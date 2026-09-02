@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from .approvals import require_exact_approval
-from .base import BaseExecutionAdapter
+from .base import BaseExecutionAdapter, record_error_codes
 from .contracts import ContractBinding, validate_contract
 from .errors import AdapterFailure, CanonicalErrorCode
 from .models import ProbeContext
@@ -53,10 +53,17 @@ class DriverInvocation:
     state: Mapping[str, Any] = field(default_factory=dict)
     evidence: tuple[dict[str, Any], ...] = ()
     payload: Mapping[str, Any] | None = None
+    #: The adapter's own failure code (EXECUTION_ERROR_MAPPING.yaml key). Only
+    #: a FAIL or BLOCKED invocation carries one.
+    adapter_error_code: str | None = None
 
     def __post_init__(self) -> None:
         if self.status not in _DRIVER_STATUSES:
             raise ValueError(f"unsupported driver status: {self.status}")
+        if self.adapter_error_code is not None and self.status not in {"FAIL", "BLOCKED"}:
+            raise ValueError(
+                f"{self.status} driver invocation must not carry an adapter_error_code"
+            )
         if not isinstance(self.state, Mapping):
             raise ValueError("driver state must be a mapping")
         if not all(isinstance(item, Mapping) for item in self.evidence):
@@ -196,6 +203,9 @@ class DriverExecutionAdapter(BaseExecutionAdapter):
     ) -> tuple[str, list[dict[str, Any]]]:
         record["driver_state"] = dict(invocation.state)
         evidence = [dict(item) for item in invocation.evidence]
+        if invocation.adapter_error_code:
+            record_error_codes(record, invocation.adapter_error_code)
+            evidence.append({"type": "adapter_error_code", **record["error_codes"]})
         if invocation.payload is not None:
             record["result"] = self._terminal_receipt(request, invocation)
         return invocation.status, evidence

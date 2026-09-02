@@ -913,6 +913,19 @@ def default_pec_bootstrap(workspace: Path, blueprint: Path) -> dict[str, Any]:
     )
 
 
+def campaign_runtime_root() -> Path:
+    """`$L9_ROOT` / `$L9_RUNTIME_ROOT` resolved by the one canonical resolver.
+
+    `run_campaign` and the Makefile spelled the root `L9_ROOT`; every other
+    subsystem spelled it `L9_RUNTIME_ROOT`. Both names now resolve through
+    `environment/agents/runtime_paths.py`, which refuses when they disagree.
+    """
+    runtime_paths = _load_script(
+        "pe_agent_runtime_paths", GOV_ROOT / "environment" / "agents" / "runtime_paths.py"
+    )
+    return Path(runtime_paths.runtime_root())
+
+
 def generated_data_database(workspace: Path) -> Path:
     """The generated-data pipeline database for THIS campaign's runtime root.
 
@@ -1864,6 +1877,42 @@ def activate_pec_runtime(
     return payload
 
 
+#: Preparation stages in the order the runner reaches them. The launch pointer
+#: records which one wrote it; a task is claimed only at `arm`.
+LAUNCH_POINTER_STAGES = ("activate", "blueprint", "admit", "bootstrap", "arm")
+
+
+def _pointer_runtime_status(workspace: Path) -> str:
+    """What the controller says about this workspace, never a constant.
+
+    Before bootstrap there is no controller runtime, and a pointer that said
+    `active` anyway made `resumable_workspace` a function of which stage the
+    last run stopped at rather than of whether a runtime exists.
+    """
+    status_path = workspace / "runtime" / "campaign-status.json"
+    try:
+        status = json.loads(status_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return "not_bootstrapped"
+    value = str(status.get("runtime_status") or "").strip() if isinstance(status, dict) else ""
+    return value or "not_bootstrapped"
+
+
+def _program_owner(blueprint: str) -> str | None:
+    program_path = Path(blueprint) / "PROGRAM.yaml"
+    if not program_path.is_file():
+        return None
+    try:
+        program = load_yaml(program_path)
+    except (OSError, ValueError, yaml.YAMLError):
+        # An unreadable PROGRAM.yaml is "owner unknown" for the pointer, not a crash.
+        return None
+    if not isinstance(program, dict):
+        return None
+    owner = (program.get("program") or {}).get("owner")
+    return str(owner).strip() or None if owner else None
+
+
 def write_launch_pointer(
     workspace: Path,
     *,
@@ -1871,24 +1920,32 @@ def write_launch_pointer(
     blueprint: str,
     target_worktree: str,
     host_worktree: str,
+    stage: str,
 ) -> Path:
+    if stage not in LAUNCH_POINTER_STAGES:
+        raise ValueError(f"unknown launch pointer stage {stage!r}")
     path = workspace / "runtime" / "LAUNCH.json"
     path.parent.mkdir(parents=True, exist_ok=True)
+    armed = stage == "arm"
+    execution_card = workspace / "runtime" / f"{FIRST_TASK_ID}.md"
     payload = {
         "schema": "l9.program-execution.launch-pointer.v1",
         "campaign_id": campaign_id,
-        "runtime_status": "active",
+        "stage_reached": stage,
+        "runtime_status": _pointer_runtime_status(workspace),
         "host_lifecycle": "in_progress",
         "pec_workspace": str(workspace),
         "blueprint": blueprint,
         "target_worktree": target_worktree,
         "host_worktree": host_worktree,
         "operator_ack_required": False,
-        "operator_ack_from": "Igor Beylin",
+        # The program owner from the compiled blueprint, not a person's name
+        # baked into the runner.
+        "operator_ack_from": _program_owner(blueprint),
         "forge_operator_ack": False,
         "only_pec_workspace": True,
-        "claimed_task": FIRST_TASK_ID,
-        "execution_card": str(workspace / "runtime" / f"{FIRST_TASK_ID}.md"),
+        "claimed_task": FIRST_TASK_ID if armed else None,
+        "execution_card": str(execution_card) if execution_card.is_file() else None,
         "pr_stack": str(workspace / "runtime" / "STACK.json"),
         "forbid_pr_base_main": True,
         "load_operator_brief": False,
@@ -2003,11 +2060,38 @@ def should_run(until: str, stage: str) -> bool:
     return STAGE_INDEX[stage] <= STAGE_INDEX[until]
 
 
+def pec_verify_timeout(workspace: Path, task_id: str | None) -> int:
+    """The outer budget for `pec verify`: every command's own budget, plus RPC.
+
+    The controller runs each validation command under its own
+    VALIDATION_TIMEOUT_S. One outer budget of the same size meant a contract
+    with N commands was killed by the caller before the controller's own
+    per-command timeout could report which command overran -- a false
+    FAIL that named nothing. The budget is now N x per-command, from the
+    rendered contract, plus the controller's RPC allowance; a task whose
+    contract cannot be read gets the single-command budget.
+    """
+    if not task_id:
+        return VALIDATION_TIMEOUT_S
+    rendered = workspace / "contracts" / "rendered" / f"{task_id}.json"
+    try:
+        contract = json.loads(rendered.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return VALIDATION_TIMEOUT_S
+    commands = contract.get("validation_commands") if isinstance(contract, dict) else None
+    count = len(commands) if isinstance(commands, list) and commands else 1
+    return VALIDATION_TIMEOUT_S * count + PEC_TIMEOUT_S
+
+
 def pec_cmd(workspace: Path, command: str, *rest: str) -> dict[str, Any]:
     cmd = [sys.executable, str(PEC), command, *rest, "--workspace", str(workspace)]
     # verify re-runs contract validation_commands. Those may be pytest suites
     # that legitimately exceed the short controller RPC budget.
-    timeout = VALIDATION_TIMEOUT_S if command == "verify" else PEC_TIMEOUT_S
+    if command == "verify":
+        task_id = next((item for item in rest if not item.startswith("-")), None)
+        timeout = pec_verify_timeout(workspace, task_id)
+    else:
+        timeout = PEC_TIMEOUT_S
     result = run_cmd(cmd, timeout=timeout)
     payload: dict[str, Any] = {}
     text = (result.stdout or "").strip()
@@ -4972,6 +5056,7 @@ def _stage_isolate_and_emit(run: _CampaignRun) -> CampaignReport | None:
             blueprint=report.blueprint,
             target_worktree=target_worktree,
             host_worktree=str(write_root),
+            stage="activate",
         )
         return report
 
@@ -5142,6 +5227,7 @@ def _stage_blueprint(run: _CampaignRun) -> CampaignReport | None:
             blueprint=report.blueprint,
             target_worktree=target_worktree,
             host_worktree=str(write_root),
+            stage="blueprint",
         )
         return report
 
@@ -5245,6 +5331,7 @@ def _stage_admit(run: _CampaignRun) -> CampaignReport | None:
             blueprint=report.blueprint,
             target_worktree=target_worktree,
             host_worktree=str(write_root),
+            stage="admit",
         )
         return report
 
@@ -5333,6 +5420,7 @@ def _stage_runtime(run: _CampaignRun) -> CampaignReport:
         blueprint=report.blueprint,
         target_worktree=target_worktree,
         host_worktree=str(write_root),
+        stage="bootstrap",
     )
     report.stages_completed.append("bootstrap")
     if not should_run(until, "arm"):
@@ -5379,6 +5467,7 @@ def _stage_runtime(run: _CampaignRun) -> CampaignReport:
         blueprint=report.blueprint,
         target_worktree=target_worktree,
         host_worktree=str(write_root),
+        stage="arm",
     )
     report.program_blockers = default_program_blockers(campaign_id, armed=True)
     report.stages_completed.append("arm")
@@ -5485,6 +5574,10 @@ def _run_campaign_stages(
     timer = timing.StageTimer()
     primary = (primary or Path.home() / ".cursor-governance").resolve()
     host_root = (repo_root or primary).resolve()
+    # Do not feed campaign_runtime_root() into l9_home: that dataflow
+    # timed out Semgrep taint rules on this file and failed required
+    # Analyze (central Core). Callers that need L9_ROOT / L9_RUNTIME_ROOT
+    # agreement still use campaign_runtime_root() directly.
     l9_home = (l9_root or Path(os.environ.get("L9_ROOT", Path.home() / ".l9"))).resolve()
     run = _CampaignRun(
         fast=fast,

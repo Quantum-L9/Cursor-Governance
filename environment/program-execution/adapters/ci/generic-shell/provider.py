@@ -80,8 +80,16 @@ class GenericShellDriver:
             "gates": gates,
         }
         passed = all(value == "PASS" for value in gates.values())
+        adapter_error_code = None
+        if not passed:
+            adapter_error_code = (
+                "HOST_EXECUTION_FAILED"
+                if gates["command_execution"] != "PASS"
+                else "TARGET_STATE_DRIFT"
+            )
         return DriverInvocation(
             status="PASS" if passed else "FAIL",
+            adapter_error_code=adapter_error_code,
             payload=payload,
             evidence=(
                 {

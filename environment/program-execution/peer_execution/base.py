@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .contracts import ContractBinding, validate_contract
-from .errors import AdapterFailure, CanonicalErrorCode
+from .errors import AdapterFailure, CanonicalErrorCode, canonical_code_for
 from .models import CapabilityReceipt, LifecycleReceipt, ProbeContext
 from .receipts import ReceiptChain
 from .runtime_store import RuntimeStore
@@ -22,6 +22,28 @@ def _admitting_probe(probe: CapabilityReceipt) -> dict[str, Any]:
         "receipt_digest": probe.receipt_digest,
         "program_lock_digest": probe.program_lock_digest,
         "capabilities": list(probe.capabilities),
+    }
+
+
+def record_error_codes(record: dict[str, Any], adapter_code: str | None) -> None:
+    """Persist a provider-reported failure code and its canonical mapping."""
+    if not adapter_code:
+        return
+    canonical = canonical_code_for(adapter_code)
+    record["error_codes"] = {
+        "adapter": adapter_code,
+        "canonical": canonical.value if canonical is not None else None,
+    }
+    record.setdefault("evidence", [])
+
+
+def _error_codes(record: Mapping[str, Any]) -> dict[str, str | None]:
+    codes = record.get("error_codes")
+    if not isinstance(codes, Mapping):
+        return {}
+    return {
+        "canonical_error_code": codes.get("canonical"),
+        "adapter_error_code": codes.get("adapter"),
     }
 
 
@@ -239,6 +261,7 @@ class BaseExecutionAdapter:
             status=status,
             dispatch_id=dispatch_id,
             evidence=evidence,
+            **_error_codes(record),
         )
 
     def status(self, dispatch_id: str) -> LifecycleReceipt:
@@ -250,6 +273,7 @@ class BaseExecutionAdapter:
             status=str(record.get("status", "BLOCKED")),
             dispatch_id=dispatch_id,
             evidence=list(record.get("evidence") or []),
+            **_error_codes(record),
         )
 
     def collect(self, dispatch_id: str) -> Mapping[str, Any]:

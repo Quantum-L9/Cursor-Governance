@@ -7,7 +7,9 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import os
 import re
+import shutil
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -1020,8 +1022,51 @@ def compile_source(
     stamp: str | None = None,
     stack_proof: Path | None = None,
 ) -> dict[str, Any]:
+    """Compile `source` into `target`, which only ever holds a validated tree.
+
+    Every artifact is written into a staging directory beside `target`, the
+    placeholder scan and template validation run there, and only a tree that
+    passed is swapped into place. A compile that fails validation used to leave
+    its partial output at `target`; the campaign runner quarantined it, the CLI
+    left it for the next reader to mistake for a blueprint.
+    """
     source = source.resolve()
     target = target.resolve()
+    staging = target.with_name(f".{target.name}.compiling-{os.getpid()}")
+    if staging.exists():
+        shutil.rmtree(staging)
+    if target.is_dir():
+        # Recompiling in place keeps the files a compile does not regenerate
+        # (acceptance receipts, collected evidence); stage from a copy.
+        shutil.copytree(target, staging, symlinks=True)
+    try:
+        result = _compile_into(source, staging, stamp=stamp, stack_proof=stack_proof)
+    except BaseException:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise
+    previous = target.with_name(f".{target.name}.previous-{os.getpid()}")
+    if previous.exists():
+        shutil.rmtree(previous)
+    if target.exists():
+        target.rename(previous)
+    try:
+        staging.rename(target)
+    except BaseException:
+        if previous.exists() and not target.exists():
+            previous.rename(target)
+        raise
+    shutil.rmtree(previous, ignore_errors=True)
+    result["target"] = str(target)
+    return result
+
+
+def _compile_into(
+    source: Path,
+    target: Path,
+    *,
+    stamp: str | None,
+    stack_proof: Path | None,
+) -> dict[str, Any]:
     src = load_yaml(source)
     if not isinstance(src, dict):
         raise CompileError("campaign source must be an object")

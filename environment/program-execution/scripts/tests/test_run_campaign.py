@@ -402,6 +402,7 @@ class RunCampaignTests(unittest.TestCase):
                 blueprint=str(Path(raw) / "blueprint"),
                 target_worktree=str(Path(raw) / "target"),
                 host_worktree=str(Path(raw) / "host"),
+                stage="activate",
             )
             self.assertEqual(json.loads(path.read_text())["campaign_id"], "demo-activate-v1")
             self.assertEqual([p.name for p in (workspace / "runtime").glob("*.tmp")], [])
@@ -1732,6 +1733,83 @@ class RunCampaignTests(unittest.TestCase):
             self.assertTrue(
                 any(item.get("cites") == "stack-proof.json" for item in payload["nuggets"])
             )
+
+    def test_pec_verify_budget_follows_the_contract_command_count(self) -> None:
+        """RC-F8: N commands get N per-command budgets, not one shared one."""
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            rendered = workspace / "contracts" / "rendered"
+            rendered.mkdir(parents=True)
+            (rendered / "TASK-003.json").write_text(
+                json.dumps({"validation_commands": ["a", "b", "c"]}), encoding="utf-8"
+            )
+            self.assertEqual(
+                self.mod.pec_verify_timeout(workspace, "TASK-003"),
+                self.mod.VALIDATION_TIMEOUT_S * 3 + self.mod.PEC_TIMEOUT_S,
+            )
+            self.assertEqual(
+                self.mod.pec_verify_timeout(workspace, "TASK-404"), self.mod.VALIDATION_TIMEOUT_S
+            )
+            captured: list[int] = []
+
+            def fake_run_cmd(cmd, timeout=0, **_kwargs):  # noqa: ANN001
+                captured.append(int(timeout))
+                return subprocess.CompletedProcess(cmd, 0, stdout="{}", stderr="")
+
+            with patch.object(self.mod, "run_cmd", fake_run_cmd):
+                self.mod.pec_cmd(workspace, "verify", "TASK-003")
+            self.assertEqual(captured, [self.mod.VALIDATION_TIMEOUT_S * 3 + self.mod.PEC_TIMEOUT_S])
+
+    def test_launch_pointer_records_the_stage_and_never_a_constant_state(self) -> None:
+        """RC-F11: what the pointer says follows the runtime, not the writer."""
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw) / "programs" / "demo-v1"
+            blueprint = Path(raw) / "blueprint"
+            blueprint.mkdir()
+            (blueprint / "PROGRAM.yaml").write_text(
+                "program:\n  id: demo-v1\n  owner: AUTH-001\n", encoding="utf-8"
+            )
+            common = {
+                "campaign_id": "demo-v1",
+                "blueprint": str(blueprint),
+                "target_worktree": str(Path(raw) / "target"),
+                "host_worktree": str(Path(raw) / "host"),
+            }
+            path = self.mod.write_launch_pointer(workspace, stage="activate", **common)
+            launch = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(launch["stage_reached"], "activate")
+            self.assertEqual(launch["runtime_status"], "not_bootstrapped")
+            self.assertIsNone(launch["claimed_task"])
+            self.assertIsNone(launch["execution_card"])
+            self.assertEqual(launch["operator_ack_from"], "AUTH-001")
+            self.assertFalse(self.mod.resumable_workspace(workspace))
+            (workspace / "runtime" / "campaign-status.json").write_text(
+                json.dumps({"runtime_status": "active"}), encoding="utf-8"
+            )
+            (workspace / "runtime" / "TASK-001.md").write_text("card\n", encoding="utf-8")
+            path = self.mod.write_launch_pointer(workspace, stage="arm", **common)
+            launch = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(launch["runtime_status"], "active")
+            self.assertEqual(launch["claimed_task"], "TASK-001")
+            self.assertTrue(launch["execution_card"].endswith("TASK-001.md"))
+            with self.assertRaises(ValueError):
+                self.mod.write_launch_pointer(workspace, stage="publish", **common)
+
+    def test_one_runtime_root_with_two_spellings(self) -> None:
+        """L9_ROOT and L9_RUNTIME_ROOT resolve the same root; a contradiction refuses."""
+        with tempfile.TemporaryDirectory() as raw:
+            with patch.dict(os.environ, {"L9_ROOT": raw, "L9_RUNTIME_ROOT": ""}):
+                self.assertEqual(self.mod.campaign_runtime_root(), Path(raw).resolve())
+            with patch.dict(os.environ, {"L9_ROOT": "", "L9_RUNTIME_ROOT": raw}):
+                self.assertEqual(self.mod.campaign_runtime_root(), Path(raw).resolve())
+            other = Path(raw) / "other"
+            other.mkdir()
+            with (
+                patch.dict(os.environ, {"L9_ROOT": raw, "L9_RUNTIME_ROOT": str(other)}),
+                self.assertRaises(RuntimeError) as ctx,
+            ):
+                self.mod.campaign_runtime_root()
+            self.assertIn("different roots", str(ctx.exception))
 
     def test_pec_verify_uses_validation_timeout(self) -> None:
         captured: list[int] = []

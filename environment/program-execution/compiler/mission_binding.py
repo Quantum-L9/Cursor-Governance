@@ -97,9 +97,14 @@ def produce_binding(
     bound_at: datetime,
     output_path: Path,
     metadata: dict[str, Any] | None = None,
-    validation_mode: str = "instantiated",
+    validation_mode: str = "template",
 ) -> MissionProgramBinding:
     """Validate, then identify, then bind — or fail closed having written nothing.
+
+    The binding is taken at compile time, over the draft the compiler emitted,
+    so the official validation runs in template mode: a compiler cannot claim
+    the `accepted` status that instantiated mode requires -- `accept_blueprint`
+    grants that later, against bound evidence.
 
     ``output_path`` is explicit and required. There is no default inside the
     Blueprint to fall back to, because a default is exactly how the circular

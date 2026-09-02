@@ -10,7 +10,7 @@ from typing import Any
 
 import structlog
 
-from .base import BaseExecutionAdapter
+from .base import BaseExecutionAdapter, record_error_codes
 from .context import write_context_manifest
 from .contracts import ContractBinding, validate_contract
 from .core_receipts import attempt_receipt, verification_receipt
@@ -548,6 +548,9 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
         validate_provider_invocation(request, invocation)
         record["provider_state"] = dict(invocation.state)
         evidence = [dict(item) for item in invocation.evidence]
+        if invocation.adapter_error_code:
+            record_error_codes(record, invocation.adapter_error_code)
+            evidence.append({"type": "adapter_error_code", **record["error_codes"]})
         if invocation.result is not None:
             admitted = record.get("admitting_probe")
             if not isinstance(admitted, Mapping):

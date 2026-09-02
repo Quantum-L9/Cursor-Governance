@@ -205,7 +205,7 @@ def test_mission_context_participates_in_blueprint_identity(tmp_path: Path) -> N
 
     from compiler.blueprint_validate import validate
 
-    assert validate(root, mode="instantiated").ok, "a covered context must validate"
+    assert validate(root, mode="template").ok, "a covered context must validate"
 
 
 def test_mission_planning_and_runtime_semantics_are_not_copied(tmp_path: Path) -> None:
@@ -249,7 +249,7 @@ def test_unbound_synthesis_emits_no_mission_context(tmp_path: Path) -> None:
 
     from compiler.blueprint_validate import validate
 
-    assert validate(root, mode="instantiated").ok, "unbound behaviour is unchanged"
+    assert validate(root, mode="template").ok, "unbound behaviour is unchanged"
 
 
 def _truth(tmp_path: Path, **overrides) -> RepoTruth:
