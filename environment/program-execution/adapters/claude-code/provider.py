@@ -142,7 +142,7 @@ class ClaudeCodeProvider:
             "--output-format",
             "json",
             "--max-turns",
-            str(int(request.inference_budget.get("max_turns") or 12)),
+            str(int(request.inference_budget["max_turns"])),
             "--allowedTools",
             ",".join(permissions["allowed"]),
             "--disallowedTools",
@@ -151,7 +151,7 @@ class ClaudeCodeProvider:
         result = run_argv(
             argv,
             cwd=Path(request.worktree_ref).resolve(),
-            timeout_seconds=int(request.timeout_budget.get("dispatch_seconds") or 1800),
+            timeout_seconds=int(request.timeout_budget["dispatch_seconds"]),
             environment={
                 "L9_AUTONOMY_REQUIRED": "1",
                 "L9_PROGRAM_LOCK_DIGEST": request.program_lock_digest,
@@ -242,8 +242,12 @@ class ClaudeCodeProvider:
             errors=() if status == "PASS" else (fail_error,),
             transport_evidence_refs=(transport_evidence,),
         )
+        adapter_error_code = None
+        if status != "PASS":
+            adapter_error_code = "MALFORMED_HOST_OUTPUT" if parse_error else "HOST_EXECUTION_FAILED"
         return ProviderInvocation(
             status=status,
+            adapter_error_code=adapter_error_code,
             evidence=(diagnostics,),
             result=provider_result,
         )

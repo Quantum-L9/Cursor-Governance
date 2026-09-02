@@ -5,18 +5,21 @@ adapters:
   provider_module: adapters/cursor-foreground/provider.py
   status: conditional
   adapter_kind: worker_host
+  default_execution_profile_ref: worker-default
   priority: 1
 - adapter_id: cursor-background
   descriptor: adapters/cursor-background/ADAPTER.yaml
   provider_module: adapters/cursor-background/provider.py
   status: conditional
   adapter_kind: worker_host
+  default_execution_profile_ref: worker-default
   priority: 2
 - adapter_id: claude-code-direct
   descriptor: adapters/claude-code/ADAPTER.yaml
   provider_module: adapters/claude-code/provider.py
   status: conditional
   adapter_kind: worker_host
+  default_execution_profile_ref: worker-default
   priority: 3
 - adapter_id: chatgpt-manual-handoff
   descriptor: adapters/chatgpt/ADAPTER.yaml
@@ -65,16 +68,19 @@ adapters:
   provider_module: adapters/codex/provider.py
   status: dormant
   adapter_kind: worker_host
+  default_execution_profile_ref: worker-default
   priority: 11
 - adapter_id: gemini-review
   descriptor: adapters/gemini/ADAPTER.yaml
   provider_module: adapters/gemini/provider.py
   status: dormant
   adapter_kind: verifier
+  default_execution_profile_ref: reviewer-default
   priority: 12
 - adapter_id: manus-cloud
   descriptor: adapters/manus/ADAPTER.yaml
   provider_module: adapters/manus/provider.py
   status: dormant
   adapter_kind: worker_host
+  default_execution_profile_ref: worker-read-only
   priority: 13

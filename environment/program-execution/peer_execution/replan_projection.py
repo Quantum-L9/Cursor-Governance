@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from .bindings import load_peer_bindings
-from .digests import digest_object
+from .digests import digest_object, verify_embedded_digest
 
 SEMANTIC_REVISION_SCHEMA = "program-execution.replan.semantic-revision.v1"
 
@@ -120,7 +120,7 @@ def project_to_peers(
     target = workspace / "runtime/projection"
     target.mkdir(parents=True, exist_ok=True)
     semantic_revision_file = target / "replan-semantic-revision.json"
-    semantic_revision_file.write_text(_canonical_json(semantic_revision) + "\n", encoding="utf-8")
+    _write_atomic(semantic_revision_file, _canonical_json(semantic_revision) + "\n")
     accounting = {
         "schema": "program-execution.replan.peer-accounting.v1",
         "semantic_revision_digest": revision_digest,
@@ -130,7 +130,7 @@ def project_to_peers(
     }
     accounting["accounting_digest"] = digest_object(accounting)
     accounting_file = target / "peer-accounting.json"
-    accounting_file.write_text(_canonical_json(accounting) + "\n", encoding="utf-8")
+    _write_atomic(accounting_file, _canonical_json(accounting) + "\n")
     return accounting
 
 
@@ -150,6 +150,10 @@ def verify_projection(repository_root: str | Path, workspace: str | Path) -> dic
     if not accounting_path.is_file():
         return {"status": "BLOCKED", "reason": "no projection accounting recorded"}
     accounting = _json.loads(accounting_path.read_text(encoding="utf-8"))
+    if not isinstance(accounting, dict) or not verify_embedded_digest(
+        accounting, "accounting_digest"
+    ):
+        return {"status": "BLOCKED", "reason": "projection accounting digest does not verify"}
     revision_digest = accounting.get("semantic_revision_digest")
     recorded = {record["peer_id"]: record for record in accounting.get("records") or []}
     errors = []
@@ -164,7 +168,26 @@ def verify_projection(repository_root: str | Path, workspace: str | Path) -> dic
             errors.append(f"unsupported peer must fail closed: {peer_id}")
     if errors:
         return {"status": "BLOCKED", "reason": "; ".join(sorted(errors))}
-    return {"status": accounting.get("status", "ACTIVE"), "reason": ""}
+    # A recorded status is the only evidence of activation; absence is BLOCKED.
+    return {"status": str(accounting.get("status") or "BLOCKED"), "reason": ""}
+
+
+def _write_atomic(path: Path, text: str) -> None:
+    """Durable runtime state: a reader sees the old file or the new one, never a blend."""
+    import os
+    import tempfile
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    handle, staged = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
+    try:
+        with os.fdopen(handle, "w", encoding="utf-8") as stream:
+            stream.write(text)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(staged, path)
+    finally:
+        if os.path.exists(staged):
+            os.unlink(staged)
 
 
 def _canonical_json(value: Any) -> str:

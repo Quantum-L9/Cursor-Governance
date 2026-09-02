@@ -138,6 +138,25 @@ def _load_thin_component(
     return provider
 
 
+def default_execution_profile_ref(adapter_id: str, entry: Mapping[str, Any]) -> str:
+    """The profile a peer adapter falls back to when nothing names one.
+
+    Precedence is explicit ref, then the provider's unique peer binding, then
+    this. It used to be inferred in code from the descriptor (verifier ->
+    reviewer-default, no local_write -> worker-read-only). An adapter's
+    permission ceiling is registry data: EXECUTION_ADAPTER_REGISTRY.yaml names
+    it per adapter, and validate_execution_adapters.py checks it exists and
+    does not exceed the descriptor's capabilities.
+    """
+    ref = entry.get("default_execution_profile_ref")
+    if not isinstance(ref, str) or not ref.strip():
+        raise ValueError(
+            f"adapter {adapter_id} declares no default_execution_profile_ref in "
+            "EXECUTION_ADAPTER_REGISTRY.yaml; a peer adapter needs one or an explicit profile"
+        )
+    return ref
+
+
 def instantiate(
     adapter_id: str,
     runtime_root: str | Path,
@@ -153,18 +172,12 @@ def instantiate(
     module = _load_module(adapter_id)
     component = _load_thin_component(adapter_id, runtime_root, module)
     if identity.get("binding") == "peer_runtime_binding":
-        if execution_profile_ref is None:
-            capabilities = descriptor.get("capabilities") or {}
-            actions = set(capabilities.get("actions") or [])
-            if descriptor.get("adapter_kind") == "verifier":
-                execution_profile_ref = "reviewer-default"
-            elif "local_write" not in actions:
-                execution_profile_ref = "worker-read-only"
         profile = resolve_profile_for_provider(
             subsystem_root(),
             repository_root(),
             adapter_id,
             execution_profile_ref,
+            fallback_profile_ref=default_execution_profile_ref(adapter_id, entry),
         )
         return PeerExecutionAdapter(
             runtime_root,

@@ -371,9 +371,16 @@ def _ensure_import_paths() -> None:
     from a Python package rooted here.
     """
     here = Path(__file__).resolve().parent
-    for candidate in (here, here.parents[1], here.parents[3]):
+    if str(here) not in sys.path:
+        sys.path.insert(0, str(here))
+    # APPEND the subsystem and governance roots, never insert(0): `scripts` is a
+    # top-level name Program Execution SHARES with the repository root, and a
+    # prepend of either root decides that name for the whole host process (see
+    # peer_execution.imports.pe_script). Sibling modules here have no
+    # competing basename anywhere on the path, so the directory stays first.
+    for candidate in (here.parents[1], here.parents[3]):
         if str(candidate) not in sys.path:
-            sys.path.insert(0, str(candidate))
+            sys.path.append(str(candidate))
 
 
 def normalize_effect_resource(worktree: str | Path | None, resource: str | None) -> str:

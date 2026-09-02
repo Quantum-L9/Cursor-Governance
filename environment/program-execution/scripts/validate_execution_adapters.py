@@ -161,7 +161,45 @@ def _check_adapter_entry(
     security = descriptor.get("security") or {}
     if any(security.get(key) != value for key, value in REQUIRED_SECURITY.items()):
         errors.append(f"{adapter_id}: security invariants are not locked")
+    _check_default_profile(subsystem=subsystem, entry=entry, descriptor=descriptor, errors=errors)
     return adapter_id, _digest(descriptor_path)
+
+
+#: Permission profiles that admit writes. A peer adapter whose descriptor does
+#: not declare `local_write` must not default to one of these.
+_WRITE_PERMISSION_PROFILES = {"repo-local-bounded"}
+
+
+def _check_default_profile(
+    *,
+    subsystem: Path,
+    entry: dict[str, Any],
+    descriptor: dict[str, Any],
+    errors: list[str],
+) -> None:
+    """A peer adapter's registry default profile must exist and fit its capabilities."""
+    adapter_id = str(entry.get("adapter_id"))
+    identity = descriptor.get("identity") or {}
+    if identity.get("binding") != "peer_runtime_binding":
+        if "default_execution_profile_ref" in entry:
+            errors.append(f"{adapter_id}: default_execution_profile_ref on a non-peer adapter")
+        return
+    ref = entry.get("default_execution_profile_ref")
+    if not isinstance(ref, str) or not ref.strip():
+        errors.append(f"{adapter_id}: peer adapter declares no default_execution_profile_ref")
+        return
+    registry = _load_yaml(subsystem / "registry/EXECUTION_PROFILE_REGISTRY.yaml")
+    profile = (registry.get("profiles") or {}).get(ref)
+    if not isinstance(profile, dict):
+        errors.append(f"{adapter_id}: default_execution_profile_ref {ref!r} is not a profile")
+        return
+    actions = set((descriptor.get("capabilities") or {}).get("actions") or [])
+    permission = str(profile.get("permission_profile_ref") or "")
+    if permission in _WRITE_PERMISSION_PROFILES and "local_write" not in actions:
+        errors.append(
+            f"{adapter_id}: default profile {ref!r} admits writes ({permission}) but the "
+            "descriptor declares no local_write capability"
+        )
 
 
 def _validate_registry_entries(
