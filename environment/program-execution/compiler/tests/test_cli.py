@@ -69,7 +69,9 @@ def test_happy_path_no_questionnaire(tmp_path: Path, capsys) -> None:
     assert "Intent parsed" in captured.out
     assert "Blueprint validation PASS" in captured.out
     assert "Program prepared for lock" in captured.out
-    assert validate(output, mode="instantiated").ok
+    # A compiler emits a draft: template-valid, and not accepted by itself.
+    assert validate(output, mode="template").ok
+    assert not validate(output, mode="instantiated").ok
 
 
 def test_target_flag_used_when_repo_evidence_absent(tmp_path: Path, capsys) -> None:
