@@ -93,5 +93,51 @@ class ResolveEnvTest(unittest.TestCase):
         self.assertEqual(Path(resolved["python"]).parent.as_posix(), resolved["bin_dir"])
 
 
+class ScopedFreshWorkspaceTests(unittest.TestCase):
+    def test_task_scoped_reset_leaves_the_other_task_alone(self) -> None:
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            _, repo, workspace = bootstrap_repo(temp, two_tasks=True)
+            register_contract(temp, workspace)
+            run_cli("claim", "TASK-001", "--workspace", str(workspace), "--holder", "worker")
+            first = run_cli("prepare", "TASK-001", "--workspace", str(workspace))
+            # A whole-workspace sweep used to delete every worktree directory and
+            # every pec/* branch regardless of --task-id.
+            other = workspace / "worktrees" / "TASK-002"
+            other.mkdir(parents=True)
+            (other / "in-flight.txt").write_text("keep\n", encoding="utf-8")
+            run_cli(
+                "fresh-workspace",
+                "--workspace",
+                str(workspace),
+                "--repository",
+                str(repo),
+                "--task-id",
+                "TASK-001",
+            )
+            self.assertFalse(Path(first["worktree"]).exists())
+            self.assertTrue((other / "in-flight.txt").is_file())
+
+    def test_task_id_cannot_escape_the_worktrees_directory(self) -> None:
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            _, repo, workspace = bootstrap_repo(temp)
+            sentinel = temp / "sentinel.txt"
+            sentinel.write_text("do not delete\n", encoding="utf-8")
+            for bad in ("../..", "../../sentinel.txt", "TASK-999"):
+                run_cli(
+                    "fresh-workspace",
+                    "--workspace",
+                    str(workspace),
+                    "--repository",
+                    str(repo),
+                    "--task-id",
+                    bad,
+                    expect=2,
+                )
+            self.assertTrue(sentinel.is_file())
+            self.assertTrue((workspace / "runtime" / "state.sqlite").is_file())
+
+
 if __name__ == "__main__":
     unittest.main()

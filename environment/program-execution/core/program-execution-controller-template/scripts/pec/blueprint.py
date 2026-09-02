@@ -190,6 +190,24 @@ def relock_tasks(lock_path: Path, task_ids: Iterable[str]) -> dict[str, Any]:
         }
         tasks.append(live[task_id])
 
+    # Admission annotates compiled files after the lock freezes them, so the
+    # file digests legitimately move on a live campaign; refreshing them is
+    # what keeps the next verification from reporting the staleness this call
+    # resolved. What must NOT ride along under a task-scoped relock is a change
+    # to a program-wide section: refreshing CONVERGENCE_GATES.yaml's digest
+    # while the lock still carries the old gates would make the lock attest a
+    # file it does not reflect.
+    changed_sections = sorted(
+        name
+        for name in _PROGRAM_WIDE_SECTIONS
+        if _semantic_view(name, lock.get(name)) != _semantic_view(name, current.get(name))
+    )
+    if changed_sections:
+        raise BlueprintError(
+            "relock adopts task definitions only; program-wide sections changed: "
+            + ", ".join(changed_sections)
+            + " -- revert those edits or bootstrap a fresh workspace"
+        )
     body = dict(lock)
     body.pop("lock_digest", None)
     body["tasks"] = tasks
@@ -212,6 +230,39 @@ def relock_tasks(lock_path: Path, task_ids: Iterable[str]) -> dict[str, Any]:
     }
 
 
+#: Keys the compiler stamps with the compile time (`snapshot_at` in PROGRAM.yaml
+#: and CURRENT_STATE.yaml, `produced_at` in EVIDENCE_CATALOG.yaml, `expiry` in
+#: DO_NOT_BUILD.yaml). Every recompile moves them; they carry no program intent.
+_COMPILE_STAMP_KEYS = frozenset({"snapshot_at", "produced_at", "expiry", "expires_at"})
+
+#: Keys admission writes AFTER the lock froze the file, per section:
+#: `accept_blueprint` flips `program.definition_status`; `collect_evidence`
+#: binds each evidence entry's environment/notes/producer/revision/status/digest;
+#: the traceability register's `sources[*].revision` is the digest of the
+#: authored source, which a task-card edit changes by definition. A relock
+#: compares program-wide sections with these masked, because a live campaign's
+#: compiled files always differ from the lock in exactly these fields.
+_ADMISSION_OWNED_KEYS: dict[str, frozenset[str]] = {
+    "program": frozenset({"definition_status"}),
+    "evidence": frozenset({"environment", "notes", "producer", "revision", "status", "digest"}),
+    "traceability": frozenset({"revision"}),
+}
+
+
+def _semantic_view(section: str, value: Any) -> Any:
+    """`value` with compile stamps and admission-owned keys removed, recursively."""
+    masked = _COMPILE_STAMP_KEYS | _ADMISSION_OWNED_KEYS.get(section, frozenset())
+
+    def _strip(node: Any) -> Any:
+        if isinstance(node, dict):
+            return {key: _strip(item) for key, item in node.items() if key not in masked}
+        if isinstance(node, list):
+            return [_strip(item) for item in node]
+        return node
+
+    return _strip(value)
+
+
 def validate_program_lock_schema(lock: dict[str, Any]) -> list[str]:
     # Imported here, not at module scope: jsonschema costs ~0.19s to import and
     # every `pec.py` CLI invocation paid it whether or not it validated anything.
@@ -229,13 +280,42 @@ def validate_program_lock_schema(lock: dict[str, Any]) -> list[str]:
     ]
 
 
-def write_program_lock(root: Path, target: Path) -> dict[str, Any]:
+def build_program_lock(root: Path) -> dict[str, Any]:
+    """Normalize and schema-check a Blueprint into a lock body, writing nothing."""
     lock = normalize_blueprint(root)
     schema_errors = validate_program_lock_schema(lock)
     if schema_errors:
         raise BlueprintError("program lock schema failed: " + "; ".join(schema_errors))
+    return lock
+
+
+def write_program_lock(root: Path, target: Path) -> dict[str, Any]:
+    lock = build_program_lock(root)
     write_json(target, lock)
     return lock
+
+
+#: Lock sections that mirror one Blueprint file each. A relock names TASKS; if
+#: any of these sections would change too, the edit was program-wide.
+_PROGRAM_WIDE_SECTIONS = (
+    "program",
+    "targets",
+    "authority",
+    "decisions",
+    "unknowns",
+    "risks",
+    "waivers",
+    "evidence",
+    "do_not_build",
+    "current_state",
+    "workstreams",
+    "dependency_graph",
+    "waves",
+    "gates",
+    "observability",
+    "cutover_and_rollback",
+    "traceability",
+)
 
 
 def verify_program_lock(lock_path: Path) -> tuple[bool, list[str]]:

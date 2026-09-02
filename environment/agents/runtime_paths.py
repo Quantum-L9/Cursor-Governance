@@ -9,9 +9,12 @@
 #   updated: 2026-08-12
 """Canonical L9 runtime path resolver (discover-legacy; never migrates DBs).
 
-Canonical root is ``L9_RUNTIME_ROOT`` (default ``~/.l9``). New subsystems MUST
-use the canonical helpers. Existing locations remain discoverable via the
-``discover_*`` helpers — Patch A does not move databases.
+Canonical root is ``L9_RUNTIME_ROOT`` (default ``~/.l9``). ``L9_ROOT`` is the
+operator-facing spelling the campaign Makefile targets use for the same root;
+either name resolves it, and setting both to different roots is refused rather
+than silently picked between. New subsystems MUST use the canonical helpers.
+Existing locations remain discoverable via the ``discover_*`` helpers — Patch A
+does not move databases.
 """
 
 from __future__ import annotations
@@ -20,10 +23,23 @@ import os
 from pathlib import Path
 
 _DEFAULT_RUNTIME_ROOT = "~/.l9"
+RUNTIME_ROOT_ENV = "L9_RUNTIME_ROOT"
+RUNTIME_ROOT_ALIAS_ENV = "L9_ROOT"
 
 
 def runtime_root() -> Path:
-    return Path(os.environ.get("L9_RUNTIME_ROOT", _DEFAULT_RUNTIME_ROOT)).expanduser().resolve()
+    canonical = os.environ.get(RUNTIME_ROOT_ENV, "").strip()
+    alias = os.environ.get(RUNTIME_ROOT_ALIAS_ENV, "").strip()
+    if canonical and alias:
+        resolved_canonical = Path(canonical).expanduser().resolve()
+        resolved_alias = Path(alias).expanduser().resolve()
+        if resolved_canonical != resolved_alias:
+            raise RuntimeError(
+                f"{RUNTIME_ROOT_ENV}={canonical!r} and {RUNTIME_ROOT_ALIAS_ENV}={alias!r} name "
+                "different roots; they are two spellings of one root -- unset one"
+            )
+    value = canonical or alias or _DEFAULT_RUNTIME_ROOT
+    return Path(value).expanduser().resolve()
 
 
 def program_runtime_root() -> Path:

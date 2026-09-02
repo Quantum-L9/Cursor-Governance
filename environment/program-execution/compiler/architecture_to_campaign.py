@@ -76,7 +76,8 @@ class RepositoryFacts:
 
     root: Path | None
     repository_id: str
-    default_branch: str = "main"
+    #: Empty when the remote's default branch could not be observed.
+    default_branch: str = ""
     validation_commands: tuple[str, ...] = ()
     package_manager: str = ""
     evidence: tuple[dict[str, str], ...] = ()
@@ -134,7 +135,7 @@ def inspect_repository(root: Path | None, repository_id: str) -> RepositoryFacts
     return RepositoryFacts(
         root=root,
         repository_id=repository_id,
-        default_branch=branch or "main",
+        default_branch=branch,
         validation_commands=tuple(dict.fromkeys(commands)),
         package_manager=package_manager,
         evidence=tuple(evidence),
@@ -152,12 +153,17 @@ def _make_targets(path: Path) -> set[str]:
 
 
 def _default_branch(root: Path) -> str:
+    """The remote's default branch, or "" when it is not observable.
+
+    `rev-parse --abbrev-ref HEAD` reported whatever branch the checkout
+    happened to be on, which is not the repository's default branch.
+    """
     git = shutil.which("git")
     if git is None:
         return ""
     try:
         result = subprocess.run(  # noqa: S603 - argv list, no shell
-            [git, "-C", str(root), "rev-parse", "--abbrev-ref", "HEAD"],
+            [git, "-C", str(root), "symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
             capture_output=True,
             text=True,
             timeout=20,
@@ -165,7 +171,9 @@ def _default_branch(root: Path) -> str:
         )
     except (OSError, subprocess.TimeoutExpired):
         return ""
-    return result.stdout.strip() if result.returncode == 0 else ""
+    if result.returncode != 0:
+        return ""
+    return result.stdout.strip().removeprefix("origin/")
 
 
 # --------------------------------------------------------------------------

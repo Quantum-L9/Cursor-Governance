@@ -13,10 +13,10 @@ from typing import Any
 
 from .blueprint import (
     BlueprintError,
+    build_program_lock,
     relock_tasks,
     stale_task_ids,
     verify_program_lock,
-    write_program_lock,
 )
 from .common import (
     ControllerError,
@@ -266,6 +266,21 @@ def bootstrap(
         raise ControllerError("blueprint admission failed: " + "; ".join(admission_errors))
     if workspace.exists() and any(item.name != "telemetry" for item in workspace.iterdir()):
         raise ControllerError(f"workspace is not empty: {workspace}")
+    # Validate BEFORE the first write. A lock written ahead of a failed check
+    # left `runtime/program-lock.json` behind, and every retry then hit
+    # "workspace is not empty" until an operator deleted it by hand.
+    try:
+        lock = build_program_lock(blueprint)
+    except BlueprintError as exc:
+        raise ControllerError(str(exc)) from exc
+    program_id = str((lock.get("program") or {}).get("id") or "")
+    if re.fullmatch(r"pe-[0-9a-f]{8,}", program_id):
+        raise ControllerError(
+            f"{program_id} is a program-execution.intent.v1 hash id; pec bootstrap refuses it"
+        )
+    controller_definition = load_yaml(template_root / "CONTROLLER.yaml")["controller"]
+    if controller_definition["contracts"]["blueprint"] != lock["blueprint_contract"]:
+        raise ControllerError("Controller and Blueprint contract versions are incompatible")
     for rel in [
         "config",
         "runtime",
@@ -281,18 +296,7 @@ def bootstrap(
         "recovery",
     ]:
         (workspace / rel).mkdir(parents=True, exist_ok=True)
-    try:
-        lock = write_program_lock(blueprint, workspace / "runtime" / "program-lock.json")
-    except BlueprintError as exc:
-        raise ControllerError(str(exc)) from exc
-    program_id = str((lock.get("program") or {}).get("id") or "")
-    if re.fullmatch(r"pe-[0-9a-f]{8,}", program_id):
-        raise ControllerError(
-            f"{program_id} is a program-execution.intent.v1 hash id; pec bootstrap refuses it"
-        )
-    controller_definition = load_yaml(template_root / "CONTROLLER.yaml")["controller"]
-    if controller_definition["contracts"]["blueprint"] != lock["blueprint_contract"]:
-        raise ControllerError("Controller and Blueprint contract versions are incompatible")
+    write_json(workspace / "runtime" / "program-lock.json", lock)
     config = {
         "schema": "program-execution-controller.runtime-config.v2",
         "template_root": str(template_root),
@@ -303,7 +307,7 @@ def bootstrap(
     }
     write_json(workspace / "config" / "controller.json", config)
     db = StateDB(workspace / "runtime" / "state.sqlite")
-    ledger = EventLedger(workspace / "ledger" / "events.jsonl")
+    ledger = EventLedger(workspace / "ledger" / "events.jsonl", anchor_store=db)
     try:
         db.set_meta("program_digest", lock["lock_digest"])
         db.set_meta("program", lock["program"])
@@ -566,6 +570,12 @@ def _evidence_valid(db: StateDB, evidence_id: str) -> bool:
         return False
     status = item.get("status")
     if status in {"invalidated", "expired", "UNKNOWN", "planned"}:
+        return False
+    # STATE_MODEL.evidence_result: UNKNOWN is non-passing, and a FAIL or BLOCKED
+    # result is not evidence FOR anything. `verify_attempt` records a FAILED
+    # verdict with `result: FAIL, status: available`; it must not satisfy a
+    # decision, an unknown, a gate, or a waiver.
+    if str(item.get("result") or "") in {"FAIL", "BLOCKED", "UNKNOWN"}:
         return False
     expires_at = item.get("expires_at")
     if expires_at and parse_time(expires_at) <= dt.datetime.now(dt.UTC):
@@ -1202,7 +1212,7 @@ def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
         repo_path = Path(repo["local_path"])
         current_dirty = bool(run_git(repo_path, "status", "--porcelain").stdout.strip())
         if current_dirty:
-            db.transition_task(task_id, "STALE", last_error="repository_state_changed")
+            _stale_and_release(db, task_id, lease, "repository_state_changed")
             raise ControllerError("repository state changed after reconciliation")
         # Campaign lineage (an existing campaign/<id> integration branch) means
         # task bases come from that branch, not the checked-out HEAD — the
@@ -1219,10 +1229,10 @@ def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
         current_head = run_git(repo_path, "rev-parse", "HEAD").stdout.strip()
         has_base = run_git(repo_path, "cat-file", "-t", lease["base_sha"], check=False)
         if has_base.returncode != 0 or has_base.stdout.strip() != "commit":
-            db.transition_task(task_id, "STALE", last_error="lease_base_missing")
+            _stale_and_release(db, task_id, lease, "lease_base_missing")
             raise ControllerError("lease base_sha is not a commit in the repository")
         if not campaign_lineage and current_head != lease["base_sha"]:
-            db.transition_task(task_id, "STALE", last_error="repository_state_changed")
+            _stale_and_release(db, task_id, lease, "repository_state_changed")
             raise ControllerError("repository state changed after reconciliation")
         worktree = workspace / "worktrees" / task_id
         reused = False
@@ -1275,8 +1285,25 @@ def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
         db.close()
 
 
+def _stale_and_release(db: StateDB, task_id: str, lease: dict[str, Any], error: str) -> None:
+    """STALE the task AND release its lease, so re-claiming is possible.
+
+    A STALE transition that kept the lease made the task unclaimable until the
+    lease TTL expired: `task_readiness` reported task_already_leased and
+    `claim` collided, while `recover` only handles expired leases.
+    """
+    db.transition_task(task_id, "STALE", last_error=error)
+    db.release_lease(str(lease["lease_id"]))
+
+
 def _worktree_matches_lease(worktree: Path, lease: dict[str, Any], repo_path: Path) -> bool:
-    """Reuse a leftover task worktree only while it still belongs to this lease."""
+    """Reuse a leftover task worktree only while it still belongs to this lease.
+
+    Belonging means the lease's branch is checked out AND the lease base is in
+    the worktree's ancestry. The branch name alone is deterministic per task,
+    so after STALE -> re-claim at a newer base the old worktree carried the
+    right name on the wrong lineage and was reused as if it were current.
+    """
     if not ((worktree / ".git").exists() or (worktree / ".git").is_file()):
         return False
     listed = run_git(repo_path, "worktree", "list", "--porcelain", check=False)
@@ -1286,7 +1313,17 @@ def _worktree_matches_lease(worktree: Path, lease: dict[str, Any], repo_path: Pa
     if not any(candidate in text for candidate in {str(worktree), str(worktree.resolve())}):
         return False
     branch = run_git(worktree, "rev-parse", "--abbrev-ref", "HEAD", check=False)
-    return branch.returncode == 0 and branch.stdout.strip() == str(lease.get("branch") or "")
+    if branch.returncode != 0 or branch.stdout.strip() != str(lease.get("branch") or ""):
+        return False
+    ancestry = run_git(
+        worktree,
+        "merge-base",
+        "--is-ancestor",
+        str(lease.get("base_sha") or ""),
+        "HEAD",
+        check=False,
+    )
+    return ancestry.returncode == 0
 
 
 def start_task(workspace: Path, task_id: str, actor: str) -> dict[str, Any]:
@@ -1309,6 +1346,13 @@ def start_task(workspace: Path, task_id: str, actor: str) -> dict[str, Any]:
         retrying = state == "FAILED" and bool(task.get("rendered_contract_path"))
         if not retrying and state != "CONTRACTED":
             raise ControllerError("task must be CONTRACTED")
+        if retrying and db.active_lease_for_task(task_id) is None:
+            # fail_task released the writer lease. A retry that starts without
+            # re-claiming reaches verify with no lease and is FAILED again on
+            # the lease gate -- a guaranteed dead end, so refuse it here.
+            raise ControllerError(
+                "FAILED task has no active lease; run `pec claim` before `pec start` to retry"
+            )
         _require_stack_proof_reentry(workspace, str(task_id))
         _refuse_operator_memo_cwd(workspace)
         ensure_campaign_active(workspace, actor, db, ledger)
@@ -1329,8 +1373,11 @@ def record_attempt(workspace: Path, task_id: str, receipt_source: Path) -> dict[
         task = db.task(task_id)
         if task is None or not task.get("rendered_contract_path"):
             raise ControllerError("Rendered Contract required")
-        if task["runtime_state"] not in {"CONTRACTED", "EXECUTING", "FAILED"}:
-            raise ControllerError(f"task cannot submit from state {task['runtime_state']}")
+        if task["runtime_state"] != "EXECUTING":
+            raise ControllerError(
+                f"task cannot submit from state {task['runtime_state']}; an attempt is "
+                "recorded only for a task that `pec start` moved to EXECUTING"
+            )
         receipt = load_json(receipt_source)
         _validate_schema(workspace, "attempt-receipt.schema.json", receipt)
         if receipt["task_id"] != task_id:
@@ -1409,10 +1456,14 @@ def _changed_paths(worktree: Path, base_sha: str | None = None) -> list[str]:
             continue
         status_code = entry[:2]
         path = entry[3:]
-        if status_code[0] in {"R", "C"} and index + 1 < len(parts):
-            index += 1
-            path = parts[index]
         paths.add(path.replace("\\", "/"))
+        if status_code[0] in {"R", "C"} and index + 1 < len(parts):
+            # `R  <new>\0<old>\0`: this entry names the NEW path; the next field
+            # is the old one. Both are touched paths -- a rename INTO a
+            # non-writable directory must fail the scope gate, and the old
+            # path is a deletion the declared set must include.
+            index += 1
+            paths.add(parts[index].replace("\\", "/"))
         index += 1
     if base_sha:
         committed = run_git(
@@ -1448,15 +1499,28 @@ def _command_runnable(command: str) -> bool:
     return shutil.which(token) is not None or Path(token).exists()
 
 
-def _preflight2_gates(commands: list[str]) -> dict[str, str]:
+def _preflight2_gates(commands: list[str], declared: list[str] | None = None) -> dict[str, str]:
+    """Inventory, blocking and coverage of the contract's required commands.
+
+    `inventory` and `coverage` used to be the literal "PASS" whenever any
+    command existed. Inventory now means every required command is a
+    well-formed, non-empty command line; coverage means every validation the
+    contract declares is among the required commands (a declared validation
+    with no command is uncovered).
+    """
     if not commands:
         return {}
+    well_formed = [
+        bool(command.strip()) and not command.strip().startswith("#") for command in commands
+    ]
     runnable = [_command_runnable(command) for command in commands]
-    blocking = "PASS" if runnable and all(runnable) else "INCOMPLETE"
+    declared_commands = [str(item).strip() for item in (declared or []) if str(item).strip()]
+    required = {command.strip() for command in commands}
+    covered = all(item in required for item in declared_commands)
     return {
-        "preflight2_inventory": "PASS",
-        "preflight2_blocking": blocking,
-        "preflight2_coverage": "PASS",
+        "preflight2_inventory": "PASS" if all(well_formed) else "INCOMPLETE",
+        "preflight2_blocking": "PASS" if runnable and all(runnable) else "INCOMPLETE",
+        "preflight2_coverage": "PASS" if covered else "INCOMPLETE",
     }
 
 
@@ -1592,9 +1656,12 @@ def _verified_this_attempt(
     digest = task.get("rendered_contract_digest")
     if digest and receipt.get("contract_digest") and receipt["contract_digest"] != digest:
         return None
-    if attempt is not None and receipt.get("candidate_sha"):
-        recorded = attempt.get("candidate_sha")
-        if recorded and recorded != receipt["candidate_sha"]:
+    # The attempts table records no candidate_sha, so comparing against it was
+    # dead: a receipt from an earlier attempt replayed as this one's verdict.
+    # The receipt names the attempt it verified through its evidence id.
+    if attempt is not None:
+        expected = f"EVID-RUNTIME-{task['id']}-{int(attempt['attempt_number']):03d}"
+        if str(receipt.get("evidence_id") or "") != expected:
             return None
     return dict(receipt)
 
@@ -1625,7 +1692,7 @@ def _verify_state_error(task: dict[str, Any] | None, task_id: str) -> Controller
             "this attempt already verified FAIL and the receipt is preserved; "
             "repair the work and run `pec start` to retry, which submits a new attempt"
         ),
-        "STALE": "the lease or repository moved; run `pec recover` then re-claim",
+        "STALE": "the lease or repository moved; the lease was released, so re-claim the task",
         "CANCELLED": "the task is terminal and cannot be verified",
         "COMPLETED": "the task is already complete; verification is not repeated",
     }.get(state, "no transition to VERIFYING exists from this state")
@@ -1728,11 +1795,14 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
             declared = sorted(set(receipt.get("changed_files") or []))
             gates["changed_files_exact"] = "PASS" if declared == changed else "FAIL"
             patterns = contract.get("writable_paths") or []
-            gates["scope"] = (
-                "PASS"
-                if changed and all(path_allowed(path, patterns) for path in changed)
-                else "FAIL"
-            )
+            try:
+                in_scope = changed and all(path_allowed(path, patterns) for path in changed)
+            except ContractError:
+                # A touched path the contract grammar refuses outright (git or
+                # controller internals) is a scope FAIL, not a traceback that
+                # leaves the task VERIFYING.
+                in_scope = False
+            gates["scope"] = "PASS" if in_scope else "FAIL"
             lock = load_json(workspace / "runtime" / "program-lock.json")
             prohibited = [
                 item.get("path_or_pattern")
@@ -1755,12 +1825,10 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
                         # carry no path_or_pattern, so they never arrive here.
                         continue
             gates["do_not_build"] = "FAIL" if dnb_hit else "PASS"
+            # A dangling symlink is still a symlink; Path.exists() follows the
+            # link and reports False for one, which used to skip the check.
             gates["symlink"] = (
-                "PASS"
-                if not any(
-                    (worktree / path).is_symlink() for path in changed if (worktree / path).exists()
-                )
-                else "FAIL"
+                "PASS" if not any((worktree / path).is_symlink() for path in changed) else "FAIL"
             )
             claimed_results = receipt.get("validation_results") or []
             claimed_commands = [item.get("command") for item in claimed_results]
@@ -1783,7 +1851,21 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
                     else "FAIL"
                 )
             if required_commands:
-                gates.update(_preflight2_gates([str(command) for command in required_commands]))
+                lock_task = next(
+                    (item for item in lock.get("tasks") or [] if item.get("id") == task_id), {}
+                )
+                declared_validations = [
+                    str(item.get("command_or_inspection") or "")
+                    for item in lock_task.get("validation") or []
+                    if isinstance(item, dict)
+                    and item.get("method") in {"command", "command_and_inspection"}
+                ]
+                gates.update(
+                    _preflight2_gates(
+                        [str(command) for command in required_commands],
+                        declared=declared_validations,
+                    )
+                )
                 validations = [_run_validation(command, worktree) for command in required_commands]
                 gates["validation"] = (
                     "PASS"
@@ -2146,12 +2228,14 @@ def evaluate_gate(
                 raise ControllerError("waiver evidence is invalid")
         elif waiver_id is not None:
             raise ControllerError("waiver_id is only valid for NOT_APPLICABLE_WITH_REASON")
-        if result == "PASS":
-            for tid in gate["definition"].get("task_ids") or []:
-                if not _dod_complete(_latest_verification(workspace, str(tid))):
-                    raise ControllerError(
-                        "evaluate-gate PASS requires Definition of Done; PASSED_LOCAL is not Done"
-                    )
+        # Definition of Done is enforced per task at `complete_task`, never here:
+        # a gate's scope spans every task it converges (`scope.task_ids`), and a
+        # multi-task gate must be PASS-able while later tasks in its scope have
+        # not run, because completing the first task requires the gate. The
+        # loop that once stood here read a `task_ids` key the schema never
+        # placed at the top level, so it was dead; made live it deadlocked
+        # every multi-task campaign. Evidence validity for the PASS is
+        # `_evidence_valid` above, which rejects FAIL/BLOCKED/UNKNOWN results.
         evaluated_at = utc_now()
         receipt = {
             "schema": "program-execution-controller.gate-evaluation.v2",
@@ -2426,7 +2510,11 @@ def _peer_parity_section(repository_root: Path, workspace: Path) -> dict[str, An
     pe_root = Path(repository_root).resolve() / "environment/program-execution"
     if not pe_root.is_dir():
         raise ControllerError(f"program-execution seam not found under repository root: {pe_root}")
-    sys.path.insert(0, str(pe_root))
+    # APPEND, never insert(0): `scripts` is a top-level name Program Execution
+    # SHARES with the repository root, so a prepend hands PE's `scripts/` that
+    # name process-wide. See peer_execution.imports.pe_script.
+    if str(pe_root) not in sys.path:
+        sys.path.append(str(pe_root))
     from peer_execution.golden_vectors import run_parity_gate
 
     report = run_parity_gate(repository_root, workspace)
@@ -2594,7 +2682,18 @@ def export_handoff(
                 "receipt_digest": receipt["receipt_digest"],
             },
         )
-        if recommendation in TERMINAL_VERDICTS:
+        completion_blockers = (
+            _campaign_completion_blockers(db, recommendation)
+            if recommendation in TERMINAL_VERDICTS
+            else {}
+        )
+        if completion_blockers:
+            # HANDOFF_PROTOCOL: a recommendation is not terminal acceptance.
+            # Live children, active leases or open blocking gates keep the
+            # runtime active; `pec close` is the one path that may refuse or
+            # accept, and it refuses exactly this state.
+            receipt["completion_blockers"] = completion_blockers
+        if recommendation in TERMINAL_VERDICTS and not completion_blockers:
             campaign_id = _campaign_id_from_program(program)
             current = read_campaign_status(workspace) or {}
             payload = write_campaign_status(

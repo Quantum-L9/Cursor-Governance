@@ -86,6 +86,8 @@ class Classification:
     #: changes `kind`: the router warns, it does not re-route. Silence here
     #: means the router saw nothing worth telling the operator.
     diagnostics: tuple[str, ...] = ()
+    #: Why the document could not be parsed, when that is the whole story.
+    reason: str | None = None
 
     @property
     def supported(self) -> bool:
@@ -102,6 +104,7 @@ class Classification:
             "path": str(self.path),
             "supported": self.supported,
             "diagnostics": list(self.diagnostics),
+            "reason": self.reason,
             "route": self.route,
         }
 
@@ -166,15 +169,20 @@ class CampaignInputRejected(Exception):
         )
 
 
-def _load_document(path: Path) -> dict[str, Any] | None:
-    """Parse YAML/JSON, or return None when the file is not a mapping document."""
+def _load_document(path: Path) -> tuple[dict[str, Any] | None, str | None]:
+    """Parse YAML/JSON: (mapping or None, parse error or None).
+
+    A parse error is reported, not swallowed: swallowing it made an unparsable
+    `.yaml` read as "parsed but matched no shape", a false diagnosis, and an
+    unparsable `.md` fall through to the brief route.
+    """
     if yaml is None:
         raise RuntimeError("PyYAML required to classify campaign input")
     try:
         raw = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-    return raw if isinstance(raw, dict) else None
+    except yaml.YAMLError as exc:
+        return None, f"{type(exc).__name__}: {str(exc).strip()[:300]}"
+    return (raw if isinstance(raw, dict) else None), None
 
 
 def _is_activate_seed(doc: dict[str, Any]) -> bool:
@@ -187,14 +195,23 @@ def _is_activate_seed(doc: dict[str, Any]) -> bool:
     )
 
 
-def _parse_frontmatter(text: str) -> dict[str, Any] | None:
+def _parse_frontmatter(text: str, *, path: Path | None = None) -> dict[str, Any] | None:
     match = FRONTMATTER_RE.match(text)
     if match is None or yaml is None:
         return None
     try:
         raw = yaml.safe_load(match.group(1))
-    except Exception:
-        return None
+    except yaml.YAMLError as exc:
+        # A document that declares frontmatter and cannot parse it must not be
+        # silently reclassified as a plain brief: a declared architecture
+        # intent with one YAML error would otherwise be rebuilt through the
+        # weaker brief -> activate route with no error.
+        raise CampaignInputRejected(
+            detected=CampaignInputKind.UNKNOWN,
+            path=path if path is not None else Path("<frontmatter>"),
+            reason=f"frontmatter does not parse: {type(exc).__name__}: {str(exc).strip()[:300]}",
+            fix="Fix the YAML frontmatter. Nothing was executed.",
+        ) from exc
     return raw if isinstance(raw, dict) else None
 
 
@@ -303,8 +320,8 @@ def classify(path: Path, *, forced_kind: CampaignInputKind | None = None) -> Cla
             path=path,
         )
     text = path.read_text(encoding="utf-8")
-    doc = _load_document(path)
-    frontmatter_doc = _parse_frontmatter(text) or {}
+    doc, parse_error = _load_document(path)
+    frontmatter_doc = _parse_frontmatter(text, path=path) or {}
     declared = str(frontmatter_doc.get("schema") or "").strip()
     if forced_kind is CampaignInputKind.ARCHITECTURE_INTENT_V1 or (
         declared == ARCHITECTURE_INTENT_SCHEMA
@@ -325,7 +342,7 @@ def classify(path: Path, *, forced_kind: CampaignInputKind | None = None) -> Cla
                 path=path,
                 diagnostics=route_confusion_diagnostics(text),
             )
-        return Classification(kind=CampaignInputKind.UNKNOWN, path=path)
+        return Classification(kind=CampaignInputKind.UNKNOWN, path=path, reason=parse_error)
     schema = str(doc.get("schema") or "").strip()
     if schema == ARCHITECTURE_INTENT_SCHEMA:
         return Classification(
@@ -346,7 +363,7 @@ def classify(path: Path, *, forced_kind: CampaignInputKind | None = None) -> Cla
     if _is_plan_intent(doc):
         return Classification(kind=CampaignInputKind.PLAN, path=path, schema=schema, document=doc)
     if path.suffix.lower() in {".md", ".markdown", ".txt"}:
-        frontmatter = _parse_frontmatter(text)
+        frontmatter = _parse_frontmatter(text, path=path)
         if _is_plan_intent(frontmatter):
             return Classification(
                 kind=CampaignInputKind.PLAN, path=path, schema=schema, document=frontmatter
@@ -400,8 +417,11 @@ def _preflight_program_intent(classification: Classification) -> list[str]:
             fix="Supply a YAML/JSON object with schema and objective.",
         )
     pe_root = Path(__file__).resolve().parents[1]
+    # APPEND, never insert(0): `scripts` is a top-level name Program Execution
+    # SHARES with the repository root, so a prepend hands PE's `scripts/` that
+    # name process-wide. See peer_execution.imports.pe_script.
     if str(pe_root) not in sys.path:
-        sys.path.insert(0, str(pe_root))
+        sys.path.append(str(pe_root))
     from compiler.intent import parse_intent
 
     try:
@@ -499,6 +519,14 @@ def reject(classification: Classification) -> CampaignInputRejected:
                 '    make -C "$HOME/.cursor-governance" campaign '
                 "INTENT=/path/to/CAMPAIGN_SOURCE.yaml"
             ),
+        )
+    if classification.reason:
+        return CampaignInputRejected(
+            detected=classification.kind,
+            schema=classification.schema,
+            path=classification.path,
+            reason=f"The file does not parse: {classification.reason}",
+            fix="Fix the document syntax. Nothing was executed.",
         )
     return CampaignInputRejected(
         detected=classification.kind,

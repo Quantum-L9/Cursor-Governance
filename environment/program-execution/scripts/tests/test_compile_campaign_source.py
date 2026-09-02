@@ -275,6 +275,18 @@ class CompileCampaignSourceTests(unittest.TestCase):
             )
 
             collect = _load("collect_evidence_test", PE_ROOT / "scripts/collect_evidence.py")
+            # CP-F17: an evidence binding needs the revision it was observed at.
+            with self.assertRaises(RuntimeError) as unbound:
+                collect.collect_evidence(
+                    target,
+                    evidence_id="EVID-001",
+                    revision=None,
+                    digest=None,
+                    notes="loop test",
+                    producer="test",
+                    expires_at=None,
+                )
+            self.assertIn("revision", str(unbound.exception))
             collected = collect.collect_evidence(
                 target,
                 evidence_id="EVID-001",
@@ -707,6 +719,108 @@ class SourcePreflightTests(unittest.TestCase):
         # The offending id is named, never silently rewritten.
         self.assertEqual(source["tasks"][0]["id"], "TASK-001A")
         self.assertNotEqual(source["tasks"][0]["id"], original)
+
+    def _compile_dict(self, raw: Path, source: dict) -> None:
+        path = raw / "CAMPAIGN_SOURCE.yaml"
+        path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
+        proof = _pass_proof(raw / "stack-proof.json")
+        self.compiler.compile_source(path, raw / "out", stack_proof=proof)
+
+    def test_failed_compile_leaves_no_partial_target(self) -> None:
+        """CP-F15: the target only ever holds a validated tree."""
+        source = self._source()
+        source["gates"] = []
+        with tempfile.TemporaryDirectory() as raw:
+            target = Path(raw) / "out"
+            with self.assertRaises(self.compiler.CompileError):
+                self._compile_dict(Path(raw), source)
+            self.assertFalse(target.exists(), "a refused compile wrote a partial blueprint")
+            self.assertEqual(
+                [p.name for p in Path(raw).iterdir() if p.name.startswith(".out.")],
+                [],
+                "staging directories must not survive a refusal",
+            )
+
+    def test_failed_recompile_keeps_the_previous_blueprint(self) -> None:
+        good = self._source()
+        with tempfile.TemporaryDirectory() as raw:
+            self._compile_dict(Path(raw), good)
+            target = Path(raw) / "out"
+            before = sorted(p.name for p in target.iterdir())
+            bad = self._source()
+            bad["gates"] = []
+            with self.assertRaises(self.compiler.CompileError):
+                self._compile_dict(Path(raw), bad)
+            self.assertEqual(sorted(p.name for p in target.iterdir()), before)
+
+    def test_decision_without_a_defined_authority_is_refused(self) -> None:
+        """`AUTH-005` used to be minted for a decision that named no authority."""
+        source = self._source()
+        source["decisions"] = [
+            {
+                "id": "DEC-900",
+                "title": "Unowned decision",
+                "question": "Which option?",
+                "status": "accepted",
+                "options": [{"id": "OPT-1", "description": "only option"}],
+                "selected_option_id": "OPT-1",
+            }
+        ]
+        with tempfile.TemporaryDirectory() as raw:
+            with self.assertRaises(self.compiler.CompileError) as ctx:
+                self._compile_dict(Path(raw), source)
+        self.assertIn("DEC-900", str(ctx.exception))
+        self.assertIn("authority", str(ctx.exception))
+
+    def test_decision_without_a_status_is_refused_before_any_write(self) -> None:
+        """A status-less decision used to reach the register dump and die with KeyError."""
+        source = self._source()
+        authority = source["authorities"][0]["id"]
+        source["decisions"] = [
+            {
+                "id": "DEC-901",
+                "title": "Unstated decision",
+                "question": "Which option?",
+                "authority_id": authority,
+                "options": [{"id": "OPT-1", "description": "only option"}],
+                "selected_option_id": "OPT-1",
+            }
+        ]
+        with tempfile.TemporaryDirectory() as raw:
+            with self.assertRaises(self.compiler.CompileError) as ctx:
+                self._compile_dict(Path(raw), source)
+            self.assertFalse((Path(raw) / "out").exists(), "refusal must precede any write")
+        self.assertIn("DEC-901", str(ctx.exception))
+        self.assertIn("status", str(ctx.exception))
+
+    def test_decision_status_comes_from_the_decision_register_schema(self) -> None:
+        source = self._source()
+        authority = source["authorities"][0]["id"]
+        source["decisions"] = [
+            {
+                "id": "DEC-902",
+                "title": "Mis-stated decision",
+                "question": "Which option?",
+                "status": "approved",
+                "authority_id": authority,
+                "options": [{"id": "OPT-1", "description": "only option"}],
+                "selected_option_id": "OPT-1",
+            }
+        ]
+        with tempfile.TemporaryDirectory() as raw:
+            with self.assertRaises(self.compiler.CompileError) as ctx:
+                self._compile_dict(Path(raw), source)
+        self.assertIn("DEC-902", str(ctx.exception))
+        self.assertIn("'approved'", str(ctx.exception))
+        self.assertIn("accepted", str(ctx.exception))
+
+    def test_source_without_gates_is_refused_not_given_gate_001(self) -> None:
+        source = self._source()
+        source["gates"] = []
+        with tempfile.TemporaryDirectory() as raw:
+            with self.assertRaises(self.compiler.CompileError) as ctx:
+                self._compile_dict(Path(raw), source)
+        self.assertIn("no gates", str(ctx.exception))
 
     def test_illegal_gate_id_fails_preflight(self) -> None:
         source = self._source()

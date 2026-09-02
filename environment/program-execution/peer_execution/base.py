@@ -7,13 +7,49 @@ from pathlib import Path
 from typing import Any
 
 from .contracts import ContractBinding, validate_contract
-from .errors import AdapterFailure, CanonicalErrorCode
+from .errors import AdapterFailure, CanonicalErrorCode, canonical_code_for
 from .models import CapabilityReceipt, LifecycleReceipt, ProbeContext
 from .receipts import ReceiptChain
 from .runtime_store import RuntimeStore
 from .schema_registry import SchemaRegistry
 
 _RECEIPT_CHAIN_LOCK = threading.RLock()
+
+
+def _admitting_probe(probe: CapabilityReceipt) -> dict[str, Any]:
+    """The part of a capability receipt a dispatch record binds itself to."""
+    return {
+        "receipt_digest": probe.receipt_digest,
+        "program_lock_digest": probe.program_lock_digest,
+        "capabilities": list(probe.capabilities),
+    }
+
+
+def record_error_codes(record: dict[str, Any], adapter_code: str | None) -> None:
+    """Persist a provider-reported failure code and its canonical mapping."""
+    if not adapter_code:
+        return
+    canonical = canonical_code_for(adapter_code)
+    record["error_codes"] = {
+        "adapter": adapter_code,
+        "canonical": canonical.value if canonical is not None else None,
+    }
+    record.setdefault("evidence", [])
+
+
+def _error_codes(record: Mapping[str, Any]) -> dict[str, str | None]:
+    codes = record.get("error_codes")
+    if not isinstance(codes, Mapping):
+        return {}
+    return {
+        "canonical_error_code": codes.get("canonical"),
+        "adapter_error_code": codes.get("adapter"),
+    }
+
+
+#: Record statuses a subclass may have persisted before raising out of
+#: `_dispatch_record`; anything else means the failure was never recorded.
+_TERMINAL_DISPATCH_STATUSES = frozenset({"FAIL", "BLOCKED", "CANCELLED", "UNSUPPORTED"})
 
 
 class BaseExecutionAdapter:
@@ -135,7 +171,7 @@ class BaseExecutionAdapter:
     def prepare(self, contract: Mapping[str, Any]) -> LifecycleReceipt:
         expected = contract.get("program_lock_digest") or contract.get("program_digest")
         binding = validate_contract(contract, expected_program_lock_digest=expected)
-        self._require_fresh_probe(binding.program_lock_digest)
+        probe = self._require_fresh_probe(binding.program_lock_digest)
         dispatch_id = f"{self.adapter_id}-{uuid.uuid4().hex}"
         record = {
             "dispatch_id": dispatch_id,
@@ -148,6 +184,7 @@ class BaseExecutionAdapter:
                 "requested_actions": list(binding.requested_actions),
             },
             "contract": binding.raw,
+            "admitting_probe": _admitting_probe(probe),
         }
         self.runtime.save(dispatch_id, record)
         return self._append(
@@ -169,8 +206,52 @@ class BaseExecutionAdapter:
         if record.get("status") != "PREPARED":
             raise ValueError("dispatch record is not PREPARED")
         binding = validate_contract(record["contract"])
-        self._require_fresh_probe(binding.program_lock_digest)
-        status, evidence = self._dispatch_record(record)
+        # Freshness gates ADMISSION. The receipt that admits this dispatch is
+        # recorded so result application later binds to it, not to wall-clock
+        # TTL: a provider whose invoke legitimately runs longer than the probe
+        # TTL must not have its result discarded as a capability failure.
+        record["admitting_probe"] = _admitting_probe(
+            self._require_fresh_probe(binding.program_lock_digest)
+        )
+        self.runtime.save(dispatch_id, record)
+        try:
+            status, evidence = self._dispatch_record(record)
+        except Exception as exc:
+            # A subclass that persisted a terminal status before raising keeps
+            # it. One that raised before reaching its own FAIL path (request
+            # rendering, context manifest, provider construction) would leave
+            # the record PREPARED -- a dispatch that ran and was never
+            # recorded, and the lifecycle chain would end at `prepare PASS`.
+            # Persist FAIL with the error as evidence, then show the phase.
+            canonical_code = (
+                exc.code.value
+                if isinstance(exc, AdapterFailure)
+                else CanonicalErrorCode.VALIDATION_FAILURE.value
+            )
+            adapter_code = exc.adapter_code if isinstance(exc, AdapterFailure) else None
+            stored = self.runtime.load(dispatch_id)
+            if stored.get("status") not in _TERMINAL_DISPATCH_STATUSES:
+                stored["status"] = "FAIL"
+                stored["evidence"] = [
+                    *list(stored.get("evidence") or []),
+                    {
+                        "type": "dispatch_exception",
+                        "error": str(exc),
+                        "canonical_error_code": canonical_code,
+                        "adapter_error_code": adapter_code,
+                    },
+                ]
+                self.runtime.save(dispatch_id, stored)
+            self._append(
+                phase="dispatch",
+                binding=binding,
+                status=str(stored["status"]),
+                dispatch_id=dispatch_id,
+                evidence=list(stored.get("evidence") or []),
+                canonical_error_code=canonical_code,
+                adapter_error_code=adapter_code,
+            )
+            raise
         record["status"] = status
         record["evidence"] = evidence
         self.runtime.save(dispatch_id, record)
@@ -180,6 +261,7 @@ class BaseExecutionAdapter:
             status=status,
             dispatch_id=dispatch_id,
             evidence=evidence,
+            **_error_codes(record),
         )
 
     def status(self, dispatch_id: str) -> LifecycleReceipt:
@@ -191,6 +273,7 @@ class BaseExecutionAdapter:
             status=str(record.get("status", "BLOCKED")),
             dispatch_id=dispatch_id,
             evidence=list(record.get("evidence") or []),
+            **_error_codes(record),
         )
 
     def collect(self, dispatch_id: str) -> Mapping[str, Any]:

@@ -4,9 +4,12 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
+import os
 import re
+import shutil
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -53,8 +56,12 @@ from blueprint_ops import (  # noqa: E402
 )
 
 _PE_ROOT_FOR_IMPORT = Path(__file__).resolve().parents[1]
+# APPEND, never insert(0): `scripts` is a top-level name Program Execution
+# SHARES with the repository root, so a prepend hands PE's `scripts/` that name
+# process-wide -- and this file runs inside every `make campaign` through
+# campaign_input._compile_module(). See peer_execution.imports.pe_script.
 if str(_PE_ROOT_FOR_IMPORT) not in sys.path:
-    sys.path.insert(0, str(_PE_ROOT_FOR_IMPORT))
+    sys.path.append(str(_PE_ROOT_FOR_IMPORT))
 
 from peer_execution.validation_command import validation_command_error  # noqa: E402
 
@@ -74,6 +81,7 @@ EVIDENCE_TYPE = {
 }
 CONTRACT_KEYS = ("pair", "blueprint", "controller_minimum")
 AUTH_REQUIRED = ("id", "responsibility", "owner")
+DECISION_REQUIRED = ("id", "question", "status")
 TASK_STATUSES_ADMITTED = {"ready", "blocked", "cancelled", "superseded"}
 # Actions the sealed Program Execution runner cannot perform. A source may
 # still declare them -- historical sources declare push and pull_request --
@@ -335,6 +343,63 @@ def _remap_adapter(value: str) -> str:
     return ADAPTER_REMAP.get(value, value)
 
 
+def _first_authority_id(src: dict[str, Any]) -> str:
+    authorities = [item for item in (src.get("authorities") or []) if isinstance(item, dict)]
+    for item in authorities:
+        if str(item.get("id") or "").strip():
+            return str(item["id"])
+    raise CompileError(
+        "campaign source declares no authorities; decisions, observability signals and "
+        "rollback need an owning authority the source defines"
+    )
+
+
+def _known_authority_ids(src: dict[str, Any]) -> set[str]:
+    return {
+        str(item.get("id"))
+        for item in (src.get("authorities") or [])
+        if isinstance(item, dict) and str(item.get("id") or "").strip()
+    }
+
+
+def _decision_authority(item: dict[str, Any], src: dict[str, Any]) -> str:
+    authority = str(item.get("authority_id") or "").strip()
+    if not authority:
+        raise CompileError(f"decision {item.get('id')!r} names no authority_id")
+    if authority not in _known_authority_ids(src):
+        raise CompileError(
+            f"decision {item.get('id')!r} names authority {authority!r}, which the source "
+            "does not define"
+        )
+    return authority
+
+
+def _task_owner_authority(item: dict[str, Any], first_authority: str) -> str:
+    basis = [str(value) for value in (item.get("authority_basis_ids") or []) if str(value)]
+    return basis[0] if basis else first_authority
+
+
+def _decision_rationale(item: dict[str, Any]) -> str:
+    selected = str(item.get("selected_option_id") or "").strip()
+    authority = str(item.get("authority_id") or "").strip()
+    if selected and authority:
+        return f"Selected {selected} per {authority}."
+    if selected:
+        return f"Selected {selected}."
+    return "Decision recorded from the campaign source; no option selected yet."
+
+
+def _source_revision(src: dict[str, Any], source: Path) -> str:
+    """Exact identity of the source this Blueprint was compiled from."""
+    provenance = src.get("intent_provenance") or {}
+    declared = ((provenance.get("source") or {}) if isinstance(provenance, dict) else {}).get(
+        "sha256"
+    )
+    if isinstance(declared, str) and declared.strip():
+        return f"sha256:{declared.strip().removeprefix('sha256:')}"
+    return "sha256:" + hashlib.sha256(source.read_bytes()).hexdigest()
+
+
 def _require_auth(item: dict[str, Any]) -> None:
     missing = [key for key in AUTH_REQUIRED if not item.get(key)]
     if missing:
@@ -357,6 +422,19 @@ def _semantic_precheck(src: dict[str, Any]) -> list[str]:
                 "Register mandates non-empty options — fix the source, never synthesize "
                 "options in the compiled artifact"
             )
+        missing = [key for key in DECISION_REQUIRED if not decision.get(key)]
+        if missing:
+            raise CompileError(
+                f"decision {decision.get('id')!r} is missing required keys {missing}; "
+                "the Decision Register admits no decision without them -- fix the source"
+            )
+        admitted = blueprint_decision_statuses()
+        if decision["status"] not in admitted:
+            raise CompileError(
+                f"decision {decision['id']!r}: status {decision['status']!r} is not one of "
+                f"{sorted(admitted)}"
+            )
+        _decision_authority(decision, src)
     for task in src.get("tasks") or []:
         status = task.get("definition_status")
         if status not in TASK_STATUSES_ADMITTED:
@@ -403,7 +481,9 @@ def _admission_evidence(src: dict[str, Any]) -> list[dict[str, Any]]:
     evidence = [item for item in (src.get("evidence_requirements") or []) if isinstance(item, dict)]
     if evidence:
         return evidence
-    host = str((src.get("metadata") or {}).get("intended_host") or "UNKNOWN")
+    host = str(
+        (src.get("metadata") or {}).get("intended_host") or resolve_campaign_target_repository(src)
+    )
     return [
         {
             "id": "EVID-001",
@@ -545,6 +625,22 @@ def blueprint_task_id_pattern() -> str:
 
 def blueprint_gate_id_pattern() -> str:
     return _schema_id_pattern(GATE_ID_SCHEMA, "gates")
+
+
+DECISION_SCHEMA = BLUEPRINT_TEMPLATE / "schemas/decision-register.schema.json"
+
+
+def blueprint_decision_statuses() -> frozenset[str]:
+    """The `decisions[*].status` values the instantiated Decision Register admits."""
+    schema = json.loads(DECISION_SCHEMA.read_text(encoding="utf-8"))
+    node = schema.get("properties", {}).get("decisions", {})
+    enum = node.get("items", {}).get("properties", {}).get("status", {}).get("enum")
+    if not isinstance(enum, list) or not enum:
+        raise CompileError(
+            f"{DECISION_SCHEMA.name} declares no decisions[].status enum; the admitted "
+            "decision statuses cannot be sourced and preflight would be guessing"
+        )
+    return frozenset(str(value) for value in enum)
 
 
 def effective_authorization_ceiling(item: dict[str, Any]) -> dict[str, Any]:
@@ -947,8 +1043,51 @@ def compile_source(
     stamp: str | None = None,
     stack_proof: Path | None = None,
 ) -> dict[str, Any]:
+    """Compile `source` into `target`, which only ever holds a validated tree.
+
+    Every artifact is written into a staging directory beside `target`, the
+    placeholder scan and template validation run there, and only a tree that
+    passed is swapped into place. A compile that fails validation used to leave
+    its partial output at `target`; the campaign runner quarantined it, the CLI
+    left it for the next reader to mistake for a blueprint.
+    """
     source = source.resolve()
     target = target.resolve()
+    staging = target.with_name(f".{target.name}.compiling-{os.getpid()}")
+    if staging.exists():
+        shutil.rmtree(staging)
+    if target.is_dir():
+        # Recompiling in place keeps the files a compile does not regenerate
+        # (acceptance receipts, collected evidence); stage from a copy.
+        shutil.copytree(target, staging, symlinks=True)
+    try:
+        result = _compile_into(source, staging, stamp=stamp, stack_proof=stack_proof)
+    except BaseException:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise
+    previous = target.with_name(f".{target.name}.previous-{os.getpid()}")
+    if previous.exists():
+        shutil.rmtree(previous)
+    if target.exists():
+        target.rename(previous)
+    try:
+        staging.rename(target)
+    except BaseException:
+        if previous.exists() and not target.exists():
+            previous.rename(target)
+        raise
+    shutil.rmtree(previous, ignore_errors=True)
+    result["target"] = str(target)
+    return result
+
+
+def _compile_into(
+    source: Path,
+    target: Path,
+    *,
+    stamp: str | None,
+    stack_proof: Path | None,
+) -> dict[str, Any]:
     src = load_yaml(source)
     if not isinstance(src, dict):
         raise CompileError("campaign source must be an object")
@@ -1024,8 +1163,19 @@ def compile_source(
         },
     )
 
-    first_target = compiled_targets[0]["id"] if compiled_targets else "TARGET-001"
-    first_gate = gates[0]["id"] if gates else "GATE-001"
+    # Ids are read from the source, never minted: a fabricated GATE-001 failed
+    # late as an "unresolved reference" the operator never wrote, and a
+    # fabricated AUTH-005 shipped silently.
+    if not compiled_targets:
+        raise CompileError("campaign source declares no execution targets")
+    if not gates:
+        raise CompileError(
+            "campaign source declares no gates; every authority, workstream and cutover "
+            "step must reference a gate the source defines"
+        )
+    first_target = compiled_targets[0]["id"]
+    first_gate = gates[0]["id"]
+    first_authority = _first_authority_id(src)
     responsibilities = []
     for auth in src.get("authorities") or []:
         _require_auth(auth)
@@ -1079,12 +1229,10 @@ def compile_source(
                         for option in item.get("options") or []
                     ],
                     "selected_option": item.get("selected_option_id"),
-                    "rationale": (
-                        f"Selected {item.get('selected_option_id')} per {item.get('authority_id')}."
-                    ),
+                    "rationale": _decision_rationale(item),
                     "evidence_ids": list(item.get("required_evidence_ids") or []),
                     "blocks": list(item.get("blocking_task_ids") or []),
-                    "required_by": item.get("authority_id") or "AUTH-005",
+                    "required_by": _decision_authority(item, src),
                     "supersedes": None,
                 }
                 for item in src.get("decisions") or []
@@ -1323,7 +1471,7 @@ def compile_source(
                 {
                     "id": item["id"],
                     "entity_type": "task",
-                    "owner": (item.get("authority_basis_ids") or ["AUTH-001"])[0],
+                    "owner": _task_owner_authority(item, first_authority),
                 }
                 for item in tasks
             ],
@@ -1475,7 +1623,7 @@ def compile_source(
                 {
                     "id": f"OBS-{index:03d}",
                     "name": name,
-                    "owner": "AUTH-002",
+                    "owner": first_authority,
                     "source_target_id": first_target,
                     "collection_method": "controller_projection",
                     "expected_range": "defined",
@@ -1517,7 +1665,7 @@ def compile_source(
                 "steps": list(cut.get("rollback_rules") or ["preserve_failed_replan_evidence"]),
                 "data_reconciliation": "append_only_receipts_never_rewritten",
                 "validation": ["prior_evidence_unchanged"],
-                "owner": "AUTH-001",
+                "owner": first_authority,
             },
         },
     )
@@ -1539,7 +1687,7 @@ def compile_source(
                 {
                     "id": "SRC-001",
                     "source": repo_rel or source.name,
-                    "revision": src.get("integrity", {}).get("digest_algorithm", "sha256"),
+                    "revision": _source_revision(src, source),
                     "authority_class": "governing",
                     "evidence_id": evidence[0]["id"],
                     "claims": [

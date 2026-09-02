@@ -52,6 +52,9 @@ IMPROVE_RECORD ?= 0
 # macOS /usr/bin/make is GNU Make 3.81 — it does not export `export VAR :=`
 # into recipe shells. Recipes MUST call $(PYTHON)/$(RUFF)/$(MYPY), never PATH python3.
 PYTHON := $(CURDIR)/.venv/bin/python
+# One runtime root, two spellings: campaign targets say L9_ROOT, every other
+# subsystem says L9_RUNTIME_ROOT (environment/agents/runtime_paths.py).
+L9_ROOT ?= $(or $(L9_RUNTIME_ROOT),$(HOME)/.l9)
 RUFF := $(CURDIR)/.venv/bin/ruff
 MYPY := $(CURDIR)/.venv/bin/mypy
 export PYTHON
