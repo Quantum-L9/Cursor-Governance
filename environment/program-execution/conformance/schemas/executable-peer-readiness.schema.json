@@ -3,57 +3,98 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "title": "Executable Peer Readiness Receipt",
+  "description": "The binding-level readiness receipt integrations/bootstrap/peer_readiness.py builds and probe_executable_peers.py writes. The writer validates against this schema before it returns a receipt.",
   "type": "object",
+  "$defs": {
+    "pass_fail": {
+      "enum": ["PASS", "FAIL"]
+    },
+    "probe_status": {
+      "enum": ["PASS", "FAIL", "BLOCKED", "UNSUPPORTED", "UNKNOWN"]
+    },
+    "identifier": {
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "type": "string"
+    }
+  },
   "properties": {
     "schema": {
-      "const": "l9.executable-peer-readiness.v1"
+      "const": "l9.executable-peer-readiness.v3"
     },
     "agent_id": {
-      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
-      "type": "string"
+      "$ref": "#/$defs/identifier"
     },
     "surface": {
-      "type": "string"
+      "type": "string",
+      "minLength": 1
     },
-    "adapter_id": {
-      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
-      "type": "string"
+    "provider_ref": {
+      "$ref": "#/$defs/identifier"
     },
-    "identity": {
+    "execution_profile_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "binding": {
       "additionalProperties": false,
       "type": "object",
       "properties": {
         "status": {
-          "enum": ["PASS", "FAIL"]
+          "$ref": "#/$defs/pass_fail"
         },
-        "principal_id": {
+        "error": {
+          "type": ["string", "null"]
+        },
+        "autonomy_provider_ref": {
           "type": ["string", "null"]
         }
       },
-      "required": ["status", "principal_id"]
+      "required": ["status", "error", "autonomy_provider_ref"]
     },
     "program_execution": {
       "additionalProperties": false,
       "type": "object",
       "properties": {
         "status": {
-          "enum": ["PASS", "FAIL"]
+          "$ref": "#/$defs/pass_fail"
         },
         "contract_family": {
           "type": ["string", "null"]
         },
         "descriptor_digest": {
           "type": ["string", "null"]
+        },
+        "provider_probe": {
+          "additionalProperties": false,
+          "type": "object",
+          "properties": {
+            "status": {
+              "$ref": "#/$defs/probe_status"
+            },
+            "blocked_reason": {
+              "type": ["string", "null"]
+            },
+            "capabilities": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "receipt_digest": {
+              "type": ["string", "null"]
+            }
+          },
+          "required": ["status", "blocked_reason", "capabilities", "receipt_digest"]
         }
       },
-      "required": ["status", "contract_family", "descriptor_digest"]
+      "required": ["status", "contract_family", "descriptor_digest", "provider_probe"]
     },
     "autonomy": {
       "additionalProperties": false,
       "type": "object",
       "properties": {
         "status": {
-          "enum": ["PASS", "FAIL"]
+          "$ref": "#/$defs/pass_fail"
         },
         "provider_id": {
           "type": ["string", "null"]
@@ -80,39 +121,53 @@
       "additionalProperties": false,
       "type": "object",
       "properties": {
-        "identity_binding": {
-          "enum": ["PASS", "FAIL"]
+        "canonical_binding": {
+          "$ref": "#/$defs/pass_fail"
         },
-        "adapter_conformance": {
-          "enum": ["PASS", "FAIL"]
+        "provider_conformance": {
+          "$ref": "#/$defs/pass_fail"
         },
-        "adapter_probe": {
-          "enum": ["PASS", "FAIL"]
+        "execution_profile": {
+          "$ref": "#/$defs/pass_fail"
+        },
+        "provider_routable": {
+          "$ref": "#/$defs/pass_fail"
+        },
+        "provider_probe": {
+          "$ref": "#/$defs/probe_status"
+        },
+        "provider_probe_integrity": {
+          "$ref": "#/$defs/pass_fail"
         },
         "autonomy_provider": {
-          "enum": ["PASS", "FAIL"]
+          "$ref": "#/$defs/pass_fail"
         },
         "autonomy_conformance": {
-          "enum": ["PASS", "FAIL"]
+          "$ref": "#/$defs/pass_fail"
         },
         "execution_gateway": {
-          "enum": ["PASS", "FAIL"]
+          "$ref": "#/$defs/pass_fail"
         }
       },
       "required": [
-        "identity_binding",
-        "adapter_conformance",
-        "adapter_probe",
+        "canonical_binding",
+        "provider_conformance",
+        "execution_profile",
+        "provider_routable",
+        "provider_probe",
+        "provider_probe_integrity",
         "autonomy_provider",
         "autonomy_conformance",
         "execution_gateway"
       ]
     },
     "observed_at": {
-      "type": "string"
+      "type": "string",
+      "format": "date-time"
     },
     "expires_at": {
-      "type": "string"
+      "type": "string",
+      "format": "date-time"
     },
     "status": {
       "enum": ["READY", "BLOCKED"]
@@ -121,15 +176,17 @@
       "type": ["string", "null"]
     },
     "receipt_digest": {
-      "type": "string"
+      "type": "string",
+      "pattern": "^(sha256:)?[0-9a-f]{64}$"
     }
   },
   "required": [
     "schema",
     "agent_id",
     "surface",
-    "adapter_id",
-    "identity",
+    "provider_ref",
+    "execution_profile_ref",
+    "binding",
     "program_execution",
     "autonomy",
     "checks",

@@ -1,11 +1,22 @@
 from __future__ import annotations
 
 import json
+import sys
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from helpers import bootstrap_repo, cleanup_worktree, prepare_attempt, register_contract, run_cli
+from helpers import (
+    SCRIPTS,
+    bootstrap_repo,
+    cleanup_worktree,
+    prepare_attempt,
+    register_contract,
+    run_cli,
+)
+
+sys.path.insert(0, str(SCRIPTS))
+from pec.state import StateDB
 
 
 class CampaignStatusTest(unittest.TestCase):
@@ -86,6 +97,39 @@ class CampaignStatusTest(unittest.TestCase):
                 ],
                 "completed",
             )
+            cleanup_worktree(repo, workspace)
+
+    def test_export_handoff_keeps_runtime_active_over_live_children(self) -> None:
+        """HANDOFF_PROTOCOL: a recommendation is not terminal acceptance."""
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            _, repo, workspace = bootstrap_repo(temp, two_tasks=True)
+            register_contract(temp, workspace)
+            # TASK-001 is mid-flight (LEASED); a NOT_CONVERGED recommendation is
+            # terminal, and export-handoff used to write runtime_status=completed
+            # over it, after which every claim/start was refused.
+            run_cli("claim", "TASK-001", "--workspace", str(workspace), "--holder", "worker")
+            # A failed blocking gate is what makes the recommendation NOT_CONVERGED
+            # (terminal); a merely leased task alone is INCONCLUSIVE.
+            db = StateDB(workspace / "runtime" / "state.sqlite")
+            try:
+                db.set_gate("GATE-001", "FAIL", [], "receipt-path")
+            finally:
+                db.close()
+            receipt = run_cli(
+                "export-handoff",
+                "--workspace",
+                str(workspace),
+                "--actor",
+                "operator",
+                "--output",
+                str(temp / "handoff.json"),
+            )
+            self.assertEqual(receipt["recommended_program_verdict"], "NOT_CONVERGED")
+            self.assertIn("completion_blockers", receipt)
+            self.assertIn("TASK-001", receipt["completion_blockers"].get("tasks", []))
+            status = run_cli("status", "--workspace", str(workspace))["campaign_status"]
+            self.assertNotEqual(status.get("runtime_status"), "completed")
             cleanup_worktree(repo, workspace)
 
     def test_pec_close_refuses_live_children(self) -> None:

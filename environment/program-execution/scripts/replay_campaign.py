@@ -231,7 +231,7 @@ def materialize_task(
 def pec_status_tasks(workspace: Path) -> list[dict[str, Any]]:
     env = {**os.environ, "L9_ALLOW_PEC_DIRECT": "1"}
     completed = run_cmd(
-        ["python3", str(PEC), "status", "--workspace", str(workspace)],
+        [sys.executable, str(PEC), "status", "--workspace", str(workspace)],
         env=env,
     )
     if completed.returncode != 0:
@@ -252,7 +252,7 @@ def run_campaign_until(
 ) -> subprocess.CompletedProcess[str]:
     env = {**os.environ, "L9_CAMPAIGN_UNTIL_DEBUG": "1"}
     return run_cmd(
-        ["python3", str(RUN_CAMPAIGN), "--intent", str(intent), "--until", until],
+        [sys.executable, str(RUN_CAMPAIGN), "--intent", str(intent), "--until", until],
         cwd=isolate,
         timeout=MAKE_TIMEOUT_S,
         env=env,
