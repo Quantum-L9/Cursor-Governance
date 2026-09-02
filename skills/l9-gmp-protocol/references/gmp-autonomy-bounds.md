@@ -14,6 +14,17 @@ set `PR_BASE=origin/campaign/<id>`. Do not import or cite
   per Task. If host_bridge is missing or the lease is denied, serialize on the
   main agent. Do not ask.
 
+| Autonomy role | Task `subagent_type` | Token |
+|---|---|---|
+| recon | `l9-recon` | `L9_ADMISSION_TOKEN=…` in the prompt |
+| remediator | `l9-pr-remediation` | same |
+| executor / test | `l9-test` | same |
+| evidence_writer / documentation | `l9-documentation` | same |
+| reviewer / verifier / verifier_reviewer | `l9-verifier-reviewer` | same |
+
+YAML `cursor_subagent_type` is the built-in Cursor category, not the Task type.
+Do not launch those five roles as generic `explore` / `generalPurpose`.
+
 ## Publish
 
 `--mode start` / `--mode full` call `l4_local.py begin --contract-id gmp-<id>`

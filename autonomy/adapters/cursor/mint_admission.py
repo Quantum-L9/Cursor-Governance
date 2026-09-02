@@ -30,6 +30,7 @@ def mint_admission(
     requested_role: str | None = None,
     ttl_seconds: int | None = None,
     adapter_config: dict[str, Any] | None = None,
+    workspace: str | Path | None = None,
 ) -> dict[str, Any]:
     """Return the ``create_admission`` payload, including ``prompt_marker``."""
     runtime = AutonomyRuntime.from_repository(
@@ -53,6 +54,7 @@ def mint_admission(
         action_id=action_id,
         requested_role=requested_role,
         ttl_seconds=ttl_seconds,
+        workspace=workspace,
     )
 
 
@@ -72,6 +74,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--action-id")
     parser.add_argument("--requested-role")
     parser.add_argument("--ttl-seconds", type=int)
+    parser.add_argument(
+        "--workspace",
+        default=None,
+        help="Consumer workspace for the deployment receipt (default: --root).",
+    )
     return parser
 
 
@@ -87,6 +94,7 @@ def main(argv: list[str] | None = None) -> int:
             action_id=args.action_id,
             requested_role=args.requested_role,
             ttl_seconds=args.ttl_seconds,
+            workspace=args.workspace,
         )
     except Exception as exc:  # noqa: BLE001 — CLI fail-closed
         json.dump({"ok": False, "error": str(exc)}, sys.stdout)
