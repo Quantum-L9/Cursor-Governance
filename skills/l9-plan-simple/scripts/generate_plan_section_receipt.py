@@ -19,6 +19,7 @@ from plan_sections import (
     TEMPLATE_REL,
     execute_swap_presence,
     frontmatter_presence,
+    handoff_mode,
     json_section_presence,
     md_section_presence,
     receipt_status,
@@ -53,6 +54,7 @@ def build_receipt(
     md_sections = md_section_presence(md_text)
     frontmatter = frontmatter_presence(md_text)
     execute_swap = execute_swap_presence(md_text)
+    mode = handoff_mode(md_text)
     return {
         "schema_version": "1.0.0",
         "kind": RECEIPT_KIND,
@@ -63,6 +65,7 @@ def build_receipt(
         "plan_md_sha256": _sha256(plan_md_path),
         "section_schema_ref": PLAN_SCHEMA_REL,
         "template_ref": TEMPLATE_REL,
+        "handoff_mode": mode,
         "gar_upstream": {
             "invoked": gar_invoked,
             "skill_ref": GAR_SKILL_REF,

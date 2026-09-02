@@ -1126,7 +1126,7 @@
     },
     {
       "composition_role": "general",
-      "description": "create a machine-validated cursor .plan.md from the shared executable-plan template and execute it with the build button, then open a stacked PR. never branch off main when an open PR exists. always publish via the stacked path after build and display the PR URL. use when scope is unclear, requirements need decomposition, cursor plan mode is on, or the next step should be planned before code changes. do not use when the user asks for program-execution, make campaign, /l9-plan, or a pe campaign lock.",
+      "description": "create a machine-validated cursor .plan.md from the shared executable-plan template in one of two handoff modes. default mode cursor-build executes with the build button and then opens a stacked PR; never branch off main when an open PR exists, and display the PR URL. embedded mode is for callers that own their own execution \u2014 it stops at validated planning artifacts and grants no execution, commit, publication, campaign, or deployment authority. use when scope is unclear, requirements need decomposition, cursor plan mode is on, the next step should be planned before code changes, or a nested skill or pipeline needs planning depth without downstream authority. do not use when the user asks for program-execution, make campaign, /l9-plan, or a pe campaign lock.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-plan-simple",
@@ -1303,5 +1303,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "cbaf39b32ddae7a4b663ae852eed2d6f339bfc026a1cd9e9547ed2d35fe050b6",
-  "source_skill_corpus_sha256": "ef2e09710a503452dc4bc07709f41edcf4e7bb2899a7b2e2b23fa4edd91d35cd"
+  "source_skill_corpus_sha256": "e15bf81e13e25914d3f2a4404d8ef344f0028879b3be4f897d378e1171b65cce"
 }

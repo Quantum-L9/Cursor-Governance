@@ -14,6 +14,7 @@
     "plan_md_sha256",
     "section_schema_ref",
     "template_ref",
+    "handoff_mode",
     "gar_upstream",
     "json_sections",
     "md_sections",
@@ -98,16 +99,19 @@
         "execute_via": { "type": "boolean" }
       }
     },
+    "handoff_mode": {
+      "enum": ["cursor-build", "embedded"]
+    },
     "execute_swap": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "cursor_build_heading",
+        "handoff_heading",
         "live_pe_heading",
         "live_make_campaign"
       ],
       "properties": {
-        "cursor_build_heading": { "type": "boolean" },
+        "handoff_heading": { "type": "boolean" },
         "live_pe_heading": { "type": "boolean" },
         "live_make_campaign": { "type": "boolean" }
       }
