@@ -85,11 +85,70 @@ class InstallMountTests(unittest.TestCase):
         # The whole projected set, not a subset: .mcp.json is a render of
         # mcp.template.json and shows as untracked in every consumer that does not
         # commit it. Asserting the full list is what stops a glob being dropped.
-        for glob in (".claude/skills/", ".claude/rules/", ".claude/commands/", ".mcp.json"):
+        for glob in (".claude/skills", ".claude/rules", ".claude/commands", ".mcp.json"):
             self.assertIn(glob, body, f"{glob} must be excluded from the consumer repo")
         # Committable consumer wiring must NOT be excluded.
         for glob in (".claude/settings.json", ".claude/hooks/"):
             self.assertNotIn(glob, body, f"{glob} is consumer wiring and must stay visible")
+
+    def test_excludes_are_honoured_inside_a_linked_worktree(self) -> None:
+        """The globs must land where git READS them, not merely be written.
+
+        `git rev-parse --git-dir` in a linked worktree is .git/worktrees/<name>/,
+        but git reads $GIT_COMMON_DIR/info/exclude — so writing to the former is a
+        silent no-op. Rules 49/96 give every mutating agent its own worktree, so
+        that is the normal case, not the exotic one. The primary-clone test above
+        cannot catch this: there the two directories are the same path.
+
+        Asserts through `git check-ignore` rather than a file location, so the
+        contract is the outcome and a future relocation stays free.
+        """
+        subprocess.run(
+            ["git", "-C", str(self.workspace), "commit", "-q", "--allow-empty", "-m", "base"],
+            check=True,
+            env={
+                **os.environ,
+                "GIT_AUTHOR_NAME": "t",
+                "GIT_AUTHOR_EMAIL": "t@t",
+                "GIT_COMMITTER_NAME": "t",
+                "GIT_COMMITTER_EMAIL": "t@t",
+            },
+        )
+        linked = self.root / "linked"
+        subprocess.run(
+            ["git", "-C", str(self.workspace), "worktree", "add", "-q", "-b", "wt", str(linked)],
+            check=True,
+        )
+        self.assertNotEqual(
+            subprocess.run(
+                ["git", "-C", str(linked), "rev-parse", "--git-dir"], capture_output=True, text=True
+            ).stdout.strip(),
+            subprocess.run(
+                ["git", "-C", str(linked), "rev-parse", "--git-common-dir"],
+                capture_output=True,
+                text=True,
+            ).stdout.strip(),
+            "fixture is not a linked worktree — the two dirs must differ",
+        )
+
+        result = self._run(workspace=linked)
+        self.assertIn(result.returncode, (0, 1), result.stderr[-2000:])
+
+        # Probe each path itself, never a child: the installer mounts
+        # .claude/rules and .claude/skills as SYMLINKS into governance, and
+        # check-ignore refuses a pathspec "beyond a symbolic link".
+        for glob in (".claude/skills", ".claude/rules", ".claude/commands", ".mcp.json"):
+            self.assertEqual(
+                0,
+                subprocess.run(["git", "-C", str(linked), "check-ignore", glob]).returncode,
+                f"{glob} written but not honoured by git inside a linked worktree",
+            )
+        for glob in (".claude/settings.json", ".claude/hooks"):
+            self.assertNotEqual(
+                0,
+                subprocess.run(["git", "-C", str(linked), "check-ignore", glob]).returncode,
+                f"{glob} is consumer wiring and must stay visible",
+            )
 
     def test_install_is_idempotent(self) -> None:
         self._run()

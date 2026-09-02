@@ -495,11 +495,19 @@ fi
 # governs untracked paths, so a tracked .mcp.json keeps showing its real diff.
 # That is what makes one list correct for both cases.
 if [ "$CHECK" != "1" ] && git -C "$WORKSPACE" rev-parse --git-dir >/dev/null 2>&1; then
-  exclude_file="$(git -C "$WORKSPACE" rev-parse --git-dir)/info/exclude"
+  # --git-common-dir, not --git-dir: in a LINKED WORKTREE the latter is
+  # .git/worktrees/<name>/, but git reads $GIT_COMMON_DIR/info/exclude, so
+  # writing there is a silent no-op. Identical in a primary clone. Rules
+  # 49/96 give every mutating agent its own worktree, so that is the norm.
+  exclude_file="$(git -C "$WORKSPACE" rev-parse --git-common-dir)/info/exclude"
   case "$exclude_file" in /*) : ;; *) exclude_file="$WORKSPACE/$exclude_file" ;; esac
   mkdir -p "$(dirname "$exclude_file")"
   touch "$exclude_file"
-  for glob in ".claude/skills/" ".claude/rules/" ".claude/commands/" ".mcp.json"; do
+  # No trailing slash: a "dir/" pattern matches DIRECTORIES ONLY, and these
+  # mirrors are mounted as symlinks into governance (.claude/rules is one),
+  # which git does not treat as a directory — so the slashed form silently
+  # never matched. Slashless matches the mirror however it is mounted.
+  for glob in ".claude/skills" ".claude/rules" ".claude/commands" ".mcp.json"; do
     grep -qxF "$glob" "$exclude_file" 2>/dev/null || printf '%s\n' "$glob" >> "$exclude_file"
   done
   say "excluded generated .claude mirrors + .mcp.json (local, uncommitted)"
