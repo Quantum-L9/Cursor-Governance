@@ -3,10 +3,10 @@ l9_schema: 1
 parent: l9-plan-simple
 layer: reference
 role: plan_workflow
-tags: [plan, todo, validation, projection, cursor-build, embedded, handoff]
+tags: [plan, todo, validation, projection, cursor-build, embedded, handoff, gar, section-receipt]
 owner: igor_beylin
 status: active
-version: 1.2.0
+version: 1.3.0
 updated: 2026-09-02
 /L9_META -->
 
@@ -38,8 +38,13 @@ Mode selection is explicit and machine-observable (`--execute-via`, then `execut
 
 `PLAN_DOCUMENT` stays execution-neutral. The mode lives on the projection axis; do not encode it as a schema field, and do not fork the schema per mode.
 
+## Architect upstream (required, both modes)
+
+Read `skills/l9-global-architect/SKILL.md` and run the GAR bootloader **before** emit. Do not skip to PLAN_DOCUMENT. Standalone `/l9-global-architect` remains explicit-only; this step is the plan-simple supporting invoke. Embedded mode does not waive it — embedded narrows the *handoff*, never the planning depth.
+
 ## Shared steps (identical in both modes)
 
+0. **Architect** — run `l9-global-architect` to settle architecture (or record that it is already settled).
 1. **Doctrine and depth** — planning doctrine + `route_plan.py` classification (escalate-only).
 2. **Pre-validation** — bind the current workspace (branch, dirty, HEAD if useful). For code in scope on governed workspaces name `.pre-commit-config.yaml` as the hook catalog. Do **not** write `Lock: origin/main = <sha>`. Do **not** require a clean tip worktree. Do **not** stop-and-replan as a Program Lock.
 3. **Gather** — objective, scope in/out, falsifiable success. Ambiguity → STOP and ask.
@@ -65,6 +70,16 @@ python3 skills/l9-plan/scripts/render_plan_pe_autonomy.py <plan.json> --execute-
 Or hand-copy the first-class SSOT and apply the mode's execute swap below. Do **not** call `render_plan_pe_autonomy.py` without `--execute-via` for a simple plan (the default injects PE).
 
 Frontmatter in both modes: Cursor `name`, `overview`, `todos`, `isProject`, plus `kind: simple` and the selected `execute_via`. Convergence `execute_via` matches.
+
+10. **Section receipt** — generate then validate, in both modes. The receipt stamps `handoff_mode`, so it is judged against that mode's headings: **Execute via Cursor Build** for `cursor-build`, **Handoff to Caller** for `embedded`. Schema owner stays `../l9-plan/schemas/plan-document.schema.json`; the receipt shape is `../schemas/plan-section-receipt.schema.json`.
+
+```bash
+# from the repository root
+python3 skills/l9-plan-simple/scripts/generate_plan_section_receipt.py \
+  --plan-json <plan.json> --plan-md <plan.md> --out <plan>.section-receipt.json \
+  --gar-invoked
+python3 skills/l9-plan-simple/scripts/validate_plan_section_receipt.py <plan>.section-receipt.json
+```
 
 ## Branch — `cursor-build` (unchanged)
 

@@ -3,10 +3,10 @@ l9_schema: 1
 parent: l9-plan-simple
 layer: reference
 role: validation_checklist
-tags: [plan, validation, cursor-build, embedded]
+tags: [plan, validation, cursor-build, embedded, gar, section-receipt]
 owner: igor_beylin
 status: active
-version: 1.2.0
+version: 1.3.0
 updated: 2026-09-02
 /L9_META -->
 
@@ -19,11 +19,17 @@ updated: 2026-09-02
 - [ ] No forked copy of `canonical.template.executable_plan.v1.plan.md`
 - [ ] Reuses `l9-plan` schema + `validate_plan_document.py` (not copied)
 - [ ] One renderer for every mode — no per-mode copy of `render_plan_pe_autonomy.py`
+- [ ] Compact workflow loads `l9-global-architect` before emit, in both modes
+- [ ] `scripts/generate_plan_section_receipt.py` and `scripts/validate_plan_section_receipt.py` present
+- [ ] Section receipt is `handoff_mode`-aware (one receipt shape, both modes)
 
 ## Delivered plan — both modes
 
 - [ ] PLAN_DOCUMENT emitted
 - [ ] `python3 ../l9-plan/scripts/validate_plan_document.py <plan.json>` PASS
+- [ ] `l9-global-architect` ran upstream (receipt `gar_upstream.invoked: true`)
+- [ ] `python3 skills/l9-plan-simple/scripts/validate_plan_section_receipt.py <plan>.section-receipt.json` PASS
+- [ ] Receipt `handoff_mode` matches the frontmatter `execute_via`
 - [ ] Handoff mode was selected explicitly, not inferred from missing capabilities
 - [ ] `.plan.md` projected with the mode's `--execute-via` (or hand-filled with that mode's execute swap)
 - [ ] Frontmatter has `kind: simple` and the selected `execute_via`

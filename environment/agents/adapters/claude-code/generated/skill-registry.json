@@ -966,7 +966,7 @@
       "invocation": "explicit_only",
       "name": "l9-global-architect",
       "path": "skills/l9-global-architect",
-      "reason": "experimental GAR runtime bootloader whose broad architect-engineer description would hijack ordinary routing if auto-invoked; load only when the user explicitly invokes the global architect runtime or iterates on the pack; disable-model-invocation",
+      "reason": "experimental GAR runtime bootloader whose broad architect-engineer description would hijack ordinary routing if auto-invoked; load when the user explicitly invokes the global architect runtime, iterates on the pack, or when l9-plan-simple loads it as the required upstream planner; disable-model-invocation",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1302,6 +1302,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "daa54da4cb8e7a1b3a43bfde11c3906db992fe88eabb73a6c73ec2f29bcf42b9",
-  "source_skill_corpus_sha256": "c4edd0bea5304340c5963fb7d35a4d177670bcfd30e750c671b1b468f263c6cb"
+  "source_manifest_sha256": "cbaf39b32ddae7a4b663ae852eed2d6f339bfc026a1cd9e9547ed2d35fe050b6",
+  "source_skill_corpus_sha256": "e15bf81e13e25914d3f2a4404d8ef344f0028879b3be4f897d378e1171b65cce"
 }

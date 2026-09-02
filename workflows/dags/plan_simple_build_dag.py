@@ -38,13 +38,14 @@ PLAN_SIMPLE_BUILD_NODES = [
         id="plan_simple",
         name="Plan via l9-plan-simple",
         node_type=NodeType.ANALYZE,
-        description="Produce PLAN_DOCUMENT JSON and a kind:simple .plan.md",
+        description="GAR upstream, then PLAN_DOCUMENT JSON and a kind:simple .plan.md",
         action="skills/l9-plan-simple/SKILL.md",
         outputs=["plan_json", "plan_md"],
         metadata={
             "ir_kind": "bounded_llm",
             "domain_owner": "l9-plan-simple",
             "also_read": [
+                "skills/l9-global-architect/SKILL.md",
                 "skills/l9-plan-simple/references/plan-workflow-simple.md",
                 "skills/l9-plan/scripts/validate_plan_document.py",
                 "skills/l9-plan/scripts/render_plan_pe_autonomy.py",
@@ -62,14 +63,33 @@ PLAN_SIMPLE_BUILD_NODES = [
         metadata={"ir_kind": "deterministic", "domain_owner": "l9-plan"},
     ),
     SessionNode(
+        id="generate_section_receipt",
+        name="Generate section receipt",
+        node_type=NodeType.TRANSFORM,
+        description="Record JSON + markdown section presence against the plan schema",
+        action="skills/l9-plan-simple/scripts/generate_plan_section_receipt.py",
+        outputs=["section_receipt"],
+        metadata={"ir_kind": "deterministic", "domain_owner": "l9-plan-simple"},
+    ),
+    SessionNode(
+        id="validate_section_receipt",
+        name="Validate section receipt",
+        node_type=NodeType.VALIDATE,
+        description="Fail-closed: every required schema key and template heading present",
+        action="skills/l9-plan-simple/scripts/validate_plan_section_receipt.py",
+        validation="section receipt validator exits 0",
+        outputs=["section_receipt_valid"],
+        metadata={"ir_kind": "deterministic", "domain_owner": "l9-plan-simple"},
+    ),
+    SessionNode(
         id="gate_plan",
         name="Plan ready?",
         node_type=NodeType.GATE,
-        description="PASS only when JSON validates and the .plan.md is kind:simple",
-        action="skills/l9-plan/scripts/validate_plan_document.py",
+        description="PASS only when JSON, kind:simple, and section receipt all PASS",
+        action="skills/l9-plan-simple/scripts/validate_plan_section_receipt.py",
         gate_type=GateType.CONDITIONAL,
-        validation="state.get('plan_valid') is True",
-        metadata={"ir_kind": "deterministic", "domain_owner": "l9-plan"},
+        validation="state.get('plan_valid') is True and state.get('section_receipt_valid') is True",
+        metadata={"ir_kind": "deterministic", "domain_owner": "l9-plan-simple"},
     ),
     SessionNode(
         id="improve",
@@ -91,6 +111,25 @@ PLAN_SIMPLE_BUILD_NODES = [
             "ir_kind": "bounded_llm",
             "domain_owner": "kernels/Validate & Repair.md",
         },
+    ),
+    SessionNode(
+        id="regenerate_section_receipt",
+        name="Regenerate section receipt",
+        node_type=NodeType.TRANSFORM,
+        description="Re-record JSON + markdown sections after Improve and V&R",
+        action="skills/l9-plan-simple/scripts/generate_plan_section_receipt.py",
+        outputs=["section_receipt"],
+        metadata={"ir_kind": "deterministic", "domain_owner": "l9-plan-simple"},
+    ),
+    SessionNode(
+        id="revalidate_section_receipt",
+        name="Revalidate section receipt",
+        node_type=NodeType.VALIDATE,
+        description="Fail-closed: kernels must not drop a required section",
+        action="skills/l9-plan-simple/scripts/validate_plan_section_receipt.py",
+        validation="post-kernel section receipt validator exits 0",
+        outputs=["section_receipt_valid"],
+        metadata={"ir_kind": "deterministic", "domain_owner": "l9-plan-simple"},
     ),
     SessionNode(
         id="kernel_receipt",
@@ -200,7 +239,9 @@ PLAN_SIMPLE_BUILD_NODES = [
 PLAN_SIMPLE_BUILD_EDGES = [
     SessionEdge(from_node="start", to_node="plan_simple"),
     SessionEdge(from_node="plan_simple", to_node="validate_plan"),
-    SessionEdge(from_node="validate_plan", to_node="gate_plan"),
+    SessionEdge(from_node="validate_plan", to_node="generate_section_receipt"),
+    SessionEdge(from_node="generate_section_receipt", to_node="validate_section_receipt"),
+    SessionEdge(from_node="validate_section_receipt", to_node="gate_plan"),
     SessionEdge(
         from_node="gate_plan",
         to_node="improve",
@@ -220,7 +261,9 @@ PLAN_SIMPLE_BUILD_EDGES = [
         label="Cannot plan",
     ),
     SessionEdge(from_node="improve", to_node="validate_repair"),
-    SessionEdge(from_node="validate_repair", to_node="kernel_receipt"),
+    SessionEdge(from_node="validate_repair", to_node="regenerate_section_receipt"),
+    SessionEdge(from_node="regenerate_section_receipt", to_node="revalidate_section_receipt"),
+    SessionEdge(from_node="revalidate_section_receipt", to_node="kernel_receipt"),
     SessionEdge(from_node="kernel_receipt", to_node="gate_kernel"),
     SessionEdge(
         from_node="gate_kernel",
@@ -266,7 +309,7 @@ PLAN_SIMPLE_BUILD_EDGES = [
 PLAN_SIMPLE_BUILD_DAG = SessionDAG(
     id="plan-simple-build-v1",
     name="Plan-Simple Build/GMP Workflow",
-    version="1.0.0",
+    version="1.2.0",
     description=(
         "Compose /l9-plan-simple, kernels/Improve.md, then kernels/Validate & "
         "Repair.md, and execute the hardened plan via Cursor Build under /gmp. "
