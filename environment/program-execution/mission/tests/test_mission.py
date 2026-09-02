@@ -30,8 +30,10 @@ import yaml
 from jsonschema import Draft202012Validator
 
 MISSION_ROOT = Path(__file__).resolve().parents[1]
+# APPEND, never insert(0): a module file outranks a namespace directory
+# regardless of order (see compiler.mission_admission).
 if str(MISSION_ROOT) not in sys.path:
-    sys.path.insert(0, str(MISSION_ROOT))
+    sys.path.append(str(MISSION_ROOT))
 CORE_SCHEMAS = MISSION_ROOT.parent / "core" / "shared" / "schemas"
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 

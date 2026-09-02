@@ -56,6 +56,15 @@ RECEIPT_SCHEMA_PATH = (
 )
 
 
+def _restore_unaccepted(
+    program_path: Path, original_program: bytes, receipt_path: Path, root: Path
+) -> None:
+    """Undo a partial acceptance so the next attempt starts from a clean tree."""
+    program_path.write_bytes(original_program)
+    receipt_path.unlink(missing_ok=True)
+    write_manifest(root, "accept_blueprint")
+
+
 def _utc_now() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat()
 
@@ -90,15 +99,15 @@ def accept_blueprint(blueprint: Path, *, actor: str, evidence_ids: list[str]) ->
     if status == "accepted":
         raise RuntimeError(f"Blueprint already accepted: {root}")
 
-    program["program"]["definition_status"] = "accepted"
-    dump_yaml(program_path, program)
-
+    # Every check that needs no write runs BEFORE PROGRAM.yaml changes. A
+    # status flipped ahead of a failed check left the tree "already accepted"
+    # with a stale manifest, and every retry refused.
     placeholders = scan_placeholders(root)
     if placeholders:
         raise RuntimeError(
-            "unresolved placeholders in accepted Blueprint: " + "; ".join(placeholders[:5])
+            "unresolved placeholders in Blueprint; refuse acceptance: "
+            + "; ".join(placeholders[:5])
         )
-
     receipt = {
         "schema": "program-execution-blueprint.acceptance-receipt.v1",
         "schema_version": "1.0.0",
@@ -108,14 +117,23 @@ def accept_blueprint(blueprint: Path, *, actor: str, evidence_ids: list[str]) ->
         "evidence_ids": sorted(set(evidence_ids)),
     }
     _validate_receipt(receipt)
-    dump_yaml(root / "ACCEPTANCE_RECEIPT.yaml", receipt)
 
-    write_manifest(root, "accept_blueprint")
-
-    errors = validate_blueprint(root, "instantiated")
+    original_program = program_path.read_bytes()
+    receipt_path = root / "ACCEPTANCE_RECEIPT.yaml"
+    program["program"]["definition_status"] = "accepted"
+    dump_yaml(program_path, program)
+    try:
+        dump_yaml(receipt_path, receipt)
+        write_manifest(root, "accept_blueprint")
+        errors = validate_blueprint(root, "instantiated")
+    except BaseException:
+        _restore_unaccepted(program_path, original_program, receipt_path, root)
+        raise
     if errors:
+        _restore_unaccepted(program_path, original_program, receipt_path, root)
         raise RuntimeError(
-            "accepted Blueprint failed instantiated validation: " + "; ".join(errors[:5])
+            "Blueprint failed instantiated validation; acceptance not recorded: "
+            + "; ".join(errors[:5])
         )
     return {
         "status": "ACCEPTED",
