@@ -35,9 +35,18 @@ def load_package(directory: str | Path, name: str) -> ModuleType:
     directory returns the bound package instead of re-executing it, so every
     caller shares one instance and module-level state stays coherent. A name
     already bound to a DIFFERENT directory is an error, never a silent
-    overwrite of somebody else's package.
+    overwrite of somebody else's package. A symlinked package directory or
+    `__init__.py` is refused, the same control `load_module` applies to a
+    single source.
     """
-    directory = Path(directory).expanduser().resolve()
+    directory = Path(directory).expanduser()
+    # A symlinked package directory or `__init__.py` would execute code from
+    # outside the subsystem under a name the subsystem vouches for. Checked
+    # BEFORE resolve(), because resolve() follows the link and erases the
+    # evidence.
+    if directory.is_symlink() or (directory / "__init__.py").is_symlink():
+        raise ImportError(f"refusing symlinked package source: {directory}")
+    directory = directory.resolve()
     existing = sys.modules.get(name)
     if existing is not None:
         bound = [Path(entry).resolve() for entry in getattr(existing, "__path__", [])]

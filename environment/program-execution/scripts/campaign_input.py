@@ -325,8 +325,11 @@ def _preflight_program_intent(classification: Classification) -> list[str]:
             fix="Supply a YAML/JSON object with schema and objective.",
         )
     pe_root = Path(__file__).resolve().parents[1]
+    # APPEND, never insert(0): `scripts` is a top-level name Program Execution
+    # SHARES with the repository root, so a prepend hands PE's `scripts/` that
+    # name process-wide. See peer_execution.imports.pe_script.
     if str(pe_root) not in sys.path:
-        sys.path.insert(0, str(pe_root))
+        sys.path.append(str(pe_root))
     from compiler.intent import parse_intent
 
     try:

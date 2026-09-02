@@ -21,9 +21,11 @@ from __future__ import annotations
 import ast
 import subprocess
 import sys
+import tempfile
 import textwrap
 import unittest
 from pathlib import Path
+from types import ModuleType
 
 PE_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = PE_ROOT.parents[1]
@@ -40,6 +42,7 @@ if str(PE_ROOT) not in sys.path:
 from peer_execution.imports import (  # noqa: E402
     PE_SCRIPTS_PACKAGE,
     bind_pe_scripts,
+    load_package,
     pe_script,
 )
 
@@ -139,6 +142,90 @@ class BinderIdentityTests(unittest.TestCase):
 
     def test_pe_scripts_name_is_not_the_colliding_name(self) -> None:
         self.assertNotEqual(PE_SCRIPTS_PACKAGE, "scripts")
+
+
+class LoadPackageTests(unittest.TestCase):
+    """The generic primitive, including the paths only failure reaches.
+
+    `load_package` became public API when the PE accessor was split off it, so
+    its refusals are contract, not incidental behaviour.
+    """
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self._tmp.name)
+        self.addCleanup(self._tmp.cleanup)
+
+    def _package(self, name: str, body: str = "VALUE = 1\n") -> Path:
+        directory = self.root / name
+        directory.mkdir()
+        (directory / "__init__.py").write_text(body, encoding="utf-8")
+        return directory
+
+    def _bind(self, directory: Path, name: str) -> ModuleType:
+        module = load_package(directory, name)
+        self.addCleanup(sys.modules.pop, name, None)
+        return module
+
+    def test_binds_the_directory_it_was_given(self) -> None:
+        directory = self._package("alpha")
+        module = self._bind(directory, "l9_test_alpha")
+        self.assertEqual(module.VALUE, 1)
+        self.assertEqual([Path(p) for p in module.__path__], [directory])
+
+    def test_rebinding_the_same_directory_returns_one_instance(self) -> None:
+        directory = self._package("beta")
+        first = self._bind(directory, "l9_test_beta")
+        first.MARKER = object()  # module-level state must survive
+        second = load_package(directory, "l9_test_beta")
+        self.assertIs(first, second)
+        self.assertIs(second.MARKER, first.MARKER)
+
+    def test_refuses_to_steal_a_name_bound_elsewhere(self) -> None:
+        self._bind(self._package("gamma"), "l9_test_clash")
+        other = self._package("delta")
+        with self.assertRaises(ImportError) as ctx:
+            load_package(other, "l9_test_clash")
+        self.assertIn("already bound", str(ctx.exception))
+        # The incumbent binding must survive the refusal untouched.
+        self.assertEqual(
+            [Path(p) for p in sys.modules["l9_test_clash"].__path__],
+            [self.root / "gamma"],
+        )
+
+    def test_refuses_a_directory_that_is_not_a_package(self) -> None:
+        bare = self.root / "not_a_package"
+        bare.mkdir()
+        with self.assertRaises(ImportError) as ctx:
+            load_package(bare, "l9_test_bare")
+        self.assertIn("not a package", str(ctx.exception))
+        self.assertNotIn("l9_test_bare", sys.modules)
+
+    def test_refuses_a_symlinked_package_directory(self) -> None:
+        """The control `load_module` applies to a file, applied to a package."""
+        real = self._package("real_pkg")
+        link = self.root / "linked_pkg"
+        link.symlink_to(real, target_is_directory=True)
+        with self.assertRaises(ImportError) as ctx:
+            load_package(link, "l9_test_symlink_dir")
+        self.assertIn("refusing symlinked package source", str(ctx.exception))
+        self.assertNotIn("l9_test_symlink_dir", sys.modules)
+
+    def test_refuses_a_symlinked_package_init(self) -> None:
+        real = self._package("init_donor")
+        directory = self.root / "linked_init"
+        directory.mkdir()
+        (directory / "__init__.py").symlink_to(real / "__init__.py")
+        with self.assertRaises(ImportError) as ctx:
+            load_package(directory, "l9_test_symlink_init")
+        self.assertIn("refusing symlinked package source", str(ctx.exception))
+        self.assertNotIn("l9_test_symlink_init", sys.modules)
+
+    def test_a_failing_package_body_leaves_no_half_bound_module(self) -> None:
+        directory = self._package("explodes", body="raise RuntimeError('boom')\n")
+        with self.assertRaises(RuntimeError):
+            load_package(directory, "l9_test_explodes")
+        self.assertNotIn("l9_test_explodes", sys.modules)
 
 
 class ForeignBindingTests(unittest.TestCase):
@@ -313,8 +400,12 @@ class SysPathHygieneTests(unittest.TestCase):
         self.assertEqual(offenders, [], f"sys.path.insert(0, PE_ROOT): {offenders}")
 
 
-#: Names conventionally bound to a subsystem root in this tree.
-_ROOT_NAMES = frozenset({"PE_ROOT", "_PE_ROOT", "ROOT", "_ROOT", "SUBSYSTEM_ROOT"})
+#: Names conventionally bound to a subsystem root in this tree. Matched
+#: case-INSENSITIVELY: the first cut of this guard missed two live
+#: `sys.path.insert(0, str(root))` calls in tests/test_probe_command.py purely
+#: because the local was lowercase, which is no difference at all to the import
+#: system.
+_ROOT_NAMES = frozenset({"pe_root", "_pe_root", "root", "_root", "subsystem_root"})
 
 
 def _is_subsystem_root(node: ast.AST | None) -> bool:
@@ -331,7 +422,7 @@ def _is_subsystem_root(node: ast.AST | None) -> bool:
         if node.func.id != "str" or not node.args:
             return False
         node = node.args[0]
-    return isinstance(node, ast.Name) and node.id in _ROOT_NAMES
+    return isinstance(node, ast.Name) and node.id.lower() in _ROOT_NAMES
 
 
 if __name__ == "__main__":

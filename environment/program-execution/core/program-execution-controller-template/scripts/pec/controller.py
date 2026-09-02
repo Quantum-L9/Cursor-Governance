@@ -2339,7 +2339,11 @@ def _peer_parity_section(repository_root: Path, workspace: Path) -> dict[str, An
     pe_root = Path(repository_root).resolve() / "environment/program-execution"
     if not pe_root.is_dir():
         raise ControllerError(f"program-execution seam not found under repository root: {pe_root}")
-    sys.path.insert(0, str(pe_root))
+    # APPEND, never insert(0): `scripts` is a top-level name Program Execution
+    # SHARES with the repository root, so a prepend hands PE's `scripts/` that
+    # name process-wide. See peer_execution.imports.pe_script.
+    if str(pe_root) not in sys.path:
+        sys.path.append(str(pe_root))
     from peer_execution.golden_vectors import run_parity_gate
 
     report = run_parity_gate(repository_root, workspace)

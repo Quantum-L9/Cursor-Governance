@@ -68,8 +68,6 @@ class ProbeCommandTests(unittest.TestCase):
             self.assertNotIn("PASS", [binding["status"] for binding in cursor["bindings"]])
 
     def test_binding_outcome_keeps_honest_blocked_and_fails_structural(self) -> None:
-        root = Path(__file__).resolve().parents[1]
-        sys.path.insert(0, str(root))
         _binding_outcome = pe_script("probe_executable_peers")._binding_outcome
 
         self.assertEqual(_binding_outcome({"status": "READY"}), "READY")
@@ -107,7 +105,6 @@ class ProbeCommandTests(unittest.TestCase):
 
     def test_executable_peer_probe_fails_closed_without_bindings(self) -> None:
         root = Path(__file__).resolve().parents[1]
-        sys.path.insert(0, str(root))
         probe = pe_script("probe_executable_peers").probe
 
         with tempfile.TemporaryDirectory() as temporary:
