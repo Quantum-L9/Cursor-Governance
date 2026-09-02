@@ -1927,7 +1927,7 @@
     },
     {
       "path": "registry/EXECUTION_ROUTING_POLICY.yaml",
-      "sha256": "dd75195c3d5be7ae75e610b0f17446ff965d08c62c738a83dc3596f4fc22abb2"
+      "sha256": "c46cff157b97f6c609c58a0cb9d11903d06ca8c311c56a0b96c86182b2e2d01d"
     },
     {
       "path": "scripts/__init__.py",
@@ -1963,7 +1963,7 @@
     },
     {
       "path": "scripts/collect_evidence.py",
-      "sha256": "cd1718ffee25428708567208d126df752c309239956af20e057b46ce59706c0f"
+      "sha256": "82bb9848f1410c826113386b770d3a01439d16e3aeeffedef7952f78bb38a0a9"
     },
     {
       "path": "scripts/compile_architecture_intent.py",
@@ -2031,7 +2031,7 @@
     },
     {
       "path": "scripts/router.py",
-      "sha256": "bf054ce66dc79c0145f86c1f16490108d229cb8afae5921726b1149286fffbf4"
+      "sha256": "a40204ef20e965575b916f8e534ad2ac4cee020ac0cee5572fdb3f78310d2750"
     },
     {
       "path": "scripts/run_campaign.py",
@@ -2064,6 +2064,10 @@
     {
       "path": "scripts/tests/test_campaign_tunnel_airtight.py",
       "sha256": "fe8ec03594daa5219d0c062eed022a7b087c5a8adac90d02593e8192ceb62c0c"
+    },
+    {
+      "path": "scripts/tests/test_collect_evidence_memory_lookup.py",
+      "sha256": "040eb1a3035464781de64338dd3bff7c485c22b63b69ade96249f51d6cc824b2"
     },
     {
       "path": "scripts/tests/test_compile_architecture_intent.py",
