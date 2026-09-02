@@ -6,6 +6,7 @@ import io
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from contextlib import redirect_stderr
 from pathlib import Path
 

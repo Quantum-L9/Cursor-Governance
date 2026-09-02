@@ -6,6 +6,7 @@ import json
 import os
 import sys
 import unittest
+import unittest.mock
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
