@@ -6,6 +6,7 @@ from typing import Any
 
 import yaml
 from adapters.common.errors import AdapterFailure, CanonicalErrorCode
+from peer_execution.models import CapabilityReceipt
 
 KIND_BY_ACTION_CLASS = {
     "repository_implementation": "worker_host",
@@ -34,6 +35,7 @@ def _adapter_rejection_reasons(
     requested_actions: set[str],
     target_kind: str,
     capability_receipts: Mapping[str, Mapping[str, Any]] | None,
+    program_lock_digest: str | None = None,
 ) -> list[str]:
     reasons: list[str] = []
     if entry.get("status") in {"dormant", "non_routable"}:
@@ -50,9 +52,32 @@ def _adapter_rejection_reasons(
         reasons.append("target_kind_mismatch")
     if entry.get("status") == "conditional":
         receipt = (capability_receipts or {}).get(str(entry.get("adapter_id")))
-        if not receipt or receipt.get("status") != "PASS":
-            reasons.append("fresh_capability_receipt_required")
+        reasons.extend(_capability_receipt_rejections(receipt, program_lock_digest))
     return reasons
+
+
+def _capability_receipt_rejections(
+    receipt: Mapping[str, Any] | None, program_lock_digest: str | None
+) -> list[str]:
+    """Why a stored capability receipt does not make a conditional adapter routable.
+
+    "Fresh" is judged, not assumed: the receipt must verify its own digest,
+    carry PASS, be inside its TTL, and be bound to the Program Lock the
+    contract names. A `status: PASS` file alone proved nothing.
+    """
+    if not receipt or receipt.get("status") != "PASS":
+        return ["fresh_capability_receipt_required"]
+    try:
+        parsed = CapabilityReceipt.from_dict(dict(receipt))
+    except (KeyError, TypeError, ValueError):
+        return ["capability_receipt_malformed"]
+    if not parsed.is_valid():
+        return ["capability_receipt_digest_mismatch"]
+    if not parsed.is_fresh():
+        return ["capability_receipt_expired"]
+    if program_lock_digest and parsed.program_lock_digest != program_lock_digest:
+        return ["capability_receipt_program_lock_mismatch"]
+    return []
 
 
 def route_contract(
@@ -74,6 +99,9 @@ def route_contract(
         )
     requested_actions = {str(item) for item in contract.get("requested_actions") or []}
     target_kind = str(contract.get("target_kind") or "")
+    program_lock_digest = (
+        str(contract.get("program_lock_digest") or contract.get("program_digest") or "") or None
+    )
     preferences = policy.get("preference", {}).get(action_class) or []
     entries = {str(item["adapter_id"]): dict(item) for item in registry.get("adapters") or []}
     reasons: dict[str, list[str]] = {}
@@ -88,6 +116,7 @@ def route_contract(
             requested_actions=requested_actions,
             target_kind=target_kind,
             capability_receipts=capability_receipts,
+            program_lock_digest=program_lock_digest,
         )
         if not adapter_reasons:
             return {

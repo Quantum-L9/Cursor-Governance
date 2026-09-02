@@ -210,11 +210,20 @@ class ProviderInvocation:
     state: Mapping[str, Any] = field(default_factory=dict)
     evidence: tuple[dict[str, Any], ...] = ()
     result: CanonicalProviderResult | None = None
+    #: The adapter's own failure code (EXECUTION_ERROR_MAPPING.yaml key). Only
+    #: a FAIL or BLOCKED invocation carries one.
+    adapter_error_code: str | None = None
 
     def __post_init__(self) -> None:
         _require_non_empty("provider invocation status", self.status)
         if self.status not in _PROVIDER_INVOCATION_STATUSES:
             raise ValueError(f"unsupported provider invocation status: {self.status}")
+        if self.adapter_error_code is not None:
+            _require_non_empty("provider invocation adapter_error_code", self.adapter_error_code)
+            if self.status not in {"FAIL", "BLOCKED"}:
+                raise ValueError(
+                    f"{self.status} provider invocation must not carry an adapter_error_code"
+                )
         _require_mapping("provider invocation state", self.state)
         _dict_tuple("provider invocation evidence", self.evidence)
         if self.result is not None and not isinstance(self.result, CanonicalProviderResult):

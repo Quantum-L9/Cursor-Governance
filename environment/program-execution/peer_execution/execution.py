@@ -10,7 +10,7 @@ from typing import Any
 
 import structlog
 
-from .base import BaseExecutionAdapter
+from .base import BaseExecutionAdapter, record_error_codes
 from .context import write_context_manifest
 from .contracts import ContractBinding, validate_contract
 from .core_receipts import attempt_receipt, verification_receipt
@@ -67,6 +67,13 @@ def _string_list(payload: Mapping[str, Any], key: str, *, required: bool) -> lis
     return output
 
 
+_WORKTREE_OBSERVATION_TIMEOUT_SECONDS = 60
+
+
+class WorktreeObservationError(RuntimeError):
+    """The worktree could not be observed; absence of evidence is not evidence."""
+
+
 def _observe_worktree_changes(contract: Mapping[str, Any]) -> list[str]:
     worktree = contract.get("worktree")
     if not isinstance(worktree, str) or not worktree.strip():
@@ -74,14 +81,20 @@ def _observe_worktree_changes(contract: Mapping[str, Any]) -> list[str]:
     root = Path(worktree).expanduser()
     if not root.is_dir():
         return []
-    completed = subprocess.run(
-        ["git", "-C", str(root), "status", "--porcelain=v1", "-z", "--untracked-files=all"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(root), "status", "--porcelain=v1", "-z", "--untracked-files=all"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=_WORKTREE_OBSERVATION_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise WorktreeObservationError(f"git status failed in {root}: {exc}") from exc
     if completed.returncode != 0:
-        return []
+        raise WorktreeObservationError(
+            f"git status exited {completed.returncode} in {root}: {completed.stderr.strip()[:200]}"
+        )
     # NUL-delimited, parsed exactly as pec/controller.py::_changed_paths does.
     # Without -z git quotes any path containing a space, and the quotes end up
     # in the recorded filename, so verification against the controller's
@@ -447,7 +460,11 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
             changed_files = []
             residuals.append("changed_files_unusable_shape")
         if not changed_files:
-            observed = _observe_worktree_changes(contract)
+            try:
+                observed = _observe_worktree_changes(contract)
+            except WorktreeObservationError:
+                observed = []
+                residuals.append("worktree_observation_failed")
             if observed:
                 changed_files = observed
                 residuals.append("changed_files_recovered_from_worktree")
@@ -531,10 +548,20 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
         validate_provider_invocation(request, invocation)
         record["provider_state"] = dict(invocation.state)
         evidence = [dict(item) for item in invocation.evidence]
+        if invocation.adapter_error_code:
+            record_error_codes(record, invocation.adapter_error_code)
+            evidence.append({"type": "adapter_error_code", **record["error_codes"]})
         if invocation.result is not None:
-            probe = self._require_fresh_probe(request.program_lock_digest)
+            admitted = record.get("admitting_probe")
+            if not isinstance(admitted, Mapping):
+                raise ValueError("dispatch record carries no admitting capability receipt")
+            if admitted.get("program_lock_digest") != request.program_lock_digest:
+                raise ValueError(
+                    "admitting capability receipt is bound to a different Program Lock"
+                )
             unexpected = sorted(
-                set(invocation.result.observed_capabilities) - set(probe.capabilities)
+                set(invocation.result.observed_capabilities)
+                - set(admitted.get("capabilities") or [])
             )
             if unexpected:
                 raise ValueError(
@@ -573,7 +600,7 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
             raise
         try:
             return self._apply_invocation(record, request, invocation)
-        except ValueError as exc:
+        except (ValueError, AdapterFailure) as exc:
             record["status"] = "FAIL"
             evidence = [dict(item) for item in invocation.evidence]
             if invocation.result is not None:
@@ -598,7 +625,22 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
                 request,
                 dict(record.get("provider_state") or {}),
             )
-            status, evidence = self._apply_invocation(record, request, invocation)
+            try:
+                status, evidence = self._apply_invocation(record, request, invocation)
+            except (ValueError, AdapterFailure) as exc:
+                # A terminal poll whose payload cannot be applied is a terminal
+                # FAIL, persisted -- never a record left RUNNING forever.
+                record["status"] = "FAIL"
+                record["evidence"] = [
+                    *[dict(item) for item in invocation.evidence],
+                    {
+                        "type": "payload_shape_error",
+                        "error_type": type(exc).__name__,
+                        "message": str(exc)[:500],
+                    },
+                ]
+                self.runtime.save(dispatch_id, record)
+                raise
             record["status"] = status
             record["evidence"] = evidence
             self.runtime.save(dispatch_id, record)
