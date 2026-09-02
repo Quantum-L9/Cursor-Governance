@@ -9,8 +9,8 @@ metadata:
   tags: [l9, pr, ci, code-review, github-code-quality, copilot, diagnose, sonarcloud, codeql, debt, remediation, concurrent, github, makefile]
   owner: igor_beylin
   status: active
-  version: 4.5.0
-  updated: 2026-08-30
+  version: 4.5.1
+  updated: 2026-09-02
 ---
 
 # PR Remediation
@@ -115,7 +115,7 @@ Applies `kernels/Diagnose First Kernel.md`, `kernels/Validate & Repair.md`, and 
 5. **Plan the PR, then patch that PR.** No edits on a PR until its ingested findings have dispositions. Independent clusters run in parallel into one worktree batch. A locked `Remediation-Cycle` / plan whose files still match is executed, not rewritten.
 6. **One commit, one remediator publish.** Zero if nothing codebase-safe remains. Never commit-per-finding, never publish to probe CI, never `--no-verify`. Remediator publish **is** `git push` of the already-open PR branch. Do not run `make pr`. Campaign / feature work that is not this skill still must not use raw `git push` when its cached publish target is `make pr`.
 7. **Local verify blocks commit.** Local verify **is** `L9_REMEDIATOR=1 PR_BASE=origin/main make precommit-repo` (changed-file hooks plus ruff). That env makes `make pr-check` fail closed so this skill cannot enter the reader wave. Do not run `make pr-check`. Do not run pytest or conformance. Do not require all-files pre-commit. Never `--no-verify`. Record the result as `Passed` / `Failed` / `Unknown`. Remote CI is independent confirmation — do not claim remote `Passed` from local `Passed`.
-8. **Own until merged.** Subscribe to every in-scope open PR at preflight. The human is **not** watching. After publish: record the head SHA and continue independent PRs, then **stay on the train**. Poll `gh pr view` / `gh pr checks` every 15s (cap `max_wait_snapshots`) until `mergeStateStatus=CLEAN` or a CODEBASE-red required check appears (then the next cycle). Never finish with “re-invoke `/l9-pr-remediation` when CI turns green.” A 404/422 on the GitHub subscription API does not waive ownership. Poll workers never merge.
+8. **Own until merged.** Subscribe to every in-scope open PR at preflight. The human is **not** watching. After publish: record the head SHA and continue independent PRs, then **stay on the train**. Poll `gh pr view` / `gh pr checks` every 15s (cap `max_wait_snapshots`) until `mergeStateStatus=CLEAN` or a CODEBASE-red required check appears (then the next cycle). Never finish with “re-invoke `/l9-pr-remediation` when CI turns green.” A classified GraphQL refusal or subscribe WARN does not waive ownership. Poll workers never merge.
 9. **Validate suggestions against current code.** Comment snippets are not ground truth.
 10. **No gate weakening / suppressions.** No `NOSONAR`, blanket noqa/type-ignore/eslint-disable, CodeQL dismissals/exclusions, skipped tests, or lowered thresholds. Narrow documented suppression only for a *proven* false positive where a code fix is less safe.
 11. **Every conversation resolved.** Reply Fixed / Deferred / Acknowledged / Disagreed, then `resolveReviewThread` on **every** GraphQL `reviewThreads` node with `isResolved: false` — any author (`github-code-quality`, Copilot, `github-advanced-security`, CodeQL, humans, unknown bots). Paginate threads (`pageInfo.hasNextPage`). GitHub "a conversation must be resolved" **is** a merge blocker. HUMAN: name the decision in the reply (linked issue if Deferred), resolve the thread, and pass that decision to `pr_board.py --human-decision` so the PR is `board=leftover` on evidence rather than on a hunch. Bots re-file on new lines after a push — those are **new** threads. Re-query after every publish and immediately before `gh pr merge`.
@@ -125,7 +125,7 @@ Applies `kernels/Diagnose First Kernel.md`, `kernels/Validate & Repair.md`, and 
 
 ## Hot Path (Converge)
 
-0. **Authorize (Converge invoke only), then read-only preflight.** User invoke is merge authorization — write the receipt. Then inspect only: load [references/run-contract.md](references/run-contract.md), cache remediator verbs (`make precommit-repo`, `git push`), fingerprint the venv (`UV_PYTHON` = uv-managed **native** CPython; reject x86_64/miniconda/`uv python find --system` on arm64), list **all** open PRs, **subscribe/own each** (`viewerSubscription`; PUT `issues/{n}/subscription` when not `SUBSCRIBED`), build the overlap + stack matrix (`gh pr view --json files`). Reuse a worktree that already holds the branch (`git worktree list` first). `worktree_add_wired.sh` only when none exists. Emit `RUN_CONTRACT`. Do not edit a PR in this step.
+0. **Authorize (Converge invoke only), then read-only preflight.** User invoke is merge authorization — write the receipt. Then inspect only: load [references/run-contract.md](references/run-contract.md), cache remediator verbs (`make precommit-repo`, `git push`), fingerprint the venv (`UV_PYTHON` = uv-managed **native** CPython; reject x86_64/miniconda/`uv python find --system` on arm64), list **all** open PRs, **subscribe/own each** (`viewerSubscription`; `ops/scripts/lib/gh_subscribe_pr.sh` → GraphQL `updateSubscription` when not `SUBSCRIBED`; never `PUT issues/{n}/subscription`), build the overlap + stack matrix (`gh pr view --json files`). Reuse a worktree that already holds the branch (`git worktree list` first). `worktree_add_wired.sh` only when none exists. Emit `RUN_CONTRACT`. Do not edit a PR in this step.
 
 ```bash
 # TEMPLATE — substitute owner/repo from the verified gh target in this run

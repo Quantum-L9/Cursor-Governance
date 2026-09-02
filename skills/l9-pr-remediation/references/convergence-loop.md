@@ -57,7 +57,7 @@ A second cycle is **not** the normal path. It is only for signals that did not e
 
 ## Own until merged
 
-Subscribe to every in-scope open PR at preflight (`viewerSubscription`; PUT `issues/{n}/subscription` when not `SUBSCRIBED`). A 404/422 does not waive ownership.
+Subscribe to every in-scope open PR at preflight (`viewerSubscription`; `ops/scripts/lib/gh_subscribe_pr.sh` → GraphQL `updateSubscription` when not `SUBSCRIBED`). Never `PUT issues/{n}/subscription` (that route 404s). A classified GraphQL refusal or subscribe WARN does not waive ownership.
 
 After remediator publish, record the head SHA and continue independent PRs. Then stay on MERGE_TRAIN: snapshot `gh pr view` / `gh pr checks` every 15s (cap `max_wait_snapshots`) until `mergeStateStatus=CLEAN` or a CODEBASE-red required check names a source file this PR owns. Never tell the human to re-invoke `/l9-pr-remediation` because CI is still running.
 

@@ -651,3 +651,17 @@ def test_open_pr_after_gate_remediates_defaults_to_one() -> None:
     script = (SCRIPTS / "open_pr_after_gate.sh").read_text(encoding="utf-8")
     assert 'PR_REMEDIATE="${PR_REMEDIATE:-1}"' in script
     assert 'PR_REMEDIATE="${PR_REMEDIATE:-0}"' not in script
+
+
+def test_open_pr_after_gate_subscribes_via_graphql() -> None:
+    """PUT issues/{n}/subscription 404s. GraphQL updateSubscription is live."""
+    script = (SCRIPTS / "open_pr_after_gate.sh").read_text(encoding="utf-8")
+    helper = (SCRIPTS / "lib" / "gh_subscribe_pr.sh").read_text(encoding="utf-8")
+    assert "gh_subscribe_pr.sh" in script
+    assert "gh_subscribe_pr " in script
+    assert (
+        '-X PUT "repos/${owner}/${name}/issues/${pr_number}/subscription"'
+        not in script
+    )
+    assert "updateSubscription" in helper
+    assert '-X PUT "repos/' not in helper
