@@ -1,14 +1,18 @@
 {
-  "name": "L9 canonical CI required (evaluate)",
+  "name": "L9 canonical CI required",
   "target": "branch",
   "enforcement": "evaluate",
   "conditions": {
     "ref_name": {
-      "include": ["~DEFAULT_BRANCH"],
+      "include": [
+        "~DEFAULT_BRANCH"
+      ],
       "exclude": []
     },
     "repository_name": {
-      "include": ["~ALL"],
+      "include": [
+        "~ALL"
+      ],
       "exclude": [],
       "protected": false
     }
@@ -23,6 +27,18 @@
             "repository_id": 1285564308,
             "path": ".github/workflows/org-ci.yml",
             "ref": "refs/heads/main"
+          }
+        ]
+      }
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": false,
+        "do_not_enforce_on_create": true,
+        "required_status_checks": [
+          {
+            "context": "Analyze (central Core)"
           }
         ]
       }
