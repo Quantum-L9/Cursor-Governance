@@ -25,14 +25,24 @@ import textwrap
 import unittest
 from pathlib import Path
 
-from peer_execution.imports import (
+PE_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = PE_ROOT.parents[1]
+
+# APPEND, never insert(0). This file is collected by BOTH suites: the root
+# pytest suite (PYTHONPATH=${REPO_ROOT}, where `peer_execution` is not
+# importable without this) and `make program-execution-conformance`
+# (PYTHONPATH=PE_ROOT, where it already is). Prepending would make Program
+# Execution's `scripts/` win the shared top-level name for the rest of the
+# session -- the very defect this file exists to pin.
+if str(PE_ROOT) not in sys.path:
+    sys.path.append(str(PE_ROOT))
+
+from peer_execution.imports import (  # noqa: E402
     PE_SCRIPTS_PACKAGE,
     bind_pe_scripts,
     pe_script,
 )
 
-PE_ROOT = Path(__file__).resolve().parents[2]
-REPO_ROOT = PE_ROOT.parents[1]
 PE_SCRIPTS_DIR = PE_ROOT / "scripts"
 ROOT_SCRIPTS_DIR = REPO_ROOT / "scripts"
 
@@ -261,6 +271,67 @@ class CallSiteTests(unittest.TestCase):
                 result = _run_probe(probe)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(result.stdout.strip(), "pe_call_site_under_test")
+
+
+class SysPathHygieneTests(unittest.TestCase):
+    """No Program Execution module may PREPEND the subsystem root to sys.path.
+
+    `scripts` is the only top-level name Program Execution and the repository
+    root both define, so a prepend hands PE's `scripts/` that name for the whole
+    process -- the mirror of the bug this file pins. Appending still resolves
+    every PE-exclusive package (`peer_execution`, `compiler`, `adapters`,
+    `integrations`), which is all any of these call sites actually needs.
+    """
+
+    def test_no_module_prepends_the_subsystem_root(self) -> None:
+        offenders: list[str] = []
+        for path in sorted(PE_ROOT.rglob("*.py")):
+            try:
+                tree = ast.parse(path.read_text(encoding="utf-8"))
+            except SyntaxError:  # pragma: no cover - fixture corpora
+                continue
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Call):
+                    continue
+                func = node.func
+                if not isinstance(func, ast.Attribute) or func.attr != "insert":
+                    continue
+                value = func.value
+                if not (
+                    isinstance(value, ast.Attribute)
+                    and value.attr == "path"
+                    and isinstance(value.value, ast.Name)
+                    and value.value.id == "sys"
+                ):
+                    continue
+                if not node.args or not isinstance(node.args[0], ast.Constant):
+                    continue
+                if node.args[0].value != 0:
+                    continue
+                if _is_subsystem_root(node.args[1] if len(node.args) > 1 else None):
+                    offenders.append(f"{path.relative_to(PE_ROOT)}:{node.lineno}")
+        self.assertEqual(offenders, [], f"sys.path.insert(0, PE_ROOT): {offenders}")
+
+
+#: Names conventionally bound to a subsystem root in this tree.
+_ROOT_NAMES = frozenset({"PE_ROOT", "_PE_ROOT", "ROOT", "_ROOT", "SUBSYSTEM_ROOT"})
+
+
+def _is_subsystem_root(node: ast.AST | None) -> bool:
+    """True when `node` is the subsystem root ITSELF, not a directory under it.
+
+    `sys.path.insert(0, str(PE_ROOT / "scripts"))` is a different and harmless
+    thing: it exposes bare module names (`provider_loader`, `validate_replan`),
+    never the `scripts` PACKAGE, so it cannot win the shared top-level name. A
+    path join is therefore what separates the safe form from the unsafe one.
+    """
+    if node is None:
+        return False
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+        if node.func.id != "str" or not node.args:
+            return False
+        node = node.args[0]
+    return isinstance(node, ast.Name) and node.id in _ROOT_NAMES
 
 
 if __name__ == "__main__":

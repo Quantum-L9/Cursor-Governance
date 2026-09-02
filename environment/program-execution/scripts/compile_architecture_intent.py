@@ -29,8 +29,12 @@ from pathlib import Path
 from typing import Any
 
 PE_ROOT = Path(__file__).resolve().parents[1]
+# APPEND, never insert(0): Program Execution needs its own PE-exclusive
+# packages here, but `scripts` is a top-level name it SHARES with the
+# repository root. Prepending would hand PE's `scripts/` that name for the
+# whole process. See peer_execution.imports.pe_script.
 if str(PE_ROOT) not in sys.path:
-    sys.path.insert(0, str(PE_ROOT))
+    sys.path.append(str(PE_ROOT))
 
 from compiler.architecture_coverage import (  # noqa: E402
     DEFAULT_REPAIR_ROUNDS,

@@ -15,8 +15,12 @@ _PE_ROOT = _HERE.parents[1]
 _GOV_ROOT = _PE_ROOT.parents[1]
 if str(_GOV_ROOT) not in sys.path:
     sys.path.insert(0, str(_GOV_ROOT))
+# APPEND, never insert(0): Program Execution needs its own PE-exclusive
+# packages here, but `scripts` is a top-level name it SHARES with the
+# repository root. Prepending would hand PE's `scripts/` that name for the
+# whole process. See peer_execution.imports.pe_script.
 if str(_PE_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PE_ROOT))
+    sys.path.append(str(_PE_ROOT))
 
 from autonomy.compiler.graph_compiler import compile_graph  # noqa: E402
 from autonomy.models import CampaignAuthorization, DeploymentManifest  # noqa: E402

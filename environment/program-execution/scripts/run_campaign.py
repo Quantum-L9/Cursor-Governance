@@ -2502,8 +2502,10 @@ def _peer_imports():
     already owns binding -> probe -> prepare/dispatch/collect, and this runner
     reuses those helpers rather than growing a second copy of them.
     """
+    # APPEND, never insert(0) -- see peer_execution.imports.pe_script:
+    # `scripts` is a top-level name shared with the repository root.
     if str(PE_ROOT) not in sys.path:
-        sys.path.insert(0, str(PE_ROOT))
+        sys.path.append(str(PE_ROOT))
     from peer_execution.autonomy.models import (  # noqa: PLC0415
         ActionRuntime,
         ActionSpec,
