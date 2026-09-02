@@ -659,9 +659,6 @@ def test_open_pr_after_gate_subscribes_via_graphql() -> None:
     helper = (SCRIPTS / "lib" / "gh_subscribe_pr.sh").read_text(encoding="utf-8")
     assert "gh_subscribe_pr.sh" in script
     assert "gh_subscribe_pr " in script
-    assert (
-        '-X PUT "repos/${owner}/${name}/issues/${pr_number}/subscription"'
-        not in script
-    )
+    assert '-X PUT "repos/${owner}/${name}/issues/${pr_number}/subscription"' not in script
     assert "updateSubscription" in helper
     assert '-X PUT "repos/' not in helper
