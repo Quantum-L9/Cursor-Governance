@@ -43,6 +43,27 @@ PE_ROOT = Path(__file__).resolve().parents[1]
 UNKNOWN_REVISION = "UNKNOWN"
 
 
+def memory_lookup(query: str, *, repo_root: Path) -> dict[str, Any]:
+    """Read-only Graphiti search. Fail closed. Never writes memory."""
+
+    graphiti = repo_root / "environment" / "program-execution" / "integrations" / "graphiti"
+    if str(graphiti) not in sys.path:
+        sys.path.insert(0, str(graphiti))
+    if str(repo_root / "environment" / "program-execution") not in sys.path:
+        sys.path.insert(0, str(repo_root / "environment" / "program-execution"))
+    try:
+        from context_reader import GraphitiContextReader
+    except ImportError as exc:
+        raise RuntimeError(
+            f"memory-lookup fail-closed: context_reader unavailable ({exc})"
+        ) from exc
+    try:
+        reader = GraphitiContextReader(repo_root)
+        return {"status": "PASS", "mode": "read_only", "result": reader.search(query)}
+    except Exception as exc:
+        raise RuntimeError(f"memory-lookup fail-closed: {exc}") from exc
+
+
 def _utc_now() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat()
 
@@ -128,7 +149,21 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--notes", default=None)
     parser.add_argument("--producer", default="operator")
     parser.add_argument("--expires-at", default=None)
+    parser.add_argument(
+        "--memory-lookup",
+        default=None,
+        metavar="QUERY",
+        help="Read-only Graphiti search; fails closed offline; never writes memory",
+    )
     args = parser.parse_args(argv)
+    if args.memory_lookup:
+        try:
+            payload = memory_lookup(args.memory_lookup, repo_root=PE_ROOT.parent.parent)
+        except RuntimeError as exc:
+            print(f"FAIL: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
     try:
         result = collect_evidence(
             args.blueprint,
