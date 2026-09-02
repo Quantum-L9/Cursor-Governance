@@ -213,14 +213,36 @@ class DriverExecutionAdapter(BaseExecutionAdapter):
             ]
             self.runtime.save(request.dispatch_id, record)
             raise
-        return self._apply_invocation(record, request, invocation)
+        return self._apply_or_fail(record, request, invocation, request.dispatch_id)
+
+    def _apply_or_fail(self, record, request, invocation, dispatch_id: str):
+        """Apply a driver invocation, or persist a terminal FAIL if it cannot be.
+
+        A malformed terminal payload used to leave the record at DISPATCHING or
+        RUNNING with no evidence, which `collect()` then reported as "not
+        complete" -- a driver failure read as work still in flight.
+        """
+        try:
+            return self._apply_invocation(record, request, invocation)
+        except ValueError as exc:
+            record["status"] = "FAIL"
+            record["evidence"] = [
+                *[dict(item) for item in invocation.evidence],
+                {
+                    "type": "payload_shape_error",
+                    "error_type": type(exc).__name__,
+                    "message": str(exc)[:500],
+                },
+            ]
+            self.runtime.save(dispatch_id, record)
+            raise
 
     def status(self, dispatch_id: str):
         record = self.runtime.load(dispatch_id)
         if record.get("status") == "RUNNING":
             request = self._request(record)
             invocation = self.driver.poll(request, dict(record.get("driver_state") or {}))
-            status, evidence = self._apply_invocation(record, request, invocation)
+            status, evidence = self._apply_or_fail(record, request, invocation, dispatch_id)
             record["status"] = status
             record["evidence"] = evidence
             self.runtime.save(dispatch_id, record)

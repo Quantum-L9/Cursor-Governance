@@ -59,6 +59,35 @@ class GenericShellLifecycleTests(unittest.TestCase):
                 "stable\n",
             )
 
+    def test_exactness_gate_fails_without_an_observation(self) -> None:
+        """Declared == observed used to be vacuous: observed defaulted to declared."""
+        root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as directory:
+            temporary = Path(directory)
+            candidate = temporary / "candidate"
+            candidate.mkdir()
+            contract = valid_contract(requested_actions=["verify"], allowed_actions=["verify"])
+            contract["candidate_directory"] = str(candidate)
+            contract["verification_commands"] = [["python3", "-c", "print('ok')"]]
+            contract["candidate_sha"] = "3" * 40
+            contract["declared_changed_files"] = ["example.txt"]
+            contract.pop("observed_changed_files", None)
+            contract.pop("contract_digest")
+            contract["contract_digest"] = digest_object(contract)
+            adapter = instantiate("ci-generic-shell", temporary / "runtime")
+            adapter.probe(
+                ProbeContext(
+                    repository_root=str(root.parents[1]),
+                    runtime_root=str(temporary / "runtime"),
+                    program_lock_digest=PROGRAM_DIGEST,
+                )
+            )
+            prepared = adapter.prepare(contract)
+            adapter.dispatch({"dispatch_id": prepared.dispatch_id})
+            result = adapter.collect(str(prepared.dispatch_id))
+            self.assertEqual(result["gates"]["changed_files_exact"], "FAIL")
+            self.assertEqual(result["gates"]["command_execution"], "PASS")
+
     def test_failed_verification_receipt_is_collectable(self) -> None:
         root = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as directory:

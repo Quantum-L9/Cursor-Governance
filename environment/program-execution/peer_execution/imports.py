@@ -2,42 +2,65 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+import threading
 from pathlib import Path
 from types import ModuleType
 
+#: One lock for every location-based binding. The campaign runner dispatches
+#: provider lanes from a thread pool, and each lane resolves its provider
+#: through `load_module` under the SAME name; without the lock two lanes could
+#: execute one provider file twice and hold different module objects while
+#: `sys.modules` pointed at whichever finished last.
+_BIND_LOCK = threading.RLock()
+
 
 def load_module(path: str | Path, name: str) -> ModuleType:
+    """Bind the module FILE at `path` under `name`, resolved by location only.
+
+    Idempotent: a second call for the same file returns the module already
+    bound, so every caller shares one instance and module-level state stays
+    coherent. A name already bound to a DIFFERENT file is an error, never a
+    silent replacement of somebody else's module -- and a failing load leaves
+    an incumbent binding untouched, because it never displaces one.
+    """
     source = Path(path).expanduser()
     if source.is_symlink():
         raise ImportError(f"refusing symlinked module source: {source}")
     source = source.resolve()
     if not source.is_file():
         raise ImportError(f"module source does not exist: {source}")
-    spec = importlib.util.spec_from_file_location(name, source)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"unable to load module: {source}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    try:
-        spec.loader.exec_module(module)
-    except Exception:
-        sys.modules.pop(name, None)
-        raise
-    return module
+    with _BIND_LOCK:
+        existing = sys.modules.get(name)
+        if existing is not None:
+            bound = getattr(existing, "__file__", None)
+            if bound and Path(bound).resolve() == source:
+                return existing
+            raise ImportError(f"{name} is already bound to {bound}, not {source}")
+        spec = importlib.util.spec_from_file_location(name, source)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"unable to load module: {source}")
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        try:
+            spec.loader.exec_module(module)
+        except Exception:
+            sys.modules.pop(name, None)
+            raise
+        return module
 
 
 def load_package(directory: str | Path, name: str) -> ModuleType:
     """Bind a package DIRECTORY under `name`, resolved by location only.
 
-    The location-based twin of `load_module`: submodules of the result import
-    normally through `__path__`, so callers use ordinary `import_module` rather
-    than loading each file by hand. Idempotent -- a second call for the same
-    directory returns the bound package instead of re-executing it, so every
-    caller shares one instance and module-level state stays coherent. A name
-    already bound to a DIFFERENT directory is an error, never a silent
-    overwrite of somebody else's package. A symlinked package directory or
-    `__init__.py` is refused, the same control `load_module` applies to a
-    single source.
+    The location-based twin of `load_module`, with the same contract:
+    submodules of the result import normally through `__path__`, so callers use
+    ordinary `import_module` rather than loading each file by hand. Idempotent
+    -- a second call for the same directory returns the bound package instead
+    of re-executing it, so every caller shares one instance and module-level
+    state stays coherent. A name already bound to a DIFFERENT directory is an
+    error, never a silent overwrite of somebody else's package. A symlinked
+    package directory or `__init__.py` is refused, the same control
+    `load_module` applies to a single source.
     """
     directory = Path(directory).expanduser()
     # A symlinked package directory or `__init__.py` would execute code from
@@ -47,29 +70,30 @@ def load_package(directory: str | Path, name: str) -> ModuleType:
     if directory.is_symlink() or (directory / "__init__.py").is_symlink():
         raise ImportError(f"refusing symlinked package source: {directory}")
     directory = directory.resolve()
-    existing = sys.modules.get(name)
-    if existing is not None:
-        bound = [Path(entry).resolve() for entry in getattr(existing, "__path__", [])]
-        if bound == [directory]:
-            return existing
-        raise ImportError(f"{name} is already bound to {bound}, not {directory}")
+    with _BIND_LOCK:
+        existing = sys.modules.get(name)
+        if existing is not None:
+            bound = [Path(entry).resolve() for entry in getattr(existing, "__path__", [])]
+            if bound == [directory]:
+                return existing
+            raise ImportError(f"{name} is already bound to {bound}, not {directory}")
 
-    init = directory / "__init__.py"
-    if not init.is_file():
-        raise ImportError(f"not a package: {directory}")
-    spec = importlib.util.spec_from_file_location(
-        name, init, submodule_search_locations=[str(directory)]
-    )
-    if spec is None or spec.loader is None:
-        raise ImportError(f"unable to load package: {directory}")
-    package = importlib.util.module_from_spec(spec)
-    sys.modules[name] = package
-    try:
-        spec.loader.exec_module(package)
-    except Exception:
-        sys.modules.pop(name, None)
-        raise
-    return package
+        init = directory / "__init__.py"
+        if not init.is_file():
+            raise ImportError(f"not a package: {directory}")
+        spec = importlib.util.spec_from_file_location(
+            name, init, submodule_search_locations=[str(directory)]
+        )
+        if spec is None or spec.loader is None:
+            raise ImportError(f"unable to load package: {directory}")
+        package = importlib.util.module_from_spec(spec)
+        sys.modules[name] = package
+        try:
+            spec.loader.exec_module(package)
+        except Exception:
+            sys.modules.pop(name, None)
+            raise
+        return package
 
 
 # --- Program Execution's own `scripts/` package -----------------------------

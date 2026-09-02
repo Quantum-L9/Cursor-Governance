@@ -67,6 +67,26 @@ class ProbeCommandTests(unittest.TestCase):
             self.assertTrue(all(binding["status"] == "BLOCKED" for binding in cursor["bindings"]))
             self.assertNotIn("PASS", [binding["status"] for binding in cursor["bindings"]])
 
+    def test_provider_exception_fails_the_gate(self) -> None:
+        """A raise out of instantiate()/probe() is a defect, never honest BLOCKED."""
+        module = pe_script("probe_executable_peers")
+        root = Path(__file__).resolve().parents[1]
+        original = module.instantiate
+
+        def explode(*args, **kwargs):
+            raise ValueError("adapter descriptor schema errors")
+
+        module.instantiate = explode
+        try:
+            with tempfile.TemporaryDirectory() as temporary:
+                report = module.probe(root, root.parents[1], Path(temporary))
+        finally:
+            module.instantiate = original
+        self.assertEqual(report["status"], "FAIL", report)
+        self.assertGreater(report["status_counts"].get("FAIL", 0), 0, report["status_counts"])
+        self.assertEqual(report["status_counts"].get("READY", 0), 0)
+        self.assertTrue(all(peer["gate"] == "fail" for peer in report["peers"]), report["peers"])
+
     def test_binding_outcome_keeps_honest_blocked_and_fails_structural(self) -> None:
         _binding_outcome = pe_script("probe_executable_peers")._binding_outcome
 

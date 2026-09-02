@@ -16,13 +16,22 @@ import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
+PE_ROOT = ROOT.parent
 TEMPLATE = ROOT / "program-execution-blueprint-template"
 if str(ROOT / "shared") not in sys.path:
     sys.path.insert(0, str(ROOT / "shared"))
-if str(TEMPLATE / "scripts") not in sys.path:
-    sys.path.insert(0, str(TEMPLATE / "scripts"))
+# APPEND, never insert(0): `scripts` is a top-level name Program Execution
+# shares with the repository root (see peer_execution.imports.pe_script).
+if str(PE_ROOT) not in sys.path:
+    sys.path.append(str(PE_ROOT))
 
-import instantiate  # noqa: E402 — official canonical manifest writer
+from peer_execution.imports import load_module  # noqa: E402
+
+# The official canonical manifest writer, bound by FILE LOCATION. `instantiate`
+# is a basename both template `scripts/` directories define, so a bare import
+# would resolve to whichever renderer was imported first in the process.
+instantiate = load_module(TEMPLATE / "scripts" / "instantiate.py", "pe_blueprint_instantiate")
+
 from blueprint_identity import (  # noqa: E402
     DIGEST_ALGORITHM,
     MANIFEST_FILENAME,

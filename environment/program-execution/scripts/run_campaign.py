@@ -341,6 +341,27 @@ def auto_harvest(trace: pe_trace.ExecutionTrace | None) -> None:
         print(f"pe-trace: harvest failed for {workspace}: {exc}", file=sys.stderr)
 
 
+def _commit_identity_args(repo: Path) -> list[str]:
+    """`-c user.*` for `git commit` ONLY when the checkout resolves no identity.
+
+    CI runners and freshly created task worktrees carry no committer identity,
+    and `git commit` then refuses with "Author identity unknown". An identity
+    the operator configured (repo, global, or GIT_* environment) is read, not
+    assumed, and never overridden.
+    """
+    for key in ("user.email", "user.name"):
+        configured = run_cmd(
+            ["git", "-C", str(repo), "config", key],
+            timeout=GIT_TIMEOUT_S,
+            env=git_env(),
+        )
+        if configured.returncode != 0 or not (configured.stdout or "").strip():
+            break
+    else:
+        return []
+    return ["-c", "user.name=make-campaign", "-c", "user.email=make-campaign@l9.local"]
+
+
 def git_env() -> dict[str, str]:
     env = os.environ.copy()
     for key in (
@@ -891,6 +912,55 @@ def default_pec_bootstrap(workspace: Path, blueprint: Path) -> dict[str, Any]:
     )
 
 
+def generated_data_database(workspace: Path) -> Path:
+    """The generated-data pipeline database for THIS campaign's runtime root.
+
+    A campaign runs under one root (`--l9-root` / `$L9_ROOT`), and its pec
+    workspace is `<root>/programs/<id>`. Publication used to resolve a second,
+    unrelated variable (`L9_RUNTIME_ROOT`) and default to the real home, so a
+    campaign run under a scratch root still wrote into `~/.l9`. A workspace not
+    shaped `<root>/programs/<id>` falls back to the canonical resolver in
+    `environment/agents/runtime_paths.py`, never to a literal here.
+    """
+    workspace = Path(workspace).resolve()
+    if workspace.parent.name == "programs":
+        return workspace.parents[1] / "generated-data" / "pipeline.sqlite3"
+    runtime_paths = _load_script(
+        "pe_agent_runtime_paths", GOV_ROOT / "environment" / "agents" / "runtime_paths.py"
+    )
+    return Path(runtime_paths.canonical_generated_data_database())
+
+
+def _bind_pec_package() -> Any:
+    """Bind the controller package `pec` by FILE LOCATION, never via sys.path.
+
+    Prepending the controller template's `scripts/` directory exposed every
+    bare module name in it -- including `instantiate`, a basename the Blueprint
+    template's `scripts/` also defines with a different contract -- so which
+    `instantiate` a later bare import resolved depended on import order. The
+    package binder resolves `pec` from its directory under the one name it
+    owns and adds nothing to the import path.
+    """
+    if str(PE_ROOT) not in sys.path:
+        # APPEND, never insert(0): `scripts` is a top-level name shared with the
+        # repository root (see peer_execution.imports.pe_script).
+        sys.path.append(str(PE_ROOT))
+    from peer_execution.imports import load_package  # noqa: PLC0415
+
+    return load_package(PEC_SCRIPTS / "pec", "pec")
+
+
+def _write_json_atomic(path: Path, payload: Any) -> Path:
+    """Write-then-rename through pe_timing, the one atomic JSON writer here.
+
+    LAUNCH.json, campaign-status.json and STACK.json are the resume gates: a
+    torn write to any of them made `resumable_workspace` read a live runtime
+    as a draft leftover and quarantine it, sqlite, leases and worktrees alike.
+    """
+    timing = _load_script("pe_timing", PE_ROOT / "scripts/pe_timing.py")
+    return timing.write_json_atomic(path, payload)
+
+
 def _load_script(name: str, path: Path) -> Any:
     cached = sys.modules.get(name)
     if cached is not None and getattr(cached, "__file__", None) == str(path):
@@ -1010,6 +1080,19 @@ def ensure_target_history(dest: Path, repository_id: str) -> None:
     if history_walkable(dest) and not is_shallow_repo(dest):
         return
     origin = f"https://github.com/{repository_id}.git"
+    # Read the checkout's identity before rewriting its remote: an existing
+    # GitHub origin that names a different repository is not this target.
+    current = run_cmd(
+        ["git", "-C", str(dest), "remote", "get-url", "origin"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    current_url = (current.stdout or "").strip() if current.returncode == 0 else ""
+    if "github.com" in current_url.lower() and repository_id.lower() not in current_url.lower():
+        raise CampaignError(
+            f"target checkout {dest} has origin {current_url}, not {repository_id}; "
+            "refuse to repoint another repository's remote"
+        )
     run_cmd(
         ["git", "-C", str(dest), "remote", "set-url", "origin", origin],
         timeout=GIT_TIMEOUT_S,
@@ -1071,12 +1154,20 @@ def default_ensure_target_checkout(
                 return dest
             shutil.rmtree(dest)
     url = f"https://github.com/{repository_id}.git"
-    clone = run_cmd(
-        ["git", "clone", url, str(dest)],
-        timeout=CLONE_TIMEOUT_S,
-        env=git_env(),
-    )
+    try:
+        clone = run_cmd(
+            ["git", "clone", url, str(dest)],
+            timeout=CLONE_TIMEOUT_S,
+            env=git_env(),
+        )
+    except CampaignError:
+        # A killed clone leaves `dest/.git` behind, and the next run would take
+        # the existing-checkout branch and try to repair a hollow tree instead
+        # of cloning again. `dest` did not exist when this function started.
+        shutil.rmtree(dest, ignore_errors=True)
+        raise
     if clone.returncode != 0:
+        shutil.rmtree(dest, ignore_errors=True)
         raise CampaignError(
             f"cannot checkout {repository_id} at {dest}: {(clone.stderr or clone.stdout).strip()}"
         )
@@ -1196,8 +1287,7 @@ def build_pr_stack(campaign_id: str, tasks: list[dict[str, Any]]) -> dict[str, A
 
 def write_pr_stack(workspace: Path, stack: dict[str, Any]) -> Path:
     path = workspace / "runtime" / "STACK.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(stack, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _write_json_atomic(path, stack)
     return path
 
 
@@ -1209,14 +1299,22 @@ def ensure_integration_branch(target_path: Path, campaign_id: str) -> str:
         env=git_env(),
     )
     if exists.returncode != 0:
+        # Prefer the remote integration branch when one exists (fetched by the
+        # caller); only a campaign with no remote lineage starts at HEAD.
+        remote = run_cmd(
+            ["git", "-C", str(target_path), "rev-parse", "--verify", f"origin/{branch}"],
+            timeout=GIT_TIMEOUT_S,
+            env=git_env(),
+        )
+        start = f"origin/{branch}" if remote.returncode == 0 else "HEAD"
         created = run_cmd(
-            ["git", "-C", str(target_path), "branch", branch, "HEAD"],
+            ["git", "-C", str(target_path), "branch", branch, start],
             timeout=GIT_TIMEOUT_S,
             env=git_env(),
         )
         if created.returncode != 0:
             raise CampaignError(
-                f"cannot create {branch}: {(created.stderr or created.stdout).strip()}"
+                f"cannot create {branch} from {start}: {(created.stderr or created.stdout).strip()}"
             )
     return branch
 
@@ -1338,6 +1436,40 @@ def ensure_task_contract(workspace: Path, task_id: str) -> Path:
     return register_task_contract(workspace, task_id)
 
 
+#: Runtime states in which TASK-001 is already claimed by an earlier run of this
+#: campaign; a repeat `make campaign` resumes them rather than claiming again.
+_ALREADY_CLAIMED_STATES = frozenset(
+    {"LEASED", "PREPARED", "CONTRACTED", "EXECUTING", "SUBMITTED", "VERIFYING", "PASSED_LOCAL"}
+)
+
+
+def _claim_first_task(workspace: Path) -> dict[str, Any]:
+    """Claim TASK-001, or confirm an earlier run of this campaign already did.
+
+    The claim used to run through a bare `run_cmd` whose exit code was never
+    read, so a refused claim (task not eligible, decision pending, lease held
+    by someone else) still reported the campaign as armed with TASK-001
+    claimed. `pec_cmd` raises on refusal. The one refusal that is NOT a defect
+    is our own earlier claim on a resumed campaign, which is read from the
+    controller first rather than inferred from the error text.
+    """
+    for task in pec_status_tasks(workspace):
+        if str(task.get("id")) != FIRST_TASK_ID:
+            continue
+        state = str(task.get("runtime_state") or "")
+        if state in _ALREADY_CLAIMED_STATES or state == "COMPLETED":
+            return {"status": "already_claimed", "task_id": FIRST_TASK_ID, "runtime_state": state}
+    return pec_cmd(
+        workspace,
+        "claim",
+        FIRST_TASK_ID,
+        "--holder",
+        "make-campaign",
+        "--ttl-minutes",
+        str(TASK_BUDGET_MINUTES),
+    )
+
+
 def default_arm(
     workspace: Path,
     campaign_id: str,
@@ -1347,6 +1479,12 @@ def default_arm(
     trace: pe_trace.ExecutionTrace | None = None,
 ) -> dict[str, Any]:
     refuse_hash_campaign_id(campaign_id)
+    # Read the remote lineage BEFORE deciding where the local integration
+    # branch starts: every task lease bases itself on refs/heads/campaign/<id>,
+    # so a local branch minted from a fresh clone's default-branch HEAD while
+    # origin/campaign/<id> already carries integrated work puts every later
+    # lease and verification on the wrong lineage.
+    fetch_stack_refs(target_path, campaign_id)
     ensure_integration_branch(target_path, campaign_id)
     with traced(trace, "reconcile", "reconcile", metadata={"repository": repository_id}):
         reconciled = default_reconcile(workspace, repository_id, target_path)
@@ -1361,28 +1499,13 @@ def default_arm(
     deferred = [str(task["id"]) for task in tasks if str(task["id"]) not in set(frontier)]
     stack = build_pr_stack(campaign_id, tasks)
     write_pr_stack(workspace, stack)
-    fetch_stack_refs(target_path, campaign_id)
-    claim = run_cmd(
-        [
-            sys.executable,
-            str(PEC),
-            "claim",
-            FIRST_TASK_ID,
-            "--workspace",
-            str(workspace),
-            "--holder",
-            "make-campaign",
-            "--ttl-minutes",
-            str(TASK_BUDGET_MINUTES),
-        ],
-        timeout=PEC_TIMEOUT_S,
-    )
+    claim = _claim_first_task(workspace)
     return {
         "task_id": FIRST_TASK_ID,
         "armed_task_ids": list(frontier),
         "deferred_task_ids": deferred,
         "contracts": contracts,
-        "claim": (claim.stdout or "").strip(),
+        "claim": claim,
         "reconcile": reconciled,
         "stack": stack,
     }
@@ -1685,10 +1808,8 @@ def activate_pec_runtime(
     workspace = workspace.resolve()
     sqlite = workspace / "runtime" / "state.sqlite"
     if sqlite.is_file():
-        scripts_dir = str(PEC.parent)
-        if scripts_dir not in sys.path:
-            sys.path.insert(0, scripts_dir)
-        from pec.controller import ensure_campaign_active, open_runtime
+        _bind_pec_package()
+        from pec.controller import ensure_campaign_active, open_runtime  # noqa: PLC0415
 
         db, ledger = open_runtime(workspace)
         try:
@@ -1708,7 +1829,7 @@ def activate_pec_runtime(
         "evidence": {},
         "actor": actor,
     }
-    status_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _write_json_atomic(status_path, payload)
     return payload
 
 
@@ -1756,7 +1877,7 @@ def write_launch_pointer(
             "If blocked, stop and report; do not sit."
         ),
     }
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _write_json_atomic(path, payload)
     return path
 
 
@@ -1921,11 +2042,24 @@ def task_output_location(task: dict[str, Any]) -> str:
     return task_output_locations(task)[0]
 
 
-def is_stub_output(path: Path, title: str) -> bool:
+def is_stub_output(path: Path, title: str, *, primary: bool = True) -> bool:
+    """True when `path` still carries the rendered stub rather than real work.
+
+    The length heuristic belongs to the PRIMARY output only. Applied to every
+    declared writable path it silently dropped legitimate short files -- an
+    empty `__init__.py`, a `.gitkeep`, a one-line config -- from `git add`, so
+    the task verified and completed with that file never committed.
+    """
     if not path.is_file():
         return True
-    existing = path.read_text(encoding="utf-8")
-    return existing.strip() == f"{path.stem} complete: {title}" or len(existing.strip()) < 40
+    try:
+        existing = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return False  # binary content is real work, not the rendered stub
+    stripped = existing.strip()
+    if stripped == f"{path.stem} complete: {title}":
+        return True
+    return primary and len(stripped) < 40
 
 
 def live_lock_missing_seed_paths(seed: dict[str, Any], pec_workspace: Path) -> bool:
@@ -2271,7 +2405,7 @@ def render_progress(
     )
     path = pec_workspace / "runtime" / "PROGRESS.json"
     if path.parent.is_dir():
-        path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        _write_json_atomic(path, report)
     return timing.format_progress(report)
 
 
@@ -3241,12 +3375,7 @@ def publish_task_outcome(
                 os.replace(temporary, source_path)
             finally:
                 temporary.unlink(missing_ok=True)
-        runtime_root = Path(
-            os.environ.get("L9_RUNTIME_ROOT", str(Path.home() / ".l9"))
-        ).expanduser()
-        publisher = publisher_module.OutcomePublisher(
-            GOV_ROOT, runtime_root / "generated-data" / "pipeline.sqlite3"
-        )
+        publisher = publisher_module.OutcomePublisher(GOV_ROOT, generated_data_database(workspace))
         published = publisher.publish(
             outcome_payload,
             repository=str(
@@ -3511,7 +3640,24 @@ def _default_execute_peer(
                 + json.dumps(task_states, sort_keys=True)
             )
         by_id = {str(task["id"]): task for task in tasks}
-        units = [_prepare_peer_unit(workspace, by_id[task_id], trace=trace) for task_id in selected]
+        units: list[dict[str, Any]] = []
+        for task_id in selected:
+            try:
+                units.append(_prepare_peer_unit(workspace, by_id[task_id], trace=trace))
+            except Exception as exc:
+                # Units prepared before this one already hold live authority
+                # (Controller EXECUTING + a root lease). Retire it canonically
+                # before the campaign error surfaces, or they strand mid-flight
+                # and the next run re-dispatches them as if nothing happened.
+                reason = f"batch preparation aborted at {task_id}: {type(exc).__name__}: {exc}"
+                for prepared in units:
+                    if not prepared.get("already_submitted"):
+                        _record_canonical_failure(
+                            workspace, prepared, str(prepared["task_id"]), reason
+                        )
+                if isinstance(exc, CampaignError):
+                    raise
+                raise CampaignError(reason) from exc
         dispatch_units = [unit for unit in units if not unit["already_submitted"]]
         for unit in dispatch_units:
             grant = unit.get("grant") or {}
@@ -3551,6 +3697,11 @@ def _default_execute_peer(
                 )
             except CampaignError as exc:
                 failures[task_id] = str(exc)
+            except Exception as exc:  # noqa: BLE001 — every sibling is reconciled below
+                # Anything else (a decode error reading a writable path, a grant
+                # refusal) is still this child's failure; an escaping exception
+                # here left the failing sibling EXECUTING with a live lease.
+                failures[task_id] = f"{type(exc).__name__}: {exc}"
         if failures:
             for task_id, reason in sorted(failures.items()):
                 unit = units_by_id.get(task_id)
@@ -3633,7 +3784,11 @@ def write_and_commit_output(
             "authorization ceiling must permit commit for its work to be committed"
         )
     declared = list(dict.fromkeys([*(writable or []), rel]))
-    to_add = [item for item in declared if item and not is_stub_output(worktree / item, title)]
+    to_add = [
+        item
+        for item in declared
+        if item and not is_stub_output(worktree / item, title, primary=(item == rel))
+    ]
     if not to_add:
         raise CampaignError(f"refuse stub output for {rel}; implement the task in {worktree} first")
     added = run_cmd(
@@ -3661,7 +3816,15 @@ def write_and_commit_output(
             raise CampaignError("cannot read candidate SHA for an already-satisfied task")
         return head.stdout.strip()
     commit = run_cmd(
-        ["git", "-C", str(worktree), "commit", "-m", f"pec: {Path(rel).stem} output"],
+        [
+            "git",
+            *_commit_identity_args(worktree),
+            "-C",
+            str(worktree),
+            "commit",
+            "-m",
+            f"pec: {Path(rel).stem} output",
+        ],
         timeout=GIT_TIMEOUT_S,
         env=git_env(),
     )
@@ -3686,7 +3849,7 @@ def record_stack_pr(workspace: Path, task_id: str, number: int, url: str) -> Non
         if str(item.get("task_id")) == task_id:
             item["pr_number"] = number
             item["pr_url"] = url
-    path.write_text(json.dumps(stack, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _write_json_atomic(path, stack)
 
 
 def recorded_stack_pr_numbers(workspace: Path) -> list[int]:
@@ -3949,7 +4112,7 @@ def _default_execute_legacy(
                 "claimed_status": "completed",
             }
             receipt_path = workspace / "runtime" / f"{task_id}.attempt.json"
-            receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+            _write_json_atomic(receipt_path, receipt)
             with traced(trace, "commit", "record_attempt", task_id=task_id):
                 recorded = pec_cmd(
                     workspace, "record-attempt", task_id, "--receipt", str(receipt_path)
@@ -4139,6 +4302,7 @@ def commit_host_emit(worktree: Path, campaign_id: str) -> None:
     commit = run_cmd(
         [
             "git",
+            *_commit_identity_args(worktree),
             "-C",
             str(worktree),
             "commit",
@@ -5140,12 +5304,9 @@ def render_report(report: CampaignReport) -> None:
                     if isinstance(item, dict)
                 ),
             }
-        runtime_root = Path(
-            os.environ.get("L9_RUNTIME_ROOT", str(Path.home() / ".l9"))
-        ).expanduser()
         summary, json_path, md_path = summary_module.write_summary(
             workspace=workspace,
-            database_path=runtime_root / "generated-data" / "pipeline.sqlite3",
+            database_path=generated_data_database(workspace),
             campaign_id=report.campaign_id,
             campaign_report=structured,
         )

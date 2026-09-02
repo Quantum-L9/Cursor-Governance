@@ -44,9 +44,21 @@ from .synthesizer import PE_ROOT
 CORE_SHARED = PE_ROOT / "core" / "shared"
 MISSION_ROOT = PE_ROOT / "mission"
 
+# APPEND, never insert(0): see mission_admission for why appending reaches the
+# module files and why the binding is then verified rather than assumed.
 for _path in (CORE_SHARED, MISSION_ROOT):
     if str(_path) not in sys.path:
-        sys.path.insert(0, str(_path))
+        sys.path.append(str(_path))
+
+import mission as _mission_module  # noqa: E402
+
+from .mission_admission import _require_module_file  # noqa: E402
+
+_require_module_file(_mission_module, MISSION_ROOT / "mission.py", "mission")
+
+import binding as _binding_module  # noqa: E402
+
+_require_module_file(_binding_module, MISSION_ROOT / "binding.py", "binding")
 
 from binding import (  # noqa: E402 — the one binding authority (contract §17 reuse)
     MissionProgramBinding,

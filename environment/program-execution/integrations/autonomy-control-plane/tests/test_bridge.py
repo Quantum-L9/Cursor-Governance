@@ -13,8 +13,9 @@ from adapters.common.imports import load_module
 _HERE = Path(__file__).resolve().parents[1]
 _PE_ROOT = _HERE.parents[1]
 _GOV_ROOT = _PE_ROOT.parents[1]
+# APPEND, never insert(0): see peer_execution.imports.pe_script.
 if str(_GOV_ROOT) not in sys.path:
-    sys.path.insert(0, str(_GOV_ROOT))
+    sys.path.append(str(_GOV_ROOT))
 # APPEND, never insert(0): Program Execution needs its own PE-exclusive
 # packages here, but `scripts` is a top-level name it SHARES with the
 # repository root. Prepending would hand PE's `scripts/` that name for the
@@ -180,6 +181,15 @@ def _execution_request_payload() -> dict[str, object]:
 
 
 class AutonomyControlPlaneBridgeTests(unittest.TestCase):
+    def test_missing_base_sha_is_refused_not_zero_filled(self) -> None:
+        """A zero SHA passes the hex check and binds a lease to a commit no tree has."""
+        mapper = _mapper()
+        contract = _mutating_contract()
+        contract.pop("base_sha")
+        with self.assertRaises(mapper.ContractActionError) as ctx:
+            mapper.map_program_contract(contract, adapter_id="claude-code", attempt_number=1)
+        self.assertIn("base_sha", str(ctx.exception))
+
     def test_identifiers_are_deterministic(self) -> None:
         module = _mapper()
         first = module.deterministic_ids("Program A", "TASK-1", 2, "cursor-foreground")
@@ -289,6 +299,25 @@ class AutonomyControlPlaneBridgeTests(unittest.TestCase):
         self.assertIn("repository.write_scoped", caps)
         self.assertIn("git.commit_local", caps)
         self.assertEqual(authorized, ("repository.write_scoped", "git.commit_local"))
+
+    def test_read_probe_targets_the_declared_scope_not_an_invented_file(self) -> None:
+        """A read grant with no declared path probes the whole-worktree scope."""
+        module = _grant()
+        contract = {"writable_paths": [], "requested_actions": ["inspect"]}
+        self.assertEqual(module._resource_for_capability(contract, "repository.read"), "**")
+        declared = {"writable_paths": ["docs/result.txt"], "requested_actions": ["inspect"]}
+        self.assertEqual(
+            module._resource_for_capability(declared, "repository.read"), "docs/result.txt"
+        )
+        self.assertIsNone(module._resource_for_capability(contract, "shell.execute"))
+
+    def test_write_probe_without_a_declared_path_is_refused(self) -> None:
+        """`README.md` used to be invented as the resource of every write probe."""
+        module = _grant()
+        contract = {"writable_paths": [], "requested_actions": ["local_write"]}
+        with self.assertRaises(module.AutonomyGrantError) as ctx:
+            module._resource_for_capability(contract, "repository.write_scoped")
+        self.assertIn("WRITABLE_PATHS_REQUIRED", str(ctx.exception))
 
     def test_inspect_only_grant_does_not_authorize_write(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

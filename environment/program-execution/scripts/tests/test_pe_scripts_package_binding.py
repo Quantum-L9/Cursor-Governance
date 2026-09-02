@@ -400,21 +400,19 @@ class SysPathHygieneTests(unittest.TestCase):
         self.assertEqual(offenders, [], f"sys.path.insert(0, PE_ROOT): {offenders}")
 
 
-#: Names conventionally bound to a subsystem root in this tree. Matched
-#: case-INSENSITIVELY: the first cut of this guard missed two live
-#: `sys.path.insert(0, str(root))` calls in tests/test_probe_command.py purely
-#: because the local was lowercase, which is no difference at all to the import
-#: system.
-_ROOT_NAMES = frozenset({"pe_root", "_pe_root", "root", "_root", "subsystem_root"})
-
-
 def _is_subsystem_root(node: ast.AST | None) -> bool:
-    """True when `node` is the subsystem root ITSELF, not a directory under it.
+    """True when `node` is a ROOT variable itself, not a directory under one.
 
-    `sys.path.insert(0, str(PE_ROOT / "scripts"))` is a different and harmless
-    thing: it exposes bare module names (`provider_loader`, `validate_replan`),
-    never the `scripts` PACKAGE, so it cannot win the shared top-level name. A
-    path join is therefore what separates the safe form from the unsafe one.
+    `sys.path.insert(0, str(PE_ROOT / "scripts"))` is a different thing: it
+    exposes bare module names, never the `scripts` PACKAGE, so it cannot win
+    the shared top-level name. A path join is therefore what separates the safe
+    form from the unsafe one.
+
+    Any name containing "root" counts, case-insensitively. The first cut
+    matched an allow-list of spellings and missed `root` (lowercase) and then
+    `_PE_ROOT_FOR_IMPORT` -- a live prepend of the subsystem root that ran
+    inside every `make campaign` -- because the spelling was not on the list.
+    The import system does not care how the variable is spelled.
     """
     if node is None:
         return False
@@ -422,8 +420,134 @@ def _is_subsystem_root(node: ast.AST | None) -> bool:
         if node.func.id != "str" or not node.args:
             return False
         node = node.args[0]
-    return isinstance(node, ast.Name) and node.id.lower() in _ROOT_NAMES
+    return isinstance(node, ast.Name) and "root" in node.id.lower()
 
 
-if __name__ == "__main__":
-    unittest.main()
+class BareNameBindingTests(unittest.TestCase):
+    """Two different modules must never compete for one bare name inside PE.
+
+    `instantiate.py` exists in BOTH template `scripts/` directories with
+    different contracts. Whichever directory was prepended last decided which
+    one a bare `import instantiate` bound -- so the Blueprint synthesizer could
+    receive the controller renderer, which has no `render_tree`.
+    """
+
+    BLUEPRINT_RENDERER = (
+        PE_ROOT / "core/program-execution-blueprint-template/scripts/instantiate.py"
+    )
+    CONTROLLER_SCRIPTS = PE_ROOT / "core/program-execution-controller-template/scripts"
+
+    def test_no_program_execution_module_binds_the_renderer_by_bare_name(self) -> None:
+        offenders: list[str] = []
+        for path in sorted(PE_ROOT.rglob("*.py")):
+            if "/campaigns/" in path.as_posix():
+                continue  # frozen campaign snapshots are not live code
+            try:
+                tree = ast.parse(path.read_text(encoding="utf-8"))
+            except SyntaxError:  # pragma: no cover - fixture corpora
+                continue
+            for node in ast.walk(tree):
+                names: list[str] = []
+                if isinstance(node, ast.Import):
+                    names = [alias.name for alias in node.names]
+                elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+                    names = [node.module]
+                if any(name.split(".")[0] == "instantiate" for name in names):
+                    offenders.append(f"{path.relative_to(PE_ROOT)}:{node.lineno}")
+        self.assertEqual(offenders, [], f"bare `instantiate` imports: {offenders}")
+
+    def test_synthesizer_binds_the_blueprint_renderer_under_hostile_order(self) -> None:
+        probe = f"""
+            import sys
+            from pathlib import Path
+            sys.path.insert(0, {str(self.CONTROLLER_SCRIPTS)!r})
+            sys.path.append({str(PE_ROOT)!r})
+            import instantiate  # the CONTROLLER renderer wins the bare name
+            import compiler.synthesizer as synthesizer
+            print(Path(instantiate.__file__).resolve())
+            print(Path(synthesizer.instantiate.__file__).resolve())
+            print(hasattr(synthesizer.instantiate, "render_tree"))
+        """
+        result = _run_probe(probe)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        bare, bound, renders = result.stdout.split()
+        self.assertEqual(Path(bare), self.CONTROLLER_SCRIPTS / "instantiate.py")
+        self.assertEqual(Path(bound), self.BLUEPRINT_RENDERER.resolve())
+        self.assertEqual(renders, "True")
+
+    def test_campaign_runner_binds_pec_by_location_without_touching_sys_path(self) -> None:
+        probe = f"""
+            import sys
+            from pathlib import Path
+            sys.path.append({str(PE_ROOT)!r})
+            from peer_execution.imports import load_module
+            runner = load_module(
+                Path({str(PE_SCRIPTS_DIR)!r}) / "run_campaign.py", "pe_runner_probe"
+            )
+            before = list(sys.path)
+            package = runner._bind_pec_package()
+            print(Path(package.__path__[0]).resolve())
+            print({str(self.CONTROLLER_SCRIPTS)!r} in sys.path)
+            print(sys.path == before)
+            from pec.controller import ensure_campaign_active  # noqa: F401
+            print("import-ok")
+        """
+        result = _run_probe(probe)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        bound, exposed, unchanged, ok = result.stdout.split()
+        self.assertEqual(Path(bound), (self.CONTROLLER_SCRIPTS / "pec").resolve())
+        self.assertEqual(exposed, "False")
+        self.assertEqual(unchanged, "True")
+        self.assertEqual(ok, "import-ok")
+
+    def test_mission_consumers_refuse_a_namespace_binding(self) -> None:
+        """`mission/` is importable as an empty namespace package from PE_ROOT."""
+        probe = f"""
+            import sys
+            sys.path.append({str(PE_ROOT)!r})
+            import mission  # binds the DIRECTORY, not mission.py
+            assert not getattr(mission, "__file__", None), mission
+            try:
+                import compiler.mission_admission  # noqa: F401
+            except ImportError as exc:
+                print("REFUSED" if "namespace" in str(exc) else f"WRONG: {{exc}}")
+            else:
+                print("SILENT")
+        """
+        result = _run_probe(probe)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), "REFUSED")
+
+
+class RuntimeRootAuthorityTests(unittest.TestCase):
+    """Runtime paths come from `environment/agents/runtime_paths.py`, by location."""
+
+    def test_peer_probe_resolves_the_canonical_readiness_root(self) -> None:
+        probe = f"""
+            import os, sys
+            from pathlib import Path
+            os.environ["L9_RUNTIME_ROOT"] = {str(REPO_ROOT / ".l9-probe-root")!r}
+            sys.path.append({str(PE_ROOT)!r})
+            from peer_execution.imports import load_module, pe_script
+            before = list(sys.path)
+            resolved = pe_script("probe_executable_peers")._resolve_runtime_root()
+            canonical = load_module(
+                Path({str(REPO_ROOT)!r}) / "environment/agents/runtime_paths.py",
+                "probe_runtime_paths",
+            ).peer_readiness_root()
+            print(resolved == canonical)
+            print(sys.path == before)
+            print(str(resolved).endswith("agents/readiness"))
+        """
+        result = _run_probe(probe)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.split(), ["True", "True", "True"])
+
+    def test_no_legacy_readiness_literal_remains(self) -> None:
+        for name in ("probe_executable_peers.py", "probe_execution_adapters.py"):
+            text = (PE_SCRIPTS_DIR / name).read_text(encoding="utf-8")
+            # Quoted literals are code; the prose in docstrings may name the
+            # legacy layout to explain why it is gone.
+            self.assertNotIn('"_peer-readiness"', text, name)
+            self.assertNotIn('Path.home() / ".l9"', text, name)
+            self.assertNotIn('"~/.l9', text, name)
