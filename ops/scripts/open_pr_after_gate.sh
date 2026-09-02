@@ -556,10 +556,11 @@ if [[ -f "$_pr_summary_py" ]]; then
 fi
 
 echo "--- subscribe (GitHub notifications for PR #$pr_number) ---"
-if gh api -X PUT "repos/${owner}/${name}/issues/${pr_number}/subscription" \
-  -f subscribed=true -f ignored=false >/dev/null; then
-  echo "Subscribed to PR #$pr_number ($repo)"
-else
+# PUT repos/.../issues/{n}/subscription 404s. GraphQL updateSubscription is
+# the live path (ops/scripts/lib/gh_subscribe_pr.sh).
+# shellcheck source=lib/gh_subscribe_pr.sh
+source "$SCRIPT_DIR/lib/gh_subscribe_pr.sh"
+if ! gh_subscribe_pr "$owner" "$name" "$pr_number"; then
   echo "WARN: could not subscribe to PR #$pr_number (continuing)"
 fi
 
