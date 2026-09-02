@@ -163,6 +163,7 @@ repos:
     integrates_with: [cursor-governance]
   l9-infra:
     github: Quantum-L9/l9-infisical-control-plane
+    github_aliases: [Quantum-L9/l9-infra]
     path_hints: [l9-infra, l9-infisical-control-plane]
     remote_patterns: ["*/l9-infra*", "*/l9-infra.git", "*/l9-infisical-control-plane*"]
     integrates_with: [cursor-governance]

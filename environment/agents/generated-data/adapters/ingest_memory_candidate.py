@@ -29,11 +29,18 @@ def _group_from_candidate_source(source: Mapping[str, Any]) -> str | None:
     needle = recorded.lower()
     for slug, cfg in repos.items():
         github = str((cfg or {}).get("github") or "")
-        if github and github.lower() == needle:
+        aliases = [
+            str(item).strip()
+            for item in ((cfg or {}).get("github_aliases") or [])
+            if str(item).strip()
+        ]
+        names = [github, *aliases]
+        if any(name.lower() == needle for name in names if name):
             return str(slug)
-        name = github.rsplit("/", 1)[-1] if github else ""
-        if name and name.lower() == needle:
-            return str(slug)
+        for name in names:
+            basename = name.rsplit("/", 1)[-1] if name else ""
+            if basename and basename.lower() == needle:
+                return str(slug)
         if recorded.lower() == str(slug).lower():
             return str(slug)
     return None
