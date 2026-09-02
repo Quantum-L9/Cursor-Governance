@@ -5,7 +5,14 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-from .common import digest_object, load_yaml, sha256_file, utc_now, write_json
+from .common import (
+    digest_object,
+    load_yaml,
+    sha256_file,
+    utc_now,
+    verification_mechanisms_from_card,
+    write_json,
+)
 
 LOCK_SCHEMA = Path(__file__).resolve().parents[2] / "schemas" / "program-lock.schema.json"
 
@@ -60,9 +67,10 @@ def normalize_blueprint(root: Path) -> dict[str, Any]:
             raise BlueprintError(f"task {raw['id']} references unknown target {raw['target_id']}")
         execution_kind = raw["execution_kind"]
         repository_id = target.get("repository_id") if execution_kind == "repo_local" else None
+        verification_mechanisms = verification_mechanisms_from_card(raw)
         required_commands = [
             item["command_or_inspection"]
-            for item in raw.get("validation") or []
+            for item in verification_mechanisms
             if item.get("method") in {"command", "command_and_inspection"}
         ]
         tasks.append(
@@ -83,6 +91,7 @@ def normalize_blueprint(root: Path) -> dict[str, Any]:
                 "completion_gates": list(raw.get("completion_gate_ids") or []),
                 "authorization_ceiling": dict(raw.get("authorization_ceiling") or {}),
                 "required_acceptance": [item["id"] for item in raw.get("acceptance") or []],
+                "verification_mechanisms": verification_mechanisms,
                 "required_validation_commands": required_commands,
                 "risk_tier": (raw.get("risk") or {}).get("tier", "T2"),
                 "source": raw,
@@ -141,6 +150,32 @@ def relock_tasks(lock_path: Path, task_ids: Iterable[str]) -> dict[str, Any]:
     if missing:
         raise BlueprintError(f"cannot relock tasks absent from the Blueprint: {sorted(missing)}")
 
+    recorded_tasks = {str(task["id"]): task for task in lock.get("tasks") or []}
+    if set(recorded_tasks) != set(live):
+        raise BlueprintError("scoped relock refused: task membership changed")
+
+    recorded_sources = dict(lock.get("source_digests") or {})
+    current_sources = dict(current.get("source_digests") or {})
+    if set(recorded_sources) != set(current_sources):
+        raise BlueprintError("scoped relock refused: Blueprint source membership changed")
+    # Program-wide sources are compiled artifacts, not authored inputs: a resume
+    # that reaches this call has just recompiled the Blueprint, so PROGRAM.yaml
+    # and its siblings differ from what the prior lock attested on every run.
+    # Refusing on that drift would make scoped relock unreachable. What the
+    # explicit-task-ids path must not do is absorb a *task definition* nobody
+    # named, which is what the next guard closes.
+    non_selected_drift = sorted(
+        task_id
+        for task_id, task in recorded_tasks.items()
+        if task_id not in wanted
+        and task_definition_digest(task) != task_definition_digest(live[task_id])
+    )
+    if non_selected_drift:
+        raise BlueprintError(
+            "scoped relock refused: non-selected task definitions changed: "
+            + ", ".join(non_selected_drift)
+        )
+
     previous_digest = str(lock.get("lock_digest") or "")
     definitions: dict[str, dict[str, str]] = {}
     tasks: list[dict[str, Any]] = []
@@ -176,7 +211,11 @@ def relock_tasks(lock_path: Path, task_ids: Iterable[str]) -> dict[str, Any]:
     body = dict(lock)
     body.pop("lock_digest", None)
     body["tasks"] = tasks
-    body["source_digests"] = current.get("source_digests") or {}
+    # The file digests must move with the definitions, or the very next
+    # verification reports the same staleness this call just resolved. The
+    # guards above are what keep that refresh honest: no unnamed task
+    # definition, and no change in task or source membership, reaches here.
+    body["source_digests"] = dict(current_sources)
     body["lock_digest"] = digest_object(body)
     schema_errors = validate_program_lock_schema(body)
     if schema_errors:

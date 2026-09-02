@@ -755,6 +755,35 @@ _BLOCKING = "blocking"
 _STATE = "state"
 
 
+#: A verification mechanism that can actually produce a verdict. `inspection`
+#: alone cannot: it yields a reading, not the pass/fail the Controller acts on.
+_TERMINAL_VERIFICATION_METHODS = {"command", "command_and_inspection", "external_adapter"}
+
+#: Ceiling flags that make a task mutating, and so require a terminal verifier.
+_MUTATING_AUTHORIZATIONS = ("local_write", "commit", "destructive_change")
+
+
+def missing_terminal_verifier(task: dict[str, Any]) -> bool:
+    """A mutating repo-local task the Controller could never verify.
+
+    Acceptance already refuses this before a Blueprint is sealed. This is the
+    defence in depth: a lock written before that rule existed, or a task that
+    reached runtime by some other path, would otherwise be claimable and fail
+    only at `verify` — after the worker had already changed the repository.
+    Readiness is where that costs nothing.
+    """
+    if str(task.get("execution_kind") or "").strip() != "repo_local":
+        return False
+    ceiling = task.get("authorization_ceiling") or {}
+    if not any(bool(ceiling.get(action)) for action in _MUTATING_AUTHORIZATIONS):
+        return False
+    mechanisms = task.get("verification_mechanisms") or []
+    return not any(
+        isinstance(item, dict) and str(item.get("method") or "") in _TERMINAL_VERIFICATION_METHODS
+        for item in mechanisms
+    )
+
+
 def _gate_prerequisite_kind(gate: dict[str, Any] | None) -> str:
     """Classify an unsatisfied gate prerequisite (ADR-0023).
 
@@ -801,6 +830,8 @@ def task_readiness_detail(
         entries.append((_BLOCKING, "global_halt"))
     if task["definition_status"] != "ready":
         entries.append((_BLOCKING, f"definition_not_ready:{task['definition_status']}"))
+    if missing_terminal_verifier(task):
+        entries.append((_BLOCKING, "missing_terminal_verifier"))
     if task["runtime_state"] in {
         "LEASED",
         "PREPARED",
@@ -1557,6 +1588,37 @@ def _preflight2_gates(commands: list[str], declared: list[str] | None = None) ->
     }
 
 
+def _unenforced_prohibitions(workspace: Path) -> list[dict[str, Any]]:
+    """Prohibitions the do_not_build gate cannot evaluate.
+
+    That gate matches file paths. A prohibition with no usable pattern - an
+    architecture law such as "a second Program Execution runtime or Controller"
+    - is enforced by review and conformance instead, and the gate is silent
+    about it. Silence is what makes a PASS read wider than it is, so the
+    verification receipt names them.
+
+    Derived as the complement of the set the gate actually matches, rather than
+    by reading `kind`, so a legacy entry carrying neither a kind nor a pattern
+    is reported here too instead of vanishing between the two.
+    """
+    lock_path = workspace / "runtime" / "program-lock.json"
+    if not lock_path.is_file():
+        return []
+    entries = (load_json(lock_path).get("do_not_build") or {}).get("prohibited_primary_paths") or []
+    unenforced: list[dict[str, Any]] = []
+    for item in entries:
+        if not isinstance(item, dict) or item.get("path_or_pattern"):
+            continue
+        unenforced.append(
+            {
+                "id": str(item.get("id") or ""),
+                "statement": str(item.get("statement") or ""),
+                "enforced_by": str(item.get("detection") or "review_and_conformance"),
+            }
+        )
+    return unenforced
+
+
 def _wiring_gate(contract: dict[str, Any], task: dict[str, Any]) -> str:
     source = task.get("source") if isinstance(task.get("source"), dict) else {}
     consumers = contract.get("consumers") or source.get("consumers") or []
@@ -1767,6 +1829,13 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
         changed: list[str] = []
         validations: list[dict[str, Any]] = []
         candidate_sha = None
+        # What the do_not_build gate does NOT cover. Semantic prohibitions carry
+        # no path to match (W8/S1), so a PASS from that gate means "the changed
+        # paths are clean", never "no prohibition was violated". Saying which
+        # rules it could not evaluate keeps the receipt from reading as the
+        # broader claim. Derived from the lock, so it stands even when the
+        # worktree is gone and every gate is FAIL.
+        unenforced_prohibitions = _unenforced_prohibitions(workspace)
         if worktree is None or not worktree.is_dir():
             for name in [
                 "base_sha",
@@ -1811,8 +1880,14 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
                         if path_allowed(path, [str(pattern)]):
                             dnb_hit = True
                     except ContractError:
-                        if str(pattern) in path:
-                            dnb_hit = True
+                        # An entry that will not parse as a repo path is not a
+                        # path prohibition, and substring-matching it against a
+                        # filename was never enforcement: a sentence does not
+                        # appear inside a path, so the gate passed having
+                        # matched nothing. Semantic prohibitions now travel in
+                        # their own channel (compiler/prohibition_kind.py) and
+                        # carry no path_or_pattern, so they never arrive here.
+                        continue
             gates["do_not_build"] = "FAIL" if dnb_hit else "PASS"
             # A dangling symlink is still a symlink; Path.exists() follows the
             # link and reports False for one, which used to skip the check.
@@ -1822,12 +1897,23 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
             claimed_results = receipt.get("validation_results") or []
             claimed_commands = [item.get("command") for item in claimed_results]
             required_commands = contract.get("validation_commands") or []
-            gates["worker_validation_claim"] = (
-                "PASS"
-                if claimed_commands == required_commands
-                and all(item.get("status") == "PASS" for item in claimed_results)
-                else "FAIL"
-            )
+            if not required_commands:
+                # A claim gate that checked nothing must not report PASS. With no
+                # commands both sides are empty, so the equality holds vacuously
+                # and `all([])` is True - the gate would assert the worker's
+                # validation claim on zero evidence. Today `validation` is
+                # INCOMPLETE in the same breath so the verdict is already
+                # refused, but that makes the safety a property of a sibling
+                # gate rather than of this one. Say INCOMPLETE here too, so the
+                # honest answer does not depend on which gate is read.
+                gates["worker_validation_claim"] = "INCOMPLETE"
+            else:
+                gates["worker_validation_claim"] = (
+                    "PASS"
+                    if claimed_commands == required_commands
+                    and all(item.get("status") == "PASS" for item in claimed_results)
+                    else "FAIL"
+                )
             if required_commands:
                 lock_task = next(
                     (item for item in lock.get("tasks") or [] if item.get("id") == task_id), {}
@@ -1877,6 +1963,7 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
             "declared_changed_files": sorted(set(receipt.get("changed_files") or [])),
             "observed_changed_files": changed,
             "validations": validations,
+            "unenforced_prohibitions": unenforced_prohibitions,
             "gates": gates,
             "kernel_verdict": kernel_verdict,
             "dod_gates": dod_gates,
