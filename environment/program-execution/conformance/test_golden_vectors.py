@@ -56,6 +56,21 @@ class GoldenVectorTests(unittest.TestCase):
                 result["escalation"], vector["expected"]["escalation"], vector["vector_id"]
             )
 
+    def test_derived_vectors_do_not_copy_their_expectation(self) -> None:
+        """A parity gate that reads `expected` into `result` cannot fail."""
+        for vector_id in ("unsupported_peer", "peer_local_override"):
+            vector = next(item for item in GOLDEN_VECTORS if item["vector_id"] == vector_id)
+            tampered = dict(vector)
+            tampered["expected"] = {
+                "authority_result": "ALLOWED",
+                "blocker": None,
+                "escalation": None,
+            }
+            result = evaluate_vector(tampered)
+            self.assertEqual(result["authority_result"], "REJECTED", vector_id)
+            self.assertEqual(result["blocker"], vector["expected"]["blocker"], vector_id)
+            self.assertEqual(result["escalation"], vector["expected"]["escalation"], vector_id)
+
     def test_delta_classes_pinned_to_canonical_contract(self) -> None:
         import yaml
 

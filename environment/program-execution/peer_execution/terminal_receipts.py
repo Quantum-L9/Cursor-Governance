@@ -6,8 +6,6 @@ from typing import Any
 from .core_receipts import verification_receipt
 from .digests import digest_object
 
-_ZERO_DIGEST = "sha256:" + "0" * 64
-
 
 def _required_string(name: str, value: object) -> str:
     if not isinstance(value, str) or not value.strip():
@@ -101,13 +99,18 @@ def deployment_from_payload(
         "operation": operation,
         "repository": _required_string("repository", contract.get("repository")),
         "environment": _required_string("environment", contract.get("environment")),
+        # Contract fields, never defaults: a zero digest satisfies the schema's
+        # hex pattern, so a missing rollback plan used to validate as a real one.
         "ref": _required_string(
-            "deployment ref",
-            contract.get("candidate_sha") or contract.get("ref") or "READ_ONLY",
+            "deployment ref", contract.get("candidate_sha") or contract.get("ref")
         ),
-        "artifact_digest": str(contract.get("artifact_digest") or _ZERO_DIGEST),
+        "artifact_digest": _required_string(
+            "deployment artifact_digest", contract.get("artifact_digest")
+        ),
         "approval_id": approval_id,
-        "rollback_plan_digest": str(contract.get("rollback_plan_digest") or _ZERO_DIGEST),
+        "rollback_plan_digest": _required_string(
+            "deployment rollback_plan_digest", contract.get("rollback_plan_digest")
+        ),
         "result": dict(result),
     }
     body["receipt_digest"] = digest_object(body)

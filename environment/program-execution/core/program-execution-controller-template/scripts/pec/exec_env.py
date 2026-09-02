@@ -125,6 +125,9 @@ def _discover_python(cwd: Path | None) -> Path:
                 if candidate.is_file():
                     return _keep_venv_shim(candidate)
     if cwd is not None:
+        provisioned = _provisioned_python(cwd)
+        if provisioned is not None:
+            return provisioned
         for name in (".venv", "venv"):
             for exe in ("bin/python3", "bin/python", "Scripts/python.exe"):
                 candidate = cwd / name / exe
@@ -142,41 +145,75 @@ def _existing_venv_python(cwd: Path) -> Path | None:
     return None
 
 
+def exec_env_root(worktree: Path) -> Path | None:
+    """Where a consumer task worktree's provisioned environment lives.
+
+    `$L9_ROOT/programs/<id>/worktrees/<task>` gets
+    `$L9_ROOT/programs/<id>/runtime/exec-env/<task>`: inside the controller
+    workspace, outside the candidate tree. Provisioning used to run
+    `uv venv` and `uv pip install -e .[dev]` INSIDE the candidate, so verifying
+    an attempt wrote a `.venv` into the tree whose changed files it was about
+    to judge. None for a path that is not a consumer task worktree.
+    """
+    workspace = worktree.resolve()
+    l9 = (Path.home() / ".l9").resolve()
+    try:
+        parts = workspace.relative_to(l9).parts
+    except ValueError:
+        return None
+    if len(parts) < 4 or parts[0] != "programs" or parts[2] != "worktrees":
+        return None
+    return l9 / "programs" / parts[1] / "runtime" / "exec-env" / parts[3]
+
+
+def _provisioned_python(worktree: Path) -> Path | None:
+    root = exec_env_root(worktree)
+    return _existing_venv_python(root) if root is not None else None
+
+
 def _consumer_project_python(cwd: Path) -> Path | None:
     """Prefer the target repo project environment over the PE controller venv.
 
     Consumer repos here install with ``pip install -e .[dev]`` (see EIE
     ``make setup``). ``uv sync`` fails when ``requires-python`` is wider than a
     git dependency allows. Provision ``uv venv --python 3.12`` then
-    ``uv pip install -e .[dev]``.
+    ``uv pip install -e <worktree>[dev]`` -- into the exec-env root beside the
+    controller runtime, never into the candidate worktree.
     """
     if not (cwd / "pyproject.toml").is_file():
         return None
+    existing = _provisioned_python(cwd) or _existing_venv_python(cwd)
     uv = shutil.which("uv")
-    if uv is None:
-        return _existing_venv_python(cwd)
-    if _existing_venv_python(cwd) is None:
+    root = exec_env_root(cwd)
+    if uv is None or root is None:
+        return existing
+    venv = root / ".venv"
+    if _provisioned_python(cwd) is None:
+        venv.parent.mkdir(parents=True, exist_ok=True)
         created = subprocess.run(
-            [uv, "venv", "--python", "3.12"],
-            cwd=str(cwd),
+            [uv, "venv", "--python", "3.12", str(venv)],
+            cwd=str(root),
             text=True,
             capture_output=True,
             check=False,
             timeout=120,
         )
         if created.returncode != 0:
-            return None
+            return existing
+    python = _provisioned_python(cwd)
+    if python is None:
+        return existing
     installed = subprocess.run(
-        [uv, "pip", "install", "-e", ".[dev]"],
-        cwd=str(cwd),
+        [uv, "pip", "install", "--python", str(python), "-e", f"{cwd}[dev]"],
+        cwd=str(root),
         text=True,
         capture_output=True,
         check=False,
         timeout=600,
     )
     if installed.returncode != 0:
-        return _existing_venv_python(cwd)
-    return _existing_venv_python(cwd)
+        return python
+    return python
 
 
 @dataclass(frozen=True)
