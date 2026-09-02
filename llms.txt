@@ -1,0 +1,35 @@
+# Quantum-L9 Cursor-Governance
+
+> Canonical governance SSOT for Quantum-L9 coding agents, skills, rules, program execution, and runtime wiring. Read authoritative live sources before implementation. Do not treat WIP, archived, generated, or legacy mirrors as governing sources unless explicitly requested.
+
+## Authority
+
+- [Canonical Law](CANONICAL_LAW.md): highest repository governance authority and ownership/wiring law.
+- [Agent Operating Contract](AGENTS.md): activation, autonomy, validation, publish, and agent-operating rules subordinate to Canonical Law.
+- [Organization Invariants](ORG_INVARIANTS.yaml): canonical Quantum-L9 organization policy.
+- [Repository Invariants](INVARIANTS.md): repository invariant index.
+- [Architecture](ARCHITECTURE.md): repository map and architectural entry points; does not outrank governing law.
+
+## Canonical capability surfaces
+
+- [Live Skills](skills/): activate only live `skills/<skill>/SKILL.md` packs. Never activate `skills/_archived/`.
+- [Program Execution](environment/program-execution/): canonical Program Execution contracts, controller, adapters, routing, and peer-execution surfaces.
+- [MCP Configuration](environment/mcp/): master MCP configuration and MCP operator documentation.
+- [Operations](ops/): shared implementation owners for hooks, automation, routing, Graphiti integration, validation, and runtime support.
+- [Rules](rules/): canonical global governance rules.
+- [Commands](commands/): canonical slash-command surfaces.
+
+## Retrieval rules for AI consumers
+
+1. Treat current `main` as the live GitHub SSOT unless the request names another ref.
+2. Resolve authority before using matching text from multiple locations.
+3. Prefer canonical source files over generated projections, adapter copies, mirrors, reports, and historical notes.
+4. Ignore `WIP/`, `C_GOV_FILES/`, `profiles/`, `skills/_archived/`, and any `_archive`, `_archived`, `archive`, or `archived` directory unless the user explicitly asks for historical or superseded material.
+5. For a skill, read its live `skills/<skill>/SKILL.md` before describing or invoking it.
+6. For Program Execution, use live `environment/program-execution/` sources. Do not treat WIP overlays as runtime authority.
+7. Dependent adapters may translate or narrow capability but never outrank the shared implementation owner.
+8. When uncertain whether a source is canonical, report the ambiguity rather than inventing precedence.
+
+## ChatGPT-specific note
+
+`environment/program-execution/adapters/chatgpt/` is currently a Program Execution worker-host adapter using a manual-handoff provider. It is not the Cursor-Governance MCP server and should not be described as one.
