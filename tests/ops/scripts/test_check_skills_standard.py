@@ -35,7 +35,6 @@ def test_folded_description_counts_full_text(tmp_path: Path) -> None:
         "name: l9-bounded-autonomy\n"
         "description: >-\n"
         f"  {desc}\n"
-        "disable-model-invocation: true\n"
         "metadata:\n"
         "  skill_schema: 1\n",
     )
@@ -45,6 +44,30 @@ def test_folded_description_counts_full_text(tmp_path: Path) -> None:
     assert arch == 0
     assert disc == len(b"l9-bounded-autonomy") + len(desc.encode())
     assert not any("under 150" in w for w in warns)
+
+
+def test_explicit_only_skill_counts_name_only(tmp_path: Path) -> None:
+    desc = (
+        "bounded autonomy campaign SOP for Cursor — parallel non-dependent Tasks, "
+        "background PR-poll subagents while main continues. use when user runs "
+        "/autonomy or needs PR convergence while continuing other work."
+    )
+    _write_skill(
+        tmp_path,
+        "l9-bounded-autonomy",
+        "name: l9-bounded-autonomy\n"
+        "description: >-\n"
+        f"  {desc}\n"
+        "disable-model-invocation: true\n"
+        "metadata:\n"
+        "  skill_schema: 1\n",
+    )
+    errs, _warns, live, arch, disc = check_skills(tmp_path)
+    assert errs == []
+    assert live == 1
+    assert arch == 0
+    assert disc == len(b"l9-bounded-autonomy")
+    assert disc != len(b"l9-bounded-autonomy") + len(desc.encode())
 
 
 def test_non_native_top_level_fails(tmp_path: Path) -> None:
