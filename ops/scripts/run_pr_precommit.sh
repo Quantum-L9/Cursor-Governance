@@ -114,12 +114,25 @@ _WRITER_HOOKS="end-of-file-fixer,trailing-whitespace"
 _WRITER_SKIP="${_CORPUS_SKIP},${_READER_HOOKS}"
 _READER_SKIP="${_CORPUS_SKIP},${_WRITER_HOOKS}"
 
-# Governance-local hooks with no `files:` guard. Their entry scripts live in the
-# governance tree, so in a consumer workspace they resolve to a path that does
-# not exist and the hook dies on a missing file rather than on anything it
-# checked. `commit-verification-contract` is now in `_CORPUS_SKIP` (velocity
-# path); `make precommit` / `make pr-full` still run it `--all-files`.
-_GOV_ONLY_SKIP=""
+# Governance-local hooks. Their `entry:` is a governance-tree path, so in a
+# consumer workspace it resolves to `<consumer>/ops/scripts/...`, which does not
+# exist, and the hook dies on a missing file rather than on anything it checked
+# — a false FAIL blocking `make pr` for every consumer repository.
+# `commit-verification-contract` is now in `_CORPUS_SKIP` (velocity path);
+# `make precommit` / `make pr-full` still run it `--all-files`.
+#
+# A `files:` guard does not save a hook from this: `gh-package-deps-preflight`
+# has one (`package.json|package-lock.json`), which is exactly what fired it in
+# Quantum-L9/SEO-Bot on a change that added test-group scripts:
+#   can't open file '<consumer>/ops/scripts/validate_gh_package_deps.py'
+# The guard decides WHETHER it runs; the entry path decides whether it CAN. Any
+# hook whose entry lives here belongs in this list, guarded or not.
+#
+# This skips the hook where it cannot run. It does not excuse what the hook
+# would have found: `validate_gh_package_deps.py` judges vendored `file:` deps
+# as local deps (tests/ops/scripts/test_validate_gh_package_deps.py), so running
+# it by hand against a consumer is clean rather than eight phantom findings.
+_GOV_ONLY_SKIP="gh-package-deps-preflight"
 if [[ -n "$_GOV_ONLY_SKIP" && "$WS" != "$GOV_ROOT" ]]; then
   _WRITER_SKIP="${_WRITER_SKIP},${_GOV_ONLY_SKIP}"
   _READER_SKIP="${_READER_SKIP},${_GOV_ONLY_SKIP}"

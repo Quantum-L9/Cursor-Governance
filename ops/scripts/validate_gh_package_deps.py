@@ -10,6 +10,17 @@ Offline-first: shape checks always run. A live registry-metadata check runs
 when the secrets resolver is available; if the resolver or network fails the
 live check degrades to a warning (fail-open) — shape violations still fail.
 
+Not every `@quantum-l9/*` dependency comes from the registry. A repo may vendor
+one in-tree and declare it `file:packages/<name>`, which npm records in the lock
+as `{"resolved": "packages/<name>", "link": true}` with no tarball URL and no
+integrity — by construction, not by omission. Judged as a registry install that
+is eight findings in a repo with four such packages, none of them real. Those
+deps are checked as LOCAL deps instead: the declaration, the lock entry and the
+directory on disk must all agree, and its package.json must name the package it
+claims to be. That is a verified exemption, not a skip — `file:packages/ghost`
+pointing at nothing is still a finding, and so is a lock entry claiming a link
+that the declaration does not.
+
 Usage: python3 ops/scripts/validate_gh_package_deps.py [package.json] [package-lock.json]
 """
 
@@ -71,8 +82,57 @@ def lock_entries(lock: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return out
 
 
+LOCAL_SPEC_PREFIXES = ("file:", "link:")
+
+
+def local_spec_path(spec: str) -> str | None:
+    """The path a `file:`/`link:` spec points at, or None when it is not one."""
+    for prefix in LOCAL_SPEC_PREFIXES:
+        if spec.startswith(prefix):
+            return spec[len(prefix) :].strip()
+    return None
+
+
+def local_problems(name: str, spec_path: str, entry: dict[str, Any], root: Path) -> list[str]:
+    """Verify a vendored local dependency instead of a registry one.
+
+    Every condition here is something a registry install would have proven some
+    other way: that the declaration and the lock agree on where the package
+    lives, and that what lives there is the package being claimed.
+    """
+    problems: list[str] = []
+    if entry.get("link") is not True:
+        problems.append(
+            f"{name}: declared as a local path ({spec_path!r}) but the lock entry is not a link"
+        )
+    resolved = str(entry.get("resolved") or "")
+    if resolved.rstrip("/") != spec_path.rstrip("/"):
+        problems.append(f"{name}: declared {spec_path!r} but the lock resolves it to {resolved!r}")
+    target = (root / spec_path).resolve()
+    manifest = target / "package.json"
+    if not manifest.is_file():
+        problems.append(f"{name}: local path {spec_path!r} has no package.json")
+        return problems
+    vendored = _load_json(manifest)
+    if vendored is None:
+        problems.append(f"{name}: local path {spec_path!r} has an unreadable package.json")
+    elif vendored.get("name") != name:
+        problems.append(
+            f"{name}: local path {spec_path!r} contains {vendored.get('name')!r}, not {name!r}"
+        )
+    return problems
+
+
 def shape_problems(name: str, entry: dict[str, Any]) -> list[str]:
     problems: list[str] = []
+    if entry.get("link") is True:
+        # The declaration says registry, the lock says local directory. Naming
+        # the disagreement is more useful than reporting the two symptoms it
+        # causes (no tarball URL, no integrity) as if they were separate facts.
+        return [
+            f"{name}: lock entry is a local link to {str(entry.get('resolved') or '')!r}, "
+            "but package.json does not declare it with file:/link:"
+        ]
     version = str(entry.get("version") or "")
     resolved = str(entry.get("resolved") or "")
     integrity = str(entry.get("integrity") or "")
@@ -143,12 +203,20 @@ def main() -> int:
     if not deps:
         return 0
     entries = lock_entries(lock or {})
+    # Local specs are relative to the manifest that declares them, not to cwd.
+    root = Path(args.package_json).resolve().parent
 
     problems: list[str] = []
+    local = 0
     for name, spec in sorted(deps.items()):
         entry = entries.get(name)
         if not entry:
             problems.append(f"{name}: declared ({spec}) but missing from package-lock.json")
+            continue
+        spec_path = local_spec_path(spec)
+        if spec_path is not None:
+            local += 1
+            problems.extend(local_problems(name, spec_path, entry, root))
             continue
         problems.extend(shape_problems(name, entry))
         if not args.no_live_check:
@@ -163,7 +231,10 @@ def main() -> int:
     if problems:
         print(f"validate_gh_package_deps: {len(problems)} problem(s) found", file=sys.stderr)
         return 1
-    print(f"validate_gh_package_deps: {len(deps)} @quantum-l9 dep(s) verified")
+    summary = f"validate_gh_package_deps: {len(deps)} @quantum-l9 dep(s) verified"
+    if local:
+        summary += f" ({local} vendored locally, {len(deps) - local} from the registry)"
+    print(summary)
     return 0
 
 
