@@ -1,4 +1,4 @@
 interface:
   display_name: "L9 Plan Simple"
-  short_description: "Shared executable-plan template, Cursor Build, then stacked make pr"
+  short_description: "Shared executable-plan template with two handoff modes: Cursor Build (default) or embedded caller-owned planning"
   brand_color: "#0F766E"

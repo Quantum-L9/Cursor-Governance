@@ -966,7 +966,7 @@
       "invocation": "explicit_only",
       "name": "l9-global-architect",
       "path": "skills/l9-global-architect",
-      "reason": "experimental GAR runtime bootloader whose broad architect-engineer description would hijack ordinary routing if auto-invoked; load only when the user explicitly invokes the global architect runtime or iterates on the pack; disable-model-invocation",
+      "reason": "experimental GAR runtime bootloader whose broad architect-engineer description would hijack ordinary routing if auto-invoked; load when the user explicitly invokes the global architect runtime, iterates on the pack, or when l9-plan-simple loads it as the required upstream planner; disable-model-invocation",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1126,7 +1126,7 @@
     },
     {
       "composition_role": "general",
-      "description": "create a machine-validated cursor .plan.md from the shared executable-plan template and execute it with the build button, then open a stacked PR. never branch off main when an open PR exists. always publish via the stacked path after build and display the PR URL. use when scope is unclear, requirements need decomposition, cursor plan mode is on, or the next step should be planned before code changes. do not use when the user asks for program-execution, make campaign, /l9-plan, or a pe campaign lock.",
+      "description": "create a machine-validated cursor .plan.md from the shared executable-plan template in one of two handoff modes. default mode cursor-build executes with the build button and then opens a stacked PR; never branch off main when an open PR exists, and display the PR URL. embedded mode is for callers that own their own execution \u2014 it stops at validated planning artifacts and grants no execution, commit, publication, campaign, or deployment authority. use when scope is unclear, requirements need decomposition, cursor plan mode is on, the next step should be planned before code changes, or a nested skill or pipeline needs planning depth without downstream authority. do not use when the user asks for program-execution, make campaign, /l9-plan, or a pe campaign lock.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-plan-simple",
@@ -1302,6 +1302,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "daa54da4cb8e7a1b3a43bfde11c3906db992fe88eabb73a6c73ec2f29bcf42b9",
-  "source_skill_corpus_sha256": "0cf2371eeecf397783229da931f54473124ff9bd8e3872fef7b24596e1b0b7b1"
+  "source_manifest_sha256": "cbaf39b32ddae7a4b663ae852eed2d6f339bfc026a1cd9e9547ed2d35fe050b6",
+  "source_skill_corpus_sha256": "dd430937b72c92ebfa5bdf6a07182366c6e71a6091e0d8175f279bcbbbe693a9"
 }
