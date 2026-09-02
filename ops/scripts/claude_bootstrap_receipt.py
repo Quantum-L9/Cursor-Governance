@@ -60,7 +60,7 @@ SURFACES: dict[str, dict[str, str]] = {
     },
     "cursor": {
         "dir": "cursor",
-        "remediation": "make cursor-install WS=\"$(pwd)\"",
+        "remediation": 'make cursor-install WS="$(pwd)"',
     },
 }
 
@@ -77,6 +77,7 @@ def _surface_dir(surface: str) -> str:
 def _surface_remediation(surface: str) -> str:
     entry = SURFACES.get((surface or "claude").strip().lower())
     return entry["remediation"] if entry else "run the surface installer"
+
 
 NEVER_RAN = "never_ran"
 UNKNOWN = "unknown"
@@ -170,9 +171,7 @@ def receipt_path(env: dict[str, str] | None = None, *, surface: str = "claude") 
         override = (source.get(key) or "").strip()
         if override:
             return Path(override)
-    return (
-        Path(source.get("HOME", str(Path.home()))) / ".l9" / surface_dir / "bootstrap-state.json"
-    )
+    return Path(source.get("HOME", str(Path.home()))) / ".l9" / surface_dir / "bootstrap-state.json"
 
 
 def evaluate(

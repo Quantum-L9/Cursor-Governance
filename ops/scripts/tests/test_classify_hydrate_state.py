@@ -47,9 +47,7 @@ class PacketBooleanTests(unittest.TestCase):
         self.assertEqual(reason, "")
 
     def test_packet_degraded_true_is_degraded_with_reason(self) -> None:
-        degraded, reason = chs.classify(
-            _packet(degraded=True, reason="search timeout")
-        )
+        degraded, reason = chs.classify(_packet(degraded=True, reason="search timeout"))
         self.assertTrue(degraded)
         self.assertEqual(reason, "search timeout")
 
@@ -107,9 +105,11 @@ class CliContractTests(unittest.TestCase):
         self.assertEqual(reason, "empty task state")
 
     def test_cli_reason_is_single_line(self) -> None:
-        md = "```json\n" + json.dumps(
-            {"degraded": True, "hydrate_stats": {"degrade_reason": "a\nb\nc"}}
-        ) + "\n```"
+        md = (
+            "```json\n"
+            + json.dumps({"degraded": True, "hydrate_stats": {"degrade_reason": "a\nb\nc"}})
+            + "\n```"
+        )
         flag, reason = self._run(md)
         self.assertEqual(flag, "true")
         self.assertNotIn("\n", reason)
