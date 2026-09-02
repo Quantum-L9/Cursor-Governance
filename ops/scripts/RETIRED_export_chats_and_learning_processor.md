@@ -1,6 +1,6 @@
 # Retired: hourly chat export + tenx learning processor
 
-**Status:** retired 2026-08-13  
+**Status:** retired 2026-08-13
 **Replacement:** Cursor `sessionEnd` (chat X'd out) →
 `python -m ops.graphiti.hydration.archive_transcript` →
 S3 bucket `l9-chat-transcripts-020125249784` (`v1/<conversation_id>.json`).
@@ -26,7 +26,8 @@ embedded them. No tool dumps, no sqlite, no git_status wrappers.
 ## Operator
 
 ```bash
-# unload dead jobs
+# unload dead jobs (also: com.tenx.cursor-governance leftover monitor)
+launchctl bootout "gui/$(id -u)/com.tenx.cursor-governance" 2>/dev/null || true
 launchctl bootout "gui/$(id -u)/com.tenx.chat-export" 2>/dev/null || true
 launchctl bootout "gui/$(id -u)/com.tenx.learning-processor" 2>/dev/null || true
 

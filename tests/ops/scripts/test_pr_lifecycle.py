@@ -335,6 +335,67 @@ def test_gate_failure_receipt_clears_when_digest_changes(tmp_path: Path) -> None
     assert proc.returncode != 2
 
 
+def test_recording_the_kernels_clears_a_stale_failure_receipt(tmp_path: Path) -> None:
+    """The kernel gate's own instruction must be followable.
+
+    kernel_gate.py fails the gate with "apply the two kernels, record, and
+    re-run the same command". Its receipt lives at .l9/autonomy/, which is
+    gitignored — invisible to `git ls-files` with or without
+    `--others --exclude-standard` — so recording it changed nothing the state
+    digest observed, and the STOP-LOOPING latch then refused the very re-run the
+    hook had just demanded. An unclearable gate is worse than no gate: the only
+    exits left are bypassing it or abandoning the work.
+    """
+    repo = _init_repo(tmp_path, feature=True)
+    paths, content = _state_digest(repo)
+    receipt_dir = repo / ".l9" / "pr"
+    receipt_dir.mkdir(parents=True)
+    (receipt_dir / "gate-failure.json").write_text(
+        json.dumps(
+            {
+                "schema": "l9.pr_gate_failure.v2",
+                "paths_digest": paths,
+                "content_digest": content,
+                "pr_base": "main",
+                "failed_nodes": [],
+                "failed_hooks": [],
+                "recheck_command": "",
+                "message": "STOP LOOPING",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    # Precondition: with no kernel receipt, the latch holds.
+    assert _state_digest(repo) == (paths, content)
+
+    kernel_receipt = repo / ".l9" / "autonomy" / "kernel-receipt.json"
+    kernel_receipt.parent.mkdir(parents=True, exist_ok=True)
+    kernel_receipt.write_text(
+        json.dumps(
+            {
+                "schema": "l9.kernel_receipt.v1",
+                "phase": "recorded",
+                "applied_at": "2026-01-01T00:00:00Z",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    assert _state_digest(repo) != (paths, content), (
+        "recording the kernels must invalidate the stale FAIL receipt"
+    )
+
+    proc = _run(
+        ["bash", str(SCRIPTS / "run_pr_gate.sh")],
+        cwd=repo,
+        env={"WS": str(repo), "PR_BASE": "main", "PR_LOCK_WAIT_S": "1"},
+    )
+    output = proc.stdout + proc.stderr
+    assert "FAIL receipt matches unchanged state" not in output
+    assert proc.returncode != 2
+
+
 def test_precommit_reuses_changed_file(tmp_path: Path) -> None:
     repo = _init_repo(tmp_path, feature=True)
     listed = tmp_path / "changed.txt"

@@ -23,11 +23,19 @@ from helpers import (
 
 
 def _inspection_blueprint(root: Path) -> Path:
+    """A task with a terminal verifier that flattens to no shell command.
+
+    See the twin in `test_kernel_verdict.py`. A mutating repo_local task with
+    only `inspection` is now refused at acceptance and at readiness
+    (`missing_terminal_verifier`); `external_adapter` is the reachable form of
+    "nothing for the Controller to run", so these verdict tests still exercise
+    what they were written for.
+    """
     bp = make_blueprint(root)
     cards = yaml.safe_load((bp / "TASK_CARDS.yaml").read_text(encoding="utf-8"))
     for task in cards.get("tasks") or []:
         for item in task.get("validation") or []:
-            item["method"] = "inspection"
+            item["method"] = "external_adapter"
     (bp / "TASK_CARDS.yaml").write_text(yaml.safe_dump(cards, sort_keys=False), encoding="utf-8")
     return bp
 
@@ -81,6 +89,10 @@ class PipelineAssemblyFillTest(unittest.TestCase):
             run_cli("reconcile", "--workspace", str(workspace), "--repository", f"repo-a={repo}")
             contract = source_contract("TASK-001", "docs/result.txt")
             contract["validation_commands"] = []
+            # `_inspection_blueprint` rewrote every card's method, and the Source
+            # Contract must preserve the Blueprint's mechanisms exactly.
+            for mechanism in contract["verification_mechanisms"]:
+                mechanism["method"] = "external_adapter"
             write_json(temp / "TASK-001.source.json", contract)
             run_cli(
                 "register-contract",

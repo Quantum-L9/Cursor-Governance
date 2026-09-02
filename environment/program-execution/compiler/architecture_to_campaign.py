@@ -39,6 +39,7 @@ from .architecture_intent import (
     slugify,
 )
 from .architecture_ir import SemanticItem
+from .repo_truth import RequirementDisposition, classify_dispositions, discover
 
 CAMPAIGN_SOURCE_SCHEMA = "l9.program-execution.campaign-source.v2"
 DEFAULT_OWNER = "Igor Beylin"
@@ -272,6 +273,11 @@ def lower(
             "architecture source yielded no material requirement, constraint, or objective; "
             "nothing executable to compile"
         )
+    # Ground every requirement before any task is formed: what the repository
+    # already has decides whether an obligation is CREATE or a harden/keep of
+    # something present, and that answer belongs in the action and its record.
+    dispositions = _requirement_dispositions(requirements, facts)
+
     objective_text = _objective_text(intent, objectives, requirements)
     for item in objectives:
         map_item(item.id, "program_objective")
@@ -493,7 +499,8 @@ def lower(
                 task_id=task_id,
                 title=section.title[:_SECTION_TITLE_LIMIT],
                 objective=_task_objective(section, drivers),
-                actions=[_action(item) for item in drivers] or [f"Implement {section.title}."],
+                actions=[_action(item, dispositions.get(item.id)) for item in drivers]
+                or [f"Implement {section.title}."],
                 acceptance=_task_acceptance(task_id, acceptance_items, drivers),
                 validation=validation,
                 negative_cases=_task_negative_cases(prohibition_items),
@@ -506,7 +513,19 @@ def lower(
         )
         for item in drivers:
             map_item(item.id, "task", task_id=task_id)
-            map_item(item.id, "task_action", task_id=task_id)
+            row = dispositions.get(item.id)
+            map_item(
+                item.id,
+                "task_action",
+                task_id=task_id,
+                # Provenance answers "why is this action worded that way": the
+                # disposition, the repository path that grounded it, and the
+                # evidence that found the path. `map_item` drops empty values,
+                # so an ungrounded requirement records nothing extra.
+                disposition=row.disposition if row else "",
+                grounded_path=(row.path or "") if row else "",
+                grounding_evidence=row.evidence if row else "",
+            )
         for item in seams:
             map_item(item.id, "task_path", task_id=task_id)
         for item in acceptance_items:
@@ -866,9 +885,29 @@ def _refuse_placeholders(source: dict[str, Any]) -> None:
         )
 
 
-def _action(item: SemanticItem) -> str:
+#: How an existing-artifact disposition reads as the lead of an action. Only
+#: dispositions that name something already in the checkout appear here: they
+#: are the ones that change what the worker should do. CREATE and UNKNOWN keep
+#: the bare statement, because "Create X" in front of a sentence that already
+#: says what to build adds nothing and would reword every existing action.
+_DISPOSITION_LEAD: dict[str, str] = {
+    "KEEP": "Preserve the existing",
+    "HARDEN_WIRE_EXISTING": "Harden and wire the existing",
+    "MERGE_WITH_EXISTING": "Merge into the existing",
+    "DELETE_SUPERSEDED": "Delete the superseded",
+    "MIGRATION_CONTEXT": "Migrate the existing",
+}
+
+
+def _action(item: SemanticItem, disposition: RequirementDisposition | None = None) -> str:
     hint = f" ({_clip(item.implementation_hint, 120)})" if item.implementation_hint else ""
-    return _clip(f"{item.statement}{hint}")
+    lead = ""
+    if disposition is not None:
+        phrase = _DISPOSITION_LEAD.get(disposition.disposition, "")
+        if phrase:
+            where = f" {disposition.path}" if disposition.path else ""
+            lead = f"{phrase}{where} — "
+    return _clip(f"{lead}{item.statement}{hint}")
 
 
 def _objective_text(
@@ -957,6 +996,37 @@ def _task_negative_cases(prohibitions: Sequence[SemanticItem]) -> list[str]:
     cases = [_clip(f"violates: {item.statement}", 200) for item in prohibitions]
     cases.extend(["scope_expansion", "remote_mutation_before_release"])
     return list(dict.fromkeys(cases))
+
+
+def _requirement_dispositions(
+    requirements: Sequence[SemanticItem], facts: RepositoryFacts
+) -> dict[str, RequirementDisposition]:
+    """Classify each material requirement against real repository evidence.
+
+    `repo_truth.classify_dispositions` is the canonical grounding classifier.
+    Lowering used to ask only `RepositoryFacts.path_exists`, a binary that
+    cannot tell HARDEN_WIRE_EXISTING from CREATE, so the disposition W5
+    computes reached the shadow harness and nothing else — it had no production
+    caller at all. Wiring it here is what carries KEEP / HARDEN / MERGE /
+    CREATE into action wording and provenance on the live path.
+
+    Grounding is best-effort by design: with no checkout, or a checkout that
+    cannot be read, every requirement simply keeps its unqualified wording. A
+    classifier failure must never cost the campaign its tasks.
+    """
+    if facts.root is None:
+        return {}
+    usable = [(item, item.statement.strip()) for item in requirements if item.statement.strip()]
+    if not usable:
+        return {}
+    try:
+        truth = discover(facts.root)
+        rows = classify_dispositions([text for _, text in usable], truth)
+    except Exception:
+        return {}
+    if len(rows) != len(usable):  # pragma: no cover - contract guard
+        return {}
+    return {item.id: row for (item, _), row in zip(usable, rows, strict=True)}
 
 
 def _resolve_paths(items: Sequence[SemanticItem], facts: RepositoryFacts) -> list[str]:

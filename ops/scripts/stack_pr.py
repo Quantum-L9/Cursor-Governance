@@ -27,7 +27,6 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import Any
-from urllib.parse import quote
 
 
 def _gh(*args: str) -> Any:
@@ -49,15 +48,58 @@ def _gh(*args: str) -> Any:
         return text  # --jq string fields (e.g. default_branch) are not JSON
 
 
+#: One page is 100 PRs. This repo runs ~17 open; a repo that exceeds the page
+#: would silently order a truncated set, so a full page is reported rather than
+#: assumed complete.
+_PULLS_PAGE = 100
+
+
 def open_prs(repo: str, prefix: str) -> list[dict[str, Any]]:
-    query = f"repo:{repo} is:pr is:open"
-    if prefix:
-        query += f" head:{prefix}"
-    return _gh(
-        f"search/issues?q={quote(query)}",
+    """Open PRs for one repo as {number, title, head, base}, head/base as labels.
+
+    Repo-scoped deliberately. This used ``search/issues?q=repo:...``, which is a
+    CROSS-REPO endpoint: a session gateway bound to its configured repositories
+    answers it 403 ("sessions are bound to their configured repositories"), so
+    ``stack_pr.py order`` could not run at all there — at exactly the moment
+    stack order matters, since rules 48/53 make bottom-up merge order a
+    correctness requirement and PR_STACK=auto is the ``make pr`` default. The
+    repo is known at call time, so nothing here ever needed org-wide reach.
+
+    The 403 was also masking two defects that would have produced wrong answers
+    rather than no answer:
+
+    * search/issues returns ISSUE objects. The issues representation of a pull
+      request carries no ``head`` and no ``base`` (only ``pull_request``), so
+      the old projection yielded null for both fields on every hit. Ordering
+      reads exactly those two fields.
+    * ``--jq '.items[] | {...}'`` emits newline-delimited objects. ``_gh`` does a
+      single ``json.loads``, which raises on two or more results and falls back
+      to returning the raw STRING — after which ``cmd_order`` iterates characters
+      and ``pr["base"]`` raises TypeError. It happened to work for exactly one
+      open PR.
+
+    Both are gone here: repos/{repo}/pulls returns real pull objects, and the
+    ``[...]`` jq wrapper makes the payload a single JSON array.
+    """
+    prs = _gh(
+        f"repos/{repo}/pulls?state=open&per_page={_PULLS_PAGE}",
         "--jq",
-        ".items[] | {number, title, head: .head.label, base: .base.label}",
+        "[.[] | {number, title, head: .head.label, base: .base.label, ref: .head.ref}]",
     )
+    if not isinstance(prs, list):  # defensive: _gh degrades to str on bad JSON
+        print(f"stack_pr: unexpected pulls payload for {repo}", file=sys.stderr)
+        raise SystemExit(1)
+    if len(prs) == _PULLS_PAGE:
+        print(
+            f"stack_pr: {repo} returned a full page of {_PULLS_PAGE} open PRs; "
+            "ordering may be computed over a truncated set",
+            file=sys.stderr,
+        )
+    if prefix:
+        # search used `head:{prefix}`; the pulls endpoint's `head` filter wants an
+        # exact user:ref, so the prefix match is applied here instead.
+        prs = [pr for pr in prs if str(pr.get("ref") or "").startswith(prefix)]
+    return [{k: v for k, v in pr.items() if k != "ref"} for pr in prs]
 
 
 def refuse_unstacked_base(base: str) -> None:

@@ -86,8 +86,8 @@ PREPARATION_STAGES = (
     "plan_window",
     "emit",
     "compile",
-    "validate_blueprint",
     "launchability",
+    "validate_blueprint",
     "admission_evidence",
     "accept",
     "bootstrap",
@@ -2502,6 +2502,77 @@ def render_progress(
     return timing.format_progress(report)
 
 
+def blueprint_byte_inventory(blueprint: Path) -> dict[str, str]:
+    """Content inventory for the accepted Blueprint, including MANIFEST bytes."""
+    return {
+        path.relative_to(blueprint).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in sorted(blueprint.rglob("*"))
+        if path.is_file()
+    }
+
+
+def task_count_agreement(
+    blueprint: Path, launchability: Mapping[str, Any], pec_workspace: Path
+) -> dict[str, int]:
+    """Compiled, launchable and locked task counts, as three independent reads.
+
+    Each is taken from the artifact that stage actually produced, not from a
+    shared variable, because a shared variable is what would hide the defect
+    this measures.
+    """
+    module = _load_script("launchability", PE_ROOT / "scripts/launchability.py")
+    lock_path = pec_workspace / "runtime" / "program-lock.json"
+    locked = 0
+    if lock_path.is_file():
+        try:
+            locked = len(json.loads(lock_path.read_text(encoding="utf-8")).get("tasks") or [])
+        except (OSError, json.JSONDecodeError):  # pragma: no cover - lock is written by pec
+            locked = -1
+    return {
+        "compiled": len(module.blueprint_tasks(blueprint)),
+        "launchability": int(launchability.get("task_count") or 0),
+        "program_lock": locked,
+    }
+
+
+def assert_task_counts_agree(
+    blueprint: Path, launchability: Mapping[str, Any], pec_workspace: Path
+) -> dict[str, int]:
+    """Fatal invariant: compile, launchability and the lock saw the same tasks.
+
+    B1 was exactly this disagreement, and nothing noticed. Launchability read
+    `tasks.json`, found nothing, and self-skipped as "no_task_cards" while
+    compile had produced a full set and the lock froze them. Every stage looked
+    healthy in isolation; only the counts side by side show the adapter had come
+    unplugged. Cheap to check, and it fails at bootstrap rather than as a
+    mystery at arm or verify.
+    """
+    counts = task_count_agreement(blueprint, launchability, pec_workspace)
+    if len(set(counts.values())) == 1:
+        return counts
+    detail = ", ".join(f"{stage}={count}" for stage, count in sorted(counts.items()))
+    raise CampaignError(
+        f"task count disagreement across stages ({detail}); a stage is reading a "
+        "different task source than the others",
+        error_code="TASK_COUNT_DISAGREEMENT",
+    )
+
+
+def assert_blueprint_immutable(blueprint: Path, accepted: dict[str, str], *, phase: str) -> int:
+    """Fatal executable invariant: accepted Blueprint bytes never move in execution."""
+    current = blueprint_byte_inventory(blueprint)
+    changed = sorted(
+        path for path in set(accepted) | set(current) if accepted.get(path) != current.get(path)
+    )
+    if changed:
+        raise CampaignError(
+            f"post_accept_blueprint_write_count={len(changed)} during {phase}; "
+            f"sealed Blueprint changed: {', '.join(changed[:20])}",
+            error_code="POST_ACCEPT_BLUEPRINT_WRITE",
+        )
+    return 0
+
+
 def check_launchability(
     blueprint: Path,
     repo_root: Path,
@@ -2525,12 +2596,12 @@ def check_launchability(
     # to change -- after bootstrap freezes the lock it is too late, and the task
     # would reach `pec verify` with nothing to run.
     injected = module.apply_synthesized_validations(
-        blueprint, report.get("synthesized_validations") or {}
+        blueprint, report.get("synthesized_validations") or {}, validate=False
     )
     if injected:
         report["injected_validations"] = injected
         log(f"validations inferred and written into {len(injected)} task card(s)")
-    receipt = blueprint / "launchability-report.json"
+    receipt = module.launchability_report_path(blueprint)
     receipt.parent.mkdir(parents=True, exist_ok=True)
     receipt.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     log(module.format_report(report))
@@ -2576,31 +2647,13 @@ def measure_admission_evidence(target_path: Path) -> dict[str, Any]:
     return measured
 
 
-def _task_card_command(cards: dict[str, Any], task_id: str) -> str:
-    for task in cards.get("tasks") or []:
-        if not isinstance(task, dict) or str(task.get("id") or "") != task_id:
-            continue
-        for entry in task.get("validation") or []:
-            if isinstance(entry, dict) and entry.get("method") in {
-                "command",
-                "command_and_inspection",
-            }:
-                return str(entry.get("command_or_inspection") or "").strip()
-    return ""
-
-
 def stale_unittest_should_yield_to_pytest(existing: str, inferred: str) -> bool:
-    """True when a compiled unittest command would miss pytest-collectable tests."""
+    """Diagnostic compatibility predicate; never authorizes runtime Blueprint mutation."""
     return "-m unittest" in existing and "-m pytest" in inferred
 
 
 def adoptable_inferred_command(command: str) -> bool:
-    """Inferences the execute path may relock onto the rendered contract.
-
-    Includes last-resort presence checks. Those do not prove behavior; pec
-    verify still requires a modified worktree, exact changed-files, and scope.
-    Refusing them leaves docs and config tasks INCOMPLETE after a real write.
-    """
+    """Diagnostic classifier retained for compatibility tests, not execution adoption."""
     text = str(command).strip()
     return (
         "-m unittest" in text
@@ -2611,84 +2664,33 @@ def adoptable_inferred_command(command: str) -> bool:
     )
 
 
-def rematerialize_after_relock(workspace: Path, task_id: str) -> dict[str, Any]:
-    """Rebuild the rendered contract after relock returns the task to ELIGIBLE.
-
-    Reuses the existing task worktree. Does not invent a parallel execution path.
-    """
-    ensure_task_contract(workspace, task_id)
-    pec_cmd(
-        workspace,
-        "claim",
-        task_id,
-        "--holder",
-        "make-campaign",
-        "--ttl-minutes",
-        str(TASK_BUDGET_MINUTES),
-    )
-    pec_cmd(workspace, "prepare", task_id)
-    rendered = pec_cmd(workspace, "render-contract", task_id)
-    pec_cmd(workspace, "start", task_id, "--actor", "make-campaign")
-    return json.loads(Path(str(rendered["contract"])).read_text(encoding="utf-8"))
-
-
 def fill_inferred_validation(
     contract_path: Path, contract: dict[str, Any], worktree: Path
 ) -> dict[str, Any]:
-    """Adopt inferred validation through pec relock, never by rewriting digests.
+    """Normal execution is assertion-only after Blueprint acceptance.
 
-    Hand-editing the rendered contract breaks the contract-digest gate.
+    Missing execution completeness is a structured pre-dispatch blocker. It is
+    never repaired by editing TASK_CARDS.yaml, relocking, or rematerializing a
+    rendered contract after the Blueprint has become authority.
     """
-    launch = _load_script("launchability", PE_ROOT / "scripts/launchability.py")
-    inferred = launch.infer_validation_commands(
-        {"writable_paths": contract.get("writable_paths") or []},
-        worktree,
+    del contract_path, worktree
+    requested = {str(item) for item in (contract.get("requested_actions") or [])}
+    mutating = bool(requested & {"local_write", "commit", "destructive_change"})
+    mechanisms = [
+        item for item in (contract.get("verification_mechanisms") or []) if isinstance(item, dict)
+    ]
+    terminal = any(
+        str(item.get("method") or "") in {"command", "command_and_inspection", "external_adapter"}
+        for item in mechanisms
     )
-    existing = [str(item) for item in (contract.get("validation_commands") or []) if item]
-    replace_stale_unittest = bool(
-        existing and inferred and stale_unittest_should_yield_to_pytest(existing[0], inferred[0])
-    )
-    if existing and not replace_stale_unittest:
-        return contract
-    if not inferred:
-        return contract
-    if not adoptable_inferred_command(inferred[0]):
-        return contract
-    workspace = contract_path.parents[2]
-    task_id = str(contract.get("task_id") or "")
-    lock_path = workspace / "runtime" / "program-lock.json"
-    if not lock_path.is_file() or not task_id:
-        return contract
-    lock = json.loads(lock_path.read_text(encoding="utf-8"))
-    cards_path = Path(str(lock.get("blueprint_root") or "")) / "TASK_CARDS.yaml"
-    if not cards_path.is_file():
-        return contract
-    cards = load_yaml(cards_path)
-    if _task_card_command(cards, task_id) == inferred[0]:
-        return contract
-    changed = False
-    for task in cards.get("tasks") or []:
-        if not isinstance(task, dict) or str(task.get("id") or "") != task_id:
-            continue
-        task["validation"] = [
-            {
-                "id": "VAL-INFERRED-001",
-                "method": "command",
-                "command_or_inspection": inferred[0],
-                "expected_result": "PASS",
-            }
-        ]
-        changed = True
-        break
-    if not changed:
-        return contract
-    if yaml is None:
-        raise CampaignError("PyYAML required to persist inferred validation")
-    cards_path.write_text(yaml.safe_dump(cards, sort_keys=False), encoding="utf-8")
-    if adopt_changed_definitions(workspace, [task_id]) is None:
-        raise CampaignError(f"pec relock refused inferred validation for {task_id}")
-    log(f"inferred validation adopted for {task_id}: {inferred[0]}")
-    return rematerialize_after_relock(workspace, task_id)
+    if mutating and not terminal:
+        task_id = str(contract.get("task_id") or "UNKNOWN")
+        raise CampaignError(
+            f"{task_id}: missing terminal verification mechanism before provider launch; "
+            "repair the pre-seal Blueprint instead of mutating sealed authority",
+            error_code="MISSING_TERMINAL_VERIFIER",
+        )
+    return contract
 
 
 def _peer_identity() -> tuple[str, str, str | None]:
@@ -4581,6 +4583,8 @@ def resume_live_campaign(
         pec_workspace=str(pec_workspace),
         program_blockers=default_program_blockers(campaign_id, armed=True),
     )
+    resume_blueprint = Path(report.blueprint)
+    resume_blueprint_inventory = blueprint_byte_inventory(resume_blueprint)
     log(f"resume {campaign_id} (runtime active; workspace kept, not quarantined)")
     report.stages_completed.append("resume")
     repository_id = str((seed.get("target") or {}).get("repository_id") or host_repo)
@@ -4605,6 +4609,7 @@ def resume_live_campaign(
                 live_prs=should_run(until, "pr") and hooks.make_pr is None,
                 trace=trace,
             )
+    assert_blueprint_immutable(resume_blueprint, resume_blueprint_inventory, phase="resume_execute")
     executed = False
     if (pec_workspace / "runtime" / "program-lock.json").is_file():
         executed = all_required_tasks_completed(pec_workspace)
@@ -4745,6 +4750,7 @@ class _CampaignRun:
     timer: Any = None
     timing: Any = None
     trace: Any = None
+    accepted_blueprint_inventory: Any = None
     worktree: Any = None
     write_root: Any = None
 
@@ -5145,9 +5151,29 @@ def _stage_blueprint(run: _CampaignRun) -> CampaignReport | None:
                 f"resume prepared runtime {report.pec_workspace} (definitions relocked: {relocked})"
             )
 
-    # Validation is a pure function of blueprint content, so the compiled
-    # fingerprint is the whole key. A blueprint that validated once does not
-    # need re-validating until it changes.
+    # Execution completeness is a compile/admission concern. Enrich native Task
+    # Cards first, regenerate MANIFEST, then run the one final canonical
+    # Blueprint validation over the exact bytes that may be accepted.
+    prelaunch_key = blueprint_fingerprint(blueprint)
+    launch_receipt = blueprint.parent / "launchability-reports" / f"{blueprint.name}.json"
+
+    def _launch_receipt_survives(cached: Any) -> bool:
+        if int((cached or {}).get("task_count") or 0) == 0:
+            return True
+        return launch_receipt.is_file()
+
+    launch_key = timing.fingerprint(
+        compile_generation, prelaunch_key, str(write_root), fast, campaign_id
+    )
+    with reuse.stage(timer, "launchability", launch_key, verify=_launch_receipt_survives) as staged:
+        if staged.reused:
+            report.launchability = dict(staged.value)
+        else:
+            report.launchability = check_launchability(
+                blueprint, write_root, fast=fast, campaign_id=campaign_id
+            )
+            staged.value = dict(report.launchability)
+
     validate_key = blueprint_fingerprint(blueprint)
     with reuse.stage(timer, "validate_blueprint", validate_key) as staged:
         if staged.reused:
@@ -5169,34 +5195,6 @@ def _stage_blueprint(run: _CampaignRun) -> CampaignReport | None:
     if errors:
         raise CampaignError("template validate failed: " + "; ".join(errors))
     log("template validate PASS")
-
-    launch_receipt = blueprint / "launchability-report.json"
-
-    def _launch_receipt_survives(cached: Any) -> bool:
-        # A campaign with no task cards never writes a receipt, so only demand
-        # the file when the cached verdict says there was something to check.
-        if int((cached or {}).get("task_count") or 0) == 0:
-            return True
-        return launch_receipt.is_file()
-
-    launch_key = timing.fingerprint(validate_key, str(write_root), fast, campaign_id)
-    with reuse.stage(timer, "launchability", launch_key, verify=_launch_receipt_survives) as staged:
-        if staged.reused:
-            report.launchability = dict(staged.value)
-        else:
-            report.launchability = check_launchability(
-                blueprint, write_root, fast=fast, campaign_id=campaign_id
-            )
-            staged.value = dict(report.launchability)
-    if report.launchability.get("injected_validations"):
-        # Inference just edited the Task Cards that validation had already read.
-        # Re-validate rather than arm a blueprint in a state nothing checked.
-        validate = hooks.validate_blueprint or default_validate_blueprint
-        with timer.stage("validate_blueprint_reinjected") as entry:
-            errors = validate(blueprint)
-            entry["detail"] = {"tasks": list(report.launchability["injected_validations"])}
-        if errors:
-            raise CampaignError("inferred validations broke the blueprint: " + "; ".join(errors))
     report.stages_completed.append("blueprint")
     if not should_run(until, "admit"):
         write_launch_pointer(
@@ -5289,6 +5287,8 @@ def _stage_admit(run: _CampaignRun) -> CampaignReport | None:
                 else:
                     default_admit(blueprint, revision=host_revision)
             staged.value = {"revision": host_revision}
+    accepted_blueprint_inventory = blueprint_byte_inventory(blueprint)
+    run.accepted_blueprint_inventory = accepted_blueprint_inventory
     if fast:
         # An acceptance nobody typed still has to be auditable. Record the two
         # facts it rests on, scoped local_only so publish cannot read it as
@@ -5301,6 +5301,7 @@ def _stage_admit(run: _CampaignRun) -> CampaignReport | None:
             launchability=report.launchability,
         )
         log(f"accept {prepare.LOCAL_ACCEPTED} (local_only: compile PASS + launchability PASS)")
+    assert_blueprint_immutable(blueprint, accepted_blueprint_inventory, phase="post_accept_admit")
     report.stages_completed.append("admit")
     if not should_run(until, "bootstrap"):
         write_launch_pointer(
@@ -5339,6 +5340,7 @@ def _stage_runtime(run: _CampaignRun) -> CampaignReport:
     trace = run.trace
     until = run.until
     write_root = run.write_root
+    accepted_blueprint_inventory = run.accepted_blueprint_inventory
 
     pec = hooks.pec_bootstrap or default_pec_bootstrap
     pec_workspace_path = Path(report.pec_workspace)
@@ -5382,6 +5384,10 @@ def _stage_runtime(run: _CampaignRun) -> CampaignReport:
     timer.flush()
     report.pec_note = str(pec_result.get("output") or "")
     log("pec bootstrap ok")
+    task_counts = assert_task_counts_agree(
+        blueprint, report.launchability, Path(report.pec_workspace)
+    )
+    log(f"task counts agree: {task_counts['compiled']} across compile, launchability, lock")
     with traced(trace, "bootstrap", "pec_runtime_activate"):
         pec_status = activate_pec_runtime(Path(report.pec_workspace), campaign_id=campaign_id)
     log(f"pec runtime_status={pec_status.get('runtime_status')}")
@@ -5400,6 +5406,7 @@ def _stage_runtime(run: _CampaignRun) -> CampaignReport:
         host_worktree=str(write_root),
         stage="bootstrap",
     )
+    assert_blueprint_immutable(blueprint, accepted_blueprint_inventory, phase="bootstrap")
     report.stages_completed.append("bootstrap")
     if not should_run(until, "arm"):
         return report
@@ -5418,6 +5425,7 @@ def _stage_runtime(run: _CampaignRun) -> CampaignReport:
                     target_path=target_path,
                     trace=trace,
                 )
+    assert_blueprint_immutable(blueprint, accepted_blueprint_inventory, phase="arm")
     report.timings = timer.report()
     log(
         "preparation ready: first task executable after "
@@ -5469,6 +5477,7 @@ def _stage_runtime(run: _CampaignRun) -> CampaignReport:
                     trace=trace,
                     timer=timer,
                 )
+    assert_blueprint_immutable(blueprint, accepted_blueprint_inventory, phase="execute")
     executed = False
     if (pec_workspace / "runtime" / "program-lock.json").is_file():
         executed = all_required_tasks_completed(pec_workspace)

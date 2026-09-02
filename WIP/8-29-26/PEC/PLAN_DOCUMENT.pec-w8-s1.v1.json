@@ -1,0 +1,318 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "deep",
+  "title": "W8/S1 split — semantic prohibitions are not path globs",
+  "objective": "Stop the compiler writing a natural-language prohibition into a field the Controller glob-matches against file paths, which makes do_not_build report PASS having enforced nothing. Separate semantic laws from filesystem globs across the compile/verify seam, and close the first of S1's four acceptance bullets.",
+  "success_criteria": [
+    "A semantic prohibition never reaches the Controller as a path pattern: the compiler classifies each prohibition and only emits path_or_pattern when the statement is genuinely a repo path or glob.",
+    "The Controller's do_not_build gate matches only entries that supply a path pattern, and the substring fallback that treats a sentence as a path is gone.",
+    "No prohibition is dropped: semantic laws keep statement, rationale, source_refs and semantic_id, and stay visible in DO_NOT_BUILD.yaml under an explicit kind.",
+    "A test proves a semantic prohibition cannot make do_not_build FAIL by accident and cannot be silently counted as enforced.",
+    "A test proves a genuine path prohibition still trips do_not_build.",
+    "Full controller suite, PE conformance runner and the hardening suite stay green; no product behavior changes beyond the classification."
+  ],
+  "scope": {
+    "in": [
+      "environment/program-execution/scripts/compile_campaign_source.py — classify prohibitions at emission",
+      "environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py — match only real path patterns",
+      "environment/program-execution/core/program-execution-blueprint-template/schemas/do-not-build.schema.json — declare kind",
+      "tests on both sides of the seam",
+      "WIP/8-29-26/PEC trackers and this PLAN_DOCUMENT"
+    ],
+    "out": [
+      "The SemanticModel round-trip and semantic_diff — S1's other three acceptance bullets, a much larger build",
+      "S2 through S8, and W9/W10, which are sequenced behind them by dependency, not by a missing plan",
+      "compiler/synthesizer.py's parallel emission — read to confirm the same shape, changed only if the seam demands it",
+      "Any v3 surface, Program Lock, make campaign, or campaign activation",
+      "Merging PR #442 or any change to merge authority"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "PV1",
+      "command_or_action": "git rev-parse --abbrev-ref HEAD; git status --porcelain",
+      "pass_criteria": "on the PEC branch, clean tree",
+      "status": "passed"
+    },
+    {
+      "id": "PV2",
+      "command_or_action": "Read compile_campaign_source.py:1177 and controller.py do_not_build block",
+      "pass_criteria": "Confirms path_or_pattern is fed item['statement'], and the Controller globs it via path_allowed with a substring fallback on ContractError",
+      "status": "passed"
+    },
+    {
+      "id": "PV3",
+      "command_or_action": "Read do-not-build.schema.json",
+      "pass_criteria": "additionalProperties is true, so a kind field is additive and breaks no existing artifact",
+      "status": "passed"
+    },
+    {
+      "id": "PV4",
+      "command_or_action": ".pre-commit-config.yaml is the hook catalog; ruff and trailing-whitespace own these files",
+      "pass_criteria": "known before editing",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Add a prohibition classifier at the compiler seam: a statement that is a repo path or glob becomes path_or_pattern with kind=path; anything else becomes kind=semantic, carrying statement and rationale, with no path_or_pattern for the Controller to glob.",
+      "files": [
+        "environment/program-execution/scripts/compile_campaign_source.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "prohibited_primary_paths emission",
+      "leverage_rank": 1,
+      "shared_root_cause": "One field carrying two kinds of thing, exactly as baseline_commit did in S0."
+    },
+    {
+      "id": "T2",
+      "task": "Declare kind in the DO_NOT_BUILD schema so the distinction is contractual rather than incidental.",
+      "files": [
+        "environment/program-execution/core/program-execution-blueprint-template/schemas/do-not-build.schema.json"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Insert",
+      "anchor": "prohibited_primary_paths items properties",
+      "leverage_rank": 3
+    },
+    {
+      "id": "T3",
+      "task": "Make the Controller match only entries that supply a path pattern and remove the substring fallback that treats a sentence as a path. A gate must not appear to enforce what it cannot match.",
+      "files": [
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Replace",
+      "anchor": "dnb_hit loop",
+      "leverage_rank": 2,
+      "shared_root_cause": "Same as B6: a gate reporting PASS having checked nothing."
+    },
+    {
+      "id": "T4",
+      "task": "Tests both sides: a semantic prohibition cannot trip or be counted by do_not_build; a genuine path prohibition still trips it; the compiler classifies both shapes.",
+      "files": [
+        "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_do_not_build_verify.py",
+        "environment/program-execution/scripts/tests/test_compile_campaign_source.py"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": [
+        "T1",
+        "T3"
+      ],
+      "operation": "Insert",
+      "anchor": "existing do-not-build and compile suites",
+      "leverage_rank": 4
+    },
+    {
+      "id": "T5",
+      "task": "Regenerate manifests and update both trackers with the S1 partial and what S1 still needs.",
+      "files": [
+        "environment/program-execution/MANIFEST.json",
+        "WIP/8-29-26/PEC/PEC-repair-pipeline.json",
+        "WIP/8-29-26/PEC/PEC-repair-pipeline.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T4"
+      ],
+      "operation": "Replace",
+      "anchor": "W8 subwave progress",
+      "leverage_rank": 5
+    }
+  ],
+  "critical_path": [
+    "T1",
+    "T3",
+    "T4",
+    "T5"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "Semantic laws and path globs travel in distinguishable channels.",
+      "unlocks": "The Controller can enforce what it can actually match, and say nothing about what it cannot."
+    },
+    {
+      "id": "M2",
+      "outcome": "do_not_build no longer reports PASS on unenforceable input.",
+      "unlocks": "S1's split bullet is closed and provable."
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "T3",
+      "evidence_required": "A semantic prohibition no longer reaches path_allowed; a path prohibition still does",
+      "no_go_action": "If real campaigns depend on the substring fallback, stop and report rather than removing enforcement anyone relies on."
+    },
+    {
+      "id": "C2",
+      "after": "T4",
+      "evidence_required": "Controller suite, compile suite, conformance runner and hardening all green",
+      "no_go_action": "Any regression: fix before publishing; do not push a red tree."
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "WIP/8-29-26/PEC/PEC-repair-pipeline.md",
+      "action": "update",
+      "todo_ids": [
+        "T5"
+      ],
+      "reason": "Narrative twin of the tracker; records the S1 partial."
+    },
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "No agent authority or command surface changes."
+    },
+    {
+      "surface": "environment/program-execution/MANIFEST.json",
+      "action": "update",
+      "todo_ids": [
+        "T5"
+      ],
+      "reason": "Generated digest; the edited files are covered."
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does any real campaign rely on the substring fallback to enforce something today?",
+      "Is a prohibition statement ever legitimately a path, so classification would misroute it?",
+      "Does synthesizer.py emit the same shape, leaving the defect alive on a second path?",
+      "Does removing the fallback make do_not_build weaker rather than more honest?"
+    ],
+    "assumed_false_ifs": [
+      "If a shipped campaign's DO_NOT_BUILD entries are genuine globs already, T1's classifier must preserve them unchanged or it breaks live enforcement.",
+      "If the Controller's ContractError branch is load-bearing for directory-scope patterns, removing it would drop real matches."
+    ],
+    "blast_radius": "The compile seam and one Controller gate. Both are covered by existing suites (compile 649-test conformance runner, controller 112 tests). No runtime path outside verify changes; no schema field is removed, only added.",
+    "rollback": "git revert the slice commit. The schema change is additive and the classifier is deterministic, so reverting restores prior behavior exactly."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T1",
+      "T3",
+      "T2",
+      "T4",
+      "T5"
+    ],
+    "shared_causes": [
+      "One field carrying two different kinds of thing — the same root cause as baseline_commit in S0.",
+      "A gate that cannot match its input still reporting PASS — the same root cause as B6."
+    ],
+    "deletions_or_consolidations": [
+      "Removes the substring fallback rather than adding a second matcher beside it."
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Removing the substring fallback drops enforcement someone relies on.",
+      "mitigation": "C1 checks live campaign artifacts before the removal lands; if any depend on it, stop and report."
+    },
+    {
+      "risk": "A classifier misroutes a genuine glob as semantic, weakening enforcement.",
+      "mitigation": "Classify conservatively: anything that parses as a repo path or glob stays a path; only clearly non-path statements become semantic."
+    },
+    {
+      "risk": "synthesizer.py carries the same emission and is left defective.",
+      "mitigation": "Read it in T1; bring it along if it shares the shape, and record it if it does not."
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U3",
+      "question": "Should an unenforceable semantic prohibition make do_not_build INCOMPLETE rather than PASS?",
+      "decision_effect": "Would change every campaign's gate output, not just this seam.",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "FV1",
+      "command": "uv run --frozen --no-build python -m pytest core/program-execution-controller-template/scripts/tests -q",
+      "pass_criteria": "112+ passed",
+      "status": "pending"
+    },
+    {
+      "id": "FV2",
+      "command": "uv run --frozen --no-build python -m unittest environment/program-execution/scripts/tests/test_compile_campaign_source.py",
+      "pass_criteria": "all pass",
+      "status": "pending"
+    },
+    {
+      "id": "FV3",
+      "command": "uv run --frozen --no-build python environment/program-execution/scripts/run_conformance.py",
+      "pass_criteria": "status PASS, 0 failures, 0 errors",
+      "status": "pending"
+    },
+    {
+      "id": "FV4",
+      "command": "uv run --frozen --no-build python -m pytest environment/program-execution/tests/hardening -q",
+      "pass_criteria": "56 passed, 15 xfailed",
+      "status": "pending"
+    },
+    {
+      "id": "FV5",
+      "command": "uv run --frozen --no-build ruff check . && ruff format --check <changed>",
+      "pass_criteria": "clean",
+      "status": "pending"
+    },
+    {
+      "id": "FV6",
+      "command": "pre-commit run --config .pre-commit-config.yaml --files <changed>",
+      "pass_criteria": "all hooks pass",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U3"
+    ],
+    "next_skill": "l9-ynp",
+    "stop_reason": "Closes S1's split bullet only. S1's SemanticModel round-trip and semantic_diff bullets, and S2-S8, remain unstarted and are sized well beyond this slice; W9 and W10 sit behind them by dependency."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "environment/program-execution/scripts/compile_campaign_source.py",
+      "environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py",
+      "environment/program-execution/core/program-execution-blueprint-template/schemas/do-not-build.schema.json",
+      "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_do_not_build_verify.py",
+      "environment/program-execution/scripts/tests/test_compile_campaign_source.py",
+      "environment/program-execution/MANIFEST.json",
+      "WIP/8-29-26/PEC/**"
+    ],
+    "must_not_modify": [
+      "environment/program-execution/campaigns/pe-v3-hardening/** — immutable forensic campaign source",
+      ".github/workflows/**",
+      "environment/program-execution/core/program-execution-controller-template/scripts/pec/state.py"
+    ],
+    "preserved_contracts": [
+      "No prohibition is dropped or truncated further than today",
+      "do-not-build schema stays additive",
+      "program-execution-blueprint.do-not-build.v2 keeps its schema id"
+    ],
+    "validation_commands": [
+      "uv run --frozen --no-build python environment/program-execution/scripts/run_conformance.py",
+      "uv run --frozen --no-build python -m pytest environment/program-execution/tests/hardening -q"
+    ]
+  },
+  "estimate": "1 GMP"
+}

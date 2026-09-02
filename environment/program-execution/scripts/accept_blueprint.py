@@ -45,6 +45,7 @@ from blueprint_ops import (  # noqa: E402
     validate_blueprint,
     write_manifest,
 )
+from launchability import blueprint_tasks, terminal_verification_errors  # noqa: E402
 
 PE_ROOT = Path(__file__).resolve().parents[1]
 RECEIPT_SCHEMA_PATH = (
@@ -102,6 +103,12 @@ def accept_blueprint(blueprint: Path, *, actor: str, evidence_ids: list[str]) ->
     # Every check that needs no write runs BEFORE PROGRAM.yaml changes. A
     # status flipped ahead of a failed check left the tree "already accepted"
     # with a stale manifest, and every retry refused.
+    terminal_errors = terminal_verification_errors(blueprint_tasks(root))
+    if terminal_errors:
+        raise RuntimeError(
+            "execution completeness failed before acceptance: " + "; ".join(terminal_errors[:5])
+        )
+
     placeholders = scan_placeholders(root)
     if placeholders:
         raise RuntimeError(

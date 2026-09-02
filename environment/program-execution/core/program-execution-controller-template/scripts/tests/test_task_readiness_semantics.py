@@ -232,5 +232,48 @@ class TaskReadinessSemanticsTest(unittest.TestCase):
             self.assertIn("TASK-001", _ids(view["terminal"]))
 
 
+class MissingTerminalVerifierReadinessTest(unittest.TestCase):
+    """B7: the Controller refuses a task it could never verify.
+
+    Acceptance already refuses this before a Blueprint is sealed. Readiness is
+    the second line: a lock written before that rule existed would otherwise be
+    claimable, and the defect would surface at `verify` — after the worker had
+    already changed the repository.
+    """
+
+    @staticmethod
+    def _inspection_only_blueprint(root: Path) -> Path:
+        """A mutating repo_local task whose only mechanism is `inspection`."""
+        bp = make_blueprint(root)
+        cards = yaml.safe_load((bp / "TASK_CARDS.yaml").read_text(encoding="utf-8"))
+        for task in cards.get("tasks") or []:
+            for item in task.get("validation") or []:
+                item["method"] = "inspection"
+        (bp / "TASK_CARDS.yaml").write_text(
+            yaml.safe_dump(cards, sort_keys=False), encoding="utf-8"
+        )
+        return bp
+
+    def test_mutating_task_without_a_terminal_verifier_is_blocked(self) -> None:
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            bp = self._inspection_only_blueprint(temp / "blueprint")
+            _, workspace = _bootstrap(temp, bp)
+            view = run_cli("next", "--workspace", str(workspace))
+            self.assertIn("TASK-001", _ids(view["blocked"]), msg=view)
+            entry = _entry(view, "blocked", "TASK-001")
+            assert entry is not None
+            self.assertIn("missing_terminal_verifier", str(entry), msg=entry)
+
+    def test_a_terminal_verifier_leaves_readiness_alone(self) -> None:
+        """The guard must not touch the ordinary case it does not own."""
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            _, repo, workspace = bootstrap_repo(temp)
+            view = run_cli("next", "--workspace", str(workspace))
+            self.assertNotIn("missing_terminal_verifier", str(view), msg=view)
+            cleanup_worktree(repo, workspace)
+
+
 if __name__ == "__main__":
     unittest.main()

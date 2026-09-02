@@ -296,16 +296,29 @@ class GoldenSemanticTests(unittest.TestCase):
         self.assertGreater(len(self._artifact("EXECUTION_WAVES.yaml")["waves"]), 1)
 
     def test_the_research_only_prohibition_is_enforceable(self) -> None:
+        """The law survives compilation, in the channel that can carry it.
+
+        These assertions used to read `path_or_pattern`, because that is where
+        the compiler put every prohibition. "MUST NOT serve reasoning" is not a
+        glob, and the Controller matching it against changed files enforced
+        nothing (W8/S1). The text now lives in `statement`, and the entry
+        declares itself semantic so it is never globbed.
+        """
         prohibitions = self._artifact("DO_NOT_BUILD.yaml")["prohibited_primary_paths"]
-        joined = " ".join(entry["path_or_pattern"] for entry in prohibitions)
+        joined = " ".join(entry["statement"] for entry in prohibitions)
         self.assertIn("Perplexity", joined)
         self.assertIn("MUST NOT serve reasoning", joined)
+        carriers = [
+            entry for entry in prohibitions if "MUST NOT serve reasoning" in entry["statement"]
+        ]
+        self.assertTrue(carriers)
+        for entry in carriers:
+            self.assertEqual(entry["kind"], "semantic")
+            self.assertNotIn("path_or_pattern", entry)
 
     def test_the_reasoning_content_privacy_invariant_is_a_prohibition(self) -> None:
         prohibitions = self._artifact("DO_NOT_BUILD.yaml")["prohibited_primary_paths"]
-        self.assertTrue(
-            any("reasoning_content" in entry["path_or_pattern"] for entry in prohibitions)
-        )
+        self.assertTrue(any("reasoning_content" in entry["statement"] for entry in prohibitions))
 
     def test_the_deferred_composite_stays_deferred(self) -> None:
         program = self._artifact("PROGRAM.yaml")["program"]
