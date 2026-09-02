@@ -38,6 +38,8 @@ files:
   sha256: 928e35ff2e76015fea913f86b43fd9f271c67cd7aedbc2f1ce77a52485572561
 - path: policy/waivers.yaml
   sha256: 1ad9c11bb1400280b352d17c607c870698bc236159bb78da7006bfb1a0496e9a
+- path: receipts/unified-loop-baseline.json
+  sha256: 232cf0f351288cc102ea7d2ea90a1e575ccac0c9514f8173f94c7a54e4e8512a
 - path: references/APPROVALS_WAIVERS_AND_HANDOFF.md
   sha256: b1302b5a53ae2507701febb1c226aba2e26da79dc3ca88b928487da837afc659
 - path: references/AUTHORITY_AND_RISK.md
@@ -93,13 +95,15 @@ files:
 - path: scripts/pec/blueprint.py
   sha256: 5e01499d18ee746fe44cd87f6cd3422af7d38a7643e3e312042949edb0c45a32
 - path: scripts/pec/cli.py
-  sha256: 4814a96fabdf4966534e7d35e4c392bef2a0d2480e92478e75f3d9229eb8c025
+  sha256: 565172d5da4495c3ddd893c744140d3db2ef3ed0921cf5325ebf746208cdfbae
 - path: scripts/pec/common.py
   sha256: df55978ff7841bf6db5b05f3e937c3d682c956b0992d9e02022cdb277f0fa104
 - path: scripts/pec/contracts.py
   sha256: acc86ed2260ba6a048b40dca0cf589345796830e4d58a970b377113f2ac1e14b
 - path: scripts/pec/controller.py
-  sha256: 7c262d04009aacb6fd375b6f65d76f9a605a60d8a164bc31352f24ee604122cd
+  sha256: e52020ee8b128cce21bcfa4bec143d33cadbb55aa30cd7eed64131ad77704f18
+- path: scripts/pec/dispatch.py
+  sha256: b4b4a0959e287009d7770e513b388ce1c8f10326a181e537b4ff435ce153aaf2
 - path: scripts/pec/exec_env.py
   sha256: 8e77e4df62e904ccb60da1deb9c21bdb2897d72955a884f5f1bfd5697c6a40f1
 - path: scripts/pec/ledger.py
@@ -110,6 +114,8 @@ files:
   sha256: 84671f9952a1bc677c92d3a90dc4f92066f890663ca04065546c3885fe576f3e
 - path: scripts/pec/runtime.py
   sha256: 2fc4b45e13dfacf8b36cd52b3f5c60d558044c8e9ac1087da8d384b9e40e833f
+- path: scripts/pec/signals.py
+  sha256: 181df8e54d5edd133ba000dc55df46b9459d623085f4d560e142d1f16f4e928b
 - path: scripts/pec/state.py
   sha256: da3d7af66a2b7a4bb260ca3ee16e32a1cbef869daf27fb0c4d4a94a9b24e68ab
 - path: scripts/pec/workspace_reset.py
@@ -184,6 +190,8 @@ files:
   sha256: b130770fe995539a3eae45b0345a183b06fff4844e56722ea2309cea9e7b2ef9
 - path: scripts/tests/test_task_readiness_semantics.py
   sha256: 00acd7272a820111d4605f9ef3eb668f08514fe78214be65253e76f4d9012c3e
+- path: scripts/tests/test_unified_loop_seams.py
+  sha256: 86c162c17093ea52f24681d8c0447aad3c270b7ecf1e4615d65e81a3f6baa2cf
 - path: scripts/tests/test_verify_committed_work.py
   sha256: c8cc87f837178654df0aa58f2f8c893546c87cc8c793bf45223a4d93a05fda56
 - path: scripts/tests/test_verify_lifecycle.py

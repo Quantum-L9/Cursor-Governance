@@ -31,6 +31,7 @@ from autonomy.tests.swarm_fixtures import (  # noqa: E402
     campaign_payload,
     deployment_payload,
 )
+from environment.agents.deployment import receipts as deploy_receipts  # noqa: E402
 from environment.agents.lifecycle import compose_start, compose_stop, receipts  # noqa: E402
 
 
@@ -40,6 +41,16 @@ class HostLifecycleTests(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         os.environ["L9_RUNTIME_ROOT"] = self.tmp.name
         self.addCleanup(os.environ.pop, "L9_RUNTIME_ROOT", None)
+        deploy_receipts.write_deployment_receipt(
+            {
+                "schema": deploy_receipts.RECEIPT_SCHEMA,
+                "status": deploy_receipts.STATUS_READY,
+                "source_manifest_digest": deploy_receipts.source_manifest_digest(_GOV_ROOT),
+                "surface": "cursor",
+            },
+            surface="cursor",
+            workspace_id=deploy_receipts.workspace_id_for(_GOV_ROOT),
+        )
         self.database = Path(self.tmp.name) / "runtime.sqlite3"
         os.environ["L9_AUTONOMY_RUNTIME_DB"] = str(self.database)
         self.addCleanup(os.environ.pop, "L9_AUTONOMY_RUNTIME_DB", None)
