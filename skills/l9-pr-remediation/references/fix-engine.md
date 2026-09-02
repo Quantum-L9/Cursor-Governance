@@ -28,6 +28,9 @@ Apply fixes for classified **codebase** findings. Independent clusters run concu
 - MUST NOT commit or push until ALL planned codebase fixes are applied AND `make precommit-repo` passed.
 - MUST use the smallest diff that resolves the finding.
 - MUST parallelize independent clusters by default; serialize only on conflicting file ownership.
+  Launch each cluster as Task type `l9-pr-remediation` with
+  `L9_ADMISSION_TOKEN=…` from `mint_admission.py`. Do not spawn generic
+  `explore` / `generalPurpose` for remediator work.
 - When a fix would require changes outside the PR's file scope, mark as deferred.
 - NEVER push partial fixes — all or nothing per cycle for the codebase batch.
 

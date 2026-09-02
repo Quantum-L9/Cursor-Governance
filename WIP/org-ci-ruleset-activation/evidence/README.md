@@ -1,14 +1,27 @@
 # Evidence
 
-`verify.sh --pr <owner/repo> <n>` writes `remote-end-to-end-run.json` here.
+| File | Written by | When |
+|---|---|---|
+| `ruleset-id` | `apply.sh` | every successful apply — the canonical ruleset ID, asserted on later runs so promotion cannot land on a different object |
+| `org-rulesets.before.json` | operator, Phase 0 | baseline inventory |
+| `organization-ruleset-live-enforcement.json` | `verify.sh --check` | only at `RESULT: LIVE_ENFORCING` |
+| `remote-end-to-end-run.json` | `verify.sh --pr <owner/repo> <n>` | canary correlation |
 
-Once both files below exist and show success, update
+Both JSON files carry brief-required top-level keys (`schema`, observed GitHub fields). Nested `workflow` / `targets` extras are allowed. Re-run `verify.sh`; do not hand-edit values.
+
+`verify.sh` never prints a bare `PASS`. It names the state — `ADVISORY_VALID`,
+`ADVISORY_CANARY_PASS`, `LIVE_ENFORCING`, `LIVE_CANARY_PASS` — because an
+evaluate-mode ruleset reading as "PASS" is exactly how an advisory rule gets recorded
+as live enforcement. Only `LIVE_ENFORCING` writes the enforcement evidence file.
+
+Once both JSON files below exist and show success, update
 `l9-ci-core/.l9/org-runtime-interface.yaml` — the two claims that are the entire gap
 between "the repo says it enforces" and "it enforces".
 
 ## `organization-ruleset-live-enforcement`
 
-Capture from `bash verify.sh --check`, then:
+From `evidence/organization-ruleset-live-enforcement.json`
+(`bash verify.sh --check` at `RESULT: LIVE_ENFORCING`):
 
 ```yaml
   - id: organization-ruleset-live-enforcement
