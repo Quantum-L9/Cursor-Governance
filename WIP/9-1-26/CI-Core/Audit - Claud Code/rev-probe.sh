@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -u
+set -uo pipefail
 ROOT=/tmp/l9-ci-preflight-audit
 cd "$ROOT"
 for rev in b1a491414ed04bb18d665f8a8755de80947c8200 f546f122d33601ea5a4b2592e3482c5c39eddd82 0c487747b0fcd172edaefe9e843dac818de8fc12; do
@@ -7,7 +7,7 @@ for rev in b1a491414ed04bb18d665f8a8755de80947c8200 f546f122d33601ea5a4b2592e348
   dir="$ROOT/rev-check/$short"
   echo "===== SDK revision $short ====="
   mkdir -p "$dir" && git -C "$dir" init -q && git -C "$dir" remote add origin https://github.com/Quantum-L9/l9-ci-sdk.git
-  git -C "$dir" -c protocol.version=2 fetch -q --depth=1 origin "$rev" 2>&1 | tail -1
+  git -C "$dir" -c protocol.version=2 fetch -q --depth=1 origin "$rev"
   git -C "$dir" checkout -q --detach FETCH_HEAD
   actual=$(git -C "$dir" rev-parse HEAD)
   echo "checked out: $actual"
