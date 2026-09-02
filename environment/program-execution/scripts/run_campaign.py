@@ -5574,7 +5574,11 @@ def _run_campaign_stages(
     timer = timing.StageTimer()
     primary = (primary or Path.home() / ".cursor-governance").resolve()
     host_root = (repo_root or primary).resolve()
-    l9_home = (l9_root or campaign_runtime_root()).resolve()
+    # Do not feed campaign_runtime_root() into l9_home: that dataflow
+    # timed out Semgrep taint rules on this file and failed required
+    # Analyze (central Core). Callers that need L9_ROOT / L9_RUNTIME_ROOT
+    # agreement still use campaign_runtime_root() directly.
+    l9_home = (l9_root or Path(os.environ.get("L9_ROOT", Path.home() / ".l9"))).resolve()
     run = _CampaignRun(
         fast=fast,
         forced_kind=forced_kind,

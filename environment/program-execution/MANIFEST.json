@@ -2023,7 +2023,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "5239508900db7630c202bb7a53bec229317dcad8a2594c6c97dcc42a047392c8"
+      "sha256": "09244206f851a3679a5bd00e85e6f8a58544bf2d538cfe8e350d7df3ff879f32"
     },
     {
       "path": "scripts/run_conformance.py",
