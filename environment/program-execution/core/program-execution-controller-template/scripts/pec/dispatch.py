@@ -20,8 +20,10 @@ class DispatchError(RuntimeError):
 
 # pec/dispatch.py → scripts → template → core → program-execution
 _PE_ROOT = Path(__file__).resolve().parents[4]
+# Append the subsystem root — never prepend. A prepend shadows the repo
+# root's `scripts/` package with PE's `scripts/` directory.
 if str(_PE_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PE_ROOT))
+    sys.path.append(str(_PE_ROOT))
 if str(_PE_ROOT / "scripts") not in sys.path:
     sys.path.insert(0, str(_PE_ROOT / "scripts"))
 
