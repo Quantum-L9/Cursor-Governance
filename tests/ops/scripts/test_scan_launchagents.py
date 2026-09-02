@@ -177,6 +177,17 @@ def test_non_ssot_cursor_governance_dir_still_fails(tmp_path: Path) -> None:
     assert reason == "governance root other than $HOME/.cursor-governance"
 
 
+def test_suffixed_governance_root_still_fails(tmp_path: Path) -> None:
+    ssot = (tmp_path / ".cursor-governance").resolve()
+    ssot.mkdir()
+    assert classify_string("/Users/x/.cursor-governance-backup/ops/x.sh", ssot) == (
+        "governance root other than $HOME/.cursor-governance"
+    )
+    assert classify_string("/Users/x/GlobalCommands.old/ops/x.sh", ssot) == (
+        "governance root other than $HOME/.cursor-governance"
+    )
+
+
 def test_script_does_not_call_launchctl() -> None:
     text = Path(SCRIPTS / "scan_launchagents.py").read_text(encoding="utf-8")
     assert "launchctl" not in text

@@ -140,4 +140,15 @@ grep -q 'retire_leftover_tenx_launchagents' "$OPS_DIR/setup_workspace_symlinks.s
   || fail_now "setup_workspace_symlinks.sh must call retire_leftover_tenx_launchagents"
 pass "retire moves three tenx plists to _retired; scan PASSes"
 
+# Dangling leftover symlink must retire, not report "no leftover".
+FAKE_LA2="$TMP/retire-dangling"
+mkdir -p "$FAKE_LA2"
+ln -s "$TMP/missing-tenx-target.plist" "$FAKE_LA2/com.tenx.cursor-governance.plist"
+L9_LAUNCHAGENTS_DIR="$FAKE_LA2" retire_leftover_tenx_launchagents >/dev/null
+[ ! -L "$FAKE_LA2/com.tenx.cursor-governance.plist" ] \
+  || fail_now "dangling leftover symlink still in live LaunchAgents"
+[ -L "$FAKE_LA2/_retired/com.tenx.cursor-governance.plist" ] \
+  || fail_now "dangling leftover was not moved to _retired"
+pass "retire moves dangling leftover symlink to _retired"
+
 echo "RESULT: PASS — launchagent scan ($PASS checks)"

@@ -27,11 +27,11 @@ retire_leftover_tenx_launchagents() {
   mkdir -p "$retired"
   for label in "${RETIRED_TENX_LAUNCHAGENT_LABELS[@]}"; do
     plist="$la_dir/${label}.plist"
-    if [ ! -e "$plist" ]; then
+    if [ ! -e "$plist" ] && [ ! -L "$plist" ]; then
       echo "OK: no leftover $label"
       continue
     fi
-    if [ "$la_real" = "$real_real" ]; then
+    if [ "$la_real" = "$real_real" ] && command -v launchctl >/dev/null 2>&1; then
       launchctl bootout "gui/$(id -u)/${label}" 2>/dev/null || true
     fi
     dest="$retired/${label}.plist"
