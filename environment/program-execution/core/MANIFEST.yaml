@@ -354,8 +354,8 @@ files:
   sha256: acc86ed2260ba6a048b40dca0cf589345796830e4d58a970b377113f2ac1e14b
   bytes: 17021
 - path: program-execution-controller-template/scripts/pec/controller.py
-  sha256: 8be35e8838e62b7ace3e996451cabc8dccb2bd67a5d1d8a635d5657d1a4e590c
-  bytes: 107085
+  sha256: d90463cd947697ca84c4991b48392e6d8e33defe906edf0484841979f63462da
+  bytes: 107344
 - path: program-execution-controller-template/scripts/pec/exec_env.py
   sha256: 56fe5eb1114dda26f3e061de03580b788cfa5e654c117d0c0b65ac9083d15a10
   bytes: 10917
@@ -366,8 +366,8 @@ files:
   sha256: 9b0dc41eb54b59b872b9d59b412bd3218de146d3a71c6424dbd13feef33392e9
   bytes: 9403
 - path: program-execution-controller-template/scripts/pec/replan.py
-  sha256: 3f5a560e652f0c639e87093f90dfcbcadbcc112dec5557741f38ca31597aa86b
-  bytes: 14411
+  sha256: 84671f9952a1bc677c92d3a90dc4f92066f890663ca04065546c3885fe576f3e
+  bytes: 14670
 - path: program-execution-controller-template/scripts/pec/runtime.py
   sha256: 4de2ad94cf8e0e94069b2d97fec2d4c11cf36a2fbdbc4f8bed730d314cf449a3
   bytes: 3094
@@ -592,4 +592,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 195
-  total_bytes: 730198
+  total_bytes: 730716
