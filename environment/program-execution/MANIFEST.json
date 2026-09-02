@@ -915,7 +915,7 @@
     },
     {
       "path": "campaigns/scripts/test_close_campaign.py",
-      "sha256": "f42bcf86dc6698d64ad9c29a487ea4d21dfbc40379b84f9bdf1e4d5a20ac0dad"
+      "sha256": "f541f3e863aec55aacd9aafcc01768f74a80f0e05c5b13c2a703c05308317d9b"
     },
     {
       "path": "campaigns/session-runtime-hydration-convergence-v1/CAMPAIGN_SOURCE.yaml",
@@ -1967,7 +1967,7 @@
     },
     {
       "path": "scripts/campaign_input.py",
-      "sha256": "25c0817fd71e92f5224afaac4bfbb219ffb6cbb68941aeb35092ef3abdabc086"
+      "sha256": "e701202aedb9f22fa003ea1fe5d36a2c815c73e739732444c107e24495fb76f0"
     },
     {
       "path": "scripts/campaign_pr_copy.py",

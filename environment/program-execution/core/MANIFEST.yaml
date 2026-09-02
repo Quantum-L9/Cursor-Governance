@@ -357,11 +357,11 @@ files:
   sha256: 946e53429aa413bda374070057ea5e9043d66ef5773344e2b593fb3e575fda51
   bytes: 18179
 - path: program-execution-controller-template/scripts/pec/controller.py
-  sha256: e261314582c7fd8c2b98b6bea2a518eb04c3f019bfec9f66a0f5d1c96c081670
-  bytes: 120490
+  sha256: caf665e43ec25eca3056a085c43e62d60914c004990063885667a80d8a505003
+  bytes: 120487
 - path: program-execution-controller-template/scripts/pec/dispatch.py
-  sha256: b4b4a0959e287009d7770e513b388ce1c8f10326a181e537b4ff435ce153aaf2
-  bytes: 5715
+  sha256: 87e8619e49131144071d7eff92100888241b4903e742c68a2cf09ffbb2603fb7
+  bytes: 5846
 - path: program-execution-controller-template/scripts/pec/exec_env.py
   sha256: 8e77e4df62e904ccb60da1deb9c21bdb2897d72955a884f5f1bfd5697c6a40f1
   bytes: 12465
@@ -582,8 +582,8 @@ files:
   sha256: 339df81ed6f92d4c9ff97bab242f070df187d7cabc80380b17ced6eb24b840e3
   bytes: 3979
 - path: tests/test_replan_handoff.py
-  sha256: 93816e89cdd1b6d4ed14bf608d66a38ec04bfd5e4202fc8005702991b4eab13f
-  bytes: 5042
+  sha256: aff01a6e0888180cb28fcb7873a227cf98fa3ea98ed1608ebd916a78c9c84682
+  bytes: 5082
 - path: tests/test_replan_integration.py
   sha256: d952bf5bb37602119d98bd579fe9dcf91f7cb626db53af21df418d5c542a04e2
   bytes: 10855
@@ -610,4 +610,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 201
-  total_bytes: 818119
+  total_bytes: 818287

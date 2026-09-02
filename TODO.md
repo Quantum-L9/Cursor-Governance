@@ -1,5 +1,12 @@
 ## Issue unblock (session reference)
 
+**Cluster:** Quantum-L9/l9-ci-sdk#79 closed on PR 83; #82 .l9 detect exclusion on same PR
+**Owning fix:** https://github.com/Quantum-L9/l9-ci-sdk/pull/83
+**Next:** l9-ci-core#122 pin is CI_PIPELINE; CG#454 pytest collection; remaining HUMAN/EXTERNAL
+**Pickup:** Graphiti PICKUP written 2026-09-01
+
+## Issue unblock (session reference)
+
 **Cluster:** Quantum-L9/Cursor-Governance#336
 **Owning fix:** allowlisted CLI diagnostics in claude-code excerpts (this branch)
 **Next:** land stacked PR then r9 #184
