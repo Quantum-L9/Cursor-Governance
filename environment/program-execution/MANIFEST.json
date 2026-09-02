@@ -2111,7 +2111,7 @@
     },
     {
       "path": "scripts/tests/test_probe_lock_binding.py",
-      "sha256": "a5bf31b1e6da9392fe6b8b60ffc5af59bf6cb772c5819056daad0f4cb840248b"
+      "sha256": "90151f610b93b4244b86baa208718188123fc3bcd6ddd1d850fc5806c0405717"
     },
     {
       "path": "scripts/tests/test_replay_campaign.py",

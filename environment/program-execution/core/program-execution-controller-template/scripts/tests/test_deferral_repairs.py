@@ -8,7 +8,6 @@ import sys
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from unittest import mock
 
 from helpers import (
     SCRIPTS,
@@ -109,7 +108,7 @@ class NextActionTests(unittest.TestCase):
     """PEC-F18: preflight names what it knows and what the caller must supply."""
 
     def test_unknown_actor_and_task_are_required_inputs_not_literals(self) -> None:
-        with mock.patch.dict(os.environ, {"L9_MEMORY_AGENT_ID": "", "PEC_ACTOR": ""}):
+        with unittest.mock.patch.dict(os.environ, {"L9_MEMORY_AGENT_ID": "", "PEC_ACTOR": ""}):
             action = _next_action(
                 None,
                 workspace=Path("/ws"),
@@ -125,7 +124,7 @@ class NextActionTests(unittest.TestCase):
         self.assertNotIn("TASK-001", action["args"])
 
     def test_known_actor_and_repository_are_used(self) -> None:
-        with mock.patch.dict(os.environ, {"PEC_ACTOR": "alice"}):
+        with unittest.mock.patch.dict(os.environ, {"PEC_ACTOR": "alice"}):
             action = _next_action(
                 "repository_not_reconciled",
                 workspace=Path("/ws"),
@@ -136,7 +135,7 @@ class NextActionTests(unittest.TestCase):
             )
         self.assertEqual(action["args"][-1], "repo-main=/repo")
         self.assertNotIn("required_inputs", action)
-        with mock.patch.dict(os.environ, {"L9_MEMORY_AGENT_ID": "", "PEC_ACTOR": ""}):
+        with unittest.mock.patch.dict(os.environ, {"L9_MEMORY_AGENT_ID": "", "PEC_ACTOR": ""}):
             claim = _next_action(
                 "lease_missing",
                 workspace=Path("/ws"),

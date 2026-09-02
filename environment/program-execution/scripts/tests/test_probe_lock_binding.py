@@ -8,7 +8,6 @@ import tempfile
 import unittest
 from contextlib import redirect_stderr
 from pathlib import Path
-from unittest import mock
 
 from peer_execution.imports import pe_script
 
@@ -18,12 +17,12 @@ _probe = pe_script("probe_execution_adapters")
 
 class ProbeLockBindingTests(unittest.TestCase):
     def test_cli_probe_without_a_lock_digest_is_refused(self) -> None:
-        args = mock.Mock(program_lock_digest=None, runtime=None)
-        with mock.patch.object(_cli, "_binding") as binding:
-            binding.return_value = mock.Mock(provider_ref="cursor-foreground")
+        args = unittest.mock.Mock(program_lock_digest=None, runtime=None)
+        with unittest.mock.patch.object(_cli, "_binding") as binding:
+            binding.return_value = unittest.mock.Mock(provider_ref="cursor-foreground")
             with (
                 tempfile.TemporaryDirectory() as raw,
-                mock.patch.dict("os.environ", {"L9_PROGRAM_ADAPTER_RUNTIME": raw}),
+                unittest.mock.patch.dict("os.environ", {"L9_PROGRAM_ADAPTER_RUNTIME": raw}),
                 self.assertRaises(ValueError) as ctx,
             ):
                 _cli.command_probe(args)
@@ -39,8 +38,8 @@ class ProbeLockBindingTests(unittest.TestCase):
             runtime = Path(raw) / "programs" / "live-campaign"
             argv = ["probe_execution_adapters.py", "--runtime", str(runtime)]
             with (
-                mock.patch.object(sys, "argv", argv),
-                mock.patch.dict("os.environ", {"L9_PROGRAM_LOCK_DIGEST": ""}),
+                unittest.mock.patch.object(sys, "argv", argv),
+                unittest.mock.patch.dict("os.environ", {"L9_PROGRAM_LOCK_DIGEST": ""}),
                 redirect_stderr(io.StringIO()) as err,
                 self.assertRaises(SystemExit) as ctx,
             ):
