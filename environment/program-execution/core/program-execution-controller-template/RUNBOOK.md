@@ -84,9 +84,13 @@ python scripts/pec.py register-contract TASK-002 --workspace ../runtime --file T
 python scripts/pec.py claim TASK-002 --workspace ../runtime --holder worker-01
 python scripts/pec.py prepare TASK-002 --workspace ../runtime
 python scripts/pec.py render-contract TASK-002 --workspace ../runtime
+python scripts/pec.py start TASK-002 --workspace ../runtime --actor <actor>
 ```
 
 Give only the Rendered Contract, Worker Brief, and worktree to the worker.
+`start` is not optional: it is where the stack-proof re-entry check, the
+campaign-active check and the `TASK_EXECUTION_STARTED` ledger event happen,
+and `record-attempt` accepts an attempt only from a task in EXECUTING.
 
 **Worker contract:** leave the task worktree dirty (uncommitted) OR commit on
 the task branch — `verify` covers both (union of dirty changes and

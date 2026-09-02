@@ -15,7 +15,7 @@ files:
 - path: README.md
   sha256: 5f61529b813d694d4790fccb85f6bd6ffbac112df748ec9816f41305459540b6
 - path: RUNBOOK.md
-  sha256: c012b1ddd3bb147ada5ce360ce265b1ac1e634e2527ef695146e9a441ef1b4d6
+  sha256: 5cf82df2b0cc2eef3312b17dac5807842c393012a2ab8d6673c113e5bc42a9a8
 - path: SECURITY.md
   sha256: 1bb8ae37d783ba450dbaafb779dfdcae5c2ac474ff72cbcdf1b08c5398fc4f2e
 - path: TEMPLATE_VARIABLES.yaml
