@@ -5261,7 +5261,6 @@ def _stage_runtime(run: _CampaignRun) -> CampaignReport:
     ensure_target_checkout_once = run.ensure_target_checkout_once
     hooks = run.hooks
     host_repo = run.host_repo
-    pec_workspace = run.pec_workspace
     report = run.report
     repository_id = run.repository_id
     requested_until = run.requested_until
