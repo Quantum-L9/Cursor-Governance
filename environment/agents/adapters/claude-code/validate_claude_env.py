@@ -179,8 +179,26 @@ def check_mcp_uses_env_refs(failures: list[str]) -> None:
         if banned in raw:
             _fail(f"mcp.template.json must not reference {banned}", failures)
     # Functional config must never carry the bearer; a prohibition mention in
-    # the _comment block documents the contract and is expected.
-    if "GRAPHITI_MCP_TOKEN" in json.dumps(servers):
+    # the _comment block documents the contract and is expected — and so is a
+    # ${VAR} reference under a private `_`-prefixed directive.
+    #
+    # `_comment` was carved out here by hand, which worked until a SECOND
+    # private key existed. `_optional_headers` renders the Graphiti bearer only
+    # when the platform actually proxies a value, and claude_projection.render_mcp
+    # strips every `_`-prefixed key before anything ships (claude_projection.py:
+    # `out = {k: v for k, v in spec.items() if not k.startswith("_")}`);
+    # test_graphiti_front_door asserts `_optional_headers` never reaches a render.
+    # So the directive is not functional config, and scanning the raw template
+    # subtree for the variable NAME failed the one shape the design sanctions.
+    #
+    # Strip the same keys the renderer strips, then test what actually ships.
+    # Carving out key names one at a time is what drifted; deriving the carve-out
+    # from the render rule cannot drift again.
+    functional = {
+        name: {key: value for key, value in spec.items() if not key.startswith("_")}
+        for name, spec in servers.items()
+    }
+    if "GRAPHITI_MCP_TOKEN" in json.dumps(functional):
         _fail("mcp.template.json server config must not reference GRAPHITI_MCP_TOKEN", failures)
     if not failures:
         print("  OK: mcp.template.json references no memory credential in server config")
