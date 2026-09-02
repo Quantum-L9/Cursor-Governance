@@ -219,7 +219,7 @@ def _mission(**overrides: object):
 
     mission_root = Path(__file__).resolve().parents[2] / "mission"
     if str(mission_root) not in sys.path:
-        sys.path.insert(0, str(mission_root))
+        sys.path.append(str(mission_root))
     from mission import parse_mission
 
     fixture = mission_root / "tests" / "fixtures" / "valid_mission.yaml"

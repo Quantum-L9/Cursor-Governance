@@ -308,6 +308,105 @@ class RunCampaignTests(unittest.TestCase):
         with patch.dict(os.environ, {"L9_CAMPAIGN_UNTIL_DEBUG": "1"}):
             self.mod.refuse_live_until_shortcut("activate")
 
+    def test_integration_branch_starts_at_the_remote_lineage_when_one_exists(self) -> None:
+        """A fresh clone must not mint campaign/<id> from its default-branch HEAD."""
+        with tempfile.TemporaryDirectory() as raw:
+            temp = Path(raw)
+            origin = temp / "origin"
+            origin.mkdir()
+            _git_init(origin)
+            env = _isolated_git_env()
+            subprocess.run(
+                ["git", "-C", str(origin), "checkout", "-q", "-b", "campaign/demo"],
+                check=True,
+                env=env,
+            )
+            (origin / "integrated.txt").write_text("integrated\n", encoding="utf-8")
+            subprocess.run(["git", "-C", str(origin), "add", "integrated.txt"], check=True, env=env)
+            subprocess.run(
+                ["git", *_GIT_IDENTITY, "-C", str(origin), "commit", "-qm", "integrated"],
+                check=True,
+                env=env,
+            )
+            integrated = subprocess.run(
+                ["git", "-C", str(origin), "rev-parse", "HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            ).stdout.strip()
+            subprocess.run(["git", "-C", str(origin), "checkout", "-q", "-"], check=True, env=env)
+            clone = temp / "clone"
+            subprocess.run(
+                ["git", "clone", "-q", str(origin), str(clone)],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            # The clone's HEAD is the default branch; origin/campaign/demo is ahead.
+            self.mod.fetch_stack_refs(clone, "demo")
+            branch = self.mod.ensure_integration_branch(clone, "demo")
+            local = subprocess.run(
+                ["git", "-C", str(clone), "rev-parse", branch],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            ).stdout.strip()
+            self.assertEqual(local, integrated)
+
+    def test_stub_heuristic_applies_to_the_primary_output_only(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            temp = Path(raw)
+            (temp / "__init__.py").write_text("", encoding="utf-8")
+            (temp / "note.txt").write_text("note complete: Title\n", encoding="utf-8")
+            (temp / "blob.bin").write_bytes(b"\xff\xfe\x00binary")
+            self.assertTrue(self.mod.is_stub_output(temp / "__init__.py", "Title"))
+            self.assertFalse(self.mod.is_stub_output(temp / "__init__.py", "Title", primary=False))
+            self.assertTrue(self.mod.is_stub_output(temp / "note.txt", "Title", primary=False))
+            self.assertFalse(self.mod.is_stub_output(temp / "blob.bin", "Title", primary=False))
+
+    def test_generated_data_database_follows_the_campaign_runtime_root(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            l9 = Path(raw) / "l9"
+            workspace = l9 / "programs" / "demo-activate-v1"
+            workspace.mkdir(parents=True)
+            self.assertEqual(
+                self.mod.generated_data_database(workspace),
+                l9 / "generated-data" / "pipeline.sqlite3",
+            )
+
+    def test_commit_identity_is_supplied_only_when_the_checkout_has_none(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            repo = Path(raw) / "repo"
+            repo.mkdir()
+            _git_init(repo)
+            self.assertEqual(self.mod._commit_identity_args(repo), [])
+            bare = Path(raw) / "bare"
+            bare.mkdir()
+            env = _isolated_git_env()
+            env["GIT_CONFIG_GLOBAL"] = str(Path(raw) / "no-global-config")
+            env["GIT_CONFIG_NOSYSTEM"] = "1"
+            subprocess.run(["git", "init", "-q", str(bare)], check=True, env=env)
+            with patch.dict(os.environ, env, clear=True):
+                args = self.mod._commit_identity_args(bare)
+            self.assertIn("user.email=make-campaign@l9.local", args)
+
+    def test_launch_pointer_is_written_atomically(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw) / "program"
+            (workspace / "runtime").mkdir(parents=True)
+            path = self.mod.write_launch_pointer(
+                workspace,
+                campaign_id="demo-activate-v1",
+                blueprint=str(Path(raw) / "blueprint"),
+                target_worktree=str(Path(raw) / "target"),
+                host_worktree=str(Path(raw) / "host"),
+                stage="activate",
+            )
+            self.assertEqual(json.loads(path.read_text())["campaign_id"], "demo-activate-v1")
+            self.assertEqual([p.name for p in (workspace / "runtime").glob("*.tmp")], [])
+
     def test_rejects_intent_v1(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             path = Path(raw) / "intent.yaml"
@@ -1635,6 +1734,83 @@ class RunCampaignTests(unittest.TestCase):
                 any(item.get("cites") == "stack-proof.json" for item in payload["nuggets"])
             )
 
+    def test_pec_verify_budget_follows_the_contract_command_count(self) -> None:
+        """RC-F8: N commands get N per-command budgets, not one shared one."""
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            rendered = workspace / "contracts" / "rendered"
+            rendered.mkdir(parents=True)
+            (rendered / "TASK-003.json").write_text(
+                json.dumps({"validation_commands": ["a", "b", "c"]}), encoding="utf-8"
+            )
+            self.assertEqual(
+                self.mod.pec_verify_timeout(workspace, "TASK-003"),
+                self.mod.VALIDATION_TIMEOUT_S * 3 + self.mod.PEC_TIMEOUT_S,
+            )
+            self.assertEqual(
+                self.mod.pec_verify_timeout(workspace, "TASK-404"), self.mod.VALIDATION_TIMEOUT_S
+            )
+            captured: list[int] = []
+
+            def fake_run_cmd(cmd, timeout=0, **_kwargs):  # noqa: ANN001
+                captured.append(int(timeout))
+                return subprocess.CompletedProcess(cmd, 0, stdout="{}", stderr="")
+
+            with patch.object(self.mod, "run_cmd", fake_run_cmd):
+                self.mod.pec_cmd(workspace, "verify", "TASK-003")
+            self.assertEqual(captured, [self.mod.VALIDATION_TIMEOUT_S * 3 + self.mod.PEC_TIMEOUT_S])
+
+    def test_launch_pointer_records_the_stage_and_never_a_constant_state(self) -> None:
+        """RC-F11: what the pointer says follows the runtime, not the writer."""
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw) / "programs" / "demo-v1"
+            blueprint = Path(raw) / "blueprint"
+            blueprint.mkdir()
+            (blueprint / "PROGRAM.yaml").write_text(
+                "program:\n  id: demo-v1\n  owner: AUTH-001\n", encoding="utf-8"
+            )
+            common = {
+                "campaign_id": "demo-v1",
+                "blueprint": str(blueprint),
+                "target_worktree": str(Path(raw) / "target"),
+                "host_worktree": str(Path(raw) / "host"),
+            }
+            path = self.mod.write_launch_pointer(workspace, stage="activate", **common)
+            launch = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(launch["stage_reached"], "activate")
+            self.assertEqual(launch["runtime_status"], "not_bootstrapped")
+            self.assertIsNone(launch["claimed_task"])
+            self.assertIsNone(launch["execution_card"])
+            self.assertEqual(launch["operator_ack_from"], "AUTH-001")
+            self.assertFalse(self.mod.resumable_workspace(workspace))
+            (workspace / "runtime" / "campaign-status.json").write_text(
+                json.dumps({"runtime_status": "active"}), encoding="utf-8"
+            )
+            (workspace / "runtime" / "TASK-001.md").write_text("card\n", encoding="utf-8")
+            path = self.mod.write_launch_pointer(workspace, stage="arm", **common)
+            launch = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(launch["runtime_status"], "active")
+            self.assertEqual(launch["claimed_task"], "TASK-001")
+            self.assertTrue(launch["execution_card"].endswith("TASK-001.md"))
+            with self.assertRaises(ValueError):
+                self.mod.write_launch_pointer(workspace, stage="publish", **common)
+
+    def test_one_runtime_root_with_two_spellings(self) -> None:
+        """L9_ROOT and L9_RUNTIME_ROOT resolve the same root; a contradiction refuses."""
+        with tempfile.TemporaryDirectory() as raw:
+            with patch.dict(os.environ, {"L9_ROOT": raw, "L9_RUNTIME_ROOT": ""}):
+                self.assertEqual(self.mod.campaign_runtime_root(), Path(raw).resolve())
+            with patch.dict(os.environ, {"L9_ROOT": "", "L9_RUNTIME_ROOT": raw}):
+                self.assertEqual(self.mod.campaign_runtime_root(), Path(raw).resolve())
+            other = Path(raw) / "other"
+            other.mkdir()
+            with (
+                patch.dict(os.environ, {"L9_ROOT": raw, "L9_RUNTIME_ROOT": str(other)}),
+                self.assertRaises(RuntimeError) as ctx,
+            ):
+                self.mod.campaign_runtime_root()
+            self.assertIn("different roots", str(ctx.exception))
+
     def test_pec_verify_uses_validation_timeout(self) -> None:
         captured: list[int] = []
 
@@ -1710,6 +1886,49 @@ class RunCampaignTests(unittest.TestCase):
             ).stdout.strip()
             (repo / ".git" / "objects" / parent[:2] / parent[2:]).unlink()
             self.assertFalse(self.mod.history_walkable(repo))
+
+    def test_github_repository_is_decided_by_host_not_substring(self) -> None:
+        """CodeQL: `"github.com" in url` accepted any URL mentioning GitHub."""
+        parse = self.mod.github_repository_from_url
+        self.assertEqual(parse("https://github.com/Quantum-L9/Repo.git"), "Quantum-L9/Repo")
+        self.assertEqual(parse("git@github.com:Quantum-L9/Repo.git"), "Quantum-L9/Repo")
+        self.assertEqual(parse("ssh://git@github.com/Quantum-L9/Repo"), "Quantum-L9/Repo")
+        self.assertIsNone(parse("https://evil.example/github.com/Quantum-L9/Repo"))
+        self.assertIsNone(parse("https://github.com.evil.example/Quantum-L9/Repo"))
+        self.assertIsNone(parse("https://gitlab.example/Quantum-L9/Repo"))
+        self.assertIsNone(parse(""))
+
+    def test_ensure_target_history_refuses_a_lookalike_origin(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            repo = Path(raw) / "repo"
+            repo.mkdir()
+            _git_init(repo)
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(repo),
+                    "remote",
+                    "add",
+                    "origin",
+                    "https://github.com/Other/Repo.git",
+                ],
+                check=True,
+                capture_output=True,
+            )
+            # A walkable, non-shallow checkout returns before the origin is
+            # read; mark it shallow so the repair path (and its guard) runs.
+            head = subprocess.run(
+                ["git", "-C", str(repo), "rev-parse", "HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+            (repo / ".git" / "shallow").write_text(head + "\n", encoding="utf-8")
+            self.assertTrue(self.mod.is_shallow_repo(repo))
+            with self.assertRaises(self.mod.CampaignError) as ctx:
+                self.mod.ensure_target_history(repo, "Quantum-L9/unused")
+            self.assertIn("Other/Repo", str(ctx.exception))
 
     def test_ensure_target_history_passes_walkable_repo(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -1922,6 +2141,32 @@ class CampaignInputRoutingTests(unittest.TestCase):
 
     def _source(self) -> dict:
         return self.activate.build_source(READY_SEED, stamp="2026-01-01T00:00:00Z")
+
+    def test_declared_frontmatter_that_does_not_parse_is_rejected_not_rerouted(self) -> None:
+        """One YAML error in an architecture-intent header must not become a brief."""
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "design.md"
+            path.write_text(
+                "---\n"
+                "schema: l9.program-execution.architecture-intent.v1\n"
+                "title: Router: microscope\n"
+                "target: Quantum-L9/LLM-Router\n"
+                "---\n\n# Router\n\nBody.\n",
+                encoding="utf-8",
+            )
+            with self.assertRaises(self.ci.CampaignInputRejected) as ctx:
+                self.ci.classify(path)
+            self.assertIn("frontmatter does not parse", str(ctx.exception))
+
+    def test_unparsable_yaml_is_reported_as_a_parse_error(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "broken.yaml"
+            path.write_text("schema: [unclosed\n", encoding="utf-8")
+            found = self.ci.classify(path)
+            self.assertIs(found.kind, self.ci.CampaignInputKind.UNKNOWN)
+            rejection = self.ci.reject(found)
+            self.assertIn("does not parse", str(rejection))
+            self.assertNotIn("The file parsed", str(rejection))
 
     def test_campaign_source_v2_is_classified_by_schema_not_extension(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

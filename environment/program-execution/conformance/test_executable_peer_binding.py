@@ -46,6 +46,18 @@ class ExecutablePeerBindingTests(unittest.TestCase):
         self.assertEqual(readiness["status"], "BLOCKED")
         self.assertEqual(readiness["blocked_reason"], "provider_probe")
 
+    def test_receipt_conforms_to_its_schema_and_the_writer_enforces_it(self) -> None:
+        """AD-F9: the v3 receipt validates against the schema the tree ships."""
+        module = _readiness_module()
+        readiness = module.build_readiness(
+            SUBSYSTEM, REPO_ROOT, "cursor", "cursor-ide", "cursor-foreground", "worker-default"
+        )
+        self.assertEqual(module.validate_readiness_receipt(readiness), [])
+        broken = dict(readiness)
+        broken.pop("checks")
+        errors = module.validate_readiness_receipt(broken)
+        self.assertTrue(any("checks" in error for error in errors), errors)
+
     def test_dormant_adapter_binding_is_blocked_not_ready(self) -> None:
         readiness = _readiness_module().build_readiness(
             SUBSYSTEM,
