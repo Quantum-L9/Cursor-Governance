@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import unittest
-from unittest import mock
 
 from adapters.github.common import auth_probe, gh_transport
 
@@ -26,8 +25,8 @@ class AuthProbeTests(unittest.TestCase):
             return result
 
         with (
-            mock.patch.object(gh_transport.GhTransport, "run", fake_run),
-            mock.patch.object(auth_probe.shutil, "which", return_value="/usr/bin/gh"),
+            unittest.mock.patch.object(gh_transport.GhTransport, "run", fake_run),
+            unittest.mock.patch.object(auth_probe.shutil, "which", return_value="/usr/bin/gh"),
         ):
             return auth_probe.probe("."), calls
 
