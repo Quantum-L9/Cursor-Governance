@@ -26,6 +26,43 @@ def load_module(path: str | Path, name: str) -> ModuleType:
     return module
 
 
+def load_package(directory: str | Path, name: str) -> ModuleType:
+    """Bind a package DIRECTORY under `name`, resolved by location only.
+
+    The location-based twin of `load_module`: submodules of the result import
+    normally through `__path__`, so callers use ordinary `import_module` rather
+    than loading each file by hand. Idempotent -- a second call for the same
+    directory returns the bound package instead of re-executing it, so every
+    caller shares one instance and module-level state stays coherent. A name
+    already bound to a DIFFERENT directory is an error, never a silent
+    overwrite of somebody else's package.
+    """
+    directory = Path(directory).expanduser().resolve()
+    existing = sys.modules.get(name)
+    if existing is not None:
+        bound = [Path(entry).resolve() for entry in getattr(existing, "__path__", [])]
+        if bound == [directory]:
+            return existing
+        raise ImportError(f"{name} is already bound to {bound}, not {directory}")
+
+    init = directory / "__init__.py"
+    if not init.is_file():
+        raise ImportError(f"not a package: {directory}")
+    spec = importlib.util.spec_from_file_location(
+        name, init, submodule_search_locations=[str(directory)]
+    )
+    if spec is None or spec.loader is None:
+        raise ImportError(f"unable to load package: {directory}")
+    package = importlib.util.module_from_spec(spec)
+    sys.modules[name] = package
+    try:
+        spec.loader.exec_module(package)
+    except Exception:
+        sys.modules.pop(name, None)
+        raise
+    return package
+
+
 # --- Program Execution's own `scripts/` package -----------------------------
 #
 # `scripts` is NOT a name Program Execution owns. The repository root ships a
@@ -45,6 +82,11 @@ def load_module(path: str | Path, name: str) -> ModuleType:
 # it under a name it owns exclusively. No sys.path mutation, no eviction of
 # another subsystem's `scripts` binding, and no dependence on which suite,
 # module, or test happened to import first.
+#
+# This accessor lives in `peer_execution` because that is the only PE-exclusive
+# namespace a module inside `scripts/` can import WITHOUT first binding the
+# ambiguous name -- the constraint is Python's import model, not a layering
+# preference. The generic half above carries no knowledge of `scripts`.
 
 PE_SCRIPTS_PACKAGE = "pe_scripts"
 
@@ -53,45 +95,15 @@ def _pe_scripts_dir() -> Path:
     """Absolute path of `environment/program-execution/scripts`.
 
     Derived from this file's own location, so it is correct under direct CLI
-    execution, `import peer_execution.imports`, and
-    `spec_from_file_location` loading alike.
+    execution, `import peer_execution.imports`, and `spec_from_file_location`
+    loading alike.
     """
     return Path(__file__).resolve().parents[1] / "scripts"
 
 
 def bind_pe_scripts() -> ModuleType:
-    """Bind Program Execution's `scripts/` package as `pe_scripts` and return it.
-
-    Idempotent: a second call returns the already-bound package rather than
-    re-executing it, so every caller shares one module instance (identity
-    checks and module-level state stay coherent).
-    """
-    existing = sys.modules.get(PE_SCRIPTS_PACKAGE)
-    directory = _pe_scripts_dir()
-    if existing is not None:
-        bound = [Path(entry).resolve() for entry in getattr(existing, "__path__", [])]
-        if bound == [directory]:
-            return existing
-        raise ImportError(f"{PE_SCRIPTS_PACKAGE} is already bound to {bound}, not {directory}")
-
-    init = directory / "__init__.py"
-    if not init.is_file():
-        raise ImportError(f"Program Execution scripts package is missing: {init}")
-    spec = importlib.util.spec_from_file_location(
-        PE_SCRIPTS_PACKAGE,
-        init,
-        submodule_search_locations=[str(directory)],
-    )
-    if spec is None or spec.loader is None:
-        raise ImportError(f"unable to load package: {directory}")
-    package = importlib.util.module_from_spec(spec)
-    sys.modules[PE_SCRIPTS_PACKAGE] = package
-    try:
-        spec.loader.exec_module(package)
-    except Exception:
-        sys.modules.pop(PE_SCRIPTS_PACKAGE, None)
-        raise
-    return package
+    """Bind Program Execution's `scripts/` package as `pe_scripts`."""
+    return load_package(_pe_scripts_dir(), PE_SCRIPTS_PACKAGE)
 
 
 def pe_script(module_name: str) -> ModuleType:
@@ -100,7 +112,7 @@ def pe_script(module_name: str) -> ModuleType:
     Use instead of `from scripts.<module> import ...` anywhere inside Program
     Execution. `module_name` is the bare sibling name, e.g. "provider_loader".
     """
-    if not module_name or module_name.startswith(".") or "/" in module_name:
+    if not module_name or module_name.startswith(".") or "/" in module_name or "\\" in module_name:
         raise ValueError(f"not a Program Execution script module: {module_name!r}")
     bind_pe_scripts()
     return importlib.import_module(f"{PE_SCRIPTS_PACKAGE}.{module_name}")
