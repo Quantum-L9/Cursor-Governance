@@ -4750,6 +4750,7 @@ class _CampaignRun:
     timer: Any = None
     timing: Any = None
     trace: Any = None
+    accepted_blueprint_inventory: Any = None
     worktree: Any = None
     write_root: Any = None
 
@@ -5287,6 +5288,7 @@ def _stage_admit(run: _CampaignRun) -> CampaignReport | None:
                     default_admit(blueprint, revision=host_revision)
             staged.value = {"revision": host_revision}
     accepted_blueprint_inventory = blueprint_byte_inventory(blueprint)
+    run.accepted_blueprint_inventory = accepted_blueprint_inventory
     if fast:
         # An acceptance nobody typed still has to be auditable. Record the two
         # facts it rests on, scoped local_only so publish cannot read it as
@@ -5338,6 +5340,7 @@ def _stage_runtime(run: _CampaignRun) -> CampaignReport:
     trace = run.trace
     until = run.until
     write_root = run.write_root
+    accepted_blueprint_inventory = run.accepted_blueprint_inventory
 
     pec = hooks.pec_bootstrap or default_pec_bootstrap
     pec_workspace_path = Path(report.pec_workspace)

@@ -1039,7 +1039,7 @@
     },
     {
       "path": "compiler/synthesizer.py",
-      "sha256": "32f3d6613f36f21fc06ab802f0ebf72f9d97690fc218bb5661546e6f89f50422"
+      "sha256": "efbdd66bccdcb9a6307c248ef3212045fc15058941491ee307ef47142a4fa53d"
     },
     {
       "path": "compiler/tests/conformance/__init__.py",
@@ -1954,6 +1954,10 @@
       "sha256": "c7cae64da3979a31621edf7eb7897a5eacbe8578a2edabd433c023caabe91ba0"
     },
     {
+      "path": "scripts/campaign_exec.py",
+      "sha256": "c449b34630df393441c70d990c91004cee3e17f5d88760ddbf607f6e21fa0148"
+    },
+    {
       "path": "scripts/campaign_input.py",
       "sha256": "25c0817fd71e92f5224afaac4bfbb219ffb6cbb68941aeb35092ef3abdabc086"
     },
@@ -2039,7 +2043,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "6d0673f03c43703f88073226b84d34792159b0399dad4b222d32891ef12e9ec6"
+      "sha256": "ba8a131344ab4778aba9fa695a016207b81682409bbbea5d87930457a2d275c1"
     },
     {
       "path": "scripts/run_conformance.py",

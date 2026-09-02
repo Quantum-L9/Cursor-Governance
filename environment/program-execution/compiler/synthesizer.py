@@ -10,12 +10,11 @@ import yaml
 from peer_execution.imports import load_module
 
 from .mission_admission import validate_mission_context
+from .prohibition_kind import entry as prohibition_entry
 
 MODULE_ROOT = Path(__file__).resolve().parent
 PE_ROOT = MODULE_ROOT.parent
 TEMPLATE_ROOT = PE_ROOT / "core" / "program-execution-blueprint-template"
-
-from .prohibition_kind import entry as prohibition_entry
 
 #: The official Blueprint template renderer (contract §17 reuse), bound by FILE
 #: LOCATION under a name Program Execution owns. `instantiate` is not a name
