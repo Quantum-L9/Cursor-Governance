@@ -162,9 +162,9 @@ repos:
     remote_patterns: ["*/l9-harness*", "*/l9-harness.git"]
     integrates_with: [cursor-governance]
   l9-infra:
-    github: Quantum-L9/l9-infra
-    path_hints: [l9-infra]
-    remote_patterns: ["*/l9-infra*", "*/l9-infra.git"]
+    github: Quantum-L9/l9-infisical-control-plane
+    path_hints: [l9-infra, l9-infisical-control-plane]
+    remote_patterns: ["*/l9-infra*", "*/l9-infra.git", "*/l9-infisical-control-plane*"]
     integrates_with: [cursor-governance]
   l9-node-chain-of-search:
     github: Quantum-L9/l9-node-chain-of-search
