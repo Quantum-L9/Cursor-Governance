@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from peer_execution.runtime_store import write_json_atomic
+
 
 class BackgroundTransport:
     def __init__(self, runtime_root: str | Path) -> None:
@@ -12,10 +14,8 @@ class BackgroundTransport:
 
     def dispatch(self, dispatch_id: str, task: dict[str, Any]) -> Path:
         path = self.root / f"{dispatch_id}.request.json"
-        path.write_text(
-            json.dumps(task, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
+        # The host polls this file from another process: write-then-rename.
+        write_json_atomic(path, task)
         return path
 
     def status(self, dispatch_id: str) -> str:

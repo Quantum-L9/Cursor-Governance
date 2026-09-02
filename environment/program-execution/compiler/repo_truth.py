@@ -179,7 +179,7 @@ def discover(root: Path) -> RepoTruth:
     truth.owner = _resolve_owner(root, truth)
     truth.test_command, truth.package_manager = _resolve_test_command(root, truth)
     truth.runtime_version = _resolve_runtime_version(root, truth)
-    truth.adr_files = sorted(str(p.relative_to(root)) for p in root.rglob("*") if _is_adr(p))
+    truth.adr_files = sorted(str(p.relative_to(root)) for p in _walk(root) if _is_adr(p))
     truth.validation_commands = _validation_commands(root, truth)
     truth.rollback_defs = _rollback_defs(root, truth)
     return truth
@@ -199,6 +199,27 @@ def _load_dpk(root: Path) -> dict[str, Any] | None:
     return data or None
 
 
+_GIT_TIMEOUT_SECONDS = 20
+_PRUNED_DIRS = frozenset({".git", ".venv", "venv", "node_modules", "__pycache__", ".tox"})
+
+
+def _walk(root: Path):
+    """Every file under `root`, skipping VCS, virtualenv and dependency trees."""
+    stack = [root]
+    while stack:
+        current = stack.pop()
+        try:
+            entries = sorted(current.iterdir())
+        except OSError:
+            continue
+        for entry in entries:
+            if entry.is_dir():
+                if entry.name not in _PRUNED_DIRS and not entry.is_symlink():
+                    stack.append(entry)
+            else:
+                yield entry
+
+
 def _git_state(root: Path) -> tuple[str | None, str | None]:
     try:
         completed = subprocess.run(
@@ -206,6 +227,7 @@ def _git_state(root: Path) -> tuple[str | None, str | None]:
             capture_output=True,
             text=True,
             check=False,
+            timeout=_GIT_TIMEOUT_SECONDS,
         )
         remote = completed.stdout.strip() or None
         head = subprocess.run(
@@ -213,10 +235,11 @@ def _git_state(root: Path) -> tuple[str | None, str | None]:
             capture_output=True,
             text=True,
             check=False,
+            timeout=_GIT_TIMEOUT_SECONDS,
         )
         revision = head.stdout.strip() or None
         return remote, revision
-    except OSError:
+    except (OSError, subprocess.TimeoutExpired):
         return None, None
 
 

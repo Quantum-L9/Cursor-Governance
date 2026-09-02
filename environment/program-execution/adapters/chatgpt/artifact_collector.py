@@ -12,7 +12,10 @@ def collect_returned_artifact(path: str | Path, envelope: dict[str, Any]) -> dic
     if not isinstance(value, dict):
         raise ValueError("returned ChatGPT artifact must be an object")
     for key in ("task_id", "program_lock_digest", "contract_digest", "producer_identity"):
-        if value.get(key) != envelope.get(key):
+        expected = envelope.get(key)
+        if not isinstance(expected, str) or not expected:
+            raise ValueError(f"handoff envelope has no {key}; cannot match a returned artifact")
+        if value.get(key) != expected:
             raise ValueError(f"returned artifact {key} mismatch")
     claimed = value.get("artifact_digest")
     body = dict(value)

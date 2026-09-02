@@ -18,14 +18,21 @@ from typing import Any
 PE_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = PE_ROOT.parents[1]
 _CONTROLLER_COMMAND_TIMEOUT_SECONDS = 300
+# APPEND, never insert(0). Program Execution needs `peer_execution` on the path
+# when this file is run directly; none of PE's top-level names except `scripts`
+# collide with the repository root, and PE no longer imports `scripts` by that
+# ambiguous name at all (see peer_execution.imports.pe_script). Prepending would
+# make PE's `scripts/` shadow the repository-root `scripts` package for every
+# other consumer in the same process -- the mirror of the bug this file had.
 if str(PE_ROOT) not in sys.path:
-    sys.path.insert(0, str(PE_ROOT))
+    sys.path.append(str(PE_ROOT))
 
 from peer_execution.bindings import resolve_peer_binding  # noqa: E402
+from peer_execution.imports import pe_script  # noqa: E402
 from peer_execution.models import ProbeContext  # noqa: E402
 from peer_execution.runner import run_to_terminal  # noqa: E402
 
-from scripts.provider_loader import instantiate  # noqa: E402
+instantiate = pe_script("provider_loader").instantiate
 
 
 def _run_json(argv: list[str], *, cwd: Path) -> dict[str, Any]:
