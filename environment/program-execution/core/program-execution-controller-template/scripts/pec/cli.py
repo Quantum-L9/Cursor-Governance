@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from .common import load_json
 from .contracts import (
     ContractError,
     draft_source_contract,
@@ -39,6 +40,7 @@ from .controller import (
     validate_runtime,
     verify_attempt,
 )
+from .dispatch import dispatch_rendered_contract
 from .exec_env import resolve_exec_env
 from .workspace_reset import fresh_execution_workspace
 
@@ -415,6 +417,8 @@ def main(argv: list[str] | None = None, *, template_root: Path) -> int:
             db, ledger = open_runtime(args.workspace)
             try:
                 value = render_contract(db, ledger, args.workspace.resolve(), args.task_id)
+                rendered = load_json(Path(value["contract"]))
+                value["dispatch"] = dispatch_rendered_contract(rendered)
             finally:
                 db.close()
         elif args.command == "start":
