@@ -1563,7 +1563,11 @@
     },
     {
       "path": "integrations/subagent-generated-data/campaign_summary.py",
-      "sha256": "dd13edadaa5525240fac54e9ff2b031d77f1b3a7fd88f02003f56abdcaa18430"
+      "sha256": "ba477a7b59b618e20ed8eba2c1b53e8e68c8bec532fe1fd3f62c086a91bd05fa"
+    },
+    {
+      "path": "integrations/subagent-generated-data/compile_units.py",
+      "sha256": "7f5792cd4539a8926cff0701c1d81a40e8e45489ff97ad897a3fba854e11edfb"
     },
     {
       "path": "integrations/subagent-generated-data/outcome_publisher.py",
@@ -1571,15 +1575,15 @@
     },
     {
       "path": "integrations/subagent-generated-data/receipt_projection.py",
-      "sha256": "f52d55c75abfca4a745ee448e2ba736df9b6bb0de7e57cc7d9b2f1f067c4ae53"
+      "sha256": "d34abe2a9bd05355792f11f43c6d785dfc8083455a5923ecf6c2979791db4180"
     },
     {
       "path": "integrations/subagent-generated-data/tests/test_campaign_summary.py",
-      "sha256": "23e421d3bb8333124abe1624c378f337d1c32680cb2a16ef5c6e9a767bb03a07"
+      "sha256": "8c5bd6e43c844ac5814b9c54d01071b5b6f8a69b8405aef3b670e800e1af60ca"
     },
     {
       "path": "integrations/subagent-generated-data/tests/test_outcome_publisher.py",
-      "sha256": "a6a5bdf507128ebb9b5dee1b991b86ba5a15ff96a1fae39ad1444ed0ea943c1d"
+      "sha256": "d2c3b3147b2bee6e35d000aa23cca3946a8b9c156875d095b56b7c1ce2bbc797"
     },
     {
       "path": "mission/MISSION_ACCEPTANCE_MODEL.yaml",
@@ -1659,7 +1663,7 @@
     },
     {
       "path": "peer_execution/autonomy/bootstrap.py",
-      "sha256": "5e11c0cb2fd258a3d80fec2d8296a3c6e44074370661c34bf5e87e356f4f7766"
+      "sha256": "ca4ce8b178ff9b28729fe9ac49ebac63143001d2f412b60ae98fa190b72d1d51"
     },
     {
       "path": "peer_execution/autonomy/claim_lease.py",
@@ -1667,7 +1671,7 @@
     },
     {
       "path": "peer_execution/autonomy/cli.py",
-      "sha256": "aaab201a13f6b95a1c55c39d0772fe8aa8ac60551a2025b8870bec8f0c440621"
+      "sha256": "0f04b7c6e361e8165ac02fcad2422c21a20bcae4b804afff71b11003dc920d64"
     },
     {
       "path": "peer_execution/autonomy/examples/pr-convergence-campaign.json",
@@ -1710,6 +1714,10 @@
       "sha256": "89f7e93af5301d329e0999c288ce60e8749726102e20847cc032b3e238f1d4f5"
     },
     {
+      "path": "peer_execution/autonomy/state_dir.py",
+      "sha256": "bf8990ae69de3c7eaca8417c20988f07d5cbe059d552cea2130e806205bdef71"
+    },
+    {
       "path": "peer_execution/autonomy/state_store.py",
       "sha256": "1c8001288b5b42d1df5f98af32ba6bdcdfb87ae07beff17df4c505ab9a6cb612"
     },
@@ -1740,6 +1748,10 @@
     {
       "path": "peer_execution/autonomy/tests/test_scheduler.py",
       "sha256": "dc1457732df2208bd12f0d18e05c33c10b1a6b204f7398685a0dfe63d92410e0"
+    },
+    {
+      "path": "peer_execution/autonomy/tests/test_state_dir.py",
+      "sha256": "402a719e7b8a12ace5e0eb29065fafcf87c0dac18e52b64036880b18be587365"
     },
     {
       "path": "peer_execution/autonomy/tests/test_state_store.py",
@@ -2007,7 +2019,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "d66c9520b13c52ad0039f5dd3aa26df81782366aa99fd230f790d9e609dbebaf"
+      "sha256": "ad5aad7371520ca7696ca593d007b9ef9c6c9bef79c3b85e57133d89edf6236d"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -2155,7 +2167,7 @@
     },
     {
       "path": "tests/hardening/test_real_campaign_e2e.py",
-      "sha256": "0847a058bdace927f5e44ea0297f616c5861a4808362d682e308be9ca4b3d30c"
+      "sha256": "99b9aacbaff0ec80b0d1cdbf878bd093488af3f9e42591e6146a8b6f980e8f94"
     },
     {
       "path": "tests/test_adapter_cli.py",
