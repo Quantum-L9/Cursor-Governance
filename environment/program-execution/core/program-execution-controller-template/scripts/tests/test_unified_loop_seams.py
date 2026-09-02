@@ -27,6 +27,7 @@ from pec.signals import (  # noqa: E402
     list_dry_run_queue,
     publish_controller_event,
 )
+from peer_execution.models import CapabilityReceipt  # noqa: E402
 
 
 class _StubProvider:
@@ -101,11 +102,19 @@ class UnifiedLoopSeamTests(unittest.TestCase):
             "target_kind": "git_repository",
             "independent_verification": False,
         }
+        lock = str(rendered["program_digest"])
+        receipt = CapabilityReceipt.create(
+            adapter_id="cursor-foreground",
+            adapter_version="1.0.0",
+            status="PASS",
+            capabilities=["inspect"],
+            program_lock_digest=lock,
+        ).to_dict()
         result = dispatch_rendered_contract(
             rendered,
             provider=_StubProvider(),
             invoke=True,
-            capability_receipts={"cursor-foreground": {"status": "PASS"}},
+            capability_receipts={"cursor-foreground": receipt},
         )
         self.assertEqual(result["dispatch"]["status"], "ROUTED")
         self.assertEqual(result["probe"]["status"], "PASS")

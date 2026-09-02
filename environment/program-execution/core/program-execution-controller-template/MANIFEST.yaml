@@ -191,7 +191,7 @@ files:
 - path: scripts/tests/test_task_readiness_semantics.py
   sha256: 00acd7272a820111d4605f9ef3eb668f08514fe78214be65253e76f4d9012c3e
 - path: scripts/tests/test_unified_loop_seams.py
-  sha256: 9c893936973580e06253e97dd471a1eab3c7ed668d88acb8268d8f684693c6b6
+  sha256: 86c162c17093ea52f24681d8c0447aad3c270b7ecf1e4615d65e81a3f6baa2cf
 - path: scripts/tests/test_verify_committed_work.py
   sha256: c8cc87f837178654df0aa58f2f8c893546c87cc8c793bf45223a4d93a05fda56
 - path: scripts/tests/test_verify_lifecycle.py
