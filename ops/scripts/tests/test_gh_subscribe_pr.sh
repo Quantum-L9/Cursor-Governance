@@ -14,21 +14,6 @@ fail() { echo "FAIL: $1" >&2; exit 1; }
 
 mkdir -p "$TMP_ROOT/bin"
 
-cat > "$TMP_ROOT/bin/gh" <<'STUB'
-#!/usr/bin/env bash
-# REST pulls/{n} → node_id. GraphQL updateSubscription → SUBSCRIBED.
-if [[ "$1" == "api" && "$2" == "repos/o/n/pulls/81" ]]; then
-  echo '{"node_id":"PR_kwDOtest"}'
-  exit 0
-fi
-if [[ "$1" == "api" && "$2" == "graphql" ]]; then
-  echo '{"data":{"updateSubscription":{"subscribable":{"number":81,"viewerSubscription":"SUBSCRIBED"}}}}'
-  exit 0
-fi
-exit 1
-STUB
-chmod +x "$TMP_ROOT/bin/gh"
-
 # gh --jq is applied by real gh. The stub prints JSON; the helper passes --jq
 # to gh. Reproduce jq locally when the stub sees --jq.
 cat > "$TMP_ROOT/bin/gh" <<'STUB'

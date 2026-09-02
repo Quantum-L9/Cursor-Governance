@@ -54,6 +54,8 @@ gh_subscribe_pr() {
   # GH_GRAPHQL_UNSUPPORTED survives the call.
   local gql_out gql_rc
   gql_out="$(mktemp)"
+  local _had_errexit=0
+  [[ $- == *e* ]] && _had_errexit=1
   set +e
   gh_graphql api graphql \
     -f query="$_GH_SUBSCRIBE_MUTATION" \
@@ -61,7 +63,11 @@ gh_subscribe_pr() {
     --jq '.data.updateSubscription.subscribable.viewerSubscription' \
     >"$gql_out"
   gql_rc=$?
-  set -e
+  if [[ "$_had_errexit" -eq 1 ]]; then
+    set -e
+  else
+    set +e
+  fi
   out="$(cat "$gql_out")"
   rm -f "$gql_out"
 
