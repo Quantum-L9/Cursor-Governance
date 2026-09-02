@@ -16,8 +16,10 @@ import pytest
 import yaml
 
 MISSION_ROOT = Path(__file__).resolve().parents[1]
+# APPEND, never insert(0): a module file outranks a namespace directory
+# regardless of order (see compiler.mission_admission).
 if str(MISSION_ROOT) not in sys.path:
-    sys.path.insert(0, str(MISSION_ROOT))
+    sys.path.append(str(MISSION_ROOT))
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 from binding import (  # noqa: E402

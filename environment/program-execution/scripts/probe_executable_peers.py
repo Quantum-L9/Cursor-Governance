@@ -8,10 +8,10 @@ from pathlib import Path
 from typing import Any
 
 from peer_execution.bindings import load_peer_bindings
-from peer_execution.imports import load_module
+from peer_execution.imports import load_module, pe_script
 from peer_execution.models import ProbeContext
 
-from scripts.provider_loader import instantiate
+instantiate = pe_script("provider_loader").instantiate
 
 _STRUCTURAL_CHECKS = (
     "canonical_binding",
@@ -34,15 +34,21 @@ def _repo_root() -> Path:
 
 
 def _resolve_runtime_root() -> Path:
-    repo = _repo_root()
-    if str(repo) not in sys.path:
-        sys.path.insert(0, str(repo))
-    try:
-        from environment.agents.runtime_paths import peer_readiness_root
+    """The canonical peer-readiness receipt root, from its one owner.
 
-        return peer_readiness_root()
-    except Exception:  # noqa: BLE001
-        return (Path.home() / ".l9" / "programs" / "_peer-readiness").resolve()
+    `environment/agents/runtime_paths.py` owns every L9 runtime path. It is
+    bound by FILE LOCATION rather than by prepending the repository root to
+    sys.path (which would hand the repository-root `scripts` package the shared
+    top-level name for the rest of the process), and a failure to load it is a
+    failure: this probe used to fall back to the legacy
+    `~/.l9/programs/_peer-readiness` layout, silently writing receipts where
+    nothing reads them while still reporting PASS.
+    """
+    runtime_paths = load_module(
+        _repo_root() / "environment" / "agents" / "runtime_paths.py",
+        "pe_agent_runtime_paths",
+    )
+    return runtime_paths.peer_readiness_root()
 
 
 def _readiness_builder():
@@ -107,6 +113,10 @@ def probe(subsystem_root: Path, repo_root: Path, runtime_root: Path) -> dict[str
             provider_ref = binding["provider_ref"]
             profile_ref = binding["execution_profile_ref"]
             probe_runtime = runtime_root / "provider-probes" / agent_id / provider_ref
+            # Readiness runs with no program: the receipt binds to a sentinel
+            # derived from the binding it probes, under its own runtime root.
+            # It is labelled as such in the probe metadata so no reader can
+            # mistake it for a Program Lock, and the routing gate refuses it.
             probe_digest = (
                 "sha256:"
                 + hashlib.sha256(
@@ -130,12 +140,21 @@ def probe(subsystem_root: Path, repo_root: Path, runtime_root: Path) -> dict[str
                         repository_root=str(repo_root),
                         runtime_root=str(probe_runtime),
                         program_lock_digest=probe_digest,
-                        metadata={"agent_ref": agent_id, "surface": surface},
+                        metadata={
+                            "agent_ref": agent_id,
+                            "surface": surface,
+                            "program_lock_binding": "readiness_sentinel",
+                        },
                     )
                 ).to_dict()
             except Exception as exc:  # noqa: BLE001
+                # Honest BLOCKED is what a provider RETURNS (missing host,
+                # file-drop transport). An exception out of instantiate() or
+                # probe() -- a descriptor schema error, an identity mismatch, a
+                # missing PROVIDER_CLASS -- is a structural defect, and the
+                # gate's own law says defects FAIL it.
                 provider_probe = {
-                    "status": "BLOCKED",
+                    "status": "FAIL",
                     "blocked_reason": "provider_probe_exception",
                     "error_type": type(exc).__name__,
                 }

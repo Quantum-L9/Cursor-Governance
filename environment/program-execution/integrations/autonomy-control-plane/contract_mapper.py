@@ -158,6 +158,17 @@ def _allowed_paths(contract: Mapping[str, Any], *, mutation: bool) -> list[str]:
     return ["**"] if not mutation else ["repository:declared"]
 
 
+def read_scope_paths(contract: Mapping[str, Any]) -> list[str]:
+    """The path scope a read-only grant is authorized against.
+
+    Declared writable paths when the contract names any; otherwise the whole
+    worktree (`**`). This is the same scope the mapped campaign carries, so a
+    read probe against its first entry probes the scope itself rather than a
+    file the task never named.
+    """
+    return _allowed_paths(contract, mutation=False)
+
+
 def map_program_contract(
     contract: Mapping[str, Any],
     *,
@@ -174,6 +185,14 @@ def map_program_contract(
     mutation = _mutation_requested(contract)
     now = _iso_now()
     base_sha = str(contract.get("base_sha") or "").strip()
+    if not base_sha:
+        # `"0" * 40` satisfied the campaign validator's hex check, so a contract
+        # with no base became a lease bound to a SHA no worktree has -- revoked
+        # on its first heartbeat instead of refused here.
+        raise ContractActionError(
+            "base_sha is required: a root-autonomy campaign binds itself to the task's base "
+            "commit and revokes on drift from it"
+        )
     objective = str(contract.get("objective") or "Execute Program task")
     repository = str(contract.get("repository_id") or contract.get("repository") or "local")
     branch = str(contract.get("branch") or "HEAD")
@@ -215,7 +234,7 @@ def map_program_contract(
         "base_state": {
             "repository": repository,
             "branch": branch,
-            "commit_sha": base_sha or "0" * 40,
+            "commit_sha": base_sha,
         },
         "revocation": {
             "kill_switch_file": ".l9/autonomy/revoke",
