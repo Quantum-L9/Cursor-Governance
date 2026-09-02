@@ -98,22 +98,39 @@ def _safe_target(dest: Path, member_name: str) -> Path:
 
 
 def safe_extract_zip(src: Path, dest: Path) -> None:
+    dest.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(src) as zf:
         for member in zf.infolist():
-            _safe_target(dest, member.filename)
+            target = _safe_target(dest, member.filename)
             mode = (member.external_attr >> 16) & 0o170000
             if mode == stat.S_IFLNK:
                 raise ValueError(f"zip symlink member rejected: {member.filename}")
-        zf.extractall(dest)
+            if member.is_dir() or member.filename.endswith("/"):
+                target.mkdir(parents=True, exist_ok=True)
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with zf.open(member) as src_fh, target.open("wb") as out_fh:
+                out_fh.write(src_fh.read())
 
 
 def safe_extract_tar(src: Path, dest: Path) -> None:
+    dest.mkdir(parents=True, exist_ok=True)
     with tarfile.open(src) as tf:
         for member in tf.getmembers():
-            _safe_target(dest, member.name)
+            target = _safe_target(dest, member.name)
             if member.issym() or member.islnk() or member.isdev():
                 raise ValueError(f"unsafe tar member type rejected: {member.name}")
-        tf.extractall(dest, filter="data")
+            if member.isdir():
+                target.mkdir(parents=True, exist_ok=True)
+                continue
+            if not member.isfile():
+                raise ValueError(f"unsafe tar member type rejected: {member.name}")
+            extracted = tf.extractfile(member)
+            if extracted is None:
+                raise ValueError(f"tar member unreadable: {member.name}")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with extracted, target.open("wb") as out_fh:
+                out_fh.write(extracted.read())
 
 
 def extract_archive(src: Path, dest: Path) -> None:
