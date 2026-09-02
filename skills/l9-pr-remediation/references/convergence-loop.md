@@ -158,7 +158,7 @@ minimum_safe_next_action: "own_required_checks_then_merge" | "merge_train_oldest
 MUST stop the loop when:
 - `cycles_run >= max_cycles` → emit `partial`
 - Local verify Passed AND no new actionable codebase signals → emit `converged` for **this PR**. Do not merge until FIRST_MERGE_GATE. Then MERGE_TRAIN (own the required-check wait; do not hand off).
-- `pr_board.py` returns `leftover` for a PR → that PR is `partial`, and the status must quote the declaration (`--human-decision` or `--unfixable-check`) that produced it. Edit-axis notes alone are **not** that declaration and are not a stop condition: attempt the merge first. `fix` means another cycle for that PR; `wait` means keep polling.
+- `pr_board.py` returns `leftover` for a PR → that PR is `partial`, and the status must quote the declaration (`--human-decision` or `--unfixable-check`) that produced it **and** the GitHub issue opened for `l9-issue-remediation` ([issue-handoff.md](issue-handoff.md)). Edit-axis notes alone are **not** that declaration and are not a stop condition: attempt the merge first. Do not ask the human to unblock. `fix` means another cycle for that PR; `wait` means keep polling.
 - Poll worker `merge_eligible` on a stale SHA → ignore; never merge from it
 - A fix causes an unrecoverable regression → emit `blocked`
 - GitHub API is rate-limited and retry fails → emit `blocked`

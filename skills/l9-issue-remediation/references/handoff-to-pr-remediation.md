@@ -6,14 +6,19 @@ role: pr_handoff
 tags: [issues, pr, handoff, l9-pr-remediation]
 owner: igor_beylin
 status: active
-version: 1.1.0
-updated: 2026-08-29
+version: 1.2.0
+updated: 2026-09-02
 /L9_META -->
 
 # Handoff to l9-pr-remediation
 
 This skill **never merges**. Remediator Converge may load `l9-pr-remediation`
 **only** after the bound target reports `open_issues == 0`.
+
+Issues opened by `l9-pr-remediation` above-paygrade handoff
+(`skills/l9-pr-remediation/references/issue-handoff.md`) are ordinary issues.
+Converge drains them. Do not bounce them back to the PR remediator until
+`open_issues=0`.
 
 Diagnose / auditor **never** calls this path.
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contract tests for l9-pr-remediation 4.5.1. Stdlib only."""
+"""Contract tests for l9-pr-remediation 4.6.0. Stdlib only."""
 
 from __future__ import annotations
 
@@ -29,7 +29,16 @@ def _forbid(text: str, needle: str, where: str) -> None:
 
 
 def test_version_and_map() -> None:
-    _need(SKILL, "version: 4.5.1", "SKILL.md")
+    _need(SKILL, "version: 4.6.0", "SKILL.md")
+    _need(SKILL, "references/issue-handoff.md", "SKILL.md")
+    _need(SKILL, "l9-issue-remediation", "SKILL.md")
+    _need(SKILL, "environment/contracts/autonomy", "SKILL.md")
+    _need(SKILL, "cursor-subagents", "SKILL.md")
+    _need(SKILL, "Do not ask the human to unblock", "SKILL.md")
+    if "issue-handoff.md" not in REFS:
+        _fail("references/issue-handoff.md missing")
+    _need(REFS["issue-handoff.md"], "gh issue create", "issue-handoff.md")
+    _need(REFS["issue-handoff.md"], "l9-issue-remediation", "issue-handoff.md")
     if not (ROOT / "scripts" / "reply_threads.py").is_file():
         _fail("scripts/reply_threads.py missing")
     _need(SKILL, "Kernel bind", "SKILL.md")

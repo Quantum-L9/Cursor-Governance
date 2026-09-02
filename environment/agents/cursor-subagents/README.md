@@ -101,6 +101,11 @@ claims.
 The main agent must not wait idly for background subagents when independent
 critical-path work remains available.
 
+`skills/l9-pr-remediation` consumes this module for parallel remediator waves
+and for launching `l9-issue-remediation` after an above-paygrade GitHub issue
+is opened. That launch is the specialized issue skill (`generalPurpose`), not
+a sixth Cursor role. See `DELEGATION_CONTRACT.yaml` `above_paygrade_handoff`.
+
 Result documents
 
 Every subagent must return exactly one document conforming to:
