@@ -15,7 +15,7 @@ files:
 - path: README.md
   sha256: 5f61529b813d694d4790fccb85f6bd6ffbac112df748ec9816f41305459540b6
 - path: RUNBOOK.md
-  sha256: c012b1ddd3bb147ada5ce360ce265b1ac1e634e2527ef695146e9a441ef1b4d6
+  sha256: 5cf82df2b0cc2eef3312b17dac5807842c393012a2ab8d6673c113e5bc42a9a8
 - path: SECURITY.md
   sha256: 1bb8ae37d783ba450dbaafb779dfdcae5c2ac474ff72cbcdf1b08c5398fc4f2e
 - path: TEMPLATE_VARIABLES.yaml
@@ -91,29 +91,29 @@ files:
 - path: scripts/pec/__init__.py
   sha256: 1c97c455db405eead95452458bbd62c3843425adbeb120a7cf5da2848d42a2bb
 - path: scripts/pec/blueprint.py
-  sha256: de8bd4aece170268f2b85e6fcd2c411c44a39726fc766cae97e7a4cac44a520b
+  sha256: 5e01499d18ee746fe44cd87f6cd3422af7d38a7643e3e312042949edb0c45a32
 - path: scripts/pec/cli.py
-  sha256: 4e95cb40a81e25d8d4949d44d16884cfaf06dc54590b181aefda80f4f0d05b8c
+  sha256: 4814a96fabdf4966534e7d35e4c392bef2a0d2480e92478e75f3d9229eb8c025
 - path: scripts/pec/common.py
   sha256: df55978ff7841bf6db5b05f3e937c3d682c956b0992d9e02022cdb277f0fa104
 - path: scripts/pec/contracts.py
   sha256: acc86ed2260ba6a048b40dca0cf589345796830e4d58a970b377113f2ac1e14b
 - path: scripts/pec/controller.py
-  sha256: 8be35e8838e62b7ace3e996451cabc8dccb2bd67a5d1d8a635d5657d1a4e590c
+  sha256: 7c262d04009aacb6fd375b6f65d76f9a605a60d8a164bc31352f24ee604122cd
 - path: scripts/pec/exec_env.py
-  sha256: 56fe5eb1114dda26f3e061de03580b788cfa5e654c117d0c0b65ac9083d15a10
+  sha256: 8e77e4df62e904ccb60da1deb9c21bdb2897d72955a884f5f1bfd5697c6a40f1
 - path: scripts/pec/ledger.py
-  sha256: b805256c42a3bb57b12297128160685a12edf48fa0352a0b0b60ff66b505e252
+  sha256: ce27b2ab0c7cde6a34f4030fbd07b27fe63914519cc0e8f701c3afdd240dad1c
 - path: scripts/pec/preflight.py
-  sha256: 9b0dc41eb54b59b872b9d59b412bd3218de146d3a71c6424dbd13feef33392e9
+  sha256: 422fe029a0535a46f0489e43eda1a25045cb30971efdf6c2eaa4135295fd58f2
 - path: scripts/pec/replan.py
-  sha256: 3f5a560e652f0c639e87093f90dfcbcadbcc112dec5557741f38ca31597aa86b
+  sha256: 84671f9952a1bc677c92d3a90dc4f92066f890663ca04065546c3885fe576f3e
 - path: scripts/pec/runtime.py
-  sha256: 4de2ad94cf8e0e94069b2d97fec2d4c11cf36a2fbdbc4f8bed730d314cf449a3
+  sha256: 2fc4b45e13dfacf8b36cd52b3f5c60d558044c8e9ac1087da8d384b9e40e833f
 - path: scripts/pec/state.py
-  sha256: e273f8051fef9d72913aaa667649fbfd61f18ddc1064fd933673d9e093593432
+  sha256: da3d7af66a2b7a4bb260ca3ee16e32a1cbef869daf27fb0c4d4a94a9b24e68ab
 - path: scripts/pec/workspace_reset.py
-  sha256: edf39052bd7f13cb79e946fa55cc2b6fecff50b96dfc0043943c007ab088a443
+  sha256: 1f87ce29446c467b8ecc900ca8ab1b9db5ecce74cc1fc229c60e459fe975fe06
 - path: scripts/pec.py
   sha256: a06ff404d01ffaf0defa06e273897bb26f2464adf6d9507714c2d64749a25273
 - path: scripts/run_negative_tests.py
@@ -131,19 +131,23 @@ files:
 - path: scripts/tests/test_campaign_fan_in.py
   sha256: 935760a69ed57106ad73ba5be739e7b8f732071de444749b97cbd39e8e77cf91
 - path: scripts/tests/test_campaign_status.py
-  sha256: 869b81d6a1ea8e2b7cb3cdca858715bca2aca4b5c8784d6a9551f7994f86dc10
+  sha256: 11f709cbae6589c57d3c724eb68d8e95a74f2c16804bdd956829c634ba7b9810
 - path: scripts/tests/test_changed_files.py
-  sha256: 1de461c7d7d3a79519657f926c1e10a42990b264e5e9d9468c6797479ea836df
+  sha256: c189ec7f2e7988066e935d03f3d6a4dd82f7c9c91e133822898d1b65d6560551
 - path: scripts/tests/test_controller_success.py
   sha256: 77fd8817dbeb512ef455dc72acb1a82d9de173c5b835e652aacae848911fa78f
 - path: scripts/tests/test_decision_unknown.py
   sha256: b564797fadb1a16ba35d6d08c71bd742e81e03ca29ec11c86c3e8a44139012bd
+- path: scripts/tests/test_deferral_repairs.py
+  sha256: 8fd96068f7442f96de8af2abc401ff1cbf3800cfe227b2bccef55869d2dbeadf
 - path: scripts/tests/test_do_not_build_verify.py
   sha256: 6462b98713377b893eca74b633ee7868c30b749a5eb054577663ee32fab51513
+- path: scripts/tests/test_exec_env_root.py
+  sha256: e50e6d398e629395d4bc06548d59e62f8ffff716d6025ae0b8e8aeea4792333d
 - path: scripts/tests/test_execution_recovery.py
-  sha256: 6402cf39797ab7e0d3a6ef19ea6054153d6e696b327da713eda2b5f58697973e
+  sha256: c12d43517683de545d57a89db757e68f730f7890fe21501ed41fde8f5be5d998
 - path: scripts/tests/test_fail_task.py
-  sha256: f5a1b853b0bf1bd3c77c0688e759742937b593c9ca1e1b82882af34b915855f4
+  sha256: 30531f449cf0a13676c959e74343de13ae1ff7edf119651694bbd10d9cbc6360
 - path: scripts/tests/test_import_graph.py
   sha256: ca6bcfa79727f80b322e47f5fdaa228eaabf96e758e3ba13897aefcbdd734e01
 - path: scripts/tests/test_kernel_verdict.py
@@ -151,7 +155,7 @@ files:
 - path: scripts/tests/test_leases_and_approval.py
   sha256: ae7ef493630fb9c7ffe0b0939537328298cdf98e351b59b7d9890cd79c70fb9c
 - path: scripts/tests/test_ledger_tamper.py
-  sha256: c471659035072ed2ba5e22c7fbb2ea75c13e6aae6751e1e176c9a066e027f5a0
+  sha256: ab380d5485c9fa0fb47b636b8195dfa8961c501afb63417c1e3288ae55494f34
 - path: scripts/tests/test_pe_clean_startup.py
   sha256: 6aeb90005d5ba0e36a3f93932ef9a8715f9bd9479a723b2ba7d2ce4ef5ccd9cf
 - path: scripts/tests/test_pipeline_assembly_fill.py
@@ -159,7 +163,7 @@ files:
 - path: scripts/tests/test_preflight.py
   sha256: d3ecd4c701fe9053fb23baa9f9565f728100d61a4e3c78ae42e41dbed801ecf5
 - path: scripts/tests/test_prepare_reuse.py
-  sha256: c4e3c473a499679b22235e9bf8e1d13e990e6cee37f6ca7c63d433b44a14efa0
+  sha256: 5a792a14e6dc7bdf051ece2b162ccf131e7e3f824c8ad54b701f3f9ba49f0c82
 - path: scripts/tests/test_program_control.py
   sha256: dbe6434dcfb45ee7316483027219020d549ae825cd2fa6bb9da085e6567b4ba0
 - path: scripts/tests/test_program_lock_drift.py
@@ -171,7 +175,7 @@ files:
 - path: scripts/tests/test_scope.py
   sha256: 25df4fca8992212c17f6ed5a925b37708d1b4f8bf91d1f8fac45651aee6dae82
 - path: scripts/tests/test_scoped_invalidation.py
-  sha256: c2916711ee7ee3f497bf7e9bac67caceb821f31d0f7f31c81dd2078a2f67e5aa
+  sha256: 9ad47e83aa4f65a02bad8e5a0b50f5dd0e97377deb3ee03827b4e62c0e0b9941
 - path: scripts/tests/test_source_contract_idempotent.py
   sha256: 195963bc4db81bbf3c171c2539f28be45c184ab75f0f67e6b1f6bfb64ae25f8a
 - path: scripts/tests/test_source_contract_placeholder.py
@@ -189,7 +193,7 @@ files:
 - path: scripts/tests/test_wave_dependency.py
   sha256: 271268dca078c50de977eb2b940d96c224c79bd62d76140de216591b36399538
 - path: scripts/validate_controller.py
-  sha256: 994efa39a7fac7828a99f23be5c5b255e04b47fa388684dc92cfbea6d3202ce1
+  sha256: 5279ecf96b0eda97450dd4175ad958bbd7c80bed99845eb4bc6089f2f803c5de
 integrity:
   algorithm: sha256
   self_excluded: true

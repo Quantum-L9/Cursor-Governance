@@ -40,7 +40,7 @@ import json
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from types import MappingProxyType
+from types import MappingProxyType, ModuleType
 from typing import Any
 
 from jsonschema import Draft202012Validator
@@ -52,10 +52,36 @@ MODULE_ROOT = Path(__file__).resolve().parent
 PE_ROOT = MODULE_ROOT.parent
 MISSION_ROOT = PE_ROOT / "mission"
 
+# APPEND, never insert(0). A module file outranks a namespace directory
+# regardless of order, so appending is enough to reach `mission.py`; what
+# appending cannot do is shadow a name some other subsystem already resolves.
 if str(MISSION_ROOT) not in sys.path:
-    sys.path.insert(0, str(MISSION_ROOT))
+    sys.path.append(str(MISSION_ROOT))
 
-from mission import Mission  # noqa: E402 — official Mission model (contract §17 reuse)
+
+def _require_module_file(module: ModuleType, expected: Path, label: str) -> None:
+    """Refuse a namespace-package binding where a module FILE was required.
+
+    `mission/` is a directory directly under the Program Execution root with no
+    `__init__.py`, so the bare name `mission` is also importable as a namespace
+    package from PE_ROOT. Python gives a namespace portion the lowest priority,
+    but a name already bound in `sys.modules` is never re-resolved: if anything
+    imported `mission` before `mission/` itself was on the path, this import
+    would silently return the empty namespace package instead of `mission.py`.
+    """
+    bound = getattr(module, "__file__", None)
+    if not bound or Path(bound).resolve() != expected.resolve():
+        raise ImportError(
+            f"{label} resolved to {bound or getattr(module, '__path__', None)}, not {expected}; "
+            "a namespace package or foreign module already owns that name in this process"
+        )
+
+
+import mission as _mission_module  # noqa: E402 — official Mission model (contract §17 reuse)
+
+_require_module_file(_mission_module, MISSION_ROOT / "mission.py", "mission")
+
+Mission = _mission_module.Mission
 
 SCHEMA_PATH = MODULE_ROOT / "schemas" / "mission-context.schema.json"
 

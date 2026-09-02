@@ -31,12 +31,17 @@ ALLOWED_TRANSITIONS = {
     "ELIGIBLE": {"WAITING", "BLOCKED", "LEASED", "COMPLETED", "CANCELLED", "STALE"},
     "LEASED": {"PREPARED", "STALE", "FAILED", "CANCELLED"},
     "PREPARED": {"CONTRACTED", "STALE", "FAILED", "CANCELLED"},
-    "CONTRACTED": {"EXECUTING", "SUBMITTED", "STALE", "FAILED", "CANCELLED"},
+    # SUBMITTED is reachable only through EXECUTING. `pec start` is where the
+    # stack-proof re-entry check, the campaign-active check and the
+    # TASK_EXECUTION_STARTED ledger event happen; CONTRACTED -> SUBMITTED and
+    # FAILED -> SUBMITTED let a worker hand in an attempt without any of them.
+    # Every real caller already starts before it submits.
+    "CONTRACTED": {"EXECUTING", "STALE", "FAILED", "CANCELLED"},
     "EXECUTING": {"SUBMITTED", "STALE", "FAILED", "CANCELLED"},
     "SUBMITTED": {"VERIFYING", "STALE", "FAILED"},
     "VERIFYING": {"PASSED_LOCAL", "FAILED", "STALE"},
     "PASSED_LOCAL": {"COMPLETED", "STALE", "CANCELLED"},
-    "FAILED": {"ELIGIBLE", "EXECUTING", "SUBMITTED", "STALE", "CANCELLED"},
+    "FAILED": {"ELIGIBLE", "EXECUTING", "STALE", "CANCELLED"},
     "STALE": {"ELIGIBLE", "CANCELLED"},
     "CANCELLED": set(),
     "COMPLETED": set(),
