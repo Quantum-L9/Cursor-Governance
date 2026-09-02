@@ -41,6 +41,8 @@ class MemoryLookupTests(unittest.TestCase):
                         str(root),
                         "--evidence-id",
                         "EVID-002",
+                        "--revision",
+                        "deadbeef",
                         "--memory-lookup",
                         "q",
                     ]
