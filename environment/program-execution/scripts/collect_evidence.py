@@ -39,6 +39,8 @@ from blueprint_ops import (  # noqa: E402
 )
 
 PE_ROOT = Path(__file__).resolve().parents[1]
+#: What the compiler writes before evidence is bound; never accepted as a binding.
+UNKNOWN_REVISION = "UNKNOWN"
 
 
 def _utc_now() -> str:
@@ -73,9 +75,18 @@ def collect_evidence(
         known = ", ".join(sorted(item.get("id", "?") for item in entries)) or "<none>"
         raise RuntimeError(f"unknown evidence id {evidence_id!r}; catalog has: {known}")
 
+    bound_revision = str(revision).strip() if revision is not None else ""
+    if not bound_revision or bound_revision.upper() == UNKNOWN_REVISION:
+        # The compiler stamps `revision: UNKNOWN` on purpose: it is the marker
+        # that no evidence has been bound yet. Marking the entry `available`
+        # while keeping that marker recorded evidence about nothing.
+        raise RuntimeError(
+            f"evidence {evidence_id} needs the revision it was observed at; "
+            f"got {revision!r}. Pass --revision <sha-or-ref>."
+        )
     entry.update(
         {
-            "revision": revision if revision is not None else entry.get("revision"),
+            "revision": bound_revision,
             "digest": digest,
             "method": "read_only_inspection",
             "environment": "local",
@@ -112,7 +123,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="collect_evidence")
     parser.add_argument("--blueprint", required=True, type=Path)
     parser.add_argument("--evidence-id", required=True)
-    parser.add_argument("--revision", default=None)
+    parser.add_argument("--revision", required=True)
     parser.add_argument("--digest", default=None)
     parser.add_argument("--notes", default=None)
     parser.add_argument("--producer", default="operator")

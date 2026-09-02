@@ -13,11 +13,12 @@ reported as `absent`, not raised.
 
 from __future__ import annotations
 
+import re
 import shutil
 from pathlib import Path
 from typing import Any
 
-from .common import run_git
+from .common import resolve_within, run_git
 
 PEC_BRANCH_PREFIX = "pec/"
 # `refs/heads/pec/*` does not fnmatch a nested name like `pec/w0/task-001`;
@@ -130,40 +131,45 @@ def fresh_execution_workspace(
         if worktrees_dir.is_dir():
             discovered = sorted(item.name for item in worktrees_dir.iterdir() if item.is_dir())
     else:
-        discovered = list(task_ids)
+        discovered = [_validated_task_id(workspace, task_id) for task_id in task_ids]
 
     cleaned: list[dict[str, Any]] = []
     for task_id in discovered:
         for branch in task_branches(repo, task_id) or [None]:  # type: ignore[list-item]
             cleaned.append(clean_task_execution(workspace, repo, task_id, branch=branch))
 
-    # A worktree directory can survive with no git registration at all; sweep
-    # whatever is left so recreation does not trip on a non-empty path.
-    if worktrees_dir.is_dir():
-        for item in sorted(worktrees_dir.iterdir()):
-            if item.is_dir():
-                shutil.rmtree(item, ignore_errors=True)
+    orphaned: dict[str, str] = {}
+    if task_ids is None:
+        # Whole-workspace reset only. A worktree directory can survive with no
+        # git registration at all; sweep whatever is left so recreation does
+        # not trip on a non-empty path. Scoped to named tasks, this sweep and
+        # the orphan pass below destroyed every OTHER task's dirty worktree and
+        # its verified-but-unintegrated candidate branch.
+        if worktrees_dir.is_dir():
+            for item in sorted(worktrees_dir.iterdir()):
+                if item.is_dir():
+                    shutil.rmtree(item, ignore_errors=True)
     run_git(repo, "worktree", "prune", check=False)
 
-    # Any pec branch with no worktree left is residue by definition.
-    orphaned: dict[str, str] = {}
-    live = {branch for branch in _registered_worktrees(repo).values() if branch}
-    listing = run_git(
-        repo,
-        "for-each-ref",
-        "--format=%(refname:short)",
-        PEC_BRANCH_REFSPEC,
-        check=False,
-    )
-    if listing.returncode == 0:
-        for name in listing.stdout.splitlines():
-            branch = name.strip()
-            if branch and branch not in live:
-                orphaned[branch] = _delete_branch(repo, branch)
+    if task_ids is None:
+        # Any pec branch with no worktree left is residue by definition.
+        live = {branch for branch in _registered_worktrees(repo).values() if branch}
+        listing = run_git(
+            repo,
+            "for-each-ref",
+            "--format=%(refname:short)",
+            PEC_BRANCH_REFSPEC,
+            check=False,
+        )
+        if listing.returncode == 0:
+            for name in listing.stdout.splitlines():
+                branch = name.strip()
+                if branch and branch not in live:
+                    orphaned[branch] = _delete_branch(repo, branch)
 
     released = 0
     if release_leases:
-        released = _release_open_leases(workspace)
+        released = _release_open_leases(workspace, task_ids=discovered if task_ids else None)
 
     return {
         "workspace": str(workspace),
@@ -174,7 +180,33 @@ def fresh_execution_workspace(
     }
 
 
-def _release_open_leases(workspace: Path) -> int:
+_TASK_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+
+
+def _validated_task_id(workspace: Path, task_id: str) -> str:
+    """A task id that names a worktree INSIDE this workspace, and a known task.
+
+    `--task-id` reached `shutil.rmtree(workspace / "worktrees" / task_id)`
+    unchecked; `../..` resolved above the workspace.
+    """
+    value = str(task_id).strip()
+    if not _TASK_ID_RE.fullmatch(value):
+        raise ValueError(f"invalid task id for fresh-workspace: {task_id!r}")
+    resolve_within(workspace / "worktrees", workspace / "worktrees" / value)
+    db_path = workspace / "runtime" / "state.sqlite"
+    if db_path.is_file():
+        from .state import StateDB
+
+        db = StateDB(db_path)
+        try:
+            if db.task(value) is None:
+                raise ValueError(f"unknown task id for fresh-workspace: {value}")
+        finally:
+            db.close()
+    return value
+
+
+def _release_open_leases(workspace: Path, task_ids: list[str] | None = None) -> int:
     """Drop leases that point at worktrees this reset just removed."""
     db_path = workspace / "runtime" / "state.sqlite"
     if not db_path.is_file():
@@ -185,6 +217,8 @@ def _release_open_leases(workspace: Path) -> int:
     try:
         released = 0
         for lease in db.active_leases():
+            if task_ids is not None and str(lease.get("task_id") or "") not in task_ids:
+                continue
             db.release_lease(str(lease["lease_id"]))
             task_id = str(lease.get("task_id") or "")
             task = db.task(task_id) if task_id else None
