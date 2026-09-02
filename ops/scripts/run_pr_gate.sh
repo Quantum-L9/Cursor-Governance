@@ -132,6 +132,20 @@ _gate_code_digest() {
   fi
   cat "${present[@]}" 2>/dev/null | cksum | awk '{print $1}'
 }
+# The kernel latch's receipt is gate-relevant state that lives OUTSIDE the
+# worktree hash: `.l9/` is gitignored, so neither `git ls-files` nor
+# `--others --exclude-standard` can see it. Without this term the one sequence
+# the kernel gate itself prescribes was structurally impossible: the gate fails
+# with "apply the two kernels, record, and re-run the same command", recording
+# changes nothing the digest observes, and the STOP-LOOPING latch then refuses
+# the re-run against an unchanged state — an unclearable gate, which teaches
+# bypassing rather than finishing. Same class of state as `_gate_code_digest`,
+# and folded in at the same seam.
+_gate_kernel_digest() {
+  local receipt="$WS/.l9/autonomy/kernel-receipt.json"
+  [[ -f "$receipt" ]] && cat "$receipt" 2>/dev/null
+  return 0
+}
 _gate_state_digest() {
   local list paths content
   list="$(mktemp)"
@@ -146,6 +160,7 @@ _gate_state_digest() {
     {
       xargs -0 -r git hash-object <"$list" 2>/dev/null
       _gate_code_digest
+      _gate_kernel_digest
     } | cksum | awk '{print $1}'
   )"
   rm -f "$list"
