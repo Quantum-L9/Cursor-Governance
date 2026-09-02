@@ -351,7 +351,7 @@
     },
     {
       "path": "adapters/github/common/tests/test_auth_probe.py",
-      "sha256": "cbfbdca49aa63c0890f135a2b3e2041cc40c9e9a34586a2c07c169db4f29c353"
+      "sha256": "fbcd8c8b8db74d4be4af07da09e105803d7578d2dc65fe273aacb4e9091f27a8"
     },
     {
       "path": "adapters/github/deployments/ADAPTER.yaml",
@@ -2015,7 +2015,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "1c44d875937eb39ba2c4ac13f5e18f5d6390070fa00821f5bb9ee64cbcef710e"
+      "sha256": "2d0be14dab6b5085a04e33b503d319d161e76b4d86d72b5b77570ce7420f261b"
     },
     {
       "path": "scripts/run_conformance.py",
