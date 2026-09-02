@@ -242,8 +242,12 @@ class ClaudeCodeProvider:
             errors=() if status == "PASS" else (fail_error,),
             transport_evidence_refs=(transport_evidence,),
         )
+        adapter_error_code = None
+        if status != "PASS":
+            adapter_error_code = "MALFORMED_HOST_OUTPUT" if parse_error else "HOST_EXECUTION_FAILED"
         return ProviderInvocation(
             status=status,
+            adapter_error_code=adapter_error_code,
             evidence=(diagnostics,),
             result=provider_result,
         )

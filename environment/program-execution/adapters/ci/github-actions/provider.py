@@ -117,8 +117,16 @@ class GitHubActionsDriver:
                 "independent_verifier": "PASS",
             },
         }
+        adapter_error_code = None
+        if not passed:
+            adapter_error_code = (
+                "TARGET_STATE_DRIFT"
+                if payload["gates"]["candidate_sha_exact"] != "PASS"
+                else "HOST_EXECUTION_FAILED"
+            )
         return DriverInvocation(
             status="PASS" if passed else "FAIL",
+            adapter_error_code=adapter_error_code,
             state=next_state,
             payload=payload,
             evidence=({"type": "workflow_run", **run},),
@@ -134,6 +142,7 @@ class GitHubActionsDriver:
         )
         return DriverInvocation(
             status="CANCELLED" if result.exit_code == 0 else "FAIL",
+            adapter_error_code=None if result.exit_code == 0 else "HOST_EXECUTION_FAILED",
             state=state,
             evidence=(result.to_evidence(),),
         )

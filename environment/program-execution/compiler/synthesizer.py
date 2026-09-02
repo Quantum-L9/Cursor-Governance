@@ -147,7 +147,11 @@ def _program(resolution: dict[str, Any], meta: dict[str, Any], now: datetime) ->
             "name": _program_name(intent["normalized_objective"]),
             "version": "1.0.0",
             "owner": owner,
-            "definition_status": "accepted",
+            # A compiler produces a draft. Acceptance is `accept_blueprint`'s
+            # decision, taken against bound evidence and recorded in an
+            # ACCEPTANCE_RECEIPT; a compiler that stamped `accepted` here
+            # accepted its own output with no evidence and no receipt.
+            "definition_status": "draft",
             "snapshot_at": snapshot,
             "objective": intent["normalized_objective"],
             "problem_statement": (

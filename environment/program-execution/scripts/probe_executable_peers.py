@@ -113,6 +113,10 @@ def probe(subsystem_root: Path, repo_root: Path, runtime_root: Path) -> dict[str
             provider_ref = binding["provider_ref"]
             profile_ref = binding["execution_profile_ref"]
             probe_runtime = runtime_root / "provider-probes" / agent_id / provider_ref
+            # Readiness runs with no program: the receipt binds to a sentinel
+            # derived from the binding it probes, under its own runtime root.
+            # It is labelled as such in the probe metadata so no reader can
+            # mistake it for a Program Lock, and the routing gate refuses it.
             probe_digest = (
                 "sha256:"
                 + hashlib.sha256(
@@ -136,7 +140,11 @@ def probe(subsystem_root: Path, repo_root: Path, runtime_root: Path) -> dict[str
                         repository_root=str(repo_root),
                         runtime_root=str(probe_runtime),
                         program_lock_digest=probe_digest,
-                        metadata={"agent_ref": agent_id, "surface": surface},
+                        metadata={
+                            "agent_ref": agent_id,
+                            "surface": surface,
+                            "program_lock_binding": "readiness_sentinel",
+                        },
                     )
                 ).to_dict()
             except Exception as exc:  # noqa: BLE001

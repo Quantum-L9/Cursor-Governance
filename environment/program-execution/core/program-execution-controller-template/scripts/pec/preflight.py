@@ -113,6 +113,30 @@ def _lock_blockers() -> list[str]:
     return []
 
 
+#: What `next_action` names when the runtime does not know it. A caller must
+#: supply these; preflight never invents a holder, an actor or a repository.
+ACTOR_INPUT = "<actor>"
+TASK_INPUT = "<task-id>"
+REPOSITORY_INPUT = "<repository-id>=<path>"
+
+
+def _actor_hint() -> str | None:
+    for name in ("L9_MEMORY_AGENT_ID", "PEC_ACTOR"):
+        value = os.environ.get(name, "").strip()
+        if value:
+            return value
+    return None
+
+
+def _with_required_inputs(action: dict[str, Any]) -> dict[str, Any]:
+    required = sorted(
+        {item for item in action["args"] if item in {ACTOR_INPUT, TASK_INPUT, REPOSITORY_INPUT}}
+    )
+    if required:
+        action["required_inputs"] = required
+    return action
+
+
 def _next_action(
     token: str | None,
     *,
@@ -120,9 +144,34 @@ def _next_action(
     task_id: str | None,
     receipt_workspace: Path,
     surface: str,
+    repository_ids: list[str] | None = None,
+) -> dict[str, Any]:
+    return _with_required_inputs(
+        _next_action_template(
+            token,
+            workspace=workspace,
+            task_id=task_id,
+            receipt_workspace=receipt_workspace,
+            surface=surface,
+            repository_ids=repository_ids or [],
+        )
+    )
+
+
+def _next_action_template(
+    token: str | None,
+    *,
+    workspace: Path,
+    task_id: str | None,
+    receipt_workspace: Path,
+    surface: str,
+    repository_ids: list[str],
 ) -> dict[str, Any]:
     ws = str(workspace)
-    tid = task_id or "TASK-001"
+    # `TASK-001` used to stand in for an unknown task; a next action against a
+    # task the runtime never named is an invented instruction.
+    tid = task_id or TASK_INPUT
+    actor = _actor_hint() or ACTOR_INPUT
     if token in {
         "runtime_receipt_missing",
         "runtime_receipt_not_ready",
@@ -153,9 +202,14 @@ def _next_action(
             ],
         }
     if token == "repository_not_reconciled":
+        repository = (
+            f"{repository_ids[0]}={receipt_workspace}"
+            if len(repository_ids) == 1
+            else REPOSITORY_INPUT
+        )
         return {
             "command": "pec",
-            "args": ["reconcile", "--workspace", ws, "--repository", f"repo-a={receipt_workspace}"],
+            "args": ["reconcile", "--workspace", ws, "--repository", repository],
         }
     if token in {"source_contract_incomplete", "writable_paths_missing"}:
         return {
@@ -170,23 +224,23 @@ def _next_action(
             ],
         }
     if token == "lease_missing":
-        return {"command": "pec", "args": ["claim", tid, "--workspace", ws, "--holder", "worker"]}
+        return {"command": "pec", "args": ["claim", tid, "--workspace", ws, "--holder", actor]}
     if token == "not_prepared":
         return {"command": "pec", "args": ["prepare", tid, "--workspace", ws]}
     if token == "actor_required":
         return {
             "command": "pec",
-            "args": ["start", tid, "--workspace", ws, "--actor", "worker"],
+            "args": ["start", tid, "--workspace", ws, "--actor", actor],
         }
     if token and token.startswith("runtime_state_not_claimable:PREPARED"):
         return {"command": "pec", "args": ["render-contract", tid, "--workspace", ws]}
     if token and token.startswith("runtime_state_not_claimable:CONTRACTED"):
         return {
             "command": "pec",
-            "args": ["start", tid, "--workspace", ws, "--actor", "worker"],
+            "args": ["start", tid, "--workspace", ws, "--actor", actor],
         }
     if token is None:
-        return {"command": "pec", "args": ["claim", tid, "--workspace", ws, "--holder", "worker"]}
+        return {"command": "pec", "args": ["claim", tid, "--workspace", ws, "--holder", actor]}
     return {"command": "pec", "args": ["status", "--workspace", ws]}
 
 
@@ -234,6 +288,7 @@ def preflight(
     program: dict[str, Any] = {"workspace": str(workspace), "lock_digest": UNKNOWN}
     runtime_validation: dict[str, Any] = {"status": "SKIPPED"}
     task_payload: dict[str, Any] | None = None
+    repository_ids: list[str] = []
 
     mutating_blocked = bool(blockers)
     if not mutating_blocked:
@@ -244,6 +299,7 @@ def preflight(
             if lock_path.is_file():
                 lock = load_json(lock_path)
                 program["lock_digest"] = str(lock.get("lock_digest") or UNKNOWN)
+            repository_ids = [str(row["repository_id"]) for row in db.repositories()]
             tasks = [db.task(task_id)] if task_id else db.tasks()
             tasks = [t for t in tasks if t is not None]
             chosen = tasks[0] if tasks else None
@@ -270,6 +326,7 @@ def preflight(
         task_id=(task_payload or {}).get("id") if task_payload else task_id,
         receipt_workspace=receipt_ws,
         surface=surface,
+        repository_ids=repository_ids,
     )
     ready = not blockers
     return {

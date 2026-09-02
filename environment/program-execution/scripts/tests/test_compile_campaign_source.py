@@ -265,6 +265,18 @@ class CompileCampaignSourceTests(unittest.TestCase):
             )  # self-validates template mode
 
             collect = _load("collect_evidence_test", PE_ROOT / "scripts/collect_evidence.py")
+            # CP-F17: an evidence binding needs the revision it was observed at.
+            with self.assertRaises(RuntimeError) as unbound:
+                collect.collect_evidence(
+                    target,
+                    evidence_id="EVID-001",
+                    revision=None,
+                    digest=None,
+                    notes="loop test",
+                    producer="test",
+                    expires_at=None,
+                )
+            self.assertIn("revision", str(unbound.exception))
             collected = collect.collect_evidence(
                 target,
                 evidence_id="EVID-001",
@@ -703,6 +715,33 @@ class SourcePreflightTests(unittest.TestCase):
         path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
         proof = _pass_proof(raw / "stack-proof.json")
         self.compiler.compile_source(path, raw / "out", stack_proof=proof)
+
+    def test_failed_compile_leaves_no_partial_target(self) -> None:
+        """CP-F15: the target only ever holds a validated tree."""
+        source = self._source()
+        source["gates"] = []
+        with tempfile.TemporaryDirectory() as raw:
+            target = Path(raw) / "out"
+            with self.assertRaises(self.compiler.CompileError):
+                self._compile_dict(Path(raw), source)
+            self.assertFalse(target.exists(), "a refused compile wrote a partial blueprint")
+            self.assertEqual(
+                [p.name for p in Path(raw).iterdir() if p.name.startswith(".out.")],
+                [],
+                "staging directories must not survive a refusal",
+            )
+
+    def test_failed_recompile_keeps_the_previous_blueprint(self) -> None:
+        good = self._source()
+        with tempfile.TemporaryDirectory() as raw:
+            self._compile_dict(Path(raw), good)
+            target = Path(raw) / "out"
+            before = sorted(p.name for p in target.iterdir())
+            bad = self._source()
+            bad["gates"] = []
+            with self.assertRaises(self.compiler.CompileError):
+                self._compile_dict(Path(raw), bad)
+            self.assertEqual(sorted(p.name for p in target.iterdir()), before)
 
     def test_decision_without_a_defined_authority_is_refused(self) -> None:
         """`AUTH-005` used to be minted for a decision that named no authority."""

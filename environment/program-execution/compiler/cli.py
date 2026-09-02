@@ -107,7 +107,10 @@ def run(argv: list[str] | None = None) -> int:
     from .synthesizer import instantiate as _instantiate
 
     _instantiate.write_manifest(output)  # resolution artifact participates in the manifest
-    result = validate_or_repair(output)
+    # The compiler emits a draft; `accept_blueprint` is what makes it
+    # instantiated-executable, against bound evidence. Validate what a
+    # compiler can honestly claim: a template-valid tree.
+    result = validate_or_repair(output, mode="template")
     print(STEPS["validation"].format(status="PASS" if result.ok else "FAIL"))
     if not result.ok:
         for error in result.errors:

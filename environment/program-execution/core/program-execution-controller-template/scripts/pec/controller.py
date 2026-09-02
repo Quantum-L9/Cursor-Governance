@@ -1342,8 +1342,11 @@ def record_attempt(workspace: Path, task_id: str, receipt_source: Path) -> dict[
         task = db.task(task_id)
         if task is None or not task.get("rendered_contract_path"):
             raise ControllerError("Rendered Contract required")
-        if task["runtime_state"] not in {"CONTRACTED", "EXECUTING", "FAILED"}:
-            raise ControllerError(f"task cannot submit from state {task['runtime_state']}")
+        if task["runtime_state"] != "EXECUTING":
+            raise ControllerError(
+                f"task cannot submit from state {task['runtime_state']}; an attempt is "
+                "recorded only for a task that `pec start` moved to EXECUTING"
+            )
         receipt = load_json(receipt_source)
         _validate_schema(workspace, "attempt-receipt.schema.json", receipt)
         if receipt["task_id"] != task_id:
@@ -1465,15 +1468,28 @@ def _command_runnable(command: str) -> bool:
     return shutil.which(token) is not None or Path(token).exists()
 
 
-def _preflight2_gates(commands: list[str]) -> dict[str, str]:
+def _preflight2_gates(commands: list[str], declared: list[str] | None = None) -> dict[str, str]:
+    """Inventory, blocking and coverage of the contract's required commands.
+
+    `inventory` and `coverage` used to be the literal "PASS" whenever any
+    command existed. Inventory now means every required command is a
+    well-formed, non-empty command line; coverage means every validation the
+    contract declares is among the required commands (a declared validation
+    with no command is uncovered).
+    """
     if not commands:
         return {}
+    well_formed = [
+        bool(command.strip()) and not command.strip().startswith("#") for command in commands
+    ]
     runnable = [_command_runnable(command) for command in commands]
-    blocking = "PASS" if runnable and all(runnable) else "INCOMPLETE"
+    declared_commands = [str(item).strip() for item in (declared or []) if str(item).strip()]
+    required = {command.strip() for command in commands}
+    covered = all(item in required for item in declared_commands)
     return {
-        "preflight2_inventory": "PASS",
-        "preflight2_blocking": blocking,
-        "preflight2_coverage": "PASS",
+        "preflight2_inventory": "PASS" if all(well_formed) else "INCOMPLETE",
+        "preflight2_blocking": "PASS" if runnable and all(runnable) else "INCOMPLETE",
+        "preflight2_coverage": "PASS" if covered else "INCOMPLETE",
     }
 
 
@@ -1578,9 +1594,12 @@ def _verified_this_attempt(
     digest = task.get("rendered_contract_digest")
     if digest and receipt.get("contract_digest") and receipt["contract_digest"] != digest:
         return None
-    if attempt is not None and receipt.get("candidate_sha"):
-        recorded = attempt.get("candidate_sha")
-        if recorded and recorded != receipt["candidate_sha"]:
+    # The attempts table records no candidate_sha, so comparing against it was
+    # dead: a receipt from an earlier attempt replayed as this one's verdict.
+    # The receipt names the attempt it verified through its evidence id.
+    if attempt is not None:
+        expected = f"EVID-RUNTIME-{task['id']}-{int(attempt['attempt_number']):03d}"
+        if str(receipt.get("evidence_id") or "") != expected:
             return None
     return dict(receipt)
 
@@ -1746,7 +1765,21 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
                 else "FAIL"
             )
             if required_commands:
-                gates.update(_preflight2_gates([str(command) for command in required_commands]))
+                lock_task = next(
+                    (item for item in lock.get("tasks") or [] if item.get("id") == task_id), {}
+                )
+                declared_validations = [
+                    str(item.get("command_or_inspection") or "")
+                    for item in lock_task.get("validation") or []
+                    if isinstance(item, dict)
+                    and item.get("method") in {"command", "command_and_inspection"}
+                ]
+                gates.update(
+                    _preflight2_gates(
+                        [str(command) for command in required_commands],
+                        declared=declared_validations,
+                    )
+                )
                 validations = [_run_validation(command, worktree) for command in required_commands]
                 gates["validation"] = (
                     "PASS"
