@@ -81,6 +81,17 @@ if [ ! -f "$GOV_DIR/CANONICAL_LAW.md" ]; then
   warn "no governance SSOT at $GOV_DIR — the surface caller must materialize it first"
   exit 1
 fi
+
+# A $HOME workspace is a harness artifact, never a repository: a receipt
+# stamped `workspace: $HOME` was later reported as another session's bootstrap
+# state (see WIP/9-2-26/cursor-remediation/TECH_DEBT.md). Refuse it for every
+# surface — the caller must pass the repository root it actually operates on.
+_ws_real="$(cd "$WORKSPACE" 2>/dev/null && pwd -P || printf '%s' "$WORKSPACE")"
+_home_real="$(cd "$HOME" 2>/dev/null && pwd -P || printf '%s' "$HOME")"
+if [ "$_ws_real" = "$_home_real" ]; then
+  warn "refusing --workspace \$HOME ($WORKSPACE) — a home-directory workspace writes receipts no session owns; pass a repository root"
+  exit 1
+fi
 say "agent bootstrap: surface=$SURFACE governance=$GOV_DIR workspace=$WORKSPACE"
 
 DEGRADED=0

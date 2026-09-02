@@ -863,3 +863,5 @@ findings were deliberately left open:
 - [x] **`ops/scripts/verify_worktree_clean.py`** + **`run_ff_post_shelf.sh`**
 
 Plan: `docs/plans/ff_close_publish_loop_a1b2c3d4.plan.md`
+
+- [ ] Review `WIP/9-2-26/cursor-remediation/TECH_DEBT.md` (+ `tech_debt.json`) — environment/loader/bootstrap debt ledger from both 2026-09-02 experience packs; TODO.md stays a pointer, findings live there.
