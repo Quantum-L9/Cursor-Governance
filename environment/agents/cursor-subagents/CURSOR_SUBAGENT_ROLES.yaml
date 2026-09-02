@@ -34,11 +34,15 @@ roles:
       - report exact changed files
       - report executed validation
       - preserve residual risks and unresolved items
+      - after remediator best-effort, open a GitHub issue for above-paygrade work
+      - launch l9-issue-remediation and continue independent PRs
     prohibited:
       - expand_scope
       - modify_forbidden_paths
       - merge_or_perform_remote_mutation
       - self_verify
+      - ask_human_to_unblock
+      - idle_on_user_interaction
   test:
     autonomy_role: executor
     cursor_subagent_type: generalPurpose

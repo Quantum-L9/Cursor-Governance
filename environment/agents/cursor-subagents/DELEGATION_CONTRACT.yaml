@@ -9,6 +9,7 @@ scope:
     - native Cursor subagent delegation
     - recon subagents
     - PR-remediation subagents
+    - issue-remediation handoff launched by the PR remediator
     - test subagents
     - documentation subagents
     - verifier and reviewer subagents
@@ -92,7 +93,7 @@ delegation:
   retain_with_main_agent_when:
     - architecture_authority_is_unresolved
     - cross_component_synthesis_is_required
-    - user_interaction_is_imminent
+    - user_interaction_is_imminent  # remediator exception: above_paygrade_handoff
     - writable_scope_overlaps_active_mutation
     - campaign_state_or_gate_authority_would_be_exercised
     - delegation_contract_cannot_be_rendered_exactly
@@ -137,6 +138,25 @@ completion:
       changed_files_allowed: false
       subject_agent_required: true
       subject_agent_must_differ_from_producer: true
+above_paygrade_handoff:
+  owner_skill: l9-pr-remediation
+  downstream_skill: l9-issue-remediation
+  autonomy_contracts: environment/contracts/autonomy/MANIFEST.yaml
+  cursor_role: pr_remediation
+  launch_as: generalPurpose
+  invent_sixth_role: false
+  when:
+    - HUMAN after remediator best-effort
+    - CI_PIPELINE required and unfixable after remediator best-effort
+    - ENVIRONMENT still broken after one venv preflight
+  must:
+    - open_github_issue
+    - launch_l9-issue-remediation
+    - continue_independent_prs
+  must_not:
+    - ask_the_human_to_unblock
+    - idle_waiting_for_human_reply
+    - park_the_whole_train_on_one_leftover
 generated_data:
   accepted_documents_only: true
   raw_chat_is_not_a_packet: true
