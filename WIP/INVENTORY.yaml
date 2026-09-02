@@ -1,5 +1,5 @@
 schema: l9.wip.inventory.v1
-updated: '2026-08-31T00:26:06Z'
+updated: '2026-09-02T06:09:22Z'
 entries:
 - path: WIP/8-14-26/Web SEO LLM Trio/L9 Website Improvement — Independent Validation
     Contract Pack.md
@@ -1378,7 +1378,7 @@ entries:
 - path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/PROGRESS.md
   kind: dated
   date_bucket: 8-26-26
-  sha256: d9126dd5331d513a6a21e93400dec0a499531e7122d23c66d6dfb35c31251368
+  sha256: 96984c98e2e4a2668dfa0d86e67f1829689f4d0dfb6c8fc8e7f0c9db72d0bab3
   status: active
 - path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/README.md
   kind: dated
@@ -1439,7 +1439,7 @@ entries:
 - path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/friction.yaml
   kind: dated
   date_bucket: 8-26-26
-  sha256: ef80964d0f4be371b1afe6c966a84bfadced673cbd81ebc0352e75b04b7c7de6
+  sha256: 59ef732c38d7057b0e81c466e3fbbbe416a83d30381820945a0bd447f564643d
   status: active
 - path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/improvements.yaml
   kind: dated
@@ -1449,7 +1449,7 @@ entries:
 - path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/progress.yaml
   kind: dated
   date_bucket: 8-26-26
-  sha256: e1b53ba843c2a6f5aeb14120050a39018ffcbffa17c8f84f8ab760ccb75b7d28
+  sha256: c7acc0c356032a69f49647f3b6234870c92f1401dc5986912481dbc4a743eb27
   status: active
 - path: WIP/8-27-26/HANDOFF-pe-execution-attempt.md
   kind: dated
@@ -2288,6 +2288,11 @@ entries:
   date_bucket: 8-29-26
   sha256: d3a5b3d26abc4b311641311815e453b150bc653d0ec0db0dcf818882aab67382
   status: active
+- path: WIP/8-29-26/l9-runtime-velocity/PROGRESS.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 80f42633689e0de07c425ae70de87e0ab1b9f307b8b34edda89012a7f3af4d12
+  status: active
 - path: WIP/8-29-26/l9-runtime-velocity/l9-runtime-velocity_7c4a1e93.plan.md
   kind: dated
   date_bucket: 8-29-26
@@ -2297,6 +2302,11 @@ entries:
   kind: dated
   date_bucket: 8-29-26
   sha256: 02d05ed55dac5411e7b137b831636ff34ea1fa1841d56c87a1ef246f3286614a
+  status: active
+- path: WIP/8-29-26/l9-runtime-velocity/progress.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 5162f434d02219d79d47d374236d23ba7310d92ddbc532ac7f9b3ba9ea46e58d
   status: active
 - path: WIP/8-29-26/makefile/Makefile-CG.md
   kind: dated
@@ -2534,6 +2544,152 @@ entries:
   kind: dated
   date_bucket: 8-30-26
   sha256: 3ac4232322c831b7d9be1985e0644e979c93f57f0611e65145ba623c927c044d
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/CI-Preflight-Docket.html
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: 6d2e9eb12a3a2655d80dcfdeffd61f1affecf76e7aa7ef663fa1fc5461179ac2
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/consumer/pyproject.toml
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: 6c8d9c84e99274668fb00b56d2d6dab60c44b00f44b91007d8bcb51799319aca
+  status: possible-landed
+  note: possible-landed
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/consumer/src/app.py
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: dbce4d559fde8e92b5f104f7b15595d9afed5fa432acb4f78c9f7ea5b5113b7d
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/consumer/tests/test_app.py
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: 5e9fc10c88e56d9ae29ab5d9156e4b04fbd42f624e25461b7f3b38ec55cd73db
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/consumer/use_sdk.py
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: a9f406104eb0c164b7fe50b9d567211fb9e3f4aede8ecaf738bb827fe731b5b0
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/dist-sdk/l9_ci-2.0.0-py3-none-any.whl
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: c575a6ba87b00eaa8a98a97eed3cc330369f512e8d10931c03c53fb8fe7c6451
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/dist-sdk/l9_ci-2.0.0.tar.gz
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: 97fe42640a74d06094369e4e34d7a840761839e71f15604c99ec9e20110ab150
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/e2e/agent-payload.json
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: e09263069c2e3f4d83cc753c8471db9eb424245a3540e64bb7d5d3d937851d8f
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/e2e/bundle-strict.json
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: 51e87c821a1afbb5252affcd967eae9b93c670da3131516d7a7d8c1021137485
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/e2e/det-1.json
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: f5847c540c576ce080c2337f2ca2cfb5091f01290495bcd36b3a2e356813cdf1
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/e2e/det-2.json
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: b91a8086364a0772554cff4ad06ebc06893f05f8fb9f69b9f5433e4c1cfe007e
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/e2e/det-3.json
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: e3317194c0473578f036d7ed141cd35ef7de76d5d86d58f45e87b0d8a67cf782
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/e2e/det-4.json
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: e3317194c0473578f036d7ed141cd35ef7de76d5d86d58f45e87b0d8a67cf782
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/e2e/finding-bundle.json
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: cd75344e360850b6d3e317cdf354e343114b837017c1cc544c214cd34e778867
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/e2e/gate-result.json
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: 1dec5c1cc375d8697469a446255097462cabc81d81390f9fb866f274198d4084
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/e2e/gate-strict.json
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: 49e96f579d6802b40f1187bf94dbe61305b287927e7cc2894e1693a1919212f3
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/e2e/gate-warn.json
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: 58e4df6b4436a1ad77e24634f950e862dfcfe0c1b91ec8ecaa7dade3e469c887
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/e2e/manifest-a.md
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: c95a9854570e545804a92184cb9f42b5f52153809dc18be4f367ecd795cc862a
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/e2e/manifest-b.md
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: c95a9854570e545804a92184cb9f42b5f52153809dc18be4f367ecd795cc862a
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/e2e/project.sarif
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: b0dc98f460e5a70b4257a96a5c5a83d2d179a400818b930897b1ddfabc268b1e
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/e2e/raw-report.json
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: b37da4e7adb6770d0209b9cb46ad7d2c79d03059535870ecf9ded6f624fd8f7c
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/e2e/warn.json
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: 15fef1efbcd1b67aac37db2e48786bcf36a02fc2815934f0406dd689c4b95e0c
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/rev-probe.sh
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: 6b03d0fb2b2dbcfb9e0e5185164050d3078c35e6a84cea91897ed7f83e9f0a3e
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/ws/policy.yaml
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: 5ccd754c68f930217514d455cc44ef0955ecfcf793a2700b61cfe2af1705ab40
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/ws/project-src/src/example.py
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: 633ecfb72d2a0b6ab3a9eb7de65d037a3e66174653ea0ae2463f10f66dd83f0b
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/ws/scan/finding-bundle.json
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: 8bc99cbe4f5e9f1c75d043d42a08777f47ffa9d8c794bfb667c1b7ebbb2b43cd
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/ws/scan/gate-result.json
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: 49e96f579d6802b40f1187bf94dbe61305b287927e7cc2894e1693a1919212f3
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/ws/scan/raw.json
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: 5c15f49725d3bd8d6cd3797d63b94d1a3d511f254c750d9cf2c51760a367a826
+  status: active
+- path: WIP/9-1-26/CI-Core/Audit - Claud Code/ws/semgrep-policy.yaml
+  kind: dated
+  date_bucket: 9-1-26
+  sha256: e775e0c39011e3737dfbda577adec58aee194aeea9b0c732e917c013aa0174cc
   status: active
 - path: WIP/Audit - Pre-flight.md
   kind: series
