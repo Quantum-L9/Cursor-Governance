@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pack self-test for l9-plan-simple GAR wire + section receipt."""
+"""Pack self-test for l9-plan-simple GAR wire + section receipt (both handoff modes)."""
 
 from __future__ import annotations
 
@@ -22,11 +22,13 @@ if str(SCRIPTS) not in sys.path:
 from generate_plan_section_receipt import build_receipt  # noqa: E402
 from validate_plan_section_receipt import check_receipt  # noqa: E402
 
+# Repo-root paths: the scripts confine CLI arguments to the working directory,
+# so the SKILL.md Validation block is documented and run from the repo root.
 INVOKED = [
-    "../l9-plan/scripts/validate_plan_document.py",
-    "scripts/generate_plan_section_receipt.py",
-    "scripts/validate_plan_section_receipt.py",
-    "scripts/self_test.py",
+    "skills/l9-plan/scripts/validate_plan_document.py",
+    "skills/l9-plan-simple/scripts/generate_plan_section_receipt.py",
+    "skills/l9-plan-simple/scripts/validate_plan_section_receipt.py",
+    "skills/l9-plan-simple/scripts/self_test.py",
 ]
 
 
@@ -39,16 +41,16 @@ def _skill_validation_scripts() -> list[str]:
     block = re.search(r"## Validation\s+.*?```bash\n(.*?)```", text, re.S)
     if not block:
         return []
-    return re.findall(r"(?:scripts/|\.\./l9-plan/scripts/)[a-zA-Z0-9_./-]+\.py", block.group(1))
+    return re.findall(r"skills/[a-zA-Z0-9_.-]+/scripts/[a-zA-Z0-9_./-]+\.py", block.group(1))
 
 
-def _render(dest: Path) -> None:
+def _render(dest: Path, mode: str = "cursor-build") -> None:
     proc = _run(
         [
             sys.executable,
             str(RENDER),
             str(PLAN_PASS),
-            "--execute-via=cursor-build",
+            f"--execute-via={mode}",
         ],
         cwd=REPO,
     )
@@ -71,7 +73,7 @@ def main() -> int:
     if not listed:
         errors.append("SKILL.md ## Validation bash block missing or has no scripts")
     for name in INVOKED:
-        if name != "scripts/self_test.py" and name not in listed:
+        if name != "skills/l9-plan-simple/scripts/self_test.py" and name not in listed:
             errors.append(f"SKILL.md Validation missing invoked script: {name}")
 
     if not PLAN_PASS.is_file():
@@ -89,6 +91,7 @@ def main() -> int:
         live_receipt = hold / "pass.receipt.json"
         fail_md = hold / "fail.plan.md"
         fail_receipt = hold / "fail.receipt.json"
+        extra: tuple[Path, ...] = ()
         try:
             live_json.write_bytes(PLAN_PASS.read_bytes())
             live_md.write_text(plan_md.read_text(encoding="utf-8"), encoding="utf-8")
@@ -112,8 +115,26 @@ def main() -> int:
             no_gar = build_receipt(live_json, live_md, gar_invoked=False, gar_run_id=None)
             if no_gar["status"] != "fail":
                 errors.append("receipt with gar_upstream.invoked=false must status=fail")
+
+            if receipt.get("handoff_mode") != "cursor-build":
+                errors.append(f"cursor-build receipt handoff_mode: {receipt.get('handoff_mode')!r}")
+
+            # Embedded handoff: same receipt shape, judged against its own mode.
+            emb_md = hold / "embedded.plan.md"
+            emb_receipt = hold / "embedded.receipt.json"
+            extra = (emb_md, emb_receipt)
+            _render(emb_md, mode="embedded")
+            emb_built = build_receipt(live_json, emb_md, gar_invoked=True, gar_run_id="self-test")
+            emb_receipt.write_text(json.dumps(emb_built, indent=2) + "\n", encoding="utf-8")
+            if emb_built.get("handoff_mode") != "embedded":
+                errors.append(f"embedded receipt handoff_mode: {emb_built.get('handoff_mode')!r}")
+            emb_errors = check_receipt(emb_receipt)
+            if emb_errors:
+                errors.append(
+                    "expected PASS embedded receipt failed:\n  " + "\n  ".join(emb_errors)
+                )
         finally:
-            for path in (live_json, live_md, live_receipt, fail_md, fail_receipt):
+            for path in (live_json, live_md, live_receipt, fail_md, fail_receipt, *extra):
                 if path.exists():
                     path.unlink()
             if hold.exists() and not any(hold.iterdir()):

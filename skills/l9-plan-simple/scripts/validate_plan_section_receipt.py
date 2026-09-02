@@ -71,7 +71,7 @@ def _coverage_errors(receipt: dict[str, Any]) -> list[str]:
     for key in json_required_keys():
         if key not in claimed_json:
             errors.append(f"G_RECEIPT_COVERAGE: receipt omits JSON section {key}")
-    for title in md_required_headings():
+    for title in md_required_headings(mode=str(receipt.get("handoff_mode") or "cursor-build")):
         if title not in claimed_md:
             errors.append(f"G_RECEIPT_COVERAGE: receipt omits MD section {title!r}")
     if receipt.get("section_schema_ref") != PLAN_SCHEMA_REL:
