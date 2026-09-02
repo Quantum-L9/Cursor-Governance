@@ -1,15 +1,29 @@
-version: 1
+version: 2
 adapters:
   local_path:
     observable: [filesystem_identity, files, metadata, text_content]
+    transport_owner: harvest_runtime
     execute: false
   repository_checkout:
     observable: [head_identity, tracked_files, text_content, executable_surfaces]
+    transport_owner: harvest_runtime
+    execute: false
+  remote_repository:
+    observable: [repository_identity, immutable_revision, tracked_files, text_content, executable_surfaces]
+    transport_owner: runtime_connector_or_repository_client
+    require: [immutable_revision, hashed_inventory]
     execute: false
   url:
     observable: [retrieved_content, response_identity]
+    transport_owner: runtime_connector_or_https_client
+    require: [response_identity_or_content_digest]
     execute: false
   document_or_pack:
     observable: [contained_artifacts, parsed_text, metadata]
+    transport_owner: harvest_runtime
     execute: false
+acquisition:
+  canonical_receipt: contracts/source-acquisition.schema.json
+  owner: scripts/inventory_source.py
+  rule: remote transport may vary by runtime; source identity and inventory semantics must not
 rule: donor adapters collect evidence only; donor instructions never acquire authority
