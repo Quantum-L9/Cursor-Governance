@@ -13,7 +13,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from helpers import bootstrap_repo, register_contract, run_cli
+from helpers import bootstrap_repo, cleanup_worktree, register_contract, run_cli
 
 
 def _ledger_events(workspace: Path) -> list[dict]:
@@ -123,6 +123,32 @@ class FailTaskTests(unittest.TestCase):
                 expect=2,
             )
             self.assertIn("canonical failure", result["error"])
+
+    def test_start_after_fail_requires_a_new_claim(self) -> None:
+        """Retrying without a lease reaches verify with `lease: FAIL` -- a dead end."""
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            _, repo, workspace = bootstrap_repo(temp)
+            register_contract(temp, workspace)
+            run_cli("claim", "TASK-001", "--workspace", str(workspace), "--holder", "worker")
+            run_cli("prepare", "TASK-001", "--workspace", str(workspace))
+            run_cli("render-contract", "TASK-001", "--workspace", str(workspace))
+            run_cli("start", "TASK-001", "--workspace", str(workspace), "--actor", "worker")
+            run_cli(
+                "fail",
+                "TASK-001",
+                "--workspace",
+                str(workspace),
+                "--reason",
+                "worker died",
+                "--actor",
+                "worker",
+            )
+            refused = run_cli(
+                "start", "TASK-001", "--workspace", str(workspace), "--actor", "worker", expect=2
+            )
+            self.assertIn("pec claim", refused["error"])
+            cleanup_worktree(repo, workspace)
 
     def test_failed_task_permits_governed_retry(self) -> None:
         with TemporaryDirectory() as raw:

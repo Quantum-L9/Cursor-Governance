@@ -7,6 +7,7 @@ and that partial semantic revision activation is impossible.
 
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 import unittest
@@ -110,6 +111,21 @@ class ReplanProjectionTests(unittest.TestCase):
                 verification = verify_projection(REPO_ROOT, workspace)
             self.assertEqual(verification["status"], "BLOCKED")
             self.assertIn("missing peer accounting: new-peer", verification["reason"])
+
+    def test_tampered_accounting_is_blocked_on_verification(self) -> None:
+        semantic = build_semantic_revision(CONTRACT, SCHEMA, **SEMANTIC_KWARGS)
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw) / "workspace"
+            workspace.mkdir()
+            project_to_peers(REPO_ROOT, workspace, semantic_revision=semantic, actor=ACTOR)
+            path = workspace / "runtime/projection/peer-accounting.json"
+            accounting = json.loads(path.read_text(encoding="utf-8"))
+            accounting["status"] = "ACTIVE"
+            accounting["records"] = []
+            path.write_text(json.dumps(accounting) + "\n", encoding="utf-8")
+            verification = verify_projection(REPO_ROOT, workspace)
+            self.assertEqual(verification["status"], "BLOCKED")
+            self.assertIn("digest", verification["reason"])
 
     def test_applicable_peer_set_matches_registry(self) -> None:
         bindings = yaml.safe_load(BINDINGS_PATH.read_text(encoding="utf-8"))
