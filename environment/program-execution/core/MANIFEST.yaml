@@ -414,8 +414,8 @@ files:
   sha256: b564797fadb1a16ba35d6d08c71bd742e81e03ca29ec11c86c3e8a44139012bd
   bytes: 2054
 - path: program-execution-controller-template/scripts/tests/test_deferral_repairs.py
-  sha256: 11e89892592fb57d86b765011cb1823fa7b58cd09cacff082edd595e4407c2d8
-  bytes: 6885
+  sha256: 6b14f3fa46565f30062c4d8566dea93ca35d3ac7e3bde8cd93c91769c7f68e97
+  bytes: 6886
 - path: program-execution-controller-template/scripts/tests/test_do_not_build_verify.py
   sha256: 6462b98713377b893eca74b633ee7868c30b749a5eb054577663ee32fab51513
   bytes: 2083
@@ -598,4 +598,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 197
-  total_bytes: 769779
+  total_bytes: 769780
