@@ -494,6 +494,14 @@ fi
 # Excluding it is a no-op wherever it IS committed — .git/info/exclude only
 # governs untracked paths, so a tracked .mcp.json keeps showing its real diff.
 # That is what makes one list correct for both cases.
+#
+# .claude/settings.local.json is a THIRD category: neither a generated mirror
+# nor committable wiring, but a personal machine-local override (Claude Code's
+# .local.json convention). It was covered only where a repo happened to carry a
+# tracked ignore line for it -- Cursor-Governance at .gitignore:51, a blanket
+# /.claude/ in some consumers -- so a repo with neither showed it untracked on
+# every session. Coverage that depends on a per-repo tracked line is exactly
+# what this list exists to replace.
 if [ "$CHECK" != "1" ] && git -C "$WORKSPACE" rev-parse --git-dir >/dev/null 2>&1; then
   # --git-common-dir, not --git-dir: in a LINKED WORKTREE the latter is
   # .git/worktrees/<name>/, but git reads $GIT_COMMON_DIR/info/exclude, so
@@ -507,10 +515,11 @@ if [ "$CHECK" != "1" ] && git -C "$WORKSPACE" rev-parse --git-dir >/dev/null 2>&
   # mirrors are mounted as symlinks into governance (.claude/rules is one),
   # which git does not treat as a directory — so the slashed form silently
   # never matched. Slashless matches the mirror however it is mounted.
-  for glob in ".claude/skills" ".claude/rules" ".claude/commands" ".mcp.json"; do
+  for glob in ".claude/skills" ".claude/rules" ".claude/commands" ".mcp.json" \
+              ".claude/settings.local.json"; do
     grep -qxF "$glob" "$exclude_file" 2>/dev/null || printf '%s\n' "$glob" >> "$exclude_file"
   done
-  say "excluded generated .claude mirrors + .mcp.json (local, uncommitted)"
+  say "excluded generated .claude mirrors + .mcp.json + settings.local.json (local, uncommitted)"
 fi
 
 # --- 5) Thin l9 dispatcher --------------------------------------------------

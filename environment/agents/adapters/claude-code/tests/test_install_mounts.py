@@ -85,7 +85,13 @@ class InstallMountTests(unittest.TestCase):
         # The whole projected set, not a subset: .mcp.json is a render of
         # mcp.template.json and shows as untracked in every consumer that does not
         # commit it. Asserting the full list is what stops a glob being dropped.
-        for glob in (".claude/skills", ".claude/rules", ".claude/commands", ".mcp.json"):
+        for glob in (
+            ".claude/skills",
+            ".claude/rules",
+            ".claude/commands",
+            ".mcp.json",
+            ".claude/settings.local.json",
+        ):
             self.assertIn(glob, body, f"{glob} must be excluded from the consumer repo")
         # Committable consumer wiring must NOT be excluded.
         for glob in (".claude/settings.json", ".claude/hooks/"):
@@ -137,7 +143,13 @@ class InstallMountTests(unittest.TestCase):
         # Probe each path itself, never a child: the installer mounts
         # .claude/rules and .claude/skills as SYMLINKS into governance, and
         # check-ignore refuses a pathspec "beyond a symbolic link".
-        for glob in (".claude/skills", ".claude/rules", ".claude/commands", ".mcp.json"):
+        for glob in (
+            ".claude/skills",
+            ".claude/rules",
+            ".claude/commands",
+            ".mcp.json",
+            ".claude/settings.local.json",
+        ):
             self.assertEqual(
                 0,
                 subprocess.run(["git", "-C", str(linked), "check-ignore", glob]).returncode,
