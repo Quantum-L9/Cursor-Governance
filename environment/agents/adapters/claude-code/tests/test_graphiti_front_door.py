@@ -7,7 +7,9 @@ import ast
 import json
 import re
 import sys
+import tempfile
 import unittest
+import unittest.mock as mock
 from pathlib import Path
 
 CLAUDE = Path(__file__).resolve().parent.parent
@@ -189,6 +191,57 @@ class FrontDoorTests(unittest.TestCase):
             "Bearer ${GRAPHITI_MCP_TOKEN}",
         )
         self.assertEqual(proxied["context7"]["url"], "https://mcp.context7.com/mcp")
+
+    def test_validator_accepts_a_bearer_under_a_private_directive(self) -> None:
+        """make claude-env must agree with the design it is validating.
+
+        `check_mcp_uses_env_refs` scanned the RAW mcpServers subtree for the
+        string GRAPHITI_MCP_TOKEN. That predicate was written when `_comment`
+        was the only private key, and it was carved out by hand. When
+        `_optional_headers` arrived — the directive that makes the bearer
+        conditional, and which claude_projection strips before anything ships —
+        the hand-written carve-out did not grow, so `make claude-env` reported
+        STRUCTURAL_FAIL against the very shape the rest of this file asserts is
+        correct. Two owners of one contract, disagreeing.
+        """
+        sys.path.insert(0, str(CLAUDE))
+        import validate_claude_env as v
+
+        failures: list[str] = []
+        v.check_mcp_uses_env_refs(failures)
+        self.assertEqual(
+            [f for f in failures if "GRAPHITI_MCP_TOKEN" in f],
+            [],
+            "a ${VAR} reference under a stripped private directive is not a credential",
+        )
+
+    def test_validator_still_rejects_a_bearer_in_functional_config(self) -> None:
+        """The strip must not defang the check it is narrowing.
+
+        The token is planted under context7's REAL `headers` — functional config
+        that ships — rather than under graphiti-memory, so only the predicate
+        under test can catch it; the separate graphiti `headers` check cannot
+        take the credit.
+        """
+        sys.path.insert(0, str(CLAUDE))
+        import validate_claude_env as v
+
+        template = json.loads((CLAUDE / "mcp.template.json").read_text(encoding="utf-8"))
+        template["mcpServers"]["context7"]["headers"] = {
+            "Authorization": "Bearer ${GRAPHITI_MCP_TOKEN}"
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            planted = Path(tmp)
+            (planted / "mcp.template.json").write_text(json.dumps(template), encoding="utf-8")
+            failures: list[str] = []
+            with mock.patch.object(v, "HERE", planted):
+                v.check_mcp_uses_env_refs(failures)
+
+        self.assertTrue(
+            [f for f in failures if "GRAPHITI_MCP_TOKEN" in f],
+            "a bearer in config that actually ships must still fail the gate",
+        )
 
     def test_environment_template_exports_no_credentials(self) -> None:
         """The cloud variables field is plaintext and model-readable: no
