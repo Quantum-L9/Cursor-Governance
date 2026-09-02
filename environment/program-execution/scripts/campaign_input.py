@@ -257,7 +257,7 @@ def _normative_signals(text: str) -> tuple[str, ...]:
     """
     pe_root = Path(__file__).resolve().parents[1]
     if str(pe_root) not in sys.path:
-        sys.path.insert(0, str(pe_root))
+        sys.path.append(str(pe_root))
     try:
         from compiler.architecture_intent import normative_signals
     except Exception:  # pragma: no cover - diagnostics never block routing

@@ -1145,7 +1145,7 @@ def _claim_autonomy_projection(
     pe_root = Path(__file__).resolve().parents[4]
     mapper = pe_root / "integrations" / "autonomy-control-plane"
     if str(pe_root) not in sys.path:
-        sys.path.insert(0, str(pe_root))
+        sys.path.append(str(pe_root))
     if str(mapper) not in sys.path:
         sys.path.insert(0, str(mapper))
     try:
