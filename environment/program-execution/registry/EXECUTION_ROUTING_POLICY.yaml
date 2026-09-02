@@ -17,6 +17,8 @@ preference:
   - claude-code-direct
   - cursor-background
   - cursor-foreground
+  tightly_scoped_mechanical:
+  - codex-cloud
   interactive_local_repair:
   - cursor-foreground
   - claude-code-direct
