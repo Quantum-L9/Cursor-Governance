@@ -1,20 +1,41 @@
 #!/usr/bin/env python3
 """Create a deterministic, safety-aware inventory for an idea pack."""
+
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
-from pathlib import Path
 import stat
 import tarfile
 import tempfile
 import zipfile
+from pathlib import Path
 
 TEXT_EXTENSIONS = {
-    ".md", ".txt", ".yaml", ".yml", ".json", ".toml", ".ini", ".cfg",
-    ".py", ".js", ".ts", ".tsx", ".jsx", ".sql", ".csv", ".xml", ".html",
-    ".css", ".sh", ".ps1", ".svg", ".graphql", ".proto",
+    ".md",
+    ".txt",
+    ".yaml",
+    ".yml",
+    ".json",
+    ".toml",
+    ".ini",
+    ".cfg",
+    ".py",
+    ".js",
+    ".ts",
+    ".tsx",
+    ".jsx",
+    ".sql",
+    ".csv",
+    ".xml",
+    ".html",
+    ".css",
+    ".sh",
+    ".ps1",
+    ".svg",
+    ".graphql",
+    ".proto",
 }
 ARCHIVE_EXTENSIONS = {".zip", ".tar", ".tgz", ".gz", ".bz2", ".xz"}
 METADATA_NAMES = {".DS_Store", "Thumbs.db"}
@@ -43,22 +64,26 @@ def record_path(records: list[dict], root: Path, path: Path, prefix: str = "") -
     kind = path_kind(path)
     if path.is_symlink():
         target = path.readlink().as_posix().encode("utf-8")
-        records.append({
-            "path": f"{prefix}{rel}",
-            "size": len(target),
-            "sha256": sha256_bytes(target),
-            "kind": kind,
-            "symlink_target": target.decode("utf-8"),
-        })
+        records.append(
+            {
+                "path": f"{prefix}{rel}",
+                "size": len(target),
+                "sha256": sha256_bytes(target),
+                "kind": kind,
+                "symlink_target": target.decode("utf-8"),
+            }
+        )
         return
 
     data = path.read_bytes()
-    records.append({
-        "path": f"{prefix}{rel}",
-        "size": len(data),
-        "sha256": sha256_bytes(data),
-        "kind": kind,
-    })
+    records.append(
+        {
+            "path": f"{prefix}{rel}",
+            "size": len(data),
+            "sha256": sha256_bytes(data),
+            "kind": kind,
+        }
+    )
 
 
 def _safe_target(dest: Path, member_name: str) -> Path:
@@ -135,11 +160,13 @@ def inventory_tree(
                 records.extend(child_records)
                 issues.extend(child_issues)
         except (OSError, ValueError, zipfile.BadZipFile, tarfile.TarError) as exc:
-            issues.append({
-                "path": nested_name,
-                "code": "NESTED_ARCHIVE_UNREADABLE",
-                "detail": str(exc),
-            })
+            issues.append(
+                {
+                    "path": nested_name,
+                    "code": "NESTED_ARCHIVE_UNREADABLE",
+                    "detail": str(exc),
+                }
+            )
 
     return records, issues
 
@@ -190,21 +217,25 @@ def main() -> int:
         source_kind = "file"
         if source.is_symlink():
             target = source.readlink().as_posix().encode("utf-8")
-            records = [{
-                "path": source.name,
-                "size": len(target),
-                "sha256": sha256_bytes(target),
-                "kind": "symlink",
-                "symlink_target": target.decode("utf-8"),
-            }]
+            records = [
+                {
+                    "path": source.name,
+                    "size": len(target),
+                    "sha256": sha256_bytes(target),
+                    "kind": "symlink",
+                    "symlink_target": target.decode("utf-8"),
+                }
+            ]
         else:
             data = source.read_bytes()
-            records = [{
-                "path": source.name,
-                "size": len(data),
-                "sha256": sha256_bytes(data),
-                "kind": path_kind(source),
-            }]
+            records = [
+                {
+                    "path": source.name,
+                    "size": len(data),
+                    "sha256": sha256_bytes(data),
+                    "kind": path_kind(source),
+                }
+            ]
 
     records = sorted(records, key=lambda r: r["path"])
     issues = sorted(issues, key=lambda r: (r["path"], r["code"], r["detail"]))

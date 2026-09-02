@@ -32,11 +32,7 @@ def test_folded_description_counts_full_text(tmp_path: Path) -> None:
     _write_skill(
         tmp_path,
         "l9-bounded-autonomy",
-        "name: l9-bounded-autonomy\n"
-        "description: >-\n"
-        f"  {desc}\n"
-        "metadata:\n"
-        "  skill_schema: 1\n",
+        f"name: l9-bounded-autonomy\ndescription: >-\n  {desc}\nmetadata:\n  skill_schema: 1\n",
     )
     errs, warns, live, arch, disc = check_skills(tmp_path)
     assert errs == []

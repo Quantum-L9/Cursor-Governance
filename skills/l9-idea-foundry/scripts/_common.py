@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Shared deterministic primitives for L9 Idea Foundry scripts."""
+
 from __future__ import annotations
 
 import hashlib
 import json
-from pathlib import Path
 import subprocess
+from pathlib import Path
 from typing import Any
 
 try:
@@ -40,7 +41,9 @@ def valid_sha256(value: object) -> bool:
 
 
 def canonical_json_bytes(value: Any) -> bytes:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode(
+        "utf-8"
+    )
 
 
 def semantic_digest(value: Any) -> str:

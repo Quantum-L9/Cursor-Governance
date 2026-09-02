@@ -2,8 +2,6 @@
 from __future__ import annotations
 
 import copy
-import tempfile
-from pathlib import Path
 
 from _common import ContractError, dump_yaml, load_data
 from check_adapter_capability import check_unit
@@ -79,7 +77,10 @@ def main() -> int:
     checks.append("website_specialized_factory=PASS")
 
     # Bounded existing repo
-    e = envelope([req("ER-001", "repository_change", "modify", repo="Quantum-L9/example")], repos=["Quantum-L9/example"])
+    e = envelope(
+        [req("ER-001", "repository_change", "modify", repo="Quantum-L9/example")],
+        repos=["Quantum-L9/example"],
+    )
     g = route_envelope(validate_envelope(e), registry)
     validate_graph(g)
     u = find_unit(g, "EXISTING_REPO_CHANGE")
@@ -88,11 +89,15 @@ def main() -> int:
 
     # Cognitive convergence -> one multi-repo PE-shaped campaign
     repos = ["Quantum-L9/PR_Repair", "Quantum-L9/LLM-Router", "Quantum-L9/l9-cognitive-runtime"]
-    e = envelope([
-        req("ER-001", "repository_change", "modify", repo=repos[0]),
-        req("ER-002", "repository_change", "modify", repo=repos[1]),
-        req("ER-003", "repository_change", "modify", repo=repos[2], deps=["ER-001", "ER-002"]),
-    ], cross=True, repos=repos)
+    e = envelope(
+        [
+            req("ER-001", "repository_change", "modify", repo=repos[0]),
+            req("ER-002", "repository_change", "modify", repo=repos[1]),
+            req("ER-003", "repository_change", "modify", repo=repos[2], deps=["ER-001", "ER-002"]),
+        ],
+        cross=True,
+        repos=repos,
+    )
     g = route_envelope(validate_envelope(e), registry)
     validate_graph(g)
     u = find_unit(g, "EXISTING_SYSTEM_CAMPAIGN")
@@ -112,10 +117,12 @@ def main() -> int:
     checks.append("multi_repo_pe_gap=PASS")
 
     # Mixed product + website with explicit dependency
-    e = envelope([
-        req("ER-001", "product_repository", "new"),
-        req("ER-002", "website", "new", deps=["ER-001"]),
-    ])
+    e = envelope(
+        [
+            req("ER-001", "product_repository", "new"),
+            req("ER-002", "website", "new", deps=["ER-001"]),
+        ]
+    )
     g = route_envelope(validate_envelope(e), registry)
     validate_graph(g)
     product = find_unit(g, "NEW_PRODUCT_REPOSITORY")
@@ -142,10 +149,12 @@ def main() -> int:
     checks.append("upstream_executor_rejected=PASS")
 
     # Requirement cycles fail closed
-    cyc = envelope([
-        req("ER-001", "product_repository", "new", deps=["ER-002"]),
-        req("ER-002", "website", "new", deps=["ER-001"]),
-    ])
+    cyc = envelope(
+        [
+            req("ER-001", "product_repository", "new", deps=["ER-002"]),
+            req("ER-002", "website", "new", deps=["ER-001"]),
+        ]
+    )
     try:
         validate_envelope(cyc)
     except ContractError:

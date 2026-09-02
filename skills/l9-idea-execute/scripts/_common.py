@@ -46,7 +46,9 @@ def nonempty_string(value: Any) -> bool:
 
 
 def canonical_json_bytes(value: Any) -> bytes:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode(
+        "utf-8"
+    )
 
 
 def semantic_digest(value: Any) -> str:

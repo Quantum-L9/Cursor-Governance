@@ -75,7 +75,9 @@ def main() -> int:
         if len(candidates) > 1 and args.unit_id is None:
             matching = [u for u in candidates if u.get("adapter") == caps.get("adapter")]
             if len(matching) != 1:
-                raise ContractError("specify --unit when capability snapshot does not select exactly one unit")
+                raise ContractError(
+                    "specify --unit when capability snapshot does not select exactly one unit"
+                )
             candidates = matching
         result = check_unit(candidates[0], caps)
         print(dump_yaml(result), end="")

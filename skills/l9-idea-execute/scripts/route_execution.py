@@ -51,11 +51,13 @@ def route_envelope(envelope: dict[str, Any], registry: dict[str, Any]) -> dict[s
         elif cap == "repository_change":
             repo_changes.append(req)
         else:
-            blockers.append({
-                "code": "CAPABILITY_OWNER_UNKNOWN",
-                "requirement_id": rid,
-                "detail": f"no demonstrated owner route for capability {cap}",
-            })
+            blockers.append(
+                {
+                    "code": "CAPABILITY_OWNER_UNKNOWN",
+                    "requirement_id": rid,
+                    "detail": f"no demonstrated owner route for capability {cap}",
+                }
+            )
 
     if repo_changes:
         repos = sorted({req["target_repo"] for req in repo_changes})
@@ -98,7 +100,10 @@ def route_envelope(envelope: dict[str, Any], registry: dict[str, Any]) -> dict[s
 
 def main() -> int:
     if len(sys.argv) not in (2, 3):
-        print("usage: route_execution.py <envelope.yaml|json> [capability-registry.yaml]", file=sys.stderr)
+        print(
+            "usage: route_execution.py <envelope.yaml|json> [capability-registry.yaml]",
+            file=sys.stderr,
+        )
         return 2
     try:
         envelope = validate_envelope(load_data(sys.argv[1]))

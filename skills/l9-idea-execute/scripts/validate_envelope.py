@@ -5,7 +5,13 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from _common import ContractError, assert_acyclic, load_data, nonempty_string, require_list, require_mapping
+from _common import (
+    ContractError,
+    assert_acyclic,
+    load_data,
+    nonempty_string,
+    require_mapping,
+)
 
 SCHEMA = "l9.idea-execution-envelope/v1"
 DECISIONS = {"GO", "CONDITIONAL"}
@@ -46,7 +52,10 @@ def validate_envelope(data: Any) -> dict[str, Any]:
             continue
         forbidden = FORBIDDEN_REQUIREMENT_KEYS.intersection(req)
         if forbidden:
-            errors.append(f"{label} must declare capabilities/outcomes, not executor fields: {sorted(forbidden)}")
+            errors.append(
+                f"{label} must declare capabilities/outcomes, "
+                f"not executor fields: {sorted(forbidden)}"
+            )
         rid = req.get("id")
         if not nonempty_string(rid):
             errors.append(f"{label}.id must be a non-empty string")
@@ -60,7 +69,9 @@ def validate_envelope(data: Any) -> dict[str, Any]:
             errors.append(f"{label}.target_state must be a non-empty string")
         if not isinstance(req.get("required"), bool):
             errors.append(f"{label}.required must be boolean")
-        if req.get("capability") == "repository_change" and not nonempty_string(req.get("target_repo")):
+        if req.get("capability") == "repository_change" and not nonempty_string(
+            req.get("target_repo")
+        ):
             errors.append(f"{label}.target_repo is required for repository_change")
         deps = req.get("dependencies", [])
         if not isinstance(deps, list) or not all(nonempty_string(x) for x in deps):
@@ -94,13 +105,21 @@ def validate_envelope(data: Any) -> dict[str, Any]:
         for key in ("protected_actions", "repositories"):
             value = chars.get(key, [])
             if not isinstance(value, list) or not all(nonempty_string(x) for x in value):
-                errors.append(f"execution_characteristics.{key} must be a list of non-empty strings")
+                errors.append(
+                    f"execution_characteristics.{key} must be a list of non-empty strings"
+                )
 
     existing = root.get("existing_execution", {})
     if not isinstance(existing, dict):
         errors.append("existing_execution must be a mapping")
     else:
-        for key in ("plan_refs", "contract_refs", "acceptance_refs", "rollback_refs", "handoff_refs"):
+        for key in (
+            "plan_refs",
+            "contract_refs",
+            "acceptance_refs",
+            "rollback_refs",
+            "handoff_refs",
+        ):
             value = existing.get(key, [])
             if not isinstance(value, list) or not all(nonempty_string(x) for x in value):
                 errors.append(f"existing_execution.{key} must be a list of non-empty strings")
