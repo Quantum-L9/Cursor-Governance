@@ -280,10 +280,21 @@ def close_session(
     is_background_agent: bool = False,
     dry_run: bool = False,
     clock: Any = None,
+    budget: float | None = None,
 ) -> dict[str, Any]:
-    """Run Phase A (+ optional Phase B). Fail-open; never raises to hooks."""
+    """Run Phase A (+ optional Phase B). Fail-open; never raises to hooks.
+
+    ``budget`` overrides :data:`TOTAL_BUDGET` for this call. A caller that closes
+    SEVERAL repositories inside one hook window must divide its own budget
+    between them: the module constant is a per-call ceiling, and six calls at the
+    default 30 s ceiling overrun a 20 s Stop hook by an order of magnitude. Phase
+    A (the PICKUP write) is attempted regardless; a small budget only starves
+    Phase B, which already degrades by design. ``None`` keeps the constant, so
+    every existing single-repository caller is unchanged.
+    """
     clock = clock or time.monotonic
     started = clock()
+    total_budget = TOTAL_BUDGET if budget is None else max(0.0, float(budget))
     project = Path(project_dir).expanduser().resolve()
     session_id = _latches.resolve_session_id(explicit=session_id)
     report: dict[str, Any] = {
@@ -417,7 +428,7 @@ def close_session(
         report["warnings"].append(f"Phase A over budget ({elapsed_a:.1f}s)")
 
     # --- Phase B ---
-    remaining = TOTAL_BUDGET - (clock() - started)
+    remaining = total_budget - (clock() - started)
     rules = _load_rules()
     phase_b_budget = min(PHASE_B_BUDGET, max(0.0, remaining - 1.0))
     skip_b = False

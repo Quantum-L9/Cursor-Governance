@@ -14,6 +14,8 @@ source "$SCRIPT_DIR/lib/rules_overlay.sh"
 source "$SCRIPT_DIR/lib/workspace_kind.sh"
 # shellcheck source=lib/cursor_plans_store.sh
 source "$SCRIPT_DIR/lib/cursor_plans_store.sh"
+# shellcheck source=lib/retire_leftover_launchagents.sh
+source "$SCRIPT_DIR/lib/retire_leftover_launchagents.sh"
 
 FALLBACK_LOG="$HOME/.cursor-globalcommands-fallback.log"
 DISABLE_FALLBACK=${DISABLE_FALLBACK:-1}
@@ -429,6 +431,9 @@ install_session_end_governance_hook
 
 echo ""
 install_graphiti_tunnel_agent
+
+echo ""
+retire_leftover_tenx_launchagents
 
 echo ""
 ensure_global_git_ignores

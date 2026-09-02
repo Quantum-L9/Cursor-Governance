@@ -116,6 +116,24 @@ class IngestMemoryCandidateTests(unittest.TestCase):
             self.module.ingest_candidate(candidate, dry_run=True)
         self.assertEqual(calls, [])
 
+    def test_former_github_alias_still_maps_to_group(self) -> None:
+        captured: list = []
+
+        def fake_resolve(*args, **kwargs):
+            captured.append((args, kwargs))
+            return {"group_id": "l9-infra", "readonly": False}
+
+        calls = _install_client_fake()
+        client = sys.modules["ops.graphiti.graphiti_memory_client"]
+        client.resolve_group_id = fake_resolve
+        candidate = _candidate()
+        candidate["source"]["repository"] = "Quantum-L9/l9-infra"
+        result = self.module.ingest_candidate(candidate, dry_run=True)
+        self.assertEqual(result["status"], "accepted")
+        self.assertEqual(calls, [])
+        self.assertTrue(captured)
+        self.assertEqual(captured[0][1].get("explicit"), "l9-infra")
+
 
 if __name__ == "__main__":
     unittest.main()

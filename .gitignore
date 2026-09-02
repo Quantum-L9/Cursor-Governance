@@ -113,8 +113,17 @@ reports/*
 # under L9_AUTONOMY_STATE_DIR (default .l9/autonomy/). It is machine-local
 # runtime state, not source. The SessionStart probe is read-only, but init/run
 # create this tree.
-.l9/
-# .l9/scratch-hold/ — non-WIP park vault (covered by .l9/ above; never park WIP/)
+# `.l9/*`, not `.l9/`: git cannot re-include a file underneath an excluded
+# DIRECTORY, so the negation below is inert against a bare `.l9/` — the file
+# stays ignored and CI never sees it. Matching the contents instead lets the
+# one tracked file out while every runtime path under .l9/ stays ignored.
+.l9/*
+# The single consumer-owned CI input, read by the org-injected
+# .github/workflows/org-ci.yml via l9-ci-core's resolve-consumer-metadata
+# action. It is fetched from the commit under test, so it MUST be tracked;
+# an untracked local copy does not exist in CI.
+!.l9/ci.json
+# .l9/scratch-hold/ — non-WIP park vault (covered by .l9/* above; never park WIP/)
 # L9 Subagent-Generated Data runtime
 .l9/subagent-generated-data/*.sqlite3
 .l9/subagent-generated-data/*.sqlite3-shm

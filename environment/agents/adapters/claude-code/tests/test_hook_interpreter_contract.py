@@ -369,6 +369,27 @@ class WritebackObservabilityTests(unittest.TestCase):
         self.assertNotEqual(skip_status, failure_status)
         self.assertEqual(failure_status, "runtime_error")
 
+    def test_non_module_import_failure_is_also_recorded_not_raised(self) -> None:
+        """The import guard must be fail-OPEN, not merely ModuleNotFoundError-aware.
+
+        Only ModuleNotFoundError was caught around the close_session import, so
+        any other import-time failure — a SyntaxError in that module, a circular
+        ImportError, an exception at its module scope — escaped as a traceback
+        with no receipt at all. The Stop hook then reported nothing rather than
+        reporting that it had failed, which is the exact "health claimed from
+        silence" shape the receipt exists to prevent.
+        """
+        boom = ImportError("cannot import name 'close_session' (circular import)")
+        with mock.patch.object(self.wb.st, "fresh_receipt", return_value=True):
+            with mock.patch.object(self.wb.gb, "find_governance_root", return_value=self.state):
+                with mock.patch("builtins.__import__", side_effect=_import_exploder(boom)):
+                    self._run()
+        receipt = self._writeback_receipt()
+        self.assertEqual(receipt["status"], "runtime_error")
+        self.assertEqual(receipt["error"], "ImportError")
+        self.assertEqual(self.rc, 0, "a Stop hook must never block session termination")
+        self.assertIn("RUNTIME FAILURE", self.stderr)
+
     def test_stop_hook_never_blocks_session_termination(self) -> None:
         """Section 6.3 - observability, not a new blocking policy."""
         with mock.patch.object(self.wb.st, "fresh_receipt", return_value=True):
@@ -384,6 +405,23 @@ def _import_raiser(missing: str) -> Any:
     def _fake(name: str, *args: Any, **kwargs: Any) -> Any:
         if name.startswith("ops.graphiti.hydration"):
             raise ModuleNotFoundError(f"No module named '{missing}'", name=missing)
+        return real_import(name, *args, **kwargs)
+
+    return _fake
+
+
+def _import_exploder(exc: BaseException) -> Any:
+    """Fail the close_session import with something that is NOT a missing module.
+
+    A SyntaxError in the imported module, a circular ImportError, or an
+    exception raised at its module scope are all import failures that
+    ModuleNotFoundError does not cover.
+    """
+    real_import = __import__
+
+    def _fake(name: str, *args: Any, **kwargs: Any) -> Any:
+        if name.startswith("ops.graphiti.hydration"):
+            raise exc
         return real_import(name, *args, **kwargs)
 
     return _fake
