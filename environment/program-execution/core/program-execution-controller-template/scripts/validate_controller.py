@@ -66,6 +66,10 @@ REQUIRED = [
     "scripts/pec/state.py",
     "scripts/pec/cli.py",
     "scripts/pec/preflight.py",
+    "scripts/pec/runtime.py",
+    "scripts/pec/replan.py",
+    "scripts/pec/exec_env.py",
+    "scripts/pec/workspace_reset.py",
 ]
 PLACEHOLDER = re.compile(r"\{\{[A-Z0-9_]+\}\}")
 MARKDOWN_LINK = re.compile(r"\[[^\]]+\]\(([^)]+)\)")

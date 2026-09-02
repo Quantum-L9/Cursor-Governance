@@ -53,7 +53,7 @@ class GitHubActionsDriver:
 
     def invoke(self, request: DriverExecutionRequest) -> DriverInvocation:
         contract = request.contract
-        for key in ("repository", "workflow", "candidate_sha"):
+        for key in ("repository", "workflow", "candidate_sha", "ref"):
             if not isinstance(contract.get(key), str) or not contract.get(key):
                 raise ValueError(f"GitHub Actions contract field missing: {key}")
         dispatcher = load_module(
@@ -69,7 +69,7 @@ class GitHubActionsDriver:
 
     def poll(self, request: DriverExecutionRequest, state) -> DriverInvocation:
         monitor = load_module(Path(__file__).with_name("monitor.py"), "pes_github_actions_monitor")
-        run = monitor.find_run(self.transport, request.contract)
+        run = monitor.find_run(self.transport, request.contract, state=state)
         if not run:
             return DriverInvocation(status="RUNNING", state=state)
         next_state = dict(state)

@@ -7,13 +7,23 @@ import os
 from pathlib import Path
 
 from adapters.common.models import ProbeContext
+from peer_execution.imports import load_module, pe_script
 
-from scripts.provider_loader import instantiate, load_registry, repository_root
+_provider_loader = pe_script("provider_loader")
+instantiate = _provider_loader.instantiate
+load_registry = _provider_loader.load_registry
+repository_root = _provider_loader.repository_root
 
 
 def _default_runtime() -> Path:
-    program_home = Path(os.environ.get("L9_PROGRAM_HOME", "~/.l9/programs")).expanduser()
-    return (program_home / "_adapter-probe").resolve()
+    # `environment/agents/runtime_paths.py` owns the program runtime root
+    # (`L9_PROGRAM_HOME`, else `$L9_RUNTIME_ROOT/programs`). Restating that
+    # resolution here had already drifted: it ignored `L9_RUNTIME_ROOT`.
+    runtime_paths = load_module(
+        repository_root() / "environment" / "agents" / "runtime_paths.py",
+        "pe_agent_runtime_paths",
+    )
+    return (runtime_paths.program_runtime_root() / "_adapter-probe").resolve()
 
 
 def _default_lock_digest() -> str:

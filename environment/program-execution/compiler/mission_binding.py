@@ -44,16 +44,30 @@ from .synthesizer import PE_ROOT
 CORE_SHARED = PE_ROOT / "core" / "shared"
 MISSION_ROOT = PE_ROOT / "mission"
 
+# APPEND, never insert(0): see mission_admission for why appending reaches the
+# module files and why the binding is then verified rather than assumed.
 for _path in (CORE_SHARED, MISSION_ROOT):
     if str(_path) not in sys.path:
-        sys.path.insert(0, str(_path))
+        sys.path.append(str(_path))
 
-from binding import (  # noqa: E402 — the one binding authority (contract §17 reuse)
-    MissionProgramBinding,
-    bind_mission_to_program,
-)
+import mission as _mission_module  # noqa: E402
+
+from .mission_admission import _require_module_file  # noqa: E402
+
+_require_module_file(_mission_module, MISSION_ROOT / "mission.py", "mission")
+
+import binding as _binding_module  # noqa: E402
+
+_require_module_file(_binding_module, MISSION_ROOT / "binding.py", "binding")
+
 from blueprint_identity import compute_blueprint_digest  # noqa: E402
-from mission import Mission  # noqa: E402
+
+# Bound from the verified module objects above -- the one binding authority
+# (contract §17 reuse) -- rather than re-imported by name, so the symbols can
+# only come from the module files the guard just checked.
+MissionProgramBinding = _binding_module.MissionProgramBinding
+bind_mission_to_program = _binding_module.bind_mission_to_program
+Mission = _mission_module.Mission
 
 #: The circular shape ADR-0026 names, kept here so the prohibition is greppable.
 FORBIDDEN_IN_BLUEPRINT_FILENAME = "MISSION_BINDING.yaml"

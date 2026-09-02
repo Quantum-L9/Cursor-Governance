@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import sys
@@ -43,17 +44,46 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parents[6]
 
 
+_RECEIPT_READER_MODULE = "pec_runtime_readiness_receipt"
+
+
+def _readiness_receipt_reader() -> Any | None:
+    """Bind `ops/scripts/write_runtime_readiness_receipt.py` by FILE LOCATION.
+
+    Prepending `ops/scripts` to sys.path exposed every bare module name in that
+    directory (dozens of them) at the front of the import path of whichever
+    process called preflight. The receipt reader is one file; bind that file.
+    None when the file is absent, which callers report as a missing receipt.
+    """
+    source = _repo_root() / "ops" / "scripts" / "write_runtime_readiness_receipt.py"
+    if not source.is_file():
+        return None
+    existing = sys.modules.get(_RECEIPT_READER_MODULE)
+    if (
+        existing is not None
+        and Path(getattr(existing, "__file__", "")).resolve() == source.resolve()
+    ):
+        return existing
+    spec = importlib.util.spec_from_file_location(_RECEIPT_READER_MODULE, source)
+    if spec is None or spec.loader is None:
+        return None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[_RECEIPT_READER_MODULE] = module
+    try:
+        spec.loader.exec_module(module)
+    except Exception:
+        sys.modules.pop(_RECEIPT_READER_MODULE, None)
+        raise
+    return module
+
+
 def _load_receipt(
     surface: str, receipt_workspace: Path
 ) -> tuple[Path | None, dict[str, Any] | None]:
-    scripts = _repo_root() / "ops" / "scripts"
-    if str(scripts) not in sys.path:
-        sys.path.insert(0, str(scripts))
-    try:
-        from write_runtime_readiness_receipt import receipt_path
-    except ImportError:
+    reader = _readiness_receipt_reader()
+    if reader is None:
         return None, None
-    path = receipt_path(surface=surface, workspace=receipt_workspace)
+    path = reader.receipt_path(surface=surface, workspace=receipt_workspace)
     if not path.is_file():
         return path, None
     try:

@@ -698,6 +698,81 @@ class SourcePreflightTests(unittest.TestCase):
         self.assertEqual(source["tasks"][0]["id"], "TASK-001A")
         self.assertNotEqual(source["tasks"][0]["id"], original)
 
+    def _compile_dict(self, raw: Path, source: dict) -> None:
+        path = raw / "CAMPAIGN_SOURCE.yaml"
+        path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
+        proof = _pass_proof(raw / "stack-proof.json")
+        self.compiler.compile_source(path, raw / "out", stack_proof=proof)
+
+    def test_decision_without_a_defined_authority_is_refused(self) -> None:
+        """`AUTH-005` used to be minted for a decision that named no authority."""
+        source = self._source()
+        source["decisions"] = [
+            {
+                "id": "DEC-900",
+                "title": "Unowned decision",
+                "question": "Which option?",
+                "status": "accepted",
+                "options": [{"id": "OPT-1", "description": "only option"}],
+                "selected_option_id": "OPT-1",
+            }
+        ]
+        with tempfile.TemporaryDirectory() as raw:
+            with self.assertRaises(self.compiler.CompileError) as ctx:
+                self._compile_dict(Path(raw), source)
+        self.assertIn("DEC-900", str(ctx.exception))
+        self.assertIn("authority", str(ctx.exception))
+
+    def test_decision_without_a_status_is_refused_before_any_write(self) -> None:
+        """A status-less decision used to reach the register dump and die with KeyError."""
+        source = self._source()
+        authority = source["authorities"][0]["id"]
+        source["decisions"] = [
+            {
+                "id": "DEC-901",
+                "title": "Unstated decision",
+                "question": "Which option?",
+                "authority_id": authority,
+                "options": [{"id": "OPT-1", "description": "only option"}],
+                "selected_option_id": "OPT-1",
+            }
+        ]
+        with tempfile.TemporaryDirectory() as raw:
+            with self.assertRaises(self.compiler.CompileError) as ctx:
+                self._compile_dict(Path(raw), source)
+            self.assertFalse((Path(raw) / "out").exists(), "refusal must precede any write")
+        self.assertIn("DEC-901", str(ctx.exception))
+        self.assertIn("status", str(ctx.exception))
+
+    def test_decision_status_comes_from_the_decision_register_schema(self) -> None:
+        source = self._source()
+        authority = source["authorities"][0]["id"]
+        source["decisions"] = [
+            {
+                "id": "DEC-902",
+                "title": "Mis-stated decision",
+                "question": "Which option?",
+                "status": "approved",
+                "authority_id": authority,
+                "options": [{"id": "OPT-1", "description": "only option"}],
+                "selected_option_id": "OPT-1",
+            }
+        ]
+        with tempfile.TemporaryDirectory() as raw:
+            with self.assertRaises(self.compiler.CompileError) as ctx:
+                self._compile_dict(Path(raw), source)
+        self.assertIn("DEC-902", str(ctx.exception))
+        self.assertIn("'approved'", str(ctx.exception))
+        self.assertIn("accepted", str(ctx.exception))
+
+    def test_source_without_gates_is_refused_not_given_gate_001(self) -> None:
+        source = self._source()
+        source["gates"] = []
+        with tempfile.TemporaryDirectory() as raw:
+            with self.assertRaises(self.compiler.CompileError) as ctx:
+                self._compile_dict(Path(raw), source)
+        self.assertIn("no gates", str(ctx.exception))
+
     def test_illegal_gate_id_fails_preflight(self) -> None:
         source = self._source()
         gates = source.get("gates") or []

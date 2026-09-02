@@ -194,11 +194,25 @@ def evaluate_vector(vector: dict[str, Any]) -> dict[str, Any]:
         "vector_id": entry["vector_id"],
         "scenario": entry["scenario"],
     }
+    # Derived from the INPUT alone. Copying `expected` into the result made the
+    # parity gate unfalsifiable for these two vectors.
     if entry["input"].get("peer_capability") == "unsupported":
-        result.update(entry["expected"])
+        result.update(
+            {
+                "authority_result": "REJECTED",
+                "blocker": "unsupported_peer_fail_closed",
+                "escalation": "explicit_unsupported_peer",
+            }
+        )
         return result
     if entry["input"].get("peer_local_override"):
-        result.update(entry["expected"])
+        result.update(
+            {
+                "authority_result": "REJECTED",
+                "blocker": "peer_local_semantic_override",
+                "escalation": "canonical_source_violation",
+            }
+        )
         return result
     classes = entry["input"].get("delta_classes") or []
     forbidden = [item for item in classes if item in FORBIDDEN_DELTA_CLASSES]

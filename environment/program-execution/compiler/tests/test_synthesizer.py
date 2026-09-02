@@ -142,7 +142,7 @@ def _mission(**overrides):
 
     mission_root = Path(__file__).resolve().parents[2] / "mission"
     if str(mission_root) not in sys.path:
-        sys.path.insert(0, str(mission_root))
+        sys.path.append(str(mission_root))
     from mission import parse_mission
 
     fixture = mission_root / "tests" / "fixtures" / "valid_mission.yaml"
@@ -250,3 +250,69 @@ def test_unbound_synthesis_emits_no_mission_context(tmp_path: Path) -> None:
     from compiler.blueprint_validate import validate
 
     assert validate(root, mode="instantiated").ok, "unbound behaviour is unchanged"
+
+
+def _truth(tmp_path: Path, **overrides) -> RepoTruth:
+    fields = dict(
+        root=tmp_path,
+        remote="https://github.com/Other-Org/Some-Repo.git",
+        revision="0123456789abcdef0123456789abcdef01234567",
+        owner="Igor Beylin",
+        test_command="pytest -q",
+        package_manager=None,
+        runtime_version="3.12",
+        dpk=None,
+        constraints_files=[],
+        adr_files=[],
+        validation_commands=["pytest -q"],
+        rollback_defs=[],
+        source_priority={"test_command": "prose"},
+    )
+    fields.update(overrides)
+    return RepoTruth(**fields)
+
+
+def _resolve(tmp_path: Path, **overrides) -> dict:
+    return resolve(
+        parse_intent(
+            {"schema": "program-execution.intent.v1", "objective": "Make repo X achieve Y."}
+        ),
+        truth=_truth(tmp_path, **overrides),
+    )
+
+
+def test_execution_target_is_the_resolved_repository_not_a_guess(tmp_path: Path) -> None:
+    """The path `/x/Quantum-L9/...` used to become `Quantum-L9/Cursor-Governance`."""
+    checkout = tmp_path / "Quantum-L9" / "LLM-Router"
+    checkout.mkdir(parents=True)
+    resolution = _resolve(checkout)
+    output = tmp_path / "blueprint"
+    synthesize(resolution, output)
+    targets = yaml.safe_load((output / "EXECUTION_TARGETS.yaml").read_text(encoding="utf-8"))
+    repository_id = targets["targets"][0]["repository_id"]
+    assert repository_id == resolution["targets"][0]["repository_id"]
+    assert repository_id == "Other-Org/Some-Repo"
+
+
+def test_unknown_test_command_yields_an_inspection_never_an_invented_shell(
+    tmp_path: Path,
+) -> None:
+    resolution = _resolve(tmp_path, test_command=None, validation_commands=[])
+    output = tmp_path / "blueprint"
+    synthesize(resolution, output)
+    cards = yaml.safe_load((output / "TASK_CARDS.yaml").read_text(encoding="utf-8"))
+    implementation = [task for task in cards["tasks"] if task["workstream_id"] == "WS-02"]
+    assert implementation, cards
+    for task in implementation:
+        for validation in task["validation"]:
+            assert validation["method"] == "inspection", validation
+            assert "pytest" not in validation["command_or_inspection"]
+
+
+def test_unobserved_revision_is_not_reported_in_sync(tmp_path: Path) -> None:
+    resolution = _resolve(tmp_path, revision=None)
+    output = tmp_path / "blueprint"
+    synthesize(resolution, output)
+    delta = yaml.safe_load((output / "CURRENT_STATE_DELTA.yaml").read_text(encoding="utf-8"))
+    classification = delta["deltas"][0]["classification"]
+    assert classification == "UNKNOWN", delta["deltas"][0]
