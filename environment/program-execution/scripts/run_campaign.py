@@ -19,6 +19,7 @@ import re
 import shutil
 import subprocess
 import sys
+import urllib.parse
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -1074,6 +1075,35 @@ def history_walkable(path: Path) -> bool:
     return True
 
 
+_GITHUB_SSH_ORIGIN = re.compile(
+    r"^(?:ssh://)?git@github\.com[:/](?P<repo>[^/\s]+/[^/\s]+?)(?:\.git)?/?$"
+)
+
+
+def github_repository_from_url(url: str) -> str | None:
+    """`owner/name` when `url` is a GitHub remote, else None.
+
+    Decided from the parsed host, never from a substring: a URL that merely
+    contains "github.com" somewhere in its path or query is not GitHub.
+    """
+    value = url.strip()
+    if not value:
+        return None
+    ssh = _GITHUB_SSH_ORIGIN.match(value)
+    if ssh:
+        return ssh.group("repo")
+    parsed = urllib.parse.urlparse(value)
+    if parsed.scheme not in {"https", "http", "ssh", "git"}:
+        return None
+    if (parsed.hostname or "").lower() != "github.com":
+        return None
+    parts = [part for part in parsed.path.split("/") if part]
+    if len(parts) < 2:
+        return None
+    name = parts[1][:-4] if parts[1].endswith(".git") else parts[1]
+    return f"{parts[0]}/{name}"
+
+
 def ensure_target_history(dest: Path, repository_id: str) -> None:
     """Fail closed unless the target can walk its own history before pec verify."""
     dest = dest.resolve()
@@ -1088,7 +1118,8 @@ def ensure_target_history(dest: Path, repository_id: str) -> None:
         env=git_env(),
     )
     current_url = (current.stdout or "").strip() if current.returncode == 0 else ""
-    if "github.com" in current_url.lower() and repository_id.lower() not in current_url.lower():
+    named = github_repository_from_url(current_url)
+    if named is not None and named.lower() != repository_id.lower():
         raise CampaignError(
             f"target checkout {dest} has origin {current_url}, not {repository_id}; "
             "refuse to repoint another repository's remote"
@@ -4607,31 +4638,73 @@ def run_campaign(
         auto_harvest(trace)
 
 
-def _run_campaign_stages(
-    intent_path: Path,
-    *,
-    until: str = "merge",
-    primary: Path | None = None,
-    worktree: Path | None = None,
-    repo_root: Path | None = None,
-    l9_root: Path | None = None,
-    host_repo: str = HOST_REPO_DEFAULT,
-    target_override: str | None = None,
-    hooks: Hooks | None = None,
-    fast: bool | None = None,
-    trace: pe_trace.ExecutionTrace | None = None,
-    forced_kind: Any | None = None,
-    target_checkout: Path | None = None,
-) -> CampaignReport:
-    requested_until = until
-    until = normalize_until(until)
-    hooks = hooks or Hooks()
-    fast = fast_mode(fast)
-    timing = _load_script("pe_timing", PE_ROOT / "scripts/pe_timing.py")
-    timer = timing.StageTimer()
-    primary = (primary or Path.home() / ".cursor-governance").resolve()
-    host_root = (repo_root or primary).resolve()
-    l9_home = (l9_root or Path(os.environ.get("L9_ROOT", Path.home() / ".l9"))).resolve()
+@dataclass
+class _CampaignRun:
+    """Everything one campaign run carries between its stages.
+
+    `_run_campaign_stages` used to be one 670-line function. The org semgrep
+    taint rules analyze a function in time that grows with (live variables x
+    statements), and that one function alone consumed half of the per-file
+    budget -- the gate went `incomplete` the moment the file grew. Each stage
+    below is the same code over this shared record instead of one scope.
+    """
+
+    fast: bool
+    hooks: Hooks
+    host_repo: str
+    host_root: Path
+    intent_path: Path
+    l9_home: Path
+    primary: Path
+    requested_until: str
+    until: str
+    blueprint: Any = None
+    campaign_id: Any = None
+    campaign_source_doc: Any = None
+    compile_generation: Any = None
+    compile_input: Any = None
+    ensure_target_checkout_once: Any = None
+    forced_kind: Any = None
+    pec_workspace: Any = None
+    prepare: Any = None
+    primed_root: Any = None
+    repo_root: Any = None
+    report: Any = None
+    repository_id: Any = None
+    resolved_intent: Any = None
+    reuse: Any = None
+    scoped_resume: Any = None
+    seed: Any = None
+    stack_proof_path: Any = None
+    target_checkout: Any = None
+    target_override: Any = None
+    target_path: Any = None
+    target_worktree: Any = None
+    timer: Any = None
+    timing: Any = None
+    trace: Any = None
+    worktree: Any = None
+    write_root: Any = None
+
+
+def _stage_classify_and_prime(run: _CampaignRun) -> CampaignReport | None:
+    fast = run.fast
+    forced_kind = run.forced_kind
+    hooks = run.hooks
+    host_repo = run.host_repo
+    host_root = run.host_root
+    intent_path = run.intent_path
+    l9_home = run.l9_home
+    primary = run.primary
+    repo_root = run.repo_root
+    requested_until = run.requested_until
+    target_checkout = run.target_checkout
+    target_override = run.target_override
+    timer = run.timer
+    timing = run.timing
+    trace = run.trace
+    until = run.until
+
     with traced(
         trace, "input", "input_classification", metadata={"intent": str(intent_path)}
     ) as classified:
@@ -4759,6 +4832,39 @@ def _run_campaign_stages(
     stack_proof_path = Path(
         str((stack_receipt or {}).get("path") or (primed_root / campaign_id / "stack-proof.json"))
     )
+
+    run.campaign_id = campaign_id
+    run.campaign_source_doc = campaign_source_doc
+    run.pec_workspace = pec_workspace
+    run.prepare = prepare
+    run.primed_root = primed_root
+    run.resolved_intent = resolved_intent
+    run.reuse = reuse
+    run.seed = seed
+    run.stack_proof_path = stack_proof_path
+    return None
+
+
+def _stage_isolate_and_emit(run: _CampaignRun) -> CampaignReport | None:
+    campaign_id = run.campaign_id
+    campaign_source_doc = run.campaign_source_doc
+    fast = run.fast
+    hooks = run.hooks
+    l9_home = run.l9_home
+    primary = run.primary
+    primed_root = run.primed_root
+    repo_root = run.repo_root
+    requested_until = run.requested_until
+    resolved_intent = run.resolved_intent
+    reuse = run.reuse
+    seed = run.seed
+    stack_proof_path = run.stack_proof_path
+    timer = run.timer
+    timing = run.timing
+    trace = run.trace
+    until = run.until
+    worktree = run.worktree
+
     with timer.stage("isolate"):
         if repo_root is not None:
             write_root = repo_root.resolve()
@@ -4868,6 +4974,26 @@ def _run_campaign_stages(
             host_worktree=str(write_root),
         )
         return report
+
+    run.report = report
+    run.target_worktree = target_worktree
+    run.write_root = write_root
+    return None
+
+
+def _stage_blueprint(run: _CampaignRun) -> CampaignReport | None:
+    campaign_id = run.campaign_id
+    fast = run.fast
+    hooks = run.hooks
+    report = run.report
+    reuse = run.reuse
+    stack_proof_path = run.stack_proof_path
+    target_worktree = run.target_worktree
+    timer = run.timer
+    timing = run.timing
+    trace = run.trace
+    until = run.until
+    write_root = run.write_root
 
     source = campaign_source_path(write_root, campaign_id)
     blueprint = Path(report.blueprint)
@@ -5019,6 +5145,33 @@ def _run_campaign_stages(
         )
         return report
 
+    run.blueprint = blueprint
+    run.compile_generation = compile_generation
+    run.compile_input = compile_input
+    run.scoped_resume = scoped_resume
+    return None
+
+
+def _stage_admit(run: _CampaignRun) -> CampaignReport | None:
+    blueprint = run.blueprint
+    campaign_id = run.campaign_id
+    compile_generation = run.compile_generation
+    compile_input = run.compile_input
+    fast = run.fast
+    hooks = run.hooks
+    host_repo = run.host_repo
+    prepare = run.prepare
+    primed_root = run.primed_root
+    report = run.report
+    reuse = run.reuse
+    seed = run.seed
+    target_worktree = run.target_worktree
+    timer = run.timer
+    timing = run.timing
+    trace = run.trace
+    until = run.until
+    write_root = run.write_root
+
     repository_id = str((seed.get("target") or {}).get("repository_id") or host_repo)
     target_path = Path(target_worktree)
 
@@ -5094,6 +5247,34 @@ def _run_campaign_stages(
             host_worktree=str(write_root),
         )
         return report
+
+    run.ensure_target_checkout_once = ensure_target_checkout_once
+    run.repository_id = repository_id
+    run.target_path = target_path
+    return None
+
+
+def _stage_runtime(run: _CampaignRun) -> CampaignReport:
+    blueprint = run.blueprint
+    campaign_id = run.campaign_id
+    compile_generation = run.compile_generation
+    ensure_target_checkout_once = run.ensure_target_checkout_once
+    hooks = run.hooks
+    host_repo = run.host_repo
+    pec_workspace = run.pec_workspace
+    report = run.report
+    repository_id = run.repository_id
+    requested_until = run.requested_until
+    reuse = run.reuse
+    scoped_resume = run.scoped_resume
+    seed = run.seed
+    target_path = run.target_path
+    target_worktree = run.target_worktree
+    timer = run.timer
+    timing = run.timing
+    trace = run.trace
+    until = run.until
+    write_root = run.write_root
 
     pec = hooks.pec_bootstrap or default_pec_bootstrap
     pec_workspace_path = Path(report.pec_workspace)
@@ -5279,6 +5460,62 @@ def _run_campaign_stages(
     report.program_blockers = []
     report.stages_completed.append("close")
     return report
+
+
+def _run_campaign_stages(
+    intent_path: Path,
+    *,
+    until: str = "merge",
+    primary: Path | None = None,
+    worktree: Path | None = None,
+    repo_root: Path | None = None,
+    l9_root: Path | None = None,
+    host_repo: str = HOST_REPO_DEFAULT,
+    target_override: str | None = None,
+    hooks: Hooks | None = None,
+    fast: bool | None = None,
+    trace: pe_trace.ExecutionTrace | None = None,
+    forced_kind: Any | None = None,
+    target_checkout: Path | None = None,
+) -> CampaignReport:
+    requested_until = until
+    until = normalize_until(until)
+    hooks = hooks or Hooks()
+    fast = fast_mode(fast)
+    timing = _load_script("pe_timing", PE_ROOT / "scripts/pe_timing.py")
+    timer = timing.StageTimer()
+    primary = (primary or Path.home() / ".cursor-governance").resolve()
+    host_root = (repo_root or primary).resolve()
+    l9_home = (l9_root or Path(os.environ.get("L9_ROOT", Path.home() / ".l9"))).resolve()
+    run = _CampaignRun(
+        fast=fast,
+        forced_kind=forced_kind,
+        hooks=hooks,
+        host_repo=host_repo,
+        host_root=host_root,
+        intent_path=intent_path,
+        l9_home=l9_home,
+        primary=primary,
+        repo_root=repo_root,
+        requested_until=requested_until,
+        target_checkout=target_checkout,
+        target_override=target_override,
+        timer=timer,
+        timing=timing,
+        trace=trace,
+        until=until,
+        worktree=worktree,
+    )
+    for stage in (
+        _stage_classify_and_prime,
+        _stage_isolate_and_emit,
+        _stage_blueprint,
+        _stage_admit,
+    ):
+        finished = stage(run)
+        if finished is not None:
+            return finished
+    return _stage_runtime(run)
 
 
 def render_report(report: CampaignReport) -> None:

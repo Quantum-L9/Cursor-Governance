@@ -1809,6 +1809,49 @@ class RunCampaignTests(unittest.TestCase):
             (repo / ".git" / "objects" / parent[:2] / parent[2:]).unlink()
             self.assertFalse(self.mod.history_walkable(repo))
 
+    def test_github_repository_is_decided_by_host_not_substring(self) -> None:
+        """CodeQL: `"github.com" in url` accepted any URL mentioning GitHub."""
+        parse = self.mod.github_repository_from_url
+        self.assertEqual(parse("https://github.com/Quantum-L9/Repo.git"), "Quantum-L9/Repo")
+        self.assertEqual(parse("git@github.com:Quantum-L9/Repo.git"), "Quantum-L9/Repo")
+        self.assertEqual(parse("ssh://git@github.com/Quantum-L9/Repo"), "Quantum-L9/Repo")
+        self.assertIsNone(parse("https://evil.example/github.com/Quantum-L9/Repo"))
+        self.assertIsNone(parse("https://github.com.evil.example/Quantum-L9/Repo"))
+        self.assertIsNone(parse("https://gitlab.example/Quantum-L9/Repo"))
+        self.assertIsNone(parse(""))
+
+    def test_ensure_target_history_refuses_a_lookalike_origin(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            repo = Path(raw) / "repo"
+            repo.mkdir()
+            _git_init(repo)
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(repo),
+                    "remote",
+                    "add",
+                    "origin",
+                    "https://github.com/Other/Repo.git",
+                ],
+                check=True,
+                capture_output=True,
+            )
+            # A walkable, non-shallow checkout returns before the origin is
+            # read; mark it shallow so the repair path (and its guard) runs.
+            head = subprocess.run(
+                ["git", "-C", str(repo), "rev-parse", "HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+            (repo / ".git" / "shallow").write_text(head + "\n", encoding="utf-8")
+            self.assertTrue(self.mod.is_shallow_repo(repo))
+            with self.assertRaises(self.mod.CampaignError) as ctx:
+                self.mod.ensure_target_history(repo, "Quantum-L9/unused")
+            self.assertIn("Other/Repo", str(ctx.exception))
+
     def test_ensure_target_history_passes_walkable_repo(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             repo = Path(raw) / "repo"

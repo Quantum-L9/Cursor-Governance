@@ -81,7 +81,7 @@ import mission as _mission_module  # noqa: E402 — official Mission model (cont
 
 _require_module_file(_mission_module, MISSION_ROOT / "mission.py", "mission")
 
-from mission import Mission  # noqa: E402
+Mission = _mission_module.Mission
 
 SCHEMA_PATH = MODULE_ROOT / "schemas" / "mission-context.schema.json"
 

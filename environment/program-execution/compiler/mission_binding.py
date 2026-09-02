@@ -60,12 +60,14 @@ import binding as _binding_module  # noqa: E402
 
 _require_module_file(_binding_module, MISSION_ROOT / "binding.py", "binding")
 
-from binding import (  # noqa: E402 — the one binding authority (contract §17 reuse)
-    MissionProgramBinding,
-    bind_mission_to_program,
-)
 from blueprint_identity import compute_blueprint_digest  # noqa: E402
-from mission import Mission  # noqa: E402
+
+# Bound from the verified module objects above -- the one binding authority
+# (contract §17 reuse) -- rather than re-imported by name, so the symbols can
+# only come from the module files the guard just checked.
+MissionProgramBinding = _binding_module.MissionProgramBinding
+bind_mission_to_program = _binding_module.bind_mission_to_program
+Mission = _mission_module.Mission
 
 #: The circular shape ADR-0026 names, kept here so the prohibition is greppable.
 FORBIDDEN_IN_BLUEPRINT_FILENAME = "MISSION_BINDING.yaml"

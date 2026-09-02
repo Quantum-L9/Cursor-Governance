@@ -975,11 +975,11 @@
     },
     {
       "path": "compiler/mission_admission.py",
-      "sha256": "bdcfecd3ae17d173089200eec38680d0874dd7499de399b55fb15ad13f6b8b9e"
+      "sha256": "c956085e7d8021c9b04084f5b55618208221755076f6c7dac74ab19908e8ad4d"
     },
     {
       "path": "compiler/mission_binding.py",
-      "sha256": "74385b5042c45dcfb204bfd110ae4431a5224a52e8a095b3f5a0ccfb9fdd7d81"
+      "sha256": "7df0621ffd0a953f5a9f6655d90c55a818ca5542b2bc4aa680ba079789c59416"
     },
     {
       "path": "compiler/policies/quantum-l9.safe-autonomy.v1.yaml",
@@ -2015,7 +2015,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "c3f5cd228fcbf65726a3e3c5eda4367296e8a1d943260939d1aa9e5c7dfc4e46"
+      "sha256": "1c44d875937eb39ba2c4ac13f5e18f5d6390070fa00821f5bb9ee64cbcef710e"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -2107,7 +2107,7 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "6359aed9f7021dbad7912f9d2375fc6ada8a6a14e9e91149cefea1d5e217153f"
+      "sha256": "bd29cd2612195270635fcb6552294341189858a6e1697d56ac08c9555a594470"
     },
     {
       "path": "scripts/tests/test_run_conformance.py",
