@@ -8,10 +8,10 @@ from pathlib import Path
 from typing import Any
 
 from peer_execution.bindings import load_peer_bindings
-from peer_execution.imports import load_module
+from peer_execution.imports import load_module, pe_script
 from peer_execution.models import ProbeContext
 
-from scripts.provider_loader import instantiate
+instantiate = pe_script("provider_loader").instantiate
 
 _STRUCTURAL_CHECKS = (
     "canonical_binding",

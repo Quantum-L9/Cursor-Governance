@@ -159,7 +159,7 @@
     },
     {
       "path": "adapters/codex/tests/test_driver.py",
-      "sha256": "46fd2afdae71e59b681ab0efb9e2a437f94ec684651ed08a9c5ff9d979d6719d"
+      "sha256": "cfb983b9ac504ae9c6423f50097e49fc474d7cd964c3b01624a12a43b699ee2f"
     },
     {
       "path": "adapters/common/__init__.py",
@@ -299,7 +299,7 @@
     },
     {
       "path": "adapters/gemini/tests/test_driver.py",
-      "sha256": "9c478c26d8239092c6aef8eae42ac6118004685f04332e96b598086d3d78bdb7"
+      "sha256": "fe25eeed627fdd60853d690e3775b1f1388aa74e0dabda60818e9257f2e02635"
     },
     {
       "path": "adapters/github/__init__.py",
@@ -415,7 +415,7 @@
     },
     {
       "path": "adapters/manus/tests/test_driver.py",
-      "sha256": "60c462e69c3461bb3f0352960b307088a5a1d5302baa771b0533c0fe0bbd8dea"
+      "sha256": "aac0bac90869896f5eae8d45a5a631653f1ef01becec3af716cece91ddb8ae91"
     },
     {
       "path": "audits/pipeline-assembly-audit.v1.yaml",
@@ -1563,7 +1563,11 @@
     },
     {
       "path": "integrations/subagent-generated-data/campaign_summary.py",
-      "sha256": "dd13edadaa5525240fac54e9ff2b031d77f1b3a7fd88f02003f56abdcaa18430"
+      "sha256": "ba477a7b59b618e20ed8eba2c1b53e8e68c8bec532fe1fd3f62c086a91bd05fa"
+    },
+    {
+      "path": "integrations/subagent-generated-data/compile_units.py",
+      "sha256": "7f5792cd4539a8926cff0701c1d81a40e8e45489ff97ad897a3fba854e11edfb"
     },
     {
       "path": "integrations/subagent-generated-data/outcome_publisher.py",
@@ -1571,15 +1575,15 @@
     },
     {
       "path": "integrations/subagent-generated-data/receipt_projection.py",
-      "sha256": "f52d55c75abfca4a745ee448e2ba736df9b6bb0de7e57cc7d9b2f1f067c4ae53"
+      "sha256": "d34abe2a9bd05355792f11f43c6d785dfc8083455a5923ecf6c2979791db4180"
     },
     {
       "path": "integrations/subagent-generated-data/tests/test_campaign_summary.py",
-      "sha256": "23e421d3bb8333124abe1624c378f337d1c32680cb2a16ef5c6e9a767bb03a07"
+      "sha256": "8c5bd6e43c844ac5814b9c54d01071b5b6f8a69b8405aef3b670e800e1af60ca"
     },
     {
       "path": "integrations/subagent-generated-data/tests/test_outcome_publisher.py",
-      "sha256": "a6a5bdf507128ebb9b5dee1b991b86ba5a15ff96a1fae39ad1444ed0ea943c1d"
+      "sha256": "d2c3b3147b2bee6e35d000aa23cca3946a8b9c156875d095b56b7c1ce2bbc797"
     },
     {
       "path": "mission/MISSION_ACCEPTANCE_MODEL.yaml",
@@ -1799,7 +1803,7 @@
     },
     {
       "path": "peer_execution/imports.py",
-      "sha256": "8847fdfd6313b03d907701d12b16a4fd03007439ae3d330e47a70ef8d6b83ac7"
+      "sha256": "d3084c8c9da207517ed9b5d19fbe21b7eab3b47330dc0046cd7eae3cbe8bba92"
     },
     {
       "path": "peer_execution/models.py",
@@ -1915,7 +1919,7 @@
     },
     {
       "path": "scripts/adapter_cli.py",
-      "sha256": "c212cf9879864bcc436b3349a3e99d00b0a7874b7a96cf928b4382735224a3fa"
+      "sha256": "8fabb448f27932fdebde488efa6b09258afec208d9174de10528f10aa2876a84"
     },
     {
       "path": "scripts/apply_repository_alignment.py",
@@ -1975,15 +1979,15 @@
     },
     {
       "path": "scripts/peer_execution_cli.py",
-      "sha256": "5f9877f0080d56929d0c29e03955407335cec1127e9c81addac25cf146d86c4d"
+      "sha256": "d889f2e68d866d53299d3c3e8cb1ef0b9c47a171bd1b37dc7341bea1c45ca8ed"
     },
     {
       "path": "scripts/probe_executable_peers.py",
-      "sha256": "0c2edec65aac887366468269842cb50291e8706943e505dca2841e9b2dff3416"
+      "sha256": "e07b0045dc4f89e425a938a31c91b6c19e9fc707f5956bb028b2648c81c77546"
     },
     {
       "path": "scripts/probe_execution_adapters.py",
-      "sha256": "d226c5ea7066474e96c29d09a691969e9cfd37f33fc00a13ad967f47166ca15d"
+      "sha256": "b32e9f4fe5137360fb8eaa72f5cb7dd4da6053a1580cdb2108644deb9cb9742b"
     },
     {
       "path": "scripts/provider_loader.py",
@@ -2007,7 +2011,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "d66c9520b13c52ad0039f5dd3aa26df81782366aa99fd230f790d9e609dbebaf"
+      "sha256": "ad5aad7371520ca7696ca593d007b9ef9c6c9bef79c3b85e57133d89edf6236d"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -2019,7 +2023,7 @@
     },
     {
       "path": "scripts/run_peer_task_pipeline.py",
-      "sha256": "15067c5271432095df07d2aeff93b151f0e055d69481ca611aef58834a6ace5a"
+      "sha256": "e84e1a5eca83cb29bfc6d64d70821efe6609ddd6b7ef9af0c3f076678385277a"
     },
     {
       "path": "scripts/tests/fixtures/architecture-intent-llm-router.md",
@@ -2068,6 +2072,10 @@
     {
       "path": "scripts/tests/test_pe_prepare_state.py",
       "sha256": "7e521159e0f320227e6eb45dec8ea4671f1493df9ea2d3f1fecae0e229875e9b"
+    },
+    {
+      "path": "scripts/tests/test_pe_scripts_package_binding.py",
+      "sha256": "355e7b5d5aa35da047d6d383c7d7d4494de6ce9ff0a0fcb60c707cc84a5bb0b2"
     },
     {
       "path": "scripts/tests/test_pe_smoke_campaign.py",
@@ -2155,7 +2163,7 @@
     },
     {
       "path": "tests/hardening/test_real_campaign_e2e.py",
-      "sha256": "0847a058bdace927f5e44ea0297f616c5861a4808362d682e308be9ca4b3d30c"
+      "sha256": "99b9aacbaff0ec80b0d1cdbf878bd093488af3f9e42591e6146a8b6f980e8f94"
     },
     {
       "path": "tests/test_adapter_cli.py",
@@ -2171,7 +2179,7 @@
     },
     {
       "path": "tests/test_generic_shell_lifecycle.py",
-      "sha256": "c5f980ffe4451e2a5ab209d2cc7d8f9fdd4940370ded76f7afa376e85736d707"
+      "sha256": "1a66e15f9ac83330e695f2010a77f82591250350b2067b0899d15af736f5b8cf"
     },
     {
       "path": "tests/test_no_agent_identity_duplication.py",
@@ -2191,7 +2199,7 @@
     },
     {
       "path": "tests/test_probe_command.py",
-      "sha256": "0458ffa3bc78facfefa6366ceae95b7b03fb0ae0383aceb789ec6939bab4effb"
+      "sha256": "e52386d6f7f313bd7f82ea096f8a7dab2f3b4f66680236297b876aa335401259"
     },
     {
       "path": "tests/test_registry_alignment.py",
@@ -2203,7 +2211,7 @@
     },
     {
       "path": "tests/test_routing.py",
-      "sha256": "754709aba36d1fb061e470a1faa10eba761acd1f58cd8551cf0abf64da60c9a5"
+      "sha256": "e93e4553b32de2f265a74de129df2e041524eba45e360f7234d02e9b9a6badbe"
     },
     {
       "path": "tests/test_runtime_state_locations.py",

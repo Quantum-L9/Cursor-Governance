@@ -7,8 +7,12 @@ import os
 from pathlib import Path
 
 from adapters.common.models import ProbeContext
+from peer_execution.imports import pe_script
 
-from scripts.provider_loader import instantiate, load_registry, repository_root
+_provider_loader = pe_script("provider_loader")
+instantiate = _provider_loader.instantiate
+load_registry = _provider_loader.load_registry
+repository_root = _provider_loader.repository_root
 
 
 def _default_runtime() -> Path:

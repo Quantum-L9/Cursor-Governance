@@ -8,7 +8,9 @@ from adapters.common.digests import digest_object
 from adapters.common.models import ProbeContext
 from adapters.common.schema_registry import SchemaRegistry
 from conformance.helpers import PROGRAM_DIGEST, valid_contract
-from scripts.provider_loader import instantiate
+from peer_execution.imports import pe_script
+
+instantiate = pe_script("provider_loader").instantiate
 
 
 class GenericShellLifecycleTests(unittest.TestCase):

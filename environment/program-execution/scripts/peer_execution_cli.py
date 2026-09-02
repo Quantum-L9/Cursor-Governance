@@ -9,10 +9,13 @@ from pathlib import Path
 from typing import Any
 
 from peer_execution.bindings import resolve_peer_binding
+from peer_execution.imports import pe_script
 from peer_execution.models import ProbeContext
 from peer_execution.runtime_store import RuntimeStore
 
-from scripts.provider_loader import instantiate, repository_root
+_provider_loader = pe_script("provider_loader")
+instantiate = _provider_loader.instantiate
+repository_root = _provider_loader.repository_root
 
 
 def _json(value: object) -> None:

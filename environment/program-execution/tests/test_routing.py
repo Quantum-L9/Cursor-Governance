@@ -4,7 +4,9 @@ import unittest
 from pathlib import Path
 
 from adapters.common.errors import AdapterFailure
-from scripts.router import route_contract
+from peer_execution.imports import pe_script
+
+route_contract = pe_script("router").route_contract
 
 
 class RoutingTests(unittest.TestCase):
