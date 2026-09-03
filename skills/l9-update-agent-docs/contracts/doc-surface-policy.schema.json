@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.local/contracts/doc-surface-policy.schema.json",
+  "title": "L9 Repository Documentation Surface Policy",
+  "type": "object",
+  "required": ["schema", "version", "owner", "surfaces", "impact_rules", "capabilities", "llms_txt"],
+  "properties": {
+    "schema": {"const": "l9.repo-docs.surface-policy.v1"},
+    "version": {"type": "integer", "minimum": 1},
+    "owner": {"type": "string", "minLength": 1},
+    "surfaces": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "owner",
+          "role",
+          "authority_class",
+          "selectors",
+          "create_policy",
+          "refresh_policy",
+          "generator",
+          "evidence_sources",
+          "prohibited_mutations"
+        ],
+        "properties": {
+          "owner": {"type": "string", "minLength": 1},
+          "role": {"type": "string", "minLength": 1},
+          "authority_class": {
+            "enum": ["canonical_authority", "operating_ssot", "pointer", "index", "projection", "specialist", "external"]
+          },
+          "selectors": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+          "create_policy": {
+            "enum": ["never", "existing_only", "create_if_absent", "create_if_enabled", "generator_owned", "external_only"]
+          },
+          "refresh_policy": {
+            "enum": ["never", "surgical", "surgical_additive", "pointer_only", "regenerate", "generator_owned", "external_only"]
+          },
+          "generator": {"type": ["string", "null"]},
+          "evidence_sources": {"type": "array", "items": {"type": "string"}},
+          "prohibited_mutations": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "impact_rules": {"type": "object", "minProperties": 1},
+    "capabilities": {"type": "object"},
+    "llms_txt": {"type": "object"}
+  }
+}
