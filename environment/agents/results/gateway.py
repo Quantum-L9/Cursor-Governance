@@ -29,22 +29,43 @@ def _load_ingest_module():
     return module
 
 
+# Host stop verdicts that count as a normal completion. Anything else the host
+# reports (cancelled, error, timeout, killed, failed, ...) is a terminal
+# non-success and rejects the result regardless of what the document says.
+HOST_SUCCESS_STATUSES = frozenset(
+    {"completed", "complete", "success", "succeeded", "done", "finished", "ok"}
+)
+# Root lease states under which a returned document may still be judged: the
+# lease is live, or it ended by normal release (ACTION_COMPLETED). REVOKED,
+# EXPIRED, and a missing lease mean root authority withdrew the assignment.
+LEASE_ACCEPTABLE_STATUSES = frozenset({"ACTIVE", "RELEASED"})
+
+
 def _role_alias(value: Any) -> str:
-    raw = str(value or "").strip().lower().replace("-", "_")
-    aliases = {
-        "l9_recon": "recon",
-        "recon": "recon",
-        "l9_pr_remediation": "pr_remediation",
-        "pr_remediation": "pr_remediation",
-        "l9_test": "test",
-        "test": "test",
-        "l9_documentation": "documentation",
-        "documentation": "documentation",
-        "l9_verifier": "verifier_reviewer",
-        "l9_reviewer": "verifier_reviewer",
-        "verifier_reviewer": "verifier_reviewer",
-    }
-    return aliases.get(raw, raw)
+    return cursor_subagent.result_bridge.canonical_cursor_role(value)
+
+
+def _host_authority_error(return_receipt: Mapping[str, Any]) -> str | None:
+    """Reasons the host or the root lease refuse this result before the
+    document is even read. A document never out-votes either."""
+    host_status = return_receipt.get("host_status")
+    if host_status not in (None, ""):
+        if str(host_status).strip().lower() not in HOST_SUCCESS_STATUSES:
+            return f"host reported terminal status {str(host_status)!r}, not a success"
+    database = return_receipt.get("runtime_database")
+    lease_id = return_receipt.get("lease_id")
+    if database in (None, "") or not lease_id:
+        return None
+    from autonomy.adapters.cursor import host_bridge  # noqa: PLC0415
+
+    if not Path(str(database)).is_file():
+        return f"root runtime database {str(database)!r} is unavailable; lease state undeterminable"
+    status = host_bridge.lease_status(database, str(lease_id))
+    if status is None:
+        return f"root lease {str(lease_id)!r} is missing"
+    if status not in LEASE_ACCEPTABLE_STATUSES:
+        return f"root lease {str(lease_id)!r} is {status}, not ACTIVE or RELEASED"
+    return None
 
 
 def _rejection(
@@ -134,18 +155,39 @@ def _correlation_error(
     return None
 
 
-def accept(
+def _accept(
     *,
     return_receipt: dict[str, Any] | None,
     surface_result: dict[str, Any],
-    adapter: str = "cursor_subagent",
-) -> dict[str, Any]:
+    adapter: str,
+) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    """Judge one returned result; every outcome is a durable acceptance receipt.
+
+    Returns ``(receipt, normalized_document)``; the document is ``None`` unless
+    the receipt is ACCEPTED. Normalization runs inside this guarded path so an
+    adapter or correlation failure is recorded as REJECTED rather than
+    escaping as an exception that leaves no receipt behind.
+    """
     if not return_receipt or return_receipt.get("status") not in {"RETURNED", None}:
-        return _rejection(
-            return_receipt=return_receipt,
-            surface_result=surface_result,
-            adapter=adapter,
-            reason="missing SubagentReturnReceipt",
+        return (
+            _rejection(
+                return_receipt=return_receipt,
+                surface_result=surface_result,
+                adapter=adapter,
+                reason="missing SubagentReturnReceipt",
+            ),
+            None,
+        )
+    authority_problem = _host_authority_error(return_receipt)
+    if authority_problem is not None:
+        return (
+            _rejection(
+                return_receipt=return_receipt,
+                surface_result=surface_result,
+                adapter=adapter,
+                reason=f"host authority refused result: {authority_problem}",
+            ),
+            None,
         )
     try:
         normalized = normalize(
@@ -154,11 +196,14 @@ def accept(
             adapter=adapter,
         )
     except Exception as exc:  # noqa: BLE001
-        return _rejection(
-            return_receipt=return_receipt,
-            surface_result=surface_result,
-            adapter=adapter,
-            reason=f"adapter validation failed: {exc}",
+        return (
+            _rejection(
+                return_receipt=return_receipt,
+                surface_result=surface_result,
+                adapter=adapter,
+                reason=f"adapter validation failed: {exc}",
+            ),
+            None,
         )
 
     reason = _correlation_error(return_receipt, normalized)
@@ -169,14 +214,15 @@ def accept(
         json.dumps(normalized, sort_keys=True, default=str).encode()
     ).hexdigest()
     result_id = normalized.get("result_id") or result_digest[:16]
-    existing = result_receipts.load_acceptance(str(result_id))
+    assignment_id = return_receipt.get("assignment_id")
+    existing = result_receipts.load_acceptance(str(result_id), assignment_id)
     if existing:
         if existing.get("result_digest") != result_digest:
             raise RuntimeError(f"result_id collision for {result_id}: existing result differs")
-        return existing
-    return result_receipts.write_acceptance(
+        return existing, (normalized if existing.get("status") == "ACCEPTED" else None)
+    receipt = result_receipts.write_acceptance(
         {
-            "assignment_id": return_receipt.get("assignment_id"),
+            "assignment_id": assignment_id,
             "campaign_id": identity.get("campaign_id"),
             "graph_id": identity.get("graph_id"),
             "action_id": identity.get("action_id"),
@@ -188,12 +234,29 @@ def accept(
             "result_adapter": adapter,
             "result_id": result_id,
             "result_digest": result_digest,
+            "document_status": normalized.get("status"),
+            "host_status": return_receipt.get("host_status"),
             "raw_result_path": return_receipt.get("raw_result_path"),
             "raw_result_digest": return_receipt.get("raw_result_digest"),
             "status": status,
             "reason": reason,
         }
     )
+    return receipt, (normalized if status == "ACCEPTED" else None)
+
+
+def accept(
+    *,
+    return_receipt: dict[str, Any] | None,
+    surface_result: dict[str, Any],
+    adapter: str = "cursor_subagent",
+) -> dict[str, Any]:
+    receipt, _normalized = _accept(
+        return_receipt=return_receipt,
+        surface_result=surface_result,
+        adapter=adapter,
+    )
+    return receipt
 
 
 def accept_and_ingest(
@@ -207,19 +270,15 @@ def accept_and_ingest(
     designated_authority_approval: bool = False,
     recurrence_counts: Mapping[str, int] | None = None,
 ) -> dict[str, Any]:
-    normalized = normalize(
+    acceptance, normalized = _accept(
         return_receipt=return_receipt,
         surface_result=surface_result,
         adapter=adapter,
     )
-    acceptance = accept(
-        return_receipt=return_receipt,
-        surface_result=normalized,
-        adapter=adapter,
-    )
-    if acceptance.get("status") != "ACCEPTED":
+    if acceptance.get("status") != "ACCEPTED" or normalized is None:
         return {
             "status": "REJECTED",
+            "reason": acceptance.get("reason"),
             "acceptance_receipt": acceptance,
             "ingress_receipt": None,
         }
@@ -240,10 +299,20 @@ def accept_and_ingest(
         recurrence_counts=recurrence_counts,
     )
     ingress_outcome = str(ingress.get("outcome") or "UNKNOWN")
-    handoff_status = "FAILED" if ingress_outcome == "FAILED" else "ACCEPTED"
+    document_status = str(normalized.get("status") or "unknown")
+    # The document's own completion status is carried through, never
+    # flattened: a partial, blocked, or failed document was accepted as
+    # evidence, which is not the same handoff as a completed one.
+    if ingress_outcome == "FAILED":
+        handoff_status = "FAILED"
+    elif document_status != "completed":
+        handoff_status = "ACCEPTED_INCOMPLETE"
+    else:
+        handoff_status = "ACCEPTED"
     return {
         "status": handoff_status,
         "result_acceptance_status": "ACCEPTED",
+        "document_status": document_status,
         "generated_data_status": ingress_outcome,
         "packet_id": packet["packet_id"],
         "acceptance_receipt": acceptance,

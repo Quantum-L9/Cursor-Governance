@@ -625,10 +625,6 @@ class CompileCampaignSourceTests(unittest.TestCase):
             self.assertEqual(errors, [], msg="\n".join(errors))
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class SourcePreflightTests(unittest.TestCase):
     """Deterministic source defects, caught before anything is created."""
 
@@ -1036,3 +1032,53 @@ class SourcePreflightTests(unittest.TestCase):
         before = copy.deepcopy(source)
         self.compiler.preflight_campaign_source_document(source)
         self.assertEqual(source, before)
+
+
+class DuplicateTaskIdTests(unittest.TestCase):
+    """Two tasks with one id have no compiled representation and are refused at preflight."""
+
+    def setUp(self) -> None:
+        self.compiler = _load(
+            "compile_campaign_source_duplicate_ids",
+            PE_ROOT / "scripts/compile_campaign_source.py",
+        )
+
+    def _source(self) -> dict:
+        return _with_declared_scope(yaml.safe_load(SOURCE.read_text(encoding="utf-8")))
+
+    def test_an_exact_duplicate_task_id_fails_preflight(self) -> None:
+        source = self._source()
+        source["tasks"].append(dict(source["tasks"][0]))
+        with self.assertRaises(self.compiler.CompileError) as ctx:
+            self.compiler.preflight_campaign_source_document(source)
+        self.assertIn("duplicate task id 'TASK-001'", str(ctx.exception))
+
+    def test_a_case_colliding_task_id_fails_preflight(self) -> None:
+        source = self._source()
+        twin = dict(source["tasks"][0])
+        twin["id"] = "task-001"
+        source["tasks"].append(twin)
+        with self.assertRaises(self.compiler.CompileError) as ctx:
+            self.compiler.preflight_campaign_source_document(source)
+        self.assertIn("collides with 'TASK-001'", str(ctx.exception))
+        self.assertIn("case-insensitively", str(ctx.exception))
+
+    def test_the_compile_path_refuses_the_duplicate_too(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            source = self._source()
+            source["tasks"].append(dict(source["tasks"][-1]))
+            path = root / "CAMPAIGN_SOURCE.yaml"
+            path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
+            proof = _pass_proof(root / "stack-proof.json")
+            with self.assertRaises(self.compiler.CompileError) as ctx:
+                self.compiler.compile_source(path, root / "blueprint", stack_proof=proof)
+            self.assertIn("duplicate task id", str(ctx.exception))
+            self.assertFalse((root / "blueprint").exists())
+
+    def test_distinct_ids_still_pass(self) -> None:
+        self.compiler.preflight_campaign_source_document(self._source())
+
+
+if __name__ == "__main__":
+    unittest.main()

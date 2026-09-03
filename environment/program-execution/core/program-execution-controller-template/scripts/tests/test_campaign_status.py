@@ -47,7 +47,7 @@ class CampaignStatusTest(unittest.TestCase):
             self.assertEqual(restored["runtime_status"], "active")
             self.assertEqual(restored["actor"], "worker-a")
 
-    def test_export_handoff_completes_runtime_status(self) -> None:
+    def test_export_handoff_recommends_and_close_completes_runtime_status(self) -> None:
         with TemporaryDirectory() as raw:
             temp = Path(raw)
             _, repo, workspace = bootstrap_repo(temp)
@@ -88,9 +88,23 @@ class CampaignStatusTest(unittest.TestCase):
                 str(temp / "handoff.json"),
             )
             self.assertEqual(receipt["recommended_program_verdict"], "CONVERGED")
+            # HANDOFF_PROTOCOL: the export recommends; it never terminalizes.
+            # The runtime stays active until the program owner closes it.
             status = json.loads((workspace / "runtime" / "campaign-status.json").read_text())
-            self.assertEqual(status["runtime_status"], "completed")
-            self.assertEqual(status["verdict"], "CONVERGED")
+            self.assertEqual(status["runtime_status"], "active")
+            self.assertIsNone(status.get("verdict"))
+            self.assertNotIn("completion_blockers", receipt)
+            closed = run_cli(
+                "close",
+                "--workspace",
+                str(workspace),
+                "--actor",
+                "operator",
+                "--verdict",
+                "CONVERGED",
+            )
+            self.assertEqual(closed["runtime_status"], "completed")
+            self.assertEqual(closed["verdict"], "CONVERGED")
             self.assertEqual(
                 run_cli("status", "--workspace", str(workspace))["campaign_status"][
                     "runtime_status"

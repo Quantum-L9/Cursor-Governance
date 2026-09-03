@@ -341,6 +341,78 @@ def test_the_effect_decision_is_recorded_under_this_lease(harness: Harness) -> N
 
 
 # ---------------------------------------------------------------------------
+# The environment is a lookup key for persisted authority, never authority
+# ---------------------------------------------------------------------------
+
+
+def test_a_forged_authority_digest_blocks(harness: Harness) -> None:
+    """The environment names a receipt; a digest the receipt does not carry denies."""
+    environment = harness.worker_environment()
+    environment["L9_AUTONOMY_AUTHORITY_DIGEST"] = "sha256:" + "f" * 64
+    code, replayed = harness.tool_call(
+        harness.write_event(str(harness.worktree / WRITABLE)), environment=environment
+    )
+    assert code == 2
+    assert not replayed
+
+
+def test_a_window_without_a_persisted_grant_receipt_blocks(harness: Harness) -> None:
+    receipt = harness.grants.grant_receipt_path(harness.workspace, TASK_ID, 1, kind="grant")
+    assert receipt.is_file()
+    receipt.rename(receipt.with_suffix(".moved"))
+    code, replayed = harness.tool_call(harness.write_event(str(harness.worktree / WRITABLE)))
+    assert code == 2
+    assert not replayed
+
+
+def test_a_tampered_grant_receipt_blocks(harness: Harness) -> None:
+    """Editing the receipt to widen its scope breaks the digest it carries."""
+    receipt = harness.grants.grant_receipt_path(harness.workspace, TASK_ID, 1, kind="grant")
+    payload = json.loads(receipt.read_text(encoding="utf-8"))
+    payload["autonomy_authority"]["capabilities"].append("pr.merge")
+    receipt.write_text(json.dumps(payload), encoding="utf-8")
+    code, replayed = harness.tool_call(harness.write_event(str(harness.worktree / WRITABLE)))
+    assert code == 2
+    assert not replayed
+
+
+# ---------------------------------------------------------------------------
+# A worker never names its own capability
+# ---------------------------------------------------------------------------
+
+
+def test_a_worker_cannot_name_its_own_capability(harness: Harness) -> None:
+    """`capability` in tool input is a claim, and the authorizer ignores claims."""
+    grants = harness.grants
+    outside = harness.workspace / "outside.md"
+    for target in (str(outside), str(harness.worktree / "README.md")):
+        event = {
+            "tool_name": "Write",
+            "tool_input": {
+                "file_path": target,
+                "content": "x",
+                "capability": "artifact.write_execution_result",
+            },
+        }
+        code, replayed = harness.tool_call(event)
+        assert code == 2, target
+        assert not replayed, target
+    assert (
+        grants.authorized_resources(harness.grant, phase=grants.AUTHORIZATION_PHASE_EFFECT) == set()
+    )
+
+
+def test_an_unmapped_tool_is_refused_not_read_defaulted(harness: Harness) -> None:
+    event = {
+        "tool_name": "mcp__fs__create_directory",
+        "tool_input": {"path": str(harness.worktree / WRITABLE)},
+    }
+    code, replayed = harness.tool_call(event)
+    assert code == 2
+    assert not replayed
+
+
+# ---------------------------------------------------------------------------
 # Session authority and identity
 # ---------------------------------------------------------------------------
 
@@ -355,6 +427,8 @@ def test_the_effect_decision_is_recorded_under_this_lease(harness: Harness) -> N
         "L9_AUTONOMY_ROOT",
         "L9_PROGRAM_WORKSPACE",
         "L9_PROGRAM_TASK_ID",
+        "L9_PROGRAM_ATTEMPT_NUMBER",
+        "L9_AUTONOMY_AUTHORITY_DIGEST",
     ],
 )
 def test_incomplete_session_authority_blocks(harness: Harness, dropped: str) -> None:

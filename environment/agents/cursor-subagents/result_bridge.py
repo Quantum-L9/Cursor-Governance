@@ -4,7 +4,9 @@ import copy
 import hashlib
 import json
 import re
+import sys
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
 
 RESULT_SCHEMA = "l9.cursor-subagent.result.v1"
@@ -23,7 +25,41 @@ ROLE_TO_GENERATED_DATA_ROLE = {
     "documentation": "evidence_writer",
     "verifier_reviewer": "reviewer",
 }
+# Single owner of the autonomy-role -> Cursor-subagent-role vocabulary. Root
+# Autonomy persists the autonomy role (executor, remediator, ...); the result
+# document carries the Cursor role (test, pr_remediation, ...). Every consumer
+# that must compare the two (lifecycle receipts, the result gateway, the Cursor
+# adapter) resolves through this table rather than a private alias list.
+AUTONOMY_ROLE_TO_CURSOR_ROLE = {
+    "recon": "recon",
+    "remediator": "pr_remediation",
+    "pr_remediation": "pr_remediation",
+    "executor": "test",
+    "test": "test",
+    "evidence_writer": "documentation",
+    "documentation": "documentation",
+    "reviewer": "verifier_reviewer",
+    "verifier": "verifier_reviewer",
+    "verifier_reviewer": "verifier_reviewer",
+}
 READ_ONLY_ROLES = {"recon", "verifier_reviewer"}
+MUTATING_ROLES = set(ROLE_TO_RESULT_KIND) - READ_ONLY_ROLES
+# Document statuses whose findings must not be proposed for promotion: the
+# producing subagent did not finish, so its findings are evidence only.
+NON_PROMOTABLE_STATUSES = {"partial", "blocked", "failed"}
+NON_PROMOTABLE_ROUTES = ("evidence", "unknowns")
+
+
+def canonical_cursor_role(value: Any) -> str:
+    """Resolve any role spelling (autonomy, ``l9-`` prefixed, Cursor) to the
+    Cursor result role. Unknown spellings are returned normalized but unmapped
+    so callers can reject them explicitly."""
+    raw = str(value or "").strip().lower().replace("-", "_")
+    if raw.startswith("l9_"):
+        raw = raw[3:]
+    return AUTONOMY_ROLE_TO_CURSOR_ROLE.get(raw, raw)
+
+
 VALID_STATUSES = {"completed", "partial", "blocked", "failed"}
 VALID_PRIMARY_CLASSES = {
     "repository_fact",
@@ -533,6 +569,17 @@ def _typed_artifact_evidence(
     }
 
 
+def _proposed_routes(finding: Mapping[str, Any], *, promotable: bool) -> list[str]:
+    routes = list(finding.get("proposed_routes", []))
+    if promotable:
+        return routes
+    # A partial, blocked, or failed document did not finish its work; its
+    # findings may be kept as evidence or open unknowns but never proposed for
+    # promotion into memory, contracts, patterns, or architecture.
+    narrowed = [route for route in routes if route in NON_PROMOTABLE_ROUTES]
+    return narrowed or [NON_PROMOTABLE_ROUTES[0]]
+
+
 def to_generated_data_packet(
     document: Mapping[str, Any],
     *,
@@ -561,6 +608,7 @@ def to_generated_data_packet(
         base_sha=identity["base_sha"],
         artifact_digest=artifact_digest,
     )
+    promotable = normalized["status"] not in NON_PROMOTABLE_STATUSES
     generated_units: list[dict[str, Any]] = []
     for finding in deliverable["findings"]:
         scope = {
@@ -587,7 +635,7 @@ def to_generated_data_packet(
                     "base_sha": identity["base_sha"],
                     "expires_at": None,
                 },
-                "proposed_routes": list(finding.get("proposed_routes", [])),
+                "proposed_routes": _proposed_routes(finding, promotable=promotable),
                 "expected_reuse": dict(
                     finding.get(
                         "expected_reuse",
@@ -681,29 +729,28 @@ ASSIGNMENT_IDENTITY_FIELDS = (
 )
 
 
-def _glob_to_regex(pattern: str) -> re.Pattern[str]:
-    """Translate a path glob into a regex. ``**`` spans directories; ``*`` and
-    ``?`` do not cross ``/``."""
-    out: list[str] = []
-    i, n = 0, len(pattern)
-    while i < n:
-        char = pattern[i]
-        if char == "*":
-            if i + 1 < n and pattern[i + 1] == "*":
-                out.append(".*")
-                i += 2
-                continue
-            out.append("[^/]*")
-        elif char == "?":
-            out.append("[^/]")
-        else:
-            out.append(re.escape(char))
-        i += 1
-    return re.compile("^" + "".join(out) + "$")
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def _capability_gateway():
+    """The root capability gateway owns the writable-path grammar. The result
+    bridge reuses its matcher so a document is judged by exactly the rule the
+    gateway enforced at runtime; a second grammar here would let the two
+    disagree about the same path."""
+    if str(_REPO_ROOT) not in sys.path:
+        sys.path.insert(0, str(_REPO_ROOT))
+    from autonomy.runtime import capability_gateway  # noqa: PLC0415
+
+    return capability_gateway
+
+
+def normalize_changed_path(path: str) -> str:
+    return _capability_gateway().normalize_path(path)
 
 
 def _path_matches_any(path: str, patterns: list[str]) -> bool:
-    return any(_glob_to_regex(pattern).fullmatch(path) for pattern in patterns)
+    gateway = _capability_gateway()
+    return any(gateway.path_matches(str(pattern), path) for pattern in patterns)
 
 
 def validate_result_against_assignment(
@@ -739,15 +786,35 @@ def validate_result_against_assignment(
         )
 
     allowed = _require_list(spec.get("allowed_paths", []), "assignment.allowed_paths")
+    action_allowed = _require_list(
+        spec.get("action_allowed_paths", []), "assignment.action_allowed_paths"
+    )
     forbidden = _require_list(spec.get("forbidden_paths", []), "assignment.forbidden_paths")
-    for index, changed in enumerate(deliverable["files_changed"]):
-        if forbidden and _path_matches_any(changed, forbidden):
+    files_changed = deliverable["files_changed"]
+    if files_changed and expected_role in MUTATING_ROLES and not allowed:
+        # An empty writable set is no grant, not an unconstrained one. Only the
+        # rendered assignment may widen scope; a document never does.
+        raise AssignmentCorrelationError(
+            "files_changed reported but the assignment grants no writable paths"
+        )
+    for index, changed in enumerate(files_changed):
+        try:
+            normalized_path = normalize_changed_path(changed)
+        except ValueError as exc:
+            raise AssignmentCorrelationError(
+                f"files_changed[{index}] {changed!r} is not a repository-relative path: {exc}"
+            ) from exc
+        if forbidden and _path_matches_any(normalized_path, forbidden):
             raise AssignmentCorrelationError(
                 f"files_changed[{index}] {changed!r} touches a forbidden path"
             )
-        if allowed and not _path_matches_any(changed, allowed):
+        if allowed and not _path_matches_any(normalized_path, allowed):
             raise AssignmentCorrelationError(
                 f"files_changed[{index}] {changed!r} is outside the allowed paths"
+            )
+        if action_allowed and not _path_matches_any(normalized_path, action_allowed):
+            raise AssignmentCorrelationError(
+                f"files_changed[{index}] {changed!r} is outside the action's allowed paths"
             )
 
     if expected_role == "verifier_reviewer":

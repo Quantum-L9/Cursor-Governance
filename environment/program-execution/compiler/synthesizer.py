@@ -246,7 +246,7 @@ def _artifacts(
         tasks.append(_implementation_task(task_id, req, ceiling, profile, test_command))
     if test_command:
         tasks.append(_validation_task(validation_task_id, test_command, ceiling, req_task_ids))
-    tasks.append(_verification_task(verification_task_id, ceiling, w1_task_ids))
+    tasks.append(_verification_task(verification_task_id, w1_task_ids))
 
     decisions = _decisions(profile, requires_human, owner, all_task_ids)
 
@@ -465,9 +465,7 @@ def _validation_task(
     }
 
 
-def _verification_task(
-    task_id: str, ceiling: dict[str, bool], predecessors: list[str]
-) -> dict[str, Any]:
+def _verification_task(task_id: str, predecessors: list[str]) -> dict[str, Any]:
     return {
         "id": task_id,
         "title": "Independent verification and handoff preparation",
@@ -524,9 +522,12 @@ def _verification_task(
             "reversibility": "fully_reversible",
             "blast_radius": "program_definition",
         },
-        "authorization_ceiling": {
-            action: bool(ceiling.get(action, False)) for action in AUTH_ACTIONS
-        },
+        # Verification reads receipts; it writes nothing. Handing it the
+        # profile's write/commit ceiling made it a "mutating repo_local task
+        # with no terminal verification mechanism" at acceptance, so the
+        # synthesizer's own program could never be accepted -- and, worse, a
+        # verifier that could commit would be verifying its own writes.
+        "authorization_ceiling": {action: False for action in AUTH_ACTIONS} | {"inspect": True},
         "completion_gate_ids": ["GATE-003"],
     }
 

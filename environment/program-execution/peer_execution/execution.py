@@ -80,7 +80,9 @@ def _observe_worktree_changes(contract: Mapping[str, Any]) -> list[str]:
         return []
     root = Path(worktree).expanduser()
     if not root.is_dir():
-        return []
+        # The contract names a worktree; a missing one is a failed observation,
+        # not an observation of no changes. Callers record the residual.
+        raise WorktreeObservationError(f"worktree is not a directory: {root}")
     try:
         completed = subprocess.run(
             ["git", "-C", str(root), "status", "--porcelain=v1", "-z", "--untracked-files=all"],
