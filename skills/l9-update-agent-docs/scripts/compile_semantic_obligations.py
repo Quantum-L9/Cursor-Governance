@@ -23,7 +23,10 @@ def load_json(path: Path) -> dict[str, Any]:
 def schema_errors(data: dict[str, Any], schema_path: Path) -> list[str]:
     schema = load_json(schema_path)
     validator = Draft202012Validator(schema)
-    return [f"{'.'.join(map(str, e.path)) or '$'}: {e.message}" for e in validator.iter_errors(data)]
+    return [
+        f"{'.'.join(map(str, error.path)) or '$'}: {error.message}"
+        for error in validator.iter_errors(data)
+    ]
 
 
 def validate_harvest(harvest: dict[str, Any], schema_path: Path) -> list[str]:
@@ -55,9 +58,25 @@ def compile_obligations(
     required = sorted(set(required_surfaces))
     errors = validate_harvest(harvest, harvest_schema)
     if errors:
-        return {"schema": SCHEMA_ID, "status": "FAIL", "required_surfaces": required, "obligations": [], "resolved_surfaces": [], "unresolved_surfaces": required, "blockers": errors}
+        return {
+            "schema": SCHEMA_ID,
+            "status": "FAIL",
+            "required_surfaces": required,
+            "obligations": [],
+            "resolved_surfaces": [],
+            "unresolved_surfaces": required,
+            "blockers": errors,
+        }
     if harvest.get("status") in {"BLOCKED", "FAIL"}:
-        return {"schema": SCHEMA_ID, "status": "BLOCKED", "required_surfaces": required, "obligations": [], "resolved_surfaces": [], "unresolved_surfaces": required, "blockers": [f"harvest status is {harvest.get('status')}"]}
+        return {
+            "schema": SCHEMA_ID,
+            "status": "BLOCKED",
+            "required_surfaces": required,
+            "obligations": [],
+            "resolved_surfaces": [],
+            "unresolved_surfaces": required,
+            "blockers": [f"harvest status is {harvest.get('status')}"],
+        }
 
     evidence = {e.get("id"): e for e in harvest.get("evidence", []) if isinstance(e, dict)}
     reverse = {destinations[s]: s for s in required if s in destinations}
@@ -80,7 +99,14 @@ def compile_obligations(
                 continue
             if locator.get("kind") == "unknown" or not str(locator.get("value") or "").strip():
                 continue
-            confirmed.append({"id": evidence_id, "source": item.get("source"), "locator": locator, "claim": item.get("claim")})
+            confirmed.append(
+                {
+                    "id": evidence_id,
+                    "source": item.get("source"),
+                    "locator": locator,
+                    "claim": item.get("claim"),
+                }
+            )
         if not confirmed:
             continue
         if action not in {"PRESERVE", "HANDOFF"} and not concept.get("semantic_contract"):
@@ -101,7 +127,17 @@ def compile_obligations(
         })
         resolved.add(surface)
     unresolved = sorted(set(required) - resolved)
-    result = {"schema": SCHEMA_ID, "status": "PASS" if not unresolved else "PARTIAL", "required_surfaces": required, "obligations": sorted(obligations, key=lambda x: (x["surface"], x["concept_id"])), "resolved_surfaces": sorted(resolved), "unresolved_surfaces": unresolved, "blockers": []}
+    result = {
+        "schema": SCHEMA_ID,
+        "status": "PASS" if not unresolved else "PARTIAL",
+        "required_surfaces": required,
+        "obligations": sorted(
+            obligations, key=lambda item: (item["surface"], item["concept_id"])
+        ),
+        "resolved_surfaces": sorted(resolved),
+        "unresolved_surfaces": unresolved,
+        "blockers": [],
+    }
     output_errors = schema_errors(result, OBLIGATION_SCHEMA)
     if output_errors:
         result["status"] = "FAIL"
@@ -117,7 +153,12 @@ def main() -> int:
     parser.add_argument("--destination", action="append", default=[])
     args = parser.parse_args()
     destinations = dict(item.split("=", 1) for item in args.destination)
-    result = compile_obligations(load_json(Path(args.harvest)), args.surface, destinations, Path(args.harvest_schema))
+    result = compile_obligations(
+        load_json(Path(args.harvest)),
+        args.surface,
+        destinations,
+        Path(args.harvest_schema),
+    )
     print(json.dumps(result, indent=2, sort_keys=True))
     return {"PASS": 0, "PARTIAL": 3, "BLOCKED": 2, "FAIL": 1}[result["status"]]
 

@@ -27,7 +27,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install pyyaml
+          pip install --only-binary=:all: pyyaml==6.0.3 jsonschema==4.26.0
 
       - name: ORG_INVARIANTS.yaml parses
         run: |
@@ -74,7 +74,7 @@ jobs:
             git fetch --no-tags origin "${BASE_REF}"
             git diff --name-only "origin/${BASE_REF}...HEAD" > /tmp/pr-changed-files.txt
             if [ ! -s /tmp/pr-changed-files.txt ]; then
-              echo "ok: empty PR file list — skip generated regen"
+              echo "ok: empty PR file list - skip generated regen"
             elif grep -E -q '^environment/program-execution/' /tmp/pr-changed-files.txt; then
               python3 "$gen" --changed-file /tmp/pr-changed-files.txt --pe-manifest --check --json
             else
@@ -141,3 +141,82 @@ jobs:
             exit 1
           fi
           echo "ok: no credential patterns"
+
+      - name: Repository documentation obligations (advisory pilot)
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          tool=skills/l9-update-agent-docs/scripts/validate_pointer_headings.py
+          receipt=.artifacts/repo-docs-receipt.json
+          mkdir -p .artifacts
+          [ -f "$tool" ] || {
+            echo "::error::mandatory repo-docs controller $tool missing"
+            exit 1
+          }
+
+          rc=0
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            git fetch --no-tags origin "${BASE_REF}"
+            python3 "$tool" \
+              --changed-since "origin/${BASE_REF}" \
+              --receipt "$receipt" \
+              --json || rc=$?
+          else
+            python3 "$tool" --receipt "$receipt" --json || rc=$?
+          fi
+
+          python3 - "$receipt" "$rc" <<'PY'
+          import json
+          import os
+          import sys
+
+          path = sys.argv[1]
+          rc = int(sys.argv[2])
+          with open(path, encoding="utf-8") as handle:
+              receipt = json.load(handle)
+
+          status = receipt.get("final_status", "UNKNOWN")
+          freshness = receipt.get("freshness", {})
+          semantic = receipt.get("semantic_harvest", {})
+          stale = freshness.get("stale_surfaces", [])
+          missing = freshness.get("missing_surfaces", [])
+          unresolved = semantic.get("unresolved_surfaces", [])
+          request = semantic.get("request")
+
+          lines = [
+              "## Repository documentation obligations",
+              "",
+              f"- status: `{status}`",
+              f"- stale surfaces: `{', '.join(stale) or 'none'}`",
+              f"- missing surfaces: `{', '.join(missing) or 'none'}`",
+              f"- unresolved semantic surfaces: `{', '.join(unresolved) or 'none'}`",
+          ]
+          if request:
+              lines.append(
+                  f"- harvest target: `{request.get('harvest_target', 'UNKNOWN')}`"
+              )
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write("\n".join(lines) + "\n")
+
+          if rc == 3:
+              print(
+                  "::warning::repo-docs found actionable documentation obligations; "
+                  "pilot remains advisory"
+              )
+              raise SystemExit(0)
+          if rc != 0:
+              print(f"::error::repo-docs controller failed with status {status}")
+              raise SystemExit(rc)
+          print(f"ok: repo-docs controller status {status}")
+          PY
+
+      - name: Upload repository documentation receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: repo-docs-receipt-${{ github.run_id }}
+          path: .artifacts/repo-docs-receipt.json
+          if-no-files-found: ignore
+          retention-days: 14
