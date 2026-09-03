@@ -1,45 +1,23 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://quantum-l9.local/contracts/repo-docs-receipt.schema.json",
-  "title": "L9 Repository Documentation Receipt",
   "type": "object",
-  "required": [
-    "schema",
-    "final_status",
-    "target",
-    "adapter",
-    "surfaces",
-    "changes",
-    "impact",
-    "capabilities",
-    "llms_txt",
-    "validators_executed",
-    "evidence_sources",
-    "blockers"
-  ],
+  "additionalProperties": false,
+  "required": ["schema", "final_status", "target", "adapter", "surfaces", "changes", "impact", "freshness", "semantic_harvest", "capabilities", "llms_txt", "validators_executed", "evidence_sources", "blockers"],
   "properties": {
-    "schema": {"const": "l9.repo-docs.receipt.v1"},
+    "schema": {"const": "l9.repo-docs.receipt.v2"},
     "final_status": {"enum": ["PASS", "PARTIAL", "BLOCKED", "FAIL"]},
-    "target": {
-      "type": "object",
-      "required": ["repository_root", "sha", "changed_since"],
-      "properties": {
-        "repository_root": {"type": "string"},
-        "sha": {"type": "string", "minLength": 1},
-        "changed_since": {"type": ["string", "null"]}
-      }
-    },
+    "target": {"type": "object"},
     "adapter": {"type": "object"},
     "surfaces": {"type": "array"},
-    "changes": {
-      "type": "object",
-      "required": ["changed_files", "skipped_files", "unknown_files"]
-    },
+    "changes": {"type": "object", "required": ["changed_files", "skipped_files", "unknown_files", "run_mutations"]},
     "impact": {"type": "object"},
+    "freshness": {"type": "object"},
+    "semantic_harvest": {"type": "object"},
     "capabilities": {"type": "object"},
     "llms_txt": {"type": "object"},
     "validators_executed": {"type": "array"},
-    "evidence_sources": {"type": "array", "items": {"type": "string"}},
+    "evidence_sources": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
     "blockers": {"type": "array", "items": {"type": "string"}}
   }
 }

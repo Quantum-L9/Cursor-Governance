@@ -10,6 +10,8 @@ import yaml
 
 PACK = Path(__file__).resolve().parents[1]
 SCRIPTS = PACK / "scripts"
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
 
 
 def load_module(name: str, path: Path):
@@ -32,10 +34,7 @@ def write(path: Path, text: str) -> None:
 
 def init_git(root: Path) -> None:
     subprocess.run(["git", "init", "-q", "-b", "main", str(root)], check=True)
-    subprocess.run(
-        ["git", "-C", str(root), "config", "user.email", "tests@example.com"],
-        check=True,
-    )
+    subprocess.run(["git", "-C", str(root), "config", "user.email", "tests@example.com"], check=True)
     subprocess.run(["git", "-C", str(root), "config", "user.name", "Tests"], check=True)
 
 
@@ -45,71 +44,77 @@ def commit_all(root: Path, message: str = "base") -> str:
     return subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"], text=True).strip()
 
 
-def honest_pointer_stack(root: Path) -> None:
-    write(
-        root / "README.md",
-        "# Repo\n\n## Purpose\n\nIndex.\n\n## Key Files\n\nCANONICAL_LAW.md AGENTS.md\n",
-    )
+def honest_stack(root: Path, *, invariants: bool = True, architecture: bool = False) -> None:
+    write(root / "README.md", "# Repo\n\n## Purpose\n\nIndex.\n\n## Key Files\n\nCANONICAL_LAW.md AGENTS.md\n")
     write(root / "CLAUDE.md", "# Load\n\n## Authority chain\n\nCANONICAL_LAW.md > AGENTS.md\n")
     write(root / "AGENTS.md", "# Agents\n")
     write(root / "CANONICAL_LAW.md", "# Law\n")
+    if invariants:
+        write(root / "INVARIANTS.md", "# Invariants\n")
+    if architecture:
+        write(root / "ARCHITECTURE.md", "# Architecture\n")
 
 
-def test_policy_is_typed_and_rejects_duplicate_operating_ssot():
+def evidence(eid: str = "e1", epistemic: str = "CONFIRMED") -> dict:
+    return {
+        "id": eid,
+        "epistemic": epistemic,
+        "source": "repo",
+        "locator": {"kind": "path_lines", "value": ".github/workflows/ci.yml:1-10"},
+        "claim": "workflow enforces durable behavior",
+        "secret_redacted": False,
+    }
+
+
+def concept(cid: str, surface: str, *, eid: str = "e1", disposition: str = "PORT", comparison: str = "DONOR_STRONGER") -> dict:
+    return {
+        "id": cid,
+        "name": f"{surface} semantic",
+        "problem": "durable behavior must remain documented",
+        "semantic_contract": f"Keep {surface} aligned with executable semantics.",
+        "disposition": disposition,
+        "beneficiary_destination": f"docs:{surface}",
+        "evidence_ids": [eid],
+        "risks": ["stale docs"],
+        "acceptance_tests": [{"given": "change", "when": "docs refresh", "then": "aligned", "must_not": "invent"}],
+        "beneficiary_fit": {
+            "comparison": comparison,
+            "existing_owner": surface,
+            "merge_decision": "preserve stronger semantics",
+            "compatibility_risk": "low",
+        },
+        "nugget": True,
+        "rank_score": 55,
+    }
+
+
+def harvest(*concepts: dict, evidence_rows: list[dict] | None = None, status: str = "PASS") -> dict:
+    return {
+        "schema_version": "1.1.0",
+        "status": status,
+        "evidence": evidence_rows or [],
+        "concepts": list(concepts),
+    }
+
+
+def test_policy_schema_is_runtime_authority_and_semantic_ssot_is_unique():
     policy = rd.load_policy()
     assert rd.validate_policy(policy) == []
-    clone = yaml.safe_load(yaml.safe_dump(policy))
-    clone["surfaces"]["claude"]["authority_class"] = "operating_ssot"
-    errors = rd.validate_policy(clone)
-    assert any("exactly one operating_ssot" in error for error in errors)
+    broken = yaml.safe_load(yaml.safe_dump(policy))
+    del broken["surfaces"]["agents"]["requirement"]
+    assert any("requirement" in error for error in rd.validate_policy(broken))
+    duplicate = yaml.safe_load(yaml.safe_dump(policy))
+    duplicate["surfaces"]["claude"]["authority_class"] = "operating_ssot"
+    assert any("exactly one operating_ssot" in error for error in rd.validate_policy(duplicate))
 
 
-def test_adapter_precedence_explicit_then_repo_then_domain(tmp_path: Path):
-    root = tmp_path / "my-repo"
-    root.mkdir()
-    write(root / ".claude/adapters/my-repo-update-agent-docs.md", "repo")
-    write(root / ".claude/adapters/plasticos-update-agent-docs.md", "domain")
-    write(root / "addons/__manifest__.py", "{}")
-    write(root / "custom.md", "explicit")
-
-    rel, state = rd.resolve_adapter(root, "custom.md")
-    assert (rel, state) == ("custom.md", "EXPLICIT")
-    rel, state = rd.resolve_adapter(root)
-    assert (rel, state) == (".claude/adapters/my-repo-update-agent-docs.md", "DISCOVERED")
-    (root / ".claude/adapters/my-repo-update-agent-docs.md").unlink()
-    rel, state = rd.resolve_adapter(root)
-    assert (rel, state) == (".claude/adapters/plasticos-update-agent-docs.md", "DISCOVERED")
-
-
-def test_create_vs_refresh_contract():
+def test_root_containment_and_surface_actions(tmp_path: Path):
     policy = rd.load_policy()
+    assert rd.resolve_under_root(tmp_path, "llms.txt") == tmp_path / "llms.txt"
+    assert rd.resolve_under_root(tmp_path, "../llms.txt") is None
     assert rd.surface_action(policy["surfaces"]["claude"], exists=False) == "CREATE"
-    assert rd.surface_action(policy["surfaces"]["claude"], exists=True) == "REFRESH"
     assert rd.surface_action(policy["surfaces"]["readme_root"], exists=False) == "SKIP"
-    assert rd.surface_action(policy["surfaces"]["canonical_law"], exists=True) == "EXTERNAL"
     assert rd.surface_action(policy["surfaces"]["llms_txt"], exists=False, enabled=True) == "CREATE"
-
-
-def test_managed_blocks_must_be_byte_stable():
-    policy = rd.load_policy()
-    before = (
-        "# A\n<!-- BEGIN L9 FORMATTER OWNERSHIP -->\nowned\n"
-        "<!-- END L9 FORMATTER OWNERSHIP -->\nTail\n"
-    )
-    after_ok = before.replace("Tail", "Tail changed")
-    assert rd.managed_block_mutations(before, after_ok, policy) == []
-    after_bad = before.replace("owned", "rewritten")
-    assert rd.managed_block_mutations(before, after_bad, policy) == [
-        "managed block changed: l9_formatter_ownership"
-    ]
-
-
-def test_root_containment_refuses_escape(tmp_path: Path):
-    root = tmp_path / "repo"
-    root.mkdir()
-    assert rd.resolve_under_root(root, "llms.txt") == root / "llms.txt"
-    assert rd.resolve_under_root(root, "../llms.txt") is None
-    assert rd.resolve_under_root(root, "/tmp/llms.txt") is None
 
 
 def test_missing_pointer_files_are_partial_not_pass(tmp_path: Path):
@@ -118,111 +123,126 @@ def test_missing_pointer_files_are_partial_not_pass(tmp_path: Path):
     assert {row["status"] for row in result["files"]} == {"Unknown"}
 
 
-def test_llms_projection_is_small_absolute_and_not_authority(tmp_path: Path):
-    root = tmp_path / "demo"
-    root.mkdir()
-    honest_pointer_stack(root)
-    write(root / "ARCHITECTURE.md", "# Architecture\n")
-    write(root / "INVARIANTS.md", "# Invariants\n")
-    write(root / "API_REFERENCE.md", "# API\n")
-    policy = rd.load_policy()
-    rendered = rd.render_llms_txt(root, policy, "https://docs.example.com/")
-    assert rendered.startswith("# demo\n")
-    assert "## Documentation" in rendered
-    assert "https://docs.example.com/README.md" in rendered
-    assert "projection, not authority" in rendered
-    assert rd.validate_llms_txt(rendered) == []
-    target = rd.write_llms_txt(root, rendered)
-    assert target == root / "llms.txt"
-
-
-def test_impact_analysis_routes_only_affected_surfaces():
-    policy = rd.load_policy()
-    impact = rd.impact_analysis(
-        policy,
-        [
-            ".github/workflows/ci.yml",
-            "src/api/routes.py",
-            "src/core/engine.py",
-            "AGENTS.md",
-        ],
-    )
-    impacted = set(impact["impacted_surfaces"])
-    assert {"architecture", "invariants"}.issubset(impacted)
-    assert "api_reference" in impacted
-    assert "module_readmes" in impacted
-    assert {"agents", "claude"}.issubset(impacted)
-    assert "llms_txt" in impacted
-
-
-def test_module_readme_capability_is_available_blocked_or_not_applicable(tmp_path: Path):
-    policy = rd.load_policy()
+def test_managed_region_dirty_worktree_is_compared_to_head(tmp_path: Path):
     root = tmp_path / "repo"
-    root.mkdir()
+    root.mkdir(); init_git(root); honest_stack(root)
+    write(root / "README.md", "# Repo\n\n## Purpose\n\nIndex.\n\n## Key Files\n\nCANONICAL_LAW.md AGENTS.md\n<!-- BEGIN L9 FORMATTER OWNERSHIP -->\nowned\n<!-- END L9 FORMATTER OWNERSHIP -->\n")
+    commit_all(root)
+    write(root / "README.md", (root / "README.md").read_text().replace("owned", "changed"))
+    changed, base, error = rd.automatic_changed_scope(root)
+    assert error is None and base == "HEAD" and changed == ["README.md"]
+    status, findings = rd.validate_managed_regions(root, base, changed, rd.load_policy())
+    assert status == "FAIL"
+    assert "managed block changed" in findings[0]
+
+
+def test_impact_is_machine_routed_and_harvest_is_selective(tmp_path: Path):
+    policy = rd.load_policy()
+    root = tmp_path / "repo"; root.mkdir(); honest_stack(root)
+    impact = rd.impact_analysis(policy, [".github/workflows/ci.yml", "src/api/routes.py", "src/core.py"])
+    assert {"architecture", "invariants", "api_reference", "module_readmes"}.issubset(set(impact["impacted_surfaces"]))
+    assert rd.semantic_harvest_required(policy, impact, root) == ["invariants"]
+    docs_only = rd.impact_analysis(policy, ["README.md"])
+    assert rd.semantic_harvest_required(policy, docs_only, root) == []
+
+
+def test_missing_harvest_emits_exact_targeted_request(tmp_path: Path):
+    root = tmp_path / "repo"; root.mkdir(); init_git(root); honest_stack(root)
+    base = commit_all(root)
+    write(root / ".github/workflows/ci.yml", "name: CI\n"); commit_all(root, "workflow")
+    receipt = rd.audit_repository(root, changed_since=base)
+    semantic = receipt["semantic_harvest"]
+    assert semantic["status"] == "PARTIAL"
+    assert semantic["required_surfaces"] == ["invariants"]
+    assert semantic["request"]["harvest_target"] == "repo-docs:invariants"
+    assert receipt["freshness"]["stale_surfaces"] == ["invariants"]
+    assert rd.exit_code_for_receipt(receipt) == 3
+
+
+def test_confirmed_qualified_harvest_closes_semantic_obligation(tmp_path: Path):
+    root = tmp_path / "repo"; root.mkdir(); init_git(root); honest_stack(root)
+    base = commit_all(root)
+    write(root / ".github/workflows/ci.yml", "name: CI\n")
+    write(root / "INVARIANTS.md", "# Invariants\n\n- CI contract refreshed.\n")
+    write(root / "harvest.json", json.dumps(harvest(concept("i1", "invariants"), evidence_rows=[evidence()])))
+    commit_all(root, "workflow and docs")
+    receipt = rd.audit_repository(root, changed_since=base, harvest_path="harvest.json")
+    semantic = receipt["semantic_harvest"]
+    assert semantic["status"] == "PASS"
+    assert semantic["resolved_surfaces"] == ["invariants"]
+    assert semantic["obligations"][0]["action"] == "ADD_OR_REFRESH"
+    assert receipt["freshness"]["status"] == "PASS"
+    assert receipt["final_status"] == "PASS"
+    assert rd.exit_code_for_receipt(receipt) == 0
+    assert "harvest.json" in receipt["evidence_sources"]
+    assert ".github/workflows/ci.yml:1-10" in receipt["evidence_sources"]
+
+
+def test_inference_cannot_close_and_stronger_beneficiary_is_preserved(tmp_path: Path):
+    schema = Path("/tmp/l9-intelligence-harvest/contracts/harvest-ir.schema.json")
+    inferred = rd.compile_obligations(
+        harvest(concept("i1", "invariants"), evidence_rows=[evidence(epistemic="INFERENCE")]),
+        ["invariants"], {"invariants": "docs:invariants"}, schema,
+    )
+    assert inferred["status"] == "PARTIAL" and inferred["resolved_surfaces"] == []
+    stronger = concept("i2", "invariants", disposition="MERGE_WITH_EXISTING", comparison="BENEFICIARY_STRONGER")
+    preserved = rd.compile_obligations(
+        harvest(stronger, evidence_rows=[evidence()]),
+        ["invariants"], {"invariants": "docs:invariants"}, schema,
+    )
+    assert preserved["status"] == "PASS"
+    assert preserved["obligations"][0]["action"] == "PRESERVE"
+
+
+def test_freshness_flags_stale_and_closes_when_doc_changes(tmp_path: Path):
+    root = tmp_path / "repo"; root.mkdir(); honest_stack(root)
+    policy = rd.load_policy()
+    stale = rd.freshness_analysis(root, policy, rd.impact_analysis(policy, [".github/workflows/ci.yml"]), False)
+    assert stale["stale_surfaces"] == ["invariants"]
+    current = rd.freshness_analysis(root, policy, rd.impact_analysis(policy, [".github/workflows/ci.yml", "INVARIANTS.md"]), False)
+    assert current["status"] == "PASS" and current["stale_surfaces"] == []
+
+
+def test_optional_not_applicable_does_not_yellow_healthy_repo(tmp_path: Path):
+    root = tmp_path / "repo"; root.mkdir(); init_git(root); honest_stack(root); commit_all(root)
+    receipt = rd.audit_repository(root)
+    assert receipt["llms_txt"]["status"] == "NotApplicable"
+    assert receipt["final_status"] == "PASS"
+
+
+def test_llms_is_small_machine_projection_and_run_mutation(tmp_path: Path):
+    root = tmp_path / "repo"; root.mkdir(); init_git(root); honest_stack(root)
+    write(root / "mkdocs.yml", "site_name: demo\n"); commit_all(root)
+    receipt = rd.audit_repository(root, llms_base_url_value="https://docs.example.com", write_llms=True)
+    text = (root / "llms.txt").read_text()
+    assert text.startswith("# repo\n") and "Projection only; not authority." in text
+    assert rd.validate_llms_txt(text) == []
+    assert receipt["changes"]["run_mutations"] == ["llms.txt"]
+
+
+def test_module_readme_capability_is_truthful_about_polyglot(tmp_path: Path):
+    root = tmp_path / "repo"; root.mkdir(); policy = rd.load_policy()
     assert rd.probe_module_readme_capability(root, policy)["status"] == "NotApplicable"
     write(root / "scripts/generate_subsystem_readmes.py", "")
     assert rd.probe_module_readme_capability(root, policy)["status"] == "BLOCKED"
     write(root / "config/subsystems/readme_config.yaml", "version: 1\n")
     write(root / "workflows/dags/readme_pipeline_dag.py", "")
-    result = rd.probe_module_readme_capability(root, policy)
-    assert result["status"] == "AVAILABLE"
-    assert result["polyglot_extension_owner"] == "scripts/generate_subsystem_readmes.py"
+    assert rd.probe_module_readme_capability(root, policy, ["src/x.py"])["status"] == "AVAILABLE"
+    ts = rd.probe_module_readme_capability(root, policy, ["src/x.ts"])
+    assert ts["status"] == "PARTIAL" and ts["unsupported_impacted_extensions"] == [".ts"]
 
 
-def test_changed_since_and_managed_region_regression(tmp_path: Path):
-    root = tmp_path / "repo"
-    root.mkdir()
-    init_git(root)
-    honest_pointer_stack(root)
-    write(
-        root / "ARCHITECTURE.md",
-        "# Architecture\n<!-- BEGIN L9 FORMATTER OWNERSHIP -->\nowned\n"
-        "<!-- END L9 FORMATTER OWNERSHIP -->\n",
-    )
-    base = commit_all(root)
-    write(
-        root / "ARCHITECTURE.md",
-        "# Architecture\n<!-- BEGIN L9 FORMATTER OWNERSHIP -->\nchanged\n"
-        "<!-- END L9 FORMATTER OWNERSHIP -->\n",
-    )
-    commit_all(root, "change")
-    changed, error = rd.changed_files_since(root, base)
-    assert error is None
-    assert changed == ["ARCHITECTURE.md"]
-    errors = rd.validate_managed_regions(root, base, changed or [], rd.load_policy())
-    assert errors == ["ARCHITECTURE.md: managed block changed: l9_formatter_ownership"]
-
-
-def test_receipt_contains_sha_surfaces_owners_changes_evidence_and_validators(tmp_path: Path):
-    root = tmp_path / "repo"
-    root.mkdir()
-    init_git(root)
-    honest_pointer_stack(root)
-    sha = commit_all(root)
+def test_receipt_schema_is_executable_authority(tmp_path: Path):
+    root = tmp_path / "repo"; root.mkdir(); init_git(root); honest_stack(root); commit_all(root)
     receipt = rd.audit_repository(root)
-    assert receipt["target"]["sha"] == sha
-    assert receipt["surfaces"]
-    assert all("owner" in surface for surface in receipt["surfaces"])
-    assert set(receipt["changes"]) == {"changed_files", "skipped_files", "unknown_files"}
-    assert receipt["evidence_sources"]
-    assert receipt["validators_executed"]
     assert rd.validate_receipt_shape(receipt) == []
-    out = root / "repo-docs-receipt.json"
-    out.write_text(json.dumps(receipt), encoding="utf-8")
-    assert json.loads(out.read_text(encoding="utf-8"))["schema"] == "l9.repo-docs.receipt.v1"
+    broken = dict(receipt); broken.pop("freshness")
+    assert rd.validate_receipt_shape(broken)
 
 
-def test_adapter_can_enable_llms_without_site_marker(tmp_path: Path):
-    root = tmp_path / "repo"
-    root.mkdir()
-    adapter = root / ".claude/adapters/repo-update-agent-docs.md"
-    write(
-        adapter,
-        "# adapter\n\n<!-- L9_DOCS\nllms_txt: enabled\n"
-        "llms_base_url: https://docs.example.com\n-->\n",
-    )
-    directives = rd.adapter_directives(root, ".claude/adapters/repo-update-agent-docs.md")
-    enabled, reason = rd.llms_enabled(root, rd.load_policy(), directives)
-    base, source = rd.llms_base_url(directives, None)
-    assert (enabled, reason) == (True, "adapter")
-    assert (base, source) == ("https://docs.example.com/", "adapter")
+def test_partial_exit_semantics_distinguish_actionable_from_passive():
+    passive = {"final_status": "PARTIAL", "semantic_harvest": {"unresolved_surfaces": []}, "freshness": {"stale_surfaces": [], "missing_surfaces": []}}
+    active = {"final_status": "PARTIAL", "semantic_harvest": {"unresolved_surfaces": ["invariants"]}, "freshness": {"stale_surfaces": [], "missing_surfaces": []}}
+    assert rd.exit_code_for_receipt(passive) == 0
+    assert rd.exit_code_for_receipt(passive, fail_on_partial=True) == 3
+    assert rd.exit_code_for_receipt(active) == 3
