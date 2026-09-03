@@ -1195,7 +1195,7 @@
     },
     {
       "path": "compiler/tests/test_architecture_extractor.py",
-      "sha256": "24177d1e7328acea3899e9f6fcfb876c176820b2640f284d7ffae9223ffafbdc"
+      "sha256": "a26aa99ab21d7f70b65ebd51382eb8643113275fe2a378abdba295abd23d5cb7"
     },
     {
       "path": "compiler/tests/test_architecture_intent.py",
