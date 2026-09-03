@@ -35,4 +35,3 @@ recorded. A mismatch leaves the task PASSED_LOCAL with its candidate preserved.
 refuses a success verdict the Controller's own recommendation (pending
 decisions, open Unknowns, a halt, a broken ledger) does not support. Every
 Program-state transition first verifies the ledger chain.
-

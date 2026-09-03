@@ -297,8 +297,8 @@ files:
   sha256: 443a9db1d2221713d3a4245fb3cccbf2e24c404871308d62ce52df743b5f6d68
   bytes: 1458
 - path: program-execution-controller-template/references/VERIFICATION_AND_RECEIPTS.md
-  sha256: 48d562066544288c9806d3723a3b6f1afbcfddde10970e6ec4f7854ef9693d68
-  bytes: 2023
+  sha256: 9226d687c0ae9338650183d250947acc33629550228718ea9856f42d47169e57
+  bytes: 2022
 - path: program-execution-controller-template/references/WORKER_ADAPTER.md
   sha256: 587b94c5a8f534abc218bee0b480d27ae95d6cab2c7cc33c0b0eef8539903df8
   bytes: 376
@@ -616,4 +616,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 203
-  total_bytes: 865601
+  total_bytes: 865600
