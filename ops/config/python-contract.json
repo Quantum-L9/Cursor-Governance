@@ -6,6 +6,26 @@
     "selector": "ops/scripts/select_pr_pytest_paths.py",
     "note": "make pr passes --changed-file to the runner. make test, make pr-full, and CI keep the catalog including repo-root '.'."
   },
+  "skill_self_test_roots": [
+    "skills/l9-cli-optimization",
+    "skills/l9-code-maintenance",
+    "skills/l9-dag-authoring",
+    "skills/l9-git-work-preserve",
+    "skills/l9-intelligence-harvest",
+    "skills/l9-issue-remediation",
+    "skills/l9-pipeline-audit",
+    "skills/l9-plan",
+    "skills/l9-plan-audit",
+    "skills/l9-plan-simple",
+    "skills/l9-pr-remediation",
+    "skills/l9-repo-sync",
+    "skills/l9-repository-renovation",
+    "skills/l9-skill-compiler",
+    "skills/l9-structured-reasoning",
+    "skills/l9-update-agent-docs",
+    "skills/l9-wire-into-repo",
+    "skills/l9-ynp"
+  ],
   "substitutions": {
     "REPO_ROOT": "absolute path of the repository root, resolved by the runner from its own location",
     "PYTHON": "absolute path of the current Python interpreter (sys.executable)"
@@ -64,6 +84,10 @@
     {
       "path": "skills/l9-ynp/scripts/self_test.py",
       "reason": "Not a pytest test: skill pack self-check script. Ignored via conftest collect_ignore to avoid basename collisions across skills/*/scripts/self_test.py."
+    },
+    {
+      "path": "skills/l9-wire-into-repo/scripts/self_test.py",
+      "reason": "Not a pytest test: executable wiring fixture proof owned by the skill-contracts suite and ignored by root pytest to avoid basename collisions."
     }
   ],
   "suites": [
@@ -108,6 +132,46 @@
         }
       },
       "rationale": "Root discovery over the whole repository with root autonomy/ on PYTHONPATH. Explicitly ignores the three separately-owned active suites (each has its own registry entry) so it neither shadows their packages nor double-runs them. Non-test false positives are ignored via pyproject addopts. CI profile keeps root-only coverage XML + terminal coverage, xdist, the 300s per-test timeout, and the existing zero-percent advisory threshold. Local make pr must not pass this suite's '.' collection root; it uses --changed-file and select_pr_pytest_paths.py instead."
+    },
+    {
+      "id": "skill-contracts",
+      "kind": "command_sequence",
+      "working_directory": ".",
+      "owned_paths": [
+        "skills"
+      ],
+      "env": {
+        "PYTHONDONTWRITEBYTECODE": "1"
+      },
+      "append_user_pytest_args": false,
+      "allow_exit_5": false,
+      "profiles": {
+        "local": {
+          "argv": [
+            [
+              "${PYTHON}",
+              "ops/scripts/validate_python_contract.py"
+            ],
+            [
+              "${PYTHON}",
+              "ops/scripts/run_skill_self_tests.py"
+            ]
+          ]
+        },
+        "ci": {
+          "argv": [
+            [
+              "${PYTHON}",
+              "ops/scripts/validate_python_contract.py"
+            ],
+            [
+              "${PYTHON}",
+              "ops/scripts/run_skill_self_tests.py"
+            ]
+          ]
+        }
+      },
+      "rationale": "Skill-local executable evidence is a first-class suite rather than an incidental pytest side effect. The canonical Python contract remains the registry: skill_self_test_roots declares which live skill packs own self-tests, while run_skill_self_tests.py discovers every skills/*/scripts/*self_test.py, fails closed when a new test appears under an unregistered skill root, and executes each discovered script in a fresh Python process from its own skill root. Owning skills/ ensures a changed or newly-added skill self-test selects this suite before it can become invisible."
     },
     {
       "id": "claude-code-autonomy",
