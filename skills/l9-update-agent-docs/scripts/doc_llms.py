@@ -1,4 +1,5 @@
 """Small llms.txt projection mechanics for repository documentation."""
+
 from __future__ import annotations
 
 import re
@@ -27,9 +28,7 @@ def llms_enabled(
     return False, "no_published_docs_surface"
 
 
-def llms_base_url(
-    directives: dict[str, Any], cli: str | None
-) -> tuple[str | None, str]:
+def llms_base_url(directives: dict[str, Any], cli: str | None) -> tuple[str | None, str]:
     value = cli or directives.get("llms_base_url")
     if not value:
         return None, "UNKNOWN"
@@ -37,15 +36,12 @@ def llms_base_url(
     return str(value).rstrip("/") + "/", source
 
 
-def render_llms_txt(
-    root: Path, policy: dict[str, Any], base_url: str
-) -> str:
+def render_llms_txt(root: Path, policy: dict[str, Any], base_url: str) -> str:
     title = repo_slug(root)
     lines = [
         f"# {title}",
         "",
-        f"> LLM-facing documentation index for {title}. "
-        "Projection only; not authority.",
+        f"> LLM-facing documentation index for {title}. Projection only; not authority.",
         "",
         "## Documentation",
         "",
@@ -58,16 +54,12 @@ def render_llms_txt(
             (
                 selector
                 for selector in spec["selectors"]
-                if not any(char in selector for char in "*?[")
-                and (root / selector).is_file()
+                if not any(char in selector for char in "*?[") and (root / selector).is_file()
             ),
             None,
         )
         if rel:
-            lines.append(
-                f"- [{spec['role']}]({urljoin(base_url, rel)}): "
-                f"owner `{spec['owner']}`"
-            )
+            lines.append(f"- [{spec['role']}]({urljoin(base_url, rel)}): owner `{spec['owner']}`")
     return "\n".join(lines).rstrip() + "\n"
 
 

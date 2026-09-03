@@ -1,4 +1,5 @@
 """Typed documentation topology and repository-surface mechanics."""
+
 from __future__ import annotations
 
 import json
@@ -56,19 +57,13 @@ def validate_policy(policy: dict[str, Any]) -> list[str]:
         return errors
     surfaces = policy["surfaces"]
     operating = [
-        key
-        for key, spec in surfaces.items()
-        if spec["authority_class"] == "operating_ssot"
+        key for key, spec in surfaces.items() if spec["authority_class"] == "operating_ssot"
     ]
     canonical = [
-        key
-        for key, spec in surfaces.items()
-        if spec["authority_class"] == "canonical_authority"
+        key for key, spec in surfaces.items() if spec["authority_class"] == "canonical_authority"
     ]
     if len(operating) != 1:
-        errors.append(
-            f"exactly one operating_ssot required; found {operating or 'none'}"
-        )
+        errors.append(f"exactly one operating_ssot required; found {operating or 'none'}")
     if len(canonical) > 1:
         errors.append(f"at most one canonical_authority allowed; found {canonical}")
     known = set(surfaces)
@@ -128,9 +123,7 @@ def normalize_heading(value: str) -> str:
 
 def pointer_validate_root(root: Path) -> dict[str, Any]:
     mapping = yaml.safe_load(POINTER_MAP.read_text(encoding="utf-8"))
-    forbidden = {
-        normalize_heading(item) for item in mapping["forbidden_donor_sections"]
-    }
+    forbidden = {normalize_heading(item) for item in mapping["forbidden_donor_sections"]}
     rows: list[dict[str, str]] = []
     findings: list[str] = []
     unknown: list[str] = []
@@ -141,9 +134,7 @@ def pointer_validate_root(root: Path) -> dict[str, Any]:
             unknown.append(f"{rel}: missing on disk")
             continue
         text = path.read_text(encoding="utf-8")
-        headings = {
-            normalize_heading(match.group(2)) for match in HEADINGS.finditer(text)
-        }
+        headings = {normalize_heading(match.group(2)) for match in HEADINGS.finditer(text)}
         local = []
         for heading in spec.get("required_headings", []):
             normalized = normalize_heading(heading)
@@ -163,18 +154,14 @@ def selector_paths(root: Path, selectors: list[str]) -> list[str]:
     for selector in selectors:
         if any(char in selector for char in "*?["):
             found.update(
-                path.relative_to(root).as_posix()
-                for path in root.glob(selector)
-                if path.is_file()
+                path.relative_to(root).as_posix() for path in root.glob(selector) if path.is_file()
             )
         elif (root / selector).is_file():
             found.add(selector)
     return sorted(found)
 
 
-def surface_action(
-    spec: dict[str, Any], *, exists: bool, enabled: bool = False
-) -> str:
+def surface_action(spec: dict[str, Any], *, exists: bool, enabled: bool = False) -> str:
     if exists:
         if spec["refresh_policy"] in {"never", "external_only"}:
             return "EXTERNAL"

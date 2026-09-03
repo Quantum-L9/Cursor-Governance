@@ -111,29 +111,29 @@ def compile_obligations(
             continue
         if action not in {"PRESERVE", "HANDOFF"} and not concept.get("semantic_contract"):
             continue
-        obligations.append({
-            "surface": surface,
-            "concept_id": concept["id"],
-            "name": concept.get("name", ""),
-            "action": action,
-            "disposition": concept["disposition"],
-            "semantic_contract": concept.get("semantic_contract"),
-            "problem": concept.get("problem", ""),
-            "risks": concept.get("risks", []),
-            "acceptance_tests": concept.get("acceptance_tests", []),
-            "beneficiary_fit": concept.get("beneficiary_fit"),
-            "evidence": confirmed,
-            "rank_score": concept.get("rank_score"),
-        })
+        obligations.append(
+            {
+                "surface": surface,
+                "concept_id": concept["id"],
+                "name": concept.get("name", ""),
+                "action": action,
+                "disposition": concept["disposition"],
+                "semantic_contract": concept.get("semantic_contract"),
+                "problem": concept.get("problem", ""),
+                "risks": concept.get("risks", []),
+                "acceptance_tests": concept.get("acceptance_tests", []),
+                "beneficiary_fit": concept.get("beneficiary_fit"),
+                "evidence": confirmed,
+                "rank_score": concept.get("rank_score"),
+            }
+        )
         resolved.add(surface)
     unresolved = sorted(set(required) - resolved)
     result = {
         "schema": SCHEMA_ID,
         "status": "PASS" if not unresolved else "PARTIAL",
         "required_surfaces": required,
-        "obligations": sorted(
-            obligations, key=lambda item: (item["surface"], item["concept_id"])
-        ),
+        "obligations": sorted(obligations, key=lambda item: (item["surface"], item["concept_id"])),
         "resolved_surfaces": sorted(resolved),
         "unresolved_surfaces": unresolved,
         "blockers": [],

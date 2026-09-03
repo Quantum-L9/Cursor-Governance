@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Machine-first repository documentation obligation controller."""
+
 from __future__ import annotations
 
 import argparse
@@ -51,9 +52,7 @@ def head(root: Path) -> str:
     return "UNKNOWN"
 
 
-def build_harvest_request(
-    root: Path, surfaces: list[str], sha: str
-) -> dict[str, Any]:
+def build_harvest_request(root: Path, surfaces: list[str], sha: str) -> dict[str, Any]:
     target = ",".join(surfaces)
     digest = hashlib.sha256(f"{sha}:{target}".encode()).hexdigest()[:12]
     return {
@@ -90,16 +89,12 @@ def semantic_harvest_state(
     state["request"] = build_harvest_request(root, required, head(root))
     if not harvest_path:
         state.update(status="PARTIAL", unresolved_surfaces=required)
-        state["blockers"] = [
-            "semantic harvest required but harvest.json was not supplied"
-        ]
+        state["blockers"] = ["semantic harvest required but harvest.json was not supplied"]
         return state
     target = resolve_under_root(root, harvest_path)
     if target is None or not target.is_file():
         state.update(status="BLOCKED", unresolved_surfaces=required)
-        state["blockers"] = [
-            "harvest input is missing or escapes repository root"
-        ]
+        state["blockers"] = ["harvest input is missing or escapes repository root"]
         return state
     result = compile_obligations(
         load_json(target),
@@ -208,9 +203,7 @@ def audit_repository(
 
     impact = impact_analysis(policy, changed_files)
     pointer = pointer_validate_root(root)
-    managed_status, managed_findings = validate_managed_regions(
-        root, base, changed_files, policy
-    )
+    managed_status, managed_findings = validate_managed_regions(root, base, changed_files, policy)
     semantic = semantic_harvest_state(root, policy, impact, harvest_path)
     module_cap = probe_module_readme_capability(
         root,
@@ -220,9 +213,7 @@ def audit_repository(
     llms, run_mutations = build_llms_state(
         root, policy, directives, llms_base_url_value, write_llms
     )
-    freshness = freshness_analysis(
-        root, policy, impact, llms["enabled"], run_mutations
-    )
+    freshness = freshness_analysis(root, policy, impact, llms["enabled"], run_mutations)
     surfaces = discover_surfaces(root, policy, llms["enabled"])
     impacted = set(impact["impacted_surfaces"])
     for row in surfaces:
@@ -248,8 +239,7 @@ def audit_repository(
         {
             "name": "doc_freshness",
             "status": freshness["status"],
-            "findings": freshness["stale_surfaces"]
-            + freshness["missing_surfaces"],
+            "findings": freshness["stale_surfaces"] + freshness["missing_surfaces"],
         },
         {
             "name": "module_readme_capability",
@@ -272,9 +262,7 @@ def audit_repository(
     unknown = [
         row["id"]
         for row in surfaces
-        if row["requirement"] == "required"
-        and not row["present"]
-        and row["action"] != "EXTERNAL"
+        if row["requirement"] == "required" and not row["present"] and row["action"] != "EXTERNAL"
     ]
     if unknown:
         status = merge_status(status, "PARTIAL")
@@ -331,9 +319,7 @@ def audit_repository(
     return receipt
 
 
-def exit_code_for_receipt(
-    receipt: dict[str, Any], fail_on_partial: bool = False
-) -> int:
+def exit_code_for_receipt(receipt: dict[str, Any], fail_on_partial: bool = False) -> int:
     status = receipt["final_status"]
     if status == "PARTIAL":
         semantic = receipt.get("semantic_harvest", {})

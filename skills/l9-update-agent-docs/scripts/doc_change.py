@@ -1,4 +1,5 @@
 """Repository change, impact, freshness, and capability mechanics."""
+
 from __future__ import annotations
 
 import fnmatch
@@ -9,9 +10,7 @@ from typing import Any
 from doc_policy import git, selector_paths
 
 
-def changed_files_since(
-    root: Path, base: str
-) -> tuple[list[str] | None, str | None]:
+def changed_files_since(root: Path, base: str) -> tuple[list[str] | None, str | None]:
     if git(root, "rev-parse", "--verify", f"{base}^{{commit}}").returncode != 0:
         return None, f"unable to resolve changed-since ref {base!r}"
     proc = git(root, "diff", "--name-only", f"{base}...HEAD")
@@ -24,10 +23,7 @@ def worktree_changes(root: Path) -> list[str]:
     proc = git(root, "status", "--porcelain")
     if proc.returncode != 0:
         return []
-    values = [
-        line[3:].split(" -> ", 1)[-1]
-        for line in proc.stdout.splitlines()
-    ]
+    values = [line[3:].split(" -> ", 1)[-1] for line in proc.stdout.splitlines()]
     return sorted(set(item for item in values if item))
 
 
@@ -36,9 +32,7 @@ def automatic_changed_scope(
 ) -> tuple[list[str], str | None, str | None]:
     dirty = worktree_changes(root)
     if dirty:
-        head_exists = git(
-            root, "rev-parse", "--verify", "HEAD^{commit}"
-        ).returncode == 0
+        head_exists = git(root, "rev-parse", "--verify", "HEAD^{commit}").returncode == 0
         return dirty, "HEAD" if head_exists else None, None
     branch = git(root, "branch", "--show-current").stdout.strip()
     if branch in {"", "main", "master"}:
@@ -50,9 +44,7 @@ def automatic_changed_scope(
     return [], None, None
 
 
-def impact_analysis(
-    policy: dict[str, Any], changed: list[str]
-) -> dict[str, Any]:
+def impact_analysis(policy: dict[str, Any], changed: list[str]) -> dict[str, Any]:
     impacted: set[str] = set()
     matched: dict[str, list[str]] = {}
     for name, rule in policy["impact_rules"].items():
@@ -60,13 +52,9 @@ def impact_analysis(
             path
             for path in changed
             if not any(
-                fnmatch.fnmatch(path, pattern)
-                for pattern in rule.get("exclude_patterns", [])
+                fnmatch.fnmatch(path, pattern) for pattern in rule.get("exclude_patterns", [])
             )
-            and any(
-                fnmatch.fnmatch(path, pattern)
-                for pattern in rule["patterns"]
-            )
+            and any(fnmatch.fnmatch(path, pattern) for pattern in rule["patterns"])
         ]
         if hits:
             matched[name] = hits
@@ -91,8 +79,7 @@ def semantic_harvest_required(
         spec = policy["surfaces"][surface]
         if root is not None and not selector_paths(root, spec["selectors"]):
             conditional_absent = (
-                spec["requirement"] == "conditional"
-                and spec["create_policy"] == "never"
+                spec["requirement"] == "conditional" and spec["create_policy"] == "never"
             )
             if conditional_absent:
                 continue
@@ -100,15 +87,11 @@ def semantic_harvest_required(
     return sorted(required)
 
 
-def managed_block_mutations(
-    before: str, after: str, policy: dict[str, Any]
-) -> list[str]:
+def managed_block_mutations(before: str, after: str, policy: dict[str, Any]) -> list[str]:
     errors = []
     for item in policy.get("managed_regions", {}).get("blocks", []):
         pattern = re.compile(
-            re.escape(item["start"])
-            + r".*?"
-            + re.escape(item["end"]),
+            re.escape(item["start"]) + r".*?" + re.escape(item["end"]),
             re.DOTALL,
         )
         if pattern.findall(before) != pattern.findall(after):
@@ -128,15 +111,9 @@ def validate_managed_regions(
     changed: list[str],
     policy: dict[str, Any],
 ) -> tuple[str, list[str]]:
-    docs = [
-        path
-        for path in changed
-        if Path(path).suffix.lower() in {".md", ".mdc", ".txt"}
-    ]
+    docs = [path for path in changed if Path(path).suffix.lower() in {".md", ".mdc", ".txt"}]
     if docs and not base:
-        return "PARTIAL", [
-            "managed-region comparison base unavailable for changed documentation"
-        ]
+        return "PARTIAL", ["managed-region comparison base unavailable for changed documentation"]
     errors = []
     for rel in docs:
         path = root / rel
@@ -146,10 +123,7 @@ def validate_managed_regions(
         if before.returncode == 0:
             after = path.read_text(encoding="utf-8")
             errors.extend(
-                f"{rel}: {error}"
-                for error in managed_block_mutations(
-                    before.stdout, after, policy
-                )
+                f"{rel}: {error}" for error in managed_block_mutations(before.stdout, after, policy)
             )
     return ("FAIL", errors) if errors else ("PASS", [])
 
@@ -160,10 +134,7 @@ def probe_module_readme_capability(
     changed: list[str] | None = None,
 ) -> dict[str, Any]:
     cap = policy["capabilities"]["module_readmes"]
-    present = {
-        name: (root / rel).is_file()
-        for name, rel in cap["required_paths"].items()
-    }
+    present = {name: (root / rel).is_file() for name, rel in cap["required_paths"].items()}
     count = sum(present.values())
     if count == len(present):
         status = "AVAILABLE"
@@ -171,14 +142,8 @@ def probe_module_readme_capability(
         status = "NotApplicable"
     else:
         status = "BLOCKED"
-    extensions = {
-        Path(path).suffix
-        for path in changed or []
-        if Path(path).suffix
-    }
-    unsupported = sorted(
-        extensions - set(cap.get("supported_extensions", []))
-    )
+    extensions = {Path(path).suffix for path in changed or [] if Path(path).suffix}
+    unsupported = sorted(extensions - set(cap.get("supported_extensions", [])))
     if status == "AVAILABLE" and unsupported:
         status = "PARTIAL"
     return {
@@ -198,9 +163,7 @@ def freshness_analysis(
     llms_is_enabled: bool,
     run_mutations: list[str] | None = None,
 ) -> dict[str, Any]:
-    changed = sorted(
-        set(impact.get("changed_files", [])) | set(run_mutations or [])
-    )
+    changed = sorted(set(impact.get("changed_files", [])) | set(run_mutations or []))
     rows = []
     stale = []
     missing = []
@@ -219,10 +182,7 @@ def freshness_analysis(
         touched = sorted(
             path
             for path in changed
-            if any(
-                fnmatch.fnmatch(path, selector)
-                for selector in spec["selectors"]
-            )
+            if any(fnmatch.fnmatch(path, selector) for selector in spec["selectors"])
         )
         if touched:
             state = "CURRENT"

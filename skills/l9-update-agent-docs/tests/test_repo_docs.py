@@ -40,9 +40,7 @@ def init(root: Path) -> None:
 def commit(root: Path, message: str = "change") -> str:
     subprocess.run(["git", "-C", str(root), "add", "."], check=True)
     subprocess.run(["git", "-C", str(root), "commit", "-q", "-m", message], check=True)
-    return subprocess.check_output(
-        ["git", "-C", str(root), "rev-parse", "HEAD"], text=True
-    ).strip()
+    return subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"], text=True).strip()
 
 
 def stack(root: Path, architecture: bool = False) -> None:
