@@ -255,9 +255,9 @@ class TruncatedPayloadTests(unittest.TestCase):
         return adapter
 
     def _fake_result(self, *, stdout: str, truncated: bool, size: int):
-        from peer_execution.subprocess_runner import CommandResult
+        import peer_execution.subprocess_runner as runner
 
-        return CommandResult(
+        return runner.CommandResult(
             argv=("claude-fake",),
             executable="/usr/bin/claude-fake",
             exit_code=0,
