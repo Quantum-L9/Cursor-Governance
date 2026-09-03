@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-
 from compile_semantic_obligations import compile_obligations
 from doc_change import (
     automatic_changed_scope,
@@ -37,7 +36,6 @@ from doc_policy import (
     resolve_adapter,
     resolve_under_root,
     schema_errors,
-    surface_action,
     validate_policy,
 )
 
