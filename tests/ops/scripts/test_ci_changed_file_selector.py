@@ -77,7 +77,7 @@ def test_foo_py_maps_to_named_test_not_dot(tmp_path: Path) -> None:
     )
 
 
-def test_live_ops_script_change_skips_autonomy_wave3_pe() -> None:
+def test_live_ops_script_change_skips_non_owner_suites() -> None:
     changed = ["ops/scripts/select_pr_pytest_paths.py"]
     selected = select_pr_pytest_paths(changed)
     assert "." not in selected
@@ -86,11 +86,23 @@ def test_live_ops_script_change_skips_autonomy_wave3_pe() -> None:
     by_id = {suite["id"]: suite for suite in suites}
     assert _suite_intersects(by_id["repo-root"], selected, changed, selector)
     for suite_id in (
+        "skill-contracts",
         "claude-code-autonomy",
         "subagent-generated-data-wave3",
         "program-execution-controller",
     ):
         assert not _suite_intersects(by_id[suite_id], selected, changed, selector), suite_id
+
+
+def test_changed_or_new_skill_self_test_selects_skill_contracts() -> None:
+    suites = validate_registry(_load_json(REGISTRY_PATH))
+    by_id = {suite["id"]: suite for suite in suites}
+    for changed in (
+        ["skills/l9-wire-into-repo/scripts/self_test.py"],
+        ["skills/l9-future-skill/scripts/self_test.py"],
+    ):
+        selected = select_pr_pytest_paths(changed)
+        assert _suite_intersects(by_id["skill-contracts"], selected, changed, selector)
 
 
 def test_markdown_only_file_list_is_empty_mapped_set() -> None:
