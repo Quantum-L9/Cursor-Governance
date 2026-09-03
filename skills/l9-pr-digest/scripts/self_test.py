@@ -5,7 +5,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from pr_digest import digest, validate
+from pr_digest_core import digest, validate
 
 
 def fixture(**overrides):
@@ -20,11 +20,28 @@ def fixture(**overrides):
         "head_sha": "b" * 40,
         "commits": ["b" * 40],
         "files": [
-            {"path": "src/parser.py", "status": "modified", "additions": 4, "deletions": 2, "patch": "+def parse_fixed(x):\n+    return x\n"},
-            {"path": "tests/test_parser.py", "status": "modified", "additions": 5, "deletions": 0, "patch": "+def test_parse_fixed():\n+    assert True\n"},
+            {
+                "path": "src/parser.py",
+                "status": "modified",
+                "additions": 4,
+                "deletions": 2,
+                "patch": "+def parse_fixed(x):\n+    return x\n",
+            },
+            {
+                "path": "tests/test_parser.py",
+                "status": "modified",
+                "additions": 5,
+                "deletions": 0,
+                "patch": "+def test_parse_fixed():\n+    assert True\n",
+            },
         ],
         "ci_checks": [{"name": "tests", "conclusion": "success"}],
-        "intent": {"requested_outcome": "fix parser bug", "explicit_scope": ["src/parser.py", "tests/test_parser.py"], "explicit_non_goals": ["provider expansion"], "acceptance_criteria": ["regression covered"]},
+        "intent": {
+            "requested_outcome": "fix parser bug",
+            "explicit_scope": ["src/parser.py", "tests/test_parser.py"],
+            "explicit_non_goals": ["provider expansion"],
+            "acceptance_criteria": ["regression covered"],
+        },
     }
     doc.update(overrides)
     return doc
@@ -66,7 +83,17 @@ def main() -> int:
     assert any(f["code"] == "suppression_or_ignore_added" for f in sup["deterministic_findings"])
     assert sup["required_narrowing"]
 
-    catalog = fixture(files=[{"path": "reports/repo-index/test_catalog.txt", "status": "removed", "additions": 0, "deletions": 50}], ci_checks=[{"name": "tests", "conclusion": "success"}])
+    catalog = fixture(
+        files=[
+            {
+                "path": "reports/repo-index/test_catalog.txt",
+                "status": "removed",
+                "additions": 0,
+                "deletions": 50,
+            }
+        ],
+        ci_checks=[{"name": "tests", "conclusion": "success"}],
+    )
     cat = digest(catalog)
     assert not any(f["code"] == "deleted_test" for f in cat["deterministic_findings"])
 
