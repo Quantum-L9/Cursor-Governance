@@ -1,0 +1,18 @@
+{
+  "target": "demo-capability",
+  "expected_ulp": "owner",
+  "intended_consumers": ["consumer-a", "consumer-b"],
+  "nodes": [
+    {"id": "owner", "role": "authoritative_owner"},
+    {"id": "registry", "role": "source_registry"},
+    {"id": "projection", "role": "generated_derivative"},
+    {"id": "consumer-a", "role": "consumer"},
+    {"id": "consumer-b", "role": "consumer"}
+  ],
+  "edges": [
+    ["owner", "registry"],
+    ["registry", "projection"],
+    ["projection", "consumer-a"],
+    ["registry", "consumer-b"]
+  ]
+}
