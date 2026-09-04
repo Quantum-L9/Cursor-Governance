@@ -1,0 +1,446 @@
+{
+  "schema_version": "1",
+  "mode": "plan",
+  "depth": "deep",
+  "code_in_scope": true,
+  "title": "Governance caller permission repair — revive the org PR/issue gate and make its outage detectable",
+  "objective": "Repair the Quantum-L9 governance gate, which has never executed. The thin caller .github/workflows/governance.yml declares no GITHUB_TOKEN permissions while both callees demand write scopes, so every run is rejected at startup by the reusable-workflow permission cap: 287 of 287 runs are startup_failure since installation. Because a startup_failure emits no check run, branch protection has nothing to wait on and reports mergeable_state=clean while the gate is dead. Fix the defect at its source (the org template shipped to every repo), unblock this repository immediately, remove the unused write scope that made the grant necessary, and add detection so a silent gate outage cannot recur.",
+  "success_criteria": [
+    "SC-01: a Governance workflow run on a Cursor-Governance PR reaches a terminal conclusion other than startup_failure, evidenced by gh api actions/runs showing conclusion in {success, failure, skipped} for that head SHA",
+    "SC-02: the same run creates at least one check run, evidenced by a non-empty check_runs array on the PR head SHA — proving the gate is now observable to branch protection",
+    "SC-03: templates/governance-caller.yml in Quantum-L9/.github declares job-level permissions sufficient for both callees, and the installed Cursor-Governance copy matches it byte-for-byte",
+    "SC-04: the v1 tag on Quantum-L9/.github resolves to a commit containing the corrected template, verified by git ls-remote refs/tags/v1",
+    "SC-05: governance-pr.yml no longer requests pull-requests: write, and its gates job still produces its job summary — proving the scope was unused",
+    "SC-06: a repository gate fails when the Governance workflow startup-fails, verified against a deliberately broken caller on a scratch branch",
+    "SC-07: exactly one PR template is authoritative, and its section headings are the set governance-pr.yml parses (Problem, Risk, Evidence, Gates)",
+    "SC-08: docs/DISTRIBUTION.md Appendix B documents the permission-cap failure mode alongside the allow-list trap it already covers",
+    "SC-09: scripts/preflight.sh reports a repo whose governance caller lacks permissions, so the trap is caught at seed time rather than after 287 dead runs",
+    "SC-10: no consumer repo regresses — Governance runs that were previously startup_failure now produce check runs"
+  ],
+  "scope": {
+    "in": [
+      "Cursor-Governance/.github/workflows/governance.yml — add job-level permissions to both caller jobs",
+      "Quantum-L9/.github templates/governance-caller.yml — same fix at the distribution source",
+      "Quantum-L9/.github .github/workflows/governance-pr.yml — drop the unused pull-requests: write scope",
+      "Quantum-L9/.github v1 tag — re-point so consumers pinned at @v1 receive the fix",
+      "Cursor-Governance PR template reconciliation between root PULL_REQUEST_TEMPLATE.md and .github/pull_request_template.md",
+      "A detection gate that treats a startup_failure of a required governance workflow as a failure rather than silence",
+      "docs/DISTRIBUTION.md Appendix B and scripts/preflight.sh section 5 — cover the permission-cap trap"
+    ],
+    "out": [
+      "Changing branch protection or required-check configuration",
+      "Setting org- or repo-wide default_workflow_permissions to write — a blanket token escalation rejected in favour of least-privilege per-job grants",
+      "Any change to the governance-pr.yml or governance-issue.yml validation logic beyond the permissions block",
+      "Cursor-Governance application code, autonomy runtime, or memory subsystem",
+      "The unrelated WIP/claude-code-mobile-environment plan merged by PR 233"
+    ]
+  },
+  "pre_validation": [
+    {
+      "id": "PV-01",
+      "command_or_action": "gh api repos/Quantum-L9/Cursor-Governance/actions/permissions/workflow",
+      "pass_criteria": "Returns default_workflow_permissions. Value 'read' confirms the permission-cap diagnosis; 'write' redirects to the allowed_actions branch (U-01)",
+      "status": "unknown"
+    },
+    {
+      "id": "PV-02",
+      "command_or_action": "diff -u templates/governance-caller.yml .github/workflows/governance.yml across the org clone and this repo",
+      "pass_criteria": "Empty diff — installed caller is unmodified template, so the defect is upstream not local drift",
+      "status": "passed"
+    },
+    {
+      "id": "PV-03",
+      "command_or_action": "Page every run of governance.yml and tally conclusions",
+      "pass_criteria": "287/287 startup_failure — a constant structural condition, not a regression",
+      "status": "passed"
+    },
+    {
+      "id": "PV-04",
+      "command_or_action": "Verify md5 of governance-pr.yml, governance-issue.yml and governance-caller.yml at tag v1 versus org main",
+      "pass_criteria": "Identical at both refs — upstream has never fixed this, so re-pointing the tag alone cannot help",
+      "status": "passed"
+    },
+    {
+      "id": "PV-05",
+      "command_or_action": "Confirm no automated writer restores the caller: mandatory-files.yml mode and exceptions, plus presence of scripts/sync_ci_from_pack.py in this repo",
+      "pass_criteria": "governance.yml is mode: seeded, Cursor-Governance is an explicit exception, and sync_ci_from_pack.py is absent so on-org-update.yml is a no-op",
+      "status": "passed"
+    },
+    {
+      "id": "PV-06",
+      "command_or_action": "Parse the candidate caller with yaml.safe_load and assert each job's permissions is a superset of its callee's declaration",
+      "pass_criteria": "Parses; pr grants contents:read + pull-requests:write, issue grants contents:read + issues:write",
+      "status": "passed"
+    },
+    {
+      "id": "PV-07",
+      "command_or_action": "make pr-check on the changed files",
+      "pass_criteria": "PASS before any push",
+      "status": "pending"
+    }
+  ],
+  "todos": [
+    {
+      "id": "t-01-org-template-permissions",
+      "task": "Add job-level permissions to templates/governance-caller.yml in Quantum-L9/.github — the distribution source every consumer is seeded from. Grant the pr job contents: read plus pull-requests: write, and the issue job contents: read plus issues: write. Grant both jobs, not only the one matching the event: permission validation runs at startup for every uses: job before if: skipping is applied, so a partial grant still fails the run. This is the root-cause fix; every other repo in the org carries the identical dead gate.",
+      "files": ["templates/governance-caller.yml"],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Insert",
+      "blocker": "This session holds anonymous read-only access to Quantum-L9/.github and cannot write to it. Requires an operator or a session with write scope on that repository.",
+      "leverage_rank": 1,
+      "shared_root_cause": "A: caller grants no GITHUB_TOKEN permissions while callees demand write, so the reusable-workflow permission cap rejects the run at startup"
+    },
+    {
+      "id": "t-02-drop-unused-write-scope",
+      "task": "Remove pull-requests: write from .github/workflows/governance-pr.yml in Quantum-L9/.github. The gates job reads the PR body from context.payload.pull_request.body and writes only core.summary, core.notice and core.setFailed — it never calls the pull-requests API, so the scope is unused. Reducing it to contents: read means the PR half of the gate needs no elevated grant from any caller at all, which shrinks t-01 and removes a standing write token from every consumer repo. Verify by confirming the gates job still renders its job summary after the change.",
+      "files": [".github/workflows/governance-pr.yml"],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Replace",
+      "blocker": "Same as t-01 — no write access to Quantum-L9/.github from this session.",
+      "leverage_rank": 2
+    },
+    {
+      "id": "t-03-local-caller-permissions",
+      "task": "Apply the same permissions blocks to this repository's .github/workflows/governance.yml so Cursor-Governance stops startup-failing without waiting on the org tag change. The validated patch is already generated and YAML-checked. This is safe from automated overwrite: mandatory-files.yml marks governance.yml mode: seeded, lists Cursor-Governance as an explicit exception, and on-org-update.yml no-ops here because scripts/sync_ci_from_pack.py does not exist in this repo. It remains vulnerable only to a manual ops/sync-org-files.sh governance run, which t-01 resolves by making template and local copy agree.",
+      "files": [".github/workflows/governance.yml"],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Insert",
+      "leverage_rank": 3,
+      "shared_root_cause": "A: caller grants no GITHUB_TOKEN permissions while callees demand write, so the reusable-workflow permission cap rejects the run at startup"
+    },
+    {
+      "id": "t-04-startup-failure-detection",
+      "task": "Add a gate that makes a startup_failure loud. A startup_failure creates no check run, so branch protection cannot require it and a dead workflow is indistinguishable from a workflow that was never configured — which is exactly how 287 failures went unnoticed while PRs merged reporting mergeable_state=clean. Add a step to governance-self-check.yml that queries the current head SHA for a Governance workflow run and fails when its conclusion is startup_failure or when it produced zero check runs. Because governance-self-check is itself a normal workflow it does produce a check run, so the absence is finally observable.",
+      "files": [".github/workflows/governance-self-check.yml"],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["t-03-local-caller-permissions"],
+      "operation": "Insert",
+      "leverage_rank": 4,
+      "shared_root_cause": "B: a startup_failure emits no check run, so no gate observes the outage"
+    },
+    {
+      "id": "t-05-preflight-permission-check",
+      "task": "Extend scripts/preflight.sh section 5 in Quantum-L9/.github to check the permission cap, not just the allow-list. It currently reads only allowed_actions, which is why preflight passed every repo while every governance run died. Add: read default_workflow_permissions per repo, and statically assert that a seeded .github/workflows/governance.yml declares permissions covering what the pinned callees demand. This is the check that would have caught the defect before seeding.",
+      "files": ["scripts/preflight.sh"],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": ["t-01-org-template-permissions"],
+      "operation": "Insert",
+      "blocker": "Same as t-01 — no write access to Quantum-L9/.github from this session.",
+      "leverage_rank": 5,
+      "shared_root_cause": "C: org diagnostic tooling checks allowed_actions but not the permission cap"
+    },
+    {
+      "id": "t-06-repoint-v1-tag",
+      "task": "Re-point the v1 tag on Quantum-L9/.github to the commit containing t-01 and t-02, so every consumer repo pinned at @v1 receives the fix. Note there is no scripted path for this repository: ops/tag-v1.sh targets Quantum-L9/l9-ci-core, not .github, so the operation is a manual annotated-tag replacement published to origin. Record the previous v1 target 3e841ea4f7f8be2a8c9fc45cad5bed46fe801d08 first so the change is reversible.",
+      "files": ["refs/tags/v1"],
+      "effort": "S",
+      "risk": "high",
+      "dependencies": ["t-01-org-template-permissions", "t-02-drop-unused-write-scope"],
+      "operation": "Replace",
+      "blocker": "Same as t-01 — no write access to Quantum-L9/.github from this session. Re-pointing a tag consumed by every repo in the org is an operator action.",
+      "leverage_rank": 6
+    },
+    {
+      "id": "t-07-reconcile-pr-templates",
+      "task": "Resolve the two disagreeing PR templates, both added in commit 99c6819. Root PULL_REQUEST_TEMPLATE.md uses Summary / Type of Change / Governance Checklist / Breaking Change / Rollback Plan / Related Issues; .github/pull_request_template.md uses Problem / Fix / Risk / Evidence / Gates. governance-pr.yml parses only the second set, so once the gate runs every PR authored from the root template draws a finding on every section it checks. PR 223 used the .github form and PR 233 used the root form, so both are live in practice. Pick one authoritative template and delete or align the other; if the root form is preferred, governance-pr.yml section names must move with it.",
+      "files": ["PULL_REQUEST_TEMPLATE.md", ".github/pull_request_template.md"],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Delete",
+      "leverage_rank": 7,
+      "shared_root_cause": "D: two PR templates disagree with the section names the org checker parses"
+    },
+    {
+      "id": "t-08-document-permission-trap",
+      "task": "Extend docs/DISTRIBUTION.md Appendix B in Quantum-L9/.github. Appendix B is titled 'the rollout trap' and documents only the Actions allow-list, which is not what broke this. Add the permission-cap trap as a second named failure mode: a caller with no permissions key plus a callee demanding write yields startup_failure with no check run and no error surfaced through the REST API, so it is invisible to both operators and branch protection. Include the diagnostic command and the caller-grant remedy.",
+      "files": ["docs/DISTRIBUTION.md"],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": ["t-05-preflight-permission-check"],
+      "operation": "Insert",
+      "blocker": "Same as t-01 — no write access to Quantum-L9/.github from this session.",
+      "leverage_rank": 8,
+      "shared_root_cause": "C: org diagnostic tooling checks allowed_actions but not the permission cap"
+    },
+    {
+      "id": "t-09-verify-local-recovery",
+      "task": "Open a PR carrying t-03 and observe the Governance workflow on its head SHA. Confirm the run no longer concludes startup_failure and that it creates check runs. This single observation also discriminates the two candidate root causes: if the run still startup-fails after a correct grant, the cause is the Appendix B allow-list rather than the permission cap, and U-01 becomes the blocking question. Record the resulting conclusion and any advisory findings the gate emits against this repository's PR template.",
+      "files": [".github/workflows/governance.yml"],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": ["t-03-local-caller-permissions"],
+      "operation": "Insert",
+      "leverage_rank": 9
+    },
+    {
+      "id": "t-10-verify-org-propagation",
+      "task": "After t-06, confirm consumer repos recover: for each repo seeded with the governance caller, check that the most recent Governance run produces check runs rather than startup_failure. Repos that had drifted from the template will not recover from the tag change alone and need the caller re-synced via ops/sync-org-files.sh governance.",
+      "files": ["ops/sync-org-files.sh"],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["t-06-repoint-v1-tag"],
+      "operation": "Insert",
+      "blocker": "Requires GitHub API access across Quantum-L9 org repositories; this session is scoped to Cursor-Governance plus anonymous read of .github.",
+      "leverage_rank": 10
+    }
+  ],
+  "critical_path": [
+    "t-03-local-caller-permissions",
+    "t-09-verify-local-recovery",
+    "t-01-org-template-permissions",
+    "t-02-drop-unused-write-scope",
+    "t-06-repoint-v1-tag",
+    "t-10-verify-org-propagation"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "Cursor-Governance's Governance workflow executes instead of startup-failing, and creates check runs",
+      "unlocks": "The diagnosis is confirmed empirically, which is the precondition for touching the org template and the shared v1 tag"
+    },
+    {
+      "id": "M2",
+      "outcome": "The org template and governance-pr.yml are corrected and v1 points at them",
+      "unlocks": "Every consumer repo pinned at @v1 recovers without local edits"
+    },
+    {
+      "id": "M3",
+      "outcome": "A startup_failure of the governance workflow fails a check that does produce a check run",
+      "unlocks": "The class of silent gate outage this plan repairs can no longer persist undetected"
+    },
+    {
+      "id": "M4",
+      "outcome": "One authoritative PR template whose headings match what the checker parses, and preflight plus Appendix B cover the permission-cap trap",
+      "unlocks": "The revived gate produces signal rather than noise, and seeding cannot reintroduce the defect"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "t-09-verify-local-recovery",
+      "evidence_required": "gh api on the PR head SHA shows the Governance run with conclusion other than startup_failure AND a non-empty check_runs array",
+      "no_go_action": "Stop before touching the org template or the v1 tag. A still-failing run means the cause is not the permission cap; resolve U-01 by reading actions/permissions and follow the Appendix B allow-list branch instead."
+    },
+    {
+      "id": "C2",
+      "after": "t-06-repoint-v1-tag",
+      "evidence_required": "git ls-remote --tags origin refs/tags/v1 resolves to the corrected commit, and one consumer repo's next Governance run produces check runs",
+      "no_go_action": "Restore v1 to the recorded previous target 3e841ea4f7f8be2a8c9fc45cad5bed46fe801d08 and re-open the diagnosis; do not leave consumers on a half-changed tag."
+    },
+    {
+      "id": "C3",
+      "after": "t-04-startup-failure-detection",
+      "evidence_required": "On a scratch branch with a deliberately permission-stripped caller, the detection step fails; with the corrected caller it passes",
+      "no_go_action": "A detector that cannot fail on the known-bad input is decoration. Remove it rather than ship a false assurance, and record why."
+    },
+    {
+      "id": "C4",
+      "after": "t-07-reconcile-pr-templates",
+      "evidence_required": "A newly opened PR's advisory findings from governance-pr.yml are empty or limited to genuinely unfilled sections",
+      "no_go_action": "If findings fire against a correctly filled template, the checker's section regexes and the template are still misaligned; fix the regexes before declaring the gate useful."
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "docs/DISTRIBUTION.md Appendix B (Quantum-L9/.github)",
+      "action": "update",
+      "todo_ids": ["t-08-document-permission-trap"],
+      "reason": "Appendix B documents only the allow-list trap; the permission-cap trap that actually caused 287 failures is undocumented"
+    },
+    {
+      "surface": "Cursor-Governance PR template surface",
+      "action": "update",
+      "todo_ids": ["t-07-reconcile-pr-templates"],
+      "reason": "Two templates disagree and only one matches the checker"
+    },
+    {
+      "surface": "Cursor-Governance README / CANONICAL_LAW",
+      "action": "n_a",
+      "reason": "No governance law changes; this repairs an inoperative gate rather than altering policy"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "If the permission cap is the cause, why did nobody notice for 287 runs? Because startup_failure emits no check run, branch protection had nothing to block on and mergeable_state stayed clean — the silence is a consequence of the same defect, which is self-consistent rather than suspicious.",
+      "Could the cause instead be the Appendix B allow-list? Possible, but memory-distill.yml uses the third-party aws-actions/configure-aws-credentials and has runs concluding success; a restrictive allow-list would have startup-failed that run too.",
+      "Could the callee YAML simply be invalid? Both callees parse cleanly under yaml.safe_load and declare well-formed workflow_call triggers, so a syntax defect is excluded.",
+      "Is codeql.yml really a comparable control? It is the only other reusable-workflow caller in the repo, uses the same cross-repo uses: form, and differs in exactly one respect — it grants job-level permissions. It passes.",
+      "Would granting permissions to only the job matching the event suffice? No — startup validation covers every uses: job before if: skipping, so a partial grant still fails.",
+      "Does re-pointing v1 risk consumers that pinned deliberately to old behaviour? v1 is documented as a moving tag and the governance workflows are byte-identical at v1 and org main, so no consumer is depending on a v1-only variant."
+    ],
+    "assumed_false_ifs": [
+      "PV-01 returns default_workflow_permissions: write — then the caller already had write, the cap was never violated, and the whole permission branch of this plan is wrong; the allow-list branch takes over.",
+      "The Governance run still startup-fails after t-03 lands — then the diagnosis is wrong regardless of what PV-01 says, and C1 stops the plan before the org tag is touched.",
+      "Removing pull-requests: write breaks governance-pr.yml — then the scope was load-bearing through a path not visible in the script, and t-02 reverts while t-01 keeps the caller grant.",
+      "Cursor-Governance is deliberately exempt from the org gate — mandatory-files.yml lists it as an exception, so the correct fix might be deleting the caller here rather than repairing it (U-02)."
+    ],
+    "blast_radius": "t-03, t-04, t-07 and t-09 are confined to Cursor-Governance and are reversible by reverting one commit. t-01, t-02, t-05 and t-08 change the template and tooling every Quantum-L9 repo is seeded from. t-06 changes a tag that every consumer repo resolves at workflow-startup time: a bad commit at v1 breaks governance on every repo simultaneously, which is why C1 gates it behind empirical confirmation on a single repo first. No production service, deployment path, or C1/VPS surface is touched.",
+    "rollback": "Local todos: git revert the commit; the caller returns to its current byte-identical-to-template state and the gate returns to its present dead-but-harmless condition. Tag change: restore v1 to the recorded previous target 3e841ea4f7f8be2a8c9fc45cad5bed46fe801d08 and republish it; consumers pick it up on their next run with no consumer-side action. Template and doc changes in Quantum-L9/.github: ordinary revert commits. Nothing in this plan writes to a runtime system, so there is no data migration to unwind."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "t-01-org-template-permissions",
+      "t-02-drop-unused-write-scope",
+      "t-03-local-caller-permissions",
+      "t-04-startup-failure-detection",
+      "t-05-preflight-permission-check",
+      "t-06-repoint-v1-tag",
+      "t-07-reconcile-pr-templates",
+      "t-08-document-permission-trap",
+      "t-09-verify-local-recovery",
+      "t-10-verify-org-propagation"
+    ],
+    "shared_causes": [
+      "A: the caller grants no GITHUB_TOKEN permissions while both callees demand write, so the reusable-workflow permission cap rejects every run at startup — t-01, t-03",
+      "B: a startup_failure emits no check run, so branch protection and operators both see silence instead of an outage — t-04",
+      "C: the org's own diagnostic tooling and rollout documentation check the allow-list trap but not the permission cap, so seeding could never catch this — t-05, t-08",
+      "D: two PR templates disagree with the section names governance-pr.yml parses, so the revived gate would emit noise — t-07"
+    ],
+    "deletions_or_consolidations": [
+      "t-02 deletes an unused pull-requests: write scope, which removes a standing write token from every consumer repo and shrinks the grant t-01 must make",
+      "t-07 deletes one of the two competing PR templates rather than maintaining both",
+      "U-02 may retire Cursor-Governance's governance.yml caller entirely, since mandatory-files.yml already exempts this repo from the org governance-file policy"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "The permission-cap diagnosis is wrong and the real cause is the Appendix B allow-list; work lands on the org template for nothing",
+      "mitigation": "t-03 is harmless under either cause and C1 discriminates them empirically on one repo before any org-wide change. PV-01 settles it in one command if an operator can run it."
+    },
+    {
+      "risk": "Re-pointing v1 breaks governance on every consumer repo at once",
+      "mitigation": "Gate the change behind C1's confirmed single-repo recovery, record the previous target SHA beforehand, and verify one consumer immediately after (C2) with a one-command restore path."
+    },
+    {
+      "risk": "Reviving the gate floods PRs with advisory findings because the repo's PR template does not match what the checker parses",
+      "mitigation": "strict defaults to false so findings are core.notice plus a job summary and can never block a merge; t-07 reconciles the templates, and C4 verifies the noise is gone."
+    },
+    {
+      "risk": "Granting pull-requests: write to the caller job widens the token scope on every PR",
+      "mitigation": "t-02 removes the demand at the source so the grant can be narrowed to contents: read; sequence t-02 before t-01 where operator time allows."
+    },
+    {
+      "risk": "A manual ops/sync-org-files.sh governance run overwrites the local fix in t-03",
+      "mitigation": "t-01 makes the template and the local copy identical, so a later sync is a no-op rather than a regression."
+    },
+    {
+      "risk": "The detection gate in t-04 races the Governance run and reports absence before it has been created",
+      "mitigation": "C3 tests the detector against both a known-bad and a known-good caller; poll or key the check to the workflow run rather than to wall-clock timing, and prefer a false pass over a flaky failure."
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U-01",
+      "question": "What is default_workflow_permissions for Cursor-Governance and for the Quantum-L9 org — read or write?",
+      "decision_effect": "Read confirms the permission-cap diagnosis and the whole t-01/t-03 line. Write falsifies it and redirects to the Appendix B allow-list branch. This session's proxy returns 403 on every actions/permissions path, so it cannot be answered here.",
+      "resolution": "probe"
+    },
+    {
+      "id": "U-02",
+      "question": "Is Cursor-Governance meant to run the org governance caller at all, given policies/mandatory-files.yml lists it as an explicit exception — 'Policy SSOT, has its own governance model'?",
+      "decision_effect": "If the exemption is intentional, the correct local fix is deleting .github/workflows/governance.yml rather than repairing it, which retires t-03, t-04 and t-09 for this repo while leaving the org-wide todos untouched.",
+      "resolution": "ask"
+    },
+    {
+      "id": "U-03",
+      "question": "Which PR template is authoritative — the root Summary/Type-of-Change form or the .github Problem/Fix/Risk/Evidence/Gates form the checker parses?",
+      "decision_effect": "Determines whether t-07 deletes the root template or instead rewrites governance-pr.yml section regexes to match it.",
+      "resolution": "ask"
+    },
+    {
+      "id": "U-04",
+      "question": "How many Quantum-L9 repos carry the seeded governance caller, and how many have drifted from the template?",
+      "decision_effect": "Sizes t-10 and determines whether the v1 tag change alone restores the org or whether a sync pass is also required.",
+      "resolution": "probe"
+    },
+    {
+      "id": "U-05",
+      "question": "What exact error string does GitHub record for these startup failures?",
+      "decision_effect": "Would confirm the cause directly rather than by elimination. The REST API exposes no message for startup_failure: the check suite is empty and the jobs list is zero-length, so only the Actions web UI for a failing run can show it.",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "FV-01",
+      "command": "python3 -c \"import yaml; d=yaml.safe_load(open('.github/workflows/governance.yml')); [print(n, j['permissions']) for n,j in d['jobs'].items()]\"",
+      "pass_criteria": "Both jobs parse and each declares permissions covering its callee's demands",
+      "status": "pending"
+    },
+    {
+      "id": "FV-02",
+      "command": "make pr-check",
+      "pass_criteria": "PASS on the changed files before any push",
+      "status": "pending"
+    },
+    {
+      "id": "FV-03",
+      "command": "gh api repos/Quantum-L9/Cursor-Governance/actions/workflows/governance.yml/runs --jq '.workflow_runs[0].conclusion'",
+      "pass_criteria": "Not startup_failure for the head SHA carrying t-03",
+      "status": "pending"
+    },
+    {
+      "id": "FV-04",
+      "command": "gh api repos/Quantum-L9/Cursor-Governance/commits/HEADSHA/check-runs --jq '.total_count'",
+      "pass_criteria": "Greater than the pre-change count — the Governance workflow now contributes check runs and is therefore observable to branch protection",
+      "status": "pending"
+    },
+    {
+      "id": "FV-05",
+      "command": "git ls-remote --tags https://github.com/Quantum-L9/.github refs/tags/v1",
+      "pass_criteria": "Resolves to the commit carrying t-01 and t-02, not 3e841ea",
+      "status": "pending"
+    },
+    {
+      "id": "FV-06",
+      "command": "Publish a scratch branch whose caller has its permissions block removed and observe the t-04 detection gate",
+      "pass_criteria": "The detection gate fails on the known-bad caller and passes on the corrected one",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": ["U-01", "U-02", "U-03", "U-04", "U-05"],
+    "next_skill": "l9-ynp",
+    "stop_reason": "The local repair path (t-03, t-04, t-09) is fully specified and executable now. The org-wide path (t-01, t-02, t-05, t-06, t-08, t-10) is specified but blocked on write access to Quantum-L9/.github, which this session cannot obtain — it holds anonymous read only. U-01 is answerable in one command by anyone with an unproxied token and would convert the diagnosis from strongly-evidenced to confirmed; U-02 and U-03 are owner decisions that change which todos apply."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      ".github/workflows/governance.yml",
+      ".github/workflows/governance-self-check.yml",
+      "PULL_REQUEST_TEMPLATE.md",
+      ".github/pull_request_template.md",
+      "WIP/governance-caller-permission-repair/**"
+    ],
+    "must_not_modify": [
+      "Branch protection and required-check configuration",
+      "Org or repo default_workflow_permissions settings",
+      ".github/workflows/codeql.yml and codeql-reusable.yml — the working control used to diagnose this",
+      "Any Cursor-Governance application, autonomy-runtime or memory code",
+      "WIP/claude-code-mobile-environment/**"
+    ],
+    "preserved_contracts": [
+      "The caller stays a thin caller: no governance logic moves into Cursor-Governance",
+      "The installed caller stays byte-identical to templates/governance-caller.yml once t-01 lands",
+      "governance-pr.yml keeps strict defaulting to false, so the gate stays advisory until deliberately promoted",
+      "Least privilege: permissions are granted per job at the minimum each callee declares, never by widening default_workflow_permissions",
+      "make pr remains the only path to GitHub for this repository"
+    ],
+    "validation_commands": [
+      "make pr-check",
+      "python3 -c \"import yaml; yaml.safe_load(open('.github/workflows/governance.yml'))\"",
+      "gh api repos/Quantum-L9/Cursor-Governance/actions/workflows/governance.yml/runs --jq '.workflow_runs[0].conclusion'",
+      "gh api repos/Quantum-L9/Cursor-Governance/actions/permissions/workflow"
+    ]
+  },
+  "estimate": "Local path t-03/t-04/t-09: about half a day including one CI round-trip. Org path t-01/t-02/t-05/t-06/t-08/t-10: about a day of operator time, gated on write access to Quantum-L9/.github and on checkpoint C1."
+}
