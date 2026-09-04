@@ -695,6 +695,66 @@
         "supporting": [
           "l9-git-work-preserve"
         ]
+      },
+      {
+        "hint_allowed": true,
+        "id": "idea_execute",
+        "negative_signals": [
+          "refine the idea",
+          "brainstorm",
+          "ideaos only"
+        ],
+        "note": "explicit_only + hint_allowed \u2014 Read/attach only. Mutation requires explicit user invoke. Never auto-select as IdeaOS or as a generic coder.\n",
+        "positive_signals": [
+          "/l9-idea-execute",
+          "idea execute",
+          "ideaos execution",
+          "idea-to-execution",
+          "execution envelope",
+          "route this ideaos"
+        ],
+        "primary": "l9-idea-execute",
+        "required_any": [
+          "/l9-idea-execute",
+          "idea execute",
+          "ideaos execution",
+          "idea-to-execution",
+          "execution envelope"
+        ],
+        "signal_weight": 8,
+        "supporting": [
+          "l9-structured-reasoning"
+        ]
+      },
+      {
+        "hint_allowed": true,
+        "id": "idea_foundry",
+        "negative_signals": [
+          "website only",
+          "deploy to production",
+          "existing repo change"
+        ],
+        "note": "explicit_only + hint_allowed \u2014 Read/attach only. Mutation requires explicit user invoke. Never birth a repo from a hint.\n",
+        "positive_signals": [
+          "/l9-idea-foundry",
+          "idea foundry",
+          "compile this idea pack",
+          "birth-ready repository",
+          "l9-repo-template birth",
+          "idea pack to code"
+        ],
+        "primary": "l9-idea-foundry",
+        "required_any": [
+          "/l9-idea-foundry",
+          "idea foundry",
+          "birth-ready repository",
+          "idea pack to code",
+          "l9-repo-template birth"
+        ],
+        "signal_weight": 8,
+        "supporting": [
+          "l9-structured-reasoning"
+        ]
       }
     ],
     "supporting_skills": [
@@ -1004,6 +1064,28 @@
       "when_to_use": "wiring memory, debugging prefetch/bootstrap, GMP Phase 0 MEMORY_PREFETCH, episode/T0 memory-bank writes, or checking Graphiti health"
     },
     {
+      "composition_role": "general",
+      "description": "route a validated ideaos decision into the shortest governed execution owner. use when idea-to-execution work needs a new product repo, website-bot build, bounded existing-repo change, or program-execution campaign. do not use for raw idea refinement or when ideaos has not decided outcomes.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-idea-execute",
+      "path": "skills/l9-idea-execute",
+      "reason": "routes validated IdeaOS decisions into Foundry, Website-Bot, plan-simple, or Program Execution; owner-selection and downstream invocation are high blast radius; disable-model-invocation",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
+      "description": "compile an implementation-ready idea pack into tested code and a birth-ready quantum-l9 repository. use when a mature idea should leave specification and become a real repo via l9-repo-template. do not use for websites, existing-repo changes, or production deployment.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-idea-foundry",
+      "path": "skills/l9-idea-foundry",
+      "reason": "compiles idea packs into tested code and l9-repo-template births; repository creation and code realization are high blast radius; disable-model-invocation",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
       "composition_role": "primary",
       "description": "handle production incidents \u2014 triage, mitigate, communicate, and write postmortems. use when a production incident is active (SEV1\u2013SEV4), coordinating mitigation, or writing a postmortem.",
       "disable_model_invocation": false,
@@ -1302,6 +1384,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "132fb178fc0b81d846f7edc6339f7f9969b04393eea7205ae015adeb8a60ef80",
-  "source_skill_corpus_sha256": "cab8206bd09bb7fb0d7e2b7ed4ff415aaeb2212a969f18977b31075a8db2a828"
+  "source_manifest_sha256": "f1f1f9f18ae9899dcdea4137ab5c993298654074781881dedacd27a0c86eff6d",
+  "source_skill_corpus_sha256": "84a37d89a892a41baa125968c66d1ca9b71b7f7d6010becc76b596b17d5739be"
 }
