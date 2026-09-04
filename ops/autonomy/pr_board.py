@@ -130,13 +130,153 @@ def _probe_entry(repo: str, pr: str) -> dict[str, Any] | None:
     return entry
 
 
+def _rest_mergeable(value: Any) -> str:
+    """REST's tri-state `mergeable` in the GraphQL enum's vocabulary."""
+    if value is True:
+        return "MERGEABLE"
+    if value is False:
+        return "CONFLICTING"
+    return "UNKNOWN"
+
+
+def _rest_review_decision(repo: str, pr: str) -> str:
+    """Latest decisive review per reviewer, folded into `reviewDecision`.
+
+    Only CHANGES_REQUESTED moves a verdict, so an unreadable review list
+    degrades to "" rather than inventing REVIEW_REQUIRED and parking the PR.
+    A DISMISSED review is the reviewer's latest word and clears their block.
+    """
+    try:
+        reviews = _gh_json(["api", f"repos/{repo}/pulls/{pr}/reviews?per_page=100"])
+    except RuntimeError:
+        return ""
+    if not isinstance(reviews, list):
+        return ""
+    latest: dict[str, str] = {}
+    for review in reviews:
+        if not isinstance(review, dict):
+            continue
+        state = str(review.get("state") or "").upper()
+        if state not in ("APPROVED", "CHANGES_REQUESTED", "DISMISSED"):
+            continue
+        login = str((review.get("user") or {}).get("login") or "").strip()
+        if login:
+            latest[login] = state
+    if "CHANGES_REQUESTED" in latest.values():
+        return "CHANGES_REQUESTED"
+    if "APPROVED" in latest.values():
+        return "APPROVED"
+    return ""
+
+
+def _rest_workflow_names(repo: str, sha: str) -> dict[str, str]:
+    """check-suite id -> workflow display name, for `workflowName` parity.
+
+    Required-workflow rules name a workflow *file*; rollup nodes carry the
+    workflow's display name. REST check runs carry neither, only the suite id,
+    so the runs listing is what bridges them. Best effort: an unmatched
+    workflow stays pending rather than inventing a state.
+    """
+    try:
+        payload = _gh_json(["api", f"repos/{repo}/actions/runs?head_sha={sha}&per_page=100"])
+    except RuntimeError:
+        return {}
+    names: dict[str, str] = {}
+    for run in (payload or {}).get("workflow_runs") or []:
+        if not isinstance(run, dict):
+            continue
+        suite = run.get("check_suite_id")
+        name = str(run.get("name") or "").strip()
+        if suite is not None and name:
+            names.setdefault(str(suite), name)
+    return names
+
+
+def _rest_rollup(repo: str, sha: str) -> list[dict[str, Any]]:
+    """`statusCheckRollup` parity: REST check runs plus legacy commit statuses."""
+    workflow_names = _rest_workflow_names(repo, sha)
+    try:
+        payload = _gh_json(["api", f"repos/{repo}/commits/{sha}/check-runs?per_page=100"])
+    except RuntimeError as exc:
+        raise BoardError(f"check-runs probe failed: {exc}") from exc
+    nodes: list[dict[str, Any]] = []
+    for run in (payload or {}).get("check_runs") or []:
+        if not isinstance(run, dict):
+            continue
+        name = str(run.get("name") or "").strip()
+        if not name:
+            continue
+        # A running check run has no conclusion; `status` is what ranks it
+        # pending, so leave the key absent rather than writing an empty one.
+        node: dict[str, Any] = {"name": name, "status": str(run.get("status") or "")}
+        conclusion = run.get("conclusion")
+        if conclusion:
+            node["conclusion"] = str(conclusion)
+        app = run.get("app")
+        if isinstance(app, dict) and app.get("id") is not None:
+            node["app"] = {"databaseId": app.get("id")}
+        suite = run.get("check_suite")
+        suite_id = suite.get("id") if isinstance(suite, dict) else None
+        workflow = workflow_names.get(str(suite_id)) if suite_id is not None else None
+        if workflow:
+            node["workflowName"] = workflow
+        nodes.append(node)
+    try:
+        status = _gh_json(["api", f"repos/{repo}/commits/{sha}/status"])
+    except RuntimeError:
+        status = None
+    for context in (status or {}).get("statuses") or []:
+        if not isinstance(context, dict):
+            continue
+        name = str(context.get("context") or "").strip()
+        if name:
+            nodes.append({"context": name, "state": str(context.get("state") or "")})
+    return nodes
+
+
+def _pr_view_rest(repo: str, pr: str) -> dict[str, Any]:
+    """`gh pr view --json` parity built from REST alone.
+
+    Model-controlled surfaces serve REST while refusing GraphQL entirely, which
+    made every verdict on those surfaces "telemetry unavailable" -> WAIT. The
+    board is the merge authority, so a board that can never answer there is a
+    gate no correct action clears -- and an unclearable gate teaches bypassing.
+    Every field the ladder reads has a REST source, so the verdict stays
+    computed from evidence instead of degrading to a hunch.
+    """
+    payload = _gh_json(["api", f"repos/{repo}/pulls/{pr}"])
+    if not isinstance(payload, dict):
+        raise BoardError("REST pull probe emitted no object")
+    head = payload.get("head") or {}
+    base = payload.get("base") or {}
+    sha = str((head or {}).get("sha") or "").strip()
+    if not sha:
+        raise BoardError("REST pull probe reported no head sha")
+    return {
+        "number": payload.get("number"),
+        "headRefName": str((head or {}).get("ref") or ""),
+        "baseRefName": str((base or {}).get("ref") or ""),
+        "headRefOid": sha,
+        "isDraft": bool(payload.get("draft")),
+        "mergeable": _rest_mergeable(payload.get("mergeable")),
+        "mergeStateStatus": str(payload.get("mergeable_state") or "").upper(),
+        "reviewDecision": _rest_review_decision(repo, pr),
+        "statusCheckRollup": _rest_rollup(repo, sha),
+    }
+
+
 def _pr_view(repo: str, pr: str) -> dict[str, Any]:
     try:
         view = _gh_json(["pr", "view", pr, "--repo", repo, "--json", PR_VIEW_FIELDS])
-    except RuntimeError as exc:
-        raise BoardError(f"gh pr view failed: {exc}") from exc
+    except RuntimeError as graphql_exc:
+        try:
+            return _pr_view_rest(repo, pr)
+        except RuntimeError as rest_exc:
+            raise BoardError(
+                f"gh pr view failed: {graphql_exc}; REST fallback failed: {rest_exc}"
+            ) from graphql_exc
     if not isinstance(view, dict):
-        raise BoardError("gh pr view emitted no object")
+        return _pr_view_rest(repo, pr)
     return view
 
 
@@ -243,16 +383,31 @@ def _required_app_ids(rules: list[Any]) -> dict[str, str]:
     return pinned
 
 
-def protection_required(repo: str, branch: str) -> tuple[list[str], bool]:
-    """Required contexts and the strict flag from classic branch protection.
+def _protection_source_is_silent(detail: str) -> bool:
+    """Does this probe failure mean "this source names nothing" rather than "broken"?
 
-    404 is the normal answer on a ruleset-only repository and means this source
-    requires nothing -- not that the probe broke.
+    404 is the normal answer on a ruleset-only repository. 403 "Resource not
+    accessible by integration" is the App-token answer: classic protection is
+    outside the token's scope, so this source cannot speak -- which is not the
+    same as telemetry being unknown. Rulesets still answer, and GitHub's own
+    ``mergeStateStatus`` already folds in every gate it enforces, so a real
+    classic-protection wall still arrives as BLOCKED/BEHIND and the ladder
+    refuses it (``test_blocked_with_no_required_is_still_not_a_merge``).
+    Failing the whole verdict closed here instead parks every PR on a token
+    scope, which is an unclearable gate rather than a safe one.
     """
+    lowered = detail.lower()
+    if "404" in detail or "not found" in lowered or "branch not protected" in lowered:
+        return True
+    return "403" in detail and "not accessible" in lowered
+
+
+def protection_required(repo: str, branch: str) -> tuple[list[str], bool]:
+    """Required contexts and the strict flag from classic branch protection."""
     try:
         payload = _gh_json(["api", f"repos/{repo}/branches/{branch}/protection"])
     except RuntimeError as exc:
-        if "404" in str(exc) or "Not Found" in str(exc) or "Branch not protected" in str(exc):
+        if _protection_source_is_silent(str(exc)):
             return [], False
         raise BoardError(f"branch protection probe failed: {exc}") from exc
     checks = (payload or {}).get("required_status_checks") or {}
