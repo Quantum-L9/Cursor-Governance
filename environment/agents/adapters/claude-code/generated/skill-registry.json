@@ -1126,7 +1126,7 @@
     },
     {
       "composition_role": "general",
-      "description": "create a machine-validated cursor .plan.md from the shared executable-plan template in one of two handoff modes. default mode cursor-build executes with the build button and then opens a stacked PR; never branch off main when an open PR exists, and display the PR URL. embedded mode is for callers that own their own execution \u2014 it stops at validated planning artifacts and grants no execution, commit, publication, campaign, or deployment authority. use when scope is unclear, requirements need decomposition, cursor plan mode is on, the next step should be planned before code changes, or a nested skill or pipeline needs planning depth without downstream authority. do not use when the user asks for program-execution, make campaign, /l9-plan, or a pe campaign lock.",
+      "description": "create a machine-validated cursor .plan.md from the executable-plan template. cursor-build executes then opens a stacked PR; embedded stops at planning artifacts with no execution authority. use when scope is unclear or Plan mode is on. do not use for /l9-plan, make campaign, or a PE lock.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-plan-simple",
@@ -1137,7 +1137,7 @@
     },
     {
       "composition_role": "general",
-      "description": "digest an exact pull request into deterministic evidence, intent and expansion analysis, architecture judgement, and a bounded remediation gate without modifying the PR. use when reviewing agent-generated PR scope, checking architecture or proportionality before remediation, manually unpacking a PR in chat, or running a machine pre-remediation quality gate beyond ordinary CI.",
+      "description": "digest one PR into evidence, scope, and a bounded remediation packet without modifying it. use when judging agent PR scope before remediation or running the pre-remediation quality gate.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pr-digest",
@@ -1314,5 +1314,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "57dd519098dcc63d180d268934f382a3b0c3f4fc60c8ecca90ecbeeb8d2b44d1",
-  "source_skill_corpus_sha256": "89fec842ebf747070732efae8908dad0560ff3ef9eb0604e8bfd16cb0570582b"
+  "source_skill_corpus_sha256": "192f9e034dcdbf5209efccc7dfb29c42c34aae0f85524affd553f498c50ebe14"
 }
