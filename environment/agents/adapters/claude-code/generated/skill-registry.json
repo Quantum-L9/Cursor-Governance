@@ -1208,11 +1208,22 @@
     },
     {
       "composition_role": "general",
-      "description": "create a machine-validated Cursor .plan.md from the shared executable-plan template using cursor-build or embedded handoff. use when scope needs decomposition, Cursor plan mode is active, work should be planned before code changes, or a nested caller needs planning depth without execution authority. cursor-build is default and hands off to Build and stacked PR; embedded stops at validated planning artifacts. do not use for Program Execution, make campaign, /l9-plan, or a PE campaign lock.",
+      "description": "create a machine-validated cursor .plan.md from the executable-plan template. cursor-build executes then opens a stacked PR; embedded stops at planning artifacts with no execution authority. use when scope is unclear or Plan mode is on. do not use for /l9-plan, make campaign, or a PE lock.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-plan-simple",
       "path": "skills/l9-plan-simple",
+      "reason": "auto-registered by sync_generated_artifacts (orphan \u2192 explicit_only)",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
+      "description": "digest one PR into evidence, scope, and a bounded remediation packet without modifying it. use when judging agent PR scope before remediation or running the pre-remediation quality gate.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-pr-digest",
+      "path": "skills/l9-pr-digest",
       "reason": "auto-registered by sync_generated_artifacts (orphan \u2192 explicit_only)",
       "user_invocable": true,
       "when_to_use": ""
@@ -1384,6 +1395,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "f1f1f9f18ae9899dcdea4137ab5c993298654074781881dedacd27a0c86eff6d",
-  "source_skill_corpus_sha256": "6ac4d1985fdcaf6603459ea8cd0bea0d77a6890d4f3be75ede17bcd815019ef2"
+  "source_manifest_sha256": "90fd48b1d0c8d85e623dd13efcbf9a7ba87d0a5c1d4941ae7405f52af4411f61",
+  "source_skill_corpus_sha256": "a5fba4f2fccfd7595abca9a36ecae98bf9598dbc6fc83e1f211cb4a4c2288975"
 }
