@@ -9,9 +9,12 @@ from typing import Any
 
 from adapters.common.errors import AdapterFailure
 from adapters.common.models import ProbeContext
+from peer_execution.imports import pe_script
 
-from scripts.provider_loader import instantiate, subsystem_root
-from scripts.router import route_contract
+_provider_loader = pe_script("provider_loader")
+instantiate = _provider_loader.instantiate
+subsystem_root = _provider_loader.subsystem_root
+route_contract = pe_script("router").route_contract
 
 
 def _json(value: object) -> None:
@@ -47,7 +50,7 @@ def _program_digest(args: argparse.Namespace) -> str:
 
 
 def command_validate(args: argparse.Namespace) -> int:
-    from scripts.validate_execution_adapters import validate
+    validate = pe_script("validate_execution_adapters").validate
 
     report = validate(subsystem_root())
     _json(report)

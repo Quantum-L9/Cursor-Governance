@@ -33,8 +33,10 @@ MISSION_ROOT = PE_ROOT / "mission"
 FIXTURE = MISSION_ROOT / "tests" / "fixtures" / "valid_mission.yaml"
 SCHEMA_PATH = PE_ROOT / "compiler" / "schemas" / "mission-context.schema.json"
 
+# APPEND, never insert(0): a module file outranks a namespace directory
+# regardless of order (see compiler.mission_admission).
 if str(MISSION_ROOT) not in sys.path:
-    sys.path.insert(0, str(MISSION_ROOT))
+    sys.path.append(str(MISSION_ROOT))
 
 from mission import Mission, load_mission, parse_mission  # noqa: E402
 

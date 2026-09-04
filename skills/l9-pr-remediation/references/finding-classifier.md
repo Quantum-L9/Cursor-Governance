@@ -32,9 +32,9 @@ Board rules that are not negotiable in prose: required-check identity is the uni
 | Class | Edit? | Action |
 |-------|-------|--------|
 | **CODEBASE** | yes | Fix in the concurrent batch |
-| **CI_PIPELINE** | no | Note in status; continue other clusters. Declare to the board only if the check is required and unfixable |
-| **ENVIRONMENT** | no | Venv preflight once; export UV_PYTHON; continue other clusters |
-| **HUMAN** | no | Reply + resolve; name the decision and pass it to `pr_board.py --human-decision`; continue other clusters |
+| **CI_PIPELINE** | no | Note in status; continue other clusters. Declare to the board only if the check is required and unfixable, then [issue-handoff.md](issue-handoff.md) |
+| **ENVIRONMENT** | no | Venv preflight once; export UV_PYTHON; continue other clusters. Still broken → [issue-handoff.md](issue-handoff.md) |
+| **HUMAN** | no | Reply + resolve; name the decision; [issue-handoff.md](issue-handoff.md); `pr_board.py --human-decision`; continue other clusters |
 | **FALSE_POSITIVE** | no | Reply with evidence; resolve |
 
 See [ownership-boundary.md](ownership-boundary.md). Unknown ownership **or** unverified root cause → do not edit that cluster. `disposition: fix` requires a root cause traced to current source or CI logs, with a confidence of `high` or `medium`. `low` / `Unknown` → `defer` or `note_*`, not a patch.

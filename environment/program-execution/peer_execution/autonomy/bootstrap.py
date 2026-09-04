@@ -13,12 +13,14 @@ from typing import Any
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     from autonomy.scheduler import plan_ready_set  # type: ignore[import-not-found]
+    from autonomy.state_dir import expand_state_dir  # type: ignore[import-not-found]
     from autonomy.state_store import StateStore  # type: ignore[import-not-found]
 
     from autonomy.models import ConcurrencyBudget  # type: ignore[import-not-found]
 else:
     from .models import ConcurrencyBudget
     from .scheduler import plan_ready_set
+    from .state_dir import expand_state_dir
     from .state_store import StateStore
 
 
@@ -27,8 +29,7 @@ def _truthy(value: str | None) -> bool:
 
 
 def _state_root(workspace: Path) -> Path:
-    configured = os.environ.get("L9_AUTONOMY_STATE_DIR", ".l9/autonomy")
-    path = Path(configured).expanduser()
+    path = expand_state_dir(os.environ.get("L9_AUTONOMY_STATE_DIR"))
     return path if path.is_absolute() else workspace / path
 
 

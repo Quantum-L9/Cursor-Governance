@@ -1,0 +1,11 @@
+{
+  "schema": "l9.finding-policy/v1",
+  "metadata": {
+    "version": "1.0.0"
+  },
+  "defaults": {
+    "mode": "unresolved"
+  },
+  "rules": {},
+  "note": "Audit fixture only — not the org Semgrep finding policy. Live authority is the repo's versioned policy (metadata.version 1.0.0, defaults.mode unresolved). Kept so the preflight audit can show the shape that was evaluated."
+}

@@ -2,23 +2,29 @@
 
 from __future__ import annotations
 
-import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import yaml
+from peer_execution.imports import load_module
+
+from .mission_admission import validate_mission_context
+from .prohibition_kind import entry as prohibition_entry
 
 MODULE_ROOT = Path(__file__).resolve().parent
 PE_ROOT = MODULE_ROOT.parent
 TEMPLATE_ROOT = PE_ROOT / "core" / "program-execution-blueprint-template"
 
-if str(TEMPLATE_ROOT / "scripts") not in sys.path:
-    sys.path.insert(0, str(TEMPLATE_ROOT / "scripts"))
-
-import instantiate  # noqa: E402 — official template renderer (contract §17 reuse)
-
-from .mission_admission import validate_mission_context  # noqa: E402
+#: The official Blueprint template renderer (contract §17 reuse), bound by FILE
+#: LOCATION under a name Program Execution owns. `instantiate` is not a name
+#: this module may claim: the controller template ships its own
+#: `scripts/instantiate.py` with the same basename and a different contract
+#: (no `render_tree`), and both template `scripts/` directories get prepended
+#: to the import path by different callers, so a bare `import instantiate`
+#: bound whichever renderer happened to be imported first in the process.
+BLUEPRINT_RENDERER_MODULE = "pe_blueprint_instantiate"
+instantiate = load_module(TEMPLATE_ROOT / "scripts" / "instantiate.py", BLUEPRINT_RENDERER_MODULE)
 
 #: Emitted only for a Mission-bound resolution. Not MISSION_BINDING.yaml: that
 #: names blueprint_digest and may never live inside the Blueprint (ADR-0026).
@@ -142,7 +148,11 @@ def _program(resolution: dict[str, Any], meta: dict[str, Any], now: datetime) ->
             "name": _program_name(intent["normalized_objective"]),
             "version": "1.0.0",
             "owner": owner,
-            "definition_status": "accepted",
+            # A compiler produces a draft. Acceptance is `accept_blueprint`'s
+            # decision, taken against bound evidence and recorded in an
+            # ACCEPTANCE_RECEIPT; a compiler that stamped `accepted` here
+            # accepted its own output with no evidence and no receipt.
+            "definition_status": "draft",
             "snapshot_at": snapshot,
             "objective": intent["normalized_objective"],
             "problem_statement": (
@@ -233,7 +243,7 @@ def _artifacts(
 
     tasks = [_task_001(owner)]
     for task_id, req in zip(req_task_ids, requirements):
-        tasks.append(_implementation_task(task_id, req, ceiling, profile))
+        tasks.append(_implementation_task(task_id, req, ceiling, profile, test_command))
     if test_command:
         tasks.append(_validation_task(validation_task_id, test_command, ceiling, req_task_ids))
     tasks.append(_verification_task(verification_task_id, ceiling, w1_task_ids))
@@ -242,7 +252,7 @@ def _artifacts(
 
     return {
         "PROGRAM": program,
-        "EXECUTION_TARGETS": _targets(meta),
+        "EXECUTION_TARGETS": _targets(resolution, meta),
         "AUTHORITY_REGISTRY": _authority_registry(owner),
         "DECISION_REGISTER": decisions,
         "UNKNOWN_REGISTER": _unknowns(unknowns, all_task_ids),
@@ -327,9 +337,35 @@ def _task_001(owner: str) -> dict[str, Any]:
 
 
 def _implementation_task(
-    task_id: str, req: dict[str, Any], ceiling: dict[str, bool], profile: str
+    task_id: str,
+    req: dict[str, Any],
+    ceiling: dict[str, bool],
+    profile: str,
+    test_command: str | None = None,
 ) -> dict[str, Any]:
     statement = req["statement"]
+    # The validation is repository truth or an inspection; never an invented
+    # shell command the repository cannot run.
+    validation = (
+        {
+            "id": f"VAL-{task_id}",
+            "method": "command",
+            "command_or_inspection": test_command,
+            "environment": "local",
+            "expected_result": "PASS",
+        }
+        if test_command
+        else {
+            "id": f"VAL-{task_id}",
+            "method": "inspection",
+            "command_or_inspection": (
+                f"No repository test command was resolved; inspect the durable output for "
+                f"{req['id']} and its evidence by hand."
+            ),
+            "environment": "local",
+            "expected_result": "PASS",
+        }
+    )
     return {
         "id": task_id,
         "title": statement[:80],
@@ -359,15 +395,7 @@ def _implementation_task(
                 "required_evidence_types": ["test_result"],
             }
         ],
-        "validation": [
-            {
-                "id": f"VAL-{task_id}",
-                "method": "command",
-                "command_or_inspection": "pytest -q",
-                "environment": "local",
-                "expected_result": "PASS",
-            }
-        ],
+        "validation": [validation],
         "negative_cases": ["validation fails", "evidence missing"],
         "rollback": {
             "strategy": "git restore of the scoped change",
@@ -503,8 +531,16 @@ def _verification_task(
     }
 
 
-def _targets(meta: dict[str, Any]) -> dict[str, Any]:
-    repository_id = _target_repo_id(meta)
+def _targets(resolution: dict[str, Any], meta: dict[str, Any]) -> dict[str, Any]:
+    # The resolver already resolved the target repository (from the intent or
+    # the checkout's git remote, with evidence). Re-deriving it here from the
+    # local filesystem path invented ids: a hard-coded "Quantum-L9/Cursor-
+    # Governance" for any path containing "Quantum-L9", a bare absolute path
+    # otherwise.
+    targets = resolution.get("targets") or []
+    repository_id = str((targets[0] if targets else {}).get("repository_id") or "").strip()
+    if not repository_id:
+        raise ValueError("resolution declares no target repository_id; cannot synthesize targets")
     return {
         "schema": "program-execution-blueprint.execution-targets.v2",
         "schema_version": "2.0.0",
@@ -524,13 +560,6 @@ def _targets(meta: dict[str, Any]) -> dict[str, Any]:
             }
         ],
     }
-
-
-def _target_repo_id(meta: dict[str, Any]) -> str:
-    remote = meta.get("target_root") or ""
-    if "/" in str(remote) and "Quantum-L9" in str(remote):
-        return "Quantum-L9/Cursor-Governance"
-    return str(remote) or "UNKNOWN"
 
 
 def _authority_registry(owner: str) -> dict[str, Any]:
@@ -748,27 +777,33 @@ def _do_not_build() -> dict[str, Any]:
     return {
         "schema": "program-execution-blueprint.do-not-build.v2",
         "schema_version": "2.0.0",
+        # Both of these are architecture laws, not globs. They used to ship as
+        # path_or_pattern, which the Controller then tried to match against
+        # changed files - a sentence never appears inside a path, so the gate
+        # passed having enforced neither. They now travel as semantic rules.
         "prohibited_primary_paths": [
-            {
-                "id": "DNB-001",
-                "path_or_pattern": "a second Program Execution runtime or Controller",
-                "reason": "The existing Controller is the sole runtime authority",
-                "detection": "review plus conformance checks",
-                "exception_authority": "NONE",
-            },
-            {
-                "id": "DNB-002",
-                "path_or_pattern": "compiler-owned mutable runtime state",
-                "reason": "The compiler emits definitions; runtime state belongs to the Controller",
-                "detection": "review plus conformance checks",
-                "exception_authority": "NONE",
-            },
+            prohibition_entry(
+                identifier="DNB-001",
+                statement="a second Program Execution runtime or Controller",
+                reason="The existing Controller is the sole runtime authority",
+                detection="review plus conformance checks",
+                exception_authority="NONE",
+            ),
+            prohibition_entry(
+                identifier="DNB-002",
+                statement="compiler-owned mutable runtime state",
+                reason="The compiler emits definitions; runtime state belongs to the Controller",
+                detection="review plus conformance checks",
+                exception_authority="NONE",
+            ),
         ],
         "allowed_experiments": [],
     }
 
 
 def _current_state_delta(revision: str, snapshot: str) -> dict[str, Any]:
+    # An unobserved revision is not IN_SYNC with anything; say so.
+    observed = revision != "UNKNOWN"
     return {
         "schema": "program-execution-blueprint.current-state-delta.v2",
         "schema_version": "2.0.0",
@@ -788,9 +823,18 @@ def _current_state_delta(revision: str, snapshot: str) -> dict[str, Any]:
                 "target_id": "TARGET-001",
                 "expected_state": f"repository HEAD {revision}",
                 "observed_state": f"repository HEAD {revision}",
-                "classification": "IN_SYNC",
-                "impact": "No drift; synthesis bound to the observed revision.",
-                "required_action": "None until the Controller advances execution.",
+                "classification": "IN_SYNC" if observed else "UNKNOWN",
+                "impact": (
+                    "No drift; synthesis bound to the observed revision."
+                    if observed
+                    else "Repository revision could not be observed; synthesis is bound to "
+                    "no revision."
+                ),
+                "required_action": (
+                    "None until the Controller advances execution."
+                    if observed
+                    else "Resolve the target checkout's git HEAD before admission."
+                ),
                 "evidence_ids": ["EVID-001"],
             }
         ],

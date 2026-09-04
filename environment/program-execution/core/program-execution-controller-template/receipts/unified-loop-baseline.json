@@ -1,0 +1,8 @@
+{
+  "schema": "l9.gmp.unified-loop-baseline.v1",
+  "gmp_id": "GMP-133",
+  "recorded_at": "2026-08-31T03:11:02Z",
+  "origin_main": "da0c7530df837d417a1437f9d08b5d8e61ba4a10",
+  "branch": "agent/gmp133/unified-loop",
+  "note": "pe/unified-loop was already occupied at 452d75e9 (stale vs tip). Ground truth used the sanctioned agent worktree from live origin/main."
+}

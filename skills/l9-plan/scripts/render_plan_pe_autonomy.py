@@ -8,6 +8,12 @@ environment/contracts/execution/templates/canonical.template.executable_plan.v1.
 
 --execute-via=pe-campaign (default) keeps the PE execute block.
 --execute-via=cursor-build swaps that block for Cursor Build (l9-plan-simple).
+--execute-via=embedded swaps it for a caller-owned handoff that authorizes no
+execution at all (l9-plan-simple embedded mode, for callers that own their own
+downstream realization).
+
+One projection axis, one template, one validator: a mode is a `_Projection`
+row, never a second renderer.
 """
 
 from __future__ import annotations
@@ -17,12 +23,16 @@ import hashlib
 import json
 import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 from paths import safe_cli_path
 
 EXECUTE_VIA_PE = "pe-campaign"
 EXECUTE_VIA_BUILD = "cursor-build"
+EXECUTE_VIA_EMBEDDED = "embedded"
+EXECUTE_VIA_CHOICES = (EXECUTE_VIA_PE, EXECUTE_VIA_BUILD, EXECUTE_VIA_EMBEDDED)
+
 BUILD_EXECUTE_SECTION = """## Execute via Cursor Build
 
 Press **Build**. Plan on the current workspace. Execute on the unique open-PR chain tip.
@@ -37,11 +47,158 @@ Press **Build**. Plan on the current workspace. Execute on the unique open-PR ch
 - The finish reply **must** display the opened PR URL as proof. Without that URL the Build is incomplete.
 """
 
+EMBEDDED_EXECUTE_SECTION = """## Handoff to Caller
+
+This document is **validated planning evidence**. Embedded mode terminates here and returns control to the invoking caller.
+
+- The `PLAN_DOCUMENT` behind this projection PASSed `validate_plan_document.py`.
+- This markdown is that document's validated projection — a planning artifact, not a run instruction.
+- The **caller** owns everything downstream: branch selection, worktree, mutation, verification, publication, and release.
+- The caller MUST establish and enforce its own execution authority before acting on this plan. Embedded planning confers none of it.
+- Embedded mode grants **no** mutation authority, **no** commit authority, **no** publication or pull-request authority, **no** campaign or Program Execution authority, **no** phased-execution-protocol authority, and **no** deployment authority.
+- Nothing in this document authorizes an executor to act on it.
+
+**Intended callers:** nested skills, pre-birth and repository-birth workflows, orchestration pipelines, and any system that needs L9 planning depth while owning downstream realization itself.
+"""
+
+
+@dataclass(frozen=True)
+class _Projection:
+    """One handoff mode's projection directives.
+
+    `execute_section is None` means "leave the template's own PE execute
+    authority in place" — that is the pe-campaign identity row.
+    """
+
+    kind: str
+    execute_via: str
+    execute_section: str | None = None
+    section_heading_swap: str | None = None
+    execute_blockquote: str | None = None
+    todos_blockquote: str | None = None
+    next_action_row: str | None = None
+    convergence_via_row: str | None = None
+    machine_stub: str | None = None
+    head_execute_blurb: str = ""
+    head_next_skill: str | None = None
+    head_execute_via_line: str = ""
+
+
+_PE_HEAD_BLURB = (
+    "`@environment/program-execution` → Program Lock/Controller → `@autonomy` (subordinate)."
+)
+
+_BUILD_EXECUTE_BLURB = (
+    "> **Execute:** when status is `executable`, press **Build**, stack on the "
+    "unique open-PR tip if any open PR exists (`PR_STACK=auto`; never `origin/main`), "
+    "then `PR_STACK=auto PR_REMEDIATE=0 make pr` and display the PR URL. Do **not** "
+    "run `make campaign`, admit a Program Lock, or free-form mutate from this markdown alone."
+)
+_BUILD_TODOS_BLURB = (
+    "> **Cursor todos:** frontmatter `todos` project to Build todos. Body is the binding contract."
+)
+_BUILD_NEXT_ACTION = (
+    "| minimum_safe_next_action | When law holds and status=`executable`, "
+    "press **Build**, stack if any open PR exists (`PR_STACK=auto`), then `make pr` "
+    "and display the PR URL — do not free-form execute |"
+)
+_BUILD_CONVERGENCE_VIA = (
+    "| execute_via | Cursor Build; stacked PR if any open PR exists; display PR URL |"
+)
+_BUILD_MACHINE_STUB = """execute_via:
+  pipeline: cursor-build
+  mention_program: "Cursor Build"
+  command_ref: PR_STACK=auto make pr
+  authority_order:
+    - plan_document
+    - cursor_build
+"""
+
+_EMBEDDED_EXECUTE_BLURB = (
+    "> **Execute:** nothing here executes. When status is `executable` this document is "
+    "validated planning evidence handed back to the invoking caller, which owns branch, "
+    "mutation, publication and release authority under its own contract. Do **not** "
+    "free-form mutate from this markdown alone."
+)
+_EMBEDDED_TODOS_BLURB = (
+    "> **Cursor todos:** frontmatter `todos` are the caller's task decomposition, not a "
+    "live execution queue. Body is the binding contract."
+)
+_EMBEDDED_NEXT_ACTION = (
+    "| minimum_safe_next_action | When law holds and status=`executable`, return this "
+    "validated plan to the invoking caller — embedded mode authorizes no mutation, "
+    "publication, or release |"
+)
+_EMBEDDED_CONVERGENCE_VIA = (
+    "| execute_via | Embedded handoff; caller-owned execution; no mutation or "
+    "publication authority granted here |"
+)
+_EMBEDDED_MACHINE_STUB = """execute_via:
+  pipeline: embedded
+  mention_program: "caller-owned handoff"
+  command_ref: none
+  authority_order:
+    - plan_document
+    - invoking_caller
+"""
+
+PROJECTIONS: dict[str, _Projection] = {
+    EXECUTE_VIA_PE: _Projection(
+        kind="pe",
+        execute_via=EXECUTE_VIA_PE,
+        head_execute_blurb=_PE_HEAD_BLURB,
+        head_next_skill=None,
+        head_execute_via_line="- execute_via: @environment/program-execution → @autonomy",
+    ),
+    EXECUTE_VIA_BUILD: _Projection(
+        kind="simple",
+        execute_via=EXECUTE_VIA_BUILD,
+        execute_section=BUILD_EXECUTE_SECTION,
+        section_heading_swap="Execute via Cursor Build; stacked make pr if any open PR exists",
+        execute_blockquote=_BUILD_EXECUTE_BLURB,
+        todos_blockquote=_BUILD_TODOS_BLURB,
+        next_action_row=_BUILD_NEXT_ACTION,
+        convergence_via_row=_BUILD_CONVERGENCE_VIA,
+        machine_stub=_BUILD_MACHINE_STUB,
+        head_execute_blurb=(
+            "Press **Build**. Stack on the unique open-PR tip if any open PR exists. "
+            "After todos: `PR_STACK=auto PR_REMEDIATE=0 make pr` and display the PR URL. "
+            "Do not run `make campaign`."
+        ),
+        head_next_skill="Build then stacked make pr",
+        head_execute_via_line=f"- execute_via: {EXECUTE_VIA_BUILD}",
+    ),
+    EXECUTE_VIA_EMBEDDED: _Projection(
+        kind="simple",
+        execute_via=EXECUTE_VIA_EMBEDDED,
+        execute_section=EMBEDDED_EXECUTE_SECTION,
+        section_heading_swap="Handoff to the invoking caller; no execution authority",
+        execute_blockquote=_EMBEDDED_EXECUTE_BLURB,
+        todos_blockquote=_EMBEDDED_TODOS_BLURB,
+        next_action_row=_EMBEDDED_NEXT_ACTION,
+        convergence_via_row=_EMBEDDED_CONVERGENCE_VIA,
+        machine_stub=_EMBEDDED_MACHINE_STUB,
+        head_execute_blurb=(
+            "Planning artifact only. Embedded mode terminates after validation and hands "
+            "control back to the invoking caller, which owns every downstream action."
+        ),
+        head_next_skill="caller-owned handoff (no execution authorized here)",
+        head_execute_via_line=f"- execute_via: {EXECUTE_VIA_EMBEDDED}",
+    ),
+}
+
 # Skill path is a symlink; prefer resolving the first-class git SSOT.
 TEMPLATE_REL = Path("references/executable-plan.pe-autonomy.template.md")
 SSOT_REL = Path(
     "environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md"
 )
+
+
+def projection_for(execute_via: str) -> _Projection:
+    try:
+        return PROJECTIONS[execute_via]
+    except KeyError:
+        raise SystemExit(f"unknown --execute-via: {execute_via}") from None
 
 
 def _slug(text: str) -> str:
@@ -81,6 +238,7 @@ def _yaml_list(items: list[str]) -> str:
 
 
 def _frontmatter(plan: dict, execute_via: str = EXECUTE_VIA_PE) -> str:
+    prof = projection_for(execute_via)
     title = str(plan.get("title") or "Untitled plan")
     overview = str(plan.get("objective") or title).replace("\n", " ").strip()
     if len(overview) > 400:
@@ -102,91 +260,67 @@ def _frontmatter(plan: dict, execute_via: str = EXECUTE_VIA_PE) -> str:
         lines.append(f"    phase: {t['phase']}")
         lines.append(f"    depends_on: {_yaml_list(t['depends_on'])}")
     lines.append("isProject: false")
-    if execute_via == EXECUTE_VIA_BUILD:
-        lines.append("kind: simple")
-        lines.append(f"execute_via: {EXECUTE_VIA_BUILD}")
-    elif execute_via == EXECUTE_VIA_PE:
-        lines.append("kind: pe")
-        lines.append(f"execute_via: {EXECUTE_VIA_PE}")
+    lines.append(f"kind: {prof.kind}")
+    lines.append(f"execute_via: {prof.execute_via}")
     lines.append("---")
     return "\n".join(lines)
 
 
-_BUILD_EXECUTE_BLURB = (
-    "> **Execute:** when status is `executable`, press **Build**, stack on the "
-    "unique open-PR tip if any open PR exists (`PR_STACK=auto`; never `origin/main`), "
-    "then `PR_STACK=auto PR_REMEDIATE=0 make pr` and display the PR URL. Do **not** "
-    "run `make campaign`, admit a Program Lock, or free-form mutate from this markdown alone."
-)
-_BUILD_TODOS_BLURB = (
-    "> **Cursor todos:** frontmatter `todos` project to Build todos. Body is the binding contract."
-)
-_BUILD_NEXT_ACTION = (
-    "| minimum_safe_next_action | When law holds and status=`executable`, "
-    "press **Build**, stack if any open PR exists (`PR_STACK=auto`), then `make pr` "
-    "and display the PR URL — do not free-form execute |"
-)
-_BUILD_CONVERGENCE_VIA = (
-    "| execute_via | Cursor Build; stacked PR if any open PR exists; display PR URL |"
-)
-_BUILD_MACHINE_STUB = """execute_via:
-  pipeline: cursor-build
-  mention_program: "Cursor Build"
-  command_ref: PR_STACK=auto make pr
-  authority_order:
-    - plan_document
-    - cursor_build
-"""
-
-
-def _rewrite_pe_directives_for_build(body: str) -> str:
-    """Omit live PE-only run-path directives from a Cursor-Build projection."""
-    body = re.sub(
-        r"^> \*\*Execute:\*\* when status is `executable`, run through \*\*\[@environment/program-execution\].*$",
-        _BUILD_EXECUTE_BLURB,
-        body,
-        count=1,
-        flags=re.M,
-    )
-    body = re.sub(
-        r"^> \*\*Cursor todos:\*\* frontmatter `todos` project to PE Task Cards.*$",
-        _BUILD_TODOS_BLURB,
-        body,
-        count=1,
-        flags=re.M,
-    )
-    body = body.replace(
-        "| minimum_safe_next_action | When law holds and status=`executable`, attach [@environment/program-execution](environment/program-execution/) + [@autonomy](commands/autonomy.md); project→Lock→claim→render→autonomy lanes — do not free-form execute |",
-        _BUILD_NEXT_ACTION,
-    )
-    body = body.replace(
-        "| execute_via | `@environment/program-execution` → Program Lock/Controller → `@autonomy` (`/autonomy` → `l9-bounded-autonomy`) under Program lease → PE adapter |",
-        _BUILD_CONVERGENCE_VIA,
-    )
-    body = re.sub(
-        r"execute_via:\n(?:  .+\n)+",
-        _BUILD_MACHINE_STUB,
-        body,
-        count=1,
-    )
+def _rewrite_pe_directives(body: str, prof: _Projection) -> str:
+    """Omit live PE-only run-path directives from a non-PE projection."""
+    if prof.execute_blockquote:
+        body = re.sub(
+            r"^> \*\*Execute:\*\* when status is `executable`, run through \*\*\[@environment/program-execution\].*$",
+            lambda _m: prof.execute_blockquote or "",
+            body,
+            count=1,
+            flags=re.M,
+        )
+    if prof.todos_blockquote:
+        body = re.sub(
+            r"^> \*\*Cursor todos:\*\* frontmatter `todos` project to PE Task Cards.*$",
+            lambda _m: prof.todos_blockquote or "",
+            body,
+            count=1,
+            flags=re.M,
+        )
+    if prof.next_action_row:
+        body = body.replace(
+            "| minimum_safe_next_action | When law holds and status=`executable`, attach [@environment/program-execution](environment/program-execution/) + [@autonomy](commands/autonomy.md); project→Lock→claim→render→autonomy lanes — do not free-form execute |",
+            prof.next_action_row,
+        )
+    if prof.convergence_via_row:
+        body = body.replace(
+            "| execute_via | `@environment/program-execution` → Program Lock/Controller → `@autonomy` (`/autonomy` → `l9-bounded-autonomy`) under Program lease → PE adapter |",
+            prof.convergence_via_row,
+        )
+    if prof.machine_stub:
+        body = re.sub(
+            r"execute_via:\n(?:  .+\n)+",
+            lambda _m: prof.machine_stub or "",
+            body,
+            count=1,
+        )
     return body
 
 
 def _swap_execute_block(body: str, execute_via: str) -> str:
-    if execute_via != EXECUTE_VIA_BUILD:
+    prof = projection_for(execute_via)
+    if prof.execute_section is None:
         return body
     pattern = re.compile(
         r"^## Execute via @environment/program-execution \+ autonomy.*?(?=^## |\Z)",
         re.M | re.S,
     )
-    swapped, n = pattern.subn(BUILD_EXECUTE_SECTION.rstrip() + "\n\n", body, count=1)
+    swapped, n = pattern.subn(prof.execute_section.rstrip() + "\n\n", body, count=1)
     if not n:
-        swapped = BUILD_EXECUTE_SECTION.rstrip() + "\n\n" + body
-    swapped = swapped.replace(
-        "Execute via @environment/program-execution + subordinate @autonomy",
-        "Execute via Cursor Build; stacked make pr if any open PR exists",
-    )
-    return _rewrite_pe_directives_for_build(swapped)
+        swapped = prof.execute_section.rstrip() + "\n\n" + body
+    if prof.section_heading_swap:
+        swapped = swapped.replace(
+            "Execute via @environment/program-execution + subordinate @autonomy",
+            prof.section_heading_swap,
+        )
+    return _rewrite_pe_directives(swapped, prof)
 
 
 def _success_table(plan: dict) -> list[str]:
@@ -216,6 +350,7 @@ def _scope_out(plan: dict) -> list[str]:
 
 def render(plan: dict, template_text: str, execute_via: str = EXECUTE_VIA_PE) -> str:
     """Fill a minimal executable head from JSON; append template body as fill guide."""
+    prof = projection_for(execute_via)
     title = str(plan.get("title") or "Untitled plan")
     scope = plan.get("scope") or {}
     conv = plan.get("convergence") or {}
@@ -233,21 +368,12 @@ def render(plan: dict, template_text: str, execute_via: str = EXECUTE_VIA_PE) ->
     body = re.sub(r"^# PLAN:.*$", f"# PLAN: {title}", body, count=1, flags=re.M)
     body = _swap_execute_block(body, execute_via)
 
-    if execute_via == EXECUTE_VIA_BUILD:
-        execute_blurb = (
-            "Press **Build**. Stack on the unique open-PR tip if any open PR exists. "
-            "After todos: `PR_STACK=auto PR_REMEDIATE=0 make pr` and display the PR URL. "
-            "Do not run `make campaign`."
-        )
-        next_skill = "Build then stacked make pr"
-        execute_via_line = f"- execute_via: {EXECUTE_VIA_BUILD}"
-    else:
-        execute_blurb = (
-            "`@environment/program-execution` → Program Lock/Controller → "
-            "`@autonomy` (subordinate)."
-        )
+    execute_blurb = prof.head_execute_blurb
+    if prof.head_next_skill is None:
         next_skill = conv.get("next_skill", "/autonomy + @environment/program-execution")
-        execute_via_line = "- execute_via: @environment/program-execution → @autonomy"
+    else:
+        next_skill = prof.head_next_skill
+    execute_via_line = prof.head_execute_via_line
 
     head = [
         _frontmatter(plan, execute_via),
@@ -307,9 +433,9 @@ def main() -> int:
     parser.add_argument("template", nargs="?", help="optional template override")
     parser.add_argument(
         "--execute-via",
-        choices=(EXECUTE_VIA_PE, EXECUTE_VIA_BUILD),
+        choices=EXECUTE_VIA_CHOICES,
         default=EXECUTE_VIA_PE,
-        help=f"execute path (default {EXECUTE_VIA_PE})",
+        help=f"execute/handoff path (default {EXECUTE_VIA_PE})",
     )
     args = parser.parse_args()
     plan_path = safe_cli_path(args.plan_json)

@@ -430,7 +430,11 @@ fi
 # adapter — this list is only what all surfaces share.
 if [ "$CHECK" != "1" ] && git -C "$WORKSPACE" rev-parse --git-dir >/dev/null 2>&1; then
   log "Shared local git excludes"
-  exclude_file="$(git -C "$WORKSPACE" rev-parse --git-dir)/info/exclude"
+  # --git-common-dir, not --git-dir: in a LINKED WORKTREE the latter is
+  # .git/worktrees/<name>/, but git reads $GIT_COMMON_DIR/info/exclude, so
+  # writing there is a silent no-op. Identical in a primary clone. Rules
+  # 49/96 give every mutating agent its own worktree, so that is the norm.
+  exclude_file="$(git -C "$WORKSPACE" rev-parse --git-common-dir)/info/exclude"
   case "$exclude_file" in /*) : ;; *) exclude_file="$WORKSPACE/$exclude_file" ;; esac
   mkdir -p "$(dirname "$exclude_file")"
   touch "$exclude_file"

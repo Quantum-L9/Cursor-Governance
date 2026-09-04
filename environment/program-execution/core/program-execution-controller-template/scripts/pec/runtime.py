@@ -44,9 +44,8 @@ def open_runtime(workspace: Path) -> tuple[StateDB, EventLedger]:
     workspace = workspace.resolve()
     if not (workspace / "runtime" / "state.sqlite").is_file():
         raise ControllerError(f"Controller runtime not bootstrapped: {workspace}")
-    return StateDB(workspace / "runtime" / "state.sqlite"), EventLedger(
-        workspace / "ledger" / "events.jsonl"
-    )
+    db = StateDB(workspace / "runtime" / "state.sqlite")
+    return db, EventLedger(workspace / "ledger" / "events.jsonl", anchor_store=db)
 
 
 def _runtime_config(workspace: Path) -> dict[str, Any]:

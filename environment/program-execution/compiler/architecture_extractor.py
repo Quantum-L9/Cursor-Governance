@@ -32,7 +32,7 @@ from typing import Any, Protocol
 
 from jsonschema import Draft202012Validator
 
-from .architecture_intent import SourceUnit
+from .architecture_intent import SourceUnit, normative_signals
 
 SCHEMA_DIR = Path(__file__).resolve().parent / "schemas"
 REQUEST_SCHEMA = "l9.program-execution.architecture-extractor-request.v1"
@@ -195,6 +195,16 @@ _PROBE_RE = re.compile(
     re.IGNORECASE,
 )
 
+#: Document-structure anchors, which are not obligations and so are not part of
+#: the normative vocabulary. They stay upper-case-only on purpose:
+#: `architecture_intent` confines lower-case materiality to obligations and
+#: prohibitions so coverage does not drown, and "risk"/"evidence" are ordinary
+#: prose words. Word-bounded so `EVIDENCE` is not found inside another token.
+_STRUCTURAL_SIGNAL_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("RISK", re.compile(r"(?<![A-Za-z])RISK(?![A-Za-z])")),
+    ("EVIDENCE", re.compile(r"(?<![A-Za-z])EVIDENCE(?![A-Za-z])")),
+)
+
 _KIND_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("prohibition", ("MUST NOT", "NEVER", "DO NOT", "FORBIDDEN", "PROHIBITED")),
     ("risk", ("RISK",)),
@@ -203,8 +213,29 @@ _KIND_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("evidence_requirement", ("EVIDENCE",)),
     ("constraint", ("INVARIANT", "FAIL CLOSED", "FAIL-CLOSED")),
     ("requirement", ("MUST", "REQUIRED", "REQUIRE", "SHALL")),
-    ("scope_include", ("PRIMARY", "ONLY", "PRESERVE", "REMOVE")),
+    ("scope_include", ("PRIMARY", "ONLY", "PRESERVE", "KEEP", "REMOVE")),
 )
+
+
+def sentence_signals(sentence: str) -> frozenset[str]:
+    """Canonical signal names in `sentence`, from one vocabulary.
+
+    `architecture_intent.normative_signals` is the single source of normative
+    lexical semantics. Deriving the extractor's signals from it is what makes
+    an obligation written in lower case carry the same canonical name as its
+    upper-case anchor, and therefore reach the same kind: before this, the
+    extractor matched upper-case literals as substrings, so `must not` was
+    invisible on the deterministic surface while `normative_signals` reported
+    `MUST NOT` — two vocabularies disagreeing about the same sentence.
+
+    Structural anchors that are not obligations are added on top; they are the
+    only signals this module still owns.
+    """
+    found = set(normative_signals(sentence))
+    for name, pattern in _STRUCTURAL_SIGNAL_PATTERNS:
+        if pattern.search(sentence):
+            found.add(name)
+    return frozenset(found)
 
 
 @dataclass
@@ -333,8 +364,9 @@ class DeterministicExtractor:
         return items
 
     def _sentence_kind(self, sentence: str) -> str | None:
+        present = sentence_signals(sentence)
         for kind, signals in _KIND_RULES:
-            if any(signal in sentence for signal in signals):
+            if any(signal in present for signal in signals):
                 return kind
         return None
 

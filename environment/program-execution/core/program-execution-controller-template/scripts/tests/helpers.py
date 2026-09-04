@@ -595,6 +595,21 @@ def source_contract(
         "requested_actions": actions or ["inspect", "local_write"],
         "acceptance_obligation_ids": [f"AC-{task_id[-3:]}"],
         "writable_paths": [output],
+        # A mutating task carries a terminal verification mechanism, which the
+        # source-contract schema now requires. The Source Contract must preserve
+        # the Blueprint's mechanisms *exactly*, so this mirrors the `validation`
+        # block that `make_blueprint`'s task card above emits for the same
+        # task_id and output. `validation_commands` stays as the untyped
+        # projection of the same check.
+        "verification_mechanisms": [
+            {
+                "id": f"VAL-{task_id[-3:]}",
+                "method": "command",
+                "command_or_inspection": f"python3 -c \"from pathlib import Path; assert Path('{output}').read_text() == 'ok\\n'\"",  # noqa: E501
+                "environment": "local",
+                "expected_result": "PASS",
+            }
+        ],
         "validation_commands": [
             f"python3 -c \"from pathlib import Path; assert Path('{output}').read_text() == 'ok\\n'\""  # noqa: E501
         ],

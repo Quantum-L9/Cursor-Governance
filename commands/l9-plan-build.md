@@ -30,6 +30,8 @@ Composes existing owners. Do not invent a second skill.
 
 - Graph: `workflows/dags/plan_simple_build_dag.py`
 - Plan: `skills/l9-plan-simple/SKILL.md`
+- Upstream: `skills/l9-global-architect/SKILL.md`
+- Receipt: `skills/l9-plan-simple/scripts/validate_plan_section_receipt.py`
 - Kernels: `kernels/Improve.md`, `kernels/Validate & Repair.md`
 - Build execute: `skills/l9-plan-simple/references/plan-workflow-simple.md`
 - GMP: `commands/gmp.md` → `workflows/gmp_executor.py`
