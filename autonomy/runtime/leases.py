@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from datetime import timedelta
 from typing import Any
 
@@ -17,6 +17,66 @@ from autonomy.runtime.timeutil import (
     utc_now_text,
 )
 from autonomy.runtime.types import Lease, LeaseStatus
+
+# Roles whose whole purpose is to judge another agent's work. Their lease
+# subject must not be a producer of anything they depend on or were declared
+# independent from; the graph linter proves the declaration, this proves the
+# binding at issue time.
+INDEPENDENT_ROLES = frozenset({"verifier", "reviewer", "verifier_reviewer"})
+
+
+def producer_agent_ids(
+    connection: Any,
+    *,
+    campaign_id: str,
+    action_ids: Iterable[str],
+) -> list[str]:
+    """Agents that produced (or hold/held the lease on) the given actions.
+
+    An action's producers are the lease subjects of its VALID artifacts plus
+    the agent currently assigned to it. The assignment is included because an
+    action may be completed without an artifact row (status set directly) and
+    the agent that held its lease still authored that state.
+    """
+    producers: dict[str, None] = {}
+    for action_id in action_ids:
+        rows = connection.execute(
+            """
+            SELECT l.agent_id AS agent_id
+            FROM artifacts AS a
+            JOIN leases AS l ON l.lease_id = a.lease_id
+            WHERE a.campaign_id = ? AND a.action_id = ? AND a.status = 'VALID'
+            """,
+            (campaign_id, action_id),
+        ).fetchall()
+        for row in rows:
+            if row["agent_id"]:
+                producers.setdefault(str(row["agent_id"]), None)
+        assigned = connection.execute(
+            """
+            SELECT assigned_agent_id
+            FROM actions
+            WHERE campaign_id = ? AND action_id = ?
+            """,
+            (campaign_id, action_id),
+        ).fetchone()
+        if assigned is not None and assigned["assigned_agent_id"]:
+            producers.setdefault(str(assigned["assigned_agent_id"]), None)
+    return list(producers)
+
+
+def independence_sources(action: Mapping[str, Any]) -> list[str]:
+    """Actions this one must be independent from: the explicit declaration
+    first (it names the subject under review), then every dependency."""
+    sources: dict[str, None] = {}
+    for key in ("independent_from", "depends_on"):
+        for action_id in action.get(key, []) or []:
+            sources.setdefault(str(action_id), None)
+    return list(sources)
+
+
+def requires_independence(action: Mapping[str, Any]) -> bool:
+    return str(action.get("role")) in INDEPENDENT_ROLES or str(action.get("kind")) == "validation"
 
 
 class LeaseManager:
@@ -95,6 +155,17 @@ class LeaseManager:
                     f"ACTION_ALREADY_LEASED: {action_id!r} already has "
                     f"active lease {duplicate['lease_id']!r}"
                 )
+            if requires_independence(action):
+                producers = producer_agent_ids(
+                    connection,
+                    campaign_id=campaign_id,
+                    action_ids=independence_sources(action),
+                )
+                if agent_id in producers:
+                    raise PolicyViolation(
+                        f"VERIFIER_NOT_INDEPENDENT: {agent_id!r} produced work that "
+                        f"{action_id!r} must judge independently"
+                    )
             # Insert the lease row before claims so the claims FK is satisfiable.
             self.claims.assert_available(
                 connection,

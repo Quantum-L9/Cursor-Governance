@@ -296,10 +296,14 @@ def run_validation_command(
             "exit_code": 124,
             "stdout": stdout[-_STREAM_TAIL:],
             "stderr": f"validation command timed out after {timeout}s",
+            "stdout_truncated": len(stdout) > _STREAM_TAIL,
+            "stderr_truncated": False,
             "exec_env": resolved.describe(),
         }
-    stdout = (completed.stdout or "")[-_STREAM_TAIL:]
-    stderr = (completed.stderr or "")[-_STREAM_TAIL:]
+    full_stdout = completed.stdout or ""
+    full_stderr = completed.stderr or ""
+    stdout = full_stdout[-_STREAM_TAIL:]
+    stderr = full_stderr[-_STREAM_TAIL:]
     empty = _empty_test_collection(command, stdout, stderr)
     failed = completed.returncode != 0 or empty
     result: dict[str, Any] = {
@@ -308,6 +312,11 @@ def run_validation_command(
         "exit_code": 2 if empty and completed.returncode == 0 else completed.returncode,
         "stdout": stdout,
         "stderr": (f"{stderr}\nvalidation collected zero tests".strip() if empty else stderr),
+        # The streams above are tails. A reader of the receipt must be told
+        # when the command wrote more than was kept, or a cut-off traceback
+        # reads as the whole story.
+        "stdout_truncated": len(full_stdout) > _STREAM_TAIL,
+        "stderr_truncated": len(full_stderr) > _STREAM_TAIL,
     }
     if failed:
         result["exec_env"] = resolved.describe()
@@ -324,13 +333,28 @@ def _empty_test_collection(command: str, stdout: str, stderr: str) -> bool:
     return "NO TESTS RAN" in output or "Ran 0 tests" in output or "collected 0 items" in output
 
 
+TRUNCATION_MARKER = "[output truncated: showing the last"
+
+
 def to_attempt_result(result: dict[str, Any]) -> dict[str, Any]:
-    """Shrink a validation result to the attempt-receipt shape."""
-    evidence = ((result.get("stdout") or "") + (result.get("stderr") or "")).strip()
+    """Shrink a validation result to the attempt-receipt shape.
+
+    The receipt schema admits exactly `command`, `status`, `exit_code` and
+    `evidence`, so truncation is declared inside the evidence text: a leading
+    marker line names how much of the output survived. Without it a tail cut
+    at an arbitrary character was indistinguishable from complete output.
+    """
+    full_evidence = ((result.get("stdout") or "") + (result.get("stderr") or "")).strip()
+    evidence = full_evidence[-_EVIDENCE_TAIL:]
+    streams_cut = bool(result.get("stdout_truncated") or result.get("stderr_truncated"))
+    if evidence and (streams_cut or len(full_evidence) > len(evidence)):
+        shown = len(evidence)
+        total = f"{len(full_evidence)}+" if streams_cut else str(len(full_evidence))
+        evidence = f"{TRUNCATION_MARKER} {shown} of {total} characters]\n{evidence}"
     entry: dict[str, Any] = {
         "command": result["command"],
         "status": result["status"],
         "exit_code": result["exit_code"],
-        "evidence": evidence[-_EVIDENCE_TAIL:] or None,
+        "evidence": evidence or None,
     }
     return entry

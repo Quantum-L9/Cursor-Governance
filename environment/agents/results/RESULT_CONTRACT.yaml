@@ -9,3 +9,22 @@ prohibited:
   - conversational_acceptance
   - adapter_direct_memory_write
   - adapter_direct_processor_invoke
+acceptance_authority:
+  # The host and the root lease outrank the document. A structurally valid
+  # document returned under a cancelled/errored host stop, or under a lease
+  # root Autonomy revoked or let expire, is REJECTED with a durable receipt.
+  host_terminal_status_must_be_success: true
+  root_lease_must_be_active_or_released: true
+  # Scope and review subject come from the rendered assignment only; the
+  # document never supplies its own allowed_paths, forbidden_paths, or
+  # subject_agent_id, and an empty writable grant admits no changed files.
+  writable_scope_source: assignment
+  review_subject_source: assignment
+  path_grammar_owner: autonomy/runtime/capability_gateway.py
+  role_vocabulary_owner: environment/agents/cursor-subagents/result_bridge.py
+receipts:
+  # Every judged result leaves an acceptance receipt, including correlation
+  # rejections; receipts are keyed by (assignment_id, result_id).
+  acceptance_key: [assignment_id, result_id]
+  document_status_preserved: true
+  handoff_status_for_incomplete_document: ACCEPTED_INCOMPLETE

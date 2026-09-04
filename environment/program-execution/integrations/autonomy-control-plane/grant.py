@@ -278,12 +278,100 @@ def authority_digest(authority: Mapping[str, Any]) -> str:
     return "sha256:" + hashlib.sha256(encoded).hexdigest()
 
 
+def latest_grant_receipt(workspace: str | Path, task_id: str) -> tuple[int, dict[str, Any] | None]:
+    """The highest-generation grant receipt PE recorded for this task, if any.
+
+    Root grants are generations, not Controller attempts: every dispatch a
+    task's window gets is one generation, and the receipt for it is the
+    authority evidence of record. Returns ``(generation, receipt)``; a task
+    with no receipt yet is ``(0, None)``.
+    """
+    directory = Path(workspace).resolve() / "runtime" / "autonomy-grants"
+    prefix = f"{_slugify_receipt(task_id)}.attempt-"
+    best: tuple[int, dict[str, Any] | None] = (0, None)
+    if not directory.is_dir():
+        return best
+    for path in directory.glob(f"{prefix}*.grant.json"):
+        stem = path.name[len(prefix) :].split(".", 1)[0]
+        if not stem.isdigit():
+            continue
+        generation = int(stem)
+        if generation <= best[0]:
+            continue
+        try:
+            receipt = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(receipt, dict):
+            best = (generation, receipt)
+    return best
+
+
+def _lease_status(grant: Mapping[str, Any]) -> str | None:
+    """Live status of the persisted grant's subordinate lease, or None if unknown."""
+    database = Path(str(grant.get("runtime_database") or ""))
+    if not database.is_file():
+        return None
+    root = str(grant.get("repository_root") or _GOV_ROOT)
+    runtime = AutonomyRuntime.from_repository(repository_root=root, database_path=database)
+    try:
+        lease = runtime.leases.get(str(grant.get("lease_id") or ""))
+    except (KeyError, ValueError):
+        return None
+    return str(lease.status.value)
+
+
+def _resume_persisted_grant(
+    grant: Mapping[str, Any],
+    *,
+    parent: ProgramParent,
+    binding: PeerBinding,
+) -> dict[str, Any] | None:
+    """Resume the grant a lost window ran under, or say why it cannot be.
+
+    A window PE dispatched and then lost still holds a live subordinate lease.
+    Re-issuing would either be refused by the root store (the same campaign id
+    with a fresh payload) or would mint a second authority for the same
+    attempt. Instead the recorded grant is resumed -- after proving it is the
+    one this exact Program parent and peer binding issued and that its lease
+    is still ACTIVE. Returns None when the lease is terminal, which means the
+    next generation must be minted; raises on drift, which means nothing here
+    is resumable.
+    """
+    recorded_parent = dict(grant.get("program_parent") or {})
+    for field_name in ("lease_id", "base_sha", "contract_digest"):
+        recorded = str(recorded_parent.get(field_name) or "")
+        live = str(getattr(parent, field_name) or "")
+        if recorded and live and recorded != live:
+            raise AutonomyGrantError(
+                f"GRANT_PARENT_DRIFT: persisted grant {field_name} {recorded!r} != live "
+                f"Program parent {live!r}; the recorded window cannot be resumed"
+            )
+    recorded_binding = dict(grant.get("peer_binding") or {})
+    for field_name in ("agent_ref", "surface", "provider_ref", "execution_profile_ref"):
+        recorded = str(recorded_binding.get(field_name) or "")
+        live = str(getattr(binding, field_name) or "")
+        if recorded and live and recorded != live:
+            raise AutonomyGrantError(
+                f"GRANT_BINDING_DRIFT: persisted grant {field_name} {recorded!r} != {live!r}"
+            )
+    authority = grant.get("autonomy_authority")
+    if not isinstance(authority, dict) or authority_digest(authority) != str(
+        authority.get("authority_digest") or ""
+    ):
+        raise AutonomyGrantError("GRANT_RECEIPT_TAMPERED: persisted grant fails its own digest")
+    status = _lease_status(grant)
+    if status == "ACTIVE":
+        return dict(grant)
+    return None
+
+
 def grant_task_mutation(
     repository_root: str | Path,
     workspace: str | Path,
     contract: Mapping[str, Any],
     *,
-    attempt_number: int = 1,
+    attempt_number: int | None = None,
     adapter_id: str = "cursor-foreground",
     agent_ref: str | None = None,
     surface: str | None = None,
@@ -322,11 +410,48 @@ def grant_task_mutation(
         parent = verifier.require_live_parent(contract)
     except ProgramAuthorityError as exc:
         raise AutonomyGrantError(str(exc)) from exc
+    task_id = str(contract.get("task_id") or contract.get("id") or "task")
+    # Generations: resume the recorded grant when its window's lease is still
+    # live under this exact parent; otherwise mint the next generation so the
+    # root campaign id never collides with a terminal one.
+    latest_generation, latest = latest_grant_receipt(pec, task_id)
+    if attempt_number is None:
+        if latest is not None:
+            resumed = _resume_persisted_grant(latest, parent=parent, binding=binding)
+            if resumed is not None:
+                return resumed
+            attempt_number = latest_generation + 1
+        else:
+            attempt_number = 1
+    else:
+        requested = grant_receipt_path(pec, task_id, int(attempt_number), kind="grant")
+        if requested.is_file():
+            try:
+                existing = json.loads(requested.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                raise AutonomyGrantError(f"GRANT_RECEIPT_UNREADABLE: {requested}: {exc}") from exc
+            resumed = _resume_persisted_grant(existing, parent=parent, binding=binding)
+            if resumed is not None:
+                return resumed
+            raise AutonomyGrantError(
+                f"GRANT_GENERATION_TERMINAL: grant generation {attempt_number} for {task_id} "
+                "already ran and its lease is terminal; a new dispatch needs a new generation"
+            )
     mapped = map_program_contract(
         contract,
         adapter_id=adapter_id,
         attempt_number=attempt_number,
     )
+    if mapped["mutation"] and not parent.bound:
+        # A subordinate mutation lease is only ever issued beneath a live
+        # Program parent. With no canonical state the parent's expiry,
+        # revocation and lease drift are unobservable, so a mutation grant
+        # would be bounded by nothing but its own TTL. Absence of the
+        # authority source is a refusal, not a relaxation.
+        raise AutonomyGrantError(
+            "PROGRAM_PARENT_UNBOUND: no canonical Program state at "
+            f"{verifier.state_path}; a mutation grant is refused without a live parent"
+        )
     campaign_payload = mapped["campaign"]
     deployment_payload = mapped["deployment"]
     campaign = CampaignAuthorization.from_dict(campaign_payload)
@@ -378,7 +503,6 @@ def grant_task_mutation(
         work_agent = ids["agent_id"]
         work_capabilities = RECON_CAPABILITIES
         authorize = INSPECT_AUTHORIZATIONS
-    task_id = str(contract.get("task_id") or contract.get("id") or "task")
     try:
         ttl_seconds = verifier.subordinate_ttl_seconds(
             parent,
@@ -866,6 +990,20 @@ def submit_task_result(
             "reason": f"subordinate lease is already {lease.status.value}",
             "lease_id": lease_id,
         }
+    # The terminal result is bound to the exact rendered contract the lease was
+    # issued for. An empty digest binds to nothing, and a foreign one would
+    # release this lease on the strength of some other task's contract.
+    digest = str(contract_digest or "").strip()
+    if not digest:
+        raise AutonomyGrantError(
+            "RESULT_CONTRACT_DIGEST_MISSING: a terminal result must name its rendered contract"
+        )
+    recorded = str((lease.metadata or {}).get("program_contract_digest") or "")
+    if recorded and recorded != digest:
+        raise AutonomyGrantError(
+            f"RESULT_CONTRACT_DIGEST_MISMATCH: result names {digest!r} but lease "
+            f"{lease_id} was issued for {recorded!r}"
+        )
     artifact_id = f"artifact-{uuid.uuid4().hex}"
     runtime.artifacts.submit(
         lease_id=lease_id,

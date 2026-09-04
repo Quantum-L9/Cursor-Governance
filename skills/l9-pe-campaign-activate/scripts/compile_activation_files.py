@@ -63,14 +63,16 @@ def load_yaml(path: Path) -> Any:
     return yaml.safe_load(path.read_text(encoding="utf-8"))
 
 
-def dump_yaml(path: Path, value: Any) -> None:
+def yaml_text(value: Any) -> str:
+    """The exact text `dump_yaml` writes, so a receipt can be taken over it."""
     if yaml is None:
         raise CompileError("PyYAML required")
+    return yaml.safe_dump(value, sort_keys=False, allow_unicode=True, width=88)
+
+
+def dump_yaml(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        yaml.safe_dump(value, sort_keys=False, allow_unicode=True, width=88),
-        encoding="utf-8",
-    )
+    path.write_text(yaml_text(value), encoding="utf-8")
 
 
 def require_intent(raw: Any) -> dict[str, Any]:
@@ -554,23 +556,58 @@ def build_source(intent: dict[str, Any], *, stamp: str) -> dict[str, Any]:
     }
 
 
-def write_receipt(source_path: Path, campaign_id: str, *, stamp: str) -> dict[str, Any]:
+def write_receipt(
+    source_path: Path,
+    campaign_id: str,
+    *,
+    stamp: str,
+    expected_bytes: bytes | None = None,
+    operator_input: Path | None = None,
+) -> dict[str, Any]:
+    """Record what was placed at `source_path`, measured from the file itself.
+
+    `digest` / `bytes` are always the placed CAMPAIGN_SOURCE.yaml re-read from
+    disk. `pack_recorded_*` is the compiler's own serialization when the
+    caller supplies it (`expected_bytes`), and `digest_matches_pack` compares
+    the two independent reads; a mismatch is refused, not recorded as a
+    match. Without `expected_bytes` those fields are `null`: the receipt used
+    to copy `digest` into them and assert `True` unconditionally, which
+    attested nothing. `operator_input` records the activate seed the source
+    was compiled from, so the receipt binds the input as well as the output.
+    """
     data = source_path.read_bytes()
     digest = hashlib.sha256(data).hexdigest()
-    receipt = {
+    expected_digest = (
+        hashlib.sha256(expected_bytes).hexdigest() if expected_bytes is not None else None
+    )
+    if expected_digest is not None and expected_digest != digest:
+        raise CompileError(
+            f"{source_path.name} on disk (sha256 {digest[:12]}, {len(data)} bytes) is not the "
+            f"compiled source (sha256 {expected_digest[:12]}, {len(expected_bytes or b'')} "
+            "bytes); refusing to write an integrity receipt over a file that drifted "
+            "between write and read"
+        )
+    receipt: dict[str, Any] = {
         "schema": "source-integrity-receipt.v1",
         "campaign_id": campaign_id,
         "source_file": "CAMPAIGN_SOURCE.yaml",
         "digest_algorithm": "sha256",
         "digest": digest,
         "bytes": len(data),
-        "pack_recorded_digest": digest,
-        "pack_recorded_bytes": len(data),
-        "digest_matches_pack": True,
+        "pack_recorded_digest": expected_digest,
+        "pack_recorded_bytes": len(expected_bytes) if expected_bytes is not None else None,
+        "digest_matches_pack": (digest == expected_digest) if expected_digest else None,
         "collected_at": stamp,
         "collection_method": "l9-pe-campaign-activate-compile",
         "producer": "l9-pe-campaign-activate",
     }
+    if operator_input is not None:
+        raw = operator_input.read_bytes()
+        receipt["operator_input"] = {
+            "path": str(operator_input),
+            "sha256": hashlib.sha256(raw).hexdigest(),
+            "bytes": len(raw),
+        }
     receipt_path = source_path.with_name("source-integrity-receipt.json")
     receipt_path.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
     return receipt
@@ -693,7 +730,13 @@ def compile_activation(
     campaign_dir.mkdir(parents=True, exist_ok=True)
     source_path = campaign_dir / "CAMPAIGN_SOURCE.yaml"
     dump_yaml(source_path, source)
-    write_receipt(source_path, campaign_id, stamp=now)
+    write_receipt(
+        source_path,
+        campaign_id,
+        stamp=now,
+        expected_bytes=yaml_text(source).encode("utf-8"),
+        operator_input=intent_path,
+    )
     assert_no_forbidden(campaign_dir)
 
     wrote = [

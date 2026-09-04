@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 from pathlib import Path
 
 import pytest
@@ -316,3 +317,28 @@ def test_unobserved_revision_is_not_reported_in_sync(tmp_path: Path) -> None:
     delta = yaml.safe_load((output / "CURRENT_STATE_DELTA.yaml").read_text(encoding="utf-8"))
     classification = delta["deltas"][0]["classification"]
     assert classification == "UNKNOWN", delta["deltas"][0]
+
+
+def test_verification_task_is_inspect_only_and_the_program_is_acceptable(tmp_path: Path) -> None:
+    """The verifier reads receipts and writes nothing.
+
+    It used to inherit the profile's write/commit ceiling, which made it a
+    mutating repo_local task with no terminal verifier at acceptance -- so the
+    synthesizer's own program was refused by `accept_blueprint` -- and would
+    have let the verifier commit the very writes it was verifying.
+    """
+    root = _synthesize(tmp_path)
+    cards = yaml.safe_load((root / "TASK_CARDS.yaml").read_text(encoding="utf-8"))
+    verifier = next(
+        t for t in cards["tasks"] if "independent_verification" in (t.get("actions") or [])
+    )
+    ceiling = verifier["authorization_ceiling"]
+    assert ceiling["inspect"] is True
+    assert not any(v for k, v in ceiling.items() if k != "inspect"), ceiling
+    spec = importlib.util.spec_from_file_location(
+        "synth_test_launchability", Path(__file__).resolve().parents[2] / "scripts/launchability.py"
+    )
+    assert spec is not None and spec.loader is not None
+    launchability = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(launchability)
+    assert launchability.terminal_verification_errors(launchability.blueprint_tasks(root)) == []

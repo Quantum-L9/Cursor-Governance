@@ -32,6 +32,14 @@ class CommandResult:
     duration_seconds: float
     timed_out: bool
     environment_fingerprint: str
+    #: `stdout` / `stderr` hold at most `_MAX_OUTPUT` bytes of the tail. When
+    #: the process wrote more, the flag says so and `*_bytes` says how much;
+    #: the digests are always over the full raw stream, never the tail, so a
+    #: truncated capture cannot be mistaken for the complete output.
+    stdout_truncated: bool = False
+    stderr_truncated: bool = False
+    stdout_bytes: int = 0
+    stderr_bytes: int = 0
 
     def to_evidence(self) -> dict[str, object]:
         return {
@@ -43,6 +51,10 @@ class CommandResult:
             "duration_seconds": self.duration_seconds,
             "timed_out": self.timed_out,
             "environment_fingerprint": self.environment_fingerprint,
+            "stdout_truncated": self.stdout_truncated,
+            "stderr_truncated": self.stderr_truncated,
+            "stdout_bytes": self.stdout_bytes,
+            "stderr_bytes": self.stderr_bytes,
         }
 
 
@@ -89,6 +101,20 @@ def _merge_environment(
     return merged
 
 
+def _bound_stream(raw: bytes | None) -> tuple[str, bool, int]:
+    """Decode the tail of a captured stream: (text, truncated, raw byte count).
+
+    Captured as bytes and decoded with replacement so a process that emits
+    non-UTF-8 output still yields a result (and a receipt) instead of dying
+    in the runner with a `UnicodeDecodeError`. Only the last `_MAX_OUTPUT`
+    bytes are kept as text; the caller digests the full raw stream.
+    """
+    data = raw or b""
+    truncated = len(data) > _MAX_OUTPUT
+    tail = data[-_MAX_OUTPUT:] if truncated else data
+    return tail.decode("utf-8", errors="replace"), truncated, len(data)
+
+
 def _kill_process_group(pid: int, sig: signal.Signals) -> None:
     try:
         os.killpg(pid, sig)
@@ -118,6 +144,7 @@ def run_argv(
     if not working_directory.is_dir():
         raise NotADirectoryError(str(working_directory))
     env = _merge_environment(os.environ, environment)
+    stdin_bytes = stdin.encode("utf-8") if stdin is not None else None
     start = time.monotonic()
     process = subprocess.Popen(
         normalized,
@@ -126,33 +153,39 @@ def run_argv(
         stdin=subprocess.PIPE if stdin is not None else subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=True,
+        text=False,
         start_new_session=True,
     )
     timed_out = False
     try:
-        stdout, stderr = process.communicate(input=stdin, timeout=timeout_seconds)
+        raw_stdout, raw_stderr = process.communicate(input=stdin_bytes, timeout=timeout_seconds)
     except subprocess.TimeoutExpired:
         log.warning("subprocess_timed_out", timeout_seconds=timeout_seconds)
         timed_out = True
         _kill_process_group(process.pid, signal.SIGTERM)
         try:
-            stdout, stderr = process.communicate(timeout=5)
+            raw_stdout, raw_stderr = process.communicate(timeout=5)
         except subprocess.TimeoutExpired:
             _kill_process_group(process.pid, signal.SIGKILL)
-            stdout, stderr = process.communicate()
+            raw_stdout, raw_stderr = process.communicate()
     duration = time.monotonic() - start
-    stdout = stdout[-_MAX_OUTPUT:]
-    stderr = stderr[-_MAX_OUTPUT:]
+    raw_stdout = raw_stdout or b""
+    raw_stderr = raw_stderr or b""
+    stdout, stdout_truncated, stdout_bytes = _bound_stream(raw_stdout)
+    stderr, stderr_truncated, stderr_bytes = _bound_stream(raw_stderr)
     return CommandResult(
         argv=normalized,
         executable=executable,
         exit_code=process.returncode,
         stdout=stdout,
         stderr=stderr,
-        stdout_digest=_SHA256_PREFIX + hashlib.sha256(stdout.encode()).hexdigest(),
-        stderr_digest=_SHA256_PREFIX + hashlib.sha256(stderr.encode()).hexdigest(),
+        stdout_digest=_SHA256_PREFIX + hashlib.sha256(raw_stdout).hexdigest(),
+        stderr_digest=_SHA256_PREFIX + hashlib.sha256(raw_stderr).hexdigest(),
         duration_seconds=round(duration, 6),
         timed_out=timed_out,
         environment_fingerprint=_fingerprint_environment(env),
+        stdout_truncated=stdout_truncated,
+        stderr_truncated=stderr_truncated,
+        stdout_bytes=stdout_bytes,
+        stderr_bytes=stderr_bytes,
     )

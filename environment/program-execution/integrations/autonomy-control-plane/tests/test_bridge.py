@@ -241,10 +241,12 @@ class AutonomyControlPlaneBridgeTests(unittest.TestCase):
 
     def test_local_write_without_commit_grant_withholds_commit_capability(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
+            contract = _write_only_contract()
+            _bind_program_parent(Path(raw), contract)
             grant = _grant().grant_task_mutation(
                 _GOV_ROOT,
                 Path(raw),
-                _write_only_contract(),
+                contract,
                 attempt_number=1,
             )
             self.assertTrue(grant["mutation"])
@@ -345,10 +347,12 @@ class AutonomyControlPlaneBridgeTests(unittest.TestCase):
     def test_grant_issues_local_write_and_commit_not_merge(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             workspace = Path(raw)
+            contract = _mutating_contract()
+            _bind_program_parent(workspace, contract)
             grant = _grant().grant_task_mutation(
                 _GOV_ROOT,
                 workspace,
-                _mutating_contract(),
+                contract,
                 attempt_number=1,
             )
             self.assertTrue(grant["mutation"])
@@ -374,6 +378,9 @@ class AutonomyControlPlaneBridgeTests(unittest.TestCase):
             contract_b = dict(_mutating_contract())
             contract_b["task_id"] = "TASK-2"
             contract_b["writable_paths"] = ["docs/other.md"]
+            contract_b["lease_id"] = "lease-program-2"
+            _bind_program_parent(workspace, contract_a)
+            _bind_program_parent(workspace, contract_b)
             grant_a = _grant().grant_task_mutation(
                 _GOV_ROOT, workspace, contract_a, attempt_number=1
             )
@@ -391,9 +398,9 @@ class AutonomyControlPlaneBridgeTests(unittest.TestCase):
     def test_revoked_grant_lease_cannot_stay_active(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             workspace = Path(raw)
-            grant = _grant().grant_task_mutation(
-                _GOV_ROOT, workspace, _mutating_contract(), attempt_number=1
-            )
+            contract = _mutating_contract()
+            _bind_program_parent(workspace, contract)
+            grant = _grant().grant_task_mutation(_GOV_ROOT, workspace, contract, attempt_number=1)
             result = _grant().revoke_task_grant(grant, reason="child failed before completion")
             self.assertTrue(result["revoked"])
             from autonomy.runtime.engine import AutonomyRuntime
@@ -678,6 +685,30 @@ class SubordinateLifecycleTests(unittest.TestCase):
             for claim in claims:
                 self.assertNotEqual(claim["status"], "HELD")
 
+    def test_terminal_result_is_bound_to_the_rendered_contract_digest(self) -> None:
+        """An empty or foreign digest must not release this lease."""
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            module, grant = self._granted(workspace)
+            for digest in ("", "   ", "digest-of-another-task"):
+                with self.subTest(digest=digest):
+                    with self.assertRaises(module.AutonomyGrantError):
+                        module.submit_task_result(
+                            grant,
+                            changed_files=["docs/result.txt"],
+                            candidate_sha=None,
+                            contract_digest=digest,
+                        )
+            self.assertEqual(self._lease_row(grant)["status"], "ACTIVE")
+            result = module.submit_task_result(
+                grant,
+                changed_files=["docs/result.txt"],
+                candidate_sha=None,
+                contract_digest="digest-1",
+            )
+            self.assertTrue(result["submitted"])
+            self.assertEqual(result["lease_status"], "RELEASED")
+
     def test_root_support_never_completes_program_truth(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             workspace = Path(raw)
@@ -853,6 +884,178 @@ class EffectAuthorizationTests(unittest.TestCase):
                 agent_id="agent-x",
                 orchestrator=object(),
             )
+
+
+class GrantGenerationTests(unittest.TestCase):
+    """A lost window resumes its live grant; a terminal one is succeeded.
+
+    Re-issuing a grant for the same task and attempt used to be refused by the
+    root store ("already registered with different contracts"), so an
+    interrupted EXECUTING task could never be resumed and a reset task could
+    never be re-dispatched.
+    """
+
+    def _bound(self, workspace: Path):
+        contract = _mutating_contract()
+        _bind_program_parent(workspace, contract)
+        return contract
+
+    def test_a_live_grant_is_resumed_not_reissued(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            contract = self._bound(workspace)
+            module = _grant()
+            first = module.grant_task_mutation(_GOV_ROOT, workspace, contract)
+            second = module.grant_task_mutation(_GOV_ROOT, workspace, contract)
+            self.assertEqual(second["lease_id"], first["lease_id"])
+            self.assertEqual(second["attempt_number"], 1)
+            self.assertEqual(module.latest_grant_receipt(workspace, "TASK-1")[0], 1)
+
+    def test_a_terminal_grant_is_succeeded_by_the_next_generation(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            contract = self._bound(workspace)
+            module = _grant()
+            first = module.grant_task_mutation(_GOV_ROOT, workspace, contract)
+            module.revoke_task_grant(first, reason="window died")
+            second = module.grant_task_mutation(_GOV_ROOT, workspace, contract)
+            self.assertNotEqual(second["lease_id"], first["lease_id"])
+            self.assertEqual(second["attempt_number"], 2)
+            self.assertNotEqual(second["campaign_id"], first["campaign_id"])
+            self.assertTrue(
+                module.grant_receipt_path(workspace, "TASK-1", 2, kind="grant").is_file()
+            )
+            # An explicit request for the terminal generation is refused, never
+            # silently re-minted under the same root identity.
+            with self.assertRaises(module.AutonomyGrantError) as caught:
+                module.grant_task_mutation(_GOV_ROOT, workspace, contract, attempt_number=1)
+            self.assertIn("GRANT_GENERATION_TERMINAL", str(caught.exception))
+
+    def test_a_grant_beneath_a_different_parent_is_not_resumed(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            contract = self._bound(workspace)
+            module = _grant()
+            first = module.grant_task_mutation(_GOV_ROOT, workspace, contract)
+            receipt = module.grant_receipt_path(workspace, "TASK-1", 1, kind="grant")
+            payload = json.loads(receipt.read_text(encoding="utf-8"))
+            payload["program_parent"]["lease_id"] = "lease-program-other"
+            receipt.write_text(json.dumps(payload), encoding="utf-8")
+            with self.assertRaises(module.AutonomyGrantError) as caught:
+                module.grant_task_mutation(_GOV_ROOT, workspace, contract)
+            self.assertIn("GRANT_PARENT_DRIFT", str(caught.exception))
+            self.assertEqual(first["attempt_number"], 1)
+
+
+class WorkerEffectCapabilityTests(unittest.TestCase):
+    """A worker window never names its own capability, and unknown tools deny.
+
+    The root `infer_capability` honours an explicit `arguments["capability"]`
+    for trusted in-process callers. A worker's tool input is untrusted host
+    data: honouring it there let a `Write` claim `artifact.write_execution_result`
+    -- a capability the executor lease legitimately holds -- and skip the
+    gateway's path confinement entirely.
+    """
+
+    def _authorizer(self, workspace: Path):
+        contract = _mutating_contract()
+        _bind_program_parent(workspace, contract)
+        grant = _grant().grant_task_mutation(_GOV_ROOT, workspace, contract, attempt_number=1)
+        worktree = workspace / "worktrees" / str(contract["task_id"])
+        (worktree / "docs").mkdir(parents=True, exist_ok=True)
+        module = _program_authority()
+        base = str(contract["base_sha"])
+        authorizer = module.ProgramBoundEffectAuthorizer(
+            grant["autonomy_authority"], head_reader=lambda _worktree: base
+        )
+        return module, grant, worktree, authorizer
+
+    def test_caller_supplied_capability_never_escapes_path_confinement(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            module, grant, worktree, authorizer = self._authorizer(Path(raw))
+            honest = authorizer.authorize(
+                tool_name="Write",
+                arguments={"file_path": str(worktree / "docs/result.txt"), "content": "x"},
+            )
+            self.assertTrue(honest.allowed, honest.message)
+            outside = authorizer.authorize(
+                tool_name="Write",
+                arguments={
+                    "file_path": "/etc/passwd",
+                    "content": "x",
+                    "capability": "artifact.write_execution_result",
+                },
+            )
+            self.assertFalse(outside.allowed)
+            self.assertEqual(outside.code, "RESOURCE_OUTSIDE_WORKTREE")
+            scoped = authorizer.authorize(
+                tool_name="Write",
+                arguments={
+                    "file_path": str(worktree / "AGENTS.md"),
+                    "content": "x",
+                    "capability": "artifact.write_execution_result",
+                },
+            )
+            self.assertFalse(scoped.allowed)
+            self.assertEqual(scoped.code, "PATH_OUTSIDE_CAMPAIGN_SCOPE")
+            downgraded = authorizer.authorize(
+                tool_name="Write",
+                arguments={
+                    "file_path": str(worktree / "AGENTS.md"),
+                    "content": "x",
+                    "capability": "repository.read",
+                },
+            )
+            self.assertFalse(downgraded.allowed)
+            # Only the honest write was ever recorded as an effect decision.
+            effects = _grant().authorized_resources(grant, phase=module.AUTHORIZATION_PHASE_EFFECT)
+            self.assertEqual(effects, {"docs/result.txt"})
+
+    def test_unmapped_tool_is_refused_not_defaulted_to_read(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            _module, _grant_receipt, worktree, authorizer = self._authorizer(Path(raw))
+            decision = authorizer.authorize(
+                tool_name="mcp__fs__create_directory",
+                arguments={"path": str(worktree / "docs/result.txt")},
+            )
+            self.assertFalse(decision.allowed)
+            self.assertEqual(decision.code, "TOOL_UNMAPPED")
+
+    def test_tools_outside_the_worker_effect_set_are_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            _module, _grant_receipt, worktree, authorizer = self._authorizer(Path(raw))
+            for tool_name in ("git_commit", "git_push", "gh_pr_merge"):
+                with self.subTest(tool_name=tool_name):
+                    decision = authorizer.authorize(
+                        tool_name=tool_name, arguments={"path": str(worktree)}
+                    )
+                    self.assertFalse(decision.allowed)
+                    self.assertEqual(decision.code, "CAPABILITY_NOT_EFFECT_AUTHORIZABLE")
+
+    def test_unbound_parent_refuses_mutation_grant_and_effects(self) -> None:
+        """No canonical Program state is a missing authority source, not freedom."""
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            with self.assertRaises(_grant().AutonomyGrantError) as caught:
+                _grant().grant_task_mutation(
+                    _GOV_ROOT, workspace, _mutating_contract(), attempt_number=1
+                )
+            self.assertIn("PROGRAM_PARENT_UNBOUND", str(caught.exception))
+            # An inspect-only grant has nothing to mutate and stays available.
+            contract = _mutating_contract()
+            contract["requested_actions"] = ["inspect"]
+            grant = _grant().grant_task_mutation(_GOV_ROOT, workspace, contract, attempt_number=1)
+            self.assertFalse(grant["mutation"])
+            module = _program_authority()
+            authorizer = module.ProgramBoundEffectAuthorizer(
+                grant["autonomy_authority"], head_reader=lambda _worktree: "a" * 40
+            )
+            decision = authorizer.authorize(
+                tool_name="Read",
+                arguments={"file_path": str(workspace / "worktrees/TASK-1/docs/result.txt")},
+            )
+            self.assertFalse(decision.allowed)
+            self.assertEqual(decision.code, "PROGRAM_PARENT_UNBOUND")
 
 
 if __name__ == "__main__":
