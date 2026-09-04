@@ -274,6 +274,109 @@ def test_ruleset_only_repo_reports_required_checks(monkeypatch) -> None:
     assert strict is True
 
 
+def test_workflows_rule_paths_are_collected() -> None:
+    """Org ruleset 21895545 shape: a required *workflow*, not a named context.
+
+    Observed 2026-09-01 on the Quantum-L9 convergence run: the board reported
+    `required_checks: []` on repos gated by the org-ci workflows rule, and the
+    BLOCKED reason blamed reviews instead of the unrun required workflow.
+    """
+    rules = [
+        {"type": "deletion"},
+        {
+            "type": "workflows",
+            "parameters": {
+                "do_not_enforce_on_create": True,
+                "workflows": [
+                    {
+                        "repository_id": 1285564308,
+                        "path": ".github/workflows/org-ci.yml",
+                        "ref": "refs/heads/main",
+                    }
+                ],
+            },
+        },
+    ]
+    assert pr_board.ruleset_required_workflows(rules) == [
+        {"path": ".github/workflows/org-ci.yml", "repository_id": "1285564308"}
+    ]
+
+
+def test_unmatched_required_workflow_blocked_is_pending_not_reviews() -> None:
+    """BLOCKED + a workflows rule the probe could not match = pending workflow."""
+    facts = _facts(rollup=_green(), merge_state="BLOCKED")
+    facts["required_workflows"] = [".github/workflows/org-ci.yml"]
+    verdict = decide(facts)
+    assert verdict["board"] == WAIT
+    assert "org-ci.yml" in verdict["reason"]
+    assert "unresolved conversation" not in verdict["reason"]
+    assert verdict["pending_workflows"] == [".github/workflows/org-ci.yml"]
+
+
+def test_matched_required_workflow_failing_job_is_fix() -> None:
+    rollup = [
+        *_green(),
+        {
+            "name": "Analyze (central Core)",
+            "conclusion": "FAILURE",
+            "workflowName": "L9 Org CI",
+        },
+    ]
+    facts = _facts(rollup=rollup, merge_state="BLOCKED")
+    facts["required_workflows"] = [".github/workflows/org-ci.yml"]
+    facts["required_workflow_names"] = {".github/workflows/org-ci.yml": "L9 Org CI"}
+    verdict = decide(facts)
+    assert verdict["board"] == FIX
+    assert "Analyze (central Core)" in verdict["reason"]
+    assert verdict["failing_workflow_jobs"] == {
+        ".github/workflows/org-ci.yml": ["Analyze (central Core)"]
+    }
+
+
+def test_matched_required_workflow_pending_job_waits() -> None:
+    rollup = [
+        *_green(),
+        {
+            "name": "Analyze (central Core)",
+            "status": "IN_PROGRESS",
+            "workflowName": "L9 Org CI",
+        },
+    ]
+    facts = _facts(rollup=rollup, merge_state="BLOCKED")
+    facts["required_workflows"] = [".github/workflows/org-ci.yml"]
+    facts["required_workflow_names"] = {".github/workflows/org-ci.yml": "L9 Org CI"}
+    verdict = decide(facts)
+    assert verdict["board"] == WAIT
+    assert verdict["pending_workflows"] == [".github/workflows/org-ci.yml"]
+
+
+def test_satisfied_workflow_merge_reason_never_claims_unprotected_base() -> None:
+    rollup = [
+        {
+            "name": "Analyze (central Core)",
+            "conclusion": "SUCCESS",
+            "workflowName": "L9 Org CI",
+        }
+    ]
+    facts = _facts(rollup=rollup, required=[], merge_state="UNSTABLE")
+    facts["required_workflows"] = [".github/workflows/org-ci.yml"]
+    facts["required_workflow_names"] = {".github/workflows/org-ci.yml": "L9 Org CI"}
+    verdict = decide(facts)
+    assert verdict["board"] == MERGE
+    assert "no required check on this base" not in verdict["reason"]
+    assert "org-ci.yml" in verdict["reason"]
+
+
+def test_unmatched_workflow_on_merge_ready_state_still_merges() -> None:
+    """UNSTABLE means GitHub itself says required gates are green; an unmatched
+    workflow must not invent a wait, only rewrite the unprotected-base reason."""
+    facts = _facts(rollup=[], required=[], merge_state="UNSTABLE")
+    facts["required_workflows"] = [".github/workflows/org-ci.yml"]
+    verdict = decide(facts)
+    assert verdict["board"] == MERGE
+    assert "no required check on this base" not in verdict["reason"]
+
+
 def test_both_protection_sources_union_without_duplicates(monkeypatch) -> None:
     def fake_gh(args: list[str]):
         if "/rules/branches/" in args[1]:
