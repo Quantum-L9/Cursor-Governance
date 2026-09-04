@@ -81,9 +81,10 @@ Verify:
 
 Gate: Resolve tool-schema defects before ChatGPT registration.
 
-ChatGPT freezes the approved tool/input snapshot. Server-side changes are not automatically
-adopted, and incompatible later changes can cause calls to fail until an admin
-refreshes/reviews the app. (OpenAI Help Center)
+ChatGPT may cache the approved tool/input snapshot after publish. Server-side changes are not
+always adopted automatically, and incompatible later changes can cause calls to fail until an
+admin refreshes or reviews the app. See OpenAI Help Center:
+https://help.openai.com/en/articles/11487775-connectors-in-chatgpt
 
 ## 2. Verify OAuth Readiness
 
@@ -662,10 +663,10 @@ PUBLISHED_CHATGPT_CALL = PASS
 
 ## 17. Evidence Capture
 
-Create:
+Create (keep it next to this playbook, not at the repo root):
 
 ```text
-FINAL_FINDINGS-CHATGPT-CUSTOM-MCP-PUBLISH.md
+WIP/8-31-26/FINAL_FINDINGS-CHATGPT-CUSTOM-MCP-PUBLISH.md
 ```
 
 Record:
