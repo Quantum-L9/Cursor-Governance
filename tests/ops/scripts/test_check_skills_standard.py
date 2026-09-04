@@ -84,7 +84,10 @@ def test_empty_paths_fails(tmp_path: Path) -> None:
 
 
 def test_pack_test_fixtures_are_not_live_skills(tmp_path: Path) -> None:
-    desc = "demo skill used only in unit tests. use when checking the discovery gate."
+    desc = (
+        "demo skill used only in unit tests. use when checking the discovery "
+        "gate and verifying nested fixture packs stay excluded from live inventory."
+    )
     _write_skill(tmp_path, "l9-demo", f"name: l9-demo\ndescription: {desc}\n")
 
     fixture = tmp_path / "skills" / "l9-demo" / "tests" / "fixtures" / "repo" / "skills" / "l9-fake"

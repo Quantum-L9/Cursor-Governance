@@ -884,7 +884,7 @@
     },
     {
       "composition_role": "primary",
-      "description": "Use Context7 documentation before coding when current library, framework, SDK, API, version-specific behavior, or unfamiliar dependency docs could prevent implementation mistakes, deprecated patterns, or debug loops.",
+      "description": "ground implementation decisions in current Context7 documentation before coding. use when current library, framework, SDK, API, version-specific behavior, or unfamiliar dependency docs could prevent implementation mistakes, deprecated patterns, or debug loops.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-context7-docs",
@@ -1126,7 +1126,7 @@
     },
     {
       "composition_role": "general",
-      "description": "create a machine-validated cursor .plan.md from the shared executable-plan template in one of two handoff modes. default mode cursor-build executes with the build button and then opens a stacked PR; never branch off main when an open PR exists, and display the PR URL. embedded mode is for callers that own their own execution \u2014 it stops at validated planning artifacts and grants no execution, commit, publication, campaign, or deployment authority. use when scope is unclear, requirements need decomposition, cursor plan mode is on, the next step should be planned before code changes, or a nested skill or pipeline needs planning depth without downstream authority. do not use when the user asks for program-execution, make campaign, /l9-plan, or a pe campaign lock.",
+      "description": "create a machine-validated Cursor .plan.md from the shared executable-plan template using cursor-build or embedded handoff. use when scope needs decomposition, Cursor plan mode is active, work should be planned before code changes, or a nested caller needs planning depth without execution authority. cursor-build is default and hands off to Build and stacked PR; embedded stops at validated planning artifacts. do not use for Program Execution, make campaign, /l9-plan, or a PE campaign lock.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-plan-simple",
@@ -1291,7 +1291,7 @@
     },
     {
       "composition_role": "primary",
-      "description": "synthesize the single highest-leverage next action from current context. use after completing work, when priorities are unclear, or when the user asks what to do next.",
+      "description": "synthesize the single highest-leverage next action from current context. use when work is complete, priorities are unclear, or the user asks what to do next.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-ynp",
@@ -1303,5 +1303,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "132fb178fc0b81d846f7edc6339f7f9969b04393eea7205ae015adeb8a60ef80",
-  "source_skill_corpus_sha256": "bcb684392a013a6ffdaf12e312f95e87a56b5a8e7254c047c8061c2fe00cc2a3"
+  "source_skill_corpus_sha256": "f71ba79cb45d6ceed189fb978d600011840c78c63c3f52d1d238dae6e45a6a60"
 }
