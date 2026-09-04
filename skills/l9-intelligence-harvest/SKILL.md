@@ -36,9 +36,11 @@ Logical order: BIND_REQUEST → PROBE_CAPABILITIES → LOCK_SOURCE_IDENTITY → 
 
 Run `scripts/bind_request.py`, `scripts/inventory_source.py`, `scripts/qualify_nuggets.py`, `scripts/rank_nuggets.py`, `scripts/validate_harvest.py`, and `scripts/render_brief.py` for their owned operations. Never substitute model judgment for file existence, schema parsing, evidence reference resolution, enum validation, ranking, portability closure, or unobserved runtime results.
 
+For source acquisition, preserve the existing `scripts/inventory_source.py` owner. Local paths and checkouts may be inventoried directly. Remote repositories and URLs are transported by the active runtime's existing repository client, HTTPS client, or connector, then normalized through `contracts/source-acquisition.schema.json` and admitted with `scripts/inventory_source.py --acquisition <receipt>`. Never fabricate local-checkout proof when the runtime used a remote transport.
+
 ## Bounded semantic contracts
 
-Load `references/system-reconstruction-contract.md`, `references/concept-extraction-contract.md`, and `references/beneficiary-fit-contract.md` only for their named semantic nodes.
+Load `references/source-acquisition-contract.md` only for source probing, identity locking, and donor inventory. Load `references/system-reconstruction-contract.md`, `references/concept-extraction-contract.md`, and `references/beneficiary-fit-contract.md` only for their named semantic nodes.
 
 ## Invariants
 
@@ -49,6 +51,9 @@ Load `references/system-reconstruction-contract.md`, `references/concept-extract
 - Every concept has exactly one disposition from `policies/disposition-policy.yaml`.
 - Highest-leverage ranking is deterministic.
 - Donor code is not executed by default. Donor and beneficiary mutation are forbidden.
+- Source transport is runtime-owned; harvest owns source admission, immutable identity semantics, and deterministic inventory.
+- Remote repository PASS requires an immutable revision plus hashed inventory; URL PASS requires response identity or a content digest.
+- Verification level is explicit and must never be upgraded from declared hashes to content-rehashed proof without re-reading bytes.
 - Never implement beneficiary changes. Emit acceptance tests and transfer semantics only.
 - Exact code copying, deployment, wiring, commits, and pushes belong to other capabilities and are out of scope.
 - Protect secrets according to `policies/harvest-policy.yaml`.
