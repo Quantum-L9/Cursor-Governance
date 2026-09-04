@@ -82,19 +82,56 @@ def test_hook_still_fails_open() -> None:
     assert "set -e" not in text.splitlines()[0:5]
 
 
-def test_bootstrap_repair_marker_follows_installer_success() -> None:
-    """A failed installer must not permanently skip repair at this revision."""
+def test_bootstrap_repair_marker_records_the_attempt_not_the_success() -> None:
+    """The repair must CONVERGE, and a revision bump must be what re-arms it.
+
+    This assertion was inverted, and the inversion is the bug. The marker was
+    written only on installer success, so a repair that could not succeed inside
+    the hook budget never wrote one — and re-armed on every single session,
+    consuming the whole budget each time and killing the hook before it emitted
+    any context at all. "Not permanently skipped" had quietly become "permanently
+    re-attempted and permanently failing", which is strictly worse: it costs the
+    session its entire governance context to achieve nothing.
+
+    An attempt that fails is still an attempt. The marker therefore records the
+    attempt BEFORE the installer runs, and the outcome is appended to it, so the
+    marker is diagnosable rather than merely present. Re-arming stays keyed on
+    the governance revision (the marker path carries it), which is what the
+    original intent — repair must not be skipped forever — actually requires.
+    """
     text = body()
-    timeout = text.index('run_with_timeout "${L9_BOOTSTRAP_REPAIR_BUDGET:-90}"')
-    installer = text.index('bash "$installer"', timeout)
-    marker_write = text.index(': >"$marker"', installer)
-    assert timeout < installer < marker_write, (
-        "persist the attempt marker only after installer success"
+    marker_write = text.index('>"$marker"')
+    installer = text.index('bash "$installer"', marker_write)
+    assert marker_write < installer, (
+        "record the attempt BEFORE running the installer, or an unfinishable "
+        "repair re-arms every session forever"
     )
-    assert not re.search(
-        r'(?<!run_with_)timeout "\$\{L9_BOOTSTRAP_REPAIR_BUDGET:-90\}"',
-        text,
+    # The outcome is appended, so the marker distinguishes ok from failed.
+    assert "printf 'ok\\n' >>\"$marker\"" in text
+    assert "printf 'failed rc=%s\\n'" in text
+    # Re-arming stays revision-keyed: the marker path must carry the revision.
+    assert 'marker="$HOME/.l9/claude/bootstrap-repair-${revision}.attempted"' in text
+
+
+def test_bootstrap_repair_is_bounded_by_the_remaining_hook_budget() -> None:
+    """A 90 s ceiling inside a 30 s hook is not long-running, it is impossible.
+
+    The repair used to be launched with a fixed ``L9_BOOTSTRAP_REPAIR_BUDGET``
+    of 90 s from a hook registered with ``timeout: 30``. It could only ever be
+    killed. The ceiling must be clamped to what is actually left, and the repair
+    must be declined outright when that is too little to finish.
+    """
+    text = body()
+    assert '_repair_left="$(_l9_budget_left)"' in text, "size the repair from what is LEFT"
+    assert '[ "$_repair_cap" -gt "$_repair_left" ] && _repair_cap="$_repair_left"' in text, (
+        "the configured ceiling must never exceed the remaining budget"
     )
+    assert 'run_with_timeout "$_repair_cap"' in text, "run under the clamped ceiling"
+    assert "bootstrap repair: DEFERRED" in text, (
+        "a repair that cannot finish must say so rather than start and be killed"
+    )
+    # Never a bare `timeout` call — run_with_timeout is the portable wrapper.
+    assert not re.search(r'(?<!run_with_)timeout "\$_repair_cap"', text)
     assert 'run_with_timeout() { shift; "$@"; }' not in text
     assert text.index("bootstrap repair: SKIPPED — run_with_timeout.sh missing") < text.index(
         'bash "$installer"'

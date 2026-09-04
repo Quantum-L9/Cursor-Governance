@@ -19,6 +19,7 @@ import re
 import shutil
 import subprocess
 import sys
+import urllib.parse
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -35,6 +36,7 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 if str(_SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPT_DIR))
 
+import campaign_exec  # noqa: E402 - sibling; owns subprocess.run (Semgrep taint)
 import pe_trace  # noqa: E402 - sibling module, imported after the sys.path guard
 
 PE_ROOT = Path(__file__).resolve().parents[1]
@@ -84,8 +86,8 @@ PREPARATION_STAGES = (
     "plan_window",
     "emit",
     "compile",
-    "validate_blueprint",
     "launchability",
+    "validate_blueprint",
     "admission_evidence",
     "accept",
     "bootstrap",
@@ -341,22 +343,29 @@ def auto_harvest(trace: pe_trace.ExecutionTrace | None) -> None:
         print(f"pe-trace: harvest failed for {workspace}: {exc}", file=sys.stderr)
 
 
+def _commit_identity_args(repo: Path) -> list[str]:
+    """`-c user.*` for `git commit` ONLY when the checkout resolves no identity.
+
+    CI runners and freshly created task worktrees carry no committer identity,
+    and `git commit` then refuses with "Author identity unknown". An identity
+    the operator configured (repo, global, or GIT_* environment) is read, not
+    assumed, and never overridden.
+    """
+    for key in ("user.email", "user.name"):
+        configured = run_cmd(
+            ["git", "-C", str(repo), "config", key],
+            timeout=GIT_TIMEOUT_S,
+            env=git_env(),
+        )
+        if configured.returncode != 0 or not (configured.stdout or "").strip():
+            break
+    else:
+        return []
+    return ["-c", "user.name=make-campaign", "-c", "user.email=make-campaign@l9.local"]
+
+
 def git_env() -> dict[str, str]:
-    env = os.environ.copy()
-    for key in (
-        "GIT_DIR",
-        "GIT_WORK_TREE",
-        "GIT_INDEX_FILE",
-        "GIT_OBJECT_DIRECTORY",
-        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
-        "GIT_COMMON_DIR",
-        "GIT_PREFIX",
-    ):
-        env.pop(key, None)
-    env["GIT_TERMINAL_PROMPT"] = "0"
-    env["GIT_ASKPASS"] = "echo"
-    env["GCM_INTERACTIVE"] = "never"
-    return env
+    return campaign_exec.git_env()
 
 
 def run_cmd(
@@ -367,22 +376,13 @@ def run_cmd(
     env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     # Single choke point: no campaign subprocess reaches a remote unless a
-    # governed release transition is open.
+    # governed release transition is open. The spawn itself lives in
+    # campaign_exec so Semgrep taint rules do not time out on this file.
     action = publication_command(cmd)
     if action is not None:
         refuse_publication(action)
-    child_env = os.environ.copy() if env is None else dict(env)
-    child_env.setdefault("L9_CAMPAIGN_TUNNEL", "1")
     try:
-        return subprocess.run(
-            cmd,
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            cwd=str(cwd) if cwd is not None else None,
-            env=child_env,
-        )
+        return campaign_exec.run_child(cmd, timeout=timeout, cwd=cwd, env=env)
     except subprocess.TimeoutExpired as exc:
         raise CampaignError(f"timed out after {timeout}s: {' '.join(cmd[:6])}") from exc
 
@@ -891,6 +891,68 @@ def default_pec_bootstrap(workspace: Path, blueprint: Path) -> dict[str, Any]:
     )
 
 
+def campaign_runtime_root() -> Path:
+    """`$L9_ROOT` / `$L9_RUNTIME_ROOT` resolved by the one canonical resolver.
+
+    `run_campaign` and the Makefile spelled the root `L9_ROOT`; every other
+    subsystem spelled it `L9_RUNTIME_ROOT`. Both names now resolve through
+    `environment/agents/runtime_paths.py`, which refuses when they disagree.
+    """
+    runtime_paths = _load_script(
+        "pe_agent_runtime_paths", GOV_ROOT / "environment" / "agents" / "runtime_paths.py"
+    )
+    return Path(runtime_paths.runtime_root())
+
+
+def generated_data_database(workspace: Path) -> Path:
+    """The generated-data pipeline database for THIS campaign's runtime root.
+
+    A campaign runs under one root (`--l9-root` / `$L9_ROOT`), and its pec
+    workspace is `<root>/programs/<id>`. Publication used to resolve a second,
+    unrelated variable (`L9_RUNTIME_ROOT`) and default to the real home, so a
+    campaign run under a scratch root still wrote into `~/.l9`. A workspace not
+    shaped `<root>/programs/<id>` falls back to the canonical resolver in
+    `environment/agents/runtime_paths.py`, never to a literal here.
+    """
+    workspace = Path(workspace).resolve()
+    if workspace.parent.name == "programs":
+        return workspace.parents[1] / "generated-data" / "pipeline.sqlite3"
+    runtime_paths = _load_script(
+        "pe_agent_runtime_paths", GOV_ROOT / "environment" / "agents" / "runtime_paths.py"
+    )
+    return Path(runtime_paths.canonical_generated_data_database())
+
+
+def _bind_pec_package() -> Any:
+    """Bind the controller package `pec` by FILE LOCATION, never via sys.path.
+
+    Prepending the controller template's `scripts/` directory exposed every
+    bare module name in it -- including `instantiate`, a basename the Blueprint
+    template's `scripts/` also defines with a different contract -- so which
+    `instantiate` a later bare import resolved depended on import order. The
+    package binder resolves `pec` from its directory under the one name it
+    owns and adds nothing to the import path.
+    """
+    if str(PE_ROOT) not in sys.path:
+        # APPEND, never insert(0): `scripts` is a top-level name shared with the
+        # repository root (see peer_execution.imports.pe_script).
+        sys.path.append(str(PE_ROOT))
+    from peer_execution.imports import load_package  # noqa: PLC0415
+
+    return load_package(PEC_SCRIPTS / "pec", "pec")
+
+
+def _write_json_atomic(path: Path, payload: Any) -> Path:
+    """Write-then-rename through pe_timing, the one atomic JSON writer here.
+
+    LAUNCH.json, campaign-status.json and STACK.json are the resume gates: a
+    torn write to any of them made `resumable_workspace` read a live runtime
+    as a draft leftover and quarantine it, sqlite, leases and worktrees alike.
+    """
+    timing = _load_script("pe_timing", PE_ROOT / "scripts/pe_timing.py")
+    return timing.write_json_atomic(path, payload)
+
+
 def _load_script(name: str, path: Path) -> Any:
     cached = sys.modules.get(name)
     if cached is not None and getattr(cached, "__file__", None) == str(path):
@@ -1004,12 +1066,55 @@ def history_walkable(path: Path) -> bool:
     return True
 
 
+_GITHUB_SSH_ORIGIN = re.compile(
+    r"^(?:ssh://)?git@github\.com[:/](?P<repo>[^/\s]+/[^/\s]+?)(?:\.git)?/?$"
+)
+
+
+def github_repository_from_url(url: str) -> str | None:
+    """`owner/name` when `url` is a GitHub remote, else None.
+
+    Decided from the parsed host, never from a substring: a URL that merely
+    contains "github.com" somewhere in its path or query is not GitHub.
+    """
+    value = url.strip()
+    if not value:
+        return None
+    ssh = _GITHUB_SSH_ORIGIN.match(value)
+    if ssh:
+        return ssh.group("repo")
+    parsed = urllib.parse.urlparse(value)
+    if parsed.scheme not in {"https", "http", "ssh", "git"}:
+        return None
+    if (parsed.hostname or "").lower() != "github.com":
+        return None
+    parts = [part for part in parsed.path.split("/") if part]
+    if len(parts) < 2:
+        return None
+    name = parts[1][:-4] if parts[1].endswith(".git") else parts[1]
+    return f"{parts[0]}/{name}"
+
+
 def ensure_target_history(dest: Path, repository_id: str) -> None:
     """Fail closed unless the target can walk its own history before pec verify."""
     dest = dest.resolve()
     if history_walkable(dest) and not is_shallow_repo(dest):
         return
     origin = f"https://github.com/{repository_id}.git"
+    # Read the checkout's identity before rewriting its remote: an existing
+    # GitHub origin that names a different repository is not this target.
+    current = run_cmd(
+        ["git", "-C", str(dest), "remote", "get-url", "origin"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    current_url = (current.stdout or "").strip() if current.returncode == 0 else ""
+    named = github_repository_from_url(current_url)
+    if named is not None and named.lower() != repository_id.lower():
+        raise CampaignError(
+            f"target checkout {dest} has origin {current_url}, not {repository_id}; "
+            "refuse to repoint another repository's remote"
+        )
     run_cmd(
         ["git", "-C", str(dest), "remote", "set-url", "origin", origin],
         timeout=GIT_TIMEOUT_S,
@@ -1071,12 +1176,20 @@ def default_ensure_target_checkout(
                 return dest
             shutil.rmtree(dest)
     url = f"https://github.com/{repository_id}.git"
-    clone = run_cmd(
-        ["git", "clone", url, str(dest)],
-        timeout=CLONE_TIMEOUT_S,
-        env=git_env(),
-    )
+    try:
+        clone = run_cmd(
+            ["git", "clone", url, str(dest)],
+            timeout=CLONE_TIMEOUT_S,
+            env=git_env(),
+        )
+    except CampaignError:
+        # A killed clone leaves `dest/.git` behind, and the next run would take
+        # the existing-checkout branch and try to repair a hollow tree instead
+        # of cloning again. `dest` did not exist when this function started.
+        shutil.rmtree(dest, ignore_errors=True)
+        raise
     if clone.returncode != 0:
+        shutil.rmtree(dest, ignore_errors=True)
         raise CampaignError(
             f"cannot checkout {repository_id} at {dest}: {(clone.stderr or clone.stdout).strip()}"
         )
@@ -1196,8 +1309,7 @@ def build_pr_stack(campaign_id: str, tasks: list[dict[str, Any]]) -> dict[str, A
 
 def write_pr_stack(workspace: Path, stack: dict[str, Any]) -> Path:
     path = workspace / "runtime" / "STACK.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(stack, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _write_json_atomic(path, stack)
     return path
 
 
@@ -1209,14 +1321,22 @@ def ensure_integration_branch(target_path: Path, campaign_id: str) -> str:
         env=git_env(),
     )
     if exists.returncode != 0:
+        # Prefer the remote integration branch when one exists (fetched by the
+        # caller); only a campaign with no remote lineage starts at HEAD.
+        remote = run_cmd(
+            ["git", "-C", str(target_path), "rev-parse", "--verify", f"origin/{branch}"],
+            timeout=GIT_TIMEOUT_S,
+            env=git_env(),
+        )
+        start = f"origin/{branch}" if remote.returncode == 0 else "HEAD"
         created = run_cmd(
-            ["git", "-C", str(target_path), "branch", branch, "HEAD"],
+            ["git", "-C", str(target_path), "branch", branch, start],
             timeout=GIT_TIMEOUT_S,
             env=git_env(),
         )
         if created.returncode != 0:
             raise CampaignError(
-                f"cannot create {branch}: {(created.stderr or created.stdout).strip()}"
+                f"cannot create {branch} from {start}: {(created.stderr or created.stdout).strip()}"
             )
     return branch
 
@@ -1338,6 +1458,40 @@ def ensure_task_contract(workspace: Path, task_id: str) -> Path:
     return register_task_contract(workspace, task_id)
 
 
+#: Runtime states in which TASK-001 is already claimed by an earlier run of this
+#: campaign; a repeat `make campaign` resumes them rather than claiming again.
+_ALREADY_CLAIMED_STATES = frozenset(
+    {"LEASED", "PREPARED", "CONTRACTED", "EXECUTING", "SUBMITTED", "VERIFYING", "PASSED_LOCAL"}
+)
+
+
+def _claim_first_task(workspace: Path) -> dict[str, Any]:
+    """Claim TASK-001, or confirm an earlier run of this campaign already did.
+
+    The claim used to run through a bare `run_cmd` whose exit code was never
+    read, so a refused claim (task not eligible, decision pending, lease held
+    by someone else) still reported the campaign as armed with TASK-001
+    claimed. `pec_cmd` raises on refusal. The one refusal that is NOT a defect
+    is our own earlier claim on a resumed campaign, which is read from the
+    controller first rather than inferred from the error text.
+    """
+    for task in pec_status_tasks(workspace):
+        if str(task.get("id")) != FIRST_TASK_ID:
+            continue
+        state = str(task.get("runtime_state") or "")
+        if state in _ALREADY_CLAIMED_STATES or state == "COMPLETED":
+            return {"status": "already_claimed", "task_id": FIRST_TASK_ID, "runtime_state": state}
+    return pec_cmd(
+        workspace,
+        "claim",
+        FIRST_TASK_ID,
+        "--holder",
+        "make-campaign",
+        "--ttl-minutes",
+        str(TASK_BUDGET_MINUTES),
+    )
+
+
 def default_arm(
     workspace: Path,
     campaign_id: str,
@@ -1347,6 +1501,12 @@ def default_arm(
     trace: pe_trace.ExecutionTrace | None = None,
 ) -> dict[str, Any]:
     refuse_hash_campaign_id(campaign_id)
+    # Read the remote lineage BEFORE deciding where the local integration
+    # branch starts: every task lease bases itself on refs/heads/campaign/<id>,
+    # so a local branch minted from a fresh clone's default-branch HEAD while
+    # origin/campaign/<id> already carries integrated work puts every later
+    # lease and verification on the wrong lineage.
+    fetch_stack_refs(target_path, campaign_id)
     ensure_integration_branch(target_path, campaign_id)
     with traced(trace, "reconcile", "reconcile", metadata={"repository": repository_id}):
         reconciled = default_reconcile(workspace, repository_id, target_path)
@@ -1361,28 +1521,13 @@ def default_arm(
     deferred = [str(task["id"]) for task in tasks if str(task["id"]) not in set(frontier)]
     stack = build_pr_stack(campaign_id, tasks)
     write_pr_stack(workspace, stack)
-    fetch_stack_refs(target_path, campaign_id)
-    claim = run_cmd(
-        [
-            sys.executable,
-            str(PEC),
-            "claim",
-            FIRST_TASK_ID,
-            "--workspace",
-            str(workspace),
-            "--holder",
-            "make-campaign",
-            "--ttl-minutes",
-            str(TASK_BUDGET_MINUTES),
-        ],
-        timeout=PEC_TIMEOUT_S,
-    )
+    claim = _claim_first_task(workspace)
     return {
         "task_id": FIRST_TASK_ID,
         "armed_task_ids": list(frontier),
         "deferred_task_ids": deferred,
         "contracts": contracts,
-        "claim": (claim.stdout or "").strip(),
+        "claim": claim,
         "reconcile": reconciled,
         "stack": stack,
     }
@@ -1685,10 +1830,8 @@ def activate_pec_runtime(
     workspace = workspace.resolve()
     sqlite = workspace / "runtime" / "state.sqlite"
     if sqlite.is_file():
-        scripts_dir = str(PEC.parent)
-        if scripts_dir not in sys.path:
-            sys.path.insert(0, scripts_dir)
-        from pec.controller import ensure_campaign_active, open_runtime
+        _bind_pec_package()
+        from pec.controller import ensure_campaign_active, open_runtime  # noqa: PLC0415
 
         db, ledger = open_runtime(workspace)
         try:
@@ -1708,8 +1851,44 @@ def activate_pec_runtime(
         "evidence": {},
         "actor": actor,
     }
-    status_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _write_json_atomic(status_path, payload)
     return payload
+
+
+#: Preparation stages in the order the runner reaches them. The launch pointer
+#: records which one wrote it; a task is claimed only at `arm`.
+LAUNCH_POINTER_STAGES = ("activate", "blueprint", "admit", "bootstrap", "arm")
+
+
+def _pointer_runtime_status(workspace: Path) -> str:
+    """What the controller says about this workspace, never a constant.
+
+    Before bootstrap there is no controller runtime, and a pointer that said
+    `active` anyway made `resumable_workspace` a function of which stage the
+    last run stopped at rather than of whether a runtime exists.
+    """
+    status_path = workspace / "runtime" / "campaign-status.json"
+    try:
+        status = json.loads(status_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return "not_bootstrapped"
+    value = str(status.get("runtime_status") or "").strip() if isinstance(status, dict) else ""
+    return value or "not_bootstrapped"
+
+
+def _program_owner(blueprint: str) -> str | None:
+    program_path = Path(blueprint) / "PROGRAM.yaml"
+    if not program_path.is_file():
+        return None
+    try:
+        program = load_yaml(program_path)
+    except (OSError, ValueError, yaml.YAMLError):
+        # An unreadable PROGRAM.yaml is "owner unknown" for the pointer, not a crash.
+        return None
+    if not isinstance(program, dict):
+        return None
+    owner = (program.get("program") or {}).get("owner")
+    return str(owner).strip() or None if owner else None
 
 
 def write_launch_pointer(
@@ -1719,24 +1898,32 @@ def write_launch_pointer(
     blueprint: str,
     target_worktree: str,
     host_worktree: str,
+    stage: str,
 ) -> Path:
+    if stage not in LAUNCH_POINTER_STAGES:
+        raise ValueError(f"unknown launch pointer stage {stage!r}")
     path = workspace / "runtime" / "LAUNCH.json"
     path.parent.mkdir(parents=True, exist_ok=True)
+    armed = stage == "arm"
+    execution_card = workspace / "runtime" / f"{FIRST_TASK_ID}.md"
     payload = {
         "schema": "l9.program-execution.launch-pointer.v1",
         "campaign_id": campaign_id,
-        "runtime_status": "active",
+        "stage_reached": stage,
+        "runtime_status": _pointer_runtime_status(workspace),
         "host_lifecycle": "in_progress",
         "pec_workspace": str(workspace),
         "blueprint": blueprint,
         "target_worktree": target_worktree,
         "host_worktree": host_worktree,
         "operator_ack_required": False,
-        "operator_ack_from": "Igor Beylin",
+        # The program owner from the compiled blueprint, not a person's name
+        # baked into the runner.
+        "operator_ack_from": _program_owner(blueprint),
         "forge_operator_ack": False,
         "only_pec_workspace": True,
-        "claimed_task": FIRST_TASK_ID,
-        "execution_card": str(workspace / "runtime" / f"{FIRST_TASK_ID}.md"),
+        "claimed_task": FIRST_TASK_ID if armed else None,
+        "execution_card": str(execution_card) if execution_card.is_file() else None,
         "pr_stack": str(workspace / "runtime" / "STACK.json"),
         "forbid_pr_base_main": True,
         "load_operator_brief": False,
@@ -1756,7 +1943,7 @@ def write_launch_pointer(
             "If blocked, stop and report; do not sit."
         ),
     }
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _write_json_atomic(path, payload)
     return path
 
 
@@ -1851,11 +2038,38 @@ def should_run(until: str, stage: str) -> bool:
     return STAGE_INDEX[stage] <= STAGE_INDEX[until]
 
 
+def pec_verify_timeout(workspace: Path, task_id: str | None) -> int:
+    """The outer budget for `pec verify`: every command's own budget, plus RPC.
+
+    The controller runs each validation command under its own
+    VALIDATION_TIMEOUT_S. One outer budget of the same size meant a contract
+    with N commands was killed by the caller before the controller's own
+    per-command timeout could report which command overran -- a false
+    FAIL that named nothing. The budget is now N x per-command, from the
+    rendered contract, plus the controller's RPC allowance; a task whose
+    contract cannot be read gets the single-command budget.
+    """
+    if not task_id:
+        return VALIDATION_TIMEOUT_S
+    rendered = workspace / "contracts" / "rendered" / f"{task_id}.json"
+    try:
+        contract = json.loads(rendered.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return VALIDATION_TIMEOUT_S
+    commands = contract.get("validation_commands") if isinstance(contract, dict) else None
+    count = len(commands) if isinstance(commands, list) and commands else 1
+    return VALIDATION_TIMEOUT_S * count + PEC_TIMEOUT_S
+
+
 def pec_cmd(workspace: Path, command: str, *rest: str) -> dict[str, Any]:
     cmd = [sys.executable, str(PEC), command, *rest, "--workspace", str(workspace)]
     # verify re-runs contract validation_commands. Those may be pytest suites
     # that legitimately exceed the short controller RPC budget.
-    timeout = VALIDATION_TIMEOUT_S if command == "verify" else PEC_TIMEOUT_S
+    if command == "verify":
+        task_id = next((item for item in rest if not item.startswith("-")), None)
+        timeout = pec_verify_timeout(workspace, task_id)
+    else:
+        timeout = PEC_TIMEOUT_S
     result = run_cmd(cmd, timeout=timeout)
     payload: dict[str, Any] = {}
     text = (result.stdout or "").strip()
@@ -1921,11 +2135,24 @@ def task_output_location(task: dict[str, Any]) -> str:
     return task_output_locations(task)[0]
 
 
-def is_stub_output(path: Path, title: str) -> bool:
+def is_stub_output(path: Path, title: str, *, primary: bool = True) -> bool:
+    """True when `path` still carries the rendered stub rather than real work.
+
+    The length heuristic belongs to the PRIMARY output only. Applied to every
+    declared writable path it silently dropped legitimate short files -- an
+    empty `__init__.py`, a `.gitkeep`, a one-line config -- from `git add`, so
+    the task verified and completed with that file never committed.
+    """
     if not path.is_file():
         return True
-    existing = path.read_text(encoding="utf-8")
-    return existing.strip() == f"{path.stem} complete: {title}" or len(existing.strip()) < 40
+    try:
+        existing = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return False  # binary content is real work, not the rendered stub
+    stripped = existing.strip()
+    if stripped == f"{path.stem} complete: {title}":
+        return True
+    return primary and len(stripped) < 40
 
 
 def live_lock_missing_seed_paths(seed: dict[str, Any], pec_workspace: Path) -> bool:
@@ -2271,8 +2498,79 @@ def render_progress(
     )
     path = pec_workspace / "runtime" / "PROGRESS.json"
     if path.parent.is_dir():
-        path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        _write_json_atomic(path, report)
     return timing.format_progress(report)
+
+
+def blueprint_byte_inventory(blueprint: Path) -> dict[str, str]:
+    """Content inventory for the accepted Blueprint, including MANIFEST bytes."""
+    return {
+        path.relative_to(blueprint).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in sorted(blueprint.rglob("*"))
+        if path.is_file()
+    }
+
+
+def task_count_agreement(
+    blueprint: Path, launchability: Mapping[str, Any], pec_workspace: Path
+) -> dict[str, int]:
+    """Compiled, launchable and locked task counts, as three independent reads.
+
+    Each is taken from the artifact that stage actually produced, not from a
+    shared variable, because a shared variable is what would hide the defect
+    this measures.
+    """
+    module = _load_script("launchability", PE_ROOT / "scripts/launchability.py")
+    lock_path = pec_workspace / "runtime" / "program-lock.json"
+    locked = 0
+    if lock_path.is_file():
+        try:
+            locked = len(json.loads(lock_path.read_text(encoding="utf-8")).get("tasks") or [])
+        except (OSError, json.JSONDecodeError):  # pragma: no cover - lock is written by pec
+            locked = -1
+    return {
+        "compiled": len(module.blueprint_tasks(blueprint)),
+        "launchability": int(launchability.get("task_count") or 0),
+        "program_lock": locked,
+    }
+
+
+def assert_task_counts_agree(
+    blueprint: Path, launchability: Mapping[str, Any], pec_workspace: Path
+) -> dict[str, int]:
+    """Fatal invariant: compile, launchability and the lock saw the same tasks.
+
+    B1 was exactly this disagreement, and nothing noticed. Launchability read
+    `tasks.json`, found nothing, and self-skipped as "no_task_cards" while
+    compile had produced a full set and the lock froze them. Every stage looked
+    healthy in isolation; only the counts side by side show the adapter had come
+    unplugged. Cheap to check, and it fails at bootstrap rather than as a
+    mystery at arm or verify.
+    """
+    counts = task_count_agreement(blueprint, launchability, pec_workspace)
+    if len(set(counts.values())) == 1:
+        return counts
+    detail = ", ".join(f"{stage}={count}" for stage, count in sorted(counts.items()))
+    raise CampaignError(
+        f"task count disagreement across stages ({detail}); a stage is reading a "
+        "different task source than the others",
+        error_code="TASK_COUNT_DISAGREEMENT",
+    )
+
+
+def assert_blueprint_immutable(blueprint: Path, accepted: dict[str, str], *, phase: str) -> int:
+    """Fatal executable invariant: accepted Blueprint bytes never move in execution."""
+    current = blueprint_byte_inventory(blueprint)
+    changed = sorted(
+        path for path in set(accepted) | set(current) if accepted.get(path) != current.get(path)
+    )
+    if changed:
+        raise CampaignError(
+            f"post_accept_blueprint_write_count={len(changed)} during {phase}; "
+            f"sealed Blueprint changed: {', '.join(changed[:20])}",
+            error_code="POST_ACCEPT_BLUEPRINT_WRITE",
+        )
+    return 0
 
 
 def check_launchability(
@@ -2298,12 +2596,12 @@ def check_launchability(
     # to change -- after bootstrap freezes the lock it is too late, and the task
     # would reach `pec verify` with nothing to run.
     injected = module.apply_synthesized_validations(
-        blueprint, report.get("synthesized_validations") or {}
+        blueprint, report.get("synthesized_validations") or {}, validate=False
     )
     if injected:
         report["injected_validations"] = injected
         log(f"validations inferred and written into {len(injected)} task card(s)")
-    receipt = blueprint / "launchability-report.json"
+    receipt = module.launchability_report_path(blueprint)
     receipt.parent.mkdir(parents=True, exist_ok=True)
     receipt.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     log(module.format_report(report))
@@ -2349,31 +2647,13 @@ def measure_admission_evidence(target_path: Path) -> dict[str, Any]:
     return measured
 
 
-def _task_card_command(cards: dict[str, Any], task_id: str) -> str:
-    for task in cards.get("tasks") or []:
-        if not isinstance(task, dict) or str(task.get("id") or "") != task_id:
-            continue
-        for entry in task.get("validation") or []:
-            if isinstance(entry, dict) and entry.get("method") in {
-                "command",
-                "command_and_inspection",
-            }:
-                return str(entry.get("command_or_inspection") or "").strip()
-    return ""
-
-
 def stale_unittest_should_yield_to_pytest(existing: str, inferred: str) -> bool:
-    """True when a compiled unittest command would miss pytest-collectable tests."""
+    """Diagnostic compatibility predicate; never authorizes runtime Blueprint mutation."""
     return "-m unittest" in existing and "-m pytest" in inferred
 
 
 def adoptable_inferred_command(command: str) -> bool:
-    """Inferences the execute path may relock onto the rendered contract.
-
-    Includes last-resort presence checks. Those do not prove behavior; pec
-    verify still requires a modified worktree, exact changed-files, and scope.
-    Refusing them leaves docs and config tasks INCOMPLETE after a real write.
-    """
+    """Diagnostic classifier retained for compatibility tests, not execution adoption."""
     text = str(command).strip()
     return (
         "-m unittest" in text
@@ -2384,84 +2664,33 @@ def adoptable_inferred_command(command: str) -> bool:
     )
 
 
-def rematerialize_after_relock(workspace: Path, task_id: str) -> dict[str, Any]:
-    """Rebuild the rendered contract after relock returns the task to ELIGIBLE.
-
-    Reuses the existing task worktree. Does not invent a parallel execution path.
-    """
-    ensure_task_contract(workspace, task_id)
-    pec_cmd(
-        workspace,
-        "claim",
-        task_id,
-        "--holder",
-        "make-campaign",
-        "--ttl-minutes",
-        str(TASK_BUDGET_MINUTES),
-    )
-    pec_cmd(workspace, "prepare", task_id)
-    rendered = pec_cmd(workspace, "render-contract", task_id)
-    pec_cmd(workspace, "start", task_id, "--actor", "make-campaign")
-    return json.loads(Path(str(rendered["contract"])).read_text(encoding="utf-8"))
-
-
 def fill_inferred_validation(
     contract_path: Path, contract: dict[str, Any], worktree: Path
 ) -> dict[str, Any]:
-    """Adopt inferred validation through pec relock, never by rewriting digests.
+    """Normal execution is assertion-only after Blueprint acceptance.
 
-    Hand-editing the rendered contract breaks the contract-digest gate.
+    Missing execution completeness is a structured pre-dispatch blocker. It is
+    never repaired by editing TASK_CARDS.yaml, relocking, or rematerializing a
+    rendered contract after the Blueprint has become authority.
     """
-    launch = _load_script("launchability", PE_ROOT / "scripts/launchability.py")
-    inferred = launch.infer_validation_commands(
-        {"writable_paths": contract.get("writable_paths") or []},
-        worktree,
+    del contract_path, worktree
+    requested = {str(item) for item in (contract.get("requested_actions") or [])}
+    mutating = bool(requested & {"local_write", "commit", "destructive_change"})
+    mechanisms = [
+        item for item in (contract.get("verification_mechanisms") or []) if isinstance(item, dict)
+    ]
+    terminal = any(
+        str(item.get("method") or "") in {"command", "command_and_inspection", "external_adapter"}
+        for item in mechanisms
     )
-    existing = [str(item) for item in (contract.get("validation_commands") or []) if item]
-    replace_stale_unittest = bool(
-        existing and inferred and stale_unittest_should_yield_to_pytest(existing[0], inferred[0])
-    )
-    if existing and not replace_stale_unittest:
-        return contract
-    if not inferred:
-        return contract
-    if not adoptable_inferred_command(inferred[0]):
-        return contract
-    workspace = contract_path.parents[2]
-    task_id = str(contract.get("task_id") or "")
-    lock_path = workspace / "runtime" / "program-lock.json"
-    if not lock_path.is_file() or not task_id:
-        return contract
-    lock = json.loads(lock_path.read_text(encoding="utf-8"))
-    cards_path = Path(str(lock.get("blueprint_root") or "")) / "TASK_CARDS.yaml"
-    if not cards_path.is_file():
-        return contract
-    cards = load_yaml(cards_path)
-    if _task_card_command(cards, task_id) == inferred[0]:
-        return contract
-    changed = False
-    for task in cards.get("tasks") or []:
-        if not isinstance(task, dict) or str(task.get("id") or "") != task_id:
-            continue
-        task["validation"] = [
-            {
-                "id": "VAL-INFERRED-001",
-                "method": "command",
-                "command_or_inspection": inferred[0],
-                "expected_result": "PASS",
-            }
-        ]
-        changed = True
-        break
-    if not changed:
-        return contract
-    if yaml is None:
-        raise CampaignError("PyYAML required to persist inferred validation")
-    cards_path.write_text(yaml.safe_dump(cards, sort_keys=False), encoding="utf-8")
-    if adopt_changed_definitions(workspace, [task_id]) is None:
-        raise CampaignError(f"pec relock refused inferred validation for {task_id}")
-    log(f"inferred validation adopted for {task_id}: {inferred[0]}")
-    return rematerialize_after_relock(workspace, task_id)
+    if mutating and not terminal:
+        task_id = str(contract.get("task_id") or "UNKNOWN")
+        raise CampaignError(
+            f"{task_id}: missing terminal verification mechanism before provider launch; "
+            "repair the pre-seal Blueprint instead of mutating sealed authority",
+            error_code="MISSING_TERMINAL_VERIFIER",
+        )
+    return contract
 
 
 def _peer_identity() -> tuple[str, str, str | None]:
@@ -2502,8 +2731,10 @@ def _peer_imports():
     already owns binding -> probe -> prepare/dispatch/collect, and this runner
     reuses those helpers rather than growing a second copy of them.
     """
+    # APPEND, never insert(0) -- see peer_execution.imports.pe_script:
+    # `scripts` is a top-level name shared with the repository root.
     if str(PE_ROOT) not in sys.path:
-        sys.path.insert(0, str(PE_ROOT))
+        sys.path.append(str(PE_ROOT))
     from peer_execution.autonomy.models import (  # noqa: PLC0415
         ActionRuntime,
         ActionSpec,
@@ -3239,12 +3470,7 @@ def publish_task_outcome(
                 os.replace(temporary, source_path)
             finally:
                 temporary.unlink(missing_ok=True)
-        runtime_root = Path(
-            os.environ.get("L9_RUNTIME_ROOT", str(Path.home() / ".l9"))
-        ).expanduser()
-        publisher = publisher_module.OutcomePublisher(
-            GOV_ROOT, runtime_root / "generated-data" / "pipeline.sqlite3"
-        )
+        publisher = publisher_module.OutcomePublisher(GOV_ROOT, generated_data_database(workspace))
         published = publisher.publish(
             outcome_payload,
             repository=str(
@@ -3509,7 +3735,24 @@ def _default_execute_peer(
                 + json.dumps(task_states, sort_keys=True)
             )
         by_id = {str(task["id"]): task for task in tasks}
-        units = [_prepare_peer_unit(workspace, by_id[task_id], trace=trace) for task_id in selected]
+        units: list[dict[str, Any]] = []
+        for task_id in selected:
+            try:
+                units.append(_prepare_peer_unit(workspace, by_id[task_id], trace=trace))
+            except Exception as exc:
+                # Units prepared before this one already hold live authority
+                # (Controller EXECUTING + a root lease). Retire it canonically
+                # before the campaign error surfaces, or they strand mid-flight
+                # and the next run re-dispatches them as if nothing happened.
+                reason = f"batch preparation aborted at {task_id}: {type(exc).__name__}: {exc}"
+                for prepared in units:
+                    if not prepared.get("already_submitted"):
+                        _record_canonical_failure(
+                            workspace, prepared, str(prepared["task_id"]), reason
+                        )
+                if isinstance(exc, CampaignError):
+                    raise
+                raise CampaignError(reason) from exc
         dispatch_units = [unit for unit in units if not unit["already_submitted"]]
         for unit in dispatch_units:
             grant = unit.get("grant") or {}
@@ -3549,6 +3792,11 @@ def _default_execute_peer(
                 )
             except CampaignError as exc:
                 failures[task_id] = str(exc)
+            except Exception as exc:  # noqa: BLE001 — every sibling is reconciled below
+                # Anything else (a decode error reading a writable path, a grant
+                # refusal) is still this child's failure; an escaping exception
+                # here left the failing sibling EXECUTING with a live lease.
+                failures[task_id] = f"{type(exc).__name__}: {exc}"
         if failures:
             for task_id, reason in sorted(failures.items()):
                 unit = units_by_id.get(task_id)
@@ -3631,7 +3879,11 @@ def write_and_commit_output(
             "authorization ceiling must permit commit for its work to be committed"
         )
     declared = list(dict.fromkeys([*(writable or []), rel]))
-    to_add = [item for item in declared if item and not is_stub_output(worktree / item, title)]
+    to_add = [
+        item
+        for item in declared
+        if item and not is_stub_output(worktree / item, title, primary=(item == rel))
+    ]
     if not to_add:
         raise CampaignError(f"refuse stub output for {rel}; implement the task in {worktree} first")
     added = run_cmd(
@@ -3659,7 +3911,15 @@ def write_and_commit_output(
             raise CampaignError("cannot read candidate SHA for an already-satisfied task")
         return head.stdout.strip()
     commit = run_cmd(
-        ["git", "-C", str(worktree), "commit", "-m", f"pec: {Path(rel).stem} output"],
+        [
+            "git",
+            *_commit_identity_args(worktree),
+            "-C",
+            str(worktree),
+            "commit",
+            "-m",
+            f"pec: {Path(rel).stem} output",
+        ],
         timeout=GIT_TIMEOUT_S,
         env=git_env(),
     )
@@ -3684,7 +3944,7 @@ def record_stack_pr(workspace: Path, task_id: str, number: int, url: str) -> Non
         if str(item.get("task_id")) == task_id:
             item["pr_number"] = number
             item["pr_url"] = url
-    path.write_text(json.dumps(stack, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _write_json_atomic(path, stack)
 
 
 def recorded_stack_pr_numbers(workspace: Path) -> list[int]:
@@ -3947,7 +4207,7 @@ def _default_execute_legacy(
                 "claimed_status": "completed",
             }
             receipt_path = workspace / "runtime" / f"{task_id}.attempt.json"
-            receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+            _write_json_atomic(receipt_path, receipt)
             with traced(trace, "commit", "record_attempt", task_id=task_id):
                 recorded = pec_cmd(
                     workspace, "record-attempt", task_id, "--receipt", str(receipt_path)
@@ -4137,6 +4397,7 @@ def commit_host_emit(worktree: Path, campaign_id: str) -> None:
     commit = run_cmd(
         [
             "git",
+            *_commit_identity_args(worktree),
             "-C",
             str(worktree),
             "commit",
@@ -4322,6 +4583,8 @@ def resume_live_campaign(
         pec_workspace=str(pec_workspace),
         program_blockers=default_program_blockers(campaign_id, armed=True),
     )
+    resume_blueprint = Path(report.blueprint)
+    resume_blueprint_inventory = blueprint_byte_inventory(resume_blueprint)
     log(f"resume {campaign_id} (runtime active; workspace kept, not quarantined)")
     report.stages_completed.append("resume")
     repository_id = str((seed.get("target") or {}).get("repository_id") or host_repo)
@@ -4346,6 +4609,7 @@ def resume_live_campaign(
                 live_prs=should_run(until, "pr") and hooks.make_pr is None,
                 trace=trace,
             )
+    assert_blueprint_immutable(resume_blueprint, resume_blueprint_inventory, phase="resume_execute")
     executed = False
     if (pec_workspace / "runtime" / "program-lock.json").is_file():
         executed = all_required_tasks_completed(pec_workspace)
@@ -4441,31 +4705,74 @@ def run_campaign(
         auto_harvest(trace)
 
 
-def _run_campaign_stages(
-    intent_path: Path,
-    *,
-    until: str = "merge",
-    primary: Path | None = None,
-    worktree: Path | None = None,
-    repo_root: Path | None = None,
-    l9_root: Path | None = None,
-    host_repo: str = HOST_REPO_DEFAULT,
-    target_override: str | None = None,
-    hooks: Hooks | None = None,
-    fast: bool | None = None,
-    trace: pe_trace.ExecutionTrace | None = None,
-    forced_kind: Any | None = None,
-    target_checkout: Path | None = None,
-) -> CampaignReport:
-    requested_until = until
-    until = normalize_until(until)
-    hooks = hooks or Hooks()
-    fast = fast_mode(fast)
-    timing = _load_script("pe_timing", PE_ROOT / "scripts/pe_timing.py")
-    timer = timing.StageTimer()
-    primary = (primary or Path.home() / ".cursor-governance").resolve()
-    host_root = (repo_root or primary).resolve()
-    l9_home = (l9_root or Path(os.environ.get("L9_ROOT", Path.home() / ".l9"))).resolve()
+@dataclass
+class _CampaignRun:
+    """Everything one campaign run carries between its stages.
+
+    `_run_campaign_stages` used to be one 670-line function. The org semgrep
+    taint rules analyze a function in time that grows with (live variables x
+    statements), and that one function alone consumed half of the per-file
+    budget -- the gate went `incomplete` the moment the file grew. Each stage
+    below is the same code over this shared record instead of one scope.
+    """
+
+    fast: bool
+    hooks: Hooks
+    host_repo: str
+    host_root: Path
+    intent_path: Path
+    l9_home: Path
+    primary: Path
+    requested_until: str
+    until: str
+    blueprint: Any = None
+    campaign_id: Any = None
+    campaign_source_doc: Any = None
+    compile_generation: Any = None
+    compile_input: Any = None
+    ensure_target_checkout_once: Any = None
+    forced_kind: Any = None
+    pec_workspace: Any = None
+    prepare: Any = None
+    primed_root: Any = None
+    repo_root: Any = None
+    report: Any = None
+    repository_id: Any = None
+    resolved_intent: Any = None
+    reuse: Any = None
+    scoped_resume: Any = None
+    seed: Any = None
+    stack_proof_path: Any = None
+    target_checkout: Any = None
+    target_override: Any = None
+    target_path: Any = None
+    target_worktree: Any = None
+    timer: Any = None
+    timing: Any = None
+    trace: Any = None
+    accepted_blueprint_inventory: Any = None
+    worktree: Any = None
+    write_root: Any = None
+
+
+def _stage_classify_and_prime(run: _CampaignRun) -> CampaignReport | None:
+    fast = run.fast
+    forced_kind = run.forced_kind
+    hooks = run.hooks
+    host_repo = run.host_repo
+    host_root = run.host_root
+    intent_path = run.intent_path
+    l9_home = run.l9_home
+    primary = run.primary
+    repo_root = run.repo_root
+    requested_until = run.requested_until
+    target_checkout = run.target_checkout
+    target_override = run.target_override
+    timer = run.timer
+    timing = run.timing
+    trace = run.trace
+    until = run.until
+
     with traced(
         trace, "input", "input_classification", metadata={"intent": str(intent_path)}
     ) as classified:
@@ -4593,6 +4900,39 @@ def _run_campaign_stages(
     stack_proof_path = Path(
         str((stack_receipt or {}).get("path") or (primed_root / campaign_id / "stack-proof.json"))
     )
+
+    run.campaign_id = campaign_id
+    run.campaign_source_doc = campaign_source_doc
+    run.pec_workspace = pec_workspace
+    run.prepare = prepare
+    run.primed_root = primed_root
+    run.resolved_intent = resolved_intent
+    run.reuse = reuse
+    run.seed = seed
+    run.stack_proof_path = stack_proof_path
+    return None
+
+
+def _stage_isolate_and_emit(run: _CampaignRun) -> CampaignReport | None:
+    campaign_id = run.campaign_id
+    campaign_source_doc = run.campaign_source_doc
+    fast = run.fast
+    hooks = run.hooks
+    l9_home = run.l9_home
+    primary = run.primary
+    primed_root = run.primed_root
+    repo_root = run.repo_root
+    requested_until = run.requested_until
+    resolved_intent = run.resolved_intent
+    reuse = run.reuse
+    seed = run.seed
+    stack_proof_path = run.stack_proof_path
+    timer = run.timer
+    timing = run.timing
+    trace = run.trace
+    until = run.until
+    worktree = run.worktree
+
     with timer.stage("isolate"):
         if repo_root is not None:
             write_root = repo_root.resolve()
@@ -4700,8 +5040,29 @@ def _run_campaign_stages(
             blueprint=report.blueprint,
             target_worktree=target_worktree,
             host_worktree=str(write_root),
+            stage="activate",
         )
         return report
+
+    run.report = report
+    run.target_worktree = target_worktree
+    run.write_root = write_root
+    return None
+
+
+def _stage_blueprint(run: _CampaignRun) -> CampaignReport | None:
+    campaign_id = run.campaign_id
+    fast = run.fast
+    hooks = run.hooks
+    report = run.report
+    reuse = run.reuse
+    stack_proof_path = run.stack_proof_path
+    target_worktree = run.target_worktree
+    timer = run.timer
+    timing = run.timing
+    trace = run.trace
+    until = run.until
+    write_root = run.write_root
 
     source = campaign_source_path(write_root, campaign_id)
     blueprint = Path(report.blueprint)
@@ -4790,9 +5151,29 @@ def _run_campaign_stages(
                 f"resume prepared runtime {report.pec_workspace} (definitions relocked: {relocked})"
             )
 
-    # Validation is a pure function of blueprint content, so the compiled
-    # fingerprint is the whole key. A blueprint that validated once does not
-    # need re-validating until it changes.
+    # Execution completeness is a compile/admission concern. Enrich native Task
+    # Cards first, regenerate MANIFEST, then run the one final canonical
+    # Blueprint validation over the exact bytes that may be accepted.
+    prelaunch_key = blueprint_fingerprint(blueprint)
+    launch_receipt = blueprint.parent / "launchability-reports" / f"{blueprint.name}.json"
+
+    def _launch_receipt_survives(cached: Any) -> bool:
+        if int((cached or {}).get("task_count") or 0) == 0:
+            return True
+        return launch_receipt.is_file()
+
+    launch_key = timing.fingerprint(
+        compile_generation, prelaunch_key, str(write_root), fast, campaign_id
+    )
+    with reuse.stage(timer, "launchability", launch_key, verify=_launch_receipt_survives) as staged:
+        if staged.reused:
+            report.launchability = dict(staged.value)
+        else:
+            report.launchability = check_launchability(
+                blueprint, write_root, fast=fast, campaign_id=campaign_id
+            )
+            staged.value = dict(report.launchability)
+
     validate_key = blueprint_fingerprint(blueprint)
     with reuse.stage(timer, "validate_blueprint", validate_key) as staged:
         if staged.reused:
@@ -4814,34 +5195,6 @@ def _run_campaign_stages(
     if errors:
         raise CampaignError("template validate failed: " + "; ".join(errors))
     log("template validate PASS")
-
-    launch_receipt = blueprint / "launchability-report.json"
-
-    def _launch_receipt_survives(cached: Any) -> bool:
-        # A campaign with no task cards never writes a receipt, so only demand
-        # the file when the cached verdict says there was something to check.
-        if int((cached or {}).get("task_count") or 0) == 0:
-            return True
-        return launch_receipt.is_file()
-
-    launch_key = timing.fingerprint(validate_key, str(write_root), fast, campaign_id)
-    with reuse.stage(timer, "launchability", launch_key, verify=_launch_receipt_survives) as staged:
-        if staged.reused:
-            report.launchability = dict(staged.value)
-        else:
-            report.launchability = check_launchability(
-                blueprint, write_root, fast=fast, campaign_id=campaign_id
-            )
-            staged.value = dict(report.launchability)
-    if report.launchability.get("injected_validations"):
-        # Inference just edited the Task Cards that validation had already read.
-        # Re-validate rather than arm a blueprint in a state nothing checked.
-        validate = hooks.validate_blueprint or default_validate_blueprint
-        with timer.stage("validate_blueprint_reinjected") as entry:
-            errors = validate(blueprint)
-            entry["detail"] = {"tasks": list(report.launchability["injected_validations"])}
-        if errors:
-            raise CampaignError("inferred validations broke the blueprint: " + "; ".join(errors))
     report.stages_completed.append("blueprint")
     if not should_run(until, "admit"):
         write_launch_pointer(
@@ -4850,8 +5203,36 @@ def _run_campaign_stages(
             blueprint=report.blueprint,
             target_worktree=target_worktree,
             host_worktree=str(write_root),
+            stage="blueprint",
         )
         return report
+
+    run.blueprint = blueprint
+    run.compile_generation = compile_generation
+    run.compile_input = compile_input
+    run.scoped_resume = scoped_resume
+    return None
+
+
+def _stage_admit(run: _CampaignRun) -> CampaignReport | None:
+    blueprint = run.blueprint
+    campaign_id = run.campaign_id
+    compile_generation = run.compile_generation
+    compile_input = run.compile_input
+    fast = run.fast
+    hooks = run.hooks
+    host_repo = run.host_repo
+    prepare = run.prepare
+    primed_root = run.primed_root
+    report = run.report
+    reuse = run.reuse
+    seed = run.seed
+    target_worktree = run.target_worktree
+    timer = run.timer
+    timing = run.timing
+    trace = run.trace
+    until = run.until
+    write_root = run.write_root
 
     repository_id = str((seed.get("target") or {}).get("repository_id") or host_repo)
     target_path = Path(target_worktree)
@@ -4906,6 +5287,8 @@ def _run_campaign_stages(
                 else:
                     default_admit(blueprint, revision=host_revision)
             staged.value = {"revision": host_revision}
+    accepted_blueprint_inventory = blueprint_byte_inventory(blueprint)
+    run.accepted_blueprint_inventory = accepted_blueprint_inventory
     if fast:
         # An acceptance nobody typed still has to be auditable. Record the two
         # facts it rests on, scoped local_only so publish cannot read it as
@@ -4918,6 +5301,7 @@ def _run_campaign_stages(
             launchability=report.launchability,
         )
         log(f"accept {prepare.LOCAL_ACCEPTED} (local_only: compile PASS + launchability PASS)")
+    assert_blueprint_immutable(blueprint, accepted_blueprint_inventory, phase="post_accept_admit")
     report.stages_completed.append("admit")
     if not should_run(until, "bootstrap"):
         write_launch_pointer(
@@ -4926,8 +5310,37 @@ def _run_campaign_stages(
             blueprint=report.blueprint,
             target_worktree=target_worktree,
             host_worktree=str(write_root),
+            stage="admit",
         )
         return report
+
+    run.ensure_target_checkout_once = ensure_target_checkout_once
+    run.repository_id = repository_id
+    run.target_path = target_path
+    return None
+
+
+def _stage_runtime(run: _CampaignRun) -> CampaignReport:
+    blueprint = run.blueprint
+    campaign_id = run.campaign_id
+    compile_generation = run.compile_generation
+    ensure_target_checkout_once = run.ensure_target_checkout_once
+    hooks = run.hooks
+    host_repo = run.host_repo
+    report = run.report
+    repository_id = run.repository_id
+    requested_until = run.requested_until
+    reuse = run.reuse
+    scoped_resume = run.scoped_resume
+    seed = run.seed
+    target_path = run.target_path
+    target_worktree = run.target_worktree
+    timer = run.timer
+    timing = run.timing
+    trace = run.trace
+    until = run.until
+    write_root = run.write_root
+    accepted_blueprint_inventory = run.accepted_blueprint_inventory
 
     pec = hooks.pec_bootstrap or default_pec_bootstrap
     pec_workspace_path = Path(report.pec_workspace)
@@ -4971,6 +5384,10 @@ def _run_campaign_stages(
     timer.flush()
     report.pec_note = str(pec_result.get("output") or "")
     log("pec bootstrap ok")
+    task_counts = assert_task_counts_agree(
+        blueprint, report.launchability, Path(report.pec_workspace)
+    )
+    log(f"task counts agree: {task_counts['compiled']} across compile, launchability, lock")
     with traced(trace, "bootstrap", "pec_runtime_activate"):
         pec_status = activate_pec_runtime(Path(report.pec_workspace), campaign_id=campaign_id)
     log(f"pec runtime_status={pec_status.get('runtime_status')}")
@@ -4987,7 +5404,9 @@ def _run_campaign_stages(
         blueprint=report.blueprint,
         target_worktree=target_worktree,
         host_worktree=str(write_root),
+        stage="bootstrap",
     )
+    assert_blueprint_immutable(blueprint, accepted_blueprint_inventory, phase="bootstrap")
     report.stages_completed.append("bootstrap")
     if not should_run(until, "arm"):
         return report
@@ -5006,6 +5425,7 @@ def _run_campaign_stages(
                     target_path=target_path,
                     trace=trace,
                 )
+    assert_blueprint_immutable(blueprint, accepted_blueprint_inventory, phase="arm")
     report.timings = timer.report()
     log(
         "preparation ready: first task executable after "
@@ -5033,6 +5453,7 @@ def _run_campaign_stages(
         blueprint=report.blueprint,
         target_worktree=target_worktree,
         host_worktree=str(write_root),
+        stage="arm",
     )
     report.program_blockers = default_program_blockers(campaign_id, armed=True)
     report.stages_completed.append("arm")
@@ -5056,6 +5477,7 @@ def _run_campaign_stages(
                     trace=trace,
                     timer=timer,
                 )
+    assert_blueprint_immutable(blueprint, accepted_blueprint_inventory, phase="execute")
     executed = False
     if (pec_workspace / "runtime" / "program-lock.json").is_file():
         executed = all_required_tasks_completed(pec_workspace)
@@ -5115,6 +5537,66 @@ def _run_campaign_stages(
     return report
 
 
+def _run_campaign_stages(
+    intent_path: Path,
+    *,
+    until: str = "merge",
+    primary: Path | None = None,
+    worktree: Path | None = None,
+    repo_root: Path | None = None,
+    l9_root: Path | None = None,
+    host_repo: str = HOST_REPO_DEFAULT,
+    target_override: str | None = None,
+    hooks: Hooks | None = None,
+    fast: bool | None = None,
+    trace: pe_trace.ExecutionTrace | None = None,
+    forced_kind: Any | None = None,
+    target_checkout: Path | None = None,
+) -> CampaignReport:
+    requested_until = until
+    until = normalize_until(until)
+    hooks = hooks or Hooks()
+    fast = fast_mode(fast)
+    timing = _load_script("pe_timing", PE_ROOT / "scripts/pe_timing.py")
+    timer = timing.StageTimer()
+    primary = (primary or Path.home() / ".cursor-governance").resolve()
+    host_root = (repo_root or primary).resolve()
+    # Do not feed campaign_runtime_root() into l9_home: that dataflow
+    # timed out Semgrep taint rules on this file and failed required
+    # Analyze (central Core). Callers that need L9_ROOT / L9_RUNTIME_ROOT
+    # agreement still use campaign_runtime_root() directly.
+    l9_home = (l9_root or Path(os.environ.get("L9_ROOT", Path.home() / ".l9"))).resolve()
+    run = _CampaignRun(
+        fast=fast,
+        forced_kind=forced_kind,
+        hooks=hooks,
+        host_repo=host_repo,
+        host_root=host_root,
+        intent_path=intent_path,
+        l9_home=l9_home,
+        primary=primary,
+        repo_root=repo_root,
+        requested_until=requested_until,
+        target_checkout=target_checkout,
+        target_override=target_override,
+        timer=timer,
+        timing=timing,
+        trace=trace,
+        until=until,
+        worktree=worktree,
+    )
+    for stage in (
+        _stage_classify_and_prime,
+        _stage_isolate_and_emit,
+        _stage_blueprint,
+        _stage_admit,
+    ):
+        finished = stage(run)
+        if finished is not None:
+            return finished
+    return _stage_runtime(run)
+
+
 def render_report(report: CampaignReport) -> None:
     log(f"activation blockers: {', '.join(report.activation_blockers) or 'none'}")
     log(f"program blockers: {', '.join(report.program_blockers) or 'none'}")
@@ -5138,12 +5620,9 @@ def render_report(report: CampaignReport) -> None:
                     if isinstance(item, dict)
                 ),
             }
-        runtime_root = Path(
-            os.environ.get("L9_RUNTIME_ROOT", str(Path.home() / ".l9"))
-        ).expanduser()
         summary, json_path, md_path = summary_module.write_summary(
             workspace=workspace,
-            database_path=runtime_root / "generated-data" / "pipeline.sqlite3",
+            database_path=generated_data_database(workspace),
             campaign_id=report.campaign_id,
             campaign_report=structured,
         )

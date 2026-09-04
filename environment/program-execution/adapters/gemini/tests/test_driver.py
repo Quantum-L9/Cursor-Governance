@@ -6,7 +6,11 @@ from pathlib import Path
 
 import yaml
 from adapters.common.models import ProbeContext
-from scripts.provider_loader import instantiate, repository_root
+from peer_execution.imports import pe_script
+
+_provider_loader = pe_script("provider_loader")
+instantiate = _provider_loader.instantiate
+repository_root = _provider_loader.repository_root
 
 PROGRAM_DIGEST = "sha256:" + "1" * 64
 

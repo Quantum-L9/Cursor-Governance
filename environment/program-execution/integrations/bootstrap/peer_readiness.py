@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 import hashlib
+import json
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -203,4 +204,27 @@ def build_readiness(
         "blocked_reason": blocked_reason,
     }
     body["receipt_digest"] = digest_object(body)
+    schema_errors = validate_readiness_receipt(body)
+    if schema_errors:
+        # The receipt is the contract the schema states; a writer that cannot
+        # satisfy its own schema must say so rather than publish anyway.
+        raise ValueError("readiness receipt violates its schema: " + "; ".join(schema_errors))
     return body
+
+
+READINESS_SCHEMA_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "conformance/schemas/executable-peer-readiness.schema.json"
+)
+
+
+def validate_readiness_receipt(receipt: Mapping[str, Any]) -> list[str]:
+    """Schema errors for one readiness receipt, empty when it conforms."""
+    from jsonschema import Draft202012Validator  # noqa: PLC0415 - deferred, see blueprint.py
+
+    schema = json.loads(READINESS_SCHEMA_PATH.read_text(encoding="utf-8"))
+    validator = Draft202012Validator(schema)
+    return [
+        f"{'.'.join(str(part) for part in error.path) or '<root>'}: {error.message}"
+        for error in sorted(validator.iter_errors(dict(receipt)), key=lambda e: list(e.path))
+    ]

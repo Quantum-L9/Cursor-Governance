@@ -27,6 +27,21 @@ from claude_bootstrap_receipt import NEVER_RAN, read  # noqa: E402
 
 INSTALL = REPO / "environment" / "agents" / "adapters" / "claude-code" / "install.sh"
 
+#: Every component the receipt serialises, in the order install.sh writes them.
+COMPONENTS = (
+    "shared_bootstrap",
+    "settings",
+    "skills",
+    "commands",
+    "rules",
+    "capabilities",
+    "memory",
+    "memory_cli",
+    "memory_mcp",
+    "mcp",
+    "plugins",
+)
+
 
 class InstallReceiptTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -114,6 +129,79 @@ class InstallReceiptTests(unittest.TestCase):
         parsed = self._receipt()
         for key in ("settings", "skills", "rules"):
             self.assertEqual(parsed[key], "BLOCKED", f"{key} must not read READY")
+
+    # -- Receipt honesty: an unreached component is not a healthy one -------
+
+    def test_incomplete_run_never_serialises_an_unevaluated_component_as_ready(self) -> None:
+        """A receipt must not assert total failure and total health at once.
+
+        The observed shape: `"state": "failed"`, `"stage": "shared-bootstrap"`,
+        and all eleven components READY with empty reasons — because READY is the
+        INITIAL value of every STATUS_* variable and `downgrade` (the only
+        mutator) never ran for any of them, the process having died inside stage
+        one. The reader then printed "failed — installer failed at stage
+        'shared-bootstrap'" directly above "shared_bootstrap: READY".
+
+        Governance absent is the same shape and the earliest one available: the
+        guard clause exits at stage `startup`, so the trap writes the receipt
+        and NOTHING has been evaluated. On such a run an untouched READY is not
+        a verdict, it is an unanswered question.
+        """
+        result = self._run()  # no CANONICAL_LAW.md — exits before any stage runs
+        self.assertNotEqual(result.returncode, 0)
+        parsed = self._receipt()
+        self.assertEqual(parsed["state"], "failed", "this case must be an INCOMPLETE run")
+
+        reasons = parsed["reasons"]
+        unknown = [k for k in COMPONENTS if parsed[k] == "UNKNOWN"]
+        self.assertTrue(unknown, "nothing was rewritten, so the honesty rule never fired")
+        for key in COMPONENTS:
+            self.assertNotEqual(
+                parsed[key],
+                "READY",
+                f"{key} reads READY on a run that never reached it",
+            )
+            if parsed[key] == "UNKNOWN":
+                self.assertIn(
+                    "not evaluated",
+                    reasons.get(key, ""),
+                    f"{key} is UNKNOWN without saying why",
+                )
+                self.assertIn(parsed["stage"], reasons[key], f"{key} must name the stage reached")
+            else:
+                # A component that WAS downgraded keeps its verdict and its own
+                # recorded reason: DEGRADED and BLOCKED are evidence, and only
+                # untouched optimism is rewritten.
+                self.assertNotIn("not evaluated", reasons.get(key, ""))
+                self.assertTrue(reasons.get(key), f"{key} was downgraded without a reason")
+
+    def test_a_completed_run_keeps_every_verdict_it_actually_reached(self) -> None:
+        """The rewrite is scoped to incomplete runs; a finished verdict is evidence.
+
+        This run reaches the installer's own final `write_receipt`, so READY
+        means evaluated-and-passed, BLOCKED keeps its recorded reason, and the
+        "not evaluated" text must appear nowhere at all.
+        """
+        (self.gov / "CANONICAL_LAW.md").write_text("synthetic", encoding="utf-8")
+        subprocess.run(["git", "init", "-q", str(self.workspace)], check=True)
+        self._run()
+        parsed = self._receipt()
+        self.assertNotEqual(parsed["state"], "failed", "this case must be a COMPLETE run")
+        self.assertEqual(
+            parsed["shared_bootstrap"],
+            "BLOCKED",
+            "the component that actually failed must still name its own failure",
+        )
+        self.assertTrue(
+            parsed["reasons"]["shared_bootstrap"],
+            "a downgraded component keeps its recorded reason",
+        )
+        for key in COMPONENTS:
+            self.assertNotIn(
+                "not evaluated",
+                parsed["reasons"].get(key, ""),
+                f"{key}: a completed run must not report anything as unevaluated",
+            )
 
     # -- T-10: absence is never_ran, never ready ----------------------------
 

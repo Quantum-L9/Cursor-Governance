@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import sys
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from close_campaign import archive_completed, close_campaign, next_campaign
 
 

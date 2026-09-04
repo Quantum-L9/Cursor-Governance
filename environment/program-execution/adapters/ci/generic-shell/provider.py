@@ -54,14 +54,21 @@ class GenericShellDriver:
         declared = list(
             contract.get("declared_changed_files") or contract.get("changed_files") or []
         )
-        observed = list(contract.get("observed_changed_files") or declared)
+        # `observed_changed_files` is an OBSERVATION the caller supplies. It
+        # used to default to the declaration (and `[]`, "nothing changed", is
+        # falsy and defaulted too), so the exactness gate could only pass.
+        observed_raw = contract.get("observed_changed_files")
+        observation_available = isinstance(observed_raw, list)
+        observed = [str(item) for item in observed_raw] if observation_available else []
         gates = {
             "command_execution": (
                 "PASS"
                 if validations and all(item["status"] == "PASS" for item in validations)
                 else "FAIL"
             ),
-            "changed_files_exact": "PASS" if declared == observed else "FAIL",
+            "changed_files_exact": (
+                "PASS" if observation_available and declared == observed else "FAIL"
+            ),
             "candidate_immutable": "PASS" if mutation_free else "FAIL",
             "independent_verifier": "PASS",
         }
@@ -73,8 +80,16 @@ class GenericShellDriver:
             "gates": gates,
         }
         passed = all(value == "PASS" for value in gates.values())
+        adapter_error_code = None
+        if not passed:
+            adapter_error_code = (
+                "HOST_EXECUTION_FAILED"
+                if gates["command_execution"] != "PASS"
+                else "TARGET_STATE_DRIFT"
+            )
         return DriverInvocation(
             status="PASS" if passed else "FAIL",
+            adapter_error_code=adapter_error_code,
             payload=payload,
             evidence=(
                 {

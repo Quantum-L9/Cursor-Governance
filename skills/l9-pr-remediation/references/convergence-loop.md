@@ -57,7 +57,7 @@ A second cycle is **not** the normal path. It is only for signals that did not e
 
 ## Own until merged
 
-Subscribe to every in-scope open PR at preflight (`viewerSubscription`; PUT `issues/{n}/subscription` when not `SUBSCRIBED`). A 404/422 does not waive ownership.
+Subscribe to every in-scope open PR at preflight (`viewerSubscription`; `ops/scripts/lib/gh_subscribe_pr.sh` → GraphQL `updateSubscription` when not `SUBSCRIBED`). Never `PUT issues/{n}/subscription` (that route 404s). A classified GraphQL refusal or subscribe WARN does not waive ownership.
 
 After remediator publish, record the head SHA and continue independent PRs. Then stay on MERGE_TRAIN: snapshot `gh pr view` / `gh pr checks` every 15s (cap `max_wait_snapshots`) until `mergeStateStatus=CLEAN` or a CODEBASE-red required check names a source file this PR owns. Never tell the human to re-invoke `/l9-pr-remediation` because CI is still running.
 
@@ -158,7 +158,7 @@ minimum_safe_next_action: "own_required_checks_then_merge" | "merge_train_oldest
 MUST stop the loop when:
 - `cycles_run >= max_cycles` → emit `partial`
 - Local verify Passed AND no new actionable codebase signals → emit `converged` for **this PR**. Do not merge until FIRST_MERGE_GATE. Then MERGE_TRAIN (own the required-check wait; do not hand off).
-- `pr_board.py` returns `leftover` for a PR → that PR is `partial`, and the status must quote the declaration (`--human-decision` or `--unfixable-check`) that produced it. Edit-axis notes alone are **not** that declaration and are not a stop condition: attempt the merge first. `fix` means another cycle for that PR; `wait` means keep polling.
+- `pr_board.py` returns `leftover` for a PR → that PR is `partial`, and the status must quote the declaration (`--human-decision` or `--unfixable-check`) that produced it **and** the GitHub issue opened for `l9-issue-remediation` ([issue-handoff.md](issue-handoff.md)). Edit-axis notes alone are **not** that declaration and are not a stop condition: attempt the merge first. Do not ask the human to unblock. `fix` means another cycle for that PR; `wait` means keep polling.
 - Poll worker `merge_eligible` on a stale SHA → ignore; never merge from it
 - A fix causes an unrecoverable regression → emit `blocked`
 - GitHub API is rate-limited and retry fails → emit `blocked`

@@ -109,4 +109,12 @@ if grep -nE 'gh (pr|repo) [a-z].*\|\| true' "$PR_GATE" | grep -v gh_graphql; the
 fi
 pass "no unclassified GraphQL call remains on the publish path"
 
+# T7 — subscribe uses GraphQL updateSubscription, not the 404 REST route.
+grep -q 'gh_subscribe_pr.sh' "$PR_GATE" \
+  || fail "open_pr_after_gate.sh must source gh_subscribe_pr.sh"
+if grep -qE 'gh api -X PUT "repos/\$\{owner\}/\$\{name\}/issues/\$\{pr_number\}/subscription"' "$PR_GATE"; then
+  fail "open_pr_after_gate.sh still calls PUT issues/subscription (404)"
+fi
+pass "publish path subscribes via GraphQL, not PUT issues/subscription"
+
 echo "OK: $PASS assertions"

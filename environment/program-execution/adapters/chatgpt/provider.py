@@ -12,6 +12,28 @@ from peer_execution.provider import (
 )
 
 
+def _write_json_atomic(path: Path, value: dict) -> None:
+    """Write-then-rename: the host reads this envelope from another process.
+
+    Thin providers may not import the shared runtime store, so the atomic
+    write is local to this file.
+    """
+    import os
+    import tempfile
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    handle, staged = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
+    try:
+        with os.fdopen(handle, "w", encoding="utf-8") as stream:
+            stream.write(json.dumps(value, indent=2, sort_keys=True) + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(staged, path)
+    finally:
+        if os.path.exists(staged):
+            os.unlink(staged)
+
+
 class ChatGPTManualHandoffProvider:
     provider_id = "chatgpt-manual-handoff"
 
@@ -55,14 +77,15 @@ class ChatGPTManualHandoffProvider:
             contract,
             artifacts=list(contract.get("source_artifacts") or []),
             producer_identity=identity,
+            # The request is the authoritative identity of this execution; the
+            # rendered contract is consulted only when the request lacks it.
+            task_id=getattr(request, "task_id", None),
+            program_lock_digest=getattr(request, "program_lock_digest", None),
+            contract_digest=getattr(request, "rendered_contract_digest", None),
         )
         root = self.runtime_root / "chatgpt-handoffs"
-        root.mkdir(parents=True, exist_ok=True)
         path = root / f"{request.execution_id}.envelope.json"
-        path.write_text(
-            json.dumps(envelope, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
+        _write_json_atomic(path, envelope)
         return ProviderInvocation(
             status="RUNNING",
             state={"envelope": envelope, "handoff_path": str(path)},

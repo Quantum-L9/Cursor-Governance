@@ -2,7 +2,7 @@ schema: l9.autonomy-contracts.manifest.v1
 schema_version: 2.0.0
 family: l9_autonomy_architecture
 status: active
-updated: "2026-08-12"
+updated: "2026-09-02"
 purpose: >
   First-class autonomy family registry. Program Execution remains the controller;
   root autonomy declares owns_program_state: false. Shared bounded-concurrency
@@ -41,6 +41,7 @@ artifacts:
       - CANONICAL_LAW.md
       - ops/scripts/project_llm_rules.py
       - environment/generated/llm-rules/zz-autonomy-surface-override.md
+      - skills/l9-pr-remediation
     not_for:
       - skill_local_forks_of_surface_profile
       - adapter_prose_forks
@@ -63,6 +64,7 @@ artifacts:
       - ops/autonomy/resolve_execution_gate.py
       - environment/agents/adapters/claude-code/hooks/local_execution_gate_wrap.py
       - skills/l9-bounded-autonomy
+      - skills/l9-pr-remediation
     not_for:
       - mid_execution_push_before_release_authorized
   - artifact_id: peer-execution-bounded-autonomy-runtime
@@ -106,6 +108,7 @@ artifacts:
       - ops/autonomy/local_execution_gate.py
       - ops/autonomy/worktree_isolation_gate.py
       - rules/54-context-sensitive-git-guardrails.mdc
+      - skills/l9-pr-remediation
     not_for:
       - publish_path_enforcement
       - merge_authorization
@@ -119,6 +122,8 @@ projections:
   - path: commands/autonomy.md
     relation: discovery_pointer
   - path: skills/l9-bounded-autonomy/SKILL.md
+    relation: discovery_pointer
+  - path: skills/l9-pr-remediation/SKILL.md
     relation: discovery_pointer
   - path: environment/generated/llm-rules/zz-autonomy-surface-override.md
     relation: generated_from_surface_profile
