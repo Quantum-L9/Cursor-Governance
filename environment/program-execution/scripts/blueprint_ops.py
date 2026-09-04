@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +24,36 @@ VALIDATOR_PATH = (
 )
 _VALIDATOR_MODULE_NAME = "pec_validate_blueprint"
 _SCAN_SUFFIXES = {".md", ".yaml", ".yml", ".json", ".py"}
+
+
+class BlueprintTreeError(RuntimeError):
+    """The blueprint tree holds something an inventory cannot honestly digest."""
+
+
+def tree_files(root: Path) -> list[Path]:
+    """Every regular file under `root`, refusing any symlink on the way.
+
+    A Blueprint is a self-contained artifact: its MANIFEST attests the bytes
+    of the files *in* the tree. `rglob` reports a symlink as a file when its
+    target is one, so a link to a path outside the blueprint was digested into
+    MANIFEST.yaml as if it were blueprint content, and a broken link simply
+    vanished from the inventory. Neither is a file this tree owns.
+    """
+    base = Path(root)
+    files: list[Path] = []
+    for path in sorted(base.rglob("*")):
+        if path.is_symlink():
+            try:
+                target = os.readlink(path)
+            except OSError:
+                target = "?"
+            raise BlueprintTreeError(
+                f"symlink inside the blueprint tree: {path.relative_to(base).as_posix()} -> "
+                f"{target}; a blueprint inventories only regular files it owns"
+            )
+        if path.is_file():
+            files.append(path)
+    return files
 
 
 def load_yaml(path: Path) -> Any:
@@ -59,8 +90,8 @@ def scan_placeholders(root: Path) -> list[str]:
     """Mirror the validator's placeholder scan (same patterns, same file classes)."""
     patterns = list(load_validator().PLACEHOLDERS)
     found: list[str] = []
-    for path in sorted(Path(root).rglob("*")):
-        if not path.is_file() or path.suffix.lower() not in _SCAN_SUFFIXES:
+    for path in tree_files(Path(root)):
+        if path.suffix.lower() not in _SCAN_SUFFIXES:
             continue
         text = path.read_text(encoding="utf-8", errors="ignore")
         for pattern in patterns:
@@ -74,10 +105,9 @@ def scan_placeholders(root: Path) -> list[str]:
 def write_manifest(root: Path, compiled_from: str) -> None:
     """Canonical Blueprint MANIFEST.yaml generator (digest of every tree file)."""
     files = []
-    for path in sorted(Path(root).rglob("*")):
+    for path in tree_files(Path(root)):
         if (
-            path.is_file()
-            and path.name != "MANIFEST.yaml"
+            path.name != "MANIFEST.yaml"
             and "__pycache__" not in path.parts
             and path.suffix != ".pyc"
         ):

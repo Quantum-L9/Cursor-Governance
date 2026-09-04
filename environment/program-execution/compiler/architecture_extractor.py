@@ -557,7 +557,20 @@ class ClaudeCodeExtractor:
                 f"(request {request.request_id}): {_sanitize(result.stderr)}"
             )
         stdout = result.stdout or ""
-        if len(stdout.encode("utf-8", "ignore")) > self.max_output_bytes:
+        # The runner keeps only a bounded tail of stdout. A truncated payload
+        # is not "no output" and not a parse error: it is a response that
+        # exceeded the budget and can never be admitted, because whatever was
+        # cut off is exactly the part no reader can recover.
+        if getattr(result, "stdout_truncated", False):
+            raise ExtractorError(
+                "semantic extractor output exceeded the runner's output budget and was "
+                f"truncated ({getattr(result, 'stdout_bytes', 0)} bytes written; "
+                f"request {request.request_id}, mode {request.mode})"
+            )
+        produced = max(
+            int(getattr(result, "stdout_bytes", 0) or 0), len(stdout.encode("utf-8", "ignore"))
+        )
+        if produced > self.max_output_bytes:
             raise ExtractorError(
                 f"semantic extractor output exceeded {self.max_output_bytes} bytes"
             )

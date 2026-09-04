@@ -9,6 +9,7 @@ obligations the operator wrote are still there afterwards.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import subprocess
@@ -614,3 +615,92 @@ class CliTests(unittest.TestCase):
 
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()
+
+
+class SourceRevisionTests(unittest.TestCase):
+    """`SOURCE_TRACEABILITY.sources[0].revision` names the bytes that were compiled.
+
+    The architecture route's declared document digest used to be copied into
+    `revision` verbatim, so the register named a file the compiler never read
+    and an edited campaign source kept the "revision" of the unedited one.
+    The declared digest is now a separate field and is re-derived from the
+    document when that document can be read.
+    """
+
+    def setUp(self) -> None:
+        self._tmp = TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.root = Path(self._tmp.name)
+        # Compile from a private copy so the document can be drifted afterwards.
+        self.document = self.root / "architecture.md"
+        self.document.write_text(FIXTURE.read_text(encoding="utf-8"), encoding="utf-8")
+        self.receipt = _compile(self.root, intent=self.document)
+        self.source_path = Path(self.receipt["campaign_source"])
+        self.proof = _pass_proof(self.root / "stack-proof.json", self.receipt["campaign_id"])
+
+    def _traceability(self, target: Path) -> dict:
+        return yaml.safe_load((target / "SOURCE_TRACEABILITY.yaml").read_text(encoding="utf-8"))
+
+    def _compile_edited(self, edited: dict, target: str = "edited") -> dict:
+        path = self.root / f"{target}.yaml"
+        path.write_text(yaml.safe_dump(edited, sort_keys=False), encoding="utf-8")
+        return COMPILER.compile_source(path, self.root / target, stack_proof=self.proof)
+
+    def test_declared_digest_is_not_the_source_revision(self) -> None:
+        target = self.root / "clean"
+        COMPILER.compile_source(self.source_path, target, stack_proof=self.proof)
+        source = self._traceability(target)["sources"][0]
+        declared = self.receipt["source"]["sha256"]
+        compiled = hashlib.sha256(self.source_path.read_bytes()).hexdigest()
+        self.assertNotEqual(declared, compiled)
+        self.assertEqual(source["revision"], f"sha256:{compiled}")
+        self.assertEqual(source["architecture_source_sha256"], declared)
+        self.assertEqual(source["architecture_source_verification"], "verified")
+        self.assertEqual(source["architecture_intent"]["source_sha256"], declared)
+
+    def test_an_edited_campaign_source_gets_its_own_revision(self) -> None:
+        edited = yaml.safe_load(self.source_path.read_text(encoding="utf-8"))
+        edited["tasks"][0]["title"] = edited["tasks"][0]["title"] + " (edited)"
+        self._compile_edited(edited)
+        clean = self.root / "clean"
+        COMPILER.compile_source(self.source_path, clean, stack_proof=self.proof)
+        self.assertNotEqual(
+            self._traceability(self.root / "edited")["sources"][0]["revision"],
+            self._traceability(clean)["sources"][0]["revision"],
+        )
+
+    def test_a_drifted_architecture_source_is_refused(self) -> None:
+        with self.document.open("a", encoding="utf-8") as handle:
+            handle.write("\nPerplexity MUST now serve reasoning traffic.\n")
+        with self.assertRaises(COMPILER.CompileError) as ctx:
+            COMPILER.compile_source(self.source_path, self.root / "drifted", stack_proof=self.proof)
+        self.assertIn("architecture source drifted", str(ctx.exception))
+        self.assertFalse((self.root / "drifted").exists())
+
+    def test_drift_is_judged_on_normalized_text_not_raw_bytes(self) -> None:
+        """CRLF endings and a BOM are not drift; the route digests normalized text."""
+        raw = self.document.read_text(encoding="utf-8")
+        self.document.write_bytes(b"\xef\xbb\xbf" + raw.replace("\n", "\r\n").encode("utf-8"))
+        result = COMPILER.compile_source(
+            self.source_path, self.root / "normalized", stack_proof=self.proof
+        )
+        self.assertFalse(
+            [w for w in result["warnings"] if w.startswith("architecture_source_unverifiable")]
+        )
+
+    def test_an_absent_architecture_source_is_recorded_as_unverifiable(self) -> None:
+        edited = yaml.safe_load(self.source_path.read_text(encoding="utf-8"))
+        edited["intent_provenance"]["source"]["path"] = str(self.root / "moved-away.md")
+        result = self._compile_edited(edited, target="unverifiable")
+        marked = [w for w in result["warnings"] if w.startswith("architecture_source_unverifiable")]
+        self.assertEqual(len(marked), 1, result["warnings"])
+        source = self._traceability(self.root / "unverifiable")["sources"][0]
+        self.assertEqual(source["architecture_source_verification"], "unverifiable")
+        self.assertEqual(source["architecture_source_sha256"], self.receipt["source"]["sha256"])
+
+    def test_a_forged_declared_digest_over_a_readable_source_is_refused(self) -> None:
+        edited = yaml.safe_load(self.source_path.read_text(encoding="utf-8"))
+        edited["intent_provenance"]["source"]["sha256"] = "f" * 64
+        with self.assertRaises(COMPILER.CompileError) as ctx:
+            self._compile_edited(edited, target="forged")
+        self.assertIn("architecture source drifted", str(ctx.exception))

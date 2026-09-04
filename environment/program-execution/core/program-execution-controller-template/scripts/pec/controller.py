@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import importlib.util
 import json
 import re
@@ -126,6 +127,54 @@ def write_campaign_status(
     return payload
 
 
+def _program_recommendation(db: StateDB, ledger: EventLedger) -> tuple[str, dict[str, Any]]:
+    """The one verdict computation `export-handoff` and `close` both consult.
+
+    Returns the recommended terminal verdict and the facts it rests on. A
+    success verdict is recommended only when every required task is COMPLETED,
+    every blocking gate is satisfied, no decision or Unknown is open, the
+    runtime is not halted and the ledger verifies.
+    """
+    tasks = db.tasks()
+    gates = db.gates()
+    blocking_gates = [gate for gate in gates if gate["blocking"]]
+    required_tasks = [
+        task for task in tasks if task["definition_status"] not in {"cancelled", "superseded"}
+    ]
+    open_risks = [
+        risk["id"]
+        for risk in db.get_meta("risks", [])
+        if risk.get("status") not in {"closed", "superseded"}
+    ]
+    unresolved_decisions = [item["id"] for item in db.decisions() if item["status"] == "pending"]
+    unresolved_unknowns = [item["id"] for item in db.unknowns() if item["status"] == "open"]
+    ledger_ok, ledger_message = ledger.verify()
+    halted = bool(db.get_meta("global_halt", False))
+    if any(gate["result"] == "FAIL" for gate in blocking_gates):
+        recommendation = "NOT_CONVERGED"
+    elif unresolved_decisions or unresolved_unknowns or halted or not ledger_ok:
+        recommendation = "INCONCLUSIVE"
+    elif (
+        required_tasks
+        and all(task["runtime_state"] == "COMPLETED" for task in required_tasks)
+        and all(_gate_satisfied(db, gate) for gate in blocking_gates)
+    ):
+        recommendation = "CONVERGED_WITH_NON_BLOCKING_RISKS" if open_risks else "CONVERGED"
+    else:
+        recommendation = "INCONCLUSIVE"
+    facts = {
+        "unresolved_decisions": unresolved_decisions,
+        "unresolved_unknowns": unresolved_unknowns,
+        "open_risks": open_risks,
+        "global_halt": halted,
+        "ledger_valid": ledger_ok,
+        "ledger_message": ledger_message,
+        "required_tasks": len(required_tasks),
+        "blocking_gates": len(blocking_gates),
+    }
+    return recommendation, facts
+
+
 def complete_campaign(
     workspace: Path,
     actor: str,
@@ -143,6 +192,18 @@ def complete_campaign(
                 "campaign close refused; canonical child/gate/lease state is not terminal: "
                 + json.dumps(blockers, sort_keys=True)
             )
+        recommendation, facts = _program_recommendation(db, ledger)
+        if verdict in SUCCESS_VERDICTS and recommendation not in SUCCESS_VERDICTS:
+            # The caller's verdict is a claim; the runtime's own facts decide
+            # whether a success verdict is supportable. Pending decisions, open
+            # Unknowns, a halt or a broken ledger recommend INCONCLUSIVE, and a
+            # close may not declare more than the Controller can recommend.
+            raise ControllerError(
+                f"campaign close refused; verdict {verdict} exceeds the Controller "
+                f"recommendation {recommendation}: " + json.dumps(facts, sort_keys=True)
+            )
+        if verdict in SUCCESS_VERDICTS and not facts["ledger_valid"]:
+            raise ControllerError("campaign close refused; ledger integrity failure")
         current = read_campaign_status(workspace) or db.get_meta("campaign_status") or {}
         payload = write_campaign_status(
             workspace,
@@ -249,6 +310,10 @@ def _admission_errors(blueprint: Path, *, admission_draft: bool) -> list[str]:
         ]
     if _complete_pair(blueprint):
         return _validate_blueprint(blueprint, "instantiated")
+    # A hand-assembled blueprint (the Controller's own fixtures) carries no
+    # MANIFEST/README pair, so the instantiated validator cannot run. Live
+    # blueprints always carry both (instantiate copies README, accept writes
+    # MANIFEST). The skip is recorded in the ledger by `bootstrap`, never silent.
     return []
 
 
@@ -336,6 +401,7 @@ def bootstrap(
             db.upsert_waiver(waiver)
         for evidence in lock["evidence"]:
             db.upsert_evidence(evidence)
+        blueprint_validation = "instantiated" if _complete_pair(blueprint) else "skipped"
         ledger.append(
             "CONTROLLER_BOOTSTRAPPED",
             "controller",
@@ -344,8 +410,20 @@ def bootstrap(
                 "blueprint": str(blueprint),
                 "program_digest": lock["lock_digest"],
                 "controller_contract": config["controller_contract"],
+                "blueprint_validation": blueprint_validation,
             },
         )
+        if blueprint_validation == "skipped":
+            # Visible, never silent: the pair was incomplete so the
+            # instantiated validator did not run over this blueprint.
+            ledger.append(
+                "BLUEPRINT_VALIDATION_SKIPPED",
+                "controller",
+                {
+                    "blueprint": str(blueprint),
+                    "reason": "incomplete MANIFEST.yaml/README.md pair",
+                },
+            )
         campaign_status = write_campaign_status(
             workspace,
             campaign_id=_campaign_id_from_program(lock.get("program")),
@@ -368,6 +446,7 @@ def bootstrap(
             "draft" if admission_draft else lock["program"].get("definition_status")
         ),
         "campaign_status": campaign_status,
+        "blueprint_validation": blueprint_validation,
     }
 
 
@@ -584,6 +663,72 @@ def _evidence_valid(db: StateDB, evidence_id: str) -> bool:
     return True
 
 
+def _require_ledger_integrity(ledger: EventLedger) -> None:
+    """A Program-state transition never lands on top of a tampered ledger.
+
+    `verify()` used to run only where a reader happened to ask; a middle event
+    could be rewritten and every later mutation still appended on top of it.
+    Every transition that changes Program truth checks the chain first.
+    """
+    ok, message = ledger.verify()
+    if not ok:
+        raise ControllerError(
+            f"ledger integrity failure; refusing to mutate Program state: {message}"
+        )
+
+
+def _evidence_supports(db: StateDB, evidence_ids: list[str], task_ids: set[str]) -> bool:
+    """Does any of this evidence support one of these tasks?"""
+    for evidence_id in evidence_ids:
+        item = db.evidence(evidence_id) or {}
+        if set(item.get("supports") or []) & task_ids:
+            return True
+    return False
+
+
+#: Gate classes that close over executed work. Their PASS needs the
+#: Controller's own verification of an in-scope task, never catalog evidence.
+EXECUTION_GATE_CLASSES = frozenset({"execution", "validation"})
+CONTROLLER_VERIFICATION_METHOD = "independent_controller_verification"
+
+
+def _controller_verification_supports(
+    db: StateDB, evidence_ids: list[str], task_ids: set[str]
+) -> bool:
+    for evidence_id in evidence_ids:
+        item = db.evidence(evidence_id) or {}
+        if str(item.get("method") or "") != CONTROLLER_VERIFICATION_METHOD:
+            continue
+        if str(item.get("result") or "") != "PASS":
+            continue
+        if set(item.get("supports") or []) & task_ids:
+            return True
+    return False
+
+
+def _risk_tier_policy() -> dict[str, Any]:
+    path = Path(__file__).resolve().parents[2] / "policy" / "risk-tiers.yaml"
+    if not path.is_file():
+        raise ControllerError(f"risk tier policy missing: {path}")
+    document = load_json_or_yaml(path)
+    tiers = document.get("tiers") if isinstance(document, dict) else None
+    if not isinstance(tiers, dict):
+        raise ControllerError(f"risk tier policy has no tiers: {path}")
+    return tiers
+
+
+def _max_attempts(task: dict[str, Any]) -> int:
+    """The retry budget the risk policy grants this task. Undefined is refused."""
+    tier = str(task.get("risk_tier") or "")
+    policy = _risk_tier_policy().get(tier)
+    budget = (policy or {}).get("max_attempts") if isinstance(policy, dict) else None
+    if not isinstance(budget, int) or isinstance(budget, bool) or budget < 1:
+        raise ControllerError(
+            f"risk tier {tier!r} declares no positive max_attempts; retries are finite or refused"
+        )
+    return budget
+
+
 ACTIVE_RUNTIME_STATES = {
     "LEASED",
     "PREPARED",
@@ -609,6 +754,28 @@ def _campaign_integration_branch(workspace: Path) -> str | None:
     if not campaign_id or campaign_id == "unknown":
         return None
     return f"campaign/{campaign_id}"
+
+
+def _integration_branch_in_force(db: StateDB, workspace: Path, task: dict[str, Any]) -> bool:
+    """Is fan-in through `campaign/<id>` live for this task's repository?
+
+    The same test `_integrate_candidate` applies: a named integration branch
+    that does not exist in the reconciled repository is not in force, and a
+    standalone runtime keeps PASSED_LOCAL as a satisfying dependency state.
+    """
+    branch = _campaign_integration_branch(workspace)
+    if branch is None or not task.get("repository_id"):
+        return False
+    repo = db.repository(str(task["repository_id"]))
+    if repo is None or not repo.get("local_path"):
+        return False
+    repo_path = Path(str(repo["local_path"]))
+    if not repo_path.is_dir():
+        return False
+    return (
+        run_git(repo_path, "rev-parse", "--verify", f"refs/heads/{branch}", check=False).returncode
+        == 0
+    )
 
 
 def _lease_base_sha(workspace: Path, repo: dict[str, Any], task_id: str) -> str:
@@ -852,9 +1019,15 @@ def task_readiness_detail(
         for dep in override.get("add") or []:
             if dep not in effective_dependencies:
                 effective_dependencies.append(dep)
+    # Under a campaign integration branch a dependency's work reaches the
+    # successor's base only at COMPLETED (fan-in). PASSED_LOCAL work is still
+    # sitting on its task branch, so a successor claimed against it would base
+    # on a lineage that lacks exactly the change it depends on.
+    integrated_only = _integration_branch_in_force(db, workspace, task)
+    satisfied = {"COMPLETED"} if integrated_only else {"PASSED_LOCAL", "COMPLETED"}
     for dep in effective_dependencies:
         dependency = db.task(dep)
-        if dependency is None or dependency["runtime_state"] not in {"PASSED_LOCAL", "COMPLETED"}:
+        if dependency is None or dependency["runtime_state"] not in satisfied:
             entries.append((_WAITING, f"dependency_not_complete:{dep}"))
     for decision_id in task["required_decisions"]:
         decision = db.decision(decision_id)
@@ -1411,7 +1584,31 @@ def start_task(workspace: Path, task_id: str, actor: str) -> dict[str, Any]:
             raise ControllerError(
                 "FAILED task has no active lease; run `pec claim` before `pec start` to retry"
             )
+        if retrying:
+            budget = _max_attempts(task)
+            attempts = int(task.get("attempts") or 0)
+            if attempts >= budget:
+                db.transition_task(task_id, "CANCELLED", last_error="RETRY_BUDGET_EXHAUSTED")
+                lease = db.active_lease_for_task(task_id)
+                if lease:
+                    db.release_lease(lease["lease_id"])
+                    db.update_task(task_id, lease_id=None)
+                ledger.append(
+                    "TASK_CANCELLED",
+                    actor,
+                    {
+                        "task_id": task_id,
+                        "reason": "RETRY_BUDGET_EXHAUSTED",
+                        "attempts": attempts,
+                        "max_attempts": budget,
+                    },
+                )
+                raise ControllerError(
+                    f"retry budget exhausted for {task_id}: {attempts} attempt(s) recorded, "
+                    f"risk tier allows {budget}; task CANCELLED"
+                )
         _require_stack_proof_reentry(workspace, str(task_id))
+        _require_ledger_integrity(ledger)
         _refuse_operator_memo_cwd(workspace)
         ensure_campaign_active(workspace, actor, db, ledger)
         db.transition_task(task_id, "EXECUTING")
@@ -1436,6 +1633,7 @@ def record_attempt(workspace: Path, task_id: str, receipt_source: Path) -> dict[
                 f"task cannot submit from state {task['runtime_state']}; an attempt is "
                 "recorded only for a task that `pec start` moved to EXECUTING"
             )
+        _require_ledger_integrity(ledger)
         receipt = load_json(receipt_source)
         _validate_schema(workspace, "attempt-receipt.schema.json", receipt)
         if receipt["task_id"] != task_id:
@@ -1537,6 +1735,102 @@ def _changed_paths(worktree: Path, base_sha: str | None = None) -> list[str]:
             if line.strip():
                 paths.add(line.strip().replace("\\", "/"))
     return sorted(path for path in paths if path and not _is_wiring_path(path))
+
+
+def _observed_file_digests(worktree: Path, changed: list[str]) -> dict[str, str]:
+    """Content identity of every observed change, as verified.
+
+    The verdict is about these bytes. Recording them lets integration prove
+    that what it lands is byte-identical to what was verified, instead of
+    trusting that nothing touched the tree between the verdict and the commit.
+    """
+    digests: dict[str, str] = {}
+    for path in changed:
+        target = worktree / path
+        if target.is_symlink():
+            digests[path] = "symlink"
+        elif target.is_dir():
+            digests[path] = "directory"
+        elif target.is_file():
+            digests[path] = "sha256:" + hashlib.sha256(target.read_bytes()).hexdigest()
+        else:
+            digests[path] = "absent"
+    return digests
+
+
+def _blob_digest(repo_path: Path, revision: str, path: str) -> str:
+    """Content identity of `path` at `revision`, in the same vocabulary."""
+    exists = run_git(repo_path, "cat-file", "-e", f"{revision}:{path}", check=False)
+    if exists.returncode != 0:
+        return "absent"
+    kind = run_git(repo_path, "cat-file", "-t", f"{revision}:{path}", check=False).stdout.strip()
+    if kind == "tree":
+        return "directory"
+    mode = run_git(repo_path, "ls-tree", revision, "--", path, check=False).stdout.split(" ", 1)[0]
+    if mode == "120000":
+        return "symlink"
+    completed = subprocess.run(
+        ["git", "-C", str(repo_path), "show", f"{revision}:{path}"],
+        capture_output=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        return "absent"
+    return "sha256:" + hashlib.sha256(completed.stdout).hexdigest()
+
+
+def _require_candidate_matches_verification(
+    workspace: Path,
+    task: dict[str, Any],
+    attempt: dict[str, Any] | None,
+    repo_path: Path,
+    candidate_sha: str,
+) -> dict[str, Any]:
+    """The integrated candidate must be the verified state, byte for byte.
+
+    Verification ran against a working tree; the candidate is a commit made
+    afterwards. Nothing else binds the two, so this does: every observed path
+    must be committed, nothing else may be, and each committed blob must carry
+    the digest the verdict recorded. A drift leaves the task PASSED_LOCAL with
+    its candidate preserved for diagnosis rather than landing unverified bytes.
+    """
+    task_id = str(task["id"])
+    verification = _verified_this_attempt(workspace, task, attempt)
+    if not verification or verification.get("verdict") != "PASSED_LOCAL":
+        raise ControllerError(
+            f"{task_id}: no PASSED_LOCAL verification for the current attempt; refuse integration"
+        )
+    base_sha = str(task.get("base_sha") or "")
+    committed = sorted(
+        line.strip().replace("\\", "/")
+        for line in run_git(
+            repo_path, "diff", "--name-only", f"{base_sha}..{candidate_sha}", check=False
+        ).stdout.splitlines()
+        if line.strip() and not _is_wiring_path(line.strip())
+    )
+    observed = sorted(set(verification.get("observed_changed_files") or []))
+    if committed != observed:
+        raise ControllerError(
+            f"{task_id}: integrated diff does not match the verified changes; "
+            f"verified={observed} committed={committed}; task remains PASSED_LOCAL"
+        )
+    worktree = Path(str(task.get("worktree") or ""))
+    if worktree.is_dir():
+        pending = _changed_paths(worktree, None)
+        if pending:
+            raise ControllerError(
+                f"{task_id}: verified worktree still carries uncommitted changes {pending}; "
+                "refuse to integrate a candidate that is not the verified state"
+            )
+    digests = verification.get("observed_file_digests") or {}
+    for path, expected in sorted(digests.items()):
+        actual = _blob_digest(repo_path, candidate_sha, path)
+        if actual != expected:
+            raise ControllerError(
+                f"{task_id}: {path} at candidate {candidate_sha[:12]} is {actual}, "
+                f"verified as {expected}; refuse to integrate unverified bytes"
+            )
+    return verification
 
 
 def _run_validation(command: str, worktree: Path) -> dict[str, Any]:
@@ -1827,6 +2121,7 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
         )
         worktree = Path(task["worktree"]) if task.get("worktree") else None
         changed: list[str] = []
+        observed_digests: dict[str, str] = {}
         validations: list[dict[str, Any]] = []
         candidate_sha = None
         # What the do_not_build gate does NOT cover. Semantic prohibitions carry
@@ -1856,6 +2151,7 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
                 else "FAIL"
             )
             changed = _changed_paths(worktree, task.get("base_sha"))
+            observed_digests = _observed_file_digests(worktree, changed)
             declared = sorted(set(receipt.get("changed_files") or []))
             gates["changed_files_exact"] = "PASS" if declared == changed else "FAIL"
             patterns = contract.get("writable_paths") or []
@@ -1962,6 +2258,7 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
             "candidate_sha": candidate_sha,
             "declared_changed_files": sorted(set(receipt.get("changed_files") or [])),
             "observed_changed_files": changed,
+            "observed_file_digests": observed_digests,
             "validations": validations,
             "unenforced_prohibitions": unenforced_prohibitions,
             "gates": gates,
@@ -2277,8 +2574,39 @@ def evaluate_gate(
         gate = db.gate(gate_id)
         if gate is None:
             raise ControllerError(f"unknown gate: {gate_id}")
+        _require_ledger_integrity(ledger)
         if not evidence_ids or not all(_evidence_valid(db, item) for item in evidence_ids):
             raise ControllerError("gate evaluation requires valid evidence")
+        definition = gate.get("definition") or {}
+        if result == "PASS":
+            # Validity is not relevance. A PASS is a claim about THIS gate's
+            # scope, so it needs the evidence the gate itself names and at
+            # least one item that supports a task inside the gate's scope.
+            required = [str(item) for item in definition.get("required_evidence_ids") or []]
+            missing = sorted(set(required) - set(evidence_ids))
+            if missing:
+                raise ControllerError(
+                    f"gate {gate_id} PASS requires its declared evidence; missing {missing}"
+                )
+            scope_tasks = {
+                str(item) for item in (definition.get("scope") or {}).get("task_ids") or []
+            }
+            if scope_tasks and not _evidence_supports(db, list(evidence_ids), scope_tasks):
+                raise ControllerError(
+                    f"gate {gate_id} PASS requires evidence supporting a task in its scope "
+                    f"{sorted(scope_tasks)}; none of {sorted(set(evidence_ids))} does"
+                )
+            if scope_tasks and str(definition.get("class") or "") in EXECUTION_GATE_CLASSES:
+                # An execution or validation gate closes over work that ran.
+                # Planning evidence from the catalog supports the same task
+                # and is valid, but it says nothing about the attempt; only the
+                # Controller's own verification of an in-scope task does.
+                if not _controller_verification_supports(db, list(evidence_ids), scope_tasks):
+                    raise ControllerError(
+                        f"gate {gate_id} ({definition.get('class')}) PASS requires Controller "
+                        "verification evidence for a task in its scope; planning or "
+                        "catalog evidence cannot close an execution gate"
+                    )
         if result == "NOT_APPLICABLE_WITH_REASON":
             if not gate["definition"].get("waiver_allowed") or not waiver_id:
                 raise ControllerError(
@@ -2428,6 +2756,9 @@ def _integrate_candidate(
         raise ControllerError(
             f"candidate {candidate_sha} does not descend from task base {base_sha}"
         )
+    _require_candidate_matches_verification(
+        workspace, task, db.latest_attempt(task_id), repo_path, candidate_sha
+    )
     tree, _ = _integration_checkout(workspace, repo_path, branch)
     if run_git(tree, "status", "--porcelain").stdout.strip():
         raise ControllerError(
@@ -2509,6 +2840,7 @@ def complete_task(
         task = db.task(task_id)
         if task is None:
             raise ControllerError(f"unknown task: {task_id}")
+        _require_ledger_integrity(ledger)
         if not evidence_ids or not all(_evidence_valid(db, item) for item in evidence_ids):
             raise ControllerError("task completion requires valid evidence")
         for gate_id in task["completion_gates"]:
@@ -2535,7 +2867,30 @@ def complete_task(
         else:
             if task["runtime_state"] != "PASSED_LOCAL":
                 raise ControllerError("repository task must be PASSED_LOCAL before completion")
-            if not _dod_complete(_latest_verification(workspace, task_id)):
+            attempt = db.latest_attempt(task_id)
+            verification = _verified_this_attempt(workspace, task, attempt) or {}
+            if not verification:
+                raise ControllerError(
+                    "no verification receipt for the current attempt; refuse completion"
+                )
+            # The completing evidence is this attempt's own verification, not
+            # any valid evidence that happens to exist: the evidence id the
+            # receipt minted must be supplied, still name this task, and still
+            # carry the receipt's digest.
+            verification_evidence = str(verification.get("evidence_id") or "")
+            if verification_evidence not in set(evidence_ids):
+                raise ControllerError(
+                    f"task completion requires this attempt's verification evidence "
+                    f"{verification_evidence!r}; got {sorted(set(evidence_ids))}"
+                )
+            recorded = db.evidence(verification_evidence) or {}
+            if task_id not in set(recorded.get("supports") or []) or str(
+                recorded.get("digest") or ""
+            ) != str(verification.get("receipt_digest") or ""):
+                raise ControllerError(
+                    "verification evidence does not bind this task's receipt; refuse completion"
+                )
+            if not _dod_complete(verification):
                 raise ControllerError(
                     "PASSED_LOCAL is not Done; Definition of Done required before complete"
                 )
@@ -2623,25 +2978,10 @@ def export_handoff(
         required_tasks = [
             task for task in tasks if task["definition_status"] not in {"cancelled", "superseded"}
         ]
-        open_risks = [
-            risk["id"]
-            for risk in db.get_meta("risks", [])
-            if risk.get("status") not in {"closed", "superseded"}
-        ]
-        unresolved_decisions = [item["id"] for item in decisions if item["status"] == "pending"]
-        unresolved_unknowns = [item["id"] for item in unknowns if item["status"] == "open"]
-        if any(gate["result"] == "FAIL" for gate in blocking_gates):
-            recommendation = "NOT_CONVERGED"
-        elif unresolved_decisions or unresolved_unknowns:
-            recommendation = "INCONCLUSIVE"
-        elif (
-            required_tasks
-            and all(task["runtime_state"] == "COMPLETED" for task in required_tasks)
-            and all(_gate_satisfied(db, gate) for gate in blocking_gates)
-        ):
-            recommendation = "CONVERGED_WITH_NON_BLOCKING_RISKS" if open_risks else "CONVERGED"
-        else:
-            recommendation = "INCONCLUSIVE"
+        recommendation, facts = _program_recommendation(db, ledger)
+        open_risks = facts["open_risks"]
+        unresolved_decisions = facts["unresolved_decisions"]
+        unresolved_unknowns = facts["unresolved_unknowns"]
         program = db.get_meta("program")
         receipt = {
             "schema": "program-execution-controller.handoff-receipt.v2",
@@ -2762,26 +3102,12 @@ def export_handoff(
             else {}
         )
         if completion_blockers:
-            # HANDOFF_PROTOCOL: a recommendation is not terminal acceptance.
-            # Live children, active leases or open blocking gates keep the
-            # runtime active; `pec close` is the one path that may refuse or
-            # accept, and it refuses exactly this state.
             receipt["completion_blockers"] = completion_blockers
-        if recommendation in TERMINAL_VERDICTS and not completion_blockers:
-            campaign_id = _campaign_id_from_program(program)
-            current = read_campaign_status(workspace) or {}
-            payload = write_campaign_status(
-                workspace,
-                campaign_id=campaign_id,
-                source_status=str(current.get("source_status") or "operator_intake"),
-                runtime_status="completed",
-                actor=actor,
-                ledger=ledger,
-                verdict=recommendation,
-                evidence={"handoff_id": receipt["handoff_id"], "output": str(output)},
-            )
-            db.set_meta("campaign_status", payload)
-            receipt["campaign_status"] = payload
+        # HANDOFF_PROTOCOL: a recommendation is not terminal acceptance. The
+        # handoff reports what the Controller would recommend and leaves the
+        # runtime active; `pec close`, invoked by the program owner, is the one
+        # path that accepts or refuses a terminal verdict.
+        receipt["campaign_status"] = read_campaign_status(workspace) or {}
         from .signals import publish_controller_event
 
         receipt["signal"] = publish_controller_event(

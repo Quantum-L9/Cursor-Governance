@@ -13,6 +13,7 @@ if str(_GOV_ROOT) not in sys.path:
     sys.path.insert(0, str(_GOV_ROOT))
 
 from environment.agents.lifecycle import receipts  # noqa: E402
+from environment.agents.results.receipts import safe_receipt_id  # noqa: E402
 
 _TOKEN_PATTERN = re.compile(r"L9_ADMISSION_TOKEN=([A-Za-z0-9-]+)")
 
@@ -26,21 +27,17 @@ def _allow(dispatch: dict[str, Any]) -> dict[str, Any]:
 
 
 def _result_role(value: Any) -> str:
-    raw = str(value or "").strip().lower().replace("-", "_")
-    aliases = {
-        "l9_recon": "recon",
-        "recon": "recon",
-        "l9_pr_remediation": "pr_remediation",
-        "pr_remediation": "pr_remediation",
-        "l9_test": "test",
-        "test": "test",
-        "l9_documentation": "documentation",
-        "documentation": "documentation",
-        "l9_verifier": "verifier_reviewer",
-        "l9_reviewer": "verifier_reviewer",
-        "verifier_reviewer": "verifier_reviewer",
-    }
-    return aliases.get(raw, raw)
+    """Resolve the role the result document must carry.
+
+    Root Autonomy persists the autonomy role (``executor``); the document
+    carries the Cursor role (``test``). The bridge owns that vocabulary, so
+    this is a lookup, never a private alias table.
+    """
+    from environment.agents.results.adapters.cursor_subagent import (  # noqa: PLC0415
+        result_bridge,
+    )
+
+    return result_bridge.canonical_cursor_role(value)
 
 
 def compose_subagent_start(
@@ -52,6 +49,10 @@ def compose_subagent_start(
     assignment_id = assignment.get("assignment_id") or payload.get("assignment_id")
     if not assignment_id:
         return _deny("missing assignment_id")
+    try:
+        safe_receipt_id(assignment_id, label="assignment_id")
+    except ValueError as exc:
+        return _deny(str(exc))
 
     role = assignment.get("subagent_role") or payload.get("subagent_role") or ""
     if not role:
@@ -162,6 +163,20 @@ def _admission_from_payload(payload: dict[str, Any]) -> str | None:
     return match.group(1) if match else None
 
 
+def _subagent_type_from_payload(payload: dict[str, Any]) -> str | None:
+    """The Task's declared managed-agent type, when the host supplies one.
+
+    This is not identity or scope: it is compared against the type the
+    admission was minted for, so a token cannot launch a different agent
+    definition than the one root authority admitted.
+    """
+    tool_input = payload.get("tool_input")
+    if not isinstance(tool_input, dict):
+        return None
+    value = str(tool_input.get("subagent_type") or "").strip()
+    return value or None
+
+
 def _host_bridge():
     from autonomy.adapters.cursor import host_bridge  # noqa: PLC0415
 
@@ -195,7 +210,12 @@ def compose_host_pre_tool_use(payload: dict[str, Any]) -> dict[str, Any]:
             "native Task carries no admission token; root authority must exist "
             "before launch and is never inferred from Task prose"
         )
-    decision = _host_bridge().host_bind_pre_tool_use(database, admission, tool_use_id)
+    decision = _host_bridge().host_bind_pre_tool_use(
+        database,
+        admission,
+        tool_use_id,
+        subagent_type=_subagent_type_from_payload(payload),
+    )
     if not decision.get("allowed"):
         return _deny(str(decision.get("reason") or "admission denied"))
     admission = decision["admission"]
@@ -213,6 +233,10 @@ def compose_host_subagent_start(payload: dict[str, Any]) -> dict[str, Any]:
     tool_call_id = str(payload.get("tool_call_id") or "").strip()
     if not subagent_id or not tool_call_id:
         return _deny("native subagentStart missing subagent_id or tool_call_id")
+    try:
+        safe_receipt_id(subagent_id, label="subagent_id")
+    except ValueError as exc:
+        return _deny(str(exc))
     database = _resolve_runtime_database(payload)
     if database is None:
         return _deny(
@@ -244,8 +268,10 @@ def compose_host_subagent_start(payload: dict[str, Any]) -> dict[str, Any]:
         "objective": None,
         "input_artifact_ids": [],
         "allowed_paths": list(admission.get("allowed_paths") or []),
+        "action_allowed_paths": list(admission.get("action_allowed_paths") or []),
         "forbidden_paths": list(admission.get("forbidden_paths") or []),
-        "subject_agent_id": None,
+        "subject_agent_id": admission.get("subject_agent_id"),
+        "expected_subagent_type": admission.get("expected_subagent_type"),
         "lease_id": admission["lease_id"],
         "base_sha": admission["base_sha"],
         "workspace": str(payload.get("workspace_root") or payload.get("workspace") or ""),
@@ -269,6 +295,9 @@ def compose_host_subagent_start(payload: dict[str, Any]) -> dict[str, Any]:
             "lease_id": admission["lease_id"],
             "campaign_id": admission["campaign_id"],
             "action_id": admission["action_id"],
+            # The stop path re-checks the root lease against this database;
+            # a document never out-votes the lease that admitted it.
+            "runtime_database": str(database),
         }
     )
     return _allow(dispatch)

@@ -93,15 +93,15 @@ def check_skills(root: Path) -> tuple[list[str], list[str], int, int, int]:
         elif not is_arch:
             n = len(desc)
             if n < DESC_MIN:
-                warns.append(
+                errs.append(
                     f"{rel}: description {n} chars, under {DESC_MIN} - triggers likely missing"
                 )
             elif n > DESC_MAX:
-                warns.append(
+                errs.append(
                     f"{rel}: description {n} chars, over {DESC_MAX} - body leaking into frontmatter"
                 )
             if "use when" not in desc.lower() and "use for" not in desc.lower():
-                warns.append(f"{rel}: description has no `use when`/`use for` trigger clause")
+                errs.append(f"{rel}: description has no `use when`/`use for` trigger clause")
 
         dmi = fm.get("disable-model-invocation") is True
         if is_arch:

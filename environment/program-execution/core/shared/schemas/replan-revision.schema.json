@@ -178,6 +178,13 @@
         },
         "widens_lock": {
           "type": "boolean"
+        },
+        "operation_violations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },

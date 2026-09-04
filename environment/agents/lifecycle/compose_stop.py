@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from environment.agents.lifecycle import receipts
+from environment.agents.results.receipts import safe_receipt_id
 
 _GITHUB_RE = re.compile(
     r"(?:https://github\.com/|git@github\.com:)(?P<owner>[^/]+)/(?P<repo>[^/]+?)(?:\.git)?$"
@@ -88,8 +89,14 @@ def _pipeline_result(
 
 def compose_subagent_stop(payload: dict[str, Any]) -> dict[str, Any]:
     assignment_id = payload.get("assignment_id")
+    host_status: str | None = None
+    runtime_database: str | None = None
     if not assignment_id and payload.get("subagent_id"):
         subagent_id = str(payload.get("subagent_id") or "").strip()
+        try:
+            safe_receipt_id(subagent_id, label="subagent_id")
+        except ValueError as exc:
+            return {"status": "QUARANTINED", "reason": f"orphan subagentStop: {exc}"}
         host_stop = receipts.write_host_stop(subagent_id, payload)
         correlation = receipts.load_host_correlation(subagent_id)
         if correlation is None:
@@ -99,8 +106,18 @@ def compose_subagent_stop(payload: dict[str, Any]) -> dict[str, Any]:
                 "host_stop_receipt": host_stop,
             }
         assignment_id = correlation.get("assignment_id")
+        # The host's own terminal verdict and the root database the admission
+        # was bound in travel with the return receipt: the gateway judges the
+        # document against both, never the document against itself.
+        raw_status = payload.get("status")
+        host_status = str(raw_status).strip() if raw_status not in (None, "") else None
+        runtime_database = correlation.get("runtime_database") or None
     if not assignment_id:
         return {"status": "QUARANTINED", "reason": "orphan subagentStop: missing assignment_id"}
+    try:
+        safe_receipt_id(assignment_id, label="assignment_id")
+    except ValueError as exc:
+        return {"status": "QUARANTINED", "reason": f"orphan subagentStop: {exc}"}
 
     dispatch = receipts.load_dispatch(str(assignment_id))
     if dispatch is None:
@@ -127,6 +144,8 @@ def compose_subagent_stop(payload: dict[str, Any]) -> dict[str, Any]:
                 "repository_class": dispatch.get("repository_class"),
                 "surface": dispatch.get("surface"),
                 "dispatch_receipt_digest": dispatch.get("receipt_digest"),
+                "host_status": host_status,
+                "runtime_database": runtime_database,
                 "output_digest": raw_capture["result_digest"],
                 "raw_result_digest": raw_capture["result_digest"],
                 "raw_result_path": raw_capture["path"],
