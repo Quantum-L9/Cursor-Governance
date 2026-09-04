@@ -74,6 +74,20 @@ class HookExecFailClosedTests(unittest.TestCase):
         env = dict(os.environ)
         env["HOME"] = str(self.home)
         env.pop("L9_GOVERNANCE_DIR", None)
+        # These tests assert Claude gate fail-closed behavior. Clear Cursor
+        # markers inherited from the parent session so the surface guard does
+        # not skip before the launcher can fail closed.
+        for key in (
+            "CURSOR_AGENT",
+            "CLAUDECODE",
+            "CLAUDE_CODE_ENTRYPOINT",
+            "CLAUDE_CODE_SESSION_ID",
+            "CLAUDE_CODE_REMOTE",
+            "L9_GOVERNANCE_SURFACE",
+            "L9_SURFACE_GUARD",
+        ):
+            env.pop(key, None)
+        env["CLAUDECODE"] = "1"
         env["L9_HOOK_SKIP_LOG"] = str(self.home / ".l9" / "claude" / "hook-skips.log")
         return subprocess.run(
             ["bash", str(LAUNCHER), "--class", hook_class, name],
@@ -117,6 +131,16 @@ class HookExecFailClosedTests(unittest.TestCase):
         self._materialize_governance()
         env = dict(os.environ)
         env["HOME"] = str(self.home)
+        for key in (
+            "CURSOR_AGENT",
+            "CLAUDECODE",
+            "CLAUDE_CODE_ENTRYPOINT",
+            "CLAUDE_CODE_SESSION_ID",
+            "CLAUDE_CODE_REMOTE",
+            "L9_GOVERNANCE_SURFACE",
+        ):
+            env.pop(key, None)
+        env["CLAUDECODE"] = "1"
         for argv in (["--class", "gate"], ["--class", "wat", "memory_gate.py"], []):
             with self.subTest(argv=argv):
                 result = subprocess.run(
