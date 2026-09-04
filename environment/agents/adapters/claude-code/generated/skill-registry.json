@@ -1137,6 +1137,17 @@
     },
     {
       "composition_role": "general",
+      "description": "digest an exact pull request into deterministic evidence, intent and expansion analysis, architecture judgement, and a bounded remediation gate without modifying the PR. use when reviewing agent-generated PR scope, checking architecture or proportionality before remediation, manually unpacking a PR in chat, or running a machine pre-remediation quality gate beyond ordinary CI.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-pr-digest",
+      "path": "skills/l9-pr-digest",
+      "reason": "auto-registered by sync_generated_artifacts (orphan \u2192 explicit_only)",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
       "description": "diagnose or converge github prs \u2014 remediator path is precommit-repo then git push, then a stack-safe oldest-first merge train. board verdict is ops/autonomy/pr_board.py, never a check conclusion alone. do not run make pr or make pr-check. use when a campaign left prs unmergeable, the user invokes /l9-pr-remediation, or they ask to fix, remediate, babysit, converge, or merge failing prs.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
@@ -1302,6 +1313,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "132fb178fc0b81d846f7edc6339f7f9969b04393eea7205ae015adeb8a60ef80",
-  "source_skill_corpus_sha256": "bcb684392a013a6ffdaf12e312f95e87a56b5a8e7254c047c8061c2fe00cc2a3"
+  "source_manifest_sha256": "57dd519098dcc63d180d268934f382a3b0c3f4fc60c8ecca90ecbeeb8d2b44d1",
+  "source_skill_corpus_sha256": "89fec842ebf747070732efae8908dad0560ff3ef9eb0604e8bfd16cb0570582b"
 }

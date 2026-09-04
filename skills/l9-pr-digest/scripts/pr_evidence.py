@@ -1,31 +1,62 @@
 #!/usr/bin/env python3
 """Evidence helpers for l9-pr-digest. Pure/read-only except subprocess collection."""
+
 from __future__ import annotations
 
 import json
 import re
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
 CI_FAIL = {"failure", "failed", "cancelled", "timed_out", "action_required"}
 CI_ACCEPT = {"success", "skipped", "neutral"}
 DEPS = {
-    "requirements.txt", "requirements-dev.txt", "pyproject.toml", "poetry.lock", "uv.lock",
-    "package.json", "package-lock.json", "pnpm-lock.yaml", "yarn.lock", "Cargo.toml",
-    "Cargo.lock", "go.mod", "go.sum",
+    "requirements.txt",
+    "requirements-dev.txt",
+    "pyproject.toml",
+    "poetry.lock",
+    "uv.lock",
+    "package.json",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "Cargo.toml",
+    "Cargo.lock",
+    "go.mod",
+    "go.sum",
 }
 LOCKS = {
-    "poetry.lock", "uv.lock", "package-lock.json", "pnpm-lock.yaml",
-    "yarn.lock", "Cargo.lock", "go.sum",
+    "poetry.lock",
+    "uv.lock",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "Cargo.lock",
+    "go.sum",
 }
 MANIFESTS = {
-    "requirements.txt", "requirements-dev.txt", "pyproject.toml",
-    "package.json", "Cargo.toml", "go.mod",
+    "requirements.txt",
+    "requirements-dev.txt",
+    "pyproject.toml",
+    "package.json",
+    "Cargo.toml",
+    "go.mod",
 }
 BINARY = {
-    ".png", ".jpg", ".jpeg", ".gif", ".pdf", ".zip",
-    ".tar", ".gz", ".whl", ".bin", ".exe", ".dmg",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".pdf",
+    ".zip",
+    ".tar",
+    ".gz",
+    ".whl",
+    ".bin",
+    ".exe",
+    ".dmg",
 }
 GOV_PREFIX = (".github/workflows/", "rules/", "ops/config/", "skills/AUTONOMY_MANIFEST.yaml")
 GENERATED = ("generated/", "dist/", "build/", "manifest.json", "skill-registry.json")
@@ -41,9 +72,7 @@ PATTERNS = {
     "suppression_or_ignore_added": re.compile(
         r"#\s*noqa\b|type:\s*ignore|eslint-disable|NOSONAR|continue-on-error", re.I
     ),
-    "timeout_or_retry_increase": re.compile(
-        r"\b(timeout|max_retries|retries|retry_count)\b", re.I
-    ),
+    "timeout_or_retry_increase": re.compile(r"\b(timeout|max_retries|retries|retry_count)\b", re.I),
     "debug_artifact": re.compile(
         r"\bprint\s*\(|console\.log\s*\(|breakpoint\s*\(|pdb\.set_trace", re.I
     ),
@@ -51,14 +80,55 @@ PATTERNS = {
 }
 
 
-def run(cmd: list[str], cwd: Path | None = None) -> str:
-    proc = subprocess.run(
-        cmd,
-        cwd=str(cwd) if cwd else None,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+def _file_status(entry: dict[str, Any]) -> str:
+    raw = str(entry.get("status") or entry.get("changeType") or "modified").lower()
+    mapping = {
+        "added": "added",
+        "add": "added",
+        "deleted": "deleted",
+        "removed": "deleted",
+        "remove": "deleted",
+        "renamed": "renamed",
+        "copied": "copied",
+        "modified": "modified",
+        "changed": "modified",
+    }
+    return mapping.get(raw, "modified")
+
+
+def _required_check_names(repo: str, pr_number: int, workspace: Path | None) -> list[str]:
+    if workspace is None:
+        return []
+    helper = workspace / "ops" / "autonomy" / "pr_board.py"
+    if not helper.is_file():
+        return []
+    python = workspace / ".venv" / "bin" / "python"
+    interpreter = str(python) if python.is_file() else sys.executable
+    try:
+        raw = run(
+            [interpreter, str(helper), "--repo", repo, "--pr", str(pr_number), "--json"],
+            workspace,
+            timeout=45,
+        )
+        data = json.loads(raw)
+    except (RuntimeError, json.JSONDecodeError):
+        return []
+    names = data.get("required_checks") or []
+    return [str(name) for name in names if name]
+
+
+def run(cmd: list[str], cwd: Path | None = None, timeout: int = 30) -> str:
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=str(cwd) if cwd else None,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(f"command timed out ({timeout}s): {' '.join(cmd)}") from exc
     if proc.returncode:
         message = f"command failed ({proc.returncode}): {' '.join(cmd)}"
         raise RuntimeError(f"{message}\n{proc.stderr.strip()}")
@@ -85,13 +155,15 @@ def live_evidence(repo: str, pr_number: int, workspace: Path | None) -> dict[str
         "files": [
             {
                 "path": f.get("path"),
-                "status": f.get("status") or "modified",
+                "status": _file_status(f),
                 "additions": int(f.get("additions") or 0),
                 "deletions": int(f.get("deletions") or 0),
                 "patch": None,
             }
             for f in doc.get("files", [])
         ],
+        "files_truncated": len(doc.get("files") or []) >= 100,
+        "required_check_names": _required_check_names(repo, pr_number, workspace),
         "ci_checks": [
             {
                 "name": c.get("name") or c.get("context") or "UNKNOWN",
@@ -206,8 +278,19 @@ def intent_of(evidence: dict[str, Any]) -> tuple[dict[str, Any], str]:
 
 def tokens(text: str | None) -> set[str]:
     stop = {
-        "the", "and", "for", "with", "this", "that", "from",
-        "into", "apply", "feat", "fix", "chore", "style",
+        "the",
+        "and",
+        "for",
+        "with",
+        "this",
+        "that",
+        "from",
+        "into",
+        "apply",
+        "feat",
+        "fix",
+        "chore",
+        "style",
     }
     words = re.findall(r"[a-z0-9]+", (text or "").lower())
     return {word for word in words if len(word) >= 4 and word not in stop}

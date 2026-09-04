@@ -1,15 +1,27 @@
 ---
 name: l9-pr-digest
-description: digest an exact pull request into deterministic evidence, intent and expansion analysis, architecture judgement, and a bounded remediation gate without modifying the PR. use when reviewing agent-generated PR scope, checking architecture or proportionality before remediation, manually unpacking a PR in chat, or running a machine pre-remediation quality gate beyond ordinary CI.
+description: digest an exact pull request into deterministic evidence, intent and
+  expansion analysis, architecture judgement, and a bounded remediation gate without
+  modifying the PR. use when reviewing agent-generated PR scope, checking architecture
+  or proportionality before remediation, manually unpacking a PR in chat, or running
+  a machine pre-remediation quality gate beyond ordinary CI.
 metadata:
   skill_schema: 1
   layer: control_plane
   role: skill_entrypoint
-  tags: [l9, pr, digest, scope, architecture, pre-remediation, evidence]
+  tags:
+  - l9
+  - pr
+  - digest
+  - scope
+  - architecture
+  - pre-remediation
+  - evidence
   owner: igor_beylin
   status: active
   version: 1.0.0
   updated: 2026-09-02
+disable-model-invocation: true
 ---
 
 # L9 PR Digest

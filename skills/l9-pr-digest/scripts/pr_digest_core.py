@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Deterministic decision engine for l9-pr-digest."""
+
 from __future__ import annotations
 
 import re
@@ -163,7 +164,11 @@ def _decision(
 ) -> str:
     if ci_failure:
         return "CI_OR_EXECUTION_FAILURE"
+    if "PR_file_inventory_truncated" in unknowns:
+        return "BLOCKED"
     if any(item["severity"] == "blocking" for item in flags):
+        return "BLOCKED"
+    if any(item["severity"] == "blocking_review" for item in flags):
         return "BLOCKED"
     if intent_source == "UNKNOWN" and (questions or expansion):
         return "INTENT_UNKNOWN_REVIEW_REQUIRED"
@@ -308,7 +313,18 @@ def digest(evidence: dict[str, Any], workspace: Path | None = None) -> dict[str,
         }
         for check in evidence.get("ci_checks") or []
     ]
-    ci_failure = any(check["conclusion"].lower() in CI_FAIL for check in checks)
+    required_names = {str(name) for name in (evidence.get("required_check_names") or []) if name}
+    relevant_checks = (
+        [check for check in checks if check["name"] in required_names] if required_names else checks
+    )
+    if required_names:
+        ci_failure = any(check["conclusion"].lower() in CI_FAIL for check in relevant_checks)
+    else:
+        ci_failure = False
+        if any(check["conclusion"].lower() in CI_FAIL for check in checks):
+            unknowns.append("CI_required_set_unavailable")
+    if evidence.get("files_truncated"):
+        unknowns.append("PR_file_inventory_truncated")
     if not checks:
         unknowns.append("CI_evidence_missing")
     elif any(check["conclusion"].lower() not in CI_FAIL | CI_ACCEPT for check in checks):
@@ -377,9 +393,11 @@ def digest(evidence: dict[str, Any], workspace: Path | None = None) -> dict[str,
         "LLM_judgement_questions": questions,
         "remediation_packet": {
             "PR_base_and_head": {"base_sha": base, "head_sha": head},
-            "accepted_change_scope": (
-                intent.get("explicit_scope") or [intent.get("requested_outcome")]
-            ),
+            "accepted_change_scope": [
+                item
+                for item in (intent.get("explicit_scope") or [intent.get("requested_outcome")])
+                if item
+            ],
             "files_or_symbols_requiring_attention": sorted(
                 {item.get("path") for item in flags if item.get("path")}
             ),
@@ -403,10 +421,20 @@ def digest(evidence: dict[str, Any], workspace: Path | None = None) -> dict[str,
 
 def validate(doc: dict[str, Any]) -> list[str]:
     required = {
-        "PR_identity", "intent_identity", "evidence", "deterministic_findings",
-        "judgement_findings", "expansion_items", "required_narrowing",
-        "remediation_findings", "unknowns", "decision", "confidence",
-        "LLM_judgement_used", "LLM_judgement_questions", "remediation_packet",
+        "PR_identity",
+        "intent_identity",
+        "evidence",
+        "deterministic_findings",
+        "judgement_findings",
+        "expansion_items",
+        "required_narrowing",
+        "remediation_findings",
+        "unknowns",
+        "decision",
+        "confidence",
+        "LLM_judgement_used",
+        "LLM_judgement_questions",
+        "remediation_packet",
     }
     errors = [f"missing required field: {field}" for field in sorted(required - set(doc))]
     if doc.get("decision") not in DECISIONS:
@@ -414,4 +442,22 @@ def validate(doc: dict[str, Any]) -> list[str]:
     identity = doc.get("PR_identity") or {}
     if not identity.get("base_sha") or not identity.get("head_sha"):
         errors.append("exact base/head SHA not bound")
+    packet = doc.get("remediation_packet") or {}
+    packet_required = {
+        "PR_base_and_head",
+        "accepted_change_scope",
+        "files_or_symbols_requiring_attention",
+        "findings_to_fix",
+        "expansion_to_remove",
+        "architecture_invariants_to_preserve",
+        "tests_to_add_or_repair",
+        "CI_failures_relevant_to_remediation",
+        "explicit_non_goals",
+        "UNKNOWNs",
+        "acceptance_criteria",
+    }
+    errors.extend(
+        f"missing remediation_packet field: {field}"
+        for field in sorted(packet_required - set(packet))
+    )
     return errors

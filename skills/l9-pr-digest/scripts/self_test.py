@@ -61,19 +61,29 @@ def main() -> int:
     assert "CI_evidence_incomplete" in pending["unknowns"]
 
     expanded = fixture()
-    expanded["files"].append({
-        "path": "src/provider_adapter.py", "status": "added", "additions": 25, "deletions": 0,
-        "patch": "+class NewProviderAdapter:\n+    pass\n",
-    })
+    expanded["files"].append(
+        {
+            "path": "src/provider_adapter.py",
+            "status": "added",
+            "additions": 25,
+            "deletions": 0,
+            "patch": "+class NewProviderAdapter:\n+    pass\n",
+        }
+    )
     exp = digest(expanded)
     assert exp["decision"] == "UNKNOWN"
     assert any(q["code"] == "new_adapter" for q in exp["LLM_judgement_questions"])
 
     unknown_intent = fixture(title="", body="", intent=None)
-    unknown_intent["files"].append({
-        "path": "src/registry.py", "status": "added", "additions": 10, "deletions": 0,
-        "patch": "+class ProviderRegistry:\n+    pass\n",
-    })
+    unknown_intent["files"].append(
+        {
+            "path": "src/registry.py",
+            "status": "added",
+            "additions": 10,
+            "deletions": 0,
+            "patch": "+class ProviderRegistry:\n+    pass\n",
+        }
+    )
     unk = digest(unknown_intent)
     assert unk["decision"] == "INTENT_UNKNOWN_REVIEW_REQUIRED"
 

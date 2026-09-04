@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """CLI for the deterministic, read-only L9 pre-remediation PR digest."""
+
 from __future__ import annotations
 
 import argparse

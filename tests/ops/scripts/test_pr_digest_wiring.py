@@ -1,11 +1,13 @@
 """Pre-remediation PR digest wiring contract."""
+
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 
 
 def test_poll_worker_requires_digest_before_remediation() -> None:
-    text = (ROOT / "skills/l9-bounded-autonomy/references/prompt-templates.md").read_text(encoding="utf-8")
+    prompt = ROOT / "skills/l9-bounded-autonomy/references/prompt-templates.md"
+    text = prompt.read_text(encoding="utf-8")
     section = text.split("## poll_worker", 1)[1].split("## mutation_lane", 1)[0]
     digest = section.index("l9-pr-digest")
     remediation = section.index("l9-pr-remediation")

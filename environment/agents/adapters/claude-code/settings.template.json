@@ -261,6 +261,7 @@
     "l9-pipeline-audit": "user-invocable-only",
     "l9-pipeline-orchestrator": "user-invocable-only",
     "l9-plan-simple": "user-invocable-only",
+    "l9-pr-digest": "user-invocable-only",
     "l9-pr-remediation": "user-invocable-only",
     "l9-python-tdd-with-uv": "user-invocable-only",
     "l9-repo-index": "user-invocable-only",
