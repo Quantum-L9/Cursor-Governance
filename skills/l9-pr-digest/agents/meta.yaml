@@ -1,0 +1,4 @@
+interface:
+  display_name: "L9 PR Digest"
+  short_description: "Digest PR intent, expansion, architecture, and evidence before remediation"
+  brand_color: "#6D28D9"
