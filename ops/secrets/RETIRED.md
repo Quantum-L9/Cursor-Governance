@@ -12,7 +12,7 @@ scored Cursor sessions with Claude cloud probes.
 |---|---|
 | Graphiti (Cursor) | Local CLI + SSH tunnel (`ops/graphiti/graphiti_memory_client.py`) |
 | Graphiti (adapters) | `${GRAPHITI_MCP_URL}` in MCP templates |
-| Sonar on a model surface | Unauthenticated public read (`sonar_fetch.py`) |
+| Sonar on a model surface | `sonar_fetch.py` uses `SONAR_TOKEN` when the operator environment already carries it (never exported by ops/secrets); public read otherwise |
 | Sonar as a human | `DirectTransport` + operator `SONAR_TOKEN` |
 | Infisical | Operator `hydrate_infisical.py` only — never on the agent plane |
 

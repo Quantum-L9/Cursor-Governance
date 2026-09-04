@@ -46,7 +46,7 @@ work today.
 |---|---|
 | `gh pr view/list/checks/merge` (GraphQL) | Session gateway returns 403 — use `gh api` REST |
 | Autonomous merge | `gh pr merge` is GraphQL, so it 403s here anyway; and there is no autonomous-merge env boolean — merge needs the scoped `/l9-pr-remediation` receipt (or human `L9_MERGE_AUTHORIZED`) |
-| `sonar.read_issues` | No authenticated Sonar; public reads only |
+| `sonar.read_issues` | No brokered Sonar. `sonar_fetch.py` authenticates only with a `SONAR_TOKEN` the operator environment already supplies (2026-09-04 directive: resolve Sonar fully, never merge-blocking); otherwise public reads |
 | `semgrep.appsec_scan`, `semgrep.mcp` | No authenticated AppSec; CE unaffected |
 | `context7.mcp` | No library docs retrieval via the retired broker |
 | `gitguardian.mcp` | No brokered secret scanning; `gitleaks` still runs locally |

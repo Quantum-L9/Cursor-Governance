@@ -25,7 +25,7 @@ fail-closed protocol (identity binding, pagination, root-cause clustering, minim
 contract, security-hotspot policy, and the local-fix-is-not-remote-closure rule) lives in
 [sonarcloud-remediation.md](sonarcloud-remediation.md). Deterministic retrieval:
 
-Lazy: run only when Sonar is configured **and** the check is failing or blocking. Write `--output` under `$PWD` (never `/tmp`). Path-blocked fetch does not block Converge when that check is green.
+Run on **every** Converge when Sonar is configured (`sonar-project.properties`), authenticated with the environment `SONAR_TOKEN`; the check's colour does not matter and a red Sonar check never blocks merge. Write `--output` under `$PWD` (never `/tmp`). A path-blocked fetch is recorded, never a reason to stop the train.
 
 ```bash
 "${GOV_PY:-$PWD/.venv/bin/python}" scripts/sonar_fetch.py \
@@ -43,7 +43,7 @@ classify → fix → validate gates as CI and review signals.
 When a Makefile exists, skip reconstructing a local suite from workflow YAML.
 Record remediator `make precommit-repo` / `git push`. Do not run ceremony `make pr-check` / `make pr`. Continue to CI log ingestion only for already-red checks.
 
-### Step 0: Parse workflow YAML (fallback only — no Makefile `pr-check`)
+### Step 0: Parse workflow YAML (fallback only — no Makefile)
 
 ```bash
 # List all workflow files
@@ -92,7 +92,7 @@ cat package.json | grep -A1 '"scripts"'
 **Remediator verbs (required)** — `make precommit-repo` is the local-verify surface, `git push` is publish. Ceremony `make pr-check` / `make pr` must not be invoked. See [remediation-plan.md](remediation-plan.md).
 
 ```bash
-test -f Makefile && grep -E '^(pr-check|pr|improve):' Makefile
+test -f Makefile && grep -E '^(precommit-repo|improve):' Makefile
 test -f .pre-commit-config.yaml && grep -E '^[[:space:]]+- id:' .pre-commit-config.yaml
 ```
 
@@ -221,8 +221,8 @@ When a review comment references the same file+line as a CI error, merge into on
 ## Ingestion Completeness Check
 
 After ingestion, verify:
-- [ ] Makefile PUBLIC verbs recorded when a Makefile exists (`pr-check` / `pr`)
-- [ ] Workflow `run:` leftover recorded only when no `pr-check`
+- [ ] Remediator verbs recorded when a Makefile exists (`make precommit-repo` verify, `git push` publish)
+- [ ] Workflow `run:` leftover recorded only when no Makefile exists
 - [ ] Cited/planned-path hook ids recorded (not all-files as the gate)
 - [ ] All CI failures mapped to a gate in the registry
 - [ ] All unresolved review threads captured
