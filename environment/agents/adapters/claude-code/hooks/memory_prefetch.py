@@ -119,6 +119,23 @@ def _emit(context: str) -> None:
     )
 
 
+def _claude_runtime_marker_present() -> bool:
+    """Mirror of session_start_claude_governance.sh lines 89-92.
+
+    This hook is registered in .claude/settings.json, but Cursor sessions on a
+    machine that also runs Claude can invoke it (observed: two agent_id=
+    claude-code hydrate blocks injected into a Cursor session). An observer
+    hook without a runtime guard leaks another surface's identity into this
+    one, so absent every Claude marker it must no-op.
+    """
+    if os.environ.get("CLAUDE_CODE_REMOTE", "") == "true":
+        return True
+    return any(
+        os.environ.get(key)
+        for key in ("CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_SESSION_ID")
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(prog="memory_prefetch")
     parser.add_argument(
@@ -130,6 +147,16 @@ def main() -> int:
         ),
     )
     args = parser.parse_args()
+
+    # Observer-class guard: no Claude runtime marker and no explicit repair
+    # invocation (--session-id) means this is another surface's session.
+    if not _claude_runtime_marker_present() and not args.session_id:
+        print(
+            "memory_prefetch: skipped — no Claude runtime marker "
+            "(CLAUDECODE/CLAUDE_CODE_*); not this surface",
+            file=sys.stderr,
+        )
+        return 0
     try:
         event = json.load(sys.stdin)
     except (json.JSONDecodeError, ValueError):
