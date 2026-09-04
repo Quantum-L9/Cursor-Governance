@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   governance-self-check:
@@ -28,48 +28,6 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           pip install --only-binary=:all: pyyaml==6.0.3 jsonschema==4.26.0
-
-      - name: Persist canonical repo-docs repair outputs
-        if: github.event_name == 'pull_request'
-        env:
-          BASE_REF: ${{ github.base_ref }}
-          HEAD_REF: ${{ github.head_ref }}
-        run: |
-          set -euo pipefail
-          git fetch --no-tags origin "${BASE_REF}" "${HEAD_REF}"
-          git switch -C repo-docs-repair "origin/${HEAD_REF}"
-          git diff --name-only "origin/${BASE_REF}...HEAD" > /tmp/pr-changed-files.txt
-          gen=ops/scripts/sync_generated_artifacts.py
-          python3 "$gen" --changed-file /tmp/pr-changed-files.txt --json
-          python -m pip install --only-binary=:all: ruff==0.16.1
-          files=(
-            skills/l9-update-agent-docs/scripts/doc_obligations.py
-            skills/l9-update-agent-docs/scripts/repo_docs.py
-            skills/l9-update-agent-docs/scripts/compile_semantic_obligations.py
-            skills/l9-update-agent-docs/scripts/validate_pointer_headings.py
-            skills/l9-update-agent-docs/tests/test_repo_docs.py
-          )
-          ruff format "${files[@]}"
-          ruff check --fix "${files[@]}" || true
-          ruff format "${files[@]}"
-          python scripts/generate_subsystem_readmes.py --subsystem skills --skip-time-verify
-          git add \
-            skills/l9-update-agent-docs/scripts/doc_obligations.py \
-            skills/l9-update-agent-docs/scripts/repo_docs.py \
-            skills/l9-update-agent-docs/scripts/compile_semantic_obligations.py \
-            skills/l9-update-agent-docs/scripts/validate_pointer_headings.py \
-            skills/l9-update-agent-docs/tests/test_repo_docs.py \
-            skills/README.md \
-            ops/generated/skill-registry.json \
-            environment/agents/adapters/claude-code/generated/skill-registry.json
-          if git diff --cached --quiet; then
-            echo "ok: canonical repair outputs already committed"
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git commit -m "fix(repo-docs): apply canonical generated outputs"
-            git push origin HEAD:"${HEAD_REF}"
-          fi
 
       - name: ORG_INVARIANTS.yaml parses
         run: |
