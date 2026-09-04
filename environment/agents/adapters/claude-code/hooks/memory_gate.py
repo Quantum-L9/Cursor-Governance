@@ -146,8 +146,10 @@ def main() -> int:
                 f"--session-id {session_id}"
                 if session_id
                 else (
-                    "--session-id <your-session-id> (find it as the newest "
-                    "~/.claude/projects/<project>/<uuid>.jsonl for this conversation)"
+                    "--session-id <session-id-from-hook-event> "
+                    "(best-effort fallback only if the hook event has no "
+                    "session_id: newest ~/.claude/projects/<project>/<uuid>.jsonl "
+                    "— on Cursor that heuristic is often wrong)"
                 )
             )
             _deny(

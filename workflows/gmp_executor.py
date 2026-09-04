@@ -32,7 +32,7 @@ import os
 import re
 import subprocess
 import sys
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
@@ -255,8 +255,23 @@ class GMPState:
 
     @classmethod
     def from_dict(cls, d: dict) -> GMPState:
-        d["current_step"] = StepType(d["current_step"])
-        return cls(**d)
+        data = dict(d)
+        data["current_step"] = StepType(data["current_step"])
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
+
+    def start_ceremony_complete(self) -> bool:
+        """True when an authorized start finished scope lock + user gate.
+
+        Partial state after ``_init_state`` (Ctrl-C mid-start) must not unlock
+        finalize. A locked ``todo_plan`` plus the three start steps is the proof.
+        """
+        required = {
+            StepType.MEMORY_READ.value,
+            StepType.SCOPE_LOCK.value,
+            StepType.USER_GATE.value,
+        }
+        return bool(self.todo_plan) and required.issubset(set(self.completed_steps))
 
 
 # =============================================================================
@@ -1271,8 +1286,24 @@ Examples:
         # Restore authorization stamped into the state file by the /gmp start,
         # so the documented resume/finalize invocation works without repeating
         # --authorized-by (it must not re-gate a run the slash already opened).
+        # Require a completed start ceremony so a partial _init_state stamp
+        # cannot unlock finalize. Legacy states (pre-authorized_by field) that
+        # already locked a plan are treated as slash-authorized on finalize.
         if executor._load_state() and executor.state is not None:
-            executor.authorized = executor.state.authorized_by == "slash-gmp"
+            state = executor.state
+            stamped = state.authorized_by == "slash-gmp"
+            legacy_finalize = (
+                not state.authorized_by
+                and args.mode == "finalize"
+                and state.start_ceremony_complete()
+            )
+            if (stamped or legacy_finalize) and state.start_ceremony_complete():
+                executor.authorized = True
+            elif stamped and not state.start_ceremony_complete():
+                print(  # noqa: ADR-0019
+                    "GMP state has authorized_by=slash-gmp but start ceremony "
+                    "incomplete; refusing to restore authorization for finalize"
+                )
 
     if args.reset:
         executor._clear_state()
