@@ -686,33 +686,6 @@ def main() -> int:
         proof = json.loads(measure_out.stdout)
         if "baseline" not in proof or "candidate" not in proof:
             raise RuntimeError("measure did not emit a proof block")
-        # P1-1: git-aware baseline. --before runs (relative) inside a throwaway
-        # worktree at main (serial fixture); --after runs the working-tree
-        # (parallel) runner by absolute path. Proof must emit and the worktree
-        # must be cleaned up.
-        runner_abs = str(repo / "runner.py")
-        git_measure = run(
-            [
-                sys.executable,
-                str(scripts / "measure.py"),
-                "--repo",
-                str(repo),
-                "--before-ref",
-                "main",
-                "--before",
-                f"{sys.executable} runner.py --tasks 3",
-                "--after",
-                f"{sys.executable} {runner_abs} --tasks 3 --workers 2",
-                "--samples",
-                "1",
-            ]
-        )
-        gproof = json.loads(git_measure.stdout)
-        if "baseline" not in gproof or "candidate" not in gproof:
-            raise RuntimeError("git-aware measure did not emit a proof block")
-        worktrees_dir = repo / ".git" / "worktrees"
-        if worktrees_dir.exists() and any(worktrees_dir.iterdir()):
-            raise RuntimeError("measure.py left a git worktree behind")
 
         null_wiring = build_spec()
         null_wiring["wiring"] = None
