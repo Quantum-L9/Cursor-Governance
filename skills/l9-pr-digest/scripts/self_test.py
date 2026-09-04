@@ -54,7 +54,15 @@ def main() -> int:
     assert good["LLM_judgement_used"] is False
 
     ci = digest(fixture(ci_checks=[{"name": "tests", "conclusion": "failure"}]))
-    assert ci["decision"] == "CI_OR_EXECUTION_FAILURE"
+    assert ci["decision"] == "UNKNOWN"
+    assert "CI_required_set_unavailable" in ci["unknowns"]
+    ci_required = digest(
+        fixture(
+            ci_checks=[{"name": "tests", "conclusion": "failure"}],
+            required_check_names=["tests"],
+        )
+    )
+    assert ci_required["decision"] == "CI_OR_EXECUTION_FAILURE"
 
     pending = digest(fixture(ci_checks=[{"name": "tests", "conclusion": "UNKNOWN"}]))
     assert pending["decision"] == "UNKNOWN"

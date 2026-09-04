@@ -360,6 +360,8 @@ def _non_dot_roots(suites: list[dict[str, Any]], selector: Any) -> list[str]:
     for suite in suites:
         if selector.is_dot_owned(suite):
             continue
+        if suite.get("kind") != "pytest":
+            continue
         for root in suite.get("owned_paths") or []:
             text = str(root)
             if text and text != "." and text not in roots:

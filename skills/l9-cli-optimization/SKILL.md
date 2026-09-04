@@ -95,7 +95,7 @@ Repository-owned targets only. External ownership or a request to bypass provide
 Before external research or rebuilding:
 
 1. Inspect relevant conversation context.
-2. Inventory relevant sandbox artifacts by metadata first.
+2. Inventory relevant sandbox artifacts by metadata first. A prior sandbox artifact continues into the commit-ready bundle; do not start over.
 3. Select the newest validated canonical artifact.
 4. Reuse, patch, or extend it.
 5. Name the exact remaining evidence gap.
