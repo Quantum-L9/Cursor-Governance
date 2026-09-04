@@ -32,9 +32,7 @@ KNOWN_SURFACES: Final[frozenset[str]] = frozenset(
     }
 )
 
-CLAUDE_GATE_SURFACES: Final[frozenset[str]] = frozenset(
-    {"claude-code", "claude-code-remote"}
-)
+CLAUDE_GATE_SURFACES: Final[frozenset[str]] = frozenset({"claude-code", "claude-code-remote"})
 
 ADAPTER_KERNEL_SURFACES: Final[frozenset[str]] = frozenset(
     {"claude-code", "claude-code-remote", "codex", "gemini", "manus"}
