@@ -1,7 +1,7 @@
 # Cursor-Governance — architecture index
 
-**Version:** 1.0.0
-**Updated:** 2026-08-21
+**Version:** 1.1.0
+**Updated:** 2026-09-04
 **Role:** this-repo map. Not Program Execution architecture. Not the L9 Coding Control Plane kernel doc.
 
 This file indexes live trees and owners so an agent can find the right SSOT. It does **not** outrank the authority chain. Do not copy CI tables, skill registries, or PE Controller law here — refresh those from the cited files.
@@ -48,6 +48,17 @@ Verified on disk 2026-08-21 against the repository root (not recalled from [`REA
 | `WIP/` | Dated scratch corpus on `main`. Pre-commit and CI `paths-ignore` treat it as non-gating. |
 
 Root agent-doc surface (this change): `CANONICAL_LAW.md`, `AGENTS.md`, `CLAUDE.md`, `README.md`, `ORG_INVARIANTS.yaml`, this file, [`INVARIANTS.md`](INVARIANTS.md).
+
+## Repository documentation obligation compiler
+
+`skills/l9-update-agent-docs` is the repository documentation obligation compiler. Its durable unit of work is a typed, target-resolved `DocumentationObligation`, not a whole documentation surface.
+
+- [`skills/l9-update-agent-docs/references/doc-surface-policy.yaml`](skills/l9-update-agent-docs/references/doc-surface-policy.yaml) owns documentation topology, impact routing, owners, create/refresh policy, and semantic-qualification triggers.
+- [`skills/l9-update-agent-docs/contracts/documentation-obligation.schema.json`](skills/l9-update-agent-docs/contracts/documentation-obligation.schema.json) defines the per-target machine obligation; [`skills/l9-update-agent-docs/contracts/repo-docs-receipt.schema.json`](skills/l9-update-agent-docs/contracts/repo-docs-receipt.schema.json) defines the receipt envelope.
+- [`skills/l9-update-agent-docs/scripts/repo_docs.py`](skills/l9-update-agent-docs/scripts/repo_docs.py) compiles repository delta + topology into obligations and records base, source-head, and tested-revision identity.
+- Deterministic obligations are resolved locally. Semantic obligations are qualified only through canonical `l9-intelligence-harvest` evidence; Repo Docs does not copy Harvest reasoning or mutate on Harvest's behalf.
+- Rendering remains owner-native: module READMEs stay with `readme-pipeline-v1`; specialist/external surfaces remain with their declared owners.
+- `.github/workflows/governance-self-check.yml` is a thin advisory CI consumer: it invokes the compiler, surfaces open obligations, and uploads the machine receipt. It does not reimplement obligation semantics.
 
 ## CI/CD architecture
 
