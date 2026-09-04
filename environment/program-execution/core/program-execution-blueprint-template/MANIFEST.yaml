@@ -85,7 +85,7 @@ files:
 - path: schemas/dependency-graph.schema.json
   sha256: ca9df0e4a6e81b8ff89f186e06dc58e3b5190c590a40744e0fb83f3df361456c
 - path: schemas/do-not-build.schema.json
-  sha256: 191dcf5146fd66e9643bb2adc6a93b9da673ef697e35d617e12dda53f76ab782
+  sha256: 395d85313c4f7627b415ee8deaf42a9b126ed29cdc5400da38a862d31300b47b
 - path: schemas/evidence-catalog.schema.json
   sha256: 64b5e4f9b0acd6f447fb3a758462ebfe46d847eb9fa296e0fca4634fd6534df5
 - path: schemas/execution-index.schema.json

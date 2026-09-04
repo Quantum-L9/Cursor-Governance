@@ -16,7 +16,12 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
+# APPEND, never insert(0): Program Execution needs its own PE-exclusive
+# packages here, but `scripts` is a top-level name it SHARES with the
+# repository root. Prepending would hand PE's `scripts/` that name for the
+# whole process. See peer_execution.imports.pe_script.
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))
 
 from peer_execution.golden_vectors import run_parity_gate  # noqa: E402
 

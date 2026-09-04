@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contract tests for l9-pr-remediation 4.5.0. Stdlib only."""
+"""Contract tests for l9-pr-remediation 4.6.0. Stdlib only."""
 
 from __future__ import annotations
 
@@ -29,7 +29,16 @@ def _forbid(text: str, needle: str, where: str) -> None:
 
 
 def test_version_and_map() -> None:
-    _need(SKILL, "version: 4.5.0", "SKILL.md")
+    _need(SKILL, "version: 4.6.0", "SKILL.md")
+    _need(SKILL, "references/issue-handoff.md", "SKILL.md")
+    _need(SKILL, "l9-issue-remediation", "SKILL.md")
+    _need(SKILL, "environment/contracts/autonomy", "SKILL.md")
+    _need(SKILL, "cursor-subagents", "SKILL.md")
+    _need(SKILL, "Do not ask the human to unblock", "SKILL.md")
+    if "issue-handoff.md" not in REFS:
+        _fail("references/issue-handoff.md missing")
+    _need(REFS["issue-handoff.md"], "gh issue create", "issue-handoff.md")
+    _need(REFS["issue-handoff.md"], "l9-issue-remediation", "issue-handoff.md")
     if not (ROOT / "scripts" / "reply_threads.py").is_file():
         _fail("scripts/reply_threads.py missing")
     _need(SKILL, "Kernel bind", "SKILL.md")
@@ -174,6 +183,17 @@ def test_ci_and_poll() -> None:
     _need(SKILL, "Poll workers never merge", "SKILL.md")
     _need(SKILL, "Own until merged", "SKILL.md")
     _need(SKILL, "subscribe/own", "SKILL.md")
+    _need(SKILL, "updateSubscription", "SKILL.md")
+    _need(SKILL, "gh_subscribe_pr.sh", "SKILL.md")
+    _need(REFS["convergence-loop.md"], "updateSubscription", "convergence-loop.md")
+    _need(REFS["convergence-loop.md"], "gh_subscribe_pr.sh", "convergence-loop.md")
+    helper = Path(__file__).resolve().parents[3] / "ops" / "scripts" / "lib" / "gh_subscribe_pr.sh"
+    if not helper.is_file():
+        _fail("ops/scripts/lib/gh_subscribe_pr.sh missing")
+    helper_text = helper.read_text(encoding="utf-8")
+    _need(helper_text, "updateSubscription", "gh_subscribe_pr.sh")
+    if "gh api -X PUT" in helper_text:
+        _fail("gh_subscribe_pr.sh must not call PUT issues/subscription")
     _need(SKILL, "own_until_merged: true", "SKILL.md")
     _need(SKILL, "forbid_reinvoke_handoff: true", "SKILL.md")
     _need(REFS["convergence-loop.md"], "Own until merged", "convergence-loop.md")

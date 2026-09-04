@@ -21,7 +21,12 @@ def _git_head(repo_root: Path) -> str:
         check=False,
         timeout=30,
     )
-    return result.stdout.strip() if result.returncode == 0 else "UNKNOWN"
+    if result.returncode != 0 or not result.stdout.strip():
+        raise RuntimeError(
+            "cannot resolve git HEAD for the adapter matrix; refuse to record UNKNOWN as a "
+            f"source_base_sha: {result.stderr.strip()[:200]}"
+        )
+    return result.stdout.strip()
 
 
 def render(root: Path) -> dict[str, object]:

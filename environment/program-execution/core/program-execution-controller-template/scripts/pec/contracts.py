@@ -87,6 +87,7 @@ def validate_source_contract(contract: dict[str, Any], task: dict[str, Any]) -> 
         "requested_actions",
         "acceptance_obligation_ids",
         "writable_paths",
+        "verification_mechanisms",
         "validation_commands",
         "required_gate_ids",
         "required_evidence_ids",
@@ -126,9 +127,26 @@ def validate_source_contract(contract: dict[str, Any], task: dict[str, Any]) -> 
     writable = [normalize_repo_path(value) for value in contract.get("writable_paths") or []]
     if "local_write" in actions and not writable:
         raise ContractError("local_write requires non-empty writable_paths")
+    mechanisms = contract.get("verification_mechanisms") or []
+    if not all(isinstance(item, dict) for item in mechanisms):
+        raise ContractError("verification_mechanisms must contain typed objects")
+    locked_mechanisms = task.get("verification_mechanisms") or []
+    if mechanisms != locked_mechanisms:
+        raise ContractError(
+            "Source Contract must preserve Blueprint verification_mechanisms exactly"
+        )
     commands = contract.get("validation_commands") or []
     if not all(isinstance(command, str) and command.strip() for command in commands):
         raise ContractError("validation commands must be non-empty strings")
+    derived_commands = [
+        str(item.get("command_or_inspection") or "")
+        for item in mechanisms
+        if item.get("method") in {"command", "command_and_inspection"}
+    ]
+    if commands != derived_commands:
+        raise ContractError(
+            "validation_commands must be the command-only projection of verification_mechanisms"
+        )
     required_commands = set(task.get("required_validation_commands") or [])
     if not required_commands <= set(commands):
         raise ContractError(
@@ -207,6 +225,7 @@ def draft_source_contract(
         "requested_actions": requested or ["inspect"],
         "acceptance_obligation_ids": task["required_acceptance"],
         "writable_paths": writable,
+        "verification_mechanisms": task.get("verification_mechanisms") or [],
         "validation_commands": task["required_validation_commands"],
         "required_gate_ids": task["completion_gates"],
         "required_evidence_ids": task["required_evidence"],
@@ -338,6 +357,12 @@ def render_contract(
                 "",
                 "Writable paths:",
                 *[f"- `{path}`" for path in rendered["writable_paths"]],
+                "",
+                "Verification mechanisms:",
+                *[
+                    f"- `{item['method']}`: {item['command_or_inspection']}"
+                    for item in rendered["verification_mechanisms"]
+                ],
                 "",
                 "Validation commands:",
                 *[f"- `{command}`" for command in rendered["validation_commands"]],

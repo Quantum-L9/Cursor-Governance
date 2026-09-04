@@ -3,6 +3,28 @@ schema_version: 1.0.0
 baseline_commit: 0db3fedf697b263a3b8bd9ea8ce40113f999b67d
 generated_at: '2026-08-17T12:20:00Z'
 
+# Three kinds of pin, deliberately distinct. One field holding all three is
+# what let a forensic SHA sit in a position that reads as live.
+baseline:
+  # pe-v3-hardening campaign baseline. Historical evidence, never a live pin.
+  # Bound equal to the legacy top-level baseline_commit above, which the
+  # forensic campaign's baseline_commit_mismatch stop condition still reads.
+  forensic_commit: 0db3fedf697b263a3b8bd9ea8ce40113f999b67d
+  # Commit at which every counterexample below was proven to reproduce.
+  characterized_at: 9ba6df638a0ad3afbfeef4f2d319a88f093ff035
+  # Fingerprint of the reproduction surface - the entries and the test files
+  # that reproduce them. Not a manifest digest: the manifest digests this file,
+  # so recording one here would be self-referential and could never settle.
+  characterized_reproduction_digest: sha256:654a0ff27cddef01db6c54590383ffd86f2302ae2a4eedeced342b65446a5837
+  # Pinned immutable v2 orchestrator reference (plane A).
+  orchestrator_plane_a: 9ba6df638a0ad3afbfeef4f2d319a88f093ff035
+  # Durability, not characterization. A branch commit is already immutable, so
+  # the freeze above verifies without main; what main adds is survival of a
+  # squash merge, which lands the same tree under a different sha. Advisory at
+  # S0 and required at promotion (S8). Set it to the merge commit when the
+  # characterized work reaches origin/main.
+  pinned_to_main: null
+
 counterexamples:
   - id: CE-COMPILER-001
     invariant: semantic_conservation
@@ -12,7 +34,7 @@ counterexamples:
     test_file: test_hardening_compiler.py
     test_function: test_retry_policy_preserved
     severity: high
-    
+
   - id: CE-COMPILER-002
     invariant: semantic_conservation
     description: first_target misbinds workstream/authority/traceability
@@ -21,7 +43,7 @@ counterexamples:
     test_file: test_hardening_compiler.py
     test_function: test_first_target_binding
     severity: high
-    
+
   - id: CE-CANDIDATE-001
     invariant: immutable_candidate_identity
     description: Dirty worktree verified with HEAD as candidate
@@ -30,7 +52,7 @@ counterexamples:
     test_file: test_hardening_candidate.py
     test_function: test_dirty_candidate_immutable_identity
     severity: critical
-    
+
   - id: CE-CANDIDATE-002
     invariant: candidate_toctou_protection
     description: Submitted state changes before verify
@@ -39,7 +61,7 @@ counterexamples:
     test_file: test_hardening_candidate.py
     test_function: test_candidate_immutable_after_submission
     severity: critical
-    
+
   - id: CE-EVIDENCE-001
     invariant: claim_scoped_admissibility
     description: Unrelated evidence can satisfy another claim
@@ -48,7 +70,7 @@ counterexamples:
     test_file: test_hardening_evidence.py
     test_function: test_evidence_claim_scoped
     severity: critical
-    
+
   - id: CE-EVIDENCE-002
     invariant: evidence_polarity_matters
     description: FAIL evidence can satisfy positive obligation
@@ -57,7 +79,7 @@ counterexamples:
     test_file: test_hardening_evidence.py
     test_function: test_fail_evidence_rejected_for_positive_claim
     severity: high
-    
+
   - id: CE-EVIDENCE-003
     invariant: evidence_immutability
     description: Old verification artifact overwritten by retry
@@ -66,7 +88,7 @@ counterexamples:
     test_file: test_hardening_evidence.py
     test_function: test_evidence_artifacts_immutable
     severity: high
-    
+
   - id: CE-AUTHORITY-001
     invariant: principal_based_authority
     description: Arbitrary approved_by string unlocks authority operation
@@ -75,7 +97,7 @@ counterexamples:
     test_file: test_hardening_authority.py
     test_function: test_actor_string_insufficient
     severity: critical
-    
+
   - id: CE-AUTHORITY-002
     invariant: nondelegable_authority
     description: Nondelegable authority can be projected
@@ -84,7 +106,7 @@ counterexamples:
     test_file: test_hardening_authority.py
     test_function: test_nondelegable_authority_enforced
     severity: high
-    
+
   - id: CE-GATE-001
     invariant: computed_gate_results
     description: Caller supplies PASS/method/evidence to gate evaluation
@@ -93,7 +115,7 @@ counterexamples:
     test_file: test_hardening_gates.py
     test_function: test_gate_result_computed_not_supplied
     severity: critical
-    
+
   - id: CE-REPOSITORY-001
     invariant: generation_genealogy
     description: Reconcile advances baseline while lease uses old generation
@@ -102,7 +124,7 @@ counterexamples:
     test_file: test_hardening_repository.py
     test_function: test_generation_advance_fenced_by_lease
     severity: high
-    
+
   - id: CE-LEASE-001
     invariant: temporal_authority_enforcement
     description: Expired lease remains usable at use boundaries
@@ -111,7 +133,7 @@ counterexamples:
     test_file: test_hardening_leases.py
     test_function: test_expired_lease_rejected
     severity: critical
-    
+
   - id: CE-REPLAN-001
     invariant: authorized_work_immutability
     description: Active task can become affected "future" task
@@ -120,7 +142,7 @@ counterexamples:
     test_file: test_hardening_replan.py
     test_function: test_replan_cannot_affect_inflight
     severity: high
-    
+
   - id: CE-CLOSEOUT-001
     invariant: owner_terminal_authority
     description: Controller handoff recommendation can drive completion
@@ -129,7 +151,7 @@ counterexamples:
     test_file: test_hardening_closeout.py
     test_function: test_controller_cannot_terminalize
     severity: critical
-    
+
   - id: CE-CLOSEOUT-002
     invariant: inconclusive_is_terminal
     description: INCONCLUSIVE produced but rejected as terminal
@@ -142,10 +164,10 @@ counterexamples:
 summary:
   total_counterexamples: 15
   critical: 7
-  high: 6
+  high: 7
   medium: 1
-  low: 1
-  test_files: 8
-  
+  low: 0
+  test_files: 9
+
 status: registry_complete
 verification: all_counterexamples_reproduce_as_xfail_tests

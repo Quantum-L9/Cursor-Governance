@@ -11,6 +11,7 @@ import yaml
 CORE = Path(__file__).resolve().parents[1]
 REPO_ROOT = CORE.parents[2]
 TEMPLATE = CORE / "program-execution-controller-template"
+sys.path.insert(0, str(CORE / "tests"))
 sys.path.insert(0, str(TEMPLATE / "scripts"))
 
 # Keep the controller template free of compiled debris (validate_controller checks).

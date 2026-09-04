@@ -75,6 +75,30 @@ def _is_under_ssot(text: str, ssot: Path) -> bool:
     return False
 
 
+def _is_label_derived_log_name(part: str) -> bool:
+    """``com.tenx.cursor-governance.out`` is a LaunchAgent log name, not a root."""
+    return part.startswith("com.") and part.endswith((".out", ".err", ".log"))
+
+
+def _has_governance_path_component(text: str) -> bool:
+    """True when a governance fragment is a path component, not a filename substring.
+
+    Exact components (``.cursor-governance``) and suffixed roots
+    (``.cursor-governance-backup``, ``GlobalCommands.old``) count. Label-derived
+    log filenames such as ``/tmp/com.tenx.cursor-governance.out`` do not.
+    """
+    parts = Path(os.path.expanduser(text)).parts
+    for part in parts:
+        if _is_label_derived_log_name(part):
+            continue
+        for fragment in GOVERNANCE_FRAGMENTS:
+            if part == fragment or part.startswith(fragment):
+                return True
+            if fragment in part and not part.startswith("com."):
+                return True
+    return False
+
+
 def classify_string(text: str, ssot: Path) -> str | None:
     """Return a reason if this string violates path law, else None."""
     if not text:
@@ -84,7 +108,7 @@ def classify_string(text: str, ssot: Path) -> str | None:
     for fragment in FORBIDDEN_FRAGMENTS:
         if fragment in text:
             return f"forbidden fragment {fragment!r}"
-    if any(fragment in text for fragment in GOVERNANCE_FRAGMENTS):
+    if _has_governance_path_component(text):
         return "governance root other than $HOME/.cursor-governance"
     return None
 
@@ -117,7 +141,7 @@ def scan_dir(launchagents: Path, ssot: Path) -> tuple[list[str], list[str]]:
             for item in _flatten(data.get(key)):
                 values.append((key, item))
         governance_related = label.startswith(GOVERNANCE_LABEL_PREFIXES) or any(
-            any(fragment in item for fragment in GOVERNANCE_FRAGMENTS) for _key, item in values
+            _has_governance_path_component(item) for _key, item in values
         )
         if not governance_related:
             continue

@@ -1,0 +1,606 @@
+<title>CI Preflight Docket</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --ground: #f4f6f8;
+    --surface: #fbfcfd;
+    --ink: #182230;
+    --muted: #5a6878;
+    --faint: #8b98a8;
+    --hairline: #d8dfe7;
+    --accent: #1d6e85;
+    --accent-soft: #e3eef2;
+    --crit: #b4231f;
+    --crit-bg: #f9e8e6;
+    --req: #9c5a00;
+    --req-bg: #faf0e0;
+    --pass: #1f7a4d;
+    --pass-bg: #e4f2ea;
+    --info: #4a5b70;
+    --info-bg: #e8edf2;
+    --code-bg: #edf1f4;
+    --shadow: 0 1px 2px rgba(24,34,48,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #10151c;
+      --surface: #161c25;
+      --ink: #dde4ec;
+      --muted: #8fa0b3;
+      --faint: #6d7d8f;
+      --hairline: #27313e;
+      --accent: #57a8c6;
+      --accent-soft: #16252d;
+      --crit: #e27067;
+      --crit-bg: #2b1a19;
+      --req: #d9a441;
+      --req-bg: #2b2315;
+      --pass: #5fb877;
+      --pass-bg: #16281d;
+      --info: #9fb2c6;
+      --info-bg: #1c2531;
+      --code-bg: #1a222c;
+      --shadow: 0 1px 2px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #10151c;
+    --surface: #161c25;
+    --ink: #dde4ec;
+    --muted: #8fa0b3;
+    --faint: #6d7d8f;
+    --hairline: #27313e;
+    --accent: #57a8c6;
+    --accent-soft: #16252d;
+    --crit: #e27067;
+    --crit-bg: #2b1a19;
+    --req: #d9a441;
+    --req-bg: #2b2315;
+    --pass: #5fb877;
+    --pass-bg: #16281d;
+    --info: #9fb2c6;
+    --info-bg: #1c2531;
+    --code-bg: #1a222c;
+    --shadow: 0 1px 2px rgba(0,0,0,.4);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+  }
+  .wrap { max-width: 74rem; margin: 0 auto; padding: 0 1.5rem; }
+  header.hero {
+    border-bottom: 1px solid var(--hairline);
+    background: var(--surface);
+  }
+  .hero-inner { padding: 2.8rem 0 2.2rem; }
+  .eyebrow {
+    font-size: .72rem; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin: 0 0 .6rem;
+  }
+  h1 { font-size: 2.1rem; margin: 0 0 .4rem; font-weight: 600; letter-spacing: -.01em; text-wrap: balance; }
+  .sub { color: var(--muted); max-width: 60rem; margin: 0; }
+  .verdict-row { display: flex; flex-wrap: wrap; gap: .9rem; align-items: center; margin-top: 1.4rem; }
+  .chip {
+    display: inline-flex; align-items: center; gap: .45rem;
+    font-size: .78rem; font-weight: 700; letter-spacing: .05em;
+    padding: .34rem .8rem; border-radius: 999px; border: 1px solid transparent;
+  }
+  .chip.amber { background: var(--req-bg); color: var(--req); border-color: var(--req); }
+  .chip.green { background: var(--pass-bg); color: var(--pass); border-color: var(--pass); }
+  .chip.red { background: var(--crit-bg); color: var(--crit); border-color: var(--crit); }
+  .chip.slate { background: var(--info-bg); color: var(--info); border-color: var(--info); }
+  .chip .dot { width: .5rem; height: .5rem; border-radius: 50%; background: currentColor; flex: none; }
+  .meta-line { font-size: .82rem; color: var(--faint); margin-top: 1rem; font-family: "Menlo", ui-monospace, "SF Mono", monospace; }
+  .stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
+    gap: .7rem; margin-top: 1.6rem;
+  }
+  .stat { background: var(--surface); border: 1px solid var(--hairline); border-radius: 8px; padding: .8rem .95rem; box-shadow: var(--shadow); }
+  .stat .k { font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); font-weight: 700; }
+  .stat .v { font-size: 1.06rem; font-weight: 600; margin-top: .15rem; font-variant-numeric: tabular-nums; }
+  .stat .v small { font-size: .78rem; color: var(--muted); font-weight: 500; }
+  main { padding: 2.2rem 0 4rem; }
+  section { margin-bottom: 2.6rem; }
+  h2 {
+    font-size: 1.28rem; font-weight: 600; margin: 0 0 .9rem;
+    padding-top: 1rem; border-top: 1px solid var(--hairline);
+    letter-spacing: -.01em;
+  }
+  h2 .no { color: var(--accent); font-family: "Menlo", ui-monospace, monospace; font-size: .8rem; font-weight: 700; margin-right: .55rem; letter-spacing: .05em; }
+  h3 { font-size: 1rem; font-weight: 600; margin: 1.3rem 0 .5rem; }
+  p { margin: .55rem 0; }
+  ul, ol { margin: .55rem 0; padding-left: 1.35rem; }
+  li { margin: .25rem 0; }
+  code, .mono {
+    font-family: "Menlo", ui-monospace, "SF Mono", monospace;
+    font-size: .84em;
+  }
+  code { background: var(--code-bg); border-radius: 4px; padding: .08rem .3rem; }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--hairline); border-radius: 8px;
+    padding: .85rem 1rem; overflow-x: auto; font-size: .8rem; line-height: 1.5;
+    font-family: "Menlo", ui-monospace, "SF Mono", monospace;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .table-scroll { overflow-x: auto; border: 1px solid var(--hairline); border-radius: 8px; background: var(--surface); box-shadow: var(--shadow); }
+  table { border-collapse: collapse; width: 100%; font-size: .86rem; }
+  th {
+    text-align: left; font-size: .7rem; letter-spacing: .09em; text-transform: uppercase;
+    color: var(--faint); font-weight: 700; padding: .6rem .8rem;
+    border-bottom: 1px solid var(--hairline); white-space: nowrap;
+  }
+  td { padding: .55rem .8rem; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td.mono, .num { font-variant-numeric: tabular-nums; }
+  .st { font-weight: 700; font-size: .74rem; letter-spacing: .04em; white-space: nowrap; }
+  .st.pass { color: var(--pass); }
+  .st.fail { color: var(--crit); }
+  .st.warn { color: var(--req); }
+  .st.info { color: var(--info); }
+  .finding {
+    border: 1px solid var(--hairline); border-left: 4px solid var(--info);
+    border-radius: 8px; background: var(--surface); padding: .9rem 1.05rem; margin: .8rem 0;
+    box-shadow: var(--shadow);
+  }
+  .finding.p1 { border-left-color: var(--crit); }
+  .finding.p2 { border-left-color: var(--req); }
+  .finding.p3 { border-left-color: var(--info); }
+  .finding .fhead { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-bottom: .35rem; }
+  .finding .fid { font-family: "Menlo", ui-monospace, monospace; font-size: .78rem; color: var(--muted); }
+  .finding .fname { font-weight: 600; font-size: .95rem; }
+  .sev { font-size: .68rem; font-weight: 700; letter-spacing: .06em; padding: .16rem .5rem; border-radius: 4px; }
+  .sev.p1 { background: var(--crit-bg); color: var(--crit); }
+  .sev.p2 { background: var(--req-bg); color: var(--req); }
+  .sev.p3 { background: var(--info-bg); color: var(--info); }
+  .sev.inf { background: var(--code-bg); color: var(--faint); }
+  .finding .fmeta { font-size: .8rem; color: var(--muted); margin: .2rem 0; }
+  .finding .fmeta b { color: var(--ink); font-weight: 600; }
+  .finding .fbody { font-size: .88rem; }
+  .finding .fbody p { margin: .3rem 0; }
+  .finding .fbody .lbl { font-weight: 700; color: var(--ink); }
+  .note {
+    background: var(--info-bg); border-radius: 8px; padding: .7rem 1rem;
+    font-size: .88rem; margin: .9rem 0;
+  }
+  .verdict-final {
+    border: 1px solid var(--req); border-radius: 10px; background: var(--surface);
+    padding: 1.4rem 1.5rem; box-shadow: var(--shadow);
+  }
+  .verdict-final h2 { border-top: none; padding-top: 0; }
+  .gate { display: flex; gap: .6rem; align-items: baseline; padding: .4rem 0; border-bottom: 1px dashed var(--hairline); font-size: .9rem; }
+  .gate:last-child { border-bottom: none; }
+  .gate .n { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; flex: none; width: 1.6rem; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="wrap">
+<header class="hero">
+  <div class="hero-inner">
+    <p class="eyebrow">Quantum-L9 · CI preflight forensic audit · 2026-09-01</p>
+    <h1>CI Preflight Docket</h1>
+    <p class="sub">Full-depth end-to-end audit of <code>Quantum-L9/l9-ci-core</code> and <code>Quantum-L9/l9-ci-sdk</code> at their exact current heads — architecture, ownership, contracts, packaging, clean installs, real cross-repo execution, failure semantics, version compatibility, and open work — executed in a clean environment against the actual Core→SDK seam.</p>
+    <div class="verdict-row">
+      <span class="chip amber"><span class="dot"></span>READY AFTER SPECIFIC PREDEPLOYMENT FIXES</span>
+      <span class="chip green"><span class="dot"></span>REAL CORE↔SDK E2E PASS</span>
+      <span class="chip green"><span class="dot"></span>NO P0 BLOCKERS</span>
+    </div>
+    <p class="meta-line">core@aaa01124d95b8fc51369636116e71aedf2f7389f (main) · sdk@7d7762eae5e1a12fdc66276975e2949891762a20 (main, = Core's pinned default)</p>
+    <div class="stats">
+      <div class="stat"><div class="k">Core tests</div><div class="v">261 <small>all OK</small></div></div>
+      <div class="stat"><div class="k">SDK tests</div><div class="v">434 <small>all OK</small></div></div>
+      <div class="stat"><div class="k">Clean installs</div><div class="v">2/2 <small>PASS</small></div></div>
+      <div class="stat"><div class="k">Provision seam</div><div class="v">PASS <small>12/12 CLI probes</small></div></div>
+      <div class="stat"><div class="k">Failure paths</div><div class="v">7/7 <small>contract-exact</small></div></div>
+      <div class="stat"><div class="k">P0 / P1 / P2</div><div class="v">0 / 7 / 14</div></div>
+      <div class="stat"><div class="k">Supported SDK pins</div><div class="v">4/4 <small>coherent</small></div></div>
+      <div class="stat"><div class="k">Not executed</div><div class="v">3 <small>env-bound</small></div></div>
+    </div>
+  </div>
+</header>
+<main>
+
+<section>
+  <h2><span class="no">01</span>Exact heads and versions</h2>
+  <div class="table-scroll"><table>
+    <tr><th>Repository</th><th>Exact SHA (audited)</th><th>Branch</th><th>Declared version</th><th>Tags</th><th>Registry</th></tr>
+    <tr><td><b>l9-ci-core</b></td><td class="mono">aaa01124d95b8fc51369636116e71aedf2f7389f</td><td>main</td><td><code>2.0.0.dev1</code> (pyproject)</td><td>v2.0.0 → 450f6ec (8 commits behind main)</td><td>not distributed</td></tr>
+    <tr><td><b>l9-ci-sdk</b></td><td class="mono">7d7762eae5e1a12fdc66276975e2949891762a20</td><td>main</td><td><code>2.0.0</code> (pyproject, <code>__version__</code>, integration contract)</td><td>v1.0.0, v0.1.0 — no v2 tag</td><td>PyPI has 1.0.0 only</td></tr>
+  </table></div>
+  <p>Both clones were fresh, full-depth; working trees clean; remotes verified. Core's pinned SDK default (<code>.l9/sdk-compatibility.yaml</code> → <code>provision-sdk</code>) is exactly today's SDK HEAD — the current pair is the pinned pair by construction.</p>
+</section>
+
+<section>
+  <h2><span class="no">02</span>Current architecture</h2>
+  <h3>Core — central CI orchestrator / thin control plane</h3>
+  <p>A GitHub-Actions distribution repo, not a pip package. It owns the required workflow <code>org-ci.yml</code> (ruleset-triggered on consumer PRs), reusable kernel workflows (<code>analyze-semgrep.yml</code>, <code>publish-analysis.yml</code>, baseline ratchet, self-CI), and 15 composite actions: <code>provision-sdk</code> (immutable SDK checkout + venv + CLI contract probes), <code>invoke-sdk</code> (whitelisted-operation adapter), <code>resolve-governance</code>, <code>detect-language</code>, <code>install-consumer-ci</code> (pins ruff/mypy/pytest/biome), plus validation/manifest/route actions. Its own Python (<code>.github/actions/</code>, <code>tools/l9_repo</code>) is the validation harness for its own artifacts; ruff + mypy gates pass (re-run: 0 findings, 21 files).</p>
+  <h3>SDK — canonical analysis engine / distributable package</h3>
+  <p>A hatchling-built pip package (<code>l9-ci</code>) with CLI entry <code>l9-ci</code>. ~100 modules across 14 packages: repository enumeration/snapshot identity, capability detection, provider SPI + Semgrep execution/normalization, identity resolution, policy classification, canonical bundle + schema/semantic validation, technical gate evaluation, deterministic SARIF/agent-payload projections, manifest generation, baseline ratchet, governance attestation, l9.observation/v1. Ships 15 JSON schemas and packaged Semgrep rulesets (python/typescript) + profile registry as package data.</p>
+</section>
+
+<section>
+  <h2><span class="no">03</span>Canonical ownership boundary</h2>
+  <div class="table-scroll"><table>
+    <tr><th>Concern</th><th>Owner</th><th>Evidence</th></tr>
+    <tr><td>CI orchestration, provisioning, publication, artifact upload</td><td><b>Core</b></td><td><code>.l9/ownership.yaml:4</code>, workflow bodies</td></tr>
+    <tr><td>Analysis: detection, provider execution, findings, bundles, gates, projections</td><td><b>SDK</b></td><td><code>sdk/.l9/integration-contract.yaml</code> boundary</td></tr>
+    <tr><td>Final Assurance verdict / control decisions</td><td><b>Assurance</b> (out of band)</td><td>integration contract “principle”; no verdict-emitting code found in either repo</td></tr>
+    <tr><td>Ruleset content + identity maps</td><td><b>SDK</b> (packaged); Core never authors <code>--config</code> lists</td><td><code>invoke-sdk/invoke.py</code> language allowlist; rulesets in wheel</td></tr>
+    <tr><td>Toolchain pins for consumers (ruff/mypy/pytest)</td><td><b>Core</b></td><td><code>install-consumer-ci/</code> + toolchain-lock.json</td></tr>
+  </table></div>
+  <p>Core is prohibited from parsing provider reports, reconstructing findings, or building l9.observation payloads itself; the SDK is prohibited from uploading artifacts or reading GitHub workflow context. No schema copies of the SDK were found in Core (prohibition honored). One declared-prohibition exception: the SDK’s own CI calls Core’s <code>analyze-semgrep.yml</code> as a consumer (workflow-level, documented direction reversal).</p>
+</section>
+
+<section>
+  <h2><span class="no">04</span>Core↔SDK contract matrix</h2>
+  <div class="table-scroll"><table>
+    <tr><th>Seam</th><th>Producer → Consumer</th><th>Pin</th><th>Verified</th></tr>
+    <tr><td>SDK provisioning + CLI probes</td><td>SDK → <code>org-ci.yml</code> / all kernels</td><td class="mono">7d7762e… (default)</td><td><span class="st pass">PASS</span> executed locally, contract file cross-checked</td></tr>
+    <tr><td>invoke-sdk operations (6 whitelisted)</td><td>SDK → <code>org-ci.yml</code>, <code>analyze-semgrep.yml</code>, <code>publish-analysis.yml</code></td><td class="mono">7d7762e…</td><td><span class="st pass">PASS</span> real scan through adapter</td></tr>
+    <tr><td>legacy normalize / baseline workflows</td><td>SDK → <code>normalize-semgrep-report.yml</code>, <code>baseline-ratchet.yml</code></td><td class="mono">0c487747…</td><td><span class="st pass">PASS</span> (supported-entry probe)</td></tr>
+    <tr><td>biome reusable templates</td><td>SDK → docs/templates</td><td class="mono">f546f122…</td><td><span class="st pass">PASS</span></td></tr>
+    <tr><td>SDK self-CI → Core analyze kernel</td><td>Core → SDK workflows (consumer pattern)</td><td class="mono">84375ed2…</td><td><span class="st pass">PASS</span> SHA exists; docs still cite f7a4ee8c (P1)</td></tr>
+    <tr><td>Artifact protocols</td><td colspan="2">l9.finding-bundle/v1, l9.agent-review-payload/v1, l9.sarif-log/v1 (b1a4914+); l9.integration-contract/v1</td><td><span class="st pass">PASS</span> v2 bundles correctly rejected</td></tr>
+    <tr><td>Policy: no floating refs / branches / tags</td><td colspan="2"><code>sdk-compatibility.yaml</code> policy block</td><td><span class="st pass">PASS</span> enforced by provision.py</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2><span class="no">05</span>Package &amp; dependency audit</h2>
+  <p><b>SDK wheel</b> (<code>l9_ci-2.0.0-py3-none-any.whl</code>, built with hatchling in a clean env): 88 modules, 15 JSON schemas, packaged identity-map + profiles + rulesets — complete package-data inclusion. Runtime deps exact-pinned (<code>jsonschema==4.26.0</code>, <code>referencing==0.37.0</code>, <code>PyYAML==6.0.3</code>) mirrored in <code>requirements.txt</code> by stated design. No undeclared runtime dependency observed; imports verified at runtime.</p>
+  <p><b>Core toolchain pins</b> (<code>install-consumer-ci</code>): ruff==0.16.1, mypy==2.3.0, pytest==9.1.1, biome 2.5.8 — installed and executed cleanly in the consumer simulation. Note a <b>cross-repo skew</b>: the SDK’s own dev pins are ruff 0.16.3 / mypy 2.3.1 — consumer repos get 0.16.1 / 2.3.0 (deliberate per comments, but the two planes are not identical).</p>
+</section>
+
+<section>
+  <h2><span class="no">06</span>Clean-environment install results</h2>
+  <pre># 1 — wheel build + install (python 3.11 venv)
+uv build sdk/                      → l9_ci-2.0.0.tar.gz + .whl   [rc=0]
+uv pip install wheel               → clean venv                  [rc=0]
+l9-ci --help                       → 8 subcommands listed        [rc=0]
+
+# 2 — Core's real provisioning seam (provision.py, GITHUB_WORKSPACE sim)
+INPUT_SDK_REVISION=7d7762e… python3 provision.py
+  → detached checkout @7d7762e, contract l9.integration-contract/v1 verified,
+    isolated venv, semgrep runtime installed, 12/12 required CLI paths probed
+    executable=/ws/.l9/runtime/sdk/bin/l9-ci                        [rc=0]
+
+# 3 — all 12 required CLI paths --help at the pinned revision        [12 × rc=0]</pre>
+  <p>No source-checkout dependency exists for the <em>package</em> surface; Core’s sanctioned runtime deliberately runs the SDK from a provisioned source checkout at the pinned SHA (that is the documented contract, and it executed cleanly).</p>
+</section>
+
+<section>
+  <h2><span class="no">07</span>Repository test results</h2>
+  <div class="table-scroll"><table>
+    <tr><th>Suite</th><th>Command</th><th>Result</th><th>Notes</th></tr>
+    <tr><td>Core</td><td><code>python -m unittest discover tests/</code></td><td><span class="st pass">261 OK</span></td><td>authoritative invocation per self-ci.yml; exactly 1 documented skip (<code>test_manifest_integrity</code>, env-gated)</td></tr>
+    <tr><td>Core lint/type</td><td><code>ruff check</code> + <code>mypy</code> over .github/actions + tools</td><td><span class="st pass">PASS</span></td><td>0 findings / 21 files</td></tr>
+    <tr><td>SDK</td><td><code>uv sync --all-extras</code> + <code>pytest tests/</code></td><td><span class="st pass">434 passed</span></td><td>4 initial errors were my uv-venv missing pip (env defect, not repo); all pass once satisfied. 3 documented env-conditional skips; zero xfails</td></tr>
+    <tr><td>SDK packaging tests</td><td><code>pytest tests/rulesets/test_packaging.py</code></td><td><span class="st pass">4 passed</span></td><td>includes wheel-content, no-bytecode-cache, and clean-install-outside-repo proofs</td></tr>
+  </table></div>
+  <p>Test quality: largely behavioral — decision-table matrices, mutation-proven boundary checkers, exact-equality public-API enforcement, byte-determinism, schema-inventory exactness. Weak spot: three P1 defects (manifest drift, unresolvable self-pins, vocabulary divergence) pass green by construction — the suite validates the wrong SSOT for those (see finding C4).</p>
+</section>
+
+<section>
+  <h2><span class="no">08</span>Core↔SDK real E2E results</h2>
+  <p>The deepest executable path was run end-to-end in a clean environment — the exact actions Core ships, against the exact pinned SDK revision, using a real Semgrep binary and the packaged rulesets:</p>
+  <pre>provision-sdk (immutable SHA fetch, contract cross-check, CLI probes)   [rc=0]
+invoke-sdk: semgrep-run --language python --strict --required
+    real semgrep scan of fixture source → raw.json (1 real finding:
+    l9.baseline.python.exec-eval-use, packaged ruleset)                 [rc=0]
+invoke-sdk: strict normalization with Core's org semgrep-policy
+    (advisory-by-default; empty rules map by org design)                [rc=0]
+bundle validate finding-bundle.json                                     [rc=0]
+gate evaluate → status "pass", 0 blocking / 0 fatal / 0 unresolved      [rc=0]
+bundle project-agent-payload                                            [rc=0]
+bundle project-sarif                                                    [rc=0]
+compatibility check → SDK_version=2.0.0, compatible=True               [rc=0]</pre>
+  <p>Identity and provenance survive the boundary: finding IDs are stable content hashes; the bundle’s canonical digest excludes <code>generated_at</code> by design. The adapter’s confinement held: paths outside the simulated workspace were rejected (<code>rc=2</code>), and all six adapter negative probes failed closed.</p>
+</section>
+
+<section>
+  <h2><span class="no">09</span>External consumer simulation</h2>
+  <p>A disposable consumer repo (<code>acme-consumer</code>) with no access to either source tree:</p>
+  <ul>
+    <li><b>Toolchain path:</b> <code>install-consumer-ci</code> pins installed cleanly; ruff 0.16.1 detected the planted lint issue (<code>rc=1</code>, real signal), mypy 2.3.0 clean, targeted pytest 9.1.1 passed.</li>
+    <li><b>Library path:</b> the built wheel imported outside the repo — <code>__version__</code> 2.0.0, <code>build_default_registry()</code> → <code>['semgrep']</code>, file enumeration, capability detection (<code>['python']</code>).</li>
+    <li><b>Workflow path:</b> GitHub-hosted execution of <code>org-ci.yml</code> on a real PR is inherently environment-bound — NOT_EXECUTED locally; the workflow contract (inputs, refs, gate mapping) was verified statically and via Core’s own behavioral tests.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="no">10</span>CI path + negative/failure-path results</h2>
+  <p>Reconstructed consumer path: ruleset required workflow → <code>resolve-consumer-metadata</code> → <code>resolve-governance</code> → <code>provision-sdk</code> → <code>detect-language</code> → <code>invoke-sdk</code> → <code>validate-bundle</code> → gate → <code>route-artifacts</code> → <code>build-artifact-manifest</code>. Exit codes propagate unremapped (contract). Measured failure semantics:</p>
+  <div class="table-scroll"><table>
+    <tr><th>Case</th><th>Observed</th><th>Contract</th><th>Verdict</th></tr>
+    <tr><td>Malformed bundle JSON</td><td class="mono">rc=5, actionable message</td><td>5 artifact_validation_failure</td><td><span class="st pass">EXACT</span></td></tr>
+    <tr><td>Unsupported artifact major (v2 bundle)</td><td class="mono">rc=5 “expected l9.finding-bundle/v1”</td><td>5</td><td><span class="st pass">EXACT</span></td></tr>
+    <tr><td>Minimum SDK version 3.0.0</td><td class="mono">rc=8 incompatible_version</td><td>8</td><td><span class="st pass">EXACT</span></td></tr>
+    <tr><td>Missing snapshot-id / missing report</td><td class="mono">rc=4</td><td>4 provider_report_failure</td><td><span class="st pass">EXACT</span></td></tr>
+    <tr><td>Invalid language (java)</td><td class="mono">rc=2</td><td>2 invalid_arguments</td><td><span class="st pass">EXACT</span></td></tr>
+    <tr><td>Strict + unknown identity (no map)</td><td class="mono">rc=6, bundle not written</td><td>6 unresolved_strict_contract</td><td><span class="st pass">EXACT</span></td></tr>
+    <tr><td>Strict + non-empty findings + no policy</td><td class="mono">rc=6</td><td>6</td><td><span class="st pass">EXACT</span></td></tr>
+    <tr><td>Adapter: unsupported op / bad executable / path escape / bad boolean</td><td class="mono">rc=2 ×4</td><td>2</td><td><span class="st pass">EXACT</span></td></tr>
+    <tr><td><b>Warn-level report error → gate</b> (issue #122 repro)</td><td class="mono">gate rc=6, status=incomplete, blocking_count=0</td><td>—</td><td><span class="st fail">FAIL-CLOSED OVER-STRICT</span></td></tr>
+  </table></div>
+  <p>The last row is the reproduced live defect: a Semgrep <code>level:"warn"</code> timeout becomes a fatal provider failure at SDK HEAD, the gate goes <code>incomplete</code> with zero blocking findings, and <code>org-ci.yml</code> blocking mode fails the PR identically to a real fail — the exact scenario of Core issue #122. No retry mechanism exists anywhere in the SDK (by design, fail-closed).</p>
+</section>
+
+<section>
+  <h2><span class="no">11</span>Deterministic identity audit</h2>
+  <ul>
+    <li><b>Bundle determinism:</b> two normalizations with identical inputs differ <em>only</em> in <code>generated_at</code> (proven field-by-field). With <code>--generated-at</code> pinned, outputs are byte-identical. Finding IDs are content hashes and stable across both.</li>
+    <li><b>Manifest determinism:</b> two generations byte-identical; <code>manifest check</code> rc=0.</li>
+    <li><b>Gap:</b> Core’s workflows never pass <code>generated-at</code> → every real-pipeline bundle carries a fresh timestamp; bundle bytes are not reproducible run-to-run (digest/identity remain stable — the SDK excludes <code>generated_at</code> from the canonical digest by design).</li>
+    <li><b>Hazard:</b> two canonicalization implementations exist (digest normalizes nested list order; <code>bundle_bytes</code> normalizes only top-level) — two logically identical bundles can share a digest yet differ in bytes.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="no">12</span>Generated artifacts &amp; provenance</h2>
+  <ul>
+    <li><b>Core MANIFEST.sha256 — DRIFTED.</b> 222 tracked files, 210 listed; 11 unlisted (incl. <code>.github/actions/container-release/*</code>, <code>presets/typescript/*</code>, 3 test files, <code>tools/publish_consumer_ci_tag.sh</code>). The verifier checks only listed paths, so missing entries are invisible; the companion <code>require_all_paths</code> rule exists but the drift is in the release tag itself.</li>
+    <li><b>SDK ruleset/identity-map parity — CURRENT.</b> Packaged <code>identity-map.yaml</code> byte-identical (semantically) to SSOT <code>.l9/semgrep-identity-map.yaml</code>.</li>
+    <li><b>Audit ledger:</b> SDK <code>.l9/audit-findings.md</code> — all 28 items closed, but sealed against SHAs 96 commits behind HEAD; nothing re-verifies it against HEAD.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="no">13</span>Version compatibility matrix</h2>
+  <div class="table-scroll"><table>
+    <tr><th>SDK revision</th><th>SDK version</th><th>Declared in Core manifest</th><th>Required CLI paths</th><th>Probe result</th></tr>
+    <tr><td class="mono">7d7762e… (default pin)</td><td>2.0.0</td><td>yes — <code>default</code> + <code>supported[0]</code></td><td>12</td><td><span class="st pass">12/12</span></td></tr>
+    <tr><td class="mono">b1a4914…</td><td>1.0.0</td><td>yes</td><td>12 (incl. project-sarif)</td><td><span class="st pass">12/12</span></td></tr>
+    <tr><td class="mono">f546f12…</td><td>1.0.0</td><td>yes</td><td>11 (entry correctly excludes project-sarif)</td><td><span class="st pass">11/11</span></td></tr>
+    <tr><td class="mono">0c48774…</td><td>1.0.0</td><td>yes</td><td>11 (same)</td><td><span class="st pass">11/11</span></td></tr>
+  </table></div>
+  <p>Each supported revision declares <code>l9.integration-contract/v1</code> + executable <code>l9-ci</code> and satisfies every CLI path its entry requires. The manifest is internally consistent — the two oldest revisions genuinely lack <code>project-sarif</code> and their entries correctly omit it. Current pair (Core main + SDK main = pinned default) is coherent at runtime. The publish plane has not caught up: SDK tags/PyPI/docs still say 1.0.0 while code is 2.0.0.</p>
+</section>
+
+<section>
+  <h2><span class="no">14</span>Open PR &amp; issue impact</h2>
+  <div class="table-scroll"><table>
+    <tr><th>Item</th><th>Repo</th><th>Classification</th><th>Effect on verdict</th></tr>
+    <tr><td>PR #83 “honour warn-level report errors” (2/4 tasks, in flight today)</td><td>SDK</td><td>MATERIAL, fix for #79</td><td>Directly fixes the issue-#122 reproduction; required before the SDK pin bump</td></tr>
+    <tr><td>Issue #122 “central mode blocks on incomplete identically to fail”</td><td>Core</td><td>PRE-DEPLOYMENT (verified reproducible)</td><td>Blocks the consumer experience; resolution = land #83 + bump pins in org-ci.yml / analyze-semgrep.yml</td></tr>
+    <tr><td>PRs #80, #81 (dependabot ruff / hatchling)</td><td>SDK</td><td>NON-BLOCKING</td><td>Routine bumps</td></tr>
+    <tr><td>PR #78 (docs role separation)</td><td>SDK</td><td>NON-BLOCKING</td><td>Docs only</td></tr>
+  </table></div>
+  <p>Core: 0 open PRs. SDK: 0 open issues. No other material open work.</p>
+</section>
+
+<section>
+  <h2><span class="no">15</span>Architecture conformance</h2>
+  <ul>
+    <li><span class="st pass">PASS</span> One owner per canonical contract; SDK schema non-duplication in Core verified; no shadow protocol/schema found.</li>
+    <li><span class="st pass">PASS</span> Layer-direction test enforced (SDK→Core forbidden at runtime level).</li>
+    <li><span class="st pass">PASS</span> No private-internal cross-repo dependency: Core consumes SDK only via pinned-SHA workflow/action refs and the whitelisted CLI adapter.</li>
+    <li><span class="st warn">GAP</span> <code>l9_ci/baseline</code> and <code>l9_ci/governance</code> exist in the SDK with no declared owner in <code>ownership.yaml</code>; duplicate default-registry factories; public-api manifest under-declares the rulesets surface.</li>
+    <li><span class="st warn">GAP</span> SDK self-CI Semgrep job is unconditionally green (warning-and-exit-0 shadow mode, documented but misleading as a gate); CI aggregator treats <code>skipped</code> as pass.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="no">16</span>Operational preflight</h2>
+  <ul>
+    <li><b>What is distributed:</b> Core = workflow/action/preset distribution consumed by SHA or the <code>v2</code> tag (note: v2 lags main by 8 commits). SDK = <code>l9-ci</code> wheel (2.0.0, unpublished; PyPI serves 1.0.0).</li>
+    <li><b>Required runtime:</b> Python ≥3.11 (SDK); runner with git + pip; Semgrep pinned exactly by org-ci (<code>steps.runtime.outputs['semgrep-version']</code>), while the provision venv independently floats <code>semgrep&gt;=1.100</code> fallback — pin interplay worth reconciling.</li>
+    <li><b>Required config:</b> governance defaults (execution profiles, rule-modes, policy) resolved centrally; consumer override supported via repo-local <code>.github/governance/</code>.</li>
+    <li><b>Secrets/services:</b> none required for the analysis path; <code>checks:write</code>/<code>security-events:write</code> scoped to publication workflows only.</li>
+    <li><b>Health signal:</b> gate-result artifact (<code>l9.gate-result/v1</code>) + exit codes 0/1/6. <b>Failure signal:</b> currently coarse — <code>incomplete</code> and <code>fail</code> collapse in blocking mode (issue #122).</li>
+    <li><b>Rollback/pinback:</b> supported-revisions allowlist with policy forbidding floating refs, branches, tags, and fallbacks — provision fails closed on any unlisted revision.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="no">17</span>Findings</h2>
+
+  <h3>P1 — pre-deployment required (7)</h3>
+
+  <div class="finding p1">
+    <div class="fhead"><span class="sev p1">P1</span><span class="fname">Manifest integrity: MANIFEST.sha256 drifted, verifier blind</span><span class="fid">C1 · GENERATED_ARTIFACT · core</span></div>
+    <div class="fmeta"><b>Path:</b> MANIFEST.sha256; tools/l9_repo/__main__.py:534-585; test_manifest_integrity.py:39</div>
+    <div class="fbody"><p><span class="lbl">Evidence:</span> 222 tracked files vs 210 listed; 11 unlisted (container-release action, presets/typescript ×6, 3 tests, publish_consumer_ci_tag.sh). All listed entries hash correctly. Verifier checks only listed paths — missing entries undetectable. Drift exists in the v2.0.0 tag itself.</p>
+    <p><span class="lbl">Impact:</span> A tampered or forgotten tracked file is indistinguishable from a valid manifest; release tag carries the same hole.</p>
+    <p><span class="lbl">Minimum fix:</span> Make the verifier fail on tracked-but-unlisted files, regenerate, wire <code>L9_MANIFEST_CHECK</code> into CI (drop the skip gate).</p></div>
+  </div>
+
+  <div class="finding p1">
+    <div class="fhead"><span class="sev p1">P1</span><span class="fname">23 self-referenced action pins unreachable from any ref in a fresh clone</span><span class="fid">C2 · SUPPLY-CHAIN · core</span></div>
+    <div class="fmeta"><b>Path:</b> org-ci.yml:284-455; analyze-semgrep.yml; publish-analysis.yml — pins 2aa859c8… (×22) and 645ea6e5…</div>
+    <div class="fbody"><p><span class="lbl">Evidence:</span> Both SHAs absent from a full fresh clone’s ODB (verified <code>git cat-file -e</code>); they resolve only via GitHub PR-head refs (verified live on github.com). They are the PR-head SHAs of #121/#125, not the merge commits.</p>
+    <p><span class="lbl">Impact:</span> Local pin verification/review is impossible for the whole org-ci chain; if GitHub ever GCs PR refs, every org-ci run breaks site-wide.</p>
+    <p><span class="lbl">Minimum fix:</span> Re-pin to the merge commits (1abce35 / aaa0112) or the release tag; extend <code>test_org_runtime_contract</code> to check SHA existence.</p></div>
+  </div>
+
+  <div class="finding p1">
+    <div class="fhead"><span class="sev p1">P1</span><span class="fname">Governance vocabulary divergence breaks workflow_dispatch on all copy-first packs</span><span class="fid">C3 · CONFIG · core</span></div>
+    <div class="fmeta"><b>Path:</b> presets/{python,typescript}/.github/governance/execution-profiles.yaml + templates vs resolve-governance/defaults/execution-profiles.yaml</div>
+    <div class="fbody"><p><span class="lbl">Evidence:</span> Central defaults allow event <em>classes</em> (nightly, merge, release); the packs allow raw triggers (schedule, workflow_dispatch). The kernel maps <code>workflow_dispatch → nightly</code> and validates literal membership → <code>GovernanceError</code> exit 2 on every manual run against a preset. Tests validate central defaults only, so CI is green.</p>
+    <p><span class="lbl">Impact:</span> Runtime-breaking for every consumer that copied a preset or template — silent, un-caught.</p>
+    <p><span class="lbl">Minimum fix:</span> Align the four packs to event classes; add a test validating every copy-first pack against the kernel mapping table.</p></div>
+  </div>
+
+  <div class="finding p1">
+    <div class="fhead"><span class="sev p1">P1</span><span class="fname">Test suite structurally blind to C1–C3</span><span class="fid">C4 · TEST_GAP · core</span></div>
+    <div class="fmeta"><b>Path:</b> test_caller_profile_event_compatibility.py:591-598; test_org_runtime_contract.py:150-178; test_manifest_integrity.py:39</div>
+    <div class="fbody"><p><span class="lbl">Evidence:</span> Caller-compat validates central defaults only; org-runtime checks pin <em>format</em> only, never existence; manifest integrity is skip-gated. All three P1s above pass green by construction.</p>
+    <p><span class="lbl">Impact:</span> The shipped suite cannot detect the defects it most needs to catch.</p>
+    <p><span class="lbl">Minimum fix:</span> Validate all packs; check SHA existence; fail on tracked-unlisted manifest files.</p></div>
+  </div>
+
+  <div class="finding p1">
+    <div class="fhead"><span class="sev p1">P1</span><span class="fname">SDK version plane split: code 2.0.0 vs tags/PyPI/docs 1.0.0</span><span class="fid">S1 · VERSIONING · sdk</span></div>
+    <div class="fmeta"><b>Path:</b> pyproject.toml:7; l9_ci/__init__.py:6; docs/PUBLISHING.md:25-34; docs/COMPATIBILITY_MATRIX.md:17; MIGRATION.md:6-9</div>
+    <div class="fbody"><p><span class="lbl">Evidence:</span> In-code triad (pyproject / <code>__version__</code> / integration-contract) is consistent and test-enforced at 2.0.0. No v2.0.0 tag exists; PyPI serves 1.0.0; three docs instruct <code>pip install l9-ci==1.0.0</code>.</p>
+    <p><span class="lbl">Impact:</span> Consumers following the docs get an artifact two minors behind the pinned runtime; release evidence plane disagrees with the code plane.</p>
+    <p><span class="lbl">Minimum fix:</span> Tag v2.0.0, publish, update the three docs (publish.yml’s tag-match check will gate correctly).</p></div>
+  </div>
+
+  <div class="finding p1">
+    <div class="fhead"><span class="sev p1">P1</span><span class="fname">Documented Core pin diverges from the enforced pin in SDK workflows</span><span class="fid">S2 · CROSS-REPO · sdk</span></div>
+    <div class="fmeta"><b>Path:</b> ARCHITECTURE.md:79-80; docs/COMPATIBILITY_MATRIX.md:27 vs all five l9-analysis*.yml (84375ed2…)</div>
+    <div class="fbody"><p><span class="lbl">Evidence:</span> Docs name f7a4ee8c…; the workflows pin 84375ed2… (verified to exist in Core history). The wiring test checks only pin shape and repo target.</p>
+    <p><span class="lbl">Impact:</span> Release evidence references a stale Core revision; pin governance relies on doc accuracy nothing enforces.</p>
+    <p><span class="lbl">Minimum fix:</span> Reconcile docs to 84375ed2; consider asserting the exact SHA in the wiring test.</p></div>
+  </div>
+
+  <div class="finding p1">
+    <div class="fhead"><span class="sev p1">P1</span><span class="fname">Warn-level provider errors block required scans (reproduced, fix in flight)</span><span class="fid">X1 · FAILURE_SEMANTICS · core+sdk seam</span></div>
+    <div class="fmeta"><b>Path:</b> l9_ci/providers/semgrep/provider.py:396-415; org-ci.yml:500-513; Core issue #122; SDK PR #83</div>
+    <div class="fbody"><p><span class="lbl">Evidence:</span> Reproduced end-to-end: a <code>level:"warn"</code> timeout → fatal provider failure → gate <code>incomplete</code> (rc=6) with blocking_count=0, unresolved_count=0 → blocking mode fails the PR identically to a fail. Real-world instance: Cursor-Governance#442.</p>
+    <p><span class="lbl">Impact:</span> Consumers see red required checks with no way to distinguish a real finding from a scanner timeout; no remedy either way.</p>
+    <p><span class="lbl">Minimum fix:</span> Land SDK PR #83 (honours warn level; missing level stays fail-closed), then bump the SDK pin in org-ci.yml / analyze-semgrep.yml and distinguish incomplete-vs-fail in the step summary (issue #122).</p></div>
+  </div>
+
+  <h3>P2 — material non-blocking (14)</h3>
+  <div class="finding p2">
+    <div class="fhead"><span class="sev p2">P2</span><span class="fname">Dual canonicalization semantics</span><span class="fid">S3 · DETERMINISM · sdk</span></div>
+    <div class="fbody"><p><code>canonical_digest</code> normalizes nested list order; <code>bundle_bytes</code> only top-level — identical content can share a digest with different bytes. Single canonicalizer needed.</p></div>
+  </div>
+  <div class="finding p2">
+    <div class="fhead"><span class="sev p2">P2</span><span class="fname">include_untracked is a silent no-op on the filesystem path</span><span class="fid">S4 · CONFIG · sdk</span></div>
+    <div class="fbody"><p><code>enumerator.py:43</code> discards the flag; snapshot/manifest identity silently include untracked files on non-git roots while git mode honors it.</p></div>
+  </div>
+  <div class="finding p2">
+    <div class="fhead"><span class="sev p2">P2</span><span class="fname">Self-CI Semgrep job is unconditionally green</span><span class="fid">S5 · CI · sdk</span></div>
+    <div class="fbody"><p><code>l9-self-ci.yml:407-417</code> converts any non-zero SDK exit into a warning + exit 0 (documented shadow mode) — the SDK’s own CI cannot signal a regression on its canonical path; aggregator also treats <code>skipped</code> as pass.</p></div>
+  </div>
+  <div class="finding p2">
+    <div class="fhead"><span class="sev p2">P2</span><span class="fname">compare_authority can never fail</span><span class="fid">S6 · FAILURE_SEMANTICS · sdk</span></div>
+    <div class="fbody"><p><code>governance/authority.py:239-243</code> always returns PASS with warning diagnostics — authority drift is not machine-detectable despite ADR 0014.</p></div>
+  </div>
+  <div class="finding p2">
+    <div class="fhead"><span class="sev p2">P2</span><span class="fname">Observation schema diverges from siblings</span><span class="fid">S7 · SCHEMA · sdk</span></div>
+    <div class="fbody"><p><code>observation.schema.json</code> uses a third <code>$id</code> namespace convention and a 5-value severity enum (no “unknown”) vs 6 values in finding/evidence schemas; parallel copy of the finding shape.</p></div>
+  </div>
+  <div class="finding p2">
+    <div class="fhead"><span class="sev p2">P2</span><span class="fname">Duplicate default-provider-registry factories</span><span class="fid">S8 · ARCHITECTURE · sdk</span></div>
+    <div class="fbody"><p><code>commands/providers.py:12-15</code> duplicates the canonical <code>build_default_registry()</code> — future divergence risk.</p></div>
+  </div>
+  <div class="finding p2">
+    <div class="fhead"><span class="sev p2">P2</span><span class="fname">Core dogfoods advisory while consumers default blocking</span><span class="fid">C5 · CONFIG · core</span></div>
+    <div class="fbody"><p>Repo-local rule-modes set semgrep advisory; central defaults leave consumers blocking — the blocking behavior shipped to consumers is never exercised by Core’s own CI.</p></div>
+  </div>
+  <div class="finding p2">
+    <div class="fhead"><span class="sev p2">P2</span><span class="fname">Version drift: pyproject 2.0.0.dev1 vs release gate 2.0.0</span><span class="fid">C6 · RELEASE · core</span></div>
+    <div class="fbody"><p><code>release-validation.yml:55</code> expects 2.0.0; pyproject declares 2.0.0.dev1.</p></div>
+  </div>
+  <div class="finding p2">
+    <div class="fhead"><span class="sev p2">P2</span><span class="fname">v2 floating tag lags main by 8 commits</span><span class="fid">C7 · VERSIONING · core</span></div>
+    <div class="fbody"><p><code>v2 == v2.0.0 == 450f6ec</code>; consumers defaulting to <code>v2</code> (install.sh) silently miss #121–#125. The tag-mover script was never run post-release.</p></div>
+  </div>
+  <div class="finding p2">
+    <div class="fhead"><span class="sev p2">P2</span><span class="fname">v1-kernel advisory fail-opens</span><span class="fid">C8 · FAILURE_SEMANTICS · core</span></div>
+    <div class="fbody"><p><code>security.yml:86,98</code> etc. convert checker failures into notices — contradicts the declared always-fatal semantics for first-party checkers.</p></div>
+  </div>
+  <div class="finding p2">
+    <div class="fhead"><span class="sev p2">P2</span><span class="fname">Org-runtime claims partially UNKNOWN</span><span class="fid">C9 · PROVENANCE · core</span></div>
+    <div class="fbody"><p>Ruleset-instantiates-on-native-push and genesis-push-payload claims remain unproven; the repo itself admits this in the contract file.</p></div>
+  </div>
+  <div class="finding p2">
+    <div class="fhead"><span class="sev p2">P2</span><span class="fname">Provisioned Semgrep floats while org-ci pins exactly</span><span class="fid">X2 · DEPENDENCY · seam</span></div>
+    <div class="fbody"><p>SDK declares no <code>semgrep</code> extra, so provision.py installs the <code>&gt;=1.100</code> fallback into the SDK venv, while org-ci separately installs the exact central pin on the runner — which binary wins depends on PATH ordering at execution time. Pin the runtime inside the SDK venv to the org pin.</p></div>
+  </div>
+  <div class="finding p2">
+    <div class="fhead"><span class="sev p2">P2</span><span class="fname">Core never pins generated_at</span><span class="fid">X3 · IDENTITY · seam</span></div>
+    <div class="fbody"><p>No Core workflow passes <code>generated-at</code>, so real-pipeline bundles are not byte-reproducible (digests and finding IDs remain stable).</p></div>
+  </div>
+  <div class="finding p2">
+    <div class="fhead"><span class="sev p2">P2</span><span class="fname">Toolchain pin skew Core vs SDK</span><span class="fid">X4 · DEPENDENCY · seam</span></div>
+    <div class="fbody"><p>Consumers get ruff 0.16.1 / mypy 2.3.0 (Core pins); the SDK develops against 0.16.3 / 2.3.1. Deliberate per comments, but the planes are not identical and nothing tests the consumer plane against SDK expectations.</p></div>
+  </div>
+
+  <h3>P3 — debt (8)</h3>
+  <div class="finding p3">
+    <div class="fhead"><span class="sev p3">P3</span><span class="fname">SDK_version() probes a nonexistent distribution name</span><span class="fid">S9 · sdk</span></div>
+    <div class="fbody"><p><code>commands/semgrep.py:33</code> queries “l9-ci-sdk”; the distribution is <code>l9-ci</code> — the metadata branch is dead code (safe fallback).</p></div>
+  </div>
+  <div class="finding p3">
+    <div class="fhead"><span class="sev p3">P3</span><span class="fname">Public-API manifest under-declares rulesets; ownership.yaml omits baseline + governance</span><span class="fid">S10 · sdk</span></div>
+    <div class="fbody"><p>Manifest lists <code>[]</code> for the rulesets surface (guarded by a looser subset test); two shipped packages have no declared owner.</p></div>
+  </div>
+  <div class="finding p3">
+    <div class="fhead"><span class="sev p3">P3</span><span class="fname">Docs drift: compat matrix, publishing, issue index, ADR index/status</span><span class="fid">S11 · DOCUMENTATION · sdk</span></div>
+    <div class="fbody"><p>Multiple stale claims (1.0.0 runtime, old pins, “no pyproject” premise now false, ADR 0014 “Proposed” while shipped).</p></div>
+  </div>
+  <div class="finding p3">
+    <div class="fhead"><span class="sev p3">P3</span><span class="fname">Public API crashes on str root instead of coercing</span><span class="fid">S12 · RUNTIME · sdk</span></div>
+    <div class="fbody"><p><code>enumerate_repository_files(".")</code> raises a raw <code>AttributeError</code> (expects Path) — no coercion or Diagnostic for library consumers.</p></div>
+  </div>
+  <div class="finding p3">
+    <div class="fhead"><span class="sev p3">P3</span><span class="fname">Root CLI lacks --version</span><span class="fid">S13 · CLI · sdk</span></div>
+    <div class="fbody"><p><code>l9-ci --version</code> exits 2 (“command required”); version is available only via package metadata.</p></div>
+  </div>
+  <div class="finding p3">
+    <div class="fhead"><span class="sev p3">P3</span><span class="fname">Stale release notes and doc paths</span><span class="fid">C10 · DOCUMENTATION · core</span></div>
+    <div class="fbody"><p><code>RELEASE_NOTES_v2.0.0.md</code> cites an old SDK pin and “55 tests” (actual 280 methods / 38 files); template README references a non-existent defaults path.</p></div>
+  </div>
+  <div class="finding p3">
+    <div class="fhead"><span class="sev p3">P3</span><span class="fname">Manifest integrity test skip-gated and not wired to CI</span><span class="fid">C11 · TEST_GAP · core</span></div>
+    <div class="fbody"><p><code>skipUnless(L9_MANIFEST_CHECK)</code> with no CI wiring for the flag.</p></div>
+  </div>
+  <div class="finding p3">
+    <div class="fhead"><span class="sev p3">P3</span><span class="fname">Audit ledger sealed 96 commits behind HEAD</span><span class="fid">S14 · PROVENANCE · sdk</span></div>
+    <div class="fbody"><p>All 28 ledger items cite old SHAs; nothing re-verifies ledger state against HEAD.</p></div>
+  </div>
+
+  <div class="note"><b>INFORMATIONAL:</b> SDK→Core workflow-level calls reverse the declared one-way dependency direction (consumer pattern — document the exception). v2.0.0 tagger identity is an undocumented automation (<code>Tests &lt;tests@example.com&gt;</code>). Semgrep remains “experimental” per release-policy with the runtime fixture absent — honestly declared, not a hidden skip.</div>
+</section>
+
+<section>
+  <h2><span class="no">18</span>Unresolved UNKNOWNs &amp; not-executed checks</h2>
+  <h3>UNKNOWN</h3>
+  <ul>
+    <li>GitHub retention of the two PR-head SHAs (C2) — cannot be proven from here; works today.</li>
+    <li>Native-push genesis / ruleset-instantiation claims (org-runtime-interface) — no local evidence possible.</li>
+    <li>Whether <code>generated_at</code> unpinned-by-Core is intended (SDK treats it as provenance-only; Core simply never passes it — the policy question is open, tracked in SDK TODO.md).</li>
+    <li>Which semgrep binary actually wins in the real runner (provision venv <code>&gt;=1.100</code> vs org-ci exact pin) — PATH-order dependent, unobservable locally.</li>
+  </ul>
+  <h3>NOT_EXECUTED (environment-bound, honestly bounded)</h3>
+  <ul>
+    <li>GitHub-hosted execution of <code>org-ci.yml</code> on a real PR (runner-only).</li>
+    <li>PyPI publish of SDK 2.0.0 (publish gate’s tag-match logic verified statically only).</li>
+    <li>Baseline ratchet against a fresh multi-run ledger (SDK’s 29 baseline tests are the coverage evidence).</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="no">19</span>Remaining pre-deployment gates</h2>
+  <div class="gate"><span class="n">1</span>Land SDK PR #83 (warn-level classification) and bump the Core SDK pins past it; distinguish <code>incomplete</code> from <code>fail</code> in org-ci enforcement and step summary (Core issue #122).</div>
+  <div class="gate"><span class="n">2</span>Fix the Core MANIFEST verifier to fail on tracked-but-unlisted files; regenerate <code>MANIFEST.sha256</code>; wire the integrity check into CI.</div>
+  <div class="gate"><span class="n">3</span>Re-pin the 23 self-referenced action refs to merge commits reachable from main/tag (or accept and document the PR-ref dependency).</div>
+  <div class="gate"><span class="n">4</span>Align the four copy-first packs’ event vocabulary with central defaults; add pack-coverage tests.</div>
+  <div class="gate"><span class="n">5</span>Tag + publish SDK v2.0.0; update the three version docs; reconcile Core pyproject to 2.0.0 and move the <code>v2</code> tag to the release head.</div>
+  <div class="gate"><span class="n">6</span>Reconcile the SDK docs’ Core pin (f7a4ee8c → 84375ed2) and pin the Semgrep runtime inside the provision venv to the org’s exact pin.</div>
+</section>
+
+<section>
+  <h2><span class="no">20</span>Final readiness verdict</h2>
+  <div class="verdict-final">
+    <p class="eyebrow">Verdict</p>
+    <h2 style="margin-top:.2rem">READY AFTER SPECIFIC PREDEPLOYMENT FIXES</h2>
+    <p>The pair is <b>architecturally sound and genuinely executable end-to-end</b>: the exact pinned Core→SDK seam was provisioned, probed, run against a real scanner, validated, and gated to a passing verdict in a clean environment; both test suites are green and behavioral; failure paths map exactly to the published exit-code contract; version compatibility across all four supported SDK revisions is coherent. Nothing fails open.</p>
+    <p>What blocks “ready today” is not the seam — it is the <b>edges around it</b>: seven P1s covering manifest integrity (C1), pin reviewability (C2), a runtime-breaking consumer config divergence (C3), a test suite blind to all three (C4), a three-plane version split in the SDK (S1), stale documented pins (S2), and the reproduced warn-classification defect that blocks real PRs today (X1, fix already in flight as SDK PR #83). Each has a concrete, bounded fix; none requires architecture change.</p>
+    <div class="table-scroll" style="margin-top:1rem"><table>
+      <tr><th>Summary field</th><th>Status</th></tr>
+      <tr><td>Core SHA / SDK SHA</td><td class="mono">aaa01124…7389f / 7d7762e…1762a20</td></tr>
+      <tr><td>Core version / SDK version</td><td class="mono">2.0.0.dev1 (gate 2.0.0) / 2.0.0 (tags 1.0.0)</td></tr>
+      <tr><td>Core tests / SDK tests</td><td><span class="st pass">261 OK / 434 OK</span></td></tr>
+      <tr><td>Clean installs / package build</td><td><span class="st pass">PASS / PASS</span></td></tr>
+      <tr><td>Core↔SDK contract + real E2E</td><td><span class="st pass">PASS / PASS</span></td></tr>
+      <tr><td>Consumer simulation / failure paths</td><td><span class="st pass">PASS / 9×EXACT</span></td></tr>
+      <tr><td>Compatibility matrix</td><td><span class="st pass">4/4 coherent</span></td></tr>
+      <tr><td>P0 / P1 / P2 / P3</td><td class="num">0 / 7 / 14 / 8</td></tr>
+      <tr><td>Blocked / not-executed checks</td><td class="num">0 / 3 (env-bound, listed)</td></tr>
+    </table></div>
+  </div>
+</section>
+
+</main>
+</div>

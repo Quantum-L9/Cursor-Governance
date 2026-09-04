@@ -55,7 +55,14 @@ def resolve_profile_for_provider(
     repository_root: str | Path,
     provider_ref: str,
     execution_profile_ref: str | None = None,
+    *,
+    fallback_profile_ref: str | None = None,
 ) -> dict[str, Any]:
+    """Explicit ref, else the provider's unique peer binding, else the fallback.
+
+    `fallback_profile_ref` is the adapter's own registry default; without one
+    the subsystem-wide `default_profile_ref` applies.
+    """
     subsystem = Path(subsystem_root).expanduser().resolve()
     if not isinstance(provider_ref, str) or not provider_ref.strip():
         raise ValueError("provider_ref must be a non-empty string")
@@ -71,6 +78,9 @@ def resolve_profile_for_provider(
         raise ValueError(
             f"provider {provider_ref} has multiple profiles; explicit binding is required"
         )
+    if refs:
+        return load_profile(subsystem, next(iter(refs)))
+    if fallback_profile_ref:
+        return load_profile(subsystem, fallback_profile_ref)
     registry = load_profile_registry(subsystem)
-    profile_ref = next(iter(refs)) if refs else registry["default_profile_ref"]
-    return load_profile(subsystem, profile_ref)
+    return load_profile(subsystem, registry["default_profile_ref"])

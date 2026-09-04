@@ -29,8 +29,12 @@ from pathlib import Path
 from typing import Any
 
 PE_ROOT = Path(__file__).resolve().parents[1]
+# APPEND, never insert(0): Program Execution needs its own PE-exclusive
+# packages here, but `scripts` is a top-level name it SHARES with the
+# repository root. Prepending would hand PE's `scripts/` that name for the
+# whole process. See peer_execution.imports.pe_script.
 if str(PE_ROOT) not in sys.path:
-    sys.path.insert(0, str(PE_ROOT))
+    sys.path.append(str(PE_ROOT))
 
 from compiler.architecture_coverage import (  # noqa: E402
     DEFAULT_REPAIR_ROUNDS,
@@ -125,12 +129,16 @@ def existing_campaign_ids(repo_root: Path | None) -> set[str]:
                     ids.add(path.name)
         status = campaigns / "CAMPAIGN_STATUS.yaml"
         if status.is_file():
-            try:
-                import yaml
+            import yaml
 
+            try:
                 raw = yaml.safe_load(status.read_text(encoding="utf-8")) or {}
-            except Exception:
-                raw = {}
+            except yaml.YAMLError as exc:
+                # An unreadable ledger hid every id it records, so a collision
+                # check that "passed" proved nothing.
+                raise ArchitectureCompileError(
+                    f"campaign status ledger is unreadable: {status}: {exc}"
+                ) from exc
             for entry in raw.get("campaigns") or []:
                 if isinstance(entry, dict) and entry.get("id"):
                     ids.add(str(entry["id"]))
@@ -200,16 +208,17 @@ def compile_architecture_intent(
             },
         )
     cache = (cache_root or default_cache_root()) / resolved_id
-    cache.mkdir(parents=True, exist_ok=True)
     source_path = cache / "CAMPAIGN_SOURCE.yaml"
-    _dump_yaml(source_path, lowered.source)
+    _refuse_foreign_cache(source_path, lowered.source, resolved_id)
+    cache.mkdir(parents=True, exist_ok=True)
+    _write_text_atomic(source_path, _yaml_text(lowered.source))
     resolution_path = cache / "ARCHITECTURE_RESOLUTION.json"
-    resolution_path.write_text(
+    _write_text_atomic(
+        resolution_path,
         json.dumps(lowered.source["intent_provenance"], indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
     )
     archived = cache / f"architecture-source{intent.path.suffix or '.md'}"
-    archived.write_text(intent.text, encoding="utf-8")
+    _write_text_atomic(archived, intent.text)
     return {
         "schema": "l9.program-execution.architecture-compile-receipt.v1",
         "campaign_id": resolved_id,
@@ -323,13 +332,66 @@ def _refuse_unresolved_contradictions(
     )
 
 
-def _dump_yaml(path: Path, value: Any) -> None:
+def _yaml_text(value: Any) -> str:
     import yaml
 
-    path.write_text(
-        yaml.safe_dump(value, sort_keys=False, allow_unicode=True, width=100),
-        encoding="utf-8",
-    )
+    return yaml.safe_dump(value, sort_keys=False, allow_unicode=True, width=100)
+
+
+def _dump_yaml(path: Path, value: Any) -> None:
+    _write_text_atomic(path, _yaml_text(value))
+
+
+def _write_text_atomic(path: Path, text: str) -> None:
+    """Compiler cache entries are read by later stages: never leave a torn file."""
+    import os
+    import tempfile
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    handle, staged = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
+    try:
+        with os.fdopen(handle, "w", encoding="utf-8") as stream:
+            stream.write(text)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(staged, path)
+    finally:
+        if os.path.exists(staged):
+            os.unlink(staged)
+
+
+def _source_sha256(source: dict[str, Any]) -> str:
+    provenance = source.get("intent_provenance") or {}
+    origin = provenance.get("source") if isinstance(provenance, dict) else None
+    return str((origin or {}).get("sha256") or "") if isinstance(origin, dict) else ""
+
+
+def _refuse_foreign_cache(source_path: Path, source: dict[str, Any], campaign_id: str) -> None:
+    """Refuse to overwrite a cached campaign compiled from a DIFFERENT document.
+
+    The campaign id is derived from the document title, so two different
+    documents with one H1 resolved to one cache directory and the second
+    silently replaced the first, stack proof included. Recompiling the same
+    document (same source digest) stays idempotent.
+    """
+    if not source_path.is_file():
+        return
+    import yaml
+
+    try:
+        existing = yaml.safe_load(source_path.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError as exc:
+        raise ArchitectureCompileError(
+            f"cached campaign source for {campaign_id} is unreadable: {source_path}: {exc}"
+        ) from exc
+    previous = _source_sha256(existing) if isinstance(existing, dict) else ""
+    current = _source_sha256(source)
+    if previous and current and previous != current:
+        raise ArchitectureCompileError(
+            f"campaign id {campaign_id} is already compiled from a different source "
+            f"(sha256 {previous[:12]} != {current[:12]}) at {source_path.parent}; "
+            "pass --campaign-id for a distinct id or remove the stale cache deliberately"
+        )
 
 
 def build_parser() -> argparse.ArgumentParser:
