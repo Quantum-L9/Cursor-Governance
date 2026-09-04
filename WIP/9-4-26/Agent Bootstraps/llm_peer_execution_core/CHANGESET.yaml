@@ -1,0 +1,82 @@
+schema: l9.peer_execution.pr_changeset.v1
+repository: Quantum-L9/Cursor-Governance
+base_sha: 5707ea8cefd15cfd5b80a9c1503e3f03119f6adc
+intent: thin_peer_provider_adapters_with_shared_execution_core
+moves:
+- from: environment/program-execution/adapters/common
+  to: environment/program-execution/peer_execution
+  reason: reusable_lifecycle_belongs_upstream
+- from: environment/agents/adapters/claude-code/autonomy
+  to: environment/program-execution/peer_execution/autonomy
+  reason: bounded_execution_is_provider_neutral
+- from: environment/contracts/autonomy/meta/claude-code-bounded-autonomy-scheduler.meta.md
+  to: environment/contracts/autonomy/meta/peer-execution-bounded-autonomy-runtime.meta.md
+  reason: remove_provider_ownership_from_shared_runtime
+- from: environment/program-execution/validation/validation_checks.jsonl
+  to: environment/program-execution/validation/history/validation_checks.pre_peer_execution_core.jsonl
+  reason: preserve_revision_bound_historical_evidence
+removed:
+- environment/program-execution/adapters/claude-code-bounded-autonomy/
+- environment/program-execution/integrations/claude-code-bounded-autonomy/
+- environment/program-execution/adapters/claude-code/driver.py
+- environment/program-execution/adapters/claude-code/receipt_mapper.py
+- environment/program-execution/adapters/cursor-foreground/receipt_mapper.py
+- environment/program-execution/adapters/cursor-background/receipt_mapper.py
+- environment/program-execution/adapters/codex/driver.py
+- environment/program-execution/adapters/gemini/driver.py
+- environment/program-execution/adapters/manus/driver.py
+- environment/program-execution/adapters/chatgpt/receipt_mapper.py
+added_core_capabilities:
+- canonical_execution_request_v1
+- canonical_provider_result_v1
+- digest_bound_context_manifest_v1
+- execution_profile_registry_v1
+- peer_runtime_bindings_v2
+- shared_permission_profiles
+- shared_timeout_and_poll_runner
+- provider_neutral_telemetry_normalization
+- shared_program_receipt_construction
+- thin_provider_conformance
+- provider_neutral_single_task_pipeline
+- canonical_controller_rendered_contract_v2_bridge
+- provider_neutral_permission_enforcement
+- pre_admission_provider_host_preflight
+- durable_dispatch_intent
+- persisted_request_drift_detection
+- provider_loader_contract_and_path_validation
+- runtime_identifier_collision_rejection
+- atomic_context_write_and_symlink_rejection
+- complete_worker_remote_action_denial
+- single_load_provider_instantiation
+- strict_shared_subprocess_transport
+- durable_provider_exception_state
+- fail_closed_claude_output_translation
+- non_vacuous_verification_verdicts
+- controller_owned_abort_and_retry_recovery
+- attempt_receipt_atomic_workspace_confined_handoff
+- atomic_isolated_worktree_pack_application
+- all_routable_execution_kind_thin_driver_conformance
+- complete_peer_execution_import_ownership
+provider_state:
+  claude-code-direct: thin_active_path
+  cursor-foreground: thin_conditional_path
+  cursor-background: thin_conditional_path
+  codex-cloud: dormant_transport_not_implemented
+  gemini-review: dormant_transport_not_implemented
+  manus-cloud: dormant_transport_not_implemented
+  chatgpt-manual-handoff: thin_dormant_manual_path
+retired_provider_id:
+- claude-code-bounded-autonomy
+invariants:
+- Program_Controller_remains_sole_program_state_authority
+- root_autonomy_remains_authorization_control_plane
+- provider_descriptors_do_not_own_agent_ref
+- bounded_execution_is_not_a_provider_identity
+- local_write_does_not_imply_commit_or_push
+- unsupported_provider_transport_is_BLOCKED
+- DeepSeek_is_deferred_configuration_or_future_thin_provider
+- no_remote_mutation_by_pack
+- permission_profiles_are_enforced_before_provider_dispatch
+- empty_verification_gates_cannot_pass
+- unavailable_optional_static_checker_is_SKIPPED
+improvement_pass: blocker_seal_v3

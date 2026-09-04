@@ -1,0 +1,321 @@
+{
+  "schema_version": "1.0",
+  "mode": "plan",
+  "title": "First-class Cursor adapter (thin, Cursor-primary)",
+  "objective": "Stand up a thin Cursor adapter over the shared ops/ brain, kill two cross-surface leaks (false hydrate DEGRADED from substring classification; Claude $HOME receipt and observer hooks bleeding into Cursor sessions), and ledger both 2026-09-02 environment-experience packs as tech debt in WIP.",
+  "success_criteria": [
+    "A hydrate packet with degraded=false and close_gap=false produces no graphiti-hydrate line under ### Degraded",
+    "Under surface cursor, a Claude receipt whose workspace is $HOME (or another root) renders stale_other_surface, never this-session DEGRADED",
+    "A Cursor session injects zero agent_id=claude-code hydrate blocks (memory_prefetch.py no-ops without Claude runtime markers)",
+    "make cursor-install WS=<repo> exits 0 writing ~/.l9/cursor/bootstrap-state.json (l9.cursor-bootstrap.v1); make cursor-install-check re-reads it via the shared reader; --workspace $HOME fails with a named error",
+    "command -v gh and python3 -c 'import yaml' succeed in a fresh agent shell without per-command PATH prefixes",
+    "WIP/9-2-26/cursor-remediation/ contains exactly TECH_DEBT.md + tech_debt.json (valid JSON, no zips), every row with id/source/impact/owner/traces_to/done_condition",
+    "TODO.md gains exactly one EOF pointer; no hunk inside the Igor block (line 29 onward)"
+  ],
+  "scope": {
+    "in": [
+      "ops/hooks/session_start_bootstrap.sh hydrate classification + Homebrew PATH prepend",
+      "ops/scripts/classify_hydrate_state.py (new) + twin tests",
+      "ops/scripts/claude_bootstrap_receipt.py surface parameterization",
+      "ops/scripts/session_start_runtime_report.py stale_other_surface downgrade + cursor-adapter row",
+      "environment/agents/adapters/claude-code/hooks/memory_prefetch.py runtime-marker guard",
+      "ops/scripts/bootstrap_agent_environment.sh $HOME workspace refusal",
+      "environment/agents/adapters/cursor/ pack (README, env example, mcp template, install.sh, SESSION_START_SPEC.md, tests)",
+      "Makefile cursor-install / cursor-install-check (append-only)",
+      "environment/agents/README.md layout line",
+      "WIP/9-2-26/cursor-remediation/ debt pair; TODO.md EOF pointer",
+      "official simple-plan artifacts under docs/plans/"
+    ],
+    "out": [
+      "copying or importing any claude-code/ script",
+      "make campaign / Program Lock / Lock: origin/main = <sha>",
+      "moving or printing GRAPHITI_MCP_TOKEN or any env value (secret-plane decisions stay human)",
+      "restoring the capability broker",
+      "changing ~/.cursor/graphiti.env bytes",
+      "any .zip inside cursor-remediation/",
+      "editing the Igor TODO block",
+      "KERNEL/PE overlay landing"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "PV-1",
+      "command_or_action": "grep lines 449-456 of ops/hooks/session_start_bootstrap.sh for the *degraded* glob",
+      "pass_criteria": "defect confirmed: healthy packet fence text matches the glob",
+      "status": "passed"
+    },
+    {
+      "id": "PV-2",
+      "command_or_action": "grep memory_prefetch.py for CLAUDECODE/CLAUDE_CODE_* markers",
+      "pass_criteria": "no guard present (leak confirmed); sibling hook session_start_claude_governance.sh:89-92 has the marker set",
+      "status": "passed"
+    },
+    {
+      "id": "PV-3",
+      "command_or_action": "glob for reports/environment_experience_improvement_pack.zip and /tmp twin",
+      "pass_criteria": "presence decides ingest vs UNKNOWN rows",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "fix-hydrate-boolean",
+      "task": "Classify hydrate from packet JSON booleans via new ops/scripts/classify_hydrate_state.py; conservative no-classifier fallback; twin tests",
+      "files": ["ops/hooks/session_start_bootstrap.sh", "ops/scripts/classify_hydrate_state.py", "ops/scripts/tests/test_classify_hydrate_state.py"],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Replace",
+      "leverage_rank": 1,
+      "shared_root_cause": "substring-as-status"
+    },
+    {
+      "id": "surface-isolate-receipts",
+      "task": "Surface-parameterize claude_bootstrap_receipt.py; downgrade foreign-workspace receipts to stale_other_surface; add cursor-adapter row; guard memory_prefetch.py behind Claude runtime markers",
+      "files": ["ops/scripts/claude_bootstrap_receipt.py", "ops/scripts/session_start_runtime_report.py", "environment/agents/adapters/claude-code/hooks/memory_prefetch.py", "ops/scripts/tests/test_session_start_runtime_report.py", "environment/agents/adapters/claude-code/tests/test_memory_prefetch_guard.py"],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["fix-hydrate-boolean"],
+      "operation": "Replace",
+      "leverage_rank": 2,
+      "shared_root_cause": "receipt-without-surface-identity; hooks-without-runtime-guard"
+    },
+    {
+      "id": "cursor-adapter-pack",
+      "task": "Thin environment/agents/adapters/cursor/ pack + make cursor-install / cursor-install-check + agents README layout line",
+      "files": ["environment/agents/adapters/cursor/", "Makefile", "environment/agents/README.md"],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": ["surface-isolate-receipts"],
+      "operation": "Create",
+      "leverage_rank": 3
+    },
+    {
+      "id": "path-venv",
+      "task": "Homebrew PATH prepend in SessionStart; $HOME workspace refusal in shared bootstrap and install.sh; locked-venv documentation",
+      "files": ["ops/hooks/session_start_bootstrap.sh", "ops/scripts/bootstrap_agent_environment.sh", "environment/agents/adapters/cursor/README.md"],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Insert",
+      "leverage_rank": 4,
+      "shared_root_cause": "$HOME-as-workspace"
+    },
+    {
+      "id": "ingest-debt-ledger",
+      "task": "TECH_DEBT.md + tech_debt.json in WIP/9-2-26/cursor-remediation/ from both packs; no zips; UNKNOWN rows only for evidence that stays absent",
+      "files": ["WIP/9-2-26/cursor-remediation/TECH_DEBT.md", "WIP/9-2-26/cursor-remediation/tech_debt.json"],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Create",
+      "leverage_rank": 5
+    },
+    {
+      "id": "todo-pointer",
+      "task": "One EOF pointer in TODO.md to the ledger; Igor block untouched",
+      "files": ["TODO.md"],
+      "blocker": "none: TODO.md is the literal target filename, not placeholder text",
+      "effort": "S",
+      "risk": "low",
+      "dependencies": ["ingest-debt-ledger"],
+      "operation": "Insert",
+      "leverage_rank": 6
+    },
+    {
+      "id": "emit-simple-plan",
+      "task": "Official PLAN_DOCUMENT + docs/plans .plan.md (kind: simple, execute_via: cursor-build) + section receipt",
+      "files": ["docs/plans/cursor_adapter_first_class_9f3a1c2e.plan.json", "docs/plans/cursor_adapter_first_class_9f3a1c2e.plan.md"],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Create",
+      "leverage_rank": 7
+    },
+    {
+      "id": "publish",
+      "task": "Scoped-commit (pathspecs), l4_local.py authorize-release, PR_STACK=auto PR_REMEDIATE=0 make pr; reply displays the PR URL",
+      "files": [],
+      "blocker": "none: publish ceremony only — no file edits; make pr owns the gate",
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": ["fix-hydrate-boolean", "surface-isolate-receipts", "cursor-adapter-pack", "path-venv", "ingest-debt-ledger", "todo-pointer", "emit-simple-plan"],
+      "leverage_rank": 8
+    }
+  ],
+  "critical_path": [
+    "fix-hydrate-boolean",
+    "surface-isolate-receipts",
+    "cursor-adapter-pack",
+    "publish"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "Shared-brain fixes landed with green tests (hydrate booleans, receipt isolation, prefetch guard, $HOME refusal)",
+      "unlocks": "an honest SessionStart Degraded section on every surface"
+    },
+    {
+      "id": "M2",
+      "outcome": "Cursor adapter pack installed: receipt READY, shared reader reads it, agents-env PASS",
+      "unlocks": "Cursor as a first-class registered surface with its own receipt"
+    },
+    {
+      "id": "M3",
+      "outcome": "Debt ledger + TODO pointer + official plan artifacts committed and published as a stacked PR",
+      "unlocks": "traceability for everything not fixed here"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "surface-isolate-receipts",
+      "evidence_required": "pytest ops/scripts/tests/test_session_start_runtime_report.py + guard test green",
+      "no_go_action": "stop; do not build the adapter on top of a leaking report"
+    },
+    {
+      "id": "C2",
+      "after": "cursor-adapter-pack",
+      "evidence_required": "make cursor-install exits 0, receipt on disk, make agents-env PASS",
+      "no_go_action": "fix the pack before ledger/publish"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "Makefile",
+      "action": "update",
+      "todo_ids": ["cursor-adapter-pack"],
+      "reason": "append-only cursor-install targets; additive_only root file, make pr stamps L9_PROTECTED_ROOT_PR"
+    },
+    {
+      "surface": "TODO.md",
+      "action": "update",
+      "todo_ids": ["todo-pointer"],
+      "reason": "one EOF pointer; additive_only; Igor block untouched"
+    },
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "no doctrine change; adapter README carries the surface map"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Feed the classifier a packet with degraded=false inside the JSON fence — does any hydrate row still appear?",
+      "With the Claude $HOME receipt on disk, run the report as claude-code with this git root — does a Degraded line name claude-adapter?",
+      "Run memory_prefetch.py with no Claude markers — does any stdout context block appear?"
+    ],
+    "assumed_false_ifs": [
+      "CURSOR_PROJECT_DIR is not a git root in real sessions",
+      "hooks.json is not user-owned and must be rewritten by the installer"
+    ],
+    "blast_radius": "SessionStart classification (all surfaces read the shared reporter), receipt reader callers, Claude prefetch hook, Makefile append, WIP/TODO docs. No migrations, no data.",
+    "rollback": "Every deliverable is a revertable unit: hydrate hunk + new script, report classifier hunk, one new directory, appended Makefile lines, two WIP files, one TODO line."
+  },
+  "leverage": {
+    "ranked_todo_ids": ["fix-hydrate-boolean", "surface-isolate-receipts", "cursor-adapter-pack", "path-venv", "ingest-debt-ledger", "todo-pointer", "emit-simple-plan", "publish"],
+    "shared_causes": ["substring-as-status", "receipt-without-surface-identity", "hooks-without-runtime-guard", "$HOME-as-workspace"],
+    "deletions_or_consolidations": ["no second receipt reader — claude_bootstrap_receipt.py parameterized instead", "no adapter-owned hydrate/env logic — everything lands in ops/ first"]
+  },
+  "risks": [
+    {
+      "risk": "Over-eager boolean parse hides a real close-gap",
+      "mitigation": "close_gap=true and degraded=true stay unconditional positives; test_classify_hydrate_state.py covers both; hydration close-gap unit tests stay green"
+    },
+    {
+      "risk": "Guarding memory_prefetch.py blinds real Claude sessions",
+      "mitigation": "guard mirrors the exact marker set session_start_claude_governance.sh:89-92 already trusts; explicit --session-id keeps the documented mid-session repair path"
+    },
+    {
+      "risk": "$HOME refusal breaks a legitimate caller",
+      "mitigation": "no legitimate caller passes $HOME (harness artifact only); refusal exits with a named error naming the fix"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U-B",
+      "question": "Which parent process ran the 20:19Z Claude repair (sibling Claude window vs harness)?",
+      "decision_effect": "none on this plan — receipt facts recorded; downgrade handles either origin",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U-C",
+      "question": "What wrote ~/.cursor/graphiti.env on 2026-06-07?",
+      "decision_effect": "none — file bytes untouched; provenance recorded as unknown in the ledger",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "FV-1",
+      "command": ".venv/bin/python -m pytest ops/scripts/tests/test_classify_hydrate_state.py ops/scripts/tests/test_session_start_runtime_report.py ops/scripts/tests/test_cursor_shared_bootstrap_edge.py environment/agents/adapters/cursor/tests/ environment/agents/adapters/claude-code/tests/test_memory_prefetch_guard.py -q",
+      "pass_criteria": "all green",
+      "status": "passed"
+    },
+    {
+      "id": "FV-2",
+      "command": "make cursor-install WS=\"$(pwd)\" && make cursor-install-check WS=\"$(pwd)\"",
+      "pass_criteria": "exit 0; receipt state ready via shared reader",
+      "status": "passed"
+    },
+    {
+      "id": "FV-3",
+      "command": "python3 -c \"import json; json.load(open('WIP/9-2-26/cursor-remediation/tech_debt.json'))\"",
+      "pass_criteria": "parses",
+      "status": "passed"
+    },
+    {
+      "id": "FV-4",
+      "command": "make agents-env",
+      "pass_criteria": "registry + adapters PASS with the new directory",
+      "status": "passed"
+    },
+    {
+      "id": "FV-5",
+      "command": "PR_STACK=auto PR_REMEDIATE=0 make pr (runs the .pre-commit-config.yaml changed-file catalog + locked ruff/pytest/security)",
+      "pass_criteria": "gate green, PR opened, URL displayed in the finish reply — executes in the publish todo after this artifact is committed (a plan document cannot pre-pass the gate on its own commit)",
+      "status": "skipped"
+    }
+  ],
+  "convergence": {
+    "status": "converged",
+    "remaining_unknown_ids": ["U-B", "U-C"],
+    "next_skill": "none — Build executed; publish via make pr",
+    "stop_reason": "all todos executed; both residual unknowns are accept_bounded and ledgered"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "ops/hooks/session_start_bootstrap.sh",
+      "ops/scripts/classify_hydrate_state.py",
+      "ops/scripts/claude_bootstrap_receipt.py",
+      "ops/scripts/session_start_runtime_report.py",
+      "ops/scripts/bootstrap_agent_environment.sh",
+      "environment/agents/adapters/claude-code/hooks/memory_prefetch.py",
+      "environment/agents/adapters/cursor/**",
+      "Makefile (append-only)",
+      "environment/agents/README.md",
+      "WIP/9-2-26/cursor-remediation/**",
+      "TODO.md (EOF append only)",
+      "docs/plans/cursor_adapter_first_class_9f3a1c2e.*"
+    ],
+    "must_not_modify": [
+      "~/.cursor/graphiti.env",
+      "TODO.md Igor block (line 29+)",
+      "any claude-code installer scripts (guard-only edit to memory_prefetch.py)",
+      "kernels/**",
+      "CANONICAL_LAW.md"
+    ],
+    "preserved_contracts": [
+      "close_gap=true and degraded=true remain unconditional hydrate positives",
+      "claude receipt back-compat: default surface claude, L9_CLAUDE_BOOTSTRAP_RECEIPT honored",
+      "adapters carry no credentials and no second resolver (ADAPTER_CONTRACT)"
+    ],
+    "validation_commands": [
+      ".venv/bin/python -m pytest ops/scripts/tests/ environment/agents/adapters/cursor/tests/ -q",
+      "make cursor-install-check WS=\"$(pwd)\"",
+      "make agents-env"
+    ]
+  },
+  "depth": "standard"
+}

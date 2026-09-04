@@ -1,0 +1,226 @@
+{
+  "schema": "l9.cursor-remediation.tech-debt/v1",
+  "generated_at": "2026-09-02T21:45:00Z",
+  "sources": {
+    "session_pack": "/tmp/l9-env-exp-pack-20260902/ (cursor-2026-09-02-pr-remediator; FAIL-01..11, FRIC-01..06, IMP-01..09)",
+    "other_agent_pack": "reports/environment_experience_improvement_pack.zip (binding_head 119d0df0; F-01..05, FR-01..10, IMP-BOOT/LOADER/ENV-*) — present at build time, read in place",
+    "resolved_in_chat": "hydrate-branch attribution, graphiti.env provenance, Claude $HOME receipt writer (2026-09-02 session)"
+  },
+  "no_zips_rule": "archives are read in place; none live under WIP/9-2-26/cursor-remediation/",
+  "rows": [
+    {
+      "id": "TD-01",
+      "title": "SessionStart marked graphiti-hydrate DEGRADED while the packet said degraded=false",
+      "source": "session pack FAIL-01/IMP-01; resolved-in-chat (bootstrap *degraded* glob, lines 449-456)",
+      "impact": "high",
+      "owner": "bootstrap",
+      "traces_to": ["FAIL-01", "FAIL-07", "IMP-01"],
+      "status": "fixed-by-this-plan",
+      "fixed_by": "ops/scripts/classify_hydrate_state.py + session_start_bootstrap.sh classifier wiring (todo fix-hydrate-boolean)",
+      "done_condition": "A packet with degraded=false and close_gap=false emits no graphiti-hydrate row under ### Degraded (test_classify_hydrate_state.py)"
+    },
+    {
+      "id": "TD-02",
+      "title": "Bootstrap receipts carried no surface/workspace identity, so a Claude $HOME receipt read as this session's state",
+      "source": "session pack FAIL-02/IMP-02; other pack F-01/F-04/IMP-BOOT-01",
+      "impact": "high",
+      "owner": "bootstrap",
+      "traces_to": ["FAIL-02", "FAIL-11", "F-01", "F-04", "IMP-02", "IMP-BOOT-01"],
+      "status": "fixed-by-this-plan",
+      "fixed_by": "claude_bootstrap_receipt.py --surface param; session_start_runtime_report.py stale_other_surface downgrade + cursor-adapter row (todo surface-isolate-receipts)",
+      "done_condition": "Report renders a receipt whose workspace is $HOME or another root as stale_other_surface n/a, never this-session DEGRADED (ReceiptSurfaceIsolationTests)"
+    },
+    {
+      "id": "TD-03",
+      "title": "Shared bootstrap accepted --workspace $HOME and wrote machine-wide receipts against it",
+      "source": "session pack IMP-07; other pack F-01/IMP-BOOT-01; repair log 'workspace /Users/ib-mac is the harness project directory'",
+      "impact": "high",
+      "owner": "bootstrap",
+      "traces_to": ["IMP-07", "F-01", "FR-07"],
+      "status": "fixed-by-this-plan",
+      "fixed_by": "bootstrap_agent_environment.sh + adapters/cursor/install.sh refuse $HOME (todo path-venv)",
+      "done_condition": "Both scripts exit 1 naming the refusal for --workspace $HOME (test_cursor_install.py)"
+    },
+    {
+      "id": "TD-04",
+      "title": "Agent shells missed Homebrew PATH and bound the wrong python",
+      "source": "session pack FAIL-05/FAIL-09/FRIC-01/IMP-05; other pack FR-01",
+      "impact": "high",
+      "owner": "env",
+      "traces_to": ["FAIL-05", "FAIL-09", "FAIL-12", "FRIC-01", "FRIC-05", "IMP-05"],
+      "status": "fixed-by-this-plan",
+      "fixed_by": "session_start_bootstrap.sh Homebrew PATH prepend; adapters/cursor/README.md locked-venv doc (todo path-venv)",
+      "done_condition": "command -v gh and python3 -c 'import yaml' succeed in a fresh agent shell without a per-command prefix"
+    },
+    {
+      "id": "TD-05",
+      "title": "Claude observer hook memory_prefetch.py ran in Cursor sessions and injected agent_id=claude-code hydrate blocks",
+      "source": "resolved-in-chat (this session's context carried two Claude hydrate blocks); other pack FR-04 shows the sibling hook guards correctly",
+      "impact": "high",
+      "owner": "adapter",
+      "traces_to": ["FR-04", "resolved-in-chat"],
+      "status": "fixed-by-this-plan",
+      "fixed_by": "memory_prefetch.py runtime-marker guard mirroring session_start_claude_governance.sh:89-92 (todo surface-isolate-receipts)",
+      "done_condition": "memory_prefetch.py with no Claude marker exits 0 with a skip log and zero stdout context (test_memory_prefetch_guard.py)"
+    },
+    {
+      "id": "TD-06",
+      "title": "Bash and Python Graphiti loaders disagree on precedence (source-overwrite vs setdefault)",
+      "source": "session pack FAIL-03/FRIC-02/IMP-03; other pack FR-01/FR-02/IMP-LOADER-01",
+      "impact": "medium",
+      "owner": "loader",
+      "traces_to": ["FAIL-03", "FRIC-02", "IMP-03", "FR-02", "IMP-LOADER-01"],
+      "status": "open",
+      "done_condition": "One documented precedence matrix; a unit test asserts bash and Python resolve the same GRAPHITI_MCP_URL winner from the same files"
+    },
+    {
+      "id": "TD-07",
+      "title": "Live Graphiti token sits in ~/.cursor/graphiti.env while docs point at a secrets overlay; env_status misnames the token home",
+      "source": "session pack FAIL-04/IMP-04",
+      "impact": "medium",
+      "owner": "env",
+      "traces_to": ["FAIL-04", "IMP-04"],
+      "status": "open",
+      "note": "Secret-plane change — human decision required; explicitly out of scope for this plan. Never print values.",
+      "done_condition": "env_status reports token source class (machine_env|overlay|keychain|process) without values"
+    },
+    {
+      "id": "TD-08",
+      "title": "make claude-env / verify_account_env.py applies Claude-cloud account scoring to Cursor shells",
+      "source": "other pack F-02/F-03/IMP-BOOT-03/IMP-LOADER-03",
+      "impact": "medium",
+      "owner": "adapter",
+      "traces_to": ["F-02", "F-03", "FR-08", "IMP-BOOT-03", "IMP-LOADER-03"],
+      "status": "open",
+      "done_condition": "Without a Claude runtime marker, verify_account_env prints NOT_APPLICABLE exit 0; make claude-env does not exit 5 solely from a HOME-scoped Claude receipt"
+    },
+    {
+      "id": "TD-09",
+      "title": "Readiness receipt says READY while bootstrap receipt says DEGRADED for the same workspace stamp",
+      "source": "other pack F-04/IMP-BOOT-04",
+      "impact": "medium",
+      "owner": "bootstrap",
+      "traces_to": ["F-04", "IMP-BOOT-04"],
+      "status": "open",
+      "done_condition": "If bootstrap-state.json is DEGRADED, l9.claude-readiness.v1 overall_readiness is not READY"
+    },
+    {
+      "id": "TD-10",
+      "title": "claude_projection.py enumerates ~/.cursor-governance.bak.* clones as mount roots",
+      "source": "other pack FR-06/IMP-BOOT-02",
+      "impact": "medium",
+      "owner": "bootstrap",
+      "traces_to": ["FR-06", "IMP-BOOT-02"],
+      "status": "open",
+      "done_condition": "A new projection-receipt.json contains no mount_root under ~/.cursor-governance.bak.*"
+    },
+    {
+      "id": "TD-11",
+      "title": "Stale l9-governance.backup.20260814_232353 plugin still on Cursor's always-apply rules path",
+      "source": "other pack FR-05/IMP-ENV-02; still observed in this session's applied rules",
+      "impact": "medium",
+      "owner": "env",
+      "traces_to": ["FR-05", "IMP-ENV-02"],
+      "status": "open",
+      "note": "User-machine change under ~/.cursor/plugins/local/ — not repo-tracked; needs an operator move or a wiring-tool cleanup rule",
+      "done_condition": "A new Cursor session's always-applied rules include no path under l9-governance.backup.*"
+    },
+    {
+      "id": "TD-12",
+      "title": "graphiti.env.defaults comment still names the retired L9_MEMORY_HTTP_URL side door",
+      "source": "other pack FR-03/IMP-ENV-01",
+      "impact": "low",
+      "owner": "env",
+      "traces_to": ["FR-03", "IMP-ENV-01"],
+      "status": "open",
+      "done_condition": "rg L9_MEMORY_HTTP_URL ops/graphiti/graphiti.env.defaults returns no matches"
+    },
+    {
+      "id": "TD-13",
+      "title": "gitleaks 8.30.0 vs pin 8.24.3 warning prints beside real degrades every check",
+      "source": "session pack FAIL-10/IMP-09; other pack FR-09/IMP-ENV-03",
+      "impact": "low",
+      "owner": "env",
+      "traces_to": ["FAIL-10", "IMP-09", "FR-09", "IMP-ENV-03"],
+      "status": "open",
+      "done_condition": "Receipt lists gitleaks_pin=warn separately; pin bumped or allow-newer documented in requirements.txt"
+    },
+    {
+      "id": "TD-14",
+      "title": "Archived env_loader.py can be rediscovered as a live loader though its CSV source is gone",
+      "source": "other pack F-05/IMP-LOADER-04; TODO.md A3",
+      "impact": "low",
+      "owner": "loader",
+      "traces_to": ["F-05", "IMP-LOADER-04"],
+      "status": "open",
+      "done_condition": "environment/_archived/env_loader.py raises retired before writing .env, or is deleted per TODO.md A3"
+    },
+    {
+      "id": "TD-15",
+      "title": "GitHub branch-protection API shape undocumented (partial PUT 404s; only full-document PUT works; DELETE stays denied)",
+      "source": "session pack FAIL-06/FRIC-04/IMP-06",
+      "impact": "low",
+      "owner": "env",
+      "traces_to": ["FAIL-06", "FRIC-04", "IMP-06"],
+      "status": "open",
+      "done_condition": "One ops note + helper that PUTs the full protection document; DELETE gate unweakened"
+    },
+    {
+      "id": "TD-16",
+      "title": "governance_refresh receipt reads never_ran on this machine",
+      "source": "session pack FAIL-11",
+      "impact": "low",
+      "owner": "bootstrap",
+      "traces_to": ["FAIL-11"],
+      "status": "open",
+      "done_condition": "governance_refresh_receipt.py --json reports a fresh state after SessionStart"
+    },
+    {
+      "id": "TD-17",
+      "title": "Hydrated PICKUP surfaced a finished Website-Bot objective instead of the live task",
+      "source": "session pack FAIL-07",
+      "impact": "low",
+      "owner": "bootstrap",
+      "traces_to": ["FAIL-07", "IMP-01"],
+      "status": "open",
+      "done_condition": "PICKUP compile prefers the newest session-scoped episode; stale finished objectives are not re-surfaced as next="
+    },
+    {
+      "id": "TD-18",
+      "title": "zsh agent-shell discipline undocumented (SH_WORD_SPLIT off; ? globbing broke gh API URLs)",
+      "source": "session pack FAIL-05/FRIC-05 residual after TD-04",
+      "impact": "low",
+      "owner": "env",
+      "traces_to": ["FAIL-05", "FRIC-05", "IMP-05"],
+      "status": "open",
+      "done_condition": "Agent-shell note documents quoting/setopt rules; remediator scripts pass shellcheck for the two observed patterns"
+    },
+    {
+      "id": "TD-19",
+      "title": "Prior environment-experience packs duplicated under two WIP trees",
+      "source": "session pack FRIC-06 (WIP/8-26-26-Claude Environment/_archive duplicates)",
+      "impact": "low",
+      "owner": "env",
+      "traces_to": ["FRIC-06"],
+      "status": "open",
+      "done_condition": "make wip-hygiene dedupes or inventories the duplicate pack trees with landed: markers"
+    }
+  ],
+  "unknown_register": [
+    {
+      "id": "U-A",
+      "status": "resolved",
+      "note": "Other agent's pack was absent at planning time; present at build time at reports/environment_experience_improvement_pack.zip and /tmp/environment_experience_improvement_pack.zip — ingested above (F-*/FR-*/IMP-* rows)."
+    },
+    {
+      "id": "U-B",
+      "status": "open",
+      "note": "Which parent process ran the 2026-09-02T20:19:36Z Claude repair (sibling Claude window vs harness) — receipt facts recorded (workspace=/Users/ib-mac, writer=claude install.sh); parent unknowable from disk."
+    },
+    {
+      "id": "U-C",
+      "status": "open",
+      "note": "What wrote ~/.cursor/graphiti.env on 2026-06-07 — predates tracked init_graphiti_machine_env.sh (2026-07-04, never overwrites); provenance unknown; file bytes untouched."
+    }
+  ]
+}

@@ -34,6 +34,7 @@ environment/agents/
 │   └── WORK_CLAIM_PROTOCOL.md # anti-duplication claim protocol
 ├── adapters/
 │   ├── ADAPTER_CONTRACT.md    # three-carrier contract (from claude-code)
+│   ├── cursor/                # active — thin Cursor-IDE binding (install + receipt + SessionStart spec)
 │   ├── manus/                 # active — connector + env + bootstrap + setup
 │   ├── codex/                 # active — MCP + config.toml + AGENTS block
 │   ├── gemini/                # active — settings + GEMINI block + setup
