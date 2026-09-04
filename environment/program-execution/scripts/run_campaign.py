@@ -139,6 +139,37 @@ def refuse_publication(action: str) -> None:
 _PUBLICATION_GIT_SUBCOMMANDS = frozenset({"push"})
 _PUBLICATION_GH_PR_SUBCOMMANDS = frozenset({"create", "merge", "edit", "ready", "close", "reopen"})
 _MUTATING_HTTP_METHODS = frozenset({"POST", "PATCH", "PUT", "DELETE"})
+#: `gh api` flags that carry a request body. gh sends POST for any of them
+#: unless a method is named, so a body without `-X` is still a mutation.
+_GH_API_BODY_FLAGS = frozenset({"-f", "--raw-field", "-F", "--field", "--input"})
+#: gh global options that take a value and may precede the subcommand.
+_GH_GLOBAL_VALUE_OPTIONS = frozenset({"-R", "--repo", "--hostname"})
+#: Scripts that are publication acts wherever they are spawned from: the
+#: sanctioned publisher itself, the stack-safe merge helper, and the two
+#: merge-authorization writers.
+_PUBLICATION_SCRIPTS = frozenset(
+    {
+        "open_pr_after_gate.sh",
+        "stack_safe_merge.py",
+        "authorize_campaign_merge.py",
+        "authorize_merge.py",
+    }
+)
+
+
+def _gh_subcommand_tokens(rest: list[str]) -> list[str]:
+    """`rest` with gh's leading global options removed."""
+    index = 0
+    while index < len(rest):
+        token = rest[index]
+        if token in _GH_GLOBAL_VALUE_OPTIONS:
+            index += 2
+            continue
+        if token.startswith("-"):
+            index += 1
+            continue
+        break
+    return rest[index:]
 
 
 def _git_subcommand(rest: list[str]) -> str:
@@ -171,26 +202,38 @@ def publication_command(cmd: list[str]) -> str | None:
     if exe == "git" and _git_subcommand(rest) in _PUBLICATION_GIT_SUBCOMMANDS:
         return "push a branch to a remote"
     if exe == "gh":
-        if rest[:1] == ["pr"] and len(rest) >= 2 and rest[1] in _PUBLICATION_GH_PR_SUBCOMMANDS:
-            return f"run gh pr {rest[1]}"
+        # Global options (`gh -R owner/repo pr merge 1`) precede the subcommand
+        # and must not hide it from classification.
+        rest = _gh_subcommand_tokens(rest)
+        if rest[:1] == ["pr"]:
+            verbs = [token for token in rest[1:] if not token.startswith("-")]
+            if verbs and verbs[0] in _PUBLICATION_GH_PR_SUBCOMMANDS:
+                return f"run gh pr {verbs[0]}"
         if rest[:1] == ["api"]:
             for index, token in enumerate(rest):
                 if token in {"-X", "--method"} and index + 1 < len(rest):
                     if rest[index + 1].upper() in _MUTATING_HTTP_METHODS:
                         return "mutate GitHub through the REST API"
+                if token in _GH_API_BODY_FLAGS or any(
+                    token.startswith(f"{flag}=") for flag in _GH_API_BODY_FLAGS
+                ):
+                    return "mutate GitHub through the REST API"
         return None
-    if exe == "make":
+    if exe in {"make", "l9"}:
+        # `l9 pr` is the cross-repo dispatcher's spelling of `make pr`.
         for token in rest:
             if token.startswith("-") or ENV_ASSIGN_RE.match(token):
                 continue
             if token == "pr":
                 return "invoke the make pr publish path"
         return None
-    # Merge authorization is a publication act wherever it is spawned from.
-    if any(Path(part).name == "authorize_campaign_merge.py" for part in argv):
-        return "write a merge authorization receipt"
-    if any(Path(part).name == "authorize_merge.py" for part in argv):
-        return "write a merge authorization receipt"
+    # Publication scripts are publication acts wherever they are spawned from.
+    for part in argv:
+        name = Path(part).name
+        if name in _PUBLICATION_SCRIPTS:
+            if name.startswith("authorize"):
+                return "write a merge authorization receipt"
+            return f"invoke the publication script {name}"
     return None
 
 
@@ -317,14 +360,14 @@ def blueprint_fingerprint(blueprint: Path) -> str:
     normalised away. Including it would add no information and would make
     every recompilation look like a different input.
     """
-    try:
-        files = sorted(
-            item for item in blueprint.rglob("*") if item.is_file() and item.name != "MANIFEST.yaml"
-        )
-    except OSError:
-        return pe_trace.fingerprint(str(blueprint), "<unreadable>")
+    # A missing or unreadable blueprint is not a stable input: keying it would
+    # let "nothing" reuse a prepared stage. OSError propagates instead.
+    files = sorted(
+        item for item in blueprint.rglob("*") if item.is_file() and item.name != "MANIFEST.yaml"
+    )
     return pe_trace.fingerprint(
-        *[part for item in files for part in (str(item.relative_to(blueprint)), item)]
+        *[part for item in files for part in (str(item.relative_to(blueprint)), item)],
+        strict=True,
     )
 
 
@@ -2248,8 +2291,10 @@ def campaign_source_shape(source: Path) -> dict[str, Any] | None:
     for task in tasks:
         if not isinstance(task, dict) or not task.get("id"):
             return None
-        digests[str(task["id"])] = pe_trace.fingerprint(task)
-    return {"body": pe_trace.fingerprint(body), "tasks": digests}
+        # Operator sources are compared byte-for-byte: an edit confined to a
+        # timestamp scalar is still an edit, so no timestamp normalisation here.
+        digests[str(task["id"])] = pe_trace.fingerprint_inputs(task)
+    return {"body": pe_trace.fingerprint_inputs(body), "tasks": digests}
 
 
 def edited_task_ids(current: dict[str, Any], recorded: Any) -> list[str] | None:
@@ -2503,11 +2548,15 @@ def render_progress(
 
 
 def blueprint_byte_inventory(blueprint: Path) -> dict[str, str]:
-    """Content inventory for the accepted Blueprint, including MANIFEST bytes."""
+    """Content inventory for the accepted Blueprint, including MANIFEST bytes.
+
+    Regular files only: a symlink inside the tree is refused by `tree_files`
+    rather than digested as if its target were blueprint content.
+    """
+    ops = _load_script("blueprint_ops", PE_ROOT / "scripts/blueprint_ops.py")
     return {
         path.relative_to(blueprint).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
-        for path in sorted(blueprint.rglob("*"))
-        if path.is_file()
+        for path in ops.tree_files(blueprint)
     }
 
 
@@ -2870,11 +2919,9 @@ def _task_autonomy_authority(
     task_id = str(contract.get("task_id") or contract.get("id") or "")
     if not task_id:
         return None
-    attempt_number = int(contract.get("attempt_number") or 1)
-    path = _grant_module().grant_receipt_path(workspace, task_id, attempt_number, kind="grant")
-    if not path.is_file():
+    _generation, receipt = _grant_module().latest_grant_receipt(workspace, task_id)
+    if not receipt:
         return None
-    receipt = json.loads(path.read_text(encoding="utf-8"))
     authority = receipt.get("autonomy_authority")
     return dict(authority) if isinstance(authority, dict) else None
 
@@ -2955,6 +3002,42 @@ def _grant_module() -> Any:
     )
 
 
+def _persisted_task_grant(workspace: Path, contract: dict[str, Any]) -> dict[str, Any] | None:
+    """The grant receipt PE recorded for this task/attempt, if one exists.
+
+    A resumed SUBMITTED/VERIFYING task is finished by verification alone, but
+    the subordinate lease its window ran under is still live until something
+    terminalizes it. Reading the receipt back is what lets the resume retire
+    that lease instead of leaving it ACTIVE for its whole TTL.
+    """
+    task_id = str(contract.get("task_id") or contract.get("id") or "")
+    if not task_id:
+        return None
+    _generation, receipt = _grant_module().latest_grant_receipt(workspace, task_id)
+    return receipt if isinstance(receipt, dict) and receipt.get("lease_id") else None
+
+
+def _retire_resumed_grant(unit: dict[str, Any], verification: dict[str, Any]) -> None:
+    """Close the root lease of a resumed attempt once the Controller has ruled.
+
+    Verification is the Controller's; what this closes is only the child
+    authority. A verified attempt releases its lease, a rejected one revokes
+    it, and neither outcome is allowed to mask the verdict itself.
+    """
+    grant = unit.get("grant")
+    if not grant:
+        return
+    grants = _grant_module()
+    verdict = str(verification.get("verdict") or "UNKNOWN")
+    try:
+        if verdict == "PASSED_LOCAL":
+            grants.release_task_grant(grant, reason="RESUMED_ATTEMPT_VERIFIED")
+        else:
+            grants.revoke_task_grant(grant, reason=f"resumed attempt verdict {verdict}"[:500])
+    except Exception as exc:  # noqa: BLE001 — never mask the Controller verdict
+        log(f"root lease retirement for resumed {unit.get('task_id')} failed: {exc}")
+
+
 def _grant_root_authority(
     workspace: Path,
     task_id: str,
@@ -2970,7 +3053,9 @@ def _grant_root_authority(
     writer lease is never orphaned.
     """
     grants = _grant_module()
-    attempt_number = int(contract.get("attempt_number") or 1)
+    # The root plane numbers grant generations itself: a lost window's live
+    # grant is resumed, a terminal one is succeeded by the next generation.
+    attempt_number = contract.get("attempt_number")
     # The root lease carries the full canonical peer identity, not just the
     # surface: the adapter session it is bound to must be the conformant
     # session for this peer/surface/provider/profile tuple.
@@ -2989,7 +3074,7 @@ def _grant_root_authority(
                 GOV_ROOT,
                 workspace,
                 contract,
-                attempt_number=attempt_number,
+                attempt_number=int(attempt_number) if attempt_number else None,
                 adapter_id=binding.provider_ref,
                 agent_ref=binding.agent_ref,
                 surface=binding.surface,
@@ -3090,6 +3175,108 @@ def provider_effected_paths(worktree: Path, baseline: Mapping[str, str] | None) 
         for path in actual_changed_paths(worktree)
         if known.get(path) != _path_fingerprint(worktree, path)
     )
+
+
+EFFECT_BASELINE_SCHEMA = "l9.program-execution.effect-baseline.v1"
+
+
+def effect_baseline_path(workspace: Path, task_id: str) -> Path:
+    """Where PE keeps the pre-dispatch effect baseline it took for one task."""
+    return workspace / "runtime" / "peer-execution" / "effect-baselines" / f"{task_id}.json"
+
+
+def persist_effect_baseline(
+    workspace: Path,
+    task_id: str,
+    *,
+    contract: Mapping[str, Any],
+    worktree: Path,
+    baseline: Mapping[str, str],
+) -> Path:
+    """Record the snapshot taken before this task's provider window opens.
+
+    Mediation coverage is judged against a baseline that predates every
+    provider effect. Taking that baseline from the live tree is right exactly
+    once -- before the first window is dispatched. A resumed EXECUTING task
+    already carries its interrupted window's writes, and a fresh snapshot
+    there would fingerprint those writes INTO the baseline and exempt them
+    from coverage, so an unmediated write could ride a resume into a recorded
+    Program attempt. Persisting the original snapshot, bound to the exact
+    rendered contract, base SHA and worktree, is what lets a resume be judged
+    against the same starting point its window was.
+    """
+    payload = {
+        "schema": EFFECT_BASELINE_SCHEMA,
+        "task_id": task_id,
+        "contract_digest": str(contract.get("contract_digest") or ""),
+        "base_sha": str(contract.get("base_sha") or ""),
+        "worktree": str(Path(worktree).resolve()),
+        "recorded_at": utc_now(),
+        "baseline": dict(baseline),
+    }
+    return _write_json_atomic(effect_baseline_path(workspace, task_id), payload)
+
+
+def load_effect_baseline(
+    workspace: Path,
+    task_id: str,
+    *,
+    contract: Mapping[str, Any],
+    worktree: Path,
+) -> dict[str, str]:
+    """The persisted pre-dispatch baseline of a resumed EXECUTING task, or fail closed.
+
+    A task that is EXECUTING with no baseline PE itself recorded was started
+    outside a dispatch PE witnessed. Its worktree effects cannot be attributed
+    to any mediated window, and guessing a baseline from the current tree is
+    the hole this function exists to close -- so the answer is a refusal, not
+    a best effort.
+    """
+    path = effect_baseline_path(workspace, task_id)
+    if not path.is_file():
+        raise CampaignError(
+            f"{task_id} is EXECUTING with no persisted pre-dispatch effect baseline at {path}; "
+            "its worktree effects cannot be attributed to a mediated provider window, so "
+            "Program Execution refuses to resume it. Reset the task (pec fresh-workspace, "
+            "then claim and start) so a fresh window is dispatched under a fresh baseline.",
+            error_code="EFFECT_BASELINE_MISSING",
+        )
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise CampaignError(
+            f"{task_id}: persisted effect baseline is unreadable: {path}: {exc}",
+            error_code="EFFECT_BASELINE_MISSING",
+        ) from exc
+    if not isinstance(payload, dict):
+        raise CampaignError(
+            f"{task_id}: persisted effect baseline is not an object: {path}",
+            error_code="EFFECT_BASELINE_MISMATCH",
+        )
+    expected = {
+        "schema": EFFECT_BASELINE_SCHEMA,
+        "task_id": task_id,
+        "contract_digest": str(contract.get("contract_digest") or ""),
+        "base_sha": str(contract.get("base_sha") or ""),
+        "worktree": str(Path(worktree).resolve()),
+    }
+    for key, value in expected.items():
+        recorded = str(payload.get(key) or "")
+        if recorded != value:
+            raise CampaignError(
+                f"{task_id}: persisted effect baseline {key} {recorded!r} does not match the "
+                f"resumed task {value!r}; refusing to attribute effects across a changed {key}",
+                error_code="EFFECT_BASELINE_MISMATCH",
+            )
+    baseline = payload.get("baseline")
+    if not isinstance(baseline, dict) or not all(
+        isinstance(key, str) and isinstance(value, str) for key, value in baseline.items()
+    ):
+        raise CampaignError(
+            f"{task_id}: persisted effect baseline carries no path fingerprints: {path}",
+            error_code="EFFECT_BASELINE_MISMATCH",
+        )
+    return dict(baseline)
 
 
 def _require_mediated_effects(
@@ -3276,6 +3463,11 @@ def _prepare_peer_unit(
     state = str((states.get(task_id) or {}).get("runtime_state") or "")
     if state in {"STALE", "CANCELLED", "FAILED"}:
         raise CampaignError(f"{task_id} is {state}; Peer Core does not blind-retry failed attempts")
+    # An EXECUTING task at entry is a window PE dispatched earlier and lost
+    # (interrupted campaign process). Its worktree may already carry that
+    # window's effects, so the coverage baseline must be the one recorded
+    # before that window opened -- never a fresh snapshot of the tree.
+    resumed_executing = state == "EXECUTING"
     contract_path = workspace / "contracts" / "rendered" / f"{task_id}.json"
     worktree = workspace / "worktrees" / task_id
     already_submitted = state in {"SUBMITTED", "VERIFYING"}
@@ -3320,10 +3512,47 @@ def _prepare_peer_unit(
     contract = json.loads(Path(str(rendered["contract"])).read_text(encoding="utf-8"))
     contract = fill_inferred_validation(Path(str(rendered["contract"])), contract, worktree)
     grant: dict[str, Any] | None = None
+    # Snapshot of everything PE itself changed while wiring the worktree, taken
+    # before any provider effect exists, so coverage is judged on the
+    # provider's own writes. Persisted at first dispatch and reloaded on a
+    # resume: a resumed EXECUTING window is judged against the baseline its
+    # own dispatch recorded, and one with no recorded baseline fails closed.
+    pre_dispatch_baseline: dict[str, str] = {}
     if not already_submitted:
+        if resumed_executing:
+            try:
+                pre_dispatch_baseline = load_effect_baseline(
+                    workspace, task_id, contract=contract, worktree=Path(str(worktree))
+                )
+            except CampaignError as exc:
+                # Effects nobody can attribute never become a Program attempt.
+                # The task is FAILED canonically now, before any grant is
+                # issued, so nothing holds live authority for it afterwards.
+                _record_canonical_failure(workspace, None, task_id, str(exc))
+                raise
+            baseline_source = "persisted"
+        else:
+            pre_dispatch_baseline = worktree_effect_baseline(Path(str(worktree)))
+            persist_effect_baseline(
+                workspace,
+                task_id,
+                contract=contract,
+                worktree=Path(str(worktree)),
+                baseline=pre_dispatch_baseline,
+            )
+            baseline_source = "observed"
+        emit(
+            trace,
+            "TASK_EFFECT_BASELINE",
+            "authority",
+            "pre_dispatch_effect_baseline",
+            task_id=task_id,
+            metadata={"source": baseline_source, "paths": len(pre_dispatch_baseline)},
+        )
         # Required prepare sequence: contract → claim → worktree → render →
-        # fill/lock validation → root-Autonomy grant → start → dispatch. The
-        # peer scheduler's readiness decision is never mutation authority.
+        # fill/lock validation → effect baseline → root-Autonomy grant → start
+        # → dispatch. The peer scheduler's readiness decision is never mutation
+        # authority.
         grant = _grant_root_authority(workspace, task_id, contract, trace=trace)
         # Re-read the live state: the inferred-validation relock path re-claims
         # and restarts the task itself, and starting twice is an illegal edge.
@@ -3340,6 +3569,11 @@ def _prepare_peer_unit(
         )
         if live_state in {"LEASED", "PREPARED", "CONTRACTED"}:
             pec_cmd(workspace, "start", task_id, "--actor", "make-campaign")
+    else:
+        # The attempt is recorded; only verification remains. Its window's
+        # root lease is still live and must be retired once the Controller
+        # has ruled, so the resume carries the grant it ran under.
+        grant = _persisted_task_grant(workspace, contract)
     writable = [str(path) for path in (contract.get("writable_paths") or []) if path]
     if not writable:
         writable = task_output_locations(task)
@@ -3352,14 +3586,10 @@ def _prepare_peer_unit(
         "rel": writable[0],
         "title": str(task.get("title") or task_id),
         "already_submitted": already_submitted,
+        "resumed_executing": resumed_executing,
         "grant": grant,
         "autonomy_authority": (grant or {}).get("autonomy_authority"),
-        # Snapshot taken after PE finished wiring the worktree and before any
-        # provider effect exists, so coverage is judged on the provider's own
-        # writes.
-        "pre_dispatch_baseline": (
-            {} if already_submitted else worktree_effect_baseline(Path(str(worktree)))
-        ),
+        "pre_dispatch_baseline": pre_dispatch_baseline,
     }
 
 
@@ -3611,6 +3841,8 @@ def _finish_peer_unit(
 
     with timer.stage("task_verify", task_id=task_id):
         verification = traced_verify(workspace, task_id, trace=trace, attempt_number=attempt_number)
+    if unit["already_submitted"]:
+        _retire_resumed_grant(unit, verification)
     if verification.get("verdict") != "PASSED_LOCAL":
         # The Controller rejected the attempt this root evidence supported.
         # Root autonomy withdraws its support; it never decides the verdict.
@@ -3644,6 +3876,7 @@ def _finish_peer_unit(
         unit["title"],
         writable=writable,
         commit_authorized=contract_allows_commit(contract),
+        observed=[str(path) for path in (verification.get("observed_changed_files") or [])],
     )
     emit(
         trace,
@@ -3654,19 +3887,9 @@ def _finish_peer_unit(
         metadata={"candidate_sha": candidate},
     )
     evidence_id = str(verification["evidence_id"])
-    for gate_id in task.get("completion_gates") or task.get("completion_gate_ids") or []:
-        pec_cmd(
-            workspace,
-            "evaluate-gate",
-            str(gate_id),
-            "PASS",
-            "--evidence-id",
-            evidence_id,
-            "--method",
-            "inspection",
-            "--actor",
-            "make-campaign",
-        )
+    evaluate_completion_gates(
+        workspace, task, evidence_id, trace=trace, attempt_number=attempt_number
+    )
     pec_cmd(
         workspace,
         "complete",
@@ -3852,6 +4075,64 @@ def run_worker_handoff(
     return outcome.to_dict()
 
 
+def locked_gates(workspace: Path) -> list[dict[str, Any]]:
+    """Gate definitions as the Program Lock froze them."""
+    lock_path = workspace / "runtime" / "program-lock.json"
+    if not lock_path.is_file():
+        return []
+    try:
+        lock = json.loads(lock_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    gates = lock.get("gates") if isinstance(lock, dict) else None
+    return [gate for gate in (gates or []) if isinstance(gate, dict)]
+
+
+def evaluate_completion_gates(
+    workspace: Path,
+    task: dict[str, Any],
+    evidence_id: str,
+    *,
+    trace: pe_trace.ExecutionTrace | None = None,
+    attempt_number: int | None = None,
+) -> None:
+    """Ask the Controller to evaluate this task's completion gates.
+
+    One owner for both execution paths. The runner supplies the verification
+    evidence it holds plus whatever evidence the gate's own definition declares
+    it requires; the Controller decides whether that evidence supports the
+    gate's scope. The runner never decides a gate -- a gate whose declared
+    evidence does not exist stays unevaluated and the campaign stops truthfully.
+    """
+    task_id = str(task.get("id") or "")
+    gates = {str(gate.get("id")): gate for gate in locked_gates(workspace) if gate.get("id")}
+    for gate_id in task.get("completion_gates") or task.get("completion_gate_ids") or []:
+        definition = gates.get(str(gate_id)) or {}
+        required = [str(item) for item in definition.get("required_evidence_ids") or []]
+        argv: list[str] = []
+        for item in dict.fromkeys([evidence_id, *required]):
+            argv.extend(["--evidence-id", item])
+        with traced(
+            trace,
+            "gate",
+            "evaluate_gate",
+            task_id=task_id,
+            attempt_number=attempt_number,
+            metadata={"gate_id": str(gate_id)},
+        ):
+            pec_cmd(
+                workspace,
+                "evaluate-gate",
+                str(gate_id),
+                "PASS",
+                *argv,
+                "--method",
+                "inspection",
+                "--actor",
+                "make-campaign",
+            )
+
+
 def contract_allows_commit(contract: dict[str, Any]) -> bool:
     """Does this rendered contract actually carry commit authority?"""
     return "commit" in {str(item) for item in (contract.get("requested_actions") or [])}
@@ -3864,13 +4145,20 @@ def write_and_commit_output(
     writable: list[str] | None = None,
     *,
     commit_authorized: bool,
+    observed: list[str] | None = None,
 ) -> str:
-    """Commit every declared writable file that holds real work, not one stub.
+    """Commit exactly the verified work, not one stub.
 
     The commit boundary is where PE's terminal effect happens, so authority is
     checked here rather than at each caller: a task whose rendered contract does
     not request `commit` never reaches `git add`. `local_write` is not commit
     authority and never implies it.
+
+    When the Controller has already verified the tree, `observed` is the exact
+    set of paths its verdict covers and is what gets staged -- a path the
+    verdict saw but a declared-path filter would have dropped (a glob scope, a
+    file under a directory scope) is committed, and nothing the verdict did not
+    see is. Without a verdict the declared writable paths are the only guide.
     """
     if not commit_authorized:
         raise CampaignError(
@@ -3878,12 +4166,23 @@ def write_and_commit_output(
             "action. Local write authority is not commit authority -- the task's "
             "authorization ceiling must permit commit for its work to be committed"
         )
-    declared = list(dict.fromkeys([*(writable or []), rel]))
-    to_add = [
-        item
-        for item in declared
-        if item and not is_stub_output(worktree / item, title, primary=(item == rel))
-    ]
+    if observed is not None:
+        if rel in observed and is_stub_output(worktree / rel, title, primary=True):
+            raise CampaignError(
+                f"refuse stub output for {rel}; implement the task in {worktree} first"
+            )
+        to_add = [item for item in dict.fromkeys(observed) if item]
+        if not to_add:
+            raise CampaignError(
+                f"refuse to commit {rel}: the verification observed no changed files"
+            )
+    else:
+        declared = list(dict.fromkeys([*(writable or []), rel]))
+        to_add = [
+            item
+            for item in declared
+            if item and not is_stub_output(worktree / item, title, primary=(item == rel))
+        ]
     if not to_add:
         raise CampaignError(f"refuse stub output for {rel}; implement the task in {worktree} first")
     added = run_cmd(
@@ -4283,27 +4582,9 @@ def _default_execute_legacy(
                 f"failed gates={json.dumps(failed_gates(verification), sort_keys=True)}"
             )
         evidence_id = str(verification["evidence_id"])
-        for gate_id in task.get("completion_gates") or task.get("completion_gate_ids") or []:
-            with traced(
-                trace,
-                "gate",
-                "evaluate_gate",
-                task_id=task_id,
-                attempt_number=attempt_number,
-                metadata={"gate_id": str(gate_id)},
-            ):
-                pec_cmd(
-                    workspace,
-                    "evaluate-gate",
-                    str(gate_id),
-                    "PASS",
-                    "--evidence-id",
-                    evidence_id,
-                    "--method",
-                    "inspection",
-                    "--actor",
-                    "make-campaign",
-                )
+        evaluate_completion_gates(
+            workspace, task, evidence_id, trace=trace, attempt_number=attempt_number
+        )
         pec_cmd(
             workspace,
             "complete",
@@ -4505,23 +4786,46 @@ def default_close(
                 )
             merge_fn = hooks.authorize_and_merge or default_authorize_and_merge
             merge_fn(host_repo, number)
+    # The verdict is the Controller's recommendation, read from a handoff it
+    # exported over its own state -- never a literal the runner asserts.
+    handoff_path = workspace / "receipts" / "handoffs" / "campaign-close-handoff.json"
+    handoff = pec_cmd(
+        workspace,
+        "export-handoff",
+        "--actor",
+        "make-campaign",
+        "--output",
+        str(handoff_path),
+    )
+    verdict = str(handoff.get("recommended_program_verdict") or "INCONCLUSIVE")
+    if verdict not in {"CONVERGED", "CONVERGED_WITH_NON_BLOCKING_RISKS"}:
+        raise CampaignError(
+            f"refuse to close {campaign_id}: Controller recommends {verdict}; "
+            f"handoff {handoff.get('handoff_id')} at {handoff_path}"
+        )
     pec_cmd(
         workspace,
         "close",
         "--actor",
         "make-campaign",
         "--verdict",
-        "CONVERGED",
+        verdict,
         "--evidence",
         f"campaign_id={campaign_id}",
+        "--evidence",
+        f"handoff_id={handoff.get('handoff_id')}",
     )
     closer = _load_script("close_campaign", PE_ROOT / "campaigns/scripts/close_campaign.py")
     campaigns_root = write_root / "environment/program-execution/campaigns"
     closer.close_campaign(
         campaigns_root,
         campaign_id,
-        "CONVERGED",
-        {"campaign_id": campaign_id, "pec_workspace": str(workspace)},
+        verdict,
+        {
+            "campaign_id": campaign_id,
+            "pec_workspace": str(workspace),
+            "handoff_id": str(handoff.get("handoff_id") or ""),
+        },
         "make-campaign",
     )
     archived = closer.archive_completed(campaigns_root, campaign_id)
@@ -4538,6 +4842,67 @@ def target_head_sha(target_path: Path) -> str:
     if sha.returncode != 0 or not re.fullmatch(r"[0-9a-f]{40}", value):
         raise CampaignError(f"admit requires a reconciled 40-char target HEAD, got {value!r}")
     return value
+
+
+def reconcile_resumed_source(
+    *,
+    campaign_id: str,
+    source: Path,
+    pec_workspace: Path,
+    l9_home: Path,
+) -> dict[str, Any]:
+    """Refuse or absorb authored-source drift before a resumed runtime executes.
+
+    Compares the campaign source on disk with the shape the prepared runtime
+    was compiled from (`PREPARE_STATE.json`, `compile.source`). A per-task edit
+    is relocked through the Controller, exactly as a fresh `make campaign`
+    would do it; an edit to the program body or the task set cannot be
+    absorbed and stops the resume with `SOURCE_DRIFT_ON_RESUME`. No recorded
+    shape means nothing to compare -- the runtime was prepared before this
+    record existed -- and the resume proceeds on the lock alone.
+    """
+    if not source.is_file():
+        return {"status": "NO_SOURCE"}
+    shape = campaign_source_shape(source)
+    if shape is None:
+        raise CampaignError(
+            f"{campaign_id}: campaign source {source} is not a campaign-source document; "
+            "refusing to resume against it",
+            error_code="SOURCE_DRIFT_ON_RESUME",
+        )
+    timing = _load_script("pe_timing", PE_ROOT / "scripts/pe_timing.py")
+    prepare = _load_script("pe_prepare_state", PE_ROOT / "scripts/pe_prepare_state.py")
+    primed = l9_home / "primed" / campaign_id
+    reuse = prepare.PrepareCache(
+        timing.StageCache(primed, enabled=True),
+        prepare.PrepareState.load(primed / "PREPARE_STATE.json", campaign_id=campaign_id),
+    )
+    cached = reuse.recorded_value("compile")
+    recorded = (cached or {}).get("source") if isinstance(cached, dict) else None
+    if not isinstance(recorded, dict):
+        return {"status": "NO_RECORDED_SHAPE"}
+    edited = edited_task_ids(shape, recorded)
+    if edited is None:
+        raise CampaignError(
+            f"{campaign_id}: the campaign source changed its program body or task set since "
+            "the runtime was prepared; a resume cannot absorb that. Run make campaign "
+            "without a live runtime (or quarantine it) to rebuild from the new source.",
+            error_code="SOURCE_DRIFT_ON_RESUME",
+        )
+    if not edited:
+        return {"status": "CURRENT"}
+    adopted = adopt_changed_definitions(pec_workspace, edited)
+    if adopted is None:
+        raise CampaignError(
+            f"{campaign_id}: edited task definitions {edited} cannot be absorbed by the live "
+            "runtime (pec relock refused); rebuild from the new source instead of resuming",
+            error_code="SOURCE_DRIFT_ON_RESUME",
+        )
+    key = str((reuse.state.stages.get("compile") or {}).get("key") or "")
+    if key:
+        reuse.store("compile", key, {**cached, "source": shape})
+    log(f"resume {campaign_id}: relocked edited definitions {', '.join(edited)}")
+    return {"status": "RELOCKED", "relocked": edited, "adopted": adopted}
 
 
 def resume_live_campaign(
@@ -4585,6 +4950,16 @@ def resume_live_campaign(
     )
     resume_blueprint = Path(report.blueprint)
     resume_blueprint_inventory = blueprint_byte_inventory(resume_blueprint)
+    # The authored source is not runtime state, but a resume that never looks
+    # at it would execute a lock the operator has since edited underneath. Ask
+    # the source what moved: per-task edits are relocked, anything wider is a
+    # different program wearing the same id and is refused.
+    reconcile_resumed_source(
+        campaign_id=campaign_id,
+        source=campaign_source_path(write_root, campaign_id),
+        pec_workspace=pec_workspace,
+        l9_home=l9_home,
+    )
     log(f"resume {campaign_id} (runtime active; workspace kept, not quarantined)")
     report.stages_completed.append("resume")
     repository_id = str((seed.get("target") or {}).get("repository_id") or host_repo)
@@ -5069,7 +5444,7 @@ def _stage_blueprint(run: _CampaignRun) -> CampaignReport | None:
     # Fingerprint the campaign's own inputs only. Folding a shared registry in
     # meant registering an unrelated campaign invalidated this one's prepared
     # runtime and forced a full rebuild.
-    compile_input = pe_trace.fingerprint(source, stack_proof_path)
+    compile_input = pe_trace.fingerprint_inputs(source, stack_proof_path)
     # Preparing an already-prepared campaign is the operation an operator repeats
     # most often, and stepping the runtime aside to rebuild it unconditionally is
     # what made the second run cost the same as the first. Step aside only when

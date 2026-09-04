@@ -125,6 +125,19 @@ completion:
     - files_changed_are_truthful
     - unresolved_items_are_explicit
     - provenance_is_present
+  # The assignment, not the document, supplies scope and subject; the host stop
+  # verdict and the root lease outrank the document (see
+  # environment/agents/results/RESULT_CONTRACT.yaml acceptance_authority).
+  authority_over_document:
+    - host_terminal_status_must_be_success
+    - root_lease_must_not_be_revoked_or_expired
+    - writable_paths_come_from_assignment_only
+    - empty_writable_grant_admits_no_changed_files
+    - review_subject_comes_from_assignment_only
+    - verifier_lease_refused_for_a_producer_agent
+    - task_subagent_type_must_match_admitted_managed_agent
+  role_vocabulary_owner: result_bridge.py#AUTONOMY_ROLE_TO_CURSOR_ROLE
+  background_policy_owner: CURSOR_SUBAGENT_ROLES.yaml#default_background
   role_guards:
     recon:
       changed_files_allowed: false

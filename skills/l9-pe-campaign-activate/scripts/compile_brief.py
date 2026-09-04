@@ -237,8 +237,22 @@ def extract_tasks(text: str) -> list[dict[str, Any]]:
     )
 
 
+def normalize_text(raw: str) -> str:
+    """LF line endings, no BOM, trailing newline.
+
+    The same three rules as `compiler.architecture_intent.normalize_source`,
+    applied before frontmatter is matched: `FRONTMATTER_RE` anchors at the
+    first byte, so a byte-order mark or CRLF endings used to hide a declared
+    header and reroute the document as a plain memo.
+    """
+    text = raw.replace("\ufeff", "").replace("\r\n", "\n").replace("\r", "\n")
+    if text and not text.endswith("\n"):
+        text += "\n"
+    return text
+
+
 def parse_frontmatter(text: str) -> dict[str, Any] | None:
-    match = FRONTMATTER_RE.match(text)
+    match = FRONTMATTER_RE.match(normalize_text(text))
     if match is None or yaml is None:
         return None
     try:
@@ -311,24 +325,33 @@ def extract_plan_todos(raw: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def load_companion_plan_document(plan_path: Path, text: str) -> dict[str, Any] | None:
-    """Load a cited PLAN_DOCUMENT JSON so todo files survive into the seed."""
-    candidates: list[Path] = []
+    """Load a cited PLAN_DOCUMENT JSON so todo files survive into the seed.
+
+    Candidates live in the plan's own directory only: a citation is resolved
+    by basename beside the plan, never followed to an arbitrary absolute path,
+    so a plan cannot make the compiler read JSON from anywhere on disk. A
+    cited companion that exists but does not parse is an error, not an absent
+    companion — silently dropping it dropped every todo's `files` with it.
+    """
+    candidates: list[tuple[Path, bool]] = []
     cited = PLAN_DOCUMENT_CITE_RE.search(text)
     if cited:
         raw_name = Path(cited.group(1).strip())
-        candidates.append(plan_path.parent / raw_name.name)
-        if raw_name.is_absolute():
-            candidates.append(raw_name)
-    candidates.append(plan_path.with_suffix(".json"))
+        candidates.append((plan_path.parent / raw_name.name, True))
+    candidates.append((plan_path.with_suffix(".json"), False))
     seen: set[Path] = set()
-    for candidate in candidates:
+    for candidate, was_cited in candidates:
         resolved = candidate.resolve() if candidate.exists() else candidate
         if resolved in seen or not candidate.is_file():
             continue
         seen.add(resolved)
         try:
             payload = json.loads(candidate.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            if was_cited:
+                raise BriefError(
+                    f"cited PLAN_DOCUMENT {candidate.name} does not parse: {exc}"
+                ) from exc
             continue
         if isinstance(payload, dict) and isinstance(payload.get("todos"), list):
             return payload
@@ -486,7 +509,7 @@ def load_mapping(path: Path) -> Any:
     if yaml is None:
         raise BriefError("PyYAML required")
     try:
-        return yaml.safe_load(path.read_text(encoding="utf-8"))
+        return yaml.safe_load(normalize_text(path.read_text(encoding="utf-8")))
     except yaml.YAMLError:
         return None
 
@@ -537,7 +560,7 @@ def compile_brief(
     brief_path = brief_path.resolve()
     if not brief_path.is_file():
         raise BriefError(f"brief not found: {brief_path}")
-    text = brief_path.read_text(encoding="utf-8")
+    text = normalize_text(brief_path.read_text(encoding="utf-8"))
     raw = load_mapping(brief_path)
     if not isinstance(raw, dict):
         raw = parse_frontmatter(text)

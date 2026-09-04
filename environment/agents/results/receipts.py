@@ -20,15 +20,35 @@ def _root() -> Path:
     return agent_runtime_root() / "results"
 
 
-def _safe_id(value: Any) -> str:
+def safe_receipt_id(value: Any, *, label: str = "result_id") -> str:
+    """One identifier grammar for every receipt path component.
+
+    Receipt files are named after identifiers a host or a subagent supplied;
+    anything outside this alphabet (``..``, ``/``, whitespace) would let such
+    an identifier escape the receipt root, so it is refused rather than
+    written.
+    """
     text = str(value or "").strip()
-    if not text or not _SAFE_ID.fullmatch(text):
-        raise ValueError("result_id contains unsupported characters")
+    if not text or not _SAFE_ID.fullmatch(text) or set(text) == {"."}:
+        raise ValueError(f"{label} contains unsupported characters")
     return text
 
 
-def acceptance_path(result_id: str) -> Path:
-    return _root() / f"{_safe_id(result_id)}.json"
+def _safe_id(value: Any) -> str:
+    return safe_receipt_id(value)
+
+
+def acceptance_path(result_id: str, assignment_id: str | None = None) -> Path:
+    """Acceptance receipts are keyed by ``(assignment_id, result_id)``.
+
+    A result_id is chosen by the producing subagent, so two agents on two
+    actions may legitimately pick the same one; only within one assignment is
+    a differing body under the same result_id a collision.
+    """
+    name = f"{_safe_id(result_id)}.json"
+    if assignment_id is None:
+        return _root() / name
+    return _root() / safe_receipt_id(assignment_id, label="assignment_id") / name
 
 
 def _atomic_write(path: Path, data: bytes) -> None:
@@ -74,7 +94,7 @@ def write_acceptance(body: dict[str, Any]) -> dict[str, Any]:
     encoded = (
         json.dumps(stored, indent=2, sort_keys=True, ensure_ascii=False).encode("utf-8") + b"\n"
     )
-    path = acceptance_path(result_id)
+    path = acceptance_path(result_id, body.get("assignment_id"))
     if path.is_file():
         existing = path.read_bytes()
         if existing == encoded:
@@ -89,6 +109,6 @@ def write_acceptance(body: dict[str, Any]) -> dict[str, Any]:
     return stored
 
 
-def load_acceptance(result_id: str) -> dict[str, Any] | None:
-    path = acceptance_path(result_id)
+def load_acceptance(result_id: str, assignment_id: str | None = None) -> dict[str, Any] | None:
+    path = acceptance_path(result_id, assignment_id)
     return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None

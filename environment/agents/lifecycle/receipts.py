@@ -16,6 +16,7 @@ from environment.agents.lifecycle.schemas import (
     PR_ASSIGNMENT_SCHEMA,
     RETURN_SCHEMA,
 )
+from environment.agents.results.receipts import safe_receipt_id
 from environment.agents.runtime_paths import (
     agent_runtime_root,
     assignment_root,
@@ -79,28 +80,36 @@ def write_json(path: Path, body: dict[str, Any]) -> dict[str, Any]:
     return stored
 
 
+def _assignment_file(assignment_id: str) -> str:
+    return f"{safe_receipt_id(assignment_id, label='assignment_id')}.json"
+
+
+def _subagent_file(subagent_id: str) -> str:
+    return f"{safe_receipt_id(subagent_id, label='subagent_id')}.json"
+
+
 def assignment_path(assignment_id: str) -> Path:
-    return assignment_root() / f"{assignment_id}.json"
+    return assignment_root() / _assignment_file(assignment_id)
 
 
 def dispatch_path(assignment_id: str) -> Path:
-    return subagent_receipt_root() / "dispatch" / f"{assignment_id}.json"
+    return subagent_receipt_root() / "dispatch" / _assignment_file(assignment_id)
 
 
 def return_path(assignment_id: str) -> Path:
-    return subagent_receipt_root() / "return" / f"{assignment_id}.json"
+    return subagent_receipt_root() / "return" / _assignment_file(assignment_id)
 
 
 def raw_result_path(assignment_id: str) -> Path:
-    return agent_runtime_root() / "results" / "raw" / f"{assignment_id}.json"
+    return agent_runtime_root() / "results" / "raw" / _assignment_file(assignment_id)
 
 
 def host_correlation_path(subagent_id: str) -> Path:
-    return subagent_receipt_root() / "host-correlation" / f"{subagent_id}.json"
+    return subagent_receipt_root() / "host-correlation" / _subagent_file(subagent_id)
 
 
 def host_stop_path(subagent_id: str) -> Path:
-    return subagent_receipt_root() / "host-stop" / f"{subagent_id}.json"
+    return subagent_receipt_root() / "host-stop" / _subagent_file(subagent_id)
 
 
 def write_host_correlation(fields: dict[str, Any]) -> dict[str, Any]:
@@ -212,7 +221,7 @@ def write_pr_remediation_assignment(fields: dict[str, Any]) -> dict[str, Any]:
         "never_force_push": True,
         **fields,
     }
-    path = assignment_root() / "pr-remediation" / f"{aid}.json"
+    path = assignment_root() / "pr-remediation" / _assignment_file(aid)
     return write_json(path, body)
 
 

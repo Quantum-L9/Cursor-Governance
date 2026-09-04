@@ -26,8 +26,14 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from autonomy.adapters.cursor.adapter import _cursor_subagent_type
 from autonomy.adapters.orchestrator import AdapterOrchestrator
 from autonomy.runtime.engine import AutonomyRuntime
+from autonomy.runtime.leases import (
+    independence_sources,
+    producer_agent_ids,
+    requires_independence,
+)
 from autonomy.runtime.timeutil import parse_timestamp, utc_now, utc_now_text
 
 _BINDINGS_REL = Path("environment/agents/PEER_RUNTIME_BINDINGS.yaml")
@@ -98,11 +104,30 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_cursor_host_admissions_tool_use
     ON cursor_host_admissions(tool_use_id) WHERE tool_use_id IS NOT NULL;
 """
 
+# Columns added after the table first shipped. ``CREATE TABLE IF NOT EXISTS``
+# never widens an existing table, so they are reconciled per connection.
+_ADMISSION_COLUMNS = (
+    ("action_allowed_paths_json", "TEXT NOT NULL DEFAULT '[]'"),
+    ("subject_agent_id", "TEXT"),
+    ("expected_subagent_type", "TEXT"),
+)
+
+
+def _ensure_admission_schema(connection: sqlite3.Connection) -> None:
+    connection.executescript(_ADMISSION_DDL)
+    present = {row[1] for row in connection.execute("PRAGMA table_info(cursor_host_admissions)")}
+    for name, declaration in _ADMISSION_COLUMNS:
+        if name not in present:
+            connection.execute(
+                f"ALTER TABLE cursor_host_admissions ADD COLUMN {name} {declaration}"
+            )
+    connection.commit()
+
 
 def _connect(database: str | Path) -> sqlite3.Connection:
     connection = sqlite3.connect(str(database))
     connection.row_factory = sqlite3.Row
-    connection.executescript(_ADMISSION_DDL)
+    _ensure_admission_schema(connection)
     return connection
 
 
@@ -113,6 +138,7 @@ def _deny(reason: str) -> dict[str, Any]:
 def _admission_dict(row: sqlite3.Row) -> dict[str, Any]:
     value = dict(row)
     value["allowed_paths"] = json.loads(value.pop("allowed_paths_json"))
+    value["action_allowed_paths"] = json.loads(value.pop("action_allowed_paths_json") or "[]")
     value["forbidden_paths"] = json.loads(value.pop("forbidden_paths_json"))
     value["is_parallel_worker"] = (
         None if value["is_parallel_worker"] is None else bool(value["is_parallel_worker"])
@@ -132,7 +158,7 @@ class CursorHostBridge:
         self.runtime = runtime
         self.orchestrator = orchestrator
         with self.runtime.store.connect() as connection:
-            connection.executescript(_ADMISSION_DDL)
+            _ensure_admission_schema(connection)
 
     # ------------------------------------------------------------------
     # producer: root authority first, then an opaque single-use token
@@ -185,6 +211,30 @@ class CursorHostBridge:
         campaign = self.runtime.store.decode_campaign(campaign_id)
         campaign_row = self.runtime.store.get_campaign(campaign_id)
         scope = campaign.get("scope") or {}
+        role = str(action["role"])
+        # Writable scope is the intersection the capability gateway enforces:
+        # a path must satisfy the campaign scope AND, when the action narrows
+        # it, the action scope. Forbidden paths are the union of both.
+        action_metadata = action.get("metadata") or {}
+        allowed_paths = list(scope.get("allowed_paths") or [])
+        action_allowed_paths = list(action_metadata.get("allowed_paths") or [])
+        forbidden_paths = list(scope.get("forbidden_paths") or [])
+        for pattern in action_metadata.get("forbidden_paths") or []:
+            if pattern not in forbidden_paths:
+                forbidden_paths.append(pattern)
+        subject_agent_id: str | None = None
+        if requires_independence(action):
+            with self.runtime.store.connect() as connection:
+                producers = producer_agent_ids(
+                    connection,
+                    campaign_id=campaign_id,
+                    action_ids=independence_sources(action),
+                )
+            subject_agent_id = producers[0] if producers else None
+        try:
+            expected_subagent_type: str | None = _cursor_subagent_type(role)
+        except ValueError:
+            expected_subagent_type = None
         token = f"admission-{uuid.uuid4().hex}"
         now = utc_now_text()
         with self.runtime.store.transaction() as connection:
@@ -194,8 +244,9 @@ class CursorHostBridge:
                     admission_token, status, session_id, campaign_id, graph_id,
                     action_id, role, agent_id, lease_id, capability_id,
                     base_sha, allowed_paths_json, forbidden_paths_json,
-                    created_at, expires_at
-                ) VALUES (?, 'PENDING', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    action_allowed_paths_json, subject_agent_id,
+                    expected_subagent_type, created_at, expires_at
+                ) VALUES (?, 'PENDING', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     token,
@@ -203,13 +254,16 @@ class CursorHostBridge:
                     campaign_id,
                     campaign_row["graph_id"],
                     selected_action,
-                    str(action["role"]),
+                    role,
                     agent_id,
                     lease["lease_id"],
                     lease["capability_id"],
                     lease["base_sha"],
-                    json.dumps(list(scope.get("allowed_paths") or [])),
-                    json.dumps(list(scope.get("forbidden_paths") or [])),
+                    json.dumps(allowed_paths),
+                    json.dumps(forbidden_paths),
+                    json.dumps(action_allowed_paths),
+                    subject_agent_id,
+                    expected_subagent_type,
                     now,
                     lease["expires_at"],
                 ),
@@ -224,8 +278,15 @@ class CursorHostBridge:
             "prompt_marker": f"L9_ADMISSION_TOKEN={token}",
         }
 
-    def bind_pre_tool_use(self, token: str, tool_use_id: str) -> dict[str, Any]:
-        return host_bind_pre_tool_use(self.runtime.store.database_path, token, tool_use_id)
+    def bind_pre_tool_use(
+        self, token: str, tool_use_id: str, *, subagent_type: str | None = None
+    ) -> dict[str, Any]:
+        return host_bind_pre_tool_use(
+            self.runtime.store.database_path,
+            token,
+            tool_use_id,
+            subagent_type=subagent_type,
+        )
 
     def bind_subagent_start(self, **kwargs: Any) -> dict[str, Any]:
         return host_bind_subagent_start(self.runtime.store.database_path, **kwargs)
@@ -235,6 +296,25 @@ class CursorHostBridge:
 # hook-side binders: raw SQLite against the same root runtime database,
 # cheap enough for a host hook process and free of policy loading.
 # ----------------------------------------------------------------------
+
+
+def lease_status(database: str | Path, lease_id: str) -> str | None:
+    """Terminal or live status of a root lease, or None when it does not exist.
+
+    Cheap raw-SQLite read for hook-side callers (the result gateway re-checks
+    the lease at stop time); no policy is loaded.
+    """
+    connection = sqlite3.connect(str(database))
+    connection.row_factory = sqlite3.Row
+    try:
+        row = connection.execute(
+            "SELECT status FROM leases WHERE lease_id = ?", (str(lease_id),)
+        ).fetchone()
+    except sqlite3.OperationalError:
+        return None
+    finally:
+        connection.close()
+    return None if row is None else str(row["status"])
 
 
 def _lease_active(connection: sqlite3.Connection, lease_id: str) -> str | None:
@@ -256,16 +336,20 @@ def host_bind_pre_tool_use(
     database: str | Path,
     token: str,
     tool_use_id: str,
+    *,
+    subagent_type: str | None = None,
 ) -> dict[str, Any]:
     """Bind a host preToolUse(Task) ``tool_use_id`` to a pending admission.
 
     Denies when the token is missing, unknown, expired, already bound to a
-    different tool use (single-use), or when the underlying root lease is no
-    longer ACTIVE. The Task text never contributes anything but the opaque
-    token itself.
+    different tool use (single-use), when the underlying root lease is no
+    longer ACTIVE, or when the Task names a managed ``subagent_type`` other
+    than the one the admission was minted for. The Task text never
+    contributes anything but the opaque token itself.
     """
     token = str(token or "").strip()
     tool_use_id = str(tool_use_id or "").strip()
+    subagent_type = str(subagent_type or "").strip() or None
     if not token or not tool_use_id:
         return _deny("admission token and tool_use_id are required")
     connection = _connect(database)
@@ -276,6 +360,12 @@ def host_bind_pre_tool_use(
         ).fetchone()
         if row is None:
             return _deny("unknown admission token")
+        expected_type = row["expected_subagent_type"]
+        if subagent_type and expected_type and subagent_type != expected_type:
+            return _deny(
+                f"Task subagent_type {subagent_type!r} does not match the admitted "
+                f"managed agent {expected_type!r}"
+            )
         if utc_now() >= parse_timestamp(row["expires_at"]):
             connection.execute(
                 "UPDATE cursor_host_admissions SET status='EXPIRED' WHERE admission_token=?",
