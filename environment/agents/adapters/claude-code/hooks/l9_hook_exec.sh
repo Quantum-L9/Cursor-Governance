@@ -84,15 +84,17 @@ fi
 if [ "$HOOK_CLASS" = "gate" ] && [ "${L9_SURFACE_GUARD:-1}" != "0" ]; then
   _L9_HOOK_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
   _L9_SD_LIB=""
-  for _L9_SD_CAND in \
-    "${_L9_HOOK_DIR}/../../../../ops/scripts/lib/surface_detect.sh" \
-    "$GOV_DIR/ops/scripts/lib/surface_detect.sh"
-  do
-    if [ -f "$_L9_SD_CAND" ]; then
-      _L9_SD_LIB="$_L9_SD_CAND"
+  _L9_WALK="$_L9_HOOK_DIR"
+  while [ -n "$_L9_WALK" ] && [ "$_L9_WALK" != "/" ]; do
+    if [ -f "$_L9_WALK/ops/scripts/lib/surface_detect.sh" ]; then
+      _L9_SD_LIB="$_L9_WALK/ops/scripts/lib/surface_detect.sh"
       break
     fi
+    _L9_WALK="$(dirname "$_L9_WALK")"
   done
+  if [ -z "$_L9_SD_LIB" ] && [ -f "$GOV_DIR/ops/scripts/lib/surface_detect.sh" ]; then
+    _L9_SD_LIB="$GOV_DIR/ops/scripts/lib/surface_detect.sh"
+  fi
   if [ -n "$_L9_SD_LIB" ] && [ -f "$_L9_SD_LIB" ]; then
     # shellcheck source=../../../../ops/scripts/lib/surface_detect.sh
     . "$_L9_SD_LIB"
@@ -110,7 +112,7 @@ if [ "$HOOK_CLASS" = "gate" ] && [ "${L9_SURFACE_GUARD:-1}" != "0" ]; then
     esac
     unset _L9_SURFACE
   fi
-  unset _L9_SD_LIB _L9_SD_CAND _L9_HOOK_DIR
+  unset _L9_SD_LIB _L9_WALK _L9_HOOK_DIR
 fi
 
 SKIP_LOG="${L9_HOOK_SKIP_LOG:-$HOME/.l9/claude/hook-skips.log}"

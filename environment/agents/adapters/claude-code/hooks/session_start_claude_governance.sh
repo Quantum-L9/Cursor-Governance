@@ -85,18 +85,20 @@ _l9_emit_partial() {
 # with cloud account-field drift, broker probes, and never_ran installer
 # receipts that cannot pass here. Skip unless surface_detect says Claude.
 # Marker SSOT: ops/scripts/lib/surface_detect.sh (twin of surface_detect.py).
-# Prefer this checkout's tree (worktree / clone), then the live SSOT.
+# Prefer this checkout's tree (walk up for ops/scripts/lib), then the live SSOT.
 _L9_HOOK_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 _L9_SD_LIB=""
-for _L9_SD_CAND in \
-  "${_L9_HOOK_DIR}/../../../../ops/scripts/lib/surface_detect.sh" \
-  "${HOME}/.cursor-governance/ops/scripts/lib/surface_detect.sh"
-do
-  if [ -f "$_L9_SD_CAND" ]; then
-    _L9_SD_LIB="$_L9_SD_CAND"
+_L9_WALK="$_L9_HOOK_DIR"
+while [ -n "$_L9_WALK" ] && [ "$_L9_WALK" != "/" ]; do
+  if [ -f "$_L9_WALK/ops/scripts/lib/surface_detect.sh" ]; then
+    _L9_SD_LIB="$_L9_WALK/ops/scripts/lib/surface_detect.sh"
     break
   fi
+  _L9_WALK="$(dirname "$_L9_WALK")"
 done
+if [ -z "$_L9_SD_LIB" ] && [ -f "${HOME}/.cursor-governance/ops/scripts/lib/surface_detect.sh" ]; then
+  _L9_SD_LIB="${HOME}/.cursor-governance/ops/scripts/lib/surface_detect.sh"
+fi
 if [ -n "$_L9_SD_LIB" ]; then
   # shellcheck source=../../../../ops/scripts/lib/surface_detect.sh
   . "$_L9_SD_LIB"
@@ -117,7 +119,7 @@ else
   fi
   unset _l9_claude_runtime
 fi
-unset _L9_SD_LIB _L9_SD_CAND _L9_HOOK_DIR
+unset _L9_SD_LIB _L9_WALK _L9_HOOK_DIR
 
 WORKSPACE="${CLAUDE_PROJECT_DIR:-$PWD}"
 
