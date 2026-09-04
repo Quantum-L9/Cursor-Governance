@@ -51,7 +51,7 @@ means the wrong interpreter, not a missing dependency.
 ## Reading the receipt
 
 ```bash
-python3 ops/scripts/claude_bootstrap_receipt.py --surface cursor --json
+"$HOME/.cursor-governance/.venv/bin/python" ops/scripts/claude_bootstrap_receipt.py --surface cursor --json
 ```
 
 One reader, one expiry rule, for every surface. A receipt whose `workspace`

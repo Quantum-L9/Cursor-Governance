@@ -70,6 +70,8 @@ def classify(markdown: str) -> tuple[bool, str]:
         return False, ""
     if "hydrate CLI missing" in markdown:
         return True, "hydrate CLI missing"
+    if "hydration degraded" in markdown.casefold():
+        return True, "hydration degraded"
     if _LEADING_DEGRADED_RE.search(markdown):
         for line in markdown.splitlines():
             if "DEGRADED" in line:

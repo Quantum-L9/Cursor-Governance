@@ -364,7 +364,7 @@ def collect(
         classify_skill_usage(skill_note),
         classify_itest(error=probe_neo4j(), codegraph=codegraph),
     ]
-    receipt = read_claude_receipt()
+    receipt = read_claude_receipt(path=root / ".l9" / "claude" / "bootstrap-state.json")
     repair_log, repair_text = latest_repair_log(root / ".l9" / "claude")
     lines.extend(
         classify_claude_adapter(
@@ -378,7 +378,10 @@ def collect(
     lines.extend(
         classify_cursor_adapter(
             surface=surface,
-            receipt=read_claude_receipt(surface="cursor"),
+            receipt=read_claude_receipt(
+                path=root / ".l9" / "cursor" / "bootstrap-state.json",
+                surface="cursor",
+            ),
             workspace=workspace,
         )
     )

@@ -902,4 +902,5 @@ cursor-install:
 cursor-install-check:
 	bash "$(CURDIR)/environment/agents/adapters/cursor/install.sh" \
 		--governance "$(CURDIR)" --workspace "$(if $(WS),$(WS),$(CURDIR))" --check
-	L9_GOV_ROOT="$(CURDIR)" $(PYTHON) ops/scripts/claude_bootstrap_receipt.py --surface cursor --json
+	L9_GOV_ROOT="$(CURDIR)" $(PYTHON) ops/scripts/claude_bootstrap_receipt.py \
+		--surface cursor --path "$$HOME/.l9/cursor/bootstrap-check.json" --json

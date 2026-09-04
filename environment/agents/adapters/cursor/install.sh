@@ -132,17 +132,20 @@ else
   REASON_HOOKS="~/.cursor/hooks.json missing or has no session-start-bootstrap registration (AGENTS.md §2.1)"
 fi
 
-PLUGIN_LINK="$HOME/.cursor/plugins/local/l9-governance"
-if [ -e "$PLUGIN_LINK" ] && [ -f "$PLUGIN_LINK/CANONICAL_LAW.md" ]; then
-  STATUS_PLUGIN="READY"
-else
-  STATUS_PLUGIN="DEGRADED"
-  REASON_PLUGIN="$PLUGIN_LINK absent or does not resolve to a governance root"
-fi
-
 WS_REAL="$WORKSPACE"
 GOV_REAL="$(cd "$GOV_DIR" && pwd -P)"
 SSOT_REAL="$(cd "$HOME/.cursor-governance" 2>/dev/null && pwd -P || echo "")"
+
+PLUGIN_LINK="$HOME/.cursor/plugins/local/l9-governance"
+PLUGIN_REAL="$(cd "$PLUGIN_LINK" 2>/dev/null && pwd -P || echo "")"
+if [ -n "$PLUGIN_REAL" ] && {
+  [ "$PLUGIN_REAL" = "$GOV_REAL" ] || [ "$PLUGIN_REAL" = "$SSOT_REAL" ]
+}; then
+  STATUS_PLUGIN="READY"
+else
+  STATUS_PLUGIN="DEGRADED"
+  REASON_PLUGIN="$PLUGIN_LINK absent or does not resolve to the canonical governance root"
+fi
 if [ "$WS_REAL" = "$GOV_REAL" ] || { [ -n "$SSOT_REAL" ] && [ "$WS_REAL" = "$SSOT_REAL" ]; }; then
   STATUS_COMMANDS="READY"; REASON_COMMANDS="ssot workspace — no self-alias (CANONICAL_LAW §1)"
 elif [ -L "$WORKSPACE/.cursor-commands" ] && [ -f "$WORKSPACE/.cursor-commands/CANONICAL_LAW.md" ]; then
