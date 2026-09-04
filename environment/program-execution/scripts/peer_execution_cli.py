@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import sys
@@ -9,10 +8,13 @@ from pathlib import Path
 from typing import Any
 
 from peer_execution.bindings import resolve_peer_binding
+from peer_execution.imports import pe_script
 from peer_execution.models import ProbeContext
 from peer_execution.runtime_store import RuntimeStore
 
-from scripts.provider_loader import instantiate, repository_root
+_provider_loader = pe_script("provider_loader")
+instantiate = _provider_loader.instantiate
+repository_root = _provider_loader.repository_root
 
 
 def _json(value: object) -> None:
@@ -110,7 +112,12 @@ def command_lifecycle(args: argparse.Namespace, operation: str) -> int:
 def command_probe(args: argparse.Namespace) -> int:
     runtime = _runtime(args.runtime)
     binding = _binding(args)
-    digest = args.program_lock_digest or hashlib.sha256(b"peer-execution-probe").hexdigest()
+    digest = args.program_lock_digest
+    if not digest:
+        # A probe binds its capability receipt to a Program Lock. Minting one
+        # from a constant recorded capabilities against a program that does
+        # not exist; the routing gate then refused every such receipt anyway.
+        raise ValueError("--program-lock-digest is required: a probe binds to a real Program Lock")
     adapter = instantiate(
         binding.provider_ref,
         runtime,

@@ -162,6 +162,54 @@ def main() -> int:
     else:
         errors.append(f"cursor-build render failed\n{build.stderr}")
 
+    embedded = run(
+        [
+            sys.executable,
+            "scripts/render_plan_pe_autonomy.py",
+            "fixtures/plan_pass.json",
+            "--execute-via=embedded",
+        ]
+    )
+    if embedded.returncode == 0:
+        out = embedded.stdout
+        if "## Handoff to Caller" not in out:
+            errors.append("embedded render missing Handoff to Caller section")
+        if "kind: simple" not in out or "execute_via: embedded" not in out:
+            errors.append("embedded render missing kind/execute_via frontmatter")
+        if "pipeline: embedded" not in out:
+            errors.append("embedded render missing embedded machine-stub pipeline")
+        if "## Execute via @environment/program-execution" in out:
+            errors.append("embedded render retained PE execute heading")
+        if "Execute via Cursor Build" in out:
+            errors.append("embedded render leaked Cursor Build execute heading")
+        # Embedded is planning evidence only: no live execution authority at all.
+        for banned in (
+            "Press **Build**",
+            "PR_STACK=auto",
+            "PR_REMEDIATE=0",
+            "make pr",
+            "display the PR URL",
+            "agent_worktree_start.sh",
+            "make campaign",
+            "Program Lock",
+            "Controller lease",
+        ):
+            if banned in out:
+                errors.append(f"embedded render leaked execution authority: {banned}")
+    else:
+        errors.append(f"embedded render failed\n{embedded.stderr}")
+
+    bad_mode = run(
+        [
+            sys.executable,
+            "scripts/render_plan_pe_autonomy.py",
+            "fixtures/plan_pass.json",
+            "--execute-via=not-a-mode",
+        ]
+    )
+    if bad_mode.returncode == 0:
+        errors.append("invalid --execute-via unexpectedly succeeded")
+
     # Local Cursor mirror: optional, but fail-closed when present and drifted.
     sync = run([sys.executable, "scripts/sync_cursor_plan_template.py", ".", "--check"])
     if sync.returncode not in {0, 1}:

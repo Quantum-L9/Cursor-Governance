@@ -6,8 +6,8 @@ role: ownership_boundary
 tags: [pr, ownership, codebase, ci-pipeline, edit-axis]
 owner: igor_beylin
 status: active
-version: 3.3.0
-updated: 2026-08-30
+version: 3.4.0
+updated: 2026-09-02
 /L9_META -->
 
 # Ownership Boundary
@@ -41,19 +41,19 @@ Read-only surfaces (never edit here):
 - contradictory lint/type config when the needed change alters enforcement rather than code
 - missing secrets / provisioning / third-party outages
 
-**Action:** cite evidence in the cycle status. Do not edit. Do not emit issue-file bundles or tarballs. Continue every independent codebase cluster. Then let the board decide the PR: if the failing check is **required** and cannot be fixed without editing CI, declare it (`pr_board.py --unfixable-check "{name}"`) and that PR is `leftover`. If the check is not in the required set, it never blocked merge.
+**Action:** cite evidence in the cycle status. Do not edit. Do not emit issue-file bundles or tarballs. Continue every independent codebase cluster. Then let the board decide the PR: if the failing check is **required** and cannot be fixed without editing CI, declare it (`pr_board.py --unfixable-check "{name}"`) and that PR is `leftover`. Open the GitHub issue and launch `l9-issue-remediation` ([issue-handoff.md](issue-handoff.md)). If the check is not in the required set, it never blocked merge.
 
 ## ENVIRONMENT
 
 Interpreter, arch, ABI, or venv failure (cryptography native-ext import, Rosetta miniconda on arm64, broken SSOT `.venv`). Not a source defect.
 
-**Action:** run the venv preflight once ([run-contract.md](run-contract.md)). Export `UV_PYTHON` to uv-managed **native** CPython. Do not use `uv python find --system` (conda `base` wins). Do not edit source. Do not unpin lock pins. Do not symlink a failing SSOT venv. Do not edit the Makefile from this skill. Continue every independent codebase cluster.
+**Action:** run the venv preflight once ([run-contract.md](run-contract.md)). Export `UV_PYTHON` to uv-managed **native** CPython. Do not use `uv python find --system` (conda `base` wins). Do not edit source. Do not unpin lock pins. Do not symlink a failing SSOT venv. Do not edit the Makefile from this skill. If it is still broken after that one preflight, open the issue handoff ([issue-handoff.md](issue-handoff.md)). Continue every independent codebase cluster.
 
 ## HUMAN
 
 Needs product, architecture, legal, or security-exception judgment.
 
-**Action:** name the decision in the reply (linked issue if Deferred), resolve the thread, finish all independent codebase work, then pass the decision to `pr_board.py --human-decision "{decision}"` so that PR is `leftover` on a named decision rather than on a hunch. An unnamed "feels like a human call" is not a decision and does not park a PR. GitHub conversation resolution is itself a merge blocker — do not leave `isResolved: false`.
+**Action:** name the decision in the reply, open the GitHub issue first ([issue-handoff.md](issue-handoff.md)), resolve the thread, finish all independent codebase work, then pass the decision to `pr_board.py --human-decision "{decision}"` so that PR is `leftover` on a named decision rather than on a hunch. An unnamed "feels like a human call" is not a decision and does not park a PR. Do not ask the human to unblock. GitHub conversation resolution is itself a merge blocker — do not leave `isResolved: false`.
 
 ## Code-review agents
 

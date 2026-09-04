@@ -10,6 +10,33 @@ from typing import Any
 _SAFE_IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,199}$")
 
 
+def write_json_atomic(path: Path, value: dict[str, Any]) -> None:
+    """Write JSON so a concurrent or crashed reader never sees a half file.
+
+    Shared by the runtime store and by every host-facing file another process
+    polls (Cursor task requests, ChatGPT envelopes, autonomy grant receipts).
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = json.dumps(value, indent=2, sort_keys=True) + "\n"
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            dir=path.parent,
+            delete=False,
+        ) as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+            temporary = Path(handle.name)
+        os.replace(temporary, path)
+        temporary = None
+    finally:
+        if temporary is not None and temporary.exists():
+            temporary.unlink()
+
+
 class RuntimeStore:
     def __init__(self, root: str | Path) -> None:
         self.root = Path(root).expanduser().resolve()
@@ -36,25 +63,7 @@ class RuntimeStore:
 
     @staticmethod
     def _atomic_write(path: Path, value: dict[str, Any]) -> None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        payload = json.dumps(value, indent=2, sort_keys=True) + "\n"
-        temporary: Path | None = None
-        try:
-            with tempfile.NamedTemporaryFile(
-                "w",
-                encoding="utf-8",
-                dir=path.parent,
-                delete=False,
-            ) as handle:
-                handle.write(payload)
-                handle.flush()
-                os.fsync(handle.fileno())
-                temporary = Path(handle.name)
-            os.replace(temporary, path)
-            temporary = None
-        finally:
-            if temporary is not None and temporary.exists():
-                temporary.unlink()
+        write_json_atomic(path, value)
 
     @staticmethod
     def _load_object(path: Path) -> dict[str, Any]:

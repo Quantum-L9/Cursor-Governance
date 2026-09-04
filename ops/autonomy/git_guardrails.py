@@ -1719,6 +1719,9 @@ _GH_GRAPHQL_ALLOWED_MUTATIONS = frozenset(
     {
         "addPullRequestReviewThreadReply",
         "resolveReviewThread",
+        # PUT repos/{o}/{r}/issues/{n}/subscription is not a live REST route
+        # (404). GraphQL updateSubscription is the subscribe path.
+        "updateSubscription",
     }
 )
 

@@ -143,6 +143,51 @@ def test_classify_ssot_path_ok(tmp_path: Path) -> None:
     assert classify_string(str(ssot / "ops" / "hooks" / "x.sh"), ssot) is None
 
 
+def test_tmp_label_filename_is_not_a_governance_root(tmp_path: Path) -> None:
+    """Label-derived /tmp logs contain '.cursor-governance' as a filename, not a dir."""
+    ssot = (tmp_path / ".cursor-governance").resolve()
+    ssot.mkdir()
+    assert classify_string("/tmp/com.tenx.cursor-governance.out", ssot) is None
+    assert classify_string("/tmp/com.tenx.cursor-governance.err", ssot) is None
+
+
+def test_tmp_tenx_label_plist_passes(tmp_path: Path) -> None:
+    agents = tmp_path / "LaunchAgents"
+    agents.mkdir()
+    ssot = tmp_path / ".cursor-governance"
+    ssot.mkdir()
+    _write_plist(
+        agents / "com.tenx.cursor-governance.plist",
+        label="com.tenx.cursor-governance",
+        args=["/bin/bash", "/Users/x/bin/tenx-cursor-governance.sh"],
+        stdout="/tmp/com.tenx.cursor-governance.out",
+    )
+    fails, warns = scan_dir(agents, ssot.resolve())
+    assert fails == []
+    assert warns == []
+    rc = main(["--dir", str(agents), "--ssot", str(ssot)])
+    assert rc == 0
+
+
+def test_non_ssot_cursor_governance_dir_still_fails(tmp_path: Path) -> None:
+    ssot = (tmp_path / ".cursor-governance").resolve()
+    ssot.mkdir()
+    other = tmp_path / "alt" / ".cursor-governance" / "ops" / "x.sh"
+    reason = classify_string(str(other), ssot)
+    assert reason == "governance root other than $HOME/.cursor-governance"
+
+
+def test_suffixed_governance_root_still_fails(tmp_path: Path) -> None:
+    ssot = (tmp_path / ".cursor-governance").resolve()
+    ssot.mkdir()
+    assert classify_string("/Users/x/.cursor-governance-backup/ops/x.sh", ssot) == (
+        "governance root other than $HOME/.cursor-governance"
+    )
+    assert classify_string("/Users/x/GlobalCommands.old/ops/x.sh", ssot) == (
+        "governance root other than $HOME/.cursor-governance"
+    )
+
+
 def test_script_does_not_call_launchctl() -> None:
     text = Path(SCRIPTS / "scan_launchagents.py").read_text(encoding="utf-8")
     assert "launchctl" not in text

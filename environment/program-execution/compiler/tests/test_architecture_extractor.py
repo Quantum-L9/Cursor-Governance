@@ -113,6 +113,69 @@ class DeterministicExtractorTests(unittest.TestCase):
             self.assertIn("MUST NEVER", prohibition["statement"])
 
 
+class OneNormativeVocabularyTests(unittest.TestCase):
+    """CE-AT-002 / CE-AT-003 on the live surface, not only in shadow.
+
+    `architecture_intent.normative_signals` is the single source of normative
+    lexical semantics. These prove the deterministic extractor now reads that
+    vocabulary rather than a second, upper-case-only one of its own — the
+    surface the tests actually force, and the one W4 left open.
+    """
+
+    def test_lowercase_prohibition_survives_with_provenance(self) -> None:
+        """CE-AT-002. The 04_lowercase_prohibition sentence, read live."""
+        with TemporaryDirectory() as raw:
+            intent = _intent(
+                Path(raw),
+                "# Assurance\n\ndon't replace assurance. The existing "
+                "`compiler/intent.py` must stay the parser.\n",
+            )
+            items = DeterministicExtractor().extract(_request(intent)).items
+            kinds = {item["kind"] for item in items}
+            self.assertIn("prohibition", kinds, msg=[i["statement"] for i in items])
+            self.assertIn("requirement", kinds, msg=[i["statement"] for i in items])
+            unit_ids = {unit.id for unit in intent.units}
+            for item in items:
+                self.assertTrue(item["source_refs"], msg=item)
+                self.assertLessEqual(set(item["source_refs"]), unit_ids)
+
+    def test_upper_and_lower_prohibitions_are_semantically_equivalent(self) -> None:
+        """CE-AT-003. Case changes the wording, never the semantics."""
+        extractor = DeterministicExtractor()
+        for lower, upper in (
+            ("it must not happen.", "It MUST NOT happen."),
+            ("don't replace assurance.", "DO NOT replace assurance."),
+            ("never replace assurance.", "NEVER replace assurance."),
+            ("the parser must stay.", "The parser MUST stay."),
+            ("preserve the existing router.", "PRESERVE the existing router."),
+        ):
+            with self.subTest(lower=lower):
+                kind = extractor._sentence_kind(lower)
+                self.assertEqual(
+                    kind,
+                    extractor._sentence_kind(upper),
+                    msg=f"{lower!r} and {upper!r} must reach the same kind",
+                )
+                self.assertIsNotNone(kind)
+
+    def test_material_keep_does_not_silently_disappear(self) -> None:
+        """`normative_signals` calls this material, so a kind must accept it."""
+        extractor = DeterministicExtractor()
+        self.assertEqual(extractor._sentence_kind("keep the existing router."), "scope_include")
+
+    def test_conversational_prose_is_still_not_an_obligation(self) -> None:
+        """Collapsing the vocabularies must not drown coverage (C2 threshold)."""
+        extractor = DeterministicExtractor()
+        for prose in (
+            "Please keep going.",
+            "it deliberately never becomes one.",
+            "risk of drift is acceptable here.",
+            "a READONLY mount is fine.",
+        ):
+            with self.subTest(prose=prose):
+                self.assertIsNone(extractor._sentence_kind(prose))
+
+
 class ResponseContractTests(unittest.TestCase):
     def test_malformed_response_is_refused_not_partially_admitted(self) -> None:
         with self.assertRaises(ExtractorError):

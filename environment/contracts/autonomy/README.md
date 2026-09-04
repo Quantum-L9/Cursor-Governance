@@ -19,4 +19,9 @@ SessionStart already injects `ops/autonomy/surface_profile.yaml`
 is the wire: scoped local commit without asking; ask only before push /
 `make pr`. Do not add a second activation path.
 
+`skills/l9-pr-remediation` consumes the surface-doctrine and merge-gate
+artifacts. It does not own Program state and does not fork
+`surface_profile.yaml`. Above-paygrade leftovers become a GitHub issue
+plus `l9-issue-remediation`, not a human ask.
+
 Validate with `make autonomy-contracts-validate` or `make autonomy-validate`.
