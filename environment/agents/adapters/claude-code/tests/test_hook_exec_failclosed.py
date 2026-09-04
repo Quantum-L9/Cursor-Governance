@@ -354,6 +354,8 @@ class ProgramBoundAuthorizationTests(unittest.TestCase):
             "L9_AUTONOMY_ROOT": str(self.authority["repository_root"]),
             "L9_PROGRAM_WORKSPACE": str(self.authority["workspace"]),
             "L9_PROGRAM_TASK_ID": str(self.authority["task_id"]),
+            "L9_PROGRAM_ATTEMPT_NUMBER": str(self.authority.get("attempt_number") or 1),
+            "L9_AUTONOMY_AUTHORITY_DIGEST": str(self.authority.get("authority_digest") or ""),
             "L9_PROGRAM_LEASE_ID": str(parent.get("lease_id") or ""),
             "L9_PROGRAM_WORKTREE": str(parent.get("worktree") or self.worktree),
         }

@@ -34,27 +34,37 @@ Campaign authorization packet:
 
 Your lock: pr:{{pr_number}} — you alone may push this PR branch until hand-back.
 
-Loop:
+Pre-remediation digest gate (mandatory, read-only):
+0. Read `skills/l9-pr-digest/SKILL.md` before `l9-pr-remediation`.
+1. Bind the exact current PR base SHA and head SHA. Load original task/PR intent and current CI evidence when available.
+2. Run `l9-pr-digest` in machine mode. Preserve `.l9/pr/pr-digest-result.json` as the evidence surface for this head.
+3. If the head changes before remediation starts, discard the stale digest and re-run against the new exact head.
+4. Continue into remediation only for `READY_FOR_REMEDIATION` or `READY_WITH_NON_BLOCKING_NOTES`.
+5. For `NARROW_BEFORE_REMEDIATION`, `ARCHITECTURE_REPAIR_BEFORE_REMEDIATION`, `CI_OR_EXECUTION_FAILURE`, `INTENT_UNKNOWN_REVIEW_REQUIRED`, `BLOCKED`, or `UNKNOWN`: do not remediate. Return the digest decision, evidence, and blockers to main.
+6. When READY, the digest `remediation_packet` is the exclusive remediation scope. Do not broaden it with nearby cleanup or optional refactors.
+
+Loop (only after a READY digest):
 1. gh pr view {{pr_number}} --json number,title,state,mergeable,statusCheckRollup,reviewDecision
 2. gh pr checks {{pr_number}}
 3. Triage unresolved review comments (filter resolved first; act on clear valid fixes)
 4. If conflicts: fetch base, attempt resolve only when intent is clear; else escalate
 
-Remediation (only if packet covers this PR):
+Remediation (only if packet covers this PR and digest is READY):
 - Follow l9-pr-remediation Converge: scoped fix → local verify → ONE commit → push → recheck
 - Max 3 fix-push cycles; then escalate with blockers
 - Without packet coverage: watch-only; escalate proposed diffs to main
 
 Never: merge, force-push, admin merge, weaken tests for green, change CI to hide failures, expand scope, commit secrets.
 
-Notify main ONLY on: check flip, new actionable review, conflict, merge_eligible, or escalation.
+Notify main ONLY on: digest gate block, check flip, new actionable review, conflict, merge_eligible, or escalation.
 Do not spam no-op status.
 
 Cadence: prefer subscribe_pr_activity if available; else backoff 30s→60s→120s; after 30m idle notify main.
 
 Terminal return:
-  status: merge_eligible | escalated | failed
+  status: merge_eligible | digest_blocked | escalated | failed
   head_sha: ...
+  digest_decision: ...
   evidence: ...
   blockers: [...]
 ```
