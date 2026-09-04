@@ -34,6 +34,7 @@ _AUTHORITY_ENVIRONMENT = {
     "L9_AUTONOMY_ROOT": "repository_root",
     "L9_PROGRAM_WORKSPACE": "workspace",
     "L9_PROGRAM_TASK_ID": "task_id",
+    "L9_PROGRAM_ATTEMPT_NUMBER": "attempt_number",
     "L9_AUTONOMY_AUTHORITY_DIGEST": "authority_digest",
 }
 
@@ -111,8 +112,10 @@ class ClaudeCodeProvider:
         for name, field in _AUTHORITY_ENVIRONMENT.items():
             value = authority.get(field)
             if value is None or not str(value).strip():
-                if field == "authority_digest":
-                    continue
+                # The digest and attempt number are what let the hook resolve
+                # this window's environment back to the persisted grant
+                # receipt; without them the environment is not a lookup key
+                # for recorded authority, it is a bare claim.
                 raise ValueError(f"ROOT_AUTHORITY_INCOMPLETE: missing {field!r}")
             environment[name] = str(value)
         parent = authority.get("program_parent") or {}

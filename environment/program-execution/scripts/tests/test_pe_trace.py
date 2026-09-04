@@ -841,5 +841,48 @@ class SecretRedactionTest(unittest.TestCase):
         self.assertEqual(safe["redacted_keys"], ["count", "verdict"])
 
 
+class FingerprintInputsTest(unittest.TestCase):
+    """Operator inputs are fingerprinted strictly; emitted artifacts stay normalised."""
+
+    def setUp(self) -> None:
+        self.mod = load_module("pe_trace_fingerprint_inputs", TRACE_SCRIPT)
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.root = Path(self._tmp.name)
+
+    def test_strict_fingerprint_raises_on_a_missing_input(self) -> None:
+        with self.assertRaises(FileNotFoundError):
+            self.mod.fingerprint_inputs(self.root / "ghost.yaml")
+        with self.assertRaises(FileNotFoundError):
+            self.mod.fingerprint(self.root / "ghost.yaml", strict=True)
+
+    def test_default_fingerprint_still_keys_a_missing_path_by_name(self) -> None:
+        """Unchanged behaviour for emitted artifacts: the caller opts into strictness."""
+        first = self.mod.fingerprint(self.root / "ghost.yaml")
+        self.assertEqual(first, self.mod.fingerprint(self.root / "ghost.yaml"))
+
+    def test_strict_fingerprint_sees_a_timestamp_only_edit(self) -> None:
+        path = self.root / "source.yaml"
+        path.write_text("tasks:\n  - id: TASK-001\n    due: '2026-01-01T00:00:00Z'\n")
+        before_strict = self.mod.fingerprint_inputs(path)
+        before_default = self.mod.fingerprint(path)
+        path.write_text("tasks:\n  - id: TASK-001\n    due: '2026-06-01T00:00:00Z'\n")
+        self.assertNotEqual(before_strict, self.mod.fingerprint_inputs(path))
+        self.assertEqual(before_default, self.mod.fingerprint(path))
+
+    def test_strict_fingerprint_sees_a_timestamp_edit_in_a_task_mapping(self) -> None:
+        one = {"id": "TASK-001", "due": "2026-01-01T00:00:00Z"}
+        two = {"id": "TASK-001", "due": "2026-06-01T00:00:00Z"}
+        self.assertNotEqual(self.mod.fingerprint_inputs(one), self.mod.fingerprint_inputs(two))
+        self.assertEqual(self.mod.fingerprint(one), self.mod.fingerprint(two))
+
+    def test_strict_fingerprint_is_deterministic(self) -> None:
+        path = self.root / "source.yaml"
+        path.write_text("a: 1\n")
+        self.assertEqual(
+            self.mod.fingerprint_inputs(path, "x"), self.mod.fingerprint_inputs(path, "x")
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

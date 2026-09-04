@@ -241,6 +241,59 @@ def validate_intent_provenance(src: dict[str, Any]) -> list[str]:
             f"intent_provenance records {chunks_extracted} of {chunks_expected} source chunks "
             "extracted; no chunk may be omitted"
         )
+    return _verify_architecture_source(provenance)
+
+
+ARCHITECTURE_SOURCE_UNVERIFIABLE = "architecture_source_unverifiable"
+
+
+def _architecture_intent_module() -> Any:
+    """`compiler.architecture_intent`, by the route campaign_input already uses."""
+    from compiler.architecture_intent import digest, normalize_source
+
+    return normalize_source, digest
+
+
+def _verify_architecture_source(provenance: dict[str, Any]) -> list[str]:
+    """Re-derive `intent_provenance.source.sha256` from the document it names.
+
+    The declared digest is a *claim* about a file outside the campaign source.
+    When that file is readable it is normalized and digested exactly as the
+    architecture route did, and a different result is drift: the campaign
+    source was compiled from a document that no longer says what it said.
+    When the file is not readable the claim cannot be checked, and that is
+    recorded as a warning rather than silently accepted.
+    """
+    origin = provenance.get("source") or {}
+    declared = str(origin.get("sha256") or "").strip().lower()
+    declared_path = str(origin.get("path") or "").strip()
+    if not declared_path:
+        return [
+            f"{ARCHITECTURE_SOURCE_UNVERIFIABLE}: intent_provenance.source names no path; "
+            f"declared sha256 {declared[:12]} was not re-derived"
+        ]
+    candidate = Path(declared_path).expanduser()
+    try:
+        raw = candidate.read_text(encoding="utf-8")
+    except OSError as exc:
+        return [
+            f"{ARCHITECTURE_SOURCE_UNVERIFIABLE}: {declared_path} is not readable "
+            f"({type(exc).__name__}); declared sha256 {declared[:12]} was not re-derived"
+        ]
+    except UnicodeDecodeError as exc:
+        raise CompileError(
+            f"architecture source drifted: {declared_path} is no longer UTF-8 text ({exc}); "
+            f"intent_provenance.source.sha256 records {declared[:12]}. Recompile through "
+            "the architecture route instead of editing the compiled campaign source"
+        ) from exc
+    normalize_source, digest = _architecture_intent_module()
+    actual = digest(normalize_source(raw))
+    if actual != declared:
+        raise CompileError(
+            f"architecture source drifted: {declared_path} now digests {actual[:12]}, "
+            f"intent_provenance.source.sha256 records {declared[:12]}. Recompile through "
+            "the architecture route instead of editing the compiled campaign source"
+        )
     return []
 
 
@@ -389,14 +442,15 @@ def _decision_rationale(item: dict[str, Any]) -> str:
     return "Decision recorded from the campaign source; no option selected yet."
 
 
-def _source_revision(src: dict[str, Any], source: Path) -> str:
-    """Exact identity of the source this Blueprint was compiled from."""
-    provenance = src.get("intent_provenance") or {}
-    declared = ((provenance.get("source") or {}) if isinstance(provenance, dict) else {}).get(
-        "sha256"
-    )
-    if isinstance(declared, str) and declared.strip():
-        return f"sha256:{declared.strip().removeprefix('sha256:')}"
+def _source_revision(source: Path) -> str:
+    """Exact identity of the source this Blueprint was compiled from.
+
+    Always the digest of the bytes actually compiled. The architecture route's
+    declared document digest used to be recorded here instead, so the
+    traceability register named a file the compiler never read — and the same
+    edited campaign source, handed in twice, recorded the same "revision". The
+    declared digest rides beside it as `architecture_source_sha256`.
+    """
     return "sha256:" + hashlib.sha256(source.read_bytes()).hexdigest()
 
 
@@ -435,6 +489,7 @@ def _semantic_precheck(src: dict[str, Any]) -> list[str]:
                 f"{sorted(admitted)}"
             )
         _decision_authority(decision, src)
+    _require_unique_task_ids(src)
     for task in src.get("tasks") or []:
         status = task.get("definition_status")
         if status not in TASK_STATUSES_ADMITTED:
@@ -468,6 +523,36 @@ def _semantic_precheck(src: dict[str, Any]) -> list[str]:
                     "nothing to run"
                 )
     return warnings
+
+
+def _require_unique_task_ids(src: dict[str, Any]) -> None:
+    """Two tasks with one id have no compiled representation.
+
+    Lowering keys tasks by id, so the second definition silently overwrote the
+    first and the dependency graph, task cards and readiness all described a
+    program with one task fewer than the operator wrote. Compared
+    case-insensitively: the Blueprint grammar is upper-case, and `task-001`
+    beside `TASK-001` is a collision the runner's edit detection cannot tell
+    apart either.
+    """
+    seen: dict[str, str] = {}
+    for task in src.get("tasks") or []:
+        task_id = str((task or {}).get("id") or "")
+        key = task_id.casefold()
+        if key in seen:
+            collision = (
+                f"duplicate task id {task_id!r}"
+                if seen[key] == task_id
+                else (
+                    f"task id {task_id!r} collides with {seen[key]!r} "
+                    "(ids compare case-insensitively)"
+                )
+            )
+            raise CompileError(
+                f"{collision}; every task must carry a unique id — the later definition "
+                "would silently replace the earlier one. Renumber the task in the source"
+            )
+        seen[key] = task_id
 
 
 def _admission_evidence(src: dict[str, Any]) -> list[dict[str, Any]]:
@@ -998,18 +1083,22 @@ def normalize_definition_status(src: dict[str, Any]) -> list[str]:
     return notes
 
 
-def _architecture_lineage(src: dict[str, Any]) -> dict[str, Any]:
+def _architecture_lineage(src: dict[str, Any], *, verification: str = "verified") -> dict[str, Any]:
     """Project clause-level architecture lineage into the existing traceability source.
 
     The `sources` items are already `additionalProperties: true`, so lineage
     rides in the artifact the Blueprint already has rather than in a second,
-    competing traceability file.
+    competing traceability file. `architecture_source_sha256` is the declared
+    document digest, kept apart from `revision` (the compiled bytes), and
+    `architecture_source_verification` says whether that claim was re-derived.
     """
     provenance = src.get("intent_provenance")
     if not isinstance(provenance, dict):
         return {}
     items = provenance.get("semantic_items") or []
     return {
+        "architecture_source_sha256": str((provenance.get("source") or {}).get("sha256") or ""),
+        "architecture_source_verification": verification,
         "architecture_intent": {
             "schema": str(provenance.get("schema") or ""),
             "source_sha256": str((provenance.get("source") or {}).get("sha256") or ""),
@@ -1032,7 +1121,7 @@ def _architecture_lineage(src: dict[str, Any]) -> dict[str, Any]:
                 for item in items
                 if str(item.get("materiality") or "material") == "material"
             ],
-        }
+        },
     }
 
 
@@ -1687,7 +1776,7 @@ def _compile_into(
                 {
                     "id": "SRC-001",
                     "source": repo_rel or source.name,
-                    "revision": _source_revision(src, source),
+                    "revision": _source_revision(source),
                     "authority_class": "governing",
                     "evidence_id": evidence[0]["id"],
                     "claims": [
@@ -1714,7 +1803,17 @@ def _compile_into(
                     "task_ids": [item["id"] for item in tasks],
                     "gate_ids": [item["id"] for item in gates],
                     "status": "active",
-                    **_architecture_lineage(src),
+                    **_architecture_lineage(
+                        src,
+                        verification=(
+                            "unverifiable"
+                            if any(
+                                warning.startswith(ARCHITECTURE_SOURCE_UNVERIFIABLE)
+                                for warning in provenance_warnings
+                            )
+                            else "verified"
+                        ),
+                    ),
                 }
             ],
         },

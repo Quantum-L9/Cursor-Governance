@@ -199,7 +199,20 @@ of the first run and completed work survives:
   the rest materialize on demand when a task is claimed
 - editing a task's definition relocks that task (`pec relock`) instead of
   rebuilding the program. Changing the program body or the set of tasks is not
-  absorbable and does rebuild
+  absorbable and does rebuild. A resume of a **live** runtime applies the same
+  rule before executing: per-task edits are relocked, a wider edit stops the
+  resume with `SOURCE_DRIFT_ON_RESUME` instead of executing a lock the source
+  no longer describes
+- the mediation baseline (what PE itself changed in a task worktree before the
+  provider window opened) is persisted at first dispatch under
+  `runtime/peer-execution/effect-baselines/<task>.json`. A resumed EXECUTING
+  window is judged against that recorded baseline, never against a fresh
+  snapshot of a tree that may already carry the lost window's writes; an
+  EXECUTING task with no recorded baseline fails closed
+  (`EFFECT_BASELINE_MISSING`) rather than having its effects guessed at
+- a lost window's root grant is **resumed** when its lease is still live under
+  the same Program parent; a terminal lease is succeeded by the next grant
+  generation, so a reset task can be re-dispatched under a fresh root identity
 - in FAST mode a campaign that compiles and is launchable is accepted from local
   evidence, recorded in `LOCAL_ACCEPTANCE.json` as `authority: local_only`. That
   record is explicitly **not** sufficient for publish, merge or deploy, and no
