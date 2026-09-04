@@ -1,0 +1,251 @@
+{
+  "schema_version": "1.1.0",
+  "request": {
+    "request_id": "repo-docs-e0968137a310",
+    "donor": "Quantum-L9/Cursor-Governance",
+    "beneficiary": "Quantum-L9/Cursor-Governance",
+    "harvest_target": "repo-docs:agents,architecture,invariants",
+    "access_mode": "read-only",
+    "depth": "standard",
+    "brief": false
+  },
+  "source_identity": {
+    "repository": "Quantum-L9/Cursor-Governance",
+    "repo_docs": {
+      "repository": "Quantum-L9/Cursor-Governance",
+      "semantic_source_digest": "e321757be2548045ce02b3ecda744aefaf21b9aeb630f4fe1de0c04f3a78e60c",
+      "required_surfaces": ["agents", "architecture", "invariants"]
+    }
+  },
+  "inventory": [
+    {
+      "path": "ops/autonomy/surface_detect.py",
+      "classification": "active",
+      "action": "keep",
+      "evidence_ids": ["ev-surface-detect"]
+    },
+    {
+      "path": "environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh",
+      "classification": "active",
+      "action": "keep",
+      "evidence_ids": ["ev-hook-exec"]
+    },
+    {
+      "path": "AGENTS.md",
+      "classification": "active",
+      "action": "keep",
+      "evidence_ids": ["ev-agents-surface"]
+    }
+  ],
+  "system": {
+    "identity": "Surface hook divergence",
+    "workflows": [
+      {
+        "name": "surface detection then hook skip",
+        "entry": "ops/autonomy/surface_detect.py",
+        "adapter": "environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh"
+      }
+    ],
+    "control_flow": [
+      {
+        "from": "CURSOR_AGENT or explicit surface id",
+        "to": "surface_detect",
+        "then": "l9_hook_exec skips Claude-only PreToolUse wrappers on Cursor"
+      }
+    ],
+    "ownership_boundaries": [
+      {
+        "owner": "ops/autonomy",
+        "responsibility": "detect the live surface from env, not from a projected adapter stamp"
+      },
+      {
+        "owner": "claude-code adapter hooks",
+        "responsibility": "skip local_execution_gate_wrap and memory_gate on non-Claude surfaces"
+      }
+    ],
+    "dependencies": [
+      {
+        "from": "l9_hook_exec.sh",
+        "to": "surface_detect.py",
+        "kind": "surface identity"
+      }
+    ],
+    "must_not_own": [
+      "Cursor beforeShellExecution combined gate",
+      "Claude PreToolUse merge_gate and session_debt wrappers"
+    ]
+  },
+  "surfaces": [
+    {
+      "item": "agents",
+      "source": "AGENTS.md",
+      "visibility": "repository",
+      "is_wrapper": false,
+      "resolved_target": "AGENTS.md",
+      "dependencies": [
+        "ops/autonomy/surface_detect.py",
+        "ops/scripts/lib/surface_detect.sh"
+      ],
+      "mutations": ["surgical refresh"],
+      "evidence_ids": ["ev-agents-surface"]
+    },
+    {
+      "item": "architecture",
+      "source": "ARCHITECTURE.md",
+      "visibility": "repository",
+      "is_wrapper": false,
+      "resolved_target": "ARCHITECTURE.md",
+      "dependencies": [
+        "ops/autonomy/surface_detect.py",
+        "environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh"
+      ],
+      "mutations": ["index pointer"],
+      "evidence_ids": ["ev-surface-detect", "ev-hook-exec"]
+    },
+    {
+      "item": "invariants",
+      "source": "INVARIANTS.md",
+      "visibility": "repository",
+      "is_wrapper": false,
+      "resolved_target": "INVARIANTS.md",
+      "dependencies": ["ops/autonomy/surface_detect.py"],
+      "mutations": ["index pointer"],
+      "evidence_ids": ["ev-surface-detect"]
+    }
+  ],
+  "drift": [],
+  "evidence": [
+    {
+      "id": "ev-surface-detect",
+      "epistemic": "CONFIRMED",
+      "source": "Quantum-L9/Cursor-Governance",
+      "locator": {
+        "kind": "path_lines",
+        "value": "ops/autonomy/surface_detect.py"
+      },
+      "claim": "CURSOR_AGENT overrides a projected L9_GOVERNANCE_SURFACE of claude-code or claude-code-remote so Cursor sessions are not scored as Claude.",
+      "secret_redacted": false
+    },
+    {
+      "id": "ev-hook-exec",
+      "epistemic": "CONFIRMED",
+      "source": "Quantum-L9/Cursor-Governance",
+      "locator": {
+        "kind": "path_lines",
+        "value": "environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh"
+      },
+      "claim": "On a non-Claude surface, l9_hook_exec skips only local_execution_gate_wrap.py and memory_gate.py; merge_gate_wrap.py and session_debt_wrap.py stay active.",
+      "secret_redacted": false
+    },
+    {
+      "id": "ev-agents-surface",
+      "epistemic": "CONFIRMED",
+      "source": "Quantum-L9/Cursor-Governance",
+      "locator": {
+        "kind": "path_lines",
+        "value": "AGENTS.md"
+      },
+      "claim": "Operating instructions already separate Cursor SessionStart from Claude projection and tree-kernel latch ownership.",
+      "secret_redacted": false
+    }
+  ],
+  "concepts": [
+    {
+      "id": "surface-detect-overrides-projected-claude",
+      "name": "Live surface id wins over a projected Claude stamp",
+      "description": "Surface detection treats CURSOR_AGENT as Cursor even when a Claude adapter projection exported L9_GOVERNANCE_SURFACE=claude-code.",
+      "problem": "A projected Claude surface id on a Cursor session activates Claude-only PreToolUse wrappers and scores the wrong runtime.",
+      "semantic_contract": "surface_detect.py / surface_detect.sh resolve the live surface from CURSOR_AGENT and explicit ids; a projected claude-code or claude-code-remote value does not outrank an active Cursor agent marker.",
+      "disposition": "PORT",
+      "beneficiary_destination": "docs:agents",
+      "evidence_ids": ["ev-surface-detect", "ev-agents-surface"],
+      "risks": [
+        "Treating the projected env as authority would keep Cursor inside Claude gates."
+      ],
+      "acceptance_tests": [
+        {
+          "given": "CURSOR_AGENT is set and L9_GOVERNANCE_SURFACE is claude-code",
+          "when": "surface_detect runs",
+          "then": "the resolved surface is cursor",
+          "must_not": "keep the projected claude-code id"
+        }
+      ],
+      "beneficiary_fit": {
+        "comparison": "DONOR_STRONGER",
+        "existing_owner": "repository_operating_instructions",
+        "merge_decision": "refresh AGENTS.md with the live-surface override",
+        "compatibility_risk": "low"
+      },
+      "leverage": 5,
+      "compounding": 5,
+      "rank_score": 95,
+      "nugget": true
+    },
+    {
+      "id": "hook-exec-skips-claude-only-wrappers",
+      "name": "l9_hook_exec skips Claude-only wrappers on Cursor",
+      "description": "The Claude adapter hook runner is shared; Cursor must not execute Claude PreToolUse wrappers that belong to a different gate plane.",
+      "problem": "Running local_execution_gate_wrap and memory_gate on Cursor duplicates or fights beforeShellExecution.",
+      "semantic_contract": "l9_hook_exec skips only local_execution_gate_wrap.py and memory_gate.py when the resolved surface is not Claude; merge_gate_wrap.py and session_debt_wrap.py remain.",
+      "disposition": "PORT",
+      "beneficiary_destination": "docs:architecture",
+      "evidence_ids": ["ev-hook-exec", "ev-surface-detect"],
+      "risks": [
+        "Skipping merge_gate_wrap would drop merge-denial from the adapter path."
+      ],
+      "acceptance_tests": [
+        {
+          "given": "resolved surface is cursor",
+          "when": "l9_hook_exec lists hooks",
+          "then": "local_execution_gate_wrap.py and memory_gate.py are skipped",
+          "must_not": "skip merge_gate_wrap.py or session_debt_wrap.py"
+        }
+      ],
+      "beneficiary_fit": {
+        "comparison": "DONOR_STRONGER",
+        "existing_owner": "repository_architecture_index",
+        "merge_decision": "index the hook-exec skip as adapter architecture",
+        "compatibility_risk": "low"
+      },
+      "leverage": 5,
+      "compounding": 4,
+      "rank_score": 90,
+      "nugget": true
+    },
+    {
+      "id": "surface-detect-is-the-identity-invariant",
+      "name": "Surface identity is detected, not inherited from projection",
+      "description": "The autonomy surface id used by gates must come from live process markers, not from files a Claude projection wrote.",
+      "problem": "A stale projected surface id silently moves a Cursor session onto Claude gate law.",
+      "semantic_contract": "Gate skip and kernel latch decisions consume surface_detect output. A projected L9_GOVERNANCE_SURFACE is evidence, not identity, when CURSOR_AGENT is set.",
+      "disposition": "PORT",
+      "beneficiary_destination": "docs:invariants",
+      "evidence_ids": ["ev-surface-detect"],
+      "risks": [
+        "An explicit non-Cursor L9_GOVERNANCE_SURFACE must still win when CURSOR_AGENT is unset."
+      ],
+      "acceptance_tests": [
+        {
+          "given": "an explicit L9_GOVERNANCE_SURFACE other than projected Claude ids",
+          "when": "CURSOR_AGENT is unset",
+          "then": "the explicit id is the resolved surface",
+          "must_not": "rewrite an explicit non-Claude surface to cursor"
+        }
+      ],
+      "beneficiary_fit": {
+        "comparison": "DONOR_STRONGER",
+        "existing_owner": "repository_invariant_index",
+        "merge_decision": "add the live-surface identity pointer",
+        "compatibility_risk": "low"
+      },
+      "leverage": 5,
+      "compounding": 5,
+      "rank_score": 100,
+      "nugget": true
+    }
+  ],
+  "safety": [],
+  "unknowns": [],
+  "highest_leverage_nugget": "surface-detect-is-the-identity-invariant",
+  "status": "PASS"
+}

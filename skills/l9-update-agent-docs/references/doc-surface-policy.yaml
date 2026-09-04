@@ -189,7 +189,7 @@ capabilities:
     partial_behavior: BLOCKED
     partial_repair_route: l9-wire-into-repo
     polyglot_extension_owner: scripts/generate_subsystem_readmes.py
-    supported_extensions: [.py]
+    supported_extensions: [.py, .sh]
 
 llms_txt:
   owner: l9-update-agent-docs
