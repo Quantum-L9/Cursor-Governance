@@ -148,6 +148,17 @@ def _iter_python_files(root: Path) -> list[Path]:
     return files
 
 
+def _iter_shell_files(root: Path) -> list[Path]:
+    files: list[Path] = []
+    for sh_file in sorted(root.rglob("*.sh")):
+        if _skip_dir(sh_file):
+            continue
+        if "tests" in sh_file.parts:
+            continue
+        files.append(sh_file)
+    return files
+
+
 def _extract_all(tree: ast.Module) -> list[str]:
     names: list[str] = []
     for node in tree.body:
@@ -250,6 +261,10 @@ def extract_subsystem_facts(repo_root: Path, subsystem_path: str) -> ModuleFacts
                 )
             elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and _public(node.name):
                 facts.functions.append(_function_info(node, rel))
+    for sh_file in _iter_shell_files(full):
+        rel = str(sh_file.relative_to(repo_root))
+        if rel not in facts.files:
+            facts.files.append(rel)
     facts.imports = sorted(set(imports))
     facts.exports = sorted(set(exports))
     facts.constants = constants
@@ -262,8 +277,6 @@ def _first_line(text: str, fallback: str) -> str:
 
 
 def render_components(facts: ModuleFacts) -> str:
-    if not facts.classes:
-        return "_No public classes in this path._"
     blocks: list[str] = []
     for cls in facts.classes[:12]:
         summary = _first_line(cls.docstring, "No description")
@@ -274,6 +287,12 @@ def render_components(facts: ModuleFacts) -> str:
             f"- File: `{cls.file}` (L{cls.line_start}–{cls.line_end})\n"
             f"- Methods: {methods}"
         )
+    shells = [path for path in facts.files if path.endswith(".sh")]
+    if shells:
+        listed = "\n".join(f"- `{path}`" for path in shells[:20])
+        blocks.append(f"### Shell entrypoints\n\n{listed}")
+    if not blocks:
+        return "_No public classes in this path._"
     return "\n\n".join(blocks)
 
 

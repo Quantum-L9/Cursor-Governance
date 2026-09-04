@@ -29,6 +29,15 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+_HERE = Path(__file__).resolve().parent
+_ROOT = _HERE.parents[1]
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+from ops.autonomy.surface_detect import (  # noqa: E402
+    ADAPTER_KERNEL_SURFACES,
+    kernel_latch_surface,
+)
+
 SCHEMA = "l9.kernel_receipt.v1"
 RECEIPT_REL = Path(".l9") / "autonomy" / "kernel-receipt.json"
 KERNELS: tuple[tuple[str, str], ...] = (
@@ -46,7 +55,7 @@ CORPUS_SKIP_PREFIXES = (
 KERNEL_EXEMPT_PREFIXES = CORPUS_SKIP_PREFIXES
 #: Tree-kernel latch is adapter-surface only. Cursor is the primary plane
 #: and must not stall commit/push on Recursive Alignment receipts.
-ADAPTER_KERNEL_SURFACES = frozenset({"claude-code", "codex", "gemini", "manus"})
+#: Surface ids live in ops/autonomy/surface_detect.py (SSOT).
 ADAPTER_SURFACES = ADAPTER_KERNEL_SURFACES
 #: Executable-plan templates are not Cursor plans. Do not require kernel_pass.
 PLAN_SKIP_PREFIXES = (
@@ -273,18 +282,10 @@ def kernel_latch_required(*, env: Mapping[str, str] | None = None) -> bool:
     Cursor sessions set ``CURSOR_AGENT``. CI and a bare shell have neither
     that nor an adapter surface id — they skip, so a Cursor-authored PR is
     not blocked in GitHub Actions for a missing kernel receipt.
+
+    Marker resolution is owned by ``ops.autonomy.surface_detect``.
     """
-    source = os.environ if env is None else env
-    surface = (source.get("L9_GOVERNANCE_SURFACE") or "").strip().lower()
-    if surface in ADAPTER_KERNEL_SURFACES:
-        return True
-    if source.get("CLAUDECODE") or source.get("CLAUDE_CODE_ENTRYPOINT"):
-        return True
-    if source.get("CLAUDE_CODE_REMOTE") == "true":
-        return True
-    if source.get("CLAUDE_CODE_SESSION_ID"):
-        return True
-    return False
+    return kernel_latch_surface(env)
 
 
 def precommit(root: Path, gov: Path, changed_file: Path | None) -> int:

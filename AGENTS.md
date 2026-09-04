@@ -1256,3 +1256,12 @@ still be a PR GitHub will merge.
   `.l9/pr/board-<pr>.json` receipt, not prose.
 - `pr_board.py` advises only. `ops/autonomy/stack_safe_merge.py --run` stays the
   sole merge executor and still chooses the method.
+
+<!-- SURFACE_HOOK_DIVERGENCE_V1 -->
+## Surface-hook divergence (2026-09-04)
+
+Claude Code gate-class hooks (`memory_gate`, `local_execution_gate_wrap`) must
+not evaluate under Cursor. SSOT: `ops/autonomy/surface_detect.py` +
+`ops/scripts/lib/surface_detect.sh`. Divergence point: `l9_hook_exec.sh`
+self-guard (kill switch `L9_SURFACE_GUARD=0`). Contract:
+`environment/agents/SURFACE_BOOTSTRAP_CONTRACT.md`. ADR-0029.

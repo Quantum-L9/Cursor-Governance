@@ -1,0 +1,332 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Surface bootstrap divergence \u2014 shared brain upstream, per-surface hook stacks downstream",
+  "objective": "Stop cross-surface hook execution (Claude Code desktop gates firing inside Cursor sessions) by defining one ops-owned surface-detection predicate and making every adapter hook self-guard at its entry point, while keeping the shared brain (ops/autonomy gates, Graphiti memory, kernels) upstream of the divergence point; additionally make the GMP TODO-plan requirement machine-enforced at run start instead of prose enforced late by gates.",
+  "success_criteria": [
+    "A Cursor session editor write (Write/StrReplace) is never denied by environment/agents/adapters/claude-code/hooks/memory_gate.py; guard test simulating CURSOR_AGENT=1 with no Claude markers exits allow from l9_hook_exec.sh gate classes",
+    "A Claude Code desktop session (CLAUDECODE set) still gets full memory_gate + local_execution_gate enforcement; regression test proves the guard does not weaken the Claude surface",
+    "Exactly one surface-detection implementation exists (ops-owned); kernel_gate.py and session_start_claude_governance.sh consume it instead of private marker lists",
+    "gmp_executor.py refuses to enter IMPLEMENT without a machine-readable TODO plan in state, and accepts --todos-json at start/full so the requirement binds at invocation, not at scope_lock mid-run",
+    "A written surface contract names the divergence point: shared = ops/autonomy + ops/graphiti + kernels; per-surface = hook registration, memory front door, session receipts"
+  ],
+  "scope": {
+    "in": [
+      "ops/scripts/lib/ + ops/autonomy/ surface detection SSOT (new shell lib + python module)",
+      "environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh entry guard",
+      "ops/autonomy/kernel_gate.py and claude session_start hook refactor to consume the SSOT predicate",
+      "workflows/gmp_executor.py machine TODO contract + commands/gmp.md mechanical block",
+      "surface contract ADR/doc",
+      "tests for all of the above"
+    ],
+    "out": [
+      "Unifying hydration receipts into one cross-surface receipt (follow-on plan; documented, not built here)",
+      "Retiring or rewriting the Cursor graphiti-gate-* stack",
+      "Bounded-autonomy scheduler, Program Execution, peer-execution core",
+      "Claude mobile transport (HTTPS Graphiti) changes",
+      "Editing generated .claude/settings.json directly (claude_projection.py regenerates it)"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "bind workspace /Users/ib-mac/Cursor-Governance branch feat/pr-board-required-workflows-gmp133; hook catalog .pre-commit-config.yaml",
+      "pass_criteria": "single governed workspace",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "evidence: ~/.cursor/hooks.json (Cursor stack) vs .claude/settings.json PreToolUse Edit|Write|NotebookEdit|Bash -> l9_hook_exec.sh memory_gate; live denial of Cursor StrReplace by memory_gate observed this session",
+      "pass_criteria": "cross-surface execution proven",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "precedent check: AGENTS.md CURSOR_SESSIONSTART_NO_CLAUDE_CLOUD_V1 (session_start_claude_governance.sh no-ops without Claude runtime marker) and CURSOR_KERNEL_LATCH_ADAPTER_ONLY_V1 (kernel_gate adapter-only latch)",
+      "pass_criteria": "guard pattern already sanctioned for SessionStart and kernel latch; this plan extends it to PreToolUse",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Create surface-detection SSOT: ops/scripts/lib/surface_detect.sh and ops/autonomy/surface_detect.py returning one of cursor|claude-code|claude-code-remote|codex|gemini|manus|unknown from CURSOR_AGENT, CLAUDECODE, CLAUDE_CODE_ENTRYPOINT, CLAUDE_CODE_SESSION_ID, CLAUDE_CODE_REMOTE, L9_GOVERNANCE_SURFACE (explicit env wins; markers break ties toward the adapter). Refactor ops/autonomy/kernel_gate.py and environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh to consume it",
+      "files": [
+        "ops/scripts/lib/surface_detect.sh",
+        "ops/autonomy/surface_detect.py",
+        "ops/autonomy/kernel_gate.py",
+        "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "existing marker checks in kernel_gate.py _surface() and session_start_claude_governance.sh",
+      "leverage_rank": 1,
+      "shared_root_cause": "surface identity decided ad hoc in each script"
+    },
+    {
+      "id": "T2",
+      "task": "Hook-entry guard in environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh: when the detected surface is not claude-code/claude-code-remote, gate-class hooks (memory_gate, local_execution_gate_wrap for Edit/Write matchers) emit allow and exit 0. Observer-class hooks unchanged. Kill switch L9_SURFACE_GUARD=0 restores old behavior",
+      "files": [
+        "environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Insert",
+      "anchor": "l9_hook_exec.sh dispatch before invoking the named hook script",
+      "leverage_rank": 2,
+      "shared_root_cause": "hook registration travels with the workspace while sessions come from any surface"
+    },
+    {
+      "id": "T3",
+      "task": "Surface bootstrap contract doc: docs/decisions/ADR (surface-hook divergence) + environment/agents/SURFACE_BOOTSTRAP_CONTRACT.md defining shared-upstream (ops/autonomy gates, ops/graphiti brain, kernels, L4) vs per-surface-downstream (hook registration files, memory front door, session receipts, projection engines), the divergence point (hook entry surface guard), the marker table for all three surfaces including mobile CLAUDE_CODE_REMOTE + HTTPS Graphiti, and the CANONICAL_LAW 2.1 rule that adapters never export policy upstream",
+      "files": [
+        "docs/decisions/ADR-0029-surface-hook-divergence.md",
+        "environment/agents/SURFACE_BOOTSTRAP_CONTRACT.md"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": [
+        "T1",
+        "T2"
+      ],
+      "operation": "Create",
+      "anchor": "docs/decisions/ numbering after latest ADR",
+      "leverage_rank": 4
+    },
+    {
+      "id": "T4",
+      "task": "GMP machine task-plan contract: gmp_executor.py start/full modes accept --todos-json (file or inline JSON list of {id,task,files}) persisted into GMPState; scope_lock fails fast at run start with an actionable message naming --todos-json when authorized runs have no TODOs; commands/gmp.md mechanical block documents passing the plan todos. No behavior change for TTY interactive mode",
+      "files": [
+        "workflows/gmp_executor.py",
+        "commands/gmp.md"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Insert",
+      "anchor": "GMPState dataclass + _init_state + scope_lock step from the GMP-133 session fixes",
+      "leverage_rank": 3,
+      "shared_root_cause": "protocol requirements expressed as prose instead of machine contract bound at invocation"
+    },
+    {
+      "id": "T5",
+      "task": "Tests: surface_detect parity test (shell lib and python module agree on a marker matrix), l9_hook_exec guard test (CURSOR_AGENT env -> allow without invoking memory_gate; CLAUDECODE env -> gate invoked), kernel_gate refactor regression, gmp --todos-json acceptance + fail-fast tests",
+      "files": [
+        "tests/ops/autonomy/test_surface_detect.py",
+        "tests/adapters/claude_code/test_l9_hook_exec_guard.py",
+        "tests/workflows/test_gmp_executor_todos.py"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": [
+        "T1",
+        "T2",
+        "T4"
+      ],
+      "operation": "Create",
+      "anchor": "existing tests/workflows/test_gmp_executor_authorized.py patterns",
+      "leverage_rank": 5
+    },
+    {
+      "id": "T6",
+      "task": "Mobile alignment verification: confirm the mobile bootstrap (CLAUDE_CODE_REMOTE path, WIP claude-code-mobile-environment pack, validate_claude_env) resolves surface claude-code-remote through the new SSOT and that no mobile flow depended on running claude gates under a non-Claude surface; code change only if a gap is proven",
+      "files": [
+        "ops/scripts/validate_claude_env.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Insert",
+      "anchor": "CLAUDE_CODE_REMOTE marker references",
+      "leverage_rank": 6
+    }
+  ],
+  "critical_path": [
+    "T1",
+    "T2",
+    "T5"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "surface_detect SSOT exists and existing consumers refactored",
+      "unlocks": "hook-entry guard"
+    },
+    {
+      "id": "M2",
+      "outcome": "l9_hook_exec.sh guard live: Cursor edits no longer pass through claude gates",
+      "unlocks": "contract doc + tests"
+    },
+    {
+      "id": "M3",
+      "outcome": "GMP accepts machine TODOs at invocation and fails fast without them",
+      "unlocks": "prose-to-contract migration for other slash protocols"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "surface_detect parity test PASS on the marker matrix",
+      "no_go_action": "stop; fix predicate before touching hook entry"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "guard test PASS both directions (Cursor allow-through, Claude enforced)",
+      "no_go_action": "revert l9_hook_exec.sh change; guard must never weaken the Claude surface"
+    },
+    {
+      "id": "C3",
+      "after": "M3",
+      "evidence_required": "gmp fail-fast test PASS; commands/gmp.md updated",
+      "no_go_action": "block readiness; do not ship guard without the GMP contract if both were promised"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "update",
+      "todo_ids": [
+        "T3"
+      ]
+    },
+    {
+      "surface": "CLAUDE.md",
+      "action": "n_a",
+      "reason": "authority pointer unchanged; contract doc is a map, not a rung"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Is there a legitimate reason Cursor should be gated by claude memory_gate today (someone relying on it as the only edit hydration gate)? Cursor has its own graphiti-gate-edits stack, so no; but verify GRAPHITI_WRITE_GATES default before removing the accidental second gate",
+      "Does any Claude Code launch path set none of CLAUDECODE/CLAUDE_CODE_ENTRYPOINT/CLAUDE_CODE_SESSION_ID/CLAUDE_CODE_REMOTE, which would silently disable gates on the Claude surface?",
+      "Does claude_projection.py or plugins.desired.json regenerate l9_hook_exec.sh or is it source-owned? Guard must live in the source artifact, not a projection output",
+      "Can --todos-json be abused to satisfy scope_lock with an empty list or placeholder TODOs?"
+    ],
+    "assumed_false_ifs": [
+      "assumed false if Cursor's harness stops executing .claude/settings.json hooks in a future release (guard becomes dormant, harmless)",
+      "assumed false if some surface intentionally runs both stacks for defense-in-depth; the contract doc must record that as a decision, not an accident"
+    ],
+    "blast_radius": "hook entry guard touches every Claude Code tool call; a wrong predicate could disable memory/L4 gating on the Claude surface (security-relevant) or keep blocking Cursor. Mitigated by parity tests both directions, kill switch, and observer-class hooks left unguarded",
+    "rollback": "git revert of the guard commit restores prior behavior; L9_SURFACE_GUARD=0 is the immediate runtime kill switch without a deploy"
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T1",
+      "T2",
+      "T4",
+      "T3",
+      "T5",
+      "T6"
+    ],
+    "shared_causes": [
+      "surface identity decided ad hoc per script instead of one upstream predicate",
+      "protocol requirements written as prose and enforced late by gates instead of bound at invocation"
+    ],
+    "deletions_or_consolidations": [
+      "private marker lists in kernel_gate.py and session_start_claude_governance.sh collapse into surface_detect",
+      "memory_gate stops being an accidental second edit gate on Cursor (graphiti-gate-edits remains the Cursor gate)"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "guard predicate misclassifies a real Claude session and disables its gates",
+      "mitigation": "CLAUDECODE is always set by Claude Code; test matrix covers all marker combinations; fail toward enforcing (unknown surface = do not guard off)"
+    },
+    {
+      "risk": "editing a projection-generated file that gets overwritten on next SessionStart",
+      "mitigation": "T2 disconfirming check: locate the source artifact of l9_hook_exec.sh and edit only source; run claude_projection.py --check after"
+    },
+    {
+      "risk": "receipt divergence remains (two hydration front doors) and resurfaces later",
+      "mitigation": "explicitly deferred to follow-on plan and recorded in ADR as a known seam, not silently dropped"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "does any consumer repo depend on claude memory_gate firing under Cursor (defense-in-depth by accident)?",
+      "decision_effect": "if yes, the guard needs a per-repo opt-in instead of a global no-op for non-Claude surfaces",
+      "resolution": "probe"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "python3 -m pytest tests/ops/autonomy/test_surface_detect.py tests/adapters/claude_code/test_l9_hook_exec_guard.py tests/workflows/test_gmp_executor_todos.py -q",
+      "pass_criteria": "all PASS",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "PR_STACK=auto PR_REMEDIATE=0 make pr",
+      "pass_criteria": "gate PASS, PR opened, URL displayed",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": ".pre-commit-config.yaml",
+      "pass_criteria": "changed-file hooks PASS",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U1"
+    ],
+    "next_skill": "l9-ynp",
+    "stop_reason": "plan validated structurally; Build not yet pressed"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "ops/scripts/lib/surface_detect.sh",
+      "ops/autonomy/surface_detect.py",
+      "ops/autonomy/kernel_gate.py",
+      "environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh",
+      "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh",
+      "environment/agents/SURFACE_BOOTSTRAP_CONTRACT.md",
+      "docs/decisions/",
+      "workflows/gmp_executor.py",
+      "commands/gmp.md",
+      "tests/",
+      "AGENTS.md"
+    ],
+    "must_not_modify": [
+      ".claude/settings.json (generated by claude_projection.py)",
+      "~/.cursor/hooks.json machine registration",
+      "ops/hooks/graphiti-gate-*.sh Cursor stack",
+      "environment/program-execution/",
+      "CANONICAL_LAW.md"
+    ],
+    "preserved_contracts": [
+      "Claude Code desktop and mobile keep full gate enforcement (memory_gate, local_execution_gate, kernel latch)",
+      "CANONICAL_LAW 2.1 Cursor-primary: shared predicate lives in ops/, adapters wrap it",
+      "AGENTS.md is additive_only; changes append a named fragment",
+      "L4 / publish path unchanged: scoped commit -> authorize-release -> PR_REMEDIATE=0 make pr"
+    ],
+    "validation_commands": [
+      "python3 -m pytest tests/ops/autonomy/test_surface_detect.py tests/adapters/claude_code/test_l9_hook_exec_guard.py tests/workflows/test_gmp_executor_todos.py -q",
+      ".pre-commit-config.yaml",
+      "PR_STACK=auto PR_REMEDIATE=0 make pr"
+    ]
+  },
+  "depth": "deep",
+  "checklist": [
+    "surface_detect SSOT",
+    "hook entry guard",
+    "contract ADR",
+    "gmp todos-json",
+    "tests both directions"
+  ],
+  "estimate": "1 Build session"
+}

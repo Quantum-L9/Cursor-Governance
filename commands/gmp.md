@@ -71,6 +71,23 @@ Then run skill phases 2–6 on the main agent (no Cursor Build). Then `--mode fi
 
 ---
 
+
+Path hit with a machine TODO list (optional; plan frontmatter todos still win
+when `--plan` is set without `--todos-json`):
+
+```bash
+"$GOV_PY" workflows/gmp_executor.py \
+  --authorized-by slash-gmp \
+  --todos-json '@path/to/todos.json' \
+  --mode start \
+  --tier RUNTIME \
+  "<task>"
+```
+
+`--todos-json` accepts an inline JSON list of `{id,task,files}` or a path /
+`@path`. Authorized start/full fails fast at scope-lock when neither `--plan`
+todos nor `--todos-json` provide a non-empty list.
+
 ## Interpreter
 
 `GOV_PY` is `$HOME/.cursor-governance/.venv/bin/python`, else `$(pwd)/.venv/bin/python`.
