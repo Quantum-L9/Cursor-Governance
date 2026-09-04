@@ -151,7 +151,9 @@ def _branch_rules(repo: str, branch: str) -> list[Any]:
         rules = _gh_json(["api", f"repos/{repo}/rules/branches/{branch}"])
     except RuntimeError as exc:
         raise BoardError(f"ruleset probe failed: {exc}") from exc
-    return rules if isinstance(rules, list) else []
+    if not isinstance(rules, list):
+        raise BoardError("ruleset probe returned a non-list payload; treat as unknown telemetry")
+    return rules
 
 
 def _ruleset_contexts(rules: list[Any]) -> tuple[list[str], bool]:
@@ -321,8 +323,32 @@ def _rollup_states(
     return states
 
 
+def _workflow_state_rank(state: str) -> int:
+    """Prefer evidence that a required workflow job passed over a same-named miss.
+
+    Rollup matching is by free-form ``workflowName``. An optional workflow that
+    reuses the required org workflow's display name can appear as a second
+    failing job next to the required SUCCESS. Preferring the better state keeps
+    that collision as GitHub's own UNSTABLE (mergeable) instead of inventing a
+    FIX. Real failures still win when every same-named node is red.
+    """
+    upper = state.upper()
+    if upper in ("SUCCESS", "NEUTRAL", "SKIPPED"):
+        return 3
+    if upper in PENDING_STATES:
+        return 2
+    if upper in FAILING_STATES:
+        return 1
+    return 0
+
+
 def _workflow_job_states(view: dict[str, Any], workflow_name: str) -> dict[str, str]:
-    """Job name -> state for rollup check runs produced by one named workflow."""
+    """Job name -> state for rollup check runs produced by one named workflow.
+
+    When several rollup nodes share ``workflowName`` + job name (required org
+    workflow vs an optional clone with the same display name), keep the best
+    observed state so a green required job is not overwritten by a red twin.
+    """
     states: dict[str, str] = {}
     for node in view.get("statusCheckRollup") or []:
         if not isinstance(node, dict):
@@ -333,7 +359,10 @@ def _workflow_job_states(view: dict[str, Any], workflow_name: str) -> dict[str, 
         if not name:
             continue
         state = str(node.get("conclusion") or node.get("state") or node.get("status") or "").upper()
-        states[name] = state or "PENDING"
+        state = state or "PENDING"
+        prior = states.get(name)
+        if prior is None or _workflow_state_rank(state) > _workflow_state_rank(prior):
+            states[name] = state
     return states
 
 
@@ -474,8 +503,9 @@ def decide(
     failing = [name for name in required if states.get(name, "EXPECTED") in FAILING_STATES]
     pending = [name for name in required if states.get(name, "EXPECTED") in PENDING_STATES]
     unresolved = _unresolved_threads(view)
-    declared_unfixable = [name for name in unfixable_checks if name in failing]
-    fixable_failing = [name for name in failing if name not in unfixable_checks]
+    declared = {str(name).strip() for name in unfixable_checks if str(name).strip()}
+    declared_unfixable = [name for name in failing if name in declared]
+    fixable_failing = [name for name in failing if name not in declared]
 
     # `type: workflows` ruleset rules (org required workflows) never appear as
     # named contexts. Match their rollup jobs by workflow display name when we
@@ -487,6 +517,7 @@ def decide(
     }
     failing_workflow_jobs: dict[str, list[str]] = {}
     pending_workflows: list[str] = []
+    matched_satisfied_workflows: list[str] = []
     for path in required_workflows:
         name = workflow_names.get(path, "")
         if name:
@@ -499,8 +530,30 @@ def decide(
                 failing_workflow_jobs[path] = bad
             elif any(state in PENDING_STATES for state in jobs.values()):
                 pending_workflows.append(path)
+            else:
+                matched_satisfied_workflows.append(path)
         elif merge_state not in MERGE_READY_STATES:
             pending_workflows.append(path)
+
+    def _workflow_declared_unfixable(path: str, jobs: list[str]) -> bool:
+        """--unfixable-check may name a workflow path, a job, or 'path (job)'."""
+        if path in declared:
+            return True
+        for job in jobs:
+            if job in declared or f"{path} ({job})" in declared:
+                return True
+        return False
+
+    unfixable_workflow_jobs = {
+        path: jobs
+        for path, jobs in failing_workflow_jobs.items()
+        if _workflow_declared_unfixable(path, jobs)
+    }
+    fixable_workflow_jobs = {
+        path: jobs
+        for path, jobs in failing_workflow_jobs.items()
+        if path not in unfixable_workflow_jobs
+    }
 
     verdict = {
         "board": WAIT,
@@ -549,9 +602,9 @@ def decide(
         verdict["reason"] = "required check(s) failing: " + ", ".join(fixable_failing)
         return verdict
 
-    if failing_workflow_jobs:
+    if fixable_workflow_jobs:
         detail = "; ".join(
-            f"{path} ({', '.join(jobs)})" for path, jobs in failing_workflow_jobs.items()
+            f"{path} ({', '.join(jobs)})" for path, jobs in fixable_workflow_jobs.items()
         )
         verdict["board"] = FIX
         verdict["reason"] = f"required workflow job(s) failing: {detail}"
@@ -589,12 +642,13 @@ def decide(
         verdict["reason"] = f"named HUMAN decision outstanding: {human_decision}"
         return verdict
 
-    if declared_unfixable:
+    if declared_unfixable or unfixable_workflow_jobs:
+        names = list(declared_unfixable)
+        for path, jobs in unfixable_workflow_jobs.items():
+            names.append(f"{path} ({', '.join(jobs)})")
         verdict["board"] = LEFTOVER
         verdict["reason"] = (
-            "required check(s) "
-            + ", ".join(declared_unfixable)
-            + " declared unfixable without editing CI"
+            "required check(s) " + ", ".join(names) + " declared unfixable without editing CI"
         )
         return verdict
 
@@ -635,10 +689,18 @@ def decide(
 
     if required:
         base_reason = "every required check passed"
+    elif matched_satisfied_workflows:
+        # Only claim "satisfied" when rollup jobs were matched and green.
+        base_reason = "required workflow(s) satisfied: " + ", ".join(matched_satisfied_workflows)
     elif required_workflows:
         # A workflows rule is present, so this base is *not* unprotected --
-        # never report it as "no required check on this base".
-        base_reason = "required workflow(s) satisfied: " + ", ".join(required_workflows)
+        # never report it as "no required check on this base". Unmatched paths
+        # on a merge-ready state mean GitHub already cleared the gate; do not
+        # invent satisfaction evidence we do not have.
+        base_reason = (
+            "required workflow rule(s) present (rollup unmatched; GitHub merge-ready): "
+            + ", ".join(required_workflows)
+        )
     else:
         base_reason = "no required check on this base and GitHub reports it mergeable"
     verdict["board"] = MERGE

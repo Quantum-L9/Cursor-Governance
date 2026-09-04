@@ -333,6 +333,57 @@ def test_matched_required_workflow_failing_job_is_fix() -> None:
     }
 
 
+def test_same_named_optional_red_does_not_override_required_green() -> None:
+    """Display-name collision: required SUCCESS + optional FAILURE → keep SUCCESS."""
+    rollup = [
+        {
+            "name": "Analyze (central Core)",
+            "conclusion": "SUCCESS",
+            "workflowName": "L9 Org CI",
+        },
+        {
+            "name": "Analyze (central Core)",
+            "conclusion": "FAILURE",
+            "workflowName": "L9 Org CI",
+        },
+    ]
+    facts = _facts(rollup=rollup, required=[], merge_state="UNSTABLE")
+    facts["required_workflows"] = [".github/workflows/org-ci.yml"]
+    facts["required_workflow_names"] = {".github/workflows/org-ci.yml": "L9 Org CI"}
+    verdict = decide(facts)
+    assert verdict["board"] == MERGE
+    assert verdict["failing_workflow_jobs"] == {}
+
+
+def test_unfixable_declaration_covers_required_workflow_job() -> None:
+    rollup = [
+        {
+            "name": "Analyze (central Core)",
+            "conclusion": "FAILURE",
+            "workflowName": "L9 Org CI",
+        }
+    ]
+    facts = _facts(rollup=rollup, required=[], merge_state="BLOCKED")
+    facts["required_workflows"] = [".github/workflows/org-ci.yml"]
+    facts["required_workflow_names"] = {".github/workflows/org-ci.yml": "L9 Org CI"}
+    assert decide(facts)["board"] == FIX
+    leftover = decide(facts, unfixable_checks=(".github/workflows/org-ci.yml",))
+    assert leftover["board"] == LEFTOVER
+    assert "unfixable without editing CI" in leftover["reason"]
+
+
+def test_branch_rules_non_list_is_board_error(monkeypatch) -> None:
+    def fake_gh(_args: list[str]):
+        return {"message": "Not Found"}
+
+    monkeypatch.setattr(pr_board, "_gh_json", fake_gh)
+    try:
+        pr_board._branch_rules(TARGET, "main")
+        raise AssertionError("expected BoardError")
+    except pr_board.BoardError as exc:
+        assert "non-list" in str(exc)
+
+
 def test_matched_required_workflow_pending_job_waits() -> None:
     rollup = [
         *_green(),
@@ -375,6 +426,8 @@ def test_unmatched_workflow_on_merge_ready_state_still_merges() -> None:
     verdict = decide(facts)
     assert verdict["board"] == MERGE
     assert "no required check on this base" not in verdict["reason"]
+    assert "satisfied" not in verdict["reason"]
+    assert "rollup unmatched" in verdict["reason"]
 
 
 def test_both_protection_sources_union_without_duplicates(monkeypatch) -> None:
