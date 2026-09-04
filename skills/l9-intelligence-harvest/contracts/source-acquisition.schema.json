@@ -1,0 +1,75 @@
+{
+  "$id": "l9/intelligence-harvest/source-acquisition",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "adapter": {
+      "enum": [
+        "local_path",
+        "repository_checkout",
+        "remote_repository",
+        "url",
+        "document_or_pack"
+      ]
+    },
+    "inventory": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "bytes": {"minimum": 0, "type": "integer"},
+          "classification": {"default": "candidate", "type": "string"},
+          "path": {"minLength": 1, "type": "string"},
+          "sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"}
+        },
+        "required": ["path", "bytes", "sha256"],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "limitations": {
+      "items": {"type": "string"},
+      "type": "array"
+    },
+    "locator": {"minLength": 1, "type": "string"},
+    "materialized_root": {"type": ["string", "null"]},
+    "schema_version": {"const": "1.0"},
+    "source_identity": {
+      "additionalProperties": false,
+      "properties": {
+        "content_sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+        "final_url": {"minLength": 1, "type": "string"},
+        "immutable_ref": {"minLength": 1, "type": "string"},
+        "kind": {
+          "enum": ["file", "directory", "repository", "url", "document_pack"]
+        },
+        "provider": {"minLength": 1, "type": "string"},
+        "repository": {"minLength": 1, "type": "string"},
+        "response_etag": {"minLength": 1, "type": "string"},
+        "response_last_modified": {"minLength": 1, "type": "string"}
+      },
+      "required": ["kind"],
+      "type": "object"
+    },
+    "status": {"enum": ["PASS", "PARTIAL", "BLOCKED"]},
+    "transport": {
+      "enum": ["filesystem", "repository_checkout", "direct_https", "connector"]
+    },
+    "verification": {
+      "enum": ["CONTENT_REHASHED", "CONTENT_HASH_DECLARED", "IDENTITY_ONLY"]
+    }
+  },
+  "required": [
+    "schema_version",
+    "adapter",
+    "locator",
+    "transport",
+    "source_identity",
+    "materialized_root",
+    "inventory",
+    "verification",
+    "limitations",
+    "status"
+  ],
+  "title": "SourceAcquisitionReceipt",
+  "type": "object"
+}

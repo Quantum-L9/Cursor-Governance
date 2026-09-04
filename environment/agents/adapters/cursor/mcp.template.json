@@ -1,0 +1,27 @@
+{
+  "_comment": [
+    "Cursor MCP configuration — Graphiti front door only.",
+    "Authority: environment/agents/adapters/cursor/mcp.template.json is the",
+    "canonical shape for the Cursor surface's Graphiti server entry. Cursor's",
+    "live MCP config is user-owned (~/.cursor/mcp.json / IDE settings); this",
+    "template documents the sanctioned entry, it is not auto-rendered over",
+    "user config.",
+    "",
+    "NO CREDENTIAL VALUES. ${GRAPHITI_MCP_URL} and the optional",
+    "${GRAPHITI_MCP_TOKEN} header are environment references, exactly like the",
+    "claude-code template. The retired capability broker URL is forbidden",
+    "(CAPABILITY_BROKER_RETIRED_V1)."
+  ],
+  "mcpServers": {
+    "graphiti-memory": {
+      "type": "http",
+      "url": "${GRAPHITI_MCP_URL}",
+      "timeout": 120000,
+      "_optional_headers": {
+        "GRAPHITI_MCP_TOKEN": {
+          "Authorization": "Bearer ${GRAPHITI_MCP_TOKEN}"
+        }
+      }
+    }
+  }
+}

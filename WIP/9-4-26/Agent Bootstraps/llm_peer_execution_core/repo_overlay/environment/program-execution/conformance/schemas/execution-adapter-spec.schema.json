@@ -1,0 +1,117 @@
+{
+  "$id": "https://quantum-l9.dev/program-execution/execution-adapter-spec.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Program Execution Adapter Specification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "adapter_id", "adapter_version", "adapter_kind",
+    "contract_family", "provider", "capabilities", "identity",
+    "security", "receipts", "status"
+  ],
+  "properties": {
+    "schema": {"const": "program-execution-adapter.spec.v1"},
+    "adapter_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "adapter_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "adapter_kind": {
+      "enum": [
+        "worker_host", "verifier", "remote_action", "deployment_record",
+        "target_deployment_factory", "target_deployment"
+      ]
+    },
+    "contract_family": {"const": "program-execution-system.v2"},
+    "provider": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "protocol_version"],
+      "properties": {
+        "type": {
+          "enum": [
+            "root_autonomy", "cursor_task_tools",
+            "subprocess", "manual_handoff", "gh_cli", "factory"
+          ]
+        },
+        "protocol_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_kinds", "actions", "async_execution", "cancellation",
+        "structured_output", "isolated_execution", "remote_credentials"
+      ],
+      "properties": {
+        "target_kinds": {"type": "array", "items": {"type": "string"}},
+        "actions": {"type": "array", "items": {"type": "string"}},
+        "async_execution": {"type": "boolean"},
+        "cancellation": {"enum": ["supported", "unsupported", "conditional"]},
+        "structured_output": {"type": "boolean"},
+        "isolated_execution": {"type": "boolean"},
+        "remote_credentials": {"enum": ["forbidden", "conditional", "required"]}
+      }
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["binding", "memory_write"],
+      "properties": {
+        "binding": {
+          "enum": [
+            "peer_runtime_binding", "controller_contract", "external_receipt"
+          ]
+        },
+        "memory_write": {
+          "enum": ["forbidden", "via_generated_data_pipeline"]
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "default_deny", "may_narrow_authority", "may_widen_authority",
+        "autonomous_merge", "force_push", "direct_graphiti_write"
+      ],
+      "properties": {
+        "default_deny": {"const": true},
+        "may_narrow_authority": {"const": true},
+        "may_widen_authority": {"const": false},
+        "autonomous_merge": {"const": false},
+        "force_push": {"const": false},
+        "direct_graphiti_write": {"const": false}
+      }
+    },
+    "receipts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lifecycle_schema", "terminal_core_receipt"],
+      "properties": {
+        "lifecycle_schema": {
+          "const": "program-execution-adapter.lifecycle-receipt.v1"
+        },
+        "terminal_core_receipt": {
+          "enum": ["attempt", "verification", "remote_action", "deployment", "none"]
+        }
+      }
+    },
+    "status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["default", "blocked_reason"],
+      "properties": {
+        "default": {"enum": ["active", "conditional", "dormant", "non_routable"]},
+        "blocked_reason": {"type": ["string", "null"]}
+      }
+    }
+  }
+}
