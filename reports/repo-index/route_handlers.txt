@@ -1,8 +1,0 @@
-./execution-governance/_archived/api/governance-api.py:106:@app.route("/governance/validate", methods=["POST"])
-./execution-governance/_archived/api/governance-api.py:125:@app.route("/governance/rules", methods=["GET"])
-./execution-governance/_archived/api/governance-api.py:144:@app.route("/governance/rules", methods=["POST"])
-./execution-governance/_archived/api/governance-api.py:181:@app.route("/governance/metrics", methods=["GET"])
-./execution-governance/_archived/api/governance-api.py:197:@app.route("/governance/health", methods=["GET"])
-./execution-governance/_archived/api/governance-api.py:228:@app.route("/governance/learning/extract", methods=["POST"])
-./execution-governance/_archived/api/governance-api.py:277:@app.route("/governance/learning/auto-process", methods=["POST"])
-./execution-governance/_archived/api/governance-api.py:80:@app.route("/governance/status", methods=["GET"])

@@ -97,10 +97,36 @@ def _safe_target(dest: Path, member_name: str) -> Path:
     return target
 
 
+MAX_ARCHIVE_MEMBERS = 2048
+MAX_MEMBER_BYTES = 32 * 1024 * 1024
+MAX_ARCHIVE_BYTES = 128 * 1024 * 1024
+_EXTRACT_CHUNK = 1024 * 1024
+
+
+def _copy_bounded(src_fh: object, dest: Path, *, remaining: list[int], name: str) -> None:
+    written = 0
+    with dest.open("wb") as out_fh:
+        while True:
+            chunk = src_fh.read(_EXTRACT_CHUNK)  # type: ignore[attr-defined]
+            if not chunk:
+                break
+            written += len(chunk)
+            remaining[0] -= len(chunk)
+            if written > MAX_MEMBER_BYTES:
+                raise ValueError(f"archive member exceeds {MAX_MEMBER_BYTES} bytes: {name}")
+            if remaining[0] < 0:
+                raise ValueError(f"archive exceeds {MAX_ARCHIVE_BYTES} uncompressed bytes")
+            out_fh.write(chunk)
+
+
 def safe_extract_zip(src: Path, dest: Path) -> None:
     dest.mkdir(parents=True, exist_ok=True)
+    remaining = [MAX_ARCHIVE_BYTES]
     with zipfile.ZipFile(src) as zf:
-        for member in zf.infolist():
+        members = zf.infolist()
+        if len(members) > MAX_ARCHIVE_MEMBERS:
+            raise ValueError(f"zip exceeds {MAX_ARCHIVE_MEMBERS} members")
+        for member in members:
             target = _safe_target(dest, member.filename)
             mode = (member.external_attr >> 16) & 0o170000
             if mode == stat.S_IFLNK:
@@ -109,14 +135,18 @@ def safe_extract_zip(src: Path, dest: Path) -> None:
                 target.mkdir(parents=True, exist_ok=True)
                 continue
             target.parent.mkdir(parents=True, exist_ok=True)
-            with zf.open(member) as src_fh, target.open("wb") as out_fh:
-                out_fh.write(src_fh.read())
+            with zf.open(member) as src_fh:
+                _copy_bounded(src_fh, target, remaining=remaining, name=member.filename)
 
 
 def safe_extract_tar(src: Path, dest: Path) -> None:
     dest.mkdir(parents=True, exist_ok=True)
-    with tarfile.open(src) as tf:
-        for member in tf.getmembers():
+    remaining = [MAX_ARCHIVE_BYTES]
+    with tarfile.open(src, mode="r:*") as tf:
+        members = tf.getmembers()
+        if len(members) > MAX_ARCHIVE_MEMBERS:
+            raise ValueError(f"tar exceeds {MAX_ARCHIVE_MEMBERS} members")
+        for member in members:
             target = _safe_target(dest, member.name)
             if member.issym() or member.islnk() or member.isdev():
                 raise ValueError(f"unsafe tar member type rejected: {member.name}")
@@ -129,8 +159,8 @@ def safe_extract_tar(src: Path, dest: Path) -> None:
             if extracted is None:
                 raise ValueError(f"tar member unreadable: {member.name}")
             target.parent.mkdir(parents=True, exist_ok=True)
-            with extracted, target.open("wb") as out_fh:
-                out_fh.write(extracted.read())
+            with extracted:
+                _copy_bounded(extracted, target, remaining=remaining, name=member.name)
 
 
 def extract_archive(src: Path, dest: Path) -> None:

@@ -11,10 +11,25 @@ from validate_envelope import validate_envelope
 REGISTRY_PATH = Path(__file__).resolve().parent.parent / "references" / "capability-registry.yaml"
 
 
+def _require_unique_requirement_ids(requirements: list[dict[str, Any]]) -> None:
+    seen_exact: set[str] = set()
+    seen_folded: dict[str, str] = {}
+    for req in requirements:
+        rid = str(req["id"])
+        if rid in seen_exact:
+            raise ContractError(f"duplicate requirement id {rid!r}")
+        folded = rid.casefold()
+        prior = seen_folded.get(folded)
+        if prior is not None and prior != rid:
+            raise ContractError(f"requirement ids {prior!r} and {rid!r} collide after case folding")
+        seen_exact.add(rid)
+        seen_folded[folded] = rid
+
+
 def _unit_for_req(req: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
     rid = req["id"]
     return {
-        "id": f"unit-{rid.lower()}",
+        "id": f"unit-{rid}",
         "topology": spec["topology"],
         "owner": spec["owner"],
         "adapter": spec["adapter"],
@@ -27,6 +42,7 @@ def _unit_for_req(req: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
 
 def route_envelope(envelope: dict[str, Any], registry: dict[str, Any]) -> dict[str, Any]:
     validate_envelope(envelope)
+    _require_unique_requirement_ids(envelope["requirements"])
     special = registry.get("specialized_factories", {})
     generic = registry.get("generic_routes", {})
     requirements: list[dict[str, Any]] = envelope["requirements"]

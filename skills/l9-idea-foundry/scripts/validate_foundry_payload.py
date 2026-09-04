@@ -162,6 +162,27 @@ def validate_authority(authority: dict[str, Any], failures: list[str]) -> None:
         nonempty_string(claim.get("statement"), f"AUTHORITY_MAP.claims[{i}].statement", failures)
 
 
+def bind_plan_document(
+    root: Path, planning: dict[str, Any], label: str, failures: list[str]
+) -> None:
+    ref = planning.get("plan_document_ref")
+    digest = planning.get("plan_digest")
+    if not isinstance(ref, str) or not ref.strip():
+        return
+    plan_path = (root / ref).resolve()
+    try:
+        plan_path.relative_to(root.resolve())
+    except ValueError:
+        failures.append(f"{label} plan_document_ref escapes payload root")
+        return
+    if not plan_path.is_file():
+        failures.append(f"{label} plan_document_ref is not a file: {ref}")
+        return
+    actual = sha256_file(plan_path)
+    if digest != actual:
+        failures.append(f"{label} plan_digest does not match file {ref}")
+
+
 def validate_blueprint(blueprint: dict[str, Any], failures: list[str]) -> dict[str, Any]:
     identity = mapping(blueprint.get("identity"), "IMPLEMENTATION_BLUEPRINT.identity", failures)
     nonempty_string(
@@ -454,6 +475,16 @@ def validate_receipt(
     sequence(
         validation.get("results"), "FOUNDRY_RECEIPT.validation.results", failures, nonempty=True
     )
+    bad_results = [
+        result
+        for result in (validation.get("results") or [])
+        if str(result).upper() in {"FAILED", "FAIL", "ERROR", "BLOCKED"}
+    ]
+    fail_if(
+        bool(bad_results),
+        f"FOUNDRY_RECEIPT.validation.results include non-passing entries: {bad_results}",
+        failures,
+    )
 
     mapping(receipt.get("birth"), "FOUNDRY_RECEIPT.birth", failures)
     deployment = mapping(receipt.get("deployment"), "FOUNDRY_RECEIPT.deployment", failures)
@@ -615,6 +646,8 @@ def main() -> int:
     blueprint_planning = validate_blueprint(blueprint, failures)
     validate_traceability(traceability, failures)
     receipt_planning = validate_receipt(receipt, blueprint_planning, failures)
+    bind_plan_document(root, blueprint_planning, "blueprint planning", failures)
+    bind_plan_document(root, receipt_planning, "receipt planning", failures)
 
     # Cross-contract source identity.
     compilation = (
@@ -790,6 +823,13 @@ def main() -> int:
                 if tree_digest:
                     observations.append(f"tracked_file_count={len(records)}")
                     observations.append(f"tracked_tree_digest={tree_digest}")
+
+    if args.birth_ready:
+        run_status = str((receipt.get("run") or {}).get("status") or "")
+        if run_status in {"INTAKE", "PLANNED", "QUARANTINED", "BLOCKED"}:
+            failures.append(
+                f"--birth-ready refused when FOUNDRY_RECEIPT.run.status is {run_status}"
+            )
 
     if failures:
         print("FOUNDRY_PAYLOAD: FAIL")
