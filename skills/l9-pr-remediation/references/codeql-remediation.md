@@ -1,3 +1,15 @@
+<!-- L9_META
+l9_schema: 1
+parent: l9-pr-remediation
+layer: reference
+role: codeql_signal
+tags: [codeql, code-scanning, security, dataflow, fail-closed]
+owner: igor_beylin
+status: active
+version: 1.1.0
+updated: 2026-09-04
+/L9_META -->
+
 # CodeQL remediation (code-scanning alerts)
 
 This reference governs the **CodeQL / code-scanning** signal: a repository has active
@@ -188,7 +200,7 @@ prohibited.
 - `GREEN_CODEQL_CLEAN_REVIEW_RESOLVED` — all confirmed in-scope alerts resolved; coverage
   gaps fixed; exact PR head SHA analyzed; CodeQL check green; no new in-scope alerts;
   tests + build pass; all required checks green; no unanswered code-review agent (`github-code-quality[bot]`, Copilot) or other review threads;
-  branch clean; PR **not merged**.
+  branch clean; PR handed to the pack's MERGE_TRAIN (merge happens there, oldest first, stack-safe).
 - `GREEN_WITH_EXPLICIT_ACCEPTED_RISKS` — required checks green and remaining alerts are
   proven false positives or explicitly accepted with authority and evidence; no hidden
   failures.
@@ -205,5 +217,5 @@ prohibited.
 - The only way to clear an alert is to weaken CodeQL scope/query suites, or to dismiss
   without proven authority → STOP; never weaken or dismiss.
 - A required check or CodeQL result is `UNKNOWN` → STOP until the boundary is understood.
-- Do not merge, release, or deploy. Do not resolve a review thread without a fix or an
-  evidence-backed rebuttal. Do not disclose exploit detail beyond what remediation needs.
+- Do not release or deploy; merge only through the pack's MERGE_TRAIN. Do not resolve a
+  review thread without a fix or an evidence-backed rebuttal. Do not disclose exploit detail beyond what remediation needs.

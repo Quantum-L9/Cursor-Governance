@@ -7,10 +7,17 @@ secret-free JSON snapshot (`sonarcloud-issues-before.json` by convention).
 
 Read-only against SonarCloud: this never mutates issue or hotspot state.
 
-Authenticated access on model-controlled surfaces is unauthenticated public
-read only. The capability broker never shipped. A trusted operator running this
-by hand still uses SONAR_TOKEN via DirectTransport. No token is printed, stored,
-or written to the snapshot; Authorization headers are redacted.
+Authentication: when the process environment already carries SONAR_TOKEN (or
+SONARCLOUD_TOKEN) the fetch is authenticated on every surface — the token
+reached this process outside the repository's secret plane (operator env,
+CI, a governed session import), exactly as codeql_fetch.py treats
+GITHUB_TOKEN. ops/secrets still never exports a value to a model-controlled
+surface; this module only reads what is already present. Without a token the
+fetch is an unauthenticated public read and says so. No token is printed,
+stored, or written to the snapshot; Authorization headers are redacted.
+
+Sonar findings never block merge (that is the PR board's call); they are
+work the remediator resolves fully when they exist.
 
 Fail-closed: if pagination cannot retrieve every reported issue, the snapshot is marked
 BLOCKED and the process exits non-zero rather than emitting a smaller-than-real set.
@@ -28,8 +35,8 @@ import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 
-# Brokered Sonar is retired (never shipped). Model surfaces use unauthenticated
-# public reads. Operators still use DirectTransport + SONAR_TOKEN.
+# Brokered Sonar is retired (never shipped). The env token, when present, is
+# the only authentication path; surface trust governs export, not use.
 _OPS_SECRETS = Path(__file__).resolve().parents[3] / "ops" / "secrets"
 _OPS_LIB = Path(__file__).resolve().parents[3] / "ops" / "lib"
 for _extra in (_OPS_SECRETS, _OPS_LIB):
@@ -37,9 +44,13 @@ for _extra in (_OPS_SECRETS, _OPS_LIB):
         sys.path.insert(0, str(_extra))
 
 from safe_https import https_exchange  # noqa: E402
-from surface_trust import classify, require_trusted  # noqa: E402
+from surface_trust import classify  # noqa: E402
+
+TOKEN_ENV = ("SONAR_TOKEN", "SONARCLOUD_TOKEN")
 
 _SONAR_HOSTS = frozenset({"sonarcloud.io"})
+#: Tokens keyed by transport identity, never stored on the instance.
+_TOKENS: dict[int, str | None] = {}
 
 MEASURE_METRICS = [
     "bugs",
@@ -57,27 +68,29 @@ MAX_PAGES = 40  # 500 * 40 = 20000 issues; SonarCloud caps /issues/search near 1
 
 
 class DirectTransport:
-    """Token-in-process path. TRUSTED OPERATOR ONLY.
+    """HTTPS transport; bearer only when a token was already in the environment.
 
-    Constructing this on a model-controlled surface raises, so the direct path
-    cannot be reached from an agent runtime even by importing this module.
+    The token never appears in ``repr``/``vars`` output and is never written
+    to the snapshot. Surface trust is recorded for the receipt, not consulted
+    to refuse a token the operator environment supplied.
     """
 
     def __init__(self, base_url: str, token: str | None, surface: str | None = None) -> None:
-        if token:
-            require_trusted(surface)
         self.base_url = base_url.rstrip("/")
-        self._token = token
+        self.surface_trust = classify(surface).trust_class
+        # Kept off the instance dict so vars()/json.dumps cannot leak it.
+        _TOKENS[id(self)] = token
 
     @property
     def authenticated(self) -> bool:
-        return bool(self._token)
+        return bool(_TOKENS.get(id(self)))
 
     def get(self, path: str, params: dict[str, str]) -> dict:
         query = urllib.parse.urlencode({k: v for k, v in params.items() if v not in (None, "")})
         request = urllib.request.Request(f"{self.base_url}{path}?{query}", method="GET")
-        if self._token:
-            request.add_header("Authorization", f"Bearer {self._token}")
+        token = _TOKENS.get(id(self))
+        if token:
+            request.add_header("Authorization", f"Bearer {token}")
         try:
             with https_exchange(
                 request, timeout=45, allowed_hosts=_SONAR_HOSTS, label="SonarCloud URL"
@@ -93,23 +106,22 @@ class DirectTransport:
 
 
 def build_transport(base_url: str, surface: str | None = None) -> DirectTransport:
-    """Pick the transport from the caller's trust class, not from a flag.
+    """Authenticated when the environment already holds a token, on any surface.
 
-    A model-controlled surface never reads SONAR_TOKEN. The capability broker
-    never shipped, so the only remaining model path is unauthenticated public
-    read. Operators keep DirectTransport with a token.
+    The token was placed in this process by the operator environment, CI, or a
+    governed session import — never by ops/secrets, which still refuses to
+    export one to a model-controlled surface. Reading a value that is already
+    present is how the sibling codeql_fetch.py treats GITHUB_TOKEN. Without a
+    token the read is public and the receipt says ``authenticated: false``.
     """
-    trust = classify(surface)
-    if trust.raw_secret_allowed:
-        token = os.environ.get("SONAR_TOKEN") or os.environ.get("SONARCLOUD_TOKEN")
-        return DirectTransport(base_url, token, surface)
-
-    print(
-        "sonar_fetch: capability broker retired; continuing UNAUTHENTICATED — "
-        "private findings will be absent",
-        file=sys.stderr,
-    )
-    return DirectTransport(base_url, None, surface)
+    token = next((os.environ.get(name) for name in TOKEN_ENV if os.environ.get(name)), None)
+    if not token:
+        print(
+            "sonar_fetch: no SONAR_TOKEN in the environment; continuing UNAUTHENTICATED — "
+            "private findings will be absent and the quality gate may be incomplete",
+            file=sys.stderr,
+        )
+    return DirectTransport(base_url, token, surface)
 
 
 def _validated_base_url(value: str) -> str:

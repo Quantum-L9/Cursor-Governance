@@ -289,13 +289,19 @@ def test_no_adapter_mcp_template_carries_a_graphiti_bearer() -> None:
 
 
 # ---------------------------------------------------------------------------
-# §13 — Sonar consumer is never env-token on a model surface
+# §13 — Sonar consumer uses an env token that is already present; never leaks it
 # ---------------------------------------------------------------------------
 
 
-def test_sonar_consumer_ignores_an_env_token_on_a_model_surface(
+def test_sonar_consumer_uses_an_env_token_on_a_model_surface_without_leaking_it(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Operator directive 2026-09-04: Sonar findings are resolved with the API key.
+
+    The token reached the process outside ops/secrets (operator env, CI, a
+    governed session import), so reading it is not an export. It must still
+    never surface in a serialized transport or a receipt.
+    """
     sys.path.insert(0, str(REPO_ROOT / "skills" / "l9-pr-remediation" / "scripts"))
     import sonar_fetch
 
@@ -303,16 +309,28 @@ def test_sonar_consumer_ignores_an_env_token_on_a_model_surface(
     monkeypatch.setenv("L9_GOVERNANCE_SURFACE", "claude-code")
     monkeypatch.setenv("CLAUDECODE", "1")
     transport = sonar_fetch.build_transport("https://sonarcloud.io/api")
-    assert not transport.authenticated
+    assert transport.authenticated
+    assert transport.surface_trust == surface_trust.MODEL_CONTROLLED
     assert "CANARY_TOKEN_VALUE" not in json.dumps(vars(transport), default=str)
+    assert "CANARY_TOKEN_VALUE" not in repr(transport)
 
 
-def test_sonar_direct_transport_refuses_a_token_from_a_model_surface(
+def test_sonar_consumer_reports_unauthenticated_when_no_token_is_present(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     sys.path.insert(0, str(REPO_ROOT / "skills" / "l9-pr-remediation" / "scripts"))
     import sonar_fetch
 
+    monkeypatch.delenv("SONAR_TOKEN", raising=False)
+    monkeypatch.delenv("SONARCLOUD_TOKEN", raising=False)
+    transport = sonar_fetch.build_transport("https://sonarcloud.io/api")
+    assert not transport.authenticated
+
+
+def test_secret_plane_export_is_still_denied_on_a_model_surface(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Using a present token is not the same as resolving one: export stays denied."""
     monkeypatch.setenv("CLAUDECODE", "1")
     with pytest.raises(PermissionError):
-        sonar_fetch.DirectTransport("https://sonarcloud.io/api", "tok", surface="operator")
+        surface_trust.require_trusted("operator")

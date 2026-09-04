@@ -1,0 +1,184 @@
+# Skill intelligence report for l9-pr-remediation 5.1.0 (exemplary tier).
+# Every gate below names the executable evidence that produced its status.
+# Re-validate with skills/l9-skill-compiler/scripts/validate_exemplary_skill.py
+# and skills/l9-pr-remediation/scripts/self_test.py (activation precision).
+skill_intelligence_report:
+  activation_model:
+    strong_signals:
+      - '"/l9-pr-remediation" or remediate / fix / babysit / converge / merge the failing PRs'
+      - '"/pr", "ready to merge", "merge blockers", "unresolved review comments"'
+      - a campaign or `make pr` left pull requests red, conflicting, or unmergeable
+      - '"get the open PRs green and merged", "run the merge train"'
+      - github-code-quality[bot] / Copilot threads need replies and resolution
+    weak_signals:
+      - "CI is red"
+      - "what's the status of the PRs"
+      - "clean up the review comments"
+    reject_signals:
+      - open GitHub issues, "/issues", "drain the issues"
+      - 'first publish of a branch: "open a PR for my branch", "make pr", campaign publish'
+      - force-push, admin merge, rewriting published history, weakening tests to get green
+      - editing CI workflows, branch protection, or secrets to make a check pass
+      - a code review of a diff with no pull request context
+    false_positive_risks:
+      - '"merge" in an issue-drain request pulling Converge instead of the issue skill'
+      - a first-publish request mistaken for remediation of an already-open PR
+    specificity_score: 5.0
+    false_positive_risk_score: 0
+    measurement: >-
+      scripts/activation_cases.json — 18 labeled prompts (converge, diagnose, reject)
+      classified by the pack's own intent-precedence rule in scripts/self_test.py;
+      specificity_score = 5 x accuracy, false_positive_risk_score = wrong activations.
+      Plus the 2 shared router fixtures in ops/skill_routing/tests/skill_routing_cases.json.
+  authority_model:
+    order:
+      - latest user instruction and explicit PR scope
+      - current repository source and tests at the PR head
+      - required-check and branch-protection evidence via ops/autonomy/pr_board.py
+      - human review, then code-review agents, then other bots, newest first
+      - scanner API evidence confirmed against current source
+      - deterministic owners (pr_fleet.py, stack_safe_merge.py) and Makefile public verbs
+      - this pack and its references; Unknown never becomes an action
+    conflict_rule: >-
+      higher authority wins; a comment snippet never outranks the file at the head;
+      a check conclusion never outranks the required set; unknown telemetry is wait.
+  expert_heuristics:
+    - condition: pr_fleet.py plan reports a non-generated file overlap between two open PRs
+      judgment: two lanes editing that file would race and one publish would clobber the other
+      action: keep the later PR out of this mutation wave (recon now, remediate next wave); generated-only overlap heals after merge and does not serialize
+    - condition: a red check appears in statusCheckRollup or gh pr checks
+      judgment: red is inventory; only membership in the required set makes it a blocker
+      action: run pr_board.py for that head; merge on UNSTABLE when every required check is green
+    - condition: a PR head SHA differs from the fleet receipt fingerprint
+      judgment: every receipt, board verdict, and assignment bound to the old head is stale
+      action: re-plan the fleet, discard stale assignments, re-run the board before any merge
+    - condition: a lane reports done without a document, or its document fails pr_fleet.py accept
+      judgment: nothing about that PR is verified, whatever the narrative says
+      action: reject, re-assign with the reason or take the PR into the main lane; never close the lane
+    - condition: HUMAN decision, unfixable required CI, or ENVIRONMENT persists after best-effort
+      judgment: the block is authority, not effort; waiting on a person idles the whole train
+      action: gh issue create, launch l9-issue-remediation, declare it to the board, continue independent PRs
+    - condition: required checks are still running after a publish
+      judgment: the wait is external and owns no main-agent work
+      action: assign a watcher lane (read-only recon role) and move to the next ready PR or the merge-train preflight
+    - condition: a PR head is the base of another open PR
+      judgment: a squash rewrites the parent's commits and silently orphans the child
+      action: let stack_safe_merge.py choose --merge; merge children bottom-up; never update-branch after a parent squash
+  doctrine:
+    - plan the fleet once with the deterministic owner; re-plan only when a head moves
+    - launch the largest safe wave in one message and keep the main agent working
+    - the board is computed from required-check identity, never judged from a red check
+    - ownership answers "may I patch this file"; it never decides what happens to the PR
+    - one plan, one commit, one publish per PR; cycles only for signals that did not exist
+    - a lane completes with an accepted result document, never with a sentence
+    - CI waits belong to background watchers, not to the main agent's turn
+    - above-paygrade work becomes a GitHub issue plus the issue skill, never a question
+    - SonarCloud findings are resolved fully when present and never block merge
+    - merge only through the stack-safe executor, oldest first, parents before children
+  invariants:
+    - Diagnose never commits, pushes, edits, or merges
+    - Converge invocation is merge authorization for every open PR in the target repo
+    - verify is L9_REMEDIATOR=1 PR_BASE=origin/main make precommit-repo; publish is git push of the open PR branch; make pr and make pr-check are never invoked
+    - two mutation lanes never share a branch or a non-generated path
+    - 'a result document is judged against its assignment: identity, base SHA, role, writable scope'
+    - a red check outside the required set never holds the merge train
+    - leftover requires --human-decision or --unfixable-check; unknown telemetry is wait
+    - never force-push, --admin, hand-typed --squash, update-branch after a parent squash
+    - never edit .github/workflows, actions, protection, secrets, or CI wiring
+    - lane caps are read from ops/autonomy/execution_profile.py; the pack states no number
+  adapter_map:
+    core_default: >-
+      REST-first fleet plan, one-message waves under profile caps, fail-closed
+      acceptance, board authority, stack-safe oldest-first merge train
+    adapters:
+      - name: cursor_constrained_surface
+        load_when: execution profile resolves to cursor
+        changes: mutation lanes capped by the profile; deferred PRs get recon now; main agent takes a lane only when one is free
+      - name: graphql_restricted_surface
+        load_when: gh pr subcommands or GraphQL return 403 / SURFACE_UNSUPPORTED_GRAPHQL
+        changes: REST-only inventory, stack probe, and PR update; unknown thread telemetry degrades the board to wait; subscribe WARN keeps ownership
+      - name: sonar_configured_repository
+        load_when: sonar-project.properties exists
+        changes: authenticated Sonar fetch on every Converge, fixes in the same commit, never a board input
+  failure_modes:
+    - mode: false_activation_into_mutation
+      prevention: hard intent precedence; ambiguous asks are Diagnose; Diagnose forbids commit/push/merge; reject signals route issues and first publishes elsewhere
+    - mode: narrative_completion
+      prevention: pr_fleet.py accept rejects any lane without a correlated result document; partial/blocked/failed is never promoted
+    - mode: board_from_rollup
+      prevention: verdicts come only from pr_board.py; rollup is inventory
+    - mode: conflicting_mutators
+      prevention: waves admit a PR only when its claims conflict with none admitted; acceptance rejects changed files outside the grant
+    - mode: hand_back_to_human
+      prevention: watcher lanes own CI waits; leftovers open an issue and launch l9-issue-remediation; "re-invoke when green" is forbidden
+  leverage_points:
+    - point: fleet planned once by pr_fleet.py replaces per-PR hand inventory and repeated stack probes
+      scores: {future_action_acceleration: 5, output_quality_gain: 4, drift_reduction: 5, reuse_across_tasks: 5, implementation_simplicity: 4}
+      total: 23
+    - point: one-message wave launch turns N serial remediations into one round under canonical caps
+      scores: {future_action_acceleration: 5, output_quality_gain: 3, drift_reduction: 4, reuse_across_tasks: 5, implementation_simplicity: 4}
+      total: 21
+    - point: fail-closed acceptance makes delegated work trustworthy without re-reading every diff
+      scores: {future_action_acceleration: 3, output_quality_gain: 5, drift_reduction: 5, reuse_across_tasks: 4, implementation_simplicity: 4}
+      total: 21
+    - point: board authority from required-check identity stops mergeable PRs from being parked
+      scores: {future_action_acceleration: 3, output_quality_gain: 5, drift_reduction: 5, reuse_across_tasks: 5, implementation_simplicity: 5}
+      total: 23
+    - point: Sonar fixed inside the same commit removes a follow-up cycle per PR
+      scores: {future_action_acceleration: 4, output_quality_gain: 4, drift_reduction: 3, reuse_across_tasks: 4, implementation_simplicity: 4}
+      total: 19
+  evidence_hierarchy:
+    order:
+      - file content at the PR head SHA
+      - pr_board.py receipt (.l9/pr/board-{n}.json) and pr_fleet.py receipt (.l9/pr/fleet.json)
+      - required-check logs (gh run view --log-failed) and check-run conclusions
+      - review threads (GraphQL reviewThreads) and code-review agent comments
+      - scanner snapshots (sonarcloud-issues-before.json, codeql-alerts-before.json) confirmed against source
+      - accepted result documents and gateway acceptance receipts
+      - local make precommit-repo result (never a proxy for remote CI)
+    rule: report only validation that ran; Passed / Failed / Skipped / Unknown / NotApplicable
+  self_improvement_hook:
+    capture_when: the user reports a bad run or requests iteration; never invented telemetry
+    capture:
+      - missed_trigger
+      - false_trigger
+      - recurring_user_correction
+      - output_that_required_manual_rework
+    record_to:
+      - Graphiti lesson via l9-graphiti-memory (atomic, --kind lesson, agent stamped)
+      - a new labeled prompt in scripts/activation_cases.json when the miss was activation
+      - a regression case in tests/ops/autonomy/test_pr_fleet.py when the miss was planning or acceptance
+  exemplary_gate_results:
+    activation_precision:
+      status: pass
+      evidence: scripts/self_test.py test_activation_precision over scripts/activation_cases.json (18 labeled prompts, 0 wrong activations)
+    adapter_architecture:
+      status: pass
+      evidence: three conditional adapters, each with load_when and decision changes; core default stays domain-agnostic
+    evidence_hierarchy:
+      status: pass
+      evidence: ordered evidence list bound to concrete receipts and commands; vocabulary Passed/Failed/Skipped/Unknown/NotApplicable enforced in SKILL.md
+    doctrine_extraction:
+      status: pass
+      evidence: ten doctrine lines, each mapped to a Law in SKILL.md and enforced by self_test.py or tests/ops/autonomy/test_pr_fleet.py
+    expert_heuristics:
+      status: pass
+      evidence: seven condition -> judgment -> action heuristics; four are executable in pr_fleet.py (overlap, fingerprint, accept, watch) and tested
+    failure_modes:
+      status: pass
+      evidence: five modes with prevention rules; each prevention is a tested owner (pr_board.py, pr_fleet.py accept/waves, self_test.py forbids)
+    leverage_model:
+      status: pass
+      evidence: five scored leverage points; two score 23/25 (threshold >=18)
+    self_improvement_hook:
+      status: pass
+      evidence: after-use capture block in SKILL.md with concrete record targets
+    compiler_enforcement_gates:
+      status: pass
+      evidence: validate_skill_pack.py PASS (frontmatter, links, description window); validate_exemplary_skill.py PASS; self_test.py PASS
+    skill_intelligence_report:
+      status: pass
+      evidence: this file; all twelve required fields present
+  tier_decision:
+    tier: exemplary
+    rationale: every required gate passes with executable evidence; activation precision is measured, not asserted

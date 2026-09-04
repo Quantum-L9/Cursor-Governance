@@ -1,0 +1,89 @@
+# Gate B expertise model for l9-pr-remediation (compiler pipeline:
+# parse_source -> extract_expertise -> compress_expertise -> design_skill).
+# Compressed judgment only: every line changes a future decision. Validated by
+# skills/l9-skill-compiler/scripts/validate_exemplary_skill.py.
+expertise_model:
+  experts:
+    - PR fleet convergence operator (open-PR inventory, waves, merge train)
+    - release and branch-protection engineer (required-check identity, stack safety)
+    - code-review triage engineer (CI logs, review threads, code-review agents, Sonar/CodeQL)
+    - bounded-delegation orchestrator (assignments, result documents, fail-closed acceptance)
+    - governed-publish operator (precommit-repo verify, git push of an open PR, no ceremony)
+  doctrine:
+    - plan the fleet once with the deterministic owner; re-plan only when a head moves
+    - launch the largest safe wave in one message and keep the main agent working
+    - the board is computed from required-check identity, never judged from a red check
+    - ownership answers "may I patch this file"; it never decides what happens to the PR
+    - one plan, one commit, one publish per PR; cycles only for signals that did not exist
+    - a lane completes with an accepted result document, never with a sentence
+    - CI waits belong to background watchers, not to the main agent's turn
+    - above-paygrade work becomes a GitHub issue plus the issue skill, never a question
+    - SonarCloud findings are resolved fully when present and never block merge
+    - merge only through the stack-safe executor, oldest first, parents before children
+  invariants:
+    - Diagnose never commits, pushes, edits, or merges
+    - Converge invocation is merge authorization for every open PR in the target repo
+    - remediator verify is `L9_REMEDIATOR=1 PR_BASE=origin/main make precommit-repo`; publish is `git push` of the already-open PR branch; `make pr` / `make pr-check` are never invoked
+    - two mutation lanes never share a branch or a non-generated path (claim primitive decides)
+    - 'a result document is judged against its assignment: identity, base SHA, role, writable scope'
+    - a red check outside the required set never holds the merge train
+    - "`leftover` requires `--human-decision` or `--unfixable-check`; unknown telemetry is `wait`"
+    - never force-push, `--admin`, hand-typed `--squash`, `update-branch` after a parent squash
+    - never edit `.github/workflows/**`, actions, protection, secrets, or CI wiring
+    - lane caps are read from `ops/autonomy/execution_profile.py`; the pack states no number
+  authority_hierarchy:
+    - latest user instruction and explicit PR scope
+    - current repository source and tests at the PR head
+    - required-check and branch-protection evidence via `ops/autonomy/pr_board.py`
+    - human review, then code-review agents, then other bots, newest first
+    - scanner API evidence confirmed against current source
+    - deterministic owners (`pr_fleet.py`, `stack_safe_merge.py`) and Makefile public verbs
+    - this pack and its references; `Unknown` never becomes an action
+  activation_signals:
+    - '"/l9-pr-remediation" or "remediate / fix / babysit / converge / merge the failing PRs"'
+    - '"/pr", "is PR #n ready to merge", "merge blockers", "unresolved review comments"'
+    - a campaign or `make pr` left pull requests red, conflicting, or unmergeable
+    - '"get the open PRs green and merged", "run the merge train"'
+    - review threads from github-code-quality[bot] or Copilot need replies and resolution
+  reject_signals:
+    - open GitHub issues, "/issues", "drain the issues" (issue skill, not this pack)
+    - 'first publish of a branch: "open a PR for my branch", "make pr", campaign publish'
+    - force-push, admin merge, rewriting published history, weakening tests to get green
+    - editing CI workflows, branch protection, or secrets to make a check pass
+    - a code review of a diff with no pull request context at all
+  adapters:
+    - name: cursor_constrained_surface
+      load_when:
+        - execution profile resolves to cursor (L9_GOVERNANCE_SURFACE unset or cursor)
+      changes:
+        - mutation lanes are capped by the profile (read, never stated); deferred PRs get recon now and remediation next wave
+        - the main agent takes a mutation lane itself only when the cap leaves one free
+    - name: graphql_restricted_surface
+      load_when:
+        - "`gh pr` subcommands or GraphQL return 403 / SURFACE_UNSUPPORTED_GRAPHQL"
+      changes:
+        - inventory, stack probe, and PR create/update go over REST (`gh api repos/...`)
+        - 'review-thread telemetry may be unknown: the board degrades to `wait`, never `merge`; subscribe WARN does not waive ownership'
+    - name: sonar_configured_repository
+      load_when:
+        - sonar-project.properties exists in the target repository
+      changes:
+        - every Converge fetches the PR issue set with the environment SONAR_TOKEN and fixes confirmed issues in the same commit
+        - Sonar status is never a board input; residue is a Deferred reply plus issue handoff
+  failure_modes:
+    - name: false_activation_into_mutation
+      prevention: intent precedence is hard; ambiguous asks are Diagnose; Diagnose forbids commit/push/merge; reject signals route issues and first publishes elsewhere
+    - name: narrative_completion
+      prevention: "`pr_fleet.py accept` rejects any lane without a correlated result document; partial/blocked/failed is never promoted"
+    - name: board_from_rollup
+      prevention: verdicts come only from `pr_board.py` (required set from protection ∪ rulesets ∪ required workflows); rollup is inventory
+    - name: conflicting_mutators
+      prevention: waves admit a PR only when its `path:`/`branch:` claims conflict with none admitted; acceptance rejects changed files outside the grant
+    - name: hand_back_to_human
+      prevention: watcher lanes own CI waits; leftovers open an issue and launch l9-issue-remediation; "re-invoke when green" is forbidden
+  leverage_points:
+    - fleet planned once by `pr_fleet.py` replaces per-PR hand inventory and repeated stack probes
+    - one-message wave launch turns N serial remediations into one round under canonical caps
+    - fail-closed acceptance makes delegated work trustworthy without re-reading every diff
+    - board authority from required-check identity stops mergeable PRs from being parked
+    - Sonar fixed inside the same commit removes a whole follow-up cycle per PR
