@@ -1,0 +1,282 @@
+{
+  "schema_version": "1.1.0",
+  "request": {
+    "request_id": "repo-docs-f02b4140ed11",
+    "donor": "Quantum-L9/Cursor-Governance",
+    "beneficiary": "Quantum-L9/Cursor-Governance",
+    "harvest_target": "repo-docs:architecture,invariants",
+    "access_mode": "read-only",
+    "depth": "standard",
+    "brief": false
+  },
+  "source_identity": {
+    "repository": "Quantum-L9/Cursor-Governance",
+    "repo_docs": {
+      "repository": "Quantum-L9/Cursor-Governance",
+      "semantic_source_digest": "c5f57a7e0d26b716ddbc587657bcf23b1aff2d04592509f12f442dfc1f6a6659",
+      "required_surfaces": [
+        "architecture",
+        "invariants"
+      ]
+    }
+  },
+  "inventory": [
+    {
+      "path": ".github/workflows/governance-self-check.yml",
+      "purpose": "Thin CI consumer for repository documentation obligation receipts.",
+      "classification": "active",
+      "owner": "Cursor-Governance",
+      "consumers": [
+        "pull_request",
+        "push:main",
+        "workflow_dispatch"
+      ],
+      "importance": 5,
+      "action": "keep",
+      "evidence_ids": [
+        "ev-ci-consumer"
+      ]
+    },
+    {
+      "path": "skills/l9-update-agent-docs/scripts/repo_docs.py",
+      "purpose": "Canonical Repository Documentation Obligation Compiler front door.",
+      "classification": "active",
+      "owner": "l9-update-agent-docs",
+      "consumers": [
+        "governance-self-check"
+      ],
+      "importance": 5,
+      "action": "keep",
+      "evidence_ids": [
+        "ev-compiler"
+      ]
+    },
+    {
+      "path": "skills/l9-update-agent-docs/scripts/doc_obligations.py",
+      "purpose": "Target resolution, obligation lifecycle, validation, and terminal-status derivation.",
+      "classification": "active",
+      "owner": "l9-update-agent-docs",
+      "consumers": [
+        "repo_docs.py"
+      ],
+      "importance": 5,
+      "action": "keep",
+      "evidence_ids": [
+        "ev-obligation-lifecycle"
+      ]
+    }
+  ],
+  "system": {
+    "identity": "Repository Documentation Obligation Compiler",
+    "workflows": [
+      {
+        "name": "repository documentation obligation check",
+        "entry": ".github/workflows/governance-self-check.yml",
+        "compiler": "skills/l9-update-agent-docs/scripts/repo_docs.py"
+      }
+    ],
+    "control_flow": [
+      {
+        "from": "repository delta",
+        "to": "documentation topology",
+        "then": "target-resolved DocumentationObligation objects",
+        "semantic_branch": "l9-intelligence-harvest",
+        "terminal": "l9.repo-docs.receipt.v3"
+      }
+    ],
+    "ownership_boundaries": [
+      {
+        "owner": "l9-update-agent-docs",
+        "responsibility": "compile documentation obligations and receipts"
+      },
+      {
+        "owner": "l9-intelligence-harvest",
+        "responsibility": "discover and qualify semantic evidence only"
+      },
+      {
+        "owner": "readme-pipeline-v1",
+        "responsibility": "render module README targets"
+      }
+    ],
+    "dependencies": [
+      {
+        "from": "repo-docs",
+        "to": "l9-intelligence-harvest",
+        "kind": "selective semantic qualification"
+      },
+      {
+        "from": "repo-docs",
+        "to": "readme-pipeline-v1",
+        "kind": "owner-native module documentation action"
+      }
+    ],
+    "must_not_own": [
+      "semantic reasoning duplicated from l9-intelligence-harvest",
+      "module README rendering duplicated from readme-pipeline-v1",
+      "Organization CI Core"
+    ]
+  },
+  "surfaces": [
+    {
+      "item": "architecture",
+      "source": "ARCHITECTURE.md",
+      "visibility": "repository",
+      "is_wrapper": false,
+      "resolved_target": "ARCHITECTURE.md",
+      "dependencies": [
+        "skills/l9-update-agent-docs/scripts/repo_docs.py",
+        ".github/workflows/governance-self-check.yml"
+      ],
+      "mutations": [
+        "surgical refresh"
+      ],
+      "evidence_ids": [
+        "ev-ci-consumer",
+        "ev-compiler"
+      ]
+    },
+    {
+      "item": "invariants",
+      "source": "INVARIANTS.md",
+      "visibility": "repository",
+      "is_wrapper": false,
+      "resolved_target": "INVARIANTS.md",
+      "dependencies": [
+        "skills/l9-update-agent-docs/scripts/doc_obligations.py",
+        "skills/l9-update-agent-docs/scripts/repo_docs.py"
+      ],
+      "mutations": [
+        "surgical refresh"
+      ],
+      "evidence_ids": [
+        "ev-obligation-lifecycle",
+        "ev-compiler"
+      ]
+    }
+  ],
+  "drift": [],
+  "evidence": [
+    {
+      "id": "ev-ci-consumer",
+      "epistemic": "CONFIRMED",
+      "source": "Quantum-L9/Cursor-Governance",
+      "locator": {
+        "kind": "path_lines",
+        "value": ".github/workflows/governance-self-check.yml"
+      },
+      "claim": "The existing governance-self-check workflow invokes repo_docs.py, passes source-head and tested-revision identity, exposes obligation counts, and uploads the receipt.",
+      "secret_redacted": false
+    },
+    {
+      "id": "ev-compiler",
+      "epistemic": "CONFIRMED",
+      "source": "Quantum-L9/Cursor-Governance",
+      "locator": {
+        "kind": "path_lines",
+        "value": "skills/l9-update-agent-docs/scripts/repo_docs.py"
+      },
+      "claim": "repo_docs.py is the machine-first Repository Documentation Obligation Compiler and delegates semantic qualification to l9-intelligence-harvest.",
+      "secret_redacted": false
+    },
+    {
+      "id": "ev-obligation-lifecycle",
+      "epistemic": "CONFIRMED",
+      "source": "Quantum-L9/Cursor-Governance",
+      "locator": {
+        "kind": "path_lines",
+        "value": "skills/l9-update-agent-docs/scripts/doc_obligations.py"
+      },
+      "claim": "Documentation obligations are target-resolved, validated individually, and receipt status is derived from whether required obligations are terminal or blocked.",
+      "secret_redacted": false
+    },
+    {
+      "id": "ev-obligation-schema",
+      "epistemic": "CONFIRMED",
+      "source": "Quantum-L9/Cursor-Governance",
+      "locator": {
+        "kind": "path_lines",
+        "value": "skills/l9-update-agent-docs/contracts/documentation-obligation.schema.json"
+      },
+      "claim": "DocumentationObligation is a first-class typed machine contract with target, owner, trigger, revision, qualification, action, evidence, lifecycle, validation, and blockers.",
+      "secret_redacted": false
+    }
+  ],
+  "concepts": [
+    {
+      "id": "repo-docs-architecture-obligation-compiler",
+      "name": "Repository documentation obligation compiler architecture",
+      "description": "Repository documentation maintenance is modeled as compilation from repository delta and documentation topology into typed target-resolved obligations, with semantic qualification delegated upstream and owner-native rendering preserved.",
+      "problem": "Surface-level stale flags do not provide a durable machine unit with exact target, owner, evidence, lifecycle, and closure semantics.",
+      "semantic_contract": "Repository changes compile into target-resolved DocumentationObligation objects; deterministic qualification remains local, semantic qualification remains owned by l9-intelligence-harvest, specialist owners render their own targets, and CI consumes the resulting receipt rather than reimplementing the compiler.",
+      "disposition": "PORT",
+      "beneficiary_destination": "docs:architecture",
+      "evidence_ids": [
+        "ev-ci-consumer",
+        "ev-compiler",
+        "ev-obligation-schema"
+      ],
+      "risks": [
+        "Duplicating semantic reasoning inside Repo Docs would create a second Harvest owner.",
+        "Moving rendering into the compiler would create duplicate documentation owners."
+      ],
+      "acceptance_tests": [
+        {
+          "given": "a repository change impacts one or more documentation surfaces",
+          "when": "repo_docs.py evaluates the change",
+          "then": "it emits target-resolved DocumentationObligation objects and a receipt",
+          "must_not": "collapse owner-specific work back into surface-only stale flags or duplicate specialist renderers"
+        }
+      ],
+      "beneficiary_fit": {
+        "comparison": "DONOR_STRONGER",
+        "existing_owner": "repository_architecture_index",
+        "merge_decision": "refresh the architecture index with the executable compiler boundary",
+        "compatibility_risk": "low"
+      },
+      "leverage": 5,
+      "compounding": 5,
+      "rank_score": 95,
+      "nugget": true
+    },
+    {
+      "id": "repo-docs-invariant-terminal-closure",
+      "name": "Evidence-backed terminal documentation closure",
+      "description": "Receipt PASS is a derived result of per-obligation terminality and required validation, not a separate optimistic status plane.",
+      "problem": "Independent surface, freshness, capability, and semantic status planes can disagree and allow false completion claims.",
+      "semantic_contract": "A repository documentation receipt may report PASS only when every applicable DocumentationObligation is terminal with required validation evidenced; any required non-terminal obligation remains PARTIAL, any blocked obligation yields BLOCKED, and semantic obligations may close only after change-bound canonical Harvest evidence is admitted.",
+      "disposition": "PORT",
+      "beneficiary_destination": "docs:invariants",
+      "evidence_ids": [
+        "ev-obligation-lifecycle",
+        "ev-compiler",
+        "ev-obligation-schema"
+      ],
+      "risks": [
+        "Treating SATISFIED as terminal would equate a touched target with validated closure.",
+        "Accepting unbound Harvest evidence would allow semantic proof from the wrong repository change."
+      ],
+      "acceptance_tests": [
+        {
+          "given": "one or more applicable documentation obligations exist",
+          "when": "receipt status is derived",
+          "then": "PASS occurs only after all required obligations are terminal and validated",
+          "must_not": "report PASS while any required obligation is awaiting qualification, open, validated-but-nonterminal, handoff-required, or blocked"
+        }
+      ],
+      "beneficiary_fit": {
+        "comparison": "DONOR_STRONGER",
+        "existing_owner": "repository_invariant_index",
+        "merge_decision": "add the executable closure and Harvest-binding invariant pointers",
+        "compatibility_risk": "low"
+      },
+      "leverage": 5,
+      "compounding": 5,
+      "rank_score": 100,
+      "nugget": true
+    }
+  ],
+  "safety": [],
+  "unknowns": [],
+  "highest_leverage_nugget": "repo-docs-invariant-terminal-closure",
+  "status": "PASS"
+}

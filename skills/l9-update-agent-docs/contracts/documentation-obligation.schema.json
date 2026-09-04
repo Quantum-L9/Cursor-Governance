@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.local/contracts/documentation-obligation.schema.json",
+  "title": "L9 Repository Documentation Obligation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "obligation_id",
+    "surface",
+    "target",
+    "owner",
+    "trigger",
+    "revision",
+    "qualification",
+    "required_action",
+    "evidence",
+    "lifecycle",
+    "validation",
+    "blockers"
+  ],
+  "properties": {
+    "schema": {"const": "l9.repo-docs.obligation.v1"},
+    "obligation_id": {"type": "string", "minLength": 1},
+    "surface": {"type": "string", "minLength": 1},
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "path", "selector", "present"],
+      "properties": {
+        "kind": {"enum": ["file", "generated_file", "external", "surface"]},
+        "path": {"type": ["string", "null"]},
+        "selector": {"type": ["string", "null"]},
+        "present": {"type": "boolean"}
+      }
+    },
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "authority_class", "execution_mode", "executor"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "authority_class": {"type": "string", "minLength": 1},
+        "execution_mode": {"enum": ["owner_native", "generator", "specialist", "external", "none"]},
+        "executor": {"type": ["string", "null"]}
+      }
+    },
+    "trigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rules", "source_changes", "basis"],
+      "properties": {
+        "rules": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "source_changes": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "basis": {"enum": ["changed_files", "baseline", "run_mutation"]}
+      }
+    },
+    "revision": {"$ref": "#/$defs/revision"},
+    "qualification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "status", "semantic_owner", "harvest_target", "harvest_request_id", "concept_ids"],
+      "properties": {
+        "kind": {"enum": ["deterministic", "semantic"]},
+        "status": {"enum": ["QUALIFIED", "AWAITING", "NOT_REQUIRED", "BLOCKED"]},
+        "semantic_owner": {"type": ["string", "null"]},
+        "harvest_target": {"type": ["string", "null"]},
+        "harvest_request_id": {"type": ["string", "null"]},
+        "concept_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+      }
+    },
+    "required_action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "mode", "owner", "executor"],
+      "properties": {
+        "type": {"enum": ["REFRESH", "REGENERATE", "CREATE", "RECONCILE", "PRESERVE", "VALIDATE", "HANDOFF", "NO_ACTION"]},
+        "mode": {"enum": ["OWNER_NATIVE", "SEMANTICALLY_QUALIFIED", "EXTERNAL_OWNER", "NONE"]},
+        "owner": {"type": "string", "minLength": 1},
+        "executor": {"type": ["string", "null"]}
+      }
+    },
+    "evidence": {"type": "array", "items": {"$ref": "#/$defs/evidence"}},
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reason", "terminal"],
+      "properties": {
+        "status": {"enum": ["DETECTED", "AWAITING_QUALIFICATION", "OPEN", "HANDOFF_REQUIRED", "SATISFIED", "VALIDATED", "CLOSED", "PRESERVED", "BLOCKED", "NOT_APPLICABLE"]},
+        "reason": {"type": "string"},
+        "terminal": {"type": "boolean"}
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "results"],
+      "properties": {
+        "required": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "status", "evidence_ids", "detail"],
+            "properties": {
+              "name": {"type": "string", "minLength": 1},
+              "status": {"enum": ["PASS", "FAIL", "BLOCKED", "UNKNOWN", "NotApplicable"]},
+              "evidence_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+              "detail": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "blockers": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+  },
+  "$defs": {
+    "revision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "base_ref", "base_sha", "source_head_sha", "tested_revision_sha", "comparison_mode"],
+      "properties": {
+        "repository": {"type": "string", "minLength": 1},
+        "base_ref": {"type": ["string", "null"]},
+        "base_sha": {"type": ["string", "null"]},
+        "source_head_sha": {"type": "string", "minLength": 1},
+        "tested_revision_sha": {"type": "string", "minLength": 1},
+        "comparison_mode": {"enum": ["merge_base_to_head", "worktree_to_head", "snapshot", "unknown"]}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "source", "locator", "epistemic", "supports"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "type": {"enum": ["change", "topology", "target", "harvest", "capability", "validation", "revision", "adapter"]},
+        "source": {"type": "string", "minLength": 1},
+        "locator": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "value"],
+          "properties": {
+            "kind": {"enum": ["path", "rule", "sha", "symbol", "artifact", "value"]},
+            "value": {"type": "string", "minLength": 1}
+          }
+        },
+        "epistemic": {"enum": ["CONFIRMED", "INFERENCE", "UNKNOWN"]},
+        "supports": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}
