@@ -122,6 +122,10 @@ tiers:
     reason: experimental GAR runtime bootloader whose broad architect-engineer description would hijack ordinary routing if auto-invoked; load when the user explicitly invokes the global architect runtime, iterates on the pack, or when l9-plan-simple loads it as the required upstream planner; disable-model-invocation
   - skill: l9-pr-digest
     reason: auto-registered by sync_generated_artifacts (orphan → explicit_only)
+  - skill: l9-idea-execute
+    reason: routes validated IdeaOS decisions into Foundry, Website-Bot, plan-simple, or Program Execution; owner-selection and downstream invocation are high blast radius; disable-model-invocation
+  - skill: l9-idea-foundry
+    reason: compiles idea packs into tested code and l9-repo-template births; repository creation and code realization are high blast radius; disable-model-invocation
   do_not_migrate_to_skills:
   - item: commands/_archived/violation.md
     reason: violation handling belongs in always-applied rules or hooks, not optional skill context
@@ -757,6 +761,58 @@ claude_routing:
     supporting:
     - l9-git-work-preserve
     note: 'explicit_only + hint_allowed — Read/attach only. Mutation is /ff or make ff via scripts/ff.sh. Never activate_fresh. Never delete unique work.
+
+      '
+  - id: idea_execute
+    primary: l9-idea-execute
+    signal_weight: 8
+    hint_allowed: true
+    required_any:
+    - /l9-idea-execute
+    - idea execute
+    - ideaos execution
+    - idea-to-execution
+    - execution envelope
+    positive_signals:
+    - /l9-idea-execute
+    - idea execute
+    - ideaos execution
+    - idea-to-execution
+    - execution envelope
+    - route this ideaos
+    negative_signals:
+    - refine the idea
+    - brainstorm
+    - ideaos only
+    supporting:
+    - l9-structured-reasoning
+    note: 'explicit_only + hint_allowed — Read/attach only. Mutation requires explicit user invoke. Never auto-select as IdeaOS or as a generic coder.
+
+      '
+  - id: idea_foundry
+    primary: l9-idea-foundry
+    signal_weight: 8
+    hint_allowed: true
+    required_any:
+    - /l9-idea-foundry
+    - idea foundry
+    - birth-ready repository
+    - idea pack to code
+    - l9-repo-template birth
+    positive_signals:
+    - /l9-idea-foundry
+    - idea foundry
+    - compile this idea pack
+    - birth-ready repository
+    - l9-repo-template birth
+    - idea pack to code
+    negative_signals:
+    - website only
+    - deploy to production
+    - existing repo change
+    supporting:
+    - l9-structured-reasoning
+    note: 'explicit_only + hint_allowed — Read/attach only. Mutation requires explicit user invoke. Never birth a repo from a hint.
 
       '
 slash_commands:

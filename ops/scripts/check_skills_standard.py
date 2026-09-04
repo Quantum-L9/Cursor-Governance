@@ -2,7 +2,9 @@
 """CI gate for docs/skills-standard.md.
 
 Env:
-  SKILLS_DISCOVERY_BUDGET  max bytes of live name+description (default 16384)
+  SKILLS_DISCOVERY_BUDGET  max bytes of always-apply discovery (default 16384).
+  Model-invocable skills count name+description; disable-model-invocation
+  skills count name only.
 """
 
 from __future__ import annotations
@@ -111,7 +113,14 @@ def check_skills(root: Path) -> tuple[list[str], list[str], int, int, int]:
                 )
         else:
             live += 1
-            disc += len(name.encode()) + len(desc.encode())
+            # Always-apply cost is the model-invocable roster. explicit-only
+            # packs set disable-model-invocation and skillOverrides
+            # user-invocable-only, so they do not pay description bytes every
+            # turn. Their names still count because Claude lists names.
+            if dmi:
+                disc += len(name.encode())
+            else:
+                disc += len(name.encode()) + len(desc.encode())
 
         nlines = body.count("\n") + 1
         if nlines > BODY_MAX:

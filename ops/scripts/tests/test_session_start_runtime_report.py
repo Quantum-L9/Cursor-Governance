@@ -275,6 +275,149 @@ class HookWiringTests(unittest.TestCase):
         self.assertLess(marker, installer)
 
 
+class ReceiptSurfaceIsolationTests(unittest.TestCase):
+    """A receipt written for another workspace or $HOME is never this session's fault."""
+
+    def test_claude_home_receipt_is_stale_other_surface_not_degraded(self) -> None:
+        home = str(Path.home())
+        lines = report.classify_claude_adapter(
+            surface="claude-code",
+            receipt={
+                "state": "degraded",
+                "reason": "degraded: capabilities",
+                "workspace": home,
+                "generated_at": "2026-09-02T20:19:36Z",
+            },
+            repair_log="",
+            repair_text="",
+            workspace="/Users/someone/Cursor-Governance",
+        )
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(lines[0]["class"], report.NA)
+        self.assertIn("stale_other_surface", lines[0]["summary"])
+        self.assertIn("$HOME", lines[0]["summary"])
+        self.assertFalse(lines[0]["include_in_degraded"])
+
+    def test_claude_other_workspace_receipt_is_stale_other_surface(self) -> None:
+        lines = report.classify_claude_adapter(
+            surface="claude-code",
+            receipt={
+                "state": "failed",
+                "reason": "installer failed",
+                "workspace": "/tmp/some-other-clone",
+            },
+            repair_log="",
+            repair_text="",
+            workspace="/tmp/this-clone",
+        )
+        self.assertEqual(lines[0]["class"], report.NA)
+        self.assertIn("stale_other_surface", lines[0]["summary"])
+        self.assertFalse(lines[0]["include_in_degraded"])
+
+    def test_claude_this_workspace_receipt_still_scores(self) -> None:
+        lines = report.classify_claude_adapter(
+            surface="claude-code",
+            receipt={
+                "state": "failed",
+                "reason": "installer failed at stage 'settings'",
+                "workspace": "/tmp/this-clone",
+            },
+            repair_log="",
+            repair_text="",
+            workspace="/tmp/this-clone",
+        )
+        self.assertEqual(lines[0]["class"], report.FAILED)
+        self.assertTrue(lines[0]["include_in_degraded"])
+
+    def test_receipt_without_workspace_is_not_invented_stale(self) -> None:
+        lines = report.classify_claude_adapter(
+            surface="claude-code",
+            receipt={"state": "ready", "reason": "all components READY (10s ago)"},
+            repair_log="",
+            repair_text="",
+            workspace="/tmp/this-clone",
+        )
+        self.assertEqual(lines[0]["class"], report.OK)
+
+
+class CursorAdapterClassificationTests(unittest.TestCase):
+    def test_not_cursor_surface_emits_nothing(self) -> None:
+        self.assertEqual(
+            report.classify_cursor_adapter(
+                surface="claude-code", receipt={"state": "ready"}, workspace="/tmp/ws"
+            ),
+            [],
+        )
+
+    def test_never_ran_is_na_optional_wiring(self) -> None:
+        lines = report.classify_cursor_adapter(
+            surface="cursor",
+            receipt={"state": "never_ran", "reason": "no bootstrap receipt on disk"},
+            workspace="/tmp/ws",
+        )
+        self.assertEqual(lines[0]["class"], report.NA)
+        self.assertIn("cursor-install", lines[0]["summary"])
+        self.assertFalse(lines[0]["include_in_degraded"])
+
+    def test_ready_this_workspace_is_ok(self) -> None:
+        lines = report.classify_cursor_adapter(
+            surface="cursor",
+            receipt={"state": "ready", "reason": "all READY", "workspace": "/tmp/ws"},
+            workspace="/tmp/ws",
+        )
+        self.assertEqual(lines[0]["class"], report.OK)
+
+    def test_other_workspace_cursor_receipt_is_stale(self) -> None:
+        lines = report.classify_cursor_adapter(
+            surface="cursor",
+            receipt={"state": "degraded", "reason": "x", "workspace": "/tmp/other"},
+            workspace="/tmp/ws",
+        )
+        self.assertEqual(lines[0]["class"], report.NA)
+        self.assertIn("stale_other_surface", lines[0]["summary"])
+
+    def test_fresh_this_workspace_failed_reaches_degraded(self) -> None:
+        lines = report.classify_cursor_adapter(
+            surface="cursor",
+            receipt={"state": "failed", "reason": "hooks.json missing", "workspace": "/tmp/ws"},
+            workspace="/tmp/ws",
+        )
+        self.assertEqual(lines[0]["class"], report.FAILED)
+        self.assertTrue(lines[0]["include_in_degraded"])
+
+
+class ReceiptReaderSurfaceTests(unittest.TestCase):
+    def test_cursor_surface_maps_to_cursor_receipt_path(self) -> None:
+        import claude_bootstrap_receipt as cbr
+
+        path = cbr.receipt_path(env={"HOME": "/tmp/h"}, surface="cursor")
+        self.assertEqual(str(path), "/tmp/h/.l9/cursor/bootstrap-state.json")
+        self.assertEqual(cbr.schema_for("cursor"), "l9.cursor-bootstrap.v1")
+
+    def test_claude_code_alias_maps_to_claude_dir(self) -> None:
+        import claude_bootstrap_receipt as cbr
+
+        path = cbr.receipt_path(env={"HOME": "/tmp/h"}, surface="claude-code")
+        self.assertEqual(str(path), "/tmp/h/.l9/claude/bootstrap-state.json")
+
+    def test_generic_override_wins(self) -> None:
+        import claude_bootstrap_receipt as cbr
+
+        path = cbr.receipt_path(
+            env={"HOME": "/tmp/h", "L9_CURSOR_BOOTSTRAP_RECEIPT": "/tmp/x.json"},
+            surface="cursor",
+        )
+        self.assertEqual(str(path), "/tmp/x.json")
+
+    def test_never_ran_remediation_names_the_surface_installer(self) -> None:
+        import claude_bootstrap_receipt as cbr
+
+        cursor = cbr.evaluate(None, surface="cursor")
+        self.assertIn("cursor-install", cursor["remediation"])
+        claude = cbr.evaluate(None, surface="claude")
+        self.assertIn("claude-code/install.sh", claude["remediation"])
+
+
 class PortableTimeoutTests(unittest.TestCase):
     def test_python_fallback_runs_without_gnu_timeout(self) -> None:
         lib = REPO / "ops" / "scripts" / "lib" / "run_with_timeout.sh"

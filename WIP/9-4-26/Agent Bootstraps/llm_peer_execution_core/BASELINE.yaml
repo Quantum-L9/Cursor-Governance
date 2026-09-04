@@ -1,0 +1,20 @@
+schema: l9.pr_pack.baseline.v1
+repository: Quantum-L9/Cursor-Governance
+repository_url: https://github.com/Quantum-L9/Cursor-Governance
+branch: main
+base_sha: 0fbd477e507d33ee52f2a87c2d9eb77c15b6a492
+base_commit_title: "Merge pull request #117 from Quantum-L9/feat/autonomy-first-class"
+bound_at: '2026-08-12'
+base_policy:
+  exact_match_required: true
+  dirty_worktree_allowed: false
+  automatic_rebase: false
+  remote_mutation: forbidden
+source_grounding:
+  method: connected_github_read_only_inspection
+  full_checkout_materialized_in_build_environment: false
+  implication: >-
+    The application pack is pinned to exact inspected source paths and validates
+    the complete applied repository when run in a clean clone. This build
+    environment did not materialize a full repository checkout, so repository
+    runtime validation is intentionally not claimed here.

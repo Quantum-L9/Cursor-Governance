@@ -173,3 +173,7 @@ current_work/
 .coverage
 .coverage.*
 coverage.xml
+
+# Generated /index exports stay local. Last-match override of the earlier
+# !reports/repo-index/ re-include so session-end backup cannot recommit them.
+reports/repo-index/
