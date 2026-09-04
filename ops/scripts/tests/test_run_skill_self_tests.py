@@ -14,14 +14,18 @@ if str(SCRIPT_DIR) not in sys.path:
 from run_skill_self_tests import ContractError, run_self_tests, validate_contract  # noqa: E402
 
 
-def _skill(root: Path, name: str, script_name: str = "self_test.py", body: str = "raise SystemExit(0)\n") -> None:
+def _skill(
+    root: Path, name: str, script_name: str = "self_test.py", body: str = "raise SystemExit(0)\n"
+) -> None:
     skill = root / "skills" / name
     scripts = skill / "scripts"
     scripts.mkdir(parents=True)
     (skill / "SKILL.md").write_text(
         "---\n"
         f"name: {name}\n"
-        "description: validate a fixture-backed skill contract deterministically before publication. use when exercising the test adapter in repository contract tests.\n"
+        "description: validate a fixture-backed skill contract deterministically "
+        "before publication. use when exercising the test adapter in repository "
+        "contract tests.\n"
         "---\n",
         encoding="utf-8",
     )

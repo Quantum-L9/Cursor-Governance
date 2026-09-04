@@ -14,11 +14,16 @@ FAIL_FIXTURE = ROOT / "fixtures" / "wiring_fail_unreachable.json"
 
 
 def run(fixture: Path) -> int:
-    return subprocess.run(
-        [sys.executable, str(VALIDATOR), str(fixture)],
-        cwd=ROOT,
-        check=False,
-    ).returncode
+    try:
+        return subprocess.run(
+            [sys.executable, str(VALIDATOR), str(fixture)],
+            cwd=ROOT,
+            check=False,
+            timeout=30,
+        ).returncode
+    except subprocess.TimeoutExpired:
+        print(f"self-test FAIL: validator timed out after 30s on {fixture.name}", file=sys.stderr)
+        return 2
 
 
 def main() -> int:

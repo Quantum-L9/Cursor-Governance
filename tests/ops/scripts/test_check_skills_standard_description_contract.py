@@ -19,11 +19,7 @@ def _skill(tmp_path: Path, description: str, *, body_lines: int = 1) -> Path:
     skill.mkdir(parents=True)
     body = "\n".join(f"line {i}" for i in range(body_lines))
     (skill / "SKILL.md").write_text(
-        "---\n"
-        "name: l9-demo\n"
-        f"description: {description}\n"
-        "---\n\n"
-        f"{body}\n",
+        f"---\nname: l9-demo\ndescription: {description}\n---\n\n{body}\n",
         encoding="utf-8",
     )
     return tmp_path

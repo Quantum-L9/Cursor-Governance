@@ -60,20 +60,13 @@ def validate_contract(root: Path, contract: dict[str, Any]) -> list[Path]:
     if not tests:
         raise ContractError("no live skill self-tests discovered")
 
-    discovered_roots = {
-        test.parent.parent.relative_to(root).as_posix()
-        for test in tests
-    }
+    discovered_roots = {test.parent.parent.relative_to(root).as_posix() for test in tests}
     unregistered = sorted(discovered_roots - registered)
     missing = sorted(registered - discovered_roots)
     if unregistered:
-        raise ContractError(
-            "unregistered skill self-test roots: " + ", ".join(unregistered)
-        )
+        raise ContractError("unregistered skill self-test roots: " + ", ".join(unregistered))
     if missing:
-        raise ContractError(
-            "registered skill roots have no *self_test.py: " + ", ".join(missing)
-        )
+        raise ContractError("registered skill roots have no *self_test.py: " + ", ".join(missing))
 
     for skill_root in roots:
         skill_dir = root / skill_root
@@ -83,7 +76,11 @@ def validate_contract(root: Path, contract: dict[str, Any]) -> list[Path]:
     suites = contract.get("suites")
     if not isinstance(suites, list):
         raise ContractError("python contract suites must be a list")
-    matches = [suite for suite in suites if isinstance(suite, dict) and suite.get("id") == "skill-contracts"]
+    matches = [
+        suite
+        for suite in suites
+        if isinstance(suite, dict) and suite.get("id") == "skill-contracts"
+    ]
     if len(matches) != 1:
         raise ContractError("python contract must define exactly one skill-contracts suite")
     suite = matches[0]

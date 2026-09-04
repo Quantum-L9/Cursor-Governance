@@ -63,7 +63,11 @@ def validate(data: dict[str, Any]) -> list[str]:
     graph: dict[str, list[str]] = defaultdict(list)
     incoming: dict[str, list[str]] = defaultdict(list)
     for edge in edges_raw:
-        if not isinstance(edge, list) or len(edge) != 2 or not all(isinstance(x, str) for x in edge):
+        if (
+            not isinstance(edge, list)
+            or len(edge) != 2
+            or not all(isinstance(x, str) for x in edge)
+        ):
             errors.append(f"invalid edge: {edge!r}")
             continue
         source, target = edge
@@ -78,8 +82,13 @@ def validate(data: dict[str, Any]) -> list[str]:
             parents = incoming.get(node_id, [])
             if not parents:
                 errors.append(f"generated derivative has no upstream source: {node_id}")
-            elif all(roles[parent] in {"generated_derivative", "historical", "documentation"} for parent in parents):
-                errors.append(f"generated derivative lacks authoritative propagation source: {node_id}")
+            elif all(
+                roles[parent] in {"generated_derivative", "historical", "documentation"}
+                for parent in parents
+            ):
+                errors.append(
+                    f"generated derivative lacks authoritative propagation source: {node_id}"
+                )
 
     reachable: set[str] = set()
     queue: deque[str] = deque([owner])
