@@ -55,22 +55,22 @@ def normalize(
     }
     if required.issubset(assignment) and all(assignment.get(key) for key in required):
         exact = {key: assignment[key] for key in required}
+        # Scope and subject come from the rendered assignment only. A document
+        # that names its own writable paths or its own review subject is
+        # self-attesting the very authority the gateway exists to check.
         exact.update(
             {
-                "role": assignment.get("result_role") or document_assignment["role"],
-                "allowed_paths": list(
-                    assignment.get("allowed_paths")
-                    or document_assignment.get("allowed_paths")
-                    or []
+                "role": result_bridge.canonical_cursor_role(
+                    assignment.get("result_role")
+                    or assignment.get("subagent_role")
+                    or document_assignment["role"]
                 ),
-                "forbidden_paths": list(
-                    assignment.get("forbidden_paths")
-                    or document_assignment.get("forbidden_paths")
-                    or []
-                ),
+                "allowed_paths": list(assignment.get("allowed_paths") or []),
+                "action_allowed_paths": list(assignment.get("action_allowed_paths") or []),
+                "forbidden_paths": list(assignment.get("forbidden_paths") or []),
             }
         )
-        if document_assignment["role"] == "verifier_reviewer":
-            exact["subject_agent_id"] = document_assignment.get("subject_agent_id")
+        if exact["role"] == "verifier_reviewer":
+            exact["subject_agent_id"] = assignment.get("subject_agent_id")
         return result_bridge.validate_result_against_assignment(normalized, exact)
     return normalized

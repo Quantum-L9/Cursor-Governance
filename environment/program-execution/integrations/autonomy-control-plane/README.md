@@ -86,6 +86,27 @@ the worktree actually shows as changed by the provider window carries an
 allowed `repository.write_scoped` decision under the same subordinate lease.
 An unmediated write never becomes a recorded Program attempt.
 
+## Grant generations
+
+Root grants are generations, not Controller attempts. `grant_task_mutation`
+with no explicit `attempt_number` first looks for the receipt PE already
+recorded for the task (`latest_grant_receipt`): a lease that is still ACTIVE
+beneath the same Program parent and peer binding is **resumed** (a lost window
+keeps the authority it ran under); a terminal lease is succeeded by the next
+generation, which mints a new root campaign id. Parent or binding drift refuses
+the resume (`GRANT_PARENT_DRIFT`, `GRANT_BINDING_DRIFT`), and an explicit
+request for a terminal generation is refused (`GRANT_GENERATION_TERMINAL`)
+rather than re-minted under the same identity. A mutation grant is never
+issued beneath an unbound parent (`PROGRAM_PARENT_UNBOUND`): with no canonical
+Program state, expiry, revocation and drift are unobservable.
+
+The worker environment the provider exports is a **lookup key** for that
+receipt, never authority itself: the PreToolUse wrapper resolves
+`L9_PROGRAM_ATTEMPT_NUMBER` and `L9_AUTONOMY_AUTHORITY_DIGEST` to the persisted
+grant receipt, verifies the sidecar digest and every bound field, and runs the
+authorizer on the receipt's sidecar. A forged digest, a missing receipt, or an
+edited receipt denies every effect.
+
 ## Terminal subordinate lifecycle
 
 - **Success:** a typed `ExecutionResult` is submitted under the subordinate
@@ -99,6 +120,17 @@ An unmediated write never becomes a recorded Program attempt.
 PEC remains the sole authority on Program state and completion. `run_campaign`
 asks the Controller to verify independently *after* the root lifecycle closes,
 and `owns_program_state` stays `false` everywhere in this bridge.
+
+## Worker effect capabilities
+
+The capability of an effect is derived from the tool's identity alone. A
+worker's tool input is untrusted: a `capability` claim inside it is stripped
+before inference, an unmapped tool name is refused (`TOOL_UNMAPPED`) rather
+than defaulted to a read, and only `repository.read`, `repository.search`,
+`repository.write_scoped`, `git.diff` and validated `test.run` may be exercised
+as effects (`CAPABILITY_NOT_EFFECT_AUTHORIZABLE` otherwise), even when the
+subordinate lease holds more. The terminal result must name the rendered
+contract digest the lease was issued for.
 
 ## Invariants
 

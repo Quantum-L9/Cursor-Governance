@@ -243,3 +243,60 @@ class GroundingTests(unittest.TestCase):
 
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()
+
+
+class TruncatedPayloadTests(unittest.TestCase):
+    """A payload the runner cut off is refused as over budget, never parsed or
+    reported as "returned no output"."""
+
+    def _adapter(self) -> ClaudeCodeExtractor:
+        adapter = ClaudeCodeExtractor()
+        adapter._resolved = "/usr/bin/claude-fake"
+        return adapter
+
+    def _fake_result(self, *, stdout: str, truncated: bool, size: int):
+        import peer_execution.subprocess_runner as runner
+
+        return runner.CommandResult(
+            argv=("claude-fake",),
+            executable="/usr/bin/claude-fake",
+            exit_code=0,
+            stdout=stdout,
+            stderr="",
+            stdout_digest="sha256:" + "0" * 64,
+            stderr_digest="sha256:" + "0" * 64,
+            duration_seconds=0.1,
+            timed_out=False,
+            environment_fingerprint="sha256:test",
+            stdout_truncated=truncated,
+            stdout_bytes=size,
+        )
+
+    def test_a_truncated_runner_result_is_refused_as_over_budget(self) -> None:
+        from unittest.mock import patch
+
+        import peer_execution.subprocess_runner as runner
+
+        with TemporaryDirectory() as raw:
+            request = _request(_intent(Path(raw)))
+        fake = self._fake_result(stdout='{"items": []', truncated=True, size=2_000_000)
+        with patch.object(runner, "run_argv", return_value=fake):
+            with self.assertRaises(ExtractorError) as ctx:
+                self._adapter().extract(request)
+        message = str(ctx.exception)
+        self.assertIn("truncated", message)
+        self.assertNotIn("returned no output", message)
+        self.assertNotIn("not valid JSON", message)
+
+    def test_a_complete_result_within_budget_is_still_parsed(self) -> None:
+        from unittest.mock import patch
+
+        import peer_execution.subprocess_runner as runner
+
+        with TemporaryDirectory() as raw:
+            request = _request(_intent(Path(raw)))
+        payload = json.dumps({"request_id": request.request_id, "items": [], "notes": []})
+        fake = self._fake_result(stdout=payload, truncated=False, size=len(payload))
+        with patch.object(runner, "run_argv", return_value=fake):
+            response = self._adapter().extract(request)
+        self.assertEqual(response.items, ())

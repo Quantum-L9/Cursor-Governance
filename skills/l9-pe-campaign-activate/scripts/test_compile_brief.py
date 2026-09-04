@@ -159,5 +159,95 @@ class CompileBriefTests(unittest.TestCase):
             )
 
 
+class NormalizedFrontmatterTests(unittest.TestCase):
+    """A byte-order mark or CRLF endings must not hide a declared header."""
+
+    PLAN = (
+        "---\n"
+        "name: Tip\n"
+        "overview: Resolve the tip\n"
+        "todos:\n"
+        "  - id: T1\n"
+        "    content: Add resolver\n"
+        "---\n\n"
+        "# PLAN: Tip\n"
+    )
+
+    def test_parse_frontmatter_sees_through_a_bom(self) -> None:
+        from compile_brief import parse_frontmatter
+
+        self.assertEqual(parse_frontmatter("﻿" + self.PLAN)["name"], "Tip")
+
+    def test_parse_frontmatter_sees_through_crlf(self) -> None:
+        from compile_brief import parse_frontmatter
+
+        self.assertEqual(parse_frontmatter(self.PLAN.replace("\n", "\r\n"))["name"], "Tip")
+
+    def test_bom_crlf_plan_compiles_as_a_plan_not_a_memo(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            plan = root / "demo.plan.md"
+            plan.write_bytes(b"\xef\xbb\xbf" + self.PLAN.replace("\n", "\r\n").encode("utf-8"))
+            result = compile_brief(plan, output=root / "out.yaml")
+            self.assertEqual(result["seed"]["title"], "Tip")
+            self.assertEqual(result["seed"]["tasks"][0]["title"], "Add resolver")
+
+
+class CompanionPlanDocumentTests(unittest.TestCase):
+    PLAN = (
+        "---\n"
+        "name: Tip\n"
+        "overview: Resolve the tip\n"
+        "todos:\n"
+        "  - id: T1\n"
+        "    content: Add resolver\n"
+        "---\n\n"
+        "# PLAN: Tip\n\n"
+        "> Projected from validated PLAN_DOCUMENT `{cite}`\n"
+    )
+    COMPANION = {
+        "mode": "plan",
+        "title": "Tip",
+        "objective": "Resolve the tip",
+        "todos": [{"id": "T1", "task": "Add resolver", "files": ["ops/scripts/x.py"]}],
+    }
+
+    def test_a_cited_absolute_path_outside_the_plan_directory_is_not_read(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            elsewhere = root / "elsewhere"
+            elsewhere.mkdir()
+            foreign = elsewhere / "companion.json"
+            foreign.write_text(json.dumps(self.COMPANION), encoding="utf-8")
+            plans = root / "plans"
+            plans.mkdir()
+            plan = plans / "demo.plan.md"
+            plan.write_text(self.PLAN.format(cite=foreign), encoding="utf-8")
+            result = compile_brief(plan, output=root / "out.yaml")
+            self.assertNotIn("paths", result["seed"]["tasks"][0])
+
+    def test_a_cited_companion_beside_the_plan_is_still_read_by_basename(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "companion.json").write_text(json.dumps(self.COMPANION), encoding="utf-8")
+            plan = root / "demo.plan.md"
+            plan.write_text(
+                self.PLAN.format(cite="/anywhere/else/companion.json"), encoding="utf-8"
+            )
+            result = compile_brief(plan, output=root / "out.yaml")
+            self.assertEqual(result["seed"]["tasks"][0]["paths"], ["ops/scripts/x.py"])
+
+    def test_a_cited_but_unparsable_companion_is_an_error_not_an_absence(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "companion.json").write_text('{"todos": [', encoding="utf-8")
+            plan = root / "demo.plan.md"
+            plan.write_text(self.PLAN.format(cite="companion.json"), encoding="utf-8")
+            with self.assertRaises(BriefError) as ctx:
+                compile_brief(plan, output=root / "out.yaml")
+            self.assertIn("companion.json", str(ctx.exception))
+            self.assertIn("does not parse", str(ctx.exception))
+
+
 if __name__ == "__main__":
     unittest.main()
