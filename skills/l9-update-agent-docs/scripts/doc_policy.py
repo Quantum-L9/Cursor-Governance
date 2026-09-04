@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import fnmatch
 import json
 import re
 import subprocess
@@ -23,12 +24,21 @@ DIRECTIVES = re.compile(r"<!--\s*L9_DOCS\s*\n(.*?)\n\s*-->", re.DOTALL)
 
 
 def git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["git", "-C", str(root), *args],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
+    try:
+        return subprocess.run(
+            ["git", "-C", str(root), *args],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except subprocess.TimeoutExpired:
+        return subprocess.CompletedProcess(
+            ["git", "-C", str(root), *args],
+            returncode=124,
+            stdout="",
+            stderr="git timed out after 30s",
+        )
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -190,11 +200,20 @@ def pointer_validate_root(root: Path) -> dict[str, Any]:
 
 def selector_paths(root: Path, selectors: list[str]) -> list[str]:
     found: set[str] = set()
+    listed: list[str] | None = None
     for selector in selectors:
         if any(char in selector for char in "*?["):
-            found.update(
-                path.relative_to(root).as_posix() for path in root.glob(selector) if path.is_file()
-            )
+            if listed is None:
+                proc = git(root, "ls-files", "-co", "--exclude-standard")
+                listed = proc.stdout.splitlines() if proc.returncode == 0 else []
+            if listed:
+                found.update(path for path in listed if fnmatch.fnmatch(path, selector))
+            else:
+                found.update(
+                    path.relative_to(root).as_posix()
+                    for path in root.glob(selector)
+                    if path.is_file()
+                )
         elif (root / selector).is_file():
             found.add(selector)
     return sorted(found)
