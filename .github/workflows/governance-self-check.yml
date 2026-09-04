@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   governance-self-check:
@@ -29,13 +29,15 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           pip install --only-binary=:all: pyyaml==6.0.3 jsonschema==4.26.0
 
-      - name: Capture canonical repo-docs repair outputs
+      - name: Persist canonical repo-docs repair outputs
         if: github.event_name == 'pull_request'
         env:
           BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
         run: |
           set -euo pipefail
-          git fetch --no-tags origin "${BASE_REF}"
+          git fetch --no-tags origin "${BASE_REF}" "${HEAD_REF}"
+          git switch -C repo-docs-repair "origin/${HEAD_REF}"
           git diff --name-only "origin/${BASE_REF}...HEAD" > /tmp/pr-changed-files.txt
           gen=ops/scripts/sync_generated_artifacts.py
           python3 "$gen" --changed-file /tmp/pr-changed-files.txt --json
@@ -51,26 +53,23 @@ jobs:
           ruff check --fix "${files[@]}" || true
           ruff format "${files[@]}"
           python scripts/generate_subsystem_readmes.py --subsystem skills --skip-time-verify
-          mkdir -p .artifacts/repo-docs-repair/skills/l9-update-agent-docs/scripts
-          mkdir -p .artifacts/repo-docs-repair/skills/l9-update-agent-docs/tests
-          mkdir -p .artifacts/repo-docs-repair/skills
-          mkdir -p .artifacts/repo-docs-repair/ops/generated
-          cp skills/l9-update-agent-docs/scripts/doc_obligations.py .artifacts/repo-docs-repair/skills/l9-update-agent-docs/scripts/
-          cp skills/l9-update-agent-docs/scripts/repo_docs.py .artifacts/repo-docs-repair/skills/l9-update-agent-docs/scripts/
-          cp skills/l9-update-agent-docs/scripts/compile_semantic_obligations.py .artifacts/repo-docs-repair/skills/l9-update-agent-docs/scripts/
-          cp skills/l9-update-agent-docs/scripts/validate_pointer_headings.py .artifacts/repo-docs-repair/skills/l9-update-agent-docs/scripts/
-          cp skills/l9-update-agent-docs/tests/test_repo_docs.py .artifacts/repo-docs-repair/skills/l9-update-agent-docs/tests/
-          cp skills/README.md .artifacts/repo-docs-repair/skills/README.md
-          cp ops/generated/skill-registry.json .artifacts/repo-docs-repair/ops/generated/
-
-      - name: Upload canonical repo-docs repair outputs
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
-        with:
-          name: repo-docs-repair-${{ github.run_id }}
-          path: .artifacts/repo-docs-repair
-          if-no-files-found: error
-          retention-days: 1
+          git add \
+            skills/l9-update-agent-docs/scripts/doc_obligations.py \
+            skills/l9-update-agent-docs/scripts/repo_docs.py \
+            skills/l9-update-agent-docs/scripts/compile_semantic_obligations.py \
+            skills/l9-update-agent-docs/scripts/validate_pointer_headings.py \
+            skills/l9-update-agent-docs/tests/test_repo_docs.py \
+            skills/README.md \
+            ops/generated/skill-registry.json \
+            environment/agents/adapters/claude-code/generated/skill-registry.json
+          if git diff --cached --quiet; then
+            echo "ok: canonical repair outputs already committed"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "fix(repo-docs): apply canonical generated outputs"
+            git push origin HEAD:"${HEAD_REF}"
+          fi
 
       - name: ORG_INVARIANTS.yaml parses
         run: |
