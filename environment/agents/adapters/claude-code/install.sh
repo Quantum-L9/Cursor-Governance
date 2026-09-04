@@ -554,7 +554,38 @@ if [ "$CHECK" != "1" ] && git -C "$WORKSPACE" rev-parse --git-dir >/dev/null 2>&
               ".claude/settings.local.json"; do
     grep -qxF "$glob" "$exclude_file" 2>/dev/null || printf '%s\n' "$glob" >> "$exclude_file"
   done
-  say "excluded generated .claude mirrors + .mcp.json + settings.local.json (local, uncommitted)"
+  # The files the settings reconciler MATERIALIZES (settings.json, the two
+  # consumer hooks) are the fourth category. They were left out of the list
+  # above as "committable consumer wiring", and that is right for a repo that
+  # commits them — but governance writes them into every workspace, so in a
+  # repo that does not they sit as untracked dirt after every session.
+  #
+  # Tracked-ness decides, exactly as reconcile_claude_settings.settings_is_git_tracked
+  # already defines the ownership signal: a tracked file is repo content and is
+  # left alone, an untracked one was injected here and is ours to contain.
+  # Unconditional exclusion would force `git add -f` on a consumer that
+  # legitimately commits its wiring, which is why this loop is conditional
+  # where the one above is not.
+  #
+  # The list comes from the reconciler that writes them, not restated here.
+  if [ -n "$GOV_PY" ]; then
+    # Silence here would be a fail-open: an older governance clone without the
+    # flag would leave the dirt with no signal that containment did not run.
+    injected="$("$GOV_PY" "$GOV_DIR/ops/scripts/reconcile_claude_settings.py" \
+                 --print-workspace-artifacts 2>/dev/null)" || injected=""
+    if [ -z "$injected" ]; then
+      warn "reconcile_claude_settings --print-workspace-artifacts returned nothing; injected .claude wiring stays untracked"
+    else
+      printf '%s\n' "$injected" | while IFS= read -r artifact; do
+        [ -n "$artifact" ] || continue
+        if git -C "$WORKSPACE" ls-files --error-unmatch -- "$artifact" >/dev/null 2>&1; then
+          continue  # repo content: exclusion would only add friction
+        fi
+        grep -qxF "$artifact" "$exclude_file" 2>/dev/null || printf '%s\n' "$artifact" >> "$exclude_file"
+      done
+    fi
+  fi
+  say "excluded generated .claude mirrors + .mcp.json + settings.local.json + untracked injected wiring (local, uncommitted)"
 fi
 
 # --- 5) Thin l9 dispatcher --------------------------------------------------

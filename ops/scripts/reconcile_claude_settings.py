@@ -50,6 +50,19 @@ CONSUMER_HOOK_FILES = (
 PRESERVE_USER_KEYS = ("enabledPlugins", "theme", "statusLine", "model")
 
 
+def workspace_artifacts() -> tuple[str, ...]:
+    """Workspace-relative paths this reconciler materializes as REAL files.
+
+    The generated mirrors (`.claude/skills`, `.claude/rules`,
+    `.claude/commands`) are symlinks into governance and the adapter installer
+    already excludes them. These are the paths it writes byte-for-byte, so
+    they are the ones that show as untracked dirt in a consumer that has not
+    committed them. Named here, beside `CONSUMER_HOOK_FILES`, so the installer
+    reads the list instead of restating it in shell.
+    """
+    return (".claude/settings.json", *(f".claude/hooks/{name}" for name in CONSUMER_HOOK_FILES))
+
+
 def load_json(path: Path) -> dict[str, Any]:
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
@@ -424,7 +437,18 @@ def main() -> int:
         action="store_true",
         help="remove exactly the L9-managed keys from ~/.claude/settings.json",
     )
+    parser.add_argument(
+        "--print-workspace-artifacts",
+        action="store_true",
+        help="list the workspace files this reconciler writes, one per line",
+    )
     args = parser.parse_args()
+
+    if args.print_workspace_artifacts:
+        for item in workspace_artifacts():
+            print(item)
+        return 0
+
     root = args.root.resolve()
 
     if args.uninstall_user:

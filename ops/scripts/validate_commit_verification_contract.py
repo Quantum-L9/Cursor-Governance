@@ -66,6 +66,7 @@ _SKIP_FILES = {
     "ops/autonomy/verification_bypass_gate.py",
     "ops/scripts/validate_commit_verification_contract.py",
     "tests/ops/autonomy/test_verification_bypass_gate.py",
+    "tests/ops/scripts/test_commit_verification_validator.py",
 }
 
 #: Reading a setting is not setting it. `git config --get core.hooksPath` is how
