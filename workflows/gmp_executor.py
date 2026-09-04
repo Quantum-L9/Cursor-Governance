@@ -239,6 +239,12 @@ class GMPState:
     # Optional step flags
     needs_tests: bool = False
     needs_readme: bool = False
+    # A /gmp-authorized run stays authorized across resume. The documented
+    # finalize call (`--resume --mode finalize --commit-when-done`) does not
+    # repeat --authorized-by, and without this stamp an unauthorized resume
+    # falls into the interactive DAG, where a closed stdin reads as
+    # "No TODOs defined" and then "User aborted".
+    authorized_by: str = ""
     generated_tests: list[str] = field(default_factory=list)
     generated_readmes: list[str] = field(default_factory=list)
 
@@ -335,14 +341,16 @@ class GMPExecutor:
         if not L4_LOCAL.is_file():
             return
         assert self.state is not None
+        # --workspace is a global flag of l4_local.py: it must precede the
+        # subcommand or argparse rejects it as an unrecognized argument.
         argv = [
             sys.executable,
             str(L4_LOCAL),
+            "--workspace",
+            str(REPO_ROOT),
             "begin",
             "--contract-id",
             f"gmp-{self.state.gmp_id}",
-            "--workspace",
-            str(REPO_ROOT),
         ]
         code, stdout, stderr = self._run_argv(argv)
         if code != 0:
@@ -354,7 +362,7 @@ class GMPExecutor:
         if not L4_LOCAL.is_file():
             return
         for sub in ("record-kernels", "authorize-release"):
-            argv = [sys.executable, str(L4_LOCAL), sub, "--workspace", str(REPO_ROOT)]
+            argv = [sys.executable, str(L4_LOCAL), "--workspace", str(REPO_ROOT), sub]
             code, stdout, stderr = self._run_argv(argv)
             if code != 0:
                 print(f"L4 {sub} failed: {stderr or stdout}")  # noqa: ADR-0019
@@ -1058,6 +1066,7 @@ from {module_path} import ...
             task=task,
             started_at=datetime.now().isoformat(),
             current_step=STEP_ORDER[0],
+            authorized_by="slash-gmp" if self.authorized else "",
         )
         self._save_state()
 
@@ -1257,6 +1266,13 @@ Examples:
         plan = args.plan if args.plan.is_absolute() else REPO_ROOT / args.plan
         executor.plan_path = plan
     executor.mode = args.mode or "full"
+
+    if not executor.authorized and (args.resume or args.mode == "finalize"):
+        # Restore authorization stamped into the state file by the /gmp start,
+        # so the documented resume/finalize invocation works without repeating
+        # --authorized-by (it must not re-gate a run the slash already opened).
+        if executor._load_state() and executor.state is not None:
+            executor.authorized = executor.state.authorized_by == "slash-gmp"
 
     if args.reset:
         executor._clear_state()
