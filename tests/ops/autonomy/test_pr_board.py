@@ -495,3 +495,237 @@ def test_helper_never_merges() -> None:
     source = HELPER.read_text(encoding="utf-8")
     assert "gh pr merge" not in source
     assert "stack_safe_merge.py --run" in source
+
+
+# --- GraphQL-refusing surfaces -------------------------------------------
+# A model-controlled surface serves REST and 403s GraphQL wholesale. `gh pr
+# view` is GraphQL, so the single call that fed the whole ladder took every
+# verdict to "telemetry unavailable" -> WAIT: a merge gate no correct action
+# could clear. These pin the REST reconstruction that keeps the board computed.
+
+GRAPHQL_403 = (
+    "HTTP 403: This GraphQL query is not enabled for this session — only the "
+    "pinned set of PR-review operations is served."
+)
+
+
+def _rest_only_gh(pull, *, check_runs=(), runs=(), statuses=(), reviews=()):
+    """A gh double that answers REST and refuses every GraphQL entry point."""
+
+    def fake_gh(args: list[str]):
+        if args[0] == "pr":
+            raise RuntimeError(GRAPHQL_403)
+        if args[0] == "api" and args[1] == "graphql":
+            raise RuntimeError(GRAPHQL_403)
+        endpoint = args[1] if len(args) > 1 else ""
+        if endpoint.endswith("/pulls/512"):
+            return pull
+        if "/pulls/512/reviews" in endpoint:
+            return list(reviews)
+        if "/check-runs" in endpoint:
+            return {"check_runs": list(check_runs)}
+        if "/actions/runs" in endpoint:
+            return {"workflow_runs": list(runs)}
+        if endpoint.endswith("/status"):
+            return {"statuses": list(statuses)}
+        raise AssertionError(f"unexpected gh call: {args}")
+
+    return fake_gh
+
+
+_PULL = {
+    "number": 512,
+    "draft": False,
+    "mergeable": True,
+    "mergeable_state": "clean",
+    "head": {"ref": "feat/x", "sha": "deadbeef"},
+    "base": {"ref": "main"},
+}
+
+
+def test_rest_fallback_answers_when_graphql_is_refused(monkeypatch) -> None:
+    """The regression: GraphQL 403 must not read as unknown telemetry."""
+    monkeypatch.setattr(
+        pr_board,
+        "_gh_json",
+        _rest_only_gh(
+            _PULL,
+            check_runs=[
+                {"name": "Test Suite", "status": "completed", "conclusion": "success"},
+            ],
+        ),
+    )
+    view = pr_board._pr_view("Quantum-L9/Cursor-Governance", "512")
+    assert view["mergeStateStatus"] == "CLEAN"
+    assert view["mergeable"] == "MERGEABLE"
+    assert view["headRefOid"] == "deadbeef"
+    assert view["baseRefName"] == "main"
+    assert view["isDraft"] is False
+    assert _rollup_states_of(view) == {"Test Suite": "SUCCESS"}
+
+
+def _rollup_states_of(view) -> dict:
+    return pr_board._rollup_states(view, {})
+
+
+def test_rest_fallback_running_check_is_pending_not_success(monkeypatch) -> None:
+    """No conclusion yet must rank pending; a blank must never read as green."""
+    monkeypatch.setattr(
+        pr_board,
+        "_gh_json",
+        _rest_only_gh(
+            _PULL,
+            check_runs=[
+                {"name": "Test Suite", "status": "in_progress", "conclusion": None},
+            ],
+        ),
+    )
+    view = pr_board._pr_view("Quantum-L9/Cursor-Governance", "512")
+    assert _rollup_states_of(view) == {"Test Suite": "IN_PROGRESS"}
+    assert "IN_PROGRESS" in pr_board.PENDING_STATES
+
+
+def test_rest_fallback_carries_app_identity_and_workflow_name(monkeypatch) -> None:
+    """Pinned-app matching and required-workflow matching both need identity."""
+    monkeypatch.setattr(
+        pr_board,
+        "_gh_json",
+        _rest_only_gh(
+            _PULL,
+            check_runs=[
+                {
+                    "name": "gates",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "app": {"id": 15368},
+                    "check_suite": {"id": 77},
+                }
+            ],
+            runs=[{"check_suite_id": 77, "name": "org-ci"}],
+        ),
+    )
+    view = pr_board._pr_view("Quantum-L9/Cursor-Governance", "512")
+    node = view["statusCheckRollup"][0]
+    assert pr_board._rollup_app_id(node) == "15368"
+    assert pr_board._workflow_job_states(view, "org-ci") == {"gates": "SUCCESS"}
+
+
+def test_rest_fallback_legacy_status_contexts_are_kept(monkeypatch) -> None:
+    """Commit statuses are rollup nodes too; dropping them loses a gate."""
+    monkeypatch.setattr(
+        pr_board,
+        "_gh_json",
+        _rest_only_gh(_PULL, statuses=[{"context": "semgrep/scan", "state": "success"}]),
+    )
+    view = pr_board._pr_view("Quantum-L9/Cursor-Governance", "512")
+    assert _rollup_states_of(view)["semgrep/scan"] == "SUCCESS"
+
+
+def test_rest_fallback_conflicting_pull_is_not_mergeable(monkeypatch) -> None:
+    """mergeable:false is CONFLICTING, which the ladder turns into FIX."""
+    pull = {**_PULL, "mergeable": False, "mergeable_state": "dirty"}
+    monkeypatch.setattr(pr_board, "_gh_json", _rest_only_gh(pull))
+    view = pr_board._pr_view("Quantum-L9/Cursor-Governance", "512")
+    assert view["mergeable"] == "CONFLICTING"
+    assert view["mergeStateStatus"] == "DIRTY"
+
+
+def test_rest_fallback_unknown_mergeable_stays_unknown(monkeypatch) -> None:
+    """GitHub computes mergeability async; null must degrade to WAIT, not MERGE."""
+    pull = {**_PULL, "mergeable": None, "mergeable_state": "unknown"}
+    monkeypatch.setattr(pr_board, "_gh_json", _rest_only_gh(pull))
+    view = pr_board._pr_view("Quantum-L9/Cursor-Governance", "512")
+    assert view["mergeable"] == "UNKNOWN"
+    assert view["mergeStateStatus"] not in pr_board.MERGE_READY_STATES
+
+
+def test_rest_fallback_changes_requested_survives(monkeypatch) -> None:
+    """reviewDecision is a real blocker and REST must still surface it."""
+    monkeypatch.setattr(
+        pr_board,
+        "_gh_json",
+        _rest_only_gh(
+            _PULL,
+            reviews=[
+                {"user": {"login": "alice"}, "state": "APPROVED"},
+                {"user": {"login": "bob"}, "state": "CHANGES_REQUESTED"},
+            ],
+        ),
+    )
+    view = pr_board._pr_view("Quantum-L9/Cursor-Governance", "512")
+    assert view["reviewDecision"] == "CHANGES_REQUESTED"
+
+
+def test_rest_fallback_dismissed_review_clears_that_reviewer(monkeypatch) -> None:
+    """A dismissed block is the reviewer's latest word, not a standing wall."""
+    monkeypatch.setattr(
+        pr_board,
+        "_gh_json",
+        _rest_only_gh(
+            _PULL,
+            reviews=[
+                {"user": {"login": "bob"}, "state": "CHANGES_REQUESTED"},
+                {"user": {"login": "bob"}, "state": "DISMISSED"},
+            ],
+        ),
+    )
+    view = pr_board._pr_view("Quantum-L9/Cursor-Governance", "512")
+    assert view["reviewDecision"] == ""
+
+
+def test_both_transports_dead_is_still_a_board_error(monkeypatch) -> None:
+    """Fail closed: no telemetry at all must never become a merge."""
+
+    def dead_gh(args: list[str]):
+        raise RuntimeError("gh not on PATH")
+
+    monkeypatch.setattr(pr_board, "_gh_json", dead_gh)
+    try:
+        pr_board._pr_view("Quantum-L9/Cursor-Governance", "512")
+    except pr_board.BoardError as exc:
+        assert "REST fallback failed" in str(exc)
+    else:
+        raise AssertionError("dead telemetry must raise BoardError")
+
+
+def test_protection_403_is_a_silent_source_not_lost_telemetry(monkeypatch) -> None:
+    """An App token cannot read classic protection; rulesets still answer.
+
+    Failing closed here parked every PR in the repo on a token scope. The
+    BLOCKED backstop above is what keeps that safe, not the protection read.
+    """
+    rules = [
+        {
+            "type": "required_status_checks",
+            "parameters": {"required_status_checks": [{"context": "Test Suite"}]},
+        }
+    ]
+
+    def fake_gh(args: list[str]):
+        if args[0] == "api" and "/rules/branches/" in args[1]:
+            return rules
+        if args[0] == "api" and "/protection" in args[1]:
+            raise RuntimeError("gh: Resource not accessible by integration (HTTP 403)")
+        raise AssertionError(f"unexpected gh call: {args}")
+
+    monkeypatch.setattr(pr_board, "_gh_json", fake_gh)
+    contexts, strict = required_checks("Quantum-L9/Cursor-Governance", "main")
+    assert contexts == ["Test Suite"]
+    assert strict is False
+
+
+def test_protection_probe_real_break_still_fails_closed(monkeypatch) -> None:
+    """A 500 or a network fault is unknown telemetry and must still raise."""
+
+    def fake_gh(args: list[str]):
+        if args[0] == "api" and "/rules/branches/" in args[1]:
+            return []
+        raise RuntimeError("HTTP 500: Internal Server Error")
+
+    monkeypatch.setattr(pr_board, "_gh_json", fake_gh)
+    try:
+        pr_board.protection_required("Quantum-L9/Cursor-Governance", "main")
+    except pr_board.BoardError:
+        pass
+    else:
+        raise AssertionError("a broken protection probe must raise BoardError")

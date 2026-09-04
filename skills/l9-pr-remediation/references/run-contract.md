@@ -24,10 +24,10 @@ Emit `RUN_CONTRACT` in the first Converge status. Reuse until invalidation.
 |----|-------|------|
 | `P_cmd` | Cache remediator verify=`make precommit-repo` and remediator publish=`git push` of an already-open PR branch. Name ceremony verbs `make pr-check` and `PR_REMEDIATE=0 make pr` only as **do not run**. INTERNAL: `pr-preflight`, `precommit`, `pr-full`. | Caching `make pr` / `make pr-check` as this skill's publish/verify is a skill defect. |
 | `P_venv` | `.python-version`, `.venv/pyvenv.cfg` `home`, `file` + `platform.machine()` of `.venv/bin/python`, `cryptography` + `pytest` import | Arch mismatch, miniconda `home`, or import fail → set `UV_PYTHON` to uv-managed **native** CPython matching requires-python. Never `uv python find --system` (conda `base` wins). Do not loop. |
-| `P_prs` | `gh pr list` + `gh pr view --json files` for each open PR | Overlap nonempty → FIRST_MERGE_GATE. Do not merge the first green PR. |
-| `P_stack` | For each open PR, is `headRefName` the `baseRefName` of another open PR? | Stacked parent: squash/rebase denied. Children first, retarget, or `--merge`. |
+| `P_fleet` | `"$GOV_PY" ops/autonomy/pr_fleet.py plan --repo {owner}/{repo} --board --json` — one REST pass: every open PR with files, `stack_edges`, `overlap` (generated-only flagged), `merge_order`, `waves`, board per head, `fingerprint`; receipt `.l9/pr/fleet.json` | Non-generated overlap is serialized by the planner, never by hand. Do not merge the first green PR. `FAIL:` from the planner → no wave; fix the telemetry. Re-plan only when the fingerprint changes. |
+| `P_stack` | Read `stack_edges` / `merge_order` from the receipt (parents before children) | Stacked parent: squash/rebase denied. Children first, retarget, or `--merge`. |
 | `P_wire` | `git worktree list` first; reuse the worktree that already holds the branch | `worktree_add_wired.sh` only when none exists. Do not commit wire / `AGENTS.md`. |
-| `P_board` | Per open PR: `"$GOV_PY" ops/autonomy/pr_board.py --repo {owner}/{repo} --pr {n} --json` | The board verdict (`merge` / `fix` / `wait` / `leftover`) and the required-check set come from here. `statusCheckRollup` in `P_prs` is inventory, not a verdict — it lists optional checks too. Do not author a verdict from `mergeStateStatus`, a bare check conclusion, or an issue body. Re-run per head SHA; a verdict is stale the moment the head moves. |
+| `P_board` | Per open PR: `"$GOV_PY" ops/autonomy/pr_board.py --repo {owner}/{repo} --pr {n} --json` (`pr_fleet.py plan --board` runs it for every PR concurrently) | The board verdict (`merge` / `fix` / `wait` / `leftover`) and the required-check set come from here. `statusCheckRollup` in `P_prs` is inventory, not a verdict — it lists optional checks too. Do not author a verdict from `mergeStateStatus`, a bare check conclusion, or an issue body. Re-run per head SHA; a verdict is stale the moment the head moves. |
 | `P_blockers` | Known HUMAN / CI_PIPELINE / ENVIRONMENT — **edit axis only** | Note which files you may not patch; continue independent CODEBASE work. These classes are **not** board verdicts and do not park a PR. A named human decision or an unfixable required check reaches the board only as `pr_board.py --human-decision` / `--unfixable-check`. |
 | `P_diag` | For the PR about to be edited: head SHA, `gh pr checks`, paginated `reviewThreads`, cited-file read at that SHA | Missing evidence → `Unknown`; do not edit. `disposition: fix` requires a verified root cause. |
 | `P_verify` | `make precommit-repo` (changed-file hooks plus ruff) | `make precommit-repo` is the remediator gate. Record `Passed` / `Failed` / `Unknown`. Do not run `make pr-check`. Do not run pytest or conformance. Do not treat local `Passed` as remote CI `Passed`. |
@@ -43,6 +43,7 @@ This host (Cursor-Governance / Makefile capability graph):
 - verify: `L9_REMEDIATOR=1 PR_BASE=origin/main make precommit-repo`
 - kernels (optional): `make improve`
 - publish: `git push` of the already-open PR branch
+- fleet: `ops/autonomy/pr_fleet.py plan --repo {owner}/{repo} --board --json` (read-only; writes `.l9/pr/fleet.json`; never edits or merges) — waves, assignments, acceptance: [fleet-waves.md](fleet-waves.md)
 - board: `ops/autonomy/pr_board.py --repo {owner}/{repo} --pr {n} --json` (read-only advice; writes `.l9/pr/board-{n}.json`; never merges)
 - merge: `ops/autonomy/stack_safe_merge.py --repo {owner}/{repo} --pr {n} --run` (method chosen in code; oldest `createdAt` first)
 - interpreter: `$PWD/.venv/bin/python` (Makefile `$(PYTHON)`). Not Homebrew / system / miniconda base.
@@ -104,7 +105,7 @@ Dirty `AGENTS.md` after wire is not a finding.
 
 ## PR topology
 
-For every open PR record: number, base, head SHA, `createdAt`, `headRefName`, `baseRefName`, `files[].path`.
+The planner records every open PR (number, base, head SHA, `createdAt`, `headRefName`, `baseRefName`, files) and derives the edges below. Do not derive them by hand.
 
 Edges:
 
@@ -146,7 +147,7 @@ A companion miss is a plan-gate failure, not a remote-CI discovery.
 
 - Locked plan + matching files → skip re-diagnosis; run `P_cmd`+`P_venv` if uncached; verify + publish.
 - After `RUN_CONTRACT`, start the first PR that has `CODEBASE` findings. Do not wait for green-check scanner fetches.
-- Parallelize independent PR worktrees after the overlap matrix. Serialize merge (oldest first).
+- Launch the planner's first wave in one message ([fleet-waves.md](fleet-waves.md)). Serialize merge (`merge_order`, oldest first).
 - Native-ext import fail → stop `CODEBASE` diagnosis; `P_venv` once.
 - CI green + only conversations open → reply + resolve; no new code cycle.
 
@@ -169,6 +170,11 @@ run_contract:
     arch: "arm64"
     pyvenv_home: "{must not be miniconda on arm64}"
     fingerprint: "{opaque}"
+  fleet:
+    receipt: ".l9/pr/fleet.json"
+    fingerprint: "{16 hex; re-plan when it changes}"
+    caps_owner: "ops/autonomy/execution_profile.py"
+    first_wave: {remediate: [191, 192], recon: [], watch: []}
   prs:
     - number: 192
       base: main

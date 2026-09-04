@@ -46,7 +46,7 @@ work today.
 |---|---|
 | `gh pr view/list/checks/merge` (GraphQL) | Session gateway returns 403 — use `gh api` REST |
 | Autonomous merge | `gh pr merge` is GraphQL, so it 403s here anyway; and there is no autonomous-merge env boolean — merge needs the scoped `/l9-pr-remediation` receipt (or human `L9_MERGE_AUTHORIZED`) |
-| `sonar.read_issues` | No authenticated Sonar; public reads only |
+| `sonar.read_issues` | No brokered Sonar. `sonar_fetch.py` authenticates only with a `SONAR_TOKEN` the operator environment already supplies (2026-09-04 directive: resolve Sonar fully, never merge-blocking); otherwise public reads |
 | `semgrep.appsec_scan`, `semgrep.mcp` | No authenticated AppSec; CE unaffected |
 | `context7.mcp` | No library docs retrieval via the retired broker |
 | `gitguardian.mcp` | No brokered secret scanning; `gitleaks` still runs locally |
@@ -113,6 +113,40 @@ unpredictably rather than consistently.
 What must not be read into this: the 2026-08-29/30 row is not retracted, and neither
 row licenses asserting a mechanism. `gh api` succeeding while the session's own
 `GH_TOKEN` is an invalid sentinel remains the only claim either row supports.
+
+### 2026-09-04 — Claude Code cloud container, `Quantum-L9/Cursor-Governance` @ `a4a311e`
+
+Probed during a `/l9-pr-remediation` Converge run over PRs #488 and #489.
+
+| Probe | Result |
+|---|---|
+| `gh api user` | **works** — resolves `cryptoxdog` |
+| `gh api graphql` (any query) | **403** — "only the pinned set of PR-review operations is served" |
+| `gh pr list` / `gh pr view` | **403** — both are GraphQL clients |
+| `gh api repos/{owner}/{repo}/pulls/{n}` | **works** |
+| `gh api repos/{owner}/{repo}/rules/branches/main` | **works** — returns the org ruleset |
+| `gh api repos/{owner}/{repo}/branches/main/protection` | **403** "Resource not accessible by integration" |
+| `gh api repos/{owner}/{repo}/commits/{sha}/check-runs` | **works** |
+
+**The consequence was a board that could never answer.** `ops/autonomy/pr_board.py`
+is the merge authority, and two of its inputs were reachable only by routes this
+container refuses: `_pr_view` called `gh pr view` (GraphQL), and
+`protection_required` treated the 403 on classic protection as lost telemetry.
+Either one alone degraded every verdict to `wait / telemetry unavailable`, so no
+PR in the repo could ever be merged by the sanctioned path — an unclearable gate,
+which teaches bypassing rather than safety.
+
+Both are now fixed in the helper rather than worked around at the call site: the
+view falls back to a REST reconstruction of the same nine fields, and an
+unreadable classic-protection source is treated as naming nothing (rulesets still
+answer, and GitHub's own `mergeStateStatus` still refuses BLOCKED). The fail-closed
+property is unchanged — when *no* transport answers, the verdict is still
+`BoardError` → `wait`, never `merge`.
+
+What must not be read into this row: GraphQL being refused here is not a claim
+that it is refused everywhere, and the REST fallback is not a licence to prefer
+REST where GraphQL answers. The board tries GraphQL first and uses REST only when
+that call fails.
 
 ### Relationship to the P307 pack
 

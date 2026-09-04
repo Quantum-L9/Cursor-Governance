@@ -16,6 +16,15 @@ SonarCloud findings are a **third signal source** alongside CI failures and revi
 comments. They are retrieved from the API, confirmed against current source, collapsed
 to root causes, and fixed with the smallest safe change — never chased by suppression.
 
+## When (always, never blocking)
+
+When `sonar-project.properties` exists, **every** Converge fetches the issue set for
+each PR head it edits — whether or not the Sonar check is red — and resolves every
+confirmed issue in that PR's single commit. A red Sonar check is **not** a merge
+blocker: `ops/autonomy/pr_board.py` decides the board from the required set, and Sonar
+is outside it unless the repository's protection says otherwise. Unfixable residue is a
+Deferred reply plus the issue handoff, never a stopped train.
+
 This signal is **fail-closed** and **read-only against SonarCloud**: never mutate remote
 issue state, never weaken analysis, and never claim remote closure from local reasoning.
 
@@ -29,8 +38,11 @@ Resolve and record before any fix:
   under test. Never mix findings from unrelated branches.
 - `analyzed_revision` and `latest_analysis_date` — compare SonarCloud's analyzed revision
   with local `HEAD`. If they materially differ and cannot be reconciled → **STOP (BLOCKED)**.
-- Auth: read `SONAR_TOKEN` **by environment reference only**. Public projects read without
-  a token. Never print, commit, or store the token; redact `Authorization` headers.
+- Auth: `SONAR_TOKEN` (or `SONARCLOUD_TOKEN`) is read from the process environment on
+  every surface — it reached the process outside the repository's secret plane, which
+  still never exports one. Absent token → unauthenticated public read, reported as
+  `authenticated: false`; never paste a token to close that gap. Never print, commit, or
+  store the token; redact `Authorization` headers.
 
 ## Retrieve (fail-closed, paginated)
 
@@ -119,9 +131,11 @@ the repo supports it and it is safe). Result values: `PASS`, `FAIL`, `BLOCKED`, 
 - `skipped` is not `PASS`; `unavailable` is not `PASS`.
 - **A local fix is not a remote SonarCloud closure.** The quality gate is not green until
   observed green. Validation must bind to the exact candidate revision.
-- Re-query the issues API only after the corrected revision has been analyzed by SonarCloud
-  (phase 8, under separate explicit push/analysis authority). Until then, report
-  `PENDING_REMOTE_ANALYSIS` and claim no closure.
+- Re-query the issues API only after the pushed head has been analyzed by SonarCloud
+  (the PR analysis runs on the published head; the watcher lane reports when it lands).
+  Until then, report `PENDING_REMOTE_ANALYSIS` and claim no closure. A still-red gate
+  after re-query is work for the next cycle or a Deferred issue — it never holds the
+  merge train.
 
 ## Required artifacts
 

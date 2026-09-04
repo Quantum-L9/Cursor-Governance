@@ -1,0 +1,24 @@
+{
+  "schema": "l9.pr-remediation.activation-cases.v1",
+  "note": "Labeled prompts for the pack's intent-precedence rule (SKILL.md). converge = mutate authority, diagnose = read-only, reject = another owner. Classified by scripts/self_test.py; a wrong activation is a failure, not a score.",
+  "cases": [
+    {"prompt": "/l9-pr-remediation Quantum-L9/Cursor-Governance", "expected": "converge"},
+    {"prompt": "remediate the failing PRs on Cursor-Governance and merge them", "expected": "converge"},
+    {"prompt": "babysit PR #481 until it is green and merged", "expected": "converge"},
+    {"prompt": "the campaign left three PRs red, converge them", "expected": "converge"},
+    {"prompt": "fix the review comments on the open PRs and get them merged", "expected": "converge"},
+    {"prompt": "run the merge train on the open PRs", "expected": "converge"},
+    {"prompt": "/pr #488", "expected": "diagnose"},
+    {"prompt": "is PR #488 ready to merge?", "expected": "diagnose"},
+    {"prompt": "what are the merge blockers on PR 72", "expected": "diagnose"},
+    {"prompt": "review PR 72 and list unresolved review comments", "expected": "diagnose"},
+    {"prompt": "what's the status of the PRs", "expected": "diagnose"},
+    {"prompt": "drain the open issues across the fleet", "expected": "reject"},
+    {"prompt": "/issues Quantum-L9/SEO-Bot", "expected": "reject"},
+    {"prompt": "open a PR for my branch with make pr", "expected": "reject"},
+    {"prompt": "force-push my rebased branch and admin merge it", "expected": "reject"},
+    {"prompt": "edit the workflow so the failing check passes", "expected": "reject"},
+    {"prompt": "review this diff I pasted for security problems", "expected": "reject"},
+    {"prompt": "publish the campaign branch", "expected": "reject"}
+  ]
+}

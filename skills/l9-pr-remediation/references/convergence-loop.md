@@ -42,13 +42,13 @@ A second cycle is **not** the normal path. It is only for signals that did not e
 ┌─────────────────────────────────────────────────────────┐
 │              NEXT PR, THEN MERGE_TRAIN                    │
 │                                                          │
-│  1. Record head SHA                                      │
+│  1. Record head SHA; accept the lane's result document   │
 │  2. Re-query reviewThreads                               │
-│  3. Continue REMEDIATE_ALL                               │
+│  3. Launch the next wave (pr_fleet.py) / REMEDIATE_ALL   │
 │  4. FIRST_MERGE_GATE then MERGE_TRAIN                    │
 │                                                          │
 │  → do not merge because this one PR is green             │
-│  → own required-check wait (15s snapshots) then merge    │
+│  → watcher owns the required-check wait; merge on CLEAN  │
 │  → new post-push comments already present: one more      │
 │  → skipped census / unrun local gate: protocol failure   │
 │  → max cycles: STOP + partial report                     │
@@ -59,7 +59,7 @@ A second cycle is **not** the normal path. It is only for signals that did not e
 
 Subscribe to every in-scope open PR at preflight (`viewerSubscription`; `ops/scripts/lib/gh_subscribe_pr.sh` → GraphQL `updateSubscription` when not `SUBSCRIBED`). Never `PUT issues/{n}/subscription` (that route 404s). A classified GraphQL refusal or subscribe WARN does not waive ownership.
 
-After remediator publish, record the head SHA and continue independent PRs. Then stay on MERGE_TRAIN: snapshot `gh pr view` / `gh pr checks` every 15s (cap `max_wait_snapshots`) until `mergeStateStatus=CLEAN` or a CODEBASE-red required check names a source file this PR owns. Never tell the human to re-invoke `/l9-pr-remediation` because CI is still running.
+After remediator publish, record the head SHA, hand the wait to a background watcher lane (`pr_fleet.py assign --kind watch`, read-only `recon` role — [fleet-waves.md](fleet-waves.md)), and continue the next ready PR or the merge-train preflight. The watcher reports the terminal observation (`mergeStateStatus=CLEAN`, or a CODEBASE-red required check naming a source file this PR owns); the main agent never blocks a turn on it and never polls a PR a watcher owns. Never tell the human to re-invoke `/l9-pr-remediation` because CI is still running.
 
 If CI is already red on a source file this PR owns:
 
@@ -166,26 +166,4 @@ MUST stop the loop when:
 
 ## Configuration
 
-Defaults (overridable by user):
-
-```yaml
-max_cycles: 3                  # safety valve; success path is 1 commit
-one_and_done: true
-max_local_verify_iterations: 5
-auto_fix_nits: true           # clear one-line nits; skip only true product forks
-skip_bot_discussions: true     # skip non-actionable chatter from non-CRA bots only; NEVER skip github-code-quality or Copilot
-parallel_clusters: true        # always parallelize independent clusters
-forbid_no_verify: true
-require_precommit_all_hooks: false
-require_precommit_all_files: false
-prefer_makefile: true
-makefile_primary: precommit-repo
-oldest_created_at_default: true
-stack_safe: true
-merge_on_converge: true
-own_until_merged: true
-subscribe_open_prs: true
-poll_interval_seconds: 15
-max_wait_snapshots: 32
-forbid_reinvoke_handoff: true
-```
+Defaults live once, in `SKILL.md` → Defaults. This file does not restate them.

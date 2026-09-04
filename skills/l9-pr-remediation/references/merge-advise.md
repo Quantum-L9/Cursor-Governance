@@ -91,5 +91,5 @@ Makefile `pr` exists, publish is `PR_REMEDIATE=0 make pr`. Never raw
 - Merge before FIRST_MERGE_GATE
 - Squash/rebase a head that is the base of another open PR
 - `gh pr update-branch` after squash-merging a parent
-- Raw `git push` when Makefile `pr` exists
+- Raw `git push` as a *first* publish (opening a PR is `make pr` for campaign / feature work; the remediator's publish of an already-open PR branch is `git push`)
 - Publish from the default branch (`make pr` refuses `main`/`master`)

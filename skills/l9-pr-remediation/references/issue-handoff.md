@@ -58,11 +58,12 @@ EOF
 
 2. Record the issue number on the thread reply (HUMAN Deferred) and in the
    cycle status.
-3. Launch `l9-issue-remediation` Converge as a Cursor `generalPurpose`
-   subagent (`environment/agents/cursor-subagents` — reuse `pr_remediation`
-   concurrency rules; do not invent a sixth role). Bound it to the new
-   issue and `{owner}/{repo}`. Continue the PR train immediately. Do not
-   idle for that subagent.
+3. Launch `l9-issue-remediation` Converge as one background Task
+   (`DELEGATION_CONTRACT.above_paygrade_handoff`: `launch_as: generalPurpose`
+   under the `pr_remediation` role rules — the specialised issue skill, not a
+   sixth Cursor role and not a remediator lane). Bound it to the new issue and
+   `{owner}/{repo}`. It returns a result document like any lane. Continue the
+   PR train immediately. Do not idle for that subagent.
 4. This skill still does **not** merge from the issue agent, and the issue
    agent still does **not** `gh pr merge`. Reverse gate stays
    `open_issues=0` before the issue pack may invoke this skill.

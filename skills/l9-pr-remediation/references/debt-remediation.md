@@ -1,3 +1,15 @@
+<!-- L9_META
+l9_schema: 1
+parent: l9-pr-remediation
+layer: reference
+role: debt_signal
+tags: [ruff, mypy, eslint, typescript, debt, baseline, fail-closed]
+owner: igor_beylin
+status: active
+version: 1.1.0
+updated: 2026-09-04
+/L9_META -->
+
 # Pre-existing debt remediation (Ruff / mypy / ESLint)
 
 This reference governs the **static-analysis and type-debt** signal: a repository
@@ -169,7 +181,7 @@ Emit these alongside the usual gate artifacts so the work is auditable:
 
 - `GREEN_CLEAN_REVIEW_RESOLVED` — all in-scope pre-existing errors resolved; applicable
   Ruff/mypy/ESLint/tsc/tests/build green; all required PR checks green; no unresolved
-  code-review agent (`github-code-quality[bot]`, Copilot) or blocking review threads; branch clean; PR **not merged**.
+  code-review agent (`github-code-quality[bot]`, Copilot) or blocking review threads; branch clean; PR handed to the pack's MERGE_TRAIN.
 - `GREEN_WITH_EXPLICIT_NON_BLOCKING_DEBT` — required checks green and remaining debt is
   out-of-scope or explicitly accepted, with no hidden failures.
 - `PARTIALLY_REMEDIATED` — some confirmed debt fixed, required errors/reviews remain.
@@ -185,5 +197,6 @@ Emit these alongside the usual gate artifacts so the work is auditable:
 - The only way to pass is to weaken Ruff, mypy, ESLint, TypeScript, tests, or CI → STOP;
   never weaken a gate.
 - A required check is `UNKNOWN` → STOP until the failing boundary is understood.
-- Do not merge, release, or deploy. Do not resolve a review thread without a fix or an
-  evidence-backed rebuttal. Report `BLOCKED` rather than emit a misleading pass.
+- Do not release or deploy; merge only through the pack's MERGE_TRAIN. Do not resolve a
+  review thread without a fix or an evidence-backed rebuttal. Report `BLOCKED` rather than
+  emit a misleading pass.

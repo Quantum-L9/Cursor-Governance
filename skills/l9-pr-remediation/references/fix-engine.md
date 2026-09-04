@@ -27,10 +27,13 @@ Apply fixes for classified **codebase** findings. Independent clusters run concu
 - MUST NOT edit until the [remediation plan](remediation-plan.md) has a disposition for every census finding.
 - MUST NOT commit or push until ALL planned codebase fixes are applied AND `make precommit-repo` passed.
 - MUST use the smallest diff that resolves the finding.
-- MUST parallelize independent clusters by default; serialize only on conflicting file ownership.
-  Launch each cluster as Task type `l9-pr-remediation` with
-  `L9_ADMISSION_TOKEN=…` from `mint_admission.py`. Do not spawn generic
-  `explore` / `generalPurpose` for remediator work.
+- MUST parallelize independent PRs by default: the wave comes from
+  `ops/autonomy/pr_fleet.py plan`, each lane from `pr_fleet.py assign`
+  (managed Task type `l9-pr-remediation`, bounded `allowed_paths`), and each
+  lane ends with a result document judged by `pr_fleet.py accept`
+  ([fleet-waves.md](fleet-waves.md)). Serialize only on a claim conflict the
+  planner reports. Inside one lane, independent clusters are one batch and
+  one commit. No campaign, no admission token.
 - When a fix would require changes outside the PR's file scope, mark as deferred.
 - NEVER push partial fixes — all or nothing per cycle for the codebase batch.
 
@@ -51,24 +54,24 @@ rg -i "<error class or key phrase>" \
 
 ## Gate Discovery (MANDATORY FIRST STEP)
 
-When a Makefile exists, the public local gate **is** `pr-check`. Do not build a second suite from every workflow `run:`.
+When a Makefile exists, the remediator local gate **is** `make precommit-repo`. Do not build a second suite from every workflow `run:`. Do not run `make pr-check` or `make pr` from this skill.
 
 ```bash
-# PUBLIC verbs
-test -f Makefile && { grep -E '^(pr-check|pr|improve):' Makefile || true; }
+# remediator verbs
+test -f Makefile && { grep -E '^(precommit-repo|improve):' Makefile || true; }
 ```
 
 ```yaml
 local_verify_commands:
-  - name: "pr-check"
-    command: "PR_BASE=origin/main make precommit-repo"
-    source: "Makefile:pr-check"
+  - name: "precommit-repo"
+    command: "L9_REMEDIATOR=1 PR_BASE=origin/main make precommit-repo"
+    source: "Makefile:precommit-repo"
 ```
 
-Also record (do not all-run unless no Makefile `pr-check`):
-- `.pre-commit-config.yaml` hook ids that cover **cited/planned** paths; all-files pre-commit is not the default and is not the public gate
-- `package.json` scripts only as leftover fallback when no `pr-check`
-- Workflow `run:` commands only when no Makefile `pr` / `pr-check` exists (see [run-contract.md](run-contract.md))
+Also record (do not all-run):
+- `.pre-commit-config.yaml` hook ids that cover **cited/planned** paths; all-files pre-commit is not the gate
+- `package.json` scripts only as leftover fallback when no Makefile exists
+- Workflow `run:` commands only when no Makefile exists (see [run-contract.md](run-contract.md))
 
 Never `--no-verify`. Never `pre-commit install`. Never `make precommit` as shipping verify.
 
@@ -147,7 +150,7 @@ After applying ALL planned fixes, run the verify stack in [remediation-plan.md](
 PR_BASE=origin/main make precommit-repo
 
 # 2) Cited/planned paths (even if the default toolchain excludes them)
-# 3) Workflow run: leftover ONLY when no Makefile pr-check exists
+# 3) Workflow run: leftover ONLY when no Makefile exists
 ```
 
 ### Verification Rules

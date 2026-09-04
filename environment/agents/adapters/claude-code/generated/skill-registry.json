@@ -1230,7 +1230,7 @@
     },
     {
       "composition_role": "general",
-      "description": "diagnose or converge github prs \u2014 remediator path is precommit-repo then git push, then a stack-safe oldest-first merge train. board verdict is ops/autonomy/pr_board.py, never a check conclusion alone. do not run make pr or make pr-check. use when a campaign left prs unmergeable, the user invokes /l9-pr-remediation, or they ask to fix, remediate, babysit, converge, or merge failing prs.",
+      "description": "diagnose or converge github prs \u2014 plan the open-pr fleet once (pr_fleet.py), remediate every non-conflicting pr in one subagent wave, verify with precommit-repo then git push, fully resolve sonarcloud findings (never merge-blocking), then a stack-safe oldest-first merge train on pr_board.py verdicts. do not run make pr or make pr-check. use when a campaign left prs unmergeable, the user invokes /l9-pr-remediation, or they ask to fix, remediate, babysit, converge, or merge failing prs.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pr-remediation",
@@ -1396,5 +1396,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "90fd48b1d0c8d85e623dd13efcbf9a7ba87d0a5c1d4941ae7405f52af4411f61",
-  "source_skill_corpus_sha256": "65658a4e619c6d11e1bdb748d491f26e7377191fef4e23efd763faa184837bb2"
+  "source_skill_corpus_sha256": "a9d970843d1153f0dece5586d6bdf3cb3d4ff5e4f78a0fbdb712ed4d51df1a0e"
 }
