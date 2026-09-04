@@ -189,6 +189,30 @@
       "forbidden": [
         "l9-cli-optimization"
       ]
+    },
+    {
+      "prompt": "Run /l9-idea-execute to route this ideaos decision into governed execution",
+      "expected_primary": "l9-idea-execute",
+      "expected_supporting": [
+        "l9-structured-reasoning"
+      ],
+      "expected_source": "explicit_hint"
+    },
+    {
+      "prompt": "Use the idea foundry to compile this idea pack into a birth-ready repository",
+      "expected_primary": "l9-idea-foundry",
+      "expected_supporting": [
+        "l9-structured-reasoning"
+      ],
+      "expected_source": "explicit_hint"
+    },
+    {
+      "prompt": "Brainstorm and refine the idea only, do not execute",
+      "expected_primary": null,
+      "forbidden": [
+        "l9-idea-execute",
+        "l9-idea-foundry"
+      ]
     }
   ]
 }
