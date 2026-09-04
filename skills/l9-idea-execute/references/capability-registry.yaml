@@ -1,0 +1,24 @@
+schema: l9.idea-execute.capability-registry/v1
+registry_version: 1
+principle: specialized_factory_before_generic_birth
+specialized_factories:
+  website:
+    owner: Quantum-L9/Website-Bot
+    adapter: website-bot
+    topology: SPECIALIZED_FACTORY
+    native_input: domain_spec.source.yaml
+    note: Website-Bot owns any website-specific provisioning or generated site repository.
+generic_routes:
+  new_product_repository:
+    owner: l9-idea-foundry
+    adapter: l9-idea-foundry
+    topology: NEW_PRODUCT_REPOSITORY
+  bounded_existing_repo:
+    owner: l9-plan-simple
+    adapter: l9-plan-simple
+    topology: EXISTING_REPO_CHANGE
+  existing_system_campaign:
+    owner: Cursor-Governance/Program-Execution
+    adapter: program-execution
+    topology: EXISTING_SYSTEM_CAMPAIGN
+unbound_policy: FAIL_CLOSED

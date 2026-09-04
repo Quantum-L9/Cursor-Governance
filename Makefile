@@ -887,3 +887,20 @@ pr-security-full:
 		bash ops/scripts/run_pr_security.sh "$(WS)"
 
 pr-full: pr-security-full
+
+# --- Cursor adapter (environment/agents/adapters/cursor/) --------------------
+# Thin binding: shared bootstrap + Cursor wiring checks + surface receipt at
+# ~/.l9/cursor/bootstrap-state.json (read via claude_bootstrap_receipt.py
+# --surface cursor — one reader, one expiry rule). Refuses WS=$HOME.
+.PHONY: cursor-install cursor-install-check
+## Install/verify the Cursor adapter and write its bootstrap receipt. Usage: make cursor-install WS=/path
+cursor-install:
+	bash "$(CURDIR)/environment/agents/adapters/cursor/install.sh" \
+		--governance "$(CURDIR)" --workspace "$(if $(WS),$(WS),$(CURDIR))"
+
+## Read-only Cursor adapter check (writes bootstrap-check.json, never the session receipt).
+cursor-install-check:
+	bash "$(CURDIR)/environment/agents/adapters/cursor/install.sh" \
+		--governance "$(CURDIR)" --workspace "$(if $(WS),$(WS),$(CURDIR))" --check
+	L9_GOV_ROOT="$(CURDIR)" $(PYTHON) ops/scripts/claude_bootstrap_receipt.py \
+		--surface cursor --path "$$HOME/.l9/cursor/bootstrap-check.json" --json

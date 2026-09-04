@@ -6,6 +6,18 @@
 # Installed as a REAL file at ~/.cursor/hooks/session-start-bootstrap.sh (not a symlink).
 set -uo pipefail
 
+# Hook processes inherit a minimal PATH that can miss Homebrew, so `gh` and
+# other brew-installed checkers vanish from every subprocess this hook spawns
+# (observed friction: per-command PATH prefixes in agent shells).
+# Idempotent prepend; the locked interpreter stays $GC/.venv/bin/python.
+for _l9_bin in /opt/homebrew/bin /usr/local/bin; do
+  case ":$PATH:" in
+    *":$_l9_bin:"*) ;;
+    *) [ -d "$_l9_bin" ] && PATH="$_l9_bin:$PATH" ;;
+  esac
+done
+export PATH
+
 REPO="${CURSOR_PROJECT_DIR:-}"
 
 # IDE profile is the only SessionStart reconciler that writes the workspace.
@@ -448,12 +460,35 @@ else
 fi
 HYDRATE_DEGRADED="false"
 HYDRATE_REASON=""
-case "$HYDRATE_MD" in
-  *DEGRADED*|*degraded*|*hydrate\ CLI\ missing*|*'"degraded": true'*)
-    HYDRATE_DEGRADED="true"
-    HYDRATE_REASON="$(printf '%s\n' "$HYDRATE_MD" | grep -E 'degraded|degrade_reason|hydration degraded|hydrate CLI missing' | head -n 2 | tr '\n' ' ')"
-    ;;
-esac
+# Classify from the packet JSON booleans (degraded / hydrate_stats.close_gap),
+# never by substring: every healthy packet fence contains '"degraded": false',
+# which a *degraded* glob misreads as a this-session fault.
+resolve_hydrate_classifier() {
+  if [ -n "${CURSOR_PROJECT_DIR:-}" ] && [ -f "$CURSOR_PROJECT_DIR/ops/scripts/classify_hydrate_state.py" ]; then
+    printf '%s\n' "$CURSOR_PROJECT_DIR/ops/scripts/classify_hydrate_state.py"
+    return 0
+  fi
+  if [ -f "$GC/ops/scripts/classify_hydrate_state.py" ]; then
+    printf '%s\n' "$GC/ops/scripts/classify_hydrate_state.py"
+    return 0
+  fi
+  return 1
+}
+HYDRATE_CLASSIFIER="$(resolve_hydrate_classifier || true)"
+if [ -n "$HYDRATE_CLASSIFIER" ]; then
+  HYDRATE_CLASS_OUT="$(printf '%s' "$HYDRATE_MD" | "$AUDIT_PY_BIN" "$HYDRATE_CLASSIFIER" 2>/dev/null || printf 'false\n\n')"
+  HYDRATE_DEGRADED="$(printf '%s\n' "$HYDRATE_CLASS_OUT" | sed -n '1p')"
+  HYDRATE_REASON="$(printf '%s\n' "$HYDRATE_CLASS_OUT" | sed -n '2p')"
+  [ "$HYDRATE_DEGRADED" = "true" ] || HYDRATE_DEGRADED="false"
+else
+  # Conservative fallback: only unambiguous markers, never a bare substring.
+  case "$HYDRATE_MD" in
+    *'"degraded": true'*|*'hydrate CLI missing'*)
+      HYDRATE_DEGRADED="true"
+      HYDRATE_REASON="$(printf '%s\n' "$HYDRATE_MD" | grep -E '"degraded": true|hydrate CLI missing' | head -n 1)"
+      ;;
+  esac
+fi
 
 # Resolve order: override, then this checkout (ssot_checkout / feature worktree),
 # then live SSOT. make start still runs the SSOT hook until this PR merges.
@@ -494,6 +529,7 @@ if [ -n "$RUNTIME_REPORTER" ] && [ -f "$RUNTIME_REPORTER" ]; then
     --codegraph "$CODEGRAPH_MD" \
     --hydrate-degraded "$HYDRATE_DEGRADED" \
     --hydrate-reason "$HYDRATE_REASON" \
+    --workspace "${CURSOR_PROJECT_DIR:-$PWD}" \
     2>"$RUNTIME_ERR" || true)"
   if [ -z "$RUNTIME_MD" ]; then
     RUNTIME_TAIL="$(head -c 240 "$RUNTIME_ERR" | tr '\n' ' ')"

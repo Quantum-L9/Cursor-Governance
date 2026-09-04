@@ -81,6 +81,8 @@ AUTHORITY = {
     "runtime_database": "/tmp/autonomy-runtime.sqlite3",
     "repository_root": "/tmp",
     "workspace": "/tmp/workspace",
+    "attempt_number": 1,
+    "authority_digest": "sha256:" + "0" * 64,
 }
 
 

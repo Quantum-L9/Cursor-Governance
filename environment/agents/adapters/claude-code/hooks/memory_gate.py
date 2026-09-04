@@ -139,12 +139,24 @@ def main() -> int:
         requires = st.validate_requires(rule)
 
         if "session_prefetch" in requires and not st.usable_receipt(contract, session_id):
+            # Name the session id the gate itself resolved: on Cursor the hook
+            # event id is NOT the newest ~/.claude/projects jsonl, and pointing
+            # at that heuristic sent agents to prefetch for the wrong session.
+            sid_hint = (
+                f"--session-id {session_id}"
+                if session_id
+                else (
+                    "--session-id <session-id-from-hook-event> "
+                    "(best-effort fallback only if the hook event has no "
+                    "session_id: newest ~/.claude/projects/<project>/<uuid>.jsonl "
+                    "— on Cursor that heuristic is often wrong)"
+                )
+            )
             _deny(
                 f"Memory not hydrated this session. Governed write '{rule['id']}' requires the "
                 "SessionStart Graphiti prefetch (front door). Start a fresh session, or run "
                 "environment/agents/adapters/claude-code/hooks/memory_prefetch.py "
-                "--session-id <your-session-id> (find it as the newest "
-                "~/.claude/projects/<project>/<uuid>.jsonl for this conversation), then retry. "
+                f"{sid_hint}, then retry. "
                 "This is a hydration gate, not a lock: no phase-lock is required or accepted."
             )
         return 0

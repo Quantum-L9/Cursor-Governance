@@ -138,7 +138,11 @@ def normalize(data: bytes) -> bytes:
     return _TIMESTAMP_RE.sub(b"<timestamp>", data)
 
 
-def fingerprint(*parts: Any) -> str:
+def fingerprint(
+    *parts: Any,
+    strict: bool = False,
+    normalize_timestamps: bool = True,
+) -> str:
     """Deterministic SHA-256 over the given input parts.
 
     Accepts paths (hashed by content when readable, else by name), bytes, and
@@ -147,27 +151,48 @@ def fingerprint(*parts: Any) -> str:
 
     Emission timestamps are normalised out of every part, so a repeat over
     unchanged inputs is visible even though the artifacts were re-stamped.
+
+    Both defaults describe *emitted* artifacts, and both are wrong for an
+    operator's input: an unreadable input hashed by name is a stable key for
+    a file that is not there, and a timestamp the operator typed into a task
+    is an edit, not an emission stamp. `strict=True` re-raises the `OSError`
+    instead of substituting a placeholder; `normalize_timestamps=False`
+    hashes ISO timestamps as written. `fingerprint_inputs` is the pairing.
     """
     digest = hashlib.sha256()
     for part in parts:
         if isinstance(part, Path):
             digest.update(str(part).encode("utf-8"))
             try:
-                digest.update(normalize(part.read_bytes()))
+                data = part.read_bytes()
             except OSError:
+                if strict:
+                    raise
+                data = None
+            if data is None:
                 digest.update(b"<unreadable>")
+            else:
+                digest.update(normalize(data) if normalize_timestamps else data)
         elif isinstance(part, bytes):
-            digest.update(normalize(part))
+            digest.update(normalize(part) if normalize_timestamps else part)
         else:
-            digest.update(
-                normalize(
-                    json.dumps(part, sort_keys=True, default=str, ensure_ascii=False).encode(
-                        "utf-8"
-                    )
-                )
+            encoded = json.dumps(part, sort_keys=True, default=str, ensure_ascii=False).encode(
+                "utf-8"
             )
+            digest.update(normalize(encoded) if normalize_timestamps else encoded)
         digest.update(b"\0")
     return digest.hexdigest()
+
+
+def fingerprint_inputs(*parts: Any) -> str:
+    """Fingerprint of operator-authored inputs: every byte counts, or it raises.
+
+    For compile keys and edit detection over the campaign source. A missing or
+    unreadable path raises its `OSError` rather than keying a stable reuse
+    decision on `<unreadable>`, and timestamps are hashed as written because
+    here they are content the operator may have changed.
+    """
+    return fingerprint(*parts, strict=True, normalize_timestamps=False)
 
 
 # -- redaction ----------------------------------------------------------

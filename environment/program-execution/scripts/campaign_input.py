@@ -169,17 +169,89 @@ class CampaignInputRejected(Exception):
         )
 
 
-def _load_document(path: Path) -> tuple[dict[str, Any] | None, str | None]:
+def _normalize_text(raw: str) -> str:
+    """LF line endings, no BOM, trailing newline: the compiler's source identity.
+
+    The architecture route computes source identity on
+    `compiler.architecture_intent.normalize_source`; routing reads the same
+    normalized text so a byte-order mark or CRLF endings cannot change which
+    route a document takes. The compiler's function is preferred when it is
+    reachable; the fallback is the same three rules, not a second policy.
+    """
+    pe_root = Path(__file__).resolve().parents[1]
+    if str(pe_root) not in sys.path:
+        sys.path.append(str(pe_root))
+    try:
+        from compiler.architecture_intent import normalize_source
+    except Exception:  # pragma: no cover - the compiler tree is part of this repo
+        normalize_source = None  # type: ignore[assignment]
+    if normalize_source is not None:
+        return normalize_source(raw)
+    text = raw.replace("\ufeff", "").replace("\r\n", "\n").replace("\r", "\n")
+    if text and not text.endswith("\n"):
+        text += "\n"
+    return text
+
+
+def _read_document_text(path: Path) -> str:
+    """The document as normalized UTF-8 text, or the terminal refusal.
+
+    Bytes that are not UTF-8 text (a binary, an archive, a wrong-encoding
+    export) used to escape as a raw `UnicodeDecodeError`, and an unreadable
+    file as a raw `OSError`; neither said what was handed in or what to do.
+    An empty document is refused here too: it would otherwise classify as a
+    brief by extension alone, which is exactly what "never by extension" was
+    written to stop.
+    """
+    try:
+        raw_bytes = path.read_bytes()
+    except OSError as exc:
+        raise CampaignInputRejected(
+            detected=CampaignInputKind.UNKNOWN,
+            path=path,
+            reason=f"cannot read campaign input: {type(exc).__name__}: {exc}",
+            fix="Make the file readable by this user, or pass INTENT=<path> to a readable "
+            "copy. Nothing was executed.",
+        ) from exc
+    try:
+        raw = raw_bytes.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise CampaignInputRejected(
+            detected=CampaignInputKind.UNKNOWN,
+            path=path,
+            reason="not UTF-8 text; binary or archive input is not supported",
+            fix="Supply a UTF-8 text document: a campaign-source.v2 YAML, an activate "
+            "seed, an architecture-intent document, a plan, or a brief memo. Extract an "
+            "archive first and point INTENT at the document inside it. Nothing was executed.",
+        ) from exc
+    text = _normalize_text(raw)
+    if not text.strip():
+        raise CampaignInputRejected(
+            detected=CampaignInputKind.UNKNOWN,
+            path=path,
+            reason="empty document",
+            fix="Write the campaign input before handing it in; an empty file matches no "
+            "supported shape. Nothing was executed.",
+        )
+    return text
+
+
+def _load_document(path: Path, text: str | None = None) -> tuple[dict[str, Any] | None, str | None]:
     """Parse YAML/JSON: (mapping or None, parse error or None).
 
     A parse error is reported, not swallowed: swallowing it made an unparsable
     `.yaml` read as "parsed but matched no shape", a false diagnosis, and an
     unparsable `.md` fall through to the brief route.
+
+    `text` is the normalized document when the caller already read it; the
+    file is read (and normalized, and refused when unreadable) otherwise.
     """
     if yaml is None:
         raise RuntimeError("PyYAML required to classify campaign input")
+    if text is None:
+        text = _read_document_text(path)
     try:
-        raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+        raw = yaml.safe_load(text)
     except yaml.YAMLError as exc:
         return None, f"{type(exc).__name__}: {str(exc).strip()[:300]}"
     return (raw if isinstance(raw, dict) else None), None
@@ -319,8 +391,8 @@ def classify(path: Path, *, forced_kind: CampaignInputKind | None = None) -> Cla
             "activate YAML, or brief memo.",
             path=path,
         )
-    text = path.read_text(encoding="utf-8")
-    doc, parse_error = _load_document(path)
+    text = _read_document_text(path)
+    doc, parse_error = _load_document(path, text)
     frontmatter_doc = _parse_frontmatter(text, path=path) or {}
     declared = str(frontmatter_doc.get("schema") or "").strip()
     if forced_kind is CampaignInputKind.ARCHITECTURE_INTENT_V1 or (

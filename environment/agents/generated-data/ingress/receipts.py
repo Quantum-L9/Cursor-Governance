@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import sys
 import tempfile
 from datetime import UTC, datetime
@@ -43,12 +44,29 @@ PROCESSING_STATUSES = {
 }
 
 
+#: One path segment: no separator, no `.`/`..`, nothing that leaves the
+#: receipt directory. A sha256 hex digest satisfies it; so do the short
+#: acceptance digests ingest hands in (`"none"` for a refused result). The
+#: filename used to be built from the caller's string verbatim, so a digest of
+#: `../../escape` wrote outside the receipt root.
+_DIGEST_SEGMENT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+
+
+def _digest_segment(value: Any, *, label: str) -> str:
+    text = value if isinstance(value, str) else ""
+    if not _DIGEST_SEGMENT_RE.match(text) or "/" in text or "\\" in text:
+        raise ValueError(f"{label} is not a safe receipt filename segment: {value!r}")
+    return text
+
+
 def _path(acceptance_digest: str) -> Path:
-    return generated_data_receipt_root() / "ingress" / f"{acceptance_digest}.json"
+    segment = _digest_segment(acceptance_digest, label="acceptance receipt digest")
+    return generated_data_receipt_root() / "ingress" / f"{segment}.json"
 
 
 def packet_evidence_path(packet_digest: str) -> Path:
-    return generated_data_evidence_root() / "packets" / f"{packet_digest}.json"
+    segment = _digest_segment(packet_digest, label="packet digest")
+    return generated_data_evidence_root() / "packets" / f"{segment}.json"
 
 
 def _atomic_write(path: Path, data: bytes) -> None:
@@ -113,7 +131,8 @@ def load_ingress(acceptance_digest: str) -> dict[str, Any] | None:
 
 
 def quarantine_meta(meta: dict[str, Any]) -> Path:
-    path = generated_data_quarantine_root() / f"{meta.get('packet_digest', 'unknown')}.json"
+    segment = _digest_segment(meta.get("packet_digest", "unknown"), label="packet digest")
+    path = generated_data_quarantine_root() / f"{segment}.json"
     _atomic_write(
         path,
         json.dumps(meta, indent=2, sort_keys=True, ensure_ascii=False).encode("utf-8") + b"\n",

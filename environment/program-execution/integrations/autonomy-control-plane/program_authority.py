@@ -320,6 +320,25 @@ SHELL_TOOLS = frozenset({"Bash", "Shell", "run_terminal_cmd"})
 #: Capabilities the gateway resolves against a repository-relative path.
 PATH_CAPABILITY_PREFIXES = ("repository.", "file.", "git.diff")
 
+#: The only capabilities a worker window may exercise as an effect. Everything
+#: a worker legitimately does inside its worktree is one of these. Root-side
+#: terminalization (`artifact.*`), Controller-owned transitions and every
+#: publication capability are never a worker tool call, so a tool that maps to
+#: any other capability is refused here -- before the gateway is asked -- even
+#: when the subordinate lease happens to hold that capability. A non-path
+#: capability would also skip the gateway's path confinement, which is exactly
+#: how a worker used to name `artifact.write_execution_result` on a `Write` and
+#: be allowed to write outside its worktree.
+WORKER_EFFECT_CAPABILITIES = frozenset(
+    {
+        "repository.read",
+        "repository.search",
+        "repository.write_scoped",
+        "git.diff",
+        "test.run",
+    }
+)
+
 # Authorization phases recorded in a gateway decision's metadata. This module
 # owns the vocabulary because it is the one loaded standalone by the live
 # PreToolUse hook; `grant.py` imports these rather than restating them.
@@ -514,6 +533,20 @@ class ProgramBoundEffectAuthorizer:
             parent = self.verifier.parent_from_authority(self.authority)
         except ProgramAuthorityError as exc:
             return self._denied(tool_name, exc)
+        if not parent.bound:
+            # An effect authorizer exists only for Program worker windows, and
+            # every one of those has canonical Program state to answer to.
+            # With no state there is nothing to check expiry, revocation or
+            # lease drift against, so "unbound" is not "unconstrained": it is
+            # a missing authority source, and a missing source denies.
+            return self._denied(
+                tool_name,
+                ProgramAuthorityError(
+                    "PROGRAM_PARENT_UNBOUND: no canonical Program state at "
+                    f"{self.verifier.state_path}; effects cannot be authorized"
+                ),
+                parent=parent,
+            )
         try:
             capability = self._capability_for(tool_name, arguments)
             resource = self._resource_for(capability, parent, tool_name, arguments)
@@ -527,7 +560,7 @@ class ProgramBoundEffectAuthorizer:
         try:
             decision = tool_hook.pre_tool_use(
                 tool_name=tool_name,
-                arguments=arguments,
+                arguments={key: value for key, value in arguments.items() if key != "capability"},
                 orchestrator=self.orchestrator,
                 session_id=str(self.authority["adapter_session_id"]),
                 lease_id=str(self.authority["lease_id"]),
@@ -578,11 +611,31 @@ class ProgramBoundEffectAuthorizer:
             if not isinstance(command, str) or not command.strip():
                 raise ProgramAuthorityError("SHELL_COMMAND_MISSING: no command to validate")
             return canonical_shell_capability(command)
-        capability = tool_hook.infer_capability(tool_name, arguments)
+        # The capability is derived from the tool's identity alone. The root
+        # `infer_capability` honours an explicit `arguments["capability"]` for
+        # trusted in-process callers; a worker window is not one. Its tool
+        # input is untrusted host data, so the claim is stripped before
+        # inference and can never name the authority it is asking for.
+        untrusted = {key: value for key, value in arguments.items() if key != "capability"}
+        if tool_name not in tool_hook.TOOL_CAPABILITY_MAP:
+            # The root inference falls back to `repository.read` for any name it
+            # does not know. A read default on an unknown tool is fail-open: an
+            # unmapped mutating tool would be authorized as a read. Unknown
+            # tools are refused, never guessed.
+            raise ProgramAuthorityError(
+                f"TOOL_UNMAPPED: {tool_name!r} has no root capability mapping; "
+                "an unmapped tool is refused, never defaulted to a read"
+            )
+        capability = tool_hook.infer_capability(tool_name, untrusted)
         if capability == "test.run":
             # Only the validated shell path above may reach test.run.
             raise ProgramAuthorityError(
                 f"SHELL_CAPABILITY_NOT_VALIDATED: {tool_name!r} may not claim test.run"
+            )
+        if capability not in WORKER_EFFECT_CAPABILITIES:
+            raise ProgramAuthorityError(
+                f"CAPABILITY_NOT_EFFECT_AUTHORIZABLE: {tool_name!r} maps to {capability!r}, "
+                "which a worker window may not exercise as an effect"
             )
         return capability
 

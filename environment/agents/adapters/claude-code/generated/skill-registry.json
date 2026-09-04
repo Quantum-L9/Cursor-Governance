@@ -695,6 +695,66 @@
         "supporting": [
           "l9-git-work-preserve"
         ]
+      },
+      {
+        "hint_allowed": true,
+        "id": "idea_execute",
+        "negative_signals": [
+          "refine the idea",
+          "brainstorm",
+          "ideaos only"
+        ],
+        "note": "explicit_only + hint_allowed \u2014 Read/attach only. Mutation requires explicit user invoke. Never auto-select as IdeaOS or as a generic coder.\n",
+        "positive_signals": [
+          "/l9-idea-execute",
+          "idea execute",
+          "ideaos execution",
+          "idea-to-execution",
+          "execution envelope",
+          "route this ideaos"
+        ],
+        "primary": "l9-idea-execute",
+        "required_any": [
+          "/l9-idea-execute",
+          "idea execute",
+          "ideaos execution",
+          "idea-to-execution",
+          "execution envelope"
+        ],
+        "signal_weight": 8,
+        "supporting": [
+          "l9-structured-reasoning"
+        ]
+      },
+      {
+        "hint_allowed": true,
+        "id": "idea_foundry",
+        "negative_signals": [
+          "website only",
+          "deploy to production",
+          "existing repo change"
+        ],
+        "note": "explicit_only + hint_allowed \u2014 Read/attach only. Mutation requires explicit user invoke. Never birth a repo from a hint.\n",
+        "positive_signals": [
+          "/l9-idea-foundry",
+          "idea foundry",
+          "compile this idea pack",
+          "birth-ready repository",
+          "l9-repo-template birth",
+          "idea pack to code"
+        ],
+        "primary": "l9-idea-foundry",
+        "required_any": [
+          "/l9-idea-foundry",
+          "idea foundry",
+          "birth-ready repository",
+          "idea pack to code",
+          "l9-repo-template birth"
+        ],
+        "signal_weight": 8,
+        "supporting": [
+          "l9-structured-reasoning"
+        ]
       }
     ],
     "supporting_skills": [
@@ -884,7 +944,7 @@
     },
     {
       "composition_role": "primary",
-      "description": "Use Context7 documentation before coding when current library, framework, SDK, API, version-specific behavior, or unfamiliar dependency docs could prevent implementation mistakes, deprecated patterns, or debug loops.",
+      "description": "ground implementation decisions in current Context7 documentation before coding. use when current library, framework, SDK, API, version-specific behavior, or unfamiliar dependency docs could prevent implementation mistakes, deprecated patterns, or debug loops.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-context7-docs",
@@ -1002,6 +1062,28 @@
       "reason": "",
       "user_invocable": true,
       "when_to_use": "wiring memory, debugging prefetch/bootstrap, GMP Phase 0 MEMORY_PREFETCH, episode/T0 memory-bank writes, or checking Graphiti health"
+    },
+    {
+      "composition_role": "general",
+      "description": "route a validated ideaos decision into the shortest governed execution owner. use when idea-to-execution work needs a new product repo, website-bot build, bounded existing-repo change, or program-execution campaign. do not use for raw idea refinement or when ideaos has not decided outcomes.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-idea-execute",
+      "path": "skills/l9-idea-execute",
+      "reason": "routes validated IdeaOS decisions into Foundry, Website-Bot, plan-simple, or Program Execution; owner-selection and downstream invocation are high blast radius; disable-model-invocation",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
+      "description": "compile an implementation-ready idea pack into tested code and a birth-ready quantum-l9 repository. use when a mature idea should leave specification and become a real repo via l9-repo-template. do not use for websites, existing-repo changes, or production deployment.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-idea-foundry",
+      "path": "skills/l9-idea-foundry",
+      "reason": "compiles idea packs into tested code and l9-repo-template births; repository creation and code realization are high blast radius; disable-model-invocation",
+      "user_invocable": true,
+      "when_to_use": ""
     },
     {
       "composition_role": "primary",
@@ -1126,7 +1208,7 @@
     },
     {
       "composition_role": "general",
-      "description": "create a machine-validated cursor .plan.md from the shared executable-plan template in one of two handoff modes. default mode cursor-build executes with the build button and then opens a stacked PR; never branch off main when an open PR exists, and display the PR URL. embedded mode is for callers that own their own execution \u2014 it stops at validated planning artifacts and grants no execution, commit, publication, campaign, or deployment authority. use when scope is unclear, requirements need decomposition, cursor plan mode is on, the next step should be planned before code changes, or a nested skill or pipeline needs planning depth without downstream authority. do not use when the user asks for program-execution, make campaign, /l9-plan, or a pe campaign lock.",
+      "description": "create a machine-validated Cursor .plan.md from the shared executable-plan template using cursor-build or embedded handoff. use when scope needs decomposition, Cursor plan mode is active, work should be planned before code changes, or a nested caller needs planning depth without execution authority. cursor-build is default and hands off to Build and stacked PR; embedded stops at validated planning artifacts. do not use for Program Execution, make campaign, /l9-plan, or a PE campaign lock.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-plan-simple",
@@ -1269,7 +1351,7 @@
     },
     {
       "composition_role": "primary",
-      "description": "maintain the root agent-doc pointer stack (agents.md, claude.md, readme.md) and generate module READMEs via readme-pipeline-v1. use when the user says update agent docs, refresh repo docs, generate module readmes, sync agent files, create root claude.md/invariants.md, or after ci checks or pre-commit hooks change. creates those two only when absent; never invents other root files.",
+      "description": "compile repository changes into typed, target-resolved documentation obligations, selectively qualify semantic obligations with l9-intelligence-harvest, route owner-native actions, and emit evidence-backed repo-docs receipts. use when refreshing repo or agent docs, checking documentation impact after code/CI/governance changes, generating module READMEs, or proving documentation freshness before PR/merge.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-update-agent-docs",
@@ -1291,7 +1373,7 @@
     },
     {
       "composition_role": "primary",
-      "description": "synthesize the single highest-leverage next action from current context. use after completing work, when priorities are unclear, or when the user asks what to do next.",
+      "description": "synthesize the single highest-leverage next action from current context. use when work is complete, priorities are unclear, or the user asks what to do next.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-ynp",
@@ -1302,6 +1384,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "132fb178fc0b81d846f7edc6339f7f9969b04393eea7205ae015adeb8a60ef80",
-  "source_skill_corpus_sha256": "bcb684392a013a6ffdaf12e312f95e87a56b5a8e7254c047c8061c2fe00cc2a3"
+  "source_manifest_sha256": "f1f1f9f18ae9899dcdea4137ab5c993298654074781881dedacd27a0c86eff6d",
+  "source_skill_corpus_sha256": "187f2683f032b790d0353f71cf481d70153b1b0c588ebd41f9a4dc3cbd20fc43"
 }

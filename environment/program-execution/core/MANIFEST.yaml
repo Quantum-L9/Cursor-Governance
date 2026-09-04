@@ -255,8 +255,8 @@ files:
   sha256: 6ec60ea6135ed408e0288917cf73db8ed23b6af2d299903c20e724560a011197
   bytes: 537
 - path: program-execution-controller-template/policy/risk-tiers.yaml
-  sha256: 99bde611c460d0986377c5f64e7773221f203bf5e9e62bc4cb6355d1c3371f92
-  bytes: 727
+  sha256: 696cd3425280d1c35fe5df21e08665600f5e3d883034195813662dcd2b4acc24
+  bytes: 1039
 - path: program-execution-controller-template/policy/stop-conditions.yaml
   sha256: 928e35ff2e76015fea913f86b43fd9f271c67cd7aedbc2f1ce77a52485572561
   bytes: 2039
@@ -294,11 +294,11 @@ files:
   sha256: e42f5aa4018d0bf8bc0cb94f93663afdeb45a7424ca3d19890504867aaeb5df7
   bytes: 611
 - path: program-execution-controller-template/references/STATE_MACHINE.md
-  sha256: 87b0b292667c477e5918c6d651db0ca1aaeb3253cf690f6fb6e62b049d28e0bb
-  bytes: 1088
+  sha256: 443a9db1d2221713d3a4245fb3cccbf2e24c404871308d62ce52df743b5f6d68
+  bytes: 1458
 - path: program-execution-controller-template/references/VERIFICATION_AND_RECEIPTS.md
-  sha256: 94e4329c9de0a8c4dc2d0a507be66e08fef296744c5916f51bcb297c7b098352
-  bytes: 556
+  sha256: 9226d687c0ae9338650183d250947acc33629550228718ea9856f42d47169e57
+  bytes: 2022
 - path: program-execution-controller-template/references/WORKER_ADAPTER.md
   sha256: 587b94c5a8f534abc218bee0b480d27ae95d6cab2c7cc33c0b0eef8539903df8
   bytes: 376
@@ -333,8 +333,8 @@ files:
   sha256: 08dd769b01fcca140d0b43647ddce142ea3fd07384e2f7ba26bf8fa658d3f919
   bytes: 4791
 - path: program-execution-controller-template/schemas/verification-receipt.schema.json
-  sha256: 6780f3341ff52e661da0bd91acc9e7e4321964a44d9cbe33242ec67a25173163
-  bytes: 3539
+  sha256: 7779968b84ede61679fe9e9d73a60ad6e15f1e0f3243383a280153a01ece978b
+  bytes: 3690
 - path: program-execution-controller-template/schemas/waiver.schema.json
   sha256: 6ff6e71f1a820ae05bbd795a50ac96e176bf971ccb8f6e9051f4da1623b087c7
   bytes: 1221
@@ -357,14 +357,14 @@ files:
   sha256: 946e53429aa413bda374070057ea5e9043d66ef5773344e2b593fb3e575fda51
   bytes: 18179
 - path: program-execution-controller-template/scripts/pec/controller.py
-  sha256: caf665e43ec25eca3056a085c43e62d60914c004990063885667a80d8a505003
-  bytes: 120487
+  sha256: 1ed13eda28338f60d8ee80a80946001e5e3e0f951815764c19ac55953997392e
+  bytes: 135837
 - path: program-execution-controller-template/scripts/pec/dispatch.py
   sha256: 87e8619e49131144071d7eff92100888241b4903e742c68a2cf09ffbb2603fb7
   bytes: 5846
 - path: program-execution-controller-template/scripts/pec/exec_env.py
-  sha256: 8e77e4df62e904ccb60da1deb9c21bdb2897d72955a884f5f1bfd5697c6a40f1
-  bytes: 12465
+  sha256: 693f338770d933320ccd6a19ac887d71c36b8575dfc9e391f405d5062e3d2b3b
+  bytes: 13696
 - path: program-execution-controller-template/scripts/pec/ledger.py
   sha256: ce27b2ab0c7cde6a34f4030fbd07b27fe63914519cc0e8f701c3afdd240dad1c
   bytes: 3682
@@ -372,8 +372,8 @@ files:
   sha256: 422fe029a0535a46f0489e43eda1a25045cb30971efdf6c2eaa4135295fd58f2
   bytes: 12257
 - path: program-execution-controller-template/scripts/pec/replan.py
-  sha256: 84671f9952a1bc677c92d3a90dc4f92066f890663ca04065546c3885fe576f3e
-  bytes: 14670
+  sha256: 8f880f6be1df4e0b62f4d04adb855f76d5f38233f385d4dac0ef4c93f56d98ce
+  bytes: 17899
 - path: program-execution-controller-template/scripts/pec/runtime.py
   sha256: 2fc4b45e13dfacf8b36cd52b3f5c60d558044c8e9ac1087da8d384b9e40e833f
   bytes: 3109
@@ -411,8 +411,8 @@ files:
   sha256: 935760a69ed57106ad73ba5be739e7b8f732071de444749b97cbd39e8e77cf91
   bytes: 11721
 - path: program-execution-controller-template/scripts/tests/test_campaign_status.py
-  sha256: 11f709cbae6589c57d3c724eb68d8e95a74f2c16804bdd956829c634ba7b9810
-  bytes: 9846
+  sha256: 7e67ce784259147c82582a71052609190ffa52602821c36999c67964316f6090
+  bytes: 10443
 - path: program-execution-controller-template/scripts/tests/test_changed_files.py
   sha256: c189ec7f2e7988066e935d03f3d6a4dd82f7c9c91e133822898d1b65d6560551
   bytes: 2449
@@ -431,6 +431,9 @@ files:
 - path: program-execution-controller-template/scripts/tests/test_exec_env_root.py
   sha256: e50e6d398e629395d4bc06548d59e62f8ffff716d6025ae0b8e8aeea4792333d
   bytes: 1264
+- path: program-execution-controller-template/scripts/tests/test_exec_env_truncation.py
+  sha256: 0395821cfbd0e63920d091a808f8b8b30f9ba2ef1a62b188ed3e90c5790d16e9
+  bytes: 2611
 - path: program-execution-controller-template/scripts/tests/test_execution_recovery.py
   sha256: c12d43517683de545d57a89db757e68f730f7890fe21501ed41fde8f5be5d998
   bytes: 6115
@@ -494,6 +497,9 @@ files:
 - path: program-execution-controller-template/scripts/tests/test_unified_loop_seams.py
   sha256: 86c162c17093ea52f24681d8c0447aad3c270b7ecf1e4615d65e81a3f6baa2cf
   bytes: 10473
+- path: program-execution-controller-template/scripts/tests/test_v3_hardening_repairs.py
+  sha256: 6d85d9581a02216a5683f3348bb6d3d546b8a5dd37ca5d47661a4ef775a51683
+  bytes: 21834
 - path: program-execution-controller-template/scripts/tests/test_verify_committed_work.py
   sha256: c8cc87f837178654df0aa58f2f8c893546c87cc8c793bf45223a4d93a05fda56
   bytes: 1882
@@ -567,8 +573,8 @@ files:
   sha256: a6c86bbe6a586809a82d76a5963ae0de5a476d7b161771a55fee517911c28f82
   bytes: 1918
 - path: shared/schemas/replan-revision.schema.json
-  sha256: 89546ee78fc22a01b71f53a975d232a8b69a8c09f994dc1bc3df491a9708cbba
-  bytes: 5166
+  sha256: 707524d463285fae4461cdbd62f1d0ad7ff5ed539b658e3f01e8d01e70461640
+  bytes: 5328
 - path: tests/test_autonomy_rail.py
   sha256: 5f29a2ac881118936fd70f078cc96cdd0c4a2c5c588964303c1f20b8f96bd092
   bytes: 3861
@@ -609,5 +615,5 @@ integrity:
   algorithm: sha256
   self_excluded: true
 summary:
-  file_count: 201
-  total_bytes: 818287
+  file_count: 203
+  total_bytes: 865600

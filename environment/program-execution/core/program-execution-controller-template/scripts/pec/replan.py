@@ -82,13 +82,67 @@ def _write_plan_revision(workspace: Path, state: dict[str, Any]) -> None:
     write_json(workspace / PLAN_REVISION_REL, state)
 
 
-def _containment(delta: dict[str, Any]) -> dict[str, Any]:
+def _lock_dependencies(workspace: Path) -> dict[str, set[str]]:
+    """Dependencies the Program Lock froze, per task."""
+    lock = load_json(workspace / "runtime" / "program-lock.json")
+    return {
+        str(task["id"]): {str(dep) for dep in (task.get("dependencies") or [])}
+        for task in lock.get("tasks") or []
+        if isinstance(task, dict) and task.get("id")
+    }
+
+
+def _operation_violations(workspace: Path, delta: dict[str, Any]) -> list[str]:
+    """Operations the lock does not permit, whatever classes the delta claims.
+
+    Containment used to read the delta's self-declared classes only, so a
+    revision labelled `add_diagnostics` could carry a `reorder` that deleted a
+    frozen dependency edge and a successor would run before its prerequisite.
+    REPLAN_CONTRACT allows `reorder_where_deps_permit`: a reorder may add
+    ordering, never remove an edge the lock froze.
+    """
+    locked = _lock_dependencies(workspace)
+    violations: list[str] = []
+    for operation in delta.get("operations") or []:
+        if not isinstance(operation, dict):
+            violations.append("operation is not an object")
+            continue
+        opcode = str(operation.get("op") or "")
+        target = str(operation.get("target_task_id") or "")
+        if opcode == "reorder":
+            if target not in locked:
+                violations.append(f"reorder targets unknown task {target!r}")
+                continue
+            removed = {str(dep) for dep in (operation.get("remove_dependencies") or [])}
+            frozen = removed & locked[target]
+            if frozen:
+                violations.append(
+                    f"reorder removes locked dependencies of {target}: {sorted(frozen)}"
+                )
+            added = {str(dep) for dep in (operation.get("add_dependencies") or [])}
+            unknown = sorted(dep for dep in added if dep not in locked)
+            if unknown:
+                violations.append(f"reorder adds unknown dependencies to {target}: {unknown}")
+        elif opcode == "split":
+            if target not in locked:
+                violations.append(f"split targets unknown task {target!r}")
+        elif opcode == "add_unknown":
+            blocked = [str(item) for item in (operation.get("blocked_task_ids") or [])]
+            unknown = sorted(item for item in blocked if item not in locked)
+            if unknown:
+                violations.append(f"add_unknown blocks unknown tasks: {unknown}")
+    return violations
+
+
+def _containment(delta: dict[str, Any], workspace: Path | None = None) -> dict[str, Any]:
     classes = list(delta.get("classes") or [])
     forbidden = [c for c in classes if c in FORBIDDEN]
+    violations = _operation_violations(workspace, delta) if workspace is not None else []
     return {
-        "result": "FAIL" if forbidden else "PASS",
+        "result": "FAIL" if (forbidden or violations) else "PASS",
         "forbidden_classes_present": forbidden,
-        "widens_lock": bool(forbidden),
+        "operation_violations": violations,
+        "widens_lock": bool(forbidden or violations),
     }
 
 
@@ -106,10 +160,13 @@ def propose(
     workspace = workspace.resolve()
     lock_digest = _lock_digest(workspace)
     plan = current_plan_revision(workspace)
-    containment = _containment(delta)
+    containment = _containment(delta, workspace)
     if containment["result"] == "FAIL":
         raise ControllerError(
-            "authority containment failed: " + ", ".join(containment["forbidden_classes_present"])
+            "authority containment failed: "
+            + ", ".join(
+                [*containment["forbidden_classes_present"], *containment["operation_violations"]]
+            )
         )
     payload: dict[str, Any] = {
         "schema": "program-execution.replan.revision.v1",
@@ -198,6 +255,14 @@ def activate(workspace: Path, revision_id: str, *, actor: str) -> dict[str, Any]
     revision = load_json(path)
     if revision["status"] != "verified":
         raise ControllerError(f"revision {revision_id} is not verified")
+    # Re-checked against the live lock at activation: the operations are what
+    # `plan_adaptation` will apply, so the lock they must respect is this one.
+    live = _containment(revision.get("delta") or {}, workspace)
+    if live["result"] == "FAIL":
+        raise ControllerError(
+            "authority containment failed at activation: "
+            + ", ".join([*live["forbidden_classes_present"], *live["operation_violations"]])
+        )
     plan = current_plan_revision(workspace)
     if revision["previous_plan_revision"] != plan["plan_revision"]:
         revision["status"] = "stale"

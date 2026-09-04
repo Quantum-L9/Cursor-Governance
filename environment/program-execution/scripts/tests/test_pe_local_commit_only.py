@@ -213,6 +213,17 @@ class LocalCommitOnlyTests(unittest.TestCase):
         self.assertIsNotNone(classify(["make", "pr"]))
         self.assertIsNotNone(classify(["make", "-C", "/repo", "PR_REMEDIATE=0", "pr"]))
         self.assertIsNotNone(classify(["python3", "/x/authorize_campaign_merge.py", "--pr", "7"]))
+        # Global options before the subcommand, a body without an explicit
+        # method, the dispatcher spelling, and the publication scripts are all
+        # the same remote act under a different surface.
+        self.assertIsNotNone(classify(["gh", "--repo", "o/r", "pr", "merge", "1"]))
+        self.assertIsNotNone(classify(["gh", "-R", "o/r", "pr", "create", "--fill"]))
+        self.assertIsNotNone(classify(["gh", "api", "repos/o/r/pulls", "-f", "title=x"]))
+        self.assertIsNotNone(classify(["gh", "api", "repos/o/r/pulls", "--input", "body.json"]))
+        self.assertIsNotNone(classify(["gh", "api", "repos/o/r/pulls", "-F", "base=main"]))
+        self.assertIsNotNone(classify(["l9", "pr"]))
+        self.assertIsNotNone(classify(["bash", "ops/scripts/open_pr_after_gate.sh", "/ws"]))
+        self.assertIsNotNone(classify(["python3", "ops/autonomy/stack_safe_merge.py", "--pr", "7"]))
         # Local work and reads stay allowed.
         for allowed in (
             ["git", "-C", "/repo", "commit", "-m", "work"],
@@ -221,6 +232,9 @@ class LocalCommitOnlyTests(unittest.TestCase):
             ["gh", "pr", "view", "--json", "number"],
             ["gh", "pr", "checks", "7"],
             ["gh", "api", "repos/o/r/pulls"],
+            ["gh", "api", "-X", "GET", "repos/o/r/pulls"],
+            ["gh", "--repo", "o/r", "pr", "view", "1"],
+            ["l9", "pr-check"],
             ["make", "pr-check"],
             ["python3", "pec.py", "status"],
         ):

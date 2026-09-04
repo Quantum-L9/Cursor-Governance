@@ -114,12 +114,19 @@ if os.environ.get("SMOKE_FAIL_TASK") == task_id:
     raise SystemExit(0)
 # The negative control: this window skips its own host mediation entirely.
 rogue = os.environ.get("SMOKE_ROGUE_TASK") == task_id
+# The resume control: this window writes nothing and merely CLAIMS the path,
+# standing in for a provider that reports work an earlier, interrupted window
+# already left in the tree.
+claim_only = os.environ.get("SMOKE_CLAIM_ONLY_TASK") == task_id
 worktree = pathlib.Path.cwd()
 changed = []
 denials = []
 for rel in contract.get("writable_paths") or []:
     target = worktree / rel
     body = f"{task_id} implemented through Peer Core.\n" + ("verified " * 8) + "\n"
+    if claim_only:
+        changed.append(rel)
+        continue
     if not rogue:
         refusal = mediate("Write", {"file_path": str(target), "content": body})
         if refusal is not None:
@@ -273,6 +280,150 @@ class PeSmokeCampaignTests(unittest.TestCase):
             ),
         )
         return report, l9, time.monotonic() - started
+
+    def _resume(self, raw: Path):
+        """Re-enter the public front door for a campaign that is already live."""
+        root = raw / "host"
+        l9 = raw / "l9"
+        return self.mod.run_campaign(
+            root / "intent.yaml",
+            until="execute",
+            primary=raw / "primary",
+            repo_root=root,
+            l9_root=l9,
+            fast=True,
+            hooks=self.mod.Hooks(
+                context7_stack=_stack_ok,
+                compile_activation=self.activate.compile_activation,
+            ),
+        )
+
+    def _arm_and_start_task001(self, tmp: Path) -> tuple[Path, Path]:
+        """Arm the campaign, then drive TASK-001 to EXECUTING by hand.
+
+        This is the shape of a window PE did NOT dispatch: the task is live in
+        the Controller but PE never recorded a pre-dispatch effect baseline
+        for it, so nothing can attribute whatever the tree carries.
+        """
+        with unittest.mock.patch.dict(
+            "os.environ", {**_peer_test_env(tmp), "L9_CAMPAIGN_UNTIL_DEBUG": "1"}
+        ):
+            _, l9, _ = self._run_smoke(tmp, until="arm")
+        workspace = l9 / "programs/demo-activate-v1"
+        prepared = _pec(workspace, "prepare", "TASK-001")
+        _pec(workspace, "render-contract", "TASK-001")
+        _pec(workspace, "start", "TASK-001", "--actor", "make-campaign")
+        return workspace, Path(prepared["worktree"])
+
+    def test_resumed_executing_task_without_a_recorded_baseline_is_refused(self) -> None:
+        """An EXECUTING task PE never baselined cannot have its effects attributed.
+
+        Before this control existed the resume snapshotted the live tree, so
+        bytes an unmediated writer left there were fingerprinted INTO the
+        baseline, escaped mediation coverage, and were committed as the task's
+        own work by a provider that merely claimed the path.
+        """
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            workspace, worktree = self._arm_and_start_task001(tmp)
+            rogue = worktree / "docs/program-execution/demo/baseline.md"
+            rogue.parent.mkdir(parents=True, exist_ok=True)
+            rogue.write_text(
+                "TASK-001 written by an UNMEDIATED interrupted window.\n" + ("verified " * 8),
+                encoding="utf-8",
+            )
+            env = _peer_test_env(tmp)
+            env["SMOKE_CLAIM_ONLY_TASK"] = "TASK-001"
+            with unittest.mock.patch.dict("os.environ", env):
+                with self.assertRaises(self.mod.CampaignError) as caught:
+                    self._resume(tmp)
+            self.assertEqual(caught.exception.error_code, "EFFECT_BASELINE_MISSING")
+            states = {i["id"]: i["runtime_state"] for i in _pec(workspace, "status")["tasks"]}
+            self.assertEqual(states["TASK-001"], "FAILED")
+            self.assertFalse((workspace / "receipts/verification/TASK-001.json").is_file())
+            log = subprocess.run(
+                ["git", "-C", str(worktree), "log", "--oneline"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertNotIn("baseline output", log.stdout, "unattributed bytes were committed")
+
+    def test_resumed_window_is_judged_against_its_recorded_baseline(self) -> None:
+        """A window PE dispatched and lost resumes against the baseline it recorded.
+
+        The baseline is persisted before the window opens. A write that lands
+        afterwards -- here, an unmediated one -- is therefore a provider effect
+        on resume, and coverage refuses it exactly as it would on a first run.
+        """
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            env = {**_peer_test_env(tmp), "L9_CAMPAIGN_UNTIL_DEBUG": "1"}
+            with unittest.mock.patch.dict("os.environ", env):
+                _, l9, _ = self._run_smoke(tmp, until="arm")
+                workspace = l9 / "programs/demo-activate-v1"
+                task = next(t for t in self.mod.locked_tasks(workspace) if t["id"] == "TASK-001")
+                unit = self.mod._prepare_peer_unit(workspace, task, trace=None)
+            self.assertFalse(unit["resumed_executing"])
+            self.assertTrue(self.mod.effect_baseline_path(workspace, "TASK-001").is_file())
+            worktree = Path(str(unit["worktree"]))
+            # The dispatched window is "lost" here; an unmediated writer then
+            # touches the declared path before the campaign is resumed.
+            rogue = worktree / "docs/program-execution/demo/baseline.md"
+            rogue.parent.mkdir(parents=True, exist_ok=True)
+            rogue.write_text(
+                "TASK-001 written after the baseline, by nobody PE authorized.\n"
+                + ("verified " * 8),
+                encoding="utf-8",
+            )
+            env = _peer_test_env(tmp)
+            env["SMOKE_CLAIM_ONLY_TASK"] = "TASK-001"
+            with unittest.mock.patch.dict("os.environ", env):
+                with self.assertRaises(self.mod.CampaignError) as caught:
+                    self._resume(tmp)
+            self.assertIn("unmediated", str(caught.exception))
+            states = {i["id"]: i["runtime_state"] for i in _pec(workspace, "status")["tasks"]}
+            self.assertEqual(states["TASK-001"], "FAILED")
+            self.assertFalse((workspace / "receipts/verification/TASK-001.json").is_file())
+
+    def test_resume_after_an_interruption_before_any_effect_completes(self) -> None:
+        """The positive control: a lost window with no effects resumes and finishes."""
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            env = {**_peer_test_env(tmp), "L9_CAMPAIGN_UNTIL_DEBUG": "1"}
+            with unittest.mock.patch.dict("os.environ", env):
+                _, l9, _ = self._run_smoke(tmp, until="arm")
+                workspace = l9 / "programs/demo-activate-v1"
+                task = next(t for t in self.mod.locked_tasks(workspace) if t["id"] == "TASK-001")
+                unit = self.mod._prepare_peer_unit(workspace, task, trace=None)
+            states = {i["id"]: i["runtime_state"] for i in _pec(workspace, "status")["tasks"]}
+            self.assertEqual(states["TASK-001"], "EXECUTING")
+            first_lease = (unit.get("grant") or {}).get("lease_id")
+            with unittest.mock.patch.dict("os.environ", _peer_test_env(tmp)):
+                report = self._resume(tmp)
+            self.assertIn("execute", report.stages_completed)
+            states = {i["id"]: i["runtime_state"] for i in _pec(workspace, "status")["tasks"]}
+            self.assertEqual(states["TASK-001"], "COMPLETED")
+            self.assertEqual(states["TASK-002"], "COMPLETED")
+            # The resumed window ran under the lease its dispatch was granted,
+            # and that lease holds no live authority once the task completed.
+            grant = json.loads(
+                self.mod._grant_module()
+                .grant_receipt_path(workspace, "TASK-001", 1, kind="grant")
+                .read_text(encoding="utf-8")
+            )
+            self.assertEqual(grant["lease_id"], first_lease)
+            import sqlite3
+
+            connection = sqlite3.connect(grant["runtime_database"])
+            try:
+                row = connection.execute(
+                    "SELECT status FROM leases WHERE lease_id=?", (grant["lease_id"],)
+                ).fetchone()
+            finally:
+                connection.close()
+            self.assertIsNotNone(row)
+            self.assertNotEqual(row[0], "ACTIVE")
 
     def test_public_campaign_path_reaches_task001_from_a_campaign_source(self) -> None:
         """The acceptance criterion: `campaign-source.v2` in, executed tasks out.
