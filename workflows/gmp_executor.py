@@ -119,6 +119,51 @@ def adapter_publish_surface() -> bool:
     return surface in ADAPTER_PUBLISH_SURFACES
 
 
+
+def parse_todos_json(raw: str) -> list[dict[str, str]]:
+    """Parse ``--todos-json`` (inline JSON or ``@path`` / path to a JSON file).
+
+    Accepts a list of objects with ``id``, ``task`` (or ``description``), and
+    optional ``files`` / ``file``. Empty list is rejected by the caller.
+    """
+    payload = raw.strip()
+    if not payload:
+        raise ValueError("--todos-json is empty")
+    if payload.startswith("@"):
+        path = Path(payload[1:]).expanduser()
+        payload = path.read_text(encoding="utf-8")
+    else:
+        as_path = Path(payload).expanduser()
+        if as_path.is_file() and not payload.lstrip().startswith("["):
+            payload = as_path.read_text(encoding="utf-8")
+    data = json.loads(payload)
+    if not isinstance(data, list):
+        raise ValueError("--todos-json must be a JSON list")
+    todos: list[dict[str, str]] = []
+    for i, item in enumerate(data, 1):
+        if not isinstance(item, dict):
+            raise ValueError(f"--todos-json item {i} is not an object")
+        files = item.get("files") or []
+        file_path = ""
+        if isinstance(files, list) and files:
+            file_path = str(files[0])
+        elif item.get("file"):
+            file_path = str(item["file"])
+        description = str(
+            item.get("task") or item.get("description") or item.get("content") or ""
+        )
+        todos.append(
+            {
+                "id": str(item.get("id") or f"T{i}"),
+                "file": file_path,
+                "lines": str(item.get("lines") or "all"),
+                "action": str(item.get("action") or item.get("operation") or "REPLACE"),
+                "description": description,
+            }
+        )
+    return todos
+
+
 def parse_plan_scope(plan_path: Path) -> list[dict[str, str]]:
     """Lock todos from plan frontmatter, else from a ## Files heading."""
     text = plan_path.read_text(encoding="utf-8")
@@ -308,6 +353,7 @@ class GMPExecutor:
     def __init__(self):
         self.state: GMPState | None = None
         self.authorized = False
+        self.todos_json: str | None = None
         self.commit_when_done = False
         self.plan_path: Path | None = None
         self.mode = "full"
@@ -453,16 +499,39 @@ class GMPExecutor:
         print(f"Task: {self.state.task}")  # noqa: ADR-0019
         print()  # noqa: ADR-0019
 
-        if self.authorized and self.plan_path is not None:
-            todos = parse_plan_scope(self.plan_path)
+        if self.authorized:
+            todos: list[dict[str, str]] = []
+            source = ""
+            if self.todos_json:
+                try:
+                    todos = parse_todos_json(self.todos_json)
+                except (OSError, ValueError, json.JSONDecodeError) as exc:
+                    return StepResult(
+                        success=False,
+                        error=f"--todos-json invalid: {exc}",
+                    )
+                source = "todos-json"
+            elif self.plan_path is not None:
+                todos = parse_plan_scope(self.plan_path)
+                source = "plan"
             if not todos:
-                print(NO_SCOPE)  # noqa: ADR-0019
-                return StepResult(success=False, error=NO_SCOPE)
+                msg = (
+                    "No TODOs defined for authorized run. Pass --plan with "
+                    "frontmatter todos, or --todos-json '@path.json' / inline "
+                    "JSON list of {id,task,files}."
+                )
+                print(msg)  # noqa: ADR-0019
+                return StepResult(success=False, error=msg)
             self.state.todo_plan = todos
-            print("TODO PLAN LOCKED FROM PLAN")  # noqa: ADR-0019
+            label = (
+                "TODO PLAN LOCKED FROM PLAN"
+                if source == "plan"
+                else "TODO PLAN LOCKED FROM --todos-json"
+            )
+            print(label)  # noqa: ADR-0019
             for t in todos:
                 print(f"  {t['id']}: {t['file']} {t['action']}")  # noqa: ADR-0019
-            return StepResult(success=True, output=f"{len(todos)} TODOs from plan")
+            return StepResult(success=True, output=f"{len(todos)} TODOs from {source}")
 
         print("Memory Context Applied:")  # noqa: ADR-0019
         print(self.state.memory_context[:500] if self.state.memory_context else "None")  # noqa: ADR-0019
@@ -1126,8 +1195,14 @@ from {module_path} import ...
             print(result.stderr)  # noqa: ADR-0019
 
     def run_authorized_start(self, task: str, tier: str) -> int:
-        if self.plan_path is None or not self.plan_path.is_file():
-            print(NO_SCOPE)  # noqa: ADR-0019
+        has_plan = self.plan_path is not None and self.plan_path.is_file()
+        has_todos = bool(self.todos_json and str(self.todos_json).strip())
+        if not has_plan and not has_todos:
+            print(
+                "No TODOs defined for authorized run. Pass --plan with "
+                "frontmatter todos, or --todos-json '@path.json' / inline "
+                "JSON list of {id,task,files}."
+            )  # noqa: ADR-0019
             return EXIT_NO_SCOPE
         self._init_state(task, tier)
         self._print_header(f"GMP EXECUTOR: {self.state.gmp_id}")
@@ -1135,7 +1210,7 @@ from {module_path} import ...
         self.state.completed_steps.append(StepType.MEMORY_READ.value)
         scope = self._step_scope_lock()
         if not scope.success:
-            print(NO_SCOPE)  # noqa: ADR-0019
+            print(scope.error or NO_SCOPE)  # noqa: ADR-0019
             self._clear_state()
             return EXIT_NO_SCOPE
         self.state.completed_steps.append(StepType.SCOPE_LOCK.value)
@@ -1269,6 +1344,14 @@ Examples:
     parser.add_argument("--reset", action="store_true", help="Clear state and start fresh")
     parser.add_argument("--authorized-by", choices=["slash-gmp"], default=None)
     parser.add_argument("--plan", type=Path, default=None)
+    parser.add_argument(
+        "--todos-json",
+        default=None,
+        help=(
+            "Machine TODO plan: inline JSON list or path/@path "
+            "(authorized start/full). Bound at invocation."
+        ),
+    )
     parser.add_argument("--mode", choices=["start", "finalize", "full"], default=None)
     parser.add_argument("--commit-when-done", action="store_true")
 
@@ -1277,6 +1360,8 @@ Examples:
     executor = GMPExecutor()
     executor.authorized = args.authorized_by == "slash-gmp"
     executor.commit_when_done = bool(args.commit_when_done)
+    if getattr(args, "todos_json", None):
+        executor.todos_json = args.todos_json
     if args.plan is not None:
         plan = args.plan if args.plan.is_absolute() else REPO_ROOT / args.plan
         executor.plan_path = plan

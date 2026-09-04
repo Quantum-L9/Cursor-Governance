@@ -83,17 +83,41 @@ _l9_emit_partial() {
 # Cursor also loads projected .claude/settings.json in this repo. This hook is
 # Claude Code SessionStart only. Running it under Cursor scores that session
 # with cloud account-field drift, broker probes, and never_ran installer
-# receipts that cannot pass here. Skip unless a Claude Code runtime marker is
-# present. CURSOR_AGENT alone is not Claude Code.
-_l9_claude_runtime=0
-[ "${CLAUDE_CODE_REMOTE:-}" = "true" ] && _l9_claude_runtime=1
-[ -n "${CLAUDECODE:-}" ] && _l9_claude_runtime=1
-[ -n "${CLAUDE_CODE_ENTRYPOINT:-}" ] && _l9_claude_runtime=1
-[ -n "${CLAUDE_CODE_SESSION_ID:-}" ] && _l9_claude_runtime=1
-if [ "$_l9_claude_runtime" -eq 0 ]; then
-  emit ""
+# receipts that cannot pass here. Skip unless surface_detect says Claude.
+# Marker SSOT: ops/scripts/lib/surface_detect.sh (twin of surface_detect.py).
+# Prefer this checkout's tree (worktree / clone), then the live SSOT.
+_L9_HOOK_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+_L9_SD_LIB=""
+for _L9_SD_CAND in \
+  "${_L9_HOOK_DIR}/../../../../ops/scripts/lib/surface_detect.sh" \
+  "${HOME}/.cursor-governance/ops/scripts/lib/surface_detect.sh"
+do
+  if [ -f "$_L9_SD_CAND" ]; then
+    _L9_SD_LIB="$_L9_SD_CAND"
+    break
+  fi
+done
+if [ -n "$_L9_SD_LIB" ]; then
+  # shellcheck source=../../../../ops/scripts/lib/surface_detect.sh
+  . "$_L9_SD_LIB"
+  case "$(l9_detect_surface)" in
+    claude-code|claude-code-remote) : ;;
+    *) emit "" ;;
+  esac
+else
+  # Fail-soft if the lib is missing on a half-wired machine: keep the prior
+  # inline marker list so Claude sessions are not silently skipped.
+  _l9_claude_runtime=0
+  [ "${CLAUDE_CODE_REMOTE:-}" = "true" ] && _l9_claude_runtime=1
+  [ -n "${CLAUDECODE:-}" ] && _l9_claude_runtime=1
+  [ -n "${CLAUDE_CODE_ENTRYPOINT:-}" ] && _l9_claude_runtime=1
+  [ -n "${CLAUDE_CODE_SESSION_ID:-}" ] && _l9_claude_runtime=1
+  if [ "$_l9_claude_runtime" -eq 0 ]; then
+    emit ""
+  fi
+  unset _l9_claude_runtime
 fi
-unset _l9_claude_runtime
+unset _L9_SD_LIB _L9_SD_CAND _L9_HOOK_DIR
 
 WORKSPACE="${CLAUDE_PROJECT_DIR:-$PWD}"
 

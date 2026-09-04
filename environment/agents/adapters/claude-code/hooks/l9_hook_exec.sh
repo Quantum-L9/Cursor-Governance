@@ -76,6 +76,43 @@ if [ -n "${L9_GOVERNANCE_DIR:-}" ] && [ "$L9_GOVERNANCE_DIR" != "$GOV_DIR" ]; th
   esac
 fi
 
+# Surface guard (INV-2): Claude gate-class hooks must not evaluate under Cursor
+# (or any non-Claude surface). Cursor has its own ~/.cursor/hooks.json stack.
+# Fail toward enforcing: unknown surface still runs the gate. Kill switch:
+# L9_SURFACE_GUARD=0 restores the pre-guard behavior for diagnostics.
+# SSOT: ops/scripts/lib/surface_detect.sh (resolved via GOV_DIR, else this tree).
+if [ "$HOOK_CLASS" = "gate" ] && [ "${L9_SURFACE_GUARD:-1}" != "0" ]; then
+  _L9_HOOK_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+  _L9_SD_LIB=""
+  for _L9_SD_CAND in \
+    "${_L9_HOOK_DIR}/../../../../ops/scripts/lib/surface_detect.sh" \
+    "$GOV_DIR/ops/scripts/lib/surface_detect.sh"
+  do
+    if [ -f "$_L9_SD_CAND" ]; then
+      _L9_SD_LIB="$_L9_SD_CAND"
+      break
+    fi
+  done
+  if [ -n "$_L9_SD_LIB" ] && [ -f "$_L9_SD_LIB" ]; then
+    # shellcheck source=../../../../ops/scripts/lib/surface_detect.sh
+    . "$_L9_SD_LIB"
+    _L9_SURFACE="$(l9_detect_surface)"
+    # Skip only when positively identified as non-Claude. unknown fails
+    # toward enforcing (still evaluate). Claude surfaces always evaluate.
+    case "$_L9_SURFACE" in
+      claude-code|claude-code-remote|unknown) : ;;
+      *)
+        printf 'l9-hook: gate %s skipped (surface=%s; Claude gates are Claude-only)\n' \
+          "$HOOK_NAME" "$_L9_SURFACE" >&2
+        unset _L9_SURFACE
+        exit 0
+        ;;
+    esac
+    unset _L9_SURFACE
+  fi
+  unset _L9_SD_LIB _L9_SD_CAND _L9_HOOK_DIR
+fi
+
 SKIP_LOG="${L9_HOOK_SKIP_LOG:-$HOME/.l9/claude/hook-skips.log}"
 
 # Every skip is timestamped in UTC. An undated skip log cannot answer the only
