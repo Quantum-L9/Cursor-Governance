@@ -29,6 +29,48 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           pip install --only-binary=:all: pyyaml==6.0.3 jsonschema==4.26.0
 
+      - name: Capture canonical repo-docs repair outputs
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "${BASE_REF}"
+          git diff --name-only "origin/${BASE_REF}...HEAD" > /tmp/pr-changed-files.txt
+          gen=ops/scripts/sync_generated_artifacts.py
+          python3 "$gen" --changed-file /tmp/pr-changed-files.txt --json
+          python -m pip install --only-binary=:all: ruff==0.16.1
+          ruff check --fix \
+            skills/l9-update-agent-docs/scripts/doc_obligations.py \
+            skills/l9-update-agent-docs/scripts/repo_docs.py \
+            skills/l9-update-agent-docs/scripts/compile_semantic_obligations.py \
+            skills/l9-update-agent-docs/scripts/validate_pointer_headings.py \
+            skills/l9-update-agent-docs/tests/test_repo_docs.py
+          ruff format \
+            skills/l9-update-agent-docs/scripts/doc_obligations.py \
+            skills/l9-update-agent-docs/scripts/repo_docs.py \
+            skills/l9-update-agent-docs/scripts/compile_semantic_obligations.py \
+            skills/l9-update-agent-docs/scripts/validate_pointer_headings.py \
+            skills/l9-update-agent-docs/tests/test_repo_docs.py
+          mkdir -p .artifacts/repo-docs-repair/skills/l9-update-agent-docs/scripts
+          mkdir -p .artifacts/repo-docs-repair/skills/l9-update-agent-docs/tests
+          mkdir -p .artifacts/repo-docs-repair/ops/generated
+          cp skills/l9-update-agent-docs/scripts/doc_obligations.py .artifacts/repo-docs-repair/skills/l9-update-agent-docs/scripts/
+          cp skills/l9-update-agent-docs/scripts/repo_docs.py .artifacts/repo-docs-repair/skills/l9-update-agent-docs/scripts/
+          cp skills/l9-update-agent-docs/scripts/compile_semantic_obligations.py .artifacts/repo-docs-repair/skills/l9-update-agent-docs/scripts/
+          cp skills/l9-update-agent-docs/scripts/validate_pointer_headings.py .artifacts/repo-docs-repair/skills/l9-update-agent-docs/scripts/
+          cp skills/l9-update-agent-docs/tests/test_repo_docs.py .artifacts/repo-docs-repair/skills/l9-update-agent-docs/tests/
+          cp ops/generated/skill-registry.json .artifacts/repo-docs-repair/ops/generated/
+
+      - name: Upload canonical repo-docs repair outputs
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: repo-docs-repair-${{ github.run_id }}
+          path: .artifacts/repo-docs-repair
+          if-no-files-found: error
+          retention-days: 1
+
       - name: ORG_INVARIANTS.yaml parses
         run: |
           python3 - <<'PY'
