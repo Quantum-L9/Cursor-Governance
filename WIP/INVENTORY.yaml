@@ -1,5 +1,5 @@
 schema: l9.wip.inventory.v1
-updated: '2026-09-02T06:09:22Z'
+updated: '2026-09-02T19:59:35Z'
 entries:
 - path: WIP/8-14-26/Web SEO LLM Trio/L9 Website Improvement — Independent Validation
     Contract Pack.md
@@ -1606,20 +1606,36 @@ entries:
   date_bucket: 8-29-26
   sha256: d866b6a98e2512ffa6c3bdc904df810d02eb13d83b7f55c645dd8e73d732a05b
   status: active
+- path: WIP/8-29-26/PEC/HANDOFF.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 4789f640e4795c13e6302b569b5f6ff5271c857433fc0c8fedff624dfcaa62df
+  status: possible-landed
+  note: possible-landed
 - path: WIP/8-29-26/PEC/PEC-repair-pipeline.json
   kind: dated
   date_bucket: 8-29-26
-  sha256: 80fbb34ec085c20cfd77568bdee71830e3e356f7f8a8f72ab6f946014700de25
+  sha256: 1ea97e89b7d99d115396e83e93894a6606925e7d80b17720bdb5d34be406cc9f
   status: active
 - path: WIP/8-29-26/PEC/PEC-repair-pipeline.md
   kind: dated
   date_bucket: 8-29-26
-  sha256: ed42f0fdc57a16b31fb763ba6214de13159d7de71d664b83b33ef53937909611
+  sha256: 5816dbcfd2469b2d1484af2cfdf4aed5a4b782770b83a82498fc0b3f0c8535d5
   status: active
 - path: WIP/8-29-26/PEC/PLAN_DOCUMENT.pec-repair-pipeline.v1.json
   kind: dated
   date_bucket: 8-29-26
   sha256: 26bbad3b0226780669a397b0ca60542688fbeb0511d575d309709b84b314ddee
+  status: active
+- path: WIP/8-29-26/PEC/PLAN_DOCUMENT.pec-w8-s0.v1.json
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 95ff4dae3ffc3976a9c6627f52fc098eb5ccf4f423be4d6b873857773cf17bb1
+  status: active
+- path: WIP/8-29-26/PEC/PLAN_DOCUMENT.pec-w8-s1.v1.json
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: fa9bf56bee90b752a422767bc1fa32b5f63ec5fb7b2bcb9250107545ed7b87e6
   status: active
 - path: WIP/8-29-26/PEC/_archive/Campaign Activation Files/CAMPAIGN_SOURCE.yaml
   kind: dated
@@ -2544,6 +2560,16 @@ entries:
   kind: dated
   date_bucket: 8-30-26
   sha256: 3ac4232322c831b7d9be1985e0644e979c93f57f0611e65145ba623c927c044d
+  status: active
+- path: WIP/8-31-26/Cognitive Runtime Playbook.md
+  kind: dated
+  date_bucket: 8-31-26
+  sha256: 687809ede218c02a70b8745e71415beea9b153f8f5dbd9951ff32e7025392bb2
+  status: active
+- path: WIP/8-31-26/pe-eie/INTENT.md
+  kind: dated
+  date_bucket: 8-31-26
+  sha256: 41f4cb7d99f84d91039b71fb1c1439d77fa618c8b292e1da705b04b1da9fb3fa
   status: active
 - path: WIP/9-1-26/CI-Core/Audit - Claud Code/CI-Preflight-Docket.html
   kind: dated
@@ -3981,7 +4007,8 @@ entries:
   kind: series
   date_bucket: null
   sha256: 10d5c06b273ba2295984cc4b87a8b0e37e6ecb24295d30c32e906bc5ad71cc05
-  status: active
+  status: possible-landed
+  note: possible-landed
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/claude-code/ADAPTER.yaml
   kind: series
   date_bucket: null
@@ -4293,7 +4320,8 @@ entries:
   kind: series
   date_bucket: null
   sha256: 8847fdfd6313b03d907701d12b16a4fd03007439ae3d330e47a70ef8d6b83ac7
-  status: active
+  status: possible-landed
+  note: possible-landed
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/permissions.py
   kind: series
   date_bucket: null
@@ -4304,7 +4332,8 @@ entries:
   kind: series
   date_bucket: null
   sha256: aa1fd58c5815a8e747a3f85c89fb88e77c3c3fe685a4c7d71c901551fee071ab
-  status: active
+  status: possible-landed
+  note: possible-landed
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/provider.py
   kind: series
   date_bucket: null
@@ -4321,7 +4350,8 @@ entries:
   kind: series
   date_bucket: null
   sha256: d0a073947e2bdc6059238230750d26d020f608520e107301e7211430ca635577
-  status: active
+  status: possible-landed
+  note: possible-landed
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/schema_registry.py
   kind: series
   date_bucket: null
@@ -4354,7 +4384,8 @@ entries:
   kind: series
   date_bucket: null
   sha256: 5dc61cdb25ca98c76a775d2fcfe7c0e8eb7f961327b96c25f92233573a16c464
-  status: active
+  status: possible-landed
+  note: possible-landed
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/registry/EXECUTION_CONCURRENCY_POLICY.yaml
   kind: series
   date_bucket: null
@@ -4371,7 +4402,8 @@ entries:
   kind: series
   date_bucket: null
   sha256: dd75195c3d5be7ae75e610b0f17446ff965d08c62c738a83dc3596f4fc22abb2
-  status: active
+  status: possible-landed
+  note: possible-landed
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/scripts/peer_execution_cli.py
   kind: series
   date_bucket: null
@@ -4460,37 +4492,67 @@ entries:
   date_bucket: null
   sha256: b4eba104aeed6a95c728b6012f74225a226ceb9659f633ce491ee8f4206b67ff
   status: active
-- path: WIP/org-ci-ruleset-activation/README.md
+- path: WIP/org-ci-ruleset-activation/RUNBOOK.md
   kind: series
   date_bucket: null
-  sha256: 09d21423cd1e22661b839101512ff5084332959e814ea697a107e6eed8459784
+  sha256: de23acb8b23995aa0c0e52bdadf51b225316abb1b8ec2bfecca99810968cbe6e
   status: possible-landed
   note: possible-landed
 - path: WIP/org-ci-ruleset-activation/apply.sh
   kind: series
   date_bucket: null
-  sha256: 84edf833a5540234ec234d7f000b498ff3709d6aa0292962febb5fec1686e7c3
+  sha256: 306e971a891b235cdbd497f208f1b908f2ad6606b227ed0d1a9617c3bb5fa563
   status: active
 - path: WIP/org-ci-ruleset-activation/evidence/README.md
   kind: series
   date_bucket: null
-  sha256: 5ae89536316fd6118379ca6376136cd51b2bb5020096d52aa24e36e28aeb02fd
+  sha256: b31e7e7332de40fdffde46e610b0f7e83804f39195c9acc5e6ba7158fe9a16b0
   status: possible-landed
   note: possible-landed
+- path: WIP/org-ci-ruleset-activation/evidence/org-rulesets.before.json
+  kind: series
+  date_bucket: null
+  sha256: d664b0ea3f23a2c20b2477c4e04a78bd59caccb813505a5f4bcedad950bb5184
+  status: active
+- path: WIP/org-ci-ruleset-activation/evidence/organization-ruleset-live-enforcement.json
+  kind: series
+  date_bucket: null
+  sha256: 17d21d2847150a50b552cf23995a004b7c4eeb4cfb7063f60004e9f36bded9a0
+  status: active
+- path: WIP/org-ci-ruleset-activation/evidence/promoted-at
+  kind: series
+  date_bucket: null
+  sha256: 6405660c47d5f9f277ecb3c95812c1e37d46d7648dd315f482a47357a18d0e2d
+  status: active
+- path: WIP/org-ci-ruleset-activation/evidence/remote-end-to-end-run.json
+  kind: series
+  date_bucket: null
+  sha256: a0570aa836a9ade7708b3db913cc1587751e5756d58b53d87f10b86c0018cf0c
+  status: active
+- path: WIP/org-ci-ruleset-activation/evidence/ruleset-id
+  kind: series
+  date_bucket: null
+  sha256: 4c5303e62cadeeb752cecdeacdf2b684f73d8a172ce0d98d7cc8a5bb200a29fd
+  status: active
 - path: WIP/org-ci-ruleset-activation/org-ci-required.active.ruleset.json
   kind: series
   date_bucket: null
-  sha256: 3eb3e7e8e458e6e77761ea9f48bedea79ddcb5939be88de75635455bba8d3ae5
+  sha256: 2f804317e060a4d8148f708686bc7dbd33ea93d82649def141602082618c7fd3
   status: active
 - path: WIP/org-ci-ruleset-activation/org-ci-required.ruleset.json
   kind: series
   date_bucket: null
-  sha256: 360fbd2d8eedfd67358af18483283bdb4d48d6c5d13fe97e4929c7c3f313ee88
+  sha256: a6ed3f082f7b7537a5862c3a70b218091a3bacb0166209e2f83ae1d624798e68
+  status: active
+- path: WIP/org-ci-ruleset-activation/selftest.sh
+  kind: series
+  date_bucket: null
+  sha256: 9ae17f4c44ad64f3c8bd28944babfbaf009010674e05b111d72df5cbb1b0274a
   status: active
 - path: WIP/org-ci-ruleset-activation/verify.sh
   kind: series
   date_bucket: null
-  sha256: c8d9c03bdbfb4701b4194ad68df127b8106998e10d9c835d8da3bcbcfe1f98b6
+  sha256: 10db8ec77bb30adf3014d7f21c6f599527c34d98f610262adff03cf251532b1c
   status: active
 - path: WIP/out-of-scope-hold/Untitled
   kind: series
