@@ -116,7 +116,10 @@ def main() -> int:
                 errors.append(f"compiled packet must be NEXT: {next_names}")
             if "note.md" not in next_names:
                 errors.append(f"possible-landed WIP must be NEXT: {next_names}")
-            if not (ws / "docs" / "plans" / "built" / "spent_done.plan.md").is_file():
+            archived = (ws / "docs" / "plans" / "BUILT" / "spent_done.plan.md").is_file() or (
+                ws / "docs" / "plans" / "built" / "spent_done.plan.md"
+            ).is_file()
+            if not archived:
                 errors.append("spent root plan must archive to built/")
             if (ws / "docs" / "plans" / "spent_done.plan.md").exists():
                 errors.append("spent root plan must leave the live root")
