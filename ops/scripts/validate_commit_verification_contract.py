@@ -68,8 +68,6 @@ _SKIP_FILES = {
     "tests/ops/autonomy/test_verification_bypass_gate.py",
 }
 
-_BYPASS_TOKEN = re.compile(r"(?i)--no-verify|core\.hooksPath|pre-commit\s+uninstall")
-
 #: Reading a setting is not setting it. `git config --get core.hooksPath` is how
 #: a tool REPORTS that hooks are repointed — the installer warns about exactly
 #: that — and a line that only mentions the key inside a message emits nothing.
@@ -89,6 +87,52 @@ _PROHIBITION = re.compile(
 #: ``--no-verify`` (both sides of "no" are hyphens, so both word boundaries
 #: hold), which silently exonerated every line this gate exists to catch. The
 #: token is stripped before the prohibition test for the same reason.
+
+
+def _scan_tokens(contract: dict) -> tuple[str, ...]:
+    """Literal tokens a source line can carry that *run* a declared bypass.
+
+    Derived from the declaration rather than restated, so a form added to
+    ``commit-verification-contract.json`` is scanned here without a second
+    edit. Three literals were hand-maintained here while the contract declared
+    more, so ``--no-pre-commit-hook`` — declared on six git subcommands — was
+    never scanned at all.
+
+    ``env_prefix`` forms are deliberately excluded. ``SKIP=`` / ``HUSKY=`` only
+    bypass verification when applied to ``git commit`` / ``git push``, and that
+    context lives in the command, not in the line. Scanning the bare names
+    flags governance's own sanctioned surface-aware skip list
+    (``run_pr_precommit.sh``) and five other legitimate files. The gate still
+    denies them — it parses the command, which a line scan cannot.
+    """
+    tokens: set[str] = set()
+    for form in contract.get("forms") or ():
+        detector = form.get("detector")
+        if detector == "git_flag":
+            tokens.update(form.get("flags") or ())
+        elif detector == "git_global_config":
+            tokens.update(form.get("keys") or ())
+        elif detector == "git_subcommand_args":
+            tokens.update(form.get("match_args") or ())
+        elif detector == "argv":
+            head, args = form.get("head"), form.get("args") or ()
+            if head and args:
+                tokens.add(" ".join([str(head), *(str(arg) for arg in args)]))
+    return tuple(sorted(tokens, key=len, reverse=True))
+
+
+def bypass_pattern(contract: dict) -> re.Pattern[str]:
+    """Match a declared token as a whole flag or key, never as a prefix.
+
+    Without the trailing guard ``--no-verify`` matches inside
+    ``--no-verify-ancestry`` — an argparse flag for skipping an ancestry
+    reachability probe, not a bypass — which failed this gate on unmodified
+    ``main``. The enforcer never had the bug: it compares whole tokens.
+    """
+    alternatives = "|".join(
+        re.escape(token).replace(r"\ ", r"\s+") for token in _scan_tokens(contract)
+    )
+    return re.compile(rf"(?i)(?:{alternatives})(?![\w-])")
 
 
 def _tracked_files() -> list[Path]:
@@ -143,8 +187,9 @@ def check_briefing_is_told(errors: list[str]) -> None:
         errors.append("declaration has no briefing_lines: nothing to tell the session")
 
 
-def check_tree_emits_no_bypass(errors: list[str]) -> None:
+def check_tree_emits_no_bypass(contract: dict, errors: list[str]) -> None:
     """Governance tooling must not perform the bypass on the agent's behalf."""
+    bypass_token = bypass_pattern(contract)
     for path in _tracked_files():
         if not path.is_file() or not _in_scope(path):
             continue
@@ -153,10 +198,10 @@ def check_tree_emits_no_bypass(errors: list[str]) -> None:
         except OSError:
             continue
         for number, line in enumerate(lines, start=1):
-            hit = _BYPASS_TOKEN.search(line)
+            hit = bypass_token.search(line)
             if not hit:
                 continue
-            if _PROHIBITION.search(_BYPASS_TOKEN.sub(" ", line)):
+            if _PROHIBITION.search(bypass_token.sub(" ", line)):
                 continue
             # A read or a message about the key is not an emission. Scoped to
             # core.hooksPath: `--no-verify` has no read form, so a line carrying
@@ -187,7 +232,8 @@ def main() -> int:
         check_every_form_denies(contract, errors)
     check_briefing_is_told(errors)
     check_gate_is_live(errors)
-    check_tree_emits_no_bypass(errors)
+    if contract is not None:
+        check_tree_emits_no_bypass(contract, errors)
     if errors:
         print("FAIL: commit-verification contract", file=sys.stderr)
         for item in errors:
