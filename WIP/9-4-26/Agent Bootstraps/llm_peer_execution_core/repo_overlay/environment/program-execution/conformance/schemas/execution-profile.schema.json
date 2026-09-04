@@ -1,0 +1,104 @@
+{
+  "$id": "https://quantum-l9.dev/program-execution/execution-profile.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "default_profile_ref": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "profiles": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "properties": {
+          "context_policy_ref": {
+            "const": "contract-minimal-v1"
+          },
+          "inference_budget": {
+            "additionalProperties": false,
+            "properties": {
+              "max_turns": {
+                "maximum": 64,
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "max_turns"
+            ],
+            "type": "object"
+          },
+          "permission_profile_ref": {
+            "enum": [
+              "read-only",
+              "repo-local-bounded"
+            ]
+          },
+          "retry_policy": {
+            "additionalProperties": false,
+            "properties": {
+              "backoff_seconds": {
+                "maximum": 300,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "max_attempts": {
+                "const": 1,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "max_attempts",
+              "backoff_seconds"
+            ],
+            "type": "object"
+          },
+          "timeout_budget": {
+            "additionalProperties": false,
+            "properties": {
+              "dispatch_seconds": {
+                "maximum": 7200,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "poll_seconds": {
+                "maximum": 600,
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "dispatch_seconds",
+              "poll_seconds"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "permission_profile_ref",
+          "context_policy_ref",
+          "inference_budget",
+          "timeout_budget",
+          "retry_policy"
+        ],
+        "type": "object"
+      },
+      "minProperties": 1,
+      "type": "object"
+    },
+    "schema": {
+      "const": "l9.peer-execution.profile-registry.v1"
+    },
+    "schema_version": {
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema",
+    "schema_version",
+    "default_profile_ref",
+    "profiles"
+  ],
+  "type": "object"
+}
