@@ -76,7 +76,12 @@ def inventory_acquisition(path):
         ident, rows = inventory(root)
         if ident is None:
             return None, [], receipt.get("verification"), "materialized_root_inaccessible", []
-        if rows != expected:
+        normalized_expected = []
+        for item in expected:
+            row = dict(item)
+            row.setdefault("classification", "candidate")
+            normalized_expected.append(row)
+        if rows != normalized_expected:
             return None, [], receipt.get("verification"), "acquisition_inventory_mismatch", []
         verification = "CONTENT_REHASHED"
     else:
@@ -96,9 +101,8 @@ def inventory_acquisition(path):
 
 def _remote_block(locator):
     parsed = urlparse(locator)
-    is_github_repo = (
-        parsed.netloc.lower() == "github.com" and len(parsed.path.strip("/").split("/")) >= 2
-    )
+    path_parts = [part for part in parsed.path.strip("/").split("/") if part]
+    is_github_repo = parsed.netloc.lower() == "github.com" and len(path_parts) == 2
     adapter = "remote_repository" if is_github_repo else "url"
     required = (
         "immutable revision plus hashed inventory"
