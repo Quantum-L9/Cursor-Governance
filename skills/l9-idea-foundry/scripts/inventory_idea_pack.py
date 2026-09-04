@@ -115,7 +115,7 @@ def safe_extract_zip(src: Path, dest: Path) -> None:
 
 def safe_extract_tar(src: Path, dest: Path) -> None:
     dest.mkdir(parents=True, exist_ok=True)
-    with tarfile.open(src) as tf:
+    with tarfile.open(src, mode="r:*") as tf:
         for member in tf.getmembers():
             target = _safe_target(dest, member.name)
             if member.issym() or member.islnk() or member.isdev():

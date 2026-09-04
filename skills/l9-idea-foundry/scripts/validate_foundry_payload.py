@@ -454,6 +454,16 @@ def validate_receipt(
     sequence(
         validation.get("results"), "FOUNDRY_RECEIPT.validation.results", failures, nonempty=True
     )
+    bad_results = [
+        result
+        for result in (validation.get("results") or [])
+        if str(result).upper() in {"FAILED", "FAIL", "ERROR", "BLOCKED"}
+    ]
+    fail_if(
+        bool(bad_results),
+        f"FOUNDRY_RECEIPT.validation.results include non-passing entries: {bad_results}",
+        failures,
+    )
 
     mapping(receipt.get("birth"), "FOUNDRY_RECEIPT.birth", failures)
     deployment = mapping(receipt.get("deployment"), "FOUNDRY_RECEIPT.deployment", failures)
@@ -790,6 +800,13 @@ def main() -> int:
                 if tree_digest:
                     observations.append(f"tracked_file_count={len(records)}")
                     observations.append(f"tracked_tree_digest={tree_digest}")
+
+    if args.birth_ready:
+        run_status = str((receipt.get("run") or {}).get("status") or "")
+        if run_status in {"INTAKE", "PLANNED", "QUARANTINED", "BLOCKED"}:
+            failures.append(
+                f"--birth-ready refused when FOUNDRY_RECEIPT.run.status is {run_status}"
+            )
 
     if failures:
         print("FOUNDRY_PAYLOAD: FAIL")
