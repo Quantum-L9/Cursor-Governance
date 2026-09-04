@@ -1,6 +1,6 @@
 ---
 name: l9-context7-docs
-description: Use Context7 documentation before coding when current library, framework, SDK, API, version-specific behavior, or unfamiliar dependency docs could prevent implementation mistakes, deprecated patterns, or debug loops.
+description: ground implementation decisions in current Context7 documentation before coding. use when current library, framework, SDK, API, version-specific behavior, or unfamiliar dependency docs could prevent implementation mistakes, deprecated patterns, or debug loops.
 metadata:
   skill_schema: 1
   layer: control_plane
