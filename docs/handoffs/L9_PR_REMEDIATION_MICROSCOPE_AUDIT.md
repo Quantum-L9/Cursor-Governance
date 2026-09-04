@@ -215,7 +215,7 @@ covered by executable tests.
 
 | Id | Category | Note |
 |---|---|---|
-| F12 | INFORMATIONAL | `validate_exemplary_skill.py` reports missing `expertise_model.yaml` / `skill_intelligence_report.yaml`; the pack is `strong`, not `exemplary`. No packaging bloat added (prohibited). |
+| F12 | INFORMATIONAL | At lock time `validate_exemplary_skill.py` reported missing `expertise_model.yaml` / `skill_intelligence_report.yaml` (pack tier `strong`). Closed after the findings lock on operator request ("make it exemplary"): both artifacts plus `scripts/activation_cases.json` added at 5.1.0; the validator passes. Activation precision is measured by `self_test.py`, not asserted. |
 | F13 | RESULT_CONTRACT | Result identity fields assume campaign/lease vocabulary. For a non-campaign bounded task the ids are run-scoped correlation keys (`lease_id = no-root-lease-<assignment>`); the gateway checks a root lease only when a runtime database is named, so nothing is faked. Documented in `pr_fleet.py`; contract unchanged. |
 | F14 | INFORMATIONAL | `reviewThreads` is GraphQL-only; on a GraphQL-restricted surface `pr_board.py` degrades honestly (threads `None`, board never MERGE on unknown). `pr_fleet.py` is REST-only by design. |
 

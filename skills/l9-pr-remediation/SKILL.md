@@ -9,8 +9,9 @@ metadata:
   tags: [l9, pr, ci, code-review, github-code-quality, copilot, diagnose, sonarcloud, codeql, debt, remediation, concurrent, subagents, github, makefile]
   owner: igor_beylin
   status: active
-  version: 5.0.0
+  version: 5.1.0
   updated: 2026-09-04
+  tier: exemplary
 ---
 
 # PR Remediation
@@ -219,7 +220,8 @@ Not a second publish path. After any merge that touched generated paths — or w
 - [references/issue-handoff.md](references/issue-handoff.md) — above-paygrade → `gh issue create` + `l9-issue-remediation`
 - `environment/contracts/autonomy/MANIFEST.yaml` — surface doctrine + merge gate
 - `environment/agents/cursor-subagents/DELEGATION_CONTRACT.yaml` — roles, result schema, handoff
-- [scripts/self_test.py](scripts/self_test.py)
+- [scripts/self_test.py](scripts/self_test.py) · [scripts/activation_cases.json](scripts/activation_cases.json)
+- [expertise_model.yaml](expertise_model.yaml) · [skill_intelligence_report.yaml](skill_intelligence_report.yaml) — exemplary intelligence layer
 
 ## Defaults
 
@@ -311,10 +313,30 @@ Verdict · blockers · warnings · key review concerns · overlap advisory · YN
 - `merge_conflict_count`
 - `repeated_command_count`
 
+## Intelligence layer (exemplary tier)
+
+Compiled through the `l9-skill-compiler` pipeline `parse_source → extract_expertise → compress_expertise → design_skill → validate`. The compressed judgment lives beside this file and is validated, not asserted:
+
+| Artifact | Role |
+|---|---|
+| `expertise_model.yaml` | Gate B: experts, doctrine, invariants, authority, activation and reject signals, three conditional adapters, failure modes with prevention rules, scored leverage points |
+| `skill_intelligence_report.yaml` | `skill_intelligence_report`: activation model with measured precision, heuristics (condition → judgment → action), adapter map, evidence hierarchy, gate results, tier decision |
+| `scripts/activation_cases.json` | 18 labeled prompts (converge / diagnose / reject) scored by the intent-precedence rule above in `scripts/self_test.py` |
+
+Adapters load only when they change a decision: `cursor_constrained_surface` (caps from the execution profile), `graphql_restricted_surface` (REST-only, board degrades to `wait`), `sonar_configured_repository` (authenticated fetch every Converge, never a board input).
+
+### After-use capture (self-improvement hook)
+
+Only when the user reports a bad run or asks for iteration — never invented telemetry — capture `missed_trigger`, `false_trigger`, `recurring_user_correction`, `output_that_required_manual_rework`. Record an activation miss as a new labeled prompt in `scripts/activation_cases.json`; a planning or acceptance miss as a case in `tests/ops/autonomy/test_pr_fleet.py`; the lesson as one atomic Graphiti write (`l9-graphiti-memory`, `--kind lesson`).
+
 ## Validation
 
+Gates per `skills/l9-skill-compiler/references/enforcement-gates.md` (structural, contract, execution, evidence, operator, regression). Record only what ran.
+
 ```bash
-# pack self_test is stdlib-only (structural + wiring). Prefer the locked interpreter.
+# pack self_test is stdlib-only (structural + wiring + activation precision). Prefer the locked interpreter.
 "${GOV_PY:-$PWD/.venv/bin/python}" skills/l9-pr-remediation/scripts/self_test.py
+"${GOV_PY:-$PWD/.venv/bin/python}" skills/l9-skill-compiler/scripts/validate_skill_pack.py skills/l9-pr-remediation
+"${GOV_PY:-$PWD/.venv/bin/python}" skills/l9-skill-compiler/scripts/validate_exemplary_skill.py skills/l9-pr-remediation
 "${GOV_PY:-$PWD/.venv/bin/python}" -m pytest -q tests/ops/autonomy/test_pr_fleet.py
 ```

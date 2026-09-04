@@ -71,7 +71,7 @@ scheduling.
 
 ## 4. Target skill changes
 
-- `SKILL.md` 4.6.0 → 5.0.0 (320 lines): deterministic-owners table; Laws rewritten
+- `SKILL.md` 4.6.0 → 5.0.0 → 5.1.0 (`tier: exemplary`; intelligence layer + after-use capture): deterministic-owners table; Laws rewritten
   (fleet plan, one-message wave, results-as-documents, watcher-owned waits, Sonar
   resolve-fully/block-never); Hot Path 0–10 on `pr_fleet.py`; Defaults gain
   `fleet_owner`, `replan_on`, `wave_launch`, `concurrency_caps_owner`,
@@ -157,9 +157,9 @@ suites pass). Resource-limit changes: none; caps are read from their owner.
 
 | Check | Result |
 |---|---|
-| `skills/l9-skill-compiler/scripts/validate_skill_pack.py skills/l9-pr-remediation` | PASS (26 files) |
-| `skills/l9-pr-remediation/scripts/self_test.py` | PASS |
-| `validate_exemplary_skill.py` | not claimed: pack is `strong`, not `exemplary` (no packaging bloat added) |
+| `skills/l9-skill-compiler/scripts/validate_skill_pack.py skills/l9-pr-remediation` | PASS (29 files) |
+| `skills/l9-pr-remediation/scripts/self_test.py` | PASS (incl. activation precision over `scripts/activation_cases.json`: 18 labeled prompts, 0 wrong activations) |
+| `skills/l9-skill-compiler/scripts/validate_exemplary_skill.py skills/l9-pr-remediation` | PASS (`expertise_model.yaml` + `skill_intelligence_report.yaml`, all ten gates `pass`, tier `exemplary`) |
 | `ruff check` + `ruff format --check` on changed Python | PASS |
 
 ## 12. Autonomy validation (executed)
@@ -186,7 +186,7 @@ fails closed).
 
 ## 15. Remaining non-blocking debt and UNKNOWNs
 
-- Pack tier is `strong`; exemplary artifacts deliberately not added.
+- Pack tier is `exemplary` (5.1.0). The intelligence layer is two YAML artifacts plus one labeled-prompt fixture; the executable owners did not change and no lane number entered prose.
 - `pr_fleet.py` is REST-only; `reviewThreads` stays GraphQL-only inside `pr_board.py`, which degrades to `wait` when unavailable.
 - `SONAR_TOKEN` was absent in the audit container; the fetcher reports `authenticated: false` in that case and the skill records the gap.
 - The velocity table models the shipped prose; a live timed run was not possible here (no open fleet in the container).

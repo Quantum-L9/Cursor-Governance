@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contract tests for l9-pr-remediation 5.0.0. Stdlib only.
+"""Contract tests for l9-pr-remediation 5.1.0. Stdlib only.
 
 Structural and wiring checks: every link resolves, every deterministic owner
 the pack names exists, the pre-v5 contradictions stay gone, and the pack never
@@ -9,6 +9,7 @@ coverage of the fleet planner lives in tests/ops/autonomy/test_pr_fleet.py.
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -71,7 +72,8 @@ def _forbid(text: str, needle: str, where: str) -> None:
 
 
 def test_frontmatter_and_map() -> None:
-    _need(SKILL, "version: 5.0.0", "SKILL.md")
+    _need(SKILL, "version: 5.1.0", "SKILL.md")
+    _need(SKILL, "tier: exemplary", "SKILL.md")
     _need(SKILL, "disable-model-invocation: true", "SKILL.md")
     match = re.search(r"^description: (.+)$", SKILL, re.M)
     if match is None or not (150 <= len(match.group(1)) <= 500):
@@ -296,6 +298,102 @@ def test_sonar_directive() -> None:
     _need(REFS["signal-ingestion.md"], "never blocks merge", "signal-ingestion.md")
 
 
+CONVERGE_SIGNALS = (
+    "/l9-pr-remediation",
+    "remediate",
+    "babysit",
+    "converge",
+    "merge them",
+    "get them merged",
+    "merge train",
+    "merge the failing",
+    "fix the review comments",
+)
+DIAGNOSE_SIGNALS = (
+    "/pr ",
+    "ready to merge",
+    "merge blockers",
+    "review pr",
+    "unresolved review comments",
+    "status of the prs",
+)
+REJECT_SIGNALS = (
+    "issues",
+    "/issues",
+    "make pr",
+    "open a pr for",
+    "force-push",
+    "admin merge",
+    "edit the workflow",
+    "diff i pasted",
+    "campaign branch",
+)
+
+
+def classify_intent(prompt: str) -> str:
+    """The pack's intent-precedence rule, executable: reject owners first, then
+    the mutate verbs, then read-only readiness. An explicit slash always wins."""
+    text = prompt.lower()
+    if "/l9-pr-remediation" in text:
+        return "converge"
+    if any(signal in text for signal in REJECT_SIGNALS):
+        return "reject"
+    if any(signal in text for signal in CONVERGE_SIGNALS):
+        return "converge"
+    if any(signal in text for signal in DIAGNOSE_SIGNALS):
+        return "diagnose"
+    return "none"
+
+
+def test_activation_precision() -> None:
+    path = ROOT / "scripts" / "activation_cases.json"
+    if not path.is_file():
+        _fail("scripts/activation_cases.json missing")
+    cases = json.loads(path.read_text(encoding="utf-8"))["cases"]
+    if len(cases) < 12:
+        _fail("activation_cases.json needs at least 12 labeled prompts")
+    wrong = [
+        (case["prompt"], case["expected"], classify_intent(case["prompt"]))
+        for case in cases
+        if classify_intent(case["prompt"]) != case["expected"]
+    ]
+    false_activations = [
+        item for item in wrong if item[1] == "reject" and item[2] in {"converge", "diagnose"}
+    ]
+    if wrong:
+        _fail(f"activation cases misclassified: {wrong}")
+    accuracy = (len(cases) - len(wrong)) / len(cases)
+    specificity = round(5 * accuracy, 2)
+    report = (ROOT / "skill_intelligence_report.yaml").read_text(encoding="utf-8")
+    _need(report, f"specificity_score: {specificity}", "skill_intelligence_report.yaml")
+    _need(
+        report,
+        f"false_positive_risk_score: {len(false_activations)}",
+        "skill_intelligence_report.yaml",
+    )
+    _need(report, f"{len(cases)} labeled prompts", "skill_intelligence_report.yaml")
+
+
+def test_exemplary_artifacts() -> None:
+    for name in ("expertise_model.yaml", "skill_intelligence_report.yaml"):
+        if not (ROOT / name).is_file():
+            _fail(f"{name} missing (exemplary tier)")
+        _need(SKILL, name, "SKILL.md")
+    for term in (
+        "extract_expertise",
+        "skill_intelligence_report",
+        "validate_exemplary_skill.py",
+        "enforcement-gates",
+        "After-use capture",
+    ):
+        _need(SKILL, term, "SKILL.md")
+    model = (ROOT / "expertise_model.yaml").read_text(encoding="utf-8")
+    for owner in ("pr_fleet.py", "pr_board.py", "execution_profile.py", "stack_safe_merge.py"):
+        _need(model, owner, "expertise_model.yaml")
+    for stale in STALE:
+        _forbid(model, stale, "expertise_model.yaml")
+
+
 def test_venv_and_counters() -> None:
     rc = REFS["run-contract.md"]
     venv_needles = (
@@ -331,6 +429,8 @@ def main() -> None:
     test_board_and_merge()
     test_sonar_directive()
     test_venv_and_counters()
+    test_activation_precision()
+    test_exemplary_artifacts()
     print("l9-pr-remediation self_test: PASS")
 
 
