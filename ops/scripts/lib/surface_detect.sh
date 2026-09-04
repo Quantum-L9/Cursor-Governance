@@ -4,11 +4,19 @@
 # shellcheck shell=bash
 
 # Detect the agent surface from the environment.
-# Explicit L9_GOVERNANCE_SURFACE wins when it is a known id; otherwise markers
-# break ties toward the adapter. unknown means "do not skip gates".
+# CURSOR_AGENT overrides a projected Claude explicit surface. Other known
+# explicit ids still win. Otherwise markers break ties. unknown = do not skip.
 l9_detect_surface() {
   local explicit
   explicit="$(printf '%s' "${L9_GOVERNANCE_SURFACE:-}" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+  if [ -n "${CURSOR_AGENT:-}" ]; then
+    case "$explicit" in
+      claude-code|claude-code-remote)
+        printf '%s\n' "cursor"
+        return 0
+        ;;
+    esac
+  fi
   case "$explicit" in
     cursor|claude-code|claude-code-remote|codex|gemini|manus)
       printf '%s\n' "$explicit"

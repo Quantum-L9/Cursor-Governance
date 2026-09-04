@@ -8,10 +8,13 @@ Return values:
   cursor | claude-code | claude-code-remote | codex | gemini | manus | unknown
 
 Precedence:
-  1. Explicit ``L9_GOVERNANCE_SURFACE`` when it is a known id (wins).
-  2. Runtime markers break ties toward the adapter (Claude remote, Claude
+  1. ``CURSOR_AGENT`` overrides a projected Claude explicit surface
+     (``L9_GOVERNANCE_SURFACE=claude-code`` from ``.claude/settings.json``
+     loaded inside Cursor). Intentional non-Claude explicit ids still win.
+  2. Explicit ``L9_GOVERNANCE_SURFACE`` when it is a known id.
+  3. Runtime markers break ties toward the adapter (Claude remote, Claude
      desktop/CLI, then Cursor).
-  3. ``unknown`` when nothing matches — callers that fail-toward-enforcing
+  4. ``unknown`` when nothing matches — callers that fail-toward-enforcing
      treat unknown as "do not skip the gate".
 """
 
@@ -43,6 +46,8 @@ def detect_surface(env: Mapping[str, str] | None = None) -> str:
     """Return the surface id for ``env`` (defaults to ``os.environ``)."""
     source = os.environ if env is None else env
     explicit = (source.get("L9_GOVERNANCE_SURFACE") or "").strip().lower()
+    if source.get("CURSOR_AGENT") and explicit in CLAUDE_GATE_SURFACES:
+        return "cursor"
     if explicit in KNOWN_SURFACES:
         return explicit
 

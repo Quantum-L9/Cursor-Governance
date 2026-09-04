@@ -19,6 +19,8 @@ SH_LIB = ROOT / "ops" / "scripts" / "lib" / "surface_detect.sh"
 
 MATRIX = [
     ({"L9_GOVERNANCE_SURFACE": "cursor", "CLAUDECODE": "1"}, "cursor"),
+    ({"L9_GOVERNANCE_SURFACE": "claude-code", "CURSOR_AGENT": "1"}, "cursor"),
+    ({"L9_GOVERNANCE_SURFACE": "claude-code-remote", "CURSOR_AGENT": "1"}, "cursor"),
     ({"CLAUDE_CODE_REMOTE": "true"}, "claude-code-remote"),
     ({"CLAUDECODE": "1"}, "claude-code"),
     ({"CLAUDE_CODE_ENTRYPOINT": "cli"}, "claude-code"),

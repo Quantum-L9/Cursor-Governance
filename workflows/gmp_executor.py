@@ -119,23 +119,35 @@ def adapter_publish_surface() -> bool:
     return surface in ADAPTER_PUBLISH_SURFACES
 
 
+def _todos_json_file(raw_path: str) -> Path:
+    """Resolve a ``--todos-json`` path and require it under ``REPO_ROOT``."""
+    candidate = Path(raw_path).expanduser()
+    if not candidate.is_absolute():
+        candidate = REPO_ROOT / candidate
+    resolved = candidate.resolve()
+    root = REPO_ROOT.resolve()
+    try:
+        resolved.relative_to(root)
+    except ValueError as exc:
+        raise ValueError("--todos-json path must be under the repository root") from exc
+    return resolved
+
 
 def parse_todos_json(raw: str) -> list[dict[str, str]]:
     """Parse ``--todos-json`` (inline JSON or ``@path`` / path to a JSON file).
 
     Accepts a list of objects with ``id``, ``task`` (or ``description``), and
-    optional ``files`` / ``file``. Empty list is rejected by the caller.
+    optional ``files`` / ``file``. A multi-file item expands to one todo per
+    path so downstream scope lock keeps every declared file. Empty list is
+    rejected by the caller.
     """
     payload = raw.strip()
     if not payload:
         raise ValueError("--todos-json is empty")
     if payload.startswith("@"):
-        path = Path(payload[1:]).expanduser()
-        payload = path.read_text(encoding="utf-8")
-    else:
-        as_path = Path(payload).expanduser()
-        if as_path.is_file() and not payload.lstrip().startswith("["):
-            payload = as_path.read_text(encoding="utf-8")
+        payload = _todos_json_file(payload[1:]).read_text(encoding="utf-8")
+    elif not payload.lstrip().startswith("["):
+        payload = _todos_json_file(payload).read_text(encoding="utf-8")
     data = json.loads(payload)
     if not isinstance(data, list):
         raise ValueError("--todos-json must be a JSON list")
@@ -144,23 +156,26 @@ def parse_todos_json(raw: str) -> list[dict[str, str]]:
         if not isinstance(item, dict):
             raise ValueError(f"--todos-json item {i} is not an object")
         files = item.get("files") or []
-        file_path = ""
+        paths: list[str] = []
         if isinstance(files, list) and files:
-            file_path = str(files[0])
+            paths = [str(p) for p in files]
         elif item.get("file"):
-            file_path = str(item["file"])
-        description = str(
-            item.get("task") or item.get("description") or item.get("content") or ""
-        )
-        todos.append(
-            {
-                "id": str(item.get("id") or f"T{i}"),
-                "file": file_path,
-                "lines": str(item.get("lines") or "all"),
-                "action": str(item.get("action") or item.get("operation") or "REPLACE"),
-                "description": description,
-            }
-        )
+            paths = [str(item["file"])]
+        if not paths:
+            paths = [""]
+        description = str(item.get("task") or item.get("description") or item.get("content") or "")
+        base_id = str(item.get("id") or f"T{i}")
+        for j, file_path in enumerate(paths):
+            todo_id = base_id if j == 0 else f"{base_id}.{j + 1}"
+            todos.append(
+                {
+                    "id": todo_id,
+                    "file": file_path,
+                    "lines": str(item.get("lines") or "all"),
+                    "action": str(item.get("action") or item.get("operation") or "REPLACE"),
+                    "description": description,
+                }
+            )
     return todos
 
 
@@ -1225,14 +1240,7 @@ from {module_path} import ...
         if not task.strip():
             print(NO_TASK)  # noqa: ADR-0019
             return EXIT_NO_TASK
-        self._init_state(task, tier)
-        self._print_header(f"GMP EXECUTOR: {self.state.gmp_id}")
-        self._step_memory_read()
-        self.state.completed_steps.append(StepType.MEMORY_READ.value)
-        self._maybe_l4_begin()
-        self._save_state()
-        print(NO_PLAN)  # noqa: ADR-0019
-        return 0
+        return self.run_authorized_start(task, tier)
 
     def run_authorized_finalize(self) -> int:
         if not self._load_state() or self.state is None:
@@ -1349,7 +1357,7 @@ Examples:
         default=None,
         help=(
             "Machine TODO plan: inline JSON list or path/@path "
-            "(authorized start/full). Bound at invocation."
+            "(authorized start/full; both scope-lock). Bound at invocation."
         ),
     )
     parser.add_argument("--mode", choices=["start", "finalize", "full"], default=None)

@@ -99,15 +99,20 @@ if [ "$HOOK_CLASS" = "gate" ] && [ "${L9_SURFACE_GUARD:-1}" != "0" ]; then
     # shellcheck source=../../../../ops/scripts/lib/surface_detect.sh
     . "$_L9_SD_LIB"
     _L9_SURFACE="$(l9_detect_surface)"
-    # Skip only when positively identified as non-Claude. unknown fails
-    # toward enforcing (still evaluate). Claude surfaces always evaluate.
+    # Skip only Claude-only gates (memory + local-execution). merge_gate and
+    # session_debt stay active on Cursor — Cursor's native stack does not
+    # replace those authorizations. unknown fails toward enforcing.
     case "$_L9_SURFACE" in
       claude-code|claude-code-remote|unknown) : ;;
       *)
-        printf 'l9-hook: gate %s skipped (surface=%s; Claude gates are Claude-only)\n' \
-          "$HOOK_NAME" "$_L9_SURFACE" >&2
-        unset _L9_SURFACE
-        exit 0
+        case "$HOOK_NAME" in
+          local_execution_gate_wrap.py|memory_gate.py)
+            printf 'l9-hook: gate %s skipped (surface=%s; Claude-only gate)\n' \
+              "$HOOK_NAME" "$_L9_SURFACE" >&2
+            unset _L9_SURFACE
+            exit 0
+            ;;
+        esac
         ;;
     esac
     unset _L9_SURFACE
