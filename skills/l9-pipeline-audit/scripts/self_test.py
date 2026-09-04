@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -74,6 +75,8 @@ def main() -> int:
             "  - id: a\n    content: done\n    status: completed\n---\n\n# y\n",
             encoding="utf-8",
         )
+        isolated = os.environ.copy()
+        isolated["L9_REPO_WRITE_LOCK"] = "0"
         proc = subprocess.run(
             [
                 sys.executable,
@@ -89,6 +92,7 @@ def main() -> int:
             check=False,
             capture_output=True,
             text=True,
+            env=isolated,
         )
         if proc.returncode != 0:
             errors.append(f"audit_pipeline exit {proc.returncode}: {proc.stderr}")
