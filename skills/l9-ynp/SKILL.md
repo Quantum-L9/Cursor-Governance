@@ -1,6 +1,6 @@
 ---
 name: l9-ynp
-description: synthesize the single highest-leverage next action from current context. use after completing work, when priorities are unclear, or when the user asks what to do next.
+description: synthesize the single highest-leverage next action from current context. use when work is complete, priorities are unclear, or the user asks what to do next.
 metadata:
   skill_schema: 1
   layer: control_plane

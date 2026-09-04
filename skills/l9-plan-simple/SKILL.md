@@ -1,14 +1,6 @@
 ---
 name: l9-plan-simple
-description: create a machine-validated cursor .plan.md from the shared executable-plan
-  template in one of two handoff modes. default mode cursor-build executes with the build
-  button and then opens a stacked PR; never branch off main when an open PR exists, and
-  display the PR URL. embedded mode is for callers that own their own execution — it stops
-  at validated planning artifacts and grants no execution, commit, publication, campaign,
-  or deployment authority. use when scope is unclear, requirements need decomposition,
-  cursor plan mode is on, the next step should be planned before code changes, or a
-  nested skill or pipeline needs planning depth without downstream authority. do not use
-  when the user asks for program-execution, make campaign, /l9-plan, or a pe campaign lock.
+description: create a machine-validated Cursor .plan.md from the shared executable-plan template using cursor-build or embedded handoff. use when scope needs decomposition, Cursor plan mode is active, work should be planned before code changes, or a nested caller needs planning depth without execution authority. cursor-build is default and hands off to Build and stacked PR; embedded stops at validated planning artifacts. do not use for Program Execution, make campaign, /l9-plan, or a PE campaign lock.
 metadata:
   skill_schema: 1
   layer: control_plane
