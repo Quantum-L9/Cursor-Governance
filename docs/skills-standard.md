@@ -86,11 +86,14 @@ Decision recorded 2026-08-13: **flag-all**. Relocate `_archived/` to
 | Non-native top-level frontmatter keys | 0 |
 | `name` not matching folder name | 0 |
 | Archived skills without `disable-model-invocation` | 0 |
-| Total discovery footprint (names + descriptions) | 16,384 bytes |
+| Total discovery footprint (model-invocable names + descriptions; explicit-only names only) | 16,384 bytes |
 | `SKILL.md` body | 500 lines (warn; pre-existing overages are not a hard fail) |
 
 Discovery footprint is the skills equivalent of the rules always-apply budget.
-It is the only skill cost paid on every turn.
+It is the only skill cost paid on every turn. Model-invocable skills contribute
+`name` + `description`. A live skill with `disable-model-invocation: true`
+contributes `name` only — Claude still lists the name, but the description is
+not an always-apply payload (`skillOverrides: user-invocable-only`).
 
 A `SKILL.md` under a pack's own `tests/fixtures/` is a test fixture, not a
 skill: it is never registered in `AUTONOMY_MANIFEST.yaml`, never symlinked into

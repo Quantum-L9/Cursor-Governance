@@ -85,10 +85,19 @@ class CursorSharedBootstrapEdgeTests(unittest.TestCase):
         ):
             self.assertNotIn(slogan, live)
 
-    def test_hook_recognizes_lowercase_hydrate_degraded(self) -> None:
+    def test_hook_classifies_hydrate_from_packet_booleans_not_substrings(self) -> None:
+        """Supersedes the old lowercase-substring assertion: the healthy packet
+        fence contains the literal '"degraded": false', so a bare *degraded*
+        glob reported a false this-session DEGRADED on every healthy boot.
+        Classification now lives in ops/scripts/classify_hydrate_state.py.
+        """
         live = _live_path(HOOK.read_text(encoding="utf-8"))
-        self.assertIn("*degraded*", live)
-        self.assertIn("*hydrate\\ CLI\\ missing*", live)
+        self.assertIn("classify_hydrate_state.py", live)
+        self.assertIn("resolve_hydrate_classifier", live)
+        self.assertNotIn("*DEGRADED*|*degraded*", live)
+        # The no-classifier fallback keys on unambiguous markers only.
+        self.assertIn("*'\"degraded\": true'*", live)
+        self.assertIn("*'hydrate CLI missing'*", live)
 
     def test_hook_emits_single_graphiti_hydrate_heading(self) -> None:
         live = _live_path(HOOK.read_text(encoding="utf-8"))
