@@ -1265,4 +1265,3 @@ not evaluate under Cursor. SSOT: `ops/autonomy/surface_detect.py` +
 `ops/scripts/lib/surface_detect.sh`. Divergence point: `l9_hook_exec.sh`
 self-guard (kill switch `L9_SURFACE_GUARD=0`). Contract:
 `environment/agents/SURFACE_BOOTSTRAP_CONTRACT.md`. ADR-0029.
-
