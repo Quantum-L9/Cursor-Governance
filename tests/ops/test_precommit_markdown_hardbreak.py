@@ -17,6 +17,7 @@ into a generated file on the next sync.
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -43,6 +44,20 @@ def _hook(hook_id: str) -> dict:
             if hook.get("id") == hook_id:
                 return hook
     raise AssertionError(f"hook {hook_id} missing from {CONFIG}")
+
+
+def _excluded(rel: str) -> bool:
+    """True when this config keeps the path away from trailing-whitespace.
+
+    Read from the config rather than restated, so the scan below asserts over
+    exactly the files the hook actually processes.
+    """
+    data = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
+    patterns = [
+        str(data.get("exclude") or r"(?!)"),
+        str(_hook("trailing-whitespace").get("exclude") or r"(?!)"),
+    ]
+    return any(re.search(p, rel) for p in patterns)
 
 
 def _declared_markdown_exts() -> set[str]:
@@ -76,6 +91,8 @@ def test_declared_exts_cover_every_markdown_source_in_tree() -> None:
 
     carrying: set[str] = set()
     for rel in tracked:
+        if _excluded(rel):
+            continue
         path = ROOT / rel
         try:
             text = path.read_text(encoding="utf-8")
@@ -139,7 +156,15 @@ def test_non_markdown_still_loses_trailing_whitespace(tmp_path: Path) -> None:
     target.write_text(HARD_BREAK, encoding="utf-8")
 
     subprocess.run(
-        ["pre-commit", "run", "trailing-whitespace", "--config", str(CONFIG), "--files", str(target)],
+        [
+            "pre-commit",
+            "run",
+            "trailing-whitespace",
+            "--config",
+            str(CONFIG),
+            "--files",
+            str(target),
+        ],
         cwd=tmp_path,
         capture_output=True,
         text=True,
