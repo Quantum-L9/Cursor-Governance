@@ -1351,7 +1351,7 @@
     },
     {
       "composition_role": "primary",
-      "description": "maintain the root agent-doc pointer stack (agents.md, claude.md, readme.md) and generate module READMEs via readme-pipeline-v1. use when the user says update agent docs, refresh repo docs, generate module readmes, sync agent files, create root claude.md/invariants.md, or after ci checks or pre-commit hooks change. creates those two only when absent; never invents other root files.",
+      "description": "compile repository changes into typed, target-resolved documentation obligations, selectively qualify semantic obligations with l9-intelligence-harvest, route owner-native actions, and emit evidence-backed repo-docs receipts. use when refreshing repo or agent docs, checking documentation impact after code/CI/governance changes, generating module READMEs, or proving documentation freshness before PR/merge.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-update-agent-docs",
@@ -1385,5 +1385,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "f1f1f9f18ae9899dcdea4137ab5c993298654074781881dedacd27a0c86eff6d",
-  "source_skill_corpus_sha256": "0ceafbedfaf225b033b558bf558d36bcc5116d48fc10543a2b6cad4d48d62d14"
+  "source_skill_corpus_sha256": "187f2683f032b790d0353f71cf481d70153b1b0c588ebd41f9a4dc3cbd20fc43"
 }
