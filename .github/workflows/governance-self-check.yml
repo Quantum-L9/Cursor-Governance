@@ -56,12 +56,6 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           BASE_REF: ${{ github.base_ref }}
         run: |
-          # pull_request: regenerate only generators whose sources are in the
-          # PR file list (--changed-file, no --force). --pe-manifest is added
-          # only when a PE source path is listed. An empty file list must not
-          # be passed (the script treats that as --force).
-          # push to main / workflow_dispatch: full snapshot
-          # (--force --pe-manifest --check).
           gen=ops/scripts/sync_generated_artifacts.py
           [ -f "$gen" ] || { echo "::error::$gen missing - cannot verify generated artifacts"; exit 1; }
           paths="rules/RULES-MANIFEST.json rules/RULES-MANIFEST.yaml rules/RULES-MANIFEST.md \
@@ -81,8 +75,6 @@ jobs:
               python3 "$gen" --changed-file /tmp/pr-changed-files.txt --check --json
             fi
           else
-            # --pe-manifest reaches environment/program-execution/MANIFEST.json,
-            # which --force alone does not. push to main is the snapshot check.
             python3 "$gen" --force --pe-manifest --check --json
           fi
           if ! git diff --quiet -- $paths; then
@@ -94,8 +86,6 @@ jobs:
 
       - name: Rules budget gate
         run: |
-          # Fail closed: the validator is mandatory. A missing validator is a
-          # build failure, never a silent warning-and-pass.
           v=ops/scripts/check_rules_standard.py
           [ -f "$v" ] || { echo "::error::mandatory validator $v missing"; exit 1; }
           python3 "$v"
@@ -146,13 +136,15 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           BASE_REF: ${{ github.base_ref }}
+          SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          TESTED_REVISION_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          tool=skills/l9-update-agent-docs/scripts/validate_pointer_headings.py
+          tool=skills/l9-update-agent-docs/scripts/repo_docs.py
           receipt=.artifacts/repo-docs-receipt.json
           mkdir -p .artifacts
           [ -f "$tool" ] || {
-            echo "::error::mandatory repo-docs controller $tool missing"
+            echo "::error::mandatory repo-docs compiler $tool missing"
             exit 1
           }
 
@@ -161,10 +153,16 @@ jobs:
             git fetch --no-tags origin "${BASE_REF}"
             python3 "$tool" \
               --changed-since "origin/${BASE_REF}" \
+              --source-head-sha "$SOURCE_HEAD_SHA" \
+              --tested-revision-sha "$TESTED_REVISION_SHA" \
               --receipt "$receipt" \
               --json || rc=$?
           else
-            python3 "$tool" --receipt "$receipt" --json || rc=$?
+            python3 "$tool" \
+              --source-head-sha "$TESTED_REVISION_SHA" \
+              --tested-revision-sha "$TESTED_REVISION_SHA" \
+              --receipt "$receipt" \
+              --json || rc=$?
           fi
 
           python3 - "$receipt" "$rc" <<'PY'
@@ -178,27 +176,34 @@ jobs:
               receipt = json.load(handle)
 
           status = receipt.get("final_status", "UNKNOWN")
-          freshness = receipt.get("freshness", {})
+          summary = receipt.get("summary", {})
           semantic = receipt.get("semantic_harvest", {})
-          stale = freshness.get("stale_surfaces", [])
-          missing = freshness.get("missing_surfaces", [])
-          unresolved = semantic.get("unresolved_surfaces", [])
+          obligations = receipt.get("obligations", [])
+          open_rows = [row for row in obligations if not row.get("lifecycle", {}).get("terminal")]
+          open_targets = [
+              row.get("target", {}).get("path") or f"surface:{row.get('surface', 'UNKNOWN')}"
+              for row in open_rows
+          ]
           request = semantic.get("request")
 
           lines = [
               "## Repository documentation obligations",
               "",
               f"- status: `{status}`",
-              f"- stale surfaces: `{', '.join(stale) or 'none'}`",
-              f"- missing surfaces: `{', '.join(missing) or 'none'}`",
-              f"- unresolved semantic surfaces: `{', '.join(unresolved) or 'none'}`",
+              f"- total obligations: `{summary.get('total', 0)}`",
+              f"- open obligations: `{summary.get('open', 0)}`",
+              f"- blocked obligations: `{summary.get('blocked', 0)}`",
+              f"- awaiting qualification: `{summary.get('awaiting_qualification', 0)}`",
+              f"- open targets: `{', '.join(open_targets) or 'none'}`",
+              f"- source head: `{receipt.get('revision', {}).get('source_head_sha', 'UNKNOWN')}`",
+              f"- tested revision: `{receipt.get('revision', {}).get('tested_revision_sha', 'UNKNOWN')}`",
           ]
           if request:
               lines.append(
                   f"- harvest target: `{request.get('harvest_target', 'UNKNOWN')}`"
               )
-          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
-              summary.write("\n".join(lines) + "\n")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as output:
+              output.write("\n".join(lines) + "\n")
 
           if rc == 3:
               print(
@@ -207,9 +212,9 @@ jobs:
               )
               raise SystemExit(0)
           if rc != 0:
-              print(f"::error::repo-docs controller failed with status {status}")
+              print(f"::error::repo-docs compiler failed with status {status}")
               raise SystemExit(rc)
-          print(f"ok: repo-docs controller status {status}")
+          print(f"ok: repo-docs compiler status {status}")
           PY
 
       - name: Upload repository documentation receipt

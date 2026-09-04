@@ -1,23 +1,201 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://quantum-l9.local/contracts/repo-docs-receipt.schema.json",
+  "title": "L9 Repository Documentation Receipt",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "final_status", "target", "adapter", "surfaces", "changes", "impact", "freshness", "semantic_harvest", "capabilities", "llms_txt", "validators_executed", "evidence_sources", "blockers"],
+  "required": [
+    "schema",
+    "final_status",
+    "revision",
+    "adapter",
+    "changes",
+    "impact",
+    "surfaces",
+    "obligations",
+    "summary",
+    "semantic_harvest",
+    "capabilities",
+    "llms_txt",
+    "validators_executed",
+    "evidence_index",
+    "structural_failures",
+    "blockers"
+  ],
   "properties": {
-    "schema": {"const": "l9.repo-docs.receipt.v2"},
+    "schema": {"const": "l9.repo-docs.receipt.v3"},
     "final_status": {"enum": ["PASS", "PARTIAL", "BLOCKED", "FAIL"]},
-    "target": {"type": "object"},
-    "adapter": {"type": "object"},
-    "surfaces": {"type": "array"},
-    "changes": {"type": "object", "required": ["changed_files", "skipped_files", "unknown_files", "run_mutations"]},
-    "impact": {"type": "object"},
-    "freshness": {"type": "object"},
-    "semantic_harvest": {"type": "object"},
-    "capabilities": {"type": "object"},
-    "llms_txt": {"type": "object"},
-    "validators_executed": {"type": "array"},
-    "evidence_sources": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
-    "blockers": {"type": "array", "items": {"type": "string"}}
+    "revision": {"$ref": "#/$defs/revision"},
+    "adapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "resolution"],
+      "properties": {
+        "path": {"type": ["string", "null"]},
+        "resolution": {"enum": ["EXPLICIT", "DISCOVERED", "NONE", "BLOCKED"]}
+      }
+    },
+    "changes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["changed_files", "run_mutations"],
+      "properties": {
+        "changed_files": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "run_mutations": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+      }
+    },
+    "impact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["impacted_surfaces", "matched_rules"],
+      "properties": {
+        "impacted_surfaces": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "matched_rules": {
+          "type": "object",
+          "additionalProperties": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+        }
+      }
+    },
+    "surfaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "owner", "role", "authority_class", "requirement", "paths", "present", "action", "impacted"],
+        "properties": {
+          "id": {"type": "string"},
+          "owner": {"type": "string"},
+          "role": {"type": "string"},
+          "authority_class": {"type": "string"},
+          "requirement": {"type": "string"},
+          "paths": {"type": "array", "items": {"type": "string"}},
+          "present": {"type": "boolean"},
+          "action": {"type": "string"},
+          "impacted": {"type": "boolean"}
+        }
+      }
+    },
+    "obligations": {
+      "type": "array",
+      "items": {"$ref": "https://quantum-l9.local/contracts/documentation-obligation.schema.json"}
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total", "terminal", "open", "blocked", "awaiting_qualification", "by_status"],
+      "properties": {
+        "total": {"type": "integer", "minimum": 0},
+        "terminal": {"type": "integer", "minimum": 0},
+        "open": {"type": "integer", "minimum": 0},
+        "blocked": {"type": "integer", "minimum": 0},
+        "awaiting_qualification": {"type": "integer", "minimum": 0},
+        "by_status": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}}
+      }
+    },
+    "semantic_harvest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner", "status", "required_surfaces", "input", "discovered", "request", "semantic_source_digest", "source_paths", "blockers"],
+      "properties": {
+        "owner": {"type": "string", "minLength": 1},
+        "status": {"enum": ["PASS", "PARTIAL", "BLOCKED", "FAIL", "NotApplicable"]},
+        "required_surfaces": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "input": {"type": ["string", "null"]},
+        "discovered": {"type": "boolean"},
+        "request": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "request_id": {"type": "string"},
+            "donor": {"type": "string"},
+            "beneficiary": {"type": "string"},
+            "harvest_target": {"type": "string"},
+            "access_mode": {"type": "string"},
+            "depth": {"type": "string"},
+            "brief": {"type": "boolean"}
+          }
+        },
+        "semantic_source_digest": {"type": ["string", "null"]},
+        "source_paths": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "blockers": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["module_readmes"],
+      "properties": {
+        "module_readmes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "owner", "present", "partial_repair_route", "polyglot_extension_owner", "unsupported_impacted_extensions"],
+          "properties": {
+            "status": {"enum": ["AVAILABLE", "PARTIAL", "BLOCKED", "NotApplicable"]},
+            "owner": {"type": "string"},
+            "present": {"type": "object", "additionalProperties": {"type": "boolean"}},
+            "partial_repair_route": {"type": ["string", "null"]},
+            "polyglot_extension_owner": {"type": "string"},
+            "unsupported_impacted_extensions": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+          }
+        }
+      }
+    },
+    "llms_txt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "enabled", "enabled_reason", "base_url_source", "path", "written", "findings"],
+      "properties": {
+        "status": {"enum": ["PASS", "PARTIAL", "FAIL", "BLOCKED", "NotApplicable"]},
+        "enabled": {"type": "boolean"},
+        "enabled_reason": {"type": "string"},
+        "base_url_source": {"type": "string"},
+        "path": {"type": "string"},
+        "written": {"type": "boolean"},
+        "findings": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "validators_executed": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "status", "findings"],
+        "properties": {
+          "name": {"type": "string"},
+          "status": {"enum": ["PASS", "PARTIAL", "BLOCKED", "FAIL", "NotApplicable"]},
+          "findings": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "evidence_index": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "structural_failures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "severity", "detail"],
+        "properties": {
+          "code": {"type": "string"},
+          "severity": {"enum": ["FAIL", "BLOCKED"]},
+          "detail": {"type": "string"}
+        }
+      }
+    },
+    "blockers": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+  },
+  "$defs": {
+    "revision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "base_ref", "base_sha", "source_head_sha", "tested_revision_sha", "comparison_mode"],
+      "properties": {
+        "repository": {"type": "string", "minLength": 1},
+        "base_ref": {"type": ["string", "null"]},
+        "base_sha": {"type": ["string", "null"]},
+        "source_head_sha": {"type": "string", "minLength": 1},
+        "tested_revision_sha": {"type": "string", "minLength": 1},
+        "comparison_mode": {"enum": ["merge_base_to_head", "worktree_to_head", "snapshot", "unknown"]}
+      }
+    }
   }
 }

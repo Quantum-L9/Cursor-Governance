@@ -20,7 +20,7 @@ surfaces:
     selectors: [CANONICAL_LAW.md]
     create_policy: external_only
     refresh_policy: external_only
-    generator: none
+    generator: null
     evidence_sources: [CANONICAL_LAW.md]
     prohibited_mutations: [edit_by_this_skill, duplicate_into_pointer_docs]
     llms_include: false
@@ -32,7 +32,7 @@ surfaces:
     selectors: [AGENTS.md]
     create_policy: existing_only
     refresh_policy: surgical_additive
-    generator: none
+    generator: null
     evidence_sources: [AGENTS.md, CANONICAL_LAW.md]
     prohibited_mutations: [fold_to_pointer, wholesale_rewrite, duplicate_canonical_law]
     llms_include: true
@@ -44,7 +44,7 @@ surfaces:
     selectors: [CLAUDE.md]
     create_policy: create_if_absent
     refresh_policy: pointer_only
-    generator: none
+    generator: null
     evidence_sources: [AGENTS.md, CANONICAL_LAW.md, INVARIANTS.md, ARCHITECTURE.md]
     prohibited_mutations: [own_doctrine, ci_table_dump, registry_dump, managed_region_change]
     llms_include: false
@@ -56,7 +56,7 @@ surfaces:
     selectors: [README.md]
     create_policy: never
     refresh_policy: pointer_only
-    generator: none
+    generator: null
     evidence_sources: [README.md, AGENTS.md, CANONICAL_LAW.md]
     prohibited_mutations: [generate_from_template, replace_product_content, own_doctrine]
     llms_include: true
@@ -68,7 +68,7 @@ surfaces:
     selectors: [ARCHITECTURE.md]
     create_policy: never
     refresh_policy: surgical
-    generator: none
+    generator: null
     evidence_sources: [.github/workflows, config, source_tree]
     prohibited_mutations: [copy_operating_ssot, copy_canonical_law, managed_region_change]
     llms_include: true
@@ -80,7 +80,7 @@ surfaces:
     selectors: [INVARIANTS.md]
     create_policy: create_if_absent
     refresh_policy: surgical
-    generator: none
+    generator: null
     evidence_sources: [AGENTS.md, ORG_INVARIANTS.yaml, .github/workflows, .pre-commit-config.yaml]
     prohibited_mutations: [copy_org_invariant_bodies, guessed_counts, managed_region_change]
     llms_include: true

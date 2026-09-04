@@ -10,10 +10,12 @@ from typing import Any
 
 import yaml
 from jsonschema import Draft202012Validator
+from referencing import Registry, Resource
 
 PACK = Path(__file__).resolve().parents[1]
 POLICY_PATH = PACK / "references/doc-surface-policy.yaml"
 POLICY_SCHEMA = PACK / "contracts/doc-surface-policy.schema.json"
+OBLIGATION_SCHEMA = PACK / "contracts/documentation-obligation.schema.json"
 RECEIPT_SCHEMA = PACK / "contracts/repo-docs-receipt.schema.json"
 POINTER_MAP = PACK / "references/pointer-heading-map.yaml"
 HEADINGS = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
@@ -36,11 +38,24 @@ def load_json(path: Path) -> dict[str, Any]:
     return value
 
 
+def _schema_registry() -> Registry:
+    registry = Registry()
+    for path in (POLICY_SCHEMA, OBLIGATION_SCHEMA, RECEIPT_SCHEMA):
+        if not path.is_file():
+            continue
+        schema = load_json(path)
+        uri = schema.get("$id")
+        if uri:
+            registry = registry.with_resource(str(uri), Resource.from_contents(schema))
+    return registry
+
+
 def schema_errors(value: dict[str, Any], path: Path) -> list[str]:
-    validator = Draft202012Validator(load_json(path))
+    schema = load_json(path)
+    validator = Draft202012Validator(schema, registry=_schema_registry())
     return [
         f"{'.'.join(map(str, error.path)) or '$'}: {error.message}"
-        for error in validator.iter_errors(value)
+        for error in sorted(validator.iter_errors(value), key=lambda item: list(item.path))
     ]
 
 
@@ -71,6 +86,16 @@ def validate_policy(policy: dict[str, Any]) -> list[str]:
         unknown = sorted(set(rule["surfaces"]) - known)
         if unknown:
             errors.append(f"impact rule {name}: unknown surfaces {unknown}")
+    for surface, rules in policy["semantic_harvest"]["activation"].items():
+        if surface not in known:
+            errors.append(f"semantic activation references unknown surface {surface!r}")
+        unknown_rules = sorted(set(rules) - set(policy["impact_rules"]))
+        if unknown_rules:
+            errors.append(f"semantic activation {surface}: unknown rules {unknown_rules}")
+    destinations = policy["semantic_harvest"]["destinations"]
+    missing_destinations = sorted(set(policy["semantic_harvest"]["activation"]) - set(destinations))
+    if missing_destinations:
+        errors.append(f"semantic surfaces missing destinations: {missing_destinations}")
     return errors
 
 
@@ -87,10 +112,24 @@ def resolve_under_root(root: Path, rel: str) -> Path | None:
     return target
 
 
-def repo_slug(root: Path) -> str:
+def _remote_origin(root: Path) -> str | None:
     proc = git(root, "remote", "get-url", "origin")
-    raw = proc.stdout.strip().rstrip("/") if proc.returncode == 0 else root.name
-    return raw.rsplit("/", 1)[-1].removesuffix(".git").lower().replace("_", "-")
+    return proc.stdout.strip() if proc.returncode == 0 and proc.stdout.strip() else None
+
+
+def repository_identity(root: Path) -> str:
+    raw = _remote_origin(root)
+    if not raw:
+        return root.name
+    match = re.search(r"github\.com(?::|/)([^/]+)/([^/]+?)(?:\.git)?$", raw.rstrip("/"))
+    if match:
+        return f"{match.group(1)}/{match.group(2)}"
+    return raw.rstrip("/").removesuffix(".git")
+
+
+def repo_slug(root: Path) -> str:
+    identity = repository_identity(root)
+    return identity.rsplit("/", 1)[-1].lower().replace("_", "-")
 
 
 def resolve_adapter(root: Path, explicit: str | None = None) -> tuple[str | None, str]:

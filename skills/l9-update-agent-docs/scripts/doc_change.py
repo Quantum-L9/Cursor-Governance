@@ -1,4 +1,4 @@
-"""Repository change, impact, freshness, and capability mechanics."""
+"""Repository change, impact, managed-region, and capability mechanics."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ def changed_files_since(root: Path, base: str) -> tuple[list[str] | None, str | 
         return None, f"unable to resolve changed-since ref {base!r}"
     proc = git(root, "diff", "--name-only", f"{base}...HEAD")
     if proc.returncode == 0:
-        return [item for item in proc.stdout.splitlines() if item], None
+        return sorted(item for item in proc.stdout.splitlines() if item), None
     return None, proc.stderr.strip()
 
 
@@ -57,10 +57,9 @@ def impact_analysis(policy: dict[str, Any], changed: list[str]) -> dict[str, Any
             and any(fnmatch.fnmatch(path, pattern) for pattern in rule["patterns"])
         ]
         if hits:
-            matched[name] = hits
+            matched[name] = sorted(set(hits))
             impacted.update(rule["surfaces"])
     return {
-        "changed_files": changed,
         "impacted_surfaces": sorted(impacted),
         "matched_rules": matched,
     }
@@ -117,7 +116,7 @@ def validate_managed_regions(
     errors = []
     for rel in docs:
         path = root / rel
-        if not path.is_file():
+        if not path.is_file() or base is None:
             continue
         before = git(root, "show", f"{base}:{rel}")
         if before.returncode == 0:
@@ -139,9 +138,9 @@ def probe_module_readme_capability(
     if count == len(present):
         status = "AVAILABLE"
     elif count == 0:
-        status = "NotApplicable"
+        status = cap["absence_behavior"]
     else:
-        status = "BLOCKED"
+        status = cap["partial_behavior"]
     extensions = {Path(path).suffix for path in changed or [] if Path(path).suffix}
     unsupported = sorted(extensions - set(cap.get("supported_extensions", [])))
     if status == "AVAILABLE" and unsupported:
@@ -153,61 +152,4 @@ def probe_module_readme_capability(
         "partial_repair_route": cap.get("partial_repair_route"),
         "polyglot_extension_owner": cap["polyglot_extension_owner"],
         "unsupported_impacted_extensions": unsupported,
-    }
-
-
-def freshness_analysis(
-    root: Path,
-    policy: dict[str, Any],
-    impact: dict[str, Any],
-    llms_is_enabled: bool,
-    run_mutations: list[str] | None = None,
-) -> dict[str, Any]:
-    changed = sorted(set(impact.get("changed_files", [])) | set(run_mutations or []))
-    rows = []
-    stale = []
-    missing = []
-    for surface in impact.get("impacted_surfaces", []):
-        spec = policy["surfaces"][surface]
-        if surface == "llms_txt" and not llms_is_enabled:
-            rows.append(
-                {
-                    "surface": surface,
-                    "status": "NotApplicable",
-                    "changed_paths": [],
-                }
-            )
-            continue
-        present = selector_paths(root, spec["selectors"])
-        touched = sorted(
-            path
-            for path in changed
-            if any(fnmatch.fnmatch(path, selector) for selector in spec["selectors"])
-        )
-        if touched:
-            state = "CURRENT"
-        elif (
-            not present
-            and spec["requirement"] == "conditional"
-            and spec["create_policy"] == "never"
-        ):
-            state = "NotApplicable"
-        elif not present:
-            state = "MISSING"
-            missing.append(surface)
-        else:
-            state = "STALE"
-            stale.append(surface)
-        rows.append(
-            {
-                "surface": surface,
-                "status": state,
-                "changed_paths": touched,
-            }
-        )
-    return {
-        "status": "PARTIAL" if stale or missing else "PASS",
-        "surfaces": rows,
-        "stale_surfaces": sorted(stale),
-        "missing_surfaces": sorted(missing),
     }
