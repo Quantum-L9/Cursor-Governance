@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "l9.pr_digest.v1",
+  "type": "object",
+  "required": [
+    "PR_identity", "intent_identity", "evidence", "deterministic_findings",
+    "judgement_findings", "expansion_items", "required_narrowing",
+    "remediation_findings", "unknowns", "decision", "confidence",
+    "LLM_judgement_used", "LLM_judgement_questions", "remediation_packet"
+  ],
+  "properties": {
+    "decision": {"enum": ["READY_FOR_REMEDIATION", "READY_WITH_NON_BLOCKING_NOTES", "NARROW_BEFORE_REMEDIATION", "ARCHITECTURE_REPAIR_BEFORE_REMEDIATION", "CI_OR_EXECUTION_FAILURE", "INTENT_UNKNOWN_REVIEW_REQUIRED", "BLOCKED", "UNKNOWN"]},
+    "LLM_judgement_used": {"type": "boolean"},
+    "LLM_judgement_questions": {"type": "array"},
+    "unknowns": {"type": "array"},
+    "remediation_packet": {"type": "object"}
+  },
+  "additionalProperties": true
+}

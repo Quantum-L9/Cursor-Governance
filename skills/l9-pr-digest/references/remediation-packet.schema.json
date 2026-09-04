@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "l9.pr_remediation_packet.v1",
+  "type": "object",
+  "required": ["PR_base_and_head", "accepted_change_scope", "files_or_symbols_requiring_attention", "findings_to_fix", "expansion_to_remove", "architecture_invariants_to_preserve", "tests_to_add_or_repair", "CI_failures_relevant_to_remediation", "explicit_non_goals", "UNKNOWNs", "acceptance_criteria"],
+  "additionalProperties": false,
+  "properties": {
+    "PR_base_and_head": {"type": "object"}, "accepted_change_scope": {"type": "array"}, "files_or_symbols_requiring_attention": {"type": "array"}, "findings_to_fix": {"type": "array"}, "expansion_to_remove": {"type": "array"}, "architecture_invariants_to_preserve": {"type": "array"}, "tests_to_add_or_repair": {"type": "array"}, "CI_failures_relevant_to_remediation": {"type": "array"}, "explicit_non_goals": {"type": "array"}, "UNKNOWNs": {"type": "array"}, "acceptance_criteria": {"type": "array"}
+  }
+}
