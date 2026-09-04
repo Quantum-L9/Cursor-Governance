@@ -27,6 +27,12 @@ Reading only the first is the bug that matters: it reports zero required checks
 on a ruleset-protected repository, and zero required checks reads as "nothing
 is blocking, merge it".
 
+Ruleset rules of `type: workflows` (org required workflows, e.g. the L9
+canonical org-ci gate) name a workflow file rather than a status-check
+context. They are collected as `required_workflows`, matched to rollup jobs by
+workflow display name when resolvable, and an unmatched required workflow on a
+not-merge-ready PR reads as pending -- never as an unprotected base.
+
 `leftover` is never inferred. It is an *input*: the caller declares a named
 HUMAN decision (--human-decision) or a required check it cannot fix without
 editing CI (--unfixable-check), both of which are evidence the caller already
@@ -134,8 +140,8 @@ def _pr_view(repo: str, pr: str) -> dict[str, Any]:
     return view
 
 
-def ruleset_required(repo: str, branch: str) -> tuple[list[str], bool]:
-    """Required contexts and the strict flag from repository rulesets.
+def _branch_rules(repo: str, branch: str) -> list[Any]:
+    """All effective rules for a branch, or BoardError when the probe fails.
 
     A missing or unreadable ruleset is not zero required checks -- it is
     unknown, and the branch-protection source still gets a turn. Only an empty
@@ -145,6 +151,12 @@ def ruleset_required(repo: str, branch: str) -> tuple[list[str], bool]:
         rules = _gh_json(["api", f"repos/{repo}/rules/branches/{branch}"])
     except RuntimeError as exc:
         raise BoardError(f"ruleset probe failed: {exc}") from exc
+    if not isinstance(rules, list):
+        raise BoardError("ruleset probe returned a non-list payload; treat as unknown telemetry")
+    return rules
+
+
+def _ruleset_contexts(rules: list[Any]) -> tuple[list[str], bool]:
     contexts: list[str] = []
     strict = False
     for rule in rules or []:
@@ -157,6 +169,64 @@ def ruleset_required(repo: str, branch: str) -> tuple[list[str], bool]:
             if context:
                 contexts.append(context)
     return contexts, strict
+
+
+def ruleset_required(repo: str, branch: str) -> tuple[list[str], bool]:
+    """Required contexts and the strict flag from repository rulesets."""
+    return _ruleset_contexts(_branch_rules(repo, branch))
+
+
+def ruleset_required_workflows(rules: list[Any]) -> list[dict[str, str]]:
+    """Required workflows from `type: workflows` ruleset rules.
+
+    An org "required workflow" ruleset (the L9 canonical-CI shape) names a
+    workflow *file* in another repository, never a status-check context. It is
+    just as merge-blocking as a required context, but it is invisible to
+    `required_status_checks` parsing -- which is how an org-gated PR reported
+    `required_checks: []` and the BLOCKED reason blamed reviews instead of the
+    unrun org-ci workflow.
+    """
+    out: list[dict[str, str]] = []
+    for rule in rules or []:
+        if not isinstance(rule, dict) or rule.get("type") != "workflows":
+            continue
+        for workflow in (rule.get("parameters") or {}).get("workflows") or []:
+            path = str((workflow or {}).get("path") or "").strip()
+            if not path:
+                continue
+            repo_id = (workflow or {}).get("repository_id")
+            out.append({"path": path, "repository_id": "" if repo_id is None else str(repo_id)})
+    return out
+
+
+def workflow_display_names(repo: str, workflows: list[dict[str, str]]) -> dict[str, str]:
+    """Map required workflow path -> its display name, best effort.
+
+    Rollup check runs carry `workflowName` (the workflow's `name:`), not the
+    file path the ruleset names, so matching needs this lookup. A failed
+    lookup is fail-open: the workflow stays unmatched and `decide` treats
+    unmatched + not-merge-ready as pending rather than inventing a state.
+    """
+    names: dict[str, str] = {}
+    for workflow in workflows:
+        path = workflow.get("path") or ""
+        filename = path.rsplit("/", 1)[-1]
+        if not filename:
+            continue
+        repo_id = workflow.get("repository_id") or ""
+        endpoint = (
+            f"repositories/{repo_id}/actions/workflows/{filename}"
+            if repo_id
+            else f"repos/{repo}/actions/workflows/{filename}"
+        )
+        try:
+            payload = _gh_json(["api", endpoint])
+        except RuntimeError:
+            continue
+        name = str((payload or {}).get("name") or "").strip()
+        if name:
+            names[path] = name
+    return names
 
 
 def _required_app_ids(rules: list[Any]) -> dict[str, str]:
@@ -253,6 +323,49 @@ def _rollup_states(
     return states
 
 
+def _workflow_state_rank(state: str) -> int:
+    """Prefer evidence that a required workflow job passed over a same-named miss.
+
+    Rollup matching is by free-form ``workflowName``. An optional workflow that
+    reuses the required org workflow's display name can appear as a second
+    failing job next to the required SUCCESS. Preferring the better state keeps
+    that collision as GitHub's own UNSTABLE (mergeable) instead of inventing a
+    FIX. Real failures still win when every same-named node is red.
+    """
+    upper = state.upper()
+    if upper in ("SUCCESS", "NEUTRAL", "SKIPPED"):
+        return 3
+    if upper in PENDING_STATES:
+        return 2
+    if upper in FAILING_STATES:
+        return 1
+    return 0
+
+
+def _workflow_job_states(view: dict[str, Any], workflow_name: str) -> dict[str, str]:
+    """Job name -> state for rollup check runs produced by one named workflow.
+
+    When several rollup nodes share ``workflowName`` + job name (required org
+    workflow vs an optional clone with the same display name), keep the best
+    observed state so a green required job is not overwritten by a red twin.
+    """
+    states: dict[str, str] = {}
+    for node in view.get("statusCheckRollup") or []:
+        if not isinstance(node, dict):
+            continue
+        if str(node.get("workflowName") or "").strip() != workflow_name:
+            continue
+        name = str(node.get("name") or node.get("context") or "").strip()
+        if not name:
+            continue
+        state = str(node.get("conclusion") or node.get("state") or node.get("status") or "").upper()
+        state = state or "PENDING"
+        prior = states.get(name)
+        if prior is None or _workflow_state_rank(state) > _workflow_state_rank(prior):
+            states[name] = state
+    return states
+
+
 def conflicted_paths(base: str, head: str) -> list[str]:
     """Conflicted paths for the merge, or [] when git cannot answer.
 
@@ -337,6 +450,10 @@ def collect(repo: str, pr: str) -> dict[str, Any]:
             "strict": strict,
             "conflicted_paths": conflicts,
             "required_apps": apps,
+            "required_workflows": [str(w) for w in injected.get("required_workflows") or []],
+            "required_workflow_names": {
+                str(k): str(v) for k, v in (injected.get("required_workflow_names") or {}).items()
+            },
         }
 
     view = _pr_view(repo, pr)
@@ -346,14 +463,13 @@ def collect(repo: str, pr: str) -> dict[str, Any]:
     threads = fetch_review_threads(repo, pr)
     if threads is not None:
         view["reviewThreads"] = threads
-    contexts, strict = required_checks(repo, base)
-    apps: dict[str, str] = {}
-    try:
-        rules = _gh_json(["api", f"repos/{repo}/rules/branches/{base}"])
-        if isinstance(rules, list):
-            apps.update(_required_app_ids(rules))
-    except RuntimeError:
-        apps = {}
+    rules = _branch_rules(repo, base)
+    ruleset_contexts, ruleset_strict = _ruleset_contexts(rules)
+    protection_contexts, protection_strict = protection_required(repo, base)
+    contexts = list(dict.fromkeys([*ruleset_contexts, *protection_contexts]))
+    strict = ruleset_strict or protection_strict
+    apps = _required_app_ids(rules)
+    workflow_rules = ruleset_required_workflows(rules)
     conflicts: list[str] = []
     if str(view.get("mergeable") or "").upper() == "CONFLICTING":
         conflicts = conflicted_paths(f"origin/{base}", str(view.get("headRefOid") or ""))
@@ -363,6 +479,8 @@ def collect(repo: str, pr: str) -> dict[str, Any]:
         "strict": strict,
         "conflicted_paths": conflicts,
         "required_apps": apps,
+        "required_workflows": [w["path"] for w in workflow_rules],
+        "required_workflow_names": workflow_display_names(repo, workflow_rules),
     }
 
 
@@ -385,8 +503,57 @@ def decide(
     failing = [name for name in required if states.get(name, "EXPECTED") in FAILING_STATES]
     pending = [name for name in required if states.get(name, "EXPECTED") in PENDING_STATES]
     unresolved = _unresolved_threads(view)
-    declared_unfixable = [name for name in unfixable_checks if name in failing]
-    fixable_failing = [name for name in failing if name not in unfixable_checks]
+    declared = {str(name).strip() for name in unfixable_checks if str(name).strip()}
+    declared_unfixable = [name for name in failing if name in declared]
+    fixable_failing = [name for name in failing if name not in declared]
+
+    # `type: workflows` ruleset rules (org required workflows) never appear as
+    # named contexts. Match their rollup jobs by workflow display name when we
+    # have one; an unmatched required workflow while GitHub is not merge-ready
+    # is pending, never invisible.
+    required_workflows = [str(w) for w in facts.get("required_workflows") or []]
+    workflow_names = {
+        str(k): str(v) for k, v in (facts.get("required_workflow_names") or {}).items()
+    }
+    failing_workflow_jobs: dict[str, list[str]] = {}
+    pending_workflows: list[str] = []
+    matched_satisfied_workflows: list[str] = []
+    for path in required_workflows:
+        name = workflow_names.get(path, "")
+        if name:
+            jobs = _workflow_job_states(view, name)
+            if not jobs:
+                pending_workflows.append(path)
+                continue
+            bad = sorted(job for job, state in jobs.items() if state in FAILING_STATES)
+            if bad:
+                failing_workflow_jobs[path] = bad
+            elif any(state in PENDING_STATES for state in jobs.values()):
+                pending_workflows.append(path)
+            else:
+                matched_satisfied_workflows.append(path)
+        elif merge_state not in MERGE_READY_STATES:
+            pending_workflows.append(path)
+
+    def _workflow_declared_unfixable(path: str, jobs: list[str]) -> bool:
+        """--unfixable-check may name a workflow path, a job, or 'path (job)'."""
+        if path in declared:
+            return True
+        for job in jobs:
+            if job in declared or f"{path} ({job})" in declared:
+                return True
+        return False
+
+    unfixable_workflow_jobs = {
+        path: jobs
+        for path, jobs in failing_workflow_jobs.items()
+        if _workflow_declared_unfixable(path, jobs)
+    }
+    fixable_workflow_jobs = {
+        path: jobs
+        for path, jobs in failing_workflow_jobs.items()
+        if path not in unfixable_workflow_jobs
+    }
 
     verdict = {
         "board": WAIT,
@@ -394,6 +561,9 @@ def decide(
         "required_checks": required,
         "failing_required": failing,
         "pending_required": pending,
+        "required_workflows": required_workflows,
+        "failing_workflow_jobs": failing_workflow_jobs,
+        "pending_workflows": pending_workflows,
         "conflicted_paths": conflicts,
         "strict_required_status_checks_policy": strict,
         "merge_state_status": merge_state,
@@ -432,6 +602,14 @@ def decide(
         verdict["reason"] = "required check(s) failing: " + ", ".join(fixable_failing)
         return verdict
 
+    if fixable_workflow_jobs:
+        detail = "; ".join(
+            f"{path} ({', '.join(jobs)})" for path, jobs in fixable_workflow_jobs.items()
+        )
+        verdict["board"] = FIX
+        verdict["reason"] = f"required workflow job(s) failing: {detail}"
+        return verdict
+
     if unresolved:
         verdict["board"] = FIX
         verdict["reason"] = (
@@ -444,9 +622,14 @@ def decide(
         verdict["reason"] = "review decision is CHANGES_REQUESTED"
         return verdict
 
-    if pending:
+    if pending or pending_workflows:
+        parts = []
+        if pending:
+            parts.append("required check(s) still running: " + ", ".join(pending))
+        if pending_workflows:
+            parts.append("required workflow(s) not yet successful: " + ", ".join(pending_workflows))
         verdict["board"] = WAIT
-        verdict["reason"] = "required check(s) still running: " + ", ".join(pending)
+        verdict["reason"] = "; ".join(parts)
         return verdict
 
     if view.get("isDraft"):
@@ -459,12 +642,13 @@ def decide(
         verdict["reason"] = f"named HUMAN decision outstanding: {human_decision}"
         return verdict
 
-    if declared_unfixable:
+    if declared_unfixable or unfixable_workflow_jobs:
+        names = list(declared_unfixable)
+        for path, jobs in unfixable_workflow_jobs.items():
+            names.append(f"{path} ({', '.join(jobs)})")
         verdict["board"] = LEFTOVER
         verdict["reason"] = (
-            "required check(s) "
-            + ", ".join(declared_unfixable)
-            + " declared unfixable without editing CI"
+            "required check(s) " + ", ".join(names) + " declared unfixable without editing CI"
         )
         return verdict
 
@@ -503,13 +687,25 @@ def decide(
         )
         return verdict
 
+    if required:
+        base_reason = "every required check passed"
+    elif matched_satisfied_workflows:
+        # Only claim "satisfied" when rollup jobs were matched and green.
+        base_reason = "required workflow(s) satisfied: " + ", ".join(matched_satisfied_workflows)
+    elif required_workflows:
+        # A workflows rule is present, so this base is *not* unprotected --
+        # never report it as "no required check on this base". Unmatched paths
+        # on a merge-ready state mean GitHub already cleared the gate; do not
+        # invent satisfaction evidence we do not have.
+        base_reason = (
+            "required workflow rule(s) present (rollup unmatched; GitHub merge-ready): "
+            + ", ".join(required_workflows)
+        )
+    else:
+        base_reason = "no required check on this base and GitHub reports it mergeable"
     verdict["board"] = MERGE
     verdict["reason"] = (
-        (
-            "no required check on this base and GitHub reports it mergeable"
-            if not required
-            else "every required check passed"
-        )
+        base_reason
         + (f" (non-required checks red: {merge_state})" if merge_state == "UNSTABLE" else "")
         + "; attempt via stack_safe_merge.py --run"
     )
