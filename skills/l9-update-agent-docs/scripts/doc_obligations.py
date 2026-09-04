@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-
 from doc_policy import OBLIGATION_SCHEMA, schema_errors, selector_paths
 
 OBLIGATION_ID = "l9.repo-docs.obligation.v1"
@@ -49,11 +48,7 @@ def semantic_source_digest(
     for surface in required_surfaces:
         active_rules.update(policy["semantic_harvest"]["activation"].get(surface, []))
     paths = sorted(
-        {
-            path
-            for rule in active_rules
-            for path in impact.get("matched_rules", {}).get(rule, [])
-        }
+        {path for rule in active_rules for path in impact.get("matched_rules", {}).get(rule, [])}
     )
     if not paths:
         return None, []
@@ -108,10 +103,7 @@ def _generic_targets(
     paths = selector_paths(root, spec["selectors"])
     if paths:
         kind = "external" if spec["create_policy"] == "external_only" else "file"
-        return [
-            {"kind": kind, "path": path, "selector": path, "present": True}
-            for path in paths
-        ]
+        return [{"kind": kind, "path": path, "selector": path, "present": True} for path in paths]
     if surface == "llms_txt" and not llms_enabled:
         return [{"kind": "surface", "path": None, "selector": "llms_txt", "present": False}]
     if spec["requirement"] == "conditional" and spec["create_policy"] in {
@@ -159,10 +151,15 @@ def _target_applicable(
         return False
     if target.get("path") is None:
         return False
-    if not target["present"] and spec["requirement"] == "conditional" and spec["create_policy"] in {
-        "never",
-        "external_only",
-    }:
+    if (
+        not target["present"]
+        and spec["requirement"] == "conditional"
+        and spec["create_policy"]
+        in {
+            "never",
+            "external_only",
+        }
+    ):
         return False
     return True
 
@@ -206,7 +203,15 @@ def build_obligations(
             module_changes = impact.get("matched_rules", {}).get("module_implementation_change", [])
             targets = _module_targets(root, policy, module_changes)
             if not targets:
-                targets = [{"kind": "surface", "path": None, "selector": "no_configured_subsystem_target", "present": False, "source_changes": module_changes}]
+                targets = [
+                    {
+                        "kind": "surface",
+                        "path": None,
+                        "selector": "no_configured_subsystem_target",
+                        "present": False,
+                        "source_changes": module_changes,
+                    }
+                ]
         else:
             targets = _generic_targets(root, surface, spec, llms_enabled=llms_enabled)
         for target in targets:
@@ -222,56 +227,194 @@ def build_obligations(
             evidence: list[dict[str, Any]] = []
             for rule in rules:
                 value = f"impact_rules.{rule}"
-                evidence.append({"id": _evidence_id("rule", value), "type": "topology", "source": "skills/l9-update-agent-docs/references/doc-surface-policy.yaml", "locator": {"kind": "rule", "value": value}, "epistemic": "CONFIRMED", "supports": "trigger"})
+                evidence.append(
+                    {
+                        "id": _evidence_id("rule", value),
+                        "type": "topology",
+                        "source": "skills/l9-update-agent-docs/references/doc-surface-policy.yaml",
+                        "locator": {"kind": "rule", "value": value},
+                        "epistemic": "CONFIRMED",
+                        "supports": "trigger",
+                    }
+                )
             for path in local_sources:
-                evidence.append({"id": _evidence_id("change", path), "type": "change", "source": "git_diff", "locator": {"kind": "path", "value": path}, "epistemic": "CONFIRMED", "supports": "trigger"})
+                evidence.append(
+                    {
+                        "id": _evidence_id("change", path),
+                        "type": "change",
+                        "source": "git_diff",
+                        "locator": {"kind": "path", "value": path},
+                        "epistemic": "CONFIRMED",
+                        "supports": "trigger",
+                    }
+                )
             target_value = target.get("path") or f"surface:{surface}"
-            evidence.append({"id": _evidence_id("target", target_value), "type": "target", "source": "repository", "locator": {"kind": "path" if target.get("path") else "value", "value": target_value}, "epistemic": "CONFIRMED", "supports": "target_resolution"})
-            evidence.append({"id": _evidence_id("revision", revision["tested_revision_sha"]), "type": "revision", "source": "git", "locator": {"kind": "sha", "value": revision["tested_revision_sha"]}, "epistemic": "CONFIRMED", "supports": "source_revision"})
+            evidence.append(
+                {
+                    "id": _evidence_id("target", target_value),
+                    "type": "target",
+                    "source": "repository",
+                    "locator": {
+                        "kind": "path" if target.get("path") else "value",
+                        "value": target_value,
+                    },
+                    "epistemic": "CONFIRMED",
+                    "supports": "target_resolution",
+                }
+            )
+            evidence.append(
+                {
+                    "id": _evidence_id("revision", revision["tested_revision_sha"]),
+                    "type": "revision",
+                    "source": "git",
+                    "locator": {"kind": "sha", "value": revision["tested_revision_sha"]},
+                    "epistemic": "CONFIRMED",
+                    "supports": "source_revision",
+                }
+            )
             required_validation = ["target_freshness"] if applicable else []
             results: list[dict[str, Any]] = []
             if surface == "module_readmes" and applicable:
                 required_validation.append("owner_capability")
                 cap_status = module_capability["status"]
                 cap_ev = _evidence_id("capability", cap_status)
-                evidence.append({"id": cap_ev, "type": "capability", "source": "readme-pipeline-v1", "locator": {"kind": "value", "value": cap_status}, "epistemic": "CONFIRMED", "supports": "owner_capability"})
-                results.append(_validation_result("owner_capability", "PASS" if cap_status == "AVAILABLE" else "BLOCKED", f"module README capability is {cap_status}", [cap_ev]))
+                evidence.append(
+                    {
+                        "id": cap_ev,
+                        "type": "capability",
+                        "source": "readme-pipeline-v1",
+                        "locator": {"kind": "value", "value": cap_status},
+                        "epistemic": "CONFIRMED",
+                        "supports": "owner_capability",
+                    }
+                )
+                results.append(
+                    _validation_result(
+                        "owner_capability",
+                        "PASS" if cap_status == "AVAILABLE" else "BLOCKED",
+                        f"module README capability is {cap_status}",
+                        [cap_ev],
+                    )
+                )
             if semantic:
                 required_validation.append("semantic_qualification")
             touched = bool(target.get("path") and target["path"] in touched_paths)
             if not applicable:
-                lifecycle = {"status": "NOT_APPLICABLE", "reason": "surface has no applicable target for this change", "terminal": True}
-                qualification = {"kind": "deterministic", "status": "NOT_REQUIRED", "semantic_owner": None, "harvest_target": None, "harvest_request_id": None, "concept_ids": []}
+                lifecycle = {
+                    "status": "NOT_APPLICABLE",
+                    "reason": "surface has no applicable target for this change",
+                    "terminal": True,
+                }
+                qualification = {
+                    "kind": "deterministic",
+                    "status": "NOT_REQUIRED",
+                    "semantic_owner": None,
+                    "harvest_target": None,
+                    "harvest_request_id": None,
+                    "concept_ids": [],
+                }
             elif semantic:
-                lifecycle = {"status": "AWAITING_QUALIFICATION", "reason": "semantic Harvest evidence required", "terminal": False}
-                qualification = {"kind": "semantic", "status": "AWAITING", "semantic_owner": policy["semantic_harvest"]["owner"], "harvest_target": policy["semantic_harvest"]["destinations"].get(surface), "harvest_request_id": None, "concept_ids": []}
+                lifecycle = {
+                    "status": "AWAITING_QUALIFICATION",
+                    "reason": "semantic Harvest evidence required",
+                    "terminal": False,
+                }
+                qualification = {
+                    "kind": "semantic",
+                    "status": "AWAITING",
+                    "semantic_owner": policy["semantic_harvest"]["owner"],
+                    "harvest_target": policy["semantic_harvest"]["destinations"].get(surface),
+                    "harvest_request_id": None,
+                    "concept_ids": [],
+                }
             elif touched:
-                lifecycle = {"status": "SATISFIED", "reason": "owner target changed in the evaluated change set", "terminal": False}
-                qualification = {"kind": "deterministic", "status": "QUALIFIED", "semantic_owner": None, "harvest_target": None, "harvest_request_id": None, "concept_ids": []}
+                lifecycle = {
+                    "status": "SATISFIED",
+                    "reason": "owner target changed in the evaluated change set",
+                    "terminal": False,
+                }
+                qualification = {
+                    "kind": "deterministic",
+                    "status": "QUALIFIED",
+                    "semantic_owner": None,
+                    "harvest_target": None,
+                    "harvest_request_id": None,
+                    "concept_ids": [],
+                }
             elif action_type == "HANDOFF":
-                lifecycle = {"status": "HANDOFF_REQUIRED", "reason": "specialist or external owner action required", "terminal": False}
-                qualification = {"kind": "deterministic", "status": "QUALIFIED", "semantic_owner": None, "harvest_target": None, "harvest_request_id": None, "concept_ids": []}
+                lifecycle = {
+                    "status": "HANDOFF_REQUIRED",
+                    "reason": "specialist or external owner action required",
+                    "terminal": False,
+                }
+                qualification = {
+                    "kind": "deterministic",
+                    "status": "QUALIFIED",
+                    "semantic_owner": None,
+                    "harvest_target": None,
+                    "harvest_request_id": None,
+                    "concept_ids": [],
+                }
             else:
-                lifecycle = {"status": "OPEN", "reason": "owner target has not been refreshed in this change set", "terminal": False}
-                qualification = {"kind": "deterministic", "status": "QUALIFIED", "semantic_owner": None, "harvest_target": None, "harvest_request_id": None, "concept_ids": []}
+                lifecycle = {
+                    "status": "OPEN",
+                    "reason": "owner target has not been refreshed in this change set",
+                    "terminal": False,
+                }
+                qualification = {
+                    "kind": "deterministic",
+                    "status": "QUALIFIED",
+                    "semantic_owner": None,
+                    "harvest_target": None,
+                    "harvest_request_id": None,
+                    "concept_ids": [],
+                }
             obligation = {
                 "schema": OBLIGATION_ID,
-                "obligation_id": "docobl-" + _hash(surface, str(target.get("path")), *local_sources, revision["source_head_sha"]),
+                "obligation_id": "docobl-"
+                + _hash(
+                    surface, str(target.get("path")), *local_sources, revision["source_head_sha"]
+                ),
                 "surface": surface,
-                "target": {"kind": target["kind"], "path": target.get("path"), "selector": target.get("selector"), "present": bool(target.get("present"))},
-                "owner": {"id": spec["owner"], "authority_class": spec["authority_class"], "execution_mode": execution_mode, "executor": executor},
+                "target": {
+                    "kind": target["kind"],
+                    "path": target.get("path"),
+                    "selector": target.get("selector"),
+                    "present": bool(target.get("present")),
+                },
+                "owner": {
+                    "id": spec["owner"],
+                    "authority_class": spec["authority_class"],
+                    "execution_mode": execution_mode,
+                    "executor": executor,
+                },
                 "trigger": {"rules": rules, "source_changes": local_sources, "basis": basis},
                 "revision": dict(revision),
                 "qualification": qualification,
-                "required_action": {"type": action_type, "mode": action_mode, "owner": spec["owner"], "executor": executor},
+                "required_action": {
+                    "type": action_type,
+                    "mode": action_mode,
+                    "owner": spec["owner"],
+                    "executor": executor,
+                },
                 "evidence": evidence,
                 "lifecycle": lifecycle,
                 "validation": {"required": sorted(set(required_validation)), "results": results},
                 "blockers": [],
             }
-            if surface == "module_readmes" and applicable and module_capability["status"] in {"PARTIAL", "BLOCKED"}:
-                obligation["lifecycle"] = {"status": "BLOCKED", "reason": f"owner capability is {module_capability['status']}", "terminal": False}
-                obligation["blockers"] = [f"module README owner capability is {module_capability['status']}"]
+            if (
+                surface == "module_readmes"
+                and applicable
+                and module_capability["status"] in {"PARTIAL", "BLOCKED"}
+            ):
+                obligation["lifecycle"] = {
+                    "status": "BLOCKED",
+                    "reason": f"owner capability is {module_capability['status']}",
+                    "terminal": False,
+                }
+                obligation["blockers"] = [
+                    f"module README owner capability is {module_capability['status']}"
+                ]
             errors = schema_errors(obligation, OBLIGATION_SCHEMA)
             if errors:
                 raise ValueError("invalid compiled obligation: " + "; ".join(errors))
@@ -295,7 +438,11 @@ def apply_semantic_resolutions(
         surface = obligation["surface"]
         if semantic.get("status") in {"BLOCKED", "FAIL"}:
             obligation["qualification"]["status"] = "BLOCKED"
-            obligation["lifecycle"] = {"status": "BLOCKED", "reason": "semantic Harvest evidence failed admission", "terminal": False}
+            obligation["lifecycle"] = {
+                "status": "BLOCKED",
+                "reason": "semantic Harvest evidence failed admission",
+                "terminal": False,
+            }
             obligation["blockers"] = sorted(set(semantic.get("blockers", [])))
             continue
         concepts = by_surface.get(surface, [])
@@ -303,18 +450,34 @@ def apply_semantic_resolutions(
             continue
         obligation["qualification"]["status"] = "QUALIFIED"
         obligation["qualification"]["harvest_request_id"] = request_id
-        obligation["qualification"]["concept_ids"] = sorted({str(item["concept_id"]) for item in concepts})
+        obligation["qualification"]["concept_ids"] = sorted(
+            {str(item["concept_id"]) for item in concepts}
+        )
         actions = {item["action"] for item in concepts}
         for concept in concepts:
             for item in concept.get("evidence", []):
                 locator = item.get("locator") or {}
                 value = str(locator.get("value") or item.get("id") or concept["concept_id"])
-                evidence = {"id": f"harvest-{item.get('id') or _hash(value, size=10)}", "type": "harvest", "source": str(item.get("source") or "harvest.json"), "locator": {"kind": "path" if locator.get("kind") == "path_lines" else "value", "value": value}, "epistemic": "CONFIRMED", "supports": f"semantic_qualification:{concept['concept_id']}"}
+                evidence = {
+                    "id": f"harvest-{item.get('id') or _hash(value, size=10)}",
+                    "type": "harvest",
+                    "source": str(item.get("source") or "harvest.json"),
+                    "locator": {
+                        "kind": "path" if locator.get("kind") == "path_lines" else "value",
+                        "value": value,
+                    },
+                    "epistemic": "CONFIRMED",
+                    "supports": f"semantic_qualification:{concept['concept_id']}",
+                }
                 if evidence["id"] not in {row["id"] for row in obligation["evidence"]}:
                     obligation["evidence"].append(evidence)
         if actions == {"PRESERVE"}:
             obligation["required_action"]["type"] = "PRESERVE"
-            obligation["lifecycle"] = {"status": "PRESERVED", "reason": "Harvest found beneficiary semantics stronger; no mutation required", "terminal": True}
+            obligation["lifecycle"] = {
+                "status": "PRESERVED",
+                "reason": "Harvest found beneficiary semantics stronger; no mutation required",
+                "terminal": True,
+            }
             continue
         if actions == {"HANDOFF"}:
             obligation["required_action"]["type"] = "HANDOFF"
@@ -325,11 +488,23 @@ def apply_semantic_resolutions(
             obligation["required_action"]["type"] = "REFRESH"
         target = obligation["target"]["path"]
         if target and target in touched:
-            obligation["lifecycle"] = {"status": "SATISFIED", "reason": "semantically qualified owner target changed in the evaluated change set", "terminal": False}
+            obligation["lifecycle"] = {
+                "status": "SATISFIED",
+                "reason": "semantically qualified owner target changed in the evaluated change set",
+                "terminal": False,
+            }
         elif obligation["required_action"]["type"] == "HANDOFF":
-            obligation["lifecycle"] = {"status": "HANDOFF_REQUIRED", "reason": "Harvest qualified a specialist-owner handoff", "terminal": False}
+            obligation["lifecycle"] = {
+                "status": "HANDOFF_REQUIRED",
+                "reason": "Harvest qualified a specialist-owner handoff",
+                "terminal": False,
+            }
         else:
-            obligation["lifecycle"] = {"status": "OPEN", "reason": "Harvest qualified the obligation; owner target still requires action", "terminal": False}
+            obligation["lifecycle"] = {
+                "status": "OPEN",
+                "reason": "Harvest qualified the obligation; owner target still requires action",
+                "terminal": False,
+            }
     return obligations
 
 
@@ -348,30 +523,70 @@ def validate_and_close_obligations(
         target = obligation["target"]["path"]
         if "target_freshness" in obligation["validation"]["required"]:
             if obligation["required_action"]["type"] in {"NO_ACTION", "PRESERVE"}:
-                existing["target_freshness"] = _validation_result("target_freshness", "NotApplicable", "no target mutation required")
+                existing["target_freshness"] = _validation_result(
+                    "target_freshness", "NotApplicable", "no target mutation required"
+                )
             elif target and target in touched:
-                target_ev = next((row["id"] for row in obligation["evidence"] if row["type"] == "target"), None)
-                existing["target_freshness"] = _validation_result("target_freshness", "PASS", "target changed in the evaluated change set", [target_ev] if target_ev else [])
+                target_ev = next(
+                    (row["id"] for row in obligation["evidence"] if row["type"] == "target"), None
+                )
+                existing["target_freshness"] = _validation_result(
+                    "target_freshness",
+                    "PASS",
+                    "target changed in the evaluated change set",
+                    [target_ev] if target_ev else [],
+                )
             else:
-                existing["target_freshness"] = _validation_result("target_freshness", "UNKNOWN", "target was not changed in the evaluated change set")
+                existing["target_freshness"] = _validation_result(
+                    "target_freshness",
+                    "UNKNOWN",
+                    "target was not changed in the evaluated change set",
+                )
         if "semantic_qualification" in obligation["validation"]["required"]:
             qualified = obligation["qualification"]["status"] == "QUALIFIED"
             harvest_ids = [row["id"] for row in obligation["evidence"] if row["type"] == "harvest"]
-            existing["semantic_qualification"] = _validation_result("semantic_qualification", "PASS" if qualified else "UNKNOWN", "qualified by admitted Harvest evidence" if qualified else "semantic qualification missing", harvest_ids)
+            existing["semantic_qualification"] = _validation_result(
+                "semantic_qualification",
+                "PASS" if qualified else "UNKNOWN",
+                "qualified by admitted Harvest evidence"
+                if qualified
+                else "semantic qualification missing",
+                harvest_ids,
+            )
         obligation["validation"]["results"] = [existing[name] for name in sorted(existing)]
-        statuses = {row["status"] for row in obligation["validation"]["results"] if row["name"] in obligation["validation"]["required"]}
+        statuses = {
+            row["status"]
+            for row in obligation["validation"]["results"]
+            if row["name"] in obligation["validation"]["required"]
+        }
         if "BLOCKED" in statuses or "FAIL" in statuses:
-            obligation["lifecycle"] = {"status": "BLOCKED", "reason": "required validation blocked or failed", "terminal": False}
+            obligation["lifecycle"] = {
+                "status": "BLOCKED",
+                "reason": "required validation blocked or failed",
+                "terminal": False,
+            }
             continue
         if obligation["required_action"]["type"] == "HANDOFF" and target not in touched:
             continue
         if statuses and statuses.issubset({"PASS", "NotApplicable"}):
-            obligation["lifecycle"] = {"status": "CLOSED", "reason": "required owner action and validation are evidenced", "terminal": True}
+            obligation["lifecycle"] = {
+                "status": "CLOSED",
+                "reason": "required owner action and validation are evidenced",
+                "terminal": True,
+            }
         elif lifecycle["status"] == "SATISFIED":
-            obligation["lifecycle"] = {"status": "VALIDATED", "reason": "owner action observed but required validation remains incomplete", "terminal": False}
+            obligation["lifecycle"] = {
+                "status": "VALIDATED",
+                "reason": "owner action observed but required validation remains incomplete",
+                "terminal": False,
+            }
         errors = schema_errors(obligation, OBLIGATION_SCHEMA)
         if errors:
-            obligation["lifecycle"] = {"status": "BLOCKED", "reason": "obligation failed canonical schema validation", "terminal": False}
+            obligation["lifecycle"] = {
+                "status": "BLOCKED",
+                "reason": "obligation failed canonical schema validation",
+                "terminal": False,
+            }
             obligation["blockers"] = sorted(set(obligation["blockers"] + errors))
     return obligations
 

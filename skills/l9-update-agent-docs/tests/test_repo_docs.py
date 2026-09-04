@@ -53,9 +53,7 @@ def init(root: Path) -> None:
 def commit(root: Path, message: str = "change") -> str:
     subprocess.run(["git", "-C", str(root), "add", "."], check=True)
     subprocess.run(["git", "-C", str(root), "commit", "-q", "-m", message], check=True)
-    return subprocess.check_output(
-        ["git", "-C", str(root), "rev-parse", "HEAD"], text=True
-    ).strip()
+    return subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"], text=True).strip()
 
 
 def stack(root: Path, architecture: bool = True) -> None:
@@ -238,9 +236,7 @@ def test_bound_harvest_normalizes_into_same_obligations_and_closes(tmp_path: Pat
     commit(root, "harvest evidence")
     receipt = rd.audit_repository(root, changed_since=base)
     semantic = [
-        row
-        for row in receipt["obligations"]
-        if row["surface"] in {"architecture", "invariants"}
+        row for row in receipt["obligations"] if row["surface"] in {"architecture", "invariants"}
     ]
     assert receipt["semantic_harvest"]["status"] == "PASS"
     assert receipt["semantic_harvest"]["discovered"] is True
