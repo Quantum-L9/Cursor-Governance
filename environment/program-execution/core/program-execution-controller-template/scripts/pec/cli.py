@@ -5,7 +5,9 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
+from .common import load_json
 from .contracts import (
     ContractError,
     draft_source_contract,
@@ -38,6 +40,7 @@ from .controller import (
     validate_runtime,
     verify_attempt,
 )
+from .dispatch import dispatch_rendered_contract
 from .exec_env import resolve_exec_env
 from .workspace_reset import fresh_execution_workspace
 
@@ -414,6 +417,8 @@ def main(argv: list[str] | None = None, *, template_root: Path) -> int:
             db, ledger = open_runtime(args.workspace)
             try:
                 value = render_contract(db, ledger, args.workspace.resolve(), args.task_id)
+                rendered = load_json(Path(value["contract"]))
+                value["dispatch"] = dispatch_rendered_contract(rendered)
             finally:
                 db.close()
         elif args.command == "start":
@@ -514,5 +519,16 @@ def main(argv: list[str] | None = None, *, template_root: Path) -> int:
         print_json(value)
         return 0
     except (ControllerError, ContractError, ValueError, RuntimeError) as exc:
-        print_json({"status": "ERROR", "error": str(exc)})
+        # Flattening every failure to one string lost what kind of failure it
+        # was: a caller could not tell a contract defect from a state refusal
+        # from a bad argument without parsing prose.
+        payload: dict[str, Any] = {
+            "status": "ERROR",
+            "error": str(exc),
+            "error_type": type(exc).__name__,
+        }
+        code = getattr(exc, "error_code", None) or getattr(exc, "code", None)
+        if isinstance(code, str) and code:
+            payload["error_code"] = code
+        print_json(payload)
         return 2

@@ -253,18 +253,26 @@ class HookWiringTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("run_with_timeout.sh", text)
         self.assertIn("run_with_timeout", text)
+        # The ceiling is now the CLAMPED one ("$_repair_cap"), not the raw
+        # L9_BOOTSTRAP_REPAIR_BUDGET default: a fixed 90 s inside a 30 s hook
+        # could only ever be killed. The invariant this test owns is unchanged —
+        # go through the portable wrapper, never bare `timeout`, never a stub.
+        self.assertNotRegex(text, r'(?<!run_with_)timeout "\$_repair_cap"')
         self.assertNotRegex(
             text,
             r'(?<!run_with_)timeout "\$\{L9_BOOTSTRAP_REPAIR_BUDGET:-90\}"',
         )
         self.assertNotIn('run_with_timeout() { shift; "$@"; }', text)
         skipped = text.index("bootstrap repair: SKIPPED — run_with_timeout.sh missing")
-        installer = text.index('bash "$installer"', skipped)
-        repair = text.index('run_with_timeout "${L9_BOOTSTRAP_REPAIR_BUDGET:-90}"', skipped)
-        marker = text.index(': >"$marker"', installer)
-        self.assertLess(skipped, installer)
+        repair = text.index('run_with_timeout "$_repair_cap"', skipped)
+        installer = text.index('bash "$installer"', repair)
+        # The attempt marker is now written BEFORE the installer, not after it:
+        # writing it only on success made an unfinishable repair re-arm every
+        # session forever. See test_session_start_refresh_guard.py.
+        marker = text.index('>"$marker"', skipped)
+        self.assertLess(skipped, repair)
         self.assertLess(repair, installer)
-        self.assertLess(installer, marker)
+        self.assertLess(marker, installer)
 
 
 class PortableTimeoutTests(unittest.TestCase):

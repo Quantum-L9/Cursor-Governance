@@ -19,6 +19,23 @@
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
+# Wall clock for the whole hook. Every bounded sub-operation below sizes itself
+# against what is LEFT of the registration's `timeout`, not against a constant
+# of its own: the repair used to be launched with a fixed 90 s ceiling inside a
+# 30 s hook, which is not a long-running operation but an impossible one.
+_L9_HOOK_START=$(date +%s)
+
+# Must agree with the `timeout` on this hook's entry in settings.template.json:
+# this value sizes the clamping, that value is where the harness kills the hook,
+# and a drift between them computes the clamp against a window that does not
+# exist. Nothing renders one from the other — the agreement is held by
+# tests/test_session_start_partial_emit.py::BudgetRegistrationLockstepTest, so
+# a bump in one place fails there rather than degrading silently in production.
+_l9_budget_left() {
+  local total="${L9_SESSION_START_BUDGET:-30}" reserve="${L9_SESSION_START_RESERVE:-4}"
+  echo $(( total - ( $(date +%s) - _L9_HOOK_START ) - reserve ))
+}
+
 resolve_governance_dir() {
   local d="$HOME/.cursor-governance"
   if [ -n "${L9_GOVERNANCE_DIR:-}" ] && [ "${L9_GOVERNANCE_DIR}" != "$d" ]; then
@@ -38,11 +55,29 @@ json_escape() {
   printf '%s' "$s"
 }
 
+_L9_EMITTED=0
 emit() {
+  [ "$_L9_EMITTED" = "1" ] && exit 0
+  _L9_EMITTED=1
   local ctx
   ctx=$(json_escape "$1")
   printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s"}}\n' "$ctx"
   exit 0
+}
+
+# FAIL-OPEN is not the same as FAIL-SAFE, and the difference is this function.
+# Everything below accumulates into LINES and is emitted by ONE call on the last
+# line, so the hook is resilient to every failure it anticipated (missing SSOT,
+# unreadable profile, absent loader — each degrades to a WARN line) and totally
+# fragile to the one it did not: running out of wall clock. A hosted container
+# recorded `duration_ms 30008, exit_code 1, aborted true` on this hook and the
+# session received NO governance context whatsoever — not a smaller blob, none.
+# Emitting what has accumulated restores the contract the header already claims.
+_l9_emit_partial() {
+  [ "$_L9_EMITTED" = "1" ] && exit 0
+  LINES+=("WARN: SessionStart reached its timeout budget — the context above is PARTIAL.")
+  LINES+=("      Raise this hook's timeout, or run 'make claude-install' for the full report.")
+  emit "$(printf '%s\n' "${LINES[@]}")"
 }
 
 # Cursor also loads projected .claude/settings.json in this repo. This hook is
@@ -61,7 +96,23 @@ fi
 unset _l9_claude_runtime
 
 WORKSPACE="${CLAUDE_PROJECT_DIR:-$PWD}"
+
+# The locked interpreter is resolved inside the `resolve_governance_dir` block
+# below; this is the fallback for when that block does not run. Without it,
+# `emit_bootstrap_status "$PY"` referenced an unset variable under `set -u` and
+# the hook died with `PY: unbound variable`, exit 1, having emitted NOTHING —
+# so the one message that branch exists to deliver ("governance SSOT: NOT
+# FOUND — web/setup.sh must clone ..."), the message that tells an operator
+# their environment was never provisioned, could never reach anyone.
+PY="python3"
+
 LINES=()
+# Armed only once LINES exists: under `set -u` a trap that expands an unset
+# array would fail exactly when it is most needed. EXIT is included because the
+# budget kill is not the only way this script can stop early — an unbound
+# variable or a failed builtin ends it just as silently, and the emit guard
+# makes the normal path a no-op here.
+trap '_l9_emit_partial' TERM INT EXIT
 LINES+=("L9 Governance — Claude Code session")
 LINES+=("workspace: $WORKSPACE")
 
@@ -173,13 +224,16 @@ if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
       write_refresh_receipt fetch-failed "$local_sha" unknown -1 unknown
       LINES+=("governance refresh: WARN fetch origin/$GOV_BRANCH failed — reusing clone (may be stale)")
     fi
-    # Per-session, per-repository dependency work (consumer workspace toolchain
-    # + pre-commit warm) moved out of the cached account Setup script.
-    DEPS_HELPER="$GOV/environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh"
-    if [ -f "$DEPS_HELPER" ]; then
-      DEPS_LINE=$(bash "$DEPS_HELPER" --workspace "$WORKSPACE" 2>&1 | tail -1)
-      LINES+=("session deps: ${DEPS_LINE:-unknown}")
-    fi
+    # Dependency provisioning is NOT run from here. It was, and it is why this
+    # hook never finished: `session_deps_cloud.sh` blocks for its own 20 s
+    # budget while pip resolves a consumer workspace (one observed run cloned a
+    # git dependency and downloaded wheels), so ~25 s of a 30 s hook was spent
+    # before the reporting this hook exists for had begun. SessionStart hooks
+    # run CONCURRENTLY — the harness spawned indices 0/1/2 within 4 ms of each
+    # other — so deps now has its own registration in settings.template.json and
+    # its own timeout, and costs this hook nothing instead of costing it
+    # everything. See ADR/audit note in SESSION_START_SPEC.md.
+    :
   fi
 fi
 
@@ -387,17 +441,35 @@ except Exception:
     *)
       if [ ! -f "$marker" ] && [ -f "$installer" ]; then
         mkdir -p "$HOME/.l9/claude"
+        # Clamp to what is LEFT of this hook's budget. A fixed 90 s ceiling
+        # inside a 30 s hook cannot succeed — it can only be killed, and being
+        # killed is what kept the receipt `failed` and the marker unwritten.
+        _repair_left="$(_l9_budget_left)"
+        _repair_cap="${L9_BOOTSTRAP_REPAIR_BUDGET:-90}"
+        [ "$_repair_cap" -gt "$_repair_left" ] && _repair_cap="$_repair_left"
         if ! type run_with_timeout >/dev/null 2>&1; then
           LINES+=("bootstrap repair: SKIPPED — run_with_timeout.sh missing; installer not started")
+        elif [ "$_repair_cap" -lt "${L9_BOOTSTRAP_REPAIR_MIN:-15}" ]; then
+          LINES+=("bootstrap repair: DEFERRED — ${_repair_left}s of hook budget left, needs >=${L9_BOOTSTRAP_REPAIR_MIN:-15}s")
+          LINES+=("bootstrap repair:   run 'make claude-install' to repair now (receipt: '$state')")
         else
-          LINES+=("bootstrap repair: receipt was '$state' at ${revision:0:8} — running the installer once")
-          if run_with_timeout "${L9_BOOTSTRAP_REPAIR_BUDGET:-90}" \
+          # The marker records that this REVISION was attempted, and it is
+          # written BEFORE the attempt. Writing it only on success made the
+          # repair self-perpetuating: the attempt could not finish inside the
+          # budget, so the marker never appeared, so the next session re-armed
+          # it and spent the whole budget again — for every session, forever.
+          # An attempt that fails is still an attempt; a revision bump re-arms.
+          printf '%s attempted state=%s\n' \
+            "$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)" "$state" >"$marker"
+          LINES+=("bootstrap repair: receipt was '$state' at ${revision:0:8} — running the installer once (${_repair_cap}s)")
+          if run_with_timeout "$_repair_cap" \
             env L9_BOOTSTRAP_LOG_PATH="$HOME/.l9/claude/bootstrap-repair-${revision}.log" \
             bash "$installer" \
             >"$HOME/.l9/claude/bootstrap-repair-${revision}.log" 2>&1; then
-            : >"$marker"
+            printf 'ok\n' >>"$marker"
           else
             _repair_rc=$?
+            printf 'failed rc=%s\n' "$_repair_rc" >>"$marker"
             _repair_how="$(head -n 3 "$HOME/.l9/claude/bootstrap-repair-${revision}.log" | tr '\n' ' ')"
             LINES+=("bootstrap repair: FAILED rc=${_repair_rc} — ${_repair_how:-no log bytes}")
           fi

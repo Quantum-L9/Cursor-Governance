@@ -20,13 +20,14 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
+import yaml
+
 TESTS_DIR = Path(__file__).resolve().parent
 if str(TESTS_DIR.parent) not in sys.path:
     sys.path.insert(0, str(TESTS_DIR.parent))
 if str(TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(TESTS_DIR))
 
-import yaml  # noqa: E402
 from helpers import (  # type: ignore[import-not-found]  # noqa: E402
     CONTROLLER_ROOT,
     make_blueprint,
@@ -171,6 +172,74 @@ class RelockTests(unittest.TestCase):
                 after["TASK-002"]["required_validation_commands"],
                 ["python3 -c 'print(1)'"],
             )
+
+    def test_a_program_wide_edit_is_refused_by_a_task_relock(self) -> None:
+        """Refreshing every digest while replacing only tasks laundered gate edits."""
+        from pec.blueprint import BlueprintError
+
+        with TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            blueprint, lock_path = self._drifted(tmp)
+            gates_path = blueprint / "CONVERGENCE_GATES.yaml"
+            gates = yaml.safe_load(gates_path.read_text(encoding="utf-8"))
+            gates["gates"][0]["title"] = "edited after the lock froze it"
+            gates_path.write_text(yaml.safe_dump(gates, sort_keys=False), encoding="utf-8")
+            before = lock_path.read_bytes()
+            with self.assertRaises(BlueprintError) as ctx:
+                relock_tasks(lock_path, ["TASK-002"])
+            self.assertIn("gates", str(ctx.exception))
+            self.assertEqual(lock_path.read_bytes(), before, "a refused relock must write nothing")
+
+    def test_compile_stamps_and_admission_fields_do_not_refuse_a_task_relock(self) -> None:
+        """A live campaign's compiled files always differ from the lock in these.
+
+        A task-card edit is a new source revision (traceability), a recompile
+        re-stamps `snapshot_at`/`expiry`/`produced_at`, and admission owns
+        `program.definition_status` plus the bound evidence entries. None of
+        that is a program-wide edit.
+        """
+        with TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            blueprint, lock_path = self._drifted(tmp)
+            trace_path = blueprint / "SOURCE_TRACEABILITY.yaml"
+            trace = yaml.safe_load(trace_path.read_text(encoding="utf-8"))
+            trace["sources"][0]["revision"] = "sha256:" + "f" * 64
+            write_yaml(trace_path, trace)
+            program_path = blueprint / "PROGRAM.yaml"
+            program = yaml.safe_load(program_path.read_text(encoding="utf-8"))
+            program["program"]["definition_status"] = "draft"
+            program["program"]["snapshot_at"] = "2030-01-01T00:00:00+00:00"
+            write_yaml(program_path, program)
+            evidence_path = blueprint / "EVIDENCE_CATALOG.yaml"
+            evidence = yaml.safe_load(evidence_path.read_text(encoding="utf-8"))
+            evidence["evidence"][0]["status"] = "planned"
+            evidence["evidence"][0]["revision"] = "UNKNOWN"
+            evidence["evidence"][0]["produced_at"] = "2030-01-01T00:00:00+00:00"
+            write_yaml(evidence_path, evidence)
+
+            outcome = relock_tasks(lock_path, ["TASK-002"])
+
+            self.assertEqual(outcome["relocked"], ["TASK-002"])
+            ok, errors = verify_program_lock(lock_path)
+            self.assertTrue(ok, errors)
+
+    def test_a_traceability_edit_beyond_the_revision_is_refused(self) -> None:
+        """Source identity and authority class are program-wide; the revision is not."""
+        from pec.blueprint import BlueprintError
+
+        with TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            blueprint, lock_path = self._drifted(tmp)
+            trace_path = blueprint / "SOURCE_TRACEABILITY.yaml"
+            trace = yaml.safe_load(trace_path.read_text(encoding="utf-8"))
+            trace["sources"][0]["revision"] = "sha256:" + "f" * 64
+            trace["sources"][0]["authority_class"] = "inferred"
+            write_yaml(trace_path, trace)
+            before = lock_path.read_bytes()
+            with self.assertRaises(BlueprintError) as ctx:
+                relock_tasks(lock_path, ["TASK-002"])
+            self.assertIn("traceability", str(ctx.exception))
+            self.assertEqual(lock_path.read_bytes(), before, "a refused relock must write nothing")
 
     def test_a_relocked_lock_verifies_again(self) -> None:
         """The relock must resolve the staleness, not merely rename it."""

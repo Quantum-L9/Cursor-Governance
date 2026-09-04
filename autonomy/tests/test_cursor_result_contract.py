@@ -53,6 +53,24 @@ class CursorResultContractTests(unittest.TestCase):
     def test_unmapped_role_has_no_result_contract(self) -> None:
         task = build_cursor_task(_deployment("coordinator"))
         self.assertNotIn("result_contract", task)
+        self.assertEqual(task["subagent_type"], "generalPurpose")
+        self.assertFalse(task["subagent_type"].startswith("l9-"))
+
+    def test_managed_roles_emit_l9_task_types(self) -> None:
+        expected = {
+            "recon": "l9-recon",
+            "remediator": "l9-pr-remediation",
+            "executor": "l9-test",
+            "test": "l9-test",
+            "evidence_writer": "l9-documentation",
+            "documentation": "l9-documentation",
+            "reviewer": "l9-verifier-reviewer",
+            "verifier": "l9-verifier-reviewer",
+            "verifier_reviewer": "l9-verifier-reviewer",
+        }
+        for role, name in expected.items():
+            task = build_cursor_task(_deployment(role))
+            self.assertEqual(task["subagent_type"], name, role)
 
 
 if __name__ == "__main__":

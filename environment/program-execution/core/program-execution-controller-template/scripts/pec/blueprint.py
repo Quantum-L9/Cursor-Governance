@@ -5,7 +5,14 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-from .common import digest_object, load_yaml, sha256_file, utc_now, write_json
+from .common import (
+    digest_object,
+    load_yaml,
+    sha256_file,
+    utc_now,
+    verification_mechanisms_from_card,
+    write_json,
+)
 
 LOCK_SCHEMA = Path(__file__).resolve().parents[2] / "schemas" / "program-lock.schema.json"
 
@@ -60,9 +67,10 @@ def normalize_blueprint(root: Path) -> dict[str, Any]:
             raise BlueprintError(f"task {raw['id']} references unknown target {raw['target_id']}")
         execution_kind = raw["execution_kind"]
         repository_id = target.get("repository_id") if execution_kind == "repo_local" else None
+        verification_mechanisms = verification_mechanisms_from_card(raw)
         required_commands = [
             item["command_or_inspection"]
-            for item in raw.get("validation") or []
+            for item in verification_mechanisms
             if item.get("method") in {"command", "command_and_inspection"}
         ]
         tasks.append(
@@ -83,6 +91,7 @@ def normalize_blueprint(root: Path) -> dict[str, Any]:
                 "completion_gates": list(raw.get("completion_gate_ids") or []),
                 "authorization_ceiling": dict(raw.get("authorization_ceiling") or {}),
                 "required_acceptance": [item["id"] for item in raw.get("acceptance") or []],
+                "verification_mechanisms": verification_mechanisms,
                 "required_validation_commands": required_commands,
                 "risk_tier": (raw.get("risk") or {}).get("tier", "T2"),
                 "source": raw,
@@ -141,6 +150,32 @@ def relock_tasks(lock_path: Path, task_ids: Iterable[str]) -> dict[str, Any]:
     if missing:
         raise BlueprintError(f"cannot relock tasks absent from the Blueprint: {sorted(missing)}")
 
+    recorded_tasks = {str(task["id"]): task for task in lock.get("tasks") or []}
+    if set(recorded_tasks) != set(live):
+        raise BlueprintError("scoped relock refused: task membership changed")
+
+    recorded_sources = dict(lock.get("source_digests") or {})
+    current_sources = dict(current.get("source_digests") or {})
+    if set(recorded_sources) != set(current_sources):
+        raise BlueprintError("scoped relock refused: Blueprint source membership changed")
+    # Program-wide sources are compiled artifacts, not authored inputs: a resume
+    # that reaches this call has just recompiled the Blueprint, so PROGRAM.yaml
+    # and its siblings differ from what the prior lock attested on every run.
+    # Refusing on that drift would make scoped relock unreachable. What the
+    # explicit-task-ids path must not do is absorb a *task definition* nobody
+    # named, which is what the next guard closes.
+    non_selected_drift = sorted(
+        task_id
+        for task_id, task in recorded_tasks.items()
+        if task_id not in wanted
+        and task_definition_digest(task) != task_definition_digest(live[task_id])
+    )
+    if non_selected_drift:
+        raise BlueprintError(
+            "scoped relock refused: non-selected task definitions changed: "
+            + ", ".join(non_selected_drift)
+        )
+
     previous_digest = str(lock.get("lock_digest") or "")
     definitions: dict[str, dict[str, str]] = {}
     tasks: list[dict[str, Any]] = []
@@ -155,12 +190,32 @@ def relock_tasks(lock_path: Path, task_ids: Iterable[str]) -> dict[str, Any]:
         }
         tasks.append(live[task_id])
 
+    # Admission annotates compiled files after the lock freezes them, so the
+    # file digests legitimately move on a live campaign; refreshing them is
+    # what keeps the next verification from reporting the staleness this call
+    # resolved. What must NOT ride along under a task-scoped relock is a change
+    # to a program-wide section: refreshing CONVERGENCE_GATES.yaml's digest
+    # while the lock still carries the old gates would make the lock attest a
+    # file it does not reflect.
+    changed_sections = sorted(
+        name
+        for name in _PROGRAM_WIDE_SECTIONS
+        if _semantic_view(name, lock.get(name)) != _semantic_view(name, current.get(name))
+    )
+    if changed_sections:
+        raise BlueprintError(
+            "relock adopts task definitions only; program-wide sections changed: "
+            + ", ".join(changed_sections)
+            + " -- revert those edits or bootstrap a fresh workspace"
+        )
     body = dict(lock)
     body.pop("lock_digest", None)
     body["tasks"] = tasks
     # The file digests must move with the definitions, or the very next
-    # verification reports the same staleness this call just resolved.
-    body["source_digests"] = current.get("source_digests") or {}
+    # verification reports the same staleness this call just resolved. The
+    # guards above are what keep that refresh honest: no unnamed task
+    # definition, and no change in task or source membership, reaches here.
+    body["source_digests"] = dict(current_sources)
     body["lock_digest"] = digest_object(body)
     schema_errors = validate_program_lock_schema(body)
     if schema_errors:
@@ -173,6 +228,39 @@ def relock_tasks(lock_path: Path, task_ids: Iterable[str]) -> dict[str, Any]:
         "definitions": definitions,
         "tasks": {task_id: live[task_id] for task_id in definitions},
     }
+
+
+#: Keys the compiler stamps with the compile time (`snapshot_at` in PROGRAM.yaml
+#: and CURRENT_STATE.yaml, `produced_at` in EVIDENCE_CATALOG.yaml, `expiry` in
+#: DO_NOT_BUILD.yaml). Every recompile moves them; they carry no program intent.
+_COMPILE_STAMP_KEYS = frozenset({"snapshot_at", "produced_at", "expiry", "expires_at"})
+
+#: Keys admission writes AFTER the lock froze the file, per section:
+#: `accept_blueprint` flips `program.definition_status`; `collect_evidence`
+#: binds each evidence entry's environment/notes/producer/revision/status/digest;
+#: the traceability register's `sources[*].revision` is the digest of the
+#: authored source, which a task-card edit changes by definition. A relock
+#: compares program-wide sections with these masked, because a live campaign's
+#: compiled files always differ from the lock in exactly these fields.
+_ADMISSION_OWNED_KEYS: dict[str, frozenset[str]] = {
+    "program": frozenset({"definition_status"}),
+    "evidence": frozenset({"environment", "notes", "producer", "revision", "status", "digest"}),
+    "traceability": frozenset({"revision"}),
+}
+
+
+def _semantic_view(section: str, value: Any) -> Any:
+    """`value` with compile stamps and admission-owned keys removed, recursively."""
+    masked = _COMPILE_STAMP_KEYS | _ADMISSION_OWNED_KEYS.get(section, frozenset())
+
+    def _strip(node: Any) -> Any:
+        if isinstance(node, dict):
+            return {key: _strip(item) for key, item in node.items() if key not in masked}
+        if isinstance(node, list):
+            return [_strip(item) for item in node]
+        return node
+
+    return _strip(value)
 
 
 def validate_program_lock_schema(lock: dict[str, Any]) -> list[str]:
@@ -192,13 +280,42 @@ def validate_program_lock_schema(lock: dict[str, Any]) -> list[str]:
     ]
 
 
-def write_program_lock(root: Path, target: Path) -> dict[str, Any]:
+def build_program_lock(root: Path) -> dict[str, Any]:
+    """Normalize and schema-check a Blueprint into a lock body, writing nothing."""
     lock = normalize_blueprint(root)
     schema_errors = validate_program_lock_schema(lock)
     if schema_errors:
         raise BlueprintError("program lock schema failed: " + "; ".join(schema_errors))
+    return lock
+
+
+def write_program_lock(root: Path, target: Path) -> dict[str, Any]:
+    lock = build_program_lock(root)
     write_json(target, lock)
     return lock
+
+
+#: Lock sections that mirror one Blueprint file each. A relock names TASKS; if
+#: any of these sections would change too, the edit was program-wide.
+_PROGRAM_WIDE_SECTIONS = (
+    "program",
+    "targets",
+    "authority",
+    "decisions",
+    "unknowns",
+    "risks",
+    "waivers",
+    "evidence",
+    "do_not_build",
+    "current_state",
+    "workstreams",
+    "dependency_graph",
+    "waves",
+    "gates",
+    "observability",
+    "cutover_and_rollback",
+    "traceability",
+)
 
 
 def verify_program_lock(lock_path: Path) -> tuple[bool, list[str]]:

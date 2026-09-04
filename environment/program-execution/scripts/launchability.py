@@ -37,14 +37,21 @@ from typing import Any
 # Sibling import safety: this module is also loaded via importlib (tests) and
 # run directly, so the PE root may not be on sys.path.
 _PE_ROOT = Path(__file__).resolve().parents[1]
+# APPEND, never insert(0): Program Execution needs its own PE-exclusive
+# packages here, but `scripts` is a top-level name it SHARES with the
+# repository root. Prepending would hand PE's `scripts/` that name for the
+# whole process. See peer_execution.imports.pe_script.
 if str(_PE_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PE_ROOT))
+    sys.path.append(str(_PE_ROOT))
 
 from peer_execution.validation_command import validation_command_error  # noqa: E402
 
 SEVERITY_ORDER = {"blocker": 0, "warning": 1, "info": 2}
 _PY_MODULE = re.compile(r"^(?P<pkg>[\w./-]+)\.py$")
-_INSPECTION_KINDS = {"analysis", "inspection", "decision", "program_control", "review"}
+_INSPECTION_KINDS = {"analysis", "inspection", "decision", "program_control", "review", "read_only"}
+_COMMAND_METHODS = {"command", "command_and_inspection"}
+_TERMINAL_METHODS = {"command", "command_and_inspection", "external_adapter"}
+_MUTATING_ACTIONS = {"local_write", "commit", "destructive_change"}
 
 
 class LaunchabilityError(RuntimeError):
@@ -63,21 +70,67 @@ def _finding(
     }
 
 
-def declared_validation_commands(task: dict[str, Any]) -> list[str]:
-    """Executable commands the task itself declares. Explicit beats inferred."""
-    commands: list[str] = []
-    for entry in task.get("validation") or []:
+def declared_verification_mechanisms(task: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return the Blueprint's typed verification mechanisms without flattening them."""
+    mechanisms: list[dict[str, Any]] = []
+    for entry in task.get("validation") or task.get("verification_mechanisms") or []:
         if not isinstance(entry, dict):
             continue
-        command = str(entry.get("command_or_inspection") or entry.get("command") or "").strip()
         method = str(entry.get("method") or "").strip()
-        if command and method in {"command", "command_and_inspection", "external_adapter"}:
-            commands.append(command)
+        instruction = str(
+            entry.get("command_or_inspection")
+            or entry.get("instruction")
+            or entry.get("command")
+            or ""
+        ).strip()
+        if method and instruction:
+            mechanisms.append(
+                {
+                    "id": str(entry.get("id") or f"VAL-{len(mechanisms) + 1:03d}"),
+                    "method": method,
+                    "command_or_inspection": instruction,
+                    "environment": str(entry.get("environment") or "repo_local"),
+                    "expected_result": str(entry.get("expected_result") or "PASS"),
+                }
+            )
+    return mechanisms
+
+
+def declared_validation_commands(task: dict[str, Any]) -> list[str]:
+    """Executable shell commands derived from typed verification mechanisms."""
+    commands = [
+        item["command_or_inspection"]
+        for item in declared_verification_mechanisms(task)
+        if item["method"] in _COMMAND_METHODS
+    ]
     for command in task.get("required_validation_commands") or []:
         text = str(command).strip()
         if text and text not in commands:
             commands.append(text)
     return commands
+
+
+def task_requires_terminal_verifier(task: dict[str, Any]) -> bool:
+    """Only mutating repo-local work must carry a terminal verifier before seal."""
+    if str(task.get("execution_kind") or "").strip() != "repo_local":
+        return False
+    ceiling = task.get("authorization_ceiling") or {}
+    return any(bool(ceiling.get(action)) for action in _MUTATING_ACTIONS)
+
+
+def has_terminal_verifier(task: dict[str, Any]) -> bool:
+    return any(
+        item["method"] in _TERMINAL_METHODS for item in declared_verification_mechanisms(task)
+    )
+
+
+def terminal_verification_errors(tasks: list[dict[str, Any]]) -> list[str]:
+    return [
+        f"{task.get('id') or 'UNKNOWN'}: mutating repo_local task has no terminal "
+        "verification mechanism"
+        for task in tasks
+        if task_requires_terminal_verifier(task) and not has_terminal_verifier(task)
+    ]
 
 
 def _writable_paths(task: dict[str, Any]) -> list[str]:
@@ -172,7 +225,7 @@ def _admissible(commands: list[str]) -> list[str]:
 
 def _requires_controller_verification(task: dict[str, Any]) -> bool:
     kind = str(task.get("execution_kind") or "").strip().lower()
-    if kind in _INSPECTION_KINDS:
+    if kind in _INSPECTION_KINDS or kind in {"external_adapter"}:
         return False
     return str(task.get("definition_status") or "") != "cancelled"
 
@@ -208,7 +261,11 @@ def check_tasks(
                     )
                 )
 
-        if _requires_controller_verification(task) and not declared_validation_commands(task):
+        if (
+            _requires_controller_verification(task)
+            and not has_terminal_verifier(task)
+            and not declared_validation_commands(task)
+        ):
             inferred = infer_validation_commands(task, repo_root, python=python) if infer else []
             if inferred:
                 synthesized[task_id] = inferred
@@ -273,37 +330,45 @@ def check_tasks(
 
 
 def apply_synthesized_validations(
-    blueprint_dir: Path, synthesized: dict[str, list[str]]
+    blueprint_dir: Path, synthesized: dict[str, list[str]], *, validate: bool = True
 ) -> list[str]:
-    """Write inferred validations into the Task Cards they were inferred for.
+    """Atomically enrich native Task Cards before seal, then manifest + validate.
 
-    Inference used to stop at the report: `--fast` said it would infer a
-    validation, the finding recorded what it inferred, and then the contract was
-    rendered from a task card that still declared none. The controller then
-    returned INCOMPLETE on a campaign whose own preparation had told the operator
-    it was handled -- the gap between the message and the artifact.
-
-    The entry is written as an ordinary `method: command` validation, because
-    that is what the lock and the rendered contract read. Its `VAL-INFERRED-*`
-    id is the only provenance the Task Card schema has room for
-    (`additionalProperties: false`), and it is enough to tell an operator
-    reading the card that they did not write this line.
-
-    Returns the task ids that were changed, so a caller can re-validate.
+    The campaign runner passes ``validate=False`` because canonical Blueprint
+    validation is its immediately following stage. Direct callers default to
+    validation so no mutation can escape schema checking.
     """
     import yaml
+    from blueprint_ops import lock_exists_for_blueprint, validate_blueprint, write_manifest
 
     cards = blueprint_dir / "TASK_CARDS.yaml"
+    manifest = blueprint_dir / "MANIFEST.yaml"
     if not synthesized or not cards.is_file():
         return []
-    doc = yaml.safe_load(cards.read_text(encoding="utf-8")) or {}
+    if lock_exists_for_blueprint(blueprint_dir):
+        raise LaunchabilityError("refuse post-seal Blueprint validation enrichment")
+
+    cards_before = cards.read_bytes()
+    manifest_before = manifest.read_bytes() if manifest.is_file() else None
+    manifest_doc = (
+        yaml.safe_load(manifest_before.decode("utf-8")) if manifest_before is not None else {}
+    ) or {}
+    compiled_from = str(manifest_doc.get("compiled_from") or "launchability-preseal-enrichment")
+    doc = yaml.safe_load(cards_before.decode("utf-8")) or {}
     changed: list[str] = []
     for task in doc.get("tasks") or []:
         commands = synthesized.get(str(task.get("id")))
-        if not commands or declared_validation_commands(task):
+        if not commands or has_terminal_verifier(task):
             continue
         entries = list(task.get("validation") or [])
+        existing = {
+            str(item.get("command_or_inspection") or "")
+            for item in entries
+            if isinstance(item, dict)
+        }
         for index, command in enumerate(commands, start=1):
+            if command in existing:
+                continue
             entries.append(
                 {
                     "id": f"VAL-INFERRED-{index:03d}",
@@ -314,28 +379,51 @@ def apply_synthesized_validations(
                 }
             )
         task["validation"] = entries
-        changed.append(str(task.get("id")))
-    if changed:
+        if has_terminal_verifier(task):
+            changed.append(str(task.get("id")))
+
+    if not changed:
+        return []
+    try:
         cards.write_text(
             yaml.safe_dump(doc, sort_keys=False, allow_unicode=True, width=100), encoding="utf-8"
         )
+        write_manifest(blueprint_dir, compiled_from)
+        if validate:
+            errors = validate_blueprint(blueprint_dir, "template")
+            if errors:
+                raise LaunchabilityError(
+                    "pre-seal validation enrichment broke canonical Blueprint schema: "
+                    + "; ".join(errors[:5])
+                )
+    except Exception:
+        cards.write_bytes(cards_before)
+        if manifest_before is None:
+            manifest.unlink(missing_ok=True)
+        else:
+            manifest.write_bytes(manifest_before)
+        raise
     return sorted(changed)
 
 
+def launchability_report_path(blueprint_dir: Path) -> Path:
+    """Runtime/admission report path outside the sealed Blueprint tree."""
+    root = blueprint_dir.resolve()
+    return root.parent / "launchability-reports" / f"{root.name}.json"
+
+
 def blueprint_tasks(blueprint_dir: Path) -> list[dict[str, Any]]:
-    """Read compiled Task Cards without importing the blueprint toolchain."""
-    tasks_path = blueprint_dir / "tasks.json"
-    if tasks_path.is_file():
-        payload = json.loads(tasks_path.read_text(encoding="utf-8"))
-        if isinstance(payload, dict):
-            payload = payload.get("tasks") or []
-        return [item for item in payload if isinstance(item, dict)]
-    tasks: list[dict[str, Any]] = []
-    for path in sorted((blueprint_dir / "tasks").glob("*.json")):
-        item = json.loads(path.read_text(encoding="utf-8"))
-        if isinstance(item, dict):
-            tasks.append(item)
-    return tasks
+    """Read the canonical native TASK_CARDS.yaml projection used by the Controller."""
+    import yaml
+
+    cards = blueprint_dir / "TASK_CARDS.yaml"
+    if not cards.is_file():
+        return []
+    payload = yaml.safe_load(cards.read_text(encoding="utf-8")) or {}
+    tasks = payload.get("tasks") or []
+    if not isinstance(tasks, list):
+        raise LaunchabilityError("TASK_CARDS.yaml tasks must be a list")
+    return [item for item in tasks if isinstance(item, dict)]
 
 
 def format_report(report: dict[str, Any]) -> str:

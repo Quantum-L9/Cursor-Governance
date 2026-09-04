@@ -583,7 +583,13 @@ class TestGhPolicy:
             's1: resolveReviewThread(input: {threadId: "PRRT_1"}) '
             "{ thread { isResolved } } }'"
         )
-        for command in (resolve_cmd, reply_cmd, batched):
+        subscribe_cmd = (
+            "gh api graphql -f query='"
+            "mutation($id: ID!) { "
+            "updateSubscription(input: {subscribableId: $id, state: SUBSCRIBED}) "
+            "{ subscribable { ... on PullRequest { viewerSubscription } } } }'"
+        )
+        for command in (resolve_cmd, reply_cmd, batched, subscribe_cmd):
             assert outcome(command) is Outcome.GUARD_THEN_ALLOW, command
 
     def test_unknown_or_mixed_graphql_mutations_are_denied(self) -> None:

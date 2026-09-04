@@ -39,6 +39,29 @@ from blueprint_ops import (  # noqa: E402
 )
 
 PE_ROOT = Path(__file__).resolve().parents[1]
+#: What the compiler writes before evidence is bound; never accepted as a binding.
+UNKNOWN_REVISION = "UNKNOWN"
+
+
+def memory_lookup(query: str, *, repo_root: Path) -> dict[str, Any]:
+    """Read-only Graphiti search. Fail closed. Never writes memory."""
+
+    graphiti = repo_root / "environment" / "program-execution" / "integrations" / "graphiti"
+    if str(graphiti) not in sys.path:
+        sys.path.insert(0, str(graphiti))
+    if str(repo_root / "environment" / "program-execution") not in sys.path:
+        sys.path.insert(0, str(repo_root / "environment" / "program-execution"))
+    try:
+        from context_reader import GraphitiContextReader
+    except ImportError as exc:
+        raise RuntimeError(
+            f"memory-lookup fail-closed: context_reader unavailable ({exc})"
+        ) from exc
+    try:
+        reader = GraphitiContextReader(repo_root)
+        return {"status": "PASS", "mode": "read_only", "result": reader.search(query)}
+    except Exception as exc:
+        raise RuntimeError(f"memory-lookup fail-closed: {exc}") from exc
 
 
 def _utc_now() -> str:
@@ -73,9 +96,18 @@ def collect_evidence(
         known = ", ".join(sorted(item.get("id", "?") for item in entries)) or "<none>"
         raise RuntimeError(f"unknown evidence id {evidence_id!r}; catalog has: {known}")
 
+    bound_revision = str(revision).strip() if revision is not None else ""
+    if not bound_revision or bound_revision.upper() == UNKNOWN_REVISION:
+        # The compiler stamps `revision: UNKNOWN` on purpose: it is the marker
+        # that no evidence has been bound yet. Marking the entry `available`
+        # while keeping that marker recorded evidence about nothing.
+        raise RuntimeError(
+            f"evidence {evidence_id} needs the revision it was observed at; "
+            f"got {revision!r}. Pass --revision <sha-or-ref>."
+        )
     entry.update(
         {
-            "revision": revision if revision is not None else entry.get("revision"),
+            "revision": bound_revision,
             "digest": digest,
             "method": "read_only_inspection",
             "environment": "local",
@@ -112,12 +144,26 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="collect_evidence")
     parser.add_argument("--blueprint", required=True, type=Path)
     parser.add_argument("--evidence-id", required=True)
-    parser.add_argument("--revision", default=None)
+    parser.add_argument("--revision", required=True)
     parser.add_argument("--digest", default=None)
     parser.add_argument("--notes", default=None)
     parser.add_argument("--producer", default="operator")
     parser.add_argument("--expires-at", default=None)
+    parser.add_argument(
+        "--memory-lookup",
+        default=None,
+        metavar="QUERY",
+        help="Read-only Graphiti search; fails closed offline; never writes memory",
+    )
     args = parser.parse_args(argv)
+    if args.memory_lookup:
+        try:
+            payload = memory_lookup(args.memory_lookup, repo_root=PE_ROOT.parent.parent)
+        except RuntimeError as exc:
+            print(f"FAIL: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
     try:
         result = collect_evidence(
             args.blueprint,
