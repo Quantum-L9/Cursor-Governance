@@ -14,7 +14,7 @@
     "trailing-whitespace": {
       "mode": "writer",
       "output_prefixes": [],
-      "note": "strips trailing whitespace; may rewrite any passed text file"
+      "note": "strips trailing whitespace; may rewrite any passed text file. Exception: --markdown-linebreak-ext=md,mdc preserves two-space Markdown hard line breaks, so generator-owned .md/.mdc bytes are not independently canonicalized (tests/ops/test_precommit_markdown_hardbreak.py)"
     },
     "check-added-large-files": {
       "mode": "read_only",

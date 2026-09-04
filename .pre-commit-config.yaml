@@ -21,6 +21,21 @@ repos:
         # docs/plans/claude-code/*.plan.md stay normalised.
         exclude: "^(dist/|docs/plans/claude-code/[^/]+/)"
       - id: trailing-whitespace
+        # Two trailing spaces are a Markdown hard line break, not stray
+        # whitespace. This gate runs the GOVERNANCE config against consumer
+        # workspaces (run_pr_precommit.sh --config), so without this flag the
+        # hook silently rewrites generator-owned bytes in any repo it touches:
+        # l9-harness/scripts/update_manifest.py emits `Package: `…`  ` and
+        # verify_generated.py compares raw bytes, so the strip becomes
+        # "generated artifact drift" that the generator then undoes — a
+        # formatter/generator oscillation with no fixed point.
+        # `mdc` is required alongside `md`: rules/*.mdc bodies are copied
+        # verbatim into environment/generated/llm-rules/*.md by
+        # project_llm_rules.py, so protecting only the projection would strip
+        # the source and propagate the loss back into a generated file.
+        # Narrow by construction (upstream _process_line): blank lines are
+        # still emptied and single trailing spaces are still removed.
+        args: ["--markdown-linebreak-ext=md,mdc"]
         exclude: "^(dist/|docs/plans/claude-code/[^/]+/)"
       - id: check-added-large-files
         args: ["--maxkb=1000"]
