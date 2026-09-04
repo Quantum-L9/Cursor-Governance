@@ -40,26 +40,27 @@ jobs:
           gen=ops/scripts/sync_generated_artifacts.py
           python3 "$gen" --changed-file /tmp/pr-changed-files.txt --json
           python -m pip install --only-binary=:all: ruff==0.16.1
-          ruff check --fix \
-            skills/l9-update-agent-docs/scripts/doc_obligations.py \
-            skills/l9-update-agent-docs/scripts/repo_docs.py \
-            skills/l9-update-agent-docs/scripts/compile_semantic_obligations.py \
-            skills/l9-update-agent-docs/scripts/validate_pointer_headings.py \
+          files=(
+            skills/l9-update-agent-docs/scripts/doc_obligations.py
+            skills/l9-update-agent-docs/scripts/repo_docs.py
+            skills/l9-update-agent-docs/scripts/compile_semantic_obligations.py
+            skills/l9-update-agent-docs/scripts/validate_pointer_headings.py
             skills/l9-update-agent-docs/tests/test_repo_docs.py
-          ruff format \
-            skills/l9-update-agent-docs/scripts/doc_obligations.py \
-            skills/l9-update-agent-docs/scripts/repo_docs.py \
-            skills/l9-update-agent-docs/scripts/compile_semantic_obligations.py \
-            skills/l9-update-agent-docs/scripts/validate_pointer_headings.py \
-            skills/l9-update-agent-docs/tests/test_repo_docs.py
+          )
+          ruff format "${files[@]}"
+          ruff check --fix "${files[@]}" || true
+          ruff format "${files[@]}"
+          python scripts/generate_subsystem_readmes.py --subsystem skills --skip-time-verify
           mkdir -p .artifacts/repo-docs-repair/skills/l9-update-agent-docs/scripts
           mkdir -p .artifacts/repo-docs-repair/skills/l9-update-agent-docs/tests
+          mkdir -p .artifacts/repo-docs-repair/skills
           mkdir -p .artifacts/repo-docs-repair/ops/generated
           cp skills/l9-update-agent-docs/scripts/doc_obligations.py .artifacts/repo-docs-repair/skills/l9-update-agent-docs/scripts/
           cp skills/l9-update-agent-docs/scripts/repo_docs.py .artifacts/repo-docs-repair/skills/l9-update-agent-docs/scripts/
           cp skills/l9-update-agent-docs/scripts/compile_semantic_obligations.py .artifacts/repo-docs-repair/skills/l9-update-agent-docs/scripts/
           cp skills/l9-update-agent-docs/scripts/validate_pointer_headings.py .artifacts/repo-docs-repair/skills/l9-update-agent-docs/scripts/
           cp skills/l9-update-agent-docs/tests/test_repo_docs.py .artifacts/repo-docs-repair/skills/l9-update-agent-docs/tests/
+          cp skills/README.md .artifacts/repo-docs-repair/skills/README.md
           cp ops/generated/skill-registry.json .artifacts/repo-docs-repair/ops/generated/
 
       - name: Upload canonical repo-docs repair outputs
