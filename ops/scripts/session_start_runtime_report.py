@@ -131,12 +131,39 @@ def classify_itest(*, error: str, codegraph: str) -> dict[str, Any]:
     )
 
 
+def _receipt_belongs_here(receipt: dict[str, Any], workspace: str) -> tuple[bool, str]:
+    """A receipt written for another workspace (or for $HOME) is not this
+    session's state. The observed poisoning: a Claude harness SessionStart ran
+    install.sh with --workspace $HOME and its receipt was then reported as the
+    current session's bootstrap verdict.
+    """
+    recorded = str(receipt.get("workspace") or "").strip()
+    if not recorded:
+        return True, ""  # old receipts carry no workspace; do not invent a fault
+    try:
+        recorded_real = os.path.realpath(recorded)
+    except OSError:
+        recorded_real = recorded
+    home_real = os.path.realpath(str(Path.home()))
+    if recorded_real == home_real:
+        return False, f"receipt workspace is $HOME ({recorded}) — harness/other-surface run"
+    if workspace:
+        try:
+            ws_real = os.path.realpath(workspace)
+        except OSError:
+            ws_real = workspace
+        if recorded_real != ws_real:
+            return False, f"receipt workspace {recorded} is not this session's {workspace}"
+    return True, ""
+
+
 def classify_claude_adapter(
     *,
     surface: str,
     receipt: dict[str, Any],
     repair_log: str,
     repair_text: str,
+    workspace: str = "",
 ) -> list[dict[str, Any]]:
     state = str(receipt.get("state") or "unknown")
     reason = str(receipt.get("reason") or "")
@@ -150,6 +177,19 @@ def classify_claude_adapter(
                     "not this surface — Cursor SessionStart does not run "
                     "install.sh (CURSOR_SESSIONSTART_NO_CLAUDE_CLOUD_V1)"
                 ),
+                this_surface=False,
+                include_in_degraded=False,
+            )
+        ]
+
+    belongs, why = _receipt_belongs_here(receipt, workspace)
+    if not belongs:
+        return [
+            _line(
+                "claude-adapter",
+                NA,
+                f"stale_other_surface — {why}",
+                evidence=str(receipt.get("generated_at") or ""),
                 this_surface=False,
                 include_in_degraded=False,
             )
@@ -169,6 +209,50 @@ def classify_claude_adapter(
             evidence=f"{repair_name}: {how}" if repair_name else how,
         )
     ]
+
+
+def classify_cursor_adapter(
+    *,
+    surface: str,
+    receipt: dict[str, Any],
+    workspace: str = "",
+) -> list[dict[str, Any]]:
+    """Cursor's own receipt (~/.l9/cursor/bootstrap-state.json).
+
+    `make cursor-install` is optional wiring, so never_ran is n/a, not a
+    fault. A receipt from another workspace is stale_other_surface. Only a
+    fresh, this-workspace non-ready receipt reaches ### Degraded.
+    """
+    if surface != "cursor":
+        return []
+    state = str(receipt.get("state") or "unknown")
+    reason = str(receipt.get("reason") or "")
+    if state == "never_ran":
+        return [
+            _line(
+                "cursor-adapter",
+                NA,
+                "no receipt — make cursor-install never ran (optional wiring)",
+                this_surface=False,
+                include_in_degraded=False,
+            )
+        ]
+    belongs, why = _receipt_belongs_here(receipt, workspace)
+    if not belongs:
+        return [
+            _line(
+                "cursor-adapter",
+                NA,
+                f"stale_other_surface — {why}",
+                evidence=str(receipt.get("generated_at") or ""),
+                this_surface=False,
+                include_in_degraded=False,
+            )
+        ]
+    if state == "ready":
+        return [_line("cursor-adapter", OK, reason or "all required components READY")]
+    klass = FAILED if state in {"failed", "blocked"} else DEGRADED
+    return [_line("cursor-adapter", klass, f"{state} — {reason or 'receipt state=' + state}")]
 
 
 def classify_graphiti(*, detail: str, stderr: str, healthy: bool) -> dict[str, Any]:
@@ -268,6 +352,7 @@ def collect(
     hydrate_degraded: bool,
     hydrate_reason: str,
     home: Path | None = None,
+    workspace: str = "",
 ) -> list[dict[str, Any]]:
     root = home or Path.home()
     lines: list[dict[str, Any]] = [
@@ -279,7 +364,7 @@ def collect(
         classify_skill_usage(skill_note),
         classify_itest(error=probe_neo4j(), codegraph=codegraph),
     ]
-    receipt = read_claude_receipt()
+    receipt = read_claude_receipt(path=root / ".l9" / "claude" / "bootstrap-state.json")
     repair_log, repair_text = latest_repair_log(root / ".l9" / "claude")
     lines.extend(
         classify_claude_adapter(
@@ -287,6 +372,17 @@ def collect(
             receipt=receipt,
             repair_log=repair_log,
             repair_text=repair_text,
+            workspace=workspace,
+        )
+    )
+    lines.extend(
+        classify_cursor_adapter(
+            surface=surface,
+            receipt=read_claude_receipt(
+                path=root / ".l9" / "cursor" / "bootstrap-state.json",
+                surface="cursor",
+            ),
+            workspace=workspace,
         )
     )
     lines.append(classify_simple("wiring", wiring, fail_tokens=("fail",)))
@@ -349,6 +445,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--codegraph", default="skipped")
     parser.add_argument("--hydrate-degraded", default="false")
     parser.add_argument("--hydrate-reason", default="")
+    parser.add_argument(
+        "--workspace",
+        default=os.environ.get("CURSOR_PROJECT_DIR", os.getcwd()),
+        help="session git root; receipts recorded for another workspace are stale_other_surface",
+    )
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
@@ -366,6 +467,7 @@ def main(argv: list[str] | None = None) -> int:
         codegraph=args.codegraph,
         hydrate_degraded=_truthy(args.hydrate_degraded),
         hydrate_reason=args.hydrate_reason,
+        workspace=args.workspace,
     )
     if args.json:
         print(json.dumps({"lines": lines}, indent=2, sort_keys=True))

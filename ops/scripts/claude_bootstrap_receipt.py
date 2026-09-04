@@ -22,9 +22,15 @@ The distinction this module exists to preserve:
 missing file as benign, which is why they are separated here rather than in each
 caller.
 
+The reader is surface-parameterized (one expiry rule, one reader — never a
+second receipt brain per surface). ``--surface claude`` (default) reads
+``~/.l9/claude/bootstrap-state.json``; ``--surface cursor`` reads
+``~/.l9/cursor/bootstrap-state.json`` written by ``make cursor-install``.
+
 Usage:
   python3 ops/scripts/claude_bootstrap_receipt.py --read
   python3 ops/scripts/claude_bootstrap_receipt.py --read --json
+  python3 ops/scripts/claude_bootstrap_receipt.py --surface cursor --json
 """
 
 from __future__ import annotations
@@ -39,6 +45,39 @@ from typing import Any
 from governance_refresh_receipt import _parse_timestamp  # noqa: PLC2701
 
 SCHEMA = "l9.claude-bootstrap.v1"
+
+#: Per-surface receipt directory + never_ran remediation. The governance
+#: surface id `claude-code` and the short dir name `claude` are the same
+#: surface; both keys resolve identically.
+SURFACES: dict[str, dict[str, str]] = {
+    "claude": {
+        "dir": "claude",
+        "remediation": "bash environment/agents/adapters/claude-code/install.sh",
+    },
+    "claude-code": {
+        "dir": "claude",
+        "remediation": "bash environment/agents/adapters/claude-code/install.sh",
+    },
+    "cursor": {
+        "dir": "cursor",
+        "remediation": 'make cursor-install WS="$(pwd)"',
+    },
+}
+
+
+def schema_for(surface: str) -> str:
+    return f"l9.{_surface_dir(surface)}-bootstrap.v1"
+
+
+def _surface_dir(surface: str) -> str:
+    entry = SURFACES.get((surface or "claude").strip().lower())
+    return entry["dir"] if entry else (surface or "claude").strip().lower()
+
+
+def _surface_remediation(surface: str) -> str:
+    entry = SURFACES.get((surface or "claude").strip().lower())
+    return entry["remediation"] if entry else "run the surface installer"
+
 
 NEVER_RAN = "never_ran"
 UNKNOWN = "unknown"
@@ -121,12 +160,18 @@ def live_governance_revision(root: Path | None = None) -> str:
     return raw
 
 
-def receipt_path(env: dict[str, str] | None = None) -> Path:
+def receipt_path(env: dict[str, str] | None = None, *, surface: str = "claude") -> Path:
     source = os.environ if env is None else env
-    override = (source.get("L9_CLAUDE_BOOTSTRAP_RECEIPT") or "").strip()
-    if override:
-        return Path(override)
-    return Path(source.get("HOME", str(Path.home()))) / ".l9" / "claude" / "bootstrap-state.json"
+    surface_dir = _surface_dir(surface)
+    # Back-compat override for claude; generic per-surface override otherwise.
+    override_keys = [f"L9_{surface_dir.upper().replace('-', '_')}_BOOTSTRAP_RECEIPT"]
+    if surface_dir == "claude":
+        override_keys.insert(0, "L9_CLAUDE_BOOTSTRAP_RECEIPT")
+    for key in override_keys:
+        override = (source.get(key) or "").strip()
+        if override:
+            return Path(override)
+    return Path(source.get("HOME", str(Path.home()))) / ".l9" / surface_dir / "bootstrap-state.json"
 
 
 def evaluate(
@@ -134,6 +179,7 @@ def evaluate(
     *,
     now: datetime | None = None,
     governance_revision: str | None = None,
+    surface: str = "claude",
 ) -> dict[str, Any]:
     moment = now or datetime.now(UTC)
 
@@ -141,7 +187,7 @@ def evaluate(
         return {
             "state": NEVER_RAN,
             "reason": "no bootstrap receipt on disk — the adapter installer never completed",
-            "remediation": "bash environment/agents/adapters/claude-code/install.sh",
+            "remediation": _surface_remediation(surface),
             "components": {},
         }
 
@@ -241,11 +287,12 @@ def read(
     *,
     now: datetime | None = None,
     governance_revision: str | None = None,
+    surface: str = "claude",
 ) -> dict[str, Any]:
-    target = path or receipt_path()
+    target = path or receipt_path(surface=surface)
     revision = live_governance_revision() if governance_revision is None else governance_revision
     if not target.is_file():
-        return evaluate(None, now=now, governance_revision=revision)
+        return evaluate(None, now=now, governance_revision=revision, surface=surface)
     try:
         parsed = json.loads(target.read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -256,7 +303,7 @@ def read(
         }
     if not isinstance(parsed, dict):
         return {"state": UNKNOWN, "reason": "receipt is not a JSON object", "components": {}}
-    return evaluate(parsed, now=now, governance_revision=revision)
+    return evaluate(parsed, now=now, governance_revision=revision, surface=surface)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -271,6 +318,11 @@ def main(argv: list[str] | None = None) -> int:
         help="read and print the receipt (default action; accepted for compatibility)",
     )
     parser.add_argument("--path", default="")
+    parser.add_argument(
+        "--surface",
+        default="claude",
+        help="receipt surface: claude (default) or cursor — one reader, one expiry rule",
+    )
     parser.add_argument("--json", action="store_true")
     parser.add_argument(
         "--reprobe",
@@ -279,13 +331,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    result = read(Path(args.path) if args.path else None)
+    result = read(Path(args.path) if args.path else None, surface=args.surface)
     if args.reprobe:
         result = reprobe_degraded(result)
     if args.json:
         print(json.dumps(result, indent=2, sort_keys=True))
     else:
-        print(f"claude bootstrap: {result['state']} — {result['reason']}")
+        print(f"{_surface_dir(args.surface)} bootstrap: {result['state']} — {result['reason']}")
         for key, value in (result.get("components") or {}).items():
             print(f"  {key}: {value}")
             reason = (result.get("reasons") or {}).get(key, "")
