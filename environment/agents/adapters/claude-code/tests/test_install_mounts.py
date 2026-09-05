@@ -116,6 +116,12 @@ class InstallMountTests(unittest.TestCase):
             ".claude/settings.local.json",
         ):
             self.assertIn(glob, body, f"{glob} must be excluded from the consumer repo")
+        for blanket in (".claude/", "/.claude/", ".claude", "/.claude"):
+            self.assertNotIn(
+                blanket,
+                body.splitlines(),
+                f"{blanket} is Option A and hides committable consumer wiring",
+            )
         # The materialized wiring is the FOURTH category, and tracked-ness
         # decides it (install.sh, "Tracked-ness decides, exactly as
         # reconcile_claude_settings.settings_is_git_tracked already defines the
