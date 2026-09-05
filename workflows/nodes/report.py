@@ -140,7 +140,7 @@ async def report_node(state: WorkflowState) -> dict:
     report_text = "\n".join(lines)
 
     # Print report
-    print(report_text)  # noqa: ADR-0019
+    print(report_text)
 
     duration_ms = (time.time() - start_time) * 1000
 

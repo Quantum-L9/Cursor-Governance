@@ -487,7 +487,7 @@ def get_gmp_execution_dag() -> SessionDAG:
 
 # Generate Mermaid diagram for documentation
 if __name__ == "__main__":
-    print(GMP_EXECUTION_DAG.to_markdown())  # noqa: ADR-0019
+    print(GMP_EXECUTION_DAG.to_markdown())
 # ============================================================================
 # DORA FOOTER META - AUTO-GENERATED - DO NOT EDIT MANUALLY
 # ============================================================================

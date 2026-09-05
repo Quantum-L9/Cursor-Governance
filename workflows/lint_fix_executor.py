@@ -171,9 +171,9 @@ class LintFixExecutor:
         return result.returncode, result.stdout, result.stderr
 
     def _print_header(self, title: str):
-        print(f"\n{'=' * 60}")  # noqa: ADR-0019
-        print(f"  {title}")  # noqa: ADR-0019
-        print(f"{'=' * 60}\n")  # noqa: ADR-0019
+        print(f"\n{'=' * 60}")
+        print(f"  {title}")
+        print(f"{'=' * 60}\n")
 
     def _parse_ruff_output(self, output: str) -> list[dict]:
         """Parse ruff output into structured errors."""
@@ -218,16 +218,16 @@ class LintFixExecutor:
         # Summarize by code
         code_counts = Counter(e["code"] for e in errors)
 
-        print(f"Found {len(errors)} lint errors:")  # noqa: ADR-0019
-        print("-" * 40)  # noqa: ADR-0019
-        print("| Code | Count |")  # noqa: ADR-0019
-        print("|------|-------|")  # noqa: ADR-0019
+        print(f"Found {len(errors)} lint errors:")
+        print("-" * 40)
+        print("| Code | Count |")
+        print("|------|-------|")
         for code, count in code_counts.most_common(20):
-            print(f"| {code:6} | {count:5} |")  # noqa: ADR-0019
-        print("-" * 40)  # noqa: ADR-0019
+            print(f"| {code:6} | {count:5} |")
+        print("-" * 40)
 
         if not errors:
-            print("✅ No lint errors found!")  # noqa: ADR-0019
+            print("✅ No lint errors found!")
 
         return True
 
@@ -254,10 +254,10 @@ class LintFixExecutor:
                 error["fix_type"] = "manual"
                 manual_count += 1
 
-        print("Categorization:")  # noqa: ADR-0019
-        print(f"  🤖 AUTO (ruff --fix): {auto_count}")  # noqa: ADR-0019
-        print(f"  🔧 SEMI (sed patterns): {semi_count}")  # noqa: ADR-0019
-        print(f"  👤 MANUAL (requires review): {manual_count}")  # noqa: ADR-0019
+        print("Categorization:")
+        print(f"  🤖 AUTO (ruff --fix): {auto_count}")
+        print(f"  🔧 SEMI (sed patterns): {semi_count}")
+        print(f"  👤 MANUAL (requires review): {manual_count}")
 
         return True
 
@@ -270,10 +270,10 @@ class LintFixExecutor:
         auto_errors = [e for e in self.state.errors_before if e.get("fix_type") == "auto"]
 
         if not auto_errors:
-            print("✅ No auto-fixable errors")  # noqa: ADR-0019
+            print("✅ No auto-fixable errors")
             return True
 
-        print(f"Applying ruff --fix for {len(auto_errors)} errors...")  # noqa: ADR-0019
+        print(f"Applying ruff --fix for {len(auto_errors)} errors...")
 
         # Run ruff with --fix
         cmd = "ruff check . --fix 2>&1 || true"
@@ -284,9 +284,9 @@ class LintFixExecutor:
             match = re.search(r"Fixed (\d+)", stdout)
             if match:
                 fixed = int(match.group(1))
-                print(f"✅ ruff fixed {fixed} errors")  # noqa: ADR-0019
+                print(f"✅ ruff fixed {fixed} errors")
         else:
-            print("✅ ruff --fix completed")  # noqa: ADR-0019
+            print("✅ ruff --fix completed")
 
         # Track modified files
         for error in auto_errors:
@@ -305,7 +305,7 @@ class LintFixExecutor:
         semi_errors = [e for e in self.state.errors_before if e.get("fix_type") == "semi"]
 
         if not semi_errors:
-            print("✅ No semi-auto fixable errors")  # noqa: ADR-0019
+            print("✅ No semi-auto fixable errors")
             return True
 
         # Group by code
@@ -318,12 +318,12 @@ class LintFixExecutor:
 
         for code, errors in by_code.items():
             if code not in SEMI_AUTO_PATTERNS:
-                print(f"⚠️  {code}: No pattern defined")  # noqa: ADR-0019
+                print(f"⚠️  {code}: No pattern defined")
                 continue
 
             pattern_info = SEMI_AUTO_PATTERNS[code]
-            print(f"\n🔧 Fixing {code}: {pattern_info['description']}")  # noqa: ADR-0019
-            print(f"   Pattern: {pattern_info['pattern']}")  # noqa: ADR-0019
+            print(f"\n🔧 Fixing {code}: {pattern_info['description']}")
+            print(f"   Pattern: {pattern_info['pattern']}")
 
             # Group by file for efficiency
             by_file = {}
@@ -380,7 +380,7 @@ class LintFixExecutor:
                     full_path.write_text(content)
                     if filepath not in self.state.files_modified:
                         self.state.files_modified.append(filepath)
-                    print(f"   ✅ {filepath}")  # noqa: ADR-0019
+                    print(f"   ✅ {filepath}")
                     for e in file_errors:
                         e["status"] = "fixed"
 
@@ -404,7 +404,7 @@ class LintFixExecutor:
                 if code == 0:
                     passed += 1
                 else:
-                    print(f"❌ {f}: {stderr[:60]}")  # noqa: ADR-0019
+                    print(f"❌ {f}: {stderr[:60]}")
 
             status = (
                 f"✅ {passed}/{len(py_files)}"
@@ -412,7 +412,7 @@ class LintFixExecutor:
                 else f"⚠️ {passed}/{len(py_files)}"
             )
             validations.append({"check": "py_compile", "status": status})
-            print(f"✅ Syntax valid: {passed}/{len(py_files)} files")  # noqa: ADR-0019
+            print(f"✅ Syntax valid: {passed}/{len(py_files)} files")
 
         self.state.validation_results = validations
         return True
@@ -441,17 +441,17 @@ class LintFixExecutor:
         after = len(errors)
         fixed = before - after
 
-        print("Results:")  # noqa: ADR-0019
-        print(f"  Before: {before} errors")  # noqa: ADR-0019
-        print(f"  After:  {after} errors")  # noqa: ADR-0019
-        print(f"  Fixed:  {fixed} errors")  # noqa: ADR-0019
+        print("Results:")
+        print(f"  Before: {before} errors")
+        print(f"  After:  {after} errors")
+        print(f"  Fixed:  {fixed} errors")
 
         if after > 0:
             # Summarize remaining
             code_counts = Counter(e["code"] for e in errors)
-            print("\nRemaining errors:")  # noqa: ADR-0019
+            print("\nRemaining errors:")
             for code, count in code_counts.most_common(10):
-                print(f"  {code}: {count}")  # noqa: ADR-0019
+                print(f"  {code}: {count}")
 
         return True
 
@@ -486,7 +486,7 @@ class LintFixExecutor:
             --summary "Lint error fixing via /lint-fix DAG executor" \
             --skip-verify 2>/dev/null || echo "Report generation skipped"'''
 
-        print("Generating report...")  # noqa: ADR-0019
+        print("Generating report...")
         _code, stdout, _stderr = self._run_shell(cmd)
 
         # Extract report path
@@ -496,9 +496,9 @@ class LintFixExecutor:
                 break
 
         if self.state.report_path:
-            print(f"✅ Report: {self.state.report_path}")  # noqa: ADR-0019
+            print(f"✅ Report: {self.state.report_path}")
         else:
-            print("⚠️  Report generation skipped")  # noqa: ADR-0019
+            print("⚠️  Report generation skipped")
             self.state.report_path = "N/A"
 
         return True
@@ -510,7 +510,7 @@ class LintFixExecutor:
         self._print_header("COMMIT (NO PUSH)")
 
         if not self.state.files_modified:
-            print("✅ No files to commit")  # noqa: ADR-0019
+            print("✅ No files to commit")
             return True
 
         # Stage modified files
@@ -538,16 +538,16 @@ class LintFixExecutor:
         code, stdout, _stderr = self._run_shell(cmd)
 
         if "nothing to commit" in stdout.lower():
-            print("✅ Nothing to commit — working tree clean")  # noqa: ADR-0019
+            print("✅ Nothing to commit — working tree clean")
         elif code == 0 or "file changed" in stdout.lower():
             _code, hash_out, _ = self._run_shell("git rev-parse --short HEAD")
             self.state.commit_hash = hash_out.strip()
-            print(f"✅ Committed: {self.state.commit_hash}")  # noqa: ADR-0019
-            print(f"   Message: {commit_msg}")  # noqa: ADR-0019
+            print(f"✅ Committed: {self.state.commit_hash}")
+            print(f"   Message: {commit_msg}")
         else:
-            print(f"⚠️  Commit result: {stdout[:100]}")  # noqa: ADR-0019
+            print(f"⚠️  Commit result: {stdout[:100]}")
 
-        print("\n⚠️  DO NOT PUSH — Review changes first")  # noqa: ADR-0019
+        print("\n⚠️  DO NOT PUSH — Review changes first")
 
         return True
 
@@ -557,33 +557,33 @@ class LintFixExecutor:
     def status(self):
         """Show current status."""
         if not self._load_state():
-            print("No active /lint-fix execution. Start with:")  # noqa: ADR-0019
-            print("  python3 workflows/lint_fix_executor.py")  # noqa: ADR-0019
+            print("No active /lint-fix execution. Start with:")
+            print("  python3 workflows/lint_fix_executor.py")
             return
 
         self._print_header("LINT-FIX STATUS")
-        print(f"Started: {self.state.started_at}")  # noqa: ADR-0019
-        print(f"Current step: {self.state.current_step}")  # noqa: ADR-0019
-        print(f"Target codes: {self.state.target_codes or 'all'}")  # noqa: ADR-0019
-        print(f"Errors before: {len(self.state.errors_before)}")  # noqa: ADR-0019
-        print()  # noqa: ADR-0019
+        print(f"Started: {self.state.started_at}")
+        print(f"Current step: {self.state.current_step}")
+        print(f"Target codes: {self.state.target_codes or 'all'}")
+        print(f"Errors before: {len(self.state.errors_before)}")
+        print()
 
         for step in STEP_ORDER:
             if step in self.state.completed_steps:
-                print(f"  ✅ {step}")  # noqa: ADR-0019
+                print(f"  ✅ {step}")
             elif step == self.state.current_step:
-                print(f"  🔄 {step}")  # noqa: ADR-0019
+                print(f"  🔄 {step}")
             else:
-                print(f"  ⏳ {step}")  # noqa: ADR-0019
+                print(f"  ⏳ {step}")
 
     def run(self, target_codes: list[str] | None = None, resume: bool = False):
         """Execute the /lint-fix DAG — fully autonomous (or dry-run plan)."""
         if resume and self.dry_run:
-            print("❌ --dry-run cannot resume; omit --resume")  # noqa: ADR-0019
+            print("❌ --dry-run cannot resume; omit --resume")
             return False
         # Initialize or resume
         if resume and self._load_state():
-            print("Resuming lint-fix...")  # noqa: ADR-0019
+            print("Resuming lint-fix...")
         else:
             self.state = LintFixState(
                 started_at=datetime.now(UTC).isoformat(),
@@ -595,7 +595,7 @@ class LintFixExecutor:
         mode = "DRY-RUN " if self.dry_run else ""
         self._print_header(f"{mode}LINT-FIX EXECUTOR")
         if self.state.target_codes:
-            print(f"Target codes: {', '.join(self.state.target_codes)}")  # noqa: ADR-0019
+            print(f"Target codes: {', '.join(self.state.target_codes)}")
 
         # Step executors
         executors = {
@@ -619,9 +619,9 @@ class LintFixExecutor:
             if self.dry_run and step not in dry_run_stop_after:
                 self._print_header("DRY-RUN STOP — skipping mutate steps")
                 before = len(self.state.errors_before)
-                print(f"Errors found: {before}")  # noqa: ADR-0019
-                print(f"Would run next: {step}")  # noqa: ADR-0019
-                print("\nNo fixes applied. No state file. No commit.")  # noqa: ADR-0019
+                print(f"Errors found: {before}")
+                print(f"Would run next: {step}")
+                print("\nNo fixes applied. No state file. No commit.")
                 return True
 
             self.state.current_step = step
@@ -629,7 +629,7 @@ class LintFixExecutor:
 
             executor = executors.get(step)
             if not executor:
-                print(f"❌ No executor for step: {step}")  # noqa: ADR-0019
+                print(f"❌ No executor for step: {step}")
                 break
 
             success = executor()
@@ -638,20 +638,20 @@ class LintFixExecutor:
                 self.state.completed_steps.append(step)
                 self._save_state()
             else:
-                print(f"\n❌ Step failed: {step}")  # noqa: ADR-0019
-                print("\nResume with: python3 workflows/lint_fix_executor.py --resume")  # noqa: ADR-0019
+                print(f"\n❌ Step failed: {step}")
+                print("\nResume with: python3 workflows/lint_fix_executor.py --resume")
                 return False
 
         # Complete
         self._print_header("LINT-FIX COMPLETE")
         before = len(self.state.errors_before)
         after = len(self.state.errors_after)
-        print(f"✅ Errors: {before} → {after} ({before - after} fixed)")  # noqa: ADR-0019
-        print(f"   Files modified: {len(self.state.files_modified)}")  # noqa: ADR-0019
-        print(f"   Report: {self.state.report_path}")  # noqa: ADR-0019
+        print(f"✅ Errors: {before} → {after} ({before - after} fixed)")
+        print(f"   Files modified: {len(self.state.files_modified)}")
+        print(f"   Report: {self.state.report_path}")
         if self.state.commit_hash:
-            print(f"   Commit: {self.state.commit_hash}")  # noqa: ADR-0019
-        print("\n⚠️  DO NOT PUSH — Review changes first")  # noqa: ADR-0019
+            print(f"   Commit: {self.state.commit_hash}")
+        print("\n⚠️  DO NOT PUSH — Review changes first")
 
         # Clean up state
         self._clear_state()
@@ -694,7 +694,7 @@ Examples:
     if args.reset:
         if STATE_FILE.exists():
             STATE_FILE.unlink()
-        print("✅ State cleared")  # noqa: ADR-0019
+        print("✅ State cleared")
         return
 
     if args.status:
@@ -703,7 +703,7 @@ Examples:
 
     if args.resume:
         if not STATE_FILE.exists():
-            print("No lint-fix execution to resume")  # noqa: ADR-0019
+            print("No lint-fix execution to resume")
             sys.exit(1)
         executor.run(resume=True)
         return
