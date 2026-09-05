@@ -628,6 +628,10 @@ def test_ff_shelf_list_and_rsync_argv() -> int:
         git(clone, "add", "WIP/tracked.md")
         git(clone, "commit", "-m", "track wip")
         (clone / "WIP" / "tracked.md").write_text("tracked-dirty\n", encoding="utf-8")
+        (clone / "WIP" / "gone.md").write_text("will-delete\n", encoding="utf-8")
+        git(clone, "add", "WIP/gone.md")
+        git(clone, "commit", "-m", "track gone")
+        (clone / "WIP" / "gone.md").unlink()
         (clone / "root-queue.md").write_text("not corpus leftover\n", encoding="utf-8")
         shelf = Path(tmp) / "shelf"
         proc = run(
@@ -660,6 +664,14 @@ def test_ff_shelf_list_and_rsync_argv() -> int:
             return _fail(f"root task-queue file must be shelved, listed={listed}")
         if "WIP/tracked.md" not in listed:
             return _fail(f"dirty-tracked corpus must be shelved, listed={listed}")
+        if "WIP/gone.md" in listed:
+            return _fail(f"deleted corpus must not be an rsync source, listed={listed}")
+        if "WIP/gone.md" not in data.get("deleted", []):
+            return _fail(f"deleted corpus must be recorded, deleted={data.get('deleted')}")
+        if "untracked corpus" in " ".join(data.get("commit") or []):
+            return _fail(f"commit message still says untracked: {data.get('commit')}")
+        if "leftover corpus" not in " ".join(data.get("commit") or []):
+            return _fail(f"commit must say leftover corpus: {data.get('commit')}")
         if "root-queue.md" in listed:
             return _fail("non-corpus root file must not be shelved")
         rsync = data["rsync"]
