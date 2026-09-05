@@ -133,6 +133,9 @@ class HostNativeLifecycleTests(unittest.TestCase):
                 "lease_id": "no-root-lease-remediate-pr504-run1",
                 "campaign_id": "fleet-cursor-governance",
                 "graph_id": "fleet",
+                "allowed_paths": ["ops/autonomy/*"],
+                "forbidden_paths": [".github/workflows/**"],
+                "base_sha": "abc123def456",
             }
         )
         payload = self._pre("tu-fleet", "l9-pr-remediation")
@@ -141,6 +144,11 @@ class HostNativeLifecycleTests(unittest.TestCase):
         self.assertEqual(out["permission"], "allow", out)
         self.assertEqual(out["action_id"], "remediate-pr504-run1")
         self.assertEqual(out["lease_id"], "no-root-lease-remediate-pr504-run1")
+        start = compose_start.compose_host_subagent_start(self._start("tu-fleet", "sub-fleet"))
+        self.assertEqual(start["permission"], "allow", start)
+        assigned = receipts.load_assignment("remediate-pr504-run1")
+        self.assertEqual(assigned["allowed_paths"], ["ops/autonomy/*"])
+        self.assertEqual(assigned["base_sha"], "abc123def456")
 
     def test_stale_uncorrelated_admission_expires(self) -> None:
         from datetime import UTC, datetime, timedelta
@@ -156,6 +164,17 @@ class HostNativeLifecycleTests(unittest.TestCase):
         inflight = receipts.list_in_flight_host_admissions()
         self.assertEqual(inflight, [])
         self.assertIsNone(receipts.load_host_admission("tu-stale"))
+
+    def test_corrupt_assignment_id_does_not_crash_in_flight(self) -> None:
+        receipts.write_host_admission(
+            {
+                "tool_use_id": "tu-bad",
+                "assignment_id": "../../escape",
+                "mutation": True,
+            }
+        )
+        inflight = receipts.list_in_flight_host_admissions()
+        self.assertTrue(isinstance(inflight, list))
 
 
 if __name__ == "__main__":

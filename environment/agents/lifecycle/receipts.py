@@ -231,7 +231,13 @@ def _host_admission_has_stop(body: dict[str, Any]) -> bool:
         if corr.get("tool_use_id") != tool_use_id and corr.get("tool_call_id") != tool_use_id:
             continue
         subagent_id = str(corr.get("subagent_id") or "").strip()
-        if subagent_id and host_stop_path(subagent_id).is_file():
+        if not subagent_id:
+            continue
+        try:
+            stopped = host_stop_path(subagent_id).is_file()
+        except ValueError:
+            continue
+        if stopped:
             return True
     return False
 
@@ -250,8 +256,13 @@ def list_in_flight_host_admissions() -> list[dict[str, Any]]:
         if not isinstance(body, dict):
             continue
         assignment_id = str(body.get("assignment_id") or "").strip()
-        if assignment_id and return_path(assignment_id).is_file():
-            continue
+        if assignment_id:
+            try:
+                returned = return_path(assignment_id).is_file()
+            except ValueError:
+                continue
+            if returned:
+                continue
         if _host_admission_has_stop(body):
             continue
         if _host_admission_expired(body):

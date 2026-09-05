@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -248,6 +249,20 @@ def _host_native_is_mutation(subagent_type: str) -> bool:
     return subagent_type not in _HOST_NATIVE_READ_TYPES
 
 
+def _workspace_head(workspace: str) -> str | None:
+    root = Path(workspace).expanduser() if workspace else None
+    if root is None or not root.exists():
+        return None
+    proc = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "HEAD"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    sha = (proc.stdout or "").strip()
+    return sha or None
+
+
 def _recorded_fleet_assignment(payload: dict[str, Any]) -> dict[str, Any] | None:
     """Use a recorded ``pr_fleet.py assign`` packet when the prompt names it."""
     tool_input = payload.get("tool_input")
@@ -299,20 +314,32 @@ def _compose_host_native_pre_tool_use(payload: dict[str, Any], tool_use_id: str)
         role = str(
             recorded.get("subagent_role") or recorded.get("role") or _result_role(subagent_type)
         )
+        allowed_paths = list(recorded.get("allowed_paths") or [])
+        forbidden_paths = list(recorded.get("forbidden_paths") or [])
+        base_sha = str(recorded.get("base_sha") or "") or None
     else:
         assignment_id = f"host-native-{tool_use_id}"
         lease_id = f"no-root-lease-{assignment_id}"
         campaign_id = "host-native"
         graph_id = "host-native"
         role = _result_role(subagent_type)
+        allowed_paths: list[str] = []
+        forbidden_paths: list[str] = []
+        base_sha = None
     try:
         safe_receipt_id(assignment_id, label="assignment_id")
     except ValueError as exc:
         return _deny(str(exc))
 
-    caps = _host_native_caps()
+    try:
+        caps = _host_native_caps()
+    except (OSError, KeyError, TypeError, ValueError) as exc:
+        return _deny(f"execution profile unavailable: {exc}")
     with receipts.host_admission_lock():
-        in_flight = receipts.list_in_flight_host_admissions()
+        try:
+            in_flight = receipts.list_in_flight_host_admissions()
+        except (OSError, ValueError, TypeError) as exc:
+            return _deny(f"host admission inventory failed: {exc}")
         if len(in_flight) >= caps["max_parallel"]:
             return _deny(
                 f"max_parallel={caps['max_parallel']} already in flight "
@@ -337,6 +364,9 @@ def _compose_host_native_pre_tool_use(payload: dict[str, Any], tool_use_id: str)
                 "graph_id": graph_id,
                 "action_id": assignment_id,
                 "agent_id": assignment_id,
+                "allowed_paths": allowed_paths,
+                "forbidden_paths": forbidden_paths,
+                "base_sha": base_sha,
                 "workspace": str(payload.get("workspace_root") or payload.get("workspace") or ""),
             }
         )
@@ -399,27 +429,40 @@ def _correlate_host_native_start(
     tool_call_id = str(payload.get("tool_call_id") or "").strip()
     assignment_id = str(admission["assignment_id"])
     role = str(admission.get("subagent_role") or _result_role(admission.get("subagent_type")))
+    recorded = receipts.load_assignment(assignment_id) or {}
+    workspace = str(
+        recorded.get("workspace")
+        or payload.get("workspace_root")
+        or payload.get("workspace")
+        or admission.get("workspace")
+        or ""
+    )
+    base_sha = recorded.get("base_sha") or admission.get("base_sha") or _workspace_head(workspace)
     fields = {
         "assignment_id": assignment_id,
-        "campaign_id": admission.get("campaign_id") or "host-native",
-        "graph_id": admission.get("graph_id") or "host-native",
-        "action_id": admission.get("action_id") or assignment_id,
-        "agent_id": admission.get("agent_id") or assignment_id,
-        "parent_agent_id": "cursor",
+        "campaign_id": admission.get("campaign_id") or recorded.get("campaign_id") or "host-native",
+        "graph_id": admission.get("graph_id") or recorded.get("graph_id") or "host-native",
+        "action_id": admission.get("action_id") or recorded.get("action_id") or assignment_id,
+        "agent_id": admission.get("agent_id") or recorded.get("agent_id") or assignment_id,
+        "parent_agent_id": recorded.get("parent_agent_id") or "cursor",
         "subagent_role": role,
         "result_role": _result_role(role),
-        "objective": None,
-        "input_artifact_ids": [],
-        "allowed_paths": [],
-        "forbidden_paths": [],
-        "subject_agent_id": None,
+        "objective": recorded.get("objective"),
+        "input_artifact_ids": list(recorded.get("input_artifact_ids") or []),
+        "allowed_paths": list(
+            recorded.get("allowed_paths") or admission.get("allowed_paths") or []
+        ),
+        "forbidden_paths": list(
+            recorded.get("forbidden_paths") or admission.get("forbidden_paths") or []
+        ),
+        "subject_agent_id": recorded.get("subject_agent_id"),
         "expected_subagent_type": admission.get("subagent_type"),
-        "lease_id": admission.get("lease_id"),
-        "base_sha": None,
-        "workspace": str(payload.get("workspace_root") or payload.get("workspace") or ""),
-        "repository": None,
-        "repository_class": "governed_repository",
-        "surface": "cursor-ide",
+        "lease_id": admission.get("lease_id") or recorded.get("lease_id"),
+        "base_sha": base_sha,
+        "workspace": workspace,
+        "repository": recorded.get("repository"),
+        "repository_class": recorded.get("repository_class") or "governed_repository",
+        "surface": recorded.get("surface") or "cursor-ide",
     }
     if not receipts.assignment_path(assignment_id).is_file():
         receipts.write_assignment(fields)
