@@ -127,6 +127,55 @@ class HookExecFailClosedTests(unittest.TestCase):
         self._run("gate", "memory_gate.py")
         self.assertFalse(self._skip_log.exists())
 
+    def test_a_gate_registered_as_an_observer_is_refused(self) -> None:
+        """The class is a property of the HOOK, not of the caller (INV-1b).
+
+        This launcher exists so the fail-open/fail-closed decision is made once
+        rather than re-typed inside eight `bash -c` one-liners where a slip
+        silently disables a gate. It took --class on trust, so the slip it was
+        built to prevent still worked: a gate registered --class observer exited
+        0 without evaluating, indistinguishable from a gate that passed.
+        """
+        self._materialize_governance()  # no .venv, so a real gate would BLOCK
+        for name in GATES:
+            with self.subTest(gate=name):
+                result = self._run("observer", name)
+                self.assertEqual(
+                    result.returncode, 2, f"{name} must not be downgradable to an observer"
+                )
+                self.assertIn("refusing to downgrade", result.stderr)
+        # And a downgrade refusal is not a skip.
+        self.assertFalse(self._skip_log.exists())
+
+    def test_a_genuine_observer_is_not_forced_to_a_gate(self) -> None:
+        """Only gates are named, so adding an observer needs no edit here."""
+        self._materialize_governance()
+        result = self._run("observer", "skill_usage_logger.py")
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("did NOT run", result.stderr)
+
+    def test_skip_log_falls_back_when_home_is_unwritable(self) -> None:
+        """The audit trail must survive the broken environment it audits.
+
+        record_skip returned silently when its directory could not be created,
+        so the record vanished in exactly the case it exists for — a wrong or
+        unwritable HOME is what makes hooks skip in the first place.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            fallback = Path(tmp) / "l9-hook-skips.log"
+            env = dict(os.environ)
+            env["HOME"] = "/proc/nonexistent"
+            env["TMPDIR"] = tmp
+            env.pop("L9_HOOK_SKIP_LOG", None)
+            result = subprocess.run(
+                ["bash", str(LAUNCHER), "--class", "observer", "skill_usage_logger.py"],
+                capture_output=True, text=True, env=env, input="",
+            )
+            self.assertEqual(result.returncode, 0)
+            self.assertIn("skip log unwritable", result.stderr)
+            self.assertTrue(fallback.exists(), "the skip must be recorded somewhere")
+            self.assertIn("skill_usage_logger.py", fallback.read_text(encoding="utf-8"))
+
     def test_malformed_registration_is_treated_as_a_gate(self) -> None:
         self._materialize_governance()
         env = dict(os.environ)
