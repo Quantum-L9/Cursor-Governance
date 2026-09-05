@@ -130,9 +130,18 @@ def classify_path(
     if len(hits) == 1:
         return {"action": "ship", "dest": hits[0], "reason": "glob"}
 
-    for pattern in routing.get("skip_machine_local") or []:
-        if glob_match(rel, pattern):
-            return {"action": "skip", "dest": "", "reason": "machine_local"}
+    # Tracked is the ownership signal, the same rule the Claude adapter's
+    # installer uses to decide what to exclude: a tracked file is repo content,
+    # an untracked one is an activation artifact this machine produced. Testing
+    # the pattern before tracked-ness contradicted that — `.claude/` and
+    # `.mcp.json` are listed below, and `.mcp.json` is TRACKED in
+    # Cursor-Governance itself, so an edit to it classified `machine_local` and
+    # never shipped. `never_commit` stays unconditional above: a tracked secret
+    # is still a secret.
+    if not tracked:
+        for pattern in routing.get("skip_machine_local") or []:
+            if glob_match(rel, pattern):
+                return {"action": "skip", "dest": "", "reason": "machine_local"}
     if tracked and current_dest:
         return {"action": "ship", "dest": current_dest, "reason": "tracked_current_remote"}
     if tracked:
