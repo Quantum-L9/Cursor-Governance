@@ -169,7 +169,10 @@ class HookExecFailClosedTests(unittest.TestCase):
             env.pop("L9_HOOK_SKIP_LOG", None)
             result = subprocess.run(
                 ["bash", str(LAUNCHER), "--class", "observer", "skill_usage_logger.py"],
-                capture_output=True, text=True, env=env, input="",
+                capture_output=True,
+                text=True,
+                env=env,
+                input="",
             )
             self.assertEqual(result.returncode, 0)
             self.assertIn("skip log unwritable", result.stderr)

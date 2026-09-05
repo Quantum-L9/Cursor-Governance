@@ -478,7 +478,8 @@ def _graphiti_transport_auth() -> str:
     beside uv_version rather than as a status dimension — a dims entry would
     aggregate an intended posture into a DEGRADED receipt.
     """
-    return "AUTHENTICATED" if os.environ.get("GRAPHITI_MCP_TOKEN", "").strip() else "UNAUTHENTICATED"
+    token = os.environ.get("GRAPHITI_MCP_TOKEN", "").strip()
+    return "AUTHENTICATED" if token else "UNAUTHENTICATED"
 
 
 def _secret_boundary_status() -> tuple[str, str]:

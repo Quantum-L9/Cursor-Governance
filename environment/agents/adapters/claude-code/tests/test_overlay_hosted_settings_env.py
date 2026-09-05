@@ -134,3 +134,47 @@ class OverlayHostedSettingsEnvTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_reconciler_keeps_the_keys_the_overlay_owns(tmp_path) -> None:
+    """Two governance components must not fight over one `env` block.
+
+    `env` is a managed key, so the reconciler took it wholly from the template.
+    overlay_hosted_settings_env copies hosted account values — including keys
+    the template deliberately does not carry — into the same user-scope file.
+    Observed on a healthy container: the overlay added L9_L4_LOCAL_AUTONOMY and
+    L9_WORKTREE_ISOLATION, the reconciler reported that correct state as drift
+    and would strip them on the next write, and the overlay put them back. A
+    check that reports ok=false on a correctly configured container teaches the
+    reader to ignore it.
+    """
+    import sys
+    from pathlib import Path
+
+    repo = Path(__file__).resolve().parents[5]
+    sys.path.insert(0, str(repo / "ops" / "scripts"))
+    import reconcile_claude_settings as rc
+
+    template = {"env": {"L9_GOVERNANCE_SURFACE": "claude-code"}}
+    existing = {
+        "env": {
+            "L9_GOVERNANCE_SURFACE": "claude-code",
+            "L9_L4_LOCAL_AUTONOMY": "1",
+            "L9_WORKTREE_ISOLATION": "1",
+            "SOMETHING_UNMANAGED": "x",
+        }
+    }
+
+    merged = rc.merge_user_settings(template, existing, root=repo)
+    env = merged["env"]
+    assert env["L9_L4_LOCAL_AUTONOMY"] == "1", "overlay-owned key must survive"
+    assert env["L9_WORKTREE_ISOLATION"] == "1", "overlay-owned key must survive"
+    # Preservation is scoped to keys the overlay declares — it widens nothing.
+    assert "SOMETHING_UNMANAGED" not in env
+
+    # And a key the overlay owns but the file does not carry is not invented.
+    absent = rc.merge_user_settings(template, {"env": dict(template["env"])}, root=repo)
+    assert "L9_L4_LOCAL_AUTONOMY" not in absent["env"]
+
+    # The key list comes from the overlay module, never a second hand-kept copy.
+    assert "L9_L4_LOCAL_AUTONOMY" in rc._overlay_env_keys(repo)

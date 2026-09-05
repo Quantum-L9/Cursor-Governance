@@ -39,10 +39,8 @@ _GOV_LIB = _governance_lib()
 if str(_GOV_LIB) not in sys.path:
     sys.path.insert(0, str(_GOV_LIB))
 
-from workspace_roots import (  # noqa: E402
-    DROPPED_CAP,
-    select_workspace_roots as _shared_select_workspace_roots,
-)
+from workspace_roots import DROPPED_CAP  # noqa: E402
+from workspace_roots import select_workspace_roots as _shared_select_workspace_roots  # noqa: E402
 
 #: Cloud containers put several repositories side by side. Hydrating each costs
 #: one packet of context, so the count is capped rather than unbounded — and the
