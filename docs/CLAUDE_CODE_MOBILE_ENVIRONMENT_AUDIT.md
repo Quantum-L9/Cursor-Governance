@@ -12,6 +12,21 @@ Every claim below is backed by execution in the live container at that SHA. No s
 value, fragment, or full process environment appears anywhere in this document; secrets
 are reported as name, presence, length, and a truncated non-reversible digest only.
 
+### This document is not a new authority
+
+Three documents already own parts of this subject, and this audit defers to each rather
+than restating it:
+
+| Owner | Owns | This audit adds |
+|---|---|---|
+| `docs/DEGRADED_MODE_CONTRACT.md` | transport capability, the `gh auth status` divergence, the unauthenticated Graphiti posture | a dated 2026-09-05 row, filed **there** |
+| `docs/MEMORY_PIPELINE_MAP.md` | the live hydrate/close path | measured load results for that path on mobile |
+| `docs/CLAUDE_SURFACE_PARITY.md` | the shared surface contract | the mobile-specific runtime profile |
+
+Where a finding below concerns a posture one of those documents already records, the
+finding is scoped to what is genuinely new — usually a **label or a report**, not the
+posture itself.
+
 ---
 
 ## Executive verdict
@@ -182,12 +197,15 @@ This is the state `rules/62` documents.
 | GitHub REST | `gh api user` | `cryptoxdog (User)` |
 | GitHub REST | `gh api repos/Quantum-L9/Cursor-Governance` | resolves, `default=main` |
 | GitHub git | `git ls-remote origin main` | returns `91daac4…` |
-| GitHub CLI status | `gh auth status` | *"The token in GH_TOKEN is invalid."* |
+| GitHub CLI status | `gh auth status` | *"The token in GH_TOKEN is invalid."*, **exit 1** |
 | Graphiti | CLI `health` | `healthy: true`, circuit CLOSED, 9 tools |
 
 `gh auth status` contradicts three working probes. `rules/62` already forbids gating on
-it; this run is another dated confirmation. The credential reaching GitHub is supplied
-outside this repository's control — recorded as a probe, not a theory.
+it; this run is a third dated measurement, and its exit code (`1`) matches the 2026-08-31
+container and contradicts the 2026-08-29/30 one — which is the point: the exit code is
+unusable in either direction. The measurement is filed where it belongs, as a dated row in
+`docs/DEGRADED_MODE_CONTRACT.md`, not asserted a second time here. The credential reaching
+GitHub is supplied outside this repository's control — recorded as a probe, not a theory.
 
 ### Exposure
 
@@ -278,8 +296,11 @@ The value measures **reachability**. In this environment there is no authenticat
 `GRAPHITI_MCP_TOKEN` is ABSENT, the client adds `Authorization` only when that variable is
 set (`graphiti_memory_client.py:226–228`), and the rendered `.mcp.json` carries `url` with
 no `headers`. `mcp.template.json` states the unauthenticated posture is intentional
-(`_optional_headers`, "Graphiti stays unauthenticated"), so the defect is the **label**,
-not the posture.
+(`_optional_headers`, "Graphiti stays unauthenticated"), and
+`docs/DEGRADED_MODE_CONTRACT.md` already records it in the capability table
+("Graphiti MCP at `GRAPHITI_MCP_URL` | No bearer; session may be memory-blind"). The
+posture is therefore **owned, documented and deliberate**; the defect is the **label**
+that contradicts it.
 
 **The same receipt contradicts itself:** `Graphiti_authenticated_health: "cli
 authenticated"` sits beside `secret_boundary_status: "model-controlled (no
@@ -417,10 +438,12 @@ keys to the projection drift check.
 
 ### F-09 · P3 · RULES — an always-loaded rule depends on a path-scoped one
 
-`80-gmp-execution` (always-loaded) closes with *"Phase closure conditions in this file
-depend on the detailed testing rules in `50-qa-testing.mdc`"*. `50-qa-testing` is
-path-scoped and absent unless a test file is touched, so the dependency is dangling for most
-of a session.
+`80-gmp-execution` (always-loaded) closes at line 63 with *"Phase closure conditions in
+this file **depend on** the detailed testing rules in `50-qa-testing.mdc`"*, and again at
+line 64. `50-qa-testing` is path-scoped (`paths: '**/test_*.py'`) and therefore absent
+unless a test file is touched, so the dependency is dangling for most of a session. The
+same holds for the `50-qa-testing` reference in `rules/80-gmp-execution.mdc:70–71`, which
+is the source of the projection.
 
 **Fix:** inline the closure conditions `80` actually needs, or make the reference conditional.
 
