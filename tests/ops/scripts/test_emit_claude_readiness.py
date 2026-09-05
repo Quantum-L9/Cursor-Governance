@@ -429,8 +429,21 @@ def test_receipt_carries_a_write_time_and_expires(tmp_path: Path, monkeypatch) -
 
     assert receipt["generated_at"], "receipt must record when it was written"
     assert receipt["ttl_seconds"] == er.RECEIPT_TTL_SECONDS
-    # timestamp stays the governance commit date — it is not the write time.
-    assert receipt["timestamp"] != receipt["generated_at"]
+
+    # `timestamp` stays the governance COMMIT date. Assert that against git
+    # rather than against `generated_at`: the two carry different meanings but
+    # can carry the same instant, and a fixture repo committed in the same
+    # second as the receipt makes an inequality check fail for a reason that
+    # says nothing about the contract. (It did, in CI, on a fresh runner.)
+    commit_date = subprocess.run(
+        ["git", "-C", str(gov), "log", "-1", "--format=%cI"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    assert receipt["timestamp"] == commit_date, "timestamp must be the governance commit date"
+    # And `generated_at` is a write time in the receipt's own UTC format.
+    datetime.strptime(receipt["generated_at"], er._TIMESTAMP_FORMAT)
 
     assert er.receipt_freshness(receipt)["state"] == er.FRESH
 
