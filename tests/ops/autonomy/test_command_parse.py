@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "ops" / "autonomy"))
 
 from command_parse import (  # noqa: E402
     extract_named_roots,
+    make_workspace_raw,
     split_segments,
     strip_heredoc_bodies,
 )
@@ -81,3 +82,20 @@ def test_extract_named_roots_ignores_heredoc_data():
 @pytest.mark.parametrize("bad", ["", None])
 def test_extract_named_roots_empty_command(bad):
     assert extract_named_roots(bad or "") == []
+
+
+def test_make_workspace_raw_leading_and_trailing():
+    assert make_workspace_raw("WS=/tmp/wb make pr") == "/tmp/wb"
+    assert make_workspace_raw("make -C /tmp/gov pr WS=/tmp/wb") == "/tmp/wb"
+    assert make_workspace_raw("PR_REMEDIATE=0 make pr") is None
+    assert make_workspace_raw("git -C /tmp/wb push") is None
+
+
+def test_extract_named_roots_make_ws_beats_make_dash_c():
+    """Governance makefile lives at -C; the target checkout is WS=."""
+    command = "PR_REMEDIATE=0 make -C /tmp/gov pr WS=/tmp/wb"
+    assert extract_named_roots(command) == ["/tmp/wb"]
+
+
+def test_extract_named_roots_make_dash_c_when_ws_absent():
+    assert extract_named_roots("make -C /tmp/gov pr") == ["/tmp/gov"]
