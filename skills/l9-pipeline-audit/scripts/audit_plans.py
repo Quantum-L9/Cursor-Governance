@@ -410,6 +410,8 @@ def audit(
         except OSError:
             continue
         fm, body = parse_frontmatter(text)
+        if fm.get("harvested") is True:
+            continue
         todos = fm.get("todos")
         if not is_unbuilt(todos, fm):
             continue

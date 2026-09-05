@@ -1,22 +1,25 @@
 ---
 name: l9-audit-plans
-version: "1.1.0"
-description: "Audit and shelf the Cursor plans store: root = current unbuilt only; partial / built / superseded / parked go in subfolders"
+version: "2.0.0"
+description: "Audit, shelf, and refine the Cursor plans store: root = current; leftover todos fold or compile; harvested donors omitted"
 auto_chain: null
 ---
 
-# /l9-audit-plans — Plans-store shelf audit
+# /l9-audit-plans — Plans-store shelf + refine
 
 ## WHAT IT DOES
 
-Audit the machine-global Cursor **plans store** and put every `.plan.md` on the
-correct shelf. This is **not** `l9-plan` (author a plan) and **not**
-`/l9-pipeline-audit` (plans + WIP + campaigns live-queue and harvest).
+Put every `.plan.md` on the binding shelf, then keep leftover todos as **plan
+work** (fold onto a same-concern beneficiary, else compile one packet per
+concern). Harvested donors keep folder `status` plus `harvested: true` and are
+omitted later.
 
-Store path: workspace `.cursor/plans` → `~/.cursor/plans` → `docs/plans/`
-(stamp `$HOME/.cursor/l9-plans-store`). Rules: [`docs/plans/README.md`](../docs/plans/README.md).
+This is **not** `l9-plan` and **not** `/l9-pipeline-audit`.
+Do **not** auto-Build. SessionStart must not call refine.
 
-Do **not** auto-Build any plan.
+Store path: workspace `.cursor/plans` → `~/.cursor/plans` → `docs/plans/`.
+Rules: [`docs/plans/README.md`](../docs/plans/README.md),
+[`skills/l9-audit-plans/references/refine.md`](../skills/l9-audit-plans/references/refine.md).
 
 ---
 
@@ -24,32 +27,27 @@ Do **not** auto-Build any plan.
 
 | Location | Who belongs there |
 |---|---|
-| *(root)* | **Current unbuilt** only — every todo still `pending`. `_TEMPLATE.plan.md` stays. |
+| *(root)* | **Current unbuilt** only. `status: current`. `_TEMPLATE.plan.md` stays. |
 | `partially-built/` | Started: ≥1 todo `completed` or `in_progress`, not all done |
-| `built/` | All todos `completed`/`cancelled`, or `built: true` / `status: completed` |
-| `backlog/` | Unbuilt, **not current** (parked) |
-| `archive/` | Non-plan harvest / leftover companions |
+| `built/` | All todos done, or `built: true` / `status: completed` |
+| `stale/` | Unbuilt, **not current** (written, never started) |
+| `archive/` | Leftover companions |
 | `archive/superseded/` | `status: superseded` or older same-slug copy |
 
-**Current** = README live-queue name, or this week's dated `_*_M-D-YY` stamp, or
-an explicit current hex the operator named. Do **not** treat a bulk mtime bump
-as current.
-
-Same-slug: dated `M-D-YY` outranks 8-hex. Compare only **root + backlog +
-partially-built** — ignore `built/` and `archive/` mtimes.
-
-Companion `.plan.json` / `.activate.yaml` move with their `.plan.md`.
+`harvested: true` is a **tag**, not a status. `partial/` / `backlog/` /
+`pending/` are retired.
 
 ---
 
 ## EXECUTION (MANDATORY)
 
-### 1. Live-queue scan (sessionStart CLI — display)
-
 ```bash
 REPO="${CURSOR_PROJECT_DIR:-$(pwd)}"
 GOV="${HOME}/.cursor-governance"
-[ -f "$GOV/skills/l9-pipeline-audit/scripts/audit_plans.py" ] || GOV="$REPO"
+[ -f "$GOV/skills/l9-audit-plans/scripts/run_audit_plans.py" ] || GOV="$REPO"
+
+"$GOV/.venv/bin/python" "$GOV/skills/l9-audit-plans/scripts/run_audit_plans.py" \
+  --workspace "$REPO"
 
 python3 "$GOV/skills/l9-pipeline-audit/scripts/audit_plans.py" \
   --workspace "$REPO" \
@@ -59,48 +57,13 @@ python3 "$GOV/skills/l9-pipeline-audit/scripts/audit_plans.py" \
   --limit 15
 ```
 
-Present that stdout as the live-queue report. Do not invent plans it omitted.
+`run_audit_plans.py` is shelf → refine → shelf → README. Set
+`L9_AUDIT_PLANS_REFINE=0` to skip refine (diagnose).
 
-### 1b. Harvest-candidate report (display)
+Do **not** call `l9-intelligence-harvest` as a writer. Do **not** absorb leftover
+todos into `AGENTS.md`.
 
-From the same scan, list findings flagged `harvestable`. Group by concern
-(`pe-execute`, `baseline`, `mission`). Those plans have live invariants **and**
-stale wiring or a superseded mission.
-
-Do **not** auto-Build. Do **not** auto-compile. Do **not** `git mv` a mixed
-plan to `archive/superseded/`.
-
-Harvest owner is skill `l9-intelligence-harvest`, invoked through
-`/l9-pipeline-audit` (plans + WIP + campaigns). Do not call
-`l9-harvest-pipeline`. Then `/gmp` the compiled packet. Do not
-`make campaign`.
-
-### 2. Shelf hygiene (root + backlog + partially-built)
-
-Classify every top-level, `backlog/*.plan.md`, and `partially-built/*.plan.md`
-(skip `_TEMPLATE.plan.md`):
-
-1. `status: superseded` or older same-slug → `archive/superseded/`
-2. `built: true` / `status: completed` / all todos done → `built/`
-3. Same basename already in `built/` → drop the leftover (do not duplicate)
-4. Any `completed` or `in_progress` remaining → `partially-built/`
-5. Current + all `pending` → root
-6. Unbuilt + not current → `backlog/`
-
-**Backlog check is required.** Promote only current unbuilt to root. Move
-current partials out of backlog into `partially-built/`. Move built/superseded
-out of backlog.
-
-### 3. Organize
-
-Move (prefer `git mv` when tracked). Create `partially-built/` if missing.
-Print a count table: root kept / partial / built / superseded / backlog / dropped dups.
-
-Do not mass-rename historical hex/ISO stamps. Do not invent `pe/`, `ci/`, or date folders.
-
-### 4. Re-scan
-
-Re-run the step-1 CLI. Root must be current unbuilt only (plus `_TEMPLATE`).
+Present script stdout. Do not invent paths it omitted.
 
 ---
 
@@ -109,20 +72,12 @@ Re-run the step-1 CLI. Root must be current unbuilt only (plus `_TEMPLATE`).
 ```markdown
 ## Plans store audit
 
-**Live queue (scanner):**
-<paste CLI stdout>
+**Invoke:**
+<paste run_audit_plans.py stdout>
 
-**Moves:** root N | partially-built N | built N | superseded N | backlog N | dropped-dup N
-
-**Root now:**
-- `name.plan.md` …
+**Live queue (scanner, display only):**
+<paste audit_plans.py stdout>
 ```
-
-| Scanner line | Meaning |
-|---|---|
-| `none: no unbuilt plans in window` | Live queue empty in the 7-day window |
-| `UNBUILT:` / `STALE:` | Still at root; flags only — not a Build order |
-| `plan audit: no plans dir` | Store path missing |
 
 ### Ready For
 
@@ -134,6 +89,8 @@ Re-run the step-1 CLI. Root must be current unbuilt only (plus `_TEMPLATE`).
 
 ## NOTES
 
-- SessionStart `### Plan audit` is `l9-pipeline-audit` (plans + WIP + campaigns; one NEXT slot per surface; spent archive only). This slash remains the plans-store shelf organizer.
+- SessionStart `### Plan audit` is `l9-pipeline-audit` (display-only). This slash
+  is the plans-store shelf + refine organizer.
 - `/plan-audit` is a compatibility alias of `/l9-pipeline-audit`, not this command.
 - Slash: `commands/l9-audit-plans.md`
+- Skill: `skills/l9-audit-plans` (`scripts/run_audit_plans.py`)

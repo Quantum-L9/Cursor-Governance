@@ -1298,3 +1298,18 @@ not evaluate under Cursor. SSOT: `ops/autonomy/surface_detect.py` +
 `ops/scripts/lib/surface_detect.sh`. Divergence point: `l9_hook_exec.sh`
 self-guard (kill switch `L9_SURFACE_GUARD=0`). Contract:
 `environment/agents/SURFACE_BOOTSTRAP_CONTRACT.md`. ADR-0029.
+
+<!-- PLANS_REFINE_V1 -->
+## Plans-store refine (2026-09-05)
+
+This fragment is additive only. Do not fold `L9_AUDIT_PLANS_V1`.
+
+- Every `.plan.md` has `status` from the closed set: `current` (live root only),
+  `partially-built`, `built`, `stale`, `superseded`.
+- `harvested: true` is a tag, not a status. After fold or compile the donor keeps
+  folder status and is omitted on later `/l9-audit-plans` invokes.
+- Leftover todos stay plan work: fold onto a same-concern root or
+  `partially-built/` beneficiary, else compile one `status: current` packet per
+  concern. Do not absorb into law. `uncategorized` never folds.
+- `/l9-plan-simple` writes `status: current` on first draft.
+- SessionStart must not call refine. Kill switch: `L9_AUDIT_PLANS_REFINE=0`.
