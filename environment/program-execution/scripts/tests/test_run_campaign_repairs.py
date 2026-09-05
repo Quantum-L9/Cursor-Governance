@@ -460,7 +460,7 @@ class ResumeSourceReconciliationTests(_Base):
             self._reconcile(write_root, source, l9_home)
         self.assertEqual(ctx.exception.error_code, "SOURCE_DRIFT_ON_RESUME")
 
-    def test_no_recorded_shape_or_source_is_not_drift(self) -> None:
+    def test_no_source_is_not_drift(self) -> None:
         self.assertEqual(
             self.mod.reconcile_resumed_source(
                 campaign_id="CAMP-1",
@@ -470,21 +470,97 @@ class ResumeSourceReconciliationTests(_Base):
             )["status"],
             "NO_SOURCE",
         )
+
+    def test_no_recorded_shape_fails_closed_instead_of_resuming_on_the_lock(self) -> None:
+        """PEC-P1-001: an unverifiable source is not a compatibility fallback."""
         write_root = self.tmp / "root"
         source = self.mod.campaign_source_path(write_root, "CAMP-1")
         source.parent.mkdir(parents=True)
         import yaml
 
         source.write_text(yaml.safe_dump(self.SOURCE, sort_keys=False), encoding="utf-8")
-        self.assertEqual(
+        with self.assertRaises(self.mod.CampaignError) as ctx:
             self.mod.reconcile_resumed_source(
                 campaign_id="CAMP-1",
                 source=source,
                 pec_workspace=self.tmp / "ws",
                 l9_home=self.tmp / "l9-empty",
-            )["status"],
-            "NO_RECORDED_SHAPE",
+            )
+        self.assertEqual(ctx.exception.error_code, "RESUME_SOURCE_UNVERIFIED")
+        self.assertIn("attest-resume-source", str(ctx.exception))
+
+
+class ResumeIdentityAdmissionTests(_Base):
+    """PEC-P1-001: the Controller decides Program identity before execution."""
+
+    def _admit(self, verdicts: list[dict[str, Any]], adopt: Any = None) -> Any:
+        answers = iter(verdicts)
+        patches = [
+            unittest.mock.patch.object(
+                self.mod, "_admit_resume", side_effect=lambda ws: next(answers)
+            ),
+            unittest.mock.patch.object(
+                self.mod, "adopt_changed_definitions", side_effect=adopt or (lambda ws, ids: {})
+            ),
+        ]
+        for item in patches:
+            item.start()
+        try:
+            return self.mod.admit_resume_identity(self.tmp / "ws", "CAMP-1")
+        finally:
+            for item in patches:
+                item.stop()
+
+    def test_exact_match_executes(self) -> None:
+        self.assertEqual(self._admit([{"decision": "EXACT_MATCH"}])["decision"], "EXACT_MATCH")
+
+    def test_task_scoped_drift_is_relocked_with_the_controller_scope_then_readmitted(
+        self,
+    ) -> None:
+        adopted: list[list[str]] = []
+        verdict = self._admit(
+            [
+                {"decision": "TASK_SCOPED_DRIFT", "relock_scope": ["TASK-002"]},
+                {"decision": "EXACT_MATCH"},
+            ],
+            adopt=lambda ws, ids: adopted.append(list(ids)) or {"relocked": list(ids)},
         )
+        self.assertEqual(adopted, [["TASK-002"]])
+        self.assertEqual(verdict["decision"], "EXACT_MATCH")
+
+    def test_a_relock_that_does_not_reach_exact_match_stops(self) -> None:
+        with self.assertRaises(self.mod.CampaignError) as ctx:
+            self._admit(
+                [
+                    {"decision": "TASK_SCOPED_DRIFT", "relock_scope": ["TASK-002"]},
+                    {"decision": "WIDER_PROGRAM_DRIFT", "reasons": ["gates"]},
+                ]
+            )
+        self.assertEqual(ctx.exception.error_code, "RESUME_SOURCE_MISMATCH")
+
+    def test_every_wider_decision_stops(self) -> None:
+        for decision in (
+            "WIDER_PROGRAM_DRIFT",
+            "SCHEMA_INCOMPATIBLE",
+            "TARGET_MISMATCH",
+            "SOURCE_UNAVAILABLE",
+        ):
+            with self.subTest(decision=decision), self.assertRaises(self.mod.CampaignError) as ctx:
+                self._admit([{"decision": decision, "reasons": ["x"]}])
+            self.assertEqual(ctx.exception.error_code, "RESUME_SOURCE_MISMATCH")
+
+    def test_lock_invalid_is_a_hard_stop(self) -> None:
+        with self.assertRaises(self.mod.CampaignError) as ctx:
+            self._admit([{"decision": "LOCK_INVALID", "reasons": ["digest"]}])
+        self.assertEqual(ctx.exception.error_code, "LOCK_INVALID")
+
+    def test_a_refused_relock_stops(self) -> None:
+        with self.assertRaises(self.mod.CampaignError) as ctx:
+            self._admit(
+                [{"decision": "TASK_SCOPED_DRIFT", "relock_scope": ["TASK-001"]}],
+                adopt=lambda ws, ids: None,
+            )
+        self.assertEqual(ctx.exception.error_code, "RESUME_SOURCE_MISMATCH")
 
 
 if __name__ == "__main__":

@@ -14,8 +14,11 @@ from pathlib import Path
 from typing import Any
 
 from .blueprint import (
+    RESUME_EXACT_MATCH,
+    RESUME_TASK_SCOPED_DRIFT,
     BlueprintError,
     build_program_lock,
+    classify_lock_drift,
     relock_tasks,
     stale_task_ids,
     verify_program_lock,
@@ -567,6 +570,54 @@ def relock_definitions(
             "superseded_after_completion": sorted(superseded),
             "lock_digest": outcome["lock_digest"],
             "provenance": str(history),
+        }
+    finally:
+        db.close()
+
+
+def admit_resume(workspace: Path) -> dict[str, Any]:
+    """Decide whether a live runtime may resume against the Blueprint on disk.
+
+    Immutable Program identity is decided here, by the Controller, from the
+    full semantic delta between the active Program Lock and the current
+    Blueprint -- never by a caller's path-compatibility check (PEC-P1-001).
+    Read-only: the answer names the canonical next step and this function
+    takes none of them.
+
+    Decisions, in canonical order: LOCK_INVALID, SCHEMA_INCOMPATIBLE,
+    SOURCE_UNAVAILABLE, TARGET_MISMATCH, WIDER_PROGRAM_DRIFT,
+    TASK_SCOPED_DRIFT, EXACT_MATCH. Only EXACT_MATCH may execute directly;
+    TASK_SCOPED_DRIFT must pass through `relock_definitions` and be re-admitted;
+    everything else stops the resume.
+    """
+    db, _ = open_runtime(workspace)
+    try:
+        lock_path = workspace.resolve() / "runtime" / "program-lock.json"
+        verdict = classify_lock_drift(lock_path)
+        delta = verdict.get("delta") or {}
+        recorded_digest = db.get_meta("program_digest")
+        lock_digest = None
+        if lock_path.is_file():
+            try:
+                lock_digest = load_json(lock_path).get("lock_digest")
+            except (OSError, ValueError):
+                lock_digest = None
+        decision = verdict["decision"]
+        reasons = list(verdict["reasons"])
+        if decision == RESUME_EXACT_MATCH and recorded_digest != lock_digest:
+            decision = "LOCK_INVALID"
+            reasons.append("runtime state records a different program digest than the lock on disk")
+        return {
+            "status": decision,
+            "decision": decision,
+            "may_execute": decision == RESUME_EXACT_MATCH,
+            "relock_scope": list(delta.get("tasks_changed") or [])
+            if decision == RESUME_TASK_SCOPED_DRIFT
+            else [],
+            "reasons": reasons,
+            "program_digest": recorded_digest,
+            "lock_digest": lock_digest,
+            "source_digests_moved": list(delta.get("source_digests_moved") or []),
         }
     finally:
         db.close()

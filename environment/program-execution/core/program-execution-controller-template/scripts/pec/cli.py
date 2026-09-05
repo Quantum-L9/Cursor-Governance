@@ -17,6 +17,7 @@ from .contracts import (
 from .controller import (
     ControllerError,
     add_approval,
+    admit_resume,
     bootstrap,
     claim_task,
     complete_campaign,
@@ -63,6 +64,12 @@ def parser() -> argparse.ArgumentParser:
     )
 
     cmd = sub.add_parser("validate")
+    cmd.add_argument("--workspace", required=True, type=Path)
+
+    cmd = sub.add_parser(
+        "admit-resume",
+        help="read-only: may this live runtime resume against the Blueprint on disk?",
+    )
     cmd.add_argument("--workspace", required=True, type=Path)
 
     cmd = sub.add_parser(
@@ -346,6 +353,11 @@ def main(argv: list[str] | None = None, *, template_root: Path) -> int:
         elif args.command == "validate":
             value = validate_runtime(args.workspace)
             if value["status"] != "PASS":
+                print_json(value)
+                return 1
+        elif args.command == "admit-resume":
+            value = admit_resume(args.workspace)
+            if not value["may_execute"]:
                 print_json(value)
                 return 1
         elif args.command == "relock":

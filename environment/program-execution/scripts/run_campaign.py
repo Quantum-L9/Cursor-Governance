@@ -4880,7 +4880,18 @@ def reconcile_resumed_source(
     cached = reuse.recorded_value("compile")
     recorded = (cached or {}).get("source") if isinstance(cached, dict) else None
     if not isinstance(recorded, dict):
-        return {"status": "NO_RECORDED_SHAPE"}
+        # A runtime prepared before the shape record existed cannot prove that
+        # the source on disk is the source it was compiled from. Resuming on the
+        # lock alone was the silent compatibility fallback PEC-P1-001 names; the
+        # honest answer is a stop with the one documented reconciliation step.
+        raise CampaignError(
+            f"{campaign_id}: the prepared runtime records no compiled source shape, so the "
+            f"campaign source {source} cannot be proven to be what the runtime was compiled "
+            "from. Reconcile explicitly with "
+            f"`run_campaign.py attest-resume-source --campaign-id {campaign_id}` (which "
+            "admits the Blueprint against the active Program Lock first), or rebuild.",
+            error_code="RESUME_SOURCE_UNVERIFIED",
+        )
     edited = edited_task_ids(shape, recorded)
     if edited is None:
         raise CampaignError(
@@ -4903,6 +4914,104 @@ def reconcile_resumed_source(
         reuse.store("compile", key, {**cached, "source": shape})
     log(f"resume {campaign_id}: relocked edited definitions {', '.join(edited)}")
     return {"status": "RELOCKED", "relocked": edited, "adopted": adopted}
+
+
+def admit_resume_identity(pec_workspace: Path, campaign_id: str) -> dict[str, Any]:
+    """Prove the live runtime still describes the Program on disk, or stop.
+
+    Asks the Controller (`pec admit-resume`) rather than reimplementing drift
+    classification here. TASK_SCOPED_DRIFT is absorbed through the canonical
+    relock with exactly the scope the Controller named, then re-admitted; the
+    relock is never trusted to have produced EXACT_MATCH without asking again.
+    """
+    verdict = _admit_resume(pec_workspace)
+    decision = str(verdict.get("decision") or "UNKNOWN")
+    if decision == "TASK_SCOPED_DRIFT":
+        scope = [str(item) for item in (verdict.get("relock_scope") or [])]
+        adopted = adopt_changed_definitions(pec_workspace, scope)
+        if adopted is None:
+            raise CampaignError(
+                f"resume {campaign_id}: task definitions {scope} drifted and the Controller "
+                "refused to relock them; rebuild instead of resuming",
+                error_code="RESUME_SOURCE_MISMATCH",
+            )
+        log(f"resume {campaign_id}: relocked drifted definitions {', '.join(scope)}")
+        verdict = _admit_resume(pec_workspace)
+        decision = str(verdict.get("decision") or "UNKNOWN")
+    if decision != "EXACT_MATCH":
+        reasons = "; ".join(str(item) for item in (verdict.get("reasons") or [])) or decision
+        raise CampaignError(
+            f"resume {campaign_id}: the live runtime does not describe the Program on disk "
+            f"({decision}: {reasons}); refusing to execute",
+            error_code="RESUME_SOURCE_MISMATCH" if decision != "LOCK_INVALID" else "LOCK_INVALID",
+        )
+    return verdict
+
+
+def _admit_resume(pec_workspace: Path) -> dict[str, Any]:
+    """`pec admit-resume`, read-only; a non-zero exit still carries the verdict."""
+    result = run_cmd(
+        [sys.executable, str(PEC), "admit-resume", "--workspace", str(pec_workspace)],
+        timeout=PEC_TIMEOUT_S,
+    )
+    try:
+        payload = json.loads(result.stdout or "{}")
+    except json.JSONDecodeError:
+        payload = {}
+    if not isinstance(payload, dict) or "decision" not in payload:
+        detail = (result.stderr or result.stdout or "").strip()
+        raise CampaignError(
+            f"pec admit-resume gave no verdict: {detail}", error_code="RESUME_SOURCE_MISMATCH"
+        )
+    return payload
+
+
+def attest_resume_source(
+    *,
+    campaign_id: str,
+    l9_home: Path,
+    repo_root: Path | None,
+) -> dict[str, Any]:
+    """Record the compiled-source shape for a runtime prepared before it existed.
+
+    The one documented reconciliation for RESUME_SOURCE_UNVERIFIED. It records
+    nothing unless the Controller admits the Blueprint on disk against the
+    active lock as EXACT_MATCH, so the shape written is the shape of the
+    Program the runtime actually froze.
+    """
+    pec_workspace = l9_home / "programs" / campaign_id
+    if not resumable_workspace(pec_workspace):
+        raise CampaignError(f"{campaign_id}: no live runtime at {pec_workspace}")
+    launch = json.loads((pec_workspace / "runtime" / "LAUNCH.json").read_text(encoding="utf-8"))
+    host = str(launch.get("host_worktree") or launch.get("host_tree") or "")
+    write_root = repo_root.resolve() if repo_root is not None else Path(host).resolve()
+    source = campaign_source_path(write_root, campaign_id)
+    shape = campaign_source_shape(source) if source.is_file() else None
+    if shape is None:
+        raise CampaignError(f"{campaign_id}: campaign source unavailable at {source}")
+    verdict = _admit_resume(pec_workspace)
+    if verdict.get("decision") != "EXACT_MATCH":
+        raise CampaignError(
+            f"{campaign_id}: cannot attest the source shape; the Controller reports "
+            f"{verdict.get('decision')}: {'; '.join(verdict.get('reasons') or [])}",
+            error_code="RESUME_SOURCE_MISMATCH",
+        )
+    timing = _load_script("pe_timing", PE_ROOT / "scripts/pe_timing.py")
+    prepare = _load_script("pe_prepare_state", PE_ROOT / "scripts/pe_prepare_state.py")
+    primed = l9_home / "primed" / campaign_id
+    reuse = prepare.PrepareCache(
+        timing.StageCache(primed, enabled=True),
+        prepare.PrepareState.load(primed / "PREPARE_STATE.json", campaign_id=campaign_id),
+    )
+    cached = reuse.recorded_value("compile")
+    key = str((reuse.state.stages.get("compile") or {}).get("key") or "") or "attested"
+    reuse.store("compile", key, {**(cached if isinstance(cached, dict) else {}), "source": shape})
+    return {
+        "status": "ATTESTED",
+        "campaign_id": campaign_id,
+        "source": str(source),
+        "program_digest": verdict.get("program_digest"),
+    }
 
 
 def resume_live_campaign(
@@ -4960,6 +5069,12 @@ def resume_live_campaign(
         pec_workspace=pec_workspace,
         l9_home=l9_home,
     )
+    # Immutable Program identity is the Controller's decision, taken from the
+    # semantic delta between the active lock and the compiled Blueprint. The
+    # source comparison above is one execution safety check; it never decides
+    # Program equivalence. Only EXACT_MATCH executes; TASK_SCOPED_DRIFT goes
+    # through the canonical relock and is re-admitted; anything wider stops.
+    admit_resume_identity(pec_workspace, campaign_id)
     log(f"resume {campaign_id} (runtime active; workspace kept, not quarantined)")
     report.stages_completed.append("resume")
     repository_id = str((seed.get("target") or {}).get("repository_id") or host_repo)
@@ -6135,10 +6250,39 @@ def trace_command(argv: list[str]) -> int:
     return 0
 
 
+def build_attest_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="run_campaign.py attest-resume-source",
+        description=(
+            "Record the compiled-source shape of a live runtime after Controller admission."
+        ),
+    )
+    parser.add_argument("--campaign-id", required=True)
+    parser.add_argument("--l9-root", type=Path, default=None)
+    parser.add_argument("--repo-root", type=Path, default=None)
+    return parser
+
+
+def attest_command(argv: list[str]) -> int:
+    args = build_attest_parser().parse_args(argv)
+    l9_home = (args.l9_root or Path(os.environ.get("L9_ROOT", Path.home() / ".l9"))).resolve()
+    try:
+        result = attest_resume_source(
+            campaign_id=args.campaign_id, l9_home=l9_home, repo_root=args.repo_root
+        )
+    except CampaignError as exc:
+        print(f"FAIL: {exc}", file=sys.stderr)
+        return exc.exit_code
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     raw = list(sys.argv[1:] if argv is None else argv)
     if raw and raw[0] == "trace":
         return trace_command(raw[1:])
+    if raw and raw[0] == "attest-resume-source":
+        return attest_command(raw[1:])
     parser = build_parser()
     args = parser.parse_args(raw)
     if args.check_input is not None:
