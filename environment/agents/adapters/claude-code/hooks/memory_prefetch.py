@@ -39,7 +39,10 @@ _GOV_LIB = _governance_lib()
 if str(_GOV_LIB) not in sys.path:
     sys.path.insert(0, str(_GOV_LIB))
 
-from workspace_roots import workspace_roots as _shared_workspace_roots  # noqa: E402
+from workspace_roots import (  # noqa: E402
+    DROPPED_CAP,
+    select_workspace_roots as _shared_select_workspace_roots,
+)
 
 #: Cloud containers put several repositories side by side. Hydrating each costs
 #: one packet of context, so the count is capped rather than unbounded — and the
@@ -94,11 +97,38 @@ def _hydration_roots(workspace: Path) -> list[Path]:
     the container root directly — could be wrong for so long. The namespace
     filter stays local because it is memory's rule, not the resolver's.
     """
-    return _shared_workspace_roots(
+    return _hydration_selection(workspace).selected
+
+
+def _hydration_selection(workspace: Path):
+    """`_hydration_roots`, keeping the roots it dropped and why.
+
+    Naming the cap is not naming what the cap cost. The emitted line used to
+    offer two rules and attribute neither, so six repositories excluded purely
+    by the cap read as six repositories with nothing to hydrate.
+    """
+    return _shared_select_workspace_roots(
         workspace,
         cap=_MAX_HYDRATION_ROOTS,
         predicate=_resolves_to_own_group,
     )
+
+
+def _dropped_summary(dropped: list[tuple[Path, str]]) -> str:
+    """Name every excluded repository and the rule that excluded it."""
+    if not dropped:
+        return ""
+    by_cap = [p.name for p, reason in dropped if reason == DROPPED_CAP]
+    by_ns = [p.name for p, reason in dropped if reason != DROPPED_CAP]
+    parts = []
+    if by_cap:
+        parts.append(
+            f"beyond the cap of {_MAX_HYDRATION_ROOTS}, so NOT hydrated this "
+            f"session: {', '.join(by_cap)}"
+        )
+    if by_ns:
+        parts.append(f"no namespace of their own: {', '.join(by_ns)}")
+    return "; ".join(parts)
 
 
 sys.path.insert(0, str(MEM))
@@ -181,7 +211,8 @@ def main() -> int:
     # resolver from it, and its except-branch fails OPEN so a resolver fault can
     # never cost the session its memory. Called before the path was set, that
     # open failure was silent and unconditional — every root looked eligible.
-    roots = _hydration_roots(workspace)
+    selection = _hydration_selection(workspace)
+    roots, dropped = selection.selected, selection.dropped
 
     try:
         from ops.graphiti.hydration.compile_session_packet import compile_and_format
@@ -255,12 +286,13 @@ def main() -> int:
             "No phase-lock is required or accepted for repository mutation.",
         ]
         if len(roots) > 1:
+            dropped_note = _dropped_summary(dropped)
             lines.insert(
                 1,
                 f"Multi-repo container: hydrated {len(roots)} of "
-                f"{_repo_count(workspace)} repositories under {workspace} "
-                f"(cap {_MAX_HYDRATION_ROOTS}; repositories with no namespace of their "
-                "own are skipped). A group_id is repository identity, never container "
+                f"{_repo_count(workspace)} repositories under {workspace}. "
+                + (f"Excluded — {dropped_note}. " if dropped_note else "")
+                + "A group_id is repository identity, never container "
                 "identity — resolving one from the container root matches every repo "
                 "and returns none.",
             )

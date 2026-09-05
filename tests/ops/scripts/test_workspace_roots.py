@@ -16,8 +16,11 @@ sys.path.insert(0, str(REPO_ROOT / "ops" / "scripts" / "lib"))
 
 from workspace_roots import (  # noqa: E402
     DEFAULT_MAX_ROOTS,
+    DROPPED_CAP,
+    DROPPED_NO_NAMESPACE,
     is_repository,
     projection_roots,
+    select_workspace_roots,
     workspace_roots,
 )
 
@@ -111,3 +114,50 @@ def test_live_container_shape_is_stable(tmp_path: Path, cap: int) -> None:
     result = workspace_roots(tmp_path, cap=cap)
     assert result == sorted(made)[:cap]
     assert all(is_repository(path) for path in result)
+
+
+def test_selection_names_every_dropped_root_and_why(tmp_path: Path) -> None:
+    """A cap that drops repositories must name them, and name the rule.
+
+    The emitted hydration line used to read "(cap 6; repositories with no
+    namespace of their own are skipped)" — two rules, neither attributed, no
+    repository named. In a container of twelve that is indistinguishable from
+    "the other six had nothing to hydrate", which is how six repositories went
+    unserved without anyone noticing.
+    """
+    container = tmp_path / "container"
+    container.mkdir()
+    names = [f"repo-{i:02d}" for i in range(DEFAULT_MAX_ROOTS + 3)]
+    for name in names:
+        make_repo(container, name)
+    # One repository fails the caller's predicate rather than the cap.
+    unnamespaced = names[0]
+
+    selection = select_workspace_roots(
+        container, predicate=lambda p: p.name != unnamespaced
+    )
+
+    assert [p.name for p in selection.selected] == names[1 : DEFAULT_MAX_ROOTS + 1]
+    reasons = {p.name: reason for p, reason in selection.dropped}
+    assert reasons[unnamespaced] == DROPPED_NO_NAMESPACE
+    assert reasons[names[-1]] == DROPPED_CAP
+    # Every repository is accounted for exactly once: served or explained.
+    assert len(selection.selected) + len(selection.dropped) == len(names)
+
+
+def test_workspace_roots_is_a_thin_wrapper(tmp_path: Path) -> None:
+    """The reported drops can never disagree with the acted-on selection."""
+    container = tmp_path / "container"
+    container.mkdir()
+    for i in range(DEFAULT_MAX_ROOTS + 2):
+        make_repo(container, f"repo-{i:02d}")
+    assert workspace_roots(container) == select_workspace_roots(container).selected
+
+
+def test_container_fallback_reports_no_drops(tmp_path: Path) -> None:
+    """The whole-container fallback serves everything, so nothing is unserved."""
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    selection = select_workspace_roots(empty)
+    assert selection.selected == [empty]
+    assert selection.dropped == []
