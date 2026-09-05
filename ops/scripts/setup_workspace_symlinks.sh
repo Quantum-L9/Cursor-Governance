@@ -167,7 +167,9 @@ PLIST
 
 ensure_global_git_ignores() {
   # Option B machine layer (Cursor-Governance#281): core.excludesFile covers
-  # every clone on this machine. Never a blanket `.claude/` (Option A).
+  # never-owned session paths on this machine. Generated Claude mirrors
+  # (including `.mcp.json`) stay session-local so a consumer can still
+  # `git add .claude .mcp.json` for Web/Mobile. Never a blanket `.claude/`.
   local gi
   gi="$(git config --global core.excludesfile 2>/dev/null || true)"
   [ -z "$gi" ] && gi="$HOME/.gitignore_global"

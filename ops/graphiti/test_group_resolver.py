@@ -175,6 +175,7 @@ def test_live_pr_repair_registry_keeps_group_id_after_github_rename(monkeypatch)
     monkeypatch.setattr(group_resolver, "load_registry", lambda: live)
     entry = live["repos"]["pr-repair"]
     assert entry["github"] == "Quantum-L9/l9-pr-repair"
+    assert "Quantum-L9/PR_Repair" in entry.get("github_aliases", [])
     assert "PR_Repair" in entry["path_hints"]
     assert "l9-pr-repair" in entry["path_hints"]
     assert any(

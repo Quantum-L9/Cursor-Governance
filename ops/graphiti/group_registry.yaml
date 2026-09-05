@@ -194,6 +194,7 @@ repos:
     integrates_with: [cursor-governance]
   pr-repair:
     github: Quantum-L9/l9-pr-repair
+    github_aliases: [Quantum-L9/PR_Repair]
     path_hints: [PR_Repair, pr-repair, l9-pr-repair]
     remote_patterns:
       - "*/PR_Repair*"

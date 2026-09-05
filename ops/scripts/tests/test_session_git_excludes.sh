@@ -56,10 +56,19 @@ git -C "$ws" worktree add -q -b wt "$linked"
 apply_session_git_excludes "$linked"
 git -C "$linked" check-ignore -q .claude/skills || fail "linked worktree does not honour .claude/skills"
 
-# Machine global list is the same Claude mirrors, still no blanket.
+# Machine list is never-owned only. .mcp.json stays session-local so
+# `git add .mcp.json` still works for Web/Mobile adoption.
 gi="$tmp/gitignore_global"
-apply_machine_session_excludes "$gi"
-grep -qxF '.claude/skills' "$gi" || fail "machine excludes missing .claude/skills"
+printf '%s\n' 'memory-bank/' '.mcp.json' '.claude/skills' >"$gi"
+apply_machine_session_excludes "$gi" || fail "apply_machine_session_excludes on a writable file"
+grep -qxF 'memory-bank/' "$gi" || fail "machine excludes dropped memory-bank/"
+grep -qxF '.claude/settings.local.json' "$gi" || fail "machine excludes missing settings.local.json"
+if grep -qxF '.mcp.json' "$gi"; then fail "machine excludes must not contain .mcp.json"; fi
+if grep -qxF '.claude/skills' "$gi"; then fail "machine excludes must not contain .claude/skills"; fi
 if grep -qxF '.claude/' "$gi"; then fail "machine excludes wrote blanket .claude/"; fi
+
+blocked="$tmp/not-a-dir"
+printf 'x\n' >"$blocked"
+apply_machine_session_excludes "$blocked/gitignore" && fail "unwritable machine excludes must fail"
 
 pass "session_git_excludes Option B (no Option A blanket)"
