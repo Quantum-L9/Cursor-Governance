@@ -88,7 +88,7 @@ reference:
   imports the core deps — an unimportable environment is DEGRADED, never READY);
 - `schema_version = l9.claude-readiness.v1`.
 
-Capability dimensions (`MCP_status`, `Graphiti_authenticated_health`) may read
+Capability dimensions (`MCP_status`, `Graphiti_reachability`) may read
 DEGRADED where the platform issues no identity; that is a shared, expected
 degraded mode across the cloud surfaces, not a parity divergence. Record the
 receipt from each surface here as it is observed; until then those surfaces stay

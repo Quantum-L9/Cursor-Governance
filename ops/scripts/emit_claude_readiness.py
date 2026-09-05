@@ -39,6 +39,7 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -56,6 +57,19 @@ SCHEMA_VERSION = "l9.claude-readiness.v1"
 # receipt is printed. The value is a posture label (READY/…), never a credential;
 # the JSON field name is unchanged.
 _BOUNDARY_FIELD = "secret_boundary_status"
+
+#: A readiness receipt describes probes that were run once. Every dimension in
+#: it can go false without the file changing, so the receipt must carry the
+#: window inside which it is worth believing. One hour matches the governance
+#: refresh receipt, which answers the same question about the same clone.
+RECEIPT_TTL_SECONDS = 3600
+_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+
+#: Freshness states, distinct from the READY/DEGRADED dimension vocabulary: a
+#: receipt can be perfectly READY and far too old to act on.
+FRESH = "fresh"
+EXPIRED = "expired"
+NEVER_RAN = "never_ran"
 
 READY = "READY"
 DEGRADED = "DEGRADED"
@@ -253,7 +267,7 @@ def _classify_graphiti_http_code(code: int) -> tuple[str, str]:
         return DEGRADED, "not authenticated (blocker: allowlist)"
     if 200 <= code < 500:
         return READY, "front door reachable"
-    return DEGRADED, "not authenticated (blocker: reachability)"
+    return DEGRADED, "unreachable (blocker: reachability)"
 
 
 def _graphiti_mcp_http_health() -> tuple[str, str]:
@@ -261,7 +275,7 @@ def _graphiti_mcp_http_health() -> tuple[str, str]:
         return READY, "probe skipped"
     url = graphiti_mcp_url()
     if not url:
-        return DEGRADED, "not authenticated (blocker: config)"
+        return DEGRADED, "unconfigured (blocker: config)"
     # Never urllib.urlopen: GRAPHITI_MCP_URL is env-sourced and urllib follows
     # file:// (CWE-939). safe_https.exchange is HTTPS or loopback HTTP only.
     req = urllib.request.Request(url, method="GET")
@@ -280,9 +294,9 @@ def _graphiti_mcp_http_health() -> tuple[str, str]:
     except urllib.error.HTTPError as exc:
         return _classify_graphiti_http_code(int(exc.code))
     except ValueError:
-        return DEGRADED, "not authenticated (blocker: config)"
+        return DEGRADED, "unconfigured (blocker: config)"
     except Exception:  # noqa: BLE001 - a probe never crashes the emitter
-        return DEGRADED, "not authenticated (blocker: reachability)"
+        return DEGRADED, "unreachable (blocker: reachability)"
 
 
 def _graphiti_cli_health(gov: Path) -> tuple[str, str]:
@@ -306,7 +320,7 @@ def _graphiti_cli_health(gov: Path) -> tuple[str, str]:
     if not isinstance(data, dict):
         return DEGRADED, "cli health unparseable"
     if data.get("healthy"):
-        return READY, "cli authenticated"
+        return READY, "cli reachable"
     # Classify without interpolating probe-derived exception text.
     blob = json.dumps(data).lower()
     if "403" in blob:
@@ -315,7 +329,7 @@ def _graphiti_cli_health(gov: Path) -> tuple[str, str]:
         return DEGRADED, "not authenticated (blocker: identity)"
     if data.get("liveness_ok") and not (data.get("tools") or {}).get("reachable"):
         return DEGRADED, "cli tool plane unreachable"
-    return DEGRADED, "not authenticated (blocker: reachability)"
+    return DEGRADED, "unreachable (blocker: reachability)"
 
 
 def graphiti_probe(gov: Path) -> dict[str, Any]:
@@ -329,14 +343,14 @@ def graphiti_probe(gov: Path) -> dict[str, Any]:
 
 
 def _graphiti_health(probe: dict[str, Any]) -> tuple[str, str]:
-    """Classify a pre-built probe dict (tests + compact Graphiti_authenticated)."""
+    """Classify a pre-built probe dict (tests + compact Graphiti_reachability)."""
     if not probe:
         return UNKNOWN, "graphiti probe unavailable"
     if probe.get("ok"):
-        return READY, "authenticated"
+        return READY, "reachable"
     key = str(probe.get("primary_blocker") or "").strip().lower()
     blocker = _BLOCKER_VOCAB.get(key, "unknown")
-    return DEGRADED, f"not authenticated (blocker: {blocker})"
+    return DEGRADED, f"unhealthy (blocker: {blocker})"
 
 
 def _mcp_status(bootstrap: dict[str, Any] | None, proj_mcp: str) -> tuple[str, str]:
@@ -450,6 +464,27 @@ _SECRET_BOUNDARY_VOCAB = {
 }
 
 
+def _graphiti_transport_auth() -> str:
+    """Whether the Graphiti transport carries a credential — measured, not assumed.
+
+    The module docstring's own truth rule says a TCP-reachable Graphiti is not
+    an authenticated Graphiti, but every health probe above measures only
+    reachability. This reads the one signal that decides the question, and it
+    reads it exactly where the client decides it: ``graphiti_memory_client.py``
+    adds an ``Authorization: Bearer`` header if and only if GRAPHITI_MCP_TOKEN
+    is set and non-empty, and ``mcp.template.json`` merges the same header under
+    ``_optional_headers`` on the same condition.
+
+    UNAUTHENTICATED is a posture, not a fault. On a model-controlled surface the
+    token is deliberately absent (see docs/DEGRADED_MODE_CONTRACT.md, "Graphiti
+    MCP at GRAPHITI_MCP_URL | No bearer"), so this is reported as an observation
+    beside uv_version rather than as a status dimension — a dims entry would
+    aggregate an intended posture into a DEGRADED receipt.
+    """
+    token = os.environ.get("GRAPHITI_MCP_TOKEN", "").strip()
+    return "AUTHENTICATED" if token else "UNAUTHENTICATED"
+
+
 def _secret_boundary_status() -> tuple[str, str]:
     # This surface holds no credentials. Graphiti health is HTTPS to
     # memory.quantumaipartners.com, not a broker-mediated probe.
@@ -558,7 +593,7 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
         "MCP_status": mcp_status,
         "memory_cli_status": cli_status,
         "memory_mcp_status": mem_mcp_status,
-        "Graphiti_authenticated_health": graphiti_status,
+        "Graphiti_reachability": graphiti_status,
         "Makefile_facade_status": facade_status,
         "dispatcher_status": disp_status,
         "merge_authority_status": merge_status,
@@ -572,7 +607,7 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
         "MCP_status": mcp_note,
         "memory_cli_status": cli_note,
         "memory_mcp_status": mem_mcp_note,
-        "Graphiti_authenticated_health": graphiti_note,
+        "Graphiti_reachability": graphiti_note,
         "Makefile_facade_status": facade_note,
         "dispatcher_status": disp_note,
         "merge_authority_status": merge_note,
@@ -592,7 +627,12 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
 
     receipt: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
+        # The COMMIT date of governance_SHA, not when this receipt was written.
+        # Kept under its historical name for existing consumers; `generated_at`
+        # below is the write time, and freshness is derived from that one.
         "timestamp": _git(gov, "log", "-1", "--format=%cI") or "",
+        "generated_at": datetime.now(UTC).strftime(_TIMESTAMP_FORMAT),
+        "ttl_seconds": RECEIPT_TTL_SECONDS,
         "governance_repository": ident["governance_repository"],
         "governance_default_branch": ident["governance_default_branch"],
         "governance_SHA": ident["governance_SHA"],
@@ -600,6 +640,9 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
         # Observation, not a dims entry — see _uv_version. Empty string means
         # "not observed", which is distinct from a version that is merely old.
         "uv_version": _uv_version(),
+        # Observation, not a dims entry — see _graphiti_transport_auth. An
+        # absent token is the intended posture here, not a degradation.
+        "graphiti_transport_auth": _graphiti_transport_auth(),
     }
     receipt.update(dims)
     receipt["overall_readiness"] = overall
@@ -607,6 +650,44 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
     receipt["warnings"] = warnings
     receipt["notes"] = notes
     return receipt
+
+
+def receipt_freshness(
+    receipt: dict[str, Any] | None, *, now: datetime | None = None
+) -> dict[str, Any]:
+    """Derive whether a readiness receipt is still worth believing.
+
+    Modelled on ops/scripts/governance_refresh_receipt.py, deliberately: that
+    module exists because a receipt whose claim outlived its truth was read as
+    current, and this receipt had the same defect in a worse form. It carried no
+    write time at all — its `timestamp` is the COMMIT date of governance_SHA,
+    which reads exactly like a write time — so its age was not merely untracked
+    but unknowable, and a receipt written at container creation was reported as
+    the live capability plane many hours later.
+
+    Absence is `never_ran`, not `expired`: "the probes never ran" and "the probes
+    ran but I cannot vouch for them now" call for different responses.
+    """
+    moment = now or datetime.now(UTC)
+    if receipt is None:
+        return {"state": NEVER_RAN, "reason": "no readiness receipt on disk", "age_seconds": None}
+    raw = str(receipt.get("generated_at", ""))
+    try:
+        written = datetime.strptime(raw, _TIMESTAMP_FORMAT).replace(tzinfo=UTC)
+    except (TypeError, ValueError):
+        # Pre-dates generated_at, or unparseable. Not `fresh` — an unknowable
+        # age is exactly the state this function refuses to report as current.
+        return {
+            "state": EXPIRED,
+            "reason": "receipt carries no parseable generated_at",
+            "age_seconds": None,
+        }
+    age = int((moment - written).total_seconds())
+    ttl = receipt.get("ttl_seconds")
+    ttl = RECEIPT_TTL_SECONDS if not isinstance(ttl, int) or ttl <= 0 else ttl
+    if age > ttl:
+        return {"state": EXPIRED, "reason": f"written {age}s ago, ttl {ttl}s", "age_seconds": age}
+    return {"state": FRESH, "reason": f"written {age}s ago, ttl {ttl}s", "age_seconds": age}
 
 
 def _receipt_path() -> Path:
@@ -626,7 +707,10 @@ def _compact(receipt: dict[str, Any]) -> str:
     # Printed outside `order` because that list is the status dimensions, and a
     # version string is not a status. "unobserved" rather than a bare blank so
     # the absence is legible in a pasted SessionStart block.
+    fresh = receipt_freshness(receipt)
+    lines.append(f"receipt_freshness={fresh['state']} ({fresh['reason']})")
     lines.append(f"uv_version={receipt.get('uv_version') or 'unobserved'}")
+    lines.append(f"graphiti_transport_auth={receipt.get('graphiti_transport_auth', UNKNOWN)}")
     order = [
         "skill_projection_status",
         "command_projection_status",
@@ -637,7 +721,7 @@ def _compact(receipt: dict[str, Any]) -> str:
         "MCP_status",
         "memory_cli_status",
         "memory_mcp_status",
-        "Graphiti_authenticated_health",
+        "Graphiti_reachability",
         "Makefile_facade_status",
         "dispatcher_status",
         "merge_authority_status",

@@ -1,15 +1,15 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-31T02:53:19Z'
+generated_utc: '2026-09-05T17:58:46Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:e2e49441c14df4c35f0be76f94de872b3b642b2672977395cdabaf6382365136
+source_tree_digest: sha256:a0388f292371e19e5f9f4956819e329c0b8be4af0badea93445c24a1a40aefe1
 summary:
-  total_mdc_files: 68
-  always_apply_true: 32
+  total_mdc_files: 69
+  always_apply_true: 33
   always_apply_false: 36
   no_boolean_always_apply: 0
   explicit_rule_ids: 68
-  derived_rule_ids: 0
+  derived_rule_ids: 1
   deprecated_rules: 0
 rules:
 - file: 00-global.mdc
@@ -34,6 +34,28 @@ rules:
   removal_plan: null
   extends: null
   classification_source: explicit
+- file: 01-authority-chain.mdc
+  id: l9.rule.01.authority.chain
+  id_source: derived
+  version: null
+  description: Name the authority chain and locate its rungs, because the two highest are not in context.
+  scope: global
+  domain: general
+  activation: always
+  activation_source: derived
+  always_apply: true
+  globs: null
+  first_heading: Authority chain — and where to read the parts you cannot see
+  has_yaml_frontmatter: true
+  line_count: 64
+  content_digest: sha256:a2f5f3993a026f0891d36c1ac704c91435d92bdf3975610ed0721255b51292e4
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 02-slash-commands.mdc
   id: l9.rule.slash-commands
   id_source: explicit
@@ -1163,10 +1185,10 @@ rules:
   globs: null
   first_heading: GMP v1.7 execution rules (L9)
   has_yaml_frontmatter: true
-  line_count: 71
-  content_digest: sha256:14a64f58c0e8796dbd97d481056ce93ffaadcc49cce17a00218d7025a2fca3be
+  line_count: 85
+  content_digest: sha256:e5a0e63b42c1d278212d68beb1d0b72d552f3c43f836eb66c2b30e15247aad3d
   authority: canonical_global
-  context_cost: minimal
+  context_cost: moderate
   deprecated: false
   replacement: null
   removal_plan: null

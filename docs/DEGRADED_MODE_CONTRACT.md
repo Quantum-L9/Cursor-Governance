@@ -148,6 +148,46 @@ that it is refused everywhere, and the REST fallback is not a licence to prefer
 REST where GraphQL answers. The board tries GraphQL first and uses REST only when
 that call fails.
 
+### 2026-09-05 — Claude Code cloud container, `Quantum-L9/Cursor-Governance` @ `91daac4`
+
+Probed during the mobile environment audit (`docs/CLAUDE_CODE_MOBILE_ENVIRONMENT_AUDIT.md`),
+on a **12-repository container** rooted at `/home/user` rather than a single checkout.
+
+| Probe | Result | vs. the rows above |
+|---|---|---|
+| `gh api user` | **works** — resolves `cryptoxdog`, exit 0 | same |
+| `gh api repos/Quantum-L9/Cursor-Governance` | **works** — `default=main` | same |
+| `git ls-remote origin main` | **works** — returns `91daac4…` | new probe |
+| `gh auth status` | reports `The token in GH_TOKEN is invalid` — **and exits 1** | matches 2026-08-31, contradicts 2026-08-29/30 |
+| `gitleaks` | present, `/root/.local/bin/gitleaks` | same |
+| `pre-commit` | present, `/root/.local/bin/pre-commit` | same |
+| `uv` | present, `/root/.local/bin/uv` v0.8.17 | same |
+| `semgrep` | **absent** | same |
+
+The exit code lands on `1` for the second time out of three measurements. That does not
+resolve the split — it confirms the conclusion the 2026-08-31 row already drew: two
+values have now been observed for the same message and the same working `gh api`, so the
+exit code is unusable in either direction. Nothing here retracts the 2026-08-29/30 row.
+
+**New in this row: the sentinel is measurably one value across five names.**
+`GH_TOKEN`, `GITHUB_TOKEN`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and
+`CLOUDSDK_AUTH_ACCESS_TOKEN` all hold a 14-character value with the identical SHA-256
+prefix `f07d7417`. Five unrelated providers cannot share one credential, so this is a
+placeholder occupying five credential-shaped names — not five degraded credentials. It
+strengthens "`gh api` succeeds while the session's own `GH_TOKEN` is an invalid
+sentinel" without asserting any mechanism for why.
+
+The Graphiti row in the capability table above ("No bearer; session may be memory-blind")
+also reproduces here: `GRAPHITI_MCP_TOKEN` is absent, the CLI adds `Authorization` only
+when it is set, and the rendered `.mcp.json` carries `url` with no `headers` — which is
+what `mcp.template.json` intends via `_optional_headers`. The audit's F-01 is therefore
+scoped to the readiness receipt **labelling** that plane
+`Graphiti_authenticated_health: READY`, not to the posture this row already
+records. That label is now fixed: the dimension is `Graphiti_reachability`, and
+a separate `graphiti_transport_auth` observation reports `UNAUTHENTICATED` here
+from the presence of `GRAPHITI_MCP_TOKEN` — the same signal the client and
+`mcp.template.json` already branch on. This row's posture is unchanged.
+
 ### Relationship to the P307 pack
 
 `WIP/8-26-26/environment_experience_improvement_pack_p307_revised` records **CR-105**
@@ -163,6 +203,20 @@ one, `gh`, `gitleaks` and `pre-commit` are present and only `semgrep` is absent.
 A capability reporting `UNAVAILABLE`, `DEGRADED`, or `BLOCKED_BY_PLATFORM` is
 **never** a reason to paste a credential into this surface. Not `SONAR_TOKEN`,
 not `SEMGREP_APP_TOKEN`, not `INFISICAL_CLIENT_SECRET`, not a Graphiti bearer.
+
+**And there is no containment boundary below the session.** Measured 2026-09-05:
+a Task subagent receives **168 of 168** environment variables with identical
+digests — every `L9_*`, `GRAPHITI_MCP_URL`, and every credential-shaped name
+including `CLAUDE_CODE_MESSAGING_TOKEN`. Child shells inherit the same, across
+login, non-login, POSIX and Python-subprocess boundaries alike. Nothing filters
+them, and nothing in this repository can: Claude Code's agent definitions carry
+`tools` and `model`, not an environment scope.
+
+Nothing real leaks today only because the GitHub, AWS and GCP names all hold one
+14-character sentinel. The moment a real credential is proxied here it reaches
+every subagent and every child process, unfiltered, whatever any contract says
+about which of them may see it. So the rule above is not a preference about
+tidiness — it is the only containment this surface has.
 Everything an LLM can execute can read that LLM's environment. An unavailable
 capability is a delivery problem; a pasted secret is a permanent compromise on
 this surface.
