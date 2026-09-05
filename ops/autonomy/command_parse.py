@@ -9,14 +9,15 @@ Design constraints (fail-closed):
 - Quoted spans are NEVER stripped. Stripping them would hide real commands
   passed to wrappers (``bash -c 'git push …'``) — a fail-open hole. Segment
   splitting honors quote state instead.
-- Only static named paths are extracted (``git -C <path>`` / ``cd <path>``);
-  tokens containing substitutions or glob characters are ignored so dynamic
-  targets can never widen a gate.
+- Only static named paths are extracted (``git -C <path>`` / ``cd <path>`` /
+  make ``WS=``); tokens containing substitutions or glob characters are
+  ignored so dynamic targets can never widen a gate.
 """
 
 from __future__ import annotations
 
 import re
+from pathlib import PurePosixPath
 
 # Opener only — no repeating optional-quantifier group. CodeQL 410/412 flagged
 # both `\S+` and `[^\s>|&;]+` after `[0-9]?>>?` inside `*`: `>a>a…` / `!0>`
@@ -166,14 +167,59 @@ def wrapper_subcommands(segment: str, *, _depth: int = 0) -> list[str]:
     return nested
 
 
-#: Executables whose ``-C <path>`` names the directory the command runs in.
-#: ``make -C`` means what ``git -C`` means, and a publish invoked that way must
-#: be judged against that checkout's receipt, not the session's.
+#: Executables whose ``-C <path>`` names a directory. For ``git`` that is the
+#: repo. For ``make`` it is the makefile directory — the workspace a goal
+#: acts on is ``WS=`` (Makefile ``WS ?= $(CURDIR)``). When ``WS=`` is present
+#: it is the named root and ``make -C`` is not.
 _DASH_C_EXECUTABLES = frozenset({"git", "make"})
+
+ENV_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+MAKE_WORKSPACE_VARS = frozenset({"WS", "L9_L4_WORKSPACE"})
+_MAKE_OPTS_WITH_ARG = frozenset(
+    {"-C", "-f", "-j", "-l", "-o", "-W", "--directory", "--file", "--makefile", "--jobs"}
+)
+
+
+def _assignment_value(token: str, keys: frozenset[str]) -> str | None:
+    if not ENV_ASSIGN_RE.match(token):
+        return None
+    key, _, value = token.partition("=")
+    if key not in keys:
+        return None
+    cleaned = _dequote(value.strip())
+    return cleaned or None
+
+
+def make_workspace_raw(segment: str) -> str | None:
+    """Last ``WS=`` / ``L9_L4_WORKSPACE=`` on a make segment, or None."""
+    tokens = segment_words(segment)
+    index = 0
+    found: str | None = None
+    while index < len(tokens) and ENV_ASSIGN_RE.match(tokens[index]):
+        raw = _assignment_value(tokens[index], MAKE_WORKSPACE_VARS)
+        if raw is not None:
+            found = raw
+        index += 1
+    if index >= len(tokens) or PurePosixPath(tokens[index]).name != "make":
+        return None
+    index += 1
+    while index < len(tokens):
+        token = tokens[index]
+        if token in _MAKE_OPTS_WITH_ARG:
+            index += 2
+            continue
+        raw = _assignment_value(token, MAKE_WORKSPACE_VARS)
+        if raw is not None:
+            found = raw
+        index += 1
+    return found
 
 
 def extract_named_roots(command: str) -> list[str]:
-    """Static repo paths named by ``git -C``/``make -C <path>`` or ``cd <path>``.
+    """Static repo paths named by ``git -C``, make ``WS=`` / ``make -C``, or ``cd``.
+
+    A make ``WS=`` / ``L9_L4_WORKSPACE=`` is the workspace the Makefile acts
+    on. ``make -C`` is only used when those are absent (CURDIR after ``-C``).
 
     Fail-closed: tokens containing ``$``, backticks, ``(``/``)``, wildcards,
     braces, or ``~`` are ignored (dynamic targets never widen a gate).
@@ -181,7 +227,12 @@ def extract_named_roots(command: str) -> list[str]:
     """
     roots: list[str] = []
     for segment in split_segments(strip_heredoc_bodies(command)):
-        tokens = segment.split()
+        make_ws = make_workspace_raw(segment)
+        skip_make_dash_c = False
+        if make_ws and not any(ch in make_ws for ch in "$`()*?[]{}~"):
+            roots.append(make_ws)
+            skip_make_dash_c = True
+        tokens = segment_words(segment)
         for index, token in enumerate(tokens):
             head = token.rstrip(";")
             candidate: str | None = None
@@ -190,6 +241,8 @@ def extract_named_roots(command: str) -> list[str]:
                 and index + 2 < len(tokens)
                 and tokens[index + 1] == "-C"
             ):
+                if skip_make_dash_c and head == "make":
+                    continue
                 candidate = tokens[index + 2]
             elif head == "cd" and index + 1 < len(tokens):
                 candidate = tokens[index + 1]
