@@ -11,6 +11,7 @@ from typing import Any
 from environment.agents.lifecycle.schemas import (
     ASSIGNMENT_SCHEMA,
     DISPATCH_SCHEMA,
+    HOST_ADMISSION_SCHEMA,
     HOST_CORRELATION_SCHEMA,
     HOST_RAW_STOP_SCHEMA,
     PR_ASSIGNMENT_SCHEMA,
@@ -108,6 +109,11 @@ def host_correlation_path(subagent_id: str) -> Path:
     return subagent_receipt_root() / "host-correlation" / _subagent_file(subagent_id)
 
 
+def host_admission_path(tool_use_id: str) -> Path:
+    name = f"{safe_receipt_id(tool_use_id, label='tool_use_id')}.json"
+    return subagent_receipt_root() / "host-admission" / name
+
+
 def host_stop_path(subagent_id: str) -> Path:
     return subagent_receipt_root() / "host-stop" / _subagent_file(subagent_id)
 
@@ -129,6 +135,68 @@ def write_host_correlation(fields: dict[str, Any]) -> dict[str, Any]:
 def load_host_correlation(subagent_id: str) -> dict[str, Any] | None:
     path = host_correlation_path(subagent_id)
     return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
+
+
+def write_host_admission(fields: dict[str, Any]) -> dict[str, Any]:
+    tool_use_id = str(fields.get("tool_use_id") or "").strip()
+    assignment_id = str(fields.get("assignment_id") or "").strip()
+    if not tool_use_id or not assignment_id:
+        raise ValueError("host admission requires tool_use_id and assignment_id")
+    body = {
+        "schema": HOST_ADMISSION_SCHEMA,
+        "observed_at": _now(),
+        "status": "ADMITTED",
+        "path": "host-native",
+        **fields,
+        "tool_use_id": tool_use_id,
+        "assignment_id": assignment_id,
+    }
+    return write_json(host_admission_path(tool_use_id), body)
+
+
+def load_host_admission(tool_use_id: str) -> dict[str, Any] | None:
+    path = host_admission_path(tool_use_id)
+    return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
+
+
+def _host_admission_has_stop(body: dict[str, Any]) -> bool:
+    tool_use_id = str(body.get("tool_use_id") or "")
+    corr_root = subagent_receipt_root() / "host-correlation"
+    if not tool_use_id or not corr_root.is_dir():
+        return False
+    for path in corr_root.glob("*.json"):
+        try:
+            corr = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if corr.get("tool_use_id") != tool_use_id and corr.get("tool_call_id") != tool_use_id:
+            continue
+        subagent_id = str(corr.get("subagent_id") or "").strip()
+        if subagent_id and host_stop_path(subagent_id).is_file():
+            return True
+    return False
+
+
+def list_in_flight_host_admissions() -> list[dict[str, Any]]:
+    """Host-native admissions that have not returned or stopped."""
+    root = subagent_receipt_root() / "host-admission"
+    if not root.is_dir():
+        return []
+    open_ones: list[dict[str, Any]] = []
+    for path in root.glob("*.json"):
+        try:
+            body = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(body, dict):
+            continue
+        assignment_id = str(body.get("assignment_id") or "").strip()
+        if assignment_id and return_path(assignment_id).is_file():
+            continue
+        if _host_admission_has_stop(body):
+            continue
+        open_ones.append(body)
+    return open_ones
 
 
 def write_host_stop(subagent_id: str, payload: dict[str, Any]) -> dict[str, Any]:

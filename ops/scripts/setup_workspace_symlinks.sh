@@ -419,6 +419,33 @@ bse = [combined_entry] + [
     e for e in bse if combined_bse not in (e.get("command") or "")
 ]
 hooks["beforeShellExecution"] = bse
+
+# subagentStart: one lifecycle command. The start script already runs
+# graphiti_gate_runner; a second graphiti-gate-subagent.sh plus a no-arg
+# alias of the same script was a triple fire that still fail-closed.
+retired_start = {
+    "./hooks/graphiti-gate-subagent.sh",
+    "./hooks/lifecycle-subagent-start.sh",
+}
+canonical_start = "./hooks/lifecycle-subagent-start.sh subagent_start"
+starts = hooks.setdefault("subagentStart", [])
+starts = [
+    e
+    for e in starts
+    if isinstance(e, dict) and (e.get("command") or "") not in retired_start
+]
+start_entry = {"command": canonical_start, "timeout": 15, "failClosed": True}
+starts = [start_entry] + [
+    e for e in starts if canonical_start not in (e.get("command") or "")
+]
+hooks["subagentStart"] = starts
+
+canonical_stop = "./hooks/lifecycle-subagent-stop.sh"
+stops = [e for e in hooks.setdefault("subagentStop", []) if isinstance(e, dict)]
+stop_entry = {"command": canonical_stop, "timeout": 15, "failClosed": True}
+stops = [stop_entry] + [e for e in stops if canonical_stop not in (e.get("command") or "")]
+hooks["subagentStop"] = stops
+
 data = {"version": 1, "hooks": hooks}
 
 hooks_json.parent.mkdir(parents=True, exist_ok=True)

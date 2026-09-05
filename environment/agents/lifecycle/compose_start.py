@@ -17,6 +17,24 @@ from environment.agents.results.receipts import safe_receipt_id  # noqa: E402
 
 _TOKEN_PATTERN = re.compile(r"L9_ADMISSION_TOKEN=([A-Za-z0-9-]+)")
 
+# Cursor Task types that are read-only. Mutation is conservative for everything
+# else (including generalPurpose / l9-issue-remediation / unknown types).
+# Role-table spellings (l9-recon, l9-pr-remediation, …) are resolved first.
+_HOST_NATIVE_READ_TYPES = frozenset(
+    {
+        "explore",
+        "code-reviewer",
+        "security-review",
+        "bugbot",
+        "ci-investigator",
+        "conversation-analyzer",
+        "comment-analyzer",
+        "pr-test-analyzer",
+        "type-design-analyzer",
+        "cursor-guide",
+    }
+)
+
 
 def _deny(reason: str) -> dict[str, Any]:
     return {"permission": "deny", "reason": reason}
@@ -183,32 +201,127 @@ def _host_bridge():
     return host_bridge
 
 
-def compose_host_pre_tool_use(payload: dict[str, Any]) -> dict[str, Any]:
-    """Admit a native Task launch only against pre-existing root authority.
+def _host_native_caps() -> dict[str, Any]:
+    """Surface caps from the execution-profile owner. Never a local 2/4."""
+    autonomy_dir = _GOV_ROOT / "ops" / "autonomy"
+    if str(autonomy_dir) not in sys.path:
+        sys.path.insert(0, str(autonomy_dir))
+    import execution_profile  # noqa: PLC0415
 
-    The canonical producer (`autonomy/adapters/cursor/host_bridge.py`) must
-    have created a pending admission — root lease and rendered contract
-    included — before the Task fires. The prompt may carry the opaque
-    admission token, but the token only identifies persisted authority;
-    identity and scope are never inferred from Task prose. Everything
-    uncorrelated stays denied, exactly as PR #287's fail-closed floor.
+    policy = execution_profile.load_policy(_GOV_ROOT)
+    surface = execution_profile.classify(os.environ, policy)
+    profile = policy["profiles"][surface]
+    return {
+        "surface": surface,
+        "max_parallel": int(profile["max_parallel"]),
+        "max_mutation_lanes": int(profile["max_mutation_lanes"]),
+    }
+
+
+def _host_native_is_mutation(subagent_type: str) -> bool:
+    from environment.agents.results.adapters.cursor_subagent import (  # noqa: PLC0415
+        result_bridge,
+    )
+
+    role = _result_role(subagent_type)
+    if role in result_bridge.READ_ONLY_ROLES:
+        return False
+    if role in result_bridge.MUTATING_ROLES:
+        return True
+    return subagent_type not in _HOST_NATIVE_READ_TYPES
+
+
+def _compose_host_native_pre_tool_use(
+    payload: dict[str, Any], tool_use_id: str
+) -> dict[str, Any]:
+    """Admit remediator / recon / issue Tasks without Program Execution.
+
+    A managed ``subagent_type`` is host identity, not inferred prose. Caps
+    come from ``ops/autonomy/claude-execution-profiles.json``. No campaign,
+    no root lease, no ``host_bridge`` token.
+    """
+    subagent_type = _subagent_type_from_payload(payload)
+    if not subagent_type:
+        return _deny(
+            "native Task carries no admission token and no managed subagent_type; "
+            "root authority is never inferred from Task prose"
+        )
+    try:
+        safe_receipt_id(tool_use_id, label="tool_use_id")
+    except ValueError as exc:
+        return _deny(str(exc))
+
+    mutation = _host_native_is_mutation(subagent_type)
+    caps = _host_native_caps()
+    in_flight = receipts.list_in_flight_host_admissions()
+    if len(in_flight) >= caps["max_parallel"]:
+        return _deny(
+            f"max_parallel={caps['max_parallel']} already in flight "
+            f"({caps['surface']} execution profile)"
+        )
+    if mutation:
+        mutating = sum(1 for item in in_flight if item.get("mutation"))
+        if mutating >= caps["max_mutation_lanes"]:
+            return _deny(
+                f"max_mutation_lanes={caps['max_mutation_lanes']} already in flight "
+                f"({caps['surface']} execution profile)"
+            )
+
+    assignment_id = f"host-native-{tool_use_id}"
+    try:
+        safe_receipt_id(assignment_id, label="assignment_id")
+    except ValueError as exc:
+        return _deny(str(exc))
+    role = _result_role(subagent_type)
+    lease_id = f"no-root-lease-{assignment_id}"
+    receipts.write_host_admission(
+        {
+            "tool_use_id": tool_use_id,
+            "assignment_id": assignment_id,
+            "subagent_type": subagent_type,
+            "subagent_role": role,
+            "mutation": mutation,
+            "lease_id": lease_id,
+            "campaign_id": "host-native",
+            "graph_id": "host-native",
+            "action_id": assignment_id,
+            "agent_id": assignment_id,
+            "workspace": str(payload.get("workspace_root") or payload.get("workspace") or ""),
+        }
+    )
+    return {
+        "permission": "allow",
+        "admission_token": None,
+        "lease_id": lease_id,
+        "action_id": assignment_id,
+        "path": "host-native",
+    }
+
+
+def compose_host_pre_tool_use(payload: dict[str, Any]) -> dict[str, Any]:
+    """Admit a native Task launch.
+
+    Two paths, never mixed:
+
+    1. ``L9_ADMISSION_TOKEN`` present — Program Execution / root Autonomy
+       only. Missing DB or unknown token stays denied (PR #287 floor).
+    2. No token — host-native. Remediator, recon, issue remediator, and
+       other managed Cursor Task types, capped by the execution profile.
+       PEC is not consulted.
     """
     if str(payload.get("tool_name") or "") != "Task":
         return _deny("native lifecycle preToolUse only accepts Task")
     tool_use_id = str(payload.get("tool_use_id") or "").strip()
     if not tool_use_id:
         return _deny("native Task missing tool_use_id")
+    admission = _admission_from_payload(payload)
+    if not admission:
+        return _compose_host_native_pre_tool_use(payload, tool_use_id)
     database = _resolve_runtime_database(payload)
     if database is None:
         return _deny(
             "no root Autonomy runtime database for this workspace; "
             "native Task admission stays fail-closed"
-        )
-    admission = _admission_from_payload(payload)
-    if not admission:
-        return _deny(
-            "native Task carries no admission token; root authority must exist "
-            "before launch and is never inferred from Task prose"
         )
     decision = _host_bridge().host_bind_pre_tool_use(
         database,
@@ -218,13 +331,65 @@ def compose_host_pre_tool_use(payload: dict[str, Any]) -> dict[str, Any]:
     )
     if not decision.get("allowed"):
         return _deny(str(decision.get("reason") or "admission denied"))
-    admission = decision["admission"]
+    bound = decision["admission"]
     return {
         "permission": "allow",
-        "admission_token": admission["admission_token"],
-        "lease_id": admission["lease_id"],
-        "action_id": admission["action_id"],
+        "admission_token": bound["admission_token"],
+        "lease_id": bound["lease_id"],
+        "action_id": bound["action_id"],
+        "path": "program-execution",
     }
+
+
+def _correlate_host_native_start(
+    payload: dict[str, Any], admission: dict[str, Any]
+) -> dict[str, Any]:
+    subagent_id = str(payload.get("subagent_id") or "").strip()
+    tool_call_id = str(payload.get("tool_call_id") or "").strip()
+    assignment_id = str(admission["assignment_id"])
+    role = str(admission.get("subagent_role") or _result_role(admission.get("subagent_type")))
+    fields = {
+        "assignment_id": assignment_id,
+        "campaign_id": admission.get("campaign_id") or "host-native",
+        "graph_id": admission.get("graph_id") or "host-native",
+        "action_id": admission.get("action_id") or assignment_id,
+        "agent_id": admission.get("agent_id") or assignment_id,
+        "parent_agent_id": "cursor",
+        "subagent_role": role,
+        "result_role": _result_role(role),
+        "objective": None,
+        "input_artifact_ids": [],
+        "allowed_paths": [],
+        "forbidden_paths": [],
+        "subject_agent_id": None,
+        "expected_subagent_type": admission.get("subagent_type"),
+        "lease_id": admission.get("lease_id"),
+        "base_sha": None,
+        "workspace": str(payload.get("workspace_root") or payload.get("workspace") or ""),
+        "repository": None,
+        "repository_class": "governed_repository",
+        "surface": "cursor-ide",
+    }
+    if not receipts.assignment_path(assignment_id).is_file():
+        receipts.write_assignment(fields)
+    dispatch = receipts.write_dispatch(fields)
+    receipts.write_host_correlation(
+        {
+            "subagent_id": subagent_id,
+            "assignment_id": assignment_id,
+            "tool_use_id": admission["tool_use_id"],
+            "tool_call_id": tool_call_id,
+            "parent_conversation_id": str(payload.get("parent_conversation_id") or "") or None,
+            "model": str(payload.get("model") or "") or None,
+            "is_parallel_worker": payload.get("is_parallel_worker"),
+            "git_branch": str(payload.get("git_branch") or "") or None,
+            "lease_id": admission.get("lease_id"),
+            "campaign_id": fields["campaign_id"],
+            "action_id": fields["action_id"],
+            # No runtime_database: the results gateway must not demand a PE lease.
+        }
+    )
+    return _allow(dispatch)
 
 
 def compose_host_subagent_start(payload: dict[str, Any]) -> dict[str, Any]:
@@ -237,11 +402,14 @@ def compose_host_subagent_start(payload: dict[str, Any]) -> dict[str, Any]:
         safe_receipt_id(subagent_id, label="subagent_id")
     except ValueError as exc:
         return _deny(str(exc))
+    native = receipts.load_host_admission(tool_call_id)
+    if native is not None:
+        return _correlate_host_native_start(payload, native)
     database = _resolve_runtime_database(payload)
     if database is None:
         return _deny(
-            "no root Autonomy runtime database for this workspace; "
-            "native subagentStart stays fail-closed"
+            "no host-native admission for this tool_call_id and no root Autonomy "
+            "runtime database; native subagentStart stays fail-closed"
         )
     decision = _host_bridge().host_bind_subagent_start(
         database,
