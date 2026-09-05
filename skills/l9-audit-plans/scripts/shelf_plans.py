@@ -347,9 +347,7 @@ def shelf(plans_dir: Path, workspace: Path, today: date) -> dict[str, Any]:
         if loaded is None:
             continue
         fm, body = loaded
-        verdict = _verdict(
-            path, fm, body, queue=queue, week=week, superseded_names=superseded
-        )
+        verdict = _verdict(path, fm, body, queue=queue, week=week, superseded_names=superseded)
         dest_dir = shelf_dir(plans_dir, verdict)
         if verdict == "root":
             counts["root"] += 1

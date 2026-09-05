@@ -32,7 +32,7 @@ def _plan(
 ) -> str:
     rows = []
     for idx, todo_status in enumerate(statuses, start=1):
-        content = (contents[idx - 1] if contents and idx - 1 < len(contents) else "x")
+        content = contents[idx - 1] if contents and idx - 1 < len(contents) else "x"
         rows.append(f"  - id: t{idx}\n    content: {content}\n    status: {todo_status}")
     todos = "\n".join(rows)
     extra = ""

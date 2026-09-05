@@ -29,13 +29,14 @@ def invoke(plans_dir: Path, workspace: Path, today: date) -> dict:
     if not refine_skipped:
         refined = refine(plans_dir)
         second = shelf(plans_dir, workspace, today)
-        root_now = sorted(
-            p.name for p in _iter_plan_mds(plans_dir) if p.name != TEMPLATE_NAME
-        )
+        root_now = sorted(p.name for p in _iter_plan_mds(plans_dir) if p.name != TEMPLATE_NAME)
         readme = rewrite_live_queue(plans_dir, root_now)
         refined["root_now"] = root_now
         refined["readme"] = bool(refined.get("readme") or readme)
-        first = {**first, "actions": list(first.get("actions") or []) + list(second.get("actions") or [])}
+        first = {
+            **first,
+            "actions": list(first.get("actions") or []) + list(second.get("actions") or []),
+        }
         first["root_now"] = root_now
     return {
         "shelf": first,
