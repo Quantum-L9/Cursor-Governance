@@ -36,6 +36,7 @@ class ReceiptIdentifierTests(unittest.TestCase):
             receipts.return_path,
             receipts.raw_result_path,
             receipts.host_correlation_path,
+            receipts.host_admission_path,
             receipts.host_stop_path,
         )
         for helper in helpers:

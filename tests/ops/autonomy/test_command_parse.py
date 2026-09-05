@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "ops" / "autonomy"))
 
 from command_parse import (  # noqa: E402
     extract_named_roots,
+    make_workspace_raw,
     split_segments,
     strip_heredoc_bodies,
 )
@@ -81,3 +82,29 @@ def test_extract_named_roots_ignores_heredoc_data():
 @pytest.mark.parametrize("bad", ["", None])
 def test_extract_named_roots_empty_command(bad):
     assert extract_named_roots(bad or "") == []
+
+
+def test_make_workspace_raw_leading_and_trailing():
+    assert make_workspace_raw("WS=/tmp/wb make pr") == "/tmp/wb"
+    assert make_workspace_raw("make -C /tmp/gov pr WS=/tmp/wb") == "/tmp/wb"
+    assert make_workspace_raw("PR_REMEDIATE=0 make pr") is None
+    assert make_workspace_raw("git -C /tmp/wb push") is None
+
+
+def test_extract_named_roots_make_ws_beats_make_dash_c():
+    """Governance makefile lives at -C; the target checkout is WS=."""
+    command = "PR_REMEDIATE=0 make -C /tmp/gov pr WS=/tmp/wb"
+    assert extract_named_roots(command) == ["/tmp/wb"]
+
+
+def test_extract_named_roots_make_dash_c_when_ws_absent():
+    assert extract_named_roots("make -C /tmp/gov pr") == ["/tmp/gov"]
+
+
+def test_make_workspace_raw_quoted_path_with_spaces():
+    assert make_workspace_raw('make pr WS="/tmp/Consumer Repo"') == "/tmp/Consumer Repo"
+    assert make_workspace_raw('WS="/tmp/Consumer Repo" make pr') == "/tmp/Consumer Repo"
+
+
+def test_extract_named_roots_quoted_ws_with_spaces():
+    assert extract_named_roots('make pr WS="/tmp/Consumer Repo"') == ["/tmp/Consumer Repo"]

@@ -17,6 +17,7 @@ REQUIRED = [
     "references/execute.md",
     "references/forbidden.md",
     "scripts/ff.sh",
+    "scripts/ff_shelf.py",
     "scripts/self_test.py",
     "scripts/validate_pack_structure.py",
 ]
@@ -88,6 +89,20 @@ def main() -> int:
     if "stash -u" in execute and "does **not** call" not in execute:
         print("FAIL: execute.md must not teach stash -u as the mutate path", file=sys.stderr)
         return 1
+    if "files-from=<(" in execute:
+        print("FAIL: execute.md must not teach process-substitution files-from", file=sys.stderr)
+        return 1
+    if "git add -- ${shelf_paths" in execute:
+        print("FAIL: execute.md must not teach git add -- ${shelf_paths}", file=sys.stderr)
+        return 1
+    for needle in (
+        "scripts/ff_shelf.py",
+        ".l9/ff-shelf-untracked.txt",
+        "GOV_PY verify_worktree_clean.py",
+    ):
+        if needle not in execute:
+            print(f"FAIL: execute.md missing {needle}", file=sys.stderr)
+            return 1
 
     forbidden = (ROOT / "references/forbidden.md").read_text(encoding="utf-8")
     for prim in GIT_PRIMITIVES:
@@ -105,6 +120,13 @@ def main() -> int:
         return 1
     if "diff --name-only HEAD" not in ff_sh:
         print("FAIL: ff.sh must park all dirty tracked vs HEAD", file=sys.stderr)
+        return 1
+    live_ff = "\n".join(line for line in ff_sh.splitlines() if not line.lstrip().startswith("#"))
+    if "unshallow" in live_ff:
+        print("FAIL: ff.sh must never unshallow", file=sys.stderr)
+        return 1
+    if "merge --ff-only" in live_ff:
+        print("FAIL: ff.sh must never merge --ff-only", file=sys.stderr)
         return 1
 
     for rel in ("SKILL.md", "references/execute.md", "references/diagnose-first.md"):

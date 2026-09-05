@@ -5,6 +5,7 @@ DISPATCH_SCHEMA = "l9.subagent-dispatch-receipt.v1"
 RETURN_SCHEMA = "l9.subagent-return-receipt.v1"
 PR_ASSIGNMENT_SCHEMA = "l9.pr-remediation-assignment.v1"
 HOST_CORRELATION_SCHEMA = "l9.cursor-subagent.host-correlation.v1"
+HOST_ADMISSION_SCHEMA = "l9.cursor-subagent.host-admission.v1"
 HOST_RAW_STOP_SCHEMA = "l9.cursor-subagent.host-stop.v1"
 
 CORRELATION_FIELDS = (
