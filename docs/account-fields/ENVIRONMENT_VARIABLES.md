@@ -5,7 +5,7 @@
 is stored as the characters `$HOME/x`.
 **Applies to:** NEW sessions only. Anthropic caches the environment after the
 first successful build, so a stale paste survives until a rebuild.
-**Checksum:** `1c048c59a33cc641` (31 variables)
+**Checksum:** `e82ec18f72308215` (30 variables)
 
 Generated from `environment/agents/adapters/claude-code/web/environment.env.example`
 by `verify_account_env.py --emit-fields`. Do not hand-edit this file; edit the
@@ -51,7 +51,6 @@ L9_WORKTREE_ISOLATION=1
 NPM_CONFIG_AUDIT=false
 NPM_CONFIG_FUND=false
 PIP_DISABLE_PIP_VERSION_CHECK=1
-PR_REMEDIATE=0
 PYTHONDONTWRITEBYTECODE=1
 PYTHONUNBUFFERED=1
 USER_ID=claude_code_agent
@@ -63,5 +62,5 @@ USER_ID=claude_code_agent
 python3 environment/agents/adapters/claude-code/verify_account_env.py
 ```
 
-`OK: all 31 expected variables match` means the field matches HEAD.
+`OK: all 30 expected variables match` means the field matches HEAD.
 Any `DRIFT:` line names the variable, what is set, and what was expected.

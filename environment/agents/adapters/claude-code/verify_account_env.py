@@ -58,6 +58,8 @@ DELIBERATELY_ABSENT = frozenset(
         "SEMGREP_APP_TOKEN",
         "INFISICAL_CLIENT_SECRET",
         "INFISICAL_TOKEN",
+        # Per-invocation opt-out, spelled at the call site. See PINNED_OPT_OUTS.
+        "PR_REMEDIATE",
     }
 )
 
@@ -205,6 +207,29 @@ def revision_direction(actual: str, expected: str) -> str:
 #: leak would cry wolf on every hosted session and teach the reader to ignore
 #: the one line that matters.
 PROXY_SENTINEL = "proxy-injected"
+
+
+#: Per-invocation opt-outs that must never be pinned in the account field.
+#:
+#: These are not credentials and not authority — they are flags a COMMAND passes
+#: for one run. Set once in the ambient environment they apply to every
+#: invocation forever, and the documented default becomes unreachable: nothing a
+#: caller does can restore it, because the caller's own default is what the
+#: ambient value overrides.
+#:
+#: PR_REMEDIATE is the observed case. rules/48 states remediates defaults to 1
+#: after the PR opens and that `PR_REMEDIATE=0` is opt-out ONLY, but it was
+#: pinned to 0 account-wide, so the poll-to-green worker could never run on this
+#: surface and no `make pr` could re-enable it. Every documented invocation
+#: spells the opt-out at the call site (`PR_REMEDIATE=0 make pr`), which is
+#: exactly why the field must not spell it too.
+PINNED_OPT_OUTS = frozenset({"PR_REMEDIATE"})
+
+
+def pinned_opt_outs_present(env: dict[str, str] | None = None) -> list[str]:
+    """Per-invocation opt-outs found pinned in the ambient environment."""
+    live = os.environ if env is None else env
+    return sorted(key for key in PINNED_OPT_OUTS if key in live)
 
 
 def prohibited_present(env: dict[str, str] | None = None) -> list[str]:
@@ -415,6 +440,7 @@ def run(
     have_rev = stub_revision_actual(env, session_env)
     drift = bool(want_rev) and have_rev != want_rev
     leaked = prohibited_present(env)
+    pinned = pinned_opt_outs_present(env)
     return {
         "expected_keys": len(expected),
         "deviations": deviations,
@@ -423,7 +449,8 @@ def run(
         "stub_drift": drift,
         "stub_drift_direction": revision_direction(have_rev, want_rev) if drift else "same",
         "prohibited_present": leaked,
-        "ok": not deviations and not drift and not leaked,
+        "pinned_opt_outs": pinned,
+        "ok": not deviations and not drift and not leaked and not pinned,
     }
 
 
@@ -468,6 +495,12 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 f"  INFO: {key}={safe_value(key, os.environ[key])} (runtime-managed; not compared)"
             )
+    for key in result["pinned_opt_outs"]:
+        print(f"  PINNED: {key} is set in this environment")
+        print("          It is a per-invocation opt-out, not an account setting. Pinned")
+        print("          here it applies to every run and the documented default becomes")
+        print("          unreachable. Delete it from the Environment variables field and")
+        print("          pass it at the call site instead.")
     for key in result["prohibited_present"]:
         print(f"  PROHIBITED: {key} is set in this environment (value not shown)")
         print("              delete it from the Environment variables field; a pasted")
