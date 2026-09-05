@@ -125,3 +125,44 @@ def test_live_revision_follows_a_worktree_gitdir(tmp_path: Path) -> None:
     worktree.mkdir()
     (worktree / ".git").write_text(f"gitdir: {git_dir}\n", encoding="utf-8")
     assert receipt.live_governance_revision(worktree) == "f" * 40
+
+
+def test_receipt_is_workspace_bound_when_it_can_say_so() -> None:
+    """A receipt for one repository is not evidence about a sibling.
+
+    A cloud container holds several repositories side by side, so the single
+    `workspace` field records whichever root the installer was invoked with.
+    Observed: a receipt stamped /home/user/Website-Bot reporting READY was read
+    as authoritative by a session whose workspace was the container root.
+    """
+    base = make(revision="c" * 40)
+    base["covered_roots"] = ["/home/user", "/home/user/Website-Bot"]
+
+    covered = receipt.evaluate(
+        base, now=NOW, governance_revision="c" * 40, workspace="/home/user"
+    )
+    assert covered["state"] == receipt.READY
+    assert covered["workspace_covered"] is True
+
+    other = receipt.evaluate(
+        base, now=NOW, governance_revision="c" * 40, workspace="/home/user/l9-harness"
+    )
+    assert other["state"] == receipt.UNKNOWN
+    assert other["workspace_covered"] is False
+    assert "not evidence about this workspace" in other["reason"]
+
+
+def test_workspace_binding_is_back_compatible() -> None:
+    """A receipt predating covered_roots must not be demoted on a guess."""
+    legacy = make(revision="d" * 40)
+    legacy.pop("covered_roots", None)
+
+    # No workspace asked about: behaviour is exactly as before.
+    assert receipt.evaluate(legacy, now=NOW, governance_revision="d" * 40)["state"] == receipt.READY
+
+    # Asked about, but the receipt cannot say — None, and no demotion.
+    asked = receipt.evaluate(
+        legacy, now=NOW, governance_revision="d" * 40, workspace="/anywhere"
+    )
+    assert asked["workspace_covered"] is None
+    assert asked["state"] == receipt.READY

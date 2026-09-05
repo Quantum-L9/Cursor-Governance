@@ -412,3 +412,33 @@ def test_transport_auth_is_measured_not_assumed(tmp_path: Path, monkeypatch) -> 
     # not come back under any spelling.
     assert "Graphiti_authenticated_health" not in receipt
     assert "authenticated" not in str(receipt["notes"].get("Graphiti_reachability", ""))
+
+
+def test_receipt_carries_a_write_time_and_expires(tmp_path: Path, monkeypatch) -> None:
+    """A receipt whose age is unknowable must not be reported as current.
+
+    `timestamp` is the COMMIT date of governance_SHA and reads exactly like a
+    write time, so the receipt had no age at all: one written at container
+    creation was printed as the live capability plane many hours later.
+    """
+    from datetime import UTC, datetime, timedelta
+
+    gov = _init_fake_gov(tmp_path, merge_denies=True)
+    home = _fake_home(tmp_path, mcp="READY")
+    receipt = _build(gov, home, monkeypatch)
+
+    assert receipt["generated_at"], "receipt must record when it was written"
+    assert receipt["ttl_seconds"] == er.RECEIPT_TTL_SECONDS
+    # timestamp stays the governance commit date — it is not the write time.
+    assert receipt["timestamp"] != receipt["generated_at"]
+
+    assert er.receipt_freshness(receipt)["state"] == er.FRESH
+
+    written = datetime.strptime(receipt["generated_at"], er._TIMESTAMP_FORMAT).replace(tzinfo=UTC)
+    later = written + timedelta(seconds=er.RECEIPT_TTL_SECONDS + 1)
+    assert er.receipt_freshness(receipt, now=later)["state"] == er.EXPIRED
+
+    # Absence is a distinct state from expiry.
+    assert er.receipt_freshness(None)["state"] == er.NEVER_RAN
+    # So is a receipt predating generated_at — unknowable age is never fresh.
+    assert er.receipt_freshness({"schema_version": er.SCHEMA_VERSION})["state"] == er.EXPIRED

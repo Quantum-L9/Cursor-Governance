@@ -39,6 +39,7 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -56,6 +57,19 @@ SCHEMA_VERSION = "l9.claude-readiness.v1"
 # receipt is printed. The value is a posture label (READY/…), never a credential;
 # the JSON field name is unchanged.
 _BOUNDARY_FIELD = "secret_boundary_status"
+
+#: A readiness receipt describes probes that were run once. Every dimension in
+#: it can go false without the file changing, so the receipt must carry the
+#: window inside which it is worth believing. One hour matches the governance
+#: refresh receipt, which answers the same question about the same clone.
+RECEIPT_TTL_SECONDS = 3600
+_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+
+#: Freshness states, distinct from the READY/DEGRADED dimension vocabulary: a
+#: receipt can be perfectly READY and far too old to act on.
+FRESH = "fresh"
+EXPIRED = "expired"
+NEVER_RAN = "never_ran"
 
 READY = "READY"
 DEGRADED = "DEGRADED"
@@ -607,7 +621,12 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
 
     receipt: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
+        # The COMMIT date of governance_SHA, not when this receipt was written.
+        # Kept under its historical name for existing consumers; `generated_at`
+        # below is the write time, and freshness is derived from that one.
         "timestamp": _git(gov, "log", "-1", "--format=%cI") or "",
+        "generated_at": datetime.now(UTC).strftime(_TIMESTAMP_FORMAT),
+        "ttl_seconds": RECEIPT_TTL_SECONDS,
         "governance_repository": ident["governance_repository"],
         "governance_default_branch": ident["governance_default_branch"],
         "governance_SHA": ident["governance_SHA"],
@@ -627,6 +646,44 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
     return receipt
 
 
+def receipt_freshness(
+    receipt: dict[str, Any] | None, *, now: datetime | None = None
+) -> dict[str, Any]:
+    """Derive whether a readiness receipt is still worth believing.
+
+    Modelled on ops/scripts/governance_refresh_receipt.py, deliberately: that
+    module exists because a receipt whose claim outlived its truth was read as
+    current, and this receipt had the same defect in a worse form. It carried no
+    write time at all — its `timestamp` is the COMMIT date of governance_SHA,
+    which reads exactly like a write time — so its age was not merely untracked
+    but unknowable, and a receipt written at container creation was reported as
+    the live capability plane many hours later.
+
+    Absence is `never_ran`, not `expired`: "the probes never ran" and "the probes
+    ran but I cannot vouch for them now" call for different responses.
+    """
+    moment = now or datetime.now(UTC)
+    if receipt is None:
+        return {"state": NEVER_RAN, "reason": "no readiness receipt on disk", "age_seconds": None}
+    raw = str(receipt.get("generated_at", ""))
+    try:
+        written = datetime.strptime(raw, _TIMESTAMP_FORMAT).replace(tzinfo=UTC)
+    except (TypeError, ValueError):
+        # Pre-dates generated_at, or unparseable. Not `fresh` — an unknowable
+        # age is exactly the state this function refuses to report as current.
+        return {
+            "state": EXPIRED,
+            "reason": "receipt carries no parseable generated_at",
+            "age_seconds": None,
+        }
+    age = int((moment - written).total_seconds())
+    ttl = receipt.get("ttl_seconds")
+    ttl = RECEIPT_TTL_SECONDS if not isinstance(ttl, int) or ttl <= 0 else ttl
+    if age > ttl:
+        return {"state": EXPIRED, "reason": f"written {age}s ago, ttl {ttl}s", "age_seconds": age}
+    return {"state": FRESH, "reason": f"written {age}s ago, ttl {ttl}s", "age_seconds": age}
+
+
 def _receipt_path() -> Path:
     override = os.environ.get("L9_READINESS_RECEIPT_FILE", "").strip()
     if override:
@@ -644,6 +701,8 @@ def _compact(receipt: dict[str, Any]) -> str:
     # Printed outside `order` because that list is the status dimensions, and a
     # version string is not a status. "unobserved" rather than a bare blank so
     # the absence is legible in a pasted SessionStart block.
+    fresh = receipt_freshness(receipt)
+    lines.append(f"receipt_freshness={fresh['state']} ({fresh['reason']})")
     lines.append(f"uv_version={receipt.get('uv_version') or 'unobserved'}")
     lines.append(f"graphiti_transport_auth={receipt.get('graphiti_transport_auth', UNKNOWN)}")
     order = [

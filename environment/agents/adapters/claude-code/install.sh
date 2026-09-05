@@ -142,6 +142,38 @@ stage() { RECEIPT_STAGE="$1"; }
 # evidence. Only untouched optimism is rewritten, and only when the run did not
 # finish — this is the same rule the projection already applies one layer down
 # ("nothing was classified, so no domain can claim health from silence").
+# Which workspaces this receipt actually speaks for.
+#
+# `workspace` records ONE path. In a cloud container holding several
+# repositories side by side that path is whichever root the installer happened
+# to be invoked with, so a receipt stamped `/home/user/Website-Bot` was read as
+# authoritative by every other workspace in the container, and by the container
+# root itself. The installer already learned this shape once — a check run
+# against a different --workspace silently replaced the session's verdicts, and
+# check mode now writes beside the real receipt. This is the same defect one
+# level out.
+#
+# projection_roots is the mount set the installer reconciles: the container root
+# plus the repositories inside it, or just the workspace when it is a checkout.
+# Emitting it makes coverage a fact the reader can check rather than infer.
+receipt_covered_roots() {
+  "$GOV_PY" - "$GOV_DIR" "$WORKSPACE" <<'PYEOF' 2>/dev/null || printf '["%s"]' "$WORKSPACE"
+import json
+import sys
+from pathlib import Path
+
+gov, workspace = sys.argv[1], sys.argv[2]
+sys.path.insert(0, str(Path(gov) / "ops" / "scripts" / "lib"))
+try:
+    from workspace_roots import projection_roots
+
+    roots = [str(p) for p in projection_roots(Path(workspace))]
+except Exception:
+    roots = [workspace]
+print(json.dumps(roots))
+PYEOF
+}
+
 _receipt_component() {
   if [ "$RECEIPT_COMPLETE" = "0" ] && [ "${1:-}" = "READY" ]; then
     printf 'UNKNOWN'
@@ -179,6 +211,7 @@ write_receipt() {
     printf '  "governance_revision": "%s",\n' \
       "$(json_token "$(git -C "$GOV_DIR" rev-parse HEAD 2>/dev/null || echo unknown)")"
     printf '  "workspace": "%s",\n' "$(json_token "$WORKSPACE")"
+    printf '  "covered_roots": %s,\n' "$(receipt_covered_roots)"
     printf '  "shared_bootstrap": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_SHARED")")"
     printf '  "settings": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_SETTINGS")")"
     printf '  "skills": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_SKILLS")")"
