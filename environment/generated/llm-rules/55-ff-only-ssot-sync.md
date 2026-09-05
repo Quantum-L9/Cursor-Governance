@@ -43,6 +43,12 @@ not delete files to unblock. Do not `git stash push` corpus — shelf + commit +
   `record-kernels`), then `PR_STACK=auto PR_REMEDIATE=0 make pr` in the shelf
   worktree unless `FF_SHELF_PUBLISH=0`, then `run_ff_post_shelf.sh` +
   `verify_worktree_clean.py` on the named clone. `ff.sh` stays push-off.
+- Leftover-untracked `WIP/`, `docs/plans/`, and
+  `environment/program-execution/campaigns/` shelf mutate is
+  `skills/l9-repo-sync/scripts/ff_shelf.py` (in-clone
+  `.l9/ff-shelf-untracked.txt`, no process substitution). Do not widen
+  that script to the root task-queue file or dirty-tracked corpus in
+  this revision.
 - Never `git stash push` corpus paths to “prepare” for `/ff`
 
 ## MUST NOT
