@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
 import os
 import tempfile
-from datetime import UTC, datetime
+from collections.abc import Iterator
+from contextlib import contextmanager
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -109,9 +112,25 @@ def host_correlation_path(subagent_id: str) -> Path:
     return subagent_receipt_root() / "host-correlation" / _subagent_file(subagent_id)
 
 
+HOST_ADMISSION_RESERVE_TTL = timedelta(minutes=2)
+
+
 def host_admission_path(tool_use_id: str) -> Path:
     name = f"{safe_receipt_id(tool_use_id, label='tool_use_id')}.json"
     return subagent_receipt_root() / "host-admission" / name
+
+
+@contextmanager
+def host_admission_lock() -> Iterator[None]:
+    """Serialize cap check + admission write across concurrent preToolUse hooks."""
+    path = subagent_receipt_root() / "host-admission.lock"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a+", encoding="utf-8") as handle:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
 def host_stop_path(subagent_id: str) -> Path:
@@ -159,6 +178,46 @@ def load_host_admission(tool_use_id: str) -> dict[str, Any] | None:
     return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
 
 
+def _parse_observed_at(raw: Any) -> datetime | None:
+    text = str(raw or "").strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed
+
+
+def _host_admission_has_start(body: dict[str, Any]) -> bool:
+    tool_use_id = str(body.get("tool_use_id") or "")
+    corr_root = subagent_receipt_root() / "host-correlation"
+    if not tool_use_id or not corr_root.is_dir():
+        return False
+    for path in corr_root.glob("*.json"):
+        try:
+            corr = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if corr.get("tool_use_id") == tool_use_id or corr.get("tool_call_id") == tool_use_id:
+            return True
+    return False
+
+
+def _host_admission_expired(body: dict[str, Any], *, now: datetime | None = None) -> bool:
+    if _host_admission_has_start(body) or _host_admission_has_stop(body):
+        return False
+    observed = _parse_observed_at(body.get("observed_at"))
+    if observed is None:
+        return False
+    clock = now or datetime.now(UTC)
+    return clock - observed > HOST_ADMISSION_RESERVE_TTL
+
+
 def _host_admission_has_stop(body: dict[str, Any]) -> bool:
     tool_use_id = str(body.get("tool_use_id") or "")
     corr_root = subagent_receipt_root() / "host-correlation"
@@ -194,6 +253,9 @@ def list_in_flight_host_admissions() -> list[dict[str, Any]]:
         if assignment_id and return_path(assignment_id).is_file():
             continue
         if _host_admission_has_stop(body):
+            continue
+        if _host_admission_expired(body):
+            path.unlink(missing_ok=True)
             continue
         open_ones.append(body)
     return open_ones

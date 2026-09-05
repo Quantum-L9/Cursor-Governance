@@ -32,8 +32,25 @@ _HOST_NATIVE_READ_TYPES = frozenset(
         "pr-test-analyzer",
         "type-design-analyzer",
         "cursor-guide",
+        "l9-recon",
+        "l9-verifier-reviewer",
+        "l9-documentation",
     }
 )
+_HOST_NATIVE_MUTATION_TYPES = frozenset(
+    {
+        "generalPurpose",
+        "l9-pr-remediation",
+        "l9-issue-remediation",
+        "l9-test",
+        "l9-pr-remediation",
+        "best-of-n-runner",
+        "code-simplifier",
+        "shell",
+    }
+)
+_HOST_NATIVE_ALLOWED_TYPES = _HOST_NATIVE_READ_TYPES | _HOST_NATIVE_MUTATION_TYPES
+_ASSIGNMENT_ID_RE = re.compile(r"assignment_id:\s*([A-Za-z0-9._-]+)")
 
 
 def _deny(reason: str) -> dict[str, Any]:
@@ -231,62 +248,98 @@ def _host_native_is_mutation(subagent_type: str) -> bool:
     return subagent_type not in _HOST_NATIVE_READ_TYPES
 
 
+def _recorded_fleet_assignment(payload: dict[str, Any]) -> dict[str, Any] | None:
+    """Use a recorded ``pr_fleet.py assign`` packet when the prompt names it."""
+    tool_input = payload.get("tool_input")
+    if not isinstance(tool_input, dict):
+        return None
+    match = _ASSIGNMENT_ID_RE.search(str(tool_input.get("prompt") or ""))
+    if match is None:
+        return None
+    assignment_id = match.group(1)
+    try:
+        safe_receipt_id(assignment_id, label="assignment_id")
+    except ValueError:
+        return None
+    return receipts.load_assignment(assignment_id)
+
+
 def _compose_host_native_pre_tool_use(payload: dict[str, Any], tool_use_id: str) -> dict[str, Any]:
     """Admit remediator / recon / issue Tasks without Program Execution.
 
-    A managed ``subagent_type`` is host identity, not inferred prose. Caps
-    come from ``ops/autonomy/claude-execution-profiles.json``. No campaign,
-    no root lease, no ``host_bridge`` token.
+    Evidence is a recorded fleet assignment or an allowlisted managed type.
+    Caps come from ``ops/autonomy/claude-execution-profiles.json``. No
+    campaign, no root lease, no ``host_bridge`` token.
     """
+    recorded = _recorded_fleet_assignment(payload)
     subagent_type = _subagent_type_from_payload(payload)
-    if not subagent_type:
+    if recorded is None and not subagent_type:
         return _deny(
             "native Task carries no admission token and no managed subagent_type; "
             "root authority is never inferred from Task prose"
         )
+    if recorded is None and subagent_type not in _HOST_NATIVE_ALLOWED_TYPES:
+        return _deny(
+            "native Task type is not an allowlisted managed definition and "
+            "no recorded fleet assignment was found"
+        )
+    if not subagent_type:
+        subagent_type = str(recorded.get("subagent_type") or recorded.get("role") or "")
     try:
         safe_receipt_id(tool_use_id, label="tool_use_id")
     except ValueError as exc:
         return _deny(str(exc))
 
     mutation = _host_native_is_mutation(subagent_type)
-    caps = _host_native_caps()
-    in_flight = receipts.list_in_flight_host_admissions()
-    if len(in_flight) >= caps["max_parallel"]:
-        return _deny(
-            f"max_parallel={caps['max_parallel']} already in flight "
-            f"({caps['surface']} execution profile)"
+    if recorded is not None:
+        assignment_id = str(recorded["assignment_id"])
+        lease_id = str(recorded.get("lease_id") or f"no-root-lease-{assignment_id}")
+        campaign_id = str(recorded.get("campaign_id") or "host-native")
+        graph_id = str(recorded.get("graph_id") or "host-native")
+        role = str(
+            recorded.get("subagent_role") or recorded.get("role") or _result_role(subagent_type)
         )
-    if mutation:
-        mutating = sum(1 for item in in_flight if item.get("mutation"))
-        if mutating >= caps["max_mutation_lanes"]:
-            return _deny(
-                f"max_mutation_lanes={caps['max_mutation_lanes']} already in flight "
-                f"({caps['surface']} execution profile)"
-            )
-
-    assignment_id = f"host-native-{tool_use_id}"
+    else:
+        assignment_id = f"host-native-{tool_use_id}"
+        lease_id = f"no-root-lease-{assignment_id}"
+        campaign_id = "host-native"
+        graph_id = "host-native"
+        role = _result_role(subagent_type)
     try:
         safe_receipt_id(assignment_id, label="assignment_id")
     except ValueError as exc:
         return _deny(str(exc))
-    role = _result_role(subagent_type)
-    lease_id = f"no-root-lease-{assignment_id}"
-    receipts.write_host_admission(
-        {
-            "tool_use_id": tool_use_id,
-            "assignment_id": assignment_id,
-            "subagent_type": subagent_type,
-            "subagent_role": role,
-            "mutation": mutation,
-            "lease_id": lease_id,
-            "campaign_id": "host-native",
-            "graph_id": "host-native",
-            "action_id": assignment_id,
-            "agent_id": assignment_id,
-            "workspace": str(payload.get("workspace_root") or payload.get("workspace") or ""),
-        }
-    )
+
+    caps = _host_native_caps()
+    with receipts.host_admission_lock():
+        in_flight = receipts.list_in_flight_host_admissions()
+        if len(in_flight) >= caps["max_parallel"]:
+            return _deny(
+                f"max_parallel={caps['max_parallel']} already in flight "
+                f"({caps['surface']} execution profile)"
+            )
+        if mutation:
+            mutating = sum(1 for item in in_flight if item.get("mutation"))
+            if mutating >= caps["max_mutation_lanes"]:
+                return _deny(
+                    f"max_mutation_lanes={caps['max_mutation_lanes']} already in flight "
+                    f"({caps['surface']} execution profile)"
+                )
+        receipts.write_host_admission(
+            {
+                "tool_use_id": tool_use_id,
+                "assignment_id": assignment_id,
+                "subagent_type": subagent_type,
+                "subagent_role": role,
+                "mutation": mutation,
+                "lease_id": lease_id,
+                "campaign_id": campaign_id,
+                "graph_id": graph_id,
+                "action_id": assignment_id,
+                "agent_id": assignment_id,
+                "workspace": str(payload.get("workspace_root") or payload.get("workspace") or ""),
+            }
+        )
     return {
         "permission": "allow",
         "admission_token": None,

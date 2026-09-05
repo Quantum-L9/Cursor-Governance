@@ -118,6 +118,45 @@ class HostNativeLifecycleTests(unittest.TestCase):
         self.assertEqual(fifth["permission"], "deny", fifth)
         self.assertIn("max_parallel", fifth["reason"])
 
+    def test_unknown_type_without_assignment_is_denied(self) -> None:
+        out = compose_start.compose_host_pre_tool_use(self._pre("tu-custom", "my-custom-agent"))
+        self.assertEqual(out["permission"], "deny", out)
+        self.assertIn("allowlisted", out["reason"])
+
+    def test_recorded_fleet_assignment_is_correlated(self) -> None:
+        receipts.write_assignment(
+            {
+                "assignment_id": "remediate-pr504-run1",
+                "kind": "remediate",
+                "role": "l9-pr-remediation",
+                "subagent_role": "l9-pr-remediation",
+                "lease_id": "no-root-lease-remediate-pr504-run1",
+                "campaign_id": "fleet-cursor-governance",
+                "graph_id": "fleet",
+            }
+        )
+        payload = self._pre("tu-fleet", "l9-pr-remediation")
+        payload["tool_input"]["prompt"] = "assignment_id: remediate-pr504-run1\nfix the PR"
+        out = compose_start.compose_host_pre_tool_use(payload)
+        self.assertEqual(out["permission"], "allow", out)
+        self.assertEqual(out["action_id"], "remediate-pr504-run1")
+        self.assertEqual(out["lease_id"], "no-root-lease-remediate-pr504-run1")
+
+    def test_stale_uncorrelated_admission_expires(self) -> None:
+        from datetime import UTC, datetime, timedelta
+
+        receipts.write_host_admission(
+            {
+                "tool_use_id": "tu-stale",
+                "assignment_id": "host-native-tu-stale",
+                "mutation": True,
+                "observed_at": (datetime.now(UTC) - timedelta(minutes=5)).isoformat(),
+            }
+        )
+        inflight = receipts.list_in_flight_host_admissions()
+        self.assertEqual(inflight, [])
+        self.assertIsNone(receipts.load_host_admission("tu-stale"))
+
 
 if __name__ == "__main__":
     unittest.main()
