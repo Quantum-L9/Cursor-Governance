@@ -604,7 +604,7 @@ def get_test_pipeline_dag() -> SessionDAG:
 
 # Generate Mermaid diagram for documentation
 if __name__ == "__main__":
-    print(TEST_PIPELINE_DAG.to_markdown())  # noqa: ADR-0019
+    print(TEST_PIPELINE_DAG.to_markdown())
 # ============================================================================
 # DORA FOOTER META - AUTO-GENERATED - DO NOT EDIT MANUALLY
 # ============================================================================

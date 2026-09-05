@@ -14,6 +14,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from select_pr_pytest_paths import (  # noqa: E402
+    root_addopts_ignores,
     root_collect_ignores,
     select_pr_pytest_paths,
 )
@@ -246,3 +247,33 @@ class FixtureAndCampaignScopeTests(unittest.TestCase):
         self.assertTrue(campaign - compiler, (compiler, campaign))
         self.assertNotIn(self.CAMPAIGN_TEST, compiler)
         self.assertIn(self.CAMPAIGN_TEST, campaign)
+
+
+class AddoptsIgnoreTests(unittest.TestCase):
+    """A path ignored via pyproject addopts is as unrunnable as a conftest one.
+
+    `--ignore` filters directory recursion; it does not survive the path being
+    named as an explicit argument. So a selector that drops only
+    `collect_ignore` paths hands pytest the very module the exclusion exists to
+    keep out. `workflows/dags/test_pipeline_dag.py` is that case: a DAG module
+    that merely matches `test_*.py`, whose import registers `test-pipeline-v1`
+    and raises when `workflows.dags` already loaded it.
+    """
+
+    DAG_MODULE = "workflows/dags/test_pipeline_dag.py"
+
+    def test_addopts_ignores_are_read_from_pyproject(self) -> None:
+        self.assertIn(self.DAG_MODULE, root_addopts_ignores())
+
+    def test_addopts_and_conftest_ignores_are_distinct_sources(self) -> None:
+        # The bug was reading one and assuming it covered both.
+        self.assertNotIn(self.DAG_MODULE, root_collect_ignores())
+
+    def test_ignored_dag_module_is_not_selected_when_changed(self) -> None:
+        self.assertNotIn(self.DAG_MODULE, select_pr_pytest_paths([self.DAG_MODULE]))
+
+    def test_sibling_real_tests_still_selected_alongside_it(self) -> None:
+        sibling = "tests/workflows/test_dag_authoring_alignment.py"
+        selected = select_pr_pytest_paths([self.DAG_MODULE, sibling])
+        self.assertIn(sibling, selected)
+        self.assertNotIn(self.DAG_MODULE, selected)

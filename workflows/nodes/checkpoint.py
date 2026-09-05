@@ -143,10 +143,10 @@ async def cli_checkpoint_node(state: WorkflowState) -> dict:
     message = state.get("confirmation_message") or "Continue with workflow?"
     current_phase = state.get("current_phase", "unknown")
 
-    print(f"\n{'─' * 50}")  # noqa: ADR-0019
-    print(f"⏸️  CHECKPOINT [{current_phase}]")  # noqa: ADR-0019
-    print(f"{'─' * 50}")  # noqa: ADR-0019
-    print(f"   {message}")  # noqa: ADR-0019
+    print(f"\n{'─' * 50}")
+    print(f"⏸️  CHECKPOINT [{current_phase}]")
+    print(f"{'─' * 50}")
+    print(f"   {message}")
 
     response = input("   Continue? [Y/n]: ").strip().lower()
 
