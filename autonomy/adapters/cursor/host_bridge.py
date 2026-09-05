@@ -45,9 +45,11 @@ def _cursor_deployment_readiness_required(repo_root: Path) -> bool:
         return False
     try:
         import yaml
-
+    except ImportError:
+        return True
+    try:
         document = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    except Exception:
+    except (OSError, yaml.YAMLError):
         return True
     if not isinstance(document, dict):
         return True
@@ -118,6 +120,11 @@ def _ensure_admission_schema(connection: sqlite3.Connection) -> None:
     present = {row[1] for row in connection.execute("PRAGMA table_info(cursor_host_admissions)")}
     for name, declaration in _ADMISSION_COLUMNS:
         if name not in present:
+            # SQLite cannot bind identifiers or type declarations as
+            # parameters, so an ALTER TABLE ... ADD COLUMN has to be composed.
+            # Both halves come from _ADMISSION_COLUMNS, a module-level literal
+            # tuple; no caller value reaches this string.
+            # nosemgrep: l9.baseline.python.sql-string-format
             connection.execute(
                 f"ALTER TABLE cursor_host_admissions ADD COLUMN {name} {declaration}"
             )

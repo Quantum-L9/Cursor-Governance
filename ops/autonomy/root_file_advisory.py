@@ -69,10 +69,14 @@ def uncommitted_overwrites(repo: Path, protected: dict[str, str]) -> list[tuple[
 
 def advisory(repo: Path) -> str | None:
     """One paragraph when an overwrite lacks its marker, else None."""
+    # Broad by design; the handler below carries the reason.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         import validate_root_file_protection as gate
     except Exception:  # noqa: BLE001 - observer: never cost a turn
         return None
+    # Broad by design; the handler below carries the reason.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         config = gate.load_config(repo)
     except Exception:  # noqa: BLE001
@@ -80,6 +84,8 @@ def advisory(repo: Path) -> str | None:
     protected = {e["path"]: e["rule"] for e in config["protected_files"]}
 
     committed: list[tuple[str, int, int]] = []
+    # Broad by design; the handler below carries the reason.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         base = gate.merge_base(repo, "origin/main", "HEAD")
         justified = gate.collect_justified_paths(repo, base, "HEAD")
@@ -92,6 +98,8 @@ def advisory(repo: Path) -> str | None:
     except Exception:  # noqa: BLE001 - no origin/main in a fresh clone, etc.
         justified = set()
 
+    # Broad by design; the handler below carries the reason.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         pending = [f for f in uncommitted_overwrites(repo, protected) if f[0] not in justified]
     except Exception:  # noqa: BLE001
@@ -118,6 +126,8 @@ def advisory(repo: Path) -> str | None:
 
 
 def main() -> int:
+    # Broad by design; the handler below carries the reason.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         raw = sys.stdin.read()
         event = json.loads(raw) if raw.strip() else {}

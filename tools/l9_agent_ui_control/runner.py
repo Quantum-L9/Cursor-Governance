@@ -54,6 +54,9 @@ def _soft_post_result(channel: str | None, task: dict[str, Any], result: dict[st
         status=result.get("status"),
         channel=channel,
     )
+    # Fail-soft: Slack notification is optional and must never fail the task
+    # whose result it reports.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         from api.slack_client import post_result_async  # type: ignore
 
@@ -301,6 +304,9 @@ async def poll_and_execute() -> None:
                 }
 
             if result.get("status") == "error" and pyautogui_available:
+                # Fail-soft: a screenshot is best-effort error decoration; a
+                # capture fault must not replace the real error.
+                # nosemgrep: l9.baseline.python.broad-except
                 try:
                     shot_dir = Path.home() / ".l9" / "mac_tasks" / "screenshots" / task_id
                     shot_dir.mkdir(parents=True, exist_ok=True)

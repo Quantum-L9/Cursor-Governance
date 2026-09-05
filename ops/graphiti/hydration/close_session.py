@@ -55,6 +55,8 @@ def _closes_dir(project_dir: Path) -> str:
 
 def _load_rules() -> dict[str, Any]:
     path = Path(__file__).resolve().parent / "promotion_rules.yaml"
+    # Broad by design; the handler below carries the reason.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         import yaml
 
