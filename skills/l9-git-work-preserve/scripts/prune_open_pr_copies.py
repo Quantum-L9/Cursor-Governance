@@ -17,10 +17,16 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import subprocess
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+
+SHA_FIELD_RE = re.compile(r'(body_sha256:\s*["\']?)([^"\'\s]+)(["\']?)')
+RAN_AT_RE = re.compile(r'(ran_at:\s*["\']?)([^"\'\s]+)(["\']?)')
+ZERO_DIGEST = "0" * 64
+RAN_AT_SENTINEL = "1970-01-01T00:00:00Z"
 
 SCHEMA = "l9.git_work_preserve.receipt/v1"
 SKIP_PREFIXES = ("WIP/Legal Defense/",)
@@ -62,6 +68,27 @@ def sha256_blob(repo: Path, rev: str, rel: str) -> str | None:
     if proc.returncode != 0:
         return None
     return hashlib.sha256(proc.stdout).hexdigest()
+
+
+def kernel_normalize(text: str) -> str:
+    """Zero kernel receipt fields so leftover vs open-PR plan bodies can match."""
+    text = SHA_FIELD_RE.sub(lambda m: f"{m.group(1)}{ZERO_DIGEST}{m.group(3)}", text)
+    return RAN_AT_RE.sub(lambda m: f"{m.group(1)}{RAN_AT_SENTINEL}{m.group(3)}", text)
+
+
+def kernel_normalized_sha256(data: bytes | str) -> str | None:
+    if isinstance(data, bytes):
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError:
+            return None
+    else:
+        text = data
+    return hashlib.sha256(kernel_normalize(text).encode("utf-8")).hexdigest()
+
+
+def is_plan_md(rel: str) -> bool:
+    return rel.replace("\\", "/").endswith(".plan.md")
 
 
 def path_key(rel: str) -> str:
@@ -119,7 +146,14 @@ def build_blob_index(git: repo_hygiene.Git, heads: list[str], baseline: str) -> 
             digest = sha256_blob(git.root, head, rel)
             if not digest:
                 continue
-            index.setdefault(path_key(rel), set()).add(digest)
+            key = path_key(rel)
+            index.setdefault(key, set()).add(digest)
+            if is_plan_md(rel):
+                blob = _run_bytes(git.root, "cat-file", "blob", f"{head}:{rel}")
+                if blob.returncode == 0:
+                    canon = kernel_normalized_sha256(blob.stdout)
+                    if canon:
+                        index[key].add(canon)
     return index
 
 
@@ -157,7 +191,17 @@ def classify_worktree(
             continue
         full = wt / rel
         digest = sha256_file(full)
-        if digest is None or digest not in hashes:
+        if digest is None:
+            continue
+        matched = digest in hashes
+        if not matched and is_plan_md(rel) and full.is_file():
+            try:
+                leftover_text = full.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                leftover_text = ""
+            canon = kernel_normalized_sha256(leftover_text) if leftover_text else None
+            matched = bool(canon and canon in hashes)
+        if not matched:
             continue
         tracked = head_has_path(wt, rel)
         if tracked:
