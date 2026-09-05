@@ -192,15 +192,10 @@ repos:
     path_hints: [LLM-Router, llm-router]
     remote_patterns: ["*/LLM-Router*", "*/LLM-Router.git"]
     integrates_with: [cursor-governance]
-  pr-repair:
+  l9-pr-repair:
     github: Quantum-L9/l9-pr-repair
-    github_aliases: [Quantum-L9/PR_Repair]
-    path_hints: [PR_Repair, pr-repair, l9-pr-repair]
-    remote_patterns:
-      - "*/PR_Repair*"
-      - "*/PR_Repair.git"
-      - "*/l9-pr-repair*"
-      - "*/l9-pr-repair.git"
+    path_hints: [l9-pr-repair]
+    remote_patterns: ["*/l9-pr-repair*", "*/l9-pr-repair.git"]
     integrates_with: [cursor-governance]
   quantum-dashboard:
     github: Quantum-L9/quantum-dashboard

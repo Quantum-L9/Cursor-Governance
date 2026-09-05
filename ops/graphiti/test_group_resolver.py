@@ -168,29 +168,27 @@ def test_no_match_falls_back_readonly_workspace():
     assert result["readonly"] is True
 
 
-def test_live_pr_repair_registry_keeps_group_id_after_github_rename(monkeypatch):
-    """GitHub renamed Quantum-L9/PR_Repair -> l9-pr-repair. Graphiti group_id stays pr-repair."""
+def test_live_l9_pr_repair_registry_group_id_matches_github_slug(monkeypatch):
+    """GitHub slug Quantum-L9/l9-pr-repair is the Graphiti group_id. No dual-match leftovers."""
     live_path = Path(__file__).resolve().parent / "group_registry.yaml"
     live = yaml.safe_load(live_path.read_text(encoding="utf-8"))
     monkeypatch.setattr(group_resolver, "load_registry", lambda: live)
-    entry = live["repos"]["pr-repair"]
+    assert "pr-repair" not in live["repos"]
+    entry = live["repos"]["l9-pr-repair"]
     assert entry["github"] == "Quantum-L9/l9-pr-repair"
-    assert "Quantum-L9/PR_Repair" in entry.get("github_aliases", [])
-    assert "PR_Repair" in entry["path_hints"]
-    assert "l9-pr-repair" in entry["path_hints"]
-    assert any(
-        p.endswith("PR_Repair*") or p.endswith("PR_Repair.git") for p in entry["remote_patterns"]
-    )
-    assert any("l9-pr-repair" in p for p in entry["remote_patterns"])
-
-    _set_remote(monkeypatch, "git@github.com:Quantum-L9/PR_Repair.git")
-    old = group_resolver.resolve_group_id(Path("/tmp/anywhere"))
-    assert old == {"group_id": "pr-repair", "method": "registry", "readonly": False}
+    assert not entry.get("github_aliases")
+    assert entry["path_hints"] == ["l9-pr-repair"]
+    assert entry["remote_patterns"] == ["*/l9-pr-repair*", "*/l9-pr-repair.git"]
 
     _set_remote(monkeypatch, "https://github.com/Quantum-L9/l9-pr-repair.git")
     new = group_resolver.resolve_group_id(Path("/tmp/anywhere"))
-    assert new == {"group_id": "pr-repair", "method": "registry", "readonly": False}
+    assert new == {"group_id": "l9-pr-repair", "method": "registry", "readonly": False}
 
     _set_remote(monkeypatch, None)
     folder = group_resolver.resolve_group_id(Path("/Users/me/l9-pr-repair"))
-    assert folder == {"group_id": "pr-repair", "method": "registry", "readonly": False}
+    assert folder == {"group_id": "l9-pr-repair", "method": "registry", "readonly": False}
+
+    _set_remote(monkeypatch, "git@github.com:Quantum-L9/PR_Repair.git")
+    old = group_resolver.resolve_group_id(Path("/tmp/anywhere"))
+    assert old["group_id"] != "l9-pr-repair"
+    assert old.get("readonly") is True
