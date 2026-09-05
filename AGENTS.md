@@ -1067,6 +1067,26 @@ history. Those sentences stay on disk only where already rewritten.
 - **`/ff --ssot`** / `make ff-ssot` = SSOT only.
 - Use the flags from other repos. Do not diagnose. Do not sequential-ff.
 
+<!-- FF_SHELF_SCRIPT_V1 -->
+## `/ff` shelf mutate is `ff_shelf.py` (2026-09-05)
+
+This fragment supersedes the agent-improvised rsync/`git add` recipes in
+`FF_SHELF_WIP_PLANS_V1` / `FF_CLOSE_PUBLISH_LOOP_V1` only. Those paragraphs
+stay on disk (additive_only). Do not fold them.
+
+- After `ff.sh` succeeds, leftover **untracked** `WIP/`, `docs/plans/`, and
+  `environment/program-execution/campaigns/` are shelved by
+  `skills/l9-repo-sync/scripts/ff_shelf.py`.
+- The path list is `$CLONE/.l9/ff-shelf-untracked.txt`. `rsync --files-from`
+  that file. No process substitution. No `/tmp` files-from.
+- `git add --pathspec-from-file` is a separate command from `git commit`.
+- Append an existing same-author `feat/ff-shelf-*` PR; do not cut a second stamp.
+- Corpus kernels still apply; `kernel_pass` YAML only on `*.plan.md`.
+- L4 is `begin` + `authorize-release` (not `record-kernels`).
+- Shelf publish is `PR_STACK=auto PR_REMEDIATE=0 make pr` unless
+  `FF_SHELF_PUBLISH=0`. `ff.sh` stays push-off.
+- Then `run_ff_post_shelf.sh` and locked-interpreter `verify_worktree_clean.py`.
+
 <!-- L9_ISSUE_REMEDIATE_AUTOMATION_V1 -->
 ## `/issues` remediator (2026-08-29)
 

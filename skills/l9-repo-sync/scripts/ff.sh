@@ -358,8 +358,42 @@ if [ "$BRANCH_BEFORE" != "$TARGET_BRANCH" ]; then
   _switch_to_target
 fi
 
-AHEAD="$(git -C "$CLONE" rev-list --count "origin/${TARGET_BRANCH}..HEAD")"
-BEHIND="$(git -C "$CLONE" rev-list --count "HEAD..origin/${TARGET_BRANCH}")"
+_is_shallow_or_grafted() {
+  if [ "$(git -C "$CLONE" rev-parse --is-shallow-repository 2>/dev/null || true)" = "true" ]; then
+    return 0
+  fi
+  local _shallow _grafts
+  _shallow="$(git -C "$CLONE" rev-parse --git-path shallow 2>/dev/null || true)"
+  if [ -n "$_shallow" ] && [ -f "$_shallow" ]; then
+    return 0
+  fi
+  _grafts="$(git -C "$CLONE" rev-parse --git-path info/grafts 2>/dev/null || true)"
+  if [ -n "$_grafts" ] && [ -s "$_grafts" ]; then
+    return 0
+  fi
+  return 1
+}
+
+# SHA-first tip compare. Shallow/grafted rev-list counts lie (missing parents
+# look like unique commits). Never unshallow. Never merge --ff-only.
+_HEAD_SHA="$(git -C "$CLONE" rev-parse HEAD)"
+_ORIGIN_SHA="$(git -C "$CLONE" rev-parse "origin/${TARGET_BRANCH}")"
+AHEAD=0
+BEHIND=0
+if [ "$_HEAD_SHA" = "$_ORIGIN_SHA" ]; then
+  echo "ff: tip compare SHA-equal ${_HEAD_SHA} (at-tip)"
+elif _is_shallow_or_grafted; then
+  BEHIND=1
+  echo "ff: tip compare SHA-unequal shallow/grafted; skip rev-list preserve"
+else
+  if git -C "$CLONE" merge-base --is-ancestor HEAD "origin/${TARGET_BRANCH}" 2>/dev/null; then
+    BEHIND="$(git -C "$CLONE" rev-list --count "HEAD..origin/${TARGET_BRANCH}")"
+  else
+    AHEAD="$(git -C "$CLONE" rev-list --count "origin/${TARGET_BRANCH}..HEAD")"
+    BEHIND="$(git -C "$CLONE" rev-list --count "HEAD..origin/${TARGET_BRANCH}")"
+  fi
+fi
+unset _HEAD_SHA _ORIGIN_SHA
 
 if [ "$AHEAD" -gt 0 ]; then
   PRESERVE_REF="refs/l9/preserved/ff/${STAMP}"

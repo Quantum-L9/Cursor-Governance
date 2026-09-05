@@ -101,16 +101,18 @@ It classifies `refs/l9/preserved/ff/*`, `refs/l9/preserved/ff-dirty/*`, and
 4. **Done** when the script prints `OK:` for each clone. Do not add a second
    census or pytest to `/ff`.
 5. **Shelf** — leftover untracked `WIP/`, `docs/plans/`, and
-   `environment/program-execution/campaigns/` become a sibling branch
-   (`feat/ff-shelf-<stamp>`). Copy the bytes into the new worktree
-   (untracked files are not in a fresh checkout). Apply Improve, then
-   Recursive Alignment, then Validate & Repair **before** commit/precommit.
-   Then `l4_local.py begin` + `authorize-release` (not `record-kernels`).
-   **Finish the shelf publish loop** unless `FF_SHELF_PUBLISH=0`:
-   `PR_STACK=auto PR_REMEDIATE=0 make pr` in the shelf worktree and display
-   the opened **PR URL** (see Shelf publish loop above / `FF_CLOSE_PUBLISH_LOOP_V1`).
-   Opt-out: `FF_SHELF_PUBLISH=0` shelves and commits only. Skip paths an open
-   shelf PR already carries. `ff.sh` stays push-off. Secret globs stay out.
+   `environment/program-execution/campaigns/` via **one** call:
+   `"$GOV_PY" skills/l9-repo-sync/scripts/ff_shelf.py --clone "$CLONE"`.
+   The script writes `$CLONE/.l9/ff-shelf-untracked.txt`, rsyncs
+   `--files-from` that file, appends an existing same-author
+   `feat/ff-shelf-*` PR (or cuts one stamp), applies corpus kernels
+   (`kernel_pass` YAML only on `*.plan.md`), pathspec-from-file then a
+   separate commit, then `l4_local.py begin` + `authorize-release` (not
+   `record-kernels`). **Finish the shelf publish loop** unless
+   `FF_SHELF_PUBLISH=0`: `PR_STACK=auto PR_REMEDIATE=0 make pr` in the
+   shelf worktree and display the opened **PR URL**. `ff.sh` stays
+   push-off. Secret globs stay out. Then
+   `"$GOV_PY" ops/scripts/verify_worktree_clean.py --workspace "$CLONE"`.
    The dirty-preserve ref is **not** deleted here — see Handoff.
 
 ## Failure Handling

@@ -42,7 +42,7 @@ Inside `scripts/ff.sh`, after fetch:
 1. If `ahead > 0` **on main**, create the preserve branch/ref (do not drop
    unique commits on `main`).
 2. If the clone is **behind or ahead** and has dirty **tracked** paths, park
-   **non-corpus** paths (corpus keep-list bytes stay in the worktree — see
+   **all** **non-corpus** paths (corpus keep-list bytes stay in the worktree — see
    `ssot_is_ff_corpus_keep`):
    - `git stash create` (no `-u`) at `refs/l9/preserved/ff-dirty/<stamp>`
    - copy each path to `$HOME/.cursor/l9-ff-hold/<clone-key>/<stamp>/tracked/`
@@ -68,64 +68,47 @@ Same gitdir, HEAD on `main`, `.venv` still at `<clone>/.venv` when it existed
 before, env.local keep-list still present, unique untracked still present
 or held, no new `~/.cursor-governance.bak.*`.
 
-## After success — shelf corpus (WIP, plans, campaigns, TODO)
+## After success — shelf leftover untracked corpus
 
-`ff.sh` is finished. The slash/`make ff` caller then shelves leftover
-**untracked and dirty tracked** corpus under `TODO.md`, `WIP/`, `docs/plans/`,
-and `environment/program-execution/campaigns/` so the named clone is not a dump:
+`ff.sh` is finished and stays **push-off**. The slash/`make ff` caller then
+runs **one** script for leftover **untracked** `WIP/`, `docs/plans/`, and
+`environment/program-execution/campaigns/` (not the root task-queue file, not
+dirty-tracked corpus):
 
-1. List untracked under those three trees (respect `.gitignore`).
-2. Skip `WIP/Legal Defense/`, `WIP/*oauth*.json`, `WIP/*credentials*.json`,
+```bash
+GOV_PY="${GOV_PY:-$HOME/.cursor-governance/.venv/bin/python}"
+"$GOV_PY" skills/l9-repo-sync/scripts/ff_shelf.py --clone "$CLONE"
+```
+
+`ff_shelf.py` owns the mutate path:
+
+1. Writes `$CLONE/.l9/ff-shelf-untracked.txt` (respect `.gitignore`).
+2. Skips `WIP/Legal Defense/`, `WIP/*oauth*.json`, `WIP/*credentials*.json`,
    `WIP/*client_secret*.json`, and any file that looks like a live secret.
-3. **Drop what is already shelved.** For each remaining path, if an open
-   `feat/ff-shelf-*` PR already contains it at the same sha256, it is shelved —
-   remove it from the list. Without this, every later `/ff` re-shelves the same
-   bytes (the copies stay in the clone by step 8) and stamps another branch.
-
-   ```bash
-   gh pr list --state open --search 'head:feat/ff-shelf-' --json number,headRefName \
-     --jq '.[].headRefName'   # then: git ls-tree -r <branch> --format '%(objectname) %(path)'
-   ```
-
-4. If the list is now empty, stop.
-5. **Create the sibling worktree, then copy the bytes into it.** Untracked
-   files live in one worktree only, so a fresh checkout of `origin/main` does
-   not contain them and a pathspec `git add` there fails "did not match any
-   files". Copy first:
-
-   ```bash
-   bash ops/scripts/worktree_add_wired.sh "$SHELF" -b "feat/ff-shelf-<stamp>" origin/main
-   rsync -R --files-from=<(printf '%s\n' "${shelf_paths[@]}") "$CLONE" "$SHELF"
-   ```
-
-6. **Apply corpus kernels before commit and before precommit** — Improve, then
-   Recursive Alignment, then Validate & Repair — on the copied files. Write
-   `kernel_pass` (those three blocks, `ran_at` in that order) on shelved
-   `*.plan.md`. Then pathspec-add **only** those files, scoped commit, then
-   **authorize the release in that worktree**. L4 state is workspace-local
-   (`.l9/autonomy`). Do **not** `record-kernels`; corpus kernels are `/ff`-owned
-   and `kernel_gate.py` skips these prefixes:
-
-   ```bash
-   git -C "$SHELF" add -- "${shelf_paths[@]}" && git -C "$SHELF" commit -m "…"
-   "$SHELF/.venv/bin/python" ops/autonomy/l4_local.py begin --contract-id "ff-shelf-<stamp>"
-   "$SHELF/.venv/bin/python" ops/autonomy/l4_local.py authorize-release
-   ```
-
-7. **Finish the shelf loop (default ON).** When shelf paths remain after dedupe,
-   run `PR_STACK=auto PR_REMEDIATE=0 make pr` in the shelf worktree and display
-   the opened **PR URL**. Opt-out: `FF_SHELF_PUBLISH=0` (shelf + commit only).
-   `/ff` still does not call `make pr` from inside `ff.sh` — the slash caller
-   runs publish after `ff.sh` returns.
-8. **Post-shelf close** in the named clone:
+3. Drops paths an open same-author `feat/ff-shelf-*` PR already carries at the
+   same sha256. Appends that worktree; does not cut a second stamp. If none is
+   open, cuts one `feat/ff-shelf-<stamp>`.
+4. `rsync -R --files-from=$CLONE/.l9/ff-shelf-untracked.txt` — no process
+   substitution, no `/tmp` files-from. Untracked bytes are not in a fresh
+   checkout.
+5. Applies corpus kernels (Improve, then Recursive Alignment, then Validate &
+   Repair) on leftover files. Writes `kernel_pass` YAML only on `*.plan.md`.
+6. `git add --pathspec-from-file` on that list, then a **separate** commit.
+   Then `l4_local.py begin` + `authorize-release` in the shelf worktree (not
+   `record-kernels`).
+7. Shelf publish (default ON): `PR_STACK=auto PR_REMEDIATE=0 make pr` in the
+   shelf worktree. Opt-out: `FF_SHELF_PUBLISH=0`. Display the opened **PR URL**.
+   Do not put `make pr` inside `ff.sh`.
+8. Post-shelf close in the named clone (also invoked by the script):
 
    ```bash
    bash ops/scripts/run_ff_post_shelf.sh "$CLONE"
-   ops/scripts/verify_worktree_clean.py --workspace "$CLONE"
+   "$GOV_PY" ops/scripts/verify_worktree_clean.py --workspace "$CLONE"
    ```
 
-   Leave shelf copies in the named clone until verify passes. Do not `git stash -u`.
-   Do not run `make pr` from inside `ff.sh`.
+   Always `GOV_PY verify_worktree_clean.py` (locked interpreter; the verify
+   script is not executable). Leave shelf copies in the named clone until
+   verify passes. Do not `git stash -u`.
 
 `refs/l9/preserved/ff-dirty/<stamp>` stays until `l9-git-work-preserve` triage
 plus `prune-policy` say otherwise. `/ff` never deletes it.
