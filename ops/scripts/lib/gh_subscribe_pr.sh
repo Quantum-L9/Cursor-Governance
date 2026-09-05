@@ -112,7 +112,8 @@ _GH_SUBSCRIBE_MUTATION='mutation($id: ID!) {
 }'
 
 gh_subscribe_pr() {
-  local owner="$1" name="$2" pr="$3" node_id out state
+  # ${n:-} so set -u does not abort on a missing positional before the warning.
+  local owner="${1:-}" name="${2:-}" pr="${3:-}" node_id out state
   local rest_err gql_out gql_rc _had_errexit=0
   if [[ -z "$owner" || -z "$name" || -z "$pr" ]]; then
     echo "WARN: gh_subscribe_pr requires OWNER REPO PR_NUMBER" >&2

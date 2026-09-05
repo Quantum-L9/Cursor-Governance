@@ -93,13 +93,16 @@ pass "helper does not call PUT issues/subscription"
 
 # Incident: zsh `source` from a foreign CWD must load the sibling, not CWD/gh_graphql.sh.
 if command -v zsh >/dev/null 2>&1; then
+  set +e
   out="$(
     PATH="$TMP_ROOT/bin:$PATH"
     cd "$TMP_ROOT/cwd"
     zsh -c "source $(printf '%q' "$LIB"); command -v gh_graphql >/dev/null && gh_subscribe_pr o n 81"
   )"
+  zsh_rc=$?
+  set -e
   grep -q 'Subscribed to PR #81 (o/n)' <<<"$out" \
-    || fail "zsh source from foreign CWD did not subscribe: $out"
+    || fail "zsh source from foreign CWD did not subscribe (rc=${zsh_rc}): $out"
   pass "zsh source from foreign CWD resolves sibling gh_graphql.sh"
 else
   echo "SKIP: zsh not on PATH"
