@@ -170,9 +170,9 @@ class MigrateExecutor:
         return result.returncode, result.stdout, result.stderr
 
     def _print_header(self, title: str):
-        print(f"\n{'=' * 60}")  # noqa: ADR-0019
-        print(f"  {title}")  # noqa: ADR-0019
-        print(f"{'=' * 60}\n")  # noqa: ADR-0019
+        print(f"\n{'=' * 60}")
+        print(f"  {title}")
+        print(f"{'=' * 60}\n")
 
     # =========================================================================
     # STEP 1: INDEX ANALYSIS
@@ -181,7 +181,7 @@ class MigrateExecutor:
         self._print_header("INDEX ANALYSIS — Find All Occurrences")
 
         pattern = self.state.old_pattern
-        print(f"Searching for: {pattern}\n")  # noqa: ADR-0019
+        print(f"Searching for: {pattern}\n")
 
         # Use ripgrep to find all matches
         escaped_pattern = pattern.replace('"', '\\"')
@@ -212,27 +212,27 @@ class MigrateExecutor:
 
         self.state.matches = matches
 
-        print(f"Found {len(matches)} occurrences:")  # noqa: ADR-0019
-        print("-" * 70)  # noqa: ADR-0019
-        print("| File | Line | Content |")  # noqa: ADR-0019
-        print("|------|------|---------|")  # noqa: ADR-0019
+        print(f"Found {len(matches)} occurrences:")
+        print("-" * 70)
+        print("| File | Line | Content |")
+        print("|------|------|---------|")
         for m in matches[:30]:  # Show first 30
-            print(f"| {m['file'][:35]} | {m['line']:4} | {m['content'][:40]} |")  # noqa: ADR-0019
+            print(f"| {m['file'][:35]} | {m['line']:4} | {m['content'][:40]} |")
         if len(matches) > 30:
-            print(f"| ... and {len(matches) - 30} more |")  # noqa: ADR-0019
-        print("-" * 70)  # noqa: ADR-0019
+            print(f"| ... and {len(matches) - 30} more |")
+        print("-" * 70)
 
         if not matches:
-            print("⚠️  No matches found — pattern may not exist")  # noqa: ADR-0019
+            print("⚠️  No matches found — pattern may not exist")
             return True  # Continue but note it
 
         # Check for protected files
         protected_touched = [m["file"] for m in matches if m["file"] in PROTECTED_FILES]
         if protected_touched:
-            print("\n⚠️  PROTECTED FILES CONTAIN PATTERN:")  # noqa: ADR-0019
+            print("\n⚠️  PROTECTED FILES CONTAIN PATTERN:")
             for f in protected_touched:
-                print(f"   - {f}")  # noqa: ADR-0019
-            print("\n⚠️  Will migrate but requires extra review")  # noqa: ADR-0019
+                print(f"   - {f}")
+            print("\n⚠️  Will migrate but requires extra review")
 
         return True
 
@@ -245,10 +245,10 @@ class MigrateExecutor:
         old = self.state.old_pattern
         new = self.state.new_pattern
 
-        print("Migration pattern:")  # noqa: ADR-0019
-        print(f"  FROM: {old}")  # noqa: ADR-0019
-        print(f"  TO:   {new}")  # noqa: ADR-0019
-        print()  # noqa: ADR-0019
+        print("Migration pattern:")
+        print(f"  FROM: {old}")
+        print(f"  TO:   {new}")
+        print()
 
         # Analyze pattern type
         pattern_type = "simple_replace"
@@ -259,15 +259,15 @@ class MigrateExecutor:
         elif "." in old and "." in new:
             pattern_type = "module_rename"
 
-        print(f"Pattern type: {pattern_type}")  # noqa: ADR-0019
+        print(f"Pattern type: {pattern_type}")
 
         # Compute preview for first match
         if self.state.matches:
             sample = self.state.matches[0]["content"]
             preview = sample.replace(old, new)
-            print("\nPreview (first match):")  # noqa: ADR-0019
-            print(f"  Before: {sample[:60]}")  # noqa: ADR-0019
-            print(f"  After:  {preview[:60]}")  # noqa: ADR-0019
+            print("\nPreview (first match):")
+            print(f"  Before: {sample[:60]}")
+            print(f"  After:  {preview[:60]}")
 
         return True
 
@@ -288,17 +288,17 @@ class MigrateExecutor:
             files_to_modify[m["file"]].append(m)
             m["new_content"] = m["content"].replace(old, new)
 
-        print(f"Files to modify: {len(files_to_modify)}")  # noqa: ADR-0019
-        print(f"Total changes: {len(self.state.matches)}")  # noqa: ADR-0019
-        print()  # noqa: ADR-0019
+        print(f"Files to modify: {len(files_to_modify)}")
+        print(f"Total changes: {len(self.state.matches)}")
+        print()
 
         # Show file summary
-        print("-" * 50)  # noqa: ADR-0019
-        print("| File | Changes |")  # noqa: ADR-0019
-        print("|------|---------|")  # noqa: ADR-0019
+        print("-" * 50)
+        print("| File | Changes |")
+        print("|------|---------|")
         for f, changes in sorted(files_to_modify.items()):
-            print(f"| {f[:35]} | {len(changes):3} |")  # noqa: ADR-0019
-        print("-" * 50)  # noqa: ADR-0019
+            print(f"| {f[:35]} | {len(changes):3} |")
+        print("-" * 50)
 
         self.state.files_modified = list(files_to_modify.keys())
 
@@ -323,7 +323,7 @@ class MigrateExecutor:
         for filepath in self.state.files_modified:
             full_path = REPO_ROOT / filepath
             if not full_path.exists():
-                print(f"⚠️  File not found: {filepath}")  # noqa: ADR-0019
+                print(f"⚠️  File not found: {filepath}")
                 fail_count += 1
                 continue
 
@@ -333,18 +333,18 @@ class MigrateExecutor:
 
             if code == 0:
                 success_count += 1
-                print(f"✅ {filepath}")  # noqa: ADR-0019
+                print(f"✅ {filepath}")
             else:
                 fail_count += 1
-                print(f"❌ {filepath}: {stderr[:50]}")  # noqa: ADR-0019
+                print(f"❌ {filepath}: {stderr[:50]}")
 
         # Mark matches as migrated
         for m in self.state.matches:
             m["migrated"] = True
 
-        print(f"\n✅ Applied: {success_count} files")  # noqa: ADR-0019
+        print(f"\n✅ Applied: {success_count} files")
         if fail_count:
-            print(f"❌ Failed: {fail_count} files")  # noqa: ADR-0019
+            print(f"❌ Failed: {fail_count} files")
 
         return fail_count == 0 or success_count > 0
 
@@ -363,11 +363,11 @@ class MigrateExecutor:
             code, _stdout, stderr = self._run_shell(f"python3 -m py_compile {files_str}")
             if code == 0:
                 validations.append({"check": "py_compile", "status": "✅"})
-                print(f"✅ py_compile: {len(py_files)} files OK")  # noqa: ADR-0019
+                print(f"✅ py_compile: {len(py_files)} files OK")
             else:
                 validations.append({"check": "py_compile", "status": "❌", "error": stderr})
-                print("❌ py_compile: FAILED")  # noqa: ADR-0019
-                print(stderr[:200])  # noqa: ADR-0019
+                print("❌ py_compile: FAILED")
+                print(stderr[:200])
                 # Don't fail - let wiring step handle
 
         # Quick import test for affected modules
@@ -381,9 +381,9 @@ class MigrateExecutor:
             cmd = f'python3 -c "import {module}" 2>&1'
             code, _stdout, _stderr = self._run_shell(cmd)
             if code == 0:
-                print(f"✅ import {module[:40]}")  # noqa: ADR-0019
+                print(f"✅ import {module[:40]}")
             else:
-                print(f"⚠️  import {module[:40]}: may need wiring")  # noqa: ADR-0019
+                print(f"⚠️  import {module[:40]}: may need wiring")
 
         self.state.validation_results = validations
         return True
@@ -398,7 +398,7 @@ class MigrateExecutor:
 
         # Check if migration created new import requirements
         if "from " in new_pattern or "import " in new_pattern:
-            print("Migration involves imports - checking refs...")  # noqa: ADR-0019
+            print("Migration involves imports - checking refs...")
             # Extract module name from new pattern
             match = re.search(r"from\s+([\w.]+)\s+import|import\s+([\w.]+)", new_pattern)
             if match:
@@ -407,11 +407,11 @@ class MigrateExecutor:
                 cmd = f'python3 -c "import {module_name}" 2>&1'
                 code, stdout, _stderr = self._run_shell(cmd)
                 if code == 0:
-                    print(f"✅ Module {module_name} is importable")  # noqa: ADR-0019
+                    print(f"✅ Module {module_name} is importable")
                 else:
-                    print(f"⚠️  Module {module_name} import issue: {stdout[:80]}")  # noqa: ADR-0019
+                    print(f"⚠️  Module {module_name} import issue: {stdout[:80]}")
         else:
-            print("✅ No additional wiring needed")  # noqa: ADR-0019
+            print("✅ No additional wiring needed")
 
         return True
 
@@ -431,10 +431,10 @@ class MigrateExecutor:
 
         if remaining == 0:
             checks.append({"check": "Old pattern removed", "status": "✅"})
-            print("✅ Old pattern fully migrated")  # noqa: ADR-0019
+            print("✅ Old pattern fully migrated")
         else:
             checks.append({"check": "Old pattern removed", "status": f"⚠️ {remaining} remaining"})
-            print(f"⚠️  {remaining} files still contain old pattern")  # noqa: ADR-0019
+            print(f"⚠️  {remaining} files still contain old pattern")
 
         # Verify new pattern exists
         new_pattern = self.state.new_pattern
@@ -443,14 +443,14 @@ class MigrateExecutor:
         new_count = int(stdout.strip() or "0")
 
         checks.append({"check": "New pattern present", "status": f"✅ {new_count} files"})
-        print(f"✅ New pattern in {new_count} files")  # noqa: ADR-0019
+        print(f"✅ New pattern in {new_count} files")
 
         # Summary
-        print("\n" + "=" * 40)  # noqa: ADR-0019
-        print("WIRING CONFIRMATION SUMMARY")  # noqa: ADR-0019
-        print("=" * 40)  # noqa: ADR-0019
+        print("\n" + "=" * 40)
+        print("WIRING CONFIRMATION SUMMARY")
+        print("=" * 40)
         for c in checks:
-            print(f"  {c['status']} {c['check']}")  # noqa: ADR-0019
+            print(f"  {c['status']} {c['check']}")
 
         self.state.validation_results.extend(checks)
         return True
@@ -484,7 +484,7 @@ class MigrateExecutor:
             --summary "Code migration via /migrate DAG executor" \
             --skip-verify 2>/dev/null || echo "Report generation skipped"'''
 
-        print("Generating report...")  # noqa: ADR-0019
+        print("Generating report...")
         _code, stdout, _stderr = self._run_shell(cmd)
 
         # Extract report path
@@ -494,9 +494,9 @@ class MigrateExecutor:
                 break
 
         if self.state.report_path:
-            print(f"✅ Report: {self.state.report_path}")  # noqa: ADR-0019
+            print(f"✅ Report: {self.state.report_path}")
         else:
-            print("⚠️  Report generation skipped")  # noqa: ADR-0019
+            print("⚠️  Report generation skipped")
             self.state.report_path = "N/A"
 
         return True
@@ -508,7 +508,7 @@ class MigrateExecutor:
         self._print_header("COMMIT — Stage and Commit (NO PUSH)")
 
         if not self.state.files_modified:
-            print("✅ No files modified — nothing to commit")  # noqa: ADR-0019
+            print("✅ No files modified — nothing to commit")
             return True
 
         # Stage files
@@ -531,17 +531,17 @@ class MigrateExecutor:
         code, stdout, _stderr = self._run_shell(cmd)
 
         if "nothing to commit" in stdout.lower():
-            print("✅ Nothing to commit — working tree clean")  # noqa: ADR-0019
+            print("✅ Nothing to commit — working tree clean")
         elif code == 0 or "file changed" in stdout.lower():
             # Get commit hash
             code, hash_out, _ = self._run_shell("git rev-parse --short HEAD")
             self.state.commit_hash = hash_out.strip()
-            print(f"✅ Committed: {self.state.commit_hash}")  # noqa: ADR-0019
-            print(f"   Message: {commit_msg}")  # noqa: ADR-0019
+            print(f"✅ Committed: {self.state.commit_hash}")
+            print(f"   Message: {commit_msg}")
         else:
-            print(f"⚠️  Commit result: {stdout[:100]}")  # noqa: ADR-0019
+            print(f"⚠️  Commit result: {stdout[:100]}")
 
-        print("\n⚠️  DO NOT PUSH — Review changes first")  # noqa: ADR-0019
+        print("\n⚠️  DO NOT PUSH — Review changes first")
 
         return True
 
@@ -551,35 +551,35 @@ class MigrateExecutor:
     def status(self):
         """Show current status."""
         if not self._load_state():
-            print("No active /migrate execution. Start with:")  # noqa: ADR-0019
-            print('  python3 workflows/migrate_executor.py "old" "new"')  # noqa: ADR-0019
+            print("No active /migrate execution. Start with:")
+            print('  python3 workflows/migrate_executor.py "old" "new"')
             return
 
         self._print_header(f"MIGRATE STATUS: {self.state.old_pattern} → {self.state.new_pattern}")
-        print(f"Started: {self.state.started_at}")  # noqa: ADR-0019
-        print(f"Current step: {self.state.current_step}")  # noqa: ADR-0019
-        print(f"Matches: {len(self.state.matches)}")  # noqa: ADR-0019
-        print()  # noqa: ADR-0019
+        print(f"Started: {self.state.started_at}")
+        print(f"Current step: {self.state.current_step}")
+        print(f"Matches: {len(self.state.matches)}")
+        print()
 
         for step in STEP_ORDER:
             if step in self.state.completed_steps:
-                print(f"  ✅ {step}")  # noqa: ADR-0019
+                print(f"  ✅ {step}")
             elif step == self.state.current_step:
-                print(f"  🔄 {step}")  # noqa: ADR-0019
+                print(f"  🔄 {step}")
             else:
-                print(f"  ⏳ {step}")  # noqa: ADR-0019
+                print(f"  ⏳ {step}")
 
     def run(self, old_pattern: str = "", new_pattern: str = "", resume: bool = False):
         """Execute the /migrate DAG — fully autonomous (or dry-run plan)."""
         if resume and self.dry_run:
-            print("❌ --dry-run cannot resume; omit --resume")  # noqa: ADR-0019
+            print("❌ --dry-run cannot resume; omit --resume")
             return False
         # Initialize or resume
         if resume and self._load_state():
-            print(f"Resuming migration: {self.state.old_pattern} → {self.state.new_pattern}")  # noqa: ADR-0019
+            print(f"Resuming migration: {self.state.old_pattern} → {self.state.new_pattern}")
         else:
             if not old_pattern or not new_pattern:
-                print("❌ Both old and new patterns required")  # noqa: ADR-0019
+                print("❌ Both old and new patterns required")
                 return False
             self.state = MigrateState(
                 old_pattern=old_pattern,
@@ -616,13 +616,13 @@ class MigrateExecutor:
 
             if self.dry_run and step not in dry_run_stop_after:
                 self._print_header("DRY-RUN STOP — skipping mutate steps")
-                print(f"Would run next: {step}")  # noqa: ADR-0019
-                print(f"Planned files: {len(self.state.files_modified)}")  # noqa: ADR-0019
+                print(f"Would run next: {step}")
+                print(f"Planned files: {len(self.state.files_modified)}")
                 for f in self.state.files_modified[:40]:
-                    print(f"  - {f}")  # noqa: ADR-0019
+                    print(f"  - {f}")
                 if len(self.state.files_modified) > 40:
-                    print(f"  ... +{len(self.state.files_modified) - 40} more")  # noqa: ADR-0019
-                print("\nNo files written. No state file. No commit.")  # noqa: ADR-0019
+                    print(f"  ... +{len(self.state.files_modified) - 40} more")
+                print("\nNo files written. No state file. No commit.")
                 return True
 
             self.state.current_step = step
@@ -630,7 +630,7 @@ class MigrateExecutor:
 
             executor = executors.get(step)
             if not executor:
-                print(f"❌ No executor for step: {step}")  # noqa: ADR-0019
+                print(f"❌ No executor for step: {step}")
                 break
 
             success = executor()
@@ -639,18 +639,18 @@ class MigrateExecutor:
                 self.state.completed_steps.append(step)
                 self._save_state()
             else:
-                print(f"\n❌ Step failed: {step}")  # noqa: ADR-0019
-                print("\nResume with: python3 workflows/migrate_executor.py --resume")  # noqa: ADR-0019
+                print(f"\n❌ Step failed: {step}")
+                print("\nResume with: python3 workflows/migrate_executor.py --resume")
                 return False
 
         # Complete
         self._print_header("MIGRATION COMPLETE")
-        print(f"✅ Pattern: {self.state.old_pattern} → {self.state.new_pattern}")  # noqa: ADR-0019
-        print(f"   Files modified: {len(self.state.files_modified)}")  # noqa: ADR-0019
-        print(f"   Report: {self.state.report_path}")  # noqa: ADR-0019
+        print(f"✅ Pattern: {self.state.old_pattern} → {self.state.new_pattern}")
+        print(f"   Files modified: {len(self.state.files_modified)}")
+        print(f"   Report: {self.state.report_path}")
         if self.state.commit_hash:
-            print(f"   Commit: {self.state.commit_hash}")  # noqa: ADR-0019
-        print("\n⚠️  DO NOT PUSH — Review changes first")  # noqa: ADR-0019
+            print(f"   Commit: {self.state.commit_hash}")
+        print("\n⚠️  DO NOT PUSH — Review changes first")
 
         # Clean up state
         self._clear_state()
@@ -694,7 +694,7 @@ Examples:
     if args.reset:
         if STATE_FILE.exists():
             STATE_FILE.unlink()
-        print("✅ State cleared")  # noqa: ADR-0019
+        print("✅ State cleared")
         return
 
     if args.status:
@@ -703,7 +703,7 @@ Examples:
 
     if args.resume:
         if not STATE_FILE.exists():
-            print("No migration to resume")  # noqa: ADR-0019
+            print("No migration to resume")
             sys.exit(1)
         executor.run(resume=True)
         return
