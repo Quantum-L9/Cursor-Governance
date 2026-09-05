@@ -182,8 +182,10 @@ def make_goals(segment: str) -> tuple[str, ...]:
 
 def _resolve_named_workspace(raw: str, root: Path) -> Path | None:
     """Existing git work tree named by WS=, or None (ignore the override)."""
+    if any(ch in raw for ch in "$`()*?[]{}~"):
+        return None
     try:
-        candidate = Path(os.path.expandvars(raw)).expanduser()
+        candidate = Path(raw)
     except (OSError, ValueError):
         return None
     if not candidate.is_absolute():

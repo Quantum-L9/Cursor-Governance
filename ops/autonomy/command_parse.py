@@ -192,7 +192,7 @@ def _assignment_value(token: str, keys: frozenset[str]) -> str | None:
 
 def make_workspace_raw(segment: str) -> str | None:
     """Last ``WS=`` / ``L9_L4_WORKSPACE=`` on a make segment, or None."""
-    tokens = segment.split()
+    tokens = segment_words(segment)
     index = 0
     found: str | None = None
     while index < len(tokens) and ENV_ASSIGN_RE.match(tokens[index]):
@@ -232,7 +232,7 @@ def extract_named_roots(command: str) -> list[str]:
         if make_ws and not any(ch in make_ws for ch in "$`()*?[]{}~"):
             roots.append(make_ws)
             skip_make_dash_c = True
-        tokens = segment.split()
+        tokens = segment_words(segment)
         for index, token in enumerate(tokens):
             head = token.rstrip(";")
             candidate: str | None = None

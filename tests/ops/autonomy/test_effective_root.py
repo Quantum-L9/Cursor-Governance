@@ -187,6 +187,14 @@ def test_invalid_ws_is_ignored(main_repo: Path, tmp_path: Path) -> None:
     assert effective_root(command, main_repo) == main_repo
 
 
+def test_make_ws_does_not_expand_env(
+    main_repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    other = make_repo(tmp_path / "other")
+    monkeypatch.setenv("WS_TARGET", str(other))
+    assert effective_root("make pr WS=$WS_TARGET", main_repo) == main_repo
+
+
 def test_cd_unrelated_still_refused_when_ws_absent(main_repo: Path, tmp_path: Path) -> None:
     other = make_repo(tmp_path / "other")
     assert effective_root(f'cd "{other}" && make pr', main_repo) == main_repo

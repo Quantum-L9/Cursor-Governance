@@ -99,3 +99,12 @@ def test_extract_named_roots_make_ws_beats_make_dash_c():
 
 def test_extract_named_roots_make_dash_c_when_ws_absent():
     assert extract_named_roots("make -C /tmp/gov pr") == ["/tmp/gov"]
+
+
+def test_make_workspace_raw_quoted_path_with_spaces():
+    assert make_workspace_raw('make pr WS="/tmp/Consumer Repo"') == "/tmp/Consumer Repo"
+    assert make_workspace_raw('WS="/tmp/Consumer Repo" make pr') == "/tmp/Consumer Repo"
+
+
+def test_extract_named_roots_quoted_ws_with_spaces():
+    assert extract_named_roots('make pr WS="/tmp/Consumer Repo"') == ["/tmp/Consumer Repo"]
