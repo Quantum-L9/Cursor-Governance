@@ -55,6 +55,23 @@ def extract_jsonrpc_payload(stdout: str) -> dict[str, Any]:
     return candidate
 
 
+def _validated_repo_root(candidate: str) -> Path:
+    """Resolve an argv-supplied repository root, or refuse it.
+
+    The value is handed to the indexer as a command argument, so the
+    leading-character rule is the load-bearing one: a value beginning with ``-``
+    is an ordinary string to ``subprocess`` but an *option* to the program
+    receiving it. Requiring an existing directory also fails fast and clearly
+    instead of letting the indexer report something obscure about an empty tree.
+    """
+    if candidate.startswith("-"):
+        raise SystemExit(f"repository root must not look like an option: {candidate!r}")
+    resolved = Path(candidate).expanduser().resolve()
+    if not resolved.is_dir():
+        raise SystemExit(f"repository root is not a directory: {candidate!r}")
+    return resolved
+
+
 def call_tool(
     repo_root: Path, tool_name: str, arguments: dict[str, Any] | None = None
 ) -> dict[str, Any]:
@@ -103,7 +120,7 @@ def main() -> int:
 
     repo = resolve_repo()
     if len(sys.argv) > 3:
-        repo = Path(sys.argv[3]).expanduser().resolve()
+        repo = _validated_repo_root(sys.argv[3])
 
     result = call_tool(repo, tool, args)
     print(json.dumps(result, indent=2))
