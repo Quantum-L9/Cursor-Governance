@@ -2,10 +2,29 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
 from .common import verification_mechanisms_from_card
+
+#: Authoritative runtime schema version. Bumped only when persistence
+#: compatibility materially changes; every open reads it first.
+#:   1  original tables (implicit: no version key)
+#:   2  tasks.verification_mechanisms column (implicit: column present)
+#:   3  explicit version key + Controller transactions (PEC remediation R3)
+RUNTIME_SCHEMA_VERSION = 3
+RUNTIME_SCHEMA_KEY = "runtime_schema_version"
+#: Bounded wait for the single-writer lock before a mutation is refused.
+BUSY_TIMEOUT_SECONDS = 5.0
+
+
+class StateError(RuntimeError):
+    def __init__(self, message: str, *, error_code: str | None = None):
+        super().__init__(message)
+        self.error_code = error_code
+
 
 TASK_STATES = {
     "WAITING",
@@ -51,14 +70,99 @@ ALLOWED_TRANSITIONS = {
 
 
 class StateDB:
+    """The canonical runtime store, opened in explicit-transaction mode.
+
+    Every mutation primitive below is usable on its own (it autocommits) and
+    inside `controller_transaction()`, where nothing commits until the outer
+    Controller operation does. That is what lets one Controller operation move
+    several rows -- and, from R8 on, its event and receipt records -- durably
+    together (PEC-P1-004).
+    """
+
     def __init__(self, path: Path):
         path.parent.mkdir(parents=True, exist_ok=True)
         self.path = path
-        self.conn = sqlite3.connect(path)
+        # isolation_level=None: sqlite3 issues no implicit BEGIN, so a plain
+        # DML statement autocommits and `controller_transaction` owns BEGIN
+        # IMMEDIATE / COMMIT explicitly. `timeout` bounds the busy wait.
+        self.conn = sqlite3.connect(path, isolation_level=None, timeout=BUSY_TIMEOUT_SECONDS)
         self.conn.row_factory = sqlite3.Row
+        self._tx_depth = 0
+        self._after_commit: list[Callable[[], None]] = []
         self._init()
 
+    # ------------------------------------------------------------------ tx
+    @property
+    def in_transaction(self) -> bool:
+        return self._tx_depth > 0
+
+    def _commit(self) -> None:
+        """Commit unless an enclosing Controller transaction owns the commit."""
+        if self._tx_depth == 0 and self.conn.in_transaction:
+            self._commit()
+
+    @contextmanager
+    def controller_transaction(self) -> Iterator[StateDB]:
+        """One serializable Controller mutation.
+
+        BEGIN IMMEDIATE takes the single-writer lock up front, so two
+        Controller processes cannot both read "current state" and both write
+        a successor: the second waits on the lock (bounded by the busy
+        timeout) and then re-reads. Nested use joins the outer transaction.
+        Callbacks registered through `on_commit` run only after the outermost
+        COMMIT succeeds and are discarded on rollback -- that is the hook
+        R8's ledger/receipt projections hang on.
+        """
+        if self._tx_depth > 0:
+            self._tx_depth += 1
+            try:
+                yield self
+            finally:
+                self._tx_depth -= 1
+            return
+        try:
+            self.conn.execute("BEGIN IMMEDIATE")
+        except sqlite3.OperationalError as exc:
+            raise StateError(
+                f"controller transaction could not acquire the runtime writer lock: {exc}",
+                error_code="RUNTIME_WRITER_BUSY",
+            ) from exc
+        self._tx_depth = 1
+        try:
+            yield self
+        except BaseException:
+            self._tx_depth = 0
+            self._after_commit.clear()
+            if self.conn.in_transaction:
+                self.conn.execute("ROLLBACK")
+            raise
+        self._tx_depth = 0
+        self.conn.execute("COMMIT")
+        hooks, self._after_commit = self._after_commit, []
+        for hook in hooks:
+            hook()
+
+    def on_commit(self, callback: Callable[[], None]) -> None:
+        """Run `callback` after the enclosing transaction commits (now, if none)."""
+        if self._tx_depth > 0:
+            self._after_commit.append(callback)
+        else:
+            callback()
+
+    # -------------------------------------------------------------- schema
     def _init(self) -> None:
+        recorded = self._recorded_schema_version()
+        if recorded is not None and recorded > RUNTIME_SCHEMA_VERSION:
+            raise StateError(
+                f"runtime schema version {recorded} is newer than this Controller "
+                f"supports ({RUNTIME_SCHEMA_VERSION}); refusing to interpret it",
+                error_code="RUNTIME_SCHEMA_INCOMPATIBLE",
+            )
+        # Base DDL is idempotent and may run outside a transaction: a crash
+        # mid-way leaves a strict subset of the same tables, which the next
+        # open completes. Everything that changes the MEANING of existing
+        # rows happens in `_migrate`, inside one transaction, and the version
+        # key is the last write of that transaction.
         self.conn.executescript(
             """
             PRAGMA journal_mode=WAL;
@@ -167,13 +271,66 @@ class StateDB:
             );
             """
         )
-        task_columns = {str(row["name"]) for row in self.conn.execute("PRAGMA table_info(tasks)")}
-        if "verification_mechanisms" not in task_columns:
+        if recorded != RUNTIME_SCHEMA_VERSION:
+            self._migrate(recorded)
+
+    def _recorded_schema_version(self) -> int | None:
+        has_meta = self.conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='meta'"
+        ).fetchone()
+        if has_meta is None:
+            # No tables at all: a fresh runtime, versioned at creation below.
+            has_tasks = self.conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='tasks'"
+            ).fetchone()
+            return None if has_tasks is None else 1
+        row = self.conn.execute(
+            "SELECT value FROM meta WHERE key=?", (RUNTIME_SCHEMA_KEY,)
+        ).fetchone()
+        if row is None:
+            # Pre-versioned runtime: distinguish a fresh database (no tasks table
+            # yet) from a legacy one by what is on disk, never by assumption.
+            has_tasks = self.conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='tasks'"
+            ).fetchone()
+            if has_tasks is None:
+                return None
+            columns = {str(r["name"]) for r in self.conn.execute("PRAGMA table_info(tasks)")}
+            return 2 if "verification_mechanisms" in columns else 1
+        try:
+            return int(json.loads(row["value"]))
+        except (TypeError, ValueError) as exc:
+            raise StateError(
+                f"runtime schema version is unreadable: {row['value']!r}",
+                error_code="RUNTIME_SCHEMA_INCOMPATIBLE",
+            ) from exc
+
+    def _migrate(self, recorded: int | None) -> None:
+        """Bring a supported older runtime to the current version, transactionally.
+
+        Each step is idempotent so an interrupted migration re-runs cleanly:
+        the version key is written last, inside the same transaction, and an
+        interrupted run leaves it at the old value (or absent).
+        """
+        with self.controller_transaction():
+            version = recorded or 0
+            if version < 2:
+                columns = {str(r["name"]) for r in self.conn.execute("PRAGMA table_info(tasks)")}
+                if "verification_mechanisms" not in columns:
+                    self.conn.execute(
+                        "ALTER TABLE tasks ADD COLUMN verification_mechanisms "
+                        "TEXT NOT NULL DEFAULT '[]'"
+                    )
+                if recorded is not None:
+                    self._backfill_verification_mechanisms()
             self.conn.execute(
-                "ALTER TABLE tasks ADD COLUMN verification_mechanisms TEXT NOT NULL DEFAULT '[]'"
+                "INSERT INTO meta(key,value) VALUES(?,?) "
+                "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                (RUNTIME_SCHEMA_KEY, json.dumps(RUNTIME_SCHEMA_VERSION)),
             )
-            self._backfill_verification_mechanisms()
-        self.conn.commit()
+
+    def schema_version(self) -> int:
+        return int(self.get_meta(RUNTIME_SCHEMA_KEY, 0) or 0)
 
     def _backfill_verification_mechanisms(self) -> None:
         """Populate the new column for rows frozen before it existed.
@@ -231,7 +388,7 @@ class StateDB:
             "INSERT INTO meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",  # noqa: E501
             (key, json.dumps(value, sort_keys=True)),
         )
-        self.conn.commit()
+        self._commit()
 
     def get_meta(self, key: str, default: Any = None) -> Any:
         row = self.conn.execute("SELECT value FROM meta WHERE key=?", (key,)).fetchone()
@@ -273,7 +430,7 @@ class StateDB:
                 "reconciled_at": existing.get("reconciled_at"),
             },
         )
-        self.conn.commit()
+        self._commit()
 
     def repository(self, repository_id: str) -> dict[str, Any] | None:
         row = self.conn.execute(
@@ -372,7 +529,7 @@ class StateDB:
             f"INSERT INTO tasks({columns}) VALUES({placeholders}) ON CONFLICT(id) DO UPDATE SET {updates}",  # noqa: E501  # nosec B608
             payload,
         )
-        self.conn.commit()
+        self._commit()
 
     def _task_row(self, row: sqlite3.Row) -> dict[str, Any]:
         value = dict(row)
@@ -402,7 +559,7 @@ class StateDB:
             "UPDATE tasks SET runtime_state=?, last_error=? WHERE id=?",
             (new_state, last_error, task_id),
         )
-        self.conn.commit()
+        self._commit()
 
     def update_task(self, task_id: str, **fields: Any) -> None:
         allowed = {
@@ -430,7 +587,7 @@ class StateDB:
             f"UPDATE tasks SET {sets} WHERE id=?",  # nosec B608
             [*fields.values(), task_id],
         )
-        self.conn.commit()
+        self._commit()
 
     def upsert_gate(self, gate: dict[str, Any]) -> None:
         existing = self.gate(gate["id"])
@@ -452,7 +609,7 @@ class StateDB:
                 existing.get("evaluation_receipt") if existing else None,
             ),
         )
-        self.conn.commit()
+        self._commit()
 
     def gate(self, gate_id: str) -> dict[str, Any] | None:
         row = self.conn.execute("SELECT * FROM gates WHERE id=?", (gate_id,)).fetchone()
@@ -473,7 +630,7 @@ class StateDB:
             "UPDATE gates SET result=?, evidence_ids=?, evaluation_receipt=? WHERE id=?",
             (result, json.dumps(evidence_ids), receipt, gate_id),
         )
-        self.conn.commit()
+        self._commit()
 
     def upsert_decision(self, item: dict[str, Any]) -> None:
         existing = self.decision(item["id"])
@@ -483,7 +640,7 @@ class StateDB:
             "INSERT INTO decisions(id,status,evidence_ids,source) VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET source=excluded.source",  # noqa: E501
             (item["id"], status, json.dumps(evidence_ids), json.dumps(item, sort_keys=True)),
         )
-        self.conn.commit()
+        self._commit()
 
     def decision(self, decision_id: str) -> dict[str, Any] | None:
         row = self.conn.execute("SELECT * FROM decisions WHERE id=?", (decision_id,)).fetchone()
@@ -507,7 +664,7 @@ class StateDB:
             "UPDATE decisions SET status=?, evidence_ids=? WHERE id=?",
             (status, json.dumps(evidence_ids), decision_id),
         )
-        self.conn.commit()
+        self._commit()
 
     def upsert_unknown(self, item: dict[str, Any]) -> None:
         existing = self.unknown(item["id"])
@@ -525,7 +682,7 @@ class StateDB:
                 json.dumps(item, sort_keys=True),
             ),
         )
-        self.conn.commit()
+        self._commit()
 
     def unknown(self, unknown_id: str) -> dict[str, Any] | None:
         row = self.conn.execute("SELECT * FROM unknowns WHERE id=?", (unknown_id,)).fetchone()
@@ -550,14 +707,14 @@ class StateDB:
             "UPDATE unknowns SET status=?, evidence_ids=? WHERE id=?",
             (status, json.dumps(evidence_ids), unknown_id),
         )
-        self.conn.commit()
+        self._commit()
 
     def upsert_waiver(self, item: dict[str, Any]) -> None:
         self.conn.execute(
             "INSERT OR REPLACE INTO waivers(id,payload) VALUES(?,?)",
             (item["id"], json.dumps(item, sort_keys=True)),
         )
-        self.conn.commit()
+        self._commit()
 
     def waiver(self, waiver_id: str) -> dict[str, Any] | None:
         row = self.conn.execute("SELECT payload FROM waivers WHERE id=?", (waiver_id,)).fetchone()
@@ -574,7 +731,7 @@ class StateDB:
             "INSERT OR REPLACE INTO evidence(id,payload) VALUES(?,?)",
             (item["id"], json.dumps(item, sort_keys=True)),
         )
-        self.conn.commit()
+        self._commit()
 
     def evidence(self, evidence_id: str) -> dict[str, Any] | None:
         row = self.conn.execute(
@@ -604,7 +761,7 @@ class StateDB:
                 lease["expires_at"],
             ),
         )
-        self.conn.commit()
+        self._commit()
 
     def update_lease(self, lease_id: str, **fields: Any) -> None:
         allowed = {"worktree", "contract_digest", "active"}
@@ -617,7 +774,7 @@ class StateDB:
             f"UPDATE leases SET {sets} WHERE lease_id=?",  # nosec B608
             [*fields.values(), lease_id],
         )
-        self.conn.commit()
+        self._commit()
 
     def active_lease_for_task(self, task_id: str) -> dict[str, Any] | None:
         row = self.conn.execute(
@@ -633,7 +790,7 @@ class StateDB:
 
     def release_lease(self, lease_id: str) -> None:
         self.conn.execute("UPDATE leases SET active=0 WHERE lease_id=?", (lease_id,))
-        self.conn.commit()
+        self._commit()
 
     def next_attempt_number(self, task_id: str) -> int:
         row = self.conn.execute(
@@ -649,7 +806,7 @@ class StateDB:
             "INSERT INTO attempts(task_id,attempt_number,receipt_path,status,created_at) VALUES(?,?,?,?,?)",  # noqa: E501
             (task_id, attempt_number, receipt_path, "RECORDED", created_at),
         )
-        self.conn.commit()
+        self._commit()
 
     def latest_attempt(self, task_id: str) -> dict[str, Any] | None:
         row = self.conn.execute(
@@ -663,7 +820,7 @@ class StateDB:
             "INSERT OR REPLACE INTO approvals(approval_id,payload) VALUES(?,?)",
             (approval["approval_id"], json.dumps(approval, sort_keys=True)),
         )
-        self.conn.commit()
+        self._commit()
 
     def approvals(self) -> list[dict[str, Any]]:
         return [
