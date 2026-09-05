@@ -491,7 +491,21 @@ def relock_definitions(
         if not stale:
             return {"status": "CURRENT", "relocked": [], "superseded_after_completion": []}
 
-        outcome = relock_tasks(lock_path, stale)
+        try:
+            outcome = relock_tasks(lock_path, stale)
+        except BlueprintError as exc:
+            error = ControllerError(str(exc))
+            error.error_code = getattr(exc, "error_code", None)  # type: ignore[attr-defined]
+            raise error from exc
+        if outcome["status"] == "CURRENT":
+            # The caller offered a scope and the Controller found nothing inside
+            # it that moved; an unchanged Program relocks to itself.
+            return {
+                "status": "CURRENT",
+                "relocked": [],
+                "superseded_after_completion": [],
+                "lock_digest": outcome["lock_digest"],
+            }
         superseded: list[str] = []
         for task_id in outcome["relocked"]:
             existing = db.task(task_id)
