@@ -20,8 +20,8 @@ import pytest
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "ops" / "autonomy"))
 
-from local_execution_gate import cursor_shell_verdict, effective_root, evaluate  # noqa: E402
 from l4_local import authorize_release, begin  # noqa: E402
+from local_execution_gate import cursor_shell_verdict, effective_root, evaluate  # noqa: E402
 
 
 def git(root: Path, *args: str) -> str:
