@@ -138,9 +138,7 @@ def test_receipt_is_workspace_bound_when_it_can_say_so() -> None:
     base = make(revision="c" * 40)
     base["covered_roots"] = ["/home/user", "/home/user/Website-Bot"]
 
-    covered = receipt.evaluate(
-        base, now=NOW, governance_revision="c" * 40, workspace="/home/user"
-    )
+    covered = receipt.evaluate(base, now=NOW, governance_revision="c" * 40, workspace="/home/user")
     assert covered["state"] == receipt.READY
     assert covered["workspace_covered"] is True
 
@@ -161,8 +159,6 @@ def test_workspace_binding_is_back_compatible() -> None:
     assert receipt.evaluate(legacy, now=NOW, governance_revision="d" * 40)["state"] == receipt.READY
 
     # Asked about, but the receipt cannot say — None, and no demotion.
-    asked = receipt.evaluate(
-        legacy, now=NOW, governance_revision="d" * 40, workspace="/anywhere"
-    )
+    asked = receipt.evaluate(legacy, now=NOW, governance_revision="d" * 40, workspace="/anywhere")
     assert asked["workspace_covered"] is None
     assert asked["state"] == receipt.READY

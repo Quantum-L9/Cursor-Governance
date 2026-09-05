@@ -1,17 +1,17 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-31T02:53:19Z`. Source: `rules/*.mdc`.
+Generated: `2026-09-05T17:58:46Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
 | Bucket | Count |
 |---|---:|
-| Total MDC files | **68** |
-| `alwaysApply: true` | **32** |
+| Total MDC files | **69** |
+| `alwaysApply: true` | **33** |
 | `alwaysApply: false` | **36** |
 | No boolean `alwaysApply` | **0** |
 | Explicit stable IDs | **68** |
-| Derived compatibility IDs | **0** |
+| Derived compatibility IDs | **1** |
 | Deprecated rules | **0** |
 
 ## Rule index
@@ -19,6 +19,7 @@ Generated: `2026-08-31T02:53:19Z`. Source: `rules/*.mdc`.
 | File | ID | Scope | Domain | Activation | Lines | Digest |
 |---|---|---|---|---|---:|---|
 | `00-global.mdc` | `l9.rule.00.global` | global | governance | always | 40 | `f52c4a83d314` |
+| `01-authority-chain.mdc` | `l9.rule.01.authority.chain` | global | general | always | 64 | `a2f5f3993a02` |
 | `02-slash-commands.mdc` | `l9.rule.slash-commands` | global | governance | always | 135 | `76d110e9c449` |
 | `03-graphiti-memory.mdc` | `l9.rule.graphiti.memory` | global | memory | always | 70 | `93cd8a5cbf32` |
 | `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | agent_requested | 70 | `64a0e957121b` |
@@ -66,7 +67,7 @@ Generated: `2026-08-31T02:53:19Z`. Source: `rules/*.mdc`.
 | `77-cursor-subagent-orchestration.mdc` | `l9.rule.77.cursor.subagent.orchestration` | global | governance | agent_requested | 24 | `67cc9f7af1be` |
 | `78-perplexity-run-harness.mdc` | `l9.rule.78.perplexity.run.harness` | global | general | agent_requested | 62 | `ff0c6fe1e02f` |
 | `79-output-discipline.mdc` | `l9.rule.output-discipline` | global | output | agent_requested | 26 | `ea8f58ae1f55` |
-| `80-gmp-execution.mdc` | `l9.rule.80.gmp.execution` | global | ci | always | 71 | `14a64f58c0e8` |
+| `80-gmp-execution.mdc` | `l9.rule.80.gmp.execution` | global | ci | always | 85 | `e5a0e63b42c1` |
 | `81-gmp-audit.mdc` | `l9.rule.81.gmp.audit` | global | governance | agent_requested | 96 | `0a3985c2fdc4` |
 | `82-deployment-manifest.mdc` | `l9.rule.82.deployment.manifest` | global | deployment | agent_requested | 72 | `b57f632b093e` |
 | `83-gmp-contracts.mdc` | `l9.rule.83.gmp.contracts` | global | governance | always | 135 | `f9c358d00e0e` |

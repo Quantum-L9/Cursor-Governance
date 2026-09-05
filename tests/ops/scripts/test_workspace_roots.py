@@ -133,9 +133,7 @@ def test_selection_names_every_dropped_root_and_why(tmp_path: Path) -> None:
     # One repository fails the caller's predicate rather than the cap.
     unnamespaced = names[0]
 
-    selection = select_workspace_roots(
-        container, predicate=lambda p: p.name != unnamespaced
-    )
+    selection = select_workspace_roots(container, predicate=lambda p: p.name != unnamespaced)
 
     assert [p.name for p in selection.selected] == names[1 : DEFAULT_MAX_ROOTS + 1]
     reasons = {p.name: reason for p, reason in selection.dropped}
