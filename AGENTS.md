@@ -1087,6 +1087,19 @@ stay on disk (additive_only). Do not fold them.
   `FF_SHELF_PUBLISH=0`. `ff.sh` stays push-off.
 - Then `run_ff_post_shelf.sh` and locked-interpreter `verify_worktree_clean.py`.
 
+<!-- FF_SHELF_CORPUS_REMAINDER_V1 -->
+## `/ff` shelf also owns the task-queue file and dirty-tracked corpus (2026-09-05)
+
+This fragment supersedes only the untracked-only corpus sentence in
+`FF_SHELF_SCRIPT_V1`. That paragraph stays on disk (additive_only). Do not
+fold it.
+
+- `ff_shelf.py` also shelves leftover **untracked** `TODO.md` and leftover
+  **dirty-tracked** files under `TODO.md`, `WIP/`, `docs/plans/`, and
+  `environment/program-execution/campaigns/`.
+- The path list is still `$CLONE/.l9/ff-shelf-untracked.txt`.
+- Secret globs and `WIP/Legal Defense/` stay out. `ff.sh` stays push-off.
+
 <!-- L9_ISSUE_REMEDIATE_AUTOMATION_V1 -->
 ## `/issues` remediator (2026-08-29)
 

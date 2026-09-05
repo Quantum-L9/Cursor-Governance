@@ -623,6 +623,11 @@ def test_ff_shelf_list_and_rsync_argv() -> int:
         (clone / "WIP" / "note.md").write_text("wip leftover\n", encoding="utf-8")
         (clone / "docs" / "plans").mkdir(parents=True)
         (clone / "docs" / "plans" / "left.md").write_text("plan leftover\n", encoding="utf-8")
+        (clone / "TODO.md").write_text("queue leftover\n", encoding="utf-8")
+        (clone / "WIP" / "tracked.md").write_text("tracked-v1\n", encoding="utf-8")
+        git(clone, "add", "WIP/tracked.md")
+        git(clone, "commit", "-m", "track wip")
+        (clone / "WIP" / "tracked.md").write_text("tracked-dirty\n", encoding="utf-8")
         (clone / "root-queue.md").write_text("not corpus leftover\n", encoding="utf-8")
         shelf = Path(tmp) / "shelf"
         proc = run(
@@ -651,8 +656,12 @@ def test_ff_shelf_list_and_rsync_argv() -> int:
         listed = list_path.read_text(encoding="utf-8").splitlines()
         if "WIP/note.md" not in listed or "docs/plans/left.md" not in listed:
             return _fail(f"missing leftover paths: {listed}")
+        if "TODO.md" not in listed:
+            return _fail(f"root task-queue file must be shelved, listed={listed}")
+        if "WIP/tracked.md" not in listed:
+            return _fail(f"dirty-tracked corpus must be shelved, listed={listed}")
         if "root-queue.md" in listed:
-            return _fail("root queue file must not be shelved")
+            return _fail("non-corpus root file must not be shelved")
         rsync = data["rsync"]
         joined = " ".join(rsync)
         if "<(" in joined:
