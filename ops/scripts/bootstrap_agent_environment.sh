@@ -435,24 +435,17 @@ else
 fi
 
 # --- 5) Shared local git excludes -------------------------------------------
-# Machine-local activation artifacts that every surface creates. Written to
-# .git/info/exclude, which is LOCAL and uncommitted, so a consumer's tracked
-# .gitignore is never mutated. Vendor-specific globs stay in that vendor's
-# adapter — this list is only what all surfaces share.
+# Option B (Cursor-Governance#281): session-injected paths go in
+# .git/info/exclude (local, uncommitted). Never mutate a consumer's tracked
+# .gitignore (Option A). Claude generated mirrors belong HERE so every
+# surface — not only Claude install.sh — hides them. A blanket `.claude/`
+# is forbidden; see ops/scripts/lib/session_git_excludes.sh.
+# shellcheck source=lib/session_git_excludes.sh
+source "$SCRIPT_DIR/lib/session_git_excludes.sh"
 if [ "$CHECK" != "1" ] && git -C "$WORKSPACE" rev-parse --git-dir >/dev/null 2>&1; then
   log "Shared local git excludes"
-  # --git-common-dir, not --git-dir: in a LINKED WORKTREE the latter is
-  # .git/worktrees/<name>/, but git reads $GIT_COMMON_DIR/info/exclude, so
-  # writing there is a silent no-op. Identical in a primary clone. Rules
-  # 49/96 give every mutating agent its own worktree, so that is the norm.
-  exclude_file="$(git -C "$WORKSPACE" rev-parse --git-common-dir)/info/exclude"
-  case "$exclude_file" in /*) : ;; *) exclude_file="$WORKSPACE/$exclude_file" ;; esac
-  mkdir -p "$(dirname "$exclude_file")"
-  touch "$exclude_file"
-  for glob in "/.cursor-commands" "/.cursor/" "/.l9/" "memory-bank/"; do
-    grep -qxF "$glob" "$exclude_file" 2>/dev/null || printf '%s\n' "$glob" >> "$exclude_file"
-  done
-  say "excluded shared activation artifacts via $exclude_file (local, uncommitted)"
+  apply_session_git_excludes "$WORKSPACE"
+  say "excluded shared + Claude-mirror activation artifacts via $(session_exclude_file "$WORKSPACE") (local, uncommitted)"
 
   # Stale remote-tracking refs make every "unpushed commits" count wrong, in
   # both directions. A branch deleted upstream on merge leaves refs/remotes/
