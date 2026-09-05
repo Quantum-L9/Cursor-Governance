@@ -177,7 +177,9 @@ def test_live_pr_repair_registry_keeps_group_id_after_github_rename(monkeypatch)
     assert entry["github"] == "Quantum-L9/l9-pr-repair"
     assert "PR_Repair" in entry["path_hints"]
     assert "l9-pr-repair" in entry["path_hints"]
-    assert any(p.endswith("PR_Repair*") or p.endswith("PR_Repair.git") for p in entry["remote_patterns"])
+    assert any(
+        p.endswith("PR_Repair*") or p.endswith("PR_Repair.git") for p in entry["remote_patterns"]
+    )
     assert any("l9-pr-repair" in p for p in entry["remote_patterns"])
 
     _set_remote(monkeypatch, "git@github.com:Quantum-L9/PR_Repair.git")
