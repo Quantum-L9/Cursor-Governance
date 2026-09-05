@@ -173,9 +173,10 @@ def test_live_pr_repair_registry_keeps_group_id_after_github_rename(monkeypatch)
     live_path = Path(__file__).resolve().parent / "group_registry.yaml"
     live = yaml.safe_load(live_path.read_text(encoding="utf-8"))
     monkeypatch.setattr(group_resolver, "load_registry", lambda: live)
+    assert "l9-pr-repair" not in live["repos"]
     entry = live["repos"]["pr-repair"]
     assert entry["github"] == "Quantum-L9/l9-pr-repair"
-    assert "Quantum-L9/PR_Repair" in entry.get("github_aliases", [])
+    assert "Quantum-L9/PR_Repair" in entry["github_aliases"]
     assert "PR_Repair" in entry["path_hints"]
     assert "l9-pr-repair" in entry["path_hints"]
     assert any(
