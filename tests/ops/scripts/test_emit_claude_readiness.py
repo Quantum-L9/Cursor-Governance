@@ -146,7 +146,7 @@ def test_working_cli_and_dead_mcp_are_not_one_word(tmp_path: Path, monkeypatch) 
     home = _fake_home(tmp_path, mcp="READY")
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
-    monkeypatch.setattr(er, "_graphiti_cli_health", lambda _gov: (READY, "cli authenticated"))
+    monkeypatch.setattr(er, "_graphiti_cli_health", lambda _gov: (READY, "cli reachable"))
     monkeypatch.setattr(
         er,
         "_graphiti_mcp_http_health",
@@ -155,7 +155,7 @@ def test_working_cli_and_dead_mcp_are_not_one_word(tmp_path: Path, monkeypatch) 
     receipt = er.build_receipt(gov=gov, workspace=str(gov))
     assert receipt["memory_cli_status"] == READY
     assert receipt["memory_mcp_status"] == DEGRADED
-    assert receipt["Graphiti_authenticated_health"] == READY
+    assert receipt["Graphiti_reachability"] == READY
     assert receipt["overall_readiness"] == DEGRADED
 
 
@@ -167,7 +167,7 @@ def test_graphiti_probe_does_not_call_broker(tmp_path: Path, monkeypatch) -> Non
         called["broker"] = True
         raise AssertionError("probe_broker must not run")
 
-    monkeypatch.setattr(er, "_graphiti_cli_health", lambda _gov: (READY, "cli authenticated"))
+    monkeypatch.setattr(er, "_graphiti_cli_health", lambda _gov: (READY, "cli reachable"))
     monkeypatch.setattr(er, "_graphiti_mcp_http_health", lambda: (READY, "front door reachable"))
     monkeypatch.setattr(er, "_broker_probe", _no_broker, raising=False)
     home = _fake_home(tmp_path, mcp="READY")
@@ -175,7 +175,7 @@ def test_graphiti_probe_does_not_call_broker(tmp_path: Path, monkeypatch) -> Non
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
     receipt = er.build_receipt(gov=gov, workspace=str(gov))
     assert called["broker"] is False
-    assert receipt["Graphiti_authenticated_health"] == READY
+    assert receipt["Graphiti_reachability"] == READY
     # Only known blocker classes are emitted; an unknown value is mapped away so
     # no probe-derived string is printed verbatim.
     _, note = er._graphiti_health({"ok": False, "primary_blocker": "identity"})
@@ -268,7 +268,7 @@ def _fake_home(tmp_path: Path, *, mcp: str = "READY") -> Path:
 def _build(gov: Path, home: Path, monkeypatch) -> dict:
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
-    monkeypatch.setattr(er, "_graphiti_cli_health", lambda _gov: (READY, "cli authenticated"))
+    monkeypatch.setattr(er, "_graphiti_cli_health", lambda _gov: (READY, "cli reachable"))
     monkeypatch.setattr(er, "_graphiti_mcp_http_health", lambda: (READY, "front door reachable"))
     return er.build_receipt(gov=gov, workspace=str(gov))
 
@@ -280,7 +280,7 @@ def test_ready_only_when_all_components_pass(tmp_path: Path, monkeypatch) -> Non
     assert receipt["merge_authority_status"] == READY
     assert receipt["Makefile_facade_status"] == READY
     assert receipt["dispatcher_status"] == READY
-    assert receipt["Graphiti_authenticated_health"] == READY
+    assert receipt["Graphiti_reachability"] == READY
     assert receipt["interpreter_importable_status"] == READY
     assert receipt["overall_readiness"] == READY, receipt["warnings"]
     # Required fields present.
@@ -384,3 +384,31 @@ def test_stale_sha_prevents_ready(tmp_path: Path, monkeypatch) -> None:
     receipt = _build(gov, home, monkeypatch)
     assert receipt["overall_readiness"] != READY
     assert any("freshness" in w for w in receipt["warnings"])
+
+
+def test_transport_auth_is_measured_not_assumed(tmp_path: Path, monkeypatch) -> None:
+    """A reachable Graphiti must never be reported as an authenticated one.
+
+    The module docstring's truth rule says exactly this, but every health probe
+    measures reachability only, and the READY reason used to read "cli
+    authenticated". A model-controlled surface carries no GRAPHITI_MCP_TOKEN, so
+    a receipt there must say UNAUTHENTICATED while still reporting the plane
+    reachable and the overall verdict READY — the absent token is the intended
+    posture, not a degradation.
+    """
+    gov = _init_fake_gov(tmp_path, merge_denies=True)
+    home = _fake_home(tmp_path, mcp="READY")
+    monkeypatch.delenv("GRAPHITI_MCP_TOKEN", raising=False)
+    receipt = _build(gov, home, monkeypatch)
+    assert receipt["graphiti_transport_auth"] == "UNAUTHENTICATED"
+    assert receipt["Graphiti_reachability"] == READY
+    assert receipt["overall_readiness"] == READY, receipt["warnings"]
+
+    monkeypatch.setenv("GRAPHITI_MCP_TOKEN", "probe-only-not-a-real-token")
+    authed = _build(gov, home, monkeypatch)
+    assert authed["graphiti_transport_auth"] == "AUTHENTICATED"
+
+    # The old field name asserted an authentication nothing measured. It must
+    # not come back under any spelling.
+    assert "Graphiti_authenticated_health" not in receipt
+    assert "authenticated" not in str(receipt["notes"].get("Graphiti_reachability", ""))

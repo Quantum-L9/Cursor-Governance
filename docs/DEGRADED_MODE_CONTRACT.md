@@ -181,8 +181,12 @@ The Graphiti row in the capability table above ("No bearer; session may be memor
 also reproduces here: `GRAPHITI_MCP_TOKEN` is absent, the CLI adds `Authorization` only
 when it is set, and the rendered `.mcp.json` carries `url` with no `headers` — which is
 what `mcp.template.json` intends via `_optional_headers`. The audit's F-01 is therefore
-scoped to the readiness receipt **labelling** that plane `Graphiti_authenticated_health:
-READY`, not to the posture this row already records.
+scoped to the readiness receipt **labelling** that plane
+`Graphiti_authenticated_health: READY`, not to the posture this row already
+records. That label is now fixed: the dimension is `Graphiti_reachability`, and
+a separate `graphiti_transport_auth` observation reports `UNAUTHENTICATED` here
+from the presence of `GRAPHITI_MCP_TOKEN` — the same signal the client and
+`mcp.template.json` already branch on. This row's posture is unchanged.
 
 ### Relationship to the P307 pack
 
