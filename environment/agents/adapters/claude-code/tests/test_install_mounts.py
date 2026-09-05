@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -39,6 +40,28 @@ class InstallMountTests(unittest.TestCase):
         subprocess.run(["git", "init", "-q", str(self.workspace)], check=True)
         self.receipt = self.root / "bootstrap-state.json"
         self.addCleanup(self._tmp.cleanup)
+
+    def _materialized_artifacts(self) -> list[str]:
+        """The wiring files the settings reconciler writes into a workspace.
+
+        Read from the reconciler that writes them rather than restated here, for
+        the same reason install.sh reads it: two copies of this list drift, and
+        the drift is silent -- a glob dropped from one side is only visible as
+        untracked dirt or as a consumer forced to `git add -f`.
+        """
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(REPO / "ops" / "scripts" / "reconcile_claude_settings.py"),
+                "--print-workspace-artifacts",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        artifacts = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+        self.assertTrue(artifacts, "reconciler reported no workspace artifacts")
+        return artifacts
 
     def _run(self, workspace: Path | None = None) -> subprocess.CompletedProcess[str]:
         env = dict(os.environ)
@@ -93,66 +116,21 @@ class InstallMountTests(unittest.TestCase):
             ".claude/settings.local.json",
         ):
             self.assertIn(glob, body, f"{glob} must be excluded from the consumer repo")
-        # Injected wiring is a FOURTH category and tracked-ness decides it.
-        #
-        # This assertion used to be a blanket "consumer wiring must never be
-        # excluded", written before install.sh grew the conditional block that
-        # contains untracked injected wiring. It then contradicted the
-        # implementation and failed on unmodified main: governance writes
-        # .claude/settings.json and the two consumer hooks into every workspace,
-        # so in a repo that does not commit them they sit as untracked dirt
-        # after every session. This synthetic workspace is a fresh `git init`
-        # that commits nothing, which is exactly that case.
-        for artifact in (
-            ".claude/settings.json",
-            ".claude/hooks/session_start_claude_governance.sh",
-        ):
+        # The materialized wiring is the FOURTH category, and tracked-ness
+        # decides it (install.sh, "Tracked-ness decides, exactly as
+        # reconcile_claude_settings.settings_is_git_tracked already defines the
+        # ownership signal"). This workspace has no commits, so settings.json and
+        # the two hooks are untracked: governance injected them, so governance
+        # contains them rather than leaving untracked dirt after every session.
+        # The tracked branch — where they are repo content and must stay
+        # visible — is asserted by
+        # test_committed_consumer_wiring_is_left_visible below.
+        for artifact in self._materialized_artifacts():
             self.assertIn(
                 artifact,
                 body,
-                f"{artifact} is untracked here and must be contained",
+                f"{artifact} was injected and untracked here, so it must be contained",
             )
-
-    def test_tracked_consumer_wiring_is_never_excluded(self) -> None:
-        """The other half of the tracked-ness rule, which had no cover at all.
-
-        Excluding a path the consumer legitimately commits would force `git add
-        -f` on every change to its own wiring. That is why install.sh makes this
-        loop conditional where the mirrors loop is unconditional — and asserting
-        only the exclusion half would let the condition be dropped silently.
-        """
-        claude = self.workspace / ".claude"
-        claude.mkdir(parents=True, exist_ok=True)
-        (claude / "settings.json").write_text("{}", encoding="utf-8")
-        subprocess.run(
-            ["git", "-C", str(self.workspace), "add", "-f", ".claude/settings.json"],
-            check=True,
-        )
-        subprocess.run(
-            [
-                "git",
-                "-C",
-                str(self.workspace),
-                "-c",
-                "user.email=t@e.st",
-                "-c",
-                "user.name=t",
-                "commit",
-                "-qm",
-                "track wiring",
-            ],
-            check=True,
-        )
-
-        result = self._run()
-        self.assertIn(result.returncode, (0, 1), result.stderr[-2000:])
-
-        body = (self.workspace / ".git" / "info" / "exclude").read_text(encoding="utf-8")
-        self.assertNotIn(
-            ".claude/settings.json",
-            body,
-            "a tracked file is repo content and must stay visible",
-        )
 
     def test_excludes_are_honoured_inside_a_linked_worktree(self) -> None:
         """The globs must land where git READS them, not merely be written.
@@ -212,17 +190,58 @@ class InstallMountTests(unittest.TestCase):
                 subprocess.run(["git", "-C", str(linked), "check-ignore", glob]).returncode,
                 f"{glob} written but not honoured by git inside a linked worktree",
             )
-        # Same fourth-category rule as the primary-clone test: this worktree
-        # commits no .claude wiring, so the injected files are untracked here
-        # and must be contained — and must be contained THROUGH git, which is
-        # the whole point of probing check-ignore rather than the file.
-        self.assertEqual(
-            0,
-            subprocess.run(
-                ["git", "-C", str(linked), "check-ignore", ".claude/settings.json"]
-            ).returncode,
-            "untracked injected wiring must be honoured by git inside a linked worktree",
+        # Fourth category, same rule as the primary-clone test: this worktree's
+        # branch carries only an empty commit, so the materialized wiring is
+        # untracked and must be contained — and contained where git READS it,
+        # which is the point of this test.
+        for artifact in self._materialized_artifacts():
+            self.assertEqual(
+                0,
+                subprocess.run(["git", "-C", str(linked), "check-ignore", artifact]).returncode,
+                f"{artifact} written but not honoured by git inside a linked worktree",
+            )
+
+    def test_committed_consumer_wiring_is_left_visible(self) -> None:
+        """The other half of "tracked-ness decides": repo content is not excluded.
+
+        A consumer that legitimately commits its `.claude` wiring must not have
+        governance exclude it underneath — that would force `git add -f` on every
+        subsequent edit to a file the repository owns. This branch had no
+        coverage at all: the assertion here previously ran unconditionally and so
+        only ever exercised the untracked case, which is why it disagreed with
+        the installer instead of describing it.
+        """
+        git_env = {
+            **os.environ,
+            "GIT_AUTHOR_NAME": "t",
+            "GIT_AUTHOR_EMAIL": "t@t",
+            "GIT_COMMITTER_NAME": "t",
+            "GIT_COMMITTER_EMAIL": "t@t",
+        }
+        artifacts = self._materialized_artifacts()
+        for artifact in artifacts:
+            target = self.workspace / artifact
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("# committed by the consumer\n", encoding="utf-8")
+        subprocess.run(
+            ["git", "-C", str(self.workspace), "add", "--", *artifacts], check=True, env=git_env
         )
+        subprocess.run(
+            ["git", "-C", str(self.workspace), "commit", "-q", "-m", "consumer wiring"],
+            check=True,
+            env=git_env,
+        )
+
+        result = self._run()
+        self.assertIn(result.returncode, (0, 1), result.stderr[-2000:])
+
+        body = (self.workspace / ".git" / "info" / "exclude").read_text(encoding="utf-8")
+        for artifact in artifacts:
+            self.assertNotIn(
+                artifact,
+                body,
+                f"{artifact} is tracked repo content and must not be excluded",
+            )
 
     def test_install_is_idempotent(self) -> None:
         self._run()

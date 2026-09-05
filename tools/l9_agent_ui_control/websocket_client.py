@@ -496,7 +496,8 @@ class TaskExecutor:
             Result dict with status, output, error, exit_code
         """
         import os as os_module
-        import subprocess
+        import pathlib
+        import shutil
         import tempfile
 
         code = payload.get("code", "")
@@ -562,39 +563,50 @@ class TaskExecutor:
         # Fallback: subprocess with restricted environment (less secure)
         logger.warning("Using subprocess fallback for Python execution - less secure than Docker")
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-            f.write(code)
-            temp_path = f.name
+        # A private 0700 directory, not /tmp itself. /tmp is world-writable, so
+        # pointing HOME and cwd at it let any other local user drop files the
+        # executed code would then read or import -- and read back whatever this
+        # code writes. mkdtemp gives a directory only this process's user can
+        # enter, which is what "sandbox" was meant to mean here.
+        sandbox_dir = tempfile.mkdtemp(prefix="l9-py-exec-")
+        script_path = os_module.path.join(sandbox_dir, "snippet.py")
+        # Written off the event loop: this coroutine serves a live websocket, and
+        # a synchronous file write blocks every other connection on the loop.
+        await asyncio.to_thread(pathlib.Path(script_path).write_text, code, encoding="utf-8")
 
         try:
-            result = subprocess.run(  # noqa: S603 — trusted cmd, no shell
-                ["python3", temp_path],  # noqa: S607 — trusted system command
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-                env={"PATH": "/usr/bin:/bin", "HOME": "/tmp"},  # noqa: S108 — intentional minimal sandbox env
-                cwd="/tmp",  # noqa: S108 — intentional sandbox working directory
+            process = await asyncio.create_subprocess_exec(
+                sys.executable,
+                script_path,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                env={"PATH": "/usr/bin:/bin", "HOME": sandbox_dir},
+                cwd=sandbox_dir,
             )
+            try:
+                stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
+            except TimeoutError:
+                process.kill()
+                await process.wait()
+                return {
+                    "status": "failed",
+                    "error": "Execution timeout",
+                    "output": "",
+                    "exit_code": -1,
+                }
             return {
-                "status": "completed" if result.returncode == 0 else "failed",
-                "output": result.stdout,
-                "error": result.stderr,
-                "exit_code": result.returncode,
+                "status": "completed" if process.returncode == 0 else "failed",
+                "output": stdout.decode("utf-8", errors="replace"),
+                "error": stderr.decode("utf-8", errors="replace"),
+                "exit_code": process.returncode,
                 "executor": "subprocess",
                 "warning": "Executed without Docker sandbox - less secure",
-            }
-        except subprocess.TimeoutExpired:
-            return {
-                "status": "failed",
-                "error": "Execution timeout",
-                "output": "",
-                "exit_code": -1,
             }
         except Exception as e:
             return {"status": "error", "error": str(e), "output": "", "exit_code": -1}
         finally:
             with contextlib.suppress(Exception):
-                os_module.unlink(temp_path)
+                shutil.rmtree(sandbox_dir, ignore_errors=True)
 
 
 # =============================================================================

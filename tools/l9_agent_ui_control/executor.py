@@ -31,6 +31,7 @@ __dora_meta__ = {
 
 import asyncio
 import os
+import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -93,19 +94,26 @@ class AutomationExecutor:
 
         try:
             logger.info("Installing Playwright browsers...")
-            # This will check and install if needed
-            import subprocess
-
-            result = subprocess.run(
-                ["python", "-m", "playwright", "install", "chromium"],  # noqa: S607 — trusted system command
-                capture_output=True,
-                text=True,
+            # asyncio.create_subprocess_exec, not subprocess.run: a browser
+            # install takes tens of seconds, and the blocking call stalled the
+            # whole event loop for its duration -- every other coroutine in this
+            # executor, including timeouts and cancellation, stopped running.
+            process = await asyncio.create_subprocess_exec(
+                sys.executable,
+                "-m",
+                "playwright",
+                "install",
+                "chromium",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
             )
-            if result.returncode == 0:
+            _, stderr = await process.communicate()
+            if process.returncode == 0:
                 logger.info("Playwright browsers installed successfully")
                 self._browser_installed = True
             else:
-                logger.warning(f"Browser installation may have failed: {result.stderr}")
+                detail = stderr.decode("utf-8", errors="replace").strip()
+                logger.warning(f"Browser installation may have failed: {detail}")
         except Exception as e:
             logger.warning(f"Could not auto-install browsers: {e}. Attempting to continue...")
             self._browser_installed = True  # Assume browsers are installed

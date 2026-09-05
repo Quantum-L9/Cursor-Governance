@@ -65,7 +65,13 @@ fi
   cd "$GOV_ROOT"
   # uv writes its resolution report to stdout; that stream is the machine
   # payload upstream, so hand its human output to stderr (F-08).
-  uv sync --locked --extra dev >&2
+  #
+  # --no-build refuses source distributions. Installing a dependency must not be
+  # able to execute it: a sdist's setup.py runs arbitrary code at install time,
+  # on every machine that bootstraps this governance environment. Every package
+  # in uv.lock resolves to a wheel, so this costs nothing today and fails loudly
+  # rather than silently building if that ever stops being true.
+  uv sync --locked --no-build --extra dev >&2
 )
 
 if [ ! -x "$GOV_ROOT/.venv/bin/python3" ]; then

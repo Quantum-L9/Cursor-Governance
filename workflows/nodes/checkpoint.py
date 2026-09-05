@@ -27,6 +27,7 @@ __dora_meta__ = {
 }
 # ============================================================================
 
+import asyncio
 import time
 from datetime import datetime
 
@@ -148,7 +149,11 @@ async def cli_checkpoint_node(state: WorkflowState) -> dict:
     print(f"{'─' * 50}")  # noqa: ADR-0019
     print(f"   {message}")  # noqa: ADR-0019
 
-    response = input("   Continue? [Y/n]: ").strip().lower()
+    # input() blocks the whole event loop until the human types. Off-loading it
+    # to the default executor keeps every other coroutine -- timeouts, heartbeats,
+    # cancellation -- running while this checkpoint waits.
+    raw_response = await asyncio.to_thread(input, "   Continue? [Y/n]: ")
+    response = raw_response.strip().lower()
 
     if response in ("", "y", "yes"):
         return await checkpoint_node({**state, "user_confirmed": True})

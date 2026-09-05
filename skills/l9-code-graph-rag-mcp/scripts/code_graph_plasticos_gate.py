@@ -13,8 +13,15 @@ from typing import Any
 EVIDENCE_REL = ".cursor/code-graph-phase0-evidence.json"
 EVIDENCE_TTL_HOURS = 4
 
+# The anchors bind differently per alternative and that is intentional: the two
+# foundation directories match as PREFIXES (anything beneath them is high
+# impact), while the model-file alternative must match the WHOLE path. Written
+# as `^(a|b|c$)` that reading depended on knowing `$` binds inside the group and
+# `^` outside it; the explicit per-alternative anchors below say it outright.
 HIGH_IMPACT_PATH_RE = re.compile(
-    r"^(plasticos_base/|plasticos_security_base/|plasticos_[^/]+/models/[^/]+\.py$)"
+    r"(?:^plasticos_base/)"
+    r"|(?:^plasticos_security_base/)"
+    r"|(?:^plasticos_[^/]+/models/[^/]+\.py$)"
 )
 
 FOUNDATION_PREFIXES = ("plasticos_base/", "plasticos_security_base/")
