@@ -93,7 +93,7 @@ files:
 - path: scripts/pec/__init__.py
   sha256: 1c97c455db405eead95452458bbd62c3843425adbeb120a7cf5da2848d42a2bb
 - path: scripts/pec/blueprint.py
-  sha256: c206bfea061506ff20c96c011e3ebb2b43b07b13a4d2c882a3588933036c7acc
+  sha256: 9414115b2f9891b99d50ddc68583b3fed2e1f23748299b005857458856fab4f3
 - path: scripts/pec/cli.py
   sha256: 565172d5da4495c3ddd893c744140d3db2ef3ed0921cf5325ebf746208cdfbae
 - path: scripts/pec/common.py
@@ -101,7 +101,7 @@ files:
 - path: scripts/pec/contracts.py
   sha256: 946e53429aa413bda374070057ea5e9043d66ef5773344e2b593fb3e575fda51
 - path: scripts/pec/controller.py
-  sha256: 1ed13eda28338f60d8ee80a80946001e5e3e0f951815764c19ac55953997392e
+  sha256: cc8208ebad58da1d3ec7adeb4bd5f9462b570b7fb78c20f6bdfb8e4d8920fca9
 - path: scripts/pec/dispatch.py
   sha256: 87e8619e49131144071d7eff92100888241b4903e742c68a2cf09ffbb2603fb7
 - path: scripts/pec/exec_env.py
@@ -109,7 +109,7 @@ files:
 - path: scripts/pec/ledger.py
   sha256: ce27b2ab0c7cde6a34f4030fbd07b27fe63914519cc0e8f701c3afdd240dad1c
 - path: scripts/pec/preflight.py
-  sha256: 422fe029a0535a46f0489e43eda1a25045cb30971efdf6c2eaa4135295fd58f2
+  sha256: 0d19f9d29aca2432bd13bb045bb0d549bf573e136d77bfd6212b29abbaf96c07
 - path: scripts/pec/replan.py
   sha256: 8f880f6be1df4e0b62f4d04adb855f76d5f38233f385d4dac0ef4c93f56d98ce
 - path: scripts/pec/runtime.py

@@ -843,6 +843,10 @@ def _gate_satisfied(db: StateDB, gate: dict[str, Any]) -> bool:
     receipt_path = Path(gate["evaluation_receipt"])
     if not receipt_path.is_file():
         return False
+    # Deliberately broad and fail-CLOSED: any fault reading or validating the
+    # waiver returns False, i.e. "no active waiver". Narrowing risks a fault
+    # propagating as an exception where the caller expects a boolean verdict.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         receipt = load_json(receipt_path)
         waiver_id = receipt.get("waiver_id")
@@ -2091,6 +2095,11 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
         contract: dict[str, Any] = {}
         if task.get("rendered_contract_path") and Path(task["rendered_contract_path"]).is_file():
             contract = load_json(Path(task["rendered_contract_path"]))
+            # Deliberately broad and fail-CLOSED: schema violation, a missing
+            # contract_digest, and a digest mismatch are all the same verdict
+            # here -- the contract gate is FAIL. This runs inside gate
+            # evaluation, where raising would abandon the whole verdict.
+            # nosemgrep: l9.baseline.python.broad-except
             try:
                 _validate_schema(workspace, "task-contract.schema.json", contract)
                 claimed = contract["contract_digest"]

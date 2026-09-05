@@ -120,6 +120,8 @@ def command_is_git_or_gh(command: str) -> bool:
     """
     if not command or not command.strip():
         return False
+    # Broad by design; the handler below carries the reason.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         heads = _effective_heads(command)
     except Exception:  # noqa: BLE001 - structural parse must never deny git/gh

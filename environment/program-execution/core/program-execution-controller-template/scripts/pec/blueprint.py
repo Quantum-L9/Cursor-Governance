@@ -377,7 +377,7 @@ def stale_task_ids(lock_path: Path) -> set[str] | None:
         return None
     try:
         lock = json.loads(lock_path.read_text(encoding="utf-8"))
-    except Exception:
+    except (OSError, ValueError):
         return None
 
     # Structural integrity is not scopable: if the lock does not describe itself

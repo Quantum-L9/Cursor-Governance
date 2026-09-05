@@ -236,9 +236,11 @@ def parse_frontmatter(text: str) -> tuple[dict[str, Any], int]:
         return {}, 0
     try:
         import yaml
-
+    except ImportError:
+        return {}, 0
+    try:
         raw = yaml.safe_load(match.group(1))
-    except Exception:
+    except yaml.YAMLError:
         return {}, 0
     consumed = match.group(0).count("\n")
     return (raw if isinstance(raw, dict) else {}), consumed

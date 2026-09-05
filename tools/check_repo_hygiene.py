@@ -126,7 +126,7 @@ for t in tracked:
         continue
     try:
         body = p.read_text(encoding="utf-8", errors="ignore")
-    except Exception:
+    except OSError:
         continue
     if SECRET_PAT.search(body):
         errs.append(f"credential pattern in tracked file: {t}")

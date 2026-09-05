@@ -114,7 +114,7 @@ def parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
             loaded = yaml.safe_load(raw)
             if isinstance(loaded, dict):
                 data = loaded
-        except Exception:
+        except yaml.YAMLError:
             data = {}
     if "kernel_pass" not in data:
         fallback = parse_kernel_pass_fallback(raw)

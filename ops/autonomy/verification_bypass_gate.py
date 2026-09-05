@@ -59,7 +59,7 @@ _HOOK_MUTATOR_HEADS = frozenset(
     {"rm", "mv", "cp", "chmod", "truncate", "ln", "install", "tee", "dd", "shred", "unlink"}
 )
 
-_HOOK_DIR_TOKEN = ".git/hooks"
+_HOOK_DIR_MARKER = ".git/hooks"
 
 
 class ContractError(RuntimeError):
@@ -269,7 +269,7 @@ def _match_form(
     if detector == "hook_path_write":
         _assigns, rest = _env_prefix(words)
         head = PurePosixPath(rest[0]).name if rest else ""
-        touches = [word for word in rest[1:] if _HOOK_DIR_TOKEN in word]
+        touches = [word for word in rest[1:] if _HOOK_DIR_MARKER in word]
         if head in _HOOK_MUTATOR_HEADS and touches:
             return True
         if (
@@ -278,7 +278,7 @@ def _match_form(
             and any(word.startswith("-i") or word == "--in-place" for word in rest[1:])
         ):
             return True
-        return any(_HOOK_DIR_TOKEN in target for target in _redirect_targets(segment))
+        return any(_HOOK_DIR_MARKER in target for target in _redirect_targets(segment))
 
     return False
 
@@ -297,7 +297,7 @@ def _deny_reason(contract: dict[str, Any], form: dict[str, Any]) -> str:
 def _unreadable_contract_verdict(command: str, exc: BaseException) -> str | None:
     """Fail closed, but only over the commands this plane governs."""
     lowered = command.lower()
-    governs = _HOOK_DIR_TOKEN in lowered or any(
+    governs = _HOOK_DIR_MARKER in lowered or any(
         token in lowered for token in ("git commit", "git push", "pre-commit")
     )
     if not governs:

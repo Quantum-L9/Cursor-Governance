@@ -54,7 +54,7 @@ def _git(*a):
     try:
         r = subprocess.run(["git", *a], capture_output=True, text=True, timeout=10)
         return r.stdout.strip() if r.returncode == 0 else ""
-    except Exception:
+    except (OSError, subprocess.SubprocessError):
         return ""
 
 
@@ -81,12 +81,12 @@ def discover_checks():
         return []
     try:
         import yaml
-    except Exception:
+    except ImportError:
         return []
     for f in list(wf.glob("*.yml")) + list(wf.glob("*.yaml")):
         try:
             d = yaml.safe_load(f.read_text()) or {}
-        except Exception:
+        except (OSError, yaml.YAMLError):
             continue
         for jid, job in (d.get("jobs") or {}).items():
             names.add(job.get("name", jid) if isinstance(job, dict) else jid)

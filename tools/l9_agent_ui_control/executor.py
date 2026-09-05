@@ -197,6 +197,10 @@ class AutomationExecutor:
 
     async def _check_selector(self, selector: str) -> bool:
         """Check if selector exists on page."""
+        # Deliberately broad: Playwright raises a wide, version-dependent set
+        # for a missing element, a closed page, or a navigation race, and every
+        # one of them means the same thing here -- the selector is not present.
+        # nosemgrep: l9.baseline.python.broad-except
         try:
             if not self.page:
                 return False
@@ -515,6 +519,8 @@ class AutomationExecutor:
 
             # Get page data if available
             page_data = {}
+            # Fail-soft: page metadata is diagnostic decoration on the result.
+            # nosemgrep: l9.baseline.python.broad-except
             try:
                 if self.page:
                     page_data = {"url": self.page.url, "title": await self.page.title()}
