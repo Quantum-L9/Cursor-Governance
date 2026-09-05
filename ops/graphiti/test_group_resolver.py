@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -165,3 +166,28 @@ def test_no_match_falls_back_readonly_workspace():
     assert result["group_id"] == "igor-workspace"
     assert result["method"] == "fallback_readonly"
     assert result["readonly"] is True
+
+
+def test_live_pr_repair_registry_keeps_group_id_after_github_rename(monkeypatch):
+    """GitHub renamed Quantum-L9/PR_Repair -> l9-pr-repair. Graphiti group_id stays pr-repair."""
+    live_path = Path(__file__).resolve().parent / "group_registry.yaml"
+    live = yaml.safe_load(live_path.read_text(encoding="utf-8"))
+    monkeypatch.setattr(group_resolver, "load_registry", lambda: live)
+    entry = live["repos"]["pr-repair"]
+    assert entry["github"] == "Quantum-L9/l9-pr-repair"
+    assert "PR_Repair" in entry["path_hints"]
+    assert "l9-pr-repair" in entry["path_hints"]
+    assert any(p.endswith("PR_Repair*") or p.endswith("PR_Repair.git") for p in entry["remote_patterns"])
+    assert any("l9-pr-repair" in p for p in entry["remote_patterns"])
+
+    _set_remote(monkeypatch, "git@github.com:Quantum-L9/PR_Repair.git")
+    old = group_resolver.resolve_group_id(Path("/tmp/anywhere"))
+    assert old == {"group_id": "pr-repair", "method": "registry", "readonly": False}
+
+    _set_remote(monkeypatch, "https://github.com/Quantum-L9/l9-pr-repair.git")
+    new = group_resolver.resolve_group_id(Path("/tmp/anywhere"))
+    assert new == {"group_id": "pr-repair", "method": "registry", "readonly": False}
+
+    _set_remote(monkeypatch, None)
+    folder = group_resolver.resolve_group_id(Path("/Users/me/l9-pr-repair"))
+    assert folder == {"group_id": "pr-repair", "method": "registry", "readonly": False}
