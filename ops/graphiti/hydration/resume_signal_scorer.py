@@ -16,6 +16,8 @@ _ACTION_RE = re.compile(r"\b(edit|wrote|commit|patch|implement|fix)\b", re.IGNOR
 
 
 def load_promotion_rules(path: Path | None = None) -> dict[str, Any]:
+    # Broad by design; the handler below carries the reason.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         import yaml
 
@@ -83,6 +85,8 @@ def should_persist_derived_episode(
     rules: dict[str, Any] | None = None,
 ) -> bool:
     """False = drop optional derived write. Exception → True (fail-open)."""
+    # Broad by design; the handler below carries the reason.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         loaded = rules if rules is not None else load_promotion_rules()
         min_score = float(loaded.get("derived_episode_min_score", 0.35))

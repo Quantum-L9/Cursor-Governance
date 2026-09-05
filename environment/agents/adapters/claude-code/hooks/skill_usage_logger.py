@@ -30,6 +30,10 @@ def skill_from_payload(payload: dict[str, Any]) -> tuple[str, str]:
 def main() -> int:
     if os.environ.get("L9_SKILL_USAGE_LOGGING", "true").lower() != "true":
         return 0
+    # Fail-soft by design: usage logging is an observer and must never fail a
+    # skill invocation, so every fault here is swallowed and the hook still
+    # returns 0. Exception, not BaseException, so interrupts still propagate.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         payload = json.load(sys.stdin)
         skill, source = skill_from_payload(payload)

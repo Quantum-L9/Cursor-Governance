@@ -30,7 +30,12 @@ from validate_session_dag_source import validate as validate_session  # noqa: E4
 DAG_AUTHORING_SOURCE = REPO_ROOT / "workflows" / "dags" / "dag_authoring_dag.py"
 DISCOVERY_BOUNDARY = REPO_ROOT / "workflows" / "dags" / "__init__.py"
 PACKAGE_INIT = REPO_ROOT / "workflows" / "__init__.py"
-COMMAND = REPO_ROOT / "commands" / "dag-authoring.md"
+# The `/dag-authoring` wrapper was retired to `commands/_archived/` when the
+# skill became the live surface (`skills/l9-dag-authoring/`); it is absent from
+# `commands/COMMANDS_MANIFEST.yaml`, the enabled-command SSOT. The trigger-shape
+# invariant below still applies to the archived wrapper, so pin it there rather
+# than at the path the retirement removed.
+COMMAND = REPO_ROOT / "commands" / "_archived" / "dag-authoring.md"
 
 
 # --------------------------------------------------------------------------

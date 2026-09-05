@@ -105,6 +105,8 @@ def _l4_receipt_path(workspace: Path) -> Path:
     consumer silently reads nothing — the PR body would simply lose its L4
     section, with no error to notice. One owner, one resolver.
     """
+    # Broad by design; the handler below carries the reason.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "autonomy"))
         from l4_local import receipt_path

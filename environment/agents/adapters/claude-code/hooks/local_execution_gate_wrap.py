@@ -202,7 +202,10 @@ def _load_authority_module() -> Any:
     sys.modules["l9_program_authority_hook"] = module
     try:
         spec.loader.exec_module(module)
-    except Exception:
+    # BaseException, not Exception: a partially executed module must be
+    # unregistered even when the load is interrupted, or the next import
+    # silently gets the broken half. The block re-raises.
+    except BaseException:
         sys.modules.pop("l9_program_authority_hook", None)
         raise
     return module
