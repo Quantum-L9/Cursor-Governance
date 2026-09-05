@@ -151,20 +151,35 @@ def gh_login() -> str:
     return proc.stdout.strip()
 
 
-def gh_open_shelf_prs() -> list[OpenShelfPR]:
-    proc = run(
-        [
-            "gh",
-            "pr",
-            "list",
-            "--state",
-            "open",
-            "--search",
-            "head:feat/ff-shelf-",
-            "--json",
-            "number,headRefName,author,updatedAt",
-        ]
-    )
+def github_repo_slug(clone: Path) -> str:
+    proc = run(["git", "-C", str(clone), "remote", "get-url", "origin"])
+    if proc.returncode != 0:
+        return ""
+    url = proc.stdout.strip()
+    if url.endswith(".git"):
+        url = url[: -len(".git")]
+    for prefix in ("https://github.com/", "git@github.com:"):
+        if url.startswith(prefix):
+            return url[len(prefix) :]
+    return ""
+
+
+def gh_open_shelf_prs(clone: Path) -> list[OpenShelfPR]:
+    cmd = [
+        "gh",
+        "pr",
+        "list",
+        "--state",
+        "open",
+        "--search",
+        "head:feat/ff-shelf-",
+        "--json",
+        "number,headRefName,author,updatedAt",
+    ]
+    slug = github_repo_slug(clone)
+    if slug:
+        cmd.extend(["--repo", slug])
+    proc = run(cmd, cwd=clone)
     if proc.returncode != 0:
         return []
     try:
@@ -191,9 +206,9 @@ def resolve_shelf_branch(
     stamp: str,
 ) -> tuple[str, str]:
     """Return (branch, action) where action is append or stamp."""
-    mine = [
-        p for p in prs if p.head.startswith("feat/ff-shelf-") and (not author or p.author == author)
-    ]
+    if not author:
+        return f"feat/ff-shelf-{stamp}", "stamp"
+    mine = [p for p in prs if p.head.startswith("feat/ff-shelf-") and p.author == author]
     if not mine:
         return f"feat/ff-shelf-{stamp}", "stamp"
     mine.sort(key=lambda p: p.updated_at, reverse=True)
@@ -321,6 +336,9 @@ def ensure_shelf_worktree(
         return
     wired = clone / "ops" / "scripts" / "worktree_add_wired.sh"
     if action == "append":
+        fetched = run(["git", "-C", str(clone), "fetch", "origin", branch])
+        if fetched.returncode != 0:
+            raise RuntimeError(fetched.stderr or fetched.stdout or f"fetch {branch} failed")
         argv = (
             ["bash", str(wired), str(shelf), branch]
             if wired.is_file()
@@ -338,7 +356,7 @@ def ensure_shelf_worktree(
         argv = ["bash", str(wired), "-b", branch, str(shelf), base_ref]
     else:
         argv = ["git", "-C", str(clone), "worktree", "add", "-b", branch, str(shelf), base_ref]
-    proc = run(argv)
+    proc = run(argv, cwd=clone)
     if proc.returncode != 0:
         raise RuntimeError(proc.stderr or proc.stdout or "worktree add failed")
 
@@ -378,7 +396,11 @@ def main(argv: list[str] | None = None) -> int:
     paths = collect_untracked(clone)
     stamp = args.stamp or datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     author = args.author or ("" if args.open_shelf_prs else gh_login())
-    prs = load_open_shelf_prs(args.open_shelf_prs) if args.open_shelf_prs else gh_open_shelf_prs()
+    prs = (
+        load_open_shelf_prs(args.open_shelf_prs)
+        if args.open_shelf_prs
+        else gh_open_shelf_prs(clone)
+    )
     branch, action = resolve_shelf_branch(prs, author, stamp)
     if action == "append" and paths:
         paths = drop_already_shelved(clone, paths, branch)
@@ -437,12 +459,12 @@ def main(argv: list[str] | None = None) -> int:
     l4 = shelf / "ops" / "autonomy" / "l4_local.py"
     if l4.is_file():
         begin = run(
-            [py, str(l4), "begin", "--contract-id", f"ff-shelf-{stamp}", "--workspace", str(shelf)]
+            [py, str(l4), "--workspace", str(shelf), "begin", "--contract-id", f"ff-shelf-{stamp}"]
         )
         if begin.returncode != 0:
             print(begin.stderr or begin.stdout, file=sys.stderr)
             return 1
-        auth = run([py, str(l4), "authorize-release", "--workspace", str(shelf)])
+        auth = run([py, str(l4), "--workspace", str(shelf), "authorize-release"])
         if auth.returncode != 0:
             print(auth.stderr or auth.stdout, file=sys.stderr)
             return 1
@@ -459,10 +481,16 @@ def main(argv: list[str] | None = None) -> int:
 
     post = clone / "ops" / "scripts" / "run_ff_post_shelf.sh"
     if post.is_file():
-        run(["bash", str(post), str(clone)])
+        post_proc = run(["bash", str(post), str(clone)])
+        if post_proc.returncode != 0:
+            print(post_proc.stderr or post_proc.stdout, file=sys.stderr)
+            return 1
     verify = clone / "ops" / "scripts" / "verify_worktree_clean.py"
     if verify.is_file():
-        run([gov_python(clone), str(verify), "--workspace", str(clone)])
+        verify_proc = run([gov_python(clone), str(verify), "--workspace", str(clone)])
+        if verify_proc.returncode != 0:
+            print(verify_proc.stderr or verify_proc.stdout, file=sys.stderr)
+            return 1
     print(json.dumps({**report, "published": os.environ.get("FF_SHELF_PUBLISH", "1") != "0"}))
     return 0
 

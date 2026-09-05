@@ -383,8 +383,14 @@ BEHIND=0
 if [ "$_HEAD_SHA" = "$_ORIGIN_SHA" ]; then
   echo "ff: tip compare SHA-equal ${_HEAD_SHA} (at-tip)"
 elif _is_shallow_or_grafted; then
-  BEHIND=1
-  echo "ff: tip compare SHA-unequal shallow/grafted; skip rev-list preserve"
+  if git -C "$CLONE" merge-base --is-ancestor HEAD "origin/${TARGET_BRANCH}" 2>/dev/null; then
+    BEHIND=1
+    echo "ff: tip compare SHA-unequal shallow/grafted; HEAD ancestor of origin (no unique commits)"
+  else
+    AHEAD=1
+    BEHIND=1
+    echo "ff: tip compare SHA-unequal shallow/grafted; preserve unique HEAD"
+  fi
 else
   if git -C "$CLONE" merge-base --is-ancestor HEAD "origin/${TARGET_BRANCH}" 2>/dev/null; then
     BEHIND="$(git -C "$CLONE" rev-list --count "HEAD..origin/${TARGET_BRANCH}")"

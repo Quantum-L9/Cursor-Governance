@@ -498,9 +498,9 @@ def test_shallow_behind_never_preserves() -> int:
         if (shallow / "tracked.txt").read_text(encoding="utf-8") != "c2\n":
             return _fail("shallow clone did not catch up via reset --keep")
         if _preserve_refs(shallow):
-            return _fail("shallow unequal must not write l9/ff-preserve-* from rev-list")
-        if "skip rev-list preserve" not in proc.stdout:
-            return _fail("missing shallow SHA-unequal log")
+            return _fail("ancestor-only shallow must not write l9/ff-preserve-*")
+        if "HEAD ancestor of origin" not in proc.stdout:
+            return _fail("missing shallow ancestor-only log")
     return 0
 
 
@@ -728,6 +728,102 @@ def test_ff_shelf_append_not_restamp() -> int:
     return 0
 
 
+def test_ff_shelf_empty_author_stamps() -> int:
+    with tempfile.TemporaryDirectory() as tmp:
+        clone = Path(tmp) / "clone"
+        _init_clone(clone)
+        (clone / "tracked.txt").write_text("t\n", encoding="utf-8")
+        git(clone, "add", "tracked.txt")
+        git(clone, "commit", "-m", "base")
+        (clone / "docs" / "plans").mkdir(parents=True)
+        (clone / "docs" / "plans" / "left.md").write_text("plan leftover\n", encoding="utf-8")
+        prs = [
+            {
+                "number": 3,
+                "headRefName": "feat/ff-shelf-other",
+                "author": {"login": "someone-else"},
+                "updatedAt": "2026-09-06T00:00:00Z",
+            }
+        ]
+        pr_path = Path(tmp) / "prs.json"
+        pr_path.write_text(json.dumps(prs), encoding="utf-8")
+        proc = run(
+            [
+                sys.executable,
+                str(_ff_shelf()),
+                "--clone",
+                str(clone),
+                "--dry-run",
+                "--stamp",
+                "20260905TstampZ",
+                "--author",
+                "",
+                "--open-shelf-prs",
+                str(pr_path),
+            ]
+        )
+        if proc.returncode != 0:
+            return _fail(f"empty-author dry-run failed: {proc.stderr or proc.stdout}")
+        data = json.loads(proc.stdout)
+        if data.get("action") != "stamp":
+            return _fail(f"empty author must stamp, got {data.get('action')}")
+        if data.get("branch") != "feat/ff-shelf-20260905TstampZ":
+            return _fail(f"empty author must not append foreign shelf, got {data.get('branch')}")
+    return 0
+
+
+def test_shallow_unique_head_preserves() -> int:
+    """Shallow clone with a unique local commit must park HEAD before reset."""
+    with tempfile.TemporaryDirectory() as tmp:
+        remote = Path(tmp) / "remote.git"
+        seed = Path(tmp) / "seed"
+        run(["git", "init", "--bare", str(remote)])
+        run(["git", "clone", str(remote), str(seed)])
+        git(seed, "config", "user.email", "test@example.com")
+        git(seed, "config", "user.name", "Test")
+        (seed / "tracked.txt").write_text("c0\n", encoding="utf-8")
+        git(seed, "add", "tracked.txt")
+        git(seed, "commit", "-m", "c0")
+        git(seed, "branch", "-M", "main")
+        git(seed, "push", "-u", "origin", "main")
+        git(remote, "symbolic-ref", "HEAD", "refs/heads/main")
+
+        shallow = Path(tmp) / "shallow"
+        run(["git", "clone", str(remote), str(shallow)])
+        git(shallow, "config", "user.email", "test@example.com")
+        git(shallow, "config", "user.name", "Test")
+        (shallow / "unique.txt").write_text("mine\n", encoding="utf-8")
+        git(shallow, "add", "unique.txt")
+        git(shallow, "commit", "-m", "unique")
+        unique_sha = run(["git", "-C", str(shallow), "rev-parse", "HEAD"]).stdout.strip()
+        _force_shallow(shallow)
+
+        (seed / "tracked.txt").write_text("c1\n", encoding="utf-8")
+        git(seed, "add", "tracked.txt")
+        git(seed, "commit", "-m", "c1")
+        git(seed, "push")
+
+        home = Path(tmp) / "home"
+        home.mkdir()
+        proc = run(
+            ["bash", str(FF)],
+            env={"CURSOR_GOVERNANCE_DIR": str(shallow), "HOME": str(home)},
+        )
+        if proc.returncode != 0:
+            return _fail(f"ff.sh rc={proc.returncode}\n{proc.stdout}\n{proc.stderr}")
+        parked = _preserve_refs(shallow)
+        if not parked:
+            return _fail("shallow unique HEAD must write l9/ff-preserve-*")
+        parked_sha = run(
+            ["git", "-C", str(shallow), "rev-parse", parked.splitlines()[0]]
+        ).stdout.strip()
+        if parked_sha != unique_sha:
+            return _fail("preserve ref must point at the unique shallow tip")
+        if "preserve unique HEAD" not in proc.stdout:
+            return _fail("missing shallow unique-HEAD log")
+    return 0
+
+
 def main() -> int:
     struct = run([sys.executable, str(ROOT / "scripts" / "validate_pack_structure.py")])
     if struct.returncode != 0:
@@ -746,6 +842,8 @@ def main() -> int:
         ("full_history_unique", test_full_history_unique_tip_preserves),
         ("ff_shelf_rsync", test_ff_shelf_list_and_rsync_argv),
         ("ff_shelf_append", test_ff_shelf_append_not_restamp),
+        ("ff_shelf_empty_author", test_ff_shelf_empty_author_stamps),
+        ("shallow_unique_head", test_shallow_unique_head_preserves),
     ):
         rc = fn()
         if rc != 0:

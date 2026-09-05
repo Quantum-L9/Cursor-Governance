@@ -65,6 +65,24 @@ tree, else `$HOME/Cursor-Governance`, else `CURSOR_GOVERNANCE_CLONE`.
 
    ```bash
    GOV_PY="${GOV_PY:-$HOME/.cursor-governance/.venv/bin/python}"
+   FF_TARGETS=()
+   # Required: initialize before the loop. ff.sh cannot export this array.
+   # Prefer every `ff: clone=` line ff.sh printed. Do not assume $(pwd).
+   # If those lines were not captured, reconstruct from the flag passed to ff.sh:
+   #   (none)  → this checkout and $HOME/.cursor-governance when they differ
+   #   --clone → working copy only
+   #   --ssot  → $HOME/.cursor-governance only
+   if [ -z "${FF_TARGETS[*]:-}" ]; then
+     _ff_here="$(cd "$(pwd)" && pwd)"
+     _ff_ssot=""
+     if [ -e "${HOME}/.cursor-governance/.git" ]; then
+       _ff_ssot="$(cd "${HOME}/.cursor-governance" && pwd)"
+     fi
+     FF_TARGETS+=("$_ff_here")
+     if [ -n "$_ff_ssot" ] && [ "$_ff_ssot" != "$_ff_here" ]; then
+       FF_TARGETS+=("$_ff_ssot")
+     fi
+   fi
    for _ff_ws in "${FF_TARGETS[@]}"; do
      "$GOV_PY" "$_ff_ws/skills/l9-repo-sync/scripts/ff_shelf.py" --clone "$_ff_ws"
    done
