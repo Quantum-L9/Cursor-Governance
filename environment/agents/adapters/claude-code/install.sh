@@ -568,19 +568,23 @@ fi
 # shellcheck source=../../../../ops/scripts/lib/session_git_excludes.sh
 source "$GOV_DIR/ops/scripts/lib/session_git_excludes.sh"
 if [ "$CHECK" != "1" ] && git -C "$WORKSPACE" rev-parse --git-dir >/dev/null 2>&1; then
-  apply_session_claude_mirror_excludes "$WORKSPACE"
-  # The files the settings reconciler MATERIALIZES (settings.json, the two
-  # consumer hooks) are the fourth category. Tracked-ness decides.
-  if [ -n "$GOV_PY" ]; then
-    injected="$("$GOV_PY" "$GOV_DIR/ops/scripts/reconcile_claude_settings.py" \
-                 --print-workspace-artifacts 2>/dev/null)" || injected=""
-    if [ -z "$injected" ]; then
-      warn "reconcile_claude_settings --print-workspace-artifacts returned nothing; injected .claude wiring stays untracked"
-    else
-      printf '%s\n' "$injected" | apply_session_untracked_artifact_excludes "$WORKSPACE"
+  if apply_session_claude_mirror_excludes "$WORKSPACE"; then
+    # The files the settings reconciler MATERIALIZES (settings.json, the two
+    # consumer hooks) are the fourth category. Tracked-ness decides.
+    if [ -n "$GOV_PY" ]; then
+      injected="$("$GOV_PY" "$GOV_DIR/ops/scripts/reconcile_claude_settings.py" \
+                   --print-workspace-artifacts 2>/dev/null)" || injected=""
+      if [ -z "$injected" ]; then
+        warn "reconcile_claude_settings --print-workspace-artifacts returned nothing; injected .claude wiring stays untracked"
+      else
+        printf '%s\n' "$injected" | apply_session_untracked_artifact_excludes "$WORKSPACE" \
+          || warn "could not contain untracked injected .claude wiring in $WORKSPACE"
+      fi
     fi
+    say "excluded generated .claude mirrors + .mcp.json + settings.local.json + untracked injected wiring (local, uncommitted)"
+  else
+    warn "could not write Claude-mirror git excludes for $WORKSPACE"
   fi
-  say "excluded generated .claude mirrors + .mcp.json + settings.local.json + untracked injected wiring (local, uncommitted)"
 fi
 
 # --- 5) Thin l9 dispatcher --------------------------------------------------
