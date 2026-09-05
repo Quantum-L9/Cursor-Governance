@@ -8,10 +8,26 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
+
+_GH_OWNER_RE = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})")
+
+
+def _validated_owner(value: str) -> str:
+    """Return ``value`` once proven to be a GitHub owner slug.
+
+    It is passed to ``gh`` as a command argument. The rule that matters is the
+    leading character: a value such as ``--template=...`` is an ordinary string
+    to ``subprocess`` but an option to ``gh``, which turns a repository listing
+    into an attacker-chosen gh invocation.
+    """
+    if not _GH_OWNER_RE.fullmatch(value):
+        raise SystemExit(f"BLOCKED: not a valid GitHub owner: {value!r}")
+    return value
 
 
 def _validated_output(value: str) -> Path:
@@ -71,7 +87,7 @@ def main() -> int:
     args = parser.parse_args()
     if args.limit < 1 or args.limit > 1000:
         raise SystemExit("BLOCKED: --limit must be 1..1000")
-    repos = discover(args.org, args.limit)
+    repos = discover(_validated_owner(args.org), args.limit)
     payload = {
         "org": args.org,
         "generated_at": datetime.now(UTC).isoformat(),

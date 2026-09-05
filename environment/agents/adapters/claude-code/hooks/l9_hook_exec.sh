@@ -65,6 +65,35 @@ case "$HOOK_CLASS" in
     ;;
 esac
 
+# INV-1b: the class is a property of the HOOK, not of the caller.
+#
+# This file exists so the fail-open/fail-closed decision is made once rather
+# than re-typed inside eight `bash -c '...'` one-liners where a copy-paste slip
+# silently disables a gate. It took --class on trust, so the slip it was built
+# to prevent still worked: `--class observer memory_gate.py` exits 0 and the
+# gate never evaluates, which is indistinguishable from a gate that passed.
+#
+# The table below is the authority. A registration that disagrees with it is a
+# malformed registration, and malformed registrations already refuse to guess.
+# A hook absent from the table keeps the caller's class, so adding an observer
+# needs no edit here; every GATE is named, because that is the direction where
+# being wrong is silent.
+l9_required_class() {
+  case "$1" in
+    merge_gate_wrap.py|local_execution_gate_wrap.py|memory_gate.py|session_debt_wrap.py)
+      printf 'gate' ;;
+    *) printf '' ;;
+  esac
+}
+
+_L9_REQUIRED="$(l9_required_class "$HOOK_NAME")"
+if [ -n "$_L9_REQUIRED" ] && [ "$_L9_REQUIRED" != "$HOOK_CLASS" ]; then
+  printf 'l9-hook: %s is registered --class %s but is a %s — refusing to downgrade it\n' \
+    "$HOOK_NAME" "$HOOK_CLASS" "$_L9_REQUIRED" >&2
+  exit 2
+fi
+unset _L9_REQUIRED
+
 # The cloud SSOT is always $HOME/.cursor-governance. L9_GOVERNANCE_DIR is honoured
 # only when it agrees, so an unexpanded literal '$HOME' from an .env-format
 # environment field can never redirect a gate at its policy.
@@ -125,11 +154,22 @@ SKIP_LOG="${L9_HOOK_SKIP_LOG:-$HOME/.l9/claude/hook-skips.log}"
 # Every skip is timestamped in UTC. An undated skip log cannot answer the only
 # question worth asking of it: was this hook skipped during the run I am
 # investigating, or six weeks ago?
+# The skip log answers one question: was this hook skipped during the run I am
+# investigating? It used to `return 0` when its directory could not be created,
+# so the record vanished in exactly the broken-environment case it exists for —
+# a wrong or unwritable HOME is what makes hooks skip in the first place. It now
+# falls back to TMPDIR and says on stderr where the line actually went.
 record_skip() {
-  local reason="$1" ts
+  local reason="$1" ts target
   ts="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo 'unknown-time')"
-  mkdir -p "$(dirname "$SKIP_LOG")" 2>/dev/null || return 0
-  printf '%s observer %s %s\n' "$ts" "$HOOK_NAME" "$reason" >> "$SKIP_LOG" 2>/dev/null || true
+  target="$SKIP_LOG"
+  if ! mkdir -p "$(dirname "$target")" 2>/dev/null; then
+    target="${TMPDIR:-/tmp}/l9-hook-skips.log"
+    printf 'l9-hook: skip log unwritable at %s — recording to %s\n' "$SKIP_LOG" "$target" >&2
+  fi
+  if ! printf '%s observer %s %s\n' "$ts" "$HOOK_NAME" "$reason" >> "$target" 2>/dev/null; then
+    printf 'l9-hook: could not record skip of %s (%s) anywhere\n' "$HOOK_NAME" "$reason" >&2
+  fi
 }
 
 # One exit path for "this hook cannot run", so a gate can never accidentally

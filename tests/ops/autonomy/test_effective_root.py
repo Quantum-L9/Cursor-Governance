@@ -20,7 +20,8 @@ import pytest
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "ops" / "autonomy"))
 
-from local_execution_gate import effective_root  # noqa: E402
+from l4_local import authorize_release, begin  # noqa: E402
+from local_execution_gate import cursor_shell_verdict, effective_root, evaluate  # noqa: E402
 
 
 def git(root: Path, *args: str) -> str:
@@ -161,6 +162,77 @@ def test_repo_root_still_refuses_an_unrelated_repo(main_repo: Path, tmp_path: Pa
     """
     other = make_repo(tmp_path / "other")
     assert effective_root(f'cd "{other}" && make pr', main_repo) == main_repo
+
+
+def test_make_ws_redirects_to_another_repo(main_repo: Path, tmp_path: Path) -> None:
+    """Governance makefile contract: WS= is the target, even across repos."""
+    other = make_repo(tmp_path / "other")
+    command = f'PR_REMEDIATE=0 make -C "{main_repo}" pr WS="{other}"'
+    assert effective_root(command, main_repo) == other.resolve()
+
+
+def test_make_ws_env_prefix_redirects(main_repo: Path, tmp_path: Path) -> None:
+    other = make_repo(tmp_path / "other")
+    command = f'WS="{other}" PR_REMEDIATE=0 make pr'
+    assert effective_root(command, main_repo) == other.resolve()
+
+
+def test_make_without_ws_keeps_root(main_repo: Path) -> None:
+    assert effective_root(f'make -C "{main_repo}" pr', main_repo) == main_repo
+
+
+def test_invalid_ws_is_ignored(main_repo: Path, tmp_path: Path) -> None:
+    missing = tmp_path / "nope"
+    command = f"make pr WS={missing}"
+    assert effective_root(command, main_repo) == main_repo
+
+
+def test_make_ws_does_not_expand_env(
+    main_repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    other = make_repo(tmp_path / "other")
+    monkeypatch.setenv("WS_TARGET", str(other))
+    assert effective_root("make pr WS=$WS_TARGET", main_repo) == main_repo
+
+
+def test_cd_unrelated_still_refused_when_ws_absent(main_repo: Path, tmp_path: Path) -> None:
+    other = make_repo(tmp_path / "other")
+    assert effective_root(f'cd "{other}" && make pr', main_repo) == main_repo
+
+
+def test_evaluate_uses_ws_receipt_not_session_root(
+    main_repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A governance-checkout session may publish a consumer that holds the receipt."""
+    monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+    consumer = make_repo(tmp_path / "consumer")
+    git(consumer, "checkout", "-b", "feat/ws")
+    begin(consumer, contract_id="ws")
+    authorize_release(consumer)
+    command = f'PR_REMEDIATE=0 make -C "{main_repo}" pr WS="{consumer}"'
+    assert evaluate("Bash", {"command": command}, root=main_repo) is None
+    assert evaluate("Bash", {"command": "PR_REMEDIATE=0 make pr"}, root=main_repo) is not None
+
+
+def test_cursor_verdict_allows_ws_when_session_root_has_no_receipt(
+    main_repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+    consumer = make_repo(tmp_path / "consumer")
+    git(consumer, "checkout", "-b", "feat/ws")
+    begin(consumer, contract_id="ws")
+    authorize_release(consumer)
+    event = {
+        "command": f'PR_REMEDIATE=0 make -C "{main_repo}" pr WS="{consumer}"',
+        "cwd": str(main_repo),
+        "workspace_roots": [str(main_repo)],
+    }
+    import json
+
+    permission, message = cursor_shell_verdict(json.dumps(event))
+    assert permission == "allow", message
 
 
 # --- The Claude entry point must use this resolution too ---------------------

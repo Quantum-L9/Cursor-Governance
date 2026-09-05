@@ -1,17 +1,17 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-31T02:53:19Z`. Source: `rules/*.mdc`.
+Generated: `2026-09-05T21:50:51Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
 | Bucket | Count |
 |---|---:|
-| Total MDC files | **68** |
-| `alwaysApply: true` | **32** |
+| Total MDC files | **69** |
+| `alwaysApply: true` | **33** |
 | `alwaysApply: false` | **36** |
 | No boolean `alwaysApply` | **0** |
 | Explicit stable IDs | **68** |
-| Derived compatibility IDs | **0** |
+| Derived compatibility IDs | **1** |
 | Deprecated rules | **0** |
 
 ## Rule index
@@ -19,6 +19,7 @@ Generated: `2026-08-31T02:53:19Z`. Source: `rules/*.mdc`.
 | File | ID | Scope | Domain | Activation | Lines | Digest |
 |---|---|---|---|---|---:|---|
 | `00-global.mdc` | `l9.rule.00.global` | global | governance | always | 40 | `f52c4a83d314` |
+| `01-authority-chain.mdc` | `l9.rule.01.authority.chain` | global | general | always | 64 | `a2f5f3993a02` |
 | `02-slash-commands.mdc` | `l9.rule.slash-commands` | global | governance | always | 135 | `76d110e9c449` |
 | `03-graphiti-memory.mdc` | `l9.rule.graphiti.memory` | global | memory | always | 70 | `93cd8a5cbf32` |
 | `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | agent_requested | 70 | `64a0e957121b` |
@@ -48,7 +49,7 @@ Generated: `2026-08-31T02:53:19Z`. Source: `rules/*.mdc`.
 | `52-qa-jest.mdc` | `l9.rule.52.qa.jest` | global | testing | agent_requested | 35 | `38f6e2e26683` |
 | `53-pr-overlap-guardrail.mdc` | `l9.rule.53.pr.overlap.guardrail` | global | git | always | 117 | `f0ca4633d6a1` |
 | `54-context-sensitive-git-guardrails.mdc` | `l9.rule.54.git.guardrails` | global | git | always | 78 | `22327366534e` |
-| `55-ff-only-ssot-sync.mdc` | `l9.rule.55.ff.only.ssot.sync` | global | git | always | 71 | `2f96be733d68` |
+| `55-ff-only-ssot-sync.mdc` | `l9.rule.55.ff.only.ssot.sync` | global | git | always | 76 | `9c83eecc7427` |
 | `59-incident-lessons.mdc` | `l9.rule.incident.lessons` | global | deployment | agent_requested | 22 | `3fb8e334a6b1` |
 | `60-anti-patterns.mdc` | `l9.rule.anti.patterns` | global | testing | always | 27 | `664ff6afbb7f` |
 | `61-secrets-and-dependencies.mdc` | `l9.rule.61.secrets.and.dependencies` | global | security | agent_requested | 50 | `d90a13c2549a` |
@@ -66,7 +67,7 @@ Generated: `2026-08-31T02:53:19Z`. Source: `rules/*.mdc`.
 | `77-cursor-subagent-orchestration.mdc` | `l9.rule.77.cursor.subagent.orchestration` | global | governance | agent_requested | 24 | `67cc9f7af1be` |
 | `78-perplexity-run-harness.mdc` | `l9.rule.78.perplexity.run.harness` | global | general | agent_requested | 62 | `ff0c6fe1e02f` |
 | `79-output-discipline.mdc` | `l9.rule.output-discipline` | global | output | agent_requested | 26 | `ea8f58ae1f55` |
-| `80-gmp-execution.mdc` | `l9.rule.80.gmp.execution` | global | ci | always | 71 | `14a64f58c0e8` |
+| `80-gmp-execution.mdc` | `l9.rule.80.gmp.execution` | global | ci | always | 85 | `e5a0e63b42c1` |
 | `81-gmp-audit.mdc` | `l9.rule.81.gmp.audit` | global | governance | agent_requested | 96 | `0a3985c2fdc4` |
 | `82-deployment-manifest.mdc` | `l9.rule.82.deployment.manifest` | global | deployment | agent_requested | 72 | `b57f632b093e` |
 | `83-gmp-contracts.mdc` | `l9.rule.83.gmp.contracts` | global | governance | always | 135 | `f9c358d00e0e` |

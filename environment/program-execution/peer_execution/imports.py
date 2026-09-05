@@ -43,7 +43,9 @@ def load_module(path: str | Path, name: str) -> ModuleType:
         sys.modules[name] = module
         try:
             spec.loader.exec_module(module)
-        except Exception:
+        # BaseException, not Exception: a partially executed module must be
+        # unregistered even when the load is interrupted. The block re-raises.
+        except BaseException:
             sys.modules.pop(name, None)
             raise
         return module
@@ -90,7 +92,9 @@ def load_package(directory: str | Path, name: str) -> ModuleType:
         sys.modules[name] = package
         try:
             spec.loader.exec_module(package)
-        except Exception:
+        # BaseException, not Exception: a partially executed module must be
+        # unregistered even when the load is interrupted. The block re-raises.
+        except BaseException:
             sys.modules.pop(name, None)
             raise
         return package

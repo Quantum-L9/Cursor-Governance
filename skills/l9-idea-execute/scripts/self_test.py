@@ -88,7 +88,7 @@ def main() -> int:
     checks.append("bounded_existing_repo=PASS")
 
     # Cognitive convergence -> one multi-repo PE-shaped campaign
-    repos = ["Quantum-L9/PR_Repair", "Quantum-L9/LLM-Router", "Quantum-L9/l9-cognitive-runtime"]
+    repos = ["Quantum-L9/l9-pr-repair", "Quantum-L9/LLM-Router", "Quantum-L9/l9-cognitive-runtime"]
     e = envelope(
         [
             req("ER-001", "repository_change", "modify", repo=repos[0]),

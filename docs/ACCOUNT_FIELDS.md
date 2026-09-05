@@ -9,7 +9,7 @@ rebuilt — which is the failure this file exists to make detectable.
 
 ## 1. Environment variables
 
-Checksum `1c048c59a33cc641` — `verify_account_env.py` confirms a paste by comparing
+Checksum `e82ec18f72308215` — `verify_account_env.py` confirms a paste by comparing
 the live runtime against this set.
 
 ```dotenv
@@ -40,7 +40,6 @@ L9_WORKTREE_ISOLATION=1
 NPM_CONFIG_AUDIT=false
 NPM_CONFIG_FUND=false
 PIP_DISABLE_PIP_VERSION_CHECK=1
-PR_REMEDIATE=0
 PYTHONDONTWRITEBYTECODE=1
 PYTHONUNBUFFERED=1
 USER_ID=claude_code_agent

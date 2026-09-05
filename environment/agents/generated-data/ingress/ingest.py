@@ -143,6 +143,9 @@ def _run_delivery_if_configured(
     )
     result = worker.run_once(actor=actor, job_id=job_id)
     if result is not None and result.enqueued:
+        # Fail-soft: draining the outbox is opportunistic follow-up work. A
+        # drain fault must not fail the ingest that already succeeded.
+        # nosemgrep: l9.baseline.python.broad-except
         try:
             worker.drain_memory_outbox(actor=actor, limit=5)
         except Exception:
@@ -293,6 +296,9 @@ def ingest_packet(
         )
     except Exception as exc:
         store = PipelineStateStore(database)
+        # Fail-soft inside an error path: this is already handling an
+        # exception, and a second fault must not mask the first.
+        # nosemgrep: l9.baseline.python.broad-except
         try:
             job = store.get_job(job_id)
             state = job.state.value

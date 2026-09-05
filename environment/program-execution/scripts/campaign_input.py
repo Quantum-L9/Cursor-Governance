@@ -181,6 +181,8 @@ def _normalize_text(raw: str) -> str:
     pe_root = Path(__file__).resolve().parents[1]
     if str(pe_root) not in sys.path:
         sys.path.append(str(pe_root))
+    # Broad by design; the handler below carries the reason.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         from compiler.architecture_intent import normalize_source
     except Exception:  # pragma: no cover - the compiler tree is part of this repo
@@ -330,10 +332,14 @@ def _normative_signals(text: str) -> tuple[str, ...]:
     pe_root = Path(__file__).resolve().parents[1]
     if str(pe_root) not in sys.path:
         sys.path.append(str(pe_root))
+    # Broad by design; the handler below carries the reason.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         from compiler.architecture_intent import normative_signals
     except Exception:  # pragma: no cover - diagnostics never block routing
         return ()
+    # Broad by design; the handler below carries the reason.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         return tuple(normative_signals(text))
     except Exception:  # pragma: no cover - diagnostics never block routing

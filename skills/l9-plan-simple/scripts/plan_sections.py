@@ -97,7 +97,7 @@ def parse_frontmatter(text: str) -> dict[str, Any]:
     if yaml is not None:
         try:
             loaded = yaml.safe_load(raw)
-        except Exception:
+        except yaml.YAMLError:
             loaded = None
         if isinstance(loaded, dict):
             return loaded

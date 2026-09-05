@@ -1,0 +1,458 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Close /ff shelf loop gaps",
+  "objective": "Stop the /ff shelf loop from being an agent-improvised path, and stop shallow/grafted clones from false-parking unique tips. Own shelf mutate in one script. Compare catch-up tips by SHA first; use rev-list counts only on full history after SHA differs.",
+  "success_criteria": [
+    "ff_shelf refuses process substitution and any /tmp files-from; writes $CLONE/.l9/ff-shelf-untracked.txt then rsync --files-from that path",
+    "git add uses --pathspec-from-file on that list in a command that does not also commit or status",
+    "an already-open same-author feat/ff-shelf-* PR is appended; a second stamp branch is not created",
+    "post-shelf prune unlinks unstamped leftover *.plan.md whose kernel-normalized body matches the open-PR blob at the same path",
+    "slash and execute.md name ff_shelf as the only shelf mutate path; ff.sh stays push-off",
+    "l9-repo-sync validate_pack_structure and self_test PASS; prune pack_self_test covers the donor case; .pre-commit-config.yaml is the hook catalog",
+    "ff.sh: HEAD SHA == origin/main SHA is at-tip (no preserve, no reset, AHEAD/BEHIND treated as 0). Shallow/grafted + SHA unequal never creates l9/ff-preserve-* from rev-list counts. Full history preserves only when HEAD is not an ancestor of origin/main. No unshallow. No merge --ff-only."
+  ],
+  "scope": {
+    "in": [
+      "skills/l9-repo-sync/scripts/ff_shelf.py (new)",
+      "skills/l9-repo-sync/scripts/ff.sh (SHA tip compare only)",
+      "skills/l9-repo-sync/scripts/self_test.py",
+      "skills/l9-repo-sync/scripts/validate_pack_structure.py",
+      "skills/l9-repo-sync/references/execute.md",
+      "skills/l9-repo-sync/SKILL.md",
+      "commands/ff.md",
+      "rules/55-ff-only-ssot-sync.mdc",
+      "AGENTS.md append-only fragment",
+      "skills/l9-git-work-preserve/scripts/prune_open_pr_copies.py",
+      "skills/l9-git-work-preserve/scripts/pack_self_test.py"
+    ],
+    "out": [
+      "Rewriting ff.sh park/hold/switch primitives beyond the SHA tip compare",
+      "git fetch --unshallow or deepen-by-default inside /ff",
+      "Using merge --ff-only as the /ff catch-up move",
+      "Changing governance_activate_fresh.sh do_ff (follow-on; sessionStart grafts)",
+      "Putting make pr inside ff.sh",
+      "Weakening sacred-WIP isolation to allow WIP via /tmp",
+      "Draining Dependabot or other sibling PR chains",
+      "Deleting unused feat/ff-shelf-20260904T145518Z (hygiene, not this change)",
+      "KERNEL pack or PE overlay landing",
+      "Program Lock and the campaign runner",
+      "CANONICAL_LAW.md",
+      "WIP/Legal Defense and secret globs",
+      "Widening ff_shelf.py to TODO.md or dirty-tracked corpus (rule 55 remainder; follow-on)"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "git rev-parse HEAD && git branch --show-current && git status --porcelain && git rev-parse origin/main && git rev-parse --is-shallow-repository",
+      "pass_criteria": "VR re-verify 2026-09-05T21:30Z: this checkout is main @ 91daac4a8a026917bfd2ae243827008a83866ce2; origin/main is 3c45c9165cf09475fc962fa829aa617e03f1347a; unique open PR #499 tip is f72042ba1cfe207d54af8564798327c560f7d885 (agent/cursor/optB-excludes); HEAD is an ancestor of origin/main; origin/main is an ancestor of #499; not shallow; porcelain is the three untracked plan artifacts only",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "name hook catalog .pre-commit-config.yaml",
+      "pass_criteria": "catalog exists at repo root; Build uses changed-file hooks via make pr",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "read execute.md rsync recipe + worktree_isolation_gate _MV_CP_WIP_TMP",
+      "pass_criteria": "process substitution files-from is documented; rsync+WIP+/tmp is denied",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "gh pr list --state open --repo Quantum-L9/Cursor-Governance --json number && gh pr view 497 --json state,mergedAt",
+      "pass_criteria": "VR re-verify: open board is [#499]; #497 remains merged. Build stacks on #499 tip f72042ba (agent/cursor/optB-excludes). Do not branch from origin/main while that unique chain exists.",
+      "status": "passed"
+    },
+    {
+      "id": "P4",
+      "command_or_action": "git fetch origin && start feature branch from the unique open-PR tip (#499); copy the three plan files by pathspec; do not run /ff on this dirty tree",
+      "pass_criteria": "Build worktree HEAD equals #499 tip f72042ba1cfe207d54af8564798327c560f7d885 or a newer unique-chain tip. Plan files arrive by pathspec copy. /ff is forbidden as the P4 move. Do not mutate at 91daac4. Do not fork from origin/main while #499 is open.",
+      "status": "pending"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Add ff_shelf.py for leftover untracked WIP/, docs/plans/, and campaigns/ only (not the root task-queue file, not dirty-tracked corpus). In-clone path list, rsync --files-from that file, append existing same-author feat/ff-shelf-* worktree or cut one stamp when none is open. Apply corpus kernels to leftover files; write kernel_pass YAML only on *.plan.md. Pathspec-from-file then separate commit, L4 begin+authorize-release. Shelf-script publish uses PR_STACK=auto. This Build's own PR also uses V4 PR_STACK=auto stacked on #499. Then run_ff_post_shelf.sh.",
+      "files": [
+        "skills/l9-repo-sync/scripts/ff_shelf.py"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "new file next to scripts/ff.sh",
+      "leverage_rank": 1,
+      "shared_root_cause": "agent-improvised shelf loop"
+    },
+    {
+      "id": "T2",
+      "task": "Extend l9-repo-sync self_test after T7: list lands under clone .l9/; rsync command contains no /tmp and no process substitution; add uses --pathspec-from-file alone; open shelf PR is appended not restamped. Keep the T7 shallow SHA fixtures in the same file.",
+      "files": [
+        "skills/l9-repo-sync/scripts/self_test.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T1",
+        "T7"
+      ],
+      "operation": "Insert",
+      "anchor": "after T7 SHA fixtures and existing ff.sh fixtures",
+      "leverage_rank": 4
+    },
+    {
+      "id": "T3",
+      "task": "Prune untracked leftover *.plan.md when kernel-normalized body matches the open-PR blob at the same path; keep exact-sha256 unlink; never unlink unique leftover bytes",
+      "files": [
+        "skills/l9-git-work-preserve/scripts/prune_open_pr_copies.py",
+        "skills/l9-git-work-preserve/scripts/pack_self_test.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [],
+      "operation": "Insert",
+      "anchor": "after sha256_file / sha256_blob helpers",
+      "leverage_rank": 3
+    },
+    {
+      "id": "T4",
+      "task": "Replace agent rsync/add recipes with a single ff_shelf.py call in execute.md, SKILL.md compact shelf step, and commands/ff.md steps 2-3; keep ff.sh push-off; verify always via locked interpreter",
+      "files": [
+        "skills/l9-repo-sync/references/execute.md",
+        "skills/l9-repo-sync/SKILL.md",
+        "commands/ff.md"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Replace",
+      "anchor": "After success — shelf corpus",
+      "leverage_rank": 5
+    },
+    {
+      "id": "T5",
+      "task": "Require ff_shelf.py in validate_pack_structure; fail if execute.md still has files-from=<( or git add -- ${shelf_paths}; require .l9/ff-shelf-untracked.txt and GOV_PY verify_worktree_clean.py",
+      "files": [
+        "skills/l9-repo-sync/scripts/validate_pack_structure.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T4"
+      ],
+      "operation": "Insert",
+      "anchor": "REQUIRED list and execute.md needle loop",
+      "leverage_rank": 6
+    },
+    {
+      "id": "T6",
+      "task": "Append AGENTS.md fragment FF_SHELF_SCRIPT_V1 after FF_PAIR_FLAGS_V1 (last live FF_* block). Add a MUST line to rule 55 that leftover-untracked WIP/docs/plans/campaigns shelf mutate is ff_shelf.py. Do not rewrite older FF_* fragments. Do not widen this Build to the root task-queue file or dirty-tracked corpus.",
+      "files": [
+        "AGENTS.md",
+        "rules/55-ff-only-ssot-sync.mdc"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "T4"
+      ],
+      "operation": "Insert",
+      "anchor": "after FF_PAIR_FLAGS_V1 / rule 55 MUST leftover-untracked sentence",
+      "leverage_rank": 7
+    },
+    {
+      "id": "T7",
+      "task": "In ff.sh compare HEAD to origin/${TARGET_BRANCH} by SHA before any rev-list count. Equal: treat as at-tip (AHEAD=0 BEHIND=0) so preserve, reset, maybe_leave, and checkout -f skip. Unequal and shallow/grafted: never create l9/ff-preserve-* from rev-list counts; existing dirty park then reset --keep. Unequal and full history: preserve only when HEAD is not an ancestor of origin/${TARGET_BRANCH}. Never unshallow. Never merge --ff-only. Add the shallow SHA fixture in self_test.py.",
+      "files": [
+        "skills/l9-repo-sync/scripts/ff.sh",
+        "skills/l9-repo-sync/scripts/self_test.py"
+      ],
+      "effort": "S",
+      "risk": "high",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "AHEAD/BEHIND rev-list block around line 361; maybe_leave uses those vars at line 265",
+      "leverage_rank": 2,
+      "shared_root_cause": "ancestry counts lie on shallow grafts"
+    }
+  ],
+  "critical_path": [
+    "T7",
+    "T1",
+    "T3",
+    "T2",
+    "T4",
+    "T5",
+    "T6"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "ff_shelf.py owns list/copy/stage/append/publish",
+      "unlocks": "self_test and thin slash"
+    },
+    {
+      "id": "M2",
+      "outcome": "prune absorbs kernel-stamp donors",
+      "unlocks": "verify_worktree_clean after one-sided stamp"
+    },
+    {
+      "id": "M3",
+      "outcome": "protocol and pack validator name the script",
+      "unlocks": "Build publish"
+    },
+    {
+      "id": "M4",
+      "outcome": "ff.sh tip compare is SHA-equality first",
+      "unlocks": "one-shot catch-up on shallow SSOT without fake preserve refs"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "self_test covers in-clone list, no /tmp rsync, pathspec-from-file, append-not-restamp",
+      "no_go_action": "stop; do not thin the slash until the script exists"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "pack_self_test: unstamped leftover plan unlinks; unique leftover plan stays",
+      "no_go_action": "stop; do not unlink same-path leftovers that are not kernel-normalized matches"
+    },
+    {
+      "id": "C3",
+      "after": "M3",
+      "evidence_required": "validate_pack_structure PASS; execute.md has no files-from=<(",
+      "no_go_action": "block readiness"
+    },
+    {
+      "id": "C4",
+      "after": "M4",
+      "evidence_required": "self_test: grafted/shallow clone with lying rev-list counts does reset --keep and writes no l9/ff-preserve-*; HEAD==origin/main is a no-op; full-history unique tip still preserves",
+      "no_go_action": "stop; do not ship ancestry-count preserve on shallow; do not drop full-history unique commits"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "update",
+      "todo_ids": [
+        "T6"
+      ]
+    },
+    {
+      "surface": "CLAUDE.md",
+      "action": "n_a",
+      "reason": "authority pointer only; no /ff shelf recipe lives there"
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "symlink and secret-plane law unchanged"
+    },
+    {
+      "surface": "README.md",
+      "action": "n_a",
+      "reason": "index; /ff remains skills/l9-repo-sync"
+    },
+    {
+      "surface": "commands/ff.md",
+      "action": "update",
+      "todo_ids": [
+        "T4"
+      ]
+    },
+    {
+      "surface": "rules/55-ff-only-ssot-sync.mdc",
+      "action": "update",
+      "todo_ids": [
+        "T6"
+      ]
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "If two same-author feat/ff-shelf-* PRs are open, does append pick the newest updatedAt and refuse a third stamp?",
+      "If leftover plan.md has unique prose plus a missing kernel_pass, does prune delete novel bytes?",
+      "If the agent still follows execute.md after the script lands, does the old rsync recipe remain?",
+      "If FF_SHELF_PUBLISH=0, does the script still write the in-clone list, commit, and skip make pr?",
+      "If a shallow clone reports ahead 1 behind 1 with HEAD != origin/main, does /ff still write l9/ff-preserve-*?",
+      "If a full-history clone has unique commits on local main, does SHA-first still create l9/ff-preserve-* before reset --keep?",
+      "If Build starts at 91daac4 or origin/main while #499 is open, does the change land off the unique chain tip?",
+      "If P4 uses /ff on this dirty tree, do the three untracked plan files get shelved before T7?"
+    ],
+    "assumed_false_ifs": [
+      "sacred-WIP isolation still denies rsync that names WIP and /tmp in one command",
+      "isolation still denies git add && commit compounds and argv dumps of 100+ pathspecs",
+      "ff.sh remains the catch-up primitive and stays push-off",
+      "AGENTS.md stays additive_only so older FF_* fragments are appended over, not rewritten",
+      "unique open PR stays #499 through this Build; a second chain mid-flight fails closed and restacks",
+      "executor does not run /ff as P4 on this dirty tree"
+    ],
+    "blast_radius": "A wrong prune absorb deletes unique leftover plans. A wrong append lands corpus on a foreign shelf PR. A docs-only patch leaves the next /ff hitting the same /tmp and sibling denials. A wrong SHA-first rule drops a real unique main commit on full history or keeps false-parking shallow tips. Building from 91daac4 or origin/main while #499 is open creates a sibling chain. Running /ff as P4 shelves these plan files.",
+    "rollback": "Revert the feature commit(s) on the Build branch. After revert, ff.sh returns to the rev-list preserve path (known shallow false-park). Isolation gates stay. Restore execute.md recipes from origin/main only when ff_shelf.py is also reverted."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T1",
+      "T7",
+      "T3",
+      "T2",
+      "T4",
+      "T5",
+      "T6"
+    ],
+    "shared_causes": [
+      "shelf mutate is an agent-improvised loop with a recipe the gates deny",
+      "verify depends on byte-identity after a one-sided kernel stamp",
+      "rev-list ahead/behind lies on shallow grafts and false-parks unique tips"
+    ],
+    "deletions_or_consolidations": [
+      "delete the rsync --files-from=<(printf …) recipe",
+      "delete git add -- ${shelf_paths[@]} && commit from execute.md",
+      "collapse slash steps 2-3 into one ff_shelf.py invocation plus post-shelf already inside it",
+      "stop using rev-list --count as the preserve trigger on shallow/grafted clones"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Prune absorb treats any same-path leftover as shipped and deletes unique edits",
+      "mitigation": "Absorb leftover *.plan.md only after kernel_pass normalize (ran_at / body_sha256) equals the open-PR blob; all other paths stay exact sha256"
+    },
+    {
+      "risk": "Append lands on a Dependabot or foreign-agent feat/ff-shelf-* head",
+      "mitigation": "Match head:feat/ff-shelf- AND same GitHub author as the current actor; if zero, cut a new stamp; if more than one same-author, use the newest updatedAt and refuse a second stamp"
+    },
+    {
+      "risk": "Build publish hits sibling-chain fail-closed even after this change",
+      "mitigation": "VR re-verify: unique open PR is #499. Stack this Build on f72042ba. The shelf script still appends existing same-author feat/ff-shelf-* PRs. Do not drain Dependabot here."
+    },
+    {
+      "risk": "AGENTS.md rewrite without ALLOW-ROOT-DELETION",
+      "mitigation": "Append a named fragment only"
+    },
+    {
+      "risk": "SHA-first skip preserve drops a real unique commit that lives only on local main",
+      "mitigation": "On full history, preserve when HEAD is not an ancestor of origin/main. On shallow/grafted, never trust rev-list counts; do not preserve; reset --keep after the existing dirty park."
+    },
+    {
+      "risk": "Build mutates this checkout while it is behind origin/main",
+      "mitigation": "P4: git fetch; feature branch or worktree from #499 tip f72042ba; copy the three plan files by pathspec. Never /ff this dirty tree. Do not commit on 91daac4 or origin/main while #499 is open."
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "If two same-author feat/ff-shelf-* PRs are open, which worktree is canonical?",
+      "decision_effect": "Append target and whether a third stamp is forbidden",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U2",
+      "question": "Does this Build also change governance_activate_fresh.sh do_ff from merge --ff-only to reset --keep on a clean tree?",
+      "decision_effect": "Source of depth-1 grafts; out of this Build (sessionStart ceremony). Follow-on only.",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U3",
+      "question": "Does ff_shelf.py also own rule 55 leftover TODO.md and dirty-tracked corpus?",
+      "decision_effect": "This Build keeps the slash/FF_CORPUS set (untracked WIP/docs/plans/campaigns). Rule 55 remainder is a follow-on. T6 MUST names that same subset.",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "python3 skills/l9-repo-sync/scripts/validate_pack_structure.py",
+      "pass_criteria": "PASS and execute.md lacks files-from=<(",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "python3 skills/l9-repo-sync/scripts/self_test.py",
+      "pass_criteria": "PASS including shelf fixtures, shallow SHA no-false-preserve, and full-history unique-tip still-preserve",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "python3 skills/l9-git-work-preserve/scripts/pack_self_test.py",
+      "pass_criteria": "PASS including kernel-normalized leftover plan unlink and unique leftover stay",
+      "status": "pending"
+    },
+    {
+      "id": "V4",
+      "command": "PR_STACK=auto PR_REMEDIATE=0 make pr (hook catalog .pre-commit-config.yaml)",
+      "pass_criteria": "changed-file hooks from .pre-commit-config.yaml PASS; PR stacks on #499; finish reply shows the PR URL",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U1",
+      "U2",
+      "U3"
+    ],
+    "next_skill": "cursor-build",
+    "stop_reason": "Three kernels applied. Implementation waits for Build from #499 tip f72042ba (do not /ff this dirty tree; do not fork origin/main while #499 is open)"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "skills/l9-repo-sync/scripts/ff_shelf.py",
+      "skills/l9-repo-sync/scripts/ff.sh",
+      "skills/l9-repo-sync/scripts/self_test.py",
+      "skills/l9-repo-sync/scripts/validate_pack_structure.py",
+      "skills/l9-repo-sync/references/execute.md",
+      "skills/l9-repo-sync/SKILL.md",
+      "commands/ff.md",
+      "rules/55-ff-only-ssot-sync.mdc",
+      "AGENTS.md",
+      "skills/l9-git-work-preserve/scripts/prune_open_pr_copies.py",
+      "skills/l9-git-work-preserve/scripts/pack_self_test.py"
+    ],
+    "must_not_modify": [
+      "ops/scripts/governance_activate_fresh.sh",
+      "ops/autonomy/worktree_isolation_gate.py",
+      "CANONICAL_LAW.md",
+      "WIP/Legal Defense/",
+      "environment/program-execution/core/"
+    ],
+    "preserved_contracts": [
+      "ff.sh stays push-off and is the only catch-up primitive",
+      "unique leftover bytes are never deleted",
+      "sacred-WIP isolation still denies WIP via public temp",
+      "AGENTS.md additive_only: append fragment, no rewrite of older FF_* blocks",
+      "no make campaign / Program Lock",
+      "full-history unique local commits still get l9/ff-preserve-* before reset --keep",
+      "this Build's V4 uses PR_STACK=auto stacked on #499; ff_shelf.py later publish uses PR_STACK=auto and appends same-author feat/ff-shelf-* only",
+      "ff_shelf.py corpus set is leftover untracked WIP/docs/plans/campaigns; not TODO.md or dirty-tracked"
+    ],
+    "validation_commands": [
+      "python3 skills/l9-repo-sync/scripts/validate_pack_structure.py",
+      "python3 skills/l9-repo-sync/scripts/self_test.py",
+      "python3 skills/l9-git-work-preserve/scripts/pack_self_test.py",
+      "PR_STACK=auto PR_REMEDIATE=0 make pr (hook catalog .pre-commit-config.yaml)"
+    ]
+  },
+  "depth": "standard",
+  "checklist": [
+    "in-clone list",
+    "append existing shelf",
+    "pathspec-from-file then commit",
+    "kernel-normalize prune",
+    "thin slash",
+    "SHA tip compare",
+    "Build from #499 tip not 91daac4 or origin/main",
+    "P4 is fetch+copy not /ff"
+  ],
+  "estimate": "one Build stacked on #499 f72042ba; P4 is fetch+copy"
+}

@@ -49,6 +49,41 @@ CONSUMER_HOOK_FILES = (
 
 PRESERVE_USER_KEYS = ("enabledPlugins", "theme", "statusLine", "model")
 
+#: `env` keys another governance component legitimately adds to the USER-scope
+#: settings after this reconciler has written them.
+#:
+#: `env` is a managed key, so it was taken wholly from the template — and
+#: overlay_hosted_settings_env.py copies hosted account values, including two
+#: keys the template deliberately does not carry, into the same file. The two
+#: then fought every session: the overlay added them, this reconciler reported
+#: the healthy result as drift and would strip them on the next write, and the
+#: overlay put them back. A check that reports `ok: false` on a correctly
+#: configured container is the cry-wolf failure the repo calls out elsewhere.
+#:
+#: Sourced from the overlay itself, never re-listed here, so the two cannot
+#: drift apart. Only keys the existing file actually carries are preserved: this
+#: widens nothing, it stops a peer's deliberate write being called drift.
+OVERLAY_ENV_KEYS_MODULE = "environment/agents/adapters/claude-code/overlay_hosted_settings_env.py"
+
+
+def _overlay_env_keys(root: Path) -> tuple[str, ...]:
+    """OVERLAY_KEYS as the overlay module defines them; empty if unreadable."""
+    module = root / OVERLAY_ENV_KEYS_MODULE
+    try:
+        import ast
+
+        tree = ast.parse(module.read_text(encoding="utf-8"))
+    except (OSError, SyntaxError):
+        return ()
+    for node in tree.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        names = [t.id for t in node.targets if isinstance(t, ast.Name)]
+        if "OVERLAY_KEYS" not in names or not isinstance(node.value, ast.Tuple):
+            continue
+        return tuple(el.value for el in node.value.elts if isinstance(el, ast.Constant))
+    return ()
+
 
 def workspace_artifacts() -> tuple[str, ...]:
     """Workspace-relative paths this reconciler materializes as REAL files.
@@ -75,9 +110,16 @@ def dump_json(data: dict[str, Any]) -> str:
 
 
 def merge_user_settings(
-    template: dict[str, Any], existing: dict[str, Any] | None
+    template: dict[str, Any],
+    existing: dict[str, Any] | None,
+    *,
+    root: Path | None = None,
 ) -> dict[str, Any]:
-    """Template wins for managed keys; preserve plugins/theme and unknown user keys."""
+    """Template wins for managed keys; preserve plugins/theme and unknown user keys.
+
+    One exception, in `env`: keys the hosted overlay owns are kept when the
+    existing file already carries them. See OVERLAY_ENV_KEYS_MODULE.
+    """
     base = dict(existing or {})
     out: dict[str, Any] = {}
     # Preserve known user keys first.
@@ -97,6 +139,14 @@ def merge_user_settings(
     for key in MANAGED_TOP_LEVEL:
         if key in template:
             out[key] = template[key]
+    if root is not None and isinstance(out.get("env"), dict):
+        overlay_keys = _overlay_env_keys(root)
+        base_env = base.get("env") if isinstance(base.get("env"), dict) else {}
+        merged_env = dict(out["env"])
+        for key in overlay_keys:
+            if key in base_env and key not in merged_env:
+                merged_env[key] = base_env[key]
+        out["env"] = merged_env
     return out
 
 
@@ -263,7 +313,9 @@ def build_manifest(template: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def reconcile_user(template: dict[str, Any], *, check: bool) -> dict[str, Any]:
+def reconcile_user(
+    template: dict[str, Any], *, check: bool, root: Path | None = None
+) -> dict[str, Any]:
     """Project the managed key set into USER scope.
 
     This is the floor that survives a session whose project directory is not a
@@ -277,7 +329,7 @@ def reconcile_user(template: dict[str, Any], *, check: bool) -> dict[str, Any]:
     drift: list[str] = []
     user_path = user_settings_path()
     existing = load_json(user_path) if user_path.is_file() else {}
-    merged = merge_user_settings(template, existing)
+    merged = merge_user_settings(template, existing, root=root)
     drift.extend(write_if_changed(user_path, dump_json(merged), check=check, wrote=wrote))
     drift.extend(
         write_if_changed(
@@ -395,7 +447,7 @@ def run(
         all_wrote.extend(gov_result["wrote"])
 
     if user:
-        user_result = reconcile_user(template, check=check)
+        user_result = reconcile_user(template, check=check, root=root)
         results["user"] = user_result
         all_drift.extend(user_result["drift"])
         all_wrote.extend(user_result["wrote"])

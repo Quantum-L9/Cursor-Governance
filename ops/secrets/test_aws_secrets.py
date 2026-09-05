@@ -474,6 +474,9 @@ class PortAwsToInfisicalTests(unittest.TestCase):
         cls.port = _load("port_aws_to_infisical")
 
     def test_dry_run_never_emits_secret_values(self) -> None:
+        # Fabricated value, and it has to look like a live key: this test
+        # proves format_dry_run never emits it.
+        # nosemgrep: l9.baseline.python.hardcoded-credential
         secret = "sk-live-SUPER-SECRET-VALUE-9f3a"
         lines = self.port.format_dry_run(
             aws_ids=["openclaw-igorbot/github"],

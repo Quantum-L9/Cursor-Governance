@@ -46,7 +46,7 @@ MAX_COUNTS = {
 def _load_yaml(path: Path) -> dict[str, Any] | None:
     try:
         import yaml  # type: ignore[import-not-found]
-    except Exception:
+    except ImportError:
         return None
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):

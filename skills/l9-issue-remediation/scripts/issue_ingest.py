@@ -21,6 +21,22 @@ REF_RE = re.compile(
 _SECRETISH = re.compile(r"(?i)(token|secret|password|api[_-]?key)\s*[=:]\s*\S+")
 
 
+_GH_REPO_RE = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})/[A-Za-z0-9._-]{1,100}")
+
+
+def _validated_repo(value: str) -> str:
+    """Return ``value`` once proven to be an ``owner/name`` slug.
+
+    It is passed to ``gh`` as a command argument. The rule that matters is the
+    leading character: a value such as ``--template=...`` is an ordinary string
+    to ``subprocess`` but an option to ``gh``, which turns an issue query into an
+    attacker-chosen gh invocation.
+    """
+    if not _GH_REPO_RE.fullmatch(value) or value.endswith((".", ".git")):
+        raise SystemExit(f"BLOCKED: not a valid owner/name repository: {value!r}")
+    return value
+
+
 def _validated_output(value: str) -> Path:
     base = Path.cwd().resolve()
     resolved = (base / value).resolve()
@@ -143,7 +159,7 @@ def main() -> int:
         raise SystemExit("BLOCKED: --limit-per-repo must be 1..200")
 
     if args.repo:
-        repos = [args.repo]
+        repos = [_validated_repo(args.repo)]
     else:
         fleet_path = Path(args.fleet)
         if not fleet_path.is_file():

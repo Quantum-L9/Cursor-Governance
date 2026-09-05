@@ -14,6 +14,23 @@ QUALITY_FIELDS = [
 ]
 
 
+def _read_under_cwd(candidate: str, *, label: str) -> str:
+    """Read a caller-named file, refusing anything outside the working tree.
+
+    The path arrives from argv. Without containment this CLI will happily read
+    and surface the contents of any file the process can reach, so an operator
+    (or an agent) invoking it with a traversal path turns an analysis helper into
+    a file-disclosure tool. The inputs it is meant to read are workspace
+    artifacts, so confinement costs no supported use.
+    """
+    workspace = Path.cwd().resolve()
+    try:
+        resolved = Path(candidate).resolve().relative_to(workspace)
+    except ValueError as error:
+        raise SystemExit(f"{label} must stay inside {workspace}: {candidate!r}") from error
+    return (workspace / resolved).read_text(encoding="utf-8")
+
+
 def summarize(rows: list[dict]) -> dict:
     if not rows:
         raise ValueError("run file must contain at least one row")
@@ -31,8 +48,8 @@ def main() -> int:
     parser.add_argument("baseline")
     parser.add_argument("candidate")
     args = parser.parse_args()
-    baseline = summarize(json.loads(Path(args.baseline).read_text(encoding="utf-8")))
-    candidate = summarize(json.loads(Path(args.candidate).read_text(encoding="utf-8")))
+    baseline = summarize(json.loads(_read_under_cwd(args.baseline, label="baseline")))
+    candidate = summarize(json.loads(_read_under_cwd(args.candidate, label="candidate")))
     result = {
         "baseline": baseline,
         "candidate": candidate,

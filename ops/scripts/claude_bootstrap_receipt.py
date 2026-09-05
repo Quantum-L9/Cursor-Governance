@@ -174,12 +174,29 @@ def receipt_path(env: dict[str, str] | None = None, *, surface: str = "claude") 
     return Path(source.get("HOME", str(Path.home()))) / ".l9" / surface_dir / "bootstrap-state.json"
 
 
+def _workspace_covered(receipt: dict[str, Any], workspace: str) -> bool | None:
+    """Whether this receipt speaks for `workspace`. None when it cannot say.
+
+    `workspace` records ONE path. A cloud container holds several repositories
+    side by side, so that path is whichever root the installer was invoked with,
+    and every other workspace in the container — the container root included —
+    read the verdict as its own. `covered_roots` is the installer's own mount
+    set; a receipt predating it returns None rather than a guess, so old
+    receipts keep their existing behaviour.
+    """
+    roots = receipt.get("covered_roots")
+    if not isinstance(roots, list) or not roots:
+        return None
+    return workspace in {str(r) for r in roots}
+
+
 def evaluate(
     receipt: dict[str, Any] | None,
     *,
     now: datetime | None = None,
     governance_revision: str | None = None,
     surface: str = "claude",
+    workspace: str | None = None,
 ) -> dict[str, Any]:
     moment = now or datetime.now(UTC)
 
@@ -206,6 +223,20 @@ def evaluate(
         "reasons": receipt.get("reasons") if isinstance(receipt.get("reasons"), dict) else {},
         "log_path": str(receipt.get("log_path") or ""),
     }
+
+    covered = None if workspace is None else _workspace_covered(receipt, workspace)
+    carried["workspace_covered"] = covered
+    if covered is False:
+        # Not an expiry and not a revision move: this receipt describes a
+        # different workspace and was never evidence about this one.
+        return {
+            "state": UNKNOWN,
+            "reason": (
+                f"receipt covers {receipt.get('covered_roots')}, not {workspace} — "
+                "it is not evidence about this workspace"
+            ),
+            **carried,
+        }
 
     written = _parse_timestamp(str(receipt.get("generated_at", "")))
     if written is None:

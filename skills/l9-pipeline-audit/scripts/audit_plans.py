@@ -152,7 +152,7 @@ def parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
             loaded = yaml.safe_load(raw)
             if isinstance(loaded, dict):
                 data = loaded
-        except Exception:
+        except yaml.YAMLError:
             data = {}
     if not data or "todos" not in data:
         fallback = _parse_frontmatter_fallback(raw)
@@ -285,6 +285,10 @@ def is_simple_kind(frontmatter: dict[str, Any], body: str) -> bool:
 
 
 def kernel_unfired(path: Path) -> bool:
+    # Deliberately broad: this reaches into a sibling skill by path and imports
+    # it dynamically. Any failure of that arrangement means "cannot prove the
+    # kernel is unfired", which is False, not an audit crash.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         scripts = Path(__file__).resolve().parents[2] / "l9-plan" / "scripts"
         if str(scripts) not in sys.path:

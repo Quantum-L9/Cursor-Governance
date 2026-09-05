@@ -90,6 +90,9 @@ def test_chat_completions_uses_fixed_host(monkeypatch):
     body = json.dumps({"choices": [{"message": {"content": '{"ok": true}'}}]}).encode()
     sock = _patch_transport(monkeypatch, _http_response(body), capture)
     out = ofh.chat_completions(
+        # Synthetic key: the assertions below check it is forwarded verbatim as
+        # the Authorization: Bearer header to the fixed host.
+        # nosemgrep: l9.baseline.python.hardcoded-credential
         api_key="sk-test",
         messages=[{"role": "user", "content": "hi"}],
         max_tokens=50,
@@ -112,6 +115,8 @@ def test_chat_completions_http_error(monkeypatch):
     _patch_transport(monkeypatch, _http_response(b'{"error":"nope"}', status=401))
     with pytest.raises(ofh.OpenAIFixedHostError, match="openai_http_401"):
         ofh.chat_completions(
+            # Synthetic key for the 401 path.
+            # nosemgrep: l9.baseline.python.hardcoded-credential
             api_key="sk-bad",
             messages=[{"role": "user", "content": "x"}],
             max_tokens=10,

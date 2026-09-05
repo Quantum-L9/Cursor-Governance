@@ -212,7 +212,7 @@ def _rg(pattern: str, root: Path) -> list[tuple[str, int, str]]:
         # normalize if rg returned absolute
         try:
             rel = str(Path(path).resolve().relative_to(root))
-        except Exception:
+        except (OSError, ValueError):
             rel = path.replace(str(root) + "/", "")
         hits.append((rel, line_no, content.strip()[:200]))
     return hits
