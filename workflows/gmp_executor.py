@@ -1216,6 +1216,7 @@ from {module_path} import ...
                 "frontmatter todos, or --todos-json '@path.json' / inline "
                 "JSON list of {id,task,files}."
             )
+            print(NO_SCOPE)
             return EXIT_NO_SCOPE
         self._init_state(task, tier)
         self._print_header(f"GMP EXECUTOR: {self.state.gmp_id}")
@@ -1223,7 +1224,13 @@ from {module_path} import ...
         self.state.completed_steps.append(StepType.MEMORY_READ.value)
         scope = self._step_scope_lock()
         if not scope.success:
-            print(scope.error or NO_SCOPE)
+            if scope.error:
+                print(scope.error)
+            # The marker is the outcome tag, not a fallback for a missing
+            # message: callers grep stdout for NO_SCOPE the same way they grep
+            # for NO_TASK and READY_FOR_BUILD. Printing `scope.error or
+            # NO_SCOPE` dropped it on exactly the runs that had a diagnostic.
+            print(NO_SCOPE)
             self._clear_state()
             return EXIT_NO_SCOPE
         self.state.completed_steps.append(StepType.SCOPE_LOCK.value)
