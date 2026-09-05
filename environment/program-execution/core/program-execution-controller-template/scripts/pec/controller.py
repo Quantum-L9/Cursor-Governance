@@ -13,6 +13,17 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
+from .attempts import (
+    ATTEMPT_ABANDONED,
+    ATTEMPT_DISPATCHING,
+    ATTEMPT_FENCED,
+    ATTEMPT_ORPHANED,
+    ATTEMPT_RUNNING,
+    ATTEMPT_TERMINAL,
+    FENCE_FENCED,
+    capture_baseline,
+    write_baseline_artifact,
+)
 from .blueprint import (
     RESUME_EXACT_MATCH,
     RESUME_TASK_SCOPED_DRIFT,
@@ -49,7 +60,12 @@ from .runtime import (
     read_campaign_status,
 )
 from .state import StateDB
-from .workspace_reset import clean_task_execution
+from .workspace_reset import (
+    _validated_task_id,
+    clean_task_execution,
+    fresh_execution_workspace,
+    task_branches,
+)
 
 CAMPAIGN_STATUS_SCHEMA = "program-execution-controller.campaign-status.v1"
 SOURCE_STATUSES = {"operator_intake", "registered", "withdrawn"}
@@ -532,6 +548,7 @@ def relock_definitions(
             lease = db.active_lease_for_task(task_id)
             if lease is not None:
                 db.release_lease(str(lease["lease_id"]))
+            _settle_live_attempt(db, task_id, state=ATTEMPT_ABANDONED, reason="definition_relocked")
             if state not in {"WAITING", "BLOCKED", "ELIGIBLE"}:
                 # STALE is the state model's own word for "the definition this
                 # was working from was replaced", and unlike BLOCKED it is
@@ -1229,6 +1246,7 @@ def status(workspace: Path) -> dict[str, Any]:
                     # waiting_reasons and the full set in reasons (ADR-0023).
                     "blockers": detail["blocking_reasons"],
                     "reasons": detail["reasons"],
+                    "execution_attempt": _attempt_summary(db.live_execution_attempt(task["id"])),
                 }
             )
         ledger_ok, ledger_message = ledger.verify()
@@ -1277,10 +1295,56 @@ def status(workspace: Path) -> dict[str, Any]:
             "decisions": db.decisions(),
             "unknowns": db.unknowns(),
             "active_leases": db.active_leases(),
+            "live_execution_attempts": [
+                _attempt_summary(item) for item in db.live_execution_attempts()
+            ],
             "ledger": {"valid": ledger_ok, "message": ledger_message},
         }
     finally:
         db.close()
+
+
+def _attempt_summary(attempt: dict[str, Any] | None) -> dict[str, Any] | None:
+    if attempt is None:
+        return None
+    return {
+        "attempt_id": attempt["attempt_id"],
+        "task_id": attempt["task_id"],
+        "attempt_number": attempt["attempt_number"],
+        "lease_id": attempt["lease_id"],
+        "state": attempt["state"],
+        "fence_status": attempt["fence_status"],
+        "provider_ref": attempt.get("provider_ref"),
+        "provider_execution_id": attempt.get("provider_execution_id"),
+        "baseline_digest": attempt["baseline_digest"],
+        "started_at": attempt["started_at"],
+    }
+
+
+def _settle_live_attempt(
+    db: StateDB,
+    task_id: str,
+    *,
+    state: str,
+    terminal_status: str | None = None,
+    reason: str | None = None,
+    fence: bool = False,
+) -> dict[str, Any] | None:
+    """Move the task's live attempt (if any) to a settled state. Idempotent."""
+    attempt = db.live_execution_attempt(task_id)
+    if attempt is None:
+        return None
+    fields: dict[str, Any] = {
+        "state": state,
+        "terminal_at": utc_now(),
+        "terminal_status": terminal_status or state,
+        "reason": reason,
+    }
+    if fence:
+        fields["fence_status"] = FENCE_FENCED
+        fields["fenced_at"] = fields["terminal_at"]
+    db.update_execution_attempt(str(attempt["attempt_id"]), **fields)
+    return db.execution_attempt(str(attempt["attempt_id"]))
 
 
 def next_tasks(workspace: Path) -> dict[str, Any]:
@@ -1626,7 +1690,9 @@ def _worktree_matches_lease(worktree: Path, lease: dict[str, Any], repo_path: Pa
     return ancestry.returncode == 0
 
 
-def start_task(workspace: Path, task_id: str, actor: str) -> dict[str, Any]:
+def start_task(
+    workspace: Path, task_id: str, actor: str, *, provider_ref: str | None = None
+) -> dict[str, Any]:
     db, ledger = open_runtime(workspace)
     try:
         task = db.task(task_id)
@@ -1680,13 +1746,128 @@ def start_task(workspace: Path, task_id: str, actor: str) -> dict[str, Any]:
         _require_ledger_integrity(ledger)
         _refuse_operator_memo_cwd(workspace)
         ensure_campaign_active(workspace, actor, db, ledger)
-        db.transition_task(task_id, "EXECUTING")
+        lease = db.active_lease_for_task(task_id)
+        if lease is None or str(lease.get("lease_id")) != str(task.get("lease_id") or ""):
+            raise ControllerError(
+                f"{task_id}: no active lease bound to the task; refuse to dispatch",
+                error_code="STALE_LEASE_RESULT",
+            )
+        if db.live_execution_attempt(task_id) is not None:
+            raise ControllerError(
+                f"{task_id}: an execution attempt is still live; resolve, fence or abandon "
+                "it through recovery before dispatching a successor",
+                error_code="EXECUTION_ATTEMPT_STILL_LIVE",
+            )
+        worktree = Path(str(task.get("worktree") or ""))
+        if not task.get("worktree") or not worktree.is_dir():
+            raise ControllerError(
+                f"{task_id}: worktree is not prepared; refuse to dispatch without a baseline",
+                error_code="EXECUTION_BASELINE_MISSING",
+            )
+        # Durable attempt identity and immutable pre-effect baseline BEFORE any
+        # provider may run (PEC-P0-003). The baseline is captured from the
+        # worktree as it is right now, written atomically, and bound to this
+        # attempt in the same transaction that moves the task to EXECUTING. A
+        # crash before this commit leaves nothing to resume; a crash after it
+        # leaves exactly one attempt to reconcile against exactly one baseline.
+        attempt_number = db.next_execution_attempt_number(task_id)
+        attempt_id = f"attempt-{uuid.uuid4().hex[:16]}"
+        baseline = capture_baseline(worktree)
+        baseline_path, baseline_digest = write_baseline_artifact(
+            workspace,
+            task_id=task_id,
+            attempt_id=attempt_id,
+            lease_id=str(lease["lease_id"]),
+            program_digest=str(db.get_meta("program_digest")),
+            contract_digest=str(task["rendered_contract_digest"]),
+            base_sha=str(task.get("base_sha") or ""),
+            worktree=worktree,
+            baseline=baseline,
+        )
+        record = {
+            "attempt_id": attempt_id,
+            "task_id": task_id,
+            "attempt_number": attempt_number,
+            "lease_id": str(lease["lease_id"]),
+            "program_digest": str(db.get_meta("program_digest")),
+            "contract_digest": str(task["rendered_contract_digest"]),
+            "base_sha": str(task.get("base_sha") or ""),
+            "worktree": str(worktree.resolve()),
+            "baseline_path": str(baseline_path),
+            "baseline_digest": baseline_digest,
+            "state": ATTEMPT_DISPATCHING,
+            "provider_ref": provider_ref,
+            "provider_execution_id": None,
+            "started_at": utc_now(),
+        }
+        with db.controller_transaction():
+            db.create_execution_attempt(record)
+            db.transition_task(task_id, "EXECUTING")
         ledger.append(
             "TASK_EXECUTION_STARTED",
             actor,
-            {"task_id": task_id, "contract_digest": task["rendered_contract_digest"]},
+            {
+                "task_id": task_id,
+                "contract_digest": task["rendered_contract_digest"],
+                "attempt_id": attempt_id,
+                "attempt_number": attempt_number,
+                "lease_id": str(lease["lease_id"]),
+                "baseline_digest": baseline_digest,
+                "baseline_paths": len(baseline),
+            },
         )
-        return {"status": "EXECUTING", "task_id": task_id}
+        return {
+            "status": "EXECUTING",
+            "task_id": task_id,
+            "attempt_id": attempt_id,
+            "attempt_number": attempt_number,
+            "lease_id": str(lease["lease_id"]),
+            "baseline_digest": baseline_digest,
+            "baseline_path": str(baseline_path),
+        }
+    finally:
+        db.close()
+
+
+def bind_dispatch(
+    workspace: Path,
+    task_id: str,
+    *,
+    provider_execution_id: str,
+    provider_ref: str | None = None,
+) -> dict[str, Any]:
+    """Persist the provider's own execution/job identity on the live attempt.
+
+    Correlation, never proof: a provider that offers no identifier falls into
+    the stricter fencing path in recovery, and one that does lets recovery ask
+    the provider whether the window is still running.
+    """
+    db, ledger = open_runtime(workspace)
+    try:
+        attempt = db.live_execution_attempt(task_id)
+        if attempt is None:
+            raise ControllerError(
+                f"{task_id}: no live execution attempt to bind a dispatch to",
+                error_code="STALE_ATTEMPT_RESULT",
+            )
+        fields: dict[str, Any] = {
+            "provider_execution_id": provider_execution_id,
+            "state": ATTEMPT_RUNNING,
+        }
+        if provider_ref:
+            fields["provider_ref"] = provider_ref
+        db.update_execution_attempt(str(attempt["attempt_id"]), **fields)
+        ledger.append(
+            "EXECUTION_DISPATCH_BOUND",
+            "controller",
+            {
+                "task_id": task_id,
+                "attempt_id": attempt["attempt_id"],
+                "provider_execution_id": provider_execution_id,
+                "provider_ref": provider_ref or attempt.get("provider_ref"),
+            },
+        )
+        return _attempt_summary(db.execution_attempt(str(attempt["attempt_id"]))) or {}
     finally:
         db.close()
 
@@ -1713,20 +1894,61 @@ def record_attempt(workspace: Path, task_id: str, receipt_source: Path) -> dict[
             raise ControllerError("Attempt Receipt Program Lock mismatch")
         if receipt["base_sha"] != task["base_sha"]:
             raise ControllerError("Attempt Receipt base SHA mismatch")
-        attempt = db.next_attempt_number(task_id)
+        live = db.live_execution_attempt(task_id)
+        if live is None:
+            # EXECUTING with no live attempt: a legacy runtime migrated mid-flight
+            # or an attempt recovery already settled. Either way the effects in
+            # the worktree cannot be attributed to a dispatch the Controller
+            # witnessed, so they never become a Program attempt.
+            raise ControllerError(
+                f"{task_id} is EXECUTING with no live execution attempt; recovery is "
+                "required before a result can be recorded",
+                error_code="RUNTIME_RECONCILIATION_REQUIRED",
+            )
+        if live.get("fence_status") != "none":
+            raise ControllerError(
+                f"{task_id}: execution attempt {live['attempt_id']} is fenced; its result "
+                "is refused",
+                error_code="STALE_ATTEMPT_RESULT",
+            )
+        lease = db.active_lease_for_task(task_id)
+        if lease is None or str(lease["lease_id"]) != str(live["lease_id"]):
+            raise ControllerError(
+                f"{task_id}: the live attempt was dispatched under lease {live['lease_id']}, "
+                "which is no longer the task's active lease; result refused",
+                error_code="STALE_LEASE_RESULT",
+            )
+        if (
+            receipt["contract_digest"] != live["contract_digest"]
+            or receipt["base_sha"] != live["base_sha"]
+            or receipt["program_digest"] != live["program_digest"]
+        ):
+            raise ControllerError(
+                f"{task_id}: Attempt Receipt does not bind execution attempt {live['attempt_id']}",
+                error_code="STALE_ATTEMPT_RESULT",
+            )
+        attempt = int(live["attempt_number"])
         target = (
             workspace / "attempts" / task_id / f"attempt-{attempt:03d}" / "attempt-receipt.json"
         )
         write_json(target, receipt)
-        db.create_attempt(task_id, attempt, str(target), utc_now())
-        db.update_task(task_id, attempts=attempt)
-        db.transition_task(task_id, "SUBMITTED")
+        with db.controller_transaction():
+            db.create_attempt(task_id, attempt, str(target), utc_now())
+            db.update_task(task_id, attempts=attempt)
+            db.update_execution_attempt(
+                str(live["attempt_id"]),
+                state=ATTEMPT_TERMINAL,
+                terminal_status="SUBMITTED",
+                terminal_at=utc_now(),
+            )
+            db.transition_task(task_id, "SUBMITTED")
         ledger.append(
             "ATTEMPT_RECORDED",
             "worker",
             {
                 "task_id": task_id,
                 "attempt": attempt,
+                "attempt_id": live["attempt_id"],
                 "receipt": str(target),
                 "receipt_digest": digest_object(receipt),
             },
@@ -1735,6 +1957,7 @@ def record_attempt(workspace: Path, task_id: str, receipt_source: Path) -> dict[
             "status": "SUBMITTED",
             "task_id": task_id,
             "attempt": attempt,
+            "attempt_id": live["attempt_id"],
             "receipt": str(target),
         }
         from .signals import publish_controller_event
@@ -2322,10 +2545,21 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
         )
         attempt_number = attempt["attempt_number"] if attempt else task["attempts"]
         evidence_id = f"EVID-RUNTIME-{task_id}-{int(attempt_number):03d}"
+        execution_attempt = next(
+            (
+                item
+                for item in db.execution_attempts(task_id)
+                if int(item["attempt_number"]) == int(attempt_number)
+            ),
+            None,
+        )
         verification = {
             "schema": "program-execution-controller.verification-receipt.v2",
             "verification_id": f"VERIFY-{uuid.uuid4().hex[:16]}",
             "task_id": task_id,
+            "execution_attempt_id": (
+                str(execution_attempt["attempt_id"]) if execution_attempt else None
+            ),
             "contract_digest": task.get("rendered_contract_digest"),
             "program_digest": db.get_meta("program_digest"),
             "base_sha": task.get("base_sha"),
@@ -2370,6 +2604,10 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
             verdict,
             last_error=None if verdict == "PASSED_LOCAL" else json.dumps(gates, sort_keys=True),
         )
+        if execution_attempt is not None:
+            db.update_execution_attempt(
+                str(execution_attempt["attempt_id"]), terminal_status=verdict
+            )
         ledger.append(
             "ATTEMPT_VERIFIED",
             "controller",
@@ -2429,6 +2667,9 @@ def fail_task(workspace: Path, task_id: str, reason: str, actor: str) -> dict[st
             )
         lease = db.active_lease_for_task(task_id)
         lease_id = None
+        settled = _settle_live_attempt(
+            db, task_id, state=ATTEMPT_TERMINAL, terminal_status="FAILED", reason=reason
+        )
         if lease is not None:
             lease_id = str(lease["lease_id"])
             db.release_lease(lease_id)
@@ -2443,6 +2684,7 @@ def fail_task(workspace: Path, task_id: str, reason: str, actor: str) -> dict[st
                 "lease_id": lease_id,
                 "lease_released": lease_id is not None,
                 "worktree_preserved": task.get("worktree"),
+                "attempt_id": settled["attempt_id"] if settled else None,
             },
         )
         return {
@@ -2499,6 +2741,15 @@ def recover(workspace: Path, actor: str) -> dict[str, Any]:
                     run_git(worktree, "ls-files", "--others", "--exclude-standard").stdout,
                     encoding="utf-8",
                 )
+            settled = _settle_live_attempt(
+                db,
+                lease["task_id"],
+                state=ATTEMPT_ORPHANED,
+                terminal_status="ORPHANED",
+                reason="lease_expired",
+                fence=True,
+            )
+            metadata["execution_attempt"] = _attempt_summary(settled)
             write_json(recovery_root / "metadata.json", metadata)
             evidence_id = f"EVID-RECOVERY-{lease['lease_id']}"
             db.upsert_evidence(
@@ -2549,6 +2800,280 @@ def recover(workspace: Path, actor: str) -> dict[str, Any]:
     finally:
         db.close()
     return {"status": "RECOVERED", "items": recovered}
+
+
+RECOVERABLE_TASK_STATES = ACTIVE_RUNTIME_STATES | {"FAILED", "STALE"}
+
+
+def _capture_recovery_evidence(recovery_root: Path, worktree: Path | None) -> dict[str, Any]:
+    """Everything a recovery must preserve before anything is destroyed.
+
+    Raises on any failure to read the worktree: destroying state whose
+    evidence could not be captured is the one thing recovery may never do.
+    """
+    recovery_root.mkdir(parents=True, exist_ok=True)
+    if worktree is None or not worktree.is_dir():
+        return {"worktree": "absent"}
+    inside = run_git(worktree, "rev-parse", "--is-inside-work-tree", check=False)
+    if inside.returncode != 0 or inside.stdout.strip() != "true":
+        # A directory with no git metadata: nothing to diff, so preserve the
+        # whole tree as it stands. Every file is "untracked" by definition.
+        files = sorted(
+            str(item.relative_to(worktree)).replace("\\", "/")
+            for item in worktree.rglob("*")
+            if item.is_file() and not item.is_symlink()
+        )
+        untracked_root = recovery_root / "untracked"
+        for rel in files:
+            target = untracked_root / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(worktree / rel, target)
+        (recovery_root / "status.txt").write_text("", encoding="utf-8")
+        (recovery_root / "changes.patch").write_text("", encoding="utf-8")
+        (recovery_root / "untracked.txt").write_text(
+            "".join(f"{rel}\n" for rel in files), encoding="utf-8"
+        )
+        return {"worktree": str(worktree), "git": "not_a_git_worktree", "dirty_paths": files}
+    status = run_git(worktree, "status", "--porcelain=v1").stdout
+    head = run_git(worktree, "rev-parse", "HEAD").stdout.strip()
+    branch = run_git(worktree, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
+    patch = run_git(worktree, "diff", "--binary").stdout
+    untracked = run_git(worktree, "ls-files", "--others", "--exclude-standard").stdout
+    (recovery_root / "status.txt").write_text(status, encoding="utf-8")
+    (recovery_root / "changes.patch").write_text(patch, encoding="utf-8")
+    (recovery_root / "untracked.txt").write_text(untracked, encoding="utf-8")
+    untracked_root = recovery_root / "untracked"
+    for line in untracked.splitlines():
+        rel = line.strip()
+        source = worktree / rel
+        if rel and source.is_file() and not source.is_symlink():
+            target = untracked_root / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, target)
+    return {
+        "worktree": str(worktree),
+        "head": head,
+        "branch": branch,
+        "dirty": bool(status.strip()),
+        "dirty_paths": sorted(line[3:].strip() for line in status.splitlines() if len(line) > 3),
+    }
+
+
+def recover_execution(
+    workspace: Path,
+    actor: str,
+    *,
+    reason: str,
+    task_ids: list[str] | None = None,
+    repository: Path | None = None,
+    provider_terminated: bool = False,
+    clean_worktrees: bool = True,
+) -> dict[str, Any]:
+    """The only authority for taking execution authority away from a task.
+
+    For every affected task, in this order: load task, lease and live attempt;
+    capture recovery evidence (branch, HEAD, dirty diff, untracked files,
+    baseline identity, lease, attempt, provider correlation, reason); in one
+    transaction re-check identity, fence the live attempt, release the lease
+    and land the task on STALE; record the evidence; only then remove the
+    worktree and task branch. Readiness is recomputed by the next claim --
+    recovery never forces STALE -> ELIGIBLE (PEC-P0-001).
+
+    Idempotent: an attempt already fenced, a lease already inactive, a
+    worktree already gone and a task already STALE each produce no second
+    transition, event or evidence record.
+    """
+    db, ledger = open_runtime(workspace)
+    workspace = workspace.resolve()
+    items: list[dict[str, Any]] = []
+    try:
+        _require_ledger_integrity(ledger)
+        if task_ids is None:
+            candidates = sorted(
+                {str(item["task_id"]) for item in db.active_leases()}
+                | {str(item["task_id"]) for item in db.live_execution_attempts()}
+                | {
+                    str(task["id"])
+                    for task in db.tasks()
+                    if (workspace / "worktrees" / str(task["id"])).is_dir()
+                }
+            )
+        else:
+            candidates = [_validated_task_id(workspace, task_id) for task_id in task_ids]
+        for task_id in candidates:
+            task = db.task(task_id)
+            if task is None:
+                raise ControllerError(f"unknown task: {task_id}")
+            lease = db.active_lease_for_task(task_id)
+            attempt = db.live_execution_attempt(task_id)
+            worktree_path = workspace / "worktrees" / task_id
+            repo_path: Path | None = repository
+            if repo_path is None:
+                repo = db.repository(str(task.get("repository_id") or ""))
+                if repo and repo.get("local_path"):
+                    repo_path = Path(str(repo["local_path"]))
+            nothing_live = lease is None and attempt is None and not worktree_path.exists()
+            if nothing_live and task["runtime_state"] not in ACTIVE_RUNTIME_STATES:
+                items.append({"task_id": task_id, "status": "NOTHING_TO_RECOVER"})
+                continue
+            identity = (
+                str(attempt["attempt_id"]) if attempt else None,
+                str(lease["lease_id"]) if lease else None,
+            )
+            recovery_id = identity[0] or identity[1] or f"orphan-{uuid.uuid4().hex[:12]}"
+            recovery_root = workspace / "recovery" / task_id / recovery_id
+            if (recovery_root / "metadata.json").is_file():
+                # Already recovered under this identity: verify and continue.
+                evidence = {"worktree": "already_preserved"}
+            else:
+                evidence = _capture_recovery_evidence(
+                    recovery_root, worktree_path if worktree_path.exists() else None
+                )
+            fence_proof = (
+                "provider_terminated_confirmed" if provider_terminated else "identity_fence_only"
+            )
+            metadata = {
+                "schema": "program-execution-controller.execution-recovery.v1",
+                "task_id": task_id,
+                "recovered_at": utc_now(),
+                "actor": actor,
+                "reason": reason,
+                "previous_runtime_state": task["runtime_state"],
+                "lease": lease,
+                "execution_attempt": _attempt_summary(attempt),
+                "baseline": {
+                    "path": attempt["baseline_path"] if attempt else None,
+                    "digest": attempt["baseline_digest"] if attempt else None,
+                },
+                "provider_correlation": {
+                    "provider_ref": attempt.get("provider_ref") if attempt else None,
+                    "provider_execution_id": (
+                        attempt.get("provider_execution_id") if attempt else None
+                    ),
+                    "termination": "confirmed" if provider_terminated else "unknown",
+                },
+                "fence_proof": fence_proof,
+                "worktree_evidence": evidence,
+            }
+            transitioned = False
+            with db.controller_transaction():
+                # Race defence: the identities inspected above must still be the
+                # identities being mutated.
+                now_attempt = db.live_execution_attempt(task_id)
+                now_lease = db.active_lease_for_task(task_id)
+                if (
+                    (str(now_attempt["attempt_id"]) if now_attempt else None),
+                    (str(now_lease["lease_id"]) if now_lease else None),
+                ) != identity:
+                    raise ControllerError(
+                        f"{task_id}: lease or attempt identity changed during recovery; "
+                        "re-run recovery",
+                        error_code="RUNTIME_RECONCILIATION_REQUIRED",
+                    )
+                fenced = _settle_live_attempt(
+                    db,
+                    task_id,
+                    state=ATTEMPT_FENCED,
+                    terminal_status="ORPHANED",
+                    reason=f"recovery:{reason}",
+                    fence=True,
+                )
+                if lease is not None:
+                    db.release_lease(str(lease["lease_id"]))
+                    db.update_task(task_id, lease_id=None)
+                current = db.task(task_id) or task
+                if current["runtime_state"] in RECOVERABLE_TASK_STATES and (
+                    current["runtime_state"] != "STALE"
+                ):
+                    db.transition_task(task_id, "STALE", last_error=f"recovery:{reason}")
+                    transitioned = True
+                if not (recovery_root / "metadata.json").is_file():
+                    write_json(recovery_root / "metadata.json", metadata)
+                    evidence_id = f"EVID-RECOVERY-{recovery_id}"
+                    db.upsert_evidence(
+                        {
+                            "id": evidence_id,
+                            "type": "recovery_artifact",
+                            "source": str(recovery_root),
+                            "revision": (lease or {}).get("base_sha") or task.get("base_sha"),
+                            "digest": digest_object(metadata),
+                            "method": "execution_recovery",
+                            "environment": "controller_runtime",
+                            "producer": actor,
+                            "produced_at": metadata["recovered_at"],
+                            "expires_at": None,
+                            "result": "INFORMATIONAL",
+                            "status": "available",
+                            "supports": [task_id],
+                            "contradicts": [],
+                            "notes": f"Execution recovery evidence ({fence_proof}).",
+                        }
+                    )
+                else:
+                    evidence_id = f"EVID-RECOVERY-{recovery_id}"
+            cleanup: dict[str, Any] | None = None
+            if clean_worktrees and repo_path is not None and repo_path.is_dir():
+                branches = task_branches(repo_path, task_id) or [None]
+                cleanup = [
+                    clean_task_execution(
+                        workspace,
+                        repo_path,
+                        task_id,
+                        branch=branch or (lease or {}).get("branch"),
+                    )
+                    for branch in branches
+                ]
+            elif worktree_path.exists() and clean_worktrees:
+                raise ControllerError(
+                    f"{task_id}: worktree {worktree_path} exists but no repository is known "
+                    "to detach it from; pass --repository",
+                    error_code="RUNTIME_RECONCILIATION_REQUIRED",
+                )
+            item = {
+                "task_id": task_id,
+                "status": "RECOVERED",
+                "attempt_fenced": fenced["attempt_id"] if fenced else None,
+                "lease_released": str(lease["lease_id"]) if lease else None,
+                "runtime_state": (db.task(task_id) or {}).get("runtime_state"),
+                "transitioned": transitioned,
+                "fence_proof": fence_proof,
+                "evidence_id": evidence_id,
+                "artifact": str(recovery_root),
+                "cleanup": cleanup,
+            }
+            ledger.append("EXECUTION_RECOVERED", actor, item)
+            items.append(item)
+        return {"status": "RECOVERED", "reason": reason, "items": items}
+    finally:
+        db.close()
+
+
+def fresh_workspace(
+    workspace: Path,
+    repository: Path,
+    actor: str,
+    *,
+    reason: str,
+    task_ids: list[str] | None = None,
+    provider_terminated: bool = False,
+) -> dict[str, Any]:
+    """`pec fresh-workspace`: a presentation over Controller recovery.
+
+    Recovery fences, preserves and releases first; only then are the
+    filesystem mechanics (worktrees, registrations, `pec/*` branches, orphan
+    directories) swept. Nothing here decides lease, task or attempt state.
+    """
+    recovered = recover_execution(
+        workspace,
+        actor,
+        reason=reason,
+        task_ids=task_ids,
+        repository=repository,
+        provider_terminated=provider_terminated,
+        clean_worktrees=True,
+    )
+    mechanics = fresh_execution_workspace(workspace, repository, task_ids=task_ids or None)
+    return {**mechanics, "recovery": recovered}
 
 
 def add_approval(workspace: Path, approval_file: Path) -> dict[str, Any]:

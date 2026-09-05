@@ -3520,6 +3520,19 @@ def _prepare_peer_unit(
     pre_dispatch_baseline: dict[str, str] = {}
     if not already_submitted:
         if resumed_executing:
+            # The Controller is the authority on whether a dispatch exists to
+            # resume. EXECUTING with no live execution attempt (a runtime
+            # migrated mid-flight, or one whose attempt recovery already
+            # settled) has effects nobody can attribute; fail closed.
+            if not (states.get(task_id) or {}).get("execution_attempt"):
+                reason = (
+                    f"{task_id} is EXECUTING with no live Controller execution attempt; "
+                    "its worktree effects cannot be attributed to a dispatch the Controller "
+                    "witnessed. Run `pec recover-execution` (or `pec fresh-workspace`) "
+                    "to fence and preserve them before a successor is dispatched."
+                )
+                _record_canonical_failure(workspace, None, task_id, reason)
+                raise CampaignError(reason, error_code="RUNTIME_RECONCILIATION_REQUIRED")
             try:
                 pre_dispatch_baseline = load_effect_baseline(
                     workspace, task_id, contract=contract, worktree=Path(str(worktree))
@@ -3765,6 +3778,29 @@ def publish_task_outcome(
         log(f"generated-data publication failed for {task_id}: {exc}")
 
 
+def _bind_dispatch_correlation(
+    workspace: Path, task_id: str, outcome: dict[str, Any] | None
+) -> None:
+    """Persist the provider's dispatch id on the Controller's live attempt.
+
+    Correlation only: recovery can ask the provider about a window it can name.
+    A provider that offers no id is not refused here; it falls into the stricter
+    fencing path. A bind the Controller refuses (fenced or stale attempt) is not
+    masked either -- record-attempt refuses the same result a moment later.
+    """
+    dispatch_id = str((outcome or {}).get("dispatch_id") or "")
+    if not dispatch_id:
+        return
+    args = ["--provider-execution-id", dispatch_id]
+    provider_ref = str((outcome or {}).get("provider_ref") or "")
+    if provider_ref:
+        args.extend(["--provider-ref", provider_ref])
+    try:
+        pec_cmd(workspace, "bind-dispatch", task_id, *args)
+    except CampaignError as exc:
+        log(f"dispatch correlation for {task_id} was not bound: {exc}")
+
+
 def _finish_peer_unit(
     workspace: Path,
     campaign_id: str,
@@ -3812,6 +3848,7 @@ def _finish_peer_unit(
         receipt_path = Path(str(contract["attempt_receipt_path"]))
         if not receipt_path.is_file():
             raise CampaignError(f"Peer Core did not persist attempt receipt for {task_id}")
+        _bind_dispatch_correlation(workspace, task_id, outcome)
         # Mediation coverage precedes the Controller: an unmediated write must
         # never become a recorded Program attempt.
         actual_changed = _require_mediated_effects(unit, trace=trace)

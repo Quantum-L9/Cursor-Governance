@@ -14,7 +14,8 @@ from .common import verification_mechanisms_from_card
 #:   1  original tables (implicit: no version key)
 #:   2  tasks.verification_mechanisms column (implicit: column present)
 #:   3  explicit version key + Controller transactions (PEC remediation R3)
-RUNTIME_SCHEMA_VERSION = 3
+#:   4  execution_attempts: durable attempt identity + baseline binding (R4)
+RUNTIME_SCHEMA_VERSION = 4
 RUNTIME_SCHEMA_KEY = "runtime_schema_version"
 #: Bounded wait for the single-writer lock before a mutation is refused.
 BUSY_TIMEOUT_SECONDS = 5.0
@@ -269,6 +270,31 @@ class StateDB:
               approval_id TEXT PRIMARY KEY,
               payload TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS execution_attempts (
+              attempt_id TEXT PRIMARY KEY,
+              task_id TEXT NOT NULL,
+              attempt_number INTEGER NOT NULL,
+              lease_id TEXT NOT NULL,
+              program_digest TEXT NOT NULL,
+              contract_digest TEXT NOT NULL,
+              base_sha TEXT NOT NULL,
+              worktree TEXT NOT NULL,
+              baseline_path TEXT NOT NULL,
+              baseline_digest TEXT NOT NULL,
+              state TEXT NOT NULL,
+              provider_ref TEXT,
+              provider_execution_id TEXT,
+              started_at TEXT NOT NULL,
+              terminal_at TEXT,
+              terminal_status TEXT,
+              fence_status TEXT NOT NULL DEFAULT 'none',
+              fenced_at TEXT,
+              reason TEXT,
+              UNIQUE(task_id, attempt_number)
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS live_task_attempt
+              ON execution_attempts(task_id)
+              WHERE state IN ('BASELINED', 'DISPATCHING', 'RUNNING');
             """
         )
         if recorded != RUNTIME_SCHEMA_VERSION:
@@ -826,4 +852,112 @@ class StateDB:
         return [
             json.loads(row["payload"])
             for row in self.conn.execute("SELECT payload FROM approvals ORDER BY approval_id")
+        ]
+
+    # ---------------------------------------------------- execution attempts
+    _LIVE_ATTEMPT_STATES = ("BASELINED", "DISPATCHING", "RUNNING")
+
+    def next_execution_attempt_number(self, task_id: str) -> int:
+        """One numbering for dispatched attempts and recorded receipts.
+
+        A dispatched attempt that never records a receipt (host crash) still
+        consumed its number, so the next dispatch takes the number after the
+        larger of the two tables.
+        """
+        row = self.conn.execute(
+            "SELECT COALESCE(MAX(n),0)+1 AS n FROM ("
+            "  SELECT MAX(attempt_number) AS n FROM execution_attempts WHERE task_id=?"
+            "  UNION ALL SELECT MAX(attempt_number) AS n FROM attempts WHERE task_id=?)",
+            (task_id, task_id),
+        ).fetchone()
+        return int(row["n"])
+
+    def create_execution_attempt(self, record: dict[str, Any]) -> None:
+        columns = (
+            "attempt_id",
+            "task_id",
+            "attempt_number",
+            "lease_id",
+            "program_digest",
+            "contract_digest",
+            "base_sha",
+            "worktree",
+            "baseline_path",
+            "baseline_digest",
+            "state",
+            "provider_ref",
+            "provider_execution_id",
+            "started_at",
+            "terminal_at",
+            "terminal_status",
+            "fence_status",
+            "fenced_at",
+            "reason",
+        )
+        payload = {name: record.get(name) for name in columns}
+        payload["fence_status"] = payload["fence_status"] or "none"
+        self.conn.execute(
+            "INSERT INTO execution_attempts("
+            + ",".join(columns)
+            + ") VALUES("
+            + ",".join(f":{name}" for name in columns)
+            + ")",
+            payload,
+        )
+        self._commit()
+
+    def update_execution_attempt(self, attempt_id: str, **fields: Any) -> None:
+        allowed = {
+            "state",
+            "provider_ref",
+            "provider_execution_id",
+            "terminal_at",
+            "terminal_status",
+            "fence_status",
+            "fenced_at",
+            "reason",
+        }
+        unknown = set(fields) - allowed
+        if unknown:
+            raise ValueError(f"unsupported execution attempt fields: {sorted(unknown)}")
+        if not fields:
+            return
+        sets = ",".join(f"{name}=?" for name in fields)
+        # Column names are validated against `allowed`; values are bound.
+        self.conn.execute(
+            f"UPDATE execution_attempts SET {sets} WHERE attempt_id=?",  # nosec B608
+            [*fields.values(), attempt_id],
+        )
+        self._commit()
+
+    def execution_attempt(self, attempt_id: str) -> dict[str, Any] | None:
+        row = self.conn.execute(
+            "SELECT * FROM execution_attempts WHERE attempt_id=?", (attempt_id,)
+        ).fetchone()
+        return None if row is None else dict(row)
+
+    def live_execution_attempt(self, task_id: str) -> dict[str, Any] | None:
+        row = self.conn.execute(
+            "SELECT * FROM execution_attempts WHERE task_id=? "
+            "AND state IN ('BASELINED','DISPATCHING','RUNNING')",
+            (task_id,),
+        ).fetchone()
+        return None if row is None else dict(row)
+
+    def live_execution_attempts(self) -> list[dict[str, Any]]:
+        return [
+            dict(row)
+            for row in self.conn.execute(
+                "SELECT * FROM execution_attempts "
+                "WHERE state IN ('BASELINED','DISPATCHING','RUNNING') ORDER BY started_at"
+            )
+        ]
+
+    def execution_attempts(self, task_id: str) -> list[dict[str, Any]]:
+        return [
+            dict(row)
+            for row in self.conn.execute(
+                "SELECT * FROM execution_attempts WHERE task_id=? ORDER BY attempt_number",
+                (task_id,),
+            )
         ]

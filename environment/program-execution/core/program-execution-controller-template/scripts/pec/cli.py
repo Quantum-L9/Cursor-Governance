@@ -18,6 +18,7 @@ from .controller import (
     ControllerError,
     add_approval,
     admit_resume,
+    bind_dispatch,
     bootstrap,
     claim_task,
     complete_campaign,
@@ -25,12 +26,14 @@ from .controller import (
     evaluate_gate,
     export_handoff,
     fail_task,
+    fresh_workspace,
     next_tasks,
     open_runtime,
     prepare_worktree,
     reconcile_repositories,
     record_attempt,
     recover,
+    recover_execution,
     release_lease,
     relock_definitions,
     set_decision,
@@ -43,7 +46,6 @@ from .controller import (
 )
 from .dispatch import dispatch_rendered_contract
 from .exec_env import resolve_exec_env
-from .workspace_reset import fresh_execution_workspace
 
 
 def print_json(value) -> None:
@@ -90,12 +92,34 @@ def parser() -> argparse.ArgumentParser:
 
     cmd = sub.add_parser(
         "fresh-workspace",
-        help="idempotently clear task worktrees, registrations and pec/* branches",
+        help="Controller recovery, then clear task worktrees, registrations and pec/* branches",
     )
     cmd.add_argument("--workspace", required=True, type=Path)
     cmd.add_argument("--repository", required=True, type=Path)
     cmd.add_argument("--task-id", action="append", default=[])
-    cmd.add_argument("--keep-leases", action="store_true")
+    cmd.add_argument("--actor", default="operator")
+    cmd.add_argument("--reason", default="fresh-workspace")
+    cmd.add_argument(
+        "--provider-terminated",
+        action="store_true",
+        help="the caller confirmed every affected provider window has terminated",
+    )
+
+    cmd = sub.add_parser(
+        "recover-execution",
+        help="fence live attempts, preserve evidence, release leases (no filesystem sweep)",
+    )
+    cmd.add_argument("--workspace", required=True, type=Path)
+    cmd.add_argument("--actor", required=True)
+    cmd.add_argument("--reason", required=True)
+    cmd.add_argument("--task-id", action="append", default=[])
+    cmd.add_argument("--repository", type=Path, default=None)
+    cmd.add_argument("--provider-terminated", action="store_true")
+    cmd.add_argument(
+        "--keep-worktrees",
+        action="store_true",
+        help="preserve the worktree in place after fencing (evidence is still captured)",
+    )
 
     cmd = sub.add_parser(
         "resolve-env", help="report the interpreter validation commands will resolve"
@@ -147,6 +171,15 @@ def parser() -> argparse.ArgumentParser:
     cmd.add_argument("task_id")
     cmd.add_argument("--workspace", required=True, type=Path)
     cmd.add_argument("--actor", required=True)
+    cmd.add_argument("--provider-ref", default=None)
+
+    cmd = sub.add_parser(
+        "bind-dispatch", help="record the provider execution id on the live attempt"
+    )
+    cmd.add_argument("task_id")
+    cmd.add_argument("--workspace", required=True, type=Path)
+    cmd.add_argument("--provider-execution-id", required=True)
+    cmd.add_argument("--provider-ref", default=None)
 
     cmd = sub.add_parser("record-attempt")
     cmd.add_argument("task_id")
@@ -283,6 +316,8 @@ _TUNNEL_COMMANDS = frozenset(
     {
         "bootstrap",
         "relock",
+        "fresh-workspace",
+        "recover-execution",
         "reconcile",
         "draft-contract",
         "register-contract",
@@ -290,6 +325,7 @@ _TUNNEL_COMMANDS = frozenset(
         "prepare",
         "render-contract",
         "start",
+        "bind-dispatch",
         "record-attempt",
         "verify",
         "complete",
@@ -363,11 +399,23 @@ def main(argv: list[str] | None = None, *, template_root: Path) -> int:
         elif args.command == "relock":
             value = relock_definitions(args.workspace, actor=args.actor, task_ids=args.tasks)
         elif args.command == "fresh-workspace":
-            value = fresh_execution_workspace(
+            value = fresh_workspace(
                 args.workspace,
                 args.repository,
+                args.actor,
+                reason=args.reason,
                 task_ids=args.task_id or None,
-                release_leases=not args.keep_leases,
+                provider_terminated=args.provider_terminated,
+            )
+        elif args.command == "recover-execution":
+            value = recover_execution(
+                args.workspace,
+                args.actor,
+                reason=args.reason,
+                task_ids=args.task_id or None,
+                repository=args.repository,
+                provider_terminated=args.provider_terminated,
+                clean_worktrees=not args.keep_worktrees,
             )
         elif args.command == "resolve-env":
             value = resolve_exec_env(args.cwd).describe()
@@ -434,7 +482,16 @@ def main(argv: list[str] | None = None, *, template_root: Path) -> int:
             finally:
                 db.close()
         elif args.command == "start":
-            value = start_task(args.workspace, args.task_id, args.actor)
+            value = start_task(
+                args.workspace, args.task_id, args.actor, provider_ref=args.provider_ref
+            )
+        elif args.command == "bind-dispatch":
+            value = bind_dispatch(
+                args.workspace,
+                args.task_id,
+                provider_execution_id=args.provider_execution_id,
+                provider_ref=args.provider_ref,
+            )
         elif args.command == "record-attempt":
             value = record_attempt(args.workspace, args.task_id, args.receipt)
         elif args.command == "verify":

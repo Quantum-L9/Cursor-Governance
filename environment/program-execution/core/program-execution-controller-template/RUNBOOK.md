@@ -113,10 +113,19 @@ once:
 python scripts/pec.py fresh-workspace --workspace ../runtime --repository <target>
 ```
 
-It clears task worktrees, git's worktree registrations, `pec/*` branches and
-open leases together — cleaning only some of them is what produced
-`fatal: a branch named 'pec/<wave>/task-xxx' already exists`. It is safe to run
-repeatedly and on a workspace that never executed anything.
+It is a presentation over Controller recovery (`pec recover-execution`): for
+every affected task the live execution attempt is fenced, its worktree evidence
+(branch, HEAD, dirty diff, untracked files, baseline identity, lease, provider
+correlation) is preserved under `recovery/<task>/<attempt>/`, the lease is
+released and the task lands on STALE -- readiness is recomputed by the next
+`claim`, never forced. Only then are task worktrees, git's worktree
+registrations and `pec/*` branches cleared together (cleaning only some of them
+is what produced `fatal: a branch named 'pec/<wave>/task-xxx' already exists`).
+A late result from the fenced attempt is refused by identity. Both commands
+are campaign-tunnel commands, safe to run repeatedly and on a workspace that
+never executed anything. Pass `--provider-terminated` only when every affected
+provider window is known to have stopped; the receipt records which fence proof
+applied.
 
 **Validation environment:** worker-side and controller-side validation resolve
 one interpreter through `pec/exec_env.py` (no login shell). To see what
