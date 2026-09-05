@@ -409,25 +409,23 @@ class GMPEnforcer:
             current_step="memory_read",
         )
         self._save_state()
-        print(f"✅ GMP initialized: {gmp_id}")  # noqa: ADR-0019
-        print(f"   Tier: {tier}")  # noqa: ADR-0019
-        print(f"   Task: {task_description}")  # noqa: ADR-0019
-        print("\n📍 First step: memory_read")  # noqa: ADR-0019
+        print(f"✅ GMP initialized: {gmp_id}")
+        print(f"   Tier: {tier}")
+        print(f"   Task: {task_description}")
+        print("\n📍 First step: memory_read")
 
     def status(self) -> None:
         """Print current status."""
         if not self.state:
-            print("❌ No active GMP. Initialize with:")  # noqa: ADR-0019
-            print(  # noqa: ADR-0019
-                "   python3 workflows/gmp_enforcer.py init GMP-XXX RUNTIME 'task description'"
-            )
+            print("❌ No active GMP. Initialize with:")
+            print("   python3 workflows/gmp_enforcer.py init GMP-XXX RUNTIME 'task description'")
             return
 
-        print(f"\n{'=' * 60}")  # noqa: ADR-0019
-        print(f"GMP: {self.state.gmp_id} ({self.state.tier})")  # noqa: ADR-0019
-        print(f"Task: {self.state.task_description}")  # noqa: ADR-0019
-        print(f"Started: {self.state.started_at}")  # noqa: ADR-0019
-        print(f"{'=' * 60}")  # noqa: ADR-0019
+        print(f"\n{'=' * 60}")
+        print(f"GMP: {self.state.gmp_id} ({self.state.tier})")
+        print(f"Task: {self.state.task_description}")
+        print(f"Started: {self.state.started_at}")
+        print(f"{'=' * 60}")
 
         for step in GMP_WORKFLOW:
             state_step = self.state.steps.get(step.id)
@@ -441,61 +439,57 @@ class GMPEnforcer:
                 }.get(state_step.status, "❓")
 
                 current = " ← CURRENT" if step.id == self.state.current_step else ""
-                print(f"  {status_icon} {step.name}{current}")  # noqa: ADR-0019
+                print(f"  {status_icon} {step.name}{current}")
 
-        print(f"{'=' * 60}\n")  # noqa: ADR-0019
+        print(f"{'=' * 60}\n")
 
     def next_step(self) -> None:
         """Get prompt for next required step."""
         if not self.state:
-            print("❌ No active GMP")  # noqa: ADR-0019
+            print("❌ No active GMP")
             return
 
         current = self.state.current_step
         if not current:
-            print("✅ All steps complete!")  # noqa: ADR-0019
+            print("✅ All steps complete!")
             return
 
         step = self.state.steps.get(current)
         if not step:
-            print(f"❌ Unknown step: {current}")  # noqa: ADR-0019
+            print(f"❌ Unknown step: {current}")
             return
 
         # Check dependencies
         for dep in step.depends_on:
             dep_step = self.state.steps.get(dep)
             if dep_step and dep_step.status != StepStatus.COMPLETED:
-                print(  # noqa: ADR-0019
-                    f"❌ BLOCKED: Step '{current}' requires '{dep}' to be completed first!"
-                )
-                print(f"\nComplete '{dep}' first with:")  # noqa: ADR-0019
-                print(f"   python3 workflows/gmp_enforcer.py complete {dep}")  # noqa: ADR-0019
+                print(f"❌ BLOCKED: Step '{current}' requires '{dep}' to be completed first!")
+                print(f"\nComplete '{dep}' first with:")
+                print(f"   python3 workflows/gmp_enforcer.py complete {dep}")
                 return
 
         # Show prompt
-        print(f"\n{'=' * 60}")  # noqa: ADR-0019
-        print(f"NEXT REQUIRED STEP: {step.name}")  # noqa: ADR-0019
-        print(f"{'=' * 60}")  # noqa: ADR-0019
-        print(step.prompt)  # noqa: ADR-0019
+        print(f"\n{'=' * 60}")
+        print(f"NEXT REQUIRED STEP: {step.name}")
+        print(f"{'=' * 60}")
+        print(step.prompt)
 
     def complete_step(self, step_id: str, output: str = "") -> None:
         """Mark a step as complete."""
         if not self.state:
-            print("❌ No active GMP")  # noqa: ADR-0019
+            print("❌ No active GMP")
             return
 
         step = self.state.steps.get(step_id)
         if not step:
-            print(f"❌ Unknown step: {step_id}")  # noqa: ADR-0019
+            print(f"❌ Unknown step: {step_id}")
             return
 
         # Check dependencies
         for dep in step.depends_on:
             dep_step = self.state.steps.get(dep)
             if dep_step and dep_step.status != StepStatus.COMPLETED:
-                print(  # noqa: ADR-0019
-                    f"❌ BLOCKED: Cannot complete '{step_id}' — requires '{dep}' first!"
-                )
+                print(f"❌ BLOCKED: Cannot complete '{step_id}' — requires '{dep}' first!")
                 return
 
         # Mark complete
@@ -513,19 +507,19 @@ class GMPEnforcer:
             self.state.current_step = None
 
         self._save_state()
-        print(f"✅ Step '{step_id}' completed!")  # noqa: ADR-0019
+        print(f"✅ Step '{step_id}' completed!")
 
         if self.state.current_step:
-            print(f"📍 Next step: {self.state.current_step}")  # noqa: ADR-0019
+            print(f"📍 Next step: {self.state.current_step}")
         else:
-            print("🎉 All steps complete!")  # noqa: ADR-0019
+            print("🎉 All steps complete!")
 
     def reset(self) -> None:
         """Reset workflow state."""
         if self.state_file.exists():
             self.state_file.unlink()
         self.state = None
-        print("✅ GMP state reset")  # noqa: ADR-0019
+        print("✅ GMP state reset")
 
 
 # =============================================================================

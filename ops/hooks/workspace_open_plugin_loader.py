@@ -49,7 +49,7 @@ def load_yaml_dict(path: Path) -> dict[str, Any]:
         return {}
     try:
         data = yaml.safe_load(path.read_text())
-    except Exception:
+    except (OSError, yaml.YAMLError):
         return {}
     return data if isinstance(data, dict) else {}
 
@@ -57,7 +57,7 @@ def load_yaml_dict(path: Path) -> dict[str, Any]:
 def load_json_dict(path: Path) -> dict[str, Any]:
     try:
         data = json.loads(path.read_text())
-    except Exception:
+    except (OSError, ValueError):
         return {}
     return data if isinstance(data, dict) else {}
 
@@ -157,6 +157,9 @@ def classify_only(workspace_arg: str) -> int:
     implementation (classify_workspace above), not a second bash port of it.
     Fails open to "core_default" on any error, same policy as the hook path.
     """
+    # The fail-open policy above is the contract, so the catch is deliberately
+    # broad.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         workspace = Path(workspace_arg).resolve()
         gov_root = resolve_governance_root()
@@ -174,6 +177,9 @@ def main() -> int:
     if len(sys.argv) >= 3 and sys.argv[1] == "--classify":
         return classify_only(sys.argv[2])
 
+    # Fail open: workspace open must never block on this hook, so any payload
+    # or resolution fault degrades to an empty plugin list.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         payload = json.load(sys.stdin)
         workspace_roots = payload.get("workspace_roots") or []

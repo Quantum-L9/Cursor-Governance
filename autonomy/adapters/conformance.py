@@ -14,6 +14,7 @@ from autonomy.adapters.protocol import (
     ConformanceReport,
     ConformanceStatus,
 )
+from autonomy.errors import CompatibilityError
 from autonomy.versioning import Version
 
 _CHECK_IDS = {
@@ -53,7 +54,10 @@ def _load_binding_resolver(repository_root: Path):
     sys.modules[_BINDING_RESOLVER_MODULE] = module
     try:
         spec.loader.exec_module(module)
-    except Exception:
+    # BaseException, not Exception: a partially executed module must be
+    # unregistered even when the load is interrupted, or the next import
+    # silently gets the broken half. The block re-raises.
+    except BaseException:
         sys.modules.pop(_BINDING_RESOLVER_MODULE, None)
         raise
     return module.resolve_peer_binding
@@ -99,7 +103,7 @@ class AdapterConformance:
             actual = Version.parse(config.protocol_version)
             required = Version.parse(configured)
             passed = actual.major == required.major and actual >= required
-        except Exception:
+        except CompatibilityError:
             passed = False
         return ConformanceCheck(
             "ADAPTER-001",

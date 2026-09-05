@@ -107,8 +107,12 @@ def _emit(permission: str, message: str | None = None) -> int:
 def _graphiti(raw: str) -> tuple[str, str]:
     try:
         import graphiti_gate_lib as lib
-    except Exception:
+    except ImportError:
         return "allow", ""
+    # Deliberately broad: the gate library is external to this hook, and its
+    # failure mode is a policy decision, not a crash -- deny when gates are
+    # enabled, otherwise allow.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         result = lib.shell_gate(raw)
     except Exception:

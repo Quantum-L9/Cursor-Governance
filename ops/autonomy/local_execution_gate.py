@@ -625,6 +625,8 @@ def _guardrail_from_payload(raw: str) -> str | None:
             command = str(tool_input.get("command") or tool_input.get("cmd") or "")
     if not command.strip():
         return None
+    # Broad by design; the handler below carries the reason.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         root = workspace_from_event(event)
     except Exception:  # noqa: BLE001 - an unresolvable workspace is not a verdict

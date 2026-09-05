@@ -700,7 +700,7 @@ def get_wire_dag() -> SessionDAG:
 
 # Generate Mermaid diagram for documentation
 if __name__ == "__main__":
-    print(WIRE_DAG.to_markdown())  # noqa: ADR-0019
+    print(WIRE_DAG.to_markdown())
 # ============================================================================
 # DORA FOOTER META - AUTO-GENERATED - DO NOT EDIT MANUALLY
 # ============================================================================

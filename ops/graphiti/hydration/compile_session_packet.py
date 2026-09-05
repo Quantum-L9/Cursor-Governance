@@ -28,6 +28,8 @@ from ops.graphiti.hydration.session_latches import (  # noqa: E402
 
 
 def _read_groups(group_id: str) -> list[str]:
+    # Broad by design; the handler below carries the reason.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         import graphiti_memory_client as gmc
 
@@ -43,6 +45,8 @@ def _hydration_budget() -> int:
     raw = os.environ.get("MEMORY_HYDRATION_CHAR_BUDGET", "").strip()
     if raw.isdigit():
         return max(500, int(raw))
+    # Broad by design; the handler below carries the reason.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         import yaml
 
@@ -215,6 +219,8 @@ def compile_session_packet(
     close_gap_text = close_gap_reason(project, conversation_id)
     if close_gap_text:
         close_gap = True
+    # Broad by design; the handler below carries the reason.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         identity = resolve_write_identity(explicit_agent_id=agent_id, surface="cursor")
     except Exception:  # noqa: BLE001

@@ -313,6 +313,8 @@ def _pickup_payload(
         "source_description": stamp_source_description(agent_id, "pickup_context"),
         "group_id": group_id,
     }
+    # Broad by design; the handler below carries the reason.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         from episode_contract import EpisodeContract
 
@@ -416,6 +418,8 @@ def process_pending(
         tmp_path = Path(tmp)
         for key in keys:
             job_path = tmp_path / "job.json"
+            # Broad by design; the handler below carries the reason.
+            # nosemgrep: l9.baseline.python.broad-except
             try:
                 job = get_job_to_path(key, job_path, runner=runner)
                 content_hash = str(job.get("content_hash") or "")
@@ -481,6 +485,8 @@ def main(argv: list[str] | None = None) -> int:
         # Token may be optional on some deployments; warn loudly but continue if URL set.
         print("WARN: graphiti_token_unset", file=sys.stderr)
 
+    # Broad by design; the handler below carries the reason.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         report = process_pending(max_jobs=args.max_jobs, dry_run=args.dry_run)
     except Exception:  # noqa: BLE001
