@@ -7,7 +7,9 @@ import argparse
 import ast
 import json
 import re
+import shlex
 import sys
+import tomllib
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -117,6 +119,49 @@ def root_collect_ignores(repo_root: Path = REPO_ROOT) -> list[str]:
     return []
 
 
+def root_addopts_ignores(repo_root: Path = REPO_ROOT) -> list[str]:
+    """`--ignore=` paths from pyproject `addopts` — the other half of what root pytest skips.
+
+    The root conftest's `collect_ignore` and pytest's `addopts --ignore=` are two
+    spellings of one contract: `non_test_exclusions` in
+    `ops/config/python-contract.json`. Reading only the conftest half is exactly
+    the drift `root_collect_ignores` warns about, and it had a live consequence.
+
+    `workflows/dags/test_pipeline_dag.py` is declared a non-test exclusion and
+    implemented in `addopts`, so `_drop_unrunnable` never saw it. A PR touching
+    that file therefore selected it as its own target (`infer_test_path` returns
+    any `test_*.py` unchanged), and an explicitly-named argument overrides
+    `--ignore` — so pytest imported the DAG module that `--ignore` exists to keep
+    out. Under xdist each worker imported it after `workflows.dags` was already
+    loaded, raising "DAG with ID 'test-pipeline-v1' already registered" once per
+    worker.
+    """
+    pyproject = repo_root / "pyproject.toml"
+    if not pyproject.is_file():
+        return []
+    try:
+        config = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return []
+    addopts = config.get("tool", {}).get("pytest", {}).get("ini_options", {}).get("addopts", "")
+    if isinstance(addopts, list):
+        tokens: list[str] = [str(item) for item in addopts]
+    elif isinstance(addopts, str):
+        try:
+            tokens = shlex.split(addopts)
+        except ValueError:
+            return []
+    else:
+        return []
+    ignores: list[str] = []
+    for index, token in enumerate(tokens):
+        if token.startswith("--ignore="):
+            ignores.append(token.split("=", 1)[1])
+        elif token == "--ignore" and index + 1 < len(tokens):
+            ignores.append(tokens[index + 1])
+    return [item for item in ignores if item]
+
+
 def _has_pytest_owner(path: str, suites: list[dict]) -> bool:
     return any(
         not is_dot_owned(suite)
@@ -136,8 +181,12 @@ def _drop_unrunnable(selected: list[str], suites: list[dict]) -> tuple[list[str]
     Handing it to the repo-root suite as an explicit argument overrides that
     exclusion and fails on import, so it is not a valid pr-check target unless a
     non-root suite owns it.
+
+    Both spellings of the exclusion count. A path ignored via pyproject
+    `addopts` is as unrunnable as one in the conftest's `collect_ignore`, and an
+    explicit argument overrides `--ignore` just as readily.
     """
-    ignores = root_collect_ignores()
+    ignores = root_collect_ignores() + root_addopts_ignores()
     keep: list[str] = []
     dropped: list[str] = []
     for path in selected:
@@ -319,8 +368,9 @@ def select_pr_pytest_paths(changed: list[str], *, registry: Path = REGISTRY_PATH
             )
     if unrunnable:
         print(
-            "NOTE: not a repo-root pytest target (excluded by root conftest, owned by a "
-            "non-pytest loader): " + ", ".join(unrunnable),
+            "NOTE: not a repo-root pytest target (excluded by root conftest collect_ignore "
+            "or pyproject addopts --ignore, owned by a non-pytest loader): "
+            + ", ".join(unrunnable),
             file=sys.stderr,
         )
     return selected
