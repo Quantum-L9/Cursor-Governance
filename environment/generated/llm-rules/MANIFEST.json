@@ -14,6 +14,15 @@
     {
       "alias": null,
       "class": "always",
+      "output": "01-authority-chain.md",
+      "output_sha256": "2ad1494fcb16c118505edee13930f8158abc64a99b6a812952d5e8d23952ece2",
+      "source": "rules/01-authority-chain.mdc",
+      "source_sha256": "a2f5f3993a026f0891d36c1ac704c91435d92bdf3975610ed0721255b51292e4",
+      "stem": "01-authority-chain"
+    },
+    {
+      "alias": null,
+      "class": "always",
       "output": "02-slash-commands.md",
       "output_sha256": "65541f32f396ee887a45a2254efbbd5665a63c2cb6e591331a96f0e1c87ae02a",
       "source": "rules/02-slash-commands.mdc",
@@ -628,9 +637,9 @@
   "source_relative": "rules",
   "summary": {
     "denied": 1,
-    "projected": 51,
+    "projected": 52,
     "skipped_agent_requested": 17,
-    "source_mdc": 69
+    "source_mdc": 70
   },
-  "tree_sha256": "f937db186287ae36434384e720998bf62ee647e960d10737d9ee983de0f17241"
+  "tree_sha256": "122bb662ce629c44dd3a29bee443460d50fc1fc3b3d1d9490617f809768e0b80"
 }
