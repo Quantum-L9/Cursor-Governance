@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Shelf leftover untracked WIP/, docs/plans/, and campaigns/ after /ff.
+"""Shelf leftover corpus after /ff: untracked and dirty-tracked.
 
-Writes ``$CLONE/.l9/ff-shelf-untracked.txt`` then ``rsync --files-from`` that
-path (no process substitution, no ``/tmp`` files-from). Appends an existing
+Owns ``TODO.md``, ``WIP/``, ``docs/plans/``, and
+``environment/program-execution/campaigns/``. Writes
+``$CLONE/.l9/ff-shelf-untracked.txt`` then ``rsync --files-from`` that path
+(no process substitution, no ``/tmp`` files-from). Appends an existing
 same-author ``feat/ff-shelf-*`` worktree, or cuts one stamp when none is open.
 ``git add --pathspec-from-file`` is a separate command from commit.
 """
@@ -21,6 +23,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 LIST_REL = ".l9/ff-shelf-untracked.txt"
+SHELF_EXACT = ("TODO.md",)
 SHELF_PREFIXES = (
     "WIP/",
     "docs/plans/",
@@ -57,15 +60,15 @@ def run(
     )
 
 
-def is_leftover_untracked(rel: str) -> bool:
+def is_shelf_path(rel: str) -> bool:
     norm = rel.replace("\\", "/").lstrip("./")
     if any(norm.startswith(prefix) for prefix in SKIP_PREFIXES):
         return False
-    if not any(norm.startswith(prefix) for prefix in SHELF_PREFIXES):
-        return False
     if SECRET_NAME_RE.search(Path(norm).name):
         return False
-    return True
+    if norm in SHELF_EXACT:
+        return True
+    return any(norm.startswith(prefix) for prefix in SHELF_PREFIXES)
 
 
 def collect_untracked(clone: Path) -> list[str]:
@@ -78,9 +81,25 @@ def collect_untracked(clone: Path) -> list[str]:
     paths = []
     for raw in proc.stdout.splitlines():
         rel = raw.strip().strip('"')
-        if rel and is_leftover_untracked(rel):
+        if rel and is_shelf_path(rel):
             paths.append(rel)
-    return sorted(paths)
+    return paths
+
+
+def collect_dirty_tracked(clone: Path) -> list[str]:
+    proc = run(["git", "-C", str(clone), "diff", "--name-only", "HEAD"], check=False)
+    if proc.returncode != 0:
+        raise RuntimeError(proc.stderr or "git diff --name-only failed")
+    paths = []
+    for raw in proc.stdout.splitlines():
+        rel = raw.strip().strip('"')
+        if rel and is_shelf_path(rel):
+            paths.append(rel)
+    return paths
+
+
+def collect_shelf_paths(clone: Path) -> list[str]:
+    return sorted(set(collect_untracked(clone)) | set(collect_dirty_tracked(clone)))
 
 
 def write_untracked_list(clone: Path, paths: list[str]) -> Path:
@@ -375,7 +394,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"FAIL: not a git clone: {clone}", file=sys.stderr)
             return 2
 
-    paths = collect_untracked(clone)
+    paths = collect_shelf_paths(clone)
     stamp = args.stamp or datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     author = args.author or ("" if args.open_shelf_prs else gh_login())
     prs = load_open_shelf_prs(args.open_shelf_prs) if args.open_shelf_prs else gh_open_shelf_prs()

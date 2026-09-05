@@ -58,9 +58,10 @@ bash skills/l9-repo-sync/scripts/ff.sh --ssot
 `--clone` from another repo: this checkout if it is a governance identity
 tree, else `$HOME/Cursor-Governance`, else `CURSOR_GOVERNANCE_CLONE`.
 
-2. **Shelf leftover untracked `WIP/`, `docs/plans/`, and
-   `environment/program-execution/campaigns/`** with one script (skip
-   gitignored secret globs, `WIP/Legal Defense/`, credential filenames).
+2. **Shelf leftover untracked and dirty-tracked `TODO.md`, `WIP/`,
+   `docs/plans/`, and `environment/program-execution/campaigns/`** with
+   one script (skip gitignored secret globs, `WIP/Legal Defense/`,
+   credential filenames).
    Do **not** invent an rsync/`git add` recipe. `ff.sh` stays push-off.
 
    ```bash
