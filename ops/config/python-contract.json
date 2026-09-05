@@ -7,6 +7,7 @@
     "note": "make pr passes --changed-file to the runner. make test, make pr-full, and CI keep the catalog including repo-root '.'."
   },
   "skill_self_test_roots": [
+    "skills/l9-audit-plans",
     "skills/l9-cli-optimization",
     "skills/l9-code-maintenance",
     "skills/l9-dag-authoring",
