@@ -111,9 +111,7 @@ class HostNativeLifecycleTests(unittest.TestCase):
         for index, subagent_type in enumerate(
             ("l9-recon", "explore", "l9-pr-remediation", "l9-verifier-reviewer")
         ):
-            out = compose_start.compose_host_pre_tool_use(
-                self._pre(f"tu-p{index}", subagent_type)
-            )
+            out = compose_start.compose_host_pre_tool_use(self._pre(f"tu-p{index}", subagent_type))
             self.assertEqual(out["permission"], "allow", (subagent_type, out))
             allowed.append(out)
         fifth = compose_start.compose_host_pre_tool_use(self._pre("tu-p4", "explore"))

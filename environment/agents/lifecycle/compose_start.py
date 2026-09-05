@@ -231,9 +231,7 @@ def _host_native_is_mutation(subagent_type: str) -> bool:
     return subagent_type not in _HOST_NATIVE_READ_TYPES
 
 
-def _compose_host_native_pre_tool_use(
-    payload: dict[str, Any], tool_use_id: str
-) -> dict[str, Any]:
+def _compose_host_native_pre_tool_use(payload: dict[str, Any], tool_use_id: str) -> dict[str, Any]:
     """Admit remediator / recon / issue Tasks without Program Execution.
 
     A managed ``subagent_type`` is host identity, not inferred prose. Caps
