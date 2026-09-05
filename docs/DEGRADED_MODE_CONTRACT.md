@@ -148,6 +148,42 @@ that it is refused everywhere, and the REST fallback is not a licence to prefer
 REST where GraphQL answers. The board tries GraphQL first and uses REST only when
 that call fails.
 
+### 2026-09-05 — Claude Code cloud container, `Quantum-L9/Cursor-Governance` @ `91daac4`
+
+Probed during the mobile environment audit (`docs/CLAUDE_CODE_MOBILE_ENVIRONMENT_AUDIT.md`),
+on a **12-repository container** rooted at `/home/user` rather than a single checkout.
+
+| Probe | Result | vs. the rows above |
+|---|---|---|
+| `gh api user` | **works** — resolves `cryptoxdog`, exit 0 | same |
+| `gh api repos/Quantum-L9/Cursor-Governance` | **works** — `default=main` | same |
+| `git ls-remote origin main` | **works** — returns `91daac4…` | new probe |
+| `gh auth status` | reports `The token in GH_TOKEN is invalid` — **and exits 1** | matches 2026-08-31, contradicts 2026-08-29/30 |
+| `gitleaks` | present, `/root/.local/bin/gitleaks` | same |
+| `pre-commit` | present, `/root/.local/bin/pre-commit` | same |
+| `uv` | present, `/root/.local/bin/uv` v0.8.17 | same |
+| `semgrep` | **absent** | same |
+
+The exit code lands on `1` for the second time out of three measurements. That does not
+resolve the split — it confirms the conclusion the 2026-08-31 row already drew: two
+values have now been observed for the same message and the same working `gh api`, so the
+exit code is unusable in either direction. Nothing here retracts the 2026-08-29/30 row.
+
+**New in this row: the sentinel is measurably one value across five names.**
+`GH_TOKEN`, `GITHUB_TOKEN`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and
+`CLOUDSDK_AUTH_ACCESS_TOKEN` all hold a 14-character value with the identical SHA-256
+prefix `f07d7417`. Five unrelated providers cannot share one credential, so this is a
+placeholder occupying five credential-shaped names — not five degraded credentials. It
+strengthens "`gh api` succeeds while the session's own `GH_TOKEN` is an invalid
+sentinel" without asserting any mechanism for why.
+
+The Graphiti row in the capability table above ("No bearer; session may be memory-blind")
+also reproduces here: `GRAPHITI_MCP_TOKEN` is absent, the CLI adds `Authorization` only
+when it is set, and the rendered `.mcp.json` carries `url` with no `headers` — which is
+what `mcp.template.json` intends via `_optional_headers`. The audit's F-01 is therefore
+scoped to the readiness receipt **labelling** that plane `Graphiti_authenticated_health:
+READY`, not to the posture this row already records.
+
 ### Relationship to the P307 pack
 
 `WIP/8-26-26/environment_experience_improvement_pack_p307_revised` records **CR-105**
