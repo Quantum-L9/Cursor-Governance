@@ -188,6 +188,46 @@ a separate `graphiti_transport_auth` observation reports `UNAUTHENTICATED` here
 from the presence of `GRAPHITI_MCP_TOKEN` — the same signal the client and
 `mcp.template.json` already branch on. This row's posture is unchanged.
 
+### 2026-09-05 (same container, later probe) — the mechanism, now verified
+
+The row above says the sentinel "strengthens `gh api` succeeds while the
+session's own `GH_TOKEN` is an invalid sentinel **without asserting any
+mechanism for why**". A later probe in the same container settles the why, with
+a control that makes it assertable rather than theorised.
+
+| Probe | Result |
+|---|---|
+| `gh api user` with `GH_TOKEN`/`GITHUB_TOKEN` **unset** | refuses — "To get started with GitHub CLI, please run: gh auth login" |
+| `gh api user` with a deliberately **wrong** token (`ghp_000…`) | **`cryptoxdog`** |
+| `curl https://api.github.com/user`, **no `Authorization` header**, via proxy | **200**, `login: cryptoxdog` |
+| the same curl with **`--noproxy '*'`** — the control | **401** |
+| `$HTTPS_PROXY/__agentproxy/status` | `installedProxyPreconfiguredClis: ["gh"]`, `gitConfigInjection: true`, `gitSshRewrite: true` |
+
+**The egress proxy injects the credential in transit.** Identical request,
+identical host; the only variable is the proxy, and authentication appears.
+`GH_TOKEN` must merely be *non-empty* for `gh` to consider itself configured —
+its **value** never reaches GitHub, which is exactly why the sentinel and a
+deliberately wrong token behave alike, and why `gh auth status` can call the
+token invalid while `gh api` works.
+
+**What this changes, and what it does not.** `rules/62` says "do not assert a
+mechanism the repository cannot verify — record the probe, not a theory." The
+repository **can** verify this one: the `--noproxy` control is the verification,
+and it is reproducible in any container of this class. So the mechanism may be
+stated, provided the control is stated with it. What does not change: the
+sanctioned transports (`gh api` REST, `mcp__github__*`), the publication path,
+merge authority, and the standing rule that a capability reporting `UNAVAILABLE`
+is never a reason to paste a secret.
+
+**Graphiti, probed the same way, gives the opposite answer.** Proxy-bypassed and
+direct from the public internet: unauthenticated `GET` → `406` (content
+negotiation, not auth); a bogus bearer → identical `406`; no `WWW-Authenticate`;
+`tools/list` → `Bad Request: Missing session ID`, a protocol error, never `401`.
+The proxy is not gating that host, and the host demands nothing. Whether IP
+allow-listing exists that happens to include this container is untested — the
+bypassed request still originated here — and settling it needs a different
+network. No `initialize` handshake was completed and no group's memory was read.
+
 ### Relationship to the P307 pack
 
 `WIP/8-26-26/environment_experience_improvement_pack_p307_revised` records **CR-105**

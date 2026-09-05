@@ -11,6 +11,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 # shellcheck source=resolve_governance_paths.sh
 source "$(cd "$(dirname "$0")" && pwd)/resolve_governance_paths.sh"
+# This script consumes no GOV_ROOT — it sources the file for
+# is_l9_isolate_workspace/bind_isolate_toolchain. But that file installs an
+# EXIT trap that warns when no entry point ran, so bind explicitly rather
+# than emit a warning against a script that is not misusing the resolver.
+resolve_governance_paths || true
 if is_l9_isolate_workspace "$ROOT"; then
   bind_isolate_toolchain "$ROOT" "${GOV_TOOLCHAIN_ROOT:-$HOME/.cursor-governance}"
 fi

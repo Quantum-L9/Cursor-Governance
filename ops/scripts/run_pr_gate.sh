@@ -5,11 +5,17 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=resolve_governance_paths.sh
 source "$SCRIPT_DIR/resolve_governance_paths.sh"
+# Sourcing does NOT bind which clone is authoritative (rules/06). Without this
+# call GOV_ROOT below was derived from $SCRIPT_DIR alone — the "deriving
+# governance from the installed directory" the rule forbids — and the file's
+# own EXIT trap warned about it on every `make pr`. `|| true` matches
+# pr_preflight.sh: the gate must still run in a consumer checkout.
+resolve_governance_paths || true
 # shellcheck source=lib/fetch_receipt.sh
 source "$SCRIPT_DIR/lib/fetch_receipt.sh"
 # shellcheck source=lib/resolve_pr_stack.sh
 source "$SCRIPT_DIR/lib/resolve_pr_stack.sh"
-GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+GOV_ROOT="${GOV_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 WS="${WS:-$(pwd)}"
 WS="$(cd "$WS" && pwd)"
 PR_BASE="${PR_BASE:-origin/main}"

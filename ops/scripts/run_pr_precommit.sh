@@ -14,6 +14,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=resolve_governance_paths.sh
 source "$SCRIPT_DIR/resolve_governance_paths.sh"
+# Bind the authoritative clone before GOV_ROOT is used below (rules/06).
+resolve_governance_paths || true
 # Staged mode: invoked from a git commit hook rather than from make pr-check.
 # Same catalog, same SKIP list — the single reason `pre-commit install` is
 # forbidden is that a RAW shim runs the catalog WITHOUT that list, so
@@ -63,7 +65,7 @@ fi
 # NOTE (still deferred): cwd=$GOV_ROOT with absolute --files paths. That changes
 # how every hook resolves its inputs; skipping the unresolvable hooks is the
 # narrower fix for the failure actually observed.
-GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+GOV_ROOT="${GOV_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 GOV_PRECOMMIT_CONFIG="$GOV_ROOT/.pre-commit-config.yaml"
 
 # Resolve first. An empty list is PASS without the pre-commit CLI — CI Test
