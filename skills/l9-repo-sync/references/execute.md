@@ -71,9 +71,8 @@ or held, no new `~/.cursor-governance.bak.*`.
 ## After success — shelf leftover untracked corpus
 
 `ff.sh` is finished and stays **push-off**. The slash/`make ff` caller then
-runs **one** script for leftover **untracked** `WIP/`, `docs/plans/`, and
-`environment/program-execution/campaigns/` (not the root task-queue file, not
-dirty-tracked corpus):
+runs **one** script for leftover **untracked and dirty-tracked** `TODO.md`,
+`WIP/`, `docs/plans/`, and `environment/program-execution/campaigns/`:
 
 ```bash
 GOV_PY="${GOV_PY:-$HOME/.cursor-governance/.venv/bin/python}"

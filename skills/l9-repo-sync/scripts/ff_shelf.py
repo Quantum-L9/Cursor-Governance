@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Shelf leftover untracked WIP/, docs/plans/, and campaigns/ after /ff.
+"""Shelf leftover corpus after /ff: untracked and dirty-tracked.
 
-Writes ``$CLONE/.l9/ff-shelf-untracked.txt`` then ``rsync --files-from`` that
-path (no process substitution, no ``/tmp`` files-from). Appends an existing
+Owns ``TODO.md``, ``WIP/``, ``docs/plans/``, and
+``environment/program-execution/campaigns/``. Writes
+``$CLONE/.l9/ff-shelf-untracked.txt`` then ``rsync --files-from`` that path
+(no process substitution, no ``/tmp`` files-from). Appends an existing
 same-author ``feat/ff-shelf-*`` worktree, or cuts one stamp when none is open.
 ``git add --pathspec-from-file`` is a separate command from commit.
 """
@@ -21,6 +23,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 LIST_REL = ".l9/ff-shelf-untracked.txt"
+SHELF_EXACT = ("TODO.md",)
 SHELF_PREFIXES = (
     "WIP/",
     "docs/plans/",
@@ -57,15 +60,15 @@ def run(
     )
 
 
-def is_leftover_untracked(rel: str) -> bool:
+def is_shelf_path(rel: str) -> bool:
     norm = rel.replace("\\", "/").lstrip("./")
     if any(norm.startswith(prefix) for prefix in SKIP_PREFIXES):
         return False
-    if not any(norm.startswith(prefix) for prefix in SHELF_PREFIXES):
-        return False
     if SECRET_NAME_RE.search(Path(norm).name):
         return False
-    return True
+    if norm in SHELF_EXACT:
+        return True
+    return any(norm.startswith(prefix) for prefix in SHELF_PREFIXES)
 
 
 def collect_untracked(clone: Path) -> list[str]:
@@ -78,9 +81,55 @@ def collect_untracked(clone: Path) -> list[str]:
     paths = []
     for raw in proc.stdout.splitlines():
         rel = raw.strip().strip('"')
-        if rel and is_leftover_untracked(rel):
+        if rel and is_shelf_path(rel):
             paths.append(rel)
-    return sorted(paths)
+    return paths
+
+
+def _dirty_names(clone: Path, diff_filter: str) -> list[str]:
+    proc = run(
+        [
+            "git",
+            "-C",
+            str(clone),
+            "diff",
+            "--name-only",
+            f"--diff-filter={diff_filter}",
+            "HEAD",
+        ],
+        check=False,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(proc.stderr or "git diff --name-only failed")
+    paths = []
+    for raw in proc.stdout.splitlines():
+        rel = raw.strip().strip('"')
+        if rel and is_shelf_path(rel):
+            paths.append(rel)
+    return paths
+
+
+def collect_dirty_tracked(clone: Path) -> list[str]:
+    """Copyable dirty-tracked corpus. Deletions are not rsync sources."""
+    return [rel for rel in _dirty_names(clone, "ACMRT") if (clone / rel).exists()]
+
+
+def collect_dirty_deleted(clone: Path) -> list[str]:
+    return _dirty_names(clone, "D")
+
+
+def collect_shelf_paths(clone: Path) -> list[str]:
+    return sorted(set(collect_untracked(clone)) | set(collect_dirty_tracked(clone)))
+
+
+def apply_shelf_deletions(shelf: Path, deleted: list[str]) -> None:
+    for rel in deleted:
+        target = shelf / rel
+        if not target.exists() and not target.is_symlink():
+            continue
+        proc = run(["git", "-C", str(shelf), "rm", "-f", "--", rel], check=False)
+        if proc.returncode != 0 and target.exists():
+            target.unlink()
 
 
 def write_untracked_list(clone: Path, paths: list[str]) -> Path:
@@ -393,7 +442,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"FAIL: not a git clone: {clone}", file=sys.stderr)
             return 2
 
-    paths = collect_untracked(clone)
+    paths = collect_shelf_paths(clone)
+    deleted = collect_dirty_deleted(clone)
     stamp = args.stamp or datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     author = args.author or ("" if args.open_shelf_prs else gh_login())
     prs = (
@@ -404,6 +454,7 @@ def main(argv: list[str] | None = None) -> int:
     branch, action = resolve_shelf_branch(prs, author, stamp)
     if action == "append" and paths:
         paths = drop_already_shelved(clone, paths, branch)
+    has_work = bool(paths or deleted)
     list_path = write_untracked_list(clone, paths)
     shelf = args.shelf_worktree
     if shelf is None:
@@ -413,20 +464,21 @@ def main(argv: list[str] | None = None) -> int:
 
     rsync_argv = build_rsync_argv(clone, shelf, list_path) if paths else []
     add_argv = build_add_argv(shelf, list_path) if paths else []
-    commit_msg = f"ff-shelf leftover untracked corpus ({stamp})"
-    commit_argv = build_commit_argv(shelf, commit_msg) if paths else []
+    commit_msg = f"ff-shelf leftover corpus ({stamp})"
+    commit_argv = build_commit_argv(shelf, commit_msg) if has_work else []
     report = {
         "clone": str(clone),
         "list_path": str(list_path),
         "paths": paths,
-        "action": action if paths else "empty",
+        "deleted": deleted,
+        "action": action if has_work else "empty",
         "branch": branch,
         "shelf": str(shelf),
         "rsync": rsync_argv,
         "add": add_argv,
         "commit": commit_argv,
     }
-    if args.dry_run or not paths:
+    if args.dry_run or not has_work:
         print(json.dumps(report, indent=2, sort_keys=True))
         return 0
 
@@ -434,22 +486,25 @@ def main(argv: list[str] | None = None) -> int:
     if "<(" in joined_rsync or "/tmp/" in str(list_path) and "/.l9/" not in str(list_path):
         print("FAIL: rsync files-from must be the in-clone list", file=sys.stderr)
         return 2
-    if "commit" in add_argv or "status" in add_argv:
+    if add_argv and ("commit" in add_argv or "status" in add_argv):
         print("FAIL: git add must not also commit or status", file=sys.stderr)
         return 2
 
     base_ref = resolve_base_ref(clone, args.base_ref or None)
     ensure_shelf_worktree(clone, shelf, branch, action, base_ref)
-    proc = run(rsync_argv)
-    if proc.returncode != 0:
-        print(proc.stderr or proc.stdout, file=sys.stderr)
-        return 1
-    for rel in paths:
-        stamp_kernel_pass(shelf / rel)
-    add_proc = run(add_argv)
-    if add_proc.returncode != 0:
-        print(add_proc.stderr or add_proc.stdout, file=sys.stderr)
-        return 1
+    if paths:
+        proc = run(rsync_argv)
+        if proc.returncode != 0:
+            print(proc.stderr or proc.stdout, file=sys.stderr)
+            return 1
+        for rel in paths:
+            stamp_kernel_pass(shelf / rel)
+        add_proc = run(add_argv)
+        if add_proc.returncode != 0:
+            print(add_proc.stderr or add_proc.stdout, file=sys.stderr)
+            return 1
+    if deleted:
+        apply_shelf_deletions(shelf, deleted)
     commit_proc = run(commit_argv)
     if commit_proc.returncode != 0:
         print(commit_proc.stderr or commit_proc.stdout, file=sys.stderr)

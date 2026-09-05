@@ -235,10 +235,24 @@ prune_baks() {
 }
 
 do_ff() {
+  # Clean-tree catch-up only (caller already requires tree_clean + only_behind).
+  # SHA-first. Never unshallow. Do not use an ff-only merge — that move is the
+  # sessionStart graft source when history is shallow.
   git -C "$CLONE" fetch --quiet origin "$BRANCH" 2>/dev/null || return 1
-  git -C "$CLONE" merge --ff-only --quiet "origin/${BRANCH}" 2>/dev/null || return 1
+  if ! git -C "$CLONE" rev-parse --verify "origin/${BRANCH}" >/dev/null 2>&1; then
+    return 1
+  fi
+  local head origin_sha
+  head="$(git -C "$CLONE" rev-parse HEAD 2>/dev/null || echo "")"
+  origin_sha="$(git -C "$CLONE" rev-parse "origin/${BRANCH}" 2>/dev/null || echo "")"
+  [ -n "$head" ] && [ -n "$origin_sha" ] || return 1
+  if [ "$head" = "$origin_sha" ]; then
+    LOCAL_SHA="$head"
+    return 0
+  fi
+  git -C "$CLONE" reset --keep "origin/${BRANCH}" 2>/dev/null || return 1
   LOCAL_SHA="$(local_head)"
-  [ "$LOCAL_SHA" = "$REMOTE_SHA" ]
+  [ "$LOCAL_SHA" = "$REMOTE_SHA" ] || [ "$LOCAL_SHA" = "$origin_sha" ]
 }
 
 do_swap() {

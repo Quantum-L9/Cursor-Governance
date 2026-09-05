@@ -253,5 +253,12 @@ pass "activate at tip / failed paths leave live intact"
 [ -f "$OPS_DIR/setup_workspace_symlinks.sh" ]
 pass "activator + setup scripts present"
 
+# ── T8: do_ff is SHA-first reset --keep (U2) ─────────────────────────────────
+DO_FF="$(awk '/^do_ff\(\)/,/^}/' "$ACTIVATE")"
+echo "$DO_FF" | grep -v '^[[:space:]]*#' | grep -q 'merge --ff-only' && fail "T8 do_ff still uses merge --ff-only"
+echo "$DO_FF" | grep -v '^[[:space:]]*#' | grep -q 'unshallow' && fail "T8 do_ff must never unshallow"
+echo "$DO_FF" | grep -q 'reset --keep' || fail "T8 do_ff must reset --keep"
+pass "do_ff is SHA-first reset --keep (no merge --ff-only)"
+
 assert_no_global_pollution
 echo "RESULT: PASS ($PASS cases)"

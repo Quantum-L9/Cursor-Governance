@@ -100,8 +100,9 @@ It classifies `refs/l9/preserved/ff/*`, `refs/l9/preserved/ff-dirty/*`, and
    Step 0 inside the script switches to `main` without moving the feature ref.
 4. **Done** when the script prints `OK:` for each clone. Do not add a second
    census or pytest to `/ff`.
-5. **Shelf** — leftover untracked `WIP/`, `docs/plans/`, and
-   `environment/program-execution/campaigns/` via **one** call:
+5. **Shelf** — leftover untracked and dirty-tracked `TODO.md`, `WIP/`,
+   `docs/plans/`, and `environment/program-execution/campaigns/` via
+   **one** call:
    `"$GOV_PY" skills/l9-repo-sync/scripts/ff_shelf.py --clone "$CLONE"`.
    The script writes `$CLONE/.l9/ff-shelf-untracked.txt`, rsyncs
    `--files-from` that file, appends an existing same-author
