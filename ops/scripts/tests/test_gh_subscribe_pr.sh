@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # GraphQL updateSubscription is the subscribe path; PUT issues/subscription is not.
+# Also pins the zsh-source path bug: BASH_SOURCE is empty in zsh, so the helper
+# must not resolve gh_graphql.sh relative to CWD.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -12,7 +14,7 @@ PASS=0
 pass() { PASS=$((PASS + 1)); echo "PASS T$PASS: $1"; }
 fail() { echo "FAIL: $1" >&2; exit 1; }
 
-mkdir -p "$TMP_ROOT/bin"
+mkdir -p "$TMP_ROOT/bin" "$TMP_ROOT/cwd"
 
 # gh --jq is applied by real gh. The stub prints JSON; the helper passes --jq
 # to gh. Reproduce jq locally when the stub sees --jq.
@@ -88,5 +90,54 @@ if grep -qE 'gh api -X PUT' "$LIB"; then
   fail "helper still contains PUT issues/subscription"
 fi
 pass "helper does not call PUT issues/subscription"
+
+# Incident: zsh `source` from a foreign CWD must load the sibling, not CWD/gh_graphql.sh.
+if command -v zsh >/dev/null 2>&1; then
+  out="$(
+    PATH="$TMP_ROOT/bin:$PATH"
+    cd "$TMP_ROOT/cwd"
+    zsh -c "source $(printf '%q' "$LIB"); command -v gh_graphql >/dev/null && gh_subscribe_pr o n 81"
+  )"
+  grep -q 'Subscribed to PR #81 (o/n)' <<<"$out" \
+    || fail "zsh source from foreign CWD did not subscribe: $out"
+  pass "zsh source from foreign CWD resolves sibling gh_graphql.sh"
+else
+  echo "SKIP: zsh not on PATH"
+fi
+
+out="$(
+  PATH="$TMP_ROOT/bin:$PATH"
+  cd "$TMP_ROOT/cwd"
+  bash -c "source $(printf '%q' "$LIB"); gh_subscribe_pr o n 81"
+)"
+grep -q 'Subscribed to PR #81 (o/n)' <<<"$out" \
+  || fail "bash source from foreign CWD did not subscribe: $out"
+pass "bash source from foreign CWD resolves sibling gh_graphql.sh"
+
+out="$(
+  PATH="$TMP_ROOT/bin:$PATH"
+  cd "$TMP_ROOT/cwd"
+  bash "$LIB" o n 81
+)"
+grep -q 'Subscribed to PR #81 (o/n)' <<<"$out" \
+  || fail "CLI invocation did not subscribe: $out"
+pass "CLI bash gh_subscribe_pr.sh OWNER REPO PR works from foreign CWD"
+
+# A copy without the sibling must name the expected path, not CWD.
+cp "$LIB" "$TMP_ROOT/orphan-subscribe.sh"
+set +e
+orphan_err="$(
+  cd "$TMP_ROOT/cwd"
+  bash "$TMP_ROOT/orphan-subscribe.sh" o n 81 2>&1
+)"
+orphan_rc=$?
+set -e
+[ "$orphan_rc" -ne 0 ] || fail "orphan helper without sibling must fail"
+grep -q 'expected sibling' <<<"$orphan_err" \
+  || fail "orphan helper must name the missing sibling: $orphan_err"
+grep -q 'CWD=' <<<"$orphan_err" || fail "orphan helper must say CWD is not consulted: $orphan_err"
+grep -qv "$TMP_ROOT/cwd/gh_graphql.sh" <<<"$orphan_err" \
+  || fail "orphan helper must not look in CWD: $orphan_err"
+pass "missing sibling fails closed without consulting CWD"
 
 echo "OK: $PASS assertions"
