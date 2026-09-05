@@ -67,5 +67,19 @@ alwaysApply: true
 
 ## Testing references
 
-- Phase closure conditions in this file **depend on** the detailed testing rules in `50-qa-testing.mdc`.
-- When a phase requires tests to be green (e.g., Phase 4), apply the policies and patterns defined in `50-qa-testing.mdc` (unit, integration, critical-path, performance).
+This rule always applies; `50-qa-testing.mdc` is glob-scoped and is only in
+context when a matching test file is. A closure condition that could only be
+read there was therefore unreadable for most of a session, so the part Phase 4
+depends on is stated here and `50` carries the detail.
+
+**Phase 4 closure, self-contained:**
+
+- Every test the Phase 0 plan named is green — unit, integration, and
+  critical-path where the change touches one.
+- A failing test is evidence and is diagnosed, never skipped, weakened, or
+  mocked away (`95-test-fix-policy.mdc`, which always applies).
+- Tests actually ran. "Not run" is a reportable state; silence is not.
+
+For the fuller testing contract — coverage thresholds, per-language patterns,
+determinism, regression and smoke suites — read `50-qa-testing.mdc` directly
+when working in test files, where it auto-attaches.
