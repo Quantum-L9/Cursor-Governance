@@ -57,7 +57,7 @@ If a valid executable plan already exists and the current downstream executor ac
 
 Requirements affect:
 
-- `Quantum-L9/PR_Repair`;
+- `Quantum-L9/l9-pr-repair`;
 - `Quantum-L9/LLM-Router`;
 - `Quantum-L9/l9-cognitive-runtime`.
 
