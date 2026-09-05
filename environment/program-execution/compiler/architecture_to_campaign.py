@@ -1019,6 +1019,9 @@ def _requirement_dispositions(
     usable = [(item, item.statement.strip()) for item in requirements if item.statement.strip()]
     if not usable:
         return {}
+    # Deliberately broad: disposition classification is an optional enrichment
+    # over discovered truth, and an empty result is a valid outcome.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         truth = discover(facts.root)
         rows = classify_dispositions([text for _, text in usable], truth)

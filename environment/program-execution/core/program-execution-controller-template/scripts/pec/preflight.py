@@ -71,7 +71,10 @@ def _readiness_receipt_reader() -> Any | None:
     sys.modules[_RECEIPT_READER_MODULE] = module
     try:
         spec.loader.exec_module(module)
-    except Exception:
+    # BaseException, not Exception: a partially executed module must be
+    # unregistered even when the load is interrupted, or the next import
+    # silently gets the broken half. The block re-raises.
+    except BaseException:
         sys.modules.pop(_RECEIPT_READER_MODULE, None)
         raise
     return module

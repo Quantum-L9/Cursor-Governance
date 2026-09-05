@@ -66,6 +66,8 @@ def _resolves_to_own_group(root: Path) -> bool:
     were this one's. Filtering here rather than after compiling also stops an
     unusable root from consuming a slot under the cap.
     """
+    # Broad by design; the handler below carries the reason.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         from ops.graphiti.group_resolver import load_registry, resolve_group_id
 
@@ -200,6 +202,8 @@ def main() -> int:
             packet = compiled.get("packet") or {}
             group_id = str(packet.get("group_id") or "")
             # Gate receipt via inject (hash / memory_satisfied_for)
+            # Broad by design; the handler below carries the reason.
+            # nosemgrep: l9.baseline.python.broad-except
             try:
                 result = gb.inject(
                     f"Claude Code session in {root.name}",

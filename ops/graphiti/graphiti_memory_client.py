@@ -625,6 +625,8 @@ def cmd_inject(args: argparse.Namespace) -> int:
     task_sig = hashlib.sha256(args.task.encode()).hexdigest()[:16]
     prefetch_parts: list[str] = []
     for gid in resolve_read_groups(group_id):
+        # Broad by design; the handler below carries the reason.
+        # nosemgrep: l9.baseline.python.broad-except
         try:
             prefetch_parts.append(
                 str(
@@ -832,6 +834,8 @@ def cmd_stats(args: argparse.Namespace) -> int:
     if not group_id:
         raise SystemExit("no group_id")
     episodes: list[Any] = []
+    # Broad by design; the handler below carries the reason.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         data = call_tool("get_episodes", {"group_ids": [group_id], "max_episodes": 999})
         episodes = data.get("episodes", []) if isinstance(data, dict) else []

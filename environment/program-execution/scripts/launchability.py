@@ -396,7 +396,10 @@ def apply_synthesized_validations(
                     "pre-seal validation enrichment broke canonical Blueprint schema: "
                     + "; ".join(errors[:5])
                 )
-    except Exception:
+    # BaseException, not Exception: this restores the pre-write cards and
+    # manifest before re-raising, and an interrupted enrichment is exactly when
+    # the half-written Blueprint must not survive.
+    except BaseException:
         cards.write_bytes(cards_before)
         if manifest_before is None:
             manifest.unlink(missing_ok=True)

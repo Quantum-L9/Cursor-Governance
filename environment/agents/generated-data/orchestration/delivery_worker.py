@@ -533,6 +533,9 @@ class DeliveryWorker:
         actor: str,
         limit: int = 20,
     ) -> list[DeliveryExecutionResult]:
+        # Fail-soft: the opportunistic pre-drain must not stop the deliveries
+        # this call exists to run.
+        # nosemgrep: l9.baseline.python.broad-except
         try:
             self.drain_memory_outbox(actor=actor, limit=min(5, max(0, limit)))
         except Exception:
@@ -556,7 +559,7 @@ class DeliveryWorker:
                 from runtime_paths import memory_outbox_root
 
                 return memory_outbox_root()
-            except Exception:
+            except ImportError:
                 return Path(self.configuration.repository_root) / default_rel
         return configured
 
@@ -929,7 +932,7 @@ def main() -> int:
 
         memory_outbox = str(memory_outbox_root())
         route_outbox = str(generated_data_outbox_root())
-    except Exception:
+    except ImportError:
         memory_outbox = str(runtime_root / "memory-outbox")
         route_outbox = str(runtime_root)
     configuration = DeliveryWorkerConfiguration(

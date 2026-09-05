@@ -265,6 +265,9 @@ def _graphiti_mcp_http_health() -> tuple[str, str]:
     # Never urllib.urlopen: GRAPHITI_MCP_URL is env-sourced and urllib follows
     # file:// (CWE-939). safe_https.exchange is HTTPS or loopback HTTP only.
     req = urllib.request.Request(url, method="GET")
+    # The final handler below is deliberately broad (noqa: BLE001): a
+    # readiness probe never crashes the emitter.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         with exchange(
             req,
@@ -481,6 +484,8 @@ def _interpreter_importable_status(gov: Path) -> tuple[str, str]:
     else:
         return UNKNOWN, "governance .venv interpreter not found"
     probe = "import " + ", ".join(_IMPORT_CORE)
+    # Broad by design; the handler below carries the reason.
+    # nosemgrep: l9.baseline.python.broad-except
     try:
         code, _out, _err = _run([str(venv_py), "-c", probe], timeout=20)
     except Exception:  # noqa: BLE001 - a probe never crashes the emitter

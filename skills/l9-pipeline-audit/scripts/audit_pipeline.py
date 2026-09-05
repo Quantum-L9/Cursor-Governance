@@ -46,7 +46,7 @@ def _load_yaml(path: Path) -> dict[str, Any]:
         return {}
     try:
         loaded = yaml.safe_load(path.read_text(encoding="utf-8", errors="replace"))
-    except Exception:
+    except (OSError, yaml.YAMLError):
         return {}
     return loaded if isinstance(loaded, dict) else {}
 

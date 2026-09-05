@@ -36,7 +36,7 @@ from safe_https import exchange  # noqa: E402
 
 AWS_PREFIX = "openclaw-igorbot/"
 AWS_REGION = "us-east-1"
-BOOTSTRAP_SECRET = "openclaw-igorbot/infisical-cursor"
+BOOTSTRAP_SECRET_REF = "openclaw-igorbot/infisical-cursor"
 DEFAULT_PROJECT_ID = "9f92179d-3caa-4d7a-90a9-bb896499bfe6"
 DEFAULT_ENV = "prod"
 STRUCTURED_ROOT = "/aws/openclaw-igorbot"
@@ -399,7 +399,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)
 
-    boot = json.loads(aws_secret_string(BOOTSTRAP_SECRET))
+    boot = json.loads(aws_secret_string(BOOTSTRAP_SECRET_REF))
     host = str(boot["host"]).rstrip("/")
     token = login(host, str(boot["client_id"]), str(boot["client_secret"]))
 

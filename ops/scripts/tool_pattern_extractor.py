@@ -144,6 +144,10 @@ class ToolPatternExtractor:
             db = plyvel.DB(str(live_db_path), create_if_missing=False)
 
             for key, value in db:
+                # Deliberately broad: rows come from a foreign LevelDB written
+                # by another process, so any decode or shape fault means "skip
+                # this row", never "abandon the scan".
+                # nosemgrep: l9.baseline.python.broad-except
                 try:
                     key_str = key.decode("utf-8", errors="ignore")
                     value_str = value.decode("utf-8", errors="ignore")

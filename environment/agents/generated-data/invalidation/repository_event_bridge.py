@@ -808,7 +808,10 @@ def load_state_store_module() -> ModuleType:
     sys.modules[module_name] = module
     try:
         spec.loader.exec_module(module)
-    except Exception:
+    # BaseException, not Exception: a partially executed module must be
+    # unregistered even when the load is interrupted, or the next import
+    # silently gets the broken half. The block re-raises.
+    except BaseException:
         sys.modules.pop(module_name, None)
         raise
     return module
