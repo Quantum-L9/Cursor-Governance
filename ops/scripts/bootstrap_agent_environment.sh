@@ -444,8 +444,11 @@ fi
 source "$SCRIPT_DIR/lib/session_git_excludes.sh"
 if [ "$CHECK" != "1" ] && git -C "$WORKSPACE" rev-parse --git-dir >/dev/null 2>&1; then
   log "Shared local git excludes"
-  apply_session_git_excludes "$WORKSPACE"
-  say "excluded shared + Claude-mirror activation artifacts via $(session_exclude_file "$WORKSPACE") (local, uncommitted)"
+  if apply_session_git_excludes "$WORKSPACE"; then
+    say "excluded shared + Claude-mirror activation artifacts via $(session_exclude_file "$WORKSPACE") (local, uncommitted)"
+  else
+    warn "could not write session git excludes for $WORKSPACE"
+  fi
 
   # Stale remote-tracking refs make every "unpushed commits" count wrong, in
   # both directions. A branch deleted upstream on merge leaves refs/remotes/
