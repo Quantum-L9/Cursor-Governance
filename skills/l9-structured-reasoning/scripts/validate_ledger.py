@@ -26,6 +26,23 @@ ROOT = Path(__file__).resolve().parents[1]
 POLICY_PATH = ROOT / "references" / "confidence-policy.yaml"
 
 
+def _read_under_cwd(candidate: str, *, label: str) -> str:
+    """Read a caller-named file, refusing anything outside the working tree.
+
+    The path arrives from argv. Without containment this CLI will happily read
+    and surface the contents of any file the process can reach, so an operator
+    (or an agent) invoking it with a traversal path turns an analysis helper into
+    a file-disclosure tool. The inputs it is meant to read are workspace
+    artifacts, so confinement costs no supported use.
+    """
+    workspace = Path.cwd().resolve()
+    try:
+        resolved = Path(candidate).resolve().relative_to(workspace)
+    except ValueError as error:
+        raise SystemExit(f"{label} must stay inside {workspace}: {candidate!r}") from error
+    return (workspace / resolved).read_text(encoding="utf-8")
+
+
 def load_allow_set() -> dict[str, dict[str, list[str]]]:
     try:
         import yaml
@@ -103,7 +120,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("ledger")
     args = parser.parse_args()
-    raw = Path(args.ledger).read_text(encoding="utf-8")
+    raw = _read_under_cwd(args.ledger, label="ledger")
     data = json.loads(raw)
     errors = validate(data)
     if errors:
