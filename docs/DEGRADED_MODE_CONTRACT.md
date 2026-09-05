@@ -203,6 +203,20 @@ one, `gh`, `gitleaks` and `pre-commit` are present and only `semgrep` is absent.
 A capability reporting `UNAVAILABLE`, `DEGRADED`, or `BLOCKED_BY_PLATFORM` is
 **never** a reason to paste a credential into this surface. Not `SONAR_TOKEN`,
 not `SEMGREP_APP_TOKEN`, not `INFISICAL_CLIENT_SECRET`, not a Graphiti bearer.
+
+**And there is no containment boundary below the session.** Measured 2026-09-05:
+a Task subagent receives **168 of 168** environment variables with identical
+digests — every `L9_*`, `GRAPHITI_MCP_URL`, and every credential-shaped name
+including `CLAUDE_CODE_MESSAGING_TOKEN`. Child shells inherit the same, across
+login, non-login, POSIX and Python-subprocess boundaries alike. Nothing filters
+them, and nothing in this repository can: Claude Code's agent definitions carry
+`tools` and `model`, not an environment scope.
+
+Nothing real leaks today only because the GitHub, AWS and GCP names all hold one
+14-character sentinel. The moment a real credential is proxied here it reaches
+every subagent and every child process, unfiltered, whatever any contract says
+about which of them may see it. So the rule above is not a preference about
+tidiness — it is the only containment this surface has.
 Everything an LLM can execute can read that LLM's environment. An unavailable
 capability is a delivery problem; a pasted secret is a permanent compromise on
 this surface.

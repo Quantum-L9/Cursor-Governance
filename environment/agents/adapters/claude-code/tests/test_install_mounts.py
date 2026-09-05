@@ -93,9 +93,66 @@ class InstallMountTests(unittest.TestCase):
             ".claude/settings.local.json",
         ):
             self.assertIn(glob, body, f"{glob} must be excluded from the consumer repo")
-        # Committable consumer wiring must NOT be excluded.
-        for glob in (".claude/settings.json", ".claude/hooks/"):
-            self.assertNotIn(glob, body, f"{glob} is consumer wiring and must stay visible")
+        # Injected wiring is a FOURTH category and tracked-ness decides it.
+        #
+        # This assertion used to be a blanket "consumer wiring must never be
+        # excluded", written before install.sh grew the conditional block that
+        # contains untracked injected wiring. It then contradicted the
+        # implementation and failed on unmodified main: governance writes
+        # .claude/settings.json and the two consumer hooks into every workspace,
+        # so in a repo that does not commit them they sit as untracked dirt
+        # after every session. This synthetic workspace is a fresh `git init`
+        # that commits nothing, which is exactly that case.
+        for artifact in (
+            ".claude/settings.json",
+            ".claude/hooks/session_start_claude_governance.sh",
+        ):
+            self.assertIn(
+                artifact,
+                body,
+                f"{artifact} is untracked here and must be contained",
+            )
+
+    def test_tracked_consumer_wiring_is_never_excluded(self) -> None:
+        """The other half of the tracked-ness rule, which had no cover at all.
+
+        Excluding a path the consumer legitimately commits would force `git add
+        -f` on every change to its own wiring. That is why install.sh makes this
+        loop conditional where the mirrors loop is unconditional — and asserting
+        only the exclusion half would let the condition be dropped silently.
+        """
+        claude = self.workspace / ".claude"
+        claude.mkdir(parents=True, exist_ok=True)
+        (claude / "settings.json").write_text("{}", encoding="utf-8")
+        subprocess.run(
+            ["git", "-C", str(self.workspace), "add", "-f", ".claude/settings.json"],
+            check=True,
+        )
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(self.workspace),
+                "-c",
+                "user.email=t@e.st",
+                "-c",
+                "user.name=t",
+                "commit",
+                "-qm",
+                "track wiring",
+            ],
+            check=True,
+        )
+
+        result = self._run()
+        self.assertIn(result.returncode, (0, 1), result.stderr[-2000:])
+
+        body = (self.workspace / ".git" / "info" / "exclude").read_text(encoding="utf-8")
+        self.assertNotIn(
+            ".claude/settings.json",
+            body,
+            "a tracked file is repo content and must stay visible",
+        )
 
     def test_excludes_are_honoured_inside_a_linked_worktree(self) -> None:
         """The globs must land where git READS them, not merely be written.
@@ -155,12 +212,17 @@ class InstallMountTests(unittest.TestCase):
                 subprocess.run(["git", "-C", str(linked), "check-ignore", glob]).returncode,
                 f"{glob} written but not honoured by git inside a linked worktree",
             )
-        for glob in (".claude/settings.json", ".claude/hooks"):
-            self.assertNotEqual(
-                0,
-                subprocess.run(["git", "-C", str(linked), "check-ignore", glob]).returncode,
-                f"{glob} is consumer wiring and must stay visible",
-            )
+        # Same fourth-category rule as the primary-clone test: this worktree
+        # commits no .claude wiring, so the injected files are untracked here
+        # and must be contained — and must be contained THROUGH git, which is
+        # the whole point of probing check-ignore rather than the file.
+        self.assertEqual(
+            0,
+            subprocess.run(
+                ["git", "-C", str(linked), "check-ignore", ".claude/settings.json"]
+            ).returncode,
+            "untracked injected wiring must be honoured by git inside a linked worktree",
+        )
 
     def test_install_is_idempotent(self) -> None:
         self._run()

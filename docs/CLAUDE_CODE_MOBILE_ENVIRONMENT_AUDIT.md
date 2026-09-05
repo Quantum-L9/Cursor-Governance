@@ -8,6 +8,14 @@ at `/root/.cursor-governance` and the workspace checkout at `/home/user/Cursor-G
 
 **Final status:** `VERIFIED_WITH_NON_BLOCKING_FINDINGS`.
 
+**Remediation status (2026-09-05):** all twelve findings addressed on this
+branch. Fixes are listed per finding below. Three findings were **wrong as
+first written** and the corrections are recorded inline rather than quietly
+edited away — implementing a finding is the strongest test of whether it was
+true, and F-04, F-08 and F-11 did not survive it unchanged. The hydration cap
+(F-02) is deliberately not fixed here: the reporting half is, and the coverage
+decision is [issue #498](https://github.com/Quantum-L9/Cursor-Governance/issues/498).
+
 Every claim below is backed by execution in the live container at that SHA. No secret
 value, fragment, or full process environment appears anywhere in this document; secrets
 are reported as name, presence, length, and a truncated non-reversible digest only.
@@ -46,8 +54,8 @@ who it silently leaves out:
    ASCII sort, means the same six repositories always win and the same six always get
    **neither** memory hydration **nor** a dependency install — deterministically, every
    session, reported as a parenthetical.
-3. Two readiness receipts are read as current while describing a different workspace, or
-   a moment thirteen hours earlier.
+3. Two receipts are read as current outside the scope they describe — one for a
+   different workspace, one with no write time at all.
 
 None of these blocks operation. All three make a degraded state read as a ready one,
 which is the specific failure this audit exists to catch.
@@ -313,6 +321,8 @@ HTTPS front door exposing write tools over 11 group namespaces — is authentica
 `graphiti_transport_auth` field emitting `AUTHENTICATED` / `UNAUTHENTICATED` from the
 presence of `GRAPHITI_MCP_TOKEN`. Do not reuse the CLI health reason string.
 
+**FIXED.** The dimension is `Graphiti_reachability`; a separate `graphiti_transport_auth` observation reads `GRAPHITI_MCP_TOKEN` and reports `UNAUTHENTICATED` here, emitted beside `uv_version` because an absent token is the intended posture and a dims entry would aggregate it into a DEGRADED receipt. DEGRADED reasons no longer claim an auth verdict for a non-auth cause. The emitter's own docstring already stated the rule it broke: *"a TCP-reachable Graphiti is not an authenticated Graphiti"*.
+
 **Verification:** receipt shows `UNAUTHENTICATED` on this surface; a token-bearing surface
 shows `AUTHENTICATED`; `tests/ops/scripts/test_emit_claude_readiness.py` asserts both.
 
@@ -348,6 +358,14 @@ proven toolchain, and the session text implies they had nothing to hydrate.
 each; (b) raise the cap to the repository count or rotate the window across sessions so
 coverage is eventually complete.
 
+**REPORTING FIXED; COVERAGE FILED.** `select_workspace_roots` returns each dropped root
+paired with the rule that dropped it, and `workspace_roots` is now a thin wrapper over it so
+the reported drops cannot disagree with the acted-on set. The live line now names them — and
+immediately sharpened this finding: **five** were dropped by the cap
+(`l9-ci-debt-intelligence`, `l9-ci-debt-lsp`, `l9-ci-debt-resolver`, `l9-ci-sdk`,
+`l9-harness`) and exactly **one** (`l9-observability-core`) genuinely lacks a namespace. The
+cap decision is [issue #498](https://github.com/Quantum-L9/Cursor-Governance/issues/498).
+
 **Verification:** in a 12-repo container the emitted line names all 6 dropped roots with a
 per-root reason; over N sessions every namespaced repo hydrates at least once.
 
@@ -361,8 +379,11 @@ One global receipt describes one arbitrary repository, and every other workspace
 container reads that verdict as its own. `l4_local.py` already solved exactly this shape
 by namespacing state per workspace slug (see V-03); this receipt did not adopt it.
 
-**Fix:** namespace `bootstrap-state.json` per workspace, or add an explicit
-`container_roots` list and refuse to answer for a workspace not in it.
+**FIXED.** The installer now writes `covered_roots` from `projection_roots` — its own mount
+set — and `evaluate()` accepts a `workspace` and demotes to `UNKNOWN` when it can prove
+non-coverage. Back-compatible by construction: `evaluate()` without a workspace behaves
+exactly as before, and a receipt with no `covered_roots` reports `workspace_covered=None`
+rather than guessing.
 
 ---
 
@@ -375,8 +396,17 @@ creation time. `gov-refresh.json` gets this right (`ttl_seconds: 3600`, `state: 
 the readiness receipt does not. `CLAUDE.md` already warns that receipts expire and that an
 absent receipt means `never_ran`, not `ready`; this artifact has no way to express either.
 
-**Fix:** add `ttl_seconds` and a recompute-or-`unknown` read path, matching
-`governance_refresh_receipt.py`.
+**CORRECTED AND FIXED.** This finding was imprecise in a way that mattered. The receipt is
+not "13 hours stale": `timestamp` is the **commit date of `governance_SHA`**, which reads
+exactly like a write time and is not one. So the receipt carried no write time at all and its
+age was not merely untracked but *unknowable* — a worse defect than the one reported, and the
+reason the misreading was so natural.
+
+It now carries `generated_at` and `ttl_seconds`, and `receipt_freshness()` derives
+fresh / expired / never_ran the way `governance_refresh_receipt.py` already does for the same
+clone. A receipt predating `generated_at` is `expired`, never `fresh`: an unknowable age is
+precisely the state this must refuse to report as current. `timestamp` keeps its historical
+name and meaning, now with a comment saying what it is.
 
 ---
 
@@ -388,8 +418,18 @@ surface. `rules/48` states remediates defaults to 1 after the PR opens and that
 the account level, the documented default is unreachable — the poll-to-green worker can
 never run, and no `make pr` invocation restores it without an explicit per-command override.
 
-**Fix:** remove `PR_REMEDIATE` from the account environment field; pass it per invocation
-where opt-out is actually intended.
+**FIXED IN-REPO; ONE OPERATOR ACTION REMAINS.** The account field was doing exactly what
+this repo told it to: `environment.env.example` carried the literal line `PR_REMEDIATE=0`,
+two sections above a breakglass block that already states the principle — *"Setting any of
+these in the account environment makes the bypass permanent for every session."* That
+reasoning holds for a per-run flag too. The line is gone, replaced by why it is absent, and
+the paste-ready docs are regenerated. `verify_account_env.py` grows `PINNED_OPT_OUTS` and now
+reports it as `PINNED` (distinct from a `PROHIBITED` credential and from ordinary drift) with
+the remedy; live on this container it reports `PINNED` and `ok=false`.
+
+**Remaining operator action:** delete `PR_REMEDIATE` from the hosted Environment variables
+field. Nothing in-repo can do that; this change makes its absence detectable rather than
+inherited silently.
 
 ---
 
@@ -408,8 +448,11 @@ rather than re-typed in eight `bash -c` one-liners — but a wrong `--class` in 
 one-liners still silently downgrades a gate to an observer, which is the copy-paste slip
 the design set out to prevent.
 
-**Fix:** a `HOOK_NAME → required class` table inside the launcher; refuse (exit 2) when the
-registration disagrees.
+**FIXED.** A table names every gate; a registration that disagrees is refused (exit 2), and a
+downgrade refusal is not recorded as a skip. Only gates are named, so adding an observer still
+needs no edit. Re-ran the failure injection: the four original gate faults still exit 2, a
+genuine observer still exits 0 and logs, and all four gates now refuse an observer
+registration.
 
 ---
 
@@ -420,7 +463,8 @@ registration disagrees.
 `/nonexistent-gov-root/.l9/claude/hook-skips.log` and vanished. An observer skip caused by a
 broken `HOME` — precisely when the audit trail matters — leaves no trace.
 
-**Fix:** fall back to `${TMPDIR:-/tmp}/l9-hook-skips.log` and name the fallback on stderr.
+**FIXED.** Falls back to `${TMPDIR:-/tmp}/l9-hook-skips.log` and names the real target on
+stderr; proven with `HOME=/proc/nonexistent`.
 
 ---
 
@@ -431,8 +475,19 @@ from `env`; `/root/.claude/settings.json` and `settings.local.json` carry both. 
 correct **only** because `settings.local.json` wins. Remove that file and both gates lose
 their flag at the project scope.
 
-**Fix:** reproject the project-scope settings from `settings.template.json`; add the two
-keys to the projection drift check.
+**CORRECTED AND FIXED — this finding had the direction backwards.** The template carries 17
+env keys and does **not** define `L9_L4_LOCAL_AUTONOMY` or `L9_WORKTREE_ISOLATION`; the
+project-scope file matches it exactly. Those two are `OVERLAY_KEYS`, owned by
+`overlay_hosted_settings_env.py` and sourced from the hosted account field, and the tracked
+project file is deliberately left alone because patching it dirtied a clean checkout on every
+SessionStart. Nothing was missing.
+
+The real defect was the reverse. `env` is a managed key, so the reconciler took it wholly
+from the template and would **strip** the two keys the overlay had just written — reporting a
+correctly configured container as drift (`ok: false`) and, on a write, starting a churn loop
+with the overlay. `merge_user_settings` now preserves overlay-owned keys the file already
+carries, with the key list parsed from the overlay module's own `OVERLAY_KEYS` so the two
+cannot drift apart. Live: `env removed [] / added []`, where it previously removed both.
 
 ---
 
@@ -445,7 +500,15 @@ unless a test file is touched, so the dependency is dangling for most of a sessi
 same holds for the `50-qa-testing` reference in `rules/80-gmp-execution.mdc:70–71`, which
 is the source of the projection.
 
-**Fix:** inline the closure conditions `80` actually needs, or make the reference conditional.
+**FIXED.** The three conditions Phase 4 actually turns on are stated in `80` itself, with
+`50` carrying the fuller contract for when it does attach. Edited the source `.mdc` and
+regenerated the projection.
+
+**One claim here was wrong.** `00-global`'s references to `23-l9-skill-routing.mdc` and
+`84-cursor-governance-wiring.mdc` are **not** dangling: both exist under `rules/`, the first
+projected under a renamed stem and the second one of 17 sources
+`ops/config/llm_rules_projection.yaml` deliberately skips. The reference names the `.mdc`
+source, which is accurate.
 
 ---
 
@@ -467,8 +530,15 @@ the GitHub/AWS/GCP names all hold one sentinel. But there is no filtering layer 
 the first real credential proxied into the account field reaches every subagent and every
 child process, whatever its contract says.
 
-**Fix:** define an explicit subagent environment allow-list before any real credential is
-proxied to this surface.
+**CORRECTED — the proposed fix is not implementable, so the real one is documentation.**
+There is no lever: Claude Code's agent definitions carry `tools` and `model`, not an
+environment scope, and nothing in this repository attempts one. An allow-list cannot be
+written here.
+
+What *is* actionable is recording why the existing rule is load-bearing. The measurement now
+sits under "the rule that does not bend" in `docs/DEGRADED_MODE_CONTRACT.md`: because a
+credential proxied to this surface reaches every subagent and child process unfiltered, that
+rule is not a preference about tidiness — it is the only containment this surface has.
 
 ---
 
@@ -480,9 +550,17 @@ proxied to this surface.
 The chain is in force and largely invisible, which is the condition `CLAUDE.md` was written
 to mitigate rather than one it resolves.
 
-**Fix:** project the binding clauses of `CANONICAL_LAW` and `AGENTS.md` into always-apply
-rule files under `environment/generated/llm-rules/`, so authority arrives by the same path
-the rest of the doctrine does.
+**CORRECTED AND FIXED — the proposed fix would have made things worse.** `CANONICAL_LAW.md`
+carries **14** dated sections after §14 that supersede earlier ones, and `AGENTS.md` carries
+its own after §20. Projecting their bodies would push *retracted* law into every session on
+every surface, and a summary in the always-apply plane becomes a competing SSOT that drifts
+from the law it paraphrases — which `00-global` already forbids.
+
+`rules/01-authority-chain.mdc` therefore carries **no law**. It carries the chain, the fact
+that rungs 1 and 3 are absent from context, the warning that a cited `§N` is a pointer to
+disk rather than something already read, the base-plus-amendments trap, and a section index so
+an agent reads 40 lines instead of 47 KB. It says explicitly that it must never grow into a
+summary, and it fits the 4096-byte always-apply budget. Always-apply projections go 33 → 34.
 
 ---
 
@@ -501,7 +579,11 @@ the rest of the doctrine does.
 
 ---
 
-## 10. Remediation order (root-cause first)
+## 10. Remediation order (root-cause first) — all complete
+
+Recorded as planned, with what each turned out to be. The order held: fixing F-01
+first was right, and F-04 before F-03 was right for the reason given.
+
 
 1. **F-01** — stop asserting authentication that is not measured. Everything else in the
    readiness receipt is trustworthy; this one field is not, and it is the field an operator
@@ -515,8 +597,16 @@ the rest of the doctrine does.
    Cheap now, a P0 later.
 5. **F-05** — unpin `PR_REMEDIATE`.
 6. **F-06**, **F-08** — close the two silent-downgrade paths (hook class, settings drift).
-7. **F-07**, **F-09**, **F-10** — audit-trail fallback, dangling rule reference, documented
+7. **F-07**, **F-09**, **F-10** — audit-trail fallback, cross-plane rule reference, documented
    Context7 gap.
+
+**What implementing them taught, which auditing them had not.** Three findings did not
+survive contact with the code. F-04 understated its own defect (no write time at all, not a
+stale one). F-08 was backwards (the reconciler was stripping keys, not the projection missing
+them). F-11 and F-12 both proposed fixes that could not be built, or that would have shipped
+retracted law. A finding is a hypothesis until something is changed on the strength of it —
+which is the argument for pairing an audit with its remediation rather than filing it and
+moving on.
 
 ---
 

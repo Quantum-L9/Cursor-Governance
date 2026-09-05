@@ -157,7 +157,14 @@ stage() { RECEIPT_STAGE="$1"; }
 # plus the repositories inside it, or just the workspace when it is a checkout.
 # Emitting it makes coverage a fact the reader can check rather than infer.
 receipt_covered_roots() {
-  "$GOV_PY" - "$GOV_DIR" "$WORKSPACE" <<'PYEOF' 2>/dev/null || printf '["%s"]' "$WORKSPACE"
+  # Must ALWAYS print a valid JSON array. This runs inside a command
+  # substitution in the receipt writer, so emitting nothing produces
+  # `"covered_roots": ,` — an unparseable receipt, which is strictly worse than
+  # a coarse one. Every failure path below therefore falls back to the
+  # workspace alone rather than to silence.
+  local py="${GOV_PY:-}" gov="${GOV_DIR:-}" out=""
+  if [ -n "$py" ] && [ -x "$py" ] && [ -n "$gov" ]; then
+    out="$("$py" - "$gov" "$WORKSPACE" <<'PYEOF' 2>/dev/null
 import json
 import sys
 from pathlib import Path
@@ -172,6 +179,12 @@ except Exception:
     roots = [workspace]
 print(json.dumps(roots))
 PYEOF
+)" || out=""
+  fi
+  case "$out" in
+    \[*\]) printf '%s' "$out" ;;
+    *) printf '["%s"]' "$(json_token "$WORKSPACE")" ;;
+  esac
 }
 
 _receipt_component() {
