@@ -38,7 +38,7 @@ requirements:
     capability: repository_change
     target_state: modify
     required: true
-    target_repo: Quantum-L9/PR_Repair
+    target_repo: Quantum-L9/l9-pr-repair
     dependencies: []
     authority_refs: []
     unknown_ids: []
@@ -48,7 +48,7 @@ execution_characteristics:
   runtime_validation_required: true
   protected_actions: []
   repositories:
-    - Quantum-L9/PR_Repair
+    - Quantum-L9/l9-pr-repair
     - Quantum-L9/LLM-Router
     - Quantum-L9/l9-cognitive-runtime
 existing_execution:
@@ -84,7 +84,7 @@ units:
     adapter: program-execution
     requirement_ids: [ER-001, ER-002, ER-003]
     target_repos:
-      - Quantum-L9/PR_Repair
+      - Quantum-L9/l9-pr-repair
       - Quantum-L9/LLM-Router
       - Quantum-L9/l9-cognitive-runtime
     depends_on_units: []

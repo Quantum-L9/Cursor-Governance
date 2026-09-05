@@ -562,76 +562,29 @@ if [ -n "$GOV_PY" ] && [ -f "$VALIDATOR" ]; then
 fi
 
 # --- 4) Excludes for the GENERATED .claude mirrors --------------------------
-# Shared activation artifacts are excluded by the shared bootstrap; these globs
-# are Claude-specific. Only the GENERATED mirrors are excluded —
-# .claude/settings.json and .claude/hooks/ are committable consumer wiring.
-#
-# .mcp.json belongs in this list for the same reason the mirrors do: it is a
-# render of mcp.template.json (claude_projection.py), not hand-authored, and in
-# a consumer that does not commit it the projection shows as untracked on every
-# session. Measured across the four in-scope repos: tracked in Cursor-Governance,
-# untracked in l9-ci-core, l9-cognitive-runtime and l9-meta-injector.
-#
-# Excluding it is a no-op wherever it IS committed — .git/info/exclude only
-# governs untracked paths, so a tracked .mcp.json keeps showing its real diff.
-# That is what makes one list correct for both cases.
-#
-# .claude/settings.local.json is a THIRD category: neither a generated mirror
-# nor committable wiring, but a personal machine-local override (Claude Code's
-# .local.json convention). It was covered only where a repo happened to carry a
-# tracked ignore line for it -- Cursor-Governance at .gitignore:51, a blanket
-# /.claude/ in some consumers -- so a repo with neither showed it untracked on
-# every session. Coverage that depends on a per-repo tracked line is exactly
-# what this list exists to replace.
+# Option B: same list as the shared bootstrap (session_git_excludes.sh).
+# install.sh still writes it because tests / L9_SKIP_SHARED_BOOTSTRAP skip
+# the shared half. Never a blanket `.claude/` (Option A).
+# shellcheck source=../../../../ops/scripts/lib/session_git_excludes.sh
+source "$GOV_DIR/ops/scripts/lib/session_git_excludes.sh"
 if [ "$CHECK" != "1" ] && git -C "$WORKSPACE" rev-parse --git-dir >/dev/null 2>&1; then
-  # --git-common-dir, not --git-dir: in a LINKED WORKTREE the latter is
-  # .git/worktrees/<name>/, but git reads $GIT_COMMON_DIR/info/exclude, so
-  # writing there is a silent no-op. Identical in a primary clone. Rules
-  # 49/96 give every mutating agent its own worktree, so that is the norm.
-  exclude_file="$(git -C "$WORKSPACE" rev-parse --git-common-dir)/info/exclude"
-  case "$exclude_file" in /*) : ;; *) exclude_file="$WORKSPACE/$exclude_file" ;; esac
-  mkdir -p "$(dirname "$exclude_file")"
-  touch "$exclude_file"
-  # No trailing slash: a "dir/" pattern matches DIRECTORIES ONLY, and these
-  # mirrors are mounted as symlinks into governance (.claude/rules is one),
-  # which git does not treat as a directory — so the slashed form silently
-  # never matched. Slashless matches the mirror however it is mounted.
-  for glob in ".claude/skills" ".claude/rules" ".claude/commands" ".mcp.json" \
-              ".claude/settings.local.json"; do
-    grep -qxF "$glob" "$exclude_file" 2>/dev/null || printf '%s\n' "$glob" >> "$exclude_file"
-  done
-  # The files the settings reconciler MATERIALIZES (settings.json, the two
-  # consumer hooks) are the fourth category. They were left out of the list
-  # above as "committable consumer wiring", and that is right for a repo that
-  # commits them — but governance writes them into every workspace, so in a
-  # repo that does not they sit as untracked dirt after every session.
-  #
-  # Tracked-ness decides, exactly as reconcile_claude_settings.settings_is_git_tracked
-  # already defines the ownership signal: a tracked file is repo content and is
-  # left alone, an untracked one was injected here and is ours to contain.
-  # Unconditional exclusion would force `git add -f` on a consumer that
-  # legitimately commits its wiring, which is why this loop is conditional
-  # where the one above is not.
-  #
-  # The list comes from the reconciler that writes them, not restated here.
-  if [ -n "$GOV_PY" ]; then
-    # Silence here would be a fail-open: an older governance clone without the
-    # flag would leave the dirt with no signal that containment did not run.
-    injected="$("$GOV_PY" "$GOV_DIR/ops/scripts/reconcile_claude_settings.py" \
-                 --print-workspace-artifacts 2>/dev/null)" || injected=""
-    if [ -z "$injected" ]; then
-      warn "reconcile_claude_settings --print-workspace-artifacts returned nothing; injected .claude wiring stays untracked"
-    else
-      printf '%s\n' "$injected" | while IFS= read -r artifact; do
-        [ -n "$artifact" ] || continue
-        if git -C "$WORKSPACE" ls-files --error-unmatch -- "$artifact" >/dev/null 2>&1; then
-          continue  # repo content: exclusion would only add friction
-        fi
-        grep -qxF "$artifact" "$exclude_file" 2>/dev/null || printf '%s\n' "$artifact" >> "$exclude_file"
-      done
+  if apply_session_claude_mirror_excludes "$WORKSPACE"; then
+    # The files the settings reconciler MATERIALIZES (settings.json, the two
+    # consumer hooks) are the fourth category. Tracked-ness decides.
+    if [ -n "$GOV_PY" ]; then
+      injected="$("$GOV_PY" "$GOV_DIR/ops/scripts/reconcile_claude_settings.py" \
+                   --print-workspace-artifacts 2>/dev/null)" || injected=""
+      if [ -z "$injected" ]; then
+        warn "reconcile_claude_settings --print-workspace-artifacts returned nothing; injected .claude wiring stays untracked"
+      else
+        printf '%s\n' "$injected" | apply_session_untracked_artifact_excludes "$WORKSPACE" \
+          || warn "could not contain untracked injected .claude wiring in $WORKSPACE"
+      fi
     fi
+    say "excluded generated .claude mirrors + .mcp.json + settings.local.json + untracked injected wiring (local, uncommitted)"
+  else
+    warn "could not write Claude-mirror git excludes for $WORKSPACE"
   fi
-  say "excluded generated .claude mirrors + .mcp.json + settings.local.json + untracked injected wiring (local, uncommitted)"
 fi
 
 # --- 5) Thin l9 dispatcher --------------------------------------------------

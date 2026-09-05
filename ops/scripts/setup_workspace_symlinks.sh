@@ -16,6 +16,8 @@ source "$SCRIPT_DIR/lib/workspace_kind.sh"
 source "$SCRIPT_DIR/lib/cursor_plans_store.sh"
 # shellcheck source=lib/retire_leftover_launchagents.sh
 source "$SCRIPT_DIR/lib/retire_leftover_launchagents.sh"
+# shellcheck source=lib/session_git_excludes.sh
+source "$SCRIPT_DIR/lib/session_git_excludes.sh"
 
 FALLBACK_LOG="$HOME/.cursor-globalcommands-fallback.log"
 DISABLE_FALLBACK=${DISABLE_FALLBACK:-1}
@@ -164,20 +166,17 @@ PLIST
 }
 
 ensure_global_git_ignores() {
-  # Isolate per-machine runtime state from every repo via git core.excludesfile,
-  # so dynamic memory/state never lands in git history or fights the auto-sync.
+  # Option B machine layer (Cursor-Governance#281): core.excludesFile covers
+  # never-owned session paths on this machine. Generated Claude mirrors
+  # (including `.mcp.json`) stay session-local so a consumer can still
+  # `git add .claude .mcp.json` for Web/Mobile. Never a blanket `.claude/`.
   local gi
   gi="$(git config --global core.excludesfile 2>/dev/null || true)"
   [ -z "$gi" ] && gi="$HOME/.gitignore_global"
   gi="${gi/#\~/$HOME}"
-  mkdir -p "$(dirname "$gi")" 2>/dev/null || true
-  touch "$gi" 2>/dev/null || { echo "WARN: cannot write global gitignore $gi"; return 0; }
+  apply_machine_session_excludes "$gi" || { echo "WARN: cannot write global gitignore $gi"; return 0; }
   git config --global core.excludesfile "$gi" >/dev/null 2>&1 || true
-  local added=0 pat
-  for pat in "memory-bank/" ".workflow_state_*.json" ".cursor-globalcommands-fallback.log"; do
-    if ! grep -qxF "$pat" "$gi" 2>/dev/null; then echo "$pat" >> "$gi"; added=1; fi
-  done
-  [ "$added" = "1" ] && echo "OK: global git ignores updated in $gi" || echo "OK: global git ignores already present ($gi)"
+  echo "OK: global git ignores present ($gi)"
 }
 
 echo "Governance root:  $GOV_ROOT"

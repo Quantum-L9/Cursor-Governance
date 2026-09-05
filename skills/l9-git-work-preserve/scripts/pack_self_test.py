@@ -924,6 +924,86 @@ def check_shipped_copies(tmp: Path, errors: list[str]) -> None:
         errors.append("restore must keep unique committed bytes")
 
 
+def check_kernel_normalized_plans(tmp: Path, errors: list[str]) -> None:
+    sys.path.insert(0, str(SCRIPTS))
+    import prune_open_pr_copies as prune
+
+    repo = _init(tmp / "plan-norm")
+    pr_plan = (
+        "---\n"
+        "name: donor\n"
+        "kernel_pass:\n"
+        "  validate_repair:\n"
+        "    ran_at: 2026-01-01T00:00:00Z\n"
+        '    body_sha256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"\n'
+        "---\n"
+        "same body\n"
+    )
+    leftover_plan = (
+        "---\n"
+        "name: donor\n"
+        "kernel_pass:\n"
+        "  validate_repair:\n"
+        "    ran_at: 2026-09-05T21:30:00Z\n"
+        '    body_sha256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"\n'
+        "---\n"
+        "same body\n"
+    )
+    unique_plan = leftover_plan.replace("same body\n", "unique leftover body\n")
+    pr_exact = hashlib.sha256(pr_plan.encode()).hexdigest()
+    pr_canon = prune.kernel_normalized_sha256(pr_plan)
+    leftover_exact = hashlib.sha256(leftover_plan.encode()).hexdigest()
+    if leftover_exact == pr_exact:
+        errors.append("fixture leftover exact sha must differ from PR blob")
+        return
+    if pr_canon != prune.kernel_normalized_sha256(leftover_plan):
+        errors.append("fixture leftover must kernel-normalize to the PR blob")
+        return
+
+    _git(repo, "checkout", "-b", "feat/pr")
+    dest = repo / "docs" / "plans"
+    dest.mkdir(parents=True)
+    (dest / "donor.plan.md").write_text(pr_plan, encoding="utf-8")
+    _git(repo, "add", "docs/plans/donor.plan.md")
+    _git(repo, "commit", "-m", "land plan on pr")
+    _git(repo, "checkout", "main")
+
+    leftover_wt = tmp / "plan-leftover-wt"
+    _git(repo, "worktree", "add", "-b", "feat/leftover-plan", str(leftover_wt), "main")
+    (leftover_wt / "docs" / "plans").mkdir(parents=True, exist_ok=True)
+    (leftover_wt / "docs" / "plans" / "donor.plan.md").write_text(leftover_plan, encoding="utf-8")
+    (leftover_wt / "docs" / "plans" / "unique.plan.md").write_text(unique_plan, encoding="utf-8")
+
+    index = {
+        "docs/plans/donor.plan.md": [pr_exact, pr_canon],
+        "docs/plans/unique.plan.md": [hashlib.sha256(b"not-this\n").hexdigest()],
+    }
+    index_path = tmp / "plan-blob-index.json"
+    index_path.write_text(json.dumps(index), encoding="utf-8")
+
+    applied = run(
+        [
+            sys.executable,
+            str(SCRIPTS / "prune_open_pr_copies.py"),
+            "--repo",
+            str(repo),
+            "--blob-index",
+            str(index_path),
+            "--pr-head",
+            "feat/pr",
+            "--skip-fetch",
+            "--apply",
+        ]
+    )
+    if applied.returncode != 0:
+        errors.append(f"kernel-normalize apply failed: {applied.stderr or applied.stdout}")
+        return
+    if (leftover_wt / "docs" / "plans" / "donor.plan.md").exists():
+        errors.append("kernel-normalized leftover *.plan.md must be unlinked")
+    if not (leftover_wt / "docs" / "plans" / "unique.plan.md").is_file():
+        errors.append("unique leftover plan bytes must stay")
+
+
 def main() -> int:
     errors: list[str] = []
     struct = run([sys.executable, str(SCRIPTS / "validate_pack_structure.py")])
@@ -943,6 +1023,7 @@ def main() -> int:
         check_triage(build_redundancy_fixture(root / "triage"), errors)
         check_prune_execute(root / "prune", errors)
         check_shipped_copies(root / "copies", errors)
+        check_kernel_normalized_plans(root / "plan-norm", errors)
 
     if errors:
         for e in errors:
