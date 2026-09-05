@@ -58,30 +58,52 @@ bash skills/l9-repo-sync/scripts/ff.sh --ssot
 `--clone` from another repo: this checkout if it is a governance identity
 tree, else `$HOME/Cursor-Governance`, else `CURSOR_GOVERNANCE_CLONE`.
 
-2. **Shelf leftover `WIP/`, `docs/plans/`, and
-   `environment/program-execution/campaigns/`** — if any untracked files remain
-   under those trees (skip gitignored secret globs, `WIP/Legal Defense/`,
-   credential filenames, and anything an open `feat/ff-shelf-*` PR already
-   carries), cut a sibling worktree from the new `origin/main` tip
-   (`feat/ff-shelf-<stamp>`), **copy those files into it** — untracked bytes
-   do not exist in a fresh checkout. **Before commit and before precommit**,
-   apply `kernels/Improve.md`, then `kernels/Recursive Alignment.md`, then
-   `kernels/Validate & Repair.md` to those files (write `kernel_pass` on
-   shelved `*.plan.md`). Then pathspec-add **only** those files, scoped commit,
-   run `l4_local.py begin` then `authorize-release` in that worktree
-   (**not** `record-kernels` — corpus kernels are not an L4 phase). Then
-   **finish the shelf loop** unless `FF_SHELF_PUBLISH=0`:
-   `PR_STACK=auto PR_REMEDIATE=0 make pr` in the shelf worktree and display
-   the opened **PR URL**. If the shelf list was empty after dedupe, skip publish.
-   Opt-out: `FF_SHELF_PUBLISH=0` shelves and commits only (no `make pr`).
-   Do **not** put `make pr` inside `ff.sh`. Do not scoop other untracked paths.
-   Do not delete the copies in the named clone.
+2. **Shelf leftover untracked and dirty-tracked `TODO.md`, `WIP/`,
+   `docs/plans/`, and `environment/program-execution/campaigns/`** with
+   one script (skip gitignored secret globs, `WIP/Legal Defense/`,
+   credential filenames).
+   Do **not** invent an rsync/`git add` recipe. `ff.sh` stays push-off.
+
+   ```bash
+   GOV_PY="${GOV_PY:-$HOME/.cursor-governance/.venv/bin/python}"
+   FF_TARGETS=()
+   # Required: initialize before the loop. ff.sh cannot export this array.
+   # Prefer every `ff: clone=` line ff.sh printed. Do not assume $(pwd).
+   # If those lines were not captured, reconstruct from the flag passed to ff.sh:
+   #   (none)  → this checkout and $HOME/.cursor-governance when they differ
+   #   --clone → working copy only
+   #   --ssot  → $HOME/.cursor-governance only
+   if [ -z "${FF_TARGETS[*]:-}" ]; then
+     _ff_here="$(cd "$(pwd)" && pwd)"
+     _ff_ssot=""
+     if [ -e "${HOME}/.cursor-governance/.git" ]; then
+       _ff_ssot="$(cd "${HOME}/.cursor-governance" && pwd)"
+     fi
+     FF_TARGETS+=("$_ff_here")
+     if [ -n "$_ff_ssot" ] && [ "$_ff_ssot" != "$_ff_here" ]; then
+       FF_TARGETS+=("$_ff_ssot")
+     fi
+   fi
+   for _ff_ws in "${FF_TARGETS[@]}"; do
+     "$GOV_PY" "$_ff_ws/skills/l9-repo-sync/scripts/ff_shelf.py" --clone "$_ff_ws"
+   done
+   ```
+
+   The script writes `$CLONE/.l9/ff-shelf-untracked.txt`, appends an existing
+   same-author `feat/ff-shelf-*` PR (or cuts one stamp), applies corpus kernels
+   (`kernel_pass` on `*.plan.md` only), pathspec-from-file then a separate
+   commit, `l4_local.py begin` + `authorize-release`, then
+   `PR_STACK=auto PR_REMEDIATE=0 make pr` unless `FF_SHELF_PUBLISH=0`.
+   Display the opened **PR URL**. If the leftover list is empty, the script
+   exits 0 without a stamp. Do not scoop other untracked paths. Do not delete
+   the copies in the named clone.
 
    Record which clones `ff.sh` synced into `FF_TARGETS` (same resolution as the
    table above) before post-shelf — do not assume `$(pwd)`.
 3. **Post-shelf close** — on every clone `/ff` actually synced (not
    `$(pwd)` when that is a consumer repo, and not only one clone when bare
-   `/ff` paired two):
+   `/ff` paired two). `ff_shelf.py` already runs post-shelf; re-verify through
+   the locked interpreter:
 
    ```bash
    # Resolve the same target set ff.sh used:

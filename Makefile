@@ -17,6 +17,9 @@ endif
 # Workspace a target acts on. Defaults to the directory make was invoked from, so
 # `make -C ~/.cursor-governance start` from inside a consumer repo targets that repo.
 WS ?= $(CURDIR)
+# From a Cursor-Governance chat, pass WS=<target checkout> on every goal.
+# `make -C` sets CURDIR to the makefile directory; omit WS= and the target is
+# this clone. The L4 hook scores the named WS=, not the IDE project root.
 
 # When 1, `make pr` fails on mypy errors. Default 0 matches CI (mypy is
 # continue-on-error while the tracked debt in TODO.md remains).

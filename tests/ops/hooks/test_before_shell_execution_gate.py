@@ -20,6 +20,14 @@ def test_template_has_one_before_shell_execution_command() -> None:
     assert entries[0]["command"] == "./hooks/before-shell-execution-gate.sh"
 
 
+def test_template_has_one_fail_closed_subagent_start() -> None:
+    data = json.loads(TEMPLATE.read_text(encoding="utf-8"))
+    entries = data["hooks"]["subagentStart"]
+    assert len(entries) == 1
+    assert entries[0]["command"] == "./hooks/lifecycle-subagent-start.sh subagent_start"
+    assert entries[0]["failClosed"] is True
+
+
 def test_combined_python_names_all_three_denies() -> None:
     text = COMBINED_PY.read_text(encoding="utf-8")
     assert "shell_gate" in text

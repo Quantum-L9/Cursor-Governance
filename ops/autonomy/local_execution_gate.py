@@ -66,6 +66,7 @@ if str(_HERE) not in sys.path:
 
 from command_parse import (  # noqa: E402
     extract_named_roots,
+    make_workspace_raw,
     segment_head,
     split_segments,
     strip_heredoc_bodies,
@@ -177,6 +178,46 @@ def make_goals(segment: str) -> tuple[str, ...]:
         goals.append(token)
         index += 1
     return tuple(goals)
+
+
+def _resolve_named_workspace(raw: str, root: Path) -> Path | None:
+    """Existing git work tree named by WS=, or None (ignore the override)."""
+    if any(ch in raw for ch in "$`()*?[]{}~"):
+        return None
+    try:
+        candidate = Path(raw)
+    except (OSError, ValueError):
+        return None
+    if not candidate.is_absolute():
+        candidate = root / candidate
+    try:
+        candidate = candidate.resolve()
+    except OSError:
+        return None
+    home = Path.home().resolve()
+    if candidate in {home, home / ".cursor", home / ".claude"}:
+        return None
+    if not candidate.is_dir():
+        return None
+    toplevel = _git_out(candidate, "rev-parse", "--show-toplevel")
+    return Path(toplevel) if toplevel else None
+
+
+def command_make_workspace(command: str, root: Path) -> Path | None:
+    """Workspace named by a make ``WS=`` / ``L9_L4_WORKSPACE=``, if valid."""
+    for segment in split_segments(strip_heredoc_bodies(command)):
+        raw = make_workspace_raw(segment)
+        if raw is None:
+            for wrapped in wrapper_subcommands(segment):
+                raw = make_workspace_raw(wrapped)
+                if raw is not None:
+                    break
+        if raw is None:
+            continue
+        resolved = _resolve_named_workspace(raw, root)
+        if resolved is not None:
+            return resolved
+    return None
 
 
 def is_make_pr(segment: str) -> bool:
@@ -804,9 +845,12 @@ def effective_root(command: str, root: Path) -> Path:
     checkout -- wrong branch, wrong L4 receipt -- and no worktree could ever
     publish.
 
-    Only a worktree of the *same* repository is accepted, verified by comparing
-    `git rev-parse --git-common-dir`. A cd into an unrelated repository leaves
-    the root untouched, so this cannot be used to escape the gate.
+    An explicit make ``WS=`` / ``L9_L4_WORKSPACE=`` names the checkout the
+    Makefile will act on and *may* be another repository. That is how this
+    repo's goals are invoked from a Cursor-Governance chat
+    (``make -C ~/.cursor-governance pr WS=<consumer>``). L4 is still checked
+    at the named tree; a foreign receipt cannot authorize this one. A bare
+    ``cd`` into an unrelated repository still does not redirect.
 
     A cloud session reports something different again: a *container root* that
     holds many clones side by side and is itself no repository (`/home/user`).
@@ -820,6 +864,10 @@ def effective_root(command: str, root: Path) -> Path:
     same-repository rule still applies, so this is not a way to reach an
     unrelated checkout from a real one.
     """
+    named = command_make_workspace(command, root)
+    if named is not None:
+        return named
+
     match = _LEADING_CD.match(command)
     if not match:
         return root
