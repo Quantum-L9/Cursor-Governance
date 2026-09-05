@@ -65,7 +65,16 @@ fi
 # NOTE (still deferred): cwd=$GOV_ROOT with absolute --files paths. That changes
 # how every hook resolves its inputs; skipping the unresolvable hooks is the
 # narrower fix for the failure actually observed.
-GOV_ROOT="${GOV_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+# Script-relative ON PURPOSE, and NOT "${GOV_ROOT:-...}".
+#
+# The resolver above binds GOV_ROOT to the machine SSOT ($HOME/.cursor-governance).
+# This variable means something different: the governance tree THESE scripts
+# belong to, which is what `"$WS" != "$GOV_ROOT"` below compares to decide
+# whether a governance-local hook can resolve its entry path. Honouring the
+# resolver here made a second gov clone compare against the SSOT and skip
+# gh-package-deps-preflight inside the governance workspace itself —
+# tests/ops/scripts/test_gov_only_hook_skip.py caught it.
+GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 GOV_PRECOMMIT_CONFIG="$GOV_ROOT/.pre-commit-config.yaml"
 
 # Resolve first. An empty list is PASS without the pre-commit CLI — CI Test

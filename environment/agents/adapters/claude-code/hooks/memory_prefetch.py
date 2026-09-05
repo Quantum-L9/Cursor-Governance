@@ -100,17 +100,66 @@ def _hydration_roots(workspace: Path) -> list[Path]:
     return _hydration_selection(workspace).selected
 
 
+#: Where the rotation cursor lives. Beside the other per-container stamps, not
+#: in the repository: it is machine state about which window was served last,
+#: not content.
+_CURSOR_FILE = Path.home() / ".l9" / "claude" / "hydration-cursor.json"
+
+
+def _cursor_key(workspace: Path) -> str:
+    return str(workspace)
+
+
+def _read_hydration_offset(workspace: Path) -> int:
+    """Where the last session stopped. 0 on any doubt.
+
+    Never raises: this runs inside a fail-open observer hook, and a missing or
+    corrupt cursor must cost the session its rotation, never its hydration.
+    """
+    try:
+        data = json.loads(_CURSOR_FILE.read_text(encoding="utf-8"))
+        value = data.get(_cursor_key(workspace), 0)
+        return int(value) if isinstance(value, int) and value >= 0 else 0
+    except (OSError, ValueError, TypeError, AttributeError):
+        return 0
+
+
+def _advance_hydration_cursor(workspace: Path, served: int) -> None:
+    """Move the window on by what was actually served. Best-effort by design."""
+    if served <= 0:
+        return
+    try:
+        try:
+            data = json.loads(_CURSOR_FILE.read_text(encoding="utf-8"))
+            if not isinstance(data, dict):
+                data = {}
+        except (OSError, ValueError):
+            data = {}
+        data[_cursor_key(workspace)] = _read_hydration_offset(workspace) + served
+        _CURSOR_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _CURSOR_FILE.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
+    except OSError:
+        return
+
+
 def _hydration_selection(workspace: Path):
     """`_hydration_roots`, keeping the roots it dropped and why.
 
     Naming the cap is not naming what the cap cost. The emitted line used to
     offer two rules and attribute neither, so six repositories excluded purely
     by the cap read as six repositories with nothing to hydrate.
+
+    The cap stays — hydration pays a Graphiti round trip and context bytes on
+    every session, and nothing caches that — but it now ROTATES. A cap plus a
+    stable sort served the same prefix forever and starved the same tail
+    forever; with the cursor advanced each session, every namespaced repository
+    is hydrated within `ceil(n / cap)` sessions.
     """
     return _shared_select_workspace_roots(
         workspace,
         cap=_MAX_HYDRATION_ROOTS,
         predicate=_resolves_to_own_group,
+        offset=_read_hydration_offset(workspace),
     )
 
 
@@ -287,6 +336,10 @@ def main() -> int:
             "branch off fetched origin/main, and collision safety the publication gate. "
             "No phase-lock is required or accepted for repository mutation.",
         ]
+        # Advance only on a real hydrate. Moving the window after a degraded
+        # run would skip the repositories this session failed to serve.
+        if not degraded:
+            _advance_hydration_cursor(workspace, len(roots))
         if len(roots) > 1:
             dropped_note = _dropped_summary(dropped)
             lines.insert(
@@ -294,6 +347,13 @@ def main() -> int:
                 f"Multi-repo container: hydrated {len(roots)} of "
                 f"{_repo_count(workspace)} repositories under {workspace}. "
                 + (f"Excluded — {dropped_note}. " if dropped_note else "")
+                + (
+                    "The cap ROTATES: the repositories skipped here are the ones "
+                    "the next session hydrates first, so every namespaced "
+                    "repository is served within a bounded number of sessions. "
+                    if any(r == DROPPED_CAP for _, r in dropped)
+                    else ""
+                )
                 + "A group_id is repository identity, never container "
                 "identity — resolving one from the container root matches every repo "
                 "and returns none.",

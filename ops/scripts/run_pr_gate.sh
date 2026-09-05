@@ -15,7 +15,16 @@ resolve_governance_paths || true
 source "$SCRIPT_DIR/lib/fetch_receipt.sh"
 # shellcheck source=lib/resolve_pr_stack.sh
 source "$SCRIPT_DIR/lib/resolve_pr_stack.sh"
-GOV_ROOT="${GOV_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+# Script-relative ON PURPOSE, and NOT "${GOV_ROOT:-...}".
+#
+# The resolver above binds GOV_ROOT to the machine SSOT ($HOME/.cursor-governance).
+# This variable means something different: the governance tree THESE scripts
+# belong to, which is what `"$WS" != "$GOV_ROOT"` below compares to decide
+# whether a governance-local hook can resolve its entry path. Honouring the
+# resolver here made a second gov clone compare against the SSOT and skip
+# gh-package-deps-preflight inside the governance workspace itself —
+# tests/ops/scripts/test_gov_only_hook_skip.py caught it.
+GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 WS="${WS:-$(pwd)}"
 WS="$(cd "$WS" && pwd)"
 PR_BASE="${PR_BASE:-origin/main}"
