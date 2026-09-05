@@ -52,7 +52,7 @@ Restore release-safe alignment across the LLM routing constellation so Website-B
 | `Quantum-L9/LLM-Router` | SSOT for OpenRouter model ID strings + `@quantum-l9/llm-router` publish | Yes |
 | `Quantum-L9/Website-Bot` | Primary consumer; factory pipeline; Agent/Build/Deploy workflows; integration contract | Yes |
 | `Quantum-L9/SEO-Bot` | Live consumer locked at `llm-router@1.0.1` (same broken Haiku via package) | Yes (pin/lock only) |
-| `Quantum-L9/PR_Repair` (`router-shim`) | Depends on `github:Quantum-L9/LLM-Router#main` | Verify-only after LLM-Router main has fix (no pin PR required if #main tracks) |
+| `Quantum-L9/l9-pr-repair` (`router-shim`) | Depends on `github:Quantum-L9/LLM-Router#main` | Verify-only after LLM-Router main has fix (no pin PR required if #main tracks) |
 | `Quantum-L9/l9-graphiti-memory` WIP pack copies | Stale mirrored `package.json` snippets under `docs/WIP/` | OutOfScope (not SSOT) |
 | OpenRouter public model catalog | External schema for valid model IDs | Read-only authority for ID selection |
 | GitHub Packages `npm.pkg.github.com` | Distribution boundary | Publish + consumer install |

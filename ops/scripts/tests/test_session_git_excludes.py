@@ -23,7 +23,14 @@ class SessionGitExcludesContractTests(unittest.TestCase):
         self.assertIn("session_is_forbidden_blanket_claude", text)
         self.assertIn("apply_session_git_excludes", text)
         self.assertIn("apply_machine_session_excludes", text)
+        self.assertIn("session_machine_exclude_globs", text)
+        self.assertIn("session_prune_session_only_from_machine_file", text)
         self.assertNotRegex(text, r'(?m)^[ \t]*["\']?/?\.claude/?["\']?[ \t]*$')
+        machine_fn = text.split("session_machine_exclude_globs()", 1)[1].split("}", 1)[0]
+        self.assertNotIn(".mcp.json", machine_fn)
+        self.assertIn(".claude/settings.local.json", machine_fn)
+        machine_apply = text.split("apply_machine_session_excludes()", 1)[1]
+        self.assertNotIn("session_claude_mirror_exclude_globs", machine_apply)
 
     def test_shared_bootstrap_applies_option_b(self) -> None:
         text = BOOTSTRAP.read_text(encoding="utf-8")
@@ -36,6 +43,11 @@ class SessionGitExcludesContractTests(unittest.TestCase):
         text = SETUP.read_text(encoding="utf-8")
         self.assertIn("lib/session_git_excludes.sh", text)
         self.assertIn("apply_machine_session_excludes", text)
+        self.assertIn("WARN: cannot write global gitignore", text)
+
+    def test_bootstrap_warns_when_session_excludes_fail(self) -> None:
+        text = BOOTSTRAP.read_text(encoding="utf-8")
+        self.assertIn("could not write session git excludes", text)
 
     def test_claude_install_reuses_helper(self) -> None:
         text = INSTALL.read_text(encoding="utf-8")
