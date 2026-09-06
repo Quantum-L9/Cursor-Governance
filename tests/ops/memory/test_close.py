@@ -300,10 +300,20 @@ def test_repair_close_is_a_canonical_close_with_an_explicit_capsule(
     assert load_close_receipt(workspace, "forced")["status"] == STATUS_CLOSED_CANONICALLY
 
 
-def test_repair_skips_a_closed_session_unless_superseding(workspace, scripted, fake_cli) -> None:
+def test_repair_skips_a_closed_session_unless_superseding(
+    workspace, scripted, fake_cli, monkeypatch
+) -> None:
+    # Identity is explicit, never ambient: the test must not depend on the
+    # shell exporting L9_MEMORY_AGENT_ID (CI does not; a Cursor session does).
+    monkeypatch.delenv("L9_MEMORY_AGENT_ID", raising=False)
     _close(workspace)
     skipped = pw.repair_close(
-        project_dir=workspace, session_id="sess", objective="o", next_action="n", client=scripted
+        project_dir=workspace,
+        session_id="sess",
+        objective="o",
+        next_action="n",
+        agent_id="cursor",
+        client=scripted,
     )
     assert skipped["status"] == "skipped_already_closed"
     superseded = pw.repair_close(
@@ -312,6 +322,7 @@ def test_repair_skips_a_closed_session_unless_superseding(workspace, scripted, f
         objective="o",
         next_action="n",
         supersede=True,
+        agent_id="cursor",
         client=scripted,
     )
     assert superseded["status"] == STATUS_CLOSED_CANONICALLY
