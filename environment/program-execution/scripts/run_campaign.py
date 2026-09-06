@@ -6031,6 +6031,15 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--architecture",
+        action="store_true",
+        help=(
+            "Deprecated and ignored. Architecture admission is decided by the universal "
+            "classifier (ADR-0032); this flag cannot force a representation. Accepted only "
+            "so the `campaign-architecture` Makefile target keeps working unchanged."
+        ),
+    )
+    parser.add_argument(
         "--until",
         choices=list(UNTIL_STAGES) + list(UNTIL_ALIASES),
         default=AUTONOMOUS_LAST_STAGE,

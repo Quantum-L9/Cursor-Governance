@@ -79,8 +79,8 @@ help:
 	@echo "  make repo-write-lock-test / precommit-hook-contract — repo-write lock selftest; pre-commit hook read_only/writer contract"
 	@echo "  make l4-status / l4-begin / l4-record-kernels / l4-authorize — L4 local autonomy (no mid-exec push)"
 	@echo "  make kernel-precommit — kernel hook (before precommit-repo hooks/tests; not L4)"
-	@echo "  make campaign INTENT=path — universal PE ingress; classifies -> campaign_source -> blueprint -> PEC -> local execute"
-	@echo "  make campaign-architecture INTENT=arch.md — compatibility alias to the same universal classifier"
+	@echo "  make campaign INTENT=path — PE activate seed → worktree emit → blueprint → pec → host PR → merge-if-green"
+	@echo "  make campaign-architecture INTENT=arch.md TARGET=owner/repo — long-form architecture → campaign_source → blueprint → PEC"
 	@echo "  make pr (any case) — gate → open PR → subscribe → agent spawns l9-pr-remediation (OPEN_PR=0 / PR_REMEDIATE=0 / pr-check to skip)"
 	@echo "  make sync-generated — heal RULES/COMMANDS/PE manifests, skill-registry, skillOverrides (idempotent)"
 	@echo "  make pr-security  — gitleaks/bandit/semgrep/pip-audit on changed files only (WS-aware)"
@@ -104,32 +104,31 @@ start:
 		| $(PYTHON) "$(CURDIR)/ops/scripts/render_bootstrap_context.py"
 
 .PHONY: campaign
-## Universal Program Execution production ingress.
-## INTENT= may be campaign-source.v2, architecture prose, activate YAML, plan, or brief.
-## Architecture-grade prose is deterministically promoted without source/frontmatter mutation.
-## TARGET=owner/repo and TARGET_CHECKOUT=path are optional evidence for target resolution.
+## Activate a PE campaign from a memo .md or an activate YAML.
+## INTENT= required (brief.md or seed.yaml). No campaign_id required for memos.
 ## CAMPAIGN_UNTIL=activate|blueprint|bootstrap|execute (default execute).
 ## Local-commit-only: prepare, execute, validate, verify, commit, STOP. The pr and
 ## merge stages are a separate governed release transition, not a campaign stage.
 ## Does not implement target-repo tasks or close the ledger after a host-only merge.
 campaign:
-	@test -n "$(INTENT)" || (echo "INTENT= path to the campaign input is required" >&2; exit 2)
-	TARGET="$(TARGET)" $(PYTHON) environment/program-execution/scripts/run_campaign.py \
+	@test -n "$(INTENT)" || (echo "INTENT= path to activate seed is required" >&2; exit 2)
+	$(PYTHON) environment/program-execution/scripts/run_campaign.py \
 	  --intent "$(INTENT)" \
 	  --until "$(or $(CAMPAIGN_UNTIL),execute)" \
-	  $(if $(TARGET),--target "$(TARGET)") \
-	  $(if $(TARGET_CHECKOUT),--target-checkout "$(TARGET_CHECKOUT)") \
 	  $(CAMPAIGN_ARGS)
 
 .PHONY: campaign-architecture
-## Compatibility alias for operators/scripts that still call campaign-architecture.
-## It uses the exact same classifier and pipeline as `make campaign`; it never forces
-## architecture representation. TARGET=/TARGET_CHECKOUT remain optional evidence inputs.
+## Compile a long-form architecture design, microscope audit, or technical review
+## straight into an executable campaign. INTENT= required (raw .md needs no edits),
+## TARGET=owner/repo required unless the document declares its own `target:`.
+## Route: architecture -> campaign_source -> blueprint -> PEC.
+## CAMPAIGN_UNTIL=activate|blueprint|bootstrap|execute (default execute), same as make campaign.
 ## TARGET_CHECKOUT=path to an existing local clone (optional, read-only) so generated
 ## validations resolve to that repository's own test/lint commands.
 campaign-architecture:
 	@test -n "$(INTENT)" || (echo "INTENT= path to the architecture document is required" >&2; exit 2)
 	TARGET="$(TARGET)" $(PYTHON) environment/program-execution/scripts/run_campaign.py \
+	  --architecture \
 	  --intent "$(INTENT)" \
 	  --until "$(or $(CAMPAIGN_UNTIL),execute)" \
 	  $(if $(TARGET),--target "$(TARGET)") \

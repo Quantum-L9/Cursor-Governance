@@ -116,7 +116,7 @@ architecture prose
 Operator entry:
 
 ```bash
-make -C "$HOME/.cursor-governance" campaign \
+make -C "$HOME/.cursor-governance" campaign-architecture \
   INTENT=/tmp/llm-router-microscope.md \
   TARGET=Quantum-L9/LLM-Router
 ```

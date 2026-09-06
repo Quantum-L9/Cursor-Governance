@@ -26,7 +26,7 @@ This violates the desired operator boundary: the operator supplies semantic inte
 6. Boolean `forced`, explicit-kind overrides, and equivalent bypass states are forbidden.
 7. A declared conflicting schema MUST NOT be overridden by `CLASSIFIED` admission.
 8. Classification evidence MUST be deterministic, local, explainable, and available in the classification result/receipt.
-9. `make campaign-architecture` may remain only as a compatibility alias to the universal classifier. It MUST NOT force a representation.
+9. `make campaign-architecture` may remain only as a compatibility alias to the universal classifier. It MUST NOT force a representation. Its `--architecture` flag is retained as an accepted no-op: the runner parses it and never reads it, so it cannot select or influence a kind. The flag exists solely because the repository-root `Makefile` is `additive_only` (`ops/config/root-file-protection.json`) and this change does not rewrite it; removing the flag and its Makefile call site is tracked as separate follow-up work under that protection contract. `test_the_deprecated_architecture_flag_cannot_force_a_representation` fails if it is ever wired back into routing.
 10. Once admitted, every architecture path enters the same canonical sequence:
 
    `architecture source -> campaign-source.v2 -> Blueprint v2 -> PEC -> execute`
