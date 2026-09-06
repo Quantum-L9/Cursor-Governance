@@ -6,8 +6,8 @@ role: run_contract
 tags: [pr, preflight, venv, command-surface, topology, cache, makefile, board]
 owner: igor_beylin
 status: active
-version: 1.5.0
-updated: 2026-08-30
+version: 1.6.0
+updated: 2026-09-05
 /L9_META -->
 
 # Run Contract (min preflight + cache)
@@ -29,6 +29,7 @@ Emit `RUN_CONTRACT` in the first Converge status. Reuse until invalidation.
 | `P_wire` | `git worktree list` first; reuse the worktree that already holds the branch | `worktree_add_wired.sh` only when none exists. Do not commit wire / `AGENTS.md`. |
 | `P_board` | Per open PR: `"$GOV_PY" ops/autonomy/pr_board.py --repo {owner}/{repo} --pr {n} --json` (`pr_fleet.py plan --board` runs it for every PR concurrently) | The board verdict (`merge` / `fix` / `wait` / `leftover`) and the required-check set come from here. `statusCheckRollup` in `P_prs` is inventory, not a verdict — it lists optional checks too. Do not author a verdict from `mergeStateStatus`, a bare check conclusion, or an issue body. Re-run per head SHA; a verdict is stale the moment the head moves. |
 | `P_blockers` | Known HUMAN / CI_PIPELINE / ENVIRONMENT — **edit axis only** | Note which files you may not patch; continue independent CODEBASE work. These classes are **not** board verdicts and do not park a PR. A named human decision or an unfixable required check reaches the board only as `pr_board.py --human-decision` / `--unfixable-check`. |
+| `P_digest` | For the PR about to be edited: `skills/l9-pr-digest/scripts/pr_digest.py` → `.l9/pr/pr-digest-result.json`, then `require_digest.py --mode converge --head-sha {head}`. Diagnose-only uses `--mode diagnose` and continues after a valid non-READY packet. | Missing, unbound, or stale-head digest → do not edit. Converge non-READY → do not remediate that PR. |
 | `P_diag` | For the PR about to be edited: head SHA, `gh pr checks`, paginated `reviewThreads`, cited-file read at that SHA | Missing evidence → `Unknown`; do not edit. `disposition: fix` requires a verified root cause. |
 | `P_verify` | `make precommit-repo` (changed-file hooks plus ruff) | `make precommit-repo` is the remediator gate. Record `Passed` / `Failed` / `Unknown`. Do not run `make pr-check`. Do not run pytest or conformance. Do not treat local `Passed` as remote CI `Passed`. |
 

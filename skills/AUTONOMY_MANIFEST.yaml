@@ -121,7 +121,7 @@ tiers:
   - skill: l9-global-architect
     reason: experimental GAR runtime bootloader whose broad architect-engineer description would hijack ordinary routing if auto-invoked; load when the user explicitly invokes the global architect runtime, iterates on the pack, or when l9-plan-simple loads it as the required upstream planner; disable-model-invocation
   - skill: l9-pr-digest
-    reason: auto-registered by sync_generated_artifacts (orphan → explicit_only)
+    reason: read-only pre-remediation gate; /pr runs it before l9-pr-remediation Diagnose; Converge and the poll worker require a same-head READY packet via require_digest.py; disable-model-invocation
   - skill: l9-idea-execute
     reason: routes validated IdeaOS decisions into Foundry, Website-Bot, plan-simple, or Program Execution; owner-selection and downstream invocation are high blast radius; disable-model-invocation
   - skill: l9-idea-foundry
@@ -222,6 +222,7 @@ claude_routing:
     signal_weight: 8
     hint_allowed: true
     positive_signals:
+    - /pr
     - review pr
     - pull request review
     - merge blockers
@@ -238,8 +239,9 @@ claude_routing:
     - merge this pr
     - remediate the pr
     - babysit the pr
-    supporting: []
-    note: 'hint_allowed — Read Diagnose path; remediate-until-green routes via pr_remediation_until_green (below) under packet bounds.
+    supporting:
+    - l9-pr-digest
+    note: 'hint_allowed — Read Diagnose path after l9-pr-digest; remediate-until-green routes via pr_remediation_until_green (below) under packet bounds.
 
       '
   - id: pr_remediation_until_green
@@ -261,7 +263,8 @@ claude_routing:
     negative_signals:
     - admin merge
     - force push
-    supporting: []
+    supporting:
+    - l9-pr-digest
     note: 'Invoking /l9-pr-remediation authorizes merge of all open PRs in the target repo after Converge (oldest-first, stack-safe). Subscribe/own every open PR through required checks; do not hand the watch back to the human. The per-PR board verdict comes from ops/autonomy/pr_board.py (required-check identity from branch protection plus rulesets, conflicted paths); an ownership class is the edit axis and never parks a PR; leftover requires --human-decision or --unfixable-check; above-paygrade leftovers open a GitHub issue and launch l9-issue-remediation — do not ask the human to unblock; mission is open_prs=0. Verify with make precommit-repo; publish with git push of the already-open PR branch. Do not run make pr or make pr-check. Campaigns/make pr stay no-merge. Force-push and admin-merge remain forbidden. Receipt: ops/autonomy/authorize_merge.py --all-open.
 
       '

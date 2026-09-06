@@ -41,8 +41,9 @@
           "remediate the pr",
           "babysit the pr"
         ],
-        "note": "hint_allowed \u2014 Read Diagnose path; remediate-until-green routes via pr_remediation_until_green (below) under packet bounds.\n",
+        "note": "hint_allowed \u2014 Read Diagnose path after l9-pr-digest; remediate-until-green routes via pr_remediation_until_green (below) under packet bounds.\n",
         "positive_signals": [
+          "/pr",
           "review pr",
           "pull request review",
           "merge blockers",
@@ -55,7 +56,9 @@
         ],
         "primary": "l9-pr-remediation",
         "signal_weight": 8,
-        "supporting": []
+        "supporting": [
+          "l9-pr-digest"
+        ]
       },
       {
         "hint_allowed": true,
@@ -80,7 +83,9 @@
         ],
         "primary": "l9-pr-remediation",
         "signal_weight": 8,
-        "supporting": []
+        "supporting": [
+          "l9-pr-digest"
+        ]
       },
       {
         "hint_allowed": true,
@@ -1224,7 +1229,7 @@
       "invocation": "explicit_only",
       "name": "l9-pr-digest",
       "path": "skills/l9-pr-digest",
-      "reason": "auto-registered by sync_generated_artifacts (orphan \u2192 explicit_only)",
+      "reason": "read-only pre-remediation gate; /pr runs it before l9-pr-remediation Diagnose; Converge and the poll worker require a same-head READY packet via require_digest.py; disable-model-invocation",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1395,6 +1400,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "90fd48b1d0c8d85e623dd13efcbf9a7ba87d0a5c1d4941ae7405f52af4411f61",
-  "source_skill_corpus_sha256": "4198557f070f535b5f4f71597d6ff30b720405d9412d620a62538a037aebf275"
+  "source_manifest_sha256": "80a24260312632a4cb1c487ad096b54ed598a850fdb5b754486dc1f641265cc3",
+  "source_skill_corpus_sha256": "d4fb7cb85f79b388190bae1d9049290cff2fff8950edc4a2ac9e0b794d2df8e8"
 }

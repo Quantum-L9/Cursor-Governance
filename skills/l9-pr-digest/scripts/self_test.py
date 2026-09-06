@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 
 from pr_digest_core import digest, validate
+from require_digest import READY, check
 
 
 def fixture(**overrides):
@@ -119,6 +120,11 @@ def main() -> int:
         path = Path(td) / "digest.json"
         path.write_text(json.dumps(good), encoding="utf-8")
         assert json.loads(path.read_text())["PR_identity"]["head_sha"] == "b" * 40
+        assert not check(good, mode="diagnose")
+        assert not check(good, head_sha="b" * 40, mode="converge")
+        assert good["decision"] in READY
+        assert check(good, head_sha="c" * 40, mode="diagnose")
+        assert check(ci_required, mode="converge")
 
     print("PASS: l9-pr-digest deterministic self-test")
     return 0

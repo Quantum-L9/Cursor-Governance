@@ -17,8 +17,8 @@ metadata:
   - evidence
   owner: igor_beylin
   status: active
-  version: 1.0.0
-  updated: 2026-09-02
+  version: 1.1.0
+  updated: 2026-09-05
 disable-model-invocation: true
 ---
 
@@ -119,7 +119,9 @@ Do not activate GAR, security, performance, CI setup, or GMP merely because they
 
 ## Pipeline handoff
 
-The canonical bounded-autonomy PR poll worker must run this skill before `l9-pr-remediation`. It must preserve the reviewed base/head. If the head moved, discard the stale digest and run again. On a non-READY decision it must not enter remediation. On READY, pass only `remediation_packet` plus exact PR identity downstream.
+`/pr` runs this skill first, then `l9-pr-remediation` Diagnose. `/l9-pr-remediation` Converge and the bounded-autonomy poll worker also run this skill before any mutate. Preserve the reviewed base/head. If the head moved, discard the stale digest and run again.
+
+Diagnose continues after any valid digest (including non-READY). Converge and the poll worker enter remediation only for `READY_FOR_REMEDIATION` or `READY_WITH_NON_BLOCKING_NOTES`. Gate with `scripts/require_digest.py --mode diagnose|converge`. On READY, pass only `remediation_packet` plus exact PR identity downstream.
 
 ## Hard prohibitions
 
@@ -137,6 +139,7 @@ The canonical bounded-autonomy PR poll worker must run this skill before `l9-pr-
 ```bash
 python3 skills/l9-pr-digest/scripts/self_test.py
 python3 skills/l9-pr-digest/scripts/pr_digest.py --validate-only <digest.json>
+python3 skills/l9-pr-digest/scripts/require_digest.py --path <digest.json> --mode diagnose
 python3 skills/l9-skill-compiler/scripts/validate_skill_pack.py skills/l9-pr-digest
 ```
 
