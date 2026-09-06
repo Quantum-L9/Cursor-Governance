@@ -102,15 +102,16 @@ def test_committed_projection_is_current_for_an_unbound_environment() -> None:
 )
 def test_template_argv_equals_the_packages_managed_entry() -> None:
     interpreter = Path(os.environ["L9_MEMORY_DEV_CHECKOUT"]) / ".venv" / "bin" / "python"
-    out = subprocess.run(
+    script = "\n".join(
         [
-            str(interpreter),
-            "-c",
-            "import json\n"
-            "from l9_graphite_memory.client_config.cursor import managed_server_entry\n"
-            "e = managed_server_entry('/x/python')\n"
+            "import json",
+            "from l9_graphite_memory.client_config.cursor import managed_server_entry",
+            "e = managed_server_entry('/x/python')",
             "print(json.dumps({'key': e.key, 'args': list(e.args)}))",
-        ],
+        ]
+    )
+    out = subprocess.run(
+        [str(interpreter), "-c", script],
         capture_output=True,
         text=True,
         check=True,
