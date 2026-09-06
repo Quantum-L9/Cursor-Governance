@@ -31,7 +31,6 @@ from helpers import (
 
 sys.path.insert(0, str(SCRIPTS))
 from pec import controller as pec_controller  # noqa: E402
-from pec.common import ControllerError  # noqa: E402
 
 
 def _rows(workspace: Path, table: str) -> list[dict[str, Any]]:
@@ -197,7 +196,7 @@ class FreshWorkspaceAuthorityTests(unittest.TestCase):
                 "--reason",
                 "host lost",
             )
-            successor, worktree, new_contract = _start(temp, workspace)
+            _start(temp, workspace)
             # The old worker's receipt binds the old contract digest only if
             # the contract was re-rendered; either way the attempt/lease binding
             # decides, and the successor attempt is the only live one.
@@ -317,8 +316,6 @@ class FreshWorkspaceAuthorityTests(unittest.TestCase):
             cleanup_worktree(repo, workspace)
 
     def test_workspace_reset_module_holds_no_state_authority(self) -> None:
-        with self.assertRaises(ControllerError):
-            raise ControllerError("sentinel")  # keeps the import used
         from pec import workspace_reset
 
         self.assertFalse(hasattr(workspace_reset, "_release_open_leases"))

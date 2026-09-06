@@ -181,7 +181,7 @@ class EventProjectionTests(unittest.TestCase):
                                 ledger.append("RACE_PROBE", name, {"index": index})
                     finally:
                         db.close()
-                except BaseException as exc:  # noqa: BLE001 - collected for the assertion
+                except Exception as exc:  # noqa: BLE001 - collected for the assertion
                     errors.append(exc)
 
             threads = [threading.Thread(target=writer, args=(f"w{i}",)) for i in range(4)]

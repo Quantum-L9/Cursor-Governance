@@ -399,7 +399,6 @@ def execute(
             last_failure = history[-1]
             continue
         provider_ref = binding.provider_ref
-        profile_retries = 1
         try:
             profile_retries = int(
                 (getattr(adapter, "execution_profile", {}) or {})

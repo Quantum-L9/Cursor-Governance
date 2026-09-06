@@ -111,7 +111,7 @@ files:
 - path: scripts/pec/gates.py
   sha256: 32a07cdb47b48ec3cd40ffa131561e9183a46201a97604b6c1aaeb2083cb29af
 - path: scripts/pec/ledger.py
-  sha256: 8ae7a2f8697b825541d57604896f11228a478b7b5ba7d80ceca94c28a44fe1b6
+  sha256: 72c1bde6b01abd3bdffaaac66a51aed737b38563131323d2416142ca65b70055
 - path: scripts/pec/preflight.py
   sha256: 0d19f9d29aca2432bd13bb045bb0d549bf573e136d77bfd6212b29abbaf96c07
 - path: scripts/pec/reasons.py
@@ -179,7 +179,7 @@ files:
 - path: scripts/tests/test_pe_clean_startup.py
   sha256: 6aeb90005d5ba0e36a3f93932ef9a8715f9bd9479a723b2ba7d2ce4ef5ccd9cf
 - path: scripts/tests/test_persistence_convergence.py
-  sha256: 2eb19f73c91da4d388c254a3e3b7f70d47303d3e5d7cc7afd34408d66ea336c4
+  sha256: 3f143ff088ddecdbd940d993b32e662b1c3d3df4353ebf1d07e324ea947f6fa4
 - path: scripts/tests/test_pipeline_assembly_fill.py
   sha256: 3ba25d3f036f3d4ae0ec5f29329ae5c178d7712791b8f29723d9cbf0594e2662
 - path: scripts/tests/test_preflight.py
@@ -195,7 +195,7 @@ files:
 - path: scripts/tests/test_recovery.py
   sha256: 6a1ee7d5145edc6a942639256fa785baa74fa50dac9a8492ec2412302f014c02
 - path: scripts/tests/test_recovery_authority.py
-  sha256: 035028bb9359aa3a2ece857f756348fe94eb01859ac3c52e5ef7b2929bad8ae8
+  sha256: 90d553c6dfa27b43f358aba4d0593a84b5a1bb143bbdd165bf3c48aad31068f8
 - path: scripts/tests/test_relock_semantic_delta.py
   sha256: ec5a11ed426ccc7a90a7d9b292c3938b0d05ca1a337e70542d66e3daa8d30cab
 - path: scripts/tests/test_resume_admission.py
@@ -209,7 +209,7 @@ files:
 - path: scripts/tests/test_source_contract_placeholder.py
   sha256: a51020a3b8e516611bae2962f658876fe364604ff96e2a9c72e33a54b1a9595c
 - path: scripts/tests/test_state_transactions.py
-  sha256: 63ed60d2b2b0d853eea848f5c5eebe3ec2797b956f000db127dccdd6fab11226
+  sha256: f5ff07d0fd0e6f1359c1f3cb9a709b325ed8d35e40cadf16eaffe6224f6598e4
 - path: scripts/tests/test_state_transition.py
   sha256: b130770fe995539a3eae45b0345a183b06fff4844e56722ea2309cea9e7b2ef9
 - path: scripts/tests/test_task_readiness_semantics.py

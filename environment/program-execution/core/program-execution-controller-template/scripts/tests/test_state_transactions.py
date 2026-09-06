@@ -155,11 +155,14 @@ class ControllerTransactionTests(unittest.TestCase):
             db = self._db(Path(raw))
             other = StateDB(Path(raw) / "state.sqlite")
             try:
-                with self.assertRaises(RuntimeError):
+
+                def failing_transaction() -> None:
                     with db.controller_transaction():
                         db.transition_task("TASK-001", "ELIGIBLE")
                         db.set_meta("global_halt", True)
                         raise RuntimeError("boom")
+
+                self.assertRaises(RuntimeError, failing_transaction)
                 self.assertEqual(db.task("TASK-001")["runtime_state"], "WAITING")  # type: ignore[index]
                 self.assertFalse(db.get_meta("global_halt", False))
                 with db.controller_transaction():
@@ -178,10 +181,13 @@ class ControllerTransactionTests(unittest.TestCase):
             db = self._db(Path(raw))
             fired: list[str] = []
             try:
-                with self.assertRaises(RuntimeError):
+
+                def rolled_back_transaction() -> None:
                     with db.controller_transaction():
                         db.on_commit(lambda: fired.append("rolled-back"))
                         raise RuntimeError("boom")
+
+                self.assertRaises(RuntimeError, rolled_back_transaction)
                 with db.controller_transaction():
                     db.on_commit(lambda: fired.append("committed"))
                     self.assertEqual(fired, [])
@@ -208,7 +214,7 @@ class ControllerTransactionTests(unittest.TestCase):
         with TemporaryDirectory() as raw:
             path = Path(raw) / "state.sqlite"
             self._db(Path(raw)).close()
-            errors: list[BaseException] = []
+            errors: list[Exception] = []
 
             def bump(n: int) -> None:
                 db = StateDB(path)
@@ -217,7 +223,7 @@ class ControllerTransactionTests(unittest.TestCase):
                         with db.controller_transaction():
                             current = int(db.get_meta("counter", 0))
                             db.set_meta("counter", current + 1)
-                except BaseException as exc:  # noqa: BLE001 - collected for the assertion
+                except Exception as exc:  # noqa: BLE001 - collected for the assertion
                     errors.append(exc)
                 finally:
                     db.close()

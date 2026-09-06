@@ -99,7 +99,7 @@ class EventLedger:
         event = db.append_event(event_type, actor, payload)
         db.set_meta(LEDGER_ANCHOR_KEY, {"sequence": event["sequence"], "digest": event["digest"]})
         # Projection only after the enclosing transaction commits (now, if none).
-        db.on_commit(lambda: self.project_pending())
+        db.on_commit(self.project_pending)
         return event
 
     def _write_line(self, event: dict[str, Any]) -> None:

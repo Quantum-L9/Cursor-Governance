@@ -1823,7 +1823,7 @@
     },
     {
       "path": "peer_execution/front_door.py",
-      "sha256": "79bae4931874e810b29af7b1b4ac257886ad11a2e8149eee2e62da48380c481d"
+      "sha256": "d22ef9dc1f9c866c7a3e3e09ede49b7c6a3013aa3046ca92610e78e9708bbc92"
     },
     {
       "path": "peer_execution/golden_vectors.py",
@@ -2083,7 +2083,7 @@
     },
     {
       "path": "scripts/run_peer_task_pipeline.py",
-      "sha256": "4a366dd17350a1943d1ec47c1d21018fa3bbfd58e900cc8d62a4d3552d665b00"
+      "sha256": "0bf12fed6e3174bfd1528edced1b156aa1512b669608b9fffb7aa52352be9539"
     },
     {
       "path": "scripts/tests/fixtures/architecture-intent-llm-router.md",

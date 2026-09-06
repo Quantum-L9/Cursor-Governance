@@ -28,7 +28,6 @@ if str(PE_ROOT) not in sys.path:
     sys.path.append(str(PE_ROOT))
 
 from peer_execution import front_door  # noqa: E402
-from peer_execution.bindings import resolve_peer_binding  # noqa: E402,F401
 from peer_execution.imports import pe_script  # noqa: E402
 
 instantiate = pe_script("provider_loader").instantiate
@@ -99,8 +98,6 @@ def _load_contract(path: str | Path) -> dict[str, Any]:
 # only; they are internal aliases, not a second orchestration path.
 _resolve_provider = front_door.resolve_provider
 _probe_provider = front_door.probe_provider
-_bind_root_authority = front_door.bind_root_authority
-_root_authority_evidence = front_door.root_authority_evidence
 MUTATING_ACTIONS = front_door.MUTATING_ACTIONS
 
 
