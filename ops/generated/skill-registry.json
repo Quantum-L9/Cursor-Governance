@@ -1,5 +1,5 @@
 {
-  "generation_id": "fa3c6de9dee20d7f579e12e4b24a66556b35c24dcbe461da5382128363aa2e93",
+  "generation_id": "a4cd73bf0fc3510e743516b4aeeb9df7f1bba728d1e221d1e31b5456ccb5b288",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -1340,7 +1340,7 @@
       "path": "skills/l9-plan-simple",
       "reason": "",
       "skill_md": "skills/l9-plan-simple/SKILL.md",
-      "skill_sha256": "bf774b5a8c5682a23fdd31b13b245ef25eb8e1aa5e9cd475eb9c45b3813a0dd2",
+      "skill_sha256": "09e597cbf9765272db462acb16d9153806d5b27a81b7e30bf8ecc37046f66dd5",
       "user_invocable": true,
       "when_to_use": "scope is unclear, Cursor Plan mode is on, the user wants a Build-button plan, or implementation needs an ordinary machine-validated plan/spec first (not /l9-plan, make campaign, or a PE lock)"
     },
@@ -1555,5 +1555,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "f76b1f2444ac5c9f87fd1cffc3c28c59b00c34c71132e4194431fd39a63ee4b0",
-  "source_skill_corpus_sha256": "370019cd8e1ec24f2a6fd464fb94e74349bef5a545a21e53f27f4d0ec58814cc"
+  "source_skill_corpus_sha256": "1ee67b6faff34f0ae77a80097ffd37102655e2b51c776d1d2f4d4a4b9e5b4cc5"
 }
