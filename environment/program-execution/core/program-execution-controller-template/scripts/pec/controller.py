@@ -1294,7 +1294,7 @@ def task_readiness_detail(
     # successor's base only at COMPLETED (fan-in). PASSED_LOCAL work is still
     # sitting on its task branch, so a successor claimed against it would base
     # on a lineage that lacks exactly the change it depends on.
-    integrated_only = _integration_branch_in_force(db, workspace, task)
+    integrated_only = workspace is not None and _integration_branch_in_force(db, workspace, task)
     satisfied = {"COMPLETED"} if integrated_only else {"PASSED_LOCAL", "COMPLETED"}
     for dep in effective_dependencies:
         dependency = db.task(dep)
@@ -2393,7 +2393,7 @@ def _unenforced_prohibitions(workspace: Path) -> list[dict[str, Any]]:
 
 
 def _wiring_gate(contract: dict[str, Any], task: dict[str, Any]) -> str:
-    source = task.get("source") if isinstance(task.get("source"), dict) else {}
+    source: dict[str, Any] = task["source"] if isinstance(task.get("source"), dict) else {}
     consumers = contract.get("consumers") or source.get("consumers") or []
     entrypoints = contract.get("entrypoints") or source.get("entrypoints") or []
     if not consumers and not entrypoints:
@@ -2600,7 +2600,7 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
                 if task is None
                 else _verified_this_attempt(workspace, task, db.latest_attempt(task_id), db)
             )
-            if replay is not None:
+            if replay is not None and task is not None:
                 replay["replayed"] = True
                 replay["runtime_state"] = task["runtime_state"]
                 return replay
@@ -2743,7 +2743,7 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
                     else "FAIL"
                 )
             if required_commands:
-                lock_task = next(
+                lock_task: dict[str, Any] = next(
                     (item for item in lock.get("tasks") or [] if item.get("id") == task_id), {}
                 )
                 declared_validations = [
@@ -3259,9 +3259,9 @@ def recover_execution(
                     )
                 else:
                     evidence_id = f"EVID-RECOVERY-{recovery_id}"
-            cleanup: dict[str, Any] | None = None
+            cleanup: list[dict[str, Any]] | None = None
             if clean_worktrees and repo_path is not None and repo_path.is_dir():
-                branches = task_branches(repo_path, task_id) or [None]
+                branches: list[str | None] = list(task_branches(repo_path, task_id)) or [None]
                 cleanup = [
                     clean_task_execution(
                         workspace,
@@ -3749,7 +3749,11 @@ def complete_task(
             ledger.append(
                 "TASK_COMPLETED", actor, {"task_id": task_id, "evidence_ids": evidence_ids}
             )
-        result = {"status": "COMPLETED", "task_id": task_id, "evidence_ids": evidence_ids}
+        result: dict[str, Any] = {
+            "status": "COMPLETED",
+            "task_id": task_id,
+            "evidence_ids": evidence_ids,
+        }
         if integration is not None:
             result["integration"] = integration
         return result
@@ -3790,7 +3794,7 @@ def _peer_parity_section(repository_root: Path, workspace: Path) -> dict[str, An
         sys.path.append(str(pe_root))
     from peer_execution.golden_vectors import run_parity_gate
 
-    report = run_parity_gate(repository_root, workspace)
+    report = run_parity_gate(str(repository_root), str(workspace))
     accounting_path = Path(workspace).resolve() / "runtime/projection/peer-accounting.json"
     semantic_digest = None
     coverage: list[str] = []

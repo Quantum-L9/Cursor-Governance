@@ -681,9 +681,10 @@ class StateDB:
         return item
 
     def gates(self) -> list[dict[str, Any]]:
-        return [
+        items = [
             self.gate(row["id"]) for row in self.conn.execute("SELECT id FROM gates ORDER BY id")
-        ]  # type: ignore[list-item]
+        ]
+        return [item for item in items if item is not None]
 
     def set_gate(self, gate_id: str, result: str, evidence_ids: list[str], receipt: str) -> None:
         self.conn.execute(
@@ -712,10 +713,11 @@ class StateDB:
         return item
 
     def decisions(self) -> list[dict[str, Any]]:
-        return [
+        items = [
             self.decision(row["id"])
             for row in self.conn.execute("SELECT id FROM decisions ORDER BY id")
-        ]  # type: ignore[list-item]
+        ]
+        return [item for item in items if item is not None]
 
     def set_decision(self, decision_id: str, status: str, evidence_ids: list[str]) -> None:
         if status not in {"pending", "accepted", "rejected", "superseded"}:
@@ -755,10 +757,11 @@ class StateDB:
         return item
 
     def unknowns(self) -> list[dict[str, Any]]:
-        return [
+        items = [
             self.unknown(row["id"])
             for row in self.conn.execute("SELECT id FROM unknowns ORDER BY id")
-        ]  # type: ignore[list-item]
+        ]
+        return [item for item in items if item is not None]
 
     def set_unknown(self, unknown_id: str, status: str, evidence_ids: list[str]) -> None:
         if status not in {"open", "resolved", "accepted_risk", "superseded"}:
