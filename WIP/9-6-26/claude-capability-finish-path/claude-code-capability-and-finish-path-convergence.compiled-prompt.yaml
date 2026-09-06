@@ -1,0 +1,849 @@
+compiled_prompt:
+  id: "claude_code_capability_permission_and_sanctioned_publish_convergence"
+
+  target:
+    platform: "Claude Code"
+    primary_repository: "https://github.com/Quantum-L9/Cursor-Governance"
+    default_branch: RESOLVE_CURRENT
+    exact_start_sha: RESOLVE_FRESH_FULL_SHA
+
+  role:
+    identity: "claude_code_execution_permission_and_harness_convergence_engineer"
+
+  objective: >
+    Fix the Claude Code execution environment so the agent stops attempting
+    direct commands that the L9 harness does not permit, acquires supported
+    Memory and repository-scope capabilities as early and automatically as the
+    Claude Code platform safely allows, and has exactly one sanctioned
+    publishing path.
+
+    The finished environment must make the correct action the easiest action.
+
+    Specifically:
+
+      1. Claude Code must stop attempting bare repository/network mutation
+         commands when the L9 harness requires a governed capability or wrapper.
+
+      2. Memory-write permission should be made available automatically at
+         session activation to the maximum extent supported by Claude Code,
+         without bypassing the platform permission model.
+
+      3. Repositories referenced by the task should be added to Claude Code
+         scope through the supported Add Repo / repository-scope mechanism,
+         rather than falling back to `git clone`.
+
+      4. Repository acquisition/scope and memory permission should be acquired
+         proactively, before the agent reaches the middle of execution and
+         discovers it is blocked.
+
+      5. Publishing has ONE sanctioned path and no alternate agent-visible
+         route:
+
+           PR_REMEDIATE=0 make pr
+
+         executed from the governance workspace.
+
+         NOTHING ELSE may be used to publish.
+
+    The desired outcome is not merely another instruction telling Claude
+    "don't use git".
+
+    Repair the executable permissions, adapter configuration, bootstrap,
+    enforcement, routing, validation, and agent-facing doctrine so the runtime
+    itself consistently steers Claude through the sanctioned paths.
+
+  supplied_runtime_evidence:
+    screenshot_1:
+      surface: "Claude Code mobile"
+      observed_permission: "Add Memory requests permission"
+      observed_choices:
+        - "Allow once"
+        - "Always allow for this session"
+        - "Deny"
+      implication_to_verify: >
+        Memory write appears to expose at least a session-scoped grant mechanism.
+        Determine whether that grant can be requested or preconfigured
+        programmatically through the supported Claude Code contract.
+
+    screenshot_2:
+      surface: "Claude Code mobile"
+      observed_permission: "Add Repo requests permission"
+      observed_payload:
+        access: "push"
+        owner: "Quantum-L9"
+        repo: "Cursor-Governance"
+      observed_choices:
+        - "Allow once"
+        - "Deny"
+      implication_to_verify: >
+        Repository scope is separately permission-bound. Do not assume there is
+        a persistent or session-wide Add Repo grant because the screenshot does
+        not prove one.
+
+  grounded_repository_signals:
+    current_settings:
+      observation: >
+        Current Claude settings expose explicit Bash/git permission entries and
+        the Claude adapter has historically treated permission-layer git/gh
+        access separately from the governance execution gate.
+      evidence:
+        - " 01_ssh_to_mac.sh"
+        - ""
+
+    current_publish_permissions:
+      observation: >
+        The current Claude adapter settings include `Bash(make pr:*)` and
+        additional direct `gh` PR permissions. Reconcile this with the user's
+        new single-path publishing law instead of preserving all existing
+        publication-shaped permissions.
+      evidence:
+        - ""
+
+    settings_reconciliation:
+      observation: >
+        Claude settings are generated/reconciled rather than being a single
+        isolated JSON file, so fix the canonical owner and projections together.
+      evidence:
+        - ""
+
+    automation_law:
+      observation: >
+        Current repository law already prefers automation over repeatedly asking
+        the human to perform GitHub UI operations when a governed automated
+        mechanism exists.
+      evidence:
+        - ""
+
+  primary_question_to_answer:
+    question: >
+      Why does Claude Code still try bare git/gh commands when the L9 harness
+      blocks or supersedes them?
+
+    required_analysis:
+      - identify_every_source_that_teaches_or_permits_direct_git_or_gh
+      - distinguish_model_instruction_from_permission_configuration
+      - distinguish_Claude_permission_layer_from_L9_harness_enforcement
+      - distinguish_read_only_git_from_mutating_or_network_git
+      - identify_fallback_logic_after_Add_Repo_or_permission_failure
+      - identify_skill_or_agent_instructions_that_still_recommend_bare_git
+      - identify_generated_settings_that_reintroduce_removed_permissions
+      - identify_validator_assertions_that_require_obsolete_direct_permissions
+      - identify_mobile_or_cloud_specific_behavior
+      - identify_any_difference_between_desktop_CLI_web_and_mobile
+
+    acceptance: >
+      Produce and then repair the actual causal chain.
+
+      Do not settle for "the model ignored instructions".
+
+  authority_order:
+    - latest_explicit_user_instruction
+    - current_Cursor_Governance_CANONICAL_LAW
+    - current_Claude_Code_official_permission_and_tool_contract
+    - current_Claude_adapter_contracts
+    - current_L9_harness_and_finish_path
+    - executable_settings_and_reconciliation_code
+    - runtime_hooks_and_bootstrap
+    - tests_and_runtime_evidence
+    - documentation
+    - UNKNOWN
+
+  canonical_execution_law:
+    repository_mutation:
+      rule: >
+        Direct repository mutation/network actions must use a sanctioned L9 or
+        Claude capability boundary.
+
+      prohibited_direct_agent_actions_unless_current_law_explicitly_requires:
+        - "git clone"
+        - "git push"
+        - "git fetch used as an acquisition workaround"
+        - "git remote add used to smuggle a repo into scope"
+        - "gh repo clone"
+        - "gh repo create"
+        - "gh pr create"
+        - "gh pr merge"
+        - arbitrary_shell_based_publication
+
+      read_only_git:
+        disposition: >
+          Audit current harness law.
+
+          Preserve local read-only commands such as status/diff/show/log only
+          where the current L9 harness explicitly supports them and they do not
+          create network or mutation side effects.
+
+          Do not broaden this exception by inference.
+
+    repository_acquisition:
+      preferred_owner: "Claude Code Add Repo / repository-scope capability"
+      fallback_to_bare_git_clone: FORBIDDEN
+
+    memory_permission:
+      preferred_owner: "Claude Code supported Memory capability permission"
+      bypass_platform_permission_model: FORBIDDEN
+
+    publishing:
+      sole_agent_visible_command: "PR_REMEDIATE=0 make pr"
+      required_working_directory: GOVERNANCE_WORKSPACE
+
+      hard_rule: >
+        Publishing MUST be executed only through exactly:
+
+          PR_REMEDIATE=0 make pr
+
+        from the governance workspace.
+
+        Nothing else is an authorized publishing path.
+
+      prohibited_publish_variants:
+        - "git push"
+        - "git push <remote> <branch>"
+        - "gh pr create"
+        - "gh pr merge"
+        - "l9 pr"
+        - "make pr without PR_REMEDIATE=0"
+        - "PR_STACK=auto make pr"
+        - "PR_STACK=auto PR_REMEDIATE=0 make pr"
+        - alternate_shell_alias_for_make_pr
+        - direct_GitHub_API_PR_creation
+        - direct_GitHub_MCP_PR_creation
+        - custom_push_then_open_PR_sequence
+        - any_equivalent_publication_composition
+
+      implementation_note: >
+        Internal implementation beneath the sanctioned `make pr` target may use
+        lower-level mechanisms owned by the finish-path implementation.
+
+        Claude itself must not decompose or bypass the target.
+
+  desired_permission_architecture:
+    principle: >
+      Separate permission availability from authority to perform an action.
+
+      Pre-authorizing Memory or Add Repo capabilities must not give Claude
+      permission to publish, merge, widen repository scope arbitrarily, or write
+      indiscriminately to memory.
+
+    memory:
+      capability_available_early: true
+      write_policy_remains_governed: true
+
+    repositories:
+      scope_available_early: true
+      scope_is_task_bounded: true
+
+    publication:
+      permission_is_not_ambient: true
+      only_finish_path_may_publish: true
+
+  phase_0_fresh_runtime_and_contract_audit:
+    MUST:
+      - bind_fresh_repository_SHA
+      - inspect_CANONICAL_LAW
+      - inspect_root_and_scoped_agent_instructions
+      - inspect_environment_agents_adapters_claude_code_tree
+      - inspect_settings_template
+      - inspect_projected_claude_settings
+      - inspect_settings_reconciler
+      - inspect_validate_claude_env
+      - inspect_session_bootstrap
+      - inspect_mobile_cloud_bootstrap
+      - inspect_PreToolUse_hooks
+      - inspect_PostToolUse_hooks
+      - inspect_SessionStart_hooks
+      - inspect_memory_hooks
+      - inspect_memory_client_or_MCP_integration
+      - inspect_repo_scope_or_Add_Repo_integration
+      - inspect_finish_path_make_pr
+      - inspect_git_execution_exemption_or_current_equivalent
+      - inspect_skills_and_agent_instructions_for_git_clone_git_push_gh_pr
+      - inspect_generated_artifact_sources
+      - consult_current_official_Claude_Code_docs_for_permission_contract
+
+    search_terms:
+      - "git clone"
+      - "git push"
+      - "gh repo clone"
+      - "gh pr create"
+      - "gh pr merge"
+      - "make pr"
+      - "l9 pr"
+      - "PR_REMEDIATE"
+      - "PR_STACK"
+      - "Add Repo"
+      - "Add Memory"
+      - "permissions.allow"
+      - "permissions.deny"
+      - "additionalDirectories"
+      - "workspace"
+      - "scope"
+      - "memory"
+      - "episode_body"
+
+    output:
+      - permission_authority_map
+      - direct_command_instruction_map
+      - runtime_fallback_map
+      - generated_configuration_map
+      - exact_root_cause_of_bare_git_attempts
+
+  phase_1_single_repository_action_vocabulary:
+    objective: >
+      Give Claude one unambiguous action vocabulary so it no longer tries a
+      command the harness will reject and then asks the user to rescue it.
+
+    classify_actions:
+      local_read:
+        examples:
+          - status
+          - diff
+          - inspect_commit
+        owner: CURRENT_HARNESS_SUPPORTED_READ_PATH
+
+      add_repository_scope:
+        owner: CLAUDE_ADD_REPO_CAPABILITY
+
+      obtain_repository:
+        owner: CLAUDE_ADD_REPO_CAPABILITY_OR_CURRENT_SANCTIONED_REPO_ACQUISITION
+
+      edit_repository:
+        owner: CLAUDE_WORKSPACE
+
+      validate:
+        owner: REPOSITORY_GOVERNED_TEST_PATH
+
+      publish:
+        owner: SANCTIONED_FINISH_PATH_ONLY
+
+    MUST:
+      - remove_agent_guidance_that_suggests_bare_git_clone
+      - remove_agent_guidance_that_suggests_direct_git_push
+      - remove_agent_guidance_that_suggests_gh_pr_create
+      - remove_agent_guidance_that_suggests_alternate_publish_composition
+      - ensure_failure_to_Add_Repo_does_not_fallback_to_git_clone
+      - ensure_publish_failure_does_not_fallback_to_git_push_or_gh
+
+  phase_2_memory_permission_activation:
+    objective: >
+      Make Memory write capability available at the beginning of a Claude Code
+      session with the least friction the platform officially supports.
+
+    MUST_determine:
+      - exact_tool_or_capability_name_for_Add_Memory
+      - exact_permission_scope
+      - whether_settings_json_can_preallow_it
+      - whether_account_or_project_config_can_preallow_it
+      - whether_sessionStart_can_request_it
+      - whether_Always_allow_for_this_session_is_programmatically_expressible
+      - whether_mobile_cloud_differs_from_desktop
+      - whether_permission_is_per_operation_per_session_or_account
+      - whether_memory_MCP_and_Add_Memory_are_same_or_different_capabilities
+
+    preferred_outcome:
+      priority_1: >
+        Use an official persistent/session-scoped permission declaration if
+        Claude Code supports one.
+
+      priority_2: >
+        If the platform requires an interactive session grant, request Memory
+        permission once at session activation and have the operator choose the
+        supported session-wide grant.
+
+      priority_3: >
+        If neither can be automated, make the limitation explicit and eliminate
+        repeated late-session requests through one deterministic preflight.
+
+    MUST_NOT:
+      - use_dangerously_skip_permissions
+      - fake_permission_state
+      - persist_approval_in_an_unrecognized_local_file_and_treat_it_as_platform_permission
+      - grant_memory_permission_through_broad_Bash_wildcard
+      - bypass_memory_service_authority
+      - convert_permission_availability_into_unrestricted_memory_write_policy
+
+    memory_write_policy:
+      rule: >
+        Auto-enable the ability to write memory.
+
+        Do not auto-author every thought.
+
+        Existing L9 Memory admission, namespace, receipt, close, and write-gate
+        semantics remain authoritative.
+
+  phase_3_repository_scope_activation:
+    objective: >
+      Make task-relevant repositories available through Claude Code's supported
+      repository-scope mechanism before execution reaches them.
+
+    MUST_determine:
+      - exact_Add_Repo_tool_contract
+      - exact_permission_contract
+      - whether_repo_access_can_be_predeclared_in_session_or_environment
+      - whether_multiple_repositories_can_be_added_in_one_preflight
+      - whether_Add_Repo_supports_read_vs_push_scope
+      - whether_repository_scope_survives_session_loss
+      - whether_mobile_has_different_constraints
+      - whether_project_environment_can_be_created_with_all_required_repos_attached
+      - whether_an_account_level_org_allowlist_exists
+
+    scope_resolver:
+      input_sources:
+        - repositories_named_in_user_prompt
+        - repositories_named_in_bound_execution_contract
+        - repositories_required_by_current_skill_or_program
+        - current_governance_repository
+
+      output:
+        - exact_owner
+        - exact_repo
+        - required_access
+        - reason
+        - acquisition_status
+
+      rule: >
+        Resolve all known repository dependencies before deep execution and
+        request/add them as one bounded preflight wherever the platform allows.
+
+    access_minimization:
+      read_only_repo:
+        requested_access: MINIMUM_SUPPORTED_READ_SCOPE
+
+      repo_expected_to_be_modified:
+        requested_access: MINIMUM_SUPPORTED_WRITE_OR_PUSH_SCOPE_NEEDED_BY_PLATFORM
+
+      governance_repo_publish:
+        note: >
+          Even if the repository is in push scope, Claude still may publish only
+          through `PR_REMEDIATE=0 make pr`.
+
+    denied_or_unavailable_behavior:
+      - do_not_run_git_clone
+      - do_not_run_gh_repo_clone
+      - do_not_add_remote_as_workaround
+      - record_repo_scope_BLOCKED
+      - surface_one_clear_permission_request
+      - resume_after_scope_becomes_available
+
+  phase_4_session_capability_preflight:
+    objective: >
+      Move permission friction to one predictable early preflight instead of
+      sprinkling permission dialogs throughout a long mobile execution.
+
+    preferred_sequence:
+      - detect_Claude_surface
+      - resolve_current_governance_workspace
+      - validate_settings_projection
+      - validate_memory_runtime
+      - acquire_or_request_memory_write_capability
+      - discover_task_repository_dependencies
+      - acquire_or_request_repository_scope
+      - validate_sanctioned_finish_path_available
+      - begin_task
+
+    output_receipt:
+      schema: DEFINE_CURRENT_REPOSITORY_NATIVE_VERSIONED_SCHEMA
+
+      fields:
+        - surface
+        - session_identity
+        - governance_workspace
+        - memory_permission_status
+        - repository_scope_status
+        - repositories
+        - finish_path_status
+        - issued_at
+
+      statuses:
+        - AVAILABLE
+        - USER_GRANT_REQUIRED
+        - BLOCKED
+        - UNSUPPORTED
+        - UNKNOWN
+
+    rule: >
+      This receipt records capability state.
+
+      It must never manufacture approval or override the actual Claude platform.
+
+  phase_5_permission_configuration_convergence:
+    likely_surfaces_to_reconcile:
+      - "environment/agents/adapters/claude-code/settings.template.json"
+      - ".claude/settings.json"
+      - "ops/scripts/reconcile_claude_settings.py"
+      - "environment/agents/adapters/claude-code/validate_claude_env.py"
+      - Claude_session_bootstrap
+      - Claude_mobile_cloud_bootstrap
+      - relevant_hooks
+      - relevant_agent_instructions
+      - relevant_skills
+      - generated_artifact_sync
+
+    hard_rule: >
+      Determine the canonical owner first.
+
+      Do not patch a generated `.claude/settings.json` while leaving its
+      canonical template or reconciler unchanged.
+
+    direct_command_permissions:
+      MUST:
+        - remove_or_narrow_permissions_that_encourage_disallowed_publish_paths
+        - update_validator_expectations
+        - update_projection_tests
+        - preserve_only_required_read_or_internal_finish_path_permissions
+
+    publish_permissions_target:
+      agent_visible_publish_permission:
+        - "Bash(PR_REMEDIATE=0 make pr:*)"
+      note: >
+        Express the exact command in the strongest syntax actually supported by
+        Claude Code permissions.
+
+        If Claude permission matchers cannot safely distinguish the environment
+        prefix, enforce exactness in the L9 PreToolUse/harness layer and expose
+        no other publish-capable permission.
+
+    MUST_NOT_leave_as_alternate_publish_authority:
+      - "Bash(git push:*)"
+      - "Bash(gh pr create:*)"
+      - "Bash(gh pr merge:*)"
+      - "Bash(l9 pr:*)"
+      - unrestricted_publish_shell_wildcards
+
+  phase_6_sanctioned_finish_path:
+    canonical_command: "PR_REMEDIATE=0 make pr"
+    cwd: GOVERNANCE_WORKSPACE
+
+    trigger:
+      only_when:
+        - task_implementation_complete
+        - required_validation_complete
+        - current_repository_law_allows_publication
+        - user_or_bound_execution_contract_requests_publication
+
+    before_execution:
+      MUST:
+        - resolve_governance_workspace_exactly
+        - chdir_to_governance_workspace
+        - verify_Makefile_target_identity
+        - verify_PR_REMEDIATE_is_exactly_0
+        - ensure_no_alternate_publish_command_is_composed
+
+    execute:
+      command_exactly: "PR_REMEDIATE=0 make pr"
+
+    after_execution:
+      MUST:
+        - consume_finish_path_result
+        - report_PR_identity_if_created
+        - report_failure_without_fallback
+
+    failure_behavior:
+      MUST_NOT:
+        - git_push
+        - gh_pr_create
+        - l9_pr
+        - direct_API_publish
+        - retry_with_modified_publish_command
+
+      required: >
+        Fix the sanctioned path or report its exact blocker.
+
+  phase_7_harness_enforcement:
+    objective: >
+      Make invalid paths unrepresentable or deterministically rejected before
+      Claude wastes execution on them.
+
+    PreToolUse_or_equivalent:
+      MUST_reject_when_agent_originated:
+        - direct_git_clone_when_repo_scope_tool_is_required
+        - direct_git_push
+        - direct_gh_pr_create
+        - direct_gh_pr_merge
+        - l9_pr
+        - make_pr_without_PR_REMEDIATE_0
+        - publish_command_outside_governance_workspace
+
+      rejection_message:
+        MUST:
+          - name_the_sanctioned_alternative
+          - avoid_suggesting_the_forbidden_command
+          - distinguish_repo_scope_from_publish
+
+      publish_rejection_message: >
+        Publishing is only permitted from the governance workspace via:
+        PR_REMEDIATE=0 make pr
+
+    loop_prevention:
+      rule: >
+        After the harness rejects a direct command, Claude must not attempt
+        syntactic variants of the same forbidden operation.
+
+  phase_8_agent_instruction_alignment:
+    objective: >
+      Prevent model reasoning from selecting an invalid execution path before
+      the harness has to reject it.
+
+    MUST_scan_and_correct:
+      - CLAUDE_md_surfaces
+      - AGENTS_md_relevant_Claude_fragments
+      - Claude_Code_adapter_instructions
+      - skill_references
+      - finish_path_instructions
+      - generated_agent_rules
+      - mobile_environment_contracts
+
+    canonical_instructions:
+      repo_needed: >
+        Add it through the Claude repository-scope capability. Never substitute
+        `git clone` when scope is missing.
+
+      memory_needed: >
+        Use the supported Memory capability after the session permission
+        preflight. Do not bypass Memory through shell/network workarounds.
+
+      publish_needed: >
+        From the governance workspace, run exactly:
+        PR_REMEDIATE=0 make pr
+
+      publish_failure: >
+        Stop at the exact finish-path blocker. Do not construct an alternate
+        push/PR sequence.
+
+  phase_9_generated_artifact_alignment:
+    MUST:
+      - identify_settings_SSOT
+      - regenerate_projected_settings
+      - update_generated_artifact_checks
+      - ensure_session_bootstrap_consumes_current_settings
+      - ensure_mobile_cloud_projection_matches
+      - ensure_no_regeneration_restores_forbidden_direct_permissions
+
+    invariant: >
+      A future settings reconciliation must not resurrect a direct publishing
+      route that this repair removed.
+
+  required_tests:
+    permission_routing:
+      - prompt_requires_second_repo_routes_to_Add_Repo_not_git_clone
+      - denied_Add_Repo_does_not_fallback_to_git_clone
+      - missing_repo_scope_produces_single_clear_blocker
+      - known_multi_repo_task_preflights_all_known_repositories
+
+    memory:
+      - session_preflight_detects_memory_permission
+      - supported_session_grant_is_reused
+      - no_repeated_memory_prompt_when_session_grant_active
+      - denied_memory_permission_does_not_create_fake_approval
+      - memory_permission_does_not_bypass_write_gate
+      - memory_write_uses_canonical_memory_path
+
+    publication:
+      - direct_git_push_rejected
+      - direct_gh_pr_create_rejected
+      - direct_gh_pr_merge_rejected
+      - l9_pr_rejected
+      - make_pr_without_PR_REMEDIATE_0_rejected
+      - PR_STACK_variant_rejected
+      - sanctioned_command_outside_governance_workspace_rejected
+      - exact_PR_REMEDIATE_0_make_pr_from_governance_workspace_allowed
+      - failed_make_pr_does_not_trigger_fallback_push
+      - direct_GitHub_tool_PR_creation_not_used_as_fallback
+
+    model_guidance:
+      - no_live_instruction_recommends_git_clone_for_Add_Repo_gap
+      - no_live_instruction_recommends_direct_git_push
+      - no_live_instruction_recommends_gh_pr_create
+      - all_live_finish_instructions_name_exact_sanctioned_command
+
+    reconciliation:
+      - settings_template_and_projection_match
+      - validator_enforces_new_permission_model
+      - generated_sync_does_not_restore_old_permissions
+
+  runtime_acceptance:
+    required_surfaces:
+      - Claude_Code_desktop_or_CLI_if_available
+      - Claude_Code_cloud
+      - Claude_Code_mobile
+
+    mobile_acceptance_sequence:
+      - start_fresh_session
+      - confirm_memory_capability_preflight
+      - confirm_supported_session_memory_grant_behavior
+      - submit_task_referencing_second_repository
+      - confirm_Add_Repo_is_requested_before_clone_attempt
+      - approve_or_use_supported_pregrant
+      - confirm_no_git_clone_fallback
+      - execute_reversible_repository_work
+      - request_publish
+      - confirm_exact_finish_command_only
+      - confirm_command_runs_from_governance_workspace
+      - confirm_no_direct_git_push_or_gh_pr_create_attempt
+
+    proof_required:
+      - actual_permission_events
+      - actual_tool_or_capability_names
+      - actual_working_directory
+      - exact_publish_command
+      - harness_decision
+      - resulting_PR_identity_if_publication_requested
+
+  platform_constraint_handling:
+    rule: >
+      Do not fabricate an auto-grant feature.
+
+      If current Claude Code does not provide a supported way to pre-authorize
+      Add Repo or Add Memory, implement the highest-leverage supported behavior:
+      deterministic early preflight plus a single bounded permission request.
+
+    memory_specific:
+      preference: >
+        Use the screenshot-demonstrated session-wide Memory grant when the
+        runtime contract confirms it is supported.
+
+    repo_specific:
+      preference: >
+        Discover whether repository scope can be provisioned at environment or
+        session creation.
+
+        If Add Repo remains per-repository interactive authorization, request
+        every known repo at the start rather than discovering them serially in
+        the middle of work.
+
+  security_constraints:
+    - do_not_use_dangerously_skip_permissions
+    - do_not_create_broad_shell_allow_all
+    - do_not_store_tokens_in_repository
+    - do_not_treat_permission_receipt_as_credential
+    - do_not_auto_add_unreferenced_repositories
+    - do_not_grant_push_scope_when_read_scope_is_sufficient
+    - do_not_make_memory_write_unbounded
+    - do_not_weaken_L9_harness_to_stop_permission_prompts
+    - do_not_bypass_Claude_platform_authorization
+    - do_not_create_second_publish_path
+
+  scope_control:
+    in_scope:
+      - Claude_Code_permission_model
+      - Claude_Code_mobile_cloud_behavior
+      - repository_scope_acquisition
+      - Memory_write_capability_permission
+      - L9_harness_alignment
+      - Claude_settings_and_projection
+      - hooks_and_bootstrap
+      - agent_instructions
+      - exact_finish_path
+
+    out_of_scope:
+      - unrelated_Cursor_native_adapter
+      - unrelated_Peer_Execution
+      - generic_GitHub_permission_redesign
+      - memory_storage_architecture_rewrite
+      - unrelated_skill_reorganization
+      - unrelated_CI_refactors
+
+  deliverables:
+    - exact_start_SHA
+    - root_cause_report_for_bare_git_attempts
+    - permission_authority_map
+    - Claude_Code_capability_preflight
+    - memory_permission_convergence
+    - repository_scope_convergence
+    - sanctioned_finish_path_enforcement
+    - settings_template_repair
+    - settings_projection_repair
+    - validator_updates
+    - hook_updates_if_required
+    - instruction_alignment
+    - generated_artifact_alignment
+    - regression_tests
+    - desktop_cloud_mobile_runtime_results
+    - unsupported_platform_constraints
+    - final_changed_file_inventory
+    - final_validation_brief
+
+  final_validation_brief:
+    MUST_report:
+      - why_bare_git_was_still_being_selected
+      - exact_sources_removed_or_corrected
+      - Memory_auto_enable_mechanism
+      - whether_Memory_session_wide_pregrant_is_supported
+      - Add_Repo_auto_enable_mechanism
+      - whether_repo_scope_can_be_preprovisioned
+      - fallback_when_platform_requires_user_grant
+      - exact_repository_preflight_behavior
+      - exact_publish_command
+      - exact_publish_working_directory
+      - proof_no_alternate_publish_path_remains_agent_visible
+      - tests_run
+      - runtime_mobile_test
+      - remaining_UNKNOWNs
+
+  stop_conditions:
+    - do_not_claim_auto_permission_without_runtime_or_official_contract_proof
+    - do_not_fallback_to_git_clone_after_Add_Repo_denial
+    - do_not_fallback_to_git_push_after_finish_path_failure
+    - do_not_use_direct_gh_PR_publication
+    - do_not_allow_make_pr_without_PR_REMEDIATE_0
+    - do_not_add_PR_STACK_or_other_environment_variants
+    - do_not_publish_outside_governance_workspace
+    - do_not_patch_only_generated_settings
+    - do_not_preserve_validator_rules_that_require_obsolete_direct_publish_permissions
+    - do_not_weaken_memory_admission
+    - do_not_bypass_Claude_permission_UI_or_platform_contract
+    - do_not_fabricate_runtime_acceptance
+
+  final_status_allowed:
+    - CLAUDE_CAPABILITY_AND_FINISH_PATH_CONVERGED
+    - CONVERGED_WITH_INTERACTIVE_REPO_SCOPE_REQUIRED
+    - CONVERGED_WITH_INTERACTIVE_MEMORY_GRANT_REQUIRED
+    - STATICALLY_CONVERGED_MOBILE_RUNTIME_GATE_PENDING
+    - BLOCKED_BY_CLAUDE_CODE_PERMISSION_CONTRACT
+    - BLOCKED_BY_HARNESS_CONFLICT
+    - BLOCKED_BY_VALIDATION
+    - FAILED
+    - UNKNOWN
+
+  convergence:
+    required: true
+
+    sequence:
+      - FRESH_HEAD_BINDING
+      - TRACE_BARE_GIT_CAUSAL_CHAIN
+      - BIND_CURRENT_CLAUDE_PERMISSION_CONTRACT
+      - BIND_CURRENT_L9_HARNESS_CONTRACT
+      - LOCK_SINGLE_REPOSITORY_ACTION_VOCABULARY
+      - IMPLEMENT_MEMORY_PERMISSION_PREFLIGHT
+      - IMPLEMENT_REPOSITORY_SCOPE_PREFLIGHT
+      - REMOVE_GIT_CLONE_FALLBACK
+      - LOCK_EXACT_PUBLISH_FINISH_PATH
+      - REMOVE_ALTERNATE_PUBLISH_PERMISSIONS
+      - UPDATE_HARNESS_ENFORCEMENT
+      - ALIGN_AGENT_INSTRUCTIONS
+      - ALIGN_CANONICAL_SETTINGS_AND_PROJECTIONS
+      - UPDATE_VALIDATORS
+      - RUN_REGRESSION_MATRIX
+      - RUN_CLAUDE_RUNTIME_ACCEPTANCE
+      - RUN_MOBILE_ACCEPTANCE
+      - FINAL_MICROSCOPE
+      - FINAL_VALIDATION_BRIEF
+
+    terminal_rule: >
+      The task is complete only when Claude Code predictably acquires supported
+      Memory and repository-scope capabilities before they are needed, does not
+      substitute bare git/gh commands for denied or missing platform
+      capabilities, and has exactly one agent-visible publishing route.
+
+      That publishing route is:
+
+        PR_REMEDIATE=0 make pr
+
+      from the governance workspace.
+
+      There is no second push path, no direct PR creation path, no l9-pr alias,
+      no PR_STACK variant, and no fallback composition after failure.
+
+      If Claude Code itself requires an interactive permission grant for Memory
+      or Add Repo, preserve that security boundary and move the request to one
+      deterministic early preflight rather than attempting to bypass it.
