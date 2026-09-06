@@ -59,6 +59,16 @@ tiers:
     use_when: an agent needs an api key, token, password, infisical hydrate, aws secret ref, registry sync, or fail-closed credential check without keychain or printing values
   - skill: l9-claude-code-deepseek
     use_when: wiring Claude Code in a consumer clone to DeepSeek, opening a Claude Code tab on DeepSeek, or hydrating DEEPSEEK_API_KEY without Anthropic billing
+  - skill: l9-plan-simple
+    use_when: an ordinary execution plan or spec is needed, scope is unclear, or Plan mode is on — rules/23-l9-skill-routing.mdc already routes every ordinary planning deliverable here, so the model must be able to select it
+  - skill: l9-pr-digest
+    use_when: judging one PR's scope, evidence, expansion, and architecture impact before remediation — the skill never mutates the PR
+  - skill: l9-component-verification
+    use_when: a named component, module, import, or wiring claim needs a read-only audit, deterministic verify, or runtime probe
+  - skill: l9-chat-extraction
+    use_when: a user correction, lesson, pattern, error, or decision should reach memory — rules/87-cursor-memory-kernel.mdc requires extracting a lesson immediately, not at session end
+  - skill: l9-python-tdd-with-uv
+    use_when: writing or running Python tests under uv — red-green-refactor, vertical slicing, or uv project setup
   explicit_only:
   - skill: l9-forge
     reason: zero-pause batch execution
@@ -68,16 +78,10 @@ tiers:
     reason: lint-fix/migrate/consolidate/refactor sweeps with code-mutating executors; use --dry-run CLI before mutate
   - skill: l9-ci-ops
     reason: CI/CD pipeline operations and gate authoring
-  - skill: l9-component-verification
-    reason: component audit/verify/probe escalation ladder
-  - skill: l9-chat-extraction
-    reason: extracts chat content to memory or structured output
   - skill: l9-dag-authoring
     reason: creates/updates DAGs — structural meta tooling
   - skill: l9-repo-index
     reason: repo index export — on-demand only
-  - skill: l9-python-tdd-with-uv
-    reason: non-default stack (uv) — invoke explicitly for Python TDD
   - skill: l9-kubernetes-deploying
     reason: infra deploy operation — high blast radius, explicit only
   - skill: l9-setting-up-terraform
@@ -106,8 +110,6 @@ tiers:
     reason: macOS disk reclaim; diagnose-first then HITL repair; disable-model-invocation, explicit only
   - skill: l9-git-work-preserve
     reason: auto-registered by sync_generated_artifacts (orphan → explicit_only)
-  - skill: l9-plan-simple
-    reason: auto-registered by sync_generated_artifacts (orphan → explicit_only)
   - skill: l9-repo-sync
     reason: in-place /ff catch-up mutates a named clone (park unique work, then reset --keep); explicit only, hint_allowed for Read/attach
   - skill: l9-claude-coding-contract-compiler
@@ -120,8 +122,6 @@ tiers:
     reason: drives fresh sessions per contract, applies GitHub branch protection, and gates auto-merge with no human tap — high blast radius; merge authority still comes from /l9-pr-remediation, never from this pack; disable-model-invocation
   - skill: l9-global-architect
     reason: experimental GAR runtime bootloader whose broad architect-engineer description would hijack ordinary routing if auto-invoked; load when the user explicitly invokes the global architect runtime, iterates on the pack, or when l9-plan-simple loads it as the required upstream planner; disable-model-invocation
-  - skill: l9-pr-digest
-    reason: auto-registered by sync_generated_artifacts (orphan → explicit_only)
   - skill: l9-idea-execute
     reason: routes validated IdeaOS decisions into Foundry, Website-Bot, plan-simple, or Program Execution; owner-selection and downstream invocation are high blast radius; disable-model-invocation
   - skill: l9-idea-foundry
