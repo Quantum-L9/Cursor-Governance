@@ -13,12 +13,14 @@ from ops.graphiti.hydration import close_session as cs
 from ops.graphiti.hydration import compile_session_packet as comp
 from ops.graphiti.hydration import pickup_write as pw
 from ops.graphiti.hydration.session_latches import (
+    STATUS_CLOSE_CONFLICTED,
     STATUS_CLOSE_INCOMPLETE,
     STATUS_CLOSED_CANONICALLY,
     load_close_receipt,
+    receipt_is_close_gap,
     write_open_latch,
 )
-from ops.memory.control_plane_client import MemoryControlPlaneClient
+from ops.memory.control_plane_client import MemoryControlPlaneClient, OutcomeStatus
 from ops.memory.namespace_context import NamespaceContext
 
 RECORD = "66666666-6666-6666-6666-666666666666"
@@ -354,13 +356,21 @@ def test_retry_surfaces_memory_payload_drift_evidence(workspace, scripted, fake_
 
 
 def test_close_reports_replay_drift_from_the_receipt(workspace, scripted, fake_cli) -> None:
+    """Drift evidence is surfaced *and* the close is not canonical (CG-P1-01).
+
+    This test previously asserted ``STATUS_CLOSED_CANONICALLY`` here: memory
+    returns the historical committed record on a conflicting replay, and the
+    consumer promoted it because ``receipt.committed`` was true. Reporting the
+    drift beside a success is the defect, not the fix (contract §16).
+    """
     fake_cli.reply(
         "close",
         0,
         close_payload(replayed=True, replay_payload_matched=False, warnings=["differs"]),
     )
     report = _close(workspace)
-    assert report["status"] == STATUS_CLOSED_CANONICALLY
+    assert report["status"] == STATUS_CLOSE_CONFLICTED
+    assert report["status"] != STATUS_CLOSED_CANONICALLY
     assert report["close"]["replayed"] is True
     assert report["close"]["replay_payload_matched"] is False
     assert report["close"]["warnings"] == ["differs"]
@@ -717,3 +727,135 @@ def test_phase_b_promotions_use_the_generic_write_with_idempotency(
     argv = fake_cli.last("write")
     assert "--idempotency-key" in argv
     assert argv[argv.index("--kind") + 1] == "decision"
+
+
+# ---------------------------------------------------------------------------
+# CG-P1-01: idempotency replay drift must fail canonical close
+#
+# Memory is correct to preserve the first commit under a key and to return it.
+# The defect was on this side: the consumer promoted that historical record to
+# CLOSED_CANONICALLY because ``receipt.committed`` was true, so a close request
+# that never committed satisfied a close obligation. The contract:
+#
+#   first close                       -> CANONICAL_SUCCESS
+#   same key + same payload           -> EXACT_IDEMPOTENT_REPLAY -> success
+#   same key + different payload      -> IDEMPOTENCY_CONFLICT    -> NOT success
+# ---------------------------------------------------------------------------
+
+
+def _drifted() -> dict:
+    return close_payload(
+        replayed=True,
+        replay_payload_matched=False,
+        warnings=["idempotent replay payload differs from the stored record"],
+    )
+
+
+def test_1_first_close_succeeds(workspace, scripted, fake_cli) -> None:
+    report = _close(workspace)
+    assert report["status"] == STATUS_CLOSED_CANONICALLY
+    assert report["close"]["replayed"] is False
+
+
+def test_2_identical_retry_succeeds_idempotently(workspace, scripted, fake_cli) -> None:
+    fake_cli.reply("close", 1, None, error_stderr("StoreError", "locked"))
+    assert _close(workspace)["status"] == STATUS_CLOSE_INCOMPLETE
+    fake_cli.reply("close", 0, close_payload(replayed=True, replay_payload_matched=True))
+    report = pw.retry_close(project_dir=workspace, session_id="sess", client=scripted)
+    assert report["status"] == STATUS_CLOSED_CANONICALLY
+    assert report["replay_payload_matched"] is True
+
+
+def test_3_changed_payload_under_the_same_key_is_a_conflict(workspace, scripted, fake_cli) -> None:
+    fake_cli.reply("close", 0, _drifted())
+    outcome = scripted.close(
+        workspace=str(workspace),
+        namespace="cursor-governance",
+        summary="a different summary",
+        session_id="sess",
+        capsule_digest="f" * 64,
+        idempotency_key="cursor-close:cursor-governance:sess",
+    )
+    assert outcome.status is OutcomeStatus.IDEMPOTENCY_CONFLICT
+    assert outcome.ok is False
+    # The taxonomy is precise: not a transport failure, not a generic rejection.
+    assert outcome.status is not OutcomeStatus.CANONICAL_UNAVAILABLE
+    assert outcome.status is not OutcomeStatus.INVALID_RECEIPT
+    assert outcome.status is not OutcomeStatus.REJECTED
+    assert "already committed a different close" in (outcome.error or "")
+    # Memory's committed record is still visible as evidence — it is simply not
+    # this request's, so it never becomes this request's success.
+    assert outcome.receipt is not None and outcome.receipt.committed is True
+
+
+def test_4_changed_payload_cannot_produce_closed_canonically(workspace, scripted, fake_cli) -> None:
+    """The invariant, asserted on both close paths that can reach the promotion."""
+    fake_cli.reply("close", 0, _drifted())
+    assert _close(workspace)["status"] != STATUS_CLOSED_CANONICALLY
+
+    # ...and the retry path, which reaches the promotion through retry_close.
+    fake_cli.reply("close", 1, None, error_stderr("StoreError", "locked"))
+    assert _close(workspace, session_id="sess2")["status"] == STATUS_CLOSE_INCOMPLETE
+    fake_cli.reply("close", 0, _drifted())
+    assert (
+        pw.retry_close(project_dir=workspace, session_id="sess2", client=scripted)["status"]
+        != STATUS_CLOSED_CANONICALLY
+    )
+
+
+def test_5_conflict_leaves_the_close_obligation_unresolved(workspace, scripted, fake_cli) -> None:
+    fake_cli.reply("close", 0, _drifted())
+    report = _close(workspace)
+    assert report["status"] == STATUS_CLOSE_CONFLICTED
+    receipt = load_close_receipt(workspace, "sess")
+    assert receipt["status"] == STATUS_CLOSE_CONFLICTED
+    assert receipt["failure_class"] == "IDEMPOTENCY_CONFLICT"
+    assert receipt["last_error_code"] == "IDEMPOTENCY_CONFLICT"
+    # Visibly unresolved: the next session still sees a close gap.
+    assert receipt_is_close_gap(receipt) is True
+
+
+def test_6_repeated_conflicting_retry_is_deterministic(workspace, scripted, fake_cli) -> None:
+    fake_cli.reply("close", 0, _drifted())
+    first = _close(workspace)
+    second = _close(workspace, session_id="sess-b")
+    assert first["status"] == second["status"] == STATUS_CLOSE_CONFLICTED
+    third = _close(workspace, session_id="sess-c")
+    assert third["status"] == STATUS_CLOSE_CONFLICTED
+
+
+def test_7_exact_replay_after_a_conflict_resolves_to_the_committed_payload(
+    workspace, scripted, fake_cli
+) -> None:
+    """A conflict does not poison the key: replaying the *originally committed*
+    request still resolves the obligation, and against the payload memory holds."""
+    fake_cli.reply("close", 1, None, error_stderr("StoreError", "locked"))
+    assert _close(workspace)["status"] == STATUS_CLOSE_INCOMPLETE
+    recorded = load_close_receipt(workspace, "sess")["close_summary"]
+
+    fake_cli.reply("close", 0, _drifted())
+    assert (
+        pw.retry_close(project_dir=workspace, session_id="sess", client=scripted)["status"]
+        == STATUS_CLOSE_CONFLICTED
+    )
+    fake_cli.reply("close", 0, close_payload(replayed=True, replay_payload_matched=True))
+    resolved = pw.retry_close(project_dir=workspace, session_id="sess", client=scripted)
+    assert resolved["status"] == STATUS_CLOSED_CANONICALLY
+    # It replayed the recorded request, never a synthesized summary.
+    assert _close_summary(fake_cli) == recorded
+
+
+def test_8_warning_only_handling_is_rejected(workspace, scripted, fake_cli) -> None:
+    """Explicitly guards the shape §16 forbids: a warning beside a success.
+
+    If someone reverts the promotion guard and leaves only the drift warning,
+    the warning assertion still passes and this one fails.
+    """
+    fake_cli.reply("close", 0, _drifted())
+    report = _close(workspace)
+    assert any("drift" in w for w in report["warnings"])
+    assert report["status"] != STATUS_CLOSED_CANONICALLY, (
+        "drift was reported as a warning while the close was still promoted to "
+        "CLOSED_CANONICALLY — this is exactly the defect CG-P1-01 names"
+    )
+    assert load_close_receipt(workspace, "sess")["status"] != STATUS_CLOSED_CANONICALLY

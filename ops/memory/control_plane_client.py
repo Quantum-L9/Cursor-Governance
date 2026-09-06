@@ -71,6 +71,12 @@ class OutcomeStatus(StrEnum):
     QUARANTINED = "QUARANTINED"
     NOT_COMMITTED = "NOT_COMMITTED"
     BINDING_FAILED = "BINDING_FAILED"
+    #: Same idempotency key, different payload (audit CG-P1-01). Memory is
+    #: correct to preserve the first commit and to report the historical
+    #: record; this request is *not* the one that committed, so it is never a
+    #: canonical close. Distinct from a transport failure on purpose: nothing
+    #: is wrong with the runtime, the caller replayed a key under new content.
+    IDEMPOTENCY_CONFLICT = "IDEMPOTENCY_CONFLICT"
 
 
 @dataclass(frozen=True)
@@ -186,6 +192,7 @@ class MemoryControlPlaneClient:
         namespaces: Sequence[str] = (),
         task_signature: str | None = None,
         projection_status: str | None = None,
+        error_override: str | None = None,
     ) -> OperationOutcome:
         receipt_raw = getattr(receipt, "raw", None)
         canonical_id = None
@@ -208,7 +215,12 @@ class MemoryControlPlaneClient:
         }
         error = None
         if status is not OutcomeStatus.OK and status is not OutcomeStatus.NO_HITS:
-            error = raw.error_message or raw.error_name or _receipt_reason(raw.payload)
+            error = (
+                error_override
+                or raw.error_message
+                or raw.error_name
+                or _receipt_reason(raw.payload)
+            )
         return OperationOutcome(
             operation=operation,
             status=status,
@@ -535,7 +547,15 @@ class MemoryControlPlaneClient:
             return self._outcome(
                 "close", OutcomeStatus.INVALID_RECEIPT, _err(raw, exc), namespaces=namespaces
             )
-        if raw.exit_code == EXIT_COMMITTED and receipt.committed:
+        if receipt.payload_drifted:
+            # CG-P1-01. Memory replayed this key and proved the stored payload
+            # differs from the one just sent. The committed record it returns
+            # is the *first* close, not this request: promoting it here would
+            # let a drifted retry satisfy a close obligation it never wrote.
+            # This branch is deliberately ahead of the ``committed`` check —
+            # a warning beside a success is precisely the defect (contract §16).
+            status = OutcomeStatus.IDEMPOTENCY_CONFLICT
+        elif raw.exit_code == EXIT_COMMITTED and receipt.committed:
             status = OutcomeStatus.OK
         elif raw.exit_code == EXIT_DRY_RUN and dry_run:
             status = OutcomeStatus.NOT_COMMITTED
@@ -545,7 +565,22 @@ class MemoryControlPlaneClient:
             # A zero exit without a committed receipt, or vice versa, is a
             # contract violation; never report success from half the evidence.
             status = OutcomeStatus.INVALID_RECEIPT
-        return self._outcome("close", status, raw, receipt, namespaces=namespaces)
+        conflict_detail = None
+        if status is OutcomeStatus.IDEMPOTENCY_CONFLICT:
+            conflict_detail = (
+                f"idempotency key {idempotency_key!r} already committed a different close "
+                f"(stored digest {receipt.stored_digest}, "
+                f"replayed digest {receipt.replay_digest}); "
+                "the returned record is the first close, not this request"
+            )
+        return self._outcome(
+            "close",
+            status,
+            raw,
+            receipt,
+            namespaces=namespaces,
+            error_override=conflict_detail,
+        )
 
     def conflicts(self, *, workspace: str, namespace: str) -> OperationOutcome:
         if guard := self._guard("conflicts"):

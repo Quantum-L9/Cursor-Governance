@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from ops.graphiti.hydration.session_latches import (
+    STATUS_CLOSE_CONFLICTED,
     STATUS_CLOSE_INCOMPLETE,
     STATUS_CLOSED_CANONICALLY,
     load_close_receipt,
@@ -22,6 +23,7 @@ from ops.graphiti.hydration.session_latches import (
     resolve_session_id,
     write_receipt,
 )
+from ops.memory.control_plane_client import OutcomeStatus
 from ops.memory.namespace_context import repository_state_digest, resolve_namespace_context
 
 
@@ -112,12 +114,22 @@ def retry_close(
             dry_run=dry_run,
         )
         receipt = closed.receipt
-        committed = closed.ok and receipt is not None and receipt.committed
+        conflicted = closed.status is OutcomeStatus.IDEMPOTENCY_CONFLICT
+        # CG-P1-01: the conflict test runs before ``committed`` is consulted.
+        # ``retry_close`` replays the recorded request, so a drift here means
+        # the key was consumed by a different close — never this obligation's.
+        committed = not conflicted and closed.ok and receipt is not None and receipt.committed
         drifted = bool(getattr(receipt, "payload_drifted", False))
+        if conflicted:
+            retry_status = STATUS_CLOSE_CONFLICTED
+        elif committed:
+            retry_status = STATUS_CLOSED_CANONICALLY
+        else:
+            retry_status = STATUS_CLOSE_INCOMPLETE
         report = _finish(
             project,
             sid,
-            status=STATUS_CLOSED_CANONICALLY if committed else STATUS_CLOSE_INCOMPLETE,
+            status=retry_status,
             dry_run=dry_run,
             write_count=1 if committed else 0,
             obligation=obligation,
@@ -236,7 +248,8 @@ def repair_close(
         dry_run=dry_run,
     )
     receipt = closed.receipt
-    committed = closed.ok and receipt is not None and receipt.committed
+    repair_conflicted = closed.status is OutcomeStatus.IDEMPOTENCY_CONFLICT
+    committed = not repair_conflicted and closed.ok and receipt is not None and receipt.committed
     obligation = {
         **existing,
         "canonical_namespace_requested": namespace,
@@ -248,7 +261,11 @@ def repair_close(
     report = _finish(
         project,
         sid,
-        status=STATUS_CLOSED_CANONICALLY if committed else STATUS_CLOSE_INCOMPLETE,
+        status=(
+            STATUS_CLOSE_CONFLICTED
+            if repair_conflicted
+            else (STATUS_CLOSED_CANONICALLY if committed else STATUS_CLOSE_INCOMPLETE)
+        ),
         dry_run=dry_run,
         write_count=(1 if admitted.ok else 0) + (1 if committed else 0),
         obligation=obligation,
