@@ -303,31 +303,68 @@ def test_extract_pickup_graphiti_paraphrase():
     assert "resuming from" in got["next_action"].lower()
 
 
+# ---------------------------------------------------------------------------
+# Canonical close stubs (stage C6): every close crosses the memory boundary
+# ---------------------------------------------------------------------------
+
+_BOUNDARY_FIXTURES = ROOT / "tests" / "ops" / "memory"
+if str(_BOUNDARY_FIXTURES) not in sys.path:
+    sys.path.insert(0, str(_BOUNDARY_FIXTURES))
+from memory_boundary_fixtures import FakeMemoryCli, close_payload  # noqa: E402
+
+from ops.memory.control_plane_client import MemoryControlPlaneClient  # noqa: E402
+from ops.memory.runtime_binding import STATUS_EXACT, RuntimeBinding  # noqa: E402
+
+
+def _candidate_payload(status="admitted", record_id="66666666-6666-6666-6666-666666666666"):
+    return {
+        "status": status,
+        "candidate_id": "cursor-continuation:x",
+        "namespace": "cursor-governance",
+        "record_id": record_id,
+        "write_receipt_id": "55555555-5555-5555-5555-555555555555",
+        "storage_committed": status != "rejected",
+        "memory_state": "active",
+        "reason": None,
+    }
+
+
+def _scripted_close(monkeypatch, tmp_path):
+    """Route close_session at a scripted memory CLI; return the fake for assertions."""
+    fake = FakeMemoryCli()
+    fake.reply("ingest-governed-candidate", 0, _candidate_payload())
+    fake.reply("close", 0, close_payload())
+    cli = tmp_path / "bin" / "l9-memory"
+    cli.parent.mkdir(parents=True, exist_ok=True)
+    cli.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    cli.chmod(0o755)
+    binding = RuntimeBinding(
+        status=STATUS_EXACT,
+        runtime_mode="pinned_environment",
+        memory_package="l9-graphite-memory",
+        expected_version="x",
+        expected_contract_version="memory-control-plane/v1",
+        manifest_path="m",
+        interpreter=str(tmp_path / "bin" / "python"),
+        memory_cli=str(cli),
+        memory_version="x",
+        contract_version="memory-control-plane/v1",
+    )
+    client = MemoryControlPlaneClient(binding, runner=fake.run, session_id="sess")
+    monkeypatch.setattr(cs, "memory_client", lambda *a, **k: client)
+    monkeypatch.setattr(cs, "resolve_namespace_context", lambda *a, **k: _context())
+    monkeypatch.setattr(cs, "repository_state_digest", lambda _p: "a" * 40)
+    monkeypatch.setattr(cs, "already_closed", lambda *a, **k: False)
+    monkeypatch.setattr(cs, "write_receipt", lambda *a, **k: None)
+    return fake
+
+
 def test_phase_a_without_api_key(monkeypatch, tmp_path):
     monkeypatch.setenv("OPENAI_API_KEY", "")
     monkeypatch.setenv("MEMORY_PHASE_B_RESOLVE_SM", "0")
     monkeypatch.delenv("MEMORY_DISTILL_S3_BUCKET", raising=False)
-    monkeypatch.setattr(
-        cs,
-        "resolve_group_id",
-        lambda p: {"group_id": "cursor-governance", "readonly": False},
-    )
+    fake = _scripted_close(monkeypatch, tmp_path)
     monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **k: ("user: finish the PR", "test"))
-    writes: list[dict] = []
-
-    def fake_write(body, **kwargs):
-        writes.append({"body": body, **kwargs})
-        return {"written": True, "dry_run": True, "kind": kwargs["kind"]}
-
-    monkeypatch.setattr(cs, "_write_kind", fake_write)
-    monkeypatch.setattr(cs, "already_closed", lambda *a, **k: False)
-    monkeypatch.setattr(cs, "write_receipt", lambda *a, **k: None)
-
-    # Prevent graphiti_env_loader from re-injecting OPENAI_API_KEY mid-close.
-    import graphiti_memory_client as gmc
-
-    monkeypatch.setattr(gmc, "load_env", lambda: None)
-
     report = cs.close_session(
         project_dir=tmp_path,
         session_id="close-1",
@@ -337,30 +374,28 @@ def test_phase_a_without_api_key(monkeypatch, tmp_path):
     )
     assert report["phase_a"] is True
     assert report["phase_b"] is False
-    assert any(w.get("kind") == "pickup_context" for w in writes)
+    assert any(w["kind"] == "session_continuation" for w in report["writes"])
     assert any("openai_key" in w for w in report["warnings"])
+    assert any(args[1] == "ingest-governed-candidate" for args, _c, _s in fake.calls)
 
 
 def test_phase_b_success_with_mocked_transport(monkeypatch, tmp_path):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     monkeypatch.delenv("MEMORY_DISTILL_S3_BUCKET", raising=False)
     monkeypatch.setenv("MEMORY_DISTILL_ENQUEUE", "0")
-    monkeypatch.setattr(
-        cs,
-        "resolve_group_id",
-        lambda p: {"group_id": "cursor-governance", "readonly": False},
+    fake = _scripted_close(monkeypatch, tmp_path)
+    fake.reply(
+        "write",
+        0,
+        {
+            "receipt_id": "88888888-8888-8888-8888-888888888888",
+            "status": "admitted",
+            "namespace": "cursor-governance",
+            "record_id": "99999999-9999-9999-9999-999999999999",
+            "admission": {"reasons": []},
+        },
     )
     monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **k: ("user: ship phase b", "test"))
-    monkeypatch.setattr(cs, "already_closed", lambda *a, **k: False)
-    monkeypatch.setattr(cs, "write_receipt", lambda *a, **k: None)
-    monkeypatch.setattr(
-        cs,
-        "_write_kind",
-        lambda body, **kwargs: {"written": True, "kind": kwargs["kind"]},
-    )
-    import graphiti_memory_client as gmc
-
-    monkeypatch.setattr(gmc, "load_env", lambda: None)
 
     packet = {
         "packet_id": "abcdef0123456789",
@@ -394,28 +429,15 @@ def test_phase_b_success_with_mocked_transport(monkeypatch, tmp_path):
     assert report["phase_b"] is True
     assert report["receipt"]["phase_b"] is True
     assert report.get("promoted") == 1
+    assert report["continuation"]["refined"] is True
 
 
 def test_enqueue_fail_loud(monkeypatch, tmp_path):
     monkeypatch.setenv("MEMORY_PHASE_B", "0")
     monkeypatch.setenv("MEMORY_DISTILL_ENQUEUE", "1")
     monkeypatch.setenv("MEMORY_DISTILL_S3_BUCKET", "l9-test-distill")
-    monkeypatch.setattr(
-        cs,
-        "resolve_group_id",
-        lambda p: {"group_id": "cursor-governance", "readonly": False},
-    )
+    _scripted_close(monkeypatch, tmp_path)
     monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **k: ("user: enqueue me", "test"))
-    monkeypatch.setattr(cs, "already_closed", lambda *a, **k: False)
-    monkeypatch.setattr(cs, "write_receipt", lambda *a, **k: None)
-    monkeypatch.setattr(
-        cs,
-        "_write_kind",
-        lambda body, **kwargs: {"written": True, "kind": kwargs["kind"]},
-    )
-    import graphiti_memory_client as gmc
-
-    monkeypatch.setattr(gmc, "load_env", lambda: None)
 
     def boom(**kwargs):
         raise RuntimeError("s3 put-object failed: AccessDenied")
@@ -434,14 +456,12 @@ def test_enqueue_fail_loud(monkeypatch, tmp_path):
     assert report["enqueue_ok"] is False
     assert report["receipt"]["enqueue_ok"] is False
     assert any("enqueue failed" in w for w in report["warnings"])
+    # An enqueue failure never turns a canonical close into a non-close.
+    assert report["status"] == "closed_canonically"
 
 
 def test_idempotent_reclose(monkeypatch, tmp_path):
-    monkeypatch.setattr(
-        cs,
-        "resolve_group_id",
-        lambda p: {"group_id": "cursor-governance", "readonly": False},
-    )
+    fake = _scripted_close(monkeypatch, tmp_path)
     monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **k: ("x", "test"))
     monkeypatch.setattr(cs, "already_closed", lambda *a, **k: True)
     report = cs.close_session(
@@ -451,72 +471,56 @@ def test_idempotent_reclose(monkeypatch, tmp_path):
         dry_run=False,
     )
     assert report["status"] == "idempotent_skip"
+    assert fake.calls == []
 
 
 def test_phase_a_kept_when_phase_b_would_exceed_budget(monkeypatch, tmp_path):
-    """Synthetic clock: after Phase A, remaining budget < 3s → skip B."""
+    """Synthetic clock: after Phase A, remaining budget < 3s -> skip B."""
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-not-used")
-    monkeypatch.setattr(
-        cs,
-        "resolve_group_id",
-        lambda p: {"group_id": "cursor-governance", "readonly": False},
-    )
+    _scripted_close(monkeypatch, tmp_path)
     monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **k: ("user: hi", "test"))
-    monkeypatch.setattr(cs, "already_closed", lambda *a, **k: False)
-    monkeypatch.setattr(cs, "write_receipt", lambda *a, **k: None)
-    monkeypatch.setattr(
-        cs,
-        "_write_kind",
-        lambda body, **kwargs: {"written": True, "kind": kwargs["kind"]},
-    )
-
-    t = {"v": 1000.0}
+    ticks = iter([0.0, 0.0, 28.5, 28.6, 28.7, 28.8, 29.0, 29.1, 29.2, 29.3, 29.4, 29.5])
 
     def clock():
-        return t["v"]
-
-    # Advance clock during Phase A writes by patching _heuristic_pickup side
-    real_heuristic = cs._heuristic_pickup
-
-    def slow_heuristic(**kwargs):
-        t["v"] += 28.0  # leave < 3s of 30s budget
-        return real_heuristic(**kwargs)
-
-    monkeypatch.setattr(cs, "_heuristic_pickup", slow_heuristic)
-
-    called_b = {"n": 0}
-
-    def no_b(**kwargs):
-        called_b["n"] += 1
-        return None, "should not be called"
-
-    monkeypatch.setattr(cs, "_distill_signal_packet", no_b)
+        return next(ticks, 30.0)
 
     report = cs.close_session(
         project_dir=tmp_path,
-        session_id="close-budget",
+        session_id="close-3",
         agent_id="cursor",
         dry_run=True,
         clock=clock,
     )
     assert report["phase_a"] is True
     assert report["phase_b"] is False
-    assert called_b["n"] == 0
-    assert any("insufficient time" in w for w in report["warnings"])
+    assert any("insufficient time budget" in w for w in report["warnings"])
 
 
-def test_readonly_group_warns(monkeypatch, tmp_path):
+def test_unresolved_namespace_close_is_skipped_with_warning(monkeypatch, tmp_path):
+    """No write namespace hint: the close is skipped, memory is never called."""
+    from ops.memory.namespace_context import NamespaceContext
+
+    fake = _scripted_close(monkeypatch, tmp_path)
     monkeypatch.setattr(
         cs,
-        "resolve_group_id",
-        lambda p: {"group_id": "igor-workspace", "readonly": True, "warning": "readonly"},
+        "resolve_namespace_context",
+        lambda *a, **k: NamespaceContext(
+            workspace=str(tmp_path),
+            git_root=None,
+            repository_identity=None,
+            write_namespace_hint=None,
+            read_namespace_hints=("l9-workspace",),
+            method="unresolved",
+            warnings=("no repository match",),
+        ),
     )
     monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **k: ("", "none"))
     report = cs.close_session(
-        project_dir=tmp_path, session_id="ro", agent_id="cursor", dry_run=True
+        project_dir=tmp_path, session_id="ro-1", agent_id="cursor", dry_run=True
     )
     assert report["status"] == "skipped"
-    assert any("write blocked" in w for w in report["warnings"])
+    assert any("close blocked" in w for w in report["warnings"])
+    assert fake.calls == []
 
 
 def test_resolve_session_id_order(monkeypatch):
@@ -617,44 +621,52 @@ def test_compile_first_session_no_receipt_gap(monkeypatch, tmp_path):
     assert not comp.format_additional_context(packet).startswith("DEGRADED")
 
 
-def test_fallback_write_invoked_on_zero_count(monkeypatch, tmp_path):
-    import group_resolver
-
+def test_retry_close_discharges_an_open_obligation(monkeypatch, tmp_path):
+    """The hook's fallback is now a canonical close retry under the recorded key."""
     from ops.graphiti.hydration import pickup_write as pw
-    from ops.graphiti.hydration.session_latches import load_close_receipt
+    from ops.graphiti.hydration.session_latches import load_close_receipt, write_receipt
 
-    monkeypatch.setattr(
-        group_resolver,
-        "resolve_group_id",
-        lambda p: {"group_id": "cursor-governance", "readonly": False},
+    write_receipt(
+        tmp_path,
+        "fb-1",
+        {
+            "status": "close_incomplete",
+            "write_count": 1,
+            "canonical_namespace_requested": "cursor-governance",
+            "close_idempotency_key": "cursor-close:cursor-governance:fb-1:abc",
+            "payload_digest": "d" * 64,
+            "continuation_status": "admitted",
+            "continuation_reference": "66666666-6666-6666-6666-666666666666",
+        },
     )
-
-    def fake_write(body, **kwargs):
-        return {"written": True, "kind": kwargs["kind"]}
-
-    import ops.graphiti.hydration.close_session as cs_mod
-
-    monkeypatch.setattr(cs_mod, "_write_kind", fake_write)
-    monkeypatch.setattr(cs_mod, "load_transcript_excerpt", lambda **k: ("user: hi", "test"))
-    report = pw.fallback_pickup_write(
-        project_dir=tmp_path, session_id="fb-1", agent_id="cursor", dry_run=False
-    )
+    fake = _scripted_close(monkeypatch, tmp_path)
+    client = cs.memory_client("fb-1")
+    report = pw.retry_close(project_dir=tmp_path, session_id="fb-1", client=client)
+    assert report["status"] == "closed_canonically"
     assert report["write_count"] == 1
-    assert report["status"] == "closed"
     receipt = load_close_receipt(tmp_path, "fb-1")
-    assert receipt and int(receipt["write_count"]) == 1
+    assert receipt and receipt["status"] == "closed_canonically"
+    close_argv = fake.last("close")
+    assert close_argv[close_argv.index("--idempotency-key") + 1] == (
+        "cursor-close:cursor-governance:fb-1:abc"
+    )
 
 
-def test_repair_skips_when_already_closed(tmp_path):
-    from ops.graphiti.hydration.pickup_write import repair_pickup_write
+def test_repair_skips_when_already_closed(monkeypatch, tmp_path):
+    from ops.graphiti.hydration.pickup_write import repair_close
     from ops.graphiti.hydration.session_latches import write_receipt
 
     write_receipt(
         tmp_path,
         "rep-1",
-        {"status": "closed", "write_count": 2, "phase_a": True},
+        {
+            "status": "closed_canonically",
+            "write_count": 2,
+            "phase_a": True,
+            "canonical_operation_id": "44444444-4444-4444-4444-444444444444",
+        },
     )
-    report = repair_pickup_write(
+    report = repair_close(
         project_dir=tmp_path,
         session_id="rep-1",
         objective="done",
@@ -665,12 +677,19 @@ def test_repair_skips_when_already_closed(tmp_path):
     assert report["written"] is False
 
 
-def test_readonly_close_writes_fail_receipt(monkeypatch, tmp_path):
-    monkeypatch.setattr(
-        cs,
-        "resolve_group_id",
-        lambda p: {"group_id": "igor-workspace", "readonly": True, "warning": "readonly"},
+def test_unresolved_namespace_close_writes_fail_receipt(monkeypatch, tmp_path):
+    from ops.memory.namespace_context import NamespaceContext
+
+    unresolved = NamespaceContext(
+        workspace=str(tmp_path),
+        git_root=None,
+        repository_identity=None,
+        write_namespace_hint=None,
+        read_namespace_hints=("l9-workspace",),
+        method="unresolved",
+        warnings=("no repository match",),
     )
+    monkeypatch.setattr(cs, "resolve_namespace_context", lambda *a, **k: unresolved)
     monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **k: ("", "none"))
     report = cs.close_session(
         project_dir=tmp_path, session_id="ro-receipt", agent_id="cursor", dry_run=False
@@ -718,17 +737,9 @@ def _close_with_budget(monkeypatch, tmp_path, budget):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     monkeypatch.setenv("MEMORY_PHASE_B", "1")
     monkeypatch.delenv("MEMORY_DISTILL_S3_BUCKET", raising=False)
-    monkeypatch.setattr(
-        cs, "resolve_group_id", lambda p: {"group_id": "cursor-governance", "readonly": False}
-    )
+    _scripted_close(monkeypatch, tmp_path)
     monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **k: ("user: ship it", "test"))
-    monkeypatch.setattr(cs, "already_closed", lambda *a, **k: False)
-    monkeypatch.setattr(cs, "write_receipt", lambda *a, **k: None)
-    monkeypatch.setattr(cs, "_write_kind", lambda body, **kw: {"written": True, "kind": kw["kind"]})
     monkeypatch.setattr(cs, "_distill_signal_packet", lambda **k: (None, "stubbed"))
-    import graphiti_memory_client as gmc
-
-    monkeypatch.setattr(gmc, "load_env", lambda: None)
     return cs.close_session(
         project_dir=tmp_path,
         session_id="budget-1",

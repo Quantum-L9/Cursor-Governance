@@ -118,8 +118,11 @@ def test_real_tree_inventory_is_fully_allowlisted_and_unexpired() -> None:
     # The known legacy bypass is still present and still inventoried (stage C1).
     inventoried = {item.path for item in findings if item.allowlisted}
     assert "ops/graphiti/graphiti_memory_client.py" in inventoried
+    # The shadow reader keeps compile_session_packet.py in the inventory until C11;
+    # the close path left it at C6 (no provider vocabulary remains there).
     assert "ops/graphiti/hydration/compile_session_packet.py" in inventoried
-    assert "ops/graphiti/hydration/close_session.py" in inventoried
+    assert "ops/graphiti/hydration/close_session.py" not in inventoried
+    assert "ops/graphiti/hydration/pickup_write.py" not in inventoried
 
 
 def test_ops_memory_is_provider_free() -> None:

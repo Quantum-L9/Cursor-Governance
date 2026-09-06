@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "description": "Exact path-based exceptions for ops/scripts/validate_memory_egress_boundary.py. Every entry names the campaign stage that deletes it and an expiry date; an expired entry is a finding. Nothing here authorizes new provider egress \u2014 it inventories the legacy bypass the realignment campaign removes (CURSOR_GOVERNANCE_MEMORY_CONTROL_PLANE_REALIGNMENT_BUILD_PLAN \u00a78).",
+  "description": "Exact path-based exceptions for ops/scripts/validate_memory_egress_boundary.py. Every entry names the campaign stage that deletes it and an expiry date; an expired entry is a finding. Nothing here authorizes new provider egress — it inventories the legacy bypass the realignment campaign removes (CURSOR_GOVERNANCE_MEMORY_CONTROL_PLANE_REALIGNMENT_BUILD_PLAN §8).",
   "mode": "warning",
   "mode_note": "warning: findings are reported and the validator exits 0. Stage C11 flips this to enforce (merge-blocking).",
   "entries": [
@@ -13,18 +13,6 @@
     {
       "path": "ops/graphiti/hydration/compile_session_packet.py",
       "reason": "Migration-only legacy shadow reader (search_memory_facts) behind MEMORY_LEGACY_SHADOW / MEMORY_LEGACY_CONTINUATION; the canonical hydrate is the authority since C4. Deleted with the legacy client at C11.",
-      "retire_at_stage": "C11",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "ops/graphiti/hydration/close_session.py",
-      "reason": "Legacy add_memory close; replaced by canonical candidate + memory.close at C5/C6.",
-      "retire_at_stage": "C6",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "ops/graphiti/hydration/pickup_write.py",
-      "reason": "Legacy PICKUP repair/fallback writes; retired with the fuzzy PICKUP path at C11.",
       "retire_at_stage": "C11",
       "expires": "2026-12-31"
     },

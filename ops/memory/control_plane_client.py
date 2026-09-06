@@ -33,6 +33,7 @@ from ops.memory.receipts import (
     PhaseLockVerificationReceipt,
     ResolveReceipt,
     SearchReceipt,
+    WriteReceipt,
     result_digest,
 )
 from ops.memory.runtime_binding import Runner, RuntimeBinding, default_runner
@@ -379,6 +380,69 @@ class MemoryControlPlaneClient:
         return self._outcome(
             "search", status, raw, receipt, namespaces=namespaces, task_signature=task_signature
         )
+
+    def write(
+        self,
+        content: str,
+        *,
+        workspace: str,
+        namespace: str,
+        memory_class: str,
+        tags: Sequence[str] = (),
+        idempotency_key: str | None = None,
+        source: str = "cursor-governance",
+        source_id: str | None = None,
+        dry_run: bool = False,
+    ) -> OperationOutcome:
+        """Generic canonical write (the last resort of the write taxonomy, plan §14).
+
+        Purpose-specific ingress (``ingest_candidate``) is preferred; this is
+        for durable observations, decisions, and lessons promoted at close.
+        The receipt status is the verdict: ``rejected`` and ``quarantined``
+        stay visible, a duplicate names the record already committed.
+        """
+
+        if guard := self._guard("write"):
+            return guard
+        argv = [
+            "write",
+            content,
+            "--kind",
+            memory_class,
+            "--group-id",
+            namespace,
+            "--source",
+            source,
+        ]
+        for tag in tags:
+            argv += ["--tag", tag]
+        if idempotency_key:
+            argv += ["--idempotency-key", idempotency_key]
+        if source_id:
+            argv += ["--source-id", source_id]
+        if dry_run:
+            argv.append("--dry-run")
+        raw = self._invoke(argv, cwd=workspace)
+        namespaces = (namespace,)
+        if raw.payload is None:
+            return self._outcome("write", self._classify_failure(raw), raw, namespaces=namespaces)
+        try:
+            receipt = WriteReceipt.parse(raw.payload)
+        except InvalidReceiptError as exc:
+            return self._outcome(
+                "write", OutcomeStatus.INVALID_RECEIPT, _err(raw, exc), namespaces=namespaces
+            )
+        if receipt.status == "rejected":
+            status = OutcomeStatus.REJECTED
+        elif receipt.status == "quarantined":
+            status = OutcomeStatus.QUARANTINED
+        elif dry_run:
+            status = OutcomeStatus.NOT_COMMITTED
+        elif receipt.accepted or receipt.status == "superseded":
+            status = OutcomeStatus.OK
+        else:
+            status = OutcomeStatus.INVALID_RECEIPT
+        return self._outcome("write", status, raw, receipt, namespaces=namespaces)
 
     def ingest_candidate(self, candidate: Mapping[str, Any], *, workspace: str) -> OperationOutcome:
         """Admit a governed candidate (the continuation capsule's ingress)."""

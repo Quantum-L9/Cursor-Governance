@@ -18,6 +18,8 @@ from pathlib import Path
 
 import pytest
 
+from ops.graphiti.hydration import close_session as cs
+from ops.graphiti.hydration.session_latches import load_close_receipt
 from ops.memory.control_plane_client import MemoryControlPlaneClient, OutcomeStatus
 from ops.memory.hydration import canonical_hydrate
 from ops.memory.namespace_context import repository_state_digest, resolve_namespace_context
@@ -53,7 +55,7 @@ def runtime(tmp_path: Path) -> tuple[MemoryControlPlaneClient, dict[str, str]]:
     return MemoryControlPlaneClient(binding, env=env, session_id="proof-session"), env
 
 
-def test_lifecycle_against_the_real_memory_runtime(runtime, tmp_path: Path) -> None:
+def test_lifecycle_against_the_real_memory_runtime(runtime, tmp_path: Path, monkeypatch) -> None:
     client, _env = runtime
     context = resolve_namespace_context(ROOT)
     namespace = context.write_namespace_hint
@@ -187,6 +189,38 @@ def test_lifecycle_against_the_real_memory_runtime(runtime, tmp_path: Path) -> N
     assert resumed_again.continuation.record_id == stale_admitted.receipt.record_id
     assert resumed_again.continuation.stale is True
     assert resumed_again.continuation_candidates == 2
-    # No provider vocabulary reached the boundary at any point.
-    for args, _cwd, _stdin in getattr(client, "calls", []):
-        assert "add_memory" not in " ".join(args)
+    # Steps 15-18 through the real close path (stage C6): capsule admitted,
+    # memory.close committed, local obligation CLOSED_CANONICALLY, and a second
+    # SessionEnd is one logical close.
+    project = tmp_path / "proof-workspace"
+    project.mkdir()
+    monkeypatch.setattr(cs, "resolve_namespace_context", lambda *_a, **_k: context)
+    monkeypatch.setattr(cs, "repository_state_digest", lambda _p: head)
+    monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **_k: ("user: finish C6", "test"))
+    monkeypatch.setenv("MEMORY_PHASE_B", "0")
+    monkeypatch.setenv("MEMORY_DISTILL_ENQUEUE", "0")
+    report = cs.close_session(
+        project_dir=project, session_id="proof-close", agent_id="cursor", client=client
+    )
+    assert report["status"] == "closed_canonically", report["warnings"]
+    assert report["continuation"]["status"] == "admitted"
+    assert report["close"]["replayed"] is False
+    obligation = load_close_receipt(project, "proof-close")
+    assert obligation["status"] == "closed_canonically"
+    assert obligation["canonical_operation_id"]
+    again = cs.close_session(
+        project_dir=project, session_id="proof-close", agent_id="cursor", client=client
+    )
+    assert again["status"] == "idempotent_skip"
+    replay = client.close(
+        workspace=str(project),
+        namespace=namespace,
+        summary="replay",
+        session_id="proof-close",
+        idempotency_key=obligation["close_idempotency_key"],
+    )
+    assert replay.ok and replay.receipt.replayed is True
+    # The next session recovers exactly that capsule as canonical continuation.
+    resumed_close = canonical_hydrate(ROOT, task="Resume", client=client, session_id="after")
+    assert resumed_close.continuation is not None
+    assert resumed_close.continuation.capsule.session_id == "proof-close"

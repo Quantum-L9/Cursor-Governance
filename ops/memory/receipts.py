@@ -298,6 +298,40 @@ class SearchReceipt:
 
 
 @dataclass(frozen=True)
+class WriteReceipt:
+    """View over the memory write receipt (generic ``write``)."""
+
+    receipt_id: str
+    status: str
+    namespace: str
+    record_id: str | None
+    idempotency_key: str | None
+    admission_reasons: tuple[str, ...]
+    warnings: tuple[str, ...]
+    raw: dict[str, Any] = field(repr=False)
+
+    @classmethod
+    def parse(cls, raw: dict[str, Any]) -> WriteReceipt:
+        _require(raw, "receipt_id", "status", "namespace")
+        admission = raw.get("admission") or {}
+        reasons = admission.get("reasons") if isinstance(admission, dict) else ()
+        return cls(
+            receipt_id=str(raw["receipt_id"]),
+            status=str(raw["status"]),
+            namespace=str(raw["namespace"]),
+            record_id=_optional_str(raw.get("record_id")),
+            idempotency_key=_optional_str(raw.get("idempotency_key")),
+            admission_reasons=tuple(str(item) for item in reasons or ()),
+            warnings=tuple(str(item) for item in raw.get("warnings") or ()),
+            raw=raw,
+        )
+
+    @property
+    def accepted(self) -> bool:
+        return self.status in ACCEPTED_WRITE_STATUSES and self.record_id is not None
+
+
+@dataclass(frozen=True)
 class CandidateReceipt:
     status: str
     candidate_id: str
@@ -448,6 +482,7 @@ __all__ = [
     "SearchHitView",
     "SearchReceipt",
     "SearchRecordView",
+    "WriteReceipt",
     "result_digest",
     "validate_against_contract",
 ]

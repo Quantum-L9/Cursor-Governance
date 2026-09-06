@@ -2,11 +2,13 @@
 
 Campaign: **Cursor-Governance ↔ l9-graphiti-memory canonical realignment**
 (`CURSOR_GOVERNANCE_MEMORY_CONTROL_PLANE_REALIGNMENT_BUILD_PLAN`). Stage
-**C4**: canonical hydration is the SessionStart authority. The legacy
-provider read survives only as a migration-only shadow diagnostic
-(`MEMORY_LEGACY_SHADOW=1`) and gap-filler tagged `legacy_unverified`
-(`MEMORY_LEGACY_CONTINUATION=1`), both off by default and deleted at C11.
-SessionEnd still uses the legacy close until C5/C6.
+**C6**: canonical hydration is the SessionStart authority and canonical
+close is the SessionEnd authority. The legacy provider read survives only as
+a migration-only shadow diagnostic (`MEMORY_LEGACY_SHADOW=1`) and gap-filler
+tagged `legacy_unverified` (`MEMORY_LEGACY_CONTINUATION=1`), both off by
+default and deleted at C11. No production path writes a provider; Graphiti
+receives new records only through canonical projection (the C5 cutover, plan
+§41), and no rollback restores a direct write (plan §30).
 
 ## Rule
 
@@ -100,6 +102,21 @@ boundary as a governed candidate (`session_continuation` class,
 `namespace_local` visibility, lossless `structured_payload`; memory ADR-082)
 and is recovered from record metadata on the next hydrate. Current git state
 always wins over a stale capsule (`is_stale_for`).
+
+## Session close (plan §15, §16)
+
+`ops/graphiti/hydration/close_session.py`: gather → `ContinuationCapsuleV2`
+→ governed candidate (`ingest-governed-candidate`) → receipt validated →
+close summary → `memory.close` with `cursor-close:<namespace>:<session>:<head>`
+as idempotency key → `CloseReceipt` validated → local obligation
+`closed_canonically`. The obligation (`<project>/.l9/memory/closes/<session>.json`)
+answers only "do I still owe a close?": it carries the namespace requested,
+the capsule digest, the continuation verdict and reference, the canonical
+operation id, the idempotency key, failure class and retry count, with
+`authority: none`. It is written `close_incomplete` *before* `memory.close`
+runs, so an interrupted close is visible and `retry-close` replays it under
+the same key (one logical close). Phase B promotions (lesson/insight/decision)
+use the generic canonical `write` with per-item idempotency keys.
 
 ## Proof
 
