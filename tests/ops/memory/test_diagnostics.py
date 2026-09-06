@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from memory_boundary_fixtures import FakeMemoryCli, close_payload, health_payload, hydration_payload
+from memory_boundary_fixtures import (
+    EXPECTED_VERSION,
+    FakeMemoryCli,
+    close_payload,
+    health_payload,
+    hydration_payload,
+)
 
 from ops.memory import diagnostics
 from ops.memory.control_plane_client import MemoryControlPlaneClient
@@ -22,7 +28,7 @@ def _with_capabilities(bound: RuntimeBinding) -> RuntimeBinding:
     caps = CapabilitiesReceipt.parse(
         {
             "package": "l9-graphite-memory",
-            "package_version": "2.2.0",
+            "package_version": EXPECTED_VERSION,
             "contract_version": "memory-control-plane/v1",
             "transports": [{"transport": "cli", "operations": {"close": "close"}}],
         }
@@ -97,7 +103,7 @@ def test_unbound_package_is_package_unbound_and_spawns_nothing(fake_cli) -> None
         status=STATUS_UNBOUND,
         runtime_mode="pinned_environment",
         memory_package="l9-graphite-memory",
-        expected_version="2.2.0",
+        expected_version=EXPECTED_VERSION,
         expected_contract_version="memory-control-plane/v1",
         manifest_path="m",
         reasons=("l9-graphite-memory is not importable",),

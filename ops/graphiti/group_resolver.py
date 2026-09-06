@@ -1,102 +1,53 @@
-"""Resolve repo cwd to Graphiti group_id via group_registry.yaml."""
+"""Legacy resolver shim: repository identity for callers retired at stage C11.
+
+Since realignment stage C2 the one producer of identity and namespace hints
+is ``ops/memory/namespace_context.py``; this module keeps the dict shape the
+legacy hydration and close paths consume and delegates every match to the
+same registry matching. The ``readonly`` key it returns was never an
+authorization (memory decides that on every request, INV-07); read it as
+"identity confidence is not high enough for Cursor to request a write".
+"""
 
 from __future__ import annotations
 
 import os
-import subprocess
-from fnmatch import fnmatch
+import sys
 from pathlib import Path
 from typing import Any
 
-import yaml
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
-_REGISTRY_PATH = Path(__file__).resolve().parent / "group_registry.yaml"
+from ops.memory import namespace_context as _nc  # noqa: E402
+
+_REGISTRY_PATH = _nc.REGISTRY_PATH
 
 
 def load_registry() -> dict[str, Any]:
-    with open(_REGISTRY_PATH, encoding="utf-8") as handle:
-        return yaml.safe_load(handle) or {}
+    return _nc.load_registry(_REGISTRY_PATH)
 
 
 def _git_toplevel(cwd: Path) -> Path | None:
-    try:
-        result = subprocess.run(
-            ["git", "-C", str(cwd), "rev-parse", "--show-toplevel"],
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=5,
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            return Path(result.stdout.strip()).resolve()
-    except (OSError, subprocess.TimeoutExpired):
-        # Best-effort probe: any git/OS failure (git absent, cwd outside a repo,
-        # timeout, permission error) is treated as "not resolvable from cwd" so
-        # the caller falls back to a different resolution strategy.
-        return None
-    return None
+    return _nc.git_toplevel(cwd)
 
 
 def _child_git_roots(cwd: Path) -> list[Path]:
-    """Immediate child directories that are git work trees.
-
-    ``$HOME`` is never a workspace: scanning its child clones matches every
-    sibling repo and returns an ambiguous ``group_id``.
-    """
-    try:
-        resolved = cwd.resolve()
-        if resolved == Path.home().resolve():
-            return []
-    except OSError:
-        return []
-    roots: list[Path] = []
-    try:
-        for child in resolved.iterdir():
-            if child.is_dir() and (child / ".git").exists():
-                roots.append(child.resolve())
-    except OSError:
-        return []
-    return roots
+    return _nc.child_git_roots(cwd)
 
 
 def _git_remote_url(cwd: Path) -> str | None:
-    try:
-        result = subprocess.run(
-            ["git", "-C", str(cwd), "remote", "get-url", "origin"],
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=5,
-        )
-        if result.returncode == 0:
-            return result.stdout.strip()
-    except (OSError, subprocess.TimeoutExpired):
-        pass
-    return None
+    return _nc.git_remote_url(cwd)
 
 
 def _repo_matches(registry: dict[str, Any], cwd: Path) -> list[str]:
-    """Return the sorted set of registry slugs matching cwd (remote + path hints).
+    """Sorted registry slugs matching ``cwd`` (remote patterns + path hints)."""
 
-    Path hints are anchored to whole path segments — a hint matches only if it
-    equals one of cwd's directory components, never as an arbitrary substring.
-    """
-    repos: dict[str, Any] = registry.get("repos") or {}
-    remote = _git_remote_url(cwd) or ""
-    cwd_parts = set(cwd.parts)
-    matches: list[str] = []
-
-    for slug, cfg in repos.items():
-        for pattern in cfg.get("remote_patterns") or []:
-            if remote and fnmatch(remote, pattern):
-                matches.append(slug)
-                break
-        for hint in cfg.get("path_hints") or []:
-            if hint in cwd_parts:
-                matches.append(slug)
-                break
-
-    return sorted(set(matches))
+    # Resolved through this module's own name so a caller may substitute the
+    # remote probe (the legacy tests do) and still exercise the shared matcher.
+    return _nc.match_registry_slugs(
+        registry, remote=_git_remote_url(cwd), path_parts=set(cwd.parts)
+    )
 
 
 def resolve_group_id(cwd: Path | None = None, explicit: str | None = None) -> dict[str, Any]:
@@ -120,9 +71,9 @@ def resolve_group_id(cwd: Path | None = None, explicit: str | None = None) -> di
         method = "explicit_env" if explicit else "GRAPHITI_GROUP_ID"
         if override in forbidden:
             return {"group_id": None, "error": f"forbidden group_id: {override}", "readonly": True}
-        # An override must agree with what the repo actually is: reject it if it
-        # contradicts a resolved match. With no repo match at all it is allowed
-        # (e.g. CI runners in generic checkout dirs).
+        # A request that contradicts the checkout's identity is not forwarded
+        # as a write hint. With no repository match at all it is allowed (CI
+        # runners in generic checkout dirs); memory still decides.
         if unique and override not in unique:
             resolved = unique[0] if len(unique) == 1 else f"one of {unique}"
             return {
@@ -145,7 +96,7 @@ def resolve_group_id(cwd: Path | None = None, explicit: str | None = None) -> di
 
     on_failure = (registry.get("resolution") or {}).get("on_failure", "abort_write_allow_readonly")
     workspace = registry.get("workspace_group", "igor-workspace")
-    if on_failure == "abort_write_allow_readonly":
+    if on_failure in {"abort_write_allow_readonly", "no_write_hint"}:
         return {
             "group_id": workspace,
             "method": "fallback_readonly",

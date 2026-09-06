@@ -18,6 +18,10 @@ from typing import Any
 import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
+#: The version the binding manifest pins; the fakes report exactly this.
+EXPECTED_VERSION = json.loads(
+    (ROOT / "ops" / "config" / "memory-binding.json").read_text(encoding="utf-8")
+)["expected_package_version"]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -93,12 +97,12 @@ def bound(tmp_path: Path) -> RuntimeBinding:
         status=STATUS_EXACT,
         runtime_mode="pinned_environment",
         memory_package="l9-graphite-memory",
-        expected_version="2.2.0",
+        expected_version=EXPECTED_VERSION,
         expected_contract_version="memory-control-plane/v1",
         manifest_path=str(ROOT / "ops" / "config" / "memory-binding.json"),
         interpreter=str(tmp_path / "bin" / "python"),
         memory_cli=str(cli),
-        memory_version="2.2.0",
+        memory_version=EXPECTED_VERSION,
         contract_version="memory-control-plane/v1",
         module_path=str(tmp_path / "lib" / "l9_graphite_memory" / "__init__.py"),
     )
@@ -171,7 +175,7 @@ def health_payload(
             status = "complete"
     return {
         "status": status,
-        "package_version": "2.2.0",
+        "package_version": EXPECTED_VERSION,
         "schema_version": "2.2.0",
         "contract_version": "memory-control-plane/v1",
         "store": {"name": "sqlite", "healthy": store_healthy},

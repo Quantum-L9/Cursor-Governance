@@ -36,7 +36,7 @@ MemoryService  →  canonical store  →  outbox  →  optional Graphiti project
 | `runtime_binding.py` | exact package, interpreter, console script, contract signal | PATH-first CLI, sibling checkout discovery, floating refs |
 | `control_plane_client.py` | request → command → typed receipt; S-07 failure taxonomy | ranking, dedup, admission, authorization, provider calls |
 | `receipts.py` | consumer-side views over canonical receipts (`raw` kept) | a second schema |
-| `namespace_context.py` | repository identity, write hint (exactly one), read hints | any grant or denial |
+| `namespace_context.py` | repository identity, write hint (exactly one), read hints incl. the registry's `shared_read_namespaces`; the sole producer since C2 (`ops/graphiti/group_resolver.py` is a shim over the same matching until C11) | any grant or denial |
 | `session_contracts.py` | `ContinuationCapsuleV2` (`cursor.continuation/v2`), governed-candidate envelope | provider vocabulary |
 | `diagnostics.py` | readiness R0 `PACKAGE_BOUND` … R9 `PROJECTION_READY` | "Graphiti is up" == healthy |
 

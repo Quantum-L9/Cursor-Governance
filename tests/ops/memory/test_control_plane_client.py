@@ -6,6 +6,7 @@ import json
 
 import pytest
 from memory_boundary_fixtures import (
+    EXPECTED_VERSION,
     FakeMemoryCli,
     close_payload,
     error_stderr,
@@ -300,10 +301,10 @@ def test_unbound_runtime_never_spawns_anything(fake_cli) -> None:
         status=STATUS_UNBOUND,
         runtime_mode="pinned_environment",
         memory_package="l9-graphite-memory",
-        expected_version="2.2.0",
+        expected_version=EXPECTED_VERSION,
         expected_contract_version="memory-control-plane/v1",
         manifest_path="m",
-        reasons=("package version 2.1.0 does not match expected 2.2.0",),
+        reasons=(f"package version 2.1.0 does not match expected {EXPECTED_VERSION}",),
     )
     outcome = MemoryControlPlaneClient(unbound, runner=fake_cli.run).health()
     assert outcome.status is OutcomeStatus.BINDING_FAILED

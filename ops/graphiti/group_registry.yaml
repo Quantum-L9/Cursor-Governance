@@ -1,9 +1,28 @@
-schema_version: 2
+# Namespace alias / request hints for the canonical memory control plane.
+#
+# Reclassified at realignment stage C2 (plan §17): this file tells Cursor which
+# repository it is in and which namespaces it may *ask* to read. It grants
+# nothing. Whether the principal may read or write any namespace named here is
+# decided by l9-graphite-memory on every request (INV-07); a slug below is a
+# request Cursor will make, never a permission it holds.
+#
+# Read by ops/memory/namespace_context.py (the sole producer of identity and
+# hints). ops/graphiti/group_resolver.py is a legacy shim over the same
+# matching for callers retired at stage C11; its `readonly` verdict is identity
+# confidence, not authorization.
+schema_version: 3
+classification: namespace_request_hints
+# Namespaces Cursor requests as read fan-in beside its own repository namespace.
+# The canonical shared namespace is memory's configured workspace namespace;
+# memory authorizes or refuses the fan-in, Cursor only asks.
+shared_read_namespaces: [l9-workspace]
+# Legacy Graphiti provider group. Consulted only by the legacy resolver until
+# stage C11; never a canonical read or write request.
 workspace_group: igor-workspace
 forbidden_groups: [main, default, "", test]
 resolution:
-  order: [explicit_env, git_remote_match, path_hint_match]
-  on_failure: abort_write_allow_readonly
+  order: [explicit_request, git_remote_match, path_hint_match]
+  on_failure: no_write_hint
 repos:
   ib-odoo-19:
     github: cryptoxdog/IB-Odoo_19

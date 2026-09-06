@@ -1,10 +1,10 @@
 {
   "schema_version": "1.0.0",
-  "description": "Cursor-Governance binding to the canonical memory control plane (l9-graphiti-memory). Read by ops/memory/runtime_binding.py, which proves the exact package, interpreter, and console script before any lifecycle call. This is a Cursor-owned statement of what Cursor expects to run; it grants nothing and resolves no provider. Production binding is an immutable release artifact locked in uv.lock; until MEMORY_TARGET_VERSION is cut (campaign stage M2), integration binds the exact git SHA below and reports binding_status accordingly.",
+  "description": "Cursor-Governance binding to the canonical memory control plane (l9-graphiti-memory). Read by ops/memory/runtime_binding.py, which proves the exact package, interpreter, and console script before any lifecycle call. This is a Cursor-owned statement of what Cursor expects to run; it grants nothing and resolves no provider. Production binding is an immutable release artifact locked in uv.lock; MEMORY_TARGET_VERSION is release 2.3.0 (cut at campaign stage M2 on the memory PR); integration binds the exact git SHA of that release below until the v2.3.0 tag is on origin and uv.lock carries the artifact.",
   "distribution": "l9-graphite-memory",
   "import_package": "l9_graphite_memory",
   "console_script": "l9-memory",
-  "expected_package_version": "2.2.0",
+  "expected_package_version": "2.3.0",
   "expected_contract_version": "memory-control-plane/v1",
   "required_cli_operations": [
     "resolve",
@@ -23,8 +23,8 @@
   "source": {
     "kind": "git",
     "repository": "Quantum-L9/l9-graphiti-memory",
-    "ref": "fff7827f0e22a8f3953eaaa4fb9905ec46c4a8e7",
-    "ref_note": "PR M1 head (Quantum-L9/l9-graphiti-memory#56): CLI close, capabilities receipt, SDK parity, continuation candidate contract (ADR-082), validation-evidence re-pin. Replace with the MEMORY_TARGET_VERSION release tag at M2 and lock it in uv.lock; a git ref is an integration binding, never a production one."
+    "ref": "95169760c09b18038e6890d1191106c9a17d1504",
+    "ref_note": "Release 2.3.0 = MEMORY_TARGET_VERSION (campaign stage M2, Quantum-L9/l9-graphiti-memory#56): tag selector on search/hydrate, client cursor verify --path proving the installed entry, installed-wheel lifecycle proof, shared control-plane fixture. This SHA is the M2 head; replace it with the v2.3.0 tag once the memory PR merges and the tag is cut, and lock the artifact in uv.lock."
   },
   "binding_policy": {
     "production": "exact release artifact locked in uv.lock; runtime_mode=pinned_environment",

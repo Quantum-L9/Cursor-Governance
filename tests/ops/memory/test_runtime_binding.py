@@ -13,10 +13,11 @@ import pytest
 from ops.memory import runtime_binding as rb
 
 CONTRACT = "memory-control-plane/v1"
+EXPECTED_VERSION = rb.BindingManifest.load().expected_package_version
 
 
 def capabilities_payload(
-    *, version: str = "2.2.0", contract: str = CONTRACT, drop: Sequence[str] = ()
+    *, version: str = EXPECTED_VERSION, contract: str = CONTRACT, drop: Sequence[str] = ()
 ) -> dict[str, Any]:
     cli_ops = {
         "resolve": "resolve",
@@ -54,7 +55,7 @@ class Environment:
         self,
         root: Path,
         *,
-        version: str | None = "2.2.0",
+        version: str | None = EXPECTED_VERSION,
         with_cli: bool = True,
         module_inside_prefix: bool = True,
         capabilities: dict[str, Any] | None = None,
@@ -124,7 +125,7 @@ def test_exact_binding_reports_the_proof_shape(tmp_path: Path, monkeypatch) -> N
     proof = binding.as_dict()
     assert proof["binding_status"] == "exact"
     assert proof["memory_cli"] == str(env.cli)
-    assert proof["memory_version"] == "2.2.0"
+    assert proof["memory_version"] == EXPECTED_VERSION
     assert proof["contract_version"] == CONTRACT
     assert proof["runtime_mode"] == rb.MODE_PINNED
     assert proof["path_shadow"] is None
@@ -225,7 +226,7 @@ def test_missing_required_operation_is_unbound(tmp_path: Path) -> None:
 
 
 def test_cli_and_import_disagreeing_on_version_is_unbound(tmp_path: Path) -> None:
-    binding = bind(Environment(tmp_path, capabilities=capabilities_payload(version="2.3.0")))
+    binding = bind(Environment(tmp_path, capabilities=capabilities_payload(version="9.9.9")))
     assert not binding.ok
     assert any("do not agree" in reason for reason in binding.reasons)
 
