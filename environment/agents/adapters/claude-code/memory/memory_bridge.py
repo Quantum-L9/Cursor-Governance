@@ -70,12 +70,21 @@ def memory_client(session_id: str | None = None) -> Any:
     return MemoryControlPlaneClient(resolve_runtime_binding(), session_id=session_id)
 
 
-def hydrate(task: str, *, workspace: Path, session_id: str) -> dict[str, Any]:
-    """Canonical hydration for one repository (integration-receipt shape)."""
+def hydrate(
+    task: str, *, workspace: Path, session_id: str, continuation_policy: str = "task"
+) -> dict[str, Any]:
+    """Canonical hydration for one repository (integration-receipt shape).
+
+    ``continuation_policy`` is ``task`` (resume only this task's capsule) or
+    ``repository_fallback`` (a SessionStart with no task yet may take the
+    newest repository capsule, marked as a fallback on the receipt).
+    """
     ensure_importable()
     from ops.memory.hydration import canonical_hydrate
 
-    return canonical_hydrate(workspace, task=task, session_id=session_id).as_dict()
+    return canonical_hydrate(
+        workspace, task=task, session_id=session_id, continuation_policy=continuation_policy
+    ).as_dict()
 
 
 def conflicts(*, workspace: Path, session_id: str) -> dict[str, Any]:

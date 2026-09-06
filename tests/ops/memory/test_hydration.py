@@ -5,7 +5,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from memory_boundary_fixtures import (
+    OBJECTIVE,
+    REPOSITORY,
     FakeMemoryCli,
     continuation_record,
     error_stderr,
@@ -18,10 +21,13 @@ from ops.memory import hydration as hyd
 from ops.memory import session_state as ss
 from ops.memory.control_plane_client import MemoryControlPlaneClient, OutcomeStatus
 from ops.memory.namespace_context import NamespaceContext
+from ops.memory.session_contracts import task_signature_for
 
 ROOT = Path(__file__).resolve().parents[3]
 RECORD = "66666666-6666-6666-6666-666666666666"
 HEAD = "c" * 40
+#: The task the fixture capsule was written for; hydrating under it is a task match.
+TASK = OBJECTIVE
 
 
 def _context(
@@ -37,11 +43,13 @@ def _context(
     )
 
 
-def _hydrate(monkeypatch, fake: FakeMemoryCli, bound, *, context=None, head=HEAD, **kwargs):
+def _hydrate(
+    monkeypatch, fake: FakeMemoryCli, bound, *, context=None, head=HEAD, task=TASK, **kwargs
+):
     monkeypatch.setattr(hyd, "resolve_namespace_context", lambda *_a, **_k: context or _context())
     monkeypatch.setattr(hyd, "repository_state_digest", lambda _p: head)
     client = MemoryControlPlaneClient(bound, runner=fake.run, session_id="sess")
-    return hyd.canonical_hydrate(ROOT, task="resume", client=client, session_id="sess", **kwargs)
+    return hyd.canonical_hydrate(ROOT, task=task, client=client, session_id="sess", **kwargs)
 
 
 def _healthy(fake: FakeMemoryCli) -> FakeMemoryCli:
@@ -168,6 +176,161 @@ def test_multiple_continuation_candidates_newest_wins(monkeypatch, fake_cli, bou
     assert result.continuation is not None
     assert result.continuation.capsule.next_action == "newer"
     assert result.continuation_candidates == 2
+
+
+# ---------------------------------------------------------------------------
+# Task-scoped selection (audit P1-02): a capsule resumes only its own task
+# ---------------------------------------------------------------------------
+
+
+def _two_tasks_same_repo_same_head() -> tuple[dict, dict]:
+    task_a = continuation_record(
+        record_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        session_id="session-A",
+        objective="Task A: realign hydration",
+        next_action="continue task A",
+        created_at="2026-09-06T10:00:00+00:00",
+    )
+    task_b = continuation_record(
+        record_id="bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+        session_id="session-B",
+        objective="Task B: rotate the release pin",
+        next_action="continue task B",
+        created_at="2026-09-06T11:00:00+00:00",  # closed later than A, same HEAD
+    )
+    return task_a, task_b
+
+
+def test_resuming_task_a_selects_a_and_excludes_the_newer_task_b(
+    monkeypatch, fake_cli, bound
+) -> None:
+    """Task A and Task B closed against the same repository at the same HEAD;
+    resuming A must select A although B is newer."""
+    task_a, task_b = _two_tasks_same_repo_same_head()
+    _healthy(fake_cli).reply("hydrate", 0, hydration_payload()).reply(
+        "search", 0, search_payload(task_a, task_b)
+    )
+    result = _hydrate(monkeypatch, fake_cli, bound, task="Task A: realign hydration")
+    assert result.continuation is not None
+    assert result.continuation.record_id == task_a["record_id"]
+    assert result.continuation.capsule.next_action == "continue task A"
+    assert result.continuation.selection == hyd.SELECTION_TASK_MATCH
+    assert result.continuation.capsule.task_signature == result.task_signature
+    assert result.continuation_candidates == 2 and result.continuation_excluded == 1
+    assert result.continuation_policy == hyd.CONTINUATION_POLICY_TASK
+    assert any(
+        "1 continuation candidate(s) excluded: task signature mismatch" in w
+        for w in result.warnings
+    )
+    # The integration receipt of the continuation search names the task signature
+    # the selection was scoped to (evidence, never content).
+    search_receipt = next(r for r in result.integration_receipts if r.get("operation") == "search")
+    assert search_receipt["task_signature"] == result.task_signature
+
+
+def test_resuming_task_b_selects_b(monkeypatch, fake_cli, bound) -> None:
+    task_a, task_b = _two_tasks_same_repo_same_head()
+    _healthy(fake_cli).reply("hydrate", 0, hydration_payload()).reply(
+        "search", 0, search_payload(task_a, task_b)
+    )
+    result = _hydrate(monkeypatch, fake_cli, bound, task="Task B: rotate the release pin")
+    assert result.continuation is not None
+    assert result.continuation.record_id == task_b["record_id"]
+
+
+def test_strict_policy_returns_nothing_for_an_unknown_task(monkeypatch, fake_cli, bound) -> None:
+    """No capsule for this task: the default policy never substitutes the newest one."""
+    task_a, task_b = _two_tasks_same_repo_same_head()
+    _healthy(fake_cli).reply("hydrate", 0, hydration_payload()).reply(
+        "search", 0, search_payload(task_a, task_b)
+    )
+    result = _hydrate(monkeypatch, fake_cli, bound, task="Task C: something new")
+    assert result.continuation is None
+    assert result.status == "NO_HITS"
+    assert result.continuation_candidates == 2 and result.continuation_excluded == 2
+    assert any("2 continuation candidate(s) excluded" in w for w in result.warnings)
+
+
+def test_repository_fallback_is_explicit_and_receipted(monkeypatch, fake_cli, bound) -> None:
+    """SessionStart has no task: the fallback takes the newest repository capsule
+    and says so on the evidence, in the receipt, and in the warnings."""
+    task_a, task_b = _two_tasks_same_repo_same_head()
+    _healthy(fake_cli).reply("hydrate", 0, hydration_payload()).reply(
+        "search", 0, search_payload(task_a, task_b)
+    )
+    result = _hydrate(
+        monkeypatch,
+        fake_cli,
+        bound,
+        task="Resume session in Cursor-Governance",
+        continuation_policy=hyd.CONTINUATION_POLICY_REPOSITORY_FALLBACK,
+    )
+    assert result.continuation is not None
+    assert result.continuation.record_id == task_b["record_id"]  # newest of the repository
+    assert result.continuation.selection == hyd.SELECTION_REPOSITORY_FALLBACK
+    assert result.continuation.fallback is True
+    assert result.continuation_policy == hyd.CONTINUATION_POLICY_REPOSITORY_FALLBACK
+    assert result.continuation_excluded == 0
+    assert any("repository_fallback" in w for w in result.warnings)
+    receipt = result.as_dict()
+    assert receipt["continuation"]["selection"] == "repository_fallback"
+    assert receipt["continuation_policy"] == "repository_fallback"
+
+
+def test_fallback_still_prefers_a_task_match_when_one_exists(monkeypatch, fake_cli, bound) -> None:
+    task_a, task_b = _two_tasks_same_repo_same_head()
+    _healthy(fake_cli).reply("hydrate", 0, hydration_payload()).reply(
+        "search", 0, search_payload(task_a, task_b)
+    )
+    result = _hydrate(
+        monkeypatch,
+        fake_cli,
+        bound,
+        task="Task A: realign hydration",
+        continuation_policy=hyd.CONTINUATION_POLICY_REPOSITORY_FALLBACK,
+    )
+    assert result.continuation is not None
+    assert result.continuation.record_id == task_a["record_id"]
+    assert result.continuation.selection == hyd.SELECTION_TASK_MATCH
+
+
+def test_another_repository_capsule_is_never_selected(monkeypatch, fake_cli, bound) -> None:
+    foreign = continuation_record(
+        record_id="ffffffff-ffff-ffff-ffff-ffffffffffff",
+        repository_identity="Quantum-L9/Other-Repo",
+        objective=TASK,  # same objective text, different repository
+        created_at="2026-09-07T00:00:00+00:00",
+    )
+    _healthy(fake_cli).reply("hydrate", 0, hydration_payload()).reply(
+        "search", 0, search_payload(foreign)
+    )
+    strict = _hydrate(monkeypatch, fake_cli, bound)
+    assert strict.continuation is None and strict.continuation_excluded == 1
+    assert any("from another repository" in w for w in strict.warnings)
+    fallback = _hydrate(
+        monkeypatch,
+        fake_cli,
+        bound,
+        continuation_policy=hyd.CONTINUATION_POLICY_REPOSITORY_FALLBACK,
+    )
+    assert fallback.continuation is None
+
+
+def test_task_signature_is_objective_plus_repository_never_session(
+    monkeypatch, fake_cli, bound
+) -> None:
+    _healthy(fake_cli).reply("hydrate", 0, hydration_payload()).reply(
+        "search", 0, search_payload(continuation_record(session_id="a-different-session"))
+    )
+    result = _hydrate(monkeypatch, fake_cli, bound)
+    assert result.task_signature == task_signature_for(TASK, REPOSITORY)
+    assert result.continuation is not None  # the session id plays no part in the match
+
+
+def test_unknown_continuation_policy_is_rejected(monkeypatch, fake_cli, bound) -> None:
+    with pytest.raises(ValueError, match="continuation_policy"):
+        _hydrate(monkeypatch, fake_cli, bound, continuation_policy="newest")
+    assert fake_cli.calls == []
 
 
 def test_malformed_continuation_is_skipped_and_named(monkeypatch, fake_cli, bound) -> None:

@@ -49,6 +49,9 @@ def _finish(
         "payload_digest": obligation.get("payload_digest"),
         "continuation_status": obligation.get("continuation_status"),
         "continuation_reference": obligation.get("continuation_reference"),
+        "close_summary": obligation.get("close_summary"),
+        "close_capsule_digest": obligation.get("close_capsule_digest"),
+        "close_session_id": obligation.get("close_session_id"),
         **fields,
     }
     if not dry_run:
@@ -70,9 +73,14 @@ def retry_close(
 ) -> dict[str, Any]:
     """Discharge a ``close_incomplete`` obligation with the same idempotency key.
 
-    Replays the canonical close the interrupted attempt started: memory
-    returns the close it already committed (``replayed``) or commits it now.
-    With no prior obligation this is a full canonical close.
+    Replays the canonical close the interrupted attempt started — the *exact*
+    close request the obligation recorded (summary, capsule digest, session),
+    under the recorded key — so memory returns the close it already committed
+    (``replayed``, with ``replay_payload_matched`` proving it was the same
+    request) or commits it now (audit P2-01). An obligation that predates the
+    recorded close request cannot be replayed exactly and gets a full
+    canonical close instead; with no prior obligation this is a full
+    canonical close too.
     """
     from ops.graphiti.hydration.close_session import close_session, memory_client
 
@@ -88,21 +96,25 @@ def retry_close(
         }
     key = obligation.get("close_idempotency_key")
     namespace = obligation.get("canonical_namespace_requested")
-    if key and namespace and obligation.get("continuation_reference"):
-        # The capsule was admitted; only the close is owed. Same key -> one logical close.
+    stored_summary = obligation.get("close_summary")
+    if key and namespace and obligation.get("continuation_reference") and stored_summary:
+        # The capsule was admitted and the exact close request is on record;
+        # only the close is owed. Same key + same payload -> one logical close.
         client = client or memory_client(sid)
         closed = client.close(
             workspace=resolve_namespace_context(project).git_root or str(project),
             namespace=str(namespace),
-            summary=f"session {sid} {reason}: retry of interrupted close",
-            session_id=sid,
-            capsule_digest=obligation.get("payload_digest"),
+            summary=str(stored_summary),
+            session_id=str(obligation.get("close_session_id") or sid),
+            capsule_digest=obligation.get("close_capsule_digest")
+            or obligation.get("payload_digest"),
             idempotency_key=str(key),
             dry_run=dry_run,
         )
         receipt = closed.receipt
         committed = closed.ok and receipt is not None and receipt.committed
-        return _finish(
+        drifted = bool(getattr(receipt, "payload_drifted", False))
+        report = _finish(
             project,
             sid,
             status=STATUS_CLOSED_CANONICALLY if committed else STATUS_CLOSE_INCOMPLETE,
@@ -113,7 +125,14 @@ def retry_close(
             failure_class=None if committed else closed.status.value,
             last_error_code=None if committed else closed.status.value,
             replayed=bool(getattr(receipt, "replayed", False)),
+            replay_payload_matched=getattr(receipt, "replay_payload_matched", None),
         )
+        report["warnings"] = list(getattr(receipt, "warnings", ()) or ())
+        if drifted:
+            report["warnings"].append(
+                "close replay payload drift: the stored close differs from the replayed request"
+            )
+        return report
     report = close_session(
         project_dir=project,
         session_id=sid,

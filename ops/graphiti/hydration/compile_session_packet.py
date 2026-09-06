@@ -102,7 +102,16 @@ def compile_session_packet(
         }
 
     task = f"Resume session in {project.name}"
-    hydration = canonical_hydrate(project, task=task, session_id=conversation_id)
+    # SessionStart has no task yet, so a task-signature match is impossible
+    # here by construction; the packet asks for the explicit repository
+    # fallback and reports it (audit P1-02). A task-bearing caller keeps the
+    # default ``task`` policy and never inherits another task's capsule.
+    hydration = canonical_hydrate(
+        project,
+        task=task,
+        session_id=conversation_id,
+        continuation_policy="repository_fallback",
+    )
     namespace = hydration.namespace_context.write_namespace_hint or "unresolved"
     packet_id = hashlib.sha256(f"{conversation_id}:{namespace}:{project}".encode()).hexdigest()[:16]
 
@@ -120,6 +129,11 @@ def compile_session_packet(
         rationale = (
             f"canonical continuation {continuation.record_id[:8]} from session {capsule.session_id}"
         )
+        if continuation.fallback:
+            rationale += (
+                " (REPOSITORY FALLBACK: no continuation for this task; newest repository "
+                "continuation shown — confirm it is this task before acting)"
+            )
         if continuation.stale:
             rationale += (
                 f" (STALE: repository moved on from {capsule.repository_state_digest[:8]}; "
@@ -190,6 +204,9 @@ def compile_session_packet(
         "continuation_stale": continuation.stale if continuation else None,
         "continuation_source": continuation_source,
         "continuation_candidates": hydration.continuation_candidates,
+        "continuation_excluded": hydration.continuation_excluded,
+        "continuation_policy": hydration.continuation_policy,
+        "continuation_selection": continuation.selection if continuation else None,
         "fan_in_denied": hydration.fan_in_denied,
         "projection_status": hydration.projection_status,
     }

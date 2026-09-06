@@ -26,6 +26,10 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from ops.memory.runtime_binding import STATUS_EXACT, RuntimeBinding  # noqa: E402
+from ops.memory.session_contracts import task_signature_for  # noqa: E402
+
+REPOSITORY = "Quantum-L9/Cursor-Governance"
+OBJECTIVE = "Realign memory control plane"
 
 Handler = Callable[[list[str], str | None], tuple[int, Any, str]]
 
@@ -146,8 +150,12 @@ def close_payload(
     status: str = "complete",
     record_id: str | None = "33333333-3333-3333-3333-333333333333",
     replayed: bool = False,
+    replay_payload_matched: bool | None = None,
+    warnings: Sequence[str] = (),
 ) -> dict[str, Any]:
-    return {
+    """A CloseReceipt as memory prints it (replay forensics per ADR-082 amendment)."""
+
+    payload: dict[str, Any] = {
         "receipt_id": "44444444-4444-4444-4444-444444444444",
         "status": status,
         "namespace": "cursor-governance",
@@ -156,7 +164,14 @@ def close_payload(
         "graphiti_accepted": False,
         "replayed": replayed,
         "authorization": {"allowed": status != "failed"},
+        "warnings": list(warnings),
     }
+    if replayed:
+        matched = True if replay_payload_matched is None else replay_payload_matched
+        payload["replay_payload_matched"] = matched
+        payload["stored_digest"] = "d" * 64
+        payload["replay_digest"] = "d" * 64 if matched else "e" * 64
+    return payload
 
 
 def health_payload(
@@ -192,16 +207,23 @@ def continuation_record(
     repository_state_digest: str = "c" * 40,
     created_at: str = "2026-09-05T00:00:00+00:00",
     next_action: str = "Wire runtime binding",
+    objective: str = OBJECTIVE,
+    repository_identity: str = REPOSITORY,
+    task_signature: str | None = None,
     payload_override: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """A canonical record as `search` returns it, carrying a continuation capsule."""
+    """A canonical record as `search` returns it, carrying a continuation capsule.
+
+    The capsule's ``task_signature`` defaults to the one the capsule contract
+    derives (objective + repository), exactly as a real close writes it.
+    """
 
     capsule = {
         "schema": "cursor.continuation/v2",
         "session_id": session_id,
-        "repository_identity": "Quantum-L9/Cursor-Governance",
-        "task_signature": "0123456789abcdef0123456789abcdef",
-        "objective": "Realign memory control plane",
+        "repository_identity": repository_identity,
+        "task_signature": task_signature or task_signature_for(objective, repository_identity),
+        "objective": objective,
         "next_action": next_action,
         "active_files": ["ops/memory/runtime_binding.py"],
         "blockers": [],
@@ -219,7 +241,7 @@ def continuation_record(
         "namespace": "cursor-governance",
         "memory_class": "semantic",
         "state": "active",
-        "content": f"Realign memory control plane | next: {next_action}",
+        "content": f"{objective} | next: {next_action}",
         "tags": ["generated-data", "session_continuation"],
         "metadata": {
             "payload_schema": "cursor.continuation/v2",

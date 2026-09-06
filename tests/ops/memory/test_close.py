@@ -24,7 +24,16 @@ from ops.memory.namespace_context import NamespaceContext
 RECORD = "66666666-6666-6666-6666-666666666666"
 
 
-def candidate_payload(*, status: str = "admitted", record_id: str | None = RECORD) -> dict:
+REFINED = "99999999-9999-9999-9999-999999999999"
+
+
+def candidate_payload(
+    *,
+    status: str = "admitted",
+    record_id: str | None = RECORD,
+    superseded: tuple[str, ...] = (),
+    reason: str | None = None,
+) -> dict:
     return {
         "status": status,
         "candidate_id": "cursor-continuation:x",
@@ -33,8 +42,59 @@ def candidate_payload(*, status: str = "admitted", record_id: str | None = RECOR
         "write_receipt_id": "55555555-5555-5555-5555-555555555555",
         "storage_committed": status != "rejected",
         "memory_state": "active" if status in {"admitted", "duplicate"} else status,
-        "reason": None if status in {"admitted", "duplicate"} else f"admission {status}",
+        "reason": reason
+        if reason is not None
+        else (None if status in {"admitted", "duplicate"} else f"admission {status}"),
+        "superseded_record_ids": list(superseded),
     }
+
+
+PHASE_B_PACKET = {
+    "packet_id": "abcdef0123456789",
+    "session_id": "sess",
+    "promotion_decisions": [
+        {
+            "kind": "lesson",
+            "body": "Use the bound CLI, never PATH.",
+            "decision": "promote",
+            "score": 0.9,
+        },
+        {
+            "kind": "decision",
+            "body": "Close is idempotent by key.",
+            "decision": "promote",
+            "score": 0.8,
+        },
+        {"kind": "insight", "body": "low", "decision": "promote", "score": 0.1},
+    ],
+    "pickup": {
+        "active_objective": "Finish close cutover",
+        "next_action": "Open the PR",
+        "context_slice": "",
+        "blockers": [],
+    },
+    "do_not_promote": [],
+}
+
+
+def _enable_phase_b(monkeypatch: pytest.MonkeyPatch, packet: dict = PHASE_B_PACKET) -> None:
+    monkeypatch.setenv("MEMORY_PHASE_B", "1")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.setattr(cs, "_distill_signal_packet", lambda **_k: (packet, ""))
+    monkeypatch.setattr(cs, "should_persist_derived_episode", lambda *_a, **_k: True)
+
+
+def _ingest_calls(fake_cli: FakeMemoryCli) -> list[dict]:
+    return [
+        json.loads(stdin)
+        for argv, _cwd, stdin in fake_cli.calls
+        if argv[1] == "ingest-governed-candidate" and stdin
+    ]
+
+
+def _close_summary(fake_cli: FakeMemoryCli, call: list[str] | None = None) -> str:
+    argv = call or fake_cli.last("close")
+    return argv[argv.index("--summary") + 1]
 
 
 def write_payload(*, status: str = "admitted", record_id: str | None = RECORD) -> dict:
@@ -171,6 +231,7 @@ def test_rejected_continuation_still_closes_with_visible_status(
         "record_id": None,
         "capsule_digest": report["continuation"]["capsule_digest"],
         "session_id": "sess",
+        "task_signature": report["continuation"]["task_signature"],
     }
     receipt = load_close_receipt(workspace, "sess")
     assert receipt["continuation_status"] == "rejected"
@@ -239,6 +300,231 @@ def test_retry_after_interruption_replays_the_same_close(workspace, scripted, fa
     assert not any(c[0][1] == "ingest-governed-candidate" for c in fake_cli.calls[-1:])
     receipt = load_close_receipt(workspace, "sess")
     assert receipt["status"] == STATUS_CLOSED_CANONICALLY and receipt["retry_count"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Exact close replay (audit P2-01): the retry replays the recorded request
+# ---------------------------------------------------------------------------
+
+
+def test_retry_replays_the_exact_original_close_request(workspace, scripted, fake_cli) -> None:
+    """The obligation retains the close request; the retry sends *that* summary
+    and capsule digest — never a synthesized 'retry of interrupted close'."""
+    fake_cli.reply("close", 1, None, error_stderr("StoreError", "locked"))
+    assert _close(workspace)["status"] == STATUS_CLOSE_INCOMPLETE
+    original = fake_cli.last("close")
+    original_summary = _close_summary(fake_cli, original)
+    original_digest = original[original.index("--capsule-digest") + 1]
+    obligation = load_close_receipt(workspace, "sess")
+    assert obligation["close_summary"] == original_summary
+    assert obligation["close_capsule_digest"] == original_digest
+    assert obligation["close_session_id"] == "sess"
+
+    fake_cli.reply("close", 0, close_payload(replayed=True, replay_payload_matched=True))
+    report = pw.retry_close(project_dir=workspace, session_id="sess", client=scripted)
+    replay = fake_cli.last("close")
+    assert _close_summary(fake_cli, replay) == original_summary
+    assert replay[replay.index("--capsule-digest") + 1] == original_digest
+    assert "retry of interrupted close" not in _close_summary(fake_cli, replay)
+    assert report["status"] == STATUS_CLOSED_CANONICALLY
+    assert report["replayed"] is True and report["replay_payload_matched"] is True
+    assert report["warnings"] == []
+    # The obligation keeps the request material after the retry too.
+    assert load_close_receipt(workspace, "sess")["close_summary"] == original_summary
+
+
+def test_retry_surfaces_memory_payload_drift_evidence(workspace, scripted, fake_cli) -> None:
+    """A replay memory proves different from the stored close is reported, not
+    hidden behind the idempotent status."""
+    fake_cli.reply("close", 1, None, error_stderr("StoreError", "locked"))
+    assert _close(workspace)["status"] == STATUS_CLOSE_INCOMPLETE
+    fake_cli.reply(
+        "close",
+        0,
+        close_payload(
+            replayed=True,
+            replay_payload_matched=False,
+            warnings=["idempotent replay payload differs from the stored record"],
+        ),
+    )
+    report = pw.retry_close(project_dir=workspace, session_id="sess", client=scripted)
+    assert report["replayed"] is True and report["replay_payload_matched"] is False
+    assert any("payload drift" in w for w in report["warnings"])
+    assert any("differs from the stored record" in w for w in report["warnings"])
+
+
+def test_close_reports_replay_drift_from_the_receipt(workspace, scripted, fake_cli) -> None:
+    fake_cli.reply(
+        "close",
+        0,
+        close_payload(replayed=True, replay_payload_matched=False, warnings=["differs"]),
+    )
+    report = _close(workspace)
+    assert report["status"] == STATUS_CLOSED_CANONICALLY
+    assert report["close"]["replayed"] is True
+    assert report["close"]["replay_payload_matched"] is False
+    assert report["close"]["warnings"] == ["differs"]
+    assert any("close replay payload drift" in w for w in report["warnings"])
+
+
+def test_close_receipt_without_forensics_is_not_drift(workspace, scripted, fake_cli) -> None:
+    fake_cli.reply("close", 0, close_payload(replayed=True))
+    report = _close(workspace)
+    assert report["close"]["replay_payload_matched"] is True
+    assert not any("drift" in w for w in report["warnings"])
+
+
+def test_legacy_obligation_without_the_close_request_gets_a_full_close(
+    workspace, scripted, fake_cli
+) -> None:
+    """An obligation written before the request material existed cannot be
+    replayed exactly; the retry runs the full canonical close instead of
+    guessing a summary."""
+    from ops.graphiti.hydration.session_latches import write_receipt
+
+    write_receipt(
+        workspace,
+        "sess",
+        {
+            "status": STATUS_CLOSE_INCOMPLETE,
+            "canonical_namespace_requested": "cursor-governance",
+            "close_idempotency_key": "cursor-close:cursor-governance:sess:legacy",
+            "payload_digest": "f" * 64,
+            "continuation_status": "admitted",
+            "continuation_reference": RECORD,
+            "failure_class": "pending_close",
+        },
+    )
+    assert load_close_receipt(workspace, "sess").get("close_summary") is None
+    report = pw.retry_close(
+        project_dir=workspace, session_id="sess", agent_id="cursor", client=scripted
+    )
+    assert report["status"] == STATUS_CLOSED_CANONICALLY
+    assert any(c[0][1] == "ingest-governed-candidate" for c in fake_cli.calls)
+    assert "retry of interrupted close" not in _close_summary(fake_cli)
+
+
+def test_kill_during_close_leaves_the_exact_request_on_disk(workspace, scripted, fake_cli) -> None:
+    def killed(_argv, _stdin):
+        raise KeyboardInterrupt
+
+    fake_cli.on("close", killed)
+    with pytest.raises(KeyboardInterrupt):
+        _close(workspace)
+    obligation = load_close_receipt(workspace, "sess")
+    assert obligation["status"] == STATUS_CLOSE_INCOMPLETE
+    assert obligation["close_summary"].startswith("session sess completed:")
+    assert obligation["close_capsule_digest"] == obligation["payload_digest"]
+
+
+# ---------------------------------------------------------------------------
+# Task-scoped continuation (audit P1-02): the capsule names the session's task
+# ---------------------------------------------------------------------------
+
+
+def test_capsule_carries_the_task_signature_the_session_hydrated_under(
+    workspace, scripted, fake_cli
+) -> None:
+    from ops.memory.session_state import set_task_signature
+
+    set_task_signature("sess", "0123456789abcdef0123456789abcdef")
+    _close(workspace)
+    capsule = _ingest_calls(fake_cli)[0]["knowledge"]["structured_payload"]
+    assert capsule["task_signature"] == "0123456789abcdef0123456789abcdef"
+
+
+def test_capsule_without_session_state_derives_its_own_signature(
+    workspace, scripted, fake_cli
+) -> None:
+    from ops.memory.session_contracts import task_signature_for
+
+    _close(workspace)
+    capsule = _ingest_calls(fake_cli)[0]["knowledge"]["structured_payload"]
+    assert capsule["task_signature"] == task_signature_for(
+        capsule["objective"], "Quantum-L9/Cursor-Governance"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Phase B supersedes Phase A (audit P1-03): one ACTIVE continuation per session
+# ---------------------------------------------------------------------------
+
+
+def test_phase_b_refinement_supersedes_the_phase_a_record(
+    workspace, scripted, fake_cli, monkeypatch
+) -> None:
+    _enable_phase_b(monkeypatch)
+    fake_cli.reply("write", 0, write_payload())
+    verdicts = iter(
+        [
+            candidate_payload(),  # Phase A admitted -> RECORD
+            candidate_payload(record_id=REFINED, superseded=(RECORD,)),  # Phase B
+        ]
+    )
+    fake_cli.on("ingest-governed-candidate", lambda _a, _s: (0, next(verdicts), ""))
+    report = _close(workspace)
+    assert report["status"] == STATUS_CLOSED_CANONICALLY
+    phase_a, phase_b = _ingest_calls(fake_cli)
+    assert "supersedes" not in phase_a
+    assert phase_b["supersedes"] == [RECORD]
+    assert phase_b["candidate_id"] != phase_a["candidate_id"]
+    assert (
+        phase_b["knowledge"]["structured_payload"]["task_signature"]
+        == phase_a["knowledge"]["structured_payload"]["task_signature"]
+    )
+    assert report["continuation"]["refined"] is True
+    assert report["continuation"]["record_id"] == REFINED
+    assert report["continuation"]["supersedes"] == [RECORD]
+    assert report["continuation"]["superseded_record_ids"] == [RECORD]
+    # The close names the refined capsule, and the obligation points at it.
+    assert load_close_receipt(workspace, "sess")["continuation_reference"] == REFINED
+
+
+def test_rejected_refinement_keeps_phase_a_active(
+    workspace, scripted, fake_cli, monkeypatch
+) -> None:
+    _enable_phase_b(monkeypatch)
+    fake_cli.reply("write", 0, write_payload())
+    verdicts = iter(
+        [
+            (0, candidate_payload(), ""),
+            (
+                7,
+                candidate_payload(
+                    status="rejected",
+                    record_id=None,
+                    reason="supersession refused: record not found",
+                ),
+                "",
+            ),
+        ]
+    )
+    fake_cli.on("ingest-governed-candidate", lambda _a, _s: next(verdicts))
+    report = _close(workspace)
+    assert report["status"] == STATUS_CLOSED_CANONICALLY
+    assert report["continuation"]["record_id"] == RECORD
+    assert report["continuation"].get("refined") is None
+    assert any("Phase A continuation stays active" in w for w in report["warnings"])
+    assert load_close_receipt(workspace, "sess")["continuation_reference"] == RECORD
+
+
+def test_refinement_names_nothing_when_phase_a_was_not_admitted(
+    workspace, scripted, fake_cli, monkeypatch
+) -> None:
+    _enable_phase_b(monkeypatch)
+    fake_cli.reply("write", 0, write_payload())
+    verdicts = iter(
+        [
+            (7, candidate_payload(status="rejected", record_id=None), ""),
+            (0, candidate_payload(record_id=REFINED), ""),
+        ]
+    )
+    fake_cli.on("ingest-governed-candidate", lambda _a, _s: next(verdicts))
+    report = _close(workspace)
+    _phase_a, phase_b = _ingest_calls(fake_cli)
+    assert "supersedes" not in phase_b
+    assert report["continuation"]["supersedes"] == []
+    assert report["continuation"]["record_id"] == REFINED
 
 
 def test_restart_with_open_obligation_is_a_close_gap(
@@ -420,37 +706,8 @@ def test_generic_write_timeout_is_unknown_not_success(fake_cli, bound) -> None:
 def test_phase_b_promotions_use_the_generic_write_with_idempotency(
     workspace, scripted, fake_cli, monkeypatch
 ) -> None:
-    monkeypatch.setenv("MEMORY_PHASE_B", "1")
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    _enable_phase_b(monkeypatch)
     fake_cli.reply("write", 0, write_payload())
-    packet = {
-        "packet_id": "abcdef0123456789",
-        "session_id": "sess",
-        "promotion_decisions": [
-            {
-                "kind": "lesson",
-                "body": "Use the bound CLI, never PATH.",
-                "decision": "promote",
-                "score": 0.9,
-            },
-            {
-                "kind": "decision",
-                "body": "Close is idempotent by key.",
-                "decision": "promote",
-                "score": 0.8,
-            },
-            {"kind": "insight", "body": "low", "decision": "promote", "score": 0.1},
-        ],
-        "pickup": {
-            "active_objective": "Finish close cutover",
-            "next_action": "Open the PR",
-            "context_slice": "",
-            "blockers": [],
-        },
-        "do_not_promote": [],
-    }
-    monkeypatch.setattr(cs, "_distill_signal_packet", lambda **_k: (packet, ""))
-    monkeypatch.setattr(cs, "should_persist_derived_episode", lambda *_a, **_k: True)
     report = _close(workspace)
     assert report["status"] == STATUS_CLOSED_CANONICALLY
     assert report["phase_b"] is True and report["promoted"] == 2

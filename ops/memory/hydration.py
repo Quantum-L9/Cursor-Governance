@@ -25,7 +25,7 @@ Failure is classified, never collapsed into "memory empty" (S-07):
 from __future__ import annotations
 
 import time
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -64,6 +64,23 @@ SOURCE_LEGACY_UNVERIFIED = "legacy_unverified"
 
 _OK_STATUSES = frozenset({OutcomeStatus.OK.value, OutcomeStatus.NO_HITS.value})
 
+#: Continuation selection policies (audit P1-02). ``task`` is the default and
+#: the only one a task-bearing caller should use: a capsule is resumed only
+#: when it was written for the *same task in the same repository*, matched
+#: on ``repository_identity`` and ``task_signature``, never on recency alone.
+#: ``repository_fallback`` is the explicit degraded policy for a caller that
+#: has no task yet (SessionStart): when nothing matches the task it may take
+#: the newest capsule of this repository, and the receipt says so.
+CONTINUATION_POLICY_TASK = "task"
+CONTINUATION_POLICY_REPOSITORY_FALLBACK = "repository_fallback"
+CONTINUATION_POLICIES = frozenset(
+    {CONTINUATION_POLICY_TASK, CONTINUATION_POLICY_REPOSITORY_FALLBACK}
+)
+#: How the selected capsule was chosen (on the evidence, so every consumer
+#: of a continuation can tell a task match from a repository-wide fallback).
+SELECTION_TASK_MATCH = "task_match"
+SELECTION_REPOSITORY_FALLBACK = "repository_fallback"
+
 
 @dataclass(frozen=True)
 class ContinuationEvidence:
@@ -72,20 +89,47 @@ class ContinuationEvidence:
     stale: bool
     recorded_at: str | None
     source: str = SOURCE_CANONICAL
+    selection: str = SELECTION_TASK_MATCH
+
+    @property
+    def fallback(self) -> bool:
+        """True when this capsule was not written for the current task."""
+
+        return self.selection == SELECTION_REPOSITORY_FALLBACK
 
     def as_dict(self) -> dict[str, Any]:
         return {
             "record_id": self.record_id,
             "session_id": self.capsule.session_id,
             "task_signature": self.capsule.task_signature,
+            "repository_identity": self.capsule.repository_identity,
             "repository_state_digest": self.capsule.repository_state_digest,
             "created_at": self.capsule.created_at,
             "recorded_at": self.recorded_at,
             "stale": self.stale,
             "source": self.source,
+            "selection": self.selection,
             "schema": self.capsule.schema,
             "digest": self.capsule.digest(),
         }
+
+
+@dataclass(frozen=True)
+class ContinuationSelection:
+    """What :func:`select_continuation` decided, with the exclusions counted."""
+
+    evidence: ContinuationEvidence | None
+    candidates: int
+    excluded: int
+    warnings: tuple[str, ...]
+
+    def __iter__(self) -> Iterator[Any]:
+        """Tuple-unpacking convenience: ``evidence, candidates, excluded, warnings``."""
+
+        yield self.evidence
+        yield self.candidates
+        yield self.excluded
+        yield self.warnings
 
 
 @dataclass(frozen=True)
@@ -99,6 +143,8 @@ class CanonicalHydration:
     record_ids: tuple[str, ...] = ()
     continuation: ContinuationEvidence | None = None
     continuation_candidates: int = 0
+    continuation_excluded: int = 0
+    continuation_policy: str = CONTINUATION_POLICY_TASK
     projection_status: str | None = None
     fan_in_denied: str | None = None
     error: str | None = None
@@ -134,6 +180,8 @@ class CanonicalHydration:
             "record_count": len(self.record_ids),
             "continuation": self.continuation.as_dict() if self.continuation else None,
             "continuation_candidates": self.continuation_candidates,
+            "continuation_excluded": self.continuation_excluded,
+            "continuation_policy": self.continuation_policy,
             "projection_status": self.projection_status,
             "fan_in_denied": self.fan_in_denied,
             "error": self.error,
@@ -146,14 +194,32 @@ class CanonicalHydration:
 
 
 def select_continuation(
-    hits: Sequence[SearchHitView], *, current_repository_state: str | None
-) -> tuple[ContinuationEvidence | None, int, tuple[str, ...]]:
-    """The newest valid ``cursor.continuation/v2`` capsule among typed records.
+    hits: Sequence[SearchHitView],
+    *,
+    current_repository_state: str | None,
+    repository_identity: str | None = None,
+    task_signature: str | None = None,
+    allow_repository_fallback: bool = False,
+) -> ContinuationSelection:
+    """The newest valid ``cursor.continuation/v2`` capsule *for this task*.
 
-    Returns ``(evidence, candidate_count, warnings)``. Records that claim the
-    schema but fail validation are skipped and named; nothing is repaired or
-    guessed. Ordering is the canonical record's own ``created_at`` (falling
-    back to ``recorded_at``), never the capsule's self-reported clock.
+    Task scoping (audit P1-02): a capsule is a candidate only when its
+    ``repository_identity`` equals ``repository_identity`` and its
+    ``task_signature`` equals ``task_signature``; only those are ordered, so
+    two tasks closed against the same repository at the same HEAD never
+    resume each other. Records outside the task are counted as ``excluded``
+    and named in a warning.
+
+    With ``allow_repository_fallback`` and no task match, the newest capsule
+    of the same repository is returned with ``selection=repository_fallback``
+    — an explicit degraded policy for callers that have no task yet, never
+    the default. Without a task signature at all no task match is possible,
+    so the strict policy returns nothing and says why.
+
+    Records that claim the schema but fail validation are skipped and named;
+    nothing is repaired or guessed. Ordering is the canonical record's own
+    ``created_at`` (falling back to ``recorded_at``), never the capsule's
+    self-reported clock.
     """
 
     warnings: list[str] = []
@@ -172,17 +238,49 @@ def select_continuation(
         order_key = record.created_at or record.recorded_at or ""
         typed.append((order_key, hit, capsule))
     if not typed:
-        return None, 0, tuple(warnings)
-    typed.sort(key=lambda item: item[0], reverse=True)
-    _, newest, capsule = typed[0]
+        return ContinuationSelection(None, 0, 0, tuple(warnings))
+
+    def same_repository(capsule: ContinuationCapsuleV2) -> bool:
+        return repository_identity is None or capsule.repository_identity == repository_identity
+
+    in_repository = [item for item in typed if same_repository(item[2])]
+    matching = (
+        [item for item in in_repository if item[2].task_signature == task_signature]
+        if task_signature
+        else []
+    )
+    selection = SELECTION_TASK_MATCH
+    if matching:
+        pool = matching
+    elif allow_repository_fallback and in_repository:
+        pool = in_repository
+        selection = SELECTION_REPOSITORY_FALLBACK
+        warnings.append(
+            f"continuation repository_fallback: no capsule for task signature "
+            f"{task_signature or 'unset'}; newest of {len(in_repository)} repository "
+            "continuation(s) shown — verify it is this task before acting"
+        )
+    else:
+        pool = []
+    excluded = len(typed) - len(pool)
+    if excluded and selection == SELECTION_TASK_MATCH:
+        reason = "task signature mismatch" if task_signature else "no task signature to match"
+        if len(in_repository) < len(typed):
+            reason += f"; {len(typed) - len(in_repository)} from another repository"
+        warnings.append(f"{excluded} continuation candidate(s) excluded: {reason}")
+    if not pool:
+        return ContinuationSelection(None, len(typed), excluded, tuple(warnings))
+    pool.sort(key=lambda item: item[0], reverse=True)
+    _, newest, capsule = pool[0]
     stale = bool(current_repository_state) and capsule.is_stale_for(str(current_repository_state))
     evidence = ContinuationEvidence(
         record_id=newest.record.record_id,
         capsule=capsule,
         stale=stale,
         recorded_at=newest.record.recorded_at or newest.record.created_at,
+        selection=selection,
     )
-    return evidence, len(typed), tuple(warnings)
+    return ContinuationSelection(evidence, len(typed), excluded, tuple(warnings))
 
 
 def _projection_status(health: OperationOutcome | None) -> str | None:
@@ -203,6 +301,7 @@ def canonical_hydrate(
     max_records: int = 40,
     continuation_limit: int = 10,
     check_health: bool = True,
+    continuation_policy: str = CONTINUATION_POLICY_TASK,
 ) -> CanonicalHydration:
     """Hydrate a session from canonical memory and return typed evidence.
 
@@ -210,8 +309,18 @@ def canonical_hydrate(
     runtime is resolved through the binding manifest. Every CLI call's
     integration receipt is kept so the caller can persist observability
     without logging memory content.
+
+    ``continuation_policy`` is ``task`` (default: resume only a capsule
+    written for this task in this repository) or ``repository_fallback``
+    (SessionStart, no task yet: the newest repository capsule when no task
+    match exists, marked as such on the evidence and in ``warnings``).
     """
 
+    if continuation_policy not in CONTINUATION_POLICIES:
+        raise ValueError(
+            f"unknown continuation_policy {continuation_policy!r}; "
+            f"expected one of {sorted(CONTINUATION_POLICIES)}"
+        )
     started = time.monotonic()
     workspace_path = str(Path(workspace).expanduser().resolve())
     context = resolve_namespace_context(workspace_path, explicit=explicit_namespace)
@@ -238,6 +347,7 @@ def canonical_hydrate(
             requested_namespaces=tuple(requested),
             repository_state_digest=head,
             task_signature=signature,
+            continuation_policy=continuation_policy,
             projection_status=_projection_status(health),
             error=error,
             calls=len(receipts),
@@ -320,6 +430,7 @@ def canonical_hydrate(
 
     continuation: ContinuationEvidence | None = None
     candidates = 0
+    excluded = 0
     if primary:
         search = client.search(
             task,
@@ -332,8 +443,14 @@ def canonical_hydrate(
         )
         receipts.append(search.integration_receipt)
         if search.status is OutcomeStatus.OK:
-            continuation, candidates, selection_warnings = select_continuation(
-                search.receipt.hits, current_repository_state=head
+            continuation, candidates, excluded, selection_warnings = select_continuation(
+                search.receipt.hits,
+                current_repository_state=head,
+                repository_identity=context.repository_identity,
+                task_signature=signature,
+                allow_repository_fallback=(
+                    continuation_policy == CONTINUATION_POLICY_REPOSITORY_FALLBACK
+                ),
             )
             warnings.extend(selection_warnings)
         elif search.status is not OutcomeStatus.NO_HITS:
@@ -352,18 +469,25 @@ def canonical_hydrate(
         record_ids=record_ids,
         continuation=continuation,
         continuation_candidates=candidates,
+        continuation_excluded=excluded,
         fan_in_denied=fan_in_denied,
         hydrate_receipt_digest=result_digest(hydrate.receipt.raw),
     )
 
 
 __all__ = [
+    "CONTINUATION_POLICIES",
+    "CONTINUATION_POLICY_REPOSITORY_FALLBACK",
+    "CONTINUATION_POLICY_TASK",
     "CONTINUATION_TAG",
+    "SELECTION_REPOSITORY_FALLBACK",
+    "SELECTION_TASK_MATCH",
     "SOURCE_CANONICAL",
     "SOURCE_LEGACY_UNVERIFIED",
     "STATUS_NAMESPACE_UNRESOLVED",
     "CanonicalHydration",
     "ContinuationEvidence",
+    "ContinuationSelection",
     "canonical_hydrate",
     "select_continuation",
 ]

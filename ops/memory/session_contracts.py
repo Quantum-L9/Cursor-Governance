@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from typing import Any
@@ -167,18 +168,27 @@ class ContinuationCapsuleV2:
         namespace: str,
         source_sha: str,
         agent_id: str,
+        supersedes: Sequence[str] = (),
     ) -> dict[str, Any]:
         """The memory-owned governed-candidate envelope carrying this capsule.
 
         ``namespace`` is a *request*: MemoryService authorizes the principal
         against it (INV-07). ``source_sha`` binds freshness to the checkout.
+
+        ``supersedes`` names the canonical record ids this capsule replaces —
+        a Phase B refinement names the Phase A record so one session leaves
+        exactly one ACTIVE continuation. Memory validates every target and
+        applies the transition; Cursor only *requests* it (audit P1-03). The
+        candidate id stays distinct from the superseded record's because it
+        carries this capsule's own digest.
         """
 
         if not namespace.strip():
             raise ContinuationContractError("namespace request must be non-empty")
         if not source_sha.strip():
             raise ContinuationContractError("source_sha must be non-empty")
-        return {
+        targets = tuple(str(item).strip() for item in supersedes if str(item).strip())
+        envelope: dict[str, Any] = {
             "schema_version": CANDIDATE_SCHEMA_VERSION,
             "kind": CANDIDATE_KIND,
             "candidate_id": self.candidate_id(),
@@ -210,6 +220,9 @@ class ContinuationCapsuleV2:
             },
             "provenance": {"producer": self.producer, "source_agent_id": agent_id},
         }
+        if targets:
+            envelope["supersedes"] = list(targets)
+        return envelope
 
 
 def continuation_from_record_metadata(metadata: dict[str, Any]) -> ContinuationCapsuleV2 | None:

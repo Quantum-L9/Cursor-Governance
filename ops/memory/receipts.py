@@ -342,6 +342,10 @@ class CandidateReceipt:
     memory_state: str | None
     reason: str | None
     raw: dict[str, Any] = field(repr=False)
+    #: Records memory superseded on admission (the candidate named them in
+    #: ``supersedes``; memory validated and applied the transition). Empty on
+    #: every other verdict — a refused supersession rejects the candidate.
+    superseded_record_ids: tuple[str, ...] = ()
 
     @classmethod
     def parse(cls, raw: dict[str, Any]) -> CandidateReceipt:
@@ -356,6 +360,9 @@ class CandidateReceipt:
             memory_state=_optional_str(raw.get("memory_state")),
             reason=_optional_str(raw.get("reason")),
             raw=raw,
+            superseded_record_ids=tuple(
+                str(item) for item in raw.get("superseded_record_ids") or ()
+            ),
         )
 
     @property
@@ -372,10 +379,20 @@ class CloseReceipt:
     write_receipt_id: str | None
     replayed: bool
     raw: dict[str, Any] = field(repr=False)
+    #: Replay forensics (audit P2-01): on an idempotent replay memory reports
+    #: whether the replayed payload matched the stored record, with both
+    #: digests. ``None`` when the close was not a replay (or the runtime
+    #: predates the field); ``False`` is payload drift, which the caller must
+    #: surface — an idempotent status alone never proves the same request.
+    replay_payload_matched: bool | None = None
+    stored_digest: str | None = None
+    replay_digest: str | None = None
+    warnings: tuple[str, ...] = ()
 
     @classmethod
     def parse(cls, raw: dict[str, Any]) -> CloseReceipt:
         _require(raw, "receipt_id", "status", "namespace", "write_receipt_id")
+        matched = raw.get("replay_payload_matched")
         return cls(
             receipt_id=str(raw["receipt_id"]),
             status=str(raw["status"]),
@@ -384,6 +401,10 @@ class CloseReceipt:
             write_receipt_id=_optional_str(raw.get("write_receipt_id")),
             replayed=bool(raw.get("replayed", False)),
             raw=raw,
+            replay_payload_matched=None if matched is None else bool(matched),
+            stored_digest=_optional_str(raw.get("stored_digest")),
+            replay_digest=_optional_str(raw.get("replay_digest")),
+            warnings=tuple(str(item) for item in raw.get("warnings") or ()),
         )
 
     @property
@@ -391,6 +412,12 @@ class CloseReceipt:
         """Only a COMPLETE close with a record is a canonical close (INV-06)."""
 
         return self.status == "complete" and self.record_id is not None
+
+    @property
+    def payload_drifted(self) -> bool:
+        """A replay whose payload memory proved different from the stored close."""
+
+        return self.replayed and self.replay_payload_matched is False
 
 
 @dataclass(frozen=True)

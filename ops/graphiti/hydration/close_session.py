@@ -64,6 +64,7 @@ from ops.memory.namespace_context import (  # noqa: E402
 )
 from ops.memory.runtime_binding import resolve_runtime_binding  # noqa: E402
 from ops.memory.session_contracts import ContinuationCapsuleV2  # noqa: E402
+from ops.memory.session_state import read_session_state  # noqa: E402
 
 PHASE_A_BUDGET = 8.0
 PHASE_B_BUDGET = 18.0
@@ -174,8 +175,15 @@ def build_capsule(
     pickup: dict[str, Any],
     decisions: list[str] | None = None,
     unfinished_work: list[str] | None = None,
+    task_signature: str | None = None,
 ) -> ContinuationCapsuleV2:
-    """The Cursor-owned continuation capsule for this session (plan §12)."""
+    """The Cursor-owned continuation capsule for this session (plan §12).
+
+    ``task_signature`` is the signature the session hydrated under (its local
+    session state); the capsule carries it so the next hydration of the same
+    task selects this capsule and no other task's (audit P1-02). Without one
+    the capsule derives its signature from its own objective.
+    """
     return ContinuationCapsuleV2(
         session_id=session_id,
         repository_identity=repository_identity,
@@ -183,11 +191,26 @@ def build_capsule(
         next_action=str(pickup.get("next_action") or "").strip() or "Proceed from user request",
         repository_state_digest=head or "unknown",
         producer_version=PRODUCER_VERSION,
+        task_signature=str(task_signature or "").strip(),
         active_files=tuple(str(f) for f in pickup.get("active_files") or ())[:12],
         blockers=tuple(str(b) for b in pickup.get("blockers") or ())[:8],
         decisions=tuple(decisions or ())[:8],
         unfinished_work=tuple(unfinished_work or ())[:8],
     )
+
+
+def session_task_signature(session_id: str) -> str | None:
+    """The task signature this session hydrated under, from local session state.
+
+    Local state is evidence, never authority: it only tells the close which
+    task the continuation belongs to. Absent state means the capsule derives
+    its own signature from its objective.
+    """
+    state = read_session_state(session_id)
+    if not state:
+        return None
+    signature = state.get("task_signature")
+    return str(signature).strip() or None if signature else None
 
 
 def close_idempotency_key(namespace: str, session_id: str, head_hash: str) -> str:
@@ -495,8 +518,13 @@ def close_session(
     pickup = _heuristic_pickup(
         project_dir=project, session_id=session_id, transcript=transcript, reason=reason
     )
+    task_signature = session_task_signature(session_id)
     capsule = build_capsule(
-        session_id=session_id, repository_identity=repository_identity, head=head, pickup=pickup
+        session_id=session_id,
+        repository_identity=repository_identity,
+        head=head,
+        pickup=pickup,
+        task_signature=task_signature,
     )
     candidate = capsule.to_governed_candidate(
         namespace=namespace, source_sha=head or "0" * 40, agent_id=identity["agent_id"]
@@ -526,6 +554,7 @@ def close_session(
         "record_id": continuation_reference,
         "capsule_digest": capsule.digest(),
         "session_id": session_id,
+        "task_signature": capsule.task_signature,
     }
 
     key = close_idempotency_key(namespace, session_id, head_hash)
@@ -599,12 +628,23 @@ def close_session(
                         for d in signal.get("promotion_decisions") or []
                         if isinstance(d, dict) and d.get("kind") == "decision"
                     ],
+                    # Same task as Phase A: the refinement replaces, never forks.
+                    task_signature=capsule.task_signature,
+                )
+                # The refinement names the Phase A record so memory supersedes
+                # it on admission and one session leaves exactly one ACTIVE
+                # continuation (audit P1-03). A refused supersession rejects the
+                # refinement and Phase A stays ACTIVE — nothing is superseded
+                # by hand here. Nothing to name when Phase A was not admitted.
+                supersedes = (
+                    (continuation_reference,) if admitted.ok and continuation_reference else ()
                 )
                 refined = client.ingest_candidate(
                     rich_capsule.to_governed_candidate(
                         namespace=namespace,
                         source_sha=head or "0" * 40,
                         agent_id=identity["agent_id"],
+                        supersedes=supersedes,
                     ),
                     workspace=workspace,
                 )
@@ -618,12 +658,16 @@ def close_session(
                         "record_id": continuation_reference,
                         "capsule_digest": capsule.digest(),
                         "session_id": session_id,
+                        "task_signature": capsule.task_signature,
                         "refined": True,
+                        "supersedes": list(supersedes),
+                        "superseded_record_ids": list(refined.receipt.superseded_record_ids),
                     }
                     report["pickup"] = {k: v for k, v in rich.items() if k != "context_slice"}
                 else:
                     report["warnings"].append(
                         f"Phase B continuation {refined.status.value}: {refined.error}"
+                        + (" — Phase A continuation stays active" if supersedes else "")
                     )
             promoted = 0
             if persist_derived:
@@ -687,6 +731,29 @@ def close_session(
         f"session {session_id} {reason}: {capsule.objective} | next: {capsule.next_action} | "
         f"continuation={continuation_status} | transcript={t_source} | {_git_signal(project)}"
     )[:2000]
+    close_request = {
+        "close_summary": summary,
+        "close_capsule_digest": capsule.digest(),
+        "close_session_id": session_id,
+    }
+    # The exact close request is on disk BEFORE memory.close runs, so a retry
+    # of an interrupted close replays this summary and digest under this key
+    # (audit P2-01) — never a synthesized "retry" summary that memory would
+    # accept as an idempotent replay while the payload silently differed.
+    _persist_obligation(
+        project,
+        session_id,
+        report,
+        status=STATUS_CLOSE_INCOMPLETE,
+        dry_run=dry_run,
+        canonical_namespace_requested=namespace,
+        close_idempotency_key=key,
+        payload_digest=capsule.digest(),
+        continuation_status=continuation_status,
+        continuation_reference=continuation_reference,
+        failure_class="pending_close",
+        **close_request,
+    )
     closed = client.close(
         workspace=workspace,
         namespace=namespace,
@@ -698,14 +765,22 @@ def close_session(
     )
     report["writes"].append(_write_entry(closed, kind="close"))
     close_receipt = closed.receipt
+    replay_matched = getattr(close_receipt, "replay_payload_matched", None)
     report["close"] = {
         "status": closed.status.value,
         "receipt_id": getattr(close_receipt, "receipt_id", None),
         "record_id": getattr(close_receipt, "record_id", None),
         "replayed": bool(getattr(close_receipt, "replayed", False)),
+        "replay_payload_matched": replay_matched,
+        "warnings": list(getattr(close_receipt, "warnings", ()) or ()),
         "idempotency_key": key,
         "error": closed.error,
     }
+    if getattr(close_receipt, "payload_drifted", False):
+        report["warnings"].append(
+            "close replay payload drift: memory replayed the close under this key but the "
+            "stored close differs from this request (see close.warnings)"
+        )
 
     if closed.ok and close_receipt is not None and close_receipt.committed:
         final_status = STATUS_CLOSED_CANONICALLY
@@ -735,6 +810,7 @@ def close_session(
         canonical_operation_id=getattr(close_receipt, "receipt_id", None),
         failure_class=failure_class,
         last_error_code=None if final_status == STATUS_CLOSED_CANONICALLY else closed.status.value,
+        **close_request,
     )
     if report.get("enqueue_ok") is False and final_status == STATUS_CLOSED_CANONICALLY:
         report["receipt"]["enqueue_error_present"] = True

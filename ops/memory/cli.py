@@ -189,6 +189,7 @@ def cmd_hydrate(args: argparse.Namespace) -> int:
         explicit_namespace=args.group_id,
         token_budget=args.token_budget,
         max_records=args.max_records,
+        continuation_policy=args.continuation_policy,
     )
     _emit(hydration.as_dict())
     return EXIT_OK if hydration.ok else EXIT_REFUSED
@@ -269,6 +270,16 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--session-id", default=None)
     p.add_argument("--token-budget", type=int, default=1_200)
     p.add_argument("--max-records", type=int, default=40)
+    p.add_argument(
+        "--continuation-policy",
+        choices=("task", "repository_fallback"),
+        default="task",
+        help=(
+            "task (default): resume only a continuation written for this task in this "
+            "repository; repository_fallback: with no task match, the newest repository "
+            "continuation, marked as a fallback on the receipt"
+        ),
+    )
     p.set_defaults(func=cmd_hydrate)
 
     p = sub.add_parser("conflicts", help="evidence only; never a repository lock")

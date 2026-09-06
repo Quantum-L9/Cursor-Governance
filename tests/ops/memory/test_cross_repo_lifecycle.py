@@ -13,6 +13,7 @@ capsule loses to current repository state.
 
 from __future__ import annotations
 
+import dataclasses
 import os
 from pathlib import Path
 
@@ -157,9 +158,15 @@ def test_lifecycle_against_the_real_memory_runtime(runtime, tmp_path: Path, monk
 
     # Steps 20-23 (plan §35): a new session hydrates canonically, recovers the
     # continuation in the right namespace, and current repository truth wins
-    # over a newer but stale capsule.
-    resumed = canonical_hydrate(ROOT, task="Resume session", client=client, session_id="next")
+    # over a newer but stale capsule. The resume names the same task the
+    # capsule was written for (audit P1-02: selection is task-scoped).
+    resumed = canonical_hydrate(
+        ROOT, task="Realign memory control plane", client=client, session_id="next"
+    )
     assert resumed.status == "OK", resumed.error
+    assert resumed.continuation is not None
+    assert resumed.continuation.selection == "task_match"
+    assert resumed.task_signature == capsule.task_signature
     assert resumed.namespace_context.write_namespace_hint == namespace
     assert resumed.continuation is not None
     assert resumed.continuation.record_id == admitted.receipt.record_id
@@ -183,7 +190,7 @@ def test_lifecycle_against_the_real_memory_runtime(runtime, tmp_path: Path, monk
     )
     assert stale_admitted.ok, stale_admitted.error
     resumed_again = canonical_hydrate(
-        ROOT, task="Resume session", client=client, session_id="next-2"
+        ROOT, task="Realign memory control plane", client=client, session_id="next-2"
     )
     assert resumed_again.continuation is not None
     assert resumed_again.continuation.record_id == stale_admitted.receipt.record_id
@@ -212,15 +219,232 @@ def test_lifecycle_against_the_real_memory_runtime(runtime, tmp_path: Path, monk
         project_dir=project, session_id="proof-close", agent_id="cursor", client=client
     )
     assert again["status"] == "idempotent_skip"
+    # The obligation retained the exact close request (audit P2-01); replaying
+    # it is one logical close that memory proves payload-identical.
+    assert obligation["close_summary"] and obligation["close_capsule_digest"]
     replay = client.close(
         workspace=str(project),
         namespace=namespace,
-        summary="replay",
+        summary=obligation["close_summary"],
         session_id="proof-close",
+        capsule_digest=obligation["close_capsule_digest"],
         idempotency_key=obligation["close_idempotency_key"],
     )
     assert replay.ok and replay.receipt.replayed is True
-    # The next session recovers exactly that capsule as canonical continuation.
-    resumed_close = canonical_hydrate(ROOT, task="Resume", client=client, session_id="after")
+    assert replay.receipt.replay_payload_matched is True, replay.receipt.raw
+    assert replay.receipt.payload_drifted is False
+    # A replay under the same key with a different summary is not silently the
+    # same close: memory reports the drift and Cursor's view exposes it.
+    drifted = client.close(
+        workspace=str(project),
+        namespace=namespace,
+        summary="a different summary under the same key",
+        session_id="proof-close",
+        capsule_digest=obligation["close_capsule_digest"],
+        idempotency_key=obligation["close_idempotency_key"],
+    )
+    assert drifted.ok and drifted.receipt.replayed is True
+    assert drifted.receipt.replay_payload_matched is False
+    assert drifted.receipt.payload_drifted is True
+    assert drifted.receipt.stored_digest != drifted.receipt.replay_digest
+    assert any("differs" in w for w in drifted.receipt.warnings), drifted.receipt.raw
+    # The next session of the same task recovers exactly that capsule; a
+    # SessionStart with no task falls back to the newest repository capsule
+    # and says so.
+    resumed_close = canonical_hydrate(
+        ROOT, task="Continue work in proof-workspace", client=client, session_id="after"
+    )
     assert resumed_close.continuation is not None
     assert resumed_close.continuation.capsule.session_id == "proof-close"
+    assert resumed_close.continuation.selection == "task_match"
+    session_start = canonical_hydrate(
+        ROOT,
+        task="Resume session in Cursor-Governance",
+        client=client,
+        session_id="after-2",
+        continuation_policy="repository_fallback",
+    )
+    assert session_start.continuation is not None
+    assert session_start.continuation.selection == "repository_fallback"
+    assert any("repository_fallback" in w for w in session_start.warnings)
+    strict_unknown = canonical_hydrate(
+        ROOT, task="Resume session in Cursor-Governance", client=client, session_id="after-3"
+    )
+    assert strict_unknown.continuation is None
+    assert strict_unknown.continuation_excluded == strict_unknown.continuation_candidates > 0
+
+
+def _record_state(client: MemoryControlPlaneClient, record_id: str, namespace: str) -> str:
+    raw = client._invoke(["get", record_id, "--group-id", namespace], cwd=str(ROOT))
+    assert raw.payload is not None, raw.error_message
+    return str(raw.payload["state"])
+
+
+def test_task_isolation_and_refinement_supersession_against_the_real_runtime(
+    runtime, tmp_path: Path, monkeypatch
+) -> None:
+    """Audit P1-02 / P1-03 / P2-01 against the bound memory runtime.
+
+    Task A and Task B close against the same repository at the same HEAD;
+    resuming A selects A (B excluded) and resuming B selects B. A Phase B
+    refinement that names the Phase A record leaves exactly one ACTIVE
+    continuation (A SUPERSEDED, B ACTIVE); a refused supersession rejects the
+    refinement and keeps A ACTIVE. A close whose response was lost is retried
+    with the exact recorded request and memory proves it payload-identical.
+    """
+    client, _env = runtime
+    context = resolve_namespace_context(ROOT)
+    namespace = context.write_namespace_hint
+    assert namespace == "cursor-governance"
+    workspace = str(ROOT)
+    head = repository_state_digest(ROOT)
+    repository = context.repository_identity or "Quantum-L9/Cursor-Governance"
+
+    def capsule(session_id: str, objective: str, next_action: str) -> ContinuationCapsuleV2:
+        return ContinuationCapsuleV2(
+            session_id=session_id,
+            repository_identity=repository,
+            objective=objective,
+            next_action=next_action,
+            repository_state_digest=head,
+            producer_version="2.0.0",
+        )
+
+    task_a = capsule("session-A", "Task A: realign hydration", "continue task A")
+    task_b = capsule("session-B", "Task B: rotate the release pin", "continue task B")
+    admitted_a = client.ingest_candidate(
+        task_a.to_governed_candidate(namespace=namespace, source_sha=head, agent_id="cursor"),
+        workspace=workspace,
+    )
+    assert admitted_a.ok, admitted_a.error
+    admitted_b = client.ingest_candidate(
+        task_b.to_governed_candidate(namespace=namespace, source_sha=head, agent_id="cursor"),
+        workspace=workspace,
+    )
+    assert admitted_b.ok, admitted_b.error
+
+    resume_a = canonical_hydrate(
+        ROOT, task="Task A: realign hydration", client=client, session_id="resume-A"
+    )
+    assert resume_a.continuation is not None
+    assert resume_a.continuation.record_id == admitted_a.receipt.record_id
+    assert resume_a.continuation.capsule.next_action == "continue task A"
+    assert resume_a.continuation.selection == "task_match"
+    assert resume_a.continuation_excluded >= 1  # B (and any other task) excluded
+    resume_b = canonical_hydrate(
+        ROOT, task="Task B: rotate the release pin", client=client, session_id="resume-B"
+    )
+    assert resume_b.continuation is not None
+    assert resume_b.continuation.record_id == admitted_b.receipt.record_id
+
+    # Phase B refinement of Task A names the Phase A record: one ACTIVE left.
+    refined_a = ContinuationCapsuleV2(
+        session_id="session-A",
+        repository_identity=repository,
+        objective="Task A: realign hydration",
+        next_action="continue task A — refined next step",
+        repository_state_digest=head,
+        producer_version="2.0.0",
+        task_signature=task_a.task_signature,
+        decisions=("selection is task-scoped",),
+    )
+    refined = client.ingest_candidate(
+        refined_a.to_governed_candidate(
+            namespace=namespace,
+            source_sha=head,
+            agent_id="cursor",
+            supersedes=(admitted_a.receipt.record_id,),
+        ),
+        workspace=workspace,
+    )
+    assert refined.ok, refined.error
+    assert refined.receipt.record_id != admitted_a.receipt.record_id
+    assert refined.receipt.superseded_record_ids == (admitted_a.receipt.record_id,)
+    assert _record_state(client, admitted_a.receipt.record_id, namespace) == "superseded"
+    assert _record_state(client, refined.receipt.record_id, namespace) == "active"
+    resume_a_again = canonical_hydrate(
+        ROOT, task="Task A: realign hydration", client=client, session_id="resume-A2"
+    )
+    assert resume_a_again.continuation is not None
+    assert resume_a_again.continuation.record_id == refined.receipt.record_id
+    assert resume_a_again.continuation.capsule.next_action == "continue task A — refined next step"
+    # The superseded Phase A record is no longer retrievable as a continuation:
+    # memory's retrieval plane serves ACTIVE records only.
+    continuations = client.search(
+        "Task A: realign hydration",
+        workspace=workspace,
+        write_namespace_hint=namespace,
+        read_namespace_hints=(namespace,),
+        tags=("session_continuation",),
+        limit=50,
+    )
+    assert continuations.ok, continuations.error
+    visible = {hit.record.record_id for hit in continuations.receipt.hits}
+    assert refined.receipt.record_id in visible
+    assert admitted_a.receipt.record_id not in visible
+
+    # A refused supersession (unknown target) rejects the refinement; B stays ACTIVE.
+    refused = client.ingest_candidate(
+        capsule("session-B", "Task B: rotate the release pin", "refined B").to_governed_candidate(
+            namespace=namespace,
+            source_sha=head,
+            agent_id="cursor",
+            supersedes=("00000000-0000-4000-8000-000000000000",),
+        ),
+        workspace=workspace,
+    )
+    assert refused.status is OutcomeStatus.REJECTED, refused.status
+    assert "supersession refused" in (refused.receipt.reason or "")
+    assert _record_state(client, admitted_b.receipt.record_id, namespace) == "active"
+    resume_b_again = canonical_hydrate(
+        ROOT, task="Task B: rotate the release pin", client=client, session_id="resume-B2"
+    )
+    assert resume_b_again.continuation is not None
+    assert resume_b_again.continuation.record_id == admitted_b.receipt.record_id
+
+    # Lost close response: memory committed, Cursor never saw the receipt. The
+    # retry replays the exact recorded request under the recorded key.
+    from ops.graphiti.hydration import pickup_write as pw
+
+    project = tmp_path / "lost-response-workspace"
+    project.mkdir()
+    for module in (cs, pw):
+        monkeypatch.setattr(module, "resolve_namespace_context", lambda *_a, **_k: context)
+        monkeypatch.setattr(module, "repository_state_digest", lambda _p: head)
+    monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **_k: ("user: finish C13", "test"))
+    monkeypatch.setenv("MEMORY_PHASE_B", "0")
+    monkeypatch.setenv("MEMORY_DISTILL_ENQUEUE", "0")
+
+    class LostResponse:
+        """The real client, except the first close's response never arrives."""
+
+        def __init__(self, inner: MemoryControlPlaneClient) -> None:
+            self.inner = inner
+            self.lost = False
+
+        def __getattr__(self, name: str):
+            return getattr(self.inner, name)
+
+        def close(self, **kwargs):
+            outcome = self.inner.close(**kwargs)
+            if not self.lost:
+                self.lost = True
+                return dataclasses.replace(
+                    outcome, status=OutcomeStatus.TIMEOUT, receipt=None, error="lost response"
+                )
+            return outcome
+
+    lossy = LostResponse(client)
+    report = cs.close_session(
+        project_dir=project, session_id="lost-close", agent_id="cursor", client=lossy
+    )
+    assert report["status"] == "close_incomplete", report["warnings"]
+    obligation = load_close_receipt(project, "lost-close")
+    assert obligation["status"] == "close_incomplete"
+    assert obligation["close_summary"] and obligation["close_capsule_digest"]
+    retried = pw.retry_close(project_dir=project, session_id="lost-close", client=lossy)
+    assert retried["status"] == "closed_canonically", retried
+    assert retried["replayed"] is True
+    assert retried["replay_payload_matched"] is True, retried
+    assert not any("drift" in w for w in retried.get("warnings", []))
+    assert load_close_receipt(project, "lost-close")["status"] == "closed_canonically"

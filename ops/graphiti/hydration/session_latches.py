@@ -56,6 +56,19 @@ OBLIGATION_FIELDS = (
     "last_error_code",
 )
 
+#: The exact ``memory.close`` request material (audit P2-01). A retry of an
+#: interrupted close replays *this* summary and digest under the recorded
+#: idempotency key, never a synthesized "retry" summary: memory's replay
+#: forensics compare the stored record with the replayed payload, and a
+#: drifted replay is a defect to surface, not an idempotent success.
+#: ``close_summary`` keeps the full close summary (close_session caps it at
+#: 2000 chars), so it gets its own bound rather than the 200-char scalar cap.
+CLOSE_REQUEST_FIELDS: dict[str, int] = {
+    "close_summary": 2000,
+    "close_capsule_digest": 200,
+    "close_session_id": 200,
+}
+
 
 def resolve_session_id(*, explicit: str | None = None) -> str:
     """Single session id for open, close, compile, and fallback.
@@ -271,6 +284,9 @@ def write_receipt(project_dir: Path, session_id: str, payload: dict[str, Any]) -
     for key in OBLIGATION_FIELDS:
         value = payload.get(key)
         safe[key] = None if value is None else str(value)[:200]
+    for key, cap in CLOSE_REQUEST_FIELDS.items():
+        value = payload.get(key)
+        safe[key] = None if value is None else str(value)[:cap]
     _write_json(path_r, safe)
 
 

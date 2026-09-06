@@ -534,6 +534,11 @@ def test_retry_close_discharges_an_open_obligation(monkeypatch, tmp_path):
             "payload_digest": "d" * 64,
             "continuation_status": "admitted",
             "continuation_reference": "66666666-6666-6666-6666-666666666666",
+            # The exact close request the interrupted attempt recorded
+            # (audit P2-01): the retry replays this, never a synthesized summary.
+            "close_summary": "session fb-1 completed: objective | next: step",
+            "close_capsule_digest": "d" * 64,
+            "close_session_id": "fb-1",
         },
     )
     fake = _scripted_close(monkeypatch, tmp_path)
@@ -546,6 +551,9 @@ def test_retry_close_discharges_an_open_obligation(monkeypatch, tmp_path):
     close_argv = fake.last("close")
     assert close_argv[close_argv.index("--idempotency-key") + 1] == (
         "cursor-close:cursor-governance:fb-1:abc"
+    )
+    assert close_argv[close_argv.index("--summary") + 1] == (
+        "session fb-1 completed: objective | next: step"
     )
 
 
