@@ -1298,3 +1298,38 @@ not evaluate under Cursor. SSOT: `ops/autonomy/surface_detect.py` +
 `ops/scripts/lib/surface_detect.sh`. Divergence point: `l9_hook_exec.sh`
 self-guard (kill switch `L9_SURFACE_GUARD=0`). Contract:
 `environment/agents/SURFACE_BOOTSTRAP_CONTRACT.md`. ADR-0029.
+
+<!-- VIRTUAL_SKILL_PLANE_V2 -->
+## Virtual Skill Plane v2 — Cursor virtual gateway (2026-09-06)
+
+Canonical skill cardinality is decoupled from Cursor native discovery
+cardinality. `skills/` stays the canonical capability corpus; the
+`l9-governance` plugin now points Cursor at
+`environment/agents/adapters/cursor/skills`, which holds exactly one native
+skill, `l9-skill-gateway`. The gateway is an adapter: it owns no routing, no
+scoring, and no inventory, and it never enters `skills/AUTONOMY_MANIFEST.yaml`
+or `ops/generated/skill-registry.json`. This supersedes the "Cursor discovers
+`skills/` under the plugin root" sentence in the workspace-path table above;
+rules and commands are unchanged.
+
+- Semantic routing authority is `skills/AUTONOMY_MANIFEST.yaml` → registry v2
+  (`schema_version: 2`, per-skill `skill_md` + `skill_sha256`, registry
+  `generation_id`); selection stays `ops/skill_routing/route_prompt.py`
+  (explicit ties: score DESC, priority DESC, route_id ASC).
+- Every Cursor prompt writes one conversation-scoped receipt
+  (`l9.cursor-skill-route.v2`) at `~/.cursor/l9/routes/<conversation-key>/current.json`
+  — `routed | no_route | disabled | degraded` — atomically. The global
+  `~/.cursor/l9/skill-route.json` is retired. `beforeSubmitPrompt` emits only
+  `{"continue": true}`; `sessionStart` prints `### Route locator`.
+- Routed names are materialized to exact canonical `SKILL.md` paths
+  (`ops/skill_routing/materialize.py`) before consumption; escapes, missing or
+  corrupt resources fail closed.
+- Planning doctrine is manifest-owned: ordinary plans / Plan mode / Build-button
+  plans → `l9-plan-simple` (auto_invoke); campaign / PE / Program Lock →
+  `l9-plan`; `make campaign INTENT=` → `l9-pe-campaign-activate`.
+  `rules/23-l9-skill-routing.mdc` v2 carries no trigger table.
+- Gates: `make cursor-projection-check` (also pre-commit and
+  governance-self-check) and `make skill-plane-test`. Manual fallback:
+  `ops/skill_routing/resolve.py --prompt "<request>"`.
+- Rollback is one field: set `.cursor-plugin/plugin.json` `skills` back to
+  `"skills"`. No canonical folder moves, no symlink farm.

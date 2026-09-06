@@ -1,100 +1,82 @@
 ---
 id: l9.rule.skill-routing
-version: 1.0.0
-description: "Proactive L9 skill selection \u2014 Read the matching skill before non-trivial\
-  \ work; honor Cursor skill-route hints; fail closed if skipped."
+version: 2.0.0
+description: "Virtual Skill Plane route consumption — load the materialized canonical\
+  \ skill named by this conversation's route receipt; native Cursor inventory is an\
+  \ adapter projection, never the L9 capability inventory."
 scope: global
 activation: always
 authority: canonical_global
 alwaysApply: true
 ---
 
-# L9 skill routing (Cursor)
+# L9 skill routing (route consumption contract)
 
-Rules SSOT: this folder (`rules/` / `.cursor-commands/rules`) as `.mdc`. Claude Code
-mounts the projected `.md` tree at `.claude/rules` →
-`environment/generated/llm-rules/` (alias `l9-skill-routing.md`). Skills SSOT:
-`.cursor-commands/skills` via the `l9-governance` plugin — not a second copy under
-`.cursor/skills`.
+Rules SSOT: `rules/*.mdc`; Claude Code mounts the projection at `.claude/rules`
+(alias `l9-skill-routing.md`). This rule owns **route consumption and
+enforcement only**. It carries no prompt-to-skill mapping: the sole semantic
+routing inventory is `skills/AUTONOMY_MANIFEST.yaml` compiled into
+`ops/generated/skill-registry.json`, and the sole selection authority is
+`ops/skill_routing/route_prompt.py`.
 
-**Selecting a skill is not optional theater.** For non-trivial work, load the
-skill contract before improvising.
+## Inventory law
 
-## Authority split (SSOT — do not restate conflicting rules elsewhere)
+- **Cursor native skill inventory is an adapter projection.** The `l9-governance`
+  plugin exposes exactly one native skill, `l9-skill-gateway`. That roster is
+  **not** the canonical capability inventory and is never evidence that an L9
+  capability is, or is not, available.
+- **Canonical skills live under `skills/<name>/SKILL.md`** and are enumerated
+  only by the generated registry. Adding canonical skills never changes what
+  Cursor lists natively.
+- Never scan, list, or guess the corpus from the native roster. A route
+  receipt or the shared resolver names the resource; that path is the contract.
 
-| Layer | Meaning | Mutation authority |
-|-------|---------|-------------------|
-| `auto_invoke` | Model may select; router may force Read (`source: route`) | Per skill contract |
-| `explicit_only` + route `hint_allowed: true` | Router may recommend Read/attach (`source: explicit_hint`) | Still needs user / `/autonomy` / packet / human approve |
-| `explicit_only` (no hint) | Never proactive | Manual `/` or explicit user request only |
+## Primary consumption contract — the scoped route receipt (Cursor)
 
-**A router hint is routing evidence, not mutation authority.** Never treat
-`explicit_hint` as push/merge/deploy/UI-run permission.
+Every prompt event writes exactly one receipt for **this conversation**
+(`schema: l9.cursor-skill-route.v2`) at
+`~/.cursor/l9/routes/<conversation-key>/current.json`; the sessionStart banner
+`### Route locator` prints the exact path. Read it before non-trivial work.
 
-## Mandatory — first action on non-trivial tasks
-
-1. Scan available L9 skills for the closest match to the user request.
-2. **Read that skill's `SKILL.md` immediately** (first tool action) and follow it.
-3. Use **one primary** skill. Add at most **two supporting** skills when each supplies
-   a capability the primary does not own.
-4. Prefer a domain skill over `l9-structured-reasoning`; use structured reasoning as
-   support for architecture, planning, debugging, trade-offs, corpus analysis, or
-   material uncertainty.
-5. Honor `explicit_hint` by **Reading** the named skill; do **not** auto-execute its
-   mutating steps without the skill's required authority (packet / approve / explicit user).
-6. Skip skill load only for trivial edits / direct factual lookups where no skill
-   would improve correctness or evidence.
-7. **Planning deliverables:** when producing an ordinary execution plan/spec
-   (including Cursor Plan mode), follow `l9-plan-simple` →
-   `references/plan-workflow-simple.md` (shared canonical template, Build execute)
-   even if the skill was not attached and even if `~/.cursor/l9/skill-route.json`
-   is stale/absent. Campaign / program-execution / `make campaign` / `/l9-plan`
-   still follow `l9-plan` → `references/plan-workflow-pe-autonomy.md`.
-
-## Fail-closed
-
-- Non-trivial task + no skill loaded → load a skill before irreversible edits.
-- Domain skill vs general reasoning → domain skill wins.
-- Irreversible action without evidence → block or bounded probe.
-- Explicit-only without `hint_allowed` → never auto-select via Skill tool / ambient discovery.
-
-## Live route hint (hook)
-
-`beforeSubmitPrompt` runs `ops/hooks/before_submit_skill_router.py`, which writes:
-
-`~/.cursor/l9/skill-route.json`
-
-When that file exists and `recommended_at` is **within the last 2 minutes**, treat
-`primary` / `supporting` as the high-confidence route and Read those skills first.
-If `source` is `explicit_hint`, Read but do not mutate from the hint alone.
-If the file is stale or absent, still select from available skills yourself.
-
-## Common triggers → primary skill
-
-| User intent | Read first |
+| `status` | Obligation |
 |---|---|
-| Plan / unclear scope / decompose / Cursor Plan mode | `l9-plan-simple` |
-| Campaign / PE / `make campaign` / `/l9-plan` | `l9-plan` |
-| Run e2e / clear e2e blockers / local-proof | `l9-e2e-blocker-resolution` |
-| Campaign / `/autonomy` / PR poll while continuing | `l9-bounded-autonomy` (hint; packet required) |
-| SaaS admin UI / cartridge / API insufficient | `l9-ui-operator` (hint; human approve for run) |
-| PR review / merge blockers / readiness | `l9-pr-remediation` (hint; Diagnose only unless mutate intent) |
-| Explore unfamiliar code / map flows | `l9-code-analysis` |
-| Gaps / readiness / % complete | `l9-gap-analysis` |
-| Library/SDK/API docs before coding | `l9-context7-docs` |
-| Compile SOP/prompt into a skill | `l9-skill-compiler` |
-| Wire / rewire / verify / unwire an existing artifact or capability | `l9-wire-into-repo` |
-| Harden/converge packs or skill usage | `l9-recursive-optimization` |
-| Graphiti / memory prefetch / health | `l9-graphiti-memory` |
-| Deep trade-offs / architecture / debug / corpus | `l9-structured-reasoning` |
-| What should I do next | `l9-ynp` |
-| CI bootstrap | `l9-setting-up-ci` |
-| Security / secrets exposure | `l9-auditing-security` |
-| Performance / slow app | `l9-auditing-performance` |
-| Active incident | `l9-incident-response` |
-| Sync / fast-forward / `/ff` a named governance clone | `l9-repo-sync` (hint; `/ff` mutates) |
+| `routed` | Load exactly `decision.primary.skill_md` (one primary), then at most the two `decision.supporting[].skill_md` resources. Follow that contract first. Do not re-route or rediscover. |
+| `no_route` | Proceed without a canonical skill. A prior prompt's route is never inherited. |
+| `disabled` | Proactive routing is off for this session; the gateway fallback applies only if the work needs a skill contract. |
+| `degraded`, missing, invalid, expired, or `generation_id` ≠ registry | Use the `l9-skill-gateway` fallback: run the shared resolver and load exactly what it names. |
 
-Authority: `skills/AUTONOMY_MANIFEST.yaml` (`claude_routing`) +
-`ops/generated/skill-registry.json`. Shared scorer: `ops/skill_routing/`.
-Claude projection: `environment/generated/llm-rules/l9-skill-routing.md`
-(generated; do not hand-edit).
+On Claude Code the same brain runs in `UserPromptSubmit`; consume the injected
+`High-confidence L9 skill route` / `L9 explicit skill hint` text the same way.
+
+## Composition and authority
+
+1. **Exactly one primary**, **at most two supporting** skills.
+2. A domain capability outranks generic reasoning **when the registry says so**:
+   `l9-structured-reasoning` supports; it does not replace a routed domain primary.
+3. `source: explicit_hint` is Read/attach evidence only. An `explicit_only` skill
+   acts only on explicit user invoke, a campaign packet, or human approval as its
+   own contract states.
+4. **Routing never grants mutation authority.** A routed or hinted skill is not
+   push, merge, deploy, or UI-run permission.
+5. Irreversible action requires the applicable skill contract wherever repository
+   law requires one; a `no_route` receipt does not waive that law.
+
+| Registry tier | Router may | Action authority |
+|---|---|---|
+| `model_allowed` (auto_invoke) | select (`route`, `advisory_route`, `description`) | that skill's contract |
+| `explicit_only` + route `hint_allowed` | recommend Read/attach (`explicit_hint`) | user / packet / human approve |
+| `explicit_only` without hint | nothing — never ambient | manual `/` only |
+
+## Ownership
+
+| Concern | Owner |
+|---|---|
+| tier + route policy | `skills/AUTONOMY_MANIFEST.yaml` |
+| searchable inventory | `ops/generated/skill-registry.json` (registry v2) |
+| scoring | `ops/skill_routing/route_prompt.py` |
+| registry validation | `ops/skill_routing/registry.py` |
+| name → exact `SKILL.md` | `ops/skill_routing/materialize.py` |
+| receipt scope + atomics | `ops/skill_routing/receipt.py`, `session_locator.py` |
+| Cursor prompt adapter | `ops/hooks/before_submit_skill_router.py` |
+| Cursor native projection | `environment/agents/adapters/cursor/skills/` (validator beside it) |
+| manual fallback | `ops/skill_routing/resolve.py --prompt "<request>"` |

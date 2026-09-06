@@ -2,8 +2,22 @@ version: 1
 purpose: Canonical cross-surface skill autonomy and routing registry for governed L9 agents.
 principle: Model-invocable skills are selected from SKILL.md descriptions; explicit-only skills remain user-triggered; deterministic behavior lives in skill instructions, references, and optional skill-local scripts/assets.
 cursor_discovery:
-  enabled_by:
-  - ~/.cursor/skills symlinked to GlobalCommands/skills
+  mode: virtual_gateway
+  canonical_root: skills
+  native_projection:
+    path: environment/agents/adapters/cursor/skills
+    expected_skill_count: 1
+    gateway: l9-skill-gateway
+  registry:
+    path: ops/generated/skill-registry.json
+  route_receipt: ~/.cursor/l9/routes/<conversation-key>/current.json
+  invariants:
+    canonical_cardinality_independent_of_native_cardinality: true
+    native_canonical_mirroring_forbidden: true
+    gateway_owns_no_routing: true
+    gateway_not_in_registry: true
+  validator: environment/agents/adapters/cursor/validate_skill_projection.py
+  canonical_skill_requirements:
   - skill folder contains SKILL.md
   - frontmatter name matches folder name
   - description states what the skill does and when to use it

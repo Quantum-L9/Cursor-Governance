@@ -907,3 +907,18 @@ cursor-install-check:
 		--governance "$(CURDIR)" --workspace "$(if $(WS),$(WS),$(CURDIR))" --check
 	L9_GOV_ROOT="$(CURDIR)" $(PYTHON) ops/scripts/claude_bootstrap_receipt.py \
 		--surface cursor --path "$$HOME/.l9/cursor/bootstrap-check.json" --json
+
+# --- Virtual Skill Plane (Cursor virtual gateway) -----------------------------
+# Cursor discovers exactly one native skill (l9-skill-gateway under
+# environment/agents/adapters/cursor/skills); the canonical corpus stays under
+# skills/ and is reached through ops/generated/skill-registry.json, the
+# deterministic router, materialized SKILL.md resources, and conversation-
+# scoped route receipts. Validator + suites are repository-pure CI proof.
+.PHONY: cursor-projection-check skill-plane-test
+## Prove Cursor native discovery == [l9-skill-gateway] and registry == canonical corpus.
+cursor-projection-check:
+	$(PYTHON) environment/agents/adapters/cursor/validate_skill_projection.py --root "$(CURDIR)"
+
+## Registry / router / materializer / receipt / hook / projection / scale suites.
+skill-plane-test:
+	$(PYTHON) -m pytest ops/skill_routing/tests environment/agents/adapters/cursor/tests -q

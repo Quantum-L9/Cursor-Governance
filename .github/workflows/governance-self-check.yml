@@ -96,6 +96,21 @@ jobs:
           [ -f "$v" ] || { echo "::error::mandatory validator $v missing"; exit 1; }
           python3 "$v"
 
+      # Virtual Skill Plane: Cursor native discovery is exactly l9-skill-gateway,
+      # the registry equals the canonical corpus, and every plane layer
+      # (registry v2, router, materializer, scoped receipts, hook, projection,
+      # synthetic scale) proves its invariants from repository content alone.
+      - name: Cursor skill projection gate (Virtual Skill Plane)
+        run: |
+          v=environment/agents/adapters/cursor/validate_skill_projection.py
+          [ -f "$v" ] || { echo "::error::mandatory validator $v missing"; exit 1; }
+          python3 "$v"
+
+      - name: Skill plane suites (registry, router, materializer, receipts, hook, projection)
+        run: |
+          python3 -m pip install --only-binary=:all: pytest==9.1.1
+          python3 -m pytest ops/skill_routing/tests environment/agents/adapters/cursor/tests -q -p no:cacheprovider
+
       - name: Workflow action pins (third-party = full SHA)
         run: |
           v=ops/scripts/validate_workflow_action_pins.py
