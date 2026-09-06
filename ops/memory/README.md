@@ -145,6 +145,27 @@ state and nothing else. A subagent inherits its parent's evidence read-only:
 it never hydrates under its own identity, never writes state, never closes
 (`memory_writeback` records `skipped_subagent`).
 
+## Secret isolation (stage C9) and legacy reconciliation (stage C10)
+
+No surface holds a provider URL or bearer. The Cursor hooks load switches
+only (`ops/hooks/graphiti_common.sh`), the bootstraps and readiness emitter
+probe `ops/memory/diagnostics.py` instead of an HTTP front door, the adapter
+examples and `agent_registry.yaml` name the control plane and not a
+transport, `ops/secrets/capabilities.yaml` registers no memory capability,
+and `control_plane_client.py` strips any stale provider variable from the
+memory CLI's environment. `tests/ops/memory/test_secret_isolation.py` holds
+all of that.
+
+Provider-only history is reconciled through canonical admission, never read
+by this repository: an export (`cursor.legacy-provider-export/v1`, produced
+outside the boundary) is classified A–G by `ops/memory/legacy_reconciliation.py`
+and the B (continuation) and C (durable) classes are admitted with the
+producer `Cursor-Governance/legacy-reconciliation` and the tag
+`legacy_unverified` (`make memory-reconcile-legacy EXPORT=…`, dry run by
+default). The offline distill worker and the generated-data ingress cross the
+same control plane. `ops/config/memory-canonical-epoch.json` records the
+epoch from which the provider is a projection memory owns.
+
 ## Proof
 
 `tests/ops/memory/test_cross_repo_lifecycle.py` is the exact-head cross-repo

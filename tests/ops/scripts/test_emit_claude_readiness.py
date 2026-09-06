@@ -73,14 +73,17 @@ def test_projection_missing_receipt_is_unknown() -> None:
     assert set(out.values()) == {UNKNOWN}
 
 
-def test_graphiti_health_classifies_probe_not_broker() -> None:
-    """Graphiti compact health is the CLI/MCP probe, not a capability-broker /whoami."""
-    status, note = er._graphiti_health({"ok": False, "primary_blocker": "identity"})
+def test_memory_health_classifies_probe_not_broker() -> None:
+    """Memory compact health is the canonical readiness probe, not a broker /whoami."""
+    status, note = er._memory_health({"ok": False, "primary_blocker": "store"})
     assert status == DEGRADED
-    assert "identity" in note
-    assert "GRAPHITI_MCP_URL" not in note
-    assert er._graphiti_health({"ok": True})[0] == READY
-    assert er._graphiti_health({})[0] == UNKNOWN
+    assert "store" in note
+    assert er._memory_health({"ok": True})[0] == READY
+    assert er._memory_health({})[0] == UNKNOWN
+    # Unknown blocker vocabulary is mapped away: no probe-derived text is printed.
+    _, other = er._memory_health({"ok": False, "primary_blocker": "ghs_leaked_token_value"})
+    assert "ghs_leaked_token_value" not in other
+    assert "unknown" in other
 
 
 def test_configured_mcp_is_not_loaded_mcp() -> None:
@@ -117,49 +120,71 @@ def test_uv_version_is_empty_when_uv_cannot_report(monkeypatch) -> None:
     assert er._uv_version() == ""
 
 
-def test_graphiti_http_403_is_allowlist() -> None:
-    status, note = er._classify_graphiti_http_code(403)
-    assert status == DEGRADED
-    assert "allowlist" in note
-    assert "identity" in er._classify_graphiti_http_code(401)[1]
-    assert er._classify_graphiti_http_code(405)[0] == READY
+def _levels(**overrides: str) -> dict[str, str]:
+    base = {f"R{i}": "pass" for i in range(10)}
+    base["R5"] = "skipped"
+    base.update(overrides)
+    return base
 
 
-def test_graphiti_mcp_http_health_rejects_file_scheme(monkeypatch) -> None:
+def test_memory_layers_map_to_three_dimensions() -> None:
+    """R0/R1 -> cli, R2/R3/R6 -> control plane, R4 -> mcp; never one word."""
+    assert er._memory_cli_health(_levels())[0] == READY
+    assert er._memory_control_plane_health(_levels())[0] == READY
+    assert er._memory_mcp_health(_levels())[0] == READY
+    status, note = er._memory_cli_health(_levels(R0="fail"))
+    assert status == DEGRADED and "unbound" in note
+    status, note = er._memory_control_plane_health(_levels(R2="fail"))
+    assert status == DEGRADED and "store" in note
+    status, note = er._memory_control_plane_health(_levels(R6="fail"))
+    assert status == DEGRADED and "namespace" in note
+    status, note = er._memory_mcp_health(_levels(R4="fail"))
+    assert status == DEGRADED and "mcp_config" in note
+    # An unrunnable readiness report is UNKNOWN, never PASS.
+    assert er._memory_cli_health(None)[0] == UNKNOWN
+    assert er._memory_control_plane_health(None)[0] == UNKNOWN
+    assert er._memory_mcp_health(None)[0] == UNKNOWN
+
+
+def test_memory_probe_reads_no_provider_url(monkeypatch) -> None:
+    """Stage C9: the probe is the canonical readiness report, not an HTTP front door."""
+    monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels(R4="fail"))
+    for name in er._MEMORY_PROBE_SKIP_ENVS:
+        monkeypatch.delenv(name, raising=False)
+    probe = er.memory_probe(Path("/nowhere"))
+    assert probe["cli"]["status"] == READY
+    assert probe["control_plane"]["status"] == READY
+    assert probe["mcp"]["status"] == DEGRADED
+    assert not hasattr(er, "_graphiti_mcp_http_health")
+    assert not hasattr(er, "graphiti_mcp_url")
+
+
+def test_memory_probe_skip_env_honors_both_names(monkeypatch) -> None:
+    monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels(R0="fail"))
+    monkeypatch.delenv("L9_MEMORY_PROBE_SKIP", raising=False)
+    monkeypatch.setenv("L9_GRAPHITI_PROBE_SKIP", "1")
+    assert er.memory_probe(Path("/nowhere"))["cli"]["status"] == READY
     monkeypatch.delenv("L9_GRAPHITI_PROBE_SKIP", raising=False)
-    monkeypatch.setenv("GRAPHITI_MCP_URL", "file:///etc/passwd")
-    status, note = er._graphiti_mcp_http_health()
-    assert status == DEGRADED
-    assert "config" in note
+    monkeypatch.setenv("L9_MEMORY_PROBE_SKIP", "1")
+    assert er.memory_probe(Path("/nowhere"))["cli"]["status"] == READY
 
 
-def test_graphiti_mcp_http_health_rejects_non_allowlisted_https(monkeypatch) -> None:
-    monkeypatch.delenv("L9_GRAPHITI_PROBE_SKIP", raising=False)
-    monkeypatch.setenv("GRAPHITI_MCP_URL", "https://evil.example/graphiti/mcp")
-    status, note = er._graphiti_mcp_http_health()
-    assert status == DEGRADED
-    assert "config" in note
-
-
-def test_working_cli_and_dead_mcp_are_not_one_word(tmp_path: Path, monkeypatch) -> None:
+def test_bound_cli_and_missing_mcp_entry_are_not_one_word(tmp_path: Path, monkeypatch) -> None:
     gov = _init_fake_gov(tmp_path, merge_denies=True)
     home = _fake_home(tmp_path, mcp="READY")
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
-    monkeypatch.setattr(er, "_graphiti_cli_health", lambda _gov: (READY, "cli reachable"))
-    monkeypatch.setattr(
-        er,
-        "_graphiti_mcp_http_health",
-        lambda: (DEGRADED, "not authenticated (blocker: allowlist)"),
-    )
+    for name in er._MEMORY_PROBE_SKIP_ENVS:
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels(R4="fail"))
     receipt = er.build_receipt(gov=gov, workspace=str(gov))
     assert receipt["memory_cli_status"] == READY
+    assert receipt["memory_control_plane_status"] == READY
     assert receipt["memory_mcp_status"] == DEGRADED
-    assert receipt["Graphiti_reachability"] == READY
     assert receipt["overall_readiness"] == DEGRADED
 
 
-def test_graphiti_probe_does_not_call_broker(tmp_path: Path, monkeypatch) -> None:
+def test_memory_probe_does_not_call_broker(tmp_path: Path, monkeypatch) -> None:
     gov = _init_fake_gov(tmp_path, merge_denies=True)
     called = {"broker": False}
 
@@ -167,22 +192,16 @@ def test_graphiti_probe_does_not_call_broker(tmp_path: Path, monkeypatch) -> Non
         called["broker"] = True
         raise AssertionError("probe_broker must not run")
 
-    monkeypatch.setattr(er, "_graphiti_cli_health", lambda _gov: (READY, "cli reachable"))
-    monkeypatch.setattr(er, "_graphiti_mcp_http_health", lambda: (READY, "front door reachable"))
+    for name in er._MEMORY_PROBE_SKIP_ENVS:
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels())
     monkeypatch.setattr(er, "_broker_probe", _no_broker, raising=False)
     home = _fake_home(tmp_path, mcp="READY")
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
     receipt = er.build_receipt(gov=gov, workspace=str(gov))
     assert called["broker"] is False
-    assert receipt["Graphiti_reachability"] == READY
-    # Only known blocker classes are emitted; an unknown value is mapped away so
-    # no probe-derived string is printed verbatim.
-    _, note = er._graphiti_health({"ok": False, "primary_blocker": "identity"})
-    assert "identity" in note
-    _, other = er._graphiti_health({"ok": False, "primary_blocker": "ghs_leaked_token_value"})
-    assert "ghs_leaked_token_value" not in other
-    assert "unknown" in other
+    assert receipt["memory_control_plane_status"] == READY
 
 
 # --- Integration: build a fake governance clone + fake $HOME -------------------
@@ -268,8 +287,9 @@ def _fake_home(tmp_path: Path, *, mcp: str = "READY") -> Path:
 def _build(gov: Path, home: Path, monkeypatch) -> dict:
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
-    monkeypatch.setattr(er, "_graphiti_cli_health", lambda _gov: (READY, "cli reachable"))
-    monkeypatch.setattr(er, "_graphiti_mcp_http_health", lambda: (READY, "front door reachable"))
+    for name in er._MEMORY_PROBE_SKIP_ENVS:
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels())
     return er.build_receipt(gov=gov, workspace=str(gov))
 
 
@@ -280,7 +300,7 @@ def test_ready_only_when_all_components_pass(tmp_path: Path, monkeypatch) -> Non
     assert receipt["merge_authority_status"] == READY
     assert receipt["Makefile_facade_status"] == READY
     assert receipt["dispatcher_status"] == READY
-    assert receipt["Graphiti_reachability"] == READY
+    assert receipt["memory_control_plane_status"] == READY
     assert receipt["interpreter_importable_status"] == READY
     assert receipt["overall_readiness"] == READY, receipt["warnings"]
     # Required fields present.
@@ -386,32 +406,35 @@ def test_stale_sha_prevents_ready(tmp_path: Path, monkeypatch) -> None:
     assert any("freshness" in w for w in receipt["warnings"])
 
 
-def test_transport_auth_is_measured_not_assumed(tmp_path: Path, monkeypatch) -> None:
-    """A reachable Graphiti must never be reported as an authenticated one.
+def test_memory_transport_is_a_posture_not_a_measured_credential(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Stage C9: memory is stdio to the bound runtime; there is no bearer to measure.
 
-    The module docstring's truth rule says exactly this, but every health probe
-    measures reachability only, and the READY reason used to read "cli
-    authenticated". A model-controlled surface carries no GRAPHITI_MCP_TOKEN, so
-    a receipt there must say UNAUTHENTICATED while still reporting the plane
-    reachable and the overall verdict READY — the absent token is the intended
-    posture, not a degradation.
+    The receipt reports the transport as a constant observation and never a
+    dimension, and the retired provider fields never come back under any
+    spelling — a token in the environment changes nothing, because nothing on
+    this surface reads one.
     """
     gov = _init_fake_gov(tmp_path, merge_denies=True)
     home = _fake_home(tmp_path, mcp="READY")
-    monkeypatch.delenv("GRAPHITI_MCP_TOKEN", raising=False)
     receipt = _build(gov, home, monkeypatch)
-    assert receipt["graphiti_transport_auth"] == "UNAUTHENTICATED"
-    assert receipt["Graphiti_reachability"] == READY
+    assert receipt["memory_transport"] == er.MEMORY_TRANSPORT == "stdio-control-plane"
+    assert receipt["memory_control_plane_status"] == READY
     assert receipt["overall_readiness"] == READY, receipt["warnings"]
 
     monkeypatch.setenv("GRAPHITI_MCP_TOKEN", "probe-only-not-a-real-token")
-    authed = _build(gov, home, monkeypatch)
-    assert authed["graphiti_transport_auth"] == "AUTHENTICATED"
+    again = _build(gov, home, monkeypatch)
+    assert again["memory_transport"] == "stdio-control-plane"
 
-    # The old field name asserted an authentication nothing measured. It must
-    # not come back under any spelling.
-    assert "Graphiti_authenticated_health" not in receipt
-    assert "authenticated" not in str(receipt["notes"].get("Graphiti_reachability", ""))
+    for retired in (
+        "Graphiti_reachability",
+        "Graphiti_authenticated_health",
+        "graphiti_transport_auth",
+    ):
+        assert retired not in receipt
+        assert retired not in receipt["notes"]
+    assert "authenticated" not in str(receipt["notes"].get("memory_control_plane_status", ""))
 
 
 def test_receipt_carries_a_write_time_and_expires(tmp_path: Path, monkeypatch) -> None:

@@ -177,20 +177,17 @@ def _check_env_example(envf: Path, agent: dict, production_url: str | None) -> N
             )
     url_m = re.search(r"^GRAPHITI_MCP_URL=(.+)$", text, re.M)
     tok_m = re.search(r"^GRAPHITI_MCP_TOKEN=(.+)$", text, re.M)
-    # Realignment stage C8: the provider URL is no longer required on any
-    # surface — memory is reached through the canonical control plane
-    # (ops/memory), and the direct front door is retired. A surviving
-    # example line is tolerated until the secret plane is rewritten (C9),
-    # but it must at least name the cloud path, never a loopback tunnel.
-    if url_m and production_url:
-        got = url_m.group(1).strip()
-        expected_full = production_url.rstrip("/") + "/graphiti/mcp"
-        if got not in (production_url, expected_full) and not got.endswith("/graphiti/mcp"):
-            err(
-                "A2",
-                f"{envf.name}: GRAPHITI_MCP_URL='{got}' "
-                f"expected '{expected_full}' (cloud Graphiti path)",
-            )
+    # Realignment stage C9: no surface example may assign the retired
+    # provider transport. Memory is reached through the canonical control
+    # plane (ops/memory), bound per checkout; a URL here would re-create the
+    # direct front door the campaign removed.
+    del production_url
+    if url_m:
+        err(
+            "A2",
+            f"{envf.name}: GRAPHITI_MCP_URL is a retired provider transport (stage C9); "
+            "memory is the canonical l9-graphite-memory control plane, never a URL",
+        )
     # A2 (inverted by the zero-static-secret contract, §12/S3): the bearer must
     # be ABSENT from an agent surface example, not present-as-a-placeholder.
     #

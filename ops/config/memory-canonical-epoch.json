@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0.0",
+  "description": "The canonical memory epoch: from this point every memory byte leaving or entering Cursor-Governance crosses the l9-graphite-memory control plane, and the provider is a projection memory owns. Written at campaign stage C10 of CURSOR_GOVERNANCE_MEMORY_CONTROL_PLANE_REALIGNMENT_BUILD_PLAN; read by tests/ops/memory/test_canonical_epoch.py. It grants nothing.",
+  "epoch": {
+    "started_at": "2026-09-06T00:00:00+00:00",
+    "campaign_stage": "C10",
+    "memory_release": "2.3.0",
+    "memory_source_ref": "95169760c09b18038e6890d1191106c9a17d1504",
+    "control_plane_contract": "memory-control-plane/v1",
+    "continuation_schema": "cursor.continuation/v2"
+  },
+  "authority": {
+    "canonical": "l9-graphite-memory MemoryService (Quantum-L9/l9-graphiti-memory)",
+    "cursor_boundary": "ops/memory",
+    "provider_role": "projection-only; receives records solely through canonical projection",
+    "rollback": "no rollback path restores a direct provider write (plan §30)"
+  },
+  "session_lifecycle": {
+    "hydration": "ops/memory/hydration.py (canonical_hydrate) since C4",
+    "close": "ops/graphiti/hydration/close_session.py -> ingest-governed-candidate + memory.close since C6",
+    "mcp_instantiation": "ops/memory/mcp_instantiation.py + l9-memory client cursor install/verify since C7",
+    "claude_hooks": "environment/agents/adapters/claude-code/memory/memory_bridge.py since C8",
+    "cursor_gates": "ops/graphiti/graphiti_gate_lib.py over ops/memory/session_state.py since C8",
+    "secret_plane": "no provider URL or bearer on any surface since C9",
+    "offline_distill": "ops/graphiti/distill_queue/worker.py through the control plane since C10",
+    "generated_data": "environment/agents/generated-data/adapters/ingest_memory_candidate.py through the control plane since C10"
+  },
+  "legacy_reconciliation": {
+    "classifier": "ops/memory/legacy_reconciliation.py",
+    "classes": ["A_canonical_known", "B_provider_only_continuation", "C_provider_only_durable", "D_malformed", "E_duplicate_in_export", "F_forbidden_namespace", "G_refused_by_memory"],
+    "export_schema": "cursor.legacy-provider-export/v1",
+    "provenance": "Cursor-Governance/legacy-reconciliation; tag legacy_unverified",
+    "input": "a provider export produced outside this boundary; Cursor-Governance never reads the provider"
+  },
+  "remaining_legacy": {
+    "note": "Inventoried by ops/config/memory-egress-allowlist.json; every entry names the stage that deletes it. Warning mode until C11 flips ops/scripts/validate_memory_egress_boundary.py to --enforce.",
+    "shadow_reader": "ops/graphiti/hydration/compile_session_packet.py (MEMORY_LEGACY_SHADOW / MEMORY_LEGACY_CONTINUATION, off by default) — deleted at C11",
+    "provider_client": "ops/graphiti/graphiti_memory_client.py — tombstoned at C11"
+  }
+}

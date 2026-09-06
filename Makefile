@@ -929,6 +929,11 @@ memory-mcp-install:
 memory-mcp-check:
 	PYTHONPATH="$(CURDIR)" $(PYTHON) -m ops.memory.mcp_instantiation --check --no-receipt $(if $(MCP_PATH),--path "$(MCP_PATH)",)
 
+## Classify a provider export (A-G) and admit provider-only records canonically (stage C10).
+## Dry run by default; MEMORY_RECONCILE_APPLY=1 commits. EXPORT=<path to cursor.legacy-provider-export/v1 JSON>.
+memory-reconcile-legacy:
+	PYTHONPATH="$(CURDIR)" $(PYTHON) -m ops.memory.legacy_reconciliation --export "$(EXPORT)" --workspace "$(if $(WS),$(WS),$(CURDIR))" $(if $(MEMORY_RECONCILE_APPLY),--apply,)
+
 ## --- Claude Desktop MCP (environment/agents/adapters/claude-desktop) --------
 ## Render claude_desktop_config.json from environment/mcp/master.mcp.json; the memory
 ## entry is written by the memory package configurator when L9_MEMORY_INTERPRETER is set.

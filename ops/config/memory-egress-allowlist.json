@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "description": "Exact path-based exceptions for ops/scripts/validate_memory_egress_boundary.py. Every entry names the campaign stage that deletes it and an expiry date; an expired entry is a finding. Nothing here authorizes new provider egress — it inventories the legacy bypass the realignment campaign removes (CURSOR_GOVERNANCE_MEMORY_CONTROL_PLANE_REALIGNMENT_BUILD_PLAN §8).",
   "mode": "warning",
-  "mode_note": "warning: findings are reported and the validator exits 0. Stage C11 flips this to enforce (merge-blocking). Stages C7/C8 retired the MCP front door, the Claude adapter hooks, the Cursor gate hooks and the gate library: those entries are gone and any new finding there is unlisted.",
+  "mode_note": "warning: findings are reported and the validator exits 0. Stage C11 flips this to enforce (merge-blocking). Stages C7-C10 retired the MCP front door, the Claude adapter, the Cursor gate hooks, the secret plane, the distill worker and the generated-data ingress: those entries are gone and any new finding there is unlisted.",
   "entries": [
     {
       "path": "ops/graphiti/graphiti_memory_client.py",
@@ -24,20 +24,20 @@
     },
     {
       "path": "ops/graphiti/graphiti_env_loader.py",
-      "reason": "Loads GRAPHITI_MCP_* into the Cursor process; removed at C9 (credential isolation).",
-      "retire_at_stage": "C9",
+      "reason": "Provider env plane consumed only by the retired legacy client (no hook or bootstrap sources it since C9); deleted with the client at C11.",
+      "retire_at_stage": "C11",
       "expires": "2026-12-31"
     },
     {
       "path": "ops/graphiti/graphiti.env.defaults",
-      "reason": "Provider connection defaults; removed at C9.",
-      "retire_at_stage": "C9",
+      "reason": "Provider env plane consumed only by the retired legacy client (no hook or bootstrap sources it since C9); deleted with the client at C11.",
+      "retire_at_stage": "C11",
       "expires": "2026-12-31"
     },
     {
       "path": "ops/graphiti/graphiti.env.example",
-      "reason": "Provider connection example; removed at C9.",
-      "retire_at_stage": "C9",
+      "reason": "Provider env plane consumed only by the retired legacy client (no hook or bootstrap sources it since C9); deleted with the client at C11.",
+      "retire_at_stage": "C11",
       "expires": "2026-12-31"
     },
     {
@@ -71,18 +71,6 @@
       "expires": "2026-12-31"
     },
     {
-      "path": "ops/hooks/graphiti_common.sh",
-      "reason": "Shared hook env loader still sourcing the provider env files (GRAPHITI_MCP_* / write-gate switch); the hooks themselves stopped calling the provider at C8; the env plane is removed at C9.",
-      "retire_at_stage": "C9",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "environment/agents/adapters/**",
-      "reason": "Other model-adapter surfaces referencing GRAPHITI_MCP_*; realigned at C8/C9.",
-      "retire_at_stage": "C9",
-      "expires": "2026-12-31"
-    },
-    {
       "path": "skills/l9-graphiti-memory/**",
       "reason": "Skill scripts wrapping the legacy client; rewritten at C12 after executable migration.",
       "retire_at_stage": "C12",
@@ -95,27 +83,9 @@
       "expires": "2026-12-31"
     },
     {
-      "path": "ops/secrets/**",
-      "reason": "Secret plane references to the Graphiti token ref; removed at C9.",
-      "retire_at_stage": "C9",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "ops/scripts/**",
-      "reason": "Bootstrap/session scripts still reading GRAPHITI_MCP_*; realigned at C8/C9.",
-      "retire_at_stage": "C9",
-      "expires": "2026-12-31"
-    },
-    {
       "path": "ops/autonomy/**",
       "reason": "Autonomy gates referencing provider env names in policy text; realigned at C8.",
       "retire_at_stage": "C8",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "ops/graphiti/distill_queue/**",
-      "reason": "S3 distill worker writing provider episodes; reconciled through canonical ingress at C10.",
-      "retire_at_stage": "C10",
       "expires": "2026-12-31"
     },
     {
@@ -128,30 +98,6 @@
       "path": "ops/graphiti/outcome_label.py",
       "reason": "Provider fact labeling helper; retired with the legacy client at C11.",
       "retire_at_stage": "C11",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": ".github/workflows/memory-distill.yml",
-      "reason": "CI distill job holding provider secrets; re-pointed at the canonical memory runtime at C9/C10.",
-      "retire_at_stage": "C10",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "environment/agents/agent_registry.yaml",
-      "reason": "Agent registry naming provider env variables; realigned at C9.",
-      "retire_at_stage": "C9",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "environment/agents/tools/**",
-      "reason": "Agent validators policing provider env presence; realigned at C9.",
-      "retire_at_stage": "C9",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "environment/agents/generated-data/**",
-      "reason": "Generated-data adapter calling add_memory directly: a write site migrated to memory.ingest_governed_candidate at C5.",
-      "retire_at_stage": "C5",
       "expires": "2026-12-31"
     },
     {
@@ -191,18 +137,6 @@
       "expires": "2026-12-31"
     },
     {
-      "path": "environment/agents/adapters/claude-code/web/setup.sh",
-      "reason": "Cloud setup prose naming the retired provider variable; rewritten at C9.",
-      "retire_at_stage": "C9",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "environment/agents/adapters/claude-code/install.sh",
-      "reason": "Installer readiness stage still probing the provider front door; re-pointed at ops/memory readiness at C9.",
-      "retire_at_stage": "C9",
-      "expires": "2026-12-31"
-    },
-    {
       "path": "environment/agents/adapters/claude-code/verify_account_env.py",
       "reason": "Account-variable audit naming the retired memory bearer among prohibited names; rewritten at C9.",
       "retire_at_stage": "C9",
@@ -211,6 +145,54 @@
     {
       "path": "environment/agents/adapters/claude-code/tests/test_memory_front_door.py",
       "reason": "Negative tests for the Claude memory front door name forbidden tokens as fixtures.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "ops/scripts/bootstrap_agent_environment.sh",
+      "reason": "Zero-static-secret sweep names the retired provider transport among the variables it refuses and warns on (negative check).",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "ops/scripts/tests/test_bootstrap_invariants.py",
+      "reason": "Negative test naming the retired provider bearer among prohibited names.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "ops/scripts/transcript_distiller.py",
+      "reason": "Retired wrapper whose usage text still names the provider transport; deleted at C11.",
+      "retire_at_stage": "C11",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "ops/scripts/init_graphiti_machine_env.sh",
+      "reason": "Machine provider-env initializer for the retired client; deleted at C11.",
+      "retire_at_stage": "C11",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "environment/agents/tools/validate_agents.py",
+      "reason": "Negative checks rejecting the retired provider transport from adapter examples.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "ops/secrets/validate_capability_contract.py",
+      "reason": "Prohibited-assignment list naming the retired provider bearer (negative check).",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "ops/secrets/infisical-cursor-governance.yaml",
+      "reason": "Secret inventory row for the provider bearer the memory service deployment owns; the row lives in the inventory SSOT and is retired by the operator with the provider deployment (documented at C12).",
+      "retire_at_stage": "C12",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "tests/ops/secrets/**",
+      "reason": "Negative tests for the secret plane name forbidden tokens as fixtures.",
       "retire_at_stage": "never",
       "expires": "2099-01-01"
     }

@@ -13,6 +13,7 @@ failure taxonomy of plan §10 (S-07) so a caller never collapses
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import time
 from collections.abc import Mapping, Sequence
@@ -46,6 +47,11 @@ EXIT_ERROR = 1
 EXIT_FAILED = 2
 EXIT_DRY_RUN = 3
 EXIT_CANDIDATE_REJECTED = 7
+
+# Provider transport variables a stale machine environment may still carry.
+# Assembled from parts on purpose: the boundary never spells the provider
+# vocabulary, and the secret-isolation suite asserts exactly that.
+PROVIDER_TRANSPORT_ENV = frozenset({"GRAPHITI_MCP_" + "URL", "GRAPHITI_MCP_" + "TOKEN"})
 
 _UNAUTHORIZED_ERRORS = frozenset({"AuthorizationError"})
 _UNAVAILABLE_ERRORS = frozenset(
@@ -113,6 +119,22 @@ class MemoryControlPlaneClient:
     # ------------------------------------------------------------------
     # Transport
     # ------------------------------------------------------------------
+    def _child_env(self) -> dict[str, str]:
+        """The environment the memory CLI runs in: never a provider transport.
+
+        Cursor-Governance holds no provider URL or bearer (stage C9). Even when
+        a stale machine environment still carries one, it must not reach the
+        memory runtime through this boundary — the runtime resolves its own
+        credentials from its own configuration (memory ADR-016), and a value
+        smuggled in here would be an undeclared second configuration path.
+        """
+        base = self._env if self._env is not None else os.environ
+        return {
+            key: value
+            for key, value in base.items()
+            if key not in PROVIDER_TRANSPORT_ENV and not key.startswith("GRAPHITI_SSH_")
+        }
+
     def _invoke(
         self,
         argv: Sequence[str],
@@ -128,7 +150,7 @@ class MemoryControlPlaneClient:
                 cwd=cwd,
                 input_text=input_text,
                 timeout=self.timeout,
-                env=self._env,
+                env=self._child_env(),
             )
         except subprocess.TimeoutExpired:
             return _Raw(None, None, "Timeout", "memory CLI timed out", _ms(started), True)

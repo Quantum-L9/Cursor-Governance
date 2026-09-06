@@ -580,10 +580,10 @@ except Exception:
     sys.exit(0)
 print("memory.cli=" + str(d.get("memory_cli_status", "UNKNOWN")))
 print("memory.mcp=" + str(d.get("memory_mcp_status", "UNKNOWN")))
-print("graphiti_reachability=" + str(d.get("Graphiti_reachability", "UNKNOWN")))
-print("graphiti_transport_auth=" + str(d.get("graphiti_transport_auth", "UNKNOWN")))
+print("memory_control_plane=" + str(d.get("memory_control_plane_status", "UNKNOWN")))
+print("memory_transport=" + str(d.get("memory_transport", "UNKNOWN")))
 notes = d.get("notes") if isinstance(d.get("notes"), dict) else {}
-print("primary_blocker=" + str(notes.get("Graphiti_reachability") or "none"))
+print("primary_blocker=" + str(notes.get("memory_control_plane_status") or "none"))
 ' 2>/dev/null || true)"
   [ -n "$parsed" ] || return 0
   LINES+=("--- capability plane readiness ---")
