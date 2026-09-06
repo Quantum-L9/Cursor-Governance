@@ -920,3 +920,12 @@ memory-readiness:
 ## Provider egress firewall: warning mode until stage C11 (MEMORY_EGRESS_ENFORCE=1 to block).
 memory-egress-check:
 	$(PYTHON) ops/scripts/validate_memory_egress_boundary.py $(if $(MEMORY_EGRESS_ENFORCE),--enforce,)
+
+## --- Claude Desktop MCP (environment/agents/adapters/claude-desktop) --------
+## Render claude_desktop_config.json from environment/mcp/master.mcp.json; the memory
+## entry is written by the memory package configurator when L9_MEMORY_INTERPRETER is set.
+claude-desktop-install:
+	$(PYTHON) environment/agents/adapters/claude-desktop/render_claude_desktop_config.py $(if $(MEMORY_VERIFY_MCP),--verify,)
+
+claude-desktop-check:
+	$(PYTHON) environment/agents/adapters/claude-desktop/render_claude_desktop_config.py --check
