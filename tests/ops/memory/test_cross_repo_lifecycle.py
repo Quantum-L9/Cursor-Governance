@@ -404,8 +404,13 @@ def test_lifecycle_against_the_real_memory_runtime(runtime, tmp_path: Path, monk
     assert replay.ok and replay.receipt.replayed is True
     assert replay.receipt.replay_payload_matched is True, replay.receipt.raw
     assert replay.receipt.payload_drifted is False
-    # A replay under the same key with a different summary is not silently the
-    # same close: memory reports the drift and Cursor's view exposes it.
+    # A replay under the same key with a different summary is NOT a successful
+    # close (audit CG-P1-01). This assertion used to read `drifted.ok`, which
+    # is the defect written down as an expectation: memory preserves the first
+    # commit and returns that record, so the receipt looks committed, and
+    # treating it as this request's success lets a close that never committed
+    # discharge a close obligation. Against the real runtime the outcome is an
+    # idempotency conflict, and memory's own forensics are what prove it.
     drifted = client.close(
         workspace=str(project),
         namespace=namespace,
@@ -414,11 +419,29 @@ def test_lifecycle_against_the_real_memory_runtime(runtime, tmp_path: Path, monk
         capsule_digest=obligation["close_capsule_digest"],
         idempotency_key=obligation["close_idempotency_key"],
     )
-    assert drifted.ok and drifted.receipt.replayed is True
+    assert drifted.status is OutcomeStatus.IDEMPOTENCY_CONFLICT, drifted.status
+    assert drifted.ok is False
+    assert "already committed a different close" in (drifted.error or "")
+    assert drifted.receipt.replayed is True
     assert drifted.receipt.replay_payload_matched is False
     assert drifted.receipt.payload_drifted is True
     assert drifted.receipt.stored_digest != drifted.receipt.replay_digest
     assert any("differs" in w for w in drifted.receipt.warnings), drifted.receipt.raw
+    # Memory is right to keep the first close, and it is still the record it
+    # returns — it is simply not this request's.
+    assert drifted.receipt.committed is True
+    assert drifted.receipt.record_id == replay.receipt.record_id
+    # The conflict does not consume the key: the originally committed request
+    # still replays as one logical close.
+    settled = client.close(
+        workspace=str(project),
+        namespace=namespace,
+        summary=obligation["close_summary"],
+        session_id="proof-close",
+        capsule_digest=obligation["close_capsule_digest"],
+        idempotency_key=obligation["close_idempotency_key"],
+    )
+    assert settled.ok and settled.receipt.replay_payload_matched is True
     # The next session of the same task recovers exactly that capsule; a
     # SessionStart with no task falls back to the newest repository capsule
     # and says so.
