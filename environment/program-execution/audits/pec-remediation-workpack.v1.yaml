@@ -227,3 +227,5 @@ legacy_reconciliation:
   proven_by: core/program-execution-controller-template/scripts/tests/test_legacy_reconciliation.py
 pre_existing_findings_repaired:
 - core/tests/test_replan_integration.py encoded the pre-hardening reorder contract (failed on main); repinned to REPLAN_CONTRACT reorder_where_deps_permit
+superseded_tests_repinned:
+- scripts/tests/test_execution_completeness.py::ScopedRelockTest pinned the P0-002 laundering contract ("relock absorbs non-task program drift", whole digest set adopted) on hand-built locks that fail integrity; repinned on real Blueprints to PROGRAM_LOCK_GLOBAL_DRIFT / RELOCK_SCOPE_INSUFFICIENT refusals and moved-digest-only adoption
