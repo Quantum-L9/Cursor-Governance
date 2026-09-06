@@ -15,6 +15,8 @@ from ops.memory import runtime_binding as rb
 
 CONTRACT = "memory-control-plane/v1"
 EXPECTED_VERSION = rb.BindingManifest.load().expected_package_version
+#: The audited release digest the manifest pins; the fake install carries it.
+ARTIFACT_SHA256 = rb.BindingManifest.load().artifact_sha256
 
 
 def capabilities_payload(
@@ -63,6 +65,9 @@ class Environment:
         capabilities: dict[str, Any] | None = None,
         capabilities_rc: int = 0,
         schema_export: dict[str, Any] | None = None,
+        artifact_sha256: str | None = "__manifest__",
+        record_digest: str | None = None,
+        editable: bool = False,
     ) -> None:
         self.root = root
         self.bin = root / "bin"
@@ -86,6 +91,19 @@ class Environment:
             if schema_export is None
             else schema_export
         )
+        # Installed-artifact provenance as PEP 610 records it (CG-P1-03).
+        if artifact_sha256 == "__manifest__":
+            artifact_sha256 = ARTIFACT_SHA256
+        self.direct_url = (
+            {
+                "url": f"file:///build/l9_graphite_memory-{version}-py3-none-any.whl",
+                "archive_info": {"hashes": {"sha256": artifact_sha256}},
+            }
+            if artifact_sha256
+            else ({"url": "file:///checkout", "dir_info": {"editable": True}} if editable else None)
+        )
+        self.record_digest = record_digest
+        self.editable = editable
         self.calls: list[list[str]] = []
 
     def run(
@@ -110,6 +128,9 @@ class Environment:
                 "version": self.version,
                 "module": self.module if self.version else None,
                 "error": None if self.version else "PackageNotFoundError: l9-graphite-memory",
+                "direct_url": self.direct_url,
+                "record_digest": self.record_digest,
+                "editable": self.editable,
             }
             return subprocess.CompletedProcess(args, 0, json.dumps(payload) + "\n", "")
         if args[0] == str(self.cli) and args[1:] == ["capabilities"]:
@@ -367,3 +388,147 @@ def test_case_sensitivity_follows_the_platform(tmp_path: Path) -> None:
     variant = str(prefix).replace("Env", "ENV") + "/lib/pkg.py"
     expected = Path(variant).resolve().is_relative_to(Path(str(prefix)).resolve())
     assert rb._path_contains(str(prefix), variant) is expected
+
+
+# ---------------------------------------------------------------------------
+# CG-P1-03: STATUS_EXACT must mean the exact artifact
+#
+# Version + contract + "module under the interpreter prefix" are satisfied
+# identically by every build of a version. A status named EXACT reachable from
+# those alone says nothing about which build is installed, which is the whole
+# question a pinned release binding exists to answer.
+# ---------------------------------------------------------------------------
+
+
+def test_1_the_expected_artifact_is_exact(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
+    binding = bind(Environment(tmp_path))
+    assert binding.status == rb.STATUS_EXACT
+    assert binding.is_exact is True
+    assert binding.artifact_provenance == rb.PROVENANCE_ARTIFACT_DIGEST
+    assert binding.installed_artifact_digest == ARTIFACT_SHA256
+
+
+def test_2_same_version_different_artifact_is_not_exact(tmp_path: Path, monkeypatch) -> None:
+    """The case the old check could not see: the pinned version, a foreign build."""
+    monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
+    binding = bind(Environment(tmp_path, artifact_sha256="b" * 64))
+    assert binding.status == rb.STATUS_UNBOUND
+    assert binding.is_exact is False
+    assert any("same version, different build" in r for r in binding.reasons)
+
+
+def test_3_unproven_artifact_is_compatible_not_exact(tmp_path: Path, monkeypatch) -> None:
+    """Only version and contract provable -> the weaker status, by name."""
+    monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
+    binding = bind(Environment(tmp_path, artifact_sha256=None))
+    assert binding.status == rb.STATUS_COMPATIBLE
+    assert binding.is_exact is False
+    assert binding.ok is True  # usable, but never called exact
+    assert binding.artifact_provenance == rb.PROVENANCE_UNPROVEN
+    assert any("cannot be confirmed" in r for r in binding.reasons)
+
+
+def test_4_wrong_version_is_still_rejected(tmp_path: Path) -> None:
+    binding = bind(Environment(tmp_path, version="2.2.0"))
+    assert binding.status == rb.STATUS_UNBOUND
+
+
+def test_5_wrong_contract_version_is_still_rejected(tmp_path: Path) -> None:
+    env = Environment(tmp_path, capabilities=capabilities_payload(contract="memory/v2"))
+    binding = bind(env)
+    assert binding.status == rb.STATUS_UNBOUND
+    assert any("contract" in r for r in binding.reasons)
+
+
+def test_6_editable_install_is_never_production_exact(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
+    binding = bind(Environment(tmp_path, artifact_sha256=None, editable=True))
+    assert binding.status == rb.STATUS_COMPATIBLE
+    assert binding.is_exact is False
+    assert any("editable install" in r for r in binding.reasons)
+
+
+def test_7_development_checkout_keeps_its_own_status(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
+    checkout = tmp_path / "l9-graphiti-memory"
+    (checkout / "src" / "l9_graphite_memory").mkdir(parents=True)
+    (checkout / "src" / "l9_graphite_memory" / "__init__.py").write_text("", encoding="utf-8")
+    env = Environment(checkout / ".venv", artifact_sha256=None)
+    env.module = str(checkout / "src" / "l9_graphite_memory" / "__init__.py")
+    binding = rb.resolve_runtime_binding(env={rb.ENV_DEV_CHECKOUT: str(checkout)}, runner=env.run)
+    assert binding.status == rb.STATUS_DEVELOPMENT
+    assert binding.is_exact is False
+
+
+def test_8_foreign_install_of_the_same_version_is_refused(tmp_path: Path, monkeypatch) -> None:
+    """A wheel someone else built from the same tag: right version, right
+    contract, right layout, different bytes."""
+    monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
+    foreign = Environment(tmp_path, artifact_sha256="f" * 64)
+    assert bind(foreign).status == rb.STATUS_UNBOUND
+    assert bind(foreign).installed_artifact_digest == "f" * 64
+
+
+def test_9_record_digest_proves_the_artifact_when_pinned(tmp_path: Path, monkeypatch) -> None:
+    """Where an install left no archive hash, the installed RECORD digest is
+    the fallback proof — and it is a pin, not a self-report."""
+    monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
+    manifest = tmp_path / "binding.json"
+    _manifest_with(manifest, installed_record_digest="c" * 64)
+    env = Environment(tmp_path / "env", artifact_sha256=None, record_digest="c" * 64)
+    binding = bind(env, manifest_path=manifest)
+    assert binding.status == rb.STATUS_EXACT
+    assert binding.artifact_provenance == rb.PROVENANCE_RECORD_DIGEST
+
+    other = Environment(tmp_path / "env2", artifact_sha256=None, record_digest="d" * 64)
+    assert bind(other, manifest_path=manifest).status == rb.STATUS_UNBOUND
+
+
+def test_10_tampered_provenance_is_refused(tmp_path: Path, monkeypatch) -> None:
+    """A marker claiming the audited digest while the install is something
+    else is a contradiction, not weak evidence."""
+    monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
+    manifest = tmp_path / "binding.json"
+    _manifest_with(manifest, artifact_sha256="a" * 64)
+    binding = bind(Environment(tmp_path / "env", artifact_sha256="0" * 64), manifest_path=manifest)
+    assert binding.status == rb.STATUS_UNBOUND
+    assert any("is not the audited release" in r for r in binding.reasons)
+
+
+def test_11_required_exactness_refuses_a_compatible_build(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
+    env = Environment(tmp_path, artifact_sha256=None)
+    assert bind(env).status == rb.STATUS_COMPATIBLE
+    strict = rb.resolve_runtime_binding(
+        interpreter=str(env.interpreter), env={rb.ENV_REQUIRE_EXACT: "1"}, runner=env.run
+    )
+    assert strict.status == rb.STATUS_UNBOUND
+    assert any(rb.ENV_REQUIRE_EXACT in r for r in strict.reasons)
+
+
+def test_12_a_manifest_without_a_digest_cannot_yield_exact(tmp_path: Path, monkeypatch) -> None:
+    """The honest failure mode: nothing pinned means nothing proved, and the
+    status says so rather than borrowing the name."""
+    monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
+    manifest = tmp_path / "binding.json"
+    _manifest_with(manifest, artifact_sha256=None)
+    binding = bind(Environment(tmp_path / "env"), manifest_path=manifest)
+    assert binding.status == rb.STATUS_COMPATIBLE
+    assert any("records no artifact digest" in r for r in binding.reasons)
+
+
+def test_13_the_proof_shape_carries_the_artifact_evidence(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
+    proof = bind(Environment(tmp_path)).as_dict()
+    assert proof["binding_status"] == "exact"
+    assert proof["artifact_provenance"] == rb.PROVENANCE_ARTIFACT_DIGEST
+    assert proof["installed_artifact_digest"] == ARTIFACT_SHA256
+    assert proof["expected_artifact_digest"] == ARTIFACT_SHA256
+
+
+def _manifest_with(path: Path, **evidence: Any) -> None:
+    """A copy of the real manifest with the release evidence overridden."""
+    raw = json.loads(rb.DEFAULT_MANIFEST_PATH.read_text(encoding="utf-8"))
+    raw["release_evidence"] = {**(raw.get("release_evidence") or {}), **evidence}
+    path.write_text(json.dumps(raw), encoding="utf-8")

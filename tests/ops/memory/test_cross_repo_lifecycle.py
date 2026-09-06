@@ -35,12 +35,16 @@ import pytest
 
 from ops.graphiti.hydration import close_session as cs
 from ops.graphiti.hydration.session_latches import load_close_receipt
+from ops.memory.canonical_validation import (
+    ENV_REQUIRE_VALIDATION as ENV_REQUIRE_CANONICAL_VALIDATION,
+)
 from ops.memory.control_plane_client import MemoryControlPlaneClient, OutcomeStatus
 from ops.memory.hydration import canonical_hydrate
 from ops.memory.namespace_context import repository_state_digest, resolve_namespace_context
 from ops.memory.runtime_binding import (
     ENV_DEV_CHECKOUT,
     ENV_INTERPRETER,
+    ENV_REQUIRE_EXACT,
     BindingManifest,
     resolve_runtime_binding,
 )
@@ -116,6 +120,10 @@ def _record_evidence(binding, *, test: str) -> None:
             "memory_bound_version": binding.memory_version,
             "runtime_mode": binding.runtime_mode,
             "binding_status": binding.status,
+            "artifact_provenance": binding.artifact_provenance,
+            "installed_artifact_digest": binding.installed_artifact_digest,
+            "expected_artifact_digest": binding.expected_artifact_digest,
+            "contract_schema_digest": binding.schema_digest,
             "memory_cli": binding.memory_cli,
             "wheel_sha256": os.environ.get(ENV_WHEEL_SHA256) or None,
             "required": _required(),
@@ -149,6 +157,12 @@ def runtime(tmp_path: Path, request) -> tuple[MemoryControlPlaneClient, dict[str
             f"{ENV_REQUIRED}=1 but neither {ENV_DEV_CHECKOUT} nor {ENV_INTERPRETER} names a "
             "memory runtime: the required cross-repo proof cannot run, and must not skip"
         )
+    if _required():
+        # Fail closed for the whole required run: the artifact must be the
+        # audited one (CG-P1-03) and every receipt must satisfy the bound
+        # release's own contract (CG-P1-02). Neither may degrade silently.
+        env[ENV_REQUIRE_EXACT] = "1"
+        env[ENV_REQUIRE_CANONICAL_VALIDATION] = "1"
     binding = resolve_runtime_binding(env=env)
     assert binding.ok, binding.reasons
     assert binding.runtime_mode in ACCEPTED_MODES, binding.runtime_mode
@@ -158,6 +172,19 @@ def runtime(tmp_path: Path, request) -> tuple[MemoryControlPlaneClient, dict[str
         assert binding.runtime_mode == "pinned_environment", (
             f"{ENV_REQUIRED}=1 requires the pinned wheel via {ENV_INTERPRETER}, "
             f"got runtime_mode={binding.runtime_mode}"
+        )
+        # runtime_mode says *how* the runtime was chosen; it says nothing about
+        # which build is installed. Exactness is the artifact claim.
+        assert binding.is_exact, (
+            f"{ENV_REQUIRED}=1 requires the audited release artifact, got "
+            f"binding_status={binding.status} "
+            f"(provenance={binding.artifact_provenance}, "
+            f"installed={binding.installed_artifact_digest}, "
+            f"expected={binding.expected_artifact_digest}); reasons: {binding.reasons}"
+        )
+        assert binding.contract_schemas, (
+            "the bound release exported no canonical receipt schemas, so the proof would "
+            "validate nothing"
         )
     _record_evidence(binding, test=request.node.name)
     return MemoryControlPlaneClient(binding, env=env, session_id="proof-session"), env

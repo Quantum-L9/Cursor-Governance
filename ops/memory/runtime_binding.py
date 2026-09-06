@@ -39,8 +39,22 @@ MODE_PINNED = "pinned_environment"
 MODE_DEVELOPMENT = "development_checkout"
 
 STATUS_EXACT = "exact"
+#: Version and contract agree with the manifest, but the *artifact* was not
+#: proved (audit CG-P1-03). Two different builds of one version satisfy
+#: version + contract + containment identically, so a status named EXACT must
+#: not be reachable from those alone. This is the weaker, honest verdict.
+STATUS_COMPATIBLE = "compatible"
 STATUS_DEVELOPMENT = "development_checkout"
 STATUS_UNBOUND = "unbound"
+
+#: Turns STATUS_COMPATIBLE from "usable, and reported as unproved" into
+#: "refused". Set by the cross-repo proof and by production callers that
+#: require the audited artifact rather than a compatible build.
+ENV_REQUIRE_EXACT = "L9_MEMORY_REQUIRE_EXACT_ARTIFACT"
+
+PROVENANCE_ARTIFACT_DIGEST = "artifact_sha256"
+PROVENANCE_RECORD_DIGEST = "installed_record_digest"
+PROVENANCE_UNPROVEN = "unproven"
 
 Runner = Callable[..., "subprocess.CompletedProcess[str]"]
 
@@ -195,12 +209,23 @@ class BindingManifest:
     required_cli_operations: tuple[str, ...]
     source_ref: str | None
     path: str
+    #: Immutable release identity (audit CG-P1-03). ``artifact_sha256`` is the
+    #: wheel digest recorded when the release was built and audited;
+    #: ``installed_record_digest`` is the digest of that wheel's installed
+    #: RECORD, which is verifiable where the install left no direct-URL hash.
+    #: Either one proves the artifact; neither being present means exactness
+    #: cannot be claimed, only compatibility.
+    artifact_sha256: str | None = None
+    installed_record_digest: str | None = None
+    release_tag: str | None = None
+    memory_sha: str | None = None
 
     @classmethod
     def load(cls, path: Path | None = None) -> BindingManifest:
         manifest_path = Path(path or DEFAULT_MANIFEST_PATH)
         raw = json.loads(manifest_path.read_text(encoding="utf-8"))
         source = raw.get("source") or {}
+        evidence = raw.get("release_evidence") or {}
         return cls(
             distribution=str(raw["distribution"]),
             import_package=str(raw["import_package"]),
@@ -210,6 +235,10 @@ class BindingManifest:
             required_cli_operations=tuple(str(item) for item in raw["required_cli_operations"]),
             source_ref=str(source["ref"]) if source.get("ref") else None,
             path=str(manifest_path),
+            artifact_sha256=_optional_text(evidence.get("artifact_sha256")),
+            installed_record_digest=_optional_text(evidence.get("installed_record_digest")),
+            release_tag=_optional_text(evidence.get("release_tag")),
+            memory_sha=_optional_text(evidence.get("memory_sha")),
         )
 
 
@@ -238,10 +267,26 @@ class RuntimeBinding:
     contract_schemas: dict[str, Any] | None = field(default=None, repr=False)
     schema_digest: str | None = None
     schema_source: str | None = None
+    #: How the installed artifact was proved, and what it was proved to be
+    #: (audit CG-P1-03). ``PROVENANCE_UNPROVEN`` accompanies STATUS_COMPATIBLE.
+    artifact_provenance: str = PROVENANCE_UNPROVEN
+    installed_artifact_digest: str | None = None
+    expected_artifact_digest: str | None = None
+    release_tag: str | None = None
 
     @property
     def ok(self) -> bool:
-        return self.status in {STATUS_EXACT, STATUS_DEVELOPMENT}
+        return self.status in {STATUS_EXACT, STATUS_COMPATIBLE, STATUS_DEVELOPMENT}
+
+    @property
+    def is_exact(self) -> bool:
+        """The bound runtime is the audited release artifact, proved.
+
+        Never inferred from version, contract, or path containment: a status
+        named EXACT must mean the artifact, or it means nothing.
+        """
+
+        return self.status == STATUS_EXACT
 
     def as_dict(self) -> dict[str, Any]:
         """Bootstrap-diagnostic shape from plan §7. No secrets, no content."""
@@ -257,6 +302,10 @@ class RuntimeBinding:
             "module_path": self.module_path,
             "runtime_mode": self.runtime_mode,
             "binding_status": self.status,
+            "artifact_provenance": self.artifact_provenance,
+            "installed_artifact_digest": self.installed_artifact_digest,
+            "expected_artifact_digest": self.expected_artifact_digest,
+            "release_tag": self.release_tag,
             "path_shadow": self.path_shadow,
             "reasons": list(self.reasons),
             "manifest": self.manifest_path,
@@ -274,9 +323,15 @@ def _unbound(
     module_path: str | None = None,
     path_shadow: str | None = None,
     contract_version: str | None = None,
+    artifact_provenance: str = PROVENANCE_UNPROVEN,
+    installed_artifact_digest: str | None = None,
 ) -> RuntimeBinding:
     return RuntimeBinding(
         status=STATUS_UNBOUND,
+        artifact_provenance=artifact_provenance,
+        installed_artifact_digest=installed_artifact_digest,
+        expected_artifact_digest=manifest.artifact_sha256 or manifest.installed_record_digest,
+        release_tag=manifest.release_tag,
         runtime_mode=mode,
         memory_package=manifest.distribution,
         expected_version=manifest.expected_package_version,
@@ -548,8 +603,53 @@ def resolve_runtime_binding(
     )
     reasons.extend(schema_reasons)
 
+    proven, provenance, installed_digest, provenance_reasons = _verify_artifact_provenance(
+        manifest, probe_payload
+    )
+    reasons.extend(provenance_reasons)
+    if provenance == "contradicted":
+        # The digest is present and disagrees: a foreign build of the pinned
+        # version, which is the case a version check cannot see at all.
+        return _unbound(
+            manifest,
+            mode=mode,
+            reasons=reasons,
+            artifact_provenance=provenance,
+            installed_artifact_digest=installed_digest,
+            interpreter=str(interpreter_path),
+            memory_cli=str(memory_cli),
+            memory_version=str(version),
+            module_path=str(module_path),
+            path_shadow=path_shadow,
+            contract_version=capabilities.contract_version,
+        )
+
+    if mode == MODE_DEVELOPMENT:
+        status = STATUS_DEVELOPMENT
+    elif proven:
+        status = STATUS_EXACT
+    else:
+        status = STATUS_COMPATIBLE
+    if status is STATUS_COMPATIBLE and _require_exact_artifact(environment):
+        return _unbound(
+            manifest,
+            mode=mode,
+            reasons=[
+                *reasons,
+                f"{ENV_REQUIRE_EXACT} demands the audited artifact and it was not proved",
+            ],
+            artifact_provenance=provenance,
+            installed_artifact_digest=installed_digest,
+            interpreter=str(interpreter_path),
+            memory_cli=str(memory_cli),
+            memory_version=str(version),
+            module_path=str(module_path),
+            path_shadow=path_shadow,
+            contract_version=capabilities.contract_version,
+        )
+
     return RuntimeBinding(
-        status=STATUS_DEVELOPMENT if mode == MODE_DEVELOPMENT else STATUS_EXACT,
+        status=status,
         runtime_mode=mode,
         memory_package=manifest.distribution,
         expected_version=manifest.expected_package_version,
@@ -566,7 +666,95 @@ def resolve_runtime_binding(
         contract_schemas=schemas,
         schema_digest=schema_digest,
         schema_source=schema_source,
+        artifact_provenance=provenance,
+        installed_artifact_digest=installed_digest,
+        expected_artifact_digest=manifest.artifact_sha256 or manifest.installed_record_digest,
+        release_tag=manifest.release_tag,
     )
+
+
+def _require_exact_artifact(env: Mapping[str, str]) -> bool:
+    return str(env.get(ENV_REQUIRE_EXACT, "")).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _verify_artifact_provenance(
+    manifest: BindingManifest, probe_payload: Mapping[str, Any]
+) -> tuple[bool, str, str | None, list[str]]:
+    """Decide whether the *installed artifact* is the audited release.
+
+    Returns ``(proven, method, installed_digest, reasons)``. ``proven`` is
+    False when the artifact could not be established — which yields
+    STATUS_COMPATIBLE, never STATUS_EXACT.
+
+    Version, contract and containment are all satisfied identically by two
+    different builds of one version, so none of them is artifact identity.
+    What distinguishes builds is a digest of the thing installed:
+
+    - PEP 610 ``direct_url.json``: pip and uv record the archive a wheel came
+      from and, when the install named a hash, that hash. This is the wheel
+      sha256 the release recorded, verified in place.
+    - the installed RECORD digest: RECORD lists every installed file with its
+      own sha256, so a digest over it separates builds even when the install
+      left no archive hash.
+
+    A digest that is present and *disagrees* is not weak evidence, it is
+    contradiction: the caller turns it into UNBOUND rather than COMPATIBLE.
+    """
+
+    reasons: list[str] = []
+    direct_url = probe_payload.get("direct_url") or {}
+    record_digest = _optional_text(probe_payload.get("record_digest"))
+
+    if probe_payload.get("editable"):
+        return (
+            False,
+            PROVENANCE_UNPROVEN,
+            record_digest,
+            ["installed as an editable install, which has no immutable artifact identity"],
+        )
+
+    archive = direct_url.get("archive_info") or {}
+    hashes = archive.get("hashes") or {}
+    installed_wheel_sha = _optional_text(hashes.get("sha256")) or _optional_text(
+        archive.get("hash", "").split("=", 1)[-1] if archive.get("hash") else None
+    )
+    if manifest.artifact_sha256 and installed_wheel_sha:
+        if installed_wheel_sha == manifest.artifact_sha256:
+            return True, PROVENANCE_ARTIFACT_DIGEST, installed_wheel_sha, reasons
+        return (
+            False,
+            "contradicted",
+            installed_wheel_sha,
+            [
+                f"installed artifact sha256 {installed_wheel_sha} is not the audited release "
+                f"{manifest.artifact_sha256}: same version, different build"
+            ],
+        )
+
+    if manifest.installed_record_digest and record_digest:
+        if record_digest == manifest.installed_record_digest:
+            return True, PROVENANCE_RECORD_DIGEST, record_digest, reasons
+        return (
+            False,
+            "contradicted",
+            record_digest,
+            [
+                f"installed RECORD digest {record_digest} is not the audited release "
+                f"{manifest.installed_record_digest}: same version, different build"
+            ],
+        )
+
+    if not manifest.artifact_sha256 and not manifest.installed_record_digest:
+        reasons.append(
+            "the binding manifest records no artifact digest, so only version and contract "
+            "can be proved; this is a compatible build, not the audited release"
+        )
+    else:
+        reasons.append(
+            "the installed distribution carries no artifact provenance (no PEP 610 archive "
+            "hash and no readable RECORD), so the audited artifact cannot be confirmed"
+        )
+    return False, PROVENANCE_UNPROVEN, record_digest, reasons
 
 
 def _export_contract_schemas(

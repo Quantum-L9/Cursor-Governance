@@ -83,6 +83,42 @@ which `memory-binding.json` moves from the git SHA to the release tag and
 `pyproject.toml` / `uv.lock` carry the dependency. Until then the binding is
 integration-grade by construction and says so in `binding_status`.
 
+**`exact` means the artifact** (audit CG-P1-03). Version, contract version and
+"the module lives under the interpreter prefix" are satisfied identically by
+every build of a version, so a status reachable from those alone says nothing
+about *which* build is installed — which is the whole question a pinned release
+binding exists to answer. The status taxonomy is therefore:
+
+| `binding_status` | Meaning |
+|---|---|
+| `exact` | the installed artifact **is** the audited release, proved by digest |
+| `compatible` | version and contract agree; the artifact was not proved |
+| `development_checkout` | an explicit dev opt-in; whatever is on disk there |
+| `unbound` | refused — wrong version, wrong contract, foreign path, or a digest that *contradicts* the manifest |
+
+Provenance is read from the installed distribution, not asserted: PEP 610
+`direct_url.json` carries the archive hash pip/uv recorded for the wheel, and
+`release_evidence.artifact_sha256` is what it must equal. Where an install left
+no archive hash, `release_evidence.installed_record_digest` pins a digest over
+the installed `RECORD` (every file with its own sha256), which separates builds
+just as well. An editable install has no immutable artifact identity and is
+never `exact`. A digest that is present and disagrees is not weak evidence but
+contradiction, and is refused rather than downgraded.
+
+`L9_MEMORY_REQUIRE_EXACT_ARTIFACT=1` turns `compatible` from "usable, and
+reported as unproved" into a refusal; the required cross-repo proof sets it.
+
+**Canonical receipt validation** (audit CG-P1-02). Because the memory runtime
+may be another interpreter, `import l9_graphite_memory.contracts` cannot
+succeed in this process — so the binding *exports* each canonical receipt model
+from the bound release as JSON Schema, and `canonical_validation.py` validates
+every authoritative receipt against those before any structural view reads a
+field. A violation is `INVALID_RECEIPT`; validation that was required and could
+not run is `VALIDATION_UNAVAILABLE`, a distinct non-success — structural
+acceptance is never a fallback. Every integration receipt records which mode
+was reached (`canonical_validation`) and the schema digest it validated
+against. `L9_MEMORY_REQUIRE_CANONICAL_VALIDATION=1` makes it mandatory.
+
 ## Egress firewall (INV-03)
 
 ```bash
@@ -166,8 +202,19 @@ key — never a synthesized "retry" summary — and reads memory's replay
 forensics back (`CloseReceipt.replay_payload_matched`, `stored_digest`,
 `replay_digest`, `warnings`); a replay memory proves different from the stored
 close is surfaced as `close replay payload drift`, never hidden behind the
-idempotent status. An obligation without the request material gets a full
-canonical close instead of a guessed replay.
+idempotent status.
+
+That surfacing is evidence, not the verdict (audit CG-P1-01). Memory preserves
+the first commit under an idempotency key and returns *that* record on a
+replay, so a drifted retry comes back with `status=complete` and a `record_id`
+— and reading `committed` from it promoted a close request that never
+committed. The conflict test now runs **ahead** of every `committed`
+promotion: the client returns `IDEMPOTENCY_CONFLICT`, and the obligation goes
+to `close_conflicted`, which is neither closed nor merely unfinished. Replaying
+the same request cannot resolve it (memory holds a different close under that
+key), so it stays a close gap for the next session. Exact replay is unchanged
+and still canonical success, including after a conflict. An obligation without
+the request material gets a full canonical close instead of a guessed replay.
 
 ## MCP instantiation (stage C7) and surface realignment (stage C8)
 

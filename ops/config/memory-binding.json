@@ -57,6 +57,9 @@
     "operator_gated": [
       "v2.3.0 tag on Quantum-L9/l9-graphiti-memory (after #56 merges)",
       "uv.lock pin of the released artifact (replaces the git SHA source)"
-    ]
+    ],
+    "installed_record_digest": null,
+    "release_tag": null,
+    "artifact_provenance_note": "artifact_sha256 is the wheel digest the audited release was built to; runtime_binding verifies it against the installed distribution's PEP 610 direct_url.json archive hash and only then reports binding_status=exact. installed_record_digest is the fallback proof for an install that left no archive hash (digest over the installed RECORD). With neither provable the status is 'compatible', never 'exact'. release_tag stays null until v2.3.0 is cut on Quantum-L9/l9-graphiti-memory."
   }
 }
