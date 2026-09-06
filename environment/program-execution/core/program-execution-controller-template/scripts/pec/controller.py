@@ -753,6 +753,107 @@ def admit_resume(workspace: Path) -> dict[str, Any]:
         db.close()
 
 
+def reconcile_legacy(workspace: Path, actor: str) -> dict[str, Any]:
+    """One-time legacy-state reconciliation for runtimes created under older law.
+
+    Authority-critical repairs cannot assume every existing runtime was created
+    under the new guarantees (R12). This command classifies, never blesses:
+
+    * the active Program Lock is semantically revalidated against the Blueprint
+      on disk (`source_digests` alone are not trusted for a legacy lock);
+    * an EXECUTING task with no live execution attempt is marked as requiring
+      recovery -- never auto-resumed, never given a synthesized baseline;
+    * a runtime already marked completed is checked for terminal consistency
+      (no active lease, no live attempt, task and gate states compatible,
+      a closure receipt present) and flagged TERMINAL_STATE_INCONSISTENT when
+      it is not -- history is preserved, never rewritten;
+    * receipt files with a canonical record are LEGACY_VERIFIED, those without
+      one are LEGACY_UNVERIFIED and are never promoted to authoritative use.
+
+    Read-mostly: the only writes are the recovery-required marker on affected
+    tasks and one ledger event describing the disposition.
+    """
+    db, ledger = open_runtime(workspace)
+    workspace = workspace.resolve()
+    try:
+        report: dict[str, Any] = {
+            "status": "RECONCILED",
+            "program_lock": None,
+            "executing_without_attempt": [],
+            "terminal": None,
+            "receipts": {"verified": [], "unverified": []},
+            "halt_required": False,
+        }
+        lock_verdict = admit_resume(workspace)
+        report["program_lock"] = {
+            "decision": lock_verdict["decision"],
+            "reasons": lock_verdict["reasons"],
+            "disposition": "ATTESTED"
+            if lock_verdict["decision"] == RESUME_EXACT_MATCH
+            else "HALT_ROUTE_THROUGH_ADMISSION",
+        }
+        if lock_verdict["decision"] != RESUME_EXACT_MATCH:
+            report["halt_required"] = True
+        marked: list[str] = []
+        for task in db.tasks():
+            if task["runtime_state"] != "EXECUTING":
+                continue
+            if db.live_execution_attempt(str(task["id"])) is not None:
+                continue
+            marker = "recovery_required:legacy_executing_without_attempt"
+            if str(task.get("last_error") or "") != marker:
+                db.update_task(str(task["id"]), last_error=marker)
+            marked.append(str(task["id"]))
+        report["executing_without_attempt"] = marked
+        if marked:
+            report["halt_required"] = True
+        status_payload = read_campaign_status(workspace) or {}
+        if status_payload.get("runtime_status") == "completed":
+            problems: list[str] = []
+            if db.active_leases():
+                problems.append("active_lease")
+            if db.live_execution_attempts():
+                problems.append("live_execution_attempt")
+            verdict = str(status_payload.get("verdict") or "")
+            blockers = _campaign_completion_blockers(db, verdict) if verdict else {"verdict": []}
+            for name in ("tasks", "blocking_gates"):
+                if blockers.get(name):
+                    problems.append(f"{name}:{','.join(blockers[name])}")
+            closure = status_payload.get("closure_receipt")
+            if not closure or not Path(str(closure)).is_file():
+                problems.append("closure_receipt_missing")
+            elif db.receipt_by_artifact(str(closure)) is None:
+                problems.append("closure_receipt_unrecorded")
+            report["terminal"] = {
+                "verdict": verdict,
+                "consistent": not problems,
+                "problems": problems,
+                "disposition": "CONSISTENT" if not problems else "TERMINAL_STATE_INCONSISTENT",
+            }
+            if problems:
+                report["halt_required"] = True
+        for pattern in ("receipts/verification/*.json", "receipts/gates/*/*.json"):
+            for path in sorted(workspace.glob(pattern)):
+                bucket = "verified" if db.receipt_by_artifact(str(path)) else "unverified"
+                report["receipts"][bucket].append(str(path.relative_to(workspace)))
+        if report["halt_required"]:
+            report["status"] = "RUNTIME_RECONCILIATION_REQUIRED"
+        ledger.append(
+            "LEGACY_RUNTIME_RECONCILED",
+            actor,
+            {
+                "status": report["status"],
+                "program_lock": report["program_lock"]["decision"],
+                "executing_without_attempt": marked,
+                "terminal": (report["terminal"] or {}).get("disposition"),
+                "unverified_receipts": len(report["receipts"]["unverified"]),
+            },
+        )
+        return report
+    finally:
+        db.close()
+
+
 def validate_runtime(workspace: Path) -> dict[str, Any]:
     db, ledger = open_runtime(workspace)
     errors: list[str] = []

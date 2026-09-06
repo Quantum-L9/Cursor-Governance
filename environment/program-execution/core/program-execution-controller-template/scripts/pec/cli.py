@@ -30,6 +30,7 @@ from .controller import (
     next_tasks,
     open_runtime,
     prepare_worktree,
+    reconcile_legacy,
     reconcile_repositories,
     record_attempt,
     recover,
@@ -129,6 +130,13 @@ def parser() -> argparse.ArgumentParser:
     cmd = sub.add_parser("reconcile")
     cmd.add_argument("--workspace", required=True, type=Path)
     cmd.add_argument("--repository", action="append", default=[], help="repository_id=/path")
+
+    cmd = sub.add_parser(
+        "reconcile-legacy",
+        help="classify a runtime created under older law: lock, EXECUTING tasks, terminal state",
+    )
+    cmd.add_argument("--workspace", required=True, type=Path)
+    cmd.add_argument("--actor", default="operator")
 
     for name in ["status", "next"]:
         cmd = sub.add_parser(name)
@@ -328,6 +336,7 @@ _TUNNEL_COMMANDS = frozenset(
         "fresh-workspace",
         "recover-execution",
         "reconcile",
+        "reconcile-legacy",
         "draft-contract",
         "register-contract",
         "claim",
@@ -430,6 +439,11 @@ def main(argv: list[str] | None = None, *, template_root: Path) -> int:
             value = resolve_exec_env(args.cwd).describe()
         elif args.command == "reconcile":
             value = reconcile_repositories(args.workspace, args.repository)
+        elif args.command == "reconcile-legacy":
+            value = reconcile_legacy(args.workspace, args.actor)
+            if value["status"] != "RECONCILED":
+                print_json(value)
+                return 1
         elif args.command == "status":
             value = status(args.workspace)
         elif args.command == "next":

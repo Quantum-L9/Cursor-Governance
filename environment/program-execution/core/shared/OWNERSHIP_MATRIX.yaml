@@ -57,6 +57,30 @@ concerns:
   canonical_owner: Program Execution Controller
   controller_projection: Verification Receipt
   mutation_path: independent rerun against exact state
+- concern: execution_attempt_identity_and_baseline
+  canonical_owner: Program Execution Controller
+  controller_projection: execution_attempts record plus immutable baseline artifact
+  mutation_path: new attempt at pec start only; a baseline is never recaptured
+- concern: execution_recovery_and_fencing
+  canonical_owner: Program Execution Controller
+  controller_projection: recovery evidence, fenced attempt, released lease, STALE task
+  mutation_path: pec recover-execution or pec fresh-workspace only
+- concern: convergence_gate_verdict_derivation
+  canonical_owner: Program Execution Controller
+  controller_projection: derived Gate Evaluation Receipt with evaluator version and reason codes
+  mutation_path: evidence-only re-evaluation; callers never supply the result
+- concern: local_terminal_closure
+  canonical_owner: Program Execution Controller
+  controller_projection: Closure Receipt
+  mutation_path: pec close only; handoff export never mutates lifecycle
+- concern: canonical_runtime_persistence
+  canonical_owner: Program Execution Controller
+  controller_projection: SQLite state, event outbox and receipt records in one transaction; files are projections
+  mutation_path: Controller transaction plus startup reconciliation
+- concern: provider_retry_and_failover
+  canonical_owner: Peer Execution Core
+  controller_projection: retry receipt bound to attempt, lease and contract
+  mutation_path: front door only; fencing required before any post-dispatch retry
 - concern: final_program_verdict
   canonical_owner: program owner
   controller_projection: advisory Handoff Receipt recommendation
