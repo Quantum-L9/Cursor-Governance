@@ -22,7 +22,9 @@ tiers:
   - skill: l9-gmp-protocol
     use_when: work must be phased, auditable, traceable, or touches protected/high-risk areas
   - skill: l9-plan
-    use_when: scope is unclear, requirements need decomposition, or implementation needs a machine-validated plan/spec first
+    use_when: the user asks for /l9-plan, make campaign, a Program Lock, a campaign plan, or a PE+autonomy plan/spec that runs through program-execution; ordinary plans belong to l9-plan-simple
+  - skill: l9-plan-simple
+    use_when: scope is unclear, Cursor Plan mode is on, the user wants a Build-button plan, or implementation needs an ordinary machine-validated plan/spec first (not /l9-plan, make campaign, or a PE lock)
   - skill: l9-code-analysis
     use_when: exploring unfamiliar code, auditing structure, mapping flows, or identifying hotspots
   - skill: l9-gap-analysis
@@ -106,8 +108,6 @@ tiers:
     reason: macOS disk reclaim; diagnose-first then HITL repair; disable-model-invocation, explicit only
   - skill: l9-git-work-preserve
     reason: auto-registered by sync_generated_artifacts (orphan → explicit_only)
-  - skill: l9-plan-simple
-    reason: auto-registered by sync_generated_artifacts (orphan → explicit_only)
   - skill: l9-repo-sync
     reason: in-place /ff catch-up mutates a named clone (park unique work, then reset --keep); explicit only, hint_allowed for Read/attach
   - skill: l9-claude-coding-contract-compiler
@@ -185,6 +185,7 @@ claude_routing:
   - l9-structured-reasoning
   - l9-gmp-protocol
   - l9-plan
+  - l9-plan-simple
   - l9-code-analysis
   - l9-gap-analysis
   - l9-ynp
@@ -334,7 +335,7 @@ claude_routing:
     supporting:
     - l9-structured-reasoning
   - id: plan
-    primary: l9-plan
+    primary: l9-plan-simple
     signal_weight: 8
     positive_signals:
     - create an execution plan
@@ -348,10 +349,53 @@ claude_routing:
     - plan before coding
     - write a plan
     - planning mode
+    - plan mode
     - execution plan
     - decompose requirements
+    - build-button plan
+    negative_signals:
+    - campaign
+    - program lock
+    - program-execution
+    - program execution
+    - pe+autonomy
+    - pe autonomy
+    - /l9-plan
     supporting:
     - l9-structured-reasoning
+    note: 'Ordinary implementation plans, Build-button plans, and Cursor Plan mode are l9-plan-simple (planning-only; Build is the user''s press). Campaign / PE / Program Lock planning is the campaign_plan route below — one manifest-owned doctrine, no static rule table (VSP-P1-002).
+
+      '
+  - id: campaign_plan
+    primary: l9-plan
+    signal_weight: 8
+    priority: 1
+    positive_signals:
+    - pe campaign
+    - campaign plan
+    - plan a campaign
+    - plan the campaign
+    - prepare a campaign
+    - prepare the campaign
+    - program lock
+    - pe+autonomy
+    - pe autonomy plan
+    - program-execution plan
+    - program execution plan
+    - /l9-plan
+    - campaign spec
+    - for the campaign
+    - for a campaign
+    negative_signals:
+    - make campaign
+    - campaign INTENT
+    - activate the campaign
+    - activate a campaign
+    supporting:
+    - l9-structured-reasoning
+    note: 'PE+autonomy planning that runs through program-execution. Live activation (make campaign INTENT=) stays pe_campaign_activate; this route plans, it never activates.
+
+      '
   - id: gmp_protocol
     primary: l9-gmp-protocol
     signal_weight: 8

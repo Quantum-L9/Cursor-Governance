@@ -22,9 +22,8 @@ metadata:
   - validation
   owner: igor_beylin
   status: active
-  version: 1.3.0
-  updated: 2026-09-02
-disable-model-invocation: true
+  version: 1.4.0
+  updated: 2026-09-06
 ---
 
 # Execution Planning (Cursor Build · Embedded)

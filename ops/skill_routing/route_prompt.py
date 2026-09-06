@@ -13,13 +13,40 @@ Doctrine:
 
 from __future__ import annotations
 
+import importlib.util
 import json
-import os
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
 REGISTRY_REL = Path("ops/generated/skill-registry.json")
+
+
+def _sibling(name: str):
+    """Import a sibling module whether loaded as a package or by file path.
+
+    Surface hooks load this file with ``spec_from_file_location`` (no
+    package), so a plain relative import is not always available.
+    """
+    if __package__:
+        try:
+            return importlib.import_module(f"{__package__}.{name}")
+        except ImportError:
+            pass
+    module_name = f"l9_skill_routing_sibling_{name}"
+    cached = sys.modules.get(module_name)
+    if cached is not None:
+        return cached
+    path = Path(__file__).resolve().parent / f"{name}.py"
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    if not spec or not spec.loader:
+        raise ImportError(f"cannot load sibling module {name} from {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
 
 _STOPWORDS = frozenset(
     """
@@ -81,23 +108,12 @@ def phrase_hit(prompt: str, phrase: str) -> bool:
 
 
 def resolve_root(start: Path | None = None) -> Path:
-    """Resolve governance root that contains the skill registry."""
-    configured = os.environ.get("L9_GOVERNANCE_DIR", "").strip()
-    if configured:
-        candidate = Path(configured).expanduser()
-        if (candidate / REGISTRY_REL).is_file():
-            return candidate
-    home = Path.home() / ".cursor-governance"
-    if (home / REGISTRY_REL).is_file():
-        return home
-    here = (start or Path(__file__)).resolve()
-    for parent in here.parents:
-        if (parent / REGISTRY_REL).is_file():
-            return parent
-    return home
+    """Resolve governance root — delegates to the shared registry layer."""
+    return _sibling("registry").resolve_governance_root(start)
 
 
 def load_registry(root: Path) -> dict[str, Any]:
+    """Raw registry dict for scoring. Validation lives in registry.load_registry."""
     path = root / REGISTRY_REL
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -187,6 +203,69 @@ def _supporting(
     ][:max_supporting]
 
 
+def retrieve_candidates(registry: dict[str, Any]) -> list[dict[str, Any]]:
+    """Eligible routes for scoring — the retrieval boundary.
+
+    Immediate version: every route whose primary is scoreable (model_allowed,
+    or explicit_only with ``hint_allowed``). A future bounded index may narrow
+    this set; the scorer below stays the same.
+    """
+    known = {item["name"]: item for item in registry.get("skills", [])}
+    explicit = {name for name, item in known.items() if item.get("invocation") == "explicit_only"}
+    eligible: list[dict[str, Any]] = []
+    for route in registry.get("routing", {}).get("routes", []):
+        primary = str(route.get("primary", ""))
+        if not primary:
+            continue
+        if primary in explicit and not bool(route.get("hint_allowed", False)):
+            continue
+        eligible.append(route)
+    return eligible
+
+
+def _route_rank(score: int, route: dict[str, Any]) -> tuple[int, int, str]:
+    """Explicit deterministic ranking: score DESC, priority DESC, route_id ASC.
+
+    Returned as a max-key so manifest order never decides a tie
+    (VSP-P2-002). ``route_id`` is negated lexically via the tuple compare in
+    ``_better``.
+    """
+    return (score, int(route.get("priority", 0)), str(route.get("id", "")))
+
+
+def _better(candidate: tuple[int, int, str], incumbent: tuple[int, int, str] | None) -> bool:
+    if incumbent is None:
+        return True
+    if candidate[:2] != incumbent[:2]:
+        return candidate[:2] > incumbent[:2]
+    return candidate[2] < incumbent[2]
+
+
+def rank_candidates(
+    normalized: str, routes: list[dict[str, Any]], explicit: set[str]
+) -> tuple[tuple[int, dict[str, Any], str] | None, set[str]]:
+    """Score eligible routes; return (best, blocked_primaries)."""
+    blocked_primaries: set[str] = set()
+    best: tuple[int, dict[str, Any], str] | None = None
+    best_rank: tuple[int, int, str] | None = None
+    for route in routes:
+        primary = str(route.get("primary", ""))
+        hint_allowed = bool(route.get("hint_allowed", False))
+        if any(phrase_hit(normalized, phrase) for phrase in route.get("negative_signals", [])):
+            blocked_primaries.add(primary)
+            continue
+        score = _score_route(normalized, route, primary)
+        source = "route"
+        if primary in explicit and hint_allowed:
+            score = _hint_gate(route, score)
+            source = "explicit_hint"
+        rank = _route_rank(score, route)
+        if _better(rank, best_rank):
+            best = (score, route, source)
+            best_rank = rank
+    return best, blocked_primaries
+
+
 def route_prompt(prompt: str, registry: dict[str, Any]) -> dict[str, Any] | None:
     routing = registry.get("routing", {})
     normalized = normalize(prompt)
@@ -198,25 +277,7 @@ def route_prompt(prompt: str, registry: dict[str, Any]) -> dict[str, Any] | None
 
     known = {item["name"]: item for item in registry.get("skills", [])}
     explicit = {name for name, item in known.items() if item.get("invocation") == "explicit_only"}
-    blocked_primaries: set[str] = set()
-    best: tuple[int, dict[str, Any], str] | None = None
-    for route in routing.get("routes", []):
-        primary = str(route.get("primary", ""))
-        if not primary:
-            continue
-        hint_allowed = bool(route.get("hint_allowed", False))
-        if primary in explicit and not hint_allowed:
-            continue
-        if any(phrase_hit(normalized, phrase) for phrase in route.get("negative_signals", [])):
-            blocked_primaries.add(primary)
-            continue
-        score = _score_route(normalized, route, primary)
-        source = "route"
-        if primary in explicit and hint_allowed:
-            score = _hint_gate(route, score)
-            source = "explicit_hint"
-        if best is None or score > best[0]:
-            best = (score, route, source)
+    best, blocked_primaries = rank_candidates(normalized, retrieve_candidates(registry), explicit)
 
     threshold = int(routing.get("force_threshold", 8))
     advisory = int(routing.get("advisory_threshold", max(6, threshold - 2)))
@@ -233,8 +294,9 @@ def route_prompt(prompt: str, registry: dict[str, Any]) -> dict[str, Any] | None
         }
 
     # Description fallback: only model_allowed skills when no high-confidence route matched.
+    # Ties resolve by skill name ASC so registry order never decides.
     desc_best: tuple[int, dict[str, Any]] | None = None
-    for skill in registry.get("skills", []):
+    for skill in sorted(registry.get("skills", []), key=lambda item: str(item.get("name", ""))):
         name = str(skill.get("name", ""))
         if (
             not name

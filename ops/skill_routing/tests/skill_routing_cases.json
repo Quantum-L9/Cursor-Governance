@@ -102,11 +102,33 @@
     },
     {
       "prompt": "Create an execution plan before building this feature",
-      "expected_primary": "l9-plan",
+      "expected_primary": "l9-plan-simple",
       "expected_supporting": [
         "l9-structured-reasoning"
       ],
       "expected_source": "route"
+    },
+    {
+      "prompt": "Prepare a PE campaign plan with a program lock for this brief",
+      "expected_primary": "l9-plan",
+      "expected_supporting": [
+        "l9-structured-reasoning"
+      ],
+      "expected_source": "route",
+      "forbidden": [
+        "l9-plan-simple"
+      ]
+    },
+    {
+      "prompt": "Plan mode is on: decompose the requirements for the billing feature",
+      "expected_primary": "l9-plan-simple",
+      "expected_supporting": [
+        "l9-structured-reasoning"
+      ],
+      "expected_source": "route",
+      "forbidden": [
+        "l9-plan"
+      ]
     },
     {
       "prompt": "Wire the skill into the repo discovery tables after compiling it",
@@ -147,11 +169,14 @@
     },
     {
       "prompt": "plan this before coding",
-      "expected_primary": "l9-plan",
+      "expected_primary": "l9-plan-simple",
       "expected_supporting": [
         "l9-structured-reasoning"
       ],
-      "expected_source": "route"
+      "expected_source": "route",
+      "forbidden": [
+        "l9-plan"
+      ]
     },
     {
       "prompt": "Run e2e and clear the e2e blockers in this repo",

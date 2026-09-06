@@ -1,4 +1,5 @@
 {
+  "generation_id": "baf861ab2a0a799bac36a0579592dca58a62d4e3727729942b41c940d31b28c7",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -10,6 +11,7 @@
       "l9-structured-reasoning",
       "l9-gmp-protocol",
       "l9-plan",
+      "l9-plan-simple",
       "l9-code-analysis",
       "l9-gap-analysis",
       "l9-ynp",
@@ -166,6 +168,16 @@
       },
       {
         "id": "plan",
+        "negative_signals": [
+          "campaign",
+          "program lock",
+          "program-execution",
+          "program execution",
+          "pe+autonomy",
+          "pe autonomy",
+          "/l9-plan"
+        ],
+        "note": "Ordinary implementation plans, Build-button plans, and Cursor Plan mode are l9-plan-simple (planning-only; Build is the user's press). Campaign / PE / Program Lock planning is the campaign_plan route below \u2014 one manifest-owned doctrine, no static rule table (VSP-P1-002).\n",
         "positive_signals": [
           "create an execution plan",
           "write a plan first",
@@ -178,10 +190,45 @@
           "plan before coding",
           "write a plan",
           "planning mode",
+          "plan mode",
           "execution plan",
-          "decompose requirements"
+          "decompose requirements",
+          "build-button plan"
+        ],
+        "primary": "l9-plan-simple",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-structured-reasoning"
+        ]
+      },
+      {
+        "id": "campaign_plan",
+        "negative_signals": [
+          "make campaign",
+          "campaign INTENT",
+          "activate the campaign",
+          "activate a campaign"
+        ],
+        "note": "PE+autonomy planning that runs through program-execution. Live activation (make campaign INTENT=) stays pe_campaign_activate; this route plans, it never activates.\n",
+        "positive_signals": [
+          "pe campaign",
+          "campaign plan",
+          "plan a campaign",
+          "plan the campaign",
+          "prepare a campaign",
+          "prepare the campaign",
+          "program lock",
+          "pe+autonomy",
+          "pe autonomy plan",
+          "program-execution plan",
+          "program execution plan",
+          "/l9-plan",
+          "campaign spec",
+          "for the campaign",
+          "for a campaign"
         ],
         "primary": "l9-plan",
+        "priority": 1,
         "signal_weight": 8,
         "supporting": [
           "l9-structured-reasoning"
@@ -775,7 +822,7 @@
     ],
     "version": 2
   },
-  "schema_version": 1,
+  "schema_version": 2,
   "skills": [
     {
       "composition_role": "primary",
@@ -785,6 +832,8 @@
       "name": "l9-api-smoke-testing",
       "path": "skills/l9-api-smoke-testing",
       "reason": "",
+      "skill_md": "skills/l9-api-smoke-testing/SKILL.md",
+      "skill_sha256": "e347a8d94d083ebb302483a3f87330a10a81adcab668e5b0ba8f550c5762d35e",
       "user_invocable": true,
       "when_to_use": "verifying API health after changes, smoke-testing endpoints, or hunting 404/500 regressions across routes"
     },
@@ -796,6 +845,8 @@
       "name": "l9-architecture-decision-records",
       "path": "skills/l9-architecture-decision-records",
       "reason": "",
+      "skill_md": "skills/l9-architecture-decision-records/SKILL.md",
+      "skill_sha256": "e5b9b94084e865958e0be0bcb0dd35c0df59e647cdacf4078bbf3335373cee41",
       "user_invocable": true,
       "when_to_use": "capturing a significant architecture/design decision, recording trade-offs, or creating an ADR"
     },
@@ -807,6 +858,8 @@
       "name": "l9-auditing-performance",
       "path": "skills/l9-auditing-performance",
       "reason": "",
+      "skill_md": "skills/l9-auditing-performance/SKILL.md",
+      "skill_sha256": "0348823f881434ebc1ebb7e5484707977994f9a2f1b51b9f9856645685fd7bdd",
       "user_invocable": true,
       "when_to_use": "the app is slow, profiling for bottlenecks, or optimizing bundle/render/query performance"
     },
@@ -818,6 +871,8 @@
       "name": "l9-auditing-security",
       "path": "skills/l9-auditing-security",
       "reason": "",
+      "skill_md": "skills/l9-auditing-security/SKILL.md",
+      "skill_sha256": "ef97e1fa5a8c75f20c7067eb4a2c1c3998ea1c634e767f4d56d522f3228485f8",
       "user_invocable": true,
       "when_to_use": "reviewing code for security risks, scanning for exposed secrets, or hardening before release"
     },
@@ -829,6 +884,8 @@
       "name": "l9-aws-secrets",
       "path": "skills/l9-aws-secrets",
       "reason": "",
+      "skill_md": "skills/l9-aws-secrets/SKILL.md",
+      "skill_sha256": "29c5c24032aaee4ce94a95b65cc8ac2524740a42106e28f91f9bb8b323746f82",
       "user_invocable": true,
       "when_to_use": "an agent needs an api key, token, password, infisical hydrate, aws secret ref, registry sync, or fail-closed credential check without keychain or printing values"
     },
@@ -840,6 +897,8 @@
       "name": "l9-bounded-autonomy",
       "path": "skills/l9-bounded-autonomy",
       "reason": "campaign autonomy with parallel Tasks and background PR-poll; remediation push under campaign authorization packet \u2014 high blast radius, explicit only",
+      "skill_md": "skills/l9-bounded-autonomy/SKILL.md",
+      "skill_sha256": "60f54bd02e36394838ea1a8783519f141742a1c693f81aa0ff2a7f9a77a428c4",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -851,6 +910,8 @@
       "name": "l9-chat-extraction",
       "path": "skills/l9-chat-extraction",
       "reason": "extracts chat content to memory or structured output",
+      "skill_md": "skills/l9-chat-extraction/SKILL.md",
+      "skill_sha256": "da13065051ae787d8ca7cb2b177f9a9920f39122101d4f08f06c16ee3691c13d",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -862,6 +923,8 @@
       "name": "l9-ci-ops",
       "path": "skills/l9-ci-ops",
       "reason": "CI/CD pipeline operations and gate authoring",
+      "skill_md": "skills/l9-ci-ops/SKILL.md",
+      "skill_sha256": "7c6d005ff4e353c44a9c2af382cd6ccdca3d0855ff8b6eb0e57e0e6bbe57a8af",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -873,6 +936,8 @@
       "name": "l9-claude-code-deepseek",
       "path": "skills/l9-claude-code-deepseek",
       "reason": "",
+      "skill_md": "skills/l9-claude-code-deepseek/SKILL.md",
+      "skill_sha256": "79d0b7550ca76ae3d9f001590ba508a878a767f44b6917565fe492895a60d775",
       "user_invocable": true,
       "when_to_use": "wiring Claude Code in a consumer clone to DeepSeek, opening a Claude Code tab on DeepSeek, or hydrating DEEPSEEK_API_KEY without Anthropic billing"
     },
@@ -884,6 +949,8 @@
       "name": "l9-claude-coding-contract-compiler",
       "path": "skills/l9-claude-coding-contract-compiler",
       "reason": "compiles scoped coding-contract chains that hardwire git workflow, commit cadence, and a terminal make pr delivery; its broad \"coding contract\" surface would hijack ordinary planning routing if auto-invoked; disable-model-invocation",
+      "skill_md": "skills/l9-claude-coding-contract-compiler/SKILL.md",
+      "skill_sha256": "a7b3e74847c7b04efc5acc95e6ddd9ff1a01c1d96fe01ccd0a78236491163e59",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -895,6 +962,8 @@
       "name": "l9-cli-optimization",
       "path": "skills/l9-cli-optimization",
       "reason": "activates dormant/miswired capability and flips off-by-default flags into review-required PR packs (full-throttle mode) \u2014 high blast radius, explicit only",
+      "skill_md": "skills/l9-cli-optimization/SKILL.md",
+      "skill_sha256": "1dcc7a03079e5316984b1dab8982908cc6b1e7cb86da9cd54ac713c0fa9746b9",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -906,6 +975,8 @@
       "name": "l9-code-analysis",
       "path": "skills/l9-code-analysis",
       "reason": "",
+      "skill_md": "skills/l9-code-analysis/SKILL.md",
+      "skill_sha256": "c327eaa8b7cb429f7eaaeb5f96154cf0a77babe01fca1e9ed4fd3b54b0e3e8fe",
       "user_invocable": true,
       "when_to_use": "exploring unfamiliar code, auditing structure, mapping flows, or identifying hotspots"
     },
@@ -917,6 +988,8 @@
       "name": "l9-code-graph-rag-mcp",
       "path": "skills/l9-code-graph-rag-mcp",
       "reason": "",
+      "skill_md": "skills/l9-code-graph-rag-mcp/SKILL.md",
+      "skill_sha256": "9dd9849fcf57cded3c26a5f505f919b8b9c52321afe9686316f5edda4d2c1ca3",
       "user_invocable": true,
       "when_to_use": "code-graph, batch_index, semantic code search, list_module_importers, analyze_code_impact, or MCP code indexing is needed"
     },
@@ -928,6 +1001,8 @@
       "name": "l9-code-maintenance",
       "path": "skills/l9-code-maintenance",
       "reason": "lint-fix/migrate/consolidate/refactor sweeps with code-mutating executors; use --dry-run CLI before mutate",
+      "skill_md": "skills/l9-code-maintenance/SKILL.md",
+      "skill_sha256": "eb1357e99a30108b3ed4643fea373dc7f3176302c8c85ce95d7808de830bddca",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -939,6 +1014,8 @@
       "name": "l9-component-verification",
       "path": "skills/l9-component-verification",
       "reason": "component audit/verify/probe escalation ladder",
+      "skill_md": "skills/l9-component-verification/SKILL.md",
+      "skill_sha256": "552829cb064200e4a72be982c4bdf01ceb53249fc5baead32fcf3a4141e5b687",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -950,6 +1027,8 @@
       "name": "l9-context7-docs",
       "path": "skills/l9-context7-docs",
       "reason": "",
+      "skill_md": "skills/l9-context7-docs/SKILL.md",
+      "skill_sha256": "c57301c40edaf39b3a12bf623c21983629ec8e34c0e4f2f13945f3bcb6a6f8b3",
       "user_invocable": true,
       "when_to_use": "current library, framework, SDK, API, or version-specific documentation could prevent implementation mistakes"
     },
@@ -961,6 +1040,8 @@
       "name": "l9-dag-authoring",
       "path": "skills/l9-dag-authoring",
       "reason": "creates/updates DAGs \u2014 structural meta tooling",
+      "skill_md": "skills/l9-dag-authoring/SKILL.md",
+      "skill_sha256": "5067dcc9712d413c5b4313f88a165e663fc7efc0577a514e8a6e6b396a5c989c",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -972,6 +1053,8 @@
       "name": "l9-e2e-blocker-resolution",
       "path": "skills/l9-e2e-blocker-resolution",
       "reason": "runs e2e/proof commands, mutates code/docs/TODO, may touch disposable remote targets \u2014 high blast radius, explicit only",
+      "skill_md": "skills/l9-e2e-blocker-resolution/SKILL.md",
+      "skill_sha256": "3771a4f9465260ea2d3d2ba22e0cdf6e8a350d5debdc5bc7eb9d9688641be54a",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -983,6 +1066,8 @@
       "name": "l9-end-session",
       "path": "skills/l9-end-session",
       "reason": "session lifecycle boundary",
+      "skill_md": "skills/l9-end-session/SKILL.md",
+      "skill_sha256": "97c81a9deb508b9eb445192098e1af7365025b3611920e6c93e8c352a9548534",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -994,6 +1079,8 @@
       "name": "l9-forge",
       "path": "skills/l9-forge",
       "reason": "zero-pause batch execution",
+      "skill_md": "skills/l9-forge/SKILL.md",
+      "skill_sha256": "37ab7c9aa7ff1b961faf30bd52dc2e99d56d1975b6d8785306f9bc124838b299",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1005,6 +1092,8 @@
       "name": "l9-gap-analysis",
       "path": "skills/l9-gap-analysis",
       "reason": "",
+      "skill_md": "skills/l9-gap-analysis/SKILL.md",
+      "skill_sha256": "125c50b4788b63c069baa136b74ab91ac819489293333896175453fc21e2164f",
       "user_invocable": true,
       "when_to_use": "assessing readiness, missing pieces, compliance drift, or percent-complete status"
     },
@@ -1016,6 +1105,8 @@
       "name": "l9-git-work-preserve",
       "path": "skills/l9-git-work-preserve",
       "reason": "auto-registered by sync_generated_artifacts (orphan \u2192 explicit_only)",
+      "skill_md": "skills/l9-git-work-preserve/SKILL.md",
+      "skill_sha256": "19100e31ce57721e3e4f5ce55c10c4869e7578582ac3e48700d3d5b071d572d5",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1027,6 +1118,8 @@
       "name": "l9-global-architect",
       "path": "skills/l9-global-architect",
       "reason": "experimental GAR runtime bootloader whose broad architect-engineer description would hijack ordinary routing if auto-invoked; load when the user explicitly invokes the global architect runtime, iterates on the pack, or when l9-plan-simple loads it as the required upstream planner; disable-model-invocation",
+      "skill_md": "skills/l9-global-architect/SKILL.md",
+      "skill_sha256": "715cc111f02caac12ee01c9ae813a109814006fea5e84bb1282a3986af3bd8c9",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1038,6 +1131,8 @@
       "name": "l9-gmp-protocol",
       "path": "skills/l9-gmp-protocol",
       "reason": "",
+      "skill_md": "skills/l9-gmp-protocol/SKILL.md",
+      "skill_sha256": "cdb176cf8c68c1125ce575cbace7aaa8b87649eb26262bc6b3d1edcbf1873f0b",
       "user_invocable": true,
       "when_to_use": "work must be phased, auditable, traceable, or touches protected/high-risk areas"
     },
@@ -1049,6 +1144,8 @@
       "name": "l9-governance-symlinks",
       "path": "skills/l9-governance-symlinks",
       "reason": "narrow governance workspace binding setup and validation; exact-owner mutation skill surviving the l9-governance-wiring retirement; disable-model-invocation, explicit only",
+      "skill_md": "skills/l9-governance-symlinks/SKILL.md",
+      "skill_sha256": "ee767e11eaa0aac5b4d107fb51674cbc23deee621e0df439bab54f45cae47da3",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1060,6 +1157,8 @@
       "name": "l9-graphiti-memory",
       "path": "skills/l9-graphiti-memory",
       "reason": "",
+      "skill_md": "skills/l9-graphiti-memory/SKILL.md",
+      "skill_sha256": "686e9d0a1073539371634e482b76ccaf7894952411f046bb7a7ba69f7a175439",
       "user_invocable": true,
       "when_to_use": "wiring memory, debugging prefetch/bootstrap, GMP Phase 0 MEMORY_PREFETCH, episode/T0 memory-bank writes, or checking Graphiti health"
     },
@@ -1071,6 +1170,8 @@
       "name": "l9-idea-execute",
       "path": "skills/l9-idea-execute",
       "reason": "routes validated IdeaOS decisions into Foundry, Website-Bot, plan-simple, or Program Execution; owner-selection and downstream invocation are high blast radius; disable-model-invocation",
+      "skill_md": "skills/l9-idea-execute/SKILL.md",
+      "skill_sha256": "c5a37daab554ffe7831d22d917a6da566283204d78d350cc677732f523f1079f",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1082,6 +1183,8 @@
       "name": "l9-idea-foundry",
       "path": "skills/l9-idea-foundry",
       "reason": "compiles idea packs into tested code and l9-repo-template births; repository creation and code realization are high blast radius; disable-model-invocation",
+      "skill_md": "skills/l9-idea-foundry/SKILL.md",
+      "skill_sha256": "af4de2b85769244afcbde397356a0096f60574322e0d14ed6ae050a32e27e442",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1093,6 +1196,8 @@
       "name": "l9-incident-response",
       "path": "skills/l9-incident-response",
       "reason": "",
+      "skill_md": "skills/l9-incident-response/SKILL.md",
+      "skill_sha256": "de5386268adc30c70baf74ab40f3419cc5003c71646e283a9af96da5e860e2ea",
       "user_invocable": true,
       "when_to_use": "a production incident is active (SEV1\u2013SEV4), coordinating mitigation, or writing a postmortem"
     },
@@ -1104,6 +1209,8 @@
       "name": "l9-intelligence-harvest",
       "path": "skills/l9-intelligence-harvest",
       "reason": "donor-to-beneficiary semantic mining is a deliberate operation with a large read surface over a foreign repo; keeps the harvest family (l9-harvest-pipeline, l9-pe-nuggets) explicit; disable-model-invocation",
+      "skill_md": "skills/l9-intelligence-harvest/SKILL.md",
+      "skill_sha256": "2001905be14417b6cc882d7343117cdda82f3a7554cf0da95e5549997796dd44",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1115,6 +1222,8 @@
       "name": "l9-issue-remediation",
       "path": "skills/l9-issue-remediation",
       "reason": "/issues and /l9-issue-remediation are remediator Converge (verify-before-trust, drain all clusters at max autonomy, recommended-A human blockers, land on PRs, close phantoms/resolved, chain /l9-pr-remediation only at open_issues=0). /issues diagnose remains hint-routeable auditor. High blast radius, explicit only.",
+      "skill_md": "skills/l9-issue-remediation/SKILL.md",
+      "skill_sha256": "d32394819e4a13d2ddf1ad0f1f8d0eadc3e6d86fe7bba333c71bf2630f6aa239",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1126,6 +1235,8 @@
       "name": "l9-kubernetes-deploying",
       "path": "skills/l9-kubernetes-deploying",
       "reason": "infra deploy operation \u2014 high blast radius, explicit only",
+      "skill_md": "skills/l9-kubernetes-deploying/SKILL.md",
+      "skill_sha256": "f4440058923893a5a519265b5b8b7dfc9546c7149439623b13e8012cf6ba0c17",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1137,6 +1248,8 @@
       "name": "l9-mac-storage-triage",
       "path": "skills/l9-mac-storage-triage",
       "reason": "macOS disk reclaim; diagnose-first then HITL repair; disable-model-invocation, explicit only",
+      "skill_md": "skills/l9-mac-storage-triage/SKILL.md",
+      "skill_sha256": "e434e5e8a0e9b0c25c293feb37252f93e868e5095edc8dfedf3d2528048734bf",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1148,6 +1261,8 @@
       "name": "l9-monitoring-terminal-errors",
       "path": "skills/l9-monitoring-terminal-errors",
       "reason": "",
+      "skill_md": "skills/l9-monitoring-terminal-errors/SKILL.md",
+      "skill_sha256": "18fba500d7af1b7846f8a9531a51ee1bb52c71f9412949c0a7d5150c606e10f5",
       "user_invocable": true,
       "when_to_use": "a dev server, watcher, or test process is running and may emit runtime errors to fix live"
     },
@@ -1159,6 +1274,8 @@
       "name": "l9-pe-campaign-activate",
       "path": "skills/l9-pe-campaign-activate",
       "reason": "Live PE campaigns go through make campaign INTENT= only. hint_allowed is Read/attach so agents load that sealed front door. The run is local-commit-only and invoking the skill is not merge authority; publication is PR_REMEDIATE=0 make pr and merge of open PRs is /l9-pr-remediation. disable-model-invocation.",
+      "skill_md": "skills/l9-pe-campaign-activate/SKILL.md",
+      "skill_sha256": "5094484c232771daccf6009e72d1979c8ed8b67eec1cffaea21d35495c1b7e57",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1170,6 +1287,8 @@
       "name": "l9-pe-nuggets",
       "path": "skills/l9-pe-nuggets",
       "reason": "PLAN-window nugget extraction only; make campaign is the front door",
+      "skill_md": "skills/l9-pe-nuggets/SKILL.md",
+      "skill_sha256": "ab0757c785ee13ef83bf9c8401eff528566bce84c4904f5af86491b38349121b",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1181,6 +1300,8 @@
       "name": "l9-pipeline-audit",
       "path": "skills/l9-pipeline-audit",
       "reason": "on-demand multi-surface harvest (plans + WIP + PE campaigns) can emit new WIP or campaign INTENT; slash /l9-pipeline-audit is the explicit invoke; sessionStart runs audit_pipeline.py display+spent-archive only; disable-model-invocation",
+      "skill_md": "skills/l9-pipeline-audit/SKILL.md",
+      "skill_sha256": "be9b4f4b9f45facfa681d17fc8529929ac21045f0d0ca8db9da586c6838bcdc8",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1192,6 +1313,8 @@
       "name": "l9-pipeline-orchestrator",
       "path": "skills/l9-pipeline-orchestrator",
       "reason": "drives fresh sessions per contract, applies GitHub branch protection, and gates auto-merge with no human tap \u2014 high blast radius; merge authority still comes from /l9-pr-remediation, never from this pack; disable-model-invocation",
+      "skill_md": "skills/l9-pipeline-orchestrator/SKILL.md",
+      "skill_sha256": "2010a0c49c3a49a4aa1091cc86017c9655b936d1d7861a04e8b6880b44f59fad",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1203,19 +1326,23 @@
       "name": "l9-plan",
       "path": "skills/l9-plan",
       "reason": "",
+      "skill_md": "skills/l9-plan/SKILL.md",
+      "skill_sha256": "bafe5e4cfd4b218f6cc3ba93356eca49c4724125925ed37ec375c40056b5b648",
       "user_invocable": true,
-      "when_to_use": "scope is unclear, requirements need decomposition, or implementation needs a machine-validated plan/spec first"
+      "when_to_use": "the user asks for /l9-plan, make campaign, a Program Lock, a campaign plan, or a PE+autonomy plan/spec that runs through program-execution; ordinary plans belong to l9-plan-simple"
     },
     {
-      "composition_role": "general",
+      "composition_role": "primary",
       "description": "create a machine-validated cursor .plan.md from the executable-plan template. cursor-build executes then opens a stacked PR; embedded stops at planning artifacts with no execution authority. use when scope is unclear or Plan mode is on. do not use for /l9-plan, make campaign, or a PE lock.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
       "name": "l9-plan-simple",
       "path": "skills/l9-plan-simple",
-      "reason": "auto-registered by sync_generated_artifacts (orphan \u2192 explicit_only)",
+      "reason": "",
+      "skill_md": "skills/l9-plan-simple/SKILL.md",
+      "skill_sha256": "bf774b5a8c5682a23fdd31b13b245ef25eb8e1aa5e9cd475eb9c45b3813a0dd2",
       "user_invocable": true,
-      "when_to_use": ""
+      "when_to_use": "scope is unclear, Cursor Plan mode is on, the user wants a Build-button plan, or implementation needs an ordinary machine-validated plan/spec first (not /l9-plan, make campaign, or a PE lock)"
     },
     {
       "composition_role": "general",
@@ -1225,6 +1352,8 @@
       "name": "l9-pr-digest",
       "path": "skills/l9-pr-digest",
       "reason": "auto-registered by sync_generated_artifacts (orphan \u2192 explicit_only)",
+      "skill_md": "skills/l9-pr-digest/SKILL.md",
+      "skill_sha256": "b48dca710dd989cb3322dadda4b27ef328b65b57164af970b138afbf2edcd0f6",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1236,6 +1365,8 @@
       "name": "l9-pr-remediation",
       "path": "skills/l9-pr-remediation",
       "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked). The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Above-paygrade HUMAN / unfixable required CI / ENVIRONMENT after best-effort opens a GitHub issue and launches l9-issue-remediation via cursor-subagents; do not ask the human to unblock. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
+      "skill_md": "skills/l9-pr-remediation/SKILL.md",
+      "skill_sha256": "0a9236717f9317bff4c4941272ec01822bf0b5f2a52e2d9c8cfbfdb8d1713689",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1247,6 +1378,8 @@
       "name": "l9-prompt-engineering",
       "path": "skills/l9-prompt-engineering",
       "reason": "",
+      "skill_md": "skills/l9-prompt-engineering/SKILL.md",
+      "skill_sha256": "652c5930531b1e4b6a945cbcad581737a094338ca8fdde56486c071329b1dcd6",
       "user_invocable": true,
       "when_to_use": "designing or improving an LLM prompt, system message, or structured output schema"
     },
@@ -1258,6 +1391,8 @@
       "name": "l9-python-tdd-with-uv",
       "path": "skills/l9-python-tdd-with-uv",
       "reason": "non-default stack (uv) \u2014 invoke explicitly for Python TDD",
+      "skill_md": "skills/l9-python-tdd-with-uv/SKILL.md",
+      "skill_sha256": "3460659eb20a47a50136d067f4c79d72f8517446f500afc3083fe5e5ae34c257",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1269,6 +1404,8 @@
       "name": "l9-recursive-optimization",
       "path": "skills/l9-recursive-optimization",
       "reason": "",
+      "skill_md": "skills/l9-recursive-optimization/SKILL.md",
+      "skill_sha256": "794971aa9f6eca95a3c3e7b9dd9c600a2c11980b90cc7b82310409af388cab4c",
       "user_invocable": true,
       "when_to_use": "recursively aligning, improving, or converging artifact groups, packs, prompts, or agent outputs until execution-ready"
     },
@@ -1280,6 +1417,8 @@
       "name": "l9-repo-index",
       "path": "skills/l9-repo-index",
       "reason": "repo index export \u2014 on-demand only",
+      "skill_md": "skills/l9-repo-index/SKILL.md",
+      "skill_sha256": "dde056ee1ee3bf45793a787c726cc743870bcda6ce19fb6b34d6400ee6833907",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1291,6 +1430,8 @@
       "name": "l9-repo-sync",
       "path": "skills/l9-repo-sync",
       "reason": "in-place /ff catch-up mutates a named clone (park unique work, then reset --keep); explicit only, hint_allowed for Read/attach",
+      "skill_md": "skills/l9-repo-sync/SKILL.md",
+      "skill_sha256": "2bdec4422e403f40c016b686935c1b9133223c24d18bc9512221a0a754a67e4c",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1302,6 +1443,8 @@
       "name": "l9-repository-renovation",
       "path": "skills/l9-repository-renovation",
       "reason": "audits then implements, commits, pushes, and opens a PR under RENOVATE_TO_PR \u2014 high blast radius, explicit only",
+      "skill_md": "skills/l9-repository-renovation/SKILL.md",
+      "skill_sha256": "b786850b7c9b9aacef50bdb834a8349192b1df7636c9dab8d05ed210a756a45b",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1313,6 +1456,8 @@
       "name": "l9-setting-up-ci",
       "path": "skills/l9-setting-up-ci",
       "reason": "",
+      "skill_md": "skills/l9-setting-up-ci/SKILL.md",
+      "skill_sha256": "dde4b83d6e667e67b41df268ec9e687e053c4224b243cd2c297f9076bee89739",
       "user_invocable": true,
       "when_to_use": "bootstrapping CI, activating l9-ci-core / Biome, or adding lint/test/type-check stages without inventing ci.yml or biome.json"
     },
@@ -1324,6 +1469,8 @@
       "name": "l9-setting-up-terraform",
       "path": "skills/l9-setting-up-terraform",
       "reason": "infra-as-code bootstrap \u2014 high blast radius, explicit only",
+      "skill_md": "skills/l9-setting-up-terraform/SKILL.md",
+      "skill_sha256": "8dd9ff80d2bccb82cdced59c2546c24ba515bb75420d3a18f469b0772edd8824",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1335,6 +1482,8 @@
       "name": "l9-skill-compiler",
       "path": "skills/l9-skill-compiler",
       "reason": "",
+      "skill_md": "skills/l9-skill-compiler/SKILL.md",
+      "skill_sha256": "54abe7f653d951ff5808df5129e6972539b822c36d5fc0a1b3e40c4df180b5ad",
       "user_invocable": true,
       "when_to_use": "creating or improving a reusable skill, making a skill portable across Claude Code, Manus, or Cursor, sharpening activation and reject signals, extracting expert heuristics, eliminating drift or stubs, or producing a validated ZIP"
     },
@@ -1346,6 +1495,8 @@
       "name": "l9-structured-reasoning",
       "path": "skills/l9-structured-reasoning",
       "reason": "",
+      "skill_md": "skills/l9-structured-reasoning/SKILL.md",
+      "skill_sha256": "4707a0de1feef84e28b5feb3c8dc3b4d32c09294fb926016cd01d78fefea7a85",
       "user_invocable": true,
       "when_to_use": "planning, architecture decisions, debugging, trade-off analysis, or deep reasoning is needed"
     },
@@ -1357,6 +1508,8 @@
       "name": "l9-ui-operator",
       "path": "skills/l9-ui-operator",
       "reason": "SaaS admin UI mutations via Playwright cartridges \u2014 high blast radius; requires human approve",
+      "skill_md": "skills/l9-ui-operator/SKILL.md",
+      "skill_sha256": "297f34729c9075028ca3ed66c9dc73555745e1caf1c82f08aaee11afcd8b621a",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1368,6 +1521,8 @@
       "name": "l9-update-agent-docs",
       "path": "skills/l9-update-agent-docs",
       "reason": "",
+      "skill_md": "skills/l9-update-agent-docs/SKILL.md",
+      "skill_sha256": "e142a96b2abb29cdc1e0507dc4fb849058db3ed1f96371a32526553e22c3e5cd",
       "user_invocable": true,
       "when_to_use": "refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes, or creating root CLAUDE.md / INVARIANTS.md when missing"
     },
@@ -1379,6 +1534,8 @@
       "name": "l9-wire-into-repo",
       "path": "skills/l9-wire-into-repo",
       "reason": "",
+      "skill_md": "skills/l9-wire-into-repo/SKILL.md",
+      "skill_sha256": "de8c89e1c99112ae501bbcb43cc8ce7f48a3e75b17e5bf1150f7d24266a52441",
       "user_invocable": true,
       "when_to_use": "wiring, rewiring, verifying, registering, exposing, or unwiring an existing repository artifact or capability by finding its authoritative upstream owner and propagating reachability to intended consumers without duplicate leaf wiring"
     },
@@ -1390,11 +1547,13 @@
       "name": "l9-ynp",
       "path": "skills/l9-ynp",
       "reason": "",
+      "skill_md": "skills/l9-ynp/SKILL.md",
+      "skill_sha256": "640cd2652cd993c384c85e49a52bae9668cec6fd6c7eb7a0c737800d2e26a73c",
       "user_invocable": true,
       "when_to_use": "work just completed, priorities are unclear, or the user asks what to do next"
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "90fd48b1d0c8d85e623dd13efcbf9a7ba87d0a5c1d4941ae7405f52af4411f61",
-  "source_skill_corpus_sha256": "4198557f070f535b5f4f71597d6ff30b720405d9412d620a62538a037aebf275"
+  "source_manifest_sha256": "7930c18db24ce436348a4f6537c6fb0414b7a8e54dbce308b5674c81cc350985",
+  "source_skill_corpus_sha256": "370019cd8e1ec24f2a6fd464fb94e74349bef5a545a21e53f27f4d0ec58814cc"
 }
