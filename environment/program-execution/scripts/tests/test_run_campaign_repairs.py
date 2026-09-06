@@ -322,7 +322,15 @@ class TruthfulCloseTests(_Base):
 
         def fake_pec(ws: Path, command: str, *rest: str) -> dict[str, Any]:
             calls.append((command, *rest))
-            return handoff if command == "export-handoff" else {}
+            if command == "export-handoff":
+                return handoff
+            if command == "close":
+                return {
+                    "runtime_status": "completed",
+                    "verdict": rest[rest.index("--verdict") + 1],
+                    "closure_receipt": str(self.tmp / "closure.json"),
+                }
+            return {}
 
         closer = unittest.mock.Mock()
         closer.close_campaign = unittest.mock.Mock()
@@ -355,9 +363,43 @@ class TruthfulCloseTests(_Base):
         close = next(call for call in calls if call[0] == "close")
         self.assertIn("CONVERGED", close)
         self.assertIn("handoff_id=HANDOFF-7", close)
-        args = self.closer.close_campaign.call_args.args
-        self.assertEqual(args[2], "CONVERGED")
-        self.assertEqual(args[3]["handoff_id"], "HANDOFF-7")
+        call = self.closer.close_campaign.call_args
+        # The closer receives the Controller Closure Receipt, never a verdict
+        # literal; the verdict the runner read is only an expectation to match.
+        self.assertEqual(call.args[2], self.tmp / "closure.json")
+        self.assertEqual(call.kwargs["expected_verdict"], "CONVERGED")
+        self.assertEqual(call.kwargs["extra_evidence"]["handoff_id"], "HANDOFF-7")
+
+    def test_close_without_a_closure_receipt_is_refused(self) -> None:
+        calls: list[tuple[str, ...]] = []
+
+        def fake_pec(ws: Path, command: str, *rest: str) -> dict[str, Any]:
+            calls.append((command, *rest))
+            if command == "export-handoff":
+                return {"handoff_id": "H", "recommended_program_verdict": "CONVERGED"}
+            return {"runtime_status": "completed"}
+
+        closer = unittest.mock.Mock()
+        real_load = self.mod._load_script
+        with (
+            unittest.mock.patch.object(self.mod, "pec_cmd", side_effect=fake_pec),
+            unittest.mock.patch.object(
+                self.mod,
+                "_load_script",
+                side_effect=lambda n, p: closer if n == "close_campaign" else real_load(n, p),
+            ),
+            self.assertRaises(self.mod.CampaignError) as ctx,
+        ):
+            self.mod.default_close(
+                self.tmp / "ws",
+                "CAMP-1",
+                write_root=self.tmp,
+                host_repo="owner/repo",
+                hooks=self.mod.Hooks(),
+                merge_recorded=False,
+            )
+        self.assertEqual(ctx.exception.error_code, "TERMINAL_AUTHORITY_MISSING")
+        closer.close_campaign.assert_not_called()
 
     def test_close_refuses_when_the_controller_does_not_recommend_success(self) -> None:
         for verdict in ("HALTED", "INCONCLUSIVE", None):

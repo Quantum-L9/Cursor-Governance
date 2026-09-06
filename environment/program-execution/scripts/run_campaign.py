@@ -4840,7 +4840,7 @@ def default_close(
             f"refuse to close {campaign_id}: Controller recommends {verdict}; "
             f"handoff {handoff.get('handoff_id')} at {handoff_path}"
         )
-    pec_cmd(
+    closed = pec_cmd(
         workspace,
         "close",
         "--actor",
@@ -4852,18 +4852,25 @@ def default_close(
         "--evidence",
         f"handoff_id={handoff.get('handoff_id')}",
     )
+    closure_receipt = str(closed.get("closure_receipt") or "")
+    if not closure_receipt:
+        raise CampaignError(
+            f"pec close produced no Controller Closure Receipt for {campaign_id}; "
+            "the campaign ledger cannot be projected without one",
+            error_code="TERMINAL_AUTHORITY_MISSING",
+        )
+    # The in-repo ledger is a projection of the Controller's closure: it takes
+    # the receipt, validates its identity and digest, and records the verdict
+    # the receipt carries. The runner never hands it a verdict of its own.
     closer = _load_script("close_campaign", PE_ROOT / "campaigns/scripts/close_campaign.py")
     campaigns_root = write_root / "environment/program-execution/campaigns"
     closer.close_campaign(
         campaigns_root,
         campaign_id,
-        verdict,
-        {
-            "campaign_id": campaign_id,
-            "pec_workspace": str(workspace),
-            "handoff_id": str(handoff.get("handoff_id") or ""),
-        },
+        Path(closure_receipt),
         "make-campaign",
+        extra_evidence={"handoff_id": str(handoff.get("handoff_id") or "")},
+        expected_verdict=verdict,
     )
     archived = closer.archive_completed(campaigns_root, campaign_id)
     return {"archived": str(archived)}

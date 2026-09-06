@@ -30,6 +30,7 @@ from .blueprint import (
     BlueprintError,
     build_program_lock,
     classify_lock_drift,
+    lock_integrity_errors,
     relock_tasks,
     stale_task_ids,
     verify_program_lock,
@@ -97,6 +98,9 @@ def _campaign_completion_blockers(db: StateDB, verdict: str) -> dict[str, list[s
     active = db.active_leases()
     if active:
         blockers["active_leases"] = [str(item["lease_id"]) for item in active]
+    live = db.live_execution_attempts()
+    if live:
+        blockers["active_execution_attempts"] = [str(item["attempt_id"]) for item in live]
     if success:
         blocked_gates = [
             str(item["id"])
@@ -118,6 +122,7 @@ def write_campaign_status(
     ledger: EventLedger | None = None,
     verdict: str | None = None,
     evidence: dict[str, Any] | None = None,
+    closure_receipt: str | None = None,
 ) -> dict[str, Any]:
     if source_status not in SOURCE_STATUSES:
         raise ControllerError(f"invalid source_status={source_status}")
@@ -136,6 +141,9 @@ def write_campaign_status(
         "completed_at": utc_now() if runtime_status == "completed" else current.get("completed_at"),
         "verdict": verdict if runtime_status == "completed" else current.get("verdict"),
         "evidence": evidence or current.get("evidence") or {},
+        "closure_receipt": closure_receipt
+        if runtime_status == "completed"
+        else current.get("closure_receipt"),
         "actor": actor,
     }
     write_json(campaign_status_path(workspace), payload)
@@ -194,22 +202,84 @@ def _program_recommendation(db: StateDB, ledger: EventLedger) -> tuple[str, dict
     return recommendation, facts
 
 
+CLOSURE_RECEIPT_SCHEMA = "program-execution-controller.closure-receipt.v1"
+CLOSURE_PRODUCER = "Program Execution Controller"
+
+
+def closure_receipt_path(workspace: Path, closure_id: str) -> Path:
+    return workspace.resolve() / "receipts" / "closure" / f"{closure_id}.json"
+
+
+def _closure_blockers(db: StateDB, ledger: EventLedger, workspace: Path, verdict: str) -> dict:
+    """Every condition a terminal close must prove, success or not (R6 §10.5)."""
+    blockers = _campaign_completion_blockers(db, verdict)
+    ledger_ok, ledger_message = ledger.verify()
+    if not ledger_ok:
+        blockers["ledger"] = [ledger_message]
+    lock_path = workspace / "runtime" / "program-lock.json"
+    try:
+        lock = load_json(lock_path)
+    except (OSError, ValueError) as exc:
+        blockers["program_lock"] = [f"unreadable: {exc}"]
+    else:
+        integrity = lock_integrity_errors(lock)
+        if integrity:
+            blockers["program_lock"] = integrity
+        elif lock.get("lock_digest") != db.get_meta("program_digest"):
+            blockers["program_lock"] = ["runtime program digest does not match the lock on disk"]
+    recovering = [
+        str(task["id"])
+        for task in db.tasks()
+        if str(task.get("last_error") or "").startswith("recovery:")
+        and task["runtime_state"] not in {"COMPLETED", "CANCELLED", "STALE", "FAILED"}
+    ]
+    if recovering:
+        blockers["unresolved_recovery"] = recovering
+    return blockers
+
+
 def complete_campaign(
     workspace: Path,
     actor: str,
     verdict: str,
     evidence: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Mark a live campaign completed. Last required campaign step."""
+    """The one Controller operation that turns an active runtime terminal.
+
+    Produces the Controller Closure Receipt: the only artifact an external
+    campaign projection may accept as terminal truth (PEC-P1-002). Handoff
+    export reports; this closes. A repeated close with the same verdict replays
+    the existing receipt; a different verdict on a closed runtime is refused.
+    """
     if verdict not in TERMINAL_VERDICTS:
         raise ControllerError(f"closeout requires a terminal verdict, got {verdict}")
     db, ledger = open_runtime(workspace)
+    workspace = workspace.resolve()
     try:
-        blockers = _campaign_completion_blockers(db, verdict)
+        current = read_campaign_status(workspace) or db.get_meta("campaign_status") or {}
+        if current.get("runtime_status") == "completed":
+            existing = current.get("closure_receipt")
+            if current.get("verdict") == verdict and existing and Path(existing).is_file():
+                replay = load_json(Path(existing))
+                return {**current, "closure": replay, "replayed": True}
+            raise ControllerError(
+                f"campaign already closed with verdict {current.get('verdict')}; "
+                f"refusing to close again as {verdict}",
+                error_code="TERMINAL_ALREADY_CLOSED",
+            )
+        blockers = _closure_blockers(db, ledger, workspace, verdict)
         if blockers:
+            code = (
+                "TERMINAL_BLOCKED_ACTIVE_ATTEMPT"
+                if "active_execution_attempts" in blockers
+                else "TERMINAL_BLOCKED_ACTIVE_LEASE"
+                if "active_leases" in blockers
+                else "TERMINAL_BLOCKED"
+            )
             raise ControllerError(
                 "campaign close refused; canonical child/gate/lease state is not terminal: "
-                + json.dumps(blockers, sort_keys=True)
+                + json.dumps(blockers, sort_keys=True),
+                error_code=code,
             )
         recommendation, facts = _program_recommendation(db, ledger)
         if verdict in SUCCESS_VERDICTS and recommendation not in SUCCESS_VERDICTS:
@@ -221,23 +291,58 @@ def complete_campaign(
                 f"campaign close refused; verdict {verdict} exceeds the Controller "
                 f"recommendation {recommendation}: " + json.dumps(facts, sort_keys=True)
             )
-        if verdict in SUCCESS_VERDICTS and not facts["ledger_valid"]:
-            raise ControllerError("campaign close refused; ledger integrity failure")
-        current = read_campaign_status(workspace) or db.get_meta("campaign_status") or {}
-        payload = write_campaign_status(
-            workspace,
-            campaign_id=str(
-                current.get("campaign_id") or _campaign_id_from_program(db.get_meta("program"))
-            ),
-            source_status=str(current.get("source_status") or "operator_intake"),
-            runtime_status="completed",
-            actor=actor,
-            ledger=ledger,
-            verdict=verdict,
-            evidence=evidence,
+        campaign_id = str(
+            current.get("campaign_id") or _campaign_id_from_program(db.get_meta("program"))
         )
-        db.set_meta("campaign_status", payload)
-        return payload
+        program = db.get_meta("program") or {}
+        closure_id = f"CLOSURE-{uuid.uuid4().hex[:16]}"
+        receipt = {
+            "schema": CLOSURE_RECEIPT_SCHEMA,
+            "closure_id": closure_id,
+            "producer": CLOSURE_PRODUCER,
+            "controller_id": _runtime_config(workspace)["controller_id"],
+            "campaign_id": campaign_id,
+            "program_id": str(program.get("id") or ""),
+            "program_digest": db.get_meta("program_digest"),
+            "runtime_workspace": str(workspace),
+            "verdict": verdict,
+            "recommendation": recommendation,
+            "facts": facts,
+            "blockers_checked": [
+                "tasks",
+                "active_leases",
+                "active_execution_attempts",
+                "blocking_gates",
+                "ledger",
+                "program_lock",
+                "unresolved_recovery",
+            ],
+            "evidence": dict(evidence or {}),
+            "closed_by": actor,
+            "closed_at": utc_now(),
+        }
+        receipt["receipt_digest"] = digest_object(receipt)
+        target = closure_receipt_path(workspace, closure_id)
+        with db.controller_transaction():
+            write_json(target, receipt)
+            payload = write_campaign_status(
+                workspace,
+                campaign_id=campaign_id,
+                source_status=str(current.get("source_status") or "operator_intake"),
+                runtime_status="completed",
+                actor=actor,
+                ledger=None,
+                verdict=verdict,
+                evidence={**dict(evidence or {}), "closure_id": closure_id},
+                closure_receipt=str(target),
+            )
+            db.set_meta("campaign_status", payload)
+        ledger.append(
+            "CAMPAIGN_COMPLETED",
+            actor,
+            {**payload, "closure_receipt_digest": receipt["receipt_digest"]},
+        )
+        return {**payload, "closure": receipt}
     finally:
         db.close()
 
