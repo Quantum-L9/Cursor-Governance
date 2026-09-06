@@ -1,0 +1,236 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Exact path-based exceptions for ops/scripts/validate_memory_egress_boundary.py. Every entry names the campaign stage that deletes it and an expiry date; an expired entry is a finding. Nothing here authorizes new provider egress — it inventories the legacy bypass the realignment campaign removes (CURSOR_GOVERNANCE_MEMORY_CONTROL_PLANE_REALIGNMENT_BUILD_PLAN §8).",
+  "mode": "warning",
+  "mode_note": "warning: findings are reported and the validator exits 0. Stage C11 flips this to enforce (merge-blocking).",
+  "entries": [
+    {
+      "path": "ops/graphiti/graphiti_memory_client.py",
+      "reason": "Legacy provider client; production callers migrate C3-C6, file removed C11.",
+      "retire_at_stage": "C11",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "ops/graphiti/hydration/compile_session_packet.py",
+      "reason": "Legacy PICKUP search via search_memory_facts; replaced by canonical hydrate at C4.",
+      "retire_at_stage": "C4",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "ops/graphiti/hydration/close_session.py",
+      "reason": "Legacy add_memory close; replaced by canonical candidate + memory.close at C5/C6.",
+      "retire_at_stage": "C6",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "ops/graphiti/hydration/pickup_write.py",
+      "reason": "Legacy PICKUP repair/fallback writes; retired with the fuzzy PICKUP path at C11.",
+      "retire_at_stage": "C11",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "ops/graphiti/episode_contract.py",
+      "reason": "Provider episode payload contract; retired with the legacy client at C11.",
+      "retire_at_stage": "C11",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "ops/graphiti/graphiti_gate_lib.py",
+      "reason": "Legacy gate state consumer; realigned at C8 to canonical evidence.",
+      "retire_at_stage": "C8",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "ops/graphiti/graphiti_env_loader.py",
+      "reason": "Loads GRAPHITI_MCP_* into the Cursor process; removed at C9 (credential isolation).",
+      "retire_at_stage": "C9",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "ops/graphiti/graphiti.env.defaults",
+      "reason": "Provider connection defaults; removed at C9.",
+      "retire_at_stage": "C9",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "ops/graphiti/graphiti.env.example",
+      "reason": "Provider connection example; removed at C9.",
+      "retire_at_stage": "C9",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "ops/graphiti/mcp.json.example",
+      "reason": "Cursor-authored direct Graphiti MCP entry; replaced by the memory-owned configurator at C7.",
+      "retire_at_stage": "C7",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "ops/graphiti/prune.py",
+      "reason": "Provider-side prune tooling; reconciled or archived at C10.",
+      "retire_at_stage": "C10",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "ops/graphiti/test_*.py",
+      "reason": "In-tree tests of the legacy client; deleted with it at C11.",
+      "retire_at_stage": "C11",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "ops/graphiti/test_*.sh",
+      "reason": "In-tree e2e scripts of the legacy client; deleted with it at C11.",
+      "retire_at_stage": "C11",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "ops/graphiti/hydration/test_*.py",
+      "reason": "In-tree tests of the legacy hydration path; rewritten at C4-C6.",
+      "retire_at_stage": "C6",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "ops/hooks/graphiti_common.sh",
+      "reason": "Shared hook env loader for the legacy client; realigned at C8.",
+      "retire_at_stage": "C8",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "ops/hooks/*.sh",
+      "reason": "Cursor lifecycle hooks still invoking the legacy client; migrated at C4-C8.",
+      "retire_at_stage": "C8",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "ops/hooks/*.py",
+      "reason": "Cursor hook helpers reading Graphiti state; migrated at C8.",
+      "retire_at_stage": "C8",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "environment/agents/adapters/claude-code/mcp.template.json",
+      "reason": "Claude MCP front door to Graphiti; replaced by the canonical memory server at C7/C8.",
+      "retire_at_stage": "C8",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "environment/agents/adapters/claude-code/**",
+      "reason": "Claude adapter hooks and validators still bound to the legacy client; realigned at C8.",
+      "retire_at_stage": "C8",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "environment/agents/adapters/**",
+      "reason": "Other model-adapter surfaces referencing GRAPHITI_MCP_*; realigned at C8/C9.",
+      "retire_at_stage": "C9",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "skills/l9-graphiti-memory/**",
+      "reason": "Skill scripts wrapping the legacy client; rewritten at C12 after executable migration.",
+      "retire_at_stage": "C12",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "skills/**",
+      "reason": "Skill scripts and manifests referencing the legacy client or provider env; migrated C8-C12.",
+      "retire_at_stage": "C12",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "ops/secrets/**",
+      "reason": "Secret plane references to the Graphiti token ref; removed at C9.",
+      "retire_at_stage": "C9",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "ops/scripts/**",
+      "reason": "Bootstrap/session scripts still reading GRAPHITI_MCP_*; realigned at C8/C9.",
+      "retire_at_stage": "C9",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "ops/autonomy/**",
+      "reason": "Autonomy gates referencing provider env names in policy text; realigned at C8.",
+      "retire_at_stage": "C8",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "ops/graphiti/distill_queue/**",
+      "reason": "S3 distill worker writing provider episodes; reconciled through canonical ingress at C10.",
+      "retire_at_stage": "C10",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "ops/graphiti/docker-compose.yml",
+      "reason": "Protected provider-stack compose file (rules/93, allowlisted only, never edited here); ownership moves below the memory package at C10.",
+      "retire_at_stage": "C10",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "ops/graphiti/outcome_label.py",
+      "reason": "Provider fact labeling helper; retired with the legacy client at C11.",
+      "retire_at_stage": "C11",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": ".github/workflows/memory-distill.yml",
+      "reason": "CI distill job holding provider secrets; re-pointed at the canonical memory runtime at C9/C10.",
+      "retire_at_stage": "C10",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": ".mcp.json",
+      "reason": "Rendered projection of the Claude template's Graphiti front door; replaced by the memory-owned configurator at C7/C8.",
+      "retire_at_stage": "C8",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "environment/mcp/master.mcp.json",
+      "reason": "Master inventory naming the Graphiti front door; replaced at C7.",
+      "retire_at_stage": "C7",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "environment/agents/agent_registry.yaml",
+      "reason": "Agent registry naming provider env variables; realigned at C9.",
+      "retire_at_stage": "C9",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "environment/agents/tools/**",
+      "reason": "Agent validators policing provider env presence; realigned at C9.",
+      "retire_at_stage": "C9",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "environment/agents/generated-data/**",
+      "reason": "Generated-data adapter calling add_memory directly: a write site migrated to memory.ingest_governed_candidate at C5.",
+      "retire_at_stage": "C5",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "environment/program-execution/**",
+      "reason": "Program Execution graphiti integration and its negative tests naming provider tools; realigned at C8.",
+      "retire_at_stage": "C8",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "ops/config/memory-egress-allowlist.json",
+      "reason": "This allowlist names the forbidden tokens it governs.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "ops/scripts/validate_memory_egress_boundary.py",
+      "reason": "The scanner defines the forbidden tokens.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "tests/ops/memory/**",
+      "reason": "Negative tests for the boundary name forbidden tokens as fixtures.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    }
+  ]
+}

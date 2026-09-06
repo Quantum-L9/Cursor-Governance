@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Cursor-Governance binding to the canonical memory control plane (l9-graphiti-memory). Read by ops/memory/runtime_binding.py, which proves the exact package, interpreter, and console script before any lifecycle call. This is a Cursor-owned statement of what Cursor expects to run; it grants nothing and resolves no provider. Production binding is an immutable release artifact locked in uv.lock; until MEMORY_TARGET_VERSION is cut (campaign stage M2), integration binds the exact git SHA below and reports binding_status accordingly.",
+  "distribution": "l9-graphite-memory",
+  "import_package": "l9_graphite_memory",
+  "console_script": "l9-memory",
+  "expected_package_version": "2.2.0",
+  "expected_contract_version": "memory-control-plane/v1",
+  "required_cli_operations": [
+    "resolve",
+    "health",
+    "capabilities",
+    "hydrate",
+    "search",
+    "get",
+    "ingest",
+    "ingest_governed_candidate",
+    "close",
+    "conflicts",
+    "phase_lock",
+    "verify_phase_lock"
+  ],
+  "source": {
+    "kind": "git",
+    "repository": "Quantum-L9/l9-graphiti-memory",
+    "ref": "f1a3444a4f48ebeffa365f3e4a244cbf685a866d",
+    "ref_note": "PR M1 head: CLI close, capabilities receipt, SDK parity, continuation candidate contract (ADR-082). Replace with the MEMORY_TARGET_VERSION release tag at M2 and lock it in uv.lock; a git ref is an integration binding, never a production one."
+  },
+  "binding_policy": {
+    "production": "exact release artifact locked in uv.lock; runtime_mode=pinned_environment",
+    "integration": "exact git SHA above, installed as a built wheel into the governance environment; runtime_mode=pinned_environment",
+    "development": "L9_MEMORY_DEV_CHECKOUT=<path to a l9-graphiti-memory checkout with .venv>; runtime_mode=development_checkout, never silent",
+    "forbidden": [
+      "whatever l9-memory is first on PATH",
+      "an adjacent checkout discovered by directory scanning",
+      "git+...@main or any floating ref",
+      "pip install -e of a sibling checkout without the development opt-in"
+    ]
+  },
+  "interpreter_resolution_order": [
+    "explicit interpreter argument",
+    "L9_MEMORY_DEV_CHECKOUT/.venv/bin/python (development opt-in)",
+    "L9_MEMORY_INTERPRETER",
+    "the governance runtime interpreter (sys.executable)"
+  ]
+}

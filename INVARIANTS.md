@@ -20,6 +20,7 @@ Named pointers only. One line + path. Bind from live law at refresh time.
 | Sole sanctioned publish path is `make pr` (any capitalization); raw `git push` / `gh pr create` skip the Makefile checkers (not a hook denial in this repo) | `AGENTS.md` §4; `CANONICAL_LAW.md` §6.2.4 |
 | L4: local commits only during execution; no mid-execution push | `AGENTS.md` §3.1; `ops/autonomy/surface_profile.yaml` |
 | Graphiti is the episodic resume SSOT; do not write `memory-bank/` | `AGENTS.md` §7; `ops/graphiti/MEMORY_BANK_POLICY.md` |
+| Memory egress crosses the `l9-graphite-memory` control plane only; no direct provider calls, no provider credentials in Cursor code (INV-03/04/06/07/11). Warning mode until stage C11, then merge-blocking | `ops/memory/README.md`; [`ops/config/memory-binding.json`](ops/config/memory-binding.json); [`ops/scripts/validate_memory_egress_boundary.py`](ops/scripts/validate_memory_egress_boundary.py) |
 | Secret values never in git, logs, receipts, or chat | `AGENTS.md` §8; `ops/secrets/` |
 | Root files are classified; new root files must be registered; `additive_only` files are append-only | `AGENTS.md` §14; [`ops/config/root-file-protection.json`](ops/config/root-file-protection.json) |
 | One mutating agent per worktree; stage explicit pathspecs only | `AGENTS.md` + `rules/49-shared-worktree-isolation.mdc` |

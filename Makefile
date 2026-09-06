@@ -907,3 +907,16 @@ cursor-install-check:
 		--governance "$(CURDIR)" --workspace "$(if $(WS),$(WS),$(CURDIR))" --check
 	L9_GOV_ROOT="$(CURDIR)" $(PYTHON) ops/scripts/claude_bootstrap_receipt.py \
 		--surface cursor --path "$$HOME/.l9/cursor/bootstrap-check.json" --json
+
+## --- Memory control plane (ops/memory; realignment stage C1) --------------
+## Prove the exact l9-graphite-memory package + CLI this checkout is bound to.
+memory-binding:
+	PYTHONPATH="$(CURDIR)" $(PYTHON) -m ops.memory.diagnostics --binding-only
+
+## Layered readiness R0..R9 (projection last). Add MEMORY_VERIFY_MCP=1 for the real MCP handshake.
+memory-readiness:
+	PYTHONPATH="$(CURDIR)" $(PYTHON) -m ops.memory.diagnostics --workspace "$(if $(WS),$(WS),$(CURDIR))" $(if $(MEMORY_VERIFY_MCP),--verify-mcp,)
+
+## Provider egress firewall: warning mode until stage C11 (MEMORY_EGRESS_ENFORCE=1 to block).
+memory-egress-check:
+	$(PYTHON) ops/scripts/validate_memory_egress_boundary.py $(if $(MEMORY_EGRESS_ENFORCE),--enforce,)
