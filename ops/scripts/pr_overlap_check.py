@@ -77,11 +77,23 @@ def autonomous_publication() -> bool:
         return True
 
 
+#: Telemetry denial exit code, distinct from 1 (a detected conflict).
+#:
+#: Both deny publication, and every caller must keep denying on either — but
+#: they differ in what clears them. A conflict is in the tree: it stays until
+#: the diff or the base changes, so the caller's STOP LOOPING receipt, keyed on
+#: those digests, describes it exactly. Unreachable telemetry is not in the tree
+#: at all. The digest never moves, so a receipt written for it outlives the
+#: outage and pins the branch forever — refusing even the "re-run make pr" the
+#: block message itself prescribes. Callers distinguish the two by this code.
+TELEMETRY_DENIED_EXIT = 3
+
+
 def telemetry_failure(what: str) -> int:
     """Handle an undeterminable collision state.
 
-    Returns the process exit code: 1 (deny) under autonomous publication or an
-    explicit PR_OVERLAP_TELEMETRY=closed, else 0 with a WARN.
+    Returns the process exit code: TELEMETRY_DENIED_EXIT (deny) under autonomous
+    publication or an explicit PR_OVERLAP_TELEMETRY=closed, else 0 with a WARN.
     """
     policy = os.environ.get("PR_OVERLAP_TELEMETRY", "").strip().lower()
     if policy == "open":
@@ -92,7 +104,7 @@ def telemetry_failure(what: str) -> int:
         print("  Local work is unaffected: only the push is blocked.")
         print("  Restore telemetry (gh auth/network), then re-run make pr.")
         print("  A human may override with a stated justification: PR_OVERLAP_TELEMETRY=open")
-        return 1
+        return TELEMETRY_DENIED_EXIT
     print(f"WARN: {what} — overlap gate skipped (interactive run, fail-open)")
     return 0
 
