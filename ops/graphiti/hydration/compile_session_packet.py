@@ -6,17 +6,10 @@ identity → requested namespaces → memory.health → memory.hydrate → typed
 continuation records. The packet itself stays Cursor's composition artifact
 (S-01); only where its evidence originates changed.
 
-The provider read that used to be the authority survives here only as a
-**migration-only shadow** (plan §11, §13): read-only, never a write, never a
-source of session context, tagged ``legacy_unverified`` when it is consulted
-at all, and gone at stage C11. Two switches, both off by default:
-
-- ``MEMORY_LEGACY_SHADOW=1`` runs the legacy read beside the canonical one
-  and writes a discrepancy receipt (ids and digests, no content) under
-  ``<project>/.l9/memory/shadow/<session>.json``.
-- ``MEMORY_LEGACY_CONTINUATION=1`` lets a legacy PICKUP stand in as
-  ``legacy_unverified`` continuation *only* when canonical memory returned no
-  continuation at all, while provider-only history is being reconciled (C10).
+Stage C11 removed the migration-only provider shadow read: this module has no
+provider path left, and a session with no canonical continuation starts from
+the user request. Provider-only history is reconciled offline through
+``ops/memory/legacy_reconciliation.py``, never read from here.
 """
 
 from __future__ import annotations
@@ -24,7 +17,6 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -40,12 +32,9 @@ from ops.graphiti.hydration.identity import resolve_write_identity  # noqa: E402
 from ops.graphiti.hydration.session_latches import (  # noqa: E402
     close_gap_reason,
     resolve_session_id,
-    shadow_dir,
 )
 from ops.memory.hydration import (  # noqa: E402
-    SOURCE_LEGACY_UNVERIFIED,
     STATUS_NAMESPACE_UNRESOLVED,
-    CanonicalHydration,
     canonical_hydrate,
 )
 from ops.memory.session_state import write_session_state  # noqa: E402
@@ -53,8 +42,6 @@ from ops.memory.session_state import write_session_state  # noqa: E402
 _RULES_PATH = Path(__file__).resolve().parent / "promotion_rules.yaml"
 
 HEADING = "### memory hydrate"
-ENV_LEGACY_SHADOW = "MEMORY_LEGACY_SHADOW"
-ENV_LEGACY_CONTINUATION = "MEMORY_LEGACY_CONTINUATION"
 
 
 def _hydration_budget() -> int:
@@ -70,227 +57,6 @@ def _hydration_budget() -> int:
         return int(rules.get("hydration_char_budget_default", 4000))
     except Exception:  # noqa: BLE001
         return 4000
-
-
-def _flag(name: str) -> bool:
-    return os.environ.get(name, "0").strip().lower() in {"1", "true", "yes"}
-
-
-# ---------------------------------------------------------------------------
-# Legacy shadow reader (migration-only; deleted at C11)
-# ---------------------------------------------------------------------------
-
-
-class SearchFactsError(RuntimeError):
-    """The legacy provider read did not complete (not an empty result)."""
-
-
-def _read_groups(group_id: str) -> list[str]:
-    # Broad by design; the handler below carries the reason.
-    # nosemgrep: l9.baseline.python.broad-except
-    try:
-        import graphiti_memory_client as gmc
-
-        return list(gmc.resolve_read_groups(group_id))
-    except Exception:  # noqa: BLE001
-        return [group_id]
-
-
-def _search_facts(group_id: str, query: str, *, limit: int = 8) -> list[dict[str, Any]]:
-    """Legacy provider search. Read-only; shadow and migration use only."""
-    try:
-        import graphiti_memory_client as gmc
-
-        gmc.load_env()
-        results: list[dict[str, Any]] = []
-        errors: list[str] = []
-        for gid in _read_groups(group_id):
-            try:
-                found = gmc.call_tool(
-                    "search_memory_facts",
-                    {"query": query, "group_ids": [gid], "max_facts": limit},
-                )
-            except Exception as exc:  # noqa: BLE001
-                errors.append(f"{gid}: {exc}")
-                continue
-            if isinstance(found, dict):
-                facts = found.get("facts") or found.get("results") or found.get("nodes") or []
-                if isinstance(facts, list):
-                    results.extend(f for f in facts if isinstance(f, dict))
-            elif isinstance(found, list):
-                results.extend(f for f in found if isinstance(f, dict))
-        if not results and errors:
-            raise SearchFactsError("; ".join(errors)[:400])
-        return results[:limit]
-    except SearchFactsError:
-        raise
-    except Exception as exc:  # noqa: BLE001
-        raise SearchFactsError(str(exc) or type(exc).__name__) from exc
-
-
-def _fact_text(fact: dict[str, Any]) -> str:
-    for key in ("fact", "content", "name", "episode_body", "summary", "text"):
-        val = fact.get(key)
-        if isinstance(val, str) and val.strip():
-            return val.strip()
-    return json.dumps(fact, ensure_ascii=False)[:400]
-
-
-def _parse_pickup_pipe(text: str) -> tuple[str, str]:
-    """Parse legacy ``PICKUP|objective=…|next=…`` lines (historical format)."""
-    if "PICKUP|" not in text.upper() and not text.upper().startswith("PICKUP|"):
-        if "PICKUP|" not in text and "objective=" not in text.lower():
-            return "", ""
-    objective = ""
-    next_action = ""
-    for part in re.split(r"[|\n]", text):
-        part = part.strip()
-        low = part.lower()
-        if low.startswith("objective="):
-            objective = part.split("=", 1)[1].strip()[:500]
-        elif low.startswith("next=") or low.startswith("next_action="):
-            next_action = part.split("=", 1)[1].strip()[:1000]
-    return objective, next_action
-
-
-def _extract_pickup(facts: list[dict[str, Any]]) -> dict[str, str]:
-    """Best-effort objective/next from legacy provider facts (historical format)."""
-    pickup_text = ""
-    for fact in facts:
-        text = _fact_text(fact)
-        if (
-            "PICKUP" in text.upper()
-            or "next_action" in text
-            or "active_objective" in text
-            or "objective=" in text.lower()
-            or "next=" in text.lower()
-        ):
-            pickup_text = text
-            break
-    if not pickup_text and facts:
-        pickup_text = _fact_text(facts[0])
-    objective, next_action = _parse_pickup_pipe(pickup_text)
-    m_obj = re.search(
-        r"(?:active_objective|objective)\s*(?:[:=]|is(?:\s+to)?)\s*(.+)",
-        pickup_text,
-        re.IGNORECASE,
-    )
-    if m_obj and not objective:
-        objective = m_obj.group(1).strip().split("\n")[0][:500]
-    m_next = re.search(
-        r"(?:next_action|next(?:\s+action)?)\s*(?:[:=]|is(?:\s+to)?)\s*(.+)",
-        pickup_text,
-        re.IGNORECASE,
-    )
-    if m_next and not next_action:
-        next_action = m_next.group(1).strip().split("\n")[0][:1000]
-    # The provider often paraphrased the Phase A PICKUP into prose.
-    if not next_action:
-        m_resume = re.search(
-            r"((?:resume|resuming|continue)\s+from\s+.+)", pickup_text, re.IGNORECASE
-        )
-        if m_resume:
-            next_action = m_resume.group(1).strip().split("\n")[0][:1000]
-    if objective and re.search(r"\sby\s", objective, re.IGNORECASE):
-        tail = re.split(r"\s+\bby\b\s+", objective, maxsplit=1, flags=re.IGNORECASE)
-        if len(tail) == 2 and tail[1].strip():
-            if not next_action:
-                next_action = tail[1].strip()[:1000]
-            objective = tail[0].strip()[:500]
-    json_start = pickup_text.find("{")
-    if json_start >= 0:
-        try:
-            data = json.loads(pickup_text[json_start:])
-            if isinstance(data, dict):
-                objective = str(data.get("active_objective") or objective)[:500]
-                nested = (data.get("next_action_contract") or {}).get("next_action")
-                next_action = str(data.get("next_action") or nested or next_action)[:1000]
-                pipe = str(data.get("search_line") or "")
-                if pipe:
-                    o2, n2 = _parse_pickup_pipe(pipe)
-                    objective = o2 or objective
-                    next_action = n2 or next_action
-        except json.JSONDecodeError:
-            pass
-    return {
-        "active_objective": objective,
-        "next_action": next_action,
-        "context_slice": pickup_text[:2000],
-    }
-
-
-def _digest(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
-
-
-def _legacy_shadow_read(group_id: str) -> dict[str, Any]:
-    """Read-only legacy PICKUP read; returns ids/digests, never writes."""
-    try:
-        facts = _search_facts(group_id, "PICKUP|objective= next= agent=", limit=8)
-    except SearchFactsError as exc:
-        return {"available": False, "error": type(exc).__name__, "detail": str(exc)[:200]}
-    pickup = _extract_pickup(facts) if facts else None
-    found = bool(pickup and (pickup["active_objective"] or pickup["next_action"]))
-    return {
-        "available": True,
-        "fact_count": len(facts),
-        "pickup_found": found,
-        "objective": pickup["active_objective"] if found and pickup else "",
-        "next_action": pickup["next_action"] if found and pickup else "",
-        "next_digest": _digest(pickup["next_action"]) if found and pickup else None,
-    }
-
-
-def _shadow_receipt(
-    project: Path,
-    session_id: str,
-    hydration: CanonicalHydration,
-    legacy: dict[str, Any],
-) -> dict[str, Any]:
-    """Comparison evidence (plan §11): ids, counts, digests; no memory content."""
-    canonical_next = hydration.continuation.capsule.next_action if hydration.continuation else ""
-    canonical_next_digest = _digest(canonical_next) if canonical_next else None
-    legacy_next_digest = legacy.get("next_digest")
-    if not legacy.get("available"):
-        agreement = "legacy_unreachable"
-    elif canonical_next_digest and legacy_next_digest:
-        agreement = "same_next" if canonical_next_digest == legacy_next_digest else "differs"
-    elif canonical_next_digest:
-        agreement = "canonical_only"
-    elif legacy_next_digest:
-        agreement = "legacy_only"
-    else:
-        agreement = "neither"
-    receipt = {
-        "session_id": session_id,
-        "namespace": hydration.namespace_context.write_namespace_hint,
-        "canonical": {
-            "status": hydration.status,
-            "record_count": len(hydration.record_ids),
-            "continuation_record_id": hydration.continuation.record_id
-            if hydration.continuation
-            else None,
-            "continuation_digest": hydration.continuation.capsule.digest()
-            if hydration.continuation
-            else None,
-            "continuation_stale": hydration.continuation.stale if hydration.continuation else None,
-            "next_digest": canonical_next_digest,
-        },
-        "legacy": {
-            key: value for key, value in legacy.items() if key not in {"objective", "next_action"}
-        },
-        "agreement": agreement,
-        "authority": "canonical",
-    }
-    try:
-        directory = shadow_dir(project)
-        os.makedirs(directory, exist_ok=True)
-        safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in session_id)[:120]
-        with open(os.path.join(directory, f"{safe}.json"), "w", encoding="utf-8") as handle:
-            handle.write(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
-    except (OSError, ValueError):
-        pass
-    return receipt
 
 
 # ---------------------------------------------------------------------------
@@ -359,23 +125,6 @@ def compile_session_packet(
                 f" (STALE: repository moved on from {capsule.repository_state_digest[:8]}; "
                 "current git state wins — verify before acting)"
             )
-
-    # Migration-only legacy reader (plan §13): consulted only when canonical
-    # memory has no continuation, and its result can never pass as canonical.
-    legacy_shadow: dict[str, Any] | None = None
-    if namespace != "unresolved" and (_flag(ENV_LEGACY_SHADOW) or _flag(ENV_LEGACY_CONTINUATION)):
-        legacy_shadow = _legacy_shadow_read(namespace)
-        if (
-            continuation is None
-            and hydration.ok
-            and _flag(ENV_LEGACY_CONTINUATION)
-            and legacy_shadow.get("pickup_found")
-        ):
-            objective = str(legacy_shadow.get("objective") or "")
-            next_action = str(legacy_shadow.get("next_action") or "")
-            continuation_source = SOURCE_LEGACY_UNVERIFIED
-            rationale = "legacy_unverified PICKUP (migration window; not canonical)"
-            warnings.append("continuation came from the legacy reader: legacy_unverified")
 
     degraded = hydration.degraded or close_gap
     degrade_reason = ""
@@ -446,8 +195,6 @@ def compile_session_packet(
     }
 
     memory_block: dict[str, Any] = hydration.as_dict()
-    if legacy_shadow is not None:
-        memory_block["shadow"] = _shadow_receipt(project, conversation_id, hydration, legacy_shadow)
 
     try:
         write_session_state(conversation_id, hydration)

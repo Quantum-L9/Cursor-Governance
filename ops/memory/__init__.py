@@ -19,11 +19,12 @@ Modules (import them directly; this package deliberately imports nothing):
 - ``session_state``        — local, non-authoritative per-session memory state (plan §22)
 - ``diagnostics``          — layered readiness (R0 PACKAGE_BOUND … R9 PROJECTION_READY)
 - ``mcp_instantiation``    — per-machine Cursor MCP file; the memory entry is delegated
+- ``cli``                  — ``python -m ops.memory.cli``: the operator/workflow front door
+- ``legacy_reconciliation`` — provider-only history admitted through canonical ingress
 
-Campaign stage: C8 (canonical hydration and close are the session
-authorities; the canonical MCP server is the only memory server on every
-surface; the legacy provider read survives only as a shadow diagnostic until
-C11).
+Campaign stage: C12 (complete). The provider client is a tombstone, the
+provider env plane and shadow reader are deleted, the egress scanner enforces,
+and CANONICAL_LAW §8.2 / ADR-0030 name this package the single front door.
 """
 
 from __future__ import annotations

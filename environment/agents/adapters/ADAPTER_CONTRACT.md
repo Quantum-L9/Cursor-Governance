@@ -24,21 +24,22 @@ execution machinery.
 
 ## Memory carrier
 
-Graphiti HTTPS front door (every adapter):
+Canonical `l9-graphite-memory` control plane, **stdio**, every adapter
+(realignment stage C7–C11, ADR-0030):
 
 ```text
-${GRAPHITI_MCP_URL}
+${L9_MEMORY_INTERPRETER} -m l9_graphite_memory.server --transport stdio
 ```
 
-Default: `https://memory.quantumaipartners.com/graphiti/mcp`. **No adapter MCP
-template carries a bearer.** `GRAPHITI_MCP_TOKEN` is deliberately absent. An
-adapter template that interpolates `Authorization: Bearer ${GRAPHITI_MCP_TOKEN}`
-or points at `${L9_CAPABILITY_BROKER_URL}` is a contract violation.
+**No adapter MCP template carries a URL, an `env` block, a header, or a
+bearer** (memory ADR-016: the runtime resolves its own configuration). An
+adapter template that interpolates a provider URL, `Authorization: Bearer …`,
+or `${L9_CAPABILITY_BROKER_URL}` is a contract violation, and the retired
+`graphiti-memory` key is dropped from every rendered file (`_retired_servers`).
 
-The capability-broker experiment never shipped. Do not restore a brokered
-Graphiti URL to "fix" unauthenticated memory. `ops/graphiti/mcp.json.example`
-is the separate trusted-operator (Cursor SSH tunnel) shape and is not an
-adapter template.
+The capability-broker experiment never shipped. Do not restore a brokered or
+direct provider URL to "fix" memory: an unbound runtime is an honest
+`memory-blind`, repaired with `make memory-binding` / `make memory-mcp-install`.
 
 Writer identity is separate and comes from `agent_registry.yaml` through
 `USER_ID`, `L9_MEMORY_AGENT_ID`, and `L9_MEMORY_SOURCE`. Surface adapters never
@@ -110,7 +111,7 @@ entrypoint and passes its own surface id:
 
 ```bash
 bash ops/secrets/bootstrap_agent_env.sh --check --surface <surface-id> \
-  --require-capabilities sonar.read_issues,semgrep.appsec_scan,graphiti.query
+  --require-capabilities sonar.read_issues,semgrep.appsec_scan
 ```
 
 ### Execution classes

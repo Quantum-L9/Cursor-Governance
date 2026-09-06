@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -13,8 +12,6 @@ ROOT = Path(__file__).resolve().parents[3]
 GRAPHITI = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(GRAPHITI))
-
-from episode_contract import EpisodeContract  # noqa: E402
 
 from ops.graphiti.hydration import close_session as cs  # noqa: E402
 from ops.graphiti.hydration import compile_session_packet as comp  # noqa: E402
@@ -40,19 +37,6 @@ def test_identity_claude_cannot_impersonate_cursor():
             explicit_agent_id="cursor",
             explicit_user_id="cursor_agent",
             surface="claude-code",
-        )
-
-
-def test_episode_contract_requires_agent_id():
-    with pytest.raises(Exception):
-        EpisodeContract(
-            name="test-episode",
-            episode_body="hello world body",
-            source="text",
-            source_description="x",
-            reference_time=datetime.now(UTC),
-            group_id="cursor-governance",
-            agent_id="",
         )
 
 
@@ -173,21 +157,6 @@ def test_compile_packet_transport_failure_is_not_empty_search(monkeypatch, tmp_p
     assert "status=CANONICAL_UNAVAILABLE DEGRADED" in ctx
 
 
-def test_search_facts_raising_client_is_unreachable(monkeypatch):
-    import types
-
-    def _boom(*_a, **_k):
-        raise ConnectionError("tunnel down")
-
-    fake = types.ModuleType("graphiti_memory_client")
-    fake.load_env = lambda: None  # type: ignore[attr-defined]
-    fake.call_tool = _boom  # type: ignore[attr-defined]
-    fake.resolve_read_groups = lambda group_id: [group_id]  # type: ignore[attr-defined]
-    monkeypatch.setitem(sys.modules, "graphiti_memory_client", fake)
-    with pytest.raises(comp.SearchFactsError, match="tunnel down"):
-        comp._search_facts("cursor-governance", "PICKUP", limit=2)
-
-
 def test_compile_packet_with_pickup(monkeypatch, tmp_path):
     """A typed canonical continuation drives objective, next action, and anchors."""
     _canonical(
@@ -229,78 +198,6 @@ def test_compile_packet_stale_continuation_says_repository_wins(monkeypatch, tmp
     assert "STALE" in packet["next_action_contract"]["rationale"]
     assert "current git state wins" in packet["next_action_contract"]["rationale"]
     assert " STALE" in comp.format_additional_context(packet)
-
-
-def test_compile_packet_never_reads_the_legacy_provider_by_default(monkeypatch, tmp_path):
-    _canonical(monkeypatch, tmp_path, _hydration("NO_HITS"))
-    monkeypatch.delenv("MEMORY_LEGACY_SHADOW", raising=False)
-    monkeypatch.delenv("MEMORY_LEGACY_CONTINUATION", raising=False)
-
-    def _boom(*_a, **_k):
-        raise AssertionError("legacy provider read must not run")
-
-    monkeypatch.setattr(comp, "_search_facts", _boom)
-    packet = comp.compile_session_packet(
-        project_dir=tmp_path, conversation_id="sess-4", agent_id="cursor"
-    )
-    assert "shadow" not in packet["memory"]
-
-
-def test_legacy_continuation_is_tagged_unverified_and_only_fills_a_gap(monkeypatch, tmp_path):
-    """Migration window (plan 13): the legacy read may fill a canonical gap, never replace."""
-    monkeypatch.setenv("MEMORY_LEGACY_CONTINUATION", "1")
-    monkeypatch.setattr(
-        comp,
-        "_search_facts",
-        lambda *a, **k: [{"fact": "PICKUP|objective=Old objective|next=Old next|session=x"}],
-    )
-    _canonical(monkeypatch, tmp_path, _hydration("NO_HITS"))
-    packet = comp.compile_session_packet(
-        project_dir=tmp_path, conversation_id="sess-5", agent_id="cursor"
-    )
-    assert packet["active_objective"] == "Old objective"
-    assert packet["next_action_contract"]["next_action"] == "Old next"
-    assert packet["hydrate_stats"]["continuation_source"] == "legacy_unverified"
-    assert packet["memory"]["shadow"]["agreement"] == "legacy_only"
-    assert packet["memory"]["shadow"]["authority"] == "canonical"
-    assert (tmp_path / ".l9" / "memory" / "shadow" / "sess-5.json").is_file()
-
-    # A canonical continuation is never displaced by the legacy read.
-    _canonical(monkeypatch, tmp_path, _hydration("OK", continuation=_continuation()))
-    packet = comp.compile_session_packet(
-        project_dir=tmp_path, conversation_id="sess-6", agent_id="cursor"
-    )
-    assert packet["active_objective"] == "Ship hydrate pipeline"
-    assert packet["hydrate_stats"]["continuation_source"] == "canonical"
-    assert packet["memory"]["shadow"]["agreement"] == "differs"
-
-
-def test_extract_pickup_pipe_line():
-    facts = [
-        {
-            "fact": (
-                "PICKUP|objective=Validate hydrate close|next=Re-run sessionStart|"
-                "agent=cursor|session=abc"
-            )
-        }
-    ]
-    got = comp._extract_pickup(facts)
-    assert got["active_objective"] == "Validate hydrate close"
-    assert got["next_action"] == "Re-run sessionStart"
-
-
-def test_extract_pickup_graphiti_paraphrase():
-    facts = [
-        {
-            "fact": (
-                "The objective is to continue work in Cursor-Governance by "
-                "resuming from the latest Graphiti PICKUP."
-            )
-        }
-    ]
-    got = comp._extract_pickup(facts)
-    assert "Cursor-Governance" in got["active_objective"]
-    assert "resuming from" in got["next_action"].lower()
 
 
 # ---------------------------------------------------------------------------

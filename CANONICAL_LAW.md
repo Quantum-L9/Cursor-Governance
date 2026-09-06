@@ -867,3 +867,51 @@ forks. Do not edit the older lines.
    (extends `kernels/Improve.md`).
 2. `kernels/Recursive Improvement — Rules Batch.md` and
    `kernels/Recursive Improvement — Skills Batch.md` are removed. Do not restore.
+
+<!-- MEMORY_CONTROL_PLANE_FRONT_DOOR_V1 -->
+## 8.2 Memory control plane is the single front door (2026-09-06) — supersedes §8 interface rows and ADR-0006's client name
+
+Append-only. Memory realignment campaign stages C1–C12 (ADR-0030). Where the
+older §8 text names `ops/graphiti/graphiti_memory_client.py`, a tunnel, a
+provider URL, or a bearer, this section is the law.
+
+1. **Authority.** `MemoryService` in `l9-graphite-memory` (contract
+   `memory-control-plane/v1`, release 2.3.0, pinned in
+   `ops/config/memory-binding.json`) is the sole authority over agent memory.
+   Graphiti is a projection memory owns. Cursor-Governance never knows how to
+   call it (INV-03), never holds its credential (INV-04/06), and never decides
+   a namespace grant (INV-07).
+2. **Front door.** Every memory byte crosses `ops/memory/control_plane_client.py`
+   over stdio to the exact bound runtime (INV-11). Operator and workflow CLI:
+   `python -m ops.memory.cli health|resolve|search|write|hydrate|conflicts|readiness`,
+   run from the governance clone with its locked venv and `--workspace` naming
+   the repository. MCP transport: the package-owned `l9-graphite-memory` stdio
+   server only (`make memory-mcp-install`); no adapter template carries a URL,
+   `env` block, or bearer.
+3. **Resume SSOT.** The canonical `session_continuation` record
+   (`ContinuationCapsuleV2`) admitted at close and retrieved at hydrate. Not
+   `PICKUP|…` strings, not `memory-bank/`, not a provider read. Current git
+   state wins over a stale capsule.
+4. **Retired.** `ops/graphiti/graphiti_memory_client.py` is a tombstone (exit 2,
+   names the replacement). Deleted: the provider env plane
+   (`graphiti_env_loader.py`, `graphiti.env.defaults/example`,
+   `init_graphiti_machine_env.sh`), the shadow reader, `group_resolver.py`,
+   `episode_contract.py` (PII redaction moved to
+   `ops/graphiti/hydration/redaction.py`), `outcome_label.py`, `prune.py`,
+   `transcript_distiller.py`, `mcp.json.example`, and their tests. Do not
+   restore.
+5. **Enforcement.** `ops/scripts/validate_memory_egress_boundary.py` runs in
+   `enforce` mode (`ops/config/memory-egress-allowlist.json`); every remaining
+   allowlist entry is a negative check, a self-reference, or an operator-owned
+   file. `tests/ops/memory/test_egress_boundary.py` is merge-blocking.
+6. **Switches.** `~/.cursor/graphiti.env` carries `L9_MEMORY_ENABLED` /
+   `L9_MEMORY_WRITE_GATES` (legacy `GRAPHITI_*` aliases) only. The gate is
+   hydration-only (§8.1 stands); memory conflicts are evidence, never a lock.
+7. **Legacy history.** Provider-only records enter canonical memory only
+   through `ops/memory/legacy_reconciliation.py` (`make memory-reconcile-legacy`,
+   tag `legacy_unverified`). `ops/config/memory-canonical-epoch.json` records
+   the epoch.
+
+Rules: `03-graphiti-memory.mdc`, `87-cursor-memory-kernel.mdc`,
+`98-graphiti-memory-gate.mdc` (v1.2.0 / 1.1.0 / 1.1.0). Skill:
+`skills/l9-graphiti-memory/SKILL.md` v2.0.0. Map: `docs/MEMORY_PIPELINE_MAP.md`.

@@ -1,30 +1,31 @@
 ---
-description: Graphiti group_id gate — forbidden namespaces; Write gates when GRAPHITI_WRITE_GATES=1
+description: Memory namespace gate — forbidden namespaces; hydration-only write gates when L9_MEMORY_WRITE_GATES=1
 ---
 
-# Graphiti Memory Gate
+# Memory Gate (canonical control plane)
 
-## group_id contract
+**Updated: 2026-09-06** — Memory realignment C11/C12: the sole front door is the canonical `l9-graphite-memory` control plane through `ops/memory` (`python -m ops.memory.cli`); Graphiti is a projection memory owns. `ops/graphiti/graphiti_memory_client.py` is a tombstone, no surface holds a provider URL or bearer, and `~/.cursor/graphiti.env` carries switches only. CANONICAL_LAW §8.2, ADR-0030.
 
-- Resolve via `graphiti_memory_client.py resolve` or `GRAPHITI_GROUP_ID` env
+## Namespace contract
+
+- Resolve via `python -m ops.memory.cli resolve`; `L9_MEMORY_NAMESPACE_REQUEST` (legacy `GRAPHITI_GROUP_ID`) is a *request* memory authorizes, never a grant
 - **Forbidden:** `main`, `default`, empty, `test`
-- An explicit override (`--group-id` / `GRAPHITI_GROUP_ID`) must match the
-  resolved repo (git remote or path hint); a contradicting override fails
-  closed to readonly. Overrides are honored only when no repo match exists
+- An explicit override (`--group-id` / `L9_MEMORY_NAMESPACE_REQUEST`) that
+  contradicts the resolved repository is a warning on the request; memory
+  decides (INV-07) — Cursor never converts identity confidence into a grant
 - Path hints match whole path segments only, never substrings
-- Cross-repo edges live in `igor-workspace` only — and only bootstrap's
-  integration-edge mirror may write there; `write` rejects `igor-workspace`
-  unconditionally
+- The shared workspace namespace is read fan-in only (`shared_read_namespaces`
+  in `ops/graphiti/group_registry.yaml`); memory refuses it as a write target
 
 ## Write gates (GATES-002)
 
-Active only when `GRAPHITI_WRITE_GATES=1` in `~/.cursor/graphiti.env`.
+Active only when `L9_MEMORY_WRITE_GATES=1` (legacy alias `GRAPHITI_WRITE_GATES`) in `~/.cursor/graphiti.env` (switches only; no URL, no bearer).
 
 When active:
 
 - Write/Shell/Task denied until task in `memory_satisfied_for` or fresh prefetch
 
-Default (`GRAPHITI_WRITE_GATES=0`): advisory prefetch only — no Write blocking.
+Default (`L9_MEMORY_WRITE_GATES=0`): advisory hydration only — no Write blocking. The gate reads the canonical session state (`ops/memory/session_state.py`) and nothing else.
 
 **Hydration only.** The gate MUST NOT require `gmp:phase_lock` (or any lock) as
 a condition of repository mutation. Repository-write authority comes from a
@@ -38,6 +39,6 @@ revokes another agent's authority to edit code (E10).
 
 Runbook: `ops/graphiti/GATES-002-ACTIVATION.md`
 
-Cite Graphiti prefetch episode names when planning. `graphiti_memory_client.py conflicts` informs the plan; it does not gate the edit.
+Cite canonical continuation/record ids when planning. `python -m ops.memory.cli conflicts` informs the plan; it does not gate the edit.
 
 <!-- generated-from: rules/98-graphiti-memory-gate.mdc; do-not-edit -->

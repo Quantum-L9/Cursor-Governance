@@ -1,5 +1,7 @@
 # Graphiti VPS Deploy — C1 post-L9 (locked)
 
+> **Retired 2026-09-06 (memory realignment C11, ADR-0030).** This document describes the direct Graphiti provider path that Cursor-Governance no longer has. Memory is the canonical `l9-graphite-memory` control plane (`ops/memory`, `python -m ops.memory.cli`); see `ops/memory/README.md` and `docs/MEMORY_PIPELINE_MAP.md`. Kept as an operator record of the projection deployment only.
+
 **Host:** `46.62.243.82` (Hetzner C1)  
 **Install path:** `/opt/graphiti-cursor`  
 **Prerequisite:** L9 stack decommissioned (`/opt/l9` archived; no `l9-*` containers)  

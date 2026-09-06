@@ -14,10 +14,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-_GRAPHITI_DIR = Path(__file__).resolve().parent.parent
-if str(_GRAPHITI_DIR) not in sys.path:
-    sys.path.insert(0, str(_GRAPHITI_DIR))
-from episode_contract import redact_pii  # noqa: E402
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+from ops.graphiti.hydration.redaction import redact_pii  # noqa: E402
 
 SCHEMA = "l9-chat-transcript/v1"
 DEFAULT_BUCKET = "l9-chat-transcripts-020125249784"

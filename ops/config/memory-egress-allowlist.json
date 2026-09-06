@@ -1,111 +1,9 @@
 {
   "schema_version": "1.0.0",
-  "description": "Exact path-based exceptions for ops/scripts/validate_memory_egress_boundary.py. Every entry names the campaign stage that deletes it and an expiry date; an expired entry is a finding. Nothing here authorizes new provider egress — it inventories the legacy bypass the realignment campaign removes (CURSOR_GOVERNANCE_MEMORY_CONTROL_PLANE_REALIGNMENT_BUILD_PLAN §8).",
-  "mode": "warning",
-  "mode_note": "warning: findings are reported and the validator exits 0. Stage C11 flips this to enforce (merge-blocking). Stages C7-C10 retired the MCP front door, the Claude adapter, the Cursor gate hooks, the secret plane, the distill worker and the generated-data ingress: those entries are gone and any new finding there is unlisted.",
+  "description": "Exact path-based exceptions for ops/scripts/validate_memory_egress_boundary.py. Every entry names why the path may spell a forbidden token and an expiry; an expired entry is a finding. Nothing here authorizes provider egress — since stage C11 every remaining entry is a negative check, a scanner/allowlist self-reference, a protected operator-owned file, or a secret-inventory row, never a code path that calls a provider (CURSOR_GOVERNANCE_MEMORY_CONTROL_PLANE_REALIGNMENT_BUILD_PLAN §8).",
+  "mode": "enforce",
+  "mode_note": "enforce (stage C11+): any unlisted or expired finding fails the validator and tests/ops/memory/test_egress_boundary.py. The legacy provider client, env plane, shadow reader, distiller and their tests were deleted at C11; ops/graphiti/graphiti_memory_client.py is a tombstone that spells no provider token.",
   "entries": [
-    {
-      "path": "ops/graphiti/graphiti_memory_client.py",
-      "reason": "Legacy provider client; production callers migrate C3-C6, file removed C11.",
-      "retire_at_stage": "C11",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "ops/graphiti/hydration/compile_session_packet.py",
-      "reason": "Migration-only legacy shadow reader (search_memory_facts) behind MEMORY_LEGACY_SHADOW / MEMORY_LEGACY_CONTINUATION; the canonical hydrate is the authority since C4. Deleted with the legacy client at C11.",
-      "retire_at_stage": "C11",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "ops/graphiti/episode_contract.py",
-      "reason": "Provider episode payload contract; retired with the legacy client at C11.",
-      "retire_at_stage": "C11",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "ops/graphiti/graphiti_env_loader.py",
-      "reason": "Provider env plane consumed only by the retired legacy client (no hook or bootstrap sources it since C9); deleted with the client at C11.",
-      "retire_at_stage": "C11",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "ops/graphiti/graphiti.env.defaults",
-      "reason": "Provider env plane consumed only by the retired legacy client (no hook or bootstrap sources it since C9); deleted with the client at C11.",
-      "retire_at_stage": "C11",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "ops/graphiti/graphiti.env.example",
-      "reason": "Provider env plane consumed only by the retired legacy client (no hook or bootstrap sources it since C9); deleted with the client at C11.",
-      "retire_at_stage": "C11",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "ops/graphiti/hydration/test_*.py",
-      "reason": "In-tree tests of the migration-only legacy shadow reader (compile_session_packet._search_facts); deleted with the shadow reader at C11.",
-      "retire_at_stage": "C11",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "ops/graphiti/mcp.json.example",
-      "reason": "Cursor-authored direct Graphiti MCP entry; replaced by the memory-owned configurator at C7.",
-      "retire_at_stage": "C7",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "ops/graphiti/prune.py",
-      "reason": "Provider-side prune tooling; reconciled or archived at C10.",
-      "retire_at_stage": "C10",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "ops/graphiti/test_*.py",
-      "reason": "In-tree tests of the legacy client; deleted with it at C11.",
-      "retire_at_stage": "C11",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "ops/graphiti/test_*.sh",
-      "reason": "In-tree e2e scripts of the legacy client; deleted with it at C11.",
-      "retire_at_stage": "C11",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "skills/l9-graphiti-memory/**",
-      "reason": "Skill scripts wrapping the legacy client; rewritten at C12 after executable migration.",
-      "retire_at_stage": "C12",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "skills/**",
-      "reason": "Skill scripts and manifests referencing the legacy client or provider env; migrated C8-C12.",
-      "retire_at_stage": "C12",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "ops/autonomy/**",
-      "reason": "Autonomy gates referencing provider env names in policy text; realigned at C8.",
-      "retire_at_stage": "C8",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "ops/graphiti/docker-compose.yml",
-      "reason": "Protected provider-stack compose file (rules/93, allowlisted only, never edited here); ownership moves below the memory package at C10.",
-      "retire_at_stage": "C10",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "ops/graphiti/outcome_label.py",
-      "reason": "Provider fact labeling helper; retired with the legacy client at C11.",
-      "retire_at_stage": "C11",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "environment/program-execution/**",
-      "reason": "Program Execution graphiti integration and its negative tests naming provider tools; realigned at C8.",
-      "retire_at_stage": "C8",
-      "expires": "2026-12-31"
-    },
     {
       "path": "ops/config/memory-egress-allowlist.json",
       "reason": "This allowlist names the forbidden tokens it governs.",
@@ -126,21 +24,21 @@
     },
     {
       "path": "environment/agents/adapters/claude-code/validate_claude_env.py",
-      "reason": "Negative checks that name the memory credential and provider transport so they can be rejected from functional config; rewritten with the secret plane at C9.",
-      "retire_at_stage": "C9",
-      "expires": "2026-12-31"
+      "reason": "Negative checks that name the memory credential and provider transport so they can be rejected from functional config.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
     },
     {
       "path": "environment/agents/adapters/claude-code/web/setup.bootstrap.sh",
-      "reason": "Zero-static-secret sweep still names the retired memory bearer among the variables it refuses; rewritten with the secret plane at C9.",
-      "retire_at_stage": "C9",
-      "expires": "2026-12-31"
+      "reason": "Zero-static-secret sweep names the retired memory bearer among the variables it refuses (negative check).",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
     },
     {
       "path": "environment/agents/adapters/claude-code/verify_account_env.py",
-      "reason": "Account-variable audit naming the retired memory bearer among prohibited names; rewritten at C9.",
-      "retire_at_stage": "C9",
-      "expires": "2026-12-31"
+      "reason": "Account-variable audit naming the retired memory bearer among prohibited names (negative check).",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
     },
     {
       "path": "environment/agents/adapters/claude-code/tests/test_memory_front_door.py",
@@ -161,18 +59,6 @@
       "expires": "2099-01-01"
     },
     {
-      "path": "ops/scripts/transcript_distiller.py",
-      "reason": "Retired wrapper whose usage text still names the provider transport; deleted at C11.",
-      "retire_at_stage": "C11",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "ops/scripts/init_graphiti_machine_env.sh",
-      "reason": "Machine provider-env initializer for the retired client; deleted at C11.",
-      "retire_at_stage": "C11",
-      "expires": "2026-12-31"
-    },
-    {
       "path": "environment/agents/tools/validate_agents.py",
       "reason": "Negative checks rejecting the retired provider transport from adapter examples.",
       "retire_at_stage": "never",
@@ -185,15 +71,39 @@
       "expires": "2099-01-01"
     },
     {
-      "path": "ops/secrets/infisical-cursor-governance.yaml",
-      "reason": "Secret inventory row for the provider bearer the memory service deployment owns; the row lives in the inventory SSOT and is retired by the operator with the provider deployment (documented at C12).",
-      "retire_at_stage": "C12",
-      "expires": "2026-12-31"
-    },
-    {
       "path": "tests/ops/secrets/**",
       "reason": "Negative tests for the secret plane name forbidden tokens as fixtures.",
       "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "environment/program-execution/integrations/graphiti/tests/test_context_reader.py",
+      "reason": "Negative test asserting the read-only context reader names no provider write tool.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "environment/program-execution/scripts/validate_execution_adapters.py",
+      "reason": "Adapter validator rejecting provider write tools from the context reader (negative check).",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "environment/program-execution/tests/test_no_direct_graphiti_writer.py",
+      "reason": "Negative test asserting Program Execution has no direct provider writer.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "ops/graphiti/docker-compose.yml",
+      "reason": "Protected provider-stack compose file (rules/93): operator-owned deployment of the projection, never edited by an agent and never read by any Cursor code path. Its retirement is an operator action with the provider deployment.",
+      "retire_at_stage": "operator",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "ops/secrets/infisical-cursor-governance.yaml",
+      "reason": "Secret inventory row for the provider bearer the memory service deployment owns. No Cursor surface resolves it (stage C9); the row is retired by the operator with the provider deployment (C12 note in the inventory).",
+      "retire_at_stage": "operator",
       "expires": "2099-01-01"
     }
   ]

@@ -2,15 +2,15 @@
 
 Campaign: **Cursor-Governance ↔ l9-graphiti-memory canonical realignment**
 (`CURSOR_GOVERNANCE_MEMORY_CONTROL_PLANE_REALIGNMENT_BUILD_PLAN`). Stage
-**C8**: canonical hydration is the SessionStart authority, canonical close is
-the SessionEnd authority, the package-owned `l9-graphite-memory` server is the
-only memory MCP server on every surface, and the Claude adapter hooks and the
-Cursor write gates read canonical evidence only. The legacy provider read
-survives only as a migration-only shadow diagnostic (`MEMORY_LEGACY_SHADOW=1`)
-and gap-filler tagged `legacy_unverified` (`MEMORY_LEGACY_CONTINUATION=1`),
-both off by default and deleted at C11. No production path writes a provider;
-Graphiti receives new records only through canonical projection (the C5
-cutover, plan §41), and no rollback restores a direct write (plan §30).
+**C12 (complete)**: canonical hydration is the SessionStart authority,
+canonical close is the SessionEnd authority, the package-owned
+`l9-graphite-memory` server is the only memory MCP server on every surface,
+the Claude adapter hooks and the Cursor write gates read canonical evidence
+only, no surface holds a provider URL or bearer, the direct provider client is
+a tombstone, and the egress scanner enforces. No production path reads or
+writes a provider; Graphiti receives records only through canonical projection
+(the C5 cutover, plan §41), and no rollback restores a direct write (plan §30).
+Law: `CANONICAL_LAW.md` §8.2, `docs/decisions/ADR-0030-memory-control-plane-single-front-door.md`.
 
 ## Rule
 
@@ -45,7 +45,9 @@ MemoryService  →  canonical store  →  outbox  →  optional Graphiti project
 | `runtime_binding.py` | exact package, interpreter, console script, contract signal | PATH-first CLI, sibling checkout discovery, floating refs |
 | `control_plane_client.py` | request → command → typed receipt; S-07 failure taxonomy | ranking, dedup, admission, authorization, provider calls |
 | `receipts.py` | consumer-side views over canonical receipts (`raw` kept) | a second schema |
-| `namespace_context.py` | repository identity, write hint (exactly one), read hints incl. the registry's `shared_read_namespaces`; the sole producer since C2 (`ops/graphiti/group_resolver.py` is a shim over the same matching until C11) | any grant or denial |
+| `namespace_context.py` | repository identity, write hint (exactly one), read hints incl. the registry's `shared_read_namespaces`; the sole producer since C2 (the legacy resolver shim was deleted at C11) | any grant or denial |
+| `cli.py` | `python -m ops.memory.cli health\|resolve\|search\|write\|hydrate\|conflicts\|readiness` — the operator, GMP and Program Execution front door; every verdict is the canonical receipt printed beside the outcome status | a provider, a credential, a grant |
+| `legacy_reconciliation.py` | provider-only history classified A–G and admitted through canonical ingress tagged `legacy_unverified` | reading a provider |
 | `session_contracts.py` | `ContinuationCapsuleV2` (`cursor.continuation/v2`), governed-candidate envelope | provider vocabulary |
 | `hydration.py` | `canonical_hydrate`: health → hydrate (fan-in requested, narrowed on denial) → tag-selected continuation records → newest valid capsule as evidence, stale when HEAD moved | provider search, gap-filling from a projection, reviving superseded records |
 | `session_state.py` | `~/.cursor/l9-memory-session-state/<session>.json`: session id, task signature, namespace request, receipt digests, explicit task satisfactions; `authority: none`; the hydration-only predicate the Cursor write gates read | any claim of memory truth; any lock |
@@ -84,17 +86,18 @@ integration-grade by construction and says so in `binding_status`.
 ## Egress firewall (INV-03)
 
 ```bash
-make memory-egress-check                       # warning mode: inventory, exit 0
-MEMORY_EGRESS_ENFORCE=1 make memory-egress-check   # stage C11 posture: exit 1 on unlisted/expired
+make memory-egress-check        # enforce mode since C11: exit 1 on any unlisted or expired site
 ```
 
 `ops/scripts/validate_memory_egress_boundary.py` scans production code and
 configuration for `GRAPHITI_MCP_URL`, `GRAPHITI_MCP_TOKEN`,
 `search_memory_facts`, `search_nodes`, `search_facts`, `add_memory`,
-`add_episode`, `delete_episode`, `graphiti.write_governed`. Every legacy
-site is named in `ops/config/memory-egress-allowlist.json` with the stage
-that deletes it and an expiry; `tests/ops/memory/test_egress_boundary.py`
-fails on any new unlisted site, so the inventory can only shrink.
+`add_episode`, `delete_episode`, `graphiti.write_governed`. Since stage C11
+the allowlist (`ops/config/memory-egress-allowlist.json`, `mode: enforce`)
+names only negative checks, the scanner's own self-references, and two
+operator-owned files (the protected provider compose file and the secret
+inventory row); `tests/ops/memory/test_egress_boundary.py` fails on any
+unlisted site and on any entry that is not `never`/`operator`.
 
 ## Continuation capsule (plan §12)
 
@@ -165,6 +168,24 @@ producer `Cursor-Governance/legacy-reconciliation` and the tag
 default). The offline distill worker and the generated-data ingress cross the
 same control plane. `ops/config/memory-canonical-epoch.json` records the
 epoch from which the provider is a projection memory owns.
+
+## Legacy deletion (stage C11) and law convergence (stage C12)
+
+Deleted: the provider client (a tombstone remains at
+`ops/graphiti/graphiti_memory_client.py`, exit 2, naming the replacement),
+the provider env plane (`graphiti_env_loader.py`, `graphiti.env.defaults`,
+`graphiti.env.example`, `init_graphiti_machine_env.sh`), the shadow reader in
+`compile_session_packet.py`, `group_resolver.py`, `episode_contract.py` (PII
+redaction now `ops/graphiti/hydration/redaction.py`), `outcome_label.py`,
+`prune.py`, `transcript_distiller.py`, `mcp.json.example`, and their tests.
+`python -m ops.memory.cli` is the executable successor for every interactive,
+GMP, Program Execution and skill path; the runtime reporter's memory row and
+`check_governance_wiring.sh` read the binding, not a client.
+
+Law: `CANONICAL_LAW.md` §8.2 (2026-09-06), `AGENTS.md` "Memory control
+plane" amendment, ADR-0030, rules `03` / `87` / `98`, skill
+`l9-graphiti-memory` v2.0.0, `docs/MEMORY_PIPELINE_MAP.md`,
+`docs/DEGRADED_MODE_CONTRACT.md` dated memory section.
 
 ## Proof
 

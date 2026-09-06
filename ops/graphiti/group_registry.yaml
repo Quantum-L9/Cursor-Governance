@@ -7,9 +7,8 @@
 # request Cursor will make, never a permission it holds.
 #
 # Read by ops/memory/namespace_context.py (the sole producer of identity and
-# hints). ops/graphiti/group_resolver.py is a legacy shim over the same
-# matching for callers retired at stage C11; its `readonly` verdict is identity
-# confidence, not authorization.
+# hints). The legacy resolver shim (ops/graphiti/group_resolver.py) was deleted
+# at stage C11; identity confidence is a warning, never authorization.
 schema_version: 3
 classification: namespace_request_hints
 # Namespaces Cursor requests as read fan-in beside its own repository namespace.

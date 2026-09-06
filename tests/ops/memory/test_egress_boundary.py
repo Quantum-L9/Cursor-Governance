@@ -1,4 +1,4 @@
-"""Provider egress firewall: warning mode today, merge-blocking at C11."""
+"""Provider egress firewall: merge-blocking since stage C11 (allowlist mode = enforce)."""
 
 from __future__ import annotations
 
@@ -105,24 +105,50 @@ def test_enforce_passes_a_clean_tree(tmp_path: Path) -> None:
 
 
 def test_real_tree_inventory_is_fully_allowlisted_and_unexpired() -> None:
-    """Warning-mode contract for C1: every legacy site is named, none has expired.
+    """Enforce-mode contract (stage C11): every remaining site is a negative check.
 
-    The list must shrink as C3–C11 land; a new unlisted site is a regression.
+    The inventory shrank stage by stage; since C11 no code path that calls a
+    provider survives, so an unlisted finding is a regression and an expired
+    entry is a finding.
     """
 
-    _mode, allowlist = scanner.load_allowlist()
+    mode, allowlist = scanner.load_allowlist()
+    assert mode == "enforce"
     findings, expired = scanner.scan(ROOT, allowlist)
     unlisted = sorted({item.path for item in findings if not item.allowlisted})
     assert unlisted == [], f"new provider egress outside the allowlist: {unlisted}"
     assert expired == []
-    # The known legacy bypass is still present and still inventoried (stage C1).
     inventoried = {item.path for item in findings if item.allowlisted}
-    assert "ops/graphiti/graphiti_memory_client.py" in inventoried
-    # The shadow reader keeps compile_session_packet.py in the inventory until C11;
-    # the close path left it at C6 (no provider vocabulary remains there).
-    assert "ops/graphiti/hydration/compile_session_packet.py" in inventoried
+    # The legacy client is a tombstone and the shadow reader is gone (C11).
+    assert "ops/graphiti/graphiti_memory_client.py" not in inventoried
+    assert "ops/graphiti/hydration/compile_session_packet.py" not in inventoried
     assert "ops/graphiti/hydration/close_session.py" not in inventoried
     assert "ops/graphiti/hydration/pickup_write.py" not in inventoried
+    # Nothing left in the inventory is a code path: only checks, fixtures,
+    # the scanner itself, and operator-owned files.
+    for entry in allowlist:
+        assert entry.retire_at_stage in {"never", "operator"}, entry.path
+
+
+def test_legacy_provider_modules_are_gone() -> None:
+    for rel in (
+        "ops/graphiti/group_resolver.py",
+        "ops/graphiti/episode_contract.py",
+        "ops/graphiti/graphiti_env_loader.py",
+        "ops/graphiti/graphiti.env.defaults",
+        "ops/graphiti/graphiti.env.example",
+        "ops/graphiti/outcome_label.py",
+        "ops/graphiti/prune.py",
+        "ops/graphiti/mcp.json.example",
+        "ops/scripts/transcript_distiller.py",
+        "ops/scripts/init_graphiti_machine_env.sh",
+    ):
+        assert not (ROOT / rel).exists(), f"{rel} must stay deleted (stage C11)"
+    tombstone = (ROOT / "ops" / "graphiti" / "graphiti_memory_client.py").read_text(
+        encoding="utf-8"
+    )
+    assert "RETIRED_AT_STAGE" in tombstone and "ops.memory.cli" in tombstone
+    assert "urlparse" not in tombstone and "socket" not in tombstone
 
 
 def test_ops_memory_is_provider_free() -> None:
@@ -131,13 +157,17 @@ def test_ops_memory_is_provider_free() -> None:
     assert not [item for item in findings if item.path.startswith("ops/memory/")]
 
 
-def test_cli_entrypoint_runs_in_warning_mode() -> None:
+def test_cli_entrypoint_runs_in_enforce_mode_and_passes() -> None:
     proc = subprocess.run(
         ["python3", str(SCRIPT), "--json"], capture_output=True, text=True, check=False
     )
-    assert proc.returncode == 0, proc.stderr
+    assert proc.returncode == 0, proc.stderr or proc.stdout
     summary = json.loads(proc.stdout)
-    assert summary["mode"] == "warning"
+    assert summary["mode"] == "enforce"
+    # Listed negative checks keep the scanner's WARN vocabulary; what enforce
+    # mode guarantees is that nothing unlisted or expired survives.
+    assert summary["verdict"] in {"PASS", "WARN"}
+    assert summary["findings_unlisted"] == 0
     assert summary["forbidden_tokens"] == list(scanner.FORBIDDEN_TOKENS)
 
 

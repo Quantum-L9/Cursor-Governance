@@ -41,14 +41,14 @@ EXTRACT:
 ### 2. WRITE TO MEMORY
 
 ```bash
-python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
+python -m ops.memory.cli write \
   "LESSON: {content}" --kind lesson
 
-python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
-  "PATTERN: {content}" --kind pattern
+python -m ops.memory.cli write \
+  "PATTERN: {content}" --kind insight
 
-python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
-  "ERROR: {issue} → FIX: {solution}" --kind error
+python -m ops.memory.cli write \
+  "ERROR: {issue} → FIX: {solution}" --kind lesson
 ```
 
 ---

@@ -45,13 +45,12 @@ Use governance **venv Python** (see `skills/l9-graphiti-memory/SKILL.md`). Bare 
 ```bash
 GOV="${HOME}/.cursor-governance"
 GRAPHITI_PY="${GOV}/.venv/bin/python"
-CLIENT="${GOV}/ops/graphiti/graphiti_memory_client.py"
 [ -x "$GRAPHITI_PY" ] || GRAPHITI_PY="${HOME}/Cursor-Governance/.venv/bin/python"
-[ -f "$CLIENT" ] || CLIENT="${HOME}/Cursor-Governance/ops/graphiti/graphiti_memory_client.py"
+memcli() { (cd "$GOV" && PYTHONPATH="$GOV" "$GRAPHITI_PY" -m ops.memory.cli "$@" --workspace "${WS:-$PWD}"); }  # canonical control plane (C11)
 
-"$GRAPHITI_PY" "$CLIENT" health
+memcli health
 # If healthy:
-"$GRAPHITI_PY" "$CLIENT" write \
+memcli write \
   "PICKUP|date=$(date +%Y-%m-%d)|task={TASK}|files={FILES}|next={NEXT}|blocker={BLOCKER}|gmps={GMPS}|outcome={OUTCOME}" \
   --kind pickup_context
 
@@ -68,18 +67,18 @@ learnings writes and note the gap in the handoff report.
 
 Session learnings MUST be written through the **canonical memory path** so they get governance, audit, DAG (packet_store → graph_sync → semantic_embed → insights), and persistence. See `docs/MEMORY_PIPELINE_MAP.md`.
 
-- **Path:** `graphiti_memory_client.py write` → Graphiti episode queue → entity/edge extraction → group-scoped graph. Legacy C1 path (`cursor_memory_client.py` → `save_memory` → SubstrateDAG → PostgreSQL/Neo4j/pgvector) is deprecated — do not use it for new writes.
+- **Path:** `ops.memory.cli write` → Graphiti episode queue → entity/edge extraction → group-scoped graph. Legacy C1 path (`cursor_memory_client.py` → `save_memory` → SubstrateDAG → PostgreSQL/Neo4j/pgvector) is deprecated — do not use it for new writes.
 
 **Write atomic memories — one fact per write, not one big blob.**
 See `.cursor/rules/87-cursor-memory-kernel.mdc` → "Memory Write Format" for the full spec.
 
 ```bash
 # One write per fact. Pre-classify with --kind only (no --scope). Terse, no preamble.
-"$GRAPHITI_PY" "$CLIENT" write \
+memcli write \
   "{terse fact 1}" \
   --kind lesson --group-id {resolved_group_id}
 
-"$GRAPHITI_PY" "$CLIENT" write \
+memcli write \
   "{terse fact 2}" \
   --kind insight --group-id {resolved_group_id}
 ```

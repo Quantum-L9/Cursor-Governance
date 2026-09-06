@@ -42,7 +42,7 @@ Slash command entry: [`commands/end-session.md`](../../commands/end-session.md).
 `HEALTH → repair-write (PICKUP + receipt) → optional lesson writes → REDIS (optional) → GOVERNANCE BACKUP → HANDOFF`
 
 **Primary** is `hydration.cli repair-write` (PICKUP write + `write_receipt`).
-A bare `graphiti_memory_client.py write` does **not** stamp the close receipt.
+A bare `ops.memory.cli write` does **not** stamp the close receipt.
 Do **not** prefer `hydration.cli close --reason force_retry` — that replays the
 hook closer (ADR-0028 Option C rejected). Repair the **prior** session from
 `previous_opened.json` when SessionStart reported a close-gap.
@@ -50,7 +50,7 @@ hook closer (ADR-0028 Option C rejected). Repair the **prior** session from
 ```bash
 GOV="${HOME}/.cursor-governance"
 GRAPHITI_PY="${GOV}/.venv/bin/python"
-CLIENT="${GOV}/ops/graphiti/graphiti_memory_client.py"
+memcli() { (cd "$GOV" && PYTHONPATH="$GOV" "$GRAPHITI_PY" -m ops.memory.cli "$@" --workspace "${WS:-$PWD}"); }  # canonical control plane (C11)
 WS="${CURSOR_PROJECT_DIR:-$(pwd)}"
 PRIOR_FILE="$WS/.l9/memory/previous_opened.json"
 REPAIR_SID=""
@@ -59,7 +59,7 @@ if [ -f "$PRIOR_FILE" ]; then
 fi
 REPAIR_SID="${REPAIR_SID:-${CURSOR_CONVERSATION_ID:-manual}}"
 export L9_MEMORY_AGENT_ID=cursor USER_ID=cursor_agent
-"$GRAPHITI_PY" "$CLIENT" health
+memcli health
 cd "$GOV" && PYTHONPATH="$GOV" "$GRAPHITI_PY" -m ops.graphiti.hydration.cli repair-write \
   --project-dir "$WS" --session-id "$REPAIR_SID" \
   --objective "{TASK}" --next "{NEXT}" --files "{FILES}" --blocker "{BLOCKER}" \
@@ -69,7 +69,7 @@ cd "$GOV" && PYTHONPATH="$GOV" "$GRAPHITI_PY" -m ops.graphiti.hydration.cli repa
 Optional lesson writes after `repair-write` (same store; these do not stamp a close receipt):
 
 ```bash
-"$GRAPHITI_PY" "$CLIENT" write "{terse fact}" --kind lesson --agent-id cursor
+memcli write "{terse fact}" --kind lesson --agent-id cursor
 ```
 
 `repair-write` skips a duplicate PICKUP when the close receipt is already

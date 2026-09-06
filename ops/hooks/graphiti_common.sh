@@ -6,8 +6,9 @@
 # defaults file, a machine secrets overlay, or the macOS Keychain, and it never
 # exports a provider URL or bearer: memory is reached through the canonical
 # control plane (ops/memory), whose runtime resolves its own credentials
-# (memory ADR-016). The legacy GRAPHITI_* switch names are honored until the
-# provider vocabulary is retired at C11.
+# (memory ADR-016). The provider client is gone (stage C11); the legacy
+# GRAPHITI_* switch names stay honored as aliases of L9_MEMORY_* so an
+# un-migrated machine file keeps its master switch.
 set -uo pipefail
 
 graphiti_gov_root() {
@@ -52,21 +53,6 @@ graphiti_load_env() {
   [ -n "${L9_MEMORY_WRITE_GATES:-}" ] && export GRAPHITI_WRITE_GATES="$L9_MEMORY_WRITE_GATES"
   export GRAPHITI_WRITE_GATES="${GRAPHITI_WRITE_GATES:-0}"
   return 0
-}
-
-# Legacy: location of the retired provider client. Kept only so an
-# un-migrated caller fails at a named path instead of an unbound variable;
-# no hook shipped here calls it since C8. Deleted with the client at C11.
-graphiti_resolve_cli() {
-  REAL_HOOK="$(python3 -c "import os,sys; print(os.path.realpath(sys.argv[1]))" "${BASH_SOURCE[1]:-${BASH_SOURCE[0]}}")"
-  RESOLVE="$(dirname "$REAL_HOOK")/../scripts/resolve_governance_paths.sh"
-  # shellcheck source=/dev/null
-  source "$RESOLVE" 2>/dev/null || true
-  if resolve_governance_paths 2>/dev/null; then
-    GRAPHITI_CLI="$GLOBAL_COMMANDS/ops/graphiti/graphiti_memory_client.py"
-  else
-    GRAPHITI_CLI="$HOME/.cursor-governance/ops/graphiti/graphiti_memory_client.py"
-  fi
 }
 
 graphiti_enabled() {

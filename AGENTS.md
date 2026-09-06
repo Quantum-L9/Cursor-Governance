@@ -1298,3 +1298,31 @@ not evaluate under Cursor. SSOT: `ops/autonomy/surface_detect.py` +
 `ops/scripts/lib/surface_detect.sh`. Divergence point: `l9_hook_exec.sh`
 self-guard (kill switch `L9_SURFACE_GUARD=0`). Contract:
 `environment/agents/SURFACE_BOOTSTRAP_CONTRACT.md`. ADR-0029.
+
+<!-- MEMORY_CONTROL_PLANE_V1 -->
+## Memory control plane (2026-09-06) — supersedes §7 Graphiti
+
+Append-only. CANONICAL_LAW §8.2, ADR-0030. Where §7 (and §2's health line, and
+the `/end-session` notes after §20) name `graphiti_memory_client.py`, a tunnel,
+`add_memory` / `search_memory_facts`, or a C1 image, this section is current.
+
+- Agent memory is the canonical `l9-graphite-memory` control plane, reached
+  only through `ops/memory` (INV-03). Graphiti is a projection memory owns.
+- Health and binding:
+
+```bash
+make -C "$HOME/.cursor-governance" memory-binding      # which exact runtime is bound
+make -C "$HOME/.cursor-governance" memory-readiness    # R0 PACKAGE_BOUND … R9 PROJECTION_READY
+cd "$HOME/.cursor-governance" && .venv/bin/python -m ops.memory.cli health
+```
+
+- `make graphiti-health` reaches the C11 tombstone and exits 2 naming the
+  replacement; do not "fix" it by restoring the client.
+- sessionEnd close is canonical (`ContinuationCapsuleV2` → governed candidate →
+  `memory.close`, idempotent). `/end-session` repair is
+  `hydration.cli repair-write`; there is no `graphiti_memory_client.py write`
+  fallback any more (`write_count=0` is reported, not papered over).
+- Transcript archive to S3 (`ops.graphiti.hydration.archive_transcript`) is
+  unchanged; PII redaction lives in `ops/graphiti/hydration/redaction.py`.
+- No surface holds a provider URL or bearer; `~/.cursor/graphiti.env` is
+  switches only (`L9_MEMORY_ENABLED`, `L9_MEMORY_WRITE_GATES`).

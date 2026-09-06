@@ -284,9 +284,9 @@ graphiti_load_env 2>/dev/null || true
 
 TUNNEL_NOTE="retired (memory control plane; no provider tunnel)"
 
-GRAPHITI_HEALTH="disabled or memory boundary missing"
-GRAPHITI_HEALTHY="false"
-GRAPHITI_STDERR=""
+MEMORY_HEALTH="disabled or memory boundary missing"
+MEMORY_HEALTHY="false"
+MEMORY_STDERR=""
 if [ "${GRAPHITI_MEMORY_ENABLED:-1}" != "0" ] && [ -f "$GC/ops/memory/diagnostics.py" ]; then
   if [ -x "$GC/.venv/bin/python3" ]; then
     GPY="$GC/.venv/bin/python3"
@@ -299,18 +299,18 @@ if [ "${GRAPHITI_MEMORY_ENABLED:-1}" != "0" ] && [ -f "$GC/ops/memory/diagnostic
   # a 60-second SessionStart budget.
   HEALTH_JSON="$(cd "$GC" && PYTHONPATH="$GC${PYTHONPATH:+:$PYTHONPATH}" \
     "$GPY" -m ops.memory.diagnostics --binding-only 2>"$HEALTH_ERR" || echo '{"status":"unbound"}')"
-  GRAPHITI_STDERR="$(head -c 500 "$HEALTH_ERR" | tr '\n' ' ')"
+  MEMORY_STDERR="$(head -c 500 "$HEALTH_ERR" | tr '\n' ' ')"
   rm -f "$HEALTH_ERR"
   BINDING_STATUS="$(echo "$HEALTH_JSON" | "$GPY" -c "import sys,json; print(json.load(sys.stdin).get('status','unbound'))" 2>/dev/null || echo unbound)"
   case "$BINDING_STATUS" in
     exact|development_checkout)
-      GRAPHITI_HEALTH="bound ($BINDING_STATUS): $(echo "$HEALTH_JSON" | "$GPY" -c "import sys,json; d=json.load(sys.stdin); print((d.get('memory_package') or 'l9-graphite-memory') + ' ' + str(d.get('memory_version') or ''))" 2>/dev/null || echo l9-graphite-memory)"
-      GRAPHITI_HEALTHY="true"
+      MEMORY_HEALTH="bound ($BINDING_STATUS): $(echo "$HEALTH_JSON" | "$GPY" -c "import sys,json; d=json.load(sys.stdin); print((d.get('memory_package') or 'l9-graphite-memory') + ' ' + str(d.get('memory_version') or ''))" 2>/dev/null || echo l9-graphite-memory)"
+      MEMORY_HEALTHY="true"
       ;;
     *)
       REASON="$(echo "$HEALTH_JSON" | "$GPY" -c "import sys,json; d=json.load(sys.stdin); print('; '.join(d.get('reasons') or []) or 'memory runtime unbound')" 2>/dev/null || echo "memory runtime unbound")"
-      GRAPHITI_HEALTH="unbound: $REASON"
-      [ -n "$GRAPHITI_STDERR" ] || GRAPHITI_STDERR="$HEALTH_JSON"
+      MEMORY_HEALTH="unbound: $REASON"
+      [ -n "$MEMORY_STDERR" ] || MEMORY_STDERR="$HEALTH_JSON"
       ;;
   esac
 fi
@@ -521,9 +521,9 @@ if [ -n "$RUNTIME_REPORTER" ] && [ -f "$RUNTIME_REPORTER" ]; then
     --venv "$VENV_NOTE" \
     --ide-profile "$IDE_NOTE" \
     --tunnel "$TUNNEL_NOTE" \
-    --graphiti-detail "$GRAPHITI_HEALTH" \
-    --graphiti-stderr "$GRAPHITI_STDERR" \
-    --graphiti-healthy "$GRAPHITI_HEALTHY" \
+    --memory-detail "$MEMORY_HEALTH" \
+    --memory-stderr "$MEMORY_STDERR" \
+    --memory-healthy "$MEMORY_HEALTHY" \
     --wiring "$WIRING_CHECK" \
     --backup "$BACKUP_NOTE" \
     --skill-note "$SKILL_NOTE" \

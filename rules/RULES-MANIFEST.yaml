@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-09-05T21:50:51Z'
+generated_utc: '2026-09-06T15:34:23Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:3073a8d83871b7d3290de480e136c5859268007e988de1bb18dc58e94ff381ec
+source_tree_digest: sha256:095e1edc6041718b89f71f58c29d7e7f903646f57a2a339d65bb003d21699df1
 summary:
   total_mdc_files: 69
   always_apply_true: 33
@@ -81,8 +81,8 @@ rules:
 - file: 03-graphiti-memory.mdc
   id: l9.rule.graphiti.memory
   id_source: explicit
-  version: 1.1.0
-  description: Graphiti episodic memory SSOT — retrieval authority, group_id, temporal supersedes/conflicts
+  version: 1.2.0
+  description: Agent memory SSOT (canonical l9-graphite-memory control plane) — retrieval authority, namespace, temporal supersedes/conflicts
   scope: global
   domain: memory
   activation: always
@@ -91,8 +91,8 @@ rules:
   globs: null
   first_heading: Graphiti Memory (SSOT)
   has_yaml_frontmatter: true
-  line_count: 70
-  content_digest: sha256:93cd8a5cbf326814afcc9f1ce8651f16bcb1b4f1e991d35be2914a3a1ab39616
+  line_count: 73
+  content_digest: sha256:3517735fcfd8217fbe1faddd516fbe2c7a43fc00a1e8ccab1fab102d3d8fddfb
   authority: canonical_global
   context_cost: minimal
   deprecated: false
@@ -1334,7 +1334,7 @@ rules:
 - file: 87-cursor-memory-kernel.mdc
   id: l9.rule.cursor.memory.kernel
   id_source: explicit
-  version: 1.0.0
+  version: 1.1.0
   description: Cursor Memory Kernel enforcement — authoritative source for memory operations, kinds, and session lifecycle
   scope: global
   domain: memory
@@ -1344,8 +1344,8 @@ rules:
   globs: null
   first_heading: Cursor Memory Kernel Enforcement
   has_yaml_frontmatter: true
-  line_count: 166
-  content_digest: sha256:a27cb68253193181023d324b60f94306664114f6a847e511d7180547bf3b0cc6
+  line_count: 170
+  content_digest: sha256:71231292223304642e6ec7a70de66b742fbf5e3db7a78fb0a85a96fcc3f861ca
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -1576,18 +1576,18 @@ rules:
 - file: 98-graphiti-memory-gate.mdc
   id: l9.rule.graphiti.memory.gate
   id_source: explicit
-  version: 1.0.0
-  description: Graphiti group_id gate — forbidden namespaces; Write gates when GRAPHITI_WRITE_GATES=1
+  version: 1.1.0
+  description: Memory namespace gate — forbidden namespaces; hydration-only write gates when L9_MEMORY_WRITE_GATES=1
   scope: global
   domain: memory
   activation: always
   activation_source: explicit
   always_apply: true
   globs: null
-  first_heading: Graphiti Memory Gate
+  first_heading: Memory Gate (canonical control plane)
   has_yaml_frontmatter: true
-  line_count: 48
-  content_digest: sha256:557a495cb0cabc05a3cba5c5323612f4ab724320f77818f36fd88bb453f2f361
+  line_count: 49
+  content_digest: sha256:9874e598cf8b7dec0a9d2ff561f20615b0a9b260057795e419044430de0623e5
   authority: canonical_global
   context_cost: minimal
   deprecated: false

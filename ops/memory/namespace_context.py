@@ -12,10 +12,10 @@ authorized one.
 Stage C2 made this module the only producer of identity and hints. The
 registry it consults, ``ops/graphiti/group_registry.yaml``, is reclassified
 as alias/request hints: repository slugs, remote patterns, path hints, and
-the shared namespaces Cursor may *ask* to read. ``ops/graphiti/group_resolver.py``
-is a legacy shim over the same matching for callers that still consume its
-dict shape; its ``readonly`` verdict was never an authorization and is
-reduced here to a warning about identity confidence.
+the shared namespaces Cursor may *ask* to read. The legacy resolver shim
+(``ops/graphiti/group_resolver.py``) was deleted at stage C11; its
+``readonly`` verdict was never an authorization and survives only as the
+identity-confidence warning this module emits.
 """
 
 from __future__ import annotations

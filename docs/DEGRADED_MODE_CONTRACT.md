@@ -220,3 +220,19 @@ tidiness — it is the only containment this surface has.
 Everything an LLM can execute can read that LLM's environment. An unavailable
 capability is a delivery problem; a pasted secret is a permanent compromise on
 this surface.
+
+
+## Memory rows after the realignment (2026-09-06) — supersedes the Graphiti rows above
+
+Dated counter-observation, not a rewrite of the rows above. Since campaign
+stage C9/C11 (ADR-0030) no surface reaches `GRAPHITI_MCP_URL` and no surface
+adds an `Authorization` header for memory: the memory plane is the canonical
+`l9-graphite-memory` control plane over **stdio** to the runtime this checkout
+binds (`ops/config/memory-binding.json`). What the readiness receipt now
+reports is `memory_control_plane_status` from `ops/memory/diagnostics.py`
+(`cli` / `control_plane` / `mcp`) and the posture `memory_transport:
+stdio-control-plane`; the `Graphiti_reachability` dimension and the
+`graphiti_transport_auth` observation described above no longer exist. A
+model-controlled surface with the memory package unbound is `memory-blind` for
+the honest reason "no runtime bound", never "no bearer", and is still never a
+reason to paste a credential.

@@ -1,14 +1,16 @@
 # Memory Pipeline Map (live path SSOT)
 
 Canonical narrative for agent episodic memory in Quantum-L9 coding workspaces.
-Authority: CANONICAL_LAW §2.1 / §8, ADR-0005, ADR-0028, rules `03-graphiti-memory` + `87-cursor-memory-kernel`.
+Authority: CANONICAL_LAW §2.1 / §8 / §8.2, ADR-0005, ADR-0028, ADR-0030, rules `03-graphiti-memory` + `87-cursor-memory-kernel`.
+
+**Updated 2026-09-06 (realignment C11/C12):** the store is the canonical `l9-graphite-memory` control plane; Graphiti is a projection memory owns. The direct provider client is a tombstone; every row below that once named it now names `ops/memory`.
 
 ## One store
 
 | Layer | Role |
 |-------|------|
-| Graphiti (VPS MCP) | Sole agent episodic SSOT |
-| `ops/graphiti/graphiti_memory_client.py` | Cursor-primary front door |
+| `l9-graphite-memory` MemoryService (`memory-control-plane/v1`) | Sole agent episodic SSOT; Graphiti is its projection |
+| `ops/memory/control_plane_client.py` (`python -m ops.memory.cli`) | Cursor's only front door (INV-03); bound runtime per `ops/config/memory-binding.json` |
 | `ops/graphiti/hydration/` | sessionStart compile + sessionEnd close |
 | Claude `environment/agents/adapters/claude-code/memory/` | Thin adapter only (no second brain) |
 | `memory-bank/` | **RETIRED** — do not scaffold/read/write; delete residual trees |
@@ -19,21 +21,22 @@ Authority: CANONICAL_LAW §2.1 / §8, ADR-0005, ADR-0028, rules `03-graphiti-mem
 
 ```text
 sessionStart
-  → resolve group_id from CURSOR_PROJECT_DIR
+  → resolve repository identity + namespace hints (ops/memory/namespace_context.py)
   → write open latch (.l9/memory/opens + rotate previous_opened / last_opened)
-  → compile SessionHydrationPacket (PICKUP + facts + close-gap check)
+  → canonical_hydrate: health → hydrate → typed ContinuationCapsuleV2 (stale loses to git)
+  → compile SessionHydrationPacket (continuation + context sections + close-gap check)
   → if prior session missing receipt / write_count=0 / no session PICKUP:
       lead additional_context with DEGRADED + REPAIR: /end-session (ADR-0028)
   → emit additional_context with objective + next= + compact JSON
-  → inject receipt for gates (fail-open if Graphiti down)
+  → canonical session state for the hydration-only gates (fail-open if memory down)
 
 session work
-  → atomic T2 writes via CLI (`lesson` / `insight` / structured PICKUP)
-  → source_description = agent={id};kind={kind}
+  → atomic T2 writes via `python -m ops.memory.cli write --kind lesson|insight|decision`
+  → every write is a canonical receipt (admitted / duplicate / rejected / quarantined)
 
 sessionEnd (X-out / window_close / completed / aborted)
-  → Phase A/B via close_session.py; always write a close receipt
-  → if write_count=0: one graphiti_memory_client pickup_context fallback
+  → Phase A/B via close_session.py: capsule → governed candidate → memory.close (idempotent)
+  → local obligation under .l9/memory/closes/ (authority: none); no provider fallback
   → stderr ERROR on skip/fail; enqueue failure still exit 2
   → idempotent receipt under .l9/memory/closes/{session_id}.json
     (latches only — not resume SSOT)
@@ -52,7 +55,7 @@ sessionEnd (X-out / window_close / completed / aborted)
 
 Batch catch-up (no Mac awake at cron time)
   → GitHub Actions `.github/workflows/memory-distill.yml` (schedule + dispatch)
-  → pull pending S3 jobs → OpenAI distill → Graphiti HTTPS ingest
+  → pull pending S3 jobs → OpenAI distill → canonical ingest (ops/memory control plane)
   → Mac LaunchAgent `com.l9.transcript-distiller` / Dropbox / C1 `save_memory`
     are RETIRED (see `ops/scripts/RETIRED_transcript_distiller_launchagent.md`)
 ```
@@ -84,8 +87,8 @@ SessionStart prints `REPAIR: /end-session`, or:
 - you need a richer manual PICKUP after a degraded close
 - governance backup / Redis handoff must be forced interactively
 
-**Primary repair** is `graphiti_memory_client.py write --kind pickup_context`
-(or `hydration.cli repair-write`). Do not prefer `hydration.cli close`.
+**Primary repair** is `hydration.cli repair-write` (canonical write + receipt stamp).
+Do not prefer `hydration.cli close`; there is no provider `write` fallback (C11).
 Do not treat `/end-session` as required for every X-out. See ADR-0028.
 
 ## Budgets

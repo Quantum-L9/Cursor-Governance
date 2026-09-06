@@ -26,7 +26,7 @@ See [`docs/MEMORY_PIPELINE_MAP.md`](../docs/MEMORY_PIPELINE_MAP.md) and
 
 ## WHAT IT DOES (recovery)
 
-1. **PICKUP context** — `graphiti_memory_client.py write --kind pickup_context`
+1. **PICKUP context** — `ops.memory.cli write --kind pickup_context`
    or `hydration.cli repair-write` (same write + receipt stamp)
 2. **Lessons / errors** — atomic writes with `--agent-id`
 3. **Governance backup** — push SSOT when requested
@@ -49,14 +49,14 @@ if [ -f "$PRIOR_FILE" ]; then
   REPAIR_SID="$("$GRAPHITI_PY" -c 'import json,sys; print(json.load(open(sys.argv[1])).get("session_id") or "")' "$PRIOR_FILE")"
 fi
 REPAIR_SID="${REPAIR_SID:-${CURSOR_CONVERSATION_ID:-manual}}"
-"$GRAPHITI_PY" "$GOV/ops/graphiti/graphiti_memory_client.py" health
+memcli health
 cd "$GOV" && PYTHONPATH="$GOV" "$GRAPHITI_PY" -m ops.graphiti.hydration.cli repair-write \
   --project-dir "$WS" \
   --session-id "$REPAIR_SID" \
   --objective "{TASK}" --next "{NEXT}" --agent-id cursor
 ```
 
-Do **not** substitute `graphiti_memory_client.py write` for this step. That path
+Do **not** substitute `ops.memory.cli write` for this step. That path
 creates a PICKUP episode and never calls `write_receipt`, so hydrate still
 classifies a close-gap. `repair-write` is the only documented repair.
 
@@ -66,7 +66,7 @@ superseding. Do **not** write `memory-bank/`.
 ### Phase 2 — LESSONS & ERRORS (optional)
 
 ```bash
-"$GRAPHITI_PY" "$GOV/ops/graphiti/graphiti_memory_client.py" write \
+memcli write \
   "LESSON|topic={TOPIC}|learned={LEARNED}|context={CONTEXT}" --kind lesson --agent-id cursor
 ```
 

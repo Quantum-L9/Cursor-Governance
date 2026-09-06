@@ -202,15 +202,3 @@ def test_unknown_repository_requests_only_the_shared_read(tmp_path: Path) -> Non
     assert context.write_namespace_hint is None
     assert context.read_namespace_hints == ("l9-workspace",)
     assert context.repository_identity == "Someone/mystery"
-
-
-def test_legacy_resolver_is_a_shim_over_the_same_matching(monkeypatch, tmp_path: Path) -> None:
-    from ops.graphiti import group_resolver as legacy
-
-    monkeypatch.setattr(legacy, "load_registry", lambda: _registry())
-    repo = _git_repo(tmp_path / "PR_Repair", "git@github.com:Quantum-L9/PR_Repair.git")
-    resolved = legacy.resolve_group_id(repo)
-    context = nc.resolve_namespace_context(repo, registry=_registry(), env={})
-    assert resolved["group_id"] == context.write_namespace_hint == "pr-repair"
-    # `readonly` is identity confidence, never authorization.
-    assert resolved["readonly"] is False

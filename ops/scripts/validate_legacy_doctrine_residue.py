@@ -44,8 +44,8 @@ AUTHORITY_PROTOCOL_SURFACES = (
     ".github/pull_request_template.md",
 )
 
-# Retired session-memory client. Graphiti (ops/graphiti/graphiti_memory_client.py,
-# runtime .cursor-commands/ops/graphiti/...) is the single front door.
+# Retired session-memory client. The canonical memory control plane
+# (ops/memory; operator CLI `python -m ops.memory.cli`) is the single front door.
 RETIRED_MEMORY_CLIENT = re.compile(r"agents/cursor/cursor_memory_client\.py")
 
 # A mention that teaches the client is gone (a retirement notice) is allowed;
@@ -235,7 +235,7 @@ def main() -> int:
                 "FAIL: active surface calls the retired memory client "
                 "(agents/cursor/cursor_memory_client.py)"
             )
-            print("Use the Graphiti front door (ops/graphiti/graphiti_memory_client.py) instead.")
+            print("Use the memory control plane (python -m ops.memory.cli) instead.")
             for hit in sorted(client_findings):
                 print(f"  {hit}")
         return 1
