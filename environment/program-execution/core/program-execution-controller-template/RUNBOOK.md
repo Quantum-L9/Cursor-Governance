@@ -65,10 +65,21 @@ python scripts/pec.py next --workspace ../runtime
 ```bash
 python scripts/pec.py set-decision DEC-001 accepted --workspace ../runtime --evidence-id EVID-010 --actor owner
 python scripts/pec.py set-unknown UNK-001 resolved --workspace ../runtime --evidence-id EVID-011 --actor owner
-python scripts/pec.py evaluate-gate GATE-001 PASS --workspace ../runtime --evidence-id EVID-012 --method inspection --actor verifier
+python scripts/pec.py evaluate-gate GATE-001 --workspace ../runtime --evidence-id EVID-012 --actor verifier
 ```
 
 These commands record runtime projections and receipts. They do not rewrite Blueprint source files.
+
+`evaluate-gate` takes evidence references only. The Controller derives
+PASS / FAIL / UNKNOWN / NOT_APPLICABLE_WITH_REASON from the gate's frozen
+definition and the typed evidence it holds (`pec/gates.py`), records that
+derivation as the gate's state and receipt (`evaluator_version`,
+`reason_codes`, `unresolved`), and only then compares it with an optional
+expected result given as the second positional argument (or `--expected`). A
+mismatch exits 2 with `GATE_EXPECTATION_MISMATCH` after the truthful record has
+been made; there is no input that promotes a gate by naming the word PASS. A
+gate class the evaluator has no rule for is UNKNOWN, and changing a gate's
+definition invalidates its prior result.
 
 ## 6. Admit exact task scope
 

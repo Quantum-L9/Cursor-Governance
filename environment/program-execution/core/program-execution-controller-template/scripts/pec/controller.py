@@ -52,6 +52,7 @@ from .contracts import (
     validate_source_contract,
 )
 from .exec_env import resolve_exec_env, run_validation_command
+from .gates import GATE_EXPECTATION_MISMATCH, REASON_TEXT, derive_gate_result
 from .ledger import EventLedger
 from .runtime import (
     _require_stack_proof_reentry,
@@ -862,35 +863,6 @@ def _require_ledger_integrity(ledger: EventLedger) -> None:
         raise ControllerError(
             f"ledger integrity failure; refusing to mutate Program state: {message}"
         )
-
-
-def _evidence_supports(db: StateDB, evidence_ids: list[str], task_ids: set[str]) -> bool:
-    """Does any of this evidence support one of these tasks?"""
-    for evidence_id in evidence_ids:
-        item = db.evidence(evidence_id) or {}
-        if set(item.get("supports") or []) & task_ids:
-            return True
-    return False
-
-
-#: Gate classes that close over executed work. Their PASS needs the
-#: Controller's own verification of an in-scope task, never catalog evidence.
-EXECUTION_GATE_CLASSES = frozenset({"execution", "validation"})
-CONTROLLER_VERIFICATION_METHOD = "independent_controller_verification"
-
-
-def _controller_verification_supports(
-    db: StateDB, evidence_ids: list[str], task_ids: set[str]
-) -> bool:
-    for evidence_id in evidence_ids:
-        item = db.evidence(evidence_id) or {}
-        if str(item.get("method") or "") != CONTROLLER_VERIFICATION_METHOD:
-            continue
-        if str(item.get("result") or "") != "PASS":
-            continue
-        if set(item.get("supports") or []) & task_ids:
-            return True
-    return False
 
 
 def _risk_tier_policy() -> dict[str, Any]:
@@ -3267,76 +3239,37 @@ def set_unknown(
 def evaluate_gate(
     workspace: Path,
     gate_id: str,
-    result: str,
+    expected_result: str | None,
     evidence_ids: list[str],
-    method: str,
+    method: str | None,
     actor: str,
     waiver_id: str | None = None,
 ) -> dict[str, Any]:
+    """Derive and record a gate verdict from evidence (PEC-P1-005).
+
+    The caller supplies evidence references and, optionally, the result it
+    EXPECTS. The Controller derives the result itself (`pec.gates`), records
+    that derivation as the gate's state and receipt, and only then compares it
+    with the expectation: a mismatch is reported as GATE_EXPECTATION_MISMATCH
+    after the truthful record has been made. No supported input lets a caller
+    promote a gate by supplying the word PASS.
+    """
     db, ledger = open_runtime(workspace)
     try:
         gate = db.gate(gate_id)
         if gate is None:
             raise ControllerError(f"unknown gate: {gate_id}")
         _require_ledger_integrity(ledger)
-        if not evidence_ids or not all(_evidence_valid(db, item) for item in evidence_ids):
-            raise ControllerError("gate evaluation requires valid evidence")
-        definition = gate.get("definition") or {}
-        if result == "PASS":
-            # Validity is not relevance. A PASS is a claim about THIS gate's
-            # scope, so it needs the evidence the gate itself names and at
-            # least one item that supports a task inside the gate's scope.
-            required = [str(item) for item in definition.get("required_evidence_ids") or []]
-            missing = sorted(set(required) - set(evidence_ids))
-            if missing:
-                raise ControllerError(
-                    f"gate {gate_id} PASS requires its declared evidence; missing {missing}"
-                )
-            scope_tasks = {
-                str(item) for item in (definition.get("scope") or {}).get("task_ids") or []
-            }
-            if scope_tasks and not _evidence_supports(db, list(evidence_ids), scope_tasks):
-                raise ControllerError(
-                    f"gate {gate_id} PASS requires evidence supporting a task in its scope "
-                    f"{sorted(scope_tasks)}; none of {sorted(set(evidence_ids))} does"
-                )
-            if scope_tasks and str(definition.get("class") or "") in EXECUTION_GATE_CLASSES:
-                # An execution or validation gate closes over work that ran.
-                # Planning evidence from the catalog supports the same task
-                # and is valid, but it says nothing about the attempt; only the
-                # Controller's own verification of an in-scope task does.
-                if not _controller_verification_supports(db, list(evidence_ids), scope_tasks):
-                    raise ControllerError(
-                        f"gate {gate_id} ({definition.get('class')}) PASS requires Controller "
-                        "verification evidence for a task in its scope; planning or "
-                        "catalog evidence cannot close an execution gate"
-                    )
-        if result == "NOT_APPLICABLE_WITH_REASON":
-            if not gate["definition"].get("waiver_allowed") or not waiver_id:
-                raise ControllerError(
-                    "NOT_APPLICABLE_WITH_REASON requires an allowed, explicit waiver"
-                )
-            waiver = db.waiver(waiver_id)
-            if (
-                waiver is None
-                or waiver.get("status") != "active"
-                or gate_id not in (waiver.get("scope") or [])
-            ):
-                raise ControllerError("waiver is missing, inactive, or out of scope")
-            if parse_time(waiver["expires_at"]) <= dt.datetime.now(dt.UTC):
-                raise ControllerError("waiver is expired")
-            if not all(_evidence_valid(db, item) for item in waiver.get("evidence_ids") or []):
-                raise ControllerError("waiver evidence is invalid")
-        elif waiver_id is not None:
-            raise ControllerError("waiver_id is only valid for NOT_APPLICABLE_WITH_REASON")
-        # Definition of Done is enforced per task at `complete_task`, never here:
-        # a gate's scope spans every task it converges (`scope.task_ids`), and a
-        # multi-task gate must be PASS-able while later tasks in its scope have
-        # not run, because completing the first task requires the gate. The
-        # loop that once stood here read a `task_ids` key the schema never
-        # placed at the top level, so it was dead; made live it deadlocked
-        # every multi-task campaign. Evidence validity for the PASS is
-        # `_evidence_valid` above, which rejects FAIL/BLOCKED/UNKNOWN results.
+        if waiver_id is None and not evidence_ids:
+            raise ControllerError(
+                "gate evaluation requires evidence references", error_code="GATE_EVIDENCE_MISSING"
+            )
+        if waiver_id is not None and expected_result not in {None, "NOT_APPLICABLE_WITH_REASON"}:
+            raise ControllerError(
+                "a waiver can only yield NOT_APPLICABLE_WITH_REASON",
+                error_code=GATE_EXPECTATION_MISMATCH,
+            )
+        verdict = derive_gate_result(db, gate, list(evidence_ids), waiver_id=waiver_id)
         evaluated_at = utc_now()
         receipt = {
             "schema": "program-execution-controller.gate-evaluation.v2",
@@ -3344,24 +3277,35 @@ def evaluate_gate(
             "gate_id": gate_id,
             "program_digest": db.get_meta("program_digest"),
             "gate_definition_digest": digest_object(gate["definition"]),
-            "result": result,
-            "evidence_ids": sorted(set(evidence_ids)),
+            "result": verdict.result,
+            "evidence_ids": sorted(set(str(item) for item in evidence_ids))
+            or sorted(set(verdict.evidence_used))
+            or ["WAIVER:" + str(waiver_id)],
             "evaluated_by": actor,
             "evaluated_at": evaluated_at,
-            "method": method,
+            "method": verdict.evaluator,
             "waiver_id": waiver_id,
+            "evaluator_version": verdict.evaluator,
+            "derived": True,
+            "expected_result": expected_result,
+            "caller_method": method,
+            "reason_codes": sorted(set(verdict.reason_codes)),
+            "unresolved": sorted(set(verdict.unresolved)),
         }
         receipt["receipt_digest"] = digest_object(receipt)
         _validate_schema(workspace, "gate-evaluation.schema.json", receipt)
         target = workspace / "receipts" / "gates" / gate_id / f"{receipt['evaluation_id']}.json"
-        write_json(target, receipt)
-        db.set_gate(gate_id, result, receipt["evidence_ids"], str(target))
+        with db.controller_transaction():
+            write_json(target, receipt)
+            db.set_gate(gate_id, verdict.result, receipt["evidence_ids"], str(target))
         ledger.append(
             "GATE_EVALUATED",
             actor,
             {
                 "gate_id": gate_id,
-                "result": result,
+                "result": verdict.result,
+                "expected_result": expected_result,
+                "reason_codes": receipt["reason_codes"],
                 "receipt": str(target),
                 "receipt_digest": receipt["receipt_digest"],
             },
@@ -3371,6 +3315,17 @@ def evaluate_gate(
         receipt["signal"] = publish_controller_event(
             workspace, event="evaluate-gate", receipt=receipt
         )
+        if expected_result is not None and expected_result != verdict.result:
+            explained = "; ".join(
+                f"{code}: {REASON_TEXT.get(code, code)}" for code in receipt["reason_codes"]
+            )
+            raise ControllerError(
+                f"gate {gate_id}: caller expected {expected_result} but the Controller "
+                f"derived {verdict.result} ({explained or 'no findings'}; "
+                f"unresolved={receipt['unresolved']}); the derived result was recorded "
+                f"in {target}",
+                error_code=GATE_EXPECTATION_MISMATCH,
+            )
         return receipt
     finally:
         db.close()

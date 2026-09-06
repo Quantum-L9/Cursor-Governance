@@ -230,14 +230,23 @@ def parser() -> argparse.ArgumentParser:
     cmd.add_argument("--evidence-id", action="append", default=[])
     cmd.add_argument("--actor", required=True)
 
-    cmd = sub.add_parser("evaluate-gate")
+    cmd = sub.add_parser(
+        "evaluate-gate",
+        help="derive a gate verdict from evidence; the Controller decides PASS/FAIL/UNKNOWN",
+    )
     cmd.add_argument("gate_id")
     cmd.add_argument(
-        "result", choices=["PASS", "FAIL", "BLOCKED", "UNKNOWN", "NOT_APPLICABLE_WITH_REASON"]
+        "expected_result",
+        nargs="?",
+        default=None,
+        choices=["PASS", "FAIL", "BLOCKED", "UNKNOWN", "NOT_APPLICABLE_WITH_REASON"],
+        help="non-authoritative: the result the caller expects; a mismatch with the "
+        "derived result fails AFTER the derivation is recorded",
     )
+    cmd.add_argument("--expected", dest="expected_flag", default=None)
     cmd.add_argument("--workspace", required=True, type=Path)
     cmd.add_argument("--evidence-id", action="append", default=[])
-    cmd.add_argument("--method", required=True)
+    cmd.add_argument("--method", default=None, help="recorded as caller_method only")
     cmd.add_argument("--actor", required=True)
     cmd.add_argument("--waiver-id")
 
@@ -518,7 +527,7 @@ def main(argv: list[str] | None = None, *, template_root: Path) -> int:
             value = evaluate_gate(
                 args.workspace,
                 args.gate_id,
-                args.result,
+                args.expected_flag or args.expected_result,
                 args.evidence_id,
                 args.method,
                 args.actor,

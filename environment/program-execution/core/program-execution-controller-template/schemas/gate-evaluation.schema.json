@@ -76,6 +76,37 @@
     "receipt_digest": {
       "type": "string",
       "pattern": "^[a-f0-9]{64}$"
+    },
+    "evaluator_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "derived": {
+      "type": "boolean"
+    },
+    "expected_result": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "caller_method": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "reason_codes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "unresolved": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   }
 }

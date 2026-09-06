@@ -617,6 +617,16 @@ class StateDB:
 
     def upsert_gate(self, gate: dict[str, Any]) -> None:
         existing = self.gate(gate["id"])
+        if existing is not None and existing.get("definition") != gate:
+            # Changing a gate invalidates its prior evaluation: a PASS earned
+            # against the old definition says nothing about the new one, and
+            # the gate id alone is never enough to reuse it (R7 §11.6).
+            existing = {
+                **existing,
+                "result": "UNKNOWN",
+                "evidence_ids": [],
+                "evaluation_receipt": None,
+            }
         self.conn.execute(
             """
             INSERT INTO gates(
@@ -624,7 +634,10 @@ class StateDB:
             ) VALUES(?,?,?,?,?,?)
             ON CONFLICT(id) DO UPDATE SET
                 definition=excluded.definition,
-                blocking=excluded.blocking
+                blocking=excluded.blocking,
+                result=excluded.result,
+                evidence_ids=excluded.evidence_ids,
+                evaluation_receipt=excluded.evaluation_receipt
             """,
             (
                 gate["id"],
