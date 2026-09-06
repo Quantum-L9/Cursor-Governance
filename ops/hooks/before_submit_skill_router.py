@@ -105,8 +105,10 @@ def _usage_log(receipt: dict[str, Any], state_root: Path) -> None:
         log_path.parent.mkdir(parents=True, exist_ok=True)
         with log_path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(event, sort_keys=True) + "\n")
-    except (OSError, KeyError, TypeError):
-        pass
+    except (OSError, KeyError, TypeError) as exc:
+        # Usage logging is observability only: never let it change the
+        # receipt or block the prompt, but say why it was skipped.
+        print(f"WARN: Cursor L9 skill router: usage log skipped: {exc}", file=sys.stderr)
 
 
 def route_event(payload: dict[str, Any], plane: types.SimpleNamespace) -> dict[str, Any] | None:
@@ -139,8 +141,11 @@ def route_event(payload: dict[str, Any], plane: types.SimpleNamespace) -> dict[s
             try:
                 registry = plane.registry.load_registry()
                 generation_id, identity = registry.generation_id, registry.identity()
-            except plane.registry.RegistryError:
-                pass
+            except plane.registry.RegistryError as exc:
+                # Registry identity is optional on a disabled receipt: the
+                # receipt must still be written so no prior route stays live.
+                registry = None
+                print(f"WARN: Cursor L9 skill router: registry unavailable: {exc}", file=sys.stderr)
             return emit("disabled", reason="L9_PROACTIVE_SKILLS is not true")
         registry = plane.registry.load_registry()
         generation_id, identity = registry.generation_id, registry.identity()

@@ -15,8 +15,8 @@ replacement control plane passed its full suite in legacy-manifest mode.
 
 **Final status:** `VIRTUAL_SKILL_PLANE_V2_BUILT_STATICALLY_VALIDATED_RUNTIME_CURSOR_GATE_PENDING`
 — no Cursor runtime exists in this cloud session, so the runtime acceptance
-gate is `NOT_EXECUTED`, and publication is blocked by session repository
-authorization (see "Publication state"). Nothing in the build itself is pending.
+gate is `NOT_EXECUTED`. The branch is published as PR #513 with every CI check
+green (see "Publication state"). Nothing in the build itself is pending.
 
 ## Revision binding
 
@@ -25,7 +25,8 @@ authorization (see "Publication state"). Nothing in the build itself is pending.
 | Exact start SHA (`origin/main`) | `051c63c904a35210e549ff4eb125325dedfcba99` |
 | Code candidate SHA (local, phases 0–7) | `d809a72` |
 | Code candidate SHA (local, phases 8–12, cutover) | `da618d33b267ca7ebaaee9accd363b8133f379ce` |
-| Branch tip | the commit carrying this brief (see PR head) |
+| PR #513 first head (after #512-aligned frontmatter + worktree test isolation) | `c88ffa3e806d7c5202ed0d19449635400814d956` |
+| Branch tip | the commit carrying this brief revision (see PR head) |
 
 ## Architecture before
 
@@ -275,21 +276,36 @@ key, accept legacy, fail closed when both present and differ.
 | workflow action pins | `.venv/bin/python ops/scripts/validate_workflow_action_pins.py` | 0 | 43 references compliant | PASS |
 | repo hygiene | `.venv/bin/python tools/check_repo_hygiene.py` | 0 | PASS | PASS |
 | governance symlinks | `bash ops/scripts/validate_governance_symlinks.sh` | 0 | PASS | PASS |
-| `make pr` local gate (kernel hook, pre-commit writers, locked ruff, generated heal) | `OPEN_PR=0 PR_REMEDIATE=0 make pr` | 2 | all writer/hook stages OK; stopped at early-overlap: `gh api` 403 (repository not attached to this session) | BLOCKED at telemetry only |
+| `make pr` full gate (kernel hook, pre-commit, ruff, generated heal, pytest catalog, skill self-tests, root-file protection, wiring, security) | `PR_OVERLAP=ignore PR_REMEDIATE=0 make pr` in `~/.l9/gov-worktrees/vsp-v2` | 0 | RESULT: PASS — local PR gate clean; PR open + subscribed | PASS |
+| GitHub CI on PR #513 head `c88ffa3e` | 19 check runs (governance-self-check, Test Suite, Lint and Type Check, CodeQL, Semgrep, root-file append-only gate, SBOM, peer conformance, …) | — | 19/19 success | PASS |
 | Cursor runtime acceptance | — | — | no Cursor runtime in this session | NOT_EXECUTED |
+
+Two test-isolation defects surfaced only when the gate ran from a dedicated
+worktree on a machine that also holds `~/.cursor-governance`: the resolver test
+had to pin `HOME` so the home clone could not satisfy the ancestor-walk case,
+and the synthetic scale roots had to carry the `ops/skill_routing` package under
+test so the hook never loaded an older home-clone copy. Both are test-only
+fixes (commit `c88ffa3e`); no product code changed.
 
 ## Publication state
 
-Both commits are on the local branch `claude/virtual-skill-plane-v2-6ybcqf`.
-Publication from this cloud session is **BLOCKED by session repository
-authorization**: the git proxy refuses `git push` for
-`Quantum-L9/Cursor-Governance` ("not in this session's authorized repository
-set") and `gh api` returns HTTP 403 for the same repository, so neither
-`make pr` (early-overlap telemetry, E6 fail-closed) nor an API replay can
-publish. The session-level `add_repo` request for this repository was declined.
-Unblock: attach the repository to the session (or fetch the branch from a
-machine with push rights) and run `PR_REMEDIATE=0 make pr`; the L4 release
-receipt and the tree-kernel receipt are already recorded for HEAD.
+Published as **PR #513** (`claude/virtual-skill-plane-v2-6ybcqf` → `main`)
+through the sanctioned path only: L4 `begin` + `authorize-release`, tree-kernel
+receipt, then `PR_REMEDIATE=0 make pr` from the dedicated wired worktree
+`~/.l9/gov-worktrees/vsp-v2` (the SSOT clone stays on `main`, which the
+governance wiring check requires). `PR_OVERLAP=ignore` was used with a stated
+justification recorded in the PR body: the early-overlap probe found
+end-of-file append collisions on the append-only `AGENTS.md` / `Makefile` with
+PRs #508 and #509, and an identical `disable-model-invocation` removal in
+`skills/l9-plan-simple/SKILL.md` with PR #512 (this branch now carries the same
+hunk, so that file merges cleanly whichever lands first). Three sibling
+chains made `PR_STACK=auto` ambiguous; merge bottom-up per rule 53.
+
+Session notes that matter for the next publisher: publication was first
+blocked because the repository was not attached to the cloud session (git proxy
+and `gh api` 403); a `gate-failure.json` latched on that telemetry failure had
+to be cleared once access was restored, and `make -C $GOV pr WS=<worktree>` is
+gated on the SSOT clone's L4 receipt, so `make pr` must run inside the worktree.
 
 ## Changed-file inventory (40 paths, `051c63c9..da618d3`)
 
