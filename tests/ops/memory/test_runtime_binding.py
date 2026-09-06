@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -426,7 +427,17 @@ def test_3_unproven_artifact_is_compatible_not_exact(tmp_path: Path, monkeypatch
     assert binding.is_exact is False
     assert binding.ok is True  # usable, but never called exact
     assert binding.artifact_provenance == rb.PROVENANCE_UNPROVEN
-    assert any("cannot be confirmed" in r for r in binding.reasons)
+    assert any("cannot be verified in place" in r for r in binding.reasons)
+
+
+def test_3b_an_unhashed_install_names_the_record_digest_to_pin(tmp_path: Path, monkeypatch) -> None:
+    """uv installing a local wheel records no PEP 610 archive hash, so the
+    reason has to say what *can* be pinned instead of what is missing."""
+    monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
+    binding = bind(Environment(tmp_path, artifact_sha256=None, record_digest="e" * 64))
+    assert binding.status == rb.STATUS_COMPATIBLE
+    assert binding.installed_artifact_digest == "e" * 64
+    assert any("installed_record_digest" in r and "e" * 64 in r for r in binding.reasons)
 
 
 def test_4_wrong_version_is_still_rejected(tmp_path: Path) -> None:
@@ -532,3 +543,82 @@ def _manifest_with(path: Path, **evidence: Any) -> None:
     raw = json.loads(rb.DEFAULT_MANIFEST_PATH.read_text(encoding="utf-8"))
     raw["release_evidence"] = {**(raw.get("release_evidence") or {}), **evidence}
     path.write_text(json.dumps(raw), encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------
+# The schema-export probe, executed for real (CG-P1-02 follow-up)
+#
+# The first CI run of the required proof reported "bound release exports no
+# schema for" seven of eleven models: `l9_graphite_memory.contracts` is a
+# *package* whose __init__ re-exports only some of them, and the probe looked
+# nowhere else. No unit test covered the probe body, so nothing caught it.
+# These run the actual probe source in a real interpreter against a package
+# shaped the way the release's is.
+# ---------------------------------------------------------------------------
+
+
+def _run_probe(root: Path, names: Sequence[str]) -> dict[str, Any]:
+    import os
+
+    env = {**os.environ, "PYTHONPATH": str(root)}
+    result = subprocess.run(
+        [sys.executable, "-c", rb._SCHEMA_PROBE, ",".join(names)],
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+    return json.loads(result.stdout.strip().splitlines()[-1])
+
+
+def test_probe_finds_models_that_the_package_init_does_not_reexport(tmp_path: Path) -> None:
+    """The exact shape that failed in CI: four models re-exported, the rest
+    reachable only through a submodule."""
+    root = tmp_path / "site"
+    exported = ["SearchReceipt", "WriteReceipt"]
+    submodule_only = ["HealthReceipt", "CapabilitiesReceipt", "ConflictsReceipt"]
+    pkg = root / "l9_graphite_memory" / "contracts"
+    pkg.mkdir(parents=True)
+    (root / "l9_graphite_memory" / "__init__.py").write_text("", encoding="utf-8")
+    model = (
+        "class {name}:\n"
+        "    @staticmethod\n"
+        "    def model_json_schema():\n"
+        "        return {{'title': '{name}', 'type': 'object'}}\n"
+    )
+    (pkg / "receipts.py").write_text(
+        "".join(model.format(name=n) for n in submodule_only), encoding="utf-8"
+    )
+    (pkg / "__init__.py").write_text(
+        "".join(model.format(name=n) for n in exported), encoding="utf-8"
+    )
+
+    payload = _run_probe(root, exported + submodule_only)
+    assert payload["error"] is None
+    assert payload["missing"] == []
+    assert sorted(payload["schemas"]) == sorted(exported + submodule_only)
+
+
+def test_probe_reports_a_model_the_release_really_lacks(tmp_path: Path) -> None:
+    root = tmp_path / "site"
+    pkg = root / "l9_graphite_memory" / "contracts"
+    pkg.mkdir(parents=True)
+    (root / "l9_graphite_memory" / "__init__.py").write_text("", encoding="utf-8")
+    (pkg / "__init__.py").write_text(
+        "class SearchReceipt:\n"
+        "    @staticmethod\n"
+        "    def model_json_schema():\n"
+        "        return {'title': 'SearchReceipt'}\n",
+        encoding="utf-8",
+    )
+    payload = _run_probe(root, ["SearchReceipt", "NoSuchReceipt"])
+    assert list(payload["schemas"]) == ["SearchReceipt"]
+    assert payload["missing"] == ["NoSuchReceipt"]
+
+
+def test_probe_reports_an_absent_contracts_package(tmp_path: Path) -> None:
+    payload = _run_probe(tmp_path / "empty", ["CloseReceipt"])
+    assert payload["schemas"] == {}
+    assert payload["error"] and "ModuleNotFoundError" in payload["error"]

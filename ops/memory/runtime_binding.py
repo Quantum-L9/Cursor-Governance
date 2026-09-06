@@ -95,12 +95,17 @@ try:
         info = out["direct_url"].get("dir_info") or {}
         out["editable"] = bool(info.get("editable"))
     record = installed.read_text("RECORD") or ""
+    installer_written = ("RECORD", "INSTALLER", "REQUESTED", "direct_url.json",
+                         "RECORD.jws", "RECORD.p7s")
     rows = []
     for line in record.splitlines():
         parts = line.rsplit(",", 2)
-        if len(parts) != 3 or parts[0].endswith("/RECORD") or not parts[1]:
+        if len(parts) != 3 or not parts[1]:
             continue
-        rows.append(parts[0].replace("\\", "/") + "," + parts[1] + "," + parts[2])
+        path = parts[0].replace("\\", "/")
+        if path.rsplit("/", 1)[-1] in installer_written and ".dist-info/" in path + "/":
+            continue
+        rows.append(path + "," + parts[1] + "," + parts[2])
     if rows:
         joined = "\n".join(sorted(rows)).encode("utf-8")
         out["record_digest"] = hashlib.sha256(joined).hexdigest()
@@ -134,12 +139,25 @@ import json, sys
 names = [n for n in sys.argv[1].split(",") if n]
 out = {"schemas": {}, "module": None, "error": None, "missing": []}
 try:
-    import importlib
+    import importlib, pkgutil
     contracts = importlib.import_module("l9_graphite_memory.contracts")
     out["module"] = getattr(contracts, "__file__", None)
+    # contracts is a package: its __init__ re-exports only some models, the
+    # rest live in submodules (receipts, capabilities, memory, ...). Look in
+    # the package first, then in every submodule it contains.
+    sources = [contracts]
+    for info in pkgutil.iter_modules(getattr(contracts, "__path__", []) or []):
+        try:
+            sources.append(importlib.import_module("l9_graphite_memory.contracts." + info.name))
+        except Exception:
+            continue
     for name in names:
-        model = getattr(contracts, name, None)
-        exporter = getattr(model, "model_json_schema", None) if model is not None else None
+        exporter = None
+        for source in sources:
+            model = getattr(source, name, None)
+            exporter = getattr(model, "model_json_schema", None) if model is not None else None
+            if exporter is not None:
+                break
         if exporter is None:
             out["missing"].append(name)
             continue
@@ -749,10 +767,21 @@ def _verify_artifact_provenance(
             "the binding manifest records no artifact digest, so only version and contract "
             "can be proved; this is a compatible build, not the audited release"
         )
+    elif manifest.artifact_sha256 and not installed_wheel_sha:
+        reasons.append(
+            "the install recorded no PEP 610 archive hash, so the wheel digest "
+            f"{manifest.artifact_sha256} cannot be verified in place"
+            + (
+                f"; the installed RECORD digest is {record_digest} — pin it as "
+                "release_evidence.installed_record_digest to make this binding exact"
+                if record_digest
+                else " and the installed RECORD is unreadable"
+            )
+        )
     else:
         reasons.append(
-            "the installed distribution carries no artifact provenance (no PEP 610 archive "
-            "hash and no readable RECORD), so the audited artifact cannot be confirmed"
+            "the installed distribution carries no artifact provenance, so the audited "
+            "artifact cannot be confirmed"
         )
     return False, PROVENANCE_UNPROVEN, record_digest, reasons
 
