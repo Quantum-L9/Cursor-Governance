@@ -2806,8 +2806,12 @@ def _peer_imports():
 
 
 def _peer_pipeline() -> Any:
-    """The canonical per-task provider lifecycle owner."""
-    return _load_script("run_peer_task_pipeline", PE_ROOT / "scripts/run_peer_task_pipeline.py")
+    """The canonical Peer Execution front door (`peer_execution.front_door`)."""
+    if str(PE_ROOT) not in sys.path:
+        sys.path.append(str(PE_ROOT))
+    from peer_execution import front_door  # noqa: PLC0415
+
+    return front_door
 
 
 ENFORCED_CONCURRENCY_LIMITS = frozenset(
@@ -2931,67 +2935,78 @@ def _run_peer_execution(
     contract: dict[str, Any],
     autonomy_authority: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Execute one rendered contract through binding → profile → probe → provider.
+    """Execute one rendered contract through the public Peer Execution front door.
 
-    The lifecycle itself belongs to `run_peer_task_pipeline`; this runner supplies
-    the campaign's identity, workspace, and this task's root authority, and
-    translates a non-PASS outcome into a campaign-level stop.
+    The runner supplies the campaign's identity, workspace and this task's root
+    authority; `peer_execution.front_door.execute` owns binding resolution,
+    probe, dispatch, retry/failover classification and normalization
+    (PEC-P3-001). The result is a provider claim, never a Controller verdict.
     """
-    pipeline = _peer_pipeline()
+    front_door = _peer_pipeline()
     if autonomy_authority is None:
         autonomy_authority = _task_autonomy_authority(workspace, contract)
     agent_ref, surface, provider_override = _peer_identity()
     task_id = contract.get("task_id")
+    attempt = _live_controller_attempt(workspace, str(task_id or ""))
+    request = front_door.PeerExecutionRequest(
+        workspace=workspace,
+        contract=contract,
+        agent_ref=agent_ref,
+        surface=surface,
+        provider_ref=provider_override,
+        autonomy_authority=autonomy_authority,
+        attempt_id=(attempt or {}).get("attempt_id"),
+        lease_id=(attempt or {}).get("lease_id"),
+    )
     try:
-        binding, adapter, runtime_root = pipeline._resolve_provider(
-            workspace=workspace,
-            agent_ref=agent_ref,
-            surface=surface,
-            provider_ref=provider_override,
-        )
+        outcome = front_door.execute(request)
     except ValueError as exc:
-        # Never guess among multiple provider bindings for one surface (e.g.
-        # cursor-ide has cursor-foreground and cursor-background): the topology
-        # SSOT resolves uniquely or the operator must say which provider.
         raise CampaignError(
             f"Peer provider resolution failed for {agent_ref}/{surface}: {exc}. "
             "Set L9_PE_PROVIDER_REF to the intended provider_ref from "
             "environment/agents/PEER_RUNTIME_BINDINGS.yaml."
         ) from exc
-    probe = pipeline._probe_provider(
-        binding=binding,
-        adapter=adapter,
-        runtime=runtime_root,
-        program_digest=str(contract["program_digest"]),
-        requested_capabilities=tuple(
-            str(item) for item in (contract.get("requested_actions") or [])
-        ),
-    )
-    if probe.status != "PASS":
+    if (
+        outcome.get("status") != "PASS"
+        and outcome.get("failure_class") == front_door.SAFE_BEFORE_DISPATCH
+        and not outcome.get("dispatch_id")
+    ):
         raise CampaignError(
             f"Peer Execution capability probe blocked {task_id}: "
-            f"{probe.blocked_reason or 'UNKNOWN'}"
+            f"{outcome.get('reason') or 'UNKNOWN'}"
         )
-    outcome = pipeline._execute_provider(
-        contract=contract,
-        binding=binding,
-        adapter=adapter,
-        probe=probe,
-        autonomy_authority=autonomy_authority,
-    )
     # A non-PASS provider outcome is preserved, not thrown away: the terminal
     # failure result is evidence the batch reconciler must keep so the failed
     # child can be published durably after canonical failure is recorded.
     return {
         "status": str(outcome.get("status") or "UNKNOWN"),
         "reason": str(outcome.get("reason") or ""),
-        "receipt": dict(outcome.get("terminal_result") or {}),
-        "dispatch_id": str((outcome.get("dispatch") or {}).get("dispatch_id") or ""),
-        "provider_ref": binding.provider_ref,
-        "execution_profile_ref": binding.execution_profile_ref,
-        "agent_ref": binding.agent_ref,
-        "surface": binding.surface,
+        "receipt": dict(outcome.get("receipt") or {}),
+        "dispatch_id": str(outcome.get("dispatch_id") or ""),
+        "provider_ref": outcome.get("provider_ref"),
+        "execution_profile_ref": outcome.get("execution_profile_ref"),
+        "agent_ref": agent_ref,
+        "surface": surface,
+        "failure_class": outcome.get("failure_class"),
+        "failover_unsafe": bool(outcome.get("failover_unsafe")),
+        "attempts": list(outcome.get("attempts") or []),
+        "attempt_id": outcome.get("attempt_id"),
+        "lease_id": outcome.get("lease_id"),
     }
+
+
+def _live_controller_attempt(workspace: Path, task_id: str) -> dict[str, Any] | None:
+    """The Controller's live execution attempt for this task, for identity binding."""
+    if not task_id:
+        return None
+    try:
+        for item in pec_status_tasks(workspace):
+            if str(item.get("id")) == task_id:
+                attempt = item.get("execution_attempt")
+                return dict(attempt) if isinstance(attempt, dict) else None
+    except CampaignError:
+        return None
+    return None
 
 
 def _grant_module() -> Any:

@@ -27,10 +27,9 @@ _CONTROLLER_COMMAND_TIMEOUT_SECONDS = 300
 if str(PE_ROOT) not in sys.path:
     sys.path.append(str(PE_ROOT))
 
-from peer_execution.bindings import resolve_peer_binding  # noqa: E402
+from peer_execution import front_door  # noqa: E402
+from peer_execution.bindings import resolve_peer_binding  # noqa: E402,F401
 from peer_execution.imports import pe_script  # noqa: E402
-from peer_execution.models import ProbeContext  # noqa: E402
-from peer_execution.runner import run_to_terminal  # noqa: E402
 
 instantiate = pe_script("provider_loader").instantiate
 
@@ -95,41 +94,14 @@ def _load_contract(path: str | Path) -> dict[str, Any]:
     return value
 
 
-def _resolve_provider(
-    *,
-    workspace: Path,
-    agent_ref: str,
-    surface: str,
-    provider_ref: str | None,
-) -> tuple[Any, Any, Path]:
-    binding = resolve_peer_binding(REPO_ROOT, agent_ref, surface, provider_ref)
-    runtime = workspace / "runtime" / "peer-execution"
-    adapter = instantiate(
-        binding.provider_ref,
-        runtime,
-        execution_profile_ref=binding.execution_profile_ref,
-        binding_context=binding.to_dict(),
-    )
-    return binding, adapter, runtime
-
-
-def _probe_provider(
-    *,
-    binding: Any,
-    adapter: Any,
-    runtime: Path,
-    program_digest: str,
-    requested_capabilities: tuple[str, ...] = (),
-) -> Any:
-    return adapter.probe(
-        ProbeContext(
-            repository_root=str(REPO_ROOT),
-            runtime_root=str(runtime),
-            program_lock_digest=program_digest,
-            requested_capabilities=requested_capabilities,
-            metadata=binding.to_dict(),
-        )
-    )
+# The provider lifecycle lives in peer_execution.front_door (the one public
+# Peer Execution entry point). These names remain for this operator facade
+# only; they are internal aliases, not a second orchestration path.
+_resolve_provider = front_door.resolve_provider
+_probe_provider = front_door.probe_provider
+_bind_root_authority = front_door.bind_root_authority
+_root_authority_evidence = front_door.root_authority_evidence
+MUTATING_ACTIONS = front_door.MUTATING_ACTIONS
 
 
 def _preflight_digest(task_id: str, binding: Any) -> str:
@@ -140,45 +112,9 @@ def _preflight_digest(task_id: str, binding: Any) -> str:
     return "sha256:" + hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
-#: Contract actions whose execution mutates the task worktree. A mutating
-#: dispatch without root authority is refused here rather than discovered later
-#: by decision-coverage reconciliation.
-MUTATING_ACTIONS = frozenset({"local_write", "destructive_change", "commit"})
-
-
 def _requires_root_authority(contract: dict[str, Any]) -> bool:
     requested = {str(item) for item in (contract.get("requested_actions") or [])}
     return bool(requested & MUTATING_ACTIONS)
-
-
-def _bind_root_authority(
-    *,
-    adapter: Any,
-    contract: dict[str, Any],
-    autonomy_authority: dict[str, Any] | None,
-) -> None:
-    """Attach this task's root authority to the adapter, or fail closed.
-
-    Peer Execution does not decide whether the authority is sufficient — the
-    root gateway does. It only refuses to dispatch mutating work with no
-    authority to carry, and refuses an adapter that cannot carry one.
-    """
-    binder = getattr(adapter, "bind_autonomy_authority", None)
-    if autonomy_authority is None:
-        if _requires_root_authority(contract):
-            raise ValueError(
-                "MUTATING_DISPATCH_WITHOUT_ROOT_AUTHORITY: "
-                f"{contract.get('task_id')!r} requests mutation with no root autonomy authority"
-            )
-        if callable(binder):
-            binder(None)
-        return
-    if not callable(binder):
-        raise ValueError(
-            "ADAPTER_CANNOT_CARRY_ROOT_AUTHORITY: "
-            f"{type(adapter).__name__} has no autonomy authority carrier"
-        )
-    binder(autonomy_authority)
 
 
 def _execute_provider(
@@ -189,67 +125,39 @@ def _execute_provider(
     probe: Any,
     autonomy_authority: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    """Operator-facade wrapper over the front door's dispatch/await/collect."""
     if probe.status != "PASS":
         return {
             "status": "BLOCKED",
             "binding": binding.to_dict(),
             "probe": probe.to_dict(),
         }
-    _bind_root_authority(
-        adapter=adapter,
-        contract=contract,
-        autonomy_authority=autonomy_authority,
+    dispatch_id, prepared, dispatched = front_door.dispatch_provider(
+        contract=contract, adapter=adapter, autonomy_authority=autonomy_authority
     )
-    prepared = adapter.prepare(contract)
-    dispatched = adapter.dispatch({"dispatch_id": prepared.dispatch_id})
-    dispatch_id = str(prepared.dispatch_id)
-    outcome = run_to_terminal(adapter, dispatch_id, dispatched.status)
+    outcome = front_door.await_provider(
+        adapter=adapter, dispatch_id=dispatch_id, initial_status=str(dispatched["status"])
+    )
     if outcome.status != "PASS":
         return {
             "status": outcome.status,
             "reason": "peer_execution_timeout" if outcome.timed_out else None,
             "binding": binding.to_dict(),
             "probe": probe.to_dict(),
-            "prepare": prepared.to_dict(),
-            "dispatch": dispatched.to_dict(),
+            "prepare": prepared,
+            "dispatch": dispatched,
             **outcome.to_dict(),
         }
-    result = adapter.collect(dispatch_id)
+    result = front_door.collect_provider(adapter=adapter, dispatch_id=dispatch_id)
     return {
         "status": "PASS",
         "binding": binding.to_dict(),
         "probe": probe.to_dict(),
-        "prepare": prepared.to_dict(),
-        "dispatch": dispatched.to_dict(),
+        "prepare": prepared,
+        "dispatch": dispatched,
         **outcome.to_dict(),
         "terminal_result": dict(result),
-        "root_authority": _root_authority_evidence(autonomy_authority, result),
-    }
-
-
-def _root_authority_evidence(
-    autonomy_authority: dict[str, Any] | None,
-    result: Any,
-) -> dict[str, Any] | None:
-    """Correlation only: which lease/session this dispatch ran under.
-
-    Campaign reconciliation reads the decisions from the root runtime itself.
-    This carries the identifiers needed to find them, and deliberately no
-    verdict of its own — a second verifier is exactly what must not exist here.
-    """
-    if autonomy_authority is None:
-        return None
-    changed = result.get("changed_files") if isinstance(result, dict) else None
-    return {
-        "task_id": autonomy_authority.get("task_id"),
-        "lease_id": autonomy_authority.get("lease_id"),
-        "adapter_session_id": autonomy_authority.get("adapter_session_id"),
-        "agent_id": autonomy_authority.get("agent_id"),
-        "authority_digest": autonomy_authority.get("authority_digest"),
-        "runtime_database": autonomy_authority.get("runtime_database"),
-        "provider_reported_changed_files": sorted(
-            {str(item) for item in changed} if isinstance(changed, list) else set()
-        ),
+        "root_authority": front_door.root_authority_evidence(autonomy_authority, result),
     }
 
 
