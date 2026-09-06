@@ -1,0 +1,311 @@
+# Virtual Skill Plane v2 — build brief
+
+Schema: `L9_VIRTUAL_SKILL_PLANE_V2` · Repository: `Quantum-L9/Cursor-Governance`
+· Branch: `claude/virtual-skill-plane-v2-6ybcqf` · Built: 2026-09-06
+
+## Executive verdict
+
+Cursor native skill discovery cardinality is now decoupled from canonical L9
+skill cardinality, statically proven and CI-enforced. Cursor discovers exactly
+one native skill (`l9-skill-gateway`); the canonical corpus (56 skills) stays
+under `skills/` and is reached through registry v2, the unchanged deterministic
+router, exact materialized `SKILL.md` resources, and conversation-scoped atomic
+route receipts. The plugin manifest cutover was performed only after the
+replacement control plane passed its full suite in legacy-manifest mode.
+
+**Final status:** `VIRTUAL_SKILL_PLANE_V2_BUILT_STATICALLY_VALIDATED_RUNTIME_CURSOR_GATE_PENDING`
+— no Cursor runtime exists in this cloud session, so the runtime acceptance
+gate is `NOT_EXECUTED`, and publication is blocked by session repository
+authorization (see "Publication state"). Nothing in the build itself is pending.
+
+## Revision binding
+
+| Item | Value |
+|---|---|
+| Exact start SHA (`origin/main`) | `051c63c904a35210e549ff4eb125325dedfcba99` |
+| Code candidate SHA (local, phases 0–7) | `d809a72` |
+| Code candidate SHA (local, phases 8–12, cutover) | `da618d33b267ca7ebaaee9accd363b8133f379ce` |
+| Branch tip | the commit carrying this brief (see PR head) |
+
+## Architecture before
+
+```
+CURSOR NATIVE PLANE ──(.cursor-plugin/plugin.json "skills": "skills")──▶ skills/ (56 canonical SKILL.md exposed natively)
+beforeSubmitPrompt ──▶ route_prompt() ──▶ ~/.cursor/l9/skill-route.json (global, non-atomic, written only on a hit)
+                                     └──▶ additional_context (unsupported on beforeSubmitPrompt)
+rules/23 ──▶ static "Common triggers" table + l9-plan-simple planning mapping (second routing authority)
+AUTONOMY_MANIFEST.cursor_discovery ──▶ "~/.cursor/skills symlinked" (stale model)
+manifest route `plan` ──▶ l9-plan  (rule said l9-plan-simple: split-brain)
+```
+
+## Architecture after
+
+```
+CURSOR NATIVE PLANE
+   │  exactly 1 discoverable skill  (.cursor-plugin/plugin.json "skills": "./environment/agents/adapters/cursor/skills")
+   ▼
+l9-skill-gateway / SKILL.md            adapter only — no routing, no scoring, no inventory
+   │  fallback: ops/skill_routing/resolve.py --prompt
+   ▼
+L9 CONTROL PLANE
+   skills/AUTONOMY_MANIFEST.yaml  (cursor_discovery: mode virtual_gateway)
+   ops/generated/skill-registry.json  (registry v2: skill_md, skill_sha256, generation_id)
+   ops/skill_routing/registry.py  → route_prompt.py (unchanged brain, explicit ties)
+   → materialize.py (exact SKILL.md, path security) → receipt.py (scoped, atomic)
+   ~/.cursor/l9/routes/<conversation-key>/current.json   routed | no_route | disabled | degraded
+   sessionStart: ### Route locator (+ env L9_ROUTE_CONVERSATION_ID / L9_ROUTE_RECEIPT_PATH)
+   ▼
+CANONICAL CAPABILITY PLANE   skills/l9-*/SKILL.md  (N = 56 today; N never changes native count)
+```
+
+## Authority consolidation (current vs target)
+
+| Concern | Before | After |
+|---|---|---|
+| Semantic routing inventory | manifest + registry **and** rule 23 table **and** native roster | `AUTONOMY_MANIFEST.yaml` → registry v2 only |
+| Selection | `route_prompt.py` (implicit manifest-order ties) | `route_prompt.py` (score DESC, priority DESC, route_id ASC) |
+| Name → resource | none (model rediscovered skills) | `materialize.py` |
+| Route state | global `skill-route.json` | per-conversation `routes/<key>/current.json` |
+| Cursor discovery | `skills/` (N skills) | `environment/agents/adapters/cursor/skills` (1 skill) |
+| Runtime enforcement | rule 23 v1 (mapping + hook path) | rule 23 v2 (consumption contract only) |
+| Projection proof | none | `validate_skill_projection.py` (pre-commit + CI + Makefile) |
+
+Findings reconfirmed before edit: VSP-P0-001…P0-004, P1-001…P1-006,
+P2-001…P2-004 all reproduced on `051c63c9` (see characterization results).
+P3-001 (Claude-specific names such as `claude_routing`,
+`build_claude_skill_registry.py`) is **deferred** unchanged.
+
+## Planning split-brain resolution
+
+Confirmed against the skill contracts: `l9-plan/SKILL.md` ("do not use for
+ordinary cursor plan mode or build-button plans (use l9-plan-simple)") and
+`l9-plan-simple/SKILL.md` ("do not use for /l9-plan, make campaign, or a PE
+lock"). Encoded in the manifest:
+
+| Prompt class | Primary | Route |
+|---|---|---|
+| ordinary implementation plan / Build-ready spec / Cursor Plan mode | `l9-plan-simple` (moved to `auto_invoke`; `disable-model-invocation` removed) | `plan` (negative signals: campaign, program lock, program-execution, pe+autonomy, /l9-plan) |
+| Program Execution campaign plan / PE+autonomy / Program Lock / `/l9-plan` | `l9-plan` | `campaign_plan` (priority 1) |
+| `make campaign INTENT=…` (live activation) | `l9-pe-campaign-activate` (`explicit_hint`) | `pe_campaign_activate` (unchanged) |
+
+Rule 23 v2 carries no planning mapping; the characterization test
+`test_rule_and_router_agree_on_ordinary_planning` fails if a trigger table
+returns.
+
+## Registry v2
+
+`ops/scripts/build_claude_skill_registry.py` emits `schema_version: 2`,
+`generation_id = sha256("<manifest_sha>:<corpus_sha>")`, and per record
+`skill_md` + `skill_sha256`; route ids must be unique and `priority` an int.
+`ops/skill_routing/registry.py` validates schema, top-level identity fields,
+record shape (`^l9-…`, `path == skills/<name>`, `skill_md == skills/<name>/SKILL.md`,
+hex digest, invocation enum), duplicate names, and route references; it builds
+the name index and exposes generation identity. Corpus hashing happens only at
+generation (`check_files=True` is opt-in for CI). Regeneration is byte-identical
+(`test_generation_is_byte_deterministic`).
+
+## Scoped receipt design
+
+Schema `l9.cursor-skill-route.v2`; statuses `routed | no_route | disabled |
+degraded`; required fields `schema, status, conversation_id, generation_id,
+workspace_roots, workspace_key, issued_at, expires_at, registry` (+
+`conversation_key`, optional `prompt_sha256`, never the raw prompt). Layout
+`~/.cursor/l9/routes/<sha256(conversation_id)[:32]>/current.json`
+(`L9_ROUTE_STATE_ROOT` injects the root for tests). Writes: same-directory
+temp → flush → fsync → `os.replace`. Reads validate schema, status,
+conversation identity + key, workspace scope, TTL (default 1800 s,
+`L9_ROUTE_TTL_SECONDS`), registry generation, and materialized skill presence.
+
+## Materialization design
+
+`materialize_route(decision, registry)` resolves primary + ≤2 supports to
+`{name, skill_md (absolute), invocation, sha256}`; rejects unknown names,
+overlap, >2 supports, absolute or traversal paths, non-`SKILL.md`, wrong
+folder, missing files, symlink escapes out of `skills/`, and digest mismatch
+against the registry (fail closed).
+
+## Gateway contract
+
+`environment/agents/adapters/cursor/skills/l9-skill-gateway/SKILL.md`
+(343 discovery bytes, budget 1024): native roster ≠ canonical inventory;
+inventory = registry; consume the scoped receipt; fallback = shared resolver;
+one primary / two supports; routing is never mutation authority; never
+enumerate, mirror, score. The validator rejects any canonical skill name in
+the gateway body.
+
+## Plugin cutover and rollback
+
+`.cursor-plugin/plugin.json`: `skills: "skills"` → `"./environment/agents/adapters/cursor/skills"`;
+`l9.canonical_skills_directory: "skills"` plus registry/projection/gateway
+metadata. Performed after the pre-cutover suite (validator in
+`--allow-legacy-manifest` mode, routing/registry/materialize/receipt/locator/hook
+suites) was green. **Rollback proof:** reverting that one field restores the
+prior discovery; registry v2, receipts, materialization, router tests, and the
+planning fix remain valid because canonical skills never moved
+(`test_legacy_plugin_manifest_fails_strict` shows the validator's legacy mode
+accepts the rollback state).
+
+## Cardinality
+
+| Measure | Value |
+|---|---|
+| Cursor native skill count | 1 |
+| Canonical skill count | 56 |
+| Registry skill count | 56 (= canonical, asserted) |
+| Synthetic canonical skills added in test | +1 and +1000 → registry grows, native stays 1 |
+| Synthetic registry sizes routed end-to-end | 100, 500, 1000, 5000, 10000 |
+
+## Synthetic scale results (this container, `.venv` Python 3.12, median/p95)
+
+| N | registry parse | retrieve | explicit route | description fallback | materialize | receipt write | whole hook |
+|---|---|---|---|---|---|---|---|
+| 100 | 0.6/1.0 ms | 0.02/0.03 ms | 11.6/11.7 ms | 94/95 ms | 0.11/0.31 ms | 0.85/1.92 ms | 79/105 ms |
+| 500 | 2.6/3.1 ms | 0.09/0.11 ms | 58/60 ms | 468/468 ms | 0.13/0.32 ms | 0.77/1.63 ms | 132/161 ms |
+| 1000 | 5.3/6.0 ms | 0.20/0.23 ms | 118/123 ms | 940/954 ms | 0.15/0.35 ms | 1.0/2.1 ms | 194/196 ms |
+| 5000 | 29/33 ms | 1.2/1.4 ms | 598/628 ms | 4513/4530 ms (full run) | 0.17/0.38 ms | 0.9/2.0 ms | 702/896 ms |
+| 10000 | 66/69 ms | 2.5/2.7 ms | 1180/1183 ms | 9012/9053 ms (full run) | 0.12/0.33 ms | 0.7/1.5 ms | 1326/1447 ms |
+
+Engineering targets (not architectural truth): route@5000 < 100 ms — **not
+met** (598 ms; the scorer is O(routes × signals) and was deliberately not
+rewritten); materialize+receipt < 50 ms — met (< 3 ms); whole hook < 500 ms —
+met through 1000 skills, not at 5000+. At today's 56 skills the whole hook is
+~80 ms. The description fallback is the O(N) hotspot (~0.9 ms/skill); the
+retrieval boundary (`retrieve_candidates` / `rank_candidates`) is where a
+bounded index goes when the corpus grows past ~1000. Fallback timing above
+1000 runs only with `L9_VSP_SCALE_FULL=1`. No network, LLM, or MCP in the path
+(`test_no_network_or_model_dependencies_in_prompt_path`).
+
+## Route security results
+
+Materialization: canonical pass, normalized internal symlink pass when the
+registry digest matches, parent-escape fail, foreign-absolute fail, external
+symlink fail, missing `SKILL.md` fail, digest-mismatch fail, unknown
+primary/support fail (`test_materialize.py`, 14 cases). Validator: mirrored
+skill fail, symlink escape fail, gateway-in-registry fail, legacy manifest
+fail (strict), non-virtual manifest fail (`test_skill_projection.py`).
+
+## No-route stale-state result
+
+`test_no_route_overwrites_previous_route`, `test_empty_prompt_writes_no_route`,
+`test_disabled_overwrites_routed`, `test_degraded_on_corrupt_registry`: a
+routed receipt is replaced by `no_route`/`disabled`/`degraded` on the very
+next event. A payload without `conversation_id` writes nothing and logs a
+WARN (no scope to write into) — the documented limit.
+
+## Concurrency isolation result
+
+`test_two_conversations_have_separate_receipts`,
+`test_conversation_a_cannot_consume_b`,
+`test_same_workspace_different_conversations_are_separate`,
+`test_different_workspace_same_conversation_rejected`,
+`test_concurrent_writers_never_tear` (4 writers × 20 + reader, zero torn reads).
+
+## Hook contract result
+
+Inputs `conversation_id, generation_id, workspace_roots, prompt`; stdout
+exactly `{"continue": true}` on every path (routed, no-route, disabled,
+degraded, missing conversation, malformed payload, installed-symlink name);
+source contains no `additional_context`, `skill-route.json`, `write_text(`,
+or network imports (`test_before_submit_router.py`, 11 cases).
+
+## Session locator
+
+`session_locator.py` keys receipts on `conversation_id` (present on both
+`sessionStart` and `beforeSubmitPrompt` per cursor.com/docs/agent/hooks;
+`session_id` is never used). `session_start_bootstrap.sh` reads stdin once
+(`read -r -t 3 -d ''`), delegates to the Python owner, appends `### Route
+locator` to `additional_context`, and exports `L9_ROUTE_CONVERSATION_ID` /
+`L9_ROUTE_RECEIPT_PATH` via the hook `env` output. Identifier relationship is
+tested (`test_session_start_and_before_submit_share_identity`); a differing
+runtime id is a one-function change (`extract_conversation_id`).
+
+## CI projection invariants
+
+Pre-commit hook `cursor-skill-projection`; `governance-self-check.yml` steps
+"Cursor skill projection gate" and "Skill plane suites"; `make
+cursor-projection-check`, `make skill-plane-test`; registry drift already
+covered by `sync_generated_artifacts.py --check`.
+
+## Cursor runtime acceptance
+
+`NOT_EXECUTED` — this session has no Cursor runtime (cloud container, Claude
+Code surface). Static repository validation is not runtime proof. Runtime
+checklist to execute on a Cursor machine after `make cursor-install`: reload
+the local plugin → native roster shows only `l9-skill-gateway` → prompt "Audit
+this unfamiliar repository architecture and map the flows." → receipt `routed`
+with `l9-code-analysis` + `l9-structured-reasoning` and the exact canonical
+paths → "Fix this typo." → receipt `no_route` → two conversations → two
+receipt directories → ordinary planning prompt → `l9-plan-simple` → explicit
+hint → `source: explicit_hint`, no mutation → add a canonical skill +
+regenerate → registry +1, native 1.
+
+## Deferred naming cleanup
+
+`claude_routing` → `routing`, `build_claude_skill_registry.py` →
+`build_skill_registry.py`: not combined with this cutover (contract: only if
+correctness requires it; it did not). Migration pattern when done: prefer new
+key, accept legacy, fail closed when both present and differ.
+
+## Unresolved UNKNOWNs
+
+- Whether Cursor treats `"./environment/agents/adapters/cursor/skills"` in
+  `plugin.json` identically to `"skills"` for a local plugin (same relative
+  form as the existing `"./commands"`; runtime gate pending).
+- Whether Cursor keeps `sessionStart` stdin open beyond the 3 s bounded read
+  (payload is documented as a single JSON object; bounded read retains partial
+  data).
+
+## Validation evidence
+
+| Check | Command | Exit | Result | Status |
+|---|---|---|---|---|
+| characterization + registry + materialize + receipt + locator + scale | `.venv/bin/python -m pytest ops/skill_routing/tests -q` | 0 | 104 passed (33 subtests) | PASS |
+| hook contract + projection invariants | `.venv/bin/python -m pytest environment/agents/adapters/cursor/tests -q` | 0 | all passed (incl. 1000-synthetic-skill cardinality) | PASS |
+| Claude-side router smoke | `.venv/bin/python -m pytest environment/agents/adapters/claude-code/tests/test_cursor_skill_router.py -q` | 0 | 2 passed | PASS |
+| combined plane suite | same three paths, `-q` | 0 | 116 passed, 33 subtests, 36 s | PASS |
+| Cursor projection validator (strict, post-cutover) | `.venv/bin/python environment/agents/adapters/cursor/validate_skill_projection.py` | 0 | native=1 canonical=56 registry=56 gateway_bytes=343 | PASS |
+| pre-cutover validator (legacy manifest) | `… validate_skill_projection.py --allow-legacy-manifest` | 0 | PASS before the plugin edit | PASS |
+| registry generation drift | `.venv/bin/python ops/scripts/build_claude_skill_registry.py --root . --check` | 0 | CURRENT | PASS |
+| generated artifacts | `.venv/bin/python ops/scripts/sync_generated_artifacts.py --root . --force --check` | 0 | no updates needed | PASS |
+| canonical skill standard | `.venv/bin/python ops/scripts/check_skills_standard.py` | 0 | 56 live, footprint 7199 B / 16384 | PASS |
+| rules standard | `.venv/bin/python ops/scripts/check_rules_standard.py` | 0 | PASS (pre-existing 96-rule size warn) | PASS |
+| Claude activation validator | `.venv/bin/python environment/agents/adapters/claude-code/validate_skill_activation.py` | 0 | RESULT: PASS (33 fixtures) | PASS |
+| neighbouring suites (claude projection, sync, plan-simple, commands) | `.venv/bin/python -m pytest … -q` | 0 | 240 passed | PASS |
+| ruff | `.venv/bin/ruff check` / `format --check` on changed Python | 0 | All checks passed | PASS |
+| workflow action pins | `.venv/bin/python ops/scripts/validate_workflow_action_pins.py` | 0 | 43 references compliant | PASS |
+| repo hygiene | `.venv/bin/python tools/check_repo_hygiene.py` | 0 | PASS | PASS |
+| governance symlinks | `bash ops/scripts/validate_governance_symlinks.sh` | 0 | PASS | PASS |
+| `make pr` local gate (kernel hook, pre-commit writers, locked ruff, generated heal) | `OPEN_PR=0 PR_REMEDIATE=0 make pr` | 2 | all writer/hook stages OK; stopped at early-overlap: `gh api` 403 (repository not attached to this session) | BLOCKED at telemetry only |
+| Cursor runtime acceptance | — | — | no Cursor runtime in this session | NOT_EXECUTED |
+
+## Publication state
+
+Both commits are on the local branch `claude/virtual-skill-plane-v2-6ybcqf`.
+Publication from this cloud session is **BLOCKED by session repository
+authorization**: the git proxy refuses `git push` for
+`Quantum-L9/Cursor-Governance` ("not in this session's authorized repository
+set") and `gh api` returns HTTP 403 for the same repository, so neither
+`make pr` (early-overlap telemetry, E6 fail-closed) nor an API replay can
+publish. The session-level `add_repo` request for this repository was declined.
+Unblock: attach the repository to the session (or fetch the branch from a
+machine with push rights) and run `PR_REMEDIATE=0 make pr`; the L4 release
+receipt and the tree-kernel receipt are already recorded for HEAD.
+
+## Changed-file inventory (40 paths, `051c63c9..da618d3`)
+
+Control plane: `ops/skill_routing/{__init__,registry,route_prompt,materialize,receipt,session_locator,resolve}.py`,
+`ops/scripts/build_claude_skill_registry.py`, `ops/generated/skill-registry.json`
+(+ Claude mirror), `ops/hooks/before_submit_skill_router.py`,
+`ops/hooks/session_start_bootstrap.sh`.
+Cursor adapter: `environment/agents/adapters/cursor/skills/l9-skill-gateway/SKILL.md`,
+`environment/agents/adapters/cursor/validate_skill_projection.py`,
+`.cursor-plugin/plugin.json`, `environment/skill-adapters/SKILL_ADAPTER_ROOTS.yaml`.
+Doctrine: `skills/AUTONOMY_MANIFEST.yaml`, `skills/l9-plan-simple/SKILL.md`,
+`rules/23-l9-skill-routing.mdc` (+ generated RULES-MANIFEST.*, llm-rules
+projection), `AGENTS.md` (append-only amendment),
+`environment/agents/adapters/claude-code/settings.template.json` + `.claude/settings.json`
+(generated `skillOverrides`, l9-plan-simple no longer user-invocable-only).
+Gates: `.pre-commit-config.yaml`, `.github/workflows/governance-self-check.yml`, `Makefile` (append-only).
+Tests: `ops/skill_routing/tests/{test_characterization,test_registry,test_materialize,test_receipt,test_session_locator,test_scale}.py`,
+`skill_routing_cases.json`, `environment/agents/adapters/cursor/tests/{test_before_submit_router,test_skill_projection}.py`,
+`environment/agents/adapters/claude-code/tests/test_cursor_skill_router.py`.
