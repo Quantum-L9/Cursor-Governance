@@ -42,6 +42,7 @@ from ops.memory.control_plane_client import MemoryControlPlaneClient, OutcomeSta
 from ops.memory.hydration import canonical_hydrate
 from ops.memory.namespace_context import repository_state_digest, resolve_namespace_context
 from ops.memory.runtime_binding import (
+    CANONICAL_RECEIPT_MODELS,
     ENV_DEV_CHECKOUT,
     ENV_INTERPRETER,
     ENV_REQUIRE_EXACT,
@@ -182,9 +183,19 @@ def runtime(tmp_path: Path, request) -> tuple[MemoryControlPlaneClient, dict[str
             f"installed={binding.installed_artifact_digest}, "
             f"expected={binding.expected_artifact_digest}); reasons: {binding.reasons}"
         )
+        # The unit suite validates against a stand-in schema set; only this
+        # proof sees the real release's contracts. So it is here that the two
+        # are reconciled: every model Cursor validates must actually be
+        # exported by the bound package, or the unit suite is testing a shape
+        # production never checks.
         assert binding.contract_schemas, (
             "the bound release exported no canonical receipt schemas, so the proof would "
             "validate nothing"
+        )
+        missing = [m for m in CANONICAL_RECEIPT_MODELS if m not in binding.contract_schemas]
+        assert not missing, (
+            f"the bound release exports no canonical schema for {', '.join(missing)}: "
+            "those receipts would be accepted without canonical validation"
         )
     _record_evidence(binding, test=request.node.name)
     return MemoryControlPlaneClient(binding, env=env, session_id="proof-session"), env
