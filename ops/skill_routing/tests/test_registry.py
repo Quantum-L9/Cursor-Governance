@@ -146,6 +146,10 @@ def test_resolve_root_prefers_env(tmp_path: Path, monkeypatch):
     root = make_root(tmp_path, ["l9-one"])
     monkeypatch.setenv("L9_GOVERNANCE_DIR", str(root))
     assert reg.resolve_governance_root() == root
+    # Order is env → ~/.cursor-governance → ancestors of the start file. Point
+    # HOME at an empty dir so a governed machine's home clone cannot satisfy
+    # the lookup and the ancestor walk is what gets exercised.
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
     monkeypatch.setenv("L9_GOVERNANCE_DIR", str(tmp_path / "nope"))
     assert reg.resolve_governance_root(ROOT / "ops" / "skill_routing" / "registry.py") == ROOT
 

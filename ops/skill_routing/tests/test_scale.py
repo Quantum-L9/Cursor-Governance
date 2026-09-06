@@ -58,6 +58,10 @@ def _sha(data: bytes) -> str:
 def build_root(base: Path, count: int) -> Path:
     root = base / f"gov-{count}"
     (root / "ops" / "generated").mkdir(parents=True)
+    # The hook loads ops/skill_routing from L9_GOVERNANCE_DIR first, so the
+    # synthetic root must carry the package under test — otherwise a governed
+    # machine's ~/.cursor-governance (possibly older code) would be exercised.
+    (root / "ops" / "skill_routing").symlink_to(ROOT / "ops" / "skill_routing")
     records = []
     routes = []
     for i in range(count):
