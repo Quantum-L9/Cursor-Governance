@@ -58,6 +58,7 @@ class Environment:
         version: str | None = EXPECTED_VERSION,
         with_cli: bool = True,
         module_inside_prefix: bool = True,
+        module: str | None = None,
         capabilities: dict[str, Any] | None = None,
         capabilities_rc: int = 0,
     ) -> None:
@@ -71,7 +72,7 @@ class Environment:
             self.cli.write_text("#!/bin/sh\n", encoding="utf-8")
             self.cli.chmod(0o755)
         self.version = version
-        self.module = (
+        self.module = module or (
             str(root / "lib" / "l9_graphite_memory" / "__init__.py")
             if module_inside_prefix
             else "/somewhere/else/src/l9_graphite_memory/__init__.py"
@@ -242,3 +243,114 @@ def test_manifest_is_the_only_source_of_expectations(tmp_path: Path) -> None:
 @pytest.mark.parametrize("token", ["GRAPHITI_MCP_URL", "GRAPHITI_MCP_TOKEN", "add_memory"])
 def test_binding_module_has_no_provider_vocabulary(token: str) -> None:
     assert token not in Path(rb.__file__).read_text(encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------
+# CG-P2-01: runtime containment is a filesystem relation, not a string prefix
+#
+# `str(module).startswith(str(prefix))` answers yes for /opt/memory-evil under
+# /opt/memory — a different environment whose name merely shares a prefix, its
+# package admitted as the bound one. Containment is decided on resolved paths.
+# ---------------------------------------------------------------------------
+
+
+def test_sibling_prefix_is_not_containment() -> None:
+    """The canonical case. `/opt/memory-evil` is not inside `/opt/memory`."""
+    assert rb._path_contains("/opt/memory", "/opt/memory/lib/l9_graphite_memory/__init__.py")
+    assert not rb._path_contains(
+        "/opt/memory", "/opt/memory-evil/lib/l9_graphite_memory/__init__.py"
+    )
+    # The bare sibling directory itself, and the prefix as its own child.
+    assert not rb._path_contains("/opt/memory", "/opt/memory-evil")
+    assert not rb._path_contains("/opt/memory", "/opt/memory")
+
+
+def test_sibling_prefix_is_refused_by_the_binding(tmp_path: Path, monkeypatch) -> None:
+    """End to end: a same-version package served from the evil twin is unbound."""
+    monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
+    good = tmp_path / "memory"
+    evil = tmp_path / "memory-evil"
+    (evil / "lib" / "l9_graphite_memory").mkdir(parents=True)
+    (evil / "lib" / "l9_graphite_memory" / "__init__.py").write_text("", encoding="utf-8")
+    env = Environment(good, module=str(evil / "lib" / "l9_graphite_memory" / "__init__.py"))
+    binding = bind(env)
+    assert binding.status == rb.STATUS_UNBOUND
+    assert any("served from outside the interpreter environment" in r for r in binding.reasons)
+
+
+def test_relative_components_do_not_escape(tmp_path: Path) -> None:
+    prefix = tmp_path / "env"
+    (prefix / "lib").mkdir(parents=True)
+    (tmp_path / "other").mkdir()
+    escaped = str(prefix / "lib" / ".." / ".." / "other" / "pkg.py")
+    assert not rb._path_contains(str(prefix), escaped)
+    assert rb._path_contains(str(prefix), str(prefix / "lib" / ".." / "lib" / "pkg.py"))
+
+
+def test_symlinked_package_path_compares_by_real_location(tmp_path: Path) -> None:
+    """A site-packages entry symlinked out of the environment is not contained."""
+    prefix = tmp_path / "env"
+    site = prefix / "lib" / "site-packages"
+    site.mkdir(parents=True)
+    outside = tmp_path / "checkout" / "l9_graphite_memory"
+    outside.mkdir(parents=True)
+    (outside / "__init__.py").write_text("", encoding="utf-8")
+    link = site / "l9_graphite_memory"
+    link.symlink_to(outside, target_is_directory=True)
+    # Lexically inside the prefix; really a checkout the environment does not own.
+    assert str(link / "__init__.py").startswith(str(prefix))
+    assert not rb._path_contains(str(prefix), str(link / "__init__.py"))
+
+
+def test_symlinked_interpreter_prefix_is_still_containment(tmp_path: Path) -> None:
+    """The inverse: a symlinked *prefix* must not turn a real child into a foreigner."""
+    real = tmp_path / "real-env"
+    (real / "lib" / "l9_graphite_memory").mkdir(parents=True)
+    module = real / "lib" / "l9_graphite_memory" / "__init__.py"
+    module.write_text("", encoding="utf-8")
+    alias = tmp_path / "aliased-env"
+    alias.symlink_to(real, target_is_directory=True)
+    assert not str(module).startswith(str(alias))  # a string test would reject it
+    assert rb._path_contains(str(alias), str(module))
+
+
+def test_pth_injected_path_outside_the_prefix_is_refused(tmp_path: Path, monkeypatch) -> None:
+    """A .pth entry makes an arbitrary directory importable; it is not the environment."""
+    monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
+    injected = tmp_path / "injected" / "l9_graphite_memory" / "__init__.py"
+    injected.parent.mkdir(parents=True)
+    injected.write_text("", encoding="utf-8")
+    binding = bind(Environment(tmp_path / "env", module=str(injected)))
+    assert binding.status == rb.STATUS_UNBOUND
+    assert binding.module_path == str(injected)
+
+
+def test_editable_install_needs_the_development_opt_in(tmp_path: Path, monkeypatch) -> None:
+    """Unchanged behaviour, asserted against the new containment test."""
+    monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
+    binding = bind(Environment(tmp_path, module_inside_prefix=False))
+    assert binding.status == rb.STATUS_UNBOUND
+    assert binding.runtime_mode == rb.MODE_PINNED
+    assert any(rb.ENV_DEV_CHECKOUT in r for r in binding.reasons)
+
+
+def test_empty_or_unresolvable_operands_are_not_containment() -> None:
+    """Ambiguity fails closed — an empty prefix must never match everything."""
+    assert not rb._path_contains("", "/opt/memory/pkg.py")
+    assert not rb._path_contains(None, "/opt/memory/pkg.py")
+    assert not rb._path_contains("/opt/memory", "")
+    assert not rb._path_contains("/opt/memory", None)
+
+
+def test_case_sensitivity_follows_the_platform(tmp_path: Path) -> None:
+    """Documented, not assumed: containment is decided by the filesystem's own
+    comparison after resolution, so a case variant matches only where the
+    platform itself treats the two paths as the same file."""
+    prefix = tmp_path / "Env"
+    (prefix / "lib").mkdir(parents=True)
+    module = prefix / "lib" / "pkg.py"
+    module.write_text("", encoding="utf-8")
+    assert rb._path_contains(str(prefix), str(module))
+    variant = str(prefix).replace("Env", "ENV") + "/lib/pkg.py"
+    expected = Path(variant).resolve().is_relative_to(Path(str(prefix)).resolve())
+    assert rb._path_contains(str(prefix), variant) is expected

@@ -85,6 +85,31 @@ def default_runner(
     )
 
 
+def _path_contains(prefix: str | None, candidate: str | None) -> bool:
+    """True when ``candidate`` is a path *inside* the directory ``prefix``.
+
+    Filesystem containment, never a string prefix (CG-P2-01). ``startswith``
+    answers yes for ``/opt/memory-evil`` under ``/opt/memory``: a sibling
+    directory whose name merely begins with the environment's, which is a
+    foreign package accepted as the bound one. Both sides are resolved first
+    so a symlinked interpreter prefix, a symlinked package directory, and
+    ``..`` components all compare by their real location.
+
+    Ambiguity is not containment: an unresolvable path returns ``False``.
+    """
+
+    if not prefix or not candidate:
+        return False
+    try:
+        resolved_prefix = Path(prefix).resolve()
+        resolved_candidate = Path(candidate).resolve()
+    except (OSError, RuntimeError, ValueError):
+        return False
+    if resolved_candidate == resolved_prefix:
+        return False
+    return resolved_candidate.is_relative_to(resolved_prefix)
+
+
 @dataclass(frozen=True)
 class BindingManifest:
     distribution: str
@@ -287,7 +312,7 @@ def resolve_runtime_binding(
             memory_version=str(version),
             module_path=str(module_path),
         )
-    served_from_prefix = prefix and str(module_path).startswith(prefix)
+    served_from_prefix = _path_contains(prefix, str(module_path))
     if mode == MODE_PINNED and not served_from_prefix:
         # An editable install or a .pth pointing at a checkout: the package
         # would come from somewhere the environment does not own. That is
@@ -306,7 +331,7 @@ def resolve_runtime_binding(
         )
     if mode == MODE_DEVELOPMENT:
         checkout = Path(environment[ENV_DEV_CHECKOUT]).expanduser().resolve()
-        if not Path(str(module_path)).resolve().is_relative_to(checkout):
+        if not _path_contains(str(checkout), str(module_path)):
             return _unbound(
                 manifest,
                 mode=mode,
