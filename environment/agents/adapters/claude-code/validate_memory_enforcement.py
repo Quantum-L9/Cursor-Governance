@@ -34,7 +34,7 @@ MEM = HERE / "memory"
 CONTRACT = MEM / "memory-enforcement.contract.json"
 SCHEMA = MEM / "memory-enforcement.schema.json"
 SETTINGS = HERE / "settings.template.json"
-CONTRACT_TEST = HERE / "tests" / "test_graphiti_front_door.py"
+CONTRACT_TEST = HERE / "tests" / "test_memory_front_door.py"
 
 
 def _fail(msg: str, failures: list[str]) -> None:

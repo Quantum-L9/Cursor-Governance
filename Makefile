@@ -921,6 +921,14 @@ memory-readiness:
 memory-egress-check:
 	$(PYTHON) ops/scripts/validate_memory_egress_boundary.py $(if $(MEMORY_EGRESS_ENFORCE),--enforce,)
 
+## Render ~/.cursor/mcp.json as a real per-machine file (stage C7) and hand the
+## l9-graphite-memory entry to the package configurator; MEMORY_VERIFY_MCP=1 proves the handshake.
+memory-mcp-install:
+	PYTHONPATH="$(CURDIR)" $(PYTHON) -m ops.memory.mcp_instantiation $(if $(MCP_PATH),--path "$(MCP_PATH)",) $(if $(MEMORY_VERIFY_MCP),--verify,)
+
+memory-mcp-check:
+	PYTHONPATH="$(CURDIR)" $(PYTHON) -m ops.memory.mcp_instantiation --check --no-receipt $(if $(MCP_PATH),--path "$(MCP_PATH)",)
+
 ## --- Claude Desktop MCP (environment/agents/adapters/claude-desktop) --------
 ## Render claude_desktop_config.json from environment/mcp/master.mcp.json; the memory
 ## entry is written by the memory package configurator when L9_MEMORY_INTERPRETER is set.

@@ -39,6 +39,7 @@ Usage: validate_agents.py [--root environment/agents]
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
@@ -176,9 +177,12 @@ def _check_env_example(envf: Path, agent: dict, production_url: str | None) -> N
             )
     url_m = re.search(r"^GRAPHITI_MCP_URL=(.+)$", text, re.M)
     tok_m = re.search(r"^GRAPHITI_MCP_TOKEN=(.+)$", text, re.M)
-    if not url_m:
-        err("A2", f"{envf.name}: missing GRAPHITI_MCP_URL")
-    elif production_url:
+    # Realignment stage C8: the provider URL is no longer required on any
+    # surface — memory is reached through the canonical control plane
+    # (ops/memory), and the direct front door is retired. A surviving
+    # example line is tolerated until the secret plane is rewritten (C9),
+    # but it must at least name the cloud path, never a loopback tunnel.
+    if url_m and production_url:
         got = url_m.group(1).strip()
         expected_full = production_url.rstrip("/") + "/graphiti/mcp"
         if got not in (production_url, expected_full) and not got.endswith("/graphiti/mcp"):
@@ -219,7 +223,21 @@ def _check_mcp_no_loopback_default(key: str, adir: Path) -> None:
             err(
                 "A4",
                 f"agents.{key}: {name} must not default to loopback "
-                "(use https://memory.quantumaipartners.com/graphiti/mcp via GRAPHITI_MCP_URL)",
+                "(memory is the canonical l9-graphite-memory stdio server, "
+                "never a provider URL)",
+            )
+        # Stage C7/C8: no adapter carrier may declare the retired provider
+        # front door; the only memory server is the package-owned stdio entry.
+        try:
+            carrier = json.loads(text)
+        except json.JSONDecodeError:
+            continue
+        servers = carrier.get("mcpServers") if isinstance(carrier, dict) else None
+        if isinstance(servers, dict) and "graphiti-memory" in servers:
+            err(
+                "A4",
+                f"agents.{key}: {name} declares the retired graphiti-memory front door; "
+                "declare l9-graphite-memory (stdio) or nothing",
             )
 
 

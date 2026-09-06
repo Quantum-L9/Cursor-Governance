@@ -1,13 +1,14 @@
 {
   "$schema": "./memory-enforcement.schema.json",
   "contract": "l9.claude-code.memory-enforcement",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "status": "enforced",
-  "summary": "Memory hydration is a precondition for governed writes on the Claude Code surface. Repository-write authority comes from Git (dedicated worktree + branch + merge analysis), NOT from memory state: a Graphiti phase-lock neither authorizes, denies, nor serializes ordinary repository mutation. Single front door: Cursor Graphiti (ops/graphiti/graphiti_memory_client.py) via thin hooks. Enforced at PreToolUse. Operator-only breakglass: L9_MEMORY_ENFORCEMENT_BREAKGLASS. No ENFORCEMENT=off side door.",
+  "summary": "Memory hydration is a precondition for governed writes on the Claude Code surface. Repository-write authority comes from Git (dedicated worktree + branch + merge analysis), NOT from memory state: a memory phase-lock neither authorizes, denies, nor serializes ordinary repository mutation. Single front door: the canonical memory control plane (ops/memory, memory-control-plane/v1) via thin hooks; no provider client, no provider URL, no bearer (realignment stage C8). Enforced at PreToolUse. Operator-only breakglass: L9_MEMORY_ENFORCEMENT_BREAKGLASS. No ENFORCEMENT=off side door. A subagent inherits read evidence only: it never closes, never writes, never hydrates under its own identity.",
   "memory": {
-    "front_door": "ops/graphiti/graphiti_memory_client.py",
-    "bridge": "environment/agents/adapters/claude-code/memory/graphiti_bridge.py",
+    "front_door": "ops/memory/control_plane_client.py",
+    "bridge": "environment/agents/adapters/claude-code/memory/memory_bridge.py",
     "mcp_template": "environment/agents/adapters/claude-code/mcp.template.json",
+    "control_plane_contract": "memory-control-plane/v1",
     "agent_id_env": "L9_MEMORY_AGENT_ID",
     "default_agent_id": "claude-code",
     "namespace_env": "L9_MEMORY_NAMESPACES",
@@ -18,6 +19,8 @@
       "L9_MEMORY_HTTP_URL",
       "L9_MEMORY_CLIENT_TOKEN",
       "environment/agents/adapters/claude-code/memory/memory_client.py",
+      "environment/agents/adapters/claude-code/memory/graphiti_bridge.py",
+      "ops/graphiti/graphiti_memory_client.py",
       "l9-shared-memory@memory.quantumaipartners.com",
       "L9_MEMORY_ENFORCEMENT=off",
       "environment/agents/adapters/claude-code/hooks/memory_lock.py"
@@ -34,7 +37,7 @@
       "event": "SessionStart",
       "script": "environment/agents/adapters/claude-code/hooks/memory_prefetch.py",
       "fail_mode": "open",
-      "note": "SessionStart thin wrap of Cursor Graphiti inject. Writes receipt on success. Fail-open."
+      "note": "SessionStart thin wrap of the canonical session hydration (ops.memory.hydration via the session-packet compiler). Writes receipt on success. Fail-open."
     },
     "gate": {
       "event": "PreToolUse",
@@ -46,7 +49,7 @@
       "event": "Stop",
       "script": "environment/agents/adapters/claude-code/hooks/memory_writeback.py",
       "fail_mode": "open",
-      "note": "Stop thin wrap of Cursor Graphiti write --kind session_summary. Fail-open."
+      "note": "Stop thin wrap of the canonical close (continuation capsule -> governed candidate -> memory.close). Subagent/background Stop records skipped_subagent and closes nothing. Fail-open."
     }
   },
   "preconditions": {
@@ -147,7 +150,7 @@
   },
   "repository_authority": {
     "note": "Distinct authorities that MUST NOT be substituted for one another; see rules/96-multi-agent-main-bound-execution.mdc.",
-    "shared_knowledge": "Graphiti / canonical L9 memory",
+    "shared_knowledge": "canonical L9 memory (l9-graphite-memory MemoryService; Graphiti only as its projection)",
     "repository_isolation": "dedicated worktree (ops/scripts/agent_worktree_start.sh)",
     "task_ancestry": "fetched origin/main",
     "publication": "make pr -> ops/scripts/open_pr_after_gate.sh",

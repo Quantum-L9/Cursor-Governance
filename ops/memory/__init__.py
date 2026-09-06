@@ -18,9 +18,12 @@ Modules (import them directly; this package deliberately imports nothing):
 - ``hydration``            — canonical SessionStart hydration and typed continuation evidence
 - ``session_state``        — local, non-authoritative per-session memory state (plan §22)
 - ``diagnostics``          — layered readiness (R0 PACKAGE_BOUND … R9 PROJECTION_READY)
+- ``mcp_instantiation``    — per-machine Cursor MCP file; the memory entry is delegated
 
-Campaign stage: C4 (canonical hydration is the SessionStart authority; the
-legacy provider read survives only as a shadow diagnostic until C11).
+Campaign stage: C8 (canonical hydration and close are the session
+authorities; the canonical MCP server is the only memory server on every
+surface; the legacy provider read survives only as a shadow diagnostic until
+C11).
 """
 
 from __future__ import annotations
@@ -29,6 +32,7 @@ __all__ = [
     "control_plane_client",
     "diagnostics",
     "hydration",
+    "mcp_instantiation",
     "namespace_context",
     "receipts",
     "runtime_binding",

@@ -421,7 +421,7 @@ fi
 # memory-bank/ retired — resume from Graphiti inject/PICKUP only (no T0 excerpt)
 
 # --- Memory: single front door = Cursor Graphiti (CANONICAL_LAW §8)
-LINES+=("shared memory: Cursor Graphiti front door only (ops/graphiti inject / write); no L9_MEMORY_HTTP side door; memory-bank retired; memory never gates repository writes")
+LINES+=("shared memory: canonical memory control plane only (ops/memory; l9-graphite-memory, memory-control-plane/v1); no provider client, no L9_MEMORY_HTTP side door; memory-bank retired; memory never gates repository writes")
 
 # --- L9 Claude environment status (from the installer receipt) --------------
 # The canonical installer writes ~/.l9/claude/bootstrap-state.json

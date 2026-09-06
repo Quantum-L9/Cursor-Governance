@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "description": "Exact path-based exceptions for ops/scripts/validate_memory_egress_boundary.py. Every entry names the campaign stage that deletes it and an expiry date; an expired entry is a finding. Nothing here authorizes new provider egress — it inventories the legacy bypass the realignment campaign removes (CURSOR_GOVERNANCE_MEMORY_CONTROL_PLANE_REALIGNMENT_BUILD_PLAN §8).",
   "mode": "warning",
-  "mode_note": "warning: findings are reported and the validator exits 0. Stage C11 flips this to enforce (merge-blocking).",
+  "mode_note": "warning: findings are reported and the validator exits 0. Stage C11 flips this to enforce (merge-blocking). Stages C7/C8 retired the MCP front door, the Claude adapter hooks, the Cursor gate hooks and the gate library: those entries are gone and any new finding there is unlisted.",
   "entries": [
     {
       "path": "ops/graphiti/graphiti_memory_client.py",
@@ -23,12 +23,6 @@
       "expires": "2026-12-31"
     },
     {
-      "path": "ops/graphiti/graphiti_gate_lib.py",
-      "reason": "Legacy gate state consumer; realigned at C8 to canonical evidence.",
-      "retire_at_stage": "C8",
-      "expires": "2026-12-31"
-    },
-    {
       "path": "ops/graphiti/graphiti_env_loader.py",
       "reason": "Loads GRAPHITI_MCP_* into the Cursor process; removed at C9 (credential isolation).",
       "retire_at_stage": "C9",
@@ -44,6 +38,12 @@
       "path": "ops/graphiti/graphiti.env.example",
       "reason": "Provider connection example; removed at C9.",
       "retire_at_stage": "C9",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "ops/graphiti/hydration/test_*.py",
+      "reason": "In-tree tests of the migration-only legacy shadow reader (compile_session_packet._search_facts); deleted with the shadow reader at C11.",
+      "retire_at_stage": "C11",
       "expires": "2026-12-31"
     },
     {
@@ -71,39 +71,9 @@
       "expires": "2026-12-31"
     },
     {
-      "path": "ops/graphiti/hydration/test_*.py",
-      "reason": "In-tree tests of the legacy hydration path; rewritten at C4-C6.",
-      "retire_at_stage": "C6",
-      "expires": "2026-12-31"
-    },
-    {
       "path": "ops/hooks/graphiti_common.sh",
-      "reason": "Shared hook env loader for the legacy client; realigned at C8.",
-      "retire_at_stage": "C8",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "ops/hooks/*.sh",
-      "reason": "Cursor lifecycle hooks still invoking the legacy client; migrated at C4-C8.",
-      "retire_at_stage": "C8",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "ops/hooks/*.py",
-      "reason": "Cursor hook helpers reading Graphiti state; migrated at C8.",
-      "retire_at_stage": "C8",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "environment/agents/adapters/claude-code/mcp.template.json",
-      "reason": "Claude MCP front door to Graphiti; replaced by the canonical memory server at C7/C8.",
-      "retire_at_stage": "C8",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "environment/agents/adapters/claude-code/**",
-      "reason": "Claude adapter hooks and validators still bound to the legacy client; realigned at C8.",
-      "retire_at_stage": "C8",
+      "reason": "Shared hook env loader still sourcing the provider env files (GRAPHITI_MCP_* / write-gate switch); the hooks themselves stopped calling the provider at C8; the env plane is removed at C9.",
+      "retire_at_stage": "C9",
       "expires": "2026-12-31"
     },
     {
@@ -167,18 +137,6 @@
       "expires": "2026-12-31"
     },
     {
-      "path": ".mcp.json",
-      "reason": "Rendered projection of the Claude template's Graphiti front door; replaced by the memory-owned configurator at C7/C8.",
-      "retire_at_stage": "C8",
-      "expires": "2026-12-31"
-    },
-    {
-      "path": "environment/mcp/master.mcp.json",
-      "reason": "Master inventory naming the Graphiti front door; replaced at C7.",
-      "retire_at_stage": "C7",
-      "expires": "2026-12-31"
-    },
-    {
       "path": "environment/agents/agent_registry.yaml",
       "reason": "Agent registry naming provider env variables; realigned at C9.",
       "retire_at_stage": "C9",
@@ -217,6 +175,42 @@
     {
       "path": "tests/ops/memory/**",
       "reason": "Negative tests for the boundary name forbidden tokens as fixtures.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "environment/agents/adapters/claude-code/validate_claude_env.py",
+      "reason": "Negative checks that name the memory credential and provider transport so they can be rejected from functional config; rewritten with the secret plane at C9.",
+      "retire_at_stage": "C9",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "environment/agents/adapters/claude-code/web/setup.bootstrap.sh",
+      "reason": "Zero-static-secret sweep still names the retired memory bearer among the variables it refuses; rewritten with the secret plane at C9.",
+      "retire_at_stage": "C9",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "environment/agents/adapters/claude-code/web/setup.sh",
+      "reason": "Cloud setup prose naming the retired provider variable; rewritten at C9.",
+      "retire_at_stage": "C9",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "environment/agents/adapters/claude-code/install.sh",
+      "reason": "Installer readiness stage still probing the provider front door; re-pointed at ops/memory readiness at C9.",
+      "retire_at_stage": "C9",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "environment/agents/adapters/claude-code/verify_account_env.py",
+      "reason": "Account-variable audit naming the retired memory bearer among prohibited names; rewritten at C9.",
+      "retire_at_stage": "C9",
+      "expires": "2026-12-31"
+    },
+    {
+      "path": "environment/agents/adapters/claude-code/tests/test_memory_front_door.py",
+      "reason": "Negative tests for the Claude memory front door name forbidden tokens as fixtures.",
       "retire_at_stage": "never",
       "expires": "2099-01-01"
     }

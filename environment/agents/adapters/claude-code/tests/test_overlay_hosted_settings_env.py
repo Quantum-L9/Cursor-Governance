@@ -25,7 +25,7 @@ class OverlayHostedSettingsEnvTests(unittest.TestCase):
         payload = overlay_payload_from_environ(
             {
                 "L9_AUTONOMY_MAX_PARALLEL": "4",
-                "GRAPHITI_MCP_URL": "https://example.invalid/should-not-copy",
+                "SOME_UPSTREAM_URL": "https://example.invalid/should-not-copy",
                 "L9_CAPABILITY_BROKER_URL": "https://broker.invalid",
             }
         )

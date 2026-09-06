@@ -2,13 +2,15 @@
 
 Campaign: **Cursor-Governance ↔ l9-graphiti-memory canonical realignment**
 (`CURSOR_GOVERNANCE_MEMORY_CONTROL_PLANE_REALIGNMENT_BUILD_PLAN`). Stage
-**C6**: canonical hydration is the SessionStart authority and canonical
-close is the SessionEnd authority. The legacy provider read survives only as
-a migration-only shadow diagnostic (`MEMORY_LEGACY_SHADOW=1`) and gap-filler
-tagged `legacy_unverified` (`MEMORY_LEGACY_CONTINUATION=1`), both off by
-default and deleted at C11. No production path writes a provider; Graphiti
-receives new records only through canonical projection (the C5 cutover, plan
-§41), and no rollback restores a direct write (plan §30).
+**C8**: canonical hydration is the SessionStart authority, canonical close is
+the SessionEnd authority, the package-owned `l9-graphite-memory` server is the
+only memory MCP server on every surface, and the Claude adapter hooks and the
+Cursor write gates read canonical evidence only. The legacy provider read
+survives only as a migration-only shadow diagnostic (`MEMORY_LEGACY_SHADOW=1`)
+and gap-filler tagged `legacy_unverified` (`MEMORY_LEGACY_CONTINUATION=1`),
+both off by default and deleted at C11. No production path writes a provider;
+Graphiti receives new records only through canonical projection (the C5
+cutover, plan §41), and no rollback restores a direct write (plan §30).
 
 ## Rule
 
@@ -46,7 +48,8 @@ MemoryService  →  canonical store  →  outbox  →  optional Graphiti project
 | `namespace_context.py` | repository identity, write hint (exactly one), read hints incl. the registry's `shared_read_namespaces`; the sole producer since C2 (`ops/graphiti/group_resolver.py` is a shim over the same matching until C11) | any grant or denial |
 | `session_contracts.py` | `ContinuationCapsuleV2` (`cursor.continuation/v2`), governed-candidate envelope | provider vocabulary |
 | `hydration.py` | `canonical_hydrate`: health → hydrate (fan-in requested, narrowed on denial) → tag-selected continuation records → newest valid capsule as evidence, stale when HEAD moved | provider search, gap-filling from a projection, reviving superseded records |
-| `session_state.py` | `~/.cursor/l9-memory-session-state/<session>.json`: session id, task signature, namespace request, receipt digests; `authority: none` | any claim of memory truth |
+| `session_state.py` | `~/.cursor/l9-memory-session-state/<session>.json`: session id, task signature, namespace request, receipt digests, explicit task satisfactions; `authority: none`; the hydration-only predicate the Cursor write gates read | any claim of memory truth; any lock |
+| `mcp_instantiation.py` | `~/.cursor/mcp.json` as a real per-machine file rendered from `environment/mcp/master.mcp.json`; drops the retired `graphiti-memory` key; delegates the memory entry to `l9-memory client cursor install/verify` against the bound runtime | authoring the memory entry |
 | `diagnostics.py` | readiness R0 `PACKAGE_BOUND` … R9 `PROJECTION_READY` | "Graphiti is up" == healthy |
 
 ## Binding (INV-11)
@@ -117,6 +120,30 @@ operation id, the idempotency key, failure class and retry count, with
 runs, so an interrupted close is visible and `retry-close` replays it under
 the same key (one logical close). Phase B promotions (lesson/insight/decision)
 use the generic canonical `write` with per-item idempotency keys.
+
+## MCP instantiation (stage C7) and surface realignment (stage C8)
+
+```bash
+make memory-mcp-check                       # drift report for ~/.cursor/mcp.json, writes nothing
+make memory-mcp-install                     # real file (replaces the old symlink), memory entry via the package
+MEMORY_VERIFY_MCP=1 make memory-mcp-install # + the package's own stdio handshake proof
+```
+
+The master inventory never authors the memory entry. Every renderer (Cursor,
+Claude Desktop) hands it to `l9-memory client cursor install --path …` against
+the runtime `runtime_binding.py` proved, so the same atomic, digest-backed,
+secret-free entry lands on every surface; Claude Code's project template
+declares the identical argv gated on `L9_MEMORY_INTERPRETER`. The retired
+`graphiti-memory` front door is dropped from every rendered file and rejected
+by `validate_claude_env.py`, `environment/agents/tools/validate_agents.py`, the
+repo hygiene check and the governance self-check.
+
+On Claude Code the lifecycle hooks (`memory_prefetch.py`, `memory_writeback.py`)
+reach memory only through `memory/memory_bridge.py` → `ops/memory`; the Cursor
+write gates (`ops/graphiti/graphiti_gate_lib.py`) read the canonical session
+state and nothing else. A subagent inherits its parent's evidence read-only:
+it never hydrates under its own identity, never writes state, never closes
+(`memory_writeback` records `skipped_subagent`).
 
 ## Proof
 

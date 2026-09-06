@@ -251,4 +251,21 @@ def test_real_master_renders_without_secrets(monkeypatch) -> None:
     config, skipped, _ = desktop.render_config(master, None, {"FIRECRAWL_API_KEY": "must-not-leak"})
     text = json.dumps(config)
     assert "must-not-leak" not in text and "${" not in text
-    assert "graphiti-memory" in skipped  # legacy url front door never reaches Desktop
+    # Stage C7: the legacy url front door is gone from the inventory itself.
+    assert "graphiti-memory" not in master["mcpServers"]
+    assert "graphiti-memory" not in skipped and "graphiti-memory" not in text
+
+
+def test_template_declares_no_legacy_provider_front_door() -> None:
+    """Stage C8: l9-graphite-memory is the only memory server Claude Code sees."""
+
+    template = json.loads(TEMPLATE.read_text(encoding="utf-8"))
+    servers = template["mcpServers"]
+    assert "graphiti-memory" not in servers
+    memory_servers = [name for name in servers if "memory" in name]
+    assert memory_servers == ["l9-graphite-memory"]
+    functional = {
+        name: {key: value for key, value in spec.items() if not key.startswith("_")}
+        for name, spec in servers.items()
+    }
+    assert "GRAPHITI" not in json.dumps(functional)

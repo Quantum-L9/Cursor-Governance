@@ -1,32 +1,30 @@
 {
   "_comment": [
-    "Claude Code MCP configuration — Graphiti HTTPS front door and Context7 docs.",
+    "Claude Code MCP configuration — canonical memory control plane and Context7 docs.",
     "Authority: environment/agents/adapters/claude-code/mcp.template.json is the",
     "SINGLE canonical owner. The project-scope .mcp.json is RENDERED from this file",
     "by ops/scripts/claude_projection.py (domain: mcp) and drift-checked — it is a",
     "projection, never a second authority.",
     "",
     "NO CREDENTIAL VALUES in this file, in .mcp.json, or in the account variables",
-    "field. Transport credentials are referenced as ${VAR} only, exactly like",
-    "${GRAPHITI_MCP_URL}: the platform proxies a value into the variable when it",
-    "has one to proxy, Claude Code expands it at load, and nothing is ever written",
-    "down. web/setup.bootstrap.sh therefore does not sweep GRAPHITI_MCP_TOKEN or",
-    "CONTEXT7_API_KEY — the same reasoning that keeps GH_TOKEN unswept there.",
+    "field. Transport credentials are referenced as ${VAR} only: the platform",
+    "proxies a value into the variable when it has one to proxy, Claude Code",
+    "expands it at load, and nothing is ever written down.",
     "",
     "_requires_env on a server: the server renders only when every listed variable",
     "is set and non-empty. _optional_headers: {VAR: {header: value}} merges those",
     "headers only when VAR is set and non-empty. Both are private keys, stripped",
     "from the render like _comment. They exist so an unproxied session degrades to",
-    "the previous behaviour instead of emitting a server that cannot authenticate:",
-    "Graphiti stays unauthenticated (which is how the front door works today) and",
-    "Context7 is simply absent, with the obligation on skill l9-context7-docs per",
-    "rules/22-context7-auto-invoke.",
+    "an absent server instead of emitting one that cannot authenticate.",
     "",
-    "l9-graphite-memory is the canonical memory control plane (MemoryService over",
-    "stdio). It renders only when L9_MEMORY_INTERPRETER names a Python that has",
-    "the pinned l9-graphite-memory package installed (ops/config/memory-binding.json);",
-    "Claude Code expands ${L9_MEMORY_INTERPRETER} at load. graphiti-memory is the",
-    "legacy direct-provider front door retired at realignment stage C7/C8.",
+    "l9-graphite-memory is the ONLY memory server (MemoryService over stdio;",
+    "memory-control-plane/v1). It renders only when L9_MEMORY_INTERPRETER names a",
+    "Python that has the pinned l9-graphite-memory package installed",
+    "(ops/config/memory-binding.json); Claude Code expands ${L9_MEMORY_INTERPRETER}",
+    "at load. The legacy direct-provider front door (graphiti-memory over a",
+    "provider URL) was retired at realignment stage C8: Cursor-Governance",
+    "no longer knows how to call the provider, and the session hooks",
+    "(memory_prefetch / memory_writeback) reach memory through ops/memory only.",
     "",
     "ADDING AN MCP SERVER: add its entry here (this file is the only authority for",
     "Claude Code), reference every credential as ${VAR} under _requires_env or",
@@ -35,20 +33,17 @@
     "",
     "STILL FORBIDDEN: a literal token value anywhere in this file or in the account",
     "variables field, the retired HTTP l9-shared-memory side door, L9_MEMORY_HTTP_*",
-    "lifecycle env, and ${L9_CAPABILITY_BROKER_URL}/mcp/graphiti (never shipped)."
+    "lifecycle env, any direct provider URL or bearer, and",
+    "${L9_CAPABILITY_BROKER_URL}/mcp/graphiti (never shipped).",
+    "",
+    "_retired_servers lists keys this template used to manage and has withdrawn;",
+    "the projection removes them from .mcp.json instead of preserving them as",
+    "consumer-owned."
+  ],
+  "_retired_servers": [
+    "graphiti-memory"
   ],
   "mcpServers": {
-    "graphiti-memory": {
-      "type": "http",
-      "url": "${GRAPHITI_MCP_URL}",
-      "timeout": 120000,
-      "alwaysLoad": true,
-      "_optional_headers": {
-        "GRAPHITI_MCP_TOKEN": {
-          "Authorization": "Bearer ${GRAPHITI_MCP_TOKEN}"
-        }
-      }
-    },
     "l9-graphite-memory": {
       "type": "stdio",
       "command": "${L9_MEMORY_INTERPRETER}",
