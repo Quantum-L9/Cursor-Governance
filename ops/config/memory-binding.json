@@ -23,8 +23,8 @@
   "source": {
     "kind": "git",
     "repository": "Quantum-L9/l9-graphiti-memory",
-    "ref": "f1a3444a4f48ebeffa365f3e4a244cbf685a866d",
-    "ref_note": "PR M1 head: CLI close, capabilities receipt, SDK parity, continuation candidate contract (ADR-082). Replace with the MEMORY_TARGET_VERSION release tag at M2 and lock it in uv.lock; a git ref is an integration binding, never a production one."
+    "ref": "fff7827f0e22a8f3953eaaa4fb9905ec46c4a8e7",
+    "ref_note": "PR M1 head (Quantum-L9/l9-graphiti-memory#56): CLI close, capabilities receipt, SDK parity, continuation candidate contract (ADR-082), validation-evidence re-pin. Replace with the MEMORY_TARGET_VERSION release tag at M2 and lock it in uv.lock; a git ref is an integration binding, never a production one."
   },
   "binding_policy": {
     "production": "exact release artifact locked in uv.lock; runtime_mode=pinned_environment",
