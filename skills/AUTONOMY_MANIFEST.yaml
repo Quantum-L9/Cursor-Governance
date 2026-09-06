@@ -109,7 +109,7 @@ tiers:
   - skill: l9-mac-storage-triage
     reason: macOS disk reclaim; diagnose-first then HITL repair; disable-model-invocation, explicit only
   - skill: l9-git-work-preserve
-    reason: auto-registered by sync_generated_artifacts (orphan → explicit_only)
+    reason: diagnose-first, but the pack acts on branches, worktrees, and stashes — prune-execute deletes refs under L9_GIT_PRUNE_AUTHORIZED and stash-drop under L9_GIT_STASH_DROP_AUTHORIZED. Destruction of unique work is the exact blast radius rules/54-context-sensitive-git-guardrails.mdc governs, so selection stays a human act. Triaged 2026-09-06; previously carried the orphan auto-register default.
   - skill: l9-repo-sync
     reason: in-place /ff catch-up mutates a named clone (park unique work, then reset --keep); explicit only, hint_allowed for Read/attach
   - skill: l9-claude-coding-contract-compiler

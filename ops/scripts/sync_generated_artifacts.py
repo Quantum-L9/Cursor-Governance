@@ -203,6 +203,32 @@ def ensure_explicit_frontmatter(skill_md: Path) -> bool:
     return True
 
 
+#: Marks a tier nobody chose. `explicit_only` is the safe landing for a skill
+#: that appeared on disk unregistered — a new pack must not become
+#: model-selectable by accident. But the heal writes a manifest row, and a
+#: manifest row reads as policy: the previous wording ("auto-registered by
+#: sync_generated_artifacts (orphan → explicit_only)") stated the mechanism and
+#: so was indistinguishable, to a later reader, from a deliberate decision.
+#:
+#: Three skills sat in that state — l9-pr-digest ("Never mutate the PR"),
+#: l9-plan-simple (which rules/23-l9-skill-routing.mdc directs every ordinary
+#: planning deliverable to), and l9-git-work-preserve — each defaulted to manual
+#: and never revisited, because nothing distinguished "decided" from "defaulted"
+#: and the only signal was a warning on one sync run.
+#:
+#: So the row now says outright that it is untriaged, and names who resolves it.
+#: The safe default is unchanged; what changes is that the debt is greppable
+#: (`rg UNTRIAGED skills/AUTONOMY_MANIFEST.yaml`) and reads as a question rather
+#: than an answer. l9-wire-into-repo owns the resolution — see its "Skill
+#: targets" section, which forbids leaving a wired skill on this row.
+ORPHAN_UNTRIAGED_REASON = (
+    "UNTRIAGED — auto-registered by sync_generated_artifacts as the safe default "
+    "when this pack appeared on disk with no tier. No one has decided whether it "
+    "should be auto_invoke. Resolve via l9-wire-into-repo (Skill targets): give it "
+    "a real reason here, or move it to tiers.auto_invoke."
+)
+
+
 def heal_orphan_skills(root: Path, wrote: list[str], warnings: list[str]) -> None:
     manifest_path = root / "skills" / "AUTONOMY_MANIFEST.yaml"
     manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
@@ -226,13 +252,11 @@ def heal_orphan_skills(root: Path, wrote: list[str], warnings: list[str]) -> Non
         skill_md = root / "skills" / name / "SKILL.md"
         if ensure_explicit_frontmatter(skill_md):
             wrote.append(str(skill_md.relative_to(root)))
-        explicit_entries.append(
-            {
-                "skill": name,
-                "reason": "auto-registered by sync_generated_artifacts (orphan → explicit_only)",
-            }
+        explicit_entries.append({"skill": name, "reason": ORPHAN_UNTRIAGED_REASON})
+        warnings.append(
+            f"orphan skill auto-registered as explicit_only (UNTRIAGED): {name} "
+            "— decide its tier via l9-wire-into-repo before this is treated as policy"
         )
-        warnings.append(f"orphan skill auto-registered as explicit_only: {name}")
     tiers["explicit_only"] = explicit_entries
     new_text = yaml.safe_dump(manifest, sort_keys=False, allow_unicode=True, width=1000)
     if write_text_if_changed(manifest_path, new_text):
