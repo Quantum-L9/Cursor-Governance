@@ -423,7 +423,7 @@
     },
     {
       "path": "audits/pec-remediation-workpack.v1.yaml",
-      "sha256": "3ad5a195bd8b790deed9ed2d5993594c3cbdfbe898de9f094aa9226c00ed4db5"
+      "sha256": "2232953431a8107e8b3f9636116ecdd69acbdd2900f93f3dea619fc5e55e99a5"
     },
     {
       "path": "audits/pipeline-assembly-audit.v1.yaml",
@@ -2131,7 +2131,7 @@
     },
     {
       "path": "scripts/tests/test_execution_completeness.py",
-      "sha256": "4dc2e60c814576504a2da7f7a4d3064080a853bcd96d51f30632cc0b3e260443"
+      "sha256": "83943c94648dcf02f2c67fcaeea3937d342a45203d29292cc143ebe2d7e9a9a6"
     },
     {
       "path": "scripts/tests/test_failed_result_harvest.py",
