@@ -33,6 +33,7 @@ python3 skills/l9-pr-digest/scripts/require_digest.py \
   --path .l9/pr/pr-digest-result.json --mode diagnose
 ```
 
+   Do **not** pass `--quiet`. Show the `[digest]` finding stream and the 11-section unpack in chat. The JSON file is the remediator handoff, not the human report.
    If the head moved, discard the stale file and re-run. A valid non-READY decision still continues into Diagnose.
 3. Read `skills/l9-pr-remediation/SKILL.md` and follow **Diagnose** + [references/diagnose-workflow.md](../skills/l9-pr-remediation/references/diagnose-workflow.md). Consume the digest packet; do not re-invent intent, expansion, or CI conclusions the digest already bound.
 4. Optional focused lenses: [references/review-angles.md](../skills/l9-pr-remediation/references/review-angles.md).

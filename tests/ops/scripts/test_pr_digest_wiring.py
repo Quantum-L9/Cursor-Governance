@@ -18,6 +18,7 @@ def test_poll_worker_requires_digest_before_remediation() -> None:
     assert "ARCHITECTURE_REPAIR_BEFORE_REMEDIATION" in section
     assert "INTENT_UNKNOWN_REVIEW_REQUIRED" in section
     assert "exclusive remediation scope" in section
+    assert "--quiet" in section
 
 
 def test_digest_pack_is_read_only_and_machine_capable() -> None:
@@ -37,6 +38,7 @@ def test_pr_slash_runs_digest_then_remediator_diagnose() -> None:
     assert "require_digest.py" in contract
     assert "Digest first" in contract
     assert "Never run Converge" in command.replace("*", "")
+    assert "Do **not** pass `--quiet`" in command or "Do not pass `--quiet`" in command.replace("*", "")
 
 
 def test_digest_has_no_colliding_command_wrapper() -> None:
@@ -56,6 +58,7 @@ def test_remediator_consumes_digest_before_mutate() -> None:
         encoding="utf-8"
     )
     assert "Digest first (mandatory)" in workflow
+    assert "Do **not** pass `--quiet`" in workflow or "[digest]" in workflow
     contract = (ROOT / "skills/l9-pr-remediation/references/run-contract.md").read_text(
         encoding="utf-8"
     )

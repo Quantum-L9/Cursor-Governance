@@ -37,6 +37,8 @@ python3 skills/l9-pr-digest/scripts/require_digest.py \
   --path .l9/pr/pr-digest-result.json --mode diagnose
 ```
 
+Do **not** pass `--quiet` on a manual `/pr` or Diagnose invoke. Show the `[digest]` stream and interactive unpack in chat, then continue. `--quiet` is for poll-worker / automation only.
+
 If the head moved, discard the stale file and re-run. A valid non-READY decision still continues. An unbound or missing digest is STOP / `Unknown` for that PR. Carry `decision`, `expansion_items`, and `remediation_packet` into the verdict below. Do not re-invent intent, expansion, or CI the digest already bound.
 3. **Discovery (mandatory reviews)**
 
@@ -110,6 +112,7 @@ GATE: review comments fetched before any verdict. Attribute `github-code-quality
 | Rule | Severity |
 |------|----------|
 | Skip digest when PR number is known | HIGH — block verdict |
+| Hide digest stream behind JSON on a manual Diagnose | HIGH — stream findings |
 | Skip review comments | HIGH — block verdict |
 | Commit/push/merge during Diagnose | CRITICAL |
 | Emit `gh pr merge` from Diagnose YNP | CRITICAL |

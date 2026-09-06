@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 
 from pr_digest_core import digest, validate
+from pr_digest_render import emit_line, interactive_report
 from require_digest import READY, check
 
 
@@ -115,6 +116,25 @@ def main() -> int:
     )
     cat = digest(catalog)
     assert not any(f["code"] == "deleted_test" for f in cat["deterministic_findings"])
+
+    events: list[tuple[str, dict]] = []
+    streamed = digest(fixture(), on_event=lambda kind, payload: events.append((kind, payload)))
+    assert streamed["decision"] == "READY_FOR_REMEDIATION"
+    assert any(kind == "identity" for kind, _ in events)
+    assert any(
+        kind == "decision" and payload["decision"] == "READY_FOR_REMEDIATION"
+        for kind, payload in events
+    )
+    report = interactive_report(streamed)
+    for heading in (
+        "### 1. PR in one paragraph",
+        "### 8. Findings",
+        "### 11. Readiness",
+        "READY_FOR_REMEDIATION",
+    ):
+        assert heading in report, heading
+    sample = {"severity": "review", "code": "x", "path": "a.py", "detail": "d"}
+    assert emit_line("finding", sample).startswith("[digest] finding")
 
     with tempfile.TemporaryDirectory() as td:
         path = Path(td) / "digest.json"

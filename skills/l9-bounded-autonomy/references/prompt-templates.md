@@ -37,7 +37,7 @@ Your lock: pr:{{pr_number}} — you alone may push this PR branch until hand-bac
 Pre-remediation digest gate (mandatory, read-only):
 0. Read `skills/l9-pr-digest/SKILL.md` before `l9-pr-remediation`.
 1. Bind the exact current PR base SHA and head SHA. Load original task/PR intent and current CI evidence when available.
-2. Run `l9-pr-digest` in machine mode. Preserve `.l9/pr/pr-digest-result.json` as the evidence surface for this head.
+2. Run `l9-pr-digest` in machine mode with `--quiet`. Preserve `.l9/pr/pr-digest-result.json` as the evidence surface for this head.
 3. If the head changes before remediation starts, discard the stale digest and re-run against the new exact head.
 4. Continue into remediation only for `READY_FOR_REMEDIATION` or `READY_WITH_NON_BLOCKING_NOTES`.
 5. For `NARROW_BEFORE_REMEDIATION`, `ARCHITECTURE_REPAIR_BEFORE_REMEDIATION`, `CI_OR_EXECUTION_FAILURE`, `INTENT_UNKNOWN_REVIEW_REQUIRED`, `BLOCKED`, or `UNKNOWN`: do not remediate. Return the digest decision, evidence, and blockers to main.

@@ -1315,3 +1315,14 @@ reading of `/pr` is Diagnose-only. That sentence stays on disk (additive_only).
   enter remediation.
 - The poll-worker prompt already had this order; the remediator pack now
   consumes the same packet.
+
+<!-- L9_PR_DIGEST_STREAM_V1 -->
+## Manual digest streams findings (2026-09-05)
+
+This fragment supersedes only the “machine mode → JSON file” sentence in
+`L9_PR_DIGEST_BEFORE_REMEDIATE_V1`. That paragraph stays on disk (additive_only).
+
+- Manual `/pr` and remediator Diagnose run `pr_digest.py` **without** `--quiet`.
+  Stream `[digest]` finding lines and the 11-section unpack to the user.
+- The JSON file remains the remediator handoff. It is not the human report.
+- Poll workers / automation pass `--quiet`.

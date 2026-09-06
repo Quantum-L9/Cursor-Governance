@@ -285,6 +285,8 @@ def test_board_and_merge() -> None:
     _forbid(REFS["diagnose-workflow.md"], "gh pr merge {number}", "diagnose-workflow.md")
     _need(REFS["diagnose-workflow.md"], "Diagnose never merges", "diagnose-workflow.md")
     _need(REFS["diagnose-workflow.md"], "Digest first (mandatory)", "diagnose-workflow.md")
+    _need(REFS["diagnose-workflow.md"], "Do **not** pass `--quiet`", "diagnose-workflow.md")
+    _need(SKILL, "without** `--quiet`", "SKILL.md")
     _need(SKILL, "require_digest.py --mode converge", "SKILL.md")
     _need(SKILL, "skills/l9-pr-digest", "SKILL.md")
     _need(REFS["run-contract.md"], "P_digest", "run-contract.md")

@@ -17,7 +17,7 @@ metadata:
   - evidence
   owner: igor_beylin
   status: active
-  version: 1.1.0
+  version: 1.2.0
   updated: 2026-09-05
 disable-model-invocation: true
 ---
@@ -70,7 +70,9 @@ If base or head cannot be bound exactly, stop with `BLOCKED`. If original intent
 
 ### Machine
 
-Prefer maximum automation. Run the deterministic engine first:
+Prefer maximum automation. Run the deterministic engine first.
+
+Manual `/pr` / Diagnose (default): stream live findings and the interactive unpack to stdout, and still write the JSON packet:
 
 ```bash
 python3 skills/l9-pr-digest/scripts/pr_digest.py \
@@ -78,13 +80,15 @@ python3 skills/l9-pr-digest/scripts/pr_digest.py \
   --output .l9/pr/pr-digest-result.json
 ```
 
+Automation / poll worker: same command plus `--quiet` so only the JSON file is written.
+
 A connector or orchestration host may instead normalize immutable PR evidence into JSON and run `--fixture evidence.json`. This is the preferred path when the repository is not locally cloned. `--validate-only result.json` validates required fields and exact revision binding.
 
 If `LLM_judgement_questions` is empty, do not invoke a model. If non-empty, answer only those questions from cited PR + repository evidence, append `judgement_findings`, classify the affected `expansion_items`, set `LLM_judgement_used: true`, then recompute the final decision under the rules below.
 
 ### Interactive chat
 
-Use the same evidence object and decision semantics. Load [interactive-output-contract.md](references/interactive-output-contract.md) and render a human-readable change story, expansion map, architecture impact, CI boundary, findings, narrowing decisions, bounded remediation packet, and readiness. Do not mutate the PR.
+Use the same evidence object and decision semantics. The CLI streams `[digest]` finding lines as the engine classifies, then prints the [interactive-output-contract.md](references/interactive-output-contract.md) unpack (`scripts/pr_digest_render.py`). Show that stream to the user on a manual invoke. Do not hide it behind the JSON file. Do not mutate the PR.
 
 ## Decision model
 
@@ -150,6 +154,7 @@ A structural pass proves the pack and deterministic engine shape. It does not pr
 - [decision-and-expansion.md](references/decision-and-expansion.md)
 - [judgement-escalation.md](references/judgement-escalation.md)
 - [interactive-output-contract.md](references/interactive-output-contract.md)
+- `scripts/pr_digest_render.py` — live `[digest]` lines + 11-section unpack
 - [machine-output.schema.json](references/machine-output.schema.json)
 - [remediation-packet.schema.json](references/remediation-packet.schema.json)
 - [dogfood-validation.md](references/dogfood-validation.md)
