@@ -1,0 +1,241 @@
+# Memory cross-repo proof — required, never skippable (audit P2-02 / P1-01).
+#
+# Proves this Cursor-Governance head against the EXACT memory runtime the
+# binding manifest names (ops/config/memory-binding.json, source.ref):
+#
+#   1. clone Quantum-L9/l9-graphiti-memory at that immutable SHA
+#   2. build its wheel reproducibly (uv build --wheel, fixed SOURCE_DATE_EPOCH)
+#      and refuse a digest that differs from release_evidence.artifact_sha256
+#   3. install that wheel into a clean environment and bind it through
+#      L9_MEMORY_INTERPRETER (runtime_mode=pinned_environment) — never a
+#      development checkout, never whatever l9-memory is on PATH
+#   4. run tests/ops/memory/test_cross_repo_lifecycle.py with
+#      L9_MEMORY_CROSS_REPO_REQUIRED=1 (an absent runtime FAILS, never skips)
+#      and no provider connection material in the environment
+#   5. record Cursor SHA, memory SHA, package version, wheel digest and the
+#      test outcome in the job summary and as an artifact
+#
+# The memory repository is private. The clone uses MEMORY_REPO_READ_TOKEN when
+# the repository provides it (a fine-grained read-only token on the memory
+# repository, held in Actions secrets, never in a file) and falls back to the
+# workflow token, which reaches the memory repository only where the
+# organization grants it. Either way nothing is written to any file: the
+# token rides on one git fetch and one x-access-token URL that is reset after.
+# There is no continue-on-error anywhere in this workflow on purpose.
+name: Memory Cross-Repo Proof
+
+on:
+  # No paths filter, deliberately: a required context that never reports
+  # leaves the PR blocked forever (see l9-lint-test.yml).
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: memory-cross-repo-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  proof:
+    name: Exact-head memory lifecycle proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout immutable event revision
+        env:
+          REPOSITORY: ${{ github.repository }}
+          REVISION: ${{ github.sha }}
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin \
+            "https://x-access-token:${TOKEN}@github.com/${REPOSITORY}.git"
+          git -c protocol.version=2 fetch --depth=1 origin "${REVISION}"
+          git checkout --detach FETCH_HEAD
+          git remote set-url origin "https://github.com/${REPOSITORY}.git"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install locked governance toolchain
+        run: |
+          set -euo pipefail
+          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
+          uv sync --locked --no-build --extra dev
+
+      - name: Read the binding manifest
+        id: binding
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          d = json.load(open("ops/config/memory-binding.json"))
+          ev = d.get("release_evidence") or {}
+          missing = [k for k in ("memory_sha", "artifact_sha256", "source_date_epoch", "artifact") if k not in ev]
+          if missing:
+              raise SystemExit(f"memory-binding.json release_evidence is missing {missing}")
+          if ev["memory_sha"] != d["source"]["ref"]:
+              raise SystemExit("release_evidence.memory_sha does not equal source.ref — rebind before proving")
+          print(f"repository={d['source']['repository']}")
+          print(f"ref={d['source']['ref']}")
+          print(f"version={d['expected_package_version']}")
+          print(f"artifact={ev['artifact']}")
+          print(f"sha256={ev['artifact_sha256']}")
+          print(f"epoch={ev['source_date_epoch']}")
+          PY
+
+      - name: Clone the memory repository at the bound SHA
+        env:
+          MEMORY_REPO: ${{ steps.binding.outputs.repository }}
+          MEMORY_REF: ${{ steps.binding.outputs.ref }}
+          TOKEN: ${{ secrets.MEMORY_REPO_READ_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/memory-src"
+          cd "${RUNNER_TEMP}/memory-src"
+          git init .
+          git remote add origin \
+            "https://x-access-token:${TOKEN}@github.com/${MEMORY_REPO}.git"
+          git -c protocol.version=2 fetch --depth=1 origin "${MEMORY_REF}"
+          git checkout --detach FETCH_HEAD
+          git remote set-url origin "https://github.com/${MEMORY_REPO}.git"
+          actual="$(git rev-parse HEAD)"
+          if [ "${actual}" != "${MEMORY_REF}" ]; then
+            echo "::error::memory checkout is ${actual}, binding names ${MEMORY_REF}"
+            exit 1
+          fi
+
+      - name: Build the memory wheel reproducibly and verify its digest
+        id: wheel
+        env:
+          EXPECTED_SHA256: ${{ steps.binding.outputs.sha256 }}
+          EXPECTED_ARTIFACT: ${{ steps.binding.outputs.artifact }}
+          SOURCE_DATE_EPOCH: ${{ steps.binding.outputs.epoch }}
+        run: |
+          set -euo pipefail
+          out="${RUNNER_TEMP}/memory-wheel"
+          mkdir -p "${out}"
+          uv build --wheel --out-dir "${out}" "${RUNNER_TEMP}/memory-src"
+          wheel="${out}/${EXPECTED_ARTIFACT}"
+          if [ ! -f "${wheel}" ]; then
+            echo "::error::expected artifact ${EXPECTED_ARTIFACT} was not built; got: $(ls "${out}")"
+            exit 1
+          fi
+          actual="$(sha256sum "${wheel}" | awk '{print $1}')"
+          echo "sha256=${actual}" >> "$GITHUB_OUTPUT"
+          echo "path=${wheel}" >> "$GITHUB_OUTPUT"
+          if [ "${actual}" != "${EXPECTED_SHA256}" ]; then
+            echo "::error::wheel digest ${actual} does not match release_evidence.artifact_sha256 ${EXPECTED_SHA256}"
+            exit 1
+          fi
+          echo "wheel ${EXPECTED_ARTIFACT} sha256 ${actual} matches the binding"
+
+      - name: Install the pinned wheel into a clean environment
+        env:
+          WHEEL: ${{ steps.wheel.outputs.path }}
+          EXPECTED_VERSION: ${{ steps.binding.outputs.version }}
+        run: |
+          set -euo pipefail
+          uv venv "${RUNNER_TEMP}/memory-venv" --python "${PYTHON_VERSION}"
+          uv pip install --python "${RUNNER_TEMP}/memory-venv/bin/python" "${WHEEL}"
+          bound="$("${RUNNER_TEMP}/memory-venv/bin/python" -c 'import importlib.metadata as m; print(m.version("l9-graphite-memory"))')"
+          if [ "${bound}" != "${EXPECTED_VERSION}" ]; then
+            echo "::error::installed l9-graphite-memory ${bound}, binding expects ${EXPECTED_VERSION}"
+            exit 1
+          fi
+          test -x "${RUNNER_TEMP}/memory-venv/bin/l9-memory"
+          echo "L9_MEMORY_INTERPRETER=${RUNNER_TEMP}/memory-venv/bin/python" >> "$GITHUB_ENV"
+          echo "MEMORY_BOUND_VERSION=${bound}" >> "$GITHUB_ENV"
+
+      - name: Prove the binding
+        run: |
+          set -euo pipefail
+          uv run --frozen --no-build python -m ops.memory.diagnostics --binding-only
+
+      - name: Run the exact-head lifecycle proof (required, no skip, no provider env)
+        env:
+          L9_MEMORY_CROSS_REPO_REQUIRED: "1"
+          L9_MEMORY_CROSS_REPO_EVIDENCE: ${{ runner.temp }}/memory-cross-repo-proof.json
+          L9_MEMORY_WHEEL_SHA256: ${{ steps.wheel.outputs.sha256 }}
+          GRAPHITI_MCP_URL: ""
+          GRAPHITI_MCP_TOKEN: ""
+        run: |
+          set -euo pipefail
+          # An empty value is still "present" to the shell; remove both outright.
+          unset GRAPHITI_MCP_URL GRAPHITI_MCP_TOKEN
+          uv run --frozen --no-build python -m pytest \
+            tests/ops/memory/test_cross_repo_lifecycle.py \
+            -p no:cacheprovider -rA \
+            --junitxml "${RUNNER_TEMP}/memory-cross-repo-junit.xml"
+          python3 - "${RUNNER_TEMP}/memory-cross-repo-junit.xml" <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+          root = ET.parse(sys.argv[1]).getroot()
+          suites = [root] if root.tag == "testsuite" else list(root)
+          tests = sum(int(s.get("tests", 0)) for s in suites)
+          skipped = sum(int(s.get("skipped", 0)) for s in suites)
+          failures = sum(int(s.get("failures", 0)) + int(s.get("errors", 0)) for s in suites)
+          print(f"tests={tests} skipped={skipped} failures={failures}")
+          if tests < 2 or skipped or failures:
+              raise SystemExit("cross-repo proof did not run every case to a pass")
+          PY
+
+      - name: Record the proof
+        if: always()
+        env:
+          CURSOR_SHA: ${{ github.sha }}
+          MEMORY_REPO: ${{ steps.binding.outputs.repository }}
+          MEMORY_REF: ${{ steps.binding.outputs.ref }}
+          EXPECTED_VERSION: ${{ steps.binding.outputs.version }}
+          WHEEL_SHA256: ${{ steps.wheel.outputs.sha256 }}
+          ARTIFACT: ${{ steps.binding.outputs.artifact }}
+          OUTCOME: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          evidence="${RUNNER_TEMP}/memory-cross-repo-proof.json"
+          {
+            echo "## Memory cross-repo proof"
+            echo
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Cursor-Governance head | \`${CURSOR_SHA}\` |"
+            echo "| Memory repository | \`${MEMORY_REPO}\` |"
+            echo "| Memory head (binding source.ref) | \`${MEMORY_REF}\` |"
+            echo "| Package version | \`${MEMORY_BOUND_VERSION:-unbound}\` (binding expects \`${EXPECTED_VERSION}\`) |"
+            echo "| Artifact | \`${ARTIFACT}\` |"
+            echo "| Artifact sha256 (rebuilt here) | \`${WHEEL_SHA256:-not built}\` |"
+            echo "| Runtime mode | pinned_environment (L9_MEMORY_INTERPRETER) |"
+            echo "| Provider env | GRAPHITI_MCP_URL / GRAPHITI_MCP_TOKEN absent |"
+            echo "| Job outcome | ${OUTCOME} |"
+            echo
+            if [ -f "${evidence}" ]; then
+              echo '```json'
+              cat "${evidence}"
+              echo '```'
+            else
+              echo "_no proof record written — the suite did not bind a runtime_"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the proof record
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: memory-cross-repo-proof-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/memory-cross-repo-proof.json
+            ${{ runner.temp }}/memory-cross-repo-junit.xml
+          if-no-files-found: warn

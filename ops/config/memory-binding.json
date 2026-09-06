@@ -23,8 +23,8 @@
   "source": {
     "kind": "git",
     "repository": "Quantum-L9/l9-graphiti-memory",
-    "ref": "95169760c09b18038e6890d1191106c9a17d1504",
-    "ref_note": "Release 2.3.0 = MEMORY_TARGET_VERSION (campaign stage M2, Quantum-L9/l9-graphiti-memory#56): tag selector on search/hydrate, client cursor verify --path proving the installed entry, installed-wheel lifecycle proof, shared control-plane fixture. This SHA is the M2 head; replace it with the v2.3.0 tag once the memory PR merges and the tag is cut, and lock the artifact in uv.lock."
+    "ref": "5605569b72baa25f6b6e6324b0017317fb31e0cd",
+    "ref_note": "Release 2.3.0 = MEMORY_TARGET_VERSION, audit-closure head of Quantum-L9/l9-graphiti-memory#56: M2 (tag selector on search/hydrate, client cursor verify --path, installed-wheel lifecycle proof, shared control-plane fixture) plus the ADR-082 amendment (governed-candidate supersession, close replay forensics, coverage evidence). This SHA is the final #56 head as of 2026-09-06; replace it with the v2.3.0 tag once the memory PR merges and the tag is cut, and lock the artifact in uv.lock. release_evidence below is the proof this binding was exercised against exactly this head."
   },
   "binding_policy": {
     "production": "exact release artifact locked in uv.lock; runtime_mode=pinned_environment",
@@ -42,5 +42,21 @@
     "L9_MEMORY_DEV_CHECKOUT/.venv/bin/python (development opt-in)",
     "L9_MEMORY_INTERPRETER",
     "the governance runtime interpreter (sys.executable)"
-  ]
+  ],
+  "release_evidence": {
+    "description": "Exact-head proof of the binding (audit P1-01/P2-02). The wheel is built from source.ref with uv build --wheel under the fixed SOURCE_DATE_EPOCH below and is byte-reproducible (the digest reproduced from a fresh clone of the same commit). .github/workflows/memory-cross-repo.yml rebuilds it from the same ref, refuses a digest mismatch, installs the wheel into a clean environment, and runs tests/ops/memory/test_cross_repo_lifecycle.py with L9_MEMORY_CROSS_REPO_REQUIRED=1 (a skip is a failure) and no provider credential in the environment. A digest here without that job green on the same Cursor head is a claim, not a proof.",
+    "memory_sha": "5605569b72baa25f6b6e6324b0017317fb31e0cd",
+    "package_version": "2.3.0",
+    "artifact": "l9_graphite_memory-2.3.0-py3-none-any.whl",
+    "artifact_sha256": "905d91402db99fcd3e094db67576c19297823b448fd6f76842f32d1be4804291",
+    "build": "uv build --wheel (SOURCE_DATE_EPOCH=1784592000)",
+    "source_date_epoch": 1784592000,
+    "proved_by": "tests/ops/memory/test_cross_repo_lifecycle.py",
+    "proof_workflow": ".github/workflows/memory-cross-repo.yml",
+    "proved_at": "2026-09-06",
+    "operator_gated": [
+      "v2.3.0 tag on Quantum-L9/l9-graphiti-memory (after #56 merges)",
+      "uv.lock pin of the released artifact (replaces the git SHA source)"
+    ]
+  }
 }

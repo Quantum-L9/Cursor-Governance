@@ -5,15 +5,17 @@
     "started_at": "2026-09-06T00:00:00+00:00",
     "campaign_stage": "C10",
     "memory_release": "2.3.0",
-    "memory_source_ref": "95169760c09b18038e6890d1191106c9a17d1504",
+    "memory_source_ref": "5605569b72baa25f6b6e6324b0017317fb31e0cd",
     "control_plane_contract": "memory-control-plane/v1",
-    "continuation_schema": "cursor.continuation/v2"
+    "continuation_schema": "cursor.continuation/v2",
+    "memory_artifact_sha256": "905d91402db99fcd3e094db67576c19297823b448fd6f76842f32d1be4804291",
+    "memory_rebound_at": "2026-09-06 (audit closure C14: rebound from the M2 head to the final #56 head with the wheel digest)"
   },
   "authority": {
     "canonical": "l9-graphite-memory MemoryService (Quantum-L9/l9-graphiti-memory)",
     "cursor_boundary": "ops/memory",
     "provider_role": "projection-only; receives records solely through canonical projection",
-    "rollback": "no rollback path restores a direct provider write (plan §30)"
+    "rollback": "no rollback path restores a direct provider write (plan \u00a730)"
   },
   "session_lifecycle": {
     "hydration": "ops/memory/hydration.py (canonical_hydrate) since C4",
@@ -27,14 +29,22 @@
   },
   "legacy_reconciliation": {
     "classifier": "ops/memory/legacy_reconciliation.py",
-    "classes": ["A_canonical_known", "B_provider_only_continuation", "C_provider_only_durable", "D_malformed", "E_duplicate_in_export", "F_forbidden_namespace", "G_refused_by_memory"],
+    "classes": [
+      "A_canonical_known",
+      "B_provider_only_continuation",
+      "C_provider_only_durable",
+      "D_malformed",
+      "E_duplicate_in_export",
+      "F_forbidden_namespace",
+      "G_refused_by_memory"
+    ],
     "export_schema": "cursor.legacy-provider-export/v1",
     "provenance": "Cursor-Governance/legacy-reconciliation; tag legacy_unverified",
     "input": "a provider export produced outside this boundary; Cursor-Governance never reads the provider"
   },
   "remaining_legacy": {
     "note": "Inventoried by ops/config/memory-egress-allowlist.json; every entry names the stage that deletes it. Warning mode until C11 flips ops/scripts/validate_memory_egress_boundary.py to --enforce.",
-    "shadow_reader": "ops/graphiti/hydration/compile_session_packet.py (MEMORY_LEGACY_SHADOW / MEMORY_LEGACY_CONTINUATION, off by default) — deleted at C11",
-    "provider_client": "ops/graphiti/graphiti_memory_client.py — tombstoned at C11"
+    "shadow_reader": "ops/graphiti/hydration/compile_session_packet.py (MEMORY_LEGACY_SHADOW / MEMORY_LEGACY_CONTINUATION, off by default) \u2014 deleted at C11",
+    "provider_client": "ops/graphiti/graphiti_memory_client.py \u2014 tombstoned at C11"
   }
 }

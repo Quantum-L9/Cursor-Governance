@@ -99,6 +99,21 @@ operator-owned files (the protected provider compose file and the secret
 inventory row); `tests/ops/memory/test_egress_boundary.py` fails on any
 unlisted site and on any entry that is not `never`/`operator`.
 
+The lexical scanner is gameable by spelling; the *shape* of the boundary is
+enforced architecturally (audit P3-01) by
+`tests/ops/memory/test_transport_boundary.py` on the AST and at runtime, and by
+the `l9.memory-boundary-*` semgrep rules in `.semgrep/l9-pr.yml` on
+`make pr-security`: no module on the memory path (`ops/memory/**`,
+`close_session.py`, `pickup_write.py`, `compile_session_packet.py`,
+`session_latches.py`, the Claude memory bridge) may import a network or provider
+transport (`urllib`, `http`, `socket`, `ssl`, `requests`, `httpx`, `aiohttp`,
+`websockets`, the MCP client SDK, `graphiti_core`, `neo4j`, `asyncio`); only
+`runtime_binding.py` (the bound `l9-memory`), `namespace_context.py` (git
+identity), `mcp_instantiation.py` (the memory-owned installer) and the Claude
+`memory_state.py` git probe may spawn a process, always as an argv list; and
+`MemoryControlPlaneClient` launches exactly `binding.memory_cli` for every
+operation.
+
 ## Continuation capsule (plan §12)
 
 `ContinuationCapsuleV2` is the structured successor of the provider-only
@@ -108,6 +123,26 @@ boundary as a governed candidate (`session_continuation` class,
 `namespace_local` visibility, lossless `structured_payload`; memory ADR-082)
 and is recovered from record metadata on the next hydrate. Current git state
 always wins over a stale capsule (`is_stale_for`).
+
+Selection is **task-scoped** (audit P1-02): `select_continuation` keeps only
+capsules whose `repository_identity` and `task_signature` equal the session's
+(`task_signature_for(objective, repository)`, never the session id) and orders
+those alone, so two tasks closed against the same repository at the same HEAD
+never resume each other. `continuation_policy="repository_fallback"` is the
+explicit degraded policy for a caller with no task yet (SessionStart via
+`compile_session_packet`): with no task match it takes the newest repository
+capsule and marks it `selection=repository_fallback` on the evidence, in the
+receipt (`continuation_policy`, `continuation_excluded`) and in a warning.
+`python -m ops.memory.cli hydrate --continuation-policy` exposes the knob. The
+close capsule carries the task signature the session hydrated under (local
+session state), so the next hydration of that task selects it.
+
+A Phase B refinement names the Phase A record in `supersedes`
+(`to_governed_candidate(supersedes=...)`, memory ADR-082 amendment; audit
+P1-03). Memory validates the target and applies the transition, so one session
+leaves exactly one ACTIVE continuation; a refused supersession rejects the
+refinement and Phase A stays ACTIVE. `CandidateReceipt.superseded_record_ids`
+reports what memory superseded.
 
 ## Session close (plan §15, §16)
 
@@ -123,6 +158,16 @@ operation id, the idempotency key, failure class and retry count, with
 runs, so an interrupted close is visible and `retry-close` replays it under
 the same key (one logical close). Phase B promotions (lesson/insight/decision)
 use the generic canonical `write` with per-item idempotency keys.
+
+The obligation also retains the **exact close request** (`close_summary`,
+`close_capsule_digest`, `close_session_id`; audit P2-01), written before
+`memory.close` runs. `retry_close` replays precisely that under the recorded
+key — never a synthesized "retry" summary — and reads memory's replay
+forensics back (`CloseReceipt.replay_payload_matched`, `stored_digest`,
+`replay_digest`, `warnings`); a replay memory proves different from the stored
+close is surfaced as `close replay payload drift`, never hidden behind the
+idempotent status. An obligation without the request material gets a full
+canonical close instead of a guessed replay.
 
 ## MCP instantiation (stage C7) and surface realignment (stage C8)
 
@@ -192,6 +237,26 @@ plane" amendment, ADR-0030, rules `03` / `87` / `98`, skill
 `tests/ops/memory/test_cross_repo_lifecycle.py` is the exact-head cross-repo
 lifecycle (plan §35): bind → health → no-hit hydrate → admit capsule →
 duplicate replay → hydrate retrieves it → lossless recovery → close dry run →
-close commit → idempotent close replay → fan-in denial. It runs against the
-real memory runtime when `L9_MEMORY_DEV_CHECKOUT` is set, with provider
-variables removed from the environment.
+close commit → exact-request close replay (payload-identical) → same-key
+drift reported → fan-in denial → task-scoped resume and SessionStart
+fallback; then task isolation (Task A / Task B, same repository, same HEAD),
+Phase B supersession (A superseded, B active, A no longer retrievable),
+refused supersession (A stays active), and a lost-response close retried
+with the recorded request. It runs against a real memory runtime when
+`L9_MEMORY_DEV_CHECKOUT` (development checkout) or `L9_MEMORY_INTERPRETER`
+(installed wheel) is set, with provider variables removed from the
+environment; `L9_MEMORY_CROSS_REPO_REQUIRED=1` turns an absent runtime into a
+failure and requires the pinned wheel.
+
+`.github/workflows/memory-cross-repo.yml` is that proof as a required,
+non-skippable PR check (audit P2-02 / P1-01): it clones the memory repository
+at `memory-binding.json` `source.ref`, rebuilds the wheel reproducibly under
+the recorded `SOURCE_DATE_EPOCH`, refuses a digest that differs from
+`release_evidence.artifact_sha256`, installs the wheel into a clean
+environment bound through `L9_MEMORY_INTERPRETER`, runs the proof in required
+mode with `GRAPHITI_MCP_URL` / `GRAPHITI_MCP_TOKEN` unset, fails if any case
+skipped, and records the Cursor head, memory head, package version and
+artifact digest in the job summary and a proof artifact
+(`cursor.memory-cross-repo-proof/v1`). Making the context required in branch
+protection, the `v2.3.0` tag and the `uv.lock` artifact pin are operator steps
+named in `release_evidence.operator_gated`.

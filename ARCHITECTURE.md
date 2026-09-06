@@ -87,6 +87,9 @@ Index only. Job tables and pin versions live in the workflow files and `AGENTS.m
 - `governance.yml` — jobs `pr`, `issue`
 - `supply-chain.yml` — jobs `license-compliance`, `dependency-review`, `cyclonedx-sbom`
 - `codeql.yml` — job `codeql` (calls `codeql-reusable.yml`)
+- `memory-cross-repo.yml` — job `proof` (exact-head memory lifecycle against the
+  wheel rebuilt from `ops/config/memory-binding.json` `source.ref`; required
+  mode, never skips — see `ops/memory/README.md` "Proof")
 
 **Not a PR merge gate** (schedule, dispatch, or post-merge janitor):
 

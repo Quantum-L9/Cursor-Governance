@@ -1,20 +1,34 @@
 """Exact-head cross-repo lifecycle proof (plan §35), against a real memory runtime.
 
-Runs only when ``L9_MEMORY_DEV_CHECKOUT`` names a ``l9-graphiti-memory``
-checkout whose ``.venv`` carries the package at the manifest's expected
-version. That is the one condition a unit environment cannot construct: it
-needs the other repository's installed runtime. Everything else (store,
+Runs when a real memory runtime is bound: ``L9_MEMORY_DEV_CHECKOUT`` names a
+``l9-graphiti-memory`` checkout whose ``.venv`` carries the package
+(``runtime_mode=development_checkout``), or ``L9_MEMORY_INTERPRETER`` names an
+interpreter with the pinned wheel installed (``runtime_mode=pinned_environment``,
+what CI does). That is the one condition a unit environment cannot construct:
+it needs the other repository's installed runtime. Everything else (store,
 state, config) is disposable and isolated per test.
+
+``L9_MEMORY_CROSS_REPO_REQUIRED=1`` turns "no runtime bound" from a skip into a
+failure (audit P2-02): the required CI job
+(``.github/workflows/memory-cross-repo.yml``) installs the exact wheel of the
+binding's ``source.ref`` and must never pass by skipping. When
+``L9_MEMORY_CROSS_REPO_EVIDENCE`` names a file, the proof records the Cursor
+head, the bound memory version and runtime mode, and the wheel digest it was
+handed, so the job summary is evidence and not a claim.
 
 Sequence: bind → health → hydrate no-hit → admit a continuation capsule →
 hydrate retrieves it → close (dry run, then commit, then replay) → stale
-capsule loses to current repository state.
+capsule loses to current repository state; then task isolation, refinement
+supersession, refused supersession, lost-response retry and replay drift.
 """
 
 from __future__ import annotations
 
 import dataclasses
+import json
 import os
+import subprocess
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -24,22 +38,102 @@ from ops.graphiti.hydration.session_latches import load_close_receipt
 from ops.memory.control_plane_client import MemoryControlPlaneClient, OutcomeStatus
 from ops.memory.hydration import canonical_hydrate
 from ops.memory.namespace_context import repository_state_digest, resolve_namespace_context
-from ops.memory.runtime_binding import ENV_DEV_CHECKOUT, resolve_runtime_binding
+from ops.memory.runtime_binding import (
+    ENV_DEV_CHECKOUT,
+    ENV_INTERPRETER,
+    BindingManifest,
+    resolve_runtime_binding,
+)
 from ops.memory.session_contracts import (
     ContinuationCapsuleV2,
     continuation_from_record_metadata,
 )
 
 ROOT = Path(__file__).resolve().parents[3]
+ENV_REQUIRED = "L9_MEMORY_CROSS_REPO_REQUIRED"
+ENV_EVIDENCE = "L9_MEMORY_CROSS_REPO_EVIDENCE"
+ENV_WHEEL_SHA256 = "L9_MEMORY_WHEEL_SHA256"
+ACCEPTED_MODES = frozenset({"development_checkout", "pinned_environment"})
 
+
+def _required() -> bool:
+    return os.environ.get(ENV_REQUIRED, "").strip() in {"1", "true", "yes"}
+
+
+def _runtime_named() -> bool:
+    return bool(os.environ.get(ENV_DEV_CHECKOUT) or os.environ.get(ENV_INTERPRETER))
+
+
+# Optional locally (a unit environment has no memory runtime); mandatory under
+# L9_MEMORY_CROSS_REPO_REQUIRED=1, where an absent runtime fails the module
+# instead of skipping it — the required job must never go green by skipping.
 pytestmark = pytest.mark.skipif(
-    not os.environ.get(ENV_DEV_CHECKOUT),
-    reason=f"{ENV_DEV_CHECKOUT} unset: the cross-repo proof needs a memory checkout with .venv",
+    not _runtime_named() and not _required(),
+    reason=(
+        f"{ENV_DEV_CHECKOUT} / {ENV_INTERPRETER} unset: the cross-repo proof needs a real "
+        f"memory runtime (set {ENV_REQUIRED}=1 to make that a failure, as CI does)"
+    ),
 )
 
 
+def _cursor_head() -> str:
+    for key in ("GITHUB_SHA", "L9_CURSOR_HEAD"):
+        value = os.environ.get(key, "").strip()
+        if value:
+            return value
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(ROOT), "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return "unknown"
+    return result.stdout.strip() or "unknown"
+
+
+def _record_evidence(binding, *, test: str) -> None:
+    target = os.environ.get(ENV_EVIDENCE, "").strip()
+    if not target:
+        return
+    manifest = BindingManifest.load()
+    path = Path(target)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    existing: dict = {}
+    if path.is_file():
+        try:
+            existing = json.loads(path.read_text(encoding="utf-8"))
+        except ValueError:
+            existing = {}
+    existing.setdefault("schema", "cursor.memory-cross-repo-proof/v1")
+    existing.update(
+        {
+            "cursor_head": _cursor_head(),
+            "memory_source_ref": manifest.source_ref,
+            "memory_expected_version": manifest.expected_package_version,
+            "memory_bound_version": binding.memory_version,
+            "runtime_mode": binding.runtime_mode,
+            "binding_status": binding.status,
+            "memory_cli": binding.memory_cli,
+            "wheel_sha256": os.environ.get(ENV_WHEEL_SHA256) or None,
+            "required": _required(),
+            "provider_env_absent": not any(
+                key in os.environ for key in ("GRAPHITI_MCP_URL", "GRAPHITI_MCP_TOKEN")
+            ),
+            "recorded_at": datetime.now(UTC).isoformat(),
+        }
+    )
+    tests = list(existing.get("tests") or [])
+    if test not in tests:
+        tests.append(test)
+    existing["tests"] = tests
+    path.write_text(json.dumps(existing, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
 @pytest.fixture
-def runtime(tmp_path: Path) -> tuple[MemoryControlPlaneClient, dict[str, str]]:
+def runtime(tmp_path: Path, request) -> tuple[MemoryControlPlaneClient, dict[str, str]]:
     env = {
         **os.environ,
         "L9_MEMORY_DATA_DIR": str(tmp_path / "data"),
@@ -50,9 +144,22 @@ def runtime(tmp_path: Path) -> tuple[MemoryControlPlaneClient, dict[str, str]]:
     }
     env.pop("GRAPHITI_MCP_URL", None)
     env.pop("GRAPHITI_MCP_TOKEN", None)
+    if not _runtime_named():
+        pytest.fail(
+            f"{ENV_REQUIRED}=1 but neither {ENV_DEV_CHECKOUT} nor {ENV_INTERPRETER} names a "
+            "memory runtime: the required cross-repo proof cannot run, and must not skip"
+        )
     binding = resolve_runtime_binding(env=env)
     assert binding.ok, binding.reasons
-    assert binding.runtime_mode == "development_checkout"
+    assert binding.runtime_mode in ACCEPTED_MODES, binding.runtime_mode
+    if _required():
+        # The required job proves the *pinned* artifact; a development checkout
+        # would prove whatever is on disk there.
+        assert binding.runtime_mode == "pinned_environment", (
+            f"{ENV_REQUIRED}=1 requires the pinned wheel via {ENV_INTERPRETER}, "
+            f"got runtime_mode={binding.runtime_mode}"
+        )
+    _record_evidence(binding, test=request.node.name)
     return MemoryControlPlaneClient(binding, env=env, session_id="proof-session"), env
 
 
