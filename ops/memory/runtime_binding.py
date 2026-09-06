@@ -137,7 +137,7 @@ CANONICAL_RECEIPT_MODELS: tuple[str, ...] = (
 _SCHEMA_PROBE = r"""
 import json, sys
 names = [n for n in sys.argv[1].split(",") if n]
-out = {"schemas": {}, "module": None, "error": None, "missing": []}
+out = {"schemas": {}, "module": None, "error": None, "missing": [], "available": []}
 try:
     import importlib, pkgutil
     contracts = importlib.import_module("l9_graphite_memory.contracts")
@@ -151,6 +151,16 @@ try:
             sources.append(importlib.import_module("l9_graphite_memory.contracts." + info.name))
         except Exception:
             continue
+    seen = set()
+    for source in sources:
+        for attr in dir(source):
+            if attr.startswith("_"):
+                continue
+            candidate = getattr(source, attr, None)
+            if callable(getattr(candidate, "model_json_schema", None)) and attr not in seen:
+                seen.add(attr)
+                out["available"].append(attr)
+    out["available"].sort()
     for name in names:
         exporter = None
         for source in sources:
@@ -823,8 +833,12 @@ def _export_contract_schemas(
         detail = payload.get("error") or "the bound package exports no receipt contracts"
         return None, None, None, [f"contract schema export empty: {detail}"]
     if payload.get("missing"):
+        available = payload.get("available") or []
         reasons.append(
-            "bound release exports no schema for: " + ", ".join(sorted(payload["missing"]))
+            "bound release exports no schema for: "
+            + ", ".join(sorted(payload["missing"]))
+            + "; it exports: "
+            + (", ".join(available[:40]) if available else "(none)")
         )
     encoded = json.dumps(schemas, sort_keys=True, separators=(",", ":"), default=str)
     return (

@@ -434,10 +434,35 @@ def test_3b_an_unhashed_install_names_the_record_digest_to_pin(tmp_path: Path, m
     """uv installing a local wheel records no PEP 610 archive hash, so the
     reason has to say what *can* be pinned instead of what is missing."""
     monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
-    binding = bind(Environment(tmp_path, artifact_sha256=None, record_digest="e" * 64))
+    manifest = tmp_path / "binding.json"
+    _manifest_with(manifest, installed_record_digest=None)
+    env = Environment(tmp_path / "env", artifact_sha256=None, record_digest="e" * 64)
+    binding = bind(env, manifest_path=manifest)
     assert binding.status == rb.STATUS_COMPATIBLE
     assert binding.installed_artifact_digest == "e" * 64
     assert any("installed_record_digest" in r and "e" * 64 in r for r in binding.reasons)
+
+
+def test_3c_a_record_digest_that_disagrees_with_the_pin_is_refused(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """The manifest pins the audited wheel's RECORD digest, so a different
+    build installed under the same version is a contradiction, not a
+    compatible one."""
+    monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
+    binding = bind(Environment(tmp_path, artifact_sha256=None, record_digest="e" * 64))
+    assert binding.status == rb.STATUS_UNBOUND
+    assert any("same version, different build" in r for r in binding.reasons)
+
+
+def test_3d_the_pinned_record_digest_binds_exactly(tmp_path: Path, monkeypatch) -> None:
+    """The production path in CI: no PEP 610 hash, RECORD digest matches the pin."""
+    monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
+    pinned = rb.BindingManifest.load().installed_record_digest
+    assert pinned, "the manifest must pin the audited wheel's installed RECORD digest"
+    binding = bind(Environment(tmp_path, artifact_sha256=None, record_digest=pinned))
+    assert binding.status == rb.STATUS_EXACT
+    assert binding.artifact_provenance == rb.PROVENANCE_RECORD_DIGEST
 
 
 def test_4_wrong_version_is_still_rejected(tmp_path: Path) -> None:
@@ -523,7 +548,7 @@ def test_12_a_manifest_without_a_digest_cannot_yield_exact(tmp_path: Path, monke
     status says so rather than borrowing the name."""
     monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
     manifest = tmp_path / "binding.json"
-    _manifest_with(manifest, artifact_sha256=None)
+    _manifest_with(manifest, artifact_sha256=None, installed_record_digest=None)
     binding = bind(Environment(tmp_path / "env"), manifest_path=manifest)
     assert binding.status == rb.STATUS_COMPATIBLE
     assert any("records no artifact digest" in r for r in binding.reasons)
@@ -622,3 +647,36 @@ def test_probe_reports_an_absent_contracts_package(tmp_path: Path) -> None:
     payload = _run_probe(tmp_path / "empty", ["CloseReceipt"])
     assert payload["schemas"] == {}
     assert payload["error"] and "ModuleNotFoundError" in payload["error"]
+
+
+def test_probe_reports_every_model_the_release_exports(tmp_path: Path) -> None:
+    """A name Cursor guessed wrong must be diagnosable, not mute: the probe
+    lists what the package actually exports alongside what it could not find."""
+    root = tmp_path / "site"
+    pkg = root / "l9_graphite_memory" / "contracts"
+    pkg.mkdir(parents=True)
+    (root / "l9_graphite_memory" / "__init__.py").write_text("", encoding="utf-8")
+    (pkg / "__init__.py").write_text(
+        "class MemoryHealth:\n"
+        "    @staticmethod\n"
+        "    def model_json_schema():\n"
+        "        return {'title': 'MemoryHealth'}\n",
+        encoding="utf-8",
+    )
+    payload = _run_probe(root, ["HealthReceipt"])
+    assert payload["missing"] == ["HealthReceipt"]
+    assert "MemoryHealth" in payload["available"]
+
+
+def test_binding_reasons_name_what_the_release_exports(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
+    export = {
+        "schemas": {"CloseReceipt": {"type": "object"}},
+        "module": "contracts/__init__.py",
+        "error": None,
+        "missing": ["HealthReceipt"],
+        "available": ["CloseReceipt", "MemoryHealth"],
+    }
+    binding = bind(Environment(tmp_path, schema_export=export))
+    reason = next(r for r in binding.reasons if "exports no schema for" in r)
+    assert "HealthReceipt" in reason and "MemoryHealth" in reason

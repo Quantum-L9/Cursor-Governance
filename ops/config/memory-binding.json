@@ -58,8 +58,9 @@
       "v2.3.0 tag on Quantum-L9/l9-graphiti-memory (after #56 merges)",
       "uv.lock pin of the released artifact (replaces the git SHA source)"
     ],
-    "installed_record_digest": null,
+    "installed_record_digest": "7c875776cbcf7c1efa7546212bdfe1e3083543c4cf0d2b5f111a6d3ad665080b",
     "release_tag": null,
-    "artifact_provenance_note": "artifact_sha256 is the wheel digest the audited release was built to; runtime_binding verifies it against the installed distribution's PEP 610 direct_url.json archive hash and only then reports binding_status=exact. installed_record_digest is the fallback proof for an install that left no archive hash (digest over the installed RECORD). With neither provable the status is 'compatible', never 'exact'. release_tag stays null until v2.3.0 is cut on Quantum-L9/l9-graphiti-memory."
+    "artifact_provenance_note": "artifact_sha256 is the wheel digest the audited release was built to; runtime_binding verifies it against the installed distribution's PEP 610 direct_url.json archive hash and only then reports binding_status=exact. installed_record_digest is the fallback proof for an install that left no archive hash (digest over the installed RECORD). With neither provable the status is 'compatible', never 'exact'. release_tag stays null until v2.3.0 is cut on Quantum-L9/l9-graphiti-memory.",
+    "installed_record_digest_note": "Digest over the installed RECORD of the wheel whose sha256 is artifact_sha256 above, computed by the memory-cross-repo workflow run on Cursor head 31b4dbcd after that run independently rebuilt the wheel from source.ref and refused a sha256 mismatch. uv records no PEP 610 archive hash for a local-file install, so this is the provenance runtime_binding can verify in place; installer-written dist-info entries are excluded so the digest identifies the wheel rather than the installation."
   }
 }
