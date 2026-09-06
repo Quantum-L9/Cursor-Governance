@@ -220,6 +220,84 @@ class HydrationReceipt:
 
 
 @dataclass(frozen=True)
+class SearchRecordView:
+    """The canonical record inside a search hit (full metadata, never a summary)."""
+
+    record_id: str
+    namespace: str
+    memory_class: str
+    state: str
+    content: str
+    tags: tuple[str, ...]
+    metadata: dict[str, Any]
+    created_at: str | None
+    recorded_at: str | None
+    raw: dict[str, Any] = field(repr=False)
+
+    @classmethod
+    def parse(cls, raw: dict[str, Any]) -> SearchRecordView:
+        _require(raw, "record_id", "namespace", "memory_class")
+        temporal = raw.get("temporal") or {}
+        metadata = raw.get("metadata")
+        return cls(
+            record_id=str(raw["record_id"]),
+            namespace=str(raw["namespace"]),
+            memory_class=str(raw["memory_class"]),
+            state=str(raw.get("state") or ""),
+            content=str(raw.get("content") or ""),
+            tags=tuple(str(item) for item in raw.get("tags") or ()),
+            metadata=dict(metadata) if isinstance(metadata, dict) else {},
+            created_at=_optional_str(raw.get("created_at")),
+            recorded_at=_optional_str(temporal.get("recorded_at")) if temporal else None,
+            raw=raw,
+        )
+
+
+@dataclass(frozen=True)
+class SearchHitView:
+    record: SearchRecordView
+    score: float
+    matched_by: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class SearchReceipt:
+    receipt_id: str
+    status: str
+    query: str
+    namespaces_authorized: tuple[str, ...]
+    hits: tuple[SearchHitView, ...]
+    raw: dict[str, Any] = field(repr=False)
+
+    @classmethod
+    def parse(cls, raw: dict[str, Any]) -> SearchReceipt:
+        _require(raw, "receipt_id", "status", "query", "namespaces_authorized")
+        hits: list[SearchHitView] = []
+        for item in raw.get("hits") or []:
+            if not isinstance(item, dict) or not isinstance(item.get("record"), dict):
+                raise InvalidReceiptError("search hit without a record")
+            hits.append(
+                SearchHitView(
+                    record=SearchRecordView.parse(item["record"]),
+                    score=float(item.get("score") or 0.0),
+                    matched_by=tuple(str(value) for value in item.get("matched_by") or ()),
+                )
+            )
+        return cls(
+            receipt_id=str(raw["receipt_id"]),
+            status=str(raw["status"]),
+            query=str(raw["query"]),
+            namespaces_authorized=tuple(str(v) for v in raw["namespaces_authorized"]),
+            hits=tuple(hits),
+            raw=raw,
+        )
+
+    @property
+    def has_hits(self) -> bool:
+        return bool(self.hits)
+
+
+@dataclass(frozen=True)
 class CandidateReceipt:
     status: str
     candidate_id: str
@@ -367,6 +445,9 @@ __all__ = [
     "PhaseLockReceipt",
     "PhaseLockVerificationReceipt",
     "ResolveReceipt",
+    "SearchHitView",
+    "SearchReceipt",
+    "SearchRecordView",
     "result_digest",
     "validate_against_contract",
 ]

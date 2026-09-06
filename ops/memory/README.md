@@ -1,10 +1,12 @@
 # `ops/memory` — the Cursor memory boundary
 
 Campaign: **Cursor-Governance ↔ l9-graphiti-memory canonical realignment**
-(`CURSOR_GOVERNANCE_MEMORY_CONTROL_PLANE_REALIGNMENT_BUILD_PLAN`). This
-package is stage **C1 — dependency and egress foundation**. No lifecycle
-cutover happens here; `ops/graphiti/` still serves SessionStart/SessionEnd
-until C3–C6.
+(`CURSOR_GOVERNANCE_MEMORY_CONTROL_PLANE_REALIGNMENT_BUILD_PLAN`). Stage
+**C4**: canonical hydration is the SessionStart authority. The legacy
+provider read survives only as a migration-only shadow diagnostic
+(`MEMORY_LEGACY_SHADOW=1`) and gap-filler tagged `legacy_unverified`
+(`MEMORY_LEGACY_CONTINUATION=1`), both off by default and deleted at C11.
+SessionEnd still uses the legacy close until C5/C6.
 
 ## Rule
 
@@ -17,7 +19,10 @@ authority. Cursor-Governance never knows how to call Graphiti.
 Cursor / Claude lifecycle
         │
         ▼
-Cursor session composition           (ops/graphiti/hydration — unchanged at C1)
+Cursor session composition           (ops/graphiti/hydration/compile_session_packet.py)
+        │
+        ▼
+canonical_hydrate                    (ops/memory/hydration.py)
         │
         ▼
 MemoryControlPlaneClient            (ops/memory/control_plane_client.py)
@@ -38,6 +43,8 @@ MemoryService  →  canonical store  →  outbox  →  optional Graphiti project
 | `receipts.py` | consumer-side views over canonical receipts (`raw` kept) | a second schema |
 | `namespace_context.py` | repository identity, write hint (exactly one), read hints incl. the registry's `shared_read_namespaces`; the sole producer since C2 (`ops/graphiti/group_resolver.py` is a shim over the same matching until C11) | any grant or denial |
 | `session_contracts.py` | `ContinuationCapsuleV2` (`cursor.continuation/v2`), governed-candidate envelope | provider vocabulary |
+| `hydration.py` | `canonical_hydrate`: health → hydrate (fan-in requested, narrowed on denial) → tag-selected continuation records → newest valid capsule as evidence, stale when HEAD moved | provider search, gap-filling from a projection, reviving superseded records |
+| `session_state.py` | `~/.cursor/l9-memory-session-state/<session>.json`: session id, task signature, namespace request, receipt digests; `authority: none` | any claim of memory truth |
 | `diagnostics.py` | readiness R0 `PACKAGE_BOUND` … R9 `PROJECTION_READY` | "Graphiti is up" == healthy |
 
 ## Binding (INV-11)

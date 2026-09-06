@@ -183,3 +183,63 @@ def health_payload(
         "outbox_backlog": 0,
         "degraded_reasons": [] if status == "complete" else ["degraded"],
     }
+
+
+def continuation_record(
+    *,
+    record_id: str = "66666666-6666-6666-6666-666666666666",
+    session_id: str = "session-41",
+    repository_state_digest: str = "c" * 40,
+    created_at: str = "2026-09-05T00:00:00+00:00",
+    next_action: str = "Wire runtime binding",
+    payload_override: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """A canonical record as `search` returns it, carrying a continuation capsule."""
+
+    capsule = {
+        "schema": "cursor.continuation/v2",
+        "session_id": session_id,
+        "repository_identity": "Quantum-L9/Cursor-Governance",
+        "task_signature": "0123456789abcdef0123456789abcdef",
+        "objective": "Realign memory control plane",
+        "next_action": next_action,
+        "active_files": ["ops/memory/runtime_binding.py"],
+        "blockers": [],
+        "decisions": ["CLI is the hook transport"],
+        "unfinished_work": ["egress scanner"],
+        "repository_state_digest": repository_state_digest,
+        "producer": "Cursor-Governance",
+        "producer_version": "2.0.0",
+        "created_at": created_at,
+    }
+    if payload_override is not None:
+        capsule = payload_override
+    return {
+        "record_id": record_id,
+        "namespace": "cursor-governance",
+        "memory_class": "semantic",
+        "state": "active",
+        "content": f"Realign memory control plane | next: {next_action}",
+        "tags": ["generated-data", "session_continuation"],
+        "metadata": {
+            "payload_schema": "cursor.continuation/v2",
+            "structured_payload": capsule,
+            "producer": "Cursor-Governance",
+            "primary_class": "session_continuation",
+        },
+        "created_at": created_at,
+        "temporal": {"recorded_at": created_at, "valid_from": created_at, "valid_to": None},
+    }
+
+
+def search_payload(*records: dict[str, Any], status: str = "complete") -> dict[str, Any]:
+    return {
+        "receipt_id": "77777777-7777-7777-7777-777777777777",
+        "status": status,
+        "query": "task",
+        "namespaces_authorized": ["cursor-governance"],
+        "hits": [
+            {"record": record, "score": 0.8, "matched_by": ["canonical-store", "tag"]}
+            for record in records
+        ],
+    }

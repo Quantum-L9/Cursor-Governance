@@ -541,11 +541,12 @@ if [ -n "$RUNTIME_REPORTER" ] && [ -f "$RUNTIME_REPORTER" ]; then
   rm -f "$RUNTIME_ERR"
 fi
 
-# compile_session_packet.py already emits ### Graphiti hydrate. Do not wrap twice.
+# compile_session_packet.py already emits its own heading (### memory hydrate since
+# stage C4; ### Graphiti hydrate before it). Do not wrap twice.
 HYDRATE_BLOCK="$HYDRATE_MD"
 case "$HYDRATE_MD" in
-  *"### Graphiti hydrate"*) ;;
-  *) HYDRATE_BLOCK="### Graphiti hydrate
+  *"### memory hydrate"*|*"### Graphiti hydrate"*) ;;
+  *) HYDRATE_BLOCK="### memory hydrate
 ${HYDRATE_MD}" ;;
 esac
 

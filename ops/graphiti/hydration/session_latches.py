@@ -75,6 +75,12 @@ def closes_dir(project_dir: Path) -> str:
     return _bounded_child(_memory_dir(project_dir), "closes")
 
 
+def shadow_dir(project_dir: Path) -> str:
+    """Discrepancy receipts from the migration-only legacy shadow read (plan §11)."""
+
+    return _bounded_child(_memory_dir(project_dir), "shadow")
+
+
 def last_opened_path(project_dir: Path) -> str:
     return _bounded_child(_memory_dir(project_dir), "last_opened.json")
 

@@ -71,50 +71,106 @@ def test_transcript_cap_and_redact(tmp_path):
     assert "EMAIL_REDACTED" in text
 
 
-def test_compile_packet_fail_open(monkeypatch, tmp_path):
-    monkeypatch.setattr(
-        comp,
-        "resolve_group_id",
-        lambda p: {"group_id": "cursor-governance", "readonly": False},
+# ---------------------------------------------------------------------------
+# Canonical hydration stubs (stage C4: the packet's evidence comes from
+# ops.memory.hydration, never from a provider search)
+# ---------------------------------------------------------------------------
+
+from ops.memory import hydration as hyd  # noqa: E402
+from ops.memory.namespace_context import NamespaceContext  # noqa: E402
+from ops.memory.session_contracts import ContinuationCapsuleV2  # noqa: E402
+
+
+def _context(namespace="cursor-governance"):
+    return NamespaceContext(
+        workspace="/w",
+        git_root="/w",
+        repository_identity="Quantum-L9/Cursor-Governance",
+        write_namespace_hint=namespace,
+        read_namespace_hints=(namespace, "l9-workspace"),
+        method="registry",
     )
-    monkeypatch.setattr(comp, "_search_facts", lambda *a, **k: [])
+
+
+def _hydration(status="NO_HITS", *, continuation=None, error=None, record_ids=(), sections=()):
+    return hyd.CanonicalHydration(
+        status=status,
+        namespace_context=_context(),
+        requested_namespaces=("cursor-governance",),
+        repository_state_digest="a" * 40,
+        task_signature="sig",
+        context_sections=tuple(sections),
+        record_ids=tuple(record_ids),
+        continuation=continuation,
+        error=error,
+        calls=3,
+    )
+
+
+def _continuation(*, stale=False, next_action="Run unit tests then install hooks"):
+    capsule = ContinuationCapsuleV2(
+        session_id="sess-prev",
+        repository_identity="Quantum-L9/Cursor-Governance",
+        objective="Ship hydrate pipeline",
+        next_action=next_action,
+        repository_state_digest="b" * 40 if stale else "a" * 40,
+        producer_version="2.0.0",
+    )
+    return hyd.ContinuationEvidence(
+        record_id="66666666-6666-6666-6666-666666666666",
+        capsule=capsule,
+        stale=stale,
+        recorded_at="2026-09-05T00:00:00+00:00",
+    )
+
+
+def _canonical(monkeypatch, tmp_path, hydration):
+    monkeypatch.setenv("L9_MEMORY_SESSION_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.setattr(comp, "canonical_hydrate", lambda *a, **k: hydration)
+
+
+def test_compile_packet_fail_open(monkeypatch, tmp_path):
+    """A clean canonical no-hit is a normal empty answer, not a degraded session."""
+    _canonical(monkeypatch, tmp_path, _hydration("NO_HITS"))
     packet = comp.compile_session_packet(
         project_dir=tmp_path, conversation_id="sess-1", agent_id="cursor"
     )
     assert packet["agent_id"] == "cursor"
+    assert packet["group_id"] == "cursor-governance"
     assert packet["next_action_contract"]["next_action"]
-    assert "hydrate_stats" in packet
+    assert packet["degraded"] is False
     assert packet["hydrate_stats"]["facts_returned"] == 0
-    assert packet["hydrate_stats"]["search_queries_used"] >= 1
-    assert packet["hydrate_stats"]["degrade_reason"] == "empty PICKUP search"
+    assert packet["hydrate_stats"]["memory_status"] == "NO_HITS"
+    assert packet["hydrate_stats"]["search_queries_used"] == 3
+    assert packet["memory"]["transport"] == "cli"
     ctx = comp.format_additional_context(packet)
+    assert ctx.startswith("### memory hydrate")
     assert "next=" in ctx
     assert "facts_returned=" in ctx
+    assert "status=NO_HITS" in ctx
     assert "memory-bank" not in ctx
     assert "hydrate_stats" in ctx
+    assert (tmp_path / "state").is_dir()
 
 
 def test_compile_packet_transport_failure_is_not_empty_search(monkeypatch, tmp_path):
-    monkeypatch.setattr(
-        comp,
-        "resolve_group_id",
-        lambda p: {"group_id": "cursor-governance", "readonly": False},
+    """CANONICAL_UNAVAILABLE is never collapsed into an empty answer (S-07)."""
+    _canonical(
+        monkeypatch,
+        tmp_path,
+        _hydration("CANONICAL_UNAVAILABLE", error="StoreError: store unreachable"),
     )
-
-    def _raise(*_a, **_k):
-        raise comp.SearchFactsError("connection refused")
-
-    monkeypatch.setattr(comp, "_search_facts", _raise)
     packet = comp.compile_session_packet(
         project_dir=tmp_path, conversation_id="sess-unreachable", agent_id="cursor"
     )
     reason = packet["hydrate_stats"]["degrade_reason"]
     assert packet["degraded"] is True
-    assert reason.startswith("PICKUP search unreachable:")
-    assert "empty PICKUP search" not in reason
+    assert reason.startswith("CANONICAL_UNAVAILABLE:")
+    assert "store unreachable" in reason
+    assert "unavailable" in packet["active_objective"].lower()
     ctx = comp.format_additional_context(packet)
-    assert "PICKUP search unreachable" in ctx
-    assert "empty PICKUP search" not in ctx
+    assert "CANONICAL_UNAVAILABLE" in ctx
+    assert "status=CANONICAL_UNAVAILABLE DEGRADED" in ctx
 
 
 def test_search_facts_raising_client_is_unreachable(monkeypatch):
@@ -133,39 +189,90 @@ def test_search_facts_raising_client_is_unreachable(monkeypatch):
 
 
 def test_compile_packet_with_pickup(monkeypatch, tmp_path):
-    monkeypatch.setattr(
-        comp,
-        "resolve_group_id",
-        lambda p: {"group_id": "cursor-governance", "readonly": False},
-    )
-    monkeypatch.setattr(
-        comp,
-        "_search_facts",
-        lambda *a, **k: [
-            {
-                "fact": json.dumps(
-                    {
-                        "type": "PICKUP",
-                        "active_objective": "Ship hydrate pipeline",
-                        "next_action": "Run unit tests then install hooks",
-                    }
-                )
-            }
-        ],
+    """A typed canonical continuation drives objective, next action, and anchors."""
+    _canonical(
+        monkeypatch,
+        tmp_path,
+        _hydration(
+            "OK",
+            continuation=_continuation(),
+            record_ids=("66666666-6666-6666-6666-666666666666",),
+            sections=(("semantic", "Realign memory control plane | next: Run unit tests"),),
+        ),
     )
     packet = comp.compile_session_packet(
         project_dir=tmp_path, conversation_id="sess-2", agent_id="cursor"
     )
     assert packet["active_objective"] == "Ship hydrate pipeline"
     assert "Run unit tests" in packet["next_action_contract"]["next_action"]
+    assert "canonical continuation 66666666" in packet["next_action_contract"]["rationale"]
+    assert packet["anchors"] == []
     assert packet["hydrate_stats"]["facts_returned"] == 1
     assert packet["hydrate_stats"]["pickup_parsed"] is True
+    assert packet["hydrate_stats"]["continuation_source"] == "canonical"
+    assert packet["hydrate_stats"]["continuation_stale"] is False
     ctx = comp.format_additional_context(packet)
     assert "next=" in ctx
     assert "facts_returned=1" in ctx
     assert "pickup_parsed=yes" in ctx
+    assert "continuation: record=66666666 source=canonical" in ctx
     assert "memory-bank" not in ctx
     assert '"hydrate_stats"' in ctx
+
+
+def test_compile_packet_stale_continuation_says_repository_wins(monkeypatch, tmp_path):
+    _canonical(monkeypatch, tmp_path, _hydration("OK", continuation=_continuation(stale=True)))
+    packet = comp.compile_session_packet(
+        project_dir=tmp_path, conversation_id="sess-3", agent_id="cursor"
+    )
+    assert packet["hydrate_stats"]["continuation_stale"] is True
+    assert "STALE" in packet["next_action_contract"]["rationale"]
+    assert "current git state wins" in packet["next_action_contract"]["rationale"]
+    assert " STALE" in comp.format_additional_context(packet)
+
+
+def test_compile_packet_never_reads_the_legacy_provider_by_default(monkeypatch, tmp_path):
+    _canonical(monkeypatch, tmp_path, _hydration("NO_HITS"))
+    monkeypatch.delenv("MEMORY_LEGACY_SHADOW", raising=False)
+    monkeypatch.delenv("MEMORY_LEGACY_CONTINUATION", raising=False)
+
+    def _boom(*_a, **_k):
+        raise AssertionError("legacy provider read must not run")
+
+    monkeypatch.setattr(comp, "_search_facts", _boom)
+    packet = comp.compile_session_packet(
+        project_dir=tmp_path, conversation_id="sess-4", agent_id="cursor"
+    )
+    assert "shadow" not in packet["memory"]
+
+
+def test_legacy_continuation_is_tagged_unverified_and_only_fills_a_gap(monkeypatch, tmp_path):
+    """Migration window (plan 13): the legacy read may fill a canonical gap, never replace."""
+    monkeypatch.setenv("MEMORY_LEGACY_CONTINUATION", "1")
+    monkeypatch.setattr(
+        comp,
+        "_search_facts",
+        lambda *a, **k: [{"fact": "PICKUP|objective=Old objective|next=Old next|session=x"}],
+    )
+    _canonical(monkeypatch, tmp_path, _hydration("NO_HITS"))
+    packet = comp.compile_session_packet(
+        project_dir=tmp_path, conversation_id="sess-5", agent_id="cursor"
+    )
+    assert packet["active_objective"] == "Old objective"
+    assert packet["next_action_contract"]["next_action"] == "Old next"
+    assert packet["hydrate_stats"]["continuation_source"] == "legacy_unverified"
+    assert packet["memory"]["shadow"]["agreement"] == "legacy_only"
+    assert packet["memory"]["shadow"]["authority"] == "canonical"
+    assert (tmp_path / ".l9" / "memory" / "shadow" / "sess-5.json").is_file()
+
+    # A canonical continuation is never displaced by the legacy read.
+    _canonical(monkeypatch, tmp_path, _hydration("OK", continuation=_continuation()))
+    packet = comp.compile_session_packet(
+        project_dir=tmp_path, conversation_id="sess-6", agent_id="cursor"
+    )
+    assert packet["active_objective"] == "Ship hydrate pipeline"
+    assert packet["hydrate_stats"]["continuation_source"] == "canonical"
+    assert packet["memory"]["shadow"]["agreement"] == "differs"
 
 
 def test_extract_pickup_pipe_line():
@@ -451,12 +558,7 @@ def test_compile_close_gap_missing_receipt(monkeypatch, tmp_path):
 
     write_open_latch(tmp_path, "old-sess", background=False)
     write_open_latch(tmp_path, "new-sess", background=False)
-    monkeypatch.setattr(
-        comp,
-        "resolve_group_id",
-        lambda p: {"group_id": "cursor-governance", "readonly": False},
-    )
-    monkeypatch.setattr(comp, "_search_facts", lambda *a, **k: [])
+    _canonical(monkeypatch, tmp_path, _hydration("NO_HITS"))
     packet = comp.compile_session_packet(
         project_dir=tmp_path, conversation_id="new-sess", agent_id="cursor"
     )
@@ -477,12 +579,7 @@ def test_compile_close_gap_write_count_zero(monkeypatch, tmp_path):
         {"status": "close_failed", "write_count": 0, "phase_a": False},
     )
     write_open_latch(tmp_path, "new-zero", background=False)
-    monkeypatch.setattr(
-        comp,
-        "resolve_group_id",
-        lambda p: {"group_id": "cursor-governance", "readonly": False},
-    )
-    monkeypatch.setattr(comp, "_search_facts", lambda *a, **k: [])
+    _canonical(monkeypatch, tmp_path, _hydration("NO_HITS"))
     packet = comp.compile_session_packet(
         project_dir=tmp_path, conversation_id="new-zero", agent_id="cursor"
     )
@@ -500,18 +597,7 @@ def test_compile_enqueue_failed_is_not_close_gap(monkeypatch, tmp_path):
         {"status": "closed_enqueue_failed", "write_count": 2, "phase_a": True},
     )
     write_open_latch(tmp_path, "new-enq", background=False)
-    monkeypatch.setattr(
-        comp,
-        "resolve_group_id",
-        lambda p: {"group_id": "cursor-governance", "readonly": False},
-    )
-
-    def _facts(_gid, query, **_k):
-        if "old-enq" in str(query):
-            return [{"fact": "PICKUP|session=old-enq|next=continue"}]
-        return []
-
-    monkeypatch.setattr(comp, "_search_facts", _facts)
+    _canonical(monkeypatch, tmp_path, _hydration("OK", continuation=_continuation()))
     packet = comp.compile_session_packet(
         project_dir=tmp_path, conversation_id="new-enq", agent_id="cursor"
     )
@@ -521,17 +607,13 @@ def test_compile_enqueue_failed_is_not_close_gap(monkeypatch, tmp_path):
 
 
 def test_compile_first_session_no_receipt_gap(monkeypatch, tmp_path):
-    monkeypatch.setattr(
-        comp,
-        "resolve_group_id",
-        lambda p: {"group_id": "cursor-governance", "readonly": False},
-    )
-    monkeypatch.setattr(comp, "_search_facts", lambda *a, **k: [])
+    _canonical(monkeypatch, tmp_path, _hydration("NO_HITS"))
     packet = comp.compile_session_packet(
         project_dir=tmp_path, conversation_id="first", agent_id="cursor"
     )
     assert packet.get("close_gap") is False
-    assert packet["hydrate_stats"]["degrade_reason"] == "empty PICKUP search"
+    assert packet["hydrate_stats"]["degrade_reason"] == ""
+    assert packet["hydrate_stats"]["memory_status"] == "NO_HITS"
     assert not comp.format_additional_context(packet).startswith("DEGRADED")
 
 

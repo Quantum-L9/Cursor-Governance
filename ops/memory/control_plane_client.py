@@ -32,6 +32,7 @@ from ops.memory.receipts import (
     PhaseLockReceipt,
     PhaseLockVerificationReceipt,
     ResolveReceipt,
+    SearchReceipt,
     result_digest,
 )
 from ops.memory.runtime_binding import Runner, RuntimeBinding, default_runner
@@ -317,6 +318,66 @@ class MemoryControlPlaneClient:
             status = OutcomeStatus.NO_HITS
         return self._outcome(
             "hydrate", status, raw, receipt, namespaces=namespaces, task_signature=task_signature
+        )
+
+    def search(
+        self,
+        query: str,
+        *,
+        workspace: str,
+        write_namespace_hint: str | None,
+        read_namespace_hints: Sequence[str],
+        tags: Sequence[str] = (),
+        limit: int = 10,
+        memory_classes: Sequence[str] = (),
+        task_signature: str | None = None,
+    ) -> OperationOutcome:
+        """Canonical search returning full records (the typed-continuation path).
+
+        ``tags`` is a selector memory applies (every tag required), so a
+        consumer can retrieve its ``session_continuation`` records without
+        depending on query text. Read fan-in is requested; memory authorizes.
+        """
+
+        if guard := self._guard("search"):
+            return guard
+        argv = ["search", query, "--limit", str(limit)]
+        if write_namespace_hint:
+            argv += ["--group-id", write_namespace_hint]
+        for namespace in read_namespace_hints:
+            argv += ["--namespace", namespace]
+        for memory_class in memory_classes:
+            argv += ["--memory-class", memory_class]
+        for tag in tags:
+            argv += ["--tag", tag]
+        raw = self._invoke(argv, cwd=workspace)
+        namespaces = tuple(read_namespace_hints)
+        if raw.payload is None:
+            return self._outcome(
+                "search",
+                self._classify_failure(raw),
+                raw,
+                namespaces=namespaces,
+                task_signature=task_signature,
+            )
+        try:
+            receipt = SearchReceipt.parse(raw.payload)
+        except InvalidReceiptError as exc:
+            return self._outcome(
+                "search",
+                OutcomeStatus.INVALID_RECEIPT,
+                _err(raw, exc),
+                namespaces=namespaces,
+                task_signature=task_signature,
+            )
+        if receipt.status == "failed":
+            status = OutcomeStatus.CANONICAL_UNAVAILABLE
+        elif receipt.has_hits:
+            status = OutcomeStatus.OK
+        else:
+            status = OutcomeStatus.NO_HITS
+        return self._outcome(
+            "search", status, raw, receipt, namespaces=namespaces, task_signature=task_signature
         )
 
     def ingest_candidate(self, candidate: Mapping[str, Any], *, workspace: str) -> OperationOutcome:

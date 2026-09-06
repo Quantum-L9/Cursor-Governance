@@ -19,6 +19,7 @@ from pathlib import Path
 import pytest
 
 from ops.memory.control_plane_client import MemoryControlPlaneClient, OutcomeStatus
+from ops.memory.hydration import canonical_hydrate
 from ops.memory.namespace_context import repository_state_digest, resolve_namespace_context
 from ops.memory.runtime_binding import ENV_DEV_CHECKOUT, resolve_runtime_binding
 from ops.memory.session_contracts import (
@@ -141,3 +142,51 @@ def test_lifecycle_against_the_real_memory_runtime(runtime, tmp_path: Path) -> N
         read_namespace_hints=(namespace, "some-other-repo"),
     )
     assert denied.status is OutcomeStatus.UNAUTHORIZED_NAMESPACE
+
+    # Read fan-in to memory's shared namespace is a request memory grants (C2).
+    shared = client.hydrate(
+        "anything",
+        workspace=workspace,
+        write_namespace_hint=namespace,
+        read_namespace_hints=tuple(context.read_namespace_hints),
+    )
+    assert shared.status in {OutcomeStatus.OK, OutcomeStatus.NO_HITS}, shared.error
+    assert "l9-workspace" in context.read_namespace_hints
+
+    # Steps 20-23 (plan §35): a new session hydrates canonically, recovers the
+    # continuation in the right namespace, and current repository truth wins
+    # over a newer but stale capsule.
+    resumed = canonical_hydrate(ROOT, task="Resume session", client=client, session_id="next")
+    assert resumed.status == "OK", resumed.error
+    assert resumed.namespace_context.write_namespace_hint == namespace
+    assert resumed.continuation is not None
+    assert resumed.continuation.record_id == admitted.receipt.record_id
+    assert resumed.continuation.capsule == capsule
+    assert resumed.continuation.stale is False
+    assert resumed.repository_state_digest == head
+
+    stale_capsule = ContinuationCapsuleV2(
+        session_id="proof-session-2",
+        repository_identity=capsule.repository_identity,
+        objective="Realign memory control plane",
+        next_action="Edit a file that has since moved on",
+        repository_state_digest="0" * 40,
+        producer_version="2.0.0",
+    )
+    stale_admitted = client.ingest_candidate(
+        stale_capsule.to_governed_candidate(
+            namespace=namespace, source_sha=head, agent_id="cursor"
+        ),
+        workspace=workspace,
+    )
+    assert stale_admitted.ok, stale_admitted.error
+    resumed_again = canonical_hydrate(
+        ROOT, task="Resume session", client=client, session_id="next-2"
+    )
+    assert resumed_again.continuation is not None
+    assert resumed_again.continuation.record_id == stale_admitted.receipt.record_id
+    assert resumed_again.continuation.stale is True
+    assert resumed_again.continuation_candidates == 2
+    # No provider vocabulary reached the boundary at any point.
+    for args, _cwd, _stdin in getattr(client, "calls", []):
+        assert "add_memory" not in " ".join(args)
