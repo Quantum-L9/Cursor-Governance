@@ -11,7 +11,8 @@
 #      development checkout, never whatever l9-memory is on PATH
 #   4. run tests/ops/memory/test_cross_repo_lifecycle.py with
 #      L9_MEMORY_CROSS_REPO_REQUIRED=1 (an absent runtime FAILS, never skips)
-#      and no provider connection material in the environment
+#      after asserting no provider connection variable is in the environment
+#      (the suite additionally strips them from the runtime's child env)
 #   5. record Cursor SHA, memory SHA, package version, wheel digest and the
 #      test outcome in the job summary and as an artifact
 #
@@ -170,12 +171,15 @@ jobs:
           L9_MEMORY_CROSS_REPO_REQUIRED: "1"
           L9_MEMORY_CROSS_REPO_EVIDENCE: ${{ runner.temp }}/memory-cross-repo-proof.json
           L9_MEMORY_WHEEL_SHA256: ${{ steps.wheel.outputs.sha256 }}
-          GRAPHITI_MCP_URL: ""
-          GRAPHITI_MCP_TOKEN: ""
         run: |
           set -euo pipefail
-          # An empty value is still "present" to the shell; remove both outright.
-          unset GRAPHITI_MCP_URL GRAPHITI_MCP_TOKEN
+          # The point of the proof: no provider connection material reaches the
+          # memory path. The runner defines none; refuse to proceed if any
+          # provider-prefixed variable is present rather than silently unsetting it.
+          if env | grep -q '^GRAPHITI_MCP_'; then
+            echo "::error::a provider connection variable is present in the job environment"
+            exit 1
+          fi
           uv run --frozen --no-build python -m pytest \
             tests/ops/memory/test_cross_repo_lifecycle.py \
             -p no:cacheprovider -rA \
@@ -218,7 +222,7 @@ jobs:
             echo "| Artifact | \`${ARTIFACT}\` |"
             echo "| Artifact sha256 (rebuilt here) | \`${WHEEL_SHA256:-not built}\` |"
             echo "| Runtime mode | pinned_environment (L9_MEMORY_INTERPRETER) |"
-            echo "| Provider env | GRAPHITI_MCP_URL / GRAPHITI_MCP_TOKEN absent |"
+            echo "| Provider env | no provider connection variable present (asserted before the proof) |"
             echo "| Job outcome | ${OUTCOME} |"
             echo
             if [ -f "${evidence}" ]; then
