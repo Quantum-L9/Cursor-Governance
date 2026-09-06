@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .common import ControllerError, load_json, parse_time
+from .common import ControllerError, parse_time
 
 GATE_EVALUATOR_VERSION = "pec.gate-evaluator.v1"
 
@@ -110,11 +110,14 @@ def _verification_is_current(db: Any, item: dict[str, Any], program_digest: str 
     recorded, and have been produced under the current Program Lock.
     """
     source = Path(str(item.get("source") or ""))
-    if not source.is_file():
-        return False
-    try:
-        receipt = load_json(source)
-    except (OSError, ValueError):
+    receipt: dict[str, Any] | None = None
+    lookup = getattr(db, "receipt_by_artifact", None)
+    if callable(lookup):
+        record = lookup(str(source))
+        if record is not None:
+            receipt = dict(record["payload"])
+    if receipt is None:
+        # No canonical record: the file alone is not evidence (R8).
         return False
     if str(receipt.get("receipt_digest") or "") != str(item.get("digest") or ""):
         return False

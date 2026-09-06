@@ -15,7 +15,8 @@ from .common import verification_mechanisms_from_card
 #:   2  tasks.verification_mechanisms column (implicit: column present)
 #:   3  explicit version key + Controller transactions (PEC remediation R3)
 #:   4  execution_attempts: durable attempt identity + baseline binding (R4)
-RUNTIME_SCHEMA_VERSION = 4
+#:   5  events outbox + receipt records: SQLite is the canonical chain (R8)
+RUNTIME_SCHEMA_VERSION = 5
 RUNTIME_SCHEMA_KEY = "runtime_schema_version"
 #: Bounded wait for the single-writer lock before a mutation is refused.
 BUSY_TIMEOUT_SECONDS = 5.0
@@ -295,6 +296,26 @@ class StateDB:
             CREATE UNIQUE INDEX IF NOT EXISTS live_task_attempt
               ON execution_attempts(task_id)
               WHERE state IN ('BASELINED', 'DISPATCHING', 'RUNNING');
+            CREATE TABLE IF NOT EXISTS events (
+              sequence INTEGER PRIMARY KEY,
+              timestamp TEXT NOT NULL,
+              type TEXT NOT NULL,
+              actor TEXT NOT NULL,
+              payload TEXT NOT NULL,
+              previous_digest TEXT,
+              digest TEXT NOT NULL UNIQUE,
+              projected INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE TABLE IF NOT EXISTS receipts (
+              receipt_id TEXT PRIMARY KEY,
+              receipt_type TEXT NOT NULL,
+              entity_id TEXT NOT NULL,
+              payload TEXT NOT NULL,
+              receipt_digest TEXT NOT NULL,
+              artifact_path TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              projected INTEGER NOT NULL DEFAULT 0
+            );
             """
         )
         if recorded != RUNTIME_SCHEMA_VERSION:
@@ -974,3 +995,175 @@ class StateDB:
                 (task_id,),
             )
         ]
+
+    # ------------------------------------------------------- events (outbox)
+    def append_event(self, event_type: str, actor: str, payload: dict[str, Any]) -> dict:
+        """Allocate the next sequence and digest under the writer lock and insert.
+
+        Always inside a Controller transaction: the sequence is MAX+1 as read
+        under BEGIN IMMEDIATE, so two Controller processes cannot both mint
+        the same successor (PEC-P1-004). The file projection is not done here.
+        """
+        from .common import digest_object, utc_now
+
+        with self.controller_transaction():
+            tail = self.conn.execute(
+                "SELECT sequence, digest FROM events ORDER BY sequence DESC LIMIT 1"
+            ).fetchone()
+            event = {
+                "sequence": (int(tail["sequence"]) + 1) if tail else 1,
+                "timestamp": utc_now(),
+                "type": event_type,
+                "actor": actor,
+                "payload": payload,
+                "previous_digest": tail["digest"] if tail else None,
+            }
+            event["digest"] = digest_object(event)
+            self.conn.execute(
+                "INSERT INTO events(sequence,timestamp,type,actor,payload,previous_digest,digest,"
+                "projected) VALUES(?,?,?,?,?,?,?,0)",
+                (
+                    event["sequence"],
+                    event["timestamp"],
+                    event["type"],
+                    event["actor"],
+                    json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False),
+                    event["previous_digest"],
+                    event["digest"],
+                ),
+            )
+            self._commit()
+        return event
+
+    @staticmethod
+    def _event_row(row: sqlite3.Row) -> dict[str, Any]:
+        return {
+            "sequence": int(row["sequence"]),
+            "timestamp": row["timestamp"],
+            "type": row["type"],
+            "actor": row["actor"],
+            "payload": json.loads(row["payload"]),
+            "previous_digest": row["previous_digest"],
+            "digest": row["digest"],
+        }
+
+    def events(self) -> list[dict[str, Any]]:
+        return [
+            self._event_row(row)
+            for row in self.conn.execute("SELECT * FROM events ORDER BY sequence")
+        ]
+
+    def event_count(self) -> int:
+        return int(self.conn.execute("SELECT COUNT(*) AS n FROM events").fetchone()["n"])
+
+    def projected_event_count(self) -> int:
+        return int(
+            self.conn.execute("SELECT COUNT(*) AS n FROM events WHERE projected=1").fetchone()["n"]
+        )
+
+    def pending_events(self) -> list[dict[str, Any]]:
+        return [
+            self._event_row(row)
+            for row in self.conn.execute("SELECT * FROM events WHERE projected=0 ORDER BY sequence")
+        ]
+
+    def mark_event_projected(self, sequence: int) -> None:
+        self.conn.execute("UPDATE events SET projected=1 WHERE sequence=?", (sequence,))
+        self._commit()
+
+    def import_event(self, event: dict[str, Any], *, projected: bool = True) -> None:
+        """Adopt an already-chained legacy event verbatim (migration only)."""
+        self.conn.execute(
+            "INSERT INTO events(sequence,timestamp,type,actor,payload,previous_digest,digest,"
+            "projected) VALUES(?,?,?,?,?,?,?,?)",
+            (
+                int(event["sequence"]),
+                event["timestamp"],
+                event["type"],
+                event["actor"],
+                json.dumps(
+                    event["payload"], sort_keys=True, separators=(",", ":"), ensure_ascii=False
+                ),
+                event.get("previous_digest"),
+                event["digest"],
+                1 if projected else 0,
+            ),
+        )
+        self._commit()
+
+    # -------------------------------------------------------------- receipts
+    def record_receipt(
+        self,
+        *,
+        receipt_id: str,
+        receipt_type: str,
+        entity_id: str,
+        payload: dict[str, Any],
+        artifact_path: str,
+        projected: bool = False,
+    ) -> None:
+        """The canonical receipt record; the file under artifact_path projects it."""
+        from .common import utc_now
+
+        digest = str(payload.get("receipt_digest") or "")
+        if not digest:
+            raise ValueError("a receipt record needs a receipt_digest")
+        self.conn.execute(
+            "INSERT INTO receipts(receipt_id,receipt_type,entity_id,payload,receipt_digest,"
+            "artifact_path,created_at,projected) VALUES(?,?,?,?,?,?,?,?) "
+            "ON CONFLICT(receipt_id) DO UPDATE SET payload=excluded.payload, "
+            "receipt_digest=excluded.receipt_digest, artifact_path=excluded.artifact_path, "
+            "projected=excluded.projected",
+            (
+                receipt_id,
+                receipt_type,
+                entity_id,
+                json.dumps(payload, sort_keys=True, ensure_ascii=False),
+                digest,
+                artifact_path,
+                utc_now(),
+                1 if projected else 0,
+            ),
+        )
+        self._commit()
+
+    @staticmethod
+    def _receipt_row(row: sqlite3.Row) -> dict[str, Any]:
+        value = dict(row)
+        value["payload"] = json.loads(value["payload"])
+        return value
+
+    def receipt(self, receipt_id: str) -> dict[str, Any] | None:
+        row = self.conn.execute(
+            "SELECT * FROM receipts WHERE receipt_id=?", (receipt_id,)
+        ).fetchone()
+        return None if row is None else self._receipt_row(row)
+
+    def receipt_by_artifact(self, artifact_path: str) -> dict[str, Any] | None:
+        row = self.conn.execute(
+            "SELECT * FROM receipts WHERE artifact_path=? ORDER BY created_at DESC LIMIT 1",
+            (artifact_path,),
+        ).fetchone()
+        return None if row is None else self._receipt_row(row)
+
+    def receipts(self, receipt_type: str | None = None) -> list[dict[str, Any]]:
+        if receipt_type is None:
+            rows = self.conn.execute("SELECT * FROM receipts ORDER BY created_at, receipt_id")
+        else:
+            rows = self.conn.execute(
+                "SELECT * FROM receipts WHERE receipt_type=? ORDER BY created_at, receipt_id",
+                (receipt_type,),
+            )
+        return [self._receipt_row(row) for row in rows]
+
+    def pending_receipts(self) -> list[dict[str, Any]]:
+        return [
+            self._receipt_row(row)
+            for row in self.conn.execute(
+                "SELECT * FROM receipts WHERE projected=0 ORDER BY created_at, receipt_id"
+            )
+        ]
+
+    def mark_receipt_projected(self, receipt_id: str) -> None:
+        self.conn.execute("UPDATE receipts SET projected=1 WHERE receipt_id=?", (receipt_id,))
+        self._commit()

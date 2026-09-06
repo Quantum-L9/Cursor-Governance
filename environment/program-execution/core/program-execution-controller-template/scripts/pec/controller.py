@@ -325,7 +325,14 @@ def complete_campaign(
         receipt["receipt_digest"] = digest_object(receipt)
         target = closure_receipt_path(workspace, closure_id)
         with db.controller_transaction():
-            write_json(target, receipt)
+            _record_receipt(
+                db,
+                receipt_id=closure_id,
+                receipt_type="closure",
+                entity_id=campaign_id,
+                payload=receipt,
+                artifact=target,
+            )
             payload = write_campaign_status(
                 workspace,
                 campaign_id=campaign_id,
@@ -338,11 +345,11 @@ def complete_campaign(
                 closure_receipt=str(target),
             )
             db.set_meta("campaign_status", payload)
-        ledger.append(
-            "CAMPAIGN_COMPLETED",
-            actor,
-            {**payload, "closure_receipt_digest": receipt["receipt_digest"]},
-        )
+            ledger.append(
+                "CAMPAIGN_COMPLETED",
+                actor,
+                {**payload, "closure_receipt_digest": receipt["receipt_digest"]},
+            )
         return {**payload, "closure": receipt}
     finally:
         db.close()
@@ -1602,19 +1609,20 @@ def claim_task(
             "issued_at": issued.isoformat(),
             "expires_at": (issued + dt.timedelta(minutes=minutes)).isoformat(),
         }
-        try:
-            db.create_lease(lease)
-        except Exception as exc:
-            # Same-repository tasks may hold concurrent leases: dependency,
-            # resource, path, root-Autonomy claim, worktree, and provider
-            # constraints decide parallelism. Only a duplicate active lease
-            # for the *same task* is denied here.
-            raise ControllerError(f"task already has an active lease: {task_id}") from exc
-        db.update_task(
-            task_id, base_sha=base_sha, branch=branch, lease_id=lease_id, last_error=None
-        )
-        db.transition_task(task_id, "LEASED")
-        ledger.append("TASK_LEASED", holder, lease)
+        with db.controller_transaction():
+            try:
+                db.create_lease(lease)
+            except Exception as exc:
+                # Same-repository tasks may hold concurrent leases: dependency,
+                # resource, path, root-Autonomy claim, worktree, and provider
+                # constraints decide parallelism. Only a duplicate active lease
+                # for the *same task* is denied here.
+                raise ControllerError(f"task already has an active lease: {task_id}") from exc
+            db.update_task(
+                task_id, base_sha=base_sha, branch=branch, lease_id=lease_id, last_error=None
+            )
+            db.transition_task(task_id, "LEASED")
+            ledger.append("TASK_LEASED", holder, lease)
         projection = _claim_autonomy_projection(task, lease)
         if projection is not None:
             lease = {**lease, **projection}
@@ -1880,19 +1888,19 @@ def start_task(
         with db.controller_transaction():
             db.create_execution_attempt(record)
             db.transition_task(task_id, "EXECUTING")
-        ledger.append(
-            "TASK_EXECUTION_STARTED",
-            actor,
-            {
-                "task_id": task_id,
-                "contract_digest": task["rendered_contract_digest"],
-                "attempt_id": attempt_id,
-                "attempt_number": attempt_number,
-                "lease_id": str(lease["lease_id"]),
-                "baseline_digest": baseline_digest,
-                "baseline_paths": len(baseline),
-            },
-        )
+            ledger.append(
+                "TASK_EXECUTION_STARTED",
+                actor,
+                {
+                    "task_id": task_id,
+                    "contract_digest": task["rendered_contract_digest"],
+                    "attempt_id": attempt_id,
+                    "attempt_number": attempt_number,
+                    "lease_id": str(lease["lease_id"]),
+                    "baseline_digest": baseline_digest,
+                    "baseline_paths": len(baseline),
+                },
+            )
         return {
             "status": "EXECUTING",
             "task_id": task_id,
@@ -2019,17 +2027,17 @@ def record_attempt(workspace: Path, task_id: str, receipt_source: Path) -> dict[
                 terminal_at=utc_now(),
             )
             db.transition_task(task_id, "SUBMITTED")
-        ledger.append(
-            "ATTEMPT_RECORDED",
-            "worker",
-            {
-                "task_id": task_id,
-                "attempt": attempt,
-                "attempt_id": live["attempt_id"],
-                "receipt": str(target),
-                "receipt_digest": digest_object(receipt),
-            },
-        )
+            ledger.append(
+                "ATTEMPT_RECORDED",
+                "worker",
+                {
+                    "task_id": task_id,
+                    "attempt": attempt,
+                    "attempt_id": live["attempt_id"],
+                    "receipt": str(target),
+                    "receipt_digest": digest_object(receipt),
+                },
+            )
         submitted = {
             "status": "SUBMITTED",
             "task_id": task_id,
@@ -2154,6 +2162,7 @@ def _require_candidate_matches_verification(
     attempt: dict[str, Any] | None,
     repo_path: Path,
     candidate_sha: str,
+    db: StateDB | None = None,
 ) -> dict[str, Any]:
     """The integrated candidate must be the verified state, byte for byte.
 
@@ -2164,7 +2173,7 @@ def _require_candidate_matches_verification(
     its candidate preserved for diagnosis rather than landing unverified bytes.
     """
     task_id = str(task["id"])
-    verification = _verified_this_attempt(workspace, task, attempt)
+    verification = _verified_this_attempt(workspace, task, attempt, db)
     if not verification or verification.get("verdict") != "PASSED_LOCAL":
         raise ControllerError(
             f"{task_id}: no PASSED_LOCAL verification for the current attempt; refuse integration"
@@ -2361,8 +2370,60 @@ def verification_receipt_path(workspace: Path, task_id: str) -> Path:
     return workspace.resolve() / "receipts" / "verification" / f"{task_id}.json"
 
 
+def _record_receipt(
+    db: StateDB,
+    *,
+    receipt_id: str,
+    receipt_type: str,
+    entity_id: str,
+    payload: dict[str, Any],
+    artifact: Path,
+) -> None:
+    """Canonical receipt record now; the artifact file after the transaction commits.
+
+    A crash between the two leaves a pending record that startup
+    reconciliation rematerializes; a crash before the commit leaves nothing
+    to believe. The file is therefore never evidence on its own.
+    """
+    db.record_receipt(
+        receipt_id=receipt_id,
+        receipt_type=receipt_type,
+        entity_id=entity_id,
+        payload=payload,
+        artifact_path=str(artifact),
+    )
+
+    def materialize() -> None:
+        write_json(artifact, payload)
+        db.mark_receipt_projected(receipt_id)
+
+    db.on_commit(materialize)
+
+
+def _canonical_verification(
+    db: StateDB | None, workspace: Path, task_id: str
+) -> dict[str, Any] | None:
+    """The verification receipt the runtime canonically records for this task."""
+    path = verification_receipt_path(workspace, task_id)
+    if db is not None:
+        record = db.receipt_by_artifact(str(path))
+        if record is not None:
+            return dict(record["payload"])
+        # No canonical record: a file alone (legacy or foreign) proves nothing.
+        return None
+    if not path.is_file():
+        return None
+    try:
+        return load_json(path)
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
 def _verified_this_attempt(
-    workspace: Path, task: dict[str, Any], attempt: dict[str, Any] | None
+    workspace: Path,
+    task: dict[str, Any],
+    attempt: dict[str, Any] | None,
+    db: StateDB | None = None,
 ) -> dict[str, Any] | None:
     """Return the receipt already produced for the task's current attempt.
 
@@ -2371,12 +2432,8 @@ def _verified_this_attempt(
     new verification, so the recorded verdict is replayed instead of a second
     run against a task the state machine no longer accepts.
     """
-    path = verification_receipt_path(workspace, task["id"])
-    if not path.is_file():
-        return None
-    try:
-        receipt = load_json(path)
-    except (json.JSONDecodeError, OSError):
+    receipt = _canonical_verification(db, workspace, str(task["id"]))
+    if receipt is None:
         return None
     if str(receipt.get("task_id")) != str(task["id"]):
         return None
@@ -2440,7 +2497,7 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
             replay = (
                 None
                 if task is None
-                else _verified_this_attempt(workspace, task, db.latest_attempt(task_id))
+                else _verified_this_attempt(workspace, task, db.latest_attempt(task_id), db)
             )
             if replay is not None:
                 replay["replayed"] = True
@@ -2656,46 +2713,58 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
         verification["receipt_digest"] = digest_object(verification)
         _validate_schema(workspace, "verification-receipt.schema.json", verification)
         target = workspace / "receipts" / "verification" / f"{task_id}.json"
-        write_json(target, verification)
-        db.upsert_evidence(
-            {
-                "id": evidence_id,
-                "type": "test_result",
-                "source": str(target),
-                "revision": candidate_sha or task.get("base_sha"),
-                "digest": verification["receipt_digest"],
-                "method": "independent_controller_verification",
-                "environment": "local_worktree",
-                "producer": "Program Execution Controller",
-                "produced_at": verification["verified_at"],
-                "expires_at": None,
-                "result": "PASS" if verdict == "PASSED_LOCAL" else "FAIL",
-                "status": "available",
-                "supports": [task_id],
-                "contradicts": [],
-                "notes": None,
-            }
-        )
-        db.transition_task(
-            task_id,
-            verdict,
-            last_error=None if verdict == "PASSED_LOCAL" else json.dumps(gates, sort_keys=True),
-        )
-        if execution_attempt is not None:
-            db.update_execution_attempt(
-                str(execution_attempt["attempt_id"]), terminal_status=verdict
+        # One transaction: the canonical receipt record, the evidence it
+        # backs, the task transition and the event become durable together
+        # (PEC-P1-004). The receipt FILE is a projection materialized after
+        # commit; a believable PASSED_LOCAL cannot exist without the record.
+        with db.controller_transaction():
+            _record_receipt(
+                db,
+                receipt_id=verification["verification_id"],
+                receipt_type="verification",
+                entity_id=task_id,
+                payload=verification,
+                artifact=target,
             )
-        ledger.append(
-            "ATTEMPT_VERIFIED",
-            "controller",
-            {
-                "task_id": task_id,
-                "verdict": verdict,
-                "receipt": str(target),
-                "receipt_digest": verification["receipt_digest"],
-                "evidence_id": evidence_id,
-            },
-        )
+            db.upsert_evidence(
+                {
+                    "id": evidence_id,
+                    "type": "test_result",
+                    "source": str(target),
+                    "revision": candidate_sha or task.get("base_sha"),
+                    "digest": verification["receipt_digest"],
+                    "method": "independent_controller_verification",
+                    "environment": "local_worktree",
+                    "producer": "Program Execution Controller",
+                    "produced_at": verification["verified_at"],
+                    "expires_at": None,
+                    "result": "PASS" if verdict == "PASSED_LOCAL" else "FAIL",
+                    "status": "available",
+                    "supports": [task_id],
+                    "contradicts": [],
+                    "notes": None,
+                }
+            )
+            db.transition_task(
+                task_id,
+                verdict,
+                last_error=None if verdict == "PASSED_LOCAL" else json.dumps(gates, sort_keys=True),
+            )
+            if execution_attempt is not None:
+                db.update_execution_attempt(
+                    str(execution_attempt["attempt_id"]), terminal_status=verdict
+                )
+            ledger.append(
+                "ATTEMPT_VERIFIED",
+                "controller",
+                {
+                    "task_id": task_id,
+                    "verdict": verdict,
+                    "receipt": str(target),
+                    "receipt_digest": verification["receipt_digest"],
+                    "evidence_id": evidence_id,
+                },
+            )
         from .signals import publish_controller_event
 
         verification["signal"] = publish_controller_event(
@@ -2734,36 +2803,37 @@ def fail_task(workspace: Path, task_id: str, reason: str, actor: str) -> dict[st
             raise ControllerError(f"unknown task: {task_id}")
         state = str(task["runtime_state"] or "")
         transitioned = False
-        if state in FAILABLE_RUNTIME_STATES:
-            db.transition_task(task_id, "FAILED", last_error=reason)
-            transitioned = True
-        elif state != "FAILED":
+        if state not in FAILABLE_RUNTIME_STATES and state != "FAILED":
             raise ControllerError(
                 f"task {task_id} is {state}; canonical failure applies only to "
                 f"{sorted(FAILABLE_RUNTIME_STATES)} or an already-FAILED task"
             )
-        lease = db.active_lease_for_task(task_id)
-        lease_id = None
-        settled = _settle_live_attempt(
-            db, task_id, state=ATTEMPT_TERMINAL, terminal_status="FAILED", reason=reason
-        )
-        if lease is not None:
-            lease_id = str(lease["lease_id"])
-            db.release_lease(lease_id)
-            db.update_task(task_id, lease_id=None)
-        ledger.append(
-            "TASK_FAILED",
-            actor,
-            {
-                "task_id": task_id,
-                "reason": reason,
-                "previous_state": state,
-                "lease_id": lease_id,
-                "lease_released": lease_id is not None,
-                "worktree_preserved": task.get("worktree"),
-                "attempt_id": settled["attempt_id"] if settled else None,
-            },
-        )
+        with db.controller_transaction():
+            if state in FAILABLE_RUNTIME_STATES:
+                db.transition_task(task_id, "FAILED", last_error=reason)
+                transitioned = True
+            lease = db.active_lease_for_task(task_id)
+            lease_id = None
+            settled = _settle_live_attempt(
+                db, task_id, state=ATTEMPT_TERMINAL, terminal_status="FAILED", reason=reason
+            )
+            if lease is not None:
+                lease_id = str(lease["lease_id"])
+                db.release_lease(lease_id)
+                db.update_task(task_id, lease_id=None)
+            ledger.append(
+                "TASK_FAILED",
+                actor,
+                {
+                    "task_id": task_id,
+                    "reason": reason,
+                    "previous_state": state,
+                    "lease_id": lease_id,
+                    "lease_released": lease_id is not None,
+                    "worktree_preserved": task.get("worktree"),
+                    "attempt_id": settled["attempt_id"] if settled else None,
+                },
+            )
         return {
             "status": "FAILED",
             "task_id": task_id,
@@ -3296,20 +3366,27 @@ def evaluate_gate(
         _validate_schema(workspace, "gate-evaluation.schema.json", receipt)
         target = workspace / "receipts" / "gates" / gate_id / f"{receipt['evaluation_id']}.json"
         with db.controller_transaction():
-            write_json(target, receipt)
+            _record_receipt(
+                db,
+                receipt_id=receipt["evaluation_id"],
+                receipt_type="gate_evaluation",
+                entity_id=gate_id,
+                payload=receipt,
+                artifact=target,
+            )
             db.set_gate(gate_id, verdict.result, receipt["evidence_ids"], str(target))
-        ledger.append(
-            "GATE_EVALUATED",
-            actor,
-            {
-                "gate_id": gate_id,
-                "result": verdict.result,
-                "expected_result": expected_result,
-                "reason_codes": receipt["reason_codes"],
-                "receipt": str(target),
-                "receipt_digest": receipt["receipt_digest"],
-            },
-        )
+            ledger.append(
+                "GATE_EVALUATED",
+                actor,
+                {
+                    "gate_id": gate_id,
+                    "result": verdict.result,
+                    "expected_result": expected_result,
+                    "reason_codes": receipt["reason_codes"],
+                    "receipt": str(target),
+                    "receipt_digest": receipt["receipt_digest"],
+                },
+            )
         from .signals import publish_controller_event
 
         receipt["signal"] = publish_controller_event(
@@ -3416,7 +3493,7 @@ def _integrate_candidate(
             f"candidate {candidate_sha} does not descend from task base {base_sha}"
         )
     _require_candidate_matches_verification(
-        workspace, task, db.latest_attempt(task_id), repo_path, candidate_sha
+        workspace, task, db.latest_attempt(task_id), repo_path, candidate_sha, db
     )
     tree, _ = _integration_checkout(workspace, repo_path, branch)
     if run_git(tree, "status", "--porcelain").stdout.strip():
@@ -3527,7 +3604,7 @@ def complete_task(
             if task["runtime_state"] != "PASSED_LOCAL":
                 raise ControllerError("repository task must be PASSED_LOCAL before completion")
             attempt = db.latest_attempt(task_id)
-            verification = _verified_this_attempt(workspace, task, attempt) or {}
+            verification = _verified_this_attempt(workspace, task, attempt, db) or {}
             if not verification:
                 raise ControllerError(
                     "no verification receipt for the current attempt; refuse completion"
@@ -3558,12 +3635,19 @@ def complete_task(
             # branch. An integration conflict raises here and leaves the task
             # PASSED_LOCAL with its candidate branch and worktree preserved.
             integration = _integrate_candidate(db, ledger, workspace, task)
-            db.transition_task(task_id, "COMPLETED")
-            lease = db.active_lease_for_task(task_id)
-            if lease:
-                db.release_lease(lease["lease_id"])
-                db.update_task(task_id, lease_id=None)
-        ledger.append("TASK_COMPLETED", actor, {"task_id": task_id, "evidence_ids": evidence_ids})
+            with db.controller_transaction():
+                db.transition_task(task_id, "COMPLETED")
+                lease = db.active_lease_for_task(task_id)
+                if lease:
+                    db.release_lease(lease["lease_id"])
+                    db.update_task(task_id, lease_id=None)
+                ledger.append(
+                    "TASK_COMPLETED", actor, {"task_id": task_id, "evidence_ids": evidence_ids}
+                )
+        if task["execution_kind"] == "program_control":
+            ledger.append(
+                "TASK_COMPLETED", actor, {"task_id": task_id, "evidence_ids": evidence_ids}
+            )
         result = {"status": "COMPLETED", "task_id": task_id, "evidence_ids": evidence_ids}
         if integration is not None:
             result["integration"] = integration

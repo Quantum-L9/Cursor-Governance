@@ -123,14 +123,31 @@ class DerivedGateTests(unittest.TestCase):
             cleanup_worktree(repo, workspace)
 
     def test_stale_verification_evidence_is_unknown(self) -> None:
+        """Evidence whose digest no longer names the canonical receipt is stale.
+
+        The receipt FILE is a projection: editing it is undone by startup
+        reconciliation, which rematerializes the canonical record (R8). What
+        makes evidence stale is the canonical binding, so that is what moves.
+        """
         with TemporaryDirectory() as raw:
             temp = Path(raw)
             _, repo, workspace = bootstrap_repo(temp)
             evidence = _verified(temp, workspace)
             receipt_path = workspace / "receipts" / "verification" / "TASK-001.json"
-            payload = json.loads(receipt_path.read_text(encoding="utf-8"))
+            original = receipt_path.read_bytes()
+            payload = json.loads(original.decode("utf-8"))
             payload["receipt_digest"] = "0" * 64
             receipt_path.write_text(json.dumps(payload), encoding="utf-8")
+            receipt = _evaluate(workspace, evidence)
+            self.assertEqual(receipt["result"], "PASS", "the canonical record still proves it")
+            self.assertEqual(receipt_path.read_bytes(), original, "projection not repaired")
+            db = StateDB(workspace / "runtime" / "state.sqlite")
+            try:
+                item = db.evidence(evidence)
+                assert item is not None
+                db.upsert_evidence({**item, "digest": "0" * 64})
+            finally:
+                db.close()
             receipt = _evaluate(workspace, evidence)
             self.assertEqual(receipt["result"], "UNKNOWN")
             self.assertIn(GATE_EVIDENCE_STALE, receipt["reason_codes"])
@@ -144,7 +161,8 @@ class DerivedGateTests(unittest.TestCase):
             receipt_path = workspace / "receipts" / "verification" / "TASK-001.json"
             payload = json.loads(receipt_path.read_text(encoding="utf-8"))
             payload["program_digest"] = "1" * 64
-            # keep the digest consistent with the evidence record's copy
+            # keep the digest consistent with the evidence record's copy, and
+            # move the CANONICAL record too: the file alone is a projection.
             body = dict(payload)
             body.pop("receipt_digest", None)
             from pec.common import digest_object
@@ -156,6 +174,14 @@ class DerivedGateTests(unittest.TestCase):
                 item = db.evidence(evidence)
                 assert item is not None
                 db.upsert_evidence({**item, "digest": payload["receipt_digest"]})
+                db.record_receipt(
+                    receipt_id=payload["verification_id"],
+                    receipt_type="verification",
+                    entity_id="TASK-001",
+                    payload=payload,
+                    artifact_path=str(receipt_path),
+                    projected=True,
+                )
             finally:
                 db.close()
             receipt = _evaluate(workspace, evidence)
