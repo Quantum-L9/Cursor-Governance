@@ -16,6 +16,7 @@ a development checkout as an explicit opt-in that is *reported* as
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -46,10 +47,13 @@ Runner = Callable[..., "subprocess.CompletedProcess[str]"]
 # Runs inside the *target* interpreter: it must not assume this repository's
 # environment, only the standard library.
 _PROBE = r"""
-import json, sys
+import hashlib, json, sys
 dist, pkg = sys.argv[1], sys.argv[2]
 out = {"interpreter": sys.executable, "prefix": sys.prefix, "version": None, "module": None}
 out["error"] = None
+out["direct_url"] = None
+out["record_digest"] = None
+out["editable"] = None
 try:
     from importlib.metadata import version
     out["version"] = version(dist)
@@ -61,6 +65,77 @@ try:
     out["module"] = getattr(module, "__file__", None)
 except Exception as exc:
     out["error"] = out["error"] or f"{type(exc).__name__}: {exc}"
+try:
+    # Installed-artifact provenance. direct_url.json is PEP 610: pip and uv
+    # record the archive a wheel was installed from, with its hash when the
+    # install named one. RECORD lists every installed file with its own
+    # sha256, so a digest over it distinguishes two builds of one version.
+    from importlib.metadata import distribution
+    installed = distribution(dist)
+    try:
+        raw_direct = installed.read_text("direct_url.json")
+    except Exception:
+        raw_direct = None
+    if raw_direct:
+        out["direct_url"] = json.loads(raw_direct)
+        info = out["direct_url"].get("dir_info") or {}
+        out["editable"] = bool(info.get("editable"))
+    record = installed.read_text("RECORD") or ""
+    rows = []
+    for line in record.splitlines():
+        parts = line.rsplit(",", 2)
+        if len(parts) != 3 or parts[0].endswith("/RECORD") or not parts[1]:
+            continue
+        rows.append(parts[0].replace("\\", "/") + "," + parts[1] + "," + parts[2])
+    if rows:
+        joined = "\n".join(sorted(rows)).encode("utf-8")
+        out["record_digest"] = hashlib.sha256(joined).hexdigest()
+except Exception as exc:
+    out["error"] = out["error"] or f"{type(exc).__name__}: {exc}"
+print(json.dumps(out))
+"""
+
+#: Receipt models Cursor accepts as authoritative. The canonical schema for
+#: each is exported from the *bound* release (CG-P1-02), never restated here.
+CANONICAL_RECEIPT_MODELS: tuple[str, ...] = (
+    "CapabilitiesReceipt",
+    "HealthReceipt",
+    "ResolveReceipt",
+    "HydrationReceipt",
+    "SearchReceipt",
+    "WriteReceipt",
+    "CandidateReceipt",
+    "CloseReceipt",
+    "ConflictsReceipt",
+    "PhaseLockReceipt",
+    "PhaseLockVerificationReceipt",
+)
+
+# Also runs inside the *target* interpreter. It exports the pinned release's
+# own pydantic models as JSON Schema so Cursor validates against the contract
+# the bound package actually ships, across the interpreter boundary that makes
+# an in-process import impossible in pinned mode.
+_SCHEMA_PROBE = r"""
+import json, sys
+names = [n for n in sys.argv[1].split(",") if n]
+out = {"schemas": {}, "module": None, "error": None, "missing": []}
+try:
+    import importlib
+    contracts = importlib.import_module("l9_graphite_memory.contracts")
+    out["module"] = getattr(contracts, "__file__", None)
+    for name in names:
+        model = getattr(contracts, name, None)
+        exporter = getattr(model, "model_json_schema", None) if model is not None else None
+        if exporter is None:
+            out["missing"].append(name)
+            continue
+        try:
+            out["schemas"][name] = exporter()
+        except Exception as exc:
+            out["missing"].append(name)
+            out["error"] = out["error"] or f"{name}: {type(exc).__name__}: {exc}"
+except Exception as exc:
+    out["error"] = f"{type(exc).__name__}: {exc}"
 print(json.dumps(out))
 """
 
@@ -154,6 +229,15 @@ class RuntimeBinding:
     path_shadow: str | None = None
     capabilities: CapabilitiesReceipt | None = field(default=None, repr=False)
     reasons: tuple[str, ...] = ()
+    #: Canonical receipt schemas exported from the bound release (CG-P1-02).
+    #: ``None`` means the export did not run or the package ships no contracts
+    #: module: the client then has nothing canonical to validate against, and
+    #: fails closed where exact validation is required. Schema export never
+    #: changes the binding status — an exact runtime that cannot export its
+    #: contracts is still exactly bound, just unvalidatable.
+    contract_schemas: dict[str, Any] | None = field(default=None, repr=False)
+    schema_digest: str | None = None
+    schema_source: str | None = None
 
     @property
     def ok(self) -> bool:
@@ -459,6 +543,11 @@ def resolve_runtime_binding(
             contract_version=capabilities.contract_version,
         )
 
+    schemas, schema_digest, schema_source, schema_reasons = _export_contract_schemas(
+        interpreter_path, run, environment, timeout
+    )
+    reasons.extend(schema_reasons)
+
     return RuntimeBinding(
         status=STATUS_DEVELOPMENT if mode == MODE_DEVELOPMENT else STATUS_EXACT,
         runtime_mode=mode,
@@ -474,7 +563,63 @@ def resolve_runtime_binding(
         path_shadow=path_shadow,
         capabilities=capabilities,
         reasons=tuple(reasons),
+        contract_schemas=schemas,
+        schema_digest=schema_digest,
+        schema_source=schema_source,
     )
+
+
+def _export_contract_schemas(
+    interpreter_path: Path,
+    run: Runner,
+    environment: Mapping[str, str],
+    timeout: float,
+) -> tuple[dict[str, Any] | None, str | None, str | None, list[str]]:
+    """Export the bound release's own receipt schemas (CG-P1-02, Model B).
+
+    The memory runtime may be a different interpreter, so ``import
+    l9_graphite_memory.contracts`` cannot happen in this process. The schemas
+    are therefore mechanically extracted from the exact pinned release and
+    carried back, and the client validates against those rather than against a
+    reduced Cursor-local shape.
+
+    A failure here is reported, never fatal: the binding is still exact, and
+    it is the *client* that decides whether an unvalidatable runtime may be
+    used. Returning ``None`` is what makes it fail closed there.
+    """
+
+    reasons: list[str] = []
+    try:
+        probe = run(
+            [str(interpreter_path), "-c", _SCHEMA_PROBE, ",".join(CANONICAL_RECEIPT_MODELS)],
+            timeout=timeout,
+            env=environment,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return None, None, None, [f"contract schema export failed: {type(exc).__name__}: {exc}"]
+    try:
+        payload = json.loads((probe.stdout or "").strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        return None, None, None, ["contract schema export emitted no JSON"]
+    schemas = payload.get("schemas")
+    if not isinstance(schemas, dict) or not schemas:
+        detail = payload.get("error") or "the bound package exports no receipt contracts"
+        return None, None, None, [f"contract schema export empty: {detail}"]
+    if payload.get("missing"):
+        reasons.append(
+            "bound release exports no schema for: " + ", ".join(sorted(payload["missing"]))
+        )
+    encoded = json.dumps(schemas, sort_keys=True, separators=(",", ":"), default=str)
+    return (
+        schemas,
+        hashlib.sha256(encoded.encode("utf-8")).hexdigest(),
+        _optional_text(payload.get("module")),
+        reasons,
+    )
+
+
+def _optional_text(value: Any) -> str | None:
+    return None if value is None else str(value)
 
 
 def main(argv: Sequence[str] | None = None) -> int:

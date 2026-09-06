@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from memory_boundary_fixtures import canonical_schemas
 
 from ops.memory import runtime_binding as rb
 
@@ -61,6 +62,7 @@ class Environment:
         module: str | None = None,
         capabilities: dict[str, Any] | None = None,
         capabilities_rc: int = 0,
+        schema_export: dict[str, Any] | None = None,
     ) -> None:
         self.root = root
         self.bin = root / "bin"
@@ -79,6 +81,11 @@ class Environment:
         )
         self.capabilities = capabilities_payload() if capabilities is None else capabilities
         self.capabilities_rc = capabilities_rc
+        self.schema_export = (
+            {"schemas": canonical_schemas(), "module": self.module, "error": None, "missing": []}
+            if schema_export is None
+            else schema_export
+        )
         self.calls: list[list[str]] = []
 
     def run(
@@ -93,6 +100,9 @@ class Environment:
         del cwd, input_text, timeout, env
         args = list(argv)
         self.calls.append(args)
+        if args[0] == str(self.interpreter) and args[1] == "-c" and "schemas" in args[2]:
+            # The contract-schema export probe (CG-P1-02).
+            return subprocess.CompletedProcess(args, 0, json.dumps(self.schema_export) + "\n", "")
         if args[0] == str(self.interpreter) and args[1] == "-c":
             payload = {
                 "interpreter": str(self.interpreter),
@@ -130,7 +140,10 @@ def test_exact_binding_reports_the_proof_shape(tmp_path: Path, monkeypatch) -> N
     assert proof["contract_version"] == CONTRACT
     assert proof["runtime_mode"] == rb.MODE_PINNED
     assert proof["path_shadow"] is None
-    assert env.calls[-1] == [str(env.cli), "capabilities"]
+    assert [str(env.cli), "capabilities"] in env.calls
+    # The bound release's own contracts came back with the binding.
+    assert binding.contract_schemas and "CloseReceipt" in binding.contract_schemas
+    assert binding.schema_digest and len(binding.schema_digest) == 64
 
 
 def test_wrong_package_version_is_unbound(tmp_path: Path) -> None:

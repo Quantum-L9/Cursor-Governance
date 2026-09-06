@@ -8,6 +8,7 @@ fixtures.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -25,8 +26,12 @@ EXPECTED_VERSION = json.loads(
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from ops.memory.receipts import CapabilitiesReceipt  # noqa: E402
 from ops.memory.runtime_binding import STATUS_EXACT, RuntimeBinding  # noqa: E402
 from ops.memory.session_contracts import task_signature_for  # noqa: E402
+
+#: The contract lineage the bound release declares; receipts must agree.
+CANONICAL_SCHEMA_VERSION = "2.2.0"
 
 REPOSITORY = "Quantum-L9/Cursor-Governance"
 OBJECTIVE = "Realign memory control plane"
@@ -109,6 +114,28 @@ def bound(tmp_path: Path) -> RuntimeBinding:
         memory_version=EXPECTED_VERSION,
         contract_version="memory-control-plane/v1",
         module_path=str(tmp_path / "lib" / "l9_graphite_memory" / "__init__.py"),
+        # The whole suite runs through canonical validation, exactly as the
+        # production path does — a receipt no schema accepts fails here too.
+        contract_schemas=canonical_schemas(),
+        schema_digest=canonical_schema_digest(),
+        schema_source=str(tmp_path / "lib" / "l9_graphite_memory" / "contracts.py"),
+        capabilities=bound_capabilities(),
+    )
+
+
+def bound_capabilities() -> CapabilitiesReceipt:
+    """What the bound release declares about itself — the provenance a receipt
+    is checked against (CG-P1-02)."""
+
+    return CapabilitiesReceipt.parse(
+        {
+            "package": "l9-graphite-memory",
+            "package_version": EXPECTED_VERSION,
+            "schema_version": CANONICAL_SCHEMA_VERSION,
+            "contract_version": "memory-control-plane/v1",
+            "transports": [{"transport": "cli", "operations": {"close": "close"}}],
+            "exit_codes": {"committed": 0, "dry_run_not_committed": 3},
+        }
     )
 
 
@@ -265,3 +292,123 @@ def search_payload(*records: dict[str, Any], status: str = "complete") -> dict[s
             for record in records
         ],
     }
+
+
+# ---------------------------------------------------------------------------
+# Canonical receipt schemas (CG-P1-02)
+#
+# In a real environment these are exported from the *bound release* by
+# ``runtime_binding._export_contract_schemas`` — the pinned package's own
+# pydantic models rendered as JSON Schema. The suite supplies an equivalent
+# set so every test in it runs through the same canonical validation the
+# production path does, and so the negative cases (missing canonical-required
+# field, wrong type, malformed UUID, wrong schema version) have something real
+# to fail against.
+#
+# They are strict about what memory guarantees and permissive about what it
+# may add: Cursor narrows the contract, it never rejects a superset.
+# ---------------------------------------------------------------------------
+
+_UUID = {"type": "string", "pattern": "^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$"}
+_STR = {"type": "string"}
+
+
+def _schema(required: dict[str, Any], **properties: Any) -> dict[str, Any]:
+    return {
+        "type": "object",
+        "required": sorted(required),
+        "properties": {**required, **properties},
+    }
+
+
+def canonical_schemas() -> dict[str, Any]:
+    """The canonical receipt contracts, keyed by model name."""
+
+    return {
+        "CapabilitiesReceipt": _schema(
+            {
+                "package": _STR,
+                "package_version": _STR,
+                "contract_version": _STR,
+                "transports": {"type": "array"},
+            },
+            schema_version=_STR,
+            exit_codes={"type": "object"},
+        ),
+        "HealthReceipt": _schema(
+            {
+                "status": _STR,
+                "package_version": _STR,
+                "store": {"type": "object"},
+                "projection": {"type": "object"},
+            }
+        ),
+        "ResolveReceipt": _schema({"method": _STR, "readonly": {"type": "boolean"}}),
+        "HydrationReceipt": _schema(
+            {
+                "receipt_id": _UUID,
+                "status": _STR,
+                "task": _STR,
+                "result_digest": _STR,
+                "sections": {"type": "array"},
+            }
+        ),
+        "SearchReceipt": _schema(
+            {
+                "receipt_id": _UUID,
+                "status": _STR,
+                "query": _STR,
+                "namespaces_authorized": {"type": "array", "items": _STR},
+            },
+            hits={"type": "array"},
+            request_digest=_STR,
+        ),
+        "WriteReceipt": _schema(
+            {"receipt_id": _UUID, "status": _STR, "namespace": _STR},
+            record_id={"type": ["string", "null"]},
+        ),
+        "CandidateReceipt": _schema(
+            {"status": _STR, "candidate_id": _STR, "namespace": _STR},
+            record_id={"type": ["string", "null"]},
+            superseded_record_ids={"type": "array", "items": _STR},
+        ),
+        "CloseReceipt": _schema(
+            {
+                "receipt_id": _UUID,
+                "status": _STR,
+                "namespace": _STR,
+                "write_receipt_id": {"type": ["string", "null"]},
+            },
+            record_id={"type": ["string", "null"]},
+            replayed={"type": "boolean"},
+            replay_payload_matched={"type": ["boolean", "null"]},
+            stored_digest={"type": ["string", "null"]},
+            replay_digest={"type": ["string", "null"]},
+            warnings={"type": "array", "items": _STR},
+        ),
+        "ConflictsReceipt": _schema(
+            {"namespace": _STR, "conflicts": {"type": "array"}, "snapshot_digest": _STR}
+        ),
+        "PhaseLockReceipt": _schema(
+            {
+                "lock_id": _STR,
+                "namespace": _STR,
+                "task_signature": _STR,
+                "granted": {"type": "boolean"},
+                "expires_at": _STR,
+            }
+        ),
+        "PhaseLockVerificationReceipt": _schema(
+            {
+                "namespace": _STR,
+                "task_signature": _STR,
+                "valid": {"type": "boolean"},
+                "reasons": {"type": "array", "items": _STR},
+            }
+        ),
+    }
+
+
+def canonical_schema_digest() -> str:
+    encoded = json.dumps(canonical_schemas(), sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
