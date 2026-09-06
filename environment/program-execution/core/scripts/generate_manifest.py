@@ -29,13 +29,20 @@ import yaml
 #: A file this skips is a file they skip; drift here is a permanent gate failure.
 DEFAULT_ENTRY_KEYS = ("path", "sha256", "bytes")
 
+#: Tool caches are never manifest inputs. A `mypy`/`pytest`/`ruff` run whose cwd
+#: sits inside a template leaves one of these behind (gitignored, so invisible
+#: to `git status`), and inventorying it commits digests of local cache state
+#: that churn on every run. `validate_pair.py`, `validate_controller.py` and
+#: `validate_blueprint.py` skip the same names when they recompute.
+TOOL_CACHE_DIRS = frozenset({"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"})
+
 
 def is_manifest_input(root: Path, path: Path) -> bool:
     """True when `path` belongs in `root`'s manifest."""
     return (
         path.is_file()
         and path.name != "MANIFEST.yaml"
-        and "__pycache__" not in path.parts
+        and not any(part in TOOL_CACHE_DIRS for part in path.parts)
         and path.suffix != ".pyc"
     )
 

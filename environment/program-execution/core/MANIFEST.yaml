@@ -207,8 +207,8 @@ files:
   sha256: 1820def7bc85ac2478028ef5bae0091ec07f4b9dd159f427b9e4ea3df10c29fa
   bytes: 3111
 - path: program-execution-blueprint-template/scripts/validate_blueprint.py
-  sha256: 8fa3fcad28619eed156935f5b2a79e6b927762710e6f68391340cfe0a45a597f
-  bytes: 23561
+  sha256: 97f25ae5cdf0285ff2f29fcaf10882e8d9e1d24044f80478514d67e4699172b3
+  bytes: 23820
 - path: program-execution-controller-template/ARCHITECTURE.md
   sha256: 2e9c4fd4d6acd9c3aeb216743a94aaaf53170cb5b6e557102ea0d9b2ec964c3b
   bytes: 1340
@@ -338,60 +338,6 @@ files:
 - path: program-execution-controller-template/schemas/waiver.schema.json
   sha256: 6ff6e71f1a820ae05bbd795a50ac96e176bf971ccb8f6e9051f4da1623b087c7
   bytes: 1221
-- path: program-execution-controller-template/scripts/.mypy_cache/.gitignore
-  sha256: 6a69da670d11530d37f0f0cfdc7bed30b78ea6434e24f7a73208b982e29d322c
-  bytes: 34
-- path: program-execution-controller-template/scripts/.mypy_cache/3.12/cache.0.db
-  sha256: 58eda6b815b529f2d2acfed2c33a57c900771d6215246914137afa9f6bb33dbc
-  bytes: 208896
-- path: program-execution-controller-template/scripts/.mypy_cache/3.12/cache.1.db
-  sha256: 15c828755bcbb3c13e2b5bff4581cabb8fc3b03afcbcd3149212d3fd5b1141b4
-  bytes: 270336
-- path: program-execution-controller-template/scripts/.mypy_cache/3.12/cache.10.db
-  sha256: a3ee9a8869410b39f9eecc2c0517f4e505df3fea97d1c64cc2bd1a5c3b77a7a8
-  bytes: 172032
-- path: program-execution-controller-template/scripts/.mypy_cache/3.12/cache.11.db
-  sha256: c49d9cc6c9cf4a6c24c6fde703dcdd0f53a8e69b393612aad3f931baf3549a01
-  bytes: 212992
-- path: program-execution-controller-template/scripts/.mypy_cache/3.12/cache.12.db
-  sha256: 0cd86bea5d1392c96d208c32ab95ab21ca45d6ca2a16e2a2b0bb8fcbfeeeae8d
-  bytes: 188416
-- path: program-execution-controller-template/scripts/.mypy_cache/3.12/cache.13.db
-  sha256: 0e7af1c91351465963ce02483e0dad5f8b5ffa0945abe2b60cb72a36043f7df8
-  bytes: 262144
-- path: program-execution-controller-template/scripts/.mypy_cache/3.12/cache.14.db
-  sha256: 0ddbdd1c64ac273bfc8f0df903ddeaf9ca77e9e4cd58eb108fb86b318f839077
-  bytes: 86016
-- path: program-execution-controller-template/scripts/.mypy_cache/3.12/cache.15.db
-  sha256: 4465ec4741a061703b95e2d95d33b3df18700e2a2c2c57aa2bdd8cfacfc11c91
-  bytes: 241664
-- path: program-execution-controller-template/scripts/.mypy_cache/3.12/cache.2.db
-  sha256: a7175e1815268b1f6678fb4a634e9662641d9d91d8528716951574330b07ddde
-  bytes: 77824
-- path: program-execution-controller-template/scripts/.mypy_cache/3.12/cache.3.db
-  sha256: 5fd3613cc6353f30addc536d70b097f08bc950009f0479645e6d5934767e5fe0
-  bytes: 118784
-- path: program-execution-controller-template/scripts/.mypy_cache/3.12/cache.4.db
-  sha256: af23468ff7eb24190f6574294ebe4d6449b744ce9854f2637c93ffe39e6c0a17
-  bytes: 335872
-- path: program-execution-controller-template/scripts/.mypy_cache/3.12/cache.5.db
-  sha256: 73b989305af9e6ccdf7d8f6be6ae14a720b0abe4b549acb26086d12e11dc2962
-  bytes: 90112
-- path: program-execution-controller-template/scripts/.mypy_cache/3.12/cache.6.db
-  sha256: 3a60165ea56a90fef81d542be8089e71fa539ae9719911cf5d459d47fe655fe4
-  bytes: 73728
-- path: program-execution-controller-template/scripts/.mypy_cache/3.12/cache.7.db
-  sha256: f792d84ad86609adde1cf6459f9783a5641d76e409778477c60f68d8e2805da6
-  bytes: 102400
-- path: program-execution-controller-template/scripts/.mypy_cache/3.12/cache.8.db
-  sha256: 846d176e58fe5eceb22e78ce6ad0d4f3e5645f6b1506fe1d6b3b8f5dbeb2ba98
-  bytes: 143360
-- path: program-execution-controller-template/scripts/.mypy_cache/3.12/cache.9.db
-  sha256: b6707ddc30ef3dd4efa56eccc9405804ed4824490fcee7ec1749407e06bba09a
-  bytes: 831488
-- path: program-execution-controller-template/scripts/.mypy_cache/CACHEDIR.TAG
-  sha256: f1c13afc555358c9033b0f1f30aaa177fe88bda40f4b8a24598400d547876adc
-  bytes: 190
 - path: program-execution-controller-template/scripts/instantiate.py
   sha256: b8d702fc025d096668d063b02fafd7b6f393fcf4997b3dffa3fcf3fcbe34db02
   bytes: 2977
@@ -603,11 +549,11 @@ files:
   sha256: 271268dca078c50de977eb2b940d96c224c79bd62d76140de216591b36399538
   bytes: 3351
 - path: program-execution-controller-template/scripts/validate_controller.py
-  sha256: 5279ecf96b0eda97450dd4175ad958bbd7c80bed99845eb4bc6089f2f803c5de
-  bytes: 9766
+  sha256: 2e865213f2d054f47c49a869e4eb3cbcc1c935ce75519715527f2ea1657b9252
+  bytes: 10025
 - path: scripts/generate_manifest.py
-  sha256: bd63ab3d3d3829ce8ccaf783825352abbefe03c23a541db6a24c586b63e60ec9
-  bytes: 4774
+  sha256: 49979862e7fc48de7ec9d3e708edd9522a953d0875b475409f5868b2bc1f27ad
+  bytes: 5274
 - path: scripts/instantiate_pair.py
   sha256: c64acde6a55c676d34092989e0bccd9e929becd2e2653bef6d036644dbaa842e
   bytes: 3156
@@ -615,8 +561,8 @@ files:
   sha256: bc10b4bf18bfdf1ffad63e574e28139939f64b171aaf519046c028999d5dccec
   bytes: 2625
 - path: scripts/validate_pair.py
-  sha256: dff22030b2acb370684406aae0d0eefd03480b48cc7b93d6bddb3703a2c29fa9
-  bytes: 10417
+  sha256: 3a53f5e7b5c5511a68074addaa4597daa7078464dba0fa411a9400a292c9ddcb
+  bytes: 10678
 - path: scripts/validate_replan.py
   sha256: a823d852d2fc9879495735b2b4f5b050059ea6a67987fc733f81a673a43dcc9c
   bytes: 3855
@@ -671,6 +617,9 @@ files:
 - path: tests/test_blueprint_identity.py
   sha256: 826fce5f8e11989d995a2271f4eb7c562aab2dfe829ba4b26e484ad252eb997b
   bytes: 4639
+- path: tests/test_manifest_inputs.py
+  sha256: 8f85da86a152727867ba9623b21b2fe7c753b5bc2c57b268c06cfa3c44b568de
+  bytes: 3071
 - path: tests/test_pair_alignment.py
   sha256: 81b298a4128e9a2674ab00519c4e22c908e4331d7244c8b4b06b9606a81e50ec
   bytes: 1748
@@ -705,5 +654,5 @@ integrity:
   algorithm: sha256
   self_excluded: true
 summary:
-  file_count: 233
-  total_bytes: 4496583
+  file_count: 216
+  total_bytes: 1084645
