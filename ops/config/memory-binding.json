@@ -58,9 +58,27 @@
       "v2.3.0 tag on Quantum-L9/l9-graphiti-memory (after #56 merges)",
       "uv.lock pin of the released artifact (replaces the git SHA source)"
     ],
-    "installed_record_digest": "7c875776cbcf7c1efa7546212bdfe1e3083543c4cf0d2b5f111a6d3ad665080b",
+    "installed_record_digest": null,
     "release_tag": null,
-    "artifact_provenance_note": "artifact_sha256 is the wheel digest the audited release was built to; runtime_binding verifies it against the installed distribution's PEP 610 direct_url.json archive hash and only then reports binding_status=exact. installed_record_digest is the fallback proof for an install that left no archive hash (digest over the installed RECORD). With neither provable the status is 'compatible', never 'exact'. release_tag stays null until v2.3.0 is cut on Quantum-L9/l9-graphiti-memory.",
-    "installed_record_digest_note": "Digest over the installed RECORD of the wheel whose sha256 is artifact_sha256 above, computed by the memory-cross-repo workflow run on Cursor head 31b4dbcd after that run independently rebuilt the wheel from source.ref and refused a sha256 mismatch. uv records no PEP 610 archive hash for a local-file install, so this is the provenance runtime_binding can verify in place; installer-written dist-info entries are excluded so the digest identifies the wheel rather than the installation."
+    "artifact_provenance_note": "In-place artifact proof needs a PEP 610 archive hash, which pip/uv record for index and URL installs but NOT for the local-file install the proof workflow performs. So the workflow proves the artifact instead, and more strongly: it rebuilds the wheel from source.ref and refuses any sha256 other than artifact_sha256 before installing. The binding reports 'compatible' there and says why. L9_MEMORY_REQUIRE_EXACT_ARTIFACT=1 remains for environments whose installer records provenance.",
+    "installed_record_digest_note": "RETRACTED as an exactness proof, on evidence. Three memory-cross-repo runs installed the byte-identical wheel (artifact_sha256 verified by rebuild each time) and produced three different installed-RECORD digests: fbe247ae..., 7c875776..., be59801c... \u2014 the last two under identical normalisation and an identical install path. The installed RECORD is therefore not a deterministic function of the wheel here, so pinning it would make the binding flap between exact and unbound on an unchanged release. runtime_binding still verifies a RECORD digest when one is pinned; nothing pins one until it is shown stable."
+  },
+  "contract_model_aliases": {
+    "_note": "Cursor view name -> the model names the bound release actually exports, discovered from the schema probe's `available` list in the memory-cross-repo job. Cursor requests its own name; the probe accepts any alias, and the schema is keyed by the Cursor name so validation lookup is unchanged. A name this side guessed is not a contract the release owes.",
+    "HealthReceipt": [
+      "HealthReport"
+    ],
+    "HydrationReceipt": [
+      "HydrationResult"
+    ],
+    "CapabilitiesReceipt": [
+      "ControlPlaneCapabilities"
+    ],
+    "ConflictsReceipt": [
+      "ConflictReport"
+    ],
+    "CandidateReceipt": [
+      "MemoryCandidateIngestionResult"
+    ]
   }
 }

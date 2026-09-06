@@ -136,7 +136,15 @@ CANONICAL_RECEIPT_MODELS: tuple[str, ...] = (
 # an in-process import impossible in pinned mode.
 _SCHEMA_PROBE = r"""
 import json, sys
-names = [n for n in sys.argv[1].split(",") if n]
+# argv[1] is "CursorName=Alias1|Alias2,CursorName2=...": the release names its
+# own models, and a name this side guessed is not one it owes.
+requests = []
+for item in sys.argv[1].split(","):
+    if not item:
+        continue
+    head, _, tail = item.partition("=")
+    requests.append((head, [head] + [a for a in tail.split("|") if a]))
+names = [head for head, _ in requests]
 out = {"schemas": {}, "module": None, "error": None, "missing": [], "available": []}
 try:
     import importlib, pkgutil
@@ -161,11 +169,17 @@ try:
                 seen.add(attr)
                 out["available"].append(attr)
     out["available"].sort()
-    for name in names:
+    out["available"] = out["available"][:400]
+    for name, candidates in requests:
         exporter = None
-        for source in sources:
-            model = getattr(source, name, None)
-            exporter = getattr(model, "model_json_schema", None) if model is not None else None
+        for candidate_name in candidates:
+            for source in sources:
+                model = getattr(source, candidate_name, None)
+                exporter = (
+                    getattr(model, "model_json_schema", None) if model is not None else None
+                )
+                if exporter is not None:
+                    break
             if exporter is not None:
                 break
         if exporter is None:
@@ -247,6 +261,8 @@ class BindingManifest:
     installed_record_digest: str | None = None
     release_tag: str | None = None
     memory_sha: str | None = None
+    #: Cursor view name -> model names the bound release actually exports.
+    contract_model_aliases: dict[str, tuple[str, ...]] = field(default_factory=dict)
 
     @classmethod
     def load(cls, path: Path | None = None) -> BindingManifest:
@@ -267,6 +283,11 @@ class BindingManifest:
             installed_record_digest=_optional_text(evidence.get("installed_record_digest")),
             release_tag=_optional_text(evidence.get("release_tag")),
             memory_sha=_optional_text(evidence.get("memory_sha")),
+            contract_model_aliases={
+                str(key): tuple(str(v) for v in value)
+                for key, value in (raw.get("contract_model_aliases") or {}).items()
+                if not str(key).startswith("_") and isinstance(value, list)
+            },
         )
 
 
@@ -627,7 +648,7 @@ def resolve_runtime_binding(
         )
 
     schemas, schema_digest, schema_source, schema_reasons = _export_contract_schemas(
-        interpreter_path, run, environment, timeout
+        interpreter_path, run, environment, timeout, manifest.contract_model_aliases
     )
     reasons.extend(schema_reasons)
 
@@ -801,6 +822,7 @@ def _export_contract_schemas(
     run: Runner,
     environment: Mapping[str, str],
     timeout: float,
+    aliases: Mapping[str, Sequence[str]] | None = None,
 ) -> tuple[dict[str, Any] | None, str | None, str | None, list[str]]:
     """Export the bound release's own receipt schemas (CG-P1-02, Model B).
 
@@ -818,7 +840,15 @@ def _export_contract_schemas(
     reasons: list[str] = []
     try:
         probe = run(
-            [str(interpreter_path), "-c", _SCHEMA_PROBE, ",".join(CANONICAL_RECEIPT_MODELS)],
+            [
+                str(interpreter_path),
+                "-c",
+                _SCHEMA_PROBE,
+                ",".join(
+                    name + "=" + "|".join((aliases or {}).get(name, ()))
+                    for name in CANONICAL_RECEIPT_MODELS
+                ),
+            ],
             timeout=timeout,
             env=environment,
         )

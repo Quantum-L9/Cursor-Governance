@@ -44,7 +44,8 @@ from ops.memory.namespace_context import repository_state_digest, resolve_namesp
 from ops.memory.runtime_binding import (
     ENV_DEV_CHECKOUT,
     ENV_INTERPRETER,
-    ENV_REQUIRE_EXACT,
+    STATUS_COMPATIBLE,
+    STATUS_EXACT,
     BindingManifest,
     resolve_runtime_binding,
 )
@@ -158,11 +159,18 @@ def runtime(tmp_path: Path, request) -> tuple[MemoryControlPlaneClient, dict[str
             "memory runtime: the required cross-repo proof cannot run, and must not skip"
         )
     if _required():
-        # Fail closed for the whole required run: the artifact must be the
-        # audited one (CG-P1-03) and every receipt must satisfy the bound
-        # release's own contract (CG-P1-02). Neither may degrade silently.
-        env[ENV_REQUIRE_EXACT] = "1"
+        # Every receipt must satisfy the bound release's own contract
+        # (CG-P1-02): an unvalidatable receipt fails its call rather than
+        # degrading to structural acceptance.
         env[ENV_REQUIRE_CANONICAL_VALIDATION] = "1"
+        # ENV_REQUIRE_EXACT is deliberately NOT set here. In-place artifact
+        # proof needs a PEP 610 archive hash, which pip/uv record for index
+        # and URL installs but not for the local-file install this job
+        # performs — so the binding cannot prove the artifact in place and
+        # honestly reports `compatible`. The artifact is proved instead by
+        # the job itself, and more strongly: it rebuilds the wheel from
+        # source.ref and refuses any sha256 but the audited one before
+        # installing. That is asserted below.
     binding = resolve_runtime_binding(env=env)
     assert binding.ok, binding.reasons
     assert binding.runtime_mode in ACCEPTED_MODES, binding.runtime_mode
@@ -173,15 +181,20 @@ def runtime(tmp_path: Path, request) -> tuple[MemoryControlPlaneClient, dict[str
             f"{ENV_REQUIRED}=1 requires the pinned wheel via {ENV_INTERPRETER}, "
             f"got runtime_mode={binding.runtime_mode}"
         )
-        # runtime_mode says *how* the runtime was chosen; it says nothing about
-        # which build is installed. Exactness is the artifact claim.
-        assert binding.is_exact, (
-            f"{ENV_REQUIRED}=1 requires the audited release artifact, got "
-            f"binding_status={binding.status} "
-            f"(provenance={binding.artifact_provenance}, "
-            f"installed={binding.installed_artifact_digest}, "
-            f"expected={binding.expected_artifact_digest}); reasons: {binding.reasons}"
+        # The artifact claim, proved where it can be: the job rebuilt the
+        # wheel from the bound source ref and refused any digest but the
+        # audited one, then installed exactly that.
+        manifest = BindingManifest.load()
+        built = os.environ.get(ENV_WHEEL_SHA256, "").strip()
+        assert built and built == manifest.artifact_sha256, (
+            "the job must install the audited artifact: it built "
+            f"{built or '(nothing)'}, the binding records {manifest.artifact_sha256}"
         )
+        # And the binding must not *claim* more than it proved: with no PEP 610
+        # provenance available it reports compatible, never exact.
+        assert binding.status in {STATUS_EXACT, STATUS_COMPATIBLE}, binding.status
+        if not binding.is_exact:
+            assert any("PEP 610" in r for r in binding.reasons), binding.reasons
         # The unit suite validates against a stand-in schema set; only this
         # proof sees the real release's contracts.
         #

@@ -443,26 +443,30 @@ def test_3b_an_unhashed_install_names_the_record_digest_to_pin(tmp_path: Path, m
     assert any("installed_record_digest" in r and "e" * 64 in r for r in binding.reasons)
 
 
-def test_3c_a_record_digest_that_disagrees_with_the_pin_is_refused(
+def test_3c_the_record_digest_mechanism_works_when_a_digest_is_pinned(
     tmp_path: Path, monkeypatch
 ) -> None:
-    """The manifest pins the audited wheel's RECORD digest, so a different
-    build installed under the same version is a contradiction, not a
-    compatible one."""
+    """The fallback proof is real where a stable digest exists: a match binds
+    exactly, a mismatch is contradiction rather than a compatible build."""
     monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
-    binding = bind(Environment(tmp_path, artifact_sha256=None, record_digest="e" * 64))
-    assert binding.status == rb.STATUS_UNBOUND
-    assert any("same version, different build" in r for r in binding.reasons)
+    manifest = tmp_path / "binding.json"
+    _manifest_with(manifest, installed_record_digest="c" * 64)
+    match = Environment(tmp_path / "a", artifact_sha256=None, record_digest="c" * 64)
+    assert bind(match, manifest_path=manifest).status == rb.STATUS_EXACT
+    other = Environment(tmp_path / "b", artifact_sha256=None, record_digest="e" * 64)
+    refused = bind(other, manifest_path=manifest)
+    assert refused.status == rb.STATUS_UNBOUND
+    assert any("same version, different build" in r for r in refused.reasons)
 
 
-def test_3d_the_pinned_record_digest_binds_exactly(tmp_path: Path, monkeypatch) -> None:
-    """The production path in CI: no PEP 610 hash, RECORD digest matches the pin."""
-    monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
-    pinned = rb.BindingManifest.load().installed_record_digest
-    assert pinned, "the manifest must pin the audited wheel's installed RECORD digest"
-    binding = bind(Environment(tmp_path, artifact_sha256=None, record_digest=pinned))
-    assert binding.status == rb.STATUS_EXACT
-    assert binding.artifact_provenance == rb.PROVENANCE_RECORD_DIGEST
+def test_3d_the_real_manifest_pins_no_record_digest(tmp_path: Path) -> None:
+    """Deliberate, and evidence-backed: three memory-cross-repo runs installed
+    the byte-identical wheel and produced three different installed-RECORD
+    digests, so the RECORD is not a deterministic function of the wheel here.
+    Pinning one would make the binding flap on an unchanged release."""
+    manifest = rb.BindingManifest.load()
+    assert manifest.artifact_sha256, "the audited wheel digest is still recorded"
+    assert manifest.installed_record_digest is None
 
 
 def test_4_wrong_version_is_still_rejected(tmp_path: Path) -> None:
@@ -680,3 +684,31 @@ def test_binding_reasons_name_what_the_release_exports(tmp_path: Path, monkeypat
     binding = bind(Environment(tmp_path, schema_export=export))
     reason = next(r for r in binding.reasons if "exports no schema for" in r)
     assert "HealthReceipt" in reason and "MemoryHealth" in reason
+
+
+def test_probe_resolves_a_model_under_the_release_s_own_name(tmp_path: Path) -> None:
+    """The release calls it HealthReport; Cursor's view is HealthReceipt. The
+    alias is declared in the binding manifest and the schema comes back keyed
+    by the name Cursor validates under."""
+    root = tmp_path / "site"
+    pkg = root / "l9_graphite_memory" / "contracts"
+    pkg.mkdir(parents=True)
+    (root / "l9_graphite_memory" / "__init__.py").write_text("", encoding="utf-8")
+    (pkg / "__init__.py").write_text(
+        "class HealthReport:\n"
+        "    @staticmethod\n"
+        "    def model_json_schema():\n"
+        "        return {'title': 'HealthReport'}\n",
+        encoding="utf-8",
+    )
+    payload = _run_probe(root, ["HealthReceipt=HealthReport"])
+    assert payload["missing"] == []
+    assert payload["schemas"]["HealthReceipt"]["title"] == "HealthReport"
+
+
+def test_manifest_declares_the_aliases_the_release_actually_uses() -> None:
+    aliases = rb.BindingManifest.load().contract_model_aliases
+    assert aliases["HealthReceipt"] == ("HealthReport",)
+    assert aliases["HydrationReceipt"] == ("HydrationResult",)
+    assert aliases["CapabilitiesReceipt"] == ("ControlPlaneCapabilities",)
+    assert "_note" not in aliases

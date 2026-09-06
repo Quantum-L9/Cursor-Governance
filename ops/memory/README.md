@@ -98,15 +98,39 @@ binding exists to answer. The status taxonomy is therefore:
 
 Provenance is read from the installed distribution, not asserted: PEP 610
 `direct_url.json` carries the archive hash pip/uv recorded for the wheel, and
-`release_evidence.artifact_sha256` is what it must equal. Where an install left
-no archive hash, `release_evidence.installed_record_digest` pins a digest over
-the installed `RECORD` (every file with its own sha256), which separates builds
-just as well. An editable install has no immutable artifact identity and is
-never `exact`. A digest that is present and disagrees is not weak evidence but
-contradiction, and is refused rather than downgraded.
+`release_evidence.artifact_sha256` is what it must equal. An editable install
+has no immutable artifact identity and is never `exact`. A digest that is
+present and disagrees is not weak evidence but contradiction, and is refused
+rather than downgraded.
+
+`release_evidence.installed_record_digest` is a second, optional pin — a digest
+over the installed `RECORD` — for installs that leave no archive hash. The
+mechanism works and is tested, but **nothing pins one today, on evidence**:
+three `memory-cross-repo` runs installed the byte-identical wheel (its sha256
+re-verified by rebuild each time) and produced three different RECORD digests.
+The installed RECORD is not a deterministic function of the wheel in that
+environment, so a pin would make the binding flap between `exact` and `unbound`
+on an unchanged release. Do not pin one until it is shown stable across runs.
+
+That is why the proof job reports `compatible` rather than `exact`: `uv`
+records no archive hash for the local-file install it performs. The artifact is
+proved there by the job instead, and more strongly — it rebuilds the wheel from
+`source.ref` and refuses any sha256 but the audited one before installing.
 
 `L9_MEMORY_REQUIRE_EXACT_ARTIFACT=1` turns `compatible` from "usable, and
 reported as unproved" into a refusal; the required cross-repo proof sets it.
+
+**Model names belong to the release.** `CANONICAL_RECEIPT_MODELS` lists what
+Cursor *requests*; the release names its own models, and several differ
+(`HealthReceipt` is `HealthReport` there, `HydrationReceipt` is
+`HydrationResult`, `CapabilitiesReceipt` is `ControlPlaneCapabilities`). The
+mapping lives in `memory-binding.json` as `contract_model_aliases` and the
+probe accepts any alias, keying the schema by the name Cursor validates under.
+A name this side guessed is not a contract the release owes — so nothing
+asserts that the release exports Cursor's spelling. The enforcement is
+behavioural: an operation whose receipt has no canonical schema returns
+`VALIDATION_UNAVAILABLE`, and the binding reasons list what the release does
+export so a wrong name is diagnosable rather than mute.
 
 **Canonical receipt validation** (audit CG-P1-02). Because the memory runtime
 may be another interpreter, `import l9_graphite_memory.contracts` cannot
