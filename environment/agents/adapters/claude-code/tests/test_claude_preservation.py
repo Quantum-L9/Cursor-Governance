@@ -79,11 +79,14 @@ def project(root: Path) -> None:
         for record in sorted(registry["skills"], key=lambda item: item["name"])
         if record["invocation"] == "explicit_only"
     }
-    settings = root / ".claude/settings.json"
-    settings.parent.mkdir(parents=True, exist_ok=True)
-    settings.write_text(
-        json.dumps({"skillOverrides": overrides}, indent=2) + "\n", encoding="utf-8"
-    )
+    # sync_generated_artifacts writes the same skillOverrides into both the live
+    # settings and the template that renders into consumer clones.
+    for rel in (validator.SETTINGS_REL, validator.TEMPLATE_REL):
+        path = root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps({"skillOverrides": overrides}, indent=2) + "\n", encoding="utf-8"
+        )
 
 
 def write_baseline_from(root: Path) -> None:
@@ -178,6 +181,42 @@ def test_v_cc_001_fails_when_a_tier_moves(tmp_path: Path) -> None:
     assert errors, "a Claude tier move must fail V-CC-001"
     assert subject in errors[0]
     assert "explicit_only" in errors[0] and "model_allowed" in errors[0]
+
+
+def test_v_cc_001_covers_the_settings_template_too() -> None:
+    """The template renders into consumer clones; checking only .claude/ is a hole.
+
+    #513 changed settings.template.json in lockstep with .claude/settings.json.
+    A gate that read only the latter would pass a change that dropped an
+    override from the template alone.
+    """
+    live = json.loads((ROOT / validator.SETTINGS_REL).read_text(encoding="utf-8"))
+    template = json.loads((ROOT / validator.TEMPLATE_REL).read_text(encoding="utf-8"))
+
+    assert live["skillOverrides"] == template["skillOverrides"]
+    assert validator._template_agrees_with_settings(ROOT) == []
+
+
+def test_v_cc_001_fails_when_the_template_and_settings_disagree(tmp_path: Path) -> None:
+    root = build_root(tmp_path)
+    subject = an_explicit_only_skill(root)
+    overrides = json.loads((root / validator.SETTINGS_REL).read_text(encoding="utf-8"))[
+        "skillOverrides"
+    ]
+    template = root / validator.TEMPLATE_REL
+    template.parent.mkdir(parents=True, exist_ok=True)
+    template.write_text(
+        json.dumps(
+            {"skillOverrides": {k: v for k, v in overrides.items() if k != subject}}, indent=2
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    errors = _clause(validator.validate(root), "V-CC-001")
+
+    assert any("settings.template.json skillOverrides disagree" in err for err in errors)
+    assert any(subject in err for err in errors)
 
 
 def test_v_cc_001_fails_when_a_skill_leaves_the_projection(tmp_path: Path) -> None:

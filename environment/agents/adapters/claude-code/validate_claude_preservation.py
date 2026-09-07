@@ -45,8 +45,9 @@ CANONICAL_REL = Path("skills")
 #: past that, it is the record that the separation happened.
 ALLOWLIST: dict[str, str] = {}
 
-#: Path prefixes the Cursor adapter tree may never write (V-CC-005).
-CLAUDE_OWNED_PREFIXES = (".claude/", "environment/agents/adapters/claude-code")
+#: Path prefixes the Cursor adapter tree may never write (V-CC-005). Derived
+#: from the path constants above so the two cannot drift apart.
+CLAUDE_OWNED_PREFIXES = (".claude/", CLAUDE_ADAPTER_REL.as_posix())
 
 #: Writes are matched syntactically, never as bare English fragments — "never
 #: touches .claude/settings.json" in a README is documentation, not a write.
@@ -169,7 +170,32 @@ def check_cc001(root: Path, current: dict[str, dict[str, Any]]) -> tuple[list[st
         )
     facts["tier_drift_count"] = len(drifted)
     facts["allowlisted"] = sorted(ALLOWLIST)
+
+    # settings.template.json is the half of the projection that renders into
+    # consumer clones, and #513 changed it in lockstep with .claude/settings.json.
+    # Checking only the latter would let an override be dropped from the template
+    # alone and still pass.
+    errors.extend(_template_agrees_with_settings(root))
     return errors, facts
+
+
+def _template_agrees_with_settings(root: Path) -> list[str]:
+    try:
+        live = _read_json(root / SETTINGS_REL).get("skillOverrides", {}) or {}
+        template = _read_json(root / TEMPLATE_REL).get("skillOverrides", {}) or {}
+    except (OSError, json.JSONDecodeError) as exc:
+        return [f"settings template unreadable: {exc}"]
+
+    only_live = sorted(set(live) - set(template))
+    only_template = sorted(set(template) - set(live))
+    conflicting = sorted(n for n in set(live) & set(template) if live[n] != template[n])
+    if not (only_live or only_template or conflicting):
+        return []
+    return [
+        "settings.template.json skillOverrides disagree with .claude/settings.json "
+        f"(missing_from_template={only_live}, extra_in_template={only_template}, "
+        f"conflicting={conflicting})"
+    ]
 
 
 def check_cc002(root: Path) -> tuple[list[str], dict[str, Any]]:
@@ -243,6 +269,13 @@ def check_cc003(root: Path, current: dict[str, dict[str, Any]]) -> tuple[list[st
 
     # An explicit-only skill must carry its settings override, or Claude Code
     # would model-invoke a skill the corpus marks user-invocable-only.
+    #
+    # validate_skill_activation.py asserts the same invariant. That overlap is
+    # deliberate, not an oversight: both derive it from the same two files by
+    # the same rule, so they cannot disagree, and V-CC-003 must hold standalone
+    # — this validator is the one that still runs with Cursor absent and is
+    # wired to the Claude-path pre-commit filter. Redundancy here, not a second
+    # owner: the tier itself is owned by AUTONOMY_MANIFEST.yaml alone.
     unguarded = sorted(
         name
         for name, tier in current.items()
