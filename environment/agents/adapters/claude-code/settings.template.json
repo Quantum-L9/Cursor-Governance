@@ -18,6 +18,9 @@
     "approved here because L9 PreToolUse gates still decide whether each effect may proceed;",
     "the vendor permission dialog is not an architectural safety boundary.",
     "Read-only git introspection and explicit gh api --method GET are likewise frictionless.",
+    "Graphiti MCP reads are pre-approved. Raw graphiti-memory add_memory is explicitly denied:",
+    "it bypasses EpisodeContract agent identity, PII redaction, and repo-group resolution.",
+    "Canonical writes stay with graphiti_memory_client.py and memory_writeback.py.",
     "On Claude hosted surfaces GraphQL-backed gh pr/repo commands are intentionally NOT",
     "advertised as approved: the session gateway may reject GraphQL while repository-scoped",
     "REST works. bootstrap_capability_preflight.sh injects the REST-only rule at SessionStart.",
@@ -223,6 +226,8 @@
       "mcp__github__subscribe_pr_activity",
       "mcp__github__unsubscribe_pr_activity",
       "mcp__github__update_pull_request",
+      "mcp__graphiti-memory__search_memory_facts",
+      "mcp__graphiti-memory__group_ids",
       "mcp__context7__resolve-library-id",
       "mcp__context7__query-docs",
       "mcp__plugin_context7_context7__resolve-library-id",
@@ -234,7 +239,8 @@
       "Bash(rm -rf:*)",
       "Bash(make push:*)",
       "mcp__github__create_pull_request",
-      "mcp__github__push_files"
+      "mcp__github__push_files",
+      "mcp__graphiti-memory__add_memory"
     ]
   },
   "env": {
