@@ -10,7 +10,7 @@ compiled_prompt:
   objective: >
     Make the normal L9 Claude execution path frictionless without creating any
     duplicate authority plane. Safe repository editing, bounded inspection, and
-    canonical memory reads/writes should not trigger vendor permission prompts;
+    the canonical memory lifecycle should not trigger vendor permission prompts;
     L9 governance remains authoritative for effects. Hosted GitHub transport must
     avoid known-bad GraphQL probes and publication must remain make pr only.
 
@@ -19,11 +19,12 @@ compiled_prompt:
       service: "l9-graphiti-memory MemoryService"
       server: "l9-graphite-memory"
       transport: "stdio"
-      interactive_reads:
+      agent_lifecycle:
         - "memory.health"
         - "memory.search"
         - "memory.hydrate"
         - "memory.conflicts"
+        - "memory.close"
       interactive_write:
         sequence:
           - "memory.phase_lock"
@@ -32,6 +33,7 @@ compiled_prompt:
           - "The phase lock is a memory-write consistency precondition only."
           - "It is not repository-write authority."
           - "memory.ingest is not the autonomous model-write bypass."
+          - "Compatibility aliases are not a second agent-facing vocabulary."
       retired:
         - "graphiti-memory provider MCP"
         - "graphiti_memory_client.py as live front door"
@@ -84,6 +86,7 @@ compiled_prompt:
         - "mcp__l9-graphite-memory__memory.conflicts"
         - "mcp__l9-graphite-memory__memory.phase_lock"
         - "mcp__l9-graphite-memory__memory.write_governed"
+        - "mcp__l9-graphite-memory__memory.close"
     deny_or_do_not_ambiently_allow:
       - "retired graphiti-memory server tools"
       - "memory.ingest"
@@ -92,7 +95,7 @@ compiled_prompt:
       - "memory.bootstrap"
       - "memory.distill"
       - "admin/maintenance memory operations"
-      - "legacy write aliases"
+      - "all compatibility aliases"
       - "raw publication mutations"
 
   bootstrap:
@@ -113,8 +116,9 @@ compiled_prompt:
   validation:
     static:
       - "settings template and projected .claude/settings.json match"
-      - "canonical memory permissions present"
+      - "canonical memory lifecycle permissions present"
       - "provider memory plane absent/denied"
+      - "legacy memory aliases denied"
       - "primary checkout produces no Add Repo bootstrap path"
       - "known GraphQL commands short-circuit without invoking gh"
       - "explicit REST GET passes through"
@@ -123,7 +127,7 @@ compiled_prompt:
       - "no Register Repo Root prompt"
       - "no primary Add Repo prompt"
       - "no normal Edit/Write/NotebookEdit prompt"
-      - "no canonical memory phase-lock/write prompt"
+      - "no canonical memory lifecycle or governed-write prompt"
       - "canonical governed write returns a MemoryService receipt"
       - "no Send Later prompt"
       - "no known-bad GraphQL network attempt"
