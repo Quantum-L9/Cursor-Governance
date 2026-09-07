@@ -5,12 +5,12 @@
     "started_at": "2026-09-06T00:00:00+00:00",
     "campaign_stage": "C10",
     "memory_release": "2.3.0",
-    "memory_source_ref": "7691c07648d319ad22b353f4f6cb7e164f746bb2",
+    "memory_source_ref": "5605569b72baa25f6b6e6324b0017317fb31e0cd",
     "control_plane_contract": "memory-control-plane/v1",
     "continuation_schema": "cursor.continuation/v2",
     "memory_artifact_sha256": "905d91402db99fcd3e094db67576c19297823b448fd6f76842f32d1be4804291",
     "memory_rebound_at": "2026-09-06 (audit closure C14: rebound from the M2 head to the final #56 head with the wheel digest)",
-    "memory_source_ref_note": "Rebound from the #56 PR head 5605569b72baa25f6b6e6324b0017317fb31e0cd to its merge commit on main after #56 merged (2026-09-07). Content-identical: same tree, and the wheel rebuilt from it reproduces artifact_sha256. RU-P1-01 forbids a pre-final SHA in the release binding."
+    "memory_source_ref_note": "The commit tag v2.3.0 peels to, and identical to memory-binding.json source.ref by contract (a test enforces the equality — these two SSOTs must never name different releases). Moved to the merge commit 7691c076 when #56 merged untagged, then back here when v2.3.0 was cut at this commit: the tag is the release identity, and it is an ancestor of main. The artifact never moved — one tree d38f10d7, one wheel, artifact_sha256 reproduced from both commits."
   },
   "authority": {
     "canonical": "l9-graphite-memory MemoryService (Quantum-L9/l9-graphiti-memory)",

@@ -96,12 +96,14 @@ jobs:
           print(f"artifact={ev['artifact']}")
           print(f"sha256={ev['artifact_sha256']}")
           print(f"epoch={ev['source_date_epoch']}")
+          print(f"tag={ev.get('release_tag') or ''}")
           PY
 
       - name: Clone the memory repository at the bound SHA
         env:
           MEMORY_REPO: ${{ steps.binding.outputs.repository }}
           MEMORY_REF: ${{ steps.binding.outputs.ref }}
+          MEMORY_TAG: ${{ steps.binding.outputs.tag }}
           TOKEN: ${{ secrets.MEMORY_REPO_READ_TOKEN || github.token }}
         run: |
           set -euo pipefail
@@ -110,6 +112,25 @@ jobs:
           git init .
           git remote add origin \
             "https://x-access-token:${TOKEN}@github.com/${MEMORY_REPO}.git"
+          # A declared release_tag is a claim about which release this binding
+          # names, and a claim nothing resolves is not a binding. Peel the tag
+          # on the remote (^{} dereferences an annotated tag to its commit) and
+          # refuse a ref that is not the one the tag points at.
+          if [ -n "${MEMORY_TAG}" ]; then
+            tagged="$(git ls-remote origin "refs/tags/${MEMORY_TAG}^{}" | awk '{print $1}')"
+            if [ -z "${tagged}" ]; then
+              tagged="$(git ls-remote origin "refs/tags/${MEMORY_TAG}" | awk '{print $1}')"
+            fi
+            if [ -z "${tagged}" ]; then
+              echo "::error::binding names release_tag ${MEMORY_TAG}, which does not exist on ${MEMORY_REPO}"
+              exit 1
+            fi
+            if [ "${tagged}" != "${MEMORY_REF}" ]; then
+              echo "::error::release_tag ${MEMORY_TAG} resolves to ${tagged}, binding source.ref is ${MEMORY_REF}"
+              exit 1
+            fi
+            echo "release_tag ${MEMORY_TAG} resolves to the bound ref ${MEMORY_REF}"
+          fi
           git -c protocol.version=2 fetch --depth=1 origin "${MEMORY_REF}"
           git checkout --detach FETCH_HEAD
           git remote set-url origin "https://github.com/${MEMORY_REPO}.git"

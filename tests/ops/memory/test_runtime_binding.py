@@ -758,18 +758,45 @@ def test_the_probe_searches_group_resolver_as_well_as_contracts() -> None:
     assert "l9_graphite_memory.group_resolver" in modules
 
 
-def test_the_binding_names_the_merged_commit_not_a_pr_head() -> None:
-    """RU-P1-01: no pre-final SHA in the release binding. 7691c076 is the merge
-    commit of #56 on main; 5605569b was its PR head."""
+def test_the_binding_names_the_commit_its_release_tag_resolves_to() -> None:
+    """RU-P1-01: the tag is the release identity, so source.ref must be the
+    commit it peels to.
+
+    This assertion was written when no tag existed and said the opposite —
+    that the binding must name the merge commit 7691c076 rather than #56's
+    head 5605569b, a pre-final branch head being no release identity. Cutting
+    v2.3.0 at 5605569b settled it: that commit IS the release, and it is an
+    ancestor of main. The old form is not deleted, it is corrected — a
+    release_tag the manifest cannot resolve to its own ref is a claim rather
+    than a binding, which is why the cross-repo proof peels the tag on the
+    remote and refuses a mismatch.
+    """
     manifest = rb.BindingManifest.load()
-    ref = json.loads(rb.DEFAULT_MANIFEST_PATH.read_text(encoding="utf-8"))["source"]["ref"]
-    assert ref == "7691c07648d319ad22b353f4f6cb7e164f746bb2"
-    assert ref != "5605569b72baa25f6b6e6324b0017317fb31e0cd"
-    # The artifact the merge produces is unchanged, which is why the recorded
-    # digest and its proof survive the rebind.
+    raw = json.loads(rb.DEFAULT_MANIFEST_PATH.read_text(encoding="utf-8"))
+    ref = raw["source"]["ref"]
+    assert manifest.release_tag == "v2.3.0"
+    assert ref == "5605569b72baa25f6b6e6324b0017317fb31e0cd"
+    assert manifest.memory_sha == ref, "release_evidence.memory_sha must equal source.ref"
+    # Neither rebind moved the artifact: one tree, one wheel, one digest.
     assert manifest.artifact_sha256 == (
         "905d91402db99fcd3e094db67576c19297823b448fd6f76842f32d1be4804291"
     )
+
+
+def test_a_declared_release_tag_is_verified_against_the_bound_ref() -> None:
+    """The claim is only worth as much as the check behind it. The proof
+    workflow must peel the declared tag on the memory remote and fail when it
+    does not resolve to source.ref — otherwise release_tag is documentation."""
+    workflow = (
+        rb.DEFAULT_MANIFEST_PATH.parent.parent.parent
+        / ".github"
+        / "workflows"
+        / "memory-cross-repo.yml"
+    ).read_text(encoding="utf-8")
+    assert "print(f\"tag={ev.get('release_tag') or ''}\")" in workflow
+    assert "refs/tags/${MEMORY_TAG}^{}" in workflow
+    assert "does not exist on" in workflow
+    assert 'if [ "${tagged}" != "${MEMORY_REF}" ]' in workflow
 
 
 def test_probe_resolves_an_alias_from_a_second_declared_module(tmp_path: Path) -> None:

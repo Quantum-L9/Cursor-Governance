@@ -23,8 +23,8 @@
   "source": {
     "kind": "git",
     "repository": "Quantum-L9/l9-graphiti-memory",
-    "ref": "7691c07648d319ad22b353f4f6cb7e164f746bb2",
-    "ref_note": "Release 2.3.0 = MEMORY_TARGET_VERSION. This is the MERGE COMMIT of Quantum-L9/l9-graphiti-memory#56 on main (merged 2026-09-07), not the PR-branch head: RU-P1-01 forbids a pre-final SHA in the binding. The merge is content-identical to the audit-closure head 5605569b it landed \u2014 same tree d38f10d7e7800a80d3c5cdff3affdf93220cf981 \u2014 and the wheel rebuilt from it at SOURCE_DATE_EPOCH reproduces artifact_sha256 exactly, so the recorded artifact and its proof still hold. release_tag stays null until v2.3.0 is cut; only client-v2.0.0 exists on that repository today. Lock the artifact in uv.lock once it is published \u2014 an index or release asset is what uv sync --locked --no-build needs."
+    "ref": "5605569b72baa25f6b6e6324b0017317fb31e0cd",
+    "ref_note": "Release 2.3.0 = MEMORY_TARGET_VERSION, and this is the commit tag v2.3.0 resolves to (annotated tag 03ec559ca8e28b49c6763189363fc55400e3b09d, peeled target 5605569b). The tag is the release identity, so source.ref must equal its target: a release_tag the manifest cannot resolve to its own ref is a claim, not a binding. 5605569b is an ancestor of origin/main, merged by 7691c07648d319ad22b353f4f6cb7e164f746bb2, and the two carry the identical tree d38f10d7e7800a80d3c5cdff3affdf93220cf981 \u2014 so the wheel, artifact_sha256, and every proof taken against them are unchanged by which of the two is named. uv.lock still cannot pin the artifact: the package is not on PyPI (404 for both l9-graphite-memory and l9-graphiti-memory as of 2026-09-07) and this surface cannot read the releases API to confirm a release asset. Lock it once an index or asset serves it \u2014 that is what uv sync --locked --no-build needs."
   },
   "binding_policy": {
     "production": "exact release artifact locked in uv.lock; runtime_mode=pinned_environment",
@@ -45,7 +45,7 @@
   ],
   "release_evidence": {
     "description": "Exact-head proof of the binding (audit P1-01/P2-02). The wheel is built from source.ref with uv build --wheel under the fixed SOURCE_DATE_EPOCH below and is byte-reproducible (the digest reproduced from a fresh clone of the same commit). .github/workflows/memory-cross-repo.yml rebuilds it from the same ref, refuses a digest mismatch, installs the wheel into a clean environment, and runs tests/ops/memory/test_cross_repo_lifecycle.py with L9_MEMORY_CROSS_REPO_REQUIRED=1 (a skip is a failure) and no provider credential in the environment. A digest here without that job green on the same Cursor head is a claim, not a proof.",
-    "memory_sha": "7691c07648d319ad22b353f4f6cb7e164f746bb2",
+    "memory_sha": "5605569b72baa25f6b6e6324b0017317fb31e0cd",
     "package_version": "2.3.0",
     "artifact": "l9_graphite_memory-2.3.0-py3-none-any.whl",
     "artifact_sha256": "905d91402db99fcd3e094db67576c19297823b448fd6f76842f32d1be4804291",
@@ -59,10 +59,11 @@
       "uv.lock pin of the released artifact (replaces the git SHA source)"
     ],
     "installed_record_digest": null,
-    "release_tag": null,
+    "release_tag": "v2.3.0",
+    "release_tag_object": "03ec559ca8e28b49c6763189363fc55400e3b09d",
     "artifact_provenance_note": "In-place artifact proof needs a PEP 610 archive hash, which pip/uv record for index and URL installs but NOT for the local-file install the proof workflow performs. So the workflow proves the artifact instead, and more strongly: it rebuilds the wheel from source.ref and refuses any sha256 other than artifact_sha256 before installing. The binding reports 'compatible' there and says why. L9_MEMORY_REQUIRE_EXACT_ARTIFACT=1 remains for environments whose installer records provenance.",
     "installed_record_digest_note": "RETRACTED as an exactness proof, on evidence. FOUR installs of the byte-identical wheel (artifact_sha256 re-verified by rebuild each time) produced four different installed-RECORD digests: fbe247ae..., 7c875776..., be59801c... on GitHub runners and 52b6df58... in a Claude Code container \u2014 the last three under identical normalisation. The installed RECORD is therefore not a deterministic function of the wheel, and a pin would flap the binding between exact and unbound on an unchanged release. runtime_binding still verifies a RECORD digest when one is pinned; nothing pins one until it is shown stable across machines.",
-    "memory_sha_note": "Merge commit of #56 on main. Rebound from the PR head 5605569b after merge; proved content-identical (same tree) and digest-identical (wheel rebuilt locally to 905d91402db99fcd3e094db67576c19297823b448fd6f76842f32d1be4804291) before rebinding."
+    "memory_sha_note": "The commit tag v2.3.0 peels to. This binding moved twice on 2026-09-07 and both moves are recorded rather than rewritten: #56's PR head 5605569b -> its merge commit 7691c076 when the PR merged and no tag existed (a pre-final branch head is not a release identity), then back to 5605569b when the release authority cut v2.3.0 there. The tag settles it: the tagged commit IS the release, and it is an ancestor of main. Nothing about the artifact moved with either rebind — one tree d38f10d7, one wheel, digest 905d91402db99fcd3e094db67576c19297823b448fd6f76842f32d1be4804291 reproduced from both."
   },
   "contract_model_aliases": {
     "_note": "Cursor view name -> the model names the bound release actually exports, discovered from the schema probe's `available` list in the memory-cross-repo job. Cursor requests its own name; the probe accepts any alias, and the schema is keyed by the Cursor name so validation lookup is unchanged. A name this side guessed is not a contract the release owes.",
