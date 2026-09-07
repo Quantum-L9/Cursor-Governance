@@ -1,5 +1,5 @@
 {
-  "generation_id": "a4cd73bf0fc3510e743516b4aeeb9df7f1bba728d1e221d1e31b5456ccb5b288",
+  "generation_id": "fdcf549b00594b9370993cd85f50f6998e6bd5e8b13ba352b263de7b40ab89a9",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -11,7 +11,6 @@
       "l9-structured-reasoning",
       "l9-gmp-protocol",
       "l9-plan",
-      "l9-plan-simple",
       "l9-code-analysis",
       "l9-gap-analysis",
       "l9-ynp",
@@ -167,6 +166,7 @@
         ]
       },
       {
+        "hint_allowed": true,
         "id": "plan",
         "negative_signals": [
           "campaign",
@@ -177,7 +177,7 @@
           "pe autonomy",
           "/l9-plan"
         ],
-        "note": "Ordinary implementation plans, Build-button plans, and Cursor Plan mode are l9-plan-simple (planning-only; Build is the user's press). Campaign / PE / Program Lock planning is the campaign_plan route below \u2014 one manifest-owned doctrine, no static rule table (VSP-P1-002).\n",
+        "note": "Ordinary implementation plans, Build-button plans, and Cursor Plan mode are l9-plan-simple (planning-only; Build is the user's press). Campaign / PE / Program Lock planning is the campaign_plan route below \u2014 one manifest-owned doctrine, no static rule table (VSP-P1-002).\nexplicit_only + hint_allowed \u2014 the route recommends Read/attach (source: explicit_hint); it is never model-invocation authority. l9-plan-simple stays explicit_only so the Claude Code projection is unchanged by the Cursor plane (Claude Code Preservation Contract CC-006, V-CC-001). Promoting the tier is a separate change set \u2014 PR #512 owns it.\n",
         "positive_signals": [
           "create an execution plan",
           "write a plan first",
@@ -196,6 +196,21 @@
           "build-button plan"
         ],
         "primary": "l9-plan-simple",
+        "required_any": [
+          "execution plan",
+          "implementation plan",
+          "plan mode",
+          "planning mode",
+          "plan this",
+          "plan first",
+          "plan before",
+          "write a plan",
+          "make a plan",
+          "build-button plan",
+          "decompose the requirements",
+          "decompose requirements",
+          "scope is unclear"
+        ],
         "signal_weight": 8,
         "supporting": [
           "l9-structured-reasoning"
@@ -1332,17 +1347,17 @@
       "when_to_use": "the user asks for /l9-plan, make campaign, a Program Lock, a campaign plan, or a PE+autonomy plan/spec that runs through program-execution; ordinary plans belong to l9-plan-simple"
     },
     {
-      "composition_role": "primary",
+      "composition_role": "general",
       "description": "create a machine-validated cursor .plan.md from the executable-plan template. cursor-build executes then opens a stacked PR; embedded stops at planning artifacts with no execution authority. use when scope is unclear or Plan mode is on. do not use for /l9-plan, make campaign, or a PE lock.",
-      "disable_model_invocation": false,
-      "invocation": "model_allowed",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
       "name": "l9-plan-simple",
       "path": "skills/l9-plan-simple",
-      "reason": "",
+      "reason": "auto-registered by sync_generated_artifacts (orphan \u2192 explicit_only)",
       "skill_md": "skills/l9-plan-simple/SKILL.md",
-      "skill_sha256": "09e597cbf9765272db462acb16d9153806d5b27a81b7e30bf8ecc37046f66dd5",
+      "skill_sha256": "887736045f37ab0ca800792f9b6c0f9302f852b45302126aa9f0552c3d14a0da",
       "user_invocable": true,
-      "when_to_use": "scope is unclear, Cursor Plan mode is on, the user wants a Build-button plan, or implementation needs an ordinary machine-validated plan/spec first (not /l9-plan, make campaign, or a PE lock)"
+      "when_to_use": ""
     },
     {
       "composition_role": "general",
@@ -1554,6 +1569,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "f76b1f2444ac5c9f87fd1cffc3c28c59b00c34c71132e4194431fd39a63ee4b0",
-  "source_skill_corpus_sha256": "1ee67b6faff34f0ae77a80097ffd37102655e2b51c776d1d2f4d4a4b9e5b4cc5"
+  "source_manifest_sha256": "6edcc9e97cbe150fc003e675f9b5d11e19bad615fc1926602f56c16053fef9a4",
+  "source_skill_corpus_sha256": "4198557f070f535b5f4f71597d6ff30b720405d9412d620a62538a037aebf275"
 }

@@ -106,7 +106,7 @@
       "expected_supporting": [
         "l9-structured-reasoning"
       ],
-      "expected_source": "route"
+      "expected_source": "explicit_hint"
     },
     {
       "prompt": "Prepare a PE campaign plan with a program lock for this brief",
@@ -125,7 +125,7 @@
       "expected_supporting": [
         "l9-structured-reasoning"
       ],
-      "expected_source": "route",
+      "expected_source": "explicit_hint",
       "forbidden": [
         "l9-plan"
       ]
@@ -173,7 +173,7 @@
       "expected_supporting": [
         "l9-structured-reasoning"
       ],
-      "expected_source": "route",
+      "expected_source": "explicit_hint",
       "forbidden": [
         "l9-plan"
       ]

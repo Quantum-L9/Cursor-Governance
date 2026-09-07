@@ -24,6 +24,7 @@ metadata:
   status: active
   version: 1.3.0
   updated: 2026-09-02
+disable-model-invocation: true
 ---
 
 # Execution Planning (Cursor Build · Embedded)

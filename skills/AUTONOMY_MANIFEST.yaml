@@ -37,8 +37,6 @@ tiers:
     use_when: work must be phased, auditable, traceable, or touches protected/high-risk areas
   - skill: l9-plan
     use_when: the user asks for /l9-plan, make campaign, a Program Lock, a campaign plan, or a PE+autonomy plan/spec that runs through program-execution; ordinary plans belong to l9-plan-simple
-  - skill: l9-plan-simple
-    use_when: scope is unclear, Cursor Plan mode is on, the user wants a Build-button plan, or implementation needs an ordinary machine-validated plan/spec first (not /l9-plan, make campaign, or a PE lock)
   - skill: l9-code-analysis
     use_when: exploring unfamiliar code, auditing structure, mapping flows, or identifying hotspots
   - skill: l9-gap-analysis
@@ -122,6 +120,8 @@ tiers:
     reason: macOS disk reclaim; diagnose-first then HITL repair; disable-model-invocation, explicit only
   - skill: l9-git-work-preserve
     reason: auto-registered by sync_generated_artifacts (orphan → explicit_only)
+  - skill: l9-plan-simple
+    reason: auto-registered by sync_generated_artifacts (orphan → explicit_only)
   - skill: l9-repo-sync
     reason: in-place /ff catch-up mutates a named clone (park unique work, then reset --keep); explicit only, hint_allowed for Read/attach
   - skill: l9-claude-coding-contract-compiler
@@ -199,7 +199,6 @@ claude_routing:
   - l9-structured-reasoning
   - l9-gmp-protocol
   - l9-plan
-  - l9-plan-simple
   - l9-code-analysis
   - l9-gap-analysis
   - l9-ynp
@@ -351,6 +350,21 @@ claude_routing:
   - id: plan
     primary: l9-plan-simple
     signal_weight: 8
+    hint_allowed: true
+    required_any:
+    - execution plan
+    - implementation plan
+    - plan mode
+    - planning mode
+    - plan this
+    - plan first
+    - plan before
+    - write a plan
+    - make a plan
+    - build-button plan
+    - decompose the requirements
+    - decompose requirements
+    - scope is unclear
     positive_signals:
     - create an execution plan
     - write a plan first
@@ -378,6 +392,8 @@ claude_routing:
     supporting:
     - l9-structured-reasoning
     note: 'Ordinary implementation plans, Build-button plans, and Cursor Plan mode are l9-plan-simple (planning-only; Build is the user''s press). Campaign / PE / Program Lock planning is the campaign_plan route below — one manifest-owned doctrine, no static rule table (VSP-P1-002).
+
+      explicit_only + hint_allowed — the route recommends Read/attach (source: explicit_hint); it is never model-invocation authority. l9-plan-simple stays explicit_only so the Claude Code projection is unchanged by the Cursor plane (Claude Code Preservation Contract CC-006, V-CC-001). Promoting the tier is a separate change set — PR #512 owns it.
 
       '
   - id: campaign_plan
