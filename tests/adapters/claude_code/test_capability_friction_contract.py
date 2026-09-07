@@ -12,7 +12,6 @@ import json
 import subprocess
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[3]
 TEMPLATE = ROOT / "environment/agents/adapters/claude-code/settings.template.json"
 PROJECTED = ROOT / ".claude/settings.json"
