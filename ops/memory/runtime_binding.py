@@ -145,20 +145,31 @@ for item in sys.argv[1].split(","):
     head, _, tail = item.partition("=")
     requests.append((head, [head] + [a for a in tail.split("|") if a]))
 names = [head for head, _ in requests]
+roots = [m for m in (sys.argv[2].split(",") if len(sys.argv) > 2 else []) if m]
+if not roots:
+    roots = ["l9_graphite_memory.contracts"]
 out = {"schemas": {}, "module": None, "error": None, "missing": [], "available": []}
 try:
     import importlib, pkgutil
-    contracts = importlib.import_module("l9_graphite_memory.contracts")
-    out["module"] = getattr(contracts, "__file__", None)
-    # contracts is a package: its __init__ re-exports only some models, the
-    # rest live in submodules (receipts, capabilities, memory, ...). Look in
-    # the package first, then in every submodule it contains.
-    sources = [contracts]
-    for info in pkgutil.iter_modules(getattr(contracts, "__path__", []) or []):
+    sources = []
+    for root in roots:
         try:
-            sources.append(importlib.import_module("l9_graphite_memory.contracts." + info.name))
-        except Exception:
+            module = importlib.import_module(root)
+        except Exception as exc:
+            out["error"] = out["error"] or f"{root}: {type(exc).__name__}: {exc}"
             continue
+        if out["module"] is None:
+            out["module"] = getattr(module, "__file__", None)
+        sources.append(module)
+        # A package's __init__ re-exports only some models; the rest live in
+        # submodules (receipts, capabilities, generated_data, ...).
+        for info in pkgutil.iter_modules(getattr(module, "__path__", []) or []):
+            try:
+                sources.append(importlib.import_module(root + "." + info.name))
+            except Exception:
+                continue
+    if not sources:
+        raise ImportError("no canonical contract module was importable: " + ", ".join(roots))
     seen = set()
     for source in sources:
         for attr in dir(source):
@@ -191,7 +202,9 @@ try:
             out["missing"].append(name)
             out["error"] = out["error"] or f"{name}: {type(exc).__name__}: {exc}"
 except Exception as exc:
-    out["error"] = f"{type(exc).__name__}: {exc}"
+    # Keep the first, more specific failure (which module and why) rather than
+    # the generic "nothing importable" that follows from it.
+    out["error"] = out["error"] or f"{type(exc).__name__}: {exc}"
 print(json.dumps(out))
 """
 
@@ -263,6 +276,9 @@ class BindingManifest:
     memory_sha: str | None = None
     #: Cursor view name -> model names the bound release actually exports.
     contract_model_aliases: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    #: Modules the schema probe searches. Named by the manifest because not
+    #: every canonical model lives under the contracts package.
+    contract_model_modules: tuple[str, ...] = ()
 
     @classmethod
     def load(cls, path: Path | None = None) -> BindingManifest:
@@ -288,6 +304,7 @@ class BindingManifest:
                 for key, value in (raw.get("contract_model_aliases") or {}).items()
                 if not str(key).startswith("_") and isinstance(value, list)
             },
+            contract_model_modules=tuple(str(m) for m in (raw.get("contract_model_modules") or [])),
         )
 
 
@@ -648,7 +665,12 @@ def resolve_runtime_binding(
         )
 
     schemas, schema_digest, schema_source, schema_reasons = _export_contract_schemas(
-        interpreter_path, run, environment, timeout, manifest.contract_model_aliases
+        interpreter_path,
+        run,
+        environment,
+        timeout,
+        manifest.contract_model_aliases,
+        manifest.contract_model_modules,
     )
     reasons.extend(schema_reasons)
 
@@ -823,6 +845,7 @@ def _export_contract_schemas(
     environment: Mapping[str, str],
     timeout: float,
     aliases: Mapping[str, Sequence[str]] | None = None,
+    modules: Sequence[str] = (),
 ) -> tuple[dict[str, Any] | None, str | None, str | None, list[str]]:
     """Export the bound release's own receipt schemas (CG-P1-02, Model B).
 
@@ -848,6 +871,7 @@ def _export_contract_schemas(
                     name + "=" + "|".join((aliases or {}).get(name, ()))
                     for name in CANONICAL_RECEIPT_MODELS
                 ),
+                ",".join(modules),
             ],
             timeout=timeout,
             env=environment,

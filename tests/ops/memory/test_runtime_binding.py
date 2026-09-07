@@ -586,12 +586,12 @@ def _manifest_with(path: Path, **evidence: Any) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _run_probe(root: Path, names: Sequence[str]) -> dict[str, Any]:
+def _run_probe(root: Path, names: Sequence[str], modules: Sequence[str] = ()) -> dict[str, Any]:
     import os
 
     env = {**os.environ, "PYTHONPATH": str(root)}
     result = subprocess.run(
-        [sys.executable, "-c", rb._SCHEMA_PROBE, ",".join(names)],
+        [sys.executable, "-c", rb._SCHEMA_PROBE, ",".join(names), ",".join(modules)],
         capture_output=True,
         text=True,
         check=False,
@@ -712,3 +712,88 @@ def test_manifest_declares_the_aliases_the_release_actually_uses() -> None:
     assert aliases["HydrationReceipt"] == ("HydrationResult",)
     assert aliases["CapabilitiesReceipt"] == ("ControlPlaneCapabilities",)
     assert "_note" not in aliases
+
+
+# ---------------------------------------------------------------------------
+# The bound release's real contract surface (verified at ref 7691c076)
+#
+# Every name below was read from the merged source, then proved end to end:
+# the probe resolves 11 of 11 against the installed 2.3.0 wheel. They are
+# pinned here so a future edit cannot quietly drop one back to a guess.
+# ---------------------------------------------------------------------------
+
+RELEASE_MODEL_NAMES = {
+    "CapabilitiesReceipt": "ControlPlaneCapabilities",
+    "HealthReceipt": "HealthReport",
+    "ResolveReceipt": "GroupResolution",
+    "HydrationReceipt": "HydrationResult",
+    "CandidateReceipt": "MemoryCandidateIngestionResult",
+    "ConflictsReceipt": "ConflictReport",
+    "PhaseLockVerificationReceipt": "PhaseLockVerification",
+}
+
+
+def test_every_requested_model_resolves_by_its_own_name_or_a_declared_alias() -> None:
+    """No model Cursor requests may be left to a guess: it either matches the
+    release's own name or carries a declared, verified alias."""
+    manifest = rb.BindingManifest.load()
+    aliases = manifest.contract_model_aliases
+    same_name = {"SearchReceipt", "WriteReceipt", "CloseReceipt", "PhaseLockReceipt"}
+    for name in rb.CANONICAL_RECEIPT_MODELS:
+        if name in same_name:
+            assert name not in aliases, f"{name} matches the release; it needs no alias"
+        else:
+            assert aliases.get(name) == (RELEASE_MODEL_NAMES[name],), (
+                f"{name} is not exported by the release under that name; it must alias "
+                f"{RELEASE_MODEL_NAMES[name]}"
+            )
+
+
+def test_the_probe_searches_group_resolver_as_well_as_contracts() -> None:
+    """GroupResolution (Cursor's ResolveReceipt) is a BaseModel in
+    group_resolver.py and is NOT re-exported from the contracts package, so
+    walking contracts alone silently loses it."""
+    modules = rb.BindingManifest.load().contract_model_modules
+    assert "l9_graphite_memory.contracts" in modules
+    assert "l9_graphite_memory.group_resolver" in modules
+
+
+def test_the_binding_names_the_merged_commit_not_a_pr_head() -> None:
+    """RU-P1-01: no pre-final SHA in the release binding. 7691c076 is the merge
+    commit of #56 on main; 5605569b was its PR head."""
+    manifest = rb.BindingManifest.load()
+    ref = json.loads(rb.DEFAULT_MANIFEST_PATH.read_text(encoding="utf-8"))["source"]["ref"]
+    assert ref == "7691c07648d319ad22b353f4f6cb7e164f746bb2"
+    assert ref != "5605569b72baa25f6b6e6324b0017317fb31e0cd"
+    # The artifact the merge produces is unchanged, which is why the recorded
+    # digest and its proof survive the rebind.
+    assert manifest.artifact_sha256 == (
+        "905d91402db99fcd3e094db67576c19297823b448fd6f76842f32d1be4804291"
+    )
+
+
+def test_probe_resolves_an_alias_from_a_second_declared_module(tmp_path: Path) -> None:
+    """The GroupResolution shape, exercised for real: the model lives outside
+    the contracts package and is reachable only because the manifest names its
+    module."""
+    root = tmp_path / "site"
+    pkg = root / "l9_graphite_memory" / "contracts"
+    pkg.mkdir(parents=True)
+    (root / "l9_graphite_memory" / "__init__.py").write_text("", encoding="utf-8")
+    (pkg / "__init__.py").write_text("", encoding="utf-8")
+    (root / "l9_graphite_memory" / "group_resolver.py").write_text(
+        "class GroupResolution:\n"
+        "    @staticmethod\n"
+        "    def model_json_schema():\n"
+        "        return {'title': 'GroupResolution'}\n",
+        encoding="utf-8",
+    )
+    contracts_only = _run_probe(root, ["ResolveReceipt=GroupResolution"])
+    assert contracts_only["missing"] == ["ResolveReceipt"]
+    both = _run_probe(
+        root,
+        ["ResolveReceipt=GroupResolution"],
+        modules=["l9_graphite_memory.contracts", "l9_graphite_memory.group_resolver"],
+    )
+    assert both["missing"] == []
+    assert both["schemas"]["ResolveReceipt"]["title"] == "GroupResolution"
