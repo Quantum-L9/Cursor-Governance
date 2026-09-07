@@ -1,0 +1,97 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Cursor-Governance binding to the canonical memory control plane (l9-graphiti-memory). Read by ops/memory/runtime_binding.py, which proves the exact package, interpreter, and console script before any lifecycle call. This is a Cursor-owned statement of what Cursor expects to run; it grants nothing and resolves no provider. Production binding is an immutable release artifact locked in uv.lock; MEMORY_TARGET_VERSION is release 2.3.0 (cut at campaign stage M2 on the memory PR). source.ref is the v2.3.0 release tag on Quantum-L9/l9-graphiti-memory (annotated, cut 2026-09-07); release_evidence.memory_sha is the commit that tag resolves to, and the cross-repo proof resolves the tag and refuses any other commit. Integration installs the wheel built from that commit until uv.lock carries the published artifact.",
+  "distribution": "l9-graphite-memory",
+  "import_package": "l9_graphite_memory",
+  "console_script": "l9-memory",
+  "expected_package_version": "2.3.0",
+  "expected_contract_version": "memory-control-plane/v1",
+  "required_cli_operations": [
+    "resolve",
+    "health",
+    "capabilities",
+    "hydrate",
+    "search",
+    "get",
+    "ingest",
+    "ingest_governed_candidate",
+    "close",
+    "conflicts",
+    "phase_lock",
+    "verify_phase_lock"
+  ],
+  "source": {
+    "kind": "git",
+    "repository": "Quantum-L9/l9-graphiti-memory",
+    "ref": "v2.3.0",
+    "ref_note": "Release 2.3.0 = MEMORY_TARGET_VERSION. Annotated tag v2.3.0 (tag object 03ec559ca8e28b49c6763189363fc55400e3b09d, cut 2026-09-07 after Quantum-L9/l9-graphiti-memory#56 merged as 7691c07) resolves to 5605569b72baa25f6b6e6324b0017317fb31e0cd, the audit-closure head of #56: M2 (tag selector on search/hydrate, client cursor verify --path, installed-wheel lifecycle proof, shared control-plane fixture) plus the ADR-082 amendment (governed-candidate supersession, close replay forensics, coverage evidence). The tag is a name, not the proof: .github/workflows/memory-cross-repo.yml peels it and refuses a commit other than release_evidence.memory_sha, so a moved tag fails the proof instead of silently rebinding. Next step is the uv.lock pin of the published artifact."
+  },
+  "binding_policy": {
+    "production": "exact release artifact locked in uv.lock; runtime_mode=pinned_environment",
+    "integration": "exact git SHA above, installed as a built wheel into the governance environment; runtime_mode=pinned_environment",
+    "development": "L9_MEMORY_DEV_CHECKOUT=<path to a l9-graphiti-memory checkout with .venv>; runtime_mode=development_checkout, never silent",
+    "forbidden": [
+      "whatever l9-memory is first on PATH",
+      "an adjacent checkout discovered by directory scanning",
+      "git+...@main or any floating ref",
+      "pip install -e of a sibling checkout without the development opt-in"
+    ]
+  },
+  "interpreter_resolution_order": [
+    "explicit interpreter argument",
+    "L9_MEMORY_DEV_CHECKOUT/.venv/bin/python (development opt-in)",
+    "L9_MEMORY_INTERPRETER",
+    "the governance runtime interpreter (sys.executable)"
+  ],
+  "release_evidence": {
+    "description": "Exact-head proof of the binding (audit P1-01/P2-02). The wheel is built from source.ref with uv build --wheel under the fixed SOURCE_DATE_EPOCH below and is byte-reproducible (the digest reproduced from a fresh clone of the same commit). .github/workflows/memory-cross-repo.yml rebuilds it from the same ref, refuses a digest mismatch, installs the wheel into a clean environment, and runs tests/ops/memory/test_cross_repo_lifecycle.py with L9_MEMORY_CROSS_REPO_REQUIRED=1 (a skip is a failure) and no provider credential in the environment. A digest here without that job green on the same Cursor head is a claim, not a proof.",
+    "memory_sha": "5605569b72baa25f6b6e6324b0017317fb31e0cd",
+    "memory_tag": "v2.3.0",
+    "memory_tag_object_sha": "03ec559ca8e28b49c6763189363fc55400e3b09d",
+    "package_version": "2.3.0",
+    "artifact": "l9_graphite_memory-2.3.0-py3-none-any.whl",
+    "artifact_sha256": "905d91402db99fcd3e094db67576c19297823b448fd6f76842f32d1be4804291",
+    "build": "uv build --wheel (SOURCE_DATE_EPOCH=1784592000)",
+    "source_date_epoch": 1784592000,
+    "proved_by": "tests/ops/memory/test_cross_repo_lifecycle.py",
+    "proof_workflow": ".github/workflows/memory-cross-repo.yml",
+    "proved_at": "2026-09-06",
+    "rebound_at": "2026-09-07 (source.ref moved from the bare SHA to the v2.3.0 tag; memory_sha unchanged, digest unchanged)",
+    "operator_gated": [
+      "uv.lock pin of the released artifact: blocked until publish.yml on the v2.3.0 tag succeeds; its first run (34132867942) was rejected by the l9-graphiti-memory `release` environment deployment policy, which does not allow tag v2.3.0 (allow tag pattern v* on that environment, then re-run the workflow)"
+    ],
+    "installed_record_digest": null,
+    "artifact_provenance_note": "In-place artifact proof needs a PEP 610 archive hash, which pip/uv record for index and URL installs but NOT for the local-file install the proof workflow performs. So the workflow proves the artifact instead, and more strongly: it rebuilds the wheel from source.ref and refuses any sha256 other than artifact_sha256 before installing. The binding reports 'compatible' there and says why. L9_MEMORY_REQUIRE_EXACT_ARTIFACT=1 remains for environments whose installer records provenance.",
+    "installed_record_digest_note": "RETRACTED as an exactness proof, on evidence. FOUR installs of the byte-identical wheel (artifact_sha256 re-verified by rebuild each time) produced four different installed-RECORD digests: fbe247ae..., 7c875776..., be59801c... on GitHub runners and 52b6df58... in a Claude Code container — the last three under identical normalisation. The installed RECORD is therefore not a deterministic function of the wheel, and a pin would flap the binding between exact and unbound on an unchanged release. runtime_binding still verifies a RECORD digest when one is pinned; nothing pins one until it is shown stable across machines."
+  },
+  "contract_model_aliases": {
+    "_note": "Cursor view name -> the model names the bound release actually exports, discovered from the schema probe's `available` list in the memory-cross-repo job. Cursor requests its own name; the probe accepts any alias, and the schema is keyed by the Cursor name so validation lookup is unchanged. A name this side guessed is not a contract the release owes.",
+    "HealthReceipt": [
+      "HealthReport"
+    ],
+    "HydrationReceipt": [
+      "HydrationResult"
+    ],
+    "CapabilitiesReceipt": [
+      "ControlPlaneCapabilities"
+    ],
+    "ConflictsReceipt": [
+      "ConflictReport"
+    ],
+    "CandidateReceipt": [
+      "MemoryCandidateIngestionResult"
+    ],
+    "PhaseLockVerificationReceipt": [
+      "PhaseLockVerification"
+    ],
+    "ResolveReceipt": [
+      "GroupResolution"
+    ],
+    "_verified": "All five aliases plus PhaseLockVerification and GroupResolution were read from the merged source at ref 7691c076, then proved end to end: the schema probe resolves 11 of 11 CANONICAL_RECEIPT_MODELS against the installed 2.3.0 wheel."
+  },
+  "contract_model_modules": [
+    "l9_graphite_memory.contracts",
+    "l9_graphite_memory.group_resolver"
+  ],
+  "contract_model_modules_note": "Modules the schema probe searches for canonical receipt models. The contracts package is walked including its submodules; GroupResolution (Cursor's ResolveReceipt) lives in group_resolver.py and is not re-exported from contracts, so it must be named explicitly. Verified against the merged source at the bound ref, not inferred."
+}

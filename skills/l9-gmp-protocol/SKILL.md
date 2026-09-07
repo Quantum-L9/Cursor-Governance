@@ -8,8 +8,8 @@ metadata:
   tags: [l9, gmp, deterministic, phases, evidence, modification_lock, governance]
   owner: igor_beylin
   status: active
-  version: 2.0.0
-  updated: 2026-08-28
+  version: 2.0.1
+  updated: 2026-09-07
 ---
 
 # GMP Protocol — Deterministic Phased Execution
@@ -78,7 +78,7 @@ Because ground truth (2) outranks the canonical docs (4), follow the repo's actu
 
 ## Compact Workflow
 
-1. **Phase 0 — Plan lock.** Establish ground truth (verify real paths, classes, signatures from this repo). Read relevant ADRs (`.cursor/rules/*.mdc`, `docs/adr/`). Emit a locked TODO plan: each TODO has `id`, `phase`, `file`, `operation` (Insert|Replace|Delete|Wrap|Create), `anchor` (line or unique string), `description`, `dependencies`. No placeholders, no "maybe". Declare the modification lock (may-modify / must-not-modify). When Graphiti is enabled, run `python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py conflicts` and declare `MEMORY_PREFETCH: <episode names>`.
+1. **Phase 0 — Plan lock.** Establish ground truth (verify real paths, classes, signatures from this repo). Read relevant ADRs (`.cursor/rules/*.mdc`, `docs/adr/`). Emit a locked TODO plan: each TODO has `id`, `phase`, `file`, `operation` (Insert|Replace|Delete|Wrap|Create), `anchor` (line or unique string), `description`, `dependencies`. No placeholders, no "maybe". Declare the modification lock (may-modify / must-not-modify). When memory is bound (`L9_MEMORY_ENABLED=1`, `readiness` R0 passes), run `python -m ops.memory.cli conflicts` and declare `MEMORY_PREFETCH:` from the canonical receipt — `namespace`, `snapshot_digest`, `checked_record_count`, `conflicts` (count or record ids), `policy_version` — never "episode names". The receipt is evidence; it never gates the edit and a memory phase-lock is never repository-write authority (rule 96 E7).
 2. **Phase 1 — Baseline.** For each TODO confirm file exists, anchor resolves uniquely, no protected path is targeted, dependency chain is acyclic. Status: READY | PARTIAL | BLOCKED. Proceed only on READY (or explicit human override).
 3. **Phase 2 — Implement.** Apply only READY TODOs, line-anchored and minimal. No edits outside the locked plan. Keep imports/standards intact. Record file + line ranges per TODO.
 4. **Phase 3 — Enforce.** Add only the guards/tests/ACL/observability the TODO requires. Never weaken existing checks. Skip cleanly if the change needs none.

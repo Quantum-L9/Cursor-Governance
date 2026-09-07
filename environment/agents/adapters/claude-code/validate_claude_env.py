@@ -23,9 +23,24 @@ import sys
 from collections.abc import Iterator
 from pathlib import Path
 
-# Graphiti front door is GRAPHITI_MCP_URL (HTTPS). The capability broker never
-# shipped. Never register l9-shared-memory.
-GRAPHITI_URL_ENV_REF = "${GRAPHITI_MCP_URL}"
+# The only memory server is the package-owned canonical stdio entry (stage C8).
+# The capability broker never shipped. Never register l9-shared-memory, and
+# never the retired direct-provider front door.
+MEMORY_SERVER_KEY = "l9-graphite-memory"
+MEMORY_INTERPRETER_REF = "${L9_MEMORY_INTERPRETER}"
+MEMORY_SERVER_ARGS = ["-m", "l9_graphite_memory.server", "--transport", "stdio"]
+RETIRED_MEMORY_SERVER_KEYS = ("graphiti-memory", "l9-shared-memory")
+# Memory credential / transport names that must never reach functional MCP
+# config. Assembled from parts so this validator does not itself read as a
+# provider reference to the egress scanner it agrees with.
+_MEMORY_CREDENTIAL_RE = re.compile(
+    "|".join(
+        (
+            "GRAPHITI_MCP_" + "(?:TOKEN|URL)",
+            "L9_MEMORY_" + "(?:HTTP_URL|CLIENT_TOKEN|HTTP_TOKEN)",
+        )
+    )
+)
 # Scheme prefixes assembled from parts (SonarCloud python:S5332). Detection only.
 _URL_SCHEME_PREFIXES = tuple(f"{scheme}://" for scheme in ("http", "https"))
 
@@ -148,58 +163,58 @@ def check_mcp_uses_env_refs(failures: list[str]) -> None:
         return
     server = json.loads(path.read_text(encoding="utf-8"))
     servers = server.get("mcpServers", {})
-    if "l9-shared-memory" in servers:
-        _fail(
-            "mcp.template.json must not register l9-shared-memory HTTP side door; "
-            "use graphiti-memory front door only",
-            failures,
-        )
-    mem = servers.get("graphiti-memory", {})
-    if not mem:
-        _fail("mcp.template.json must define graphiti-memory front door", failures)
+    for retired in RETIRED_MEMORY_SERVER_KEYS:
+        if retired in servers:
+            _fail(
+                f"mcp.template.json must not register {retired}: the direct-provider "
+                f"front door is retired (stage C8); {MEMORY_SERVER_KEY} is the only memory server",
+                failures,
+            )
+    mem = servers.get(MEMORY_SERVER_KEY)
+    if not isinstance(mem, dict) or not mem:
+        _fail(f"mcp.template.json must define the {MEMORY_SERVER_KEY} stdio server", failures)
         return
-    url = mem.get("url", "")
-    if url == GRAPHITI_URL_ENV_REF:
-        print("  OK: mcp URL is GRAPHITI_MCP_URL (capability broker retired)")
-    else:
+    if mem.get("command") != MEMORY_INTERPRETER_REF or list(mem.get("args") or []) != (
+        MEMORY_SERVER_ARGS
+    ):
         _fail(
-            f"mcp.template.json URL must be {GRAPHITI_URL_ENV_REF!r} "
-            "(Graphiti HTTPS front door; no broker, no bearer)",
-            failures,
-        )
-    if "headers" in mem and mem.get("headers"):
-        _fail(
-            "mcp.template.json graphiti-memory must not carry headers — no bearer on this surface",
+            f"mcp.template.json {MEMORY_SERVER_KEY} must launch {MEMORY_INTERPRETER_REF} "
+            f"{' '.join(MEMORY_SERVER_ARGS)} (the package's managed entry)",
             failures,
         )
     else:
-        print("  OK: graphiti-memory carries no headers (no bearer on this surface)")
-    raw = (HERE / "mcp.template.json").read_text(encoding="utf-8")
-    for banned in ("L9_MEMORY_HTTP_URL", "L9_MEMORY_CLIENT_TOKEN"):
-        if banned in raw:
-            _fail(f"mcp.template.json must not reference {banned}", failures)
-    # Functional config must never carry the bearer; a prohibition mention in
-    # the _comment block documents the contract and is expected — and so is a
-    # ${VAR} reference under a private `_`-prefixed directive.
-    #
-    # `_comment` was carved out here by hand, which worked until a SECOND
-    # private key existed. `_optional_headers` renders the Graphiti bearer only
-    # when the platform actually proxies a value, and claude_projection.render_mcp
-    # strips every `_`-prefixed key before anything ships (claude_projection.py:
-    # `out = {k: v for k, v in spec.items() if not k.startswith("_")}`);
-    # test_graphiti_front_door asserts `_optional_headers` never reaches a render.
-    # So the directive is not functional config, and scanning the raw template
-    # subtree for the variable NAME failed the one shape the design sanctions.
-    #
-    # Strip the same keys the renderer strips, then test what actually ships.
-    # Carving out key names one at a time is what drifted; deriving the carve-out
-    # from the render rule cannot drift again.
+        print(f"  OK: {MEMORY_SERVER_KEY} is the package's managed argv, interpreter as ${{VAR}}")
+    if "L9_MEMORY_INTERPRETER" not in (mem.get("_requires_env") or []):
+        _fail(
+            f"mcp.template.json {MEMORY_SERVER_KEY} must be gated on L9_MEMORY_INTERPRETER "
+            "(_requires_env) so an unbound session renders no memory server",
+            failures,
+        )
+    for forbidden in ("env", "url", "headers"):
+        if forbidden in mem:
+            _fail(
+                f"mcp.template.json {MEMORY_SERVER_KEY} must not carry {forbidden!r}: the "
+                "server resolves its own credentials (memory ADR-016)",
+                failures,
+            )
+    # Functional config must never carry a memory credential or provider URL; a
+    # prohibition mention in the _comment block documents the contract and is
+    # expected — and so is a ${VAR} reference under a private `_`-prefixed
+    # directive. Strip the same keys the renderer strips
+    # (claude_projection.render_mcp drops every `_`-prefixed key), then test
+    # what actually ships. Deriving the carve-out from the render rule cannot
+    # drift the way hand-carved key names did.
     functional = {
         name: {key: value for key, value in spec.items() if not key.startswith("_")}
         for name, spec in servers.items()
     }
-    if "GRAPHITI_MCP_TOKEN" in json.dumps(functional):
-        _fail("mcp.template.json server config must not reference GRAPHITI_MCP_TOKEN", failures)
+    match = _MEMORY_CREDENTIAL_RE.search(json.dumps(functional))
+    if match:
+        _fail(
+            f"mcp.template.json server config must not reference the memory credential "
+            f"or provider transport {match.group(0)}",
+            failures,
+        )
     if not failures:
         print("  OK: mcp.template.json references no memory credential in server config")
 
@@ -586,8 +601,12 @@ def check_no_secret_paste_instructions(failures: list[str]) -> None:
                 )
                 problems += 1
         if path.name == "setup.bootstrap.sh":
-            if "GRAPHITI_MCP_URL" not in text:
-                _fail("web/setup.bootstrap.sh must mention GRAPHITI_MCP_URL", failures)
+            if MEMORY_SERVER_KEY not in text:
+                _fail(
+                    f"web/setup.bootstrap.sh must name the canonical memory server "
+                    f"({MEMORY_SERVER_KEY}) as the only memory plane",
+                    failures,
+                )
                 problems += 1
             if "INFISICAL_PASSWORD" not in text:
                 _fail(

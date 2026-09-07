@@ -1,0 +1,110 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Exact path-based exceptions for ops/scripts/validate_memory_egress_boundary.py. Every entry names why the path may spell a forbidden token and an expiry; an expired entry is a finding. Nothing here authorizes provider egress — since stage C11 every remaining entry is a negative check, a scanner/allowlist self-reference, a protected operator-owned file, or a secret-inventory row, never a code path that calls a provider (CURSOR_GOVERNANCE_MEMORY_CONTROL_PLANE_REALIGNMENT_BUILD_PLAN §8).",
+  "mode": "enforce",
+  "mode_note": "enforce (stage C11+): any unlisted or expired finding fails the validator and tests/ops/memory/test_egress_boundary.py. The legacy provider client, env plane, shadow reader, distiller and their tests were deleted at C11; ops/graphiti/graphiti_memory_client.py is a tombstone that spells no provider token.",
+  "entries": [
+    {
+      "path": "ops/config/memory-egress-allowlist.json",
+      "reason": "This allowlist names the forbidden tokens it governs.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "ops/scripts/validate_memory_egress_boundary.py",
+      "reason": "The scanner defines the forbidden tokens.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "tests/ops/memory/**",
+      "reason": "Negative tests for the boundary name forbidden tokens as fixtures.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "environment/agents/adapters/claude-code/validate_claude_env.py",
+      "reason": "Negative checks that name the memory credential and provider transport so they can be rejected from functional config.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "environment/agents/adapters/claude-code/web/setup.bootstrap.sh",
+      "reason": "Zero-static-secret sweep names the retired memory bearer among the variables it refuses (negative check).",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "environment/agents/adapters/claude-code/verify_account_env.py",
+      "reason": "Account-variable audit naming the retired memory bearer among prohibited names (negative check).",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "environment/agents/adapters/claude-code/tests/test_memory_front_door.py",
+      "reason": "Negative tests for the Claude memory front door name forbidden tokens as fixtures.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "ops/scripts/bootstrap_agent_environment.sh",
+      "reason": "Zero-static-secret sweep names the retired provider transport among the variables it refuses and warns on (negative check).",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "ops/scripts/tests/test_bootstrap_invariants.py",
+      "reason": "Negative test naming the retired provider bearer among prohibited names.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "environment/agents/tools/validate_agents.py",
+      "reason": "Negative checks rejecting the retired provider transport from adapter examples.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "ops/secrets/validate_capability_contract.py",
+      "reason": "Prohibited-assignment list naming the retired provider bearer (negative check).",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "tests/ops/secrets/**",
+      "reason": "Negative tests for the secret plane name forbidden tokens as fixtures.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "environment/program-execution/integrations/graphiti/tests/test_context_reader.py",
+      "reason": "Negative test asserting the read-only context reader names no provider write tool.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "environment/program-execution/scripts/validate_execution_adapters.py",
+      "reason": "Adapter validator rejecting provider write tools from the context reader (negative check).",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "environment/program-execution/tests/test_no_direct_graphiti_writer.py",
+      "reason": "Negative test asserting Program Execution has no direct provider writer.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "ops/graphiti/docker-compose.yml",
+      "reason": "Protected provider-stack compose file (rules/93): operator-owned deployment of the projection, never edited by an agent and never read by any Cursor code path. Its retirement is an operator action with the provider deployment.",
+      "retire_at_stage": "operator",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "ops/secrets/infisical-cursor-governance.yaml",
+      "reason": "Secret inventory row for the provider bearer the memory service deployment owns. No Cursor surface resolves it (stage C9); the row is retired by the operator with the provider deployment (C12 note in the inventory).",
+      "retire_at_stage": "operator",
+      "expires": "2099-01-01"
+    }
+  ]
+}

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# sessionEnd — automatic Phase A/B close (PICKUP + atomic writes); fail-open
-# Budget: hooks.json Graphiti sessionEnd timeout is 30s (Phase A ≤8s, B ≤18s).
+# sessionEnd — canonical close (continuation capsule + memory.close); fail-open
+# Budget: hooks.json sessionEnd timeout is 30s (Phase A ≤8s, B ≤18s).
+# Since stage C6 every write here crosses the memory control plane; nothing
+# writes a provider, and the fallback is an idempotent canonical close retry.
 set -uo pipefail
 set +x
 
@@ -151,7 +153,7 @@ if d.get("enqueue_ok") is True:
     print("INFO: distill job enqueued", file=sys.stderr)
 ' 2>&1 || echo "INFO: session close finished" >&2
 elif [[ "$CLOSE_RC" -ne 0 && "$CLOSE_RC" -ne 2 ]]; then
-  echo "ERROR: session close failed — Phase A may be missing; attempting Graphiti write fallback" >&2
+  echo "ERROR: session close failed — attempting canonical close retry" >&2
 fi
 
 WRITE_COUNT="$(echo "${REPORT:-}" | python3 -c 'import sys,json
@@ -168,7 +170,7 @@ except Exception:
     print("")
 ' 2>/dev/null || true)"
 if [[ "$CLOSE_STATUS" != "idempotent_skip" ]] && { [[ "$CLOSE_RC" -ne 0 && "$CLOSE_RC" -ne 2 ]] || [[ "${WRITE_COUNT:-0}" == "0" ]]; }; then
-  echo "ERROR: close write_count=${WRITE_COUNT:-0} rc=${CLOSE_RC} — one Graphiti fallback write" >&2
+  echo "ERROR: close write_count=${WRITE_COUNT:-0} rc=${CLOSE_RC} — one canonical close retry (retry-close)" >&2
   FB_RC=0
   (cd "$GOV_ROOT" && PYTHONPATH="$GOV_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
     "$PY" -m ops.graphiti.hydration.cli fallback-write \
@@ -176,7 +178,7 @@ if [[ "$CLOSE_STATUS" != "idempotent_skip" ]] && { [[ "$CLOSE_RC" -ne 0 && "$CLO
     --reason "$REASON" --agent-id "$L9_MEMORY_AGENT_ID" \
     ${TRANSCRIPT_PATH:+--transcript-path "$TRANSCRIPT_PATH"}) || FB_RC=$?
   if [[ "$FB_RC" -ne 0 ]]; then
-    echo "ERROR: fallback write failed — REPAIR: /end-session" >&2
+    echo "ERROR: canonical close retry failed — obligation stays close_incomplete; REPAIR: /end-session" >&2
     _record_skip close_failed
   fi
 fi
