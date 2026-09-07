@@ -1,14 +1,15 @@
 """Claude Code capability-friction contract.
 
-The vendor permission layer is not an L9 safety boundary. Safe edits and
-read-only inspection should not prompt; L9 PreToolUse gates still decide every
-managed effect. Conversely, known GraphQL-backed GitHub commands and raw
-publication writes must not be advertised as standing approvals.
+The vendor permission layer is not an L9 safety boundary. Safe edits, canonical
+memory operations, and read-only inspection should not prompt; L9 policy still
+decides whether each governed effect may proceed. Known GraphQL-backed GitHub
+commands and raw publication writes must not be standing approvals.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -42,6 +43,19 @@ def test_safe_edit_and_read_envelope_is_no_prompt() -> None:
         "Bash(gh run list:*)",
         "Bash(gh run view:*)",
         "Bash(make pr:*)",
+    }
+    assert required <= allow
+
+
+def test_canonical_memory_operations_are_no_prompt() -> None:
+    allow = set(_settings(TEMPLATE)["permissions"]["allow"])  # type: ignore[index]
+    required = {
+        "mcp__l9-graphite-memory__memory.health",
+        "mcp__l9-graphite-memory__memory.search",
+        "mcp__l9-graphite-memory__memory.hydrate",
+        "mcp__l9-graphite-memory__memory.conflicts",
+        "mcp__l9-graphite-memory__memory.phase_lock",
+        "mcp__l9-graphite-memory__memory.write_governed",
     }
     assert required <= allow
 
@@ -82,11 +96,56 @@ def test_preflight_is_registered_and_projects_without_drift() -> None:
 def test_preflight_routes_platform_helpers_to_l9_owners() -> None:
     text = PREFLIGHT.read_text(encoding="utf-8")
     assert "Do not invoke Register Repo Root" in text
-    assert "Do not invoke Add Memory" in text
+    assert "canonical l9-graphite-memory control plane" in text
+    assert "memory.phase_lock then memory.write_governed" in text
     assert "Do not invoke Send Later" in text
     assert "publication is make pr only" in text
-    assert "access=push" in text
-    assert "second clone" in text
+    assert "Do not invoke Add Repo for this repository at SessionStart" in text
+    assert "genuinely different repository" in text
+    assert "access=push" not in text
+    assert "graphiti_memory_client.py" not in text
+
+
+def test_primary_checkout_does_not_probe_or_request_add_repo(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    subprocess.run(["git", "init"], cwd=workspace, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "remote", "add", "origin", "https://github.com/Quantum-L9/example-repo.git"],
+        cwd=workspace,
+        check=True,
+        capture_output=True,
+    )
+
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    gh_log = tmp_path / "gh.log"
+    gh = bin_dir / "gh"
+    gh.write_text(
+        f"#!/usr/bin/env bash\nprintf '%s\\n' \"$*\" >> {gh_log!s}\nexit 99\n",
+        encoding="utf-8",
+    )
+    gh.chmod(0o755)
+
+    env = dict(os.environ)
+    env["CLAUDE_PROJECT_DIR"] = str(workspace)
+    env["CLAUDE_CODE_REMOTE"] = "true"
+    env["PATH"] = f"{bin_dir}:{env.get('PATH', '')}"
+    proc = subprocess.run(
+        ["bash", str(PREFLIGHT)],
+        cwd=workspace,
+        text=True,
+        capture_output=True,
+        env=env,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(proc.stdout)
+    context = payload["hookSpecificOutput"]["additionalContext"]
+    assert "primary workspace GitHub repository: Quantum-L9/example-repo" in context
+    assert "Repository scope: PRIMARY_CHECKOUT" in context
+    assert "Do not invoke Add Repo for this repository at SessionStart" in context
+    assert not gh_log.exists(), "SessionStart must not probe GitHub just to validate primary scope"
 
 
 def test_hosted_surface_short_circuits_graphql_without_executing_gh(tmp_path: Path) -> None:
