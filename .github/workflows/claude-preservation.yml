@@ -1,0 +1,48 @@
+# Claude Code Preservation Contract (docs/CLAUDE_CODE_PRESERVATION_CONTRACT.md).
+#
+# Claude Code is an independent consumer of the canonical L9 skill corpus.
+# Cursor-boundary work — skill virtualization, bounded discovery, gateway
+# projection — must leave Claude Code's discovery, availability, invocation
+# tier, and routing untouched. This workflow is that promise as a named check.
+#
+# It is a standalone workflow rather than a step in governance-self-check so
+# the verdict is attributable on its own and the file carries no overlap with
+# concurrent governance work.
+name: claude-preservation
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  claude-preservation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version-file: .python-version
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install --only-binary=:all: pyyaml==6.0.3
+
+      - name: Projection equivalence (V-CC-001, V-CC-004)
+        run: |
+          v=ops/scripts/claude_projection_snapshot.py
+          [ -f "$v" ] || { echo "::error::mandatory validator $v missing"; exit 1; }
+          python3 "$v" --check
+
+      - name: Preservation contract suite (CC-001..CC-010)
+        run: |
+          t=environment/agents/adapters/claude-code/tests/test_claude_preservation_contract.py
+          [ -f "$t" ] || { echo "::error::mandatory suite $t missing"; exit 1; }
+          python3 -m pytest -q "$t"
