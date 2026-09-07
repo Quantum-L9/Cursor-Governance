@@ -797,3 +797,54 @@ def test_probe_resolves_an_alias_from_a_second_declared_module(tmp_path: Path) -
     )
     assert both["missing"] == []
     assert both["schemas"]["ResolveReceipt"]["title"] == "GroupResolution"
+
+
+def test_a_manifest_module_the_release_lacks_is_reported_even_when_nothing_is_missing(
+    tmp_path: Path,
+) -> None:
+    """Completeness elsewhere must not hide manifest drift.
+
+    A binding that names a module the bound release does not have is drifted
+    from the release, whether or not the remaining modules happen to supply
+    every canonical model. Swallowing that is CG-P1-02's own shape — declared
+    but not enforced — so the probe reports the unimportable module separately
+    from `missing`.
+    """
+    root = tmp_path / "site"
+    pkg = root / "l9_graphite_memory" / "contracts"
+    pkg.mkdir(parents=True)
+    (root / "l9_graphite_memory" / "__init__.py").write_text("", encoding="utf-8")
+    (pkg / "__init__.py").write_text(
+        "class SearchReceipt:\n"
+        "    @staticmethod\n"
+        "    def model_json_schema():\n"
+        "        return {'title': 'SearchReceipt'}\n",
+        encoding="utf-8",
+    )
+    payload = _run_probe(
+        root,
+        ["SearchReceipt"],
+        modules=["l9_graphite_memory.contracts", "l9_graphite_memory.no_such_module"],
+    )
+    assert payload["missing"] == []
+    assert list(payload["schemas"]) == ["SearchReceipt"]
+    assert any("no_such_module" in item for item in payload["unimportable"])
+
+
+def test_binding_reasons_name_a_manifest_module_the_release_lacks(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """And the verdict carries it, so a drifted manifest is visible in the
+    binding rather than only in the probe payload."""
+    monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
+    export = {
+        "schemas": {"CloseReceipt": {"type": "object"}},
+        "module": "contracts/__init__.py",
+        "error": None,
+        "missing": [],
+        "available": ["CloseReceipt"],
+        "unimportable": ["l9_graphite_memory.gone: ModuleNotFoundError: no module"],
+    }
+    binding = bind(Environment(tmp_path, schema_export=export))
+    reason = next(r for r in binding.reasons if "does not have" in r)
+    assert "l9_graphite_memory.gone" in reason

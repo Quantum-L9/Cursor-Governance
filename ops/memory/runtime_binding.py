@@ -148,7 +148,14 @@ names = [head for head, _ in requests]
 roots = [m for m in (sys.argv[2].split(",") if len(sys.argv) > 2 else []) if m]
 if not roots:
     roots = ["l9_graphite_memory.contracts"]
-out = {"schemas": {}, "module": None, "error": None, "missing": [], "available": []}
+out = {
+    "schemas": {},
+    "module": None,
+    "error": None,
+    "missing": [],
+    "available": [],
+    "unimportable": [],
+}
 try:
     import importlib, pkgutil
     sources = []
@@ -156,6 +163,10 @@ try:
         try:
             module = importlib.import_module(root)
         except Exception as exc:
+            # Report it even if a later root supplies every model: a manifest
+            # that names a module the release does not have has drifted from
+            # the release, and completeness elsewhere must not hide that.
+            out["unimportable"].append(f"{root}: {type(exc).__name__}: {exc}")
             out["error"] = out["error"] or f"{root}: {type(exc).__name__}: {exc}"
             continue
         if out["module"] is None:
@@ -886,6 +897,11 @@ def _export_contract_schemas(
     if not isinstance(schemas, dict) or not schemas:
         detail = payload.get("error") or "the bound package exports no receipt contracts"
         return None, None, None, [f"contract schema export empty: {detail}"]
+    if payload.get("unimportable"):
+        reasons.append(
+            "binding manifest names a contract module the bound release does not have: "
+            + "; ".join(str(item) for item in payload["unimportable"])
+        )
     if payload.get("missing"):
         available = payload.get("available") or []
         reasons.append(
