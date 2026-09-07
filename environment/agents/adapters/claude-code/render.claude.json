@@ -33,7 +33,11 @@
       "event": "SessionStart",
       "cli": "$HOME/.claude/settings.json",
       "web_mobile": ".claude/settings.json (git-tracked in the consumer repo)",
-      "script": "hooks/session_start_claude_governance.sh"
+      "scripts": [
+        "hooks/bootstrap_capability_preflight.sh",
+        "hooks/session_start_claude_governance.sh"
+      ],
+      "note": "Capability preflight runs first and establishes REST-only hosted GitHub transport plus L9 ownership of memory, repo-root, and PR-convergence helpers; the main session hook then hydrates governance context."
     },
     "mcp": {
       "template": "mcp.template.json",
