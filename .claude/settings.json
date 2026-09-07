@@ -192,6 +192,7 @@
       "mcp__l9-graphite-memory__memory.conflicts",
       "mcp__l9-graphite-memory__memory.phase_lock",
       "mcp__l9-graphite-memory__memory.write_governed",
+      "mcp__l9-graphite-memory__memory.close",
       "mcp__context7__resolve-library-id",
       "mcp__context7__query-docs",
       "mcp__plugin_context7_context7__resolve-library-id",
@@ -215,6 +216,13 @@
       "mcp__l9-graphite-memory__memory.record_reuse",
       "mcp__l9-graphite-memory__memory.invalidate_source",
       "mcp__l9-graphite-memory__write",
+      "mcp__l9-graphite-memory__search",
+      "mcp__l9-graphite-memory__health",
+      "mcp__l9-graphite-memory__bootstrap",
+      "mcp__l9-graphite-memory__phase_lock",
+      "mcp__l9-graphite-memory__verify_phase_lock",
+      "mcp__l9-graphite-memory__conflicts",
+      "mcp__l9-graphite-memory__graphiti.query",
       "mcp__l9-graphite-memory__graphiti.write_governed"
     ]
   },
