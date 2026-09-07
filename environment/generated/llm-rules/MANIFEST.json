@@ -600,9 +600,9 @@
       "alias": null,
       "class": "always",
       "output": "97-graph-layer-boundary.md",
-      "output_sha256": "954758b10d06dbcfac7f2e1f8d3e4b3b6b0a9cefba5071d0a02c5fafa9e33d1c",
+      "output_sha256": "857001e13c0354c13baf6115804e82efcf7411d31d5d9656d0ea26723aaa8df4",
       "source": "rules/97-graph-layer-boundary.mdc",
-      "source_sha256": "a7da62d5994cc8ffe565ef6a2db0b0d8f8e71c9557244cdeec516383dddb6990",
+      "source_sha256": "487928bd5c23b8b1d7ad9c0bb17e882e8e0be7002dd31998a171e956b202c338",
       "stem": "97-graph-layer-boundary"
     },
     {
@@ -641,5 +641,5 @@
     "skipped_agent_requested": 17,
     "source_mdc": 70
   },
-  "tree_sha256": "88e133df79db794b29fe3e098bc501b123e7af45ca638afd831b86b2cea3653c"
+  "tree_sha256": "e7860c814ff0f3baaaacfd4017be2c0e24a22fe3a0f19a7edc19b8e788af2518"
 }

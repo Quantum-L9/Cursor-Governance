@@ -40,5 +40,4 @@ Repository overlays may add domain-specific structural-graph procedures without 
 - Do not invent a second agent-memory stack when one adapter (CLI or MCP) is unhealthy — fix the binding (`make memory-binding`).
 - Do not route a model-authored fact through generic `memory.ingest` or the operator CLI `write` to avoid `memory.write_governed`.
 
-
 <!-- generated-from: rules/97-graph-layer-boundary.mdc; do-not-edit -->

@@ -46,4 +46,3 @@ Repository overlays may add domain-specific structural-graph procedures without 
 - **Product / domain memory** — application runtime stores (e.g. consumer product Neo4j matching, Odoo state, Gate intelligence) are **not** agent resume SSOT and must not be written or read as Cursor session memory.
 - Do not invent a second agent-memory stack when one adapter (CLI or MCP) is unhealthy — fix the binding (`make memory-binding`).
 - Do not route a model-authored fact through generic `memory.ingest` or the operator CLI `write` to avoid `memory.write_governed`.
-

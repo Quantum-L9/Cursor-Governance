@@ -298,9 +298,7 @@ def test_unconverged_surface_warns_then_fails_under_strict(residue, tmp_path: Pa
     _write(
         tmp_path,
         "commands/fixture-session.md",
-        "| Resume SSOT | Graphiti inject / PICKUP |\n"
-        "\n"
-        "Resume SSOT is Graphiti inject.\n",
+        "| Resume SSOT | Graphiti inject / PICKUP |\n\nResume SSOT is Graphiti inject.\n",
     )
     rc, out = _run(residue, tmp_path)
     assert rc == 0, out
