@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# sessionStart — code-graph health + Graphiti hydrate packet.
+# sessionStart — code-graph health + canonical memory hydrate packet.
 # Emits hydrate_markdown + codegraph_markdown + additional_context (JSON).
-# Resume SSOT is Graphiti only — never memory-bank.
+# Resume SSOT is the canonical memory control plane (ops/memory) — never
+# memory-bank, and since stage C8 never a provider call.
 set -uo pipefail
 
 REAL_HOOK="$(python3 -c "import os,sys; print(os.path.realpath(sys.argv[1]))" "${BASH_SOURCE[0]}")"
@@ -70,7 +71,7 @@ if ctx.strip():
     print(ctx)
 else:
     print(
-        "graphiti hydrate: group_id=%s agent_id=%s facts_returned=%s pickup_parsed=%s"
+        "memory hydrate: namespace=%s agent_id=%s facts_returned=%s pickup_parsed=%s"
         % (
             pkt.get("group_id", "unresolved"),
             pkt.get("agent_id", ""),
@@ -80,20 +81,10 @@ else:
     )
 ' 2>/dev/null || echo "hydration degraded — resume via PICKUP search when online; next=")"
     else
-      HYDRATE_MD="hydration degraded — resume via PICKUP search when online; next="
-      graphiti_resolve_cli
-      if [ -f "$GRAPHITI_CLI" ]; then
-        if OUT="$(cd "$REPO" && python3 "$GRAPHITI_CLI" inject "session start" 2>/dev/null)"; then
-          GID="$(echo "$OUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('group_id',''))" 2>/dev/null || true)"
-          HYDRATE_MD="${HYDRATE_MD}
-graphiti: prefetch receipt ok group_id=${GID:-unknown}"
-        fi
-      fi
-    fi
-    # Preserve inject/state hash for gates even when hydrate succeeds
-    graphiti_resolve_cli
-    if [ -f "$GRAPHITI_CLI" ]; then
-      (cd "$REPO" && python3 "$GRAPHITI_CLI" inject "session start" >/dev/null 2>&1) || true
+      # Stage C8: no provider fallback. The canonical compile is the only
+      # hydration; when it fails the session says so and resumes from the
+      # user request (memory never gates repository writes).
+      HYDRATE_MD="hydration degraded — canonical memory unavailable (make memory-readiness); next="
     fi
   else
     HYDRATE_MD="hydrate CLI missing — resume via PICKUP search when online; next="

@@ -36,3 +36,20 @@ Claude Code Web/Mobile sandboxes cannot use the SSH tunnel to `127.0.0.1:8100`.
 
 - ADR-0006 — single memory front door
 - ADR-0028 — session hydrate/close visibility and write-primary repair
+
+## Supersession (2026-09-07) — superseded in full by ADR-0030; legacy operator infrastructure only
+
+Every Decision item above describes reaching the **provider** (the Graphiti
+MCP process) from a model surface: the Caddy route, `GRAPHITI_MCP_URL`,
+`GRAPHITI_MCP_TOKEN`, `${GRAPHITI_MCP_URL}` expansion in `mcp.template.json`.
+Since realignment stage C9 no model surface holds a provider URL or bearer,
+and since stage C11 no Cursor code path reads or writes the provider at all:
+memory is reached only through `ops/memory` to the bound `l9-graphite-memory`
+runtime (stdio), and cloud surfaces render the package-owned
+`l9-graphite-memory` MCP server only when `L9_MEMORY_INTERPRETER` is bound.
+The HTTPS exposure this ADR created is legacy operator infrastructure of the
+provider deployment (operator-owned, retired with it); it is not a transport
+any adapter, hook, skill or rule may name as live. Writer attribution
+(`USER_ID` / `L9_MEMORY_AGENT_ID` / `L9_MEMORY_SOURCE`) and the gold-standard
+pack location in item 3–4 remain true and are restated by ADR-0030 and
+`CANONICAL_LAW` §8.2.

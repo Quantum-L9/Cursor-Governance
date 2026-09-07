@@ -255,12 +255,12 @@ def classify_cursor_adapter(
     return [_line("cursor-adapter", klass, f"{state} — {reason or 'receipt state=' + state}")]
 
 
-def classify_graphiti(*, detail: str, stderr: str, healthy: bool) -> dict[str, Any]:
+def classify_memory(*, detail: str, stderr: str, healthy: bool) -> dict[str, Any]:
     if healthy:
-        return _line("graphiti", OK, detail or "healthy")
+        return _line("memory", OK, detail or "healthy")
     evidence = (stderr or "").strip() or detail or "no stderr captured — probe swallowed"
     return _line(
-        "graphiti",
+        "memory",
         FAILED
         if "unreachable" in (detail or "").lower() or "refused" in evidence.lower()
         else DEGRADED,
@@ -342,9 +342,9 @@ def collect(
     venv: str,
     ide_profile: str,
     tunnel: str,
-    graphiti_detail: str,
-    graphiti_stderr: str,
-    graphiti_healthy: bool,
+    memory_detail: str,
+    memory_stderr: str,
+    memory_healthy: bool,
     wiring: str,
     backup: str,
     skill_note: str,
@@ -359,7 +359,7 @@ def collect(
         classify_simple("venv", venv, fail_tokens=("absent", "missing", "fail")),
         classify_simple("ide-profile", ide_profile, fail_tokens=("fail", "error")),
         classify_simple("tunnel", tunnel, fail_tokens=("fail", "refused", "error", "closed")),
-        classify_graphiti(detail=graphiti_detail, stderr=graphiti_stderr, healthy=graphiti_healthy),
+        classify_memory(detail=memory_detail, stderr=memory_stderr, healthy=memory_healthy),
         classify_publish_path(evaluate(load_receipt())),
         classify_skill_usage(skill_note),
         classify_itest(error=probe_neo4j(), codegraph=codegraph),
@@ -387,17 +387,17 @@ def collect(
     )
     lines.append(classify_simple("wiring", wiring, fail_tokens=("fail",)))
     lines.append(classify_simple("backup", backup, fail_tokens=("fail", "error")))
-    graphiti_row = next((item for item in lines if item["name"] == "graphiti"), None)
-    graphiti_unhealthy = bool(graphiti_row and graphiti_row["class"] in {DEGRADED, FAILED})
-    if hydrate_degraded and graphiti_unhealthy:
+    memory_row = next((item for item in lines if item["name"] == "memory"), None)
+    memory_unhealthy = bool(memory_row and memory_row["class"] in {DEGRADED, FAILED})
+    if hydrate_degraded and memory_unhealthy:
         extra = (hydrate_reason or "hydrate reported degraded").strip()
-        if extra and extra not in (graphiti_row.get("evidence") or ""):
-            prior = (graphiti_row.get("evidence") or "").strip()
-            graphiti_row["evidence"] = f"{prior} hydrate: {extra}".strip()
+        if extra and extra not in (memory_row.get("evidence") or ""):
+            prior = (memory_row.get("evidence") or "").strip()
+            memory_row["evidence"] = f"{prior} hydrate: {extra}".strip()
     elif hydrate_degraded:
         lines.append(
             _line(
-                "graphiti-hydrate",
+                "memory-hydrate",
                 DEGRADED,
                 hydrate_reason or "hydrate reported degraded",
                 evidence=hydrate_reason,
@@ -436,9 +436,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--venv", default="")
     parser.add_argument("--ide-profile", default="")
     parser.add_argument("--tunnel", default="")
-    parser.add_argument("--graphiti-detail", default="")
-    parser.add_argument("--graphiti-stderr", default="")
-    parser.add_argument("--graphiti-healthy", default="false")
+    parser.add_argument("--memory-detail", default="")
+    parser.add_argument("--memory-stderr", default="")
+    parser.add_argument("--memory-healthy", default="false")
     parser.add_argument("--wiring", default="")
     parser.add_argument("--backup", default="")
     parser.add_argument("--skill-note", default="")
@@ -458,9 +458,9 @@ def main(argv: list[str] | None = None) -> int:
         venv=args.venv,
         ide_profile=args.ide_profile,
         tunnel=args.tunnel,
-        graphiti_detail=args.graphiti_detail,
-        graphiti_stderr=args.graphiti_stderr,
-        graphiti_healthy=_truthy(args.graphiti_healthy),
+        memory_detail=args.memory_detail,
+        memory_stderr=args.memory_stderr,
+        memory_healthy=_truthy(args.memory_healthy),
         wiring=args.wiring,
         backup=args.backup,
         skill_note=args.skill_note,

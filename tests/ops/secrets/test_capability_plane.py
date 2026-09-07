@@ -138,8 +138,7 @@ def test_repository_scoped_params_are_not_caller_supplied() -> None:
     registry = load_registry()
     for capability, protected in (
         ("sonar.read_issues", ("project", "organization")),
-        ("graphiti.query", ("group_id",)),
-        ("graphiti.write_governed", ("group_id",)),
+        ("semgrep.appsec_scan", ("repo",)),
     ):
         spec = registry.get(capability)
         assert spec is not None
@@ -179,10 +178,18 @@ def test_required_capability_check_is_nonzero_when_not_enabled() -> None:
     assert result.returncode == 1
 
 
-def test_advisory_and_authority_capabilities_declare_distinct_semantics() -> None:
+def test_advisory_capabilities_declare_degrade_semantics() -> None:
     registry = load_registry()
     assert registry.get("sonar.read_issues").is_advisory
-    assert not registry.get("graphiti.write_governed").is_advisory
+
+
+def test_memory_is_not_a_brokered_capability() -> None:
+    """Stage C9: memory is the canonical control plane, never a brokered upstream."""
+    registry = load_registry()
+    for retired in ("graphiti.query", "graphiti.write_governed"):
+        assert registry.get(retired) is None, f"{retired} must not be registered"
+    raw = (SECRETS_DIR / "capabilities.yaml").read_text(encoding="utf-8")
+    assert "secret_refs: [GRAPHITI_MCP_TOKEN]" not in raw
 
 
 # ---------------------------------------------------------------------------
@@ -248,17 +255,17 @@ def test_mcp_config_carries_no_bearer() -> None:
     assert _literal_bearers(config["mcpServers"]) == []
 
 
-def test_no_adapter_mcp_template_carries_a_graphiti_bearer() -> None:
-    """Every adapter uses GRAPHITI_MCP_URL with no in-file bearer.
+def test_no_adapter_mcp_template_carries_a_provider_transport_or_bearer() -> None:
+    """Stage C9: every adapter carrier declares the canonical stdio memory server or none.
 
-    Scoped to adapter templates. `ops/graphiti/mcp.json.example` is the
-    trusted-operator (Cursor SSH tunnel) shape and is deliberately not an
-    adapter template — see its own header.
+    No in-file bearer, no broker URL, no provider URL. The memory entry, when
+    present, is the package-owned ``l9-graphite-memory`` stdio argv with no
+    ``env``/``url``/``headers`` (memory ADR-016).
     """
     adapters = REPO_ROOT / "environment" / "agents" / "adapters"
     offenders: list[str] = []
-    missing_front_door: list[str] = []
     checked = 0
+    memory_args = ["-m", "l9_graphite_memory.server", "--transport", "stdio"]
     for path in sorted(adapters.rglob("*.json")):
         try:
             config = json.loads(path.read_text(encoding="utf-8"))
@@ -273,19 +280,23 @@ def test_no_adapter_mcp_template_carries_a_graphiti_bearer() -> None:
         rendered = json.dumps(wiring)
         rel = str(path.relative_to(REPO_ROOT))
         if _literal_bearers(wiring):
-            offenders.append(rel)
+            offenders.append(f"{rel}: literal bearer")
         if "L9_CAPABILITY_BROKER_URL" in rendered:
-            offenders.append(rel)
-        if "GRAPHITI_MCP_URL" not in rendered:
-            missing_front_door.append(rel)
+            offenders.append(f"{rel}: broker url")
+        if "GRAPHITI_MCP_" in rendered:
+            offenders.append(f"{rel}: provider transport")
+        servers = wiring.get("mcpServers") or {}
+        if "graphiti-memory" in servers:
+            offenders.append(f"{rel}: retired graphiti-memory front door")
+        memory = servers.get("l9-graphite-memory")
+        if isinstance(memory, dict):
+            if list(memory.get("args") or []) != memory_args:
+                offenders.append(f"{rel}: memory argv is not the package's managed entry")
+            for forbidden in ("env", "url", "headers"):
+                if forbidden in memory:
+                    offenders.append(f"{rel}: memory entry carries {forbidden}")
     assert checked >= 5, f"adapter template discovery found only {checked} configs"
-    assert offenders == [], (
-        "adapter MCP templates must point at ${GRAPHITI_MCP_URL} "
-        f"with no in-file bearer and no broker URL: {offenders}"
-    )
-    assert missing_front_door == [], (
-        f"adapter MCP templates must use ${{GRAPHITI_MCP_URL}}: {missing_front_door}"
-    )
+    assert offenders == [], offenders
 
 
 # ---------------------------------------------------------------------------

@@ -1,10 +1,10 @@
 {
-  "_comment": "Graphiti HTTPS front door at ${GRAPHITI_MCP_URL}. NO bearer. The capability-broker experiment never shipped \u2014 do not point this server at L9_CAPABILITY_BROKER_URL. Peer of environment/agents/adapters/claude-code/mcp.template.json.",
+  "_comment": "Canonical memory control plane only (l9-graphite-memory, MemoryService over stdio). Renders when ${L9_MEMORY_INTERPRETER} names a Python carrying the pinned l9-graphite-memory package (ops/config/memory-binding.json). No env block, no credential value. The legacy direct-provider front door (graphiti-memory over a provider URL) was retired at realignment stage C7/C8; the capability broker never shipped. Peer of environment/agents/adapters/claude-code/mcp.template.json.",
   "mcpServers": {
-    "graphiti-memory": {
-      "url": "${GRAPHITI_MCP_URL}",
-      "timeout": 120000,
-      "alwaysLoad": true
+    "l9-graphite-memory": {
+      "command": "${L9_MEMORY_INTERPRETER}",
+      "args": ["-m", "l9_graphite_memory.server", "--transport", "stdio"],
+      "_requires_env": ["L9_MEMORY_INTERPRETER"]
     }
   }
 }

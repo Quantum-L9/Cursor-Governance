@@ -9,12 +9,14 @@ reads a credential, and holds nothing worth stealing.
 
 The L9 capability-broker experiment never shipped. Every registered capability
 this client reports is UNAVAILABLE with that fact in ``detail``. Do not paste a
-secret to work around it. Graphiti memory uses ``GRAPHITI_MCP_URL`` with no
-bearer; authenticated Sonar / Semgrep AppSec / Context7 are not delivered.
+secret to work around it. Memory is not a capability at all: it is the
+canonical l9-graphite-memory control plane reached through ops/memory, with
+no provider URL or bearer on any surface (realignment stage C9);
+authenticated Sonar / Semgrep AppSec / Context7 are not delivered.
 
 Usage:
   capability_client.py --check
-  capability_client.py --check --require sonar.read_issues,graphiti.query
+  capability_client.py --check --require sonar.read_issues,semgrep.appsec_scan
   capability_client.py --invoke sonar.read_issues --param branch=main
 """
 

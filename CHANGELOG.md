@@ -8,6 +8,17 @@ history instead of trusting a backfilled entry here.
 ## [Unreleased]
 
 ### Removed
+- **Direct Graphiti provider path (memory realignment C11, ADR-0030):**
+  `ops/graphiti/graphiti_memory_client.py` is a tombstone (exit 2, names
+  `python -m ops.memory.cli`); deleted `graphiti_env_loader.py`,
+  `graphiti.env.defaults/example`, `init_graphiti_machine_env.sh`,
+  `group_resolver.py`, `episode_contract.py` (PII redaction moved to
+  `ops/graphiti/hydration/redaction.py`), `outcome_label.py`, `prune.py`,
+  `transcript_distiller.py`, `mcp.json.example`, the shadow reader in
+  `compile_session_packet.py`, and their tests. The egress scanner runs in
+  `enforce` mode. Do not restore.
+
+### Removed
 - **`execution-governance/`** (TODO A1): Suite-6 archive shell deleted after
   harvest C3/C1/C4 semantics landed in `ops/scripts/audit_rules_corpus.py`
   (inverted rule-enforcer coverage + named population). C5/C6 were already

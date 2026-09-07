@@ -58,7 +58,7 @@ improvement_loop:
 
     step_5_document:
       action: "Document all changes in meta-audit"
-      reference: "ops/graphiti/graphiti_memory_client.py"
+      reference: "ops/memory/cli.py"
       format: "improvement_snapshot"
 
   schedule:

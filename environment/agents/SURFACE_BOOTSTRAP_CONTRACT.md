@@ -24,7 +24,8 @@ Adapters never export policy upstream (CANONICAL_LAW §2.1).
 | Capability | Owner |
 |---|---|
 | Local execution / L4 / worktree / verification-bypass gates | `ops/autonomy/` |
-| Graphiti client + hydration packet | `ops/graphiti/` |
+| Memory boundary (control-plane client, binding, hydration evidence) | `ops/memory/` |
+| Session hydration/close composition + Cursor write gates | `ops/graphiti/hydration/`, `ops/graphiti/graphiti_gate_lib.py` |
 | Tree kernels (RA + V&R) latch predicate | `ops/autonomy/kernel_gate.py` via `surface_detect` |
 | Surface identity | `ops/autonomy/surface_detect.py` |
 
@@ -33,7 +34,7 @@ Adapters never export policy upstream (CANONICAL_LAW §2.1).
 | Axis | Cursor | Claude desktop | Claude mobile |
 |---|---|---|---|
 | Hook registration | `~/.cursor/hooks.json` → `ops/hooks/` | `.claude/settings.json` → `l9_hook_exec.sh` | same adapter; remote markers |
-| Memory front door | Cursor Graphiti hydrate / `graphiti-gate-*` | `memory_prefetch` / `memory_gate` | HTTPS `GRAPHITI_MCP_URL` |
+| Memory front door | `ops/memory` via `session_start_memory_orchestrator.sh` / `graphiti-gate-*` | `memory_prefetch` / `memory_gate` via `memory/memory_bridge.py` → `ops/memory` | same bridge; stdio to the bound runtime, no URL |
 | Session receipts | `.l9/memory/`, Cursor session ids | `~/.l9/claude/`, Claude session ids | same Claude plane |
 | SessionStart | `session_start_bootstrap.sh` | `session_start_claude_governance.sh` (no-op if not Claude) | cloud refresh path when `CLAUDE_CODE_REMOTE=true` |
 | Kernel latch | skipped | fires | fires (`claude-code-remote`) |
