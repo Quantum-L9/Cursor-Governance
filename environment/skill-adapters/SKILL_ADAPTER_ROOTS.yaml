@@ -6,14 +6,24 @@ ssot_relative: skills
 mode: symlink
 replace_l9_duplicates: true
 adapters:
+  # Claude Code is deliberately OUTSIDE the Cursor virtualization boundary: it
+  # projects the full canonical corpus and must run with Cursor, the Cursor
+  # adapter tree, and ~/.cursor all absent. The Cursor plane may not move a
+  # Claude-visible invocation tier, drop a skill from this projection, or write
+  # any path under .claude/** or environment/agents/adapters/claude-code/**.
+  # Contract: docs/CLAUDE_CODE_PRESERVATION_CONTRACT.md (CC-001..010).
+  # Gate: environment/agents/adapters/claude-code/validate_claude_preservation.py
+  #       (V-CC-001..005; make claude-preservation-check).
   - id: claude-code-user
     surface: claude-code
     kind: user
     path: ~/.claude/skills
+    notes: "full canonical projection; preserved by CC-001..010 (V-CC-001..005)"
   - id: claude-code-project
     surface: claude-code
     kind: project
     path: .claude/skills
+    notes: "full canonical projection; preserved by CC-001..010 (V-CC-001..005)"
   - id: codex-user
     surface: codex
     kind: user

@@ -320,8 +320,41 @@ Doctrine: `skills/AUTONOMY_MANIFEST.yaml`, `skills/l9-plan-simple/SKILL.md`,
 `rules/23-l9-skill-routing.mdc` (+ generated RULES-MANIFEST.*, llm-rules
 projection), `AGENTS.md` (append-only amendment),
 `environment/agents/adapters/claude-code/settings.template.json` + `.claude/settings.json`
-(generated `skillOverrides`, l9-plan-simple no longer user-invocable-only).
+(generated `skillOverrides` — **severed**, see below: these are now byte-identical
+to the merge base).
 Gates: `.pre-commit-config.yaml`, `.github/workflows/governance-self-check.yml`, `Makefile` (append-only).
 Tests: `ops/skill_routing/tests/{test_characterization,test_registry,test_materialize,test_receipt,test_session_locator,test_scale}.py`,
 `skill_routing_cases.json`, `environment/agents/adapters/cursor/tests/{test_before_submit_router,test_skill_projection}.py`,
 `environment/agents/adapters/claude-code/tests/test_cursor_skill_router.py`.
+
+## Claude Code preservation (boundary of this plane)
+
+Contract: [`CLAUDE_CODE_PRESERVATION_CONTRACT.md`](CLAUDE_CODE_PRESERVATION_CONTRACT.md).
+
+**Claude Code is intentionally outside this plane's boundary.** Everything above
+— the gateway, registry v2, materialization, scoped receipts, bounded discovery
+— is Cursor-side. None of it may change how Claude Code behaves.
+
+This build initially crossed that line. Moving `l9-plan-simple` to `auto_invoke`
+so the Cursor `plan` route could reach it propagated through the generators and
+dropped the skill's `"user-invocable-only"` override from `.claude/settings.json`
+and `settings.template.json`: a skill the corpus marks user-invocable-only became
+model-invocable on Claude Code, inside a Cursor PR.
+
+Severed. The tier move was never required — `explicit_only` primaries route
+through `hint_allowed: true`, the pattern eleven other routes already use. The
+`plan` route now carries `hint_allowed` + a `required_any` planning gate;
+routing still resolves to `l9-plan-simple`, with `source` `explicit_hint`
+instead of `route`. The promotion itself belongs to **PR #512** ("Promote five
+read-only/guidance skills to `auto_invoke`"), which owns it deliberately and
+separately, as CC-006 requires.
+
+| check | command | result |
+|---|---|---|
+| Claude settings diff vs merge base | `git diff 051c63c..HEAD -- .claude/settings.json environment/agents/adapters/claude-code/settings.template.json` | **empty** |
+| preservation contract | `make claude-preservation-check` | V-CC-001..005 PASS; 21 passed |
+| red-before proof | same suite on the pre-sever tree `3484d5c` | V-CC-001 FAIL; validator exit 1; 3 failed, 18 passed |
+
+Gates: `.pre-commit-config.yaml` (`claude-code-preservation`),
+`governance-self-check.yml` ("Claude Code preservation gate"), and
+`make claude-preservation-check`.

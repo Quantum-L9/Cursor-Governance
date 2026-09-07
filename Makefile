@@ -922,3 +922,15 @@ cursor-projection-check:
 ## Registry / router / materializer / receipt / hook / projection / scale suites.
 skill-plane-test:
 	$(PYTHON) -m pytest ops/skill_routing/tests environment/agents/adapters/cursor/tests -q
+
+# --- Claude Code Preservation Contract ----------------------------------------
+# Claude Code is deliberately OUTSIDE the Cursor virtualization boundary. The
+# Cursor plane may add a gateway, a registry schema, receipts and routing; none
+# of that may move a skill's Claude-visible invocation tier, remove a skill from
+# the Claude projection, or write into the Claude adapter tree. Repository-pure:
+# it runs with Cursor and ~/.cursor entirely absent (CC-007 / V-CC-002).
+.PHONY: claude-preservation-check
+## Prove the Claude projection is unchanged by the Cursor plane (V-CC-001..005).
+claude-preservation-check:
+	$(PYTHON) environment/agents/adapters/claude-code/validate_claude_preservation.py --root "$(CURDIR)"
+	$(PYTHON) -m pytest environment/agents/adapters/claude-code/tests/test_claude_preservation.py -q
