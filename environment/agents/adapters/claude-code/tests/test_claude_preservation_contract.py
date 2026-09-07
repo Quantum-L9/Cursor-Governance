@@ -120,15 +120,24 @@ class ClaudeIndependenceTests(unittest.TestCase):
 
     def test_no_cursor_runtime_imports_in_claude_adapter(self) -> None:
         """CC-007 — the Claude adapter must not import Cursor-only modules."""
+        # Cursor-plane modules: route receipts, per-conversation identity, and
+        # canonical-path materialization all belong to the Cursor boundary.
         forbidden = ("receipt", "session_locator", "materialize")
         offenders: list[str] = []
         for path in sorted(CLAUDE_ADAPTER_DIR.rglob("*.py")):
             if "tests" in path.parts:
                 continue
-            text = path.read_text(encoding="utf-8", errors="replace")
-            for module in forbidden:
-                if f"skill_routing.{module}" in text or f"import {module}" in text:
-                    offenders.append(f"{path.relative_to(ROOT)} -> {module}")
+            for lineno, line in enumerate(
+                path.read_text(encoding="utf-8", errors="replace").splitlines(), 1
+            ):
+                stripped = line.strip()
+                if stripped.startswith("#"):
+                    continue
+                for module in forbidden:
+                    # Import forms only, so prose and unrelated identifiers
+                    # (a local `receipt` variable) do not raise a false alarm.
+                    if f"skill_routing.{module}" in stripped or f"import {module}" in stripped:
+                        offenders.append(f"{path.relative_to(ROOT)}:{lineno} -> {module}")
         self.assertEqual(
             [],
             offenders,
@@ -188,6 +197,34 @@ class ClaudeCardinalityTests(unittest.TestCase):
                 "a new canonical skill did not reach Claude Code discovery "
                 "(V-CC-003): Claude cardinality must track the canonical corpus, "
                 "never a bounded native projection",
+            )
+
+    def test_added_canonical_skill_reaches_user_scope(self) -> None:
+        """CC-002 names both roots; ~/.claude/skills must track the corpus too."""
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            root = base / "governance"
+            home = base / "home"
+            home.mkdir()
+            self._fixture(root, ("l9-alpha", "l9-newly-added"))
+
+            env = dict(os.environ)
+            env["HOME"] = str(home)
+            result = _run(
+                str(RECONCILE_SKILLS),
+                "--root",
+                str(root),
+                "--scope",
+                "user",
+                env=env,
+            )
+            self.assertEqual(0, result.returncode, result.stderr)
+
+            projected = home / ".claude" / "skills" / "l9-newly-added"
+            self.assertTrue(
+                projected.is_symlink(),
+                "a new canonical skill did not reach ~/.claude/skills (CC-002): "
+                f"stdout={result.stdout}",
             )
 
     def test_claude_projection_tracks_full_canonical_corpus(self) -> None:

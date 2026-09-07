@@ -70,6 +70,13 @@ reads only tracked files — the skill registry, `AUTONOMY_MANIFEST.yaml`
 deterministic snapshot of Claude Code's projection surface. `--check` diffs it
 against `environment/agents/adapters/claude-code/baseline/claude-projection-baseline.json`.
 
+A route's `primary` is not its behavior. Changing a route's signals, weight,
+priority, or supporting set repoints Claude just as effectively, so the snapshot
+carries a `route_definitions_sha256` digest per route alongside the readable
+`routes` map, plus the selection thresholds in `routing_policy`. The digest is
+what makes a signals-only edit fail the gate; the readable map is what makes the
+failure diagnosable.
+
 Hardcoding a route target inline would either rot on every legitimate change or
 invite a silent edit. Pinning the whole surface to one reviewed baseline means
 a Claude Code behavior change cannot merge unnoticed: it fails the gate, and
@@ -103,16 +110,22 @@ and `hooks/user_prompt_skill_router.py` are untouched; the Claude
 writing only under `~/.claude/l9/`.
 
 **Violated — CC-001 and CC-006.** #513 changes Claude Code routing and
-invocation policy in six places:
+invocation policy:
 
 ```
-invocation[l9-plan-simple]:                       explicit_only     -> model_allowed
+invocation[l9-plan-simple]:                        explicit_only       -> model_allowed
 settings_template_skill_overrides[l9-plan-simple]: user-invocable-only -> (removed)
 workspace_skill_overrides[l9-plan-simple]:         user-invocable-only -> (removed)
 routing_primary_skills:                            added l9-plan-simple
-routes[plan]:                                      l9-plan           -> l9-plan-simple
-routes[campaign_plan]:                             (none)            -> l9-plan
+routes[plan]:                                      l9-plan             -> l9-plan-simple
+routes[campaign_plan]:                             (none)              -> l9-plan
+route_definitions_sha256[plan]:                    8f7bb389…           -> 3a933d13…
+route_definitions_sha256[campaign_plan]:           (none)              -> 1968f900…
 ```
+
+The two digests are not redundant with the `routes` lines above them: the `plan`
+route's signal sets also change (13 → 15 positive, 0 → 7 negative), and the
+Claude route count goes 34 → 35.
 
 Observed end-to-end through the Claude hook itself, not inferred from the diff:
 

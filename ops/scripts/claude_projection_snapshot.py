@@ -26,6 +26,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -69,10 +70,29 @@ def snapshot(root: Path) -> dict[str, Any]:
     invocation = {str(s["name"]): str(s.get("invocation", "")) for s in skills}
 
     routing = manifest.get("claude_routing", {}) or {}
-    routes = {
-        str(r["id"]): str(r.get("primary", ""))
-        for r in routing.get("routes", []) or []
-        if r.get("id")
+    route_records = [r for r in routing.get("routes", []) or [] if r.get("id")]
+    routes = {str(r["id"]): str(r.get("primary", "")) for r in route_records}
+
+    # `primary` alone is not the routing behavior. A change to a route's
+    # signals, weight, priority, or supporting set repoints Claude just as
+    # surely, and would otherwise pass a primary-only comparison unnoticed.
+    # The digest covers the whole route; `routes` above keeps the diff legible.
+    route_definitions = {
+        str(r["id"]): hashlib.sha256(
+            json.dumps(r, sort_keys=True, ensure_ascii=False).encode("utf-8")
+        ).hexdigest()
+        for r in route_records
+    }
+
+    # Selection thresholds decide whether a route fires at all.
+    routing_policy = {
+        key: routing.get(key)
+        for key in (
+            "max_primary",
+            "max_supporting",
+            "force_threshold",
+            "advisory_threshold",
+        )
     }
 
     workspace_settings_path = root / WORKSPACE_SETTINGS_REL
@@ -92,7 +112,9 @@ def snapshot(root: Path) -> dict[str, Any]:
         ),
         "routing_primary_skills": sorted(routing.get("primary_skills", []) or []),
         "routing_supporting_skills": sorted(routing.get("supporting_skills", []) or []),
+        "routing_policy": routing_policy,
         "routes": dict(sorted(routes.items())),
+        "route_definitions_sha256": dict(sorted(route_definitions.items())),
     }
     if workspace_overrides is not None:
         data["workspace_skill_overrides"] = dict(sorted(workspace_overrides.items()))
