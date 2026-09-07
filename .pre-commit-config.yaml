@@ -113,16 +113,6 @@ repos:
         files: ^(\.cursor-plugin/plugin\.json|environment/agents/adapters/cursor/(skills/|validate_skill_projection\.py)|skills/|ops/generated/skill-registry\.json|ops/skill_routing/|ops/hooks/(before_submit_skill_router\.py|hooks\.json\.template)|rules/23-l9-skill-routing\.mdc)
         pass_filenames: false
 
-      # Claude Code Preservation Contract: the Cursor plane may not move a
-      # Claude-visible invocation tier, drop a skill from the Claude projection,
-      # or write into the Claude adapter tree (V-CC-001..005).
-      - id: claude-code-preservation
-        name: Claude Code projection is unchanged by the Cursor plane (V-CC-001..005)
-        entry: python3 environment/agents/adapters/claude-code/validate_claude_preservation.py
-        language: system
-        files: ^(\.claude/settings\.json|environment/agents/adapters/claude-code/(settings\.template\.json|generated/|claude_preservation_baseline\.json|validate_claude_preservation\.py)|environment/agents/adapters/cursor/|skills/|ops/generated/skill-registry\.json)
-        pass_filenames: false
-
       - id: repo-hygiene
         name: Repository housekeeping gate (RB-HK-001)
         entry: python3 tools/check_repo_hygiene.py

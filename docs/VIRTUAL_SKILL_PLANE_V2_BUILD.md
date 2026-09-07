@@ -85,7 +85,7 @@ lock"). Encoded in the manifest:
 
 | Prompt class | Primary | Route |
 |---|---|---|
-| ordinary implementation plan / Build-ready spec / Cursor Plan mode | `l9-plan-simple` (moved to `auto_invoke`; `disable-model-invocation` removed) | `plan` (negative signals: campaign, program lock, program-execution, pe+autonomy, /l9-plan) |
+| ordinary implementation plan / Build-ready spec / Cursor Plan mode | `l9-plan-simple` (stays `explicit_only`; reached by `hint_allowed` — see "Claude Code preservation") | `plan` (`required_any` planning phrases; negative signals: campaign, program lock, program-execution, pe+autonomy, /l9-plan) |
 | Program Execution campaign plan / PE+autonomy / Program Lock / `/l9-plan` | `l9-plan` | `campaign_plan` (priority 1) |
 | `make campaign INTENT=…` (live activation) | `l9-pe-campaign-activate` (`explicit_hint`) | `pe_campaign_activate` (unchanged) |
 
@@ -320,8 +320,7 @@ Doctrine: `skills/AUTONOMY_MANIFEST.yaml`, `skills/l9-plan-simple/SKILL.md`,
 `rules/23-l9-skill-routing.mdc` (+ generated RULES-MANIFEST.*, llm-rules
 projection), `AGENTS.md` (append-only amendment),
 `environment/agents/adapters/claude-code/settings.template.json` + `.claude/settings.json`
-(generated `skillOverrides` — **severed**, see below: these are now byte-identical
-to the merge base).
+(**severed** — both are byte-identical to the merge base; see below).
 Gates: `.pre-commit-config.yaml`, `.github/workflows/governance-self-check.yml`, `Makefile` (append-only).
 Tests: `ops/skill_routing/tests/{test_characterization,test_registry,test_materialize,test_receipt,test_session_locator,test_scale}.py`,
 `skill_routing_cases.json`, `environment/agents/adapters/cursor/tests/{test_before_submit_router,test_skill_projection}.py`,
@@ -329,32 +328,51 @@ Tests: `ops/skill_routing/tests/{test_characterization,test_registry,test_materi
 
 ## Claude Code preservation (boundary of this plane)
 
-Contract: [`CLAUDE_CODE_PRESERVATION_CONTRACT.md`](CLAUDE_CODE_PRESERVATION_CONTRACT.md).
-
 **Claude Code is intentionally outside this plane's boundary.** Everything above
-— the gateway, registry v2, materialization, scoped receipts, bounded discovery
-— is Cursor-side. None of it may change how Claude Code behaves.
+— the gateway, registry v2, materialization, scoped receipts — is Cursor-side,
+and none of it may change how Claude Code behaves.
 
-This build initially crossed that line. Moving `l9-plan-simple` to `auto_invoke`
-so the Cursor `plan` route could reach it propagated through the generators and
-dropped the skill's `"user-invocable-only"` override from `.claude/settings.json`
-and `settings.template.json`: a skill the corpus marks user-invocable-only became
-model-invocable on Claude Code, inside a Cursor PR.
+This build initially crossed that line. Cursor and Claude Code share `skills/`
+and `AUTONOMY_MANIFEST.yaml`, so moving `l9-plan-simple` to `auto_invoke` — done
+purely so the Cursor `plan` route could reach it — propagated through the
+generators and dropped the skill's `"user-invocable-only"` override from
+`.claude/settings.json` and `settings.template.json`. A skill the corpus marks
+user-invocable-only became model-invocable on Claude Code, inside a PR about
+Cursor virtualization. That is a Claude Code behavior change riding in another
+surface's change set.
 
-Severed. The tier move was never required — `explicit_only` primaries route
-through `hint_allowed: true`, the pattern eleven other routes already use. The
-`plan` route now carries `hint_allowed` + a `required_any` planning gate;
-routing still resolves to `l9-plan-simple`, with `source` `explicit_hint`
-instead of `route`. The promotion itself belongs to **PR #512** ("Promote five
-read-only/guidance skills to `auto_invoke`"), which owns it deliberately and
-separately, as CC-006 requires.
+**Severed.** The tier move was never required: `explicit_only` primaries are
+already routable through `hint_allowed: true`, the pattern eleven other routes
+use (`repo_sync_ff`, `pr_analysis`, `issue_remediation`, …). The `plan` route now
+carries `hint_allowed` plus a `required_any` gate of discriminating planning
+phrases, so `retrieve_candidates` admits it and `_hint_gate` passes it through
+on a solid hit. Routing still resolves to `l9-plan-simple` with the same
+supporting skill; only `source` changes from `route` to `explicit_hint` — the
+correct authority level for a skill whose own doctrine is that Build is the
+user's press.
+
+Restored to the merge-base state: `skills/l9-plan-simple/SKILL.md`
+(`disable-model-invocation: true`) and the `AUTONOMY_MANIFEST.yaml`
+`explicit_only` tier entry, with `l9-plan-simple` removed from
+`claude_routing.primary_skills` — no `explicit_only` skill appears there, so
+`composition_role` returns to `general`. Both Claude settings files and both
+registry mirrors were regenerated, never hand-edited.
 
 | check | command | result |
 |---|---|---|
 | Claude settings diff vs merge base | `git diff 051c63c..HEAD -- .claude/settings.json environment/agents/adapters/claude-code/settings.template.json` | **empty** |
-| preservation contract | `make claude-preservation-check` | V-CC-001..005 PASS; 21 passed |
-| red-before proof | same suite on the pre-sever tree `3484d5c` | V-CC-001 FAIL; validator exit 1; 3 failed, 18 passed |
+| Claude skill set + tier map vs merge base | 56 skills both sides, per-skill `invocation` / `disable_model_invocation` / `skillOverrides` compared | **identical, 0 differing entries** |
+| routing | `pytest ops/skill_routing/tests` | 83 passed, 33 subtests |
+| projection | `validate_skill_projection.py` | `native=1 canonical=56 registry=56` PASS |
+| activation | `validate_skill_activation.py` | PASS |
 
-Gates: `.pre-commit-config.yaml` (`claude-code-preservation`),
-`governance-self-check.yml` ("Claude Code preservation gate"), and
-`make claude-preservation-check`.
+Three routing fixtures move `expected_source` `route` → `explicit_hint`;
+`expected_primary` and `expected_supporting` are unchanged.
+
+**The contract and its mechanical gate are not in this PR.** The Claude Code
+Preservation Contract (CC-001..010, V-CC-001..005) and its validator are owned
+by **PR #518**, opened separately for that purpose; this PR carries only the
+sever. The tier promotion itself, if wanted, is owned by **PR #512** ("Promote
+five read-only/guidance skills to `auto_invoke`"), where it is a deliberate,
+separately reviewed decision rather than a side effect. #513 previously carried
+#512's `SKILL.md` frontmatter hunk for merge-cleanliness; it no longer does.

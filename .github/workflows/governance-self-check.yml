@@ -106,21 +106,10 @@ jobs:
           [ -f "$v" ] || { echo "::error::mandatory validator $v missing"; exit 1; }
           python3 "$v"
 
-      # Claude Code sits outside the Cursor virtualization boundary: the plane
-      # above may not move a Claude-visible invocation tier, drop a skill from
-      # the Claude projection, or write into the Claude adapter tree.
-      - name: Claude Code preservation gate (V-CC-001..005)
-        run: |
-          v=environment/agents/adapters/claude-code/validate_claude_preservation.py
-          [ -f "$v" ] || { echo "::error::mandatory validator $v missing"; exit 1; }
-          python3 "$v"
-
       - name: Skill plane suites (registry, router, materializer, receipts, hook, projection)
         run: |
           python3 -m pip install --only-binary=:all: pytest==9.1.1
-          python3 -m pytest ops/skill_routing/tests environment/agents/adapters/cursor/tests \
-            environment/agents/adapters/claude-code/tests/test_claude_preservation.py \
-            -q -p no:cacheprovider
+          python3 -m pytest ops/skill_routing/tests environment/agents/adapters/cursor/tests -q -p no:cacheprovider
 
       - name: Workflow action pins (third-party = full SHA)
         run: |
