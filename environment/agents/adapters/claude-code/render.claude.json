@@ -37,12 +37,13 @@
         "hooks/bootstrap_capability_preflight.sh",
         "hooks/session_start_claude_governance.sh"
       ],
-      "note": "Capability preflight runs first and establishes REST-only hosted GitHub transport plus L9 ownership of memory, repo-root, and PR-convergence helpers; the main session hook then hydrates governance context."
+      "note": "Capability preflight runs first and establishes REST-only hosted GitHub transport, primary-checkout initial repository scope, the canonical l9-graphite-memory/MemoryService plane including governed model writes, and L9 ownership of PR convergence. The main session hook then hydrates governance context."
     },
     "mcp": {
       "template": "mcp.template.json",
       "cli": "user-scope MCP server via `claude mcp add-json`",
-      "web_mobile": ".mcp.json (git-tracked; env-references only, no token)"
+      "web_mobile": ".mcp.json (git-tracked; env-references only, no token)",
+      "memory": "l9-graphite-memory stdio only; canonical reads plus memory.phase_lock -> memory.write_governed are the no-prompt interactive contract"
     }
   },
   "tools": {
