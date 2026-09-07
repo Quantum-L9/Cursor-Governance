@@ -19,3 +19,15 @@ def test_claude_duplicate_memory_and_scheduler_planes_are_disabled() -> None:
     env = settings["env"]
     assert env["CLAUDE_CODE_DISABLE_AUTO_MEMORY"] == "1"
     assert env["CLAUDE_CODE_DISABLE_CRON"] == "1"
+
+
+def test_graphiti_mcp_is_read_only_from_model_tool_plane() -> None:
+    settings = json.loads(TEMPLATE.read_text(encoding="utf-8"))
+    permissions = settings["permissions"]
+    allow = set(permissions["allow"])
+    deny = set(permissions["deny"])
+
+    assert "mcp__graphiti-memory__search_memory_facts" in allow
+    assert "mcp__graphiti-memory__group_ids" in allow
+    assert "mcp__graphiti-memory__add_memory" in deny
+    assert "mcp__graphiti-memory__add_memory" not in allow
