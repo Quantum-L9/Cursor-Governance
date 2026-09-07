@@ -50,6 +50,9 @@ class FakeMemoryCli:
         self.handlers: dict[str, Handler] = {}
         self.calls: list[tuple[list[str], str | None, str | None]] = []
         self.timeout_on: set[str] = set()
+        #: A real service echoes the query it was handed, so the fake does too.
+        #: Turn it off to inject a receipt that answers a *different* search.
+        self.echo_search_query = True
 
     def on(self, command: str, handler: Handler) -> FakeMemoryCli:
         self.handlers[command] = handler
@@ -81,6 +84,16 @@ class FakeMemoryCli:
                 args, 1, "", json.dumps({"error": "KeyError", "message": f"no handler {command}"})
             )
         code, payload, stderr = handler(args[2:], input_text)
+        if (
+            command == "search"
+            and self.echo_search_query
+            and isinstance(payload, dict)
+            and "query" in payload
+        ):
+            # A real service echoes the query it was handed. The canned payload
+            # cannot know it, and a fixed echo would make every search look like
+            # a receipt for a different request (MEM-P2-01, consumer half).
+            payload = {**payload, "query": args[2] if len(args) > 2 else payload["query"]}
         stdout = "" if payload is None else json.dumps(payload, indent=2, default=str)
         return subprocess.CompletedProcess(args, code, stdout, stderr)
 

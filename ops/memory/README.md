@@ -132,6 +132,29 @@ behavioural: an operation whose receipt has no canonical schema returns
 `VALIDATION_UNAVAILABLE`, and the binding reasons list what the release does
 export so a wrong name is diagnosable rather than mute.
 
+**Does the receipt answer the request?** (audit MEM-P2-01, consumer half.) A
+`SearchReceipt` binds the query and the namespaces memory authorized, and binds
+nothing about the **tag selector** — and tags change the result set, so the
+receipt cannot prove which request produced its hits. Closing that is memory's:
+it owns the receipt contract. `search_identity.py` is the other end.
+
+Two rules, and the difference is the point. A selector the receipt *echoes*
+must agree with what Cursor sent, or the hits answer another question and the
+outcome is `INVALID_RECEIPT`. A result-affecting selector the receipt *omits*
+is recorded as **unbound** — never assumed to have matched — and under
+`L9_MEMORY_REQUIRE_SEARCH_IDENTITY=1` an unbound selector is
+`REQUEST_IDENTITY_UNPROVEN`, a non-success. The two verdicts stay distinct:
+provably wrong is not the same as unproven.
+
+Cursor deliberately does **not** recompute memory's `request_digest`. It would
+have to guess the canonicalization — field order, tag ordering, absent versus
+empty — and a guess that disagrees turns every honest receipt into a rejection.
+Cursor computes its own digest for its own evidence, stamped with its own
+canonicalization version, and carries memory's digest without comparing the two.
+Namespaces are asymmetric on purpose: memory authorizing a *subset* of what
+Cursor requested is memory doing its job, so only a namespace Cursor never
+asked for is a contradiction.
+
 **Canonical receipt validation** (audit CG-P1-02). Because the memory runtime
 may be another interpreter, `import l9_graphite_memory.contracts` cannot
 succeed in this process — so the binding *exports* each canonical receipt model
