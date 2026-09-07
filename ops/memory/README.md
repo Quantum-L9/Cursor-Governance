@@ -54,6 +54,39 @@ MemoryService  →  canonical store  →  outbox  →  optional Graphiti project
 | `mcp_instantiation.py` | `~/.cursor/mcp.json` as a real per-machine file rendered from `environment/mcp/master.mcp.json`; drops the retired `graphiti-memory` key; delegates the memory entry to `l9-memory client cursor install/verify` against the bound runtime | authoring the memory entry |
 | `diagnostics.py` | readiness R0 `PACKAGE_BOUND` … R9 `PROJECTION_READY` | "Graphiti is up" == healthy |
 
+## Caller taxonomy (ADR-0030 items 7–9, CANONICAL_LAW §8.3)
+
+One authority, one egress, two adapters. Who calls what:
+
+| Caller | Adapter | Operation(s) | Role |
+|---|---|---|---|
+| Model, mid-session, recording a durable fact | `l9-graphite-memory` MCP server (stdio, package-owned) | `memory.phase_lock` → `memory.write_governed` | **The only model write.** `MemoryService` grants the lock after a conflict check on the namespace snapshot and re-verifies the digest inside the admitting transaction; a refused lock or write is the verdict |
+| Model, reading | MCP `memory.search` / `memory.hydrate`; or `cli.py search` / `hydrate` | read | evidence only |
+| SessionStart hook | `hydration.py` (`canonical_hydrate`) | `health`, `hydrate` | deterministic adapter |
+| sessionEnd hook | `ops/graphiti/hydration/close_session.py` | `ingest_candidate`, `close` (idempotent, exact-request replay) | deterministic adapter |
+| `/end-session` repair | `ops/graphiti/hydration/pickup_write.py` (`hydration.cli repair-write`) | canonical `write` + close-receipt stamp | deterministic adapter |
+| Legacy provider history | `legacy_reconciliation.py` | canonical admission, tag `legacy_unverified` | operator |
+| Diagnostics | `diagnostics.py`, `runtime_binding.py` | `readiness`, `health`, `capabilities` | operator / hooks |
+| Human operator, Program Execution, GMP Phase 0 | `cli.py` (`python -m ops.memory.cli`) | `write` (operator form), `conflicts`, `resolve` | operator |
+| `control_plane_client.py` `phase_lock` / `verify_phase_lock` | consumer-side view of the memory lock | governed-write precondition only | never repository authority |
+
+Rules that follow from the table:
+
+- The memory phase-lock is a **memory-write consistency precondition**. It
+  never authorizes a source edit, never serializes git, never replaces
+  worktree / branch / publication governance (`rules/96` E7/E8/E10,
+  `rules/98`).
+- Generic `memory.ingest` and the operator CLI `write` are **not** the model's
+  alternative to `write_governed`; routing a model-authored fact through them
+  to avoid the lock is a doctrine violation. An unbound MCP server is a
+  reported gap (`readiness`), not a reroute.
+- Deterministic adapters use purpose-specific operations over the same
+  admission path; none of them is a second egress, and none carries a
+  provider URL, bearer or raw provider tool.
+- Machine form: `environment/agents/adapters/claude-code/memory/memory-enforcement.contract.json`
+  `interactive_memory_write` (validated by `validate_memory_enforcement.py`).
+  Anti-regression: `ops/scripts/validate_legacy_doctrine_residue.py`.
+
 ## Binding (INV-11)
 
 `ops/config/memory-binding.json` states what Cursor expects: distribution,

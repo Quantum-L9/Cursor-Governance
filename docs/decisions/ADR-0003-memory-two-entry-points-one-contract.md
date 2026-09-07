@@ -123,3 +123,20 @@ that they were allowed to **diverge**:
 ## See also
 
 - ADR-0005 — one agent memory; product/domain memory out of band
+
+## Amendment (2026-09-07) — role distinction preserved, transport retired (ADR-0030)
+
+Preserved: the **two roles**. The hook path is the deterministic,
+harness-driven lifecycle (SessionStart hydration, Stop close, receipts); the
+interactive path is the model-driven, on-demand read/write path. Both are
+adapters over one `MemoryService` and one admission path.
+
+Superseded by ADR-0030: everything in this ADR that names a transport or a
+store — `${L9_MEMORY_HTTP_URL}/mcp`, the bearer-derived identity,
+`memory_client.py`, the `l9-shared-memory` registration (Decision items 1 and
+3). The hook path is `ops/memory` through `memory_bridge.py`; the interactive
+path is the package-owned `l9-graphite-memory` stdio MCP server rendered only
+when `L9_MEMORY_INTERPRETER` is bound. The interactive **write** on that path
+is `memory.phase_lock` → `memory.write_governed` (ADR-0030 item 7); generic
+`memory.ingest` is not the model's alternative to it. The accessor pin of
+ADR-0004 that item 1 pointed at is superseded in full.

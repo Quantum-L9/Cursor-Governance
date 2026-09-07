@@ -130,6 +130,127 @@ class FrontDoorTests(unittest.TestCase):
         self.assertIn("ops/graphiti/graphiti_memory_client.py", doors)
         self.assertTrue(any(d.endswith("graphiti_bridge.py") for d in doors))
 
+    # -- interactive write contract (ADR-0030 items 7-9) ----------------------
+
+    @staticmethod
+    def _contract() -> dict:
+        return json.loads((MEM / "memory-enforcement.contract.json").read_text(encoding="utf-8"))
+
+    @staticmethod
+    def _schema() -> dict:
+        return json.loads((MEM / "memory-enforcement.schema.json").read_text(encoding="utf-8"))
+
+    @staticmethod
+    def _validator():
+        sys.path.insert(0, str(CLAUDE))
+        import validate_memory_enforcement as vme
+
+        return vme
+
+    def test_contract_states_the_governed_interactive_write(self) -> None:
+        """Positive: the model's durable write is phase_lock -> write_governed."""
+        imw = self._contract()["interactive_memory_write"]
+        self.assertEqual(imw["canonical_mcp_server"], "l9-graphite-memory")
+        self.assertEqual(imw["prerequisite"], "memory.phase_lock")
+        self.assertEqual(imw["write_operation"], "memory.write_governed")
+        self.assertIs(imw["repository_authority"], False)
+        self.assertEqual(imw["provider_direct"], "forbidden")
+        self.assertEqual(imw["generic_ingest_as_model_write"], "forbidden")
+        self.assertEqual(imw["cli_adapter"], "python -m ops.memory.cli")
+        self.assertNotIn("ingest", imw["deterministic_adapter_operations"])
+        self.assertNotIn("write_governed", imw["deterministic_adapter_operations"])
+
+    def test_schema_requires_the_interactive_write_block(self) -> None:
+        schema = self._schema()
+        self.assertIn("interactive_memory_write", schema["required"])
+        props = schema["properties"]["interactive_memory_write"]["properties"]
+        self.assertEqual(props["prerequisite"]["const"], "memory.phase_lock")
+        self.assertEqual(props["write_operation"]["const"], "memory.write_governed")
+        self.assertIs(props["repository_authority"]["const"], False)
+        self.assertEqual(props["provider_direct"]["const"], "forbidden")
+        self.assertEqual(props["generic_ingest_as_model_write"]["const"], "forbidden")
+        # Retired provider properties are not legal on the memory block any more.
+        memory_props = schema["properties"]["memory"]["properties"]
+        for retired in ("url_env", "token_env", "mcp_path"):
+            self.assertNotIn(retired, memory_props)
+        self.assertIs(schema["properties"]["memory"]["additionalProperties"], False)
+
+    def test_contract_validates_against_its_schema(self) -> None:
+        try:
+            import jsonschema  # type: ignore[import-not-found]
+        except ImportError:  # pragma: no cover - the validator has a fallback
+            self.skipTest("jsonschema not installed")
+        jsonschema.validate(self._contract(), self._schema())
+
+    def test_validator_accepts_the_current_contract(self) -> None:
+        vme = self._validator()
+        failures: list[str] = []
+        vme.doctrine_check(self._contract(), failures)
+        self.assertEqual(failures, [])
+
+    def test_validator_rejects_generic_ingest_as_the_model_write(self) -> None:
+        vme = self._validator()
+        planted = self._contract()
+        planted["interactive_memory_write"]["generic_ingest_as_model_write"] = "allowed"
+        failures: list[str] = []
+        vme.doctrine_check(planted, failures)
+        self.assertTrue([f for f in failures if "generic_ingest_as_model_write" in f], failures)
+
+    def test_validator_rejects_a_provider_direct_write(self) -> None:
+        vme = self._validator()
+        planted = self._contract()
+        planted["interactive_memory_write"]["provider_direct"] = "allowed"
+        failures: list[str] = []
+        vme.doctrine_check(planted, failures)
+        self.assertTrue([f for f in failures if "provider_direct" in f], failures)
+
+    def test_validator_rejects_phase_lock_as_repository_authority(self) -> None:
+        vme = self._validator()
+        planted = self._contract()
+        planted["interactive_memory_write"]["repository_authority"] = True
+        planted["governed_writes"][0]["requires"] = ["session_prefetch", "phase_lock"]
+        failures: list[str] = []
+        vme.doctrine_check(planted, failures)
+        self.assertTrue([f for f in failures if "repository_authority" in f], failures)
+        self.assertTrue([f for f in failures if "E7" in f], failures)
+
+    def test_validator_rejects_a_missing_interactive_write_block(self) -> None:
+        vme = self._validator()
+        planted = self._contract()
+        del planted["interactive_memory_write"]
+        failures: list[str] = []
+        vme.doctrine_check(planted, failures)
+        self.assertTrue(
+            [f for f in failures if "interactive_memory_write block missing" in f], failures
+        )
+
+    def test_validator_rejects_a_provider_url_or_token_env_on_the_surface(self) -> None:
+        vme = self._validator()
+        planted = self._contract()
+        planted["memory"]["url_env"] = "GRAPHITI_MCP_" + "URL"
+        planted["memory"]["token_env"] = "GRAPHITI_MCP_" + "TOKEN"
+        failures: list[str] = []
+        vme.doctrine_check(planted, failures)
+        self.assertTrue([f for f in failures if "memory.url_env" in f], failures)
+        self.assertTrue([f for f in failures if "memory.token_env" in f], failures)
+        self.assertTrue([f for f in failures if "retired provider transport" in f], failures)
+
+    def test_validator_rejects_a_write_operation_other_than_write_governed(self) -> None:
+        vme = self._validator()
+        planted = self._contract()
+        planted["interactive_memory_write"]["write_operation"] = "memory.ingest"
+        failures: list[str] = []
+        vme.doctrine_check(planted, failures)
+        self.assertTrue([f for f in failures if "write_operation" in f], failures)
+
+    def test_validator_rejects_a_retired_front_door(self) -> None:
+        vme = self._validator()
+        planted = self._contract()
+        planted["memory"]["front_door"] = "ops/graphiti/graphiti_memory_client.py"
+        failures: list[str] = []
+        vme.doctrine_check(planted, failures)
+        self.assertTrue([f for f in failures if "memory.front_door" in f], failures)
+
     # -- MCP template ---------------------------------------------------------
 
     def test_mcp_template_declares_only_the_canonical_memory_server(self) -> None:

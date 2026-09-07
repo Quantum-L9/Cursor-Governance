@@ -49,3 +49,14 @@ outward — not Claude-adapter policy imported as Cursor law.
 - `environment/agents/SURFACE_BOOTSTRAP_CONTRACT.md`
 - ADR-0006 (single memory front door)
 - ADR-0028 (hydrate/close visibility)
+
+## Amendment (2026-09-07) — the shared brain is ops/memory + MemoryService (ADR-0030)
+
+Decision item 3's "Graphiti client" reads as **`ops/memory` over the bound
+`l9-graphite-memory` `MemoryService`**: that boundary, the binding manifest and
+the canonical session state are the shared, upstream memory brain. Per-surface
+remains hook registration, session receipts and projection engines — and each
+surface's *memory front door* is the same door (`ops/memory`), so "memory front
+door" in item 3 names where a surface wires it, not a surface-local transport.
+The receipt-unification seam in item 4 is unchanged. Nothing in this ADR
+authorizes a provider call or a second memory stack.

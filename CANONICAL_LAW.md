@@ -915,3 +915,64 @@ provider URL, or a bearer, this section is the law.
 Rules: `03-graphiti-memory.mdc`, `87-cursor-memory-kernel.mdc`,
 `98-graphiti-memory-gate.mdc` (v1.2.0 / 1.1.0 / 1.1.0). Skill:
 `skills/l9-graphiti-memory/SKILL.md` v2.0.0. Map: `docs/MEMORY_PIPELINE_MAP.md`.
+
+## 8.3 Interactive memory write contract (2026-09-07) — strengthens §8.2; supersedes §8 phase-lock and interface wording that survived §8.1/§8.2
+
+Append-only. PR #509 doctrine closure (ADR-0030 items 7–9). Where any older
+section, rule, skill or ADR still teaches `graphiti_memory_client.py` as a live
+front door, a provider URL or bearer on a surface, Graphiti `inject` / PICKUP as
+the resume SSOT, or a memory phase-lock as repository permission, this section
+and §8.2 are the law.
+
+1. **One authority, one egress, two adapters.** `MemoryService`
+   (`l9-graphite-memory`, `memory-control-plane/v1`, bound head
+   `5605569b72baa25f6b6e6324b0017317fb31e0cd`, package 2.3.0) is the sole
+   authority; `ops/memory` is the only egress (INV-03); the CLI
+   (`python -m ops.memory.cli`) and the package-owned `l9-graphite-memory` MCP
+   server are adapters to it. Graphiti is a downstream projection memory
+   owns. No model surface holds, resolves or forwards a provider URL or
+   bearer, and no provider tool is exposed to an agent through MCP.
+2. **Agents MUST be able to write durable memory, and MUST NOT write to the
+   provider transport.** The model-initiated durable write is
+   `memory.phase_lock {namespace, task_signature}` then
+   `memory.write_governed {…, task_signature}` on the `l9-graphite-memory`
+   MCP server. `MemoryService` grants the lock only after a conflict check on
+   the namespace snapshot and re-verifies the digest inside the transaction
+   that admits the record; a refused lock or write is the verdict.
+3. **The memory phase-lock governs memory-write consistency only.** It is a
+   prerequisite of a governed MEMORY write and nothing else: it does not
+   authorize a source edit, does not serialize git, and does not replace
+   worktree / branch / publication governance (§8.1 stands; `rules/96`
+   E7/E8/E10). Holding one changes nothing about repository mutation; lacking
+   one blocks nothing but the governed memory write itself.
+4. **No evasion.** Generic `memory.ingest` and the operator CLI `write` are
+   not the model's alternative to `memory.write_governed`. Routing an
+   autonomous model write through either to avoid the lock is a violation.
+   An unbound MCP server is a reported gap (`readiness`, `make
+   memory-binding`), not a reroute.
+5. **Deterministic adapters are not second egresses.** SessionStart
+   hydration, sessionEnd close, `/end-session` `repair-write`, legacy
+   reconciliation, diagnostics and Program Execution context use
+   purpose-specific `ops/memory` operations over the same admission path.
+6. **Resume SSOT** is the canonical `session_continuation` record
+   (`ContinuationCapsuleV2`), retrieved by `python -m ops.memory.cli
+   hydrate`; a Graphiti `inject` / PICKUP read is not a resume path.
+7. **Enforcement.** Machine form:
+   `environment/agents/adapters/claude-code/memory/memory-enforcement.contract.json`
+   `interactive_memory_write` (`repository_authority: false`,
+   `provider_direct: forbidden`, `generic_ingest_as_model_write: forbidden`),
+   validated by `validate_memory_enforcement.py` and pinned by
+   `tests/test_memory_front_door.py`. Anti-regression:
+   `ops/scripts/validate_legacy_doctrine_residue.py` (converged surfaces
+   fail; ADRs and this file keep history only under a dated amendment;
+   not-yet-converged surfaces warn until their locked run lands) with
+   `tests/ops/scripts/test_memory_doctrine_convergence.py`.
+
+Rules: `03-graphiti-memory.mdc` v1.3.0, `87-cursor-memory-kernel.mdc`
+v1.2.0, `97-graph-layer-boundary.mdc` v1.1.0, `98-graphiti-memory-gate.mdc`
+v1.2.0. Skills: `l9-graphiti-memory` v2.1.0, `l9-end-session` v1.7.0,
+`l9-chat-extraction` v1.1.0, `l9-gmp-protocol` v2.0.1. ADRs: ADR-0030
+(items 7–9); ADR-0002/0003/0005/0028/0029 amended; ADR-0004/0006/0007
+superseded — each under a dated section naming ADR-0030. Docs:
+`docs/MEMORY_PIPELINE_MAP.md`, `environment/agents/docs/MEMORY_TOPOLOGY.md`
+v2.0.0, `ops/memory/README.md` "Caller taxonomy".

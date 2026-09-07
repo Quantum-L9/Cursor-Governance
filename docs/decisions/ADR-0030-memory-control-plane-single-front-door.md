@@ -56,6 +56,32 @@ the provider client. ADR-0028 fixed close visibility on that same client.
    through `ops/memory/legacy_reconciliation.py` (classes A–G, tag
    `legacy_unverified`, producer `Cursor-Governance/legacy-reconciliation`).
    `ops/config/memory-canonical-epoch.json` records the epoch.
+7. **Interactive write contract (strengthened 2026-09-07).** Agents MUST be
+   able to write durable memory, and a model-initiated durable write (a
+   lesson, decision or insight recorded mid-session by Cursor or by a Claude
+   adapter) is exactly `memory.phase_lock` → `memory.write_governed` on the
+   package-owned `l9-graphite-memory` MCP server. `MemoryService` grants the
+   phase-lock only after a conflict check on the namespace snapshot, binds the
+   governed write to that snapshot digest, and refuses the write inside the
+   admitting transaction if the namespace moved (memory ADR-079). The lock is
+   therefore a **memory-write consistency precondition and nothing else**: it
+   does not authorize a source edit, does not serialize git, and does not
+   replace worktree / branch / publication governance (`CANONICAL_LAW` §8.1,
+   `rules/96` E7/E8/E10). Generic `memory.ingest` and the generic CLI `write`
+   are not the model's alternative to `write_governed`; routing an autonomous
+   model write through either to avoid the lock is a doctrine violation.
+8. **Deterministic adapters are not second egresses.** SessionStart
+   hydration, sessionEnd close, `/end-session` repair, legacy reconciliation,
+   diagnostics and Program Execution context use purpose-specific `ops/memory`
+   operations (`hydrate`, `close`, `ingest_candidate`, `repair-write`,
+   `legacy_reconciliation`, `readiness`). They are adapters over the same
+   `MemoryService` admission path; none of them is a store, a provider call,
+   or a way around item 7 for a model-authored fact.
+9. **No provider transport on any model surface.** Neither the CLI nor the
+   MCP adapter carries, resolves or forwards a provider URL or bearer. The
+   provider's raw tools (`add_memory`-class writes, provider fact/node
+   searches) are never exposed through MCP to an agent; agents write and read
+   only through `MemoryService` operations.
 
 ## Consequences
 
@@ -87,6 +113,33 @@ the provider client. ADR-0028 fixed close visibility on that same client.
   the repair is `hydration.cli repair-write` over the canonical client.
 - `CANONICAL_LAW.md` §8 "Memory Layer (Graphiti-Native)" interface rows, via
   §8.2 (2026-09-06).
+- (2026-09-07) ADR-0004 in full (the stdlib hook client it pinned no longer
+  exists); ADR-0007 in full (cloud reachability of the provider is legacy
+  operator infrastructure, not a model-surface transport); ADR-0002's
+  transport assumptions and its `phase_lock` precondition on repository
+  writes (the hydration gate stands; memory phase-lock is a governed-write
+  precondition only); ADR-0003's transport (`L9_MEMORY_HTTP_URL` /
+  `memory_client.py`) while its hook-vs-interactive role split stands;
+  ADR-0005's "Resume SSOT is Graphiti `inject` / PICKUP" and its CLI name;
+  ADR-0028's Graphiti-write fallback and PICKUP-search close-gap probe;
+  ADR-0029's "Graphiti client" as the shared brain. Each carries a dated
+  amendment or supersession section naming this ADR.
+
+## Amendment (2026-09-07) — interactive write contract and residue ratchet (ADR-0030)
+
+Decision items 7–9 above were added by the PR #509 doctrine-closure run.
+Machine form: `environment/agents/adapters/claude-code/memory/memory-enforcement.contract.json`
+`interactive_memory_write` (validated by `validate_memory_enforcement.py`,
+pinned by `tests/test_memory_front_door.py`). Anti-regression:
+`ops/scripts/validate_legacy_doctrine_residue.py` fails a converged surface
+that teaches the retired client as live, provider URL/bearer possession,
+Graphiti `inject`/PICKUP as the current resume SSOT, or generic ingest/write
+as the model's alternative to `memory.write_governed`
+(`tests/ops/scripts/test_memory_doctrine_convergence.py`). Rules
+`03` v1.3.0 / `87` v1.2.0 / `97` v1.1.0 / `98` v1.2.0, skills
+`l9-graphiti-memory` v2.1.0, `l9-end-session` v1.7.0, `l9-chat-extraction`
+v1.1.0, `l9-gmp-protocol` v2.0.1, `CANONICAL_LAW.md` §8.3 and the `AGENTS.md`
+"Interactive memory write contract" amendment carry the same text.
 
 ## References
 

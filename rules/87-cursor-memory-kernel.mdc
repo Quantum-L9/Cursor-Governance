@@ -1,8 +1,8 @@
 ---
 id: l9.rule.cursor.memory.kernel
-version: 1.1.0
+version: 1.2.0
 description: "Cursor Memory Kernel enforcement \u2014 authoritative source for memory\
-  \ operations, kinds, and session lifecycle"
+  \ operations, kinds, governed interactive writes, and session lifecycle"
 scope: global
 activation: always
 authority: canonical_global
@@ -11,13 +11,15 @@ alwaysApply: true
 
 # Cursor Memory Kernel Enforcement
 
-**Updated: 2026-08-06** — Resume SSOT is **Graphiti only** (`inject` / PICKUP). `memory-bank/` (former T0) is **deprecated/archival**. C1 L9 **decommissioned**; Graphiti at `/opt/graphiti-cursor` via SSH tunnel. See `03-graphiti-memory.mdc` and `ops/graphiti/MEMORY_BANK_POLICY.md`.
+**Updated: 2026-08-06** *(resume-SSOT and tunnel wording superseded 2026-09-06)* — `memory-bank/` (former T0) is **deprecated/archival**. C1 L9 **decommissioned**. See `03-graphiti-memory.mdc` and `ops/graphiti/MEMORY_BANK_POLICY.md`.
 
 **Updated: 2026-08-07** — One agent episodic memory (ADR-0005): CLI + MCP = same store; product/domain graphs (Odoo/consumer product/Gate) are out of band.
 
 **Updated: 2026-08-11** — Auto hydrate/close via `ops/graphiti/hydration/`; required `agent_id` on writes; `/end-session` demoted to force-retry. Map: `docs/MEMORY_PIPELINE_MAP.md`.
 
 **Updated: 2026-09-06** — Memory realignment C11/C12: the sole front door is the canonical `l9-graphite-memory` control plane through `ops/memory` (`python -m ops.memory.cli`); Graphiti is a projection memory owns. `ops/graphiti/graphiti_memory_client.py` is a tombstone, no surface holds a provider URL or bearer, and `~/.cursor/graphiti.env` carries switches only. CANONICAL_LAW §8.2, ADR-0030.
+
+**Updated: 2026-09-07** — Doctrine closure (CANONICAL_LAW §8.3, ADR-0030 items 7–9): the model's durable write is `memory.phase_lock` → `memory.write_governed` on the `l9-graphite-memory` MCP server. The CLI `write` below is the operator / deterministic-adapter path. The phase-lock is a memory-write precondition, never repository-write authority.
 
 **Effective: 2026-02-14**
 
@@ -28,11 +30,13 @@ The file `agents/cursor/cursor_memory_kernel.yaml` is the **authoritative source
 ## Before ANY Memory Operation
 
 1. **Kind:** Use the correct kind: `preference`, `lesson`, `error`, `insight`, `note`, `rule`, `pickup_context`, `session_summary`.
-2. **Endpoint:** the canonical memory control plane via the locked governance venv — `python -m ops.memory.cli` (stdio to the bound `l9-graphite-memory` runtime). No tunnel, no URL, no bearer on this surface; C1 legacy `:9002` / `/memory` **retired**.
+2. **Endpoint:** the canonical memory control plane — one `MemoryService`, two adapters. Interactive (model-initiated) writes: the `l9-graphite-memory` MCP server (`memory.phase_lock` → `memory.write_governed`). Operator / hook / deterministic-adapter operations: `python -m ops.memory.cli` from the locked governance venv (stdio to the bound runtime). No tunnel, no URL, no bearer on this surface; C1 legacy `:9002` / `/memory` **retired**.
 3. **Namespace:** Resolve via `python -m ops.memory.cli resolve` (a request; memory authorizes) — never hardcode the shared workspace / `main` / `default` as write targets.
 4. **No `--scope` flag:** Semantic “cursor scope” is tags/kind discipline, **not** a CLI argument on `write`.
+5. **Lock semantics:** `memory.phase_lock` is granted after a conflict check on the namespace snapshot and is verified again inside the admitting transaction of `memory.write_governed`. It governs memory-write consistency only — it never authorizes a source edit, serializes git, or replaces worktree / branch / publication governance (`96` E7/E8/E10, `98`).
+6. **No evasion:** do not route a model-authored fact through generic `memory.ingest` or the CLI `write` to skip the lock; an unbound MCP server is a reported gap (`L9_MEMORY_INTERPRETER`, `make memory-binding`), not a reroute.
 
-Interpreter (fail-closed):
+Interpreter (fail-closed) for the operator / adapter CLI:
 
 ```bash
 GOV="${HOME}/.cursor-governance"
@@ -40,6 +44,16 @@ GRAPHITI_PY="${GOV}/.venv/bin/python"
 WS="${CURSOR_PROJECT_DIR:-$(pwd)}"
 memcli() { (cd "$GOV" && PYTHONPATH="$GOV" "$GRAPHITI_PY" -m ops.memory.cli "$@" --workspace "${WS:-$PWD}"); }
 ```
+
+Governed interactive write (model-initiated, MCP `l9-graphite-memory`):
+
+```text
+memory.phase_lock      {namespace: <memcli resolve write hint>, task_signature: <task>}
+memory.write_governed  {namespace, content: "<one terse fact>", task_signature,
+                        memory_class: lesson|insight|decision, tags: ["agent:cursor", …]}
+```
+
+Every verdict is the canonical receipt; a refused lock or write is the verdict, not a reason to retry through another door.
 
 ---
 
@@ -59,8 +73,8 @@ When starting a session (whether via `/start-session` or manually):
 When the user corrects a mistake:
 
 1. **Extract lesson immediately** — do not wait for session end
-2. **Dedupe-check:** `memcli search "lesson topic"`
-3. **Write to memory:** `memcli write "LESSON: ..." --kind lesson`
+2. **Dedupe-check:** `memcli search "lesson topic"` (or `memory.search` on the MCP server)
+3. **Write to memory (governed):** `memory.phase_lock` → `memory.write_governed` with `memory_class: lesson` and the terse fact as `content`
 4. **Update repeated-mistakes.md** if the lesson is significant enough for the curated list
 
 ---
@@ -71,13 +85,16 @@ When hitting an error during execution:
 
 1. **Check memory first:** `memcli search "error description"`
 2. **If solution found:** Apply it. Do not debug from scratch.
-3. **If no solution:** Debug normally, then write the fix to memory for next time.
+3. **If no solution:** Debug normally, then write the fix to memory for next time (governed write, `memory_class: lesson`).
 
 ---
 
 ## Memory Write Format (MUST FOLLOW)
 
-**Atomic writes only.** One fact per memory write. No prose blobs.
+**Atomic writes only.** One fact per memory write. No prose blobs. The format
+rules below apply identically to the governed MCP write (`content`,
+`memory_class`, `tags`) and to the operator CLI (`write`, `--kind`, `--tag`);
+the CLI examples are the operator / adapter form.
 
 ### Why
 
@@ -128,7 +145,7 @@ memcli write \
 After completing a GMP, major refactor, or multi-file change:
 
 1. **Extract atomic facts** — identify each distinct lesson, insight, error fix, or preference from the work
-2. **Write each as a separate memory** — one `write` per fact
+2. **Write each as a separate governed memory** — one `memory.write_governed` per fact under one `memory.phase_lock` per task signature
 3. **Record tool actions:** If session hooks are active, `on_action()` records automatically. Otherwise, note significant actions manually.
 
 ---
@@ -148,6 +165,8 @@ Before committing, verify:
 
 - [ ] Memory writes request the resolved repo namespace (not `main` / `default` / the shared workspace)
 - [ ] Every write includes `agent_id` (`agent=` in `source_description`)
+- [ ] Model-authored facts went `memory.phase_lock` → `memory.write_governed` (no generic ingest, no CLI `write` as a bypass)
+- [ ] No memory phase-lock was treated as permission to edit, commit, push or publish
 - [ ] No fake `--scope` flag on `write`
 - [ ] CLI invoked with governance locked `.venv` Python
 - [ ] No hardcoded credentials in any agent file (ADR-0090)
@@ -164,7 +183,9 @@ Before committing, verify:
 | `docs/MEMORY_PIPELINE_MAP.md` | Live hydrate/close path SSOT |
 | `ops/graphiti/hydration/` | SessionHydrationPacket + close_session |
 | `agents/cursor/cursor_memory_kernel.yaml` | Authoritative memory behavior contract |
-| `ops/memory/cli.py` | Canonical memory CLI (`python -m ops.memory.cli` health, resolve, search, write, hydrate, conflicts, readiness) |
-| `ops/memory/README.md` | Memory boundary, binding (INV-11) and egress firewall (INV-03) |
+| `ops/memory/cli.py` | Operator / adapter memory CLI (`python -m ops.memory.cli` health, resolve, search, write, hydrate, conflicts, readiness) |
+| `l9-graphite-memory` MCP server (`memory.phase_lock`, `memory.write_governed`, `memory.search`, `memory.hydrate`) | Interactive adapter to the same `MemoryService`; rendered only when `L9_MEMORY_INTERPRETER` is bound |
+| `ops/memory/README.md` | Memory boundary, binding (INV-11), egress firewall (INV-03), caller taxonomy |
+| `environment/agents/adapters/claude-code/memory/memory-enforcement.contract.json` | Machine form of the interactive write contract (`interactive_memory_write`) |
 | `ops/graphiti/MEMORY_BANK_POLICY.md` | Deprecated T0 policy — archival note |
 | `ops/graphiti/GATES-002-ACTIVATION.md` | Soak + gate flip runbook |
