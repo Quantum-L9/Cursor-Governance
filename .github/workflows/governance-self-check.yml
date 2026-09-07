@@ -96,6 +96,14 @@ jobs:
           [ -f "$v" ] || { echo "::error::mandatory validator $v missing"; exit 1; }
           python3 "$v"
 
+      - name: Claude Code preservation contract (CC-001..CC-010)
+        run: |
+          v=ops/scripts/claude_projection_snapshot.py
+          [ -f "$v" ] || { echo "::error::mandatory validator $v missing"; exit 1; }
+          python3 "$v" --check
+          python3 -m pytest -q \
+            environment/agents/adapters/claude-code/tests/test_claude_preservation_contract.py
+
       - name: Workflow action pins (third-party = full SHA)
         run: |
           v=ops/scripts/validate_workflow_action_pins.py
