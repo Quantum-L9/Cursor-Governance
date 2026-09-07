@@ -16,6 +16,7 @@ a development checkout as an explicit opt-in that is *reported* as
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -38,18 +39,35 @@ MODE_PINNED = "pinned_environment"
 MODE_DEVELOPMENT = "development_checkout"
 
 STATUS_EXACT = "exact"
+#: Version and contract agree with the manifest, but the *artifact* was not
+#: proved (audit CG-P1-03). Two different builds of one version satisfy
+#: version + contract + containment identically, so a status named EXACT must
+#: not be reachable from those alone. This is the weaker, honest verdict.
+STATUS_COMPATIBLE = "compatible"
 STATUS_DEVELOPMENT = "development_checkout"
 STATUS_UNBOUND = "unbound"
+
+#: Turns STATUS_COMPATIBLE from "usable, and reported as unproved" into
+#: "refused". Set by the cross-repo proof and by production callers that
+#: require the audited artifact rather than a compatible build.
+ENV_REQUIRE_EXACT = "L9_MEMORY_REQUIRE_EXACT_ARTIFACT"
+
+PROVENANCE_ARTIFACT_DIGEST = "artifact_sha256"
+PROVENANCE_RECORD_DIGEST = "installed_record_digest"
+PROVENANCE_UNPROVEN = "unproven"
 
 Runner = Callable[..., "subprocess.CompletedProcess[str]"]
 
 # Runs inside the *target* interpreter: it must not assume this repository's
 # environment, only the standard library.
 _PROBE = r"""
-import json, sys
+import hashlib, json, sys
 dist, pkg = sys.argv[1], sys.argv[2]
 out = {"interpreter": sys.executable, "prefix": sys.prefix, "version": None, "module": None}
 out["error"] = None
+out["direct_url"] = None
+out["record_digest"] = None
+out["editable"] = None
 try:
     from importlib.metadata import version
     out["version"] = version(dist)
@@ -60,6 +78,143 @@ try:
     module = importlib.import_module(pkg)
     out["module"] = getattr(module, "__file__", None)
 except Exception as exc:
+    out["error"] = out["error"] or f"{type(exc).__name__}: {exc}"
+try:
+    # Installed-artifact provenance. direct_url.json is PEP 610: pip and uv
+    # record the archive a wheel was installed from, with its hash when the
+    # install named one. RECORD lists every installed file with its own
+    # sha256, so a digest over it distinguishes two builds of one version.
+    from importlib.metadata import distribution
+    installed = distribution(dist)
+    try:
+        raw_direct = installed.read_text("direct_url.json")
+    except Exception:
+        raw_direct = None
+    if raw_direct:
+        out["direct_url"] = json.loads(raw_direct)
+        info = out["direct_url"].get("dir_info") or {}
+        out["editable"] = bool(info.get("editable"))
+    record = installed.read_text("RECORD") or ""
+    installer_written = ("RECORD", "INSTALLER", "REQUESTED", "direct_url.json",
+                         "RECORD.jws", "RECORD.p7s")
+    rows = []
+    for line in record.splitlines():
+        parts = line.rsplit(",", 2)
+        if len(parts) != 3 or not parts[1]:
+            continue
+        path = parts[0].replace("\\", "/")
+        if path.rsplit("/", 1)[-1] in installer_written and ".dist-info/" in path + "/":
+            continue
+        rows.append(path + "," + parts[1] + "," + parts[2])
+    if rows:
+        joined = "\n".join(sorted(rows)).encode("utf-8")
+        out["record_digest"] = hashlib.sha256(joined).hexdigest()
+except Exception as exc:
+    out["error"] = out["error"] or f"{type(exc).__name__}: {exc}"
+print(json.dumps(out))
+"""
+
+#: Receipt models Cursor accepts as authoritative. The canonical schema for
+#: each is exported from the *bound* release (CG-P1-02), never restated here.
+CANONICAL_RECEIPT_MODELS: tuple[str, ...] = (
+    "CapabilitiesReceipt",
+    "HealthReceipt",
+    "ResolveReceipt",
+    "HydrationReceipt",
+    "SearchReceipt",
+    "WriteReceipt",
+    "CandidateReceipt",
+    "CloseReceipt",
+    "ConflictsReceipt",
+    "PhaseLockReceipt",
+    "PhaseLockVerificationReceipt",
+)
+
+# Also runs inside the *target* interpreter. It exports the pinned release's
+# own pydantic models as JSON Schema so Cursor validates against the contract
+# the bound package actually ships, across the interpreter boundary that makes
+# an in-process import impossible in pinned mode.
+_SCHEMA_PROBE = r"""
+import json, sys
+# argv[1] is "CursorName=Alias1|Alias2,CursorName2=...": the release names its
+# own models, and a name this side guessed is not one it owes.
+requests = []
+for item in sys.argv[1].split(","):
+    if not item:
+        continue
+    head, _, tail = item.partition("=")
+    requests.append((head, [head] + [a for a in tail.split("|") if a]))
+names = [head for head, _ in requests]
+roots = [m for m in (sys.argv[2].split(",") if len(sys.argv) > 2 else []) if m]
+if not roots:
+    roots = ["l9_graphite_memory.contracts"]
+out = {
+    "schemas": {},
+    "module": None,
+    "error": None,
+    "missing": [],
+    "available": [],
+    "unimportable": [],
+}
+try:
+    import importlib, pkgutil
+    sources = []
+    for root in roots:
+        try:
+            module = importlib.import_module(root)
+        except Exception as exc:
+            # Report it even if a later root supplies every model: a manifest
+            # that names a module the release does not have has drifted from
+            # the release, and completeness elsewhere must not hide that.
+            out["unimportable"].append(f"{root}: {type(exc).__name__}: {exc}")
+            out["error"] = out["error"] or f"{root}: {type(exc).__name__}: {exc}"
+            continue
+        if out["module"] is None:
+            out["module"] = getattr(module, "__file__", None)
+        sources.append(module)
+        # A package's __init__ re-exports only some models; the rest live in
+        # submodules (receipts, capabilities, generated_data, ...).
+        for info in pkgutil.iter_modules(getattr(module, "__path__", []) or []):
+            try:
+                sources.append(importlib.import_module(root + "." + info.name))
+            except Exception:
+                continue
+    if not sources:
+        raise ImportError("no canonical contract module was importable: " + ", ".join(roots))
+    seen = set()
+    for source in sources:
+        for attr in dir(source):
+            if attr.startswith("_"):
+                continue
+            candidate = getattr(source, attr, None)
+            if callable(getattr(candidate, "model_json_schema", None)) and attr not in seen:
+                seen.add(attr)
+                out["available"].append(attr)
+    out["available"].sort()
+    out["available"] = out["available"][:400]
+    for name, candidates in requests:
+        exporter = None
+        for candidate_name in candidates:
+            for source in sources:
+                model = getattr(source, candidate_name, None)
+                exporter = (
+                    getattr(model, "model_json_schema", None) if model is not None else None
+                )
+                if exporter is not None:
+                    break
+            if exporter is not None:
+                break
+        if exporter is None:
+            out["missing"].append(name)
+            continue
+        try:
+            out["schemas"][name] = exporter()
+        except Exception as exc:
+            out["missing"].append(name)
+            out["error"] = out["error"] or f"{name}: {type(exc).__name__}: {exc}"
+except Exception as exc:
+    # Keep the first, more specific failure (which module and why) rather than
+    # the generic "nothing importable" that follows from it.
     out["error"] = out["error"] or f"{type(exc).__name__}: {exc}"
 print(json.dumps(out))
 """
@@ -85,6 +240,31 @@ def default_runner(
     )
 
 
+def _path_contains(prefix: str | None, candidate: str | None) -> bool:
+    """True when ``candidate`` is a path *inside* the directory ``prefix``.
+
+    Filesystem containment, never a string prefix (CG-P2-01). ``startswith``
+    answers yes for ``/opt/memory-evil`` under ``/opt/memory``: a sibling
+    directory whose name merely begins with the environment's, which is a
+    foreign package accepted as the bound one. Both sides are resolved first
+    so a symlinked interpreter prefix, a symlinked package directory, and
+    ``..`` components all compare by their real location.
+
+    Ambiguity is not containment: an unresolvable path returns ``False``.
+    """
+
+    if not prefix or not candidate:
+        return False
+    try:
+        resolved_prefix = Path(prefix).resolve()
+        resolved_candidate = Path(candidate).resolve()
+    except (OSError, RuntimeError, ValueError):
+        return False
+    if resolved_candidate == resolved_prefix:
+        return False
+    return resolved_candidate.is_relative_to(resolved_prefix)
+
+
 @dataclass(frozen=True)
 class BindingManifest:
     distribution: str
@@ -95,12 +275,28 @@ class BindingManifest:
     required_cli_operations: tuple[str, ...]
     source_ref: str | None
     path: str
+    #: Immutable release identity (audit CG-P1-03). ``artifact_sha256`` is the
+    #: wheel digest recorded when the release was built and audited;
+    #: ``installed_record_digest`` is the digest of that wheel's installed
+    #: RECORD, which is verifiable where the install left no direct-URL hash.
+    #: Either one proves the artifact; neither being present means exactness
+    #: cannot be claimed, only compatibility.
+    artifact_sha256: str | None = None
+    installed_record_digest: str | None = None
+    release_tag: str | None = None
+    memory_sha: str | None = None
+    #: Cursor view name -> model names the bound release actually exports.
+    contract_model_aliases: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    #: Modules the schema probe searches. Named by the manifest because not
+    #: every canonical model lives under the contracts package.
+    contract_model_modules: tuple[str, ...] = ()
 
     @classmethod
     def load(cls, path: Path | None = None) -> BindingManifest:
         manifest_path = Path(path or DEFAULT_MANIFEST_PATH)
         raw = json.loads(manifest_path.read_text(encoding="utf-8"))
         source = raw.get("source") or {}
+        evidence = raw.get("release_evidence") or {}
         return cls(
             distribution=str(raw["distribution"]),
             import_package=str(raw["import_package"]),
@@ -110,6 +306,16 @@ class BindingManifest:
             required_cli_operations=tuple(str(item) for item in raw["required_cli_operations"]),
             source_ref=str(source["ref"]) if source.get("ref") else None,
             path=str(manifest_path),
+            artifact_sha256=_optional_text(evidence.get("artifact_sha256")),
+            installed_record_digest=_optional_text(evidence.get("installed_record_digest")),
+            release_tag=_optional_text(evidence.get("release_tag")),
+            memory_sha=_optional_text(evidence.get("memory_sha")),
+            contract_model_aliases={
+                str(key): tuple(str(v) for v in value)
+                for key, value in (raw.get("contract_model_aliases") or {}).items()
+                if not str(key).startswith("_") and isinstance(value, list)
+            },
+            contract_model_modules=tuple(str(m) for m in (raw.get("contract_model_modules") or [])),
         )
 
 
@@ -129,10 +335,35 @@ class RuntimeBinding:
     path_shadow: str | None = None
     capabilities: CapabilitiesReceipt | None = field(default=None, repr=False)
     reasons: tuple[str, ...] = ()
+    #: Canonical receipt schemas exported from the bound release (CG-P1-02).
+    #: ``None`` means the export did not run or the package ships no contracts
+    #: module: the client then has nothing canonical to validate against, and
+    #: fails closed where exact validation is required. Schema export never
+    #: changes the binding status — an exact runtime that cannot export its
+    #: contracts is still exactly bound, just unvalidatable.
+    contract_schemas: dict[str, Any] | None = field(default=None, repr=False)
+    schema_digest: str | None = None
+    schema_source: str | None = None
+    #: How the installed artifact was proved, and what it was proved to be
+    #: (audit CG-P1-03). ``PROVENANCE_UNPROVEN`` accompanies STATUS_COMPATIBLE.
+    artifact_provenance: str = PROVENANCE_UNPROVEN
+    installed_artifact_digest: str | None = None
+    expected_artifact_digest: str | None = None
+    release_tag: str | None = None
 
     @property
     def ok(self) -> bool:
-        return self.status in {STATUS_EXACT, STATUS_DEVELOPMENT}
+        return self.status in {STATUS_EXACT, STATUS_COMPATIBLE, STATUS_DEVELOPMENT}
+
+    @property
+    def is_exact(self) -> bool:
+        """The bound runtime is the audited release artifact, proved.
+
+        Never inferred from version, contract, or path containment: a status
+        named EXACT must mean the artifact, or it means nothing.
+        """
+
+        return self.status == STATUS_EXACT
 
     def as_dict(self) -> dict[str, Any]:
         """Bootstrap-diagnostic shape from plan §7. No secrets, no content."""
@@ -148,6 +379,10 @@ class RuntimeBinding:
             "module_path": self.module_path,
             "runtime_mode": self.runtime_mode,
             "binding_status": self.status,
+            "artifact_provenance": self.artifact_provenance,
+            "installed_artifact_digest": self.installed_artifact_digest,
+            "expected_artifact_digest": self.expected_artifact_digest,
+            "release_tag": self.release_tag,
             "path_shadow": self.path_shadow,
             "reasons": list(self.reasons),
             "manifest": self.manifest_path,
@@ -165,9 +400,15 @@ def _unbound(
     module_path: str | None = None,
     path_shadow: str | None = None,
     contract_version: str | None = None,
+    artifact_provenance: str = PROVENANCE_UNPROVEN,
+    installed_artifact_digest: str | None = None,
 ) -> RuntimeBinding:
     return RuntimeBinding(
         status=STATUS_UNBOUND,
+        artifact_provenance=artifact_provenance,
+        installed_artifact_digest=installed_artifact_digest,
+        expected_artifact_digest=manifest.artifact_sha256 or manifest.installed_record_digest,
+        release_tag=manifest.release_tag,
         runtime_mode=mode,
         memory_package=manifest.distribution,
         expected_version=manifest.expected_package_version,
@@ -287,7 +528,7 @@ def resolve_runtime_binding(
             memory_version=str(version),
             module_path=str(module_path),
         )
-    served_from_prefix = prefix and str(module_path).startswith(prefix)
+    served_from_prefix = _path_contains(prefix, str(module_path))
     if mode == MODE_PINNED and not served_from_prefix:
         # An editable install or a .pth pointing at a checkout: the package
         # would come from somewhere the environment does not own. That is
@@ -306,7 +547,7 @@ def resolve_runtime_binding(
         )
     if mode == MODE_DEVELOPMENT:
         checkout = Path(environment[ENV_DEV_CHECKOUT]).expanduser().resolve()
-        if not Path(str(module_path)).resolve().is_relative_to(checkout):
+        if not _path_contains(str(checkout), str(module_path)):
             return _unbound(
                 manifest,
                 mode=mode,
@@ -434,8 +675,63 @@ def resolve_runtime_binding(
             contract_version=capabilities.contract_version,
         )
 
+    schemas, schema_digest, schema_source, schema_reasons = _export_contract_schemas(
+        interpreter_path,
+        run,
+        environment,
+        timeout,
+        manifest.contract_model_aliases,
+        manifest.contract_model_modules,
+    )
+    reasons.extend(schema_reasons)
+
+    proven, provenance, installed_digest, provenance_reasons = _verify_artifact_provenance(
+        manifest, probe_payload
+    )
+    reasons.extend(provenance_reasons)
+    if provenance == "contradicted":
+        # The digest is present and disagrees: a foreign build of the pinned
+        # version, which is the case a version check cannot see at all.
+        return _unbound(
+            manifest,
+            mode=mode,
+            reasons=reasons,
+            artifact_provenance=provenance,
+            installed_artifact_digest=installed_digest,
+            interpreter=str(interpreter_path),
+            memory_cli=str(memory_cli),
+            memory_version=str(version),
+            module_path=str(module_path),
+            path_shadow=path_shadow,
+            contract_version=capabilities.contract_version,
+        )
+
+    if mode == MODE_DEVELOPMENT:
+        status = STATUS_DEVELOPMENT
+    elif proven:
+        status = STATUS_EXACT
+    else:
+        status = STATUS_COMPATIBLE
+    if status is STATUS_COMPATIBLE and _require_exact_artifact(environment):
+        return _unbound(
+            manifest,
+            mode=mode,
+            reasons=[
+                *reasons,
+                f"{ENV_REQUIRE_EXACT} demands the audited artifact and it was not proved",
+            ],
+            artifact_provenance=provenance,
+            installed_artifact_digest=installed_digest,
+            interpreter=str(interpreter_path),
+            memory_cli=str(memory_cli),
+            memory_version=str(version),
+            module_path=str(module_path),
+            path_shadow=path_shadow,
+            contract_version=capabilities.contract_version,
+        )
+
     return RuntimeBinding(
-        status=STATUS_DEVELOPMENT if mode == MODE_DEVELOPMENT else STATUS_EXACT,
+        status=status,
         runtime_mode=mode,
         memory_package=manifest.distribution,
         expected_version=manifest.expected_package_version,
@@ -449,7 +745,182 @@ def resolve_runtime_binding(
         path_shadow=path_shadow,
         capabilities=capabilities,
         reasons=tuple(reasons),
+        contract_schemas=schemas,
+        schema_digest=schema_digest,
+        schema_source=schema_source,
+        artifact_provenance=provenance,
+        installed_artifact_digest=installed_digest,
+        expected_artifact_digest=manifest.artifact_sha256 or manifest.installed_record_digest,
+        release_tag=manifest.release_tag,
     )
+
+
+def _require_exact_artifact(env: Mapping[str, str]) -> bool:
+    return str(env.get(ENV_REQUIRE_EXACT, "")).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _verify_artifact_provenance(
+    manifest: BindingManifest, probe_payload: Mapping[str, Any]
+) -> tuple[bool, str, str | None, list[str]]:
+    """Decide whether the *installed artifact* is the audited release.
+
+    Returns ``(proven, method, installed_digest, reasons)``. ``proven`` is
+    False when the artifact could not be established — which yields
+    STATUS_COMPATIBLE, never STATUS_EXACT.
+
+    Version, contract and containment are all satisfied identically by two
+    different builds of one version, so none of them is artifact identity.
+    What distinguishes builds is a digest of the thing installed:
+
+    - PEP 610 ``direct_url.json``: pip and uv record the archive a wheel came
+      from and, when the install named a hash, that hash. This is the wheel
+      sha256 the release recorded, verified in place.
+    - the installed RECORD digest: RECORD lists every installed file with its
+      own sha256, so a digest over it separates builds even when the install
+      left no archive hash.
+
+    A digest that is present and *disagrees* is not weak evidence, it is
+    contradiction: the caller turns it into UNBOUND rather than COMPATIBLE.
+    """
+
+    reasons: list[str] = []
+    direct_url = probe_payload.get("direct_url") or {}
+    record_digest = _optional_text(probe_payload.get("record_digest"))
+
+    if probe_payload.get("editable"):
+        return (
+            False,
+            PROVENANCE_UNPROVEN,
+            record_digest,
+            ["installed as an editable install, which has no immutable artifact identity"],
+        )
+
+    archive = direct_url.get("archive_info") or {}
+    hashes = archive.get("hashes") or {}
+    installed_wheel_sha = _optional_text(hashes.get("sha256")) or _optional_text(
+        archive.get("hash", "").split("=", 1)[-1] if archive.get("hash") else None
+    )
+    if manifest.artifact_sha256 and installed_wheel_sha:
+        if installed_wheel_sha == manifest.artifact_sha256:
+            return True, PROVENANCE_ARTIFACT_DIGEST, installed_wheel_sha, reasons
+        return (
+            False,
+            "contradicted",
+            installed_wheel_sha,
+            [
+                f"installed artifact sha256 {installed_wheel_sha} is not the audited release "
+                f"{manifest.artifact_sha256}: same version, different build"
+            ],
+        )
+
+    if manifest.installed_record_digest and record_digest:
+        if record_digest == manifest.installed_record_digest:
+            return True, PROVENANCE_RECORD_DIGEST, record_digest, reasons
+        return (
+            False,
+            "contradicted",
+            record_digest,
+            [
+                f"installed RECORD digest {record_digest} is not the audited release "
+                f"{manifest.installed_record_digest}: same version, different build"
+            ],
+        )
+
+    if not manifest.artifact_sha256 and not manifest.installed_record_digest:
+        reasons.append(
+            "the binding manifest records no artifact digest, so only version and contract "
+            "can be proved; this is a compatible build, not the audited release"
+        )
+    elif manifest.artifact_sha256 and not installed_wheel_sha:
+        reasons.append(
+            "the install recorded no PEP 610 archive hash, so the wheel digest "
+            f"{manifest.artifact_sha256} cannot be verified in place"
+            + (
+                f"; the installed RECORD digest is {record_digest} — pin it as "
+                "release_evidence.installed_record_digest to make this binding exact"
+                if record_digest
+                else " and the installed RECORD is unreadable"
+            )
+        )
+    else:
+        reasons.append(
+            "the installed distribution carries no artifact provenance, so the audited "
+            "artifact cannot be confirmed"
+        )
+    return False, PROVENANCE_UNPROVEN, record_digest, reasons
+
+
+def _export_contract_schemas(
+    interpreter_path: Path,
+    run: Runner,
+    environment: Mapping[str, str],
+    timeout: float,
+    aliases: Mapping[str, Sequence[str]] | None = None,
+    modules: Sequence[str] = (),
+) -> tuple[dict[str, Any] | None, str | None, str | None, list[str]]:
+    """Export the bound release's own receipt schemas (CG-P1-02, Model B).
+
+    The memory runtime may be a different interpreter, so ``import
+    l9_graphite_memory.contracts`` cannot happen in this process. The schemas
+    are therefore mechanically extracted from the exact pinned release and
+    carried back, and the client validates against those rather than against a
+    reduced Cursor-local shape.
+
+    A failure here is reported, never fatal: the binding is still exact, and
+    it is the *client* that decides whether an unvalidatable runtime may be
+    used. Returning ``None`` is what makes it fail closed there.
+    """
+
+    reasons: list[str] = []
+    try:
+        probe = run(
+            [
+                str(interpreter_path),
+                "-c",
+                _SCHEMA_PROBE,
+                ",".join(
+                    name + "=" + "|".join((aliases or {}).get(name, ()))
+                    for name in CANONICAL_RECEIPT_MODELS
+                ),
+                ",".join(modules),
+            ],
+            timeout=timeout,
+            env=environment,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return None, None, None, [f"contract schema export failed: {type(exc).__name__}: {exc}"]
+    try:
+        payload = json.loads((probe.stdout or "").strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        return None, None, None, ["contract schema export emitted no JSON"]
+    schemas = payload.get("schemas")
+    if not isinstance(schemas, dict) or not schemas:
+        detail = payload.get("error") or "the bound package exports no receipt contracts"
+        return None, None, None, [f"contract schema export empty: {detail}"]
+    if payload.get("unimportable"):
+        reasons.append(
+            "binding manifest names a contract module the bound release does not have: "
+            + "; ".join(str(item) for item in payload["unimportable"])
+        )
+    if payload.get("missing"):
+        available = payload.get("available") or []
+        reasons.append(
+            "bound release exports no schema for: "
+            + ", ".join(sorted(payload["missing"]))
+            + "; it exports: "
+            + (", ".join(available[:40]) if available else "(none)")
+        )
+    encoded = json.dumps(schemas, sort_keys=True, separators=(",", ":"), default=str)
+    return (
+        schemas,
+        hashlib.sha256(encoded.encode("utf-8")).hexdigest(),
+        _optional_text(payload.get("module")),
+        reasons,
+    )
+
+
+def _optional_text(value: Any) -> str | None:
+    return None if value is None else str(value)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
