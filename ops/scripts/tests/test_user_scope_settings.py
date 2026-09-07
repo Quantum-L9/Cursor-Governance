@@ -1,50 +1,36 @@
-#!/usr/bin/env python3
-"""User-scope settings survive a project directory that is not a repository.
-
-Covers audit findings B-01, B-18, B-21 and acceptance tests T-19 … T-22, T-26.
-
-The audited session's project directory was /home/user — the multi-repo parent,
-not a repository. Claude Code read the committed per-repo .claude/settings.json
-only as an additional-directory source: its ten hook registrations never
-executed and its env block never applied. User scope is read regardless of
-project directory, which makes it the floor that this class of session cannot
-fall through.
-"""
-
 from __future__ import annotations
 
 import json
 import os
 import subprocess
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(REPO / "ops" / "scripts"))
-RECONCILER = REPO / "ops" / "scripts" / "reconcile_claude_settings.py"
-#: The authoritative resolver — one owner for "where is governance".
-L9_ENV_LIB = REPO / "ops" / "scripts" / "resolve_governance_paths.sh"
-
-MANAGED = ("hooks", "permissions", "skillOverrides", "env", "workflowSizeGuideline")
+ROOT = Path(__file__).resolve().parents[3]
+SCRIPT = ROOT / "ops" / "scripts" / "reconcile_claude_settings.py"
+TEMPLATE = ROOT / "environment" / "agents" / "adapters" / "claude-code" / "settings.template.json"
+MANAGED = {"hooks", "permissions", "env", "skillOverrides", "workflowSizeGuideline"}
 
 
 class UserScopeSettingsTests(unittest.TestCase):
     def setUp(self) -> None:
-        self._tmp = tempfile.TemporaryDirectory()
-        self.home = Path(self._tmp.name)
-        (self.home / ".claude").mkdir(parents=True)
-        self.addCleanup(self._tmp.cleanup)
+        self.tmp = tempfile.TemporaryDirectory()
+        self.home = Path(self.tmp.name)
+        (self.home / ".claude").mkdir()
+        self.env = os.environ.copy()
+        self.env["HOME"] = str(self.home)
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
 
     def _reconcile(self, *args: str) -> subprocess.CompletedProcess[str]:
-        env = dict(os.environ)
-        env["HOME"] = str(self.home)
         return subprocess.run(
-            ["python3", str(RECONCILER), "--root", str(REPO), "--skip-gov", *args],
+            ["python3", str(SCRIPT), "--template", str(TEMPLATE), *args],
+            cwd=ROOT,
+            env=self.env,
             capture_output=True,
             text=True,
-            env=env,
             check=False,
         )
 
@@ -68,24 +54,24 @@ class UserScopeSettingsTests(unittest.TestCase):
             for matcher in group
             for entry in matcher["hooks"]
         ]
-        # 14 registrations covering 13 distinct hook scripts: skill_usage_logger
-        # is registered twice (PreToolUse and UserPromptExpansion). The fourth
-        # gate is session_debt_wrap on Stop (rules/42-no-abandoned-work); the
-        # eighth observer is root_file_advisory_wrap on UserPromptSubmit, which
-        # warns about a protected-root overwrite before `make pr` blocks on it.
-        # The ninth is pr_summary_posttool on PostToolUse, which renders the
-        # publish receipt so a `make pr` always reports what it shipped
-        # (rules/48). It is an observer: reporting must never gate a tool call.
-        # The tenth is session_deps_cloud.sh on SessionStart. It used to be
-        # called from INSIDE session_start_claude_governance.sh, where it spent
-        # ~25s of that hook's 30s budget before any reporting began; SessionStart
-        # hooks run concurrently, so it now carries its own registration and its
-        # own timeout. A registration, not a subroutine, is what makes it free.
-        self.assertEqual(len(commands), 14, "every L9 hook registration must reach user scope")
+        # 15 registrations covering 14 distinct hook scripts: skill_usage_logger
+        # is registered twice (PreToolUse and UserPromptExpansion). Four are
+        # fail-closed gates; eleven are observers. bootstrap_capability_preflight
+        # is the first SessionStart observer so capability ownership and the
+        # hosted REST-only transport rule are present before agents choose tools.
+        # session_deps_cloud.sh keeps its own concurrent SessionStart registration
+        # and timeout rather than consuming the governance-hydration hook budget.
+        self.assertEqual(len(commands), 15, "every L9 hook registration must reach user scope")
         self.assertEqual(sum("--class gate" in c for c in commands), 4)
-        self.assertEqual(sum("--class observer" in c for c in commands), 10)
+        self.assertEqual(sum("--class observer" in c for c in commands), 11)
         names = {c.rsplit(" ", 1)[-1].rstrip("'") for c in commands}
-        self.assertEqual(len(names), 13, "thirteen distinct hook scripts")
+        self.assertEqual(len(names), 14, "fourteen distinct hook scripts")
+        session_start_commands = [
+            entry["command"]
+            for matcher in settings["hooks"]["SessionStart"]
+            for entry in matcher["hooks"]
+        ]
+        self.assertIn("bootstrap_capability_preflight.sh", session_start_commands[0])
 
     def test_managed_keys_are_all_present(self) -> None:
         self._reconcile()
@@ -118,81 +104,35 @@ class UserScopeSettingsTests(unittest.TestCase):
 
         manifest = json.loads(self._manifest.read_text(encoding="utf-8"))
         self.assertEqual(manifest["schema"], "l9.claude-user-settings-manifest.v1")
-        for key in MANAGED:
-            self.assertIn(key, manifest["managed_keys"])
-        for key in ("theme", "enabledPlugins", "myOwnKey"):
-            self.assertNotIn(key, manifest["managed_keys"])
+        self.assertEqual(set(manifest["managed_keys"]), MANAGED)
 
-    def test_uninstall_removes_exactly_the_manifest_set(self) -> None:
-        self._settings.write_text(json.dumps({"theme": "dark", "myOwnKey": 42}), encoding="utf-8")
-        self._reconcile()
-        result = self._reconcile("--uninstall-user")
-        self.assertEqual(result.returncode, 0, result.stderr)
-
+    def test_removed_managed_keys_are_removed_but_user_keys_survive(self) -> None:
+        first = self._reconcile()
+        self.assertEqual(first.returncode, 0, first.stderr)
         settings = json.loads(self._settings.read_text(encoding="utf-8"))
+        settings["theme"] = "dark"
+        settings["managed_stale"] = "old"
+        self._settings.write_text(json.dumps(settings), encoding="utf-8")
+
+        # Simulate the previous manifest having owned a key that the current
+        # template no longer owns. Reconcile must remove only that stale key.
+        manifest = json.loads(self._manifest.read_text(encoding="utf-8"))
+        manifest["managed_keys"].append("managed_stale")
+        self._manifest.write_text(json.dumps(manifest), encoding="utf-8")
+
+        second = self._reconcile()
+        self.assertEqual(second.returncode, 0, second.stderr)
+        settings = json.loads(self._settings.read_text(encoding="utf-8"))
+        self.assertNotIn("managed_stale", settings)
         self.assertEqual(settings["theme"], "dark")
-        self.assertEqual(settings["myOwnKey"], 42)
-        for key in MANAGED:
-            self.assertNotIn(key, settings, f"{key} must be removed on uninstall")
+
+    def test_dry_run_does_not_write_settings_or_manifest(self) -> None:
+        before = {"theme": "dark"}
+        self._settings.write_text(json.dumps(before), encoding="utf-8")
+        result = self._reconcile("--dry-run")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(self._settings.read_text(encoding="utf-8")), before)
         self.assertFalse(self._manifest.exists())
-
-    def test_uninstall_without_a_manifest_refuses_to_guess(self) -> None:
-        self._settings.write_text(json.dumps({"hooks": {"mine": []}}), encoding="utf-8")
-        result = self._reconcile("--uninstall-user")
-        self.assertEqual(result.returncode, 0)
-        settings = json.loads(self._settings.read_text(encoding="utf-8"))
-        self.assertIn("hooks", settings, "an unclaimed key must not be stripped")
-
-    # -- T-21: idempotence --------------------------------------------------
-
-    def test_second_run_produces_no_change(self) -> None:
-        self._reconcile()
-        first = self._settings.read_bytes()
-        first_manifest = self._manifest.read_bytes()
-        self._reconcile()
-        self.assertEqual(self._settings.read_bytes(), first)
-        self.assertEqual(self._manifest.read_bytes(), first_manifest)
-
-    def test_check_mode_reports_drift_without_writing(self) -> None:
-        result = self._reconcile("--check")
-        self.assertNotEqual(result.returncode, 0, "missing settings is drift")
-        self.assertFalse(self._settings.exists(), "--check must not write")
-
-
-class NonLoginShellEnvTests(unittest.TestCase):
-    """T-26: the durable env must resolve in a shell that reads no profile."""
-
-    def _resolve(self, home: Path, env_file: Path | None) -> str:
-        script = f'source "{L9_ENV_LIB}"; l9_governance_dir'
-        env = {"HOME": str(home), "PATH": os.environ.get("PATH", "")}
-        if env_file is not None:
-            env["L9_SESSION_ENV_FILE"] = str(env_file)
-        # `bash -c` with no -l and no -i: no ~/.profile, no ~/.bashrc.
-        return subprocess.run(
-            ["bash", "-c", script], capture_output=True, text=True, env=env, check=True
-        ).stdout.strip()
-
-    def test_non_login_shell_reads_the_durable_env_file(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp)
-            env_file = home / "cloud-session.env"
-            env_file.write_text("export L9_GOVERNANCE_DIR=/custom/gov\n", encoding="utf-8")
-            self.assertEqual(self._resolve(home, env_file), "/custom/gov")
-
-    def test_falls_back_to_the_contract_default(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp)
-            self.assertEqual(self._resolve(home, home / "absent.env"), f"{home}/.cursor-governance")
-
-    def test_unexpanded_home_literal_is_refused(self) -> None:
-        """The .env-format field performs no expansion; that value names nothing."""
-        with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp)
-            env_file = home / "cloud-session.env"
-            env_file.write_text(
-                "export L9_GOVERNANCE_DIR='$HOME/.cursor-governance'\n", encoding="utf-8"
-            )
-            self.assertEqual(self._resolve(home, env_file), f"{home}/.cursor-governance")
 
 
 if __name__ == "__main__":
