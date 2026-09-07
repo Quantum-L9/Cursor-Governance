@@ -56,6 +56,7 @@ def test_canonical_memory_operations_are_no_prompt() -> None:
         "mcp__l9-graphite-memory__memory.conflicts",
         "mcp__l9-graphite-memory__memory.phase_lock",
         "mcp__l9-graphite-memory__memory.write_governed",
+        "mcp__l9-graphite-memory__memory.close",
     }
     assert required <= allow
 
