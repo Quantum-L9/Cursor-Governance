@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -236,7 +237,20 @@ def test_manifest_is_the_only_source_of_expectations(tmp_path: Path) -> None:
     assert manifest.distribution == "l9-graphite-memory"
     assert manifest.console_script == "l9-memory"
     assert "close" in manifest.required_cli_operations
-    assert manifest.source_ref and len(manifest.source_ref) == 40
+    # The binding policy forbids floating refs: source.ref is either the full
+    # commit SHA or the vX.Y.Z release tag, and a tag is only a name — the
+    # commit it must resolve to is pinned beside it as release_evidence.memory_sha
+    # (the cross-repo proof peels the tag and refuses any other commit).
+    assert manifest.source_ref
+    sha_re = re.compile(r"^[0-9a-f]{40}$")
+    tag_re = re.compile(r"^v\d+\.\d+\.\d+$")
+    ref = manifest.source_ref
+    assert sha_re.match(ref) or tag_re.match(ref), ref
+    raw = json.loads(Path(manifest.path).read_text(encoding="utf-8"))
+    memory_sha = str(raw["release_evidence"]["memory_sha"])
+    assert sha_re.match(memory_sha), memory_sha
+    if sha_re.match(manifest.source_ref):
+        assert manifest.source_ref == memory_sha
 
 
 @pytest.mark.parametrize("token", ["GRAPHITI_MCP_URL", "GRAPHITI_MCP_TOKEN", "add_memory"])
