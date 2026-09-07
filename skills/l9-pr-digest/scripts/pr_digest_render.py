@@ -65,12 +65,15 @@ def interactive_report(doc: dict[str, Any]) -> str:
     production = summary.get("production_files") or []
     tests = summary.get("test_files") or []
     actually = _bullets([*production[:12], *tests[:8]]) or "- UNKNOWN"
-    expansion_lines = _bullets(
-        [
-            f"{item.get('kind')} `{item.get('path')}` ({item.get('classification')})"
-            for item in expansion
-        ]
-    ) or "- none"
+    expansion_lines = (
+        _bullets(
+            [
+                f"{item.get('kind')} `{item.get('path')}` ({item.get('classification')})"
+                for item in expansion
+            ]
+        )
+        or "- none"
+    )
     arch = _bullets([q.get("question") for q in questions]) or (
         "- no architecture question emitted"
     )
@@ -81,20 +84,30 @@ def interactive_report(doc: dict[str, Any]) -> str:
     ci_proves = _bullets([f"{c.get('name')}: {c.get('conclusion')}" for c in ok]) or (
         "- no accepted CI evidence"
     )
-    ci_not = _bullets(
-        [f"{c.get('name')}: {c.get('conclusion')}" for c in fail] + list(unknowns)
-    ) or "- none named"
-    finding_lines = _bullets(
-        [
-            f"{item.get('severity')} `{item.get('code')}` "
-            f"{item.get('path') or 'PR'} — {item.get('detail')}"
-            for item in findings
-        ]
-        + [f"judgement — {item}" for item in judgements]
-    ) or "- none"
-    narrow_lines = _bullets(
-        [f"{item.get('reason')} `{item.get('path')}` → {item.get('action')}" for item in narrowing]
-    ) or "- none (keep current scope unless a later judgement classifies expansion)"
+    ci_not = (
+        _bullets([f"{c.get('name')}: {c.get('conclusion')}" for c in fail] + list(unknowns))
+        or "- none named"
+    )
+    finding_lines = (
+        _bullets(
+            [
+                f"{item.get('severity')} `{item.get('code')}` "
+                f"{item.get('path') or 'PR'} — {item.get('detail')}"
+                for item in findings
+            ]
+            + [f"judgement — {item}" for item in judgements]
+        )
+        or "- none"
+    )
+    narrow_lines = (
+        _bullets(
+            [
+                f"{item.get('reason')} `{item.get('path')}` → {item.get('action')}"
+                for item in narrowing
+            ]
+        )
+        or "- none (keep current scope unless a later judgement classifies expansion)"
+    )
     packet_lines = _bullets(
         [
             f"accepted: {packet.get('accepted_change_scope') or []}",

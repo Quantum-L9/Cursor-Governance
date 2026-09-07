@@ -38,7 +38,9 @@ def test_pr_slash_runs_digest_then_remediator_diagnose() -> None:
     assert "require_digest.py" in contract
     assert "Digest first" in contract
     assert "Never run Converge" in command.replace("*", "")
-    assert "Do **not** pass `--quiet`" in command or "Do not pass `--quiet`" in command.replace("*", "")
+    assert "Do **not** pass `--quiet`" in command or "Do not pass `--quiet`" in command.replace(
+        "*", ""
+    )
 
 
 def test_digest_has_no_colliding_command_wrapper() -> None:
