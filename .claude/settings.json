@@ -6,6 +6,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer bootstrap_capability_preflight.sh'",
+            "timeout": 15
+          },
+          {
+            "type": "command",
             "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer session_start_claude_governance.sh'",
             "timeout": 30
           },
@@ -130,9 +135,18 @@
       "Read",
       "Grep",
       "Glob",
+      "Edit",
+      "Write",
+      "NotebookEdit",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git merge-base:*)",
+      "Bash(git remote get-url:*)",
+      "Bash(git ls-files:*)",
+      "Bash(git cat-file:*)",
       "Bash(git fetch:*)",
       "Bash(git switch:*)",
       "Bash(git checkout:*)",
@@ -141,9 +155,8 @@
       "Bash(git add --:*)",
       "Bash(git commit:*)",
       "Bash(make pr:*)",
-      "Bash(gh pr merge:*)",
-      "Bash(gh pr view:*)",
-      "Bash(gh pr checks:*)",
+      "Bash(gh api --method GET:*)",
+      "Bash(gh run list:*)",
       "Bash(gh run view:*)",
       "Bash(gh run watch:*)",
       "Bash(gh run rerun:*)",
