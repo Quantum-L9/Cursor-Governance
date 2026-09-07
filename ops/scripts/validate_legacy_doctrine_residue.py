@@ -316,6 +316,11 @@ MEMORY_DOCTRINE_ALLOW = re.compile(
 #: plane or ADR-0030 licenses historical text in an AMENDED-class file.
 _DATED_HEADING = re.compile(r"^##+ .*\(20\d\d-\d\d-\d\d\)")
 
+#: The write contract is only meaningful where a memory runtime is bound. A
+#: tree without the binding manifest (a fixture, a consumer checkout) is not
+#: required to carry the converged surfaces; one that has it must.
+MEMORY_BINDING_MANIFEST = "ops/config/memory-binding.json"
+
 
 def _skip_path(path: Path) -> bool:
     parts = set(path.parts)
@@ -454,12 +459,14 @@ def memory_doctrine_findings(root: Path) -> tuple[list[str], list[str]]:
                 failures.extend(f"{rel}:{n} [{finding}] {line}" for n, finding, line in hits)
             else:
                 warnings.extend(f"{rel}:{n} [{finding}] {line}" for n, finding, line in hits)
+    memory_bound = (root / MEMORY_BINDING_MANIFEST).is_file()
     for rel, tokens in MEMORY_DOCTRINE_REQUIRED_TOKENS.items():
         path = root / rel
         if not path.is_file():
-            failures.append(
-                f"{rel}: converged surface missing (required to carry the write contract)"
-            )
+            if memory_bound:
+                failures.append(
+                    f"{rel}: converged surface missing (required to carry the write contract)"
+                )
             continue
         text = path.read_text(encoding="utf-8")
         for token in tokens:
@@ -490,7 +497,9 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="treat WARN-class memory-doctrine residue (not yet converged surfaces) as failures",
     )
-    args = parser.parse_args(argv)
+    # ``None`` means "no flags" (library callers, the pre-existing unit tests);
+    # the ``__main__`` entry passes ``sys.argv[1:]`` explicitly.
+    args = parser.parse_args([] if argv is None else argv)
     root = Path(args.root).resolve()
 
     findings: list[str] = []

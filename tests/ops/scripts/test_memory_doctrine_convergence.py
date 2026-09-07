@@ -63,7 +63,10 @@ def _write(root: Path, rel: str, text: str) -> Path:
 
 #: A minimal converged tree that satisfies every positive-presence check.
 def _converged_tree(root: Path) -> None:
-    for rel, tokens in _load().MEMORY_DOCTRINE_REQUIRED_TOKENS.items():
+    module = _load()
+    # A memory-bound checkout: the write contract is required here.
+    _write(root, module.MEMORY_BINDING_MANIFEST, "{}\n")
+    for rel, tokens in module.MEMORY_DOCTRINE_REQUIRED_TOKENS.items():
         body = "# converged\n\n" + "\n".join(f"- carries `{t}`" for t in tokens) + "\n"
         _write(root, rel, body)
 
@@ -187,12 +190,19 @@ def test_dropping_the_governed_write_contract_fails(residue, tmp_path: Path) -> 
     assert "no longer carries `memory.phase_lock`" in out
 
 
-def test_missing_converged_surface_fails(residue, tmp_path: Path) -> None:
+def test_missing_converged_surface_fails_only_where_memory_is_bound(
+    residue, tmp_path: Path
+) -> None:
     _converged_tree(tmp_path)
     (tmp_path / "ops/memory/README.md").unlink()
     rc, out = _run(residue, tmp_path)
     assert rc == 1, out
     assert "ops/memory/README.md: converged surface missing" in out
+    # A tree without the binding manifest (fixture, consumer checkout) is not
+    # required to carry the converged surfaces.
+    (tmp_path / residue.MEMORY_BINDING_MANIFEST).unlink()
+    rc, out = _run(residue, tmp_path)
+    assert rc == 0, out
 
 
 def test_episode_names_semantics_fail_on_the_gmp_skill(residue, tmp_path: Path) -> None:
