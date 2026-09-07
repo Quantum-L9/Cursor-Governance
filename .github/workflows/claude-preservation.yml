@@ -33,6 +33,10 @@ jobs:
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
+          # pytest is not preinstalled on the runner. requirements.txt carries
+          # its pin (pytest==9.1.1) as the single source of truth; pyyaml is not
+          # in it, so it installs separately — same shape as governance-self-check.
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           pip install --only-binary=:all: pyyaml==6.0.3
 
       - name: Projection equivalence (V-CC-001, V-CC-004)
