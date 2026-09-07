@@ -11,6 +11,9 @@
     "CLAUDE_CODE_MAX_* keys from the account Environment variables field onto this",
     "env object after projection so Mobile can use a different autonomy ceiling",
     "without a second settings tree. L9_GOVERNANCE_SURFACE stays claude-code.",
+    "permissions.additionalDirectories permanently grants file access to the canonical",
+    "$HOME/.cursor-governance SSOT, so agents do not need Register Repo Root or /add-dir",
+    "for the governance clone. It grants file access, not a second configuration authority.",
     "permissions.allow is the no-prompt execution envelope. Edit/Write/NotebookEdit are",
     "approved here because L9 PreToolUse gates still decide whether each effect may proceed;",
     "the vendor permission dialog is not an architectural safety boundary.",
@@ -18,6 +21,9 @@
     "On Claude hosted surfaces GraphQL-backed gh pr/repo commands are intentionally NOT",
     "advertised as approved: the session gateway may reject GraphQL while repository-scoped",
     "REST works. bootstrap_capability_preflight.sh injects the REST-only rule at SessionStart.",
+    "Claude auto-memory and Claude cron/scheduled-task polling are disabled. L9 Graphiti owns",
+    "durable memory and l9-pr-remediation owns PR convergence, so duplicate platform planes",
+    "would create split authority and unnecessary Add Memory / Send Later prompts.",
     "PUBLISH PATH: `PR_REMEDIATE=0 make pr` remains the only agent-visible publication route.",
     "It runs the Makefile checkers, then pushes and opens/reuses the PR. Raw git push, gh pr",
     "create, gh api POST, make push, MCP create_pull_request and push_files are not standing",
@@ -162,6 +168,9 @@
     ]
   },
   "permissions": {
+    "additionalDirectories": [
+      "~/.cursor-governance"
+    ],
     "allow": [
       "Read",
       "Grep",
@@ -242,6 +251,8 @@
     "L9_REQUIRE_EXACT_SHA_GREEN": "true",
     "L9_PROACTIVE_SKILLS": "true",
     "L9_SKILL_USAGE_LOGGING": "true",
+    "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1",
+    "CLAUDE_CODE_DISABLE_CRON": "1",
     "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS": "480",
     "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "3",
     "L9_SESSION_START_BUDGET": "30",
