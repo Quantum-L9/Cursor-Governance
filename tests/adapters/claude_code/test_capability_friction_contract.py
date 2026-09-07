@@ -95,9 +95,7 @@ def test_hosted_surface_short_circuits_graphql_without_executing_gh(tmp_path: Pa
     bin_dir.mkdir()
     stub = bin_dir / "gh"
     stub.write_text(
-        "#!/usr/bin/env bash\n"
-        f"printf '%s\\n' \"$*\" >> {log!s}\n"
-        "exit 99\n",
+        f"#!/usr/bin/env bash\nprintf '%s\\n' \"$*\" >> {log!s}\nexit 99\n",
         encoding="utf-8",
     )
     stub.chmod(0o755)
@@ -134,9 +132,7 @@ def test_rest_get_still_passes_through_graphql_guard(tmp_path: Path) -> None:
     bin_dir.mkdir()
     stub = bin_dir / "gh"
     stub.write_text(
-        "#!/usr/bin/env bash\n"
-        "[ \"$1 $2 $3\" = \"api --method GET\" ] || exit 98\n"
-        "printf 'ok\\n'\n",
+        '#!/usr/bin/env bash\n[ "$1 $2 $3" = "api --method GET" ] || exit 98\nprintf \'ok\\n\'\n',
         encoding="utf-8",
     )
     stub.chmod(0o755)
