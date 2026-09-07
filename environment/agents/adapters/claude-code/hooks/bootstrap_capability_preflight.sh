@@ -8,7 +8,7 @@
 #
 # L9 ownership boundaries:
 # - filesystem governance SSOT: $HOME/.cursor-governance
-# - durable memory: L9 Graphiti memory plane, not Claude's Add Memory helper
+# - durable memory: L9 Graphiti CLI/writeback plane, not raw MCP add_memory
 # - PR convergence: make pr -> l9-pr-remediation, not Send Later
 # - GitHub publication: make pr only
 # - Claude hosted GitHub transport: repository-scoped REST, never a GraphQL probe
@@ -20,7 +20,7 @@ LINES=()
 LINES+=("L9 Claude bootstrap remediation mode: ENABLED")
 LINES+=("governance SSOT: $GOV")
 LINES+=("Do not invoke Register Repo Root to create or attach a second governance clone; use $GOV locally.")
-LINES+=("Do not invoke Add Memory; durable memory is owned by the L9 Graphiti memory plane and its writeback hooks.")
+LINES+=("Do not invoke Add Memory / raw graphiti-memory add_memory; canonical durable writes use graphiti_memory_client.py and the memory_writeback hook. Graphiti MCP reads are allowed.")
 LINES+=("Do not invoke Send Later for PR watching; make pr handoff + l9-pr-remediation own convergence/polling.")
 LINES+=("Do not publish with raw git push, gh pr create, MCP create_pull_request, or push_files; publication is make pr only.")
 
