@@ -54,6 +54,39 @@ MemoryService  →  canonical store  →  outbox  →  optional Graphiti project
 | `mcp_instantiation.py` | `~/.cursor/mcp.json` as a real per-machine file rendered from `environment/mcp/master.mcp.json`; drops the retired `graphiti-memory` key; delegates the memory entry to `l9-memory client cursor install/verify` against the bound runtime | authoring the memory entry |
 | `diagnostics.py` | readiness R0 `PACKAGE_BOUND` … R9 `PROJECTION_READY` | "Graphiti is up" == healthy |
 
+## Caller taxonomy (ADR-0030 items 7–9, CANONICAL_LAW §8.3)
+
+One authority, one egress, two adapters. Who calls what:
+
+| Caller | Adapter | Operation(s) | Role |
+|---|---|---|---|
+| Model, mid-session, recording a durable fact | `l9-graphite-memory` MCP server (stdio, package-owned) | `memory.phase_lock` → `memory.write_governed` | **The only model write.** `MemoryService` grants the lock after a conflict check on the namespace snapshot and re-verifies the digest inside the admitting transaction; a refused lock or write is the verdict |
+| Model, reading | MCP `memory.search` / `memory.hydrate`; or `cli.py search` / `hydrate` | read | evidence only |
+| SessionStart hook | `hydration.py` (`canonical_hydrate`) | `health`, `hydrate` | deterministic adapter |
+| sessionEnd hook | `ops/graphiti/hydration/close_session.py` | `ingest_candidate`, `close` (idempotent, exact-request replay) | deterministic adapter |
+| `/end-session` repair | `ops/graphiti/hydration/pickup_write.py` (`hydration.cli repair-write`) | canonical `write` + close-receipt stamp | deterministic adapter |
+| Legacy provider history | `legacy_reconciliation.py` | canonical admission, tag `legacy_unverified` | operator |
+| Diagnostics | `diagnostics.py`, `runtime_binding.py` | `readiness`, `health`, `capabilities` | operator / hooks |
+| Human operator, Program Execution, GMP Phase 0 | `cli.py` (`python -m ops.memory.cli`) | `write` (operator form), `conflicts`, `resolve` | operator |
+| `control_plane_client.py` `phase_lock` / `verify_phase_lock` | consumer-side view of the memory lock | governed-write precondition only | never repository authority |
+
+Rules that follow from the table:
+
+- The memory phase-lock is a **memory-write consistency precondition**. It
+  never authorizes a source edit, never serializes git, never replaces
+  worktree / branch / publication governance (`rules/96` E7/E8/E10,
+  `rules/98`).
+- Generic `memory.ingest` and the operator CLI `write` are **not** the model's
+  alternative to `write_governed`; routing a model-authored fact through them
+  to avoid the lock is a doctrine violation. An unbound MCP server is a
+  reported gap (`readiness`), not a reroute.
+- Deterministic adapters use purpose-specific operations over the same
+  admission path; none of them is a second egress, and none carries a
+  provider URL, bearer or raw provider tool.
+- Machine form: `environment/agents/adapters/claude-code/memory/memory-enforcement.contract.json`
+  `interactive_memory_write` (validated by `validate_memory_enforcement.py`).
+  Anti-regression: `ops/scripts/validate_legacy_doctrine_residue.py`.
+
 ## Binding (INV-11)
 
 `ops/config/memory-binding.json` states what Cursor expects: distribution,
@@ -80,8 +113,11 @@ package is not published to an index, and this repository's CI installs with
 `uv sync --locked --no-build`, which refuses a git source distribution. The
 pin therefore lands at stage **M2** (release `MEMORY_TARGET_VERSION`), after
 which `memory-binding.json` moves from the git SHA to the release tag and
-`pyproject.toml` / `uv.lock` carry the dependency. Until then the binding is
-integration-grade by construction and says so in `binding_status`.
+`pyproject.toml` / `uv.lock` carry the dependency. The first half happened on
+2026-09-07: `source.ref` is the `v2.3.0` tag, pinned to its commit by
+`release_evidence.memory_sha`. Until the artifact is on the index and locked,
+the binding is integration-grade by construction and says so in
+`binding_status`.
 
 **`exact` means the artifact** (audit CG-P1-03). Version, contract version and
 "the module lives under the interpreter prefix" are satisfied identically by
@@ -343,14 +379,21 @@ environment; `L9_MEMORY_CROSS_REPO_REQUIRED=1` turns an absent runtime into a
 failure and requires the pinned wheel.
 
 `.github/workflows/memory-cross-repo.yml` is that proof as a required,
-non-skippable PR check (audit P2-02 / P1-01): it clones the memory repository
-at `memory-binding.json` `source.ref`, rebuilds the wheel reproducibly under
+non-skippable PR check (audit P2-02 / P1-01): it resolves `memory-binding.json`
+`source.ref` on the memory remote (the `v2.3.0` release tag is peeled with
+`git ls-remote`; a bare SHA is taken as is), refuses any commit other than
+`release_evidence.memory_sha` so a moved tag fails rather than rebinds, clones
+the memory repository at that SHA, rebuilds the wheel reproducibly under
 the recorded `SOURCE_DATE_EPOCH`, refuses a digest that differs from
 `release_evidence.artifact_sha256`, installs the wheel into a clean
 environment bound through `L9_MEMORY_INTERPRETER`, runs the proof in required
 mode with `GRAPHITI_MCP_URL` / `GRAPHITI_MCP_TOKEN` unset, fails if any case
 skipped, and records the Cursor head, memory head, package version and
 artifact digest in the job summary and a proof artifact
-(`cursor.memory-cross-repo-proof/v1`). Making the context required in branch
-protection, the `v2.3.0` tag and the `uv.lock` artifact pin are operator steps
-named in `release_evidence.operator_gated`.
+(`cursor.memory-cross-repo-proof/v1`). The `v2.3.0` tag was cut on 2026-09-07
+(tag object `03ec559c…`, resolving to `5605569b…`) and `source.ref` now names
+it. Making the context required in branch protection and the `uv.lock`
+artifact pin remain operator steps named in `release_evidence.operator_gated`;
+the pin waits for `publish.yml` to succeed on the tag, whose first run was
+rejected by the memory repository's `release` environment deployment policy
+(it does not yet allow the `v*` tag pattern).

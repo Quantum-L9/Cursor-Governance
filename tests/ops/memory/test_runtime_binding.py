@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from collections.abc import Mapping, Sequence
@@ -272,7 +273,20 @@ def test_manifest_is_the_only_source_of_expectations(tmp_path: Path) -> None:
     assert manifest.distribution == "l9-graphite-memory"
     assert manifest.console_script == "l9-memory"
     assert "close" in manifest.required_cli_operations
-    assert manifest.source_ref and len(manifest.source_ref) == 40
+    # The binding policy forbids floating refs: source.ref is either the full
+    # commit SHA or the vX.Y.Z release tag, and a tag is only a name — the
+    # commit it must resolve to is pinned beside it as release_evidence.memory_sha
+    # (the cross-repo proof peels the tag and refuses any other commit).
+    assert manifest.source_ref
+    sha_re = re.compile(r"^[0-9a-f]{40}$")
+    tag_re = re.compile(r"^v\d+\.\d+\.\d+$")
+    ref = manifest.source_ref
+    assert sha_re.match(ref) or tag_re.match(ref), ref
+    raw = json.loads(Path(manifest.path).read_text(encoding="utf-8"))
+    memory_sha = str(raw["release_evidence"]["memory_sha"])
+    assert sha_re.match(memory_sha), memory_sha
+    if sha_re.match(manifest.source_ref):
+        assert manifest.source_ref == memory_sha
 
 
 @pytest.mark.parametrize("token", ["GRAPHITI_MCP_URL", "GRAPHITI_MCP_TOKEN", "add_memory"])
@@ -758,45 +772,54 @@ def test_the_probe_searches_group_resolver_as_well_as_contracts() -> None:
     assert "l9_graphite_memory.group_resolver" in modules
 
 
-def test_the_binding_names_the_commit_its_release_tag_resolves_to() -> None:
-    """RU-P1-01: the tag is the release identity, so source.ref must be the
-    commit it peels to.
+def test_the_binding_names_the_release_tag_and_the_commit_it_resolves_to() -> None:
+    """RU-P1-01: v2.3.0 is cut, and the binding names it.
 
-    This assertion was written when no tag existed and said the opposite —
-    that the binding must name the merge commit 7691c076 rather than #56's
-    head 5605569b, a pre-final branch head being no release identity. Cutting
-    v2.3.0 at 5605569b settled it: that commit IS the release, and it is an
-    ancestor of main. The old form is not deleted, it is corrected — a
-    release_tag the manifest cannot resolve to its own ref is a claim rather
-    than a binding, which is why the cross-repo proof peels the tag on the
-    remote and refuses a mismatch.
+    This assertion has now been written three ways, and only the last is
+    right. It first said source.ref must be #56's head 5605569b; then, when
+    #56 merged with no tag yet, that it must be the merge commit 7691c076,
+    a pre-final branch head being no release identity. Cutting v2.3.0 at
+    5605569b settled the question the other way — the tagged commit IS the
+    release, and it is an ancestor of main.
+
+    The shape here is the base branch's, not this one's: source.ref carries
+    the TAG NAME and release_evidence.memory_sha the commit it peels to. That
+    is the stronger form, because the name is what the proof re-resolves on
+    the remote every run — so a moved tag fails the proof instead of silently
+    rebinding, which a recorded SHA alone could never catch.
     """
     manifest = rb.BindingManifest.load()
     raw = json.loads(rb.DEFAULT_MANIFEST_PATH.read_text(encoding="utf-8"))
-    ref = raw["source"]["ref"]
-    assert manifest.release_tag == "v2.3.0"
-    assert ref == "5605569b72baa25f6b6e6324b0017317fb31e0cd"
-    assert manifest.memory_sha == ref, "release_evidence.memory_sha must equal source.ref"
-    # Neither rebind moved the artifact: one tree, one wheel, one digest.
+    evidence = raw["release_evidence"]
+    assert raw["source"]["ref"] == "v2.3.0"
+    assert evidence["memory_tag"] == "v2.3.0"
+    assert evidence["memory_tag_object_sha"] == "03ec559ca8e28b49c6763189363fc55400e3b09d"
+    assert manifest.memory_sha == "5605569b72baa25f6b6e6324b0017317fb31e0cd"
+    # No rebind ever moved the artifact: one tree, one wheel, one digest.
     assert manifest.artifact_sha256 == (
         "905d91402db99fcd3e094db67576c19297823b448fd6f76842f32d1be4804291"
     )
 
 
-def test_a_declared_release_tag_is_verified_against_the_bound_ref() -> None:
-    """The claim is only worth as much as the check behind it. The proof
-    workflow must peel the declared tag on the memory remote and fail when it
-    does not resolve to source.ref — otherwise release_tag is documentation."""
+def test_a_tag_ref_is_re_resolved_on_the_remote_every_proof() -> None:
+    """A tag is a movable name, so recording it proves nothing on its own.
+
+    The proof workflow must peel it on the memory remote and refuse any commit
+    other than release_evidence.memory_sha, and must refuse a ref that is
+    neither a full SHA nor a vX.Y.Z tag — a floating ref (a branch) would make
+    the binding mean something different on every run.
+    """
     workflow = (
         rb.DEFAULT_MANIFEST_PATH.parent.parent.parent
         / ".github"
         / "workflows"
         / "memory-cross-repo.yml"
     ).read_text(encoding="utf-8")
-    assert "print(f\"tag={ev.get('release_tag') or ''}\")" in workflow
-    assert "refs/tags/${MEMORY_TAG}^{}" in workflow
+    assert "print(f\"memory_sha={ev['memory_sha']}\")" in workflow
+    assert "floating refs are forbidden" in workflow
+    assert "refs/tags/${MEMORY_REF}^{}" in workflow
     assert "does not exist on" in workflow
-    assert 'if [ "${tagged}" != "${MEMORY_REF}" ]' in workflow
+    assert 'if [ "${resolved}" != "${MEMORY_SHA}" ]' in workflow
 
 
 def test_probe_resolves_an_alias_from_a_second_declared_module(tmp_path: Path) -> None:
