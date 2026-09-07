@@ -15,6 +15,19 @@ CANONICAL_MEMORY_ALLOW = {
     "mcp__l9-graphite-memory__memory.conflicts",
     "mcp__l9-graphite-memory__memory.phase_lock",
     "mcp__l9-graphite-memory__memory.write_governed",
+    "mcp__l9-graphite-memory__memory.close",
+}
+
+LEGACY_ALIASES = {
+    "mcp__l9-graphite-memory__write",
+    "mcp__l9-graphite-memory__search",
+    "mcp__l9-graphite-memory__health",
+    "mcp__l9-graphite-memory__bootstrap",
+    "mcp__l9-graphite-memory__phase_lock",
+    "mcp__l9-graphite-memory__verify_phase_lock",
+    "mcp__l9-graphite-memory__conflicts",
+    "mcp__l9-graphite-memory__graphiti.query",
+    "mcp__l9-graphite-memory__graphiti.write_governed",
 }
 
 
@@ -36,7 +49,7 @@ def test_claude_duplicate_memory_and_scheduler_planes_are_disabled() -> None:
     assert env["CLAUDE_CODE_DISABLE_CRON"] == "1"
 
 
-def test_canonical_memory_reads_and_governed_write_are_no_prompt() -> None:
+def test_canonical_memory_lifecycle_and_governed_write_are_no_prompt() -> None:
     allow, deny = _permissions()
     assert CANONICAL_MEMORY_ALLOW <= allow
     assert CANONICAL_MEMORY_ALLOW.isdisjoint(deny)
@@ -60,11 +73,15 @@ def test_generic_and_admin_memory_writes_are_not_ambient_capabilities() -> None:
         "mcp__l9-graphite-memory__memory.ingest_governed_candidate",
         "mcp__l9-graphite-memory__memory.record_reuse",
         "mcp__l9-graphite-memory__memory.invalidate_source",
-        "mcp__l9-graphite-memory__write",
-        "mcp__l9-graphite-memory__graphiti.write_governed",
     }
     assert forbidden <= deny
     assert allow.isdisjoint(forbidden)
+
+
+def test_legacy_aliases_cannot_become_a_second_agent_vocabulary() -> None:
+    allow, deny = _permissions()
+    assert LEGACY_ALIASES <= deny
+    assert allow.isdisjoint(LEGACY_ALIASES)
 
 
 def test_phase_lock_is_memory_write_precondition_not_repository_authority() -> None:
