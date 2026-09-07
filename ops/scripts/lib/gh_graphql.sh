@@ -11,11 +11,15 @@
 # surface: the known-bad request still crosses the harness and can create a
 # permission dialog or a noisy failed tool call before the recovery path runs.
 #
-# This library owns GraphQL capability classification only. It deliberately does
-# NOT shadow the global `gh` command. Call sites that use a GraphQL-backed `gh`
-# subcommand must route it through gh_graphql(); REST calls remain explicit
-# `gh api ...` commands owned by the caller. That keeps transport decisions
-# visible in code and prevents a sourced helper from changing unrelated gh calls.
+# This library now has two jobs:
+#
+#   1. classify an unexpected GraphQL refusal on surfaces where GraphQL was not
+#      known to be unavailable;
+#   2. pre-classify Claude Code remote sessions as REST-only and short-circuit
+#      GraphQL-backed gh subcommands before they touch the network.
+#
+# Callers keep their existing REST fallback. In particular, make pr still owns
+# publication; this guard does not create PRs or merge anything itself.
 #
 # Flags:
 #   GH_GRAPHQL_UNSUPPORTED=1             GraphQL must not be attempted
@@ -55,11 +59,31 @@ if _gh_graphql_surface_rest_only; then
   GH_GRAPHQL_UNSUPPORTED=1
 fi
 
+# A deliberately narrow shell shim. open_pr_after_gate.sh contains one legacy
+# direct `gh pr create` call outside gh_graphql(). Once this library is sourced,
+# a REST-only surface must never execute that known-GraphQL command. Returning
+# non-zero lets the caller's existing REST POST fallback run. Other `gh`
+# commands, especially `gh api` REST, pass through byte-for-byte.
+#
+# The same guard protects direct GraphQL-backed gh calls made by any other
+# sourceable publish/remediation helper that loads this library. It does not
+# authorize an operation and it never translates a write into another write.
+gh() {
+  if [ "${GH_GRAPHQL_UNSUPPORTED:-0}" = "1" ] || _gh_graphql_surface_rest_only; then
+    case "${1:-} ${2:-}" in
+      "pr create"|"pr view"|"pr list"|"pr checks"|"pr merge"|"pr status"|"pr diff"|"pr checkout"|"repo view"|"api graphql")
+        _gh_graphql_mark_unsupported
+        return 1
+        ;;
+    esac
+  fi
+  command gh "$@"
+}
+
 # gh_graphql <gh args...>
-#   Runs the real gh binary, prints stdout, returns gh's exit code. On a
-#   pre-classified surface it returns before any network call. Otherwise, on
-#   failure it inspects stderr and classifies a GraphQL refusal, noting it once
-#   per process.
+#   Runs gh, prints stdout, returns gh's exit code. On a pre-classified surface
+#   it returns before any network call. Otherwise, on failure it inspects stderr
+#   and classifies a GraphQL refusal, noting it once per process.
 gh_graphql() {
   local out err rc
 
@@ -69,7 +93,7 @@ gh_graphql() {
   fi
 
   err="$(mktemp)"
-  out="$(command gh "$@" 2>"$err")"
+  out="$(gh "$@" 2>"$err")"
   rc=$?
   if [ "$rc" -ne 0 ] && grep -qiE 'graphql' "$err" \
      && grep -qiE '(^|[^0-9])403([^0-9]|$)|not enabled|forbidden' "$err"; then
