@@ -131,6 +131,9 @@
     ]
   },
   "permissions": {
+    "additionalDirectories": [
+      "~/.cursor-governance"
+    ],
     "allow": [
       "Read",
       "Grep",
@@ -211,6 +214,8 @@
     "L9_REQUIRE_EXACT_SHA_GREEN": "true",
     "L9_PROACTIVE_SKILLS": "true",
     "L9_SKILL_USAGE_LOGGING": "true",
+    "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1",
+    "CLAUDE_CODE_DISABLE_CRON": "1",
     "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS": "480",
     "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "3",
     "L9_SESSION_START_BUDGET": "30",
