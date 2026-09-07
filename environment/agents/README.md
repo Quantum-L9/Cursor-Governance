@@ -53,7 +53,7 @@ entries record deployed identities (`legacy_token_env`) so nothing breaks.
 the shared workspace group is `igor-workspace` — the same value as
 `ops/graphiti/group_registry.yaml`'s `workspace_group`, and the two files
 must never diverge. On the deployed MCP stack, direct
-`graphiti_memory_client.py write` to that group is rejected unconditionally
+a `python -m ops.memory.cli write` request naming that namespace is refused by memory
 (only bootstrap's integration-edge mirror writes there), explicit `group_id`
 overrides that contradict the resolved repo match fail closed, and path
 hints match whole path segments only. Server-side namespace grants rendered

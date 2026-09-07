@@ -1,4 +1,10 @@
-"""Session open/close latches. Not resume SSOT — Graphiti remains SSOT (ADR-0028)."""
+"""Session open/close latches and the local close obligation (ADR-0028, plan §16).
+
+A close receipt here is a *close obligation*: it answers "do I still owe the
+canonical memory service a close?" and never "what is true memory?". The
+authoritative close is the canonical CloseReceipt; ``closed_canonically`` is
+written only after one was validated (campaign stage C6).
+"""
 
 from __future__ import annotations
 
@@ -11,8 +17,14 @@ from typing import Any
 
 _SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$")
 
+#: Canonical outcomes (stage C6) plus the legacy receipt statuses still on disk.
+STATUS_CLOSED_CANONICALLY = "closed_canonically"
+STATUS_CLOSE_INCOMPLETE = "close_incomplete"
+
 RECEIPT_STATUSES = frozenset(
     {
+        STATUS_CLOSED_CANONICALLY,
+        STATUS_CLOSE_INCOMPLETE,
         "closed",
         "closed_enqueue_failed",
         "close_failed",
@@ -24,12 +36,38 @@ RECEIPT_STATUSES = frozenset(
 
 SKIP_OR_FAIL_STATUSES = frozenset(
     {
+        STATUS_CLOSE_INCOMPLETE,
         "close_failed",
         "skipped_no_project",
         "skipped_disabled",
         "skipped_cli_missing",
     }
 )
+
+#: Close-obligation fields (plan §16). Scalars only; no memory content.
+OBLIGATION_FIELDS = (
+    "canonical_namespace_requested",
+    "canonical_operation_id",
+    "close_idempotency_key",
+    "payload_digest",
+    "continuation_status",
+    "continuation_reference",
+    "failure_class",
+    "last_error_code",
+)
+
+#: The exact ``memory.close`` request material (audit P2-01). A retry of an
+#: interrupted close replays *this* summary and digest under the recorded
+#: idempotency key, never a synthesized "retry" summary: memory's replay
+#: forensics compare the stored record with the replayed payload, and a
+#: drifted replay is a defect to surface, not an idempotent success.
+#: ``close_summary`` keeps the full close summary (close_session caps it at
+#: 2000 chars), so it gets its own bound rather than the 200-char scalar cap.
+CLOSE_REQUEST_FIELDS: dict[str, int] = {
+    "close_summary": 2000,
+    "close_capsule_digest": 200,
+    "close_session_id": 200,
+}
 
 
 def resolve_session_id(*, explicit: str | None = None) -> str:
@@ -73,6 +111,12 @@ def opens_dir(project_dir: Path) -> str:
 
 def closes_dir(project_dir: Path) -> str:
     return _bounded_child(_memory_dir(project_dir), "closes")
+
+
+def shadow_dir(project_dir: Path) -> str:
+    """Discrepancy receipts from the migration-only legacy shadow read (plan §11)."""
+
+    return _bounded_child(_memory_dir(project_dir), "shadow")
 
 
 def last_opened_path(project_dir: Path) -> str:
@@ -165,10 +209,12 @@ def load_close_receipt(project_dir: Path, session_id: str) -> dict[str, Any] | N
 
 
 def receipt_is_successful_close(receipt: dict[str, Any] | None) -> bool:
-    """True when Graphiti writes landed (S3 enqueue fail is not a close-gap)."""
+    """True when the canonical close committed (legacy: provider writes landed)."""
     if not receipt:
         return False
     status = str(receipt.get("status") or "")
+    if status == STATUS_CLOSED_CANONICALLY:
+        return bool(receipt.get("canonical_operation_id"))
     write_count = int(receipt.get("write_count") or 0)
     if write_count <= 0:
         return False
@@ -221,7 +267,7 @@ def write_receipt(project_dir: Path, session_id: str, payload: dict[str, Any]) -
     status = payload.get("status")
     status_out = status if status in RECEIPT_STATUSES else "close_failed"
     enqueue_ok = payload.get("enqueue_ok")
-    safe = {
+    safe: dict[str, Any] = {
         "status": status_out,
         "session_id": str(session_id),
         "head_hash": str(payload.get("head_hash") or ""),
@@ -231,7 +277,16 @@ def write_receipt(project_dir: Path, session_id: str, payload: dict[str, Any]) -
         "enqueue_error_present": bool(payload.get("enqueue_error")),
         "write_count": int(payload.get("write_count") or 0),
         "closed_at": str(payload.get("closed_at") or datetime.now(UTC).isoformat())[:64],
+        "attempt_timestamp": str(payload.get("attempt_timestamp") or "")[:64],
+        "retry_count": int(payload.get("retry_count") or 0),
+        "authority": "none",
     }
+    for key in OBLIGATION_FIELDS:
+        value = payload.get(key)
+        safe[key] = None if value is None else str(value)[:200]
+    for key, cap in CLOSE_REQUEST_FIELDS.items():
+        value = payload.get(key)
+        safe[key] = None if value is None else str(value)[:cap]
     _write_json(path_r, safe)
 
 

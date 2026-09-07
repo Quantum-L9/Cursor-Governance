@@ -9,6 +9,8 @@ status: retired
 
 # Context memory — retired Suite-6 path
 
+> **Retired 2026-09-06 (memory realignment C11, ADR-0030).** This document describes the direct Graphiti provider path that Cursor-Governance no longer has. Memory is the canonical `l9-graphite-memory` control plane (`ops/memory`, `python -m ops.memory.cli`); see `ops/memory/README.md` and `docs/MEMORY_PIPELINE_MAP.md`. Kept as an operator record of the projection deployment only.
+
 Resume SSOT is **Graphiti**. SessionStart emits `SessionHydrationPacket` via
 `ops/graphiti/hydration/compile_session_packet.py`. Closed-chat words go to S3
 through `ops/graphiti/hydration/archive_transcript.py` (all-words; do not

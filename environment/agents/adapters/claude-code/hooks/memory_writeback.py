@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Stop-hook write-back — thin wrap of shared close_session (Cursor-primary).
+"""Stop-hook write-back — thin wrap of the canonical session close (stage C8).
 
 Multi-repository by construction, because hydration is. A cloud container puts
 several repositories side by side and ``WORKSPACE`` then names the *container*,
 not a checkout. ``memory_prefetch.py`` learned that and fans out;
-``close_session`` was still called once, on the container root, where
-``resolve_group_id`` matches every repository and therefore returns none. The
-observed result was ``status=skipped writes=0`` on a healthy Graphiti: the
-session read six repositories' memory and wrote back to zero, so nothing a
-session learned survived it.
+``close_session`` was still called once, on the container root, where identity
+resolution matches every repository and therefore returns none. The observed
+result was ``status=skipped writes=0`` on a healthy store: the session read six
+repositories' memory and wrote back to zero, so nothing a session learned
+survived it.
 
 The repository set comes from ``ops/scripts/lib/workspace_roots.py`` — the same
 one answer prefetch uses — but the *preferred* source is the prefetch receipt
@@ -16,6 +16,12 @@ this session already wrote. ``hydrated_roots`` records the roots whose identity
 actually resolved at hydrate time, so reusing it makes close symmetric with
 hydrate by construction rather than by re-deriving a set that could drift
 between the two ends of one session.
+
+Every close crosses the memory control plane (continuation capsule admitted as
+a governed candidate, then ``memory.close``); nothing here writes a provider.
+A subagent or background run never owns the parent session's continuation:
+its Stop is recorded as ``skipped_subagent`` and closes nothing (authority
+narrowing, stage C8).
 """
 
 from __future__ import annotations
@@ -50,7 +56,7 @@ from workspace_roots import workspace_roots as _shared_workspace_roots  # noqa: 
 
 sys.path.insert(0, str(MEM))
 
-import graphiti_bridge as gb  # noqa: E402
+import memory_bridge as mb  # noqa: E402
 import memory_state as st  # noqa: E402
 
 #: Receipt key suffix. Reuses st.write_receipt (the existing mechanism) under a
@@ -81,6 +87,13 @@ def _record(contract: dict, session_id: str, **fields: object) -> None:
         )
 
 
+def _is_subagent(event: dict) -> bool:
+    """A subagent / background run never closes the parent session's memory."""
+    if event.get("is_background_agent") or event.get("isBackgroundAgent"):
+        return True
+    return str(event.get("agent_type") or event.get("agentType") or "").lower() == "subagent"
+
+
 def _writeback_roots(contract: dict, session_id: str, workspace: Path) -> list[Path]:
     """Repositories to close, preferring the ones this session hydrated.
 
@@ -99,10 +112,7 @@ def _writeback_roots(contract: dict, session_id: str, workspace: Path) -> list[P
         # Deliberately swallowed, and the fallback below is the whole point: an
         # absent, truncated or malformed prefetch receipt is an ordinary state
         # (a session that never hydrated, a container reaped mid-write), not an
-        # error to propagate out of a fail-open Stop hook. Re-deriving the roots
-        # from the shared resolver is strictly better than the alternative this
-        # function exists to remove — closing the container root, where
-        # resolve_group_id matches every repository and returns none.
+        # error to propagate out of a fail-open Stop hook.
         pass
     return _shared_workspace_roots(workspace)
 
@@ -118,6 +128,11 @@ def main() -> int:
         contract = st.load_contract()
     except (OSError, json.JSONDecodeError):
         return 0
+    if _is_subagent(event):
+        # Authority narrowing: the parent session owns its continuation and its
+        # close. A subagent inherits read evidence only and writes nothing.
+        _record(contract, session_id, status="skipped_subagent")
+        return 0
     if not st.fresh_receipt(contract, session_id):
         # A policy skip: this session never prefetched, so there is nothing to
         # close. Recorded so it stays distinguishable from a runtime failure.
@@ -129,9 +144,7 @@ def main() -> int:
     os.environ.setdefault("L9_MEMORY_AGENT_ID", "claude-code")
     os.environ.setdefault("USER_ID", "claude_code_agent")
 
-    root = gb.find_governance_root()
-    if str(root) not in sys.path:
-        sys.path.insert(0, str(root))
+    mb.ensure_importable()
 
     try:
         from ops.graphiti.hydration.close_session import close_session
@@ -139,7 +152,7 @@ def main() -> int:
         # The F-13 failure: the hook reached this line on an interpreter without
         # the locked dependencies, so write-back never ran. Previously this was
         # printed as "skipped" and was indistinguishable from a healthy policy
-        # skip, which is how a permanently dead PICKUP path stayed invisible.
+        # skip, which is how a permanently dead close path stayed invisible.
         print(
             f"memory-writeback: RUNTIME FAILURE — missing module {exc.name!r}; "
             "write-back did NOT run (expected the locked governance interpreter)",
@@ -158,9 +171,7 @@ def main() -> int:
         # Narrowing the import guard to ModuleNotFoundError alone would leave a
         # SyntaxError, a circular ImportError, or an exception raised at module
         # scope inside close_session uncaught — and an uncaught exception on a
-        # Stop hook is a traceback, not a receipt. The per-root loop below has
-        # its own handler; this one covers the import that precedes it, so no
-        # failure of this hook is ever recorded only as silence.
+        # Stop hook is a traceback, not a receipt.
         print(
             f"memory-writeback: RUNTIME FAILURE ({type(exc).__name__}); write-back did NOT run",
             file=sys.stderr,
@@ -191,8 +202,8 @@ def main() -> int:
         # little time remains. Guarding it too meant a budget below the threshold
         # closed nothing at all and recorded four deferrals — reproducing the
         # writes=0 outcome this hook exists to remove, from the other direction.
-        # Phase A (the PICKUP write) is not bounded by this budget; only Phase B
-        # is. So a starved root still writes its PICKUP and merely skips
+        # Phase A (capsule + close) is not bounded by this budget; only Phase B
+        # is. So a starved root still closes canonically and merely skips
         # distillation, which is the correct degradation.
         if index > 0 and left < MIN_ROOT_BUDGET:
             # Name what was not closed. A truncated loop that reports only its
@@ -210,7 +221,7 @@ def main() -> int:
                 reason=str(event.get("reason") or "completed"),
                 transcript_path=event.get("transcript_path") or event.get("transcriptPath"),
                 agent_id="claude-code",
-                is_background_agent=bool(event.get("is_background_agent")),
+                is_background_agent=False,
                 dry_run=False,
                 budget=per_root,
             )
@@ -236,6 +247,7 @@ def main() -> int:
         contract,
         session_id,
         status="ran",
+        transport="memory-control-plane/v1",
         close_status=";".join(statuses) or "none",
         writes=writes,
         warnings=warnings,

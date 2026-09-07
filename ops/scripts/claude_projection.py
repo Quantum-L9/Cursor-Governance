@@ -413,9 +413,17 @@ def render_mcp(
     """
     env = os.environ if environ is None else environ
     managed = template.get("mcpServers") or {}
+    # ``_retired_servers``: keys the template used to manage and has withdrawn
+    # (the legacy graphiti-memory front door, realignment stage C8). Without
+    # this list a withdrawn key would survive every render as "consumer-owned"
+    # — exactly the entry the retirement exists to remove.
+    retired = template.get("_retired_servers") or []
+    if isinstance(retired, str):
+        retired = [retired]
+    retired_names = {str(name) for name in retired}
     servers: dict[str, Any] = {}
     for name, spec in (existing or {}).get("mcpServers", {}).items():
-        if name not in managed:
+        if name not in managed and name not in retired_names:
             servers[name] = spec
     for name, spec in managed.items():
         rendered = _render_server(spec, dict(env))

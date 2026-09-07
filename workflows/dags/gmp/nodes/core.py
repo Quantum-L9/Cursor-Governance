@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import re
 import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -37,8 +38,9 @@ def node_memory_read(state: GMPState) -> GMPState:
     try:
         result = subprocess.run(
             [
-                "python3",
-                "ops/graphiti/graphiti_memory_client.py",
+                sys.executable,
+                "-m",
+                "ops.memory.cli",
                 "search",
                 state.task[:100],
             ],
@@ -186,8 +188,9 @@ def node_memory_write(state: GMPState) -> GMPState:
         summary = f"{state.gmp_id}: {state.task[:100]}. Files: {state.files_modified}"
         result = subprocess.run(
             [
-                "python3",
-                "ops/graphiti/graphiti_memory_client.py",
+                sys.executable,
+                "-m",
+                "ops.memory.cli",
                 "write",
                 summary,
                 "--kind",

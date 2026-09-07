@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""CLI: ``python -m ops.graphiti.hydration.cli compile|close``."""
+"""CLI: ``python -m ops.graphiti.hydration.cli compile|close|retry-close|repair-write``.
+
+Since campaign stage C6 every close path here is canonical: a continuation
+capsule admitted through the memory control plane and ``memory.close`` with an
+idempotent key. No subcommand writes a provider.
+"""
 
 from __future__ import annotations
 
@@ -29,20 +34,27 @@ def _public_close_report(report: dict) -> dict:
     enqueue_ok = report.get("enqueue_ok")
     status = report.get("status")
     allowed = {
-        "closed",
+        "closed_canonically",
+        "close_incomplete",
+        "dry_run",
         "idempotent_skip",
         "skipped",
+        "close_failed",
         "failed",
-        "closed_enqueue_failed",
     }
+    continuation = report.get("continuation") or {}
+    close = report.get("close") or {}
     return {
         "status": status if status in allowed else "other",
         "phase_a": bool(report.get("phase_a") is True),
         "phase_b": bool(report.get("phase_b") is True),
         "enqueue_ok": True if enqueue_ok is True else (False if enqueue_ok is False else None),
         "enqueue_error_present": bool(report.get("enqueue_error")),
-        "write_count": len(report.get("writes") or []),
+        "write_count": len([w for w in report.get("writes") or [] if w.get("written")]),
         "warning_count": len(report.get("warnings") or []),
+        "continuation_status": str(continuation.get("status") or "none"),
+        "close_status": str(close.get("status") or "none"),
+        "close_replayed": bool(close.get("replayed")),
     }
 
 
@@ -65,9 +77,9 @@ def _cmd_record_skip(args: argparse.Namespace) -> int:
 
 
 def _cmd_fallback_write(args: argparse.Namespace) -> int:
-    from ops.graphiti.hydration.pickup_write import fallback_pickup_write
+    from ops.graphiti.hydration.pickup_write import retry_close
 
-    report = fallback_pickup_write(
+    report = retry_close(
         project_dir=args.project_dir,
         session_id=args.session_id,
         reason=args.reason,
@@ -81,13 +93,15 @@ def _cmd_fallback_write(args: argparse.Namespace) -> int:
             indent=2,
         )
     )
-    return 0 if int(report.get("write_count") or 0) > 0 else 1
+    if report.get("status") == "skipped_already_closed":
+        return 0
+    return 0 if report.get("status") == "closed_canonically" else 1
 
 
 def _cmd_repair_write(args: argparse.Namespace) -> int:
-    from ops.graphiti.hydration.pickup_write import repair_pickup_write
+    from ops.graphiti.hydration.pickup_write import repair_close
 
-    report = repair_pickup_write(
+    report = repair_close(
         project_dir=args.project_dir,
         session_id=args.session_id,
         objective=args.objective,
@@ -117,7 +131,8 @@ def _cmd_close(args: argparse.Namespace) -> int:
         dry_run=args.dry_run,
     )
     print(json.dumps(_public_close_report(report), indent=2, ensure_ascii=False))
-    if report.get("status") == "failed":
+    status = report.get("status")
+    if status in {"failed", "close_failed", "close_incomplete"}:
         return 1
     if report.get("enqueue_ok") is False:
         return 2
@@ -166,7 +181,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     p_skip.set_defaults(func=_cmd_record_skip)
 
-    p_fb = sub.add_parser("fallback-write", help="One Graphiti PICKUP write after empty close")
+    p_fb = sub.add_parser(
+        "fallback-write",
+        aliases=["retry-close"],
+        help="Discharge a close_incomplete obligation (idempotent canonical close retry)",
+    )
     p_fb.add_argument("--project-dir", default=".")
     p_fb.add_argument("--session-id", default="default")
     p_fb.add_argument("--reason", default="close_fallback")
@@ -175,7 +194,9 @@ def main(argv: list[str] | None = None) -> int:
     p_fb.add_argument("--dry-run", action="store_true")
     p_fb.set_defaults(func=_cmd_fallback_write)
 
-    p_rp = sub.add_parser("repair-write", help="/end-session primary Graphiti PICKUP write")
+    p_rp = sub.add_parser(
+        "repair-write", help="/end-session forced canonical close (capsule + memory.close)"
+    )
     p_rp.add_argument("--project-dir", default=".")
     p_rp.add_argument("--session-id", default="default")
     p_rp.add_argument("--objective", required=True)
