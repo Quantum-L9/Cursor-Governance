@@ -20,11 +20,17 @@ _SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$")
 #: Canonical outcomes (stage C6) plus the legacy receipt statuses still on disk.
 STATUS_CLOSED_CANONICALLY = "closed_canonically"
 STATUS_CLOSE_INCOMPLETE = "close_incomplete"
+#: Same idempotency key, different payload (audit CG-P1-01). The obligation is
+#: neither closed nor merely unfinished: memory holds a *different* committed
+#: close under this key, so retrying the same request cannot resolve it. It
+#: stays a close gap on purpose — a human or a new key has to settle it.
+STATUS_CLOSE_CONFLICTED = "close_conflicted"
 
 RECEIPT_STATUSES = frozenset(
     {
         STATUS_CLOSED_CANONICALLY,
         STATUS_CLOSE_INCOMPLETE,
+        STATUS_CLOSE_CONFLICTED,
         "closed",
         "closed_enqueue_failed",
         "close_failed",
@@ -37,6 +43,7 @@ RECEIPT_STATUSES = frozenset(
 SKIP_OR_FAIL_STATUSES = frozenset(
     {
         STATUS_CLOSE_INCOMPLETE,
+        STATUS_CLOSE_CONFLICTED,
         "close_failed",
         "skipped_no_project",
         "skipped_disabled",
