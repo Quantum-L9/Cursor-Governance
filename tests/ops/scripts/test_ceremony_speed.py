@@ -72,7 +72,7 @@ def test_local_xdist_two_files_injects() -> None:
         ["tests/ops/scripts/test_a.py", "tests/ops/scripts/test_b.py"],
         ["-q"],
     )
-    assert args == ["-n", "auto"]
+    assert args == ["-n", "auto", "--dist", "loadgroup"]
 
 
 def test_local_xdist_one_file_stays_serial() -> None:
