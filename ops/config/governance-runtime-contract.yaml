@@ -51,18 +51,25 @@ invariants:
   - id: memory-single-front-door
     priority: P0
     statement: >-
-      Graphiti is the single session-memory front door
-      (ops/graphiti/graphiti_memory_client.py; runtime
-      .cursor-commands/ops/graphiti/graphiti_memory_client.py). The retired
-      agents/cursor/cursor_memory_client.py must not be invoked by the session
-      protocol.
+      The canonical l9-graphite-memory control plane is the single
+      session-memory front door (ops/memory/control_plane_client.py; operator
+      CLI python -m ops.memory.cli). The direct provider client
+      (ops/graphiti/graphiti_memory_client.py) is a C11 tombstone and the
+      retired agents/cursor/cursor_memory_client.py must not be invoked by the
+      session protocol.
     projections:
       - type: file_exists
-        path: ops/graphiti/graphiti_memory_client.py
+        path: ops/memory/control_plane_client.py
+      - type: file_exists
+        path: ops/memory/cli.py
+      - type: file_contains
+        path: end-session.yaml
+        pattern: "ops.memory.cli"
+        present: true
       - type: file_contains
         path: end-session.yaml
         pattern: "graphiti/graphiti_memory_client.py"
-        present: true
+        present: false
       - type: file_contains
         path: end-session.yaml
         pattern: "agents/cursor/cursor_memory_client.py"

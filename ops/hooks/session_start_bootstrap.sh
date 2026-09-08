@@ -216,7 +216,6 @@ fi
 
 SETUP="$GC/ops/scripts/setup_workspace_symlinks.sh"
 ORCH="$GC/ops/hooks/session_start_memory_orchestrator.sh"
-GRAPHITI_CLI="$GC/ops/graphiti/graphiti_memory_client.py"
 
 # Claude projection is Claude Code SessionStart's job
 # (session_start_claude_governance.sh). Running it from Cursor SessionStart
@@ -276,42 +275,44 @@ if [ "$needs_wire" -eq 1 ] && [ -n "$REPO" ] && [ -f "$SETUP" ]; then
 fi
 
 
-# Graphiti env + tunnel + health (no memory-bank)
+# Memory switches + canonical readiness (no memory-bank, no provider, no tunnel
+# since stage C9: memory is the bound control-plane runtime, proven by
+# ops/memory/runtime_binding.py, never a URL this hook reaches).
 # shellcheck source=/dev/null
 [ -f "$GC/ops/hooks/graphiti_common.sh" ] && source "$GC/ops/hooks/graphiti_common.sh"
 graphiti_load_env 2>/dev/null || true
 
-TUNNEL_NOTE="skipped"
-ENSURE_TUNNEL="$GC/ops/hooks/ensure_graphiti_tunnel.sh"
-if [ -f "$ENSURE_TUNNEL" ]; then
-  TUNNEL_NOTE="$(bash "$ENSURE_TUNNEL" 2>/dev/null || echo "tunnel: ensure failed")"
-fi
+TUNNEL_NOTE="retired (memory control plane; no provider tunnel)"
 
-GRAPHITI_HEALTH="disabled or CLI missing"
-GRAPHITI_HEALTHY="false"
-GRAPHITI_STDERR=""
-if [ "${GRAPHITI_MEMORY_ENABLED:-1}" != "0" ] && [ -f "$GRAPHITI_CLI" ]; then
+MEMORY_HEALTH="disabled or memory boundary missing"
+MEMORY_HEALTHY="false"
+MEMORY_STDERR=""
+if [ "${GRAPHITI_MEMORY_ENABLED:-1}" != "0" ] && [ -f "$GC/ops/memory/diagnostics.py" ]; then
   if [ -x "$GC/.venv/bin/python3" ]; then
     GPY="$GC/.venv/bin/python3"
   else
     GPY="python3"
   fi
-  HEALTH_ERR="$(mktemp "${TMPDIR:-/tmp}/l9-graphiti-health.XXXXXX")"
-  HEALTH_JSON="$("$GPY" "$GRAPHITI_CLI" health 2>"$HEALTH_ERR" || echo '{"healthy":false}')"
-  GRAPHITI_STDERR="$(head -c 500 "$HEALTH_ERR" | tr '\n' ' ')"
+  HEALTH_ERR="$(mktemp "${TMPDIR:-/tmp}/l9-memory-health.XXXXXX")"
+  # Binding proof + health only (R0-R3): the full R0-R9 probe spawns hydrate,
+  # write and close dry runs, which belong to `make memory-readiness`, not to
+  # a 60-second SessionStart budget.
+  HEALTH_JSON="$(cd "$GC" && PYTHONPATH="$GC${PYTHONPATH:+:$PYTHONPATH}" \
+    "$GPY" -m ops.memory.diagnostics --binding-only 2>"$HEALTH_ERR" || echo '{"status":"unbound"}')"
+  MEMORY_STDERR="$(head -c 500 "$HEALTH_ERR" | tr '\n' ' ')"
   rm -f "$HEALTH_ERR"
-  HEALTH_OK="$(echo "$HEALTH_JSON" | "$GPY" -c "import sys,json; print(json.load(sys.stdin).get('healthy',False))" 2>/dev/null || echo False)"
-  LIVENESS_OK="$(echo "$HEALTH_JSON" | "$GPY" -c "import sys,json; d=json.load(sys.stdin); print(d.get('liveness_ok', False))" 2>/dev/null || echo False)"
-  if [ "$HEALTH_OK" = "True" ]; then
-    GRAPHITI_HEALTH="healthy"
-    GRAPHITI_HEALTHY="true"
-  elif [ "$LIVENESS_OK" = "True" ]; then
-    GRAPHITI_HEALTH="tunnel up (MCP tools degraded — check VPS / graphiti-mcp-token)"
-  else
-    REASON="$(echo "$HEALTH_JSON" | "$GPY" -c "import sys,json; d=json.load(sys.stdin); print(d.get('degraded') or d.get('liveness_error') or d.get('reason') or 'unreachable')" 2>/dev/null || echo unreachable)"
-    GRAPHITI_HEALTH="$REASON"
-    [ -n "$GRAPHITI_STDERR" ] || GRAPHITI_STDERR="$HEALTH_JSON"
-  fi
+  BINDING_STATUS="$(echo "$HEALTH_JSON" | "$GPY" -c "import sys,json; print(json.load(sys.stdin).get('status','unbound'))" 2>/dev/null || echo unbound)"
+  case "$BINDING_STATUS" in
+    exact|development_checkout)
+      MEMORY_HEALTH="bound ($BINDING_STATUS): $(echo "$HEALTH_JSON" | "$GPY" -c "import sys,json; d=json.load(sys.stdin); print((d.get('memory_package') or 'l9-graphite-memory') + ' ' + str(d.get('memory_version') or ''))" 2>/dev/null || echo l9-graphite-memory)"
+      MEMORY_HEALTHY="true"
+      ;;
+    *)
+      REASON="$(echo "$HEALTH_JSON" | "$GPY" -c "import sys,json; d=json.load(sys.stdin); print('; '.join(d.get('reasons') or []) or 'memory runtime unbound')" 2>/dev/null || echo "memory runtime unbound")"
+      MEMORY_HEALTH="unbound: $REASON"
+      [ -n "$MEMORY_STDERR" ] || MEMORY_STDERR="$HEALTH_JSON"
+      ;;
+  esac
 fi
 
 WIRING_CHECK="skipped"
@@ -520,9 +521,9 @@ if [ -n "$RUNTIME_REPORTER" ] && [ -f "$RUNTIME_REPORTER" ]; then
     --venv "$VENV_NOTE" \
     --ide-profile "$IDE_NOTE" \
     --tunnel "$TUNNEL_NOTE" \
-    --graphiti-detail "$GRAPHITI_HEALTH" \
-    --graphiti-stderr "$GRAPHITI_STDERR" \
-    --graphiti-healthy "$GRAPHITI_HEALTHY" \
+    --memory-detail "$MEMORY_HEALTH" \
+    --memory-stderr "$MEMORY_STDERR" \
+    --memory-healthy "$MEMORY_HEALTHY" \
     --wiring "$WIRING_CHECK" \
     --backup "$BACKUP_NOTE" \
     --skill-note "$SKILL_NOTE" \
@@ -541,11 +542,12 @@ if [ -n "$RUNTIME_REPORTER" ] && [ -f "$RUNTIME_REPORTER" ]; then
   rm -f "$RUNTIME_ERR"
 fi
 
-# compile_session_packet.py already emits ### Graphiti hydrate. Do not wrap twice.
+# compile_session_packet.py already emits its own heading (### memory hydrate since
+# stage C4; ### Graphiti hydrate before it). Do not wrap twice.
 HYDRATE_BLOCK="$HYDRATE_MD"
 case "$HYDRATE_MD" in
-  *"### Graphiti hydrate"*) ;;
-  *) HYDRATE_BLOCK="### Graphiti hydrate
+  *"### memory hydrate"*|*"### Graphiti hydrate"*) ;;
+  *) HYDRATE_BLOCK="### memory hydrate
 ${HYDRATE_MD}" ;;
 esac
 

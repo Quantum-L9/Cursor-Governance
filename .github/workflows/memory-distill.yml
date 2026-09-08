@@ -1,15 +1,27 @@
 # Batch distill worker — pull redacted SessionEnd jobs from S3, distill via
-# OpenAI (AWS SM), ingest to Graphiti HTTPS. Does not require a Mac awake.
+# OpenAI (AWS SM), admit through the canonical memory control plane
+# (realignment stage C10). Does not require a Mac awake and holds NO provider
+# credential: the memory runtime it is bound to owns storage and projection.
 #
 # Required repository configuration (fail-loud if missing):
 #   vars/secrets:
 #     MEMORY_DISTILL_S3_BUCKET   — S3 bucket name
 #     AWS_ROLE_TO_ASSUME         — OIDC role ARN with s3 + secretsmanager read
-#     GRAPHITI_MCP_TOKEN         — bearer for public Graphiti MCP (secret)
+#     L9_MEMORY_CONFIG_JSON      — memory runtime configuration (MemorySettings
+#                                  JSON: canonical store DSN, projection backend,
+#                                  local principal grants). Written to a file and
+#                                  handed to the runtime as L9_MEMORY_CONFIG; the
+#                                  worker never reads it. A sqlite store here
+#                                  would be a private ledger nobody hydrates from,
+#                                  so the shared postgres backend is required
+#                                  (memory ADR-072).
 #   Optional:
 #     MEMORY_DISTILL_S3_PREFIX   — default distill-queue/pending/
 #     OPENAI_API_KEY             — if unset, worker resolves l9/OPENAI_API_KEY via SM
 #
+# The memory package is installed at the exact ref pinned in
+# ops/config/memory-binding.json (never a floating ref) and bound through
+# L9_MEMORY_INTERPRETER; ops/memory/runtime_binding.py refuses anything else.
 # Never set continue-on-error on the distill job.
 name: Memory Distill Queue
 
@@ -24,7 +36,7 @@ on:
         required: false
         default: "20"
       dry_run:
-        description: Distill without Graphiti writes / S3 done move
+        description: Distill without memory writes / S3 done move
         required: false
         default: "false"
 
@@ -68,7 +80,7 @@ jobs:
           echo "MEMORY_DISTILL_S3_BUCKET=${BUCKET}" >> "$GITHUB_ENV"
 
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c  # v6.2.3
+        uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c  # v6.2.4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: us-east-1
@@ -83,6 +95,34 @@ jobs:
           set -euo pipefail
           command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
           uv sync --locked --no-build --extra dev
+
+      - name: Bind the pinned memory runtime
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # The exact ref this checkout is bound to (ops/config/memory-binding.json);
+          # a floating ref is forbidden by the binding policy.
+          MEMORY_REPO="$(python3 -c 'import json; d=json.load(open("ops/config/memory-binding.json")); print(d["source"]["repository"])')"
+          MEMORY_REF="$(python3 -c 'import json; d=json.load(open("ops/config/memory-binding.json")); print(d["source"]["ref"])')"
+          uv pip install --python .venv/bin/python \
+            "git+https://x-access-token:${TOKEN}@github.com/${MEMORY_REPO}.git@${MEMORY_REF}"
+          echo "L9_MEMORY_INTERPRETER=${PWD}/.venv/bin/python" >> "$GITHUB_ENV"
+          PYTHONPATH="$PWD" .venv/bin/python -m ops.memory.diagnostics --binding-only
+
+      - name: Write the memory runtime configuration
+        env:
+          MEMORY_CONFIG_JSON: ${{ secrets.L9_MEMORY_CONFIG_JSON }}
+        run: |
+          set -euo pipefail
+          if [ -z "${MEMORY_CONFIG_JSON}" ]; then
+            echo "::error::L9_MEMORY_CONFIG_JSON secret is unset — the worker has no canonical store to admit into"
+            exit 1
+          fi
+          CONFIG="${RUNNER_TEMP}/l9-memory-config.json"
+          umask 077
+          printf '%s\n' "${MEMORY_CONFIG_JSON}" > "${CONFIG}"
+          echo "L9_MEMORY_CONFIG=${CONFIG}" >> "$GITHUB_ENV"
 
       - name: Resolve OpenAI key from Secrets Manager
         id: openai
@@ -110,20 +150,13 @@ jobs:
         env:
           MEMORY_DISTILL_S3_BUCKET: ${{ env.MEMORY_DISTILL_S3_BUCKET }}
           MEMORY_DISTILL_S3_PREFIX: ${{ vars.MEMORY_DISTILL_S3_PREFIX || 'distill-queue/pending/' }}
-          GRAPHITI_MCP_URL: https://memory.quantumaipartners.com/graphiti/mcp
-          GRAPHITI_MCP_TOKEN: ${{ secrets.GRAPHITI_MCP_TOKEN }}
-          GRAPHITI_MEMORY_ENABLED: "1"
           L9_MEMORY_AGENT_ID: gha-distill
           USER_ID: gha_distill_agent
           MAX_JOBS: ${{ github.event.inputs.max_jobs || '20' }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
         run: |
           set -euo pipefail
-          if [ -z "${GRAPHITI_MCP_TOKEN}" ]; then
-            echo "::error::GRAPHITI_MCP_TOKEN secret is unset"
-            exit 1
-          fi
-          ARGS=(--max-jobs "${MAX_JOBS}")
+          ARGS=(--max-jobs "${MAX_JOBS}" --workspace "${PWD}")
           if [ "${DRY_RUN}" = "true" ]; then
             ARGS+=(--dry-run)
           fi

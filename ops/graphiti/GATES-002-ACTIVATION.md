@@ -1,5 +1,7 @@
 # GATES-002 Activation Runbook
 
+> **Retired 2026-09-06 (memory realignment C11, ADR-0030).** This document describes the direct Graphiti provider path that Cursor-Governance no longer has. Memory is the canonical `l9-graphite-memory` control plane (`ops/memory`, `python -m ops.memory.cli`); see `ops/memory/README.md` and `docs/MEMORY_PIPELINE_MAP.md`. Kept as an operator record of the projection deployment only.
+
 **Run ID:** `GMP-GRAPHITI-GATES-002`  
 **Host:** `46.62.243.82` `/opt/graphiti-cursor`  
 **Flags:** `GRAPHITI_MEMORY_ENABLED=1`, `GRAPHITI_WRITE_GATES=0` until soak passes

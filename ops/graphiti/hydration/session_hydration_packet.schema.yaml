@@ -1,4 +1,7 @@
 # SessionHydrationPacket — slim resume packet for sessionStart additional_context.
+# Since campaign stage C4 the memory evidence comes from the canonical memory control
+# plane (ops/memory/hydration.py); `memory` carries the integration receipt (ids and
+# digests, never content) and `hydrate_stats.memory_status` the S-07 outcome.
 # Design evidence: WIP packs @ a57d49b (not a runtime dependency).
 $schema: "https://json-schema.org/draft/2020-12/schema"
 $title: SessionHydrationPacket
@@ -67,3 +70,39 @@ properties:
   close_gap:
     type: boolean
     default: false
+  conversation_id:
+    type: string
+    maxLength: 120
+  fact_count:
+    type: integer
+    minimum: 0
+  hydrate_stats:
+    type: object
+    properties:
+      memory_status:
+        type: string
+        enum:
+          - OK
+          - NO_HITS
+          - CANONICAL_UNAVAILABLE
+          - UNAUTHORIZED_NAMESPACE
+          - PARTIAL_PROJECTION_DEGRADED
+          - TIMEOUT
+          - INVALID_RECEIPT
+          - BINDING_FAILED
+          - NAMESPACE_UNRESOLVED
+      transport:
+        type: string
+        const: cli
+      continuation_source:
+        type: [string, "null"]
+        enum: [canonical, legacy_unverified, null]
+  fact_previews:
+    type: array
+    maxItems: 3
+  memory:
+    type: object
+    description: Canonical hydration integration receipt (plan §31). No memory content.
+  warnings:
+    type: array
+    items: { type: string, maxLength: 400 }

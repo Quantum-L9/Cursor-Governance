@@ -1,5 +1,7 @@
 # Graphiti Machine Env Policy
 
+> **Retired 2026-09-06 (memory realignment C11, ADR-0030).** This document describes the direct Graphiti provider path that Cursor-Governance no longer has. Memory is the canonical `l9-graphite-memory` control plane (`ops/memory`, `python -m ops.memory.cli`); see `ops/memory/README.md` and `docs/MEMORY_PIPELINE_MAP.md`. Kept as an operator record of the projection deployment only.
+
 **Problem:** `graphiti.env.example` looks like something you copy per repo — but secrets cannot travel with git clones, and requiring manual setup on every clone is not sustainable.
 
 **Solution:** Three-layer config where **repo clones need zero graphiti env files**.
