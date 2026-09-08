@@ -6,8 +6,8 @@ role: validation_gates
 tags: [pr, validation, enforcement, checkpoints, artifacts, makefile]
 owner: igor_beylin
 status: active
-version: 3.5.0
-updated: 2026-08-28
+version: 4.0.0
+updated: 2026-09-07
 /L9_META -->
 
 # Validation Gates (Enforcement Layer)
@@ -25,6 +25,8 @@ P_cmd ──→ [GATE A] ──→ ingest/classify ──→ [GATE B] ──→ 
 ```
 
 Each gate requires a specific artifact. If the artifact is missing or invalid, the agent MUST NOT proceed.
+
+**Deterministic latch** is `scripts/gate_receipt.py --gate {A-F} --receipt {file}`. Checklists do not block. The script FAILs closed. Produce the JSON artifact, then run the latch.
 
 ## Gate A: Command surface discovered
 
@@ -80,7 +82,7 @@ Validation:
 - [ ] `cycle_scope` is non-empty **or** all dispositions are reply/defer/note
 - [ ] `cited_paths` lists every finding path (verified even if the default toolchain excludes it)
 - [ ] `makefile_targets` is `precommit-repo` when a Makefile exists
-- [ ] No file edits have been made yet
+- [ ] No file edits have been made yet (`worktree_dirty: false` on the Gate B receipt; `gate_receipt.py` FAILs without it)
 
 **STOP if:** Plan is incomplete — do not patch.
 

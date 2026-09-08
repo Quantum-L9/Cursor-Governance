@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contract tests for l9-pr-remediation 5.2.0. Stdlib only.
+"""Contract tests for l9-pr-remediation 5.3.0. Stdlib only.
 
 Structural and wiring checks: every link resolves, every deterministic owner
 the pack names exists, the pre-v5 contradictions stay gone, and the pack never
@@ -75,7 +75,7 @@ def _forbid(text: str, needle: str, where: str) -> None:
 
 
 def test_frontmatter_and_map() -> None:
-    _need(SKILL, "version: 5.2.0", "SKILL.md")
+    _need(SKILL, "version: 5.3.0", "SKILL.md")
     _need(SKILL, "tier: exemplary", "SKILL.md")
     _need(SKILL, "disable-model-invocation: true", "SKILL.md")
     match = re.search(r"^description: (.+)$", SKILL, re.M)
@@ -100,6 +100,7 @@ def test_frontmatter_and_map() -> None:
         "validation-gates.md",
         "sonarcloud-remediation.md",
         "codeql-remediation.md",
+        "semgrep-remediation.md",
         "debt-remediation.md",
         "review-angles.md",
     ):
@@ -109,8 +110,14 @@ def test_frontmatter_and_map() -> None:
     scripts = (
         "self_test.py",
         "reply_threads.py",
+        "protocol.py",
+        "ingest_signals.py",
+        "validate_plan.py",
+        "gate_receipt.py",
+        "issue_handoff.py",
         "sonar_fetch.py",
         "codeql_fetch.py",
+        "semgrep_fetch.py",
         "debt_audit.py",
     )
     for script in scripts:
@@ -181,8 +188,31 @@ def test_owners_exist_and_are_named() -> None:
     sonar = (ROOT / "scripts" / "sonar_fetch.py").read_text(encoding="utf-8")
     _need(sonar, "SONAR_TOKEN", "sonar_fetch.py")
     _forbid(sonar, "require_trusted(", "sonar_fetch.py")
-    for helper in ("sonar_fetch.py", "codeql_fetch.py", "debt_audit.py"):
+    for helper in (
+        "sonar_fetch.py",
+        "codeql_fetch.py",
+        "semgrep_fetch.py",
+        "debt_audit.py",
+        "ingest_signals.py",
+        "issue_handoff.py",
+    ):
         _need((ROOT / "scripts" / helper).read_text(encoding="utf-8"), "_validated_output", helper)
+    protocol = (ROOT / "scripts" / "protocol.py").read_text(encoding="utf-8")
+    for needle in (
+        "def edit_axis",
+        "def reviewer_class",
+        "def validate_plan",
+        "def validate_gate",
+        "HUMAN",
+        "FALSE_POSITIVE",
+    ):
+        _need(protocol, needle, "protocol.py")
+    _forbid(protocol, 'disposition = "fix"', "protocol.py")
+    semgrep_fetch = (ROOT / "scripts" / "semgrep_fetch.py").read_text(encoding="utf-8")
+    _need(semgrep_fetch, "SEMGREP_APP_TOKEN", "semgrep_fetch.py")
+    _need(semgrep_fetch, "capability_bind", "semgrep_fetch.py")
+    _forbid(semgrep_fetch, "require_trusted(", "semgrep_fetch.py")
+    _forbid(semgrep_fetch, "urllib.request.urlopen", "semgrep_fetch.py")
 
 
 def test_no_second_plane() -> None:
@@ -286,9 +316,20 @@ def test_board_and_merge() -> None:
     _need(REFS["diagnose-workflow.md"], "Diagnose never merges", "diagnose-workflow.md")
     _need(REFS["diagnose-workflow.md"], "Digest first (mandatory)", "diagnose-workflow.md")
     _need(REFS["diagnose-workflow.md"], "Do **not** pass `--quiet`", "diagnose-workflow.md")
+    _need(REFS["diagnose-workflow.md"], "ingest_signals.py", "diagnose-workflow.md")
+    _need(REFS["run-contract.md"], "ingest_signals.py", "run-contract.md")
+    _need(REFS["code-review-agents.md"], "ingest_signals.py", "code-review-agents.md")
     _need(SKILL, "without** `--quiet`", "SKILL.md")
     _need(SKILL, "require_digest.py --mode converge", "SKILL.md")
     _need(SKILL, "skills/l9-pr-digest", "SKILL.md")
+    for needle in (
+        "scripts/ingest_signals.py",
+        "scripts/validate_plan.py",
+        "scripts/gate_receipt.py",
+        "scripts/issue_handoff.py",
+        "scripts/protocol.py",
+    ):
+        _need(SKILL, needle, "SKILL.md")
     _need(REFS["run-contract.md"], "P_digest", "run-contract.md")
     _need(REFS["merge-advise.md"], "Never merge", "merge-advise.md")
     _need(REFS["merge-advise.md"], "oldest `createdAt` first", "merge-advise.md")
@@ -305,6 +346,29 @@ def test_sonar_directive() -> None:
     _need(sonar, "## When (always, never blocking)", "sonarcloud-remediation.md")
     _need(sonar, "never paste a token", "sonarcloud-remediation.md")
     _need(REFS["signal-ingestion.md"], "never blocks merge", "signal-ingestion.md")
+
+
+def test_semgrep_directive() -> None:
+    _need(SKILL, "references/semgrep-remediation.md", "SKILL.md resource map")
+    _need(SKILL, "scripts/semgrep_fetch.py", "SKILL.md")
+    _need(SKILL, "SEMGREP_APP_TOKEN via capability_bind", "SKILL.md")
+    _need(SKILL, "capability_bind", "SKILL.md")
+    _need(SKILL, "ops/scripts/run_pr_security.sh", "SKILL.md")
+    semgrep = REFS["semgrep-remediation.md"]
+    _need(semgrep, "## When this signal applies", "semgrep-remediation.md")
+    _need(semgrep, "Never paste a token", "semgrep-remediation.md")
+    _need(semgrep, "semgrep_fetch.py", "semgrep-remediation.md")
+    _need(semgrep, "SEMGREP_APP_TOKEN", "semgrep-remediation.md")
+    _need(semgrep, "run_pr_security.sh", "semgrep-remediation.md")
+    _need(REFS["signal-ingestion.md"], "source: semgrep", "signal-ingestion.md")
+    _need(REFS["signal-ingestion.md"], "semgrep_fetch.py", "signal-ingestion.md")
+    _need(REFS["signal-ingestion.md"], "ingest_signals.py", "signal-ingestion.md")
+    _need(REFS["validation-gates.md"], "gate_receipt.py", "validation-gates.md")
+    _need(REFS["remediation-plan.md"], "validate_plan.py", "remediation-plan.md")
+    _need(REFS["issue-handoff.md"], "issue_handoff.py", "issue-handoff.md")
+    _need(REFS["ownership-boundary.md"], "protocol.py", "ownership-boundary.md")
+    _need(REFS["code-review-agents.md"], "reviewer_class", "code-review-agents.md")
+    _need(REFS["remediation-plan.md"], "semgrep", "remediation-plan.md")
 
 
 CONVERGE_SIGNALS = (
@@ -437,6 +501,7 @@ def main() -> None:
     test_fleet_and_waves()
     test_board_and_merge()
     test_sonar_directive()
+    test_semgrep_directive()
     test_venv_and_counters()
     test_activation_precision()
     test_exemplary_artifacts()

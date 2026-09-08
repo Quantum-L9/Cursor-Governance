@@ -6,8 +6,8 @@ role: code_review_agents
 tags: [pr, review, github-code-quality, copilot, replies]
 owner: igor_beylin
 status: active
-version: 1.0.0
-updated: 2026-08-16
+version: 1.1.0
+updated: 2026-09-07
 /L9_META -->
 
 # Code-Review Agents
@@ -20,7 +20,7 @@ This class exists because GitHub Code Quality and Copilot code review post **inl
 
 ## Membership (closed set)
 
-Match on `user.login` / `author.login` (with or without the `[bot]` suffix):
+Match on `user.login` / `author.login` (with or without the `[bot]` suffix). The closed set is `scripts/protocol.py` `reviewer_class` / `CRA_LOGINS`. Do **not** invent extra members.
 
 | Login | Product | Finding type |
 |-------|---------|--------------|
@@ -60,23 +60,7 @@ Copilot comments have no severity label. Treat each as `actionable` until inspec
 
 ## Surfaces
 
-Ingest all three. Do not stop at reviews with `CHANGES_REQUESTED`.
-
-```bash
-# Inline review comments (primary Code Quality surface)
-gh api repos/{owner}/{repo}/pulls/{pr}/comments --paginate \
-  --jq '.[] | select(.user.login|test("github-code-quality|copilot"; "i")) | {id, user: .user.login, path, line, body, created_at}'
-
-# Review summaries
-gh api repos/{owner}/{repo}/pulls/{pr}/reviews --paginate \
-  --jq '.[] | select(.user.login|test("github-code-quality|copilot"; "i")) | {id, user: .user.login, state, body}'
-
-# Issue comments on the PR
-gh api repos/{owner}/{repo}/issues/{pr}/comments --paginate \
-  --jq '.[] | select(.user.login|test("github-code-quality|copilot"; "i")) | {id, user: .user.login, body, created_at}'
-```
-
-Then walk GraphQL `reviewThreads` and keep every unresolved thread whose first comment author is a member — including threads the REST "actionable body" filter would have dropped.
+`scripts/ingest_signals.py` already walks inline comments, review summaries, issue comments, and unresolved GraphQL `reviewThreads`. Do not reconstruct those `gh api` loops. Do not stop at reviews with `CHANGES_REQUESTED`. A member Note, nit, or discussion-shaped thread stays in the snapshot.
 
 Check-run annotations from a Code Quality check are extra evidence, not a substitute for comment threads. If a finding exists only as an annotation, fix it when validated; reply only when a thread exists.
 

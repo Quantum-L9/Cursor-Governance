@@ -6,8 +6,9 @@ registry at ops/config/python-contract.json, strictly validates it, and executes
 declared suites in order under two profiles:
 
     --profile local   forwards operator pytest arguments (default);
-                      with --changed-file, injects ``-n auto`` when two or more
-                      pytest files are selected (CI profiles already declare xdist)
+                      with --changed-file, injects ``-n auto --dist loadgroup``
+                      when two or more pytest files are selected (CI already
+                      declares xdist)
     --profile ci      applies the locked coverage / xdist / timeout arguments
 
 Guarantees:
@@ -284,11 +285,14 @@ def local_changed_file_xdist_args(
     scoped_paths: list[str] | None,
     user_args: list[str],
 ) -> list[str]:
-    """Return ``-n auto`` for local changed-file runs with two or more tests.
+    """Return local xdist args for changed-file runs with two or more tests.
 
     CI profiles already declare xdist in registry argv. command and
     command_sequence suites never see these args (append_user_pytest_args is
     false). A one-file selection stays serial so worker spawn cannot dominate.
+
+    ``--dist loadgroup`` honors ``pytest.mark.xdist_group`` so files that share
+    one on-disk state file (GMP executor state) do not clobber each other.
     """
     if profile != "local" or scoped_paths is None:
         return []
@@ -297,7 +301,7 @@ def local_changed_file_xdist_args(
     files = [path for path in scoped_paths if path.endswith((".py", ".pyi"))]
     if len(files) < XDIST_MIN_SCOPED_FILES:
         return []
-    return ["-n", "auto"]
+    return ["-n", "auto", "--dist", "loadgroup"]
 
 
 def strip_ceremony_knobs(env: dict[str, str]) -> dict[str, str]:

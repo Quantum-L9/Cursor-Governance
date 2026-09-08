@@ -6,8 +6,8 @@ role: issue_handoff
 tags: [pr, issues, handoff, l9-issue-remediation, cursor-subagents, autonomy]
 owner: igor_beylin
 status: active
-version: 1.0.0
-updated: 2026-09-02
+version: 1.1.0
+updated: 2026-09-07
 /L9_META -->
 
 # Above-paygrade issue handoff
@@ -37,24 +37,18 @@ Do not open an issue for a required check that is still **in progress**
 
 ## How
 
-1. Open one issue per distinct root cause (not per comment):
+1. Open one issue per distinct root cause (not per comment) via `scripts/issue_handoff.py`:
 
 ```bash
-gh issue create --repo {owner}/{repo} --title "{class}: {one-line root cause}" --body "$(cat <<'EOF'
-## Handoff from l9-pr-remediation
-
-- **class:** HUMAN | CI_PIPELINE | ENVIRONMENT
-- **repo:** {owner}/{repo}
-- **pr:** #{n}
-- **head:** {sha}
-- **best-effort:** {what this remediator already tried}
-- **why above paygrade:** {named decision or unfixable required check}
-- **downstream:** l9-issue-remediation
-
-Do not bounce this back to the PR remediator until `open_issues=0`.
-EOF
-)"
+"${GOV_PY:-$PWD/.venv/bin/python}" skills/l9-pr-remediation/scripts/issue_handoff.py \
+  --repo {owner}/{repo} --pr {n} --class HUMAN \
+  --title "{one-line root cause}" --head {sha} \
+  --best-effort "{what this remediator already tried}" \
+  --why "{named decision or unfixable required check}" \
+  --output issue-handoff.json --create
 ```
+
+Dry-run omits `--create` and still writes the body. `gh issue create` is the helper, not a hand-typed heredoc.
 
 2. Record the issue number on the thread reply (HUMAN Deferred) and in the
    cycle status.
