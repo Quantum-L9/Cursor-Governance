@@ -15,7 +15,7 @@ import subprocess
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 from protocol import (
     VERIFY_COMMAND,
@@ -57,7 +57,7 @@ query($owner: String!, $repo: String!, $pr: Int!, $cursor: String) {
 """
 
 
-def _fail(msg: str) -> None:
+def _fail(msg: str) -> NoReturn:
     print(f"FAIL: {msg}", file=sys.stderr, flush=True)
     raise SystemExit(1)
 

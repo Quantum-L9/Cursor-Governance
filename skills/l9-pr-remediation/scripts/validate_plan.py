@@ -11,12 +11,12 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 from protocol import validate_plan
 
 
-def _fail(msg: str) -> None:
+def _fail(msg: str) -> NoReturn:
     print(f"FAIL: {msg}", file=sys.stderr, flush=True)
     raise SystemExit(1)
 
