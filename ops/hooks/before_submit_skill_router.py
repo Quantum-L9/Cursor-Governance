@@ -119,7 +119,6 @@ def route_event(payload: dict[str, Any], plane: types.SimpleNamespace) -> dict[s
         return None
     state_root = Path(locator.state_root)
     prompt = extract_prompt(payload)
-    registry = None
     generation_id = ""
     identity: dict[str, str] = {}
 
@@ -144,7 +143,6 @@ def route_event(payload: dict[str, Any], plane: types.SimpleNamespace) -> dict[s
             except plane.registry.RegistryError as exc:
                 # Registry identity is optional on a disabled receipt: the
                 # receipt must still be written so no prior route stays live.
-                registry = None
                 print(f"WARN: Cursor L9 skill router: registry unavailable: {exc}", file=sys.stderr)
             return emit("disabled", reason="L9_PROACTIVE_SKILLS is not true")
         registry = plane.registry.load_registry()
