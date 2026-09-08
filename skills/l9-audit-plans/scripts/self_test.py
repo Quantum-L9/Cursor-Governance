@@ -280,7 +280,9 @@ def main() -> int:
         if id_run.returncode != 0:
             errors.append(f"unique-id refine failed: {id_run.stdout}{id_run.stderr}")
         else:
-            ids = [str(t.get("id")) for t in _fm(id_dir / "ceremony_live.plan.md").get("todos") or []]
+            ids = [
+                str(t.get("id")) for t in _fm(id_dir / "ceremony_live.plan.md").get("todos") or []
+            ]
             if len(ids) != len(set(ids)):
                 errors.append(f"folded todo ids must stay unique, got {ids}")
 
@@ -321,9 +323,7 @@ def main() -> int:
         if not compiled:
             errors.append("uppercase BUILT leftover must be compiled or folded")
         else:
-            compiled_contents = [
-                str(t.get("content")) for t in _fm(compiled[0]).get("todos") or []
-            ]
+            compiled_contents = [str(t.get("content")) for t in _fm(compiled[0]).get("todos") or []]
             if "uppercase leftover" not in compiled_contents:
                 errors.append("uppercase BUILT leftover must reach a compiled packet")
 
