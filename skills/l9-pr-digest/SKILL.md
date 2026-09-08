@@ -17,8 +17,8 @@ metadata:
   - evidence
   owner: igor_beylin
   status: active
-  version: 1.0.0
-  updated: 2026-09-02
+  version: 1.2.0
+  updated: 2026-09-05
 ---
 
 # L9 PR Digest
@@ -69,7 +69,9 @@ If base or head cannot be bound exactly, stop with `BLOCKED`. If original intent
 
 ### Machine
 
-Prefer maximum automation. Run the deterministic engine first:
+Prefer maximum automation. Run the deterministic engine first.
+
+Manual `/pr` / Diagnose (default): stream live findings and the interactive unpack to stdout, and still write the JSON packet:
 
 ```bash
 python3 skills/l9-pr-digest/scripts/pr_digest.py \
@@ -77,13 +79,15 @@ python3 skills/l9-pr-digest/scripts/pr_digest.py \
   --output .l9/pr/pr-digest-result.json
 ```
 
+Automation / poll worker: same command plus `--quiet` so only the JSON file is written.
+
 A connector or orchestration host may instead normalize immutable PR evidence into JSON and run `--fixture evidence.json`. This is the preferred path when the repository is not locally cloned. `--validate-only result.json` validates required fields and exact revision binding.
 
 If `LLM_judgement_questions` is empty, do not invoke a model. If non-empty, answer only those questions from cited PR + repository evidence, append `judgement_findings`, classify the affected `expansion_items`, set `LLM_judgement_used: true`, then recompute the final decision under the rules below.
 
 ### Interactive chat
 
-Use the same evidence object and decision semantics. Load [interactive-output-contract.md](references/interactive-output-contract.md) and render a human-readable change story, expansion map, architecture impact, CI boundary, findings, narrowing decisions, bounded remediation packet, and readiness. Do not mutate the PR.
+Use the same evidence object and decision semantics. The CLI streams `[digest]` finding lines as the engine classifies, then prints the [interactive-output-contract.md](references/interactive-output-contract.md) unpack (`scripts/pr_digest_render.py`). Show that stream to the user on a manual invoke. Do not hide it behind the JSON file. Do not mutate the PR.
 
 ## Decision model
 
@@ -98,7 +102,7 @@ Allowed decisions only:
 - `BLOCKED`
 - `UNKNOWN`
 
-`NARROW_BEFORE_REMEDIATION` blocks remediation until confirmed unjustified expansion is removed. `ARCHITECTURE_REPAIR_BEFORE_REMEDIATION` blocks remediation until duplicate authority/shadow path/boundary bypass is corrected. CI/execution failures remain failures. Only the two READY decisions may pass the bounded packet to `l9-pr-remediation`.
+`NARROW_BEFORE_REMEDIATION` blocks remediation until confirmed unjustified expansion is removed. `ARCHITECTURE_REPAIR_BEFORE_REMEDIATION` blocks remediation until duplicate authority/shadow path/boundary bypass is corrected. CI/execution failures remain failures in the decision model. Diagnose stays read-only. Converge may enter on `READY_FOR_REMEDIATION`, `READY_WITH_NON_BLOCKING_NOTES`, or `CI_OR_EXECUTION_FAILURE` — failing required checks are the remediator's job.
 
 ## CI boundary
 
@@ -112,13 +116,15 @@ Do not rerun expensive CI merely to duplicate an existing result. Missing eviden
 - `l9-structured-reasoning`: judgement-only support for emitted semantic questions.
 - `l9-code-graph-rag-mcp`: conditional blast-radius/importer evidence when already healthy.
 - `l9-gap-analysis`: conditional explicit target/readiness delta, not a default PR dependency.
-- `l9-pr-remediation`: downstream only after a READY decision.
+- `l9-pr-remediation`: Diagnose after any valid digest. Converge after READY or `CI_OR_EXECUTION_FAILURE`.
 
 Do not activate GAR, security, performance, CI setup, or GMP merely because they exist. Load them only when a distinct triggered concern requires their owner.
 
 ## Pipeline handoff
 
-The canonical bounded-autonomy PR poll worker must run this skill before `l9-pr-remediation`. It must preserve the reviewed base/head. If the head moved, discard the stale digest and run again. On a non-READY decision it must not enter remediation. On READY, pass only `remediation_packet` plus exact PR identity downstream.
+`/pr` runs this skill first, then `l9-pr-remediation` Diagnose. `/l9-pr-remediation` Converge and the bounded-autonomy poll worker also run this skill before any mutate. Preserve the reviewed base/head. If the head moved, discard the stale digest and run again.
+
+Diagnose continues after any valid digest (including non-READY). Converge and the poll worker enter remediation for `READY_FOR_REMEDIATION`, `READY_WITH_NON_BLOCKING_NOTES`, or `CI_OR_EXECUTION_FAILURE`. `NARROW_BEFORE_REMEDIATION`, `ARCHITECTURE_REPAIR_BEFORE_REMEDIATION`, `INTENT_UNKNOWN_REVIEW_REQUIRED`, `BLOCKED`, and `UNKNOWN` still stop Converge. Gate with `scripts/require_digest.py --mode diagnose|converge`. On an accepted decision, pass only `remediation_packet` plus exact PR identity downstream.
 
 ## Hard prohibitions
 
@@ -136,6 +142,7 @@ The canonical bounded-autonomy PR poll worker must run this skill before `l9-pr-
 ```bash
 python3 skills/l9-pr-digest/scripts/self_test.py
 python3 skills/l9-pr-digest/scripts/pr_digest.py --validate-only <digest.json>
+python3 skills/l9-pr-digest/scripts/require_digest.py --path <digest.json> --mode diagnose
 python3 skills/l9-skill-compiler/scripts/validate_skill_pack.py skills/l9-pr-digest
 ```
 
@@ -146,6 +153,7 @@ A structural pass proves the pack and deterministic engine shape. It does not pr
 - [decision-and-expansion.md](references/decision-and-expansion.md)
 - [judgement-escalation.md](references/judgement-escalation.md)
 - [interactive-output-contract.md](references/interactive-output-contract.md)
+- `scripts/pr_digest_render.py` — live `[digest]` lines + 11-section unpack
 - [machine-output.schema.json](references/machine-output.schema.json)
 - [remediation-packet.schema.json](references/remediation-packet.schema.json)
 - [dogfood-validation.md](references/dogfood-validation.md)
