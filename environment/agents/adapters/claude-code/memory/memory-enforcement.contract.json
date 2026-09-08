@@ -1,13 +1,14 @@
 {
   "$schema": "./memory-enforcement.schema.json",
   "contract": "l9.claude-code.memory-enforcement",
-  "version": "2.0.0",
+  "version": "3.1.0",
   "status": "enforced",
-  "summary": "Memory hydration is a precondition for governed writes on the Claude Code surface. Repository-write authority comes from Git (dedicated worktree + branch + merge analysis), NOT from memory state: a Graphiti phase-lock neither authorizes, denies, nor serializes ordinary repository mutation. Single front door: Cursor Graphiti (ops/graphiti/graphiti_memory_client.py) via thin hooks. Enforced at PreToolUse. Operator-only breakglass: L9_MEMORY_ENFORCEMENT_BREAKGLASS. No ENFORCEMENT=off side door.",
+  "summary": "Memory hydration is a precondition for governed writes on the Claude Code surface. Repository-write authority comes from Git (dedicated worktree + branch + merge analysis), NOT from memory state: a memory phase-lock neither authorizes, denies, nor serializes ordinary repository mutation. Single front door: the canonical memory control plane (ops/memory, memory-control-plane/v1) via thin hooks; no provider client, no provider URL, no bearer (realignment stage C8). Interactive (model-initiated) durable writes are memory.phase_lock -> memory.write_governed on the package-owned l9-graphite-memory MCP server; that lock is a memory-write consistency precondition only, and generic memory.ingest / the operator CLI write are not the model's alternative to it (ADR-0030 items 7-9, CANONICAL_LAW 8.3). Enforced at PreToolUse. Operator-only breakglass: L9_MEMORY_ENFORCEMENT_BREAKGLASS. No ENFORCEMENT=off side door. A subagent inherits read evidence only: it never closes, never writes, never hydrates under its own identity.",
   "memory": {
-    "front_door": "ops/graphiti/graphiti_memory_client.py",
-    "bridge": "environment/agents/adapters/claude-code/memory/graphiti_bridge.py",
+    "front_door": "ops/memory/control_plane_client.py",
+    "bridge": "environment/agents/adapters/claude-code/memory/memory_bridge.py",
     "mcp_template": "environment/agents/adapters/claude-code/mcp.template.json",
+    "control_plane_contract": "memory-control-plane/v1",
     "agent_id_env": "L9_MEMORY_AGENT_ID",
     "default_agent_id": "claude-code",
     "namespace_env": "L9_MEMORY_NAMESPACES",
@@ -18,10 +19,38 @@
       "L9_MEMORY_HTTP_URL",
       "L9_MEMORY_CLIENT_TOKEN",
       "environment/agents/adapters/claude-code/memory/memory_client.py",
+      "environment/agents/adapters/claude-code/memory/graphiti_bridge.py",
+      "ops/graphiti/graphiti_memory_client.py",
       "l9-shared-memory@memory.quantumaipartners.com",
       "L9_MEMORY_ENFORCEMENT=off",
       "environment/agents/adapters/claude-code/hooks/memory_lock.py"
     ]
+  },
+  "interactive_memory_write": {
+    "canonical_mcp_server": "l9-graphite-memory",
+    "prerequisite": "memory.phase_lock",
+    "write_operation": "memory.write_governed",
+    "repository_authority": false,
+    "provider_direct": "forbidden",
+    "generic_ingest_as_model_write": "forbidden",
+    "cli_adapter": "python -m ops.memory.cli",
+    "cli_write_role": "operator_and_deterministic_adapters",
+    "deterministic_adapter_operations": [
+      "hydrate",
+      "close",
+      "ingest_candidate",
+      "repair-write",
+      "legacy_reconciliation",
+      "readiness"
+    ],
+    "authority": [
+      "docs/decisions/ADR-0030-memory-control-plane-single-front-door.md",
+      "CANONICAL_LAW.md#8.3",
+      "rules/03-graphiti-memory.mdc",
+      "rules/87-cursor-memory-kernel.mdc",
+      "rules/98-graphiti-memory-gate.mdc"
+    ],
+    "note": "Agents MUST be able to write durable memory and MUST NOT write to the provider transport. The model's write is memory.phase_lock then memory.write_governed on the canonical MCP server; MemoryService grants the lock after a conflict check on the namespace snapshot and re-verifies the digest inside the admitting transaction. The lock governs memory-write consistency only: it does not authorize a source edit, serialize git, or replace worktree/branch/publication governance (rules/96 E7/E8/E10). Routing a model-authored fact through generic memory.ingest or the operator CLI write to avoid the lock is a violation; SessionStart/sessionEnd/repair/reconciliation/diagnostics adapters use their purpose-specific ops/memory operations over the same admission path and are not second egresses."
   },
   "state": {
     "root": ".l9/memory",
@@ -34,7 +63,7 @@
       "event": "SessionStart",
       "script": "environment/agents/adapters/claude-code/hooks/memory_prefetch.py",
       "fail_mode": "open",
-      "note": "SessionStart thin wrap of Cursor Graphiti inject. Writes receipt on success. Fail-open."
+      "note": "SessionStart thin wrap of the canonical session hydration (ops.memory.hydration via the session-packet compiler). Writes receipt on success. Fail-open."
     },
     "gate": {
       "event": "PreToolUse",
@@ -46,7 +75,7 @@
       "event": "Stop",
       "script": "environment/agents/adapters/claude-code/hooks/memory_writeback.py",
       "fail_mode": "open",
-      "note": "Stop thin wrap of Cursor Graphiti write --kind session_summary. Fail-open."
+      "note": "Stop thin wrap of the canonical close (continuation capsule -> governed candidate -> memory.close). Subagent/background Stop records skipped_subagent and closes nothing. Fail-open."
     }
   },
   "preconditions": {
@@ -147,7 +176,7 @@
   },
   "repository_authority": {
     "note": "Distinct authorities that MUST NOT be substituted for one another; see rules/96-multi-agent-main-bound-execution.mdc.",
-    "shared_knowledge": "Graphiti / canonical L9 memory",
+    "shared_knowledge": "canonical L9 memory (l9-graphite-memory MemoryService; Graphiti only as its projection)",
     "repository_isolation": "dedicated worktree (ops/scripts/agent_worktree_start.sh)",
     "task_ancestry": "fetched origin/main",
     "publication": "make pr -> ops/scripts/open_pr_after_gate.sh",

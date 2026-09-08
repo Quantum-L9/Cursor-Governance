@@ -1,4 +1,28 @@
-"""sessionEnd close: Phase A heuristic PICKUP (≤8s) + Phase B LLM distill (≤18s)."""
+"""sessionEnd close (campaign stages C5/C6): canonical candidate + memory.close.
+
+Close sequence (plan §15):
+
+    1. gather session state (transcript excerpt, git HEAD, identity)
+    2. construct ContinuationCapsuleV2 (heuristic; Phase B may refine it)
+    3. canonical serialize + digest
+    4. submit it as a governed candidate through the memory control plane
+    5. validate the candidate receipt (admitted / duplicate / rejected / quarantined)
+    6. keep the canonical reference (record id, capsule digest)
+    7. build the close summary
+    8. memory.close (idempotent: one key per session + transcript head)
+    9. validate the CloseReceipt
+   10. only then mark the local obligation CLOSED_CANONICALLY
+
+A rejected continuation does not falsify the close; the close still commits
+with ``continuation_status=rejected``. A failed close leaves the obligation
+``close_incomplete``, never ``closed``. Nothing here writes to a provider:
+Graphiti receives new records only through canonical projection (plan §29,
+stage 3), and no rollback path may restore a direct write (plan §30).
+
+``budget`` stays a per-call ceiling: a caller closing several repositories in
+one hook window divides its own allowance. Phase A (capsule admission + close)
+is always attempted; a small budget only starves Phase B distillation.
+"""
 
 from __future__ import annotations
 
@@ -13,6 +37,7 @@ from pathlib import Path
 from typing import Any
 
 _SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$")
+_FILE_RE = re.compile(r"[\w./-]+\.(?:py|md|ya?ml|json|sh|ts|tsx|js|jsx)")
 
 _GRAPHITI_DIR = Path(__file__).resolve().parent.parent
 _REPO_ROOT = _GRAPHITI_DIR.parent.parent
@@ -21,25 +46,37 @@ if str(_GRAPHITI_DIR) not in sys.path:
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from episode_contract import redact_pii  # noqa: E402
-from group_resolver import resolve_group_id  # noqa: E402
-
 from ops.graphiti.hydration import session_latches as _latches  # noqa: E402
-from ops.graphiti.hydration.identity import (  # noqa: E402
-    IdentityError,
-    envelope_body,
-    resolve_write_identity,
-    stamp_source_description,
-)
+from ops.graphiti.hydration.identity import IdentityError, resolve_write_identity  # noqa: E402
 from ops.graphiti.hydration.resume_signal_scorer import (  # noqa: E402
     should_persist_derived_episode,
     signals_from_close,
 )
 from ops.graphiti.hydration.transcript import load_transcript_excerpt  # noqa: E402
+from ops.memory.control_plane_client import (  # noqa: E402
+    MemoryControlPlaneClient,
+    OperationOutcome,
+    OutcomeStatus,
+)
+from ops.memory.namespace_context import (  # noqa: E402
+    repository_state_digest,
+    resolve_namespace_context,
+)
+from ops.memory.runtime_binding import resolve_runtime_binding  # noqa: E402
+from ops.memory.session_contracts import ContinuationCapsuleV2  # noqa: E402
+from ops.memory.session_state import read_session_state  # noqa: E402
 
 PHASE_A_BUDGET = 8.0
 PHASE_B_BUDGET = 18.0
 TOTAL_BUDGET = 30.0
+
+STATUS_CLOSED_CANONICALLY = _latches.STATUS_CLOSED_CANONICALLY
+STATUS_CLOSE_INCOMPLETE = _latches.STATUS_CLOSE_INCOMPLETE
+STATUS_CLOSE_CONFLICTED = _latches.STATUS_CLOSE_CONFLICTED
+PRODUCER_VERSION = "2.0.0"
+
+#: Phase B promotion kinds -> canonical memory classes (write taxonomy, plan §14).
+_PROMOTION_CLASSES = {"lesson": "insight", "insight": "insight", "decision": "decision"}
 
 
 def re_safe(session_id: str) -> str:
@@ -48,9 +85,7 @@ def re_safe(session_id: str) -> str:
 
 def _closes_dir(project_dir: Path) -> str:
     """Real path to project_dir/.l9/memory/closes (must stay under project root)."""
-    from ops.graphiti.hydration.session_latches import closes_dir
-
-    return closes_dir(project_dir)
+    return _latches.closes_dir(project_dir)
 
 
 def _load_rules() -> dict[str, Any]:
@@ -78,12 +113,19 @@ def already_closed(project_dir: Path, session_id: str, head_hash: str) -> bool:
             data = json.load(handle)
     except (OSError, json.JSONDecodeError):
         return False
-    return data.get("head_hash") == head_hash or data.get("status") == "closed"
+    return _latches.receipt_is_successful_close(data) and (
+        data.get("head_hash") == head_hash or data.get("status") == STATUS_CLOSED_CANONICALLY
+    )
 
 
 def write_receipt(project_dir: Path, session_id: str, payload: dict[str, Any]) -> None:
-    """Persist a close receipt with taint-safe scalars only (ADR-0028 statuses)."""
+    """Persist the close obligation with taint-safe scalars only (plan §16)."""
     _latches.write_receipt(project_dir, session_id, payload)
+
+
+def memory_client(session_id: str | None = None) -> MemoryControlPlaneClient:
+    """The bound memory runtime (tests substitute a scripted CLI here)."""
+    return MemoryControlPlaneClient(resolve_runtime_binding(), session_id=session_id)
 
 
 def _git_signal(project_dir: Path) -> str:
@@ -100,56 +142,81 @@ def _heuristic_pickup(
     session_id: str,
     transcript: str,
     reason: str,
-) -> dict[str, str]:
+) -> dict[str, Any]:
     git = _git_signal(project_dir)
-    # Last user-ish lines from transcript
     last_lines = [ln for ln in transcript.splitlines() if ln.strip()][-8:]
     slice_text = "\n".join(last_lines)[:1500]
     objective = f"Continue work in {project_dir.name}"
-    next_action = "Resume from latest Graphiti PICKUP and user request"
+    next_action = "Resume from the canonical continuation and the user request"
     for ln in reversed(last_lines):
         low = ln.lower()
         if low.startswith("user:") or "user_query" in low:
             next_action = ln.split(":", 1)[-1].strip()[:400] or next_action
+            break
+    files = []
+    for match in _FILE_RE.findall(transcript):
+        if match not in files:
+            files.append(match)
+        if len(files) >= 12:
             break
     return {
         "active_objective": objective,
         "next_action": next_action,
         "context_slice": f"{git}\nreason={reason}\nsession={session_id}\n{slice_text}"[:3500],
         "blockers": [],
+        "active_files": files,
     }
 
 
-def _write_kind(
-    body: str,
+def build_capsule(
     *,
-    kind: str,
-    group_id: str,
-    agent_id: str,
-    user_id: str,
-    dry_run: bool = False,
-) -> dict[str, Any]:
-    import graphiti_memory_client as gmc
-    from episode_contract import EpisodeContract
+    session_id: str,
+    repository_identity: str,
+    head: str | None,
+    pickup: dict[str, Any],
+    decisions: list[str] | None = None,
+    unfinished_work: list[str] | None = None,
+    task_signature: str | None = None,
+) -> ContinuationCapsuleV2:
+    """The Cursor-owned continuation capsule for this session (plan §12).
 
-    now = datetime.now(UTC)
-    stamped = envelope_body(body, agent_id=agent_id, user_id=user_id, kind=kind)
-    contract = EpisodeContract(
-        name=f"{kind}-{group_id}-{int(now.timestamp())}",
-        episode_body=stamped,
-        source="json" if stamped.strip().startswith("{") else "text",
-        source_description=stamp_source_description(agent_id, kind),
-        reference_time=now,
-        group_id=group_id,
-        kind=kind,
-        agent_id=agent_id,
-        user_id=user_id,
+    ``task_signature`` is the signature the session hydrated under (its local
+    session state); the capsule carries it so the next hydration of the same
+    task selects this capsule and no other task's (audit P1-02). Without one
+    the capsule derives its signature from its own objective.
+    """
+    return ContinuationCapsuleV2(
+        session_id=session_id,
+        repository_identity=repository_identity,
+        objective=str(pickup.get("active_objective") or "").strip() or "Continue work",
+        next_action=str(pickup.get("next_action") or "").strip() or "Proceed from user request",
+        repository_state_digest=head or "unknown",
+        producer_version=PRODUCER_VERSION,
+        task_signature=str(task_signature or "").strip(),
+        active_files=tuple(str(f) for f in pickup.get("active_files") or ())[:12],
+        blockers=tuple(str(b) for b in pickup.get("blockers") or ())[:8],
+        decisions=tuple(decisions or ())[:8],
+        unfinished_work=tuple(unfinished_work or ())[:8],
     )
-    payload = contract.to_mcp_payload()
-    if dry_run:
-        return {"written": False, "dry_run": True, "payload": payload}
-    result = gmc.call_tool("add_memory", payload)
-    return {"written": True, "kind": kind, "result": result}
+
+
+def session_task_signature(session_id: str) -> str | None:
+    """The task signature this session hydrated under, from local session state.
+
+    Local state is evidence, never authority: it only tells the close which
+    task the continuation belongs to. Absent state means the capsule derives
+    its own signature from its objective.
+    """
+    state = read_session_state(session_id)
+    if not state:
+        return None
+    signature = state.get("task_signature")
+    return str(signature).strip() or None if signature else None
+
+
+def close_idempotency_key(namespace: str, session_id: str, head_hash: str) -> str:
+    """Stable operation identity: producer, namespace, session, transcript head."""
+    return f"cursor-close:{namespace}:{session_id}:{head_hash}"
 
 
 def _phase_b_enabled() -> bool:
@@ -174,9 +241,8 @@ def _distill_signal_packet(
 ) -> tuple[dict[str, Any] | None, str]:
     """Return (packet, skip_reason). skip_reason empty on success.
 
-    Uses the Sonar-reviewed fixed-host OpenAI helper
-    (``ops.graphiti.hydration.openai_fixed_host``) — never builds a URL from
-    caller input. Key: env or ephemeral SM resolve (opaque skip codes only).
+    Uses the fixed-host OpenAI helper (``openai_fixed_host``); never builds a
+    URL from caller input. Key: env or ephemeral SM resolve (opaque skip codes).
     """
     if not _phase_b_enabled():
         return None, "MEMORY_PHASE_B=0"
@@ -207,7 +273,7 @@ def _distill_signal_packet(
     user = json.dumps(
         {
             "session_id": session_id,
-            "heuristic_pickup": pickup,
+            "heuristic_pickup": {k: v for k, v in pickup.items() if k != "active_files"},
             "transcript_excerpt": transcript[:8000],
         },
         ensure_ascii=False,
@@ -243,33 +309,99 @@ def _distill_signal_packet(
         return None, f"phase_b_{type(exc).__name__}"
 
 
-def _persist_early_receipt(
+def _write_entry(outcome: OperationOutcome, *, kind: str) -> dict[str, Any]:
+    """A canonical operation as it appears in ``report["writes"]`` (no content)."""
+    receipt = outcome.receipt
+    return {
+        "kind": kind,
+        "operation": outcome.operation,
+        "status": outcome.status.value,
+        "written": outcome.ok,
+        "record_id": getattr(receipt, "record_id", None),
+        "receipt_id": getattr(receipt, "receipt_id", None),
+        "error": outcome.error,
+        "latency_ms": outcome.latency_ms,
+    }
+
+
+def _persist_obligation(
     project: Path,
     session_id: str,
     report: dict[str, Any],
     *,
-    status: str | None = None,
+    status: str,
     dry_run: bool = False,
+    **fields: Any,
 ) -> None:
-    receipt_status = status or (
-        "close_failed" if report.get("status") in {"failed", "close_failed"} else "close_failed"
-    )
+    now = datetime.now(UTC).isoformat()
     receipt = {
-        "status": receipt_status,
+        "status": status,
         "session_id": session_id,
+        "head_hash": report.get("head_hash", ""),
         "phase_a": bool(report.get("phase_a")),
         "phase_b": bool(report.get("phase_b")),
-        "write_count": len(
-            [w for w in (report.get("writes") or []) if w.get("written") or w.get("dry_run")]
-        ),
-        "closed_at": datetime.now(UTC).isoformat(),
+        "enqueue_ok": report.get("enqueue_ok"),
+        "enqueue_error": report.get("enqueue_error"),
+        "write_count": len([w for w in (report.get("writes") or []) if w.get("written")]),
+        "closed_at": now,
+        "attempt_timestamp": now,
+        "retry_count": int(report.get("retry_count") or 0),
+        **fields,
     }
     report["receipt"] = receipt
     if not dry_run:
         try:
             write_receipt(project, session_id, receipt)
         except (OSError, ValueError) as exc:
-            report["warnings"].append(f"receipt write failed: {exc}")
+            report["warnings"].append(f"obligation write failed: {exc}")
+
+
+def _promote(
+    client: MemoryControlPlaneClient,
+    *,
+    workspace: str,
+    namespace: str,
+    session_id: str,
+    decisions: list[Any],
+    rules: dict[str, Any],
+    report: dict[str, Any],
+    dry_run: bool,
+) -> int:
+    """Phase B promotions through the generic canonical write (plan §14 order)."""
+    promote_min = float(rules.get("promote_min_score", 0.65))
+    max_promo = int(rules.get("max_promotions_per_close", 5))
+    promotable = set(rules.get("promotable_kinds") or ["lesson", "insight", "decision"])
+    promoted = 0
+    for index, item in enumerate(decisions):
+        if promoted >= max_promo:
+            break
+        if not isinstance(item, dict) or item.get("decision") != "promote":
+            continue
+        kind = str(item.get("kind") or "lesson")
+        if kind not in promotable or kind not in _PROMOTION_CLASSES:
+            continue
+        if float(item.get("score") or 0) < promote_min:
+            continue
+        body = str(item.get("body") or "").strip()
+        if not body:
+            continue
+        digest = hashlib.sha256(body.encode("utf-8")).hexdigest()[:16]
+        outcome = client.write(
+            body,
+            workspace=workspace,
+            namespace=namespace,
+            memory_class=_PROMOTION_CLASSES[kind],
+            tags=("session-close", kind),
+            idempotency_key=f"cursor-promotion:{namespace}:{session_id}:{index}:{digest}",
+            source_id=f"session:{session_id}",
+            dry_run=dry_run,
+        )
+        report["writes"].append(_write_entry(outcome, kind=kind))
+        if outcome.ok or outcome.status is OutcomeStatus.NOT_COMMITTED:
+            promoted += 1
+        else:
+            report["warnings"].append(f"promote {kind} {outcome.status.value}: {outcome.error}")
+    return promoted
 
 
 def close_session(
@@ -283,16 +415,12 @@ def close_session(
     dry_run: bool = False,
     clock: Any = None,
     budget: float | None = None,
+    client: MemoryControlPlaneClient | None = None,
 ) -> dict[str, Any]:
-    """Run Phase A (+ optional Phase B). Fail-open; never raises to hooks.
+    """Canonical close. Fail-open to hooks; never raises. Never writes a provider.
 
-    ``budget`` overrides :data:`TOTAL_BUDGET` for this call. A caller that closes
-    SEVERAL repositories inside one hook window must divide its own budget
-    between them: the module constant is a per-call ceiling, and six calls at the
-    default 30 s ceiling overrun a 20 s Stop hook by an order of magnitude. Phase
-    A (the PICKUP write) is attempted regardless; a small budget only starves
-    Phase B, which already degrades by design. ``None`` keeps the constant, so
-    every existing single-repository caller is unchanged.
+    ``dry_run`` admits nothing and commits nothing: the capsule and the close
+    pass memory's admission dry runs and the obligation is not persisted.
     """
     clock = clock or time.monotonic
     started = clock()
@@ -308,6 +436,8 @@ def close_session(
         "enqueue_ok": None,
         "writes": [],
         "warnings": [],
+        "continuation": None,
+        "close": None,
     }
 
     try:
@@ -318,118 +448,139 @@ def close_session(
     except IdentityError as exc:
         report["warnings"].append(str(exc))
         report["status"] = "close_failed"
-        _persist_early_receipt(project, session_id, report, dry_run=dry_run)
+        _persist_obligation(
+            project,
+            session_id,
+            report,
+            status="close_failed",
+            dry_run=dry_run,
+            failure_class="identity",
+        )
         return report
 
     transcript, t_source = load_transcript_excerpt(
         transcript_path=transcript_path,
         conversation_id=session_id,
     )
-    transcript = redact_pii(transcript)
     head_hash = hashlib.sha256(
         f"{session_id}:{reason}:{transcript[:2000]}:{t_source}".encode()
     ).hexdigest()[:24]
+    report["head_hash"] = head_hash
 
     if already_closed(project, session_id, head_hash) and not dry_run:
         report["status"] = "idempotent_skip"
         return report
 
-    resolved = resolve_group_id(project)
-    group_id = str(resolved.get("group_id") or "")
-    if not group_id or resolved.get("readonly"):
-        msg = str(resolved.get("error") or resolved.get("warning") or "unresolved group")
-        report["warnings"].append(f"WARN: write blocked — {msg}")
+    context = resolve_namespace_context(project)
+    namespace = context.write_namespace_hint
+    if not namespace:
+        msg = "; ".join(context.warnings) or "no write namespace hint"
+        report["warnings"].append(f"WARN: close blocked — {msg}")
         report["status"] = "skipped"
         report["skip_reason"] = msg
-        _persist_early_receipt(project, session_id, report, status="close_failed", dry_run=dry_run)
+        _persist_obligation(
+            project,
+            session_id,
+            report,
+            status="close_failed",
+            dry_run=dry_run,
+            failure_class="namespace_unresolved",
+        )
         return report
+    report["group_id"] = namespace
+    # Memory derives the local principal (write grants) from the cwd it resolves,
+    # so the CLI runs at the repository root the namespace context resolved; the
+    # close obligation still lives under ``project_dir``.
+    workspace = context.git_root or str(project)
+    head = repository_state_digest(project)
+    repository_identity = context.repository_identity or namespace
 
     if is_background_agent and not transcript:
         report["warnings"].append("background agent without transcript — Phase A git-only")
 
-    # --- Phase A ---
-    phase_a_deadline = started + PHASE_A_BUDGET
-    pickup = _heuristic_pickup(
-        project_dir=project,
-        session_id=session_id,
-        transcript=transcript,
-        reason=reason,
-    )
-    import graphiti_memory_client as gmc
-
-    try:
-        gmc.load_env()
-    except Exception as exc:  # noqa: BLE001
-        report["warnings"].append(f"load_env: {exc}")
-
-    # Pipe line first so Graphiti fact extraction indexes objective/next for hydrate.
-    search_line = (
-        f"PICKUP|objective={pickup['active_objective']}|next={pickup['next_action']}|"
-        f"agent={identity['agent_id']}|session={session_id}"
-    )
-    pickup_body = (
-        search_line
-        + "\n"
-        + json.dumps(
-            {
-                "type": "PICKUP",
-                "active_objective": pickup["active_objective"],
-                "next_action": pickup["next_action"],
-                "context_slice": pickup["context_slice"],
-                "session_id": session_id,
-                "reason": reason,
-                "agent_id": identity["agent_id"],
-                "search_line": search_line,
-            },
-            ensure_ascii=False,
-        )
-    )
-    summary_body = json.dumps(
-        {
-            "type": "session_summary",
-            "session_id": session_id,
-            "reason": reason,
-            "transcript_source": t_source,
-            "phase": "A",
-            "agent_id": identity["agent_id"],
-            "git": _git_signal(project),
-        },
-        ensure_ascii=False,
-    )
-
-    try:
-        w1 = _write_kind(
-            pickup_body,
-            kind="pickup_context",
-            group_id=group_id,
-            agent_id=identity["agent_id"],
-            user_id=identity["user_id"],
+    client = client or memory_client(session_id)
+    if not client.binding.ok:
+        reason_text = "; ".join(client.binding.reasons) or "memory runtime unbound"
+        report["warnings"].append(f"memory runtime unbound: {reason_text}")
+        report["status"] = STATUS_CLOSE_INCOMPLETE
+        _persist_obligation(
+            project,
+            session_id,
+            report,
+            status=STATUS_CLOSE_INCOMPLETE,
             dry_run=dry_run,
+            canonical_namespace_requested=namespace,
+            failure_class="BINDING_FAILED",
+            last_error_code="BINDING_FAILED",
         )
-        report["writes"].append(w1)
-        w2 = _write_kind(
-            summary_body,
-            kind="session_summary",
-            group_id=group_id,
-            agent_id=identity["agent_id"],
-            user_id=identity["user_id"],
-            dry_run=dry_run,
-        )
-        report["writes"].append(w2)
-        report["phase_a"] = True
-        report["status"] = "phase_a"
-        report["pickup"] = pickup
-    except Exception as exc:  # noqa: BLE001
-        report["warnings"].append(f"Phase A write failed: {exc}")
-        report["status"] = "failed"
-        _persist_early_receipt(project, session_id, report, status="close_failed", dry_run=dry_run)
         return report
+
+    # --- Phase A: continuation capsule -> governed candidate ---
+    pickup = _heuristic_pickup(
+        project_dir=project, session_id=session_id, transcript=transcript, reason=reason
+    )
+    task_signature = session_task_signature(session_id)
+    capsule = build_capsule(
+        session_id=session_id,
+        repository_identity=repository_identity,
+        head=head,
+        pickup=pickup,
+        task_signature=task_signature,
+    )
+    candidate = capsule.to_governed_candidate(
+        namespace=namespace, source_sha=head or "0" * 40, agent_id=identity["agent_id"]
+    )
+    admitted = client.ingest_candidate(candidate, workspace=workspace)
+    report["writes"].append(_write_entry(admitted, kind="session_continuation"))
+    continuation_status = (
+        admitted.receipt.status if admitted.receipt is not None else admitted.status.value.lower()
+    )
+    continuation_reference = admitted.receipt.record_id if admitted.receipt is not None else None
+    if admitted.status in {
+        OutcomeStatus.CANONICAL_UNAVAILABLE,
+        OutcomeStatus.TIMEOUT,
+        OutcomeStatus.BINDING_FAILED,
+        OutcomeStatus.INVALID_RECEIPT,
+    }:
+        report["warnings"].append(f"continuation not admitted: {admitted.status.value}")
+    elif not admitted.ok:
+        # Rejected / quarantined stays visible; the close still proceeds (plan §15).
+        report["warnings"].append(
+            f"continuation {continuation_status}: {admitted.error or 'no detail'}"
+        )
+    report["phase_a"] = admitted.ok
+    report["pickup"] = {k: v for k, v in pickup.items() if k != "context_slice"}
+    report["continuation"] = {
+        "status": continuation_status,
+        "record_id": continuation_reference,
+        "capsule_digest": capsule.digest(),
+        "session_id": session_id,
+        "task_signature": capsule.task_signature,
+    }
+
+    key = close_idempotency_key(namespace, session_id, head_hash)
+    # The obligation is on disk BEFORE the close so a kill between candidate
+    # admission and memory.close leaves a visible close_incomplete, never a
+    # fabricated success (adversarial test G).
+    _persist_obligation(
+        project,
+        session_id,
+        report,
+        status=STATUS_CLOSE_INCOMPLETE,
+        dry_run=dry_run,
+        canonical_namespace_requested=namespace,
+        close_idempotency_key=key,
+        payload_digest=capsule.digest(),
+        continuation_status=continuation_status,
+        continuation_reference=continuation_reference,
+        failure_class="pending_close",
+    )
 
     elapsed_a = clock() - started
     if elapsed_a > PHASE_A_BUDGET:
         report["warnings"].append(f"Phase A over budget ({elapsed_a:.1f}s)")
 
-    # --- Phase B ---
+    # --- Phase B: distillation may refine the capsule and promote durable facts ---
     remaining = total_budget - (clock() - started)
     rules = _load_rules()
     phase_b_budget = min(PHASE_B_BUDGET, max(0.0, remaining - 1.0))
@@ -443,11 +594,7 @@ def close_session(
     elif is_background_agent and not transcript:
         skip_b = True
         report["warnings"].append("Phase B skipped: background agent, no transcript")
-    elif clock() > phase_a_deadline and remaining < 5:
-        # still allow B if overall budget remains
-        pass
 
-    signal: dict[str, Any] | None = None
     if not skip_b:
         signal, b_reason = _distill_signal_packet(
             session_id=session_id,
@@ -462,7 +609,6 @@ def close_session(
         else:
             report["phase_b"] = True
             report["signal_packet_id"] = signal.get("packet_id")
-            # Optionally supersede pickup with richer one
             rich = signal.get("pickup") or {}
             session_signals = signals_from_close(
                 transcript=transcript,
@@ -471,79 +617,71 @@ def close_session(
             )
             persist_derived = should_persist_derived_episode(session_signals, rules)
             if not persist_derived:
-                report["warnings"].append("derived resume episode dropped: low resume signal")
+                report["warnings"].append("derived continuation dropped: low resume signal")
             if rich.get("next_action") and rich.get("active_objective") and persist_derived:
-                rich_line = (
-                    f"PICKUP|objective={rich['active_objective']}|next={rich['next_action']}|"
-                    f"agent={identity['agent_id']}|session={session_id}"
+                rich_capsule = build_capsule(
+                    session_id=session_id,
+                    repository_identity=repository_identity,
+                    head=head,
+                    pickup={**pickup, **rich},
+                    decisions=[
+                        str(d.get("body") or "")
+                        for d in signal.get("promotion_decisions") or []
+                        if isinstance(d, dict) and d.get("kind") == "decision"
+                    ],
+                    # Same task as Phase A: the refinement replaces, never forks.
+                    task_signature=capsule.task_signature,
                 )
-                rich_body = (
-                    rich_line
-                    + "\n"
-                    + json.dumps(
-                        {
-                            "type": "PICKUP",
-                            "active_objective": rich["active_objective"],
-                            "next_action": rich["next_action"],
-                            "context_slice": rich.get("context_slice") or pickup["context_slice"],
-                            "session_id": session_id,
-                            "packet_id": signal.get("packet_id"),
-                            "agent_id": identity["agent_id"],
-                            "search_line": rich_line,
-                        },
-                        ensure_ascii=False,
-                    )
+                # The refinement names the Phase A record so memory supersedes
+                # it on admission and one session leaves exactly one ACTIVE
+                # continuation (audit P1-03). A refused supersession rejects the
+                # refinement and Phase A stays ACTIVE — nothing is superseded
+                # by hand here. Nothing to name when Phase A was not admitted.
+                supersedes = (
+                    (continuation_reference,) if admitted.ok and continuation_reference else ()
                 )
-                try:
-                    report["writes"].append(
-                        _write_kind(
-                            rich_body,
-                            kind="pickup_context",
-                            group_id=group_id,
-                            agent_id=identity["agent_id"],
-                            user_id=identity["user_id"],
-                            dry_run=dry_run,
-                        )
+                refined = client.ingest_candidate(
+                    rich_capsule.to_governed_candidate(
+                        namespace=namespace,
+                        source_sha=head or "0" * 40,
+                        agent_id=identity["agent_id"],
+                        supersedes=supersedes,
+                    ),
+                    workspace=workspace,
+                )
+                report["writes"].append(_write_entry(refined, kind="session_continuation"))
+                if refined.ok and refined.receipt is not None:
+                    capsule = rich_capsule
+                    continuation_status = refined.receipt.status
+                    continuation_reference = refined.receipt.record_id
+                    report["continuation"] = {
+                        "status": continuation_status,
+                        "record_id": continuation_reference,
+                        "capsule_digest": capsule.digest(),
+                        "session_id": session_id,
+                        "task_signature": capsule.task_signature,
+                        "refined": True,
+                        "supersedes": list(supersedes),
+                        "superseded_record_ids": list(refined.receipt.superseded_record_ids),
+                    }
+                    report["pickup"] = {k: v for k, v in rich.items() if k != "context_slice"}
+                else:
+                    report["warnings"].append(
+                        f"Phase B continuation {refined.status.value}: {refined.error}"
+                        + (" — Phase A continuation stays active" if supersedes else "")
                     )
-                except Exception as exc:  # noqa: BLE001
-                    report["warnings"].append(f"Phase B pickup write failed: {exc}")
-
             promoted = 0
             if persist_derived:
-                promote_min = float(rules.get("promote_min_score", 0.65))
-                max_promo = int(rules.get("max_promotions_per_close", 5))
-                promotable = set(rules.get("promotable_kinds") or ["lesson", "insight", "decision"])
-                for item in signal.get("promotion_decisions") or []:
-                    if promoted >= max_promo:
-                        break
-                    if not isinstance(item, dict):
-                        continue
-                    if item.get("decision") != "promote":
-                        continue
-                    kind = str(item.get("kind") or "lesson")
-                    if kind not in promotable:
-                        continue
-                    score = float(item.get("score") or 0)
-                    if score < promote_min:
-                        continue
-                    body = str(item.get("body") or "").strip()
-                    if not body:
-                        continue
-                    try:
-                        report["writes"].append(
-                            _write_kind(
-                                body,
-                                kind=kind,
-                                group_id=group_id,
-                                agent_id=identity["agent_id"],
-                                user_id=identity["user_id"],
-                                dry_run=dry_run,
-                            )
-                        )
-                        promoted += 1
-                    except Exception as exc:  # noqa: BLE001
-                        report["warnings"].append(f"promote {kind} failed: {exc}")
-            report["status"] = "phase_a_b"
+                promoted = _promote(
+                    client,
+                    workspace=workspace,
+                    namespace=namespace,
+                    session_id=session_id,
+                    decisions=signal.get("promotion_decisions") or [],
+                    rules=rules,
+                    report=report,
+                    dry_run=dry_run,
+                )
             report["promoted"] = promoted
 
     # --- S3 distill enqueue (redacted excerpt; fail-loud when enabled+configured) ---
@@ -556,11 +694,7 @@ def close_session(
         )
 
         if not enqueue_enabled():
-            if os.environ.get("MEMORY_DISTILL_ENQUEUE", "1").strip() in (
-                "0",
-                "false",
-                "False",
-            ):
+            if os.environ.get("MEMORY_DISTILL_ENQUEUE", "1").strip() in ("0", "false", "False"):
                 report["enqueue_ok"] = None
                 report["warnings"].append("distill enqueue skipped: MEMORY_DISTILL_ENQUEUE=0")
             elif not bucket_configured():
@@ -572,7 +706,7 @@ def close_session(
         else:
             enqueue_result = enqueue_job(
                 session_id=session_id,
-                group_id=group_id,
+                group_id=namespace,
                 agent_id=identity["agent_id"],
                 transcript_excerpt=transcript,
                 heuristic_pickup=pickup,
@@ -593,30 +727,101 @@ def close_session(
         report["warnings"].append(f"ERROR: distill enqueue failed: {code}")
         print(f"ERROR: distill enqueue failed: {code}", file=sys.stderr)
 
-    receipt = {
-        "status": "closed",
-        "session_id": session_id,
-        "head_hash": head_hash,
-        "group_id": group_id,
-        "agent_id": identity["agent_id"],
-        "phase_a": report["phase_a"],
-        "phase_b": report["phase_b"],
-        "enqueue_ok": report.get("enqueue_ok"),
-        "enqueue": report.get("enqueue"),
-        "enqueue_error": report.get("enqueue_error"),
-        "write_count": len([w for w in report["writes"] if w.get("written") or w.get("dry_run")]),
-        "closed_at": datetime.now(UTC).isoformat(),
-        "reason": reason,
-        "packet_id": report.get("signal_packet_id"),
+    # --- memory.close: the only thing that can make this session CLOSED ---
+    summary = (
+        f"session {session_id} {reason}: {capsule.objective} | next: {capsule.next_action} | "
+        f"continuation={continuation_status} | transcript={t_source} | {_git_signal(project)}"
+    )[:2000]
+    close_request = {
+        "close_summary": summary,
+        "close_capsule_digest": capsule.digest(),
+        "close_session_id": session_id,
     }
-    if report.get("enqueue_ok") is False:
-        receipt["status"] = "closed_enqueue_failed"
-    if not dry_run:
-        try:
-            write_receipt(project, session_id, receipt)
-        except (OSError, ValueError) as exc:
-            report["warnings"].append(f"receipt write failed: {exc}")
-    report["receipt"] = receipt
+    # The exact close request is on disk BEFORE memory.close runs, so a retry
+    # of an interrupted close replays this summary and digest under this key
+    # (audit P2-01) — never a synthesized "retry" summary that memory would
+    # accept as an idempotent replay while the payload silently differed.
+    _persist_obligation(
+        project,
+        session_id,
+        report,
+        status=STATUS_CLOSE_INCOMPLETE,
+        dry_run=dry_run,
+        canonical_namespace_requested=namespace,
+        close_idempotency_key=key,
+        payload_digest=capsule.digest(),
+        continuation_status=continuation_status,
+        continuation_reference=continuation_reference,
+        failure_class="pending_close",
+        **close_request,
+    )
+    closed = client.close(
+        workspace=workspace,
+        namespace=namespace,
+        summary=summary,
+        session_id=session_id,
+        capsule_digest=capsule.digest(),
+        idempotency_key=key,
+        dry_run=dry_run,
+    )
+    report["writes"].append(_write_entry(closed, kind="close"))
+    close_receipt = closed.receipt
+    replay_matched = getattr(close_receipt, "replay_payload_matched", None)
+    report["close"] = {
+        "status": closed.status.value,
+        "receipt_id": getattr(close_receipt, "receipt_id", None),
+        "record_id": getattr(close_receipt, "record_id", None),
+        "replayed": bool(getattr(close_receipt, "replayed", False)),
+        "replay_payload_matched": replay_matched,
+        "warnings": list(getattr(close_receipt, "warnings", ()) or ()),
+        "idempotency_key": key,
+        "error": closed.error,
+    }
+    if getattr(close_receipt, "payload_drifted", False):
+        report["warnings"].append(
+            "close replay payload drift: memory replayed the close under this key but the "
+            "stored close differs from this request (see close.warnings)"
+        )
+
+    if closed.status is OutcomeStatus.IDEMPOTENCY_CONFLICT:
+        # CG-P1-01. Ahead of the committed promotion below: memory returned a
+        # committed record, but it is the *first* close under this key, not
+        # this one. The obligation stays open and conflicted.
+        final_status = STATUS_CLOSE_CONFLICTED
+        failure_class = closed.status.value
+        report["status"] = STATUS_CLOSE_CONFLICTED
+        report["warnings"].append(f"close idempotency conflict: {closed.error or 'no detail'}")
+    elif closed.ok and close_receipt is not None and close_receipt.committed:
+        final_status = STATUS_CLOSED_CANONICALLY
+        failure_class = None
+        report["status"] = STATUS_CLOSED_CANONICALLY
+    elif dry_run and closed.status is OutcomeStatus.NOT_COMMITTED:
+        final_status = STATUS_CLOSE_INCOMPLETE
+        failure_class = "dry_run"
+        report["status"] = "dry_run"
+    else:
+        final_status = STATUS_CLOSE_INCOMPLETE
+        failure_class = closed.status.value
+        report["status"] = STATUS_CLOSE_INCOMPLETE
+        report["warnings"].append(f"close {closed.status.value}: {closed.error or 'no detail'}")
+
+    _persist_obligation(
+        project,
+        session_id,
+        report,
+        status=final_status,
+        dry_run=dry_run,
+        canonical_namespace_requested=namespace,
+        close_idempotency_key=key,
+        payload_digest=capsule.digest(),
+        continuation_status=continuation_status,
+        continuation_reference=continuation_reference,
+        canonical_operation_id=getattr(close_receipt, "receipt_id", None),
+        failure_class=failure_class,
+        last_error_code=None if final_status == STATUS_CLOSED_CANONICALLY else closed.status.value,
+        **close_request,
+    )
+    if report.get("enqueue_ok") is False and final_status == STATUS_CLOSED_CANONICALLY:
+        report["receipt"]["enqueue_error_present"] = True
     report["elapsed_s"] = round(clock() - started, 3)
-    report["group_id"] = group_id
     return report

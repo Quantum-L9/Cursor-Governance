@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
-"""Map a MemoryCandidate on stdin to Graphiti add_memory."""
+"""Map a MemoryCandidate on stdin to a canonical memory write (stage C10).
+
+The candidate's statement is admitted through the memory control plane
+(``ops/memory``) as an ``insight`` with a stable idempotency key; memory
+decides admission, dedup and quarantine, and its receipt is the verdict.
+Nothing here calls a provider. The namespace is a *request* derived from the
+candidate's recorded repository (registry match) or the drain workspace; a
+recorded repository that matches no registry slug fails closed.
+"""
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from collections.abc import Mapping
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -15,33 +23,30 @@ _REPO = Path(__file__).resolve().parents[4]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
+SOURCE = "generated-data"
 
-def _group_from_candidate_source(source: Mapping[str, Any]) -> str | None:
+
+def _namespace_from_candidate_source(source: Mapping[str, Any]) -> str | None:
     """Prefer the candidate's recorded repository over the drain process cwd."""
     recorded = str(source.get("repository") or "").strip()
     if not recorded:
         return None
-    from ops.graphiti.group_resolver import load_registry
+    from ops.memory.namespace_context import aliases_for, load_registry
 
-    repos = load_registry().get("repos") or {}
+    registry = load_registry()
+    repos = registry.get("repos") or {}
     if recorded in repos:
         return recorded
     needle = recorded.lower()
-    for slug, cfg in repos.items():
-        github = str((cfg or {}).get("github") or "")
-        aliases = [
-            str(item).strip()
-            for item in ((cfg or {}).get("github_aliases") or [])
-            if str(item).strip()
-        ]
-        names = [github, *aliases]
-        if any(name.lower() == needle for name in names if name):
+    for slug in repos:
+        names = aliases_for(registry, str(slug))
+        if any(name.lower() == needle for name in names):
             return str(slug)
         for name in names:
-            basename = name.rsplit("/", 1)[-1] if name else ""
+            basename = name.rsplit("/", 1)[-1]
             if basename and basename.lower() == needle:
                 return str(slug)
-        if recorded.lower() == str(slug).lower():
+        if needle == str(slug).lower():
             return str(slug)
     return None
 
@@ -55,16 +60,48 @@ def _candidate_from_stdin(raw: bytes) -> dict[str, Any]:
     return dict(parsed)
 
 
-def ingest_candidate(candidate: Mapping[str, Any], *, dry_run: bool = False) -> dict[str, Any]:
-    from ops.graphiti.episode_contract import FORBIDDEN_GROUPS, EpisodeContract
-    from ops.graphiti.graphiti_memory_client import (
-        call_tool,
-        load_env,
-        resolve_group_id,
-        target_repo,
-    )
-    from ops.graphiti.hydration.identity import envelope_body, resolve_write_identity
+def _memory_client(session_id: str | None) -> Any:
+    from ops.memory.control_plane_client import MemoryControlPlaneClient
+    from ops.memory.runtime_binding import resolve_runtime_binding
 
+    return MemoryControlPlaneClient(resolve_runtime_binding(), session_id=session_id)
+
+
+def resolve_namespace(candidate: Mapping[str, Any], *, workspace: Path) -> str:
+    """The namespace request for this candidate; raises when it cannot be honest."""
+    from ops.memory.namespace_context import (
+        forbidden_namespaces,
+        load_registry,
+        resolve_namespace_context,
+    )
+
+    source = candidate.get("source")
+    if not isinstance(source, Mapping):
+        raise ValueError("candidate.source is required")
+    recorded_repo = str(source.get("repository") or "").strip()
+    explicit = _namespace_from_candidate_source(source)
+    if recorded_repo and not explicit:
+        raise RuntimeError(
+            f"write blocked: no namespace match for candidate.source.repository={recorded_repo}"
+        )
+    context = resolve_namespace_context(workspace, explicit=explicit)
+    namespace = context.write_namespace_hint
+    if not namespace:
+        raise RuntimeError(
+            "write blocked: " + ("; ".join(context.warnings) or "namespace unresolved")
+        )
+    if namespace in forbidden_namespaces(load_registry()):
+        raise RuntimeError(f"write blocked: namespace {namespace!r} is forbidden for writes")
+    return namespace
+
+
+def ingest_candidate(
+    candidate: Mapping[str, Any],
+    *,
+    dry_run: bool = False,
+    client: Any = None,
+    workspace: str | Path | None = None,
+) -> dict[str, Any]:
     knowledge = candidate.get("knowledge")
     source = candidate.get("source")
     if not isinstance(knowledge, Mapping) or not isinstance(source, Mapping):
@@ -72,85 +109,67 @@ def ingest_candidate(candidate: Mapping[str, Any], *, dry_run: bool = False) -> 
     statement = str(knowledge.get("statement") or "").strip()
     if not statement:
         raise ValueError("candidate.knowledge.statement is required")
-    load_env()
-    identity = resolve_write_identity(
-        explicit_agent_id=str(source.get("agent_id") or "") or None,
-        surface="cursor",
+    candidate_id = str(candidate.get("candidate_id") or "")
+    if not candidate_id:
+        raise ValueError("candidate.candidate_id is required")
+    workspace_path = Path(workspace or os.getcwd()).expanduser().resolve()
+    namespace = resolve_namespace(candidate, workspace=workspace_path)
+    tags = tuple(
+        str(tag)
+        for tag in ("sgd", knowledge.get("primary_class"), source.get("campaign_id"))
+        if tag
     )
-    body = envelope_body(
-        json.dumps(
-            {
-                "statement": statement,
-                "candidate_id": candidate.get("candidate_id"),
-                "unit_id": knowledge.get("unit_id"),
-                "primary_class": knowledge.get("primary_class"),
-                "campaign_id": source.get("campaign_id"),
-                "action_id": source.get("action_id"),
-                "packet_id": source.get("packet_id"),
-            },
-            sort_keys=True,
-            separators=(",", ":"),
-        ),
-        agent_id=identity["agent_id"],
-        user_id=identity["user_id"],
-        kind="insight",
-    )
-    recorded_repo = str(source.get("repository") or "").strip()
-    explicit_group = _group_from_candidate_source(source)
-    if recorded_repo and not explicit_group:
-        raise RuntimeError(
-            f"write blocked: no group match for candidate.source.repository={recorded_repo}"
-        )
-    resolved = resolve_group_id(
-        target_repo(argparse.Namespace(workspace=None)),
-        explicit=explicit_group,
-    )
-    group_id = resolved.get("group_id")
-    if resolved.get("readonly") or not group_id or group_id in FORBIDDEN_GROUPS:
-        raise RuntimeError(f"write blocked: {resolved.get('error') or resolved.get('warning')}")
-    now = datetime.now(UTC)
-    contract = EpisodeContract(
-        name=f"sgd-{candidate.get('candidate_id')}",
-        episode_body=body,
-        source="json",
-        source_description=f"sgd-memory-candidate agent={identity['agent_id']}",
-        reference_time=now,
-        group_id=group_id,
-        kind="insight",
-        agent_id=identity["agent_id"],
-        user_id=identity["user_id"],
-    )
-    payload = contract.to_mcp_payload()
     if dry_run:
         return {
             "status": "accepted",
             "dry_run": True,
-            "candidate_id": candidate.get("candidate_id"),
-            "memory_id": str(candidate.get("candidate_id")),
-            "write_receipt_id": str(candidate.get("candidate_id")),
-            "group_id": group_id,
+            "candidate_id": candidate_id,
+            "memory_id": candidate_id,
+            "write_receipt_id": candidate_id,
+            "group_id": namespace,
         }
-    result = call_tool("add_memory", payload)
-    memory_id = ""
-    if isinstance(result, Mapping):
-        memory_id = str(result.get("memory_id") or result.get("uuid") or result.get("id") or "")
+    client = client or _memory_client(str(source.get("packet_id") or "") or None)
+    if not client.binding.ok:
+        raise RuntimeError("memory runtime unbound: " + "; ".join(client.binding.reasons))
+    outcome = client.write(
+        statement,
+        workspace=str(workspace_path),
+        namespace=namespace,
+        memory_class="insight",
+        tags=tags,
+        idempotency_key=f"sgd:{candidate_id}",
+        source=SOURCE,
+        source_id=candidate_id,
+    )
+    receipt = outcome.receipt
+    if receipt is None:
+        raise RuntimeError(f"write not admitted: {outcome.status.value}: {outcome.error or ''}")
+    status = "accepted" if receipt.status == "admitted" else receipt.status
+    if receipt.status == "duplicate":
+        status = "deduplicated"
     return {
-        "status": "accepted",
-        "candidate_id": candidate.get("candidate_id"),
-        "memory_id": memory_id or str(candidate.get("candidate_id")),
-        "write_receipt_id": memory_id or str(candidate.get("candidate_id")),
-        "group_id": group_id,
-        "result": result if isinstance(result, Mapping) else {"raw": result},
+        "status": status,
+        "candidate_id": candidate_id,
+        "memory_id": receipt.record_id or candidate_id,
+        "write_receipt_id": receipt.receipt_id,
+        "group_id": namespace,
+        "result": {
+            "status": receipt.status,
+            "record_id": receipt.record_id,
+            "admission_reasons": list(receipt.admission_reasons),
+            "warnings": list(receipt.warnings),
+        },
     }
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--workspace", default=None)
     args = parser.parse_args(argv)
     try:
         candidate = _candidate_from_stdin(sys.stdin.buffer.read())
-        result = ingest_candidate(candidate, dry_run=args.dry_run)
+        result = ingest_candidate(candidate, dry_run=args.dry_run, workspace=args.workspace)
     except Exception as exc:
         json.dump({"status": "rejected", "error": str(exc)}, sys.stdout, sort_keys=True)
         sys.stdout.write("\n")

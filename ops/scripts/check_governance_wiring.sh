@@ -377,26 +377,29 @@ done
 
 CURRENT_FAIL_CLASS=graphiti
 echo ""
-echo "=== Graphiti memory (GLOBAL-001) ==="
-GRAPHITI_CLI="$GC/ops/graphiti/graphiti_memory_client.py"
-if [ -f "$GRAPHITI_CLI" ]; then
-  pass "graphiti_memory_client.py present (interpreter: $GOV_PYTHON)"
+echo "=== Memory control plane (GLOBAL-001, realignment C11) ==="
+MEMORY_BOUNDARY="$GC/ops/memory/control_plane_client.py"
+if [ -f "$MEMORY_BOUNDARY" ]; then
+  pass "ops/memory boundary present (interpreter: $GOV_PYTHON)"
   if "$GOV_PYTHON" -c "import yaml; yaml.safe_load(open('$GC/ops/graphiti/group_registry.yaml'))" 2>/dev/null; then
     pass "group_registry.yaml valid"
   else
     fail "group_registry.yaml invalid"
   fi
-  if "$GOV_PYTHON" "$GRAPHITI_CLI" resolve >/dev/null 2>&1; then
-    pass "graphiti resolve exits 0"
+  # Binding proof only (R0/R1): which exact l9-graphite-memory runtime answers.
+  # Health and the full R0..R9 ladder belong to `make memory-readiness`.
+  if (cd "$GC" && PYTHONPATH="$GC${PYTHONPATH:+:$PYTHONPATH}" "$GOV_PYTHON" -m ops.memory.diagnostics --binding-only --json >/dev/null 2>&1); then
+    pass "memory runtime bound (ops.memory.diagnostics --binding-only)"
   elif [ "$GOV_PYTHON" = "python3" ] && ! "$GOV_PYTHON" -c "import pydantic" 2>/dev/null; then
-    warn "graphiti resolve skipped — project .venv missing (run: make -C \"$GC\" venv)"
+    warn "memory binding skipped — project .venv missing (run: make -C \"$GC\" venv)"
   else
-    fail "graphiti resolve failed"
+    warn "memory runtime unbound — run: make -C \"$GC\" memory-binding"
   fi
-  if [ -f "$HOME/.cursor/graphiti.env" ]; then
-    pass "~/.cursor/graphiti.env exists"
+  if [ -f "$GC/ops/graphiti/graphiti_memory_client.py" ] \
+     && ! grep -q "RETIRED_AT_STAGE" "$GC/ops/graphiti/graphiti_memory_client.py" 2>/dev/null; then
+    fail "legacy provider client present at ops/graphiti/graphiti_memory_client.py (must be the C11 tombstone)"
   else
-    warn "~/.cursor/graphiti.env missing (copy graphiti.env.example)"
+    pass "no provider client (tombstone only)"
   fi
   # The bootstrap hook delegates to the memory orchestrator internally, so either
   # entry in sessionStart satisfies the wiring (setup retires the orchestrator-only entry).
@@ -492,7 +495,7 @@ if [ -f "$GRAPHITI_CLI" ]; then
     fail "graphiti gate E2E self-test"
   fi
 else
-  fail "Graphiti CLI missing: $GRAPHITI_CLI"
+  fail "memory boundary missing: $MEMORY_BOUNDARY"
 fi
 
 if [ -d "$WORKSPACE/memory-bank" ]; then

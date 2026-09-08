@@ -1,24 +1,29 @@
 #!/usr/bin/env bash
-# Task-scoped reset of memory_satisfied_for when task signature changes
+# Task-scoped reset of explicit memory satisfactions when the task signature
+# changes (beforeSubmitPrompt). Writes only the local, non-authoritative session
+# state (ops/memory/session_state.py); never a provider (stage C8).
 set -uo pipefail
 REAL_HOOK="$(python3 -c "import os,sys; print(os.path.realpath(sys.argv[1]))" "${BASH_SOURCE[0]}")"
+HOOK_DIR="$(dirname "$REAL_HOOK")"
 # shellcheck source=graphiti_common.sh
-source "$(dirname "$REAL_HOOK")/graphiti_common.sh"
+source "$HOOK_DIR/graphiti_common.sh"
 graphiti_gates_enabled || exit 0
-STATE="$(graphiti_state_file)"
-mkdir -p "$(dirname "$STATE")"
+ROOT="$(cd "$HOOK_DIR/../.." && pwd)"
+[ -f "$ROOT/ops/memory/session_state.py" ] || ROOT="${L9_GOVERNANCE_DIR:-$HOME/.cursor-governance}"
+if [ -x "$ROOT/.venv/bin/python3" ]; then PY="$ROOT/.venv/bin/python3"; else PY="$(command -v python3)"; fi
 INPUT="$(cat)"
 export HOOK_INPUT="$INPUT"
-export STATE_PATH="$STATE"
-python3 - <<'PY'
+export L9_SESSION_FALLBACK="${CURSOR_CONVERSATION_ID:-default}"
+PYTHONPATH="$ROOT${PYTHONPATH:+:$PYTHONPATH}" "$PY" - <<'PY'
 import hashlib
 import json
 import os
-import sys
-from pathlib import Path
+
+from ops.memory.session_state import set_task_signature
 
 raw = os.environ.get("HOOK_INPUT", "")
 prompt = ""
+conv = os.environ.get("L9_SESSION_FALLBACK", "default")
 if raw.strip():
     try:
         data = json.loads(raw)
@@ -29,19 +34,11 @@ if raw.strip():
             or data.get("text")
             or ""
         )
+        conv = str(data.get("conversation_id") or data.get("conversationId") or conv)
     except json.JSONDecodeError:
         prompt = raw[:500]
 if not prompt:
     prompt = os.environ.get("CURSOR_USER_MESSAGE", "")[:500]
-
-state_path = Path(os.environ["STATE_PATH"])
-data = {}
-if state_path.is_file():
-    data = json.loads(state_path.read_text(encoding="utf-8"))
-new_sig = hashlib.sha256(prompt.encode()).hexdigest()[:16]
-if data.get("task_signature") != new_sig:
-    data["task_signature"] = new_sig
-    data["memory_satisfied_for"] = []
-    state_path.write_text(json.dumps(data, indent=2) + "\n")
+set_task_signature(conv, hashlib.sha256(prompt.encode()).hexdigest()[:16])
 PY
 exit 0

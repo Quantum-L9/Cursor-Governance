@@ -5,12 +5,12 @@
     "path": "environment/agents/adapters/manus/mcp-connector.json",
     "layer": "adapter-config",
     "owner": "governance-control-plane",
-    "status": "active",
-    "version": "1.3.0",
-    "updated": "2026-08-29",
-    "note": "Manus Custom MCP connector. Graphiti HTTPS front door at ${GRAPHITI_MCP_URL}. NO bearer. The capability-broker experiment never shipped \u2014 do not point this server at L9_CAPABILITY_BROKER_URL. Peer of environment/agents/adapters/claude-code/mcp.template.json."
+    "status": "retired",
+    "version": "2.0.0",
+    "updated": "2026-09-06",
+    "note": "Manus Custom MCP connector. The direct-provider connector (graphiti-memory over a provider URL) was retired at realignment stage C7/C8: Cursor-Governance no longer publishes a provider transport to any surface. The canonical memory control plane (l9-graphite-memory) is a stdio server owned by the memory package; Manus, a remote surface, has no sanctioned transport to it until the memory package publishes one. No connector is declared here on purpose — an entry naming a transport memory did not authorize would be a claim memory never made."
   },
-  "name": "graphiti-memory",
-  "transport": "http",
-  "url": "${GRAPHITI_MCP_URL}"
+  "name": "l9-graphite-memory",
+  "transport": "none",
+  "status": "retired-pending-memory-remote-transport"
 }

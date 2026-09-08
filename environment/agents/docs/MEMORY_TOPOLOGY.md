@@ -5,78 +5,93 @@ path: environment/agents/docs/MEMORY_TOPOLOGY.md
 layer: doc
 owner: governance-control-plane
 status: active
-version: 1.1.0
-updated: 2026-07-31
+version: 2.0.0
+updated: 2026-09-07
 /L9_META -->
 
-# Memory Topology — one server, N surfaces
+# Memory Topology — one MemoryService, N surfaces
+
+Authority: `CANONICAL_LAW.md` §8.2 / §8.3, ADR-0030 (items 7–9), ADR-0005.
+Live path map: `docs/MEMORY_PIPELINE_MAP.md`. Boundary: `ops/memory/README.md`.
 
 ## 1. The requirement
 
-All agents write to the **same** memory graph via one long-running HTTPS
-control plane (`https://memory.quantumaipartners.com`) and per-agent bearer
-tokens. Cursor IDE may still use the separate Graphiti SSH tunnel (`:8100`);
-that path does not reach cloud sandboxes — adapters must default to the
-HTTPS URL, never loopback.
+All agents — Cursor IDE, Claude Code desktop / Web / Mobile, Codex, Gemini,
+Manus, generic adapters — read and write the **same** agent episodic memory
+through **one** authority: `MemoryService` in `l9-graphite-memory`
+(`memory-control-plane/v1`, release pinned in `ops/config/memory-binding.json`).
+Graphiti is a projection that memory owns downstream; no surface reads or
+writes it.
 
-## 2. Live deployment (Option A — ACTIVE)
+## 2. Live topology (2026-09-07 — ACTIVE)
+
+```text
+surface (Cursor / Claude / Codex / Gemini / Manus / generic)
+   │
+   ├── deterministic lifecycle (hooks, repair, reconciliation, diagnostics, PE)
+   │       ops/memory  →  python -m ops.memory.cli  ──┐
+   │                                                  │  stdio to the ONE bound runtime
+   └── interactive (model-initiated read / governed write)                │
+           l9-graphite-memory MCP server (stdio, package-owned) ──────────┤
+                                                                          ▼
+                                         MemoryService (l9-graphite-memory)
+                                                  │
+                                    canonical store → outbox → Graphiti projection
+```
 
 | Item | Value |
 |---|---|
-| Public URL | `https://memory.quantumaipartners.com` |
-| MCP | `https://memory.quantumaipartners.com/graphiti/mcp` |
-| Origin | C1 `46.62.243.82` — Caddy TLS → Graphiti `:8100` via `/graphiti/*` |
-| Process | docker `graphiti-mcp-cursor` (Cursor Graphiti plane) |
-| Auth | `GRAPHITI_MCP_TOKEN` (plane bearer) + distinct writer identity env |
-| Note | Retired L9 HTTP tool plane on `:8200` is not the lifecycle front door (ADR-0006) |
+| Authority | `MemoryService` (`l9-graphite-memory`) — admission, identity, supersession, authorization, receipts |
+| Canonical egress | `ops/memory/control_plane_client.py` (INV-03); binding proven by `ops/memory/runtime_binding.py` (INV-11) |
+| Adapter — CLI | `python -m ops.memory.cli health\|resolve\|search\|write\|hydrate\|conflicts\|readiness` (operator, hooks, deterministic adapters) |
+| Adapter — MCP | `l9-graphite-memory` stdio server, rendered only when `L9_MEMORY_INTERPRETER` is bound (`make memory-mcp-install`); no `env`, `url` or `headers` |
+| Model write | `memory.phase_lock` → `memory.write_governed` (ADR-0030 item 7) |
+| Resume SSOT | canonical `session_continuation` record (`ContinuationCapsuleV2`), current git state wins |
+| Credentials on a surface | **none** — no provider URL, no bearer (stage C9); the runtime resolves its own configuration (memory ADR-016) |
+| Namespace | a *request* from `python -m ops.memory.cli resolve`; memory authorizes (INV-07) |
 
-Registry field: `memory.production_url` in `agent_registry.yaml`.
+## 3. Per-surface wiring
 
-| Option | What runs where | Reaches cloud agents? | Status |
-|---|---|---|---|
-| **A. C1 HTTPS** | control plane behind Caddy | **Yes** | **LIVE** |
-| B. Tunnel-only Graphiti | Cursor SSH tunnel `localhost:8100` | No | Cursor-local legacy path (still valid for Cursor IDE) |
-| C. Per-host loopback `:8200` | one server per host | No | Local-only |
+Every surface wires the same door; only the registration differs.
 
-## 3. Operator wiring
+| Surface | Lifecycle (deterministic) | Interactive |
+|---|---|---|
+| Cursor IDE | `ops/hooks/session_start_memory_orchestrator.sh` / `ops/hooks/graphiti-session-end.sh` → `ops/graphiti/hydration/` → `ops/memory` | `~/.cursor/mcp.json` entry written by `l9-memory client cursor install` (`ops/memory/mcp_instantiation.py`) |
+| Claude Code (desktop / Web / Mobile) | `hooks/memory_prefetch.py` / `hooks/memory_writeback.py` → `memory/memory_bridge.py` → `ops/memory` | `mcp.template.json` `l9-graphite-memory` (`${L9_MEMORY_INTERPRETER}`) |
+| Codex / Gemini / Manus / generic | thin adapter hooks → `ops/memory` | package-owned `l9-graphite-memory` entry, same shape |
 
-See `DEPLOY.md` for the full checklist (validate → render principals → sync to
-C1 → wire each adapter). Short form:
-
-```bash
-python3 environment/agents/tools/render_principals.py \
-  --root     environment/agents \
-  --out-dir  ~/.config/l9-memory \
-  --registry agent_registry.yaml \
-  --tokens   agent_tokens.local.json \
-  --out      auth_tokens.json
-# Then sync auth_tokens.json to C1 /opt/l9-memory/config/ and restart
-# l9-memory-server — only after explicit human approval (VPS rule).
-```
-
-Every surface sets:
-
-```bash
-GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp
-GRAPHITI_MCP_TOKEN=<Graphiti plane bearer>
-USER_ID=<registry user_id>
-L9_MEMORY_AGENT_ID=<registry agent_id>
-L9_MEMORY_SOURCE=<registry source>
-```
+Identity: `L9_MEMORY_AGENT_ID` (`cursor`, `claude-code`, …) and `USER_ID` per
+`agent_registry.yaml`; stamped as tags / `agent=` on every record.
 
 ## 4. Non-negotiables
 
-`http_auth_required` stays `true` on any routable bind. One bearer token per
-agent, never shared. Graphiti/Neo4j projection for Cursor (`:8100` tunnel)
-remains; cloud agents use the HTTPS control plane. `group_id` resolution is
-unchanged (`ops/graphiti/group_registry.yaml`).
+- **One authority, one egress.** No production path calls a provider; the
+  egress scanner (`validate_memory_egress_boundary.py --enforce`), the AST /
+  runtime transport-boundary suite and the `l9.memory-boundary-*` semgrep rules
+  enforce it.
+- **Agents MUST be able to write durable memory, and MUST NOT write to the
+  provider transport.** The model's write is the governed MCP write; generic
+  `memory.ingest` and the operator CLI `write` are not its alternative.
+- **The memory phase-lock is not repository authority.** It is a namespace
+  snapshot-consistency precondition verified inside the admitting transaction.
+  Edits, commits, pushes and publication are governed by worktree / branch /
+  publication rules (`rules/96` E7/E8/E10), never by a memory lock.
+- **Deterministic adapters are not second egresses.** Hydrate, close,
+  `repair-write`, reconciliation and diagnostics are purpose-specific
+  `ops/memory` operations over the same admission path.
+- **No bearer, no URL, anywhere.** `~/.cursor/graphiti.env` carries switches
+  only (`L9_MEMORY_ENABLED`, `L9_MEMORY_WRITE_GATES`); a URL or token line is
+  residue the bootstrap reports.
 
-## 5. Two planes (do not conflate)
+## 5. Retired topology (historical — do not wire)
 
-| Plane | Reach | Used by |
-|---|---|---|
-| Graphiti MCP (CLI/host) | SSH tunnel `127.0.0.1:8100` | Cursor IDE / local CLI |
-| Graphiti MCP (cloud HTTPS) | `https://memory.quantumaipartners.com/graphiti/mcp` | Claude Code Web/Mobile, Manus, Codex, Gemini, generic |
-
-Cursor may later also consume the HTTPS plane; until then its registry entry
-honors `legacy_token_env: GRAPHITI_MCP_TOKEN` for the tunnel path.
+Before realignment stages C1–C12 (ADR-0030) this file described an HTTPS
+Graphiti MCP plane on C1 behind Caddy with a per-agent plane bearer, a
+Cursor-only SSH tunnel to the provider on loopback, and a retired L9 HTTP tool
+plane. All three were provider transports held by model surfaces. They are
+retired: the provider client is a tombstone (`ops/graphiti/graphiti_memory_client.py`,
+exit 2), the env plane was deleted at C11, the HTTPS exposure is legacy
+operator infrastructure of the provider deployment (ADR-0007 superseded), and
+`environment/agents/tools/validate_agents.py` fails an adapter env that still
+sets a provider URL or bearer. `agent_registry.yaml`'s `memory.*` fields are
+identity only.

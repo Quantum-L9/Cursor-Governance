@@ -1,4 +1,12 @@
-"""GHA / offline worker: pull pending S3 distill jobs → OpenAI → Graphiti."""
+"""GHA / offline worker: pull pending S3 distill jobs → OpenAI → canonical memory.
+
+Since realignment stage C10 every write crosses the memory control plane
+(``ops/memory``): the distilled PICKUP becomes a continuation capsule admitted
+as a governed candidate, and promoted atomics go through the generic canonical
+write with idempotency keys. Nothing here calls a provider; the memory
+runtime the worker is bound to (``L9_MEMORY_INTERPRETER`` /
+``ops/config/memory-binding.json``) owns storage and projection.
+"""
 
 from __future__ import annotations
 
@@ -15,11 +23,8 @@ from pathlib import Path
 from typing import Any
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-_GRAPHITI_DIR = _REPO_ROOT / "ops" / "graphiti"
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-if str(_GRAPHITI_DIR) not in sys.path:
-    sys.path.insert(0, str(_GRAPHITI_DIR))
 
 from ops.graphiti.distill_queue.enqueue import (  # noqa: E402
     DEFAULT_PREFIX,
@@ -31,9 +36,22 @@ from ops.graphiti.hydration.openai_fixed_host import (  # noqa: E402
     message_content,
 )
 from ops.graphiti.hydration.openai_key import resolve_openai_api_key  # noqa: E402
+from ops.memory.control_plane_client import OutcomeStatus  # noqa: E402
+from ops.memory.session_contracts import ContinuationCapsuleV2  # noqa: E402
 
 AWS_CALL_TIMEOUT = 60
 DONE_PREFIX_DEFAULT = "distill-queue/done/"
+DISTILL_PRODUCER_VERSION = "distill-queue/2.0.0"
+#: Promotion kinds -> canonical memory classes (write taxonomy, plan §14).
+_PROMOTION_CLASSES = {"lesson": "insight", "insight": "insight", "decision": "decision"}
+_NOT_ADMITTED = frozenset(
+    {
+        OutcomeStatus.CANONICAL_UNAVAILABLE,
+        OutcomeStatus.TIMEOUT,
+        OutcomeStatus.BINDING_FAILED,
+        OutcomeStatus.INVALID_RECEIPT,
+    }
+)
 
 
 _ERR_TOKENS = frozenset(
@@ -270,68 +288,109 @@ def distill_job(job: dict[str, Any], *, timeout: float = 45.0) -> dict[str, Any]
     }
 
 
-def _pickup_payload(
+def build_continuation(job: dict[str, Any], packet: dict[str, Any]) -> ContinuationCapsuleV2:
+    """The distilled PICKUP as the Cursor-owned continuation capsule (plan §12).
+
+    The job carries no checkout, so the repository state is ``unknown`` and the
+    next hydrate reports the capsule stale against any real HEAD — current git
+    state wins, which is the correct precedence for an offline distillation.
+    """
+    rich = packet.get("pickup") or {}
+    blockers = rich.get("blockers") or ()
+    if isinstance(blockers, str):
+        blockers = (blockers,)
+    return ContinuationCapsuleV2(
+        session_id=str(job.get("session_id") or packet.get("packet_id") or "distill"),
+        repository_identity=str(job.get("repository") or job.get("group_id") or "unknown"),
+        objective=str(rich.get("active_objective") or "Resume from distill queue"),
+        next_action=str(rich.get("next_action") or "Continue from the canonical continuation"),
+        repository_state_digest=str(job.get("source_sha") or "unknown"),
+        producer_version=DISTILL_PRODUCER_VERSION,
+        blockers=tuple(str(b) for b in blockers)[:8],
+    )
+
+
+def _memory_client(session_id: str | None) -> Any:
+    from ops.memory.control_plane_client import MemoryControlPlaneClient
+    from ops.memory.runtime_binding import resolve_runtime_binding
+
+    return MemoryControlPlaneClient(resolve_runtime_binding(), session_id=session_id, timeout=60.0)
+
+
+def ingest_to_memory(
     job: dict[str, Any],
     packet: dict[str, Any],
     *,
-    agent_id: str,
-    user_id: str,
-    group_id: str,
-) -> dict[str, Any]:
-    from ops.graphiti.hydration.identity import stamp_source_description
+    dry_run: bool = False,
+    client: Any = None,
+    workspace: str | None = None,
+) -> list[dict[str, Any]]:
+    """Admit the continuation capsule and promoted atomics through the control plane.
 
-    rich = packet.get("pickup") or {}
-    objective = str(rich.get("active_objective") or "Resume from distill queue")
-    next_action = str(rich.get("next_action") or "Continue from Graphiti PICKUP")
-    search_line = (
-        f"PICKUP|objective={objective}|next={next_action}|"
-        f"agent={agent_id}|session={job.get('session_id')}"
+    A rejected or quarantined verdict is recorded and the job still completes
+    (memory's verdict is the answer); an unavailable, unbound, timed-out or
+    invalid-receipt outcome raises so the job stays pending and is retried.
+    """
+    writes: list[dict[str, Any]] = []
+    namespace = str(job["group_id"])
+    agent_id = str(job.get("agent_id") or "gha-distill")
+    session_id = str(job.get("session_id") or "")
+    content_hash = str(job.get("content_hash") or packet.get("packet_id") or "")
+    client = client or _memory_client(session_id or None)
+    workspace = workspace or os.getcwd()
+    if not client.binding.ok:
+        raise RuntimeError("memory runtime unbound: " + ("; ".join(client.binding.reasons) or "?"))
+
+    capsule = build_continuation(job, packet)
+    candidate = capsule.to_governed_candidate(
+        namespace=namespace,
+        source_sha=capsule.repository_state_digest or "unknown",
+        agent_id=agent_id,
     )
-    pickup_body = (
-        search_line
-        + "\n"
-        + json.dumps(
+    if dry_run:
+        writes.append({"written": False, "dry_run": True, "kind": "session_continuation"})
+    else:
+        admitted = client.ingest_candidate(candidate, workspace=workspace)
+        if admitted.status in _NOT_ADMITTED:
+            raise RuntimeError(f"continuation not admitted: {admitted.status.value}")
+        receipt = admitted.receipt
+        writes.append(
             {
-                "type": "PICKUP",
-                "active_objective": objective,
-                "next_action": next_action,
-                "context_slice": rich.get("context_slice") or "",
-                "session_id": job.get("session_id"),
-                "packet_id": packet.get("packet_id"),
-                "content_hash": job.get("content_hash"),
-                "agent_id": agent_id,
-                "source": "gha_distill_queue",
-                "search_line": search_line,
-            },
-            ensure_ascii=False,
+                "written": admitted.ok,
+                "kind": "session_continuation",
+                "status": receipt.status if receipt is not None else admitted.status.value,
+                "record_id": getattr(receipt, "record_id", None),
+            }
         )
-    )
-    payload: dict[str, Any] = {
-        "name": f"pickup-{job.get('session_id')}-{packet.get('packet_id')}",
-        "episode_body": pickup_body,
-        "source": "text",
-        "source_description": stamp_source_description(agent_id, "pickup_context"),
-        "group_id": group_id,
-    }
-    # Broad by design; the handler below carries the reason.
-    # nosemgrep: l9.baseline.python.broad-except
-    try:
-        from episode_contract import EpisodeContract
 
-        ep = EpisodeContract(
-            name=payload["name"],
-            episode_body=pickup_body,
-            source="text",
-            source_description=payload["source_description"],
-            group_id=group_id,
-            agent_id=agent_id,
-            user_id=user_id,
-            reference_time=datetime.now(UTC),
+    for idx, item in enumerate(_eligible_promotions(packet)):
+        kind = item["kind"]
+        memory_class = _PROMOTION_CLASSES.get(kind, "insight")
+        if dry_run:
+            writes.append({"written": False, "dry_run": True, "kind": kind})
+            continue
+        outcome = client.write(
+            item["body"],
+            workspace=workspace,
+            namespace=namespace,
+            memory_class=memory_class,
+            tags=("distill", kind),
+            idempotency_key=f"distill:{content_hash}:{idx}",
+            source="gha-distill",
+            source_id=f"{packet.get('packet_id')}:{idx}",
         )
-        payload = ep.to_mcp_payload()
-    except Exception:  # noqa: BLE001
-        pass
-    return payload
+        if outcome.status in _NOT_ADMITTED:
+            raise RuntimeError(f"promotion not admitted: {outcome.status.value}")
+        receipt = outcome.receipt
+        writes.append(
+            {
+                "written": outcome.ok,
+                "kind": kind,
+                "status": receipt.status if receipt is not None else outcome.status.value,
+                "record_id": getattr(receipt, "record_id", None),
+            }
+        )
+    return writes
 
 
 def _eligible_promotions(packet: dict[str, Any], *, limit: int = 5) -> list[dict[str, Any]]:
@@ -351,55 +410,13 @@ def _eligible_promotions(packet: dict[str, Any], *, limit: int = 5) -> list[dict
     return out
 
 
-def ingest_to_graphiti(
-    job: dict[str, Any],
-    packet: dict[str, Any],
-    *,
-    dry_run: bool = False,
-) -> list[dict[str, Any]]:
-    """Write PICKUP + promoted atomics via Graphiti client (no C1)."""
-    import graphiti_memory_client as gmc
-
-    from ops.graphiti.hydration.identity import stamp_source_description
-
-    writes: list[dict[str, Any]] = []
-    group_id = str(job["group_id"])
-    agent_id = str(job.get("agent_id") or "gha-distill")
-    user_id = os.environ.get("USER_ID", "gha_distill_agent")
-    gmc.load_env()
-    # Prefer public HTTPS for GHA when tunnel unavailable
-    if not os.environ.get("GRAPHITI_MCP_URL", "").strip():
-        os.environ["GRAPHITI_MCP_URL"] = "https://memory.quantumaipartners.com/graphiti/mcp"
-
-    payload = _pickup_payload(job, packet, agent_id=agent_id, user_id=user_id, group_id=group_id)
-    if dry_run:
-        writes.append({"written": False, "dry_run": True, "kind": "pickup_context"})
-    else:
-        gmc.call_tool("add_memory", payload)
-        writes.append({"written": True, "kind": "pickup_context"})
-
-    for idx, item in enumerate(_eligible_promotions(packet)):
-        kind = item["kind"]
-        promo_payload = {
-            "name": f"{kind}-{packet.get('packet_id')}-{idx}",
-            "episode_body": item["body"],
-            "source": "text",
-            "source_description": stamp_source_description(agent_id, kind),
-            "group_id": group_id,
-        }
-        if dry_run:
-            writes.append({"written": False, "dry_run": True, "kind": kind})
-        else:
-            gmc.call_tool("add_memory", promo_payload)
-            writes.append({"written": True, "kind": kind})
-    return writes
-
-
 def process_pending(
     *,
     max_jobs: int = 20,
     dry_run: bool = False,
     runner: Any = subprocess.run,
+    client: Any = None,
+    workspace: str | None = None,
 ) -> dict[str, Any]:
     report: dict[str, Any] = {
         "processed": 0,
@@ -428,7 +445,9 @@ def process_pending(
                     mark_done(key, job, runner=runner)
                     continue
                 packet = distill_job(job)
-                writes = ingest_to_graphiti(job, packet, dry_run=dry_run)
+                writes = ingest_to_memory(
+                    job, packet, dry_run=dry_run, client=client, workspace=workspace
+                )
                 if not dry_run:
                     mark_done(key, job, runner=runner)
                 report["processed"] += 1
@@ -466,9 +485,14 @@ def _public_report(report: dict[str, Any]) -> dict[str, Any]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Process S3 distill queue → Graphiti")
+    parser = argparse.ArgumentParser(description="Process S3 distill queue → canonical memory")
     parser.add_argument("--max-jobs", type=int, default=20)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--workspace",
+        default=None,
+        help="checkout the memory CLI runs in (its principal derives from it); default cwd",
+    )
     args = parser.parse_args(argv)
 
     # Fail-loud on missing mandatory config
@@ -481,14 +505,22 @@ def main(argv: list[str] | None = None) -> int:
         _err("openai_key")
         return 1
 
-    if not os.environ.get("GRAPHITI_MCP_TOKEN", "").strip() and not args.dry_run:
-        # Token may be optional on some deployments; warn loudly but continue if URL set.
-        print("WARN: graphiti_token_unset", file=sys.stderr)
+    # The memory runtime is proven, never assumed (INV-11): an unbound worker
+    # writes nothing and says so before touching the queue.
+    client = _memory_client(None)
+    if not client.binding.ok:
+        _err("runtime")
+        print(
+            "ERROR: memory runtime unbound — " + "; ".join(client.binding.reasons), file=sys.stderr
+        )
+        return 1
 
     # Broad by design; the handler below carries the reason.
     # nosemgrep: l9.baseline.python.broad-except
     try:
-        report = process_pending(max_jobs=args.max_jobs, dry_run=args.dry_run)
+        report = process_pending(
+            max_jobs=args.max_jobs, dry_run=args.dry_run, client=client, workspace=args.workspace
+        )
     except Exception:  # noqa: BLE001
         _err("main")
         return 1

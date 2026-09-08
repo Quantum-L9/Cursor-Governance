@@ -1563,11 +1563,11 @@
     },
     {
       "path": "integrations/graphiti/README.md",
-      "sha256": "e6cba715e8be684c2c91dd1375d88656253f398104de538ed9e454a127ed58c1"
+      "sha256": "6d35fe1f7919ac8ebfe778390806e0941eb231039a15cb45fe2f40f49ddf83c6"
     },
     {
       "path": "integrations/graphiti/context_reader.py",
-      "sha256": "0f74213442c24bb3fa3c0cd8e99b7cf3519d8d49451ab91eb6cef2c59f5dc49c"
+      "sha256": "6c9f00a9e903f6aeec2899acefe2a3b2c3ceaacb8b839f3bcfd0d34795e889b3"
     },
     {
       "path": "integrations/graphiti/tests/test_context_reader.py",
