@@ -78,7 +78,7 @@ class WritebackFanOutTest(unittest.TestCase):
             contract = st.load_contract()
             payload: dict[str, object] = {
                 "namespaces": ["cursor-governance"],
-                "transport": "cursor-graphiti-hydrate",
+                "transport": "memory-control-plane/v1",
                 "status": "prefetched",
                 "degraded": False,
             }
@@ -201,6 +201,26 @@ class WritebackFanOutTest(unittest.TestCase):
 
 class WritebackPolicySkipTest(unittest.TestCase):
     """A session that never hydrated still records WHY it did nothing."""
+
+    def test_subagent_stop_closes_nothing_and_says_so(self) -> None:
+        """Authority narrowing (stage C8): a subagent never owns the parent's close."""
+        with __import__("tempfile").TemporaryDirectory() as tmp:
+            with mock.patch.dict("os.environ", {"CLAUDE_PROJECT_DIR": tmp}, clear=False):
+                contract = st.load_contract()
+                st.write_receipt(
+                    contract,
+                    "parent-session",
+                    {"namespaces": ["cursor-governance"], "status": "prefetched"},
+                )
+                sys.modules.pop("memory_writeback", None)
+                import memory_writeback as wb  # noqa: PLC0415
+
+                event = json.dumps({"session_id": "parent-session", "is_background_agent": True})
+                with mock.patch.object(sys, "stdin", io.StringIO(event)):
+                    self.assertEqual(wb.main(), 0)
+                path = st.receipt_path(contract, f"parent-session{wb.WRITEBACK_RECEIPT_SUFFIX}")
+                data = json.loads(path.read_text(encoding="utf-8"))
+                self.assertEqual(data["status"], "skipped_subagent")
 
     def test_no_prefetch_receipt_records_policy_skip(self) -> None:
         with __import__("tempfile").TemporaryDirectory() as tmp:

@@ -33,7 +33,7 @@ SSOTs:
 - [`ORG_INVARIANTS.yaml`](ORG_INVARIANTS.yaml) — machine org-policy SSOT
   (`INVARIANTS.md` points at it; do not copy `L9-ORG-*` bodies here)
 
-Resume SSOT is Graphiti (`inject` / PICKUP). Do not write `memory-bank/`.
+Resume SSOT is the canonical memory control plane (`python -m ops.memory.cli hydrate`; CANONICAL_LAW §8.2). Do not write `memory-bank/`.
 Activation is SessionStart only (`AGENTS.md` §2). Publish is
 `PR_REMEDIATE=0 make pr` (`make PR` / `Pr` / `pR` are the same target).
 Consumers do not inherit this file from the Quantum-L9/.github seeder; they

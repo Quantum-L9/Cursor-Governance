@@ -7,10 +7,10 @@ import os
 import sys
 from pathlib import Path
 
-_GRAPHITI_DIR = Path(__file__).resolve().parent.parent
-if str(_GRAPHITI_DIR) not in sys.path:
-    sys.path.insert(0, str(_GRAPHITI_DIR))
-from episode_contract import redact_pii  # noqa: E402
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+from ops.graphiti.hydration.redaction import redact_pii  # noqa: E402
 
 DEFAULT_TRANSCRIPT_CHARS = 12_000
 

@@ -8,7 +8,7 @@ l9.claude_operational_parity_convergence.v1:
   - a missing or skipped required check is not PASS;
   - a declared plugin is not an available plugin;
   - a configured MCP server is not a loaded MCP server;
-  - a TCP-reachable Graphiti is not an authenticated Graphiti;
+  - a bound memory runtime is not a healthy memory store (layers R0..R3);
   - a created symlink is not discovery proof;
   - a stale governance SHA prevents READY.
 
@@ -18,12 +18,14 @@ the SessionStart hook; `--json` prints the receipt. The emitter never mutates
 the repository, never fetches, and fails open (a probe that cannot run yields
 UNKNOWN, never a crash).
 
-Sources (all local + Graphiti HTTPS; capability broker retired, never probed):
+Sources (all local; capability broker retired, never probed; no provider URL
+since realignment stage C9):
   git -C $GOV            governance repository / default branch / SHA / freshness
   ~/.l9/claude/projection-receipt.json   skill/command/rule/settings/hooks/plugins/mcp
   ~/.l9/claude/bootstrap-state.json      capabilities / memory / mcp coarse words
-  ops/graphiti/graphiti_memory_client.py health   memory.cli
-  GET ${GRAPHITI_MCP_URL}                memory.mcp (connect vs 401 vs 403 allowlist)
+  ops/memory/diagnostics.py              memory.cli (R0/R1 binding + executable),
+                                         memory control plane (R2/R3 store + service),
+                                         memory.mcp (R4 managed entry installed)
   make -C $GOV l9-consumer-safe-list     Makefile facade
   ops/scripts/install_l9_dispatcher.sh --check   dispatcher install
   ops/autonomy/merge_gate.py             live merge-authority posture probe
@@ -37,17 +39,9 @@ import os
 import re
 import subprocess
 import sys
-import urllib.error
-import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-
-_OPS_LIB = Path(__file__).resolve().parent.parent / "lib"
-if str(_OPS_LIB) not in sys.path:
-    sys.path.insert(0, str(_OPS_LIB))
-
-from safe_https import exchange  # noqa: E402
 
 SCHEMA_VERSION = "l9.claude-readiness.v1"
 
@@ -84,7 +78,13 @@ def _gov_root() -> Path:
     return Path(os.environ.get("L9_GOV_ROOT", str(Path.home() / ".cursor-governance")))
 
 
-def _run(cmd: list[str], *, cwd: Path | None = None, timeout: int = 20) -> tuple[int, str, str]:
+def _run(
+    cmd: list[str],
+    *,
+    cwd: Path | str | None = None,
+    timeout: int = 20,
+    env: dict[str, str] | None = None,
+) -> tuple[int, str, str]:
     try:
         proc = subprocess.run(  # noqa: S603 - fixed argv, no shell
             cmd,
@@ -93,6 +93,7 @@ def _run(cmd: list[str], *, cwd: Path | None = None, timeout: int = 20) -> tuple
             text=True,
             timeout=timeout,
             check=False,
+            env=env,
         )
     except (OSError, subprocess.SubprocessError) as exc:
         return 1, "", str(exc)
@@ -234,123 +235,125 @@ def _projection_statuses(receipt: dict[str, Any] | None) -> dict[str, str]:
     return out
 
 
-DEFAULT_GRAPHITI_MCP_URL = "https://memory.quantumaipartners.com/graphiti/mcp"
-GRAPHITI_MCP_HTTPS_HOSTS = frozenset({"memory.quantumaipartners.com"})
-
-# HTTP classifier vocabulary — lookup KEY only; never interpolate a URL, body,
-# or exception string into a printed note (severs clear-text-logging taint).
-_BLOCKER_VOCAB = {
-    "identity": "identity",
-    "dns": "dns",
-    "reachability": "reachability",
-    "config": "config",
-    "allowlist": "allowlist",
-    "network": "network",
+# Memory readiness vocabulary — lookup KEYS only; never interpolate a
+# probe-derived path, exception or receipt string into a printed note (severs
+# clear-text-logging taint). The layers come from ops/memory/diagnostics.py.
+_MEMORY_BLOCKER_VOCAB = {
+    "unbound": "unbound",
+    "executable": "executable",
+    "store": "store",
+    "service": "service",
+    "mcp_config": "mcp_config",
+    "namespace": "namespace",
+    "projection": "projection",
     "none": "none",
 }
+#: Both names honored: the legacy one until the provider vocabulary is retired.
+_MEMORY_PROBE_SKIP_ENVS = ("L9_MEMORY_PROBE_SKIP", "L9_GRAPHITI_PROBE_SKIP")
 
 
-def graphiti_mcp_url() -> str:
-    return (os.environ.get("GRAPHITI_MCP_URL") or DEFAULT_GRAPHITI_MCP_URL).strip()
+def _memory_probe_skipped() -> bool:
+    return any(os.environ.get(name) == "1" for name in _MEMORY_PROBE_SKIP_ENVS)
 
 
-def _classify_graphiti_http_code(code: int) -> tuple[str, str]:
-    """Map an HTTP status from GRAPHITI_MCP_URL to READY/DEGRADED + blocker.
+def _memory_levels(gov: Path) -> dict[str, str] | None:
+    """R0..R9 statuses from the canonical readiness report, or None when unrunnable.
 
-    MCP is JSON-RPC POST; GET/HEAD often returns 405. Any 2xx–4xx except 401/403
-    means the front door answered. 403 is the hosted allowlist miss (operator
-    paste), not a missing token — do not treat it as a reason to paste one.
+    Runs in a subprocess on the governance interpreter so a broken memory
+    boundary can never crash the emitter (fail-open to UNKNOWN). Only levels
+    are read back — the report's detail strings are probe-derived and stay
+    out of every printed note.
     """
-    if code == 401:
-        return DEGRADED, "not authenticated (blocker: identity)"
-    if code == 403:
-        return DEGRADED, "not authenticated (blocker: allowlist)"
-    if 200 <= code < 500:
-        return READY, "front door reachable"
-    return DEGRADED, "unreachable (blocker: reachability)"
-
-
-def _graphiti_mcp_http_health() -> tuple[str, str]:
-    if os.environ.get("L9_GRAPHITI_PROBE_SKIP") == "1":
-        return READY, "probe skipped"
-    url = graphiti_mcp_url()
-    if not url:
-        return DEGRADED, "unconfigured (blocker: config)"
-    # Never urllib.urlopen: GRAPHITI_MCP_URL is env-sourced and urllib follows
-    # file:// (CWE-939). safe_https.exchange is HTTPS or loopback HTTP only.
-    req = urllib.request.Request(url, method="GET")
-    # The final handler below is deliberately broad (noqa: BLE001): a
-    # readiness probe never crashes the emitter.
-    # nosemgrep: l9.baseline.python.broad-except
-    try:
-        with exchange(
-            req,
-            timeout=8,
-            allowed_https_hosts=GRAPHITI_MCP_HTTPS_HOSTS,
-            allow_loopback_http=True,
-            label="Graphiti MCP URL",
-        ) as resp:
-            return _classify_graphiti_http_code(int(resp.status))
-    except urllib.error.HTTPError as exc:
-        return _classify_graphiti_http_code(int(exc.code))
-    except ValueError:
-        return DEGRADED, "unconfigured (blocker: config)"
-    except Exception:  # noqa: BLE001 - a probe never crashes the emitter
-        return DEGRADED, "unreachable (blocker: reachability)"
-
-
-def _graphiti_cli_health(gov: Path) -> tuple[str, str]:
-    if os.environ.get("L9_GRAPHITI_PROBE_SKIP") == "1":
-        return READY, "probe skipped"
-    client = gov / "ops" / "graphiti" / "graphiti_memory_client.py"
     py = gov / ".venv" / "bin" / "python3"
     if not py.is_file():
         py = Path(sys.executable)
-    if not client.is_file():
-        return UNKNOWN, "graphiti client missing"
-    code, out, _err = _run([str(py), str(client), "health"], timeout=15)
+    if not (gov / "ops" / "memory" / "diagnostics.py").is_file():
+        return None
+    code, out, _err = _run(
+        [str(py), "-m", "ops.memory.diagnostics", "--workspace", str(gov), "--json"],
+        timeout=90,
+        cwd=str(gov),
+        env={**os.environ, "PYTHONPATH": f"{gov}{os.pathsep}{os.environ.get('PYTHONPATH', '')}"},
+    )
+    del code  # a non-zero exit is a verdict carried by the levels, not a crash
     text = (out or "").strip()
     idx = text.find("{")
     if idx < 0:
-        return DEGRADED if code else UNKNOWN, "cli health unparseable"
+        return None
     try:
         data = json.loads(text[idx:])
     except json.JSONDecodeError:
-        return DEGRADED, "cli health unparseable"
-    if not isinstance(data, dict):
-        return DEGRADED, "cli health unparseable"
-    if data.get("healthy"):
-        return READY, "cli reachable"
-    # Classify without interpolating probe-derived exception text.
-    blob = json.dumps(data).lower()
-    if "403" in blob:
-        return DEGRADED, "not authenticated (blocker: allowlist)"
-    if "401" in blob:
-        return DEGRADED, "not authenticated (blocker: identity)"
-    if data.get("liveness_ok") and not (data.get("tools") or {}).get("reachable"):
-        return DEGRADED, "cli tool plane unreachable"
-    return DEGRADED, "unreachable (blocker: reachability)"
+        return None
+    levels = data.get("levels") if isinstance(data, dict) else None
+    if not isinstance(levels, list):
+        return None
+    out_levels: dict[str, str] = {}
+    for entry in levels:
+        if isinstance(entry, dict) and entry.get("level"):
+            out_levels[str(entry["level"])] = str(entry.get("status") or "")
+    return out_levels or None
 
 
-def graphiti_probe(gov: Path) -> dict[str, Any]:
-    """Split CLI vs MCP health — a working CLI + dead MCP is not one DEGRADED."""
-    cli_status, cli_note = _graphiti_cli_health(gov)
-    mcp_status, mcp_note = _graphiti_mcp_http_health()
+def _memory_cli_health(levels: dict[str, str] | None) -> tuple[str, str]:
+    """R0 PACKAGE_BOUND + R1 CLI_EXECUTABLE: which exact memory runtime will run."""
+    if levels is None:
+        return UNKNOWN, "memory readiness unavailable"
+    if levels.get("R0") != "pass":
+        return DEGRADED, "unbound (blocker: unbound)"
+    if levels.get("R1") != "pass":
+        return DEGRADED, "not executable (blocker: executable)"
+    return READY, "bound runtime executable"
+
+
+def _memory_control_plane_health(levels: dict[str, str] | None) -> tuple[str, str]:
+    """R2 CANONICAL_STORE_READY + R3 MEMORY_SERVICE_READY (+ R6 hydrate answered)."""
+    if levels is None:
+        return UNKNOWN, "memory readiness unavailable"
+    if levels.get("R0") != "pass" or levels.get("R1") != "pass":
+        return DEGRADED, "unbound (blocker: unbound)"
+    if levels.get("R2") != "pass":
+        return DEGRADED, "store not ready (blocker: store)"
+    if levels.get("R3") != "pass":
+        return DEGRADED, "service not ready (blocker: service)"
+    if levels.get("R6") != "pass":
+        return DEGRADED, "hydrate not answering (blocker: namespace)"
+    return READY, "canonical store and service ready"
+
+
+def _memory_mcp_health(levels: dict[str, str] | None) -> tuple[str, str]:
+    """R4 MCP_CONFIG_INSTALLED: the package-owned entry is present and current."""
+    if levels is None:
+        return UNKNOWN, "memory readiness unavailable"
+    if levels.get("R4") != "pass":
+        return DEGRADED, "managed entry missing or drifted (blocker: mcp_config)"
+    return READY, "managed entry installed"
+
+
+def memory_probe(gov: Path) -> dict[str, Any]:
+    """Split cli / control plane / mcp — a bound CLI with a dead store is not one word."""
+    if _memory_probe_skipped():
+        skipped = {"status": READY, "reason": "probe skipped"}
+        return {"cli": dict(skipped), "control_plane": dict(skipped), "mcp": dict(skipped)}
+    levels = _memory_levels(gov)
+    cli_status, cli_note = _memory_cli_health(levels)
+    plane_status, plane_note = _memory_control_plane_health(levels)
+    mcp_status, mcp_note = _memory_mcp_health(levels)
     return {
         "cli": {"status": cli_status, "reason": cli_note},
+        "control_plane": {"status": plane_status, "reason": plane_note},
         "mcp": {"status": mcp_status, "reason": mcp_note},
     }
 
 
-def _graphiti_health(probe: dict[str, Any]) -> tuple[str, str]:
-    """Classify a pre-built probe dict (tests + compact Graphiti_reachability)."""
+def _memory_health(probe: dict[str, Any]) -> tuple[str, str]:
+    """Classify a pre-built probe dict (tests + compact memory_control_plane_status)."""
     if not probe:
-        return UNKNOWN, "graphiti probe unavailable"
+        return UNKNOWN, "memory probe unavailable"
     if probe.get("ok"):
-        return READY, "reachable"
+        return READY, "ready"
     key = str(probe.get("primary_blocker") or "").strip().lower()
-    blocker = _BLOCKER_VOCAB.get(key, "unknown")
-    return DEGRADED, f"unhealthy (blocker: {blocker})"
+    blocker = _MEMORY_BLOCKER_VOCAB.get(key, "unknown")
+    return DEGRADED, f"not ready (blocker: {blocker})"
 
 
 def _mcp_status(bootstrap: dict[str, Any] | None, proj_mcp: str) -> tuple[str, str]:
@@ -464,32 +467,23 @@ _SECRET_BOUNDARY_VOCAB = {
 }
 
 
-def _graphiti_transport_auth() -> str:
-    """Whether the Graphiti transport carries a credential — measured, not assumed.
+#: The memory transport this surface uses — a constant posture, not a probe.
+#: Since realignment stage C9 memory is the canonical l9-graphite-memory
+#: control plane over stdio, bound per checkout; there is no provider URL and
+#: no memory bearer on this surface, so there is nothing to measure as
+#: "authenticated": the runtime resolves its own credentials (memory ADR-016).
+MEMORY_TRANSPORT = "stdio-control-plane"
 
-    The module docstring's own truth rule says a TCP-reachable Graphiti is not
-    an authenticated Graphiti, but every health probe above measures only
-    reachability. This reads the one signal that decides the question, and it
-    reads it exactly where the client decides it: ``graphiti_memory_client.py``
-    adds an ``Authorization: Bearer`` header if and only if GRAPHITI_MCP_TOKEN
-    is set and non-empty, and ``mcp.template.json`` merges the same header under
-    ``_optional_headers`` on the same condition.
 
-    UNAUTHENTICATED is a posture, not a fault. On a model-controlled surface the
-    token is deliberately absent (see docs/DEGRADED_MODE_CONTRACT.md, "Graphiti
-    MCP at GRAPHITI_MCP_URL | No bearer"), so this is reported as an observation
-    beside uv_version rather than as a status dimension — a dims entry would
-    aggregate an intended posture into a DEGRADED receipt.
-    """
-    token = os.environ.get("GRAPHITI_MCP_TOKEN", "").strip()
-    return "AUTHENTICATED" if token else "UNAUTHENTICATED"
+def _memory_transport() -> str:
+    return MEMORY_TRANSPORT
 
 
 def _secret_boundary_status() -> tuple[str, str]:
-    # This surface holds no credentials. Graphiti health is HTTPS to
-    # memory.quantumaipartners.com, not a broker-mediated probe.
+    # This surface holds no credentials. Memory is the bound control-plane
+    # runtime, not a broker-mediated probe and not a provider URL.
     boundary = _SECRET_BOUNDARY_VOCAB["model-controlled"]
-    return READY, f"{boundary} (no broker/Infisical/Graphiti secret in this environment)"
+    return READY, f"{boundary} (no broker/Infisical/memory secret in this environment)"
 
 
 def _aggregate(statuses: dict[str, str]) -> str:
@@ -558,14 +552,17 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
     proj = _read_json(home / ".l9" / "claude" / "projection-receipt.json")
     bootstrap = _read_json(home / ".l9" / "claude" / "bootstrap-state.json")
     proj_status = _projection_statuses(proj)
-    split = graphiti_probe(gov)
+    split = memory_probe(gov)
     cli_status = str(split["cli"]["status"])
     cli_note = str(split["cli"]["reason"])
     mem_mcp_status = str(split["mcp"]["status"])
     mem_mcp_note = str(split["mcp"]["reason"])
-    # Hydrate path is the CLI. MCP HTTP is a distinct dimension so a working
-    # CLI + missing MCP tools is not one word DEGRADED.
-    graphiti_status, graphiti_note = cli_status, cli_note
+    # Hydrate path is the CLI. The MCP managed entry is a distinct dimension so
+    # a bound CLI + missing MCP entry is not one word DEGRADED; the control
+    # plane (store + service) is a third, so a bound runtime with a dead store
+    # never reads as memory READY.
+    plane_status = str(split["control_plane"]["status"])
+    plane_note = str(split["control_plane"]["reason"])
 
     mcp_status, mcp_note = _mcp_status(bootstrap, proj_status["mcp"])
     facade_status, facade_note = _makefile_facade(gov)
@@ -593,7 +590,7 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
         "MCP_status": mcp_status,
         "memory_cli_status": cli_status,
         "memory_mcp_status": mem_mcp_status,
-        "Graphiti_reachability": graphiti_status,
+        "memory_control_plane_status": plane_status,
         "Makefile_facade_status": facade_status,
         "dispatcher_status": disp_status,
         "merge_authority_status": merge_status,
@@ -607,7 +604,7 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
         "MCP_status": mcp_note,
         "memory_cli_status": cli_note,
         "memory_mcp_status": mem_mcp_note,
-        "Graphiti_reachability": graphiti_note,
+        "memory_control_plane_status": plane_note,
         "Makefile_facade_status": facade_note,
         "dispatcher_status": disp_note,
         "merge_authority_status": merge_note,
@@ -640,9 +637,9 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
         # Observation, not a dims entry — see _uv_version. Empty string means
         # "not observed", which is distinct from a version that is merely old.
         "uv_version": _uv_version(),
-        # Observation, not a dims entry — see _graphiti_transport_auth. An
-        # absent token is the intended posture here, not a degradation.
-        "graphiti_transport_auth": _graphiti_transport_auth(),
+        # Observation, not a dims entry — see MEMORY_TRANSPORT. The transport
+        # is a constant posture: stdio to the bound runtime, no URL, no bearer.
+        "memory_transport": _memory_transport(),
     }
     receipt.update(dims)
     receipt["overall_readiness"] = overall
@@ -710,7 +707,7 @@ def _compact(receipt: dict[str, Any]) -> str:
     fresh = receipt_freshness(receipt)
     lines.append(f"receipt_freshness={fresh['state']} ({fresh['reason']})")
     lines.append(f"uv_version={receipt.get('uv_version') or 'unobserved'}")
-    lines.append(f"graphiti_transport_auth={receipt.get('graphiti_transport_auth', UNKNOWN)}")
+    lines.append(f"memory_transport={receipt.get('memory_transport', UNKNOWN)}")
     order = [
         "skill_projection_status",
         "command_projection_status",
@@ -721,7 +718,7 @@ def _compact(receipt: dict[str, Any]) -> str:
         "MCP_status",
         "memory_cli_status",
         "memory_mcp_status",
-        "Graphiti_reachability",
+        "memory_control_plane_status",
         "Makefile_facade_status",
         "dispatcher_status",
         "merge_authority_status",
@@ -744,15 +741,17 @@ def main() -> int:
     parser.add_argument("--json", action="store_true", help="Print the receipt JSON")
     parser.add_argument("--no-write", action="store_true", help="Do not write the receipt file")
     parser.add_argument(
+        "--memory-probe",
         "--graphiti-probe",
+        dest="memory_probe",
         action="store_true",
-        help="Print memory.cli / memory.mcp JSON and exit (no readiness receipt)",
+        help="Print memory cli / control_plane / mcp JSON and exit (no readiness receipt)",
     )
     args = parser.parse_args()
 
-    if args.graphiti_probe:
+    if args.memory_probe:
         gov = args.root or _gov_root()
-        print(json.dumps(graphiti_probe(gov)))
+        print(json.dumps(memory_probe(gov)))
         return 0
 
     receipt = build_receipt(gov=args.root, workspace=args.workspace)
