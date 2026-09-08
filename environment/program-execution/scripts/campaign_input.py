@@ -82,6 +82,11 @@ class Classification:
     path: Path
     schema: str = ""
     document: dict[str, Any] | None = field(default=None, repr=False)
+    #: Why an architecture representation is admitted: declared or classified.
+    #: Empty for non-architecture kinds.
+    admission: str = ""
+    #: Deterministic classification evidence. Never prompt/model output.
+    evidence: dict[str, Any] = field(default_factory=dict, repr=False)
     #: Non-binding observations about this routing decision. A diagnostic never
     #: changes `kind`: the router warns, it does not re-route. Silence here
     #: means the router saw nothing worth telling the operator.
@@ -103,6 +108,8 @@ class Classification:
             "schema": self.schema,
             "path": str(self.path),
             "supported": self.supported,
+            "admission": self.admission,
+            "evidence": self.evidence,
             "diagnostics": list(self.diagnostics),
             "reason": self.reason,
             "route": self.route,
@@ -311,10 +318,10 @@ def _is_plan_intent(doc: dict[str, Any] | None) -> bool:
     return False
 
 
-#: How much normative structure makes a memo look like an architecture source.
-#: Deliberately not a tight threshold: this only decides whether the operator is
-#: told the richer route exists, and a false positive costs one warning line
-#: while a false negative costs a silently flattened document.
+#: Near-boundary diagnostic for prose that did not satisfy the canonical
+#: architecture auto-promotion contract. This helper never owns routing: a
+#: false positive costs one warning line, and a document that genuinely
+#: qualifies was already promoted by `classify()` before this runs.
 ROUTE_CONFUSION_MIN_SIGNALS = 3
 ROUTE_CONFUSION_MIN_HEADINGS = 2
 
@@ -347,7 +354,7 @@ def _normative_signals(text: str) -> tuple[str, ...]:
 
 
 def route_confusion_diagnostics(text: str) -> tuple[str, ...]:
-    """Warn when a brief carries architecture-grade structure. Never re-route.
+    """Warn when a non-promoted brief still carries architecture-like structure.
 
     The brief compiler reads a memo. An architecture document states
     obligations, prohibitions and acceptance across sections, and the
@@ -355,10 +362,10 @@ def route_confusion_diagnostics(text: str) -> tuple[str, ...]:
     one through the brief route loses that structure silently, which is the
     failure this warns about.
 
-    It warns and stops there on purpose. Re-routing on a heuristic would take
-    the operator's choice away and make the front door guess at intent — the
-    thing this module was written to stop doing. The operator says
-    `make campaign-architecture`, or declares the frontmatter schema.
+    `classify()` already ran the stronger canonical architecture classifier, so
+    this is only a diagnostic for near-boundary prose and cannot change the
+    route. A source that needs architecture semantics may declare the
+    architecture schema explicitly rather than using a representation override.
     """
     signals = _normative_signals(text)
     headings = len(_HEADING_RE.findall(text))
@@ -367,26 +374,54 @@ def route_confusion_diagnostics(text: str) -> tuple[str, ...]:
     return (
         f"route_confusion: this brief carries {len(signals)} normative signal(s) "
         f"({', '.join(signals)}) across {headings} headings, which reads as an "
-        "architecture source. The brief route still compiles it, but the brief "
-        "compiler does not preserve obligation/prohibition provenance. For "
-        "semantic compilation run `make campaign-architecture`, or declare "
+        "architecture-like source but did not satisfy the auto-promotion contract. "
+        "The brief route still compiles it, but the brief compiler does not "
+        "preserve obligation/prohibition provenance. Declare "
         f"`schema: {ARCHITECTURE_INTENT_SCHEMA}` in frontmatter. Routing is "
         "unchanged; this is a warning, not a redirect.",
     )
 
 
-def classify(path: Path, *, forced_kind: CampaignInputKind | None = None) -> Classification:
+def _architecture_evidence(text: str) -> dict[str, Any]:
+    pe_root = Path(__file__).resolve().parents[1]
+    if str(pe_root) not in sys.path:
+        sys.path.append(str(pe_root))
+    from compiler.architecture_classification import architecture_prose_evidence
+
+    return dict(architecture_prose_evidence(text))
+
+
+def _architecture_promotion(text: str, path: Path) -> Classification | None:
+    """Promote unchanged prose to architecture intent on deterministic evidence.
+
+    This is the only way raw prose reaches the architecture representation:
+    there is no operator-forced kind and no caller-supplied override. A
+    document that does not satisfy the contract keeps its ordinary route.
+    """
+    evidence = _architecture_evidence(text)
+    if not evidence.get("qualified"):
+        return None
+    from compiler.architecture_classification import classification_diagnostic
+
+    return Classification(
+        kind=CampaignInputKind.ARCHITECTURE_INTENT_V1,
+        path=path,
+        schema=ARCHITECTURE_INTENT_SCHEMA,
+        admission="classified",
+        evidence=evidence,
+        diagnostics=(classification_diagnostic(evidence),),
+    )
+
+
+def classify(path: Path) -> Classification:
     """Classify by content and schema, never by file extension alone.
 
     A `.yaml` suffix says nothing about which of three YAML dialects this is,
     and the campaign source dialect is the one that was being misrouted.
 
-    `forced_kind` is how `make campaign-architecture` says "read this as
-    architecture intent". The operator already made that choice by picking the
-    target, so an unchanged assistant transcript needs no frontmatter edit and
-    the router needs no content-sniffing heuristic to guess at it. Ordinary
-    `make campaign` never forces, so generic memo traffic keeps going to the
-    brief compiler untouched.
+    Explicit schemas outrank heuristics. Raw prose is promoted to architecture
+    intent only by the deterministic architecture-classification contract, and
+    no caller can force that representation around the decision.
     """
     path = Path(path)
     if not path.is_file():
@@ -401,20 +436,22 @@ def classify(path: Path, *, forced_kind: CampaignInputKind | None = None) -> Cla
     doc, parse_error = _load_document(path, text)
     frontmatter_doc = _parse_frontmatter(text, path=path) or {}
     declared = str(frontmatter_doc.get("schema") or "").strip()
-    if forced_kind is CampaignInputKind.ARCHITECTURE_INTENT_V1 or (
-        declared == ARCHITECTURE_INTENT_SCHEMA
-    ):
+    if declared == ARCHITECTURE_INTENT_SCHEMA:
         return Classification(
             kind=CampaignInputKind.ARCHITECTURE_INTENT_V1,
             path=path,
-            schema=declared or ARCHITECTURE_INTENT_SCHEMA,
+            schema=declared,
             document=frontmatter_doc or None,
+            admission="declared",
         )
     if doc is None:
         frontmatter = frontmatter_doc or None
         if _is_plan_intent(frontmatter):
             return Classification(kind=CampaignInputKind.PLAN, path=path, document=frontmatter)
         if path.suffix.lower() in {".md", ".markdown", ".txt"}:
+            promoted = _architecture_promotion(text, path)
+            if promoted is not None:
+                return promoted
             return Classification(
                 kind=CampaignInputKind.BRIEF,
                 path=path,
@@ -424,7 +461,11 @@ def classify(path: Path, *, forced_kind: CampaignInputKind | None = None) -> Cla
     schema = str(doc.get("schema") or "").strip()
     if schema == ARCHITECTURE_INTENT_SCHEMA:
         return Classification(
-            kind=CampaignInputKind.ARCHITECTURE_INTENT_V1, path=path, schema=schema, document=doc
+            kind=CampaignInputKind.ARCHITECTURE_INTENT_V1,
+            path=path,
+            schema=schema,
+            document=doc,
+            admission="declared",
         )
     if schema == CAMPAIGN_SOURCE_SCHEMA or schema.endswith("campaign-source.v2"):
         return Classification(
@@ -446,6 +487,9 @@ def classify(path: Path, *, forced_kind: CampaignInputKind | None = None) -> Cla
             return Classification(
                 kind=CampaignInputKind.PLAN, path=path, schema=schema, document=frontmatter
             )
+        promoted = _architecture_promotion(text, path)
+        if promoted is not None:
+            return promoted
         return Classification(
             kind=CampaignInputKind.BRIEF,
             path=path,
@@ -658,17 +702,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="classify a PE campaign input")
     parser.add_argument("path", type=Path)
     parser.add_argument("--json", action="store_true")
-    parser.add_argument(
-        "--as",
-        dest="forced",
-        choices=[CampaignInputKind.ARCHITECTURE_INTENT_V1.value],
-        default=None,
-        help="interpret the input as this kind (the campaign-architecture route)",
-    )
     args = parser.parse_args(argv)
-    forced = CampaignInputKind(args.forced) if args.forced else None
     try:
-        found = classify(args.path, forced_kind=forced)
+        found = classify(args.path)
     except CampaignInputRejected as exc:
         print(json.dumps(exc.to_dict(), indent=2) if args.json else exc.render())
         return exc.exit_code
