@@ -67,6 +67,16 @@ def test_cursor_stays_the_constrained_surface() -> None:
     assert POLICY["profiles"]["cursor"]["execution_profile"] == "constrained"
 
 
+def test_cursor_marker_beats_projected_claude_surface() -> None:
+    env = {**CLAUDE_ENV, "CURSOR_AGENT": "1"}
+    assert classify(env, POLICY) == "cursor"
+
+
+def test_explicit_claude_surface_plus_remote_flag_stays_cloud_personality() -> None:
+    env = {"L9_GOVERNANCE_SURFACE": "claude-code", "CLAUDE_CODE_REMOTE": "true"}
+    assert classify(env, POLICY) == "claude_cloud"
+
+
 def test_classification_never_depends_on_model_identity(tmp_path: Path) -> None:
     for model in ("deepseek-v4-pro[1m]", "claude-opus-5", ""):
         env = {**CLAUDE_ENV, "ANTHROPIC_MODEL": model}
