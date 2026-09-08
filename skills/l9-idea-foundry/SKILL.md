@@ -299,7 +299,7 @@ The freeze receipt must bind HEAD, tracked-tree digest, source inventory digest,
 
 Use the current `l9-repo-template` birth compiler and birth engine. Run local/no-remote birth first. Only after local birth passes may remote creation occur when explicitly requested and authorized.
 
-On a surface that cannot `POST /orgs/{org}/repos`, dispatch `.github/workflows/repo-birth-dispatch.yml` on `main` using the `repo-birth` App environment. Do not mint or paste `BIRTH_APP_PRIVATE_KEY`. Read [references/birth-integration.md](references/birth-integration.md) for the live App/environment names and payload-contract placement.
+On a surface that cannot `POST /orgs/{org}/repos`, dispatch `Quantum-L9/l9-repo-template` `.github/workflows/repo-birth-dispatch.yml` on that repository's `main` using the `repo-birth` App environment. Do not mint or paste `BIRTH_APP_PRIVATE_KEY`. Do not dispatch a workflow in the current workspace repo. Read [references/birth-integration.md](references/birth-integration.md) for the live App/environment names and payload-contract placement.
 
 Do not recreate `new_repo.py`, birth-runner stages, org seeding, or CI distribution.
 
