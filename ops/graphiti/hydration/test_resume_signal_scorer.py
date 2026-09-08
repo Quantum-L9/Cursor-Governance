@@ -47,12 +47,29 @@ def test_scorer_exception_fail_open():
 
 
 def test_compile_packet_still_emits_when_derived_would_drop(monkeypatch, tmp_path):
+    from ops.memory import hydration as hyd
+    from ops.memory.namespace_context import NamespaceContext
+
+    context = NamespaceContext(
+        workspace="/w",
+        git_root="/w",
+        repository_identity="Quantum-L9/Cursor-Governance",
+        write_namespace_hint="cursor-governance",
+        read_namespace_hints=("cursor-governance",),
+        method="registry",
+    )
+    monkeypatch.setenv("L9_MEMORY_SESSION_STATE_DIR", str(tmp_path / "state"))
     monkeypatch.setattr(
         comp,
-        "resolve_group_id",
-        lambda p: {"group_id": "cursor-governance", "readonly": False},
+        "canonical_hydrate",
+        lambda *a, **k: hyd.CanonicalHydration(
+            status="NO_HITS",
+            namespace_context=context,
+            requested_namespaces=("cursor-governance",),
+            repository_state_digest="a" * 40,
+            task_signature="sig",
+        ),
     )
-    monkeypatch.setattr(comp, "_search_facts", lambda *a, **k: [])
     packet = comp.compile_session_packet(
         project_dir=tmp_path, conversation_id="low-signal", agent_id="cursor"
     )

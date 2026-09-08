@@ -154,14 +154,21 @@ class ThinnessTests(unittest.TestCase):
         for name in ("environment.env.example", "mcp.template.json"):
             text = (ADAPTER / name).read_text(encoding="utf-8")
             for line in text.splitlines():
-                if "GRAPHITI_MCP_TOKEN" in line:
-                    self.assertNotRegex(line, r"GRAPHITI_MCP_TOKEN\s*=\s*\S")
+                if "_TOKEN" in line:
+                    self.assertNotRegex(line, r"[A-Z_]+_TOKEN\s*=\s*\S")
 
-    def test_mcp_template_has_no_broker_url(self) -> None:
+    def test_mcp_template_declares_only_the_canonical_memory_server(self) -> None:
+        """Stage C7: the memory package owns the entry; no provider front door."""
         data = json.loads((ADAPTER / "mcp.template.json").read_text(encoding="utf-8"))
         self.assertNotIn("L9_CAPABILITY_BROKER_URL", json.dumps(data))
-        server = data["mcpServers"]["graphiti-memory"]
-        self.assertEqual(server["url"], "${GRAPHITI_MCP_URL}")
+        self.assertNotIn("graphiti-memory", data["mcpServers"])
+        server = data["mcpServers"]["l9-graphite-memory"]
+        self.assertEqual(server["command"], "${L9_MEMORY_INTERPRETER}")
+        self.assertEqual(
+            server["args"], ["-m", "l9_graphite_memory.server", "--transport", "stdio"]
+        )
+        for forbidden in ("env", "url", "headers"):
+            self.assertNotIn(forbidden, server)
 
 
 if __name__ == "__main__":

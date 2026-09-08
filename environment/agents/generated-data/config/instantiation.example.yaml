@@ -30,5 +30,6 @@ live_commands:
   search: L9_SGD_GRAPHITI_SEARCH_COMMAND
   reuse: L9_SGD_GRAPHITI_REUSE_COMMAND
   invalidate: L9_SGD_GRAPHITI_INVALIDATE_COMMAND
-# L9_SGD_GRAPHITI_INGEST_COMMAND example (MemoryCandidate stdin → add_memory):
+# L9_SGD_GRAPHITI_INGEST_COMMAND example (MemoryCandidate stdin → canonical
+# memory control plane; the adapter admits through ops/memory, never a provider):
 # python environment/agents/generated-data/adapters/ingest_memory_candidate.py

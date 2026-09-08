@@ -1,60 +1,72 @@
-# Claude Code capability + sanctioned finish path — compiled prompt
+# Claude Code capability + sanctioned finish path — repaired source contract
 
-Compiled prompt added to the workspace on 2026-09-06. Not yet executed, not yet
-validated as an `l9-plan` PLAN_DOCUMENT.
+This WIP artifact records the intent behind PR #514. It is supporting evidence,
+not an independent authority. Current memory and repository-scope law come from
+the revised #509/#517 memory stack and the executable Claude adapter settings.
 
-| Field | Value |
+## Target outcome
+
+Converge Claude Code Web/Mobile so the normal L9 path is frictionless without
+creating a second authority plane:
+
+1. safe Edit/Write/NotebookEdit and bounded inspection are pre-approved while
+   L9 PreToolUse policy remains authoritative;
+2. durable agent memory is the canonical `l9-graphite-memory` stdio MCP ending
+   at `MemoryService`;
+3. canonical agent memory lifecycle reads and close are prompt-free;
+4. ordinary autonomous durable writes use
+   `memory.phase_lock` → `memory.write_governed` and do not require a vendor
+   permission dialog;
+5. `memory.phase_lock` is a memory-write consistency precondition only, never
+   repository-write authority;
+6. compatibility aliases, generic `memory.ingest`, and administrative memory
+   operations are not alternate ambient agent vocabularies;
+7. the selected `CLAUDE_PROJECT_DIR` checkout is the primary repository scope,
+   so SessionStart does not request Add Repo for it;
+8. only a genuinely different repository discovered later may require one
+   narrowly scoped repository-access request;
+9. hosted GitHub transport is REST-first and known GraphQL-backed commands are
+   rejected before network;
+10. publication has one agent-visible route: `make pr`;
+11. Claude native auto-memory and scheduled-task polling remain disabled because
+    L9 memory and l9-pr-remediation already own those planes.
+
+## Explicitly retired assumptions
+
+The following are not current architecture and must not be restored:
+
+- direct `graphiti-memory` provider MCP access;
+- `graphiti_memory_client.py` as the live memory front door;
+- `search_memory_facts` / raw `add_memory` as model-facing memory operations;
+- provider URL or bearer possession by the model surface;
+- a read-only model memory plane;
+- generic `memory.ingest` as an autonomous-write bypass;
+- compatibility aliases as an alternate model-facing memory vocabulary;
+- proactive Add Repo with `access=push` for the already-selected primary checkout;
+- GitHub scope for `Cursor-Governance` merely because `$HOME/.cursor-governance`
+  supplies local governance scripts;
+- raw `git push`, `gh pr create`, arbitrary REST POST, or GitHub MCP publication
+  as alternate publication paths.
+
+## Canonical ownership
+
+| Concern | Owner |
 |---|---|
-| Artifact | `claude-code-capability-and-finish-path-convergence.compiled-prompt.yaml` |
-| Compiled prompt id | `claude_code_capability_permission_and_sanctioned_publish_convergence` |
-| Target repository | `Quantum-L9/Cursor-Governance` |
-| Status | **compiled, unexecuted** |
+| Governance files | `$HOME/.cursor-governance` |
+| Durable agent memory | `l9-graphiti-memory` `MemoryService` |
+| Canonical memory lifecycle | `memory.health/search/hydrate/conflicts/close` |
+| Interactive memory write | `memory.phase_lock` → `memory.write_governed` |
+| Repository mutation policy | L9 Git/worktree/PreToolUse governance |
+| Primary repo scope | selected `CLAUDE_PROJECT_DIR` checkout |
+| Later cross-repo expansion | hosted repository-scope capability, exact new repo only |
+| Hosted GitHub reads | repository-scoped REST / approved GitHub read tools |
+| Publication | `make pr` |
+| PR convergence | `l9-pr-remediation` |
 
-## What it asks for
+## Evidence requirement
 
-Converge the Claude Code execution environment so that:
-
-1. bare `git` / `gh` mutation is never the path the model reaches for;
-2. Memory write capability and repository scope are acquired in one early
-   deterministic preflight rather than mid-execution;
-3. publication has exactly one agent-visible route —
-   `PR_REMEDIATE=0 make pr` from the governance workspace.
-
-It is a *repair* contract, not an instruction sheet: it requires fixing the
-executable settings template, its reconciler, the projected `.claude/settings.json`,
-the validator, the PreToolUse harness, the bootstrap, and the agent-facing
-doctrine together, so no regeneration resurrects a removed publish route.
-
-## Bindings resolved at placement time
-
-These were established from the live session and are inputs the executing
-session should not re-derive from guesswork:
-
-- **Governance workspace** is `$HOME/.cursor-governance` (here: `/root/.cursor-governance`),
-  the clone whose remote is `Quantum-L9/Cursor-Governance`. Base at placement
-  time: `main@051c63c`. This is the `GOVERNANCE_WORKSPACE` the compiled prompt's
-  `phase_6` requires as the publish cwd.
-- **Repository scope** for `Quantum-L9/Cursor-Governance` was acquired through
-  the supported Add Repo capability with `access: push` — the same capability
-  `phase_3` names as the sole sanctioned acquisition owner. No `git clone`
-  fallback was used, and none is needed.
-- **Do not clone a second governance tree.** The Add Repo result proposes a
-  clone at `/home/user/cursor-governance`. Creating it would violate the
-  single-SSOT contract (`06-governance-ssot-paths`, `00-global`). The clone that
-  already exists at `$HOME/.cursor-governance` is the one to use. This is itself
-  an instance of the class of defect the compiled prompt targets: a platform
-  affordance steering toward an acquisition path the harness forbids.
-
-## Prerequisite before executing
-
-`phase_0` requires binding a fresh full SHA of the target repository's current
-default branch. `051c63c` above is the placement-time base, not that binding —
-re-fetch before execution.
-
-## Placement rationale
-
-`docs/plans/claude-code/` is reserved for schema-validated `l9-plan`
-PLAN_DOCUMENT pairs (`.plan.json` authoritative + `.plan.md` projection). This
-artifact is neither, so filing it there would misrepresent it as validated. It
-lives in the dated `WIP/` corpus until it is compiled into a PLAN_DOCUMENT or
-a program-execution campaign.
+Static settings tests are necessary but not sufficient. The candidate must also
+be exercised on hosted Claude Code and prove: no Register Repo Root prompt, no
+primary Add Repo prompt, no normal Edit/Write prompt, no canonical memory
+lifecycle/write prompt, no Send Later prompt, no known-bad GraphQL attempt, and
+a successful canonical MemoryService receipt for a governed write.

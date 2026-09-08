@@ -40,7 +40,7 @@
     "postToolUse": [
       {
         "command": "./hooks/graphiti-mark-ok.sh",
-        "matcher": "graphiti|add_episode|search_facts|search_nodes",
+        "matcher": "l9-graphite-memory|memory\\.hydrate|memory\\.search|memory\\.get",
         "timeout": 5
       },
       {

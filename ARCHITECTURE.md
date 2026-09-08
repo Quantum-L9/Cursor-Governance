@@ -32,7 +32,8 @@ Verified on disk 2026-08-21 against the repository root (not recalled from [`REA
 | `rules/` | Cursor `.mdc` rules SSOT. Projected peers: `environment/generated/llm-rules/` (do not hand-edit). |
 | `ops/hooks/` | `sessionStart` / `sessionEnd` activation. Entry: `ops/hooks/session_start_bootstrap.sh`. |
 | `ops/scripts/` | Wiring, backup, validators, publish helpers. Path resolver: `ops/scripts/resolve_governance_paths.sh`. |
-| `ops/graphiti/` | Graphiti client + hydration. Policy: `ops/graphiti/MEMORY_BANK_POLICY.md`. |
+| `ops/graphiti/` | Session hydration/close composition (`hydration/`), Cursor write gates, namespace registry (hints only), gate e2e scripts. The direct provider client is a C11 tombstone (`graphiti_memory_client.py`); no provider egress remains (ADR-0030). |
+| `ops/memory/` | Memory boundary: runtime binding to the pinned `l9-graphite-memory` CLI, control-plane client, namespace hints, ContinuationCapsuleV2, R0–R9 readiness. Binding SSOT: `ops/config/memory-binding.json`. Egress firewall: `ops/scripts/validate_memory_egress_boundary.py` (`make memory-egress-check`). See `ops/memory/README.md`. |
 | `ops/secrets/` | AWS name-inventory + Infisical inventory. Skill: `l9-aws-secrets`. |
 | `ops/autonomy/` | Shared autonomy brain (Cursor-primary). Profile: `ops/autonomy/surface_profile.yaml`. |
 | `ops/ui-operator/` | SaaS UI console (explicit-only). |
@@ -86,6 +87,9 @@ Index only. Job tables and pin versions live in the workflow files and `AGENTS.m
 - `governance.yml` — jobs `pr`, `issue`
 - `supply-chain.yml` — jobs `license-compliance`, `dependency-review`, `cyclonedx-sbom`
 - `codeql.yml` — job `codeql` (calls `codeql-reusable.yml`)
+- `memory-cross-repo.yml` — job `proof` (exact-head memory lifecycle against the
+  wheel rebuilt from `ops/config/memory-binding.json` `source.ref`; required
+  mode, never skips — see `ops/memory/README.md` "Proof")
 
 **Not a PR merge gate** (schedule, dispatch, or post-merge janitor):
 

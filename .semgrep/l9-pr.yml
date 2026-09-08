@@ -11,3 +11,124 @@ rules:
       - pattern: os.environ["SEMGREP_APP_TOKEN"]
       - pattern: os.environ.get("SEMGREP_APP_TOKEN")
       - pattern: os.getenv("SEMGREP_APP_TOKEN")
+
+  # Memory transport boundary (audit P3-01). The lexical egress scanner catches
+  # provider vocabulary; these rules enforce the shape: a module on the memory
+  # path may not import a network or provider transport, and only the binding
+  # modules may spawn a process (the bound l9-memory, git, the memory-owned
+  # MCP installer). Interpreter-level twin: tests/ops/memory/test_transport_boundary.py.
+  - id: l9.memory-boundary-no-network-or-provider-transport
+    message: >-
+      Memory-path modules cross the boundary only through the bound l9-memory
+      console script's stdio (INV-03). No urllib/http/socket/ssl/requests/httpx/
+      aiohttp/websockets, no MCP client SDK, no graphiti_core or neo4j driver here.
+    languages: [python]
+    severity: ERROR
+    metadata:
+      l9.surface: memory-boundary
+      l9.invariant: INV-03
+    paths:
+      include:
+        - ops/memory/
+        - ops/graphiti/hydration/close_session.py
+        - ops/graphiti/hydration/pickup_write.py
+        - ops/graphiti/hydration/compile_session_packet.py
+        - ops/graphiti/hydration/session_latches.py
+        - environment/agents/adapters/claude-code/memory/
+      exclude:
+        - "**/test_*.py"
+    pattern-either:
+      - pattern: import urllib
+      - pattern: import urllib.request
+      - pattern: import urllib3
+      - pattern: import http
+      - pattern: import http.client
+      - pattern: import socket
+      - pattern: import ssl
+      - pattern: import requests
+      - pattern: import httpx
+      - pattern: import aiohttp
+      - pattern: import websockets
+      - pattern: import websocket
+      - pattern: import mcp
+      - pattern: import graphiti_core
+      - pattern: import neo4j
+      - pattern: import asyncio
+      - pattern: from urllib import $X
+      - pattern: from urllib.request import $X
+      - pattern: from urllib3 import $X
+      - pattern: from http import $X
+      - pattern: from http.client import $X
+      - pattern: from socket import $X
+      - pattern: from ssl import $X
+      - pattern: from requests import $X
+      - pattern: from httpx import $X
+      - pattern: from aiohttp import $X
+      - pattern: from websockets import $X
+      - pattern: from mcp import $X
+      - pattern: from mcp.$M import $X
+      - pattern: from graphiti_core import $X
+      - pattern: from graphiti_core.$M import $X
+      - pattern: from neo4j import $X
+      - pattern: from asyncio import $X
+
+  - id: l9.memory-boundary-spawn-only-through-the-binding
+    message: >-
+      Only ops/memory/runtime_binding.py (the bound l9-memory), ops/memory/
+      namespace_context.py (git identity), ops/memory/mcp_instantiation.py
+      (memory-owned installer) and the Claude memory_state git probe may spawn
+      a process on the memory path; everything else calls MemoryControlPlaneClient.
+    languages: [python]
+    severity: ERROR
+    metadata:
+      l9.surface: memory-boundary
+      l9.invariant: INV-03
+    paths:
+      include:
+        - ops/memory/
+        - ops/graphiti/hydration/close_session.py
+        - ops/graphiti/hydration/pickup_write.py
+        - ops/graphiti/hydration/compile_session_packet.py
+        - ops/graphiti/hydration/session_latches.py
+        - environment/agents/adapters/claude-code/memory/
+      exclude:
+        - "**/test_*.py"
+        - ops/memory/runtime_binding.py
+        - ops/memory/namespace_context.py
+        - ops/memory/mcp_instantiation.py
+        - environment/agents/adapters/claude-code/memory/memory_state.py
+    pattern-either:
+      - pattern: subprocess.run(...)
+      - pattern: subprocess.Popen(...)
+      - pattern: subprocess.call(...)
+      - pattern: subprocess.check_call(...)
+      - pattern: subprocess.check_output(...)
+      - pattern: subprocess.getoutput(...)
+      - pattern: subprocess.getstatusoutput(...)
+      - pattern: os.system(...)
+      - pattern: os.popen(...)
+      - pattern: os.execv(...)
+      - pattern: os.execve(...)
+      - pattern: os.execvp(...)
+      - pattern: os.posix_spawn(...)
+
+  - id: l9.memory-boundary-no-shell-string-spawn
+    message: >-
+      A memory-path process launch is an argv list to the bound executable,
+      never a shell string (shell=True) — a shell string is how a lexically
+      clean module reaches a provider anyway.
+    languages: [python]
+    severity: ERROR
+    metadata:
+      l9.surface: memory-boundary
+      l9.invariant: INV-03
+    paths:
+      include:
+        - ops/memory/
+        - ops/graphiti/hydration/
+        - environment/agents/adapters/claude-code/memory/
+      exclude:
+        - "**/test_*.py"
+    pattern-either:
+      - pattern: subprocess.$F(..., shell=True, ...)
+      - pattern: subprocess.$F("...", ...)
