@@ -6,8 +6,8 @@ role: finding_classifier
 tags: [pr, classification, triage, severity, board]
 owner: igor_beylin
 status: active
-version: 3.5.0
-updated: 2026-08-30
+version: 3.6.0
+updated: 2026-09-07
 /L9_META -->
 
 # Finding Classifier
@@ -22,7 +22,7 @@ A finding is about a file. A board verdict is about the pull request. Keep them 
 
 | Axis | Question | Values | Decided by |
 |------|----------|--------|-----------|
-| **edit** | May I patch this file? | `CODEBASE` / `CI_PIPELINE` / `ENVIRONMENT` / `HUMAN` / `FALSE_POSITIVE` | this file, per finding |
+| **edit** | May I patch this file? | `CODEBASE` / `CI_PIPELINE` / `ENVIRONMENT` / `HUMAN` / `FALSE_POSITIVE` | path → `protocol.edit_axis`; HUMAN / FP stay this file |
 | **board** | What happens to this PR? | `merge` / `fix` / `wait` / `leftover` | `ops/autonomy/pr_board.py`, per PR |
 
 Board rules that are not negotiable in prose: required-check identity is the union of branch protection and repository rulesets; a red check outside that set does not block merge; conflicted **paths** decide a conflict, not `mergeStateStatus`; `leftover` requires a declaration (`--human-decision` / `--unfixable-check`); unknown telemetry is `wait`, never `merge`. Do not add a per-finding `board` field — the ledger carries it once per PR ([remediation-plan.md](remediation-plan.md)).
@@ -57,7 +57,7 @@ See [ownership-boundary.md](ownership-boundary.md). Unknown ownership **or** unv
 | type-check | `tsc`, `mypy`, `pyright`, type errors | Fix type annotations, add missing types, correct interfaces |
 | test | `jest`, `pytest`, `vitest`, assertion failures | Fix code or update test expectations (prefer fixing code) |
 | build | `tsc --noEmit`, `vite build`, compilation errors | Fix imports, missing modules, syntax errors |
-| security | `npm audit`, `snyk`, `trivy`, vulnerability reports | Update dependencies or apply patches |
+| security | `semgrep`, `npm audit`, `snyk`, `trivy`, vulnerability reports | Confirm against source; fix the owner ([semgrep-remediation.md](semgrep-remediation.md)) |
 
 ## Review Comment Classification
 

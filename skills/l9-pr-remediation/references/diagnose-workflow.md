@@ -40,17 +40,16 @@ python3 skills/l9-pr-digest/scripts/require_digest.py \
 Do **not** pass `--quiet` on a manual `/pr` or Diagnose invoke. Show the `[digest]` stream and interactive unpack in chat, then continue. `--quiet` is for poll-worker / automation only.
 
 If the head moved, discard the stale file and re-run. A valid non-READY decision still continues. An unbound or missing digest is STOP / `Unknown` for that PR. Carry `decision`, `expansion_items`, and `remediation_packet` into the verdict below. Do not re-invent intent, expansion, or CI the digest already bound.
-3. **Discovery (mandatory reviews)**
+3. **Discovery (mandatory reviews)** — identity from `gh pr view` / `gh pr diff --stat`; **retrieve** is `scripts/ingest_signals.py` (CI + reviews + CRA + unresolved threads). Do not reconstruct `gh api` comment loops.
 
 ```bash
 gh pr view {number} --json title,author,files,additions,deletions,baseRefName,headRefName,mergeable,reviewDecision,statusCheckRollup
 gh pr diff {number} --stat
-gh api repos/{owner}/{repo}/pulls/{number}/comments --jq '.[] | {path, line, body, author: .user.login}'
-gh api repos/{owner}/{repo}/pulls/{number}/reviews --jq '.[] | {state, body, author: .user.login}'
-gh pr checks {number}
+"${GOV_PY:-$PWD/.venv/bin/python}" skills/l9-pr-remediation/scripts/ingest_signals.py \
+  --repo {owner}/{repo} --pr {number} --output findings.json
 ```
 
-GATE: review comments fetched before any verdict. Attribute `github-code-quality[bot]` and Copilot as [code-review agents](code-review-agents.md) and list every unanswered member comment under Review Comments / Merge Blockers.
+GATE: `findings.json` exists before any verdict. Attribute `github-code-quality[bot]` and Copilot as [code-review agents](code-review-agents.md) and list every unanswered member comment under Review Comments / Merge Blockers.
 
 4. **Optional policy** — if present, load `config/policies/pr_merge_policy.yaml`, `config/policies/protected_files.yaml`, `.github/pr_review_config.yaml` for size/protected notes. Skip with `Unknown` when absent.
 5. **Optional angles** — when user asks for focused review, load [review-angles.md](review-angles.md).

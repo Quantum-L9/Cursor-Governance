@@ -38,11 +38,12 @@ Resolve and record before any fix:
   under test. Never mix findings from unrelated branches.
 - `analyzed_revision` and `latest_analysis_date` — compare SonarCloud's analyzed revision
   with local `HEAD`. If they materially differ and cannot be reconciled → **STOP (BLOCKED)**.
-- Auth: `SONAR_TOKEN` (or `SONARCLOUD_TOKEN`) is read from the process environment on
-  every surface — it reached the process outside the repository's secret plane, which
-  still never exports one. Absent token → unauthenticated public read, reported as
-  `authenticated: false`; never paste a token to close that gap. Never print, commit, or
-  store the token; redact `Authorization` headers.
+- Auth: `SONAR_TOKEN` (or `SONARCLOUD_TOKEN`) is bound in-process by
+  `capability_bind` (env if already present, else Infisical CLI user profile,
+  else AWS `openclaw-igorbot/sonarcloud#token`). Unbound token → unauthenticated
+  public read, reported as `authenticated: false`; never paste a token to close
+  that gap. Never print, export, commit, or store the token; redact
+  `Authorization` headers.
 
 ## Retrieve (fail-closed, paginated)
 
