@@ -1,59 +1,75 @@
 #!/usr/bin/env python3
-"""Cursor beforeSubmitPrompt adapter for the L9 proactive skill router.
+"""Cursor beforeSubmitPrompt adapter for the L9 Virtual Skill Plane.
 
-Thin I/O wrapper over ops/skill_routing (CANONICAL_LAW §2.1):
+I/O adapter only (CANONICAL_LAW §2.1). Every concern is delegated:
 
-1. Scores via shared route_prompt() against ops/generated/skill-registry.json
-2. Persists the recommendation for the always-apply skill-routing rule to read
-3. Emits additional_context when present (forward-compatible; ignored if unsupported)
-4. Fail-opens on any error — never blocks a prompt
+  root resolution / registry schema   ops/skill_routing/registry.py
+  scoring                              ops/skill_routing/route_prompt.py
+  skill lookup / path validation       ops/skill_routing/materialize.py
+  receipt scope / encoding / atomics   ops/skill_routing/receipt.py
+  conversation identity                ops/skill_routing/session_locator.py
+
+Contract (hard invariants):
+  * every prompt event writes exactly one conversation-scoped receipt state:
+    routed | no_route | disabled | degraded — a no-route prompt can never
+    inherit the previous prompt's route
+  * stdout is always {"continue": true}; prompt submission fails open
+  * no additional_context (unsupported on beforeSubmitPrompt), no global
+    state file, no rediscovery of selected skills, no network, no LLM, no MCP
 """
 
 from __future__ import annotations
 
+import importlib
 import importlib.util
 import json
 import os
 import sys
-import time
+import types
 from pathlib import Path
 from typing import Any
 
-ROUTER_REL = Path("ops/skill_routing/route_prompt.py")
-STATE_PATH = Path.home() / ".cursor" / "l9" / "skill-route.json"
+PACKAGE_REL = Path("ops/skill_routing")
+PACKAGE_NAME = "l9_skill_routing"
 
 
-def load_routing(root: Path):
-    path = root / ROUTER_REL
-    spec = importlib.util.spec_from_file_location("l9_skill_routing_cursor", path)
-    if not spec or not spec.loader:
-        raise RuntimeError(f"cannot load skill routing: {path}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-def resolve_root() -> Path:
+def _package_roots() -> list[Path]:
+    roots: list[Path] = []
     configured = os.environ.get("L9_GOVERNANCE_DIR", "").strip()
     if configured:
-        candidate = Path(configured).expanduser()
-        if (candidate / ROUTER_REL).is_file():
-            routing = load_routing(candidate)
-            if (candidate / routing.REGISTRY_REL).is_file():
-                return candidate
-    home = Path.home() / ".cursor-governance"
-    if (home / ROUTER_REL).is_file():
-        routing = load_routing(home)
-        if (home / routing.REGISTRY_REL).is_file():
-            return home
-    here = Path(__file__).resolve()
-    for parent in here.parents:
-        if (parent / ROUTER_REL).is_file():
-            routing = load_routing(parent)
-            if (parent / routing.REGISTRY_REL).is_file():
-                return parent
-    return home
+        roots.append(Path(configured).expanduser())
+    roots.append(Path.home() / ".cursor-governance")
+    roots.extend(Path(__file__).resolve().parents)
+    return roots
+
+
+def load_plane() -> types.SimpleNamespace:
+    """Import the shared routing package as ``l9_skill_routing`` from disk."""
+    cached = sys.modules.get(PACKAGE_NAME)
+    if cached is not None and getattr(cached, "__l9_plane__", None) is not None:
+        return cached.__l9_plane__
+    for root in _package_roots():
+        init = root / PACKAGE_REL / "__init__.py"
+        if not init.is_file():
+            continue
+        spec = importlib.util.spec_from_file_location(
+            PACKAGE_NAME, init, submodule_search_locations=[str(init.parent)]
+        )
+        if not spec or not spec.loader:
+            continue
+        package = importlib.util.module_from_spec(spec)
+        sys.modules[PACKAGE_NAME] = package
+        spec.loader.exec_module(package)
+        plane = types.SimpleNamespace(
+            registry=importlib.import_module(f"{PACKAGE_NAME}.registry"),
+            route_prompt=importlib.import_module(f"{PACKAGE_NAME}.route_prompt"),
+            materialize=importlib.import_module(f"{PACKAGE_NAME}.materialize"),
+            receipt=importlib.import_module(f"{PACKAGE_NAME}.receipt"),
+            session_locator=importlib.import_module(f"{PACKAGE_NAME}.session_locator"),
+        )
+        package.__l9_plane__ = plane
+        return plane
+    raise RuntimeError("ops/skill_routing package not found (L9_GOVERNANCE_DIR?)")
 
 
 def extract_prompt(payload: dict[str, Any]) -> str:
@@ -64,69 +80,87 @@ def extract_prompt(payload: dict[str, Any]) -> str:
     return ""
 
 
-def persist_recommendation(
-    recommendation: dict[str, Any], payload: dict[str, Any], root: Path
-) -> None:
+def proactive_enabled() -> bool:
+    return os.environ.get("L9_PROACTIVE_SKILLS", "true").lower() == "true"
+
+
+def _usage_log(receipt: dict[str, Any], state_root: Path) -> None:
+    if os.environ.get("L9_SKILL_USAGE_LOGGING", "true").lower() != "true":
+        return
+    if receipt.get("status") != "routed":
+        return
     try:
-        STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        decision = receipt["decision"]
         event = {
             "event": "cursor_skill_route",
-            "recommended_at": time.time(),
-            "session_id": payload.get("session_id") or payload.get("conversation_id") or "",
-            "workspace": payload.get("cwd") or payload.get("workspace_roots") or "",
-            "governance_root": str(root),
-            "route_id": recommendation["route_id"],
-            "primary": recommendation["primary"],
-            "supporting": recommendation["supporting"],
-            "score": recommendation["score"],
-            "source": recommendation.get("source", "route"),
+            "conversation_key": receipt.get("conversation_key", ""),
+            "issued_at": receipt.get("issued_at"),
+            "route_id": decision.get("route_id"),
+            "primary": decision["primary"]["name"],
+            "supporting": [item["name"] for item in decision.get("supporting", [])],
+            "score": decision.get("score"),
+            "source": decision.get("source"),
         }
-        STATE_PATH.write_text(json.dumps(event, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        if os.environ.get("L9_SKILL_USAGE_LOGGING", "true").lower() == "true":
-            log_path = STATE_PATH.parent / "skill-usage.jsonl"
-            with log_path.open("a", encoding="utf-8") as handle:
-                handle.write(json.dumps(event, sort_keys=True) + "\n")
-    except OSError:
-        pass
+        log_path = state_root.parent / "skill-usage.jsonl"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        with log_path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(event, sort_keys=True) + "\n")
+    except (OSError, KeyError, TypeError) as exc:
+        # Usage logging is observability only: never let it change the
+        # receipt or block the prompt, but say why it was skipped.
+        print(f"WARN: Cursor L9 skill router: usage log skipped: {exc}", file=sys.stderr)
 
 
-def kernel_pass_inject(payload: dict[str, Any]) -> str:
-    """Plan/tree kernels fire in kernel_gate.py before precommit, not here.
+def route_event(payload: dict[str, Any], plane: types.SimpleNamespace) -> dict[str, Any] | None:
+    """Resolve scope, route, materialize, and persist one receipt state."""
+    locator = plane.session_locator.locator_from_payload(payload)
+    if locator is None:
+        print("WARN: Cursor L9 skill router: payload has no conversation_id", file=sys.stderr)
+        return None
+    state_root = Path(locator.state_root)
+    prompt = extract_prompt(payload)
+    generation_id = ""
+    identity: dict[str, str] = {}
 
-    Mid-session inject applied kernels too early and re-ran checks later.
-    Keep the payload argument so callers and tests stay stable.
-    """
-    del payload
-    return ""
-
-
-def merge_context(inject: str, route: str) -> str:
-    inject = inject.strip()
-    route = route.strip()
-    if inject and route:
-        return inject + "\n\n" + route
-    return inject or route
-
-
-def context_text(recommendation: dict[str, Any]) -> str:
-    supporting = recommendation["supporting"]
-    support_text = (
-        " Supporting: " + ", ".join(f"`{name}`" for name in supporting) + "." if supporting else ""
-    )
-    if recommendation.get("source") == "explicit_hint":
-        return (
-            "L9 explicit skill hint: Read "
-            f"`{recommendation['primary']}` (SKILL.md) before continuing.{support_text} "
-            "Do not execute mutations from this hint alone — requires explicit user "
-            "authority, campaign packet, and/or human approve per the skill contract. "
-            "This route grants no mutation authority."
+    def emit(status: str, **fields: Any) -> dict[str, Any]:
+        receipt = plane.receipt.build_receipt(
+            status=status,
+            locator=locator,
+            generation_id=generation_id,
+            registry_identity=identity,
+            prompt=prompt or None,
+            **fields,
         )
-    return (
-        "High-confidence L9 skill route: Read and follow "
-        f"`{recommendation['primary']}` (SKILL.md) as your first action before normal "
-        f"execution.{support_text} Use at most one primary and two supporting skills. "
-        "Follow that skill's contract. Do not auto-execute a different explicit-only skill."
-    )
+        plane.receipt.write_receipt(receipt, state_root)
+        _usage_log(receipt, state_root)
+        return receipt
+
+    try:
+        if not proactive_enabled():
+            try:
+                registry = plane.registry.load_registry()
+                generation_id, identity = registry.generation_id, registry.identity()
+            except plane.registry.RegistryError as exc:
+                # Registry identity is optional on a disabled receipt: the
+                # receipt must still be written so no prior route stays live.
+                print(f"WARN: Cursor L9 skill router: registry unavailable: {exc}", file=sys.stderr)
+            return emit("disabled", reason="L9_PROACTIVE_SKILLS is not true")
+        registry = plane.registry.load_registry()
+        generation_id, identity = registry.generation_id, registry.identity()
+        if not prompt.strip():
+            return emit("no_route", reason="empty prompt")
+        decision = plane.route_prompt.route_prompt(prompt, registry.data)
+        if decision is None:
+            return emit("no_route", reason="no recommendation")
+        materialized = plane.materialize.materialize_route(decision, registry)
+        return emit("routed", decision=decision, materialized=materialized)
+    except Exception as exc:  # routing infrastructure failure → degraded, never stale
+        print(f"WARN: Cursor L9 skill router degraded: {exc}", file=sys.stderr)
+        try:
+            return emit("degraded", reason=f"{type(exc).__name__}: {exc}"[:500])
+        except Exception as inner:  # best effort only
+            print(f"WARN: degraded receipt not written: {inner}", file=sys.stderr)
+            return None
 
 
 def main() -> int:
@@ -135,52 +169,15 @@ def main() -> int:
         payload: dict[str, Any] = json.loads(raw) if raw.strip() else {}
     except json.JSONDecodeError:
         payload = {}
-    inject = kernel_pass_inject(payload)
-    if os.environ.get("L9_PROACTIVE_SKILLS", "true").lower() != "true":
-        out: dict[str, Any] = {"continue": True}
-        if inject:
-            out["additional_context"] = inject
-        print(json.dumps(out))
-        return 0
+    if not isinstance(payload, dict):
+        payload = {}
     try:
-        prompt = extract_prompt(payload)
-        route = ""
-        if prompt:
-            root = resolve_root()
-            routing = load_routing(root)
-            root = routing.resolve_root(Path(__file__))
-            registry = routing.load_registry(root)
-            recommendation = routing.route_prompt(prompt, registry)
-            if recommendation is not None:
-                persist_recommendation(recommendation, payload, root)
-                route = context_text(recommendation)
-        combined = merge_context(inject, route)
-        out = {"continue": True}
-        if combined:
-            out["additional_context"] = combined
-        print(json.dumps(out))
-        return 0
-    except Exception as exc:  # routing fail-open; inject still emitted
-        print(f"WARN: Cursor L9 skill router degraded: {exc}", file=sys.stderr)
-        out = {"continue": True}
-        if inject:
-            out["additional_context"] = inject
-        print(json.dumps(out))
-        return 0
-
-
-def _self_test() -> int:
-    if merge_context("INJECT", "ROUTE") != "INJECT\n\nROUTE":
-        print("FAIL: merge_context prepend", file=sys.stderr)
-        return 1
-    if merge_context("", "ROUTE") != "ROUTE":
-        print("FAIL: merge_context route-only", file=sys.stderr)
-        return 1
-    print("PASS: before_submit_skill_router prepend")
+        route_event(payload, load_plane())
+    except Exception as exc:  # fail-open: prompt submission is never blocked
+        print(f"WARN: Cursor L9 skill router unavailable: {exc}", file=sys.stderr)
+    print(json.dumps({"continue": True}))
     return 0
 
 
 if __name__ == "__main__":
-    if "--self-test" in sys.argv:
-        raise SystemExit(_self_test())
     raise SystemExit(main())
