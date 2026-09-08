@@ -36,7 +36,7 @@ commands (executors, DAGs, bootstrap, or protocols with no 1:1 skill name).
 | `/index` | Export repo indexes (script) |
 | `/pr-train` | Stacked PR train DAG → halts for `l9-pr-remediation` |
 | `/l9-plan-build` | Plan-simple + kernels + Build DAG |
-| `/l9-audit-plans` | Plans-store shelf organizer (not pipeline audit) |
+| `/l9-audit-plans` | Plans-store shelf + leftover-todo refine — skill `l9-audit-plans` (not `commands/`) |
 | `/lcto` | L CTO strategic mode |
 | `/spec` | Specification generator |
 | `/rules` | List governance rules from `.cursor/rules/` |
