@@ -1,6 +1,6 @@
 # Interactive PR unpack contract
 
-Interactive mode renders the same evidence and decisions used by machine mode, without changing semantics.
+Interactive mode renders the same evidence and decisions used by machine mode, without changing semantics. `scripts/pr_digest.py` (no `--quiet`) streams `[digest]` lines as findings fire, then prints this unpack via `scripts/pr_digest_render.py`. Manual `/pr` and remediator Diagnose must show that stream. `--quiet` is automation-only.
 
 Required sections:
 

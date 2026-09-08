@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -185,8 +186,23 @@ def _decision(
     return "READY_FOR_REMEDIATION"
 
 
-def digest(evidence: dict[str, Any], workspace: Path | None = None) -> dict[str, Any]:
+def digest(
+    evidence: dict[str, Any],
+    workspace: Path | None = None,
+    on_event: Callable[[str, dict[str, Any]], None] | None = None,
+) -> dict[str, Any]:
+    def emit(stage: str, **payload: Any) -> None:
+        if on_event is not None:
+            on_event(stage, payload)
+
     base, head = evidence.get("base_sha"), evidence.get("head_sha")
+    emit(
+        "identity",
+        repository=evidence.get("repository"),
+        pr_number=evidence.get("pr_number"),
+        base_sha=base,
+        head_sha=head,
+    )
     merge_base, patches = git_patches(workspace, base, head)
     files: list[dict[str, Any]] = []
     for raw in evidence.get("files") or []:
@@ -197,17 +213,22 @@ def digest(evidence: dict[str, Any], workspace: Path | None = None) -> dict[str,
         files.append(item)
 
     intent, intent_source = intent_of(evidence)
+    emit("intent", source=intent_source, outcome=intent.get("requested_outcome"))
     flags: list[dict[str, Any]] = []
     expansion: list[dict[str, Any]] = []
     questions: list[dict[str, Any]] = []
     unknowns: list[str] = []
     if not base or not head:
         unknowns.append("exact_base_or_head_sha_missing")
+        emit("unknown", code="exact_base_or_head_sha_missing")
     if intent_source == "UNKNOWN":
         unknowns.append("original_intent_unavailable")
+        emit("unknown", code="original_intent_unavailable")
 
     def flag(code: str, path: str | None, detail: str, severity: str = "review") -> None:
-        flags.append({"code": code, "path": path, "detail": detail, "severity": severity})
+        item = {"code": code, "path": path, "detail": detail, "severity": severity}
+        flags.append(item)
+        emit("finding", **item)
 
     title_tokens = tokens(str(evidence.get("title") or ""))
     outcome_tokens = tokens(str(intent.get("requested_outcome") or ""))
@@ -232,6 +253,14 @@ def digest(evidence: dict[str, Any], workspace: Path | None = None) -> dict[str,
         )
 
     paths, added_paths, deleted_paths = _changed_paths(files)
+    emit(
+        "files",
+        changed=len(files),
+        added=len(added_paths),
+        deleted=len(deleted_paths),
+        lines_added=sum(int(item.get("additions") or 0) for item in files),
+        lines_deleted=sum(int(item.get("deletions") or 0) for item in files),
+    )
     dependency_paths = [path for path in paths if Path(path).name in DEPS]
     for path in dependency_paths:
         flag(
@@ -325,10 +354,15 @@ def digest(evidence: dict[str, Any], workspace: Path | None = None) -> dict[str,
             unknowns.append("CI_required_set_unavailable")
     if evidence.get("files_truncated"):
         unknowns.append("PR_file_inventory_truncated")
+        emit("unknown", code="PR_file_inventory_truncated")
     if not checks:
         unknowns.append("CI_evidence_missing")
+        emit("unknown", code="CI_evidence_missing")
     elif any(check["conclusion"].lower() not in CI_FAIL | CI_ACCEPT for check in checks):
         unknowns.append("CI_evidence_incomplete")
+        emit("unknown", code="CI_evidence_incomplete")
+    if "CI_required_set_unavailable" in unknowns:
+        emit("unknown", code="CI_required_set_unavailable")
 
     narrowing = [
         {
@@ -339,9 +373,14 @@ def digest(evidence: dict[str, Any], workspace: Path | None = None) -> dict[str,
         for item in flags
         if item["code"] in {"suppression_or_ignore_added", "deleted_test"}
     ]
+    for item in expansion:
+        emit("expansion", kind=item.get("kind"), path=item.get("path"))
+    for item in questions:
+        emit("question", code=item.get("code"), question=item.get("question"))
     decision = _decision(
         ci_failure, flags, intent_source, questions, expansion, narrowing, unknowns
     )
+    emit("decision", decision=decision)
     remediation_findings = [
         {
             "code": item["code"],
