@@ -695,7 +695,7 @@ def campaign_input_module() -> Any:
     return _load_script("campaign_input", CAMPAIGN_INPUT)
 
 
-def classify_campaign_input(path: Path, *, forced_kind: Any | None = None) -> Any:
+def classify_campaign_input(path: Path) -> Any:
     """Classify the operator's input once, before anything can have side effects.
 
     Supported kinds return a classification; unsupported kinds raise the
@@ -703,7 +703,7 @@ def classify_campaign_input(path: Path, *, forced_kind: Any | None = None) -> An
     receive "unsupported, but here is a partial route" and improvise the rest.
     """
     module = campaign_input_module()
-    found = module.classify(Path(path), forced_kind=forced_kind)
+    found = module.classify(Path(path))
     if not found.supported:
         raise module.reject(found)
     return found
@@ -728,6 +728,7 @@ def default_compile_architecture(
     intent: Path,
     *,
     target: str | None,
+    admission: str,
     repo_root: Path,
     primed_dir: Path,
     target_checkout: Path | None = None,
@@ -745,7 +746,7 @@ def default_compile_architecture(
         return module.compile_architecture_intent(
             Path(intent),
             target=target,
-            forced=True,
+            admission=admission,
             repo_root=repo_root,
             target_checkout=target_checkout,
             cache_root=primed_dir,
@@ -1919,19 +1920,25 @@ def _pointer_runtime_status(workspace: Path) -> str:
     return value or "not_bootstrapped"
 
 
-def _program_owner(blueprint: str) -> str | None:
-    program_path = Path(blueprint) / "PROGRAM.yaml"
-    if not program_path.is_file():
+def _operator_ack_name(blueprint: str) -> str | None:
+    """Human acknowledgment identity from PHASE0, never program ownership.
+
+    `PROGRAM.owner` names the accountable program owner, which now carries a
+    shared Program Execution default. A pointer that reused it as the person
+    who must acknowledge would turn that default into a fabricated human.
+    """
+    config_path = Path(blueprint) / "PHASE0_USER_CONFIG.yaml"
+    if not config_path.is_file():
         return None
     try:
-        program = load_yaml(program_path)
+        config = load_yaml(config_path)
     except (OSError, ValueError, yaml.YAMLError):
-        # An unreadable PROGRAM.yaml is "owner unknown" for the pointer, not a crash.
+        # An unreadable PHASE0 contract is "ack identity unknown", not a guess.
         return None
-    if not isinstance(program, dict):
+    if not isinstance(config, dict):
         return None
-    owner = (program.get("program") or {}).get("owner")
-    return str(owner).strip() or None if owner else None
+    name = (config.get("operator_ack") or {}).get("name")
+    return str(name).strip() or None if name else None
 
 
 def write_launch_pointer(
@@ -1960,9 +1967,8 @@ def write_launch_pointer(
         "target_worktree": target_worktree,
         "host_worktree": host_worktree,
         "operator_ack_required": False,
-        # The program owner from the compiled blueprint, not a person's name
-        # baked into the runner.
-        "operator_ack_from": _program_owner(blueprint),
+        # Human acknowledgment identity is owned by PHASE0, not PROGRAM.owner.
+        "operator_ack_from": _operator_ack_name(blueprint),
         "forge_operator_ack": False,
         "only_pec_workspace": True,
         "claimed_task": FIRST_TASK_ID if armed else None,
@@ -5214,7 +5220,6 @@ def run_campaign(
     target_override: str | None = None,
     hooks: Hooks | None = None,
     fast: bool | None = None,
-    forced_kind: Any | None = None,
     target_checkout: Path | None = None,
 ) -> CampaignReport:
     """Run the campaign and leave a forensic execution trace behind it.
@@ -5247,7 +5252,6 @@ def run_campaign(
                 hooks=hooks,
                 fast=fast,
                 trace=trace,
-                forced_kind=forced_kind,
                 target_checkout=target_checkout,
             )
     finally:
@@ -5280,7 +5284,6 @@ class _CampaignRun:
     compile_generation: Any = None
     compile_input: Any = None
     ensure_target_checkout_once: Any = None
-    forced_kind: Any = None
     pec_workspace: Any = None
     prepare: Any = None
     primed_root: Any = None
@@ -5306,7 +5309,6 @@ class _CampaignRun:
 
 def _stage_classify_and_prime(run: _CampaignRun) -> CampaignReport | None:
     fast = run.fast
-    forced_kind = run.forced_kind
     hooks = run.hooks
     host_repo = run.host_repo
     host_root = run.host_root
@@ -5328,7 +5330,7 @@ def _stage_classify_and_prime(run: _CampaignRun) -> CampaignReport | None:
         # Classify once, before any stage can create a worktree, mutate a blueprint,
         # or touch PEC state. An unsupported input fails here in milliseconds.
         kinds = campaign_input_module().CampaignInputKind
-        classification = classify_campaign_input(intent_path, forced_kind=forced_kind)
+        classification = classify_campaign_input(intent_path)
         campaign_source_doc: dict[str, Any] | None = None
         architecture_receipt: dict[str, Any] | None = None
         if classification.kind is kinds.ARCHITECTURE_INTENT_V1:
@@ -5342,6 +5344,7 @@ def _stage_classify_and_prime(run: _CampaignRun) -> CampaignReport | None:
                 architecture_receipt = compile_architecture(
                     classification.path,
                     target=target_override or os.environ.get("TARGET"),
+                    admission=classification.admission or "declared",
                     repo_root=host_root,
                     primed_dir=l9_home / "primed",
                     # Read-only grounding against an existing local clone, when
@@ -6099,7 +6102,6 @@ def _run_campaign_stages(
     hooks: Hooks | None = None,
     fast: bool | None = None,
     trace: pe_trace.ExecutionTrace | None = None,
-    forced_kind: Any | None = None,
     target_checkout: Path | None = None,
 ) -> CampaignReport:
     requested_until = until
@@ -6117,7 +6119,6 @@ def _run_campaign_stages(
     l9_home = (l9_root or Path(os.environ.get("L9_ROOT", Path.home() / ".l9"))).resolve()
     run = _CampaignRun(
         fast=fast,
-        forced_kind=forced_kind,
         hooks=hooks,
         host_repo=host_repo,
         host_root=host_root,
@@ -6207,9 +6208,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--architecture",
         action="store_true",
         help=(
-            "Read INTENT as long-form architecture intent "
-            "(l9.program-execution.architecture-intent.v1). The operator's choice, so an "
-            "unchanged assistant transcript needs no frontmatter edit."
+            "Deprecated and ignored. Architecture admission is decided by the universal "
+            "classifier (ADR-0032); this flag cannot force a representation. Accepted only "
+            "so the `campaign-architecture` Makefile target keeps working unchanged."
         ),
     )
     parser.add_argument(
@@ -6345,12 +6346,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(raw)
     if args.check_input is not None:
-        forced = (
-            ["--as", campaign_input_module().CampaignInputKind.ARCHITECTURE_INTENT_V1.value]
-            if args.architecture
-            else []
-        )
-        return campaign_input_module().main([str(args.check_input), *forced])
+        return campaign_input_module().main([str(args.check_input)])
     if args.intent is None:
         parser.error("--intent is required (or use --check-input PATH)")
     module = campaign_input_module()
@@ -6358,9 +6354,6 @@ def main(argv: list[str] | None = None) -> int:
         refuse_live_until_shortcut(args.until)
         report = run_campaign(
             args.intent.resolve(),
-            forced_kind=(
-                module.CampaignInputKind.ARCHITECTURE_INTENT_V1 if args.architecture else None
-            ),
             until=args.until,
             target_checkout=args.target_checkout,
             primary=args.primary,

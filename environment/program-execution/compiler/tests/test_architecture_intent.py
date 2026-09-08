@@ -112,10 +112,12 @@ class SegmentationTests(unittest.TestCase):
 
 
 class LoadingTests(unittest.TestCase):
-    def test_raw_markdown_needs_no_frontmatter_when_forced(self) -> None:
+    def test_raw_markdown_needs_no_frontmatter_when_classified(self) -> None:
         with TemporaryDirectory() as raw:
             path = _write(Path(raw), DOC)
-            intent = load_architecture_intent(path, target="Quantum-L9/LLM-Router", forced=True)
+            intent = load_architecture_intent(
+                path, target="Quantum-L9/LLM-Router", admission="classified"
+            )
             self.assertEqual(intent.schema, ARCHITECTURE_INTENT_SCHEMA)
             self.assertEqual(intent.target, "Quantum-L9/LLM-Router")
             self.assertFalse(intent.declared)
@@ -130,47 +132,47 @@ class LoadingTests(unittest.TestCase):
                 "target: Quantum-L9/SEO-Bot\n"
                 "---\n\n" + DOC,
             )
-            intent = load_architecture_intent(path, forced=False)
+            intent = load_architecture_intent(path, admission="declared")
             self.assertTrue(intent.declared)
             self.assertEqual(intent.target, "Quantum-L9/SEO-Bot")
             self.assertEqual(intent.units[0].kind, "frontmatter")
             self.assertFalse(intent.units[0].normative)
 
-    def test_undeclared_document_is_refused_without_the_forced_route(self) -> None:
+    def test_undeclared_document_is_refused_under_declared_admission(self) -> None:
         with TemporaryDirectory() as raw:
             path = _write(Path(raw), DOC)
             with self.assertRaises(ArchitectureIntentError) as ctx:
-                load_architecture_intent(path, target="a/b", forced=False)
+                load_architecture_intent(path, target="a/b", admission="declared")
             self.assertIn(ARCHITECTURE_INTENT_SCHEMA, str(ctx.exception))
 
     def test_missing_target_fails_before_anything_else(self) -> None:
         with TemporaryDirectory() as raw:
             path = _write(Path(raw), DOC)
             with self.assertRaises(ArchitectureIntentError) as ctx:
-                load_architecture_intent(path, forced=True)
+                load_architecture_intent(path, admission="classified")
             self.assertIn("target", str(ctx.exception))
 
     def test_unreadable_and_empty_sources_are_refused(self) -> None:
         with TemporaryDirectory() as raw:
             missing = Path(raw) / "nope.md"
             with self.assertRaises(ArchitectureIntentError):
-                load_architecture_intent(missing, target="a/b", forced=True)
+                load_architecture_intent(missing, target="a/b", admission="classified")
             empty = _write(Path(raw), "\n\n   \n", "empty.md")
             with self.assertRaises(ArchitectureIntentError):
-                load_architecture_intent(empty, target="a/b", forced=True)
+                load_architecture_intent(empty, target="a/b", admission="classified")
 
 
 class CampaignIdTests(unittest.TestCase):
     def test_id_is_a_readable_slug_not_a_hash(self) -> None:
         with TemporaryDirectory() as raw:
             path = _write(Path(raw), DOC)
-            intent = load_architecture_intent(path, target="a/b", forced=True)
+            intent = load_architecture_intent(path, target="a/b", admission="classified")
             self.assertEqual(architecture_campaign_id(intent), "router-microscope-v1")
 
     def test_collision_is_answered_from_ids_that_exist(self) -> None:
         with TemporaryDirectory() as raw:
             path = _write(Path(raw), DOC)
-            intent = load_architecture_intent(path, target="a/b", forced=True)
+            intent = load_architecture_intent(path, target="a/b", admission="classified")
             taken = {"router-microscope-v1", "router-microscope-v2"}
             self.assertEqual(architecture_campaign_id(intent, taken), "router-microscope-v3")
 

@@ -18,6 +18,7 @@ import textwrap
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 import yaml
 
@@ -55,6 +56,35 @@ VALIDATOR = _load(
 BLOCKING_VOCABULARY = ("blocked", "pending", "advisory", "awaiting_review", "requires_approval")
 
 
+#: Architecture-grade prose that names no repository at all. It clears the
+#: front-door classification contract, so the only thing that can fail is
+#: target resolution — which is exactly what these tests need to isolate.
+ORPHAN_DOC = """# Control plane architecture
+
+## Authority and ownership
+
+The compiler MUST preserve obligation provenance. Ownership is a governing invariant.
+
+## Implementation plan
+
+Phase 1 rewrites the router and the adapter registry. The manifest schema is regenerated.
+
+## Acceptance and validation
+
+Every regression test MUST pass before release. Rollback is a revert, never a repair.
+
+## Prohibitions
+
+The extractor MUST NOT infer a target. Do not guess a repository from a reference.
+"""
+
+
+def _write_orphan(root: Path) -> Path:
+    orphan = root / "orphan.md"
+    orphan.write_text(ORPHAN_DOC, encoding="utf-8")
+    return orphan
+
+
 def _compile(
     tmp: Path,
     *,
@@ -66,6 +96,7 @@ def _compile(
     return ARCH.compile_architecture_intent(
         intent,
         target=target,
+        admission=kwargs.pop("admission", ARCH.ArchitectureAdmission.CLASSIFIED),
         repo_root=None,
         target_checkout=target_checkout,
         cache_root=tmp / "primed",
@@ -132,15 +163,81 @@ class RouteTests(unittest.TestCase):
             self.assertEqual(written, {"primed"})
             self.assertIn("primed", Path(receipt["campaign_source"]).parts)
 
-    def test_an_unresolvable_target_fails_before_anything_is_written(self) -> None:
+    def test_target_is_derived_from_the_architecture_subject(self) -> None:
+        """A missing TARGET is compiler work while the source names its subject.
+
+        The document says what it is an architecture *of*. Refusing to read that
+        and demanding the operator restate it was the resolvable-gap-as-blocker
+        this route exists to remove.
+        """
+        with TemporaryDirectory() as raw:
+            receipt = _compile(Path(raw), target=None)
+            self.assertEqual(receipt["target"], TARGET)
+            self.assertEqual(
+                receipt["target_resolution"]["source"],
+                "source_authority_repository",
+            )
+
+    def test_a_truly_unresolvable_target_fails_before_anything_is_written(self) -> None:
+        """No declaration, no subject, no checkout, no workspace: fail closed.
+
+        Deriving a target is not the same as inventing one. With no evidence at
+        all the compiler must refuse rather than pick a repository to mutate.
+        """
         with TemporaryDirectory() as raw:
             root = Path(raw)
+            orphan = _write_orphan(root)
             with self.assertRaises(ARCH.ArchitectureCompileError) as ctx:
-                _compile(root, target=None)
+                _compile(root, intent=orphan, target=None)
             self.assertTrue(ctx.exception.to_dict()["nothing_executed"])
             self.assertFalse(ctx.exception.to_dict()["workspace_created"])
             self.assertEqual(ctx.exception.to_dict()["tasks_started"], 0)
-            self.assertEqual([p for p in root.rglob("*") if p.is_file()], [])
+            self.assertFalse((root / "primed").exists())
+
+    def test_a_bare_github_link_is_a_reference_not_a_mutation_target(self) -> None:
+        """Architecture documents cite donor repositories constantly."""
+        with TemporaryDirectory() as raw:
+            root = Path(raw)
+            cited = root / "cited.md"
+            cited.write_text(
+                ORPHAN_DOC + "\nPrior art: https://github.com/Quantum-L9/l9-ci-core\n",
+                encoding="utf-8",
+            )
+            with self.assertRaises(ARCH.ArchitectureCompileError) as ctx:
+                _compile(root, intent=cited, target=None)
+            self.assertIn("references are not mutation authority", str(ctx.exception))
+
+    def test_source_drift_between_target_resolution_and_load_fails_closed(self) -> None:
+        """Target resolution and semantic loading must have read the same bytes.
+
+        Two reads of one path are two chances to read different content. Binding
+        both to one digest is what stops a receipt naming a target chosen from a
+        source that no longer exists.
+        """
+        with TemporaryDirectory() as raw:
+            root = Path(raw)
+            intent = root / "architecture.md"
+            intent.write_text(FIXTURE.read_text(encoding="utf-8"), encoding="utf-8")
+            resolver = ARCH.resolve_architecture_target
+
+            def resolve_then_drift(path, **kwargs):
+                result = resolver(path, **kwargs)
+                source = Path(path)
+                source.write_text(
+                    source.read_text(encoding="utf-8")
+                    + "\nThe compiler MUST reject source identity drift.\n",
+                    encoding="utf-8",
+                )
+                return result
+
+            with patch.object(ARCH, "resolve_architecture_target", side_effect=resolve_then_drift):
+                with self.assertRaises(ARCH.ArchitectureCompileError) as ctx:
+                    _compile(root, intent=intent)
+            self.assertIn(
+                "changed between target resolution and semantic loading",
+                str(ctx.exception),
+            )
+            self.assertFalse((root / "primed").exists())
 
     def test_an_unreadable_source_fails_closed(self) -> None:
         with TemporaryDirectory() as raw:
@@ -159,6 +256,11 @@ class ForwardProgressTests(unittest.TestCase):
         statuses = {task["definition_status"] for task in self.source["tasks"]}
         self.assertEqual(statuses, {"ready"})
         self.assertEqual(self.receipt["blocked_task_count"], 0)
+
+    def test_default_program_owner_is_quantum_ai_partners(self) -> None:
+        """The shared Program Execution default, not a person baked into code."""
+        self.assertEqual(self.source["program"]["owner"], "Quantum AI Partners")
+        self.assertEqual(self.source["metadata"]["owner"], "Quantum AI Partners")
 
     def test_no_approval_shaped_state_is_introduced(self) -> None:
         blob = json.dumps(self.source).lower()
@@ -597,7 +699,7 @@ class CliTests(unittest.TestCase):
                     sys.executable,
                     str(PE_ROOT / "scripts/compile_architecture_intent.py"),
                     "--intent",
-                    str(FIXTURE),
+                    str(_write_orphan(Path(raw))),
                     "--cache-root",
                     str(Path(raw) / "primed"),
                     "--extractor",
