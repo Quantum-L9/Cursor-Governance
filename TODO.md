@@ -865,3 +865,10 @@ findings were deliberately left open:
 Plan: `docs/plans/ff_close_publish_loop_a1b2c3d4.plan.md`
 
 - [ ] Review `WIP/9-2-26/cursor-remediation/TECH_DEBT.md` (+ `tech_debt.json`) — environment/loader/bootstrap debt ledger from both 2026-09-02 experience packs; TODO.md stays a pointer, findings live there.
+
+## SessionStart secrets-plane simplify leftovers (2026-09-07)
+
+`/start-session` STATE_SYNC (items 6–7) was applied in session then lost (file still v3.1.0). Items 1–5 did not land: the target files are absent from the consumer checkout and from live SSOT (`~/.cursor-governance`). Recreating the plane is **not** a `/simplify` pass.
+
+- [ ] Restore SessionStart secrets-plane owner: `ops/secrets/session_start_secrets.py`, `ops/secrets/aws_cli_preflight.py`, `ops/secrets/infisical_cli_login.py` (bootstrap calls the owner; reporter stays a derived view; no Makefile `secrets-bind` / `secrets-aws-preflight`).
+- [ ] After those files exist, apply the five small cuts: bootstrap say-line → `session_start_secrets.py`; one `BIND_NAMES` constant (reporter imports it); `aws_cli_preflight._fail(code)`; `infisical_cli_login.ensure_machine_profile()` (owner stops wrapping `main()`); reporter inserts `ops/secrets` once and derives `### FAILED` from the classified `aws-cli` line.
