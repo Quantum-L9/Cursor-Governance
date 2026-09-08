@@ -9,8 +9,8 @@ metadata:
   tags: [l9, pr, ci, code-review, github-code-quality, copilot, diagnose, sonarcloud, codeql, debt, remediation, concurrent, subagents, github, makefile]
   owner: igor_beylin
   status: active
-  version: 5.1.0
-  updated: 2026-09-04
+  version: 5.2.0
+  updated: 2026-09-05
   tier: exemplary
 ---
 
@@ -24,7 +24,7 @@ Converge is **PLAN → WAVES (REMEDIATE_ALL) → MERGE_TRAIN**. It is not remedi
 
 | Intent | Mutates | Triggers | Behavior |
 |--------|---------|----------|----------|
-| **Diagnose** | no | review / readiness / blockers / `/pr` / “ready to merge?” | Fetch PR+reviews+CI; overlap advisory; slim verdict; **never** commit/push/merge |
+| **Diagnose** | no | review / readiness / blockers / `/pr` / “ready to merge?” | Digest first, then fetch PR+reviews+CI; overlap advisory; slim verdict; **never** commit/push/merge |
 | **Converge** | yes | `/l9-pr-remediation` / fix / remediate / babysit / merge failing PRs | Fleet plan → remediation waves → stack-safe oldest-first merge train |
 
 Invoking this skill (or `/l9-pr-remediation`) is merge authorization for **all open PRs** in the target repo. Campaigns and `make pr` only publish. They do not merge. Load [references/merge-advise.md](references/merge-advise.md).
@@ -52,6 +52,7 @@ Prose never recomputes what these helpers compute. Each one is read-only advice 
 | Concurrency caps | `ops/autonomy/execution_profile.py` (read by `pr_fleet.py waves`) | numbers in this pack |
 | Subagent roles, result schema, acceptance | `environment/agents/cursor-subagents/` + `environment/agents/results/` (called by `pr_fleet.py accept`) | narrative completion |
 | Thread replies | `scripts/reply_threads.py` | per-thread `gh` loops |
+| Pre-remediation digest / READY gate | `skills/l9-pr-digest` (`scripts/pr_digest.py`, `scripts/require_digest.py`) | mutate the PR under review |
 
 ## Makefile capability graph (this host)
 
@@ -73,7 +74,7 @@ If no PR number exists (baseline debt case): same verify, `git push` the branch,
 
 ## Diagnose
 
-Load [references/diagnose-workflow.md](references/diagnose-workflow.md). Optional focused lenses: [references/review-angles.md](references/review-angles.md). List unanswered **code-review agent** comments (`github-code-quality[bot]`, Copilot) as review blockers — [references/code-review-agents.md](references/code-review-agents.md). Report file-overlap across open PRs as advisory (`pr_fleet.py plan --json` is the fastest way to get it). Do not merge.
+`/pr` and Diagnose-only invokes **run `l9-pr-digest` first**. Bind exact base/head, run `pr_digest.py` **without** `--quiet` so the user sees the live `[digest]` finding stream and the 11-section unpack, write `.l9/pr/pr-digest-result.json`, then `require_digest.py --mode diagnose`. The JSON is the remediator handoff, not a substitute for showing the stream. A valid non-READY digest still continues; an unbound or missing digest is `Unknown` / STOP for that PR. Then load [references/diagnose-workflow.md](references/diagnose-workflow.md). Optional focused lenses: [references/review-angles.md](references/review-angles.md). List unanswered **code-review agent** comments (`github-code-quality[bot]`, Copilot) as review blockers — [references/code-review-agents.md](references/code-review-agents.md). Report file-overlap across open PRs as advisory (`pr_fleet.py plan --json` is the fastest way to get it). Do not merge. Consume the digest packet; do not re-invent intent, expansion, or CI the digest already bound.
 
 **Forbidden in Diagnose:** commit, push, force-push, edit worktree for fixes, alignment %, gap matrix, deep-eval, index theater, babysit loops, `gh pr merge`.
 
@@ -81,6 +82,7 @@ Load [references/diagnose-workflow.md](references/diagnose-workflow.md). Optiona
 
 | Signal | Source | Action |
 |--------|--------|--------|
+| Digest | `skills/l9-pr-digest/scripts/pr_digest.py` + `require_digest.py --mode converge` | Same-head digest required before any edit. READY or `CI_OR_EXECUTION_FAILURE` may enter remediation. Narrow / architecture / unknown / blocked still stop. |
 | Fleet | `pr_fleet.py plan --board` | One receipt: inventory, topology, merge order, waves, board per head |
 | CI failures | `gh run view --log-failed`, annotations | Fix codebase root cause |
 | Review + inline | `gh api` reviews/comments | Validate against current code; fix or reply |
@@ -144,7 +146,7 @@ Applies `kernels/Diagnose First Kernel.md`, `kernels/Validate & Repair.md`, and 
 
 ## Hot Path (Converge)
 
-0. **Authorize, then plan the fleet (read-only).** User invoke is merge authorization — write the receipt. Load [references/run-contract.md](references/run-contract.md). Cache remediator verbs, fingerprint the venv (`UV_PYTHON` = uv-managed **native** CPython; never `uv python find --system`). Then one planner call; subscribe every PR it lists (`ops/scripts/lib/gh_subscribe_pr.sh`, runs in parallel; a classified GraphQL refusal does not waive ownership). Reuse a worktree that already holds a branch (`git worktree list`); `worktree_add_wired.sh` only when none exists. Emit `RUN_CONTRACT` from the receipt. Do not edit a PR in this step.
+0. **Authorize, then plan the fleet (read-only).** User invoke is merge authorization — write the receipt. Load [references/run-contract.md](references/run-contract.md). Cache remediator verbs, fingerprint the venv (`UV_PYTHON` = uv-managed **native** CPython; never `uv python find --system`). Then one planner call; subscribe every PR it lists (`ops/scripts/lib/gh_subscribe_pr.sh`, runs in parallel; a classified GraphQL refusal does not waive ownership). Reuse a worktree that already holds a branch (`git worktree list`); `worktree_add_wired.sh` only when none exists. Emit `RUN_CONTRACT` from the receipt. Do not edit a PR in this step. For every PR about to be edited, run `l9-pr-digest` and `require_digest.py --mode converge` against that exact head. READY or `CI_OR_EXECUTION_FAILURE` may enter remediation (failing required checks are this pack's job). Narrow / architecture / unknown / blocked → record the digest decision and continue independent accepted PRs.
 
 ```bash
 # TEMPLATE — substitute owner/repo from the verified gh target in this run
@@ -192,6 +194,7 @@ Not a second publish path. After any merge that touched generated paths — or w
 ## Resource Map
 
 ### Diagnose
+- `skills/l9-pr-digest` — mandatory predecessor (`scripts/pr_digest.py`, `scripts/require_digest.py --mode diagnose`)
 - [references/diagnose-workflow.md](references/diagnose-workflow.md)
 - [references/code-review-agents.md](references/code-review-agents.md)
 - [references/review-angles.md](references/review-angles.md)
@@ -199,6 +202,7 @@ Not a second publish path. After any merge that touched generated paths — or w
 - [references/run-contract.md](references/run-contract.md)
 
 ### Converge
+- `skills/l9-pr-digest` — same-head converge gate (`require_digest.py --mode converge`) before any edit; READY or `CI_OR_EXECUTION_FAILURE` may proceed
 - [references/run-contract.md](references/run-contract.md) — preflight, Makefile surface, venv, fleet receipt
 - [references/fleet-waves.md](references/fleet-waves.md) — wave launch, assignments, result acceptance, watchers
 - `ops/autonomy/pr_fleet.py` — fleet owner (`plan` / `assign` / `accept` / `model`)

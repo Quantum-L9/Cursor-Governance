@@ -1334,6 +1334,34 @@ rules and commands are unchanged.
 - Rollback is one field: set `.cursor-plugin/plugin.json` `skills` back to
   `"skills"`. No canonical folder moves, no symlink farm.
 
+<!-- L9_PR_DIGEST_BEFORE_REMEDIATE_V1 -->
+## `/pr` runs digest then remediator Diagnose (2026-09-05)
+
+This fragment supersedes only the implied “Diagnose starts at remediator”
+reading of `/pr` is Diagnose-only. That sentence stays on disk (additive_only).
+`/pr` still never merges.
+
+- `/pr` runs `l9-pr-digest` first (machine mode → `.l9/pr/pr-digest-result.json`
+  + `require_digest.py --mode diagnose`), then `l9-pr-remediation` Diagnose.
+- `/l9-pr-digest` is the skill slash (`skills/l9-pr-digest`). Do not add a
+  colliding `commands/l9-pr-digest.md`. It never mutates the PR.
+- `/l9-pr-remediation` Converge requires a same-head READY digest
+  (`require_digest.py --mode converge`) before any edit. Non-READY does not
+  enter remediation.
+- The poll-worker prompt already had this order; the remediator pack now
+  consumes the same packet.
+
+<!-- L9_PR_DIGEST_STREAM_V1 -->
+## Manual digest streams findings (2026-09-05)
+
+This fragment supersedes only the “machine mode → JSON file” sentence in
+`L9_PR_DIGEST_BEFORE_REMEDIATE_V1`. That paragraph stays on disk (additive_only).
+
+- Manual `/pr` and remediator Diagnose run `pr_digest.py` **without** `--quiet`.
+  Stream `[digest]` finding lines and the 11-section unpack to the user.
+- The JSON file remains the remediator handoff. It is not the human report.
+- Poll workers / automation pass `--quiet`.
+
 <!-- PLANS_REFINE_V1 -->
 ## Plans-store refine (2026-09-05)
 

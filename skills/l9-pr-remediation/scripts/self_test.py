@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contract tests for l9-pr-remediation 5.1.0. Stdlib only.
+"""Contract tests for l9-pr-remediation 5.2.0. Stdlib only.
 
 Structural and wiring checks: every link resolves, every deterministic owner
 the pack names exists, the pre-v5 contradictions stay gone, and the pack never
@@ -34,6 +34,9 @@ OWNERS = (
     "environment/agents/results/gateway.py",
     "environment/contracts/autonomy/MANIFEST.yaml",
     "skills/l9-issue-remediation/SKILL.md",
+    "skills/l9-pr-digest/SKILL.md",
+    "skills/l9-pr-digest/scripts/pr_digest.py",
+    "skills/l9-pr-digest/scripts/require_digest.py",
     "tests/ops/autonomy/test_pr_fleet.py",
 )
 
@@ -72,7 +75,7 @@ def _forbid(text: str, needle: str, where: str) -> None:
 
 
 def test_frontmatter_and_map() -> None:
-    _need(SKILL, "version: 5.1.0", "SKILL.md")
+    _need(SKILL, "version: 5.2.0", "SKILL.md")
     _need(SKILL, "tier: exemplary", "SKILL.md")
     _need(SKILL, "disable-model-invocation: true", "SKILL.md")
     match = re.search(r"^description: (.+)$", SKILL, re.M)
@@ -281,6 +284,12 @@ def test_board_and_merge() -> None:
     _need(SKILL, "**never** commit/push/merge", "SKILL.md")
     _forbid(REFS["diagnose-workflow.md"], "gh pr merge {number}", "diagnose-workflow.md")
     _need(REFS["diagnose-workflow.md"], "Diagnose never merges", "diagnose-workflow.md")
+    _need(REFS["diagnose-workflow.md"], "Digest first (mandatory)", "diagnose-workflow.md")
+    _need(REFS["diagnose-workflow.md"], "Do **not** pass `--quiet`", "diagnose-workflow.md")
+    _need(SKILL, "without** `--quiet`", "SKILL.md")
+    _need(SKILL, "require_digest.py --mode converge", "SKILL.md")
+    _need(SKILL, "skills/l9-pr-digest", "SKILL.md")
+    _need(REFS["run-contract.md"], "P_digest", "run-contract.md")
     _need(REFS["merge-advise.md"], "Never merge", "merge-advise.md")
     _need(REFS["merge-advise.md"], "oldest `createdAt` first", "merge-advise.md")
     _forbid(REFS["merge-advise.md"], "git checkout main", "merge-advise.md")

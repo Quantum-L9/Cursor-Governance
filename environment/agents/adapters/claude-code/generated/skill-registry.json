@@ -1,5 +1,5 @@
 {
-  "generation_id": "bdebd0d372c7382c0c6d50763cb3aa3bb3dad33d217e0e44c7a942da05852997",
+  "generation_id": "02489ef18d85f4df8314f3295ccdfa4c53554e95b9441f6d79f1062acf50b6f3",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -42,8 +42,9 @@
           "remediate the pr",
           "babysit the pr"
         ],
-        "note": "hint_allowed \u2014 Read Diagnose path; remediate-until-green routes via pr_remediation_until_green (below) under packet bounds.\n",
+        "note": "hint_allowed \u2014 Read Diagnose path after l9-pr-digest; remediate-until-green routes via pr_remediation_until_green (below) under packet bounds.\n",
         "positive_signals": [
+          "/pr",
           "review pr",
           "pull request review",
           "merge blockers",
@@ -56,7 +57,9 @@
         ],
         "primary": "l9-pr-remediation",
         "signal_weight": 8,
-        "supporting": []
+        "supporting": [
+          "l9-pr-digest"
+        ]
       },
       {
         "hint_allowed": true,
@@ -81,7 +84,9 @@
         ],
         "primary": "l9-pr-remediation",
         "signal_weight": 8,
-        "supporting": []
+        "supporting": [
+          "l9-pr-digest"
+        ]
       },
       {
         "hint_allowed": true,
@@ -1399,7 +1404,7 @@
       "path": "skills/l9-pr-digest",
       "reason": "",
       "skill_md": "skills/l9-pr-digest/SKILL.md",
-      "skill_sha256": "47de39b1a260b6433f38392854ace92f2fe822652d9213877013d8990bb615bc",
+      "skill_sha256": "dbf2a75af57d63bef34f58436fbe9ebcf1625b1f02ff25188ac0a6535336dc87",
       "user_invocable": true,
       "when_to_use": "judging one PR's scope, evidence, expansion, and architecture impact before remediation \u2014 the skill never mutates the PR"
     },
@@ -1412,7 +1417,7 @@
       "path": "skills/l9-pr-remediation",
       "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked). The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Above-paygrade HUMAN / unfixable required CI / ENVIRONMENT after best-effort opens a GitHub issue and launches l9-issue-remediation via cursor-subagents; do not ask the human to unblock. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
       "skill_md": "skills/l9-pr-remediation/SKILL.md",
-      "skill_sha256": "0a9236717f9317bff4c4941272ec01822bf0b5f2a52e2d9c8cfbfdb8d1713689",
+      "skill_sha256": "51b5923d7b7821b5c36ce7148be923342308e6b28ce54d39942f35d40254e17b",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1600,6 +1605,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "09f98a3b5215c431b80fd97de00f0e29f0ba6a7f137ff3bb401bddc3159d9a7c",
-  "source_skill_corpus_sha256": "7037b475909afdbcb7abdc627f349b7947afa007660c141ef9e4c9e42d7ef79f"
+  "source_manifest_sha256": "b71df84c03ba02fa5a638d03749e4bf08c7efcb5354d85fb0fe4928cf31c5587",
+  "source_skill_corpus_sha256": "f0afe54a5e39e79bca37a5b22dd580ae75a7320b0443bbf609b7b92607fbd743"
 }
