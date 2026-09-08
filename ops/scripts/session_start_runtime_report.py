@@ -21,12 +21,14 @@ from typing import Any
 # Allow `python ops/scripts/session_start_runtime_report.py` from a checkout.
 _SCRIPTS = Path(__file__).resolve().parent
 _AUTONOMY = _SCRIPTS.parent / "autonomy"
-for _path in (_SCRIPTS, _AUTONOMY):
+_SECRETS = _SCRIPTS.parent / "secrets"
+for _path in (_SCRIPTS, _AUTONOMY, _SECRETS):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
 from breakglass_receipt import evaluate, load_receipt  # noqa: E402
 from claude_bootstrap_receipt import read as read_claude_receipt  # noqa: E402
+from session_start_secrets import BIND_NAMES  # noqa: E402
 
 OK = "ok"
 NA = "n/a"
@@ -278,6 +280,96 @@ def classify_simple(name: str, detail: str, *, fail_tokens: tuple[str, ...] = ()
     return _line(name, OK, text or "ok")
 
 
+def classify_aws_cli(result: dict[str, Any] | None) -> dict[str, Any]:
+    """Derived view of aws_cli_preflight.probe. Never prints account ids."""
+    if not result:
+        return _line(
+            "aws-cli",
+            FAILED,
+            "probe unread — aws_cli_preflight produced no result",
+            evidence="no probe",
+        )
+    if result.get("ok"):
+        return _line("aws-cli", OK, str(result.get("summary") or "authorized"))
+    return _line(
+        "aws-cli",
+        FAILED,
+        str(result.get("summary") or result.get("code") or "unauthorized"),
+        evidence=str(result.get("code") or ""),
+    )
+
+
+def classify_secrets_bind(statuses: list[dict[str, Any]] | None) -> dict[str, Any]:
+    """SessionStart visibility for local bind. Never includes a secret value.
+
+    source=aws is a fault: bind is Infisical only. Unbound is a vault miss,
+    not a reason to paste a token.
+    """
+    if statuses is None:
+        return _line(
+            "secrets-bind",
+            DEGRADED,
+            "probe unread — capability_bind produced no status",
+            evidence="no bind statuses",
+        )
+    parts: list[str] = []
+    unbound: list[str] = []
+    aws_leftover: list[str] = []
+    for raw in statuses:
+        name = str(raw.get("name") or "?").strip() or "?"
+        source = str(raw.get("source") or "unbound").strip() or "unbound"
+        if name.upper() in {"VALUE", "TOKEN", "SECRET"}:
+            continue
+        parts.append(f"{name}={source}")
+        if source == "aws":
+            aws_leftover.append(name)
+        elif not raw.get("bound"):
+            unbound.append(name)
+    summary = " ".join(parts) if parts else "no inventory names probed"
+    if aws_leftover:
+        return _line(
+            "secrets-bind",
+            FAILED,
+            f"{summary} — source=aws is a fault; bind is Infisical only",
+            evidence="aws " + ",".join(aws_leftover),
+        )
+    if unbound:
+        return _line(
+            "secrets-bind",
+            DEGRADED,
+            f"{summary} — fetchers will retry; do not paste a token",
+            evidence="unbound " + ",".join(unbound),
+        )
+    return _line("secrets-bind", OK, summary)
+
+
+def probe_aws_cli() -> dict[str, Any] | None:
+    try:
+        import aws_cli_preflight as preflight
+    except ImportError:
+        return None
+    return preflight.probe()
+
+
+def probe_secrets_bind() -> list[dict[str, Any]] | None:
+    """In-process bind --check. Fail-open. Values never leave bind_status."""
+    try:
+        import capability_bind as cb
+    except ImportError:
+        return None
+    statuses: list[dict[str, Any]] = []
+    for name in BIND_NAMES:
+        status = cb.bind_status(name)
+        statuses.append(
+            {
+                "name": str(status.get("name") or name),
+                "bound": bool(status.get("bound")),
+                "source": str(status.get("source") or "unbound"),
+            }
+        )
+    return statuses
+
+
 def classify_skill_usage(detail: str) -> dict[str, Any]:
     """A missing Claude skill-usage log is n/a on Cursor, not a this-session fault."""
     text = detail or ""
@@ -321,6 +413,13 @@ def latest_repair_log(repair_dir: Path) -> tuple[str, str]:
 
 
 def format_markdown(lines: list[dict[str, Any]]) -> str:
+    parts: list[str] = []
+    failed_aws = [item for item in lines if item["name"] == "aws-cli" and item["class"] == FAILED]
+    if failed_aws:
+        parts.append("### FAILED")
+        for item in failed_aws:
+            parts.append(f"- {item['name']}: {item['class']} — {item['summary']}")
+        parts.append("")
     runtime = ["### Runtime"]
     for item in lines:
         runtime.append(f"- {item['name']}: {item['class']} — {item['summary']}")
@@ -328,12 +427,12 @@ def format_markdown(lines: list[dict[str, Any]]) -> str:
     runtime.append("### Degraded")
     if not degraded:
         runtime.append("- none")
-        return "\n".join(runtime)
+        return "\n".join(parts + runtime)
     for item in degraded:
         ev = item.get("evidence") or ""
         extra = f" Evidence: {ev}" if ev and ev not in item["summary"] else ""
         runtime.append(f"- {item['name']}: {item['class']} — {item['summary']}.{extra}".rstrip("."))
-    return "\n".join(runtime)
+    return "\n".join(parts + runtime)
 
 
 def collect(
@@ -353,14 +452,20 @@ def collect(
     hydrate_reason: str,
     home: Path | None = None,
     workspace: str = "",
+    aws_cli: dict[str, Any] | None = None,
+    secrets_bind: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     root = home or Path.home()
+    aws_result = aws_cli if aws_cli is not None else probe_aws_cli()
+    bind_result = secrets_bind if secrets_bind is not None else probe_secrets_bind()
     lines: list[dict[str, Any]] = [
         classify_simple("venv", venv, fail_tokens=("absent", "missing", "fail")),
         classify_simple("ide-profile", ide_profile, fail_tokens=("fail", "error")),
         classify_simple("tunnel", tunnel, fail_tokens=("fail", "refused", "error", "closed")),
         classify_memory(detail=memory_detail, stderr=memory_stderr, healthy=memory_healthy),
         classify_publish_path(evaluate(load_receipt())),
+        classify_aws_cli(aws_result),
+        classify_secrets_bind(bind_result),
         classify_skill_usage(skill_note),
         classify_itest(error=probe_neo4j(), codegraph=codegraph),
     ]
@@ -469,11 +574,12 @@ def main(argv: list[str] | None = None) -> int:
         hydrate_reason=args.hydrate_reason,
         workspace=args.workspace,
     )
+    aws_failed = any(item["name"] == "aws-cli" and item["class"] == FAILED for item in lines)
     if args.json:
         print(json.dumps({"lines": lines}, indent=2, sort_keys=True))
-        return 0
+        return 1 if aws_failed else 0
     print(format_markdown(lines))
-    return 0
+    return 1 if aws_failed else 0
 
 
 if __name__ == "__main__":

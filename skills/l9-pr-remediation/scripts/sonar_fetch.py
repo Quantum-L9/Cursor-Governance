@@ -9,10 +9,9 @@ Read-only against SonarCloud: this never mutates issue or hotspot state.
 
 Authentication: ``capability_bind.bind_first`` resolves SONAR_TOKEN (or
 SONARCLOUD_TOKEN) in-process (already-present env, then the Infisical CLI
-user profile, then AWS ``openclaw-igorbot/sonarcloud#token``). The value is
-never exported to ``os.environ``, never printed, and never written to the
-snapshot. The retired capability broker is not involved. Without a bound
-token the fetch is an unauthenticated public read and says so. Authorization
+profile). The value is never exported to ``os.environ``, never printed, and
+never written to the snapshot. AWS is not a bind path. Without a bound token
+the fetch is an unauthenticated public read and says so. Authorization
 headers are redacted.
 
 Sonar findings never block merge (that is the PR board's call); they are
@@ -33,7 +32,7 @@ import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 
-# Local bind (Infisical CLI profile / AWS). The capability broker is retired.
+# Local bind (Infisical CLI profile). The capability broker is retired.
 _OPS_SECRETS = Path(__file__).resolve().parents[3] / "ops" / "secrets"
 _OPS_LIB = Path(__file__).resolve().parents[3] / "ops" / "lib"
 for _extra in (_OPS_SECRETS, _OPS_LIB):
@@ -104,18 +103,19 @@ class DirectTransport:
 
 
 def build_transport(base_url: str, surface: str | None = None) -> DirectTransport:
-    """Authenticated when an inventory token can be bound, on any surface.
+    """Authenticated when the environment already holds a token, on any surface.
 
-    Bind is use, not export. A miss is a vault miss: continue unauthenticated
-    and say so. Do not paste a token.
+    The token was placed in this process by the operator environment, CI, or a
+    governed session import — never by ops/secrets, which still refuses to
+    export one to a model-controlled surface. Reading a value that is already
+    present is how the sibling codeql_fetch.py treats GITHUB_TOKEN. Without a
+    token the read is public and the receipt says ``authenticated: false``.
     """
     token = bind_first(*TOKEN_ENV)
     if not token:
         print(
-            "sonar_fetch: SONAR_TOKEN unbound "
-            "(Infisical CLI profile and AWS both missed); continuing UNAUTHENTICATED — "
-            "private findings will be absent and the quality gate may be incomplete — "
-            "do not paste a token",
+            "sonar_fetch: no SONAR_TOKEN in the environment; continuing UNAUTHENTICATED — "
+            "private findings will be absent and the quality gate may be incomplete",
             file=sys.stderr,
         )
     return DirectTransport(base_url, token, surface)

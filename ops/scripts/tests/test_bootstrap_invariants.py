@@ -155,7 +155,8 @@ class SwallowedFailureTests(unittest.TestCase):
         body = (REPO / "ops" / "scripts" / "bootstrap_agent_environment.sh").read_text(
             encoding="utf-8"
         )
-        self.assertIn("capability plane: RETIRED", body)
+        self.assertIn("session_start_secrets.py", body)
+        self.assertIn("secrets plane: session_start_secrets.py", body)
         self.assertNotIn('bash "$CAP_BOOTSTRAP"', body)
         self.assertNotIn("cap_rc=$?", body)
 
