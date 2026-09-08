@@ -1,4 +1,12 @@
-"""Graphiti PICKUP writes for hook fallback and /end-session repair (ADR-0028)."""
+"""Canonical close retry and forced ``/end-session`` repair (ADR-0028, stage C6).
+
+Both paths converge on the same memory boundary as the hook close: a
+continuation capsule admitted as a governed candidate, then ``memory.close``
+with the idempotency key recorded in the local close obligation. A retry of
+an interrupted close therefore resolves to exactly one logical close
+(adversarial tests G and H); a forced repair supersedes nothing by hand and
+never writes a provider.
+"""
 
 from __future__ import annotations
 
@@ -7,89 +15,156 @@ from pathlib import Path
 from typing import Any
 
 from ops.graphiti.hydration.session_latches import (
+    STATUS_CLOSE_CONFLICTED,
+    STATUS_CLOSE_INCOMPLETE,
+    STATUS_CLOSED_CANONICALLY,
     load_close_receipt,
     receipt_is_successful_close,
     resolve_session_id,
     write_receipt,
 )
+from ops.memory.control_plane_client import OutcomeStatus
+from ops.memory.namespace_context import repository_state_digest, resolve_namespace_context
 
 
-def fallback_pickup_write(
+def _finish(
+    project: Path,
+    session_id: str,
     *,
-    project_dir: str | Path,
-    session_id: str | None = None,
-    reason: str = "close_fallback",
-    transcript_path: str | None = None,
-    agent_id: str | None = None,
-    dry_run: bool = False,
+    status: str,
+    dry_run: bool,
+    write_count: int,
+    obligation: dict[str, Any],
+    **fields: Any,
 ) -> dict[str, Any]:
-    """One Graphiti pickup_context write after close_session write_count=0."""
-    from group_resolver import resolve_group_id
-
-    from ops.graphiti.hydration.close_session import _heuristic_pickup, _write_kind
-    from ops.graphiti.hydration.identity import resolve_write_identity
-    from ops.graphiti.hydration.transcript import load_transcript_excerpt
-
-    project = Path(project_dir).expanduser().resolve()
-    sid = resolve_session_id(explicit=session_id)
-    report: dict[str, Any] = {
-        "status": "close_failed",
-        "session_id": sid,
-        "written": False,
-        "write_count": 0,
-        "warnings": [],
+    now = datetime.now(UTC).isoformat()
+    payload = {
+        "status": status,
+        "session_id": session_id,
+        "phase_a": write_count > 0,
+        "write_count": write_count,
+        "closed_at": now,
+        "attempt_timestamp": now,
+        "retry_count": int(obligation.get("retry_count") or 0) + 1,
+        "canonical_namespace_requested": obligation.get("canonical_namespace_requested"),
+        "close_idempotency_key": obligation.get("close_idempotency_key"),
+        "payload_digest": obligation.get("payload_digest"),
+        "continuation_status": obligation.get("continuation_status"),
+        "continuation_reference": obligation.get("continuation_reference"),
+        "close_summary": obligation.get("close_summary"),
+        "close_capsule_digest": obligation.get("close_capsule_digest"),
+        "close_session_id": obligation.get("close_session_id"),
+        **fields,
     }
-    identity = resolve_write_identity(
-        explicit_agent_id=agent_id,
-        surface="claude-code" if (agent_id or "").startswith("claude") else "cursor",
-    )
-    resolved = resolve_group_id(project)
-    group_id = str(resolved.get("group_id") or "")
-    if not group_id or resolved.get("readonly"):
-        report["warnings"].append("fallback write blocked: group unresolved/readonly")
-        if not dry_run:
-            write_receipt(project, sid, {**report, "phase_a": False})
-        return report
-
-    transcript, _src = load_transcript_excerpt(
-        transcript_path=transcript_path,
-        conversation_id=sid,
-    )
-    pickup = _heuristic_pickup(
-        project_dir=project,
-        session_id=sid,
-        transcript=transcript,
-        reason=reason,
-    )
-    search_line = (
-        f"PICKUP|objective={pickup['active_objective']}|next={pickup['next_action']}|"
-        f"agent={identity['agent_id']}|session={sid}"
-    )
-    body = search_line
-    try:
-        result = _write_kind(
-            body,
-            kind="pickup_context",
-            group_id=group_id,
-            agent_id=identity["agent_id"],
-            user_id=identity["user_id"],
-            dry_run=dry_run,
-        )
-        written = bool(result.get("written") or result.get("dry_run"))
-        report["written"] = written
-        report["write_count"] = 1 if written else 0
-        report["status"] = "closed" if written else "close_failed"
-        report["phase_a"] = written
-        report["result"] = result
-    except Exception as exc:  # noqa: BLE001
-        report["warnings"].append(f"fallback write failed: {type(exc).__name__}")
-        report["status"] = "close_failed"
     if not dry_run:
-        write_receipt(project, sid, report)
+        write_receipt(project, session_id, payload)
+    report = dict(payload)
+    report["written"] = write_count > 0
     return report
 
 
-def repair_pickup_write(
+def retry_close(
+    *,
+    project_dir: str | Path,
+    session_id: str | None = None,
+    reason: str = "close_retry",
+    transcript_path: str | None = None,
+    agent_id: str | None = None,
+    dry_run: bool = False,
+    client: Any = None,
+) -> dict[str, Any]:
+    """Discharge a ``close_incomplete`` obligation with the same idempotency key.
+
+    Replays the canonical close the interrupted attempt started — the *exact*
+    close request the obligation recorded (summary, capsule digest, session),
+    under the recorded key — so memory returns the close it already committed
+    (``replayed``, with ``replay_payload_matched`` proving it was the same
+    request) or commits it now (audit P2-01). An obligation that predates the
+    recorded close request cannot be replayed exactly and gets a full
+    canonical close instead; with no prior obligation this is a full
+    canonical close too.
+    """
+    from ops.graphiti.hydration.close_session import close_session, memory_client
+
+    project = Path(project_dir).expanduser().resolve()
+    sid = resolve_session_id(explicit=session_id)
+    obligation = load_close_receipt(project, sid) or {}
+    if receipt_is_successful_close(obligation):
+        return {
+            "status": "skipped_already_closed",
+            "session_id": sid,
+            "written": False,
+            "write_count": int(obligation.get("write_count") or 0),
+        }
+    key = obligation.get("close_idempotency_key")
+    namespace = obligation.get("canonical_namespace_requested")
+    stored_summary = obligation.get("close_summary")
+    if key and namespace and obligation.get("continuation_reference") and stored_summary:
+        # The capsule was admitted and the exact close request is on record;
+        # only the close is owed. Same key + same payload -> one logical close.
+        client = client or memory_client(sid)
+        closed = client.close(
+            workspace=resolve_namespace_context(project).git_root or str(project),
+            namespace=str(namespace),
+            summary=str(stored_summary),
+            session_id=str(obligation.get("close_session_id") or sid),
+            capsule_digest=obligation.get("close_capsule_digest")
+            or obligation.get("payload_digest"),
+            idempotency_key=str(key),
+            dry_run=dry_run,
+        )
+        receipt = closed.receipt
+        conflicted = closed.status is OutcomeStatus.IDEMPOTENCY_CONFLICT
+        # CG-P1-01: the conflict test runs before ``committed`` is consulted.
+        # ``retry_close`` replays the recorded request, so a drift here means
+        # the key was consumed by a different close — never this obligation's.
+        committed = not conflicted and closed.ok and receipt is not None and receipt.committed
+        drifted = bool(getattr(receipt, "payload_drifted", False))
+        if conflicted:
+            retry_status = STATUS_CLOSE_CONFLICTED
+        elif committed:
+            retry_status = STATUS_CLOSED_CANONICALLY
+        else:
+            retry_status = STATUS_CLOSE_INCOMPLETE
+        report = _finish(
+            project,
+            sid,
+            status=retry_status,
+            dry_run=dry_run,
+            write_count=1 if committed else 0,
+            obligation=obligation,
+            canonical_operation_id=getattr(receipt, "receipt_id", None),
+            failure_class=None if committed else closed.status.value,
+            last_error_code=None if committed else closed.status.value,
+            replayed=bool(getattr(receipt, "replayed", False)),
+            replay_payload_matched=getattr(receipt, "replay_payload_matched", None),
+        )
+        report["warnings"] = list(getattr(receipt, "warnings", ()) or ())
+        if drifted:
+            report["warnings"].append(
+                "close replay payload drift: the stored close differs from the replayed request"
+            )
+        return report
+    report = close_session(
+        project_dir=project,
+        session_id=sid,
+        reason=reason,
+        transcript_path=transcript_path,
+        agent_id=agent_id,
+        dry_run=dry_run,
+        client=client,
+    )
+    receipt = report.get("receipt") or {}
+    return {
+        "status": report.get("status"),
+        "session_id": sid,
+        "written": bool(receipt.get("write_count")),
+        "write_count": int(receipt.get("write_count") or 0),
+        "warnings": report.get("warnings", []),
+    }
+
+
+def repair_close(
     *,
     project_dir: str | Path,
     session_id: str | None = None,
@@ -100,54 +175,110 @@ def repair_pickup_write(
     agent_id: str | None = None,
     supersede: bool = False,
     dry_run: bool = False,
+    client: Any = None,
 ) -> dict[str, Any]:
-    """Primary /end-session path: client write, skip if already closed."""
-    from group_resolver import resolve_group_id
+    """Forced ``/end-session`` parity: explicit capsule -> candidate -> memory.close.
 
-    from ops.graphiti.hydration.close_session import _write_kind
+    Skips when the session already closed canonically unless ``supersede``;
+    a superseding repair admits a newer capsule (hydrate prefers the newest)
+    and closes under a distinct idempotency key naming the repair.
+    """
+    from ops.graphiti.hydration.close_session import build_capsule, memory_client
     from ops.graphiti.hydration.identity import resolve_write_identity
 
     project = Path(project_dir).expanduser().resolve()
     sid = resolve_session_id(explicit=session_id)
-    existing = load_close_receipt(project, sid)
+    existing = load_close_receipt(project, sid) or {}
     if receipt_is_successful_close(existing) and not supersede:
         return {
             "status": "skipped_already_closed",
             "session_id": sid,
             "written": False,
-            "write_count": int((existing or {}).get("write_count") or 0),
+            "write_count": int(existing.get("write_count") or 0),
         }
-
     identity = resolve_write_identity(
         explicit_agent_id=agent_id,
         surface="claude-code" if (agent_id or "").startswith("claude") else "cursor",
     )
-    resolved = resolve_group_id(project)
-    group_id = str(resolved.get("group_id") or "")
-    if not group_id or resolved.get("readonly"):
-        return {"status": "close_failed", "session_id": sid, "written": False, "write_count": 0}
-
-    line = (
-        f"PICKUP|date={datetime.now(UTC).date().isoformat()}|task={objective}|"
-        f"files={files}|next={next_action}|blocker={blocker}|session={sid}"
+    context = resolve_namespace_context(project)
+    namespace = context.write_namespace_hint
+    if not namespace:
+        return {
+            "status": "close_failed",
+            "session_id": sid,
+            "written": False,
+            "write_count": 0,
+            "warnings": list(context.warnings),
+        }
+    head = repository_state_digest(project)
+    pickup = {
+        "active_objective": objective,
+        "next_action": next_action,
+        "active_files": [f.strip() for f in files.split(",") if f.strip()],
+        "blockers": [blocker] if blocker.strip() else [],
+    }
+    capsule = build_capsule(
+        session_id=sid,
+        repository_identity=context.repository_identity or namespace,
+        head=head,
+        pickup=pickup,
     )
-    result = _write_kind(
-        line,
-        kind="pickup_context",
-        group_id=group_id,
-        agent_id=identity["agent_id"],
-        user_id=identity["user_id"],
+    client = client or memory_client(sid)
+    workspace = context.git_root or str(project)
+    admitted = client.ingest_candidate(
+        capsule.to_governed_candidate(
+            namespace=namespace, source_sha=head or "0" * 40, agent_id=identity["agent_id"]
+        ),
+        workspace=workspace,
+    )
+    continuation_status = (
+        admitted.receipt.status if admitted.receipt is not None else admitted.status.value.lower()
+    )
+    continuation_reference = admitted.receipt.record_id if admitted.receipt is not None else None
+    key = str(existing.get("close_idempotency_key") or f"cursor-close:{namespace}:{sid}:repair")
+    if supersede:
+        key = f"{key}:repair:{capsule.digest()[:12]}"
+    closed = client.close(
+        workspace=workspace,
+        namespace=namespace,
+        summary=f"session {sid} end-session repair: {objective} | next: {next_action}",
+        session_id=sid,
+        capsule_digest=capsule.digest(),
+        idempotency_key=key,
         dry_run=dry_run,
     )
-    written = bool(result.get("written") or result.get("dry_run"))
-    report = {
-        "status": "closed" if written else "close_failed",
-        "session_id": sid,
-        "written": written,
-        "write_count": 1 if written else 0,
-        "phase_a": written,
-        "closed_at": datetime.now(UTC).isoformat(),
+    receipt = closed.receipt
+    repair_conflicted = closed.status is OutcomeStatus.IDEMPOTENCY_CONFLICT
+    committed = not repair_conflicted and closed.ok and receipt is not None and receipt.committed
+    obligation = {
+        **existing,
+        "canonical_namespace_requested": namespace,
+        "close_idempotency_key": key,
+        "payload_digest": capsule.digest(),
+        "continuation_status": continuation_status,
+        "continuation_reference": continuation_reference,
     }
-    if not dry_run:
-        write_receipt(project, sid, report)
+    report = _finish(
+        project,
+        sid,
+        status=(
+            STATUS_CLOSE_CONFLICTED
+            if repair_conflicted
+            else (STATUS_CLOSED_CANONICALLY if committed else STATUS_CLOSE_INCOMPLETE)
+        ),
+        dry_run=dry_run,
+        write_count=(1 if admitted.ok else 0) + (1 if committed else 0),
+        obligation=obligation,
+        canonical_operation_id=getattr(receipt, "receipt_id", None),
+        failure_class=None if committed else closed.status.value,
+        last_error_code=None if committed else closed.status.value,
+    )
+    report["continuation"] = {"status": continuation_status, "record_id": continuation_reference}
     return report
+
+
+# Compatibility names for the hook and the l9-end-session skill (retired at C11).
+fallback_pickup_write = retry_close
+repair_pickup_write = repair_close
+
+__all__ = ["fallback_pickup_write", "repair_close", "repair_pickup_write", "retry_close"]

@@ -320,25 +320,9 @@ install_session_end_governance_hook() {
     echo "WARN: memory-bank/ present in workspace (deprecated archival); not scaffolded"
   fi
 
-  # Graphiti autoseed — opt-in via GRAPHITI_AUTOSEED=1 in ~/.cursor/graphiti.env
-  graphiti_env="$HOME/.cursor/graphiti.env"
-  graphiti_cli="$GLOBAL_COMMANDS/ops/graphiti/graphiti_memory_client.py"
-  if [ -f "$graphiti_env" ]; then
-    # shellcheck disable=SC1090
-    set -a && source "$graphiti_env" && set +a
-  fi
-  if [ "${GRAPHITI_MEMORY_ENABLED:-1}" != "0" ] && [ -f "$graphiti_cli" ]; then
-    if [ "${GRAPHITI_AUTOSEED:-0}" = "1" ]; then
-      if python3 "$graphiti_cli" autoseed-check 2>/dev/null; then
-        echo "GRAPHITI: manifest already seeded"
-      else
-        echo "GRAPHITI: autoseed bootstrap for $(basename "$WORKSPACE_DIR")..."
-        python3 "$graphiti_cli" bootstrap || echo "WARN: Graphiti bootstrap failed — run manually" >&2
-      fi
-    else
-      echo "HINT: set GRAPHITI_AUTOSEED=1 in ~/.cursor/graphiti.env to bootstrap on wire"
-    fi
-  fi
+  # Provider autoseed retired at memory realignment stage C11: wiring a
+  # workspace never touches memory. Session hydration is canonical
+  # (ops/memory/hydration.py) and reads no machine env file here.
 
   if [ -f "$pre_tool_src" ]; then
     chmod +x "$pre_tool_src"
