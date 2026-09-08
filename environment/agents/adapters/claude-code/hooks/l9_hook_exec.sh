@@ -105,12 +105,16 @@ if [ -n "${L9_GOVERNANCE_DIR:-}" ] && [ "$L9_GOVERNANCE_DIR" != "$GOV_DIR" ]; th
   esac
 fi
 
-# Surface guard (INV-2): Claude gate-class hooks must not evaluate under Cursor
-# (or any non-Claude surface). Cursor has its own ~/.cursor/hooks.json stack.
-# Fail toward enforcing: unknown surface still runs the gate. Kill switch:
-# L9_SURFACE_GUARD=0 restores the pre-guard behavior for diagnostics.
-# SSOT: ops/scripts/lib/surface_detect.sh (resolved via GOV_DIR, else this tree).
-if [ "$HOOK_CLASS" = "gate" ] && [ "${L9_SURFACE_GUARD:-1}" != "0" ]; then
+# Surface guard (INV-2): one canonical detector decides which host owns each
+# hook. All observers are Claude adapter observers, so they skip on every
+# non-Claude surface, including unknown. Gates keep the existing named-hook
+# policy: only local_execution_gate_wrap.py and memory_gate.py are Claude-only;
+# merge_gate_wrap.py and session_debt_wrap.py stay active. Unknown gates still
+# run, fail-toward-closed. L9_SURFACE_GUARD=0 restores pre-guard behavior.
+#
+# Hoist the walk-up once so observers and gates use the same detector rather
+# than reimplementing host identity independently.
+if [ "${L9_SURFACE_GUARD:-1}" != "0" ]; then
   _L9_HOOK_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
   _L9_SD_LIB=""
   _L9_WALK="$_L9_HOOK_DIR"
@@ -124,27 +128,44 @@ if [ "$HOOK_CLASS" = "gate" ] && [ "${L9_SURFACE_GUARD:-1}" != "0" ]; then
   if [ -z "$_L9_SD_LIB" ] && [ -f "$GOV_DIR/ops/scripts/lib/surface_detect.sh" ]; then
     _L9_SD_LIB="$GOV_DIR/ops/scripts/lib/surface_detect.sh"
   fi
+
   if [ -n "$_L9_SD_LIB" ] && [ -f "$_L9_SD_LIB" ]; then
     # shellcheck source=../../../../ops/scripts/lib/surface_detect.sh
     . "$_L9_SD_LIB"
     _L9_SURFACE="$(l9_detect_surface)"
-    # Skip only Claude-only gates (memory + local-execution). merge_gate and
-    # session_debt stay active on Cursor — Cursor's native stack does not
-    # replace those authorizations. unknown fails toward enforcing.
-    case "$_L9_SURFACE" in
-      claude-code|claude-code-remote|unknown) : ;;
-      *)
-        case "$HOOK_NAME" in
-          local_execution_gate_wrap.py|memory_gate.py)
-            printf 'l9-hook: gate %s skipped (surface=%s; Claude-only gate)\n' \
-              "$HOOK_NAME" "$_L9_SURFACE" >&2
-            unset _L9_SURFACE
-            exit 0
-            ;;
-        esac
-        ;;
-    esac
+
+    if [ "$HOOK_CLASS" = "observer" ]; then
+      if ! l9_is_claude_gate_surface; then
+        printf 'l9-hook: observer %s skipped (surface=%s; Claude observer)\n' \
+          "$HOOK_NAME" "$_L9_SURFACE" >&2
+        unset _L9_SURFACE _L9_SD_LIB _L9_WALK _L9_HOOK_DIR
+        exit 0
+      fi
+    else
+      # Named gate table is deliberately unchanged. Only these two gates are
+      # Claude-only. merge_gate_wrap.py and session_debt_wrap.py remain active.
+      case "$_L9_SURFACE" in
+        claude-code|claude-code-remote|unknown) : ;;
+        *)
+          case "$HOOK_NAME" in
+            local_execution_gate_wrap.py|memory_gate.py)
+              printf 'l9-hook: gate %s skipped (surface=%s; Claude-only gate)\n' \
+                "$HOOK_NAME" "$_L9_SURFACE" >&2
+              unset _L9_SURFACE _L9_SD_LIB _L9_WALK _L9_HOOK_DIR
+              exit 0
+              ;;
+          esac
+          ;;
+      esac
+    fi
     unset _L9_SURFACE
+  elif [ "$HOOK_CLASS" = "observer" ]; then
+    # No detector means identity is unknown. Unknown observers must not inject
+    # Claude identity into another host; unknown gates still continue below.
+    printf 'l9-hook: observer %s skipped (surface=unknown; detector unavailable)\n' \
+      "$HOOK_NAME" >&2
+    unset _L9_SD_LIB _L9_WALK _L9_HOOK_DIR
+    exit 0
   fi
   unset _L9_SD_LIB _L9_WALK _L9_HOOK_DIR
 fi

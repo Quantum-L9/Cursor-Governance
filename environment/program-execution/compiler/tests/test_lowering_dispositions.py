@@ -48,7 +48,9 @@ The compiler MUST create {ABSENT} for the new route.
 def _requirements(tmp: Path, text: str = DOC):
     path = tmp / "arch.md"
     path.write_text(text, encoding="utf-8")
-    intent = load_architecture_intent(path, target="Quantum-L9/Cursor-Governance", forced=True)
+    intent = load_architecture_intent(
+        path, target="Quantum-L9/Cursor-Governance", admission="classified"
+    )
     response = DeterministicExtractor().extract(
         ArchitectureExtractorRequest(
             request_id=new_request_id(),
