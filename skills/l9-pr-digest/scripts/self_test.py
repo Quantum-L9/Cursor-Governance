@@ -6,6 +6,8 @@ import tempfile
 from pathlib import Path
 
 from pr_digest_core import digest, validate
+from pr_digest_render import emit_line, interactive_report
+from require_digest import READY, check
 
 
 def fixture(**overrides):
@@ -115,10 +117,60 @@ def main() -> int:
     cat = digest(catalog)
     assert not any(f["code"] == "deleted_test" for f in cat["deterministic_findings"])
 
+    events: list[tuple[str, dict]] = []
+    streamed = digest(fixture(), on_event=lambda kind, payload: events.append((kind, payload)))
+    assert streamed["decision"] == "READY_FOR_REMEDIATION"
+    assert any(kind == "identity" for kind, _ in events)
+    assert any(
+        kind == "decision" and payload["decision"] == "READY_FOR_REMEDIATION"
+        for kind, payload in events
+    )
+    report = interactive_report(streamed)
+    for heading in (
+        "### 1. PR in one paragraph",
+        "### 8. Findings",
+        "### 11. Readiness",
+        "READY_FOR_REMEDIATION",
+    ):
+        assert heading in report, heading
+    sample = {"severity": "review", "code": "x", "path": "a.py", "detail": "d"}
+    assert emit_line("finding", sample).startswith("[digest] finding")
+
+    docs_only = digest(
+        fixture(
+            files=[
+                {
+                    "path": "docs/guide.md",
+                    "status": "modified",
+                    "additions": 3,
+                    "deletions": 0,
+                    "patch": "+note\n",
+                }
+            ]
+        )
+    )
+    docs_report = interactive_report(docs_only)
+    assert "docs/guide.md" in docs_report
+
+    action_required = digest(
+        fixture(
+            ci_checks=[{"name": "review", "conclusion": "action_required"}],
+            required_check_names=["review"],
+        )
+    )
+    action_report = interactive_report(action_required)
+    assert "action_required" in action_report
+
     with tempfile.TemporaryDirectory() as td:
         path = Path(td) / "digest.json"
         path.write_text(json.dumps(good), encoding="utf-8")
         assert json.loads(path.read_text())["PR_identity"]["head_sha"] == "b" * 40
+        assert not check(good, mode="diagnose")
+        assert not check(good, head_sha="b" * 40, mode="converge")
+        assert good["decision"] in READY
+        assert check(good, head_sha="c" * 40, mode="diagnose")
+        assert not check(ci_required, mode="converge")
+        assert check({**ci_required, "decision": "NARROW_BEFORE_REMEDIATION"}, mode="converge")
 
     print("PASS: l9-pr-digest deterministic self-test")
     return 0

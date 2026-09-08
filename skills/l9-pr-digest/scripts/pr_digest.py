@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from pr_digest_core import digest, validate
+from pr_digest_render import emit_line, interactive_report
 from pr_evidence import live_evidence
 
 
@@ -23,6 +24,14 @@ def parser() -> argparse.ArgumentParser:
     out.add_argument("--intent", type=Path)
     out.add_argument("--output", type=Path)
     out.add_argument("--validate-only", type=Path)
+    out.add_argument(
+        "--quiet",
+        action="store_true",
+        help=(
+            "suppress the live findings stream and interactive report; "
+            "print JSON only when --output is omitted"
+        ),
+    )
     return out
 
 
@@ -37,6 +46,14 @@ def main() -> int:
         print("PASS: PR digest schema and exact revision binding")
         return 0
 
+    stream = not args.quiet
+
+    def on_event(kind: str, payload: dict) -> None:
+        if stream:
+            print(emit_line(kind, payload), flush=True)
+
+    if stream:
+        print("[digest] collecting evidence", flush=True)
     if args.fixture:
         evidence = json.loads(args.fixture.read_text(encoding="utf-8"))
     else:
@@ -50,12 +67,16 @@ def main() -> int:
     if args.intent:
         evidence["intent"] = json.loads(args.intent.read_text(encoding="utf-8"))
 
-    result = digest(evidence, args.workspace)
+    result = digest(evidence, args.workspace, on_event=on_event)
     rendered = json.dumps(result, indent=2) + "\n"
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(rendered, encoding="utf-8")
-    else:
+        if stream:
+            print(f"[digest] wrote {args.output}", flush=True)
+    if stream:
+        print(interactive_report(result), end="")
+    elif not args.output:
         print(rendered, end="")
     errors = validate(result)
     if errors:
