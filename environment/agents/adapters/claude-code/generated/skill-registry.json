@@ -1,5 +1,5 @@
 {
-  "generation_id": "77411fbe0cc7dbbc23b2ec16335cf59e6bd6f0263968aac272cbeeb26e300f57",
+  "generation_id": "bdebd0d372c7382c0c6d50763cb3aa3bb3dad33d217e0e44c7a942da05852997",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -951,15 +951,15 @@
     {
       "composition_role": "general",
       "description": "extract learnings and specific content from chat conversations to memory or structured output. use when closing sessions, capturing lessons, patterns, errors, preferences, code blocks, decisions, requirements, or action items from conversation.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
       "name": "l9-chat-extraction",
       "path": "skills/l9-chat-extraction",
-      "reason": "extracts chat content to memory or structured output",
+      "reason": "",
       "skill_md": "skills/l9-chat-extraction/SKILL.md",
-      "skill_sha256": "00a9009a3d0bdbfba2448aaaf393cb26ef7ed4c5e2df1632cc181984526d0a41",
+      "skill_sha256": "ae7c2cb59b1792a6822ee459ff607c8b1fb4a9cece8f2bff74ef0067811f4955",
       "user_invocable": true,
-      "when_to_use": ""
+      "when_to_use": "a user correction, lesson, pattern, error, or decision should reach memory \u2014 rules/87-cursor-memory-kernel.mdc requires extracting a lesson immediately, not at session end"
     },
     {
       "composition_role": "general",
@@ -1055,15 +1055,15 @@
     {
       "composition_role": "general",
       "description": "Audit, deterministically verify, or runtime-probe a named component \u2014 exports, imports, wiring, and loadability \u2014 as a read-only escalation ladder. Use from /audit-component, or from /analyze, /evaluate, or /analyze_evaluate when the user names a component, module, import, or wiring check. Do not use for DAG authoring or registration, for editing the component, or for generic repo exploration.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
       "name": "l9-component-verification",
       "path": "skills/l9-component-verification",
-      "reason": "component audit/verify/probe escalation ladder",
+      "reason": "",
       "skill_md": "skills/l9-component-verification/SKILL.md",
-      "skill_sha256": "552829cb064200e4a72be982c4bdf01ceb53249fc5baead32fcf3a4141e5b687",
+      "skill_sha256": "9c416a6d5468c12b1b823972804a78ea251c3876a35a8e2f026b8a9c9302ec7d",
       "user_invocable": true,
-      "when_to_use": ""
+      "when_to_use": "a named component, module, import, or wiring claim needs a read-only audit, deterministic verify, or runtime probe"
     },
     {
       "composition_role": "primary",
@@ -1150,7 +1150,7 @@
       "invocation": "explicit_only",
       "name": "l9-git-work-preserve",
       "path": "skills/l9-git-work-preserve",
-      "reason": "auto-registered by sync_generated_artifacts (orphan \u2192 explicit_only)",
+      "reason": "diagnose-first, but the pack acts on branches, worktrees, and stashes \u2014 prune-execute deletes refs under L9_GIT_PRUNE_AUTHORIZED and stash-drop under L9_GIT_STASH_DROP_AUTHORIZED. Destruction of unique work is the exact blast radius rules/54-context-sensitive-git-guardrails.mdc governs, so selection stays a human act. Triaged 2026-09-06; previously carried the orphan auto-register default.",
       "skill_md": "skills/l9-git-work-preserve/SKILL.md",
       "skill_sha256": "19100e31ce57721e3e4f5ce55c10c4869e7578582ac3e48700d3d5b071d572d5",
       "user_invocable": true,
@@ -1380,28 +1380,28 @@
     {
       "composition_role": "general",
       "description": "create a machine-validated cursor .plan.md from the executable-plan template. cursor-build executes then opens a stacked PR; embedded stops at planning artifacts with no execution authority. use when scope is unclear or Plan mode is on. do not use for /l9-plan, make campaign, or a PE lock.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
       "name": "l9-plan-simple",
       "path": "skills/l9-plan-simple",
-      "reason": "auto-registered by sync_generated_artifacts (orphan \u2192 explicit_only)",
+      "reason": "",
       "skill_md": "skills/l9-plan-simple/SKILL.md",
-      "skill_sha256": "1b3f6bbf00df91f5b5e11f47899a8d1af57fd34cd3fdce077f4bacc07d7a3b53",
+      "skill_sha256": "77ef52f58d2bf3130dd73bf74f14dcf18fd5ccad35d0cec1ddb87bb9341a7bc6",
       "user_invocable": true,
-      "when_to_use": ""
+      "when_to_use": "an ordinary execution plan or spec is needed, scope is unclear, or Plan mode is on \u2014 rules/23-l9-skill-routing.mdc already routes every ordinary planning deliverable here, so the model must be able to select it"
     },
     {
       "composition_role": "general",
       "description": "digest one PR into evidence, scope, and a bounded remediation packet without modifying it. use when judging agent PR scope before remediation or running the pre-remediation quality gate.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
       "name": "l9-pr-digest",
       "path": "skills/l9-pr-digest",
-      "reason": "auto-registered by sync_generated_artifacts (orphan \u2192 explicit_only)",
+      "reason": "",
       "skill_md": "skills/l9-pr-digest/SKILL.md",
-      "skill_sha256": "b48dca710dd989cb3322dadda4b27ef328b65b57164af970b138afbf2edcd0f6",
+      "skill_sha256": "47de39b1a260b6433f38392854ace92f2fe822652d9213877013d8990bb615bc",
       "user_invocable": true,
-      "when_to_use": ""
+      "when_to_use": "judging one PR's scope, evidence, expansion, and architecture impact before remediation \u2014 the skill never mutates the PR"
     },
     {
       "composition_role": "general",
@@ -1432,15 +1432,15 @@
     {
       "composition_role": "general",
       "description": "test-driven development in Python using uv as the package manager. covers the red-green-refactor cycle, vertical slicing, and uv project setup. use when starting Python TDD with uv, setting up a uv project, or running a red-green-refactor loop.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
       "name": "l9-python-tdd-with-uv",
       "path": "skills/l9-python-tdd-with-uv",
-      "reason": "non-default stack (uv) \u2014 invoke explicitly for Python TDD",
+      "reason": "",
       "skill_md": "skills/l9-python-tdd-with-uv/SKILL.md",
-      "skill_sha256": "3460659eb20a47a50136d067f4c79d72f8517446f500afc3083fe5e5ae34c257",
+      "skill_sha256": "3350d4443fea2100d2e4b5ae511ce85ab1e2bc18e7b365e25e75baafe09a967f",
       "user_invocable": true,
-      "when_to_use": ""
+      "when_to_use": "writing or running Python tests under uv \u2014 red-green-refactor, vertical slicing, or uv project setup"
     },
     {
       "composition_role": "primary",
@@ -1581,7 +1581,7 @@
       "path": "skills/l9-wire-into-repo",
       "reason": "",
       "skill_md": "skills/l9-wire-into-repo/SKILL.md",
-      "skill_sha256": "de8c89e1c99112ae501bbcb43cc8ce7f48a3e75b17e5bf1150f7d24266a52441",
+      "skill_sha256": "a7e5e40f615ee5068e3237bf44704b30a313a482e36f31e0a2c5e2db755da8a4",
       "user_invocable": true,
       "when_to_use": "wiring, rewiring, verifying, registering, exposing, or unwiring an existing repository artifact or capability by finding its authoritative upstream owner and propagating reachability to intended consumers without duplicate leaf wiring"
     },
@@ -1600,6 +1600,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "67e80c1bf78c160e239ba3b42551ed772591f1a9dcaca06b3012c414e7ab08a2",
-  "source_skill_corpus_sha256": "34fa3eccfabbcfc7c200ef645672505c4b9468e1e2efa7569b3732267e994e89"
+  "source_manifest_sha256": "09f98a3b5215c431b80fd97de00f0e29f0ba6a7f137ff3bb401bddc3159d9a7c",
+  "source_skill_corpus_sha256": "7037b475909afdbcb7abdc627f349b7947afa007660c141ef9e4c9e42d7ef79f"
 }
