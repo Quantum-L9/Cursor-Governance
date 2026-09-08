@@ -9,8 +9,8 @@ metadata:
   tags: [l9, pr, ci, code-review, github-code-quality, copilot, diagnose, sonarcloud, codeql, debt, remediation, concurrent, subagents, github, makefile]
   owner: igor_beylin
   status: active
-  version: 5.2.0
-  updated: 2026-09-05
+  version: 5.3.0
+  updated: 2026-09-07
   tier: exemplary
 ---
 
@@ -52,6 +52,11 @@ Prose never recomputes what these helpers compute. Each one is read-only advice 
 | Concurrency caps | `ops/autonomy/execution_profile.py` (read by `pr_fleet.py waves`) | numbers in this pack |
 | Subagent roles, result schema, acceptance | `environment/agents/cursor-subagents/` + `environment/agents/results/` (called by `pr_fleet.py accept`) | narrative completion |
 | Thread replies | `scripts/reply_threads.py` | per-thread `gh` loops |
+| Unified PR ingest (CI + reviews + CRA + scanner snapshots) | `scripts/ingest_signals.py` | reconstructing `gh api` loops |
+| Path edit-axis + reviewer class + plan/gate schema | `scripts/protocol.py` | judging HUMAN / FALSE_POSITIVE / disposition from a path |
+| Plan gate (every ingested id has a disposition) | `scripts/validate_plan.py` | editing mid-census |
+| Gate A–F latch | `scripts/gate_receipt.py` | checklist-only progress |
+| Above-paygrade issue body / create | `scripts/issue_handoff.py` | asking the human to unblock |
 | Pre-remediation digest / READY gate | `skills/l9-pr-digest` (`scripts/pr_digest.py`, `scripts/require_digest.py`) | mutate the PR under review |
 
 ## Makefile capability graph (this host)
@@ -74,7 +79,7 @@ If no PR number exists (baseline debt case): same verify, `git push` the branch,
 
 ## Diagnose
 
-`/pr` and Diagnose-only invokes **run `l9-pr-digest` first**. Bind exact base/head, run `pr_digest.py` **without** `--quiet` so the user sees the live `[digest]` finding stream and the 11-section unpack, write `.l9/pr/pr-digest-result.json`, then `require_digest.py --mode diagnose`. The JSON is the remediator handoff, not a substitute for showing the stream. A valid non-READY digest still continues; an unbound or missing digest is `Unknown` / STOP for that PR. Then load [references/diagnose-workflow.md](references/diagnose-workflow.md). Optional focused lenses: [references/review-angles.md](references/review-angles.md). List unanswered **code-review agent** comments (`github-code-quality[bot]`, Copilot) as review blockers — [references/code-review-agents.md](references/code-review-agents.md). Report file-overlap across open PRs as advisory (`pr_fleet.py plan --json` is the fastest way to get it). Do not merge. Consume the digest packet; do not re-invent intent, expansion, or CI the digest already bound.
+`/pr` and Diagnose-only invokes **run `l9-pr-digest` first**. Bind exact base/head, run `pr_digest.py` **without** `--quiet` so the user sees the live `[digest]` finding stream and the 11-section unpack, write `.l9/pr/pr-digest-result.json`, then `require_digest.py --mode diagnose`. The JSON is the remediator handoff, not a substitute for showing the stream. A valid non-READY digest still continues; an unbound or missing digest is `Unknown` / STOP for that PR. Then run `scripts/ingest_signals.py` for that PR (do not reconstruct `gh api` review loops) and load [references/diagnose-workflow.md](references/diagnose-workflow.md). Optional focused lenses: [references/review-angles.md](references/review-angles.md). List unanswered **code-review agent** comments (`github-code-quality[bot]`, Copilot) as review blockers — [references/code-review-agents.md](references/code-review-agents.md). Report file-overlap across open PRs as advisory (`pr_fleet.py plan --json` is the fastest way to get it). Do not merge. Consume the digest packet; do not re-invent intent, expansion, or CI the digest already bound.
 
 **Forbidden in Diagnose:** commit, push, force-push, edit worktree for fixes, alignment %, gap matrix, deep-eval, index theater, babysit loops, `gh pr merge`.
 
@@ -84,12 +89,14 @@ If no PR number exists (baseline debt case): same verify, `git push` the branch,
 |--------|--------|--------|
 | Digest | `skills/l9-pr-digest/scripts/pr_digest.py` + `require_digest.py --mode converge` | Same-head digest required before any edit. READY or `CI_OR_EXECUTION_FAILURE` may enter remediation. Narrow / architecture / unknown / blocked still stop. |
 | Fleet | `pr_fleet.py plan --board` | One receipt: inventory, topology, merge order, waves, board per head |
-| CI failures | `gh run view --log-failed`, annotations | Fix codebase root cause |
-| Review + inline | `gh api` reviews/comments | Validate against current code; fix or reply |
-| Code-review agents | `github-code-quality[bot]`, Copilot review logins | Inspect **every** comment; fix if validated; reply to all — [references/code-review-agents.md](references/code-review-agents.md) |
+| CI + reviews + CRA | `scripts/ingest_signals.py` | One findings snapshot; then classify. Do not re-type `gh api` loops. |
+| CI failures | ingest `source: ci` (+ `gh run view --log-failed` for root cause) | Fix codebase root cause |
+| Review + inline | ingest `source: human\|bot\|github-code-quality\|copilot` (`surface` inline/general) | Validate against current code; fix or reply |
+| Code-review agents | ingest `reviewer_class: code_review_agent` | Inspect **every** comment; fix if validated; reply to all — [references/code-review-agents.md](references/code-review-agents.md) |
 | Workflows | `.github/workflows/*.yml` | Read-only gate discovery |
-| SonarCloud | `scripts/sonar_fetch.py` with the environment `SONAR_TOKEN` | **Always when `sonar-project.properties` exists.** Resolve every confirmed issue on the PR head in the same commit. Never a merge blocker. [references/sonarcloud-remediation.md](references/sonarcloud-remediation.md) |
+| SonarCloud | `scripts/sonar_fetch.py` via `capability_bind` (`SONAR_TOKEN`) | **Always when `sonar-project.properties` exists.** Resolve every confirmed issue on the PR head in the same commit. Never a merge blocker. [references/sonarcloud-remediation.md](references/sonarcloud-remediation.md) |
 | CodeQL | `scripts/codeql_fetch.py` | Lazy: only if check failing or alerts open |
+| Semgrep | `scripts/semgrep_fetch.py` via `capability_bind` (`SEMGREP_APP_TOKEN`) | Lazy: only if check failing or findings present. Read-only App GET (full page set). Never paste a token. Never an authenticated scan. Never a merge blocker unless `pr_board.py` lists the check. [references/semgrep-remediation.md](references/semgrep-remediation.md) |
 | Lint/type/test/build debt | `scripts/debt_audit.py` + repo toolchain | Lazy: only if toolchain/baseline red |
 
 ## Converge — Outputs (per PR that changes code)
@@ -142,7 +149,7 @@ Applies `kernels/Diagnose First Kernel.md`, `kernels/Validate & Repair.md`, and 
 15. **FIRST_MERGE_GATE + stack-safe oldest-first.** Never force-push, rewrite history, expose tokens, or `--admin` merge. Merge only after the fleet receipt exists and the required sequence is remediated and published. Order is `merge_order` from the receipt (oldest `createdAt`, parents before children). Merge **only** via `ops/autonomy/stack_safe_merge.py --run`. After a parent squash, never `gh pr update-branch` — rebase `--onto` the new base. When the only blocker is required checks **in progress**, the watcher owns the wait; merge when `CLEAN`.
 16. **No invented evidence.** Do not invent check conclusions, SHAs, thread ids, or `Passed`. `{braces}` in this pack are templates until substituted from `gh` / helper / `file` output observed in this run.
 17. **The board is computed, not judged.** `board=merge|fix|wait|leftover` comes from `ops/autonomy/pr_board.py` (required-check identity from branch protection ∪ rulesets ∪ required workflows; conflicted **paths**). Never author it from `mergeStateStatus` alone, from a check conclusion without the required set, or from an issue body. A red check outside the required set does not block merge (`UNSTABLE` is a merge). `leftover` is an evidenced **input**: `--human-decision` or `--unfixable-check`. Unknown telemetry degrades to `wait`, never to `merge`.
-18. **Above-paygrade is an issue, not a question.** After best-effort, `HUMAN` / unfixable required `CI_PIPELINE` / unfixable `ENVIRONMENT` → `gh issue create`, launch `l9-issue-remediation`, continue independent PRs. Do not ask the human to unblock. [references/issue-handoff.md](references/issue-handoff.md).
+18. **Above-paygrade is an issue, not a question.** After best-effort, `HUMAN` / unfixable required `CI_PIPELINE` / unfixable `ENVIRONMENT` → `scripts/issue_handoff.py --create`, launch `l9-issue-remediation`, continue independent PRs. Do not ask the human to unblock. [references/issue-handoff.md](references/issue-handoff.md).
 
 ## Hot Path (Converge)
 
@@ -159,8 +166,8 @@ GOV_PY="${GOV_PY:-$PWD/.venv/bin/python}"
 
 1. **Discover gates (read-only).** Cache verify=`make precommit-repo`, publish=`git push`. Do not cache `make pr-check` or `PR_REMEDIATE=0 make pr`. Do not edit CI surfaces.
 2. **Launch wave 1 in one message.** For every PR in `waves.first_wave.remediate`: `pr_fleet.py assign --kind remediate --pr {n} --record --prompt`, then launch the managed `l9-pr-remediation` Task (background) with that prompt. For every PR in `first_wave.recon`: `--kind recon` → `l9-recon`. For every PR in `first_wave.watch`: `--kind watch` → `l9-recon` watcher. Then continue: the main agent remediates one lane itself only if the cap left one free, else prepares the merge train. [references/fleet-waves.md](references/fleet-waves.md).
-3. **Per PR (inside a lane): diagnose.** Failed CI + annotations, human reviews, every bot comment, every CRA thread, SonarCloud issue set for the PR (authenticated). Read cited files at the current head. Record observed / expected / root cause / Unknown. No edits yet. [references/signal-ingestion.md](references/signal-ingestion.md) + [references/code-review-agents.md](references/code-review-agents.md).
-4. **Classify + write that PR's plan.** Ownership then severity; `disposition: fix` requires a verified root cause. Companions if touching `pec/*`, `skills/*`, or `rules/*`. [references/finding-classifier.md](references/finding-classifier.md) + [references/remediation-plan.md](references/remediation-plan.md).
+3. **Per PR (inside a lane): diagnose.** Run `scripts/ingest_signals.py` for this head (CI + reviews + CRA + optional scanner snapshots). Read cited files at the current head. Record observed / expected / root cause / Unknown. No edits yet. [references/signal-ingestion.md](references/signal-ingestion.md) + [references/code-review-agents.md](references/code-review-agents.md).
+4. **Classify + write that PR's plan.** Path ownership and required-check severity come from `scripts/protocol.py`. Disposition, HUMAN, and FALSE_POSITIVE stay judgment. `scripts/validate_plan.py` must PASS before any edit. `scripts/gate_receipt.py --gate B`. Companions if touching `pec/*`, `skills/*`, or `rules/*`. [references/finding-classifier.md](references/finding-classifier.md) + [references/remediation-plan.md](references/remediation-plan.md).
 5. **Fix the planned batch.** All `disposition: fix` clusters, Sonar issues included, inside the assignment's allowed paths. Skip HUMAN / CI_PIPELINE / ENVIRONMENT after best-effort — open the issue handoff, continue. [references/fix-engine.md](references/fix-engine.md) + [references/issue-handoff.md](references/issue-handoff.md).
 6. **Local verify (blocks commit).** `L9_REMEDIATOR=1 PR_BASE=origin/main make precommit-repo`. If hooks rewrite files, commit the rewrite and re-run once. ≤5 iterations. Never `--no-verify`, `make pr-check`, `make precommit`, `--all-files`.
 7. **One commit, one remediator publish.** Explicit `git add` of planned files only. Never `-u` / `-A`. Never `git reset --hard`. `git push` the already-open PR branch. Trailer `Remediation-Cycle: {repo}#{pr}/cycle-1`.
@@ -208,20 +215,21 @@ Not a second publish path. After any merge that touched generated paths — or w
 - `ops/autonomy/pr_fleet.py` — fleet owner (`plan` / `assign` / `accept` / `model`)
 - `ops/autonomy/pr_board.py` — board authority (`merge|fix|wait|leftover` + receipt)
 - `ops/autonomy/stack_safe_merge.py` — merge executor
-- [references/ownership-boundary.md](references/ownership-boundary.md) — edit axis only
-- [references/remediation-plan.md](references/remediation-plan.md)
-- [references/signal-ingestion.md](references/signal-ingestion.md)
-- [references/finding-classifier.md](references/finding-classifier.md)
+- [references/ownership-boundary.md](references/ownership-boundary.md) — edit axis only; path prefixes are `scripts/protocol.py`
+- [references/remediation-plan.md](references/remediation-plan.md) + [scripts/validate_plan.py](scripts/validate_plan.py)
+- [references/signal-ingestion.md](references/signal-ingestion.md) + [scripts/ingest_signals.py](scripts/ingest_signals.py)
+- [references/finding-classifier.md](references/finding-classifier.md) + [scripts/protocol.py](scripts/protocol.py)
 - [references/fix-engine.md](references/fix-engine.md)
 - [references/code-review-agents.md](references/code-review-agents.md)
 - [references/review-replies.md](references/review-replies.md) + [scripts/reply_threads.py](scripts/reply_threads.py)
 - [references/convergence-loop.md](references/convergence-loop.md)
 - [references/generated-heal.md](references/generated-heal.md)
-- [references/validation-gates.md](references/validation-gates.md)
+- [references/validation-gates.md](references/validation-gates.md) + [scripts/gate_receipt.py](scripts/gate_receipt.py)
 - [references/sonarcloud-remediation.md](references/sonarcloud-remediation.md) + [scripts/sonar_fetch.py](scripts/sonar_fetch.py)
 - [references/codeql-remediation.md](references/codeql-remediation.md) + [scripts/codeql_fetch.py](scripts/codeql_fetch.py)
+- [references/semgrep-remediation.md](references/semgrep-remediation.md) + [scripts/semgrep_fetch.py](scripts/semgrep_fetch.py)
 - [references/debt-remediation.md](references/debt-remediation.md) + [scripts/debt_audit.py](scripts/debt_audit.py)
-- [references/issue-handoff.md](references/issue-handoff.md) — above-paygrade → `gh issue create` + `l9-issue-remediation`
+- [references/issue-handoff.md](references/issue-handoff.md) + [scripts/issue_handoff.py](scripts/issue_handoff.py) — above-paygrade → issue + `l9-issue-remediation`
 - `environment/contracts/autonomy/MANIFEST.yaml` — surface doctrine + merge gate
 - `environment/agents/cursor-subagents/DELEGATION_CONTRACT.yaml` — roles, result schema, handoff
 - [scripts/self_test.py](scripts/self_test.py) · [scripts/activation_cases.json](scripts/activation_cases.json)
@@ -255,9 +263,16 @@ watcher_role: recon                     # read-only background lane per waiting 
 forbid_reinvoke_handoff: true
 sonarcloud:
   when: sonar-project.properties exists
-  token: SONAR_TOKEN from the environment (never printed, never pasted)
+  token: SONAR_TOKEN via capability_bind (never printed, never pasted)
   merge_blocking: false
   resolve: all confirmed issues on the head, same commit
+semgrep:
+  when: Semgrep / L9 Analysis / pr-security check failing or findings present
+  fetch: scripts/semgrep_fetch.py
+  token: SEMGREP_APP_TOKEN via capability_bind (never printed, never pasted)
+  scan: local CE via ops/scripts/run_pr_security.sh (child unsets the token)
+  merge_blocking: false
+  resolve: all confirmed findings on the head, same commit
 local_verify:
   prefer_makefile: true
   makefile_primary: precommit-repo
@@ -273,7 +288,12 @@ merge:
   squash_when_unstacked: true
 issue_handoff: true
 issue_handoff_skill: l9-issue-remediation
+issue_handoff_script: scripts/issue_handoff.py
 forbid_ask_human_to_unblock: true
+ingest_signals: scripts/ingest_signals.py
+plan_validator: scripts/validate_plan.py
+gate_receipt: scripts/gate_receipt.py
+edit_axis_owner: scripts/protocol.py
 ```
 
 ## Failure Handling
@@ -291,7 +311,8 @@ forbid_ask_human_to_unblock: true
 - `git add -u` / `reset --hard` denied → stage explicit paths only
 - Result document rejected (`pr_fleet.py accept`) → the lane did not complete; re-assign with the reason or take the PR into the main lane
 - Head SHA moved under a lane → its document is `blocked`; re-plan the fleet (fingerprint) and re-assign
-- `SONAR_TOKEN` absent → fetch runs unauthenticated and says so; record `authenticated: false`, resolve what is visible, note the gap in status — do not paste a token
+- `SONAR_TOKEN` unbound after `capability_bind` (Infisical CLI only; AWS is not a bind path) → fetch runs unauthenticated and says so; record `authenticated: false`, resolve what is visible, note the gap in status — do not paste a token
+- `SEMGREP_APP_TOKEN` unbound after `capability_bind` → App fetch is BLOCKED; record `authenticated: false`, continue other clusters, local CE confirm still available — do not paste a token
 - CI logs missing → retry annotations/job logs once; if ownership unknown, note and continue other clusters
 - Rate limit → honor reset, retry once, continue
 - Fix breaks a gate → revert that fix, defer with reason, keep the rest of the batch (still one commit)
@@ -300,7 +321,9 @@ forbid_ask_human_to_unblock: true
 - Squash denied because head is a stack parent → merge children first, retarget, or `--merge`; do not `update-branch`
 - Unpredicted `CONFLICTING` after a merge → re-plan; do not continue the train blindly
 - Max cycles → report remaining items; do not start cycle 4
-- HUMAN / unfixable required CI / ENVIRONMENT still broken after best-effort → `gh issue create`, launch `l9-issue-remediation`, continue independent PRs
+- `ingest_signals.py` FAIL → do not classify by hand; fix the fixture/telemetry
+- `validate_plan.py` / `gate_receipt.py` FAIL → STOP; do not edit
+- HUMAN / unfixable required CI / ENVIRONMENT still broken after best-effort → `scripts/issue_handoff.py --create`, launch `l9-issue-remediation`, continue independent PRs
 
 ## Final Status (required)
 

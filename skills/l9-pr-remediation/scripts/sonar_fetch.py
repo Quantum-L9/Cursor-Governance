@@ -7,14 +7,13 @@ secret-free JSON snapshot (`sonarcloud-issues-before.json` by convention).
 
 Read-only against SonarCloud: this never mutates issue or hotspot state.
 
-Authentication: when the process environment already carries SONAR_TOKEN (or
-SONARCLOUD_TOKEN) the fetch is authenticated on every surface — the token
-reached this process outside the repository's secret plane (operator env,
-CI, a governed session import), exactly as codeql_fetch.py treats
-GITHUB_TOKEN. ops/secrets still never exports a value to a model-controlled
-surface; this module only reads what is already present. Without a token the
-fetch is an unauthenticated public read and says so. No token is printed,
-stored, or written to the snapshot; Authorization headers are redacted.
+Authentication: ``capability_bind.bind_first`` resolves SONAR_TOKEN (or
+SONARCLOUD_TOKEN) in-process (already-present env, then the Infisical CLI
+user profile, then AWS ``openclaw-igorbot/sonarcloud#token``). The value is
+never exported to ``os.environ``, never printed, and never written to the
+snapshot. The retired capability broker is not involved. Without a bound
+token the fetch is an unauthenticated public read and says so. Authorization
+headers are redacted.
 
 Sonar findings never block merge (that is the PR board's call); they are
 work the remediator resolves fully when they exist.
@@ -27,7 +26,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 import urllib.error
 import urllib.parse
@@ -35,14 +33,14 @@ import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 
-# Brokered Sonar is retired (never shipped). The env token, when present, is
-# the only authentication path; surface trust governs export, not use.
+# Local bind (Infisical CLI profile / AWS). The capability broker is retired.
 _OPS_SECRETS = Path(__file__).resolve().parents[3] / "ops" / "secrets"
 _OPS_LIB = Path(__file__).resolve().parents[3] / "ops" / "lib"
 for _extra in (_OPS_SECRETS, _OPS_LIB):
     if str(_extra) not in sys.path:
         sys.path.insert(0, str(_extra))
 
+from capability_bind import bind_first  # noqa: E402
 from safe_https import https_exchange  # noqa: E402
 from surface_trust import classify  # noqa: E402
 
@@ -106,19 +104,18 @@ class DirectTransport:
 
 
 def build_transport(base_url: str, surface: str | None = None) -> DirectTransport:
-    """Authenticated when the environment already holds a token, on any surface.
+    """Authenticated when an inventory token can be bound, on any surface.
 
-    The token was placed in this process by the operator environment, CI, or a
-    governed session import — never by ops/secrets, which still refuses to
-    export one to a model-controlled surface. Reading a value that is already
-    present is how the sibling codeql_fetch.py treats GITHUB_TOKEN. Without a
-    token the read is public and the receipt says ``authenticated: false``.
+    Bind is use, not export. A miss is a vault miss: continue unauthenticated
+    and say so. Do not paste a token.
     """
-    token = next((os.environ.get(name) for name in TOKEN_ENV if os.environ.get(name)), None)
+    token = bind_first(*TOKEN_ENV)
     if not token:
         print(
-            "sonar_fetch: no SONAR_TOKEN in the environment; continuing UNAUTHENTICATED — "
-            "private findings will be absent and the quality gate may be incomplete",
+            "sonar_fetch: SONAR_TOKEN unbound "
+            "(Infisical CLI profile and AWS both missed); continuing UNAUTHENTICATED — "
+            "private findings will be absent and the quality gate may be incomplete — "
+            "do not paste a token",
             file=sys.stderr,
         )
     return DirectTransport(base_url, token, surface)

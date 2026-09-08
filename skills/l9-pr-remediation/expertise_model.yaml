@@ -6,7 +6,7 @@ expertise_model:
   experts:
     - PR fleet convergence operator (open-PR inventory, waves, merge train)
     - release and branch-protection engineer (required-check identity, stack safety)
-    - code-review triage engineer (CI logs, review threads, code-review agents, Sonar/CodeQL)
+    - code-review triage engineer (CI logs, review threads, code-review agents, Sonar/CodeQL/Semgrep)
     - bounded-delegation orchestrator (assignments, result documents, fail-closed acceptance)
     - governed-publish operator (precommit-repo verify, git push of an open PR, no ceremony)
   doctrine:
