@@ -121,7 +121,7 @@ Operator-local aliases (gitignored `.env.local`, never git):
 - `BIRTH_SOURCE_APP_ID` — same id as a repo variable
 - `BIRTH_SOURCE_APP_PRIVATE_KEY` — the same PEM
 
-A 40-character hex line is a fingerprint, not the key. A headerless base64 body will fail `actions/create-github-app-token` with `Invalid keyData` / `asn1 encoding routines`. Do not print, export, or paste the PEM. Update the environment secret with `gh secret set BIRTH_APP_PRIVATE_KEY --repo Quantum-L9/l9-repo-template --env repo-birth` from a 0600 file.
+A 40-character hex line is a fingerprint, not the key. A headerless base64 body will fail `actions/create-github-app-token` with `Invalid keyData` / `asn1 encoding routines`. Do not print, export, or paste the PEM. Update the environment secret with `gh secret set BIRTH_APP_PRIVATE_KEY --repo Quantum-L9/l9-repo-template --env repo-birth --body-file /path/to/birth-app.pem` (0600 file; never omit `--body-file` — a bare `gh secret set` opens an interactive prompt).
 
 Birth ends at **PROVISIONAL**. `BORN` is the first passing PR, not repository existence.
 
