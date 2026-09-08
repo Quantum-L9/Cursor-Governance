@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import importlib.util
+import inspect
 import io
 import json
 import os
@@ -223,15 +224,34 @@ Budget downgrade MUST remain within the capability family.
 """
 
 
+#: The same document carried up over the deterministic auto-promotion contract.
+#: `ARCHITECTURE_DOC` deliberately stays *below* it so one fixture proves prose
+#: keeps its ordinary route and the other proves `make campaign` ingests
+#: architecture-grade prose with no frontmatter and no source edit. The H1 is
+#: shared, so both compile to the same campaign identity.
+QUALIFYING_ARCHITECTURE_DOC = (
+    ARCHITECTURE_DOC
+    + """
+## Authority and ownership
+
+The routing architecture names one owner per capability family; the router is
+the sole owner of provider selection.
+
+## Implementation plan
+
+Phase 1 rewrites the provider registry and its adapter manifest.
+
+## Acceptance and validation
+
+Every regression test MUST pass before release. Rollback is a revert.
+"""
+)
+
+
 SEEN_TARGET_CHECKOUTS: list[object] = []
 
 
-def _architecture_kind(module):
-    """The forced-architecture classification, named once so call sites fit."""
-    return module.campaign_input_module().CampaignInputKind.ARCHITECTURE_INTENT_V1
-
-
-def _architecture_hook(intent, *, target, repo_root, primed_dir, target_checkout=None):
+def _architecture_hook(intent, *, target, admission, repo_root, primed_dir, target_checkout=None):
     """Run the real architecture compiler with the deterministic extractor.
 
     Real compilation, no live model: the route under test is the wiring, and a
@@ -245,7 +265,7 @@ def _architecture_hook(intent, *, target, repo_root, primed_dir, target_checkout
     return module.compile_architecture_intent(
         Path(intent),
         target=target,
-        forced=True,
+        admission=admission,
         repo_root=repo_root,
         target_checkout=target_checkout,
         cache_root=primed_dir,
@@ -406,6 +426,35 @@ class RunCampaignTests(unittest.TestCase):
             )
             self.assertEqual(json.loads(path.read_text())["campaign_id"], "demo-activate-v1")
             self.assertEqual([p.name for p in (workspace / "runtime").glob("*.tmp")], [])
+
+    def test_launch_pointer_reads_human_ack_identity_not_program_owner(self) -> None:
+        """A shared program-owner default must never become a fabricated human.
+
+        `PROGRAM.owner` now carries the Program Execution default, so a pointer
+        that reused it would claim an organization acknowledged the launch.
+        The human identity is PHASE0's, and only PHASE0's.
+        """
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            workspace = root / "program"
+            blueprint = root / "blueprint"
+            (workspace / "runtime").mkdir(parents=True)
+            blueprint.mkdir()
+            _dump(blueprint / "PROGRAM.yaml", {"program": {"owner": "Quantum AI Partners"}})
+            _dump(
+                blueprint / "PHASE0_USER_CONFIG.yaml",
+                {"operator_ack": {"name": "Igor Beylin", "acknowledged_at": None}},
+            )
+            path = self.mod.write_launch_pointer(
+                workspace,
+                campaign_id="demo-activate-v1",
+                blueprint=str(blueprint),
+                target_worktree=str(root / "target"),
+                host_worktree=str(root / "host"),
+                stage="activate",
+            )
+            launch = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(launch["operator_ack_from"], "Igor Beylin")
 
     def test_rejects_intent_v1(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -598,12 +647,11 @@ class RunCampaignTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as raw:
             root = _host_repo(Path(raw))
-            (root / "arch.md").write_text(ARCHITECTURE_DOC, encoding="utf-8")
+            (root / "arch.md").write_text(QUALIFYING_ARCHITECTURE_DOC, encoding="utf-8")
             other_primary = Path(raw) / "other-primary"
             other_primary.mkdir()
             report = self.mod.run_campaign(
                 root / "arch.md",
-                forced_kind=_architecture_kind(self.mod),
                 until="activate",
                 primary=other_primary,
                 repo_root=root,
@@ -634,7 +682,7 @@ class RunCampaignTests(unittest.TestCase):
         """Repository grounding is unreachable if the route never passes a checkout."""
         with tempfile.TemporaryDirectory() as raw:
             root = _host_repo(Path(raw))
-            (root / "arch.md").write_text(ARCHITECTURE_DOC, encoding="utf-8")
+            (root / "arch.md").write_text(QUALIFYING_ARCHITECTURE_DOC, encoding="utf-8")
             checkout = Path(raw) / "target-clone"
             (checkout / "src").mkdir(parents=True)
             (checkout / "package.json").write_text(
@@ -646,9 +694,6 @@ class RunCampaignTests(unittest.TestCase):
             SEEN_TARGET_CHECKOUTS.clear()
             report = self.mod.run_campaign(
                 root / "arch.md",
-                forced_kind=(
-                    self.mod.campaign_input_module().CampaignInputKind.ARCHITECTURE_INTENT_V1
-                ),
                 until="activate",
                 primary=other_primary,
                 repo_root=root,
@@ -698,14 +743,13 @@ class RunCampaignTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as raw:
             root = _host_repo(Path(raw))
-            (root / "arch.md").write_text(ARCHITECTURE_DOC, encoding="utf-8")
+            (root / "arch.md").write_text(QUALIFYING_ARCHITECTURE_DOC, encoding="utf-8")
             other_primary = Path(raw) / "other-primary"
             other_primary.mkdir()
             l9_root = Path(raw) / "l9"
             with self.assertRaises(self.mod.CampaignError) as ctx:
                 self.mod.run_campaign(
                     root / "arch.md",
-                    forced_kind=_architecture_kind(self.mod),
                     until="activate",
                     primary=other_primary,
                     repo_root=root,
@@ -723,17 +767,49 @@ class RunCampaignTests(unittest.TestCase):
                 msg="no campaign directory may exist after a failed architecture compile",
             )
 
-    def test_unmarked_markdown_still_routes_to_the_brief_compiler(self) -> None:
+    def test_the_deprecated_architecture_flag_cannot_force_a_representation(self) -> None:
+        """`--architecture` is accepted for the Makefile alias and does nothing.
+
+        The flag survives only so the `campaign-architecture` target keeps
+        working without editing the append-only root Makefile. It must never be
+        wired back into routing: if it ever forces a kind again, this fails.
+        """
+        parser = self.mod.build_parser()
+        args = parser.parse_args(["--check-input", "x.md", "--architecture"])
+        self.assertTrue(args.architecture)
         module = self.mod.campaign_input_module()
         with tempfile.TemporaryDirectory() as raw:
             memo = Path(raw) / "memo.md"
             memo.write_text(ARCHITECTURE_DOC, encoding="utf-8")
+            # The flag is not a parameter of classification at all.
             self.assertIs(module.classify(memo).kind, module.CampaignInputKind.BRIEF)
-            self.assertIs(
-                module.classify(
-                    memo, forced_kind=module.CampaignInputKind.ARCHITECTURE_INTENT_V1
-                ).kind,
-                module.CampaignInputKind.ARCHITECTURE_INTENT_V1,
+        source = inspect.getsource(self.mod)
+        self.assertNotIn(
+            "args.architecture",
+            source,
+            msg="the deprecated flag must never be read back into routing",
+        )
+
+    def test_unmarked_markdown_below_the_contract_still_routes_to_the_brief_compiler(
+        self,
+    ) -> None:
+        """Prose that does not satisfy the contract keeps its ordinary route.
+
+        There is no caller-supplied override to test alongside this any more:
+        the only way this memo could reach the architecture representation is
+        by satisfying the deterministic contract or declaring the schema.
+        """
+        module = self.mod.campaign_input_module()
+        with tempfile.TemporaryDirectory() as raw:
+            memo = Path(raw) / "memo.md"
+            memo.write_text(ARCHITECTURE_DOC, encoding="utf-8")
+            found = module.classify(memo)
+            self.assertIs(found.kind, module.CampaignInputKind.BRIEF)
+            self.assertEqual(found.admission, "")
+            self.assertNotIn(
+                "forced_kind",
+                inspect.signature(module.classify).parameters,
+                msg="no caller may force the architecture representation",
             )
 
     def test_self_describing_architecture_markdown_needs_no_force(self) -> None:
@@ -1781,7 +1857,11 @@ class RunCampaignTests(unittest.TestCase):
             self.assertEqual(launch["runtime_status"], "not_bootstrapped")
             self.assertIsNone(launch["claimed_task"])
             self.assertIsNone(launch["execution_card"])
-            self.assertEqual(launch["operator_ack_from"], "AUTH-001")
+            # PROGRAM.owner is program accountability, not a human who
+            # acknowledged anything. With no PHASE0 contract there is no ack
+            # identity to report, and inventing one from the owner is the bug
+            # test_launch_pointer_reads_human_ack_identity_not_program_owner pins.
+            self.assertIsNone(launch["operator_ack_from"])
             self.assertFalse(self.mod.resumable_workspace(workspace))
             (workspace / "runtime" / "campaign-status.json").write_text(
                 json.dumps({"runtime_status": "active"}), encoding="utf-8"

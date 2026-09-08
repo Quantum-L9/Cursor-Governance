@@ -121,11 +121,12 @@ make -C "$HOME/.cursor-governance" campaign-architecture \
   TARGET=Quantum-L9/LLM-Router
 ```
 
-The document needs no edits. A document that declares its own frontmatter
-(`schema: l9.program-execution.architecture-intent.v1`, `target: owner/repo`)
-takes the ordinary `make campaign` route instead. Unmarked Markdown handed to
-`make campaign` still goes to the brief compiler — this route never steals
-generic memo traffic.
+The document needs no edits. Architecture admission is either `DECLARED`, when
+the source declares `schema: l9.program-execution.architecture-intent.v1`, or
+`CLASSIFIED`, when the universal campaign front door deterministically promotes
+unchanged architecture-grade prose. There is no explicit/forced architecture
+override. Unmarked prose that does not satisfy the architecture classifier
+continues to the brief route.
 
 ### What is authority and what is not
 

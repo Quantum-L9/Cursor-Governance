@@ -15,6 +15,7 @@
     },
     "target": { "type": "string" },
     "campaign_id": { "type": "string" },
+    "admission": { "enum": ["declared", "classified"] },
     "source": {
       "type": "object",
       "additionalProperties": true,
