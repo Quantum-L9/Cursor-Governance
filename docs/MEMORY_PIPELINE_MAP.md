@@ -1,39 +1,61 @@
 # Memory Pipeline Map (live path SSOT)
 
 Canonical narrative for agent episodic memory in Quantum-L9 coding workspaces.
-Authority: CANONICAL_LAW §2.1 / §8, ADR-0005, ADR-0028, rules `03-graphiti-memory` + `87-cursor-memory-kernel`.
+Authority: CANONICAL_LAW §2.1 / §8 / §8.2, ADR-0005, ADR-0028, ADR-0030, rules `03-graphiti-memory` + `87-cursor-memory-kernel`.
+
+**Updated 2026-09-06 (realignment C11/C12):** the store is the canonical `l9-graphite-memory` control plane; Graphiti is a projection memory owns. The direct provider client is a tombstone; every row below that once named it now names `ops/memory`.
+
+**Updated 2026-09-07 (doctrine closure, CANONICAL_LAW §8.3, ADR-0030 items 7–9):** ONE authority (`MemoryService`), ONE canonical egress (`ops/memory`), two adapters (CLI, MCP). A model-initiated durable write is `memory.phase_lock` → `memory.write_governed` on the `l9-graphite-memory` MCP server; the CLI `write` is the operator / deterministic-adapter form. The phase-lock governs memory-write consistency only — never repository authority.
 
 ## One store
 
 | Layer | Role |
 |-------|------|
-| Graphiti (VPS MCP) | Sole agent episodic SSOT |
-| `ops/graphiti/graphiti_memory_client.py` | Cursor-primary front door |
-| `ops/graphiti/hydration/` | sessionStart compile + sessionEnd close |
-| Claude `environment/agents/adapters/claude-code/memory/` | Thin adapter only (no second brain) |
+| `l9-graphite-memory` MemoryService (`memory-control-plane/v1`) | Sole agent episodic SSOT; Graphiti is its projection |
+| `ops/memory/control_plane_client.py` (`python -m ops.memory.cli`) | Cursor's only egress (INV-03); bound runtime per `ops/config/memory-binding.json`; operator / hook / deterministic-adapter CLI |
+| `l9-graphite-memory` MCP server (stdio, package-owned; `make memory-mcp-install`) | The model's interactive adapter to the same MemoryService: `memory.search`, `memory.hydrate`, `memory.phase_lock` → `memory.write_governed` |
+| `ops/graphiti/hydration/` | sessionStart compile + sessionEnd close (deterministic adapters) |
+| Claude `environment/agents/adapters/claude-code/memory/` | Thin adapter only (no second brain); `memory-enforcement.contract.json` `interactive_memory_write` is the machine form of the write contract |
 | `memory-bank/` | **RETIRED** — do not scaffold/read/write; delete residual trees |
 | `.l9/pr/` | `make pr` remediation handoff JSON (not memory) |
 | PE Graphiti projection | Observability only — never write authority |
+
+## Write paths (caller taxonomy)
+
+| Caller | Path | Operation | Note |
+|--------|------|-----------|------|
+| Model, mid-session (lesson / insight / decision) | MCP `l9-graphite-memory` | `memory.phase_lock` → `memory.write_governed` | The **only** model write. Lock = namespace-snapshot consistency precondition; refused lock/write is the verdict |
+| sessionEnd hook | `close_session.py` → `ops/memory` | `ingest_candidate` → `memory.close` (idempotent) | Deterministic adapter |
+| SessionStart hook | `canonical_hydrate` → `ops/memory` | `hydrate` | Read only |
+| `/end-session` repair | `hydration.cli repair-write` → `ops/memory` | canonical `write` + close-receipt stamp | Deterministic adapter; not the model's lesson path |
+| Legacy provider history | `legacy_reconciliation.py` | canonical admission, tag `legacy_unverified` | Operator |
+| Human operator / Program Execution | `python -m ops.memory.cli write` | generic canonical write | Operator form — not a bypass of `write_governed` for a model-authored fact |
+| Anything | provider transport (`add_memory`-class tools, provider URL/bearer) | — | **Forbidden**; no surface holds one |
+
+A memory phase-lock never authorizes a source edit, commit, push or publication (`rules/96` E7/E8/E10, `rules/98`).
 
 ## Normal session lifecycle (no `/end-session` required)
 
 ```text
 sessionStart
-  → resolve group_id from CURSOR_PROJECT_DIR
+  → resolve repository identity + namespace hints (ops/memory/namespace_context.py)
   → write open latch (.l9/memory/opens + rotate previous_opened / last_opened)
-  → compile SessionHydrationPacket (PICKUP + facts + close-gap check)
+  → canonical_hydrate: health → hydrate → typed ContinuationCapsuleV2 (stale loses to git)
+  → compile SessionHydrationPacket (continuation + context sections + close-gap check)
   → if prior session missing receipt / write_count=0 / no session PICKUP:
       lead additional_context with DEGRADED + REPAIR: /end-session (ADR-0028)
   → emit additional_context with objective + next= + compact JSON
-  → inject receipt for gates (fail-open if Graphiti down)
+  → canonical session state for the hydration-only gates (fail-open if memory down)
 
 session work
-  → atomic T2 writes via CLI (`lesson` / `insight` / structured PICKUP)
-  → source_description = agent={id};kind={kind}
+  → atomic T2 governed writes: `memory.phase_lock` → `memory.write_governed`
+    (`memory_class: lesson|insight|decision`) on the `l9-graphite-memory` MCP server
+  → every write is a canonical receipt (admitted / duplicate / rejected / quarantined)
+  → operator CLI `python -m ops.memory.cli write` is the human / adapter form only
 
 sessionEnd (X-out / window_close / completed / aborted)
-  → Phase A/B via close_session.py; always write a close receipt
-  → if write_count=0: one graphiti_memory_client pickup_context fallback
+  → Phase A/B via close_session.py: capsule → governed candidate → memory.close (idempotent)
+  → local obligation under .l9/memory/closes/ (authority: none); no provider fallback
   → stderr ERROR on skip/fail; enqueue failure still exit 2
   → idempotent receipt under .l9/memory/closes/{session_id}.json
     (latches only — not resume SSOT)
@@ -52,7 +74,7 @@ sessionEnd (X-out / window_close / completed / aborted)
 
 Batch catch-up (no Mac awake at cron time)
   → GitHub Actions `.github/workflows/memory-distill.yml` (schedule + dispatch)
-  → pull pending S3 jobs → OpenAI distill → Graphiti HTTPS ingest
+  → pull pending S3 jobs → OpenAI distill → canonical ingest (ops/memory control plane)
   → Mac LaunchAgent `com.l9.transcript-distiller` / Dropbox / C1 `save_memory`
     are RETIRED (see `ops/scripts/RETIRED_transcript_distiller_launchagent.md`)
 ```
@@ -84,9 +106,12 @@ SessionStart prints `REPAIR: /end-session`, or:
 - you need a richer manual PICKUP after a degraded close
 - governance backup / Redis handoff must be forced interactively
 
-**Primary repair** is `graphiti_memory_client.py write --kind pickup_context`
-(or `hydration.cli repair-write`). Do not prefer `hydration.cli close`.
-Do not treat `/end-session` as required for every X-out. See ADR-0028.
+**Primary repair** is `hydration.cli repair-write` (canonical write + receipt stamp).
+Do not prefer `hydration.cli close`; there is no provider `write` fallback (C11).
+Learnings extracted during `/end-session` are model-authored facts and take the
+governed write (`memory.phase_lock` → `memory.write_governed`), not the
+operator CLI. Do not treat `/end-session` as required for every X-out. See
+ADR-0028 (amended 2026-09-07) and ADR-0030.
 
 ## Budgets
 
