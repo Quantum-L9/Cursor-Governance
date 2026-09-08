@@ -7,6 +7,12 @@ The registry is generated from:
 
 Owned under ops/ (CANONICAL_LAW §2.1). Committed so Cursor and Claude Code
 hooks can score without importing PyYAML in an arbitrary consumer repository.
+
+Registry v2 (Virtual Skill Plane): every record carries the exact canonical
+resource (`skill_md`) and its digest (`skill_sha256`); the registry carries a
+`generation_id` that route receipts bind to. Generation is the only place the
+corpus is hashed — runtime loading (ops/skill_routing/registry.py) validates
+shape and never re-digests the tree.
 """
 
 from __future__ import annotations
@@ -108,6 +114,8 @@ def build_registry(root: Path) -> dict[str, Any]:
                 {
                     "name": name,
                     "path": f"skills/{name}",
+                    "skill_md": f"skills/{name}/SKILL.md",
+                    "skill_sha256": sha256_bytes(skill_bytes),
                     "invocation": mode,
                     "composition_role": composition_role,
                     "description": description,
@@ -122,9 +130,18 @@ def build_registry(root: Path) -> dict[str, Any]:
     if not isinstance(routes, list):
         raise ValueError("claude_routing.routes must be a list")
     known = {record["name"] for record in records}
+    route_ids: set[str] = set()
     for route in routes:
         if not isinstance(route, dict):
             raise ValueError(f"invalid route: {route!r}")
+        route_id = str(route.get("id") or "")
+        if not route_id:
+            raise ValueError(f"route without id: {route!r}")
+        if route_id in route_ids:
+            raise ValueError(f"duplicate route id: {route_id}")
+        route_ids.add(route_id)
+        if not isinstance(route.get("priority", 0), int):
+            raise ValueError(f"route {route_id}: priority must be an integer")
         route_primary = route.get("primary")
         if route_primary not in known:
             raise ValueError(f"route references unknown primary skill: {route_primary!r}")
@@ -132,11 +149,16 @@ def build_registry(root: Path) -> dict[str, Any]:
             if support not in known:
                 raise ValueError(f"route references unknown supporting skill: {support!r}")
 
+    manifest_sha = sha256_bytes(manifest_bytes)
+    corpus_sha = corpus_hash.hexdigest()
+    # Generation identity binds route receipts to exactly this manifest + corpus.
+    generation_id = sha256_bytes(f"{manifest_sha}:{corpus_sha}".encode("ascii"))
     return {
-        "schema_version": 1,
+        "schema_version": 2,
+        "generation_id": generation_id,
         "source": "skills/AUTONOMY_MANIFEST.yaml",
-        "source_manifest_sha256": sha256_bytes(manifest_bytes),
-        "source_skill_corpus_sha256": corpus_hash.hexdigest(),
+        "source_manifest_sha256": manifest_sha,
+        "source_skill_corpus_sha256": corpus_sha,
         "routing": routing,
         "skills": sorted(records, key=lambda item: item["name"]),
     }

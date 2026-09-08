@@ -21,7 +21,10 @@ adapters:
   - id: cursor-plugin
     surface: cursor
     kind: plugin
-    # Cursor discovers skills under the l9-governance local plugin root
-    # (~/.cursor/plugins/local/l9-governance → governance). No second skills tree.
+    # Cursor is a virtual-gateway surface: the l9-governance plugin exposes
+    # exactly one native skill (environment/agents/adapters/cursor/skills/
+    # l9-skill-gateway) and the canonical corpus is reached through the
+    # registry + route receipts. This generic reconciler never mirrors,
+    # copies, or symlinks canonical skills into Cursor discovery.
     path: null
-    notes: "plugin-root discovery; ~/.cursor/skills is forbidden"
+    notes: "virtual gateway (AUTONOMY_MANIFEST cursor_discovery); ~/.cursor/skills is forbidden"
