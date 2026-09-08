@@ -32,7 +32,19 @@ from typing import NamedTuple
 #: Hydrating or provisioning each repository costs real time, so the count is
 #: capped rather than unbounded. Callers report the cap, because a silent
 #: truncation reads as "everything was covered".
+#:
+#: The two callers do NOT pay the same price per root, so they no longer share
+#: one answer. Dependency provisioning is fingerprint-cached and its helper
+#: already re-launches itself detached when its budget expires, so a root costs
+#: real work only the first time it is seen — there `cap=UNCAPPED` serves every
+#: repository. Memory hydration pays a Graphiti round trip AND context bytes on
+#: EVERY session, cached by nothing, so it keeps a cap and rotates instead.
 DEFAULT_MAX_ROOTS = 6
+
+#: `cap=UNCAPPED` selects every eligible root. Distinct from a large number so
+#: the intent is readable at the call site and cannot drift out of date as a
+#: container grows.
+UNCAPPED = 0
 
 #: Why a repository present in the container did not make the selection.
 DROPPED_NO_NAMESPACE = "no_namespace"
@@ -74,6 +86,7 @@ def select_workspace_roots(
     *,
     cap: int = DEFAULT_MAX_ROOTS,
     predicate: Callable[[Path], bool] | None = None,
+    offset: int = 0,
 ) -> RootSelection:
     """`workspace_roots`, plus the roots it excluded and the rule that did it.
 
@@ -85,6 +98,17 @@ def select_workspace_roots(
     reported as `no_namespace` even when it also sits beyond the cap. That is
     the honest attribution — it would have been excluded either way, and by the
     more specific rule.
+
+    `offset` rotates the eligible list before the cap is applied. A cap plus a
+    stable sort meant the same prefix won every session and the same tail was
+    never served — deterministic starvation, which is worse than random
+    starvation because no session ever corrects it. With a caller that advances
+    the offset, every eligible root is served within `ceil(len/cap)` sessions.
+    The sort stays stable, so the rotation is the ONLY source of variation and
+    a given offset always yields the same window.
+
+    `cap=UNCAPPED` (0) disables truncation entirely, and then `offset` only
+    reorders — no root is ever dropped, so coverage is complete every time.
     """
     if is_repository(workspace):
         return RootSelection([workspace], [])
@@ -99,7 +123,13 @@ def select_workspace_roots(
             dropped.append((child, DROPPED_NO_NAMESPACE))
             continue
         usable.append(child)
-    selected, over_cap = usable[:cap], usable[cap:]
+    if usable and offset:
+        pivot = offset % len(usable)
+        usable = usable[pivot:] + usable[:pivot]
+    if cap == UNCAPPED or cap >= len(usable):
+        selected, over_cap = usable, []
+    else:
+        selected, over_cap = usable[:cap], usable[cap:]
     dropped.extend((child, DROPPED_CAP) for child in over_cap)
     if not selected:
         # The fallback covers the whole container, so nothing is unserved and
@@ -113,6 +143,7 @@ def workspace_roots(
     *,
     cap: int = DEFAULT_MAX_ROOTS,
     predicate: Callable[[Path], bool] | None = None,
+    offset: int = 0,
 ) -> list[Path]:
     """Repository roots inside `workspace`, in resolution order.
 
@@ -129,7 +160,7 @@ def workspace_roots(
     Use `select_workspace_roots` when the caller must also report what it left
     behind.
     """
-    return select_workspace_roots(workspace, cap=cap, predicate=predicate).selected
+    return select_workspace_roots(workspace, cap=cap, predicate=predicate, offset=offset).selected
 
 
 def projection_roots(workspace: Path, *, cap: int = DEFAULT_MAX_ROOTS) -> list[Path]:
