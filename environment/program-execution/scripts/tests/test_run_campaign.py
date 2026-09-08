@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 from unittest.mock import patch
 
@@ -2084,18 +2085,23 @@ class RunCampaignTests(unittest.TestCase):
                 encoding="utf-8",
             )
             executed: list[tuple[str, str]] = []
-            report = self.mod.run_campaign(
-                root / "intent.yaml",
-                until="execute",
-                primary=Path(raw) / "primary",
-                repo_root=root,
-                l9_root=l9,
-                hooks=self.mod.Hooks(
-                    execute=lambda space, campaign_id: (
-                        executed.append((str(space), campaign_id)) or {}
+            # The fixture runtime carries no Controller state; identity
+            # admission is the Controller's and is pinned in its own suite.
+            with unittest.mock.patch.object(
+                self.mod, "admit_resume_identity", return_value={"decision": "EXACT_MATCH"}
+            ):
+                report = self.mod.run_campaign(
+                    root / "intent.yaml",
+                    until="execute",
+                    primary=Path(raw) / "primary",
+                    repo_root=root,
+                    l9_root=l9,
+                    hooks=self.mod.Hooks(
+                        execute=lambda space, campaign_id: (
+                            executed.append((str(space), campaign_id)) or {}
+                        ),
                     ),
-                ),
-            )
+                )
             self.assertEqual(report.stages_completed, ["resume", "execute"])
             self.assertTrue((runtime / "program-lock.json").is_file())
             self.assertFalse((l9 / "programs" / "stale").exists())

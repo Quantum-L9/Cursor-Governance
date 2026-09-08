@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
-"""Live campaign closeout ledger (in-repo).
+"""Live campaign closeout ledger (in-repo): a projection, not an authority.
 
 Immutable CAMPAIGN_SOURCE.yaml metadata.status stays operator_intake.
 This ledger is what agents read to decide which campaign is next.
 
-  close  --id <campaign> --verdict CONVERGED --evidence key=value
+The terminal verdict is never supplied here. `close` consumes the Controller
+Closure Receipt that `pec close` produced over its own canonical state, validates
+its identity (schema, producer, program id, digest) and projects the verdict it
+carries (PEC-P1-002). A caller cannot invent a terminal verdict.
+
+  close  --id <campaign> --closure-receipt <path> [--expected-verdict V] [--evidence k=v]
   next
   status
 """
@@ -29,6 +34,74 @@ TERMINAL_VERDICTS = {"CONVERGED", "CONVERGED_WITH_NON_BLOCKING_RISKS", "NOT_CONV
 LEDGER_NAME = "CAMPAIGN_STATUS.yaml"
 POLICY_NAME = "CAMPAIGN_EXECUTION_POLICY.yaml"
 COMPLETED_DIR = "COMPLETED"
+CLOSURE_RECEIPT_SCHEMA = "program-execution-controller.closure-receipt.v1"
+CLOSURE_PRODUCER = "Program Execution Controller"
+_RECEIPT_REQUIRED = (
+    "schema",
+    "closure_id",
+    "producer",
+    "controller_id",
+    "campaign_id",
+    "program_id",
+    "program_digest",
+    "runtime_workspace",
+    "verdict",
+    "closed_by",
+    "closed_at",
+    "receipt_digest",
+)
+
+
+class ClosureReceiptError(ValueError):
+    pass
+
+
+def _canonical_digest(value: Any) -> str:
+    import hashlib
+
+    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def validate_closure_receipt(payload: Any, campaign_id: str) -> dict[str, Any]:
+    """The Controller Closure Receipt, or why it cannot be accepted."""
+    if not isinstance(payload, dict):
+        raise ClosureReceiptError("closure receipt is not an object")
+    missing = [key for key in _RECEIPT_REQUIRED if key not in payload]
+    if missing:
+        raise ClosureReceiptError(f"closure receipt missing fields: {missing}")
+    if payload.get("schema") != CLOSURE_RECEIPT_SCHEMA:
+        raise ClosureReceiptError(f"closure receipt schema {payload.get('schema')!r} not accepted")
+    if payload.get("producer") != CLOSURE_PRODUCER:
+        raise ClosureReceiptError(
+            f"closure receipt producer {payload.get('producer')!r} not accepted"
+        )
+    body = dict(payload)
+    claimed = body.pop("receipt_digest", None)
+    if _canonical_digest(body) != claimed:
+        raise ClosureReceiptError("closure receipt digest mismatch")
+    if str(payload.get("campaign_id")) != campaign_id:
+        raise ClosureReceiptError(
+            f"closure receipt is for campaign {payload.get('campaign_id')!r}, not {campaign_id!r}"
+        )
+    if payload.get("verdict") not in TERMINAL_VERDICTS:
+        raise ClosureReceiptError(
+            f"closure receipt verdict {payload.get('verdict')!r} not terminal"
+        )
+    return payload
+
+
+def load_closure_receipt(source: Path | dict[str, Any], campaign_id: str) -> dict[str, Any]:
+    if isinstance(source, dict):
+        return validate_closure_receipt(source, campaign_id)
+    path = Path(source)
+    if not path.is_file():
+        raise ClosureReceiptError(f"closure receipt not found: {path}")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise ClosureReceiptError(f"closure receipt unreadable: {path}: {exc}") from exc
+    return validate_closure_receipt(payload, campaign_id)
 
 
 def _utc_now() -> str:
@@ -100,17 +173,35 @@ def next_campaign(root: Path) -> dict[str, Any] | None:
 def close_campaign(
     root: Path,
     campaign_id: str,
-    verdict: str,
-    evidence: dict[str, str],
+    closure_receipt: Path | dict[str, Any],
     actor: str,
+    *,
+    extra_evidence: dict[str, str] | None = None,
+    expected_verdict: str | None = None,
 ) -> dict[str, Any]:
-    if verdict not in TERMINAL_VERDICTS:
-        raise SystemExit(f"closeout requires a terminal verdict, got {verdict}")
+    """Project a Controller closure into the campaign ledger. Never decides."""
+    try:
+        receipt = load_closure_receipt(closure_receipt, campaign_id)
+    except ClosureReceiptError as exc:
+        raise SystemExit(f"closeout refused: {exc}") from exc
+    verdict = str(receipt["verdict"])
+    if expected_verdict is not None and expected_verdict != verdict:
+        raise SystemExit(
+            f"closeout refused: caller expected {expected_verdict}, the Controller closed "
+            f"{campaign_id} as {verdict}"
+        )
     policy = load_policy(root)
     if campaign_id not in policy_ids(policy):
         raise SystemExit(f"unknown campaign_id={campaign_id}")
-    if not evidence:
-        raise SystemExit("closeout requires evidence (PR, SHA, or handoff)")
+    evidence: dict[str, Any] = {
+        "closure_id": str(receipt["closure_id"]),
+        "program_digest": str(receipt["program_digest"]),
+        "closure_receipt_digest": str(receipt["receipt_digest"]),
+        "pec_workspace": str(receipt["runtime_workspace"]),
+        "closed_by_controller": str(receipt["controller_id"]),
+    }
+    for key, value in (extra_evidence or {}).items():
+        evidence.setdefault(key, value)
     ledger = load_ledger(root)
     rows = list(ledger.get("campaigns") or [])
     found = False
@@ -135,7 +226,17 @@ def close_campaign(
     _dump_yaml(root / LEDGER_NAME, ledger)
     closeout_path = root / campaign_id / "handoff" / "CLOSEOUT.yaml"
     closeout_path.parent.mkdir(parents=True, exist_ok=True)
-    _dump_yaml(closeout_path, {"schema": "l9.program-execution.campaign-closeout.v1", **record})
+    _dump_yaml(
+        closeout_path,
+        {
+            "schema": "l9.program-execution.campaign-closeout.v2",
+            **record,
+            "closure_receipt": {
+                key: receipt.get(key)
+                for key in ("closure_id", "program_id", "program_digest", "receipt_digest")
+            },
+        },
+    )
     return record
 
 
@@ -161,9 +262,10 @@ def cmd_close(args: argparse.Namespace) -> int:
     record = close_campaign(
         campaigns_root(args.root),
         args.id,
-        args.verdict,
-        evidence,
+        args.closure_receipt,
         args.actor,
+        extra_evidence=evidence,
+        expected_verdict=args.expected_verdict,
     )
     archive_completed(campaigns_root(args.root), args.id)
     print(json.dumps(record, indent=2, sort_keys=True))
@@ -205,9 +307,20 @@ def build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="command", required=True)
     c = sub.add_parser("close")
     c.add_argument("--id", required=True)
-    c.add_argument("--verdict", required=True, choices=sorted(TERMINAL_VERDICTS))
+    c.add_argument(
+        "--closure-receipt",
+        required=True,
+        type=Path,
+        help="Controller Closure Receipt written by `pec close` (the only verdict source)",
+    )
+    c.add_argument(
+        "--expected-verdict",
+        default=None,
+        choices=sorted(TERMINAL_VERDICTS),
+        help="non-authoritative: refuse if the receipt's verdict differs",
+    )
     c.add_argument("--actor", default="AUTH-001")
-    c.add_argument("--evidence", action="append", default=[])
+    c.add_argument("--evidence", action="append", default=[], help="additive key=value only")
     c.set_defaults(func=cmd_close)
     n = sub.add_parser("next")
     n.set_defaults(func=cmd_next)
