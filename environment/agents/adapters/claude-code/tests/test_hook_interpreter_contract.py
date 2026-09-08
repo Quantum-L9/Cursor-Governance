@@ -130,6 +130,12 @@ class HookInterpreterBindingTests(unittest.TestCase):
         (hooks / "l9_hook_exec.sh").write_text(
             (HOOKS / "l9_hook_exec.sh").read_text(encoding="utf-8"), encoding="utf-8"
         )
+        surface_lib = gov / "ops" / "scripts" / "lib"
+        surface_lib.mkdir(parents=True)
+        (surface_lib / "surface_detect.sh").write_text(
+            (REPO / "ops" / "scripts" / "lib" / "surface_detect.sh").read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
         marker = tmp / "locked" / "bin"
         if with_venv:
             (gov / ".venv" / "bin").mkdir(parents=True)
@@ -144,6 +150,19 @@ class HookInterpreterBindingTests(unittest.TestCase):
         that directly. No interposed shell, so the test executes exactly what
         Claude Code executes."""
         return shlex.split(command)
+
+    def _hook_env(self, home: Path | str) -> dict[str, str]:
+        """Observers skip unless the detector sees a Claude surface."""
+        env = {**os.environ, "HOME": str(home), "CLAUDECODE": "1"}
+        for key in (
+            "CURSOR_AGENT",
+            "L9_GOVERNANCE_SURFACE",
+            "CLAUDE_CODE_ENTRYPOINT",
+            "CLAUDE_CODE_SESSION_ID",
+            "CLAUDE_CODE_REMOTE",
+        ):
+            env.pop(key, None)
+        return env
 
     def _probe_command(self, command: str) -> str:
         """Point the command at the probe hook instead of its real one.
@@ -179,7 +198,7 @@ class HookInterpreterBindingTests(unittest.TestCase):
                         capture_output=True,
                         text=True,
                         timeout=120,
-                        env={**os.environ, "HOME": str(home)},
+                        env=self._hook_env(home),
                         check=False,
                     )
                     chosen = proc.stdout.strip()
@@ -211,7 +230,7 @@ class HookInterpreterBindingTests(unittest.TestCase):
                 capture_output=True,
                 text=True,
                 timeout=120,
-                env={**os.environ, "HOME": str(home)},
+                env=self._hook_env(home),
                 check=False,
             )
         # No interpreter ran at all - nothing on stdout.
@@ -237,7 +256,7 @@ class HookInterpreterBindingTests(unittest.TestCase):
                         capture_output=True,
                         text=True,
                         timeout=120,
-                        env={**os.environ, "HOME": str(home)},
+                        env=self._hook_env(home),
                         check=False,
                     )
                     self.assertEqual(proc.returncode, 2, "a gate must BLOCK, not pass")

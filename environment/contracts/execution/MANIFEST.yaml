@@ -2,7 +2,7 @@ schema: l9.execution-contracts.manifest.v1
 schema_version: 2.0.0
 family: l9_execution_architecture
 status: active
-updated: '2026-08-12'
+updated: '2026-09-06'
 purpose: >
   First-class execution contracts, architecture law, and templates owned by
   Cursor-Governance. Program Execution is the authority plane; providers are

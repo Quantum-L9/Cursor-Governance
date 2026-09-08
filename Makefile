@@ -923,6 +923,21 @@ cursor-projection-check:
 skill-plane-test:
 	$(PYTHON) -m pytest ops/skill_routing/tests environment/agents/adapters/cursor/tests -q
 
+# --- Claude Code preservation contract ---------------------------------------
+# docs/CLAUDE_CODE_PRESERVATION_CONTRACT.md. Claude Code is an independent
+# consumer of the canonical corpus; Cursor-boundary work must not reshape it.
+# The snapshot is repository-pure, so this target needs no Cursor runtime state.
+.PHONY: claude-preservation-check claude-preservation-baseline
+## Verify the Claude Code skill projection still matches its attested baseline.
+claude-preservation-check:
+	$(PYTHON) ops/scripts/claude_projection_snapshot.py --root "$(CURDIR)" --check
+	$(PYTHON) -m pytest -q \
+		environment/agents/adapters/claude-code/tests/test_claude_preservation_contract.py
+
+## Re-attest the Claude Code projection baseline (deliberate act; CC-006).
+claude-preservation-baseline:
+	$(PYTHON) ops/scripts/claude_projection_snapshot.py --root "$(CURDIR)" --write-baseline
+
 ## --- Memory control plane (ops/memory; realignment stage C1) --------------
 ## Prove the exact l9-graphite-memory package + CLI this checkout is bound to.
 memory-binding:

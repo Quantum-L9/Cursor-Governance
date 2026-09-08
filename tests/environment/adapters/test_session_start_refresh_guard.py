@@ -222,7 +222,7 @@ def test_untracked_residue_does_not_trip_the_guard(tmp_path: Path) -> None:
 
 def test_cursor_skip_precedes_claude_banner() -> None:
     text = body()
-    skip = text.index("_l9_claude_runtime")
+    skip = text.index("Skip unless surface_detect says Claude")
     banner = text.index('LINES+=("L9 Governance — Claude Code session")')
     assert skip < banner
 

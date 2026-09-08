@@ -43,7 +43,7 @@ DOC = textwrap.dedent(
 def _intent(tmp: Path, text: str = DOC):
     path = tmp / "arch.md"
     path.write_text(text, encoding="utf-8")
-    return load_architecture_intent(path, target="Quantum-L9/LLM-Router", forced=True)
+    return load_architecture_intent(path, target="Quantum-L9/LLM-Router", admission="classified")
 
 
 @dataclass
