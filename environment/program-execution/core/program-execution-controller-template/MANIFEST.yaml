@@ -179,7 +179,7 @@ files:
 - path: scripts/tests/test_pe_clean_startup.py
   sha256: 6aeb90005d5ba0e36a3f93932ef9a8715f9bd9479a723b2ba7d2ce4ef5ccd9cf
 - path: scripts/tests/test_persistence_convergence.py
-  sha256: 3f143ff088ddecdbd940d993b32e662b1c3d3df4353ebf1d07e324ea947f6fa4
+  sha256: bcd8ace9afc306a8f1c5c00d6c629896c6e3495bc041e43c26c397cfca49e3a7
 - path: scripts/tests/test_pipeline_assembly_fill.py
   sha256: 3ba25d3f036f3d4ae0ec5f29329ae5c178d7712791b8f29723d9cbf0594e2662
 - path: scripts/tests/test_preflight.py
