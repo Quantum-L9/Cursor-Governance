@@ -2,8 +2,22 @@ version: 1
 purpose: Canonical cross-surface skill autonomy and routing registry for governed L9 agents.
 principle: Model-invocable skills are selected from SKILL.md descriptions; explicit-only skills remain user-triggered; deterministic behavior lives in skill instructions, references, and optional skill-local scripts/assets.
 cursor_discovery:
-  enabled_by:
-  - ~/.cursor/skills symlinked to GlobalCommands/skills
+  mode: virtual_gateway
+  canonical_root: skills
+  native_projection:
+    path: environment/agents/adapters/cursor/skills
+    expected_skill_count: 1
+    gateway: l9-skill-gateway
+  registry:
+    path: ops/generated/skill-registry.json
+  route_receipt: ~/.cursor/l9/routes/<conversation-key>/current.json
+  invariants:
+    canonical_cardinality_independent_of_native_cardinality: true
+    native_canonical_mirroring_forbidden: true
+    gateway_owns_no_routing: true
+    gateway_not_in_registry: true
+  validator: environment/agents/adapters/cursor/validate_skill_projection.py
+  canonical_skill_requirements:
   - skill folder contains SKILL.md
   - frontmatter name matches folder name
   - description states what the skill does and when to use it
@@ -22,7 +36,7 @@ tiers:
   - skill: l9-gmp-protocol
     use_when: work must be phased, auditable, traceable, or touches protected/high-risk areas
   - skill: l9-plan
-    use_when: scope is unclear, requirements need decomposition, or implementation needs a machine-validated plan/spec first
+    use_when: the user asks for /l9-plan, make campaign, a Program Lock, a campaign plan, or a PE+autonomy plan/spec that runs through program-execution; ordinary plans belong to l9-plan-simple
   - skill: l9-code-analysis
     use_when: exploring unfamiliar code, auditing structure, mapping flows, or identifying hotspots
   - skill: l9-gap-analysis
@@ -339,8 +353,23 @@ claude_routing:
     supporting:
     - l9-structured-reasoning
   - id: plan
-    primary: l9-plan
+    primary: l9-plan-simple
     signal_weight: 8
+    hint_allowed: true
+    required_any:
+    - execution plan
+    - implementation plan
+    - plan mode
+    - planning mode
+    - plan this
+    - plan first
+    - plan before
+    - write a plan
+    - make a plan
+    - build-button plan
+    - decompose the requirements
+    - decompose requirements
+    - scope is unclear
     positive_signals:
     - create an execution plan
     - write a plan first
@@ -353,10 +382,55 @@ claude_routing:
     - plan before coding
     - write a plan
     - planning mode
+    - plan mode
     - execution plan
     - decompose requirements
+    - build-button plan
+    negative_signals:
+    - campaign
+    - program lock
+    - program-execution
+    - program execution
+    - pe+autonomy
+    - pe autonomy
+    - /l9-plan
     supporting:
     - l9-structured-reasoning
+    note: 'Ordinary implementation plans, Build-button plans, and Cursor Plan mode are l9-plan-simple (planning-only; Build is the user''s press). Campaign / PE / Program Lock planning is the campaign_plan route below — one manifest-owned doctrine, no static rule table (VSP-P1-002).
+
+      explicit_only + hint_allowed — the route recommends Read/attach (source: explicit_hint); it is never model-invocation authority. l9-plan-simple stays explicit_only so the Claude Code projection is unchanged by the Cursor plane (Claude Code Preservation Contract CC-006, V-CC-001). Promoting the tier is a separate change set — PR #512 owns it.
+
+      '
+  - id: campaign_plan
+    primary: l9-plan
+    signal_weight: 8
+    priority: 1
+    positive_signals:
+    - pe campaign
+    - campaign plan
+    - plan a campaign
+    - plan the campaign
+    - prepare a campaign
+    - prepare the campaign
+    - program lock
+    - pe+autonomy
+    - pe autonomy plan
+    - program-execution plan
+    - program execution plan
+    - /l9-plan
+    - campaign spec
+    - for the campaign
+    - for a campaign
+    negative_signals:
+    - make campaign
+    - campaign INTENT
+    - activate the campaign
+    - activate a campaign
+    supporting:
+    - l9-structured-reasoning
+    note: 'PE+autonomy planning that runs through program-execution. Live activation (make campaign INTENT=) stays pe_campaign_activate; this route plans, it never activates.
+
+      '
   - id: gmp_protocol
     primary: l9-gmp-protocol
     signal_weight: 8
