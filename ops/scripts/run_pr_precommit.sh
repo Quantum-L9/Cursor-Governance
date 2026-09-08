@@ -14,6 +14,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=resolve_governance_paths.sh
 source "$SCRIPT_DIR/resolve_governance_paths.sh"
+# Bind the authoritative clone before GOV_ROOT is used below (rules/06).
+resolve_governance_paths || true
 # Staged mode: invoked from a git commit hook rather than from make pr-check.
 # Same catalog, same SKIP list — the single reason `pre-commit install` is
 # forbidden is that a RAW shim runs the catalog WITHOUT that list, so
@@ -63,6 +65,15 @@ fi
 # NOTE (still deferred): cwd=$GOV_ROOT with absolute --files paths. That changes
 # how every hook resolves its inputs; skipping the unresolvable hooks is the
 # narrower fix for the failure actually observed.
+# Script-relative ON PURPOSE, and NOT "${GOV_ROOT:-...}".
+#
+# The resolver above binds GOV_ROOT to the machine SSOT ($HOME/.cursor-governance).
+# This variable means something different: the governance tree THESE scripts
+# belong to, which is what `"$WS" != "$GOV_ROOT"` below compares to decide
+# whether a governance-local hook can resolve its entry path. Honouring the
+# resolver here made a second gov clone compare against the SSOT and skip
+# gh-package-deps-preflight inside the governance workspace itself —
+# tests/ops/scripts/test_gov_only_hook_skip.py caught it.
 GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 GOV_PRECOMMIT_CONFIG="$GOV_ROOT/.pre-commit-config.yaml"
 
