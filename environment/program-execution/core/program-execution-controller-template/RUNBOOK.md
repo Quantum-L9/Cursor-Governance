@@ -65,10 +65,21 @@ python scripts/pec.py next --workspace ../runtime
 ```bash
 python scripts/pec.py set-decision DEC-001 accepted --workspace ../runtime --evidence-id EVID-010 --actor owner
 python scripts/pec.py set-unknown UNK-001 resolved --workspace ../runtime --evidence-id EVID-011 --actor owner
-python scripts/pec.py evaluate-gate GATE-001 PASS --workspace ../runtime --evidence-id EVID-012 --method inspection --actor verifier
+python scripts/pec.py evaluate-gate GATE-001 --workspace ../runtime --evidence-id EVID-012 --actor verifier
 ```
 
 These commands record runtime projections and receipts. They do not rewrite Blueprint source files.
+
+`evaluate-gate` takes evidence references only. The Controller derives
+PASS / FAIL / UNKNOWN / NOT_APPLICABLE_WITH_REASON from the gate's frozen
+definition and the typed evidence it holds (`pec/gates.py`), records that
+derivation as the gate's state and receipt (`evaluator_version`,
+`reason_codes`, `unresolved`), and only then compares it with an optional
+expected result given as the second positional argument (or `--expected`). A
+mismatch exits 2 with `GATE_EXPECTATION_MISMATCH` after the truthful record has
+been made; there is no input that promotes a gate by naming the word PASS. A
+gate class the evaluator has no rule for is UNKNOWN, and changing a gate's
+definition invalidates its prior result.
 
 ## 6. Admit exact task scope
 
@@ -113,10 +124,19 @@ once:
 python scripts/pec.py fresh-workspace --workspace ../runtime --repository <target>
 ```
 
-It clears task worktrees, git's worktree registrations, `pec/*` branches and
-open leases together — cleaning only some of them is what produced
-`fatal: a branch named 'pec/<wave>/task-xxx' already exists`. It is safe to run
-repeatedly and on a workspace that never executed anything.
+It is a presentation over Controller recovery (`pec recover-execution`): for
+every affected task the live execution attempt is fenced, its worktree evidence
+(branch, HEAD, dirty diff, untracked files, baseline identity, lease, provider
+correlation) is preserved under `recovery/<task>/<attempt>/`, the lease is
+released and the task lands on STALE -- readiness is recomputed by the next
+`claim`, never forced. Only then are task worktrees, git's worktree
+registrations and `pec/*` branches cleared together (cleaning only some of them
+is what produced `fatal: a branch named 'pec/<wave>/task-xxx' already exists`).
+A late result from the fenced attempt is refused by identity. Both commands
+are campaign-tunnel commands, safe to run repeatedly and on a workspace that
+never executed anything. Pass `--provider-terminated` only when every affected
+provider window is known to have stopped; the receipt records which fence proof
+applied.
 
 **Validation environment:** worker-side and controller-side validation resolve
 one interpreter through `pec/exec_env.py` (no login shell). To see what

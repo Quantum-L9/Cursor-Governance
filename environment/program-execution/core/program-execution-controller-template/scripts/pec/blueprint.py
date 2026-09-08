@@ -18,7 +18,9 @@ LOCK_SCHEMA = Path(__file__).resolve().parents[2] / "schemas" / "program-lock.sc
 
 
 class BlueprintError(RuntimeError):
-    pass
+    def __init__(self, message: str, *, error_code: str | None = None):
+        super().__init__(message)
+        self.error_code = error_code
 
 
 def _load(root: Path, name: str) -> Any:
@@ -127,113 +129,23 @@ def normalize_blueprint(root: Path) -> dict[str, Any]:
     return body
 
 
-def relock_tasks(lock_path: Path, task_ids: Iterable[str]) -> dict[str, Any]:
-    """Refresh the frozen definition of specific tasks, leaving the rest alone.
-
-    `COMPATIBILITY.yaml` calls a source-digest change `runtime_stale_until_relock`
-    but nothing implemented the relock, so the only way past an edited task card
-    was a fresh workspace -- discarding the completed history of every other task
-    to adopt one new definition.
-
-    This is that relock, at task granularity. Definitions named in `task_ids` are
-    replaced with what the blueprint says now and the file digests are refreshed;
-    every other task's entry is preserved byte-for-byte, so the lock continues to
-    attest exactly what it attested before for the work already done.
-    """
-    lock = json.loads(lock_path.read_text(encoding="utf-8"))
-    root = Path(lock.get("blueprint_root") or "")
-    current = normalize_blueprint(root)
-    live = {str(task["id"]): task for task in current.get("tasks") or []}
-
-    wanted = [str(task_id) for task_id in task_ids]
-    missing = [task_id for task_id in wanted if task_id not in live]
-    if missing:
-        raise BlueprintError(f"cannot relock tasks absent from the Blueprint: {sorted(missing)}")
-
-    recorded_tasks = {str(task["id"]): task for task in lock.get("tasks") or []}
-    if set(recorded_tasks) != set(live):
-        raise BlueprintError("scoped relock refused: task membership changed")
-
-    recorded_sources = dict(lock.get("source_digests") or {})
-    current_sources = dict(current.get("source_digests") or {})
-    if set(recorded_sources) != set(current_sources):
-        raise BlueprintError("scoped relock refused: Blueprint source membership changed")
-    # Program-wide sources are compiled artifacts, not authored inputs: a resume
-    # that reaches this call has just recompiled the Blueprint, so PROGRAM.yaml
-    # and its siblings differ from what the prior lock attested on every run.
-    # Refusing on that drift would make scoped relock unreachable. What the
-    # explicit-task-ids path must not do is absorb a *task definition* nobody
-    # named, which is what the next guard closes.
-    non_selected_drift = sorted(
-        task_id
-        for task_id, task in recorded_tasks.items()
-        if task_id not in wanted
-        and task_definition_digest(task) != task_definition_digest(live[task_id])
-    )
-    if non_selected_drift:
-        raise BlueprintError(
-            "scoped relock refused: non-selected task definitions changed: "
-            + ", ".join(non_selected_drift)
-        )
-
-    previous_digest = str(lock.get("lock_digest") or "")
-    definitions: dict[str, dict[str, str]] = {}
-    tasks: list[dict[str, Any]] = []
-    for task in lock.get("tasks") or []:
-        task_id = str(task["id"])
-        if task_id not in wanted:
-            tasks.append(task)
-            continue
-        definitions[task_id] = {
-            "from": task_definition_digest(task),
-            "to": task_definition_digest(live[task_id]),
-        }
-        tasks.append(live[task_id])
-
-    # Admission annotates compiled files after the lock freezes them, so the
-    # file digests legitimately move on a live campaign; refreshing them is
-    # what keeps the next verification from reporting the staleness this call
-    # resolved. What must NOT ride along under a task-scoped relock is a change
-    # to a program-wide section: refreshing CONVERGENCE_GATES.yaml's digest
-    # while the lock still carries the old gates would make the lock attest a
-    # file it does not reflect.
-    changed_sections = sorted(
-        name
-        for name in _PROGRAM_WIDE_SECTIONS
-        if _semantic_view(name, lock.get(name)) != _semantic_view(name, current.get(name))
-    )
-    if changed_sections:
-        raise BlueprintError(
-            "relock adopts task definitions only; program-wide sections changed: "
-            + ", ".join(changed_sections)
-            + " -- revert those edits or bootstrap a fresh workspace"
-        )
-    body = dict(lock)
-    body.pop("lock_digest", None)
-    body["tasks"] = tasks
-    # The file digests must move with the definitions, or the very next
-    # verification reports the same staleness this call just resolved. The
-    # guards above are what keep that refresh honest: no unnamed task
-    # definition, and no change in task or source membership, reaches here.
-    body["source_digests"] = dict(current_sources)
-    body["lock_digest"] = digest_object(body)
-    schema_errors = validate_program_lock_schema(body)
-    if schema_errors:
-        raise BlueprintError("relocked program lock schema failed: " + "; ".join(schema_errors))
-    write_json(lock_path, body)
-    return {
-        "relocked": sorted(definitions),
-        "previous_lock_digest": previous_digest,
-        "lock_digest": body["lock_digest"],
-        "definitions": definitions,
-        "tasks": {task_id: live[task_id] for task_id in definitions},
-    }
+class RelockRefused(BlueprintError):
+    """A relock the Controller discovered it cannot admit. Nothing was written."""
 
 
-#: Keys the compiler stamps with the compile time (`snapshot_at` in PROGRAM.yaml
-#: and CURRENT_STATE.yaml, `produced_at` in EVIDENCE_CATALOG.yaml, `expiry` in
-#: DO_NOT_BUILD.yaml). Every recompile moves them; they carry no program intent.
-_COMPILE_STAMP_KEYS = frozenset({"snapshot_at", "produced_at", "expiry", "expires_at"})
+#: Keys the compiler stamps with the compile time, per section: `snapshot_at`
+#: in PROGRAM.yaml and CURRENT_STATE_DELTA.yaml, `produced_at` in
+#: EVIDENCE_CATALOG.yaml, `expiry` in DO_NOT_BUILD.yaml. Every recompile moves
+#: them; they carry no program intent. Masked ONLY in the section the compiler
+#: writes them to: a waiver's `expires_at` or a risk's `expiry` is program
+#: semantics (an expired waiver stops satisfying a gate), and a mask applied to
+#: every section let an edit there ride a task-scoped relock.
+_COMPILE_STAMP_KEYS: dict[str, frozenset[str]] = {
+    "program": frozenset({"snapshot_at"}),
+    "current_state": frozenset({"snapshot_at"}),
+    "evidence": frozenset({"produced_at", "expires_at"}),
+    "do_not_build": frozenset({"expiry", "expires_at"}),
+}
 
 #: Keys admission writes AFTER the lock froze the file, per section:
 #: `accept_blueprint` flips `program.definition_status`; `collect_evidence`
@@ -251,7 +163,11 @@ _ADMISSION_OWNED_KEYS: dict[str, frozenset[str]] = {
 
 def _semantic_view(section: str, value: Any) -> Any:
     """`value` with compile stamps and admission-owned keys removed, recursively."""
-    masked = _COMPILE_STAMP_KEYS | _ADMISSION_OWNED_KEYS.get(section, frozenset())
+    masked = _COMPILE_STAMP_KEYS.get(section, frozenset()) | _ADMISSION_OWNED_KEYS.get(
+        section, frozenset()
+    )
+    if not masked:
+        return value
 
     def _strip(node: Any) -> Any:
         if isinstance(node, dict):
@@ -261,6 +177,331 @@ def _semantic_view(section: str, value: Any) -> Any:
         return node
 
     return _strip(value)
+
+
+#: Lock sections that mirror one Blueprint file each. A relock names TASKS; if
+#: any of these sections would change too, the edit was program-wide.
+_PROGRAM_WIDE_SECTIONS = (
+    "program",
+    "targets",
+    "authority",
+    "decisions",
+    "unknowns",
+    "risks",
+    "waivers",
+    "evidence",
+    "do_not_build",
+    "current_state",
+    "workstreams",
+    "dependency_graph",
+    "waves",
+    "gates",
+    "observability",
+    "cutover_and_rollback",
+    "traceability",
+)
+
+#: Sections whose change means the lock describes a different Program or a
+#: different target repository, not merely a wider edit to this one.
+_IDENTITY_SECTIONS = ("targets",)
+
+LOCK_SCHEMA_ID = "program-execution-controller.program-lock.v2"
+
+
+def lock_integrity_errors(lock: Any) -> list[str]:
+    """Why this lock body cannot be trusted as evidence of anything.
+
+    Structural integrity is the precondition of every semantic question: a lock
+    whose digest does not cover its body, or whose schema is not the one this
+    Controller speaks, has no frozen semantics to compare against.
+    """
+    if not isinstance(lock, dict):
+        return ["program lock is not an object"]
+    errors: list[str] = []
+    if lock.get("schema") != LOCK_SCHEMA_ID:
+        errors.append("program lock schema mismatch")
+    body = dict(lock)
+    claimed = body.pop("lock_digest", None)
+    if digest_object(body) != claimed:
+        errors.append("program lock digest mismatch")
+    if not errors:
+        errors.extend(validate_program_lock_schema(lock))
+    return errors
+
+
+def semantic_delta(lock: dict[str, Any], current: dict[str, Any]) -> dict[str, Any]:
+    """Everything that differs, semantically, between a lock and a Blueprint.
+
+    This is the one owner of "what changed". Callers never say what changed;
+    they may only say what they are prepared to admit, and this answer decides
+    whether that is enough. File digests are reported but never decide: a live
+    campaign's compiled files legitimately move in the admission-owned fields
+    the masks above remove.
+    """
+    program_wide = sorted(
+        name
+        for name in _PROGRAM_WIDE_SECTIONS
+        if _semantic_view(name, lock.get(name)) != _semantic_view(name, current.get(name))
+    )
+    recorded_tasks = {str(task["id"]): task for task in lock.get("tasks") or []}
+    live_tasks = {str(task["id"]): task for task in current.get("tasks") or []}
+    recorded_sources = dict(lock.get("source_digests") or {})
+    current_sources = dict(current.get("source_digests") or {})
+    locked_program_id = str((lock.get("program") or {}).get("id") or "")
+    current_program_id = str((current.get("program") or {}).get("id") or "")
+    delta = {
+        "program_wide": program_wide,
+        "identity": sorted(name for name in _IDENTITY_SECTIONS if name in program_wide),
+        "program_id_changed": locked_program_id != current_program_id,
+        "tasks_changed": sorted(
+            task_id
+            for task_id in recorded_tasks
+            if task_id in live_tasks
+            and task_definition_digest(recorded_tasks[task_id])
+            != task_definition_digest(live_tasks[task_id])
+        ),
+        "tasks_added": sorted(set(live_tasks) - set(recorded_tasks)),
+        "tasks_removed": sorted(set(recorded_tasks) - set(live_tasks)),
+        "sources_added": sorted(set(current_sources) - set(recorded_sources)),
+        "sources_removed": sorted(set(recorded_sources) - set(current_sources)),
+        "source_digests_moved": sorted(
+            name
+            for name, digest in recorded_sources.items()
+            if name in current_sources and current_sources[name] != digest
+        ),
+        "blueprint_contract_changed": lock.get("blueprint_contract")
+        != current.get("blueprint_contract"),
+    }
+    delta["wider_than_tasks"] = bool(
+        delta["program_wide"]
+        or delta["tasks_added"]
+        or delta["tasks_removed"]
+        or delta["sources_added"]
+        or delta["sources_removed"]
+        or delta["blueprint_contract_changed"]
+    )
+    delta["exact"] = not delta["wider_than_tasks"] and not delta["tasks_changed"]
+    return delta
+
+
+#: Resume decision states (PEC remediation R2). Only EXACT_MATCH proceeds
+#: directly; TASK_SCOPED_DRIFT enters the canonical relock; everything else
+#: stops.
+RESUME_EXACT_MATCH = "EXACT_MATCH"
+RESUME_TASK_SCOPED_DRIFT = "TASK_SCOPED_DRIFT"
+RESUME_WIDER_PROGRAM_DRIFT = "WIDER_PROGRAM_DRIFT"
+RESUME_SCHEMA_INCOMPATIBLE = "SCHEMA_INCOMPATIBLE"
+RESUME_TARGET_MISMATCH = "TARGET_MISMATCH"
+RESUME_LOCK_INVALID = "LOCK_INVALID"
+RESUME_SOURCE_UNAVAILABLE = "SOURCE_UNAVAILABLE"
+
+
+def classify_lock_drift(lock_path: Path) -> dict[str, Any]:
+    """Compare the active Program Lock against the Blueprint on disk, semantically.
+
+    Returns `{"decision": <RESUME_*>, "reasons": [...], "delta": {...}}`.
+    The decision is what a resume is allowed to do, in the canonical order:
+    integrity first (an untrusted lock answers nothing), then availability and
+    contract compatibility of the current source, then identity, then width.
+    """
+    if not lock_path.is_file():
+        return {"decision": RESUME_LOCK_INVALID, "reasons": ["program lock missing"], "delta": None}
+    try:
+        lock = json.loads(lock_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        return {
+            "decision": RESUME_LOCK_INVALID,
+            "reasons": [f"program lock parse failure: {exc}"],
+            "delta": None,
+        }
+    if isinstance(lock, dict) and lock.get("schema") != LOCK_SCHEMA_ID:
+        return {
+            "decision": RESUME_SCHEMA_INCOMPATIBLE,
+            "reasons": [f"program lock schema {lock.get('schema')!r} is not {LOCK_SCHEMA_ID}"],
+            "delta": None,
+        }
+    integrity = lock_integrity_errors(lock)
+    if integrity:
+        return {"decision": RESUME_LOCK_INVALID, "reasons": integrity, "delta": None}
+    root = Path(str(lock.get("blueprint_root") or ""))
+    if not str(lock.get("blueprint_root") or "") or not root.is_dir():
+        return {
+            "decision": RESUME_SOURCE_UNAVAILABLE,
+            "reasons": [f"blueprint root unavailable: {root}"],
+            "delta": None,
+        }
+    try:
+        current = normalize_blueprint(root)
+    except BlueprintError as exc:
+        text = str(exc)
+        decision = RESUME_SCHEMA_INCOMPATIBLE if "contract" in text else RESUME_SOURCE_UNAVAILABLE
+        return {"decision": decision, "reasons": [text], "delta": None}
+    delta = semantic_delta(lock, current)
+    if delta["blueprint_contract_changed"]:
+        return {
+            "decision": RESUME_SCHEMA_INCOMPATIBLE,
+            "reasons": ["Blueprint contract changed since the lock was written"],
+            "delta": delta,
+        }
+    if delta["program_id_changed"] or delta["identity"]:
+        reasons = []
+        if delta["program_id_changed"]:
+            reasons.append("program id changed")
+        reasons.extend(f"identity section changed: {name}" for name in delta["identity"])
+        return {"decision": RESUME_TARGET_MISMATCH, "reasons": reasons, "delta": delta}
+    if delta["wider_than_tasks"]:
+        reasons = [f"program-wide section changed: {name}" for name in delta["program_wide"]]
+        reasons.extend(f"task added: {task_id}" for task_id in delta["tasks_added"])
+        reasons.extend(f"task removed: {task_id}" for task_id in delta["tasks_removed"])
+        reasons.extend(f"source added: {name}" for name in delta["sources_added"])
+        reasons.extend(f"source removed: {name}" for name in delta["sources_removed"])
+        return {"decision": RESUME_WIDER_PROGRAM_DRIFT, "reasons": reasons, "delta": delta}
+    if delta["tasks_changed"]:
+        return {
+            "decision": RESUME_TASK_SCOPED_DRIFT,
+            "reasons": [
+                f"task definition changed: {task_id}" for task_id in delta["tasks_changed"]
+            ],
+            "delta": delta,
+        }
+    return {"decision": RESUME_EXACT_MATCH, "reasons": [], "delta": delta}
+
+
+def relock_tasks(lock_path: Path, task_ids: Iterable[str]) -> dict[str, Any]:
+    """Adopt edited task definitions the caller is prepared to admit, or refuse.
+
+    `COMPATIBILITY.yaml` calls a source-digest change `runtime_stale_until_relock`
+    but nothing implemented the relock, so the only way past an edited task card
+    was a fresh workspace -- discarding the completed history of every other task
+    to adopt one new definition.
+
+    This is that relock, at task granularity, with the Controller discovering
+    what changed. `task_ids` is a requested MAXIMUM scope, never a statement of
+    what changed: the full semantic delta between the lock and the Blueprint is
+    computed first, and the relock succeeds only when every difference is a
+    definition inside that scope. A wider difference -- another task, a gate,
+    the authority registry, the task set, the source set -- is refused with
+    `RELOCK_SCOPE_INSUFFICIENT` / `PROGRAM_LOCK_GLOBAL_DRIFT` and the lock is
+    left byte-for-byte as it was. Source digests are refreshed only after the
+    whole delta has been admitted, so the lock never attests a file whose
+    semantics it does not carry.
+    """
+    try:
+        lock = json.loads(lock_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise RelockRefused(
+            f"relock refused: program lock unreadable: {exc}", error_code="LOCK_INVALID"
+        ) from exc
+    integrity = lock_integrity_errors(lock)
+    if integrity:
+        raise RelockRefused(
+            "relock refused: the current lock fails integrity: " + "; ".join(integrity),
+            error_code="LOCK_INVALID",
+        )
+    root = Path(lock.get("blueprint_root") or "")
+    current = normalize_blueprint(root)
+    live = {str(task["id"]): task for task in current.get("tasks") or []}
+
+    wanted = sorted(dict.fromkeys(str(task_id) for task_id in task_ids))
+    missing = [task_id for task_id in wanted if task_id not in live]
+    if missing:
+        raise RelockRefused(
+            f"cannot relock tasks absent from the Blueprint: {sorted(missing)}",
+            error_code="RELOCK_SCOPE_INSUFFICIENT",
+        )
+
+    delta = semantic_delta(lock, current)
+    if delta["blueprint_contract_changed"]:
+        raise RelockRefused(
+            "scoped relock refused: Blueprint contract changed",
+            error_code="SCHEMA_INCOMPATIBLE",
+        )
+    if delta["tasks_added"] or delta["tasks_removed"]:
+        raise RelockRefused(
+            "scoped relock refused: task membership changed "
+            f"(added={delta['tasks_added']}, removed={delta['tasks_removed']})",
+            error_code="PROGRAM_LOCK_GLOBAL_DRIFT",
+        )
+    if delta["sources_added"] or delta["sources_removed"]:
+        raise RelockRefused(
+            "scoped relock refused: Blueprint source membership changed "
+            f"(added={delta['sources_added']}, removed={delta['sources_removed']})",
+            error_code="PROGRAM_LOCK_GLOBAL_DRIFT",
+        )
+    if delta["program_wide"]:
+        # Program-wide sources are compiled artifacts, and admission annotates
+        # them after the lock froze them; `_semantic_view` masks exactly those
+        # fields, so what remains here is a real program-wide edit. Refreshing
+        # CONVERGENCE_GATES.yaml's digest while the lock still carried the old
+        # gates would make the lock attest a file it does not reflect.
+        raise RelockRefused(
+            "relock adopts task definitions only; program-wide sections changed: "
+            + ", ".join(delta["program_wide"])
+            + " -- revert those edits or bootstrap a fresh workspace",
+            error_code="PROGRAM_LOCK_GLOBAL_DRIFT",
+        )
+    outside_scope = sorted(set(delta["tasks_changed"]) - set(wanted))
+    if outside_scope:
+        raise RelockRefused(
+            "scoped relock refused: task definitions changed outside the requested scope: "
+            + ", ".join(outside_scope)
+            + f" (requested scope: {wanted or 'none'})",
+            error_code="RELOCK_SCOPE_INSUFFICIENT",
+        )
+
+    previous_digest = str(lock.get("lock_digest") or "")
+    changed = [task_id for task_id in wanted if task_id in delta["tasks_changed"]]
+    recorded_tasks = {str(task["id"]): task for task in lock.get("tasks") or []}
+    definitions: dict[str, dict[str, str]] = {}
+    tasks: list[dict[str, Any]] = []
+    for task in lock.get("tasks") or []:
+        task_id = str(task["id"])
+        if task_id not in changed:
+            tasks.append(task)
+            continue
+        definitions[task_id] = {
+            "from": task_definition_digest(recorded_tasks[task_id]),
+            "to": task_definition_digest(live[task_id]),
+        }
+        tasks.append(live[task_id])
+
+    current_sources = dict(current.get("source_digests") or {})
+    if not changed and not delta["source_digests_moved"]:
+        return {
+            "status": "CURRENT",
+            "relocked": [],
+            "previous_lock_digest": previous_digest,
+            "lock_digest": previous_digest,
+            "definitions": {},
+            "tasks": {},
+            "delta": delta,
+        }
+    body = dict(lock)
+    body.pop("lock_digest", None)
+    body["tasks"] = tasks
+    # The file digests move with the definitions, or the very next verification
+    # reports the same staleness this call just resolved. The guards above are
+    # what keep that refresh honest: every semantic difference is now inside
+    # the admitted scope, so every digest refreshed here covers semantics the
+    # new body actually carries.
+    body["source_digests"] = current_sources
+    body["lock_digest"] = digest_object(body)
+    schema_errors = validate_program_lock_schema(body)
+    if schema_errors:
+        raise RelockRefused(
+            "relocked program lock schema failed: " + "; ".join(schema_errors),
+            error_code="LOCK_INVALID",
+        )
+    write_json(lock_path, body)  # temp file + atomic replace
+    return {
+        "status": "RELOCKED",
+        "relocked": sorted(definitions),
+        "previous_lock_digest": previous_digest,
+        "lock_digest": body["lock_digest"],
+        "definitions": definitions,
+        "tasks": {task_id: live[task_id] for task_id in definitions},
+        "delta": delta,
+    }
 
 
 def validate_program_lock_schema(lock: dict[str, Any]) -> list[str]:
@@ -293,29 +534,6 @@ def write_program_lock(root: Path, target: Path) -> dict[str, Any]:
     lock = build_program_lock(root)
     write_json(target, lock)
     return lock
-
-
-#: Lock sections that mirror one Blueprint file each. A relock names TASKS; if
-#: any of these sections would change too, the edit was program-wide.
-_PROGRAM_WIDE_SECTIONS = (
-    "program",
-    "targets",
-    "authority",
-    "decisions",
-    "unknowns",
-    "risks",
-    "waivers",
-    "evidence",
-    "do_not_build",
-    "current_state",
-    "workstreams",
-    "dependency_graph",
-    "waves",
-    "gates",
-    "observability",
-    "cutover_and_rollback",
-    "traceability",
-)
 
 
 def verify_program_lock(lock_path: Path) -> tuple[bool, list[str]]:

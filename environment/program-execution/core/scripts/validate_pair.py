@@ -12,6 +12,10 @@ from typing import Any
 
 import yaml
 
+#: Mirrors `generate_manifest.TOOL_CACHE_DIRS`: the generator never inventories
+#: a tool cache, so the recomputation must skip the same names.
+TOOL_CACHE_DIRS = frozenset({"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"})
+
 ROOT_REQUIRED = [
     "README.md",
     "ARCHITECTURE.md",
@@ -238,7 +242,7 @@ def validate(root: Path, mode: str) -> list[str]:
         for p in root.rglob("*")
         if p.is_file()
         and p.name != "MANIFEST.yaml"
-        and "__pycache__" not in p.parts
+        and not any(part in TOOL_CACHE_DIRS for part in p.parts)
         and p.suffix != ".pyc"
     }
     if set(expected_paths) != set(actual):

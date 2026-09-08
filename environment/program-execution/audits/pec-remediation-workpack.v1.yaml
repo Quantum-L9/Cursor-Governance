@@ -1,0 +1,231 @@
+schema: l9.program-execution.pec-remediation-workpack.v1
+schema_version: 1.0.0
+authority: inspected_code_only
+repo: Quantum-L9/Cursor-Governance
+audit_basis_sha: 147945681073c9337a167d39e41f264433b5be0b
+implementation_base_sha: 051c63c904a35210e549ff4eb125325dedfcba99
+implementation_base_branch: main
+implementation_branch: claude/pec-remediation-plan-mo5k8p
+worktree_at_rebind: clean
+remediation_status: IMPLEMENTED
+rebind_note: >
+  The audit SHA (#376) is not an ancestor of the implementation base. 228 files
+  under environment/program-execution changed between them (#442, #458, #462,
+  #468, #469, #481). Every finding below was re-read against the implementation
+  base before any production behaviour changed; the "current_behavior" column is
+  what HEAD does, not what the audit described.
+seams:
+  pec_entrypoint: core/program-execution-controller-template/scripts/pec.py
+  program_lock: core/program-execution-controller-template/scripts/pec/blueprint.py
+  controller: core/program-execution-controller-template/scripts/pec/controller.py
+  state: core/program-execution-controller-template/scripts/pec/state.py
+  ledger: core/program-execution-controller-template/scripts/pec/ledger.py
+  runtime: core/program-execution-controller-template/scripts/pec/runtime.py
+  workspace_reset: core/program-execution-controller-template/scripts/pec/workspace_reset.py
+  cli: core/program-execution-controller-template/scripts/pec/cli.py
+  campaign_runner: scripts/run_campaign.py
+  peer_execution_pipeline: scripts/run_peer_task_pipeline.py
+  peer_execution_runner: peer_execution/runner.py
+  campaign_closer: campaigns/scripts/close_campaign.py
+  interface_contract: core/shared/INTERFACE_CONTRACT.md
+  handoff_protocol: core/shared/HANDOFF_PROTOCOL.yaml
+  ownership_matrix: core/shared/OWNERSHIP_MATRIX.yaml
+findings:
+- id: PEC-P0-001
+  title: fresh-workspace bypasses Controller recovery
+  severity: P0
+  disposition_at_base: REPRODUCES
+  symbol: pec/cli.py::main[fresh-workspace] -> pec/workspace_reset.py::fresh_execution_workspace
+  current_behavior: >
+    `pec fresh-workspace` is not a tunnel command; it removes worktrees and
+    branches, releases every active lease and drives STALE -> ELIGIBLE inside
+    workspace_reset.py with no recovery evidence, no attempt fencing and no
+    readiness recomputation. A live worker's late result can still be recorded
+    against the successor lease because nothing durable distinguishes them.
+  reproduction: core/program-execution-controller-template/scripts/tests/test_recovery_authority.py::FreshWorkspaceAuthorityTests
+  remediation: R4/R5 (PR-04, PR-05)
+  disposition_after_remediation: FIXED
+  proven_by: core/program-execution-controller-template/scripts/tests/test_recovery_authority.py
+  remediation_note: R5 (pec recover-execution; fresh-workspace tunnelled over it; workspace_reset.py mechanics only)
+- id: PEC-P0-002
+  title: task relock launders wider drift
+  severity: P0
+  disposition_at_base: PARTIALLY_FIXED
+  symbol: pec/blueprint.py::relock_tasks
+  current_behavior: >
+    #442/#481 added membership, non-selected-task and program-wide semantic
+    guards, so gate/authority/dependency drift no longer rides a task relock.
+    Residual defects: the old lock is not integrity- or schema-checked before
+    it is mutated; the compile-stamp mask (`expires_at`, `expiry`) is applied
+    to every section, so a waiver expiry edit is laundered; caller scope is
+    treated as the change set rather than a requested maximum (an explicit
+    `--task` list is replaced even for unchanged tasks, and no reason code
+    distinguishes scope insufficiency from other refusals).
+  reproduction: core/program-execution-controller-template/scripts/tests/test_relock_semantic_delta.py
+  remediation: R1 (PR-01)
+  disposition_after_remediation: FIXED
+  proven_by: core/program-execution-controller-template/scripts/tests/test_relock_semantic_delta.py
+  remediation_note: R1 (semantic_delta, integrity-checked relock, per-section stamp masks, reason codes)
+- id: PEC-P0-003
+  title: resumed EXECUTING baseline recreated
+  severity: P0
+  disposition_at_base: PARTIALLY_FIXED
+  symbol: scripts/run_campaign.py::_prepare_peer_unit, pec/controller.py::start_task
+  current_behavior: >
+    #481 persists a pre-dispatch effect baseline in the campaign runner and
+    fails closed on a resumed EXECUTING task without one. The Controller itself
+    still has no execution-attempt identity: `pec start` moves a task to
+    EXECUTING with no durable attempt row and no Controller-owned baseline, the
+    `attempts` table is written only post hoc by record-attempt, and nothing
+    binds an attempt receipt to the dispatch that produced it.
+  reproduction: core/program-execution-controller-template/scripts/tests/test_execution_attempts.py
+  remediation: R3/R4 (PR-03, PR-04)
+  disposition_after_remediation: FIXED
+  proven_by: core/program-execution-controller-template/scripts/tests/test_execution_attempts.py
+  remediation_note: R3/R4 (execution_attempts, Controller-owned baseline committed with EXECUTING, identity-bound results)
+- id: PEC-P1-001
+  title: resume bypasses current admission
+  severity: P1
+  disposition_at_base: PARTIALLY_FIXED
+  symbol: scripts/run_campaign.py::resume_live_campaign, reconcile_resumed_source
+  current_behavior: >
+    #481 compares the authored campaign source against the shape recorded at
+    compile. Two fallbacks remain: `NO_RECORDED_SHAPE` resumes on the lock
+    alone, and no Controller-side comparison of the compiled Blueprint against
+    the active Program Lock runs before execution.
+  reproduction: core/program-execution-controller-template/scripts/tests/test_resume_admission.py
+  remediation: R2 (PR-02)
+  disposition_after_remediation: FIXED
+  proven_by: core/program-execution-controller-template/scripts/tests/test_resume_admission.py; scripts/tests/test_run_campaign_repairs.py::ResumeIdentityAdmissionTests
+  remediation_note: R2 (pec admit-resume; NO_RECORDED_SHAPE fails closed; attest-resume-source)
+- id: PEC-P1-002
+  title: external closer is terminal authority
+  severity: P1
+  disposition_at_base: REPRODUCES
+  symbol: campaigns/scripts/close_campaign.py::close_campaign
+  current_behavior: >
+    `close --verdict <any terminal>` with any key=value evidence writes
+    lifecycle=complete to CAMPAIGN_STATUS.yaml and CLOSEOUT.yaml. No Controller
+    closure proof is required or validated.
+  reproduction: campaigns/scripts/test_close_campaign.py::ClosureReceiptAuthorityTests
+  remediation: R6 (PR-06)
+  disposition_after_remediation: FIXED
+  proven_by: campaigns/scripts/test_close_campaign.py::ClosureReceiptAuthorityTests; core/program-execution-controller-template/scripts/tests/test_terminal_authority.py
+  remediation_note: R6 (Closure Receipt; projection-only closer)
+- id: PEC-P1-003
+  title: handoff export terminalizes runtime
+  severity: P1
+  disposition_at_base: ALREADY_FIXED
+  symbol: pec/controller.py::export_handoff
+  current_behavior: >
+    export_handoff writes the receipt and a HANDOFF_EXPORTED event only. It
+    does not touch campaign-status, leases, task or gate state. Pinned by
+    test_campaign_status.py::test_export_handoff_keeps_runtime_active_over_live_children
+    and re-pinned at state level in the R6 suite.
+  reproduction: core/program-execution-controller-template/scripts/tests/test_terminal_authority.py::HandoffIsSideEffectFreeTests
+  remediation: R6 (test only)
+  disposition_after_remediation: ALREADY_FIXED_PINNED
+  proven_by: core/program-execution-controller-template/scripts/tests/test_terminal_authority.py::HandoffIsSideEffectFreeTests
+  remediation_note: R6 (state-level pin)
+- id: PEC-P1-004
+  title: DB / ledger / receipt divergence
+  severity: P1
+  disposition_at_base: REPRODUCES
+  symbol: pec/state.py, pec/ledger.py::EventLedger.append
+  current_behavior: >
+    Every StateDB primitive commits independently; the ledger allocates the
+    next sequence by counting lines in events.jsonl and appends outside any
+    transaction; receipts are written to disk before the state row moves.
+    A crash between any two of those leaves three surfaces disagreeing and
+    two concurrent controllers can allocate the same sequence.
+  reproduction: core/program-execution-controller-template/scripts/tests/test_persistence_convergence.py
+  remediation: R3/R8 (PR-03, PR-08)
+  disposition_after_remediation: FIXED
+  proven_by: core/program-execution-controller-template/scripts/tests/test_persistence_convergence.py; test_state_transactions.py
+  remediation_note: R3/R8 (Controller transactions, events outbox, receipt records, projection, reconciliation)
+- id: PEC-P1-005
+  title: caller-supplied gate verdict
+  severity: P1
+  disposition_at_base: REPRODUCES
+  symbol: pec/cli.py[evaluate-gate], pec/controller.py::evaluate_gate
+  current_behavior: >
+    The CLI takes `result` as a positional argument and the Controller records
+    it after checking evidence validity/relevance for PASS. A caller can record
+    FAIL/BLOCKED/UNKNOWN with no derivation at all, and PASS is admitted rather
+    than derived.
+  reproduction: core/program-execution-controller-template/scripts/tests/test_gate_derivation.py
+  remediation: R7 (PR-07)
+  disposition_after_remediation: FIXED
+  proven_by: core/program-execution-controller-template/scripts/tests/test_gate_derivation.py
+  remediation_note: R7 (pec/gates.py evaluator; expectation compared after record)
+- id: PEC-P2-001
+  title: retry/failover not live
+  severity: P2
+  disposition_at_base: REPRODUCES
+  symbol: scripts/run_peer_task_pipeline.py::_execute_provider, registry/EXECUTION_FAILOVER_POLICY.yaml
+  current_behavior: >
+    The failover policy exists as data only. No code classifies a provider
+    failure as retryable, no code selects an alternate provider, and nothing
+    checks that a prior attempt is fenced before another provider runs.
+  reproduction: peer_execution/tests/test_front_door.py
+  remediation: R9 (PR-09)
+  disposition_after_remediation: FIXED
+  proven_by: peer_execution/tests/test_front_door.py::FailoverTests
+  remediation_note: R9 (failure taxonomy, fencing-aware failover, retry receipts)
+- id: PEC-P3-001
+  title: private PE helper composition
+  severity: P3
+  disposition_at_base: REPRODUCES
+  symbol: scripts/run_campaign.py::_run_peer_execution
+  current_behavior: >
+    The live campaign composes `_resolve_provider`, `_probe_provider` and
+    `_execute_provider` from run_peer_task_pipeline directly.
+  reproduction: peer_execution/tests/test_front_door.py::LiveCampaignUsesFrontDoorTests
+  remediation: R10 (PR-10)
+  disposition_after_remediation: FIXED
+  proven_by: peer_execution/tests/test_front_door.py::LiveCampaignUsesFrontDoorTests
+  remediation_note: R10 (peer_execution.front_door is the only live entry)
+release_gates:
+  A_immutable_program_truth:
+    findings: [PEC-P0-002, PEC-P1-001]
+    status: PROVEN
+    evidence: test_relock_semantic_delta.py, test_resume_admission.py
+  B_execution_fencing:
+    findings: [PEC-P0-003, PEC-P0-001]
+    status: PROVEN
+    evidence: test_execution_attempts.py, test_recovery_authority.py
+  C_verdict_authority:
+    findings: [PEC-P1-002, PEC-P1-003, PEC-P1-005]
+    status: PROVEN
+    evidence: test_terminal_authority.py, test_close_campaign.py, test_gate_derivation.py
+  D_crash_convergence:
+    findings: [PEC-P1-004]
+    status: PROVEN
+    evidence: test_persistence_convergence.py, test_state_transactions.py
+  E_peer_resiliency:
+    findings: [PEC-P2-001, PEC-P3-001]
+    status: PROVEN
+    evidence: peer_execution/tests/test_front_door.py
+  F_full_program_convergence:
+    status: PARTIALLY_PROVEN
+    evidence: scripts/tests/test_pe_smoke_campaign.py (two-task campaign, interruption + resume, Controller verification, closure, handoff; single provider)
+    residual: a two-provider failover campaign is exercised only at the front-door unit level
+post_remediation_verdicts:
+  PROGRAM_LOCK_INTEGRITY_PROVEN: PROVEN
+  EXECUTION_FENCING_PROVEN: PROVEN
+  RESUME_IDENTITY_PROVEN: PROVEN
+  CONTROLLER_SERIALIZATION_PROVEN: PROVEN
+  CRASH_CONVERGENCE_PROVEN: PROVEN
+  INDEPENDENT_VERIFICATION_PROVEN: PROVEN
+  GATE_AUTHORITY_PROVEN: PROVEN
+  TERMINAL_AUTHORITY_PROVEN: PROVEN
+  PEER_FAILOVER_SAFETY_PROVEN: PROVEN
+  END_TO_END_PROGRAM_CONVERGENCE_PROVEN: PARTIALLY_PROVEN
+legacy_reconciliation:
+  command: pec reconcile-legacy --workspace <runtime>
+  law: classify and fence, never bless; a runtime reporting RUNTIME_RECONCILIATION_REQUIRED halts until recovered or re-admitted
+  proven_by: core/program-execution-controller-template/scripts/tests/test_legacy_reconciliation.py
+pre_existing_findings_repaired:
+- core/tests/test_replan_integration.py encoded the pre-hardening reorder contract (failed on main); repinned to REPLAN_CONTRACT reorder_where_deps_permit
+superseded_tests_repinned:
+- scripts/tests/test_execution_completeness.py::ScopedRelockTest pinned the P0-002 laundering contract ("relock absorbs non-task program drift", whole digest set adopted) on hand-built locks that fail integrity; repinned on real Blueprints to PROGRAM_LOCK_GLOBAL_DRIFT / RELOCK_SCOPE_INSUFFICIENT refusals and moved-digest-only adoption
