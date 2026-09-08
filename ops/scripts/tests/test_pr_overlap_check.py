@@ -332,7 +332,12 @@ class PrOverlapCheckTests(unittest.TestCase):
         fake = FakeGh(Path(tempfile.mkdtemp(prefix="l9-gh-")), pulls="", files={}, unavailable=True)
         gate_env = {**fake.env(env), "L9_AUTONOMY_ENABLED": "true"}
         result = _gate(work, gate_env)
-        self.assertEqual(result.returncode, 1, result.stdout)
+        # Denial is the contract; the code says WHY, so a caller can tell an
+        # outage from a conflict. 3 is TELEMETRY_DENIED_EXIT, never 1 (conflict):
+        # a conflict lives in the tree, so the caller's digest-keyed STOP LOOPING
+        # receipt describes it exactly, while an outage never moves that digest —
+        # a receipt written for one outlives it and pins the branch permanently.
+        self.assertEqual(result.returncode, 3, result.stdout)
         self.assertIn("gh CLI unavailable", result.stdout)
         self.assertIn("publication is denied", result.stdout)
         self.assertIn("Local work is unaffected", result.stdout)
@@ -371,7 +376,8 @@ class PrOverlapCheckTests(unittest.TestCase):
         gate_env["FAKE_SLUG"] = SLUG
         gate_env["L9_AUTONOMY_ENABLED"] = "true"
         result = _gate(work, gate_env)
-        self.assertEqual(result.returncode, 1, result.stdout)
+        # TELEMETRY_DENIED_EXIT, not the conflict code — see the note above.
+        self.assertEqual(result.returncode, 3, result.stdout)
         self.assertIn("could not enumerate open PRs", result.stdout)
         self.assertIn("publication is denied", result.stdout)
 

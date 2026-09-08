@@ -171,7 +171,7 @@ class LoadPackageTests(unittest.TestCase):
         directory = self._package("alpha")
         module = self._bind(directory, "l9_test_alpha")
         self.assertEqual(module.VALUE, 1)
-        self.assertEqual([Path(p) for p in module.__path__], [directory])
+        self.assertEqual([Path(p).resolve() for p in module.__path__], [directory.resolve()])
 
     def test_rebinding_the_same_directory_returns_one_instance(self) -> None:
         directory = self._package("beta")
@@ -189,8 +189,8 @@ class LoadPackageTests(unittest.TestCase):
         self.assertIn("already bound", str(ctx.exception))
         # The incumbent binding must survive the refusal untouched.
         self.assertEqual(
-            [Path(p) for p in sys.modules["l9_test_clash"].__path__],
-            [self.root / "gamma"],
+            [Path(p).resolve() for p in sys.modules["l9_test_clash"].__path__],
+            [(self.root / "gamma").resolve()],
         )
 
     def test_refuses_a_directory_that_is_not_a_package(self) -> None:

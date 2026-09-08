@@ -138,23 +138,32 @@ ls "$HOME/.cursor-governance/CANONICAL_LAW.md"    # governance clone present
 echo "$L9_GOVERNANCE_SURFACE"                     # must print exactly: claude-code
 echo "$L9_GOVERNANCE_DIR"                         # must be an expanded path, not '$HOME/...'
 "$HOME/.cursor-governance/.venv/bin/python3" -c 'import pydantic, yaml, jsonschema'  # locked env
-# Graphiti health is GRAPHITI_MCP_URL (no broker). Do not paste GRAPHITI_MCP_TOKEN.
+# Memory readiness is layered (R0..R9); there is no provider URL and no bearer.
+"$HOME/.cursor-governance/.venv/bin/python3" -m ops.memory.diagnostics --workspace "$PWD"
 ```
 
 ## Shared memory (required for governed Mobile/Web)
 
-Cloud sessions reach the **same** Graphiti store as Cursor through the HTTPS
-front door. `mcp.template.json` points `graphiti-memory` at
-`${GRAPHITI_MCP_URL}` and carries **no bearer**. This is **not** the retired
-capability broker (`${L9_CAPABILITY_BROKER_URL}/mcp/graphiti`) and **not** the
-retired `L9_MEMORY_HTTP_*` side door (ADR-0006).
+Cloud sessions reach the **same** canonical memory as Cursor: the
+`l9-graphite-memory` control plane (`MemoryService`, `memory-control-plane/v1`),
+bound per checkout by `ops/config/memory-binding.json` and proven by
+`ops/memory/runtime_binding.py`. The session hooks (`memory_prefetch.py`,
+`memory_writeback.py`) hydrate and close through `ops/memory`; the only MCP
+memory server `mcp.template.json` declares is the package-owned stdio entry,
+rendered when `L9_MEMORY_INTERPRETER` names a Python carrying the pinned
+package. The direct-provider front door (`graphiti-memory` over a provider URL)
+was retired at realignment stage C8; the capability broker never shipped; the
+`L9_MEMORY_HTTP_*` side door is retired (ADR-0006).
 
-**Honest posture:** do **not** paste a Graphiti bearer into the variables field.
+**Honest posture:** there is no memory credential to paste. A memory bearer in
+the variables field is a contract violation, not a configuration.
 
-**Identity (shared graph, distinct author).** `group_id` is shared with Cursor.
-Writing identity is not: `USER_ID=claude_code_agent` / `L9_MEMORY_AGENT_ID=claude-code`.
+**Identity (shared namespace, distinct author).** The repository namespace is
+shared with Cursor. Writing identity is not: `USER_ID=claude_code_agent` /
+`L9_MEMORY_AGENT_ID=claude-code`.
 
-**Allowlist:** add `memory.quantumaipartners.com` (Custom) or use Full.
+**Allowlist:** the memory package is installed from GitHub
+(`Quantum-L9/l9-graphiti-memory`); allow `github.com` or use Full.
 
 ## Security
 

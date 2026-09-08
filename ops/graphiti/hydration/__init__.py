@@ -1,4 +1,4 @@
-"""Session hydration + close pipeline (Cursor-primary Graphiti)."""
+"""Session hydration + close pipeline over the canonical memory control plane (C4/C6)."""
 
 from __future__ import annotations
 

@@ -22,14 +22,21 @@ Only **top-level** `*.plan.md` files are live for Cursor Build and session-start
 is `l9-pipeline-audit` against this store plus `WIP/` and PE campaigns.
 On-demand organize is `/l9-audit-plans`. On-demand harvest is `/l9-pipeline-audit`.
 
-| Location | Meaning |
-|---|---|
-| *(root)* | Live queue — **current unbuilt** plans only (all todos still `pending`). New work lands here. |
-| `partially-built/` | Started but not finished — at least one todo `completed` or `in_progress` |
-| `built/` | All todos `completed` or `cancelled`, or frontmatter `built: true` / `status: completed` |
-| `backlog/` | Open unbuilt work, parked — not current |
-| `archive/` | Non-plan harvest and other dead weight |
-| `archive/superseded/` | Older same-slug copy or body `status: superseded` |
+| Location | Meaning | Frontmatter `status` |
+|---|---|---|
+| *(root)* | Live queue — **current unbuilt** plans only (all todos still `pending`). New work lands here. | `current` |
+| `partially-built/` | Started but not finished — at least one todo `completed` or `in_progress` | `partially-built` |
+| `built/` | All todos `completed` or `cancelled`, or frontmatter `built: true` / `status: completed` | `built` |
+| `stale/` | Open unbuilt work, parked — not current (`backlog/` / `pending/` fold here) | `stale` |
+| `archive/` | Non-plan harvest and other dead weight | — |
+| `archive/superseded/` | Older same-slug copy or body `status: superseded` | `superseded` |
+
+Every plan has `status`. Root = `current`. Off-root = dest folder. `/l9-plan-simple`
+writes `status: current` on first draft. `/l9-audit-plans` heals a root file
+missing `status` to `current`.
+
+`harvested: true` is a **tag**, not a status. After leftover todos fold or
+compile, the donor keeps folder status and later `/l9-audit-plans` invokes omit it.
 
 `compiled: true` is a **live** tag on a root `.plan.md` (invariants harvested
 from mixed donors, execute via `/gmp`). It is not a shelf and not a built skip.

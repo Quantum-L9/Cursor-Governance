@@ -16,7 +16,9 @@ BANNED_TRACKED = [
 ]
 # H-03 named paths from RB-HK-001. Other historical space paths are deferred.
 SECRET_PAT = re.compile(r"lin_api_|sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}")
-ALLOWED_MCP = {"graphiti-memory"}
+# Stage C7/C8: the canonical memory server plus the docs server; the legacy
+# provider front door (graphiti-memory) is retired and must not reappear.
+ALLOWED_MCP = {"l9-graphite-memory", "context7"}
 
 errs, warns = [], []
 

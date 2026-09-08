@@ -9,6 +9,7 @@
     "version",
     "status",
     "memory",
+    "interactive_memory_write",
     "state",
     "enforcement_point",
     "hooks",
@@ -39,21 +40,28 @@
     },
     "memory": {
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
+      "description": "The canonical front door only. A provider URL env, token env or MCP path is retired doctrine (realignment C9/C11, ADR-0030) and is deliberately not a legal property.",
       "required": [
         "front_door",
         "bridge",
-        "default_namespaces"
+        "control_plane_contract",
+        "default_namespaces",
+        "forbidden_side_doors"
       ],
       "properties": {
         "front_door": {
-          "type": "string"
+          "const": "ops/memory/control_plane_client.py"
         },
         "bridge": {
-          "type": "string"
+          "type": "string",
+          "pattern": "memory/memory_bridge\\.py$"
         },
         "mcp_template": {
           "type": "string"
+        },
+        "control_plane_contract": {
+          "const": "memory-control-plane/v1"
         },
         "agent_id_env": {
           "type": "string"
@@ -75,15 +83,73 @@
           "type": "array",
           "items": {
             "type": "string"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "interactive_memory_write": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The model-initiated durable-write contract (ADR-0030 items 7-9, CANONICAL_LAW 8.3). Every const below is doctrine: a different value is a regression, not a configuration.",
+      "required": [
+        "canonical_mcp_server",
+        "prerequisite",
+        "write_operation",
+        "repository_authority",
+        "provider_direct",
+        "generic_ingest_as_model_write",
+        "cli_adapter",
+        "cli_write_role",
+        "deterministic_adapter_operations"
+      ],
+      "properties": {
+        "canonical_mcp_server": {
+          "const": "l9-graphite-memory"
+        },
+        "prerequisite": {
+          "const": "memory.phase_lock"
+        },
+        "write_operation": {
+          "const": "memory.write_governed"
+        },
+        "repository_authority": {
+          "const": false
+        },
+        "provider_direct": {
+          "const": "forbidden"
+        },
+        "generic_ingest_as_model_write": {
+          "const": "forbidden"
+        },
+        "cli_adapter": {
+          "const": "python -m ops.memory.cli"
+        },
+        "cli_write_role": {
+          "const": "operator_and_deterministic_adapters"
+        },
+        "deterministic_adapter_operations": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "hydrate",
+              "close",
+              "ingest_candidate",
+              "repair-write",
+              "legacy_reconciliation",
+              "readiness"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "authority": {
+          "type": "array",
+          "items": {
+            "type": "string"
           }
         },
-        "url_env": {
-          "type": "string"
-        },
-        "token_env": {
-          "type": "string"
-        },
-        "mcp_path": {
+        "note": {
           "type": "string"
         }
       }

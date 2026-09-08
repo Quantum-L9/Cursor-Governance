@@ -100,6 +100,8 @@ def allowed_names() -> frozenset[str]:
     inv = _inventory()
     keys = {str(name) for name in (inv.get("root_env_keys") or []) if name}
     keys.update({"GH_TOKEN", "SONARCLOUD_TOKEN"})
+    if yaml is None:
+        keys.update(str(mapped) for mapped in ENV_MAP.values() if mapped)
     return frozenset(keys)
 
 
@@ -149,8 +151,10 @@ def _from_infisical_cli(name: str) -> str | None:
         return None
     if proc.returncode != 0:
         return None
-    value = (proc.stdout or "").strip()
-    if not value or "\n" in value:
+    value = (proc.stdout or "").rstrip("\n")
+    if not value:
+        return None
+    if "\n" in value and "-----BEGIN" not in value:
         return None
     lowered = value.lower()
     if lowered in {"null", "none", "undefined"}:
@@ -165,7 +169,10 @@ def _from_aws(name: str) -> str | None:
     ref = _aws_refs().get(name)
     if not ref:
         return None
-    registry = aws_secret.load_registry(aws_secret.DEFAULT_REGISTRY)
+    try:
+        registry = aws_secret.load_registry(aws_secret.DEFAULT_REGISTRY)
+    except SystemExit:
+        return None
     secret_id, field = aws_secret.split_id(ref)
     entry = aws_secret.entry_for(registry, secret_id)
     if entry is not None and entry.get("provisioned") is False:

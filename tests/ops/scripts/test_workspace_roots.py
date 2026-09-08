@@ -18,6 +18,7 @@ from workspace_roots import (  # noqa: E402
     DEFAULT_MAX_ROOTS,
     DROPPED_CAP,
     DROPPED_NO_NAMESPACE,
+    UNCAPPED,
     is_repository,
     projection_roots,
     select_workspace_roots,
@@ -159,3 +160,59 @@ def test_container_fallback_reports_no_drops(tmp_path: Path) -> None:
     selection = select_workspace_roots(empty)
     assert selection.selected == [empty]
     assert selection.dropped == []
+
+
+def test_uncapped_selects_every_eligible_root(tmp_path: Path) -> None:
+    """The dependency plane serves everyone; only hydration pays per session."""
+    container = tmp_path / "container"
+    container.mkdir()
+    names = [f"repo-{i:02d}" for i in range(DEFAULT_MAX_ROOTS * 2)]
+    for name in names:
+        make_repo(container, name)
+
+    selection = select_workspace_roots(container, cap=UNCAPPED)
+    assert [p.name for p in selection.selected] == names
+    assert selection.dropped == [], "an uncapped plane drops nothing"
+
+
+def test_rotation_reaches_every_root_within_a_bounded_number_of_rounds(
+    tmp_path: Path,
+) -> None:
+    """A cap plus a stable sort starves the same tail forever.
+
+    That is worse than random starvation: no session ever corrects it. With the
+    offset advanced by what was served, coverage completes in ceil(n / cap)
+    rounds, and the sort stays stable so rotation is the only variable.
+    """
+    container = tmp_path / "container"
+    container.mkdir()
+    total = DEFAULT_MAX_ROOTS * 2 + 1  # deliberately not a multiple of the cap
+    names = {make_repo(container, f"repo-{i:02d}").name for i in range(total)}
+
+    seen: set[str] = set()
+    offset = 0
+    rounds = -(-total // DEFAULT_MAX_ROOTS)  # ceil
+    for _ in range(rounds):
+        selection = select_workspace_roots(container, offset=offset)
+        assert len(selection.selected) == DEFAULT_MAX_ROOTS
+        seen.update(p.name for p in selection.selected)
+        offset += len(selection.selected)
+
+    assert seen == names, "every root must be served within ceil(n / cap) rounds"
+
+
+def test_rotation_is_deterministic_for_a_given_offset(tmp_path: Path) -> None:
+    """Same offset, same window — the rotation adds no nondeterminism."""
+    container = tmp_path / "container"
+    container.mkdir()
+    for i in range(DEFAULT_MAX_ROOTS + 3):
+        make_repo(container, f"repo-{i:02d}")
+
+    first = select_workspace_roots(container, offset=4).selected
+    second = select_workspace_roots(container, offset=4).selected
+    assert first == second
+    # And a full wrap returns to the unrotated window.
+    total = len(select_workspace_roots(container, cap=UNCAPPED).selected)
+    assert select_workspace_roots(container, offset=total).selected == (
+        select_workspace_roots(container, offset=0).selected
+    )

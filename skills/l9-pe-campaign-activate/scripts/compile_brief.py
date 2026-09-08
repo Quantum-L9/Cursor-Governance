@@ -22,6 +22,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
+PE_ROOT = Path(__file__).resolve().parents[3] / "environment/program-execution"
+if str(PE_ROOT) not in sys.path:
+    sys.path.append(str(PE_ROOT))
+
+from program_policy import DEFAULT_PROGRAM_OWNER  # noqa: E402
+
 try:
     import yaml
 except ImportError:  # pragma: no cover
@@ -39,7 +45,7 @@ IT_IS_RE = re.compile(
     r"(?:Final architectural judgment.*?)?^\s*It is:\s*\n+(.+?)(?:\n\s*\n|\Z)",
     re.I | re.M | re.S,
 )
-DEFAULT_OWNER = "Igor Beylin"
+DEFAULT_OWNER = DEFAULT_PROGRAM_OWNER
 DEFAULT_TARGET = "Quantum-L9/Cursor-Governance"
 REPO_PATH_OWNERS = frozenset(
     {

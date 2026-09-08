@@ -867,3 +867,129 @@ forks. Do not edit the older lines.
    (extends `kernels/Improve.md`).
 2. `kernels/Recursive Improvement — Rules Batch.md` and
    `kernels/Recursive Improvement — Skills Batch.md` are removed. Do not restore.
+
+<!-- MEMORY_CONTROL_PLANE_FRONT_DOOR_V1 -->
+## 8.2 Memory control plane is the single front door (2026-09-06) — supersedes §8 interface rows and ADR-0006's client name
+
+Append-only. Memory realignment campaign stages C1–C12 (ADR-0030). Where the
+older §8 text names `ops/graphiti/graphiti_memory_client.py`, a tunnel, a
+provider URL, or a bearer, this section is the law.
+
+1. **Authority.** `MemoryService` in `l9-graphite-memory` (contract
+   `memory-control-plane/v1`, release 2.3.0, pinned in
+   `ops/config/memory-binding.json`) is the sole authority over agent memory.
+   Graphiti is a projection memory owns. Cursor-Governance never knows how to
+   call it (INV-03), never holds its credential (INV-04/06), and never decides
+   a namespace grant (INV-07).
+2. **Front door.** Every memory byte crosses `ops/memory/control_plane_client.py`
+   over stdio to the exact bound runtime (INV-11). Operator and workflow CLI:
+   `python -m ops.memory.cli health|resolve|search|write|hydrate|conflicts|readiness`,
+   run from the governance clone with its locked venv and `--workspace` naming
+   the repository. MCP transport: the package-owned `l9-graphite-memory` stdio
+   server only (`make memory-mcp-install`); no adapter template carries a URL,
+   `env` block, or bearer.
+3. **Resume SSOT.** The canonical `session_continuation` record
+   (`ContinuationCapsuleV2`) admitted at close and retrieved at hydrate. Not
+   `PICKUP|…` strings, not `memory-bank/`, not a provider read. Current git
+   state wins over a stale capsule.
+4. **Retired.** `ops/graphiti/graphiti_memory_client.py` is a tombstone (exit 2,
+   names the replacement). Deleted: the provider env plane
+   (`graphiti_env_loader.py`, `graphiti.env.defaults/example`,
+   `init_graphiti_machine_env.sh`), the shadow reader, `group_resolver.py`,
+   `episode_contract.py` (PII redaction moved to
+   `ops/graphiti/hydration/redaction.py`), `outcome_label.py`, `prune.py`,
+   `transcript_distiller.py`, `mcp.json.example`, and their tests. Do not
+   restore.
+5. **Enforcement.** `ops/scripts/validate_memory_egress_boundary.py` runs in
+   `enforce` mode (`ops/config/memory-egress-allowlist.json`); every remaining
+   allowlist entry is a negative check, a self-reference, or an operator-owned
+   file. `tests/ops/memory/test_egress_boundary.py` is merge-blocking.
+6. **Switches.** `~/.cursor/graphiti.env` carries `L9_MEMORY_ENABLED` /
+   `L9_MEMORY_WRITE_GATES` (legacy `GRAPHITI_*` aliases) only. The gate is
+   hydration-only (§8.1 stands); memory conflicts are evidence, never a lock.
+7. **Legacy history.** Provider-only records enter canonical memory only
+   through `ops/memory/legacy_reconciliation.py` (`make memory-reconcile-legacy`,
+   tag `legacy_unverified`). `ops/config/memory-canonical-epoch.json` records
+   the epoch.
+
+Rules: `03-graphiti-memory.mdc`, `87-cursor-memory-kernel.mdc`,
+`98-graphiti-memory-gate.mdc` (v1.2.0 / 1.1.0 / 1.1.0). Skill:
+`skills/l9-graphiti-memory/SKILL.md` v2.0.0. Map: `docs/MEMORY_PIPELINE_MAP.md`.
+
+## 8.3 Interactive memory write contract (2026-09-07) — strengthens §8.2; supersedes §8 phase-lock and interface wording that survived §8.1/§8.2
+
+Append-only. PR #509 doctrine closure (ADR-0030 items 7–9). Where any older
+section, rule, skill or ADR still teaches `graphiti_memory_client.py` as a live
+front door, a provider URL or bearer on a surface, Graphiti `inject` / PICKUP as
+the resume SSOT, or a memory phase-lock as repository permission, this section
+and §8.2 are the law.
+
+1. **One authority, one egress, two adapters.** `MemoryService`
+   (`l9-graphite-memory`, `memory-control-plane/v1`, bound head
+   `5605569b72baa25f6b6e6324b0017317fb31e0cd`, package 2.3.0) is the sole
+   authority; `ops/memory` is the only egress (INV-03); the CLI
+   (`python -m ops.memory.cli`) and the package-owned `l9-graphite-memory` MCP
+   server are adapters to it. Graphiti is a downstream projection memory
+   owns. No model surface holds, resolves or forwards a provider URL or
+   bearer, and no provider tool is exposed to an agent through MCP.
+2. **Agents MUST be able to write durable memory, and MUST NOT write to the
+   provider transport.** The model-initiated durable write is
+   `memory.phase_lock {namespace, task_signature}` then
+   `memory.write_governed {…, task_signature}` on the `l9-graphite-memory`
+   MCP server. `MemoryService` grants the lock only after a conflict check on
+   the namespace snapshot and re-verifies the digest inside the transaction
+   that admits the record; a refused lock or write is the verdict.
+3. **The memory phase-lock governs memory-write consistency only.** It is a
+   prerequisite of a governed MEMORY write and nothing else: it does not
+   authorize a source edit, does not serialize git, and does not replace
+   worktree / branch / publication governance (§8.1 stands; `rules/96`
+   E7/E8/E10). Holding one changes nothing about repository mutation; lacking
+   one blocks nothing but the governed memory write itself.
+4. **No evasion.** Generic `memory.ingest` and the operator CLI `write` are
+   not the model's alternative to `memory.write_governed`. Routing an
+   autonomous model write through either to avoid the lock is a violation.
+   An unbound MCP server is a reported gap (`readiness`, `make
+   memory-binding`), not a reroute.
+5. **Deterministic adapters are not second egresses.** SessionStart
+   hydration, sessionEnd close, `/end-session` `repair-write`, legacy
+   reconciliation, diagnostics and Program Execution context use
+   purpose-specific `ops/memory` operations over the same admission path.
+6. **Resume SSOT** is the canonical `session_continuation` record
+   (`ContinuationCapsuleV2`), retrieved by `python -m ops.memory.cli
+   hydrate`; a Graphiti `inject` / PICKUP read is not a resume path.
+7. **Enforcement.** Machine form:
+   `environment/agents/adapters/claude-code/memory/memory-enforcement.contract.json`
+   `interactive_memory_write` (`repository_authority: false`,
+   `provider_direct: forbidden`, `generic_ingest_as_model_write: forbidden`),
+   validated by `validate_memory_enforcement.py` and pinned by
+   `tests/test_memory_front_door.py`. Anti-regression:
+   `ops/scripts/validate_legacy_doctrine_residue.py` (converged surfaces
+   fail; ADRs and this file keep history only under a dated amendment;
+   not-yet-converged surfaces warn until their locked run lands) with
+   `tests/ops/scripts/test_memory_doctrine_convergence.py`.
+
+Rules: `03-graphiti-memory.mdc` v1.3.0, `87-cursor-memory-kernel.mdc`
+v1.2.0, `97-graph-layer-boundary.mdc` v1.1.0, `98-graphiti-memory-gate.mdc`
+v1.2.0. Skills: `l9-graphiti-memory` v2.1.0, `l9-end-session` v1.7.0,
+`l9-chat-extraction` v1.1.0, `l9-gmp-protocol` v2.0.1. ADRs: ADR-0030
+(items 7–9); ADR-0002/0003/0005/0028/0029 amended; ADR-0004/0006/0007
+superseded — each under a dated section naming ADR-0030. Docs:
+`docs/MEMORY_PIPELINE_MAP.md`, `environment/agents/docs/MEMORY_TOPOLOGY.md`
+v2.0.0, `ops/memory/README.md` "Caller taxonomy".
+
+<!-- MEMORY_RELEASE_231_V1 -->
+## 8.4 Memory release 2.3.1 (2026-09-08) — supersedes the 2.3.0 pin in §8.2 / §8.3
+
+Append-only. `v2.3.0` stays an immutable tag. PyPI rejected that wheel because
+the `constellation` extra declared a git URL. `v2.3.1` is the first published
+artifact (`l9-graphite-memory==2.3.1`).
+
+1. **Bound head.** `ops/config/memory-binding.json` `source.ref` is `v2.3.1`.
+   `release_evidence.memory_sha` is `84eedcdfab83020776eab290599751b3b6af8dbf`
+   (Quantum-L9/l9-graphiti-memory#60 merge). Tag object
+   `f65ff2bb1c8cb43a55b78732c4ab74f711ee8c2f`. Served wheel sha256
+   `b3b045e482fd157a0242d5ad861a3609057c6d66dd2095673f55f1efe888ff89`.
+2. **Lock.** `pyproject.toml` / `uv.lock` pin `l9-graphite-memory==2.3.1`.
+   Do not float `@main`. Do not move `v2.3.0` or `v2.3.1`.
+3. **Contract.** `memory-control-plane/v1` is unchanged. §8.2 / §8.3 front-door
+   law still stands; only the release identity moves.

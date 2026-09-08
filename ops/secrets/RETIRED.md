@@ -10,7 +10,7 @@ scored Cursor sessions with Claude cloud probes.
 
 | Need | Path |
 |---|---|
-| Graphiti (Cursor) | Local CLI + SSH tunnel (`ops/graphiti/graphiti_memory_client.py`) |
+| Graphiti (Cursor) | Canonical memory control plane over stdio (`ops/memory`, `python -m ops.memory.cli`); the provider client is a C11 tombstone |
 | Graphiti (adapters) | `${GRAPHITI_MCP_URL}` in MCP templates |
 | Sonar on a model surface | `sonar_fetch.py` uses `SONAR_TOKEN` when the operator environment already carries it (never exported by ops/secrets); public read otherwise |
 | Sonar as a human | `DirectTransport` + operator `SONAR_TOKEN` |

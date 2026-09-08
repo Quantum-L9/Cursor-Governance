@@ -50,7 +50,7 @@ context**, **reach shared memory** — without a human wiring step.
 | Discover L9 skills | `~/.claude/skills/` fed by `reconcile_claude_l9_skills.py` via `install.sh` (canonical native L9 skills) | governance cloned by `web/setup.sh`; skills referenced from the clone |
 | Boot session context | `hooks/session_start_claude_governance.sh` via `make claude-settings` → `~/.claude/settings.json` | **same hook**, committed at `.claude/settings.json` + `.claude/hooks/` via reconcile |
 | Autonomy velocity | Profile `ops/autonomy/surface_profile.yaml` + merge_gate + local_execution_gate PreToolUse | same Profile; standing A4 + L4 local (no mid-exec push); human merge |
-| Reach shared memory | Graphiti HTTPS (`GRAPHITI_MCP_URL` → `memory.quantumaipartners.com/graphiti/mcp`); health is `memory.cli` + `memory.mcp`; broker retired | same; empty hydrate is honest — do not paste `GRAPHITI_MCP_TOKEN` |
+| Reach shared memory | Canonical `l9-graphite-memory` control plane over stdio (`ops/memory`; bound per `ops/config/memory-binding.json`); readiness is `memory.cli` + control plane + `memory.mcp`; no URL, no bearer, broker retired | same; an unbound runtime is honest `memory-blind` — never paste a credential |
 
 ### Proactive L9 skill discovery and routing
 
@@ -96,26 +96,28 @@ Two different mechanisms feed Claude Code, and the names must not blur:
   until a non-marketplace front door exists — use skill `l9-context7-docs`
   there. Do not treat `/plugin` as a hosted requirement.
 
-### Memory transport — Graphiti HTTPS, split CLI vs MCP
+### Memory transport — canonical control plane, split CLI vs MCP
 
-Health probes `GRAPHITI_MCP_URL` (default
-`https://memory.quantumaipartners.com/graphiti/mcp`) without the capability
-broker (retired, never shipped). `memory.cli` is locked `.venv` +
-`graphiti_memory_client.py health`. `memory.mcp` is HTTP to that URL:
-connect vs 401 vs 403 allowlist are distinct reasons. A working CLI +
-missing MCP tools is not one word DEGRADED. `.mcp.json` is a projection
-of `mcp.template.json` pointing at `${GRAPHITI_MCP_URL}` — never
-`${L9_CAPABILITY_BROKER_URL}/mcp/graphiti`.
+Since realignment stage C9/C11 (ADR-0030) the adapter reaches memory only
+through `memory/memory_bridge.py` → `ops/memory`: stdio to the exact
+`l9-graphite-memory` runtime `ops/memory/runtime_binding.py` proves, never a
+URL. `memory.cli` is the binding proof + canonical health (R0–R3);
+`memory.mcp` is the package-owned stdio server entry in `.mcp.json`
+(`l9-memory client cursor install`, gated on `L9_MEMORY_INTERPRETER`). A bound
+CLI with a missing MCP entry is not one word DEGRADED. `.mcp.json` is a
+projection of `mcp.template.json`; the template carries no `env`, no `url`,
+no `headers` (memory ADR-016), and the retired `graphiti-memory` key is
+dropped from every rendered file.
 
-A 403 allowlist miss is an operator paste, not a missing token. Empty
-hydrate is honest. Do not paste `GRAPHITI_MCP_TOKEN`.
+An unbound runtime is an honest `memory-blind`. Do not paste anything.
 
 ### Memory identity — distinct from Cursor, shared graph
 
 Two dimensions, kept separate on purpose:
 
-- **`group_id` (repo namespace) — SHARED with Cursor.** Resolved per-repo from the
-  git remote / `GRAPHITI_GROUP_ID` (`ops/graphiti/group_registry.yaml`). Sharing it
+- **Namespace (repo identity) — SHARED with Cursor.** Resolved per-repo by
+  `ops/memory/namespace_context.py` from the git remote (hints in
+  `ops/graphiti/group_registry.yaml`; memory authorizes every request). Sharing it
   is what makes memory shared; it is **not** forked per agent.
 - **Writing-agent identity — DISTINCT from Cursor.** Cursor writes as `cursor_agent`
   (`ops/graphiti/config-docker-neo4j.yaml`, `${USER_ID:cursor_agent}`). Claude Code
@@ -140,7 +142,7 @@ second place to drift.
 | `render.claude.json` | all | Rendering map: how `policy.json` reaches Claude Code (peer of `render.cursor.json`). IDE-neutral policy never changes for it. |
 | `settings.template.json` | all | Committable `.claude/settings.json` for a consumer repo: SessionStart hook + conservative permission + env defaults. |
 | `hooks/session_start_claude_governance.sh` | all | Mobile-safe SessionStart bootstrap. Git-only, **no `~/.cursor` dependency**. Emits Claude Code `additionalContext` JSON. |
-| `mcp.template.json` | all | Shared memory MCP block — `${GRAPHITI_MCP_URL}`. Health is `GRAPHITI_MCP_URL`. **Never a token, never a bearer. Broker retired.** |
+| `mcp.template.json` | all | Package-owned `l9-graphite-memory` stdio server (`${L9_MEMORY_INTERPRETER} -m l9_graphite_memory.server --transport stdio`) + context7. **Never a URL, env block, token, or bearer. Broker retired.** |
 | `web/README.md` | Web · Mobile | Install guide for the account environment (the Network / Env / Setup triad). |
 | `web/network-policy.md` | Web · Mobile | Network-access decision (Full vs Custom allowlist) with the concrete allowlist. |
 | `web/environment.env.example` | Web · Mobile | Environment-variables template. No credentials, no GH token — the platform proxy injects. |

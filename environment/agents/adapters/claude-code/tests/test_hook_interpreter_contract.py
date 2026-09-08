@@ -130,6 +130,12 @@ class HookInterpreterBindingTests(unittest.TestCase):
         (hooks / "l9_hook_exec.sh").write_text(
             (HOOKS / "l9_hook_exec.sh").read_text(encoding="utf-8"), encoding="utf-8"
         )
+        surface_lib = gov / "ops" / "scripts" / "lib"
+        surface_lib.mkdir(parents=True)
+        (surface_lib / "surface_detect.sh").write_text(
+            (REPO / "ops" / "scripts" / "lib" / "surface_detect.sh").read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
         marker = tmp / "locked" / "bin"
         if with_venv:
             (gov / ".venv" / "bin").mkdir(parents=True)
@@ -144,6 +150,19 @@ class HookInterpreterBindingTests(unittest.TestCase):
         that directly. No interposed shell, so the test executes exactly what
         Claude Code executes."""
         return shlex.split(command)
+
+    def _hook_env(self, home: Path | str) -> dict[str, str]:
+        """Observers skip unless the detector sees a Claude surface."""
+        env = {**os.environ, "HOME": str(home), "CLAUDECODE": "1"}
+        for key in (
+            "CURSOR_AGENT",
+            "L9_GOVERNANCE_SURFACE",
+            "CLAUDE_CODE_ENTRYPOINT",
+            "CLAUDE_CODE_SESSION_ID",
+            "CLAUDE_CODE_REMOTE",
+        ):
+            env.pop(key, None)
+        return env
 
     def _probe_command(self, command: str) -> str:
         """Point the command at the probe hook instead of its real one.
@@ -179,7 +198,7 @@ class HookInterpreterBindingTests(unittest.TestCase):
                         capture_output=True,
                         text=True,
                         timeout=120,
-                        env={**os.environ, "HOME": str(home)},
+                        env=self._hook_env(home),
                         check=False,
                     )
                     chosen = proc.stdout.strip()
@@ -211,7 +230,7 @@ class HookInterpreterBindingTests(unittest.TestCase):
                 capture_output=True,
                 text=True,
                 timeout=120,
-                env={**os.environ, "HOME": str(home)},
+                env=self._hook_env(home),
                 check=False,
             )
         # No interpreter ran at all - nothing on stdout.
@@ -237,7 +256,7 @@ class HookInterpreterBindingTests(unittest.TestCase):
                         capture_output=True,
                         text=True,
                         timeout=120,
-                        env={**os.environ, "HOME": str(home)},
+                        env=self._hook_env(home),
                         check=False,
                     )
                     self.assertEqual(proc.returncode, 2, "a gate must BLOCK, not pass")
@@ -339,7 +358,7 @@ class WritebackObservabilityTests(unittest.TestCase):
     def test_missing_module_is_recorded_as_runtime_failure(self) -> None:
         """The exact F-13 shape: pydantic absent, so write-back never ran."""
         with mock.patch.object(self.wb.st, "fresh_receipt", return_value=True):
-            with mock.patch.object(self.wb.gb, "find_governance_root", return_value=self.state):
+            with mock.patch.object(self.wb.mb, "ensure_importable", return_value=self.state):
                 with mock.patch.dict(sys.modules, {}, clear=False):
                     with mock.patch(
                         "builtins.__import__",
@@ -361,7 +380,7 @@ class WritebackObservabilityTests(unittest.TestCase):
 
         self.receipts.clear()
         with mock.patch.object(self.wb.st, "fresh_receipt", return_value=True):
-            with mock.patch.object(self.wb.gb, "find_governance_root", return_value=self.state):
+            with mock.patch.object(self.wb.mb, "ensure_importable", return_value=self.state):
                 with mock.patch("builtins.__import__", side_effect=_import_raiser("pydantic")):
                     self._run()
         failure_status = self._writeback_receipt()["status"]
@@ -381,7 +400,7 @@ class WritebackObservabilityTests(unittest.TestCase):
         """
         boom = ImportError("cannot import name 'close_session' (circular import)")
         with mock.patch.object(self.wb.st, "fresh_receipt", return_value=True):
-            with mock.patch.object(self.wb.gb, "find_governance_root", return_value=self.state):
+            with mock.patch.object(self.wb.mb, "ensure_importable", return_value=self.state):
                 with mock.patch("builtins.__import__", side_effect=_import_exploder(boom)):
                     self._run()
         receipt = self._writeback_receipt()
@@ -393,7 +412,7 @@ class WritebackObservabilityTests(unittest.TestCase):
     def test_stop_hook_never_blocks_session_termination(self) -> None:
         """Section 6.3 - observability, not a new blocking policy."""
         with mock.patch.object(self.wb.st, "fresh_receipt", return_value=True):
-            with mock.patch.object(self.wb.gb, "find_governance_root", return_value=self.state):
+            with mock.patch.object(self.wb.mb, "ensure_importable", return_value=self.state):
                 with mock.patch("builtins.__import__", side_effect=_import_raiser("anything")):
                     self._run()
         self.assertEqual(self.rc, 0)

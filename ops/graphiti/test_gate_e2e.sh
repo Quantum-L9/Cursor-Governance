@@ -1,50 +1,37 @@
 #!/usr/bin/env bash
-# GATES-002 E2E — verify gate deny/allow via forced state file (no MCP required)
+# Memory gate E2E (minimal) — deny/allow via a forced canonical session state
+# file (ops/memory/session_state.py; stage C8). No provider, no MCP required.
 set -euo pipefail
 REAL_HOOK="$(python3 -c "import os,sys; print(os.path.realpath(sys.argv[1]))" "${BASH_SOURCE[0]}")"
 GC_ROOT="$(cd "$(dirname "$REAL_HOOK")/.." && pwd)"
-# shellcheck source=../hooks/graphiti_common.sh
-source "$GC_ROOT/hooks/graphiti_common.sh"
-graphiti_resolve_cli
-GATE_LIB="$(dirname "$GRAPHITI_CLI")/graphiti_gate_lib.py"
-REPO_ROOT="$(cd "$(dirname "$GATE_LIB")/../.." && pwd)"
+GATE_LIB="$GC_ROOT/graphiti/graphiti_gate_lib.py"
+REPO_ROOT="$(cd "$GC_ROOT/.." && pwd)"
 if [ -x "$REPO_ROOT/.venv/bin/python3" ]; then
-  GRAPHITI_PYTHON="$REPO_ROOT/.venv/bin/python3"
+  GATE_PYTHON="$REPO_ROOT/.venv/bin/python3"
 else
-  GRAPHITI_PYTHON="$(command -v python3)"
+  GATE_PYTHON="$(command -v python3)"
 fi
-STATE_DIR="$HOME/.cursor/graphiti-state"
-mkdir -p "$STATE_DIR"
+STATE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/l9-memory-gate-e2e.XXXXXX")"
+trap 'rm -rf "$STATE_DIR"' EXIT
+export L9_MEMORY_SESSION_STATE_DIR="$STATE_DIR"
+export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+export L9_MEMORY_WRITE_GATES=1
 TEST_STATE="$STATE_DIR/e2e-test.json"
-export GRAPHITI_WRITE_GATES=1
+GATE_IN='{"conversation_id":"e2e-test","tool_name":"Write"}'
 
-# Force empty satisfaction — expect deny
-echo '{"conversation_id":"e2e-test","tool_name":"Write"}' > /tmp/gate_in.json
+# Stale hydration, nothing satisfied — expect deny
 cat > "$TEST_STATE" <<'JSON'
-{
-  "group_id": "sandbox-test",
-  "prefetch_ts": "2000-01-01T00:00:00Z",
-  "task_signature": "abc123",
-  "memory_satisfied_for": [],
-  "cache_ttl_minutes": 30
-}
+{"schema":"cursor.memory-session-state/v1","authority":"none","session_id":"e2e-test","task_signature":"abc123","satisfied_task_signatures":[],"memory_status":"OK","timestamp":"2000-01-01T00:00:00+00:00"}
 JSON
-RESULT="$("$GRAPHITI_PYTHON" "$GATE_LIB" pre_tool_use < /tmp/gate_in.json)"
+RESULT="$("$GATE_PYTHON" "$GATE_LIB" pre_tool_use <<< "$GATE_IN")"
 echo "$RESULT" | grep -q '"deny"' || { echo "FAIL: expected deny"; exit 1; }
 
-# Force satisfied — expect allow
+# Task explicitly satisfied — expect allow
 cat > "$TEST_STATE" <<'JSON'
-{
-  "group_id": "sandbox-test",
-  "prefetch_ts": "2099-01-01T00:00:00Z",
-  "task_signature": "abc123",
-  "memory_satisfied_for": ["abc123"],
-  "cache_ttl_minutes": 30
-}
+{"schema":"cursor.memory-session-state/v1","authority":"none","session_id":"e2e-test","task_signature":"abc123","satisfied_task_signatures":["abc123"],"memory_status":"OK","timestamp":"2000-01-01T00:00:00+00:00"}
 JSON
-RESULT="$("$GRAPHITI_PYTHON" "$GATE_LIB" pre_tool_use < /tmp/gate_in.json)"
+RESULT="$("$GATE_PYTHON" "$GATE_LIB" pre_tool_use <<< "$GATE_IN")"
 echo "$RESULT" | grep -q '"allow"' || { echo "FAIL: expected allow"; exit 1; }
 
-rm -f "$TEST_STATE"
-echo "OK: graphiti gate E2E passed"
+echo "OK: memory gate E2E passed"
 exit 0

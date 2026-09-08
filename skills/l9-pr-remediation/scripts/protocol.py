@@ -394,7 +394,7 @@ def validate_gate(
         errors.extend(validate_gate_registry(receipt.get("gate_registry")))
         blob = str(receipt.get("cached_verbs") or "")
         for verb in FORBIDDEN_VERIFY:
-            if verb in blob:
+            if re.search(r"(?:^|[\s;|&])" + re.escape(verb) + r"(?:\s|$)", blob):
                 errors.append(f"cached ceremony verb {verb!r}")
     elif letter == "B":
         if plan is None:
@@ -408,6 +408,21 @@ def validate_gate(
         execution = receipt.get("execution_plan") or {}
         if not isinstance(execution, dict):
             errors.append("execution_plan missing")
+        else:
+            cycle = [str(item) for item in (execution.get("cycle_scope") or [])]
+            plan_findings = []
+            if isinstance(plan, dict):
+                plan_findings = list(plan.get("findings") or [])
+            fix_ids = [
+                str(item.get("id") or "")
+                for item in plan_findings
+                if str(item.get("disposition") or "").lower() == "fix"
+            ]
+            if any(fix_ids) and not cycle:
+                errors.append("Gate B cycle_scope empty while disposition:fix findings exist")
+            missing = [item for item in fix_ids if item and item not in cycle]
+            if missing:
+                errors.append("Gate B cycle_scope omits fix ids: " + ",".join(missing))
         if receipt.get("worktree_dirty") is not False:
             errors.append("Gate B requires worktree_dirty: false")
     elif letter == "C":

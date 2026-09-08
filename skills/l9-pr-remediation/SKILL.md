@@ -87,7 +87,7 @@ If no PR number exists (baseline debt case): same verify, `git push` the branch,
 
 | Signal | Source | Action |
 |--------|--------|--------|
-| Digest | `skills/l9-pr-digest/scripts/pr_digest.py` + `require_digest.py --mode converge` | Same-head READY packet required before any edit. Non-READY does not enter remediation. |
+| Digest | `skills/l9-pr-digest/scripts/pr_digest.py` + `require_digest.py --mode converge` | Same-head digest required before any edit. READY or `CI_OR_EXECUTION_FAILURE` may enter remediation. Narrow / architecture / unknown / blocked still stop. |
 | Fleet | `pr_fleet.py plan --board` | One receipt: inventory, topology, merge order, waves, board per head |
 | CI + reviews + CRA | `scripts/ingest_signals.py` | One findings snapshot; then classify. Do not re-type `gh api` loops. |
 | CI failures | ingest `source: ci` (+ `gh run view --log-failed` for root cause) | Fix codebase root cause |
@@ -153,7 +153,7 @@ Applies `kernels/Diagnose First Kernel.md`, `kernels/Validate & Repair.md`, and 
 
 ## Hot Path (Converge)
 
-0. **Authorize, then plan the fleet (read-only).** User invoke is merge authorization — write the receipt. Load [references/run-contract.md](references/run-contract.md). Cache remediator verbs, fingerprint the venv (`UV_PYTHON` = uv-managed **native** CPython; never `uv python find --system`). Then one planner call; subscribe every PR it lists (`ops/scripts/lib/gh_subscribe_pr.sh`, runs in parallel; a classified GraphQL refusal does not waive ownership). Reuse a worktree that already holds a branch (`git worktree list`); `worktree_add_wired.sh` only when none exists. Emit `RUN_CONTRACT` from the receipt. Do not edit a PR in this step. For every PR about to be edited, run `l9-pr-digest` and `require_digest.py --mode converge` against that exact head. Non-READY → do not remediate that PR; record the digest decision and continue independent READY PRs.
+0. **Authorize, then plan the fleet (read-only).** User invoke is merge authorization — write the receipt. Load [references/run-contract.md](references/run-contract.md). Cache remediator verbs, fingerprint the venv (`UV_PYTHON` = uv-managed **native** CPython; never `uv python find --system`). Then one planner call; subscribe every PR it lists (`ops/scripts/lib/gh_subscribe_pr.sh`, runs in parallel; a classified GraphQL refusal does not waive ownership). Reuse a worktree that already holds a branch (`git worktree list`); `worktree_add_wired.sh` only when none exists. Emit `RUN_CONTRACT` from the receipt. Do not edit a PR in this step. For every PR about to be edited, run `l9-pr-digest` and `require_digest.py --mode converge` against that exact head. READY or `CI_OR_EXECUTION_FAILURE` may enter remediation (failing required checks are this pack's job). Narrow / architecture / unknown / blocked → record the digest decision and continue independent accepted PRs.
 
 ```bash
 # TEMPLATE — substitute owner/repo from the verified gh target in this run
@@ -209,7 +209,7 @@ Not a second publish path. After any merge that touched generated paths — or w
 - [references/run-contract.md](references/run-contract.md)
 
 ### Converge
-- `skills/l9-pr-digest` — same-head READY gate (`require_digest.py --mode converge`) before any edit
+- `skills/l9-pr-digest` — same-head converge gate (`require_digest.py --mode converge`) before any edit; READY or `CI_OR_EXECUTION_FAILURE` may proceed
 - [references/run-contract.md](references/run-contract.md) — preflight, Makefile surface, venv, fleet receipt
 - [references/fleet-waves.md](references/fleet-waves.md) — wave launch, assignments, result acceptance, watchers
 - `ops/autonomy/pr_fleet.py` — fleet owner (`plan` / `assign` / `accept` / `model`)

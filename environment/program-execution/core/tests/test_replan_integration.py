@@ -22,6 +22,7 @@ sys.path.insert(0, str(TEMPLATE / "scripts"))
 
 # Keep the controller template free of compiled debris (validate_controller checks).
 sys.dont_write_bytecode = True
+from pec.common import ControllerError  # noqa: E402
 from pec.controller import bootstrap, next_tasks, status  # noqa: E402
 from pec.replan import (  # noqa: E402
     activate,
@@ -215,8 +216,30 @@ def test_recoverable_discovery_adapts_future_execution(runtime):
     assert "dependency_not_complete:T1" in _blockers(before, "T2")
     assert "dependency_not_complete:T2" in _blockers(before, "T3")
 
-    # Verified evidence discovers T2's dependency on T1 was spurious; the
-    # revision is independently verified and Controller-activated.
+    # REPLAN_CONTRACT `reorder_where_deps_permit`: a reorder may ADD ordering,
+    # never remove an edge the lock froze. Removing T2's locked dependency on
+    # T1 is refused by authority containment, and nothing about readiness or
+    # the lock moves.
+    with pytest.raises(ControllerError, match="removes locked dependencies of T2"):
+        _propose(
+            runtime,
+            "rev-remove",
+            classes=["reorder_where_deps_permit"],
+            operations=[
+                {
+                    "op": "reorder",
+                    "target_task_id": "T2",
+                    "remove_dependencies": ["T1"],
+                    "note": "claims T2 reads no T1 artifact",
+                }
+            ],
+        )
+    assert current_plan_revision(runtime)["active_replan_revision_id"] is None
+    assert _blockers(next_tasks(runtime), "T2") == _blockers(before, "T2")
+
+    # Verified evidence discovers T3 also depends on T1's artifact: adding
+    # ordering is the permitted shape, adapted at runtime without touching
+    # the lock.
     _propose(
         runtime,
         "rev-reorder",
@@ -224,25 +247,24 @@ def test_recoverable_discovery_adapts_future_execution(runtime):
         operations=[
             {
                 "op": "reorder",
-                "target_task_id": "T2",
-                "remove_dependencies": ["T1"],
-                "note": "verified evidence: T2 reads no T1 artifact",
+                "target_task_id": "T3",
+                "add_dependencies": ["T1"],
+                "note": "verified evidence: T3 reads a T1 artifact",
             }
         ],
     )
 
     plan = current_plan_revision(runtime)
     assert plan["active_replan_revision_id"] == "rev-reorder"
-    # The Program Lock itself is untouched: T2 still lists T1 in the lock.
     lock = json.loads((runtime / "runtime/program-lock.json").read_text(encoding="utf-8"))
-    locked_t2 = next(t for t in lock["tasks"] if t["id"] == "T2")
-    assert locked_t2["dependencies"] == ["T1"]
+    locked_t3 = next(t for t in lock["tasks"] if t["id"] == "T3")
+    assert locked_t3["dependencies"] == ["T2"]
 
     after = next_tasks(runtime)
-    assert "dependency_not_complete:T1" not in _blockers(after, "T2")
+    assert "dependency_not_complete:T1" in _blockers(after, "T3")
     assert "dependency_not_complete:T2" in _blockers(after, "T3")
     adaptation = plan_adaptation(runtime)
-    assert adaptation["dependency_overrides"]["T2"] == {"add": [], "remove": ["T1"]}
+    assert adaptation["dependency_overrides"]["T3"] == {"add": ["T1"], "remove": []}
 
 
 def test_scoped_unknown_blocks_only_named_dependencies(runtime):
@@ -288,7 +310,7 @@ def test_crash_resume_reconstructs_same_authority_from_durable_state(runtime):
         runtime,
         "rev-reorder",
         classes=["reorder_where_deps_permit"],
-        operations=[{"op": "reorder", "target_task_id": "T2", "remove_dependencies": ["T1"]}],
+        operations=[{"op": "reorder", "target_task_id": "T3", "add_dependencies": ["T1"]}],
     )
     in_process = {
         "plan_revision": current_plan_revision(runtime)["plan_revision"],

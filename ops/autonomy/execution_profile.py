@@ -28,6 +28,8 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from surface_detect import CLAUDE_GATE_SURFACES, detect_surface
+
 POLICY_REL = Path("ops/autonomy/claude-execution-profiles.json")
 RESOURCE_POLICY_REL = Path("autonomy/policies/resource-classes.json")
 
@@ -44,19 +46,17 @@ def load_policy(root: Path | None = None) -> dict[str, Any]:
 
 
 def classify(env: Mapping[str, str], policy: Mapping[str, Any]) -> str:
-    """Resolve exactly one runtime surface. Model identity is never consulted."""
+    """Resolve execution personality from canonical surface identity plus Claude policy."""
+
+    surface_id = detect_surface(env)
+    if surface_id not in CLAUDE_GATE_SURFACES:
+        return "cursor"
 
     rules = policy.get("classification", {})
-    surface = str(env.get(str(rules.get("surface_env", "L9_GOVERNANCE_SURFACE")), "")).strip()
-    is_claude = surface == str(rules.get("claude_surface_value", "claude-code")) or bool(
-        env.get("CLAUDECODE") or env.get("CLAUDE_CODE_ENTRYPOINT")
-    )
-    if is_claude:
-        remote = str(env.get(str(rules.get("cloud_env", "CLAUDE_CODE_REMOTE")), "")).strip()
-        if remote == str(rules.get("cloud_value", "true")):
-            return "claude_cloud"
-        return "claude_local"
-    return "cursor"
+    remote = str(env.get(str(rules.get("cloud_env", "CLAUDE_CODE_REMOTE")), "")).strip()
+    if remote == str(rules.get("cloud_value", "true")):
+        return "claude_cloud"
+    return "claude_local"
 
 
 def resolve_provider(env: Mapping[str, str], policy: Mapping[str, Any]) -> str:

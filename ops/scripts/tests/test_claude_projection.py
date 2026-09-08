@@ -163,12 +163,13 @@ def make_root(base: Path) -> Path:
         json.dumps(
             {
                 "_comment": ["test fixture"],
+                "_retired_servers": ["graphiti-memory"],
                 "mcpServers": {
-                    "graphiti-memory": {
-                        "type": "http",
-                        "url": "${GRAPHITI_MCP_URL}",
-                        "timeout": 120000,
-                        "alwaysLoad": True,
+                    "l9-graphite-memory": {
+                        "type": "stdio",
+                        "command": "${L9_MEMORY_INTERPRETER}",
+                        "args": ["-m", "l9_graphite_memory.server", "--transport", "stdio"],
+                        "_requires_env": ["L9_MEMORY_INTERPRETER"],
                     }
                 },
             }

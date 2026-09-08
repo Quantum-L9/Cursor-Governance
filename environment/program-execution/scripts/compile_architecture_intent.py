@@ -47,10 +47,15 @@ from compiler.architecture_extractor import (  # noqa: E402
     resolve_extractor,
 )
 from compiler.architecture_intent import (  # noqa: E402
+    ArchitectureAdmission,
     ArchitectureIntent,
     ArchitectureIntentError,
     architecture_campaign_id,
     load_architecture_intent,
+)
+from compiler.architecture_target import (  # noqa: E402
+    TargetResolutionError,
+    resolve_architecture_target,
 )
 from compiler.architecture_to_campaign import (  # noqa: E402
     LoweredCampaign,
@@ -58,6 +63,7 @@ from compiler.architecture_to_campaign import (  # noqa: E402
     inspect_repository,
     lower,
 )
+from program_policy import resolve_program_owner  # noqa: E402
 
 FAILURE_CODE = "PE_ARCHITECTURE_COMPILE_FAILED"
 
@@ -149,7 +155,7 @@ def compile_architecture_intent(
     path: Path,
     *,
     target: str | None = None,
-    forced: bool = True,
+    admission: ArchitectureAdmission | str,
     repo_root: Path | None = None,
     target_checkout: Path | None = None,
     campaign_id: str | None = None,
@@ -169,7 +175,29 @@ def compile_architecture_intent(
     source uses, so nothing about the richer representation is rebuilt from a
     weaker one on the way in.
     """
-    intent = _load(path, target=target, forced=forced)
+    try:
+        target_resolution = resolve_architecture_target(
+            path,
+            explicit_target=target,
+            target_checkout=target_checkout,
+            repo_root=repo_root,
+        )
+    except (OSError, UnicodeDecodeError, TargetResolutionError) as exc:
+        raise ArchitectureCompileError(
+            str(exc),
+            fix=(
+                "Make target identity deterministically resolvable from TARGET, architecture "
+                "frontmatter, one source repository, TARGET_CHECKOUT origin, or workspace origin."
+            ),
+        ) from exc
+    intent = _load(path, target=target_resolution.repository_id, admission=admission)
+    # Target resolution and semantic loading must have read the same bytes, or
+    # the receipt would bind a target chosen from a source that no longer exists.
+    if intent.sha256 != target_resolution.source_sha256:
+        raise ArchitectureCompileError(
+            "architecture source changed between target resolution and semantic loading",
+            fix="Re-run classification/compilation against a stable source file.",
+        )
     extraction = _extract(
         intent,
         extractor=extractor,
@@ -181,12 +209,13 @@ def compile_architecture_intent(
     _refuse_unresolved_contradictions(intent, extraction)
     resolved_id = campaign_id or architecture_campaign_id(intent, existing_campaign_ids(repo_root))
     facts = inspect_repository(target_checkout, intent.target)
+    resolved_owner = resolve_program_owner(owner)
     try:
         lowered: LoweredCampaign = lower(
             intent,
             extraction,
             campaign_id=resolved_id,
-            owner=owner or "Igor Beylin",
+            owner=resolved_owner,
             repository=facts,
             stamp=stamp,
         )
@@ -222,7 +251,10 @@ def compile_architecture_intent(
     return {
         "schema": "l9.program-execution.architecture-compile-receipt.v1",
         "campaign_id": resolved_id,
+        "admission": intent.admission.value,
+        "owner": resolved_owner,
         "target": intent.target,
+        "target_resolution": target_resolution.to_dict(),
         "source": {
             "path": str(intent.path),
             "sha256": intent.sha256,
@@ -245,14 +277,21 @@ def compile_architecture_intent(
     }
 
 
-def _load(path: Path, *, target: str | None, forced: bool) -> ArchitectureIntent:
+def _load(
+    path: Path,
+    *,
+    target: str,
+    admission: ArchitectureAdmission | str,
+) -> ArchitectureIntent:
     try:
-        return load_architecture_intent(path, target=target, forced=forced)
+        return load_architecture_intent(path, target=target, admission=admission)
     except ArchitectureIntentError as exc:
         raise ArchitectureCompileError(
             str(exc),
-            fix="Pass TARGET=<owner/repo> to `make campaign-architecture`, or add "
-            "`schema: l9.program-execution.architecture-intent.v1` and `target:` frontmatter.",
+            fix=(
+                "Use `make campaign` for deterministic classification, or explicitly select "
+                "architecture admission. CLASSIFIED never requires synthetic frontmatter."
+            ),
         ) from exc
 
 
@@ -394,6 +433,46 @@ def _refuse_foreign_cache(source_path: Path, source: dict[str, Any], campaign_id
         )
 
 
+def _front_door_admission(path: Path, *, declared_only: bool = False) -> ArchitectureAdmission:
+    """Delegate the representation choice to the canonical campaign front door.
+
+    This CLI never decides for itself that a document is architecture-grade.
+    It asks the same router `make campaign` uses, so there is exactly one
+    classification authority and no second, weaker admission path here.
+    """
+    import importlib.util
+
+    router_path = Path(__file__).resolve().with_name("campaign_input.py")
+    spec = importlib.util.spec_from_file_location("pe_campaign_input_for_architecture", router_path)
+    if spec is None or spec.loader is None:
+        raise ArchitectureCompileError(f"cannot load campaign input router at {router_path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    try:
+        found = module.classify(Path(path))
+    except module.CampaignInputRejected as exc:
+        raise ArchitectureCompileError(exc.reason, fix=exc.fix) from exc
+    if found.kind is not module.CampaignInputKind.ARCHITECTURE_INTENT_V1:
+        raise ArchitectureCompileError(
+            f"campaign front door classified {path} as {found.kind.value}, not architecture intent",
+            fix=(
+                "Use the compiler owned by that input kind, or make the architecture contract "
+                "explicit."
+            ),
+        )
+    admission = ArchitectureAdmission(found.admission or ArchitectureAdmission.DECLARED.value)
+    if declared_only and admission is not ArchitectureAdmission.DECLARED:
+        raise ArchitectureCompileError(
+            "--declared-only requires l9.program-execution.architecture-intent.v1 frontmatter",
+            fix=(
+                "Add the declared schema, or omit --declared-only and let `make campaign` "
+                "classify it."
+            ),
+        )
+    return admission
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="compile_architecture_intent", description=__doc__)
     parser.add_argument("--intent", required=True, type=Path)
@@ -420,10 +499,11 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
+        admission = _front_door_admission(args.intent, declared_only=args.declared_only)
         receipt = compile_architecture_intent(
             args.intent,
             target=args.target,
-            forced=not args.declared_only,
+            admission=admission,
             repo_root=args.repo_root,
             target_checkout=args.target_checkout,
             campaign_id=args.campaign_id,

@@ -227,8 +227,21 @@ def _paginate_threads(owner: str, repo: str, pr: int) -> list[dict[str, Any]]:
 
 
 def _gh_json(path: str) -> Any:
-    raw = _run_gh(["gh", "api", "--paginate", path])
-    return json.loads(raw or "[]")
+    """Parse every --paginate page. gh concatenates documents; --slurp arrays them."""
+    raw = _run_gh(["gh", "api", "--paginate", "--slurp", path])
+    pages = json.loads(raw or "[]")
+    if not isinstance(pages, list):
+        return pages
+    if not pages:
+        return []
+    if all(isinstance(page, list) for page in pages):
+        out: list[Any] = []
+        for page in pages:
+            out.extend(page)
+        return out
+    if len(pages) == 1:
+        return pages[0]
+    return pages
 
 
 def _already_ingested(findings: list[dict[str, Any]], candidate: dict[str, Any]) -> bool:
@@ -326,11 +339,14 @@ def collect(
         snapshot = _load_json(path)
         if not isinstance(snapshot, dict):
             _fail(f"{source} snapshot is not an object")
+        if str(snapshot.get("status") or "").upper() == "BLOCKED":
+            _fail(f"{source} snapshot status=BLOCKED (incomplete pagination)")
         findings.extend(normalize_scanner_findings(source, snapshot))
 
     cra_before_merge = [
         item for item in findings if item.get("reviewer_class") == "code_review_agent"
     ]
+    pre_merge = list(findings)
     findings = merge_findings(findings)
     cra_seen = {
         _login(item)
@@ -352,7 +368,7 @@ def collect(
         "cra_comments_ingested": (not cra_seen) or bool(cra_before_merge),
         "unresolved_threads": len(unresolved),
         "unresolved_threads_captured": all(
-            any(item.get("thread_id") == node.get("id") for item in findings)
+            any(item.get("thread_id") == node.get("id") for item in pre_merge)
             for node in unresolved
             if node.get("id")
         ),
@@ -422,6 +438,8 @@ def main(argv: list[str] | None = None) -> int:
     complete = snapshot["completeness"]
     if not complete["cra_comments_ingested"]:
         _fail("CRA comments present on the PR were not ingested")
+    if not complete["unresolved_threads_captured"]:
+        _fail("unresolved review threads were collapsed before thread_id capture")
     print(
         f"snapshot: {output} findings={len(snapshot['findings'])} "
         f"cra={complete['cra_findings']} threads={complete['unresolved_threads']}",
