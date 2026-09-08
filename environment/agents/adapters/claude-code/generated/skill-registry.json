@@ -875,13 +875,13 @@
     {
       "composition_role": "general",
       "description": "extract learnings and specific content from chat conversations to memory or structured output. use when closing sessions, capturing lessons, patterns, errors, preferences, code blocks, decisions, requirements, or action items from conversation.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
       "name": "l9-chat-extraction",
       "path": "skills/l9-chat-extraction",
-      "reason": "extracts chat content to memory or structured output",
+      "reason": "",
       "user_invocable": true,
-      "when_to_use": ""
+      "when_to_use": "a user correction, lesson, pattern, error, or decision should reach memory \u2014 rules/87-cursor-memory-kernel.mdc requires extracting a lesson immediately, not at session end"
     },
     {
       "composition_role": "general",
@@ -963,13 +963,13 @@
     {
       "composition_role": "general",
       "description": "Audit, deterministically verify, or runtime-probe a named component \u2014 exports, imports, wiring, and loadability \u2014 as a read-only escalation ladder. Use from /audit-component, or from /analyze, /evaluate, or /analyze_evaluate when the user names a component, module, import, or wiring check. Do not use for DAG authoring or registration, for editing the component, or for generic repo exploration.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
       "name": "l9-component-verification",
       "path": "skills/l9-component-verification",
-      "reason": "component audit/verify/probe escalation ladder",
+      "reason": "",
       "user_invocable": true,
-      "when_to_use": ""
+      "when_to_use": "a named component, module, import, or wiring claim needs a read-only audit, deterministic verify, or runtime probe"
     },
     {
       "composition_role": "primary",
@@ -1044,7 +1044,7 @@
       "invocation": "explicit_only",
       "name": "l9-git-work-preserve",
       "path": "skills/l9-git-work-preserve",
-      "reason": "auto-registered by sync_generated_artifacts (orphan \u2192 explicit_only)",
+      "reason": "diagnose-first, but the pack acts on branches, worktrees, and stashes \u2014 prune-execute deletes refs under L9_GIT_PRUNE_AUTHORIZED and stash-drop under L9_GIT_STASH_DROP_AUTHORIZED. Destruction of unique work is the exact blast radius rules/54-context-sensitive-git-guardrails.mdc governs, so selection stays a human act. Triaged 2026-09-06; previously carried the orphan auto-register default.",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1238,24 +1238,24 @@
     {
       "composition_role": "general",
       "description": "create a machine-validated cursor .plan.md from the executable-plan template. cursor-build executes then opens a stacked PR; embedded stops at planning artifacts with no execution authority. use when scope is unclear or Plan mode is on. do not use for /l9-plan, make campaign, or a PE lock.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
       "name": "l9-plan-simple",
       "path": "skills/l9-plan-simple",
-      "reason": "auto-registered by sync_generated_artifacts (orphan \u2192 explicit_only)",
+      "reason": "",
       "user_invocable": true,
-      "when_to_use": ""
+      "when_to_use": "an ordinary execution plan or spec is needed, scope is unclear, or Plan mode is on \u2014 rules/23-l9-skill-routing.mdc already routes every ordinary planning deliverable here, so the model must be able to select it"
     },
     {
       "composition_role": "general",
       "description": "digest one PR into evidence, scope, and a bounded remediation packet without modifying it. use when judging agent PR scope before remediation or running the pre-remediation quality gate.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
       "name": "l9-pr-digest",
       "path": "skills/l9-pr-digest",
-      "reason": "auto-registered by sync_generated_artifacts (orphan \u2192 explicit_only)",
+      "reason": "",
       "user_invocable": true,
-      "when_to_use": ""
+      "when_to_use": "judging one PR's scope, evidence, expansion, and architecture impact before remediation \u2014 the skill never mutates the PR"
     },
     {
       "composition_role": "general",
@@ -1282,13 +1282,13 @@
     {
       "composition_role": "general",
       "description": "test-driven development in Python using uv as the package manager. covers the red-green-refactor cycle, vertical slicing, and uv project setup. use when starting Python TDD with uv, setting up a uv project, or running a red-green-refactor loop.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
       "name": "l9-python-tdd-with-uv",
       "path": "skills/l9-python-tdd-with-uv",
-      "reason": "non-default stack (uv) \u2014 invoke explicitly for Python TDD",
+      "reason": "",
       "user_invocable": true,
-      "when_to_use": ""
+      "when_to_use": "writing or running Python tests under uv \u2014 red-green-refactor, vertical slicing, or uv project setup"
     },
     {
       "composition_role": "primary",
@@ -1424,6 +1424,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "d303af6c85575b6a72c81c9776eefee57a8f0082bd85baa7d56afe19056b5db3",
-  "source_skill_corpus_sha256": "34fa3eccfabbcfc7c200ef645672505c4b9468e1e2efa7569b3732267e994e89"
+  "source_manifest_sha256": "4d696872c36cf17de8894797be07bea8beddb81823aa9ce80a573334ef539292",
+  "source_skill_corpus_sha256": "7037b475909afdbcb7abdc627f349b7947afa007660c141ef9e4c9e42d7ef79f"
 }
