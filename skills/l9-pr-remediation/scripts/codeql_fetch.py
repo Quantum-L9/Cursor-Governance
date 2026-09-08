@@ -7,9 +7,10 @@ metadata for the exact analyzed commit, and writes a single secret-free JSON sna
 (`codeql-alerts-before.json` by convention).
 
 Read-only against GitHub: this never dismisses, reopens, or otherwise mutates alert
-state (dismissal is fail-closed policy, not a fetcher action). The API token is read
-from the environment by reference only (GITHUB_TOKEN / GH_TOKEN) and is never printed,
-stored, or written to the snapshot; the Authorization header is redacted in the receipt.
+state (dismissal is fail-closed policy, not a fetcher action). The API token is bound in-process
+(``GITHUB_TOKEN`` / ``GH_TOKEN`` via ``capability_bind``) and is never printed,
+stored, exported to ``os.environ``, or written to the snapshot; the Authorization
+header is redacted in the receipt.
 
 Fail-closed: if pagination cannot be proven complete (the Link header still advertises a
 next page after the page cap), the snapshot is marked BLOCKED and the process exits
@@ -21,7 +22,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 import urllib.error
 import urllib.parse
@@ -29,10 +29,13 @@ import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 
+_OPS_SECRETS = Path(__file__).resolve().parents[3] / "ops" / "secrets"
 _OPS_LIB = Path(__file__).resolve().parents[3] / "ops" / "lib"
-if str(_OPS_LIB) not in sys.path:
-    sys.path.insert(0, str(_OPS_LIB))
+for _extra in (_OPS_SECRETS, _OPS_LIB):
+    if str(_extra) not in sys.path:
+        sys.path.insert(0, str(_extra))
 
+from capability_bind import bind_first  # noqa: E402
 from safe_https import https_exchange  # noqa: E402
 
 PAGE_SIZE = 100
@@ -191,7 +194,7 @@ def main() -> int:
 
     base_url = _validated_base_url(args.base_url)
     output_path = _validated_output(args.output)
-    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    token = bind_first("GITHUB_TOKEN", "GH_TOKEN")
 
     open_result = fetch_alerts(base_url, args.owner, args.repo, args.ref, "open", token)
     dismissed_result = fetch_alerts(base_url, args.owner, args.repo, args.ref, "dismissed", token)

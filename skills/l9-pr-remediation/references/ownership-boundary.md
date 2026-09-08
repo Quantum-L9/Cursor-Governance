@@ -6,15 +6,15 @@ role: ownership_boundary
 tags: [pr, ownership, codebase, ci-pipeline, edit-axis]
 owner: igor_beylin
 status: active
-version: 3.4.0
-updated: 2026-09-02
+version: 3.5.0
+updated: 2026-09-07
 /L9_META -->
 
 # Ownership Boundary
 
 Classify before any edit. This skill repairs **codebase** defects only.
 
-**This file is the edit axis and nothing else.** Ownership answers one question:
+**This file is the edit axis and nothing else.** Path prefixes are `scripts/protocol.py` `edit_axis` (CODEBASE vs CI_PIPELINE only). HUMAN / FALSE_POSITIVE / ENVIRONMENT-from-error stay judgment here. Ownership answers one question:
 may I patch this file? It never decides what happens to the pull request. That
 verdict — `merge` / `fix` / `wait` / `leftover` — comes from
 `ops/autonomy/pr_board.py`, which reads required-check identity and conflicted

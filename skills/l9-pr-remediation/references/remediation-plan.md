@@ -6,8 +6,8 @@ role: remediation_plan
 tags: [pr, plan, preflight, tracking, one-commit, makefile, board]
 owner: igor_beylin
 status: active
-version: 2.3.0
-updated: 2026-08-30
+version: 3.0.0
+updated: 2026-09-07
 /L9_META -->
 
 # Remediation Plan (this PR → one commit)
@@ -35,7 +35,7 @@ A locked `Remediation-Cycle` / plan whose files still match is executed, not rew
 
 ## 1. This PR's findings (not a second fleet census)
 
-Ingest open surfaces on **this** head. Skip Sonar/CodeQL/debt unless that check is failing or configured-and-blocking.
+Ingest open surfaces on **this** head. Skip Sonar/CodeQL/Semgrep/debt unless that check is failing or configured-and-blocking.
 
 | Surface | How | Track as |
 |---------|-----|----------|
@@ -43,7 +43,7 @@ Ingest open surfaces on **this** head. Skip Sonar/CodeQL/debt unless that check 
 | Human reviews + inline + issue comments | REST + GraphQL threads | `review` |
 | Code-review agents | `github-code-quality[bot]`, Copilot — [code-review-agents.md](code-review-agents.md) | `code_review_agent` |
 | Other bots | CodeRabbit, Gemini, `github-advanced-security` | `bot` |
-| Sonar / CodeQL / debt | fetch scripts only when failing or blocking; output under `$PWD` | `scanner` / `debt` |
+| Sonar / CodeQL / Semgrep / debt | fetch scripts only when failing or blocking; output under `$PWD` | `scanner` / `debt` |
 
 Completeness for **this PR**: every unresolved thread, every failed check, every Code Quality / Copilot comment. Do not block the plan on a green-check scanner fetch.
 
@@ -68,7 +68,7 @@ remediation_plan:
 
   findings:
     - id: "cq-1"
-      source: github-code-quality | copilot | human | bot | ci | sonar | codeql | debt
+      source: github-code-quality | copilot | human | bot | ci | sonar | codeql | semgrep | debt
       author: "{login}"
       file: "path"          # null if none
       line: 12              # null if none
@@ -100,7 +100,7 @@ remediation_plan:
     no_verify: false
 ```
 
-**Plan gate (blocks edits):**
+**Plan gate (blocks edits):** run `scripts/validate_plan.py --plan plan.json --findings findings.json`. Disposition *choice* stays here; the script only refuses a missing field, a `fix` without cause, a per-finding `board`, or an ingested id with no row.
 
 - [ ] `RUN_CONTRACT` exists for the run
 - [ ] `board` + `board_reason` came from `pr_board.py` at `head_sha`; `leftover` carries its `board_declaration`
