@@ -51,7 +51,10 @@ class CompileBriefTests(unittest.TestCase):
         self.assertNotIn("older complete memory lifecycle", seed["objective"])
         self.assertEqual(seed["target"]["repository_id"], "Quantum-L9/Cursor-Governance")
         self.assertEqual(seed["problem_statement"], text)
-        self.assertEqual(seed["owner"], "Igor Beylin")
+        # The fixture states no owner, so this is the shared Program Execution
+        # default (ADR-0033). An owner the memo states explicitly still wins —
+        # test_memo_release_files_become_task_paths covers that.
+        self.assertEqual(seed["owner"], "Quantum AI Partners")
 
     def test_collision_assigns_v2(self) -> None:
         text = FIXTURE.read_text(encoding="utf-8")

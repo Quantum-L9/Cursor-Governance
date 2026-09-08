@@ -167,6 +167,16 @@ class HookExecFailClosedTests(unittest.TestCase):
             env["HOME"] = "/proc/nonexistent"
             env["TMPDIR"] = tmp
             env.pop("L9_HOOK_SKIP_LOG", None)
+            # Observer skip precedes record_skip unless this is a Claude surface.
+            for key in (
+                "CURSOR_AGENT",
+                "L9_GOVERNANCE_SURFACE",
+                "CLAUDE_CODE_ENTRYPOINT",
+                "CLAUDE_CODE_SESSION_ID",
+                "CLAUDE_CODE_REMOTE",
+            ):
+                env.pop(key, None)
+            env["CLAUDECODE"] = "1"
             result = subprocess.run(
                 ["bash", str(LAUNCHER), "--class", "observer", "skill_usage_logger.py"],
                 capture_output=True,

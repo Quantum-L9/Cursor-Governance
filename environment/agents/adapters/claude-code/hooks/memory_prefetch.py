@@ -46,9 +46,14 @@ def _governance_lib() -> Path:
 
 
 _GOV_LIB = _governance_lib()
-if str(_GOV_LIB) not in sys.path:
-    sys.path.insert(0, str(_GOV_LIB))
+_GOV_SCRIPTS = _GOV_LIB.parent
+_GOV_AUTONOMY = _GOV_LIB.parent.parent / "autonomy"
+for _path in (_GOV_LIB, _GOV_SCRIPTS, _GOV_AUTONOMY):
+    if str(_path) not in sys.path:
+        sys.path.insert(0, str(_path))
 
+from classify_hydrate_state import classify as classify_hydrate_state  # noqa: E402
+from surface_detect import is_claude_gate_surface  # noqa: E402
 from workspace_roots import DROPPED_CAP  # noqa: E402
 from workspace_roots import select_workspace_roots as _shared_select_workspace_roots  # noqa: E402
 
@@ -137,23 +142,6 @@ def _emit(context: str) -> None:
     )
 
 
-def _claude_runtime_marker_present() -> bool:
-    """Mirror of session_start_claude_governance.sh lines 89-92.
-
-    This hook is registered in .claude/settings.json, but Cursor sessions on a
-    machine that also runs Claude can invoke it (observed: two agent_id=
-    claude-code hydrate blocks injected into a Cursor session). An observer
-    hook without a runtime guard leaks another surface's identity into this
-    one, so absent every Claude marker it must no-op.
-    """
-    if os.environ.get("CLAUDE_CODE_REMOTE", "") == "true":
-        return True
-    return any(
-        os.environ.get(key)
-        for key in ("CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_SESSION_ID")
-    )
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(prog="memory_prefetch")
     parser.add_argument(
@@ -166,12 +154,12 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    # Observer-class guard: no Claude runtime marker and no explicit repair
-    # invocation (--session-id) means this is another surface's session.
-    if not _claude_runtime_marker_present() and not args.session_id:
+    # Canonical surface guard. --session-id is the explicit repair override;
+    # ordinary hook execution must never infer Claude identity from a private
+    # marker list.
+    if not is_claude_gate_surface() and not args.session_id:
         print(
-            "memory_prefetch: skipped — no Claude runtime marker "
-            "(CLAUDECODE/CLAUDE_CODE_*); not this surface",
+            "memory_prefetch: skipped — canonical surface detector says this is not Claude",
             file=sys.stderr,
         )
         return 0
@@ -231,6 +219,9 @@ def main() -> int:
                 packet_ids.append(str(packet["packet_id"]))
             body = compiled.get("additional_context") or ""
             if body:
+                hydrate_degraded, _hydrate_reason = classify_hydrate_state(body)
+                if hydrate_degraded:
+                    degraded_any = True
                 header = f"### {root.name} (namespace={group_id or 'unresolved'})"
                 contexts.append(header + "\n" + body if len(roots) > 1 else body)
 

@@ -32,6 +32,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from program_policy import DEFAULT_PROGRAM_OWNER
+
 from .architecture_coverage import CoverageReport, ExtractionResult, audit
 from .architecture_intent import (
     INTENT_PROVENANCE_SCHEMA,
@@ -42,7 +44,7 @@ from .architecture_ir import SemanticItem
 from .repo_truth import RequirementDisposition, classify_dispositions, discover
 
 CAMPAIGN_SOURCE_SCHEMA = "l9.program-execution.campaign-source.v2"
-DEFAULT_OWNER = "Igor Beylin"
+DEFAULT_OWNER = DEFAULT_PROGRAM_OWNER
 GOVERNANCE_HOST = "Quantum-L9/Cursor-Governance"
 
 TASK_KINDS = frozenset({"requirement", "constraint", "implementation_seam", "objective"})
@@ -838,6 +840,7 @@ def build_provenance(
     return {
         "schema": INTENT_PROVENANCE_SCHEMA,
         "campaign_id": campaign_id,
+        "admission": intent.admission.value,
         "target": intent.target,
         "source": {
             "path": str(intent.path),
