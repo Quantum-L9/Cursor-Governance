@@ -28,7 +28,8 @@ def check(
     decision = str(doc.get("decision") or "")
     if mode == "converge" and decision not in CONVERGE_OK:
         errors.append(
-            f"converge requires READY or CI_OR_EXECUTION_FAILURE digest, got {decision or 'missing'}"
+            "converge requires READY or CI_OR_EXECUTION_FAILURE digest, "
+            f"got {decision or 'missing'}"
         )
     return errors
 

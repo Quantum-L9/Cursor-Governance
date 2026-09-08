@@ -27,7 +27,10 @@ def parser() -> argparse.ArgumentParser:
     out.add_argument(
         "--quiet",
         action="store_true",
-        help="suppress the live findings stream and interactive report; print JSON only when --output is omitted",
+        help=(
+            "suppress the live findings stream and interactive report; "
+            "print JSON only when --output is omitted"
+        ),
     )
     return out
 

@@ -170,9 +170,7 @@ def main() -> int:
         assert good["decision"] in READY
         assert check(good, head_sha="c" * 40, mode="diagnose")
         assert not check(ci_required, mode="converge")
-        assert check(
-            {**ci_required, "decision": "NARROW_BEFORE_REMEDIATION"}, mode="converge"
-        )
+        assert check({**ci_required, "decision": "NARROW_BEFORE_REMEDIATION"}, mode="converge")
 
     print("PASS: l9-pr-digest deterministic self-test")
     return 0
