@@ -19,6 +19,24 @@ contents:
 laws:
 - receipt_is_append_only_evidence
 - receipt_does_not_mutate_blueprint
+- export_does_not_mutate_campaign_lifecycle
 - recommendation_is_not_terminal_acceptance
+- only_controller_closure_asserts_local_terminal_state
+- external_projection_consumes_closure_receipt_never_a_caller_verdict
+- controller_closure_is_not_final_program_acceptance
 - blueprint_change_requires_new_program_lock
 - acceptance_or_supersession_must_be_explicit
+closure:
+  artifact: program-execution-controller.closure-receipt.v1
+  producer: Program Execution Controller
+  produced_by: pec close
+  binding:
+  - closure_id
+  - campaign_id
+  - program_id
+  - program_digest
+  - controller_id
+  - runtime_workspace
+  - verdict
+  - receipt_digest
+  consumer: campaigns/scripts/close_campaign.py (projection only)

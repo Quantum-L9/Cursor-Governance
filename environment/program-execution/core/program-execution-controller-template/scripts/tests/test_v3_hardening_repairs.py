@@ -462,7 +462,9 @@ class TruthfulCloseTests(unittest.TestCase):
                 "CONVERGED",
                 expect=2,
             )
-            self.assertIn("recommendation", refused["error"])
+            # Ledger integrity is a closure blocker in its own right (R6), so
+            # the refusal names the ledger before any recommendation is consulted.
+            self.assertIn("ledger", refused["error"])
             cleanup_worktree(repo, workspace)
 
 

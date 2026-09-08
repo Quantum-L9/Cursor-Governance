@@ -13,7 +13,7 @@ The worker reports an Attempt Receipt. The Controller independently verifies:
 
 ## Evidence is bound to its claim
 
-Validity is not relevance. `pec evaluate-gate ... PASS` requires every evidence
+Validity is not relevance. `pec evaluate-gate` derives its verdict; PASS requires every evidence
 id the gate definition declares in `required_evidence_ids`, at least one item
 that `supports` a task in the gate's `scope.task_ids`, and — for `execution`
 and `validation` class gates — the Controller's own verification evidence

@@ -422,6 +422,10 @@
       "sha256": "aac0bac90869896f5eae8d45a5a631653f1ef01becec3af716cece91ddb8ae91"
     },
     {
+      "path": "audits/pec-remediation-workpack.v1.yaml",
+      "sha256": "2232953431a8107e8b3f9636116ecdd69acbdd2900f93f3dea619fc5e55e99a5"
+    },
+    {
       "path": "audits/pipeline-assembly-audit.v1.yaml",
       "sha256": "cbb2021d6098bb9f1eb2258f7f720986a846a927fc7c38ad067d245f7651c64d"
     },
@@ -911,11 +915,11 @@
     },
     {
       "path": "campaigns/scripts/close_campaign.py",
-      "sha256": "e3494a39f11c5dc59faba0747fda0f3c14c57b13439c8200e9b9a66fc4074ba6"
+      "sha256": "608e60e795b8acee90c199a8549e8584ea8d06f50267a73f2fb9aa659b6f1047"
     },
     {
       "path": "campaigns/scripts/test_close_campaign.py",
-      "sha256": "f541f3e863aec55aacd9aafcc01768f74a80f0e05c5b13c2a703c05308317d9b"
+      "sha256": "4587291e3523f571d577ecdc26dc8a66320d8c5c65d6d8775a79f976d4c12742"
     },
     {
       "path": "campaigns/session-runtime-hydration-convergence-v1/CAMPAIGN_SOURCE.yaml",
@@ -1659,7 +1663,7 @@
     },
     {
       "path": "peer_execution/README.md",
-      "sha256": "8494397945f6d85e03cf97ed8f2d4730149cbba3962e049ec4f27382f2bd12e0"
+      "sha256": "d439d139eb80965f40166cd6e257b321336afe0a34d48da7f59b298829b62ae3"
     },
     {
       "path": "peer_execution/__init__.py",
@@ -1826,6 +1830,10 @@
       "sha256": "803433e2a08b37365e0d1376a446265d5befa5eaaddc6b75220cf7437a147d67"
     },
     {
+      "path": "peer_execution/front_door.py",
+      "sha256": "d22ef9dc1f9c866c7a3e3e09ede49b7c6a3013aa3046ca92610e78e9708bbc92"
+    },
+    {
       "path": "peer_execution/golden_vectors.py",
       "sha256": "306ee819fdd1d91d257f0f4686e873321e0e312df8b38a340f93842e3455876b"
     },
@@ -1892,6 +1900,10 @@
     {
       "path": "peer_execution/tests/test_error_taxonomy.py",
       "sha256": "1f30948eab93922646f5a0ea5c84d4c0180d827913fcfd810aae1b7414cbe789"
+    },
+    {
+      "path": "peer_execution/tests/test_front_door.py",
+      "sha256": "d1967ef80e1086c8eeca11f7ecf4706703dd50a1656cdd685374f37cb0a3e43b"
     },
     {
       "path": "peer_execution/tests/test_peer_execution_contracts.py",
@@ -2071,7 +2083,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "3cf5911dcf0ee68ce1b08f86604fd2ec6e0d6606433421801d1f645fdb39a788"
+      "sha256": "787874c104e85573822a36466310a1e62a074523779f74df35b318482b65bd15"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -2083,7 +2095,7 @@
     },
     {
       "path": "scripts/run_peer_task_pipeline.py",
-      "sha256": "e84e1a5eca83cb29bfc6d64d70821efe6609ddd6b7ef9af0c3f076678385277a"
+      "sha256": "0bf12fed6e3174bfd1528edced1b156aa1512b669608b9fffb7aa52352be9539"
     },
     {
       "path": "scripts/tests/fixtures/architecture-intent-llm-router.md",
@@ -2131,11 +2143,11 @@
     },
     {
       "path": "scripts/tests/test_execution_completeness.py",
-      "sha256": "4dc2e60c814576504a2da7f7a4d3064080a853bcd96d51f30632cc0b3e260443"
+      "sha256": "83943c94648dcf02f2c67fcaeea3937d342a45203d29292cc143ebe2d7e9a9a6"
     },
     {
       "path": "scripts/tests/test_failed_result_harvest.py",
-      "sha256": "48dd1764d4bdee3cc253f747bb16fcef5b60504d9293f93750d014dff2c6791a"
+      "sha256": "24202da21c6e120818fae4af2563e9e9b6ea0601ee9c831dc599cf359c952300"
     },
     {
       "path": "scripts/tests/test_gate_s0_baseline.py",
@@ -2195,11 +2207,11 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "4527227ade07c974caa138107ef5d207c5c3e39a59ad6ceff739b107f04f1c79"
+      "sha256": "f5d2890edbf22b1b4628fb30b9d03e32769ca5bd3d5df8d5a8fded4fcf1ad30d"
     },
     {
       "path": "scripts/tests/test_run_campaign_repairs.py",
-      "sha256": "17a61fdebb445eaac2dda85456ededa60a47f73810c94fa43d50e1d80d90dc1f"
+      "sha256": "05ef188021d667963e71465b0831e6f72cd81f423034772d45edbf0dd9b953e2"
     },
     {
       "path": "scripts/tests/test_run_conformance.py",

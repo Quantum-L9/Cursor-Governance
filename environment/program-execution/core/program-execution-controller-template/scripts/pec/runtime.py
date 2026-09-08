@@ -21,12 +21,13 @@ which import back into `controller` -- that is what keeps it a leaf.
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 from typing import Any
 
-from .common import ControllerError, load_json
-from .ledger import EventLedger
-from .state import StateDB
+from .common import ControllerError, digest_object, load_json, write_json
+from .ledger import EventLedger, LedgerError, verify_chain
+from .state import StateDB, StateError
 
 
 def campaign_status_path(workspace: Path) -> Path:
@@ -44,8 +45,125 @@ def open_runtime(workspace: Path) -> tuple[StateDB, EventLedger]:
     workspace = workspace.resolve()
     if not (workspace / "runtime" / "state.sqlite").is_file():
         raise ControllerError(f"Controller runtime not bootstrapped: {workspace}")
-    db = StateDB(workspace / "runtime" / "state.sqlite")
-    return db, EventLedger(workspace / "ledger" / "events.jsonl", anchor_store=db)
+    try:
+        db = StateDB(workspace / "runtime" / "state.sqlite")
+    except StateError as exc:
+        raise ControllerError(str(exc), error_code=exc.error_code) from exc
+    ledger = EventLedger(workspace / "ledger" / "events.jsonl", anchor_store=db)
+    try:
+        reconcile_runtime(db, ledger, workspace)
+    except Exception:
+        db.close()
+        raise
+    return db, ledger
+
+
+def reconcile_runtime(db: StateDB, ledger: EventLedger, workspace: Path) -> dict[str, Any]:
+    """Converge the runtime's durable surfaces after any interruption (R8 §12.8).
+
+    Runs at every open, before any command. Deterministic and idempotent:
+
+    * a pre-R8 runtime (no canonical events) imports its file chain once,
+      only if that chain verifies -- an unverifiable legacy ledger fails
+      closed rather than being adopted;
+    * receipt files already on disk with no canonical record are imported
+      only when their own digest proves their content (verification, gate
+      and closure receipts); anything else is left alone and never adopted;
+    * committed-but-unprojected events are appended to the file;
+    * canonical receipts whose artifact is missing or differs from the
+      recorded content are rematerialized from the record.
+    """
+    report: dict[str, Any] = {"imported_events": 0, "projected_events": 0, "receipts": 0}
+    if db.event_count() == 0:
+        try:
+            legacy = ledger.file_events()
+        except LedgerError as exc:
+            raise ControllerError(
+                f"legacy ledger cannot be adopted: {exc}",
+                error_code="RUNTIME_RECONCILIATION_REQUIRED",
+            ) from exc
+        if legacy:
+            ok, message = verify_chain(legacy)
+            if not ok:
+                raise ControllerError(
+                    f"legacy ledger chain does not verify ({message}); refusing to adopt it",
+                    error_code="RUNTIME_RECONCILIATION_REQUIRED",
+                )
+            with db.controller_transaction():
+                for event in legacy:
+                    db.import_event(event, projected=True)
+            report["imported_events"] = len(legacy)
+    report["projected_events"] = ledger.project_pending()
+    report["receipts"] = _reconcile_receipts(db, workspace)
+    return report
+
+
+#: Receipt files a pre-R8 runtime may hold with no canonical record, and the
+#: (type, entity id field) that describes them. Imported only when the file's
+#: own digest proves its content.
+_LEGACY_RECEIPT_GLOBS = (
+    ("receipts/verification/*.json", "verification", "task_id"),
+    ("receipts/gates/*/*.json", "gate_evaluation", "gate_id"),
+    ("receipts/closure/*.json", "closure", "campaign_id"),
+)
+
+
+def _self_consistent(payload: Any) -> bool:
+    if not isinstance(payload, dict) or not payload.get("receipt_digest"):
+        return False
+    body = dict(payload)
+    claimed = body.pop("receipt_digest", None)
+    body.pop("signal", None)
+    return digest_object(body) == claimed
+
+
+def _reconcile_receipts(db: StateDB, workspace: Path) -> int:
+    touched = 0
+    for pattern, receipt_type, entity_field in _LEGACY_RECEIPT_GLOBS:
+        for path in sorted(workspace.glob(pattern)):
+            if db.receipt_by_artifact(str(path)) is not None:
+                continue
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            if not _self_consistent(payload):
+                continue
+            receipt_id = str(
+                payload.get("verification_id")
+                or payload.get("evaluation_id")
+                or payload.get("closure_id")
+                or payload["receipt_digest"]
+            )
+            if db.receipt(receipt_id) is not None:
+                continue
+            db.record_receipt(
+                receipt_id=receipt_id,
+                receipt_type=receipt_type,
+                entity_id=str(payload.get(entity_field) or ""),
+                payload={k: v for k, v in payload.items() if k != "signal"},
+                artifact_path=str(path),
+                projected=True,
+            )
+            touched += 1
+    for record in db.receipts():
+        artifact = Path(str(record["artifact_path"]))
+        expected = record["payload"]
+        materialize = not record["projected"] or not artifact.is_file()
+        if not materialize:
+            try:
+                on_disk = json.loads(artifact.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                materialize = True
+            else:
+                on_disk = dict(on_disk) if isinstance(on_disk, dict) else {}
+                on_disk.pop("signal", None)
+                materialize = on_disk != expected
+        if materialize:
+            write_json(artifact, expected)
+            db.mark_receipt_projected(str(record["receipt_id"]))
+            touched += 1
+    return touched
 
 
 def _runtime_config(workspace: Path) -> dict[str, Any]:
