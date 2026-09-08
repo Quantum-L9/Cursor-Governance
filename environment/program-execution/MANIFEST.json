@@ -2171,7 +2171,7 @@
     },
     {
       "path": "scripts/tests/test_pe_scripts_package_binding.py",
-      "sha256": "ed27228513526bebfa4dd4ce592e338ae624ca79d67528a7ea5f273e1847cb09"
+      "sha256": "770587184744b0dfe803ec3f10c32c8b1644bc59961eaa425da3a1808f5755cf"
     },
     {
       "path": "scripts/tests/test_pe_smoke_campaign.py",

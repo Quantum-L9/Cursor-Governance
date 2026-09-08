@@ -27,7 +27,15 @@ MODE_EMBEDDED = "embedded"
 # The l9-plan-simple handoff axis: mode -> the heading that replaces the PE
 # execute section. Both modes are kind:simple; only the handoff differs.
 HANDOFF_HEADINGS = {MODE_BUILD: EXECUTE_BUILD, MODE_EMBEDDED: EXECUTE_EMBEDDED}
-FRONTMATTER_KEYS = ("name", "overview", "todos", "isProject", "kind", "execute_via")
+FRONTMATTER_KEYS = (
+    "name",
+    "overview",
+    "todos",
+    "isProject",
+    "kind",
+    "execute_via",
+    "status",
+)
 NEGATION_RE = re.compile(r"(?i)\b(do not|don't|never|not a|not the|must not|forbidden)\b")
 OPTIONAL_HEADING_RE = re.compile(r"\*+\(optional", re.I)
 HEADING_RE = re.compile(r"^## +(.+)$", re.M)
@@ -124,6 +132,8 @@ def frontmatter_presence(text: str) -> dict[str, bool]:
         present["kind"] = False
     if str(fm.get("execute_via") or "").strip() not in HANDOFF_HEADINGS:
         present["execute_via"] = False
+    if str(fm.get("status") or "").strip() != "current":
+        present["status"] = False
     return present
 
 

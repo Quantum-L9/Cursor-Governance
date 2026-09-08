@@ -34,8 +34,8 @@ Produce a deep, machine-validated plan from the **same** first-class executable-
 
 | Mode | Status | Handoff | Frontmatter |
 |------|--------|---------|-------------|
-| `cursor-build` | **default** | user presses **Build**, then publishes with `PR_STACK=auto PR_REMEDIATE=0 l9 pr` and shows the PR URL | `kind: simple`, `execute_via: cursor-build` |
-| `embedded` | first-class | terminates at validated planning artifacts and returns control to the invoking caller | `kind: simple`, `execute_via: embedded` |
+| `cursor-build` | **default** | user presses **Build**, then publishes with `PR_STACK=auto PR_REMEDIATE=0 l9 pr` and shows the PR URL | `kind: simple`, `execute_via: cursor-build`, `status: current` |
+| `embedded` | first-class | terminates at validated planning artifacts and returns control to the invoking caller | `kind: simple`, `execute_via: embedded`, `status: current` |
 
 Both modes share one doctrine, one PLAN_DOCUMENT schema, one validator, one stress-test and leverage pass, and one canonical projection renderer. Only the handoff projection differs. There is no second planner.
 
@@ -108,7 +108,7 @@ Steps 1–9 are **identical in both modes**.
    python3 skills/l9-plan/scripts/render_plan_pe_autonomy.py <plan.json> --execute-via=embedded       # caller-owned
    ```
 
-   Write to `.cursor/plans/<slug>_<8hex>.plan.md` in `cursor-build`; in `embedded`, return the projection to the caller (a path only if the caller asked for one). Frontmatter must carry `kind: simple` plus the selected `execute_via`.
+   Write to `.cursor/plans/<slug>_<8hex>.plan.md` in `cursor-build`; in `embedded`, return the projection to the caller (a path only if the caller asked for one). Frontmatter must carry `kind: simple`, the selected `execute_via`, and `status: current`. `harvested` is a tag, never a status.
 11. **Section receipt** — generate then validate, in both modes. The receipt stamps `handoff_mode` and is judged against that mode's headings. FAIL → not ready:
 
     ```bash
@@ -128,7 +128,7 @@ User presses **Build**. If any open PR exists, execute on the unique chain tip (
 
 Return the validated PLAN_DOCUMENT and the embedded projection to the invoking caller, and **stop**. State plainly that the caller owns everything downstream and must establish its own execution authority.
 
-**Embedded success** is exactly this: `validate_plan_document.py` PASSes **and** the embedded projection passes its mode-specific structural checks (`kind: simple`, `execute_via: embedded`, a **Handoff to Caller** section, no live execution authority). No code execution, branch, commit, publication, or PR is required — or permitted — by this mode.
+**Embedded success** is exactly this: `validate_plan_document.py` PASSes **and** the embedded projection passes its mode-specific structural checks (`kind: simple`, `execute_via: embedded`, `status: current`, a **Handoff to Caller** section, no live execution authority). No code execution, branch, commit, publication, or PR is required — or permitted — by this mode.
 
 **Embedded grants none of:** Build execution · branch selection · worktree creation · commit authority · publication or pull-request authority · Program Execution or campaign authority · Program Lock or Controller lease · phased-execution-protocol authority · deployment authority. Do not emit a live instruction to run any of them, and do not treat the projection as authorization to act.
 

@@ -32,7 +32,7 @@ updated: 2026-09-02
 - [ ] Receipt `handoff_mode` matches the frontmatter `execute_via`
 - [ ] Handoff mode was selected explicitly, not inferred from missing capabilities
 - [ ] `.plan.md` projected with the mode's `--execute-via` (or hand-filled with that mode's execute swap)
-- [ ] Frontmatter has `kind: simple` and the selected `execute_via`
+- [ ] Frontmatter has `kind: simple`, the selected `execute_via`, and `status: current` (never `status: harvested`)
 - [ ] Stress-test and leverage pass present (no mode skips it)
 - [ ] Baseline records the current workspace; no `Lock: origin/main = <sha>`
 - [ ] Body does **not** contain a live (unnegated) `make campaign` command or a live PE execute heading
