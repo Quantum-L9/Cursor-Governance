@@ -1,5 +1,5 @@
 {
-  "generation_id": "fdcf549b00594b9370993cd85f50f6998e6bd5e8b13ba352b263de7b40ab89a9",
+  "generation_id": "363eb26557a93b979e185a378ac9a671d78583caf4a2750cb51ee867be3a56e6",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -926,7 +926,7 @@
       "path": "skills/l9-chat-extraction",
       "reason": "extracts chat content to memory or structured output",
       "skill_md": "skills/l9-chat-extraction/SKILL.md",
-      "skill_sha256": "da13065051ae787d8ca7cb2b177f9a9920f39122101d4f08f06c16ee3691c13d",
+      "skill_sha256": "00a9009a3d0bdbfba2448aaaf393cb26ef7ed4c5e2df1632cc181984526d0a41",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1075,14 +1075,14 @@
     },
     {
       "composition_role": "general",
-      "description": "force-retry session close \u2014 Graphiti write PICKUP/learnings when auto sessionEnd failed or hydrate printed REPAIR. use for recovery, richer handoff, or governance backup \u2014 not required for normal X-out.",
+      "description": "force-retry session close \u2014 canonical repair-write of the continuation record plus governed learning writes when auto sessionEnd failed or hydrate printed REPAIR. use for recovery, richer handoff, or governance backup \u2014 not required for normal X-out.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-end-session",
       "path": "skills/l9-end-session",
       "reason": "session lifecycle boundary",
       "skill_md": "skills/l9-end-session/SKILL.md",
-      "skill_sha256": "97c81a9deb508b9eb445192098e1af7365025b3611920e6c93e8c352a9548534",
+      "skill_sha256": "471e4d6d3151682d2e377b090bfd146901199aca76d98d4cdac77db732a02c9e",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1147,7 +1147,7 @@
       "path": "skills/l9-gmp-protocol",
       "reason": "",
       "skill_md": "skills/l9-gmp-protocol/SKILL.md",
-      "skill_sha256": "cdb176cf8c68c1125ce575cbace7aaa8b87649eb26262bc6b3d1edcbf1873f0b",
+      "skill_sha256": "fc90deef1f5267f390c7c6161650f4b4727e55ee6751553603daa544bc694ffe",
       "user_invocable": true,
       "when_to_use": "work must be phased, auditable, traceable, or touches protected/high-risk areas"
     },
@@ -1166,14 +1166,14 @@
     },
     {
       "composition_role": "primary",
-      "description": "Graphiti VPS memory \u2014 prefetch, group resolution, episode writes, GMP Phase 0 MEMORY_PREFETCH, /end-session PICKUP. Use when wiring memory, debugging prefetch, bootstrap, Graphiti health, or closing a session.",
+      "description": "Canonical agent memory control plane (l9-graphite-memory) \u2014 readiness, namespace resolution, canonical hydrate/search, governed interactive write (memory.phase_lock \u2192 memory.write_governed), operator CLI write, GMP Phase 0 MEMORY_PREFETCH, /end-session repair. Use when wiring memory, debugging hydration, checking memory health, writing a durable fact, reconciling legacy provider history, or closing a session.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-graphiti-memory",
       "path": "skills/l9-graphiti-memory",
       "reason": "",
       "skill_md": "skills/l9-graphiti-memory/SKILL.md",
-      "skill_sha256": "686e9d0a1073539371634e482b76ccaf7894952411f046bb7a7ba69f7a175439",
+      "skill_sha256": "7b3b12b09a8723f1f7b3e130fdd07c8f61010bc9bbcae7bcff0aae8104d0e02c",
       "user_invocable": true,
       "when_to_use": "wiring memory, debugging prefetch/bootstrap, GMP Phase 0 MEMORY_PREFETCH, episode/T0 memory-bank writes, or checking Graphiti health"
     },
@@ -1570,5 +1570,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "6edcc9e97cbe150fc003e675f9b5d11e19bad615fc1926602f56c16053fef9a4",
-  "source_skill_corpus_sha256": "4198557f070f535b5f4f71597d6ff30b720405d9412d620a62538a037aebf275"
+  "source_skill_corpus_sha256": "435e5e49e9028c8c4803390c746fd6d6123af9fa581fbd62505daefe5f5b29b2"
 }
