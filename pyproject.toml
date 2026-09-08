@@ -26,6 +26,9 @@ dependencies = [
     # issuer JWKS. Explicit rather than adding PyJWT: the broker checks exactly the
     # claims the capability contract names, and pins alg itself.
     "cryptography>=42,<51",
+    # Canonical memory control plane (ops/config/memory-binding.json). Exact
+    # release on PyPI; do not float and do not use a git extra.
+    "l9-graphite-memory==2.3.1",
 ]
 
 [project.optional-dependencies]
