@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 SCRIPTS = Path(__file__).resolve().parent
-AUDIT_SCRIPTS = SCRIPTS.parents[1] / "l9-pipeline-audit" / "scripts"
+AUDIT_SCRIPTS = SCRIPTS.parents[2] / "l9-pipeline-audit" / "scripts"
 if str(AUDIT_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(AUDIT_SCRIPTS))
 from audit_plans import (  # noqa: E402
