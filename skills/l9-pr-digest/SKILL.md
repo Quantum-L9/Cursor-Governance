@@ -103,7 +103,7 @@ Allowed decisions only:
 - `BLOCKED`
 - `UNKNOWN`
 
-`NARROW_BEFORE_REMEDIATION` blocks remediation until confirmed unjustified expansion is removed. `ARCHITECTURE_REPAIR_BEFORE_REMEDIATION` blocks remediation until duplicate authority/shadow path/boundary bypass is corrected. CI/execution failures remain failures. Only the two READY decisions may pass the bounded packet to `l9-pr-remediation`.
+`NARROW_BEFORE_REMEDIATION` blocks remediation until confirmed unjustified expansion is removed. `ARCHITECTURE_REPAIR_BEFORE_REMEDIATION` blocks remediation until duplicate authority/shadow path/boundary bypass is corrected. CI/execution failures remain failures in the decision model. Diagnose stays read-only. Converge may enter on `READY_FOR_REMEDIATION`, `READY_WITH_NON_BLOCKING_NOTES`, or `CI_OR_EXECUTION_FAILURE` — failing required checks are the remediator's job.
 
 ## CI boundary
 
@@ -117,7 +117,7 @@ Do not rerun expensive CI merely to duplicate an existing result. Missing eviden
 - `l9-structured-reasoning`: judgement-only support for emitted semantic questions.
 - `l9-code-graph-rag-mcp`: conditional blast-radius/importer evidence when already healthy.
 - `l9-gap-analysis`: conditional explicit target/readiness delta, not a default PR dependency.
-- `l9-pr-remediation`: downstream only after a READY decision.
+- `l9-pr-remediation`: Diagnose after any valid digest. Converge after READY or `CI_OR_EXECUTION_FAILURE`.
 
 Do not activate GAR, security, performance, CI setup, or GMP merely because they exist. Load them only when a distinct triggered concern requires their owner.
 
@@ -125,7 +125,7 @@ Do not activate GAR, security, performance, CI setup, or GMP merely because they
 
 `/pr` runs this skill first, then `l9-pr-remediation` Diagnose. `/l9-pr-remediation` Converge and the bounded-autonomy poll worker also run this skill before any mutate. Preserve the reviewed base/head. If the head moved, discard the stale digest and run again.
 
-Diagnose continues after any valid digest (including non-READY). Converge and the poll worker enter remediation only for `READY_FOR_REMEDIATION` or `READY_WITH_NON_BLOCKING_NOTES`. Gate with `scripts/require_digest.py --mode diagnose|converge`. On READY, pass only `remediation_packet` plus exact PR identity downstream.
+Diagnose continues after any valid digest (including non-READY). Converge and the poll worker enter remediation for `READY_FOR_REMEDIATION`, `READY_WITH_NON_BLOCKING_NOTES`, or `CI_OR_EXECUTION_FAILURE`. `NARROW_BEFORE_REMEDIATION`, `ARCHITECTURE_REPAIR_BEFORE_REMEDIATION`, `INTENT_UNKNOWN_REVIEW_REQUIRED`, `BLOCKED`, and `UNKNOWN` still stop Converge. Gate with `scripts/require_digest.py --mode diagnose|converge`. On an accepted decision, pass only `remediation_packet` plus exact PR identity downstream.
 
 ## Hard prohibitions
 

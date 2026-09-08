@@ -11,6 +11,7 @@ from pathlib import Path
 from pr_digest_core import validate
 
 READY = frozenset({"READY_FOR_REMEDIATION", "READY_WITH_NON_BLOCKING_NOTES"})
+CONVERGE_OK = READY | {"CI_OR_EXECUTION_FAILURE"}
 
 
 def check(
@@ -25,8 +26,10 @@ def check(
     if head_sha and bound_head and head_sha != bound_head:
         errors.append(f"digest head {bound_head} != current head {head_sha}")
     decision = str(doc.get("decision") or "")
-    if mode == "converge" and decision not in READY:
-        errors.append(f"converge requires READY digest, got {decision or 'missing'}")
+    if mode == "converge" and decision not in CONVERGE_OK:
+        errors.append(
+            f"converge requires READY or CI_OR_EXECUTION_FAILURE digest, got {decision or 'missing'}"
+        )
     return errors
 
 
@@ -51,7 +54,7 @@ def main() -> int:
     errors = check(doc, head_sha=args.head_sha, mode=args.mode)
     if errors:
         print("\n".join(f"FAIL: {error}" for error in errors), file=sys.stderr)
-        return 3 if args.mode == "converge" and args.path.is_file() else 1
+        return 3 if args.mode == "converge" else 1
     print(f"PASS: digest {args.mode} {doc.get('decision')}")
     return 0
 

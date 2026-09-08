@@ -136,6 +136,31 @@ def main() -> int:
     sample = {"severity": "review", "code": "x", "path": "a.py", "detail": "d"}
     assert emit_line("finding", sample).startswith("[digest] finding")
 
+    docs_only = digest(
+        fixture(
+            files=[
+                {
+                    "path": "docs/guide.md",
+                    "status": "modified",
+                    "additions": 3,
+                    "deletions": 0,
+                    "patch": "+note\n",
+                }
+            ]
+        )
+    )
+    docs_report = interactive_report(docs_only)
+    assert "docs/guide.md" in docs_report
+
+    action_required = digest(
+        fixture(
+            ci_checks=[{"name": "review", "conclusion": "action_required"}],
+            required_check_names=["review"],
+        )
+    )
+    action_report = interactive_report(action_required)
+    assert "action_required" in action_report
+
     with tempfile.TemporaryDirectory() as td:
         path = Path(td) / "digest.json"
         path.write_text(json.dumps(good), encoding="utf-8")
@@ -144,7 +169,10 @@ def main() -> int:
         assert not check(good, head_sha="b" * 40, mode="converge")
         assert good["decision"] in READY
         assert check(good, head_sha="c" * 40, mode="diagnose")
-        assert check(ci_required, mode="converge")
+        assert not check(ci_required, mode="converge")
+        assert check(
+            {**ci_required, "decision": "NARROW_BEFORE_REMEDIATION"}, mode="converge"
+        )
 
     print("PASS: l9-pr-digest deterministic self-test")
     return 0

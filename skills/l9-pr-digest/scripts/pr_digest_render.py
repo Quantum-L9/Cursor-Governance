@@ -64,7 +64,14 @@ def interactive_report(doc: dict[str, Any]) -> str:
     )
     production = summary.get("production_files") or []
     tests = summary.get("test_files") or []
-    actually = _bullets([*production[:12], *tests[:8]]) or "- UNKNOWN"
+    actually_files = [*production[:12], *tests[:8]]
+    if not actually_files:
+        actually_files = [
+            str(item.get("path") or "")
+            for item in (evidence.get("files") or [])
+            if item.get("path")
+        ][:20]
+    actually = _bullets(actually_files) or "- UNKNOWN"
     expansion_lines = (
         _bullets(
             [
@@ -78,7 +85,7 @@ def interactive_report(doc: dict[str, Any]) -> str:
         "- no architecture question emitted"
     )
     accepted = {"success", "skipped", "neutral"}
-    rejected = {"failure", "failed", "cancelled", "timed_out"}
+    rejected = {"failure", "failed", "cancelled", "timed_out", "action_required"}
     ok = [c for c in checks if str(c.get("conclusion") or "").lower() in accepted]
     fail = [c for c in checks if str(c.get("conclusion") or "").lower() in rejected]
     ci_proves = _bullets([f"{c.get('name')}: {c.get('conclusion')}" for c in ok]) or (
