@@ -18,6 +18,17 @@ for _l9_bin in /opt/homebrew/bin /usr/local/bin; do
 done
 export PATH
 
+# Cursor hands the sessionStart payload (conversation_id, workspace_roots, …)
+# on stdin. Read it once, here, before any subprocess can consume it. The
+# Python owner (ops/skill_routing/session_locator.py) parses it — this shell
+# never interprets the JSON. A terminal stdin (manual `make start`) is skipped;
+# `read -t` bounds a pipe that never closes.
+L9_HOOK_PAYLOAD=""
+if [ ! -t 0 ]; then
+  IFS= read -r -t 3 -d '' L9_HOOK_PAYLOAD || true
+fi
+export L9_HOOK_PAYLOAD
+
 REPO="${CURSOR_PROJECT_DIR:-}"
 
 # IDE profile is the only SessionStart reconciler that writes the workspace.
@@ -551,6 +562,19 @@ case "$HYDRATE_MD" in
 ${HYDRATE_MD}" ;;
 esac
 
+# Route locator: one receipt identity for this conversation, derived by the
+# Python owner from the sessionStart payload. beforeSubmitPrompt writes that
+# same locator on every prompt; rules/23-l9-skill-routing.mdc consumes it.
+ROUTE_LOCATOR_MD="### Route locator
+- unresolved: session_locator.py unavailable"
+ROUTE_LOCATOR_ENV="{}"
+SESSION_LOCATOR_PY="$GC/ops/skill_routing/session_locator.py"
+if [ -f "$SESSION_LOCATOR_PY" ]; then
+  ROUTE_LOCATOR_MD="$("$AUDIT_PY_BIN" "$SESSION_LOCATOR_PY" --banner 2>/dev/null \
+    || printf '### Route locator\n- unresolved: session_locator.py failed')"
+  ROUTE_LOCATOR_ENV="$("$AUDIT_PY_BIN" "$SESSION_LOCATOR_PY" --env 2>/dev/null || echo '{}')"
+fi
+
 COMBINED="$(cat <<EOF
 ## L9 session state
 ### Governance
@@ -568,17 +592,25 @@ ${HYDRATE_BLOCK}
 ${CODEGRAPH_MD}
 ### Plan audit
 ${PLAN_AUDIT_MD}
+${ROUTE_LOCATOR_MD}
 EOF
 )"
 
-COMBINED="$COMBINED" python3 - <<'PY'
+COMBINED="$COMBINED" ROUTE_LOCATOR_ENV="$ROUTE_LOCATOR_ENV" python3 - <<'PY'
 import json, os
+env = {
+    "GRAPHITI_MEMORY_ENABLED": os.environ.get("GRAPHITI_MEMORY_ENABLED", "1"),
+    "GRAPHITI_WRITE_GATES": os.environ.get("GRAPHITI_WRITE_GATES", "0"),
+    "GOVERNANCE_BACKUP_SKIP": os.environ.get("GOVERNANCE_BACKUP_SKIP", "0"),
+}
+try:
+    locator_env = json.loads(os.environ.get("ROUTE_LOCATOR_ENV", "{}") or "{}")
+except json.JSONDecodeError:
+    locator_env = {}
+if isinstance(locator_env, dict):
+    env.update({k: str(v) for k, v in locator_env.items() if isinstance(k, str)})
 print(json.dumps({
-    "env": {
-        "GRAPHITI_MEMORY_ENABLED": os.environ.get("GRAPHITI_MEMORY_ENABLED", "1"),
-        "GRAPHITI_WRITE_GATES": os.environ.get("GRAPHITI_WRITE_GATES", "0"),
-        "GOVERNANCE_BACKUP_SKIP": os.environ.get("GOVERNANCE_BACKUP_SKIP", "0"),
-    },
+    "env": env,
     "additional_context": os.environ.get("COMBINED", ""),
 }))
 PY

@@ -104,6 +104,15 @@ repos:
         files: ^(skills/|ops/scripts/check_skills_standard.py)
         pass_filenames: false
 
+      # Virtual Skill Plane: Cursor native discovery is exactly l9-skill-gateway;
+      # the registry equals the canonical corpus; the gateway never enumerates it.
+      - id: cursor-skill-projection
+        name: Cursor skill projection is the virtual gateway (Virtual Skill Plane)
+        entry: python3 environment/agents/adapters/cursor/validate_skill_projection.py
+        language: system
+        files: ^(\.cursor-plugin/plugin\.json|environment/agents/adapters/cursor/(skills/|validate_skill_projection\.py)|skills/|ops/generated/skill-registry\.json|ops/skill_routing/|ops/hooks/(before_submit_skill_router\.py|hooks\.json\.template)|rules/23-l9-skill-routing\.mdc)
+        pass_filenames: false
+
       - id: repo-hygiene
         name: Repository housekeeping gate (RB-HK-001)
         entry: python3 tools/check_repo_hygiene.py

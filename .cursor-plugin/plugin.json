@@ -7,13 +7,16 @@
   "repository": "https://github.com/Quantum-L9/Cursor-Governance",
   "license": "Proprietary",
   "keywords": ["l9", "governance", "constellation", "rules", "skills", "commands", "slash-commands"],
-  "skills": "skills",
+  "skills": "./environment/agents/adapters/cursor/skills",
   "commands": "./commands",
   "l9": {
     "commands_manifest": "commands/COMMANDS_MANIFEST.yaml",
     "commands_index": "commands/commands-index.md",
     "slash_recognition_rule": "rules/02-slash-commands.mdc",
     "rules_directory": "rules",
-    "skills_directory": "skills"
+    "canonical_skills_directory": "skills",
+    "skill_registry": "ops/generated/skill-registry.json",
+    "cursor_skill_projection": "environment/agents/adapters/cursor/skills",
+    "cursor_skill_gateway": "l9-skill-gateway"
   }
 }
