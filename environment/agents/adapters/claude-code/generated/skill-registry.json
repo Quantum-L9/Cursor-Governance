@@ -384,6 +384,24 @@
         ]
       },
       {
+        "id": "audit_plans_shelf",
+        "positive_signals": [
+          "l9-audit-plans",
+          "/l9-audit-plans",
+          "organize plans store",
+          "shelf plans",
+          "refine leftover plan todos",
+          "docs/plans/stale",
+          "partially-built shelf"
+        ],
+        "primary": "l9-audit-plans",
+        "signal_weight": 9,
+        "supporting": [
+          "l9-pipeline-audit",
+          "l9-ynp"
+        ]
+      },
+      {
         "id": "pipeline_audit",
         "positive_signals": [
           "pipeline audit",
@@ -798,6 +816,17 @@
       "reason": "",
       "user_invocable": true,
       "when_to_use": "capturing a significant architecture/design decision, recording trade-offs, or creating an ADR"
+    },
+    {
+      "composition_role": "general",
+      "description": "shelf then refine the Cursor plans store: root stays current unbuilt only; leftover todos fold or compile; harvested donors are omitted. use when /l9-audit-plans, a plans-store shelf audit, or leftover-todo refine runs.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-audit-plans",
+      "path": "skills/l9-audit-plans",
+      "reason": "plans-store shelf + leftover-todo refine mutates docs/plans (status law, harvested omit, fold/compile); slash /l9-audit-plans is the explicit invoke; disable-model-invocation",
+      "user_invocable": true,
+      "when_to_use": ""
     },
     {
       "composition_role": "primary",
@@ -1395,6 +1424,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "a4cd8efdd8f06d7125a6bfe485ac867518c755a4402b9db8b34b58bd202e1370",
-  "source_skill_corpus_sha256": "76c5dda3611200a0b0f52daa4fe82552c38342519d19c5ab00c975a463c7a7c3"
+  "source_manifest_sha256": "4d696872c36cf17de8894797be07bea8beddb81823aa9ce80a573334ef539292",
+  "source_skill_corpus_sha256": "7037b475909afdbcb7abdc627f349b7947afa007660c141ef9e4c9e42d7ef79f"
 }
