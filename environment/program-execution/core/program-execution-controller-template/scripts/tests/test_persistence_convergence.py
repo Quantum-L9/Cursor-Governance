@@ -12,6 +12,7 @@ import sqlite3
 import sys
 import threading
 import unittest
+import unittest.mock
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
