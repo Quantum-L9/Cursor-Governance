@@ -977,7 +977,7 @@
     },
     {
       "composition_role": "general",
-      "description": "force-retry session close \u2014 Graphiti write PICKUP/learnings when auto sessionEnd failed or hydrate printed REPAIR. use for recovery, richer handoff, or governance backup \u2014 not required for normal X-out.",
+      "description": "force-retry session close \u2014 canonical repair-write of the continuation record plus governed learning writes when auto sessionEnd failed or hydrate printed REPAIR. use for recovery, richer handoff, or governance backup \u2014 not required for normal X-out.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-end-session",
@@ -1054,7 +1054,7 @@
     },
     {
       "composition_role": "primary",
-      "description": "Graphiti VPS memory \u2014 prefetch, group resolution, episode writes, GMP Phase 0 MEMORY_PREFETCH, /end-session PICKUP. Use when wiring memory, debugging prefetch, bootstrap, Graphiti health, or closing a session.",
+      "description": "Canonical agent memory control plane (l9-graphite-memory) \u2014 readiness, namespace resolution, canonical hydrate/search, governed interactive write (memory.phase_lock \u2192 memory.write_governed), operator CLI write, GMP Phase 0 MEMORY_PREFETCH, /end-session repair. Use when wiring memory, debugging hydration, checking memory health, writing a durable fact, reconciling legacy provider history, or closing a session.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-graphiti-memory",
@@ -1396,5 +1396,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "90fd48b1d0c8d85e623dd13efcbf9a7ba87d0a5c1d4941ae7405f52af4411f61",
-  "source_skill_corpus_sha256": "1a333c4a95f49cc0378976d8805f61d6ad1e96eb91cbe8107abf713e25ea5491"
+  "source_skill_corpus_sha256": "9af9fda055dfb27b8c0b0eb9d5cce9a62de301c74c8a3d20d23ee8908d8fda42"
 }
