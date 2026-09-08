@@ -67,7 +67,15 @@ SWALLOW_BASELINE = {
     #     `_gate_on_exit` trap: an EXIT handler that can itself fail would mask
     #     the real exit code, so swallowing there is required correctness.
     # No occurrence swallows the result of a check. Verified 2026-08-29.
-    "ops/scripts/run_pr_gate.sh": 15,
+    # 16 since the rules/06 resolver bind: `resolve_governance_paths || true`.
+    # The resolver returns 1 when $HOME/.cursor-governance is not a governance
+    # clone, and this file is `set -euo pipefail`, so a bare call would abort
+    # the gate on a consumer machine. Failing to BIND the SSOT is not a check
+    # result — the script falls through to its script-relative GOV_ROOT, which
+    # is what it used before and what the `"$WS" != "$GOV_ROOT"` comparison
+    # needs. Fail-safe: it degrades binding, never a verdict. Identical
+    # construct to pr_preflight.sh, the preflight for this same gate.
+    "ops/scripts/run_pr_gate.sh": 16,
     "ops/scripts/run_pr_security.sh": 3,
     "ops/scripts/bootstrap_agent_environment.sh": 3,
     "environment/agents/adapters/claude-code/install.sh": 3,

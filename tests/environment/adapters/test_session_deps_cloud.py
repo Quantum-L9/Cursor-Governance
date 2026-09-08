@@ -31,13 +31,22 @@ HELPER = (
 )
 
 
-def run(workspace: Path, home: Path, *, remote: str = "true", budget: str = "20"):
+def run(
+    workspace: Path,
+    home: Path,
+    *,
+    remote: str = "true",
+    budget: str = "20",
+    path_prefix: Path | None = None,
+):
     env = {
         **os.environ,
         "HOME": str(home),
         "CLAUDE_CODE_REMOTE": remote,
         "L9_SESSION_DEPS_BUDGET": budget,
     }
+    if path_prefix is not None:
+        env["PATH"] = f"{path_prefix}{os.pathsep}{env.get('PATH', '')}"
     return subprocess.run(
         ["bash", str(HELPER), "--workspace", str(workspace)],
         capture_output=True,
@@ -124,13 +133,34 @@ def test_unapplied_node_lock_is_not_reported_ready(tmp_path: Path) -> None:
 
     This is the shape of the original false positive: readiness asserted from
     the fact that a pass ran rather than from applied state.
+
+    The install must FAIL for that shape to exist, and this test used to get
+    that by accident — it assumed npm could not succeed. Where npm is on PATH
+    (any container with node installed), `npm install --ignore-scripts` on a
+    dependency-free package.json succeeds in milliseconds and creates
+    node_modules, so the repository really was applied and "proven" was the
+    correct answer. The test failed for a reason that said nothing about the
+    contract.
+
+    A failing shim makes the premise real instead of assumed: the install is
+    attempted and fails, node_modules stays absent, and readiness must not be
+    claimed. That is the original false positive exactly, and it no longer
+    depends on what the runner happens to have installed.
     """
     workspace = tmp_path / "container"
     workspace.mkdir()
     repo = make_repo(workspace, "webapp")
     (repo / "package.json").write_text('{"name":"webapp","private":true}\n', encoding="utf-8")
+
+    shims = tmp_path / "failing-bin"
+    shims.mkdir()
+    for tool in ("npm", "pnpm"):
+        shim = shims / tool
+        shim.write_text("#!/usr/bin/env bash\nexit 1\n", encoding="utf-8")
+        shim.chmod(0o755)
+
     home = tmp_path / "home"
-    result = run(workspace, home, budget="1")
+    result = run(workspace, home, budget="1", path_prefix=shims)
     assert result.returncode == 0
     combined = result.stdout + result.stderr
     assert "UNPROVEN" in combined or "continues in background" in combined
