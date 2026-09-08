@@ -1,5 +1,5 @@
 ---
-description: Memory namespace gate — forbidden namespaces; hydration-only write gates when L9_MEMORY_WRITE_GATES=1
+description: Memory namespace gate — forbidden namespaces; hydration-only write gates when L9_MEMORY_WRITE_GATES=1; memory phase-lock is a governed-write precondition, never repository authority
 ---
 
 # Memory Gate (canonical control plane)
@@ -40,5 +40,29 @@ revokes another agent's authority to edit code (E10).
 Runbook: `ops/graphiti/GATES-002-ACTIVATION.md`
 
 Cite canonical continuation/record ids when planning. `python -m ops.memory.cli conflicts` informs the plan; it does not gate the edit.
+
+## Memory phase-lock vs repository authority (2026-09-07, ADR-0030 item 7)
+
+The prohibition above is about **repository** authority, and it does not
+remove the memory-side prerequisite of a governed write:
+
+- `memory.phase_lock` **is required** before `memory.write_governed` — it is
+  the memory-write consistency precondition. `MemoryService` grants it only
+  after a conflict check on the namespace snapshot and re-verifies the digest
+  inside the transaction that admits the record.
+- `memory.phase_lock` **is not** permission to edit a file, commit, push,
+  publish, or serialize another agent's git work. Holding one changes nothing
+  about repository mutation; lacking one blocks nothing but the governed memory
+  write itself.
+- Do not evade the prerequisite: a model-authored fact is not routed through
+  generic `memory.ingest` or the operator CLI `write` to avoid the lock.
+  Deterministic adapters (SessionStart hydrate, sessionEnd close,
+  `repair-write`, reconciliation, diagnostics) use their own purpose-specific
+  `ops/memory` operations over the same admission path.
+- The machine form is `interactive_memory_write` in the Claude memory
+  enforcement contract (`repository_authority: false`,
+  `provider_direct: forbidden`, `generic_ingest_as_model_write: forbidden`),
+  and the schema still rejects `phase_lock` as a `governed_writes[].requires`
+  value.
 
 <!-- generated-from: rules/98-graphiti-memory-gate.mdc; do-not-edit -->

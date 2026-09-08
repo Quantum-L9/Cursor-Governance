@@ -136,3 +136,28 @@ We choose **Option A**. Invariants:
 - `docs/MEMORY_PIPELINE_MAP.md`
 - `skills/l9-graphiti-memory/SKILL.md`
 - `skills/l9-end-session/SKILL.md`
+
+## Amendment (2026-09-07) — loud close-gap semantics preserved; repair and close are canonical (ADR-0030)
+
+Preserved: every visibility invariant — the open latch, receipts as latches
+(`authority: none`), hard `DEGRADED` + `REPAIR: /end-session` on a close-gap,
+`write_count: 0` is a fail, no `memory-bank/` fallback, Option C (replaying the
+hook closer as repair) stays rejected, repair idempotency.
+
+Rebound by ADR-0030:
+
+- **Item 1.** `/end-session` owns `hydration.cli repair-write` (canonical
+  `ops/memory` write + close-receipt stamp), not
+  `graphiti_memory_client.py write`. A bare `python -m ops.memory.cli write`
+  does not stamp the receipt and is not the close-gap repair.
+- **Item 2.** There is no "Graphiti write" fallback. `close_session.py`
+  performs the canonical close (`ContinuationCapsuleV2` → governed candidate →
+  `memory.close`, idempotent, exact-request replay); when it fails the receipt
+  says so and `/end-session` repairs — nothing writes a provider.
+- **Item 8.** The close-gap probe is the canonical continuation record for the
+  prior session (`hydrate`), not a PICKUP fact search.
+- **Item 12.** Model-authored T2 facts during work are governed writes
+  (`memory.phase_lock` → `memory.write_governed` on the `l9-graphite-memory`
+  MCP server); the CLI `write` is the operator / deterministic-adapter path.
+- The hook closer, the repair writer and the interactive writer are three
+  adapters over one `MemoryService` admission path, never three egresses.

@@ -7,8 +7,8 @@ role: memory_extraction_protocol
 tags: [l9, memory, lessons, patterns, errors]
 owner: igor_beylin
 status: active
-version: 1.0.1
-updated: 2026-06-06
+version: 1.1.0
+updated: 2026-09-07
 --- /SKILL_META ---
 -->
 
@@ -16,7 +16,8 @@ updated: 2026-06-06
 
 ## WHAT IT DOES
 
-Extract learnings from conversation → L9 memory:
+Extract learnings from conversation → canonical L9 memory (one `MemoryService`,
+ADR-0030):
 
 - Lessons learned
 - Patterns discovered
@@ -38,18 +39,34 @@ EXTRACT:
 └── Decisions (architectural choices)
 ```
 
-### 2. WRITE TO MEMORY
+### 2. WRITE TO MEMORY (governed — model-authored facts)
 
-```bash
-python -m ops.memory.cli write \
-  "LESSON: {content}" --kind lesson
+Extracted facts are model-authored, so they take the interactive write
+contract on the `l9-graphite-memory` MCP server: one `memory.phase_lock` per
+task signature, then one `memory.write_governed` per fact. Resolve the
+namespace first (`python -m ops.memory.cli resolve` → `write_namespace_hint`);
+never request the shared workspace namespace.
 
-python -m ops.memory.cli write \
-  "PATTERN: {content}" --kind insight
+```text
+memory.phase_lock      {namespace: "{ns}", task_signature: "extract-chat:{session}"}
 
-python -m ops.memory.cli write \
-  "ERROR: {issue} → FIX: {solution}" --kind lesson
+memory.write_governed  {namespace: "{ns}", task_signature: "extract-chat:{session}",
+                        content: "LESSON: {content}", memory_class: "lesson", tags: ["agent:cursor"]}
+
+memory.write_governed  {namespace: "{ns}", task_signature: "extract-chat:{session}",
+                        content: "PATTERN: {content}", memory_class: "insight", tags: ["agent:cursor"]}
+
+memory.write_governed  {namespace: "{ns}", task_signature: "extract-chat:{session}",
+                        content: "ERROR: {issue} → FIX: {solution}", memory_class: "lesson", tags: ["agent:cursor"]}
 ```
+
+- The phase-lock is a memory-write precondition only (namespace snapshot
+  consistency). It never authorizes an edit, commit, push or publish.
+- Do not route these facts through generic `memory.ingest` or the operator CLI
+  `write` to skip the lock; an unbound MCP server is reported as a gap
+  (`python -m ops.memory.cli readiness`), not rerouted.
+- A human operator extracting by hand may use the operator CLI
+  (`python -m ops.memory.cli write "…" --kind lesson --agent-id cursor`).
 
 ---
 
@@ -60,9 +77,9 @@ python -m ops.memory.cli write \
 
 | Type | Content | Status |
 |------|---------|--------|
-| lesson | {summary} | ✅ |
-| pattern | {summary} | ✅ |
-| error | {summary} | ✅ |
+| lesson | {summary} | ✅ admitted (receipt id) |
+| pattern | {summary} | ✅ admitted (receipt id) |
+| error | {summary} | ⚠️ duplicate / rejected (receipt reason) |
 
-**Items:** N extracted
+**Items:** N extracted · lock: {task_signature} · namespace: {ns}
 ```

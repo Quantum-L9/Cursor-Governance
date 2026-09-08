@@ -78,3 +78,19 @@ per ADR-0003) **and** guarantee it cannot drift from the server contract again.
   `hooks/memory_prefetch.py`,
   `tests/test_memory_client_contract.py`,
   `validate_memory_enforcement.py`
+
+## Supersession (2026-09-07) — superseded in full by ADR-0030
+
+The stdlib hook client this ADR pinned
+(`environment/claude-code/memory/memory_client.py`, later
+`environment/agents/adapters/claude-code/memory/memory_client.py`) and its
+contract test (`tests/test_memory_client_contract.py`) were deleted at
+realignment stage C8. There is no consumer-side mirror of the `memory.*`
+response keys to pin any more: the hooks call `memory_bridge.py` →
+`ops/memory/control_plane_client.py`, which returns typed receipts produced by
+the bound `l9-graphite-memory` runtime, and the network-free pin that
+`validate_memory_enforcement.py` still executes is
+`tests/test_memory_front_door.py` (no HTTP side door, canonical MCP server
+only, `interactive_memory_write` contract). This ADR is kept as history; its
+principle — "presence is not proof; execute the pin" — lives on in that
+validator. Nothing in it is a live instruction.

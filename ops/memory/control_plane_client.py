@@ -39,6 +39,11 @@ from ops.memory.receipts import (
     result_digest,
 )
 from ops.memory.runtime_binding import Runner, RuntimeBinding, default_runner
+from ops.memory.search_identity import (
+    SearchRequest,
+    require_search_identity,
+    verify_request_identity,
+)
 
 TRANSPORT = "cli"
 
@@ -83,6 +88,11 @@ class OutcomeStatus(StrEnum):
     #: or no validator was reachable. The receipt was not proved wrong; it was
     #: not proved right, and structural acceptance is not a substitute.
     VALIDATION_UNAVAILABLE = "VALIDATION_UNAVAILABLE"
+    #: The receipt could not prove it answers the request Cursor made (audit
+    #: MEM-P2-01) — a result-affecting selector it does not bind, where the
+    #: caller requires that identity. A receipt whose selectors *contradict*
+    #: the request is INVALID_RECEIPT instead: that one is provably wrong.
+    REQUEST_IDENTITY_UNPROVEN = "REQUEST_IDENTITY_UNPROVEN"
 
 
 @dataclass(frozen=True)
@@ -133,6 +143,7 @@ class MemoryControlPlaneClient:
         #: the structural view in ``receipts.py`` reads a single field.
         self.validator = validator or CanonicalValidator.for_binding(binding, env=self._env)
         self._last_validation: str | None = None
+        self._last_search_identity: Any = None
 
     def _checked(self, payload: Any, model_name: str, parser: Any) -> Any:
         """Canonical validation, then the structural view — in that order.
@@ -455,6 +466,46 @@ class MemoryControlPlaneClient:
                 _err(raw, exc),
                 namespaces=namespaces,
                 task_signature=task_signature,
+            )
+        identity = verify_request_identity(
+            SearchRequest(
+                query=query,
+                namespaces=tuple(read_namespace_hints),
+                tags=tuple(tags),
+                limit=limit,
+                memory_classes=tuple(memory_classes),
+            ),
+            receipt,
+            requested_namespaces=tuple(read_namespace_hints),
+        )
+        self._last_search_identity = identity
+        if identity.contradicted:
+            # The receipt describes a different search; its hits are not
+            # answers to this question (MEM-P2-01, consumer half).
+            return self._outcome(
+                "search",
+                OutcomeStatus.INVALID_RECEIPT,
+                raw,
+                receipt,
+                namespaces=namespaces,
+                task_signature=task_signature,
+                error_override=(
+                    "search receipt does not answer this request: " + "; ".join(identity.detail)
+                ),
+            )
+        if identity.unbound and require_search_identity(self._env):
+            return self._outcome(
+                "search",
+                OutcomeStatus.REQUEST_IDENTITY_UNPROVEN,
+                raw,
+                receipt,
+                namespaces=namespaces,
+                task_signature=task_signature,
+                error_override=(
+                    "the receipt binds no identity for result-affecting selector(s) "
+                    + ", ".join(identity.unbound)
+                    + "; it cannot prove these hits answer this request"
+                ),
             )
         if receipt.status == "failed":
             status = OutcomeStatus.CANONICAL_UNAVAILABLE

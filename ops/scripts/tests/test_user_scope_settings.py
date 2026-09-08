@@ -68,24 +68,24 @@ class UserScopeSettingsTests(unittest.TestCase):
             for matcher in group
             for entry in matcher["hooks"]
         ]
-        # 14 registrations covering 13 distinct hook scripts: skill_usage_logger
-        # is registered twice (PreToolUse and UserPromptExpansion). The fourth
-        # gate is session_debt_wrap on Stop (rules/42-no-abandoned-work); the
-        # eighth observer is root_file_advisory_wrap on UserPromptSubmit, which
-        # warns about a protected-root overwrite before `make pr` blocks on it.
-        # The ninth is pr_summary_posttool on PostToolUse, which renders the
-        # publish receipt so a `make pr` always reports what it shipped
-        # (rules/48). It is an observer: reporting must never gate a tool call.
-        # The tenth is session_deps_cloud.sh on SessionStart. It used to be
-        # called from INSIDE session_start_claude_governance.sh, where it spent
-        # ~25s of that hook's 30s budget before any reporting began; SessionStart
-        # hooks run concurrently, so it now carries its own registration and its
-        # own timeout. A registration, not a subroutine, is what makes it free.
-        self.assertEqual(len(commands), 14, "every L9 hook registration must reach user scope")
+        # 15 registrations covering 14 distinct hook scripts: skill_usage_logger
+        # is registered twice (PreToolUse and UserPromptExpansion). Four are
+        # fail-closed gates; eleven are observers. bootstrap_capability_preflight
+        # is the first SessionStart observer so capability ownership and the
+        # hosted REST-only transport rule are present before agents choose tools.
+        # session_deps_cloud.sh keeps its own concurrent SessionStart registration
+        # and timeout rather than consuming the governance-hydration hook budget.
+        self.assertEqual(len(commands), 15, "every L9 hook registration must reach user scope")
         self.assertEqual(sum("--class gate" in c for c in commands), 4)
-        self.assertEqual(sum("--class observer" in c for c in commands), 10)
+        self.assertEqual(sum("--class observer" in c for c in commands), 11)
         names = {c.rsplit(" ", 1)[-1].rstrip("'") for c in commands}
-        self.assertEqual(len(names), 13, "thirteen distinct hook scripts")
+        self.assertEqual(len(names), 14, "fourteen distinct hook scripts")
+        session_start_commands = [
+            entry["command"]
+            for matcher in settings["hooks"]["SessionStart"]
+            for entry in matcher["hooks"]
+        ]
+        self.assertIn("bootstrap_capability_preflight.sh", session_start_commands[0])
 
     def test_managed_keys_are_all_present(self) -> None:
         self._reconcile()

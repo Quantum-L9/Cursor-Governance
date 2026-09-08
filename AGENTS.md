@@ -1326,3 +1326,32 @@ cd "$HOME/.cursor-governance" && .venv/bin/python -m ops.memory.cli health
   unchanged; PII redaction lives in `ops/graphiti/hydration/redaction.py`.
 - No surface holds a provider URL or bearer; `~/.cursor/graphiti.env` is
   switches only (`L9_MEMORY_ENABLED`, `L9_MEMORY_WRITE_GATES`).
+
+## Interactive memory write contract (2026-09-07) — strengthens "Memory control plane (2026-09-06)"
+
+Append-only. CANONICAL_LAW §8.3, ADR-0030 items 7–9. Where §7, §2's health
+line, the `/end-session` notes after §20, or the 2026-09-06 amendment above
+leave the *model's* write path or the phase-lock's meaning implicit, this
+section is current.
+
+- **Write path for a model-authored fact** (lesson, insight, decision, ADR
+  delta recorded mid-session): `memory.phase_lock` → `memory.write_governed`
+  on the package-owned `l9-graphite-memory` MCP server. That is the only
+  model write. Agents MUST be able to write durable memory and MUST NOT write
+  to a provider.
+- **The memory phase-lock is a memory-write precondition only.** It never
+  authorizes an edit, a commit, a push or a PR, and never serializes another
+  agent's git work (`rules/96` E7/E8/E10, `rules/98`). Repository authority
+  is a dedicated worktree, a branch off fetched `origin/main`, and `make pr`.
+- **`python -m ops.memory.cli write` is the operator / deterministic-adapter
+  form** (`/end-session` `repair-write`, reconciliation, Program Execution, a
+  human operator). It is not the model's way around `write_governed`; neither
+  is generic `memory.ingest`. An unbound MCP server is reported
+  (`make memory-readiness`), not rerouted.
+- **GMP Phase 0 `MEMORY_PREFETCH`** cites the canonical `conflicts` receipt
+  (`namespace`, `snapshot_digest`, `checked_record_count`, `conflicts`,
+  `policy_version`), never "episode names".
+- **Ratchet.** `ops/scripts/validate_legacy_doctrine_residue.py` (pre-commit
+  and `make pr`) fails a converged memory surface that regresses to the
+  retired direct-Graphiti architecture and warns on surfaces a later locked
+  run still has to converge; `--strict-memory-doctrine` fails those too.

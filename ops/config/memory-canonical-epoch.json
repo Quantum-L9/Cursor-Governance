@@ -5,11 +5,12 @@
     "started_at": "2026-09-06T00:00:00+00:00",
     "campaign_stage": "C10",
     "memory_release": "2.3.0",
-    "memory_source_ref": "5605569b72baa25f6b6e6324b0017317fb31e0cd",
+    "memory_source_ref": "v2.3.0",
+    "memory_source_sha": "5605569b72baa25f6b6e6324b0017317fb31e0cd",
     "control_plane_contract": "memory-control-plane/v1",
     "continuation_schema": "cursor.continuation/v2",
     "memory_artifact_sha256": "905d91402db99fcd3e094db67576c19297823b448fd6f76842f32d1be4804291",
-    "memory_rebound_at": "2026-09-06 (audit closure C14: rebound from the M2 head to the final #56 head with the wheel digest)"
+    "memory_rebound_at": "2026-09-06 (audit closure C14: rebound from the M2 head to the final #56 head with the wheel digest); 2026-09-07 (source ref moved to the v2.3.0 release tag, which resolves to the same commit and digest)"
   },
   "authority": {
     "canonical": "l9-graphite-memory MemoryService (Quantum-L9/l9-graphiti-memory)",
