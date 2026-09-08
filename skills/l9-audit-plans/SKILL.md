@@ -1,6 +1,6 @@
 ---
 name: l9-audit-plans
-description: "shelf then refine the Cursor plans store: root=current; leftover todos fold or compile; harvested donors omitted. use when /l9-audit-plans runs."
+description: "shelf then refine the Cursor plans store: root stays current unbuilt only; leftover todos fold or compile; harvested donors are omitted. use when /l9-audit-plans, a plans-store shelf audit, or leftover-todo refine runs."
 disable-model-invocation: true
 metadata:
   skill_schema: 1
