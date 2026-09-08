@@ -24,7 +24,7 @@ Subfolders are out of the session-start set (see `docs/plans/README.md`):
 |---|---|
 | *(root)* | Live queue — current unbuilt plans |
 | `partially-built/` | Started but not finished (`completed` / `in_progress` todos remain) |
-| `backlog/` | Open unbuilt work, parked |
+| `stale/` | Open unbuilt work, parked (not current). Do not scan at SessionStart. |
 | `built/` | Executed plans |
 | `archive/` | Non-plan harvest and other dead weight |
 | `archive/superseded/` | Older same-slug copies or body `status: superseded` |
@@ -64,9 +64,11 @@ A plan may hold more than one verdict. SessionStart stays display-only.
 | `spent` | All todos `completed` / `cancelled` |
 
 `harvestable` is true when at least one `live_invariant` and at least one
-`stale_wiring` or `superseded_mission` share the same file. `/l9-audit-plans`
-lists those components by concern. It does not auto-compile and does not
-`git mv` a mixed plan to `archive/superseded/`.
+`stale_wiring` or `superseded_mission` share the same file.
+
+Plans-store refine (fold/compile leftover todos) is `/l9-audit-plans`.
+SessionStart stays display-only and must not call refine. Omit
+`harvested: true` donors from the live queue.
 
 Harvest of invariants is `scripts/harvest_plan_invariants.py` (Gold Nugget
 kernel cited by path; no implementation; not `l9-harvest-pipeline`).

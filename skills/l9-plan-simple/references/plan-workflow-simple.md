@@ -24,8 +24,8 @@ Section list matches [`../l9-plan/references/plan-workflow-pe-autonomy.md`](../.
 
 | Mode | Status | Terminates at | Frontmatter |
 |------|--------|---------------|-------------|
-| `cursor-build` | **default** | Build execution, then the stacked publish and PR URL | `kind: simple`, `execute_via: cursor-build` |
-| `embedded` | first-class | validated planning artifacts, returned to the invoking caller | `kind: simple`, `execute_via: embedded` |
+| `cursor-build` | **default** | Build execution, then the stacked publish and PR URL | `kind: simple`, `execute_via: cursor-build`, `status: current` |
+| `embedded` | first-class | validated planning artifacts, returned to the invoking caller | `kind: simple`, `execute_via: embedded`, `status: current` |
 
 Mode selection is explicit and machine-observable (`--execute-via`, then `execute_via` in the projection frontmatter). `cursor-build` applies whenever embedded was not explicitly requested. Capability absence never selects `embedded`, and there is no silent fallback between modes.
 
@@ -69,7 +69,7 @@ python3 skills/l9-plan/scripts/render_plan_pe_autonomy.py <plan.json> --execute-
 
 Or hand-copy the first-class SSOT and apply the mode's execute swap below. Do **not** call `render_plan_pe_autonomy.py` without `--execute-via` for a simple plan (the default injects PE).
 
-Frontmatter in both modes: Cursor `name`, `overview`, `todos`, `isProject`, plus `kind: simple` and the selected `execute_via`. Convergence `execute_via` matches.
+Frontmatter in both modes: Cursor `name`, `overview`, `todos`, `isProject`, plus `kind: simple`, the selected `execute_via`, and `status: current`. Convergence `execute_via` matches. `harvested` is a tag, never a status.
 
 10. **Section receipt** — generate then validate, in both modes. The receipt stamps `handoff_mode`, so it is judged against that mode's headings: **Execute via Cursor Build** for `cursor-build`, **Handoff to Caller** for `embedded`. Schema owner stays `../l9-plan/schemas/plan-document.schema.json`; the receipt shape is `../schemas/plan-section-receipt.schema.json`.
 

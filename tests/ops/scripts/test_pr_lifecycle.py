@@ -471,8 +471,9 @@ def test_precommit_repo_kernel_hook_fails_before_hooks(tmp_path: Path) -> None:
             "PR_CHANGED_FILE": str(listed),
             "PATH": f"{bin_dir}:/usr/bin:/bin",
             # Tree kernels are adapter-surface only. Cursor pytest inherits
-            # CURSOR_AGENT and would skip the latch this test is proving.
+            # CURSOR_AGENT, which outranks L9_GOVERNANCE_SURFACE=claude-code.
             "L9_GOVERNANCE_SURFACE": "claude-code",
+            "CURSOR_AGENT": "",
         },
     )
     assert proc.returncode == 2, proc.stdout + proc.stderr
