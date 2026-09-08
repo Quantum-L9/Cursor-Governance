@@ -868,7 +868,9 @@ Plan: `docs/plans/ff_close_publish_loop_a1b2c3d4.plan.md`
 
 ## SessionStart secrets-plane simplify leftovers (2026-09-07)
 
-`/start-session` STATE_SYNC (items 6–7) was applied in session then lost (file still v3.1.0). Items 1–5 did not land: the target files are absent from the consumer checkout and from live SSOT (`~/.cursor-governance`). Recreating the plane is **not** a `/simplify` pass.
+`/start-session` STATE_SYNC (items 6–7) was applied in session then lost (file still v3.1.0). Recreating a credential plane is **not** a `/simplify` pass and is **not** SessionStart work.
 
-- [ ] Restore SessionStart secrets-plane owner: `ops/secrets/session_start_secrets.py`, `ops/secrets/aws_cli_preflight.py`, `ops/secrets/infisical_cli_login.py` (bootstrap calls the owner; reporter stays a derived view; no Makefile `secrets-bind` / `secrets-aws-preflight`).
-- [ ] After those files exist, apply the five small cuts: bootstrap say-line → `session_start_secrets.py`; one `BIND_NAMES` constant (reporter imports it); `aws_cli_preflight._fail(code)`; `infisical_cli_login.ensure_machine_profile()` (owner stops wrapping `main()`); reporter inserts `ops/secrets` once and derives `### FAILED` from the classified `aws-cli` line.
+Cursor SessionStart is model-controlled: report bind **source** only (`capability_bind --check` / `session_start_runtime_report.py` `secrets-bind: ok — NAME=source`). Do **not** restore AWS preflight, Infisical machine-profile login, or any value-returning secrets owner on this surface. Login and hydrate stay trusted-operator outside SessionStart (`ops/secrets/README.md`, `bootstrap_agent_env.sh`).
+
+- [ ] Keep SessionStart on status-only bind reporting (`BIND_NAMES` in the reporter; one `ops/secrets` insert; `### FAILED` from the classified bind/`--check` line). No `session_start_secrets.py` AWS/Infisical login owner.
+- [ ] If login/preflight helpers are still needed, scope them to a trusted-operator process — never call them from bootstrap or the SessionStart reporter.
