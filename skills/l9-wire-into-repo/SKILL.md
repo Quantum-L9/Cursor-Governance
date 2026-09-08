@@ -245,6 +245,7 @@ Do not report PASS when a mandatory authority or propagation edge is `Unknown`.
 | Propagation used | generator/projector/reconciler/export path |
 | Leaf bindings | only irreducible direct bindings |
 | Duplicates removed | rewiring cleanup |
+| Invocation tier | Skill targets only: `auto_invoke` / `explicit_only` + the reason. `Unknown` is a failed wiring, not a receipt. |
 | Validation | Passed / Failed / Unknown / NotApplicable |
 | Residuals | non-blocking historical or informational references |
 
@@ -267,6 +268,83 @@ source-to-consumer path.
 
 These are archetypes, not mandatory paths. Repository evidence decides the
 actual owner.
+
+## Skill targets
+
+A skill is wired when the model can *reach* it, which is a different claim from
+the file existing under `skills/`. Discovery alone is not reachability: a pack
+every surface can see, but that `skillOverrides` hides from model selection, is
+reachable only when a human types its name.
+
+So for a skill target the tier decision is a **required output of wiring**, not
+later cleanup. Do not close a `wire` on a skill without it.
+
+### Propagation chain
+
+```
+skills/<name>/SKILL.md                           (pack + frontmatter)
+  → skills/AUTONOMY_MANIFEST.yaml  tiers          ← THE ULP
+    → ops/scripts/build_claude_skill_registry.py
+      → ops/generated/skill-registry.json
+        → ops/scripts/sync_generated_artifacts.py
+          → …/claude-code/settings.template.json  skillOverrides
+            → ops/scripts/reconcile_claude_settings.py
+              → .claude/settings.json  (gov · user · workspace)
+```
+
+`skills/AUTONOMY_MANIFEST.yaml` `tiers` is the only hand-authored node. Every
+node below it is generated — never hand-edit `skillOverrides`, the registry, or
+any `.claude/settings.json`, and never add a skill name to `skillOverrides`
+directly. Change the manifest, run
+`python3 ops/scripts/sync_generated_artifacts.py --force`, let the chain carry
+it.
+
+### The tier decision
+
+Place the skill in exactly one tier, with a reason that states *why*:
+
+| Tier | Criterion |
+|------|-----------|
+| `auto_invoke` | Selecting it only loads better guidance for work the user already asked for — read-only analysis, verification, planning, advisory. |
+| `explicit_only` | Selecting it can begin an action with blast radius: commits, pushes, opens or merges PRs, creates repos or infra, mutates a remote, deletes, or claims fleet/merge authority. Also correct when a broad description would hijack unrelated routing. |
+
+Read the pack body before deciding. A description is a routing surface, not
+evidence of what the skill does — check for `git push`, `make pr`, `--apply`,
+merge, deploy, or delete steps, and prefer the skill's own words ("read-only",
+"never mutate") over its summary.
+
+`explicit_only` additionally requires `disable-model-invocation: true` in the
+SKILL.md frontmatter; `auto_invoke` requires its absence.
+`environment/agents/adapters/claude-code/validate_skill_activation.py` fails
+closed in both directions.
+
+### Untriaged rows are unfinished wiring
+
+A skill on disk with no tier is auto-registered `explicit_only` by
+`heal_orphan_skills` with a reason marked `UNTRIAGED`. That is a safe default
+and a **question**, never a decision. Meeting one inside a wiring task puts it
+in scope: resolve it, or state explicitly why it stays manual.
+
+```bash
+rg 'UNTRIAGED' skills/AUTONOMY_MANIFEST.yaml
+```
+
+### Close a skill wiring with
+
+```bash
+python3 ops/scripts/sync_generated_artifacts.py --force
+python3 environment/agents/adapters/claude-code/validate_skill_activation.py
+python3 environment/agents/adapters/claude-code/validate_claude_env.py
+```
+
+Report the tier, the reason, and the auto/explicit counts before and after.
+
+Slash commands are a **separate** chain that never touches `settings.json`:
+`commands/COMMANDS_MANIFEST.yaml` → `ops/scripts/reconcile_claude_commands.py`
+→ per-command symlinks under `.claude/commands/`. Where a slash basename equals
+a registered skill the skill owns that namespace and no `commands/*.md` may
+exist — `ops/scripts/validate_commands_manifest.py` fails closed on the
+collision.
 
 ## Unwire
 
@@ -295,6 +373,9 @@ Do not:
 - invent registries or adapters without repository evidence;
 - treat grep hits as proof of active wiring;
 - treat documentation as behavioral reachability;
+- close a skill wiring on discovery alone, leaving the tier decision to
+  `heal_orphan_skills` — a row reading `UNTRIAGED` is unfinished wiring, and a
+  skill hidden by `skillOverrides` is not model-reachable;
 - restore archived machinery merely because a live reference is stale;
 - leave obsolete downstream wiring after a successful rewire;
 - claim PASS with an unresolved mandatory owner or consumer path.

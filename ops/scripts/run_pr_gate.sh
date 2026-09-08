@@ -287,13 +287,31 @@ else
   echo "WARN: $(repo_write_lock_skip_note "$WS") — continuing; concurrent writes may be misattributed"
 fi
 _gate_failed=1
+#: Set before exiting on a condition OUTSIDE the tree — telemetry the gate could
+#: not reach, not a check the diff failed. The STOP LOOPING receipt exists, in
+#: its own words, "so agents cannot wait through the same red tree again", and
+#: it keys on paths_digest + content_digest + pr_base + head_sha. An
+#: environmental block shares none of that: the tree is green, so the digest
+#: never changes, so the refusal outlives the condition that caused it and the
+#: branch is pinned permanently — including after the very thing the message
+#: tells you to do ("Restore telemetry, then re-run make pr") has been done.
+#:
+#: Observed: a gh-api outage blocked the overlap probe under E6, the exit trap
+#: recorded STOP LOOPING with failed_nodes=[], failed_hooks=[] and an empty
+#: recheck_command — nothing to fix — and after GitHub access was restored every
+#: subsequent `make pr` was still refused, pointing at a log whose last line was
+#: a clean gate. Re-running is the correct action there, so no receipt is
+#: written and the block simply recurs while the condition holds.
+_gate_env_block=0
 _gate_on_exit() {
   if [[ -n "${_prefetch_pid:-}" ]]; then
     wait "$_prefetch_pid" 2>/dev/null || true
     _prefetch_pid=""
   fi
   _write_gate_timing || true
-  if [[ "${_gate_failed:-0}" = "1" && -f "$_GATE_FAILURE_PY" ]]; then
+  if [[ "${_gate_env_block:-0}" = "1" ]]; then
+    echo "NOTE: environment-blocked (not a red tree) — no STOP LOOPING receipt written."
+  elif [[ "${_gate_failed:-0}" = "1" && -f "$_GATE_FAILURE_PY" ]]; then
     mkdir -p "$WS/.l9/pr"
     python3 "$_GATE_FAILURE_PY" write "$_GATE_FAILURE" "$(_gate_state_digest)" \
       --head-sha "$(_gate_head_sha)" \
@@ -543,15 +561,22 @@ if [[ "${PR_EARLY_OVERLAP:-0}" = "1" ]]; then
   else
     if ! git fetch origin "$_base_ref"; then
       echo "FAIL: cannot fetch origin/${_base_ref} — collision state undeterminable"
+      _gate_env_block=1
       exit 1
     fi
     _fetched_sha="$(git rev-parse "origin/${_base_ref}")"
     fetch_receipt_write "$WS" "$_base_ref" "$_fetched_sha"
   fi
   mkdir -p "$WS/.l9/pr"
-  if ! python3 "$SCRIPT_DIR/pr_overlap_check.py" \
+  _overlap_rc=0
+  python3 "$SCRIPT_DIR/pr_overlap_check.py" \
     --workspace "$WS" --base "$PR_BASE" \
-    --write-receipt "$WS/.l9/pr/overlap-receipt.json"; then
+    --write-receipt "$WS/.l9/pr/overlap-receipt.json" || _overlap_rc=$?
+  if [[ "$_overlap_rc" -ne 0 ]]; then
+    # 3 = telemetry denied (pr_overlap_check.TELEMETRY_DENIED_EXIT): nothing in
+    # the tree to fix, so a digest-keyed STOP LOOPING receipt would outlive the
+    # outage. Publication is denied either way.
+    [[ "$_overlap_rc" -eq 3 ]] && _gate_env_block=1
     echo "FAIL: early overlap blocked publish (PR_OVERLAP=${PR_OVERLAP:-block})"
     exit 1
   fi

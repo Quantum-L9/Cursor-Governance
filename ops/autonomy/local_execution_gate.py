@@ -649,6 +649,23 @@ def _guardrail_from_payload(raw: str) -> str | None:
     The git/gh exemption answers before the event is parsed, so the guardrail
     has to answer there too — otherwise a destructive git command would be
     waved through by the exemption before any policy ran.
+
+    It resolves the root the same way ``main_claude``'s later ``evaluate`` call
+    does. Answering first is only safe while both answer about the same
+    checkout: this pre-check ran on the *reported* workspace while the main path
+    applied ``effective_root``, and in a cloud container that reported workspace
+    is ``/home/user`` — many clones side by side, itself no repository.
+    ``LiveProbe`` then ran ``git -C /home/user status --porcelain``, got exit
+    128, and every command whose classification needs the dirty set failed
+    closed on I017 before the corrected root was ever computed.
+
+    That denied `cd <repo> && git checkout <existing-branch>` unconditionally on
+    this surface — not because switching branches was risky, but because the
+    probe could not run. `git checkout -b` stayed allowed throughout (a new
+    branch off HEAD clobbers nothing, so it never consults the dirty set), which
+    is why the failure looked intermittent rather than total. It is the same
+    defect the ``evaluate`` call below already carries a comment about, one
+    plane earlier.
     """
     try:
         event = json.loads(raw)
@@ -670,6 +687,8 @@ def _guardrail_from_payload(raw: str) -> str | None:
     # nosemgrep: l9.baseline.python.broad-except
     try:
         root = workspace_from_event(event)
+        if root is not None:
+            root = effective_root(command, root)
     except Exception:  # noqa: BLE001 - an unresolvable workspace is not a verdict
         root = None
     return command_requires_human(command, root=root)

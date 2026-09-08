@@ -976,3 +976,20 @@ v1.2.0. Skills: `l9-graphiti-memory` v2.1.0, `l9-end-session` v1.7.0,
 superseded — each under a dated section naming ADR-0030. Docs:
 `docs/MEMORY_PIPELINE_MAP.md`, `environment/agents/docs/MEMORY_TOPOLOGY.md`
 v2.0.0, `ops/memory/README.md` "Caller taxonomy".
+
+<!-- MEMORY_RELEASE_231_V1 -->
+## 8.4 Memory release 2.3.1 (2026-09-08) — supersedes the 2.3.0 pin in §8.2 / §8.3
+
+Append-only. `v2.3.0` stays an immutable tag. PyPI rejected that wheel because
+the `constellation` extra declared a git URL. `v2.3.1` is the first published
+artifact (`l9-graphite-memory==2.3.1`).
+
+1. **Bound head.** `ops/config/memory-binding.json` `source.ref` is `v2.3.1`.
+   `release_evidence.memory_sha` is `84eedcdfab83020776eab290599751b3b6af8dbf`
+   (Quantum-L9/l9-graphiti-memory#60 merge). Tag object
+   `f65ff2bb1c8cb43a55b78732c4ab74f711ee8c2f`. Served wheel sha256
+   `b3b045e482fd157a0242d5ad861a3609057c6d66dd2095673f55f1efe888ff89`.
+2. **Lock.** `pyproject.toml` / `uv.lock` pin `l9-graphite-memory==2.3.1`.
+   Do not float `@main`. Do not move `v2.3.0` or `v2.3.1`.
+3. **Contract.** `memory-control-plane/v1` is unchanged. §8.2 / §8.3 front-door
+   law still stands; only the release identity moves.

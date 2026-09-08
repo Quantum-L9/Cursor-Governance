@@ -108,3 +108,45 @@ def test_make_workspace_raw_quoted_path_with_spaces():
 
 def test_extract_named_roots_quoted_ws_with_spaces():
     assert extract_named_roots('make pr WS="/tmp/Consumer Repo"') == ["/tmp/Consumer Repo"]
+
+
+def test_heredoc_opener_may_be_followed_by_a_separator():
+    """`cmd <<EOF && next` is ordinary Bash: the body still starts next line.
+
+    Only redirects were accepted after the delimiter, so this form was not an
+    opener at all and its body was never stripped. That leaked DATA into
+    command matching: split_segments splits on `&&` wherever it appears, so
+    prose in a commit message became a segment whose first word is `git`.
+    """
+    command = "git commit -F - <<'MSG' && git log --oneline -1\ngit revert foo\nMSG\necho done"
+    stripped = strip_heredoc_bodies(command)
+    assert "git revert" not in stripped
+    assert "git log --oneline -1" in stripped, "the sibling command shares the opener line"
+    assert "echo done" in stripped
+
+
+def test_heredoc_opener_accepts_redirects_then_separator():
+    command = "cat <<'EOF' > notes.md && echo saved\ngit revert foo\nEOF\necho done"
+    stripped = strip_heredoc_bodies(command)
+    assert "git revert" not in stripped
+    assert "echo saved" in stripped
+    assert "echo done" in stripped
+
+
+def test_quoted_shift_text_is_still_not_an_opener():
+    """Widening the remainder rule must not make quoted text open a heredoc."""
+    command = 'echo "a << EOF" && git status\ngit revert foo'
+    stripped = strip_heredoc_bodies(command)
+    assert "git revert" in stripped, "nothing was opened, so nothing may be hidden"
+
+
+def test_unterminated_heredoc_does_not_hide_later_commands():
+    """Fail-OPEN guard: an opener that never closes must not blind the scan.
+
+    Skipping to end-of-input would leave every later line unmatched. Widening
+    which lines count as openers would widen that blindness too, so a
+    terminator is only honoured when a matching closing line actually follows.
+    """
+    command = "cat <<EOF && echo hi\nsome data\ngit revert HEAD~3"
+    stripped = strip_heredoc_bodies(command)
+    assert "git revert HEAD~3" in stripped

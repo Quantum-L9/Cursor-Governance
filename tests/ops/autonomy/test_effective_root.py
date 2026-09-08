@@ -11,6 +11,7 @@ repository may redirect the gate.
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -267,3 +268,76 @@ def test_claude_entrypoint_resolves_the_leading_cd(
 
     assert gate.main_claude() == 0
     assert seen["root"] == linked_worktree.resolve()
+
+
+# --- ...and so must the guardrail pre-check that answers BEFORE evaluate -----
+#
+# main_claude() asks _guardrail_from_payload() first, so that the git/gh
+# workflow exemption cannot wave a destructive command through before any
+# policy runs. Answering first is only safe while both planes answer about the
+# same checkout. The pre-check resolved workspace_from_event() directly and
+# skipped effective_root(), so the test above passed while the real surface
+# still denied: on a cloud container the reported workspace is /home/user,
+# which holds many clones and is itself no repository, so LiveProbe ran
+# `git -C /home/user status --porcelain`, got exit 128, and any command whose
+# classification consults the dirty set failed closed on I017 -- before the
+# corrected root existed.
+#
+# `git checkout -b` never consults the dirty set (a new branch off HEAD
+# clobbers nothing) and stayed allowed, which made the breakage look
+# intermittent instead of total.
+
+
+def test_guardrail_precheck_resolves_the_leading_cd(
+    monkeypatch: pytest.MonkeyPatch, main_repo: Path, linked_worktree: Path
+) -> None:
+    import local_execution_gate as gate
+
+    seen: dict[str, Path | None] = {}
+
+    def fake_requires_human(command: str, *, root: Path | None = None) -> str | None:  # noqa: ARG001
+        seen["root"] = root
+        return None
+
+    monkeypatch.setattr(gate, "command_requires_human", fake_requires_human)
+    monkeypatch.setattr(gate, "workspace_from_event", lambda event: main_repo)  # noqa: ARG005
+    payload = json.dumps(
+        {
+            "tool_name": "Bash",
+            "tool_input": {"command": f'cd "{linked_worktree}" && git checkout other-branch'},
+        }
+    )
+
+    assert gate._guardrail_from_payload(payload) is None
+    assert seen["root"] == linked_worktree.resolve(), (
+        "the guardrail plane must judge the checkout the command runs in, "
+        "not the reported project root"
+    )
+
+
+def test_guardrail_precheck_survives_a_container_root_that_is_no_repository(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A non-repository workspace must not deny every dirty-set command.
+
+    This is the cloud multi-repo shape: /home/user holds clones side by side.
+    A command that cd's into a real clone is judged there; one that names no
+    checkout still fails closed, because the gate genuinely cannot tell which
+    repository it would touch.
+    """
+    import local_execution_gate as gate
+
+    container = tmp_path / "container"
+    container.mkdir()
+    clone = make_repo(container / "clone")
+    git(clone, "branch", "feature")
+    monkeypatch.setattr(gate, "workspace_from_event", lambda event: container)  # noqa: ARG005
+
+    def verdict(command: str) -> str | None:
+        return gate._guardrail_from_payload(
+            json.dumps({"tool_name": "Bash", "tool_input": {"command": command}})
+        )
+
+    assert verdict(f"cd {clone} && git checkout feature") is None
+    denied = verdict("git checkout feature")
+    assert denied is not None and "I017" in denied
