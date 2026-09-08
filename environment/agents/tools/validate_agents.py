@@ -39,6 +39,7 @@ Usage: validate_agents.py [--root environment/agents]
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
@@ -176,17 +177,17 @@ def _check_env_example(envf: Path, agent: dict, production_url: str | None) -> N
             )
     url_m = re.search(r"^GRAPHITI_MCP_URL=(.+)$", text, re.M)
     tok_m = re.search(r"^GRAPHITI_MCP_TOKEN=(.+)$", text, re.M)
-    if not url_m:
-        err("A2", f"{envf.name}: missing GRAPHITI_MCP_URL")
-    elif production_url:
-        got = url_m.group(1).strip()
-        expected_full = production_url.rstrip("/") + "/graphiti/mcp"
-        if got not in (production_url, expected_full) and not got.endswith("/graphiti/mcp"):
-            err(
-                "A2",
-                f"{envf.name}: GRAPHITI_MCP_URL='{got}' "
-                f"expected '{expected_full}' (cloud Graphiti path)",
-            )
+    # Realignment stage C9: no surface example may assign the retired
+    # provider transport. Memory is reached through the canonical control
+    # plane (ops/memory), bound per checkout; a URL here would re-create the
+    # direct front door the campaign removed.
+    del production_url
+    if url_m:
+        err(
+            "A2",
+            f"{envf.name}: GRAPHITI_MCP_URL is a retired provider transport (stage C9); "
+            "memory is the canonical l9-graphite-memory control plane, never a URL",
+        )
     # A2 (inverted by the zero-static-secret contract, §12/S3): the bearer must
     # be ABSENT from an agent surface example, not present-as-a-placeholder.
     #
@@ -219,7 +220,21 @@ def _check_mcp_no_loopback_default(key: str, adir: Path) -> None:
             err(
                 "A4",
                 f"agents.{key}: {name} must not default to loopback "
-                "(use https://memory.quantumaipartners.com/graphiti/mcp via GRAPHITI_MCP_URL)",
+                "(memory is the canonical l9-graphite-memory stdio server, "
+                "never a provider URL)",
+            )
+        # Stage C7/C8: no adapter carrier may declare the retired provider
+        # front door; the only memory server is the package-owned stdio entry.
+        try:
+            carrier = json.loads(text)
+        except json.JSONDecodeError:
+            continue
+        servers = carrier.get("mcpServers") if isinstance(carrier, dict) else None
+        if isinstance(servers, dict) and "graphiti-memory" in servers:
+            err(
+                "A4",
+                f"agents.{key}: {name} declares the retired graphiti-memory front door; "
+                "declare l9-graphite-memory (stdio) or nothing",
             )
 
 

@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""SessionStart prefetch — thin wrap of Cursor hydration compiler (front door).
+"""SessionStart prefetch — thin wrap of the canonical session hydration (stage C8).
+
+Every repository this session works in is hydrated through the canonical
+memory control plane (``ops.memory.hydration.canonical_hydrate`` via the
+Cursor session-packet compiler); nothing here calls a provider or the retired
+legacy client. The receipt this hook writes is the ONLY memory precondition a
+governed write may carry (``memory_gate.py``), so it records what happened —
+a hydration that resolved no namespace is ``degraded``, never ``prefetched``.
 
 Mid-session repair: when the automatic SessionStart stamp is stale or missing,
 run with an explicit session id instead of guessing:
@@ -19,6 +26,9 @@ import sys
 from pathlib import Path
 
 MEM = Path(__file__).resolve().parent.parent / "memory"
+
+#: Receipt transport tag: the contract the hydration crossed, not a tool name.
+TRANSPORT = "memory-control-plane/v1"
 
 
 def _governance_lib() -> Path:
@@ -56,110 +66,43 @@ def _repo_count(workspace: Path) -> int:
         return 0
 
 
-def _resolves_to_own_group(root: Path) -> bool:
-    """True when this repository resolves to a namespace of its OWN.
+def _resolves_to_own_namespace(root: Path) -> bool:
+    """True when this repository resolves to a write namespace of its OWN.
 
-    Two answers do not qualify. An unresolved match means there is nothing to
-    hydrate from. The shared cross-repo namespace (`workspace_group`, normally
-    `igor-workspace`) qualifies even less: rules/98 reserves it for the
-    bootstrap integration-edge mirror and `write` rejects it outright, so
-    hydrating a repository under it reads another repository's memory as if it
-    were this one's. Filtering here rather than after compiling also stops an
-    unusable root from consuming a slot under the cap.
+    An unresolved identity has nothing to hydrate from, and filtering here
+    rather than after compiling stops an unusable root from consuming a slot
+    under the cap. The namespace context is the sole identity producer since
+    stage C2; the shared read namespace it may add is never a write target.
     """
     # Broad by design; the handler below carries the reason.
     # nosemgrep: l9.baseline.python.broad-except
     try:
-        from ops.graphiti.group_resolver import load_registry, resolve_group_id
+        from ops.memory.namespace_context import resolve_namespace_context
 
-        resolved = resolve_group_id(cwd=root)
-        shared = load_registry().get("workspace_group", "igor-workspace")
+        return bool(resolve_namespace_context(root).write_namespace_hint)
     except Exception:  # noqa: BLE001 — a resolver fault must not lose hydration
         return True
-    group_id = str(resolved.get("group_id") or "")
-    return bool(group_id) and group_id != shared
 
 
 def _hydration_roots(workspace: Path) -> list[Path]:
     """Repository roots to hydrate, in resolution order.
 
-    A group_id identifies a REPOSITORY (rules/96, §3). Resolving one from a
+    A namespace identifies a REPOSITORY (rules/96, §3). Resolving one from a
     multi-repo container root matches all of them and returns none, so the
-    session hydrated zero facts and every memory write was refused read-only —
-    while the store itself was healthy. When the workspace is a repository this
-    returns it unchanged; when it is a container of repositories it returns the
+    session hydrated zero facts and every memory write was refused — while the
+    store itself was healthy. When the workspace is a repository this returns
+    it unchanged; when it is a container of repositories it returns the
     repositories that resolve to their own namespace, each hydrated under it.
-
-    The container-vs-checkout question is answered by `ops/scripts/lib/
-    workspace_roots.py`, not here. This function used to be the only place in
-    the bootstrap that answered it correctly, which is precisely why the
-    dependency helper and the project-scope projection — both of which consumed
-    the container root directly — could be wrong for so long. The namespace
-    filter stays local because it is memory's rule, not the resolver's.
     """
     return _hydration_selection(workspace).selected
 
 
-#: Where the rotation cursor lives. Beside the other per-container stamps, not
-#: in the repository: it is machine state about which window was served last,
-#: not content.
-_CURSOR_FILE = Path.home() / ".l9" / "claude" / "hydration-cursor.json"
-
-
-def _cursor_key(workspace: Path) -> str:
-    return str(workspace)
-
-
-def _read_hydration_offset(workspace: Path) -> int:
-    """Where the last session stopped. 0 on any doubt.
-
-    Never raises: this runs inside a fail-open observer hook, and a missing or
-    corrupt cursor must cost the session its rotation, never its hydration.
-    """
-    try:
-        data = json.loads(_CURSOR_FILE.read_text(encoding="utf-8"))
-        value = data.get(_cursor_key(workspace), 0)
-        return int(value) if isinstance(value, int) and value >= 0 else 0
-    except (OSError, ValueError, TypeError, AttributeError):
-        return 0
-
-
-def _advance_hydration_cursor(workspace: Path, served: int) -> None:
-    """Move the window on by what was actually served. Best-effort by design."""
-    if served <= 0:
-        return
-    try:
-        try:
-            data = json.loads(_CURSOR_FILE.read_text(encoding="utf-8"))
-            if not isinstance(data, dict):
-                data = {}
-        except (OSError, ValueError):
-            data = {}
-        data[_cursor_key(workspace)] = _read_hydration_offset(workspace) + served
-        _CURSOR_FILE.parent.mkdir(parents=True, exist_ok=True)
-        _CURSOR_FILE.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
-    except OSError:
-        return
-
-
 def _hydration_selection(workspace: Path):
-    """`_hydration_roots`, keeping the roots it dropped and why.
-
-    Naming the cap is not naming what the cap cost. The emitted line used to
-    offer two rules and attribute neither, so six repositories excluded purely
-    by the cap read as six repositories with nothing to hydrate.
-
-    The cap stays — hydration pays a Graphiti round trip and context bytes on
-    every session, and nothing caches that — but it now ROTATES. A cap plus a
-    stable sort served the same prefix forever and starved the same tail
-    forever; with the cursor advanced each session, every namespaced repository
-    is hydrated within `ceil(n / cap)` sessions.
-    """
+    """`_hydration_roots`, keeping the roots it dropped and why."""
     return _shared_select_workspace_roots(
         workspace,
         cap=_MAX_HYDRATION_ROOTS,
-        predicate=_resolves_to_own_group,
-        offset=_read_hydration_offset(workspace),
+        predicate=_resolves_to_own_namespace,
     )
 
 
@@ -182,12 +125,8 @@ def _dropped_summary(dropped: list[tuple[Path, str]]) -> str:
 
 sys.path.insert(0, str(MEM))
 
-import graphiti_bridge as gb  # noqa: E402
+import memory_bridge as mb  # noqa: E402
 import memory_state as st  # noqa: E402
-
-
-def _gov_root() -> Path:
-    return gb.find_governance_root()
 
 
 def _emit(context: str) -> None:
@@ -252,14 +191,11 @@ def main() -> int:
     os.environ.setdefault("L9_MEMORY_AGENT_ID", "claude-code")
     os.environ.setdefault("USER_ID", "claude_code_agent")
 
-    root = _gov_root()
-    if str(root) not in sys.path:
-        sys.path.insert(0, str(root))
-
-    # AFTER the governance root joins sys.path: _hydration_roots imports the group
-    # resolver from it, and its except-branch fails OPEN so a resolver fault can
-    # never cost the session its memory. Called before the path was set, that
+    # BEFORE root selection: the namespace predicate imports ops.memory from the
+    # governance root, and its except-branch fails OPEN so a resolver fault can
+    # never cost the session its memory. Selected before the path was set, that
     # open failure was silent and unconditional — every root looked eligible.
+    mb.ensure_importable()
     selection = _hydration_selection(workspace)
     roots, dropped = selection.selected, selection.dropped
 
@@ -269,6 +205,8 @@ def main() -> int:
         contexts: list[str] = []
         group_ids: list[str] = []
         packet_ids: list[str] = []
+        memory_statuses: dict[str, str] = {}
+        continuation_ids: dict[str, str] = {}
         degraded_any = False
 
         for root in roots:
@@ -279,29 +217,21 @@ def main() -> int:
             )
             packet = compiled.get("packet") or {}
             group_id = str(packet.get("group_id") or "")
-            # Gate receipt via inject (hash / memory_satisfied_for)
-            # Broad by design; the handler below carries the reason.
-            # nosemgrep: l9.baseline.python.broad-except
-            try:
-                result = gb.inject(
-                    f"Claude Code session in {root.name}",
-                    workspace=root,
-                    session_id=session_id,
-                )
-                group_id = group_id or str(result.get("group_id") or "")
-            except Exception:  # noqa: BLE001 — hydrate facts still useful
-                pass
-            if group_id:
+            stats = packet.get("hydrate_stats") or {}
+            if group_id and group_id != "unresolved":
                 group_ids.append(group_id)
             else:
                 degraded_any = True
             if packet.get("degraded"):
                 degraded_any = True
+            memory_statuses[root.name] = str(stats.get("memory_status") or "unknown")
+            if stats.get("continuation_record_id"):
+                continuation_ids[root.name] = str(stats["continuation_record_id"])
             if packet.get("packet_id"):
                 packet_ids.append(str(packet["packet_id"]))
             body = compiled.get("additional_context") or ""
             if body:
-                header = f"### {root.name} (group_id={group_id or 'unresolved'})"
+                header = f"### {root.name} (namespace={group_id or 'unresolved'})"
                 contexts.append(header + "\n" + body if len(roots) > 1 else body)
 
         degraded = degraded_any or not group_ids
@@ -310,25 +240,28 @@ def main() -> int:
             session_id,
             {
                 "namespaces": namespaces,
-                "transport": "cursor-graphiti-hydrate",
+                "transport": TRANSPORT,
                 "group_id": group_ids[0] if len(group_ids) == 1 else "",
                 "group_ids": group_ids,
                 "hydrated_roots": [str(r) for r in roots],
                 "packet_id": packet_ids[0] if packet_ids else None,
                 "packet_ids": packet_ids,
+                "memory_statuses": memory_statuses,
+                "continuation_record_ids": continuation_ids,
                 # A receipt records what HAPPENED, not what was attempted. Writing
-                # "prefetched" over a hydration that resolved no group and returned
-                # no facts made the precondition self-satisfying: the gate saw a
-                # fresh receipt, never re-hydrated, and the session ran memory-blind
-                # for the full TTL while every surface reported it satisfied.
+                # "prefetched" over a hydration that resolved no namespace and
+                # returned nothing made the precondition self-satisfying: the gate
+                # saw a fresh receipt, never re-hydrated, and the session ran
+                # memory-blind for the full TTL while every surface reported it
+                # satisfied.
                 "status": "degraded" if degraded else "prefetched",
                 "degraded": degraded,
             },
         )
         resolved = ", ".join(group_ids) if group_ids else "unresolved"
         lines = [
-            "L9 memory: ENFORCED via Cursor Graphiti hydrate "
-            f"(group_id={resolved}; namespaces {', '.join(namespaces)}). "
+            "L9 memory: ENFORCED via canonical memory hydrate "
+            f"({TRANSPORT}; namespace={resolved}; requested {', '.join(namespaces)}). "
             "Rule 03-graphiti-memory; skill l9-graphiti-memory; CANONICAL_LAW §8.",
             *contexts,
             "Governed writes require this hydration only. Repository isolation is a "
@@ -336,10 +269,6 @@ def main() -> int:
             "branch off fetched origin/main, and collision safety the publication gate. "
             "No phase-lock is required or accepted for repository mutation.",
         ]
-        # Advance only on a real hydrate. Moving the window after a degraded
-        # run would skip the repositories this session failed to serve.
-        if not degraded:
-            _advance_hydration_cursor(workspace, len(roots))
         if len(roots) > 1:
             dropped_note = _dropped_summary(dropped)
             lines.insert(
@@ -347,14 +276,7 @@ def main() -> int:
                 f"Multi-repo container: hydrated {len(roots)} of "
                 f"{_repo_count(workspace)} repositories under {workspace}. "
                 + (f"Excluded — {dropped_note}. " if dropped_note else "")
-                + (
-                    "The cap ROTATES: the repositories skipped here are the ones "
-                    "the next session hydrates first, so every namespaced "
-                    "repository is served within a bounded number of sessions. "
-                    if any(r == DROPPED_CAP for _, r in dropped)
-                    else ""
-                )
-                + "A group_id is repository identity, never container "
+                + "A namespace is repository identity, never container "
                 "identity — resolving one from the container root matches every repo "
                 "and returns none.",
             )
@@ -362,9 +284,9 @@ def main() -> int:
     except Exception as exc:  # fail-open
         _emit(
             "L9 memory: prefetch DEGRADED ("
-            f"{exc}). No receipt written; governed writes remain fail-closed until Cursor "
-            "Graphiti is reachable. Operator-only override: L9_MEMORY_ENFORCEMENT_BREAKGLASS. "
-            "next="
+            f"{exc}). No receipt written; governed writes remain fail-closed until the "
+            "canonical memory runtime is bound (make memory-readiness). Operator-only "
+            "override: L9_MEMORY_ENFORCEMENT_BREAKGLASS. next="
         )
     return 0
 

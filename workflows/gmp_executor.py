@@ -74,7 +74,7 @@ __dora_meta__ = {
 # =============================================================================
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-MEMORY_CLIENT = REPO_ROOT / "ops" / "graphiti" / "graphiti_memory_client.py"
+MEMORY_CLI_MODULE = "ops.memory.cli"  # canonical control plane (stage C11); never a provider
 REPORT_GENERATOR = REPO_ROOT / "scripts" / "generate_gmp_report.py"
 TEST_GENERATOR_MODULE = "core.testing"
 README_GENERATOR = REPO_ROOT / "scripts" / "generate_readme.py"
@@ -481,7 +481,7 @@ class GMPExecutor:
         context_lines = []
         for query in searches:
             code, stdout, stderr = self._run_argv(
-                [sys.executable, str(MEMORY_CLIENT), "search", query]
+                [sys.executable, "-m", MEMORY_CLI_MODULE, "search", query]
             )
             if code != 0:
                 stdout = "Memory unavailable"
@@ -958,7 +958,7 @@ from {module_path} import ...
         )
 
         code, stdout, stderr = self._run_argv(
-            [sys.executable, str(MEMORY_CLIENT), "write", summary, "--kind", "lesson"]
+            [sys.executable, "-m", MEMORY_CLI_MODULE, "write", summary, "--kind", "lesson"]
         )
 
         if "failed" in stdout.lower() or code != 0:

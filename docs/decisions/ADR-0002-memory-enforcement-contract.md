@@ -86,3 +86,30 @@ Claude Code surface. The agent no longer has the choice; the harness does.
   reconcile the two so there is one memory-enforcement authority).
 - Consider server-issued signed lock tokens to remove the receipt trust-on-write
   gap entirely.
+
+## Amendment (2026-09-07) — hydration gate stands; transport and lock semantics rebound (ADR-0030)
+
+Preserved: the hydration-gate doctrine. A SessionStart receipt is the only
+memory precondition on governed repository writes on the Claude Code surface,
+the PreToolUse gate stays fail-closed, and the operator-only breakglass stays
+`L9_MEMORY_ENFORCEMENT_BREAKGLASS` (`agent_settable: false`).
+
+Superseded by ADR-0030 (and `CANONICAL_LAW` §8.1 / §8.2 / §8.3):
+
+- **Transport.** The `L9_MEMORY_HTTP_URL` plane, `memory_client.py`, and the
+  SessionStart "shared memory: … set" line described in Context no longer
+  exist. Hooks are thin wraps of `ops/memory` (`memory_bridge.py`) over the
+  bound `l9-graphite-memory` runtime; no URL, bearer or provider client is on
+  the surface.
+- **`phase_lock` as a repository-write precondition.** The Decision's
+  "`phase_lock` — for authority-file edits, `git commit/push/merge`, and PR
+  create/merge" is retired: repository-write authority is Git's (dedicated
+  worktree, branch off fetched `origin/main`, publication gate; `rules/96`
+  E7/E8/E10). The contract schema deliberately rejects `phase_lock` in
+  `governed_writes[].requires`.
+- **Repository hydration gating vs memory write locking are different
+  things.** `memory.phase_lock` still exists, but only as the prerequisite of
+  `memory.write_governed` — a memory-consistency precondition on the namespace
+  snapshot that `MemoryService` verifies inside the admitting transaction. It
+  never gates a source edit, a commit, a push, or a PR. The machine form is the
+  contract's `interactive_memory_write` block (`repository_authority: false`).

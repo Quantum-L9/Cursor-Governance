@@ -365,10 +365,11 @@ fi
 # --- 3) Capability bootstrap (RETIRED 2026-08-29) ---------------------------
 # The capability broker never shipped: broker.quantumaipartners.com has no DNS,
 # hosted surfaces issue no broker-verifiable identity, and every brokered
-# capability reported DEGRADED. Cursor Graphiti is the local CLI / tunnel and
-# GRAPHITI_MCP_URL. Do not probe a dead plane or increment DEGRADED for it.
+# capability reported DEGRADED. Memory is the canonical control plane
+# (l9-graphite-memory, bound per checkout by ops/memory/runtime_binding.py),
+# never a provider URL. Do not probe a dead plane or increment DEGRADED for it.
 log "Canonical capability bootstrap"
-say "capability plane: RETIRED (never shipped) — Graphiti via GRAPHITI_MCP_URL / local CLI"
+say "capability plane: RETIRED (never shipped) — memory via the bound l9-graphite-memory runtime"
 
 # A surface that still carries raw downstream secrets has not been migrated.
 # Report it loudly here: this is the check that would have caught the old
@@ -401,17 +402,27 @@ done
 # that workspace does not declare it. Credentials are environment-level;
 # identities are not.
 log "Repository-scoped identity"
-if [ -n "${GRAPHITI_GROUP_ID:-}" ]; then
-  warn "GRAPHITI_GROUP_ID='$GRAPHITI_GROUP_ID' is set — it outranks repo-aware"
-  warn "  resolution for every repository. Remove it from the surface environment."
-fi
-GRAPHITI_RESOLVE=$(cd "$WORKSPACE" && "$GOV_PY" "$GOV_DIR/ops/graphiti/graphiti_memory_client.py" resolve 2>/dev/null)
-GROUP_RESOLVED=$(printf '%s' "$GRAPHITI_RESOLVE" | sed -n 's/.*"group_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
-GROUP_METHOD=$(printf '%s' "$GRAPHITI_RESOLVE" | sed -n 's/.*"method"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+for pinned in L9_MEMORY_NAMESPACE_REQUEST GRAPHITI_GROUP_ID; do
+  if [ -n "${!pinned:-}" ]; then
+    warn "$pinned='${!pinned}' is set — it outranks repo-aware"
+    warn "  resolution for every repository. Remove it from the surface environment."
+  fi
+done
+# The namespace context (ops/memory/namespace_context.py) is the sole identity
+# producer since stage C2; it hints, memory authorizes. No provider is called.
+NAMESPACE_RESOLVE=$(cd "$WORKSPACE" && PYTHONPATH="$GOV_DIR${PYTHONPATH:+:$PYTHONPATH}" "$GOV_PY" -c '
+import json, sys
+from pathlib import Path
+from ops.memory.namespace_context import resolve_namespace_context
+c = resolve_namespace_context(Path(sys.argv[1]))
+print(json.dumps({"namespace": c.write_namespace_hint or "", "method": c.method}))
+' "$WORKSPACE" 2>/dev/null)
+GROUP_RESOLVED=$(printf '%s' "$NAMESPACE_RESOLVE" | sed -n 's/.*"namespace"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+GROUP_METHOD=$(printf '%s' "$NAMESPACE_RESOLVE" | sed -n 's/.*"method"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
 if [ -n "$GROUP_RESOLVED" ]; then
-  say "graphiti group for this workspace: $GROUP_RESOLVED (via ${GROUP_METHOD:-unknown})"
+  say "memory namespace hint for this workspace: $GROUP_RESOLVED (via ${GROUP_METHOD:-unknown})"
 else
-  warn "graphiti group unresolved for $WORKSPACE — memory writes read-only/aborted"
+  warn "memory namespace unresolved for $WORKSPACE — memory hydrate/close will report NAMESPACE_UNRESOLVED"
 fi
 
 # Sonar project identity. The canonical consumer
@@ -498,14 +509,18 @@ fi
 for retired in L9_MEMORY_HTTP_URL L9_MEMORY_CLIENT_TOKEN L9_MEMORY_HTTP_TOKEN; do
   [ -n "${!retired:-}" ] && warn "$retired set — retired ADR-0006 side door; remove it"
 done
-# Memory front door. A bearer in this process is a contract violation.
-# Graphiti is GRAPHITI_MCP_URL (HTTPS) or the local SSH tunnel CLI — not a
-# capability broker (retired 2026-08-29, never shipped).
+# Memory front door. A provider bearer or URL in this process is a contract
+# violation since stage C9: memory is the canonical l9-graphite-memory
+# control plane, bound per checkout, and its runtime resolves its own
+# credentials (memory ADR-016) — not a capability broker (retired
+# 2026-08-29, never shipped) and not a provider URL this surface reaches.
 if [ -n "${GRAPHITI_MCP_TOKEN:-}" ]; then
   warn "GRAPHITI_MCP_TOKEN present in a model-controlled surface — PROHIBITED (contract S3)"
-  warn "  remove it; Cursor uses the local Graphiti CLI, adapters use GRAPHITI_MCP_URL"
+  warn "  remove it; memory is the bound control-plane runtime (ops/memory), never a bearer here"
+elif [ -n "${GRAPHITI_MCP_URL:-}" ]; then
+  warn "GRAPHITI_MCP_URL present — retired provider transport (stage C9); remove it from the surface environment"
 else
-  say "memory front door: GRAPHITI_MCP_URL / local Graphiti CLI (no bearer in this process)"
+  say "memory front door: canonical control plane (l9-graphite-memory; no provider URL or bearer in this process)"
 fi
 
 for kernel in "Recursive Alignment.md" "Validate & Repair.md"; do

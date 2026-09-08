@@ -132,16 +132,16 @@ class SkillUsageClassificationTests(unittest.TestCase):
 
 
 class HydrateCollapseTests(unittest.TestCase):
-    def test_unhealthy_graphiti_does_not_add_hydrate_row(self) -> None:
+    def test_unhealthy_memory_does_not_add_hydrate_row(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             lines = report.collect(
                 surface="cursor",
                 venv="locked",
                 ide_profile="applied",
                 tunnel="open",
-                graphiti_detail="unreachable",
-                graphiti_stderr="Connection reset by peer",
-                graphiti_healthy=False,
+                memory_detail="unreachable",
+                memory_stderr="Connection reset by peer",
+                memory_healthy=False,
                 wiring="PASS",
                 backup="armed",
                 skill_note="/tmp/x.jsonl (1 entries)",
@@ -151,21 +151,21 @@ class HydrateCollapseTests(unittest.TestCase):
                 home=Path(tmp),
             )
         names = [item["name"] for item in lines]
-        self.assertIn("graphiti", names)
-        self.assertNotIn("graphiti-hydrate", names)
-        graphiti = next(item for item in lines if item["name"] == "graphiti")
-        self.assertIn("PICKUP search unreachable", graphiti["evidence"])
+        self.assertIn("memory", names)
+        self.assertNotIn("memory-hydrate", names)
+        memory = next(item for item in lines if item["name"] == "memory")
+        self.assertIn("PICKUP search unreachable", memory["evidence"])
 
-    def test_healthy_graphiti_keeps_hydrate_row(self) -> None:
+    def test_healthy_memory_keeps_hydrate_row(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             lines = report.collect(
                 surface="cursor",
                 venv="locked",
                 ide_profile="applied",
                 tunnel="open",
-                graphiti_detail="healthy",
-                graphiti_stderr="",
-                graphiti_healthy=True,
+                memory_detail="healthy",
+                memory_stderr="",
+                memory_healthy=True,
                 wiring="PASS",
                 backup="armed",
                 skill_note="/tmp/x.jsonl (1 entries)",
@@ -175,7 +175,7 @@ class HydrateCollapseTests(unittest.TestCase):
                 home=Path(tmp),
             )
         names = [item["name"] for item in lines]
-        self.assertIn("graphiti-hydrate", names)
+        self.assertIn("memory-hydrate", names)
 
 
 class ReporterResolveTests(unittest.TestCase):

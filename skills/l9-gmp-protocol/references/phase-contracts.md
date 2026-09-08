@@ -6,8 +6,8 @@ role: phase_contract
 tags: [gmp, phases, contract]
 owner: igor_beylin
 status: active
-version: 1.1.0
-updated: 2026-06-06
+version: 1.1.1
+updated: 2026-09-07
 /L9_META -->
 
 # GMP Phase Contracts (0–6)
@@ -38,7 +38,7 @@ Each phase ends with its named status line and proceeds only if the exit gate is
   ```
   Requires `code_graph_health.sh` exit 0. Writes `.cursor/code-graph-phase0-evidence.json` (4h TTL). Attach impact/importer summary to the locked plan. Skip when all TODOs are grep-only (known files, views, tests, docs) — declare `CODE_GRAPH_BASELINE: SKIPPED`.
 - **Exit:** "Phase 0 complete. TODO PLAN locked. ADRs consulted: [list]. CODE_GRAPH_BASELINE: COMPLETE | SKIPPED | BLOCKED." Stop for approval if scope is high-risk or ambiguous.
-- **MEMORY_PREFETCH (Graphiti):** run `python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py conflicts` and cite prefetch episode names in Phase 0 output. Field: `MEMORY_PREFETCH: <episode names>`.
+- **MEMORY_PREFETCH (memory control plane):** run `python -m ops.memory.cli conflicts` and cite the canonical receipt in Phase 0 output. Field: `MEMORY_PREFETCH: namespace=<ns> snapshot_digest=<sha256> checked_record_count=<n> conflicts=<count|record ids> policy_version=<memory-phase-lock/vN>`. Receipt status `CANONICAL_UNAVAILABLE` / `BINDING_FAILED` is declared as such (`MEMORY_PREFETCH: UNAVAILABLE (<status>)`), never invented. The receipt is evidence only: it does not gate the edit, and a memory phase-lock is never repository-write authority (rule 96 E7, rule 98).
 
 ## Phase 1 — Baseline Confirmation
 

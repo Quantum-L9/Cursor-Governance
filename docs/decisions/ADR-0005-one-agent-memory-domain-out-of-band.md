@@ -82,3 +82,26 @@ points are not two memories, and product domain stores are never agent memory.
 - `rules/03-graphiti-memory.mdc`
 - `rules/97-graph-layer-boundary.mdc`
 - `skills/l9-graphiti-memory/SKILL.md`
+
+## Amendment (2026-09-07) — authority rebound to MemoryService (ADR-0030)
+
+Preserved: one agent episodic memory; product / domain graphs out of band;
+the structural code graph separate; a transport failure is a wiring problem,
+never permission to invent a second memory.
+
+Rebound by ADR-0030:
+
+- **Authority.** The single episodic authority is `MemoryService` in
+  `l9-graphite-memory` (`memory-control-plane/v1`). Graphiti is a projection
+  memory owns — "Graphiti / L9 shared-memory service" in Decision item 1 reads
+  as that projection, never as a store this repository calls.
+- **Resume SSOT.** Not Graphiti `inject` / PICKUP. The canonical
+  `session_continuation` record (`ContinuationCapsuleV2`) admitted at close and
+  retrieved by `python -m ops.memory.cli hydrate`; current git state wins over
+  a stale capsule.
+- **Transports.** Decision item 2's CLI is `python -m ops.memory.cli`
+  (`graphiti_memory_client.py` is a tombstone); the MCP surface is the
+  package-owned `l9-graphite-memory` server. Both are adapters over the same
+  admission path. A model-initiated durable write on the MCP surface is
+  `memory.phase_lock` → `memory.write_governed`; the CLI `write` is the
+  operator / deterministic-adapter path, not the model's way around it.

@@ -81,8 +81,9 @@ class NoHttpSideDoor(unittest.TestCase):
     def test_memory_client_deleted(self) -> None:
         self.assertFalse((MEM / "memory_client.py").exists())
 
-    def test_graphiti_bridge_present(self) -> None:
-        self.assertTrue((MEM / "graphiti_bridge.py").is_file())
+    def test_memory_bridge_present_and_legacy_bridge_gone(self) -> None:
+        self.assertTrue((MEM / "memory_bridge.py").is_file())
+        self.assertFalse((MEM / "graphiti_bridge.py").exists())
 
 
 if __name__ == "__main__":
