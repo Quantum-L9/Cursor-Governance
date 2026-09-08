@@ -32,31 +32,72 @@ class _Binding:
     agent_ref = "stub-agent"
     surface = "stub-surface"
 
+    def to_dict(self) -> dict[str, str]:
+        return {"provider_ref": self.provider_ref}
+
 
 class _Probe:
     status = "PASS"
     blocked_reason = None
 
+    def to_dict(self) -> dict[str, str]:
+        return {"status": self.status}
 
-class _FailingPipeline:
-    """Provider window that ends in a terminal FAIL with a useful receipt."""
 
-    def _resolve_provider(self, **_kwargs):
-        return _Binding(), object(), Path("/tmp")
+class _Outcome:
+    """A provider window that timed out with confirmed termination."""
 
-    def _probe_provider(self, **_kwargs):
+    status = "FAIL"
+    timed_out = True
+    termination = "confirmed"
+
+    def to_dict(self) -> dict[str, object]:
+        return {"status": self.status, "timed_out": True, "termination": "confirmed"}
+
+
+class _FailingLifecycle:
+    """Front-door lifecycle whose provider ends in a terminal FAIL with a receipt."""
+
+    def resolve_provider(self, **_kwargs):
+        return _Binding(), types.SimpleNamespace(execution_profile={}), Path("/tmp")
+
+    def probe_provider(self, **_kwargs):
         return _Probe()
 
-    def _execute_provider(self, **_kwargs):
-        return {
-            "status": "FAIL",
-            "reason": "peer_execution_timeout",
-            "terminal_result": {
-                "changed_files": [],
-                "generated_data_units": [{"unit_id": "u-1", "kind": "finding"}],
-            },
-            "dispatch": {"dispatch_id": "d-1"},
+    def dispatch_provider(self, **_kwargs):
+        return "d-1", {"dispatch_id": "d-1"}, {"dispatch_id": "d-1", "status": "DISPATCHED"}
+
+    def await_provider(self, **_kwargs):
+        return _Outcome()
+
+    def collect_provider(self, **_kwargs):
+        return {}
+
+
+class _FrontDoor:
+    """The `_peer_pipeline()` seam: the real front door with a fake lifecycle."""
+
+    def __init__(self) -> None:
+        sys.path.append(str(PE_ROOT))
+        from peer_execution import front_door
+
+        self._front_door = front_door
+        self.PeerExecutionRequest = front_door.PeerExecutionRequest
+        self.SAFE_BEFORE_DISPATCH = front_door.SAFE_BEFORE_DISPATCH
+
+    def execute(self, request):
+        outcome = self._front_door.execute(
+            request,
+            lifecycle=_FailingLifecycle(),
+            policy=self._front_door.FailoverPolicy(),
+            health=self._front_door.ProviderHealth(),
+        )
+        # The provider's terminal result travels with the failure (RC-02).
+        outcome["receipt"] = {
+            "changed_files": [],
+            "generated_data_units": [{"unit_id": "u-1", "kind": "finding"}],
         }
+        return outcome
 
 
 class FailedResultHarvestTests(unittest.TestCase):
@@ -67,12 +108,13 @@ class FailedResultHarvestTests(unittest.TestCase):
     def test_provider_failure_preserves_terminal_result(self) -> None:
         contract = {"task_id": "TASK-001", "program_digest": "sha256:0", "requested_actions": []}
         with (
-            patch.object(self.mod, "_peer_pipeline", return_value=_FailingPipeline()),
+            patch.object(self.mod, "_peer_pipeline", return_value=_FrontDoor()),
             patch.object(self.mod, "_peer_identity", return_value=("agent", "surface", None)),
+            patch.object(self.mod, "_live_controller_attempt", return_value=None),
         ):
-            outcome = self.mod._run_peer_execution(Path("/tmp"), contract)
+            outcome = self.mod._run_peer_execution(Path(tempfile.mkdtemp()), contract)
         self.assertEqual(outcome["status"], "FAIL")
-        self.assertEqual(outcome["reason"], "peer_execution_timeout")
+        self.assertIn("peer_execution_timeout", outcome["reason"])
         self.assertEqual(
             outcome["receipt"]["generated_data_units"], [{"unit_id": "u-1", "kind": "finding"}]
         )

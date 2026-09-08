@@ -1,11 +1,16 @@
-"""One canonical cleanup for PEC task execution residue.
+"""Filesystem mechanics for PEC task execution residue. No state authority.
 
-An interrupted task leaves four things behind that each fail differently on the
-next attempt: the worktree directory, git's registration of that worktree, the
-`pec/...` task branch, and the lease that still names them. Cleaning three of
-the four produces the familiar `fatal: a branch named 'pec/.../task-...'
-already exists`, so all four are cleaned here, together, and never inline in
-the runner.
+An interrupted task leaves three filesystem things behind that each fail
+differently on the next attempt: the worktree directory, git's registration of
+that worktree, and the `pec/...` task branch. Cleaning two of the three produces
+the familiar `fatal: a branch named 'pec/.../task-...' already exists`, so all
+three are cleaned here, together, and never inline in the runner.
+
+What this module deliberately does NOT do any more (PEC-P0-001): decide lease
+revocation, task reopening, attempt fencing or successor eligibility. Those are
+Controller recovery decisions (`controller.recover_execution`), and every
+destructive entry point here is reached only through it, after the evidence a
+recovery must preserve has been captured.
 
 Every entry point is safe to call repeatedly: residue that is already gone is
 reported as `absent`, not raised.
@@ -116,9 +121,12 @@ def fresh_execution_workspace(
     repo: Path,
     *,
     task_ids: list[str] | None = None,
-    release_leases: bool = True,
 ) -> dict[str, Any]:
     """Leave the repository able to recreate every task worktree immediately.
+
+    Filesystem mechanics only. The Controller calls this AFTER recovery has
+    fenced every affected attempt and preserved its evidence; calling it any
+    other way destroys evidence a recovery may still need.
 
     Safe to invoke repeatedly, and safe to invoke on a workspace that never
     executed anything.
@@ -167,16 +175,11 @@ def fresh_execution_workspace(
                 if branch and branch not in live:
                     orphaned[branch] = _delete_branch(repo, branch)
 
-    released = 0
-    if release_leases:
-        released = _release_open_leases(workspace, task_ids=discovered if task_ids else None)
-
     return {
         "workspace": str(workspace),
         "repository": str(repo),
         "tasks_cleaned": cleaned,
         "orphaned_branches": orphaned,
-        "leases_released": released,
     }
 
 
@@ -204,30 +207,3 @@ def _validated_task_id(workspace: Path, task_id: str) -> str:
         finally:
             db.close()
     return value
-
-
-def _release_open_leases(workspace: Path, task_ids: list[str] | None = None) -> int:
-    """Drop leases that point at worktrees this reset just removed."""
-    db_path = workspace / "runtime" / "state.sqlite"
-    if not db_path.is_file():
-        return 0
-    from .state import StateDB
-
-    db = StateDB(db_path)
-    try:
-        released = 0
-        for lease in db.active_leases():
-            if task_ids is not None and str(lease.get("task_id") or "") not in task_ids:
-                continue
-            db.release_lease(str(lease["lease_id"]))
-            task_id = str(lease.get("task_id") or "")
-            task = db.task(task_id) if task_id else None
-            # The task can no longer be mid-flight once its worktree is gone;
-            # returning it to ELIGIBLE is what lets execution recreate it.
-            if task is not None and task["runtime_state"] not in {"COMPLETED", "CANCELLED"}:
-                db.transition_task(task_id, "STALE", last_error="workspace_reset")
-                db.transition_task(task_id, "ELIGIBLE")
-            released += 1
-        return released
-    finally:
-        db.close()
