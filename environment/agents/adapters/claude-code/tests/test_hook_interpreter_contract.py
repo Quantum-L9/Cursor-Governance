@@ -133,9 +133,7 @@ class HookInterpreterBindingTests(unittest.TestCase):
         surface_lib = gov / "ops" / "scripts" / "lib"
         surface_lib.mkdir(parents=True)
         (surface_lib / "surface_detect.sh").write_text(
-            (REPO / "ops" / "scripts" / "lib" / "surface_detect.sh").read_text(
-                encoding="utf-8"
-            ),
+            (REPO / "ops" / "scripts" / "lib" / "surface_detect.sh").read_text(encoding="utf-8"),
             encoding="utf-8",
         )
         marker = tmp / "locked" / "bin"
