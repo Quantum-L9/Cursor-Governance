@@ -819,7 +819,7 @@
     },
     {
       "composition_role": "general",
-      "description": "shelf then refine the Cursor plans store: root=current; leftover todos fold or compile; harvested donors omitted. use when /l9-audit-plans runs.",
+      "description": "shelf then refine the Cursor plans store: root stays current unbuilt only; leftover todos fold or compile; harvested donors are omitted. use when /l9-audit-plans, a plans-store shelf audit, or leftover-todo refine runs.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-audit-plans",
@@ -1425,5 +1425,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "d303af6c85575b6a72c81c9776eefee57a8f0082bd85baa7d56afe19056b5db3",
-  "source_skill_corpus_sha256": "afcfe9ff533d5977a44dd005e3e1eb22707f9872488b9616b60ed8104bbf2964"
+  "source_skill_corpus_sha256": "88a8c5dd0d11687b56d7cdd165655ccec1c2a7a83eb89b847f83ad052fd77419"
 }
