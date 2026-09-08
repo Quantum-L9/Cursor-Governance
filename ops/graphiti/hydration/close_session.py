@@ -72,6 +72,7 @@ TOTAL_BUDGET = 30.0
 
 STATUS_CLOSED_CANONICALLY = _latches.STATUS_CLOSED_CANONICALLY
 STATUS_CLOSE_INCOMPLETE = _latches.STATUS_CLOSE_INCOMPLETE
+STATUS_CLOSE_CONFLICTED = _latches.STATUS_CLOSE_CONFLICTED
 PRODUCER_VERSION = "2.0.0"
 
 #: Phase B promotion kinds -> canonical memory classes (write taxonomy, plan §14).
@@ -782,7 +783,15 @@ def close_session(
             "stored close differs from this request (see close.warnings)"
         )
 
-    if closed.ok and close_receipt is not None and close_receipt.committed:
+    if closed.status is OutcomeStatus.IDEMPOTENCY_CONFLICT:
+        # CG-P1-01. Ahead of the committed promotion below: memory returned a
+        # committed record, but it is the *first* close under this key, not
+        # this one. The obligation stays open and conflicted.
+        final_status = STATUS_CLOSE_CONFLICTED
+        failure_class = closed.status.value
+        report["status"] = STATUS_CLOSE_CONFLICTED
+        report["warnings"].append(f"close idempotency conflict: {closed.error or 'no detail'}")
+    elif closed.ok and close_receipt is not None and close_receipt.committed:
         final_status = STATUS_CLOSED_CANONICALLY
         failure_class = None
         report["status"] = STATUS_CLOSED_CANONICALLY

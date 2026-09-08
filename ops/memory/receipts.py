@@ -2,11 +2,16 @@
 
 These are *views* over the JSON the memory-owned CLI prints, not a second
 schema. Each view keeps the complete receipt under ``raw`` and exposes only
-the fields Cursor session composition needs. When the pinned
-``l9_graphite_memory.contracts`` package is importable in this interpreter,
-:func:`validate_against_contract` additionally validates the raw payload with
-the package's own pydantic model, so the view can never drift from the
-contract silently.
+the fields Cursor session composition needs.
+
+They are deliberately **not** the validation authority. Canonical validation
+lives in :mod:`ops.memory.canonical_validation`, which checks the raw payload
+against the schema the *bound release* exported, and the client runs it before
+any view here reads a field (audit CG-P1-02). An in-process
+``import l9_graphite_memory.contracts`` cannot serve that purpose: in pinned
+mode the memory runtime is a different interpreter, so such a check can only
+ever decline, and a validator that declines is how structural acceptance
+becomes the silent default.
 
 A receipt that lacks the fields a view requires raises
 :class:`InvalidReceiptError`; the client maps that to ``INVALID_RECEIPT`` and
@@ -45,30 +50,6 @@ def result_digest(payload: Any) -> str:
 
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
-
-
-def validate_against_contract(raw: dict[str, Any], model_name: str) -> bool:
-    """Validate ``raw`` with the memory package's own model when it is importable.
-
-    Returns ``True`` when strict validation ran and passed, ``False`` when the
-    package is not importable in this interpreter (structural checks still
-    apply). A validation failure raises :class:`InvalidReceiptError`.
-    """
-
-    try:
-        import importlib
-
-        contracts = importlib.import_module("l9_graphite_memory.contracts")
-    except ImportError:
-        return False
-    model = getattr(contracts, model_name, None)
-    if model is None:
-        return False
-    try:
-        model.model_validate(raw)
-    except Exception as exc:  # pydantic.ValidationError, kept import-free here
-        raise InvalidReceiptError(f"{model_name} validation failed: {exc}") from exc
-    return True
 
 
 @dataclass(frozen=True)
@@ -511,5 +492,4 @@ __all__ = [
     "SearchRecordView",
     "WriteReceipt",
     "result_digest",
-    "validate_against_contract",
 ]

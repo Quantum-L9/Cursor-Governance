@@ -2,7 +2,11 @@
 
 Replaces "Graphiti is up" with ten levels, projection last:
 
-    R0 PACKAGE_BOUND          runtime binding is exact or an explicit dev checkout
+    R0 PACKAGE_BOUND          runtime binding is usable: the audited artifact
+                              (exact), a compatible build whose artifact could
+                              not be proved, or an explicit dev checkout. The
+                              detail always names which — 'compatible' is a
+                              weaker claim than 'exact' and must read as one.
     R1 CLI_EXECUTABLE         the bound l9-memory answered `capabilities`
     R2 CANONICAL_STORE_READY  memory.health reports the store healthy
     R3 MEMORY_SERVICE_READY   health status complete/partial on the expected contract
@@ -91,7 +95,11 @@ def readiness_report(
         name = dict(LEVELS)[level]
         results[level] = Level(level=level, name=name, status=status, detail=detail[:400])
 
-    record("R0", PASS if binding.ok else FAIL, "; ".join(binding.reasons) or binding.status)
+    record(
+        "R0",
+        PASS if binding.ok else FAIL,
+        f"{binding.status}: " + ("; ".join(binding.reasons) or "artifact proved"),
+    )
     record(
         "R1",
         PASS if (binding.ok and binding.capabilities is not None) else FAIL,
