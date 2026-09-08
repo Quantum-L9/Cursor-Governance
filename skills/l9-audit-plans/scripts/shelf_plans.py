@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 SCRIPTS = Path(__file__).resolve().parent
-AUDIT_SCRIPTS = SCRIPTS.parents[2] / "l9-pipeline-audit" / "scripts"
+AUDIT_SCRIPTS = SCRIPTS.parents[1] / "l9-pipeline-audit" / "scripts"
 if str(AUDIT_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(AUDIT_SCRIPTS))
 from audit_plans import (  # noqa: E402
@@ -61,6 +61,14 @@ STAMP_RE = re.compile(r"_([0-9]{1,2})-([0-9]{1,2})-([0-9]{2,4})\.plan\.md$")
 
 def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _same_file(left: Path, right: Path) -> bool:
+    """Case-insensitive volumes can resolve built/ vs BUILT/ to different strings."""
+    try:
+        return left.exists() and right.exists() and left.samefile(right)
+    except OSError:
+        return left.resolve() == right.resolve()
 
 
 def _readme_queue(plans_dir: Path) -> set[str]:
@@ -165,17 +173,110 @@ def shelf_dir(plans_dir: Path, verdict: str) -> Path:
     return plans_dir / verdict
 
 
+def _same_slug_keeper(plans_dir: Path, src: Path) -> Path | None:
+    key = slug_key(src)
+    if not key:
+        return None
+    for folder in _unique_dirs(
+        plans_dir,
+        plans_dir / "partially-built",
+        plans_dir / "built",
+        plans_dir / "BUILT",
+    ):
+        for path in _iter_plan_mds(folder):
+            if _same_file(path, src):
+                continue
+            if slug_key(path) == key:
+                return path
+    return None
+
+
 def slug_collision(dest_dir: Path, src: Path) -> Path:
     """Prefer an existing same-slug file over basename-only dest."""
     named = dest_dir / src.name
     key = slug_key(src)
     if dest_dir.is_dir() and key:
         for existing in dest_dir.glob("*.plan.md"):
-            if existing == src:
+            if _same_file(existing, src):
                 continue
             if slug_key(existing) == key:
                 return existing
     return named
+
+
+def _unique_dirs(*paths: Path) -> list[Path]:
+    seen: set[Path] = set()
+    out: list[Path] = []
+    for path in paths:
+        if not path.is_dir():
+            continue
+        key = path.resolve()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(path)
+    return out
+
+
+def allocate_todo_id(preferred: str, ids: set[str]) -> str:
+    """Keep suffixing until the folded id is unique in the destination list."""
+    candidate = preferred or "fold-1"
+    if candidate not in ids:
+        return candidate
+    suffix = 1
+    while True:
+        nxt = f"{preferred}-fold" if suffix == 1 else f"{preferred}-fold-{suffix}"
+        if nxt not in ids:
+            return nxt
+        suffix += 1
+
+
+def leftover_todo_rows(fm: dict[str, Any]) -> list[dict[str, Any]]:
+    todos = fm.get("todos")
+    if not isinstance(todos, list):
+        return []
+    leftover: list[dict[str, Any]] = []
+    for item in todos:
+        if not isinstance(item, dict):
+            continue
+        status = str(item.get("status") or "pending").lower()
+        if status in {"pending", "in_progress"}:
+            leftover.append(dict(item))
+    return leftover
+
+
+def merge_unique_todos(src: Path, dest: Path) -> int:
+    """Copy unique pending/in-progress todos from src onto dest before dest-wins."""
+    src_loaded = _load_plan(src)
+    dest_loaded = _load_plan(dest)
+    if src_loaded is None or dest_loaded is None:
+        return 0
+    src_fm, _src_body = src_loaded
+    dest_fm, dest_body = dest_loaded
+    incoming = leftover_todo_rows(src_fm)
+    if not incoming:
+        return 0
+    dest_todos = dest_fm.get("todos")
+    if not isinstance(dest_todos, list):
+        dest_todos = []
+        dest_fm["todos"] = dest_todos
+    seen = {str(item.get("content") or "").strip() for item in dest_todos if isinstance(item, dict)}
+    ids = {str(item.get("id") or "") for item in dest_todos if isinstance(item, dict)}
+    added = 0
+    for item in incoming:
+        content = str(item.get("content") or "").strip()
+        if not content or content in seen:
+            continue
+        new_id = allocate_todo_id(str(item.get("id") or f"fold-{added + 1}"), ids)
+        row = dict(item)
+        row["id"] = new_id
+        dest_todos.append(row)
+        seen.add(content)
+        ids.add(new_id)
+        added += 1
+    if added:
+        _dump_frontmatter(dest, dest_fm, dest_body)
+    return added
 
 
 def _verdict(
@@ -187,7 +288,12 @@ def _verdict(
     week: set[str],
     superseded_names: set[str],
 ) -> str:
-    if STATUS_SUPERSEDED_RE.search(body) or path.name in superseded_names:
+    fm_status = str(fm.get("status") or "").strip().lower()
+    if (
+        fm_status == "superseded"
+        or STATUS_SUPERSEDED_RE.search(body)
+        or path.name in superseded_names
+    ):
         return "archive/superseded"
     todos = fm.get("todos")
     pending, in_prog, total = todo_counts(todos)
@@ -224,7 +330,7 @@ def _tracked(workspace: Path, path: Path) -> bool:
 
 
 def _remove_src(src: Path, dest: Path, workspace: Path) -> None:
-    if src.resolve() == dest.resolve():
+    if _same_file(src, dest):
         return
     if _tracked(workspace, src):
         subprocess.run(
@@ -238,7 +344,7 @@ def _remove_src(src: Path, dest: Path, workspace: Path) -> None:
 
 def _place(src: Path, dest: Path, workspace: Path, actions: list[str]) -> str:
     dest.parent.mkdir(parents=True, exist_ok=True)
-    if dest.exists() and src.resolve() != dest.resolve():
+    if dest.exists() and not _same_file(src, dest):
         if _sha(src) == _sha(dest):
             _remove_src(src, dest, workspace)
             actions.append(f"drop-ident {src.name}")
@@ -249,8 +355,10 @@ def _place(src: Path, dest: Path, workspace: Path, actions: list[str]) -> str:
         src_pending_only = src_prog == 0
         dest_wins = dest_started and (src_pending_only or dest_prog >= src_prog)
         if dest_wins:
+            merged = merge_unique_todos(src, dest)
             _remove_src(src, dest, workspace)
-            actions.append(f"keep-started {dest.name}")
+            extra = f" +{merged}" if merged else ""
+            actions.append(f"keep-started {dest.name}{extra}")
             return "kept"
         dest.write_bytes(src.read_bytes())
         if _tracked(workspace, dest):
@@ -322,11 +430,15 @@ def shelf(plans_dir: Path, workspace: Path, today: date) -> dict[str, Any]:
     folded = fold_retired(plans_dir, workspace, actions)
     queue = _readme_queue(plans_dir)
     week = _this_week_stamps(today)
-    candidates = [
-        *_iter_plan_mds(plans_dir),
-        *_iter_plan_mds(plans_dir / "stale"),
-        *_iter_plan_mds(plans_dir / "partially-built"),
-    ]
+    candidate_dirs = _unique_dirs(
+        plans_dir,
+        plans_dir / "stale",
+        plans_dir / "partially-built",
+        plans_dir / "built",
+        plans_dir / "BUILT",
+        plans_dir / "archive" / "superseded",
+    )
+    candidates = [path for folder in candidate_dirs for path in _iter_plan_mds(folder)]
     superseded = collect_newer_slugs(candidates)
     counts = {
         "root": 0,
@@ -356,7 +468,12 @@ def shelf(plans_dir: Path, workspace: Path, today: date) -> dict[str, Any]:
         else:
             counts[verdict] += 1
         dest = slug_collision(dest_dir, path)
-        if path.resolve() == dest.resolve():
+        keeper = _same_slug_keeper(plans_dir, path)
+        if keeper is not None:
+            merged = merge_unique_todos(path, keeper)
+            if merged:
+                actions.append(f"merge-leftovers {path.name} → {keeper.name} +{merged}")
+        if _same_file(path, dest):
             apply_status(path, verdict)
             continue
         result = _place(path, dest, workspace, actions)

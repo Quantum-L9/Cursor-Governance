@@ -11,7 +11,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parent
-AUDIT_SCRIPTS = SCRIPTS.parents[2] / "l9-pipeline-audit" / "scripts"
+AUDIT_SCRIPTS = SCRIPTS.parents[1] / "l9-pipeline-audit" / "scripts"
 if str(AUDIT_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(AUDIT_SCRIPTS))
 if str(SCRIPTS) not in sys.path:

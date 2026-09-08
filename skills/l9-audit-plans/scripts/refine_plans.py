@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 SCRIPTS = Path(__file__).resolve().parent
-AUDIT_SCRIPTS = SCRIPTS.parents[2] / "l9-pipeline-audit" / "scripts"
+AUDIT_SCRIPTS = SCRIPTS.parents[1] / "l9-pipeline-audit" / "scripts"
 if str(AUDIT_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(AUDIT_SCRIPTS))
 if str(SCRIPTS) not in sys.path:
@@ -22,7 +22,10 @@ from shelf_plans import (  # noqa: E402
     _dump_frontmatter,
     _iter_plan_mds,
     _load_plan,
+    _unique_dirs,
+    allocate_todo_id,
     apply_status,
+    leftover_todo_rows,
 )
 
 CONCERN_PREFIXES: list[tuple[str, str]] = [
@@ -61,17 +64,7 @@ def concern_for(path: Path, fm: dict[str, Any] | None = None) -> str:
 
 
 def leftover_todos(fm: dict[str, Any]) -> list[dict[str, Any]]:
-    todos = fm.get("todos")
-    if not isinstance(todos, list):
-        return []
-    leftover: list[dict[str, Any]] = []
-    for item in todos:
-        if not isinstance(item, dict):
-            continue
-        status = str(item.get("status") or "pending").lower()
-        if status in {"pending", "in_progress"}:
-            leftover.append(dict(item))
-    return leftover
+    return leftover_todo_rows(fm)
 
 
 def _todo_content(item: dict[str, Any]) -> str:
@@ -90,9 +83,7 @@ def _append_unique(dest_fm: dict[str, Any], incoming: list[dict[str, Any]]) -> i
         content = _todo_content(item)
         if not content or content in seen:
             continue
-        new_id = str(item.get("id") or f"fold-{added + 1}")
-        if new_id in ids:
-            new_id = f"{new_id}-fold"
+        new_id = allocate_todo_id(str(item.get("id") or f"fold-{added + 1}"), ids)
         row = dict(item)
         row["id"] = new_id
         todos.append(row)
@@ -127,7 +118,7 @@ def _write_plan(path: Path, fm: dict[str, Any], body: str) -> None:
 
 
 def _donor_dirs(plans_dir: Path) -> list[Path]:
-    return [plans_dir / "stale", plans_dir / "built"]
+    return _unique_dirs(plans_dir / "stale", plans_dir / "built", plans_dir / "BUILT")
 
 
 def _beneficiaries(plans_dir: Path, concern: str) -> list[Path]:

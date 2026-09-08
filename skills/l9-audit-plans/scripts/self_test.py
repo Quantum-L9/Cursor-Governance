@@ -179,8 +179,14 @@ def main() -> int:
         dest_after = (dest_win / "partially-built" / "same_slug_bbbb2222.plan.md").read_text(
             encoding="utf-8"
         )
-        if dest_before != dest_after:
-            errors.append("started dest must win over all-pending same-slug src")
+        dest_fm = _fm(dest_win / "partially-built" / "same_slug_bbbb2222.plan.md")
+        dest_contents = [str(t.get("content")) for t in dest_fm.get("todos") or []]
+        if "keep me" not in dest_contents:
+            errors.append("started dest must keep its own leftover")
+        if "new leftover" not in dest_contents:
+            errors.append("dest-wins must merge unique leftover todos from the same-slug src")
+        if dest_before == dest_after:
+            errors.append("dest-wins must rewrite dest when src has unique leftovers")
         if (dest_win / "same_slug_aaaa1111.plan.md").is_file():
             errors.append("same-slug src should be removed after dest-wins")
 
@@ -249,6 +255,77 @@ def main() -> int:
                 errors.append("README live-queue must list remaining root plans")
             if "1. `keep_me_9-5-26`" in readme:
                 errors.append("README must not keep stale numbered names")
+
+        id_dir = Path(tmp) / "fold-ids"
+        id_dir.mkdir()
+        _write(id_dir / "README.md", "## Live queue\n\n1. `ceremony_live`\n\n## Next\n")
+        _write(id_dir / "_TEMPLATE.plan.md", _plan("template", ["pending"]))
+        _write(
+            id_dir / "ceremony_live.plan.md",
+            _plan("live", ["pending"], status="current", contents=["keep live"]),
+        )
+        _write(
+            id_dir / "stale" / "ceremony_a.plan.md",
+            _plan("a", ["pending"], status="stale", contents=["first fold"]),
+        )
+        _write(
+            id_dir / "stale" / "ceremony_b.plan.md",
+            _plan("b", ["pending"], status="stale", contents=["second fold"]),
+        )
+        _write(
+            id_dir / "stale" / "ceremony_c.plan.md",
+            _plan("c", ["pending"], status="stale", contents=["third fold"]),
+        )
+        id_run = _run([sys.executable, str(REFINE), "--plans-dir", str(id_dir), "--format", "json"])
+        if id_run.returncode != 0:
+            errors.append(f"unique-id refine failed: {id_run.stdout}{id_run.stderr}")
+        else:
+            ids = [str(t.get("id")) for t in _fm(id_dir / "ceremony_live.plan.md").get("todos") or []]
+            if len(ids) != len(set(ids)):
+                errors.append(f"folded todo ids must stay unique, got {ids}")
+
+        supersede_dir = Path(tmp) / "supersede"
+        supersede_dir.mkdir()
+        _write(supersede_dir / "README.md", "## Live queue\n\n## Next\n")
+        _write(
+            supersede_dir / "old_thing.plan.md",
+            _plan("old", ["pending"], status="superseded", contents=["leftover"]),
+        )
+        _write(
+            supersede_dir / "BUILT" / "ceremony_uppercase.plan.md",
+            _plan(
+                "uppercase",
+                ["pending"],
+                status="built",
+                contents=["uppercase leftover"],
+            ),
+        )
+        _run(
+            [
+                sys.executable,
+                str(SHELF),
+                "--plans-dir",
+                str(supersede_dir),
+                "--workspace",
+                tmp,
+                "--today",
+                "2026-09-05",
+                "--format",
+                "json",
+            ]
+        )
+        if not (supersede_dir / "archive" / "superseded" / "old_thing.plan.md").is_file():
+            errors.append("frontmatter status superseded must shelf to archive/superseded")
+        _run([sys.executable, str(REFINE), "--plans-dir", str(supersede_dir), "--format", "json"])
+        compiled = list(supersede_dir.glob("compiled_*.plan.md"))
+        if not compiled:
+            errors.append("uppercase BUILT leftover must be compiled or folded")
+        else:
+            compiled_contents = [
+                str(t.get("content")) for t in _fm(compiled[0]).get("todos") or []
+            ]
+            if "uppercase leftover" not in compiled_contents:
+                errors.append("uppercase BUILT leftover must reach a compiled packet")
 
         second = _run(
             [sys.executable, str(REFINE), "--plans-dir", str(refine_dir), "--format", "json"]
