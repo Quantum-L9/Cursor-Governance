@@ -87,7 +87,7 @@
     "ResolveReceipt": [
       "GroupResolution"
     ],
-    "_verified": "All five aliases plus PhaseLockVerification and GroupResolution were read from the merged source at ref 7691c076, then proved end to end: the schema probe resolves 11 of 11 CANONICAL_RECEIPT_MODELS against the installed 2.3.0 wheel."
+    "_verified": "All five aliases plus PhaseLockVerification and GroupResolution were read from the merged source at ref 7691c076, then proved end to end: the schema probe resolves 11 of 11 CANONICAL_RECEIPT_MODELS against the installed 2.3.1 wheel."
   },
   "contract_model_modules": [
     "l9_graphite_memory.contracts",

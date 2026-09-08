@@ -375,7 +375,7 @@ failure and requires the pinned wheel.
 
 `.github/workflows/memory-cross-repo.yml` is that proof as a required,
 non-skippable PR check (audit P2-02 / P1-01): it resolves `memory-binding.json`
-`source.ref` on the memory remote (the `v2.3.0` release tag is peeled with
+`source.ref` on the memory remote (the `v2.3.1` release tag is peeled with
 `git ls-remote`; a bare SHA is taken as is), refuses any commit other than
 `release_evidence.memory_sha` so a moved tag fails rather than rebinds, clones
 the memory repository at that SHA, rebuilds the wheel reproducibly under
@@ -385,9 +385,8 @@ environment bound through `L9_MEMORY_INTERPRETER`, runs the proof in required
 mode with `GRAPHITI_MCP_URL` / `GRAPHITI_MCP_TOKEN` unset, fails if any case
 skipped, and records the Cursor head, memory head, package version and
 artifact digest in the job summary and a proof artifact
-(`cursor.memory-cross-repo-proof/v1`). The `v2.3.0` tag was cut on 2026-09-07
-(tag object `03ec559c…`, resolving to `5605569b…`) and `source.ref` now names
-it. Making the context required in branch protection and the `uv.lock`
+(`cursor.memory-cross-repo-proof/v1`). The live `source.ref` is the `v2.3.1`
+tag (cut 2026-09-08). The earlier `v2.3.0` tag stays immutable history. Making the context required in branch protection and the `uv.lock`
 artifact pin remain operator steps named in `release_evidence.operator_gated`;
 the pin waits for `publish.yml` to succeed on the tag, whose first run was
 rejected by the memory repository's `release` environment deployment policy
