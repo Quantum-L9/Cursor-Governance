@@ -83,6 +83,10 @@ def test_cursor_merge_gate_is_not_added_to_the_claude_only_skip_table() -> None:
         "merge_gate_wrap.py",
         {"CURSOR_AGENT": "1", "L9_GOVERNANCE_SURFACE": "claude-code"},
     )
+    assert proc.returncode == 0, proc.stderr + proc.stdout
+    blob = (proc.stderr + proc.stdout).lower()
+    assert "cannot evaluate" not in blob
+    assert "cannot_run" not in blob
     assert "Claude-only gate" not in proc.stderr
     assert "gate merge_gate_wrap.py skipped" not in proc.stderr
 
