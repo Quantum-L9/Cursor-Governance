@@ -1,5 +1,5 @@
 {
-  "generation_id": "f71ef36a81585783722da5f37716bf8568400d86203374327d94579d918617a5",
+  "generation_id": "77411fbe0cc7dbbc23b2ec16335cf59e6bd6f0263968aac272cbeeb26e300f57",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -446,6 +446,24 @@
         ]
       },
       {
+        "id": "audit_plans_shelf",
+        "positive_signals": [
+          "l9-audit-plans",
+          "/l9-audit-plans",
+          "organize plans store",
+          "shelf plans",
+          "refine leftover plan todos",
+          "docs/plans/stale",
+          "partially-built shelf"
+        ],
+        "primary": "l9-audit-plans",
+        "signal_weight": 9,
+        "supporting": [
+          "l9-pipeline-audit",
+          "l9-ynp"
+        ]
+      },
+      {
         "id": "pipeline_audit",
         "positive_signals": [
           "pipeline audit",
@@ -864,6 +882,19 @@
       "skill_sha256": "e5b9b94084e865958e0be0bcb0dd35c0df59e647cdacf4078bbf3335373cee41",
       "user_invocable": true,
       "when_to_use": "capturing a significant architecture/design decision, recording trade-offs, or creating an ADR"
+    },
+    {
+      "composition_role": "general",
+      "description": "shelf then refine the Cursor plans store: root stays current unbuilt only; leftover todos fold or compile; harvested donors are omitted. use when /l9-audit-plans, a plans-store shelf audit, or leftover-todo refine runs.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-audit-plans",
+      "path": "skills/l9-audit-plans",
+      "reason": "plans-store shelf + leftover-todo refine mutates docs/plans (status law, harvested omit, fold/compile); slash /l9-audit-plans is the explicit invoke; disable-model-invocation",
+      "skill_md": "skills/l9-audit-plans/SKILL.md",
+      "skill_sha256": "63b7c624e1939b456709ca695ba0982367e3178c169743d93e2db622c5a47f83",
+      "user_invocable": true,
+      "when_to_use": ""
     },
     {
       "composition_role": "primary",
@@ -1316,7 +1347,7 @@
       "path": "skills/l9-pipeline-audit",
       "reason": "on-demand multi-surface harvest (plans + WIP + PE campaigns) can emit new WIP or campaign INTENT; slash /l9-pipeline-audit is the explicit invoke; sessionStart runs audit_pipeline.py display+spent-archive only; disable-model-invocation",
       "skill_md": "skills/l9-pipeline-audit/SKILL.md",
-      "skill_sha256": "be9b4f4b9f45facfa681d17fc8529929ac21045f0d0ca8db9da586c6838bcdc8",
+      "skill_sha256": "93ce55afee0cb266d1bd630428b703016eefd566f6b46c43be638aa92a74cc0e",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1355,7 +1386,7 @@
       "path": "skills/l9-plan-simple",
       "reason": "auto-registered by sync_generated_artifacts (orphan \u2192 explicit_only)",
       "skill_md": "skills/l9-plan-simple/SKILL.md",
-      "skill_sha256": "887736045f37ab0ca800792f9b6c0f9302f852b45302126aa9f0552c3d14a0da",
+      "skill_sha256": "1b3f6bbf00df91f5b5e11f47899a8d1af57fd34cd3fdce077f4bacc07d7a3b53",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1569,6 +1600,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "6edcc9e97cbe150fc003e675f9b5d11e19bad615fc1926602f56c16053fef9a4",
-  "source_skill_corpus_sha256": "9af9fda055dfb27b8c0b0eb9d5cce9a62de301c74c8a3d20d23ee8908d8fda42"
+  "source_manifest_sha256": "67e80c1bf78c160e239ba3b42551ed772591f1a9dcaca06b3012c414e7ab08a2",
+  "source_skill_corpus_sha256": "34fa3eccfabbcfc7c200ef645672505c4b9468e1e2efa7569b3732267e994e89"
 }

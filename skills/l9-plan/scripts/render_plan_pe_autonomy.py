@@ -262,6 +262,7 @@ def _frontmatter(plan: dict, execute_via: str = EXECUTE_VIA_PE) -> str:
     lines.append("isProject: false")
     lines.append(f"kind: {prof.kind}")
     lines.append(f"execute_via: {prof.execute_via}")
+    lines.append("status: current")
     lines.append("---")
     return "\n".join(lines)
 

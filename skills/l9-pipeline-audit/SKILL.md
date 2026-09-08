@@ -36,6 +36,10 @@ spent plans and inventory-landed WIP only.
 `l9-global-architect` stays STANDALONE if invoked. Repository presence does not
 flip it to PE-integrated mode.
 
+Plans-store refine (fold/compile leftover todos, `harvested: true` omit) is
+`/l9-audit-plans`. SessionStart stays display-only and must not call refine.
+Omit `harvested: true` donors from the live queue.
+
 ## Compact workflow
 
 1. Run `scripts/audit_pipeline.py --workspace "$(pwd)" --gov-root "$HOME/.cursor-governance" --format markdown`.

@@ -1,8 +1,9 @@
 {
-  "canonical_skill_count": 56,
+  "canonical_skill_count": 57,
   "canonical_skills": [
     "l9-api-smoke-testing",
     "l9-architecture-decision-records",
+    "l9-audit-plans",
     "l9-auditing-performance",
     "l9-auditing-security",
     "l9-aws-secrets",
@@ -61,6 +62,7 @@
   "invocation": {
     "l9-api-smoke-testing": "model_allowed",
     "l9-architecture-decision-records": "model_allowed",
+    "l9-audit-plans": "explicit_only",
     "l9-auditing-performance": "model_allowed",
     "l9-auditing-security": "model_allowed",
     "l9-aws-secrets": "model_allowed",
@@ -119,6 +121,7 @@
   "route_definitions_sha256": {
     "adr": "4ce72547b0b201a61338e1ed8a47ec6f6f32e59b6a8b9255afc278b8917510e6",
     "api_smoke": "208674e16af051334d2f8ab431fc8a6300a139f087f620d49c8901afd7a789ce",
+    "audit_plans_shelf": "3cdb448b67f5a40dbf8fe9bec9b2a4f040ccdfc6f79558c55a9bd5726bc0a74a",
     "aws_secrets": "48412f9c7846a0aa0edd60ba700d9ff51d3d0233c97d615c7a237bb659f16bc0",
     "bounded_autonomy": "4be1400dc1223b05e26223446fb1864e146ccdfa3d94b2e95fd5f36a0b5b9aa8",
     "campaign_plan": "1968f9007c34376a9407759e8c40c65ee85e5b97ea4134ef12c81214bc9c3d2b",
@@ -156,6 +159,7 @@
   "routes": {
     "adr": "l9-architecture-decision-records",
     "api_smoke": "l9-api-smoke-testing",
+    "audit_plans_shelf": "l9-audit-plans",
     "aws_secrets": "l9-aws-secrets",
     "bounded_autonomy": "l9-bounded-autonomy",
     "campaign_plan": "l9-plan",
@@ -232,6 +236,7 @@
   ],
   "schema": "l9.claude-projection-snapshot.v1",
   "settings_template_skill_overrides": {
+    "l9-audit-plans": "user-invocable-only",
     "l9-bounded-autonomy": "user-invocable-only",
     "l9-chat-extraction": "user-invocable-only",
     "l9-ci-ops": "user-invocable-only",
@@ -267,6 +272,7 @@
     "l9-ui-operator": "user-invocable-only"
   },
   "workspace_skill_overrides": {
+    "l9-audit-plans": "user-invocable-only",
     "l9-bounded-autonomy": "user-invocable-only",
     "l9-chat-extraction": "user-invocable-only",
     "l9-ci-ops": "user-invocable-only",

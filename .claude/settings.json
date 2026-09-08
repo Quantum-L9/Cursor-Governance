@@ -248,6 +248,7 @@
     "L9_MEMORY_WRITEBACK_BUDGET": "75"
   },
   "skillOverrides": {
+    "l9-audit-plans": "user-invocable-only",
     "l9-bounded-autonomy": "user-invocable-only",
     "l9-chat-extraction": "user-invocable-only",
     "l9-ci-ops": "user-invocable-only",

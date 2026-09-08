@@ -1334,6 +1334,21 @@ rules and commands are unchanged.
 - Rollback is one field: set `.cursor-plugin/plugin.json` `skills` back to
   `"skills"`. No canonical folder moves, no symlink farm.
 
+<!-- PLANS_REFINE_V1 -->
+## Plans-store refine (2026-09-05)
+
+This fragment is additive only. Do not fold `L9_AUDIT_PLANS_V1`.
+
+- Every `.plan.md` has `status` from the closed set: `current` (live root only),
+  `partially-built`, `built`, `stale`, `superseded`.
+- `harvested: true` is a tag, not a status. After fold or compile the donor keeps
+  folder status and is omitted on later `/l9-audit-plans` invokes.
+- Leftover todos stay plan work: fold onto a same-concern root or
+  `partially-built/` beneficiary, else compile one `status: current` packet per
+  concern. Do not absorb into law. `uncategorized` never folds.
+- `/l9-plan-simple` writes `status: current` on first draft.
+- SessionStart must not call refine. Kill switch: `L9_AUDIT_PLANS_REFINE=0`.
+
 <!-- MEMORY_CONTROL_PLANE_V1 -->
 ## Memory control plane (2026-09-06) — supersedes §7 Graphiti
 

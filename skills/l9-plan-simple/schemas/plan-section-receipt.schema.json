@@ -89,14 +89,15 @@
     "frontmatter": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "overview", "todos", "isProject", "kind", "execute_via"],
+      "required": ["name", "overview", "todos", "isProject", "kind", "execute_via", "status"],
       "properties": {
         "name": { "type": "boolean" },
         "overview": { "type": "boolean" },
         "todos": { "type": "boolean" },
         "isProject": { "type": "boolean" },
         "kind": { "type": "boolean" },
-        "execute_via": { "type": "boolean" }
+        "execute_via": { "type": "boolean" },
+        "status": { "type": "boolean" }
       }
     },
     "handoff_mode": {
