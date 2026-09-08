@@ -22,6 +22,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
+from ops.memory.canonical_validation import CanonicalValidator, ValidationUnavailable
 from ops.memory.receipts import (
     CandidateReceipt,
     CapabilitiesReceipt,
@@ -38,6 +39,11 @@ from ops.memory.receipts import (
     result_digest,
 )
 from ops.memory.runtime_binding import Runner, RuntimeBinding, default_runner
+from ops.memory.search_identity import (
+    SearchRequest,
+    require_search_identity,
+    verify_request_identity,
+)
 
 TRANSPORT = "cli"
 
@@ -71,6 +77,22 @@ class OutcomeStatus(StrEnum):
     QUARANTINED = "QUARANTINED"
     NOT_COMMITTED = "NOT_COMMITTED"
     BINDING_FAILED = "BINDING_FAILED"
+    #: Same idempotency key, different payload (audit CG-P1-01). Memory is
+    #: correct to preserve the first commit and to report the historical
+    #: record; this request is *not* the one that committed, so it is never a
+    #: canonical close. Distinct from a transport failure on purpose: nothing
+    #: is wrong with the runtime, the caller replayed a key under new content.
+    IDEMPOTENCY_CONFLICT = "IDEMPOTENCY_CONFLICT"
+    #: Canonical receipt validation was required and could not be performed
+    #: (audit CG-P1-02) — the bound release exported no schema for this model,
+    #: or no validator was reachable. The receipt was not proved wrong; it was
+    #: not proved right, and structural acceptance is not a substitute.
+    VALIDATION_UNAVAILABLE = "VALIDATION_UNAVAILABLE"
+    #: The receipt could not prove it answers the request Cursor made (audit
+    #: MEM-P2-01) — a result-affecting selector it does not bind, where the
+    #: caller requires that identity. A receipt whose selectors *contradict*
+    #: the request is INVALID_RECEIPT instead: that one is provably wrong.
+    REQUEST_IDENTITY_UNPROVEN = "REQUEST_IDENTITY_UNPROVEN"
 
 
 @dataclass(frozen=True)
@@ -109,12 +131,32 @@ class MemoryControlPlaneClient:
         timeout: float = 30.0,
         env: Mapping[str, str] | None = None,
         session_id: str | None = None,
+        validator: CanonicalValidator | None = None,
     ) -> None:
         self.binding = binding
         self._run = runner or default_runner
         self.timeout = timeout
         self._env = dict(env) if env is not None else None
         self.session_id = session_id
+        #: CG-P1-02. Every receipt this client accepts as authoritative is
+        #: validated against the schema the *bound release* exported, before
+        #: the structural view in ``receipts.py`` reads a single field.
+        self.validator = validator or CanonicalValidator.for_binding(binding, env=self._env)
+        self._last_validation: str | None = None
+        self._last_search_identity: Any = None
+
+    def _checked(self, payload: Any, model_name: str, parser: Any) -> Any:
+        """Canonical validation, then the structural view — in that order.
+
+        Raises :class:`InvalidReceiptError` when the payload violates the
+        bound release's contract and :class:`ValidationUnavailable` when
+        validation was required and could not run. Neither is ever swallowed
+        into a success: a receipt Cursor cannot check is not a receipt Cursor
+        may act on.
+        """
+
+        self._last_validation = self.validator.validate(payload, model_name)
+        return parser(payload)
 
     # ------------------------------------------------------------------
     # Transport
@@ -186,6 +228,7 @@ class MemoryControlPlaneClient:
         namespaces: Sequence[str] = (),
         task_signature: str | None = None,
         projection_status: str | None = None,
+        error_override: str | None = None,
     ) -> OperationOutcome:
         receipt_raw = getattr(receipt, "raw", None)
         canonical_id = None
@@ -201,6 +244,8 @@ class MemoryControlPlaneClient:
             "status": status.value,
             "exit_code": raw.exit_code,
             "canonical_receipt_id": str(canonical_id) if canonical_id else None,
+            "canonical_validation": self._last_validation,
+            "contract_schema_digest": self.validator.schema_digest,
             "result_digest": result_digest(receipt_raw) if receipt_raw is not None else None,
             "latency_ms": raw.latency_ms,
             "projection_status": projection_status,
@@ -208,7 +253,12 @@ class MemoryControlPlaneClient:
         }
         error = None
         if status is not OutcomeStatus.OK and status is not OutcomeStatus.NO_HITS:
-            error = raw.error_message or raw.error_name or _receipt_reason(raw.payload)
+            error = (
+                error_override
+                or raw.error_message
+                or raw.error_name
+                or _receipt_reason(raw.payload)
+            )
         return OperationOutcome(
             operation=operation,
             status=status,
@@ -243,9 +293,11 @@ class MemoryControlPlaneClient:
         if raw.payload is None:
             return self._outcome("resolve", self._classify_failure(raw), raw)
         try:
-            receipt = ResolveReceipt.parse(raw.payload)
+            receipt = self._checked(raw.payload, "ResolveReceipt", ResolveReceipt.parse)
         except InvalidReceiptError as exc:
             return self._outcome("resolve", OutcomeStatus.INVALID_RECEIPT, _err(raw, exc))
+        except ValidationUnavailable as exc:
+            return self._outcome("resolve", OutcomeStatus.VALIDATION_UNAVAILABLE, _err(raw, exc))
         return self._outcome("resolve", OutcomeStatus.OK, raw, receipt)
 
     def health(self) -> OperationOutcome:
@@ -255,9 +307,11 @@ class MemoryControlPlaneClient:
         if raw.payload is None:
             return self._outcome("health", self._classify_failure(raw), raw)
         try:
-            receipt = HealthReceipt.parse(raw.payload)
+            receipt = self._checked(raw.payload, "HealthReceipt", HealthReceipt.parse)
         except InvalidReceiptError as exc:
             return self._outcome("health", OutcomeStatus.INVALID_RECEIPT, _err(raw, exc))
+        except ValidationUnavailable as exc:
+            return self._outcome("health", OutcomeStatus.VALIDATION_UNAVAILABLE, _err(raw, exc))
         projection = (
             "none"
             if receipt.projection_name in (None, "none")
@@ -278,9 +332,13 @@ class MemoryControlPlaneClient:
         if raw.payload is None or raw.exit_code != 0:
             return self._outcome("capabilities", self._classify_failure(raw), raw)
         try:
-            receipt = CapabilitiesReceipt.parse(raw.payload)
+            receipt = self._checked(raw.payload, "CapabilitiesReceipt", CapabilitiesReceipt.parse)
         except InvalidReceiptError as exc:
             return self._outcome("capabilities", OutcomeStatus.INVALID_RECEIPT, _err(raw, exc))
+        except ValidationUnavailable as exc:
+            return self._outcome(
+                "capabilities", OutcomeStatus.VALIDATION_UNAVAILABLE, _err(raw, exc)
+            )
         return self._outcome("capabilities", OutcomeStatus.OK, raw, receipt)
 
     def hydrate(
@@ -324,11 +382,19 @@ class MemoryControlPlaneClient:
                 task_signature=task_signature,
             )
         try:
-            receipt = HydrationReceipt.parse(raw.payload)
+            receipt = self._checked(raw.payload, "HydrationReceipt", HydrationReceipt.parse)
         except InvalidReceiptError as exc:
             return self._outcome(
                 "hydrate",
                 OutcomeStatus.INVALID_RECEIPT,
+                _err(raw, exc),
+                namespaces=namespaces,
+                task_signature=task_signature,
+            )
+        except ValidationUnavailable as exc:
+            return self._outcome(
+                "hydrate",
+                OutcomeStatus.VALIDATION_UNAVAILABLE,
                 _err(raw, exc),
                 namespaces=namespaces,
                 task_signature=task_signature,
@@ -384,7 +450,7 @@ class MemoryControlPlaneClient:
                 task_signature=task_signature,
             )
         try:
-            receipt = SearchReceipt.parse(raw.payload)
+            receipt = self._checked(raw.payload, "SearchReceipt", SearchReceipt.parse)
         except InvalidReceiptError as exc:
             return self._outcome(
                 "search",
@@ -392,6 +458,54 @@ class MemoryControlPlaneClient:
                 _err(raw, exc),
                 namespaces=namespaces,
                 task_signature=task_signature,
+            )
+        except ValidationUnavailable as exc:
+            return self._outcome(
+                "search",
+                OutcomeStatus.VALIDATION_UNAVAILABLE,
+                _err(raw, exc),
+                namespaces=namespaces,
+                task_signature=task_signature,
+            )
+        identity = verify_request_identity(
+            SearchRequest(
+                query=query,
+                namespaces=tuple(read_namespace_hints),
+                tags=tuple(tags),
+                limit=limit,
+                memory_classes=tuple(memory_classes),
+            ),
+            receipt,
+            requested_namespaces=tuple(read_namespace_hints),
+        )
+        self._last_search_identity = identity
+        if identity.contradicted:
+            # The receipt describes a different search; its hits are not
+            # answers to this question (MEM-P2-01, consumer half).
+            return self._outcome(
+                "search",
+                OutcomeStatus.INVALID_RECEIPT,
+                raw,
+                receipt,
+                namespaces=namespaces,
+                task_signature=task_signature,
+                error_override=(
+                    "search receipt does not answer this request: " + "; ".join(identity.detail)
+                ),
+            )
+        if identity.unbound and require_search_identity(self._env):
+            return self._outcome(
+                "search",
+                OutcomeStatus.REQUEST_IDENTITY_UNPROVEN,
+                raw,
+                receipt,
+                namespaces=namespaces,
+                task_signature=task_signature,
+                error_override=(
+                    "the receipt binds no identity for result-affecting selector(s) "
+                    + ", ".join(identity.unbound)
+                    + "; it cannot prove these hits answer this request"
+                ),
             )
         if receipt.status == "failed":
             status = OutcomeStatus.CANONICAL_UNAVAILABLE
@@ -449,10 +563,14 @@ class MemoryControlPlaneClient:
         if raw.payload is None:
             return self._outcome("write", self._classify_failure(raw), raw, namespaces=namespaces)
         try:
-            receipt = WriteReceipt.parse(raw.payload)
+            receipt = self._checked(raw.payload, "WriteReceipt", WriteReceipt.parse)
         except InvalidReceiptError as exc:
             return self._outcome(
                 "write", OutcomeStatus.INVALID_RECEIPT, _err(raw, exc), namespaces=namespaces
+            )
+        except ValidationUnavailable as exc:
+            return self._outcome(
+                "write", OutcomeStatus.VALIDATION_UNAVAILABLE, _err(raw, exc), namespaces=namespaces
             )
         if receipt.status == "rejected":
             status = OutcomeStatus.REJECTED
@@ -483,11 +601,18 @@ class MemoryControlPlaneClient:
                 "ingest_candidate", self._classify_failure(raw), raw, namespaces=namespaces
             )
         try:
-            receipt = CandidateReceipt.parse(raw.payload)
+            receipt = self._checked(raw.payload, "CandidateReceipt", CandidateReceipt.parse)
         except InvalidReceiptError as exc:
             return self._outcome(
                 "ingest_candidate",
                 OutcomeStatus.INVALID_RECEIPT,
+                _err(raw, exc),
+                namespaces=namespaces,
+            )
+        except ValidationUnavailable as exc:
+            return self._outcome(
+                "ingest_candidate",
+                OutcomeStatus.VALIDATION_UNAVAILABLE,
                 _err(raw, exc),
                 namespaces=namespaces,
             )
@@ -530,12 +655,24 @@ class MemoryControlPlaneClient:
         if raw.payload is None:
             return self._outcome("close", self._classify_failure(raw), raw, namespaces=namespaces)
         try:
-            receipt = CloseReceipt.parse(raw.payload)
+            receipt = self._checked(raw.payload, "CloseReceipt", CloseReceipt.parse)
         except InvalidReceiptError as exc:
             return self._outcome(
                 "close", OutcomeStatus.INVALID_RECEIPT, _err(raw, exc), namespaces=namespaces
             )
-        if raw.exit_code == EXIT_COMMITTED and receipt.committed:
+        except ValidationUnavailable as exc:
+            return self._outcome(
+                "close", OutcomeStatus.VALIDATION_UNAVAILABLE, _err(raw, exc), namespaces=namespaces
+            )
+        if receipt.payload_drifted:
+            # CG-P1-01. Memory replayed this key and proved the stored payload
+            # differs from the one just sent. The committed record it returns
+            # is the *first* close, not this request: promoting it here would
+            # let a drifted retry satisfy a close obligation it never wrote.
+            # This branch is deliberately ahead of the ``committed`` check —
+            # a warning beside a success is precisely the defect (contract §16).
+            status = OutcomeStatus.IDEMPOTENCY_CONFLICT
+        elif raw.exit_code == EXIT_COMMITTED and receipt.committed:
             status = OutcomeStatus.OK
         elif raw.exit_code == EXIT_DRY_RUN and dry_run:
             status = OutcomeStatus.NOT_COMMITTED
@@ -545,7 +682,22 @@ class MemoryControlPlaneClient:
             # A zero exit without a committed receipt, or vice versa, is a
             # contract violation; never report success from half the evidence.
             status = OutcomeStatus.INVALID_RECEIPT
-        return self._outcome("close", status, raw, receipt, namespaces=namespaces)
+        conflict_detail = None
+        if status is OutcomeStatus.IDEMPOTENCY_CONFLICT:
+            conflict_detail = (
+                f"idempotency key {idempotency_key!r} already committed a different close "
+                f"(stored digest {receipt.stored_digest}, "
+                f"replayed digest {receipt.replay_digest}); "
+                "the returned record is the first close, not this request"
+            )
+        return self._outcome(
+            "close",
+            status,
+            raw,
+            receipt,
+            namespaces=namespaces,
+            error_override=conflict_detail,
+        )
 
     def conflicts(self, *, workspace: str, namespace: str) -> OperationOutcome:
         if guard := self._guard("conflicts"):
@@ -556,10 +708,17 @@ class MemoryControlPlaneClient:
                 "conflicts", self._classify_failure(raw), raw, namespaces=(namespace,)
             )
         try:
-            receipt = ConflictsReceipt.parse(raw.payload)
+            receipt = self._checked(raw.payload, "ConflictsReceipt", ConflictsReceipt.parse)
         except InvalidReceiptError as exc:
             return self._outcome(
                 "conflicts", OutcomeStatus.INVALID_RECEIPT, _err(raw, exc), namespaces=(namespace,)
+            )
+        except ValidationUnavailable as exc:
+            return self._outcome(
+                "conflicts",
+                OutcomeStatus.VALIDATION_UNAVAILABLE,
+                _err(raw, exc),
+                namespaces=(namespace,),
             )
         return self._outcome("conflicts", OutcomeStatus.OK, raw, receipt, namespaces=(namespace,))
 
@@ -589,11 +748,19 @@ class MemoryControlPlaneClient:
                 task_signature=task_signature,
             )
         try:
-            receipt = PhaseLockReceipt.parse(raw.payload)
+            receipt = self._checked(raw.payload, "PhaseLockReceipt", PhaseLockReceipt.parse)
         except InvalidReceiptError as exc:
             return self._outcome(
                 "phase_lock",
                 OutcomeStatus.INVALID_RECEIPT,
+                _err(raw, exc),
+                namespaces=(namespace,),
+                task_signature=task_signature,
+            )
+        except ValidationUnavailable as exc:
+            return self._outcome(
+                "phase_lock",
+                OutcomeStatus.VALIDATION_UNAVAILABLE,
                 _err(raw, exc),
                 namespaces=(namespace,),
                 task_signature=task_signature,
@@ -624,11 +791,21 @@ class MemoryControlPlaneClient:
                 task_signature=task_signature,
             )
         try:
-            receipt = PhaseLockVerificationReceipt.parse(raw.payload)
+            receipt = self._checked(
+                raw.payload, "PhaseLockVerificationReceipt", PhaseLockVerificationReceipt.parse
+            )
         except InvalidReceiptError as exc:
             return self._outcome(
                 "verify_phase_lock",
                 OutcomeStatus.INVALID_RECEIPT,
+                _err(raw, exc),
+                namespaces=(namespace,),
+                task_signature=task_signature,
+            )
+        except ValidationUnavailable as exc:
+            return self._outcome(
+                "verify_phase_lock",
+                OutcomeStatus.VALIDATION_UNAVAILABLE,
                 _err(raw, exc),
                 namespaces=(namespace,),
                 task_signature=task_signature,

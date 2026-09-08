@@ -70,15 +70,14 @@ def test_result_digest_is_content_independent_of_key_order() -> None:
     assert left == right and len(left) == 64
 
 
-def test_validate_against_contract_is_a_noop_without_the_package(monkeypatch) -> None:
-    import builtins
+def test_receipts_expose_no_second_validation_authority() -> None:
+    """Canonical validation is owned by ops.memory.canonical_validation.
 
-    real_import = builtins.__import__
+    The superseded in-process helper lived here and could only ever decline in
+    pinned mode, where the memory package is in another interpreter. Keeping it
+    beside the real validator is a dead second authority, and its decline path
+    is exactly how structural acceptance became the silent default.
+    """
 
-    def _block(name, *args, **kwargs):
-        if name.startswith("l9_graphite_memory"):
-            raise ImportError(name)
-        return real_import(name, *args, **kwargs)
-
-    monkeypatch.setattr(builtins, "__import__", _block)
-    assert receipts.validate_against_contract(close_payload(), "CloseReceipt") is False
+    assert not hasattr(receipts, "validate_against_contract")
+    assert "validate_against_contract" not in receipts.__all__
