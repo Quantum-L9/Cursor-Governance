@@ -1,10 +1,10 @@
 {
   "schema_version": "1.0.0",
-  "description": "Cursor-Governance binding to the canonical memory control plane (l9-graphiti-memory). Read by ops/memory/runtime_binding.py, which proves the exact package, interpreter, and console script before any lifecycle call. This is a Cursor-owned statement of what Cursor expects to run; it grants nothing and resolves no provider. Production binding is an immutable release artifact locked in uv.lock; MEMORY_TARGET_VERSION is release 2.3.0 (cut at campaign stage M2 on the memory PR). source.ref is the v2.3.0 release tag on Quantum-L9/l9-graphiti-memory (annotated, cut 2026-09-07); release_evidence.memory_sha is the commit that tag resolves to, and the cross-repo proof resolves the tag and refuses any other commit. Integration installs the wheel built from that commit until uv.lock carries the published artifact.",
+  "description": "Cursor-Governance binding to the canonical memory control plane (l9-graphiti-memory). Read by ops/memory/runtime_binding.py, which proves the exact package, interpreter, and console script before any lifecycle call. This is a Cursor-owned statement of what Cursor expects to run; it grants nothing and resolves no provider. Production binding is an immutable release artifact locked in uv.lock; MEMORY_TARGET_VERSION is release 2.3.1 (PyPI-clean patch over 2.3.0). source.ref is the v2.3.1 release tag on Quantum-L9/l9-graphiti-memory (annotated, cut 2026-09-08); release_evidence.memory_sha is the commit that tag resolves to, and the cross-repo proof resolves the tag and refuses any other commit.",
   "distribution": "l9-graphite-memory",
   "import_package": "l9_graphite_memory",
   "console_script": "l9-memory",
-  "expected_package_version": "2.3.0",
+  "expected_package_version": "2.3.1",
   "expected_contract_version": "memory-control-plane/v1",
   "required_cli_operations": [
     "resolve",
@@ -23,8 +23,8 @@
   "source": {
     "kind": "git",
     "repository": "Quantum-L9/l9-graphiti-memory",
-    "ref": "v2.3.0",
-    "ref_note": "Release 2.3.0 = MEMORY_TARGET_VERSION. Annotated tag v2.3.0 (tag object 03ec559ca8e28b49c6763189363fc55400e3b09d, cut 2026-09-07 after Quantum-L9/l9-graphiti-memory#56 merged as 7691c07) resolves to 5605569b72baa25f6b6e6324b0017317fb31e0cd, the audit-closure head of #56: M2 (tag selector on search/hydrate, client cursor verify --path, installed-wheel lifecycle proof, shared control-plane fixture) plus the ADR-082 amendment (governed-candidate supersession, close replay forensics, coverage evidence). The tag is a name, not the proof: .github/workflows/memory-cross-repo.yml peels it and refuses a commit other than release_evidence.memory_sha, so a moved tag fails the proof instead of silently rebinding. Next step is the uv.lock pin of the published artifact."
+    "ref": "v2.3.1",
+    "ref_note": "Release 2.3.1 = MEMORY_TARGET_VERSION. Annotated tag v2.3.1 (tag object f65ff2bb1c8cb43a55b78732c4ab74f711ee8c2f, cut 2026-09-08 after Quantum-L9/l9-graphiti-memory#60 merged as 84eedcd) resolves to 84eedcdfab83020776eab290599751b3b6af8dbf. v2.3.0 stays immutable; 2.3.1 is the first PyPI upload (constellation Gate_SDK moved off published extras). The tag is a name, not the proof: .github/workflows/memory-cross-repo.yml peels it and refuses a commit other than release_evidence.memory_sha."
   },
   "binding_policy": {
     "production": "exact release artifact locked in uv.lock; runtime_mode=pinned_environment",
@@ -45,20 +45,20 @@
   ],
   "release_evidence": {
     "description": "Exact-head proof of the binding (audit P1-01/P2-02). The wheel is built from source.ref with uv build --wheel under the fixed SOURCE_DATE_EPOCH below and is byte-reproducible (the digest reproduced from a fresh clone of the same commit). .github/workflows/memory-cross-repo.yml rebuilds it from the same ref, refuses a digest mismatch, installs the wheel into a clean environment, and runs tests/ops/memory/test_cross_repo_lifecycle.py with L9_MEMORY_CROSS_REPO_REQUIRED=1 (a skip is a failure) and no provider credential in the environment. A digest here without that job green on the same Cursor head is a claim, not a proof.",
-    "memory_sha": "5605569b72baa25f6b6e6324b0017317fb31e0cd",
-    "memory_tag": "v2.3.0",
-    "memory_tag_object_sha": "03ec559ca8e28b49c6763189363fc55400e3b09d",
-    "package_version": "2.3.0",
-    "artifact": "l9_graphite_memory-2.3.0-py3-none-any.whl",
-    "artifact_sha256": "905d91402db99fcd3e094db67576c19297823b448fd6f76842f32d1be4804291",
+    "memory_sha": "84eedcdfab83020776eab290599751b3b6af8dbf",
+    "memory_tag": "v2.3.1",
+    "memory_tag_object_sha": "f65ff2bb1c8cb43a55b78732c4ab74f711ee8c2f",
+    "package_version": "2.3.1",
+    "artifact": "l9_graphite_memory-2.3.1-py3-none-any.whl",
+    "artifact_sha256": "b3b045e482fd157a0242d5ad861a3609057c6d66dd2095673f55f1efe888ff89",
     "build": "uv build --wheel (SOURCE_DATE_EPOCH=1784592000)",
     "source_date_epoch": 1784592000,
     "proved_by": "tests/ops/memory/test_cross_repo_lifecycle.py",
     "proof_workflow": ".github/workflows/memory-cross-repo.yml",
-    "proved_at": "2026-09-06",
-    "rebound_at": "2026-09-07 (source.ref moved from the bare SHA to the v2.3.0 tag; memory_sha unchanged, digest unchanged)",
+    "proved_at": "2026-09-08",
+    "rebound_at": "2026-09-08 (MEMORY_TARGET_VERSION moved to v2.3.1 after PyPI accepted the first upload; v2.3.0 tag unchanged)",
     "operator_gated": [
-      "uv.lock pin of the released artifact: blocked until publish.yml on the v2.3.0 tag succeeds; its first run (34132867942) was rejected by the l9-graphiti-memory `release` environment deployment policy, which does not allow tag v2.3.0 (allow tag pattern v* on that environment, then re-run the workflow)"
+      "uv.lock pin of l9-graphite-memory==2.3.1: published by Quantum-L9/l9-graphiti-memory publish.yml run 34172985608 (workflow_dispatch from main, release_tag=v2.3.1). Served wheel sha256 b3b045e482fd157a0242d5ad861a3609057c6d66dd2095673f55f1efe888ff89."
     ],
     "installed_record_digest": null,
     "artifact_provenance_note": "In-place artifact proof needs a PEP 610 archive hash, which pip/uv record for index and URL installs but NOT for the local-file install the proof workflow performs. So the workflow proves the artifact instead, and more strongly: it rebuilds the wheel from source.ref and refuses any sha256 other than artifact_sha256 before installing. The binding reports 'compatible' there and says why. L9_MEMORY_REQUIRE_EXACT_ARTIFACT=1 remains for environments whose installer records provenance.",
@@ -87,7 +87,7 @@
     "ResolveReceipt": [
       "GroupResolution"
     ],
-    "_verified": "All five aliases plus PhaseLockVerification and GroupResolution were read from the merged source at ref 7691c076, then proved end to end: the schema probe resolves 11 of 11 CANONICAL_RECEIPT_MODELS against the installed 2.3.0 wheel."
+    "_verified": "All five aliases plus PhaseLockVerification and GroupResolution were read from the merged source at ref 7691c076, then proved end to end: the schema probe resolves 11 of 11 CANONICAL_RECEIPT_MODELS against the installed 2.3.1 wheel."
   },
   "contract_model_modules": [
     "l9_graphite_memory.contracts",

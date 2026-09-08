@@ -605,7 +605,9 @@ def _run_probe(root: Path, names: Sequence[str], modules: Sequence[str] = ()) ->
 
     env = {**os.environ, "PYTHONPATH": str(root)}
     result = subprocess.run(
-        [sys.executable, "-c", rb._SCHEMA_PROBE, ",".join(names), ",".join(modules)],
+        # -S keeps the target interpreter's site-packages (now the published
+        # wheel) from leaking into a synthetic-tree probe.
+        [sys.executable, "-S", "-c", rb._SCHEMA_PROBE, ",".join(names), ",".join(modules)],
         capture_output=True,
         text=True,
         check=False,
@@ -773,31 +775,21 @@ def test_the_probe_searches_group_resolver_as_well_as_contracts() -> None:
 
 
 def test_the_binding_names_the_release_tag_and_the_commit_it_resolves_to() -> None:
-    """RU-P1-01: v2.3.0 is cut, and the binding names it.
+    """RU-P1-01: the binding names the live release tag and the commit it peels to.
 
-    This assertion has now been written three ways, and only the last is
-    right. It first said source.ref must be #56's head 5605569b; then, when
-    #56 merged with no tag yet, that it must be the merge commit 7691c076,
-    a pre-final branch head being no release identity. Cutting v2.3.0 at
-    5605569b settled the question the other way — the tagged commit IS the
-    release, and it is an ancestor of main.
-
-    The shape here is the base branch's, not this one's: source.ref carries
-    the TAG NAME and release_evidence.memory_sha the commit it peels to. That
-    is the stronger form, because the name is what the proof re-resolves on
-    the remote every run — so a moved tag fails the proof instead of silently
-    rebinding, which a recorded SHA alone could never catch.
+    source.ref carries the TAG NAME and release_evidence.memory_sha the commit
+    it peels to. A moved tag fails the proof instead of silently rebinding.
+    Live target is v2.3.1 (first PyPI upload). v2.3.0 stays immutable.
     """
     manifest = rb.BindingManifest.load()
     raw = json.loads(rb.DEFAULT_MANIFEST_PATH.read_text(encoding="utf-8"))
     evidence = raw["release_evidence"]
-    assert raw["source"]["ref"] == "v2.3.0"
-    assert evidence["memory_tag"] == "v2.3.0"
-    assert evidence["memory_tag_object_sha"] == "03ec559ca8e28b49c6763189363fc55400e3b09d"
-    assert manifest.memory_sha == "5605569b72baa25f6b6e6324b0017317fb31e0cd"
-    # No rebind ever moved the artifact: one tree, one wheel, one digest.
+    assert raw["source"]["ref"] == "v2.3.1"
+    assert evidence["memory_tag"] == "v2.3.1"
+    assert evidence["memory_tag_object_sha"] == "f65ff2bb1c8cb43a55b78732c4ab74f711ee8c2f"
+    assert manifest.memory_sha == "84eedcdfab83020776eab290599751b3b6af8dbf"
     assert manifest.artifact_sha256 == (
-        "905d91402db99fcd3e094db67576c19297823b448fd6f76842f32d1be4804291"
+        "b3b045e482fd157a0242d5ad861a3609057c6d66dd2095673f55f1efe888ff89"
     )
 
 

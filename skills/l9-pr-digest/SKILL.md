@@ -19,7 +19,6 @@ metadata:
   status: active
   version: 1.2.0
   updated: 2026-09-05
-disable-model-invocation: true
 ---
 
 # L9 PR Digest

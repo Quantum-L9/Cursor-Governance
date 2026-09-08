@@ -1,7 +1,6 @@
 ---
 name: l9-component-verification
 description: Audit, deterministically verify, or runtime-probe a named component — exports, imports, wiring, and loadability — as a read-only escalation ladder. Use from /audit-component, or from /analyze, /evaluate, or /analyze_evaluate when the user names a component, module, import, or wiring check. Do not use for DAG authoring or registration, for editing the component, or for generic repo exploration.
-disable-model-invocation: true
 metadata:
   skill_schema: 1
   layer: control_plane
