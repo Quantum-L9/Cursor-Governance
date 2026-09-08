@@ -5,10 +5,25 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=resolve_governance_paths.sh
 source "$SCRIPT_DIR/resolve_governance_paths.sh"
+# Sourcing does NOT bind which clone is authoritative (rules/06). Without this
+# call GOV_ROOT below was derived from $SCRIPT_DIR alone — the "deriving
+# governance from the installed directory" the rule forbids — and the file's
+# own EXIT trap warned about it on every `make pr`. `|| true` matches
+# pr_preflight.sh: the gate must still run in a consumer checkout.
+resolve_governance_paths || true
 # shellcheck source=lib/fetch_receipt.sh
 source "$SCRIPT_DIR/lib/fetch_receipt.sh"
 # shellcheck source=lib/resolve_pr_stack.sh
 source "$SCRIPT_DIR/lib/resolve_pr_stack.sh"
+# Script-relative ON PURPOSE, and NOT "${GOV_ROOT:-...}".
+#
+# The resolver above binds GOV_ROOT to the machine SSOT ($HOME/.cursor-governance).
+# This variable means something different: the governance tree THESE scripts
+# belong to, which is what `"$WS" != "$GOV_ROOT"` below compares to decide
+# whether a governance-local hook can resolve its entry path. Honouring the
+# resolver here made a second gov clone compare against the SSOT and skip
+# gh-package-deps-preflight inside the governance workspace itself —
+# tests/ops/scripts/test_gov_only_hook_skip.py caught it.
 GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 WS="${WS:-$(pwd)}"
 WS="$(cd "$WS" && pwd)"

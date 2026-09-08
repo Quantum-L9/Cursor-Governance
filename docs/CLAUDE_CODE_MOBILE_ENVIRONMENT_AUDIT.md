@@ -610,18 +610,64 @@ moving on.
 
 ---
 
-## 11. Unresolved UNKNOWNs
+## 11. UNKNOWNs — two since resolved by probe (2026-09-05)
 
-- **Server-side access control on the Graphiti front door.** No client credential is
-  required from this container. Whether the host enforces IP allow-listing or another
-  control cannot be determined from inside a single egress path. F-01 is scoped to the
-  false label, which *is* provable here; the posture question needs a probe from outside
-  this network.
-- **The origin of the working GitHub credential.** `gh api` succeeds while `GH_TOKEN` is a
-  sentinel. The credential is supplied outside this repository's control. `rules/62` already
-  refuses to assert a mechanism the repository cannot verify; this audit does the same.
-- **The exact literal of the 14-character sentinel.** Not needed: five unrelated providers
-  sharing one value is sufficient proof that none is a credential.
+The first two entries below originally read "cannot be determined from inside a
+single egress path". That was a conclusion reached without trying, and it was
+wrong: both were testable here, by the same experiment — **bypass the egress
+proxy and see what changes.** Corrected rather than quietly edited, because the
+original claim shipped.
+
+### RESOLVED — the origin of the working GitHub credential
+
+| Probe | Result |
+|---|---|
+| `gh api user` with `GH_TOKEN`/`GITHUB_TOKEN` unset | refuses: "please run gh auth login" |
+| `gh api user` with a deliberately **wrong** token | `cryptoxdog` |
+| `curl https://api.github.com/user`, **no auth header**, via proxy | **200**, `cryptoxdog` |
+| the same curl with **`--noproxy '*'`** (the control) | **401** |
+| `$HTTPS_PROXY/__agentproxy/status` | `installedProxyPreconfiguredClis: ["gh"]`, `gitConfigInjection: true` |
+
+Identical request, identical host; the only variable is the proxy, and auth
+appears. **The egress proxy injects the credential in transit.** `GH_TOKEN`'s
+only function is to make `gh` believe it is configured — its *value* never
+reaches GitHub, which is why a sentinel and a wrong token behave alike.
+
+This is a mechanism the repository **can** verify, so `rules/62`'s "record the
+probe, not a theory" is satisfied by recording the control, not by declining to
+name the mechanism. The dated row is in `docs/DEGRADED_MODE_CONTRACT.md`.
+
+### NARROWED — Graphiti front door access control
+
+All probes below **proxy-bypassed**, i.e. direct from the public internet:
+
+| Probe | Result |
+|---|---|
+| unauthenticated `GET` of the MCP URL | `406` — content negotiation, **not** auth |
+| the same with a deliberately wrong bearer | `406` — identical |
+| response headers | `server: uvicorn`; **no `WWW-Authenticate`** |
+| `tools/list` POST, unauthenticated, correct `Accept` | `Bad Request: Missing session ID` — a **protocol** error, never `401` |
+| governance CLI `health` (sends no `Authorization`) | healthy, 9 tools, circuit CLOSED |
+
+The host answers from the public internet without the proxy, demands no
+credential, issues no auth challenge, and treats a bogus bearer exactly like
+none. **This strengthens F-01:** the plane the receipt once labelled
+`Graphiti_authenticated_health: READY` does not merely lack a client credential
+— it asks for nothing.
+
+**Still genuinely unknown, and precisely why:** whether IP allow-listing exists
+that happens to include this container. The proxy-bypassed request still
+originated *here*, so it cannot exclude that. Settling it needs a request from
+an unrelated network.
+
+**Deliberately not done:** no `initialize` handshake was completed and no
+group's memory was read. That would exercise the exposure rather than
+characterise it, and characterisation was sufficient.
+
+### Still unresolved, and immaterial
+
+- **The exact literal of the 14-character sentinel.** Not needed: five unrelated
+  providers sharing one value is sufficient proof that none is a credential.
 
 ---
 
