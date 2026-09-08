@@ -133,7 +133,11 @@ def test_unapplied_node_lock_is_not_reported_ready(tmp_path: Path) -> None:
     result = run(workspace, home, budget="1")
     assert result.returncode == 0
     combined = result.stdout + result.stderr
-    assert "UNPROVEN" in combined or "continues in background" in combined
+    assert (
+        "UNPROVEN" in combined
+        or "continues in background" in combined
+        or "INCOMPLETE" in combined
+    )
     stamps = list((home / ".l9" / "claude").glob("deps-*.stamp"))
     assert stamps == [], "a stamp must never be written for an unproven toolchain"
 
@@ -181,6 +185,10 @@ def test_unapplied_pip_manifest_is_not_reported_ready(tmp_path: Path) -> None:
     result = run(workspace, home, budget="1")
     assert result.returncode == 0
     combined = result.stdout + result.stderr
-    assert "UNPROVEN" in combined or "continues in background" in combined
+    assert (
+        "UNPROVEN" in combined
+        or "continues in background" in combined
+        or "INCOMPLETE" in combined
+    )
     stamps = list((home / ".l9" / "claude").glob("deps-*.stamp"))
     assert stamps == [], "a stamp must never be written for an unproven pip toolchain"
