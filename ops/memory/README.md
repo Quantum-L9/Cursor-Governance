@@ -108,16 +108,11 @@ from outside the interpreter's own environment without the opt-in is
 `capabilities`, or a CLI whose reported version disagrees with the import.
 
 **Production pin status.** The plan binds production to an immutable release
-artifact locked in `uv.lock`. That artifact does not exist yet: the memory
-package is not published to an index, and this repository's CI installs with
-`uv sync --locked --no-build`, which refuses a git source distribution. The
-pin therefore lands at stage **M2** (release `MEMORY_TARGET_VERSION`), after
-which `memory-binding.json` moves from the git SHA to the release tag and
-`pyproject.toml` / `uv.lock` carry the dependency. The first half happened on
-2026-09-07: `source.ref` is the `v2.3.0` tag, pinned to its commit by
-`release_evidence.memory_sha`. Until the artifact is on the index and locked,
-the binding is integration-grade by construction and says so in
-`binding_status`.
+artifact locked in `uv.lock`. `v2.3.0` built and OIDC-authenticated but PyPI
+rejected the `constellation` git extra (400). `v2.3.1` is the first index
+upload (`publish.yml` run 34172985608, 2026-09-08). `source.ref` is the
+`v2.3.1` tag, pinned to its commit by `release_evidence.memory_sha`, and
+`pyproject.toml` / `uv.lock` carry `l9-graphite-memory==2.3.1`.
 
 **`exact` means the artifact** (audit CG-P1-03). Version, contract version and
 "the module lives under the interpreter prefix" are satisfied identically by
@@ -380,7 +375,7 @@ failure and requires the pinned wheel.
 
 `.github/workflows/memory-cross-repo.yml` is that proof as a required,
 non-skippable PR check (audit P2-02 / P1-01): it resolves `memory-binding.json`
-`source.ref` on the memory remote (the `v2.3.0` release tag is peeled with
+`source.ref` on the memory remote (the `v2.3.1` release tag is peeled with
 `git ls-remote`; a bare SHA is taken as is), refuses any commit other than
 `release_evidence.memory_sha` so a moved tag fails rather than rebinds, clones
 the memory repository at that SHA, rebuilds the wheel reproducibly under
@@ -390,9 +385,8 @@ environment bound through `L9_MEMORY_INTERPRETER`, runs the proof in required
 mode with `GRAPHITI_MCP_URL` / `GRAPHITI_MCP_TOKEN` unset, fails if any case
 skipped, and records the Cursor head, memory head, package version and
 artifact digest in the job summary and a proof artifact
-(`cursor.memory-cross-repo-proof/v1`). The `v2.3.0` tag was cut on 2026-09-07
-(tag object `03ec559c…`, resolving to `5605569b…`) and `source.ref` now names
-it. Making the context required in branch protection and the `uv.lock`
+(`cursor.memory-cross-repo-proof/v1`). The live `source.ref` is the `v2.3.1`
+tag (cut 2026-09-08). The earlier `v2.3.0` tag stays immutable history. Making the context required in branch protection and the `uv.lock`
 artifact pin remain operator steps named in `release_evidence.operator_gated`;
 the pin waits for `publish.yml` to succeed on the tag, whose first run was
 rejected by the memory repository's `release` environment deployment policy
