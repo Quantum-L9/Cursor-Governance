@@ -2,12 +2,16 @@
 #   path: environment/agents/adapters/codex/config.toml.example
 #   layer: adapter-config
 #   status: active
-#   updated: 2026-07-31
+#   updated: 2026-09-06
 #
 # Merge into ~/.codex/config.toml (CLI) or paste equivalent MCP settings into
-# the Codex cloud environment. Expand GRAPHITI_MCP_TOKEN from the account
-# env — never commit a real bearer here.
+# the Codex cloud environment. The only memory server is the canonical
+# l9-graphite-memory stdio server (memory-control-plane/v1), launched from the
+# Python that carries the pinned package (ops/config/memory-binding.json).
+# No env block, no URL, no bearer: the server resolves its own credentials
+# (memory ADR-016). The direct-provider front door was retired at realignment
+# stage C7/C8; never commit a credential value here.
 
-[mcp_servers.graphiti-memory]
-url = "${GRAPHITI_MCP_URL}"
-http_headers = { "Authorization" = "Bearer ${GRAPHITI_MCP_TOKEN}", "X-L9-User-Id" = "codex_agent", "X-L9-Agent-Id" = "codex", "X-L9-Source" = "codex" }
+[mcp_servers.l9-graphite-memory]
+command = "${L9_MEMORY_INTERPRETER}"
+args = ["-m", "l9_graphite_memory.server", "--transport", "stdio"]

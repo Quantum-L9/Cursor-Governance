@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""PreToolUse memory gate — Cursor Graphiti front door only.
+"""PreToolUse memory gate — canonical memory hydration only (stage C8).
+
+The gate reads the local prefetch receipt ``memory_prefetch.py`` wrote after
+hydrating through the memory control plane. It never calls memory itself and
+knows no provider.
 
 Operator-only escape hatch (admin key, never agent-settable):
   L9_MEMORY_ENFORCEMENT_BREAKGLASS=<reason>
@@ -154,7 +158,7 @@ def main() -> int:
             )
             _deny(
                 f"Memory not hydrated this session. Governed write '{rule['id']}' requires the "
-                "SessionStart Graphiti prefetch (front door). Start a fresh session, or run "
+                "SessionStart canonical memory prefetch. Start a fresh session, or run "
                 "environment/agents/adapters/claude-code/hooks/memory_prefetch.py "
                 f"{sid_hint}, then retry. "
                 "This is a hydration gate, not a lock: no phase-lock is required or accepted."

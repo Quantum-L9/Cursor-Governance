@@ -476,9 +476,11 @@ if [ "$CHECK" != "1" ] && { [ -n "${CLAUDE_CODE_REMOTE:-}" ] || [ -n "${CLAUDE_C
   fi
 fi
 
-# --- 3) Memory MCP front door (Claude .mcp.json format) ---------------------
-# Graphiti HTTPS front door: the template points at ${GRAPHITI_MCP_URL} and
-# carries NO bearer. The capability broker never shipped (retired 2026-08-29).
+# --- 3) Memory MCP entry (Claude .mcp.json format) ---------------------------
+# The only memory server is the package-owned l9-graphite-memory stdio entry,
+# rendered when L9_MEMORY_INTERPRETER names a Python carrying the pinned
+# package; it carries NO env block, NO url and NO bearer (stage C8/C9). The
+# capability broker experiment retired 2026-08-29 without ever shipping.
 stage "mcp-front-door"
 # .mcp.json is a PROJECTION of mcp.template.json (the single MCP authority),
 # already rendered in the claude-projection stage above. The old `cp only if
@@ -497,28 +499,33 @@ case "$MCP_STATUS" in
   *) downgrade STATUS_MCP DEGRADED "mcp projection: $MCP_STATUS" ;;
 esac
 
-# Graphiti health without the capability broker. CLI uses the locked
-# interpreter + graphiti_memory_client.py; MCP is HTTP to GRAPHITI_MCP_URL
-# (default https://memory.quantumaipartners.com/graphiti/mcp). Connect vs 401
-# vs 403 allowlist are distinct reasons. capability broker experiment retired
-# (never shipped; not probed). A leftover broker URL in .mcp.json is still a
-# defect.
-stage "graphiti-health"
+# Memory readiness without the capability broker and without a provider URL
+# (stage C9): ops/memory/diagnostics.py proves which exact l9-graphite-memory
+# runtime is bound (memory.cli = R0/R1), whether the canonical store and
+# service answer (control plane = R2/R3/R6) and whether the package-owned MCP
+# entry is installed (memory.mcp = R4). A leftover broker URL in .mcp.json is
+# still a defect.
+stage "memory-readiness"
 EMITTER="$GOV_DIR/ops/scripts/emit_claude_readiness.py"
 if [ -n "$GOV_PY" ] && [ -f "$EMITTER" ]; then
-  probe_json="$("$GOV_PY" "$EMITTER" --graphiti-probe --root "$GOV_DIR" 2>/dev/null)" || probe_json=""
+  probe_json="$("$GOV_PY" "$EMITTER" --memory-probe --root "$GOV_DIR" 2>/dev/null)" || probe_json=""
   if [ -n "$probe_json" ]; then
     cli_st="$(printf '%s' "$probe_json" | "$GOV_PY" -c 'import json,sys; print(json.load(sys.stdin)["cli"]["status"])' 2>/dev/null)" || cli_st=UNKNOWN
     cli_rs="$(printf '%s' "$probe_json" | "$GOV_PY" -c 'import json,sys; print(json.load(sys.stdin)["cli"]["reason"])' 2>/dev/null)" || cli_rs=""
+    plane_st="$(printf '%s' "$probe_json" | "$GOV_PY" -c 'import json,sys; print(json.load(sys.stdin)["control_plane"]["status"])' 2>/dev/null)" || plane_st=UNKNOWN
+    plane_rs="$(printf '%s' "$probe_json" | "$GOV_PY" -c 'import json,sys; print(json.load(sys.stdin)["control_plane"]["reason"])' 2>/dev/null)" || plane_rs=""
     mcp_st="$(printf '%s' "$probe_json" | "$GOV_PY" -c 'import json,sys; print(json.load(sys.stdin)["mcp"]["status"])' 2>/dev/null)" || mcp_st=UNKNOWN
     mcp_rs="$(printf '%s' "$probe_json" | "$GOV_PY" -c 'import json,sys; print(json.load(sys.stdin)["mcp"]["reason"])' 2>/dev/null)" || mcp_rs=""
     case "$cli_st" in
-      DEGRADED|BLOCKED|UNKNOWN) downgrade STATUS_MEMORY_CLI DEGRADED "${cli_rs:-cli health}" ;;
+      DEGRADED|BLOCKED|UNKNOWN) downgrade STATUS_MEMORY_CLI DEGRADED "${cli_rs:-memory cli}" ;;
+    esac
+    case "$plane_st" in
+      DEGRADED|BLOCKED|UNKNOWN) downgrade STATUS_MEMORY_CLI DEGRADED "${plane_rs:-memory control plane}" ;;
     esac
     case "$mcp_st" in
-      DEGRADED|BLOCKED|UNKNOWN) downgrade STATUS_MEMORY_MCP DEGRADED "${mcp_rs:-mcp health}" ;;
+      DEGRADED|BLOCKED|UNKNOWN) downgrade STATUS_MEMORY_MCP DEGRADED "${mcp_rs:-memory mcp entry}" ;;
     esac
-    say "graphiti memory.cli=$cli_st memory.mcp=$mcp_st"
+    say "memory cli=$cli_st control_plane=$plane_st mcp=$mcp_st"
   fi
 fi
 if [ "$STATUS_MEMORY_CLI" != "READY" ]; then

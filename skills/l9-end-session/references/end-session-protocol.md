@@ -7,8 +7,8 @@ role: session_close_protocol
 tags: [l9, session, handoff, memory, governance]
 owner: igor_beylin
 status: active
-version: 1.3.0
-updated: 2026-08-06
+version: 1.4.0
+updated: 2026-09-07
 auto_chain: extract-chat
 --- /SKILL_META ---
 -->
@@ -17,72 +17,96 @@ auto_chain: extract-chat
 
 ## WHAT IT DOES
 
-Clean session close:
+Clean session close (force-retry / offline recovery — normal closes are the
+automatic `sessionEnd` hook, ADR-0028):
 
-1. Write structured PICKUP context to Graphiti (sole memory path — memory-bank deprecated)
-2. Extract learnings to memory (via canonical pipeline; see `docs/MEMORY_PIPELINE_MAP.md`)
+1. Repair-write the canonical continuation record (`ContinuationCapsuleV2`)
+   through `ops/memory` and stamp the close receipt
+2. Extract learnings as governed memory writes (`memory.phase_lock` →
+   `memory.write_governed`; see `docs/MEMORY_PIPELINE_MAP.md`)
 3. Save Redis session context for cross-window resume
 4. Create handoff summary
 5. **Backup GlobalCommands to GitHub** (`Quantum-L9/Cursor-Governance`)
 
-Protocol spec: `end-session.yaml` (v2.1)
+Protocol spec: `end-session.yaml` (v2.1). Authority: CANONICAL_LAW §8.2/§8.3,
+ADR-0030 (items 7–9), ADR-0028 as amended 2026-09-07.
 
 ---
 
 ## EXECUTION
 
-### 1. MEMORY WRITE — Graphiti (REQUIRED)
+### 1. MEMORY REPAIR — canonical continuation record (REQUIRED)
 
-Health-check first, then write the structured PICKUP packet + one atomic
-write per learning fact, all to Graphiti. This is the canonical store.
+Health-check first, then `repair-write` the continuation record for the
+session that did not land. This is a **deterministic adapter** over the same
+`MemoryService` the hook closer uses; it is the only close-gap repair. A bare
+`ops.memory.cli write` does not stamp the close receipt and is not this step.
 
-If health check fails or a write errors: **warn and skip** memory persistence
+If health fails or the write is refused: **warn and skip** memory persistence
 for this close — do **not** fall back to `memory-bank/` (deprecated; see
-`MEMORY_BANK_POLICY.md`). Continue with Redis/handoff.
+`MEMORY_BANK_POLICY.md`) and do **not** write a provider. Continue with
+Redis/handoff.
 
 Use governance **venv Python** (see `skills/l9-graphiti-memory/SKILL.md`). Bare `python3` often fails with `No module named 'yaml'`. Do **not** pass `--scope` / `--scope cursor` (not a CLI flag).
 
 ```bash
 GOV="${HOME}/.cursor-governance"
 GRAPHITI_PY="${GOV}/.venv/bin/python"
-CLIENT="${GOV}/ops/graphiti/graphiti_memory_client.py"
 [ -x "$GRAPHITI_PY" ] || GRAPHITI_PY="${HOME}/Cursor-Governance/.venv/bin/python"
-[ -f "$CLIENT" ] || CLIENT="${HOME}/Cursor-Governance/ops/graphiti/graphiti_memory_client.py"
+WS="${CURSOR_PROJECT_DIR:-$(pwd)}"
+memcli() { (cd "$GOV" && PYTHONPATH="$GOV" "$GRAPHITI_PY" -m ops.memory.cli "$@" --workspace "${WS:-$PWD}"); }  # canonical control plane (C11)
+PRIOR_FILE="$WS/.l9/memory/previous_opened.json"
+REPAIR_SID="$("$GRAPHITI_PY" -c 'import json,sys; print(json.load(open(sys.argv[1])).get("session_id") or "")' "$PRIOR_FILE" 2>/dev/null || true)"
+REPAIR_SID="${REPAIR_SID:-${CURSOR_CONVERSATION_ID:-manual}}"
+export L9_MEMORY_AGENT_ID=cursor USER_ID=cursor_agent
 
-"$GRAPHITI_PY" "$CLIENT" health
+memcli health
 # If healthy:
-"$GRAPHITI_PY" "$CLIENT" write \
-  "PICKUP|date=$(date +%Y-%m-%d)|task={TASK}|files={FILES}|next={NEXT}|blocker={BLOCKER}|gmps={GMPS}|outcome={OUTCOME}" \
-  --kind pickup_context
-
-# One atomic write per learning fact (see step 2 below for format).
+cd "$GOV" && PYTHONPATH="$GOV" "$GRAPHITI_PY" -m ops.graphiti.hydration.cli repair-write \
+  --project-dir "$WS" --session-id "$REPAIR_SID" \
+  --objective "{TASK}" --next "{NEXT}" --files "{FILES}" --blocker "{BLOCKER}" \
+  --agent-id cursor
 ```
 
-`ops/hooks/graphiti-session-end.sh` on automatic `sessionEnd` tries Graphiti
-only; on failure it WARNs and exits without writing `memory-bank/`.
+`ops/hooks/graphiti-session-end.sh` on automatic `sessionEnd` performs the
+canonical close only (`close_session.py`: capsule → governed candidate →
+`memory.close`, idempotent); on failure it writes a fail receipt, WARNs on
+stderr and exits without writing `memory-bank/` or a provider.
 
-### 2. EXTRACT LEARNINGS (canonical memory pipeline — part of step 1)
+### 2. EXTRACT LEARNINGS (governed writes — part of step 1)
 
-Only runs when step 1's Graphiti health check passed. If it did not, skip
-learnings writes and note the gap in the handoff report.
+Only runs when step 1's health check passed. If it did not, skip learnings
+writes and note the gap in the handoff report.
 
-Session learnings MUST be written through the **canonical memory path** so they get governance, audit, DAG (packet_store → graph_sync → semantic_embed → insights), and persistence. See `docs/MEMORY_PIPELINE_MAP.md`.
+Session learnings are **model-authored durable facts**, so they take the
+interactive write contract: `memory.phase_lock` then `memory.write_governed`
+on the `l9-graphite-memory` MCP server (ADR-0030 item 7). They get the same
+admission, audit, supersession and projection as every other canonical record.
+See `docs/MEMORY_PIPELINE_MAP.md`.
 
-- **Path:** `graphiti_memory_client.py write` → Graphiti episode queue → entity/edge extraction → group-scoped graph. Legacy C1 path (`cursor_memory_client.py` → `save_memory` → SubstrateDAG → PostgreSQL/Neo4j/pgvector) is deprecated — do not use it for new writes.
+- **Path:** MCP `l9-graphite-memory` → `MemoryService.write_governed` →
+  canonical store → outbox → projection. The retired provider path
+  (`graphiti_memory_client.py`, `add_memory`-class episodes) and the legacy C1
+  path (`cursor_memory_client.py` → `save_memory`) are gone — do not use them.
+- The memory phase-lock is a memory-write precondition only; it authorizes no
+  file edit, commit or push.
 
 **Write atomic memories — one fact per write, not one big blob.**
 See `.cursor/rules/87-cursor-memory-kernel.mdc` → "Memory Write Format" for the full spec.
 
-```bash
-# One write per fact. Pre-classify with --kind only (no --scope). Terse, no preamble.
-"$GRAPHITI_PY" "$CLIENT" write \
-  "{terse fact 1}" \
-  --kind lesson --group-id {resolved_group_id}
+```text
+memory.phase_lock      {namespace: "{resolved namespace}", task_signature: "end-session:{REPAIR_SID}"}
 
-"$GRAPHITI_PY" "$CLIENT" write \
-  "{terse fact 2}" \
-  --kind insight --group-id {resolved_group_id}
+memory.write_governed  {namespace: "{resolved namespace}", task_signature: "end-session:{REPAIR_SID}",
+                        content: "{terse fact 1}", memory_class: "lesson", tags: ["agent:cursor"]}
+
+memory.write_governed  {namespace: "{resolved namespace}", task_signature: "end-session:{REPAIR_SID}",
+                        content: "{terse fact 2}", memory_class: "insight", tags: ["agent:cursor"]}
 ```
+
+A human operator running the close by hand may use the operator CLI
+(`memcli write "{fact}" --kind lesson --agent-id cursor`); the model does not
+substitute it for the governed write.
 
 ### 3. REDIS SESSION CONTEXT (cache_set_session_context)
 
@@ -100,13 +124,15 @@ See `.cursor/rules/87-cursor-memory-kernel.mdc` → "Memory Write Format" for th
 
 This step is mandatory: without it, the next window will not have this handoff in Redis.
 
-### 3b. SESSION HOOKS (Graphiti sessionEnd)
+### 3b. SESSION HOOKS (canonical sessionEnd close)
 
 Rely on the installed Cursor hook `ops/hooks/graphiti-session-end.sh` (wired via `~/.cursor/hooks.json` after `setup_workspace_symlinks.sh`).
 
-- On automatic `sessionEnd`, that script writes Graphiti `--kind session_summary` when a summary payload is present and Graphiti is enabled.
-- If no summary was available, Graphiti is disabled, or the write fails: **skip** — warn in the close report; do not fall back to memory-bank or CEG working-memory promotion.
-- **Do not** invoke CEG working-memory session hooks (not part of Cursor-Governance). Agent-side close persistence is Graphiti PICKUP + lessons (step 1).
+- On automatic `sessionEnd`, that script runs the canonical close
+  (`ContinuationCapsuleV2` → governed candidate → `memory.close`) when a
+  summary payload is present and memory is enabled.
+- If no summary was available, memory is disabled, or the close fails: **skip** — warn in the close report; do not fall back to memory-bank, a provider write, or CEG working-memory promotion.
+- **Do not** invoke CEG working-memory session hooks (not part of Cursor-Governance). Agent-side close persistence is the canonical continuation record + governed lesson writes (steps 1–2).
 
 ### 4. GOVERNANCE GITHUB BACKUP (mandatory)
 
@@ -152,13 +178,13 @@ Also runs automatically on **sessionEnd** after `setup_workspace_symlinks.sh` (s
 **Reports generated:** {list}
 
 ### Handoff
-- PICKUP context + learnings written to Graphiti (or warned if Graphiti unavailable) ✅
+- Continuation record repaired + governed learnings written through the memory control plane (or warned if memory unbound) ✅
 - Redis session context saved (cache_set_session_context) ✅
 - Next steps defined ✅
 - GlobalCommands pushed to Cursor-Governance ✅
 
 ### When you open a new window
-→ Use **/start-session** to load Redis context + Graphiti PICKUP/inject and resume.
+→ Use **/start-session** to load Redis context + the canonical hydrate (`ContinuationCapsuleV2`) and resume.
 ```
 
 → **Auto-chains to /extract-chat**

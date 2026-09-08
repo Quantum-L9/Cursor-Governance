@@ -1,0 +1,141 @@
+compiled_prompt:
+  id: "claude_code_capability_permission_and_sanctioned_publish_convergence"
+  status: "REPAIRED_AGAINST_CANONICAL_MEMORY_STACK"
+
+  target:
+    platform: "Claude Code Web/Mobile and CLI"
+    repository: "Quantum-L9/Cursor-Governance"
+    pr: 514
+
+  objective: >
+    Make the normal L9 Claude execution path frictionless without creating any
+    duplicate authority plane. Safe repository editing, bounded inspection, and
+    the canonical memory lifecycle should not trigger vendor permission prompts;
+    L9 governance remains authoritative for effects. Hosted GitHub transport must
+    avoid known-bad GraphQL probes and publication must remain make pr only.
+
+  authority:
+    memory:
+      service: "l9-graphiti-memory MemoryService"
+      server: "l9-graphite-memory"
+      transport: "stdio"
+      agent_lifecycle:
+        - "memory.health"
+        - "memory.search"
+        - "memory.hydrate"
+        - "memory.conflicts"
+        - "memory.close"
+      interactive_write:
+        sequence:
+          - "memory.phase_lock"
+          - "memory.write_governed"
+        law:
+          - "The phase lock is a memory-write consistency precondition only."
+          - "It is not repository-write authority."
+          - "memory.ingest is not the autonomous model-write bypass."
+          - "Compatibility aliases are not a second agent-facing vocabulary."
+      retired:
+        - "graphiti-memory provider MCP"
+        - "graphiti_memory_client.py as live front door"
+        - "search_memory_facts"
+        - "raw add_memory"
+        - "GRAPHITI_MCP_URL"
+        - "GRAPHITI_MCP_TOKEN"
+      duplicate_plane_control:
+        claude_auto_memory: "disabled"
+
+    repository_scope:
+      primary_identity: "CLAUDE_PROJECT_DIR checkout plus git origin"
+      primary_scope: "implicit initial task scope"
+      session_start_add_repo: "forbidden for primary checkout"
+      later_cross_repo: >
+        If execution later requires a genuinely different repository and the
+        hosted platform reports that exact repository unavailable, request scope
+        once for that repository only. Do not clone around the platform boundary.
+      governance_clone: >
+        $HOME/.cursor-governance is a local filesystem dependency and does not
+        itself require Cursor-Governance remote GitHub scope.
+
+    github:
+      hosted_transport: "REST_FIRST"
+      known_graphql: "classify and reject before network"
+      publication: "make pr"
+      prohibited_agent_visible_publish:
+        - "git push"
+        - "gh pr create"
+        - "gh pr merge"
+        - "arbitrary gh api POST"
+        - "mcp__github__create_pull_request"
+        - "mcp__github__push_files"
+      duplicate_scheduler_plane: "Claude cron disabled; l9-pr-remediation owns convergence"
+
+  required_permission_envelope:
+    allow:
+      repository:
+        - "Edit"
+        - "Write"
+        - "NotebookEdit"
+        - "bounded local git inspection"
+        - "explicit repository-scoped REST GET"
+        - "GitHub Actions inspection"
+        - "make pr"
+      memory:
+        - "mcp__l9-graphite-memory__memory.health"
+        - "mcp__l9-graphite-memory__memory.search"
+        - "mcp__l9-graphite-memory__memory.hydrate"
+        - "mcp__l9-graphite-memory__memory.conflicts"
+        - "mcp__l9-graphite-memory__memory.phase_lock"
+        - "mcp__l9-graphite-memory__memory.write_governed"
+        - "mcp__l9-graphite-memory__memory.close"
+    deny_or_do_not_ambiently_allow:
+      - "retired graphiti-memory server tools"
+      - "memory.ingest"
+      - "memory.delete"
+      - "memory.promote"
+      - "memory.bootstrap"
+      - "memory.distill"
+      - "admin/maintenance memory operations"
+      - "all compatibility aliases"
+      - "raw publication mutations"
+
+  bootstrap:
+    must_emit:
+      - "governance SSOT"
+      - "primary workspace repository identity"
+      - "canonical memory authority"
+      - "memory.phase_lock -> memory.write_governed"
+      - "REST_ONLY when hosted"
+      - "make pr publication authority"
+    must_not:
+      - "probe GitHub merely to validate primary repository scope"
+      - "request Add Repo for primary checkout"
+      - "request access=push at SessionStart"
+      - "teach graphiti_memory_client.py"
+      - "teach raw provider memory operations"
+
+  validation:
+    static:
+      - "settings template and projected .claude/settings.json match"
+      - "canonical memory lifecycle permissions present"
+      - "provider memory plane absent/denied"
+      - "legacy memory aliases denied"
+      - "primary checkout produces no Add Repo bootstrap path"
+      - "known GraphQL commands short-circuit without invoking gh"
+      - "explicit REST GET passes through"
+      - "raw publication remains outside standing approval"
+    hosted_acceptance:
+      - "no Register Repo Root prompt"
+      - "no primary Add Repo prompt"
+      - "no normal Edit/Write/NotebookEdit prompt"
+      - "no canonical memory lifecycle or governed-write prompt"
+      - "canonical governed write returns a MemoryService receipt"
+      - "no Send Later prompt"
+      - "no known-bad GraphQL network attempt"
+      - "make pr remains usable"
+
+  non_goals:
+    - "memory architecture changes"
+    - "provider infrastructure retirement"
+    - "legacy L9 Analysis retirement"
+    - "branch protection changes"
+    - "merge authorization"

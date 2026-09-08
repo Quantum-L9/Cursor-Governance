@@ -135,9 +135,9 @@ GMP_WORKFLOW = [
 Execute these commands NOW:
 
 ```bash
-python3 ops/graphiti/graphiti_memory_client.py search "{task_keywords}"
-python3 ops/graphiti/graphiti_memory_client.py search "lessons errors {component}"
-python3 ops/graphiti/graphiti_memory_client.py search "{domain} patterns"
+python -m ops.memory.cli search "{task_keywords}"
+python -m ops.memory.cli search "lessons errors {component}"
+python -m ops.memory.cli search "{domain} patterns"
 ```
 
 Then output:
@@ -289,13 +289,13 @@ Mark complete with: `python3 workflows/gmp_enforcer.py complete validate`
 Execute these commands NOW:
 
 ```bash
-python3 ops/graphiti/graphiti_memory_client.py write \\
+python -m ops.memory.cli write \\
   "GMP-XXX: {summary}. Tags: gmp, {component}" --kind lesson
 
-python3 ops/graphiti/graphiti_memory_client.py write \\
+python -m ops.memory.cli write \\
   "{pattern}. Tags: {domain}, pattern" --kind pattern
 
-python3 ops/graphiti/graphiti_memory_client.py write \\
+python -m ops.memory.cli write \\
   "{error_fix}. Tags: error, {component}" --kind lesson
 ```
 

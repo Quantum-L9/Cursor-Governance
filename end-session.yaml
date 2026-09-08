@@ -80,7 +80,7 @@ phase_1_pickup_context:
     (warn and continue). See MEMORY_BANK_POLICY.md and ADR-0005.
 
   primary_target: |
-    python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py health
+    python -m ops.memory.cli health
     # If healthy: write PICKUP (see `template` below) + one atomic write per
     # learning fact to Graphiti. This is the only memory write.
 
@@ -105,8 +105,8 @@ phase_1_pickup_context:
 
   command: |
     # Primary (default path when GRAPHITI_MEMORY_ENABLED=1):
-    python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py health
-    python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
+    python -m ops.memory.cli health
+    python -m ops.memory.cli write \
       "PICKUP|date={DATE}|task={TASK}|files={FILES}|next={NEXT}|blocker={BLOCKER}|gmps={GMPS}|outcome={OUTCOME}" \
       --kind pickup_context
     # If health/write fails: WARN only — do not write memory-bank/ (retired).
@@ -122,7 +122,7 @@ phase_1_pickup_context:
 
   search_at_resume: |
     # Graphiti only (memory-bank retired)
-    python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py search "PICKUP|" --limit 3
+    python -m ops.memory.cli search "PICKUP|" --limit 3
 
 # ═══════════════════════════════════════════════════════════
 # PHASE 2: LESSONS & ERRORS (If Any)
@@ -141,12 +141,12 @@ phase_2_lessons:
 
   commands:
     lesson: |
-      python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
+      python -m ops.memory.cli write \
         "LESSON|topic={TOPIC}|learned={LEARNED}|context={CONTEXT}" \
         --kind lesson
 
     error: |
-      python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
+      python -m ops.memory.cli write \
         "ERROR|type={TYPE}|cause={CAUSE}|fix={FIX}" \
         --kind error
 
@@ -173,7 +173,7 @@ phase_3_git_state:
 
     # Write to memory if uncommitted changes exist
     if [ "$UNCOMMITTED" -gt 0 ]; then
-      python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
+      python -m ops.memory.cli write \
         "GIT|branch=$BRANCH|commit=$COMMIT|uncommitted=$UNCOMMITTED|staged=$STAGED" \
         --kind git_state
     fi
@@ -245,7 +245,7 @@ phase_5_confirmation:
     └─ Last commit: {commit}
 
     🎯 NEXT SESSION RESUME:
-       python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py search "PICKUP|"
+       python -m ops.memory.cli search "PICKUP|"
 
     👋 Ready to resume anytime.
 
@@ -253,19 +253,23 @@ phase_5_confirmation:
 # QUICK REFERENCE
 # ═══════════════════════════════════════════════════════════
 quick_reference:
+  memory_cli: |
+    # Canonical memory control plane (realignment stage C11). Run from the
+    # governance clone with its locked venv; --workspace names the repo:
+    #   cd "$HOME/.cursor-governance" && .venv/bin/python -m ops.memory.cli <op> --workspace "$WS"
   triggers:
     automatic: "Close Cursor window → sessionEnd hook → ~/.cursor-governance/backup.log"
     manual_full: "/end-session — all phases + governance backup"
     manual_backup: "bash .cursor-commands/ops/scripts/backup_to_github.sh"
   minimal_end: |
     # Minimum viable session end (30 seconds)
-    python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
+    python -m ops.memory.cli write \
       "PICKUP|date=$(date +%Y-%m-%d)|task=TASK|files=FILES|next=NEXT|blocker=none|gmps=none|outcome=success" \
       --kind pickup_context
 
   resume_search: |
     # At next session start
-    python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py search "PICKUP|" --limit 3
+    python -m ops.memory.cli search "PICKUP|" --limit 3
 
   memory_kinds:
     - pickup_context: "Session handoff (MOST IMPORTANT)"

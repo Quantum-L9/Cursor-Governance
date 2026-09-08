@@ -1,0 +1,49 @@
+{
+  "schema": "cursor.legacy-provider-export/v1",
+  "namespace": "cursor-governance",
+  "exported_at": "2026-09-06T00:00:00+00:00",
+  "records": [
+    {
+      "id": "prov-0001",
+      "kind": "pickup_context",
+      "created_at": "2026-08-30T10:00:00+00:00",
+      "text": "PICKUP|objective=Finish the memory realignment|next=Run the cross-repo proof|agent=cursor|session=abc"
+    },
+    {
+      "id": "prov-0002",
+      "kind": "lesson",
+      "created_at": "2026-08-30T10:05:00+00:00",
+      "text": "_require_X() guard pattern fixes nullable service attrs."
+    },
+    {
+      "id": "prov-0003",
+      "kind": "lesson",
+      "created_at": "2026-08-30T10:06:00+00:00",
+      "text": "_require_X() guard pattern fixes nullable service attrs."
+    },
+    {
+      "id": "prov-0004",
+      "kind": "decision",
+      "created_at": "2026-08-30T10:07:00+00:00",
+      "text": "Memory writes require the resolved repo namespace, never main."
+    },
+    {
+      "id": "prov-0005",
+      "kind": "note",
+      "created_at": "2026-08-30T10:08:00+00:00",
+      "text": "   "
+    },
+    {
+      "id": "prov-0006",
+      "kind": "pickup_context",
+      "created_at": "2026-08-30T10:09:00+00:00",
+      "text": "PICKUP|agent=cursor"
+    },
+    {
+      "id": "prov-0007",
+      "kind": "preference",
+      "created_at": "2026-08-30T10:10:00+00:00",
+      "text": "Prefer tables for comparisons."
+    }
+  ]
+}
