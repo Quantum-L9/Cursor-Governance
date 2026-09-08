@@ -107,17 +107,9 @@ if [ -n "$_L9_SD_LIB" ]; then
     *) emit "" ;;
   esac
 else
-  # Fail-soft if the lib is missing on a half-wired machine: keep the prior
-  # inline marker list so Claude sessions are not silently skipped.
-  _l9_claude_runtime=0
-  [ "${CLAUDE_CODE_REMOTE:-}" = "true" ] && _l9_claude_runtime=1
-  [ -n "${CLAUDECODE:-}" ] && _l9_claude_runtime=1
-  [ -n "${CLAUDE_CODE_ENTRYPOINT:-}" ] && _l9_claude_runtime=1
-  [ -n "${CLAUDE_CODE_SESSION_ID:-}" ] && _l9_claude_runtime=1
-  if [ "$_l9_claude_runtime" -eq 0 ]; then
-    emit ""
-  fi
-  unset _l9_claude_runtime
+  # Detector unavailable means surface identity is unknown. This is an
+  # observer-class hook, so unknown must not inject Claude context.
+  emit ""
 fi
 unset _L9_SD_LIB _L9_WALK _L9_HOOK_DIR
 

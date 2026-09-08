@@ -17,7 +17,17 @@ so `compile_campaign_source.py` can succeed.
 
 ## Operator input (memo or activate YAML)
 
-Preferred: a free-form program memo (`.md`). `make campaign INTENT=brief.md`
+The public entry is always `make campaign INTENT=<path>`. It classifies the
+document before choosing a compiler. Explicit structured schemas/seed shapes
+take precedence; architecture-grade prose is deterministically admitted as
+Architecture Intent without source mutation; only remaining memo traffic enters
+the brief compiler.
+
+Architecture prose therefore does **not** require numbered release blocks and
+must never be rebuilt through brief → activate. `make campaign-architecture`
+is compatibility syntax for the same classifier, not a representation override.
+
+For a classifier-selected free-form program brief (`.md`), `make campaign INTENT=brief.md`
 assigns `campaign_id` from the filename slug (`PE- Memory.md` → `pe-memory`,
 then `-v2` on collision). You do not write a campaign id or a PE schema.
 
@@ -40,7 +50,7 @@ Optional power-user activate YAML (passthrough):
 campaign_id: kebab-case-id          # required only for this YAML form
 title: Human title                  # required
 objective: One paragraph            # required
-owner: Igor Beylin                  # default Igor Beylin
+owner: Quantum AI Partners          # canonical PE default; explicit owner may override
 target:
   repository_id: Quantum-L9/Cursor-Governance
   source_of_truth: environment/program-execution
