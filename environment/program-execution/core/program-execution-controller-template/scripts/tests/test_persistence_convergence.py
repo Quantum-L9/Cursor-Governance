@@ -15,7 +15,6 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
-from unittest import mock
 
 from helpers import (
     SCRIPTS,
@@ -82,7 +81,7 @@ class EventProjectionTests(unittest.TestCase):
                 original(self, event)
 
             with (
-                mock.patch.object(pec_ledger.EventLedger, "_write_line", dying),
+                unittest.mock.patch.object(pec_ledger.EventLedger, "_write_line", dying),
                 self.assertRaises(OSError),
             ):
                 pec_controller.claim_task(workspace, "TASK-001", "worker")
@@ -111,7 +110,7 @@ class EventProjectionTests(unittest.TestCase):
             events_before = _db_events(workspace)
             receipt_path = workspace / "receipts" / "verification" / "TASK-001.json"
             with (
-                mock.patch.object(
+                unittest.mock.patch.object(
                     StateDB, "upsert_evidence", side_effect=RuntimeError("mid-transaction crash")
                 ),
                 self.assertRaises(RuntimeError),
@@ -249,7 +248,9 @@ class ReceiptProjectionTests(unittest.TestCase):
             register_contract(temp, workspace)
             prepare_attempt(temp, workspace)
             with (
-                mock.patch.object(StateDB, "mark_receipt_projected", side_effect=OSError("crash")),
+                unittest.mock.patch.object(
+                    StateDB, "mark_receipt_projected", side_effect=OSError("crash")
+                ),
                 self.assertRaises(OSError),
             ):
                 pec_controller.verify_attempt(workspace, "TASK-001")
