@@ -3,7 +3,9 @@
     {
       "prompt": "Review PR 72 and identify merge blockers and unresolved review comments",
       "expected_primary": "l9-pr-remediation",
-      "expected_supporting": []
+      "expected_supporting": [
+        "l9-pr-digest"
+      ]
     },
     {
       "prompt": "Implement the review fixes, push commits, and merge the PR",
