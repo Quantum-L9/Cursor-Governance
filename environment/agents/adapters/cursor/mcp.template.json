@@ -1,27 +1,36 @@
 {
   "_comment": [
-    "Cursor MCP configuration — Graphiti front door only.",
-    "Authority: environment/agents/adapters/cursor/mcp.template.json is the",
-    "canonical shape for the Cursor surface's Graphiti server entry. Cursor's",
-    "live MCP config is user-owned (~/.cursor/mcp.json / IDE settings); this",
-    "template documents the sanctioned entry, it is not auto-rendered over",
-    "user config.",
+    "Cursor MCP configuration — canonical memory server only.",
+    "Authority: environment/agents/adapters/cursor/mcp.template.json documents the",
+    "sanctioned shape of the memory entry on the Cursor surface. Cursor's live",
+    "config (~/.cursor/mcp.json) is a REAL per-machine file rendered from",
+    "environment/mcp/master.mcp.json by ops/memory/mcp_instantiation.py",
+    "(make memory-mcp-install); the entry below is never copied from this file.",
+    "It is written by the memory package's own configurator",
+    "(`l9-memory client cursor install`) with the absolute interpreter of the",
+    "runtime this checkout is bound to (ops/config/memory-binding.json), because",
+    "Cursor expands no ${VAR} references. ${L9_MEMORY_INTERPRETER} here is the",
+    "machine-agnostic placeholder for that path.",
     "",
-    "NO CREDENTIAL VALUES. ${GRAPHITI_MCP_URL} and the optional",
-    "${GRAPHITI_MCP_TOKEN} header are environment references, exactly like the",
-    "claude-code template. The retired capability broker URL is forbidden",
-    "(CAPABILITY_BROKER_RETIRED_V1)."
+    "NO CREDENTIAL VALUES and no env block: the server resolves its own",
+    "credentials (memory ADR-016). The legacy direct-provider front door",
+    "(graphiti-memory over a provider URL) is retired (realignment stage C7)",
+    "and the renderer drops it from every rendered file. The retired capability",
+    "broker URL is forbidden (CAPABILITY_BROKER_RETIRED_V1)."
   ],
   "mcpServers": {
-    "graphiti-memory": {
-      "type": "http",
-      "url": "${GRAPHITI_MCP_URL}",
-      "timeout": 120000,
-      "_optional_headers": {
-        "GRAPHITI_MCP_TOKEN": {
-          "Authorization": "Bearer ${GRAPHITI_MCP_TOKEN}"
-        }
-      }
+    "l9-graphite-memory": {
+      "command": "${L9_MEMORY_INTERPRETER}",
+      "args": [
+        "-m",
+        "l9_graphite_memory.server",
+        "--transport",
+        "stdio"
+      ],
+      "_requires_env": [
+        "L9_MEMORY_INTERPRETER"
+      ],
+      "_owner": "l9-graphite-memory: managed_server_entry (client_config/cursor.py); installed by the package configurator, never rendered from this template."
     }
   }
 }

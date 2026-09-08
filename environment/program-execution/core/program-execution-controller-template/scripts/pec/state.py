@@ -2,10 +2,31 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
 from .common import verification_mechanisms_from_card
+
+#: Authoritative runtime schema version. Bumped only when persistence
+#: compatibility materially changes; every open reads it first.
+#:   1  original tables (implicit: no version key)
+#:   2  tasks.verification_mechanisms column (implicit: column present)
+#:   3  explicit version key + Controller transactions (PEC remediation R3)
+#:   4  execution_attempts: durable attempt identity + baseline binding (R4)
+#:   5  events outbox + receipt records: SQLite is the canonical chain (R8)
+RUNTIME_SCHEMA_VERSION = 5
+RUNTIME_SCHEMA_KEY = "runtime_schema_version"
+#: Bounded wait for the single-writer lock before a mutation is refused.
+BUSY_TIMEOUT_SECONDS = 5.0
+
+
+class StateError(RuntimeError):
+    def __init__(self, message: str, *, error_code: str | None = None):
+        super().__init__(message)
+        self.error_code = error_code
+
 
 TASK_STATES = {
     "WAITING",
@@ -51,14 +72,99 @@ ALLOWED_TRANSITIONS = {
 
 
 class StateDB:
+    """The canonical runtime store, opened in explicit-transaction mode.
+
+    Every mutation primitive below is usable on its own (it autocommits) and
+    inside `controller_transaction()`, where nothing commits until the outer
+    Controller operation does. That is what lets one Controller operation move
+    several rows -- and, from R8 on, its event and receipt records -- durably
+    together (PEC-P1-004).
+    """
+
     def __init__(self, path: Path):
         path.parent.mkdir(parents=True, exist_ok=True)
         self.path = path
-        self.conn = sqlite3.connect(path)
+        # isolation_level=None: sqlite3 issues no implicit BEGIN, so a plain
+        # DML statement autocommits and `controller_transaction` owns BEGIN
+        # IMMEDIATE / COMMIT explicitly. `timeout` bounds the busy wait.
+        self.conn = sqlite3.connect(path, isolation_level=None, timeout=BUSY_TIMEOUT_SECONDS)
         self.conn.row_factory = sqlite3.Row
+        self._tx_depth = 0
+        self._after_commit: list[Callable[[], None]] = []
         self._init()
 
+    # ------------------------------------------------------------------ tx
+    @property
+    def in_transaction(self) -> bool:
+        return self._tx_depth > 0
+
+    def _commit(self) -> None:
+        """Commit unless an enclosing Controller transaction owns the commit."""
+        if self._tx_depth == 0 and self.conn.in_transaction:
+            self._commit()
+
+    @contextmanager
+    def controller_transaction(self) -> Iterator[StateDB]:
+        """One serializable Controller mutation.
+
+        BEGIN IMMEDIATE takes the single-writer lock up front, so two
+        Controller processes cannot both read "current state" and both write
+        a successor: the second waits on the lock (bounded by the busy
+        timeout) and then re-reads. Nested use joins the outer transaction.
+        Callbacks registered through `on_commit` run only after the outermost
+        COMMIT succeeds and are discarded on rollback -- that is the hook
+        R8's ledger/receipt projections hang on.
+        """
+        if self._tx_depth > 0:
+            self._tx_depth += 1
+            try:
+                yield self
+            finally:
+                self._tx_depth -= 1
+            return
+        try:
+            self.conn.execute("BEGIN IMMEDIATE")
+        except sqlite3.OperationalError as exc:
+            raise StateError(
+                f"controller transaction could not acquire the runtime writer lock: {exc}",
+                error_code="RUNTIME_WRITER_BUSY",
+            ) from exc
+        self._tx_depth = 1
+        try:
+            yield self
+        except BaseException:
+            self._tx_depth = 0
+            self._after_commit.clear()
+            if self.conn.in_transaction:
+                self.conn.execute("ROLLBACK")
+            raise
+        self._tx_depth = 0
+        self.conn.execute("COMMIT")
+        hooks, self._after_commit = self._after_commit, []
+        for hook in hooks:
+            hook()
+
+    def on_commit(self, callback: Callable[[], None]) -> None:
+        """Run `callback` after the enclosing transaction commits (now, if none)."""
+        if self._tx_depth > 0:
+            self._after_commit.append(callback)
+        else:
+            callback()
+
+    # -------------------------------------------------------------- schema
     def _init(self) -> None:
+        recorded = self._recorded_schema_version()
+        if recorded is not None and recorded > RUNTIME_SCHEMA_VERSION:
+            raise StateError(
+                f"runtime schema version {recorded} is newer than this Controller "
+                f"supports ({RUNTIME_SCHEMA_VERSION}); refusing to interpret it",
+                error_code="RUNTIME_SCHEMA_INCOMPATIBLE",
+            )
+        # Base DDL is idempotent and may run outside a transaction: a crash
+        # mid-way leaves a strict subset of the same tables, which the next
+        # open completes. Everything that changes the MEANING of existing
+        # rows happens in `_migrate`, inside one transaction, and the version
+        # key is the last write of that transaction.
         self.conn.executescript(
             """
             PRAGMA journal_mode=WAL;
@@ -165,15 +271,113 @@ class StateDB:
               approval_id TEXT PRIMARY KEY,
               payload TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS execution_attempts (
+              attempt_id TEXT PRIMARY KEY,
+              task_id TEXT NOT NULL,
+              attempt_number INTEGER NOT NULL,
+              lease_id TEXT NOT NULL,
+              program_digest TEXT NOT NULL,
+              contract_digest TEXT NOT NULL,
+              base_sha TEXT NOT NULL,
+              worktree TEXT NOT NULL,
+              baseline_path TEXT NOT NULL,
+              baseline_digest TEXT NOT NULL,
+              state TEXT NOT NULL,
+              provider_ref TEXT,
+              provider_execution_id TEXT,
+              started_at TEXT NOT NULL,
+              terminal_at TEXT,
+              terminal_status TEXT,
+              fence_status TEXT NOT NULL DEFAULT 'none',
+              fenced_at TEXT,
+              reason TEXT,
+              UNIQUE(task_id, attempt_number)
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS live_task_attempt
+              ON execution_attempts(task_id)
+              WHERE state IN ('BASELINED', 'DISPATCHING', 'RUNNING');
+            CREATE TABLE IF NOT EXISTS events (
+              sequence INTEGER PRIMARY KEY,
+              timestamp TEXT NOT NULL,
+              type TEXT NOT NULL,
+              actor TEXT NOT NULL,
+              payload TEXT NOT NULL,
+              previous_digest TEXT,
+              digest TEXT NOT NULL UNIQUE,
+              projected INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE TABLE IF NOT EXISTS receipts (
+              receipt_id TEXT PRIMARY KEY,
+              receipt_type TEXT NOT NULL,
+              entity_id TEXT NOT NULL,
+              payload TEXT NOT NULL,
+              receipt_digest TEXT NOT NULL,
+              artifact_path TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              projected INTEGER NOT NULL DEFAULT 0
+            );
             """
         )
-        task_columns = {str(row["name"]) for row in self.conn.execute("PRAGMA table_info(tasks)")}
-        if "verification_mechanisms" not in task_columns:
+        if recorded != RUNTIME_SCHEMA_VERSION:
+            self._migrate(recorded)
+
+    def _recorded_schema_version(self) -> int | None:
+        has_meta = self.conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='meta'"
+        ).fetchone()
+        if has_meta is None:
+            # No tables at all: a fresh runtime, versioned at creation below.
+            has_tasks = self.conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='tasks'"
+            ).fetchone()
+            return None if has_tasks is None else 1
+        row = self.conn.execute(
+            "SELECT value FROM meta WHERE key=?", (RUNTIME_SCHEMA_KEY,)
+        ).fetchone()
+        if row is None:
+            # Pre-versioned runtime: distinguish a fresh database (no tasks table
+            # yet) from a legacy one by what is on disk, never by assumption.
+            has_tasks = self.conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='tasks'"
+            ).fetchone()
+            if has_tasks is None:
+                return None
+            columns = {str(r["name"]) for r in self.conn.execute("PRAGMA table_info(tasks)")}
+            return 2 if "verification_mechanisms" in columns else 1
+        try:
+            return int(json.loads(row["value"]))
+        except (TypeError, ValueError) as exc:
+            raise StateError(
+                f"runtime schema version is unreadable: {row['value']!r}",
+                error_code="RUNTIME_SCHEMA_INCOMPATIBLE",
+            ) from exc
+
+    def _migrate(self, recorded: int | None) -> None:
+        """Bring a supported older runtime to the current version, transactionally.
+
+        Each step is idempotent so an interrupted migration re-runs cleanly:
+        the version key is written last, inside the same transaction, and an
+        interrupted run leaves it at the old value (or absent).
+        """
+        with self.controller_transaction():
+            version = recorded or 0
+            if version < 2:
+                columns = {str(r["name"]) for r in self.conn.execute("PRAGMA table_info(tasks)")}
+                if "verification_mechanisms" not in columns:
+                    self.conn.execute(
+                        "ALTER TABLE tasks ADD COLUMN verification_mechanisms "
+                        "TEXT NOT NULL DEFAULT '[]'"
+                    )
+                if recorded is not None:
+                    self._backfill_verification_mechanisms()
             self.conn.execute(
-                "ALTER TABLE tasks ADD COLUMN verification_mechanisms TEXT NOT NULL DEFAULT '[]'"
+                "INSERT INTO meta(key,value) VALUES(?,?) "
+                "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                (RUNTIME_SCHEMA_KEY, json.dumps(RUNTIME_SCHEMA_VERSION)),
             )
-            self._backfill_verification_mechanisms()
-        self.conn.commit()
+
+    def schema_version(self) -> int:
+        return int(self.get_meta(RUNTIME_SCHEMA_KEY, 0) or 0)
 
     def _backfill_verification_mechanisms(self) -> None:
         """Populate the new column for rows frozen before it existed.
@@ -231,7 +435,7 @@ class StateDB:
             "INSERT INTO meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",  # noqa: E501
             (key, json.dumps(value, sort_keys=True)),
         )
-        self.conn.commit()
+        self._commit()
 
     def get_meta(self, key: str, default: Any = None) -> Any:
         row = self.conn.execute("SELECT value FROM meta WHERE key=?", (key,)).fetchone()
@@ -273,7 +477,7 @@ class StateDB:
                 "reconciled_at": existing.get("reconciled_at"),
             },
         )
-        self.conn.commit()
+        self._commit()
 
     def repository(self, repository_id: str) -> dict[str, Any] | None:
         row = self.conn.execute(
@@ -372,7 +576,7 @@ class StateDB:
             f"INSERT INTO tasks({columns}) VALUES({placeholders}) ON CONFLICT(id) DO UPDATE SET {updates}",  # noqa: E501  # nosec B608
             payload,
         )
-        self.conn.commit()
+        self._commit()
 
     def _task_row(self, row: sqlite3.Row) -> dict[str, Any]:
         value = dict(row)
@@ -402,7 +606,7 @@ class StateDB:
             "UPDATE tasks SET runtime_state=?, last_error=? WHERE id=?",
             (new_state, last_error, task_id),
         )
-        self.conn.commit()
+        self._commit()
 
     def update_task(self, task_id: str, **fields: Any) -> None:
         allowed = {
@@ -430,10 +634,20 @@ class StateDB:
             f"UPDATE tasks SET {sets} WHERE id=?",  # nosec B608
             [*fields.values(), task_id],
         )
-        self.conn.commit()
+        self._commit()
 
     def upsert_gate(self, gate: dict[str, Any]) -> None:
         existing = self.gate(gate["id"])
+        if existing is not None and existing.get("definition") != gate:
+            # Changing a gate invalidates its prior evaluation: a PASS earned
+            # against the old definition says nothing about the new one, and
+            # the gate id alone is never enough to reuse it (R7 §11.6).
+            existing = {
+                **existing,
+                "result": "UNKNOWN",
+                "evidence_ids": [],
+                "evaluation_receipt": None,
+            }
         self.conn.execute(
             """
             INSERT INTO gates(
@@ -441,7 +655,10 @@ class StateDB:
             ) VALUES(?,?,?,?,?,?)
             ON CONFLICT(id) DO UPDATE SET
                 definition=excluded.definition,
-                blocking=excluded.blocking
+                blocking=excluded.blocking,
+                result=excluded.result,
+                evidence_ids=excluded.evidence_ids,
+                evaluation_receipt=excluded.evaluation_receipt
             """,
             (
                 gate["id"],
@@ -452,7 +669,7 @@ class StateDB:
                 existing.get("evaluation_receipt") if existing else None,
             ),
         )
-        self.conn.commit()
+        self._commit()
 
     def gate(self, gate_id: str) -> dict[str, Any] | None:
         row = self.conn.execute("SELECT * FROM gates WHERE id=?", (gate_id,)).fetchone()
@@ -464,16 +681,17 @@ class StateDB:
         return item
 
     def gates(self) -> list[dict[str, Any]]:
-        return [
+        items = [
             self.gate(row["id"]) for row in self.conn.execute("SELECT id FROM gates ORDER BY id")
-        ]  # type: ignore[list-item]
+        ]
+        return [item for item in items if item is not None]
 
     def set_gate(self, gate_id: str, result: str, evidence_ids: list[str], receipt: str) -> None:
         self.conn.execute(
             "UPDATE gates SET result=?, evidence_ids=?, evaluation_receipt=? WHERE id=?",
             (result, json.dumps(evidence_ids), receipt, gate_id),
         )
-        self.conn.commit()
+        self._commit()
 
     def upsert_decision(self, item: dict[str, Any]) -> None:
         existing = self.decision(item["id"])
@@ -483,7 +701,7 @@ class StateDB:
             "INSERT INTO decisions(id,status,evidence_ids,source) VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET source=excluded.source",  # noqa: E501
             (item["id"], status, json.dumps(evidence_ids), json.dumps(item, sort_keys=True)),
         )
-        self.conn.commit()
+        self._commit()
 
     def decision(self, decision_id: str) -> dict[str, Any] | None:
         row = self.conn.execute("SELECT * FROM decisions WHERE id=?", (decision_id,)).fetchone()
@@ -495,10 +713,11 @@ class StateDB:
         return item
 
     def decisions(self) -> list[dict[str, Any]]:
-        return [
+        items = [
             self.decision(row["id"])
             for row in self.conn.execute("SELECT id FROM decisions ORDER BY id")
-        ]  # type: ignore[list-item]
+        ]
+        return [item for item in items if item is not None]
 
     def set_decision(self, decision_id: str, status: str, evidence_ids: list[str]) -> None:
         if status not in {"pending", "accepted", "rejected", "superseded"}:
@@ -507,7 +726,7 @@ class StateDB:
             "UPDATE decisions SET status=?, evidence_ids=? WHERE id=?",
             (status, json.dumps(evidence_ids), decision_id),
         )
-        self.conn.commit()
+        self._commit()
 
     def upsert_unknown(self, item: dict[str, Any]) -> None:
         existing = self.unknown(item["id"])
@@ -525,7 +744,7 @@ class StateDB:
                 json.dumps(item, sort_keys=True),
             ),
         )
-        self.conn.commit()
+        self._commit()
 
     def unknown(self, unknown_id: str) -> dict[str, Any] | None:
         row = self.conn.execute("SELECT * FROM unknowns WHERE id=?", (unknown_id,)).fetchone()
@@ -538,10 +757,11 @@ class StateDB:
         return item
 
     def unknowns(self) -> list[dict[str, Any]]:
-        return [
+        items = [
             self.unknown(row["id"])
             for row in self.conn.execute("SELECT id FROM unknowns ORDER BY id")
-        ]  # type: ignore[list-item]
+        ]
+        return [item for item in items if item is not None]
 
     def set_unknown(self, unknown_id: str, status: str, evidence_ids: list[str]) -> None:
         if status not in {"open", "resolved", "accepted_risk", "superseded"}:
@@ -550,14 +770,14 @@ class StateDB:
             "UPDATE unknowns SET status=?, evidence_ids=? WHERE id=?",
             (status, json.dumps(evidence_ids), unknown_id),
         )
-        self.conn.commit()
+        self._commit()
 
     def upsert_waiver(self, item: dict[str, Any]) -> None:
         self.conn.execute(
             "INSERT OR REPLACE INTO waivers(id,payload) VALUES(?,?)",
             (item["id"], json.dumps(item, sort_keys=True)),
         )
-        self.conn.commit()
+        self._commit()
 
     def waiver(self, waiver_id: str) -> dict[str, Any] | None:
         row = self.conn.execute("SELECT payload FROM waivers WHERE id=?", (waiver_id,)).fetchone()
@@ -574,7 +794,7 @@ class StateDB:
             "INSERT OR REPLACE INTO evidence(id,payload) VALUES(?,?)",
             (item["id"], json.dumps(item, sort_keys=True)),
         )
-        self.conn.commit()
+        self._commit()
 
     def evidence(self, evidence_id: str) -> dict[str, Any] | None:
         row = self.conn.execute(
@@ -604,7 +824,7 @@ class StateDB:
                 lease["expires_at"],
             ),
         )
-        self.conn.commit()
+        self._commit()
 
     def update_lease(self, lease_id: str, **fields: Any) -> None:
         allowed = {"worktree", "contract_digest", "active"}
@@ -617,7 +837,7 @@ class StateDB:
             f"UPDATE leases SET {sets} WHERE lease_id=?",  # nosec B608
             [*fields.values(), lease_id],
         )
-        self.conn.commit()
+        self._commit()
 
     def active_lease_for_task(self, task_id: str) -> dict[str, Any] | None:
         row = self.conn.execute(
@@ -633,7 +853,7 @@ class StateDB:
 
     def release_lease(self, lease_id: str) -> None:
         self.conn.execute("UPDATE leases SET active=0 WHERE lease_id=?", (lease_id,))
-        self.conn.commit()
+        self._commit()
 
     def next_attempt_number(self, task_id: str) -> int:
         row = self.conn.execute(
@@ -649,7 +869,7 @@ class StateDB:
             "INSERT INTO attempts(task_id,attempt_number,receipt_path,status,created_at) VALUES(?,?,?,?,?)",  # noqa: E501
             (task_id, attempt_number, receipt_path, "RECORDED", created_at),
         )
-        self.conn.commit()
+        self._commit()
 
     def latest_attempt(self, task_id: str) -> dict[str, Any] | None:
         row = self.conn.execute(
@@ -663,10 +883,290 @@ class StateDB:
             "INSERT OR REPLACE INTO approvals(approval_id,payload) VALUES(?,?)",
             (approval["approval_id"], json.dumps(approval, sort_keys=True)),
         )
-        self.conn.commit()
+        self._commit()
 
     def approvals(self) -> list[dict[str, Any]]:
         return [
             json.loads(row["payload"])
             for row in self.conn.execute("SELECT payload FROM approvals ORDER BY approval_id")
         ]
+
+    # ---------------------------------------------------- execution attempts
+    _LIVE_ATTEMPT_STATES = ("BASELINED", "DISPATCHING", "RUNNING")
+
+    def next_execution_attempt_number(self, task_id: str) -> int:
+        """One numbering for dispatched attempts and recorded receipts.
+
+        A dispatched attempt that never records a receipt (host crash) still
+        consumed its number, so the next dispatch takes the number after the
+        larger of the two tables.
+        """
+        row = self.conn.execute(
+            "SELECT COALESCE(MAX(n),0)+1 AS n FROM ("
+            "  SELECT MAX(attempt_number) AS n FROM execution_attempts WHERE task_id=?"
+            "  UNION ALL SELECT MAX(attempt_number) AS n FROM attempts WHERE task_id=?)",
+            (task_id, task_id),
+        ).fetchone()
+        return int(row["n"])
+
+    def create_execution_attempt(self, record: dict[str, Any]) -> None:
+        columns = (
+            "attempt_id",
+            "task_id",
+            "attempt_number",
+            "lease_id",
+            "program_digest",
+            "contract_digest",
+            "base_sha",
+            "worktree",
+            "baseline_path",
+            "baseline_digest",
+            "state",
+            "provider_ref",
+            "provider_execution_id",
+            "started_at",
+            "terminal_at",
+            "terminal_status",
+            "fence_status",
+            "fenced_at",
+            "reason",
+        )
+        payload = {name: record.get(name) for name in columns}
+        payload["fence_status"] = payload["fence_status"] or "none"
+        self.conn.execute(
+            "INSERT INTO execution_attempts("
+            + ",".join(columns)
+            + ") VALUES("
+            + ",".join(f":{name}" for name in columns)
+            + ")",
+            payload,
+        )
+        self._commit()
+
+    def update_execution_attempt(self, attempt_id: str, **fields: Any) -> None:
+        allowed = {
+            "state",
+            "provider_ref",
+            "provider_execution_id",
+            "terminal_at",
+            "terminal_status",
+            "fence_status",
+            "fenced_at",
+            "reason",
+        }
+        unknown = set(fields) - allowed
+        if unknown:
+            raise ValueError(f"unsupported execution attempt fields: {sorted(unknown)}")
+        if not fields:
+            return
+        sets = ",".join(f"{name}=?" for name in fields)
+        # Column names are validated against `allowed`; values are bound.
+        self.conn.execute(
+            f"UPDATE execution_attempts SET {sets} WHERE attempt_id=?",  # nosec B608
+            [*fields.values(), attempt_id],
+        )
+        self._commit()
+
+    def execution_attempt(self, attempt_id: str) -> dict[str, Any] | None:
+        row = self.conn.execute(
+            "SELECT * FROM execution_attempts WHERE attempt_id=?", (attempt_id,)
+        ).fetchone()
+        return None if row is None else dict(row)
+
+    def live_execution_attempt(self, task_id: str) -> dict[str, Any] | None:
+        row = self.conn.execute(
+            "SELECT * FROM execution_attempts WHERE task_id=? "
+            "AND state IN ('BASELINED','DISPATCHING','RUNNING')",
+            (task_id,),
+        ).fetchone()
+        return None if row is None else dict(row)
+
+    def live_execution_attempts(self) -> list[dict[str, Any]]:
+        return [
+            dict(row)
+            for row in self.conn.execute(
+                "SELECT * FROM execution_attempts "
+                "WHERE state IN ('BASELINED','DISPATCHING','RUNNING') ORDER BY started_at"
+            )
+        ]
+
+    def execution_attempts(self, task_id: str) -> list[dict[str, Any]]:
+        return [
+            dict(row)
+            for row in self.conn.execute(
+                "SELECT * FROM execution_attempts WHERE task_id=? ORDER BY attempt_number",
+                (task_id,),
+            )
+        ]
+
+    # ------------------------------------------------------- events (outbox)
+    def append_event(self, event_type: str, actor: str, payload: dict[str, Any]) -> dict:
+        """Allocate the next sequence and digest under the writer lock and insert.
+
+        Always inside a Controller transaction: the sequence is MAX+1 as read
+        under BEGIN IMMEDIATE, so two Controller processes cannot both mint
+        the same successor (PEC-P1-004). The file projection is not done here.
+        """
+        from .common import digest_object, utc_now
+
+        with self.controller_transaction():
+            tail = self.conn.execute(
+                "SELECT sequence, digest FROM events ORDER BY sequence DESC LIMIT 1"
+            ).fetchone()
+            event = {
+                "sequence": (int(tail["sequence"]) + 1) if tail else 1,
+                "timestamp": utc_now(),
+                "type": event_type,
+                "actor": actor,
+                "payload": payload,
+                "previous_digest": tail["digest"] if tail else None,
+            }
+            event["digest"] = digest_object(event)
+            self.conn.execute(
+                "INSERT INTO events(sequence,timestamp,type,actor,payload,previous_digest,digest,"
+                "projected) VALUES(?,?,?,?,?,?,?,0)",
+                (
+                    event["sequence"],
+                    event["timestamp"],
+                    event["type"],
+                    event["actor"],
+                    json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False),
+                    event["previous_digest"],
+                    event["digest"],
+                ),
+            )
+            self._commit()
+        return event
+
+    @staticmethod
+    def _event_row(row: sqlite3.Row) -> dict[str, Any]:
+        return {
+            "sequence": int(row["sequence"]),
+            "timestamp": row["timestamp"],
+            "type": row["type"],
+            "actor": row["actor"],
+            "payload": json.loads(row["payload"]),
+            "previous_digest": row["previous_digest"],
+            "digest": row["digest"],
+        }
+
+    def events(self) -> list[dict[str, Any]]:
+        return [
+            self._event_row(row)
+            for row in self.conn.execute("SELECT * FROM events ORDER BY sequence")
+        ]
+
+    def event_count(self) -> int:
+        return int(self.conn.execute("SELECT COUNT(*) AS n FROM events").fetchone()["n"])
+
+    def projected_event_count(self) -> int:
+        return int(
+            self.conn.execute("SELECT COUNT(*) AS n FROM events WHERE projected=1").fetchone()["n"]
+        )
+
+    def pending_events(self) -> list[dict[str, Any]]:
+        return [
+            self._event_row(row)
+            for row in self.conn.execute("SELECT * FROM events WHERE projected=0 ORDER BY sequence")
+        ]
+
+    def mark_event_projected(self, sequence: int) -> None:
+        self.conn.execute("UPDATE events SET projected=1 WHERE sequence=?", (sequence,))
+        self._commit()
+
+    def import_event(self, event: dict[str, Any], *, projected: bool = True) -> None:
+        """Adopt an already-chained legacy event verbatim (migration only)."""
+        self.conn.execute(
+            "INSERT INTO events(sequence,timestamp,type,actor,payload,previous_digest,digest,"
+            "projected) VALUES(?,?,?,?,?,?,?,?)",
+            (
+                int(event["sequence"]),
+                event["timestamp"],
+                event["type"],
+                event["actor"],
+                json.dumps(
+                    event["payload"], sort_keys=True, separators=(",", ":"), ensure_ascii=False
+                ),
+                event.get("previous_digest"),
+                event["digest"],
+                1 if projected else 0,
+            ),
+        )
+        self._commit()
+
+    # -------------------------------------------------------------- receipts
+    def record_receipt(
+        self,
+        *,
+        receipt_id: str,
+        receipt_type: str,
+        entity_id: str,
+        payload: dict[str, Any],
+        artifact_path: str,
+        projected: bool = False,
+    ) -> None:
+        """The canonical receipt record; the file under artifact_path projects it."""
+        from .common import utc_now
+
+        digest = str(payload.get("receipt_digest") or "")
+        if not digest:
+            raise ValueError("a receipt record needs a receipt_digest")
+        self.conn.execute(
+            "INSERT INTO receipts(receipt_id,receipt_type,entity_id,payload,receipt_digest,"
+            "artifact_path,created_at,projected) VALUES(?,?,?,?,?,?,?,?) "
+            "ON CONFLICT(receipt_id) DO UPDATE SET payload=excluded.payload, "
+            "receipt_digest=excluded.receipt_digest, artifact_path=excluded.artifact_path, "
+            "projected=excluded.projected",
+            (
+                receipt_id,
+                receipt_type,
+                entity_id,
+                json.dumps(payload, sort_keys=True, ensure_ascii=False),
+                digest,
+                artifact_path,
+                utc_now(),
+                1 if projected else 0,
+            ),
+        )
+        self._commit()
+
+    @staticmethod
+    def _receipt_row(row: sqlite3.Row) -> dict[str, Any]:
+        value = dict(row)
+        value["payload"] = json.loads(value["payload"])
+        return value
+
+    def receipt(self, receipt_id: str) -> dict[str, Any] | None:
+        row = self.conn.execute(
+            "SELECT * FROM receipts WHERE receipt_id=?", (receipt_id,)
+        ).fetchone()
+        return None if row is None else self._receipt_row(row)
+
+    def receipt_by_artifact(self, artifact_path: str) -> dict[str, Any] | None:
+        row = self.conn.execute(
+            "SELECT * FROM receipts WHERE artifact_path=? ORDER BY created_at DESC LIMIT 1",
+            (artifact_path,),
+        ).fetchone()
+        return None if row is None else self._receipt_row(row)
+
+    def receipts(self, receipt_type: str | None = None) -> list[dict[str, Any]]:
+        if receipt_type is None:
+            rows = self.conn.execute("SELECT * FROM receipts ORDER BY created_at, receipt_id")
+        else:
+            rows = self.conn.execute(
+                "SELECT * FROM receipts WHERE receipt_type=? ORDER BY created_at, receipt_id",
+                (receipt_type,),
+            )
+        return [self._receipt_row(row) for row in rows]
+
+    def pending_receipts(self) -> list[dict[str, Any]]:
+        return [
+            self._receipt_row(row)
+            for row in self.conn.execute(
+                "SELECT * FROM receipts WHERE projected=0 ORDER BY created_at, receipt_id"
+            )
+        ]
+
+    def mark_receipt_projected(self, receipt_id: str) -> None:
+        self.conn.execute("UPDATE receipts SET projected=1 WHERE receipt_id=?", (receipt_id,))
+        self._commit()

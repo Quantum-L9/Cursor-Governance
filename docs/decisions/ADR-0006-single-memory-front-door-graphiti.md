@@ -48,3 +48,27 @@ structural duplicate.
 - ADR-0028 — session hydrate/close visibility and write-primary repair
 - `skills/l9-graphiti-memory/SKILL.md`
 - `CANONICAL_LAW.md` §8
+
+## Supersession (2026-09-07) — ONE FRONT DOOR stands; the door is ops/memory (ADR-0030)
+
+Preserved: the principle. There is exactly one front door for agent episodic
+memory on every surface, Claude is a thin wrap, side doors are forbidden
+residue, and the only back door is the operator-only breakglass.
+
+Superseded in full by ADR-0030 as to *which* door and *how it is reached*:
+
+- The door is `ops/memory/control_plane_client.py` over stdio to the bound
+  `l9-graphite-memory` runtime, not `ops/graphiti/graphiti_memory_client.py`
+  (a tombstone since stage C11).
+- There is no tunnel and no bearer. `127.0.0.1:8100` and `GRAPHITI_MCP_TOKEN`
+  are legacy operator infrastructure of the provider deployment; no model
+  surface holds, resolves or forwards a provider URL or bearer (stage C9).
+- The Claude bridge is `memory/memory_bridge.py`, not `graphiti_bridge.py`.
+- The interactive MCP server is the package-owned `l9-graphite-memory` stdio
+  entry; a model-initiated durable write on it is `memory.phase_lock` →
+  `memory.write_governed`, and that lock is a memory-write precondition only,
+  never repository authority.
+
+`validate_legacy_doctrine_residue.py` cites this ADR's number as an
+allow-marker for retirement notices; that marker means "the side door named
+here is forbidden", never "the Graphiti client is the door".

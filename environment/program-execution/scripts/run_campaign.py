@@ -695,7 +695,7 @@ def campaign_input_module() -> Any:
     return _load_script("campaign_input", CAMPAIGN_INPUT)
 
 
-def classify_campaign_input(path: Path, *, forced_kind: Any | None = None) -> Any:
+def classify_campaign_input(path: Path) -> Any:
     """Classify the operator's input once, before anything can have side effects.
 
     Supported kinds return a classification; unsupported kinds raise the
@@ -703,7 +703,7 @@ def classify_campaign_input(path: Path, *, forced_kind: Any | None = None) -> An
     receive "unsupported, but here is a partial route" and improvise the rest.
     """
     module = campaign_input_module()
-    found = module.classify(Path(path), forced_kind=forced_kind)
+    found = module.classify(Path(path))
     if not found.supported:
         raise module.reject(found)
     return found
@@ -728,6 +728,7 @@ def default_compile_architecture(
     intent: Path,
     *,
     target: str | None,
+    admission: str,
     repo_root: Path,
     primed_dir: Path,
     target_checkout: Path | None = None,
@@ -745,7 +746,7 @@ def default_compile_architecture(
         return module.compile_architecture_intent(
             Path(intent),
             target=target,
-            forced=True,
+            admission=admission,
             repo_root=repo_root,
             target_checkout=target_checkout,
             cache_root=primed_dir,
@@ -1919,19 +1920,25 @@ def _pointer_runtime_status(workspace: Path) -> str:
     return value or "not_bootstrapped"
 
 
-def _program_owner(blueprint: str) -> str | None:
-    program_path = Path(blueprint) / "PROGRAM.yaml"
-    if not program_path.is_file():
+def _operator_ack_name(blueprint: str) -> str | None:
+    """Human acknowledgment identity from PHASE0, never program ownership.
+
+    `PROGRAM.owner` names the accountable program owner, which now carries a
+    shared Program Execution default. A pointer that reused it as the person
+    who must acknowledge would turn that default into a fabricated human.
+    """
+    config_path = Path(blueprint) / "PHASE0_USER_CONFIG.yaml"
+    if not config_path.is_file():
         return None
     try:
-        program = load_yaml(program_path)
+        config = load_yaml(config_path)
     except (OSError, ValueError, yaml.YAMLError):
-        # An unreadable PROGRAM.yaml is "owner unknown" for the pointer, not a crash.
+        # An unreadable PHASE0 contract is "ack identity unknown", not a guess.
         return None
-    if not isinstance(program, dict):
+    if not isinstance(config, dict):
         return None
-    owner = (program.get("program") or {}).get("owner")
-    return str(owner).strip() or None if owner else None
+    name = (config.get("operator_ack") or {}).get("name")
+    return str(name).strip() or None if name else None
 
 
 def write_launch_pointer(
@@ -1960,9 +1967,8 @@ def write_launch_pointer(
         "target_worktree": target_worktree,
         "host_worktree": host_worktree,
         "operator_ack_required": False,
-        # The program owner from the compiled blueprint, not a person's name
-        # baked into the runner.
-        "operator_ack_from": _program_owner(blueprint),
+        # Human acknowledgment identity is owned by PHASE0, not PROGRAM.owner.
+        "operator_ack_from": _operator_ack_name(blueprint),
         "forge_operator_ack": False,
         "only_pec_workspace": True,
         "claimed_task": FIRST_TASK_ID if armed else None,
@@ -2806,8 +2812,12 @@ def _peer_imports():
 
 
 def _peer_pipeline() -> Any:
-    """The canonical per-task provider lifecycle owner."""
-    return _load_script("run_peer_task_pipeline", PE_ROOT / "scripts/run_peer_task_pipeline.py")
+    """The canonical Peer Execution front door (`peer_execution.front_door`)."""
+    if str(PE_ROOT) not in sys.path:
+        sys.path.append(str(PE_ROOT))
+    from peer_execution import front_door  # noqa: PLC0415
+
+    return front_door
 
 
 ENFORCED_CONCURRENCY_LIMITS = frozenset(
@@ -2931,67 +2941,78 @@ def _run_peer_execution(
     contract: dict[str, Any],
     autonomy_authority: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Execute one rendered contract through binding → profile → probe → provider.
+    """Execute one rendered contract through the public Peer Execution front door.
 
-    The lifecycle itself belongs to `run_peer_task_pipeline`; this runner supplies
-    the campaign's identity, workspace, and this task's root authority, and
-    translates a non-PASS outcome into a campaign-level stop.
+    The runner supplies the campaign's identity, workspace and this task's root
+    authority; `peer_execution.front_door.execute` owns binding resolution,
+    probe, dispatch, retry/failover classification and normalization
+    (PEC-P3-001). The result is a provider claim, never a Controller verdict.
     """
-    pipeline = _peer_pipeline()
+    front_door = _peer_pipeline()
     if autonomy_authority is None:
         autonomy_authority = _task_autonomy_authority(workspace, contract)
     agent_ref, surface, provider_override = _peer_identity()
     task_id = contract.get("task_id")
+    attempt = _live_controller_attempt(workspace, str(task_id or ""))
+    request = front_door.PeerExecutionRequest(
+        workspace=workspace,
+        contract=contract,
+        agent_ref=agent_ref,
+        surface=surface,
+        provider_ref=provider_override,
+        autonomy_authority=autonomy_authority,
+        attempt_id=(attempt or {}).get("attempt_id"),
+        lease_id=(attempt or {}).get("lease_id"),
+    )
     try:
-        binding, adapter, runtime_root = pipeline._resolve_provider(
-            workspace=workspace,
-            agent_ref=agent_ref,
-            surface=surface,
-            provider_ref=provider_override,
-        )
+        outcome = front_door.execute(request)
     except ValueError as exc:
-        # Never guess among multiple provider bindings for one surface (e.g.
-        # cursor-ide has cursor-foreground and cursor-background): the topology
-        # SSOT resolves uniquely or the operator must say which provider.
         raise CampaignError(
             f"Peer provider resolution failed for {agent_ref}/{surface}: {exc}. "
             "Set L9_PE_PROVIDER_REF to the intended provider_ref from "
             "environment/agents/PEER_RUNTIME_BINDINGS.yaml."
         ) from exc
-    probe = pipeline._probe_provider(
-        binding=binding,
-        adapter=adapter,
-        runtime=runtime_root,
-        program_digest=str(contract["program_digest"]),
-        requested_capabilities=tuple(
-            str(item) for item in (contract.get("requested_actions") or [])
-        ),
-    )
-    if probe.status != "PASS":
+    if (
+        outcome.get("status") != "PASS"
+        and outcome.get("failure_class") == front_door.SAFE_BEFORE_DISPATCH
+        and not outcome.get("dispatch_id")
+    ):
         raise CampaignError(
             f"Peer Execution capability probe blocked {task_id}: "
-            f"{probe.blocked_reason or 'UNKNOWN'}"
+            f"{outcome.get('reason') or 'UNKNOWN'}"
         )
-    outcome = pipeline._execute_provider(
-        contract=contract,
-        binding=binding,
-        adapter=adapter,
-        probe=probe,
-        autonomy_authority=autonomy_authority,
-    )
     # A non-PASS provider outcome is preserved, not thrown away: the terminal
     # failure result is evidence the batch reconciler must keep so the failed
     # child can be published durably after canonical failure is recorded.
     return {
         "status": str(outcome.get("status") or "UNKNOWN"),
         "reason": str(outcome.get("reason") or ""),
-        "receipt": dict(outcome.get("terminal_result") or {}),
-        "dispatch_id": str((outcome.get("dispatch") or {}).get("dispatch_id") or ""),
-        "provider_ref": binding.provider_ref,
-        "execution_profile_ref": binding.execution_profile_ref,
-        "agent_ref": binding.agent_ref,
-        "surface": binding.surface,
+        "receipt": dict(outcome.get("receipt") or {}),
+        "dispatch_id": str(outcome.get("dispatch_id") or ""),
+        "provider_ref": outcome.get("provider_ref"),
+        "execution_profile_ref": outcome.get("execution_profile_ref"),
+        "agent_ref": agent_ref,
+        "surface": surface,
+        "failure_class": outcome.get("failure_class"),
+        "failover_unsafe": bool(outcome.get("failover_unsafe")),
+        "attempts": list(outcome.get("attempts") or []),
+        "attempt_id": outcome.get("attempt_id"),
+        "lease_id": outcome.get("lease_id"),
     }
+
+
+def _live_controller_attempt(workspace: Path, task_id: str) -> dict[str, Any] | None:
+    """The Controller's live execution attempt for this task, for identity binding."""
+    if not task_id:
+        return None
+    try:
+        for item in pec_status_tasks(workspace):
+            if str(item.get("id")) == task_id:
+                attempt = item.get("execution_attempt")
+                return dict(attempt) if isinstance(attempt, dict) else None
+    except CampaignError:
+        return None
+    return None
 
 
 def _grant_module() -> Any:
@@ -3520,6 +3541,19 @@ def _prepare_peer_unit(
     pre_dispatch_baseline: dict[str, str] = {}
     if not already_submitted:
         if resumed_executing:
+            # The Controller is the authority on whether a dispatch exists to
+            # resume. EXECUTING with no live execution attempt (a runtime
+            # migrated mid-flight, or one whose attempt recovery already
+            # settled) has effects nobody can attribute; fail closed.
+            if not (states.get(task_id) or {}).get("execution_attempt"):
+                reason = (
+                    f"{task_id} is EXECUTING with no live Controller execution attempt; "
+                    "its worktree effects cannot be attributed to a dispatch the Controller "
+                    "witnessed. Run `pec recover-execution` (or `pec fresh-workspace`) "
+                    "to fence and preserve them before a successor is dispatched."
+                )
+                _record_canonical_failure(workspace, None, task_id, reason)
+                raise CampaignError(reason, error_code="RUNTIME_RECONCILIATION_REQUIRED")
             try:
                 pre_dispatch_baseline = load_effect_baseline(
                     workspace, task_id, contract=contract, worktree=Path(str(worktree))
@@ -3765,6 +3799,29 @@ def publish_task_outcome(
         log(f"generated-data publication failed for {task_id}: {exc}")
 
 
+def _bind_dispatch_correlation(
+    workspace: Path, task_id: str, outcome: dict[str, Any] | None
+) -> None:
+    """Persist the provider's dispatch id on the Controller's live attempt.
+
+    Correlation only: recovery can ask the provider about a window it can name.
+    A provider that offers no id is not refused here; it falls into the stricter
+    fencing path. A bind the Controller refuses (fenced or stale attempt) is not
+    masked either -- record-attempt refuses the same result a moment later.
+    """
+    dispatch_id = str((outcome or {}).get("dispatch_id") or "")
+    if not dispatch_id:
+        return
+    args = ["--provider-execution-id", dispatch_id]
+    provider_ref = str((outcome or {}).get("provider_ref") or "")
+    if provider_ref:
+        args.extend(["--provider-ref", provider_ref])
+    try:
+        pec_cmd(workspace, "bind-dispatch", task_id, *args)
+    except CampaignError as exc:
+        log(f"dispatch correlation for {task_id} was not bound: {exc}")
+
+
 def _finish_peer_unit(
     workspace: Path,
     campaign_id: str,
@@ -3812,6 +3869,7 @@ def _finish_peer_unit(
         receipt_path = Path(str(contract["attempt_receipt_path"]))
         if not receipt_path.is_file():
             raise CampaignError(f"Peer Core did not persist attempt receipt for {task_id}")
+        _bind_dispatch_correlation(workspace, task_id, outcome)
         # Mediation coverage precedes the Controller: an unmediated write must
         # never become a recorded Program attempt.
         actual_changed = _require_mediated_effects(unit, trace=trace)
@@ -4803,7 +4861,7 @@ def default_close(
             f"refuse to close {campaign_id}: Controller recommends {verdict}; "
             f"handoff {handoff.get('handoff_id')} at {handoff_path}"
         )
-    pec_cmd(
+    closed = pec_cmd(
         workspace,
         "close",
         "--actor",
@@ -4815,18 +4873,25 @@ def default_close(
         "--evidence",
         f"handoff_id={handoff.get('handoff_id')}",
     )
+    closure_receipt = str(closed.get("closure_receipt") or "")
+    if not closure_receipt:
+        raise CampaignError(
+            f"pec close produced no Controller Closure Receipt for {campaign_id}; "
+            "the campaign ledger cannot be projected without one",
+            error_code="TERMINAL_AUTHORITY_MISSING",
+        )
+    # The in-repo ledger is a projection of the Controller's closure: it takes
+    # the receipt, validates its identity and digest, and records the verdict
+    # the receipt carries. The runner never hands it a verdict of its own.
     closer = _load_script("close_campaign", PE_ROOT / "campaigns/scripts/close_campaign.py")
     campaigns_root = write_root / "environment/program-execution/campaigns"
     closer.close_campaign(
         campaigns_root,
         campaign_id,
-        verdict,
-        {
-            "campaign_id": campaign_id,
-            "pec_workspace": str(workspace),
-            "handoff_id": str(handoff.get("handoff_id") or ""),
-        },
+        Path(closure_receipt),
         "make-campaign",
+        extra_evidence={"handoff_id": str(handoff.get("handoff_id") or "")},
+        expected_verdict=verdict,
     )
     archived = closer.archive_completed(campaigns_root, campaign_id)
     return {"archived": str(archived)}
@@ -4880,7 +4945,18 @@ def reconcile_resumed_source(
     cached = reuse.recorded_value("compile")
     recorded = (cached or {}).get("source") if isinstance(cached, dict) else None
     if not isinstance(recorded, dict):
-        return {"status": "NO_RECORDED_SHAPE"}
+        # A runtime prepared before the shape record existed cannot prove that
+        # the source on disk is the source it was compiled from. Resuming on the
+        # lock alone was the silent compatibility fallback PEC-P1-001 names; the
+        # honest answer is a stop with the one documented reconciliation step.
+        raise CampaignError(
+            f"{campaign_id}: the prepared runtime records no compiled source shape, so the "
+            f"campaign source {source} cannot be proven to be what the runtime was compiled "
+            "from. Reconcile explicitly with "
+            f"`run_campaign.py attest-resume-source --campaign-id {campaign_id}` (which "
+            "admits the Blueprint against the active Program Lock first), or rebuild.",
+            error_code="RESUME_SOURCE_UNVERIFIED",
+        )
     edited = edited_task_ids(shape, recorded)
     if edited is None:
         raise CampaignError(
@@ -4903,6 +4979,104 @@ def reconcile_resumed_source(
         reuse.store("compile", key, {**cached, "source": shape})
     log(f"resume {campaign_id}: relocked edited definitions {', '.join(edited)}")
     return {"status": "RELOCKED", "relocked": edited, "adopted": adopted}
+
+
+def admit_resume_identity(pec_workspace: Path, campaign_id: str) -> dict[str, Any]:
+    """Prove the live runtime still describes the Program on disk, or stop.
+
+    Asks the Controller (`pec admit-resume`) rather than reimplementing drift
+    classification here. TASK_SCOPED_DRIFT is absorbed through the canonical
+    relock with exactly the scope the Controller named, then re-admitted; the
+    relock is never trusted to have produced EXACT_MATCH without asking again.
+    """
+    verdict = _admit_resume(pec_workspace)
+    decision = str(verdict.get("decision") or "UNKNOWN")
+    if decision == "TASK_SCOPED_DRIFT":
+        scope = [str(item) for item in (verdict.get("relock_scope") or [])]
+        adopted = adopt_changed_definitions(pec_workspace, scope)
+        if adopted is None:
+            raise CampaignError(
+                f"resume {campaign_id}: task definitions {scope} drifted and the Controller "
+                "refused to relock them; rebuild instead of resuming",
+                error_code="RESUME_SOURCE_MISMATCH",
+            )
+        log(f"resume {campaign_id}: relocked drifted definitions {', '.join(scope)}")
+        verdict = _admit_resume(pec_workspace)
+        decision = str(verdict.get("decision") or "UNKNOWN")
+    if decision != "EXACT_MATCH":
+        reasons = "; ".join(str(item) for item in (verdict.get("reasons") or [])) or decision
+        raise CampaignError(
+            f"resume {campaign_id}: the live runtime does not describe the Program on disk "
+            f"({decision}: {reasons}); refusing to execute",
+            error_code="RESUME_SOURCE_MISMATCH" if decision != "LOCK_INVALID" else "LOCK_INVALID",
+        )
+    return verdict
+
+
+def _admit_resume(pec_workspace: Path) -> dict[str, Any]:
+    """`pec admit-resume`, read-only; a non-zero exit still carries the verdict."""
+    result = run_cmd(
+        [sys.executable, str(PEC), "admit-resume", "--workspace", str(pec_workspace)],
+        timeout=PEC_TIMEOUT_S,
+    )
+    try:
+        payload = json.loads(result.stdout or "{}")
+    except json.JSONDecodeError:
+        payload = {}
+    if not isinstance(payload, dict) or "decision" not in payload:
+        detail = (result.stderr or result.stdout or "").strip()
+        raise CampaignError(
+            f"pec admit-resume gave no verdict: {detail}", error_code="RESUME_SOURCE_MISMATCH"
+        )
+    return payload
+
+
+def attest_resume_source(
+    *,
+    campaign_id: str,
+    l9_home: Path,
+    repo_root: Path | None,
+) -> dict[str, Any]:
+    """Record the compiled-source shape for a runtime prepared before it existed.
+
+    The one documented reconciliation for RESUME_SOURCE_UNVERIFIED. It records
+    nothing unless the Controller admits the Blueprint on disk against the
+    active lock as EXACT_MATCH, so the shape written is the shape of the
+    Program the runtime actually froze.
+    """
+    pec_workspace = l9_home / "programs" / campaign_id
+    if not resumable_workspace(pec_workspace):
+        raise CampaignError(f"{campaign_id}: no live runtime at {pec_workspace}")
+    launch = json.loads((pec_workspace / "runtime" / "LAUNCH.json").read_text(encoding="utf-8"))
+    host = str(launch.get("host_worktree") or launch.get("host_tree") or "")
+    write_root = repo_root.resolve() if repo_root is not None else Path(host).resolve()
+    source = campaign_source_path(write_root, campaign_id)
+    shape = campaign_source_shape(source) if source.is_file() else None
+    if shape is None:
+        raise CampaignError(f"{campaign_id}: campaign source unavailable at {source}")
+    verdict = _admit_resume(pec_workspace)
+    if verdict.get("decision") != "EXACT_MATCH":
+        raise CampaignError(
+            f"{campaign_id}: cannot attest the source shape; the Controller reports "
+            f"{verdict.get('decision')}: {'; '.join(verdict.get('reasons') or [])}",
+            error_code="RESUME_SOURCE_MISMATCH",
+        )
+    timing = _load_script("pe_timing", PE_ROOT / "scripts/pe_timing.py")
+    prepare = _load_script("pe_prepare_state", PE_ROOT / "scripts/pe_prepare_state.py")
+    primed = l9_home / "primed" / campaign_id
+    reuse = prepare.PrepareCache(
+        timing.StageCache(primed, enabled=True),
+        prepare.PrepareState.load(primed / "PREPARE_STATE.json", campaign_id=campaign_id),
+    )
+    cached = reuse.recorded_value("compile")
+    key = str((reuse.state.stages.get("compile") or {}).get("key") or "") or "attested"
+    reuse.store("compile", key, {**(cached if isinstance(cached, dict) else {}), "source": shape})
+    return {
+        "status": "ATTESTED",
+        "campaign_id": campaign_id,
+        "source": str(source),
+        "program_digest": verdict.get("program_digest"),
+    }
 
 
 def resume_live_campaign(
@@ -4960,6 +5134,12 @@ def resume_live_campaign(
         pec_workspace=pec_workspace,
         l9_home=l9_home,
     )
+    # Immutable Program identity is the Controller's decision, taken from the
+    # semantic delta between the active lock and the compiled Blueprint. The
+    # source comparison above is one execution safety check; it never decides
+    # Program equivalence. Only EXACT_MATCH executes; TASK_SCOPED_DRIFT goes
+    # through the canonical relock and is re-admitted; anything wider stops.
+    admit_resume_identity(pec_workspace, campaign_id)
     log(f"resume {campaign_id} (runtime active; workspace kept, not quarantined)")
     report.stages_completed.append("resume")
     repository_id = str((seed.get("target") or {}).get("repository_id") or host_repo)
@@ -5040,7 +5220,6 @@ def run_campaign(
     target_override: str | None = None,
     hooks: Hooks | None = None,
     fast: bool | None = None,
-    forced_kind: Any | None = None,
     target_checkout: Path | None = None,
 ) -> CampaignReport:
     """Run the campaign and leave a forensic execution trace behind it.
@@ -5073,7 +5252,6 @@ def run_campaign(
                 hooks=hooks,
                 fast=fast,
                 trace=trace,
-                forced_kind=forced_kind,
                 target_checkout=target_checkout,
             )
     finally:
@@ -5106,7 +5284,6 @@ class _CampaignRun:
     compile_generation: Any = None
     compile_input: Any = None
     ensure_target_checkout_once: Any = None
-    forced_kind: Any = None
     pec_workspace: Any = None
     prepare: Any = None
     primed_root: Any = None
@@ -5132,7 +5309,6 @@ class _CampaignRun:
 
 def _stage_classify_and_prime(run: _CampaignRun) -> CampaignReport | None:
     fast = run.fast
-    forced_kind = run.forced_kind
     hooks = run.hooks
     host_repo = run.host_repo
     host_root = run.host_root
@@ -5154,7 +5330,7 @@ def _stage_classify_and_prime(run: _CampaignRun) -> CampaignReport | None:
         # Classify once, before any stage can create a worktree, mutate a blueprint,
         # or touch PEC state. An unsupported input fails here in milliseconds.
         kinds = campaign_input_module().CampaignInputKind
-        classification = classify_campaign_input(intent_path, forced_kind=forced_kind)
+        classification = classify_campaign_input(intent_path)
         campaign_source_doc: dict[str, Any] | None = None
         architecture_receipt: dict[str, Any] | None = None
         if classification.kind is kinds.ARCHITECTURE_INTENT_V1:
@@ -5168,6 +5344,7 @@ def _stage_classify_and_prime(run: _CampaignRun) -> CampaignReport | None:
                 architecture_receipt = compile_architecture(
                     classification.path,
                     target=target_override or os.environ.get("TARGET"),
+                    admission=classification.admission or "declared",
                     repo_root=host_root,
                     primed_dir=l9_home / "primed",
                     # Read-only grounding against an existing local clone, when
@@ -5925,7 +6102,6 @@ def _run_campaign_stages(
     hooks: Hooks | None = None,
     fast: bool | None = None,
     trace: pe_trace.ExecutionTrace | None = None,
-    forced_kind: Any | None = None,
     target_checkout: Path | None = None,
 ) -> CampaignReport:
     requested_until = until
@@ -5943,7 +6119,6 @@ def _run_campaign_stages(
     l9_home = (l9_root or Path(os.environ.get("L9_ROOT", Path.home() / ".l9"))).resolve()
     run = _CampaignRun(
         fast=fast,
-        forced_kind=forced_kind,
         hooks=hooks,
         host_repo=host_repo,
         host_root=host_root,
@@ -6033,9 +6208,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--architecture",
         action="store_true",
         help=(
-            "Read INTENT as long-form architecture intent "
-            "(l9.program-execution.architecture-intent.v1). The operator's choice, so an "
-            "unchanged assistant transcript needs no frontmatter edit."
+            "Deprecated and ignored. Architecture admission is decided by the universal "
+            "classifier (ADR-0032); this flag cannot force a representation. Accepted only "
+            "so the `campaign-architecture` Makefile target keeps working unchanged."
         ),
     )
     parser.add_argument(
@@ -6135,19 +6310,43 @@ def trace_command(argv: list[str]) -> int:
     return 0
 
 
+def build_attest_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="run_campaign.py attest-resume-source",
+        description=(
+            "Record the compiled-source shape of a live runtime after Controller admission."
+        ),
+    )
+    parser.add_argument("--campaign-id", required=True)
+    parser.add_argument("--l9-root", type=Path, default=None)
+    parser.add_argument("--repo-root", type=Path, default=None)
+    return parser
+
+
+def attest_command(argv: list[str]) -> int:
+    args = build_attest_parser().parse_args(argv)
+    l9_home = (args.l9_root or Path(os.environ.get("L9_ROOT", Path.home() / ".l9"))).resolve()
+    try:
+        result = attest_resume_source(
+            campaign_id=args.campaign_id, l9_home=l9_home, repo_root=args.repo_root
+        )
+    except CampaignError as exc:
+        print(f"FAIL: {exc}", file=sys.stderr)
+        return exc.exit_code
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     raw = list(sys.argv[1:] if argv is None else argv)
     if raw and raw[0] == "trace":
         return trace_command(raw[1:])
+    if raw and raw[0] == "attest-resume-source":
+        return attest_command(raw[1:])
     parser = build_parser()
     args = parser.parse_args(raw)
     if args.check_input is not None:
-        forced = (
-            ["--as", campaign_input_module().CampaignInputKind.ARCHITECTURE_INTENT_V1.value]
-            if args.architecture
-            else []
-        )
-        return campaign_input_module().main([str(args.check_input), *forced])
+        return campaign_input_module().main([str(args.check_input)])
     if args.intent is None:
         parser.error("--intent is required (or use --check-input PATH)")
     module = campaign_input_module()
@@ -6155,9 +6354,6 @@ def main(argv: list[str] | None = None) -> int:
         refuse_live_until_shortcut(args.until)
         report = run_campaign(
             args.intent.resolve(),
-            forced_kind=(
-                module.CampaignInputKind.ARCHITECTURE_INTENT_V1 if args.architecture else None
-            ),
             until=args.until,
             target_checkout=args.target_checkout,
             primary=args.primary,

@@ -393,7 +393,7 @@ class MemoryDoesNotGateRepositoryWritesTests(unittest.TestCase):
 
     def test_bridge_overwrites_stale_conversation_id(self) -> None:
         sys.path.insert(0, str(MEM))
-        import graphiti_bridge as gb
+        import memory_bridge as mb
 
-        env = gb.bind_session_env({"CURSOR_CONVERSATION_ID": "default"}, "abc")
+        env = mb.bind_session_env({"CURSOR_CONVERSATION_ID": "default"}, "abc")
         self.assertEqual(env["CURSOR_CONVERSATION_ID"], "abc")

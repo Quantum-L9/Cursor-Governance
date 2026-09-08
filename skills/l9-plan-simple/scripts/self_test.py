@@ -118,6 +118,11 @@ def main() -> int:
 
             if receipt.get("handoff_mode") != "cursor-build":
                 errors.append(f"cursor-build receipt handoff_mode: {receipt.get('handoff_mode')!r}")
+            build_text = live_md.read_text(encoding="utf-8")
+            if not re.search(r"(?m)^status:\s*current\s*$", build_text):
+                errors.append("cursor-build projection missing status: current")
+            if re.search(r"(?m)^status:\s*harvested\s*$", build_text):
+                errors.append("harvested must not be a status")
 
             # Embedded handoff: same receipt shape, judged against its own mode.
             emb_md = hold / "embedded.plan.md"
@@ -133,6 +138,17 @@ def main() -> int:
                 errors.append(
                     "expected PASS embedded receipt failed:\n  " + "\n  ".join(emb_errors)
                 )
+            emb_text = emb_md.read_text(encoding="utf-8")
+            if not re.search(r"(?m)^status:\s*current\s*$", emb_text):
+                errors.append("embedded projection missing status: current")
+            pe_md = hold / "pe.plan.md"
+            extra = (emb_md, emb_receipt, pe_md)
+            _render(pe_md, mode="pe-campaign")
+            pe_text = pe_md.read_text(encoding="utf-8")
+            if not re.search(r"(?m)^status:\s*current\s*$", pe_text):
+                errors.append("pe-campaign projection missing status: current")
+            if re.search(r"(?m)^status:\s*harvested\s*$", pe_text):
+                errors.append("pe-campaign must not use harvested as a status")
         finally:
             for path in (live_json, live_md, live_receipt, fail_md, fail_receipt, *extra):
                 if path.exists():

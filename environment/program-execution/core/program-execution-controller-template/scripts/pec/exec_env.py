@@ -113,7 +113,7 @@ def _discover_python(cwd: Path | None) -> Path:
         donor = _donor_toolchain_python()
         if donor is not None:
             return donor
-    if consumer:
+    if consumer and cwd is not None:
         project = _consumer_project_python(cwd)
         if project is not None:
             return project

@@ -27,16 +27,15 @@
 #
 # Env vars (see web/environment.env.example):
 #   GH_TOKEN=proxy-injected        — not a PAT; Anthropic git/gh proxy
-#   GRAPHITI_MCP_URL               — Graphiti HTTPS front door (no bearer)
+#   L9_MEMORY_INTERPRETER          — optional: Python carrying the pinned
+#                                    l9-graphite-memory package (canonical memory
+#                                    control plane; no provider URL, no bearer)
 #   L9_GOVERNANCE_REMOTE / _BRANCH — default Quantum-L9/Cursor-Governance @ main
 #
 # Governance always lands at $HOME/.cursor-governance (GitHub main).
 # See web/environment.env.example and web/network-policy.md.
 # ---------------------------------------------------------------------------
 set -uo pipefail
-
-# Cloud Graphiti default when unset (CLI hosts export the loopback tunnel URL).
-: "${GRAPHITI_MCP_URL:=https://memory.quantumaipartners.com/graphiti/mcp}"
 
 log() { printf '\n=== %s ===\n' "$*"; }
 have() { command -v "$1" >/dev/null 2>&1; }

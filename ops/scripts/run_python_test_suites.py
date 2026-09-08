@@ -359,10 +359,43 @@ def _read_changed(path: Path) -> list[str]:
     return [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
+_IGNORE_PREFIX = "--ignore="
+
+
+def _root_suite_ignores(suite: dict[str, Any]) -> list[str]:
+    """Roots the dot-owned suite excludes from its own full run, every profile."""
+    roots: list[str] = []
+    for profile in (suite.get("profiles") or {}).values():
+        for token in profile.get("argv") or []:
+            if isinstance(token, str) and token.startswith(_IGNORE_PREFIX):
+                root = token[len(_IGNORE_PREFIX) :].strip().rstrip("/")
+                if root and root not in roots:
+                    roots.append(root)
+    return roots
+
+
 def _non_dot_roots(suites: list[dict[str, Any]], selector: Any) -> list[str]:
+    """Roots the repo-root suite must never receive as an explicit argument.
+
+    A scoped run hands the dot-owned suite its paths as explicit pytest
+    arguments, and pytest's `--ignore` does not apply to an explicit argument.
+    So a root that suite ignores in its full run has to be withheld here, or the
+    scoped run collects what the full run never would, under root pytest's cwd
+    and import mode. Owned paths of the other pytest suites are withheld for the
+    same reason; a `command` / `command_sequence` owner's root is withheld only
+    when the repo-root suite ignores it, because `skills` is owned by such a
+    suite and is still collected by root pytest on purpose. Filtering on kind
+    alone handed the Program Execution Controller test directory (owned by a
+    command_sequence suite that runs from the template directory, where its
+    tests import `helpers` as a sibling) to root pytest, where every module
+    errored on collection while the Controller suite also ran it.
+    """
     roots: list[str] = []
     for suite in suites:
         if selector.is_dot_owned(suite):
+            for root in _root_suite_ignores(suite):
+                if root not in roots:
+                    roots.append(root)
             continue
         if suite.get("kind") != "pytest":
             continue

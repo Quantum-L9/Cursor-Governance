@@ -29,12 +29,36 @@ _SEPARATOR_PAIRS = ("&&", "||")
 _SEPARATOR_SINGLES = ";|"
 
 
+_SEPARATOR_STARTS = (*_SEPARATOR_PAIRS, *_SEPARATOR_SINGLES)
+
+
 def _remainder_is_redirects(rest: str) -> bool:
-    """True when REST is only whitespace and redirect clauses (`> file`, `2>err`)."""
+    """True when REST is only whitespace, redirect clauses, or a separator tail.
+
+    A heredoc opener may be followed on the SAME line by redirects (`> file`,
+    `2>err`) and by the start of the next command — `git commit -F - <<'MSG' &&
+    git log` is ordinary Bash, and the body still begins on the following line.
+    Only redirects were accepted before, so that form was not recognised as an
+    opener at all and its body was never stripped.
+
+    The consequence was a false DENY, not a false allow. The unstripped body
+    reached ``split_segments``, which splits on ``&&`` regardless of where the
+    text came from, so prose in a commit message could yield a fragment whose
+    first word is ``git``. A message quoting ``cd <clone> && git checkout
+    <branch>`` produced the phantom segment ``git checkout <branch>` was
+    denied.``, and ``worktree_isolation_gate`` refused the commit as a branch
+    switch on a dirty tree — describing a command that was never run. It needed
+    a dirty tree to fire, so it presented as intermittent.
+    """
     tokens = rest.split()
     index = 0
     while index < len(tokens):
         token = tokens[index]
+        # `&& git log`, `; echo`, `| tee` — the heredoc body is still the next
+        # line; this token begins a sibling command, which stays on the opener
+        # line and is segmented normally.
+        if token.startswith(_SEPARATOR_STARTS):
+            return True
         if _REDIRECT_OP_RE.fullmatch(token):
             if index + 1 >= len(tokens):
                 return False
@@ -59,18 +83,29 @@ def _heredoc_delimiter(line: str) -> str | None:
 
 
 def strip_heredoc_bodies(command: str) -> str:
-    """Remove heredoc bodies; keeps the line that opens the heredoc."""
+    """Remove heredoc bodies; keeps the line that opens the heredoc.
+
+    A terminator is only honoured when a matching closing line actually
+    follows. Skipping to end-of-input on an opener that never closes is the
+    fail-OPEN direction — every later line would go unscanned — and widening
+    which lines count as openers (see ``_remainder_is_redirects``) would
+    otherwise widen that blindness too. Unclosed openers are therefore left in
+    place and matched as text, consistent with this module's rule that an
+    early-closing body makes us match MORE of the remaining text, never less.
+    """
     lines = command.splitlines()
     out: list[str] = []
     terminators: list[str] = []
-    for line in lines:
+    for position, line in enumerate(lines):
         if terminators:
             if line.strip() == terminators[-1]:
                 terminators.pop()
             continue
         out.append(line)
         delimiter = _heredoc_delimiter(line)
-        if delimiter is not None:
+        if delimiter is not None and any(
+            later.strip() == delimiter for later in lines[position + 1 :]
+        ):
             terminators.append(delimiter)
     return "\n".join(out)
 

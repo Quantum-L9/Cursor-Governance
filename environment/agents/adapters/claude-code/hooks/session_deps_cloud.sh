@@ -84,8 +84,14 @@ resolve_roots() {
 import sys
 sys.path.insert(0, '$script/ops/scripts/lib')
 from pathlib import Path
-from workspace_roots import workspace_roots
-for root in workspace_roots(Path('$WORKSPACE')):
+from workspace_roots import UNCAPPED, workspace_roots
+# Every repository, not a capped prefix. A root costs real work only the first
+# time it is seen (the per-repo fingerprint stamp), and this helper already
+# re-launches itself detached when L9_SESSION_DEPS_BUDGET expires — so the long
+# tail moves to the background worker instead of starving a repository of its
+# toolchain forever. Memory hydration keeps its cap and rotates instead; the
+# two planes do not pay the same price per root.
+for root in workspace_roots(Path('$WORKSPACE'), cap=UNCAPPED):
     print(root)
 " 2>/dev/null && return 0
       break

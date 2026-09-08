@@ -46,7 +46,7 @@ a secret backend is one bad line away from using it.
 | `pypi.org`, `files.pythonhosted.org` | `uv sync --locked` (governance `uv.lock`), `uvx` for bandit / semgrep / pip-audit, `pre-commit`, `uv` itself |
 | `astral.sh`, `*.astral.sh` | `uv`-managed CPython download when the sandbox lacks the pinned interpreter (`.python-version` = 3.12). Not needed when a system 3.12 is already present |
 | `registry.npmjs.org` | consumer workspaces with `package.json` |
-| `memory.quantumaipartners.com` | Graphiti HTTPS front door (`GRAPHITI_MCP_URL`, default `/graphiti/mcp`). CLI health uses `graphiti_memory_client.py`; MCP health is HTTP connect vs 401 vs 403 allowlist. Broker never shipped. Do not paste `GRAPHITI_MCP_TOKEN` |
+| _(none for memory)_ | Since realignment stage C9/C11 memory is the canonical `l9-graphite-memory` control plane over **stdio** to the bound runtime (`ops/memory`); the session opens no memory HTTPS egress and holds no memory bearer. `memory.quantumaipartners.com` is no longer required (ADR-0030) |
 | `semgrep.dev`, `*.semgrep.dev` | Semgrep **registry rulesets** (`p/python`, `p/secrets`) for local CE only. Authenticated AppSec runs in the trusted worker, not here |
 
 ### Egress the agent must not need (contract §16)

@@ -11,6 +11,10 @@ from typing import Any
 import yaml
 from jsonschema import Draft202012Validator
 
+#: Mirrors the core `generate_manifest.TOOL_CACHE_DIRS`: tool caches are never
+#: manifest inputs, so the recomputation skips the same names.
+TOOL_CACHE_DIRS = frozenset({"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"})
+
 REQUIRED = [
     "README.md",
     "ARCHITECTURE.md",
@@ -219,7 +223,7 @@ def validate(root: Path, mode: str) -> list[str]:
             for p in root.rglob("*")
             if p.is_file()
             and p.name != "MANIFEST.yaml"
-            and "__pycache__" not in p.parts
+            and not any(part in TOOL_CACHE_DIRS for part in p.parts)
             and p.suffix != ".pyc"
         }
         if set(expected) != set(actual):

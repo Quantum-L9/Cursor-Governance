@@ -38,15 +38,11 @@ Mutable runtime belongs under `$HOME/.l9/`, never this source tree.
 The only live campaign path is:
 
 ```bash
-make -C "$HOME/.cursor-governance" campaign INTENT=<brief.md|activate.yaml>
+make -C "$HOME/.cursor-governance" campaign INTENT=<path>
 ```
 
-For a long-form architecture document, the front door is:
-
-```bash
-make -C "$HOME/.cursor-governance" campaign-architecture \
-  INTENT=<architecture.md> TARGET=<owner/repo>
-```
+`campaign-architecture` is retained only as a compatibility alias to this same
+front door. It does not force or override input classification.
 
 `run_campaign.py` compiles seeds, admits the Blueprint, boots
 pec without a draft flag, executes every task, stacks PRs, and closes into
@@ -75,7 +71,7 @@ no third outcome.
 | Input | Route |
 |---|---|
 | `l9.program-execution.campaign-source.v2` | straight to `compile_campaign_source` → blueprint → PEC |
-| `l9.program-execution.architecture-intent.v1` (declared, or `make campaign-architecture`) | architecture → campaign source → blueprint → PEC |
+| `l9.program-execution.architecture-intent.v1` (declared or deterministically classified from architecture-grade prose) | architecture → campaign source → blueprint → PEC |
 | activate seed (`campaign_id`, `title`, `objective`, `tasks`) | activate → campaign source → blueprint → PEC |
 | brief memo (`.md`) | brief → activate → campaign source → blueprint → PEC |
 | `program-execution.intent.v1` | **rejected** — design-time compiler input, no live adapter |
@@ -93,9 +89,10 @@ make campaign-check-input INTENT=/path/to/CAMPAIGN_SOURCE.yaml
 ```
 
 A document that declares the architecture schema in its frontmatter classifies
-as `architecture-intent.v1` here with no extra flag. To classify an *unmarked*
-document as architecture intent, use the compile-only target, which writes the
-campaign source into the compiler cache and creates no workspace:
+as `architecture-intent.v1` here with no extra flag. Unmarked architecture-grade
+prose is admitted by the same deterministic classifier. The compile-only target
+delegates to that classifier, writes only to the compiler cache, and creates no
+workspace:
 
 ```bash
 make campaign-architecture-check INTENT=/tmp/architecture.md TARGET=owner/repo
@@ -121,11 +118,11 @@ source then enters the same direct placement path an operator-supplied campaign
 source uses — never brief → activate, which would rebuild it from a weaker
 representation.
 
-Two input modes: an unchanged assistant transcript passed to
-`campaign-architecture` (the operator's choice of route is the signal), or a
-document that declares `schema: l9.program-execution.architecture-intent.v1`
-and `target:` in frontmatter and takes the ordinary `make campaign` route.
-Unmarked Markdown handed to `make campaign` still goes to the brief compiler.
+Two admission proofs exist: `DECLARED`, when the document declares
+`schema: l9.program-execution.architecture-intent.v1`, and `CLASSIFIED`, when
+the universal front door deterministically identifies unchanged prose as
+architecture-grade. Ordinary Markdown that does not meet the architecture
+classification contract remains on the brief route.
 
 Every complete generated task is `definition_status: ready`; ordering is the
 dependency graph, and a probeable open question becomes a ready read-only

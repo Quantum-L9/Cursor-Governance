@@ -107,17 +107,9 @@ if [ -n "$_L9_SD_LIB" ]; then
     *) emit "" ;;
   esac
 else
-  # Fail-soft if the lib is missing on a half-wired machine: keep the prior
-  # inline marker list so Claude sessions are not silently skipped.
-  _l9_claude_runtime=0
-  [ "${CLAUDE_CODE_REMOTE:-}" = "true" ] && _l9_claude_runtime=1
-  [ -n "${CLAUDECODE:-}" ] && _l9_claude_runtime=1
-  [ -n "${CLAUDE_CODE_ENTRYPOINT:-}" ] && _l9_claude_runtime=1
-  [ -n "${CLAUDE_CODE_SESSION_ID:-}" ] && _l9_claude_runtime=1
-  if [ "$_l9_claude_runtime" -eq 0 ]; then
-    emit ""
-  fi
-  unset _l9_claude_runtime
+  # Detector unavailable means surface identity is unknown. This is an
+  # observer-class hook, so unknown must not inject Claude context.
+  emit ""
 fi
 unset _L9_SD_LIB _L9_WALK _L9_HOOK_DIR
 
@@ -421,7 +413,7 @@ fi
 # memory-bank/ retired — resume from Graphiti inject/PICKUP only (no T0 excerpt)
 
 # --- Memory: single front door = Cursor Graphiti (CANONICAL_LAW §8)
-LINES+=("shared memory: Cursor Graphiti front door only (ops/graphiti inject / write); no L9_MEMORY_HTTP side door; memory-bank retired; memory never gates repository writes")
+LINES+=("shared memory: canonical memory control plane only (ops/memory; l9-graphite-memory, memory-control-plane/v1); no provider client, no L9_MEMORY_HTTP side door; memory-bank retired; memory never gates repository writes")
 
 # --- L9 Claude environment status (from the installer receipt) --------------
 # The canonical installer writes ~/.l9/claude/bootstrap-state.json
@@ -580,10 +572,10 @@ except Exception:
     sys.exit(0)
 print("memory.cli=" + str(d.get("memory_cli_status", "UNKNOWN")))
 print("memory.mcp=" + str(d.get("memory_mcp_status", "UNKNOWN")))
-print("graphiti_reachability=" + str(d.get("Graphiti_reachability", "UNKNOWN")))
-print("graphiti_transport_auth=" + str(d.get("graphiti_transport_auth", "UNKNOWN")))
+print("memory_control_plane=" + str(d.get("memory_control_plane_status", "UNKNOWN")))
+print("memory_transport=" + str(d.get("memory_transport", "UNKNOWN")))
 notes = d.get("notes") if isinstance(d.get("notes"), dict) else {}
-print("primary_blocker=" + str(notes.get("Graphiti_reachability") or "none"))
+print("primary_blocker=" + str(notes.get("memory_control_plane_status") or "none"))
 ' 2>/dev/null || true)"
   [ -n "$parsed" ] || return 0
   LINES+=("--- capability plane readiness ---")

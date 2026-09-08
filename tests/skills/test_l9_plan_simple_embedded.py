@@ -57,6 +57,8 @@ def test_embedded_frontmatter_is_machine_identifiable() -> None:
     head = out.split("---", 2)[1]
     assert "kind: simple" in head
     assert "execute_via: embedded" in head
+    assert "status: current" in head
+    assert "status: harvested" not in head
 
 
 def test_embedded_projection_hands_control_to_caller() -> None:
@@ -84,6 +86,7 @@ def test_cursor_build_projection_is_unchanged() -> None:
     assert "## Execute via Cursor Build" in out
     assert "kind: simple" in out
     assert "execute_via: cursor-build" in out
+    assert "status: current" in out.split("---", 2)[1]
     assert "PR_STACK=auto" in out
     assert "make pr" in out
     assert "PR URL" in out
@@ -96,6 +99,7 @@ def test_pe_campaign_projection_is_unchanged() -> None:
     assert "## Execute via @environment/program-execution" in out
     assert "kind: pe" in out
     assert "execute_via: pe-campaign" in out
+    assert "status: current" in out.split("---", 2)[1]
     assert "@autonomy" in out
 
 

@@ -106,7 +106,9 @@ jobs:
         run: |
           python3 - <<'PY'
           import json, subprocess, sys
-          allowed = {"graphiti-memory"}
+          # Stage C7/C8: canonical memory server + docs server; the legacy
+          # provider front door (graphiti-memory) is retired.
+          allowed = {"l9-graphite-memory", "context7"}
           tracked = set(subprocess.check_output(["git", "ls-files"], text=True).splitlines())
           for path in (".mcp.json", ".cursor/mcp.json"):
               if path not in tracked:

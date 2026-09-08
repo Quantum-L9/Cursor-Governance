@@ -1,7 +1,6 @@
 ---
 name: l9-python-tdd-with-uv
 description: test-driven development in Python using uv as the package manager. covers the red-green-refactor cycle, vertical slicing, and uv project setup. use when starting Python TDD with uv, setting up a uv project, or running a red-green-refactor loop.
-disable-model-invocation: true
 metadata:
   skill_schema: 1
   layer: control_plane
