@@ -9,8 +9,8 @@ metadata:
   tags: [l9, program-execution, campaign, compiler, activate, merge]
   owner: igor_beylin
   status: active
-  version: 1.2.0
-  updated: 2026-08-23
+  version: 1.3.0
+  updated: 2026-09-06
 ---
 
 # PE Campaign Activation
@@ -22,8 +22,13 @@ Blueprint, Program Lock, bounded Peer Execution, Controller verification, and
 **local commits only**.
 
 ```bash
-make -C "$HOME/.cursor-governance" campaign INTENT=<brief.md|activate.yaml>
+make -C "$HOME/.cursor-governance" campaign INTENT=<path>
 ```
+
+The front door classifies campaign-source, declared/classified architecture
+intent, activate seeds, plans, and briefs before selecting a compiler. Dense
+architecture prose is never flattened through brief → activate merely because
+it lacks frontmatter.
 
 ## Authority law
 
@@ -40,6 +45,8 @@ make -C "$HOME/.cursor-governance" campaign INTENT=<brief.md|activate.yaml>
 ```text
 operator intent
   → make campaign
+  → deterministic input classification
+  → campaign-source.v2 (direct or compiled)
   → Blueprint / Program Lock / Controller
   → PE runtime binding + execution profile
   → fresh capability probe
@@ -80,6 +87,7 @@ The emit contract is unchanged and still enforced by the compiler:
 - [references/source-contract.md](references/source-contract.md) — intent + seed fields
 - [references/pipeline.md](references/pipeline.md) — stage order inside the runner
 - [references/merge-authority.md](references/merge-authority.md) — where merge authority lives
-- [scripts/compile_brief.py](scripts/compile_brief.py) — memo `.md` → activate seed
+- [scripts/compile_brief.py](scripts/compile_brief.py) — only classifier-selected brief `.md` → activate seed
 - [scripts/compile_activation_files.py](scripts/compile_activation_files.py) — the compiler
+- `environment/program-execution/scripts/compile_architecture_intent.py` — classifier-selected architecture prose → campaign-source.v2
 - PLAN window owner: `skills/l9-pe-nuggets/` (not this pack)

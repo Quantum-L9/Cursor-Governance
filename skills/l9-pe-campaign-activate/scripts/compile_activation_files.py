@@ -23,6 +23,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+PE_ROOT = Path(__file__).resolve().parents[3] / "environment/program-execution"
+if str(PE_ROOT) not in sys.path:
+    sys.path.append(str(PE_ROOT))
+
+from program_policy import resolve_program_owner  # noqa: E402
+
 try:
     import yaml
 except ImportError:  # pragma: no cover
@@ -263,7 +269,7 @@ def build_source(intent: dict[str, Any], *, stamp: str) -> dict[str, Any]:
     campaign_id = str(intent["campaign_id"]).strip()
     title = str(intent["title"]).strip()
     objective = str(intent["objective"]).strip()
-    owner = str(intent.get("owner") or "Igor Beylin").strip()
+    owner = resolve_program_owner(intent.get("owner"))
     target = intent.get("target") if isinstance(intent.get("target"), dict) else {}
     repository_id = str(target.get("repository_id") or "Quantum-L9/Cursor-Governance").strip()
     source_of_truth = str(target.get("source_of_truth") or "environment/program-execution").strip()

@@ -21,6 +21,7 @@ import hashlib
 import re
 import unicodedata
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -38,6 +39,22 @@ FENCE_RE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
 LIST_RE = re.compile(r"^(\s*)([-*+]|\d{1,3}[.)])\s+\S")
 TABLE_RE = re.compile(r"^\s{0,3}\|")
 QUOTE_RE = re.compile(r"^\s{0,3}>")
+
+
+class ArchitectureAdmission(StrEnum):
+    """Why an architecture source is authorized to use this representation.
+
+    DECLARED: the source declares the architecture-intent schema itself.
+    CLASSIFIED: the universal campaign front door deterministically classified
+      unchanged prose as architecture-grade input.
+
+    There is intentionally no operator-forced admission state. Raw prose enters
+    Architecture Intent only after deterministic front-door classification.
+    """
+
+    DECLARED = "declared"
+    CLASSIFIED = "classified"
+
 
 # Deterministic materiality signals. These are NOT semantic authority: a signal
 # only guarantees that a unit cannot vanish from the compilation without an
@@ -166,6 +183,7 @@ class ArchitectureIntent:
     target: str
     title: str
     declared: bool
+    admission: ArchitectureAdmission
 
     @property
     def schema(self) -> str:
@@ -185,6 +203,7 @@ class ArchitectureIntent:
     def to_dict(self) -> dict[str, Any]:
         return {
             "schema": self.schema,
+            "admission": self.admission.value,
             "target": self.target,
             "title": self.title,
             "declared": self.declared,
@@ -353,17 +372,27 @@ def _starts_block(line: str) -> bool:
     )
 
 
+def _coerce_admission(value: ArchitectureAdmission | str) -> ArchitectureAdmission:
+    try:
+        return (
+            value if isinstance(value, ArchitectureAdmission) else ArchitectureAdmission(str(value))
+        )
+    except ValueError as exc:
+        raise ArchitectureIntentError(f"unknown architecture admission {value!r}") from exc
+
+
 def load_architecture_intent(
     path: Path,
     *,
     target: str | None = None,
-    forced: bool = False,
+    admission: ArchitectureAdmission | str = ArchitectureAdmission.DECLARED,
 ) -> ArchitectureIntent:
     """Read, normalize, hash, and segment an architecture source.
 
-    `forced` is the `campaign-architecture` route: the operator selected this
-    interpretation explicitly, so an unchanged assistant transcript needs no
-    frontmatter edit. Without it the document must declare its own schema.
+    Admission answers why this unchanged source may be interpreted as
+    architecture intent. DECLARED requires the source schema. CLASSIFIED
+    authorizes unchanged prose only after deterministic front-door
+    classification, so there is no operator-forced representation bypass.
     """
     path = Path(path)
     if not path.is_file():
@@ -375,12 +404,19 @@ def load_architecture_intent(
     text = normalize_source(raw)
     if not text.strip():
         raise ArchitectureIntentError(f"architecture source is empty: {path}")
+    resolved_admission = _coerce_admission(admission)
     frontmatter, _ = parse_frontmatter(text)
-    declared = str(frontmatter.get("schema") or "").strip() == ARCHITECTURE_INTENT_SCHEMA
-    if not declared and not forced:
+    declared_schema = str(frontmatter.get("schema") or "").strip()
+    if declared_schema and declared_schema != ARCHITECTURE_INTENT_SCHEMA:
         raise ArchitectureIntentError(
-            f"{path} does not declare schema {ARCHITECTURE_INTENT_SCHEMA}; pass it through "
-            "`make campaign-architecture` or add the frontmatter"
+            f"{path} declares schema {declared_schema}, not {ARCHITECTURE_INTENT_SCHEMA}; "
+            "architecture admission never overrides a conflicting declared type"
+        )
+    declared = declared_schema == ARCHITECTURE_INTENT_SCHEMA
+    if resolved_admission is ArchitectureAdmission.DECLARED and not declared:
+        raise ArchitectureIntentError(
+            f"{path} does not declare schema {ARCHITECTURE_INTENT_SCHEMA}; the universal "
+            "campaign front door must classify raw architecture prose before loading it"
         )
     units = segment(text)
     if not units:
@@ -388,8 +424,8 @@ def load_architecture_intent(
     resolved_target = str(target or frontmatter.get("target") or "").strip()
     if not resolved_target:
         raise ArchitectureIntentError(
-            "architecture intent has no target repository: pass TARGET=<owner/repo> or "
-            "declare `target:` in the document frontmatter"
+            "architecture intent has no resolved target repository; target resolution must run "
+            "before architecture loading"
         )
     return ArchitectureIntent(
         path=path.resolve(),
@@ -401,6 +437,7 @@ def load_architecture_intent(
         target=resolved_target,
         title=str(frontmatter.get("title") or "").strip() or _title_from_units(units, path),
         declared=declared,
+        admission=resolved_admission,
     )
 
 

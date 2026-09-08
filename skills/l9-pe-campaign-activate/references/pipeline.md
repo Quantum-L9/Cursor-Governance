@@ -6,8 +6,8 @@ role: pipeline
 tags: [campaign, pe, compile, bootstrap, l4]
 owner: igor_beylin
 status: active
-version: 1.1.0
-updated: 2026-08-16
+version: 1.2.0
+updated: 2026-09-06
 /L9_META -->
 
 # PE activation pipeline
@@ -16,7 +16,7 @@ There is one live front door. Do not substitute pec, the intent compiler,
 L4, or a hand-assembled compile/accept/bootstrap sequence.
 
 ```bash
-make -C "$HOME/.cursor-governance" campaign INTENT=<brief.md|activate.yaml>
+make -C "$HOME/.cursor-governance" campaign INTENT=<path>
 ```
 
 `run_campaign.py` is the tunnel. If that command exits nonzero, stop and
@@ -29,9 +29,10 @@ Order inside `run_campaign.py` only (not an operator checklist):
 
 | Stage | Runner owns |
 |---|---|
+| classify | schema/shape precedence plus deterministic architecture-prose classification; no representation override |
 | stack-proof | infer API/MCP/install/Docker; Context7 then official GET; write `$HOME/.l9/primed/<id>/stack-proof.json`; refuse on miss. Runs before emit, including `until=activate`. |
 | plan-window | after stack-proof, before emit: `l9-pe-nuggets` writes `$HOME/.l9/primed/<id>/nuggets.json`; refuse seal unless `plan_status` is Ready or ConditionallyReady. Not a new UNTIL_STAGE. |
-| activate | brief IR or activate YAML; isolate worktrees; emit file set |
+| activate | direct campaign source, architecture-compiled source, brief IR, plan, or activate YAML; isolate worktrees; emit file set without flattening richer inputs |
 | blueprint | compile + template validate |
 | admit | EVID-001 on reconciled target HEAD; accept blueprint |
 | bootstrap | pec bootstrap with no draft flag; quarantine leftovers |
@@ -71,5 +72,6 @@ Do not attach to a leftover `pe-<intent-hash>` workspace.
 
 - Runner FAIL → report; do not retry with `--admission-draft`
 - Dirty primary or dirty target → runner refuses; do not `git switch`
-- Memo with no numbered tasks → runner STOP; do not invent tasks
+- A document classified as **brief** with no numbered tasks → brief compiler STOP; do not invent tasks
+- Architecture-grade prose is classified before brief compilation and does not require numbered tasks
 - Provider or Controller verification failure → stop and report; do not publish from PE
