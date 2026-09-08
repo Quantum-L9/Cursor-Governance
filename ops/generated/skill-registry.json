@@ -389,6 +389,24 @@
         ]
       },
       {
+        "id": "audit_plans_shelf",
+        "positive_signals": [
+          "l9-audit-plans",
+          "/l9-audit-plans",
+          "organize plans store",
+          "shelf plans",
+          "refine leftover plan todos",
+          "docs/plans/stale",
+          "partially-built shelf"
+        ],
+        "primary": "l9-audit-plans",
+        "signal_weight": 9,
+        "supporting": [
+          "l9-pipeline-audit",
+          "l9-ynp"
+        ]
+      },
+      {
         "id": "pipeline_audit",
         "positive_signals": [
           "pipeline audit",
@@ -805,6 +823,17 @@
       "when_to_use": "capturing a significant architecture/design decision, recording trade-offs, or creating an ADR"
     },
     {
+      "composition_role": "general",
+      "description": "shelf then refine the Cursor plans store: root stays current unbuilt only; leftover todos fold or compile; harvested donors are omitted. use when /l9-audit-plans, a plans-store shelf audit, or leftover-todo refine runs.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-audit-plans",
+      "path": "skills/l9-audit-plans",
+      "reason": "plans-store shelf + leftover-todo refine mutates docs/plans (status law, harvested omit, fold/compile); slash /l9-audit-plans is the explicit invoke; disable-model-invocation",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
       "composition_role": "primary",
       "description": "audit and optimize application performance, including bundle size, rendering, database queries, and Core Web Vitals. use when the app is slow, profiling for bottlenecks, or optimizing bundle/render/query performance.",
       "disable_model_invocation": false,
@@ -851,13 +880,13 @@
     {
       "composition_role": "general",
       "description": "extract learnings and specific content from chat conversations to memory or structured output. use when closing sessions, capturing lessons, patterns, errors, preferences, code blocks, decisions, requirements, or action items from conversation.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
       "name": "l9-chat-extraction",
       "path": "skills/l9-chat-extraction",
-      "reason": "extracts chat content to memory or structured output",
+      "reason": "",
       "user_invocable": true,
-      "when_to_use": ""
+      "when_to_use": "a user correction, lesson, pattern, error, or decision should reach memory \u2014 rules/87-cursor-memory-kernel.mdc requires extracting a lesson immediately, not at session end"
     },
     {
       "composition_role": "general",
@@ -939,13 +968,13 @@
     {
       "composition_role": "general",
       "description": "Audit, deterministically verify, or runtime-probe a named component \u2014 exports, imports, wiring, and loadability \u2014 as a read-only escalation ladder. Use from /audit-component, or from /analyze, /evaluate, or /analyze_evaluate when the user names a component, module, import, or wiring check. Do not use for DAG authoring or registration, for editing the component, or for generic repo exploration.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
       "name": "l9-component-verification",
       "path": "skills/l9-component-verification",
-      "reason": "component audit/verify/probe escalation ladder",
+      "reason": "",
       "user_invocable": true,
-      "when_to_use": ""
+      "when_to_use": "a named component, module, import, or wiring claim needs a read-only audit, deterministic verify, or runtime probe"
     },
     {
       "composition_role": "primary",
@@ -982,7 +1011,7 @@
     },
     {
       "composition_role": "general",
-      "description": "force-retry session close \u2014 Graphiti write PICKUP/learnings when auto sessionEnd failed or hydrate printed REPAIR. use for recovery, richer handoff, or governance backup \u2014 not required for normal X-out.",
+      "description": "force-retry session close \u2014 canonical repair-write of the continuation record plus governed learning writes when auto sessionEnd failed or hydrate printed REPAIR. use for recovery, richer handoff, or governance backup \u2014 not required for normal X-out.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-end-session",
@@ -1020,7 +1049,7 @@
       "invocation": "explicit_only",
       "name": "l9-git-work-preserve",
       "path": "skills/l9-git-work-preserve",
-      "reason": "auto-registered by sync_generated_artifacts (orphan \u2192 explicit_only)",
+      "reason": "diagnose-first, but the pack acts on branches, worktrees, and stashes \u2014 prune-execute deletes refs under L9_GIT_PRUNE_AUTHORIZED and stash-drop under L9_GIT_STASH_DROP_AUTHORIZED. Destruction of unique work is the exact blast radius rules/54-context-sensitive-git-guardrails.mdc governs, so selection stays a human act. Triaged 2026-09-06; previously carried the orphan auto-register default.",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1059,7 +1088,7 @@
     },
     {
       "composition_role": "primary",
-      "description": "Graphiti VPS memory \u2014 prefetch, group resolution, episode writes, GMP Phase 0 MEMORY_PREFETCH, /end-session PICKUP. Use when wiring memory, debugging prefetch, bootstrap, Graphiti health, or closing a session.",
+      "description": "Canonical agent memory control plane (l9-graphite-memory) \u2014 readiness, namespace resolution, canonical hydrate/search, governed interactive write (memory.phase_lock \u2192 memory.write_governed), operator CLI write, GMP Phase 0 MEMORY_PREFETCH, /end-session repair. Use when wiring memory, debugging hydration, checking memory health, writing a durable fact, reconciling legacy provider history, or closing a session.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-graphiti-memory",
@@ -1214,24 +1243,24 @@
     {
       "composition_role": "general",
       "description": "create a machine-validated cursor .plan.md from the executable-plan template. cursor-build executes then opens a stacked PR; embedded stops at planning artifacts with no execution authority. use when scope is unclear or Plan mode is on. do not use for /l9-plan, make campaign, or a PE lock.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
       "name": "l9-plan-simple",
       "path": "skills/l9-plan-simple",
-      "reason": "auto-registered by sync_generated_artifacts (orphan \u2192 explicit_only)",
+      "reason": "",
       "user_invocable": true,
-      "when_to_use": ""
+      "when_to_use": "an ordinary execution plan or spec is needed, scope is unclear, or Plan mode is on \u2014 rules/23-l9-skill-routing.mdc already routes every ordinary planning deliverable here, so the model must be able to select it"
     },
     {
       "composition_role": "general",
       "description": "digest one PR into evidence, scope, and a bounded remediation packet without modifying it. use when judging agent PR scope before remediation or running the pre-remediation quality gate.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
       "name": "l9-pr-digest",
       "path": "skills/l9-pr-digest",
-      "reason": "read-only pre-remediation gate; /pr runs it before l9-pr-remediation Diagnose; Converge and the poll worker require a same-head READY packet via require_digest.py; disable-model-invocation",
+      "reason": "",
       "user_invocable": true,
-      "when_to_use": ""
+      "when_to_use": "judging one PR's scope, evidence, expansion, and architecture impact before remediation \u2014 the skill never mutates the PR"
     },
     {
       "composition_role": "general",
@@ -1258,13 +1287,13 @@
     {
       "composition_role": "general",
       "description": "test-driven development in Python using uv as the package manager. covers the red-green-refactor cycle, vertical slicing, and uv project setup. use when starting Python TDD with uv, setting up a uv project, or running a red-green-refactor loop.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
       "name": "l9-python-tdd-with-uv",
       "path": "skills/l9-python-tdd-with-uv",
-      "reason": "non-default stack (uv) \u2014 invoke explicitly for Python TDD",
+      "reason": "",
       "user_invocable": true,
-      "when_to_use": ""
+      "when_to_use": "writing or running Python tests under uv \u2014 red-green-refactor, vertical slicing, or uv project setup"
     },
     {
       "composition_role": "primary",
@@ -1400,6 +1429,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "80a24260312632a4cb1c487ad096b54ed598a850fdb5b754486dc1f641265cc3",
-  "source_skill_corpus_sha256": "9f4d27a363d7083105b6a19342f76c3eea104524afa995052fb9f77518bf0667"
+  "source_manifest_sha256": "78d9affadf15dd00d5f30ad00c2087d17f6c02653858b6a653be7c02e3c51ce9",
+  "source_skill_corpus_sha256": "3f25e000cf6bc0184dea8fc365fbd2091e7d918dae86191a275733d4e419231b"
 }
