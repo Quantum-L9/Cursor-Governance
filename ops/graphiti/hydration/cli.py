@@ -36,6 +36,7 @@ def _public_close_report(report: dict) -> dict:
     allowed = {
         "closed_canonically",
         "close_incomplete",
+        "close_conflicted",
         "dry_run",
         "idempotent_skip",
         "skipped",

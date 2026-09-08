@@ -119,6 +119,89 @@ which `memory-binding.json` moves from the git SHA to the release tag and
 the binding is integration-grade by construction and says so in
 `binding_status`.
 
+**`exact` means the artifact** (audit CG-P1-03). Version, contract version and
+"the module lives under the interpreter prefix" are satisfied identically by
+every build of a version, so a status reachable from those alone says nothing
+about *which* build is installed — which is the whole question a pinned release
+binding exists to answer. The status taxonomy is therefore:
+
+| `binding_status` | Meaning |
+|---|---|
+| `exact` | the installed artifact **is** the audited release, proved by digest |
+| `compatible` | version and contract agree; the artifact was not proved |
+| `development_checkout` | an explicit dev opt-in; whatever is on disk there |
+| `unbound` | refused — wrong version, wrong contract, foreign path, or a digest that *contradicts* the manifest |
+
+Provenance is read from the installed distribution, not asserted: PEP 610
+`direct_url.json` carries the archive hash pip/uv recorded for the wheel, and
+`release_evidence.artifact_sha256` is what it must equal. An editable install
+has no immutable artifact identity and is never `exact`. A digest that is
+present and disagrees is not weak evidence but contradiction, and is refused
+rather than downgraded.
+
+`release_evidence.installed_record_digest` is a second, optional pin — a digest
+over the installed `RECORD` — for installs that leave no archive hash. The
+mechanism works and is tested, but **nothing pins one today, on evidence**:
+three `memory-cross-repo` runs installed the byte-identical wheel (its sha256
+re-verified by rebuild each time) and produced three different RECORD digests.
+The installed RECORD is not a deterministic function of the wheel in that
+environment, so a pin would make the binding flap between `exact` and `unbound`
+on an unchanged release. Do not pin one until it is shown stable across runs.
+
+That is why the proof job reports `compatible` rather than `exact`: `uv`
+records no archive hash for the local-file install it performs. The artifact is
+proved there by the job instead, and more strongly — it rebuilds the wheel from
+`source.ref` and refuses any sha256 but the audited one before installing.
+
+`L9_MEMORY_REQUIRE_EXACT_ARTIFACT=1` turns `compatible` from "usable, and
+reported as unproved" into a refusal; the required cross-repo proof sets it.
+
+**Model names belong to the release.** `CANONICAL_RECEIPT_MODELS` lists what
+Cursor *requests*; the release names its own models, and several differ
+(`HealthReceipt` is `HealthReport` there, `HydrationReceipt` is
+`HydrationResult`, `CapabilitiesReceipt` is `ControlPlaneCapabilities`). The
+mapping lives in `memory-binding.json` as `contract_model_aliases` and the
+probe accepts any alias, keying the schema by the name Cursor validates under.
+A name this side guessed is not a contract the release owes — so nothing
+asserts that the release exports Cursor's spelling. The enforcement is
+behavioural: an operation whose receipt has no canonical schema returns
+`VALIDATION_UNAVAILABLE`, and the binding reasons list what the release does
+export so a wrong name is diagnosable rather than mute.
+
+**Does the receipt answer the request?** (audit MEM-P2-01, consumer half.) A
+`SearchReceipt` binds the query and the namespaces memory authorized, and binds
+nothing about the **tag selector** — and tags change the result set, so the
+receipt cannot prove which request produced its hits. Closing that is memory's:
+it owns the receipt contract. `search_identity.py` is the other end.
+
+Two rules, and the difference is the point. A selector the receipt *echoes*
+must agree with what Cursor sent, or the hits answer another question and the
+outcome is `INVALID_RECEIPT`. A result-affecting selector the receipt *omits*
+is recorded as **unbound** — never assumed to have matched — and under
+`L9_MEMORY_REQUIRE_SEARCH_IDENTITY=1` an unbound selector is
+`REQUEST_IDENTITY_UNPROVEN`, a non-success. The two verdicts stay distinct:
+provably wrong is not the same as unproven.
+
+Cursor deliberately does **not** recompute memory's `request_digest`. It would
+have to guess the canonicalization — field order, tag ordering, absent versus
+empty — and a guess that disagrees turns every honest receipt into a rejection.
+Cursor computes its own digest for its own evidence, stamped with its own
+canonicalization version, and carries memory's digest without comparing the two.
+Namespaces are asymmetric on purpose: memory authorizing a *subset* of what
+Cursor requested is memory doing its job, so only a namespace Cursor never
+asked for is a contradiction.
+
+**Canonical receipt validation** (audit CG-P1-02). Because the memory runtime
+may be another interpreter, `import l9_graphite_memory.contracts` cannot
+succeed in this process — so the binding *exports* each canonical receipt model
+from the bound release as JSON Schema, and `canonical_validation.py` validates
+every authoritative receipt against those before any structural view reads a
+field. A violation is `INVALID_RECEIPT`; validation that was required and could
+not run is `VALIDATION_UNAVAILABLE`, a distinct non-success — structural
+acceptance is never a fallback. Every integration receipt records which mode
+was reached (`canonical_validation`) and the schema digest it validated
+against. `L9_MEMORY_REQUIRE_CANONICAL_VALIDATION=1` makes it mandatory.
+
 ## Egress firewall (INV-03)
 
 ```bash
@@ -202,8 +285,19 @@ key — never a synthesized "retry" summary — and reads memory's replay
 forensics back (`CloseReceipt.replay_payload_matched`, `stored_digest`,
 `replay_digest`, `warnings`); a replay memory proves different from the stored
 close is surfaced as `close replay payload drift`, never hidden behind the
-idempotent status. An obligation without the request material gets a full
-canonical close instead of a guessed replay.
+idempotent status.
+
+That surfacing is evidence, not the verdict (audit CG-P1-01). Memory preserves
+the first commit under an idempotency key and returns *that* record on a
+replay, so a drifted retry comes back with `status=complete` and a `record_id`
+— and reading `committed` from it promoted a close request that never
+committed. The conflict test now runs **ahead** of every `committed`
+promotion: the client returns `IDEMPOTENCY_CONFLICT`, and the obligation goes
+to `close_conflicted`, which is neither closed nor merely unfinished. Replaying
+the same request cannot resolve it (memory holds a different close under that
+key), so it stays a close gap for the next session. Exact replay is unchanged
+and still canonical success, including after a conflict. An obligation without
+the request material gets a full canonical close instead of a guessed replay.
 
 ## MCP instantiation (stage C7) and surface realignment (stage C8)
 

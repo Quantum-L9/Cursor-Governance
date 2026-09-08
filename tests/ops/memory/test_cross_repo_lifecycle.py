@@ -35,12 +35,17 @@ import pytest
 
 from ops.graphiti.hydration import close_session as cs
 from ops.graphiti.hydration.session_latches import load_close_receipt
+from ops.memory.canonical_validation import (
+    ENV_REQUIRE_VALIDATION as ENV_REQUIRE_CANONICAL_VALIDATION,
+)
 from ops.memory.control_plane_client import MemoryControlPlaneClient, OutcomeStatus
 from ops.memory.hydration import canonical_hydrate
 from ops.memory.namespace_context import repository_state_digest, resolve_namespace_context
 from ops.memory.runtime_binding import (
     ENV_DEV_CHECKOUT,
     ENV_INTERPRETER,
+    STATUS_COMPATIBLE,
+    STATUS_EXACT,
     BindingManifest,
     resolve_runtime_binding,
 )
@@ -116,6 +121,10 @@ def _record_evidence(binding, *, test: str) -> None:
             "memory_bound_version": binding.memory_version,
             "runtime_mode": binding.runtime_mode,
             "binding_status": binding.status,
+            "artifact_provenance": binding.artifact_provenance,
+            "installed_artifact_digest": binding.installed_artifact_digest,
+            "expected_artifact_digest": binding.expected_artifact_digest,
+            "contract_schema_digest": binding.schema_digest,
             "memory_cli": binding.memory_cli,
             "wheel_sha256": os.environ.get(ENV_WHEEL_SHA256) or None,
             "required": _required(),
@@ -149,6 +158,19 @@ def runtime(tmp_path: Path, request) -> tuple[MemoryControlPlaneClient, dict[str
             f"{ENV_REQUIRED}=1 but neither {ENV_DEV_CHECKOUT} nor {ENV_INTERPRETER} names a "
             "memory runtime: the required cross-repo proof cannot run, and must not skip"
         )
+    if _required():
+        # Every receipt must satisfy the bound release's own contract
+        # (CG-P1-02): an unvalidatable receipt fails its call rather than
+        # degrading to structural acceptance.
+        env[ENV_REQUIRE_CANONICAL_VALIDATION] = "1"
+        # ENV_REQUIRE_EXACT is deliberately NOT set here. In-place artifact
+        # proof needs a PEP 610 archive hash, which pip/uv record for index
+        # and URL installs but not for the local-file install this job
+        # performs — so the binding cannot prove the artifact in place and
+        # honestly reports `compatible`. The artifact is proved instead by
+        # the job itself, and more strongly: it rebuilds the wheel from
+        # source.ref and refuses any sha256 but the audited one before
+        # installing. That is asserted below.
     binding = resolve_runtime_binding(env=env)
     assert binding.ok, binding.reasons
     assert binding.runtime_mode in ACCEPTED_MODES, binding.runtime_mode
@@ -158,6 +180,37 @@ def runtime(tmp_path: Path, request) -> tuple[MemoryControlPlaneClient, dict[str
         assert binding.runtime_mode == "pinned_environment", (
             f"{ENV_REQUIRED}=1 requires the pinned wheel via {ENV_INTERPRETER}, "
             f"got runtime_mode={binding.runtime_mode}"
+        )
+        # The artifact claim, proved where it can be: the job rebuilt the
+        # wheel from the bound source ref and refused any digest but the
+        # audited one, then installed exactly that.
+        manifest = BindingManifest.load()
+        built = os.environ.get(ENV_WHEEL_SHA256, "").strip()
+        assert built and built == manifest.artifact_sha256, (
+            "the job must install the audited artifact: it built "
+            f"{built or '(nothing)'}, the binding records {manifest.artifact_sha256}"
+        )
+        # And the binding must not *claim* more than it proved: with no PEP 610
+        # provenance available it reports compatible, never exact.
+        assert binding.status in {STATUS_EXACT, STATUS_COMPATIBLE}, binding.status
+        if not binding.is_exact:
+            assert any("PEP 610" in r for r in binding.reasons), binding.reasons
+        # The unit suite validates against a stand-in schema set; only this
+        # proof sees the real release's contracts.
+        #
+        # It deliberately does NOT assert that every name in
+        # CANONICAL_RECEIPT_MODELS is exported: that list is what Cursor
+        # *requests*, derived from its own view classes, and a name Cursor
+        # guessed wrong is not a defect in the release. The enforcement that
+        # matters is behavioural and runs below — with
+        # L9_MEMORY_REQUIRE_CANONICAL_VALIDATION=1 set above, any operation
+        # whose receipt has no canonical schema returns VALIDATION_UNAVAILABLE
+        # and fails the lifecycle assertions, naming the model. The binding
+        # reasons list what the release does export, so a wrong name is
+        # diagnosable rather than mute.
+        assert binding.contract_schemas, (
+            "the bound release exported no canonical receipt schemas, so the proof would "
+            "validate nothing"
         )
     _record_evidence(binding, test=request.node.name)
     return MemoryControlPlaneClient(binding, env=env, session_id="proof-session"), env
@@ -175,6 +228,17 @@ def test_lifecycle_against_the_real_memory_runtime(runtime, tmp_path: Path, monk
     health = client.health()
     assert health.ok, health.error
     assert health.receipt.contract_version == "memory-control-plane/v1"
+    # CG-P1-02, end to end: this receipt was validated against the schema the
+    # bound release itself exported, not merely parsed by Cursor's view. Under
+    # L9_MEMORY_REQUIRE_CANONICAL_VALIDATION=1 an unvalidatable receipt would
+    # already have failed the call above; this pins that it validated
+    # canonically rather than degrading.
+    if _required():
+        assert health.integration_receipt["canonical_validation"] == "canonical", (
+            "health was accepted without canonical validation: "
+            f"{health.integration_receipt['canonical_validation']}"
+        )
+        assert health.integration_receipt["contract_schema_digest"]
 
     empty = client.hydrate(
         "Realign memory control plane",
@@ -340,8 +404,13 @@ def test_lifecycle_against_the_real_memory_runtime(runtime, tmp_path: Path, monk
     assert replay.ok and replay.receipt.replayed is True
     assert replay.receipt.replay_payload_matched is True, replay.receipt.raw
     assert replay.receipt.payload_drifted is False
-    # A replay under the same key with a different summary is not silently the
-    # same close: memory reports the drift and Cursor's view exposes it.
+    # A replay under the same key with a different summary is NOT a successful
+    # close (audit CG-P1-01). This assertion used to read `drifted.ok`, which
+    # is the defect written down as an expectation: memory preserves the first
+    # commit and returns that record, so the receipt looks committed, and
+    # treating it as this request's success lets a close that never committed
+    # discharge a close obligation. Against the real runtime the outcome is an
+    # idempotency conflict, and memory's own forensics are what prove it.
     drifted = client.close(
         workspace=str(project),
         namespace=namespace,
@@ -350,11 +419,29 @@ def test_lifecycle_against_the_real_memory_runtime(runtime, tmp_path: Path, monk
         capsule_digest=obligation["close_capsule_digest"],
         idempotency_key=obligation["close_idempotency_key"],
     )
-    assert drifted.ok and drifted.receipt.replayed is True
+    assert drifted.status is OutcomeStatus.IDEMPOTENCY_CONFLICT, drifted.status
+    assert drifted.ok is False
+    assert "already committed a different close" in (drifted.error or "")
+    assert drifted.receipt.replayed is True
     assert drifted.receipt.replay_payload_matched is False
     assert drifted.receipt.payload_drifted is True
     assert drifted.receipt.stored_digest != drifted.receipt.replay_digest
     assert any("differs" in w for w in drifted.receipt.warnings), drifted.receipt.raw
+    # Memory is right to keep the first close, and it is still the record it
+    # returns — it is simply not this request's.
+    assert drifted.receipt.committed is True
+    assert drifted.receipt.record_id == replay.receipt.record_id
+    # The conflict does not consume the key: the originally committed request
+    # still replays as one logical close.
+    settled = client.close(
+        workspace=str(project),
+        namespace=namespace,
+        summary=obligation["close_summary"],
+        session_id="proof-close",
+        capsule_digest=obligation["close_capsule_digest"],
+        idempotency_key=obligation["close_idempotency_key"],
+    )
+    assert settled.ok and settled.receipt.replay_payload_matched is True
     # The next session of the same task recovers exactly that capsule; a
     # SessionStart with no task falls back to the newest repository capsule
     # and says so.
