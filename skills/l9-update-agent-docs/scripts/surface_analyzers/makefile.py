@@ -8,9 +8,12 @@ from typing import Any
 
 _PYTHON_ASSIGNMENT = re.compile(r"^\s*PYTHON\s*[:?+]?=", re.MULTILINE)
 _DIRECT_PYTHON = re.compile(
-    r"^(?:[@+\-]\s*)?(?:[A-Za-z_][A-Za-z0-9_]*=[^\s]+\s+)*(?:/usr/bin/)?python(?:3(?:\.\d+)?)?\b"
+    r"^(?:[@+\-]\s*)?(?:[A-Za-z_][A-Za-z0-9_]*=[^\s]+\s+)*"
+    r"(?:/usr/bin/)?python(?:3(?:\.\d+)?)?\b"
 )
-_SCRIPT_REF = re.compile(r"(?<![A-Za-z0-9_$])([A-Za-z0-9_./-]+\.py)(?![A-Za-z0-9_])")
+_SCRIPT_REF = re.compile(
+    r"(?<![A-Za-z0-9_$])([A-Za-z0-9_./-]+\.py)(?![A-Za-z0-9_])"
+)
 
 
 def _finding(
@@ -50,13 +53,21 @@ def analyze(root: Path, target: Path) -> dict[str, Any]:
         if not raw.startswith("\t"):
             continue
         recipe = raw[1:].strip()
-        if has_locked_python and "$(PYTHON)" not in recipe and _DIRECT_PYTHON.match(recipe):
+        locked_python_bypass = (
+            has_locked_python
+            and "$(PYTHON)" not in recipe
+            and _DIRECT_PYTHON.match(recipe)
+        )
+        if locked_python_bypass:
             findings.append(
                 _finding(
                     "make.recipe.locked_python",
                     property_name="python_runner_consistency",
                     observed=recipe,
-                    expected="recipe invokes $(PYTHON) when the Makefile declares a locked PYTHON runner",
+                    expected=(
+                        "recipe invokes $(PYTHON) when the Makefile declares "
+                        "a locked PYTHON runner"
+                    ),
                     line=lineno,
                 )
             )
@@ -71,7 +82,10 @@ def analyze(root: Path, target: Path) -> dict[str, Any]:
                         "make.recipe.script_resolution",
                         property_name="referenced_script_resolves",
                         observed=rel,
-                        expected="literal repository-local script reference resolves to an existing file",
+                        expected=(
+                            "literal repository-local script reference resolves "
+                            "to an existing file"
+                        ),
                         line=lineno,
                     )
                 )
