@@ -53,9 +53,16 @@ def main() -> int:
             ("makefile_contract", "makefile-contract-v1"),
             ("python_project_contract", "python-project-contract-v1"),
         ):
-            actual = policy.get("surfaces", {}).get(surface, {}).get("analysis", {}).get("analyzer")
+            actual = (
+                policy.get("surfaces", {})
+                .get(surface, {})
+                .get("analysis", {})
+                .get("analyzer")
+            )
             if actual != analyzer:
-                errors.append(f"{surface} analyzer drift: expected {analyzer!r}, got {actual!r}")
+                errors.append(
+                    f"{surface} analyzer drift: expected {analyzer!r}, got {actual!r}"
+                )
     else:
         errors.append("missing doc-surface-policy.yaml")
     if not ANALYSIS.is_file():
