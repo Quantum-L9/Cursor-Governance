@@ -8,10 +8,10 @@ PACK = Path(__file__).resolve().parents[1]
 SCRIPTS = PACK / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
-import doc_policy as dp
-from doc_surface_analysis import assess_surface_obligations
-from surface_analyzers.makefile import analyze as analyze_makefile
-from surface_analyzers.pyproject import analyze as analyze_pyproject
+import doc_policy as dp  # noqa: E402
+from doc_surface_analysis import assess_surface_obligations  # noqa: E402
+from surface_analyzers.makefile import analyze as analyze_makefile  # noqa: E402
+from surface_analyzers.pyproject import analyze as analyze_pyproject  # noqa: E402
 
 
 def write(path: Path, text: str) -> None:
@@ -42,12 +42,10 @@ def test_policy_v3_declares_closed_operational_surfaces() -> None:
     policy = dp.load_policy()
     assert dp.validate_policy(policy) == []
     assert policy["schema"] == "l9.repo-docs.surface-policy.v3"
-    assert policy["surfaces"]["makefile_contract"]["analysis"]["analyzer"] == (
-        "makefile-contract-v1"
-    )
-    assert policy["surfaces"]["python_project_contract"]["analysis"]["analyzer"] == (
-        "python-project-contract-v1"
-    )
+    make_analyzer = policy["surfaces"]["makefile_contract"]["analysis"]["analyzer"]
+    python_analyzer = policy["surfaces"]["python_project_contract"]["analysis"]["analyzer"]
+    assert make_analyzer == "makefile-contract-v1"
+    assert python_analyzer == "python-project-contract-v1"
 
 
 def test_makefile_analyzer_detects_locked_python_bypass(tmp_path: Path) -> None:
@@ -61,7 +59,9 @@ def test_makefile_analyzer_detects_locked_python_bypass(tmp_path: Path) -> None:
     )
     result = analyze_makefile(root, root / "Makefile")
     assert result["status"] == "NEEDS_IMPROVEMENT"
-    assert {row["rule_id"] for row in result["findings"]} == {"make.recipe.locked_python"}
+    assert {row["rule_id"] for row in result["findings"]} == {
+        "make.recipe.locked_python"
+    }
 
     write(
         root / "Makefile",
@@ -81,7 +81,10 @@ def test_makefile_analyzer_detects_missing_literal_script(tmp_path: Path) -> Non
         "\t$(PYTHON) ops/scripts/missing.py\n",
     )
     result = analyze_makefile(root, root / "Makefile")
-    assert any(row["rule_id"] == "make.recipe.script_resolution" for row in result["findings"])
+    assert any(
+        row["rule_id"] == "make.recipe.script_resolution"
+        for row in result["findings"]
+    )
 
 
 def test_pyproject_analyzer_detects_interpreter_and_lock_drift(tmp_path: Path) -> None:
