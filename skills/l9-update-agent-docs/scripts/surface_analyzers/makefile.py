@@ -11,9 +11,7 @@ _DIRECT_PYTHON = re.compile(
     r"^(?:[@+\-]\s*)?(?:[A-Za-z_][A-Za-z0-9_]*=[^\s]+\s+)*"
     r"(?:/usr/bin/)?python(?:3(?:\.\d+)?)?\b"
 )
-_SCRIPT_REF = re.compile(
-    r"(?<![A-Za-z0-9_$])([A-Za-z0-9_./-]+\.py)(?![A-Za-z0-9_])"
-)
+_SCRIPT_REF = re.compile(r"(?<![A-Za-z0-9_$])([A-Za-z0-9_./-]+\.py)(?![A-Za-z0-9_])")
 
 
 def _finding(
@@ -54,9 +52,7 @@ def analyze(root: Path, target: Path) -> dict[str, Any]:
             continue
         recipe = raw[1:].strip()
         locked_python_bypass = (
-            has_locked_python
-            and "$(PYTHON)" not in recipe
-            and _DIRECT_PYTHON.match(recipe)
+            has_locked_python and "$(PYTHON)" not in recipe and _DIRECT_PYTHON.match(recipe)
         )
         if locked_python_bypass:
             findings.append(
@@ -65,8 +61,7 @@ def analyze(root: Path, target: Path) -> dict[str, Any]:
                     property_name="python_runner_consistency",
                     observed=recipe,
                     expected=(
-                        "recipe invokes $(PYTHON) when the Makefile declares "
-                        "a locked PYTHON runner"
+                        "recipe invokes $(PYTHON) when the Makefile declares a locked PYTHON runner"
                     ),
                     line=lineno,
                 )
@@ -83,8 +78,7 @@ def analyze(root: Path, target: Path) -> dict[str, Any]:
                         property_name="referenced_script_resolves",
                         observed=rel,
                         expected=(
-                            "literal repository-local script reference resolves "
-                            "to an existing file"
+                            "literal repository-local script reference resolves to an existing file"
                         ),
                         line=lineno,
                     )
