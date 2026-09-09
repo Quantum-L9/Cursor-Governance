@@ -181,20 +181,7 @@ def main() -> int:
     # --root/--out arguments cannot escape the repository root (path traversal).
     if not out.is_relative_to(root):
         raise SystemExit(f"refusing to access path outside repository root: {out}")
-    registry = build_registry(root)
-    registry_text = serialized(registry)
-    skill = next(row for row in registry["skills"] if row["name"] == "l9-update-agent-docs")
-    print(
-        "REGISTRY_PROBE "
-        + json.dumps(
-            {
-                "generation_id": registry["generation_id"],
-                "source_skill_corpus_sha256": registry["source_skill_corpus_sha256"],
-                "skill_sha256": skill["skill_sha256"],
-            },
-            sort_keys=True,
-        )
-    )
+    registry_text = serialized(build_registry(root))
     if args.check:
         if not out.is_file() or out.read_text(encoding="utf-8") != registry_text:
             print(f"STALE: {out}")
