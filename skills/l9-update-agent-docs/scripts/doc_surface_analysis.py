@@ -23,7 +23,12 @@ def _hash(*parts: str, size: int = 12) -> str:
     return hashlib.sha256(payload).hexdigest()[:size]
 
 
-def _validation_result(name: str, status: str, detail: str, evidence_ids: list[str]) -> dict[str, Any]:
+def _validation_result(
+    name: str,
+    status: str,
+    detail: str,
+    evidence_ids: list[str],
+) -> dict[str, Any]:
     return {
         "name": name,
         "status": status,
@@ -32,7 +37,11 @@ def _validation_result(name: str, status: str, detail: str, evidence_ids: list[s
     }
 
 
-def _guard_resolution(root: Path, guard_id: str | None, target: str | None) -> dict[str, Any] | None:
+def _guard_resolution(
+    root: Path,
+    guard_id: str | None,
+    target: str | None,
+) -> dict[str, Any] | None:
     if not guard_id:
         return None
     if guard_id != "root-file-protection":
@@ -73,7 +82,11 @@ def _guard_resolution(root: Path, guard_id: str | None, target: str | None) -> d
             "detail": f"root-file protection contract is unreadable: {exc}",
         }
     entry = next(
-        (row for row in contract.get("protected_files", []) if row.get("path") == target),
+        (
+            row
+            for row in contract.get("protected_files", [])
+            if row.get("path") == target
+        ),
         None,
     )
     if entry is None:
@@ -126,7 +139,7 @@ def assess_surface_obligations(
     policy: dict[str, Any],
     obligations: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Attach deterministic assessment and separated ownership to compiled obligations."""
+    """Attach deterministic assessment and separated ownership to obligations."""
 
     for obligation in obligations:
         surface = obligation["surface"]
@@ -149,7 +162,11 @@ def assess_surface_obligations(
             }
             continue
 
-        guard = _guard_resolution(root, obligation["ownership"]["mutation_guard"], target_rel)
+        guard = _guard_resolution(
+            root,
+            obligation["ownership"]["mutation_guard"],
+            target_rel,
+        )
         if guard and guard["status"] == "RESOLVED":
             for evidence_id in guard["evidence_ids"]:
                 obligation["evidence"].append(
@@ -157,7 +174,10 @@ def assess_surface_obligations(
                         "id": evidence_id,
                         "type": "validation",
                         "source": guard["source"],
-                        "locator": {"kind": "rule", "value": f"protected_files.{target_rel}"},
+                        "locator": {
+                            "kind": "rule",
+                            "value": f"protected_files.{target_rel}",
+                        },
                         "epistemic": "CONFIRMED",
                         "supports": "mutation_guard",
                     }
@@ -175,7 +195,9 @@ def assess_surface_obligations(
                 "reason": "operational surface mutation guard could not be resolved",
                 "terminal": False,
             }
-            obligation["blockers"] = sorted(set(obligation["blockers"] + [guard["detail"]]))
+            obligation["blockers"] = sorted(
+                set(obligation["blockers"] + [guard["detail"]])
+            )
             continue
 
         analyzer = ANALYZERS.get(analyzer_id)
@@ -193,7 +215,9 @@ def assess_surface_obligations(
                 "reason": "operational surface analyzer is unresolved",
                 "terminal": False,
             }
-            obligation["blockers"] = sorted(set(obligation["blockers"] + [detail]))
+            obligation["blockers"] = sorted(
+                set(obligation["blockers"] + [detail])
+            )
             continue
 
         result = analyzer(root, root / target_rel)
@@ -211,7 +235,9 @@ def assess_surface_obligations(
                 "reason": "operational surface assessment could not complete",
                 "terminal": False,
             }
-            obligation["blockers"] = sorted(set(obligation["blockers"] + blockers))
+            obligation["blockers"] = sorted(
+                set(obligation["blockers"] + blockers)
+            )
             continue
 
         normalized: list[dict[str, Any]] = []
@@ -246,7 +272,9 @@ def assess_surface_obligations(
                     "observed_state": str(raw["observed_state"]),
                     "expected_state": str(raw["expected_state"]),
                     "evidence_ids": [evidence_id],
-                    "remediation_class": str(raw.get("remediation_class") or "SURGICAL"),
+                    "remediation_class": str(
+                        raw.get("remediation_class") or "SURGICAL"
+                    ),
                 }
             )
 
@@ -272,7 +300,8 @@ def assess_surface_obligations(
             required.add("material_improvement")
             obligation["validation"]["required"] = sorted(required)
             existing = {
-                row["name"]: row for row in obligation["validation"]["results"]
+                row["name"]: row
+                for row in obligation["validation"]["results"]
             }
             existing["material_improvement"] = _validation_result(
                 "material_improvement",
@@ -280,7 +309,9 @@ def assess_surface_obligations(
                 "material assessment findings remain on the evaluated target",
                 finding_evidence_ids,
             )
-            obligation["validation"]["results"] = [existing[name] for name in sorted(existing)]
+            obligation["validation"]["results"] = [
+                existing[name] for name in sorted(existing)
+            ]
         else:
             obligation["assessment"] = {
                 "analyzer": analyzer_id,
@@ -296,7 +327,9 @@ def assess_surface_obligations(
             )
             obligation["lifecycle"] = {
                 "status": "PRESERVED",
-                "reason": "deterministic surface assessment found no material improvement",
+                "reason": (
+                    "deterministic surface assessment found no material improvement"
+                ),
                 "terminal": True,
             }
     return obligations
