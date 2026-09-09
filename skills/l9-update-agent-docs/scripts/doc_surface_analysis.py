@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from surface_analyzers.makefile import analyze as analyze_makefile
 from surface_analyzers.pyproject import analyze as analyze_pyproject
