@@ -44,7 +44,11 @@ def _python_floor(requires_python: str) -> str | None:
     return f"{match.group(1)}.{match.group(2)}" if match else None
 
 
-def _self_test_findings(root: Path, data: dict[str, Any], text: str) -> list[dict[str, Any]]:
+def _self_test_findings(
+    root: Path,
+    data: dict[str, Any],
+    text: str,
+) -> list[dict[str, Any]]:
     contract_path = root / "ops/config/python-contract.json"
     if not contract_path.is_file():
         return []
@@ -64,9 +68,14 @@ def _self_test_findings(root: Path, data: dict[str, Any], text: str) -> list[dic
         ]
 
     registered_roots = set(contract.get("skill_self_test_roots") or [])
-    addopts = str(data.get("tool", {}).get("pytest", {}).get("ini_options", {}).get("addopts") or "")
+    pytest_options = data.get("tool", {}).get("pytest", {}).get("ini_options", {})
+    addopts = str(pytest_options.get("addopts") or "")
     conftest_path = root / "conftest.py"
-    conftest = conftest_path.read_text(encoding="utf-8") if conftest_path.is_file() else ""
+    conftest = (
+        conftest_path.read_text(encoding="utf-8")
+        if conftest_path.is_file()
+        else ""
+    )
     findings: list[dict[str, Any]] = []
 
     for path in sorted(root.glob("skills/*/scripts/self_test.py")):
@@ -78,7 +87,10 @@ def _self_test_findings(root: Path, data: dict[str, Any], text: str) -> list[dic
                     "python.self_test.registry",
                     property_name="self_test_registry_coverage",
                     observed=f"{skill_root} missing from skill_self_test_roots",
-                    expected="every live skill self_test.py is registered in ops/config/python-contract.json",
+                    expected=(
+                        "every live skill self_test.py is registered in "
+                        "ops/config/python-contract.json"
+                    ),
                     line=None,
                 )
             )
@@ -88,7 +100,10 @@ def _self_test_findings(root: Path, data: dict[str, Any], text: str) -> list[dic
                     "python.self_test.collection_guard",
                     property_name="root_pytest_collection_guard",
                     observed=f"{rel} is collectable by root pytest",
-                    expected="self_test.py is excluded by pyproject addopts or root conftest collect_ignore",
+                    expected=(
+                        "self_test.py is excluded by pyproject addopts or root "
+                        "conftest collect_ignore"
+                    ),
                     line=_line_for(text, "addopts"),
                 )
             )
@@ -147,7 +162,10 @@ def analyze(root: Path, target: Path) -> dict[str, Any]:
                 "python.uv.lock_presence",
                 property_name="uv_lock_consistency",
                 observed="[tool.uv] is declared but uv.lock is absent",
-                expected="uv.lock exists when the repository declares uv as its project environment contract",
+                expected=(
+                    "uv.lock exists when the repository declares uv as its "
+                    "project environment contract"
+                ),
                 line=_line_for(text, "[tool.uv]"),
             )
         )
