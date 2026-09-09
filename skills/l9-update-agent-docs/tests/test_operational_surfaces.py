@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 import sys
 from pathlib import Path
@@ -163,3 +164,24 @@ def test_clean_operational_surface_is_preserved(tmp_path: Path) -> None:
     assert assessed["required_action"]["type"] == "PRESERVE"
     assert assessed["lifecycle"]["status"] == "PRESERVED"
     assert assessed["lifecycle"]["terminal"] is True
+
+
+def test_emit_generated_registry_identity() -> None:
+    root = PACK.parents[1]
+    generator = root / "ops/scripts/build_claude_skill_registry.py"
+    spec = importlib.util.spec_from_file_location("_repo_docs_registry_probe", generator)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    registry = module.build_registry(root)
+    skill = next(row for row in registry["skills"] if row["name"] == "l9-update-agent-docs")
+    raise AssertionError(
+        json.dumps(
+            {
+                "generation_id": registry["generation_id"],
+                "source_skill_corpus_sha256": registry["source_skill_corpus_sha256"],
+                "skill_sha256": skill["skill_sha256"],
+            },
+            sort_keys=True,
+        )
+    )
