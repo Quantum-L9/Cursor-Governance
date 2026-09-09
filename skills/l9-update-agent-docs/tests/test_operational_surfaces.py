@@ -53,21 +53,15 @@ def test_makefile_analyzer_detects_locked_python_bypass(tmp_path: Path) -> None:
     write(root / "ops/scripts/replay.py", "print('ok')\n")
     write(
         root / "Makefile",
-        "PYTHON := $(CURDIR)/.venv/bin/python\n"
-        "replay:\n"
-        "\tpython3 ops/scripts/replay.py\n",
+        "PYTHON := $(CURDIR)/.venv/bin/python\nreplay:\n\tpython3 ops/scripts/replay.py\n",
     )
     result = analyze_makefile(root, root / "Makefile")
     assert result["status"] == "NEEDS_IMPROVEMENT"
-    assert {row["rule_id"] for row in result["findings"]} == {
-        "make.recipe.locked_python"
-    }
+    assert {row["rule_id"] for row in result["findings"]} == {"make.recipe.locked_python"}
 
     write(
         root / "Makefile",
-        "PYTHON := $(CURDIR)/.venv/bin/python\n"
-        "replay:\n"
-        "\t$(PYTHON) ops/scripts/replay.py\n",
+        "PYTHON := $(CURDIR)/.venv/bin/python\nreplay:\n\t$(PYTHON) ops/scripts/replay.py\n",
     )
     assert analyze_makefile(root, root / "Makefile")["status"] == "PASS"
 
@@ -76,15 +70,10 @@ def test_makefile_analyzer_detects_missing_literal_script(tmp_path: Path) -> Non
     root = tmp_path / "repo"
     write(
         root / "Makefile",
-        "PYTHON := $(CURDIR)/.venv/bin/python\n"
-        "run:\n"
-        "\t$(PYTHON) ops/scripts/missing.py\n",
+        "PYTHON := $(CURDIR)/.venv/bin/python\nrun:\n\t$(PYTHON) ops/scripts/missing.py\n",
     )
     result = analyze_makefile(root, root / "Makefile")
-    assert any(
-        row["rule_id"] == "make.recipe.script_resolution"
-        for row in result["findings"]
-    )
+    assert any(row["rule_id"] == "make.recipe.script_resolution" for row in result["findings"])
 
 
 def test_pyproject_analyzer_detects_interpreter_and_lock_drift(tmp_path: Path) -> None:
@@ -92,15 +81,15 @@ def test_pyproject_analyzer_detects_interpreter_and_lock_drift(tmp_path: Path) -
     write(
         root / "pyproject.toml",
         "[project]\n"
-        "requires-python = \">=3.12\"\n\n"
+        'requires-python = ">=3.12"\n\n'
         "[tool.uv]\n"
         "package = false\n\n"
         "[tool.ruff]\n"
-        "target-version = \"py311\"\n\n"
+        'target-version = "py311"\n\n'
         "[tool.mypy]\n"
-        "python_version = \"3.11\"\n\n"
+        'python_version = "3.11"\n\n'
         "[tool.pyright]\n"
-        "pythonVersion = \"3.11\"\n",
+        'pythonVersion = "3.11"\n',
     )
     result = analyze_pyproject(root, root / "pyproject.toml")
     rule_ids = [row["rule_id"] for row in result["findings"]]
@@ -115,9 +104,7 @@ def test_assessment_separates_ownership_and_derives_root_guard(tmp_path: Path) -
     write(root / "ops/scripts/replay.py", "print('ok')\n")
     write(
         root / "Makefile",
-        "PYTHON := $(CURDIR)/.venv/bin/python\n"
-        "replay:\n"
-        "\tpython3 ops/scripts/replay.py\n",
+        "PYTHON := $(CURDIR)/.venv/bin/python\nreplay:\n\tpython3 ops/scripts/replay.py\n",
     )
     policy = dp.load_policy()
     obligation = {
@@ -153,9 +140,7 @@ def test_clean_operational_surface_is_preserved(tmp_path: Path) -> None:
     write(root / "ops/scripts/replay.py", "print('ok')\n")
     write(
         root / "Makefile",
-        "PYTHON := $(CURDIR)/.venv/bin/python\n"
-        "replay:\n"
-        "\t$(PYTHON) ops/scripts/replay.py\n",
+        "PYTHON := $(CURDIR)/.venv/bin/python\nreplay:\n\t$(PYTHON) ops/scripts/replay.py\n",
     )
     policy = dp.load_policy()
     obligation = {
