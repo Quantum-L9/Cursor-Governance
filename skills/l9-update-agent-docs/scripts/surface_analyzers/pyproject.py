@@ -71,11 +71,7 @@ def _self_test_findings(
     pytest_options = data.get("tool", {}).get("pytest", {}).get("ini_options", {})
     addopts = str(pytest_options.get("addopts") or "")
     conftest_path = root / "conftest.py"
-    conftest = (
-        conftest_path.read_text(encoding="utf-8")
-        if conftest_path.is_file()
-        else ""
-    )
+    conftest = conftest_path.read_text(encoding="utf-8") if conftest_path.is_file() else ""
     findings: list[dict[str, Any]] = []
 
     for path in sorted(root.glob("skills/*/scripts/self_test.py")):
