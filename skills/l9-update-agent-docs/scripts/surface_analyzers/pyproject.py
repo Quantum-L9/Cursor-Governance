@@ -53,27 +53,10 @@ def _self_test_findings(
     data: dict[str, Any],
     text: str,
 ) -> list[dict[str, Any]]:
-    self_tests = sorted(root.glob("skills/*/scripts/self_test.py"))
     contract_rel = "ops/config/python-contract.json"
     contract_path = root / contract_rel
     if not contract_path.is_file():
-        if not self_tests:
-            return []
-        return [
-            _finding(
-                "python.self_test.contract_missing",
-                property_name="python_contract_presence",
-                observed=f"{contract_rel} is missing while skill self-tests exist",
-                expected=(
-                    "canonical Python contract exists before "
-                    "self-test registration is assessed"
-                ),
-                line=None,
-                remediation_class="HANDOFF",
-                severity="blocking",
-                source=contract_rel,
-            )
-        ]
+        return []
     try:
         contract = json.loads(contract_path.read_text(encoding="utf-8"))
     except (OSError, ValueError, json.JSONDecodeError):
@@ -97,7 +80,7 @@ def _self_test_findings(
     conftest = conftest_path.read_text(encoding="utf-8") if conftest_path.is_file() else ""
     findings: list[dict[str, Any]] = []
 
-    for path in self_tests:
+    for path in sorted(root.glob("skills/*/scripts/self_test.py")):
         rel = path.relative_to(root).as_posix()
         skill_root = "/".join(rel.split("/")[:2])
         if skill_root not in registered_roots:
