@@ -1,6 +1,6 @@
 ---
 name: l9-aws-secrets
-description: resolve credentials from cursor-governance ops/secrets (aws secrets manager openclaw-igorbot refs and infisical project cursor-governance) — use when an agent needs an api key, token, password, infisical hydrate, aws secret ref, registry sync, or fail-closed credential check without keychain or printing values.
+description: bind credentials from Infisical project cursor-governance at will; AWS is the one login seed unless the human explicitly asks for AWS — use when an agent needs an api key, token, password, infisical bind, aws secret ref, registry sync, or fail-closed credential check without printing values.
 metadata:
   skill_schema: 1
   layer: control_plane
@@ -8,8 +8,8 @@ metadata:
   tags: [l9, aws, infisical, secrets, openclaw-igorbot, registry, fail-closed, ssot]
   owner: igor_beylin
   status: active
-  version: 1.2.0
-  updated: 2026-08-13
+  version: 1.4.0
+  updated: 2026-09-07
 ---
 
 # l9-aws-secrets
@@ -19,29 +19,33 @@ metadata:
 Resolve credentials for Quantum-L9 agents from **Cursor-Governance** `ops/secrets/`
 without printing values, Keychain, or asking the human first.
 
-Two vaults, one inventory:
+A name in Infisical project Cursor-Governance **is** the grant. Bind it via
+`capability_bind.py` whenever a secret is required. Do not ask. Do not wait
+for approval. Do not paste a token. Do not `hydrate --export` on a model
+surface.
 
 | Vault | Role |
 |---|---|
-| **Infisical** project `Cursor-Governance` (`cursor-governance`, env `prod`) | Long-term secret store. Env-var names at `/`. Structured AWS port at `/aws/openclaw-igorbot/<name>/`. |
-| **AWS Secrets Manager** `openclaw-igorbot/*` (`us-east-1`) | Name inventory SSOT + chicken-egg Infisical Universal Auth bootstrap. |
+| **Infisical** project `Cursor-Governance` (`prod`, path `/`) | App-key grant. Bind names (`GITHUB_TOKEN`, `SEMGREP_APP_TOKEN`, …). |
+| **AWS Secrets Manager** | One chicken-egg login secret only (`login_registry.py`). Operator inventory stays in `openclaw-igorbot.registry.yaml`. Do not delete AWS SM objects. |
 
-This repository **owns** the inventory. Consumers (igorbot, bots, CI) depend on
-`ops/secrets/` — do not reverse the dependency.
+SessionStart owns the plane (`session_start_secrets.py`). The reporter is a
+derived view. There is no Makefile `secrets-bind` target.
 
-Values never go into git, logs, receipts, or chat unless the human explicitly
-needs a one-shot programmatic capture.
+Values never go into git, logs, receipts, or chat.
 
-## Law — check inventory before asking the human
+## Law — bind Infisical before asking the human
 
 **Hard rule:** If a task needs a credential, token, API key, or password, agents
-MUST attempt resolution via this skill **before** asking the human. Asking first
-while the secret is already in AWS or Infisical is a protocol failure.
+MUST bind the Infisical name **before** asking the human.
 
-1. Prefer current `ops/secrets/openclaw-igorbot.registry.yaml` + `infisical-cursor-governance.yaml` (IDs/keys only). Sync AWS if stale.
-2. `--check` the AWS ref, then resolve into the process env (stdout value only; never paste).
-3. For day-to-day app keys after bootstrap: Infisical `prod` path `/` using env-var names (`GITHUB_TOKEN`, `DEEPSEEK_API_KEY`, …).
-4. Only after `UNREGISTERED` / `NOT_PROVISIONED` / `NOT_FOUND` may you ask — and you must name the failing ref.
+1. `capability_bind.py --check NAME` (source only). SessionStart already probed
+   `SEMGREP_APP_TOKEN`, `SONAR_TOKEN`, `GITHUB_TOKEN`.
+2. Fetchers call `bind_first`. They do not require a `.env`.
+3. AWS is only for `cursor-governance/infisical-login` (mapped SM object in
+   `login_registry.py`) unless the human **explicitly** asks to use AWS.
+4. `source=aws` on an app key is a fault. `source=unbound` is a vault miss —
+   not a reason to paste.
 
 **Known aliases (non-exhaustive):**
 

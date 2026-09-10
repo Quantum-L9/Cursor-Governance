@@ -865,3 +865,11 @@ findings were deliberately left open:
 Plan: `docs/plans/ff_close_publish_loop_a1b2c3d4.plan.md`
 
 - [ ] Review `WIP/9-2-26/cursor-remediation/TECH_DEBT.md` (+ `tech_debt.json`) — environment/loader/bootstrap debt ledger from both 2026-09-02 experience packs; TODO.md stays a pointer, findings live there.
+
+## SessionStart secrets-plane simplify leftovers (2026-09-07)
+
+Landed on this PR: owner + libraries (already simplified) + `/start-session` STATE_SYNC. No Makefile ceremony. Bind `--check` never exports a value.
+
+- [x] Restore SessionStart secrets-plane owner: `ops/secrets/session_start_secrets.py`, `ops/secrets/aws_cli_preflight.py`, `ops/secrets/infisical_cli_login.py` (bootstrap calls the owner; reporter stays a derived view; no Makefile `secrets-bind` / `secrets-aws-preflight`).
+- [x] Apply the five small cuts: bootstrap say-line → `session_start_secrets.py`; one `BIND_NAMES` constant (reporter imports it); `aws_cli_preflight._fail(code)`; `infisical_cli_login.ensure_machine_profile()` (owner stops wrapping `main()`); reporter inserts `ops/secrets` once and derives `### FAILED` from the classified `aws-cli` line.
+- [x] `/start-session` STATE_SYNC prints `### FAILED` / `### Runtime` / `### Degraded` / `### Plan audit` from bootstrap context (no second check grid).

@@ -362,14 +362,20 @@ else
   DEGRADED=$((DEGRADED + 1))
 fi
 
-# --- 3) Capability bootstrap (RETIRED 2026-08-29) ---------------------------
-# The capability broker never shipped: broker.quantumaipartners.com has no DNS,
-# hosted surfaces issue no broker-verifiable identity, and every brokered
-# capability reported DEGRADED. Memory is the canonical control plane
-# (l9-graphite-memory, bound per checkout by ops/memory/runtime_binding.py),
-# never a provider URL. Do not probe a dead plane or increment DEGRADED for it.
-log "Canonical capability bootstrap"
-say "capability plane: RETIRED (never shipped) — memory via the bound l9-graphite-memory runtime"
+# --- 3) SessionStart secrets plane ------------------------------------------
+# One owner. The capability broker stays retired. Values are never exported.
+# This is not a Makefile ceremony (no secrets-bind / secrets-aws-preflight).
+log "SessionStart secrets plane"
+if [ -f "$GOV_DIR/ops/secrets/session_start_secrets.py" ]; then
+  say "secrets plane: session_start_secrets.py"
+  if ! "$GOV_PY" "$GOV_DIR/ops/secrets/session_start_secrets.py"; then
+    warn "session_start_secrets failed — reporter will show ### FAILED"
+    DEGRADED=$((DEGRADED + 1))
+  fi
+else
+  warn "missing ops/secrets/session_start_secrets.py"
+  DEGRADED=$((DEGRADED + 1))
+fi
 
 # A surface that still carries raw downstream secrets has not been migrated.
 # Report it loudly here: this is the check that would have caught the old
