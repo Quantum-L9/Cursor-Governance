@@ -1,5 +1,5 @@
 {
-  "generation_id": "0b23e543af858147a622c9ee421cf7c92db83dcd12ebf0d4526dfb8d2b38d66a",
+  "generation_id": "2ce4786e58dcc60333c762f013644b21b2802da2d829851f939899fc2a8b5d1c",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -1235,7 +1235,7 @@
       "path": "skills/l9-idea-foundry",
       "reason": "compiles idea packs into tested code and l9-repo-template births; repository creation and code realization are high blast radius; disable-model-invocation",
       "skill_md": "skills/l9-idea-foundry/SKILL.md",
-      "skill_sha256": "af4de2b85769244afcbde397356a0096f60574322e0d14ed6ae050a32e27e442",
+      "skill_sha256": "ad8edd26c317f4ce3dfafde696c9351580dfb07140a9bd1bd222ad799e99093a",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1606,5 +1606,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "b71df84c03ba02fa5a638d03749e4bf08c7efcb5354d85fb0fe4928cf31c5587",
-  "source_skill_corpus_sha256": "3f25e000cf6bc0184dea8fc365fbd2091e7d918dae86191a275733d4e419231b"
+  "source_skill_corpus_sha256": "d40b1782e5087fba1f68486e819874f52ccca3c3b87925bb4d168481e0cbe707"
 }
