@@ -620,7 +620,7 @@ def main() -> int:
             result = compose_host_subagent_start(payload)
         else:
             result = compose_subagent_start(payload)
-    except Exception as exc:  # noqa: BLE001 — hook must emit deny JSON, not a traceback exit
+    except (json.JSONDecodeError, OSError, TypeError, ValueError, KeyError) as exc:
         result = _deny(f"lifecycle compose failed: {type(exc).__name__}: {exc}")
     json.dump(result, sys.stdout)
     print()

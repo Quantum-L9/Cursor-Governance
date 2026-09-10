@@ -181,7 +181,7 @@ def main() -> int:
     try:
         payload = json.load(sys.stdin)
         result = compose_subagent_stop(payload)
-    except Exception as exc:  # noqa: BLE001
+    except (json.JSONDecodeError, OSError, TypeError, ValueError, KeyError) as exc:
         result = {
             "status": "FAILED",
             "reason": str(exc),
