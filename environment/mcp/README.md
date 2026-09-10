@@ -57,4 +57,3 @@ repository. Operator runbook: [CHATGPT_GITMCP_DOGFOOD.md](CHATGPT_GITMCP_DOGFOOD
 - It does not activate the Program Execution ChatGPT adapter.
 - It does not grant write or execution authority.
 - Native Cursor-Governance MCP design follows dogfood evidence.
-
