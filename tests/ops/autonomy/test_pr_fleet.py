@@ -134,7 +134,9 @@ def test_waiting_pr_gets_a_background_watcher(tmp_path: Path, monkeypatch) -> No
     )
     assert plan["first_wave"]["merge"] == [1]
     assert plan["first_wave"]["watch"] == [2]
-    assert plan["first_wave"]["remediate"] == [2, 3]
+    assert plan["first_wave"]["remediate"] == [3]
+    assert 2 not in plan["first_wave"]["remediate"]
+    assert 2 not in plan["first_wave"]["recon"]
     assert 2 in plan["first_wave"]["poll"] and 3 in plan["first_wave"]["poll"]
     assert 1 not in plan["first_wave"]["poll"]
 
@@ -172,6 +174,21 @@ def test_merge_now_holds_a_later_overlap_until_the_older_pr_lands(
     assert ready["merge_blocked"] == [
         {"pr": 2, "blocked_by": [{"pr": 1, "reason": "older_nongenerated_overlap"}]}
     ]
+
+
+def test_merge_now_leftover_overlap_does_not_hold_the_green_pr(tmp_path: Path, monkeypatch) -> None:
+    _probe(tmp_path, monkeypatch, OVERLAP)
+    prs = pr_fleet.inventory(TARGET)
+    overlap = pr_fleet.overlap_matrix(prs)
+    ready = pr_fleet.merge_now(
+        prs,
+        edges=[],
+        overlap=overlap,
+        boards={1: "leftover", 2: "merge"},
+        order=[1, 2],
+    )
+    assert ready["merge_now"] == [2]
+    assert ready["merge_blocked"] == []
 
 
 def test_merge_now_holds_a_stacked_child_until_the_parent_lands(

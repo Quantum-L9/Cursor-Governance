@@ -413,10 +413,11 @@ def waves(
     """Assign every PR to the earliest wave in which it may safely run.
 
     Merge-train lanes take the oldest ``merge_now`` PRs first. Remaining
-    mutation slots go to remediations whose write claims conflict with no PR
-    already admitted. Read-only recon, watch, and poll fill leftover slots.
-    Nothing here launches anything; it only names the largest currently safe
-    wave under the skill cap.
+    mutation slots go to ``board=fix`` remediations whose write claims
+    conflict with no PR already admitted. ``board=wait`` is watch/poll only —
+    never a second mutation lane on the same branch. Read-only recon, watch,
+    and poll fill leftover slots. Nothing here launches anything; it only
+    names the largest currently safe wave under the skill cap.
     """
     by_number = {pr["number"]: pr for pr in prs}
     sequence = order or [pr["number"] for pr in prs]
@@ -436,7 +437,7 @@ def waves(
     remediate_cap = max(0, caps["max_mutation_lanes"] - len(merge_admitted))
     if board_map:
         exclude = set(merge_ready) | {
-            n for n, board in board_map.items() if board in {"merge", "leftover"}
+            n for n, board in board_map.items() if board in {"merge", "leftover", "wait"}
         }
         remediate_candidates = [n for n in sequence if n not in exclude]
     else:
@@ -459,7 +460,14 @@ def waves(
     used = len(merge_admitted) + len(first["remediate"])
     read_budget = max(0, caps["max_parallel"] - used)
     watch = [n for n in sequence if board_map.get(n) == "wait" or n in merge_blocked_nums]
-    recon = [n for n in sequence if n not in first["remediate"] and n not in merge_admitted]
+    recon = [
+        n
+        for n in sequence
+        if n not in first["remediate"]
+        and n not in merge_admitted
+        and n not in watch
+        and board_map.get(n) != "leftover"
+    ]
     watch_now = watch[:read_budget]
     recon_now = [n for n in recon if n not in watch_now][: max(0, read_budget - len(watch_now))]
     poll = [n for n in sequence if n not in merge_admitted and board_map.get(n) != "leftover"]
