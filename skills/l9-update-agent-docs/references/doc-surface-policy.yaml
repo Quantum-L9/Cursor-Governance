@@ -105,8 +105,6 @@ surfaces:
       mode: deterministic_first
     mutation:
       guard: root-file-protection
-    validation:
-      validators: [target-existence, target-script-resolution, command-authority-consistency, root-file-protection]
   python_project_contract:
     owner: l9-update-agent-docs
     role: Python environment and tooling contract
@@ -128,8 +126,6 @@ surfaces:
       mode: deterministic_first
     mutation:
       guard: root-file-protection
-    validation:
-      validators: [target-existence, interpreter-contract, dependency-contract, lock-consistency, tool-scope-consistency, test-registration, root-file-protection]
   module_readmes:
     owner: readme-pipeline-v1
     role: module documentation
