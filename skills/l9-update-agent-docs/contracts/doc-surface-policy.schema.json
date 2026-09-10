@@ -89,6 +89,8 @@
           },
           "validation": {
             "type": "object",
+            "deprecated": true,
+            "description": "Legacy compatibility metadata. Canonical v3 policy does not emit per-surface validator names; executable assessment and obligation validation remain authoritative.",
             "additionalProperties": false,
             "required": ["validators"],
             "properties": {
@@ -104,7 +106,7 @@
         "allOf": [
           {
             "if": {"properties": {"kind": {"const": "operational_contract"}}, "required": ["kind"]},
-            "then": {"required": ["ownership", "analysis", "mutation", "validation"]}
+            "then": {"required": ["ownership", "analysis", "mutation"]}
           }
         ]
       }

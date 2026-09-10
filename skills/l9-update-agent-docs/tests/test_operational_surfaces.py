@@ -42,10 +42,12 @@ def test_policy_v3_declares_closed_operational_surfaces() -> None:
     policy = dp.load_policy()
     assert dp.validate_policy(policy) == []
     assert policy["schema"] == "l9.repo-docs.surface-policy.v3"
-    make_analyzer = policy["surfaces"]["makefile_contract"]["analysis"]["analyzer"]
-    python_analyzer = policy["surfaces"]["python_project_contract"]["analysis"]["analyzer"]
-    assert make_analyzer == "makefile-contract-v1"
-    assert python_analyzer == "python-project-contract-v1"
+    make_surface = policy["surfaces"]["makefile_contract"]
+    python_surface = policy["surfaces"]["python_project_contract"]
+    assert make_surface["analysis"]["analyzer"] == "makefile-contract-v1"
+    assert python_surface["analysis"]["analyzer"] == "python-project-contract-v1"
+    assert "validation" not in make_surface
+    assert "validation" not in python_surface
 
 
 def test_makefile_analyzer_detects_locked_python_bypass(tmp_path: Path) -> None:
@@ -151,6 +153,12 @@ def _obligation(surface: str, target: str) -> dict:
     }
 
 
+def _finding_evidence(assessed: dict, rule_id: str) -> dict:
+    finding = next(row for row in assessed["assessment"]["findings"] if row["rule_id"] == rule_id)
+    evidence_id = finding["evidence_ids"][0]
+    return next(row for row in assessed["evidence"] if row["id"] == evidence_id)
+
+
 def test_handoff_finding_does_not_force_owner_native_refresh(tmp_path: Path) -> None:
     root = tmp_path / "repo"
     write_root_guard(root)
@@ -164,6 +172,39 @@ def test_handoff_finding_does_not_force_owner_native_refresh(tmp_path: Path) -> 
     assert assessed["required_action"]["mode"] == "EXTERNAL_OWNER"
     assert assessed["lifecycle"]["status"] == "HANDOFF_REQUIRED"
     assert any(row["remediation_class"] == "HANDOFF" for row in assessed["assessment"]["findings"])
+    evidence = _finding_evidence(assessed, "python.self_test.contract_parse")
+    assert evidence["source"] == "ops/config/python-contract.json"
+    assert evidence["locator"]["value"] == "ops/config/python-contract.json"
+
+
+def test_registry_finding_uses_python_contract_as_evidence_source(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    write_root_guard(root)
+    write(root / "skills/demo/scripts/self_test.py", "print('ok')\n")
+    write(root / "ops/config/python-contract.json", json.dumps({"skill_self_test_roots": []}))
+    write(root / "conftest.py", "collect_ignore = ['skills/demo/scripts/self_test.py']\n")
+    write(root / "pyproject.toml", "[project]\nname = 'demo'\nrequires-python = '>=3.12'\n")
+    assessed = assess_surface_obligations(
+        root, dp.load_policy(), [_obligation("python_project_contract", "pyproject.toml")]
+    )[0]
+    assert assessed["assessment"]["disposition"] == "IMPROVE"
+    evidence = _finding_evidence(assessed, "python.self_test.registry")
+    assert evidence["source"] == "ops/config/python-contract.json"
+
+
+def test_collection_guard_runs_without_python_contract(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    write_root_guard(root)
+    write(root / "skills/demo/scripts/self_test.py", "print('ok')\n")
+    write(root / "pyproject.toml", "[project]\nname = 'demo'\nrequires-python = '>=3.12'\n")
+    assessed = assess_surface_obligations(
+        root, dp.load_policy(), [_obligation("python_project_contract", "pyproject.toml")]
+    )[0]
+    rule_ids = {row["rule_id"] for row in assessed["assessment"]["findings"]}
+    assert "python.self_test.collection_guard" in rule_ids
+    assert "python.self_test.registry" not in rule_ids
+    evidence = _finding_evidence(assessed, "python.self_test.collection_guard")
+    assert evidence["source"] == "pyproject.toml"
 
 
 def test_missing_root_guard_still_assesses_clean_makefile(tmp_path: Path) -> None:
@@ -206,24 +247,15 @@ def test_clean_operational_surface_is_preserved(tmp_path: Path) -> None:
         root / "Makefile",
         "PYTHON := $(CURDIR)/.venv/bin/python\nreplay:\n\t$(PYTHON) ops/scripts/replay.py\n",
     )
-    policy = dp.load_policy()
-    obligation = {
-        "surface": "makefile_contract",
-        "target": {"path": "Makefile", "present": True},
-        "required_action": {
-            "type": "REFRESH",
-            "mode": "OWNER_NATIVE",
-            "owner": "l9-update-agent-docs",
-            "executor": None,
-        },
-        "evidence": [],
-        "lifecycle": {"status": "OPEN", "reason": "fixture", "terminal": False},
-        "validation": {"required": ["target_freshness"], "results": []},
-        "blockers": [],
-    }
-    assessed = assess_surface_obligations(root, policy, [obligation])[0]
+    assessed = assess_surface_obligations(
+        root, dp.load_policy(), [_obligation("makefile_contract", "Makefile")]
+    )[0]
     assert assessed["assessment"]["status"] == "PASS"
     assert assessed["assessment"]["disposition"] == "PRESERVE"
     assert assessed["required_action"]["type"] == "PRESERVE"
     assert assessed["lifecycle"]["status"] == "PRESERVED"
     assert assessed["lifecycle"]["terminal"] is True
+    freshness = next(
+        row for row in assessed["validation"]["results"] if row["name"] == "target_freshness"
+    )
+    assert freshness["status"] == "NotApplicable"
