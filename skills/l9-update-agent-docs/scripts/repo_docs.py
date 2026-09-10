@@ -42,6 +42,7 @@ from doc_policy import (
     schema_errors,
     validate_policy,
 )
+from doc_surface_analysis import assess_surface_obligations
 
 RECEIPT_ID = "l9.repo-docs.receipt.v3"
 PACK = Path(__file__).resolve().parents[1]
@@ -366,6 +367,7 @@ def audit_repository(
             changed_files=changed_files,
             run_mutations=run_mutations,
         )
+    obligations = assess_surface_obligations(root, policy, obligations)
     obligations = validate_and_close_obligations(
         obligations, changed_files=changed_files, run_mutations=run_mutations
     )
