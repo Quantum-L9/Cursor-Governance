@@ -1634,6 +1634,12 @@ class RunCampaignTests(unittest.TestCase):
                 env=git_env,
             )
             l9 = Path(raw) / "l9"
+            # Same planted target the other execute-through tests use. Without
+            # it, repo_root=None falls through to a GitHub clone of the live
+            # host, and a shallow SSOT on this machine fails history_walkable.
+            target = l9 / "program-worktrees" / "demo-activate-v1"
+            target.mkdir(parents=True)
+            _git_init(target)
             report = self.mod.run_campaign(
                 primary / "intent.yaml",
                 until="execute",
