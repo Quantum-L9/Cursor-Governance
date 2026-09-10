@@ -73,8 +73,14 @@ def is_claude_gate_surface(env: Mapping[str, str] | None = None) -> bool:
 
 
 def kernel_latch_surface(env: Mapping[str, str] | None = None) -> bool:
-    """True when the tree-kernel latch applies (adapter / Claude runtimes)."""
-    return detect_surface(env) in ADAPTER_KERNEL_SURFACES
+    """True when ``make pr`` must take the tree-kernel latch before pytest.
+
+    Every known local agent surface (Cursor and adapters) fires so kernels
+    apply once, then tests run once on that tree. ``unknown`` (CI / bare
+    shell) skips: ``.l9/autonomy/kernel-receipt.json`` is gitignored and
+    cannot exist on GitHub Actions.
+    """
+    return detect_surface(env) != "unknown"
 
 
 def main() -> int:
