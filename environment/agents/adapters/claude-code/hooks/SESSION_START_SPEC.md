@@ -8,13 +8,63 @@
 ## Hard constraints
 
 1. **Fail-open** — always exit 0; never block a session. Fail-open is not the
-   same as fail-safe: the emit is armed on `TERM`/`INT`/`EXIT`, so a hook killed
-   at its `timeout` still delivers the context it had accumulated, flagged
-   `PARTIAL`. A hosted container recorded `duration_ms 30008, exit_code 1,
-   aborted true` on this hook and the session received NO governance context at
-   all — not a smaller blob, none. Every bounded sub-operation sizes itself from
-   what is LEFT of the registration's `timeout` (`_l9_budget_left`), never from
-   a constant of its own, and declines outright when too little remains.
+   same as fail-safe: a hook that runs past its budget still delivers the
+   context it had accumulated, flagged `PARTIAL`. Every bounded sub-operation
+   sizes itself from what is LEFT of the registration's `timeout`
+   (`_l9_budget_left`), never from a constant of its own, and declines outright
+   when too little remains.
+
+1a. **Delivery MUST NOT depend on a signal handler.** This was specified as a
+    trap armed on `TERM`/`INT`/`EXIT`, and it failed twice in production
+    (`duration_ms 30008, exit_code 1, aborted true`; then `durationMs 30014,
+    timedOut true`) with the session receiving NO governance context at all —
+    not a smaller blob, none. The trap was armed and correct both times. Bash
+    dispatches a trap only BETWEEN commands, so a signal arriving while the
+    hook is blocked in a FOREGROUND child (a bounded probe, the installer
+    repair) is queued behind that child and never gets a turn; the harness
+    records the cancellation ~14 ms later and reads nothing. The trap survives
+    only as the backstop for the degraded inline path.
+
+    Delivery instead rests on two properties that hold however anything dies:
+
+    - **Durable-on-write.** Every context line is appended to `$_L9_CTX_FILE`
+      by `say` the instant it is produced, so no death of any kind — `TERM`,
+      `KILL`, a wedged grandchild — can erase what was accumulated. Nothing is
+      assembled at the end by a process that may not reach the end.
+    - **The emitter is the parent.** The work runs as a child; the shell that
+      emits is its parent, so the shell that must speak is never the shell that
+      can run long. It emits by NORMAL EXIT strictly inside the registration
+      `timeout` (budget − reserve, then `+2s` before `KILL`), and a hook that
+      exits normally is read where a cancelled one is not. The parent arms its
+      own `TERM`/`INT` trap BEFORE forking, so a group-kill aimed at the child
+      cannot take the parent's default-action death with it.
+
+    The child MUST be backgrounded and awaited (`cmd & wait $!`), never run
+    under `timeout`. `wait` is interruptible, so the parent stays responsive;
+    `timeout` both blocks the parent and puts its child in a NEW process group
+    (observed: parent pgid 4256, child subtree 4260), which hides the real work
+    from any group-kill and leaves the parent waiting out the full deadline.
+    The deadline is enforced by a watchdog subshell instead, which needs no
+    external binary.
+
+    Two further properties are load-bearing, and each was found by a test
+    rather than by reasoning:
+
+    - **Tear down the child's process GROUP, not the child.** Emitting and
+      exiting does not end the hook's obligation: a surviving grandchild
+      inherits the hook's stdout/stderr and holds those pipes open, so a reader
+      waiting for EOF blocks for as long as the orphan lives (measured: a
+      reader blocked the full 8 s after the parent had already exited — the
+      original hang wearing a different hat). The child is therefore launched
+      under `set -m` so it leads its own group, the deadline signals `-$pid`,
+      and the child also gets its own stderr sink instead of inheriting the
+      hook's.
+    - **Completion is declared, never inferred from exit status.** Once the
+      deadline tears down the group, the child's own `TERM` trap runs and it
+      exits 0 exactly like a clean finish, so `rc` reports a truncated run as
+      complete. The child instead appends `__L9_SESSIONSTART_COMPLETE__` to the
+      context file as the last thing it does on every completion path; the
+      parent strips the marker and declares `PARTIAL` when it is absent.
 1a. **Claude Code runtime only.** If none of `CLAUDE_CODE_REMOTE=true`,
     `CLAUDECODE`, `CLAUDE_CODE_ENTRYPOINT`, or `CLAUDE_CODE_SESSION_ID` is set,
     emit empty `additionalContext` and return. Cursor loads projected
@@ -84,7 +134,11 @@ governance revision, which the marker path carries.
   is actually delivered on that path (it was not: `PY` was assigned only inside
   the governance-found branch, so `set -u` killed the hook with `PY: unbound
   variable` before it emitted anything)
-- a hook stopped by its timeout still emits, with a `PARTIAL` warning line
+- a hook stopped by its timeout still emits, with a `PARTIAL` warning line —
+  and emits it BEFORE the registration `timeout`, on its own, rather than
+  relying on being signalled politely at it
+- a group-kill mid-run still emits (the parent trap), and the emitted context
+  contains the lines accumulated before the kill
 - When gov present, context contains `Autonomy Velocity Doctrine` (from Profile)
 - Profile block sha256 matches `profile_loader.block_sha256()`
 - When a bootstrap receipt exists, context contains the `L9 Claude environment`

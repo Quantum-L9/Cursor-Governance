@@ -131,6 +131,94 @@ class PartialEmitOnTerminationTest(unittest.TestCase):
             )
 
 
+class SelfImposedDeadlineTest(unittest.TestCase):
+    """The hook lands inside its budget on its own, without being signalled.
+
+    PartialEmitOnTerminationTest passed throughout the production failure it
+    was written for, because it signals the whole PROCESS GROUP: the stalled
+    grandchild dies too, the foreground command returns, and the queued trap
+    dispatches at once. The harness is not that kind: it cancels at its
+    `timeout` and reads nothing, and bash will not run a trap while the script
+    sits in a foreground child — so the armed, correct trap never got a turn
+    and the session received no governance context at all.
+
+    This test therefore sends NO signal. It asserts the property the harness
+    actually needs: the hook speaks before the deadline arrives.
+    """
+
+    def test_emits_before_the_deadline_with_no_signal_at_all(self) -> None:
+        budget = 8
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            gov = home / ".cursor-governance"
+            (gov / "ops" / "autonomy").mkdir(parents=True)
+            (home / ".l9").mkdir(parents=True)
+            (gov / "CANONICAL_LAW.md").write_text("law\n", encoding="utf-8")
+            # Stalls in a FOREGROUND child — the exact shape that starves a trap.
+            (gov / "ops" / "autonomy" / "profile_loader.py").write_text(
+                "import time\ntime.sleep(600)\n", encoding="utf-8"
+            )
+            env = _base_env(home)
+            env["L9_SESSION_START_BUDGET"] = str(budget)
+
+            started = time.monotonic()
+            proc = subprocess.run(
+                ["bash", str(HOOK)],
+                capture_output=True,
+                text=True,
+                env=env,
+                cwd=tmp,
+                # Generous, so a hook that hangs FAILS here rather than being
+                # rescued by a timeout that stands in for the harness's kill.
+                timeout=120,
+                check=False,
+            )
+            elapsed = time.monotonic() - started
+
+        self.assertEqual(proc.returncode, 0, f"stderr={proc.stderr[-400:]}")
+        self.assertLess(
+            elapsed,
+            budget,
+            "the hook must emit BEFORE the registration timeout, not be killed at it",
+        )
+        context = _context(proc.stdout)
+        self.assertIn("PARTIAL", context, "the truncation must be declared, not hidden")
+        self.assertIn(
+            "L9 Governance",
+            context,
+            "lines accumulated before the deadline must survive it",
+        )
+
+    def test_partial_is_declared_once(self) -> None:
+        """The parent owns the declaration; a child racing it double-reports."""
+        budget = 8
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            gov = home / ".cursor-governance"
+            (gov / "ops" / "autonomy").mkdir(parents=True)
+            (home / ".l9").mkdir(parents=True)
+            (gov / "CANONICAL_LAW.md").write_text("law\n", encoding="utf-8")
+            (gov / "ops" / "autonomy" / "profile_loader.py").write_text(
+                "import time\ntime.sleep(600)\n", encoding="utf-8"
+            )
+            env = _base_env(home)
+            env["L9_SESSION_START_BUDGET"] = str(budget)
+            proc = subprocess.run(
+                ["bash", str(HOOK)],
+                capture_output=True,
+                text=True,
+                env=env,
+                cwd=tmp,
+                timeout=120,
+                check=False,
+            )
+        self.assertEqual(
+            _context(proc.stdout).count("the context above is PARTIAL"),
+            1,
+            "exactly one PARTIAL declaration",
+        )
+
+
 class RepairBudgetTest(unittest.TestCase):
     """The repair is sized by what is LEFT, and records that it was attempted."""
 
