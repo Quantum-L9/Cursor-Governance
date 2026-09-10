@@ -86,6 +86,29 @@ class SessionStartSecretsTests(unittest.TestCase):
         self.assertIn("SEMGREP_APP_TOKEN=infisical-cli", err.getvalue())
         self.assertNotIn("client_secret", err.getvalue())
 
+    def test_login_failed_is_plane_failure(self) -> None:
+        binds = [
+            {"name": "SEMGREP_APP_TOKEN", "bound": False, "source": "unbound"},
+            {"name": "SONAR_TOKEN", "bound": False, "source": "unbound"},
+            {"name": "GITHUB_TOKEN", "bound": False, "source": "unbound"},
+        ]
+        with (
+            mock.patch.object(
+                plane.aws_preflight,
+                "probe",
+                return_value={"ok": True, "code": "OK", "summary": "ok"},
+            ),
+            mock.patch.object(plane.login, "ensure_machine_profile", return_value="failed"),
+            mock.patch.object(plane.cb, "bind_status", side_effect=_bind_status(binds)),
+            mock.patch("sys.stderr", new_callable=io.StringIO) as err,
+        ):
+            result = plane.run_plane()
+            rc = plane.main([])
+        self.assertFalse(result["plane_ok"])
+        self.assertEqual(result["login"], "failed")
+        self.assertEqual(rc, 1)
+        self.assertIn("FAILED: Infisical machine profile failed", err.getvalue())
+
     def test_json_stdout_has_no_values(self) -> None:
         binds = [
             {"name": "SEMGREP_APP_TOKEN", "bound": True, "source": "infisical-cli"},

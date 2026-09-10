@@ -103,19 +103,19 @@ class DirectTransport:
 
 
 def build_transport(base_url: str, surface: str | None = None) -> DirectTransport:
-    """Authenticated when the environment already holds a token, on any surface.
+    """Authenticated when bind_first finds a token, on any surface.
 
-    The token was placed in this process by the operator environment, CI, or a
-    governed session import — never by ops/secrets, which still refuses to
-    export one to a model-controlled surface. Reading a value that is already
-    present is how the sibling codeql_fetch.py treats GITHUB_TOKEN. Without a
+    The token may already be in the process environment, or capability_bind
+    may resolve it from the Infisical CLI machine profile. ops/secrets still
+    refuses to export a value onto a model-controlled surface. Without a
     token the read is public and the receipt says ``authenticated: false``.
     """
     token = bind_first(*TOKEN_ENV)
     if not token:
         print(
-            "sonar_fetch: no SONAR_TOKEN in the environment; continuing UNAUTHENTICATED — "
-            "private findings will be absent and the quality gate may be incomplete",
+            "sonar_fetch: no SONAR_TOKEN bound (env or Infisical CLI); continuing "
+            "UNAUTHENTICATED — private findings will be absent and the quality "
+            "gate may be incomplete",
             file=sys.stderr,
         )
     return DirectTransport(base_url, token, surface)

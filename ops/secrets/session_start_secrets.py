@@ -46,7 +46,7 @@ def run_plane() -> dict[str, Any]:
         "aws": {"ok": bool(aws.get("ok")), "code": str(aws.get("code") or "")},
         "login": login_state,
         "binds": binds,
-        "plane_ok": bool(aws.get("ok")),
+        "plane_ok": bool(aws.get("ok")) and login_state != "failed",
     }
 
 
@@ -58,12 +58,19 @@ def main(argv: list[str] | None = None) -> int:
     if args.json:
         print(json.dumps({"ok": result["plane_ok"], "login": result["login"]}))
     if not result["plane_ok"]:
-        print(
-            "FAILED: AWS CLI is missing or not authorized. "
-            "Infisical bind cannot start. Repair: install AWS CLI v2 && "
-            "aws sts get-caller-identity",
-            file=sys.stderr,
-        )
+        if not result["aws"]["ok"]:
+            print(
+                "FAILED: AWS CLI is missing or not authorized. "
+                "Infisical bind cannot start. Repair: install AWS CLI v2 && "
+                "aws sts get-caller-identity",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"FAILED: Infisical machine profile {result['login']}. "
+                "SessionStart cannot bind inventoried secrets.",
+                file=sys.stderr,
+            )
         return 1
     print(
         f"session_start_secrets: ok login={result['login']} "

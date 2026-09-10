@@ -368,8 +368,10 @@ fi
 log "SessionStart secrets plane"
 if [ -f "$GOV_DIR/ops/secrets/session_start_secrets.py" ]; then
   say "secrets plane: session_start_secrets.py"
-  "$GOV_PY" "$GOV_DIR/ops/secrets/session_start_secrets.py" \
-    || warn "session_start_secrets failed — reporter will show ### FAILED"
+  if ! "$GOV_PY" "$GOV_DIR/ops/secrets/session_start_secrets.py"; then
+    warn "session_start_secrets failed — reporter will show ### FAILED"
+    DEGRADED=$((DEGRADED + 1))
+  fi
 else
   warn "missing ops/secrets/session_start_secrets.py"
   DEGRADED=$((DEGRADED + 1))
