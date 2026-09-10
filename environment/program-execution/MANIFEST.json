@@ -2,10 +2,6 @@
   "artifact": "program-execution-adapter-layer-v1.0.0",
   "files": [
     {
-      "path": ".DS_Store",
-      "sha256": "9313fb0ea7e092e8be5b4eb81ddc004cca34e9f8f8e30fff4306ded90f529710"
-    },
-    {
       "path": "ARCHITECTURE.md",
       "sha256": "6073797ea03e38b431f51e490ebcfcd121f3ac657a0abe42fea0b2f845fa0c18"
     },
@@ -432,10 +428,6 @@
     {
       "path": "audits/pipeline-assembly-audit.v1.yaml",
       "sha256": "cbb2021d6098bb9f1eb2258f7f720986a846a927fc7c38ad067d245f7651c64d"
-    },
-    {
-      "path": "campaigns/.DS_Store",
-      "sha256": "38b23eb9412088a5a8a101a338d5cee287822ae8d832c72ece52433952135f1b"
     },
     {
       "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
@@ -2035,7 +2027,7 @@
     },
     {
       "path": "scripts/generate_manifest.py",
-      "sha256": "b07d9bfc8cbf39da6ff697430a9747b5f0f9a764042fd84bda0d21dba14c1b49"
+      "sha256": "b4b821362649de7d42445d1cd0f0308b34b2838172da1e37a9bc2fd24619815b"
     },
     {
       "path": "scripts/launchability.py",

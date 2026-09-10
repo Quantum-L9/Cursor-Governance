@@ -11,6 +11,7 @@ EXCLUDED_NAMES = {
     ".pytest_cache",
     ".mypy_cache",
     ".ruff_cache",
+    ".DS_Store",
 }
 EXCLUDED_SUFFIXES = {".pyc", ".pyo", ".sqlite", ".sqlite3"}
 
