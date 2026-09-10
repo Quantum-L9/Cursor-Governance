@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # PUBLIC make improve — L4 begin / authorize only.
-# Tree kernels are NOT an L4 phase. They fire as the first step of
-# make precommit-repo (ops/autonomy/kernel_gate.py). Two-step:
+# Tree kernels must be recorded before IMPROVE_RECORD=1:
 #   make improve                 → begin (if needed)
-#   make improve IMPROVE_RECORD=1 → authorize-release (no kernel stamp)
+#   python3 ops/autonomy/kernel_gate.py record
+#   make improve IMPROVE_RECORD=1 → authorize-release (fails closed without receipt)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -46,13 +46,13 @@ if [[ "$IMPROVE_RECORD" = "1" ]]; then
   phase="$(_phase)"
   if [[ "$phase" != "executing" && "$phase" != "kernels_recorded" ]]; then
     echo "FAIL: IMPROVE_RECORD refused — phase is '${phase:-none}'." >&2
-    echo "      Run make improve first, then make improve IMPROVE_RECORD=1" >&2
-    echo "      to authorize-release. Kernels fire in make precommit-repo." >&2
+    echo "      Run make improve first, record tree kernels, then" >&2
+    echo "      make improve IMPROVE_RECORD=1 to authorize-release." >&2
     exit 1
   fi
-  echo "--- make improve: authorize-release (phase=$phase; kernels are not L4) ---"
+  echo "--- make improve: authorize-release (phase=$phase; requires kernel_gate receipt) ---"
   _l4 authorize-release
-  echo "RESULT: PASS — L4 release authorized. Next: make pr (kernel hook then checks once)"
+  echo "RESULT: PASS — L4 release authorized. Next: PR_REMEDIATE=0 make pr"
   exit 0
 fi
 
@@ -75,13 +75,11 @@ PHASE: ${phase}
 WORKSPACE: ${WS}
 PR_BASE: ${PR_BASE}
 INSTRUCTIONS:
-  1. Authorize when the local program is finished: make improve IMPROVE_RECORD=1
-  2. Publish once: PR_REMEDIATE=0 make pr
-  3. The first step of precommit-repo is ops/autonomy/kernel_gate.py.
-     If it fails, apply Recursive Alignment then Validate & Repair, commit,
-     run kernel_gate.py record, and re-run the same make pr. Hooks and tests
-     fire once after that hook passes.
-Do not treat L4 record-kernels as the kernel apply path.
+  1. Apply kernels/Recursive Alignment.md then kernels/Validate & Repair.md
+  2. python3 ops/autonomy/kernel_gate.py record
+  3. Authorize: make improve IMPROVE_RECORD=1
+  4. Publish once: PR_REMEDIATE=0 make pr
+Do not authorize before the kernel receipt exists.
 === END L9_AGENT_REQUIRED ===
 
 RESULT: PASS — improve phase ready (authorize, then make pr)
