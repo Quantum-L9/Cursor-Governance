@@ -186,12 +186,20 @@ class MemoryControlPlaneClient:
         input_text: str | None = None,
     ) -> _Raw:
         assert self.binding.memory_cli is not None  # guarded by _guard()
+        started = time.monotonic()
         if not self._v2_store_prepared:
             from ops.memory.store_compat import prepare_v2_sqlite_store
 
-            prepare_v2_sqlite_store(env=self._child_env())
+            receipt = prepare_v2_sqlite_store(env=self._child_env())
+            if receipt.get("status") == "error":
+                return _Raw(
+                    None,
+                    None,
+                    "StoreCompatError",
+                    str(receipt.get("error") or receipt),
+                    _ms(started),
+                )
             self._v2_store_prepared = True
-        started = time.monotonic()
         try:
             completed = self._run(
                 [self.binding.memory_cli, *argv],

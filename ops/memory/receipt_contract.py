@@ -66,6 +66,7 @@ def load_receipt_contract(path: Path | None = None) -> dict[str, Any]:
                 + "\n"
             )
     except OSError:
+        # Best-effort debug NDJSON; a log-write failure must not fail contract load.
         pass
     # #endregion
     return raw

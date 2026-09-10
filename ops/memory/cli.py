@@ -191,6 +191,7 @@ def cmd_write(args: argparse.Namespace) -> int:
             },
         )
     except Exception:
+        # Best-effort debug NDJSON; a log-write failure must not change CLI status.
         pass
     # #endregion
     _emit(document)
@@ -227,6 +228,7 @@ def cmd_hydrate(args: argparse.Namespace) -> int:
             },
         )
     except Exception:
+        # Best-effort debug NDJSON; a log-write failure must not change CLI status.
         pass
     # #endregion
     _emit(document)

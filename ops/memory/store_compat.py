@@ -60,6 +60,7 @@ def _debug(hypothesis_id: str, location: str, message: str, data: dict[str, Any]
         with _DEBUG_LOG.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(rec, default=str) + "\n")
     except OSError:
+        # Best-effort debug NDJSON; a log-write failure must not fail store preflight.
         pass
     # #endregion
 
