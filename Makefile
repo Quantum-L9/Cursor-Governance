@@ -112,9 +112,11 @@ start:
 ## Does not implement target-repo tasks or close the ledger after a host-only merge.
 campaign:
 	@test -n "$(INTENT)" || (echo "INTENT= path to activate seed is required" >&2; exit 2)
-	$(PYTHON) environment/program-execution/scripts/run_campaign.py \
+	TARGET="$(TARGET)" $(PYTHON) environment/program-execution/scripts/run_campaign.py \
 	  --intent "$(INTENT)" \
 	  --until "$(or $(CAMPAIGN_UNTIL),execute)" \
+	  $(if $(TARGET),--target "$(TARGET)") \
+	  $(if $(TARGET_CHECKOUT),--target-checkout "$(TARGET_CHECKOUT)") \
 	  $(CAMPAIGN_ARGS)
 
 .PHONY: campaign-architecture
@@ -128,7 +130,6 @@ campaign:
 campaign-architecture:
 	@test -n "$(INTENT)" || (echo "INTENT= path to the architecture document is required" >&2; exit 2)
 	TARGET="$(TARGET)" $(PYTHON) environment/program-execution/scripts/run_campaign.py \
-	  --architecture \
 	  --intent "$(INTENT)" \
 	  --until "$(or $(CAMPAIGN_UNTIL),execute)" \
 	  $(if $(TARGET),--target "$(TARGET)") \

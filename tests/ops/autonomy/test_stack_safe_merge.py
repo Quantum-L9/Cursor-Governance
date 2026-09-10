@@ -110,3 +110,46 @@ def test_execute_parent_skips_delete_ref(monkeypatch) -> None:
     joined = [" ".join(argv) for argv in runs]
     assert not any("DELETE" in line and "refs/heads/" in line for line in joined)
     assert any("pulls/53/merge" in line for line in joined)
+
+
+def test_execute_failed_delete_already_absent_is_note(monkeypatch, capsys) -> None:
+    def _run(argv: list[str]) -> int:
+        if "--method" in argv and "DELETE" in argv:
+            return 1
+        joined = " ".join(argv)
+        if "gh api " in joined + " " and "refs/heads/" in joined and "--method" not in argv:
+            return 1
+        return 0
+
+    monkeypatch.setattr("stack_safe_merge._run", _run)
+    selection = {
+        "repo": "Quantum-L9/SEO-Bot",
+        "pr": 90,
+        "method": "squash",
+        "head": "agent/cursor/org-nightly-caller",
+        "children": [],
+    }
+    assert _execute(selection, delete_branch=True) == 0
+    err = capsys.readouterr().err
+    assert "NOTE: merged, and branch 'agent/cursor/org-nightly-caller' is already absent" in err
+    assert "WARN:" not in err
+
+
+def test_execute_failed_delete_still_present_is_warn(monkeypatch, capsys) -> None:
+    def _run(argv: list[str]) -> int:
+        if "--method" in argv and "DELETE" in argv:
+            return 1
+        return 0
+
+    monkeypatch.setattr("stack_safe_merge._run", _run)
+    selection = {
+        "repo": "Quantum-L9/SEO-Bot",
+        "pr": 90,
+        "method": "squash",
+        "head": "agent/cursor/org-nightly-caller",
+        "children": [],
+    }
+    assert _execute(selection, delete_branch=True) == 0
+    err = capsys.readouterr().err
+    assert "WARN: merged, but deleting branch 'agent/cursor/org-nightly-caller' failed" in err
+    assert "already absent" not in err
