@@ -113,9 +113,7 @@ def test_cursor_surface_requires_tree_latch(
     assert gate.precommit(stacked_repo, ROOT, None) == 2
 
 
-def test_ci_unknown_skips_tree_latch(
-    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_ci_unknown_skips_tree_latch(stacked_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("L9_GOVERNANCE_SURFACE", raising=False)
     monkeypatch.delenv("CURSOR_AGENT", raising=False)
     monkeypatch.setenv("GITHUB_ACTIONS", "true")
