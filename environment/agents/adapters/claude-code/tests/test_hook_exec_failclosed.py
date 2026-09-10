@@ -168,9 +168,19 @@ class HookExecFailClosedTests(unittest.TestCase):
             env["TMPDIR"] = tmp
             env.pop("L9_HOOK_SKIP_LOG", None)
             # Observer skip precedes record_skip unless this is a Claude surface.
+            #
+            # L9_GOVERNANCE_DIR belongs in this list: the launcher honours it
+            # when it names a directory holding CANONICAL_LAW.md, so inheriting
+            # the runner's value points GOV_DIR at a VALID clone, the hook runs
+            # normally, and no skip is recorded at all — stderr comes back
+            # empty and this test fails for a reason that has nothing to do
+            # with an unwritable HOME. It passes under a bare `pytest` and
+            # fails under any runner that exports it, which is what made it
+            # look like a parallelism flake.
             for key in (
                 "CURSOR_AGENT",
                 "L9_GOVERNANCE_SURFACE",
+                "L9_GOVERNANCE_DIR",
                 "CLAUDE_CODE_ENTRYPOINT",
                 "CLAUDE_CODE_SESSION_ID",
                 "CLAUDE_CODE_REMOTE",

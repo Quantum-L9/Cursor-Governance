@@ -223,7 +223,10 @@ def test_untracked_residue_does_not_trip_the_guard(tmp_path: Path) -> None:
 def test_cursor_skip_precedes_claude_banner() -> None:
     text = body()
     skip = text.index("Skip unless surface_detect says Claude")
-    banner = text.index('LINES+=("L9 Governance — Claude Code session")')
+    # Keyed on the MESSAGE, not on how it is appended: the append call is an
+    # implementation detail (it moved from `LINES+=(...)` to `say` when context
+    # became durable-on-write), the banner line is the contract.
+    banner = text.index('"L9 Governance — Claude Code session"')
     assert skip < banner
 
 
