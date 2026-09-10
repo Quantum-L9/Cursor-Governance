@@ -7,10 +7,10 @@ metadata for the exact analyzed commit, and writes a single secret-free JSON sna
 (`codeql-alerts-before.json` by convention).
 
 Read-only against GitHub: this never dismisses, reopens, or otherwise mutates alert
-state (dismissal is fail-closed policy, not a fetcher action). The API token is bound in-process
-(``GITHUB_TOKEN`` / ``GH_TOKEN`` via ``capability_bind``) and is never printed,
-stored, exported to ``os.environ``, or written to the snapshot; the Authorization
-header is redacted in the receipt.
+state (dismissal is fail-closed policy, not a fetcher action). The API token is
+resolved in-process by ``capability_bind.bind_first`` (GITHUB_TOKEN / GH_TOKEN)
+and is never printed, stored, exported, or written to the snapshot; the
+Authorization header is redacted in the receipt.
 
 Fail-closed: if pagination cannot be proven complete (the Link header still advertises a
 next page after the page cap), the snapshot is marked BLOCKED and the process exits

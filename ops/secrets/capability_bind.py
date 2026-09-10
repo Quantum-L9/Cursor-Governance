@@ -9,13 +9,12 @@ them on stdout, stderr, ``os.environ``, a file, or a receipt.
 Resolution order:
 
 1. The name is already in the process environment (operator / CI import).
-2. Infisical CLI user profile (OS keyring login — no Universal Auth in env).
-3. AWS Secrets Manager via the mapped ``openclaw-igorbot/<suffix>#<key>`` ref.
+2. Infisical CLI user / machine profile (no Universal Auth in env).
 
+AWS Secrets Manager is **not** a bind path. ``source=aws`` is a fault.
 Only names listed in ``infisical-cursor-governance.yaml`` ``root_env_keys``
 (plus the documented aliases ``GH_TOKEN`` / ``SONARCLOUD_TOKEN``) are accepted.
-``INFISICAL_CLIENT_SECRET`` is refused even if asked. This is not a generic
-``get_secret`` API and is not the retired broker.
+``INFISICAL_CLIENT_SECRET`` is refused even if asked.
 
 Usage:
   capability_bind.py --check SEMGREP_APP_TOKEN   # names + source only
@@ -24,8 +23,8 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import json
 import os
+import shutil
 import subprocess
 import sys
 from collections.abc import Callable
@@ -35,9 +34,6 @@ HERE = Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
-import resolve_secret as aws_secret  # noqa: E402
-from port_aws_to_infisical import ENV_MAP  # noqa: E402
-
 try:
     import yaml
 except ImportError:  # pragma: no cover
@@ -45,7 +41,6 @@ except ImportError:  # pragma: no cover
 
 INVENTORY = HERE / "infisical-cursor-governance.yaml"
 CLI_TIMEOUT_SECONDS = 12
-AWS_PREFIX = "openclaw-igorbot/"
 
 #: Names that must never be bound, even if they appear in an inventory edit.
 REFUSED_NAMES = frozenset(
@@ -59,8 +54,7 @@ REFUSED_NAMES = frozenset(
 )
 
 #: CLI env keys that override a logged-in Infisical user profile. Strip them
-#: from the child so the OS-keyring session is what runs (Context7: Infisical
-#: CLI falls back to the local login when no token is attached).
+#: from the child so the OS-keyring / machine profile is what runs.
 _CLI_OVERRIDE_KEYS = (
     "INFISICAL_TOKEN",
     "INFISICAL_CLIENT_ID",
@@ -71,22 +65,15 @@ _CLI_OVERRIDE_KEYS = (
 
 SOURCE_ENV = "env"
 SOURCE_INFISICAL = "infisical-cli"
-SOURCE_AWS = "aws"
+SOURCE_INFISICAL_ABSENT = "infisical-cli-absent"
 SOURCE_UNBOUND = "unbound"
 SOURCE_REFUSED = "refused"
+SOURCE_AWS = "aws"  # never produced; leftover is a fault in the reporter
 
 _VALUES: dict[str, str] = {}
 _SOURCES: dict[str, str] = {}
 
 InfisicalFn = Callable[[str], str | None]
-AwsFn = Callable[[str], str | None]
-
-
-def _aws_refs() -> dict[str, str]:
-    refs = {mapped: f"{AWS_PREFIX}{suffix}#{key}" for (suffix, key), mapped in ENV_MAP.items()}
-    refs["GH_TOKEN"] = f"{AWS_PREFIX}github#token"
-    refs["SONARCLOUD_TOKEN"] = f"{AWS_PREFIX}sonarcloud#token"
-    return refs
 
 
 def _inventory() -> dict:
@@ -100,8 +87,6 @@ def allowed_names() -> frozenset[str]:
     inv = _inventory()
     keys = {str(name) for name in (inv.get("root_env_keys") or []) if name}
     keys.update({"GH_TOKEN", "SONARCLOUD_TOKEN"})
-    if yaml is None:
-        keys.update(str(mapped) for mapped in ENV_MAP.values() if mapped)
     return frozenset(keys)
 
 
@@ -151,58 +136,21 @@ def _from_infisical_cli(name: str) -> str | None:
         return None
     if proc.returncode != 0:
         return None
-    value = (proc.stdout or "").rstrip("\n")
-    if not value:
-        return None
-    if "\n" in value and "-----BEGIN" not in value:
+    value = (proc.stdout or "").strip()
+    if not value or "\n" in value:
         return None
     lowered = value.lower()
     if lowered in {"null", "none", "undefined"}:
         return None
-    # A table / help dump is not a secret value.
     if name in value and ("secret" in lowered or "infisical" in lowered):
         return None
     return value
-
-
-def _from_aws(name: str) -> str | None:
-    ref = _aws_refs().get(name)
-    if not ref:
-        return None
-    try:
-        registry = aws_secret.load_registry(aws_secret.DEFAULT_REGISTRY)
-    except SystemExit:
-        return None
-    secret_id, field = aws_secret.split_id(ref)
-    entry = aws_secret.entry_for(registry, secret_id)
-    if entry is not None and entry.get("provisioned") is False:
-        return None
-    region = (
-        (entry or {}).get("region")
-        or os.environ.get("AWS_REGION")
-        or registry.get("region_default")
-        or aws_secret.AWS_REGION_DEFAULT
-    )
-    raw, error = aws_secret.fetch_secret_string(str(secret_id), str(region))
-    if error or not raw:
-        return None
-    if field is None:
-        return raw.strip() or None
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError:
-        return None
-    if not isinstance(parsed, dict) or field not in parsed:
-        return None
-    value = str(parsed[field]).strip()
-    return value or None
 
 
 def _resolve(
     name: str,
     *,
     infisical_cli: InfisicalFn | None = None,
-    aws: AwsFn | None = None,
 ) -> tuple[str, str | None]:
     if name in REFUSED_NAMES:
         return SOURCE_REFUSED, None
@@ -211,14 +159,12 @@ def _resolve(
     present = (os.environ.get(name) or "").strip()
     if present:
         return SOURCE_ENV, present
+    if infisical_cli is None and shutil.which("infisical") is None:
+        return SOURCE_INFISICAL_ABSENT, None
     cli = infisical_cli or _from_infisical_cli
     value = cli(name)
     if value:
         return SOURCE_INFISICAL, value
-    aws_fn = aws or _from_aws
-    value = aws_fn(name)
-    if value:
-        return SOURCE_AWS, value
     return SOURCE_UNBOUND, None
 
 
@@ -226,12 +172,11 @@ def bind(
     name: str,
     *,
     infisical_cli: InfisicalFn | None = None,
-    aws: AwsFn | None = None,
 ) -> str | None:
     """Return the bound value, or None. Never prints. Never writes ``os.environ``."""
     if name in _VALUES:
         return _VALUES[name]
-    source, value = _resolve(name, infisical_cli=infisical_cli, aws=aws)
+    source, value = _resolve(name, infisical_cli=infisical_cli)
     _SOURCES[name] = source
     if value:
         _VALUES[name] = value
@@ -242,11 +187,10 @@ def bind(
 def bind_first(
     *names: str,
     infisical_cli: InfisicalFn | None = None,
-    aws: AwsFn | None = None,
 ) -> str | None:
     """Bind the first name that resolves. Used by fetchers with alias env tuples."""
     for name in names:
-        value = bind(name, infisical_cli=infisical_cli, aws=aws)
+        value = bind(name, infisical_cli=infisical_cli)
         if value:
             return value
     return None
@@ -254,9 +198,10 @@ def bind_first(
 
 def bind_status(name: str) -> dict[str, str | bool]:
     """Availability only. The value is never included."""
-    bind(name)
+    if name not in _SOURCES:
+        bind(name)
     source = _SOURCES.get(name, SOURCE_UNBOUND)
-    bound = source in {SOURCE_ENV, SOURCE_INFISICAL, SOURCE_AWS}
+    bound = source in {SOURCE_ENV, SOURCE_INFISICAL}
     return {"name": name, "bound": bound, "source": source}
 
 

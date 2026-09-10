@@ -34,9 +34,10 @@ Region: entry region → `AWS_REGION` → registry `region_default` → `us-east
 ## CLI
 
 ```bash
+python ops/secrets/session_start_secrets.py
+python ops/secrets/capability_bind.py --check GITHUB_TOKEN
 python ops/secrets/sync_secrets_registry.py [--refresh-keys] [--dry-run] [--json-summary]
-python ops/secrets/resolve_secret.py --ref 'openclaw-igorbot/github#token' --check
-python ops/secrets/resolve_secret.py --ref 'openclaw-igorbot/github#token'   # value on stdout only
+python ops/secrets/resolve_secret.py --ref 'openclaw-igorbot/infisical-cursor-governance#project_id' --check
 python ops/secrets/port_aws_to_infisical.py [--dry-run]   # AWS → Infisical prod
 ```
 
