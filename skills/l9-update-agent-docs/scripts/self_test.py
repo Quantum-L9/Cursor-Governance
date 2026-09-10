@@ -14,6 +14,7 @@ SKILL = PACK / "SKILL.md"
 POLICY = PACK / "references/doc-surface-policy.yaml"
 OBLIGATION = PACK / "contracts/documentation-obligation.schema.json"
 RECEIPT = PACK / "contracts/repo-docs-receipt.schema.json"
+ANALYSIS = PACK / "scripts/doc_surface_analysis.py"
 
 
 def main() -> int:
@@ -25,6 +26,10 @@ def main() -> int:
         "repo-docs-receipt.schema.json",
         "l9-intelligence-harvest",
         "readme-pipeline-v1",
+        "doc_surface_analysis.py",
+        "makefile-contract-v1",
+        "python-project-contract-v1",
+        "root-file-protection.json",
         "kernels/Recursive Alignment.md",
         "kernels/Validate & Repair.md",
         "Passed",
@@ -40,10 +45,21 @@ def main() -> int:
         policy = yaml.safe_load(POLICY.read_text(encoding="utf-8"))
         if policy.get("owner") != "l9-update-agent-docs":
             errors.append("policy owner drift")
+        if policy.get("schema") != "l9.repo-docs.surface-policy.v3":
+            errors.append("policy schema drift")
         if policy.get("semantic_harvest", {}).get("owner") != "l9-intelligence-harvest":
             errors.append("Harvest ownership drift")
+        for surface, analyzer in (
+            ("makefile_contract", "makefile-contract-v1"),
+            ("python_project_contract", "python-project-contract-v1"),
+        ):
+            actual = policy.get("surfaces", {}).get(surface, {}).get("analysis", {}).get("analyzer")
+            if actual != analyzer:
+                errors.append(f"{surface} analyzer drift: expected {analyzer!r}, got {actual!r}")
     else:
         errors.append("missing doc-surface-policy.yaml")
+    if not ANALYSIS.is_file():
+        errors.append("missing doc_surface_analysis.py")
     for path, expected in (
         (OBLIGATION, "l9.repo-docs.obligation.v1"),
         (RECEIPT, "l9.repo-docs.receipt.v3"),

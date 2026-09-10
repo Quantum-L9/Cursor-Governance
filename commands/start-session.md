@@ -1,6 +1,6 @@
 ---
 name: start-session
-version: "3.1.0"
+version: "3.2.0"
 description: "Run the L9 sessionStart bootstrap for the open workspace (same path as Cursor hooks + make start)"
 auto_chain: null
 ---
@@ -78,21 +78,16 @@ Same bootstrap; agent may skip re-printing full Graphiti prefetch bodies (still 
 
 ## OUTPUT — STATE_SYNC
 
+Print these sections from bootstrap `additional_context`. Do not invent a
+second check grid. If a section is absent, say so.
+
 ```markdown
 ## SESSION STARTED
 
-### Bootstrap
-| Check | Status |
-|-------|--------|
-| Bootstrap script | ✅ ran via make start / session_start_bootstrap.sh |
-| Governance wiring | ✅ PASS / ❌ FAIL (from context) |
-| Graphiti | ✅ healthy / ⚠️ degraded / ❌ down (from context) |
-| Plan audit | pending + NEXT 1/2/3 from `### Plan audit` (plans + WIP + campaigns) |
-| Resume SSOT | Graphiti inject / PICKUP (memory-bank retired) |
-| Slash commands | ✅ `.cursor-commands/commands` via l9-governance plugin |
-
-### Context (from bootstrap)
-{bullet list from rendered context lines, including Plan audit lines when present}
+{### FAILED — if present; else omit}
+{### Runtime}
+{### Degraded}
+{### Plan audit}
 
 ### Ready For
 → `/ynp` — next action
@@ -109,6 +104,6 @@ Same bootstrap; agent may skip re-printing full Graphiti prefetch bodies (still 
 - Cursor also runs this bootstrap automatically on `sessionStart` via `~/.cursor/hooks.json`. `/start-session` is the **manual / repair / new-window** entry that uses the identical script.
 - Slash commands activate when governance is wired: `~/.cursor/plugins/local/l9-governance` → SSOT (discovers `commands/`), plus repo `.cursor-commands` symlink. Bootstrap/`make start` ensures that wiring.
 - Resume stack is Graphiti only (`ops/graphiti/MEMORY_BANK_POLICY.md`).
-- SessionStart `### Plan audit` is `l9-pipeline-audit` `audit_pipeline.py` against tracked `docs/plans` (via `.cursor/plans` → `~/.cursor/plans`), `WIP/`, and PE campaigns. Spent root plans and inventory-landed WIP may archive (cap 8; skip if repo-write lock held). Mixed harvestable donors stay. Campaign sources are never moved. Report names pending counts and the next 3 executes in order. Do not auto-Build. On-demand harvest is `/l9-pipeline-audit`. Shelf-only is `/l9-audit-plans`.
+- Plan-audit wording lives in bootstrap `### Plan audit`. Do not restate it here. On-demand harvest is `/l9-pipeline-audit`. Shelf-only is `/l9-audit-plans`.
 
 --- End Command ---

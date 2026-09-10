@@ -1,5 +1,5 @@
-schema: l9.repo-docs.surface-policy.v2
-version: 2
+schema: l9.repo-docs.surface-policy.v3
+version: 3
 owner: l9-update-agent-docs
 
 managed_regions:
@@ -84,6 +84,52 @@ surfaces:
     evidence_sources: [AGENTS.md, ORG_INVARIANTS.yaml, .github/workflows, .pre-commit-config.yaml]
     prohibited_mutations: [copy_org_invariant_bodies, guessed_counts, managed_region_change]
     llms_include: true
+  makefile_contract:
+    owner: l9-update-agent-docs
+    role: repository operator command contract
+    authority_class: specialist
+    requirement: conditional
+    selectors: [Makefile]
+    create_policy: never
+    refresh_policy: surgical
+    generator: null
+    evidence_sources: [Makefile, AGENTS.md, INVARIANTS.md, ops/config/root-file-protection.json, .github/workflows, ops/scripts]
+    prohibited_mutations: [speculative_target_addition, undocumented_behavior_change, duplicate_command_authority, bypass_root_file_protection, wholesale_rewrite]
+    llms_include: false
+    kind: operational_contract
+    ownership:
+      semantic_owner: repository-operator-contract
+      execution_owner: repository-native
+    analysis:
+      analyzer: makefile-contract-v1
+      mode: deterministic_first
+    mutation:
+      guard: root-file-protection
+    validation:
+      validators: [target-existence, target-script-resolution, command-authority-consistency, root-file-protection]
+  python_project_contract:
+    owner: l9-update-agent-docs
+    role: Python environment and tooling contract
+    authority_class: specialist
+    requirement: conditional
+    selectors: [pyproject.toml]
+    create_policy: never
+    refresh_policy: surgical
+    generator: null
+    evidence_sources: [pyproject.toml, uv.lock, .python-version, ops/config/python-contract.json, Makefile, .pre-commit-config.yaml]
+    prohibited_mutations: [speculative_dependency_addition, unverified_version_change, duplicate_dependency_authority, weaken_test_or_lint_scope, bypass_root_file_protection, wholesale_rewrite]
+    llms_include: false
+    kind: operational_contract
+    ownership:
+      semantic_owner: repository-python-contract
+      execution_owner: repository-native
+    analysis:
+      analyzer: python-project-contract-v1
+      mode: deterministic_first
+    mutation:
+      guard: root-file-protection
+    validation:
+      validators: [target-existence, interpreter-contract, dependency-contract, lock-consistency, tool-scope-consistency, test-registration, root-file-protection]
   module_readmes:
     owner: readme-pipeline-v1
     role: module documentation
@@ -147,8 +193,14 @@ surfaces:
 
 impact_rules:
   workflow_change:
-    patterns: ['.github/workflows/*', '.github/workflows/**/*', '.pre-commit-config.yaml', Makefile]
+    patterns: ['.github/workflows/*', '.github/workflows/**/*', '.pre-commit-config.yaml']
     surfaces: [architecture, invariants]
+  makefile_contract_change:
+    patterns: [Makefile, '.github/workflows/*', '.github/workflows/**/*', 'ops/scripts/*', 'ops/scripts/**/*']
+    surfaces: [makefile_contract, architecture, invariants]
+  python_contract_change:
+    patterns: [pyproject.toml, uv.lock, .python-version, requirements.txt, conftest.py, .pre-commit-config.yaml, ops/config/python-contract.json, 'skills/*/scripts/self_test.py']
+    surfaces: [python_project_contract, invariants]
   authority_change:
     patterns: [CANONICAL_LAW.md, AGENTS.md, ORG_INVARIANTS.yaml, 'rules/*', 'rules/**/*', 'ops/autonomy/*', 'ops/autonomy/**/*']
     surfaces: [agents, claude, architecture, invariants]
@@ -173,8 +225,8 @@ semantic_harvest:
     invariants: docs:invariants
   activation:
     agents: [authority_change]
-    architecture: [workflow_change, authority_change]
-    invariants: [workflow_change, authority_change]
+    architecture: [workflow_change, makefile_contract_change, authority_change]
+    invariants: [workflow_change, makefile_contract_change, python_contract_change, authority_change]
   accepted_dispositions: [PORT, PORT_WITH_HARDENING, MERGE_WITH_EXISTING, CONFIGURE]
   confirmed_evidence_required: true
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Capability broker is retired — shared bootstrap must not score it as DEGRADED.
 
-The broker never shipped. Session bootstrap reports RETIRED and does not call
-ops/secrets/bootstrap_agent_env.sh. Stubs at that path must not change the
-degraded-count or the ready banner.
+The broker never shipped. Session bootstrap owns session_start_secrets.py and
+does not call ops/secrets/bootstrap_agent_env.sh. Stubs at that path must not
+change the degraded-count or the ready banner.
 """
 
 from __future__ import annotations
@@ -91,12 +91,14 @@ class RetiredCapabilityPlaneTests(unittest.TestCase):
         )
 
     def test_retired_plane_does_not_degrade_or_call_the_stub(self) -> None:
+        owner = self.gov / "ops" / "secrets" / "session_start_secrets.py"
+        owner.write_text("#!/usr/bin/env python3\nraise SystemExit(0)\n", encoding="utf-8")
         stub = self.gov / "ops" / "secrets" / "bootstrap_agent_env.sh"
         stub.write_text("#!/usr/bin/env bash\necho STUB_RAN >&2\nexit 1\n", encoding="utf-8")
         stub.chmod(0o755)
         result = self._run()
         self.assertEqual(result.returncode, 0, result.stderr[-2000:])
-        self.assertIn("capability plane: RETIRED", result.stderr)
+        self.assertIn("secrets plane: session_start_secrets.py", result.stderr)
         self.assertNotIn("STUB_RAN", result.stderr)
         self.assertIn("Agent environment ready", result.stderr)
         argv = json.loads(self.receipt_argv.read_text(encoding="utf-8"))

@@ -12,6 +12,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "ops" / "scripts"))
 sys.path.insert(0, str(REPO / "ops" / "autonomy"))
+sys.path.insert(0, str(REPO / "ops" / "secrets"))
 
 import session_start_runtime_report as report  # noqa: E402
 
@@ -118,6 +119,44 @@ class MarkdownEmitTests(unittest.TestCase):
         )
         self.assertIn("### Degraded\n- none", md)
 
+    def test_aws_cli_failed_leads_markdown(self) -> None:
+        md = report.format_markdown(
+            [
+                report.classify_aws_cli(
+                    {
+                        "ok": False,
+                        "code": "AWS_CLI_NOT_FOUND",
+                        "summary": "AWS_CLI_NOT_FOUND — secrets plane cannot start",
+                    }
+                )
+            ]
+        )
+        self.assertTrue(md.startswith("### FAILED"))
+        self.assertIn("aws-cli: failed", md)
+        self.assertIn("### Runtime", md)
+
+
+class SecretsPlaneClassificationTests(unittest.TestCase):
+    def test_bind_names_come_from_the_owner(self) -> None:
+        from session_start_secrets import BIND_NAMES
+
+        self.assertEqual(report.BIND_NAMES, BIND_NAMES)
+        self.assertIn("GITHUB_TOKEN", BIND_NAMES)
+
+    def test_aws_source_is_a_fault(self) -> None:
+        line = report.classify_secrets_bind(
+            [{"name": "SEMGREP_APP_TOKEN", "bound": True, "source": "aws"}]
+        )
+        self.assertEqual(line["class"], report.FAILED)
+        self.assertIn("source=aws is a fault", line["summary"])
+
+    def test_unbound_is_degraded_not_a_paste(self) -> None:
+        line = report.classify_secrets_bind(
+            [{"name": "SONAR_TOKEN", "bound": False, "source": "unbound"}]
+        )
+        self.assertEqual(line["class"], report.DEGRADED)
+        self.assertIn("do not paste a token", line["summary"])
+
 
 class SkillUsageClassificationTests(unittest.TestCase):
     def test_absent_log_is_na_not_degraded(self) -> None:
@@ -149,6 +188,12 @@ class HydrateCollapseTests(unittest.TestCase):
                 hydrate_degraded=True,
                 hydrate_reason="PICKUP search unreachable",
                 home=Path(tmp),
+                aws_cli={"ok": True, "code": "OK", "summary": "authorized"},
+                secrets_bind=[
+                    {"name": "SEMGREP_APP_TOKEN", "bound": True, "source": "env"},
+                    {"name": "SONAR_TOKEN", "bound": True, "source": "infisical-cli"},
+                    {"name": "GITHUB_TOKEN", "bound": True, "source": "infisical-cli"},
+                ],
             )
         names = [item["name"] for item in lines]
         self.assertIn("memory", names)
@@ -173,6 +218,12 @@ class HydrateCollapseTests(unittest.TestCase):
                 hydrate_degraded=True,
                 hydrate_reason="empty packet",
                 home=Path(tmp),
+                aws_cli={"ok": True, "code": "OK", "summary": "authorized"},
+                secrets_bind=[
+                    {"name": "SEMGREP_APP_TOKEN", "bound": True, "source": "env"},
+                    {"name": "SONAR_TOKEN", "bound": True, "source": "infisical-cli"},
+                    {"name": "GITHUB_TOKEN", "bound": True, "source": "infisical-cli"},
+                ],
             )
         names = [item["name"] for item in lines]
         self.assertIn("memory-hydrate", names)
@@ -233,6 +284,10 @@ class HookWiringTests(unittest.TestCase):
         text = (REPO / "ops" / "hooks" / "session_start_bootstrap.sh").read_text(encoding="utf-8")
         self.assertIn("session_start_runtime_report.py", text)
         self.assertIn("resolve_runtime_reporter", text)
+        bootstrap = (REPO / "ops" / "scripts" / "bootstrap_agent_environment.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("session_start_secrets.py", bootstrap)
         self.assertNotIn("itest: unavailable — neo4j absent", text)
         self.assertNotIn("publish-path grant: none", text)
         self.assertNotIn("GRANT_NOTE", text)

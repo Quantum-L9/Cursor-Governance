@@ -1434,6 +1434,29 @@ section is current.
   retired direct-Graphiti architecture and warns on surfaces a later locked
   run still has to converge; `--strict-memory-doctrine` fails those too.
 
+<!-- SESSIONSTART_SECRETS_PLANE_V1 -->
+## SessionStart owns the secrets plane (2026-09-07)
+
+Append-only. Do not add Makefile ceremony.
+
+- One owner: `ops/secrets/session_start_secrets.py`, called only from
+  `bootstrap_agent_environment.sh`. It runs AWS CLI preflight, seeds
+  `infisical_cli_login.py` when the machine profile is absent, then
+  `capability_bind.py --check` for inventoried names.
+- `aws_cli_preflight.py` and `infisical_cli_login.py` are libraries of
+  that owner. They are not Make targets and not a second activation path.
+- `session_start_runtime_report.py` is a derived view (`aws-cli` /
+  `secrets-bind` lines + `### FAILED` banner). It does not own the plane
+  and must not call `run_plane()`.
+- Bind is Infisical only. `source=aws` on an app key is a fault. AWS is
+  allowed only for the one login secret mapped in
+  `ops/secrets/login_registry.py` unless the human explicitly asks to use
+  AWS. Do not delete AWS SM objects.
+- Existing `make secrets-sync` / `make secrets-check` stay operator
+  inventory. Do not invent `secrets-bind` or `secrets-aws-preflight`
+  targets. Values are never exported. Do not paste a token. Do not
+  `hydrate --export` on a model surface.
+
 <!-- CURSOR_KERNEL_LATCH_BEFORE_PYTEST_V1 -->
 ## Tree kernels fire on Cursor before pytest (2026-09-10)
 

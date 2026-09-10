@@ -86,6 +86,7 @@ Classify without running anything:
 
 ```bash
 make campaign-check-input INTENT=/path/to/CAMPAIGN_SOURCE.yaml
+make campaign INTENT=/path/to/CAMPAIGN_SOURCE.yaml TARGET=owner/repo TARGET_CHECKOUT=/path/to/clone
 ```
 
 A document that declares the architecture schema in its frontmatter classifies

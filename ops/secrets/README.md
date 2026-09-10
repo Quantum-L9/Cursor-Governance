@@ -19,7 +19,10 @@ Auth for that project is still in AWS as
 
 | Path | Role |
 |---|---|
-| `openclaw-igorbot.registry.yaml` | Committed registry (IDs + JSON key names + annotations only) |
+| `openclaw-igorbot.registry.yaml` | Operator AWS inventory (IDs + JSON key names + annotations only) |
+| `infisical-login.registry.yaml` | Agent AWS inventory: Infisical login secret only (SM name in `login_registry.py`) |
+| `session_start_secrets.py` | SessionStart owner (preflight → login seed → Infisical bind `--check`) |
+| `capability_bind.py` | In-process Infisical bind (never export; `source=aws` is a fault) |
 | `infisical-cursor-governance.yaml` | Infisical project inventory (IDs + env key names, no values) |
 | `port_aws_to_infisical.py` | Re-port AWS `openclaw-igorbot/*` → Infisical prod |
 | `registry.overlays.yaml` | Local stubs not yet in AWS (`ui-session-*`, `provisioned: false`) |

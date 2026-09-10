@@ -42,10 +42,19 @@ MANAGED_TOP_LEVEL = (
 )
 
 # Copied into every .claude/hooks/ install (consumer + gov committed tree).
-CONSUMER_HOOK_FILES = (
-    SESSION_START_NAME,
-    "merge_gate_wrap.py",
-)
+#
+# Only the SessionStart bootstrap hook. It is the one file the settings
+# registration can fall back to when `$HOME/.cursor-governance` (and with it
+# the launcher) is absent — the Web/Mobile "committed files survive the clone"
+# guarantee in SESSION_START_SPEC.md — and it fails open by contract.
+#
+# `merge_gate_wrap.py` used to be projected beside it and was retired from this
+# list: every registration dispatches gates through `l9_hook_exec.sh` (INV-1,
+# fail-closed), no registration ever named the consumer copy, and the copy
+# carried its own fail-OPEN branch ("do not brick sessions") — a second, silent
+# version of a gate's failure policy, projected into every consumer repository
+# each session, which is precisely the drift the launcher exists to prevent.
+CONSUMER_HOOK_FILES = (SESSION_START_NAME,)
 
 PRESERVE_USER_KEYS = ("enabledPlugins", "theme", "statusLine", "model")
 
