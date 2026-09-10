@@ -127,7 +127,11 @@ def classify_failure(
         return "pytest"
     if hooks:
         return "hook"
-    if dirty_paths or HEAL_FAIL_RE.search(log_text):
+    if "NON_GENERATED_NEW_DIRTY:" in log_text:
+        return "source_dirty"
+    if dirty_paths or "GENERATED_NEW_DIRTY:" in log_text:
+        return "generated_heal"
+    if HEAL_FAIL_RE.search(log_text):
         return "generated_heal"
     return "unknown"
 
@@ -151,15 +155,18 @@ def build_failure_doc(
 ) -> dict[str, Any]:
     paths, content, pr_base = parse_digest(current)
     dirty = list(dirty_paths or [])
-    failure_class = classify_failure(
-        nodes=nodes, hooks=hooks, dirty_paths=dirty, log_text=log_text
-    )
+    failure_class = classify_failure(nodes=nodes, hooks=hooks, dirty_paths=dirty, log_text=log_text)
     command = recheck_command(nodes, pytest_bin)
     if nodes:
         message = (
             f"{STOP}: do not re-run the full gate. "
             "Next tool call is Read those test files and run the recheck_command. "
             "Do not AwaitShell another make pr."
+        )
+    elif failure_class == "source_dirty":
+        message = (
+            f"{STOP}: do not re-run the full gate. "
+            "Commit or restore the named source paths, then re-run make pr."
         )
     elif failure_class == "generated_heal":
         message = (
@@ -201,10 +208,13 @@ def format_refuse(doc: dict[str, Any]) -> str:
     if hooks:
         lines.extend(f"  hook:{hook}" for hook in hooks)
     if dirty:
-        lines.extend(f"  generated:{path}" for path in dirty)
+        prefix = "generated:" if failure_class == "generated_heal" else "path:"
+        lines.extend(f"  {prefix}{path}" for path in dirty)
     if not nodes and not hooks and not dirty:
         if failure_class == "generated_heal":
             lines.append("  generated-heal — commit companion rewrites; do not re-run pytest")
+        elif failure_class == "source_dirty":
+            lines.append("  source rewrite — commit or restore; then re-run make pr")
         else:
             lines.append("  (no named pytest nodes — read .l9/pr/last-gate.log)")
     command = str(doc.get("recheck_command") or "").strip()

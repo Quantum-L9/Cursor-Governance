@@ -42,7 +42,9 @@ def test_parse_dirty_paths_and_generated_heal_class() -> None:
         "environment/agents/adapters/claude-code/generated/skill-registry.json",
     ]
     assert (
-        mod.classify_failure(nodes=[], hooks=[], dirty_paths=mod.parse_dirty_paths(log), log_text=log)
+        mod.classify_failure(
+            nodes=[], hooks=[], dirty_paths=mod.parse_dirty_paths(log), log_text=log
+        )
         == "generated_heal"
     )
 
@@ -77,6 +79,56 @@ def test_refuse_names_generated_heal_not_pytest(tmp_path: Path) -> None:
     assert proc.returncode == 2
     assert "generated:ops/generated/skill-registry.json" in proc.stdout
     assert "no named pytest nodes" not in proc.stdout
+
+
+def test_write_classifies_source_dirty_after_heal(tmp_path: Path) -> None:
+    log = tmp_path / "last-gate.log"
+    log.write_text(
+        "=== generated heal (serialized writer) ===\n"
+        "NON_GENERATED_NEW_DIRTY:\n"
+        "  tests/ops/scripts/test_pr_lifecycle.py\n"
+        "FAIL: non-generated tracked files dirty after generated heal\n",
+        encoding="utf-8",
+    )
+    receipt = tmp_path / "gate-failure.json"
+    proc = subprocess.run(
+        [
+            "python3",
+            str(HELPER),
+            "write",
+            str(receipt),
+            "abc 123 origin/main",
+            "--log",
+            str(log),
+            "--head-sha",
+            "deadbeef",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 0, proc.stderr
+    doc = json.loads(receipt.read_text(encoding="utf-8"))
+    assert doc["failure_class"] == "source_dirty"
+    assert doc["dirty_paths"] == ["tests/ops/scripts/test_pr_lifecycle.py"]
+    refuse = subprocess.run(
+        [
+            "python3",
+            str(HELPER),
+            "refuse",
+            str(receipt),
+            "abc 123 origin/main",
+            "--head-sha",
+            "deadbeef",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert refuse.returncode == 2
+    assert "path:tests/ops/scripts/test_pr_lifecycle.py" in refuse.stdout
+    assert "no named pytest nodes" not in refuse.stdout
+    assert "do not re-run pytest" not in refuse.stdout
 
 
 def test_write_classifies_heal_log(tmp_path: Path) -> None:

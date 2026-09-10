@@ -628,7 +628,10 @@ def test_gate_hard_stop_precedes_pytest() -> None:
     heal_block = gate[heal_at:wave_at]
     assert "_gate_run_projection_heal" in heal_block
     assert '_gate_classify_dirtiness "generated-heal"' in heal_block
-    assert "FAIL: tracked files dirty after generated heal — commit the rewrite, then re-run make pr." not in heal_block
+    assert (
+        "FAIL: tracked files dirty after generated heal — commit the rewrite, then re-run make pr."
+        not in heal_block
+    )
     fn_at = gate.find("_gate_run_projection_heal() {")
     assert fn_at != -1 and fn_at < heal_at
     assert "--check --quiet --no-receipt" not in gate[fn_at:heal_at]
