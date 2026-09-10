@@ -114,6 +114,15 @@ def delete_ref_argv(repo: str, head: str) -> list[str]:
     return ["gh", "api", "--method", "DELETE", f"repos/{repo}/git/refs/heads/{head}"]
 
 
+def ref_exists_argv(repo: str, head: str) -> list[str]:
+    """GET the head ref after a failed DELETE.
+
+    A proxy 403 on DELETE is not proof the branch survived. Ask the API
+    whether the ref still exists before telling an operator to delete it.
+    """
+    return ["gh", "api", f"repos/{repo}/git/refs/heads/{head}"]
+
+
 def _run(argv: list[str]) -> int:
     return int(subprocess.run(argv, check=False).returncode)  # noqa: S603
 
@@ -155,11 +164,18 @@ def _execute(selection: dict[str, Any], *, delete_branch: bool) -> int:
                 file=sys.stderr,
             )
         elif _run(delete_ref_argv(repo, head)) != 0:
-            # The merge landed. Say the branch survived; do not fail the merge.
-            print(
-                f"WARN: merged, but deleting branch '{head}' failed — delete it manually",
-                file=sys.stderr,
-            )
+            # DELETE failed. A 403 from a session proxy is not leftover proof.
+            if _run(ref_exists_argv(repo, head)) != 0:
+                print(
+                    f"NOTE: merged, and branch '{head}' is already absent "
+                    "(delete returned non-zero)",
+                    file=sys.stderr,
+                )
+            else:
+                print(
+                    f"WARN: merged, but deleting branch '{head}' failed — delete it manually",
+                    file=sys.stderr,
+                )
     return 0
 
 

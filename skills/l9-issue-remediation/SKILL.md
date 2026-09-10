@@ -36,6 +36,14 @@ multiple-choice (**A** first) and resume.
 2. `diagnose` / readiness / “what’s blocking?” → **Diagnose** only.
 3. Ambiguous bare “issues” → **Converge**.
 
+## Host-native Task admission
+
+If this pack is launched as a Cursor Task from the remediator, the Task MUST
+carry a managed `subagent_type` (`l9-issue-remediation` or `generalPurpose`)
+and, when a recorded assignment exists, the prompt MUST contain
+`assignment_id: <id>`. Do not launch a prose-only Task. Do not set
+`L9_SURFACE_GUARD=0`. The host-native gate stays fail-closed.
+
 ## Fleet law
 
 Default fleet = **all non-archived `Quantum-L9/*` repositories** discovered via `gh`

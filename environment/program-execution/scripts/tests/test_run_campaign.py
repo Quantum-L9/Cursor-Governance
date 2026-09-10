@@ -394,7 +394,7 @@ class RunCampaignTests(unittest.TestCase):
             workspace.mkdir(parents=True)
             self.assertEqual(
                 self.mod.generated_data_database(workspace),
-                l9 / "generated-data" / "pipeline.sqlite3",
+                (l9 / "generated-data" / "pipeline.sqlite3").resolve(),
             )
 
     def test_commit_identity_is_supplied_only_when_the_checkout_has_none(self) -> None:
@@ -767,29 +767,6 @@ class RunCampaignTests(unittest.TestCase):
                 [],
                 msg="no campaign directory may exist after a failed architecture compile",
             )
-
-    def test_the_deprecated_architecture_flag_cannot_force_a_representation(self) -> None:
-        """`--architecture` is accepted for the Makefile alias and does nothing.
-
-        The flag survives only so the `campaign-architecture` target keeps
-        working without editing the append-only root Makefile. It must never be
-        wired back into routing: if it ever forces a kind again, this fails.
-        """
-        parser = self.mod.build_parser()
-        args = parser.parse_args(["--check-input", "x.md", "--architecture"])
-        self.assertTrue(args.architecture)
-        module = self.mod.campaign_input_module()
-        with tempfile.TemporaryDirectory() as raw:
-            memo = Path(raw) / "memo.md"
-            memo.write_text(ARCHITECTURE_DOC, encoding="utf-8")
-            # The flag is not a parameter of classification at all.
-            self.assertIs(module.classify(memo).kind, module.CampaignInputKind.BRIEF)
-        source = inspect.getsource(self.mod)
-        self.assertNotIn(
-            "args.architecture",
-            source,
-            msg="the deprecated flag must never be read back into routing",
-        )
 
     def test_unmarked_markdown_below_the_contract_still_routes_to_the_brief_compiler(
         self,

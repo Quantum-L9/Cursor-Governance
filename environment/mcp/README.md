@@ -47,3 +47,13 @@ and code: `ops/secrets/_archived/capability-broker/`.
 
 Do not paste `SONAR_TOKEN`, `SEMGREP_APP_TOKEN`, `INFISICAL_CLIENT_SECRET`, or
 any memory credential into a model-controlled environment to work around that.
+
+## GitMCP dogfood (ChatGPT)
+
+GitMCP is a temporary **read/search reconnaissance surface** over the public
+repository. Operator runbook: [CHATGPT_GITMCP_DOGFOOD.md](CHATGPT_GITMCP_DOGFOOD.md).
+
+- It does not replace `environment/mcp/master.mcp.json` as MCP configuration authority.
+- It does not activate the Program Execution ChatGPT adapter.
+- It does not grant write or execution authority.
+- Native Cursor-Governance MCP design follows dogfood evidence.

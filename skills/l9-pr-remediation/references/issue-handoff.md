@@ -55,7 +55,11 @@ Dry-run omits `--create` and still writes the body. `gh issue create` is the hel
 3. Launch `l9-issue-remediation` Converge as one background Task
    (`DELEGATION_CONTRACT.above_paygrade_handoff`: `launch_as: generalPurpose`
    under the `pr_remediation` role rules — the specialised issue skill, not a
-   sixth Cursor role and not a remediator lane). Bound it to the new issue and
+   sixth Cursor role and not a remediator lane). The Task MUST set
+   `subagent_type` to `generalPurpose` or `l9-issue-remediation`. If a fleet
+   assignment exists, the prompt MUST contain `assignment_id: <id>` from that
+   receipt. A Task with neither a managed type nor `assignment_id` is denied
+   — do not infer admission from prose. Bound it to the new issue and
    `{owner}/{repo}`. It returns a result document like any lane. Continue the
    PR train immediately. Do not idle for that subagent.
 4. This skill still does **not** merge from the issue agent, and the issue
