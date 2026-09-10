@@ -144,6 +144,7 @@ class MemoryControlPlaneClient:
         self.validator = validator or CanonicalValidator.for_binding(binding, env=self._env)
         self._last_validation: str | None = None
         self._last_search_identity: Any = None
+        self._v2_store_prepared = False
 
     def _checked(self, payload: Any, model_name: str, parser: Any) -> Any:
         """Canonical validation, then the structural view — in that order.
@@ -186,6 +187,19 @@ class MemoryControlPlaneClient:
     ) -> _Raw:
         assert self.binding.memory_cli is not None  # guarded by _guard()
         started = time.monotonic()
+        if not self._v2_store_prepared:
+            from ops.memory.store_compat import prepare_v2_sqlite_store
+
+            receipt = prepare_v2_sqlite_store(env=self._child_env())
+            if receipt.get("status") == "error":
+                return _Raw(
+                    None,
+                    None,
+                    "StoreCompatError",
+                    str(receipt.get("error") or receipt),
+                    _ms(started),
+                )
+            self._v2_store_prepared = True
         try:
             completed = self._run(
                 [self.binding.memory_cli, *argv],

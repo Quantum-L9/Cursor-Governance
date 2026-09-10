@@ -54,6 +54,7 @@ KIND_ALIASES = {
     "session_summary": "session_summary",
     "note": "observation",
     "error": "lesson",
+    "lesson": "procedural",
     "pattern": "insight",
     "rule": "decision",
 }
@@ -173,7 +174,27 @@ def cmd_write(args: argparse.Namespace) -> int:
         source_id=args.source_id,
         dry_run=args.dry_run,
     )
-    _emit(outcome_document(outcome, context=context))
+    document = outcome_document(outcome, context=context)
+    # #region agent log
+    try:
+        from ops.memory.store_compat import _debug
+
+        _debug(
+            "H5",
+            "cli.py:cmd_write",
+            "operator write",
+            {
+                "status": document.get("status"),
+                "ok": document.get("ok"),
+                "kind": KIND_ALIASES.get(args.kind, args.kind),
+                "dry_run": bool(args.dry_run),
+            },
+        )
+    except Exception:
+        # Best-effort debug NDJSON; a log-write failure must not change CLI status.
+        pass
+    # #endregion
+    _emit(document)
     return exit_code_for(outcome)
 
 
@@ -191,7 +212,26 @@ def cmd_hydrate(args: argparse.Namespace) -> int:
         max_records=args.max_records,
         continuation_policy=args.continuation_policy,
     )
-    _emit(hydration.as_dict())
+    document = hydration.as_dict()
+    # #region agent log
+    try:
+        from ops.memory.store_compat import _debug
+
+        _debug(
+            "H5",
+            "cli.py:cmd_hydrate",
+            "operator hydrate",
+            {
+                "status": document.get("status"),
+                "ok": hydration.ok,
+                "namespace": (document.get("namespace_context") or {}).get("write_namespace_hint"),
+            },
+        )
+    except Exception:
+        # Best-effort debug NDJSON; a log-write failure must not change CLI status.
+        pass
+    # #endregion
+    _emit(document)
     return EXIT_OK if hydration.ok else EXIT_REFUSED
 
 

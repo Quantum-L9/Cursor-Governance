@@ -35,6 +35,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from ops.memory.receipt_contract import compatible_package_majors, merge_receipt_schemas
 from ops.memory.receipts import InvalidReceiptError
 
 #: Turns canonical validation from "run it when the bound release exports
@@ -93,10 +94,11 @@ class CanonicalValidator:
         cls, binding: Any, *, env: Mapping[str, str] | None = None
     ) -> CanonicalValidator:
         capabilities = getattr(binding, "capabilities", None)
+        schemas, source = merge_receipt_schemas(getattr(binding, "contract_schemas", None))
         return cls(
-            schemas=getattr(binding, "contract_schemas", None),
+            schemas=schemas,
             schema_digest=getattr(binding, "schema_digest", None),
-            schema_source=getattr(binding, "schema_source", None),
+            schema_source=getattr(binding, "schema_source", None) or source,
             required=require_canonical_validation(env),
             expected_schema_version=getattr(capabilities, "schema_version", None) or None,
             expected_package_version=getattr(binding, "memory_version", None),
@@ -157,11 +159,12 @@ class CanonicalValidator:
         bound to, or the binding proved nothing about the receipt in hand.
         """
 
+        allowed = compatible_package_majors()
         declared = raw.get("schema_version")
         if declared is not None and self.expected_schema_version:
-            if str(declared) != self.expected_schema_version:
-                expected_major = _major(self.expected_schema_version)
-                actual_major = _major(str(declared))
+            expected_major = _major(self.expected_schema_version)
+            actual_major = _major(str(declared))
+            if actual_major != expected_major or actual_major not in allowed:
                 detail = (
                     "a later major than the bound release declares"
                     if actual_major > expected_major
@@ -173,7 +176,9 @@ class CanonicalValidator:
                 )
         package = raw.get("package_version")
         if package is not None and self.expected_package_version:
-            if str(package) != self.expected_package_version:
+            expected_major = _major(self.expected_package_version)
+            actual_major = _major(str(package))
+            if actual_major != expected_major or actual_major not in allowed:
                 raise InvalidReceiptError(
                     f"{model_name} was written by package {package}, not the bound "
                     f"{self.expected_package_version}"
