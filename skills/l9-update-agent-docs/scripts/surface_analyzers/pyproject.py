@@ -64,7 +64,10 @@ def _self_test_findings(
                 "python.self_test.contract_missing",
                 property_name="python_contract_presence",
                 observed=f"{contract_rel} is missing while skill self-tests exist",
-                expected="canonical Python contract exists before self-test registration is assessed",
+                expected=(
+                    "canonical Python contract exists before "
+                    "self-test registration is assessed"
+                ),
                 line=None,
                 remediation_class="HANDOFF",
                 severity="blocking",
