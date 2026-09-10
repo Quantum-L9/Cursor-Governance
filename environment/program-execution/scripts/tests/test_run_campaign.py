@@ -394,7 +394,7 @@ class RunCampaignTests(unittest.TestCase):
             workspace.mkdir(parents=True)
             self.assertEqual(
                 self.mod.generated_data_database(workspace),
-                l9 / "generated-data" / "pipeline.sqlite3",
+                (l9 / "generated-data" / "pipeline.sqlite3").resolve(),
             )
 
     def test_commit_identity_is_supplied_only_when_the_checkout_has_none(self) -> None:
