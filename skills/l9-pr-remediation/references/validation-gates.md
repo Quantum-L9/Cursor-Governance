@@ -21,7 +21,7 @@ Prevent protocol violations with lightweight **inline** proofs at each step (log
 ```text
 P_cmd ──→ [GATE A] ──→ ingest/classify ──→ [GATE B] ──→ fix ──→ [GATE C]
   ──→ make precommit-repo ──→ [GATE D] ──→ commit + git push ──→ [GATE E]
-  ──→ replies ──→ [GATE F] ──→ next PR / MERGE_TRAIN (no CI poll)
+  ──→ replies ──→ [GATE F] ──→ next PR + MERGE_NOW (remediator polls)
 ```
 
 Each gate requires a specific artifact. If the artifact is missing or invalid, the agent MUST NOT proceed.

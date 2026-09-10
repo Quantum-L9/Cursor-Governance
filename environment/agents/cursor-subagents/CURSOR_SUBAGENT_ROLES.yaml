@@ -36,10 +36,11 @@ roles:
       - preserve residual risks and unresolved items
       - after remediator best-effort, open a GitHub issue for above-paygrade work
       - launch l9-issue-remediation and continue independent PRs
+      - when assigned kind=merge, merge that one PR via stack_safe_merge.py --run
     prohibited:
       - expand_scope
       - modify_forbidden_paths
-      - merge_or_perform_remote_mutation
+      - merge_except_assigned_merge_kind_via_stack_safe_merge
       - self_verify
       - ask_human_to_unblock
       - idle_on_user_interaction

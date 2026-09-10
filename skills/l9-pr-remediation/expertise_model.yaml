@@ -16,10 +16,10 @@ expertise_model:
     - ownership answers "may I patch this file"; it never decides what happens to the PR
     - one plan, one commit, one publish per PR; cycles only for signals that did not exist
     - a lane completes with an accepted result document, never with a sentence
-    - CI waits belong to background watchers, not to the main agent's turn
+    - CI waits are polled by the remediator until open_prs=0; watchers never waive that duty
     - above-paygrade work becomes a GitHub issue plus the issue skill, never a question
     - SonarCloud findings are resolved fully when present and never block merge
-    - merge only through the stack-safe executor, oldest first, parents before children
+    - merge through the stack-safe executor as soon as merge_now is non-empty, oldest first, parents before children
   invariants:
     - Diagnose never commits, pushes, edits, or merges
     - Converge invocation is merge authorization for every open PR in the target repo
@@ -30,7 +30,7 @@ expertise_model:
     - "`leftover` requires `--human-decision` or `--unfixable-check`; unknown telemetry is `wait`"
     - never force-push, `--admin`, hand-typed `--squash`, `update-branch` after a parent squash
     - never edit `.github/workflows/**`, actions, protection, secrets, or CI wiring
-    - lane caps are read from `ops/autonomy/execution_profile.py`; the pack states no number
+    - lane caps are min(ops/autonomy/execution_profile.py, skill_subagent_cap 10) via pr_fleet.skill_caps
   authority_hierarchy:
     - latest user instruction and explicit PR scope
     - current repository source and tests at the PR head
@@ -80,7 +80,7 @@ expertise_model:
     - name: conflicting_mutators
       prevention: waves admit a PR only when its `path:`/`branch:` claims conflict with none admitted; acceptance rejects changed files outside the grant
     - name: hand_back_to_human
-      prevention: watcher lanes own CI waits; leftovers open an issue and launch l9-issue-remediation; "re-invoke when green" is forbidden
+      prevention: remediator polls remediating PRs; leftovers open an issue and launch l9-issue-remediation; "re-invoke when green" is forbidden
   leverage_points:
     - fleet planned once by `pr_fleet.py` replaces per-PR hand inventory and repeated stack probes
     - one-message wave launch turns N serial remediations into one round under canonical caps

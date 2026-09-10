@@ -104,13 +104,13 @@ def test_code_change_without_receipt_still_fails(stacked_repo: Path, tmp_path: P
     assert gate.precommit(stacked_repo, ROOT, changed) == 2
 
 
-def test_cursor_surface_skips_tree_latch(
+def test_cursor_surface_requires_tree_latch(
     stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("L9_GOVERNANCE_SURFACE", "cursor")
     monkeypatch.setenv("CURSOR_AGENT", "1")
     gate = _gate()
-    assert gate.precommit(stacked_repo, ROOT, None) == 0
+    assert gate.precommit(stacked_repo, ROOT, None) == 2
 
 
 def test_unset_surface_skips_tree_latch(
@@ -142,7 +142,7 @@ def test_authorize_release_without_record_kernels(
     assert "release_authorized" in reason
 
 
-def test_cursor_surface_skips_tree_latch_without_receipt(
+def test_cursor_surface_requires_receipt_on_code_change(
     stacked_repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("L9_GOVERNANCE_SURFACE", "cursor")
@@ -152,13 +152,14 @@ def test_cursor_surface_skips_tree_latch_without_receipt(
     code.write_text("x = 1\n", encoding="utf-8")
     changed = tmp_path / "changed.txt"
     changed.write_text("ops/foo.py\n")
-    assert gate.precommit(stacked_repo, ROOT, changed) == 0
+    assert gate.precommit(stacked_repo, ROOT, changed) == 2
 
 
 def test_unset_surface_skips_tree_latch_without_receipt(
     stacked_repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv("L9_GOVERNANCE_SURFACE", raising=False)
+    monkeypatch.delenv("CURSOR_AGENT", raising=False)
     gate = _gate()
     code = stacked_repo / "ops" / "foo.py"
     code.parent.mkdir(parents=True)
@@ -168,3 +169,19 @@ def test_unset_surface_skips_tree_latch_without_receipt(
     assert gate.precommit(stacked_repo, ROOT, changed) == 0
     assert gate.adapter_tree_kernels_required({}) is False
     assert gate.adapter_tree_kernels_required({"L9_GOVERNANCE_SURFACE": "claude-code"}) is True
+
+
+def test_cursor_requires_tree_receipt_before_pass(
+    stacked_repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("CURSOR_AGENT", "1")
+    monkeypatch.delenv("L9_GOVERNANCE_SURFACE", raising=False)
+    gate = _gate()
+    code = stacked_repo / "ops" / "foo.py"
+    code.parent.mkdir(parents=True)
+    code.write_text("x = 1\n", encoding="utf-8")
+    changed = tmp_path / "changed.txt"
+    changed.write_text("ops/foo.py\n")
+    assert gate.precommit(stacked_repo, ROOT, changed) == 2
+    gate.record(stacked_repo, gov=ROOT)
+    assert gate.precommit(stacked_repo, ROOT, changed) == 0

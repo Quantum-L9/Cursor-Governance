@@ -73,7 +73,9 @@ class ReceiptIdentifierTests(unittest.TestCase):
             {"subagent_id": "../../escape", "tool_call_id": "tu-1"}
         )
         self.assertEqual(out["permission"], "deny", out)
-        self.assertIn("subagent_id", out["reason"])
+        sanitized = compose_start.host_receipt_id("../../escape", label="subagent_id")
+        self.assertTrue(sanitized.startswith("host-"), sanitized)
+        self.assertNotIn("..", sanitized)
         self.assertEqual(self._escaped_files(), [])
 
     def test_stop_quarantines_a_traversal_identifier(self) -> None:

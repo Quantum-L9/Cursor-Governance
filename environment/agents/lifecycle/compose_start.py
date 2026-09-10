@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -60,6 +61,36 @@ def _deny(reason: str) -> dict[str, Any]:
 
 def _allow(dispatch: dict[str, Any]) -> dict[str, Any]:
     return {"permission": "allow", "dispatch_receipt": dispatch.get("receipt_digest")}
+
+
+def _first_str(payload: dict[str, Any], *keys: str) -> str:
+    for key in keys:
+        value = payload.get(key)
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            return text
+    return ""
+
+
+def host_receipt_id(raw: Any, *, label: str) -> str:
+    """Map a host tool id onto the receipt alphabet.
+
+    Cursor 3.19 sends ``tool_use_id``, ``tool_call_id``, and ``subagent_id``
+    as two tokens joined by a newline (``call-<uuid>-<n>\\nfc_…``).
+    ``safe_receipt_id`` refuses whitespace. Keep the first line when it is
+    already legal; otherwise hash the original bytes.
+    """
+    text = str(raw or "").strip()
+    if text:
+        first = text.splitlines()[0].strip()
+        try:
+            return safe_receipt_id(first, label=label)
+        except ValueError:
+            pass
+    digest = hashlib.sha256(str(raw or "").encode("utf-8")).hexdigest()[:32]
+    return f"host-{digest}"
 
 
 def _result_role(value: Any) -> str:
@@ -392,7 +423,8 @@ def compose_host_pre_tool_use(payload: dict[str, Any]) -> dict[str, Any]:
     """
     if str(payload.get("tool_name") or "") != "Task":
         return _deny("native lifecycle preToolUse only accepts Task")
-    tool_use_id = str(payload.get("tool_use_id") or "").strip()
+    raw_tool_use_id = _first_str(payload, "tool_use_id", "toolUseId", "tool_call_id", "toolCallId")
+    tool_use_id = host_receipt_id(raw_tool_use_id, label="tool_use_id") if raw_tool_use_id else ""
     if not tool_use_id:
         return _deny("native Task missing tool_use_id")
     admission = _admission_from_payload(payload)
@@ -425,8 +457,12 @@ def compose_host_pre_tool_use(payload: dict[str, Any]) -> dict[str, Any]:
 def _correlate_host_native_start(
     payload: dict[str, Any], admission: dict[str, Any]
 ) -> dict[str, Any]:
-    subagent_id = str(payload.get("subagent_id") or "").strip()
-    tool_call_id = str(payload.get("tool_call_id") or "").strip()
+    raw_subagent_id = _first_str(payload, "subagent_id", "subagentId")
+    subagent_id = host_receipt_id(raw_subagent_id, label="subagent_id") if raw_subagent_id else ""
+    raw_tool_call_id = _first_str(payload, "tool_call_id", "toolCallId", "tool_use_id", "toolUseId")
+    tool_call_id = (
+        host_receipt_id(raw_tool_call_id, label="tool_call_id") if raw_tool_call_id else ""
+    )
     assignment_id = str(admission["assignment_id"])
     role = str(admission.get("subagent_role") or _result_role(admission.get("subagent_type")))
     recorded = receipts.load_assignment(assignment_id) or {}
@@ -488,14 +524,17 @@ def _correlate_host_native_start(
 
 def compose_host_subagent_start(payload: dict[str, Any]) -> dict[str, Any]:
     """Correlate a host child to its bound admission; never manufacture identity."""
-    subagent_id = str(payload.get("subagent_id") or "").strip()
-    tool_call_id = str(payload.get("tool_call_id") or "").strip()
+    raw_subagent_id = _first_str(payload, "subagent_id", "subagentId")
+    subagent_id = host_receipt_id(raw_subagent_id, label="subagent_id") if raw_subagent_id else ""
+    raw_tool_call_id = _first_str(payload, "tool_call_id", "toolCallId", "tool_use_id", "toolUseId")
+    tool_call_id = (
+        host_receipt_id(raw_tool_call_id, label="tool_call_id") if raw_tool_call_id else ""
+    )
     if not subagent_id or not tool_call_id:
         return _deny("native subagentStart missing subagent_id or tool_call_id")
-    try:
-        safe_receipt_id(subagent_id, label="subagent_id")
-    except ValueError as exc:
-        return _deny(str(exc))
+    payload = dict(payload)
+    payload["subagent_id"] = subagent_id
+    payload["tool_call_id"] = tool_call_id
     native = receipts.load_host_admission(tool_call_id)
     if native is not None:
         return _correlate_host_native_start(payload, native)
@@ -573,16 +612,20 @@ def main() -> int:
         default="synthetic",
     )
     args = parser.parse_args()
-    payload = json.load(sys.stdin)
-    if args.mode == "pre_tool_use":
-        result = compose_host_pre_tool_use(payload)
-    elif args.mode == "subagent_start":
-        result = compose_host_subagent_start(payload)
-    else:
-        result = compose_subagent_start(payload)
+    try:
+        payload = json.load(sys.stdin)
+        if args.mode == "pre_tool_use":
+            result = compose_host_pre_tool_use(payload)
+        elif args.mode == "subagent_start":
+            result = compose_host_subagent_start(payload)
+        else:
+            result = compose_subagent_start(payload)
+    except (json.JSONDecodeError, OSError, TypeError, ValueError, KeyError) as exc:
+        result = _deny(f"lifecycle compose failed: {type(exc).__name__}: {exc}")
     json.dump(result, sys.stdout)
     print()
-    return 0 if result.get("permission") == "allow" else 1
+    # failClosed treats a non-zero as a crash and hides the deny reason.
+    return 0
 
 
 if __name__ == "__main__":

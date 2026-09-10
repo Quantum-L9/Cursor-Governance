@@ -1434,6 +1434,41 @@ section is current.
   retired direct-Graphiti architecture and warns on surfaces a later locked
   run still has to converge; `--strict-memory-doctrine` fails those too.
 
+<!-- CURSOR_KERNEL_LATCH_BEFORE_PYTEST_V1 -->
+## Tree kernels fire on Cursor before pytest (2026-09-10)
+
+This fragment supersedes only the Cursor-skip sentences in
+`CURSOR_KERNEL_LATCH_ADAPTER_ONLY_V1` and `ONE_FINISH_MAKE_PR_V1`. Those
+paragraphs stay on disk (additive_only). Do not fold them.
+
+- `ops/autonomy/kernel_gate.py` takes the tree latch on Cursor and on
+  adapter surfaces as the first writers step of `make pr` / `l9 pr`.
+- Missing receipt fail-closes before pytest so RA + Validate & Repair
+  apply once, then tests run once on that tree.
+- CI / unknown still skip (receipt is gitignored under `.l9/`).
+- Plan-kernel and `/ff` corpus kernels are unchanged. L4 is still
+  `begin` + `authorize-release` (not `record-kernels`).
+
+<!-- L9_PR_REMEDIATE_MERGE_NOW_V1 -->
+## `/l9-pr-remediation` starts merge trains on `merge_now` (2026-09-10)
+
+This fragment supersedes only the “REMEDIATE_ALL then MERGE_TRAIN” /
+“do not merge because this one PR is green” / “watcher owns the wait;
+main agent never polls” sentences in `L9_PR_REMEDIATE_OWN_UNTIL_MERGED_V1`
+and the remediator pack v5.3 hot path. Those paragraphs stay on disk
+(additive_only). Live pack: `skills/l9-pr-remediation` v5.4.0.
+
+- Planner owner is still `ops/autonomy/pr_fleet.py`. It now emits
+  `merge_now`: the oldest `board=merge` PRs that will not conflict a
+  still-open stack parent or an older non-generated overlap.
+- Launch `--kind merge` (via `stack_safe_merge.py --run`) as soon as
+  `merge_now` is non-empty. Do not wait for every open PR to be green.
+- Skill cap is `skill_subagent_cap: 10` (`pr_fleet.SKILL_SUBAGENT_CAP`).
+  The execution profile may saturate higher; this skill does not.
+- The remediator **polls** every PR in `first_wave.poll` until
+  `open_prs=0`. Watchers never merge and never waive that poll duty.
+- Mission remains `open_prs=0`.
+
 <!-- SESSIONSTART_SECRETS_PLANE_V1 -->
 ## SessionStart owns the secrets plane (2026-09-07)
 

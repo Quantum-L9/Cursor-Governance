@@ -72,6 +72,13 @@ class HostNativeLifecycleTests(unittest.TestCase):
             out = compose_start.compose_host_pre_tool_use(self._pre(tool_use_id, subagent_type))
             self.assertEqual(out["permission"], "allow", (subagent_type, out))
 
+    def test_cursor_319_newline_ids_are_admitted(self) -> None:
+        raw = "call-2f32f253-f91c-42f9-8ddb-ce97bd9a26dc-147\nfc_ozkJdPs-6SkKZu-7668baee-aws_ue1_0"
+        pre = compose_start.compose_host_pre_tool_use(self._pre(raw, "explore"))
+        self.assertEqual(pre["permission"], "allow", pre)
+        start = compose_start.compose_host_subagent_start(self._start(raw, raw))
+        self.assertEqual(start["permission"], "allow", start)
+
     def test_no_token_and_no_type_stays_denied(self) -> None:
         out = compose_start.compose_host_pre_tool_use(self._pre("tu-bare", None))
         self.assertEqual(out["permission"], "deny")
@@ -97,26 +104,25 @@ class HostNativeLifecycleTests(unittest.TestCase):
         out = compose_start.compose_host_subagent_start(self._start("tu-none", "sub-none"))
         self.assertEqual(out["permission"], "deny")
 
-    def test_max_mutation_lanes_denies_third_remediator(self) -> None:
+    def test_cursor_profile_matches_claude_velocity(self) -> None:
+        caps = compose_start._host_native_caps()
+        self.assertEqual(caps["max_parallel"], 480)
+        self.assertEqual(caps["max_mutation_lanes"], 128)
+
+    def test_three_mutation_lanes_are_admitted(self) -> None:
         first = compose_start.compose_host_pre_tool_use(self._pre("tu-m1", "l9-pr-remediation"))
         second = compose_start.compose_host_pre_tool_use(self._pre("tu-m2", "generalPurpose"))
         third = compose_start.compose_host_pre_tool_use(self._pre("tu-m3", "l9-issue-remediation"))
         self.assertEqual(first["permission"], "allow", first)
         self.assertEqual(second["permission"], "allow", second)
-        self.assertEqual(third["permission"], "deny", third)
-        self.assertIn("max_mutation_lanes", third["reason"])
+        self.assertEqual(third["permission"], "allow", third)
 
-    def test_max_parallel_denies_fifth_task(self) -> None:
-        allowed = []
+    def test_five_parallel_tasks_are_admitted(self) -> None:
         for index, subagent_type in enumerate(
-            ("l9-recon", "explore", "l9-pr-remediation", "l9-verifier-reviewer")
+            ("l9-recon", "explore", "l9-pr-remediation", "l9-verifier-reviewer", "explore")
         ):
             out = compose_start.compose_host_pre_tool_use(self._pre(f"tu-p{index}", subagent_type))
             self.assertEqual(out["permission"], "allow", (subagent_type, out))
-            allowed.append(out)
-        fifth = compose_start.compose_host_pre_tool_use(self._pre("tu-p4", "explore"))
-        self.assertEqual(fifth["permission"], "deny", fifth)
-        self.assertIn("max_parallel", fifth["reason"])
 
     def test_unknown_type_without_assignment_is_denied(self) -> None:
         out = compose_start.compose_host_pre_tool_use(self._pre("tu-custom", "my-custom-agent"))

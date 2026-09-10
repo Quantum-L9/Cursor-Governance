@@ -11,10 +11,8 @@ L9_AGENT_REQUIRED them. L4 record-kernels is not the corpus apply path.
 ``precommit`` must run first in ``run_pr_precommit.sh`` and fail closed
 before any other hook or test starts, so those checkers fire once.
 
-Cursor (``CURSOR_AGENT`` / ``L9_GOVERNANCE_SURFACE=cursor`` / unset surface
-with no Claude markers) does **not** take this latch. Tree kernels stay a
-Claude Code / adapter-surface ceremony so ``make pr`` / ``l9 pr`` share one
-finish path without a second RA+V&R apply on Cursor.
+Cursor and adapter surfaces take this latch. CI / an unknown surface skip
+it because the receipt lives under gitignored ``.l9/``.
 """
 
 from __future__ import annotations
@@ -53,8 +51,7 @@ CORPUS_SKIP_PREFIXES = (
 )
 #: Same prefixes as CORPUS_SKIP_PREFIXES (pipeline-audit surfaces).
 KERNEL_EXEMPT_PREFIXES = CORPUS_SKIP_PREFIXES
-#: Tree-kernel latch is adapter-surface only. Cursor is the primary plane
-#: and must not stall commit/push on Recursive Alignment receipts.
+#: Compat alias. Live latch is kernel_latch_surface (known surfaces, not CI).
 #: Surface ids live in ops/autonomy/surface_detect.py (SSOT).
 ADAPTER_SURFACES = ADAPTER_KERNEL_SURFACES
 #: Executable-plan templates are not Cursor plans. Do not require kernel_pass.
@@ -277,11 +274,10 @@ def read_changed_file(path: Path | None) -> list[str]:
 
 
 def kernel_latch_required(*, env: Mapping[str, str] | None = None) -> bool:
-    """True only on Claude Code / peer adapter runtimes.
+    """True on Cursor and adapter runtimes; false for CI / unknown.
 
-    Cursor sessions set ``CURSOR_AGENT``. CI and a bare shell have neither
-    that nor an adapter surface id — they skip, so a Cursor-authored PR is
-    not blocked in GitHub Actions for a missing kernel receipt.
+    CI and a bare shell resolve ``unknown`` and skip, so a missing
+    gitignored kernel receipt cannot fail GitHub Actions.
 
     Marker resolution is owned by ``ops.autonomy.surface_detect``.
     """
@@ -290,7 +286,7 @@ def kernel_latch_required(*, env: Mapping[str, str] | None = None) -> bool:
 
 def precommit(root: Path, gov: Path, changed_file: Path | None) -> int:
     if not kernel_latch_required():
-        print("OK: kernel hook skipped (Cursor / non-adapter surface; Claude Code owns this latch)")
+        print("OK: kernel hook skipped (CI / unknown surface; local agent surfaces own this latch)")
         return 0
     changed = read_changed_file(changed_file)
     if changed_are_corpus_only(changed):

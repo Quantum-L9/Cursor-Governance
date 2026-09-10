@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "id": "l9.claude_execution_profiles",
   "updated": "2026-08-18",
-  "_doc": "Surface execution personalities. Claude = unleashed, Cursor = constrained. Resolved by ops/autonomy/execution_profile.py; pointed at from ops/autonomy/surface_profile.yaml. Runtime classification never depends on model identity.",
+  "_doc": "Surface execution personalities. Claude and Cursor both saturate at the provider worker target (480 = 500-20 reserved). Resolved by ops/autonomy/execution_profile.py; pointed at from ops/autonomy/surface_profile.yaml. Runtime classification never depends on model identity.",
 
   "classification": {
     "cloud_env": "CLAUDE_CODE_REMOTE",
@@ -13,16 +13,16 @@
 
   "profiles": {
     "cursor": {
-      "execution_profile": "constrained",
-      "concurrency_policy": "bounded",
-      "parallel_read": "bounded",
-      "mutation_parallelism": "bounded_lanes",
+      "execution_profile": "maximum_velocity",
+      "concurrency_policy": "saturate",
+      "parallel_read": "maximum_legal",
+      "mutation_parallelism": "max_non_conflicting",
       "model_policy": "surface_default",
       "workflow_size_guideline": null,
-      "max_parallel": 4,
-      "max_mutation_lanes": 2,
-      "native_subagent_limit": null,
-      "subagent_spawn_depth": null
+      "max_parallel": 480,
+      "max_mutation_lanes": 128,
+      "native_subagent_limit": 480,
+      "subagent_spawn_depth": 3
     },
     "claude_local": {
       "execution_profile": "maximum_velocity",

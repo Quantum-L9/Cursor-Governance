@@ -14,7 +14,7 @@ updated: 2026-08-30
 
 ## Purpose
 
-After publishing the **single** planned commit (which has ALREADY passed `make precommit-repo`), continue the next independent PR, then MERGE_TRAIN. **Own the subscribed PRs until they are green and merged.** The human is not watching. Do not stop with a reinvoke YNP because required checks are still running.
+After publishing the **single** planned commit (which has ALREADY passed `make precommit-repo`), continue the next independent PR **and** start MERGE_NOW for any PR already in `merge_now`. **Own the subscribed PRs until they are green and merged. Poll remediating PRs.** The human is not watching. Do not stop with a reinvoke YNP because required checks are still running.
 
 A second cycle is **not** the normal path. It is only for signals that did not exist at census time. See [remediation-plan.md](remediation-plan.md).
 
@@ -40,15 +40,15 @@ A second cycle is **not** the normal path. It is only for signals that did not e
                        │
                        ▼
 ┌─────────────────────────────────────────────────────────┐
-│              NEXT PR, THEN MERGE_TRAIN                    │
+│              NEXT PR + MERGE_NOW                          │
 │                                                          │
 │  1. Record head SHA; accept the lane's result document   │
 │  2. Re-query reviewThreads                               │
-│  3. Launch the next wave (pr_fleet.py) / REMEDIATE_ALL   │
-│  4. FIRST_MERGE_GATE then MERGE_TRAIN                    │
+│  3. Launch the next wave (pr_fleet.py) + MERGE_NOW       │
+│  4. FIRST_MERGE_GATE then merge any PR in merge_now      │
 │                                                          │
-│  → do not merge because this one PR is green             │
-│  → watcher owns the required-check wait; merge on CLEAN  │
+│  → merge the oldest safe green PR now; do not wait       │
+│  → remediator polls the required-check wait; merge CLEAN │
 │  → new post-push comments already present: one more      │
 │  → skipped census / unrun local gate: protocol failure   │
 │  → max cycles: STOP + partial report                     │
@@ -59,7 +59,7 @@ A second cycle is **not** the normal path. It is only for signals that did not e
 
 Subscribe to every in-scope open PR at preflight (`viewerSubscription`; `ops/scripts/lib/gh_subscribe_pr.sh` → GraphQL `updateSubscription` when not `SUBSCRIBED`). Never `PUT issues/{n}/subscription` (that route 404s). A classified GraphQL refusal or subscribe WARN does not waive ownership.
 
-After remediator publish, record the head SHA, hand the wait to a background watcher lane (`pr_fleet.py assign --kind watch`, read-only `recon` role — [fleet-waves.md](fleet-waves.md)), and continue the next ready PR or the merge-train preflight. The watcher reports the terminal observation (`mergeStateStatus=CLEAN`, or a CODEBASE-red required check naming a source file this PR owns); the main agent never blocks a turn on it and never polls a PR a watcher owns. Never tell the human to re-invoke `/l9-pr-remediation` because CI is still running.
+After remediator publish, record the head SHA, launch a background watcher lane (`pr_fleet.py assign --kind watch`, read-only `recon` role — [fleet-waves.md](fleet-waves.md)), **and poll that PR** until `board=merge` or a red required check. The watcher reports the terminal observation (`mergeStateStatus=CLEAN`, or a CODEBASE-red required check naming a source file this PR owns); a watcher report does not waive remediator poll duty. When the PR enters `merge_now`, assign `--kind merge`. Never tell the human to re-invoke `/l9-pr-remediation` because CI is still running.
 
 If CI is already red on a source file this PR owns:
 

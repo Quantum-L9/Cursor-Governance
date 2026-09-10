@@ -1,5 +1,5 @@
 ---
-description: L4 local autonomy — stacked local commits, no mid-execution push, then PR template. Tree kernels fire on adapter make pr, not as L4. Cursor skips the tree latch.
+description: L4 local autonomy — stacked local commits, no mid-execution push, then PR template. Tree kernels fire on Cursor and adapter make pr before pytest, not as L4.
 ---
 
 # L4 Local Autonomy (no mid-execution push)
@@ -18,8 +18,8 @@ Default ON (`L9_L4_LOCAL_AUTONOMY=1`).
 4. When the program/contract is finished locally on **every** surface
    (Cursor, Claude Code desktop, Claude Code Mobile): scoped-commit,
    then authorize release, then publish **only** via Makefile checkers.
-   Do not run `make precommit-repo` then `make pr`. Cursor skips the
-   tree-kernel latch; adapters still fire it on `make pr`.
+   Do not run `make precommit-repo` then `make pr`. Tree kernels fire on
+   Cursor and adapters as the first `make pr` writers step, before pytest.
 
 ```bash
 python3 ops/autonomy/l4_local.py begin --contract-id "<id>"   # if not begun
@@ -27,10 +27,9 @@ python3 ops/autonomy/l4_local.py authorize-release
 PR_REMEDIATE=0 make pr   # or l9 pr / make -C "$GOV" pr WS="$PWD"
 ```
 
-If the kernel hook fails on an adapter surface, apply
-`kernels/Recursive Alignment.md` then `kernels/Validate & Repair.md`,
-commit, `kernel_gate.py record`, and re-run the same `make pr`. Do not
-run precommit or pytest first.
+If the kernel hook fails, apply `kernels/Recursive Alignment.md` then
+`kernels/Validate & Repair.md`, commit, `kernel_gate.py record`, and
+re-run the same `make pr`. Do not run precommit or pytest first.
 
 On every surface, `make pr` runs the **governance** Makefile's
 `pr` target regardless of the workspace repo or its Makefile — reach it
@@ -55,9 +54,8 @@ there is no raw-push fallback where one is absent.
 ## MUST NOT
 
 - Mid-execution remote mutation
-- Skipping the kernel hook on an adapter surface by running pytest /
-  pre-commit before `kernel_gate.py`. Cursor skips the tree latch on
-  purpose.
+- Skipping the kernel hook by running pytest / pre-commit before
+  `kernel_gate.py`. Cursor and adapters take the latch before tests.
 - Inventing "wait for push approval" contracts that recreate pacing stalls
 - Merging from the campaign / `make pr` path (merge is `/l9-pr-remediation`)
 - Force-push, admin-merge, or hard-reset

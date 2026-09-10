@@ -6,15 +6,17 @@ role: fleet_waves
 tags: [pr, fleet, waves, subagents, concurrency, result-contract]
 owner: igor_beylin
 status: active
-version: 1.0.0
-updated: 2026-09-04
+version: 1.1.0
+updated: 2026-09-10
 /L9_META -->
 
 # Fleet waves (parallel remediation without a campaign)
 
 `ops/autonomy/pr_fleet.py` names the largest safe wave; the main agent launches
-it natively. No Program Execution, no campaign, no admission token, no lease
-store. Safety comes from three things that already exist:
+it natively. Merge-train lanes (`merge_now`) start as soon as the oldest green
+PRs are safe — they do not wait for REMEDIATE_ALL. No Program Execution, no
+campaign, no admission token, no lease store. Safety comes from three things
+that already exist:
 
 1. **Conflict isolation** — a PR enters a mutation wave only when its write
    claims (`path:<file>` for every non-generated file, `branch:<head>`) conflict
@@ -29,16 +31,20 @@ store. Safety comes from three things that already exist:
    gateway. Wrong base SHA, wrong identity, a changed file outside the grant, a
    read-only role reporting changes, or a non-success host stop is `REJECTED`.
 
-Caps are read from `ops/autonomy/execution_profile.py` (Cursor constrained,
-Claude saturating). This pack never states a number.
+Profile caps are read from `ops/autonomy/execution_profile.py`. This pack then
+applies `skill_subagent_cap: 10` (`pr_fleet.SKILL_SUBAGENT_CAP`). Launch at most
+10 lanes at once. There is no tighter hidden Cursor cap this skill should wait
+on.
 
 ## Wave shapes
 
 | Lane | Kind | Role / managed Task | Mutates | When |
 |---|---|---|---|---|
+| merge | `merge` | `pr_remediation` / `l9-pr-remediation` | `stack_safe_merge.py --run` only | every PR in `waves.first_wave.merge` (`merge_now`) |
 | remediate | `remediate` | `pr_remediation` / `l9-pr-remediation` | bounded | every PR in `waves.first_wave.remediate` |
 | recon | `recon` | `recon` / `l9-recon` | no | PRs blocked by a claim conflict or the mutation cap: diagnose now, patch next wave |
-| watch | `watch` | `recon` / `l9-recon` | no | `board=wait` PRs: observe required checks in the background |
+| watch | `watch` | `recon` / `l9-recon` | no | `board=wait` and merge-blocked greens: observe required checks |
+| poll | (main agent) | remediator | no | every PR in `first_wave.poll` until `open_prs=0` |
 
 ## Launch (one message)
 
@@ -47,17 +53,18 @@ GOV_PY="${GOV_PY:-$PWD/.venv/bin/python}"
 "$GOV_PY" ops/autonomy/pr_fleet.py plan --repo {owner}/{repo} --board --json
 # wave 1, all assignments in one call per kind; --record writes the lifecycle
 # assignment the results gateway loads; --prompt renders the Task prompt
+"$GOV_PY" ops/autonomy/pr_fleet.py assign --repo {owner}/{repo} --kind merge --record --prompt --json
 "$GOV_PY" ops/autonomy/pr_fleet.py assign --repo {owner}/{repo} --kind remediate --record --prompt --json
 "$GOV_PY" ops/autonomy/pr_fleet.py assign --repo {owner}/{repo} --kind recon --record --prompt --json
 "$GOV_PY" ops/autonomy/pr_fleet.py assign --repo {owner}/{repo} --kind watch --record --prompt --json
 ```
 
 Then, in **one** assistant message, launch one background Task per assignment
-using its `cursor.managed_task_type` and `prompt`. Serializing independent
-ready lanes is a protocol violation. Main agent afterwards: take one remediation
-lane only if the cap left a free mutation slot; otherwise run the merge-train
-preflight (thread re-query, board refresh for green heads) or the next PR's
-diagnosis. Never `AwaitShell` on a lane; never poll a PR a watcher owns.
+using its `cursor.managed_task_type` and `prompt` (at most 10). Serializing
+independent ready lanes is a protocol violation. Main agent afterwards: poll
+every PR in `first_wave.poll` (15s snapshots) and launch `--kind merge` the
+moment `merge_now` grows. Never `AwaitShell` on a lane. A watcher report does
+not waive remediator poll duty.
 
 Each lane works on its own worktree for its own branch (`git worktree list`
 first; `worktree_add_wired.sh` only when none holds the branch). Two lanes
@@ -95,7 +102,8 @@ across waves until their PR reaches `CLEAN` or a red required check.
 
 ## Never
 
-- a lane that merges, force-pushes, edits CI surfaces, or asks the human
+- a watch/recon lane that merges, force-pushes, edits CI surfaces, or asks the human
 - two mutation lanes on one branch or one non-generated path
 - a lane closed on "done" without an accepted document
-- a cap or lane count written into this pack
+- waiting for REMEDIATE_ALL before starting `merge_now`
+- inventing a cap other than `skill_subagent_cap: 10`

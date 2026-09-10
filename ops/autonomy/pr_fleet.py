@@ -12,11 +12,13 @@ deterministic owner of that gap, and deliberately nothing more:
            overlap (generated-only overlap does not serialize), oldest-first
            bottom-up merge order, optional board verdicts, a receipt with a
            fingerprint so the fleet is inventoried once until a head moves.
-  waves    the largest currently safe concurrent set: read-only recon and watch
-           lanes always parallel; mutation lanes admitted only when their
-           write claims do not conflict under the canonical claim primitive
-           (autonomy.runtime.claims.claim_scopes_conflict), capped by the
-           surface execution profile (ops/autonomy/execution_profile.py).
+  waves    the largest currently safe concurrent set: merge-train lanes for
+           ``merge_now`` (oldest green PRs that will not conflict downstream),
+           then remediation, then read-only recon/watch/poll. Mutation lanes
+           admitted only when their write claims do not conflict under the
+           canonical claim primitive (autonomy.runtime.claims.claim_scopes_conflict).
+           Profile caps come from ops/autonomy/execution_profile.py; this
+           remediator then applies SKILL_SUBAGENT_CAP (10).
   assign   one bounded assignment packet per (PR, role) in the shape
            environment/agents/cursor-subagents/DELEGATION_CONTRACT.yaml
            requires, plus the Task prompt to launch it with.
@@ -27,8 +29,9 @@ deterministic owner of that gap, and deliberately nothing more:
            the wave plan). A model of the prose, not a timing.
 
 Not a scheduler: no leases, no claims registry, no admission, no capacity
-accounting beyond the profile caps it reads. Not a merge authority: it never
-merges, pushes, or edits. Not a campaign: identity fields on assignments are
+accounting beyond the skill cap it applies to the profile. Not a merge
+executor: it names ``merge_now`` and emits merge assignments; only
+``stack_safe_merge.py --run`` merges. Not a campaign: identity fields on assignments are
 run-scoped correlation keys (``lease_id`` is ``no-root-lease-<assignment>``),
 which the results gateway honours because it checks a root lease only when a
 runtime database is named. Program Execution is never involved.
@@ -82,7 +85,17 @@ FORBIDDEN_PATHS = (
 ROLE_RECON = "recon"
 ROLE_REMEDIATE = "pr_remediation"
 ROLE_WATCH = "recon"  # a watcher observes and never mutates: the read-only role
-KINDS = {"recon": ROLE_RECON, "remediate": ROLE_REMEDIATE, "watch": ROLE_WATCH}
+KINDS = {
+    "recon": ROLE_RECON,
+    "remediate": ROLE_REMEDIATE,
+    "watch": ROLE_WATCH,
+    "merge": ROLE_REMEDIATE,  # assigned merge kind only; watchers never merge
+}
+
+#: Remediator-owned concurrent-subagent ceiling. The execution profile may
+#: saturate far higher; this skill launches at most this many lanes at once.
+SKILL_SUBAGENT_CAP = 10
+SKILL_CAP_OWNER = "skills/l9-pr-remediation Defaults.skill_subagent_cap"
 
 RESULT_SCHEMA_PATH = (
     "environment/agents/cursor-subagents/schemas/cursor-subagent-result.schema.json"
@@ -280,32 +293,98 @@ def profile_caps(surface: str | None = None) -> dict[str, Any]:
     }
 
 
-def waves(
+def skill_caps(profile: dict[str, Any]) -> dict[str, Any]:
+    """Apply the remediator skill ceiling on top of the execution-profile caps."""
+    cap = SKILL_SUBAGENT_CAP
+    profile_parallel = int(profile["max_parallel"])
+    profile_lanes = int(profile["max_mutation_lanes"])
+    return {
+        **profile,
+        "profile_max_parallel": profile_parallel,
+        "profile_max_mutation_lanes": profile_lanes,
+        "max_parallel": min(profile_parallel, cap),
+        "max_mutation_lanes": min(profile_lanes, cap),
+        "skill_subagent_cap": cap,
+        "skill_cap_owner": SKILL_CAP_OWNER,
+    }
+
+
+def _overlap_partners(overlap: list[dict[str, Any]], number: int) -> set[int]:
+    partners: set[int] = set()
+    for item in overlap:
+        if item.get("generated_only"):
+            continue
+        prs = [int(n) for n in item.get("prs") or []]
+        if number in prs:
+            partners.update(prs)
+    partners.discard(number)
+    return partners
+
+
+def _stack_ancestors(number: int, parents: dict[int, int]) -> set[int]:
+    out: set[int] = set()
+    current = parents.get(number)
+    while current is not None and current not in out:
+        out.add(current)
+        current = parents.get(current)
+    return out
+
+
+def merge_now(
     prs: list[dict[str, Any]],
     *,
-    caps: dict[str, Any],
-    order: list[int] | None = None,
-    boards: dict[int, str] | None = None,
+    edges: list[dict[str, Any]],
+    overlap: list[dict[str, Any]],
+    boards: dict[int, str],
+    order: list[int],
 ) -> dict[str, Any]:
-    """Assign every PR to the earliest wave in which it may safely mutate.
+    """Oldest green PRs that may start a merge train without downstream conflict.
 
-    A PR joins the current mutation wave when its write claims conflict with no
-    PR already admitted to that wave and the mutation-lane cap has room.
-    Read-only recon for every PR and watchers for ``board=wait`` PRs run in the
-    first wave up to the total cap. Nothing here launches anything; it only
-    names the largest currently safe wave.
+    A ``board=merge`` PR is ready now when every still-open stack ancestor is
+    gone and every older non-generated overlap partner is either gone or
+    declared leftover. Independent green PRs may start in parallel. Later
+    remediations do not hold this prefix.
     """
-    by_number = {pr["number"]: pr for pr in prs}
-    sequence = order or [pr["number"] for pr in prs]
-    claims = {number: write_claims(by_number[number]) for number in sequence}
-    pending = list(sequence)
+    open_nums = {int(pr["number"]) for pr in prs}
+    parents = {int(edge["child"]): int(edge["parent"]) for edge in edges}
+    leftover = {n for n, board in boards.items() if board == "leftover"}
+    ready: list[int] = []
+    blocked: list[dict[str, Any]] = []
+    for number in order:
+        if boards.get(number) != "merge":
+            continue
+        blockers: list[dict[str, Any]] = []
+        for pred in _stack_ancestors(number, parents):
+            if pred in open_nums:
+                blockers.append({"pr": pred, "reason": "stack_parent_open"})
+        for pred in order:
+            if pred == number:
+                break
+            if pred not in open_nums or pred in leftover:
+                continue
+            if pred in _overlap_partners(overlap, number):
+                blockers.append({"pr": pred, "reason": "older_nongenerated_overlap"})
+        if blockers:
+            blocked.append({"pr": number, "blocked_by": blockers})
+        else:
+            ready.append(number)
+    return {"merge_now": ready, "merge_blocked": blocked}
+
+
+def _mutation_waves(
+    pending: list[int],
+    *,
+    claims: dict[int, list[dict[str, Any]]],
+    lane_cap: int,
+) -> list[dict[str, Any]]:
+    remaining = list(pending)
     mutation_waves: list[dict[str, Any]] = []
-    while pending:
+    while remaining:
         admitted: list[int] = []
         blocked_claim: list[dict[str, Any]] = []
         blocked_cap: list[int] = []
-        for number in pending:
-            if len(admitted) >= caps["max_mutation_lanes"]:
+        for number in remaining:
+            if len(admitted) >= lane_cap:
                 blocked_cap.append(number)
                 continue
             clash = [other for other in admitted if _claims_conflict(claims[number], claims[other])]
@@ -318,23 +397,95 @@ def waves(
         mutation_waves.append(
             {"remediate": admitted, "blocked_claim": blocked_claim, "blocked_cap": blocked_cap}
         )
-        pending = [number for number in pending if number not in admitted]
+        remaining = [number for number in remaining if number not in admitted]
+    return mutation_waves
 
+
+def waves(
+    prs: list[dict[str, Any]],
+    *,
+    caps: dict[str, Any],
+    order: list[int] | None = None,
+    boards: dict[int, str] | None = None,
+    overlap: list[dict[str, Any]] | None = None,
+    edges: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Assign every PR to the earliest wave in which it may safely run.
+
+    Merge-train lanes take the oldest ``merge_now`` PRs first. Remaining
+    mutation slots go to ``board=fix`` remediations whose write claims
+    conflict with no PR already admitted. ``board=wait`` is watch/poll only —
+    never a second mutation lane on the same branch. Read-only recon, watch,
+    and poll fill leftover slots. Nothing here launches anything; it only
+    names the largest currently safe wave under the skill cap.
+    """
+    by_number = {pr["number"]: pr for pr in prs}
+    sequence = order or [pr["number"] for pr in prs]
+    claims = {number: write_claims(by_number[number]) for number in sequence}
+    board_map = boards or {}
+    edge_list = edges if edges is not None else stack_edges(prs)
+    overlap_list = overlap if overlap is not None else overlap_matrix(prs)
+    merge_plan = (
+        merge_now(prs, edges=edge_list, overlap=overlap_list, boards=board_map, order=sequence)
+        if board_map
+        else {"merge_now": [], "merge_blocked": []}
+    )
+    merge_ready = list(merge_plan["merge_now"])
+    merge_blocked_nums = [int(item["pr"]) for item in merge_plan["merge_blocked"]]
+    merge_admitted = merge_ready[: caps["max_mutation_lanes"]]
+    merge_blocked_cap = merge_ready[caps["max_mutation_lanes"] :]
+    remediate_cap = max(0, caps["max_mutation_lanes"] - len(merge_admitted))
+    if board_map:
+        exclude = set(merge_ready) | {
+            n for n, board in board_map.items() if board in {"merge", "leftover", "wait"}
+        }
+        remediate_candidates = [n for n in sequence if n not in exclude]
+    else:
+        remediate_candidates = list(sequence)
+    if remediate_candidates and remediate_cap > 0:
+        mutation_waves = _mutation_waves(
+            remediate_candidates, claims=claims, lane_cap=remediate_cap
+        )
+    elif remediate_candidates:
+        mutation_waves = [
+            {
+                "remediate": [],
+                "blocked_claim": [],
+                "blocked_cap": list(remediate_candidates),
+            }
+        ]
+    else:
+        mutation_waves = [{"remediate": [], "blocked_claim": [], "blocked_cap": []}]
     first = mutation_waves[0]
-    read_budget = max(0, caps["max_parallel"] - len(first["remediate"]))
-    watch = [n for n in sequence if (boards or {}).get(n) == "wait"]
-    recon = [n for n in sequence if n not in first["remediate"]]
+    used = len(merge_admitted) + len(first["remediate"])
+    read_budget = max(0, caps["max_parallel"] - used)
+    watch = [n for n in sequence if board_map.get(n) == "wait" or n in merge_blocked_nums]
+    recon = [
+        n
+        for n in sequence
+        if n not in first["remediate"]
+        and n not in merge_admitted
+        and n not in watch
+        and board_map.get(n) != "leftover"
+    ]
     watch_now = watch[:read_budget]
     recon_now = [n for n in recon if n not in watch_now][: max(0, read_budget - len(watch_now))]
+    poll = [n for n in sequence if n not in merge_admitted and board_map.get(n) != "leftover"]
     return {
         "caps": caps,
+        "merge_now": merge_admitted,
+        "merge_blocked": merge_plan["merge_blocked"],
         "first_wave": {
+            "merge": merge_admitted,
             "remediate": first["remediate"],
             "recon": recon_now,
             "watch": watch_now,
-            "launch_count": len(first["remediate"]) + len(recon_now) + len(watch_now),
+            "poll": poll,
+            "launch_count": (
+                len(merge_admitted) + len(first["remediate"]) + len(recon_now) + len(watch_now)
+            ),
             "blocked_claim": first["blocked_claim"],
-            "blocked_cap": first["blocked_cap"],
+            "blocked_cap": list(first["blocked_cap"]) + merge_blocked_cap,
         },
         "mutation_waves": mutation_waves,
         "wave_count": len(mutation_waves),
@@ -371,8 +522,19 @@ def plan(
         for pr, verdict in zip(prs, results, strict=True):
             boards[pr["number"]] = str(verdict.get("board") or "wait")
             verdicts[str(pr["number"])] = verdict
-    caps = profile_caps(surface)
-    wave_plan = waves(prs, caps=caps, order=order, boards=boards) if prs else None
+    caps = skill_caps(profile_caps(surface))
+    wave_plan = (
+        waves(
+            prs,
+            caps=caps,
+            order=order,
+            boards=boards,
+            overlap=overlap,
+            edges=edges,
+        )
+        if prs
+        else None
+    )
     stacked = {edge["child"] for edge in edges} | {edge["parent"] for edge in edges}
     conflicting = {n for item in overlap if not item["generated_only"] for n in item["prs"]}
     print_fp = fingerprint(prs)
@@ -393,6 +555,8 @@ def plan(
         "overlap": overlap,
         "merge_order": order,
         "merge_train": [n for n in order if boards.get(n) == "merge"] if with_boards else None,
+        "merge_now": (wave_plan or {}).get("merge_now") if with_boards else None,
+        "merge_blocked": (wave_plan or {}).get("merge_blocked") if with_boards else None,
         "boards": verdicts if with_boards else None,
         "waves": wave_plan,
         "velocity": velocity_model(prs, wave_plan) if wave_plan else None,
@@ -453,6 +617,7 @@ def velocity_model(prs: list[dict[str, Any]], wave_plan: dict[str, Any]) -> dict
             "first_wave_launched": first["launch_count"],
             "first_wave_parallelism": first["launch_count"],
             "first_wave_mutators": len(first["remediate"]),
+            "first_wave_mergers": len(first.get("merge") or []),
             "main_agent_foreground_waits": 0,
             "mutation_waves": wave_plan["wave_count"],
             "blocked_claim_first_wave": len(first["blocked_claim"]),
@@ -488,7 +653,17 @@ def _objective(kind: str, repo: str, pr: dict[str, Any]) -> str:
         return (
             f"Observe {repo}#{number} at head {head} until mergeStateStatus is CLEAN or a "
             "required check turns red; report the terminal observation with the exact head. "
-            "Never push, merge, edit, or resolve threads."
+            "The remediator main agent also polls this PR; this report does not waive that "
+            "duty. Never push, merge, edit, or resolve threads."
+        )
+    if kind == "merge":
+        return (
+            f"Merge {repo}#{number} at head {head} via ops/autonomy/stack_safe_merge.py "
+            "--run only. Immediately before merge: re-run pr_board.py; re-query unresolved "
+            "reviewThreads; abort if board is not merge or the head SHA moved. Never "
+            "--admin, never hand-typed --squash, never gh pr update-branch, never "
+            "force-push, never edit files. Watchers never merge; this assigned merge "
+            "kind is the only subagent that may merge."
         )
     return (
         f"Remediate {repo}#{number} on branch {pr['headRefName']} from head {head}: plan every "
@@ -516,6 +691,8 @@ def build_assignment(
     allowed = sorted(set(pr["files"]))
     if kind == "remediate":
         allowed = sorted(set(allowed) | {f"{prefix}*" for prefix in GENERATED_PATH_PREFIXES})
+    if kind == "merge":
+        allowed = []
     packet = {
         "schema": "l9.pr-fleet.assignment.v1",
         "assignment_id": assignment_id,
@@ -540,7 +717,7 @@ def build_assignment(
         "input_artifact_ids": [],
         "allowed_paths": allowed,
         "forbidden_paths": list(FORBIDDEN_PATHS),
-        "mutation": kind == "remediate",
+        "mutation": kind in {"remediate", "merge"},
         "result_kind": "PRRemediationReport" if role == ROLE_REMEDIATE else "ReconReport",
         "result_schema": RESULT_SCHEMA_PATH,
     }
@@ -815,8 +992,27 @@ def main(argv: list[str] | None = None) -> int:
                 int(n)
                 for n in (fleet.get("waves") or {})
                 .get("first_wave", {})
-                .get({"recon": "recon", "remediate": "remediate", "watch": "watch"}[args.kind], [])
+                .get(
+                    {
+                        "recon": "recon",
+                        "remediate": "remediate",
+                        "watch": "watch",
+                        "merge": "merge",
+                    }[args.kind],
+                    [],
+                )
             ]
+            if args.kind == "merge" and args.pr:
+                allowed = {
+                    int(n)
+                    for n in (fleet.get("waves") or {}).get("first_wave", {}).get("merge", [])
+                }
+                extra = [n for n in numbers if n not in allowed]
+                if extra:
+                    raise FleetError(
+                        f"explicit merge PR(s) {extra} are not in first_wave.merge "
+                        f"{sorted(allowed)}"
+                    )
             run_id = _run_id(args.run_id)
             packets = []
             for number in numbers:
