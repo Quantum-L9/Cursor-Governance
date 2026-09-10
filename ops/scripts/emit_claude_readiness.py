@@ -694,7 +694,44 @@ def _receipt_path() -> Path:
     return Path.home() / ".l9" / "claude" / "readiness-receipt.json"
 
 
-def _compact(receipt: dict[str, Any]) -> str:
+#: How a printed receipt came to be: every probe was just run, or the on-disk
+#: receipt was handed back under `reusable_receipt`. Printed in the compact
+#: block so a reader never mistakes a reused receipt for a fresh measurement.
+REBUILT = "rebuilt"
+REUSED = "reused"
+
+
+def reusable_receipt(
+    existing: dict[str, Any] | None, *, gov: Path, workspace: str
+) -> dict[str, Any] | None:
+    """The on-disk receipt, when every probe in it is still worth believing.
+
+    Deterministic invalidation and nothing heuristic: the receipt must be FRESH
+    by its own TTL (`receipt_freshness`), must describe this workspace, and must
+    carry the governance SHA checked out right now — a moved SHA rebuilt the
+    projected artifacts the receipt describes, so the SHA is the stronger
+    binding and is checked even while the clock still says fresh. Anything
+    else returns None and the caller rebuilds.
+
+    Why it exists: the memory diagnostics probe alone costs ~5 s of a 30 s
+    SessionStart hook, and every SessionStart (startup, resume, compaction)
+    paid it to re-measure a receipt that already declares the window inside
+    which it may be believed. `make claude-readiness` never passes through
+    here: an explicit rebuild is always a rebuild.
+    """
+    if not isinstance(existing, dict) or existing.get("schema_version") != SCHEMA_VERSION:
+        return None
+    if receipt_freshness(existing)["state"] != FRESH:
+        return None
+    if str(existing.get("workspace") or "") != str(workspace):
+        return None
+    live = _git(gov, "rev-parse", "HEAD")
+    if not live or str(existing.get("governance_SHA") or "") != live:
+        return None
+    return existing
+
+
+def _compact(receipt: dict[str, Any], *, source: str = REBUILT) -> str:
     lines = ["--- claude readiness receipt ---"]
     lines.append(f"schema={receipt['schema_version']} overall={receipt['overall_readiness']}")
     lines.append(
@@ -706,6 +743,7 @@ def _compact(receipt: dict[str, Any]) -> str:
     # the absence is legible in a pasted SessionStart block.
     fresh = receipt_freshness(receipt)
     lines.append(f"receipt_freshness={fresh['state']} ({fresh['reason']})")
+    lines.append(f"receipt_source={source}")
     lines.append(f"uv_version={receipt.get('uv_version') or 'unobserved'}")
     lines.append(f"memory_transport={receipt.get('memory_transport', UNKNOWN)}")
     order = [
@@ -747,16 +785,33 @@ def main() -> int:
         action="store_true",
         help="Print memory cli / control_plane / mcp JSON and exit (no readiness receipt)",
     )
+    parser.add_argument(
+        "--reuse-fresh",
+        action="store_true",
+        help=(
+            "hand back the on-disk receipt instead of re-running every probe when it "
+            "is inside ttl_seconds, describes this workspace, and was built against "
+            "the governance SHA currently checked out; otherwise rebuild as usual"
+        ),
+    )
     args = parser.parse_args()
 
+    gov = args.root or _gov_root()
     if args.memory_probe:
-        gov = args.root or _gov_root()
         print(json.dumps(memory_probe(gov)))
         return 0
 
-    receipt = build_receipt(gov=args.root, workspace=args.workspace)
+    workspace = args.workspace or os.environ.get("CURSOR_PROJECT_DIR") or os.getcwd()
+    source = REBUILT
+    receipt: dict[str, Any] | None = None
+    if args.reuse_fresh:
+        receipt = reusable_receipt(_read_json(_receipt_path()), gov=gov, workspace=workspace)
+        if receipt is not None:
+            source = REUSED
+    if receipt is None:
+        receipt = build_receipt(gov=gov, workspace=workspace)
 
-    if not args.no_write:
+    if not args.no_write and source == REBUILT:
         path = _receipt_path()
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -769,7 +824,7 @@ def main() -> int:
     if args.json:
         print(json.dumps(receipt, indent=2))
     elif args.read:
-        print(_compact(receipt))
+        print(_compact(receipt, source=source))
     else:
         print(f"claude readiness: {receipt['overall_readiness']}")
     return 0

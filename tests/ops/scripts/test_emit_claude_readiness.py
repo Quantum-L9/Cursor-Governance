@@ -478,3 +478,123 @@ def test_receipt_carries_a_write_time_and_expires(tmp_path: Path, monkeypatch) -
     assert er.receipt_freshness(None)["state"] == er.NEVER_RAN
     # So is a receipt predating generated_at — unknowable age is never fresh.
     assert er.receipt_freshness({"schema_version": er.SCHEMA_VERSION})["state"] == er.EXPIRED
+
+
+# --- SessionStart reuse: the receipt is handed back only while it is believable
+
+
+def _fresh_receipt(sha: str = "abc123", workspace: str = "/ws") -> dict:
+    from datetime import UTC, datetime
+
+    return {
+        "schema_version": er.SCHEMA_VERSION,
+        "generated_at": datetime.now(UTC).strftime(er._TIMESTAMP_FORMAT),
+        "ttl_seconds": er.RECEIPT_TTL_SECONDS,
+        "governance_SHA": sha,
+        "workspace": workspace,
+        "overall_readiness": READY,
+        "governance_default_branch": "main",
+    }
+
+
+def test_reusable_receipt_requires_fresh_same_workspace_and_live_sha(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Deterministic invalidation: TTL, workspace, and the checked-out SHA.
+
+    The SessionStart hook re-ran every probe (~6 s, 5.3 s of it the memory
+    diagnostics) on every startup, resume and compaction to re-measure a
+    receipt that already declares its own validity window. Reuse is allowed
+    only inside that window and only for the same workspace and revision.
+    """
+    from datetime import UTC, datetime, timedelta
+
+    gov = tmp_path / "gov"
+    monkeypatch.setattr(er, "_git", lambda _g, *a: "abc123" if a == ("rev-parse", "HEAD") else "")
+    receipt = _fresh_receipt()
+
+    assert er.reusable_receipt(receipt, gov=gov, workspace="/ws") is receipt
+    assert er.reusable_receipt(receipt, gov=gov, workspace="/elsewhere") is None
+    assert er.reusable_receipt(_fresh_receipt(sha="def456"), gov=gov, workspace="/ws") is None
+    stale = datetime.now(UTC) - timedelta(seconds=er.RECEIPT_TTL_SECONDS + 1)
+    expired = {**receipt, "generated_at": stale.strftime(er._TIMESTAMP_FORMAT)}
+    assert er.reusable_receipt(expired, gov=gov, workspace="/ws") is None
+    assert er.reusable_receipt(None, gov=gov, workspace="/ws") is None
+    assert er.reusable_receipt({**receipt, "schema_version": "x"}, gov=gov, workspace="/ws") is None
+
+    # An unknowable live SHA is not a match — a missing probe must not
+    # manufacture reuse out of a receipt that may describe another revision.
+    monkeypatch.setattr(er, "_git", lambda _g, *a: "")
+    assert er.reusable_receipt(receipt, gov=gov, workspace="/ws") is None
+
+
+def test_compact_names_the_receipt_source() -> None:
+    receipt = _fresh_receipt()
+    assert "receipt_source=rebuilt" in er._compact(receipt)
+    assert "receipt_source=reused" in er._compact(receipt, source=er.REUSED)
+
+
+def test_reuse_fresh_skips_every_probe_and_leaves_the_file_untouched(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    """With a believable receipt on disk, `--read --reuse-fresh` runs no probe."""
+    path = tmp_path / "readiness-receipt.json"
+    receipt = _fresh_receipt(workspace=str(tmp_path))
+    path.write_text(json.dumps(receipt) + "\n", encoding="utf-8")
+    before = path.read_bytes()
+    monkeypatch.setenv("L9_READINESS_RECEIPT_FILE", str(path))
+    monkeypatch.setattr(er, "_git", lambda _g, *a: "abc123" if a == ("rev-parse", "HEAD") else "")
+
+    def _must_not_run(**_kwargs):  # pragma: no cover - the assertion IS the call
+        raise AssertionError("build_receipt ran despite a reusable receipt")
+
+    monkeypatch.setattr(er, "build_receipt", _must_not_run)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "emit_claude_readiness.py",
+            "--root",
+            str(tmp_path),
+            "--workspace",
+            str(tmp_path),
+            "--read",
+            "--reuse-fresh",
+        ],
+    )
+    assert er.main() == 0
+    out = capsys.readouterr().out
+    assert "receipt_source=reused" in out
+    assert "receipt_freshness=fresh" in out
+    assert path.read_bytes() == before, "reuse must not rewrite the receipt"
+
+
+def test_reuse_fresh_rebuilds_when_the_sha_moved(tmp_path: Path, monkeypatch, capsys) -> None:
+    path = tmp_path / "readiness-receipt.json"
+    path.write_text(json.dumps(_fresh_receipt(sha="old", workspace=str(tmp_path))) + "\n")
+    monkeypatch.setenv("L9_READINESS_RECEIPT_FILE", str(path))
+    monkeypatch.setattr(er, "_git", lambda _g, *a: "new" if a == ("rev-parse", "HEAD") else "")
+    calls: list[dict] = []
+
+    def _fake_build(**kwargs):
+        calls.append(kwargs)
+        return _fresh_receipt(sha="new", workspace=str(tmp_path))
+
+    monkeypatch.setattr(er, "build_receipt", _fake_build)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "emit_claude_readiness.py",
+            "--root",
+            str(tmp_path),
+            "--workspace",
+            str(tmp_path),
+            "--read",
+            "--reuse-fresh",
+        ],
+    )
+    assert er.main() == 0
+    assert len(calls) == 1, "a moved SHA must rebuild"
+    assert "receipt_source=rebuilt" in capsys.readouterr().out
+    assert json.loads(path.read_text(encoding="utf-8"))["governance_SHA"] == "new"
