@@ -43,8 +43,12 @@ def _workspace(tmp_path: Path, *, commit_wiring: bool) -> Path:
     _git(repo, "init", "-q")
     (repo / "README.md").write_text("x\n", encoding="utf-8")
     (repo / ".claude" / "settings.json").write_text("{}\n", encoding="utf-8")
-    for name in ("session_start_claude_governance.sh", "merge_gate_wrap.py"):
-        (repo / ".claude" / "hooks" / name).write_text("#!/bin/sh\n", encoding="utf-8")
+    # Only the SessionStart bootstrap hook is projected; the fail-open
+    # merge_gate_wrap.py consumer copy was retired (gates dispatch through the
+    # launcher, INV-1), so it is no longer an injected artifact here.
+    (repo / ".claude" / "hooks" / "session_start_claude_governance.sh").write_text(
+        "#!/bin/sh\n", encoding="utf-8"
+    )
     _git(repo, "add", "README.md")
     if commit_wiring:
         _git(repo, "add", "-f", ".claude/settings.json", ".claude/hooks")

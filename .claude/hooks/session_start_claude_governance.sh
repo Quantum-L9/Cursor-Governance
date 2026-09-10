@@ -26,6 +26,14 @@ set -uo pipefail
 # Inherited by the bounded child (below) so its internal clamps are measured
 # from when the HOOK started, not from when the child was forked.
 _L9_HOOK_START="${_L9_HOOK_START:-$(date +%s)}"
+# Same instant in the UTC form the launcher stamps its skip log with, so the
+# skips recorded during THIS SessionStart can be told apart from older ones.
+# Inherited by the child for the same reason as _L9_HOOK_START.
+_L9_HOOK_START_ISO="${_L9_HOOK_START_ISO:-$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo '')}"
+# TERM->KILL grace the parent's deadline subtracts (see the deadline-safe
+# block). One value, read by both ends, so the child's clamps and the parent's
+# deadline cannot drift apart.
+_L9_GRACE="${L9_SESSION_START_GRACE:-2}"
 
 # Must agree with the `timeout` on this hook's entry in settings.template.json:
 # this value sizes the clamping, that value is where the harness kills the hook,
@@ -33,9 +41,40 @@ _L9_HOOK_START="${_L9_HOOK_START:-$(date +%s)}"
 # exist. Nothing renders one from the other — the agreement is held by
 # tests/test_session_start_partial_emit.py::BudgetRegistrationLockstepTest, so
 # a bump in one place fails there rather than degrading silently in production.
+#
+# Measured one second INSIDE the parent's deadline (budget - reserve - grace):
+# a bounded engine that expires at its own ceiling is then reported by the
+# child as TIMED OUT, with the run still completing, rather than being torn
+# down together with the child at the same instant and read as PARTIAL.
 _l9_budget_left() {
   local total="${L9_SESSION_START_BUDGET:-30}" reserve="${L9_SESSION_START_RESERVE:-4}"
-  echo $(( total - ( $(date +%s) - _L9_HOOK_START ) - reserve ))
+  echo $(( total - ( $(date +%s) - _L9_HOOK_START ) - reserve - _L9_GRACE - 1 ))
+}
+
+# Every multi-second sub-engine below runs through this, and the platform
+# contract is why it is not optional: Claude Code DISCARDS a hook's output when
+# the hook reaches its registration `timeout` (hooks reference, "Timeouts"), so
+# the TERM trap armed further down cannot rescue context from a harness kill —
+# only finishing inside the budget can. A hosted session measured this hook at
+# 29,620 ms against its 30,000 ms ceiling: after the repair had spent its clamp,
+# the readiness emitter (90 s internal probe timeout) and the projection engine
+# (600 s plugin fallback) still ran with no ceiling at all, 380 ms from losing
+# every line accumulated above them.
+#
+# Returns 125 when fewer than $1 seconds remain, so the caller can NAME the
+# deferral instead of starting work that can only be killed; 124 when the
+# runner expires. Unbounded only when run_with_timeout is unavailable — the
+# same fail-open the repair already takes.
+_l9_bounded() {
+  local floor="$1" left
+  shift
+  left="$(_l9_budget_left)"
+  [ "$left" -ge "$floor" ] || return 125
+  if type run_with_timeout >/dev/null 2>&1; then
+    run_with_timeout "$left" "$@"
+  else
+    "$@"
+  fi
 }
 
 resolve_governance_dir() {
@@ -192,7 +231,7 @@ if [ "$_L9_ROLE" = "parent" ]; then
     # ignores TERM and has to be killed — still lands at budget-reserve and the
     # reserve stays a reserve. Budget and registration are held in lockstep by
     # tests/test_session_start_partial_emit.py::BudgetRegistrationLockstepTest.
-    _l9_grace=2
+    _l9_grace="$_L9_GRACE"
     _l9_deadline=$(( ${L9_SESSION_START_BUDGET:-30} - ${L9_SESSION_START_RESERVE:-4} - _l9_grace ))
     [ "$_l9_deadline" -lt 1 ] && _l9_deadline=1
 
@@ -217,6 +256,7 @@ if [ "$_L9_ROLE" = "parent" ]; then
     _l9_errlog="$(mktemp "${TMPDIR:-/tmp}/l9-sessionstart-err.XXXXXX" 2>/dev/null || echo /dev/null)"
     set -m
     _L9_ROLE=child _L9_CTX_FILE="$_L9_CTX_FILE" _L9_HOOK_START="$_L9_HOOK_START" \
+      _L9_HOOK_START_ISO="$_L9_HOOK_START_ISO" \
       bash "$0" "$@" >/dev/null 2>"$_l9_errlog" &
     _l9_child=$!
     set +m
@@ -262,8 +302,30 @@ if [ -n "$_L9_SD_LIB" ]; then
   esac
 else
   # Detector unavailable means surface identity is unknown. This is an
-  # observer-class hook, so unknown must not inject Claude context.
-  emit ""
+  # observer-class hook, so unknown must not inject Claude context (ADR-0029:
+  # no private marker list here either). The detector ships WITH governance,
+  # so this is also exactly the shape of a session whose environment was never
+  # provisioned — the one case the committed consumer copy exists for, reached
+  # through the registration's launcher-missing fallback. Say only the
+  # surface-neutral fact: no banner, no doctrine, no identity, just where the
+  # SSOT is missing and how to obtain it. A governance tree that is present
+  # but lacks its own detector is a foreign or partial tree: stay silent.
+  if [ -f "$HOME/.cursor-governance/CANONICAL_LAW.md" ]; then
+    emit ""
+  fi
+  _l9_neutral="$(printf '%s\n' \
+    "governance SSOT: NOT FOUND — web/setup.sh must clone GitHub main to \$HOME/.cursor-governance" \
+    "remote: https://github.com/Quantum-L9/Cursor-Governance (branch main)" \
+    "surface: unknown (governance surface detector unavailable) — no surface-specific context injected")"
+  # `say` is not defined yet at this point and the bounded CHILD never prints:
+  # its emit only marks completion, and the parent delivers the sidecar. So
+  # make the lines durable the same way `say` would, then complete; the
+  # degraded inline path (no sidecar) emits them directly.
+  if [ "${_L9_ROLE:-parent}" = "child" ] && [ -n "${_L9_CTX_FILE:-}" ]; then
+    printf '%s\n' "$_l9_neutral" >>"$_L9_CTX_FILE" 2>/dev/null
+    emit ""
+  fi
+  emit "$_l9_neutral"
 fi
 unset _L9_SD_LIB _L9_WALK _L9_HOOK_DIR
 
@@ -509,13 +571,22 @@ if GOV=$(resolve_governance_dir); then
   PROJECTION_ENGINE="$GOV/ops/scripts/claude_projection.py"
   if [ "${L9_SKIP_SESSION_PROJECTION:-}" != "1" ] \
      && [ -f "$PROJECTION_ENGINE" ] && command -v "$PY" >/dev/null 2>&1; then
-    PROJECTION_LINE=$("$PY" "$PROJECTION_ENGINE" --root "$GOV" --workspace "$WORKSPACE" \
+    # Bounded: the engine's own ceilings (30 s classify, 600 s plugin fallback)
+    # are sized for install time, not for what is left of this hook.
+    PROJECTION_LINE=$(_l9_bounded 5 "$PY" "$PROJECTION_ENGINE" --root "$GOV" --workspace "$WORKSPACE" \
       --summary 2>/dev/null | tail -1)
-    case "${PROJECTION_LINE:-}" in
-      projection=ok) say "claude projection: ok (receipt ~/.l9/claude/projection-receipt.json)" ;;
-      projection=*)  say "claude projection: WARN ${PROJECTION_LINE#projection=} — see ~/.l9/claude/projection-receipt.json" ;;
-      *)             say "claude projection: WARN engine produced no summary — run 'make claude-install'" ;;
-    esac
+    _projection_rc=$?
+    if [ "$_projection_rc" = 125 ]; then
+      say "claude projection: DEFERRED — $(_l9_budget_left)s of hook budget left (needs >=5s); run 'make claude-install' to reconcile"
+    elif [ "$_projection_rc" = 124 ]; then
+      say "claude projection: TIMED OUT inside the hook budget — see ~/.l9/claude/projection-receipt.json"
+    else
+      case "${PROJECTION_LINE:-}" in
+        projection=ok) say "claude projection: ok (receipt ~/.l9/claude/projection-receipt.json)" ;;
+        projection=*)  say "claude projection: WARN ${PROJECTION_LINE#projection=} — see ~/.l9/claude/projection-receipt.json" ;;
+        *)             say "claude projection: WARN engine produced no summary — run 'make claude-install'" ;;
+      esac
+    fi
   fi
   # Projection rewrites managed settings.env from the template. Re-apply the
   # hosted overlay after every SessionStart projection, not only install.sh.
@@ -543,8 +614,12 @@ if GOV=$(resolve_governance_dir); then
   # --- Bounded-autonomy campaign context (fail-open; read-only probe) ------
   AUTONOMY_BOOTSTRAP="$GOV/environment/program-execution/peer_execution/autonomy/bootstrap.py"
   if [ -f "$AUTONOMY_BOOTSTRAP" ] && command -v "$PY" >/dev/null 2>&1; then
-    AUTONOMY_CONTEXT=$("$PY" "$AUTONOMY_BOOTSTRAP" --workspace "$WORKSPACE" 2>/dev/null || true)
-    [ -n "$AUTONOMY_CONTEXT" ] && say "--- bounded autonomy ---" "$AUTONOMY_CONTEXT"
+    AUTONOMY_CONTEXT=$(_l9_bounded 2 "$PY" "$AUTONOMY_BOOTSTRAP" --workspace "$WORKSPACE" 2>/dev/null)
+    if [ $? = 125 ]; then
+      say "bounded autonomy: DEFERRED — hook budget exhausted; continue under base governance"
+    elif [ -n "$AUTONOMY_CONTEXT" ]; then
+      say "--- bounded autonomy ---" "$AUTONOMY_CONTEXT"
+    fi
   else
     say "bounded autonomy: runtime unavailable; continue under base governance"
   fi
@@ -556,8 +631,10 @@ if GOV=$(resolve_governance_dir); then
   # a ceiling (L9 lane caps, Claude Code's own subagent limits, workflow sizing).
   EXECUTION_PROFILE="$GOV/ops/autonomy/execution_profile.py"
   if [ -f "$EXECUTION_PROFILE" ] && command -v "$PY" >/dev/null 2>&1; then
-    PROFILE_TEXT=$("$PY" "$EXECUTION_PROFILE" --root "$GOV" --workspace "$WORKSPACE" 2>/dev/null || true)
-    if [ -n "$PROFILE_TEXT" ]; then
+    PROFILE_TEXT=$(_l9_bounded 2 "$PY" "$EXECUTION_PROFILE" --root "$GOV" --workspace "$WORKSPACE" 2>/dev/null)
+    if [ $? = 125 ]; then
+      say "claude execution profile: DEFERRED — hook budget exhausted; continue under base governance"
+    elif [ -n "$PROFILE_TEXT" ]; then
       say "--- claude execution profile ---"
       while IFS= read -r line || [ -n "$line" ]; do
         say "$line"
@@ -705,7 +782,12 @@ emit_account_drift() {
   [ -n "$py" ] && command -v "$py" >/dev/null 2>&1 || return 0
 
   local out
-  out="$("$py" "$verifier" 2>/dev/null || true)"
+  out="$(_l9_bounded 2 "$py" "$verifier" 2>/dev/null)"
+  if [ $? = 125 ]; then
+    # Not checked is not the same as matching: say so rather than stay quiet.
+    say "account field drift: NOT CHECKED — hook budget exhausted"
+    return 0
+  fi
   # Report only when something is wrong; a matching environment stays quiet.
   if printf '%s' "$out" | grep -q 'DRIFT:'; then
     say "--- account field drift ---"
@@ -736,6 +818,7 @@ try:
     d = json.load(open(path, encoding="utf-8"))
 except Exception:
     sys.exit(0)
+print("receipt_generated_at=" + str(d.get("generated_at") or "unknown"))
 print("memory.cli=" + str(d.get("memory_cli_status", "UNKNOWN")))
 print("memory.mcp=" + str(d.get("memory_mcp_status", "UNKNOWN")))
 print("memory_control_plane=" + str(d.get("memory_control_plane_status", "UNKNOWN")))
@@ -783,8 +866,28 @@ emit_readiness_receipt() {
   local emitter="$GOV/ops/scripts/emit_claude_readiness.py"
   [ -f "$emitter" ] || return 0
   [ -n "$py" ] && command -v "$py" >/dev/null 2>&1 || return 0
-  local block
-  block="$("$py" "$emitter" --root "$GOV" --workspace "$WORKSPACE" --read 2>/dev/null || true)"
+  # --reuse-fresh: the emitter hands back the on-disk receipt when it is inside
+  # its own TTL, describes this workspace, and was built against the governance
+  # SHA checked out right now; otherwise it rebuilds. Measured on a hosted
+  # container: the rebuild is ~6 s of a ~9 s hook — 5.3 s of it the memory
+  # diagnostics probe — re-run on every startup, resume AND compaction to
+  # re-measure a receipt that already declares its validity window, while the
+  # sibling memory_prefetch hook was crossing the same control plane for this
+  # session's real hydration. The block names its source and age either way.
+  # Bounded: the emitter's memory probe alone carries a 90 s internal timeout.
+  local block rc
+  block="$(_l9_bounded 8 "$py" "$emitter" --root "$GOV" --workspace "$WORKSPACE" --read --reuse-fresh 2>/dev/null)"
+  rc=$?
+  case "$rc" in
+    125)
+      say "claude readiness: DEFERRED — $(_l9_budget_left)s of hook budget left (needs >=8s); last receipt: ~/.l9/claude/readiness-receipt.json"
+      return 0
+      ;;
+    124)
+      say "claude readiness: TIMED OUT inside the hook budget — receipt not rebuilt this session"
+      return 0
+      ;;
+  esac
   [ -n "$block" ] || return 0
   while IFS= read -r line || [ -n "$line" ]; do
     say "$line"
@@ -806,6 +909,25 @@ if [ -f "$skill_log" ]; then
   say "skill-usage: $skill_log ($skill_n entries)"
 else
   say "skill-usage: $skill_log (absent — logger never wrote)"
+fi
+
+# Sibling SessionStart hooks run CONCURRENTLY with this one — the platform
+# offers no ordering — so on a cached hosted environment they dispatch against
+# the governance revision checked out BEFORE the refresh above landed. A hook
+# file that exists only on the new tip is then skipped by the launcher for
+# exactly one session: observed as bootstrap_capability_preflight.sh recording
+# "hook file absent" 4 s before the refresh receipt was written. The launcher
+# logs every such skip; surface the ones from THIS SessionStart so the gap is
+# visible in-session rather than discovered in a log afterwards.
+_skip_log="${L9_HOOK_SKIP_LOG:-$HOME/.l9/claude/hook-skips.log}"
+if [ -n "$_L9_HOOK_START_ISO" ] && [ -f "$_skip_log" ]; then
+  _skips="$(awk -v since="$_L9_HOOK_START_ISO" '$1 >= since' "$_skip_log" 2>/dev/null | tail -n 5)"
+  if [ -n "$_skips" ]; then
+    say "hook skips this SessionStart (sibling hooks the launcher could not run; $_skip_log):"
+    while IFS= read -r line || [ -n "$line" ]; do
+      say "  $line"
+    done <<< "$_skips"
+  fi
 fi
 
 if [ -f "$GOV/ops/autonomy/breakglass_receipt.py" ]; then

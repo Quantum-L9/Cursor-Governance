@@ -76,6 +76,209 @@ class MissingSsotTest(unittest.TestCase):
             context = _context(proc.stdout)
             self.assertIn("governance SSOT: NOT FOUND", context)
 
+    @staticmethod
+    def _registered_command() -> str:
+        settings = json.loads((CLAUDE_DIR / "settings.template.json").read_text(encoding="utf-8"))
+        for matcher in settings["hooks"]["SessionStart"]:
+            for entry in matcher["hooks"]:
+                if "session_start_claude_governance.sh" in entry["command"]:
+                    return entry["command"]
+        raise AssertionError("governance hook is not registered on SessionStart")
+
+    def test_registration_reaches_the_committed_copy_when_governance_is_absent(self) -> None:
+        """The REGISTERED command, not just the hook, must deliver NOT FOUND.
+
+        Every registration dispatches through the launcher inside
+        $HOME/.cursor-governance, so when governance is absent the launcher is
+        absent too — and an observer registration that simply `exit 0`s on a
+        missing launcher can never deliver the one line that says the
+        environment was never provisioned. The committed consumer copy exists
+        for exactly that session (SESSION_START_SPEC: Mobile/Web survival),
+        which is only true if the registration falls back to it.
+        """
+        command = self._registered_command()
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            home.mkdir()
+            project = Path(tmp) / "consumer"
+            (project / ".claude" / "hooks").mkdir(parents=True)
+            copy = project / ".claude" / "hooks" / "session_start_claude_governance.sh"
+            copy.write_text(HOOK.read_text(encoding="utf-8"), encoding="utf-8")
+            env = _base_env(home)
+            env["CLAUDE_PROJECT_DIR"] = str(project)
+            proc = subprocess.run(
+                ["bash", "-c", command],
+                capture_output=True,
+                text=True,
+                env=env,
+                cwd=tmp,
+                timeout=60,
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr[-400:])
+            self.assertIn("governance SSOT: NOT FOUND", _context(proc.stdout))
+
+    def test_registration_stays_silent_when_neither_launcher_nor_copy_exists(self) -> None:
+        """No launcher, no committed copy: an observer still fails open."""
+        command = self._registered_command()
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            home.mkdir()
+            project = Path(tmp) / "consumer"
+            project.mkdir()
+            env = _base_env(home)
+            env["CLAUDE_PROJECT_DIR"] = str(project)
+            proc = subprocess.run(
+                ["bash", "-c", command],
+                capture_output=True,
+                text=True,
+                env=env,
+                cwd=tmp,
+                timeout=60,
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 0)
+            self.assertEqual(proc.stdout.strip(), "")
+
+
+class BoundedSubEngineTest(unittest.TestCase):
+    """Every multi-second sub-engine runs inside what is LEFT of the budget.
+
+    The platform discards a hook's output when the hook reaches its `timeout`,
+    so a sub-engine that runs past the ceiling does not degrade the context —
+    it deletes it. A hosted session measured this hook at 29,620 ms against a
+    30,000 ms ceiling with the readiness emitter and the projection engine
+    running unbounded after the repair. Each must be declined by name when the
+    remaining budget cannot cover it, run under the remaining budget when it
+    can, and be reported as TIMED OUT when it exceeds that.
+    """
+
+    def _fake_governance(self, tmp: Path, *, readiness_body: str) -> Path:
+        gov = tmp / "home" / ".cursor-governance"
+        (gov / "ops" / "scripts" / "lib").mkdir(parents=True)
+        (gov / "CANONICAL_LAW.md").write_text("law\n", encoding="utf-8")
+        (gov / "ops" / "scripts" / "lib" / "run_with_timeout.sh").write_text(
+            RUN_WITH_TIMEOUT.read_text(encoding="utf-8"), encoding="utf-8"
+        )
+        (gov / "ops" / "scripts" / "claude_projection.py").write_text(
+            textwrap.dedent(
+                """
+                import pathlib, sys
+                pathlib.Path(sys.argv[0]).with_suffix(".ran").write_text("ran")
+                print("projection=ok")
+                """
+            ).strip()
+            + "\n",
+            encoding="utf-8",
+        )
+        (gov / "ops" / "scripts" / "emit_claude_readiness.py").write_text(
+            readiness_body, encoding="utf-8"
+        )
+        return gov
+
+    def _run(self, tmp: Path, *, budget: str) -> str:
+        env = _base_env(tmp / "home")
+        env["L9_SESSION_START_BUDGET"] = budget
+        proc = subprocess.run(
+            ["bash", str(HOOK)],
+            capture_output=True,
+            text=True,
+            env=env,
+            cwd=tmp,
+            timeout=120,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr[-400:])
+        return _context(proc.stdout)
+
+    READINESS_STUB = (
+        "import pathlib, sys\n"
+        'pathlib.Path(sys.argv[0]).with_suffix(".ran").write_text("ran")\n'
+        'print("--- claude readiness receipt ---")\n'
+        'print("receipt_source=stub")\n'
+    )
+
+    def test_engines_are_declined_by_name_when_the_budget_cannot_cover_them(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            gov = self._fake_governance(root, readiness_body=self.READINESS_STUB)
+            # 8 s total minus reserve (4), grace (2) and the child's one-second
+            # margin leaves 1 s: below every floor — while the parent's 2 s
+            # deadline still lets the child reach the end and declare complete.
+            context = self._run(root, budget="8")
+            self.assertIn("claude projection: DEFERRED", context)
+            self.assertIn("claude readiness: DEFERRED", context)
+            self.assertFalse(
+                (gov / "ops" / "scripts" / "claude_projection.ran").exists(),
+                "a projection that cannot fit must not be started",
+            )
+            self.assertFalse(
+                (gov / "ops" / "scripts" / "emit_claude_readiness.ran").exists(),
+                "a readiness rebuild that cannot fit must not be started",
+            )
+
+    def test_engines_run_and_report_when_the_budget_covers_them(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            gov = self._fake_governance(root, readiness_body=self.READINESS_STUB)
+            context = self._run(root, budget="120")
+            self.assertNotIn("DEFERRED", context)
+            self.assertIn("claude projection: ok", context)
+            self.assertIn("receipt_source=stub", context)
+            self.assertTrue((gov / "ops" / "scripts" / "claude_projection.ran").exists())
+            self.assertTrue((gov / "ops" / "scripts" / "emit_claude_readiness.ran").exists())
+
+    def test_an_engine_that_outlives_the_budget_is_reported_as_timed_out(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._fake_governance(root, readiness_body="import time\ntime.sleep(300)\n")
+            # 16 s minus reserve (4), grace (2) and the one-second margin
+            # leaves 9 s: enough to START the emitter (floor 8), not enough
+            # for a 300 s stall to finish. The parent's deadline is 10 s, so
+            # the child names the timeout and still completes.
+            started = time.monotonic()
+            context = self._run(root, budget="16")
+            elapsed = time.monotonic() - started
+            self.assertIn("claude readiness: TIMED OUT", context)
+            self.assertNotIn("PARTIAL", context, "a named timeout is a complete run")
+            self.assertLess(elapsed, 30, "the stall must be cut at the remaining budget")
+
+
+class SkipVisibilityTest(unittest.TestCase):
+    """Launcher skips recorded during THIS SessionStart reach the session.
+
+    Sibling hooks run concurrently and may dispatch against the pre-refresh
+    governance revision; the launcher records the resulting skip in its log,
+    and this hook surfaces the entries stamped at or after its own start —
+    and only those, so a skip from six weeks ago is not reported as today's.
+    """
+
+    def test_only_skips_from_this_session_start_are_surfaced(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            (home / ".l9" / "claude").mkdir(parents=True)
+            skip_log = home / ".l9" / "claude" / "hook-skips.log"
+            skip_log.write_text(
+                "2020-01-01T00:00:00Z observer stale_hook.py hook file absent\n"
+                "2999-01-01T00:00:00Z observer bootstrap_capability_preflight.sh "
+                "hook file absent\n",
+                encoding="utf-8",
+            )
+            proc = subprocess.run(
+                ["bash", str(HOOK)],
+                capture_output=True,
+                text=True,
+                env=_base_env(home),
+                cwd=tmp,
+                timeout=60,
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr[-400:])
+            context = _context(proc.stdout)
+            self.assertIn("hook skips this SessionStart", context)
+            self.assertIn("bootstrap_capability_preflight.sh hook file absent", context)
+            self.assertNotIn("stale_hook.py", context)
+
 
 class PartialEmitOnTerminationTest(unittest.TestCase):
     """A budget kill degrades the context; it does not delete it."""

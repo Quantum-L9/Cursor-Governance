@@ -160,6 +160,13 @@ class HookInterpreterBindingTests(unittest.TestCase):
             "CLAUDE_CODE_ENTRYPOINT",
             "CLAUDE_CODE_SESSION_ID",
             "CLAUDE_CODE_REMOTE",
+            # The launcher honours an exported L9_GOVERNANCE_DIR that names a
+            # governance tree. The `make pr` gate exports it (via
+            # ~/.l9/cloud-session.env on hosted surfaces), so a fixture that
+            # moves HOME but inherits that variable is redirected back to the
+            # real clone and every probe reports "hook file absent". The
+            # sibling suites (test_hook_exec_failclosed) already clear it.
+            "L9_GOVERNANCE_DIR",
         ):
             env.pop(key, None)
         return env
@@ -266,12 +273,16 @@ class HookInterpreterBindingTests(unittest.TestCase):
         """A machine with no governance at all keeps the original contract."""
         with tempfile.TemporaryDirectory() as tmp:
             _event, command = next((e, c) for e, c in self.commands if "--class observer" in c)
+            env = {**os.environ, "HOME": tmp}
+            # Same isolation as _hook_env: an inherited L9_GOVERNANCE_DIR would
+            # hand this "no governance at all" fixture the real clone.
+            env.pop("L9_GOVERNANCE_DIR", None)
             proc = subprocess.run(
                 self._argv(command),
                 capture_output=True,
                 text=True,
                 timeout=120,
-                env={**os.environ, "HOME": tmp},
+                env=env,
                 check=False,
             )
         self.assertEqual(proc.returncode, 0)
