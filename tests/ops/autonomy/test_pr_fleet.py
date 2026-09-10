@@ -132,8 +132,104 @@ def test_waiting_pr_gets_a_background_watcher(tmp_path: Path, monkeypatch) -> No
     plan = pr_fleet.waves(
         prs, caps=CLAUDE, order=[1, 2, 3], boards={1: "merge", 2: "wait", 3: "fix"}
     )
+    assert plan["first_wave"]["merge"] == [1]
     assert plan["first_wave"]["watch"] == [2]
-    assert plan["first_wave"]["remediate"] == [1, 2, 3]
+    assert plan["first_wave"]["remediate"] == [2, 3]
+    assert 2 in plan["first_wave"]["poll"] and 3 in plan["first_wave"]["poll"]
+    assert 1 not in plan["first_wave"]["poll"]
+
+
+def test_merge_now_starts_independent_green_prs_without_waiting_for_the_fleet(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _probe(tmp_path, monkeypatch, INDEPENDENT)
+    prs = pr_fleet.inventory(TARGET)
+    ready = pr_fleet.merge_now(
+        prs,
+        edges=[],
+        overlap=[],
+        boards={1: "merge", 2: "fix", 3: "merge"},
+        order=[1, 2, 3],
+    )
+    assert ready["merge_now"] == [1, 3]
+    assert ready["merge_blocked"] == []
+
+
+def test_merge_now_holds_a_later_overlap_until_the_older_pr_lands(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _probe(tmp_path, monkeypatch, OVERLAP)
+    prs = pr_fleet.inventory(TARGET)
+    overlap = pr_fleet.overlap_matrix(prs)
+    ready = pr_fleet.merge_now(
+        prs,
+        edges=[],
+        overlap=overlap,
+        boards={1: "merge", 2: "merge"},
+        order=[1, 2],
+    )
+    assert ready["merge_now"] == [1]
+    assert ready["merge_blocked"] == [
+        {"pr": 2, "blocked_by": [{"pr": 1, "reason": "older_nongenerated_overlap"}]}
+    ]
+
+
+def test_merge_now_holds_a_stacked_child_until_the_parent_lands(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _probe(tmp_path, monkeypatch, STACKED)
+    prs = pr_fleet.inventory(TARGET)
+    edges = pr_fleet.stack_edges(prs)
+    ready = pr_fleet.merge_now(
+        prs,
+        edges=edges,
+        overlap=[],
+        boards={1: "merge", 2: "merge"},
+        order=[1, 2],
+    )
+    assert ready["merge_now"] == [1]
+    assert ready["merge_blocked"][0]["pr"] == 2
+    assert ready["merge_blocked"][0]["blocked_by"] == [{"pr": 1, "reason": "stack_parent_open"}]
+
+
+def test_skill_cap_limits_the_first_wave_to_ten(tmp_path: Path, monkeypatch) -> None:
+    fleet = [
+        {
+            "number": n,
+            "title": f"pr {n}",
+            "created_at": f"2026-09-{n:02d}T00:00:00Z",
+            "head": {"ref": f"feat/pr-{n}", "sha": f"{n:x}" * 40},
+            "base": {"ref": "main"},
+            "draft": False,
+            "files": [f"ops/{n}.py"],
+        }
+        for n in range(1, 13)
+    ]
+    _probe(tmp_path, monkeypatch, fleet)
+    result = pr_fleet.plan(TARGET, surface="claude_cloud")
+    first = result["waves"]["first_wave"]
+    assert result["waves"]["caps"]["skill_subagent_cap"] == 10
+    assert first["launch_count"] == 10
+    assert first["remediate"] == list(range(1, 11))
+    assert first["blocked_cap"] == [11, 12]
+
+
+def test_merge_assignment_is_stack_safe_only(tmp_path: Path, monkeypatch) -> None:
+    packet = pr_fleet.build_assignment(
+        TARGET,
+        pr_fleet._normalize_pr(INDEPENDENT[0]),
+        kind="merge",
+        run_id="run1",
+        graph_id="abcd",
+    )
+    assert packet["kind"] == "merge"
+    assert packet["role"] == "pr_remediation"
+    assert packet["mutation"] is True
+    assert packet["allowed_paths"] == []
+    assert "stack_safe_merge.py" in packet["objective"]
+    assert "Never" in packet["objective"] or "never" in packet["objective"]
+    out = pr_fleet.accept(packet, _document(packet), use_gateway=False)
+    assert out["status"] == "ACCEPTED", out
 
 
 def test_fingerprint_reuses_the_inventory_until_a_head_moves(tmp_path: Path, monkeypatch) -> None:

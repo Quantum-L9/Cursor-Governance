@@ -1,6 +1,6 @@
 ---
 name: l9-pr-remediation
-description: diagnose or converge github prs — plan the open-pr fleet once (pr_fleet.py), remediate every non-conflicting pr in one subagent wave, verify with precommit-repo then git push, fully resolve sonarcloud findings (never merge-blocking), then a stack-safe oldest-first merge train on pr_board.py verdicts. do not run make pr or make pr-check. use when a campaign left prs unmergeable, the user invokes /l9-pr-remediation, or they ask to fix, remediate, babysit, converge, or merge failing prs.
+description: diagnose or converge github prs — plan the fleet once, launch up to 10 subagents to remediate, poll remediating PRs, and start stack-safe merge trains on the oldest green PRs that will not conflict downstream. do not wait for every PR to be green. do not run make pr. use when /l9-pr-remediation, fix, babysit, or merge failing prs.
 disable-model-invocation: true
 metadata:
   skill_schema: 1
@@ -9,8 +9,8 @@ metadata:
   tags: [l9, pr, ci, code-review, github-code-quality, copilot, diagnose, sonarcloud, codeql, debt, remediation, concurrent, subagents, github, makefile]
   owner: igor_beylin
   status: active
-  version: 5.3.0
-  updated: 2026-09-07
+  version: 5.4.0
+  updated: 2026-09-10
   tier: exemplary
 ---
 
@@ -20,12 +20,12 @@ metadata:
 
 One pack, two intents: **Diagnose** (read-only readiness) or **Converge** (failing → green → merged). Straight line, no campaign, no Program Execution, no packaging theater.
 
-Converge is **PLAN → WAVES (REMEDIATE_ALL) → MERGE_TRAIN**. It is not remediate-and-merge each PR as it turns green. [references/run-contract.md](references/run-contract.md).
+Converge is **PLAN → WAVES (remediate + MERGE_NOW) in parallel**. Start stack-safe merge trains on the oldest green PRs that will not conflict downstream. Do not wait for every open PR to be green. [references/run-contract.md](references/run-contract.md).
 
 | Intent | Mutates | Triggers | Behavior |
 |--------|---------|----------|----------|
 | **Diagnose** | no | review / readiness / blockers / `/pr` / “ready to merge?” | Digest first, then fetch PR+reviews+CI; overlap advisory; slim verdict; **never** commit/push/merge |
-| **Converge** | yes | `/l9-pr-remediation` / fix / remediate / babysit / merge failing PRs | Fleet plan → remediation waves → stack-safe oldest-first merge train |
+| **Converge** | yes | `/l9-pr-remediation` / fix / remediate / babysit / merge failing PRs | Fleet plan → remediations and oldest-safe merge trains in parallel, cap 10 |
 
 Invoking this skill (or `/l9-pr-remediation`) is merge authorization for **all open PRs** in the target repo. Campaigns and `make pr` only publish. They do not merge. Load [references/merge-advise.md](references/merge-advise.md).
 
@@ -49,7 +49,7 @@ Prose never recomputes what these helpers compute. Each one is read-only advice 
 | Board verdict per PR (`merge` / `fix` / `wait` / `leftover`) | `ops/autonomy/pr_board.py` | merge |
 | Merge execution and stack safety | `ops/autonomy/stack_safe_merge.py --run` behind `ops/autonomy/merge_gate.py` | `--admin`, hand-typed `--squash` |
 | Merge authorization receipt | `ops/autonomy/authorize_merge.py --all-open` | expire-less receipts |
-| Concurrency caps | `ops/autonomy/execution_profile.py` (read by `pr_fleet.py waves`) | numbers in this pack |
+| Concurrency caps | `pr_fleet.py` `skill_caps` = min(execution profile, `skill_subagent_cap` 10) | inventing a different cap |
 | Subagent roles, result schema, acceptance | `environment/agents/cursor-subagents/` + `environment/agents/results/` (called by `pr_fleet.py accept`) | narrative completion |
 | Thread replies | `scripts/reply_threads.py` | per-thread `gh` loops |
 | Unified PR ingest (CI + reviews + CRA + scanner snapshots) | `scripts/ingest_signals.py` | reconstructing `gh api` loops |
@@ -133,7 +133,7 @@ Applies `kernels/Diagnose First Kernel.md`, `kernels/Validate & Repair.md`, and 
 ## Laws (Converge)
 
 1. **Diagnose First, then one fleet plan.** Required once: `pr_fleet.py plan --board` (inventory, files, stack edges, overlap, merge order, waves, board per head, fingerprint), command surface, venv fingerprint, subscribe each PR. Emit `RUN_CONTRACT` from the receipt and reuse it. Re-plan only when the fingerprint changes (a head moved, a PR opened or merged) — never by hand. Per PR: ingest + diagnose (observed / expected / root cause / Unknown) **before** any edit of that PR. [references/run-contract.md](references/run-contract.md).
-2. **Launch the whole safe wave, then keep working.** Every PR in `waves.first_wave.remediate` gets its own bounded assignment (`pr_fleet.py assign --kind remediate`) and launches in **one** message; PRs blocked by a claim conflict get recon now and remediation in the next wave; `board=wait` PRs get a background watcher. The main agent takes one remediation itself when a lane is free, otherwise the merge-train preflight — it never idles on a background wave. Caps come from the execution profile via the planner, never from this pack. [references/fleet-waves.md](references/fleet-waves.md).
+2. **Launch the whole safe wave, then keep working.** Every PR in `waves.first_wave.merge` gets `--kind merge` and every PR in `waves.first_wave.remediate` gets `--kind remediate`, launched in **one** message (skill cap 10). PRs blocked by a claim conflict get recon now and remediation in the next wave; `board=wait` and merge-blocked greens get a watcher. The remediator polls every PR in `first_wave.poll` until `open_prs=0`. Merge trains start as soon as `merge_now` is non-empty — do not wait for REMEDIATE_ALL. [references/fleet-waves.md](references/fleet-waves.md).
 3. **One-and-done per PR, then a safety valve.** Success path is **one** plan, **one** commit, **one** CI run per PR. Max three cycles; never start cycle 4. Extra cycles are only for signals that did not exist at plan time.
 4. **Codebase only.** Repair source, tests, fixtures, package deps. Never edit `.github/workflows/**`, actions, runners, permissions, secrets, OIDC, branch protection, check wiring, or CI-only infra. Never add `continue-on-error` or skip conditions to “heal” CI. Pipeline blockers: record one line in the status and keep remediating everything else. Assignments carry these as `forbidden_paths`; a result that touched one is rejected.
 5. **Ownership before edit — and ownership is not the board.** Load [references/ownership-boundary.md](references/ownership-boundary.md). Ownership answers **one** question: may I patch this file? Edit only `CODEBASE`. `ENVIRONMENT` is not a code defect — run the venv preflight once and continue. Ownership never decides what happens to the PR; `edit=CI_PIPELINE` is not `board=leftover`.
@@ -141,12 +141,12 @@ Applies `kernels/Diagnose First Kernel.md`, `kernels/Validate & Repair.md`, and 
 7. **One commit, one remediator publish.** Zero if nothing codebase-safe remains. Never commit-per-finding, never publish to probe CI, never `--no-verify`. Remediator publish **is** `git push` of the already-open PR branch. Do not run `make pr`.
 8. **Local verify blocks commit.** Local verify **is** `L9_REMEDIATOR=1 PR_BASE=origin/main make precommit-repo`. Do not run `make pr-check`, pytest, conformance, or all-files pre-commit. Record `Passed` / `Failed` / `Unknown`. Remote CI is independent confirmation — never claim remote `Passed` from local `Passed`.
 9. **Results are documents, not sentences.** Every delegated assignment returns one `l9.cursor-subagent.result.v1` document; `pr_fleet.py accept` judges it against the assignment (identity, base SHA, role, writable scope, read-only roles report no changes) and preserves `partial` / `blocked` / `failed`. "Done" in chat is not completion. A rejected result is re-assigned or taken over by the main agent — never trusted.
-10. **Own until merged, in the background.** Subscribe to every in-scope open PR at preflight. After a publish record the head SHA, launch (or keep) a watcher for that PR, and move to the next ready PR. Poll workers and watchers never merge. Never finish with “re-invoke `/l9-pr-remediation` when CI turns green.”
+10. **Own until merged — poll, do not stop.** Subscribe to every in-scope open PR at preflight. After a publish record the head SHA, launch (or keep) a watcher, **and poll that PR** (15s snapshots) until `board=merge` or a red required check. Poll workers and watchers never merge. Assigned `--kind merge` lanes merge via `stack_safe_merge.py --run`. Never finish with “re-invoke `/l9-pr-remediation` when CI turns green.” Mission is `open_prs=0`.
 11. **Validate suggestions against current code.** Comment snippets are not ground truth.
 12. **No gate weakening / suppressions.** No `NOSONAR`, blanket noqa/type-ignore/eslint-disable, CodeQL dismissals/exclusions, skipped tests, or lowered thresholds. Narrow documented suppression only for a *proven* false positive where a code fix is less safe.
 13. **SonarCloud: resolve fully, block never.** When `sonar-project.properties` exists, fetch the PR's issue set with the environment `SONAR_TOKEN` on every Converge, confirm each issue against the head, fix every confirmed one in the same commit, and re-query after the head is analysed. A red Sonar check is not in the required set unless `pr_board.py` says so; it never holds the train. Unfixable residue is a Deferred reply plus the issue handoff, not a stopped merge.
 14. **Every conversation resolved.** Reply Fixed / Deferred / Acknowledged / Disagreed, then `resolveReviewThread` on **every** GraphQL `reviewThreads` node with `isResolved: false` — any author. Paginate threads (`pageInfo.hasNextPage`). GitHub "a conversation must be resolved" **is** a merge blocker. HUMAN: name the decision, resolve, and pass it to `pr_board.py --human-decision`. Bots re-file on new lines after a push — those are **new** threads. Re-query after every publish and immediately before each merge.
-15. **FIRST_MERGE_GATE + stack-safe oldest-first.** Never force-push, rewrite history, expose tokens, or `--admin` merge. Merge only after the fleet receipt exists and the required sequence is remediated and published. Order is `merge_order` from the receipt (oldest `createdAt`, parents before children). Merge **only** via `ops/autonomy/stack_safe_merge.py --run`. After a parent squash, never `gh pr update-branch` — rebase `--onto` the new base. When the only blocker is required checks **in progress**, the watcher owns the wait; merge when `CLEAN`.
+15. **FIRST_MERGE_GATE + MERGE_NOW, not REMEDIATE_ALL.** Never force-push, rewrite history, expose tokens, or `--admin` merge. Merge as soon as `pr_fleet.py` lists the PR in `merge_now` (oldest green prefix that will not conflict a still-open ancestor or older non-generated overlap). Order is `merge_order` from the receipt (oldest `createdAt`, parents before children). Merge **only** via `ops/autonomy/stack_safe_merge.py --run`. After a parent squash, never `gh pr update-branch` — rebase `--onto` the new base. When the only blocker is required checks **in progress**, poll until `CLEAN` then merge.
 16. **No invented evidence.** Do not invent check conclusions, SHAs, thread ids, or `Passed`. `{braces}` in this pack are templates until substituted from `gh` / helper / `file` output observed in this run.
 17. **The board is computed, not judged.** `board=merge|fix|wait|leftover` comes from `ops/autonomy/pr_board.py` (required-check identity from branch protection ∪ rulesets ∪ required workflows; conflicted **paths**). Never author it from `mergeStateStatus` alone, from a check conclusion without the required set, or from an issue body. A red check outside the required set does not block merge (`UNSTABLE` is a merge). `leftover` is an evidenced **input**: `--human-decision` or `--unfixable-check`. Unknown telemetry degrades to `wait`, never to `merge`.
 18. **Above-paygrade is an issue, not a question.** After best-effort, `HUMAN` / unfixable required `CI_PIPELINE` / unfixable `ENVIRONMENT` → `scripts/issue_handoff.py --create`, launch `l9-issue-remediation`, continue independent PRs. Do not ask the human to unblock. [references/issue-handoff.md](references/issue-handoff.md).
@@ -165,7 +165,7 @@ GOV_PY="${GOV_PY:-$PWD/.venv/bin/python}"
 ```
 
 1. **Discover gates (read-only).** Cache verify=`make precommit-repo`, publish=`git push`. Do not cache `make pr-check` or `PR_REMEDIATE=0 make pr`. Do not edit CI surfaces.
-2. **Launch wave 1 in one message.** For every PR in `waves.first_wave.remediate`: `pr_fleet.py assign --kind remediate --pr {n} --record --prompt`, then launch the managed `l9-pr-remediation` Task (background) with that prompt. For every PR in `first_wave.recon`: `--kind recon` → `l9-recon`. For every PR in `first_wave.watch`: `--kind watch` → `l9-recon` watcher. Then continue: the main agent remediates one lane itself only if the cap left one free, else prepares the merge train. [references/fleet-waves.md](references/fleet-waves.md).
+2. **Launch wave 1 in one message (cap 10).** For every PR in `waves.first_wave.merge`: `pr_fleet.py assign --kind merge --pr {n} --record --prompt`, then launch the managed `l9-pr-remediation` Task (background) to run `stack_safe_merge.py --run`. For every PR in `first_wave.remediate`: `--kind remediate`. For every PR in `first_wave.recon`: `--kind recon` → `l9-recon`. For every PR in `first_wave.watch`: `--kind watch` → `l9-recon` watcher. Then the remediator polls `first_wave.poll` and launches the next merge the moment `merge_now` grows. [references/fleet-waves.md](references/fleet-waves.md).
 3. **Per PR (inside a lane): diagnose.** Run `scripts/ingest_signals.py` for this head (CI + reviews + CRA + optional scanner snapshots). Read cited files at the current head. Record observed / expected / root cause / Unknown. No edits yet. [references/signal-ingestion.md](references/signal-ingestion.md) + [references/code-review-agents.md](references/code-review-agents.md).
 4. **Classify + write that PR's plan.** Path ownership and required-check severity come from `scripts/protocol.py`. Disposition, HUMAN, and FALSE_POSITIVE stay judgment. `scripts/validate_plan.py` must PASS before any edit. `scripts/gate_receipt.py --gate B`. Companions if touching `pec/*`, `skills/*`, or `rules/*`. [references/finding-classifier.md](references/finding-classifier.md) + [references/remediation-plan.md](references/remediation-plan.md).
 5. **Fix the planned batch.** All `disposition: fix` clusters, Sonar issues included, inside the assignment's allowed paths. Skip HUMAN / CI_PIPELINE / ENVIRONMENT after best-effort — open the issue handoff, continue. [references/fix-engine.md](references/fix-engine.md) + [references/issue-handoff.md](references/issue-handoff.md).
@@ -173,7 +173,7 @@ GOV_PY="${GOV_PY:-$PWD/.venv/bin/python}"
 7. **One commit, one remediator publish.** Explicit `git add` of planned files only. Never `-u` / `-A`. Never `git reset --hard`. `git push` the already-open PR branch. Trailer `Remediation-Cycle: {repo}#{pr}/cycle-1`.
 8. **Reply + resolve.** Every thread, any author. Inspect cited files first. `python3 -u skills/l9-pr-remediation/scripts/reply_threads.py --repo {owner}/{repo} --input {threads.json}`. [references/review-replies.md](references/review-replies.md).
 9. **Return the document; accept it.** A lane ends by writing its `l9.cursor-subagent.result.v1` document. The main agent runs `pr_fleet.py accept --assignment {id} --result {doc.json}`; `ACCEPTED` closes the lane, `ACCEPTED_INCOMPLETE` keeps the PR in the next wave, `REJECTED` re-assigns. Then launch the next wave (`mutation_waves[k]`) the same way, re-plan only if the fingerprint changed. [references/convergence-loop.md](references/convergence-loop.md).
-10. **MERGE_TRAIN** after REMEDIATE_ALL. Walk `merge_order`. Immediately before each merge re-run `pr_board.py` for that head, re-query `reviewThreads`, and let `stack_safe_merge.py` probe children. `board=merge` → merge. `board=fix` → back to step 3 for that PR. `board=wait` → the watcher owns it; merge on `CLEAN`. `board=leftover` → that PR only, with its declaration and issue handoff; the train continues. After any merge that touched generated paths, heal per [references/generated-heal.md](references/generated-heal.md).
+10. **MERGE_TRAIN starts from MERGE_NOW in parallel with remediation.** Walk `merge_now` (not the whole fleet). Immediately before each merge re-run `pr_board.py` for that head, re-query `reviewThreads`, and let `stack_safe_merge.py` probe children. `board=merge` and in `merge_now` → launch `--kind merge`. `board=fix` → back to step 3 for that PR. `board=wait` → poll until `CLEAN`. `board=leftover` → that PR only, with its declaration and issue handoff; independent trains continue. After any merge that touched generated paths, heal per [references/generated-heal.md](references/generated-heal.md). Re-plan when the fingerprint changes (a merge moves heads).
 
 ```bash
 # NEVER type --squash yourself. The helper emits --merge for a stack parent,
@@ -244,8 +244,12 @@ max_local_verify_iterations: 5
 fleet_owner: ops/autonomy/pr_fleet.py
 fleet_receipt: .l9/pr/fleet.json
 replan_on: fingerprint_change          # a head moved, a PR opened or merged
-wave_launch: all_ready_non_conflicting  # one message; caps from execution_profile.py
-concurrency_caps_owner: ops/autonomy/execution_profile.py
+wave_launch: merge_now_plus_remediate   # one message; skill_subagent_cap 10
+concurrency_caps_owner: ops/autonomy/pr_fleet.py skill_caps
+execution_profile_owner: ops/autonomy/execution_profile.py
+skill_subagent_cap: 10
+merge_now_owner: ops/autonomy/pr_fleet.py
+remediator_must_poll: true
 result_acceptance: pr_fleet.py accept   # never narrative
 ci_pipeline_policy: note_and_skip       # edit axis only; never a board verdict
 board_authority: ops/autonomy/pr_board.py
@@ -261,6 +265,7 @@ own_until_merged: true
 subscribe_open_prs: true
 watcher_role: recon                     # read-only background lane per waiting PR
 forbid_reinvoke_handoff: true
+merge_kind: merge                       # assigned stack_safe_merge only; watchers never merge
 sonarcloud:
   when: sonar-project.properties exists
   token: SONAR_TOKEN via capability_bind (never printed, never pasted)

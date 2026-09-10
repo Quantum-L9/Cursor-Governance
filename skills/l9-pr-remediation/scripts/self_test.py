@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contract tests for l9-pr-remediation 5.3.0. Stdlib only.
+"""Contract tests for l9-pr-remediation 5.4.0. Stdlib only.
 
 Structural and wiring checks: every link resolves, every deterministic owner
 the pack names exists, the pre-v5 contradictions stay gone, and the pack never
@@ -75,7 +75,7 @@ def _forbid(text: str, needle: str, where: str) -> None:
 
 
 def test_frontmatter_and_map() -> None:
-    _need(SKILL, "version: 5.3.0", "SKILL.md")
+    _need(SKILL, "version: 5.4.0", "SKILL.md")
     _need(SKILL, "tier: exemplary", "SKILL.md")
     _need(SKILL, "disable-model-invocation: true", "SKILL.md")
     match = re.search(r"^description: (.+)$", SKILL, re.M)
@@ -223,7 +223,9 @@ def test_no_second_plane() -> None:
         _forbid(text, "pre-commit run --all-files", name)
     for needle in ("max_wait_snapshots", "poll_interval_seconds", "Max 4 total", "max 2 mutation"):
         _forbid(PACK, needle, "l9-pr-remediation pack (lane caps belong to execution_profile.py)")
-    _need(SKILL, "concurrency_caps_owner: ops/autonomy/execution_profile.py", "SKILL.md")
+    _need(SKILL, "concurrency_caps_owner: ops/autonomy/pr_fleet.py skill_caps", "SKILL.md")
+    _need(SKILL, "skill_subagent_cap: 10", "SKILL.md")
+    _need(SKILL, "ops/autonomy/execution_profile.py", "SKILL.md")
     _need(SKILL, "no campaign, no Program Execution", "SKILL.md")
     for word in ("surface_profile.yaml", "lease", "scheduler"):
         if word in SKILL.lower() and "environment/contracts/autonomy" not in SKILL:
@@ -255,10 +257,10 @@ def test_fleet_and_waves() -> None:
     _need(SKILL, "pr_fleet.py plan --repo {owner}/{repo} --board --json", "SKILL.md")
     _need(SKILL, "fleet_receipt: .l9/pr/fleet.json", "SKILL.md")
     _need(SKILL, "replan_on: fingerprint_change", "SKILL.md")
-    _need(SKILL, "wave_launch: all_ready_non_conflicting", "SKILL.md")
+    _need(SKILL, "wave_launch: merge_now_plus_remediate", "SKILL.md")
     _need(SKILL, "result_acceptance: pr_fleet.py accept", "SKILL.md")
     _need(SKILL, "in **one** message", "SKILL.md")
-    _need(SKILL, "never idles on a background wave", "SKILL.md")
+    _need(SKILL, "polls every PR", "SKILL.md")
     _need(SKILL, "Results are documents, not sentences", "SKILL.md")
     _need(SKILL, "l9.cursor-subagent.result.v1", "SKILL.md")
     _need(REFS["run-contract.md"], "P_fleet", "run-contract.md")
@@ -273,7 +275,8 @@ def test_fleet_and_waves() -> None:
         "l9-pr-remediation",
         "l9-recon",
         "execution_profile.py",
-        "never states a number",
+        "skill_subagent_cap: 10",
+        "merge_now",
     ):
         _need(waves, needle, "fleet-waves.md")
     _need(REFS["fix-engine.md"], "pr_fleet.py plan", "fix-engine.md")

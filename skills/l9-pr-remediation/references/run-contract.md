@@ -24,7 +24,7 @@ Emit `RUN_CONTRACT` in the first Converge status. Reuse until invalidation.
 |----|-------|------|
 | `P_cmd` | Cache remediator verify=`make precommit-repo` and remediator publish=`git push` of an already-open PR branch. Name ceremony verbs `make pr-check` and `PR_REMEDIATE=0 make pr` only as **do not run**. INTERNAL: `pr-preflight`, `precommit`, `pr-full`. | Caching `make pr` / `make pr-check` as this skill's publish/verify is a skill defect. |
 | `P_venv` | `.python-version`, `.venv/pyvenv.cfg` `home`, `file` + `platform.machine()` of `.venv/bin/python`, `cryptography` + `pytest` import | Arch mismatch, miniconda `home`, or import fail → set `UV_PYTHON` to uv-managed **native** CPython matching requires-python. Never `uv python find --system` (conda `base` wins). Do not loop. |
-| `P_fleet` | `"$GOV_PY" ops/autonomy/pr_fleet.py plan --repo {owner}/{repo} --board --json` — one REST pass: every open PR with files, `stack_edges`, `overlap` (generated-only flagged), `merge_order`, `waves`, board per head, `fingerprint`; receipt `.l9/pr/fleet.json` | Non-generated overlap is serialized by the planner, never by hand. Do not merge the first green PR. `FAIL:` from the planner → no wave; fix the telemetry. Re-plan only when the fingerprint changes. |
+| `P_fleet` | `"$GOV_PY" ops/autonomy/pr_fleet.py plan --repo {owner}/{repo} --board --json` — one REST pass: every open PR with files, `stack_edges`, `overlap` (generated-only flagged), `merge_order`, `merge_now`, `waves`, board per head, `fingerprint`; receipt `.l9/pr/fleet.json` | Non-generated overlap is serialized by the planner, never by hand. Start merge trains on `merge_now` immediately; do not wait for REMEDIATE_ALL. `FAIL:` from the planner → no wave; fix the telemetry. Re-plan only when the fingerprint changes. |
 | `P_stack` | Read `stack_edges` / `merge_order` from the receipt (parents before children) | Stacked parent: squash/rebase denied. Children first, retarget, or `--merge`. |
 | `P_wire` | `git worktree list` first; reuse the worktree that already holds the branch | `worktree_add_wired.sh` only when none exists. Do not commit wire / `AGENTS.md`. |
 | `P_board` | Per open PR: `"$GOV_PY" ops/autonomy/pr_board.py --repo {owner}/{repo} --pr {n} --json` (`pr_fleet.py plan --board` runs it for every PR concurrently) | The board verdict (`merge` / `fix` / `wait` / `leftover`) and the required-check set come from here. `statusCheckRollup` in `P_prs` is inventory, not a verdict — it lists optional checks too. Do not author a verdict from `mergeStateStatus`, a bare check conclusion, or an issue body. Re-run per head SHA; a verdict is stale the moment the head moves. |
@@ -63,7 +63,7 @@ Forbidden during Converge (this skill):
 
 Campaign / feature work that is **not** this skill still must not treat raw `git push` as its publish path when `make pr` exists. Remediator `git push` of an already-open PR is this skill's publish.
 
-Poll workers never merge. Ignore `merge_eligible` whose SHA is older than HEAD or older than the last repo merge.
+Poll workers never merge. Assigned `--kind merge` lanes merge via `stack_safe_merge.py --run`. Ignore `merge_eligible` whose SHA is older than HEAD or older than the last repo merge. The remediator must poll remediating and waiting PRs until `open_prs=0`.
 
 In Cursor-Governance `git push` is not denied (CANONICAL_LAW §6.2.4). That is why remediator publish can be `git push`. Do not switch to `make pr` when a push fails — fix the denial.
 
@@ -122,11 +122,11 @@ FIRST_MERGE_GATE forbids `gh pr merge` until:
 - entire open-PR inventory complete
 - overlap matrix known
 - stack parents known (`P_stack`)
-- remediation published for the required sequence
+- the PR is in `merge_now` (oldest safe green prefix; later remediations do not hold it)
 - expected merge effect on remaining PRs known
 - merge strategy selected (squash if unstacked; `--merge` or children-first if stacked)
 
-Then MERGE_TRAIN: **oldest `createdAt` first (bottom-up)**. After each merge, do **not** `gh pr update-branch` on a child whose parent was squash-merged. Use `git rebase --onto <new-base> <old-parent-tip> <child>` when the child must move. When the only blocker is required checks in progress, poll until `CLEAN` then merge — do not hand the watch back to the human.
+Then MERGE_NOW: **oldest `createdAt` first (bottom-up)**, starting as soon as the planner lists a PR in `merge_now`. After each merge, do **not** `gh pr update-branch` on a child whose parent was squash-merged. Use `git rebase --onto <new-base> <old-parent-tip> <child>` when the child must move. When the only blocker is required checks in progress, poll until `CLEAN` then merge — do not hand the watch back to the human.
 
 Forbidden: remediate A → merge A → discover B conflicts → remediate B → rerun CI → repeat.
 
@@ -148,7 +148,7 @@ A companion miss is a plan-gate failure, not a remote-CI discovery.
 
 - Locked plan + matching files → skip re-diagnosis; run `P_cmd`+`P_venv` if uncached; verify + publish.
 - After `RUN_CONTRACT`, start the first PR that has `CODEBASE` findings. Do not wait for green-check scanner fetches.
-- Launch the planner's first wave in one message ([fleet-waves.md](fleet-waves.md)). Serialize merge (`merge_order`, oldest first).
+- Launch the planner's first wave in one message ([fleet-waves.md](fleet-waves.md)). Start `merge_now` immediately (oldest first, cap 10). Do not serialize behind REMEDIATE_ALL.
 - Native-ext import fail → stop `CODEBASE` diagnosis; `P_venv` once.
 - CI green + only conversations open → reply + resolve; no new code cycle.
 
@@ -174,8 +174,9 @@ run_contract:
   fleet:
     receipt: ".l9/pr/fleet.json"
     fingerprint: "{16 hex; re-plan when it changes}"
-    caps_owner: "ops/autonomy/execution_profile.py"
-    first_wave: {remediate: [191, 192], recon: [], watch: []}
+    caps_owner: "ops/autonomy/pr_fleet.py skill_caps"
+    skill_subagent_cap: 10
+    first_wave: {merge: [191], remediate: [192], recon: [], watch: [], poll: [192]}
   prs:
     - number: 192
       base: main
@@ -195,6 +196,7 @@ run_contract:
       effect: "merge 191 invalidates 192 registry"
   merge_train:
     order: [191, 192]   # oldest createdAt first
+    merge_now: [191]    # start now; do not wait for 192
     first_merge_gate: ready
     stack_safe: true
   blockers: []          # edit-axis notes only; never a reason a PR stays open

@@ -1,5 +1,5 @@
 {
-  "generation_id": "2ce4786e58dcc60333c762f013644b21b2802da2d829851f939899fc2a8b5d1c",
+  "generation_id": "fe5ea460b9379b64549214faf1f7332f4f527e775c3ebc2b2fc3bd43e9557d8a",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -1410,14 +1410,14 @@
     },
     {
       "composition_role": "general",
-      "description": "diagnose or converge github prs \u2014 plan the open-pr fleet once (pr_fleet.py), remediate every non-conflicting pr in one subagent wave, verify with precommit-repo then git push, fully resolve sonarcloud findings (never merge-blocking), then a stack-safe oldest-first merge train on pr_board.py verdicts. do not run make pr or make pr-check. use when a campaign left prs unmergeable, the user invokes /l9-pr-remediation, or they ask to fix, remediate, babysit, converge, or merge failing prs.",
+      "description": "diagnose or converge github prs \u2014 plan the fleet once, launch up to 10 subagents to remediate, poll remediating PRs, and start stack-safe merge trains on the oldest green PRs that will not conflict downstream. do not wait for every PR to be green. do not run make pr. use when /l9-pr-remediation, fix, babysit, or merge failing prs.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pr-remediation",
       "path": "skills/l9-pr-remediation",
       "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked). The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Above-paygrade HUMAN / unfixable required CI / ENVIRONMENT after best-effort opens a GitHub issue and launches l9-issue-remediation via cursor-subagents; do not ask the human to unblock. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
       "skill_md": "skills/l9-pr-remediation/SKILL.md",
-      "skill_sha256": "ae31d952b38f61c572116307f805e5d8a91e9f0544b1122ebfcc3f180517dad4",
+      "skill_sha256": "a769db5c4b51142f3dbb7f32be4f6638fed224c70ae035a3a795952b7c73ba9b",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1606,5 +1606,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "b71df84c03ba02fa5a638d03749e4bf08c7efcb5354d85fb0fe4928cf31c5587",
-  "source_skill_corpus_sha256": "d40b1782e5087fba1f68486e819874f52ccca3c3b87925bb4d168481e0cbe707"
+  "source_skill_corpus_sha256": "b8b751efc36ed35ee9a16dbf019e775e06f9338fe93bc57027ddf5fc85c776b5"
 }
