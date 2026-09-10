@@ -138,6 +138,30 @@ def test_bootstrap_repair_is_bounded_by_the_remaining_hook_budget() -> None:
     )
 
 
+def test_repair_never_precedes_the_reporting_it_can_starve() -> None:
+    """Provisioning runs LAST, after every line the hook must emit.
+
+    The repair used to run first inside ``emit_bootstrap_status``, ahead of the
+    environment block and the ``governance refresh`` projection. Clamping it to
+    the remaining budget bounds how long it runs; it does not stop it spending
+    that budget before the required lines are reached. On a runner whose
+    receipt is absent — every fresh CI runner — it took its whole clamp and CI
+    emitted ``bootstrap repair: FAILED rc=124`` followed by PARTIAL, with both
+    required items missing (`Test Suite` on 225174b9).
+
+    ``SESSION_START_SPEC`` lists the must-emit items and states that dependency
+    provisioning is NOT one of them, so ordering is the fix rather than a
+    bigger budget: reporting first can never be starved by a repair that
+    follows it, however long the repair takes.
+    """
+    text = body()
+    repair = text.index("running the installer once")
+    refresh = text.index('"$refresh_reader" --read')
+    environment = text.index("--- L9 Claude environment ---")
+    assert refresh < repair, "the governance refresh projection must precede the repair"
+    assert environment < repair, "the environment status block must precede the repair"
+
+
 def _synthetic_gov(home: Path, *, tracked_dirt: bool, untracked_dirt: bool) -> Path:
     """A minimal governance clone the hook will accept as $GOV."""
     import subprocess

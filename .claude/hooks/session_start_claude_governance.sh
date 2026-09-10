@@ -697,6 +697,44 @@ except Exception:
   revision="$(git -C "$GOV" rev-parse HEAD 2>/dev/null || echo unknown)"
   marker="$HOME/.l9/claude/bootstrap-repair-${revision}.attempted"
   installer="$GOV/environment/agents/adapters/claude-code/install.sh"
+  # The repair is attempted LAST, below, after every line this function is
+  # contractually required to emit. It used to run HERE, ahead of them, and
+  # on any runner whose receipt is absent it took its whole clamp and the
+  # required reporting was never reached: CI emitted `bootstrap repair:
+  # FAILED rc=124` and then PARTIAL, with the environment block and the
+  # `governance refresh` projection both missing. Provisioning is explicitly
+  # NOT one of the must-emit items (SESSION_START_SPEC), so it must never
+  # preempt them.
+
+  # A receipt written for a different directory reports READY for artifacts this
+  # session never loads, so compare the wired workspace against this project.
+  local wired block prefix
+  wired="$("$py" -c 'import json,sys
+try:
+    print(json.load(open(sys.argv[1], encoding="utf-8")).get("workspace",""))
+except Exception:
+    print("")' "$HOME/.l9/claude/bootstrap-state.json" 2>/dev/null || true)"
+  prefix=""
+  if [ -n "$wired" ] && [ "$wired" != "$WORKSPACE" ]; then
+    prefix="STALE: "
+    say "STALE: bootstrap receipt workspace $wired != session $WORKSPACE"
+  fi
+  block="$("$py" "$reader" --read --reprobe 2>/dev/null || true)"
+  if [ -n "$block" ]; then
+    say "--- L9 Claude environment ---"
+    while IFS= read -r line || [ -n "$line" ]; do
+      say "${prefix}${line}"
+    done <<< "$block"
+  else
+    say "L9 Claude environment: bootstrap receipt unreadable — run 'make claude-install'"
+  fi
+
+  if [ -f "$refresh_reader" ]; then
+    local refresh
+    refresh="$("$py" "$refresh_reader" --read 2>/dev/null || true)"
+    [ -n "$refresh" ] && say "$refresh"
+  fi
+
   case "$state" in
     ready|"") : ;;
     *)
@@ -738,35 +776,6 @@ except Exception:
       fi
       ;;
   esac
-
-  # A receipt written for a different directory reports READY for artifacts this
-  # session never loads, so compare the wired workspace against this project.
-  local wired block prefix
-  wired="$("$py" -c 'import json,sys
-try:
-    print(json.load(open(sys.argv[1], encoding="utf-8")).get("workspace",""))
-except Exception:
-    print("")' "$HOME/.l9/claude/bootstrap-state.json" 2>/dev/null || true)"
-  prefix=""
-  if [ -n "$wired" ] && [ "$wired" != "$WORKSPACE" ]; then
-    prefix="STALE: "
-    say "STALE: bootstrap receipt workspace $wired != session $WORKSPACE"
-  fi
-  block="$("$py" "$reader" --read --reprobe 2>/dev/null || true)"
-  if [ -n "$block" ]; then
-    say "--- L9 Claude environment ---"
-    while IFS= read -r line || [ -n "$line" ]; do
-      say "${prefix}${line}"
-    done <<< "$block"
-  else
-    say "L9 Claude environment: bootstrap receipt unreadable — run 'make claude-install'"
-  fi
-
-  if [ -f "$refresh_reader" ]; then
-    local refresh
-    refresh="$("$py" "$refresh_reader" --read 2>/dev/null || true)"
-    [ -n "$refresh" ] && say "$refresh"
-  fi
 }
 
 # --- Account-field drift (WS-4.1) -------------------------------------------
