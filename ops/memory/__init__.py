@@ -19,6 +19,7 @@ Modules (import them directly; this package deliberately imports nothing):
 - ``session_state``        — local, non-authoritative per-session memory state (plan §22)
 - ``diagnostics``          — layered readiness (R0 PACKAGE_BOUND … R9 PROJECTION_READY)
 - ``mcp_instantiation``    — per-machine Cursor MCP file; the memory entry is delegated
+- ``store_compat``         — V2.2 schema-4 sqlite preflight so V2.3+ initialize() can boot
 - ``cli``                  — ``python -m ops.memory.cli``: the operator/workflow front door
 - ``legacy_reconciliation`` — provider-only history admitted through canonical ingress
 
@@ -39,4 +40,5 @@ __all__ = [
     "runtime_binding",
     "session_contracts",
     "session_state",
+    "store_compat",
 ]

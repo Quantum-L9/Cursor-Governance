@@ -27,6 +27,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from ops.memory.receipt_contract import ReceiptContractError, merge_receipt_schemas
 from ops.memory.receipts import CapabilitiesReceipt, InvalidReceiptError
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -684,6 +685,15 @@ def resolve_runtime_binding(
         manifest.contract_model_modules,
     )
     reasons.extend(schema_reasons)
+    try:
+        schemas, merged_source = merge_receipt_schemas(schemas)
+        encoded = json.dumps(schemas, sort_keys=True, separators=(",", ":"), default=str)
+        schema_digest = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+        schema_source = (
+            merged_source if schema_source is None else f"{schema_source}+{merged_source}"
+        )
+    except ReceiptContractError as exc:
+        reasons.append(f"canonical receipt contract unavailable: {exc}")
 
     proven, provenance, installed_digest, provenance_reasons = _verify_artifact_provenance(
         manifest, probe_payload

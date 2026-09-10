@@ -1,0 +1,160 @@
+{
+  "schema": "l9.memory.receipt-contract/v1",
+  "contract_version": "memory-control-plane/v1",
+  "compatible_package_majors": [2],
+  "record_schema_version": "2.2.0",
+  "source": {
+    "repository": "Quantum-L9/l9-graphiti-memory",
+    "ref": "v2.3.1",
+    "memory_sha": "84eedcdfab83020776eab290599751b3b6af8dbf",
+    "note": "Consumer contract for every V2 control-plane receipt. Cursor narrows required fields; it does not restate the package pydantic models and does not reject a superset. Live schema probe from the bound interpreter still wins when it exports a model; this file is the canonical fallback and the SSOT the test fixtures load."
+  },
+  "aliases": {
+    "HealthReceipt": ["HealthReport"],
+    "HydrationReceipt": ["HydrationResult"],
+    "CapabilitiesReceipt": ["ControlPlaneCapabilities"],
+    "ConflictsReceipt": ["ConflictReport"],
+    "CandidateReceipt": ["MemoryCandidateIngestionResult"],
+    "PhaseLockVerificationReceipt": ["PhaseLockVerification"],
+    "ResolveReceipt": ["GroupResolution"]
+  },
+  "models": {
+    "CapabilitiesReceipt": {
+      "type": "object",
+      "required": [
+        "contract_version",
+        "package",
+        "package_version",
+        "transports"
+      ],
+      "properties": {
+        "contract_version": { "type": "string" },
+        "exit_codes": { "type": "object" },
+        "package": { "type": "string" },
+        "package_version": { "type": "string" },
+        "schema_version": { "type": "string" },
+        "transports": { "type": "array" }
+      }
+    },
+    "HealthReceipt": {
+      "type": "object",
+      "required": ["package_version", "projection", "status", "store"],
+      "properties": {
+        "package_version": { "type": "string" },
+        "projection": { "type": "object" },
+        "status": { "type": "string" },
+        "store": { "type": "object" }
+      }
+    },
+    "ResolveReceipt": {
+      "type": "object",
+      "required": ["method", "readonly"],
+      "properties": {
+        "method": { "type": "string" },
+        "readonly": { "type": "boolean" }
+      }
+    },
+    "HydrationReceipt": {
+      "type": "object",
+      "required": ["receipt_id", "result_digest", "sections", "status", "task"],
+      "properties": {
+        "receipt_id": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$"
+        },
+        "result_digest": { "type": "string" },
+        "sections": { "type": "array" },
+        "status": { "type": "string" },
+        "task": { "type": "string" }
+      }
+    },
+    "SearchReceipt": {
+      "type": "object",
+      "required": ["namespaces_authorized", "query", "receipt_id", "status"],
+      "properties": {
+        "hits": { "type": "array" },
+        "namespaces_authorized": { "type": "array", "items": { "type": "string" } },
+        "query": { "type": "string" },
+        "receipt_id": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$"
+        },
+        "request_digest": { "type": "string" },
+        "status": { "type": "string" }
+      }
+    },
+    "WriteReceipt": {
+      "type": "object",
+      "required": ["namespace", "receipt_id", "status"],
+      "properties": {
+        "namespace": { "type": "string" },
+        "receipt_id": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$"
+        },
+        "record_id": { "type": ["string", "null"] },
+        "status": { "type": "string" }
+      }
+    },
+    "CandidateReceipt": {
+      "type": "object",
+      "required": ["candidate_id", "namespace", "status"],
+      "properties": {
+        "candidate_id": { "type": "string" },
+        "namespace": { "type": "string" },
+        "record_id": { "type": ["string", "null"] },
+        "status": { "type": "string" },
+        "superseded_record_ids": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "CloseReceipt": {
+      "type": "object",
+      "required": ["namespace", "receipt_id", "status", "write_receipt_id"],
+      "properties": {
+        "namespace": { "type": "string" },
+        "receipt_id": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$"
+        },
+        "record_id": { "type": ["string", "null"] },
+        "replay_digest": { "type": ["string", "null"] },
+        "replay_payload_matched": { "type": ["boolean", "null"] },
+        "replayed": { "type": "boolean" },
+        "status": { "type": "string" },
+        "stored_digest": { "type": ["string", "null"] },
+        "warnings": { "type": "array", "items": { "type": "string" } },
+        "write_receipt_id": { "type": ["string", "null"] }
+      }
+    },
+    "ConflictsReceipt": {
+      "type": "object",
+      "required": ["conflicts", "namespace", "snapshot_digest"],
+      "properties": {
+        "conflicts": { "type": "array" },
+        "namespace": { "type": "string" },
+        "snapshot_digest": { "type": "string" }
+      }
+    },
+    "PhaseLockReceipt": {
+      "type": "object",
+      "required": ["expires_at", "granted", "lock_id", "namespace", "task_signature"],
+      "properties": {
+        "expires_at": { "type": "string" },
+        "granted": { "type": "boolean" },
+        "lock_id": { "type": "string" },
+        "namespace": { "type": "string" },
+        "task_signature": { "type": "string" }
+      }
+    },
+    "PhaseLockVerificationReceipt": {
+      "type": "object",
+      "required": ["namespace", "reasons", "task_signature", "valid"],
+      "properties": {
+        "namespace": { "type": "string" },
+        "reasons": { "type": "array", "items": { "type": "string" } },
+        "task_signature": { "type": "string" },
+        "valid": { "type": "boolean" }
+      }
+    }
+  }
+}
