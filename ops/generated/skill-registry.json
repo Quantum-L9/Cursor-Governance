@@ -1,5 +1,5 @@
 {
-  "generation_id": "34fa021008b40c299f6389056f6396a740401ebd3acc4124daaf7945102753e2",
+  "generation_id": "2e7861954fa09dc736995597eb05b333494b58a4f4f215206c5b58fcfde7814c",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -929,14 +929,14 @@
     },
     {
       "composition_role": "primary",
-      "description": "resolve credentials from cursor-governance ops/secrets (aws secrets manager openclaw-igorbot refs and infisical project cursor-governance) \u2014 use when an agent needs an api key, token, password, infisical hydrate, aws secret ref, registry sync, or fail-closed credential check without keychain or printing values.",
+      "description": "bind credentials from Infisical project cursor-governance at will; AWS is the one login seed unless the human explicitly asks for AWS \u2014 use when an agent needs an api key, token, password, infisical bind, aws secret ref, registry sync, or fail-closed credential check without printing values.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-aws-secrets",
       "path": "skills/l9-aws-secrets",
       "reason": "",
       "skill_md": "skills/l9-aws-secrets/SKILL.md",
-      "skill_sha256": "29c5c24032aaee4ce94a95b65cc8ac2524740a42106e28f91f9bb8b323746f82",
+      "skill_sha256": "3678e74015413bee047e0ef592fea417832aad0f2c6992d91b6749e6581e6915",
       "user_invocable": true,
       "when_to_use": "an agent needs an api key, token, password, infisical hydrate, aws secret ref, registry sync, or fail-closed credential check without keychain or printing values"
     },
@@ -1606,5 +1606,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "b71df84c03ba02fa5a638d03749e4bf08c7efcb5354d85fb0fe4928cf31c5587",
-  "source_skill_corpus_sha256": "af261f1350f44481400690021e1eaadfad707a518d7783238bf3392d85720033"
+  "source_skill_corpus_sha256": "1fbd6232fbdab340941400297cf62df488c385dac6c8f6ef4261d08eb0b307fc"
 }
