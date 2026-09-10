@@ -59,16 +59,9 @@ def _guard_resolution(
     source = "ops/config/root-file-protection.json"
     path = root / source
     if not path.is_file():
-        return {
-            "id": guard_id,
-            "status": "BLOCKED",
-            "source": source,
-            "rule": None,
-            "tier": None,
-            "justification_marker": None,
-            "evidence_ids": [],
-            "detail": "root-file protection contract is missing",
-        }
+        # Consumer repos do not declare this Cursor-Governance guard.
+        # Assessment still runs; the guard applies only when the file exists.
+        return None
     try:
         contract = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError, json.JSONDecodeError) as exc:
@@ -179,7 +172,7 @@ def assess_surface_obligations(
                         "supports": "mutation_guard",
                     }
                 )
-        if guard and guard["status"] == "BLOCKED":
+        if guard and guard["status"] == "BLOCKED" and guard.get("source") is None:
             obligation["assessment"] = {
                 "analyzer": analyzer_id or None,
                 "status": "BLOCKED",
@@ -268,23 +261,57 @@ def assess_surface_obligations(
             )
 
         if normalized:
-            obligation["assessment"] = {
-                "analyzer": analyzer_id,
-                "status": "NEEDS_IMPROVEMENT",
-                "findings": normalized,
-                "disposition": "IMPROVE",
-                "mutation_guard": guard,
-            }
-            obligation["required_action"].update(
-                type="REFRESH",
-                mode="OWNER_NATIVE",
-                owner=obligation["ownership"]["execution_owner"],
-            )
-            obligation["lifecycle"] = {
-                "status": "OPEN",
-                "reason": "material operational-surface findings remain unresolved",
-                "terminal": False,
-            }
+            handoff = any(row.get("remediation_class") == "HANDOFF" for row in normalized)
+            if handoff:
+                obligation["assessment"] = {
+                    "analyzer": analyzer_id,
+                    "status": "NEEDS_IMPROVEMENT",
+                    "findings": normalized,
+                    "disposition": "HANDOFF",
+                    "mutation_guard": guard,
+                }
+                obligation["required_action"].update(
+                    type="HANDOFF",
+                    mode="EXTERNAL_OWNER",
+                    owner=obligation["ownership"]["semantic_owner"],
+                )
+                obligation["lifecycle"] = {
+                    "status": "HANDOFF_REQUIRED",
+                    "reason": "operational-surface finding belongs to another authority",
+                    "terminal": False,
+                }
+            elif guard and guard["status"] == "BLOCKED":
+                obligation["assessment"] = {
+                    "analyzer": analyzer_id,
+                    "status": "BLOCKED",
+                    "findings": normalized,
+                    "disposition": "UNKNOWN",
+                    "mutation_guard": guard,
+                }
+                obligation["lifecycle"] = {
+                    "status": "BLOCKED",
+                    "reason": "operational surface mutation guard could not be resolved",
+                    "terminal": False,
+                }
+                obligation["blockers"] = sorted(set(obligation["blockers"] + [guard["detail"]]))
+            else:
+                obligation["assessment"] = {
+                    "analyzer": analyzer_id,
+                    "status": "NEEDS_IMPROVEMENT",
+                    "findings": normalized,
+                    "disposition": "IMPROVE",
+                    "mutation_guard": guard,
+                }
+                obligation["required_action"].update(
+                    type="REFRESH",
+                    mode="OWNER_NATIVE",
+                    owner=obligation["ownership"]["execution_owner"],
+                )
+                obligation["lifecycle"] = {
+                    "status": "OPEN",
+                    "reason": "material operational-surface findings remain unresolved",
+                    "terminal": False,
+                }
             required = set(obligation["validation"]["required"])
             required.add("material_improvement")
             obligation["validation"]["required"] = sorted(required)

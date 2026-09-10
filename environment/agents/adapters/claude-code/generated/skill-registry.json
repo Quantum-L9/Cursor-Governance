@@ -1,5 +1,5 @@
 {
-  "generation_id": "0b23e543af858147a622c9ee421cf7c92db83dcd12ebf0d4526dfb8d2b38d66a",
+  "generation_id": "27744c1d74343486a97150fe8e24016ac146ccc038eaadce4373193d2137aebf",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -1566,14 +1566,14 @@
     },
     {
       "composition_role": "primary",
-      "description": "compile repository changes into typed, target-resolved documentation obligations, selectively qualify semantic obligations with l9-intelligence-harvest, route owner-native actions, and emit evidence-backed repo-docs receipts. use when refreshing repo or agent docs, checking documentation impact after code/CI/governance changes, generating module READMEs, or proving documentation freshness before PR/merge.",
+      "description": "compile repository changes into typed, target-resolved documentation and operational-contract obligations, deterministically assess supported executable surfaces, selectively qualify semantic obligations with l9-intelligence-harvest, route owner-native actions, and emit evidence-backed repo-docs receipts. use when refreshing repo or agent docs, checking documentation or operational-contract impact after code/CI/governance changes, generating module READMEs, assessing Makefile or pyproject.toml contract drift, or proving repository documentation freshness before PR/merge.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-update-agent-docs",
       "path": "skills/l9-update-agent-docs",
       "reason": "",
       "skill_md": "skills/l9-update-agent-docs/SKILL.md",
-      "skill_sha256": "e142a96b2abb29cdc1e0507dc4fb849058db3ed1f96371a32526553e22c3e5cd",
+      "skill_sha256": "48124d63019630d0ab6e56dcab95a62c90aeea68e2a365c064e662e9dc10f5e2",
       "user_invocable": true,
       "when_to_use": "refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes, or creating root CLAUDE.md / INVARIANTS.md when missing"
     },
@@ -1606,5 +1606,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "b71df84c03ba02fa5a638d03749e4bf08c7efcb5354d85fb0fe4928cf31c5587",
-  "source_skill_corpus_sha256": "3f25e000cf6bc0184dea8fc365fbd2091e7d918dae86191a275733d4e419231b"
+  "source_skill_corpus_sha256": "c0fac62200a96f4762b57a97d5f098b2c1579010d3be739c947fdc6829600a38"
 }

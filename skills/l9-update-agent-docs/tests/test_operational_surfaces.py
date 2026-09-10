@@ -134,6 +134,70 @@ def test_assessment_separates_ownership_and_derives_root_guard(tmp_path: Path) -
     assert "material_improvement" in assessed["validation"]["required"]
 
 
+def _obligation(surface: str, target: str) -> dict:
+    return {
+        "surface": surface,
+        "target": {"path": target, "present": True},
+        "required_action": {
+            "type": "REFRESH",
+            "mode": "OWNER_NATIVE",
+            "owner": "l9-update-agent-docs",
+            "executor": None,
+        },
+        "evidence": [],
+        "lifecycle": {"status": "OPEN", "reason": "fixture", "terminal": False},
+        "validation": {"required": ["target_freshness"], "results": []},
+        "blockers": [],
+    }
+
+
+def test_handoff_finding_does_not_force_owner_native_refresh(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    write_root_guard(root)
+    write(root / "ops/config/python-contract.json", "{not-json")
+    write(root / "pyproject.toml", "[project]\nname = 'demo'\nrequires-python = '>=3.12'\n")
+    assessed = assess_surface_obligations(
+        root, dp.load_policy(), [_obligation("python_project_contract", "pyproject.toml")]
+    )[0]
+    assert assessed["assessment"]["disposition"] == "HANDOFF"
+    assert assessed["required_action"]["type"] == "HANDOFF"
+    assert assessed["required_action"]["mode"] == "EXTERNAL_OWNER"
+    assert assessed["lifecycle"]["status"] == "HANDOFF_REQUIRED"
+    assert any(row["remediation_class"] == "HANDOFF" for row in assessed["assessment"]["findings"])
+
+
+def test_missing_root_guard_still_assesses_clean_makefile(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    write(root / "ops/scripts/replay.py", "print('ok')\n")
+    write(
+        root / "Makefile",
+        "PYTHON := $(CURDIR)/.venv/bin/python\nreplay:\n\t$(PYTHON) ops/scripts/replay.py\n",
+    )
+    assessed = assess_surface_obligations(
+        root, dp.load_policy(), [_obligation("makefile_contract", "Makefile")]
+    )[0]
+    assert assessed["assessment"]["status"] == "PASS"
+    assert assessed["assessment"]["disposition"] == "PRESERVE"
+    assert assessed["assessment"]["mutation_guard"] is None
+    assert assessed["lifecycle"]["status"] == "PRESERVED"
+
+
+def test_makefile_ignores_non_python_script_mentions(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    write(
+        root / "Makefile",
+        "clean:\n\trm -f generated.py\nstamp:\n\ttouch generated.py\nnote:\n\techo missing.py\n",
+    )
+    assert analyze_makefile(root, root / "Makefile")["status"] == "PASS"
+
+    write(
+        root / "Makefile",
+        "PYTHON := $(CURDIR)/.venv/bin/python\nrun:\n\t$(PYTHON) ops/scripts/missing.py\n",
+    )
+    result = analyze_makefile(root, root / "Makefile")
+    assert any(row["rule_id"] == "make.recipe.script_resolution" for row in result["findings"])
+
+
 def test_clean_operational_surface_is_preserved(tmp_path: Path) -> None:
     root = tmp_path / "repo"
     write_root_guard(root)

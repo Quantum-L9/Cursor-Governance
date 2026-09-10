@@ -11,7 +11,11 @@ _DIRECT_PYTHON = re.compile(
     r"^(?:[@+\-]\s*)?(?:[A-Za-z_][A-Za-z0-9_]*=[^\s]+\s+)*"
     r"(?:/usr/bin/)?python(?:3(?:\.\d+)?)?\b"
 )
-_SCRIPT_REF = re.compile(r"(?<![A-Za-z0-9_$])([A-Za-z0-9_./-]+\.py)(?![A-Za-z0-9_])")
+_PYTHON_SCRIPT_ARG = re.compile(
+    r"(?:(?:/usr/bin/)?python(?:3(?:\.\d+)?)?|\$\(PYTHON\))"
+    r"(?:\s+-[^\s]+)*"
+    r"\s+([A-Za-z0-9_./-]+\.py)"
+)
 
 
 def _finding(
@@ -67,7 +71,7 @@ def analyze(root: Path, target: Path) -> dict[str, Any]:
                 )
             )
 
-        for match in _SCRIPT_REF.finditer(recipe):
+        for match in _PYTHON_SCRIPT_ARG.finditer(recipe):
             rel = match.group(1)
             if rel.startswith("/") or "$" in rel:
                 continue
@@ -78,7 +82,8 @@ def analyze(root: Path, target: Path) -> dict[str, Any]:
                         property_name="referenced_script_resolves",
                         observed=rel,
                         expected=(
-                            "literal repository-local script reference resolves to an existing file"
+                            "python / python3 / $(PYTHON) script argument "
+                            "resolves to an existing file"
                         ),
                         line=lineno,
                     )

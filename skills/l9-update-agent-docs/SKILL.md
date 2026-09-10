@@ -100,7 +100,7 @@ A touched operational file is never proof of improvement by itself. A material f
 `makefile_contract` is a repository operator command contract. Its analyzer is intentionally narrow and deterministic. It currently checks:
 
 - direct `python`/`python3` recipe invocation when the Makefile declares a locked `PYTHON` runner;
-- literal repository-local Python script references that no longer resolve.
+- literal `python` / `python3` / `$(PYTHON)` recipe script arguments that no longer resolve.
 
 The surface may be expanded only with evidence-backed deterministic checks whose semantic authority already exists in the repository. Do not use it to invent targets, redesign operator workflows, or turn Makefile style preferences into material findings.
 
@@ -193,7 +193,7 @@ For each configured operational surface:
 6. produce `IMPROVE`, `PRESERVE`, `HANDOFF`, `UNKNOWN`, or `NOT_APPLICABLE`;
 7. never mutate solely because the target was touched.
 
-If the analyzer or mutation guard cannot be resolved, the obligation is `BLOCKED`. Do not guess a fallback.
+If the analyzer cannot be resolved, the obligation is `BLOCKED`. Do not guess a fallback. A repository that does not declare `ops/config/root-file-protection.json` does not block assessment. If that guard is declared but cannot be resolved, block only when a mutation would otherwise be proposed.
 
 ### 5. Execute through the named owner
 
