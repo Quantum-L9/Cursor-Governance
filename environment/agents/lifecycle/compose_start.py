@@ -423,9 +423,7 @@ def compose_host_pre_tool_use(payload: dict[str, Any]) -> dict[str, Any]:
     """
     if str(payload.get("tool_name") or "") != "Task":
         return _deny("native lifecycle preToolUse only accepts Task")
-    raw_tool_use_id = _first_str(
-        payload, "tool_use_id", "toolUseId", "tool_call_id", "toolCallId"
-    )
+    raw_tool_use_id = _first_str(payload, "tool_use_id", "toolUseId", "tool_call_id", "toolCallId")
     tool_use_id = host_receipt_id(raw_tool_use_id, label="tool_use_id") if raw_tool_use_id else ""
     if not tool_use_id:
         return _deny("native Task missing tool_use_id")

@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-09-08T00:28:00Z'
+generated_utc: '2026-09-10T18:30:38Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:4f1fd95a6587656f0f97f4513d94c0d7de91b25747a60db7121d75c9d5694255
+source_tree_digest: sha256:d94474fdeb628320f19ac7c85f0573b14a8e1b46628b835108e977456d0f66f7
 summary:
   total_mdc_files: 69
   always_apply_true: 33
@@ -577,8 +577,8 @@ rules:
   globs: null
   first_heading: make pr → green merge-ready; /l9-pr-remediation → merge
   has_yaml_frontmatter: true
-  line_count: 156
-  content_digest: sha256:c03f04d87d3d601f4f2c8ca4fa63cd051b221931172ed9690f6a805f87310855
+  line_count: 158
+  content_digest: sha256:c9f6cc6236d9100657358206d302aa3787fd75dab578b6e0c862282d2616481f
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -1357,7 +1357,7 @@ rules:
   id: l9.rule.l4.local-autonomy
   id_source: explicit
   version: 1.0.0
-  description: L4 local autonomy — stacked local commits, no mid-execution push, then PR template. Tree kernels fire on adapter make pr, not as L4. Cursor skips the tree latch.
+  description: L4 local autonomy — stacked local commits, no mid-execution push, then PR template. Tree kernels fire on Cursor and adapter make pr before pytest, not as L4.
   scope: global
   domain: git
   activation: always
@@ -1366,8 +1366,8 @@ rules:
   globs: null
   first_heading: L4 Local Autonomy (no mid-execution push)
   has_yaml_frontmatter: true
-  line_count: 73
-  content_digest: sha256:c76e780ff9b83a6b5773fbfd046096239558c8a4abe939939aa32d6a69843da3
+  line_count: 71
+  content_digest: sha256:ba0ae0775f99d905aa3380a2bca6a530a05f021abfbd1dfc888b6c09d0907a1c
   authority: canonical_global
   context_cost: minimal
   deprecated: false
@@ -1609,7 +1609,7 @@ rules:
   first_heading: Local commit is standing (always on)
   has_yaml_frontmatter: true
   line_count: 66
-  content_digest: sha256:26aa22ee445fd265f2edcb56a7818b6f0109c195169ca2edd73a1c97d0bb97f1
+  content_digest: sha256:324bb7be214cd95cbf36ca30b91e3e901644d87cbdca045de93ffb34d9718024
   authority: canonical_global
   context_cost: minimal
   deprecated: false

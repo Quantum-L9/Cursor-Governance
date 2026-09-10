@@ -43,10 +43,10 @@ AND `L9_AUTONOMY_ENABLED=true`:
 5. Cursor surface (`L9_GOVERNANCE_SURFACE` is `cursor` or unset) MUST scoped-commit locally
    after each authored chunk (pathspecs; rule 49).
    Unique dirty files you authored are a rule failure. Do not ask.
-   After finished work: `authorize-release` then `PR_REMEDIATE=0 make pr` /
-   `l9 pr`. Do not run `make precommit-repo` then `make pr`. Tree kernels
-   skip on Cursor; adapters still fire them on `make pr`. L4 remote gate
-   still blocks mid-execution push.
+   After finished work: apply RA + Validate & Repair, `kernel_gate.py record`,
+   `authorize-release`, then `PR_REMEDIATE=0 make pr` / `l9 pr`. Do not run
+   `make precommit-repo` then `make pr`. Tree kernels fire on Cursor and
+   adapters before pytest. L4 remote gate still blocks mid-execution push.
 6. Source of truth: `ops/autonomy/surface_profile.yaml` — do not fork this text.
 
 ## L4 Local Autonomy (all surfaces; default ON)
@@ -61,7 +61,7 @@ AND `L9_AUTONOMY_ENABLED=true`:
   `worktree_isolation_gate.py` (Claude PreToolUse + Cursor beforeShellExecution).
 - CLI: `python3 ops/autonomy/l4_local.py {begin|authorize-release|status}`.
   Kernels: `python3 ops/autonomy/kernel_gate.py {record|precommit}`
-  (tree latch on adapter `make pr`; Cursor skips it).
+  (tree latch on Cursor and adapter `make pr`; CI / unknown skip).
 - Breakglass: `L9_LOCAL_PUSH_AUTHORIZED=<reason>` or `L9_L4_LOCAL_AUTONOMY=0`;
   isolation: `L9_GIT_REVERT_AUTHORIZED` / `L9_GIT_BROAD_ADD_AUTHORIZED` /
   `L9_GIT_SWITCH_AUTHORIZED` / `L9_GIT_RESET_AUTHORIZED` /
@@ -69,8 +69,8 @@ AND `L9_AUTONOMY_ENABLED=true`:
 - Post-push (all surfaces after L4 release): `PR_REMEDIATE=0 make pr` /
   `l9 pr` to a green merge-ready PR. Merge only after `/l9-pr-remediation`
   writes `ops/autonomy/authorize_merge.py --all-open` and each PR is green +
-  mergeable. Force-push / admin-merge stay forbidden. Tree kernels skip
-  on Cursor; Claude Code desktop and Mobile still apply them on `make pr`.
+  mergeable. Force-push / admin-merge stay forbidden. Tree kernels fire
+  on Cursor and adapters before pytest; CI / unknown skip.
 - Stacked PRs: when a PR is already open for the workstream, the next PR
   bases on the open PR's head (bottom-up merge order). Rebase and conflict
   resolution are forbidden; one feature branch per program.

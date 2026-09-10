@@ -47,7 +47,7 @@ Silence is not permission to leave unique work uncommitted.
 
 1. **Mechanical gates** — `ops/autonomy/local_execution_gate.py`, L4 receipts, `merge_gate.py`
 2. **`88-l4-local-autonomy`** — during an active L4 program: local commits authorized; mid-execution `make pr` and MCP `create_pull_request` / `push_files` denied until `authorize-release`
-3. **This rule** — Cursor **local commit** is standing and mandatory after authored edits. Finished work is `authorize-release` then `PR_REMEDIATE=0 make pr` / `l9 pr` on every surface. Raw `git push` / `gh pr create` stay ask-first. Tree kernels skip on Cursor; adapters still fire them on `make pr`.
+3. **This rule** — Cursor **local commit** is standing and mandatory after authored edits. Finished work is `authorize-release` then `PR_REMEDIATE=0 make pr` / `l9 pr` on every surface. Raw `git push` / `gh pr create` stay ask-first. Tree kernels fire on Cursor and adapters as the first `make pr` writers step, before pytest.
 4. Force-push, hard-reset, admin-merge, and secrets exfil: **never** waived
 
 Projected override: `zz-autonomy-surface-override.md`.

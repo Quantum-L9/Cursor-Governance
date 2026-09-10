@@ -73,10 +73,7 @@ class HostNativeLifecycleTests(unittest.TestCase):
             self.assertEqual(out["permission"], "allow", (subagent_type, out))
 
     def test_cursor_319_newline_ids_are_admitted(self) -> None:
-        raw = (
-            "call-2f32f253-f91c-42f9-8ddb-ce97bd9a26dc-147"
-            "\nfc_ozkJdPs-6SkKZu-7668baee-aws_ue1_0"
-        )
+        raw = "call-2f32f253-f91c-42f9-8ddb-ce97bd9a26dc-147\nfc_ozkJdPs-6SkKZu-7668baee-aws_ue1_0"
         pre = compose_start.compose_host_pre_tool_use(self._pre(raw, "explore"))
         self.assertEqual(pre["permission"], "allow", pre)
         start = compose_start.compose_host_subagent_start(self._start(raw, raw))

@@ -9,8 +9,8 @@ Claude Code Mobile) is `PR_REMEDIATE=0 make pr` / `l9 pr` (Autonomy
 Surface Profile `campaign_execution` / `l4_local_autonomy.post_push`).
 Remediates defaults to 1 after the PR opens. `PR_REMEDIATE=0` is
 opt-out for campaign and L4 authorize-release publish. Do not run
-`make precommit-repo` then `make pr`. Cursor skips the tree-kernel
-latch; adapters still fire it on `make pr`.
+`make precommit-repo` then `make pr`. Tree kernels fire on Cursor and
+adapters as the first `make pr` writers step, before pytest.
 
 **All surfaces** MUST:
 
@@ -19,8 +19,10 @@ latch; adapters still fire it on `make pr`.
    `l9 pr` / `make -C "$GOV" pr WS="$PWD"` regardless of the workspace repo's
    own Makefile. A consumer repo needs **no** `pr`/`pr-check` target; do not
    add one, and do not fall back to a raw `git push` where one is absent.
-2. Do **not** force `PR_REMEDIATE=0`. Unset remediates is 1 (poll to green
-   + merge-ready). Pass `PR_REMEDIATE=0` only to skip the poll worker.
+2. Do **not** pin `PR_REMEDIATE` in the account or ambient environment.
+   The standing finish path is `PR_REMEDIATE=0 make pr` at the **call site**
+   (campaign / L4 authorize-release). Unset remediates is 1 only when that
+   invocation omits the opt-out. `verify_account_env.py` fails closed on a pin.
 3. For Program Execution campaigns, set `PR_BASE` to
    `origin/campaign/<campaign_id>` — never open those PRs against `main`.
 4. Campaign / `make pr` end state: every published PR is **green and
