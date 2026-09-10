@@ -23,7 +23,7 @@ import json
 import os
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -42,7 +42,7 @@ def _enabled() -> bool:
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def extract_prompt(payload: dict[str, Any]) -> str:
@@ -169,7 +169,7 @@ def _fresh(receipt: dict[str, Any], *, workspace: Path, task: str) -> bool:
     except ValueError:
         return False
     if then.tzinfo is None:
-        then = then.replace(tzinfo=timezone.utc)
+        then = then.replace(tzinfo=UTC)
     return (_now() - then).total_seconds() < FRESH_SECONDS
 
 
@@ -223,9 +223,7 @@ def prefetch(
         return existing
 
     interpreter = _interpreter(gov_root)
-    hydrate_argv = memcli_argv(
-        interpreter, "hydrate", task, "--workspace", str(workspace)
-    )
+    hydrate_argv = memcli_argv(interpreter, "hydrate", task, "--workspace", str(workspace))
     conflicts_argv = memcli_argv(interpreter, "conflicts", "--workspace", str(workspace))
     if dry_run:
         body = {
@@ -328,9 +326,7 @@ def main(argv: list[str] | None = None) -> int:
     args, _unknown = parser.parse_known_args(argv)
 
     payload: dict[str, Any] = {}
-    read_stdin = args.hook or (
-        not args.task and not args.force and not sys.stdin.isatty()
-    )
+    read_stdin = args.hook or (not args.task and not args.force and not sys.stdin.isatty())
     if read_stdin:
         try:
             raw = sys.stdin.read()

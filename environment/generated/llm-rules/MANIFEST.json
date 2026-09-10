@@ -6,9 +6,9 @@
       "alias": null,
       "class": "always",
       "output": "00-global.md",
-      "output_sha256": "44c969e7d398fa0797a350f55e9d9c127ed0a006c1edeae06a87d8f020ac0820",
+      "output_sha256": "664e8ea979306627cd4db2ca9e0b35c84956c22ee57aec0fd797876beefedd02",
       "source": "rules/00-global.mdc",
-      "source_sha256": "f52c4a83d3140578f1dba975f12b643ff85a0751c49c40af1ba112720dd2011c",
+      "source_sha256": "7fef9f6d2a763dd61e4884fc5729ec8869d3d06617a7b8e2feedce5d249469df",
       "stem": "00-global"
     },
     {
@@ -91,6 +91,15 @@
       "source": "rules/10-lang-typescript.mdc",
       "source_sha256": "bb98eadfc112a416fe0a841420bcebc289f08d9b47d1ad7c8e171fd5c04952f9",
       "stem": "10-lang-typescript"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "100-max-velocity-research.md",
+      "output_sha256": "842639e1897557d538a85759e2fc2dcd6f5f8d31500cec98ff6eccef9c674c89",
+      "source": "rules/100-max-velocity-research.mdc",
+      "source_sha256": "4460c4bd2a52c95b309dff11402ccb6b0197ca3ef9de13ac2fd564022758a53c",
+      "stem": "100-max-velocity-research"
     },
     {
       "alias": null,
@@ -637,9 +646,9 @@
   "source_relative": "rules",
   "summary": {
     "denied": 1,
-    "projected": 52,
+    "projected": 53,
     "skipped_agent_requested": 17,
-    "source_mdc": 70
+    "source_mdc": 71
   },
-  "tree_sha256": "7a4b6c05f5ff6452baac1fbe17ee173f87b4accd6b8a69cb82e3cb22c37e4679"
+  "tree_sha256": "61dc9e9cd6f644a6a000827bcf22ba69e6b3e8f15fea25399a55ce46e8b43fed"
 }

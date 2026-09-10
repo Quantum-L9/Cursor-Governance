@@ -1,14 +1,14 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-09-10T18:30:38Z'
+generated_utc: '2026-09-10T20:38:47Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:d94474fdeb628320f19ac7c85f0573b14a8e1b46628b835108e977456d0f66f7
+source_tree_digest: sha256:55b7c08154fb94f6b7bce3b398fab9d89679d1cdfb38e8c9d9f055d8b7d79de8
 summary:
-  total_mdc_files: 69
-  always_apply_true: 33
+  total_mdc_files: 70
+  always_apply_true: 34
   always_apply_false: 36
   no_boolean_always_apply: 0
-  explicit_rule_ids: 68
+  explicit_rule_ids: 69
   derived_rule_ids: 1
   deprecated_rules: 0
 rules:
@@ -25,8 +25,8 @@ rules:
   globs: null
   first_heading: Global rules
   has_yaml_frontmatter: true
-  line_count: 40
-  content_digest: sha256:f52c4a83d3140578f1dba975f12b643ff85a0751c49c40af1ba112720dd2011c
+  line_count: 41
+  content_digest: sha256:7fef9f6d2a763dd61e4884fc5729ec8869d3d06617a7b8e2feedce5d249469df
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -236,6 +236,28 @@ rules:
   removal_plan: null
   extends: null
   classification_source: mixed_or_derived
+- file: 100-max-velocity-research.mdc
+  id: l9.rule.100.max.velocity.research
+  id_source: explicit
+  version: 1.0.0
+  description: Maximum-velocity is a repo invariant — launch research as concurrent subagents.
+  scope: global
+  domain: governance
+  activation: always
+  activation_source: explicit
+  always_apply: true
+  globs: null
+  first_heading: Maximum velocity + research fan-out
+  has_yaml_frontmatter: true
+  line_count: 39
+  content_digest: sha256:4460c4bd2a52c95b309dff11402ccb6b0197ca3ef9de13ac2fd564022758a53c
+  authority: canonical_global
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: explicit
 - file: 15-work-tracking.mdc
   id: l9.rule.15.work.tracking
   id_source: explicit

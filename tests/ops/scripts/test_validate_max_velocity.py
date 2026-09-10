@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import json
 import shutil
+import sys
 from pathlib import Path
 
 import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
-import sys
-
 sys.path.insert(0, str(ROOT / "ops" / "scripts"))
 
 import validate_max_velocity as v  # noqa: E402

@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
-import sys
-
 sys.path.insert(0, str(ROOT / "ops" / "hooks"))
 
 import pr_publish_memory_write as hook  # noqa: E402
@@ -144,9 +143,7 @@ def test_disabled_switch_skips_without_calling_memory(
     assert receipt["status"] == "SKIP"
 
 
-def test_cli_failure_is_warn_and_exit_zero(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_cli_failure_is_warn_and_exit_zero(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     (tmp_path / ".l9" / "pr").mkdir(parents=True)
     (tmp_path / hook.SUMMARY_REL).write_text(json.dumps(_summary()), encoding="utf-8")
     monkeypatch.delenv("L9_PR_PUBLISH_MEMORY", raising=False)

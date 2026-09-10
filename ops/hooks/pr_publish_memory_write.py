@@ -22,7 +22,7 @@ import json
 import os
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -82,13 +82,10 @@ def format_fact(
     adds = summary.get("additions")
     dels = summary.get("deletions")
     paths = _paths(summary)
-    next_action = (
-        "next=/l9-pr-remediation Converge (own until open_prs=0; launch merge_now). "
-        + (
-            "ceremony already requested a remediator spawn."
-            if remediates
-            else "ceremony published PR_REMEDIATE=0; remediator still owns merge."
-        )
+    next_action = "next=/l9-pr-remediation Converge (own until open_prs=0; launch merge_now). " + (
+        "ceremony already requested a remediator spawn."
+        if remediates
+        else "ceremony published PR_REMEDIATE=0; remediator still owns merge."
     )
     parts = [
         f"PICKUP: PR {repo}#{number} published.",
@@ -212,7 +209,7 @@ def main(argv: list[str] | None = None) -> int:
                 "schema": SCHEMA,
                 "status": "SKIP",
                 "reason": "disabled",
-                "written_at": datetime.now(timezone.utc).isoformat(),
+                "written_at": datetime.now(UTC).isoformat(),
             },
         )
         return 0
@@ -227,7 +224,7 @@ def main(argv: list[str] | None = None) -> int:
                 "schema": SCHEMA,
                 "status": "SKIP",
                 "reason": "no PR identity",
-                "written_at": datetime.now(timezone.utc).isoformat(),
+                "written_at": datetime.now(UTC).isoformat(),
             },
         )
         return 0
@@ -254,7 +251,7 @@ def main(argv: list[str] | None = None) -> int:
             "idempotency_key": key,
             "kind": KIND,
             "returncode": proc.returncode,
-            "written_at": datetime.now(timezone.utc).isoformat(),
+            "written_at": datetime.now(UTC).isoformat(),
         },
     )
     return 0

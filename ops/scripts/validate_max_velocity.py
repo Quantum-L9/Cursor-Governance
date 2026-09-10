@@ -62,8 +62,7 @@ def collect_defects(root: Path) -> list[str]:
         label = f"{POLICY_REL}: profiles.{name}"
         if row.get("execution_profile") != PROFILE:
             defects.append(
-                f"{label}.execution_profile={row.get('execution_profile')!r} "
-                f"(required {PROFILE})"
+                f"{label}.execution_profile={row.get('execution_profile')!r} (required {PROFILE})"
             )
         parallel = _int(row.get("max_parallel"))
         if parallel is None or parallel < MIN_PARALLEL:
@@ -82,8 +81,7 @@ def collect_defects(root: Path) -> list[str]:
             )
         if row.get("concurrency_policy") != "saturate":
             defects.append(
-                f"{label}.concurrency_policy={row.get('concurrency_policy')!r} "
-                "(required saturate)"
+                f"{label}.concurrency_policy={row.get('concurrency_policy')!r} (required saturate)"
             )
 
     block = surface.get("claude_execution_profiles")
