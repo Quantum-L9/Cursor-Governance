@@ -32,6 +32,7 @@ Named pointers only. One line + path. Bind from live law at refresh time.
 | Semantic documentation obligations require admitted, change-bound `l9-intelligence-harvest` evidence; the Harvest input must bind the evaluated repository, required surfaces, and semantic source digest before it may qualify an obligation | `skills/l9-update-agent-docs/scripts/repo_docs.py`; `skills/l9-update-agent-docs/scripts/compile_semantic_obligations.py` |
 | Maximum velocity is the committed execution personality on every surface (Cursor and Claude): `maximum_velocity`, `max_parallel>=480`, `max_mutation_lanes>=128`, `native_subagent_limit>=480`. Independent research launches as concurrent Tasks, not one in-session lane | `ops/autonomy/claude-execution-profiles.json`; `ops/autonomy/surface_profile.yaml` `claude_execution_profiles`; `rules/100-max-velocity-research.mdc`; `ops/scripts/validate_max_velocity.py` |
 | `/ff` overwrite-untracked scan is two git processes (`ls-files` + `ls-tree` + `comm -13`), never one `ls-files --error-unmatch` per origin path | `skills/l9-repo-sync/scripts/ff.sh`; `skills/l9-repo-sync/scripts/validate_pack_structure.py` |
+| Tree kernels record before L4 authorize-release / check-remote and before precommit; unmarked CI is the only skip | `ops/autonomy/kernel_gate.py`; `ops/autonomy/l4_local.py`; `AGENTS.md` `KERNELS_BEFORE_L4_AND_PRECOMMIT_V1` |
 
 Org-policy invariant IDs and enforcement text live only in the YAML `invariants:` block. Point there; do not duplicate.
 

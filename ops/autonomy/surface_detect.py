@@ -72,15 +72,25 @@ def is_claude_gate_surface(env: Mapping[str, str] | None = None) -> bool:
     return detect_surface(env) in CLAUDE_GATE_SURFACES
 
 
-def kernel_latch_surface(env: Mapping[str, str] | None = None) -> bool:
-    """True when ``make pr`` must take the tree-kernel latch before pytest.
+def _ci_surface(source: Mapping[str, str]) -> bool:
+    if (source.get("GITHUB_ACTIONS") or "").strip():
+        return True
+    return (source.get("CI") or "").strip().lower() in {"1", "true", "yes"}
 
-    Every known local agent surface (Cursor and adapters) fires so kernels
-    apply once, then tests run once on that tree. ``unknown`` (CI / bare
-    shell) skips: ``.l9/autonomy/kernel-receipt.json`` is gitignored and
-    cannot exist on GitHub Actions.
+
+def kernel_latch_surface(env: Mapping[str, str] | None = None) -> bool:
+    """True when local publish must take the tree-kernel latch.
+
+    Cursor, adapters, and a bare local shell all fire so RA + Validate
+    & Repair record before L4 authorize and before precommit. Skip only
+    CI with no agent-surface marker: ``.l9/autonomy/kernel-receipt.json``
+    is gitignored and cannot exist on GitHub Actions. A CI job that sets
+    a known surface (unit tests) still latches.
     """
-    return detect_surface(env) != "unknown"
+    source = os.environ if env is None else env
+    if _ci_surface(source) and detect_surface(source) == "unknown":
+        return False
+    return True
 
 
 def main() -> int:

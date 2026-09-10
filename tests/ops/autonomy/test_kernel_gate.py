@@ -1,4 +1,4 @@
-"""Kernel hook owns tree/plan kernels; L4 authorize does not."""
+"""Kernel hook + L4 authorize both require the tree-kernel receipt."""
 
 from __future__ import annotations
 
@@ -113,13 +113,25 @@ def test_cursor_surface_requires_tree_latch(
     assert gate.precommit(stacked_repo, ROOT, None) == 2
 
 
-def test_unset_surface_skips_tree_latch(
+def test_ci_unknown_skips_tree_latch(
     stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv("L9_GOVERNANCE_SURFACE", raising=False)
     monkeypatch.delenv("CURSOR_AGENT", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
     gate = _gate()
     assert gate.precommit(stacked_repo, ROOT, None) == 0
+
+
+def test_bare_local_surface_requires_tree_latch(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("L9_GOVERNANCE_SURFACE", raising=False)
+    monkeypatch.delenv("CURSOR_AGENT", raising=False)
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    monkeypatch.delenv("CI", raising=False)
+    gate = _gate()
+    assert gate.precommit(stacked_repo, ROOT, None) == 2
 
 
 def test_authorize_release_without_record_kernels(
@@ -133,13 +145,16 @@ def test_authorize_release_without_record_kernels(
     from l4_local import authorize_release, begin, release_allows_remote
 
     monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    monkeypatch.delenv("CI", raising=False)
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+    monkeypatch.setenv("CURSOR_AGENT", "1")
     begin(stacked_repo, contract_id="no-kernels")
-    receipt = authorize_release(stacked_repo)
-    assert receipt["phase"] == "release_authorized"
+    with pytest.raises(RuntimeError, match="tree kernels first"):
+        authorize_release(stacked_repo)
     allowed, reason = release_allows_remote(stacked_repo)
-    assert allowed
-    assert "release_authorized" in reason
+    assert not allowed
+    assert "mid-execution" in reason or "kernel" in reason.lower()
 
 
 def test_cursor_surface_requires_receipt_on_code_change(
@@ -155,11 +170,12 @@ def test_cursor_surface_requires_receipt_on_code_change(
     assert gate.precommit(stacked_repo, ROOT, changed) == 2
 
 
-def test_unset_surface_skips_tree_latch_without_receipt(
+def test_ci_unknown_skips_tree_latch_without_receipt(
     stacked_repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv("L9_GOVERNANCE_SURFACE", raising=False)
     monkeypatch.delenv("CURSOR_AGENT", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
     gate = _gate()
     code = stacked_repo / "ops" / "foo.py"
     code.parent.mkdir(parents=True)
@@ -167,7 +183,8 @@ def test_unset_surface_skips_tree_latch_without_receipt(
     changed = tmp_path / "changed.txt"
     changed.write_text("ops/foo.py\n")
     assert gate.precommit(stacked_repo, ROOT, changed) == 0
-    assert gate.adapter_tree_kernels_required({}) is False
+    assert gate.adapter_tree_kernels_required({"GITHUB_ACTIONS": "true"}) is False
+    assert gate.adapter_tree_kernels_required({}) is True
     assert gate.adapter_tree_kernels_required({"L9_GOVERNANCE_SURFACE": "claude-code"}) is True
 
 

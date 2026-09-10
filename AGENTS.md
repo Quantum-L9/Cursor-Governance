@@ -1530,3 +1530,23 @@ Append-only. Repo invariant: every committed execution profile is
   edit). Main keeps synthesis.
 - A denied Task admission is a gate defect to report, not a reason to
   keep recon in-session.
+
+<!-- KERNELS_BEFORE_L4_AND_PRECOMMIT_V1 -->
+## Tree kernels fire before L4 and before precommit (2026-09-10)
+
+This fragment supersedes only the “L4 is still begin + authorize-release
+(not record-kernels)” and “CI / unknown still skip” sentences in
+`CURSOR_KERNEL_LATCH_BEFORE_PYTEST_V1`. Those paragraphs stay on disk
+(additive_only). Do not fold them.
+
+- Finish path: apply `kernels/Recursive Alignment.md` then
+  `kernels/Validate & Repair.md` → `python3 ops/autonomy/kernel_gate.py record`
+  → `l4_local.py authorize-release` → `PR_REMEDIATE=0 make pr`.
+- `authorize-release` and `check-remote` fail closed without the tree
+  receipt on every local surface, including a bare shell.
+- `kernel_gate.py precommit` is the second latch (first writers step of
+  `make pr`), before ruff / pytest.
+- Skip only unmarked CI (`GITHUB_ACTIONS` or `CI` with no agent-surface
+  marker). A local `unknown` surface does not skip.
+- `record-kernels` still stamps the same receipt (compat). Do not treat
+  it as the apply path.

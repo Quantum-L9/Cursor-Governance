@@ -133,13 +133,13 @@ l4_local_autonomy:
     - push_and_open_pr_via_make_pr # remediates=1; checkers in Makefile
   kernel_hook:
     owner: ops/autonomy/kernel_gate.py
-    fires: first_step_of_precommit_repo
+    fires: before_l4_authorize_and_first_step_of_precommit_repo
     skip_unless_adapter_surface: false
     note: >-
-      Not an L4 phase. Fail-closed before any other hook or test so
-      checkers run once on the post-kernel tree. Cursor and adapter
-      surfaces (claude-code / codex / gemini / manus) take this latch
-      on make pr. CI / unknown skip it (receipt is gitignored). WIP/,
+      Fail-closed at authorize-release and check-remote, then again as
+      the first writers step of make pr, so checkers run once on the
+      post-kernel tree. Every local surface latches, including a bare
+      shell. Unmarked CI skips (receipt is gitignored). WIP/,
       docs/plans/, and environment/program-execution/campaigns/ are
       /ff corpus surfaces (Improve then Recursive Alignment then
       Validate & Repair); this hook skips those prefixes and skips

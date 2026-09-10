@@ -87,4 +87,7 @@ def test_claude_gate_and_kernel_helpers() -> None:
     assert kernel_latch_surface({"CLAUDE_CODE_REMOTE": "true"}) is True
     assert kernel_latch_surface({"L9_GOVERNANCE_SURFACE": "codex"}) is True
     assert kernel_latch_surface({"CURSOR_AGENT": "1"}) is True
-    assert kernel_latch_surface({}) is False
+    assert kernel_latch_surface({}) is True
+    assert kernel_latch_surface({"GITHUB_ACTIONS": "true"}) is False
+    assert kernel_latch_surface({"CI": "true"}) is False
+    assert kernel_latch_surface({"GITHUB_ACTIONS": "true", "CURSOR_AGENT": "1"}) is True
