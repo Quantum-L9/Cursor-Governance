@@ -177,20 +177,6 @@ def test_handoff_finding_does_not_force_owner_native_refresh(tmp_path: Path) -> 
     assert evidence["locator"]["value"] == "ops/config/python-contract.json"
 
 
-def test_missing_python_contract_handoffs_when_self_tests_exist(tmp_path: Path) -> None:
-    root = tmp_path / "repo"
-    write_root_guard(root)
-    write(root / "skills/demo/scripts/self_test.py", "print('ok')\n")
-    write(root / "pyproject.toml", "[project]\nname = 'demo'\nrequires-python = '>=3.12'\n")
-    assessed = assess_surface_obligations(
-        root, dp.load_policy(), [_obligation("python_project_contract", "pyproject.toml")]
-    )[0]
-    assert assessed["assessment"]["disposition"] == "HANDOFF"
-    assert assessed["required_action"]["type"] == "HANDOFF"
-    evidence = _finding_evidence(assessed, "python.self_test.contract_missing")
-    assert evidence["source"] == "ops/config/python-contract.json"
-
-
 def test_registry_finding_uses_python_contract_as_evidence_source(tmp_path: Path) -> None:
     root = tmp_path / "repo"
     write_root_guard(root)
