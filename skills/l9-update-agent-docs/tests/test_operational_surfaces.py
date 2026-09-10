@@ -192,6 +192,21 @@ def test_registry_finding_uses_python_contract_as_evidence_source(tmp_path: Path
     assert evidence["source"] == "ops/config/python-contract.json"
 
 
+def test_collection_guard_runs_without_python_contract(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    write_root_guard(root)
+    write(root / "skills/demo/scripts/self_test.py", "print('ok')\n")
+    write(root / "pyproject.toml", "[project]\nname = 'demo'\nrequires-python = '>=3.12'\n")
+    assessed = assess_surface_obligations(
+        root, dp.load_policy(), [_obligation("python_project_contract", "pyproject.toml")]
+    )[0]
+    rule_ids = {row["rule_id"] for row in assessed["assessment"]["findings"]}
+    assert "python.self_test.collection_guard" in rule_ids
+    assert "python.self_test.registry" not in rule_ids
+    evidence = _finding_evidence(assessed, "python.self_test.collection_guard")
+    assert evidence["source"] == "pyproject.toml"
+
+
 def test_missing_root_guard_still_assesses_clean_makefile(tmp_path: Path) -> None:
     root = tmp_path / "repo"
     write(root / "ops/scripts/replay.py", "print('ok')\n")
