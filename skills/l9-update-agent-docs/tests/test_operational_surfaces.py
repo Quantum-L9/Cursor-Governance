@@ -254,5 +254,9 @@ def test_clean_operational_surface_is_preserved(tmp_path: Path) -> None:
     assert assessed["required_action"]["type"] == "PRESERVE"
     assert assessed["lifecycle"]["status"] == "PRESERVED"
     assert assessed["lifecycle"]["terminal"] is True
-    freshness = next(row for row in assessed["validation"]["results"] if row["name"] == "target_freshness")
+    freshness = next(
+        row
+        for row in assessed["validation"]["results"]
+        if row["name"] == "target_freshness"
+    )
     assert freshness["status"] == "NotApplicable"
