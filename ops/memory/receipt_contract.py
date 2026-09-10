@@ -45,7 +45,8 @@ def load_receipt_contract(path: Path | None = None) -> dict[str, Any]:
     try:
         import time
 
-        with open("/Users/ib-mac/Cursor-Governance/.cursor/debug-01ef49.log", "a", encoding="utf-8") as _dbg:
+        _debug_log = Path(__file__).resolve().parents[2] / ".cursor" / "debug-01ef49.log"
+        with _debug_log.open("a", encoding="utf-8") as _dbg:
             _dbg.write(
                 json.dumps(
                     {
