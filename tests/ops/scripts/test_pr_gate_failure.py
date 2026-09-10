@@ -47,6 +47,15 @@ def test_parse_dirty_paths_and_generated_heal_class() -> None:
         )
         == "generated_heal"
     )
+    header_only = "=== generated heal (serialized writer) ===\nOK: skip generated heal"
+    assert (
+        mod.classify_failure(nodes=[], hooks=[], dirty_paths=[], log_text=header_only) == "unknown"
+    )
+    fail_line = "FAIL: generated heal exited 1"
+    assert (
+        mod.classify_failure(nodes=[], hooks=[], dirty_paths=[], log_text=fail_line)
+        == "generated_heal"
+    )
 
 
 def test_refuse_names_generated_heal_not_pytest(tmp_path: Path) -> None:

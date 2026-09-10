@@ -23,7 +23,7 @@ FAILED_NODE_RE = re.compile(r"^FAILED\s+(\S+)", re.M)
 HOOK_ID_RE = re.compile(r"^- hook id:\s+(\S+)", re.M)
 HOOK_EXIT_RE = re.compile(r"^- exit code:\s+(\d+)", re.M)
 DIRTY_SECTION_RE = re.compile(r"^(?:GENERATED|NON_GENERATED|SCRATCH)_NEW_DIRTY")
-HEAL_FAIL_RE = re.compile(r"generated heal", re.I)
+HEAL_FAIL_RE = re.compile(r"^FAIL: generated heal exited", re.M)
 MAKE_PR_RE = re.compile(
     r"\bmake(?:\s+-C\s+\S+)?\s+pr(?:-check)?(?:\s|$|[;&])",
     re.I,

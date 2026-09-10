@@ -530,11 +530,12 @@ fi
 echo "=== generated heal (serialized writer) ==="
 _heal_tmp="$(mktemp)"
 set +e
-{
-  _gate_run_sync
-  _gate_run_projection_heal
-} >"$_heal_tmp" 2>&1
+_gate_run_sync >"$_heal_tmp" 2>&1
 _heal_rc=$?
+if [[ "$_heal_rc" -eq 0 ]]; then
+  _gate_run_projection_heal >>"$_heal_tmp" 2>&1
+  _heal_rc=$?
+fi
 set -e
 cat "$_heal_tmp"
 cat "$_heal_tmp" >>"$_GATE_LOG" || true
