@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Resolve the execution personality of the current session.
 
-Two personalities exist: Claude is unleashed, Cursor is constrained. Which one
+Claude and Cursor both saturate at the provider worker target. Which surface
 applies is decided here, once, before autonomous work begins — from the runtime,
 never from model identity.
 

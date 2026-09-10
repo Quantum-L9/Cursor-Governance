@@ -64,8 +64,8 @@ STACKED = [_pr(1, ["ops/a.py"], head="feat/parent"), _pr(2, ["ops/b.py"], base="
 def test_caps_come_from_the_execution_profile_owner() -> None:
     assert CURSOR == {
         "surface": "cursor",
-        "max_parallel": 4,
-        "max_mutation_lanes": 2,
+        "max_parallel": 480,
+        "max_mutation_lanes": 128,
         "owner": CURSOR["owner"],
     }
     assert CLAUDE["max_mutation_lanes"] == 128 and CLAUDE["max_parallel"] == 480
@@ -117,15 +117,13 @@ def test_stacked_child_merges_after_parent_and_mutates_concurrently(
     assert not any(pr["independent"] for pr in result["prs"])
 
 
-def test_cursor_mutation_cap_defers_the_third_pr(tmp_path: Path, monkeypatch) -> None:
+def test_cursor_mutation_cap_admits_the_third_pr(tmp_path: Path, monkeypatch) -> None:
     _probe(tmp_path, monkeypatch, INDEPENDENT)
     result = pr_fleet.plan(TARGET, surface="cursor")
     first = result["waves"]["first_wave"]
-    assert first["remediate"] == [1, 2]
-    assert first["blocked_cap"] == [3]
-    assert first["recon"] == [3]  # read lane fills the remaining total cap
+    assert first["remediate"] == [1, 2, 3]
+    assert first["blocked_cap"] == []
     assert first["launch_count"] == 3 <= CURSOR["max_parallel"]
-    assert result["waves"]["mutation_waves"][1]["remediate"] == [3]
 
 
 def test_waiting_pr_gets_a_background_watcher(tmp_path: Path, monkeypatch) -> None:

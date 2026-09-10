@@ -29,8 +29,8 @@ store. Safety comes from three things that already exist:
    gateway. Wrong base SHA, wrong identity, a changed file outside the grant, a
    read-only role reporting changes, or a non-success host stop is `REJECTED`.
 
-Caps are read from `ops/autonomy/execution_profile.py` (Cursor constrained,
-Claude saturating). This pack never states a number.
+Caps are read from `ops/autonomy/execution_profile.py` (Cursor and Claude
+saturate at the same worker target). This pack never states a number.
 
 ## Wave shapes
 

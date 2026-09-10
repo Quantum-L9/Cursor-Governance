@@ -62,9 +62,11 @@ def test_local_claude_sessions_classify_as_claude_local() -> None:
     assert classify(CLAUDE_ENV, POLICY) == "claude_local"
 
 
-def test_cursor_stays_the_constrained_surface() -> None:
+def test_cursor_stays_the_cursor_surface() -> None:
     assert classify({"L9_GOVERNANCE_SURFACE": "cursor"}, POLICY) == "cursor"
-    assert POLICY["profiles"]["cursor"]["execution_profile"] == "constrained"
+    assert POLICY["profiles"]["cursor"]["execution_profile"] == "maximum_velocity"
+    assert POLICY["profiles"]["cursor"]["max_parallel"] == 480
+    assert POLICY["profiles"]["cursor"]["max_mutation_lanes"] == 128
 
 
 def test_cursor_marker_beats_projected_claude_surface() -> None:
@@ -114,7 +116,7 @@ def test_both_claude_surfaces_saturate(tmp_path: Path) -> None:
 def test_cursor_is_not_reported_as_defective(tmp_path: Path) -> None:
     resolved = _resolve({"L9_GOVERNANCE_SURFACE": "cursor"}, tmp_path)
     assert resolved["runtime_surface"] == "cursor"
-    assert resolved["execution_profile"] == "constrained"
+    assert resolved["execution_profile"] == "maximum_velocity"
     assert resolved["defects"] == []
 
 

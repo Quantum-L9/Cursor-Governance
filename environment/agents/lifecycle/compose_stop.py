@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from environment.agents.lifecycle import receipts
+from environment.agents.lifecycle.compose_start import _first_str, host_receipt_id
 from environment.agents.results.receipts import safe_receipt_id
 
 _GITHUB_RE = re.compile(
@@ -91,12 +92,11 @@ def compose_subagent_stop(payload: dict[str, Any]) -> dict[str, Any]:
     assignment_id = payload.get("assignment_id")
     host_status: str | None = None
     runtime_database: str | None = None
-    if not assignment_id and payload.get("subagent_id"):
-        subagent_id = str(payload.get("subagent_id") or "").strip()
-        try:
-            safe_receipt_id(subagent_id, label="subagent_id")
-        except ValueError as exc:
-            return {"status": "QUARANTINED", "reason": f"orphan subagentStop: {exc}"}
+    raw_subagent_id = _first_str(payload, "subagent_id", "subagentId")
+    if not assignment_id and raw_subagent_id:
+        subagent_id = host_receipt_id(raw_subagent_id, label="subagent_id")
+        if not subagent_id:
+            return {"status": "QUARANTINED", "reason": "orphan subagentStop: missing subagent_id"}
         host_stop = receipts.write_host_stop(subagent_id, payload)
         correlation = receipts.load_host_correlation(subagent_id)
         if correlation is None:
@@ -178,8 +178,8 @@ def compose_subagent_stop(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def main() -> int:
-    payload = json.load(sys.stdin)
     try:
+        payload = json.load(sys.stdin)
         result = compose_subagent_stop(payload)
     except Exception as exc:  # noqa: BLE001
         result = {
@@ -189,10 +189,8 @@ def main() -> int:
         }
     json.dump(result, sys.stdout)
     print()
-    if result.get("status") != "RETURNED":
-        return 2
-    generated = result.get("generated_data") or {}
-    return 0 if generated.get("status") == "ACCEPTED" else 2
+    # failClosed treats a non-zero as a crash; QUARANTINED is already in the body.
+    return 0
 
 
 if __name__ == "__main__":
