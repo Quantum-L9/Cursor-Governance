@@ -9,8 +9,8 @@ metadata:
   tags: [l9, foundry, idea-pack, repo-birth, plan-simple, harvest]
   owner: igor_beylin
   status: active
-  version: 1.0.0
-  updated: 2026-09-02
+  version: 1.1.0
+  updated: 2026-09-07
 ---
 
 # L9 Idea Foundry
@@ -298,6 +298,8 @@ python3 scripts/validate_foundry_payload.py <payload> \
 The freeze receipt must bind HEAD, tracked-tree digest, source inventory digest, plan digest, and the committed Foundry index digest. After this point the staging repository is immutable evidence; record birth observations externally unless you deliberately revalidate, recommit, and re-freeze.
 
 Use the current `l9-repo-template` birth compiler and birth engine. Run local/no-remote birth first. Only after local birth passes may remote creation occur when explicitly requested and authorized.
+
+On a surface that cannot `POST /orgs/{org}/repos`, dispatch `Quantum-L9/l9-repo-template` `.github/workflows/repo-birth-dispatch.yml` on that repository's `main` using the `repo-birth` App environment. Do not mint or paste `BIRTH_APP_PRIVATE_KEY`. Do not dispatch a workflow in the current workspace repo. Read [references/birth-integration.md](references/birth-integration.md) for the live App/environment names and payload-contract placement.
 
 Do not recreate `new_repo.py`, birth-runner stages, org seeding, or CI distribution.
 
