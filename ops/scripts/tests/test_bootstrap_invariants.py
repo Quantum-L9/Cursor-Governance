@@ -75,7 +75,12 @@ SWALLOW_BASELINE = {
     # is what it used before and what the `"$WS" != "$GOV_ROOT"` comparison
     # needs. Fail-safe: it degrades binding, never a verdict. Identical
     # construct to pr_preflight.sh, the preflight for this same gate.
-    "ops/scripts/run_pr_gate.sh": 16,
+    # 20 since generated-heal continue: four `cat/echo >>"$_GATE_LOG" || true`
+    # after heal + dirtiness classify. Same class as the wave-log aggregator
+    # already counted in the 15→16 note — failing to RECORD heal stdout must
+    # never change WHETHER the gate passed; the receipt parser now reads that
+    # log so an append failure is a reporting gap, not a verdict swallow.
+    "ops/scripts/run_pr_gate.sh": 20,
     "ops/scripts/run_pr_security.sh": 3,
     "ops/scripts/bootstrap_agent_environment.sh": 3,
     "environment/agents/adapters/claude-code/install.sh": 3,
