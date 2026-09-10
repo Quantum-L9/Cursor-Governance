@@ -1,6 +1,6 @@
 ---
 name: l9-update-agent-docs
-description: compile repository changes into typed, target-resolved documentation and operational-contract obligations, deterministically assess supported executable surfaces, selectively qualify semantic obligations with l9-intelligence-harvest, route owner-native actions, and emit evidence-backed repo-docs receipts. use when refreshing repo or agent docs, checking documentation or operational-contract impact after code/CI/governance changes, generating module READMEs, assessing Makefile or pyproject.toml contract drift, or proving repository documentation freshness before PR/merge.
+description: compile repository changes into typed documentation and operational-contract obligations, assess Makefile/pyproject surfaces, and emit repo-docs receipts. use when refreshing repo or agent docs, checking docs or operational-contract impact after code/CI changes, generating module READMEs, or proving documentation freshness before merge.
 metadata:
   skill_schema: 1
   layer: control_plane
