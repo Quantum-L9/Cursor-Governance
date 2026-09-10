@@ -45,6 +45,60 @@
         "executor": {"type": ["string", "null"]}
       }
     },
+    "ownership": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["obligation_owner", "semantic_owner", "execution_owner", "mutation_guard"],
+      "properties": {
+        "obligation_owner": {"type": "string", "minLength": 1},
+        "semantic_owner": {"type": "string", "minLength": 1},
+        "execution_owner": {"type": "string", "minLength": 1},
+        "mutation_guard": {"type": ["string", "null"]}
+      }
+    },
+    "assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["analyzer", "status", "findings", "disposition", "mutation_guard"],
+      "properties": {
+        "analyzer": {"type": ["string", "null"]},
+        "status": {"enum": ["NOT_REQUIRED", "NOT_APPLICABLE", "PASS", "NEEDS_IMPROVEMENT", "BLOCKED"]},
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["finding_id", "rule_id", "severity", "property", "observed_state", "expected_state", "evidence_ids", "remediation_class"],
+            "properties": {
+              "finding_id": {"type": "string", "minLength": 1},
+              "rule_id": {"type": "string", "minLength": 1},
+              "severity": {"enum": ["material", "blocking"]},
+              "property": {"type": "string", "minLength": 1},
+              "observed_state": {"type": "string"},
+              "expected_state": {"type": "string"},
+              "evidence_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+              "remediation_class": {"enum": ["SURGICAL", "HANDOFF"]}
+            }
+          }
+        },
+        "disposition": {"enum": ["IMPROVE", "PRESERVE", "HANDOFF", "UNKNOWN", "NOT_APPLICABLE"]},
+        "mutation_guard": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["id", "status", "source", "rule", "tier", "justification_marker", "evidence_ids", "detail"],
+          "properties": {
+            "id": {"type": "string", "minLength": 1},
+            "status": {"enum": ["RESOLVED", "BLOCKED"]},
+            "source": {"type": ["string", "null"]},
+            "rule": {"type": ["string", "null"]},
+            "tier": {"type": ["string", "null"]},
+            "justification_marker": {"type": ["string", "null"]},
+            "evidence_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+            "detail": {"type": "string"}
+          }
+        }
+      }
+    },
     "trigger": {
       "type": "object",
       "additionalProperties": false,
