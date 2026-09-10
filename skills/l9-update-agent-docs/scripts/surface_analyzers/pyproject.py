@@ -20,8 +20,9 @@ def _finding(
     line: int | None,
     remediation_class: str = "SURGICAL",
     severity: str = "material",
+    source: str | None = None,
 ) -> dict[str, Any]:
-    return {
+    finding = {
         "rule_id": rule_id,
         "severity": severity,
         "property": property_name,
@@ -30,6 +31,9 @@ def _finding(
         "line": line,
         "remediation_class": remediation_class,
     }
+    if source is not None:
+        finding["source"] = source
+    return finding
 
 
 def _line_for(text: str, needle: str) -> int | None:
@@ -49,35 +53,40 @@ def _self_test_findings(
     data: dict[str, Any],
     text: str,
 ) -> list[dict[str, Any]]:
-    contract_path = root / "ops/config/python-contract.json"
-    if not contract_path.is_file():
-        return []
-    try:
-        contract = json.loads(contract_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError, json.JSONDecodeError):
-        return [
-            _finding(
-                "python.self_test.contract_parse",
-                property_name="python_contract_parseability",
-                observed="ops/config/python-contract.json could not be parsed",
-                expected="canonical Python contract is valid JSON",
-                line=None,
-                remediation_class="HANDOFF",
-                severity="blocking",
-            )
-        ]
+    self_tests = sorted(root.glob("skills/*/scripts/self_test.py"))
+    contract_rel = "ops/config/python-contract.json"
+    contract_path = root / contract_rel
+    registered_roots: set[str] | None = None
+    findings: list[dict[str, Any]] = []
 
-    registered_roots = set(contract.get("skill_self_test_roots") or [])
+    if contract_path.is_file():
+        try:
+            contract = json.loads(contract_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, json.JSONDecodeError):
+            findings.append(
+                _finding(
+                    "python.self_test.contract_parse",
+                    property_name="python_contract_parseability",
+                    observed=f"{contract_rel} could not be parsed",
+                    expected="canonical Python contract is valid JSON",
+                    line=None,
+                    remediation_class="HANDOFF",
+                    severity="blocking",
+                    source=contract_rel,
+                )
+            )
+        else:
+            registered_roots = set(contract.get("skill_self_test_roots") or [])
+
     pytest_options = data.get("tool", {}).get("pytest", {}).get("ini_options", {})
     addopts = str(pytest_options.get("addopts") or "")
     conftest_path = root / "conftest.py"
     conftest = conftest_path.read_text(encoding="utf-8") if conftest_path.is_file() else ""
-    findings: list[dict[str, Any]] = []
 
-    for path in sorted(root.glob("skills/*/scripts/self_test.py")):
+    for path in self_tests:
         rel = path.relative_to(root).as_posix()
         skill_root = "/".join(rel.split("/")[:2])
-        if skill_root not in registered_roots:
+        if registered_roots is not None and skill_root not in registered_roots:
             findings.append(
                 _finding(
                     "python.self_test.registry",
@@ -88,6 +97,7 @@ def _self_test_findings(
                         "ops/config/python-contract.json"
                     ),
                     line=None,
+                    source=contract_rel,
                 )
             )
         if f"--ignore={rel}" not in addopts and rel not in conftest:
@@ -101,6 +111,7 @@ def _self_test_findings(
                         "conftest collect_ignore"
                     ),
                     line=_line_for(text, "addopts"),
+                    source="pyproject.toml",
                 )
             )
     return findings

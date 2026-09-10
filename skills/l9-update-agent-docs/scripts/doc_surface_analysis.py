@@ -228,20 +228,22 @@ def assess_surface_obligations(
         finding_evidence_ids: list[str] = []
         for raw in result.get("findings", []):
             line = raw.get("line")
+            evidence_source = str(raw.get("source") or target_rel)
             finding_id = "sf-" + _hash(
                 surface,
                 str(raw.get("rule_id")),
                 str(raw.get("property")),
+                evidence_source,
                 str(line),
             )
-            evidence_id = f"ev-{_hash('assessment', target_rel, finding_id)}"
+            evidence_id = f"ev-{_hash('assessment', evidence_source, finding_id)}"
             finding_evidence_ids.append(evidence_id)
-            locator = f"{target_rel}:{line}" if line else target_rel
+            locator = f"{evidence_source}:{line}" if line else evidence_source
             obligation["evidence"].append(
                 {
                     "id": evidence_id,
                     "type": "validation",
-                    "source": target_rel,
+                    "source": evidence_source,
                     "locator": {"kind": "path", "value": locator},
                     "epistemic": "CONFIRMED",
                     "supports": f"surface_assessment:{finding_id}",
@@ -336,9 +338,18 @@ def assess_surface_obligations(
                 mode="NONE",
                 owner=obligation["ownership"]["execution_owner"],
             )
+            existing = {row["name"]: row for row in obligation["validation"]["results"]}
+            if "target_freshness" in obligation["validation"]["required"]:
+                existing["target_freshness"] = _validation_result(
+                    "target_freshness",
+                    "NotApplicable",
+                    "deterministic assessment found no target mutation requirement",
+                    [],
+                )
+            obligation["validation"]["results"] = [existing[name] for name in sorted(existing)]
             obligation["lifecycle"] = {
                 "status": "PRESERVED",
-                "reason": ("deterministic surface assessment found no material improvement"),
+                "reason": "deterministic surface assessment found no material improvement",
                 "terminal": True,
             }
     return obligations
