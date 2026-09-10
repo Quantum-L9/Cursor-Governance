@@ -85,10 +85,21 @@ emit() {
   exit 0
 }
 
+# The DEGRADED INLINE path's delivery, and only that path's: when no sidecar
+# file could be created, the parent/child split below does not happen, LINES is
+# the only record, and this trap is the only thing that can emit it. On the
+# normal path the parent owns delivery and this is unreachable for the child
+# (which returns early) and unarmed for the parent.
+#
+# It is kept because the inline path is real, not because it is sufficient: a
+# trap cannot run while bash sits in a foreground child, which is why delivery
+# does not rest on it any more. See the deadline-safe block below.
+#
 # FAIL-OPEN is not the same as FAIL-SAFE, and the difference is this function.
-# Everything below accumulates into LINES and is emitted by ONE call on the last
-# line, so the hook is resilient to every failure it anticipated (missing SSOT,
-# unreadable profile, absent loader — each degrades to a WARN line) and totally
+# Everything below accumulates into LINES and, on that path, is emitted by ONE
+# call on the last line, so the hook is resilient to every failure it
+# anticipated (missing SSOT, unreadable profile, absent loader — each degrades
+# to a WARN line) and was totally
 # fragile to the one it did not: running out of wall clock. A hosted container
 # recorded `duration_ms 30008, exit_code 1, aborted true` on this hook and the
 # session received NO governance context whatsoever — not a smaller blob, none.
