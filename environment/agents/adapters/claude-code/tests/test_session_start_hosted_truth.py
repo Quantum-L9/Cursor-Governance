@@ -47,7 +47,10 @@ class SessionStartHostedTruthTests(unittest.TestCase):
 
         text = HOOK.read_text(encoding="utf-8")
         start = text.index("loadable=0")
-        counter = text[start : text.index('LINES+=("skills available:', start)]
+        # Delimited by the MESSAGE, not by how it is appended: the append call
+        # is an implementation detail (it moved from `LINES+=(...)` to `say`
+        # when context became durable-on-write), the banner line is the contract.
+        counter = text[start : text.index('"skills available:', start)]
         self.assertIn("find -L", counter)
         self.assertNotIn('find "$d"', counter)
 

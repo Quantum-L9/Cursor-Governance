@@ -1,5 +1,5 @@
 {
-  "generation_id": "2e7861954fa09dc736995597eb05b333494b58a4f4f215206c5b58fcfde7814c",
+  "generation_id": "6a6682a458428fa8fb2d45b676bbb61a542ab09bbcf611ebfa1cd086489237b7",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -1274,7 +1274,7 @@
       "path": "skills/l9-issue-remediation",
       "reason": "/issues and /l9-issue-remediation are remediator Converge (verify-before-trust, drain all clusters at max autonomy, recommended-A human blockers, land on PRs, close phantoms/resolved, chain /l9-pr-remediation only at open_issues=0). /issues diagnose remains hint-routeable auditor. High blast radius, explicit only.",
       "skill_md": "skills/l9-issue-remediation/SKILL.md",
-      "skill_sha256": "d32394819e4a13d2ddf1ad0f1f8d0eadc3e6d86fe7bba333c71bf2630f6aa239",
+      "skill_sha256": "b4357d132ecb2e1984e3c1a1b1f756a87c79e690546271de21e7622e21c1b2a4",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1417,7 +1417,7 @@
       "path": "skills/l9-pr-remediation",
       "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked). The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Above-paygrade HUMAN / unfixable required CI / ENVIRONMENT after best-effort opens a GitHub issue and launches l9-issue-remediation via cursor-subagents; do not ask the human to unblock. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
       "skill_md": "skills/l9-pr-remediation/SKILL.md",
-      "skill_sha256": "ae31d952b38f61c572116307f805e5d8a91e9f0544b1122ebfcc3f180517dad4",
+      "skill_sha256": "fad75dd315ea2f63580cb37cfb2a91ff13f6723ffd7883ca67c3fbee6aa9f133",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1606,5 +1606,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "b71df84c03ba02fa5a638d03749e4bf08c7efcb5354d85fb0fe4928cf31c5587",
-  "source_skill_corpus_sha256": "1fbd6232fbdab340941400297cf62df488c385dac6c8f6ef4261d08eb0b307fc"
+  "source_skill_corpus_sha256": "5d7d17945b98cf4e7578211a4b886c47fb2c7abafb7d2be298b5134c6b4acdc4"
 }
