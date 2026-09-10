@@ -57,7 +57,7 @@
           },
           {
             "type": "command",
-            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer session_start_claude_governance.sh'",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; if [ ! -f \"$x\" ]; then c=\"${CLAUDE_PROJECT_DIR:-$PWD}/.claude/hooks/session_start_claude_governance.sh\"; [ -f \"$c\" ] || exit 0; exec bash \"$c\"; fi; exec bash \"$x\" --class observer session_start_claude_governance.sh'",
             "timeout": 30
           },
           {
