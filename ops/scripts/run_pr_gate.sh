@@ -528,12 +528,41 @@ if [[ "$precommit_rc" -ne 0 ]]; then
 fi
 
 echo "=== generated heal (serialized writer) ==="
-_gate_run_sync
-_gate_run_projection_heal
-if git status --porcelain | grep -qvE '^\?\?'; then
-  echo "FAIL: tracked files dirty after generated heal — commit the rewrite, then re-run make pr."
+_heal_tmp="$(mktemp)"
+set +e
+_gate_run_sync >"$_heal_tmp" 2>&1
+_heal_rc=$?
+if [[ "$_heal_rc" -eq 0 ]]; then
+  _gate_run_projection_heal >>"$_heal_tmp" 2>&1
+  _heal_rc=$?
+fi
+set -e
+cat "$_heal_tmp"
+cat "$_heal_tmp" >>"$_GATE_LOG" || true
+rm -f "$_heal_tmp"
+if [[ "$_heal_rc" -ne 0 ]]; then
+  echo "FAIL: generated heal exited ${_heal_rc}"
+  echo "FAIL: generated heal exited ${_heal_rc}" >>"$_GATE_LOG" || true
+  exit 1
+fi
+# Generated-only rewrite is the heal doing its job. Fail-closing here forced a
+# second full make pr (empty pytest/hook receipt) after every companion catch-up.
+_cls_tmp="$(mktemp)"
+set +e
+_gate_classify_dirtiness "generated-heal" >"$_cls_tmp" 2>&1
+_cls_rc=$?
+set -e
+cat "$_cls_tmp"
+cat "$_cls_tmp" >>"$_GATE_LOG" || true
+rm -f "$_cls_tmp"
+if [[ "$_cls_rc" -ne 0 ]]; then
+  echo "FAIL: non-generated tracked files dirty after generated heal — commit or restore those paths, then re-run make pr."
   echo "      Do not auto-stage. Paths:"
   git status --porcelain | grep -vE '^\?\?'
+  {
+    echo "FAIL: non-generated tracked files dirty after generated heal — commit or restore those paths, then re-run make pr."
+    git status --porcelain | grep -vE '^\?\?'
+  } >>"$_GATE_LOG" || true
   exit 1
 fi
 if [[ -f "$WS/.l9/pr/regen-required.txt" ]]; then

@@ -1002,6 +1002,17 @@ def main(argv: list[str] | None = None) -> int:
                     [],
                 )
             ]
+            if args.kind == "merge" and args.pr:
+                allowed = {
+                    int(n)
+                    for n in (fleet.get("waves") or {}).get("first_wave", {}).get("merge", [])
+                }
+                extra = [n for n in numbers if n not in allowed]
+                if extra:
+                    raise FleetError(
+                        f"explicit merge PR(s) {extra} are not in first_wave.merge "
+                        f"{sorted(allowed)}"
+                    )
             run_id = _run_id(args.run_id)
             packets = []
             for number in numbers:

@@ -522,3 +522,21 @@ def test_cli_plan_and_assign_roundtrip(tmp_path: Path, monkeypatch) -> None:
         == 1
     )
     assert os.environ.get("L9_PR_FLEET_PROBE_FILE")
+
+
+def test_cli_rejects_explicit_merge_outside_first_wave_merge(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    _probe(tmp_path, monkeypatch, INDEPENDENT)
+    monkeypatch.chdir(tmp_path)
+    assert pr_fleet.main(["plan", "--repo", TARGET, "--surface", "claude_cloud"]) == 0
+    receipt_path = tmp_path / ".l9" / "pr" / "fleet.json"
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    receipt["waves"]["first_wave"]["merge"] = [1]
+    receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+    assert (
+        pr_fleet.main(["assign", "--repo", TARGET, "--kind", "merge", "--pr", "2", "--json"]) == 2
+    )
+    err = capsys.readouterr().err
+    assert "first_wave.merge" in err
+    assert "#2" in err or "[2]" in err

@@ -25,6 +25,154 @@ def _load() -> Any:
 mod = _load()
 
 
+def test_parse_dirty_paths_and_generated_heal_class() -> None:
+    log = "\n".join(
+        [
+            "=== generated heal (serialized writer) ===",
+            "WROTE:",
+            "  ops/generated/skill-registry.json",
+            "GENERATED_NEW_DIRTY:",
+            "  ops/generated/skill-registry.json",
+            "  environment/agents/adapters/claude-code/generated/skill-registry.json",
+            "WARN: generated/scratch artifacts changed during generated-heal",
+        ]
+    )
+    assert mod.parse_dirty_paths(log) == [
+        "ops/generated/skill-registry.json",
+        "environment/agents/adapters/claude-code/generated/skill-registry.json",
+    ]
+    assert (
+        mod.classify_failure(
+            nodes=[], hooks=[], dirty_paths=mod.parse_dirty_paths(log), log_text=log
+        )
+        == "generated_heal"
+    )
+    header_only = "=== generated heal (serialized writer) ===\nOK: skip generated heal"
+    assert (
+        mod.classify_failure(nodes=[], hooks=[], dirty_paths=[], log_text=header_only) == "unknown"
+    )
+    fail_line = "FAIL: generated heal exited 1"
+    assert (
+        mod.classify_failure(nodes=[], hooks=[], dirty_paths=[], log_text=fail_line)
+        == "generated_heal"
+    )
+
+
+def test_refuse_names_generated_heal_not_pytest(tmp_path: Path) -> None:
+    path = tmp_path / "gate-failure.json"
+    digest = "abc 123 origin/main"
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "l9.pr_gate_failure.v2",
+                "paths_digest": "abc",
+                "content_digest": "123",
+                "pr_base": "origin/main",
+                "failed_nodes": [],
+                "failed_hooks": [],
+                "dirty_paths": ["ops/generated/skill-registry.json"],
+                "failure_class": "generated_heal",
+                "recheck_command": "",
+                "message": "STOP LOOPING: commit companions",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    proc = subprocess.run(
+        ["python3", str(HELPER), "refuse", str(path), digest],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 2
+    assert "generated:ops/generated/skill-registry.json" in proc.stdout
+    assert "no named pytest nodes" not in proc.stdout
+
+
+def test_write_classifies_source_dirty_after_heal(tmp_path: Path) -> None:
+    log = tmp_path / "last-gate.log"
+    log.write_text(
+        "=== generated heal (serialized writer) ===\n"
+        "NON_GENERATED_NEW_DIRTY:\n"
+        "  tests/ops/scripts/test_pr_lifecycle.py\n"
+        "FAIL: non-generated tracked files dirty after generated heal\n",
+        encoding="utf-8",
+    )
+    receipt = tmp_path / "gate-failure.json"
+    proc = subprocess.run(
+        [
+            "python3",
+            str(HELPER),
+            "write",
+            str(receipt),
+            "abc 123 origin/main",
+            "--log",
+            str(log),
+            "--head-sha",
+            "deadbeef",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 0, proc.stderr
+    doc = json.loads(receipt.read_text(encoding="utf-8"))
+    assert doc["failure_class"] == "source_dirty"
+    assert doc["dirty_paths"] == ["tests/ops/scripts/test_pr_lifecycle.py"]
+    refuse = subprocess.run(
+        [
+            "python3",
+            str(HELPER),
+            "refuse",
+            str(receipt),
+            "abc 123 origin/main",
+            "--head-sha",
+            "deadbeef",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert refuse.returncode == 2
+    assert "path:tests/ops/scripts/test_pr_lifecycle.py" in refuse.stdout
+    assert "no named pytest nodes" not in refuse.stdout
+    assert "do not re-run pytest" not in refuse.stdout
+
+
+def test_write_classifies_heal_log(tmp_path: Path) -> None:
+    log = tmp_path / "last-gate.log"
+    log.write_text(
+        "=== generated heal (serialized writer) ===\n"
+        "GENERATED_NEW_DIRTY:\n"
+        "  ops/generated/skill-registry.json\n",
+        encoding="utf-8",
+    )
+    receipt = tmp_path / "gate-failure.json"
+    proc = subprocess.run(
+        [
+            "python3",
+            str(HELPER),
+            "write",
+            str(receipt),
+            "abc 123 origin/main",
+            "--log",
+            str(log),
+            "--head-sha",
+            "deadbeef",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 0, proc.stderr
+    doc = json.loads(receipt.read_text(encoding="utf-8"))
+    assert doc["failure_class"] == "generated_heal"
+    assert doc["dirty_paths"] == ["ops/generated/skill-registry.json"]
+    assert doc["failed_nodes"] == []
+    assert doc["failed_hooks"] == []
+
+
 def test_parse_failed_nodes_and_hooks() -> None:
     log = "\n".join(
         [
