@@ -198,7 +198,8 @@ def bind_first(
 
 def bind_status(name: str) -> dict[str, str | bool]:
     """Availability only. The value is never included."""
-    bind(name)
+    if name not in _SOURCES:
+        bind(name)
     source = _SOURCES.get(name, SOURCE_UNBOUND)
     bound = source in {SOURCE_ENV, SOURCE_INFISICAL}
     return {"name": name, "bound": bound, "source": source}
