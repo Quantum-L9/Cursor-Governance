@@ -129,6 +129,36 @@ def main() -> int:
         print("FAIL: ff.sh must never merge --ff-only", file=sys.stderr)
         return 1
 
+    park_start = ff_sh.find("_park_overwrite_untracked()")
+    park_end = ff_sh.find("_switch_to_target()", park_start)
+    park_raw = ff_sh[park_start:park_end] if park_start >= 0 and park_end > park_start else ""
+    park_body = "\n".join(
+        line for line in park_raw.splitlines() if not line.lstrip().startswith("#")
+    )
+    if not park_body:
+        print("FAIL: ff.sh missing _park_overwrite_untracked body", file=sys.stderr)
+        return 1
+    if "ls-files --error-unmatch" in park_body:
+        print(
+            "FAIL: _park_overwrite_untracked must not spawn git per origin path "
+            "(high-velocity: use comm -13 of ls-files vs ls-tree)",
+            file=sys.stderr,
+        )
+        return 1
+    if "ls-files --others" in park_body:
+        print(
+            "FAIL: _park_overwrite_untracked must not use ls-files --others "
+            "(excludesfile / untracked-cache miss ignored colliding paths)",
+            file=sys.stderr,
+        )
+        return 1
+    if "comm -13" not in park_body:
+        print(
+            "FAIL: _park_overwrite_untracked must intersect index vs origin tree via comm -13",
+            file=sys.stderr,
+        )
+        return 1
+
     for rel in ("SKILL.md", "references/execute.md", "references/diagnose-first.md"):
         hits = primitives_only_under_allowed_headings((ROOT / rel).read_text(encoding="utf-8"))
         if rel.endswith("diagnose-first.md"):

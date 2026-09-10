@@ -157,6 +157,52 @@ def test_behind_with_colliding_and_hold() -> int:
     return 0
 
 
+def test_ignored_colliding_untracked_is_parked() -> int:
+    """excludesfile must not hide an untracked path origin/main now tracks."""
+    with tempfile.TemporaryDirectory() as tmp:
+        remote = Path(tmp) / "remote.git"
+        clone = Path(tmp) / "clone"
+        run(["git", "init", "--bare", str(remote)])
+        run(["git", "clone", str(remote), str(clone)])
+        git(clone, "config", "user.email", "test@example.com")
+        git(clone, "config", "user.name", "Test")
+        (clone / "tracked.txt").write_text("v1\n", encoding="utf-8")
+        (clone / ".gitignore").write_text("landed.md\n", encoding="utf-8")
+        git(clone, "add", "tracked.txt", ".gitignore")
+        git(clone, "commit", "-m", "base")
+        git(clone, "branch", "-M", "main")
+        git(clone, "push", "-u", "origin", "main")
+        git(remote, "symbolic-ref", "HEAD", "refs/heads/main")
+
+        other = Path(tmp) / "other"
+        run(["git", "clone", str(remote), str(other)])
+        git(other, "config", "user.email", "test@example.com")
+        git(other, "config", "user.name", "Test")
+        (other / "landed.md").write_text("now tracked on main\n", encoding="utf-8")
+        git(other, "add", "-f", "landed.md")
+        git(other, "commit", "-m", "track landed.md")
+        git(other, "push")
+
+        (clone / "landed.md").write_text("local ignored copy\n", encoding="utf-8")
+        home = Path(tmp) / "home"
+        home.mkdir()
+        proc = run(
+            ["bash", str(FF)],
+            env={"CURSOR_GOVERNANCE_DIR": str(clone), "HOME": str(home)},
+        )
+        if proc.returncode != 0:
+            return _fail(f"ff.sh rc={proc.returncode}\n{proc.stdout}\n{proc.stderr}")
+        landed = (clone / "landed.md").read_text(encoding="utf-8")
+        if landed != "now tracked on main\n":
+            return _fail("ignored colliding untracked was not caught up got=" + repr(landed))
+        hold_hits = list(home.joinpath(".cursor/l9-ff-hold").rglob("landed.md"))
+        if not any(p.read_text(encoding="utf-8") == "local ignored copy\n" for p in hold_hits):
+            return _fail("ignored colliding bytes were not copied to l9-ff-hold")
+        if "parked untracked-that-main-tracks: landed.md" not in proc.stdout:
+            return _fail("missing park log for ignored colliding path")
+    return 0
+
+
 def test_non_overlapping_dirty_still_parks() -> int:
     """origin changes A; clone dirties B. Triple-dot would miss B; reset --keep must still run."""
     with tempfile.TemporaryDirectory() as tmp:
@@ -853,6 +899,7 @@ def main() -> int:
 
     for name, fn in (
         ("behind_colliding", test_behind_with_colliding_and_hold),
+        ("ignored_colliding", test_ignored_colliding_untracked_is_parked),
         ("non_overlapping_dirty", test_non_overlapping_dirty_still_parks),
         ("already_at_tip", test_already_at_tip_leaves_dirty),
         ("unrelated_history", test_unrelated_history_with_dirty),

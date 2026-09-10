@@ -311,15 +311,22 @@ _park_dirty_tracked() {
 _park_overwrite_untracked() {
   local found=""
   local rel dest
+  local _trk _org
+  # Index vs origin/main tree in two git processes. Do not spawn
+  # `ls-files --error-unmatch` per origin path (O(n) process spawns).
+  # Do not use `ls-files --others` (untracked-cache / excludesfile miss
+  # ignored colliding paths on some CI images).
+  _trk="$(mktemp "${TMPDIR:-/tmp}/l9-ff-trk.XXXXXX")"
+  _org="$(mktemp "${TMPDIR:-/tmp}/l9-ff-org.XXXXXX")"
+  git -C "$CLONE" ls-files | LC_ALL=C sort >"$_trk"
+  git -C "$CLONE" ls-tree -r --name-only "origin/${TARGET_BRANCH}" | LC_ALL=C sort >"$_org"
   while IFS= read -r rel; do
     [ -z "$rel" ] && continue
-    if git -C "$CLONE" ls-files --error-unmatch -- "$rel" >/dev/null 2>&1; then
-      continue
-    fi
     if [ -e "$CLONE/$rel" ] || [ -L "$CLONE/$rel" ]; then
       found="${found}${rel}"$'\n'
     fi
-  done < <(git -C "$CLONE" ls-tree -r --name-only "origin/${TARGET_BRANCH}")
+  done < <(comm -13 "$_trk" "$_org")
+  rm -f "$_trk" "$_org"
   OVERWRITE_UNTRACKED="$found"
   [ -n "$OVERWRITE_UNTRACKED" ] || return 0
   PARKED_UNTRACKED=1
@@ -416,9 +423,10 @@ fi
 _park_dirty_tracked maybe_leave
 
 # origin/main may now track a path that is still untracked here. reset --keep
-# may leave that worktree copy untouched. Walk origin's tree — do not depend
-# on `comm` + `ls-files --others` (untracked-cache / excludesfile miss paths
-# on some CI images).
+# may leave that worktree copy untouched. Intersect origin's tree with the
+# index (`git ls-files`, not `--others`) via `comm -13`, then test worktree
+# existence. That still sees gitignored colliding copies. High-velocity:
+# two git processes, never one `ls-files --error-unmatch` per origin path.
 _park_overwrite_untracked
 
 if [ "$BEHIND" -eq 0 ] && [ "$AHEAD" -eq 0 ]; then
