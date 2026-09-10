@@ -288,7 +288,11 @@ done
     assert proc.returncode == 0, proc.stdout + proc.stderr
     fast_ms = int((wave_dir / "fast.ms").read_text(encoding="utf-8").strip())
     slow_ms = int((wave_dir / "slow.ms").read_text(encoding="utf-8").strip())
-    assert fast_ms < 150, f"fast job inherited wait-time wall: {fast_ms}ms"
+    # Elapsed is job-internal (sleep + two `python3 -c` clocks). It cannot
+    # include `wait`. Each clock is ~60ms process startup here; under xdist
+    # the same pair has measured 435ms. 150ms assumed a free clock and
+    # flake-failed a parallel wave. Hang-closed only.
+    assert fast_ms < 800, f"fast job hung or serialized: {fast_ms}ms"
     assert slow_ms >= 200, f"slow job too short: {slow_ms}ms"
     assert fast_ms < slow_ms
 

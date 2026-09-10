@@ -22,6 +22,8 @@ STOP = "STOP LOOPING"
 FAILED_NODE_RE = re.compile(r"^FAILED\s+(\S+)", re.M)
 HOOK_ID_RE = re.compile(r"^- hook id:\s+(\S+)", re.M)
 HOOK_EXIT_RE = re.compile(r"^- exit code:\s+(\d+)", re.M)
+DIRTY_SECTION_RE = re.compile(r"^(?:GENERATED|NON_GENERATED|SCRATCH)_NEW_DIRTY")
+HEAL_FAIL_RE = re.compile(r"^FAIL: generated heal exited", re.M)
 MAKE_PR_RE = re.compile(
     r"\bmake(?:\s+-C\s+\S+)?\s+pr(?:-check)?(?:\s|$|[;&])",
     re.I,
@@ -96,6 +98,44 @@ def parse_failed_hooks(log_text: str) -> list[str]:
     return hooks
 
 
+def parse_dirty_paths(log_text: str) -> list[str]:
+    """Paths named by classify_generated_dirtiness.sh after a heal rewrite."""
+    seen: list[str] = []
+    grabbing = False
+    for line in log_text.splitlines():
+        if DIRTY_SECTION_RE.match(line):
+            grabbing = True
+            continue
+        if grabbing:
+            if line.startswith("  ") and line.strip():
+                path = line.strip()
+                if path not in seen:
+                    seen.append(path)
+                continue
+            grabbing = False
+    return seen
+
+
+def classify_failure(
+    *,
+    nodes: list[str],
+    hooks: list[str],
+    dirty_paths: list[str],
+    log_text: str,
+) -> str:
+    if nodes:
+        return "pytest"
+    if hooks:
+        return "hook"
+    if "NON_GENERATED_NEW_DIRTY:" in log_text:
+        return "source_dirty"
+    if dirty_paths or "GENERATED_NEW_DIRTY:" in log_text:
+        return "generated_heal"
+    if HEAL_FAIL_RE.search(log_text):
+        return "generated_heal"
+    return "unknown"
+
+
 def recheck_command(nodes: list[str], pytest_bin: str) -> str:
     if not nodes:
         return ""
@@ -110,14 +150,28 @@ def build_failure_doc(
     pytest_bin: str,
     log_hint: str,
     head_sha: str = "",
+    dirty_paths: list[str] | None = None,
+    log_text: str = "",
 ) -> dict[str, Any]:
     paths, content, pr_base = parse_digest(current)
+    dirty = list(dirty_paths or [])
+    failure_class = classify_failure(nodes=nodes, hooks=hooks, dirty_paths=dirty, log_text=log_text)
     command = recheck_command(nodes, pytest_bin)
     if nodes:
         message = (
             f"{STOP}: do not re-run the full gate. "
             "Next tool call is Read those test files and run the recheck_command. "
             "Do not AwaitShell another make pr."
+        )
+    elif failure_class == "source_dirty":
+        message = (
+            f"{STOP}: do not re-run the full gate. "
+            "Commit or restore the named source paths, then re-run make pr."
+        )
+    elif failure_class == "generated_heal":
+        message = (
+            f"{STOP}: do not re-run the full gate. "
+            "Generated heal rewrote companions — commit those paths, do not re-run pytest."
         )
     elif log_hint:
         message = f"{STOP}: do not re-run the full gate. Read {log_hint}."
@@ -132,6 +186,8 @@ def build_failure_doc(
         "failed_at": utc_now(),
         "failed_nodes": nodes,
         "failed_hooks": hooks,
+        "dirty_paths": dirty,
+        "failure_class": failure_class,
         "recheck_command": command,
         "message": message,
     }
@@ -145,12 +201,22 @@ def format_refuse(doc: dict[str, Any]) -> str:
     ]
     nodes = [str(n) for n in doc.get("failed_nodes") or []]
     hooks = [str(h) for h in doc.get("failed_hooks") or []]
+    dirty = [str(p) for p in doc.get("dirty_paths") or []]
+    failure_class = str(doc.get("failure_class") or "")
     if nodes:
         lines.extend(f"  {node}" for node in nodes)
     if hooks:
         lines.extend(f"  hook:{hook}" for hook in hooks)
-    if not nodes and not hooks:
-        lines.append("  (no named pytest nodes — read .l9/pr/last-gate.log)")
+    if dirty:
+        prefix = "generated:" if failure_class == "generated_heal" else "path:"
+        lines.extend(f"  {prefix}{path}" for path in dirty)
+    if not nodes and not hooks and not dirty:
+        if failure_class == "generated_heal":
+            lines.append("  generated-heal — commit companion rewrites; do not re-run pytest")
+        elif failure_class == "source_dirty":
+            lines.append("  source rewrite — commit or restore; then re-run make pr")
+        else:
+            lines.append("  (no named pytest nodes — read .l9/pr/last-gate.log)")
     command = str(doc.get("recheck_command") or "").strip()
     lines.append("Re-check:")
     if command:
@@ -230,6 +296,7 @@ def cmd_write(
     text = "\n".join(chunks)
     nodes = parse_failed_nodes(text)
     hooks = parse_failed_hooks(text)
+    dirty_paths = parse_dirty_paths(text)
     hint = str(log_path) if log_path is not None else ""
     doc = build_failure_doc(
         current=current,
@@ -238,6 +305,8 @@ def cmd_write(
         pytest_bin=pytest_bin,
         log_hint=hint,
         head_sha=head_sha,
+        dirty_paths=dirty_paths,
+        log_text=text,
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
