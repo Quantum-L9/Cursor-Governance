@@ -143,7 +143,17 @@ _READER_SKIP="${_CORPUS_SKIP},${_WRITER_HOOKS}"
 # would have found: `validate_gh_package_deps.py` judges vendored `file:` deps
 # as local deps (tests/ops/scripts/test_validate_gh_package_deps.py), so running
 # it by hand against a consumer is clean rather than eight phantom findings.
-_GOV_ONLY_SKIP="gh-package-deps-preflight"
+#
+# `max-velocity` is the same class and strictly worse: it carries no `files:`
+# guard and `pass_filenames: false`, so it fires on EVERY consumer `make pr`,
+# not only on a matching path, and dies as
+#   can't open file '<consumer>/ops/scripts/validate_max_velocity.py'
+# What it validates — the committed execution profiles in
+# `ops/autonomy/claude-execution-profiles.json` and `surface_profile.yaml` —
+# exists only in the governance tree, so there is nothing for it to check in a
+# consumer. It stays enforced on the governance configuration, which is the
+# authority the invariant is about (INVARIANTS.md; rules/07-max-velocity-research.mdc).
+_GOV_ONLY_SKIP="gh-package-deps-preflight,max-velocity"
 if [[ -n "$_GOV_ONLY_SKIP" && "$WS" != "$GOV_ROOT" ]]; then
   _WRITER_SKIP="${_WRITER_SKIP},${_GOV_ONLY_SKIP}"
   _READER_SKIP="${_READER_SKIP},${_GOV_ONLY_SKIP}"

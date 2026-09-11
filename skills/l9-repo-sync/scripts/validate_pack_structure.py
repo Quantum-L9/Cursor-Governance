@@ -158,6 +158,36 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
+    if "LC_ALL=C comm -13" not in park_body:
+        print(
+            "FAIL: _park_overwrite_untracked must run comm under LC_ALL=C "
+            "(inputs are byte-sorted; GNU comm honours LC_COLLATE, so an inherited "
+            "locale yields a silently incomplete origin-only set)",
+            file=sys.stderr,
+        )
+        return 1
+    if "< <(comm" in park_body or "< <( comm" in park_body:
+        print(
+            "FAIL: _park_overwrite_untracked must not read comm through process "
+            "substitution — that hides a non-zero comm behind an empty read and the "
+            "caller then runs a destructive reset --keep with nothing parked",
+            file=sys.stderr,
+        )
+        return 1
+    if "Refusing to continue" not in park_raw:
+        print(
+            "FAIL: _park_overwrite_untracked must abort before destructive "
+            "synchronization when the origin-only set cannot be computed",
+            file=sys.stderr,
+        )
+        return 1
+    if "trap " not in park_body:
+        print(
+            "FAIL: _park_overwrite_untracked must clean its temp files on every exit "
+            "path (success, explicit failure, early return, abort)",
+            file=sys.stderr,
+        )
+        return 1
 
     for rel in ("SKILL.md", "references/execute.md", "references/diagnose-first.md"):
         hits = primitives_only_under_allowed_headings((ROOT / rel).read_text(encoding="utf-8"))

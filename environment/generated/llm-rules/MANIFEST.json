@@ -6,9 +6,9 @@
       "alias": null,
       "class": "always",
       "output": "00-global.md",
-      "output_sha256": "664e8ea979306627cd4db2ca9e0b35c84956c22ee57aec0fd797876beefedd02",
+      "output_sha256": "b10d3fb92494e0802bc4df1cf7b530b3f710a1279f83f502387c21b5f7008229",
       "source": "rules/00-global.mdc",
-      "source_sha256": "7fef9f6d2a763dd61e4884fc5729ec8869d3d06617a7b8e2feedce5d249469df",
+      "source_sha256": "d92b573ca45a6aea9b405a578acd31bc5acba177b7cf2aad2707d1f0a10a50a9",
       "stem": "00-global"
     },
     {
@@ -67,6 +67,15 @@
     },
     {
       "alias": null,
+      "class": "always",
+      "output": "07-max-velocity-research.md",
+      "output_sha256": "d6c7c24a3d7543518638f1a32d9726b4aed4242d50776b64fc5b80d46ed93b26",
+      "source": "rules/07-max-velocity-research.mdc",
+      "source_sha256": "ce3021bf6cf26672946a1363a18ff14da0cf58e686ba5d2f9aba02081e1d13f9",
+      "stem": "07-max-velocity-research"
+    },
+    {
+      "alias": null,
       "class": "skipped_agent_requested",
       "output": null,
       "output_sha256": null,
@@ -91,15 +100,6 @@
       "source": "rules/10-lang-typescript.mdc",
       "source_sha256": "bb98eadfc112a416fe0a841420bcebc289f08d9b47d1ad7c8e171fd5c04952f9",
       "stem": "10-lang-typescript"
-    },
-    {
-      "alias": null,
-      "class": "always",
-      "output": "100-max-velocity-research.md",
-      "output_sha256": "842639e1897557d538a85759e2fc2dcd6f5f8d31500cec98ff6eccef9c674c89",
-      "source": "rules/100-max-velocity-research.mdc",
-      "source_sha256": "4460c4bd2a52c95b309dff11402ccb6b0197ca3ef9de13ac2fd564022758a53c",
-      "stem": "100-max-velocity-research"
     },
     {
       "alias": null,
@@ -650,5 +650,5 @@
     "skipped_agent_requested": 17,
     "source_mdc": 71
   },
-  "tree_sha256": "61dc9e9cd6f644a6a000827bcf22ba69e6b3e8f15fea25399a55ce46e8b43fed"
+  "tree_sha256": "c4febcbc0f763adfae45bb3c12b94416a5163450ad60c067db4028ab4ceb5a8a"
 }

@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-09-10T20:38:47Z'
+generated_utc: '2026-09-11T15:32:39Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:55b7c08154fb94f6b7bce3b398fab9d89679d1cdfb38e8c9d9f055d8b7d79de8
+source_tree_digest: sha256:b511284f6e588f228ea4b841927b04aaea133717c8a0322480e98d2bca839988
 summary:
   total_mdc_files: 70
   always_apply_true: 34
@@ -26,7 +26,7 @@ rules:
   first_heading: Global rules
   has_yaml_frontmatter: true
   line_count: 41
-  content_digest: sha256:7fef9f6d2a763dd61e4884fc5729ec8869d3d06617a7b8e2feedce5d249469df
+  content_digest: sha256:d92b573ca45a6aea9b405a578acd31bc5acba177b7cf2aad2707d1f0a10a50a9
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -166,6 +166,28 @@ rules:
   removal_plan: null
   extends: null
   classification_source: explicit
+- file: 07-max-velocity-research.mdc
+  id: l9.rule.07.max.velocity.research
+  id_source: explicit
+  version: 1.0.0
+  description: Maximum-velocity is a repo invariant — launch research as concurrent subagents.
+  scope: global
+  domain: governance
+  activation: always
+  activation_source: explicit
+  always_apply: true
+  globs: null
+  first_heading: Maximum velocity + research fan-out
+  has_yaml_frontmatter: true
+  line_count: 39
+  content_digest: sha256:ce3021bf6cf26672946a1363a18ff14da0cf58e686ba5d2f9aba02081e1d13f9
+  authority: canonical_global
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: explicit
 - file: 08-vps-ops.mdc
   id: l9.rule.08.vps.ops
   id_source: explicit
@@ -236,28 +258,6 @@ rules:
   removal_plan: null
   extends: null
   classification_source: mixed_or_derived
-- file: 100-max-velocity-research.mdc
-  id: l9.rule.100.max.velocity.research
-  id_source: explicit
-  version: 1.0.0
-  description: Maximum-velocity is a repo invariant — launch research as concurrent subagents.
-  scope: global
-  domain: governance
-  activation: always
-  activation_source: explicit
-  always_apply: true
-  globs: null
-  first_heading: Maximum velocity + research fan-out
-  has_yaml_frontmatter: true
-  line_count: 39
-  content_digest: sha256:4460c4bd2a52c95b309dff11402ccb6b0197ca3ef9de13ac2fd564022758a53c
-  authority: canonical_global
-  context_cost: minimal
-  deprecated: false
-  replacement: null
-  removal_plan: null
-  extends: null
-  classification_source: explicit
 - file: 15-work-tracking.mdc
   id: l9.rule.15.work.tracking
   id_source: explicit

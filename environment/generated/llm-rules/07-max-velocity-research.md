@@ -1,12 +1,5 @@
 ---
-id: l9.rule.100.max.velocity.research
-version: 1.0.0
 description: Maximum-velocity is a repo invariant — launch research as concurrent subagents.
-scope: global
-domain: governance
-activation: always
-authority: canonical_global
-alwaysApply: true
 ---
 
 # Maximum velocity + research fan-out
@@ -37,3 +30,5 @@ serial.
 - Wait for one research child before launching the next independent one
 - Treat `rules/77` (result-bridge orchestration) as required for explore recon
 - Skip a Task launch to avoid the Graphiti / lifecycle start hook
+
+<!-- generated-from: rules/07-max-velocity-research.mdc; do-not-edit -->
