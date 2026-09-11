@@ -12,7 +12,7 @@ description: Global non-negotiable agent behavior for governed Cursor workspaces
 - Keep responses concise; put long procedures in skills/commands
 - Use Graphiti for episodic resume — not Cursor native Memories for repo facts
 - Scoped-commit authored pathspecs on this branch before you finish a coding turn (`99-no-auto-commit`). Do not ask.
-- Independent research launches as concurrent Tasks (`explore` / `generalPurpose`); do not keep recon in-session to avoid a subagent (`100-max-velocity-research`). Caps are the execution profile (480/128), never an invented 4/2.
+- Independent research launches as concurrent Tasks (`explore` / `generalPurpose`); do not keep recon in-session to avoid a subagent (`07-max-velocity-research`). Caps are the execution profile (480/128), never an invented 4/2.
 
 ## MUST NOT
 

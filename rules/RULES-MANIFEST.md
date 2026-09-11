@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-09-10T20:38:47Z`. Source: `rules/*.mdc`.
+Generated: `2026-09-11T15:32:39Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -18,17 +18,17 @@ Generated: `2026-09-10T20:38:47Z`. Source: `rules/*.mdc`.
 
 | File | ID | Scope | Domain | Activation | Lines | Digest |
 |---|---|---|---|---|---:|---|
-| `00-global.mdc` | `l9.rule.00.global` | global | governance | always | 41 | `7fef9f6d2a76` |
+| `00-global.mdc` | `l9.rule.00.global` | global | governance | always | 41 | `d92b573ca45a` |
 | `01-authority-chain.mdc` | `l9.rule.01.authority.chain` | global | general | always | 64 | `a2f5f3993a02` |
 | `02-slash-commands.mdc` | `l9.rule.slash-commands` | global | governance | always | 135 | `76d110e9c449` |
 | `03-graphiti-memory.mdc` | `l9.rule.graphiti.memory` | global | memory | always | 87 | `05e654828e51` |
 | `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | agent_requested | 70 | `64a0e957121b` |
 | `05-ask-mode.mdc` | `l9.rule.05.ask.mode` | global | governance | always | 65 | `4b2f5f472100` |
 | `06-governance-ssot-paths.mdc` | `l9.rule.governance-ssot-paths` | global | git | always | 56 | `d08e5923b2c6` |
+| `07-max-velocity-research.mdc` | `l9.rule.07.max.velocity.research` | global | governance | always | 39 | `ce3021bf6cf2` |
 | `08-vps-ops.mdc` | `l9.rule.08.vps.ops` | global | git | agent_requested | 192 | `8ca195f6994d` |
 | `09-execute-as-instructed.mdc` | `l9.rule.09.execute.as.instructed` | global | general | always | 48 | `13d3fb355837` |
 | `10-lang-typescript.mdc` | `l9.rule.10.lang.typescript` | global | typescript | agent_requested | 182 | `bb98eadfc112` |
-| `100-max-velocity-research.mdc` | `l9.rule.100.max.velocity.research` | global | governance | always | 39 | `4460c4bd2a52` |
 | `15-work-tracking.mdc` | `l9.rule.15.work.tracking` | global | general | agent_requested | 38 | `79c9306f7061` |
 | `20-lang-python.mdc` | `l9.rule.20.lang.python` | global | python | agent_requested | 190 | `fa976f39b458` |
 | `22-context7-auto-invoke.mdc` | `l9.rule.22.context7.auto.invoke` | global | git | always | 83 | `f1c56c69c455` |

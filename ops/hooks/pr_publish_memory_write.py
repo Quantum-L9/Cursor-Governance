@@ -32,6 +32,18 @@ RECEIPT_REL = Path(".l9/pr/pr-publish-memory.json")
 MAX_PATHS = 24
 KIND = "pickup_context"
 
+#: An unavailable memory plane must not hang the publish tail. The PR is
+#: already open by the time this runs; the write is a handoff, not a gate.
+WRITE_TIMEOUT_SECONDS = 20.0
+TIMEOUT_RETURNCODE = 124
+
+#: Strong keys that bind a cached summary to THIS publication. `.l9/pr/
+#: pr-summary.json` survives in the workspace, so a summary left by an earlier
+#: PR (or by the same PR at an earlier head) would otherwise be preferred over
+#: the identity the caller just supplied, and the handoff would be written
+#: under the previous PR's idempotency key.
+IDENTITY_KEYS = ("repo", "number", "head_sha", "head")
+
 
 def _enabled() -> bool:
     if os.environ.get("L9_PR_PUBLISH_MEMORY", "1").strip() == "0":
@@ -47,6 +59,45 @@ def _summary(workspace: Path, explicit: Path | None) -> dict[str, Any]:
     except (OSError, json.JSONDecodeError):
         return {}
     return data if isinstance(data, dict) else {}
+
+
+def _identity(value: Any) -> str:
+    return str(value).strip().casefold()
+
+
+def _int_or(value: Any, default: int) -> int:
+    """Coerce an externally supplied count, never raising."""
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, int):
+        return value
+    try:
+        return int(str(value).strip())
+    except (TypeError, ValueError):
+        return default
+
+
+def summary_identity_check(
+    summary: dict[str, Any], current: dict[str, Any]
+) -> tuple[bool, list[str], list[str]]:
+    """Bind a cached summary to the current publication before trusting it.
+
+    Returns ``(usable, mismatched, compared)``. A key is only compared when
+    BOTH sides assert it: the current invocation supplies the live identity
+    (``open_pr_after_gate.sh`` passes repo/number/head/head_sha), and a key the
+    caller left empty cannot disprove anything. ``compared`` is empty when
+    nothing could be checked, which is recorded rather than assumed correct.
+    """
+    mismatched: list[str] = []
+    compared: list[str] = []
+    for key in IDENTITY_KEYS:
+        want, got = current.get(key), summary.get(key)
+        if want in (None, "") or got in (None, ""):
+            continue
+        compared.append(key)
+        if _identity(got) != _identity(want):
+            mismatched.append(key)
+    return (not mismatched), mismatched, compared
 
 
 def _paths(summary: dict[str, Any]) -> list[str]:
@@ -82,10 +133,22 @@ def format_fact(
     adds = summary.get("additions")
     dels = summary.get("deletions")
     paths = _paths(summary)
-    next_action = "next=/l9-pr-remediation Converge (own until open_prs=0; launch merge_now). " + (
+    # PR_REMEDIATE=0 is an authority boundary, not a cosmetic flag. A
+    # publish-only run may record THAT a PR opened; it may not leave a durable
+    # instruction telling the next agent to run the remediator, own every open
+    # PR, or launch merge_now — that would convert an intentionally
+    # publication-only operation into a repository-wide merge campaign the
+    # operator declined. Merge stays separately authorized (CANONICAL_LAW;
+    # rules/48, rules/88): the remediator is invoked by the user, not by a
+    # fact this hook wrote.
+    next_action = (
+        "next=/l9-pr-remediation Converge (own until open_prs=0; launch merge_now). "
         "ceremony already requested a remediator spawn."
         if remediates
-        else "ceremony published PR_REMEDIATE=0; remediator still owns merge."
+        else (
+            "state=published-only. ceremony published with PR_REMEDIATE=0: "
+            "no remediation scheduled and no merge authority conveyed."
+        )
     )
     parts = [
         f"PICKUP: PR {repo}#{number} published.",
@@ -98,7 +161,10 @@ def format_fact(
         next_action,
     ]
     if paths:
-        extra = int(files_n or len(paths)) - len(paths)
+        # `changed_files` comes from an external JSON receipt: a non-numeric or
+        # malformed value must not raise out of a hook whose whole contract is
+        # "exit 0 always". Fall back to what we can actually count.
+        extra = _int_or(files_n, len(paths)) - len(paths)
         suffix = f" (+{extra} more)" if extra > 0 else ""
         parts.append("paths: " + " ".join(paths) + suffix)
     return " ".join(p for p in parts if p)
@@ -151,14 +217,24 @@ def write_argv(
     return argv
 
 
-def run_write(argv: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(  # noqa: S603 — locked interpreter + fixed module
-        argv,
-        cwd=str(cwd),
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+def run_write(
+    argv: list[str], *, cwd: Path, timeout: float = WRITE_TIMEOUT_SECONDS
+) -> subprocess.CompletedProcess[str]:
+    try:
+        return subprocess.run(  # noqa: S603 — locked interpreter + fixed module
+            argv,
+            cwd=str(cwd),
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        # Fail-open with a bound: the PR is already open, so a memory plane
+        # that never answers becomes a WARN receipt, not a hung publish tail.
+        return subprocess.CompletedProcess(
+            argv, TIMEOUT_RETURNCODE, stdout="", stderr="memory CLI timed out"
+        )
 
 
 def _write_receipt(workspace: Path, body: dict[str, Any]) -> None:
@@ -167,6 +243,8 @@ def _write_receipt(workspace: Path, body: dict[str, Any]) -> None:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(json.dumps(body, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     except OSError:
+        # Fail-open: the receipt is evidence about a PR that already opened.
+        # An unwritable workspace must not fail the publish.
         pass
 
 
@@ -215,6 +293,12 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     summary = _summary(workspace, args.summary)
+    usable, mismatched, compared = summary_identity_check(summary, fallback)
+    if not usable:
+        # A summary describing a DIFFERENT publication is not evidence about
+        # this one. Discard it wholesale — its file list and counts belong to
+        # that PR too — and fall back to the identity this invocation supplied.
+        summary = {}
     fact = format_fact(summary, remediates=remediates, fallback=fallback)
     if not fact:
         print("pr publish memory: SKIP (no PR identity)")
@@ -251,6 +335,16 @@ def main(argv: list[str] | None = None) -> int:
             "idempotency_key": key,
             "kind": KIND,
             "returncode": proc.returncode,
+            "timed_out": proc.returncode == TIMEOUT_RETURNCODE,
+            "remediates": remediates,
+            "summary_identity": {
+                "usable": usable,
+                "mismatched": mismatched,
+                "compared": compared,
+                # Nothing comparable means the cached summary was accepted
+                # without proof, which is recorded rather than presumed sound.
+                "verified": bool(compared) and usable,
+            },
             "written_at": datetime.now(UTC).isoformat(),
         },
     )
