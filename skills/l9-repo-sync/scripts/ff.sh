@@ -311,22 +311,51 @@ _park_dirty_tracked() {
 _park_overwrite_untracked() {
   local found=""
   local rel dest
-  local _trk _org
-  # Index vs origin/main tree in two git processes. Do not spawn
+  local _trk _org _only _rc
+  # Index vs origin/main tree in a fixed two git processes. Do not spawn
   # `ls-files --error-unmatch` per origin path (O(n) process spawns).
   # Do not use `ls-files --others` (untracked-cache / excludesfile miss
   # ignored colliding paths on some CI images).
   _trk="$(mktemp "${TMPDIR:-/tmp}/l9-ff-trk.XXXXXX")"
   _org="$(mktemp "${TMPDIR:-/tmp}/l9-ff-org.XXXXXX")"
-  git -C "$CLONE" ls-files | LC_ALL=C sort >"$_trk"
-  git -C "$CLONE" ls-tree -r --name-only "origin/${TARGET_BRANCH}" | LC_ALL=C sort >"$_org"
+  _only="$(mktemp "${TMPDIR:-/tmp}/l9-ff-only.XXXXXX")"
+  # One cleanup owner for every way out of this function: normal return, the
+  # explicit failure below, and an errexit/signal abort in the parking loop.
+  # Paths are expanded into the trap text now, so the handler does not depend
+  # on locals that are gone by the time EXIT fires. This script installs no
+  # other trap, so nothing here clobbers or is clobbered.
+  trap "rm -f '$_trk' '$_org' '$_only'" RETURN EXIT
+  # A failure in this computation must NEVER degrade to "nothing to park":
+  # the caller runs a destructive `reset --keep` next, so an empty result
+  # silently overwrites every ignored colliding copy. The set difference is
+  # computed into a real file and its status checked BEFORE the loop; the
+  # earlier `< <(comm ...)` form hid a non-zero comm behind an empty read,
+  # which is precisely the failure mode that loses unique work.
+  _rc=0
+  git -C "$CLONE" ls-files | LC_ALL=C sort >"$_trk" || _rc=$?
+  if [ "$_rc" -eq 0 ]; then
+    git -C "$CLONE" ls-tree -r --name-only "origin/${TARGET_BRANCH}" \
+      | LC_ALL=C sort >"$_org" || _rc=$?
+  fi
+  if [ "$_rc" -eq 0 ]; then
+    # `comm` requires its inputs sorted in ITS OWN collation, and GNU comm
+    # honours LC_COLLATE. Both inputs are byte-sorted under LC_ALL=C, so comm
+    # must compare under LC_ALL=C as well: inheriting a developer's non-C
+    # locale yields a silently incomplete origin-only set, and every path it
+    # drops is an untracked copy that reset --keep then overwrites.
+    LC_ALL=C comm -13 "$_trk" "$_org" >"$_only" || _rc=$?
+  fi
+  if [ "$_rc" -ne 0 ]; then
+    echo "FAIL: /ff could not compute the origin-only path set (exit $_rc)." >&2
+    echo "      Refusing to continue: reset --keep would overwrite untracked copies." >&2
+    return 1
+  fi
   while IFS= read -r rel; do
     [ -z "$rel" ] && continue
     if [ -e "$CLONE/$rel" ] || [ -L "$CLONE/$rel" ]; then
       found="${found}${rel}"$'\n'
     fi
-  done < <(comm -13 "$_trk" "$_org")
-  rm -f "$_trk" "$_org"
+  done <"$_only"
   OVERWRITE_UNTRACKED="$found"
   [ -n "$OVERWRITE_UNTRACKED" ] || return 0
   PARKED_UNTRACKED=1
@@ -512,7 +541,11 @@ if [ -n "$KEEP_BEFORE" ]; then
 fi
 
 UNTRACKED_AFTER="$(git -C "$CLONE" ls-files --others --exclude-standard | LC_ALL=C sort)"
-MISSING_UNTRACKED="$(comm -23 <(printf '%s\n' "$UNTRACKED_BEFORE") <(printf '%s\n' "$UNTRACKED_AFTER") | sed '/^$/d' || true)"
+# Same collation contract as the origin-only scan: both lists are byte-sorted
+# under LC_ALL=C above, so this comparison must run under LC_ALL=C too. This
+# one guards the never-lose-unique-work verification itself, where an
+# incomplete diff reads as "nothing went missing".
+MISSING_UNTRACKED="$(LC_ALL=C comm -23 <(printf '%s\n' "$UNTRACKED_BEFORE") <(printf '%s\n' "$UNTRACKED_AFTER") | sed '/^$/d' || true)"
 if [ -n "$MISSING_UNTRACKED" ]; then
   STILL_MISSING=""
   while IFS= read -r rel; do

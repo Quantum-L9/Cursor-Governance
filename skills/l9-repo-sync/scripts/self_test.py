@@ -158,7 +158,13 @@ def test_behind_with_colliding_and_hold() -> int:
 
 
 def test_ignored_colliding_untracked_is_parked() -> int:
-    """excludesfile must not hide an untracked path origin/main now tracks."""
+    """A gitignored colliding copy must not hide a path origin/main now tracks.
+
+    The fixture ignores `landed.md` via `.gitignore`; `run()` pins
+    `core.excludesFile` to empty, so this scenario is about gitignore rather
+    than excludesfile. `ls-files --others` would miss it; intersecting the
+    index with origin's tree does not.
+    """
     with tempfile.TemporaryDirectory() as tmp:
         remote = Path(tmp) / "remote.git"
         clone = Path(tmp) / "clone"
@@ -200,6 +206,234 @@ def test_ignored_colliding_untracked_is_parked() -> int:
             return _fail("ignored colliding bytes were not copied to l9-ff-hold")
         if "parked untracked-that-main-tracks: landed.md" not in proc.stdout:
             return _fail("missing park log for ignored colliding path")
+    return 0
+
+
+def _velocity_fixture(tmp: Path, origin_paths: int) -> tuple[Path, Path]:
+    """A clone behind origin/main by `origin_paths` newly tracked files."""
+    remote = tmp / "remote.git"
+    clone = tmp / "clone"
+    run(["git", "init", "--bare", str(remote)])
+    run(["git", "clone", str(remote), str(clone)])
+    git(clone, "config", "user.email", "test@example.com")
+    git(clone, "config", "user.name", "Test")
+    (clone / "tracked.txt").write_text("v1\n", encoding="utf-8")
+    git(clone, "add", "tracked.txt")
+    git(clone, "commit", "-m", "base")
+    git(clone, "branch", "-M", "main")
+    git(clone, "push", "-u", "origin", "main")
+    git(remote, "symbolic-ref", "HEAD", "refs/heads/main")
+
+    other = tmp / "other"
+    run(["git", "clone", str(remote), str(other)])
+    git(other, "config", "user.email", "test@example.com")
+    git(other, "config", "user.name", "Test")
+    for i in range(origin_paths):
+        (other / f"landed{i:03d}.md").write_text(f"origin {i}\n", encoding="utf-8")
+    git(other, "add", "-A")
+    git(other, "commit", "-m", f"track {origin_paths} paths")
+    git(other, "push")
+    return clone, remote
+
+
+def _shim_bin(tmp: Path, name: str, body: str) -> Path:
+    """A PATH-prepended wrapper for `name`, resolved against the real binary."""
+    bin_dir = tmp / f"shim-{name}"
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    real = subprocess.run(
+        ["bash", "-lc", f"command -v {name}"], text=True, capture_output=True
+    ).stdout.strip()
+    shim = bin_dir / name
+    shim.write_text(body.replace("@REAL@", real), encoding="utf-8")
+    shim.chmod(0o755)
+    return bin_dir
+
+
+_GIT_COUNTER = """#!/usr/bin/env bash
+printf '%s\\n' "$*" >> "$L9_GIT_LOG"
+exec @REAL@ "$@"
+"""
+
+
+def _run_ff_counting(tmp: Path, clone: Path, log: Path) -> subprocess.CompletedProcess[str]:
+    home = tmp / "home"
+    home.mkdir(exist_ok=True)
+    bin_dir = _shim_bin(tmp, "git", _GIT_COUNTER)
+    return run(
+        ["bash", str(FF)],
+        env={
+            "CURSOR_GOVERNANCE_DIR": str(clone),
+            "HOME": str(home),
+            "L9_GIT_LOG": str(log),
+            "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}",
+        },
+    )
+
+
+def test_origin_only_scan_is_fixed_cost() -> int:
+    """The performance objective, measured — not asserted in a comment.
+
+    The old shape ran one `git ls-files --error-unmatch` per origin path. The
+    repaired scan enumerates twice regardless of how many paths origin tracks,
+    so the number of enumeration processes must not grow with that count.
+    This measures the enumeration calls only; asserting a total git count for
+    all of /ff would couple the test to unrelated responsibilities.
+    """
+    counts: dict[int, int] = {}
+    for n in (4, 40):
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            clone, _ = _velocity_fixture(tmp, n)
+            log = tmp / f"git-{n}.log"
+            log.write_text("", encoding="utf-8")
+            proc = _run_ff_counting(tmp, clone, log)
+            if proc.returncode != 0:
+                return _fail(f"ff.sh rc={proc.returncode} (n={n})\n{proc.stdout}\n{proc.stderr}")
+            lines = log.read_text(encoding="utf-8").splitlines()
+            if any("--error-unmatch" in line for line in lines):
+                return _fail(f"per-path `ls-files --error-unmatch` returned (n={n})")
+            counts[n] = sum(1 for line in lines if " ls-files" in line or " ls-tree" in line)
+    if counts[4] != counts[40]:
+        return _fail(
+            "origin-only scan is not fixed cost: "
+            f"{counts[4]} enumeration calls for 4 paths vs {counts[40]} for 40"
+        )
+    return 0
+
+
+_FAILING = """#!/usr/bin/env bash
+echo "@NAME@: injected failure" >&2
+exit 9
+"""
+
+
+def _injected_failure_preserves_work(tool: str) -> int:
+    """A failed origin-only computation must abort BEFORE reset --keep."""
+    with tempfile.TemporaryDirectory() as raw:
+        tmp = Path(raw)
+        clone, _ = _velocity_fixture(tmp, 3)
+        # A gitignored local copy of a path origin now tracks: the exact bytes
+        # a silent empty result would let reset --keep overwrite.
+        (clone / ".gitignore").write_text("landed000.md\n", encoding="utf-8")
+        git(clone, "add", ".gitignore")
+        git(clone, "commit", "-m", "ignore landed000")
+        (clone / "landed000.md").write_text("UNIQUE LOCAL WORK\n", encoding="utf-8")
+        home = tmp / "home"
+        home.mkdir()
+        bin_dir = _shim_bin(tmp, tool, _FAILING.replace("@NAME@", tool))
+        proc = run(
+            ["bash", str(FF)],
+            env={
+                "CURSOR_GOVERNANCE_DIR": str(clone),
+                "HOME": str(home),
+                "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}",
+            },
+        )
+        if proc.returncode == 0:
+            return _fail(f"{tool} failure did not stop /ff (rc=0)\n{proc.stdout}\n{proc.stderr}")
+        body = (clone / "landed000.md").read_text(encoding="utf-8")
+        if body != "UNIQUE LOCAL WORK\n":
+            return _fail(f"{tool} failure lost unique untracked work: {body!r}")
+    return 0
+
+
+def test_comm_failure_blocks_destructive_sync() -> int:
+    """Process substitution used to swallow this; an empty set is not a result."""
+    return _injected_failure_preserves_work("comm")
+
+
+def test_sort_failure_blocks_destructive_sync() -> int:
+    return _injected_failure_preserves_work("sort")
+
+
+def test_comm_runs_under_c_collation() -> int:
+    """`comm` must compare in the collation its inputs were sorted with.
+
+    Asserted by recording the environment the child actually receives, rather
+    than by installing a non-C locale that may not exist on the host.
+    """
+    with tempfile.TemporaryDirectory() as raw:
+        tmp = Path(raw)
+        clone, _ = _velocity_fixture(tmp, 3)
+        home = tmp / "home"
+        home.mkdir()
+        seen = tmp / "comm-env.log"
+        bin_dir = _shim_bin(
+            tmp,
+            "comm",
+            '#!/usr/bin/env bash\nprintf \'%s\\n\' "LC_ALL=${LC_ALL-unset}" >> "$L9_COMM_ENV"\n'
+            'exec @REAL@ "$@"\n',
+        )
+        proc = run(
+            ["bash", str(FF)],
+            env={
+                "CURSOR_GOVERNANCE_DIR": str(clone),
+                "HOME": str(home),
+                "L9_COMM_ENV": str(seen),
+                # A hostile ambient collation the child must not inherit.
+                "LC_COLLATE": "en_US.UTF-8",
+                "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}",
+            },
+        )
+        if proc.returncode != 0:
+            return _fail(f"ff.sh rc={proc.returncode}\n{proc.stdout}\n{proc.stderr}")
+        if not seen.is_file():
+            return _fail("comm was never invoked — the origin-only scan did not run")
+        lines = [line for line in seen.read_text(encoding="utf-8").splitlines() if line]
+        if not lines or any(line != "LC_ALL=C" for line in lines):
+            return _fail(f"comm did not run under LC_ALL=C: {lines}")
+    return 0
+
+
+def _leaked_scan_temps() -> list[Path]:
+    return sorted(Path(tempfile.gettempdir()).glob("l9-ff-*"))
+
+
+def test_scan_temp_files_are_cleaned_on_success_and_failure() -> int:
+    """mktemp files must not survive either path."""
+    before = set(_leaked_scan_temps())
+    with tempfile.TemporaryDirectory() as raw:
+        tmp = Path(raw)
+        clone, _ = _velocity_fixture(tmp, 3)
+        home = tmp / "home"
+        home.mkdir()
+        proc = run(["bash", str(FF)], env={"CURSOR_GOVERNANCE_DIR": str(clone), "HOME": str(home)})
+        if proc.returncode != 0:
+            return _fail(f"ff.sh rc={proc.returncode}\n{proc.stdout}\n{proc.stderr}")
+    leaked = set(_leaked_scan_temps()) - before
+    if leaked:
+        return _fail(f"scan temp files leaked on success: {sorted(str(p) for p in leaked)}")
+    if _injected_failure_preserves_work("comm") != 0:
+        return 1
+    leaked = set(_leaked_scan_temps()) - before
+    if leaked:
+        return _fail(f"scan temp files leaked on failure: {sorted(str(p) for p in leaked)}")
+    return 0
+
+
+def test_repeated_invocation_is_stable() -> int:
+    """Two /ff runs in a row stay correct; nothing is cached between them."""
+    with tempfile.TemporaryDirectory() as raw:
+        tmp = Path(raw)
+        clone, remote = _velocity_fixture(tmp, 3)
+        home = tmp / "home"
+        home.mkdir()
+        env = {"CURSOR_GOVERNANCE_DIR": str(clone), "HOME": str(home)}
+        for attempt in (1, 2):
+            proc = run(["bash", str(FF)], env=env)
+            if proc.returncode != 0:
+                return _fail(f"ff.sh rc={proc.returncode} on run {attempt}\n{proc.stderr}")
+        # New origin content after the first catch-up must be observed fresh.
+        other = tmp / "other"
+        (other / "later.md").write_text("added after the first ff\n", encoding="utf-8")
+        git(other, "add", "later.md")
+        git(other, "commit", "-m", "later")
+        git(other, "push")
+        proc = run(["bash", str(FF)], env=env)
+        if proc.returncode != 0:
+            return _fail(f"ff.sh rc={proc.returncode} on the third run\n{proc.stderr}")
+        if not (clone / "later.md").is_file():
+            return _fail("a later origin commit was not picked up on the next invocation")
     return 0
 
 
@@ -900,6 +1134,12 @@ def main() -> int:
     for name, fn in (
         ("behind_colliding", test_behind_with_colliding_and_hold),
         ("ignored_colliding", test_ignored_colliding_untracked_is_parked),
+        ("scan_fixed_cost", test_origin_only_scan_is_fixed_cost),
+        ("scan_comm_failure", test_comm_failure_blocks_destructive_sync),
+        ("scan_sort_failure", test_sort_failure_blocks_destructive_sync),
+        ("scan_c_collation", test_comm_runs_under_c_collation),
+        ("scan_temp_cleanup", test_scan_temp_files_are_cleaned_on_success_and_failure),
+        ("scan_repeatable", test_repeated_invocation_is_stable),
         ("non_overlapping_dirty", test_non_overlapping_dirty_still_parks),
         ("already_at_tip", test_already_at_tip_leaves_dirty),
         ("unrelated_history", test_unrelated_history_with_dirty),
