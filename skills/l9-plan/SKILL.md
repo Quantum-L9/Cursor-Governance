@@ -53,6 +53,7 @@ Legacy projection kept in place: [references/plan-workflow.md](references/plan-w
 
 ## Compact Workflow
 
+0. **Memory prefetch** — run `python3 ops/hooks/plan_memory_prefetch.py --workspace "$PWD" --task "<objective>"` and cite `MEMORY_PREFETCH` from `.l9/memory/plan-prefetch.json` (`namespace`, `snapshot_digest`, `checked_record_count`, `conflicts`, `policy_version`). Cursor `beforeSubmitPrompt` fires the same hook when this skill is routed.
 1. **Doctrine check** — load [references/planning-doctrine.md](references/planning-doctrine.md). Do not omit mandatory gates for efficiency.
 2. **Classify depth** — run `python3 scripts/route_plan.py` (or apply [references/plan-router.yaml](references/plan-router.yaml)). Classifier may only **escalate** obligations; baseline gates always apply.
 3. **Pre-Validate** — bind target; inventory baseline; for code in scope on governed workspaces name `.pre-commit-config.yaml` as the hook catalog. KERNEL pack / PE overlay landings: new branch from `origin/main` without asking (`AGENTS.md` `KERNEL_PACK_NEW_BRANCH_DEFAULT_V1`; `rules/46-kernel-pack-new-branch.mdc`).

@@ -1,5 +1,5 @@
 {
-  "generation_id": "daff60267c5443507101ba8af11aa90ae4fc51bf73f351a63169269caa428b90",
+  "generation_id": "2bc90ec09291c6b6cce5c2cc7e5ff9b9be693be7065f1fd918d008afcc1e6d17",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -1378,7 +1378,7 @@
       "path": "skills/l9-plan",
       "reason": "",
       "skill_md": "skills/l9-plan/SKILL.md",
-      "skill_sha256": "bafe5e4cfd4b218f6cc3ba93356eca49c4724125925ed37ec375c40056b5b648",
+      "skill_sha256": "6b0f5c377a6a45eb188cbfaa0b78b9cdd374135e40f1240b4f698496e2b48220",
       "user_invocable": true,
       "when_to_use": "the user asks for /l9-plan, make campaign, a Program Lock, a campaign plan, or a PE+autonomy plan/spec that runs through program-execution; ordinary plans belong to l9-plan-simple"
     },
@@ -1391,7 +1391,7 @@
       "path": "skills/l9-plan-simple",
       "reason": "",
       "skill_md": "skills/l9-plan-simple/SKILL.md",
-      "skill_sha256": "77ef52f58d2bf3130dd73bf74f14dcf18fd5ccad35d0cec1ddb87bb9341a7bc6",
+      "skill_sha256": "60cda8c0868585f58402d0740348f3f68d334efc98fc7fc5f8e13a766bec24e6",
       "user_invocable": true,
       "when_to_use": "an ordinary execution plan or spec is needed, scope is unclear, or Plan mode is on \u2014 rules/23-l9-skill-routing.mdc already routes every ordinary planning deliverable here, so the model must be able to select it"
     },
@@ -1606,5 +1606,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "b71df84c03ba02fa5a638d03749e4bf08c7efcb5354d85fb0fe4928cf31c5587",
-  "source_skill_corpus_sha256": "e2c97303d45a7ebd2a2126995a41cf19a215b472aee9e4ef32c5c85c24dfb7a3"
+  "source_skill_corpus_sha256": "2ee2808a3ce8a82d061934c4fa6dfee0666f2e555a4da526c564daddf912fcf2"
 }

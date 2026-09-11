@@ -89,8 +89,9 @@ Default human/executable projection: the shared canonical `.plan.md` with the PE
 
 ## Compact Workflow
 
-Steps 1–9 are **identical in both modes**.
+Steps 0–9 are **identical in both modes**.
 
+0. **Memory prefetch** — run `python3 ops/hooks/plan_memory_prefetch.py --workspace "$PWD" --task "<objective>"` and cite `MEMORY_PREFETCH` from `.l9/memory/plan-prefetch.json`. Cursor `beforeSubmitPrompt` fires the same hook when `l9-plan-simple` is routed.
 1. **Architect (upstream, required)** — Read [`../l9-global-architect/SKILL.md`](../l9-global-architect/SKILL.md) and follow its bootloader: load `runtime/MANIFEST.yaml` in `load_order`, instantiate run state, derive the objective, select architecture. Do not emit PLAN_DOCUMENT until GAR has selected architecture or recorded that architecture is already settled. Embedded mode does not waive this.
 2. **Doctrine / depth** — load `l9-plan` [planning-doctrine.md](../l9-plan/references/planning-doctrine.md) and classify via `python3 ../l9-plan/scripts/route_plan.py` (escalate-only). Do not omit baseline gates.
 3. **Pre-Validate** — bind the **current workspace** (branch, dirty, HEAD if useful). For code in scope on governed workspaces name `.pre-commit-config.yaml` as the hook catalog. Do **not** lock `origin/main` or open a tip worktree.

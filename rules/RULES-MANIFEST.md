@@ -1,16 +1,16 @@
 # Cursor governance rules manifest
 
-Generated: `2026-09-10T18:30:38Z`. Source: `rules/*.mdc`.
+Generated: `2026-09-11T15:32:39Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
 | Bucket | Count |
 |---|---:|
-| Total MDC files | **69** |
-| `alwaysApply: true` | **33** |
+| Total MDC files | **70** |
+| `alwaysApply: true` | **34** |
 | `alwaysApply: false` | **36** |
 | No boolean `alwaysApply` | **0** |
-| Explicit stable IDs | **68** |
+| Explicit stable IDs | **69** |
 | Derived compatibility IDs | **1** |
 | Deprecated rules | **0** |
 
@@ -18,13 +18,14 @@ Generated: `2026-09-10T18:30:38Z`. Source: `rules/*.mdc`.
 
 | File | ID | Scope | Domain | Activation | Lines | Digest |
 |---|---|---|---|---|---:|---|
-| `00-global.mdc` | `l9.rule.00.global` | global | governance | always | 40 | `f52c4a83d314` |
+| `00-global.mdc` | `l9.rule.00.global` | global | governance | always | 41 | `d92b573ca45a` |
 | `01-authority-chain.mdc` | `l9.rule.01.authority.chain` | global | general | always | 64 | `a2f5f3993a02` |
 | `02-slash-commands.mdc` | `l9.rule.slash-commands` | global | governance | always | 135 | `76d110e9c449` |
 | `03-graphiti-memory.mdc` | `l9.rule.graphiti.memory` | global | memory | always | 87 | `05e654828e51` |
 | `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | agent_requested | 70 | `64a0e957121b` |
 | `05-ask-mode.mdc` | `l9.rule.05.ask.mode` | global | governance | always | 65 | `4b2f5f472100` |
 | `06-governance-ssot-paths.mdc` | `l9.rule.governance-ssot-paths` | global | git | always | 56 | `d08e5923b2c6` |
+| `07-max-velocity-research.mdc` | `l9.rule.07.max.velocity.research` | global | governance | always | 39 | `ce3021bf6cf2` |
 | `08-vps-ops.mdc` | `l9.rule.08.vps.ops` | global | git | agent_requested | 192 | `8ca195f6994d` |
 | `09-execute-as-instructed.mdc` | `l9.rule.09.execute.as.instructed` | global | general | always | 48 | `13d3fb355837` |
 | `10-lang-typescript.mdc` | `l9.rule.10.lang.typescript` | global | typescript | agent_requested | 182 | `bb98eadfc112` |
