@@ -24,8 +24,9 @@ since realignment stage C9):
   ~/.l9/claude/projection-receipt.json   skill/command/rule/settings/hooks/plugins/mcp
   ~/.l9/claude/bootstrap-state.json      capabilities / memory / mcp coarse words
   ops/memory/diagnostics.py              memory.cli (R0/R1 binding + executable),
-                                         memory control plane (R2/R3 store + service),
-                                         memory.mcp (R4 managed entry installed)
+                                         memory control plane (R2/R3 store + service)
+  workspace .mcp.json + L9_MEMORY_INTERPRETER
+                                         Claude mcp (not Cursor diagnostics R4)
   make -C $GOV l9-consumer-safe-list     Makefile facade
   ops/scripts/install_l9_dispatcher.sh --check   dispatcher install
   ops/autonomy/merge_gate.py             live merge-authority posture probe
