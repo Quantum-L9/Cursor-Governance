@@ -600,10 +600,9 @@ cat "$_cls_tmp" >>"$_GATE_LOG" || true
 rm -f "$_cls_tmp"
 if [[ "$_cls_rc" -ne 0 ]]; then
   echo "WARN: non-generated tracked files dirty after writers/heal — committing rewrites and continuing this make pr"
-  git status --porcelain | grep -vE '^\?\?' || true
+  git status --porcelain | awk '!/^\?\?/'
   if ! _gate_commit_writer_dirt; then
     echo "FAIL: could not commit writer rewrites — fix the tree, then make pr once"
-    echo "FAIL: could not commit writer rewrites" >>"$_GATE_LOG" || true
     exit 1
   fi
   _cls_tmp="$(mktemp)"
@@ -612,11 +611,10 @@ if [[ "$_cls_rc" -ne 0 ]]; then
   _cls_rc=$?
   set -e
   cat "$_cls_tmp"
-  cat "$_cls_tmp" >>"$_GATE_LOG" || true
   rm -f "$_cls_tmp"
   if [[ "$_cls_rc" -ne 0 ]]; then
     echo "FAIL: tree still dirty after writer-rewrite commit"
-    git status --porcelain | grep -vE '^\?\?' || true
+    git status --porcelain | awk '!/^\?\?/'
     exit 1
   fi
 fi
