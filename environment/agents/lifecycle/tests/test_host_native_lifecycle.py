@@ -16,7 +16,7 @@ _GOV_ROOT = Path(__file__).resolve().parents[4]
 if str(_GOV_ROOT) not in sys.path:
     sys.path.insert(0, str(_GOV_ROOT))
 
-from environment.agents.lifecycle import compose_start, receipts  # noqa: E402
+from environment.agents.lifecycle import compose_start, compose_stop, receipts  # noqa: E402
 
 
 class HostNativeLifecycleTests(unittest.TestCase):
@@ -103,6 +103,33 @@ class HostNativeLifecycleTests(unittest.TestCase):
     def test_uncorrelated_start_without_admission_stays_denied(self) -> None:
         out = compose_start.compose_host_subagent_start(self._start("tu-none", "sub-none"))
         self.assertEqual(out["permission"], "deny")
+
+    def test_explore_prose_stop_harvests_incomplete_packet(self) -> None:
+        pre_payload = self._pre("tu-explore-stop", "explore")
+        pre_payload["workspace_root"] = str(_GOV_ROOT)
+        pre = compose_start.compose_host_pre_tool_use(pre_payload)
+        self.assertEqual(pre["permission"], "allow", pre)
+        start_payload = self._start("tu-explore-stop", "sub-explore-stop")
+        start_payload["workspace_root"] = str(_GOV_ROOT)
+        start = compose_start.compose_host_subagent_start(start_payload)
+        self.assertEqual(start["permission"], "allow", start)
+        dispatch = receipts.load_dispatch(str(pre["action_id"]))
+        self.assertIsNotNone(dispatch)
+        self.assertRegex(str(dispatch.get("base_sha") or ""), r"^[0-9a-fA-F]{40}$")
+        out = compose_stop.compose_subagent_stop(
+            {
+                "subagent_id": "sub-explore-stop",
+                "status": "completed",
+                "output": "explored the tree; no structured document",
+            }
+        )
+        self.assertEqual(out.get("status"), "RETURNED", out)
+        generated = out.get("generated_data") or {}
+        self.assertEqual(generated.get("status"), "ACCEPTED_INCOMPLETE", generated)
+        self.assertEqual(generated.get("document_status"), "partial", generated)
+        ingress = generated.get("ingress_receipt") or {}
+        self.assertEqual(ingress.get("source_kind"), "accepted_subagent_result", generated)
+        self.assertNotIn("runtime_database", receipts.load_host_correlation("sub-explore-stop"))
 
     def test_cursor_profile_matches_claude_velocity(self) -> None:
         caps = compose_start._host_native_caps()

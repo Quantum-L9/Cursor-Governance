@@ -268,6 +268,66 @@ class ResultBridgeTests(unittest.TestCase):
                     expected_pipeline_role,
                 )
 
+    def test_compile_incomplete_maps_explore_to_recon(self) -> None:
+        document = self.bridge.compile_incomplete_result(
+            {
+                "assignment_id": "host-native-tu-explore",
+                "campaign_id": "host-native",
+                "graph_id": "host-native",
+                "action_id": "host-native-tu-explore",
+                "agent_id": "host-native-tu-explore",
+                "lease_id": "no-root-lease-host-native-tu-explore",
+                "base_sha": "a" * 40,
+                "result_role": "explore",
+            },
+            {"expected_subagent_type": "explore", "objective": ""},
+            "b" * 64,
+        )
+        self.assertEqual(document["status"], "partial")
+        self.assertEqual(document["assignment"]["role"], "recon")
+        self.assertEqual(document["result_kind"], "ReconReport")
+        self.assertEqual(
+            document["assignment"]["objective"],
+            "incomplete host result for host-native-tu-explore",
+        )
+        self.assertFalse(document["deliverable"]["reuse_assessment"]["reusable_data_found"])
+        self.assertEqual(len(document["deliverable"]["unresolved_items"]), 1)
+        self.bridge.validate_result_document(document)
+
+    def test_compile_incomplete_keeps_mapped_role(self) -> None:
+        document = self.bridge.compile_incomplete_result(
+            {
+                "assignment_id": "asg-test",
+                "campaign_id": "camp-1",
+                "graph_id": "graph-1",
+                "action_id": "act-1",
+                "agent_id": "agent-1",
+                "lease_id": "lease-1",
+                "base_sha": "c" * 40,
+                "result_role": "executor",
+            },
+            {"objective": "Run the bounded tests."},
+            "d" * 64,
+        )
+        self.assertEqual(document["assignment"]["role"], "test")
+        self.assertEqual(document["result_kind"], "TestReport")
+
+    def test_compile_incomplete_rejects_invented_sha(self) -> None:
+        with self.assertRaises(self.bridge.ResultValidationError):
+            self.bridge.compile_incomplete_result(
+                {
+                    "assignment_id": "asg-nosh",
+                    "campaign_id": "host-native",
+                    "graph_id": "host-native",
+                    "action_id": "asg-nosh",
+                    "agent_id": "asg-nosh",
+                    "lease_id": "no-root-lease-asg-nosh",
+                    "base_sha": "not-a-sha",
+                },
+                {"workspace": "/tmp/does-not-exist-incomplete-harvest"},
+                "e" * 64,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

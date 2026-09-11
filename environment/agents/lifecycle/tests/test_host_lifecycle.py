@@ -176,6 +176,11 @@ class HostLifecycleTests(unittest.TestCase):
         # the existing result pipeline (never quarantined as an orphan).
         self.assertNotEqual(out.get("status"), "QUARANTINED")
         self.assertTrue(receipts.host_stop_path("sub-100").is_file())
+        generated = out.get("generated_data") or {}
+        self.assertEqual(generated.get("status"), "ACCEPTED_INCOMPLETE", generated)
+        ingress = generated.get("ingress_receipt") or {}
+        self.assertEqual(ingress.get("source_kind"), "accepted_subagent_result", generated)
+        self.assertEqual(generated.get("document_status"), "partial", generated)
 
     def test_host_stop_structured_result_writes_accepted_subagent_ingress(self) -> None:
         admission = self._admission()
@@ -232,6 +237,25 @@ class HostLifecycleTests(unittest.TestCase):
         generated = out.get("generated_data") or {}
         ingress = generated.get("ingress_receipt") or {}
         self.assertEqual(ingress.get("source_kind"), "accepted_subagent_result", generated)
+        self.assertEqual(generated.get("status"), "ACCEPTED", generated)
+
+    def test_host_stop_invalid_dict_stays_rejected(self) -> None:
+        admission = self._admission()
+        compose_start.compose_host_pre_tool_use(
+            self._pre_tool_use_payload(admission["prompt_marker"])
+        )
+        compose_start.compose_host_subagent_start(self._subagent_start_payload())
+        out = compose_stop.compose_subagent_stop(
+            {
+                "subagent_id": "sub-100",
+                "status": "COMPLETED",
+                "output": {"not": "a result document"},
+            }
+        )
+        self.assertEqual(out.get("status"), "RETURNED", out)
+        generated = out.get("generated_data") or {}
+        self.assertEqual(generated.get("status"), "REJECTED", generated)
+        self.assertIsNone(generated.get("ingress_receipt"))
 
 
 if __name__ == "__main__":

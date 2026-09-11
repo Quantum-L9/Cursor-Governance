@@ -1,24 +1,28 @@
 ---
 id: l9.rule.77.cursor.subagent.orchestration
-version: 1.0.0
-description: Govern Cursor-native concurrent subagent delegation.
+version: 1.1.0
+description: Govern Cursor-native concurrent subagent delegation on PE-token and host-native paths.
 scope: global
 domain: governance
-activation: agent_requested
+activation: always
 authority: canonical_global
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Cursor-native subagent orchestration (L9)
 
+Admission is **PE token or host-native**. A Task with `L9_ADMISSION_TOKEN` binds through Program Execution. A Task without a token binds as `host-native` when the type is allowlisted. A Task with no token and no allowlisted type stays denied.
+
 When two or more bounded actions are independently ready:
 
 1. Keep architecture, synthesis, integration, and user decisions with the main agent.
-2. Use existing autonomy readiness, lease, and resource-claim contracts.
+2. Use existing autonomy readiness, lease, and resource-claim contracts. Host-native uses the no-root-lease sentinel and does not require a PE runtime database.
 3. Launch all currently ready non-conflicting Cursor subagents in one batch.
 4. Continue independent critical-path work while background subagents run.
-5. Require one `l9.cursor-subagent.result.v1` document from each subagent.
-6. Reject narrative-only completion.
+5. Require one `l9.cursor-subagent.result.v1` document from each Task child. If the child returns a non-document, Stop compiles `status: partial`. That harvest is not completion.
+6. Reject narrative-only “done” as completion.
 7. Require a different agent for verifier/reviewer work.
-8. Submit only accepted documents through the cursor-subagents result bridge.
+8. Submit only accepted documents through the cursor-subagents result bridge. `ACCEPTED_INCOMPLETE` is evidence, not mutation or promotion authority.
 9. Do not poll CI, discover PR work, select models, or launch external agents.
+
+Stop harvests only when `subagentStart` wrote a DispatchReceipt. Orphan Stop stays QUARANTINED.

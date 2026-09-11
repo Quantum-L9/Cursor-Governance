@@ -4,8 +4,10 @@ import copy
 import hashlib
 import json
 import re
+import subprocess
 import sys
 from collections.abc import Mapping
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -165,6 +167,149 @@ def with_artifact_digest(document: Mapping[str, Any]) -> dict[str, Any]:
     provenance["artifact_digest"] = compute_artifact_digest(result)
     validate_result_document(result)
     return result
+
+
+def _workspace_head(workspace: str) -> str | None:
+    """Same resolution Start uses: ``git rev-parse HEAD`` in the workspace."""
+    root = Path(workspace).expanduser() if workspace else None
+    if root is None or not root.exists():
+        return None
+    proc = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "HEAD"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    sha = (proc.stdout or "").strip()
+    return sha or None
+
+
+def _incomplete_role(return_receipt: Mapping[str, Any], dispatch: Mapping[str, Any]) -> str:
+    raw = (
+        return_receipt.get("result_role")
+        or return_receipt.get("subagent_role")
+        or dispatch.get("result_role")
+        or dispatch.get("subagent_role")
+        or ""
+    )
+    mapped = canonical_cursor_role(raw)
+    if mapped in ROLE_TO_RESULT_KIND:
+        return mapped
+    subagent_type = str(
+        dispatch.get("expected_subagent_type") or dispatch.get("subagent_type") or ""
+    ).strip()
+    if subagent_type == "explore" or mapped == "explore":
+        return "recon"
+    return "recon"
+
+
+def _incomplete_base_sha(return_receipt: Mapping[str, Any], dispatch: Mapping[str, Any]) -> str:
+    for source in (return_receipt, dispatch):
+        sha = str(source.get("base_sha") or "").strip()
+        if _SHA_PATTERN.fullmatch(sha):
+            return sha
+    workspace = str(dispatch.get("workspace") or return_receipt.get("workspace") or "")
+    resolved = _workspace_head(workspace)
+    if resolved and _SHA_PATTERN.fullmatch(resolved):
+        return resolved
+    raise ResultValidationError("document.identity.base_sha must be an exact 40-character Git SHA")
+
+
+def _incomplete_result_id(raw_digest: str) -> str:
+    digest = str(raw_digest or "").strip()
+    if _DIGEST_PATTERN.fullmatch(digest):
+        return f"incomplete-{digest[:32]}"
+    hashed = hashlib.sha256(digest.encode("utf-8")).hexdigest()
+    return f"incomplete-{hashed[:32]}"
+
+
+def compile_incomplete_result(
+    return_receipt: Mapping[str, Any],
+    dispatch: Mapping[str, Any],
+    raw_digest: str,
+) -> dict[str, Any]:
+    """Build one schema-valid ``status: partial`` document from a non-document Stop.
+
+    Identity fields come from the return receipt. ``base_sha`` may be filled
+    from the same workspace HEAD Start uses; it is never invented. Role maps
+    through ``ROLE_TO_RESULT_KIND`` or ``explore`` → ``recon``. Unmapped host
+    types use ``recon`` / ``ReconReport``.
+    """
+    assignment_id = str(
+        return_receipt.get("assignment_id") or dispatch.get("assignment_id") or ""
+    ).strip()
+    if not assignment_id:
+        raise ResultValidationError("incomplete result requires assignment_id")
+    role = _incomplete_role(return_receipt, dispatch)
+    identity = {
+        "campaign_id": str(return_receipt.get("campaign_id") or dispatch.get("campaign_id") or ""),
+        "graph_id": str(return_receipt.get("graph_id") or dispatch.get("graph_id") or ""),
+        "action_id": str(return_receipt.get("action_id") or dispatch.get("action_id") or ""),
+        "agent_id": str(return_receipt.get("agent_id") or dispatch.get("agent_id") or ""),
+        "lease_id": str(return_receipt.get("lease_id") or dispatch.get("lease_id") or ""),
+        "base_sha": _incomplete_base_sha(return_receipt, dispatch),
+    }
+    objective = str(dispatch.get("objective") or return_receipt.get("objective") or "").strip()
+    if not objective:
+        objective = f"incomplete host result for {assignment_id}"
+    source_action = str(identity["action_id"] or assignment_id)
+    document = {
+        "schema": RESULT_SCHEMA,
+        "schema_version": RESULT_SCHEMA_VERSION,
+        "result_id": _incomplete_result_id(raw_digest),
+        "result_kind": ROLE_TO_RESULT_KIND[role],
+        "status": "partial",
+        "identity": identity,
+        "assignment": {
+            "role": role,
+            "objective": objective,
+            "input_artifact_ids": list(dispatch.get("input_artifact_ids") or []),
+            "allowed_paths": list(dispatch.get("allowed_paths") or []),
+            "forbidden_paths": list(dispatch.get("forbidden_paths") or []),
+        },
+        "deliverable": {
+            "summary": (
+                "Child returned no structured result.v1 document; Stop compiled "
+                "a partial harvest packet."
+            ),
+            "findings": [],
+            "files_read": [],
+            "files_changed": [],
+            "evidence": [],
+            "commands_executed": [],
+            "validations": [],
+            "unresolved_items": [
+                {
+                    "unknown_id": "unknown-no-structured-result",
+                    "description": (
+                        "The child returned a non-document. Raw capture digest "
+                        f"{raw_digest or 'absent'} is evidence only; the "
+                        "transcript body is not a result."
+                    ),
+                    "class": "evidence_available_but_uninspected",
+                    "blocking_status": "non_blocking",
+                    "owner": "cursor-subagent-stop",
+                    "next_action": "Re-run the child with a schema-valid result.v1 document.",
+                    "evidence_needed": "l9.cursor-subagent.result.v1 from the same assignment.",
+                    "source_action": source_action,
+                }
+            ],
+            "recommended_next_actions": [
+                "Require l9.cursor-subagent.result.v1 from the Task child."
+            ],
+            "reuse_assessment": {
+                "reusable_data_found": False,
+                "confidence": 0.2,
+                "reason": (
+                    "No structured findings were returned. Silence is not reusable generated data."
+                ),
+            },
+            "visibility": "repository_local",
+        },
+        "provenance": {"produced_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")},
+    }
+    validate_result_document(document)
+    return document
 
 
 def _require_mapping(value: Any, path: str) -> Mapping[str, Any]:
