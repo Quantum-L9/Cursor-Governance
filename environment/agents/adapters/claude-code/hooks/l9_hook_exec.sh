@@ -94,16 +94,28 @@ if [ -n "$_L9_REQUIRED" ] && [ "$_L9_REQUIRED" != "$HOOK_CLASS" ]; then
 fi
 unset _L9_REQUIRED
 
-# The cloud SSOT is always $HOME/.cursor-governance. L9_GOVERNANCE_DIR is honoured
-# only when it agrees, so an unexpanded literal '$HOME' from an .env-format
-# environment field can never redirect a gate at its policy.
+# INV-1c: the governance tree this launcher dispatches out of is $HOME/.cursor-governance
+# and nothing else. SESSION_START_SPEC hard constraint 2 states it for the
+# SessionStart hook; it holds a fortiori for every gate, because what the
+# launcher resolves here is BOTH the policy code it execs and the locked
+# interpreter it execs that code on.
+#
+# This used to honour a divergent L9_GOVERNANCE_DIR whenever the named directory
+# held a CANONICAL_LAW.md, guarding only the unexpanded literal '$HOME' case.
+# The comment above the guard claimed the opposite — "honoured only when it
+# agrees ... can never redirect a gate at its policy" — and the audit that
+# replaced it demonstrated the gap by execution: with L9_GOVERNANCE_DIR pointed
+# at a throwaway directory containing a stub CANONICAL_LAW.md, the launcher ran
+# that directory's session_start_claude_governance.sh (injecting arbitrary
+# additionalContext into the session) and then ran its memory_gate.py, as a
+# gate, on its .venv interpreter, exiting 0. A gate whose policy and interpreter
+# both come from an environment variable is not a gate.
+#
+# The sanctioned configuration never needed the redirect: ~/.l9/cloud-session.env
+# exports L9_GOVERNANCE_DIR=$HOME/.cursor-governance, i.e. the value this line
+# already computes. Tests that need the launcher pointed elsewhere move HOME,
+# which is how the sibling launcher suites have always done it.
 GOV_DIR="$HOME/.cursor-governance"
-if [ -n "${L9_GOVERNANCE_DIR:-}" ] && [ "$L9_GOVERNANCE_DIR" != "$GOV_DIR" ]; then
-  case "$L9_GOVERNANCE_DIR" in
-    *'$HOME'*|*'${HOME}'*) : ;;
-    *) [ -f "$L9_GOVERNANCE_DIR/CANONICAL_LAW.md" ] && GOV_DIR="$L9_GOVERNANCE_DIR" ;;
-  esac
-fi
 
 # Surface guard (INV-2): one canonical detector decides which host owns each
 # hook. All observers are Claude adapter observers, so they skip on every
