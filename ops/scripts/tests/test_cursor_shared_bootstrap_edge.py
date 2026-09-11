@@ -73,9 +73,7 @@ class CursorSharedBootstrapEdgeTests(unittest.TestCase):
 
     def test_hook_shared_bootstrap_resolve_prefers_worktree_over_gc(self) -> None:
         live = _live_path(HOOK.read_text(encoding="utf-8"))
-        worktree = live.index(
-            "CURSOR_PROJECT_DIR/ops/scripts/bootstrap_agent_environment.sh"
-        )
+        worktree = live.index("CURSOR_PROJECT_DIR/ops/scripts/bootstrap_agent_environment.sh")
         gc = live.index("$GC/ops/scripts/bootstrap_agent_environment.sh")
         self.assertLess(worktree, gc)
         self.assertIn("resolve_shared_bootstrap", live)

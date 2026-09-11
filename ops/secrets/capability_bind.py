@@ -225,9 +225,7 @@ def _resolve(
         else:
             fetch = infisical_cli or _from_machine_profile
             resolved = fetch(name)
-            source, value = (
-                (SOURCE_INFISICAL, resolved) if resolved else (SOURCE_UNBOUND, None)
-            )
+            source, value = (SOURCE_INFISICAL, resolved) if resolved else (SOURCE_UNBOUND, None)
     return source, value
 
 

@@ -63,17 +63,13 @@ class PacketBooleanTests(unittest.TestCase):
         self.assertIn("close_gap", reason)
 
     def test_continuation_stale_true_is_degraded(self) -> None:
-        degraded, reason = chs.classify(
-            _packet(degraded=False, continuation_stale=True)
-        )
+        degraded, reason = chs.classify(_packet(degraded=False, continuation_stale=True))
         self.assertTrue(degraded)
         self.assertIn("STALE", reason)
         self.assertIn("continuation_stale", reason)
 
     def test_continuation_stale_none_is_not_stale(self) -> None:
-        degraded, reason = chs.classify(
-            _packet(degraded=False, continuation_stale=None)
-        )
+        degraded, reason = chs.classify(_packet(degraded=False, continuation_stale=None))
         self.assertFalse(degraded)
         self.assertEqual(reason, "")
 

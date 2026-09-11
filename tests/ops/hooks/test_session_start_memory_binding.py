@@ -15,4 +15,4 @@ def test_bootstrap_does_not_invent_memory_slogans() -> None:
     assert "exact|development_checkout" not in text
     assert """.get('status','unbound')""" not in text
     assert """echo '{"status":"unbound"}'""" not in text
-    assert "MEMORY_HEALTH=\"$HEALTH_JSON\"" in text
+    assert 'MEMORY_HEALTH="$HEALTH_JSON"' in text
