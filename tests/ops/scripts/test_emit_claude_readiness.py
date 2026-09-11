@@ -340,9 +340,7 @@ def _init_fake_gov(
     return gov
 
 
-def _fake_home(
-    tmp_path: Path, *, mcp: str = "READY", gated_out: list[str] | None = None
-) -> Path:
+def _fake_home(tmp_path: Path, *, mcp: str = "READY", gated_out: list[str] | None = None) -> Path:
     home = tmp_path / "home"
     cl = home / ".l9" / "claude"
     cl.mkdir(parents=True)

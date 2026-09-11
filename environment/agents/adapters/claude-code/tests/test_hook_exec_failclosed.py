@@ -685,9 +685,7 @@ class GovernanceDirIsNotRedirectableTests(unittest.TestCase):
     def test_a_divergent_governance_dir_cannot_supply_observer_context(self) -> None:
         """A SessionStart observer emits into the session; its source is pinned."""
         result = self._run("observer", "session_start_claude_governance.sh")
-        self.assertEqual(
-            result.returncode, 0, "the SessionStart hook ran from a foreign tree"
-        )
+        self.assertEqual(result.returncode, 0, "the SessionStart hook ran from a foreign tree")
 
     def test_a_divergent_governance_dir_does_not_rescue_a_missing_canonical_tree(self) -> None:
         """The foreign tree is complete; the canonical one is gone. Gates block."""
