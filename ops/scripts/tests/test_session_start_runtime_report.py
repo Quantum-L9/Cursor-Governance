@@ -191,8 +191,8 @@ class HydrateCollapseTests(unittest.TestCase):
                 aws_cli={"ok": True, "code": "OK", "summary": "authorized"},
                 secrets_bind=[
                     {"name": "SEMGREP_APP_TOKEN", "bound": True, "source": "env"},
-                    {"name": "SONAR_TOKEN", "bound": True, "source": "infisical-cli"},
-                    {"name": "GITHUB_TOKEN", "bound": True, "source": "infisical-cli"},
+                    {"name": "SONAR_TOKEN", "bound": True, "source": "infisical"},
+                    {"name": "GITHUB_TOKEN", "bound": True, "source": "infisical"},
                 ],
             )
         names = [item["name"] for item in lines]
@@ -221,8 +221,8 @@ class HydrateCollapseTests(unittest.TestCase):
                 aws_cli={"ok": True, "code": "OK", "summary": "authorized"},
                 secrets_bind=[
                     {"name": "SEMGREP_APP_TOKEN", "bound": True, "source": "env"},
-                    {"name": "SONAR_TOKEN", "bound": True, "source": "infisical-cli"},
-                    {"name": "GITHUB_TOKEN", "bound": True, "source": "infisical-cli"},
+                    {"name": "SONAR_TOKEN", "bound": True, "source": "infisical"},
+                    {"name": "GITHUB_TOKEN", "bound": True, "source": "infisical"},
                 ],
             )
         names = [item["name"] for item in lines]

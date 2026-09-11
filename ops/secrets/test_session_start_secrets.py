@@ -64,8 +64,8 @@ class SessionStartSecretsTests(unittest.TestCase):
 
     def test_aws_ok_with_profile_does_not_reseed(self) -> None:
         binds = [
-            {"name": "SEMGREP_APP_TOKEN", "bound": True, "source": "infisical-cli"},
-            {"name": "SONAR_TOKEN", "bound": True, "source": "infisical-cli"},
+            {"name": "SEMGREP_APP_TOKEN", "bound": True, "source": "infisical"},
+            {"name": "SONAR_TOKEN", "bound": True, "source": "infisical"},
             {"name": "GITHUB_TOKEN", "bound": True, "source": "env"},
         ]
         with (
@@ -83,7 +83,7 @@ class SessionStartSecretsTests(unittest.TestCase):
         self.assertTrue(result["plane_ok"])
         self.assertEqual(result["login"], "present")
         self.assertEqual(rc, 0)
-        self.assertIn("SEMGREP_APP_TOKEN=infisical-cli", err.getvalue())
+        self.assertIn("SEMGREP_APP_TOKEN=infisical", err.getvalue())
         self.assertNotIn("client_secret", err.getvalue())
 
     def test_login_failed_is_plane_failure(self) -> None:
@@ -111,9 +111,9 @@ class SessionStartSecretsTests(unittest.TestCase):
 
     def test_json_stdout_has_no_values(self) -> None:
         binds = [
-            {"name": "SEMGREP_APP_TOKEN", "bound": True, "source": "infisical-cli"},
-            {"name": "SONAR_TOKEN", "bound": True, "source": "infisical-cli"},
-            {"name": "GITHUB_TOKEN", "bound": True, "source": "infisical-cli"},
+            {"name": "SEMGREP_APP_TOKEN", "bound": True, "source": "infisical"},
+            {"name": "SONAR_TOKEN", "bound": True, "source": "infisical"},
+            {"name": "GITHUB_TOKEN", "bound": True, "source": "infisical"},
         ]
         with (
             mock.patch.object(

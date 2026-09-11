@@ -12,8 +12,8 @@ that is ``run_pr_security.sh`` unsetting the token in a CE child. This module
 is the Sonar-shaped **GET** of findings that already exist.
 
 Authentication: ``capability_bind.bind_first`` resolves SEMGREP_APP_TOKEN
-in-process (already-present env, then the Infisical CLI user profile, then
-AWS ``openclaw-igorbot/semgrep#token``). The value is never exported to
+in-process (already-present env, then ``~/.infisical/l9-machine.json`` via
+the Infisical HTTP client). AWS is not a bind path. The value is never exported to
 ``os.environ``, never printed, and never written to the snapshot. The retired
 capability broker is not involved. The App findings API is not public: without
 a bound token the snapshot is BLOCKED, never an empty pass. Authorization
