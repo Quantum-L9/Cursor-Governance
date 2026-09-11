@@ -4,8 +4,9 @@
 SSOT doctrine: ops/autonomy/surface_profile.yaml (l4_local_autonomy).
 State + receipts live under <workspace>/.l9/autonomy/ (gitignored).
 
-Tree kernels are owned by ops/autonomy/kernel_gate.py. authorize-release
-and check-remote fail closed without that receipt on every local surface.
+Tree kernels are owned by ops/autonomy/kernel_gate.py (first step of
+precommit-repo). They are not an L4 phase, and authorize-release does not
+require a kernel stamp (CANONICAL_LAW KERNEL_PRECOMMIT_HOOK_V1).
 
 Phases:
   executing          — local commits on stacked branch; push/PR denied
@@ -419,40 +420,10 @@ def record_kernels(
     return state
 
 
-_REMOTE_KERNEL_DENY = (
-    "L4 remote denied: tree kernels have not been recorded. "
-    "Apply kernels/Recursive Alignment.md and "
-    "kernels/Validate & Repair.md, then: "
-    "python3 ops/autonomy/kernel_gate.py record"
-)
-
-
-def _tree_kernel_blocker(root: Path) -> str | None:
-    """None when tree kernels are recorded or CI skipped the latch."""
-    try:
-        from kernel_gate import gov_root_from_env, kernel_latch_required, verify_tree
-    except ImportError:  # pragma: no cover - package import when not on sys.path
-        from ops.autonomy.kernel_gate import (  # type: ignore[no-redef]
-            gov_root_from_env,
-            kernel_latch_required,
-            verify_tree,
-        )
-    if not kernel_latch_required():
-        return None
-    return verify_tree(root, gov_root_from_env())
-
-
 def authorize_release(root: Path) -> dict[str, Any]:
     state = load_phase(root)
     if state is None:
         raise RuntimeError("no L4 phase — run: python3 ops/autonomy/l4_local.py begin")
-    blocker = _tree_kernel_blocker(root)
-    if blocker:
-        raise RuntimeError(
-            "L4 authorize-release requires tree kernels first. "
-            "Apply kernels/Recursive Alignment.md and kernels/Validate & Repair.md, "
-            "then: python3 ops/autonomy/kernel_gate.py record\n" + blocker
-        )
     branch = current_branch(root)
     if branch != state.get("stacked_branch"):
         raise RuntimeError(
@@ -589,18 +560,8 @@ def release_allows_remote(root: Path) -> tuple[bool, str]:
     if receipt:
         decided = _allow_from_receipt(root, receipt, state, branch)
         if decided is not None:
-            allowed, reason = decided
-            if allowed:
-                blocker = _tree_kernel_blocker(root)
-                if blocker:
-                    return False, _REMOTE_KERNEL_DENY
             return decided
-    allowed, reason = _allow_from_phase(state)
-    if allowed:
-        blocker = _tree_kernel_blocker(root)
-        if blocker:
-            return False, _REMOTE_KERNEL_DENY
-    return allowed, reason
+    return _allow_from_phase(state)
 
 
 def status_dict(root: Path) -> dict[str, Any]:

@@ -79,13 +79,18 @@ def _ci_surface(source: Mapping[str, str]) -> bool:
 
 
 def kernel_latch_surface(env: Mapping[str, str] | None = None) -> bool:
-    """True when local publish must take the tree-kernel latch.
+    """True when local publish must take the tree-kernel latch at precommit.
 
-    Cursor, adapters, and a bare local shell all fire so RA + Validate
-    & Repair record before L4 authorize and before precommit. Skip only
-    CI with no agent-surface marker: ``.l9/autonomy/kernel-receipt.json``
-    is gitignored and cannot exist on GitHub Actions. A CI job that sets
-    a known surface (unit tests) still latches.
+    Cursor, adapters, and a bare local shell all fire so RA + Validate &
+    Repair record before the precommit hooks and tests. This is NOT an L4
+    gate: ``authorize-release`` never consults it (CANONICAL_LAW
+    ``KERNEL_PRECOMMIT_HOOK_V1``).
+
+    A bare shell used to resolve ``unknown`` and skip, so a human publishing
+    without an agent-surface marker bypassed the latch entirely. Skip only CI
+    with no agent-surface marker: ``.l9/autonomy/kernel-receipt.json`` is
+    gitignored and cannot exist on GitHub Actions. A CI job that sets a known
+    surface (unit tests) still latches.
     """
     source = os.environ if env is None else env
     if _ci_surface(source) and detect_surface(source) == "unknown":

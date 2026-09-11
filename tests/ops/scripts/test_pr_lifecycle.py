@@ -177,14 +177,6 @@ def test_improve_begin_then_record(tmp_path: Path) -> None:
     begin = _run(["bash", str(SCRIPTS / "run_improve.sh")], cwd=repo, env=env)
     assert begin.returncode == 0, begin.stderr
     assert "L9_AGENT_REQUIRED" in begin.stdout
-    assert (
-        _run(
-            ["python3", str(KERNEL_GATE), "record", "--workspace", str(repo)],
-            cwd=repo,
-            env=env,
-        ).returncode
-        == 0
-    )
     rec = _run(
         ["bash", str(SCRIPTS / "run_improve.sh")],
         cwd=repo,

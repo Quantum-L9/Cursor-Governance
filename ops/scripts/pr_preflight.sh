@@ -53,8 +53,11 @@ fi
 L4_CLI="$GOV_ROOT/ops/autonomy/l4_local.py"
 if [[ -f "$L4_CLI" && "${L9_L4_LOCAL_AUTONOMY:-1}" != "0" ]]; then
   if ! "$PY" "$L4_CLI" --workspace "$WS" check-remote; then
-    echo "FAIL: L4 release not authorized — apply kernels, then:" >&2
-    echo "      python3 ops/autonomy/kernel_gate.py record && make improve IMPROVE_RECORD=1" >&2
+    # Kernels are not an L4 phase (CANONICAL_LAW KERNEL_PRECOMMIT_HOOK_V1):
+    # this failure is about authorization only. The tree-kernel latch fires
+    # later, inside make pr, and prints its own runnable record command.
+    echo "FAIL: L4 release not authorized — run make improve, then:" >&2
+    echo "      make improve IMPROVE_RECORD=1" >&2
     exit 1
   fi
   _head="$(git rev-parse HEAD)"
