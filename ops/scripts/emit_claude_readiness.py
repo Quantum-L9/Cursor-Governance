@@ -256,6 +256,47 @@ def _memory_probe_skipped() -> bool:
     return any(os.environ.get(name) == "1" for name in _MEMORY_PROBE_SKIP_ENVS)
 
 
+#: The one memory server `mcp.template.json` declares for Claude Code.
+_MEMORY_MCP_SERVER = "l9-graphite-memory"
+
+
+def _mcp_domain_entry(receipt: dict[str, Any] | None) -> dict[str, Any] | None:
+    """The projection receipt's own record for the `mcp` domain."""
+    if not receipt:
+        return None
+    per = receipt.get("domains")
+    if isinstance(per, list):
+        for entry in per:
+            if isinstance(entry, dict) and str(entry.get("domain") or "") == "mcp":
+                return entry
+    elif isinstance(per, dict):
+        entry = per.get("mcp")
+        if isinstance(entry, dict):
+            return entry
+    return None
+
+
+def _gated_out_servers(receipt: dict[str, Any] | None) -> frozenset[str]:
+    """Servers the template declares that the projection deliberately did not render.
+
+    ``claude_projection.py`` is the single authority over ``.mcp.json`` and
+    records this set itself: a server whose ``_requires_env`` variable the
+    platform has not proxied is omitted *by design* — "so an unproxied session
+    degrades to an absent server instead of emitting one that cannot
+    authenticate" (mcp.template.json). The set is read from the receipt's own
+    detail, never from ambient environment, for the reason
+    ``_map_projection_status`` already documents: the evidence has to be present
+    where the claim is made, or every hosted surface starts answering from a
+    variable instead of from what was actually projected.
+    """
+    entry = _mcp_domain_entry(receipt)
+    detail = entry.get("detail") if isinstance(entry, dict) else None
+    names = detail.get("gated_out_servers") if isinstance(detail, dict) else None
+    if not isinstance(names, list):
+        return frozenset()
+    return frozenset(str(name) for name in names)
+
+
 def _memory_levels(gov: Path) -> dict[str, str] | None:
     """R0..R9 statuses from the canonical readiness report, or None when unrunnable.
 
@@ -320,8 +361,39 @@ def _memory_control_plane_health(levels: dict[str, str] | None) -> tuple[str, st
     return READY, "canonical store and service ready"
 
 
-def _memory_mcp_health(levels: dict[str, str] | None) -> tuple[str, str]:
-    """R4 MCP_CONFIG_INSTALLED: the package-owned entry is present and current."""
+#: Printed when the memory server is absent because governance chose not to
+#: render it. Held as a constant so the receipt, the warning and the tests all
+#: say the same thing.
+MEMORY_MCP_GATED_NOTE = (
+    "absent by design: mcp.template.json gates it on L9_MEMORY_INTERPRETER, "
+    "unproxied on this surface; durable writes go through the memory CLI"
+)
+
+
+def _memory_mcp_health(
+    levels: dict[str, str] | None, *, gated_out: frozenset[str] = frozenset()
+) -> tuple[str, str]:
+    """Is the Claude-surface memory MCP entry in the state governance intends?
+
+    The Claude authority over that entry is the projection of
+    ``mcp.template.json``. R4 is not: it delegates to the memory package's
+    ``client cursor status``, which reads ``~/.cursor/mcp.json`` — Cursor's
+    client config. Grading a Claude surface from a Cursor artifact produced a
+    permanent false DEGRADED here, and a structurally permanent one on Web and
+    Mobile, where ``~/.cursor`` does not exist at all (SESSION_START_SPEC hard
+    constraint 4). That DEGRADED then cascaded to memory → shared_bootstrap →
+    overall, and a non-ready receipt is what arms the SessionStart installer
+    repair, so the cost was not only a wrong word: it was the repair budget,
+    spent once per governance revision on a condition no installer can fix.
+
+    So: when the projection deliberately gated the server out, that IS the
+    intended state. Reported READY with the reason named, exactly as `plugins`
+    reports a policy skip and `context7` — gated out by the same mechanism in
+    the same template — is already reported. When the server IS rendered, R4
+    remains the check.
+    """
+    if _MEMORY_MCP_SERVER in gated_out:
+        return READY, MEMORY_MCP_GATED_NOTE
     if levels is None:
         return UNKNOWN, "memory readiness unavailable"
     if levels.get("R4") != "pass":
@@ -329,15 +401,22 @@ def _memory_mcp_health(levels: dict[str, str] | None) -> tuple[str, str]:
     return READY, "managed entry installed"
 
 
-def memory_probe(gov: Path) -> dict[str, Any]:
-    """Split cli / control plane / mcp — a bound CLI with a dead store is not one word."""
+def memory_probe(gov: Path, *, projection: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Split cli / control plane / mcp — a bound CLI with a dead store is not one word.
+
+    ``projection`` is the projection receipt, passed in by the caller rather
+    than read from ``$HOME`` here: a probe that reaches for ambient state is
+    one whose answer depends on the machine it runs on, which is how a
+    hermetic unit test starts reading the developer's own receipt. No
+    projection supplied means no gating is known, and R4 decides alone.
+    """
     if _memory_probe_skipped():
         skipped = {"status": READY, "reason": "probe skipped"}
         return {"cli": dict(skipped), "control_plane": dict(skipped), "mcp": dict(skipped)}
     levels = _memory_levels(gov)
     cli_status, cli_note = _memory_cli_health(levels)
     plane_status, plane_note = _memory_control_plane_health(levels)
-    mcp_status, mcp_note = _memory_mcp_health(levels)
+    mcp_status, mcp_note = _memory_mcp_health(levels, gated_out=_gated_out_servers(projection))
     return {
         "cli": {"status": cli_status, "reason": cli_note},
         "control_plane": {"status": plane_status, "reason": plane_note},
@@ -552,7 +631,7 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
     proj = _read_json(home / ".l9" / "claude" / "projection-receipt.json")
     bootstrap = _read_json(home / ".l9" / "claude" / "bootstrap-state.json")
     proj_status = _projection_statuses(proj)
-    split = memory_probe(gov)
+    split = memory_probe(gov, projection=proj)
     cli_status = str(split["cli"]["status"])
     cli_note = str(split["cli"]["reason"])
     mem_mcp_status = str(split["mcp"]["status"])
@@ -619,6 +698,13 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
     agg = {**dims, "governance_freshness": freshness_status}
     failures = [_line(k, v) for k, v in agg.items() if v == BLOCKED]
     warnings = [_line(k, v) for k, v in agg.items() if v in {DEGRADED, UNKNOWN}]
+    # A server governance chose not to render is READY (it is in the intended
+    # state) but it is still absent, and an agent reading only the status line
+    # would go looking for MCP tools that are not there. Warnings are otherwise
+    # derived from status alone, so this one is stated explicitly rather than
+    # left to a `notes` entry the compact block does not print.
+    if mem_mcp_note == MEMORY_MCP_GATED_NOTE:
+        warnings.append(f"memory_mcp_status: {MEMORY_MCP_GATED_NOTE}")
 
     overall = _aggregate(agg)
 
@@ -798,7 +884,10 @@ def main() -> int:
 
     gov = args.root or _gov_root()
     if args.memory_probe:
-        print(json.dumps(memory_probe(gov)))
+        # install.sh reads this to set STATUS_MEMORY_MCP, so it must reach the
+        # same verdict as build_receipt: same probe, same projection evidence.
+        projection = _read_json(Path.home() / ".l9" / "claude" / "projection-receipt.json")
+        print(json.dumps(memory_probe(gov, projection=projection)))
         return 0
 
     workspace = args.workspace or os.environ.get("CURSOR_PROJECT_DIR") or os.getcwd()
