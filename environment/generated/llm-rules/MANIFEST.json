@@ -418,11 +418,11 @@
     },
     {
       "alias": null,
-      "class": "skipped_agent_requested",
-      "output": null,
-      "output_sha256": null,
+      "class": "always",
+      "output": "77-cursor-subagent-orchestration.md",
+      "output_sha256": "3233da335244155ae5ad836d9795c2c5c8df08070d19f0c6b09b265e15ce882c",
       "source": "rules/77-cursor-subagent-orchestration.mdc",
-      "source_sha256": "67cc9f7af1be2a4c66d51c7060801a03710a1d94042cfc039cb505435efd65a1",
+      "source_sha256": "ee79f4d8ce9beeceb0b5261f3e1c34a6d16a6964877a47a0ba091d8de401f6de",
       "stem": "77-cursor-subagent-orchestration"
     },
     {
@@ -637,9 +637,9 @@
   "source_relative": "rules",
   "summary": {
     "denied": 1,
-    "projected": 52,
-    "skipped_agent_requested": 17,
+    "projected": 53,
+    "skipped_agent_requested": 16,
     "source_mdc": 70
   },
-  "tree_sha256": "7a4b6c05f5ff6452baac1fbe17ee173f87b4accd6b8a69cb82e3cb22c37e4679"
+  "tree_sha256": "3d7e2a2140c18904467f24f95a2b973bd3c84590b445b4583ebc8d3f4bf7d49d"
 }
