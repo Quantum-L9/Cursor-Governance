@@ -17,7 +17,12 @@ import classify_hydrate_state as chs  # noqa: E402
 SCRIPT = REPO / "ops" / "scripts" / "classify_hydrate_state.py"
 
 
-def _packet(degraded: bool, close_gap: bool = False, reason: str = "") -> str:
+def _packet(
+    degraded: bool,
+    close_gap: bool = False,
+    reason: str = "",
+    continuation_stale: bool | None = None,
+) -> str:
     body = {
         "packet_id": "4c38fc2777aa8dc4",
         "group_id": "cursor-governance",
@@ -28,6 +33,7 @@ def _packet(degraded: bool, close_gap: bool = False, reason: str = "") -> str:
             "degraded": degraded,
             "degrade_reason": reason,
             "close_gap": close_gap,
+            "continuation_stale": continuation_stale,
         },
     }
     return (
@@ -55,6 +61,21 @@ class PacketBooleanTests(unittest.TestCase):
         degraded, reason = chs.classify(_packet(degraded=False, close_gap=True))
         self.assertTrue(degraded)
         self.assertIn("close_gap", reason)
+
+    def test_continuation_stale_true_is_degraded(self) -> None:
+        degraded, reason = chs.classify(
+            _packet(degraded=False, continuation_stale=True)
+        )
+        self.assertTrue(degraded)
+        self.assertIn("STALE", reason)
+        self.assertIn("continuation_stale", reason)
+
+    def test_continuation_stale_none_is_not_stale(self) -> None:
+        degraded, reason = chs.classify(
+            _packet(degraded=False, continuation_stale=None)
+        )
+        self.assertFalse(degraded)
+        self.assertEqual(reason, "")
 
     def test_packet_wins_over_prose_mentioning_degraded(self) -> None:
         md = "notes: a previous session was degraded\n" + _packet(degraded=False)

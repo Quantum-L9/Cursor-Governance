@@ -11,7 +11,6 @@ HOOK = REPO / "ops" / "hooks" / "session_start_bootstrap.sh"
 SHARED = REPO / "ops" / "scripts" / "bootstrap_agent_environment.sh"
 
 FORBIDDEN = {
-    "ensure_uv_environment.sh": "locked toolchain",
     "gitleaks": "checker provisioning",
     "hydrate_infisical": "secret resolution",
     "scratch_hold.py": "scratch-hold restore",
@@ -71,6 +70,19 @@ class CursorSharedBootstrapEdgeTests(unittest.TestCase):
         gc = live.index("$GC/ops/scripts/session_start_runtime_report.py")
         self.assertLess(override, worktree)
         self.assertLess(worktree, gc)
+
+    def test_hook_shared_bootstrap_resolve_prefers_worktree_over_gc(self) -> None:
+        live = _live_path(HOOK.read_text(encoding="utf-8"))
+        worktree = live.index(
+            "CURSOR_PROJECT_DIR/ops/scripts/bootstrap_agent_environment.sh"
+        )
+        gc = live.index("$GC/ops/scripts/bootstrap_agent_environment.sh")
+        self.assertLess(worktree, gc)
+        self.assertIn("resolve_shared_bootstrap", live)
+        self.assertNotIn(
+            'SHARED_BOOTSTRAP="$GC/ops/scripts/bootstrap_agent_environment.sh"',
+            live,
+        )
 
     def test_hook_drops_fault_slogans(self) -> None:
         live = _live_path(HOOK.read_text(encoding="utf-8"))

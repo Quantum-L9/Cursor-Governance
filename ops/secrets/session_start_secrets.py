@@ -43,20 +43,55 @@ def run_plane() -> dict[str, Any]:
             }
         )
     return {
-        "aws": {"ok": bool(aws.get("ok")), "code": str(aws.get("code") or "")},
+        "aws": {
+            "ok": bool(aws.get("ok")),
+            "code": str(aws.get("code") or ""),
+            "summary": str(aws.get("summary") or ""),
+        },
         "login": login_state,
         "binds": binds,
         "plane_ok": bool(aws.get("ok")) and login_state != "failed",
     }
 
 
+def receipt_payload(result: dict[str, Any]) -> dict[str, Any]:
+    aws = result.get("aws") if isinstance(result.get("aws"), dict) else {}
+    binds = result.get("binds") if isinstance(result.get("binds"), list) else []
+    return {
+        "ok": bool(result.get("plane_ok")),
+        "login": result.get("login"),
+        "aws": {
+            "ok": bool(aws.get("ok")),
+            "code": str(aws.get("code") or ""),
+            "summary": str(aws.get("summary") or ""),
+        },
+        "binds": binds,
+    }
+
+
+def write_receipt(path: Path, result: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = json.dumps(receipt_payload(result), sort_keys=True) + "\n"
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(payload, encoding="utf-8")
+    tmp.replace(path)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--json", action="store_true")
+    parser.add_argument(
+        "--receipt-out",
+        default="",
+        help="Write the receipt JSON to this path. Omit to write no file.",
+    )
     args = parser.parse_args(argv)
     result = run_plane()
+    payload = receipt_payload(result)
+    if args.receipt_out:
+        write_receipt(Path(args.receipt_out), result)
     if args.json:
-        print(json.dumps({"ok": result["plane_ok"], "login": result["login"]}))
+        print(json.dumps(payload))
     if not result["plane_ok"]:
         if not result["aws"]["ok"]:
             print(

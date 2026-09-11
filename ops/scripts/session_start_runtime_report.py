@@ -29,7 +29,6 @@ for _path in (_REPO, _SCRIPTS, _AUTONOMY, _SECRETS):
 
 from breakglass_receipt import evaluate, load_receipt  # noqa: E402
 from claude_bootstrap_receipt import read as read_claude_receipt  # noqa: E402
-from session_start_secrets import BIND_NAMES  # noqa: E402
 
 OK = "ok"
 NA = "n/a"
@@ -254,6 +253,20 @@ def classify_cursor_adapter(
         ]
     if state == "ready":
         return [_line("cursor-adapter", OK, reason or "all required components READY")]
+    if state == "unknown":
+        # TTL/revision expiry: the file no longer describes an observed state.
+        # That is not a this-session install failure (same reader contract as
+        # never_ran — n/a until make cursor-install writes a fresh receipt).
+        return [
+            _line(
+                "cursor-adapter",
+                NA,
+                f"stale_receipt — {reason or 'receipt no longer describes an observed state'}",
+                evidence=reason,
+                this_surface=False,
+                include_in_degraded=False,
+            )
+        ]
     klass = FAILED if state in {"failed", "blocked"} else DEGRADED
     return [_line("cursor-adapter", klass, f"{state} — {reason or 'receipt state=' + state}")]
 
@@ -358,6 +371,22 @@ def resolve_memory_proof(*, raw_proof: str = "", raw_detail: str = "") -> dict[s
     return probe_memory_binding()
 
 
+def classify_tunnel(detail: str) -> dict[str, Any]:
+    """The provider tunnel is retired. A constant slogan is not a live probe."""
+    text = detail or ""
+    lowered = text.lower()
+    if "retired" in lowered or "no provider tunnel" in lowered:
+        return _line(
+            "tunnel",
+            NA,
+            text or "not a plane — memory control plane (no provider tunnel)",
+            evidence="not probed",
+            this_surface=False,
+            include_in_degraded=False,
+        )
+    return classify_simple("tunnel", text, fail_tokens=("fail", "refused", "error", "closed"))
+
+
 def classify_simple(name: str, detail: str, *, fail_tokens: tuple[str, ...] = ()) -> dict[str, Any]:
     text = detail or ""
     lowered = text.lower()
@@ -367,14 +396,62 @@ def classify_simple(name: str, detail: str, *, fail_tokens: tuple[str, ...] = ()
     return _line(name, OK, text or "ok")
 
 
+def classify_venv(detail: str) -> dict[str, Any]:
+    """Quote the ensure_uv check UV: line. Nonzero check is DEGRADED, not FAILED."""
+    text = (detail or "").strip()
+    if not text:
+        return _line(
+            "venv",
+            DEGRADED,
+            "probe unread — ensure_uv_environment.sh produced no UV: line",
+            evidence="no probe",
+        )
+    lowered = text.lower()
+    if any(
+        token in lowered
+        for token in (
+            "unavailable",
+            "synchronization required",
+            "missing",
+            "without a usable",
+        )
+    ):
+        return _line("venv", DEGRADED, text, evidence=text)
+    return _line("venv", OK, text)
+
+
+def classify_backup(detail: str) -> dict[str, Any]:
+    """backup_gate.sh is decision-only. SKIP is n/a, not a this-session fail."""
+    text = (detail or "").strip()
+    if not text:
+        return _line(
+            "backup",
+            DEGRADED,
+            "probe unread — backup_gate.sh produced no PROCEED/SKIP line",
+            evidence="no probe",
+        )
+    if text.startswith("PROCEED"):
+        return _line("backup", OK, text)
+    if text.startswith("SKIP"):
+        return _line(
+            "backup",
+            NA,
+            text,
+            evidence=text,
+            this_surface=False,
+            include_in_degraded=False,
+        )
+    return _line("backup", OK, text)
+
+
 def classify_aws_cli(result: dict[str, Any] | None) -> dict[str, Any]:
-    """Derived view of aws_cli_preflight.probe. Never prints account ids."""
+    """Derived view of the secrets-plane receipt aws object. Never prints account ids."""
     if not result:
         return _line(
             "aws-cli",
             FAILED,
-            "probe unread — aws_cli_preflight produced no result",
-            evidence="no probe",
+            "aws-cli receipt unread",
+            evidence="no receipt",
         )
     if result.get("ok"):
         return _line("aws-cli", OK, str(result.get("summary") or "authorized"))
@@ -396,8 +473,8 @@ def classify_secrets_bind(statuses: list[dict[str, Any]] | None) -> dict[str, An
         return _line(
             "secrets-bind",
             DEGRADED,
-            "probe unread — capability_bind produced no status",
-            evidence="no bind statuses",
+            "secrets-plane receipt unread",
+            evidence="no receipt",
         )
     parts: list[str] = []
     unbound: list[str] = []
@@ -430,31 +507,33 @@ def classify_secrets_bind(statuses: list[dict[str, Any]] | None) -> dict[str, An
     return _line("secrets-bind", OK, summary)
 
 
-def probe_aws_cli() -> dict[str, Any] | None:
-    try:
-        import aws_cli_preflight as preflight
-    except ImportError:
+def load_secrets_plane_receipt(workspace: str) -> dict[str, Any] | None:
+    """Read the plane receipt. Never probe. Invalid/absent is unread."""
+    if not workspace:
         return None
-    return preflight.probe()
+    path = Path(workspace) / ".l9" / "session" / "secrets-plane.json"
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    return data if isinstance(data, dict) else None
 
 
-def probe_secrets_bind() -> list[dict[str, Any]] | None:
-    """In-process bind --check. Fail-open. Values never leave bind_status."""
-    try:
-        import capability_bind as cb
-    except ImportError:
-        return None
-    statuses: list[dict[str, Any]] = []
-    for name in BIND_NAMES:
-        status = cb.bind_status(name)
-        statuses.append(
-            {
-                "name": str(status.get("name") or name),
-                "bound": bool(status.get("bound")),
-                "source": str(status.get("source") or "unbound"),
-            }
-        )
-    return statuses
+def secrets_receipt_parts(
+    receipt: dict[str, Any] | None,
+) -> tuple[dict[str, Any] | None, list[dict[str, Any]] | None]:
+    if not receipt:
+        return None, None
+    aws = receipt.get("aws")
+    binds = receipt.get("binds")
+    return (
+        aws if isinstance(aws, dict) else None,
+        binds if isinstance(binds, list) else None,
+    )
 
 
 def classify_skill_usage(detail: str) -> dict[str, Any]:
@@ -544,18 +623,16 @@ def collect(
     secrets_bind: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     root = home or Path.home()
-    aws_result = aws_cli if aws_cli is not None else probe_aws_cli()
-    bind_result = secrets_bind if secrets_bind is not None else probe_secrets_bind()
     lines: list[dict[str, Any]] = [
-        classify_simple("venv", venv, fail_tokens=("absent", "missing", "fail")),
+        classify_venv(venv),
         classify_simple("ide-profile", ide_profile, fail_tokens=("fail", "error")),
-        classify_simple("tunnel", tunnel, fail_tokens=("fail", "refused", "error", "closed")),
+        classify_tunnel(tunnel),
         classify_memory_proof(memory_proof)
         if memory_proof is not None
         else classify_memory(detail=memory_detail, stderr=memory_stderr, healthy=memory_healthy),
         classify_publish_path(evaluate(load_receipt())),
-        classify_aws_cli(aws_result),
-        classify_secrets_bind(bind_result),
+        classify_aws_cli(aws_cli),
+        classify_secrets_bind(secrets_bind),
         classify_skill_usage(skill_note),
         classify_itest(error=probe_neo4j(), codegraph=codegraph),
     ]
@@ -581,15 +658,8 @@ def collect(
         )
     )
     lines.append(classify_simple("wiring", wiring, fail_tokens=("fail",)))
-    lines.append(classify_simple("backup", backup, fail_tokens=("fail", "error")))
-    memory_row = next((item for item in lines if item["name"] == "memory"), None)
-    memory_unhealthy = bool(memory_row and memory_row["class"] in {DEGRADED, FAILED})
-    if hydrate_degraded and memory_unhealthy:
-        extra = (hydrate_reason or "hydrate reported degraded").strip()
-        if extra and extra not in (memory_row.get("evidence") or ""):
-            prior = (memory_row.get("evidence") or "").strip()
-            memory_row["evidence"] = f"{prior} hydrate: {extra}".strip()
-    elif hydrate_degraded:
+    lines.append(classify_backup(backup))
+    if hydrate_degraded:
         lines.append(
             _line(
                 "memory-hydrate",
@@ -657,6 +727,7 @@ def main(argv: list[str] | None = None) -> int:
         raw_proof=args.memory_proof,
         raw_detail=args.memory_detail,
     )
+    aws_cli, secrets_bind = secrets_receipt_parts(load_secrets_plane_receipt(args.workspace))
     lines = collect(
         surface=args.surface,
         venv=args.venv,
@@ -673,6 +744,8 @@ def main(argv: list[str] | None = None) -> int:
         hydrate_degraded=_truthy(args.hydrate_degraded),
         hydrate_reason=args.hydrate_reason,
         workspace=args.workspace,
+        aws_cli=aws_cli,
+        secrets_bind=secrets_bind,
     )
     aws_failed = any(item["name"] == "aws-cli" and item["class"] == FAILED for item in lines)
     if args.json:

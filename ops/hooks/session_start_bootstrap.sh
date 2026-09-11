@@ -192,8 +192,20 @@ GC="$GLOBAL_COMMANDS"
 # Generic hydration (uv, scratch_hold, checkers, capabilities, identity) lives
 # only in the shared bootstrap. Cursor keeps tip activation, wiring, hydrate,
 # plan audit, and the additional_context JSON envelope.
-SHARED_BOOTSTRAP="$GC/ops/scripts/bootstrap_agent_environment.sh"
-if [ -f "$SHARED_BOOTSTRAP" ]; then
+# Same order as resolve_runtime_reporter: this checkout, then live SSOT.
+resolve_shared_bootstrap() {
+  if [ -n "${CURSOR_PROJECT_DIR:-}" ] && [ -f "$CURSOR_PROJECT_DIR/ops/scripts/bootstrap_agent_environment.sh" ]; then
+    printf '%s\n' "$CURSOR_PROJECT_DIR/ops/scripts/bootstrap_agent_environment.sh"
+    return 0
+  fi
+  if [ -f "$GC/ops/scripts/bootstrap_agent_environment.sh" ]; then
+    printf '%s\n' "$GC/ops/scripts/bootstrap_agent_environment.sh"
+    return 0
+  fi
+  return 1
+}
+SHARED_BOOTSTRAP="$(resolve_shared_bootstrap || true)"
+if [ -n "$SHARED_BOOTSTRAP" ] && [ -f "$SHARED_BOOTSTRAP" ]; then
   # F-10: the surface is a runtime fact, not a constant. Hard-coding `cursor`
   # mis-attributed every warning, receipt and identity check on every other
   # surface, and wrote a phantom Cursor readiness receipt during a Claude Code
@@ -217,12 +229,16 @@ if [ -f "$GC/ops/scripts/governance_activate_fresh.sh" ]; then
   chmod +x "$HOME/.cursor/hooks/governance-activate-fresh.sh" 2>/dev/null || true
 fi
 
-# Build-in-progress kill switch
+# Build-in-progress kill switch. The lock file is measured; otherwise quote
+# backup_gate.sh (decision-only, empty SessionStart stdin).
 if [ -e "$GC/.governance-build-lock" ]; then
   export GOVERNANCE_BACKUP_SKIP=1
   BACKUP_NOTE="SKIPPED — .governance-build-lock present"
+elif [ -f "$GC/ops/scripts/backup_gate.sh" ]; then
+  BACKUP_NOTE="$(bash "$GC/ops/scripts/backup_gate.sh" "$GC" </dev/null || true)"
+  BACKUP_NOTE="$(printf '%s\n' "$BACKUP_NOTE" | grep -E '^(PROCEED|SKIP):' | tail -n 1 || printf '%s' "$BACKUP_NOTE")"
 else
-  BACKUP_NOTE="armed"
+  BACKUP_NOTE=""
 fi
 
 SETUP="$GC/ops/scripts/setup_workspace_symlinks.sh"
@@ -233,11 +249,14 @@ ORCH="$GC/ops/hooks/session_start_memory_orchestrator.sh"
 # wrote readiness receipts against the wrong workspace and mixed Claude cloud
 # scoring into this report. Do not call claude_projection.py here.
 
-# venv: shared bootstrap owns uv sync; report the result only
-VENV_NOTE="absent"
+# venv: shared bootstrap owns uv sync; report the check UV: line only
 if [[ -x "$GC/.venv/bin/python3" ]]; then
   export PATH="$GC/.venv/bin:$PATH"
-  VENV_NOTE="locked (uv.lock)"
+fi
+VENV_NOTE=""
+if [ -f "$GC/ops/scripts/ensure_uv_environment.sh" ]; then
+  VENV_NOTE="$(bash "$GC/ops/scripts/ensure_uv_environment.sh" "$GC" check 2>&1 || true)"
+  VENV_NOTE="$(printf '%s\n' "$VENV_NOTE" | grep '^UV:' | tail -n 1 || printf '%s' "$VENV_NOTE")"
 fi
 
 # IDE profile backgrounded

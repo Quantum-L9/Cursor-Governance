@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 import tempfile
@@ -44,6 +45,13 @@ class PublishPathClassificationTests(unittest.TestCase):
         line = report.classify_publish_path(None)
         self.assertEqual(line["class"], report.FAILED)
         self.assertTrue(line["include_in_degraded"])
+
+
+class TunnelClassificationTests(unittest.TestCase):
+    def test_retired_slogan_is_na_not_ok(self) -> None:
+        line = report.classify_tunnel("retired (memory control plane; no provider tunnel)")
+        self.assertEqual(line["class"], report.NA)
+        self.assertFalse(line["include_in_degraded"])
 
 
 class ItestClassificationTests(unittest.TestCase):
@@ -140,7 +148,7 @@ class SecretsPlaneClassificationTests(unittest.TestCase):
     def test_bind_names_come_from_the_owner(self) -> None:
         from session_start_secrets import BIND_NAMES
 
-        self.assertEqual(report.BIND_NAMES, BIND_NAMES)
+        self.assertNotIn("BIND_NAMES", vars(report))
         self.assertIn("GITHUB_TOKEN", BIND_NAMES)
 
     def test_aws_source_is_a_fault(self) -> None:
@@ -156,6 +164,85 @@ class SecretsPlaneClassificationTests(unittest.TestCase):
         )
         self.assertEqual(line["class"], report.DEGRADED)
         self.assertIn("do not paste a token", line["summary"])
+
+    def test_missing_receipt_is_unread_not_a_live_probe(self) -> None:
+        line = report.classify_secrets_bind(None)
+        self.assertEqual(line["class"], report.DEGRADED)
+        self.assertIn("secrets-plane receipt unread", line["summary"])
+        self.assertNotIn("capability_bind", line["summary"])
+
+    def test_aws_missing_receipt_is_unread(self) -> None:
+        line = report.classify_aws_cli(None)
+        self.assertEqual(line["class"], report.FAILED)
+        self.assertIn("aws-cli receipt unread", line["summary"])
+        self.assertNotIn("aws_cli_preflight", line["summary"])
+
+
+class VenvBackupClassificationTests(unittest.TestCase):
+    def test_cached_uv_line_is_ok(self) -> None:
+        line = report.classify_venv("UV: cached locked environment")
+        self.assertEqual(line["class"], report.OK)
+        self.assertIn("UV:", line["summary"])
+
+    def test_unavailable_and_sync_required_are_degraded_not_failed(self) -> None:
+        missing = report.classify_venv(
+            "UV: unavailable; locked governance environment not activated"
+        )
+        sync = report.classify_venv("UV: environment synchronization required")
+        self.assertEqual(missing["class"], report.DEGRADED)
+        self.assertEqual(sync["class"], report.DEGRADED)
+        self.assertNotEqual(missing["class"], report.FAILED)
+
+    def test_empty_venv_is_unread(self) -> None:
+        line = report.classify_venv("")
+        self.assertEqual(line["class"], report.DEGRADED)
+        self.assertIn("unread", line["summary"])
+
+    def test_proceed_is_ok(self) -> None:
+        line = report.classify_backup("PROCEED: reason=- gates clear")
+        self.assertEqual(line["class"], report.OK)
+
+    def test_skip_is_na_not_fail(self) -> None:
+        line = report.classify_backup("SKIP: sessionEnd reason=error — not a committable boundary")
+        self.assertEqual(line["class"], report.NA)
+        self.assertFalse(line["include_in_degraded"])
+
+    def test_build_lock_skip_is_na(self) -> None:
+        line = report.classify_backup("SKIPPED — .governance-build-lock present")
+        self.assertEqual(line["class"], report.NA)
+
+    def test_empty_backup_is_unread(self) -> None:
+        line = report.classify_backup("")
+        self.assertEqual(line["class"], report.DEGRADED)
+        self.assertIn("unread", line["summary"])
+
+
+class SecretsReceiptLoadTests(unittest.TestCase):
+    def test_load_receipt_passes_aws_and_binds(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp) / ".l9" / "session"
+            dest.mkdir(parents=True)
+            (dest / "secrets-plane.json").write_text(
+                json.dumps(
+                    {
+                        "ok": True,
+                        "login": "present",
+                        "aws": {"ok": True, "code": "OK", "summary": "authorized"},
+                        "binds": [{"name": "GITHUB_TOKEN", "bound": True, "source": "infisical"}],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            receipt = report.load_secrets_plane_receipt(tmp)
+            aws, binds = report.secrets_receipt_parts(receipt)
+            self.assertEqual(aws["code"], "OK")
+            self.assertEqual(binds[0]["source"], "infisical")
+
+    def test_absent_receipt_is_unread_parts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            aws, binds = report.secrets_receipt_parts(report.load_secrets_plane_receipt(tmp))
+        self.assertIsNone(aws)
+        self.assertIsNone(binds)
 
 
 class MemoryProofClassificationTests(unittest.TestCase):
@@ -199,7 +286,10 @@ class MemoryProofClassificationTests(unittest.TestCase):
 
     def test_json_detail_is_classified_as_proof(self) -> None:
         line = report.classify_memory(
-            detail='{"binding_status":"compatible","ok":true,"artifact_provenance":"unproven","reasons":["digest unproved"]}',
+            detail=(
+                '{"binding_status":"compatible","ok":true,'
+                '"artifact_provenance":"unproven","reasons":["digest unproved"]}'
+            ),
             stderr="",
             healthy=False,
         )
@@ -226,22 +316,22 @@ class SkillUsageClassificationTests(unittest.TestCase):
 
 
 class HydrateCollapseTests(unittest.TestCase):
-    def test_unhealthy_memory_does_not_add_hydrate_row(self) -> None:
+    def test_unhealthy_memory_still_emits_hydrate_row(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             lines = report.collect(
                 surface="cursor",
-                venv="locked",
+                venv="UV: cached locked environment",
                 ide_profile="applied",
                 tunnel="open",
                 memory_detail="unreachable",
                 memory_stderr="Connection reset by peer",
                 memory_healthy=False,
                 wiring="PASS",
-                backup="armed",
+                backup="PROCEED: reason=- gates clear",
                 skill_note="/tmp/x.jsonl (1 entries)",
                 codegraph="skipped",
                 hydrate_degraded=True,
-                hydrate_reason="PICKUP search unreachable",
+                hydrate_reason="STALE — continuation_stale=true",
                 home=Path(tmp),
                 aws_cli={"ok": True, "code": "OK", "summary": "authorized"},
                 secrets_bind=[
@@ -252,9 +342,10 @@ class HydrateCollapseTests(unittest.TestCase):
             )
         names = [item["name"] for item in lines]
         self.assertIn("memory", names)
-        self.assertNotIn("memory-hydrate", names)
-        memory = next(item for item in lines if item["name"] == "memory")
-        self.assertIn("PICKUP search unreachable", memory["evidence"])
+        self.assertIn("memory-hydrate", names)
+        hydrate = next(item for item in lines if item["name"] == "memory-hydrate")
+        self.assertEqual(hydrate["class"], report.DEGRADED)
+        self.assertIn("continuation_stale", hydrate["summary"])
 
     def test_healthy_memory_keeps_hydrate_row(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -343,6 +434,13 @@ class HookWiringTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("session_start_secrets.py", bootstrap)
+        self.assertIn("--receipt-out", bootstrap)
+        self.assertIn("$WORKSPACE/ops/secrets/session_start_secrets.py", bootstrap)
+        self.assertLess(
+            bootstrap.index("$WORKSPACE/ops/secrets/session_start_secrets.py"),
+            bootstrap.index("$GOV_DIR/ops/secrets/session_start_secrets.py"),
+        )
+        self.assertIn('rm -f "$SECRETS_RECEIPT"', bootstrap)
         self.assertNotIn("itest: unavailable — neo4j absent", text)
         self.assertNotIn("publish-path grant: none", text)
         self.assertNotIn("GRANT_NOTE", text)
@@ -353,6 +451,18 @@ class HookWiringTests(unittest.TestCase):
         self.assertNotIn("bound ($BINDING_STATUS)", text)
         self.assertNotIn("exact|compatible|development_checkout", text)
         self.assertNotIn("""echo '{"status":"unbound"}'""", text)
+        self.assertNotIn('BACKUP_NOTE="armed"', text)
+        self.assertNotIn('VENV_NOTE="locked (uv.lock)"', text)
+        self.assertIn("backup_gate.sh", text)
+        self.assertIn("ensure_uv_environment.sh", text)
+        reporter = (REPO / "ops" / "scripts" / "session_start_runtime_report.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("debug-eb0fc6", reporter)
+        self.assertNotIn("def probe_aws_cli", reporter)
+        self.assertNotIn("def probe_secrets_bind", reporter)
+        self.assertNotIn("else probe_", reporter)
+        self.assertNotIn("bind_status", reporter)
 
     def test_claude_hook_uses_portable_timeout(self) -> None:
         text = (
@@ -488,6 +598,20 @@ class CursorAdapterClassificationTests(unittest.TestCase):
         )
         self.assertEqual(lines[0]["class"], report.NA)
         self.assertIn("stale_other_surface", lines[0]["summary"])
+
+    def test_ttl_unknown_is_na_not_this_session_degraded(self) -> None:
+        lines = report.classify_cursor_adapter(
+            surface="cursor",
+            receipt={
+                "state": "unknown",
+                "reason": "receipt expired (764027s old, ttl 86400s)",
+                "workspace": "/tmp/ws",
+            },
+            workspace="/tmp/ws",
+        )
+        self.assertEqual(lines[0]["class"], report.NA)
+        self.assertIn("stale_receipt", lines[0]["summary"])
+        self.assertFalse(lines[0]["include_in_degraded"])
 
     def test_fresh_this_workspace_failed_reaches_degraded(self) -> None:
         lines = report.classify_cursor_adapter(
