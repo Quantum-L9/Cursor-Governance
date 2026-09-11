@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # PUBLIC make improve — L4 begin / authorize only.
-# Tree kernels are NOT an L4 phase. They fire as the first step of
-# make precommit-repo (ops/autonomy/kernel_gate.py). Two-step:
+# Tree kernels are NOT an L4 phase (CANONICAL_LAW KERNEL_PRECOMMIT_HOOK_V1).
+# They fire as the first step of make precommit-repo
+# (ops/autonomy/kernel_gate.py). Two-step:
 #   make improve                 → begin (if needed)
 #   make improve IMPROVE_RECORD=1 → authorize-release (no kernel stamp)
 set -euo pipefail
@@ -52,7 +53,7 @@ if [[ "$IMPROVE_RECORD" = "1" ]]; then
   fi
   echo "--- make improve: authorize-release (phase=$phase; kernels are not L4) ---"
   _l4 authorize-release
-  echo "RESULT: PASS — L4 release authorized. Next: make pr (kernel hook then checks once)"
+  echo "RESULT: PASS — L4 release authorized. Next: PR_REMEDIATE=0 make pr"
   exit 0
 fi
 
@@ -79,9 +80,9 @@ INSTRUCTIONS:
   2. Publish once: PR_REMEDIATE=0 make pr
   3. The first step of precommit-repo is ops/autonomy/kernel_gate.py.
      If it fails, apply Recursive Alignment then Validate & Repair, commit,
-     run kernel_gate.py record, and re-run the same make pr. Hooks and tests
-     fire once after that hook passes.
-Do not treat L4 record-kernels as the kernel apply path.
+     run the record command that hook prints, and re-run the same make pr.
+     Hooks and tests fire once after that hook passes.
+Kernels are not an L4 phase. Do not treat L4 record-kernels as the apply path.
 === END L9_AGENT_REQUIRED ===
 
 RESULT: PASS — improve phase ready (authorize, then make pr)

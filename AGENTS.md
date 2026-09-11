@@ -1530,3 +1530,31 @@ Append-only. Repo invariant: every committed execution profile is
   edit). Main keeps synthesis.
 - A denied Task admission is a gate defect to report, not a reason to
   keep recon in-session.
+
+<!-- KERNEL_LATCH_BARE_LOCAL_V1 -->
+## The tree-kernel latch covers a bare local shell (2026-09-11)
+
+This fragment supersedes only the “CI / unknown still skip” sentence in
+`CURSOR_KERNEL_LATCH_BEFORE_PYTEST_V1`. Those paragraphs stay on disk
+(additive_only). Do not fold them.
+
+It does **not** move kernels into L4. `CANONICAL_LAW`
+`KERNEL_PRECOMMIT_HOOK_V1` is unchanged and outranks this file: post-finish
+kernels are not an L4 phase and `authorize-release` does not require a
+kernel stamp.
+
+- Finish path is unchanged: `l4_local.py begin` → `authorize-release` →
+  `PR_REMEDIATE=0 make pr`. The kernel hook fires inside `make pr`.
+- `kernel_gate.py precommit` is the first writers step of `make pr`,
+  before ruff / pytest, and fails closed there — not at `authorize-release`
+  and not at `check-remote`.
+- The latch now covers every local surface, including a bare shell.
+  Previously `unknown` skipped, so a human publishing without an
+  agent-surface marker silently bypassed it.
+- Skip only unmarked CI (`GITHUB_ACTIONS` or `CI` with no agent-surface
+  marker): the receipt lives under gitignored `.l9/` and cannot exist on
+  GitHub Actions.
+- When that hook fails it prints a record command bound to the governance
+  checkout and the target workspace, so it is runnable from a consumer
+  tree. `record-kernels` still stamps the same receipt (compat); do not
+  treat it as the apply path.

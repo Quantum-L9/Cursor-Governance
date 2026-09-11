@@ -136,10 +136,11 @@ l4_local_autonomy:
     fires: first_step_of_precommit_repo
     skip_unless_adapter_surface: false
     note: >-
-      Not an L4 phase. Fail-closed before any other hook or test so
-      checkers run once on the post-kernel tree. Cursor and adapter
-      surfaces (claude-code / codex / gemini / manus) take this latch
-      on make pr. CI / unknown skip it (receipt is gitignored). WIP/,
+      Not an L4 phase; authorize-release does not require this receipt
+      (CANONICAL_LAW KERNEL_PRECOMMIT_HOOK_V1). Fail-closed as the first
+      writers step of make pr, before any other hook or test, so checkers
+      run once on the post-kernel tree. Every local surface latches,
+      including a bare shell. Unmarked CI skips (receipt is gitignored). WIP/,
       docs/plans/, and environment/program-execution/campaigns/ are
       /ff corpus surfaces (Improve then Recursive Alignment then
       Validate & Repair); this hook skips those prefixes and skips
