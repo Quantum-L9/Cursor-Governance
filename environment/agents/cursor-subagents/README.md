@@ -70,25 +70,22 @@ type stays denied. `parent_conversation_id` is already persisted on host
 correlation when the host sends it.
 ## Execution lifecycle
 ```text
-ready campaign action or bounded main-agent task
+ready campaign action or bounded main-agent Task
     ↓
-autonomy lease and resource claims
+PE token: autonomy lease + mint admission
+host-native: allowlisted type, no PE database
     ↓
-mint admission (`autonomy/adapters/cursor/mint_admission.py` → `create_admission`)
+subagentStart writes Assignment + DispatchReceipt
     ↓
-existing Cursor task renderer embeds `L9_ADMISSION_TOKEN=…`
+child returns result.v1  OR  a non-document
     ↓
-main Cursor agent launches native subagent
+Stop: accept_and_ingest  OR  compile_incomplete_result then ingest
     ↓
-subagent returns one structured result document
-    ↓
-main agent accepts or rejects the document
-    ↓
-result_bridge validates and projects the document
+ACCEPTED / ACCEPTED_INCOMPLETE  (invalid dict stays REJECTED)
     ↓
 existing generated-data processor
     ↓
-governed promotion and eventual memory delivery
+governed promotion only for completed accepted documents
 
 Concurrency law
 
