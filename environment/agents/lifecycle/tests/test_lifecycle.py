@@ -84,6 +84,8 @@ class LifecycleTests(unittest.TestCase):
     def test_orphan_stop(self):
         out = compose_stop.compose_subagent_stop({"assignment_id": "missing", "output": "x"})
         self.assertEqual(out["status"], "QUARANTINED")
+        self.assertIsNone(out.get("generated_data"))
+        self.assertIsNone(out.get("ingress_receipt"))
 
     def test_host_stop_without_correlation_is_quarantined_with_evidence(self):
         out = compose_stop.compose_subagent_stop(

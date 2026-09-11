@@ -58,13 +58,19 @@ def normalize(
         # Scope and subject come from the rendered assignment only. A document
         # that names its own writable paths or its own review subject is
         # self-attesting the very authority the gateway exists to check.
+        expected_role = result_bridge.canonical_cursor_role(
+            assignment.get("result_role")
+            or assignment.get("subagent_role")
+            or document_assignment["role"]
+        )
+        if expected_role not in result_bridge.ROLE_TO_RESULT_KIND:
+            # Host-native Task types (generalPurpose, shell, …) are not schema
+            # roles. Incomplete harvest maps them to recon; do not fail closed
+            # on the unmapped spelling.
+            expected_role = document_assignment["role"]
         exact.update(
             {
-                "role": result_bridge.canonical_cursor_role(
-                    assignment.get("result_role")
-                    or assignment.get("subagent_role")
-                    or document_assignment["role"]
-                ),
+                "role": expected_role,
                 "allowed_paths": list(assignment.get("allowed_paths") or []),
                 "action_allowed_paths": list(assignment.get("action_allowed_paths") or []),
                 "forbidden_paths": list(assignment.get("forbidden_paths") or []),
