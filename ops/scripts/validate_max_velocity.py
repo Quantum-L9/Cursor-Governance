@@ -51,6 +51,16 @@ def collect_defects(root: Path) -> list[str]:
     except (OSError, yaml.YAMLError) as exc:
         return [f"{SURFACE_REL}: unreadable ({exc})"]
 
+    # Well-formed JSON/YAML is not necessarily a MAPPING. A top-level list
+    # parses cleanly and then raises AttributeError on the first `.get`,
+    # crashing the gate instead of failing it closed with a named defect —
+    # the opposite of what a fail-closed checker owes its caller.
+    for label, doc in ((POLICY_REL, policy), (SURFACE_REL, surface)):
+        if not isinstance(doc, dict):
+            defects.append(f"{label}: top level is {type(doc).__name__}, expected a mapping")
+    if defects:
+        return defects
+
     profiles = policy.get("profiles")
     if not isinstance(profiles, dict) or not profiles:
         defects.append(f"{POLICY_REL}: profiles map missing")
