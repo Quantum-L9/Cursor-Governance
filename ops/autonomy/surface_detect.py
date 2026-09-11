@@ -72,10 +72,24 @@ def is_claude_gate_surface(env: Mapping[str, str] | None = None) -> bool:
     return detect_surface(env) in CLAUDE_GATE_SURFACES
 
 
+#: Values that mean "yes" in a CI environment variable. Anything else —
+#: including the literal "false" and "0" that GitHub Actions itself writes
+#: for a disabled condition — is not CI.
+_CI_TRUTHY = frozenset({"1", "true", "yes"})
+
+
 def _ci_surface(source: Mapping[str, str]) -> bool:
-    if (source.get("GITHUB_ACTIONS") or "").strip():
-        return True
-    return (source.get("CI") or "").strip().lower() in {"1", "true", "yes"}
+    """True only for an explicitly truthy CI marker.
+
+    Both markers are parsed the same way on purpose. Accepting any non-empty
+    ``GITHUB_ACTIONS`` would classify ``GITHUB_ACTIONS=false`` as CI, and
+    because CI is the one thing that SKIPS the kernel latch, that is an
+    accidental bypass of the gate rather than a harmless misread. Unknown or
+    malformed values now fail closed: the latch applies.
+    """
+    return any(
+        (source.get(key) or "").strip().lower() in _CI_TRUTHY for key in ("GITHUB_ACTIONS", "CI")
+    )
 
 
 def kernel_latch_surface(env: Mapping[str, str] | None = None) -> bool:
