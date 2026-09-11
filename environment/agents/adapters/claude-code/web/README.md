@@ -99,7 +99,8 @@ the account environment makes the bypass permanent for every session.
    replace anything with Infisical UA, Infisical password, a PAT, or
    `GRAPHITI_MCP_TOKEN`. `GH_TOKEN=proxy-injected` is a marker, not a secret.
    Authenticated Sonar/Semgrep stay operator-side. The capability broker
-   (`L9_CAPABILITY_BROKER_URL`) never shipped — do not set it. Graphiti is
+   (`L9_CAPABILITY_BROKER_URL`) never shipped — do not set it. Memory is the
+   bound stdio control plane (`L9_MEMORY_INTERPRETER`). Do not set
    `GRAPHITI_MCP_URL`.
 3. **Setup script** — **paste `setup.bootstrap.sh` (recommended), not `setup.sh`.**
    The account field is a *copy*, not a live link to the repo, so pasting the full

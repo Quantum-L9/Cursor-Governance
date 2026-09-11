@@ -389,6 +389,15 @@ fi
 log "Claude Code vendor wiring"
 say "governance=$GOV_DIR workspace=$WORKSPACE"
 
+# Parent-process export: shared bootstrap is a subprocess, so an export there
+# dies. Binding is the only resolver; this only publishes a proven interpreter
+# before projection so _requires_env can render l9-graphite-memory.
+if [ -f "$GOV_DIR/ops/scripts/lib/bind_memory_interpreter.sh" ]; then
+  # shellcheck source=/dev/null
+  . "$GOV_DIR/ops/scripts/lib/bind_memory_interpreter.sh"
+  bind_l9_memory_interpreter "$GOV_PY" "$GOV_DIR"
+fi
+
 # --- 1) Claude projection engine (settings, hooks, skills, commands, rules,
 #         plugins) ------------------------------------------------------------
 # ops/scripts/claude_projection.py is the one projection entrypoint: it drives
@@ -508,7 +517,7 @@ esac
 stage "memory-readiness"
 EMITTER="$GOV_DIR/ops/scripts/emit_claude_readiness.py"
 if [ -n "$GOV_PY" ] && [ -f "$EMITTER" ]; then
-  probe_json="$("$GOV_PY" "$EMITTER" --memory-probe --root "$GOV_DIR" 2>/dev/null)" || probe_json=""
+  probe_json="$("$GOV_PY" "$EMITTER" --memory-probe --root "$GOV_DIR" --workspace "$WORKSPACE" 2>/dev/null)" || probe_json=""
   if [ -n "$probe_json" ]; then
     cli_st="$(printf '%s' "$probe_json" | "$GOV_PY" -c 'import json,sys; print(json.load(sys.stdin)["cli"]["status"])' 2>/dev/null)" || cli_st=UNKNOWN
     cli_rs="$(printf '%s' "$probe_json" | "$GOV_PY" -c 'import json,sys; print(json.load(sys.stdin)["cli"]["reason"])' 2>/dev/null)" || cli_rs=""

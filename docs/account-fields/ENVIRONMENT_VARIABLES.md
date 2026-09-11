@@ -5,7 +5,7 @@
 is stored as the characters `$HOME/x`.
 **Applies to:** NEW sessions only. Anthropic caches the environment after the
 first successful build, so a stale paste survives until a rebuild.
-**Checksum:** `e82ec18f72308215` (30 variables)
+**Checksum:** `e16eb92d2f4e29ee` (28 variables)
 
 Generated from `environment/agents/adapters/claude-code/web/environment.env.example`
 by `verify_account_env.py --emit-fields`. Do not hand-edit this file; edit the
@@ -26,8 +26,6 @@ runtime, so a paste of one does not pass silently.
 ```dotenv
 CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS=480
 CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=3
-GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp
-GRAPHITI_MEMORY_ENABLED=1
 L9_AGENT_ROLE=implementation-agent
 L9_AUTONOMY_AUTHORITY=A4_CAMPAIGN_BOUNDED_EXTERNAL_WRITE
 L9_AUTONOMY_ENABLED=true
@@ -62,5 +60,5 @@ USER_ID=claude_code_agent
 python3 environment/agents/adapters/claude-code/verify_account_env.py
 ```
 
-`OK: all 30 expected variables match` means the field matches HEAD.
+`OK: all 28 expected variables match` means the field matches HEAD.
 Any `DRIFT:` line names the variable, what is set, and what was expected.

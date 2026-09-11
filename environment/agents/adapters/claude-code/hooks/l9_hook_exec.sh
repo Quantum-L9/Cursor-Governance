@@ -212,6 +212,48 @@ cannot_run() {
 
 [ -f "$GOV_DIR/CANONICAL_LAW.md" ] || cannot_run "no governance SSOT at $GOV_DIR"
 
+# Cloud SessionStart: refresh the ephemeral clone BEFORE resolving HOOK_PATH
+# so siblings do not skip tip-only files for this session. Fail-open: lock
+# or fetch failure proceeds with the existing clone. Dirty tracked trees
+# are never force-reset (same guard as session_start_claude_governance.sh).
+l9_cloud_refresh_gov() {
+  [ "${CLAUDE_CODE_REMOTE:-}" = "true" ] || return 0
+  [ -d "$GOV_DIR/.git" ] || return 0
+  local lockdir="${L9_GOV_REFRESH_LOCKDIR:-$HOME/.l9/claude/gov-refresh.lock.d}"
+  local receipt="${L9_GOV_REFRESH_RECEIPT:-$HOME/.l9/claude/gov-refresh.json}"
+  local remote="${L9_GOVERNANCE_REMOTE:-https://github.com/Quantum-L9/Cursor-Governance.git}"
+  local branch="${L9_GOVERNANCE_BRANCH:-main}"
+  local waited=0 local_sha remote_sha gov_dirty
+  mkdir -p "$(dirname "$lockdir")" "$(dirname "$receipt")" 2>/dev/null || return 0
+  if mkdir "$lockdir" 2>/dev/null; then
+    gov_dirty=$(git -C "$GOV_DIR" status --porcelain --untracked-files=no 2>/dev/null | head -c 1)
+    local_sha=$(git -C "$GOV_DIR" rev-parse --verify --quiet HEAD 2>/dev/null || echo 'unknown')
+    if [ -n "$gov_dirty" ]; then
+      printf 'l9-hook: governance refresh skipped — dirty tracked clone\n' >&2
+    else
+      git -C "$GOV_DIR" remote set-url origin "$remote" 2>/dev/null || true
+      if git -C "$GOV_DIR" fetch --depth 1 origin "$branch" >/dev/null 2>&1 \
+         && git -C "$GOV_DIR" checkout -f -B "$branch" "origin/$branch" >/dev/null 2>&1; then
+        local_sha=$(git -C "$GOV_DIR" rev-parse --verify --quiet HEAD 2>/dev/null || echo 'unknown')
+        remote_sha=$(git -C "$GOV_DIR" rev-parse --verify --quiet FETCH_HEAD 2>/dev/null || echo 'unknown')
+        printf '{\n  "schema": "l9.governance-refresh.v1",\n  "outcome": "fetched",\n  "local_sha": "%s",\n  "origin_sha": "%s",\n  "refreshed_at": "%s",\n  "ttl_seconds": %s,\n  "commits_behind": -1,\n  "state": "fresh"\n}\n' \
+          "$(printf '%s' "$local_sha" | tr -d '\n\r\t"\\' | head -c 64)" \
+          "$(printf '%s' "$remote_sha" | tr -d '\n\r\t"\\' | head -c 64)" \
+          "$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)" \
+          "${L9_GOV_REFRESH_TTL:-3600}" > "$receipt"
+      fi
+    fi
+    rmdir "$lockdir" 2>/dev/null || true
+  else
+    while [ -d "$lockdir" ] && [ "$waited" -lt 80 ]; do
+      sleep 0.1 2>/dev/null || sleep 1
+      waited=$((waited + 1))
+    done
+  fi
+}
+
+l9_cloud_refresh_gov
+
 HOOK_PATH="$GOV_DIR/environment/agents/adapters/claude-code/hooks/$HOOK_NAME"
 [ -f "$HOOK_PATH" ] || cannot_run "hook file absent at $HOOK_PATH"
 

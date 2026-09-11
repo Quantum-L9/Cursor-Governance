@@ -127,28 +127,37 @@ def _levels(**overrides: str) -> dict[str, str]:
     return base
 
 
-def test_memory_layers_map_to_three_dimensions() -> None:
-    """R0/R1 -> cli, R2/R3/R6 -> control plane, R4 -> mcp; never one word."""
+def test_memory_layers_map_to_three_dimensions(tmp_path: Path, monkeypatch) -> None:
+    """R0/R1 -> cli, R2/R3/R6 -> control plane; mcp is Claude .mcp.json + env, not R4."""
     assert er._memory_cli_health(_levels())[0] == READY
     assert er._memory_control_plane_health(_levels())[0] == READY
-    assert er._memory_mcp_health(_levels())[0] == READY
     status, note = er._memory_cli_health(_levels(R0="fail"))
     assert status == DEGRADED and "unbound" in note
     status, note = er._memory_control_plane_health(_levels(R2="fail"))
     assert status == DEGRADED and "store" in note
     status, note = er._memory_control_plane_health(_levels(R6="fail"))
     assert status == DEGRADED and "namespace" in note
-    status, note = er._memory_mcp_health(_levels(R4="fail"))
-    assert status == DEGRADED and "mcp_config" in note
     # An unrunnable readiness report is UNKNOWN, never PASS.
     assert er._memory_cli_health(None)[0] == UNKNOWN
     assert er._memory_control_plane_health(None)[0] == UNKNOWN
-    assert er._memory_mcp_health(None)[0] == UNKNOWN
+
+    monkeypatch.delenv("L9_MEMORY_INTERPRETER", raising=False)
+    status, note = er._claude_mcp_health(tmp_path)
+    assert status == DEGRADED and "L9_MEMORY_INTERPRETER" in note
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", "/venv/bin/python")
+    status, note = er._claude_mcp_health(tmp_path)
+    assert status == DEGRADED and "mcp.json" in note
+    (tmp_path / ".mcp.json").write_text(
+        json.dumps({"mcpServers": {"l9-graphite-memory": {"command": "${L9_MEMORY_INTERPRETER}"}}}),
+        encoding="utf-8",
+    )
+    assert er._claude_mcp_health(tmp_path)[0] == READY
 
 
 def test_memory_probe_reads_no_provider_url(monkeypatch) -> None:
     """Stage C9: the probe is the canonical readiness report, not an HTTP front door."""
     monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels(R4="fail"))
+    monkeypatch.delenv("L9_MEMORY_INTERPRETER", raising=False)
     for name in er._MEMORY_PROBE_SKIP_ENVS:
         monkeypatch.delenv(name, raising=False)
     probe = er.memory_probe(Path("/nowhere"))
@@ -157,6 +166,23 @@ def test_memory_probe_reads_no_provider_url(monkeypatch) -> None:
     assert probe["mcp"]["status"] == DEGRADED
     assert not hasattr(er, "_graphiti_mcp_http_health")
     assert not hasattr(er, "graphiti_mcp_url")
+    assert not hasattr(er, "_memory_mcp_health")
+
+
+def test_claude_mcp_ready_when_cursor_r4_would_fail(tmp_path: Path, monkeypatch) -> None:
+    """Claude mcp is workspace .mcp.json + interpreter, not Cursor diagnostics R4."""
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", "/venv/bin/python")
+    (tmp_path / ".mcp.json").write_text(
+        json.dumps({"mcpServers": {"l9-graphite-memory": {"command": "${L9_MEMORY_INTERPRETER}"}}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels(R4="fail"))
+    for name in er._MEMORY_PROBE_SKIP_ENVS:
+        monkeypatch.delenv(name, raising=False)
+    probe = er.memory_probe(tmp_path, tmp_path)
+    assert probe["mcp"]["status"] == READY
+    assert probe["cli"]["status"] == READY
+    assert probe["control_plane"]["status"] == READY
 
 
 def test_memory_probe_skip_env_honors_both_names(monkeypatch) -> None:
@@ -286,7 +312,12 @@ def _fake_home(tmp_path: Path, *, mcp: str = "READY") -> Path:
 
 def _build(gov: Path, home: Path, monkeypatch) -> dict:
     monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", "/venv/bin/python")
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
+    (gov / ".mcp.json").write_text(
+        json.dumps({"mcpServers": {"l9-graphite-memory": {"command": "${L9_MEMORY_INTERPRETER}"}}}),
+        encoding="utf-8",
+    )
     for name in er._MEMORY_PROBE_SKIP_ENVS:
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels())
@@ -440,9 +471,9 @@ def test_memory_transport_is_a_posture_not_a_measured_credential(
 def test_receipt_carries_a_write_time_and_expires(tmp_path: Path, monkeypatch) -> None:
     """A receipt whose age is unknowable must not be reported as current.
 
-    `timestamp` is the COMMIT date of governance_SHA and reads exactly like a
-    write time, so the receipt had no age at all: one written at container
-    creation was printed as the live capability plane many hours later.
+    Historical `timestamp` was git %cI (commit date) and read like a write
+    time, so freshness inverted. Both clocks are now the UTC write instant;
+    commit date lives under governance_committed_at.
     """
     from datetime import UTC, datetime, timedelta
 
@@ -451,22 +482,17 @@ def test_receipt_carries_a_write_time_and_expires(tmp_path: Path, monkeypatch) -
     receipt = _build(gov, home, monkeypatch)
 
     assert receipt["generated_at"], "receipt must record when it was written"
+    assert receipt["timestamp"] == receipt["generated_at"]
     assert receipt["ttl_seconds"] == er.RECEIPT_TTL_SECONDS
+    datetime.strptime(receipt["generated_at"], er._TIMESTAMP_FORMAT)
 
-    # `timestamp` stays the governance COMMIT date. Assert that against git
-    # rather than against `generated_at`: the two carry different meanings but
-    # can carry the same instant, and a fixture repo committed in the same
-    # second as the receipt makes an inequality check fail for a reason that
-    # says nothing about the contract. (It did, in CI, on a fresh runner.)
     commit_date = subprocess.run(
         ["git", "-C", str(gov), "log", "-1", "--format=%cI"],
         capture_output=True,
         text=True,
         check=True,
     ).stdout.strip()
-    assert receipt["timestamp"] == commit_date, "timestamp must be the governance commit date"
-    # And `generated_at` is a write time in the receipt's own UTC format.
-    datetime.strptime(receipt["generated_at"], er._TIMESTAMP_FORMAT)
+    assert receipt["governance_committed_at"] == commit_date
 
     assert er.receipt_freshness(receipt)["state"] == er.FRESH
 

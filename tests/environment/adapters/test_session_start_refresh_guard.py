@@ -254,6 +254,49 @@ def test_cursor_skip_precedes_claude_banner() -> None:
     assert skip < banner
 
 
+def test_bind_precedes_projection_in_install_and_session_start() -> None:
+    """Parent-process export must happen before claude_projection.py runs."""
+    adapter = REPO_ROOT / "environment" / "agents" / "adapters" / "claude-code"
+    install = (adapter / "install.sh").read_text(encoding="utf-8")
+    session = body()
+    for text in (install, session):
+        bind = text.index("bind_l9_memory_interpreter")
+        project = text.index("PROJECTION_ENGINE=")
+        assert bind < project, "export the bound interpreter before projection"
+
+
+def test_launcher_fresh_receipt_skips_the_second_reset(tmp_path: Path) -> None:
+    """After the launcher refreshed, SessionStart must not checkout -f again."""
+    import json
+    import subprocess
+
+    gov = _synthetic_gov(tmp_path, tracked_dirt=False, untracked_dirt=False)
+    sha = subprocess.run(
+        ["git", "-C", str(gov), "rev-parse", "HEAD"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    receipt = tmp_path / "receipt.json"
+    receipt.write_text(
+        json.dumps(
+            {
+                "schema": "l9.governance-refresh.v1",
+                "outcome": "fetched",
+                "local_sha": sha,
+                "state": "fresh",
+            }
+        ),
+        encoding="utf-8",
+    )
+    result = _run(tmp_path, receipt)
+    assert result.returncode == 0, result.stderr
+    blob = result.stdout + result.stderr
+    assert "already applied this SessionStart" in blob
+    assert "checkout -f" not in blob
+    assert json.loads(receipt.read_text(encoding="utf-8"))["outcome"] == "fetched"
+
+
 def test_cursor_runtime_emits_empty_context(tmp_path: Path) -> None:
     """Cursor loads this hook via projected .claude/settings.json.
 

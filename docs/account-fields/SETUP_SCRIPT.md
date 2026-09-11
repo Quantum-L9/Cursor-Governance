@@ -1,7 +1,7 @@
 # Setup script — paste-ready
 
 **Field:** claude.ai/code → environment → **Setup script**
-**Revision:** `2026-08-29.1` · **Checksum:** `a435d71d53771d79`
+**Revision:** `2026-09-11.1` · **Checksum:** `f1d9fe2cbe929b18`
 **Applies to:** NEW sessions only.
 
 Source of truth: `environment/agents/adapters/claude-code/web/setup.bootstrap.sh`.
@@ -146,7 +146,7 @@ unset _l9_contaminated
 # to see it from inside the sandbox. Recording the revision that actually ran
 # turns "is the pasted stub current?" from unanswerable into a comparison
 # (audit B-06). verify_account_env.py reads it back from cloud-session.env.
-L9_STUB_REVISION="2026-08-29.1"
+L9_STUB_REVISION="2026-09-11.1"
 
 warn() { printf 'L9 bootstrap WARN: %s\n' "$*" >&2; }
 note() { printf 'L9 bootstrap: %s\n' "$*"; }
@@ -197,14 +197,16 @@ done
 # Credentials stay in Infisical behind the broker. A pasted "Infisical password"
 # configuration here is a master key — strip it.
 #
-# GRAPHITI_MCP_TOKEN and CONTEXT7_API_KEY are deliberately NOT in this list, for
-# the same reason GH_TOKEN is not (see the block below): they are MCP transport
-# credentials the platform may proxy, and sweeping the announcement disables the
-# proxying without removing any secret. Neither is ever pasted into the account
-# variables field and neither is exported with a value by this script.
-# mcp.template.json references them as ${VAR}, so a proxied value reaches the
-# MCP client and nothing else; with no value proxied the servers behave exactly
-# as before (Graphiti unauthenticated, Context7 simply absent).
+# CONTEXT7_API_KEY is deliberately NOT in this list, for the same reason
+# GH_TOKEN is not (see the block below): it is an MCP transport credential the
+# platform may proxy, and sweeping the announcement disables the proxying
+# without removing any secret. It is never pasted into the account variables
+# field and never exported with a value by this script. mcp.template.json
+# references it as ${VAR}, so a proxied value reaches the MCP client and
+# nothing else; with no value proxied Context7 is simply absent. Memory holds
+# no transport credential on this surface at all: the only memory server is
+# the canonical l9-graphite-memory stdio entry (memory-control-plane/v1), which
+# resolves its own credentials (memory ADR-016).
 for leaked in SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN \
               INFISICAL_CLIENT_SECRET INFISICAL_TOKEN INFISICAL_PASSWORD \
               AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID \
@@ -253,9 +255,6 @@ done
 #
 # Do NOT reach for --no-verify, and do NOT unset it globally here: gh needs
 # it, and ~/.profile sources the durable env unguarded.
-
-: "${GRAPHITI_MCP_URL:=https://memory.quantumaipartners.com/graphiti/mcp}"
-export GRAPHITI_MCP_URL
 
 # --- 2) Governance SSOT ----------------------------------------------------
 GOV_REMOTE="${L9_GOVERNANCE_REMOTE:-https://github.com/Quantum-L9/Cursor-Governance.git}"
@@ -311,21 +310,32 @@ mkdir -p "$(dirname "$L9_ENV_FILE")"
   echo "export L9_STUB_REVISION=$(printf %q "$L9_STUB_REVISION")"
   echo "export L9_GOVERNANCE_DIR=$(printf %q "$GOV_DIR")"
   echo "export L9_GOVERNANCE_SURFACE=claude-code"
-  echo "export GRAPHITI_MCP_URL=$(printf %q "$GRAPHITI_MCP_URL")"
+  # No provider URL is exported (stage C8): memory is the canonical control
+  # plane, bound per checkout (ops/config/memory-binding.json), never a URL.
   # The retired capability-plane URL is deliberately not exported.
   # No GH_TOKEN export and no GH_TOKEN unset: the platform issues it, gh needs
   # it, and ~/.profile sources this file unguarded, so an unset here would strip
   # it from every login shell.
   # ADR-0006 + Infisical plane: keep vault credentials out of every in-session shell.
-  # No GRAPHITI_MCP_TOKEN / CONTEXT7_API_KEY export and no unset either, on the
-  # same GH_TOKEN reasoning above: they are proxied MCP transport credentials
-  # referenced as ${VAR} from mcp.template.json, this file is sourced unguarded
-  # by ~/.profile, and an unset here would strip a proxied value from every
+  # No CONTEXT7_API_KEY export and no unset either, on the same GH_TOKEN
+  # reasoning above: it is a proxied MCP transport credential referenced as
+  # ${VAR} from mcp.template.json, this file is sourced unguarded by
+  # ~/.profile, and an unset here would strip a proxied value from every
   # login shell — disabling the proxying rather than removing a secret.
   echo "unset L9_MEMORY_HTTP_URL L9_MEMORY_CLIENT_TOKEN L9_MEMORY_HTTP_TOKEN"
+  echo "unset GRAPHITI_MCP_URL GRAPHITI_MCP_TOKEN"
   echo "unset INFISICAL_CLIENT_SECRET INFISICAL_TOKEN INFISICAL_PASSWORD"
   echo "unset SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN"
   echo "unset AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID AWS_SESSION_TOKEN"
+  if [ -f "$GOV_DIR/ops/scripts/lib/bind_memory_interpreter.sh" ] \
+     && [ -x "$GOV_DIR/.venv/bin/python3" ]; then
+    # shellcheck source=/dev/null
+    . "$GOV_DIR/ops/scripts/lib/bind_memory_interpreter.sh"
+    bind_l9_memory_interpreter "$GOV_DIR/.venv/bin/python3" "$GOV_DIR"
+    if [ -n "${L9_MEMORY_INTERPRETER:-}" ]; then
+      echo "export L9_MEMORY_INTERPRETER=$(printf %q "$L9_MEMORY_INTERPRETER")"
+    fi
+  fi
 } > "$L9_ENV_FILE"
 
 # NOTE: Sonar project identity is deliberately NOT written here. It is
@@ -346,13 +356,16 @@ else
   note "CLAUDE_ENV_FILE unset — sourcing $L9_ENV_FILE from the shell profile instead"
 fi
 
-# --- 4) Memory front door (report, never block) ----------------------------
+# --- 4) Memory control plane (report, never block) --------------------------
 # Capability broker retired 2026-08-29 (never shipped). Do not probe it.
-# Graphiti is GRAPHITI_MCP_URL. Do NOT paste GRAPHITI_MCP_TOKEN, CONTEXT7_API_KEY,
-# or an Infisical UA into the variables field. Those two MCP transport credentials
-# are proxied: mcp.template.json references them as ${VAR}, so a value reaches the
-# MCP client only when the platform proxies one, and never via a pasted secret.
-note "memory front door URL: ${GRAPHITI_MCP_URL:-unset} (bearer: ${GRAPHITI_MCP_TOKEN:+proxied}${GRAPHITI_MCP_TOKEN:-none})"
+# The only memory plane is the canonical l9-graphite-memory server
+# (memory-control-plane/v1), bound per checkout by ops/memory/runtime_binding.py
+# and rendered into .mcp.json only when L9_MEMORY_INTERPRETER names a Python
+# carrying the pinned package. There is no provider URL and no memory bearer on
+# this surface. Do NOT paste CONTEXT7_API_KEY or an Infisical UA into the
+# variables field: the Context7 credential is proxied (mcp.template.json
+# references it as ${VAR}), never pasted.
+note "memory control plane: l9-graphite-memory (interpreter: ${L9_MEMORY_INTERPRETER:-unbound; make memory-readiness})"
 note "context7 mcp key: ${CONTEXT7_API_KEY:+proxied}${CONTEXT7_API_KEY:-none}"
 note "capability plane: RETIRED (never shipped)"
 
@@ -371,7 +384,7 @@ exit 0
 Start a NEW session, then:
 
 ```bash
-grep L9_STUB_REVISION ~/.l9/cloud-session.env      # expect 2026-08-29.1
+grep L9_STUB_REVISION ~/.l9/cloud-session.env      # expect 2026-09-11.1
 make claude-env                                    # structural + RUNTIME verdicts
 ```
 

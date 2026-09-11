@@ -320,16 +320,29 @@ def _memory_control_plane_health(levels: dict[str, str] | None) -> tuple[str, st
     return READY, "canonical store and service ready"
 
 
-def _memory_mcp_health(levels: dict[str, str] | None) -> tuple[str, str]:
-    """R4 MCP_CONFIG_INSTALLED: the package-owned entry is present and current."""
-    if levels is None:
-        return UNKNOWN, "memory readiness unavailable"
-    if levels.get("R4") != "pass":
-        return DEGRADED, "managed entry missing or drifted (blocker: mcp_config)"
-    return READY, "managed entry installed"
+def _claude_mcp_health(workspace: Path) -> tuple[str, str]:
+    """Claude project MCP is ready only when the interpreter is exported and rendered.
+
+    Diagnostics R4 is Cursor ``client cursor status`` (``~/.cursor/mcp.json``).
+    That is the wrong file on Claude Code. Do not read R4 here.
+    """
+    interp = (os.environ.get("L9_MEMORY_INTERPRETER") or "").strip()
+    if not interp:
+        return DEGRADED, "L9_MEMORY_INTERPRETER unset (blocker: mcp_config)"
+    mcp_path = Path(workspace) / ".mcp.json"
+    if not mcp_path.is_file():
+        return DEGRADED, "workspace .mcp.json missing (blocker: mcp_config)"
+    try:
+        decoded = json.loads(mcp_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return DEGRADED, "workspace .mcp.json unreadable (blocker: mcp_config)"
+    servers = decoded.get("mcpServers") if isinstance(decoded, dict) else None
+    if not isinstance(servers, dict) or "l9-graphite-memory" not in servers:
+        return DEGRADED, "l9-graphite-memory absent from .mcp.json (blocker: mcp_config)"
+    return READY, "claude mcp entry present and interpreter bound"
 
 
-def memory_probe(gov: Path) -> dict[str, Any]:
+def memory_probe(gov: Path, workspace: Path | str | None = None) -> dict[str, Any]:
     """Split cli / control plane / mcp — a bound CLI with a dead store is not one word."""
     if _memory_probe_skipped():
         skipped = {"status": READY, "reason": "probe skipped"}
@@ -337,7 +350,8 @@ def memory_probe(gov: Path) -> dict[str, Any]:
     levels = _memory_levels(gov)
     cli_status, cli_note = _memory_cli_health(levels)
     plane_status, plane_note = _memory_control_plane_health(levels)
-    mcp_status, mcp_note = _memory_mcp_health(levels)
+    ws = Path(workspace) if workspace else gov
+    mcp_status, mcp_note = _claude_mcp_health(ws)
     return {
         "cli": {"status": cli_status, "reason": cli_note},
         "control_plane": {"status": plane_status, "reason": plane_note},
@@ -552,7 +566,7 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
     proj = _read_json(home / ".l9" / "claude" / "projection-receipt.json")
     bootstrap = _read_json(home / ".l9" / "claude" / "bootstrap-state.json")
     proj_status = _projection_statuses(proj)
-    split = memory_probe(gov)
+    split = memory_probe(gov, workspace)
     cli_status = str(split["cli"]["status"])
     cli_note = str(split["cli"]["reason"])
     mem_mcp_status = str(split["mcp"]["status"])
@@ -622,13 +636,16 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
 
     overall = _aggregate(agg)
 
+    written_at = datetime.now(UTC).strftime(_TIMESTAMP_FORMAT)
     receipt: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
-        # The COMMIT date of governance_SHA, not when this receipt was written.
-        # Kept under its historical name for existing consumers; `generated_at`
-        # below is the write time, and freshness is derived from that one.
-        "timestamp": _git(gov, "log", "-1", "--format=%cI") or "",
-        "generated_at": datetime.now(UTC).strftime(_TIMESTAMP_FORMAT),
+        # Write clock. Historical `timestamp` used to be git %cI (commit date)
+        # and read like a write time, so freshness inverted if anyone keyed TTL
+        # on it. Both fields are now the UTC write instant; commit date lives
+        # under governance_committed_at.
+        "generated_at": written_at,
+        "timestamp": written_at,
+        "governance_committed_at": _git(gov, "log", "-1", "--format=%cI") or "",
         "ttl_seconds": RECEIPT_TTL_SECONDS,
         "governance_repository": ident["governance_repository"],
         "governance_default_branch": ident["governance_default_branch"],
@@ -798,7 +815,7 @@ def main() -> int:
 
     gov = args.root or _gov_root()
     if args.memory_probe:
-        print(json.dumps(memory_probe(gov)))
+        print(json.dumps(memory_probe(gov, args.workspace)))
         return 0
 
     workspace = args.workspace or os.environ.get("CURSOR_PROJECT_DIR") or os.getcwd()
