@@ -309,23 +309,14 @@ if [ "${GRAPHITI_MEMORY_ENABLED:-1}" != "0" ] && [ -f "$GC/ops/memory/diagnostic
   # write and close dry runs, which belong to `make memory-readiness`, not to
   # a 60-second SessionStart budget.
   HEALTH_JSON="$(cd "$GC" && PYTHONPATH="$GC${PYTHONPATH:+:$PYTHONPATH}" \
-    "$GPY" -m ops.memory.diagnostics --binding-only 2>"$HEALTH_ERR" || echo '{"status":"unbound"}')"
+    "$GPY" -m ops.memory.diagnostics --binding-only 2>"$HEALTH_ERR" || echo '{}')"
   MEMORY_STDERR="$(head -c 500 "$HEALTH_ERR" | tr '\n' ' ')"
   rm -f "$HEALTH_ERR"
-  # RuntimeBinding.as_dict() keys on binding_status. Failure JSON uses status.
-  # compatible is usable (R0 PASS) — artifact unproved, not unbound.
-  BINDING_STATUS="$(echo "$HEALTH_JSON" | "$GPY" -c "import sys,json; d=json.load(sys.stdin); print(d.get('binding_status') or d.get('status') or 'unbound')" 2>/dev/null || echo unbound)"
-  case "$BINDING_STATUS" in
-    exact|compatible|development_checkout)
-      MEMORY_HEALTH="bound ($BINDING_STATUS): $(echo "$HEALTH_JSON" | "$GPY" -c "import sys,json; d=json.load(sys.stdin); print((d.get('memory_package') or 'l9-graphite-memory') + ' ' + str(d.get('memory_version') or ''))" 2>/dev/null || echo l9-graphite-memory)"
-      MEMORY_HEALTHY="true"
-      ;;
-    *)
-      REASON="$(echo "$HEALTH_JSON" | "$GPY" -c "import sys,json; d=json.load(sys.stdin); print('; '.join(d.get('reasons') or []) or 'memory runtime unbound')" 2>/dev/null || echo "memory runtime unbound")"
-      MEMORY_HEALTH="unbound: $REASON"
-      [ -n "$MEMORY_STDERR" ] || MEMORY_STDERR="$HEALTH_JSON"
-      ;;
-  esac
+  # Pass the live proof JSON. The reporter classifies from its fields
+  # (binding_status, ok, artifact_provenance, reasons). Do not invent
+  # bound/unbound slogans or a status allowlist here.
+  MEMORY_HEALTH="$HEALTH_JSON"
+  MEMORY_HEALTHY=""
 fi
 
 WIRING_CHECK="skipped"

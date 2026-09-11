@@ -380,6 +380,7 @@ class RuntimeBinding:
             "module_path": self.module_path,
             "runtime_mode": self.runtime_mode,
             "binding_status": self.status,
+            "ok": self.ok,
             "artifact_provenance": self.artifact_provenance,
             "installed_artifact_digest": self.installed_artifact_digest,
             "expected_artifact_digest": self.expected_artifact_digest,

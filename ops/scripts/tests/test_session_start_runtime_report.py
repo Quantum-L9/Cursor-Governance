@@ -158,6 +158,61 @@ class SecretsPlaneClassificationTests(unittest.TestCase):
         self.assertIn("do not paste a token", line["summary"])
 
 
+class MemoryProofClassificationTests(unittest.TestCase):
+    def test_compatible_unproven_is_not_unbound_or_bound(self) -> None:
+        line = report.classify_memory_proof(
+            {
+                "binding_status": "compatible",
+                "ok": True,
+                "artifact_provenance": "unproven",
+                "memory_package": "l9-graphite-memory",
+                "memory_version": "2.3.1",
+                "reasons": ["the install recorded no PEP 610 archive hash"],
+            }
+        )
+        self.assertEqual(line["class"], report.DEGRADED)
+        self.assertIn("compatible", line["summary"])
+        self.assertIn("unproven", line["summary"])
+        self.assertIn("PEP 610", line["summary"])
+        self.assertNotIn("unbound", line["summary"])
+        self.assertFalse(line["summary"].startswith("bound "))
+
+    def test_exact_proved_is_ok_from_measured_ok(self) -> None:
+        line = report.classify_memory_proof(
+            {
+                "binding_status": "exact",
+                "ok": True,
+                "artifact_provenance": "artifact_sha256",
+                "memory_package": "l9-graphite-memory",
+                "memory_version": "2.3.1",
+                "reasons": [],
+            }
+        )
+        self.assertEqual(line["class"], report.OK)
+        self.assertIn("exact", line["summary"])
+        self.assertNotIn("bound (", line["summary"])
+
+    def test_missing_ok_is_not_invented_usable(self) -> None:
+        line = report.classify_memory_proof({"binding_status": "compatible"})
+        self.assertEqual(line["class"], report.DEGRADED)
+        self.assertFalse(line["summary"].startswith("bound "))
+
+    def test_json_detail_is_classified_as_proof(self) -> None:
+        line = report.classify_memory(
+            detail='{"binding_status":"compatible","ok":true,"artifact_provenance":"unproven","reasons":["digest unproved"]}',
+            stderr="",
+            healthy=False,
+        )
+        self.assertEqual(line["class"], report.DEGRADED)
+        self.assertIn("compatible", line["summary"])
+        self.assertNotIn("unbound", line["summary"])
+
+    def test_slogan_is_not_a_live_proof(self) -> None:
+        self.assertIsNone(report.parse_binding_proof("unbound: the install recorded no PEP 610"))
+        self.assertFalse(report.proof_is_live({"status": "unbound"}))
+        self.assertTrue(report.proof_is_live({"binding_status": "compatible", "ok": True}))
+
+
 class SkillUsageClassificationTests(unittest.TestCase):
     def test_absent_log_is_na_not_degraded(self) -> None:
         line = report.classify_skill_usage("/tmp/skill-usage.jsonl (absent — logger never wrote)")
@@ -295,6 +350,9 @@ class HookWiringTests(unittest.TestCase):
         self.assertNotIn("BOOTSTRAP_NOTE", text)
         self.assertNotIn("plugins, IDE, cold venv", text)
         self.assertNotIn("cold venv", text)
+        self.assertNotIn("bound ($BINDING_STATUS)", text)
+        self.assertNotIn("exact|compatible|development_checkout", text)
+        self.assertNotIn("""echo '{"status":"unbound"}'""", text)
 
     def test_claude_hook_uses_portable_timeout(self) -> None:
         text = (

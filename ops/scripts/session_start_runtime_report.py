@@ -20,9 +20,10 @@ from typing import Any
 
 # Allow `python ops/scripts/session_start_runtime_report.py` from a checkout.
 _SCRIPTS = Path(__file__).resolve().parent
+_REPO = _SCRIPTS.parent.parent
 _AUTONOMY = _SCRIPTS.parent / "autonomy"
 _SECRETS = _SCRIPTS.parent / "secrets"
-for _path in (_SCRIPTS, _AUTONOMY, _SECRETS):
+for _path in (_REPO, _SCRIPTS, _AUTONOMY, _SECRETS):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
@@ -258,6 +259,9 @@ def classify_cursor_adapter(
 
 
 def classify_memory(*, detail: str, stderr: str, healthy: bool) -> dict[str, Any]:
+    proof = parse_binding_proof(detail)
+    if proof_is_live(proof):
+        return classify_memory_proof(proof)
     if healthy:
         return _line("memory", OK, detail or "healthy")
     evidence = (stderr or "").strip() or detail or "no stderr captured — probe swallowed"
@@ -269,6 +273,89 @@ def classify_memory(*, detail: str, stderr: str, healthy: bool) -> dict[str, Any
         detail or "unhealthy",
         evidence=evidence[:500],
     )
+
+
+def parse_binding_proof(raw: str | None) -> dict[str, Any] | None:
+    text = (raw or "").strip()
+    if not text.startswith("{"):
+        return None
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def proof_is_live(proof: dict[str, Any] | None) -> bool:
+    """A measured RuntimeBinding.as_dict(), not a slogan or fail-closed stub."""
+    if not proof:
+        return False
+    return "binding_status" in proof or "ok" in proof
+
+
+def probe_memory_binding() -> dict[str, Any] | None:
+    try:
+        from ops.memory.runtime_binding import resolve_runtime_binding
+    except ImportError:
+        return None
+    try:
+        return resolve_runtime_binding().as_dict()
+    except Exception:
+        return None
+
+
+def classify_memory_proof(proof: dict[str, Any]) -> dict[str, Any]:
+    """Compose the memory line from measured proof fields only."""
+    status = str(proof.get("binding_status") or proof.get("status") or "").strip()
+    provenance = str(proof.get("artifact_provenance") or "").strip()
+    package = str(proof.get("memory_package") or "").strip()
+    version = str(proof.get("memory_version") or "").strip()
+    raw_reasons = proof.get("reasons") or []
+    if isinstance(raw_reasons, str):
+        reason_text = raw_reasons.strip()
+        reasons: list[str] = [raw_reasons] if raw_reasons.strip() else []
+    else:
+        reasons = [str(item) for item in raw_reasons if item]
+        reason_text = "; ".join(reasons)
+    if "ok" in proof:
+        usable = bool(proof["ok"])
+    else:
+        usable = False
+    head = status or "unknown"
+    if provenance:
+        head = f"{head} (provenance {provenance})"
+    identity = " ".join(part for part in (package, version) if part)
+    summary = " — ".join(part for part in (head, identity, reason_text) if part)
+    if not summary:
+        summary = "memory proof empty"
+    evidence = json.dumps(
+        {
+            "binding_status": status or None,
+            "ok": proof.get("ok"),
+            "artifact_provenance": provenance or None,
+            "reasons": reasons,
+        },
+        sort_keys=True,
+    )
+    lowered = f"{summary} {reason_text}".lower()
+    if not usable:
+        klass = FAILED if "unreachable" in lowered or "refused" in lowered else DEGRADED
+    elif provenance == "unproven":
+        klass = DEGRADED
+    else:
+        klass = OK
+    return _line("memory", klass, summary, evidence=evidence[:500])
+
+
+def resolve_memory_proof(*, raw_proof: str = "", raw_detail: str = "") -> dict[str, Any] | None:
+    """Prefer a live proof JSON; otherwise measure. Never trust a slogan."""
+    for raw in (raw_proof, raw_detail):
+        parsed = parse_binding_proof(raw)
+        if proof_is_live(parsed):
+            return parsed
+    if (raw_detail or "").strip().startswith("disabled"):
+        return None
+    return probe_memory_binding()
 
 
 def classify_simple(name: str, detail: str, *, fail_tokens: tuple[str, ...] = ()) -> dict[str, Any]:
@@ -444,6 +531,7 @@ def collect(
     memory_detail: str,
     memory_stderr: str,
     memory_healthy: bool,
+    memory_proof: dict[str, Any] | None = None,
     wiring: str,
     backup: str,
     skill_note: str,
@@ -462,7 +550,9 @@ def collect(
         classify_simple("venv", venv, fail_tokens=("absent", "missing", "fail")),
         classify_simple("ide-profile", ide_profile, fail_tokens=("fail", "error")),
         classify_simple("tunnel", tunnel, fail_tokens=("fail", "refused", "error", "closed")),
-        classify_memory(detail=memory_detail, stderr=memory_stderr, healthy=memory_healthy),
+        classify_memory_proof(memory_proof)
+        if memory_proof is not None
+        else classify_memory(detail=memory_detail, stderr=memory_stderr, healthy=memory_healthy),
         classify_publish_path(evaluate(load_receipt())),
         classify_aws_cli(aws_result),
         classify_secrets_bind(bind_result),
@@ -544,6 +634,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--memory-detail", default="")
     parser.add_argument("--memory-stderr", default="")
     parser.add_argument("--memory-healthy", default="false")
+    parser.add_argument(
+        "--memory-proof",
+        default="",
+        help="RuntimeBinding.as_dict() JSON; when absent the reporter re-probes",
+    )
     parser.add_argument("--wiring", default="")
     parser.add_argument("--backup", default="")
     parser.add_argument("--skill-note", default="")
@@ -558,6 +653,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
+    memory_proof = resolve_memory_proof(
+        raw_proof=args.memory_proof,
+        raw_detail=args.memory_detail,
+    )
     lines = collect(
         surface=args.surface,
         venv=args.venv,
@@ -566,6 +665,7 @@ def main(argv: list[str] | None = None) -> int:
         memory_detail=args.memory_detail,
         memory_stderr=args.memory_stderr,
         memory_healthy=_truthy(args.memory_healthy),
+        memory_proof=memory_proof,
         wiring=args.wiring,
         backup=args.backup,
         skill_note=args.skill_note,
