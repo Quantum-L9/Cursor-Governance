@@ -70,6 +70,12 @@ repos:
         language: system
         pass_filenames: false
 
+      - id: max-velocity
+        name: Committed execution profiles stay at maximum_velocity
+        entry: python3 ops/scripts/validate_max_velocity.py
+        language: system
+        pass_filenames: false
+
       - id: gh-package-deps-preflight
         name: "@quantum-l9 deps are published and lock-true (tarball + integrity)"
         entry: python3 ops/scripts/validate_gh_package_deps.py

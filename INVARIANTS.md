@@ -1,7 +1,7 @@
 # Cursor-Governance — invariants index
 
-**Version:** 1.1.0
-**Updated:** 2026-09-04
+**Version:** 1.2.0
+**Updated:** 2026-09-11
 **Role:** this-repo operating-invariant index plus a CI enforcement map.
 
 This file does **not** replace [`ORG_INVARIANTS.yaml`](ORG_INVARIANTS.yaml). That YAML is the machine-readable organization policy SSOT. The operator note for org policy is [`docs/governance/ORG_INVARIANTS.md`](docs/governance/ORG_INVARIANTS.md). Do not copy `L9-ORG-*` requirement bodies into this file.
@@ -30,6 +30,7 @@ Named pointers only. One line + path. Bind from live law at refresh time.
 | `pr-check` is the INTERNAL gate leaf of `make pr`; Diagnose is `OPEN_PR=0 make pr`; do not run `pr-check` after `precommit-repo` | `AGENTS.md` `PR_CHECK_FOLDED_V1`; `rules/48-make-pr-remediation.mdc` |
 | Repository documentation closure is obligation-based: a receipt may be `PASS` only when every applicable `DocumentationObligation` is terminal and its required validation is evidenced; any required non-terminal obligation remains `PARTIAL`, and a blocked obligation yields `BLOCKED` | `skills/l9-update-agent-docs/contracts/documentation-obligation.schema.json`; `skills/l9-update-agent-docs/scripts/doc_obligations.py` |
 | Semantic documentation obligations require admitted, change-bound `l9-intelligence-harvest` evidence; the Harvest input must bind the evaluated repository, required surfaces, and semantic source digest before it may qualify an obligation | `skills/l9-update-agent-docs/scripts/repo_docs.py`; `skills/l9-update-agent-docs/scripts/compile_semantic_obligations.py` |
+| Maximum velocity is the committed execution personality on every surface (Cursor and Claude): `maximum_velocity`, `max_parallel>=480`, `max_mutation_lanes>=128`, `native_subagent_limit>=480`. Independent research launches as concurrent Tasks, not one in-session lane | `ops/autonomy/claude-execution-profiles.json`; `ops/autonomy/surface_profile.yaml` `claude_execution_profiles`; `rules/07-max-velocity-research.mdc`; `ops/scripts/validate_max_velocity.py` |
 
 Org-policy invariant IDs and enforcement text live only in the YAML `invariants:` block. Point there; do not duplicate.
 
@@ -51,6 +52,7 @@ Invariant → workflow or script that actually checks it. Local procedure remain
 | CodeQL | `.github/workflows/codeql.yml` (reusable: `codeql-reusable.yml`) |
 | Repo hygiene | `.github/workflows/repo-hygiene.yml`; pre-commit `repo-hygiene` |
 | Generated artifact heal | pre-commit `sync-generated-artifacts` (make pr may WARN+continue; see hook comment) |
+| Maximum-velocity execution profile | pre-commit `max-velocity` → `ops/scripts/validate_max_velocity.py`; `tests/ops/scripts/test_validate_max_velocity.py` |
 
 Workflow file count at write time: **14** under `.github/workflows/`. Recount from that directory on refresh. Blocking vs janitor split: [`ARCHITECTURE.md`](ARCHITECTURE.md) CI/CD architecture.
 
@@ -75,3 +77,12 @@ Ruff `line-length = 100` (`pyproject.toml` `[tool.ruff]`). Pins stay in `AGENTS.
 ## Refresh
 
 Use skill `l9-update-agent-docs` with adapter [`.claude/adapters/cursor-governance-update-agent-docs.md`](.claude/adapters/cursor-governance-update-agent-docs.md). Keep this file an index. Bump **Version** when an invariant pointer or exclusion citation changes.
+
+<!-- MAX_VELOCITY_INVARIANT_V1 -->
+## Maximum velocity (2026-09-10)
+
+Additive index row only. Do not fold the table. A committed `constrained`
+Cursor profile, `max_parallel` below 480, or `cursor_default` other than
+`maximum_velocity` is a fail-closed regression
+(`ops/scripts/validate_max_velocity.py`). Agents fan out independent
+research as Tasks (`rules/07-max-velocity-research.mdc`).

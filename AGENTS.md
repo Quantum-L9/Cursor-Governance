@@ -1514,3 +1514,19 @@ Append-only. Do not add Makefile ceremony.
   inventory. Do not invent `secrets-bind` or `secrets-aws-preflight`
   targets. Values are never exported. Do not paste a token. Do not
   `hydrate --export` on a model surface.
+
+<!-- MAX_VELOCITY_RESEARCH_V1 -->
+## Maximum velocity + research fan-out (2026-09-10)
+
+Append-only. Repo invariant: every committed execution profile is
+`maximum_velocity` (`max_parallel>=480`, `max_mutation_lanes>=128`,
+`native_subagent_limit>=480`). Enforced by
+`ops/scripts/validate_max_velocity.py`. Live rule:
+`rules/07-max-velocity-research.mdc`.
+
+- Do not reintroduce `constrained` / 4/2 as a Cursor "economy" personality.
+- Independent research, recon, and residue audits launch as concurrent
+  Tasks (`explore` read-only; `generalPurpose` only when the child must
+  edit). Main keeps synthesis.
+- A denied Task admission is a gate defect to report, not a reason to
+  keep recon in-session.
