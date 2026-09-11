@@ -322,9 +322,11 @@ _park_overwrite_untracked() {
   # One cleanup owner for every way out of this function: normal return, the
   # explicit failure below, and an errexit/signal abort in the parking loop.
   # Paths are expanded into the trap text now, so the handler does not depend
-  # on locals that are gone by the time EXIT fires. This script installs no
-  # other trap, so nothing here clobbers or is clobbered.
-  trap "rm -f '$_trk' '$_org' '$_only'" RETURN EXIT
+  # on locals that are gone by the time EXIT fires. The handler clears both
+  # traps as its last act, so it is scoped to THIS function rather than firing
+  # on every later function return and rather than sitting installed where a
+  # future trap would silently replace it.
+  trap "rm -f '$_trk' '$_org' '$_only'; trap - RETURN EXIT" RETURN EXIT
   # A failure in this computation must NEVER degrade to "nothing to park":
   # the caller runs a destructive `reset --keep` next, so an empty result
   # silently overwrites every ignored colliding copy. The set difference is
