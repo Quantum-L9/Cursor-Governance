@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Kernel hook that fires before pre-commit hooks and tests.
 
-Not an L4 phase. L4 remains local-commit / no-mid-push / authorize-release.
-This module is the only velocity-path latch for applying tree kernels
-(Recursive Alignment + Validate & Repair). WIP/, docs/plans/, and
+L4 authorize-release requires this receipt. This module stamps and verifies
+tree kernels (Recursive Alignment + Validate & Repair). WIP/, docs/plans/, and
 environment/program-execution/campaigns/ are corpus surfaces owned by
 ``/ff`` (Improve then RA then Validate & Repair) — this hook must not
 L9_AGENT_REQUIRED them. L4 record-kernels is not the corpus apply path.
@@ -185,9 +184,9 @@ def _agent_required_tree(root: Path) -> str:
         "  2. Apply kernels/Validate & Repair.md independently on the same tree\n"
         "  3. Commit any revisions on this stacked branch (no push)\n"
         "  4. python3 ops/autonomy/kernel_gate.py record --workspace <this workspace>\n"
-        "  5. Re-run the same command (make precommit-repo / make pr-check / make pr).\n"
-        "     Hooks and tests run once after this hook passes.\n"
-        "Kernels are not an L4 phase. Do not record-kernels / IMPROVE_RECORD to apply them.\n"
+        "  5. python3 ops/autonomy/l4_local.py authorize-release\n"
+        "  6. make pr once. Do not re-run make pr to apply kernels.\n"
+        "Tree kernels are an L4 precondition. authorize-release fail-closes without this receipt.\n"
         "Do not run pre-commit or pytest first.\n"
         "=== END L9_AGENT_REQUIRED ===\n"
     )

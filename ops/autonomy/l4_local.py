@@ -4,12 +4,14 @@
 SSOT doctrine: ops/autonomy/surface_profile.yaml (l4_local_autonomy).
 State + receipts live under <workspace>/.l9/autonomy/ (gitignored).
 
-Tree kernels are owned by ops/autonomy/kernel_gate.py (first step of
-precommit-repo). They are not an L4 phase.
+Tree kernels are applied before authorize-release. The agent applies
+Recursive Alignment + Validate & Repair, then stamps
+ops/autonomy/kernel_gate.py record. authorize-release fail-closes without
+that receipt so make pr is verify-only and runs once.
 
 Phases:
   executing          — local commits on stacked branch; push/PR denied
-  kernels_recorded   — compat only; record-kernels still stamps kernel_gate
+  kernels_recorded   — record-kernels stamped kernel_gate (compat)
   release_authorized — scoped push + PR using PULL_REQUEST_TEMPLATE allowed
 """
 
@@ -419,6 +421,33 @@ def record_kernels(
     return state
 
 
+def _require_kernel_receipt(root: Path) -> None:
+    """Fail closed unless kernel_gate.verify_tree accepts this workspace."""
+    from kernel_gate import gov_root_from_env, verify_tree
+
+    fail = verify_tree(root, gov_root_from_env())
+    if fail:
+        raise RuntimeError(
+            "L4 authorize-release requires a valid tree-kernel receipt. "
+            "Apply kernels/Recursive Alignment.md and kernels/Validate & Repair.md, "
+            "then: python3 ops/autonomy/kernel_gate.py record --workspace <ws>. "
+            "Then re-run authorize-release. Do not run make pr first."
+        )
+
+
+def _align_kernel_statuses_passed(state: dict[str, Any]) -> None:
+    kernels = state.setdefault("kernels", {})
+    for label, path in (
+        ("recursive_alignment", KERNEL_RECURSIVE_ALIGNMENT),
+        ("validate_repair", KERNEL_VALIDATE_REPAIR),
+    ):
+        entry = dict(kernels.get(label) or {})
+        entry["status"] = "passed"
+        entry.setdefault("path", path)
+        entry.setdefault("ran_at", _utc_now())
+        kernels[label] = entry
+
+
 def authorize_release(root: Path) -> dict[str, Any]:
     state = load_phase(root)
     if state is None:
@@ -429,6 +458,8 @@ def authorize_release(root: Path) -> dict[str, Any]:
             f"branch drift: phase started on {state.get('stacked_branch')!r}, now on {branch!r}"
         )
     head = current_head(root)
+    _require_kernel_receipt(root)
+    _align_kernel_statuses_passed(state)
     state["phase"] = PHASE_RELEASE
     state["authorized_at"] = _utc_now()
     state["head_sha"] = head
@@ -492,9 +523,9 @@ def _allow_from_phase(state: dict[str, Any] | None) -> tuple[bool, str]:
             "L4 local autonomy: mid-execution remote denied. "
             "Commit locally on a stacked branch, finish the program/contract, "
             "then: python3 ops/autonomy/l4_local.py begin && "
+            "python3 ops/autonomy/kernel_gate.py record && "
             "python3 ops/autonomy/l4_local.py authorize-release. "
-            "Kernels fire as the first precommit-repo hook "
-            "(ops/autonomy/kernel_gate.py), not as an L4 phase."
+            "Tree kernels must be recorded before authorize-release."
         )
     phase = state.get("phase")
     if phase == PHASE_RELEASE:
@@ -505,8 +536,8 @@ def _allow_from_phase(state: dict[str, Any] | None) -> tuple[bool, str]:
             "python3 ops/autonomy/l4_local.py authorize-release"
         )
     return False, (
-        f"L4 phase={phase}: no mid-execution push/PR. Finish locally, then "
-        "authorize-release. Kernels fire in kernel_gate.py before precommit."
+        f"L4 phase={phase}: no mid-execution push/PR. Finish locally, record "
+        "tree kernels, then authorize-release."
     )
 
 

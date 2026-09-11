@@ -21,7 +21,7 @@ import pytest
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "ops" / "autonomy"))
 
-from l4_local import authorize_release, begin  # noqa: E402
+from l4_local import authorize_release, begin, record_kernels  # noqa: E402
 from local_execution_gate import cursor_shell_verdict, effective_root, evaluate  # noqa: E402
 
 
@@ -210,6 +210,7 @@ def test_evaluate_uses_ws_receipt_not_session_root(
     consumer = make_repo(tmp_path / "consumer")
     git(consumer, "checkout", "-b", "feat/ws")
     begin(consumer, contract_id="ws")
+    record_kernels(consumer)
     authorize_release(consumer)
     command = f'PR_REMEDIATE=0 make -C "{main_repo}" pr WS="{consumer}"'
     assert evaluate("Bash", {"command": command}, root=main_repo) is None
@@ -224,6 +225,7 @@ def test_cursor_verdict_allows_ws_when_session_root_has_no_receipt(
     consumer = make_repo(tmp_path / "consumer")
     git(consumer, "checkout", "-b", "feat/ws")
     begin(consumer, contract_id="ws")
+    record_kernels(consumer)
     authorize_release(consumer)
     event = {
         "command": f'PR_REMEDIATE=0 make -C "{main_repo}" pr WS="{consumer}"',
