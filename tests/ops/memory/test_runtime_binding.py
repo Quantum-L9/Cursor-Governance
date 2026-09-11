@@ -158,6 +158,7 @@ def test_exact_binding_reports_the_proof_shape(tmp_path: Path, monkeypatch) -> N
     assert binding.ok and binding.status == rb.STATUS_EXACT
     proof = binding.as_dict()
     assert proof["binding_status"] == "exact"
+    assert "status" not in proof
     assert proof["memory_cli"] == str(env.cli)
     assert proof["memory_version"] == EXPECTED_VERSION
     assert proof["contract_version"] == CONTRACT

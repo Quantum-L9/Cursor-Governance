@@ -312,9 +312,11 @@ if [ "${GRAPHITI_MEMORY_ENABLED:-1}" != "0" ] && [ -f "$GC/ops/memory/diagnostic
     "$GPY" -m ops.memory.diagnostics --binding-only 2>"$HEALTH_ERR" || echo '{"status":"unbound"}')"
   MEMORY_STDERR="$(head -c 500 "$HEALTH_ERR" | tr '\n' ' ')"
   rm -f "$HEALTH_ERR"
-  BINDING_STATUS="$(echo "$HEALTH_JSON" | "$GPY" -c "import sys,json; print(json.load(sys.stdin).get('status','unbound'))" 2>/dev/null || echo unbound)"
+  # RuntimeBinding.as_dict() keys on binding_status. Failure JSON uses status.
+  # compatible is usable (R0 PASS) — artifact unproved, not unbound.
+  BINDING_STATUS="$(echo "$HEALTH_JSON" | "$GPY" -c "import sys,json; d=json.load(sys.stdin); print(d.get('binding_status') or d.get('status') or 'unbound')" 2>/dev/null || echo unbound)"
   case "$BINDING_STATUS" in
-    exact|development_checkout)
+    exact|compatible|development_checkout)
       MEMORY_HEALTH="bound ($BINDING_STATUS): $(echo "$HEALTH_JSON" | "$GPY" -c "import sys,json; d=json.load(sys.stdin); print((d.get('memory_package') or 'l9-graphite-memory') + ' ' + str(d.get('memory_version') or ''))" 2>/dev/null || echo l9-graphite-memory)"
       MEMORY_HEALTHY="true"
       ;;
