@@ -51,3 +51,25 @@ def test_invariants_index_points_at_the_validator() -> None:
     text = (ROOT / "INVARIANTS.md").read_text(encoding="utf-8")
     assert "validate_max_velocity.py" in text
     assert "maximum_velocity" in text
+
+
+def test_non_mapping_documents_are_defects_not_crashes(tmp_path: Path) -> None:
+    """A fail-closed gate reports; it does not raise.
+
+    Valid JSON/YAML need not be a mapping. A top-level list used to reach
+    `.get` and raise AttributeError, taking the checker down instead of
+    failing it closed.
+    """
+    for policy_text, surface_text in (
+        ("[]", "profiles: {}\n"),
+        ('{"profiles": {}}', "- a\n- b\n"),
+        ("[1, 2]", "- a\n"),
+    ):
+        root = tmp_path / f"case{abs(hash((policy_text, surface_text)))}"
+        (root / Path(v.POLICY_REL).parent).mkdir(parents=True, exist_ok=True)
+        (root / Path(v.SURFACE_REL).parent).mkdir(parents=True, exist_ok=True)
+        (root / v.POLICY_REL).write_text(policy_text, encoding="utf-8")
+        (root / v.SURFACE_REL).write_text(surface_text, encoding="utf-8")
+        defects = v.collect_defects(root)
+        assert defects, (policy_text, surface_text)
+        assert any("expected a mapping" in d for d in defects), defects
