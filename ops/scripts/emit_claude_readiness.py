@@ -631,6 +631,7 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
     proj = _read_json(home / ".l9" / "claude" / "projection-receipt.json")
     bootstrap = _read_json(home / ".l9" / "claude" / "bootstrap-state.json")
     proj_status = _projection_statuses(proj)
+    gated_out = _gated_out_servers(proj)
     split = memory_probe(gov, projection=proj)
     cli_status = str(split["cli"]["status"])
     cli_note = str(split["cli"]["reason"])
@@ -702,9 +703,11 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
     # state) but it is still absent, and an agent reading only the status line
     # would go looking for MCP tools that are not there. Warnings are otherwise
     # derived from status alone, so this one is stated explicitly rather than
-    # left to a `notes` entry the compact block does not print.
-    if mem_mcp_note == MEMORY_MCP_GATED_NOTE:
-        warnings.append(f"memory_mcp_status: {MEMORY_MCP_GATED_NOTE}")
+    # left to a `notes` entry the compact block does not print. Keyed on the
+    # gating itself, not on matching the note text: a reworded note must not
+    # silently delete the warning.
+    if _MEMORY_MCP_SERVER in gated_out and mem_mcp_status == READY:
+        warnings.append(f"memory_mcp_status: {mem_mcp_note}")
 
     overall = _aggregate(agg)
 
