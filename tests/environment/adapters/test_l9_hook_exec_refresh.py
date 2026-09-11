@@ -8,13 +8,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 LAUNCHER = (
-    REPO_ROOT
-    / "environment"
-    / "agents"
-    / "adapters"
-    / "claude-code"
-    / "hooks"
-    / "l9_hook_exec.sh"
+    REPO_ROOT / "environment" / "agents" / "adapters" / "claude-code" / "hooks" / "l9_hook_exec.sh"
 )
 TIP_HOOK = "tip_only_observer.sh"
 
