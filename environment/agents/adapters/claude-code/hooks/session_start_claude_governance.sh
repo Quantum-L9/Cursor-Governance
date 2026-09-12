@@ -437,6 +437,13 @@ if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
     # origin/main is the only executable tip. This hook never independently
     # fetches or resets: an untrusted origin, a refused refresh, or a missed
     # launcher attempt must not fall into a second fetch/checkout brain.
+    #
+    # Hardened failure mode detection (PR #548):
+    #   - Direct invocation: L9_LAUNCHER_PROTOCOL_VERSION unset
+    #   - Pre-protocol launcher: L9_LAUNCHER_PROTOCOL_VERSION < 2
+    #   - Launcher crash: L9_GOV_REFRESH_STARTED=1 but no attempt ID or outcome
+    #   - Configuration skip: L9_GOV_REFRESH_OUTCOME set (launcher decided not to refresh)
+    #   - Normal operation: L9_GOV_REFRESH_ATTEMPT_ID set (launcher completed)
     _refresh_head=$(git -C "$GOV" rev-parse --verify --quiet HEAD 2>/dev/null || echo '')
     _refresh_sha=""
     _refresh_attempt=""
@@ -459,12 +466,40 @@ if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
       say "governance refresh: already applied this SessionStart (launcher attempt $_refresh_attempt)"
     else
     local_sha=$(git -C "$GOV" rev-parse --verify --quiet HEAD 2>/dev/null || echo 'unknown')
+    # -------------------------------------------------------------------------
+    # Hardened launcher-absent diagnostics: distinguish four failure modes.
+    # -------------------------------------------------------------------------
     if [ -n "${L9_GOV_REFRESH_OUTCOME:-}" ]; then
+      # Case 1: Launcher ran but decided not to refresh (configuration skip).
+      # The outcome tells us why: origin-untrusted, lock-busy, reset-skipped-dirty, etc.
       write_refresh_receipt "launcher-${L9_GOV_REFRESH_OUTCOME}" "$local_sha" unknown -1 stale
       say "governance refresh: launcher did not establish the tree (${L9_GOV_REFRESH_OUTCOME}) — no SessionStart fetch/reset (one refresh authority)"
+    elif [ -z "${L9_LAUNCHER_PROTOCOL_VERSION:-}" ]; then
+      # Case 2: No protocol version → direct invocation or very old launcher.
+      # The hook was run without going through l9_hook_exec.sh at all.
+      write_refresh_receipt direct-invocation "$local_sha" unknown -1 stale
+      say "governance refresh: WARN — hook invoked directly without l9_hook_exec.sh launcher"
+      say "governance refresh:   fix: ensure hooks.json routes through the launcher"
+    elif [ "${L9_LAUNCHER_PROTOCOL_VERSION:-0}" -lt 2 ]; then
+      # Case 3: Protocol version < 2 → pre-refresh launcher (before PR #548).
+      # The launcher exists but doesn't have the cloud refresh code.
+      write_refresh_receipt pre-protocol-launcher "$local_sha" unknown -1 stale
+      say "governance refresh: WARN — launcher protocol v${L9_LAUNCHER_PROTOCOL_VERSION} does not support cloud refresh (need v2+)"
+      say "governance refresh:   fix: update l9_hook_exec.sh to protocol v2 (PR #548)"
+    elif [ "${L9_GOV_REFRESH_STARTED:-}" = "1" ]; then
+      # Case 4: Refresh started but neither attempt ID nor outcome was set.
+      # The launcher crashed mid-refresh (kill -9, OOM, timeout, etc).
+      write_refresh_receipt launcher-crashed "$local_sha" unknown -1 stale
+      say "governance refresh: WARN — launcher crashed during refresh (started=1 but no completion)"
+      say "governance refresh:   launcher_pid=${L9_LAUNCHER_PID:-unknown} started=${L9_LAUNCHER_HOOK_START_EPOCH:-unknown}"
     else
+      # Case 5: Protocol v2+ but refresh path wasn't entered.
+      # This means CLAUDE_CODE_REMOTE wasn't true or it wasn't a SessionStart hook
+      # from the launcher's perspective — but we're seeing CLAUDE_CODE_REMOTE=true here.
+      # Likely a race or environment mismatch.
       write_refresh_receipt launcher-absent "$local_sha" unknown -1 stale
-      say "governance refresh: no launcher attempt bound — not independently fetching origin/main"
+      say "governance refresh: WARN — launcher v${L9_LAUNCHER_PROTOCOL_VERSION} did not enter refresh path"
+      say "governance refresh:   env mismatch? CLAUDE_CODE_REMOTE=${CLAUDE_CODE_REMOTE:-unset} here, may differ in launcher"
     fi
     # Dependency provisioning is NOT run from here. It was, and it is why this
     # hook never finished: `session_deps_cloud.sh` blocks for its own 20 s

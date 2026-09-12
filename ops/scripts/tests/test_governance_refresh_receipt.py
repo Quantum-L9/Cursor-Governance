@@ -139,8 +139,9 @@ class HookWriterTests(unittest.TestCase):
 
         In the PR #548 architecture, the launcher (l9_hook_exec.sh) owns the
         governance refresh for cloud SessionStart hooks. When the launcher
-        didn't set L9_GOV_REFRESH_ATTEMPT_ID, the SessionStart hook reports
-        `launcher-absent` to indicate no refresh was attempted by the launcher.
+        didn't set L9_LAUNCHER_PROTOCOL_VERSION, the SessionStart hook reports
+        `direct-invocation` to indicate the hook was run without going through
+        the launcher.
 
         The receipt must still be parseable JSON with the correct schema.
         """
@@ -167,9 +168,9 @@ class HookWriterTests(unittest.TestCase):
 
             parsed = json.loads(receipt_file.read_text(encoding="utf-8"))
             self.assertEqual(parsed["schema"], "l9.governance-refresh.v1")
-            # No L9_GOV_REFRESH_ATTEMPT_ID set, so the hook reports launcher-absent
-            # (the launcher owns the refresh in the PR #548 architecture).
-            self.assertEqual(parsed["outcome"], "launcher-absent")
+            # No L9_LAUNCHER_PROTOCOL_VERSION set, so the hook reports direct-invocation
+            # (the hook was run without going through l9_hook_exec.sh).
+            self.assertEqual(parsed["outcome"], "direct-invocation")
             self.assertEqual(parsed["origin_sha"], "unknown")
             self.assertRegex(parsed["refreshed_at"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
             self.assertIsInstance(parsed["ttl_seconds"], int)

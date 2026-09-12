@@ -49,9 +49,12 @@ def test_session_start_never_owns_fetch_or_reset() -> None:
 
 
 def test_launcher_outcome_is_recorded_not_retried() -> None:
+    """Verify the hook records launcher outcomes rather than independently retrying."""
     text = body()
+    # The hook records the launcher's outcome (e.g., lock-busy, origin-untrusted)
     assert "launcher-${L9_GOV_REFRESH_OUTCOME}" in text
-    assert "not independently fetching origin/main" in text
+    # The hook diagnoses failure modes rather than independently fetching
+    assert "one refresh authority" in text or "launcher did not establish" in text
 
 
 def test_hook_still_fails_open() -> None:
@@ -204,7 +207,8 @@ def test_tracked_dirt_survives_because_session_start_does_not_reset(
     assert (gov / "CANONICAL_LAW.md").read_text(encoding="utf-8") == (
         "synthetic + in-flight work\n"
     )
-    assert json.loads(receipt.read_text(encoding="utf-8"))["outcome"] == "launcher-absent"
+    # No L9_LAUNCHER_PROTOCOL_VERSION → direct-invocation (hook run without launcher)
+    assert json.loads(receipt.read_text(encoding="utf-8"))["outcome"] == "direct-invocation"
 
 
 def test_untracked_residue_does_not_invent_a_reset(tmp_path: Path) -> None:
@@ -216,7 +220,8 @@ def test_untracked_residue_does_not_invent_a_reset(tmp_path: Path) -> None:
 
     assert result.returncode == 0
     outcome = json.loads(receipt.read_text(encoding="utf-8"))["outcome"]
-    assert outcome == "launcher-absent"
+    # No L9_LAUNCHER_PROTOCOL_VERSION → direct-invocation (hook run without launcher)
+    assert outcome == "direct-invocation"
 
 
 def test_cursor_skip_precedes_claude_banner() -> None:
@@ -324,7 +329,8 @@ def test_a_fresh_looking_receipt_from_another_attempt_does_not_fetch(
     assert result.returncode == 0, result.stderr
     assert "already applied this SessionStart" not in result.stdout + result.stderr
     written = json.loads(receipt.read_text(encoding="utf-8"))
-    assert written["outcome"] == "launcher-absent"
+    # No L9_LAUNCHER_PROTOCOL_VERSION → direct-invocation (hook run without launcher)
+    assert written["outcome"] == "direct-invocation"
 
     receipt.write_text(json.dumps(stale), encoding="utf-8")
     result = _run_with(

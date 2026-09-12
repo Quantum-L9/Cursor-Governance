@@ -94,6 +94,26 @@ if [ -n "$_L9_REQUIRED" ] && [ "$_L9_REQUIRED" != "$HOOK_CLASS" ]; then
 fi
 unset _L9_REQUIRED
 
+# ---------------------------------------------------------------------------
+# Protocol version and launcher identification (hardening against launcher-absent).
+#
+# These exports let the SessionStart hook distinguish:
+#   - Direct invocation (not launched through l9_hook_exec.sh at all)
+#   - Pre-protocol launcher (old version without refresh code)
+#   - Launcher crash mid-refresh (started but didn't complete)
+#   - Normal operation (protocol version matches, attempt ID or outcome set)
+#
+# L9_LAUNCHER_PROTOCOL_VERSION: incremented when the launcher/hook contract changes.
+#   v1 = original launcher, no cloud refresh
+#   v2 = PR #548, cloud refresh with attempt ID binding
+# L9_LAUNCHER_PID: this launcher's PID, for crash detection and diagnostics.
+# L9_LAUNCHER_HOOK_START_EPOCH: when this launcher invocation started.
+# ---------------------------------------------------------------------------
+export L9_LAUNCHER_PROTOCOL_VERSION=2
+export L9_LAUNCHER_PID=$$
+export L9_LAUNCHER_HOOK_START_EPOCH
+L9_LAUNCHER_HOOK_START_EPOCH=$(date +%s 2>/dev/null || echo 0)
+
 # INV-1c: the governance tree this launcher dispatches out of is $HOME/.cursor-governance
 # and nothing else. SESSION_START_SPEC hard constraint 2 states it for the
 # SessionStart hook; it holds a fortiori for every gate, because what the
@@ -383,10 +403,15 @@ l9_gov_adopt_receipt() {
 l9_cloud_refresh_gov() {
   # Never inherited: a value in the account environment must not pre-seed the
   # binding the SessionStart hook keys its fallback on.
-  unset L9_GOV_REFRESH_ATTEMPT_ID L9_GOV_REFRESH_OUTCOME
+  unset L9_GOV_REFRESH_ATTEMPT_ID L9_GOV_REFRESH_OUTCOME L9_GOV_REFRESH_STARTED
   [ "${CLAUDE_CODE_REMOTE:-}" = "true" ] || return 0
   l9_is_session_start_hook "$HOOK_NAME" || return 0
   [ -d "$GOV_DIR/.git" ] || return 0
+
+  # Mark that we entered the refresh path. If the hook sees this marker but no
+  # attempt ID and no outcome, the launcher crashed mid-refresh. This catches
+  # kill -9, OOM, or any failure between here and the export at the end.
+  export L9_GOV_REFRESH_STARTED=1
   local lockdir="${L9_GOV_REFRESH_LOCKDIR:-$HOME/.l9/claude/gov-refresh.lock.d}"
   local receipt="${L9_GOV_REFRESH_RECEIPT:-$HOME/.l9/claude/gov-refresh.json}"
   local branch="main"
