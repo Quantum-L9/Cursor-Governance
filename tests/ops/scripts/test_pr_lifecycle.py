@@ -486,6 +486,9 @@ def test_precommit_repo_kernel_hook_fails_before_hooks(tmp_path: Path) -> None:
 def test_gate_commit_writer_dirt_finishes_without_second_make_pr(tmp_path: Path) -> None:
     """make pr commits writer rewrites and continues; standalone precommit-repo still stops."""
     repo = _init_repo(tmp_path, feature=True)
+    # Capture status BEFORE the dirty file is created (simulating gate start state)
+    status_before_file = tmp_path / "status_before"
+    status_before_file.write_text("", encoding="utf-8")  # empty = no prior dirt
     (repo / "a.txt").write_text("rewritten-by-ruff\n", encoding="utf-8")
     dirty = subprocess.run(
         ["git", "-C", str(repo), "status", "--porcelain"],
@@ -498,7 +501,7 @@ def test_gate_commit_writer_dirt_finishes_without_second_make_pr(tmp_path: Path)
     start = src.find("_gate_commit_writer_dirt() {")
     end = src.find("\n_gate_run_precommit()")
     assert start != -1 and end != -1
-    harness = f'WS="{repo}"\n' + src[start:end] + "\n_gate_commit_writer_dirt\n"
+    harness = f'WS="{repo}"\nstatus_before="{status_before_file}"\n' + src[start:end] + "\n_gate_commit_writer_dirt\n"
     proc = _run(["bash", "-c", harness], cwd=repo)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "committed" in proc.stdout
