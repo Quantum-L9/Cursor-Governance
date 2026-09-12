@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Emit the deterministic downstream ingress for a realized Foundry payload."""
-
 from __future__ import annotations
 
 import argparse
@@ -52,9 +51,7 @@ def _mapping(value: object, label: str) -> dict[str, Any]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description=(
-            "Emit docs/idea-origin/FOUNDRY_INDEX.json as the post-realization single ingress"
-        )
+        description="Emit docs/idea-origin/FOUNDRY_INDEX.json as the post-realization single ingress"
     )
     parser.add_argument("payload", type=Path)
     parser.add_argument("--inventory-digest", required=True)
@@ -114,9 +111,7 @@ def main() -> int:
         raise SystemExit("--plan-ref does not match FOUNDRY_RECEIPT planning.plan_document_ref")
     receipt_inventory = source.get("inventory_digest")
     if receipt_inventory != args.inventory_digest:
-        raise SystemExit(
-            "--inventory-digest does not match FOUNDRY_RECEIPT source.inventory_digest"
-        )
+        raise SystemExit("--inventory-digest does not match FOUNDRY_RECEIPT source.inventory_digest")
 
     intelligence_harvest = composition.get("intelligence_harvest") or {"status": "NOT_APPLICABLE"}
     gar = composition.get("gar") or {"status": "NOT_USED"}

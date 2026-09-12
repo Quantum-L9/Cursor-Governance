@@ -1,41 +1,20 @@
 #!/usr/bin/env python3
 """Create a deterministic, safety-aware inventory for an idea pack."""
-
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
+from pathlib import Path
 import stat
 import tarfile
 import tempfile
 import zipfile
-from pathlib import Path
 
 TEXT_EXTENSIONS = {
-    ".md",
-    ".txt",
-    ".yaml",
-    ".yml",
-    ".json",
-    ".toml",
-    ".ini",
-    ".cfg",
-    ".py",
-    ".js",
-    ".ts",
-    ".tsx",
-    ".jsx",
-    ".sql",
-    ".csv",
-    ".xml",
-    ".html",
-    ".css",
-    ".sh",
-    ".ps1",
-    ".svg",
-    ".graphql",
-    ".proto",
+    ".md", ".txt", ".yaml", ".yml", ".json", ".toml", ".ini", ".cfg",
+    ".py", ".js", ".ts", ".tsx", ".jsx", ".sql", ".csv", ".xml", ".html",
+    ".css", ".sh", ".ps1", ".svg", ".graphql", ".proto",
 }
 ARCHIVE_EXTENSIONS = {".zip", ".tar", ".tgz", ".gz", ".bz2", ".xz"}
 METADATA_NAMES = {".DS_Store", "Thumbs.db"}
@@ -64,26 +43,22 @@ def record_path(records: list[dict], root: Path, path: Path, prefix: str = "") -
     kind = path_kind(path)
     if path.is_symlink():
         target = path.readlink().as_posix().encode("utf-8")
-        records.append(
-            {
-                "path": f"{prefix}{rel}",
-                "size": len(target),
-                "sha256": sha256_bytes(target),
-                "kind": kind,
-                "symlink_target": target.decode("utf-8"),
-            }
-        )
+        records.append({
+            "path": f"{prefix}{rel}",
+            "size": len(target),
+            "sha256": sha256_bytes(target),
+            "kind": kind,
+            "symlink_target": target.decode("utf-8"),
+        })
         return
 
     data = path.read_bytes()
-    records.append(
-        {
-            "path": f"{prefix}{rel}",
-            "size": len(data),
-            "sha256": sha256_bytes(data),
-            "kind": kind,
-        }
-    )
+    records.append({
+        "path": f"{prefix}{rel}",
+        "size": len(data),
+        "sha256": sha256_bytes(data),
+        "kind": kind,
+    })
 
 
 def _safe_target(dest: Path, member_name: str) -> Path:
@@ -97,70 +72,23 @@ def _safe_target(dest: Path, member_name: str) -> Path:
     return target
 
 
-MAX_ARCHIVE_MEMBERS = 2048
-MAX_MEMBER_BYTES = 32 * 1024 * 1024
-MAX_ARCHIVE_BYTES = 128 * 1024 * 1024
-_EXTRACT_CHUNK = 1024 * 1024
-
-
-def _copy_bounded(src_fh: object, dest: Path, *, remaining: list[int], name: str) -> None:
-    written = 0
-    with dest.open("wb") as out_fh:
-        while True:
-            chunk = src_fh.read(_EXTRACT_CHUNK)  # type: ignore[attr-defined]
-            if not chunk:
-                break
-            written += len(chunk)
-            remaining[0] -= len(chunk)
-            if written > MAX_MEMBER_BYTES:
-                raise ValueError(f"archive member exceeds {MAX_MEMBER_BYTES} bytes: {name}")
-            if remaining[0] < 0:
-                raise ValueError(f"archive exceeds {MAX_ARCHIVE_BYTES} uncompressed bytes")
-            out_fh.write(chunk)
-
-
 def safe_extract_zip(src: Path, dest: Path) -> None:
-    dest.mkdir(parents=True, exist_ok=True)
-    remaining = [MAX_ARCHIVE_BYTES]
     with zipfile.ZipFile(src) as zf:
-        members = zf.infolist()
-        if len(members) > MAX_ARCHIVE_MEMBERS:
-            raise ValueError(f"zip exceeds {MAX_ARCHIVE_MEMBERS} members")
-        for member in members:
-            target = _safe_target(dest, member.filename)
+        for member in zf.infolist():
+            _safe_target(dest, member.filename)
             mode = (member.external_attr >> 16) & 0o170000
             if mode == stat.S_IFLNK:
                 raise ValueError(f"zip symlink member rejected: {member.filename}")
-            if member.is_dir() or member.filename.endswith("/"):
-                target.mkdir(parents=True, exist_ok=True)
-                continue
-            target.parent.mkdir(parents=True, exist_ok=True)
-            with zf.open(member) as src_fh:
-                _copy_bounded(src_fh, target, remaining=remaining, name=member.filename)
+        zf.extractall(dest)
 
 
 def safe_extract_tar(src: Path, dest: Path) -> None:
-    dest.mkdir(parents=True, exist_ok=True)
-    remaining = [MAX_ARCHIVE_BYTES]
-    with tarfile.open(src, mode="r:*") as tf:
-        members = tf.getmembers()
-        if len(members) > MAX_ARCHIVE_MEMBERS:
-            raise ValueError(f"tar exceeds {MAX_ARCHIVE_MEMBERS} members")
-        for member in members:
-            target = _safe_target(dest, member.name)
+    with tarfile.open(src) as tf:
+        for member in tf.getmembers():
+            _safe_target(dest, member.name)
             if member.issym() or member.islnk() or member.isdev():
                 raise ValueError(f"unsafe tar member type rejected: {member.name}")
-            if member.isdir():
-                target.mkdir(parents=True, exist_ok=True)
-                continue
-            if not member.isfile():
-                raise ValueError(f"unsafe tar member type rejected: {member.name}")
-            extracted = tf.extractfile(member)
-            if extracted is None:
-                raise ValueError(f"tar member unreadable: {member.name}")
-            target.parent.mkdir(parents=True, exist_ok=True)
-            with extracted:
-                _copy_bounded(extracted, target, remaining=remaining, name=member.name)
+        tf.extractall(dest, filter="data")
 
 
 def extract_archive(src: Path, dest: Path) -> None:
@@ -207,13 +135,11 @@ def inventory_tree(
                 records.extend(child_records)
                 issues.extend(child_issues)
         except (OSError, ValueError, zipfile.BadZipFile, tarfile.TarError) as exc:
-            issues.append(
-                {
-                    "path": nested_name,
-                    "code": "NESTED_ARCHIVE_UNREADABLE",
-                    "detail": str(exc),
-                }
-            )
+            issues.append({
+                "path": nested_name,
+                "code": "NESTED_ARCHIVE_UNREADABLE",
+                "detail": str(exc),
+            })
 
     return records, issues
 
@@ -264,25 +190,21 @@ def main() -> int:
         source_kind = "file"
         if source.is_symlink():
             target = source.readlink().as_posix().encode("utf-8")
-            records = [
-                {
-                    "path": source.name,
-                    "size": len(target),
-                    "sha256": sha256_bytes(target),
-                    "kind": "symlink",
-                    "symlink_target": target.decode("utf-8"),
-                }
-            ]
+            records = [{
+                "path": source.name,
+                "size": len(target),
+                "sha256": sha256_bytes(target),
+                "kind": "symlink",
+                "symlink_target": target.decode("utf-8"),
+            }]
         else:
             data = source.read_bytes()
-            records = [
-                {
-                    "path": source.name,
-                    "size": len(data),
-                    "sha256": sha256_bytes(data),
-                    "kind": path_kind(source),
-                }
-            ]
+            records = [{
+                "path": source.name,
+                "size": len(data),
+                "sha256": sha256_bytes(data),
+                "kind": path_kind(source),
+            }]
 
     records = sorted(records, key=lambda r: r["path"])
     issues = sorted(issues, key=lambda r: (r["path"], r["code"], r["detail"]))

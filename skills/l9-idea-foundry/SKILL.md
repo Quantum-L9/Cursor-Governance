@@ -1,16 +1,14 @@
 ---
 name: l9-idea-foundry
-description: compile an implementation-ready idea pack into tested code and a birth-ready quantum-l9 repository. use when a mature idea should leave specification and become a real repo via l9-repo-template. do not use for websites, existing-repo changes, or production deployment.
-disable-model-invocation: true
-metadata:
-  skill_schema: 1
-  layer: control_plane
-  role: skill_entrypoint
-  tags: [l9, foundry, idea-pack, repo-birth, plan-simple, harvest]
-  owner: igor_beylin
-  status: active
-  version: 1.1.0
-  updated: 2026-09-07
+description: >-
+  Compile mature idea packs, locked product specifications, and build handoffs into
+  real tested code, exact-state provenance, and repository-factory-qualified birth
+  payloads for new Quantum-L9 products. Use when an idea is leaving planning and must
+  become a new repository, when a Foundry staging product must be resumed/recompiled,
+  or when an exact frozen product must be qualified against the live l9-repo-template
+  birth contract before local or remote birth. Preserve canonical owner boundaries,
+  use the factory's own birth-payload compiler rather than authoring a second manifest,
+  require local birth evidence before publication, and stop before production deployment.
 ---
 
 # L9 Idea Foundry
@@ -19,29 +17,20 @@ Transform implementation-ready idea authority into tested source code, preserve 
 
 Optimize for **compounding reuse**, not artifact count: reuse upstream owners, compile intent once, automate deterministic seams, and leave the newborn easier to evolve than the pack was to interpret.
 
-## Core Contract
+## Exemplary intelligence contract
 
-| Input | Output | Scope |
-|-------|--------|-------|
-| Implementation-ready idea pack or specification archive | Tested payload + Foundry index + freeze receipt + local birth | Compose L9 owners; never own Website-Bot, PE, or production deploy |
+This skill was compiled through `extract_expertise -> compress_expertise -> design_skill -> exemplary_gate`. Read [references/expertise_model.yaml](references/expertise_model.yaml) and [references/skill_intelligence_report.yaml](references/skill_intelligence_report.yaml) when activation, authority, adapter routing, or drift control is ambiguous.
+Activation precision is qualified by [references/activation-qualification.yaml](references/activation-qualification.yaml).
 
-Load [references/contracts.md](references/contracts.md) and [references/composition.md](references/composition.md).
+Core decision rules:
 
-## Authority Order
-
-1. Explicit user outcome and named constraints.
-2. Idea pack authority map (canonical / locked / accepted outrank proposed / unknown).
-3. Live upstream owners (`l9-intelligence-harvest`, GAR when active, `l9-plan-simple`, `l9-repo-template`).
-4. This skill's blueprint, traceability, and birth-integration references.
-5. `Unknown` — stop with an explicit disposition; do not invent a local brain.
-
-## Activation / Reject
-
-**Activate** when a mature idea pack must become tested code and a birth-ready Quantum-L9 repository.
-
-**Reject** website-only work (Website-Bot), bounded existing-repo changes (`l9-plan-simple` / `l9-idea-execute`), and any request that includes production deployment.
-
-Cursor and Claude load this pack only on explicit invoke or a hint-allowed Read/attach. `disable-model-invocation: true` is the mechanism; a ChatGPT implicit-invocation policy is not.
+- activate for new-product realization and Foundry resume/birth qualification, not ordinary existing-repository changes;
+- higher authority wins: current locked product authority -> live external owner/factory contract -> accepted architecture/plan -> executable evidence -> docs/inference;
+- never author `l9.birth-payload/v1`; invoke the canonical factory compiler;
+- classify `BIRTH_READY` only after exact-state freeze **and** factory compile qualification of that same source revision;
+- classify `LOCAL_BIRTH_PASS` only after the canonical factory's real no-remote birth passes;
+- preserve `PROVISIONAL`, `QUARANTINED`, and `BORN` exactly as factory evidence defines them;
+- after a bad run or user correction, capture only observed missed/false triggers, recurring corrections, or manual handoff rework. Do not invent telemetry.
 
 ## Ownership and composition
 
@@ -62,7 +51,7 @@ Read [references/composition.md](references/composition.md) before invoking sibl
 
 Default path:
 
-`IDEA_PACK -> AUTHORITY_MAP -> BENEFICIARY_REUSE -> OPTIONAL_HARVEST -> ARCHITECTURE -> COMPILED_INTENT -> VALIDATED_PLAN -> CODE_REALIZED -> FOUNDRY_INDEX -> BIRTH_READY -> LOCAL_BIRTH_PASS -> OPTIONAL_PROVISIONAL_REPOSITORY`
+`IDEA_PACK -> AUTHORITY_MAP -> BENEFICIARY_REUSE -> OPTIONAL_HARVEST -> ARCHITECTURE -> COMPILED_INTENT -> VALIDATED_PLAN -> CODE_REALIZED -> FOUNDRY_INDEX -> PAYLOAD_FREEZE -> FACTORY_CONTRACT_PROBE -> FACTORY_COMPILE_PASS -> BIRTH_READY -> LOCAL_BIRTH_PASS -> OPTIONAL_PROVISIONAL_REPOSITORY`
 
 A remote repository is optional. Production deployment is never part of this path.
 
@@ -240,68 +229,90 @@ For every selected-slice capability map:
 
 Do not duplicate provenance into another traceability document. `IMPLEMENTED` requires real implementation paths and real discriminating evidence.
 
-### 9. Prove template fit
+### 9. Prove factory fit from the live contract
 
-Before materializing the authoritative payload, inspect the live `l9-repo-template` architecture and birth contract.
+Before materializing a birth handoff, inspect the live repository factory. Load [references/birth-factory-contract.md](references/birth-factory-contract.md) and [references/birth-integration.md](references/birth-integration.md).
 
-Use the non-Constellation Python template only when a real Python-owned responsibility exists. Do not invent a meaningless Python package to satisfy birth shape.
+For `Quantum-L9/l9-repo-template`, probe the current checkout:
 
-Route Constellation nodes/dependencies to the sibling factory declared by the live template. For genuinely incompatible products, stop with `TEMPLATE_MISMATCH` rather than forcing the wrong chassis.
+```bash
+python3 scripts/probe_birth_factory.py /path/to/l9-repo-template --out /tmp/factory-probe.json
+```
 
-Read [references/birth-integration.md](references/birth-integration.md).
+Require a clean exact factory revision and inspect its architecture role, sibling factories, payload ownership contract, birth-payload schema, compiler, birth engine, and repository shape.
+
+Use the non-Constellation Python factory only when a real Python-owned product responsibility exists. For Constellation nodes/dependencies, route to the sibling factory declared by the live architecture. For a genuinely incompatible product, stop `TEMPLATE_MISMATCH`; never invent a meaningless Python package to satisfy shape.
 
 ### 10. Validate code realization and emit the downstream ingress
 
-The authoritative payload must include real code, tests, architecture metadata, idea-origin contracts, and template-required repository shape.
+The authoritative staging product must include real code, tests, architecture metadata, idea-origin contracts, and the repository shape required by the selected factory.
 
-Run project-native validation first. Then run the Foundry gate:
-
-```bash
-python3 scripts/validate_foundry_payload.py <payload>
-```
-
-Generate the deterministic resume/index surface:
+Run project-native validation first. Then run the Foundry gate and deterministic index:
 
 ```bash
-python3 scripts/emit_foundry_index.py <payload> \
+python3 scripts/validate_foundry_payload.py <staging>
+
+python3 scripts/emit_foundry_index.py <staging> \
   --inventory-digest sha256:<64hex> \
   --plan-ref <validated-plan-ref> \
   --plan-digest sha256:<64hex>
 
-python3 scripts/validate_foundry_payload.py <payload>
+python3 scripts/validate_foundry_payload.py <staging>
 ```
 
-`FOUNDRY_INDEX.json` is generated output. Do not hand-edit it. Its job is to let future agents hydrate current origin context and detect changed semantic inputs without rereading the entire idea pack.
+`FOUNDRY_INDEX.json` is generated output. Do not hand-edit it. `IMPLEMENTED` requires real implementation paths and discriminating executable evidence.
 
-### 11. Freeze the exact payload and delegate birth
+### 11. Freeze, qualify with the factory's own compiler, then run local birth
 
-Initialize/retain the staging payload as a git repository, commit the exact validated tree including `FOUNDRY_INDEX.json`, and require a clean worktree.
-
-Emit the external freeze receipt:
+Commit the exact staging product, require a clean worktree, and emit the Foundry freeze receipt outside the repository:
 
 ```bash
-python3 scripts/emit_freeze_receipt.py <payload> \
+python3 scripts/emit_freeze_receipt.py <staging> \
   --inventory-digest sha256:<64hex> \
   --plan-ref <validated-plan-ref> \
   --plan-digest sha256:<64hex> \
-  --out <external-freeze.json>
+  --out /tmp/<repo>.foundry-freeze.json
+
+python3 scripts/validate_foundry_payload.py <staging> \
+  --birth-ready \
+  --freeze-receipt /tmp/<repo>.foundry-freeze.json
 ```
 
-Then require:
+Then qualify those exact bytes against the **live factory's own compiler**:
 
 ```bash
-python3 scripts/validate_foundry_payload.py <payload> \
-  --birth-ready \
-  --freeze-receipt <external-freeze.json>
+python3 scripts/qualify_birth_handoff.py <staging> \
+  --freeze-receipt /tmp/<repo>.foundry-freeze.json \
+  --repo-template-root /path/to/l9-repo-template \
+  --source-repository Quantum-L9/<staging-source-identity> \
+  --out-dir /tmp/<repo>.birth-qualification
+
+python3 scripts/validate_birth_qualification.py \
+  /tmp/<repo>.birth-qualification/birth-qualification-receipt.json
 ```
 
-The freeze receipt must bind HEAD, tracked-tree digest, source inventory digest, plan digest, and the committed Foundry index digest. After this point the staging repository is immutable evidence; record birth observations externally unless you deliberately revalidate, recommit, and re-freeze.
+Hard invariant: **Foundry never creates or edits `l9.birth-payload/v1`.** `qualify_birth_handoff.py` invokes `scripts/birth-runner/compile_birth_payload.py` from the current factory checkout with `--require-mode authoritative`. The compiled contract is external evidence and must remain outside the staging source tree.
 
-Use the current `l9-repo-template` birth compiler and birth engine. Run local/no-remote birth first. Only after local birth passes may remote creation occur when explicitly requested and authorized.
+Only after `FACTORY_COMPILE_PASS` may the staging product be called `BIRTH_READY`. Factory compilation proves source admissibility, not newborn integration.
 
-On a surface that cannot `POST /orgs/{org}/repos`, dispatch `Quantum-L9/l9-repo-template` `.github/workflows/repo-birth-dispatch.yml` on that repository's `main` using the `repo-birth` App environment. Do not mint or paste `BIRTH_APP_PRIVATE_KEY`. Do not dispatch a workflow in the current workspace repo. Read [references/birth-integration.md](references/birth-integration.md) for the live App/environment names and payload-contract placement.
+Before remote creation, run the real factory's local/no-remote birth path. The qualifier can do this when the required real environment is present:
 
-Do not recreate `new_repo.py`, birth-runner stages, org seeding, or CI distribution.
+```bash
+python3 scripts/qualify_birth_handoff.py <staging> \
+  --freeze-receipt /tmp/<repo>.foundry-freeze.json \
+  --repo-template-root /path/to/l9-repo-template \
+  --source-repository Quantum-L9/<staging-source-identity> \
+  --out-dir /tmp/<repo>.birth-qualification \
+  --run-local-birth \
+  --repo <target-repo> \
+  --pkg <python-package> \
+  --desc "<description>" \
+  --org-profile-src /path/to/Quantum-L9/.github
+```
+
+`LOCAL_BIRTH_PASS` requires observed `BIRTH: PASS` from the factory's own engine. Remote creation remains separately authorized. Preserve `PROVISIONAL` or `QUARANTINED` exactly when observed. Never claim `BORN` from repository birth; the live factory defines `BORN` as later canonical-CI evidence on a real pull request.
+
+Do not recreate `compile_birth_payload.py`, `new_repo.py`, payload ownership, org seeding, canonical CI distribution, provenance stamping, or remote attestation.
 
 ### 12. Resume/recompile without repeating unchanged work
 
@@ -318,6 +329,8 @@ After remote birth, report the actual template-observed birth state. Do not exec
 Deployment configuration may exist as inert repository content when the accepted implementation plan requires it.
 
 After remote birth, Foundry origin artifacts become provenance and context acceleration. Current repository ground truth and repo-local law own subsequent implementation.
+
+For a compact regulated-product example of the authority/Unknown pattern, load [references/example-regulated-product.md](references/example-regulated-product.md) only when the product is regulated.
 
 ## Unknown dispositions
 
@@ -349,29 +362,28 @@ Do not claim completion until every applicable item is evidenced:
 - deterministic `FOUNDRY_INDEX.json` matches current origin artifacts,
 - authoritative payload validates,
 - exact payload state is frozen at a clean commit and bound by an external freeze receipt,
-- template birth payload contract is compiled from that exact state,
-- local/no-remote birth passes,
+- the current repository factory is probed and its exact revision/contract digests are bound,
+- the factory's own compiler produces an authoritative `l9.birth-payload/v1` for that exact frozen source state,
+- `BIRTH_READY` is backed by a passing external birth-qualification receipt,
+- local/no-remote birth passes before any remote creation,
 - remote attestation is reported only when remote birth was requested and observed,
 - production deployment did not occur.
 
 Read [references/workflow.md](references/workflow.md) for recovery routing.
 
-## Validation
-
-- Inventory, payload, index, and freeze scripts MUST be the deterministic gates named below.
-- `FOUNDRY_INDEX.json` is generated; do not hand-edit it.
-- Do not claim completion unless every applicable completion-gate item is evidenced.
-- `python3 scripts/self_test.py` MUST PASS after script or contract changes.
-
 ## Skill self-validation
 
-Before packaging or after changing Foundry scripts/contracts, run:
+After changing Foundry scripts/contracts, run:
 
 ```bash
+python3 scripts/validate_skill_contract.py
 python3 scripts/self_test.py
+python3 scripts/test_factory_qualification.py
 ```
 
-Do not claim deterministic Foundry gates are healthy when this self-test fails or cannot run.
+During compiler-time exemplary validation, also run the Skill Compiler's `scripts/validate_exemplary_skill.py <skill-folder>`. Do not claim deterministic Foundry gates or `tier: exemplary` when any required test or `exemplary_gate` fails.
+
+The factory qualification tests prove Foundry's orchestration boundary with a deterministic interface fixture. A real product run must still probe and invoke the real current factory before `BIRTH_READY`; fixture success never substitutes for live factory evidence.
 
 ## Final response
 
@@ -389,8 +401,9 @@ Return a compact operator receipt with:
 - idea inventory digest/source revision,
 - Foundry index ref/digest,
 - staging payload revision and freeze-receipt ref,
-- birth payload contract ref,
-- observed birth state: `LOCAL | PROVISIONAL | QUARANTINED | BORN` only when actually observed,
+- factory probe ref/revision and qualification receipt ref,
+- factory-compiled birth payload contract ref/digest,
+- observed birth state: `BIRTH_READY | LOCAL | PROVISIONAL | QUARANTINED | BORN` only when actually evidenced,
 - repository URL only if created,
 - `DEPLOYMENT: NOT PERFORMED`.
 

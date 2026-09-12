@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Self-test deterministic L9 Idea Foundry scripts without network access."""
-
 from __future__ import annotations
 
 import hashlib
+import json
+from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import zipfile
-from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PYTHON = sys.executable
@@ -65,15 +65,9 @@ identity:
     )
     write(
         root / "tests/test_core.py",
-        (
-            "from foundry_fixture.core import normalize\n\n"
-            "def test_normalize():\n    assert normalize(' A ') == 'a'\n"
-        ),
+        "from foundry_fixture.core import normalize\n\ndef test_normalize():\n    assert normalize(' A ') == 'a'\n",
     )
-    write(
-        root / "scripts/inventory_check.py",
-        "def main():\n    return 0\n\nif __name__ == '__main__':\n    raise SystemExit(main())\n",
-    )
+    write(root / "scripts/inventory_check.py", "def main():\n    return 0\n\nif __name__ == '__main__':\n    raise SystemExit(main())\n")
     write(root / plan_ref, plan_text)
 
     write(
@@ -96,10 +90,7 @@ conflicts: []
     planning_extra = (
         "  mode_evidence_ref: skills/l9-plan-simple/SKILL.md\n  compatibility_fallback: false\n"
         if handoff == "EMBEDDED"
-        else (
-            "  compatibility_fallback: true\n"
-            "  fallback_reason: current Plan Simple lacks first-class embedded mode\n"
-        )
+        else "  compatibility_fallback: true\n  fallback_reason: current Plan Simple lacks first-class embedded mode\n"
     )
     write(
         root / "docs/idea-origin/IMPLEMENTATION_BLUEPRINT.yaml",
@@ -200,11 +191,7 @@ implementation_decisions:
 """,
     )
     write(root / "docs/idea-origin/UNKNOWN_REGISTER.md", "# Unknowns\n\nNONE\n")
-    compatibility_line = (
-        "    compatibility_fallback: false\n"
-        if handoff == "EMBEDDED"
-        else "    compatibility_fallback: true\n"
-    )
+    compatibility_line = "    compatibility_fallback: false\n" if handoff == "EMBEDDED" else "    compatibility_fallback: true\n"
     write(
         root / "docs/idea-origin/FOUNDRY_RECEIPT.yaml",
         f"""schema: l9.idea-foundry.receipt/v1
@@ -265,6 +252,7 @@ def emit_index(root: Path, inventory_digest: str, plan_digest: str) -> None:
 
 
 def main() -> int:
+    run(PYTHON, str(SCRIPT_DIR / "validate_skill_contract.py"))
     with tempfile.TemporaryDirectory(prefix="foundry-self-test-") as td:
         base = Path(td)
         root = base / "payload"
@@ -365,12 +353,15 @@ def main() -> int:
         if "unsafe or unreadable source archive" not in proc.stdout:
             raise AssertionError("unsafe archive failure did not preserve its reason")
 
+    run(PYTHON, str(SCRIPT_DIR / "test_factory_qualification.py"))
+
     print("FOUNDRY_SELF_TEST: PASS")
     print("- embedded_handoff=PASS")
     print("- legacy_handoff_compatibility=PASS")
     print("- deterministic_index=PASS")
     print("- exact_state_freeze=PASS")
     print("- unsafe_archive_rejection=PASS")
+    print("- factory_qualification=PASS")
     return 0
 
 
