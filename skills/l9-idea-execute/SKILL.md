@@ -9,8 +9,8 @@ metadata:
   tags: [l9, ideaos, execution, routing, foundry, website-bot, program-execution]
   owner: igor_beylin
   status: active
-  version: 1.0.0
-  updated: 2026-09-02
+  version: 1.1.0
+  updated: 2026-09-12
 ---
 
 # L9 Idea Execute
@@ -126,13 +126,24 @@ Before planning anything, inspect the source for valid current execution artifac
 - explicit Program Execution handoffs;
 - target filetrees or scoped modification plans.
 
-If an artifact is current, compatible with repository state, and sufficient for the selected executor, reuse it.
+Currentness is proven, never assumed. Before reusing any supplied Envelope/Graph/Receipt pack, run the pack preflight and reuse only what it reports `REUSABLE`:
+
+```bash
+python3 scripts/preflight_execution_pack.py \
+  --envelope IDEA_EXECUTION_ENVELOPE.yaml \
+  --graph EXECUTION_GRAPH.yaml \
+  --receipt IDEA_EXECUTION_RECEIPT.yaml \
+  --adapter supplied-adapter-capabilities.yaml \
+  --current-adapter current-adapter-capabilities.yaml
+```
+
+Reusing a completed pack is a closed-world claim: every Graph unit needs freshly discovered current adapter evidence. A missing, stale, conflicting, or unprovable binding yields `REPAIRABLE`/`BLOCKED`, never `REUSABLE`. Repair from `earliest_invalid_layer` and do not reuse an artifact the preflight did not clear.
 
 Apply the rule:
 
 > Never downgrade an execution-ready pack back into an unplanned idea.
 
-Planning is conditional, not ceremonial.
+Planning is conditional, not ceremonial. Proving currentness is neither.
 
 ### 4. Classify execution topology
 
@@ -182,6 +193,18 @@ Before invoking any mutable downstream system:
 5. Validate using owner-native validation where available.
 6. Invoke only the canonical public front door.
 
+Record the probe as a unit-bound `adapter-capabilities/v2` snapshot and validate it. Any supplied or previously captured snapshot must reconcile against freshly discovered current evidence before reuse:
+
+```bash
+python3 scripts/validate_adapter_snapshot.py current-adapter-capabilities.yaml
+python3 scripts/validate_adapter_snapshot.py \
+  supplied-adapter-capabilities.yaml --current current-adapter-capabilities.yaml
+```
+
+A structurally valid snapshot alone is never sufficient evidence. Without current evidence for the same Graph unit it is `UNRESOLVED`.
+
+Reserve `EXECUTOR_CAPABILITY_GAP` for a validated current snapshot that positively proves the topology is unsupported. Malformed, stale, conflicting, or absent evidence is `ADAPTER_SNAPSHOT_INVALID`, `ADAPTER_SNAPSHOT_STALE`, `ADAPTER_CONTRACT_CONFLICT`, or `ADAPTER_CAPABILITY_UNKNOWN` — not executor incapability.
+
 If the executor is conceptually correct but cannot represent the topology, stop with `EXECUTOR_CAPABILITY_GAP`. Never degrade the idea to fit the tool.
 
 Read [references/adapters.md](references/adapters.md) for all adapter contracts.
@@ -209,11 +232,22 @@ Produce a thin `l9.idea-execution-receipt/v1` that records:
 - unresolved blockers;
 - next legal transition.
 
+Validate the join before treating the Receipt as authoritative lineage:
+
+```bash
+python3 scripts/validate_receipt.py \
+  IDEA_EXECUTION_RECEIPT.yaml EXECUTION_GRAPH.yaml IDEA_EXECUTION_ENVELOPE.yaml
+```
+
+A terminal claim must be earned. A unit claiming a completed/READY state carries canonical downstream owner receipt/state references in `evidence_refs`, and the overall status must agree with its own units, its own blockers, and the bound Graph. Never claim completion over a `BLOCKED` graph, an admission-blocked unit, or unresolved blockers.
+
+Represent a not-yet-invoked or blocked unit with an explicit non-terminal state such as `NOT_RUN`, `PENDING_HANDOFF`, `BLOCKED`, or the applicable failure state. An honest blocked Receipt is a valid result; an unproven completion is not.
+
 ### 10. Resume from the earliest invalid unit
 
-On a rerun:
+On a rerun, establish the resume point with `scripts/preflight_execution_pack.py` and repair from its `earliest_invalid_layer`. Then:
 
-- reuse completed units whose source inputs, dependency outputs, owner contract, and receipt bindings remain valid;
+- reuse completed units whose source inputs, dependency outputs, owner contract, current adapter evidence, and receipt bindings are all proven valid;
 - invalidate a unit when its governing input or adapter contract changed materially;
 - invalidate downstream dependent units, not unrelated siblings;
 - never reuse a publication/deployment authorization merely because local execution evidence is reusable.
@@ -315,9 +349,22 @@ Read [references/examples.md](references/examples.md) when validating routing be
 
 ## Validation
 
-- Envelope, graph, and adapter scripts MUST be the deterministic gates named below.
+The scripts named below are the deterministic gates. They are mandatory at these transitions, not optional helpers to discover by convention:
+
+| Transition | Mandatory gate |
+|---|---|
+| Envelope compiled (step 2) | `scripts/validate_envelope.py` |
+| Graph compiled (step 4) | `scripts/validate_graph.py` |
+| Adapter contract probed (step 6) | `scripts/validate_adapter_snapshot.py`, reconciled against current evidence |
+| Supplied pack reused or resumed (steps 3, 10) | `scripts/preflight_execution_pack.py` |
+| Receipt joined (step 9) | `scripts/validate_receipt.py` |
+
+Rules:
+
 - A blocked route with an explicit failure state is a valid result.
 - Do not claim a downstream owner ran unless its canonical receipt/state is referenced.
+- Do not reuse a derived artifact the preflight did not report `REUSABLE`.
+- Structural validity is necessary and never sufficient; currentness and downstream evidence are proven separately.
 
 ## Scripts
 
@@ -325,6 +372,9 @@ Read [references/examples.md](references/examples.md) when validating routing be
 - `scripts/route_execution.py`: deterministically compile the initial Execution Graph from validated requirements and the capability registry.
 - `scripts/validate_graph.py`: validate graph shape, dependencies, cycles, topology/adapter invariants, and blocker consistency.
 - `scripts/check_adapter_capability.py`: test an execution unit against a discovered adapter capability snapshot.
+- `scripts/validate_adapter_snapshot.py`: validate a unit-bound adapter capability snapshot and reconcile supplied evidence against freshly discovered current evidence.
+- `scripts/preflight_execution_pack.py`: reconcile a supplied Envelope/Graph/adapter-evidence/Receipt pack, require closed-world current adapter coverage for completed-pack reuse, and report the earliest invalid layer.
+- `scripts/validate_receipt.py`: validate Receipt identity binding and the semantic join between claimed terminal state, downstream evidence, and Graph blockers.
 - `scripts/self_test.py`: run deterministic positive and negative regression fixtures.
 
 These scripts validate and route declared execution semantics. They do not replace model judgment for ambiguous IdeaOS meaning or downstream owner-specific compilation.
@@ -333,6 +383,7 @@ These scripts validate and route declared execution semantics. They do not repla
 
 - [references/architecture.md](references/architecture.md): authority, topology, decomposition, concurrency, and reuse rules.
 - [references/contracts.md](references/contracts.md): Envelope, Graph, adapter capability snapshot, and Receipt contracts.
+- [references/artifact-reconciliation.md](references/artifact-reconciliation.md): lineage currentness, preflight dispositions, and earliest-invalid-layer law.
 - [references/adapters.md](references/adapters.md): Foundry, Website-Bot, Plan Simple, and Program Execution adapter behavior.
 - [references/program-execution-adapter.md](references/program-execution-adapter.md): moving PE discovery seam and current baseline.
 - [references/examples.md](references/examples.md): regression examples and expected routing outcomes.

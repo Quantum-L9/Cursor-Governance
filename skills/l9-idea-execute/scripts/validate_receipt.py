@@ -10,6 +10,46 @@ from validate_graph import validate_graph
 
 SCHEMA = "l9.idea-execution-receipt/v1"
 
+# States that explicitly do NOT claim a downstream owner ran. Everything else is read as
+# a terminal completion claim and must join to canonical downstream receipt/state
+# evidence, so an unrecognized or invented state fails closed instead of passing as
+# "not really a claim". Keep this the declared failure/reason vocabulary only.
+NON_COMPLETION_STATES = frozenset(
+    {
+        # declared skill failure states
+        "IDEAOS_DECISION_REQUIRED",
+        "ENVELOPE_INVALID",
+        "CAPABILITY_OWNER_UNKNOWN",
+        "EXECUTION_TOPOLOGY_UNSUPPORTED",
+        "ADAPTER_CONTRACT_UNAVAILABLE",
+        "EXECUTOR_CAPABILITY_GAP",
+        "OWNER_NATIVE_INPUT_INVALID",
+        "DOWNSTREAM_EXECUTION_FAILED",
+        "DOWNSTREAM_RECEIPT_INVALID",
+        "PROTECTED_ACTION_REQUIRES_AUTHORITY",
+        # canonical reconciliation reason codes
+        "DERIVED_ARTIFACT_STALE",
+        "PARENT_DIGEST_MISMATCH",
+        "SOURCE_REVISION_CHANGED",
+        "GRAPH_REQUIREMENT_COVERAGE_MISMATCH",
+        "ADAPTER_SNAPSHOT_INVALID",
+        "ADAPTER_SNAPSHOT_STALE",
+        "ADAPTER_CONTRACT_CONFLICT",
+        "ADAPTER_CAPABILITY_UNKNOWN",
+        # explicit not-run / not-yet-invoked representations
+        "NOT_RUN",
+        "PENDING",
+        "PENDING_HANDOFF",
+        "BLOCKED",
+        "SKIPPED",
+        "NOT_APPLICABLE",
+    }
+)
+
+
+def _claims_completion(state: Any) -> bool:
+    return nonempty_string(state) and state.strip().upper() not in NON_COMPLETION_STATES
+
 
 def _validate_reconciliation(value: Any, errors: list[str]) -> None:
     if value is None:
@@ -89,6 +129,20 @@ def validate_receipt(data: Any, graph: Any, envelope: Any) -> dict[str, Any]:
         refs = unit.get("evidence_refs", [])
         if not isinstance(refs, list) or not all(nonempty_string(x) for x in refs):
             errors.append(f"{label}.evidence_refs must be a string list")
+            refs = []
+        if _claims_completion(unit.get("resulting_state")):
+            if not refs:
+                errors.append(
+                    f"DOWNSTREAM_EVIDENCE_MISSING: {label} claims terminal state "
+                    f"{unit.get('resulting_state')!r} without referencing any canonical "
+                    "downstream owner receipt/state in evidence_refs"
+                )
+            if graph_unit is not None and graph_unit.get("admission_status") == "BLOCKED":
+                errors.append(
+                    f"RECEIPT_SEMANTIC_CONTRADICTION: {label} claims terminal state "
+                    f"{unit.get('resulting_state')!r} while graph unit {uid} "
+                    "admission_status is BLOCKED"
+                )
 
     graph_ids = set(graph_by_id)
     if receipt_ids != graph_ids:
@@ -98,12 +152,57 @@ def validate_receipt(data: Any, graph: Any, envelope: Any) -> dict[str, Any]:
         )
 
     blockers = root.get("blockers")
+    blocker_codes: set[str] = set()
     if not isinstance(blockers, list):
         errors.append("blockers must be a list")
     else:
         for idx, blocker in enumerate(blockers):
             if not isinstance(blocker, dict) or not nonempty_string(blocker.get("code")):
                 errors.append(f"blockers[{idx}] must be a mapping with non-empty code")
+                continue
+            blocker_codes.add(blocker["code"])
+
+    # The Receipt is a lineage join, so its overall claim must agree with its own units,
+    # its own blockers, and the bound Graph. A terminal claim standing over unresolved
+    # blockers, incomplete units, or a BLOCKED graph is a contradiction, not a status.
+    overall_status = root.get("status")
+    if _claims_completion(overall_status):
+        if blocker_codes:
+            errors.append(
+                f"RECEIPT_SEMANTIC_CONTRADICTION: status {overall_status!r} claims completion "
+                f"while unresolved receipt blockers remain ({sorted(blocker_codes)})"
+            )
+        incomplete = sorted(
+            str(u.get("unit_id"))
+            for u in units
+            if isinstance(u, dict)
+            and nonempty_string(u.get("unit_id"))
+            and not _claims_completion(u.get("resulting_state"))
+        )
+        if incomplete:
+            errors.append(
+                f"RECEIPT_SEMANTIC_CONTRADICTION: status {overall_status!r} claims completion "
+                f"while units did not reach a terminal state ({incomplete})"
+            )
+        if validated_graph.get("status") == "BLOCKED":
+            errors.append(
+                f"RECEIPT_SEMANTIC_CONTRADICTION: status {overall_status!r} claims completion "
+                "while the bound graph status is BLOCKED"
+            )
+
+    # A blocked Graph stays blocked in the join. Dropping its blockers would let the
+    # Receipt narrate a cleaner state than the lineage it binds to.
+    graph_blocker_codes = {
+        blocker["code"]
+        for blocker in validated_graph.get("blockers", [])
+        if isinstance(blocker, dict) and nonempty_string(blocker.get("code"))
+    }
+    unrepresented = sorted(graph_blocker_codes - blocker_codes)
+    if unrepresented:
+        errors.append(
+            "RECEIPT_SEMANTIC_CONTRADICTION: receipt does not represent graph blockers "
+            f"{unrepresented}"
+        )
 
     _validate_reconciliation(root.get("reconciliation"), errors)
 
