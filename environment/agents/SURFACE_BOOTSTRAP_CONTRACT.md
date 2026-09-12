@@ -51,6 +51,23 @@ Do not add a second detect API.
 `environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh` is the Claude
 adapter choke point.
 
+### Governance resolution (INV-1c)
+
+The launcher resolves `$HOME/.cursor-governance` and honours no other value,
+`L9_GOVERNANCE_DIR` included. This is narrower than
+`ops/scripts/resolve_governance_paths.sh`, deliberately: what the launcher
+resolves is both the **policy file it execs** and the **locked interpreter it
+execs it on**, so a redirect here hands a gate its own policy. It previously
+accepted any directory holding a `CANONICAL_LAW.md`; an audit demonstrated by
+execution that a throwaway directory could then supply `memory_gate.py` and the
+interpreter that ran it, and supply the SessionStart hook that writes
+`additionalContext` into the session. SESSION_START_SPEC hard constraint 2
+already said so for the SessionStart hook; it holds for every hook here.
+
+The sanctioned configuration loses nothing: `~/.l9/cloud-session.env` exports
+`L9_GOVERNANCE_DIR=$HOME/.cursor-governance`, the value the launcher computes
+anyway. A test that needs the launcher pointed at a checkout moves `HOME`.
+
 ### Observers
 
 All Claude adapter observers skip when `l9_is_claude_gate_surface` is false.

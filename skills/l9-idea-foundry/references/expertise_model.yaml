@@ -1,0 +1,84 @@
+expertise_model:
+  experts:
+    - product_authority_compiler
+    - architecture_and_ownership_steward
+    - implementation_realization_lead
+    - repository_birth_contract_engineer
+    - provenance_and_evidence_auditor
+  doctrine:
+    - compile product intent once, then make downstream stages consume the accepted compiled ingress instead of reinterpreting the raw pack
+    - upstream capability owners outrank local convenience; adapters beat copied policy and copied state
+    - Foundry realizes the product repository; the repository factory realizes birth mechanics
+    - a birth manifest is evidence emitted by the factory from an immutable source snapshot, never intent authored by Foundry
+    - exact-state validation must bind the same bytes across source authority, plan, code, index, freeze, factory compile, and local birth
+    - local birth is a qualification gate, not ceremony; remote creation is forbidden until local birth passes
+    - repository existence is weaker evidence than birth state; preserve LOCAL, PROVISIONAL, QUARANTINED, and BORN semantics exactly
+    - invalidate from the earliest changed authority layer rather than regenerating every downstream artifact
+  invariants:
+    - Foundry must never author, hand-edit, or maintain an l9.birth-payload/v1 document
+    - the factory compiler must consume a committed clean staging repository and emit the birth payload contract outside that source tree
+    - BIRTH_READY requires Foundry exact-state validation plus successful factory payload compilation against the same frozen source revision
+    - LOCAL_BIRTH_PASS requires observed local no-remote birth success from the factory's own birth engine
+    - remote birth requires explicit authorization and cannot be inferred from local success
+    - Foundry must not copy birth orchestration, org profile materialization, canonical CI distribution, or template provenance into the product payload
+    - authoritative payload mode is accepted only when the live factory ownership contract classifies the source as repository-shaped
+    - template or ownership-contract drift invalidates factory qualification without invalidating unrelated upstream product authority
+    - a non-Python or Constellation topology must route to the live sibling factory rather than fabricate Python repository shape
+    - production deployment is outside Foundry authority
+  authority_hierarchy:
+    - explicit_current_user_instruction_and_locked_product_authority
+    - live_repository_factory_contract_and_canonical_external_owners
+    - accepted_architecture_and_validated_plan
+    - executable_validation_and_exact_runtime_evidence
+    - documentation_comments_history_and_model_inference
+  activation_signals:
+    - mature idea pack or specification archive explicitly ready to become real code in a new repository
+    - request to realize a product and prepare an exact repository payload for Quantum-L9 birth
+    - existing Foundry staging repository requiring resume, recompile, freeze, factory qualification, or birth handoff
+    - requirement to preserve requirement-to-code-to-test-to-birth traceability across repository creation
+    - explicit use of l9-repo-template or another canonical L9 repository factory after product realization
+  reject_signals:
+    - bounded change to an existing repository where repository birth is not part of the objective
+    - pull-request audit, remediation, merge readiness, or CI debugging without new-product realization
+    - pure architecture discussion, research, or planning with no authorized code realization
+    - deployment-only, release-only, or operations-only work after repository birth
+    - request to force a product into l9-repo-template when the live factory class/topology does not fit
+  adapters:
+    - name: non_constellation_python_birth
+      load_when:
+        - live l9-repo-template architecture declares the selected product compatible
+      changes:
+        - require authoritative repository_shape when the product is standalone
+        - require factory compiler qualification before BIRTH_READY
+        - require local no-remote birth before any remote birth
+    - name: constellation_factory_routing
+      load_when:
+        - product is a Constellation node or constellation dependency
+      changes:
+        - route to sibling factory declared by live template architecture
+        - forbid meaningless Python package fabrication
+        - classify unresolved fit as TEMPLATE_MISMATCH
+    - name: resume_and_recompile
+      load_when:
+        - FOUNDRY_INDEX.json or prior freeze/qualification receipts exist
+      changes:
+        - validate governing digests and external owner revisions before reuse
+        - invalidate only from earliest changed layer
+        - never reuse freeze or factory qualification after tracked source change
+  failure_modes:
+    - name: second_truth_birth_manifest
+      prevention: never construct l9.birth-payload/v1; invoke the factory compiler and bind its output digest externally
+    - name: stale_factory_contract
+      prevention: probe live factory architecture, ownership, schema, compiler, and revision immediately before qualification
+    - name: false_birth_completion
+      prevention: distinguish BIRTH_READY, LOCAL_BIRTH_PASS, PROVISIONAL, QUARANTINED, and BORN from observed receipts only
+    - name: authority_leakage_into_product
+      prevention: reject copied birth engine, org profile, CI enforcement, template provenance, or engine-owned paths in staging payload
+    - name: code_realization_theater
+      prevention: require real implementation paths, discriminating tests, exact traceability, clean commit, and executable local acceptance before birth qualification
+  leverage_points:
+    - use the factory's own compiler as the single mechanical truth for payload admissibility
+    - bind factory revision and contract digests into an external qualification receipt so drift is visible and cheap to re-evaluate
+    - keep FOUNDRY_INDEX.json as the durable requirement-to-code context ingress after birth
+    - make local no-remote birth the reusable pre-publication acceptance test for every eligible newborn
+    - use earliest-invalid-layer recompilation so product changes do not force unnecessary re-analysis of stable authority layers

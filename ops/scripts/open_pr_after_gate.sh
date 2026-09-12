@@ -543,6 +543,7 @@ fi
 # it to $HOME/.cursor-governance), which would look for the emitter beside a
 # copy of this script that is not the one executing.
 _pr_summary_py="$SCRIPT_DIR/write_pr_summary.py"
+_pr_head_sha="$(git -C "$WS" rev-parse HEAD 2>/dev/null || echo '')"
 if [[ -f "$_pr_summary_py" ]]; then
   "${compose_python:-python3}" "$_pr_summary_py" \
     --workspace "$WS" \
@@ -551,7 +552,7 @@ if [[ -f "$_pr_summary_py" ]]; then
     --base "$PR_BASE" \
     --branch "$branch" \
     --url "$pr_url" \
-    --head-sha "$(git -C "$WS" rev-parse HEAD 2>/dev/null || echo '')" ||
+    --head-sha "$_pr_head_sha" ||
     echo "WARN: pr summary receipt not written (continuing)"
 fi
 
@@ -639,6 +640,31 @@ EOF
 else
   echo "PR_REMEDIATE=0 — skipped remediation handoff marker (PR still open/subscribed)"
   echo "RESULT: PASS — PR open + subscribed"
+fi
+
+# Last publish step: durable memory handoff for the next agent (hydrate/search).
+# Operator CLI write — fail-open inside the hook (always exit 0). A refused
+# or unbound memory plane must not convert an opened PR into a failed publish.
+_pr_mem_py="$(cd "$SCRIPT_DIR/../hooks" && pwd)/pr_publish_memory_write.py"
+if [[ -f "$_pr_mem_py" ]]; then
+  _pr_mem_py_bin="${compose_python:-}"
+  if [[ -z "$_pr_mem_py_bin" ]]; then
+    if [[ -x "$GOV_ROOT/.venv/bin/python" ]]; then
+      _pr_mem_py_bin="$GOV_ROOT/.venv/bin/python"
+    else
+      _pr_mem_py_bin="$(command -v python3)"
+    fi
+  fi
+  "$_pr_mem_py_bin" "$_pr_mem_py" \
+    --workspace "$WS" \
+    --gov-root "$GOV_ROOT" \
+    --pr-remediate "$PR_REMEDIATE" \
+    --repo "${owner}/${name}" \
+    --number "$pr_number" \
+    --url "$pr_url" \
+    --base "$BASE_REF" \
+    --head "$branch" \
+    --head-sha "${_pr_head_sha:-}"
 fi
 
 _scratch_hold_restore

@@ -105,10 +105,12 @@ and retired (gates dispatch only through the launcher, INV-1).
 
 ## Must emit when governance found
 
-1. Governance rev (branch@sha) — on `CLAUDE_CODE_REMOTE=true` the ephemeral
-   governance clone is refreshed from `origin/main` first (fetch, reset, record
-   exact revision); on local/Desktop the checkout is **never reset** — report
-   revision + drift against origin/main only.
+1. Governance rev (branch@sha) — on `CLAUDE_CODE_REMOTE=true` the launcher
+   (`l9_hook_exec.sh`) is the **sole** refresh owner and refreshes the
+   ephemeral clone from trusted `origin/main` only (no `L9_GOVERNANCE_BRANCH`
+   selector). This hook never independently `git fetch` / `checkout -f`.
+   On local/Desktop the checkout is **never reset** — report revision +
+   drift against origin/main only.
 2. Authority order including Autonomy Surface Profile
 3. Verbatim Profile `session_start_block` via `ops/autonomy/profile_loader.py` (stdlib-only extract; no PyYAML required on SessionStart path)
 4. Read-only autonomy `bootstrap.py` context when available
@@ -149,10 +151,10 @@ SessionStart hooks still run concurrently and the platform still offers no
 ordering. The race that used to skip tip-only files (`bootstrap_capability_preflight.sh
 hook file absent` before this hook's refresh landed) is closed in the
 launcher: `l9_hook_exec.sh` flock-refreshes the ephemeral clone **before**
-resolving `HOOK_PATH`. This hook then skips its own reset when the launcher
-receipt is `state=fresh` and `local_sha` matches HEAD. Dirty tracked clones
-are never `checkout -f`. Fail-open on lock or fetch failure; SessionStart
-still exits 0.
+resolving `HOOK_PATH`. This hook never runs a second fetch/reset brain: if
+the launcher did not establish the tree (untrusted origin, lock miss, fetch
+failure, or no bound attempt), SessionStart records that outcome and
+continues. Fail-open; SessionStart still exits 0.
 
 The launcher still records every skip in `~/.l9/claude/hook-skips.log`; this
 hook reads the entries stamped at or after its own start and emits them as

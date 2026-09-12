@@ -5,7 +5,8 @@ SSOT doctrine: ops/autonomy/surface_profile.yaml (l4_local_autonomy).
 State + receipts live under <workspace>/.l9/autonomy/ (gitignored).
 
 Tree kernels are owned by ops/autonomy/kernel_gate.py (first step of
-precommit-repo). They are not an L4 phase.
+precommit-repo). They are not an L4 phase, and authorize-release does not
+require a kernel stamp (CANONICAL_LAW KERNEL_PRECOMMIT_HOOK_V1).
 
 Phases:
   executing          — local commits on stacked branch; push/PR denied

@@ -44,16 +44,20 @@ Read `skills/l9-global-architect/SKILL.md` and run the GAR bootloader **before**
 
 ## Shared steps (identical in both modes)
 
-0. **Architect** — run `l9-global-architect` to settle architecture (or record that it is already settled).
-1. **Doctrine and depth** — planning doctrine + `route_plan.py` classification (escalate-only).
-2. **Pre-validation** — bind the current workspace (branch, dirty, HEAD if useful). For code in scope on governed workspaces name `.pre-commit-config.yaml` as the hook catalog. Do **not** write `Lock: origin/main = <sha>`. Do **not** require a clean tip worktree. Do **not** stop-and-replan as a Program Lock.
-3. **Gather** — objective, scope in/out, falsifiable success. Ambiguity → STOP and ask.
-4. **Decompose** — TODOs with files (or blocker) and deps. DAG / Phase-0 rows are the todo projection, not Controller `claim`/`render` Task Cards.
-5. **Stress-test and leverage** — mandatory; no mode skips it.
-6. **Doc / Root Surface Impact** — update TODOs or N/A with reason.
-7. **Emit PLAN_DOCUMENT** — JSON conforming to the shared schema.
-8. **Validate PLAN_DOCUMENT** — `validate_plan_document.py` MUST PASS before any projection is offered.
-9. **Project the plan** — one renderer, mode-selected:
+0. **Memory prefetch** — hydrate + conflicts before architect. Run
+   `python3 ops/hooks/plan_memory_prefetch.py --workspace "$PWD" --task "<objective>"`
+   and cite `MEMORY_PREFETCH` from `.l9/memory/plan-prefetch.json`. Cursor
+   `beforeSubmitPrompt` fires the same hook when `l9-plan-simple` is routed.
+1. **Architect** — run `l9-global-architect` to settle architecture (or record that it is already settled).
+2. **Doctrine and depth** — planning doctrine + `route_plan.py` classification (escalate-only).
+3. **Pre-validation** — bind the current workspace (branch, dirty, HEAD if useful). For code in scope on governed workspaces name `.pre-commit-config.yaml` as the hook catalog. Do **not** write `Lock: origin/main = <sha>`. Do **not** require a clean tip worktree. Do **not** stop-and-replan as a Program Lock.
+4. **Gather** — objective, scope in/out, falsifiable success. Ambiguity → STOP and ask.
+5. **Decompose** — TODOs with files (or blocker) and deps. DAG / Phase-0 rows are the todo projection, not Controller `claim`/`render` Task Cards.
+6. **Stress-test and leverage** — mandatory; no mode skips it.
+7. **Doc / Root Surface Impact** — update TODOs or N/A with reason.
+8. **Emit PLAN_DOCUMENT** — JSON conforming to the shared schema.
+9. **Validate PLAN_DOCUMENT** — `validate_plan_document.py` MUST PASS before any projection is offered.
+10. **Project the plan** — one renderer, mode-selected:
 
 Run from the repository root: the scripts confine CLI paths to the working
 directory, so a `../l9-plan/...` invocation from the skill root is rejected.

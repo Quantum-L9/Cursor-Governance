@@ -160,12 +160,11 @@ class HookInterpreterBindingTests(unittest.TestCase):
             "CLAUDE_CODE_ENTRYPOINT",
             "CLAUDE_CODE_SESSION_ID",
             "CLAUDE_CODE_REMOTE",
-            # The launcher honours an exported L9_GOVERNANCE_DIR that names a
-            # governance tree. The `make pr` gate exports it (via
-            # ~/.l9/cloud-session.env on hosted surfaces), so a fixture that
-            # moves HOME but inherits that variable is redirected back to the
-            # real clone and every probe reports "hook file absent". The
-            # sibling suites (test_hook_exec_failclosed) already clear it.
+            # The launcher itself no longer reads this (INV-1c: governance is
+            # $HOME/.cursor-governance, full stop), but the hooks it execs do,
+            # and ~/.l9/cloud-session.env exports it on hosted surfaces. A
+            # fixture that moves HOME while inheriting it hands the probe a
+            # governance root the rest of the fixture did not build.
             "L9_GOVERNANCE_DIR",
         ):
             env.pop(key, None)

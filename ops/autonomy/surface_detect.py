@@ -72,15 +72,44 @@ def is_claude_gate_surface(env: Mapping[str, str] | None = None) -> bool:
     return detect_surface(env) in CLAUDE_GATE_SURFACES
 
 
-def kernel_latch_surface(env: Mapping[str, str] | None = None) -> bool:
-    """True when ``make pr`` must take the tree-kernel latch before pytest.
+#: Values that mean "yes" in a CI environment variable. Anything else —
+#: including the literal "false" and "0" that GitHub Actions itself writes
+#: for a disabled condition — is not CI.
+_CI_TRUTHY = frozenset({"1", "true", "yes"})
 
-    Every known local agent surface (Cursor and adapters) fires so kernels
-    apply once, then tests run once on that tree. ``unknown`` (CI / bare
-    shell) skips: ``.l9/autonomy/kernel-receipt.json`` is gitignored and
-    cannot exist on GitHub Actions.
+
+def _ci_surface(source: Mapping[str, str]) -> bool:
+    """True only for an explicitly truthy CI marker.
+
+    Both markers are parsed the same way on purpose. Accepting any non-empty
+    ``GITHUB_ACTIONS`` would classify ``GITHUB_ACTIONS=false`` as CI, and
+    because CI is the one thing that SKIPS the kernel latch, that is an
+    accidental bypass of the gate rather than a harmless misread. Unknown or
+    malformed values now fail closed: the latch applies.
     """
-    return detect_surface(env) != "unknown"
+    return any(
+        (source.get(key) or "").strip().lower() in _CI_TRUTHY for key in ("GITHUB_ACTIONS", "CI")
+    )
+
+
+def kernel_latch_surface(env: Mapping[str, str] | None = None) -> bool:
+    """True when local publish must take the tree-kernel latch at precommit.
+
+    Cursor, adapters, and a bare local shell all fire so RA + Validate &
+    Repair record before the precommit hooks and tests. This is NOT an L4
+    gate: ``authorize-release`` never consults it (CANONICAL_LAW
+    ``KERNEL_PRECOMMIT_HOOK_V1``).
+
+    A bare shell used to resolve ``unknown`` and skip, so a human publishing
+    without an agent-surface marker bypassed the latch entirely. Skip only CI
+    with no agent-surface marker: ``.l9/autonomy/kernel-receipt.json`` is
+    gitignored and cannot exist on GitHub Actions. A CI job that sets a known
+    surface (unit tests) still latches.
+    """
+    source = os.environ if env is None else env
+    if _ci_surface(source) and detect_surface(source) == "unknown":
+        return False
+    return True
 
 
 def main() -> int:

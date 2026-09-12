@@ -40,6 +40,7 @@ import os
 import re
 import subprocess
 import sys
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -257,6 +258,47 @@ def _memory_probe_skipped() -> bool:
     return any(os.environ.get(name) == "1" for name in _MEMORY_PROBE_SKIP_ENVS)
 
 
+#: The one memory server `mcp.template.json` declares for Claude Code.
+_MEMORY_MCP_SERVER = "l9-graphite-memory"
+
+
+def _mcp_domain_entry(receipt: dict[str, Any] | None) -> dict[str, Any] | None:
+    """The projection receipt's own record for the `mcp` domain."""
+    if not receipt:
+        return None
+    per = receipt.get("domains")
+    if isinstance(per, list):
+        for entry in per:
+            if isinstance(entry, dict) and str(entry.get("domain") or "") == "mcp":
+                return entry
+    elif isinstance(per, dict):
+        entry = per.get("mcp")
+        if isinstance(entry, dict):
+            return entry
+    return None
+
+
+def _gated_out_servers(receipt: dict[str, Any] | None) -> frozenset[str]:
+    """Servers the template declares that the projection deliberately did not render.
+
+    ``claude_projection.py`` is the single authority over ``.mcp.json`` and
+    records this set itself: a server whose ``_requires_env`` variable the
+    platform has not proxied is omitted *by design* — "so an unproxied session
+    degrades to an absent server instead of emitting one that cannot
+    authenticate" (mcp.template.json). The set is read from the receipt's own
+    detail, never from ambient environment, for the reason
+    ``_map_projection_status`` already documents: the evidence has to be present
+    where the claim is made, or every hosted surface starts answering from a
+    variable instead of from what was actually projected.
+    """
+    entry = _mcp_domain_entry(receipt)
+    detail = entry.get("detail") if isinstance(entry, dict) else None
+    names = detail.get("gated_out_servers") if isinstance(detail, dict) else None
+    if not isinstance(names, list):
+        return frozenset()
+    return frozenset(str(name) for name in names)
+
+
 def _memory_levels(gov: Path) -> dict[str, str] | None:
     """R0..R9 statuses from the canonical readiness report, or None when unrunnable.
 
@@ -321,15 +363,90 @@ def _memory_control_plane_health(levels: dict[str, str] | None) -> tuple[str, st
     return READY, "canonical store and service ready"
 
 
-def _claude_mcp_health(workspace: Path) -> tuple[str, str]:
-    """Claude project MCP is ready only when the interpreter is exported and rendered.
+#: The environment variable mcp.template.json expands into the memory server's
+#: ``command``. The rendered entry is bound to the interpreter only when its
+#: command is that reference (or the same path spelled out).
+_MEMORY_INTERPRETER_ENV = "L9_MEMORY_INTERPRETER"
+_MEMORY_INTERPRETER_REF = "${" + _MEMORY_INTERPRETER_ENV + "}"
+
+#: Asked of the bound interpreter itself. ``find_spec`` on the top-level
+#: package imports nothing, so the probe proves the package is reachable from
+#: THAT interpreter without running any of it.
+_MEMORY_IMPORT_PROBE = (
+    "import importlib.util, sys; "
+    "sys.exit(0 if importlib.util.find_spec('l9_graphite_memory') else 1)"
+)
+
+
+def _interpreter_carries_memory_package(interpreter: Path) -> bool | None:
+    """True/False from the interpreter's own answer; None when it gave none.
+
+    A probe that cannot run (killed by its timeout, refused by the OS) is not
+    evidence either way, and the caller reports it as UNKNOWN rather than
+    quietly grading the binding READY or DEGRADED on a guess.
+    """
+    try:
+        proc = subprocess.run(  # noqa: S603 - fixed argv, no shell
+            [str(interpreter), "-c", _MEMORY_IMPORT_PROBE],
+            capture_output=True,
+            text=True,
+            timeout=20,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return proc.returncode == 0
+
+
+def _claude_mcp_health(
+    workspace: Path,
+    *,
+    gated_out: frozenset[str] = frozenset(),
+    environ: Mapping[str, str] | None = None,
+) -> tuple[str, str]:
+    """Claude project MCP is READY only when the rendered entry will actually run.
 
     Diagnostics R4 is Cursor ``client cursor status`` (``~/.cursor/mcp.json``).
-    That is the wrong file on Claude Code. Do not read R4 here.
+    That is the wrong file on Claude Code, and structurally absent on Web and
+    Mobile (SESSION_START_SPEC hard constraint 4), so R4 is never read here.
+
+    What IS read is executable binding truth, not configuration presence. The
+    first version of this check returned READY for any non-empty
+    ``L9_MEMORY_INTERPRETER`` and any ``.mcp.json`` carrying the server key,
+    which is exactly the false-READY the receipt exists to prevent: a cached
+    shell exporting a deleted venv, a hand-edited ``.mcp.json`` whose command
+    names some other python, or a bound interpreter that no longer carries the
+    package all read as healthy. Each is now a named DEGRADED:
+
+      unbound          the variable is empty (the projection gates the server
+                       out on the same condition, so ``gated_out`` only adds
+                       that fact to the note — it never upgrades the verdict)
+      not a file /     the exported path does not exist or cannot execute
+      not executable   (a stale binding from a previous environment build)
+      not rendered     ``.mcp.json`` missing, unreadable, or without the server
+      not bound        the rendered command is not ``${L9_MEMORY_INTERPRETER}``
+                       (nor that same path), so what Claude would launch is not
+                       what was proven
+      stale package    the interpreter runs but cannot find
+                       ``l9_graphite_memory``
+
+    Only an executable interpreter that carries the package, referenced by the
+    rendered entry, is READY. A probe that cannot run is UNKNOWN — never PASS.
     """
-    interp = (os.environ.get("L9_MEMORY_INTERPRETER") or "").strip()
+    env = os.environ if environ is None else environ
+    interp = (env.get(_MEMORY_INTERPRETER_ENV) or "").strip()
     if not interp:
-        return DEGRADED, "L9_MEMORY_INTERPRETER unset (blocker: mcp_config)"
+        gated = (
+            "; projection gated l9-graphite-memory out on the same unbound variable"
+            if _MEMORY_MCP_SERVER in gated_out
+            else ""
+        )
+        return DEGRADED, f"L9_MEMORY_INTERPRETER unbound (blocker: mcp_config){gated}"
+    interp_path = Path(interp)
+    if not interp_path.is_file():
+        return DEGRADED, f"L9_MEMORY_INTERPRETER is not a file: {interp} (blocker: mcp_config)"
+    if not os.access(interp_path, os.X_OK):
+        return DEGRADED, f"L9_MEMORY_INTERPRETER not executable: {interp} (blocker: mcp_config)"
     mcp_path = Path(workspace) / ".mcp.json"
     if not mcp_path.is_file():
         return DEGRADED, "workspace .mcp.json missing (blocker: mcp_config)"
@@ -338,13 +455,41 @@ def _claude_mcp_health(workspace: Path) -> tuple[str, str]:
     except (OSError, json.JSONDecodeError):
         return DEGRADED, "workspace .mcp.json unreadable (blocker: mcp_config)"
     servers = decoded.get("mcpServers") if isinstance(decoded, dict) else None
-    if not isinstance(servers, dict) or "l9-graphite-memory" not in servers:
+    if not isinstance(servers, dict) or _MEMORY_MCP_SERVER not in servers:
         return DEGRADED, "l9-graphite-memory absent from .mcp.json (blocker: mcp_config)"
-    return READY, "claude mcp entry present and interpreter bound"
+    entry = servers.get(_MEMORY_MCP_SERVER)
+    command = str(entry.get("command") or "").strip() if isinstance(entry, dict) else ""
+    if command not in {_MEMORY_INTERPRETER_REF, interp}:
+        return DEGRADED, (
+            "l9-graphite-memory command is not bound to L9_MEMORY_INTERPRETER "
+            f"(rendered {command or 'nothing'}) (blocker: mcp_config)"
+        )
+    carries = _interpreter_carries_memory_package(interp_path)
+    if carries is None:
+        return UNKNOWN, "L9_MEMORY_INTERPRETER probe did not complete (blocker: mcp_config)"
+    if not carries:
+        return DEGRADED, (
+            "L9_MEMORY_INTERPRETER cannot find l9_graphite_memory — stale binding "
+            f"{interp} (blocker: mcp_config)"
+        )
+    return READY, "claude mcp entry bound to an executable interpreter carrying l9_graphite_memory"
 
 
-def memory_probe(gov: Path, workspace: Path | str | None = None) -> dict[str, Any]:
-    """Split cli / control plane / mcp — a bound CLI with a dead store is not one word."""
+def memory_probe(
+    gov: Path,
+    workspace: Path | str | None = None,
+    *,
+    projection: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Split cli / control plane / mcp — a bound CLI with a dead store is not one word.
+
+    ``projection`` is the projection receipt, passed in by the caller rather
+    than read from ``$HOME`` here: a probe that reaches for ambient state is
+    one whose answer depends on the machine it runs on, which is how a
+    hermetic unit test starts reading the developer's own receipt. It only
+    ever adds to the mcp note (a server the projection gated out); the verdict
+    comes from the workspace ``.mcp.json`` and the bound interpreter.
+    """
     if _memory_probe_skipped():
         skipped = {"status": READY, "reason": "probe skipped"}
         return {"cli": dict(skipped), "control_plane": dict(skipped), "mcp": dict(skipped)}
@@ -352,7 +497,7 @@ def memory_probe(gov: Path, workspace: Path | str | None = None) -> dict[str, An
     cli_status, cli_note = _memory_cli_health(levels)
     plane_status, plane_note = _memory_control_plane_health(levels)
     ws = Path(workspace) if workspace else gov
-    mcp_status, mcp_note = _claude_mcp_health(ws)
+    mcp_status, mcp_note = _claude_mcp_health(ws, gated_out=_gated_out_servers(projection))
     return {
         "cli": {"status": cli_status, "reason": cli_note},
         "control_plane": {"status": plane_status, "reason": plane_note},
@@ -567,7 +712,7 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
     proj = _read_json(home / ".l9" / "claude" / "projection-receipt.json")
     bootstrap = _read_json(home / ".l9" / "claude" / "bootstrap-state.json")
     proj_status = _projection_statuses(proj)
-    split = memory_probe(gov, workspace)
+    split = memory_probe(gov, workspace, projection=proj)
     cli_status = str(split["cli"]["status"])
     cli_note = str(split["cli"]["reason"])
     mem_mcp_status = str(split["mcp"]["status"])
@@ -816,7 +961,10 @@ def main() -> int:
 
     gov = args.root or _gov_root()
     if args.memory_probe:
-        print(json.dumps(memory_probe(gov, args.workspace)))
+        # install.sh reads this to set STATUS_MEMORY_MCP, so it must reach the
+        # same verdict as build_receipt: same probe, same projection evidence.
+        projection = _read_json(Path.home() / ".l9" / "claude" / "projection-receipt.json")
+        print(json.dumps(memory_probe(gov, args.workspace, projection=projection)))
         return 0
 
     workspace = args.workspace or os.environ.get("CURSOR_PROJECT_DIR") or os.getcwd()
