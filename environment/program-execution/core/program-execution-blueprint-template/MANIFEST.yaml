@@ -117,7 +117,7 @@ files:
 - path: scripts/instantiate.py
   sha256: 1820def7bc85ac2478028ef5bae0091ec07f4b9dd159f427b9e4ea3df10c29fa
 - path: scripts/validate_blueprint.py
-  sha256: 97f25ae5cdf0285ff2f29fcaf10882e8d9e1d24044f80478514d67e4699172b3
+  sha256: 1b1875a4c5d9b8caf8a927e4a0866a87e4f39852ac64ae9c84d1ce45a18639e1
 integrity:
   algorithm: sha256
   self_excluded: true
