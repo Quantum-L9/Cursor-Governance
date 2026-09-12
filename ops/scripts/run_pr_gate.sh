@@ -408,26 +408,34 @@ _gate_classify_dirtiness() {
 }
 
 _gate_commit_writer_dirt() {
-  # Commit tracked dirt the writers/heal produced so this make pr continues
-  # into pytest instead of aborting for a second run.
-  python3 - "$WS" <<'PY'
+  # Commit only paths the writers/heal made dirty. Pre-existing tracked dirt
+  # stays out of the automatic commit (fail closed at classify, do not scoop).
+  python3 - "$WS" "$status_before" <<'PY'
 import subprocess
 import sys
 from pathlib import Path
 
-ws = Path(sys.argv[1])
-porc = subprocess.check_output(["git", "status", "--porcelain", "-z"], cwd=ws)
-entries = [e.decode() for e in porc.split(b"\0") if e]
-paths: list[str] = []
-for text in entries:
+def _tracked(text: str) -> str | None:
     if text.startswith("??") or len(text) < 4:
-        continue
+        return None
     rel = text[3:]
     if " -> " in rel:
         rel = rel.split(" -> ", 1)[1]
     if rel.startswith(".l9/"):
-        continue
-    paths.append(rel)
+        return None
+    return rel
+
+ws = Path(sys.argv[1])
+before_text = Path(sys.argv[2]).read_text(encoding="utf-8", errors="replace")
+before = {p for line in before_text.splitlines() if (p := _tracked(line))}
+porc = subprocess.check_output(["git", "status", "--porcelain", "-z"], cwd=ws)
+entries = [e.decode() for e in porc.split(b"\0") if e]
+after: list[str] = []
+for text in entries:
+    rel = _tracked(text)
+    if rel:
+        after.append(rel)
+paths = [rel for rel in after if rel not in before]
 if not paths:
     raise SystemExit(0)
 subprocess.run(["git", "add", "--", *paths], cwd=ws, check=True)

@@ -421,9 +421,38 @@ def record_kernels(
     return state
 
 
-def _require_kernel_receipt(root: Path) -> None:
-    """Fail closed unless kernel_gate.verify_tree accepts this workspace."""
-    from kernel_gate import gov_root_from_env, verify_tree
+def _require_kernel_receipt(root: Path, state: dict[str, Any] | None = None) -> None:
+    """Fail closed unless kernel_gate.verify_tree accepts this workspace.
+
+    /ff corpus shelves apply their own kernels before commit, then call
+    begin + authorize-release. They must not be forced through the generic
+    tree-kernel receipt a second time.
+    """
+    from kernel_gate import (
+        changed_are_corpus_only,
+        gov_root_from_env,
+        verify_tree,
+    )
+
+    contract_id = str((state or {}).get("contract_id") or "")
+    if contract_id.startswith("ff-shelf-"):
+        return
+    begin_sha = str((state or {}).get("head_sha_at_begin") or "").strip()
+    if begin_sha:
+        try:
+            listed = subprocess.run(
+                ["git", "-C", str(root), "diff", "--name-only", begin_sha, "HEAD"],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=10,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            listed = None
+        if listed is not None and listed.returncode == 0:
+            paths = [line.strip() for line in listed.stdout.splitlines() if line.strip()]
+            if paths and changed_are_corpus_only(paths):
+                return
 
     fail = verify_tree(root, gov_root_from_env())
     if fail:
@@ -458,7 +487,7 @@ def authorize_release(root: Path) -> dict[str, Any]:
             f"branch drift: phase started on {state.get('stacked_branch')!r}, now on {branch!r}"
         )
     head = current_head(root)
-    _require_kernel_receipt(root)
+    _require_kernel_receipt(root, state)
     _align_kernel_statuses_passed(state)
     state["phase"] = PHASE_RELEASE
     state["authorized_at"] = _utc_now()
