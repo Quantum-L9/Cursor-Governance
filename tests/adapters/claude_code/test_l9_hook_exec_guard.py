@@ -2,15 +2,38 @@
 
 from __future__ import annotations
 
+import functools
 import json
 import os
 import subprocess
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 HOOK = ROOT / "environment" / "agents" / "adapters" / "claude-code" / "hooks" / "l9_hook_exec.sh"
 GATE = "memory_gate.py"
 OBSERVER = "memory_prefetch.py"
+
+#: Kept alive for the module's lifetime; dropping the handle removes the tree.
+_HOME_HANDLE: tempfile.TemporaryDirectory[str] | None = None
+
+
+@functools.cache
+def _home_for_this_checkout() -> str:
+    """A HOME whose ``.cursor-governance`` is this checkout.
+
+    The launcher resolves its governance tree as ``$HOME/.cursor-governance``
+    and honours nothing else (INV-1c), so pointing it at the checkout under
+    test is a HOME move, not an ``L9_GOVERNANCE_DIR`` export. The sibling
+    launcher suites already drive it this way; this one used the variable and
+    was the last caller depending on a redirect that could equally well aim a
+    gate at a tree nobody reviewed.
+    """
+    global _HOME_HANDLE
+    _HOME_HANDLE = tempfile.TemporaryDirectory()
+    home = Path(_HOME_HANDLE.name)
+    (home / ".cursor-governance").symlink_to(ROOT, target_is_directory=True)
+    return str(home)
 
 
 def _run(hook_class: str, hook_name: str, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
@@ -29,7 +52,7 @@ def _run(hook_class: str, hook_name: str, env: dict[str, str]) -> subprocess.Com
             "L9_GOVERNANCE_DIR",
         }
     }
-    cleaned["L9_GOVERNANCE_DIR"] = str(ROOT)
+    cleaned["HOME"] = _home_for_this_checkout()
     cleaned.update(env)
     return subprocess.run(
         ["bash", str(HOOK), "--class", hook_class, hook_name],

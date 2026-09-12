@@ -418,6 +418,16 @@ if [ -f "$MEMORY_BOUNDARY" ]; then
   else
     fail "before-submit-skill-router.py missing under ~/.cursor/hooks"
   fi
+  if grep -q "plan-memory-prefetch.py" "$HOOKS_JSON" 2>/dev/null; then
+    pass "beforeSubmitPrompt plan memory prefetch registered"
+  else
+    fail "beforeSubmitPrompt plan-memory-prefetch.py missing from hooks.json"
+  fi
+  if [ -x "$HOME/.cursor/hooks/plan-memory-prefetch.py" ] || [ -L "$HOME/.cursor/hooks/plan-memory-prefetch.py" ]; then
+    pass "plan-memory-prefetch.py installed under ~/.cursor/hooks"
+  else
+    fail "plan-memory-prefetch.py missing under ~/.cursor/hooks"
+  fi
   if grep -q "pr-gate-failure-shell.sh" "$HOOKS_JSON" 2>/dev/null; then
     pass "afterShellExecution gate-failure hook registered"
   else

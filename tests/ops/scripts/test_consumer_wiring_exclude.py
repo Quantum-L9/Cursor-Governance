@@ -101,3 +101,120 @@ def test_committed_wiring_is_left_alone(tmp_path: Path) -> None:
 
     (repo / ".claude" / "settings.json").write_text('{"edited": true}\n', encoding="utf-8")
     assert ".claude/settings.json" in _git(repo, "status", "--porcelain").stdout
+
+
+# --- F-548-007 / F-548-008: projection is ownership-aware ------------------------
+#
+# The reconciler is driven directly here (not through the installer) so the
+# properties are isolated: tracked hook bytes survive projection while drift is
+# reported; an untracked managed hook converges; a retired projection is pruned
+# when untracked and preserved-with-report when tracked.
+
+HOOK_SRC = ROOT / "environment" / "agents" / "adapters" / "claude-code" / "hooks"
+SESSION_HOOK = "session_start_claude_governance.sh"
+RETIRED_HOOK = "merge_gate_wrap.py"
+
+
+def _reconcile(repo: Path, *extra: str) -> dict:
+    import json
+
+    proc = subprocess.run(
+        [
+            str(GOV_PY),
+            str(RECONCILER),
+            "--root",
+            str(ROOT),
+            "--workspace",
+            str(repo),
+            "--skip-user",
+            "--skip-gov",
+            "--json",
+            *extra,
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    # `--check` exits 1 whenever drift is reported; that is the report, not a crash.
+    assert proc.returncode in ((0, 1) if "--check" in extra else (0,)), proc.stderr + proc.stdout
+    return json.loads(proc.stdout)["workspace"]
+
+
+@pytest.mark.skipif(not GOV_PY.exists(), reason="locked interpreter absent; reconciler cannot run")
+def test_tracked_consumer_hook_survives_projection_byte_for_byte(tmp_path: Path) -> None:
+    """A git-tracked, divergent SessionStart hook is repo-owned: reported, never overwritten."""
+    repo = _workspace(tmp_path, commit_wiring=True)
+    divergent = b"#!/bin/sh\n# branch-local in-flight edit\n"
+    hook = repo / ".claude" / "hooks" / SESSION_HOOK
+    hook.write_bytes(divergent)
+    _git(repo, "add", "-f", f".claude/hooks/{SESSION_HOOK}")
+    _git(repo, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "edit hook")
+
+    result = _reconcile(repo)
+
+    assert hook.read_bytes() == divergent, "projection overwrote a tracked consumer hook"
+    assert any(item == f"tracked-hook-drift:{hook}" for item in result["drift"]), result
+    assert str(hook) in result["preserved_tracked_hooks"]
+    assert str(hook) not in result["wrote"]
+    # --check reports the same drift without writing either.
+    check = _reconcile(repo, "--check")
+    assert any(item == f"tracked-hook-drift:{hook}" for item in check["drift"])
+    assert hook.read_bytes() == divergent
+
+
+@pytest.mark.skipif(not GOV_PY.exists(), reason="locked interpreter absent; reconciler cannot run")
+def test_untracked_managed_hook_still_converges_to_ssot(tmp_path: Path) -> None:
+    repo = _workspace(tmp_path, commit_wiring=False)
+    hook = repo / ".claude" / "hooks" / SESSION_HOOK
+    assert hook.read_bytes() != (HOOK_SRC / SESSION_HOOK).read_bytes()
+
+    result = _reconcile(repo)
+
+    assert hook.read_bytes() == (HOOK_SRC / SESSION_HOOK).read_bytes()
+    assert str(hook) in result["wrote"]
+    assert not any(item.startswith("tracked-hook-drift:") for item in result["drift"])
+
+
+@pytest.mark.skipif(not GOV_PY.exists(), reason="locked interpreter absent; reconciler cannot run")
+def test_explicit_migration_switch_resyncs_a_tracked_hook(tmp_path: Path) -> None:
+    repo = _workspace(tmp_path, commit_wiring=True)
+    hook = repo / ".claude" / "hooks" / SESSION_HOOK
+    result = _reconcile(repo, "--overwrite-tracked-hooks")
+    assert hook.read_bytes() == (HOOK_SRC / SESSION_HOOK).read_bytes()
+    assert str(hook) in result["wrote"]
+
+
+@pytest.mark.skipif(not GOV_PY.exists(), reason="locked interpreter absent; reconciler cannot run")
+def test_untracked_retired_projection_is_pruned(tmp_path: Path) -> None:
+    """A previously managed merge_gate_wrap.py left behind untracked is removed."""
+    repo = _workspace(tmp_path, commit_wiring=False)
+    orphan = repo / ".claude" / "hooks" / RETIRED_HOOK
+    orphan.write_text("# stale fail-open projection\n", encoding="utf-8")
+
+    check = _reconcile(repo, "--check")
+    assert f"retired-hook-present:{orphan}" in check["drift"]
+    assert orphan.is_file(), "--check must not delete"
+
+    result = _reconcile(repo)
+    assert not orphan.exists()
+    assert str(orphan) in result["removed"]
+    # What remains under .claude/ is exactly the current managed set; the
+    # exclusion of that set from `git status` is the installer's job (above).
+    remaining = sorted(q.name for q in (repo / ".claude" / "hooks").iterdir())
+    assert remaining == [SESSION_HOOK]
+
+
+@pytest.mark.skipif(not GOV_PY.exists(), reason="locked interpreter absent; reconciler cannot run")
+def test_tracked_file_at_a_retired_path_is_preserved_and_reported(tmp_path: Path) -> None:
+    repo = _workspace(tmp_path, commit_wiring=True)
+    owned = repo / ".claude" / "hooks" / RETIRED_HOOK
+    body = "# the repository's own file at the retired name\n"
+    owned.write_text(body, encoding="utf-8")
+    _git(repo, "add", "-f", f".claude/hooks/{RETIRED_HOOK}")
+    _git(repo, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "own it")
+
+    result = _reconcile(repo)
+
+    assert owned.read_text(encoding="utf-8") == body
+    assert f"retired-hook-tracked:{owned}" in result["drift"]
+    assert result["removed"] == []

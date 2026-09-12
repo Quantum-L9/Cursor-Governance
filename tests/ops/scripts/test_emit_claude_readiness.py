@@ -127,6 +127,36 @@ def _levels(**overrides: str) -> dict[str, str]:
     return base
 
 
+def _stub_interpreter(
+    tmp_path: Path, *, carries_package: bool = True, name: str = "python"
+) -> Path:
+    """A REAL executable standing in for a bound interpreter.
+
+    READY must mean "actually runnable": the previous fixtures exported a
+    nonexistent `/venv/bin/python` and still expected READY, which positively
+    encoded the false-ready the emitter exists to prevent (PR #548 review,
+    F-548-005). The stub answers the package probe the emitter asks of it.
+    """
+    venv_bin = tmp_path / "venv" / "bin"
+    venv_bin.mkdir(parents=True, exist_ok=True)
+    stub = venv_bin / name
+    stub.write_text(f"#!/bin/sh\nexit {0 if carries_package else 1}\n", encoding="utf-8")
+    stub.chmod(0o755)
+    return stub
+
+
+def tmp_path_of(gov: Path) -> Path:
+    """The pytest tmp dir a fake gov lives in (`_init_fake_gov` puts it at tmp/gov)."""
+    return gov.parent
+
+
+def _render_memory_server(workspace: Path, command: str = "${L9_MEMORY_INTERPRETER}") -> None:
+    (workspace / ".mcp.json").write_text(
+        json.dumps({"mcpServers": {"l9-graphite-memory": {"command": command}}}),
+        encoding="utf-8",
+    )
+
+
 def test_memory_layers_map_to_three_dimensions(tmp_path: Path, monkeypatch) -> None:
     """R0/R1 -> cli, R2/R3/R6 -> control plane; mcp is Claude .mcp.json + env, not R4."""
     assert er._memory_cli_health(_levels())[0] == READY
@@ -144,14 +174,75 @@ def test_memory_layers_map_to_three_dimensions(tmp_path: Path, monkeypatch) -> N
     monkeypatch.delenv("L9_MEMORY_INTERPRETER", raising=False)
     status, note = er._claude_mcp_health(tmp_path)
     assert status == DEGRADED and "L9_MEMORY_INTERPRETER" in note
-    monkeypatch.setenv("L9_MEMORY_INTERPRETER", "/venv/bin/python")
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(_stub_interpreter(tmp_path)))
     status, note = er._claude_mcp_health(tmp_path)
     assert status == DEGRADED and "mcp.json" in note
-    (tmp_path / ".mcp.json").write_text(
-        json.dumps({"mcpServers": {"l9-graphite-memory": {"command": "${L9_MEMORY_INTERPRETER}"}}}),
-        encoding="utf-8",
-    )
+    _render_memory_server(tmp_path)
     assert er._claude_mcp_health(tmp_path)[0] == READY
+
+
+# --- F-548-005: readiness is executable binding truth, not configuration presence
+
+
+def test_nonexistent_interpreter_is_not_ready(tmp_path: Path, monkeypatch) -> None:
+    """The exact fixture the old tests accepted: an exported path that does not exist."""
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", "/venv/bin/python")
+    _render_memory_server(tmp_path)
+    status, note = er._claude_mcp_health(tmp_path)
+    assert status == DEGRADED
+    assert "not a file" in note and "mcp_config" in note
+
+
+def test_non_executable_interpreter_is_not_ready(tmp_path: Path, monkeypatch) -> None:
+    stub = _stub_interpreter(tmp_path)
+    stub.chmod(0o644)
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(stub))
+    _render_memory_server(tmp_path)
+    status, note = er._claude_mcp_health(tmp_path)
+    assert status == DEGRADED and "not executable" in note
+
+
+def test_rendered_command_not_bound_to_the_interpreter_is_not_ready(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """What Claude would launch must be what was proven."""
+    stub = _stub_interpreter(tmp_path)
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(stub))
+    _render_memory_server(tmp_path, command="/usr/bin/python3")
+    status, note = er._claude_mcp_health(tmp_path)
+    assert status == DEGRADED and "not bound to L9_MEMORY_INTERPRETER" in note
+    # The same path spelled out literally is the same binding.
+    _render_memory_server(tmp_path, command=str(stub))
+    assert er._claude_mcp_health(tmp_path)[0] == READY
+
+
+def test_stale_interpreter_without_the_package_is_not_ready(tmp_path: Path, monkeypatch) -> None:
+    """An interpreter that runs but no longer carries l9_graphite_memory is a stale binding."""
+    stub = _stub_interpreter(tmp_path, carries_package=False)
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(stub))
+    _render_memory_server(tmp_path)
+    status, note = er._claude_mcp_health(tmp_path)
+    assert status == DEGRADED and "stale binding" in note
+
+
+def test_interpreter_probe_that_cannot_run_is_unknown_never_ready(
+    tmp_path: Path, monkeypatch
+) -> None:
+    stub = _stub_interpreter(tmp_path)
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(stub))
+    _render_memory_server(tmp_path)
+    monkeypatch.setattr(er, "_interpreter_carries_memory_package", lambda _p: None)
+    status, note = er._claude_mcp_health(tmp_path)
+    assert status == UNKNOWN and "did not complete" in note
+
+
+def test_the_package_probe_asks_the_bound_interpreter_itself(tmp_path: Path) -> None:
+    """Executed, not inferred: the probe runs the interpreter and reads its exit."""
+    yes = _stub_interpreter(tmp_path, carries_package=True, name="yes-python")
+    no = _stub_interpreter(tmp_path, carries_package=False, name="no-python")
+    assert er._interpreter_carries_memory_package(yes) is True
+    assert er._interpreter_carries_memory_package(no) is False
+    assert er._interpreter_carries_memory_package(tmp_path / "missing") is None
 
 
 def test_memory_probe_reads_no_provider_url(monkeypatch) -> None:
@@ -171,11 +262,8 @@ def test_memory_probe_reads_no_provider_url(monkeypatch) -> None:
 
 def test_claude_mcp_ready_when_cursor_r4_would_fail(tmp_path: Path, monkeypatch) -> None:
     """Claude mcp is workspace .mcp.json + interpreter, not Cursor diagnostics R4."""
-    monkeypatch.setenv("L9_MEMORY_INTERPRETER", "/venv/bin/python")
-    (tmp_path / ".mcp.json").write_text(
-        json.dumps({"mcpServers": {"l9-graphite-memory": {"command": "${L9_MEMORY_INTERPRETER}"}}}),
-        encoding="utf-8",
-    )
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(_stub_interpreter(tmp_path)))
+    _render_memory_server(tmp_path)
     monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels(R4="fail"))
     for name in er._MEMORY_PROBE_SKIP_ENVS:
         monkeypatch.delenv(name, raising=False)
@@ -208,6 +296,109 @@ def test_bound_cli_and_missing_mcp_entry_are_not_one_word(tmp_path: Path, monkey
     assert receipt["memory_control_plane_status"] == READY
     assert receipt["memory_mcp_status"] == DEGRADED
     assert receipt["overall_readiness"] == DEGRADED
+
+
+def test_a_server_the_projection_gated_out_is_an_unbound_interpreter(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """The Claude authority over `.mcp.json` is the projection, not `~/.cursor`.
+
+    R4 asks the memory package for `client cursor status`, which reads
+    `~/.cursor/mcp.json`; grading a Claude surface from a Cursor artifact was
+    a permanent false DEGRADED on Web and Mobile, and R4 is no longer read.
+    But the projection gates l9-graphite-memory out on exactly one condition —
+    L9_MEMORY_INTERPRETER unbound — and since PR #548 the SessionStart binder
+    is what establishes that variable, so a gated-out memory server is a
+    binding that did not happen, not a state governance intends. It reads
+    DEGRADED with the gating named; only `context7` (a platform-proxied
+    credential) is an absence by design.
+    """
+    monkeypatch.delenv("L9_MEMORY_INTERPRETER", raising=False)
+    gated = frozenset({er._MEMORY_MCP_SERVER})
+    status, note = er._claude_mcp_health(tmp_path, gated_out=gated)
+    assert status == DEGRADED
+    assert "L9_MEMORY_INTERPRETER" in note and "gated" in note
+    # Gating cannot upgrade a bound-and-rendered verdict either way.
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(_stub_interpreter(tmp_path)))
+    _render_memory_server(tmp_path)
+    assert er._claude_mcp_health(tmp_path, gated_out=gated)[0] == READY
+    assert er._claude_mcp_health(tmp_path, gated_out=frozenset({"context7"}))[0] == READY
+
+
+def test_r4_is_never_consulted_for_the_claude_mcp_verdict(tmp_path: Path, monkeypatch) -> None:
+    """The Cursor client-config level cannot degrade or pass a Claude surface."""
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(_stub_interpreter(tmp_path)))
+    _render_memory_server(tmp_path)
+    for name in er._MEMORY_PROBE_SKIP_ENVS:
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels(R4="fail"))
+    assert er.memory_probe(tmp_path, tmp_path)["mcp"]["status"] == READY
+    monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels(R4="pass"))
+    monkeypatch.delenv("L9_MEMORY_INTERPRETER")
+    assert er.memory_probe(tmp_path, tmp_path)["mcp"]["status"] == DEGRADED
+
+
+def test_gated_out_servers_are_read_from_the_receipt_not_the_environment(monkeypatch) -> None:
+    """Same discipline as the plugins carve-out: evidence where the claim is made."""
+    monkeypatch.delenv("L9_MEMORY_INTERPRETER", raising=False)
+    assert er._gated_out_servers(None) == frozenset()
+    assert er._gated_out_servers({"domains": [{"domain": "mcp", "status": "ok"}]}) == frozenset()
+    receipt = {
+        "domains": [
+            {"domain": "mcp", "status": "ok", "detail": {"gated_out_servers": ["context7"]}}
+        ]
+    }
+    assert er._gated_out_servers(receipt) == frozenset({"context7"})
+
+
+def test_probe_without_a_projection_lets_r4_decide_alone() -> None:
+    """No ambient $HOME read: an unsupplied projection means no gating is known."""
+    import inspect
+
+    source = inspect.getsource(er.memory_probe)
+    assert "Path.home()" not in source
+
+
+def test_gated_memory_entry_is_degraded_and_names_the_gating(tmp_path: Path, monkeypatch) -> None:
+    """An unbound interpreter is a binding that did not happen: DEGRADED, warned, legible."""
+    gov = _init_fake_gov(tmp_path, merge_denies=True)
+    home = _fake_home(tmp_path, mcp="READY", gated_out=[er._MEMORY_MCP_SERVER, "context7"])
+    monkeypatch.delenv("L9_MEMORY_INTERPRETER", raising=False)
+    monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels(R4="fail"))
+    receipt = _build_with_levels(gov, home, monkeypatch)
+    assert receipt["memory_mcp_status"] == DEGRADED
+    assert receipt["overall_readiness"] == DEGRADED
+    assert any("L9_MEMORY_INTERPRETER" in w and "gated" in w for w in receipt["warnings"])
+
+
+def test_a_rendered_but_unbound_memory_entry_still_degrades(tmp_path: Path, monkeypatch) -> None:
+    """The cascade that arms the repair stays available for a real defect."""
+    gov = _init_fake_gov(tmp_path, merge_denies=True)
+    home = _fake_home(tmp_path, mcp="READY", gated_out=[])
+    # Rendered, but bound to some other python than the proven one.
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(_stub_interpreter(tmp_path)))
+    _render_memory_server(gov, command="/usr/bin/python3")
+    monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels())
+    receipt = _build_with_levels(gov, home, monkeypatch)
+    assert receipt["memory_mcp_status"] == DEGRADED
+    assert receipt["overall_readiness"] == DEGRADED
+    assert any("not bound to L9_MEMORY_INTERPRETER" in w for w in receipt["warnings"])
+
+
+def test_ready_requires_a_real_executable_binding_end_to_end(tmp_path: Path, monkeypatch) -> None:
+    """The full receipt: nonexistent interpreter is not READY; a real stub is."""
+    gov = _init_fake_gov(tmp_path, merge_denies=True)
+    home = _fake_home(tmp_path, mcp="READY")
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", "/venv/bin/python")
+    _render_memory_server(gov)
+    monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels())
+    receipt = _build_with_levels(gov, home, monkeypatch)
+    assert receipt["memory_mcp_status"] == DEGRADED
+    assert receipt["overall_readiness"] != READY
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(_stub_interpreter(tmp_path)))
+    receipt = _build_with_levels(gov, home, monkeypatch)
+    assert receipt["memory_mcp_status"] == READY
+    assert receipt["overall_readiness"] == READY, receipt["warnings"]
 
 
 def test_memory_probe_does_not_call_broker(tmp_path: Path, monkeypatch) -> None:
@@ -297,14 +488,18 @@ def _init_fake_gov(
     return gov
 
 
-def _fake_home(tmp_path: Path, *, mcp: str = "READY") -> Path:
+def _fake_home(tmp_path: Path, *, mcp: str = "READY", gated_out: list[str] | None = None) -> Path:
     home = tmp_path / "home"
     cl = home / ".l9" / "claude"
     cl.mkdir(parents=True)
-    domains = [
+    domains: list[dict] = [
         {"domain": d, "status": "ok"}
         for d in ("skills", "commands", "rules", "settings", "hooks", "plugins", "mcp")
     ]
+    if gated_out is not None:
+        for entry in domains:
+            if entry["domain"] == "mcp":
+                entry["detail"] = {"gated_out_servers": list(gated_out), "managed_servers": []}
     (cl / "projection-receipt.json").write_text(json.dumps({"domains": domains}), encoding="utf-8")
     (cl / "bootstrap-state.json").write_text(json.dumps({"mcp": mcp}), encoding="utf-8")
     return home
@@ -312,15 +507,21 @@ def _fake_home(tmp_path: Path, *, mcp: str = "READY") -> Path:
 
 def _build(gov: Path, home: Path, monkeypatch) -> dict:
     monkeypatch.setenv("HOME", str(home))
-    monkeypatch.setenv("L9_MEMORY_INTERPRETER", "/venv/bin/python")
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(_stub_interpreter(tmp_path_of(gov))))
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
-    (gov / ".mcp.json").write_text(
-        json.dumps({"mcpServers": {"l9-graphite-memory": {"command": "${L9_MEMORY_INTERPRETER}"}}}),
-        encoding="utf-8",
-    )
+    _render_memory_server(gov)
     for name in er._MEMORY_PROBE_SKIP_ENVS:
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels())
+    return er.build_receipt(gov=gov, workspace=str(gov))
+
+
+def _build_with_levels(gov: Path, home: Path, monkeypatch) -> dict:
+    """`_build` without pinning the memory levels, so a caller can choose them."""
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
+    for name in er._MEMORY_PROBE_SKIP_ENVS:
+        monkeypatch.delenv(name, raising=False)
     return er.build_receipt(gov=gov, workspace=str(gov))
 
 
