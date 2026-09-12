@@ -1,0 +1,144 @@
+skill_intelligence_report:
+  activation_model:
+    strong_signals:
+      - implementation-ready idea authority plus new-repository realization
+      - Foundry staging payload plus repository-birth handoff
+      - explicit l9-repo-template birth after code realization
+      - exact provenance from idea source through code/test/birth
+      - Foundry resume or recompile of an existing staging product
+    weak_signals:
+      - idea pack
+      - product dossier
+      - repository creation
+      - implementation handoff
+      - birth-ready
+    reject_signals:
+      - existing-repository bounded change
+      - PR audit or remediation
+      - architecture-only discussion without code authorization
+      - post-birth deployment or release operation
+      - forced use of an incompatible repository factory
+    false_positive_risks:
+      - confusing repository creation with product realization
+      - activating on any new repo request even when a specialized factory owns it
+      - treating a mature implementation repo as an idea-stage product
+    specificity_score: 0.94
+    false_positive_risk_score: 0.08
+    scoring_basis: manual trigger-set inspection against five positive and five near-miss scenarios encoded in the exemplary contract
+  authority_model:
+    order:
+      - explicit_current_user_instruction_and_locked_product_authority
+      - live_repository_factory_contract_and_canonical_external_owners
+      - accepted_architecture_and_validated_plan
+      - executable_validation_and_exact_runtime_evidence
+      - documentation_comments_history_and_model_inference
+    conflict_rule: higher authority wins; Unknown blocks only the dependent surface
+    staleness_rule: external factory and owner evidence must be reprobed at the handoff where it governs behavior
+  expert_heuristics:
+    - condition: a clean committed standalone Python staging repo matches the live factory repository_shape
+      judgment: the product is eligible for authoritative birth semantics
+      action: invoke the factory compiler with authoritative mode and bind its manifest digest to the exact source revision
+    - condition: Foundry is about to create or edit l9.birth-payload/v1 itself
+      judgment: Foundry is duplicating repository-factory authority
+      action: stop and invoke the live factory compiler instead
+    - condition: the factory revision, ownership contract, or payload schema changed after prior qualification
+      judgment: birth compatibility evidence is stale even if product code is unchanged
+      action: invalidate only factory qualification and rerun probe plus compile against the new factory
+    - condition: source topology is non-Python, a Constellation node, or a Constellation dependency
+      judgment: l9-repo-template may be the wrong chassis
+      action: route to the live sibling factory or stop TEMPLATE_MISMATCH; never fabricate a Python package
+    - condition: factory compilation passes but local no-remote birth has not run
+      judgment: payload admissibility is proven but newborn integration is not
+      action: report BIRTH_READY only; do not claim LOCAL_BIRTH_PASS or authorize remote birth
+    - condition: remote birth returns PROVISIONAL or QUARANTINED
+      judgment: repository creation is not BORN evidence
+      action: preserve the observed state exactly and stop before deployment
+    - condition: a frozen staging repository changes after freeze or factory compile
+      judgment: every downstream exact-state proof is stale
+      action: invalidate freeze and factory qualification, recommit, refreeze, and recompile before birth
+  doctrine:
+    - product intent and repository birth are different authority planes
+    - exact bytes outrank remembered validation
+    - the factory compiler owns the birth manifest
+    - local birth is the acceptance test before publication
+    - state names are evidence claims, not optimistic milestones
+  invariants:
+    - no Foundry-authored birth payload manifest
+    - no remote birth before local birth pass
+    - no birth-state promotion without observed factory evidence
+    - no copied factory or org-governance machinery in the product payload
+    - no freeze reuse after tracked source mutation
+    - no incompatible chassis coercion
+  adapter_map:
+    core_default: realize product authority into tested source and traceability, then qualify the exact staging state against its canonical repository factory
+    adapters:
+      - name: non_constellation_python_birth
+        load_when: [live l9-repo-template fit is proven]
+        changes: [authoritative-mode qualification, local-birth gate, exact factory receipt]
+      - name: constellation_factory_routing
+        load_when: [Constellation topology is detected]
+        changes: [sibling-factory routing, template mismatch stop, no fake Python shape]
+      - name: resume_and_recompile
+        load_when: [existing Foundry index or receipts are present]
+        changes: [digest-based reuse, earliest-layer invalidation, stale external-evidence rejection]
+  failure_modes:
+    - name: second_truth_birth_manifest
+      prevention: use factory-owned compiler only
+    - name: stale_factory_contract
+      prevention: current-factory probe before qualification
+    - name: false_birth_completion
+      prevention: receipt-bound state machine with exact observed states
+    - name: authority_leakage_into_product
+      prevention: engine/chassis/org ownership rejection gates
+    - name: code_realization_theater
+      prevention: real behavior, discriminating tests, traceability, exact-state freeze
+  leverage_points:
+    - name: factory_compiler_as_truth
+      score: 5
+      reusable_advantage: one canonical compiler eliminates dual payload semantics across all future Foundry products
+    - name: factory_contract_receipt
+      score: 5
+      reusable_advantage: drift becomes an explicit requalification problem instead of hidden birth failure
+    - name: local_birth_qualification
+      score: 5
+      reusable_advantage: one no-remote acceptance gate catches chassis, lock, org-profile, lint, type, test, and provenance failures before publication
+    - name: foundry_index_traceability
+      score: 4
+      reusable_advantage: downstream agents hydrate origin context without re-reading the entire idea pack
+    - name: earliest_invalid_layer
+      score: 4
+      reusable_advantage: changes invalidate only the evidence layers that actually depend on them
+  evidence_hierarchy:
+    primary:
+      - explicit locked product authority
+      - live factory contracts and executable compiler behavior
+      - validated architecture and plan contracts
+      - local executable tests and birth receipts
+    secondary:
+      - current docs aligned with executable behavior
+    lowest:
+      - historical reports and model inference
+    unknown_policy: preserve Unknown and block only the dependent decision
+  first_order_review_loop:
+    - restate_real_product_outcome
+    - identify_current_authority_owners
+    - choose_smallest_end_to_end_executable_slice
+    - prove_factory_admissibility_with_factory_owned_tools
+    - remove_duplicate_or_decorative_artifacts
+  after_use_capture:
+    - missed_trigger
+    - false_trigger
+    - recurring_user_correction
+    - manual_rework_after_factory_handoff
+  exemplary_gate_results:
+    activation_precision: PASS
+    adapter_architecture: PASS
+    evidence_hierarchy: PASS
+    doctrine_extraction: PASS
+    expert_heuristics: PASS
+    failure_modes: PASS
+    leverage_model: PASS
+    self_improvement_hook: PASS
+    compiler_enforcement_gates: PASS
+    skill_intelligence_report: PASS
+  tier_decision: exemplary
