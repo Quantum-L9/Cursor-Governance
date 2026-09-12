@@ -433,6 +433,41 @@ if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
   if GOV=$(resolve_governance_dir); then
     GOV_REMOTE="${L9_GOVERNANCE_REMOTE:-https://github.com/Quantum-L9/Cursor-Governance.git}"
     GOV_BRANCH="${L9_GOVERNANCE_BRANCH:-main}"
+    # The launcher (l9_hook_exec.sh) refreshes before this hook resolves, and
+    # binds that attempt to this process through L9_GOV_REFRESH_ATTEMPT_ID,
+    # which the receipt it wrote carries as attempt_id. The fallback below is
+    # suppressed ONLY on a receipt proven to be the current attempt's: same
+    # attempt id, outcome fetched, local_sha equal to HEAD, and written within
+    # the last few minutes. Never on a receipt that merely says `fresh`: the
+    # first version read state/local_sha off the file, so when the current
+    # launcher lost its lock or its fetch failed and left an older receipt
+    # untouched, an unchanged HEAD made the old claim pass and this hook
+    # reported "already applied" over a clone that could be behind origin
+    # (governance_refresh_receipt.py: never trust state-at-write).
+    _refresh_head=$(git -C "$GOV" rev-parse --verify --quiet HEAD 2>/dev/null || echo '')
+    _refresh_sha=""
+    _refresh_attempt=""
+    _refresh_outcome=""
+    _refresh_epoch=""
+    _refresh_recent=0
+    if [ -n "${L9_GOV_REFRESH_ATTEMPT_ID:-}" ] && [ -f "$CLOUD_REFRESH_RECEIPT" ]; then
+      _refresh_sha=$(sed -n 's/.*"local_sha": "\([^"]*\)".*/\1/p' "$CLOUD_REFRESH_RECEIPT" | head -n 1)
+      _refresh_attempt=$(sed -n 's/.*"attempt_id": "\([^"]*\)".*/\1/p' "$CLOUD_REFRESH_RECEIPT" | head -n 1)
+      _refresh_outcome=$(sed -n 's/.*"outcome": "\([^"]*\)".*/\1/p' "$CLOUD_REFRESH_RECEIPT" | head -n 1)
+      _refresh_epoch=$(sed -n 's/.*"refreshed_epoch": \([0-9][0-9]*\).*/\1/p' "$CLOUD_REFRESH_RECEIPT" | head -n 1)
+    fi
+    case "$_refresh_epoch" in
+      ''|*[!0-9]*) : ;;
+      *) [ "$_refresh_epoch" -ge $((_L9_HOOK_START - ${L9_GOV_REFRESH_ATTEMPT_WINDOW:-300})) ] && _refresh_recent=1 ;;
+    esac
+    if [ -n "$_refresh_attempt" ] && [ "$_refresh_attempt" = "${L9_GOV_REFRESH_ATTEMPT_ID:-}" ] \
+       && [ "$_refresh_outcome" = "fetched" ] && [ "$_refresh_recent" = 1 ] \
+       && [ -n "$_refresh_sha" ] && [ "$_refresh_sha" = "$_refresh_head" ]; then
+      say "governance refresh: already applied this SessionStart (launcher attempt $_refresh_attempt)"
+    else
+    if [ -n "${L9_GOV_REFRESH_OUTCOME:-}" ]; then
+      say "governance refresh: launcher attempt did not establish the tree (${L9_GOV_REFRESH_OUTCOME}) — running the SessionStart fallback"
+    fi
     # The reset below is `checkout -f`, which DISCARDS uncommitted work and moves
     # HEAD off whatever branch is checked out. That is correct for the ephemeral
     # cloud clone it is written for, and destructive for anything else. It ran
@@ -480,6 +515,7 @@ if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
     # its own timeout, and costs this hook nothing instead of costing it
     # everything. See ADR/audit note in SESSION_START_SPEC.md.
     :
+    fi
   fi
 fi
 
@@ -568,6 +604,11 @@ if GOV=$(resolve_governance_dir); then
   # merge-patched, rules mount retargeted, stale managed projections removed.
   # The engine writes ~/.l9/claude/projection-receipt.json. Fail-open: a
   # projection failure degrades to a WARN line, never blocks the session.
+  if [ -f "$GOV/ops/scripts/lib/bind_memory_interpreter.sh" ]; then
+    # shellcheck source=/dev/null
+    . "$GOV/ops/scripts/lib/bind_memory_interpreter.sh"
+    bind_l9_memory_interpreter "$PY" "$GOV"
+  fi
   PROJECTION_ENGINE="$GOV/ops/scripts/claude_projection.py"
   if [ "${L9_SKIP_SESSION_PROJECTION:-}" != "1" ] \
      && [ -f "$PROJECTION_ENGINE" ] && command -v "$PY" >/dev/null 2>&1; then

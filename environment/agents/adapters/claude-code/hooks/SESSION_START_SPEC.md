@@ -143,19 +143,21 @@ Consequences of that split, both load-bearing:
 - The synchronous side waits on a `.done` file, not on `kill -0 $!`: the worker
   is no longer a child of the waiter.
 
-## Sibling ordering is not available; skips are surfaced
+## Sibling ordering is not available; the launcher refreshes first
 
-SessionStart hooks run concurrently and the platform offers no ordering, so
-on a cached hosted environment the siblings (preflight, memory prefetch, deps)
-dispatch against the governance revision checked out **before** this hook's
-cloud refresh lands. A hook file that exists only on the new tip is skipped by
-the launcher for exactly one session — observed as
-`bootstrap_capability_preflight.sh hook file absent` recorded 4 s before the
-refresh receipt. The launcher records every such skip in
-`~/.l9/claude/hook-skips.log`; this hook reads the entries stamped at or after
-its own start and emits them as `hook skips this SessionStart`, so the gap is
-visible in-session. Recombining the siblings to force an order is not the fix
-(see the dependency section below).
+SessionStart hooks still run concurrently and the platform still offers no
+ordering. The race that used to skip tip-only files (`bootstrap_capability_preflight.sh
+hook file absent` before this hook's refresh landed) is closed in the
+launcher: `l9_hook_exec.sh` flock-refreshes the ephemeral clone **before**
+resolving `HOOK_PATH`. This hook then skips its own reset when the launcher
+receipt is `state=fresh` and `local_sha` matches HEAD. Dirty tracked clones
+are never `checkout -f`. Fail-open on lock or fetch failure; SessionStart
+still exits 0.
+
+The launcher still records every skip in `~/.l9/claude/hook-skips.log`; this
+hook reads the entries stamped at or after its own start and emits them as
+`hook skips this SessionStart`. Recombining the siblings to force an order
+is still not the fix (see the dependency section below).
 
 ## Readiness receipt: reuse when fresh, rebuild otherwise
 

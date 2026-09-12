@@ -23,8 +23,8 @@ Checks:
   A1  every active agent's adapter directory exists (adapters/<adapter>/)
       unless adapter is cursor/claude-code (pre-existing activation paths)
   A2  adapter env examples agree with the registry (USER_ID,
-      L9_MEMORY_AGENT_ID, L9_MEMORY_SOURCE) and GRAPHITI_MCP_URL matches
-      production_url+mcp_path (or explicit full URL) when set
+      L9_MEMORY_AGENT_ID, L9_MEMORY_SOURCE); GRAPHITI_MCP_URL / TOKEN
+      must be absent (retired provider transport)
   A3  adapter contract (ADAPTER_CONTRACT.md): README.md, env example,
       MCP carrier file, bootstrap/instructions file present
   A4  MCP carriers must not default to loopback (127.0.0.1 / localhost)
@@ -196,14 +196,15 @@ def _check_env_example(envf: Path, agent: dict, production_url: str | None) -> N
     # only checked it was not a live one. A placeholder in a committed example is
     # an instruction to paste a real token into a model-controlled environment,
     #     which is exactly what the zero-static-secret contract removes. Memory
-    # resolves through GRAPHITI_MCP_URL (no bearer on the surface), so a token
-    # here is a violation regardless of its value.
+    # is the bound stdio control plane (L9_MEMORY_INTERPRETER). GRAPHITI_MCP_URL
+    # is retired provider transport; a token here is a violation regardless of
+    # its value.
     if tok_m:
         err(
             "A2",
             f"{envf.name}: GRAPHITI_MCP_TOKEN must be ABSENT from a model-controlled "
-            "surface; memory resolves through GRAPHITI_MCP_URL with no bearer "
-            "(contract S3/§12)",
+            "surface; memory is the bound stdio control plane "
+            "(L9_MEMORY_INTERPRETER), not GRAPHITI_MCP_URL (contract S3/§12)",
         )
 
 

@@ -24,8 +24,9 @@ since realignment stage C9):
   ~/.l9/claude/projection-receipt.json   skill/command/rule/settings/hooks/plugins/mcp
   ~/.l9/claude/bootstrap-state.json      capabilities / memory / mcp coarse words
   ops/memory/diagnostics.py              memory.cli (R0/R1 binding + executable),
-                                         memory control plane (R2/R3 store + service),
-                                         memory.mcp (R4 managed entry installed)
+                                         memory control plane (R2/R3 store + service)
+  workspace .mcp.json + L9_MEMORY_INTERPRETER
+                                         Claude mcp (not Cursor diagnostics R4)
   make -C $GOV l9-consumer-safe-list     Makefile facade
   ops/scripts/install_l9_dispatcher.sh --check   dispatcher install
   ops/autonomy/merge_gate.py             live merge-authority posture probe
@@ -361,54 +362,132 @@ def _memory_control_plane_health(levels: dict[str, str] | None) -> tuple[str, st
     return READY, "canonical store and service ready"
 
 
-#: Printed when the memory server is absent because governance chose not to
-#: render it. Held as a constant so the receipt, the warning and the tests all
-#: say the same thing.
-MEMORY_MCP_GATED_NOTE = (
-    "absent by design: mcp.template.json gates it on L9_MEMORY_INTERPRETER, "
-    "unproxied on this surface; durable writes go through the memory CLI"
+#: The environment variable mcp.template.json expands into the memory server's
+#: ``command``. The rendered entry is bound to the interpreter only when its
+#: command is that reference (or the same path spelled out).
+_MEMORY_INTERPRETER_ENV = "L9_MEMORY_INTERPRETER"
+_MEMORY_INTERPRETER_REF = "${" + _MEMORY_INTERPRETER_ENV + "}"
+
+#: Asked of the bound interpreter itself. ``find_spec`` on the top-level
+#: package imports nothing, so the probe proves the package is reachable from
+#: THAT interpreter without running any of it.
+_MEMORY_IMPORT_PROBE = (
+    "import importlib.util, sys; "
+    "sys.exit(0 if importlib.util.find_spec('l9_graphite_memory') else 1)"
 )
 
 
-def _memory_mcp_health(
-    levels: dict[str, str] | None, *, gated_out: frozenset[str] = frozenset()
-) -> tuple[str, str]:
-    """Is the Claude-surface memory MCP entry in the state governance intends?
+def _interpreter_carries_memory_package(interpreter: Path) -> bool | None:
+    """True/False from the interpreter's own answer; None when it gave none.
 
-    The Claude authority over that entry is the projection of
-    ``mcp.template.json``. R4 is not: it delegates to the memory package's
-    ``client cursor status``, which reads ``~/.cursor/mcp.json`` — Cursor's
-    client config. Grading a Claude surface from a Cursor artifact produced a
-    permanent false DEGRADED here, and a structurally permanent one on Web and
-    Mobile, where ``~/.cursor`` does not exist at all (SESSION_START_SPEC hard
-    constraint 4). That DEGRADED then cascaded to memory → shared_bootstrap →
-    overall, and a non-ready receipt is what arms the SessionStart installer
-    repair, so the cost was not only a wrong word: it was the repair budget,
-    spent once per governance revision on a condition no installer can fix.
-
-    So: when the projection deliberately gated the server out, that IS the
-    intended state. Reported READY with the reason named, exactly as `plugins`
-    reports a policy skip and `context7` — gated out by the same mechanism in
-    the same template — is already reported. When the server IS rendered, R4
-    remains the check.
+    A probe that cannot run (killed by its timeout, refused by the OS) is not
+    evidence either way, and the caller reports it as UNKNOWN rather than
+    quietly grading the binding READY or DEGRADED on a guess.
     """
-    if _MEMORY_MCP_SERVER in gated_out:
-        return READY, MEMORY_MCP_GATED_NOTE
-    if levels is None:
-        return UNKNOWN, "memory readiness unavailable"
-    if levels.get("R4") != "pass":
-        return DEGRADED, "managed entry missing or drifted (blocker: mcp_config)"
-    return READY, "managed entry installed"
+    try:
+        proc = subprocess.run(  # noqa: S603 - fixed argv, no shell
+            [str(interpreter), "-c", _MEMORY_IMPORT_PROBE],
+            capture_output=True,
+            text=True,
+            timeout=20,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return proc.returncode == 0
 
 
-def memory_probe(gov: Path, *, projection: dict[str, Any] | None = None) -> dict[str, Any]:
+def _claude_mcp_health(
+    workspace: Path,
+    *,
+    gated_out: frozenset[str] = frozenset(),
+    environ: dict[str, str] | None = None,
+) -> tuple[str, str]:
+    """Claude project MCP is READY only when the rendered entry will actually run.
+
+    Diagnostics R4 is Cursor ``client cursor status`` (``~/.cursor/mcp.json``).
+    That is the wrong file on Claude Code, and structurally absent on Web and
+    Mobile (SESSION_START_SPEC hard constraint 4), so R4 is never read here.
+
+    What IS read is executable binding truth, not configuration presence. The
+    first version of this check returned READY for any non-empty
+    ``L9_MEMORY_INTERPRETER`` and any ``.mcp.json`` carrying the server key,
+    which is exactly the false-READY the receipt exists to prevent: a cached
+    shell exporting a deleted venv, a hand-edited ``.mcp.json`` whose command
+    names some other python, or a bound interpreter that no longer carries the
+    package all read as healthy. Each is now a named DEGRADED:
+
+      unbound          the variable is empty (the projection gates the server
+                       out on the same condition, so ``gated_out`` only adds
+                       that fact to the note — it never upgrades the verdict)
+      not a file /     the exported path does not exist or cannot execute
+      not executable   (a stale binding from a previous environment build)
+      not rendered     ``.mcp.json`` missing, unreadable, or without the server
+      not bound        the rendered command is not ``${L9_MEMORY_INTERPRETER}``
+                       (nor that same path), so what Claude would launch is not
+                       what was proven
+      stale package    the interpreter runs but cannot find
+                       ``l9_graphite_memory``
+
+    Only an executable interpreter that carries the package, referenced by the
+    rendered entry, is READY. A probe that cannot run is UNKNOWN — never PASS.
+    """
+    env = os.environ if environ is None else environ
+    interp = (env.get(_MEMORY_INTERPRETER_ENV) or "").strip()
+    if not interp:
+        gated = (
+            "; projection gated l9-graphite-memory out on the same unbound variable"
+            if _MEMORY_MCP_SERVER in gated_out
+            else ""
+        )
+        return DEGRADED, f"L9_MEMORY_INTERPRETER unbound (blocker: mcp_config){gated}"
+    interp_path = Path(interp)
+    if not interp_path.is_file():
+        return DEGRADED, f"L9_MEMORY_INTERPRETER is not a file: {interp} (blocker: mcp_config)"
+    if not os.access(interp_path, os.X_OK):
+        return DEGRADED, f"L9_MEMORY_INTERPRETER not executable: {interp} (blocker: mcp_config)"
+    mcp_path = Path(workspace) / ".mcp.json"
+    if not mcp_path.is_file():
+        return DEGRADED, "workspace .mcp.json missing (blocker: mcp_config)"
+    try:
+        decoded = json.loads(mcp_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return DEGRADED, "workspace .mcp.json unreadable (blocker: mcp_config)"
+    servers = decoded.get("mcpServers") if isinstance(decoded, dict) else None
+    if not isinstance(servers, dict) or _MEMORY_MCP_SERVER not in servers:
+        return DEGRADED, "l9-graphite-memory absent from .mcp.json (blocker: mcp_config)"
+    entry = servers.get(_MEMORY_MCP_SERVER)
+    command = str(entry.get("command") or "").strip() if isinstance(entry, dict) else ""
+    if command not in {_MEMORY_INTERPRETER_REF, interp}:
+        return DEGRADED, (
+            "l9-graphite-memory command is not bound to L9_MEMORY_INTERPRETER "
+            f"(rendered {command or 'nothing'}) (blocker: mcp_config)"
+        )
+    carries = _interpreter_carries_memory_package(interp_path)
+    if carries is None:
+        return UNKNOWN, "L9_MEMORY_INTERPRETER probe did not complete (blocker: mcp_config)"
+    if not carries:
+        return DEGRADED, (
+            "L9_MEMORY_INTERPRETER cannot find l9_graphite_memory — stale binding "
+            f"{interp} (blocker: mcp_config)"
+        )
+    return READY, "claude mcp entry bound to an executable interpreter carrying l9_graphite_memory"
+
+
+def memory_probe(
+    gov: Path,
+    workspace: Path | str | None = None,
+    *,
+    projection: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Split cli / control plane / mcp — a bound CLI with a dead store is not one word.
 
     ``projection`` is the projection receipt, passed in by the caller rather
     than read from ``$HOME`` here: a probe that reaches for ambient state is
     one whose answer depends on the machine it runs on, which is how a
-    hermetic unit test starts reading the developer's own receipt. No
-    projection supplied means no gating is known, and R4 decides alone.
+    hermetic unit test starts reading the developer's own receipt. It only
+    ever adds to the mcp note (a server the projection gated out); the verdict
+    comes from the workspace ``.mcp.json`` and the bound interpreter.
     """
     if _memory_probe_skipped():
         skipped = {"status": READY, "reason": "probe skipped"}
@@ -416,7 +495,8 @@ def memory_probe(gov: Path, *, projection: dict[str, Any] | None = None) -> dict
     levels = _memory_levels(gov)
     cli_status, cli_note = _memory_cli_health(levels)
     plane_status, plane_note = _memory_control_plane_health(levels)
-    mcp_status, mcp_note = _memory_mcp_health(levels, gated_out=_gated_out_servers(projection))
+    ws = Path(workspace) if workspace else gov
+    mcp_status, mcp_note = _claude_mcp_health(ws, gated_out=_gated_out_servers(projection))
     return {
         "cli": {"status": cli_status, "reason": cli_note},
         "control_plane": {"status": plane_status, "reason": plane_note},
@@ -631,8 +711,7 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
     proj = _read_json(home / ".l9" / "claude" / "projection-receipt.json")
     bootstrap = _read_json(home / ".l9" / "claude" / "bootstrap-state.json")
     proj_status = _projection_statuses(proj)
-    gated_out = _gated_out_servers(proj)
-    split = memory_probe(gov, projection=proj)
+    split = memory_probe(gov, workspace, projection=proj)
     cli_status = str(split["cli"]["status"])
     cli_note = str(split["cli"]["reason"])
     mem_mcp_status = str(split["mcp"]["status"])
@@ -699,25 +778,19 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
     agg = {**dims, "governance_freshness": freshness_status}
     failures = [_line(k, v) for k, v in agg.items() if v == BLOCKED]
     warnings = [_line(k, v) for k, v in agg.items() if v in {DEGRADED, UNKNOWN}]
-    # A server governance chose not to render is READY (it is in the intended
-    # state) but it is still absent, and an agent reading only the status line
-    # would go looking for MCP tools that are not there. Warnings are otherwise
-    # derived from status alone, so this one is stated explicitly rather than
-    # left to a `notes` entry the compact block does not print. Keyed on the
-    # gating itself, not on matching the note text: a reworded note must not
-    # silently delete the warning.
-    if _MEMORY_MCP_SERVER in gated_out and mem_mcp_status == READY:
-        warnings.append(f"memory_mcp_status: {mem_mcp_note}")
 
     overall = _aggregate(agg)
 
+    written_at = datetime.now(UTC).strftime(_TIMESTAMP_FORMAT)
     receipt: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
-        # The COMMIT date of governance_SHA, not when this receipt was written.
-        # Kept under its historical name for existing consumers; `generated_at`
-        # below is the write time, and freshness is derived from that one.
-        "timestamp": _git(gov, "log", "-1", "--format=%cI") or "",
-        "generated_at": datetime.now(UTC).strftime(_TIMESTAMP_FORMAT),
+        # Write clock. Historical `timestamp` used to be git %cI (commit date)
+        # and read like a write time, so freshness inverted if anyone keyed TTL
+        # on it. Both fields are now the UTC write instant; commit date lives
+        # under governance_committed_at.
+        "generated_at": written_at,
+        "timestamp": written_at,
+        "governance_committed_at": _git(gov, "log", "-1", "--format=%cI") or "",
         "ttl_seconds": RECEIPT_TTL_SECONDS,
         "governance_repository": ident["governance_repository"],
         "governance_default_branch": ident["governance_default_branch"],
@@ -890,7 +963,7 @@ def main() -> int:
         # install.sh reads this to set STATUS_MEMORY_MCP, so it must reach the
         # same verdict as build_receipt: same probe, same projection evidence.
         projection = _read_json(Path.home() / ".l9" / "claude" / "projection-receipt.json")
-        print(json.dumps(memory_probe(gov, projection=projection)))
+        print(json.dumps(memory_probe(gov, args.workspace, projection=projection)))
         return 0
 
     workspace = args.workspace or os.environ.get("CURSOR_PROJECT_DIR") or os.getcwd()

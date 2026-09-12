@@ -254,6 +254,177 @@ def test_cursor_skip_precedes_claude_banner() -> None:
     assert skip < banner
 
 
+def test_bind_precedes_projection_in_install_and_session_start() -> None:
+    """Parent-process export must happen before claude_projection.py runs."""
+    adapter = REPO_ROOT / "environment" / "agents" / "adapters" / "claude-code"
+    install = (adapter / "install.sh").read_text(encoding="utf-8")
+    session = body()
+    for text in (install, session):
+        bind = text.index("bind_l9_memory_interpreter")
+        project = text.index("PROJECTION_ENGINE=")
+        assert bind < project, "export the bound interpreter before projection"
+
+
+def _head(gov: Path) -> str:
+    import subprocess
+
+    return subprocess.run(
+        ["git", "-C", str(gov), "rev-parse", "HEAD"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+
+
+def _launcher_receipt(sha: str, *, attempt: str, epoch: int, outcome: str = "fetched") -> dict:
+    return {
+        "schema": "l9.governance-refresh.v1",
+        "outcome": outcome,
+        "local_sha": sha,
+        "origin_sha": sha,
+        "refreshed_at": "2026-09-12T00:00:00Z",
+        "refreshed_epoch": epoch,
+        "attempt_id": attempt,
+        "owner_hook": "session_start_claude_governance.sh",
+        "ttl_seconds": 3600,
+        "commits_behind": 0,
+        "state": "fresh",
+    }
+
+
+def _run_with(home: Path, receipt: Path, extra: dict[str, str]):
+    import subprocess
+
+    env = {
+        "HOME": str(home),
+        "PATH": "/usr/bin:/bin:/usr/local/bin",
+        "CLAUDE_CODE_REMOTE": "true",
+        "L9_GOV_REFRESH_RECEIPT": str(receipt),
+        "CLAUDE_PROJECT_DIR": str(home),
+    }
+    env.update(extra)
+    return subprocess.run(
+        ["bash", str(HOOK)], capture_output=True, text=True, env=env, check=False, timeout=180
+    )
+
+
+def test_current_launcher_receipt_skips_the_second_reset(tmp_path: Path) -> None:
+    """After THIS launcher attempt refreshed, SessionStart must not checkout -f again."""
+    import json
+    import time
+
+    gov = _synthetic_gov(tmp_path, tracked_dirt=False, untracked_dirt=False)
+    sha = _head(gov)
+    receipt = tmp_path / "receipt.json"
+    receipt.write_text(
+        json.dumps(_launcher_receipt(sha, attempt="4242-now-7", epoch=int(time.time()))),
+        encoding="utf-8",
+    )
+    result = _run_with(
+        tmp_path,
+        receipt,
+        {"L9_GOV_REFRESH_ATTEMPT_ID": "4242-now-7", "L9_GOV_REFRESH_OUTCOME": "fetched"},
+    )
+    assert result.returncode == 0, result.stderr
+    blob = result.stdout + result.stderr
+    assert "already applied this SessionStart" in blob
+    assert "checkout -f" not in blob
+    assert json.loads(receipt.read_text(encoding="utf-8"))["attempt_id"] == "4242-now-7"
+
+
+def test_a_fresh_looking_receipt_from_another_attempt_never_suppresses_the_fallback(
+    tmp_path: Path,
+) -> None:
+    """PR #548 review (F-548-004): state-at-write is a claim, not evidence.
+
+    The receipt says `fresh`, its SHA equals the unchanged HEAD, and it is
+    well inside its TTL — but no launcher attempt of this process wrote it.
+    The launcher that ran for this hook lost its lock (or never ran), so the
+    fallback must run and the receipt must be rewritten by this attempt.
+    """
+    import json
+    import time
+
+    gov = _synthetic_gov(tmp_path, tracked_dirt=False, untracked_dirt=False)
+    sha = _head(gov)
+    receipt = tmp_path / "receipt.json"
+    stale = _launcher_receipt(sha, attempt="previous-session", epoch=int(time.time()))
+    receipt.write_text(json.dumps(stale), encoding="utf-8")
+
+    # No binding at all (launcher never ran / lost its lock).
+    result = _run_with(tmp_path, receipt, {})
+    assert result.returncode == 0, result.stderr
+    assert "already applied this SessionStart" not in result.stdout + result.stderr
+    written = json.loads(receipt.read_text(encoding="utf-8"))
+    assert written.get("attempt_id") != "previous-session", (
+        "the fallback must write its own receipt"
+    )
+    # The synthetic clone has no origin: the fallback records that honestly.
+    assert written["outcome"] == "fetch-failed"
+
+    # A binding that names a DIFFERENT attempt than the receipt carries.
+    receipt.write_text(json.dumps(stale), encoding="utf-8")
+    result = _run_with(
+        tmp_path,
+        receipt,
+        {"L9_GOV_REFRESH_ATTEMPT_ID": "this-attempt", "L9_GOV_REFRESH_OUTCOME": "lock-busy"},
+    )
+    blob = result.stdout + result.stderr
+    assert "already applied this SessionStart" not in blob
+    assert "launcher attempt did not establish the tree (lock-busy)" in blob
+    assert json.loads(receipt.read_text(encoding="utf-8")).get("attempt_id") != "previous-session"
+
+
+def test_a_matching_attempt_whose_fetch_failed_still_runs_the_fallback(tmp_path: Path) -> None:
+    """Same attempt id, but the launcher's own outcome was not `fetched`."""
+    import json
+    import time
+
+    gov = _synthetic_gov(tmp_path, tracked_dirt=False, untracked_dirt=False)
+    sha = _head(gov)
+    receipt = tmp_path / "receipt.json"
+    receipt.write_text(
+        json.dumps(
+            _launcher_receipt(sha, attempt="a1", epoch=int(time.time()), outcome="fetch-failed")
+        ),
+        encoding="utf-8",
+    )
+    result = _run_with(
+        tmp_path,
+        receipt,
+        {"L9_GOV_REFRESH_ATTEMPT_ID": "a1", "L9_GOV_REFRESH_OUTCOME": "fetch-failed"},
+    )
+    assert "already applied this SessionStart" not in result.stdout + result.stderr
+
+
+def test_an_old_receipt_of_the_same_attempt_id_is_not_current(tmp_path: Path) -> None:
+    """Attempt binding plus recency: a receipt hours old is not this SessionStart's."""
+    import json
+    import time
+
+    gov = _synthetic_gov(tmp_path, tracked_dirt=False, untracked_dirt=False)
+    sha = _head(gov)
+    receipt = tmp_path / "receipt.json"
+    receipt.write_text(
+        json.dumps(_launcher_receipt(sha, attempt="a1", epoch=int(time.time()) - 7200)),
+        encoding="utf-8",
+    )
+    result = _run_with(
+        tmp_path, receipt, {"L9_GOV_REFRESH_ATTEMPT_ID": "a1", "L9_GOV_REFRESH_OUTCOME": "fetched"}
+    )
+    assert "already applied this SessionStart" not in result.stdout + result.stderr
+
+
+def test_the_fallback_is_not_suppressed_by_raw_state_parsing() -> None:
+    """The hook must key its skip on the attempt binding, never on `state` alone."""
+    text = body()
+    assert '"attempt_id"' in text
+    assert "L9_GOV_REFRESH_ATTEMPT_ID" in text
+    assert '"state": "\\([^"]*\\)"' not in text, (
+        "reading state-at-write off the receipt is the defect"
+    )
+
+
 def test_cursor_runtime_emits_empty_context(tmp_path: Path) -> None:
     """Cursor loads this hook via projected .claude/settings.json.
 
