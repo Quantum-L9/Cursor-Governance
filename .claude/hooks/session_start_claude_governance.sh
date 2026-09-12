@@ -821,8 +821,10 @@ except Exception:
         say "bootstrap repair:   launch inherits it: ${repair_detail}"
         say "bootstrap repair:   clear that switch and run 'make claude-install' to repair"
       else
+        # The cause is named where arming has an effect (below), not here: the
+        # per-revision marker silences an already-attempted revision, and a line
+        # on every session after it is the noise that marker exists to stop.
         arm_repair=1
-        [ -n "$repair_detail" ] && say "bootstrap repair: degraded cause is repairable — ${repair_detail}"
       fi
       ;;
     *) arm_repair=1 ;;
@@ -852,6 +854,10 @@ except Exception:
           printf '%s attempted state=%s\n' \
             "$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)" "$state" >"$marker"
           say "bootstrap repair: receipt was '$state' at ${revision:0:8} — running the installer once (${_repair_cap}s)"
+          # For `degraded` this names the component and reason the classifier
+          # judged repairable, so the decision is auditable from the context
+          # blob alone rather than only from the receipt beside it.
+          [ -n "$repair_detail" ] && say "bootstrap repair:   repairable cause: ${repair_detail}"
           if run_with_timeout "$_repair_cap" \
             env L9_BOOTSTRAP_LOG_PATH="$HOME/.l9/claude/bootstrap-repair-${revision}.log" \
             bash "$installer" \
