@@ -60,6 +60,19 @@ _GIT_GLOBAL_WITH_ARG = frozenset({"-C", "-c", "--git-dir", "--work-tree", "--nam
 #: branch whose PR could make them remediation, so they are first publications.
 _PUSH_WHOLE_REPO_FLAGS = frozenset({"--all", "--mirror", "--tags", "--follow-tags"})
 
+#: `git push` options that consume the following token when written without
+#: `=`. Anything else that starts with `-` is a bare flag.
+_PUSH_OPTS_WITH_ARG = frozenset(
+    {"-o", "--push-option", "--receive-pack", "--exec", "--recurse-submodules", "--signed"}
+)
+
+#: `gh` options that consume the following token. `-R/--repo` is the one that
+#: matters for publication: `gh -R owner/name pr create` is the repository's
+#: own documented spelling (test_pe_local_commit_only), and a filter that only
+#: dropped dash-tokens left `owner/name` in front of `pr create` and missed it
+#: (audit F1).
+_GH_OPTS_WITH_ARG = frozenset({"-R", "--repo", "--hostname"})
+
 
 def _publish_path_override() -> str:
     try:
@@ -107,23 +120,101 @@ def _git_argv(words: list[str]) -> tuple[list[str], str | None]:
     return words[index:], named_root
 
 
-def _classify_push(args: list[str]) -> dict[str, Any] | None:
-    """What a `git push …` argument list publishes, or None when it is no publication."""
-    try:
-        from git_guardrails import _parse_push
-    except ImportError:  # pragma: no cover - package import
-        from ops.autonomy.git_guardrails import _parse_push
+def _refspec_branch(refspec: str) -> str | None:
+    """The remote branch a push refspec publishes, or None when it publishes none.
 
-    for arg in args:
+    ``src``, ``src:dst``, ``+src:dst`` and ``HEAD:refs/heads/x`` all name a
+    destination; ``:dst`` deletes it. The remote-side name is what a PR is
+    open for, so ``dst`` wins over ``src`` and ``refs/heads/`` is stripped.
+    """
+    text = refspec[1:] if refspec.startswith("+") else refspec
+    if not text or text.startswith(":"):
+        return None
+    dst = text.split(":", 1)[1] if ":" in text else text
+    if not dst:
+        return None
+    if dst.startswith("refs/heads/"):
+        dst = dst[len("refs/heads/") :]
+    return dst
+
+
+def _classify_push(args: list[str]) -> list[dict[str, Any]]:
+    """Every publication a `git push …` argument list performs.
+
+    One entry per refspec: ``git push origin open-pr-branch new-branch`` is two
+    publications, and the verdict must see both — a parser that kept only the
+    first refspec let the second branch reach GitHub behind a remediation
+    push (audit F1). No refspec means the current branch (git's default
+    ``push.default`` behaviours all publish the checked-out branch or nothing).
+    A dry run, a delete, and a bare `git push` with `--delete` publish nothing.
+    """
+    positional: list[str] = []
+    delete = False
+    index = 0
+    while index < len(args):
+        arg = args[index]
         base = arg.split("=", 1)[0]
         if base in {"-n", "--dry-run"}:
-            return None
+            return []
         if base in _PUSH_WHOLE_REPO_FLAGS:
-            return {"remote": None, "branch": None, "whole_repo": base}
-    spec = _parse_push(args)
-    if spec.delete:
-        return None
-    return {"remote": spec.remote, "branch": spec.branch, "whole_repo": None}
+            return [{"remote": None, "branch": None, "whole_repo": base}]
+        if base in {"--delete", "-d"}:
+            delete = True
+            index += 1
+            continue
+        if arg == "--":
+            positional.extend(args[index + 1 :])
+            break
+        if arg.startswith("-"):
+            if base in _PUSH_OPTS_WITH_ARG and "=" not in arg:
+                index += 2
+            else:
+                index += 1
+            continue
+        positional.append(arg)
+        index += 1
+    if delete:
+        return []
+    remote = positional[0] if positional else "origin"
+    refspecs = positional[1:]
+    if not refspecs:
+        return [{"remote": remote, "branch": None, "whole_repo": None}]
+    forms: list[dict[str, Any]] = []
+    for refspec in refspecs:
+        branch = _refspec_branch(refspec)
+        if branch is None:
+            continue
+        forms.append({"remote": remote, "branch": branch, "whole_repo": None})
+    return forms
+
+
+def _gh_creates_pr(words: list[str]) -> bool:
+    """True when a `gh …` word list runs `pr create`, wherever its options sit.
+
+    Option-aware: a value-taking option (`-R owner/name`, `--repo owner/name`)
+    consumes its value, and a `--opt=value` spelling is one token. The
+    subcommand pair is then the first two positional words, or — for an
+    option this list does not know — any two consecutive positional words:
+    denying a `gh` command that carries `pr create` among its positionals is
+    the safe direction.
+    """
+    positional: list[str] = []
+    index = 1
+    while index < len(words):
+        word = words[index]
+        if word.startswith("-"):
+            base = word.split("=", 1)[0]
+            if base in _GH_OPTS_WITH_ARG and "=" not in word:
+                index += 2
+            else:
+                index += 1
+            continue
+        positional.append(word)
+        index += 1
+    return any(
+        positional[position : position + 2] == ["pr", "create"]
+        for position in range(len(positional) - 1)
+    )
 
 
 def publication_forms(command: str) -> list[dict[str, Any]]:
@@ -132,6 +223,8 @@ def publication_forms(command: str) -> list[dict[str, Any]]:
     Each entry is ``{"form": "git push" | "gh pr create", ...}``; a push also
     carries ``remote``, ``branch`` (None = the current branch), ``named_root``
     (a ``git -C`` path) and ``whole_repo`` (a flag that publishes everything).
+    A multi-refspec push yields one entry per refspec, so the verdict judges
+    every branch the command would publish, not only the first.
     """
     found: list[dict[str, Any]] = []
     segments: list[str] = []
@@ -149,19 +242,16 @@ def publication_forms(command: str) -> list[dict[str, Any]]:
         if not words:
             continue
         if name == "gh":
-            rest = [word for word in words[1:] if not word.startswith("-")]
-            if rest[:2] == ["pr", "create"]:
+            if _gh_creates_pr(words):
                 found.append({"form": "gh pr create"})
             continue
         argv, named_root = _git_argv(words)
         if not argv or argv[0] != "push":
             continue
-        push = _classify_push(argv[1:])
-        if push is None:
-            continue
-        push["form"] = "git push"
-        push["named_root"] = named_root
-        found.append(push)
+        for push in _classify_push(argv[1:]):
+            push["form"] = "git push"
+            push["named_root"] = named_root
+            found.append(push)
     return found
 
 

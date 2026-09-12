@@ -28,7 +28,10 @@ if str(AUTONOMY) not in sys.path:
 
 import local_execution_gate as gate  # noqa: E402
 import open_pr_probe  # noqa: E402
-from first_publication_gate import first_publication_verdict  # noqa: E402
+from first_publication_gate import (  # noqa: E402
+    first_publication_verdict,
+    publication_forms,
+)
 
 
 def _open_pr(monkeypatch: pytest.MonkeyPatch, answer: bool | None) -> None:
@@ -418,3 +421,119 @@ def test_human_override_restores_prior_behaviour(
     # Override does not bypass L4 itself — an unauthorized workspace still denies.
     monkeypatch.setattr(gate, "release_allows_remote", lambda root: (False, "L4 denied"))
     assert gate.evaluate("Bash", {"command": "make push"}, root=tmp_path) == "L4 denied"
+
+
+# --------------------------------------------------------------------------
+# Audit F1 (l9-pr-audit...pr553.582a9b3): every publication effect is judged
+# --------------------------------------------------------------------------
+
+
+def _open_pr_by_branch(monkeypatch: pytest.MonkeyPatch, open_branches: set[str]) -> None:
+    """Pin the PR state per pushed branch, so a multi-ref push is judged per ref."""
+    monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+    monkeypatch.delenv("L9_PUBLISH_PATH_RECEIPT", raising=False)
+    monkeypatch.setattr(
+        open_pr_probe,
+        "open_pr_for_branch",
+        lambda root, branch, remote="origin": branch in open_branches,
+    )
+
+
+def test_publication_forms_enumerate_every_push_refspec() -> None:
+    forms = publication_forms("git push origin feat-open feat-new")
+    assert [form["branch"] for form in forms] == ["feat-open", "feat-new"]
+    forms = publication_forms("git push -u origin HEAD:refs/heads/new +topic:other :gone")
+    assert [form["branch"] for form in forms] == ["new", "other"]
+    assert publication_forms("git push origin --delete feat-a feat-b") == []
+    assert publication_forms("git push -o ci.skip origin feat-a") == [
+        {
+            "remote": "origin",
+            "branch": "feat-a",
+            "whole_repo": None,
+            "form": "git push",
+            "named_root": None,
+        }
+    ]
+
+
+def test_multi_ref_push_is_denied_when_any_ref_is_a_first_publication(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A remediation ref must not smuggle an unpublished ref past the plane."""
+    _open_pr_by_branch(monkeypatch, {"feat-open"})
+    reason = gate.evaluate(
+        "Bash", {"command": "git push origin feat-open feat-new"}, root=stacked_repo
+    )
+    assert reason is not None
+    assert "FIRST publication" in reason and "'feat-new'" in reason
+    # Order does not matter: the unpublished ref first is denied too.
+    reason = gate.evaluate(
+        "Bash", {"command": "git push origin feat-new feat-open"}, root=stacked_repo
+    )
+    assert reason is not None and "'feat-new'" in reason
+
+
+def test_multi_ref_push_of_only_open_prs_stays_remediation(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _open_pr_by_branch(monkeypatch, {"feat-open", "feat-open-2"})
+    assert (
+        gate.evaluate(
+            "Bash", {"command": "git push origin feat-open feat-open-2"}, root=stacked_repo
+        )
+        is None
+    )
+
+
+def test_refspec_destination_is_the_branch_that_is_probed(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    probed: list[str] = []
+
+    def probe(root, branch, remote="origin"):  # noqa: ANN001
+        probed.append(branch)
+        return branch == "new"
+
+    monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+    monkeypatch.setattr(open_pr_probe, "open_pr_for_branch", probe)
+    assert (
+        gate.evaluate("Bash", {"command": "git push origin HEAD:refs/heads/new"}, root=stacked_repo)
+        is None
+    )
+    assert probed == ["new"]
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "gh -R Quantum-L9/Cursor-Governance pr create --fill",
+        "gh --repo Quantum-L9/Cursor-Governance pr create --title t --body b",
+        "gh --repo=Quantum-L9/Cursor-Governance pr create --fill",
+        "gh -R o/r pr create",
+        "cd /tmp/repo && gh -R o/r pr create --fill",
+    ],
+)
+def test_gh_pr_create_is_denied_wherever_the_repo_option_sits(
+    command: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _open_pr(monkeypatch, True)
+    assert publication_forms(command) == [{"form": "gh pr create"}]
+    reason = gate.evaluate("Bash", {"command": command}, root=tmp_path)
+    assert reason is not None and "gh pr create" in reason
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "gh -R o/r pr list",
+        "gh -R o/r pr view 12",
+        "gh --repo o/r pr edit 12 --body b",
+        "gh -R o/r api repos/o/r/pulls",
+    ],
+)
+def test_gh_read_and_edit_forms_with_the_repo_option_stay_allowed(
+    command: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _open_pr(monkeypatch, False)
+    assert publication_forms(command) == []
+    assert gate.evaluate("Bash", {"command": command}, root=tmp_path) is None
