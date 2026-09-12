@@ -97,10 +97,27 @@ def _safe_target(dest: Path, member_name: str) -> Path:
     return target
 
 
+# Resource budget for untrusted idea-pack archives. Traversal/symlink checks
+# alone do not bound disk or memory: a small compressed bomb or a member flood
+# can exhaust the agent host, and inventory later reads each expanded file
+# wholly into memory. Declared sizes are checked before extraction (fast
+# rejection) and the streaming copy re-checks actual bytes (headers can lie).
 MAX_ARCHIVE_MEMBERS = 2048
 MAX_MEMBER_BYTES = 32 * 1024 * 1024
 MAX_ARCHIVE_BYTES = 128 * 1024 * 1024
 _EXTRACT_CHUNK = 1024 * 1024
+
+
+def _check_declared_budget(declared: list[tuple[str, int]], label: str) -> None:
+    if len(declared) > MAX_ARCHIVE_MEMBERS:
+        raise ValueError(f"{label} exceeds {MAX_ARCHIVE_MEMBERS} members: {len(declared)}")
+    total = 0
+    for name, size in declared:
+        if size > MAX_MEMBER_BYTES:
+            raise ValueError(f"archive member exceeds {MAX_MEMBER_BYTES} bytes: {name}")
+        total += size
+        if total > MAX_ARCHIVE_BYTES:
+            raise ValueError(f"archive exceeds {MAX_ARCHIVE_BYTES} uncompressed bytes")
 
 
 def _copy_bounded(src_fh: object, dest: Path, *, remaining: list[int], name: str) -> None:
@@ -124,8 +141,7 @@ def safe_extract_zip(src: Path, dest: Path) -> None:
     remaining = [MAX_ARCHIVE_BYTES]
     with zipfile.ZipFile(src) as zf:
         members = zf.infolist()
-        if len(members) > MAX_ARCHIVE_MEMBERS:
-            raise ValueError(f"zip exceeds {MAX_ARCHIVE_MEMBERS} members")
+        _check_declared_budget([(m.filename, m.file_size) for m in members], "zip")
         for member in members:
             target = _safe_target(dest, member.filename)
             mode = (member.external_attr >> 16) & 0o170000
@@ -144,8 +160,7 @@ def safe_extract_tar(src: Path, dest: Path) -> None:
     remaining = [MAX_ARCHIVE_BYTES]
     with tarfile.open(src, mode="r:*") as tf:
         members = tf.getmembers()
-        if len(members) > MAX_ARCHIVE_MEMBERS:
-            raise ValueError(f"tar exceeds {MAX_ARCHIVE_MEMBERS} members")
+        _check_declared_budget([(m.name, m.size) for m in members], "tar")
         for member in members:
             target = _safe_target(dest, member.name)
             if member.issym() or member.islnk() or member.isdev():

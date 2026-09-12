@@ -303,6 +303,7 @@ install_session_end_governance_hook() {
     "pr_gate_failure_shell.sh:pr-gate-failure-shell.sh" \
     "session_end_repo_hygiene.sh:session-end-repo-hygiene.sh" \
     "before_submit_skill_router.py:before-submit-skill-router.py" \
+    "plan_memory_prefetch.py:plan-memory-prefetch.py" \
     "plan_kernel_gate.py:plan-kernel-gate.py" \
     "plan-kernel-execute-gate.sh:plan-kernel-execute-gate.sh"; do
     src_name="${pair%%:*}"

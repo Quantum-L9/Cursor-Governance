@@ -36,6 +36,10 @@
       "mode": "read_only",
       "note": "validate_legacy_doctrine_residue.py — greps only"
     },
+    "max-velocity": {
+      "mode": "read_only",
+      "note": "validate_max_velocity.py — reads committed profiles only"
+    },
     "gh-package-deps-preflight": {
       "mode": "read_only",
       "note": "validate_gh_package_deps.py — reads package files; optional live registry metadata check"
@@ -84,6 +88,10 @@
     "commit-verification-contract": {
       "mode": "read_only",
       "note": "validate_commit_verification_contract.py — parses the declaration, greps tracked executables, runs the gate in-process; writes nothing"
+    },
+    "cursor-skill-projection": {
+      "mode": "read_only",
+      "note": "validate_skill_projection.py — Cursor virtual gateway cardinality; reports only"
     }
   }
 }

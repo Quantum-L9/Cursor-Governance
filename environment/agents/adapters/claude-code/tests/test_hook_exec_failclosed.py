@@ -17,6 +17,7 @@ import importlib.util
 import io
 import json
 import os
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -169,14 +170,15 @@ class HookExecFailClosedTests(unittest.TestCase):
             env.pop("L9_HOOK_SKIP_LOG", None)
             # Observer skip precedes record_skip unless this is a Claude surface.
             #
-            # L9_GOVERNANCE_DIR belongs in this list: the launcher honours it
-            # when it names a directory holding CANONICAL_LAW.md, so inheriting
-            # the runner's value points GOV_DIR at a VALID clone, the hook runs
-            # normally, and no skip is recorded at all — stderr comes back
-            # empty and this test fails for a reason that has nothing to do
-            # with an unwritable HOME. It passes under a bare `pytest` and
-            # fails under any runner that exports it, which is what made it
-            # look like a parallelism flake.
+            # L9_GOVERNANCE_DIR used to belong in this list for a reason the
+            # launcher no longer gives it: it honoured any value naming a
+            # directory with a CANONICAL_LAW.md, so inheriting the runner's
+            # value pointed GOV_DIR at a VALID clone, the hook ran normally and
+            # no skip was recorded — stderr came back empty and this test failed
+            # for a reason unrelated to an unwritable HOME, passing under a bare
+            # `pytest` and failing under any runner that exported it. INV-1c
+            # removed that redirect; the scrub stays because the hooks this
+            # launcher execs still read the variable.
             for key in (
                 "CURSOR_AGENT",
                 "L9_GOVERNANCE_SURFACE",
@@ -610,6 +612,87 @@ class ProgramBoundAuthorizationTests(unittest.TestCase):
         """DG-001 at the effect edge: no commit capability, no commit effect."""
         code, _ = self._run({"tool_name": "git_commit", "tool_input": {"path": "docs/result.txt"}})
         self.assertEqual(code, 2)
+
+
+class GovernanceDirIsNotRedirectableTests(unittest.TestCase):
+    """INV-1c: the launcher dispatches out of $HOME/.cursor-governance, only.
+
+    SESSION_START_SPEC hard constraint 2 pins governance for the SessionStart
+    hook. The launcher resolves more than that: it picks BOTH the policy file it
+    execs and the locked interpreter it runs it on. It used to accept any
+    ``L9_GOVERNANCE_DIR`` naming a directory with a ``CANONICAL_LAW.md``,
+    guarding only an unexpanded literal ``$HOME`` — so an environment variable
+    could hand a gate its own policy and its own interpreter. These tests run
+    the real launcher with such a variable exported and prove it is ignored.
+    """
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.home = Path(self._tmp.name) / "home"
+        self.canonical = self.home / ".cursor-governance"
+        self.foreign = Path(self._tmp.name) / "foreign-governance"
+        for tree, exit_code in ((self.canonical, 0), (self.foreign, 3)):
+            (tree / HOOKS_REL).mkdir(parents=True)
+            (tree / "CANONICAL_LAW.md").write_text("synthetic", encoding="utf-8")
+            venv_bin = tree / ".venv" / "bin"
+            venv_bin.mkdir(parents=True)
+            (venv_bin / "python3").write_text(f"#!/bin/sh\nexit {exit_code}\n", encoding="utf-8")
+            (venv_bin / "python3").chmod(0o755)
+            for name in (*GATES, *OBSERVERS):
+                (tree / HOOKS_REL / name).write_text("raise SystemExit(0)\n", encoding="utf-8")
+            # A shell hook is exec'd directly, bypassing the interpreter, so it
+            # needs its own tell-tale exit code to identify the tree that ran.
+            (tree / HOOKS_REL / "session_start_claude_governance.sh").write_text(
+                f"#!/usr/bin/env bash\nexit {exit_code}\n", encoding="utf-8"
+            )
+
+    def _run(self, hook_class: str, name: str) -> subprocess.CompletedProcess[str]:
+        env = dict(os.environ)
+        env["HOME"] = str(self.home)
+        env["CLAUDECODE"] = "1"
+        env["L9_GOVERNANCE_DIR"] = str(self.foreign)
+        env["L9_HOOK_SKIP_LOG"] = str(self.home / ".l9" / "claude" / "hook-skips.log")
+        for key in (
+            "CURSOR_AGENT",
+            "CLAUDE_CODE_ENTRYPOINT",
+            "CLAUDE_CODE_SESSION_ID",
+            "CLAUDE_CODE_REMOTE",
+            "L9_GOVERNANCE_SURFACE",
+            "L9_SURFACE_GUARD",
+        ):
+            env.pop(key, None)
+        return subprocess.run(
+            ["bash", str(LAUNCHER), "--class", hook_class, name],
+            input="{}",
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+
+    def test_a_divergent_governance_dir_cannot_supply_gate_policy(self) -> None:
+        """Exit 3 is the foreign tree's interpreter; 0 is the canonical one."""
+        for name in GATES:
+            with self.subTest(gate=name):
+                result = self._run("gate", name)
+                self.assertEqual(
+                    result.returncode,
+                    0,
+                    f"{name} ran the tree named by L9_GOVERNANCE_DIR",
+                )
+
+    def test_a_divergent_governance_dir_cannot_supply_observer_context(self) -> None:
+        """A SessionStart observer emits into the session; its source is pinned."""
+        result = self._run("observer", "session_start_claude_governance.sh")
+        self.assertEqual(result.returncode, 0, "the SessionStart hook ran from a foreign tree")
+
+    def test_a_divergent_governance_dir_does_not_rescue_a_missing_canonical_tree(self) -> None:
+        """The foreign tree is complete; the canonical one is gone. Gates block."""
+        shutil.rmtree(self.canonical)
+        result = self._run("gate", "memory_gate.py")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("BLOCKING", result.stderr)
 
 
 if __name__ == "__main__":

@@ -184,6 +184,75 @@ def test_bound_cli_and_missing_mcp_entry_are_not_one_word(tmp_path: Path, monkey
     assert receipt["overall_readiness"] == DEGRADED
 
 
+def test_a_server_the_projection_gated_out_is_not_a_degraded_memory_entry() -> None:
+    """The Claude authority over `.mcp.json` is the projection, not `~/.cursor`.
+
+    R4 asks the memory package for `client cursor status`, which reads
+    `~/.cursor/mcp.json`. Grading a Claude surface from a Cursor artifact is a
+    permanent false DEGRADED on Web and Mobile, where that path cannot exist
+    (SESSION_START_SPEC hard constraint 4). When the projection reports the
+    server gated out — its `_requires_env` variable unproxied — that is the
+    state governance intends, and `context7` in the same template is already
+    reported that way.
+    """
+    gated = frozenset({er._MEMORY_MCP_SERVER})
+    status, note = er._memory_mcp_health(_levels(R4="fail"), gated_out=gated)
+    assert status == READY
+    assert "absent by design" in note
+    assert "L9_MEMORY_INTERPRETER" in note
+    # Unrunnable diagnostics must not turn a by-design absence into UNKNOWN.
+    assert er._memory_mcp_health(None, gated_out=gated)[0] == READY
+
+
+def test_a_server_that_is_rendered_is_still_graded_by_r4() -> None:
+    """The fix narrows the R4 verdict; it does not delete it."""
+    other = frozenset({"context7"})
+    assert er._memory_mcp_health(_levels(R4="fail"), gated_out=other)[0] == DEGRADED
+    assert er._memory_mcp_health(_levels(), gated_out=other)[0] == READY
+
+
+def test_gated_out_servers_are_read_from_the_receipt_not_the_environment(monkeypatch) -> None:
+    """Same discipline as the plugins carve-out: evidence where the claim is made."""
+    monkeypatch.delenv("L9_MEMORY_INTERPRETER", raising=False)
+    assert er._gated_out_servers(None) == frozenset()
+    assert er._gated_out_servers({"domains": [{"domain": "mcp", "status": "ok"}]}) == frozenset()
+    receipt = {
+        "domains": [
+            {"domain": "mcp", "status": "ok", "detail": {"gated_out_servers": ["context7"]}}
+        ]
+    }
+    assert er._gated_out_servers(receipt) == frozenset({"context7"})
+
+
+def test_probe_without_a_projection_lets_r4_decide_alone() -> None:
+    """No ambient $HOME read: an unsupplied projection means no gating is known."""
+    import inspect
+
+    source = inspect.getsource(er.memory_probe)
+    assert "Path.home()" not in source
+
+
+def test_gated_memory_entry_reports_ready_and_still_warns(tmp_path: Path, monkeypatch) -> None:
+    """READY because it is in the intended state; warned because it is absent."""
+    gov = _init_fake_gov(tmp_path, merge_denies=True)
+    home = _fake_home(tmp_path, mcp="READY", gated_out=[er._MEMORY_MCP_SERVER, "context7"])
+    monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels(R4="fail"))
+    receipt = _build_with_levels(gov, home, monkeypatch)
+    assert receipt["memory_mcp_status"] == READY
+    assert receipt["overall_readiness"] == READY
+    assert any("absent by design" in w for w in receipt["warnings"])
+
+
+def test_a_rendered_but_drifted_memory_entry_still_degrades(tmp_path: Path, monkeypatch) -> None:
+    """The cascade that armed the repair stays available for a real defect."""
+    gov = _init_fake_gov(tmp_path, merge_denies=True)
+    home = _fake_home(tmp_path, mcp="READY", gated_out=[])
+    monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels(R4="fail"))
+    receipt = _build_with_levels(gov, home, monkeypatch)
+    assert receipt["memory_mcp_status"] == DEGRADED
+    assert receipt["overall_readiness"] == DEGRADED
+
+
 def test_memory_probe_does_not_call_broker(tmp_path: Path, monkeypatch) -> None:
     gov = _init_fake_gov(tmp_path, merge_denies=True)
     called = {"broker": False}
@@ -271,14 +340,18 @@ def _init_fake_gov(
     return gov
 
 
-def _fake_home(tmp_path: Path, *, mcp: str = "READY") -> Path:
+def _fake_home(tmp_path: Path, *, mcp: str = "READY", gated_out: list[str] | None = None) -> Path:
     home = tmp_path / "home"
     cl = home / ".l9" / "claude"
     cl.mkdir(parents=True)
-    domains = [
+    domains: list[dict] = [
         {"domain": d, "status": "ok"}
         for d in ("skills", "commands", "rules", "settings", "hooks", "plugins", "mcp")
     ]
+    if gated_out is not None:
+        for entry in domains:
+            if entry["domain"] == "mcp":
+                entry["detail"] = {"gated_out_servers": list(gated_out), "managed_servers": []}
     (cl / "projection-receipt.json").write_text(json.dumps({"domains": domains}), encoding="utf-8")
     (cl / "bootstrap-state.json").write_text(json.dumps({"mcp": mcp}), encoding="utf-8")
     return home
@@ -290,6 +363,15 @@ def _build(gov: Path, home: Path, monkeypatch) -> dict:
     for name in er._MEMORY_PROBE_SKIP_ENVS:
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels())
+    return er.build_receipt(gov=gov, workspace=str(gov))
+
+
+def _build_with_levels(gov: Path, home: Path, monkeypatch) -> dict:
+    """`_build` without pinning the memory levels, so a caller can choose them."""
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
+    for name in er._MEMORY_PROBE_SKIP_ENVS:
+        monkeypatch.delenv(name, raising=False)
     return er.build_receipt(gov=gov, workspace=str(gov))
 
 
