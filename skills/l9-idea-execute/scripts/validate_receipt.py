@@ -40,6 +40,7 @@ def validate_receipt(data: Any, graph: Any, envelope: Any) -> dict[str, Any]:
     root = require_mapping(data, "idea execution receipt")
     validated_envelope = validate_envelope(envelope)
     validated_graph = validate_graph(graph, validated_envelope)
+    graph_by_id = {unit["id"]: unit for unit in validated_graph["units"]}
     errors: list[str] = []
 
     if root.get("schema") != SCHEMA:
@@ -79,11 +80,17 @@ def validate_receipt(data: Any, graph: Any, envelope: Any) -> dict[str, Any]:
         for key in ("owner", "adapter", "requested_terminal_state", "resulting_state"):
             if not nonempty_string(unit.get(key)):
                 errors.append(f"{label}.{key} must be a non-empty string")
+        graph_unit = graph_by_id.get(uid)
+        if graph_unit is not None:
+            if unit.get("owner") != graph_unit.get("owner"):
+                errors.append(f"{label}.owner does not match graph unit {uid}")
+            if unit.get("adapter") != graph_unit.get("adapter"):
+                errors.append(f"{label}.adapter does not match graph unit {uid}")
         refs = unit.get("evidence_refs", [])
         if not isinstance(refs, list) or not all(nonempty_string(x) for x in refs):
             errors.append(f"{label}.evidence_refs must be a string list")
 
-    graph_ids = {unit["id"] for unit in validated_graph["units"]}
+    graph_ids = set(graph_by_id)
     if receipt_ids != graph_ids:
         errors.append(
             "receipt units must exactly match graph units "

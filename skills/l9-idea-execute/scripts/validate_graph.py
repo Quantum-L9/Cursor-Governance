@@ -88,9 +88,25 @@ def validate_graph(data: Any, envelope: Any | None = None) -> dict[str, Any]:
         if topology == "EXISTING_SYSTEM_CAMPAIGN" and len(set(repos)) < 2:
             errors.append(f"{label}: campaign unit must target at least two repos in registry v1")
 
-    for blocker in blockers:
+    blocker_req_ids: set[str] = set()
+    for idx, blocker in enumerate(blockers):
         if not isinstance(blocker, dict) or not nonempty_string(blocker.get("code")):
             errors.append("each blocker must be a mapping with non-empty code")
+            continue
+        rid = blocker.get("requirement_id")
+        if rid is not None:
+            if not nonempty_string(rid):
+                errors.append(f"blockers[{idx}].requirement_id must be a non-empty string")
+            elif rid in blocker_req_ids:
+                errors.append(f"requirement {rid} appears in multiple requirement-scoped blockers")
+            else:
+                blocker_req_ids.add(rid)
+
+    if req_ids & blocker_req_ids:
+        errors.append(
+            "requirements cannot be represented by both execution units and requirement-scoped blockers: "
+            f"{sorted(req_ids & blocker_req_ids)}"
+        )
 
     if not errors and ids:
         try:
@@ -103,12 +119,23 @@ def validate_graph(data: Any, envelope: Any | None = None) -> dict[str, Any]:
 
     if envelope is not None:
         validated_envelope = validate_envelope(envelope)
-        expected = semantic_digest(validated_envelope)
-        observed = data.get("source_envelope_digest")
-        if observed != expected:
+        expected_digest = semantic_digest(validated_envelope)
+        observed_digest = data.get("source_envelope_digest")
+        if observed_digest != expected_digest:
             raise ContractError(
                 "DERIVED_ARTIFACT_STALE: graph source_envelope_digest does not match "
-                f"current envelope digest (observed={observed}, expected={expected})"
+                f"current envelope digest (observed={observed_digest}, expected={expected_digest})"
+            )
+
+        expected_req_ids = {req["id"] for req in validated_envelope["requirements"]}
+        covered_req_ids = req_ids | blocker_req_ids
+        missing = sorted(expected_req_ids - covered_req_ids)
+        unexpected = sorted(covered_req_ids - expected_req_ids)
+        if missing or unexpected:
+            raise ContractError(
+                "GRAPH_REQUIREMENT_COVERAGE_MISMATCH: graph must cover every envelope requirement "
+                "exactly once via an execution unit or requirement-scoped blocker "
+                f"(missing={missing}, unexpected={unexpected})"
             )
     return data
 

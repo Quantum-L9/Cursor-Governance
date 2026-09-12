@@ -7,7 +7,7 @@ from _common import ContractError, dump_yaml, load_data, semantic_digest
 from check_adapter_capability import check_unit
 from preflight_execution_pack import preflight
 from route_execution import REGISTRY_PATH, route_envelope
-from validate_adapter_snapshot import validate_adapter_snapshot
+from validate_adapter_snapshot import compare_adapter_evidence, validate_adapter_snapshot
 from validate_envelope import validate_envelope
 from validate_graph import validate_graph
 from validate_receipt import validate_receipt
@@ -59,16 +59,17 @@ def find_unit(graph, topology):
     return next(u for u in graph["units"] if u["topology"] == topology)
 
 
-def caps(adapter: str, *, single=True, multi=False):
+def caps(adapter: str, unit_id: str, *, single=True, multi=False, revision="fixture-sha"):
     return {
         "schema": "l9.idea-execute.adapter-capabilities/v2",
+        "unit_id": unit_id,
         "adapter": adapter,
-        "observed_at": "2026-09-11T00:00:00Z",
+        "observed_at": "2026-09-12T00:00:00Z",
         "source_refs": [f"skills/{adapter}/SKILL.md"],
         "source_bindings": [
             {
                 "repo": "Quantum-L9/Cursor-Governance",
-                "revision": "fixture-sha",
+                "revision": revision,
                 "path": f"skills/{adapter}/SKILL.md",
             }
         ],
@@ -116,14 +117,12 @@ def main() -> int:
     registry = load_data(REGISTRY_PATH)
     checks = []
 
-    # New standalone product repo -> Foundry.
     e = envelope([req("ER-001", "product_repository", "new")])
     g = route_envelope(validate_envelope(e), registry)
     validate_graph(g, e)
     assert find_unit(g, "NEW_PRODUCT_REPOSITORY")["adapter"] == "l9-idea-foundry"
     checks.append("new_product_to_foundry=PASS")
 
-    # Website -> specialized factory, never Foundry.
     e = envelope([req("ER-001", "website", "new")])
     g = route_envelope(validate_envelope(e), registry)
     validate_graph(g, e)
@@ -131,7 +130,6 @@ def main() -> int:
     assert u["adapter"] == "website-bot" and u["owner"] == "Quantum-L9/Website-Bot"
     checks.append("website_specialized_factory=PASS")
 
-    # Bounded existing repo -> Plan Simple.
     e = envelope(
         [req("ER-001", "repository_change", "modify", repo="Quantum-L9/igorbot")],
         repos=["Quantum-L9/igorbot"],
@@ -140,10 +138,10 @@ def main() -> int:
     validate_graph(g, e)
     u = find_unit(g, "EXISTING_REPO_CHANGE")
     assert u["adapter"] == "l9-plan-simple"
-    assert check_unit(u, caps("l9-plan-simple"))["status"] == "COMPATIBLE"
+    current = caps("l9-plan-simple", u["id"])
+    assert check_unit(u, current)["status"] == "COMPATIBLE"
     checks.append("igorbot_existing_repo_to_plan_simple=PASS")
 
-    # Multi-repo PE route is a proven gap only from a valid bound snapshot.
     repos = ["Quantum-L9/a", "Quantum-L9/b"]
     e = envelope(
         [
@@ -156,21 +154,30 @@ def main() -> int:
     g = route_envelope(validate_envelope(e), registry)
     validate_graph(g, e)
     u = find_unit(g, "EXISTING_SYSTEM_CAMPAIGN")
-    assert check_unit(u, caps("program-execution", single=True, multi=False))["status"] == (
-        "EXECUTOR_CAPABILITY_GAP"
-    )
-    assert check_unit(u, caps("program-execution", single=True, multi=None))["status"] == (
-        "ADAPTER_CAPABILITY_UNKNOWN"
-    )
+    gap = caps("program-execution", u["id"], single=True, multi=False)
+    unknown = caps("program-execution", u["id"], single=True, multi=None)
+    assert check_unit(u, gap)["status"] == "EXECUTOR_CAPABILITY_GAP"
+    assert check_unit(u, unknown)["status"] == "ADAPTER_CAPABILITY_UNKNOWN"
     checks.append("adapter_gap_vs_unknown=PASS")
 
-    # Invalid adapter evidence is not executor incapability.
-    bad_caps = caps("l9-plan-simple")
+    stale = caps("program-execution", u["id"], single=True, multi=False, revision="old-sha")
+    expect_contract_error(
+        lambda: check_unit(u, gap, supplied_caps=stale),
+        "ADAPTER_SNAPSHOT_STALE",
+    )
+    conflicting = copy.deepcopy(gap)
+    conflicting["topologies"]["multi_target"] = True
+    expect_contract_error(
+        lambda: compare_adapter_evidence(conflicting, gap),
+        "ADAPTER_CONTRACT_CONFLICT",
+    )
+    checks.append("adapter_freshness_and_conflict=PASS")
+
+    bad_caps = caps("l9-plan-simple", "unit-existing-repo-change")
     del bad_caps["source_bindings"]
     expect_contract_error(lambda: validate_adapter_snapshot(bad_caps), "ADAPTER_SNAPSHOT_INVALID")
     checks.append("invalid_adapter_evidence_rejected=PASS")
 
-    # CONDITIONAL_GO is the only conditional execution vocabulary.
     e = envelope([req("ER-001", "website", "new")])
     e["idea"]["decision_status"] = "CONDITIONAL_GO"
     validate_envelope(e)
@@ -179,7 +186,6 @@ def main() -> int:
     expect_contract_error(lambda: validate_envelope(e_bad), "CONDITIONAL_GO")
     checks.append("conditional_go_aligned=PASS")
 
-    # Reserved aggregate IDs and false campaign claims fail closed.
     reserved = envelope(
         [
             req("existing-repo-change", "product_repository", "new"),
@@ -201,7 +207,6 @@ def main() -> int:
     )
     checks.append("aggregate_and_campaign_guards=PASS")
 
-    # A structurally valid stale graph is rejected by parent binding.
     e = envelope(
         [req("ER-001", "repository_change", "modify", repo="Quantum-L9/igorbot")],
         repos=["Quantum-L9/igorbot"],
@@ -215,22 +220,58 @@ def main() -> int:
     assert report["status"] == "REPAIRABLE" and report["earliest_invalid_layer"] == "graph"
     checks.append("stale_graph_regenerates_from_parent=PASS")
 
-    # Receipt is bound to both envelope and graph.
+    malformed_graph = copy.deepcopy(g)
+    malformed_graph["units"][0]["requirement_ids"] = ["ER-999"]
+    expect_contract_error(
+        lambda: validate_graph(malformed_graph, e),
+        "GRAPH_REQUIREMENT_COVERAGE_MISMATCH",
+    )
+    checks.append("graph_requirement_coverage=PASS")
+
     r = receipt_for(e, g)
     validate_receipt(r, g, e)
     stale_receipt = copy.deepcopy(r)
     stale_receipt["graph_digest"] = "sha256:" + "0" * 64
     expect_contract_error(lambda: validate_receipt(stale_receipt, g, e), "DERIVED_ARTIFACT_STALE")
-    checks.append("receipt_chain_binding=PASS")
+    false_owner = copy.deepcopy(r)
+    false_owner["units"][0]["owner"] = "wrong-owner"
+    expect_contract_error(lambda: validate_receipt(false_owner, g, e), ".owner does not match")
+    false_adapter = copy.deepcopy(r)
+    false_adapter["units"][0]["adapter"] = "wrong-adapter"
+    expect_contract_error(lambda: validate_receipt(false_adapter, g, e), ".adapter does not match")
+    checks.append("receipt_chain_and_identity_binding=PASS")
 
-    # Unknown capabilities still fail closed.
+    current = caps("l9-plan-simple", g["units"][0]["id"])
+    wrong_adapter = caps("program-execution", g["units"][0]["id"])
+    report = preflight(
+        e,
+        graph=g,
+        adapter_snapshots=[("supplied.yaml", wrong_adapter)],
+        current_adapter_snapshots=[("current.yaml", current)],
+    )
+    assert report["status"] == "REPAIRABLE"
+    supplied = next(a for a in report["artifacts"] if a["ref"] == "supplied.yaml")
+    assert "ADAPTER_CONTRACT_CONFLICT" in supplied["reason"]
+    checks.append("preflight_binds_adapter_to_graph_unit=PASS")
+
+    old = caps("l9-plan-simple", g["units"][0]["id"], revision="old-sha")
+    report = preflight(
+        e,
+        graph=g,
+        adapter_snapshots=[("old.yaml", old)],
+        current_adapter_snapshots=[("current.yaml", current)],
+    )
+    old_artifact = next(a for a in report["artifacts"] if a["ref"] == "old.yaml")
+    assert old_artifact["status"] == "STALE_REGENERATE"
+    assert report["earliest_invalid_layer"] == "old.yaml"
+    checks.append("preflight_requires_current_adapter_binding=PASS")
+
     e = envelope([req("ER-001", "quantum_telepathy", "new")])
     g = route_envelope(validate_envelope(e), registry)
     validate_graph(g, e)
     assert g["status"] == "BLOCKED" and g["blockers"][0]["code"] == "CAPABILITY_OWNER_UNKNOWN"
     checks.append("unknown_owner_fail_closed=PASS")
 
-    # Deterministic routing remains byte-stable for identical semantic input.
     e = envelope([req("ER-001", "website", "new")])
     g1 = dump_yaml(route_envelope(validate_envelope(copy.deepcopy(e)), registry))
     g2 = dump_yaml(route_envelope(validate_envelope(copy.deepcopy(e)), registry))

@@ -23,14 +23,18 @@ def validate_adapter_snapshot(data: Any) -> dict[str, Any]:
 
     if root.get("schema") != SCHEMA:
         errors.append(f"schema must equal {SCHEMA}")
+    if not nonempty_string(root.get("unit_id")):
+        errors.append("unit_id must be a non-empty string")
     if not nonempty_string(root.get("adapter")):
         errors.append("adapter must be a non-empty string")
     if not nonempty_string(root.get("observed_at")):
         errors.append("observed_at must be a non-empty string")
 
     source_refs = root.get("source_refs")
-    if not isinstance(source_refs, list) or not source_refs or not all(
-        nonempty_string(x) for x in source_refs
+    if (
+        not isinstance(source_refs, list)
+        or not source_refs
+        or not all(nonempty_string(x) for x in source_refs)
     ):
         errors.append("source_refs must be a non-empty string list")
 
@@ -94,20 +98,26 @@ def validate_adapter_snapshot(data: Any) -> dict[str, Any]:
     return root
 
 
-def compare_source_bindings(snapshot: Any, current: Any) -> None:
-    left = validate_adapter_snapshot(snapshot)
-    right = validate_adapter_snapshot(current)
-    if left["adapter"] != right["adapter"]:
-        raise ContractError("ADAPTER_CONTRACT_CONFLICT: adapter identities differ")
+def _normalized_bindings(value: dict[str, Any]) -> dict[tuple[str, str], tuple[str, str | None]]:
+    return {
+        (item["repo"], item["path"]): (item["revision"], item.get("digest"))
+        for item in value["source_bindings"]
+    }
 
-    def normalize(value: dict[str, Any]) -> dict[tuple[str, str], tuple[str, str | None]]:
-        return {
-            (item["repo"], item["path"]): (item["revision"], item.get("digest"))
-            for item in value["source_bindings"]
-        }
 
-    if normalize(left) != normalize(right):
+def compare_adapter_evidence(snapshot: Any, current: Any) -> dict[str, Any]:
+    supplied = validate_adapter_snapshot(snapshot)
+    live = validate_adapter_snapshot(current)
+    if supplied["unit_id"] != live["unit_id"] or supplied["adapter"] != live["adapter"]:
+        raise ContractError("ADAPTER_CONTRACT_CONFLICT: adapter or unit binding changed")
+    if _normalized_bindings(supplied) != _normalized_bindings(live):
         raise ContractError("ADAPTER_SNAPSHOT_STALE: source bindings changed")
+    for field in ("front_door", "accepted_inputs", "topologies", "authority"):
+        if supplied[field] != live[field]:
+            raise ContractError(
+                f"ADAPTER_CONTRACT_CONFLICT: {field} differs for identical source bindings"
+            )
+    return live
 
 
 def main() -> int:
@@ -118,7 +128,7 @@ def main() -> int:
     try:
         snapshot = validate_adapter_snapshot(load_data(args.snapshot))
         if args.current:
-            compare_source_bindings(snapshot, load_data(args.current))
+            compare_adapter_evidence(snapshot, load_data(args.current))
     except ContractError as exc:
         print(f"ADAPTER_SNAPSHOT: FAIL\n- {exc}", file=sys.stderr)
         return 1
