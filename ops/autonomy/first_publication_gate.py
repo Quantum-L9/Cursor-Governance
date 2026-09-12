@@ -138,6 +138,7 @@ def _git_builtins() -> frozenset[str]:
             names.update(word for word in proc.stdout.split() if word)
     except (OSError, subprocess.SubprocessError):
         # Live builtin list is unavailable; keep the static fallback.
+        pass
     _builtins_cache = frozenset(names)
     return _builtins_cache
 
