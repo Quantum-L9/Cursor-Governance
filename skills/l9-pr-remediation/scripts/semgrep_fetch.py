@@ -106,14 +106,16 @@ class DirectTransport:
 def build_transport(base_url: str, surface: str | None = None) -> DirectTransport:
     """Authenticated when an inventory token can be bound, on any surface.
 
-    Bind is use, not export: Infisical CLI profile / AWS, or an already-present
-    env value. A miss is a vault miss, not a reason to paste a token.
+    Bind is use, not export: an already-present env value, else the Infisical
+    machine profile (``~/.infisical/l9-machine.json`` over HTTP). The Infisical
+    CLI keyring and AWS are not bind paths. A miss is a vault miss, not a
+    reason to paste a token.
     """
     token = bind_first(*TOKEN_ENV)
     if not token:
         print(
             "semgrep_fetch: SEMGREP_APP_TOKEN unbound "
-            "(Infisical CLI profile and AWS both missed); "
+            "(not in env; Infisical machine profile absent or missed); "
             "App findings cannot be read — do not paste a token",
             file=sys.stderr,
         )

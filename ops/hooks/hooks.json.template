@@ -35,6 +35,10 @@
       {
         "command": "./hooks/before-submit-skill-router.py",
         "timeout": 5
+      },
+      {
+        "command": "./hooks/plan-memory-prefetch.py --hook",
+        "timeout": 20
       }
     ],
     "postToolUse": [

@@ -44,14 +44,29 @@ def _pipeline_result(
     dispatch: Mapping[str, Any],
     payload: Mapping[str, Any],
 ) -> dict[str, Any]:
-    if not isinstance(raw_result, dict):
-        return {
-            "status": "REJECTED",
-            "reason": "subagent output is not a structured result document",
-            "acceptance_receipt": None,
-            "ingress_receipt": None,
-        }
     from environment.agents.results import gateway
+    from environment.agents.results.adapters import cursor_subagent
+
+    surface_result: dict[str, Any]
+    if isinstance(raw_result, dict):
+        surface_result = raw_result
+    else:
+        raw_digest = str(
+            return_receipt.get("raw_result_digest") or return_receipt.get("output_digest") or ""
+        )
+        try:
+            surface_result = cursor_subagent.result_bridge.compile_incomplete_result(
+                return_receipt,
+                dispatch,
+                raw_digest,
+            )
+        except cursor_subagent.result_bridge.ResultValidationError as exc:
+            return {
+                "status": "REJECTED",
+                "reason": str(exc),
+                "acceptance_receipt": None,
+                "ingress_receipt": None,
+            }
 
     repository = str(
         payload.get("repository")
@@ -65,7 +80,7 @@ def _pipeline_result(
     try:
         return gateway.accept_and_ingest(
             return_receipt=return_receipt,
-            surface_result=raw_result,
+            surface_result=surface_result,
             repository=repository,
             repository_class=repository_class,
             independent_validation_present=bool(

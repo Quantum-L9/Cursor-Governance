@@ -58,3 +58,13 @@ The point of the index is not archival ceremony. It should let a future agent an
 - Which exact artifact changed since the prior compile?
 
 If the index cannot answer those questions through its refs/digests, repair the indexed contract instead of adding another summary file.
+## Factory-evidence invalidation
+
+Treat repository-factory evidence as a downstream cache, not product authority.
+
+- staging HEAD/tree changed -> invalidate Foundry freeze, factory compile, and local birth;
+- factory HEAD/tree or any probed ownership/schema/compiler file changed -> preserve product freeze but invalidate factory qualification and local birth;
+- organization birth profile changed -> preserve factory compile but rerun local birth;
+- prior remote birth state never upgrades automatically from a later retry or unrelated CI event.
+
+Never reuse an `l9.birth-payload/v1` document across source commits. Reinvoke the current factory compiler instead.

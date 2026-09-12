@@ -1,14 +1,9 @@
-"""Conformance: the cloud governance refresh never discards in-flight work.
+"""Conformance: SessionStart is not a second refresh brain.
 
-The refresh block resets the ephemeral governance clone with `git checkout -f
--B main origin/main`. That is correct for a throwaway clone and destructive
-anywhere else: it discards uncommitted changes AND moves HEAD off the checked
-out branch. It ran unguarded, and did exactly that to a governance checkout
-carrying in-flight work — reachable whenever `$HOME/.cursor-governance`
-resolves to a working clone rather than the throwaway one.
-
-The reset only ever has work to do on a clean clone, so refusing a dirty one
-costs the intended path nothing.
+The launcher (`l9_hook_exec.sh`) is the sole hosted refresh owner. It fetches
+and `checkout -f`s trusted `origin/main` only. This hook must never
+independently fetch or reset — including when the launcher refused an
+untrusted origin, lost its lock, or never bound an attempt.
 """
 
 from __future__ import annotations
@@ -39,41 +34,24 @@ def test_hook_exists_and_parses() -> None:
     assert subprocess.run(["bash", "-n", str(HOOK)]).returncode == 0
 
 
-def test_dirty_clone_is_probed_before_any_reset() -> None:
+def test_session_start_never_owns_fetch_or_reset() -> None:
+    """One owner: launcher refreshes; this hook reports."""
     text = body()
-    probe = text.index("gov_dirty=")
-    reset = text.index('checkout -f -B "$GOV_BRANCH"')
-    assert probe < reset, "the dirtiness probe must precede the reset"
+    cloud = text[text.index('if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then') :]
+    cloud = cloud[: cloud.index("# shellcheck source=/dev/null")]
+    assert "checkout -f" not in cloud
+    assert 'git -C "$GOV" fetch' not in cloud
+    assert "gov_dirty=" not in cloud
+    assert 'GOV_BRANCH="main"' in cloud
+    assert "L9_GOVERNANCE_BRANCH" not in cloud
+    assert "launcher-absent" in cloud
+    assert "no SessionStart fetch/reset" in cloud
 
 
-def test_probe_is_observational() -> None:
-    """A probe that mutates to measure state is the defect, not the guard.
-
-    `git status --porcelain` reads; `git stash` would not.
-    """
+def test_launcher_outcome_is_recorded_not_retried() -> None:
     text = body()
-    guard = text[text.index("gov_dirty=") : text.index('checkout -f -B "$GOV_BRANCH"')]
-    assert "status --porcelain" in guard
-    for mutating in ("git stash", "git clean", "git reset", "git restore"):
-        assert mutating not in guard
-
-
-def test_dirty_clone_skips_the_reset_and_says_so() -> None:
-    text = body()
-    assert "reset-skipped-dirty" in text, "the skip must be recorded in the receipt"
-    assert "reset SKIPPED" in text, "the skip must be visible in the session banner"
-
-
-def test_reset_is_reachable_only_when_clean() -> None:
-    """The fetch+reset path must sit on the else branch of the dirtiness test."""
-    text = body()
-    guard = re.search(
-        r'if \[ -n "\$gov_dirty" \]; then(?P<dirty>.*?)elif git -C "\$GOV" fetch',
-        text,
-        re.S,
-    )
-    assert guard is not None, "reset must hang off the dirtiness branch"
-    assert "checkout -f" not in guard.group("dirty")
+    assert "launcher-${L9_GOV_REFRESH_OUTCOME}" in text
+    assert "not independently fetching origin/main" in text
 
 
 def test_hook_still_fails_open() -> None:
@@ -212,8 +190,10 @@ def _run(home: Path, receipt: Path):
     )
 
 
-def test_tracked_dirt_actually_prevents_the_reset(tmp_path: Path) -> None:
-    """Behavioural proof, not a text match: in-flight tracked work survives."""
+def test_tracked_dirt_survives_because_session_start_does_not_reset(
+    tmp_path: Path,
+) -> None:
+    """In-flight tracked work survives: there is no SessionStart checkout -f."""
     import json
 
     gov = _synthetic_gov(tmp_path, tracked_dirt=True, untracked_dirt=False)
@@ -223,16 +203,11 @@ def test_tracked_dirt_actually_prevents_the_reset(tmp_path: Path) -> None:
     assert result.returncode == 0, "SessionStart must never block"
     assert (gov / "CANONICAL_LAW.md").read_text(encoding="utf-8") == (
         "synthetic + in-flight work\n"
-    ), "the reset discarded tracked work the guard exists to protect"
-    assert json.loads(receipt.read_text(encoding="utf-8"))["outcome"] == "reset-skipped-dirty"
+    )
+    assert json.loads(receipt.read_text(encoding="utf-8"))["outcome"] == "launcher-absent"
 
 
-def test_untracked_residue_does_not_trip_the_guard(tmp_path: Path) -> None:
-    """A fresh ephemeral clone carries untracked bootstrap residue.
-
-    `checkout -f` leaves untracked files alone, so counting them would strand
-    the very clone this refresh exists to reset.
-    """
+def test_untracked_residue_does_not_invent_a_reset(tmp_path: Path) -> None:
     import json
 
     _synthetic_gov(tmp_path, tracked_dirt=False, untracked_dirt=True)
@@ -241,7 +216,7 @@ def test_untracked_residue_does_not_trip_the_guard(tmp_path: Path) -> None:
 
     assert result.returncode == 0
     outcome = json.loads(receipt.read_text(encoding="utf-8"))["outcome"]
-    assert outcome != "reset-skipped-dirty", "untracked residue must not block the reset"
+    assert outcome == "launcher-absent"
 
 
 def test_cursor_skip_precedes_claude_banner() -> None:
@@ -265,36 +240,153 @@ def test_bind_precedes_projection_in_install_and_session_start() -> None:
         assert bind < project, "export the bound interpreter before projection"
 
 
-def test_launcher_fresh_receipt_skips_the_second_reset(tmp_path: Path) -> None:
-    """After the launcher refreshed, SessionStart must not checkout -f again."""
-    import json
+def _head(gov: Path) -> str:
     import subprocess
 
-    gov = _synthetic_gov(tmp_path, tracked_dirt=False, untracked_dirt=False)
-    sha = subprocess.run(
+    return subprocess.run(
         ["git", "-C", str(gov), "rev-parse", "HEAD"],
         capture_output=True,
         text=True,
         check=True,
     ).stdout.strip()
+
+
+def _launcher_receipt(sha: str, *, attempt: str, epoch: int, outcome: str = "fetched") -> dict:
+    return {
+        "schema": "l9.governance-refresh.v1",
+        "outcome": outcome,
+        "local_sha": sha,
+        "origin_sha": sha,
+        "refreshed_at": "2026-09-12T00:00:00Z",
+        "refreshed_epoch": epoch,
+        "attempt_id": attempt,
+        "owner_hook": "session_start_claude_governance.sh",
+        "ttl_seconds": 3600,
+        "commits_behind": 0,
+        "state": "fresh",
+    }
+
+
+def _run_with(home: Path, receipt: Path, extra: dict[str, str]):
+    import subprocess
+
+    env = {
+        "HOME": str(home),
+        "PATH": "/usr/bin:/bin:/usr/local/bin",
+        "CLAUDE_CODE_REMOTE": "true",
+        "L9_GOV_REFRESH_RECEIPT": str(receipt),
+        "CLAUDE_PROJECT_DIR": str(home),
+    }
+    env.update(extra)
+    return subprocess.run(
+        ["bash", str(HOOK)], capture_output=True, text=True, env=env, check=False, timeout=180
+    )
+
+
+def test_current_launcher_receipt_skips_the_second_reset(tmp_path: Path) -> None:
+    """After THIS launcher attempt refreshed, SessionStart must not checkout -f again."""
+    import json
+    import time
+
+    gov = _synthetic_gov(tmp_path, tracked_dirt=False, untracked_dirt=False)
+    sha = _head(gov)
     receipt = tmp_path / "receipt.json"
     receipt.write_text(
-        json.dumps(
-            {
-                "schema": "l9.governance-refresh.v1",
-                "outcome": "fetched",
-                "local_sha": sha,
-                "state": "fresh",
-            }
-        ),
+        json.dumps(_launcher_receipt(sha, attempt="4242-now-7", epoch=int(time.time()))),
         encoding="utf-8",
     )
-    result = _run(tmp_path, receipt)
+    result = _run_with(
+        tmp_path,
+        receipt,
+        {"L9_GOV_REFRESH_ATTEMPT_ID": "4242-now-7", "L9_GOV_REFRESH_OUTCOME": "fetched"},
+    )
     assert result.returncode == 0, result.stderr
     blob = result.stdout + result.stderr
     assert "already applied this SessionStart" in blob
     assert "checkout -f" not in blob
-    assert json.loads(receipt.read_text(encoding="utf-8"))["outcome"] == "fetched"
+    assert json.loads(receipt.read_text(encoding="utf-8"))["attempt_id"] == "4242-now-7"
+
+
+def test_a_fresh_looking_receipt_from_another_attempt_does_not_fetch(
+    tmp_path: Path,
+) -> None:
+    """A stale `fresh` receipt is not authority to run a second fetch/reset."""
+    import json
+    import time
+
+    gov = _synthetic_gov(tmp_path, tracked_dirt=False, untracked_dirt=False)
+    sha = _head(gov)
+    receipt = tmp_path / "receipt.json"
+    stale = _launcher_receipt(sha, attempt="previous-session", epoch=int(time.time()))
+    receipt.write_text(json.dumps(stale), encoding="utf-8")
+
+    result = _run_with(tmp_path, receipt, {})
+    assert result.returncode == 0, result.stderr
+    assert "already applied this SessionStart" not in result.stdout + result.stderr
+    written = json.loads(receipt.read_text(encoding="utf-8"))
+    assert written["outcome"] == "launcher-absent"
+
+    receipt.write_text(json.dumps(stale), encoding="utf-8")
+    result = _run_with(
+        tmp_path,
+        receipt,
+        {"L9_GOV_REFRESH_ATTEMPT_ID": "this-attempt", "L9_GOV_REFRESH_OUTCOME": "lock-busy"},
+    )
+    blob = result.stdout + result.stderr
+    assert "already applied this SessionStart" not in blob
+    assert "launcher did not establish the tree (lock-busy)" in blob
+    assert "no SessionStart fetch/reset" in blob
+    assert json.loads(receipt.read_text(encoding="utf-8"))["outcome"] == "launcher-lock-busy"
+
+
+def test_a_matching_attempt_whose_fetch_failed_still_runs_the_fallback(tmp_path: Path) -> None:
+    """Same attempt id, but the launcher's own outcome was not `fetched`."""
+    import json
+    import time
+
+    gov = _synthetic_gov(tmp_path, tracked_dirt=False, untracked_dirt=False)
+    sha = _head(gov)
+    receipt = tmp_path / "receipt.json"
+    receipt.write_text(
+        json.dumps(
+            _launcher_receipt(sha, attempt="a1", epoch=int(time.time()), outcome="fetch-failed")
+        ),
+        encoding="utf-8",
+    )
+    result = _run_with(
+        tmp_path,
+        receipt,
+        {"L9_GOV_REFRESH_ATTEMPT_ID": "a1", "L9_GOV_REFRESH_OUTCOME": "fetch-failed"},
+    )
+    assert "already applied this SessionStart" not in result.stdout + result.stderr
+
+
+def test_an_old_receipt_of_the_same_attempt_id_is_not_current(tmp_path: Path) -> None:
+    """Attempt binding plus recency: a receipt hours old is not this SessionStart's."""
+    import json
+    import time
+
+    gov = _synthetic_gov(tmp_path, tracked_dirt=False, untracked_dirt=False)
+    sha = _head(gov)
+    receipt = tmp_path / "receipt.json"
+    receipt.write_text(
+        json.dumps(_launcher_receipt(sha, attempt="a1", epoch=int(time.time()) - 7200)),
+        encoding="utf-8",
+    )
+    result = _run_with(
+        tmp_path, receipt, {"L9_GOV_REFRESH_ATTEMPT_ID": "a1", "L9_GOV_REFRESH_OUTCOME": "fetched"}
+    )
+    assert "already applied this SessionStart" not in result.stdout + result.stderr
+
+
+def test_the_fallback_is_not_suppressed_by_raw_state_parsing() -> None:
+    """The hook must key its skip on the attempt binding, never on `state` alone."""
+    text = body()
+    assert '"attempt_id"' in text
+    assert "L9_GOV_REFRESH_ATTEMPT_ID" in text
+    assert '"state": "\\([^"]*\\)"' not in text, (
+        "reading state-at-write off the receipt is the defect"
+    )
 
 
 def test_cursor_runtime_emits_empty_context(tmp_path: Path) -> None:

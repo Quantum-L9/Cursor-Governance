@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """Kernel hook that fires before pre-commit hooks and tests.
 
-L4 authorize-release requires this receipt. This module stamps and verifies
-tree kernels (Recursive Alignment + Validate & Repair). WIP/, docs/plans/, and
+Not an L4 phase. L4 remains local-commit / no-mid-push / authorize-release,
+and ``authorize-release`` does not require this receipt
+(CANONICAL_LAW KERNEL_PRECOMMIT_HOOK_V1). This module is the only
+velocity-path latch for applying tree kernels (Recursive Alignment +
+Validate & Repair). WIP/, docs/plans/, and
 environment/program-execution/campaigns/ are corpus surfaces owned by
 ``/ff`` (Improve then RA then Validate & Repair) — this hook must not
 L9_AGENT_REQUIRED them. L4 record-kernels is not the corpus apply path.
@@ -10,8 +13,9 @@ L9_AGENT_REQUIRED them. L4 record-kernels is not the corpus apply path.
 ``precommit`` must run first in ``run_pr_precommit.sh`` and fail closed
 before any other hook or test starts, so those checkers fire once.
 
-Cursor and adapter surfaces take this latch. CI / an unknown surface skip
-it because the receipt lives under gitignored ``.l9/``.
+Every local surface takes this latch, including a bare shell: the receipt
+lives under gitignored ``.l9/``, so only unmarked CI skips. A CI job that
+sets a known surface marker (the unit tests) still latches.
 """
 
 from __future__ import annotations
@@ -50,7 +54,7 @@ CORPUS_SKIP_PREFIXES = (
 )
 #: Same prefixes as CORPUS_SKIP_PREFIXES (pipeline-audit surfaces).
 KERNEL_EXEMPT_PREFIXES = CORPUS_SKIP_PREFIXES
-#: Compat alias. Live latch is kernel_latch_surface (known surfaces, not CI).
+#: Compat alias. Live latch is kernel_latch_surface (local + marked CI tests).
 #: Surface ids live in ops/autonomy/surface_detect.py (SSOT).
 ADAPTER_SURFACES = ADAPTER_KERNEL_SURFACES
 #: Executable-plan templates are not Cursor plans. Do not require kernel_pass.
@@ -173,7 +177,23 @@ def _git_head(root: Path) -> str:
     return proc.stdout.strip()
 
 
-def _agent_required_tree(root: Path) -> str:
+def record_command(root: Path, gov: Path) -> str:
+    """A record command that is runnable from a CONSUMER workspace.
+
+    The documented delegated form — ``make -C "$HOME/.cursor-governance" pr
+    WS="$(pwd)"`` — leaves the reader standing in the consumer tree, where
+    ``ops/autonomy/kernel_gate.py`` does not exist and the ambient ``python3``
+    is not the locked governance interpreter. Emit the governance script path
+    and that interpreter explicitly, plus the workspace this receipt belongs
+    to, so the printed line can simply be pasted.
+    """
+    locked = gov / ".venv" / "bin" / "python"
+    interpreter = str(locked) if locked.is_file() else "python3"
+    script = gov / "ops" / "autonomy" / "kernel_gate.py"
+    return f'{interpreter} {script} record --workspace "{root}"'
+
+
+def _agent_required_tree(root: Path, gov: Path) -> str:
     return (
         "=== L9_AGENT_REQUIRED ===\n"
         "ACTION: apply_kernels_then_precommit\n"
@@ -183,10 +203,10 @@ def _agent_required_tree(root: Path) -> str:
         "  1. Apply kernels/Recursive Alignment.md to the finished local tree\n"
         "  2. Apply kernels/Validate & Repair.md independently on the same tree\n"
         "  3. Commit any revisions on this stacked branch (no push)\n"
-        "  4. python3 ops/autonomy/kernel_gate.py record --workspace <this workspace>\n"
-        "  5. python3 ops/autonomy/l4_local.py authorize-release\n"
-        "  6. make pr once. Do not re-run make pr to apply kernels.\n"
-        "Tree kernels are an L4 precondition. authorize-release fail-closes without this receipt.\n"
+        f"  4. {record_command(root, gov)}\n"
+        "  5. Re-run the same command (make precommit-repo / make pr-check / make pr).\n"
+        "     Hooks and tests run once after this hook passes.\n"
+        "Kernels are not an L4 phase. Do not record-kernels / IMPROVE_RECORD to apply them.\n"
         "Do not run pre-commit or pytest first.\n"
         "=== END L9_AGENT_REQUIRED ===\n"
     )
@@ -214,7 +234,7 @@ def verify_tree(root: Path, gov: Path) -> str | None:
     """
     receipt = load_receipt(root)
     if receipt is None or receipt.get("schema") != SCHEMA:
-        return _agent_required_tree(root)
+        return _agent_required_tree(root, gov)
     try:
         current = kernel_shas(gov)
     except RuntimeError as exc:
@@ -223,7 +243,7 @@ def verify_tree(root: Path, gov: Path) -> str | None:
     if not isinstance(recorded, dict) or recorded != current:
         return (
             "FAIL: kernel-receipt kernel_shas do not match the live kernel files.\n"
-            + _agent_required_tree(root)
+            + _agent_required_tree(root, gov)
         )
     return None
 
@@ -273,10 +293,10 @@ def read_changed_file(path: Path | None) -> list[str]:
 
 
 def kernel_latch_required(*, env: Mapping[str, str] | None = None) -> bool:
-    """True on Cursor and adapter runtimes; false for CI / unknown.
+    """True on every local surface; false for unmarked CI.
 
-    CI and a bare shell resolve ``unknown`` and skip, so a missing
-    gitignored kernel receipt cannot fail GitHub Actions.
+    A bare local ``make pr`` must not skip. Unmarked CI skips so a
+    missing gitignored kernel receipt cannot fail GitHub Actions.
 
     Marker resolution is owned by ``ops.autonomy.surface_detect``.
     """
@@ -285,7 +305,7 @@ def kernel_latch_required(*, env: Mapping[str, str] | None = None) -> bool:
 
 def precommit(root: Path, gov: Path, changed_file: Path | None) -> int:
     if not kernel_latch_required():
-        print("OK: kernel hook skipped (CI / unknown surface; local agent surfaces own this latch)")
+        print("OK: kernel hook skipped (CI; local surfaces own this latch)")
         return 0
     changed = read_changed_file(changed_file)
     if changed_are_corpus_only(changed):

@@ -56,6 +56,17 @@ MANAGED_TOP_LEVEL = (
 # each session, which is precisely the drift the launcher exists to prevent.
 CONSUMER_HOOK_FILES = (SESSION_START_NAME,)
 
+# Hook files this reconciler USED to project and no longer does. The desired
+# state was represented only as the positive set above, so a retirement could
+# never converge: a consumer that received `merge_gate_wrap.py` in an earlier
+# session kept it for good — a fail-open duplicate of a gate policy, untracked
+# dirt in every inventory, and one mistaken registration away from restoring
+# the split-policy architecture the retirement removed. Names here are
+# removed from a `.claude/hooks/` install when UNTRACKED (governance put them
+# there); a git-tracked file at the same path is repository content and is
+# reported, never deleted, without explicit migration by the repo's owner.
+RETIRED_CONSUMER_HOOK_FILES = ("merge_gate_wrap.py",)
+
 PRESERVE_USER_KEYS = ("enabledPlugins", "theme", "statusLine", "model")
 
 #: `env` keys another governance component legitimately adds to the USER-scope
@@ -268,11 +279,33 @@ def write_if_changed(path: Path, content: str, *, check: bool, wrote: list[str])
     return drift
 
 
-def sync_hook_file(src: Path, dest: Path, *, check: bool, wrote: list[str]) -> list[str]:
+def sync_hook_file(
+    src: Path,
+    dest: Path,
+    *,
+    check: bool,
+    wrote: list[str],
+    tracked: bool = False,
+    overwrite_tracked: bool = False,
+) -> list[str]:
+    """Converge one hook install onto its governance source.
+
+    `tracked` is the ownership boundary settings already honour
+    (`settings_is_git_tracked`): a git-tracked hook is repository content, so
+    a divergent one is REPORTED as `tracked-hook-drift:<path>` and its bytes
+    are left alone — in apply mode as much as in check mode. The runtime
+    projector used to copy2 over it, which is how a SessionStart erased a
+    branch's in-flight hook edits and made a PR checkout look reset to the
+    SSOT clone. `overwrite_tracked` is the explicit migration switch for a
+    consumer that wants its committed copy re-synced (`--overwrite-tracked-hooks`).
+    An untracked install was injected by governance and still converges.
+    """
     if not src.is_file():
         return [f"missing-hook-source:{src}"]
     if dest.is_file() and dest.read_bytes() == src.read_bytes():
         return []
+    if tracked and not overwrite_tracked:
+        return [f"tracked-hook-drift:{dest}"]
     if check:
         return [str(dest)]
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -281,17 +314,63 @@ def sync_hook_file(src: Path, dest: Path, *, check: bool, wrote: list[str]) -> l
     return []
 
 
+def prune_retired_hooks(
+    hooks_dest: Path,
+    repo: Path,
+    *,
+    check: bool,
+    wrote: list[str],
+    removed: list[str],
+) -> list[str]:
+    """Remove retired governance projections; never a tracked consumer file.
+
+    An untracked file at a retired path is a stale projection and is deleted
+    (check mode reports it as `retired-hook-present:<path>`). A tracked one is
+    repository content and is reported as `retired-hook-tracked:<path>` so the
+    repo's owner can migrate it deliberately.
+    """
+    drift: list[str] = []
+    for name in RETIRED_CONSUMER_HOOK_FILES:
+        dest = hooks_dest / name
+        if not dest.exists() and not dest.is_symlink():
+            continue
+        rel = dest.relative_to(repo) if _is_relative_to(dest, repo) else None
+        if rel is not None and _path_is_git_tracked(repo, rel):
+            drift.append(f"retired-hook-tracked:{dest}")
+            continue
+        if check:
+            drift.append(f"retired-hook-present:{dest}")
+            continue
+        dest.unlink()
+        removed.append(str(dest))
+        wrote.append(str(dest))
+    return drift
+
+
+def _is_relative_to(path: Path, base: Path) -> bool:
+    try:
+        path.relative_to(base)
+    except ValueError:
+        return False
+    return True
+
+
 def reconcile_gov_claude(root: Path, template: dict[str, Any], *, check: bool) -> dict[str, Any]:
     wrote: list[str] = []
     drift: list[str] = []
+    removed: list[str] = []
     gov_settings = root / ".claude" / "settings.json"
     content = dump_json(consumer_settings(template))
     drift.extend(write_if_changed(gov_settings, content, check=check, wrote=wrote))
     hooks_src = root / HOOKS_SRC_REL
     hooks_dest = root / ".claude" / "hooks"
+    # The governance tree's own `.claude/hooks/` is a committed MIRROR of the
+    # hook sources beside it, owned by this reconciler: it always converges,
+    # and CI's `--check` is what catches a mirror that was not regenerated.
     for name in CONSUMER_HOOK_FILES:
         drift.extend(sync_hook_file(hooks_src / name, hooks_dest / name, check=check, wrote=wrote))
-    return {"wrote": wrote, "drift": drift}
+    drift.extend(prune_retired_hooks(hooks_dest, root, check=check, wrote=wrote, removed=removed))
+    return {"wrote": wrote, "drift": drift, "removed": removed}
 
 
 #: Records exactly which top-level keys L9 owns in ~/.claude/settings.json.
@@ -379,14 +458,13 @@ def uninstall_user(*, check: bool) -> dict[str, Any]:
     return {"wrote": wrote, "drift": drift, "removed": removed}
 
 
-def settings_is_git_tracked(workspace: Path) -> bool:
-    """True when the workspace tracks `.claude/settings.json` (repo-owned file).
+def _path_is_git_tracked(workspace: Path, rel: Path | str) -> bool:
+    """True when `workspace` tracks `rel` in git (repo-owned content).
 
     Tracked is the ownership signal, not file presence: a container-injected
-    file is untracked and wholly template-managed, while a tracked file is repo
-    content whose hooks must be composed with — never replaced by — the
-    template (issue #281). A workspace that is not a git repository is
-    untracked by definition.
+    file is untracked and wholly governance-managed, while a tracked file is
+    repo content. A workspace that is not a git repository, or a machine with
+    no git, is untracked by definition — the managed path is the fallback.
     """
     try:
         proc = subprocess.run(
@@ -397,7 +475,7 @@ def settings_is_git_tracked(workspace: Path) -> bool:
                 "ls-files",
                 "--error-unmatch",
                 "--",
-                ".claude/settings.json",
+                str(rel),
             ],
             capture_output=True,
             text=True,
@@ -409,11 +487,32 @@ def settings_is_git_tracked(workspace: Path) -> bool:
     return proc.returncode == 0
 
 
+def settings_is_git_tracked(workspace: Path) -> bool:
+    """True when the workspace tracks `.claude/settings.json` (repo-owned file).
+
+    A tracked settings file is repo content whose hooks must be composed with
+    — never replaced by — the template (issue #281). See `_path_is_git_tracked`.
+    """
+    return _path_is_git_tracked(workspace, ".claude/settings.json")
+
+
+def hook_is_git_tracked(workspace: Path, name: str) -> bool:
+    """True when the workspace tracks `.claude/hooks/<name>` (repo-owned hook)."""
+    return _path_is_git_tracked(workspace, f".claude/hooks/{name}")
+
+
 def reconcile_workspace(
-    root: Path, workspace: Path, template: dict[str, Any], *, check: bool
+    root: Path,
+    workspace: Path,
+    template: dict[str, Any],
+    *,
+    check: bool,
+    overwrite_tracked_hooks: bool = False,
 ) -> dict[str, Any]:
     wrote: list[str] = []
     drift: list[str] = []
+    removed: list[str] = []
+    preserved: list[str] = []
     claude = workspace / ".claude"
     settings_path = claude / "settings.json"
     existing = load_json(settings_path) if settings_path.is_file() else None
@@ -429,8 +528,28 @@ def reconcile_workspace(
     hooks_src = root / HOOKS_SRC_REL
     hooks_dest = claude / "hooks"
     for name in CONSUMER_HOOK_FILES:
-        drift.extend(sync_hook_file(hooks_src / name, hooks_dest / name, check=check, wrote=wrote))
-    return {"wrote": wrote, "drift": drift, "workspace": str(workspace)}
+        hook_tracked = hook_is_git_tracked(workspace, name)
+        hook_drift = sync_hook_file(
+            hooks_src / name,
+            hooks_dest / name,
+            check=check,
+            wrote=wrote,
+            tracked=hook_tracked,
+            overwrite_tracked=overwrite_tracked_hooks,
+        )
+        if any(item.startswith("tracked-hook-drift:") for item in hook_drift):
+            preserved.append(str(hooks_dest / name))
+        drift.extend(hook_drift)
+    drift.extend(
+        prune_retired_hooks(hooks_dest, workspace, check=check, wrote=wrote, removed=removed)
+    )
+    return {
+        "wrote": wrote,
+        "drift": drift,
+        "removed": removed,
+        "preserved_tracked_hooks": preserved,
+        "workspace": str(workspace),
+    }
 
 
 def run(
@@ -440,6 +559,7 @@ def run(
     user: bool,
     gov: bool,
     check: bool,
+    overwrite_tracked_hooks: bool = False,
 ) -> dict[str, Any]:
     template_path = root / TEMPLATE_REL
     if not template_path.is_file():
@@ -474,7 +594,13 @@ def run(
                 "skipped": "workspace-is-governance-root",
             }
         else:
-            ws_result = reconcile_workspace(root, ws_resolved, template, check=check)
+            ws_result = reconcile_workspace(
+                root,
+                ws_resolved,
+                template,
+                check=check,
+                overwrite_tracked_hooks=overwrite_tracked_hooks,
+            )
             results["workspace"] = ws_result
             all_drift.extend(ws_result["drift"])
             all_wrote.extend(ws_result["wrote"])
@@ -503,6 +629,14 @@ def main() -> int:
         action="store_true",
         help="list the workspace files this reconciler writes, one per line",
     )
+    parser.add_argument(
+        "--overwrite-tracked-hooks",
+        action="store_true",
+        help=(
+            "explicit migration: re-sync a git-tracked consumer hook from governance "
+            "(by default a tracked hook is repo-owned, reported as drift, never overwritten)"
+        ),
+    )
     args = parser.parse_args()
 
     if args.print_workspace_artifacts:
@@ -530,6 +664,7 @@ def main() -> int:
             user=not args.skip_user,
             gov=not args.skip_gov,
             check=args.check,
+            overwrite_tracked_hooks=args.overwrite_tracked_hooks,
         )
     except Exception as exc:  # noqa: BLE001
         print(f"ERROR: {exc}", file=sys.stderr)
@@ -551,6 +686,14 @@ def main() -> int:
                 print(f"  {path}")
         else:
             print("CURRENT: Claude settings triad already reconciled")
+        # Apply mode still REPORTS what it deliberately did not write: a
+        # tracked consumer hook that drifted from the SSOT, or a tracked file
+        # at a retired projection path. Silence here would hide the ownership
+        # boundary the reconciler just honoured.
+        if result["drift"]:
+            print("REPORTED (repo-owned, left as is):")
+            for path in result["drift"]:
+                print(f"  {path}")
     return 0 if result.get("ok", True) else 1
 
 

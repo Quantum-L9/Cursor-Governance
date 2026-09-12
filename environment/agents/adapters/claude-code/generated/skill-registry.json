@@ -1,5 +1,5 @@
 {
-  "generation_id": "daff60267c5443507101ba8af11aa90ae4fc51bf73f351a63169269caa428b90",
+  "generation_id": "e40cd4b34cc63a81af10da1ac4cd4828c85028236e541a4d5b836129bec532c7",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -1228,14 +1228,14 @@
     },
     {
       "composition_role": "general",
-      "description": "compile an implementation-ready idea pack into tested code and a birth-ready quantum-l9 repository. use when a mature idea should leave specification and become a real repo via l9-repo-template. do not use for websites, existing-repo changes, or production deployment.",
+      "description": "Compile mature idea packs and locked product specifications into real tested code, exact-state provenance, and repository-factory-qualified birth payloads for new Quantum-L9 products. Use when an idea leaves planning to become a new repository, when a Foundry staging product must be resumed or recompiled, or when a frozen product must be qualified against the live l9-repo-template birth contract. Never authors the birth payload; requires local birth evidence; stops before production deployment.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-idea-foundry",
       "path": "skills/l9-idea-foundry",
       "reason": "compiles idea packs into tested code and l9-repo-template births; repository creation and code realization are high blast radius; disable-model-invocation",
       "skill_md": "skills/l9-idea-foundry/SKILL.md",
-      "skill_sha256": "ad8edd26c317f4ce3dfafde696c9351580dfb07140a9bd1bd222ad799e99093a",
+      "skill_sha256": "bb981c5611b5d5beab795718b52de6bbf274a0dee230eb70fa7a1237d43b9f17",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1378,7 +1378,7 @@
       "path": "skills/l9-plan",
       "reason": "",
       "skill_md": "skills/l9-plan/SKILL.md",
-      "skill_sha256": "bafe5e4cfd4b218f6cc3ba93356eca49c4724125925ed37ec375c40056b5b648",
+      "skill_sha256": "6b0f5c377a6a45eb188cbfaa0b78b9cdd374135e40f1240b4f698496e2b48220",
       "user_invocable": true,
       "when_to_use": "the user asks for /l9-plan, make campaign, a Program Lock, a campaign plan, or a PE+autonomy plan/spec that runs through program-execution; ordinary plans belong to l9-plan-simple"
     },
@@ -1391,7 +1391,7 @@
       "path": "skills/l9-plan-simple",
       "reason": "",
       "skill_md": "skills/l9-plan-simple/SKILL.md",
-      "skill_sha256": "77ef52f58d2bf3130dd73bf74f14dcf18fd5ccad35d0cec1ddb87bb9341a7bc6",
+      "skill_sha256": "60cda8c0868585f58402d0740348f3f68d334efc98fc7fc5f8e13a766bec24e6",
       "user_invocable": true,
       "when_to_use": "an ordinary execution plan or spec is needed, scope is unclear, or Plan mode is on \u2014 rules/23-l9-skill-routing.mdc already routes every ordinary planning deliverable here, so the model must be able to select it"
     },
@@ -1417,7 +1417,7 @@
       "path": "skills/l9-pr-remediation",
       "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked). The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Above-paygrade HUMAN / unfixable required CI / ENVIRONMENT after best-effort opens a GitHub issue and launches l9-issue-remediation via cursor-subagents; do not ask the human to unblock. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
       "skill_md": "skills/l9-pr-remediation/SKILL.md",
-      "skill_sha256": "c61971c53b430dd890eda2346ed0f0c40da45248b0f51548953b92305366876b",
+      "skill_sha256": "50cddd2286a46301e69b0bd503a2cd823c7b560da01ab3d17c135bcd0edcd89e",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1606,5 +1606,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "b71df84c03ba02fa5a638d03749e4bf08c7efcb5354d85fb0fe4928cf31c5587",
-  "source_skill_corpus_sha256": "e2c97303d45a7ebd2a2126995a41cf19a215b472aee9e4ef32c5c85c24dfb7a3"
+  "source_skill_corpus_sha256": "bbdaf38c0864bb9611152117651d318b6ca74576c5dbf23253a007321c0279e3"
 }

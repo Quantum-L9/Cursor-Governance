@@ -432,43 +432,39 @@ commits_behind() {
 if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
   if GOV=$(resolve_governance_dir); then
     GOV_REMOTE="${L9_GOVERNANCE_REMOTE:-https://github.com/Quantum-L9/Cursor-Governance.git}"
-    GOV_BRANCH="${L9_GOVERNANCE_BRANCH:-main}"
-    # The reset below is `checkout -f`, which DISCARDS uncommitted work and moves
-    # HEAD off whatever branch is checked out. That is correct for the ephemeral
-    # cloud clone it is written for, and destructive for anything else. It ran
-    # unguarded, so a governance checkout carrying in-flight work — reachable
-    # here whenever $HOME/.cursor-governance resolves to a working clone rather
-    # than the throwaway one — lost that work silently, HEAD included. The reset
-    # only ever has something to do on a clean clone, so refusing a dirty one
-    # costs the intended path nothing and makes the destructive case impossible.
-    # TRACKED changes only. `checkout -f` discards tracked modifications and
-    # staged content — what this session actually lost — but leaves untracked
-    # files alone, so counting them would refuse a reset that was never
-    # dangerous and strand the ephemeral clone (a fresh one legitimately
-    # carries untracked bootstrap residue).
-    gov_dirty=$(git -C "$GOV" status --porcelain --untracked-files=no 2>/dev/null | head -c 1)
-    if [ -n "$gov_dirty" ]; then
-      local_sha=$(git -C "$GOV" rev-parse --verify --quiet HEAD 2>/dev/null || echo 'unknown')
-      write_refresh_receipt reset-skipped-dirty "$local_sha" unknown -1 stale
-      say "governance refresh: WARN $GOV has uncommitted changes — reset SKIPPED (refusing to discard in-flight work)"
-    elif git -C "$GOV" fetch --depth 1 origin "$GOV_BRANCH" >/dev/null 2>&1; then
-      remote_sha=$(git -C "$GOV" rev-parse --verify --quiet FETCH_HEAD 2>/dev/null || echo 'unknown')
-      if git -C "$GOV" checkout -f -B "$GOV_BRANCH" "origin/$GOV_BRANCH" >/dev/null 2>&1; then
-        local_sha=$(git -C "$GOV" rev-parse --verify --quiet HEAD 2>/dev/null || echo 'unknown')
-        write_refresh_receipt fetched "$local_sha" "$remote_sha" \
-          "$(commits_behind "$GOV" HEAD FETCH_HEAD)" fresh
-        say "governance refresh: cloud session — reset ephemeral clone to origin/$GOV_BRANCH"
-      else
-        local_sha=$(git -C "$GOV" rev-parse --verify --quiet HEAD 2>/dev/null || echo 'unknown')
-        write_refresh_receipt reset-failed "$local_sha" "$remote_sha" \
-          "$(commits_behind "$GOV" HEAD FETCH_HEAD)" stale
-        say "governance refresh: WARN reset to origin/$GOV_BRANCH failed — reusing clone"
-      fi
+    GOV_BRANCH="main"
+    # The launcher (l9_hook_exec.sh) is the sole refresh authority. Hosted
+    # origin/main is the only executable tip. This hook never independently
+    # fetches or resets: an untrusted origin, a refused refresh, or a missed
+    # launcher attempt must not fall into a second fetch/checkout brain.
+    _refresh_head=$(git -C "$GOV" rev-parse --verify --quiet HEAD 2>/dev/null || echo '')
+    _refresh_sha=""
+    _refresh_attempt=""
+    _refresh_outcome=""
+    _refresh_epoch=""
+    _refresh_recent=0
+    if [ -n "${L9_GOV_REFRESH_ATTEMPT_ID:-}" ] && [ -f "$CLOUD_REFRESH_RECEIPT" ]; then
+      _refresh_sha=$(sed -n 's/.*"local_sha": "\([^"]*\)".*/\1/p' "$CLOUD_REFRESH_RECEIPT" | head -n 1)
+      _refresh_attempt=$(sed -n 's/.*"attempt_id": "\([^"]*\)".*/\1/p' "$CLOUD_REFRESH_RECEIPT" | head -n 1)
+      _refresh_outcome=$(sed -n 's/.*"outcome": "\([^"]*\)".*/\1/p' "$CLOUD_REFRESH_RECEIPT" | head -n 1)
+      _refresh_epoch=$(sed -n 's/.*"refreshed_epoch": \([0-9][0-9]*\).*/\1/p' "$CLOUD_REFRESH_RECEIPT" | head -n 1)
+    fi
+    case "$_refresh_epoch" in
+      ''|*[!0-9]*) : ;;
+      *) [ "$_refresh_epoch" -ge $((_L9_HOOK_START - ${L9_GOV_REFRESH_ATTEMPT_WINDOW:-300})) ] && _refresh_recent=1 ;;
+    esac
+    if [ -n "$_refresh_attempt" ] && [ "$_refresh_attempt" = "${L9_GOV_REFRESH_ATTEMPT_ID:-}" ] \
+       && [ "$_refresh_outcome" = "fetched" ] && [ "$_refresh_recent" = 1 ] \
+       && [ -n "$_refresh_sha" ] && [ "$_refresh_sha" = "$_refresh_head" ]; then
+      say "governance refresh: already applied this SessionStart (launcher attempt $_refresh_attempt)"
     else
-      local_sha=$(git -C "$GOV" rev-parse --verify --quiet HEAD 2>/dev/null || echo 'unknown')
-      # The fetch failed, so origin is genuinely unknown — not "equal to local".
-      write_refresh_receipt fetch-failed "$local_sha" unknown -1 unknown
-      say "governance refresh: WARN fetch origin/$GOV_BRANCH failed — reusing clone (may be stale)"
+    local_sha=$(git -C "$GOV" rev-parse --verify --quiet HEAD 2>/dev/null || echo 'unknown')
+    if [ -n "${L9_GOV_REFRESH_OUTCOME:-}" ]; then
+      write_refresh_receipt "launcher-${L9_GOV_REFRESH_OUTCOME}" "$local_sha" unknown -1 stale
+      say "governance refresh: launcher did not establish the tree (${L9_GOV_REFRESH_OUTCOME}) — no SessionStart fetch/reset (one refresh authority)"
+    else
+      write_refresh_receipt launcher-absent "$local_sha" unknown -1 stale
+      say "governance refresh: no launcher attempt bound — not independently fetching origin/main"
     fi
     # Dependency provisioning is NOT run from here. It was, and it is why this
     # hook never finished: `session_deps_cloud.sh` blocks for its own 20 s
@@ -480,6 +476,7 @@ if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
     # its own timeout, and costs this hook nothing instead of costing it
     # everything. See ADR/audit note in SESSION_START_SPEC.md.
     :
+    fi
   fi
 fi
 
@@ -568,6 +565,11 @@ if GOV=$(resolve_governance_dir); then
   # merge-patched, rules mount retargeted, stale managed projections removed.
   # The engine writes ~/.l9/claude/projection-receipt.json. Fail-open: a
   # projection failure degrades to a WARN line, never blocks the session.
+  if [ -f "$GOV/ops/scripts/lib/bind_memory_interpreter.sh" ]; then
+    # shellcheck source=/dev/null
+    . "$GOV/ops/scripts/lib/bind_memory_interpreter.sh"
+    bind_l9_memory_interpreter "$PY" "$GOV"
+  fi
   PROJECTION_ENGINE="$GOV/ops/scripts/claude_projection.py"
   if [ "${L9_SKIP_SESSION_PROJECTION:-}" != "1" ] \
      && [ -f "$PROJECTION_ENGINE" ] && command -v "$PY" >/dev/null 2>&1; then
@@ -687,13 +689,80 @@ emit_bootstrap_status() {
   # only thing that re-arms it. That is what makes this converge instead of
   # re-running every session. Fail-open throughout — a repair that cannot run
   # degrades the session, it never blocks it.
-  local state revision marker installer
-  state="$("$py" "$reader" --read --json 2>/dev/null \
-    | "$py" -c 'import json,sys
+  #
+  # The verdict is read alongside the state, from the same single reader run.
+  # `degraded` on its own does not say whether a re-run can help: the reader
+  # defines it as severity ("an optional component is unavailable"), and the
+  # installer emits it for a projection engine that failed, an `.mcp.json` that
+  # drifted, a memory plane that did not answer, a structural validation that
+  # failed, and a `claude` CLI that was absent — every one of which a later
+  # idempotent run genuinely converges. Declining on the state token alone
+  # therefore removed auto-heal from the whole class, not from the futile part
+  # of it.
+  #
+  # What IS futile is a cause that is an INPUT to the installer run rather than
+  # a state it converges: the re-run this hook would launch inherits the same
+  # environment and reaches the identical verdict by construction. Those are
+  # named below, each with the switch that produces it, and each is confirmed
+  # against this hook's own environment rather than matched on prose.
+  local state repair_verdict repair_detail revision marker installer verdict_block
+  state=""; repair_verdict="arm"; repair_detail=""
+  verdict_block="$("$py" "$reader" --read --json 2>/dev/null \
+    | "$py" -c 'import json, os, sys
+
+# reason recorded by install.sh -> the environment switch that produced it.
+# A cause is only non-remediable while its switch is still set HERE, because
+# that is the environment the repair would re-run under.
+FUTILE_CAUSES = {
+    "shared bootstrap skipped by request": "L9_SKIP_SHARED_BOOTSTRAP",
+}
+OFF = {"", "0", "false", "no"}
+
+
+def emit(state: str, verdict: str, detail: str) -> None:
+    print(state)
+    print(verdict)
+    print(detail[:240])
+
+
 try:
-    print(json.load(sys.stdin).get("state", ""))
+    receipt = json.load(sys.stdin)
 except Exception:
-    print("")' 2>/dev/null || true)"
+    emit("", "arm", "")
+    raise SystemExit(0)
+
+state = str(receipt.get("state") or "")
+if state != "degraded":
+    emit(state, "arm", "")
+    raise SystemExit(0)
+
+components = receipt.get("components") or {}
+reasons = receipt.get("reasons") or {}
+degraded = [k for k, v in components.items() if str(v).upper() == "DEGRADED"]
+if not degraded:
+    # The verdict is degraded but no component owns it, so no cause is proven
+    # non-remediable. Arm: an unproven cause is not a futile one.
+    emit(state, "arm", "cause not recorded in the receipt")
+    raise SystemExit(0)
+
+futile = []
+for key in degraded:
+    switch = FUTILE_CAUSES.get(str(reasons.get(key) or "").strip())
+    if not switch or os.environ.get(switch, "").strip().lower() in OFF:
+        named = []
+        for other in degraded:
+            why = str(reasons.get(other) or "").strip() or "reason not recorded"
+            named.append(other + ": " + why)
+        emit(state, "arm", ", ".join(named))
+        raise SystemExit(0)
+    futile.append(key + " (" + switch + " set)")
+
+emit(state, "decline", ", ".join(futile))' 2>/dev/null || true)"
+  { IFS= read -r state || true
+    IFS= read -r repair_verdict || true
+    IFS= read -r repair_detail || true
+  } <<< "$verdict_block"
+  : "${state:=}"; : "${repair_verdict:=arm}"; : "${repair_detail:=}"
   revision="$(git -C "$GOV" rev-parse HEAD 2>/dev/null || echo unknown)"
   marker="$HOME/.l9/claude/bootstrap-repair-${revision}.attempted"
   installer="$GOV/environment/agents/adapters/claude-code/install.sh"
@@ -735,9 +804,35 @@ except Exception:
     [ -n "$refresh" ] && say "$refresh"
   fi
 
+  # Arming is by REPAIRABILITY, not by state token. `never_ran` (no
+  # bookkeeping), `failed` (died at a stage), `blocked` (a required component
+  # unwired) and `unknown` (an expired receipt or a superseded revision, which
+  # is what carries auto-heal after an environment change) all arm outright.
+  # `degraded` arms too, unless the classifier above proved every degraded
+  # component's cause is one this hook's own environment reproduces.
+  local arm_repair=0
   case "$state" in
     ready|"") : ;;
-    *)
+    degraded)
+      if [ "$repair_verdict" = "decline" ]; then
+        # Declined without an attempt marker: nothing was attempted, and the
+        # next session re-decides from a fresh receipt rather than inheriting
+        # a marker that would outlive the switch that caused this.
+        say "bootstrap repair: NOT ARMED — the degraded cause is an input to the installer"
+        say "bootstrap repair:   run, not a state it converges, so the re-run this hook would"
+        say "bootstrap repair:   launch inherits it: ${repair_detail}"
+        say "bootstrap repair:   clear that switch and run 'make claude-install' to repair"
+      else
+        # The cause is named where arming has an effect (below), not here: the
+        # per-revision marker silences an already-attempted revision, and a line
+        # on every session after it is the noise that marker exists to stop.
+        arm_repair=1
+      fi
+      ;;
+    *) arm_repair=1 ;;
+  esac
+
+  if [ "$arm_repair" = "1" ]; then
       if [ ! -f "$marker" ] && [ -f "$installer" ]; then
         mkdir -p "$HOME/.l9/claude"
         # Clamp to what is LEFT of this hook's budget. A fixed 90 s ceiling
@@ -761,6 +856,10 @@ except Exception:
           printf '%s attempted state=%s\n' \
             "$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)" "$state" >"$marker"
           say "bootstrap repair: receipt was '$state' at ${revision:0:8} — running the installer once (${_repair_cap}s)"
+          # For `degraded` this names the component and reason the classifier
+          # judged repairable, so the decision is auditable from the context
+          # blob alone rather than only from the receipt beside it.
+          [ -n "$repair_detail" ] && say "bootstrap repair:   repairable cause: ${repair_detail}"
           if run_with_timeout "$_repair_cap" \
             env L9_BOOTSTRAP_LOG_PATH="$HOME/.l9/claude/bootstrap-repair-${revision}.log" \
             bash "$installer" \
@@ -774,8 +873,7 @@ except Exception:
           fi
         fi
       fi
-      ;;
-  esac
+  fi
 }
 
 # --- Account-field drift (WS-4.1) -------------------------------------------

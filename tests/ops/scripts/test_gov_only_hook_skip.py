@@ -30,10 +30,25 @@ import os
 import subprocess
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPTS = ROOT / "ops" / "scripts"
 
 GOV_ONLY_HOOK = "gh-package-deps-preflight"
+
+#: hook id -> the governance-tree script its `entry:` resolves against.
+#: `max-velocity` is the harder case: no `files:` guard and
+#: `pass_filenames: false`, so it fires on every consumer `make pr` rather than
+#: only on a matching path.
+GOV_ONLY_HOOKS = {
+    "gh-package-deps-preflight": "ops/scripts/validate_gh_package_deps.py",
+    "max-velocity": "ops/scripts/validate_max_velocity.py",
+}
+
+#: A hook whose entry is NOT a governance-tree path. It must keep running in a
+#: consumer, otherwise the skip has quietly become "gate nothing".
+CONSUMER_APPLICABLE_HOOK = "check-merge-conflict"
 
 
 def git_in(repo: Path, *args: str) -> None:
@@ -92,23 +107,48 @@ def _effective_skips(tmp_path: Path, workspace: Path) -> list[str]:
     ]
 
 
-def test_hook_is_skipped_in_a_consumer_workspace(tmp_path: Path) -> None:
+@pytest.mark.parametrize("hook", sorted(GOV_ONLY_HOOKS))
+def test_hook_is_skipped_in_a_consumer_workspace(tmp_path: Path, hook: str) -> None:
     """The regression. Without this the hook runs and dies on a missing file."""
-    assert GOV_ONLY_HOOK in _effective_skips(tmp_path, _consumer_repo(tmp_path))
+    assert hook in _effective_skips(tmp_path, _consumer_repo(tmp_path))
 
 
-def test_hook_still_runs_in_the_governance_workspace(tmp_path: Path) -> None:
+@pytest.mark.parametrize("hook", sorted(GOV_ONLY_HOOKS))
+def test_hook_still_runs_in_the_governance_workspace(tmp_path: Path, hook: str) -> None:
     """A skip everywhere would be a deleted check. Here the entry resolves."""
-    assert GOV_ONLY_HOOK not in _effective_skips(tmp_path, ROOT)
+    assert hook not in _effective_skips(tmp_path, ROOT)
 
 
-def test_the_hook_entry_is_a_governance_tree_path() -> None:
+def test_a_consumer_applicable_hook_is_not_skipped(tmp_path: Path) -> None:
+    """The skip is narrow. Widening it into "gate nothing" fails here.
+
+    `check-merge-conflict` has no governance-tree entry, so it can and must
+    still run against a consumer workspace.
+    """
+    assert CONSUMER_APPLICABLE_HOOK not in _effective_skips(tmp_path, _consumer_repo(tmp_path))
+
+
+@pytest.mark.parametrize(("hook", "entry"), sorted(GOV_ONLY_HOOKS.items()))
+def test_the_hook_entry_is_a_governance_tree_path(hook: str, entry: str) -> None:
     """Why the skip is needed, asserted rather than asserted-in-a-comment.
 
-    If the entry ever becomes absolute or otherwise workspace-independent, the
-    skip is dead weight and this test says so by failing.
+    If an entry ever becomes absolute or otherwise workspace-independent, the
+    skip is dead weight for that hook and this test says so by failing.
     """
     config = (ROOT / ".pre-commit-config.yaml").read_text(encoding="utf-8")
-    assert f"- id: {GOV_ONLY_HOOK}" in config
-    assert "entry: python3 ops/scripts/validate_gh_package_deps.py" in config
-    assert (ROOT / "ops" / "scripts" / "validate_gh_package_deps.py").is_file()
+    assert f"- id: {hook}" in config
+    assert f"entry: python3 {entry}" in config
+    assert (ROOT / entry).is_file()
+
+
+def test_max_velocity_has_no_files_guard() -> None:
+    """`max-velocity` fires on every consumer publish, which is why it is listed.
+
+    A `files:` guard would not make the skip unnecessary (the entry path still
+    could not resolve), but its absence is why this one broke the documented
+    consumer path on *any* nonempty change rather than only a matching one.
+    """
+    config = (ROOT / ".pre-commit-config.yaml").read_text(encoding="utf-8")
+    block = config.split("- id: max-velocity", 1)[1].split("- id: ", 1)[0]
+    assert "pass_filenames: false" in block
+    assert "files:" not in block

@@ -9,6 +9,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "ops" / "scripts"))
@@ -690,6 +691,36 @@ class PortableTimeoutTests(unittest.TestCase):
             timeout=15,
         )
         self.assertEqual(proc.returncode, 124, proc.stderr)
+
+
+class MemoryProbeFaultTests(unittest.TestCase):
+    """An expected probe fault is evidence with a reason; an unexpected one surfaces."""
+
+    def test_expected_fault_becomes_structured_proof(self) -> None:
+        with mock.patch(
+            "ops.memory.runtime_binding.resolve_runtime_binding",
+            side_effect=RuntimeError("manifest unreadable"),
+        ):
+            proof = report.probe_memory_binding()
+        self.assertIsNotNone(proof)
+        assert proof is not None
+        self.assertTrue(report.proof_is_live(proof))
+        self.assertFalse(proof["ok"])
+        self.assertEqual(proof["binding_status"], "probe-error")
+        self.assertEqual(proof["reasons"], ["RuntimeError: manifest unreadable"])
+        line = report.classify_memory_proof(proof)
+        self.assertEqual(line["class"], report.DEGRADED)
+        self.assertIn("manifest unreadable", line["summary"])
+
+    def test_unexpected_exception_is_not_swallowed(self) -> None:
+        with (
+            mock.patch(
+                "ops.memory.runtime_binding.resolve_runtime_binding",
+                side_effect=ZeroDivisionError("defect in binding code"),
+            ),
+            self.assertRaises(ZeroDivisionError),
+        ):
+            report.probe_memory_binding()
 
 
 if __name__ == "__main__":

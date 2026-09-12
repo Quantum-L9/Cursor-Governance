@@ -425,7 +425,7 @@ class SelfImposedDeadlineTest(unittest.TestCase):
 class RepairBudgetTest(unittest.TestCase):
     """The repair is sized by what is LEFT, and records that it was attempted."""
 
-    def _fake_governance(self, tmp: Path, *, installer_body: str) -> Path:
+    def _fake_governance(self, tmp: Path, *, installer_body: str, state: str = "blocked") -> Path:
         gov = tmp / "home" / ".cursor-governance"
         (gov / "ops" / "scripts" / "lib").mkdir(parents=True)
         (gov / "environment" / "agents" / "adapters" / "claude-code").mkdir(parents=True)
@@ -433,15 +433,21 @@ class RepairBudgetTest(unittest.TestCase):
         (gov / "ops" / "scripts" / "lib" / "run_with_timeout.sh").write_text(
             RUN_WITH_TIMEOUT.read_text(encoding="utf-8"), encoding="utf-8"
         )
-        # Reader stub: reports a non-ready receipt, which is what arms the repair.
+        # Reader stub. `blocked` is the default because these tests are about
+        # the repair's BUDGET and its marker, and they need a state that arms
+        # it: `blocked` is "a required component could not be wired", which a
+        # re-run can genuinely move. `degraded` deliberately no longer arms —
+        # see test_a_degraded_receipt_does_not_re_run_the_installer below — so
+        # using it here would have made these two tests assert the budget
+        # behaviour of a repair that never starts.
         (gov / "ops" / "scripts" / "claude_bootstrap_receipt.py").write_text(
             textwrap.dedent(
-                """
+                f"""
                 import sys
                 if "--json" in sys.argv:
-                    print('{"state": "degraded"}')
+                    print('{{"state": "{state}"}}')
                 else:
-                    print("claude bootstrap: degraded — stub")
+                    print("claude bootstrap: {state} — stub")
                 """
             ).strip()
             + "\n",
@@ -507,6 +513,86 @@ class RepairBudgetTest(unittest.TestCase):
             body = markers[0].read_text(encoding="utf-8")
             self.assertIn("attempted", body)
             self.assertIn("failed rc=", body, "the outcome is recorded alongside the attempt")
+
+    def test_a_degraded_receipt_does_not_re_run_the_installer(self) -> None:
+        """`degraded` is the one non-ready state a re-run cannot move.
+
+        The reader's ladder returns `unknown` first for a receipt that covers
+        another workspace, has no parseable stamp, outlived its TTL, or was
+        produced against a superseded governance revision. So `degraded`
+        reaching the hook already proves the receipt describes this workspace,
+        is inside its TTL, and was written by an installer run against the live
+        revision — and `degraded` there means "an optional component is
+        unavailable", which no re-run inside a 30 s hook can supply.
+
+        Measured before this changed: provisioning wrote the receipt, the hook
+        read it seconds later and spent 7 s of its budget reaching the same
+        verdict. On a hosted surface the clone and ~/.l9 are fresh every
+        session, so the per-revision marker bounded that to once per session.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._fake_governance(
+                root,
+                installer_body="#!/usr/bin/env bash\necho 'installer ran' >&2\nexit 0\n",
+                state="degraded",
+            )
+            env = _base_env(root / "home")
+            env["L9_SESSION_START_BUDGET"] = "120"  # ample: nothing but state declines it
+            proc = subprocess.run(
+                ["bash", str(HOOK)],
+                capture_output=True,
+                text=True,
+                env=env,
+                cwd=tmp,
+                timeout=120,
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 0)
+            context = _context(proc.stdout)
+            self.assertIn("bootstrap repair: NOT ARMED", context)
+            self.assertNotIn("running the installer once", context)
+            self.assertNotIn("bootstrap repair: DEFERRED", context)
+            # The remediation still reaches the operator, so this is a decline,
+            # not a silence.
+            self.assertIn("make claude-install", context)
+            # No attempt marker: nothing was attempted.
+            markers = list((root / "home" / ".l9" / "claude").glob("*.attempted"))
+            self.assertEqual(markers, [], "a declined repair must not record an attempt")
+
+    def test_states_a_re_run_can_move_still_arm(self) -> None:
+        """Narrowing `degraded` must not disarm the states that need the repair.
+
+        `unknown` is the one that carries auto-heal: an expired receipt and a
+        superseded governance revision both become `unknown` in the reader, so
+        an environment fixed since the last run is still picked up.
+        """
+        for state in ("never_ran", "failed", "blocked", "unknown"):
+            with self.subTest(state=state), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                self._fake_governance(
+                    root,
+                    installer_body="#!/usr/bin/env bash\nexit 0\n",
+                    state=state,
+                )
+                env = _base_env(root / "home")
+                env["L9_SESSION_START_BUDGET"] = "120"
+                proc = subprocess.run(
+                    ["bash", str(HOOK)],
+                    capture_output=True,
+                    text=True,
+                    env=env,
+                    cwd=tmp,
+                    timeout=120,
+                    check=False,
+                )
+                self.assertEqual(proc.returncode, 0)
+                context = _context(proc.stdout)
+                self.assertIn(
+                    "running the installer once",
+                    context,
+                    f"{state} must still arm the repair",
+                )
 
 
 class BudgetRegistrationLockstepTest(unittest.TestCase):

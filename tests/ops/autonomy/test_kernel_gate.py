@@ -113,13 +113,23 @@ def test_cursor_surface_requires_tree_latch(
     assert gate.precommit(stacked_repo, ROOT, None) == 2
 
 
-def test_unset_surface_skips_tree_latch(
+def test_ci_unknown_skips_tree_latch(stacked_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("L9_GOVERNANCE_SURFACE", raising=False)
+    monkeypatch.delenv("CURSOR_AGENT", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    gate = _gate()
+    assert gate.precommit(stacked_repo, ROOT, None) == 0
+
+
+def test_bare_local_surface_requires_tree_latch(
     stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv("L9_GOVERNANCE_SURFACE", raising=False)
     monkeypatch.delenv("CURSOR_AGENT", raising=False)
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    monkeypatch.delenv("CI", raising=False)
     gate = _gate()
-    assert gate.precommit(stacked_repo, ROOT, None) == 0
+    assert gate.precommit(stacked_repo, ROOT, None) == 2
 
 
 def test_authorize_release_without_record_kernels(
@@ -133,8 +143,15 @@ def test_authorize_release_without_record_kernels(
     from l4_local import authorize_release, begin, release_allows_remote
 
     monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    monkeypatch.delenv("CI", raising=False)
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+    monkeypatch.setenv("CURSOR_AGENT", "1")
     begin(stacked_repo, contract_id="no-kernels")
+    # CANONICAL_LAW KERNEL_PRECOMMIT_HOOK_V1: post-finish kernels are not an
+    # L4 phase and authorize-release does not require a kernel stamp. The one
+    # mechanical latch is kernel_gate.precommit, asserted by the surface tests
+    # above. A stamp requirement here would be a second, unauthorized gate.
     receipt = authorize_release(stacked_repo)
     assert receipt["phase"] == "release_authorized"
     allowed, reason = release_allows_remote(stacked_repo)
@@ -155,11 +172,12 @@ def test_cursor_surface_requires_receipt_on_code_change(
     assert gate.precommit(stacked_repo, ROOT, changed) == 2
 
 
-def test_unset_surface_skips_tree_latch_without_receipt(
+def test_ci_unknown_skips_tree_latch_without_receipt(
     stacked_repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv("L9_GOVERNANCE_SURFACE", raising=False)
     monkeypatch.delenv("CURSOR_AGENT", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
     gate = _gate()
     code = stacked_repo / "ops" / "foo.py"
     code.parent.mkdir(parents=True)
@@ -167,7 +185,8 @@ def test_unset_surface_skips_tree_latch_without_receipt(
     changed = tmp_path / "changed.txt"
     changed.write_text("ops/foo.py\n")
     assert gate.precommit(stacked_repo, ROOT, changed) == 0
-    assert gate.adapter_tree_kernels_required({}) is False
+    assert gate.adapter_tree_kernels_required({"GITHUB_ACTIONS": "true"}) is False
+    assert gate.adapter_tree_kernels_required({}) is True
     assert gate.adapter_tree_kernels_required({"L9_GOVERNANCE_SURFACE": "claude-code"}) is True
 
 
@@ -185,3 +204,80 @@ def test_cursor_requires_tree_receipt_before_pass(
     assert gate.precommit(stacked_repo, ROOT, changed) == 2
     gate.record(stacked_repo, gov=ROOT)
     assert gate.precommit(stacked_repo, ROOT, changed) == 0
+
+
+def test_authorize_release_is_not_gated_by_the_kernel_receipt(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The canonical boundary, asserted from the other direction.
+
+    A precommit latch that is failing on this very tree must still not block
+    L4 authorization: they are different gates with different owners
+    (CANONICAL_LAW KERNEL_PRECOMMIT_HOOK_V1).
+    """
+    import sys
+
+    autonomy = str(ROOT / "ops" / "autonomy")
+    if autonomy not in sys.path:
+        sys.path.insert(0, autonomy)
+    from l4_local import authorize_release, begin
+
+    monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    monkeypatch.delenv("CI", raising=False)
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+
+    gate = _gate()
+    # Precommit is red on this tree: no receipt at all.
+    assert gate.precommit(stacked_repo, ROOT, None) == 2
+    # L4 authorization is nonetheless available.
+    begin(stacked_repo, contract_id="boundary")
+    assert authorize_release(stacked_repo)["phase"] == "release_authorized"
+
+
+def test_corpus_only_change_needs_no_kernel_receipt(stacked_repo: Path, tmp_path: Path) -> None:
+    """The /ff corpus lifecycle must not require a tree receipt.
+
+    WIP/, docs/plans/ and PE campaigns are owned by /ff (Improve then RA then
+    Validate & Repair). Requiring a stamp here would break the documented
+    corpus publish flow.
+    """
+    gate = _gate()
+    changed = tmp_path / "corpus.txt"
+    changed.write_text("docs/plans/some.plan.md\nWIP/notes.md\n", encoding="utf-8")
+    assert gate.precommit(stacked_repo, ROOT, changed) == 0
+
+
+def test_record_command_is_runnable_from_a_consumer_workspace(tmp_path: Path) -> None:
+    """Remediation guidance must not assume the consumer has governance's ops/.
+
+    The documented delegated form leaves the reader in the consumer tree,
+    where `ops/autonomy/kernel_gate.py` does not exist.
+    """
+    gate = _gate()
+    consumer = tmp_path / "consumer"
+    (consumer / "src").mkdir(parents=True)
+    text = gate._agent_required_tree(consumer, ROOT)
+
+    line = next(ln for ln in text.splitlines() if "kernel_gate.py record" in ln)
+    # The script is named in the GOVERNANCE checkout, not relative to cwd.
+    assert str(ROOT / "ops" / "autonomy" / "kernel_gate.py") in line
+    assert "  4. python3 ops/autonomy/kernel_gate.py record" not in text
+    # The target workspace is explicit, so it works from anywhere.
+    assert f'--workspace "{consumer}"' in line
+    # And the interpreter is the locked governance one when present.
+    command = gate.record_command(consumer, ROOT)
+    locked = ROOT / ".venv" / "bin" / "python"
+    if locked.is_file():
+        assert command.startswith(str(locked))
+    assert command in line
+    # No consumer-relative path is offered anywhere in the guidance.
+    assert str(consumer / "ops" / "autonomy") not in text
+
+
+def test_guidance_does_not_claim_kernels_gate_l4() -> None:
+    """Nothing printed by this hook may teach the superseded L4 coupling."""
+    gate = _gate()
+    text = gate._agent_required_tree(Path("/ws"), ROOT)
+    assert "Kernels are not an L4 phase." in text
+    assert "authorize-release" not in text

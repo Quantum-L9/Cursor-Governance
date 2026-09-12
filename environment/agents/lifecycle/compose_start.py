@@ -281,15 +281,20 @@ def _host_native_is_mutation(subagent_type: str) -> bool:
 
 
 def _workspace_head(workspace: str) -> str | None:
+    """Prefer recorded base_sha at callers. A hung or missing git must fail soft."""
     root = Path(workspace).expanduser() if workspace else None
     if root is None or not root.exists():
         return None
-    proc = subprocess.run(
-        ["git", "-C", str(root), "rev-parse", "HEAD"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
     sha = (proc.stdout or "").strip()
     return sha or None
 
