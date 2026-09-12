@@ -1,15 +1,3 @@
-<!-- L9_META
-l9_schema: 1
-parent: l9-idea-foundry
-layer: reference
-role: composition
-tags: [foundry, harvest, plan-simple, repo-template]
-owner: igor_beylin
-status: active
-version: 1.0.0
-updated: 2026-09-02
-/L9_META -->
-
 # Foundry capability composition
 
 Foundry is an orchestrator and product-realization owner. Compose existing L9 semantic owners instead of copying them.
@@ -153,16 +141,21 @@ Foundry may record equivalent lightweight answers only when GAR is not active. I
 
 ## l9-repo-template boundary
 
-The template owns birth. Foundry supplies an authoritative product payload and evidence. The template decides how that payload becomes a governed repository.
+The template owns birth. Foundry supplies a clean committed product repository plus Foundry evidence; the template decides whether that source is an authoritative or additive payload and compiles `l9.birth-payload/v1` itself.
+
+Foundry **must not author the birth manifest**. Its handoff is qualified only after the current factory compiler accepts the exact frozen source and a factory qualification receipt binds both source and factory revisions.
 
 Never duplicate:
 
+- `l9.birth-payload/v1` authorship or validation semantics
 - birth state machine
 - payload ownership rules
 - org birth profile application
 - provenance stamping
 - CI enrollment logic
 - remote attestation
+
+A factory revision or payload-contract change invalidates factory qualification, not stable upstream idea authority. Reprobe and recompile at the factory seam.
 
 ## Upstream-first rule
 

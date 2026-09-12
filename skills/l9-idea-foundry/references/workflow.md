@@ -1,15 +1,3 @@
-<!-- L9_META
-l9_schema: 1
-parent: l9-idea-foundry
-layer: reference
-role: workflow
-tags: [foundry, resume, recompile]
-owner: igor_beylin
-status: active
-version: 1.0.0
-updated: 2026-09-02
-/L9_META -->
-
 # Foundry workflow and recovery routing
 
 ## Contents
@@ -39,7 +27,9 @@ INTAKE
   -> LOCAL_VALIDATION
   -> FOUNDRY_INDEX
   -> PAYLOAD_FREEZE
-  -> BIRTH_PAYLOAD_COMPILE
+  -> FACTORY_CONTRACT_PROBE
+  -> FACTORY_PAYLOAD_COMPILE
+  -> BIRTH_READY
   -> LOCAL_BIRTH
   -> OPTIONAL_REMOTE_BIRTH
   -> STOP
@@ -61,7 +51,8 @@ Route failures to the earliest invalid layer instead of patching downstream symp
 | Tests weak, stale, or non-discriminating | LOCAL_VALIDATION |
 | Generated index differs from indexed artifacts | FOUNDRY_INDEX |
 | Staging tree differs from external freeze receipt | PAYLOAD_FREEZE |
-| Birth payload contract mismatch | BIRTH_PAYLOAD_COMPILE |
+| Factory architecture/ownership/schema/compiler drift | FACTORY_CONTRACT_PROBE |
+| Factory refuses authoritative compilation or source binding differs | FACTORY_PAYLOAD_COMPILE |
 | Template/chassis/org local gate failure | LOCAL_BIRTH or template owner |
 | Remote org attestation/enrollment failure | preserve template-observed remote state |
 
@@ -105,6 +96,14 @@ Choose depth from locked idea scope:
 - **MVP compile:** only when MVP scope is explicitly locked and requested.
 
 A roadmap is not permission to implement the roadmap.
+
+## Factory qualification rule
+
+Foundry does not author the birth payload contract. After freeze, probe the current canonical factory and invoke its own compiler against the exact clean staging repository. `BIRTH_READY` requires `FACTORY_COMPILE_PASS` for the same source HEAD/tree bound by the Foundry freeze receipt.
+
+Treat factory qualification as its own invalidation layer. Product code can remain valid when the factory changes; re-run only the probe/compile/local-birth evidence that depends on the changed factory. Conversely, any tracked product mutation invalidates freeze and every later qualification.
+
+Local no-remote birth is the last pre-publication acceptance test. Do not remote-create a repository after compiler qualification alone.
 
 ## Incremental resume and recompile
 

@@ -365,10 +365,21 @@ fi
 # --- 3) SessionStart secrets plane ------------------------------------------
 # One owner. The capability broker stays retired. Values are never exported.
 # This is not a Makefile ceremony (no secrets-bind / secrets-aws-preflight).
+# Prefer the workspace script so a two-clone checkout is not bound to a stale
+# SSOT plane. Receipt path is required --receipt-out (cwd may be $GOV_DIR).
 log "SessionStart secrets plane"
-if [ -f "$GOV_DIR/ops/secrets/session_start_secrets.py" ]; then
+SECRETS_RECEIPT="$WORKSPACE/.l9/session/secrets-plane.json"
+rm -f "$SECRETS_RECEIPT"
+SECRETS_PY=""
+if [ -f "$WORKSPACE/ops/secrets/session_start_secrets.py" ]; then
+  SECRETS_PY="$WORKSPACE/ops/secrets/session_start_secrets.py"
+elif [ -f "$GOV_DIR/ops/secrets/session_start_secrets.py" ]; then
+  SECRETS_PY="$GOV_DIR/ops/secrets/session_start_secrets.py"
+fi
+if [ -n "$SECRETS_PY" ]; then
   say "secrets plane: session_start_secrets.py"
-  if ! "$GOV_PY" "$GOV_DIR/ops/secrets/session_start_secrets.py"; then
+  mkdir -p "$(dirname "$SECRETS_RECEIPT")"
+  if ! "$GOV_PY" "$SECRETS_PY" --receipt-out "$SECRETS_RECEIPT"; then
     warn "session_start_secrets failed — reporter will show ### FAILED"
     DEGRADED=$((DEGRADED + 1))
   fi

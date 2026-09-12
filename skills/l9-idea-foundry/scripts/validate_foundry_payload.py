@@ -76,6 +76,13 @@ RUN_STATUSES = {
     "QUARANTINED",
     "BLOCKED",
 }
+# Run states that can never be certified as an exact-state frozen payload: the
+# run has not reached code realization, or it was explicitly stopped.
+FREEZE_REFUSED_STATUSES = {"INTAKE", "PLANNED", "QUARANTINED", "BLOCKED"}
+NON_PASSING_RESULTS = {"FAILED", "FAIL", "ERROR", "BLOCKED"}
+# Pre-factory exact-state validation. BIRTH_READY is owned by
+# qualify_birth_handoff.py and requires FACTORY_COMPILE_PASS on the same bytes.
+FREEZE_VALIDATED_PHASE = "FREEZE_VALIDATED"
 CODE_SUFFIXES = {".py", ".js", ".jsx", ".ts", ".tsx", ".rs", ".go", ".java", ".kt", ".rb"}
 PLACEHOLDER_PATTERNS = [
     re.compile(r"\bTODO\b", re.IGNORECASE),
@@ -165,6 +172,12 @@ def validate_authority(authority: dict[str, Any], failures: list[str]) -> None:
 def bind_plan_document(
     root: Path, planning: dict[str, Any], label: str, failures: list[str]
 ) -> None:
+    """Bind asserted plan metadata to the referenced file bytes.
+
+    A nonempty ref and a syntactically valid digest are assertions, not evidence.
+    The plan must exist inside the payload root and its bytes must hash to the
+    recorded digest, otherwise the payload claims a plan it does not carry.
+    """
     ref = planning.get("plan_document_ref")
     digest = planning.get("plan_digest")
     if not isinstance(ref, str) or not ref.strip():
@@ -173,7 +186,7 @@ def bind_plan_document(
     try:
         plan_path.relative_to(root.resolve())
     except ValueError:
-        failures.append(f"{label} plan_document_ref escapes payload root")
+        failures.append(f"{label} plan_document_ref escapes payload root: {ref}")
         return
     if not plan_path.is_file():
         failures.append(f"{label} plan_document_ref is not a file: {ref}")
@@ -472,14 +485,12 @@ def validate_receipt(
     sequence(
         validation.get("commands"), "FOUNDRY_RECEIPT.validation.commands", failures, nonempty=True
     )
-    sequence(
+    results = sequence(
         validation.get("results"), "FOUNDRY_RECEIPT.validation.results", failures, nonempty=True
     )
-    bad_results = [
-        result
-        for result in (validation.get("results") or [])
-        if str(result).upper() in {"FAILED", "FAIL", "ERROR", "BLOCKED"}
-    ]
+    # This validator does not execute the recorded project-native commands, so a
+    # recorded failure is the only evidence it has. Presence of a list is not a pass.
+    bad_results = [result for result in results if str(result).upper() in NON_PASSING_RESULTS]
     fail_if(
         bool(bad_results),
         f"FOUNDRY_RECEIPT.validation.results include non-passing entries: {bad_results}",
@@ -606,9 +617,16 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("payload", type=Path)
     parser.add_argument(
+        "--freeze-validated",
         "--birth-ready",
+        dest="freeze_validated",
         action="store_true",
-        help="also require clean committed git state and exact external freeze receipt binding",
+        help=(
+            "also require clean committed git state and exact external freeze receipt "
+            "binding; on success the phase is FREEZE_VALIDATED, never BIRTH_READY "
+            "(BIRTH_READY requires FACTORY_COMPILE_PASS from qualify_birth_handoff.py). "
+            "--birth-ready is a compatibility alias."
+        ),
     )
     parser.add_argument("--freeze-receipt", type=Path)
     args = parser.parse_args()
@@ -758,23 +776,32 @@ def main() -> int:
             failures,
         )
 
-    if args.birth_ready:
+    if args.freeze_validated:
+        # Exact-state freeze validation is phase-specific: a run that never reached
+        # code realization, or that was explicitly quarantined/blocked, cannot be
+        # certified as a frozen payload however clean its tree is.
+        run_status = str((receipt.get("run") or {}).get("status") or "")
+        if run_status in FREEZE_REFUSED_STATUSES:
+            failures.append(
+                f"--freeze-validated refused when FOUNDRY_RECEIPT.run.status is {run_status}"
+            )
+
         rc, inside = git_output(root, "rev-parse", "--is-inside-work-tree")
         head = ""
         if rc != 0 or inside != "true":
-            failures.append("birth-ready payload is not a git working tree")
+            failures.append("frozen payload is not a git working tree")
         else:
             rc, head = git_output(root, "rev-parse", "HEAD")
             if rc != 0 or not GIT_SHA_RE.fullmatch(head):
-                failures.append("birth-ready payload has no resolvable 40-hex HEAD commit")
+                failures.append("frozen payload has no resolvable 40-hex HEAD commit")
             rc, dirty = git_output(root, "status", "--porcelain", "--untracked-files=all")
             if rc != 0:
-                failures.append("cannot inspect git status for birth-ready payload")
+                failures.append("cannot inspect git status for frozen payload")
             elif dirty:
-                failures.append("birth-ready payload git tree is not clean")
+                failures.append("frozen payload git tree is not clean")
 
         if args.freeze_receipt is None:
-            failures.append("--birth-ready requires --freeze-receipt")
+            failures.append("--freeze-validated requires --freeze-receipt")
         else:
             freeze_path = args.freeze_receipt.resolve()
             if freeze_path == root or root in freeze_path.parents:
@@ -824,13 +851,6 @@ def main() -> int:
                     observations.append(f"tracked_file_count={len(records)}")
                     observations.append(f"tracked_tree_digest={tree_digest}")
 
-    if args.birth_ready:
-        run_status = str((receipt.get("run") or {}).get("status") or "")
-        if run_status in {"INTAKE", "PLANNED", "QUARANTINED", "BLOCKED"}:
-            failures.append(
-                f"--birth-ready refused when FOUNDRY_RECEIPT.run.status is {run_status}"
-            )
-
     if failures:
         print("FOUNDRY_PAYLOAD: FAIL")
         for item in failures:
@@ -838,8 +858,10 @@ def main() -> int:
         return 1
 
     print("FOUNDRY_PAYLOAD: PASS")
-    phase = "BIRTH_READY" if args.birth_ready else "CODE_REALIZED"
+    phase = FREEZE_VALIDATED_PHASE if args.freeze_validated else "CODE_REALIZED"
     print(f"- phase: {phase}")
+    if args.freeze_validated:
+        print("- next_state_authority: qualify_birth_handoff.py (FACTORY_COMPILE_PASS)")
     for item in observations:
         print(f"- {item}")
     print(f"- authority_map_semantic_digest={semantic_yaml_digest(authority_path)}")

@@ -8,8 +8,9 @@ shell-glob match on ``degraded`` reports a false DEGRADED
 (FAIL: session_start_bootstrap.sh lines 449-456 pre-fix).
 
 Authority order:
-1. Packet JSON booleans — ``degraded`` (top level or ``hydrate_stats``)
-   and ``hydrate_stats.close_gap`` are the only packet positives.
+1. Packet JSON booleans — ``degraded`` (top level or ``hydrate_stats``),
+   ``hydrate_stats.close_gap``, and ``hydrate_stats.continuation_stale is True``.
+   ``None`` / ``False`` on continuation_stale are not stale.
 2. When no packet parses: explicit text markers only — a line starting
    with ``DEGRADED`` or the phrase ``hydrate CLI missing``.
 
@@ -67,6 +68,8 @@ def classify(markdown: str) -> tuple[bool, str]:
             return True, reason or "packet degraded=true"
         if stats.get("close_gap") is True:
             return True, "close_gap=true — prior session did not close"
+        if stats.get("continuation_stale") is True:
+            return True, "STALE — continuation_stale=true"
         return False, ""
     if "hydrate CLI missing" in markdown:
         return True, "hydrate CLI missing"
