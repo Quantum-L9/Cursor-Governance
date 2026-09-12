@@ -115,6 +115,49 @@ class CompileCampaignSourceTests(unittest.TestCase):
             errors = self.validator.validate(target, "template")
             self.assertEqual(errors, [], msg="\n".join(errors))
 
+    def test_a_writable_t0_task_compiles_at_the_write_tier_floor(self) -> None:
+        """Audit R6: T0 is read-only (risk-tiers.yaml); a writer cannot carry it.
+
+        The fixture declares TASK-001 as `repo_local` with `local_write` and
+        `commit` under tier T0. The compiled Task Card carries T2, the source is
+        untouched, the lift is reported on stderr, and the official validator —
+        which now refuses T0 with a write ceiling — accepts the result.
+        """
+        import contextlib
+        import io
+
+        with tempfile.TemporaryDirectory() as raw:
+            target = Path(raw) / "blueprint"
+            proof = _pass_proof(Path(raw) / "stack-proof.json")
+            scoped = _scoped_source(Path(raw))
+            declared = next(
+                item
+                for item in yaml.safe_load(scoped.read_text(encoding="utf-8"))["tasks"]
+                if item["id"] == "TASK-001"
+            )
+            self.assertEqual(declared["risk"]["tier"], "T0")
+            self.assertTrue(declared["authorization_ceiling"]["local_write"])
+            captured = io.StringIO()
+            with contextlib.redirect_stderr(captured):
+                self.compiler.compile_source(scoped, target, stack_proof=proof)
+            self.assertIn("TASK-001 declares risk tier T0", captured.getvalue())
+            tasks = yaml.safe_load((target / "TASK_CARDS.yaml").read_text(encoding="utf-8"))[
+                "tasks"
+            ]
+            task_001 = next(item for item in tasks if item["id"] == "TASK-001")
+            self.assertEqual(task_001["risk"]["tier"], "T2")
+            self.assertTrue(task_001["authorization_ceiling"]["local_write"])
+            errors = self.validator.validate(target, "template")
+            self.assertEqual(errors, [], msg="\n".join(errors))
+            # And the validator itself refuses the unlifted shape.
+            task_001["risk"]["tier"] = "T0"
+            cards_path = target / "TASK_CARDS.yaml"
+            cards = yaml.safe_load(cards_path.read_text(encoding="utf-8"))
+            cards["tasks"] = tasks
+            cards_path.write_text(yaml.safe_dump(cards, sort_keys=False), encoding="utf-8")
+            errors = self.validator.validate(target, "template")
+            self.assertTrue(any("T0 is read-only" in error for error in errors), errors)
+
     def test_empty_evidence_requirements_still_template_valid(self) -> None:
         """Activate seeds omit evidence_requirements; GATE-* must not become SRC evidence."""
         synthesized = self.compiler._admission_evidence({"metadata": {"intended_host": "org/repo"}})

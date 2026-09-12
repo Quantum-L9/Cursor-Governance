@@ -45,11 +45,19 @@ make -C "$HOME/.cursor-governance" campaign INTENT=<path>
 front door. It does not force or override input classification.
 
 `run_campaign.py` compiles seeds, admits the Blueprint, boots
-pec without a draft flag, executes every task, stacks PRs, and closes into
-`campaigns/COMPLETED/<id>/`. Do not call `compile_campaign_source.py`,
-`pec bootstrap`, or `program-execution intent` as a substitute.
-`--admission-draft` is not a live path (`L9_ALLOW_ADMISSION_DRAFT=1` is
-controller unit tests only). Host-only merge is not program close.
+pec without a draft flag, and executes every task to **verified local
+commits** on `campaign/<campaign_id>`. That is where the autonomous run ends
+(`until=execute`, `AUTONOMOUS_LAST_STAGE`): the runner is permanently
+local-commit-only and refuses every publication stage — pushing the
+integration branch, opening task or host PRs, merging, and close — with
+`refuse_publication`. Publish separately with `PR_REMEDIATE=0 make pr`
+(`PR_BASE=origin/campaign/<campaign_id>`); merge only through
+`/l9-pr-remediation`; close into `campaigns/COMPLETED/<id>/` follows the
+Controller's closure receipt after that. Do not call
+`compile_campaign_source.py`, `pec bootstrap`, or `program-execution intent`
+as a substitute. `--admission-draft` is not a live path
+(`L9_ALLOW_ADMISSION_DRAFT=1` is controller unit tests only). Host-only merge
+is not program close.
 
 `git` and `git_repo_adapter` are campaign target tokens only. pec
 reconcile binds `repository_id` to a local path. They are not worker

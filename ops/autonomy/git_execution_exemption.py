@@ -21,6 +21,10 @@ runs BEFORE this exemption in ``local_execution_gate`` and decides from the
 command's actual effect, its target's sensitivity, and whether recovery is
 provable. A git command that destroys nothing is allowed there too; one that
 would destroy unrecoverable work is denied to a human, not to a workflow phase.
+First publication is another effect plane (``first_publication_gate``,
+CANONICAL_LAW §6.2.8): a ``git push`` of a branch with no open PR, or
+``gh pr create``, is denied outside ``make pr``; a push advancing an open PR is
+the remediation path and stays allowed.
 
 For the workflow plane the answer for a git/gh command is allow, regardless of
 governance state:

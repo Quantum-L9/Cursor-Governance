@@ -115,11 +115,27 @@ class PreservedPolicyBehaviourTests(unittest.TestCase):
         self.assertIn("Publish path", proc.stdout)
 
     def test_git_is_exempt_from_the_publish_denial(self) -> None:
-        """Policy still prefers `make pr`; the gate does not enforce it on git."""
+        """Policy still prefers `make pr`; the workflow plane does not enforce it on git.
+
+        The one git denial left is by effect: this checkout has no remote and
+        no open PR, so a raw push is a FIRST publication (publication plane,
+        §6.2.8) — while every other git command stays allowed.
+        """
         proc = _run(
             {
                 "tool_name": "Bash",
                 "tool_input": {"command": "git push origin main"},
+                "cwd": str(self.repo),
+            }
+        )
+        self.assertEqual(proc.returncode, 0)
+        self.assertEqual(_decision(proc.stdout), "deny")
+        self.assertIn("FIRST publication", proc.stdout)
+        self.assertNotIn("Publish path:", proc.stdout)
+        proc = _run(
+            {
+                "tool_name": "Bash",
+                "tool_input": {"command": "git fetch origin main"},
                 "cwd": str(self.repo),
             }
         )

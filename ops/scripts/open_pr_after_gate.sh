@@ -198,10 +198,50 @@ if [[ -f "$_OVERLAP_GATE" ]]; then
 fi
 
 echo "--- open PR (branch=$branch base=$BASE_REF; $ahead commit(s) ahead) ---"
+# Re-attest a HEAD that push recovery moved (audit R3). The gate and the L4
+# receipt above were checked against the tree that existed BEFORE the recovery
+# merge; the merge (and any generated-artifact heal commit) produces a tree
+# nothing has validated and a HEAD nothing has attested. Retrying the push on
+# it published an unvalidated tree under a receipt for a different sha. So:
+#   1. run_pr_gate.sh on the recovered tree (receipt reuse cannot match — the
+#      content digest changed — so this is a real run);
+#   2. l4_local.py extend-release, which re-binds the receipt only when the
+#      attested sha is an ancestor of the new HEAD on the same branch;
+#   3. check-remote once more, exactly as the first attempt did.
+# Any step failing leaves the merge in the tree and pushes nothing: the operator
+# re-runs authorize-release + make pr on a tree they can now see.
+_reattest_recovered_head() {
+  local prior="$1" now
+  now="$(git rev-parse HEAD)"
+  if [[ "$now" == "$prior" ]]; then
+    return 0
+  fi
+  echo "--- re-attest recovered HEAD (${prior:0:12} -> ${now:0:12}) ---"
+  if ! ( cd "$WS" && WS="$WS" PR_BASE="$PR_BASE" bash "$GOV_ROOT/ops/scripts/run_pr_gate.sh" ); then
+    echo "FAIL: recovered tree failed the local PR gate; nothing pushed."
+    echo "      Fix what the gate reported, then: authorize-release + make pr"
+    return 1
+  fi
+  if [[ -f "$L4_CLI" && "${L9_L4_LOCAL_AUTONOMY:-1}" != "0" ]]; then
+    if ! python3 "$L4_CLI" --workspace "$WS" extend-release \
+        --from-head "$prior" --reason "push-recovery merge of origin/$BASE_REF"; then
+      echo "FAIL: L4 receipt could not be extended to the recovered HEAD; nothing pushed."
+      echo "      Re-run: python3 ops/autonomy/l4_local.py authorize-release && make pr"
+      return 1
+    fi
+    if ! python3 "$L4_CLI" --workspace "$WS" check-remote; then
+      echo "FAIL: L4 blocks push of the recovered HEAD; nothing pushed."
+      return 1
+    fi
+  fi
+  echo "OK: recovered HEAD re-attested (gate + L4)"
+}
+
 # T-CI019: bounded recover on a rejected push. Never rewrite history.
-# Attempt, then at most one fetch + merge --no-edit + generated regen + retry (N<=2).
+# Attempt, then at most one fetch + merge --no-edit + generated regen +
+# re-attestation + retry (N<=2).
 _push_with_bounded_recover() {
-  local attempt=1 max=2
+  local attempt=1 max=2 prior_head
   while [ "$attempt" -le "$max" ]; do
     if git push -u origin HEAD; then
       return 0
@@ -210,7 +250,8 @@ _push_with_bounded_recover() {
       echo "FAIL: git push failed after $max attempts (no history rewrite)"
       return 1
     fi
-    echo "WARN: push rejected — recover $((attempt + 1))/$max (fetch + merge --no-edit + regen)"
+    echo "WARN: push rejected — recover $((attempt + 1))/$max (fetch + merge --no-edit + regen + re-attest)"
+    prior_head="$(git rev-parse HEAD)"
     git fetch origin "$BASE_REF" || return 1
     # Also fetch the remote feature branch tip: a concurrent publisher advancing the
     # same PR branch causes the rejection; merging only origin/$BASE_REF leaves those
@@ -236,6 +277,8 @@ _push_with_bounded_recover() {
           git commit --no-edit -m "chore(generated): heal artifacts after push-recovery merge" || return 1
       fi
     fi
+    # The recovered HEAD is a new tree under an old attestation until this passes.
+    _reattest_recovered_head "$prior_head" || return 1
     attempt=$((attempt + 1))
   done
   return 1

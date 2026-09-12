@@ -1578,17 +1578,15 @@ def default_arm(
 
 
 def default_make_pr(worktree: Path, campaign_id: str) -> dict[str, Any]:
+    """Refused. Program Execution never opens a host PR; `make pr` is the operator's.
+
+    The `make pr` implementation that used to sit under this refusal (audit
+    Y7) was unreachable and misread as a live publication path; the runner's
+    only publication behavior is the refusal itself.
+    """
+    del worktree, campaign_id
     refuse_publication("open a host pull request")
-    env = os.environ.copy()
-    env["PR_BASE"] = f"origin/campaign/{campaign_id}"
-    refuse_unstacked_pr_base(env["PR_BASE"])
-    env["PR_REMEDIATE"] = "0"
-    env["OPEN_PR"] = "1"
-    result = run_cmd(["make", "pr"], timeout=MAKE_PR_TIMEOUT_S, cwd=worktree, env=env)
-    output = (result.stdout + "\n" + result.stderr).strip()
-    if result.returncode != 0:
-        raise CampaignError(f"make pr failed: {output}")
-    return {"output": output}
+    raise AssertionError("unreachable: refuse_publication raises")  # pragma: no cover
 
 
 def default_pr_status(host_repo: str, number: int | None) -> dict[str, Any]:
@@ -1618,29 +1616,15 @@ def default_pr_status(host_repo: str, number: int | None) -> dict[str, Any]:
 
 
 def default_authorize_and_merge(host_repo: str, number: int) -> dict[str, Any]:
+    """Refused. Merge authority is `/l9-pr-remediation` (`authorize_merge.py`), never PE.
+
+    The authorize + `gh pr merge` implementation that used to sit under this
+    refusal (audit Y7) was unreachable; it is gone so the runner carries no
+    merge machinery at all.
+    """
+    del host_repo, number
     refuse_publication("authorize and merge a pull request")
-    auth = run_cmd(
-        [
-            sys.executable,
-            str(AUTHORIZE_SCRIPT),
-            "--repo",
-            host_repo,
-            "--pr",
-            str(number),
-            "--reason",
-            "l9-pe-campaign-activate remediation complete",
-        ],
-        timeout=GH_TIMEOUT_S,
-    )
-    if auth.returncode != 0:
-        raise CampaignError(f"authorize_campaign_merge failed: {auth.stderr.strip()}")
-    merge = run_cmd(
-        ["gh", "pr", "merge", str(number), "--repo", host_repo, "--squash", "--delete-branch"],
-        timeout=GH_TIMEOUT_S,
-    )
-    if merge.returncode != 0:
-        raise CampaignError(f"gh pr merge failed: {merge.stderr.strip()}")
-    return {"output": merge.stdout.strip()}
+    raise AssertionError("unreachable: refuse_publication raises")  # pragma: no cover
 
 
 def campaign_source_path(worktree: Path, campaign_id: str) -> Path:
@@ -2855,6 +2839,31 @@ def _peer_concurrency_budget():
     )
 
 
+#: Ceiling actions whose grant makes a locked task a writer of its scope.
+_MUTATING_CEILING_ACTIONS = ("local_write", "commit", "destructive_change")
+
+
+def task_is_mutating(task: dict[str, Any]) -> bool:
+    """Does this locked task mutate the target, by its own locked definition?
+
+    The scheduler used to mark every task ``mutation=True`` and write-lock its
+    resources (audit Y5), so inspection tasks — `read_only` execution kind, or a
+    ceiling that grants no write — consumed mutation lanes and serialized
+    behind each other for no reason. The locked task carries the answer: the
+    Blueprint's `execution_kind` and `authorization_ceiling` are what the
+    Controller renders the Source Contract's `requested_actions` from, so the
+    same fields decide here. A task the lock cannot describe is treated as
+    mutating: over-serializing is safe, under-locking is not.
+    """
+    kind = str(task.get("execution_kind") or "").strip()
+    ceiling = task.get("authorization_ceiling")
+    if kind == "read_only":
+        return False
+    if isinstance(ceiling, dict) and ceiling:
+        return any(bool(ceiling.get(action)) for action in _MUTATING_CEILING_ACTIONS)
+    return True
+
+
 def _task_target_lineage(task: dict[str, Any]) -> tuple[str, ...]:
     candidates = task.get("target_ids") or task.get("target_id") or task.get("target") or ()
     if isinstance(candidates, str):
@@ -2877,12 +2886,19 @@ def _plan_peer_task_batch(
     runtime: dict[str, Any] = {}
     for index, task in enumerate(tasks):
         task_id = str(task["id"])
+        mutating = task_is_mutating(task)
+        # A writer takes the exclusive target-lineage lock and write-locks its
+        # declared outputs. A reader declares the same keys in read mode: it
+        # still cannot run while a writer holds them (it would observe a tree
+        # mid-mutation), but readers never exclude each other and never
+        # consume a mutation lane.
+        mode = "write" if mutating else "read"
         resources = [
-            modules["ResourceLock"](key=f"target-lineage:{target}", mode="write")
+            modules["ResourceLock"](key=f"target-lineage:{target}", mode=mode)
             for target in _task_target_lineage(task)
         ]
         resources.extend(
-            modules["ResourceLock"](key=f"path:{path}", mode="write")
+            modules["ResourceLock"](key=f"path:{path}", mode=mode)
             for path in task_output_locations(task)
         )
         specs[task_id] = modules["ActionSpec"](
@@ -2892,7 +2908,7 @@ def _plan_peer_task_batch(
                 str(item) for item in (task.get("dependencies") or task.get("depends_on") or [])
             ),
             resources=tuple(resources),
-            mutation=True,
+            mutation=mutating,
             preconditions_satisfied=task_states.get(task_id) not in {"STALE", "CANCELLED"},
             priority=max(0, len(tasks) - index),
         )
@@ -2966,6 +2982,14 @@ def _run_peer_execution(
     )
     try:
         outcome = front_door.execute(request)
+    except front_door.RetryReceiptUnrecorded as exc:
+        # The provider may have run; what is missing is the durable record of
+        # the tries. That is a fail-closed stop, never a claim to reconcile.
+        raise CampaignError(
+            f"{task_id}: Peer Execution could not record its retry receipt "
+            f"({exc.target}); the attempt is not admissible without it. {exc.cause}",
+            error_code="RETRY_RECEIPT_UNRECORDED",
+        ) from exc
     except ValueError as exc:
         raise CampaignError(
             f"Peer provider resolution failed for {agent_ref}/{surface}: {exc}. "
@@ -4323,65 +4347,15 @@ def maybe_open_task_pr(
     campaign_id: str,
     item: dict[str, Any],
 ) -> dict[str, Any] | None:
-    # Opening a task PR is publication by definition — gate it ahead of the
-    # hook so an injected opener cannot route around the boundary either.
+    """Refused. Opening a task PR is publication by definition.
+
+    Gated ahead of the hook so an injected opener cannot route around the
+    boundary either. The remote-add / push / `gh pr create` body that used to
+    sit under this refusal was unreachable (audit Y7) and is gone.
+    """
+    del hooks, worktree, campaign_id, item
     refuse_publication("open a task pull request")
-    if hooks.open_task_pr is not None:
-        return hooks.open_task_pr(worktree, campaign_id, item)
-    if hooks.make_pr is not None:
-        return None
-    refuse_unstacked_pr_base(str(item.get("pr_base") or ""))
-    require_remote_campaign_branch(worktree, campaign_id)
-    github = f"https://github.com/{HOST_REPO_DEFAULT}.git"
-    run_cmd(
-        ["git", "-C", str(worktree), "remote", "get-url", "github"],
-        timeout=GIT_TIMEOUT_S,
-        env=git_env(),
-    )
-    listed = run_cmd(
-        ["git", "-C", str(worktree), "remote"],
-        timeout=GIT_TIMEOUT_S,
-        env=git_env(),
-    )
-    remotes = (listed.stdout or "").split()
-    if "github" not in remotes:
-        run_cmd(
-            ["git", "-C", str(worktree), "remote", "add", "github", github],
-            timeout=GIT_TIMEOUT_S,
-            env=git_env(),
-        )
-    pushed = run_cmd(
-        ["git", "-C", str(worktree), "push", "-u", "github", str(item["branch"])],
-        timeout=GIT_TIMEOUT_S,
-        env=git_env(),
-    )
-    if pushed.returncode != 0:
-        raise CampaignError(
-            f"cannot push {item['branch']} to GitHub: {(pushed.stderr or pushed.stdout).strip()}"
-        )
-    created = run_cmd(
-        [
-            "gh",
-            "pr",
-            "create",
-            "--repo",
-            HOST_REPO_DEFAULT,
-            "--base",
-            str(item["pr_base"]),
-            "--head",
-            str(item["branch"]),
-            "--title",
-            f"[{campaign_id}] {item.get('title') or item['task_id']}",
-            "--body",
-            f"Stacked task PR for {item['task_id']}. Never based on main.",
-        ],
-        timeout=GH_TIMEOUT_S,
-        cwd=worktree,
-        env=git_env(),
-    )
-    if created.returncode != 0:
-        raise CampaignError(f"gh pr create failed: {(created.stderr or created.stdout).strip()}")
-    return {"output": created.stdout.strip()}
+    raise AssertionError("unreachable: refuse_publication raises")  # pragma: no cover
 
 
 def _default_execute_legacy(
@@ -4802,26 +4776,9 @@ def require_remote_campaign_branch(worktree: Path, campaign_id: str) -> None:
 
 
 def push_integration_branch(worktree: Path, campaign_id: str) -> None:
+    """Refused. The integration branch leaves the machine only via `make pr` (audit Y7)."""
+    del worktree, campaign_id
     refuse_publication("push the campaign integration branch")
-    if not is_git_repo(worktree):
-        raise CampaignError("host worktree is not a git checkout; cannot push campaign branch")
-    branch = f"campaign/{campaign_id}"
-    exists = run_cmd(
-        ["git", "-C", str(worktree), "rev-parse", "--verify", branch],
-        timeout=GIT_TIMEOUT_S,
-        env=git_env(),
-    )
-    if exists.returncode != 0:
-        raise CampaignError(f"local {branch} missing; cannot set PR_BASE=origin/{branch}")
-    remote = github_push_remote(worktree)
-    pushed = run_cmd(
-        ["git", "-C", str(worktree), "push", "-u", remote, branch],
-        timeout=GIT_TIMEOUT_S,
-        env=git_env(),
-    )
-    if pushed.returncode != 0:
-        raise CampaignError(f"cannot push {branch}: {(pushed.stderr or pushed.stdout).strip()}")
-    require_remote_campaign_branch(worktree, campaign_id)
 
 
 def default_close(
@@ -4833,17 +4790,11 @@ def default_close(
     hooks: Hooks,
     merge_recorded: bool,
 ) -> dict[str, Any]:
+    del host_repo, hooks
     if merge_recorded:
+        # Merge is /l9-pr-remediation's authority; the merge loop that used to
+        # follow this refusal was unreachable (audit Y7) and is gone.
         refuse_publication("merge recorded stack pull requests")
-        for number in recorded_stack_pr_numbers(workspace):
-            status_fn = hooks.pr_status or default_pr_status
-            status = status_fn(host_repo, number)
-            if not status.get("green") or not status.get("mergeable"):
-                raise CampaignError(
-                    f"recorded PR #{number} is not green and mergeable; merge skipped"
-                )
-            merge_fn = hooks.authorize_and_merge or default_authorize_and_merge
-            merge_fn(host_repo, number)
     # The verdict is the Controller's recommendation, read from a handoff it
     # exported over its own state -- never a literal the runner asserts.
     handoff_path = workspace / "receipts" / "handoffs" / "campaign-close-handoff.json"
@@ -5177,20 +5128,12 @@ def resume_live_campaign(
         return report
     if not executed:
         raise CampaignError("refuse host-only merge before all tasks COMPLETED", exit_code=2)
+    # Everything past this line is publication and the runner refuses it. The
+    # push / make pr / PR-report block that used to follow was unreachable
+    # (audit Y7) and read as a live publication path; it is gone.
     refuse_publication("publish the campaign")
-    if hooks.make_pr is None:
-        pusher = hooks.push_integration or push_integration_branch
-        with traced(trace, "publish", "push_integration_branch"):
-            pusher(write_root, campaign_id)
-    make_pr = hooks.make_pr or default_make_pr
-    with traced(trace, "publish", "make_pr"):
-        pr_result = make_pr(write_root, campaign_id)
-    report.host_pr = str(pr_result.get("url") or pr_result.get("output") or "")
-    report.host_pr_number = pr_result.get("number")
-    log(f"PR {report.host_pr or report.host_pr_number or 'opened'}")
-    report.stages_completed.append("pr")
     if not should_run(until, "close"):
-        return report
+        return report  # pragma: no cover - refuse_publication raises
     with traced(trace, "close", "close"):
         if hooks.close is not None:
             hooks.close(pec_workspace, campaign_id)
@@ -6056,20 +5999,11 @@ def _stage_runtime(run: _CampaignRun) -> CampaignReport:
             "refuse host-only merge before all tasks COMPLETED",
             exit_code=2,
         )
+    # Publication is refused here; the push / make pr / PR-report block that
+    # used to follow was unreachable (audit Y7) and is gone.
     refuse_publication("publish the campaign")
-    if hooks.make_pr is None:
-        pusher = hooks.push_integration or push_integration_branch
-        with traced(trace, "publish", "push_integration_branch"):
-            pusher(write_root, campaign_id)
-    make_pr = hooks.make_pr or default_make_pr
-    with traced(trace, "publish", "make_pr"):
-        pr_result = make_pr(write_root, campaign_id)
-    report.host_pr = str(pr_result.get("url") or pr_result.get("output") or "")
-    report.host_pr_number = pr_result.get("number")
-    log(f"PR {report.host_pr or report.host_pr_number or 'opened'}")
-    report.stages_completed.append("pr")
     if not should_run(until, "close"):
-        return report
+        return report  # pragma: no cover - refuse_publication raises
 
     close = hooks.close or default_close
     with traced(trace, "close", "close"):

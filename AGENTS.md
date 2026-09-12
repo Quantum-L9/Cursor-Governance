@@ -1558,3 +1558,20 @@ kernel stamp.
   checkout and the target workspace, so it is runnable from a consumer
   tree. `record-kernels` still stamps the same receipt (compat); do not
   treat it as the apply path.
+
+<!-- FIRST_PUBLICATION_PLANE_V1 -->
+## First publication is gated by effect (2026-09-12) — supersedes §4 item 3 "off doctrine but not blocked"
+
+Append-only; CANONICAL_LAW §6.2.8 is the law. §4 item 3 above still holds for
+`gh pr edit` and for a `git push` that advances a branch with an **open** PR
+(the remediator path). It no longer holds for a **first publication**: a raw
+`git push` of a branch with no open PR, or `gh pr create`, is denied by
+`ops/autonomy/first_publication_gate.py` because none of the checkers ran.
+Undeterminable PR state (no `gh`, no network, no GitHub remote) denies. The
+route for a first publication is `PR_REMEDIATE=0 make pr`; breakglass is
+human/ops only (`L9_LOCAL_PUSH_AUTHORIZED=<reason>` or a scoped receipt).
+
+Two companions from the same audit: the L4 release receipt binds the exact
+HEAD sha it attested (a later commit voids it; the phase file alone authorizes
+nothing), and `make pr` push recovery re-runs the gate and
+`l4_local.py extend-release` on the merged tree before it retries a push.

@@ -664,6 +664,73 @@ class PeSmokeCampaignTests(unittest.TestCase):
         self.assertIn("TASK-003", selected)
         self.assertNotIn("TASK-002", selected)
 
+    def test_scheduler_reads_mutation_from_the_locked_task_not_by_default(self) -> None:
+        """Audit Y5: inspection tasks are readers — no mutation lane, no write lock.
+
+        Two read-only tasks on one lineage run together; a writer on that
+        lineage still excludes them; a task the lock cannot describe is still
+        treated as a writer.
+        """
+        inspect_only = {
+            "inspect": True,
+            "local_write": False,
+            "commit": False,
+            "push": False,
+            "pull_request": False,
+            "merge": False,
+            "publish_or_release": False,
+            "deploy_or_migrate": False,
+            "destructive_change": False,
+            "external_message": False,
+        }
+        writer = dict(inspect_only, local_write=True, commit=True)
+        readers = [
+            {
+                "id": "TASK-001",
+                "title": "A",
+                "target_ids": ["TARGET-A"],
+                "execution_kind": "read_only",
+                "authorization_ceiling": inspect_only,
+                "source": {"outputs": [{"location": "a.txt"}]},
+            },
+            {
+                "id": "TASK-002",
+                "title": "B",
+                "target_ids": ["TARGET-A"],
+                "execution_kind": "repo_local",
+                "authorization_ceiling": inspect_only,
+                "source": {"outputs": [{"location": "b.txt"}]},
+            },
+        ]
+        self.assertFalse(self.mod.task_is_mutating(readers[0]))
+        self.assertFalse(self.mod.task_is_mutating(readers[1]))
+        self.assertTrue(
+            self.mod.task_is_mutating({"id": "TASK-X", "authorization_ceiling": writer})
+        )
+        self.assertTrue(self.mod.task_is_mutating({"id": "TASK-Y"}))  # undescribed: a writer
+
+        states = {task["id"]: "ELIGIBLE" for task in readers}
+        selected = self.mod._plan_peer_task_batch("scheduler-readers", readers, states)
+        self.assertEqual(sorted(selected), ["TASK-001", "TASK-002"])
+
+        mixed = readers + [
+            {
+                "id": "TASK-003",
+                "title": "C",
+                "target_ids": ["TARGET-A"],
+                "execution_kind": "repo_local",
+                "authorization_ceiling": writer,
+                "source": {"outputs": [{"location": "c.txt"}]},
+            }
+        ]
+        states = {task["id"]: "ELIGIBLE" for task in mixed}
+        selected = self.mod._plan_peer_task_batch("scheduler-mixed", mixed, states)
+        # The writer holds the lineage exclusively while it runs; readers are
+        # deferred behind it (or it behind them), never all three at once.
+        self.assertNotEqual(sorted(selected), ["TASK-001", "TASK-002", "TASK-003"])
+        if "TASK-003" in selected:
+            self.assertEqual(selected, ["TASK-003"])
+
     def test_peer_batch_harvests_every_parallel_child(self) -> None:
         import time as time_module
 

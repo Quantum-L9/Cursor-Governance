@@ -15,9 +15,10 @@ The only sanctioned publish path (`make pr` → `open_pr_after_gate.sh`) runs
 `ops/scripts/pr_overlap_check.py` between the L4 release check and `git push`.
 The gate detects whether the current branch textually conflicts with its own
 base or with any already-open PR in the same repo, and blocks BEFORE the push
-with routing instructions. Raw `git push` / `gh pr create` are off doctrine but
-not blocked (CANONICAL_LAW §6.2.4); prefer `make pr` because it runs this gate,
-not because the alternative errors.
+with routing instructions. A raw `git push` of a branch with no open PR, or
+`gh pr create`, is denied as a first publication (CANONICAL_LAW §6.2.8); a push
+advancing an open PR is not blocked (§6.2.4). Prefer `make pr` because it runs
+this gate.
 
 ## Base probe (runs first)
 

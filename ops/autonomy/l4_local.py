@@ -12,6 +12,11 @@ Phases:
   executing          — local commits on stacked branch; push/PR denied
   kernels_recorded   — compat only; record-kernels still stamps kernel_gate
   release_authorized — scoped push + PR using PULL_REQUEST_TEMPLATE allowed
+
+The release receipt binds the exact HEAD sha it attested. Moving HEAD after
+authorize-release voids it (audit R2); the only re-bind is `extend-release`,
+which the publish path's push recovery calls after the gate has re-validated
+the merged tree (audit R3).
 """
 
 from __future__ import annotations
@@ -451,23 +456,100 @@ def authorize_release(root: Path) -> dict[str, Any]:
 
 
 def pr_open_for_branch(root: Path, branch: str | None = None) -> bool:
-    """True when gh reports an open PR for the current branch (remediation path)."""
-    del branch  # branch inferred by gh from HEAD
-    proc = subprocess.run(
-        ["gh", "pr", "view", "--json", "state", "-q", ".state"],
-        cwd=str(root),
+    """True when GitHub reports an open PR for ``branch`` (remediation path).
+
+    Undeterminable (no gh, no network, no GitHub remote) is False: a push the
+    probe cannot show to be remediation is treated as a first publication.
+    """
+    try:
+        from open_pr_probe import open_pr_for_branch
+    except ImportError:  # pragma: no cover - package import
+        from ops.autonomy.open_pr_probe import open_pr_for_branch
+    return open_pr_for_branch(root, branch or current_branch(root)) is True
+
+
+def extend_release(root: Path, *, from_head: str, reason: str) -> dict[str, Any]:
+    """Re-bind a valid release receipt to HEAD after a governed recovery merge.
+
+    The only caller is the publish path's push recovery
+    (``ops/scripts/open_pr_after_gate.sh``): a rejected push is recovered by
+    merging the refreshed base (and healing generated artifacts), which moves
+    HEAD past the sha the operator attested. Retrying the push on that HEAD
+    without re-attestation was audit finding R3. This operation is the
+    attestation step: it refuses unless
+
+    * this workspace holds a ``release_authorized`` receipt for the current
+      branch whose ``head_sha`` is exactly ``from_head`` (the tree that was
+      attested), and
+    * ``from_head`` is an ancestor of the current HEAD (the recovery only
+      added commits on top; nothing was rewritten).
+
+    It never runs the gate itself — the caller re-runs ``run_pr_gate.sh`` on
+    the recovered tree first — and it records the chain (``extended_from``,
+    ``extension_reason``) so the receipt says what happened.
+    """
+    receipt = load_receipt(root)
+    if not receipt or receipt.get("phase") != PHASE_RELEASE:
+        raise RuntimeError("extend-release requires an existing release_authorized receipt")
+    conflict = _state_workspace_conflict(root, receipt, "receipt")
+    if conflict:
+        raise RuntimeError(conflict)
+    branch = current_branch(root)
+    if receipt.get("stacked_branch") != branch:
+        raise RuntimeError(
+            f"extend-release: receipt is for branch {receipt.get('stacked_branch')!r}, "
+            f"current is {branch!r}"
+        )
+    pinned = str(receipt.get("head_sha") or "").strip()
+    if not pinned or pinned != from_head.strip():
+        raise RuntimeError(
+            f"extend-release: receipt authorizes {pinned[:12] or '<none>'}, "
+            f"not the claimed prior head {from_head[:12]}"
+        )
+    head = current_head(root)
+    if not head:
+        raise RuntimeError("extend-release: HEAD is unreadable")
+    if head == pinned:
+        return receipt
+    ancestor = subprocess.run(
+        ["git", "-C", str(root), "merge-base", "--is-ancestor", pinned, head],
         capture_output=True,
         text=True,
         check=False,
     )
-    if proc.returncode != 0:
-        return False
-    return proc.stdout.strip().upper() == "OPEN"
+    if ancestor.returncode != 0:
+        raise RuntimeError(
+            f"extend-release: attested {pinned[:12]} is not an ancestor of HEAD {head[:12]} — "
+            "history was rewritten; re-run authorize-release"
+        )
+    extended = dict(receipt)
+    extended["head_sha"] = head
+    extended["extended_from"] = pinned
+    extended["extension_reason"] = reason.strip() or "push-recovery"
+    extended["extended_at"] = _utc_now()
+    write_autonomy_json(root, RECEIPT_FILENAME, extended)
+    state = load_phase(root)
+    if state:
+        state["head_sha"] = head
+        write_autonomy_json(root, STATE_FILENAME, state)
+    return extended
 
 
 def _allow_from_receipt(
     root: Path, receipt: dict[str, Any], state: dict[str, Any] | None, branch: str
 ) -> tuple[bool, str] | None:
+    """Decide from the release receipt. The receipt binds branch AND head sha.
+
+    A release is authorized for the exact tree the operator attested, so the
+    receipt's ``head_sha`` is the authorization, not a detail of it. The
+    phase file used to short-circuit this comparison — ``phase ==
+    release_authorized`` on the same branch answered "allowed" before the sha
+    was ever read — so every commit made after ``authorize-release`` inherited
+    an attestation nobody gave it (audit R2). The phase file now decides
+    nothing on its own; only the sha-bound receipt, or an open PR on this
+    branch (the remediation path), can allow.
+    """
+    del state  # the phase file never authorizes remote work by itself
     if receipt.get("phase") != PHASE_RELEASE:
         return None
     if receipt.get("stacked_branch") and receipt["stacked_branch"] != branch:
@@ -475,15 +557,21 @@ def _allow_from_receipt(
             f"L4 receipt is for branch {receipt['stacked_branch']!r}, "
             f"current is {branch!r} — begin a new L4 phase or switch branch"
         )
-    if state and state.get("phase") == PHASE_RELEASE and state.get("stacked_branch") == branch:
-        return True, "L4 release_authorized"
-    if receipt.get("head_sha") == current_head(root):
-        return True, "L4 receipt matches HEAD"
+    pinned = str(receipt.get("head_sha") or "").strip()
+    head = current_head(root)
+    if pinned and head and pinned == head:
+        return True, "L4 release_authorized (receipt matches HEAD)"
+    if not pinned:
+        return False, (
+            "L4 receipt carries no head_sha, so it cannot be shown to authorize this "
+            "tree — re-run: python3 ops/autonomy/l4_local.py authorize-release"
+        )
     if pr_open_for_branch(root, branch):
         return True, "L4 remediation push on open PR"
     return False, (
-        "L4 receipt stale (HEAD moved after authorize without open PR). "
-        "Re-run kernels + authorize-release, or open PR from authorized tip first."
+        f"L4 receipt stale: authorized {pinned[:12]}, HEAD is {head[:12] or 'unreadable'} "
+        "and no PR is open for this branch. Re-run kernels + authorize-release "
+        "(or extend-release after a governed push-recovery merge)."
     )
 
 
@@ -499,7 +587,13 @@ def _allow_from_phase(state: dict[str, Any] | None) -> tuple[bool, str]:
         )
     phase = state.get("phase")
     if phase == PHASE_RELEASE:
-        return True, "L4 release_authorized (phase)"
+        # authorize-release always writes the sha-bound receipt beside this
+        # phase file; reaching here means the receipt is absent or unreadable.
+        # The phase word alone is not an attestation of any particular tree.
+        return False, (
+            "L4 phase says release_authorized but no release receipt binds a HEAD sha — "
+            "re-run: python3 ops/autonomy/l4_local.py authorize-release"
+        )
     if phase == PHASE_KERNELS:
         return False, (
             "L4 kernels recorded but release not authorized — run: "
@@ -612,6 +706,14 @@ def cmd_authorize(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_extend(args: argparse.Namespace) -> int:
+    receipt = extend_release(
+        workspace_root(args.workspace), from_head=args.from_head, reason=args.reason
+    )
+    print(json.dumps(receipt, indent=2))
+    return 0
+
+
 def cmd_status(args: argparse.Namespace) -> int:
     print(json.dumps(status_dict(workspace_root(args.workspace)), indent=2))
     return 0
@@ -644,6 +746,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     a = sub.add_parser("authorize-release", help="Authorize push/PR after kernels passed")
     a.set_defaults(func=cmd_authorize)
+
+    e = sub.add_parser(
+        "extend-release",
+        help="Re-bind the release receipt to HEAD after a governed push-recovery merge",
+    )
+    e.add_argument("--from-head", required=True, help="The sha the receipt currently attests")
+    e.add_argument("--reason", default="push-recovery", help="Why HEAD moved (recorded)")
+    e.set_defaults(func=cmd_extend)
 
     s = sub.add_parser("status", help="Show L4 phase + remote eligibility")
     s.set_defaults(func=cmd_status)

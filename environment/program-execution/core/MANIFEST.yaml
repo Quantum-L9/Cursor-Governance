@@ -207,8 +207,8 @@ files:
   sha256: 1820def7bc85ac2478028ef5bae0091ec07f4b9dd159f427b9e4ea3df10c29fa
   bytes: 3111
 - path: program-execution-blueprint-template/scripts/validate_blueprint.py
-  sha256: 97f25ae5cdf0285ff2f29fcaf10882e8d9e1d24044f80478514d67e4699172b3
-  bytes: 23820
+  sha256: 1b1875a4c5d9b8caf8a927e4a0866a87e4f39852ac64ae9c84d1ce45a18639e1
+  bytes: 24547
 - path: program-execution-controller-template/ARCHITECTURE.md
   sha256: 2e9c4fd4d6acd9c3aeb216743a94aaaf53170cb5b6e557102ea0d9b2ec964c3b
   bytes: 1340
@@ -655,4 +655,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 216
-  total_bytes: 1084618
+  total_bytes: 1085345

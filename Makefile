@@ -80,6 +80,7 @@ help:
 	@echo "  make l4-status / l4-begin / l4-record-kernels / l4-authorize — L4 local autonomy (no mid-exec push)"
 	@echo "  make kernel-precommit — kernel hook (before precommit-repo hooks/tests; not L4)"
 	@echo "  make campaign INTENT=path — PE activate seed → worktree emit → blueprint → pec → host PR → merge-if-green"
+	@echo "      (superseded 2026-09-12: the live runner is local-commit-only and stops at 'execute'; it refuses push/PR/merge. Publish with PR_REMEDIATE=0 make pr PR_BASE=origin/campaign/<id>; merge only via /l9-pr-remediation)"
 	@echo "  make campaign-architecture INTENT=arch.md TARGET=owner/repo — long-form architecture → campaign_source → blueprint → PEC"
 	@echo "  make pr (any case) — gate → open PR → subscribe → agent spawns l9-pr-remediation (OPEN_PR=0 / PR_REMEDIATE=0 / pr-check to skip)"
 	@echo "  make sync-generated — heal RULES/COMMANDS/PE manifests, skill-registry, skillOverrides (idempotent)"

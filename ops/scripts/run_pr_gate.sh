@@ -407,6 +407,57 @@ _gate_classify_dirtiness() {
   return "$rc"
 }
 
+_gate_commit_writer_dirt() {
+  # Commit only paths the writers/heal made dirty. Pre-existing tracked dirt
+  # stays out of the automatic commit (fail closed at classify, do not scoop).
+  python3 - "$WS" "$status_before" <<'PY'
+import subprocess
+import sys
+from pathlib import Path
+
+def _tracked(text: str) -> str | None:
+    if text.startswith("??") or len(text) < 4:
+        return None
+    rel = text[3:]
+    if " -> " in rel:
+        rel = rel.split(" -> ", 1)[1]
+    if rel.startswith(".l9/"):
+        return None
+    return rel
+
+ws = Path(sys.argv[1])
+before_text = Path(sys.argv[2]).read_text(encoding="utf-8", errors="replace")
+before = {p for line in before_text.splitlines() if (p := _tracked(line))}
+porc = subprocess.check_output(["git", "status", "--porcelain", "-z"], cwd=ws)
+entries = [e.decode() for e in porc.split(b"\0") if e]
+after: list[str] = []
+for text in entries:
+    rel = _tracked(text)
+    if rel:
+        after.append(rel)
+paths = [rel for rel in after if rel not in before]
+if not paths:
+    raise SystemExit(0)
+subprocess.run(["git", "add", "--", *paths], cwd=ws, check=True)
+proc = subprocess.run(
+    [
+        "git",
+        "commit",
+        "-m",
+        "style: commit gate writer rewrites so make pr finishes once",
+    ],
+    cwd=ws,
+    capture_output=True,
+    text=True,
+    check=False,
+)
+if proc.returncode != 0:
+    sys.stderr.write(proc.stderr or proc.stdout or "git commit failed\n")
+    raise SystemExit(1)
+print(f"OK: committed {len(paths)} writer-rewrite path(s) — continuing this make pr")
+PY
+}
+
 _gate_run_precommit() {
   local stage="${1:-}"
   local rc=0
@@ -556,14 +607,24 @@ cat "$_cls_tmp"
 cat "$_cls_tmp" >>"$_GATE_LOG" || true
 rm -f "$_cls_tmp"
 if [[ "$_cls_rc" -ne 0 ]]; then
-  echo "FAIL: non-generated tracked files dirty after generated heal — commit or restore those paths, then re-run make pr."
-  echo "      Do not auto-stage. Paths:"
-  git status --porcelain | grep -vE '^\?\?'
-  {
-    echo "FAIL: non-generated tracked files dirty after generated heal — commit or restore those paths, then re-run make pr."
-    git status --porcelain | grep -vE '^\?\?'
-  } >>"$_GATE_LOG" || true
-  exit 1
+  echo "WARN: non-generated tracked files dirty after writers/heal — committing rewrites and continuing this make pr"
+  git status --porcelain | awk '!/^\?\?/'
+  if ! _gate_commit_writer_dirt; then
+    echo "FAIL: could not commit writer rewrites — fix the tree, then make pr once"
+    exit 1
+  fi
+  _cls_tmp="$(mktemp)"
+  set +e
+  _gate_classify_dirtiness "generated-heal-after-commit" >"$_cls_tmp" 2>&1
+  _cls_rc=$?
+  set -e
+  cat "$_cls_tmp"
+  rm -f "$_cls_tmp"
+  if [[ "$_cls_rc" -ne 0 ]]; then
+    echo "FAIL: tree still dirty after writer-rewrite commit"
+    git status --porcelain | awk '!/^\?\?/'
+    exit 1
+  fi
 fi
 if [[ -f "$WS/.l9/pr/regen-required.txt" ]]; then
   rm -f "$WS/.l9/pr/regen-required.txt"

@@ -483,6 +483,48 @@ def test_precommit_repo_kernel_hook_fails_before_hooks(tmp_path: Path) -> None:
     assert "lint-ruff" not in combined
 
 
+def test_gate_commit_writer_dirt_finishes_without_second_make_pr(tmp_path: Path) -> None:
+    """make pr commits writer rewrites and continues; standalone precommit-repo still stops."""
+    repo = _init_repo(tmp_path, feature=True)
+    # Capture status BEFORE the dirty file is created (simulating gate start state)
+    status_before_file = tmp_path / "status_before"
+    status_before_file.write_text("", encoding="utf-8")  # empty = no prior dirt
+    (repo / "a.txt").write_text("rewritten-by-ruff\n", encoding="utf-8")
+    dirty = subprocess.run(
+        ["git", "-C", str(repo), "status", "--porcelain"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    assert "a.txt" in dirty
+    src = (SCRIPTS / "run_pr_gate.sh").read_text(encoding="utf-8")
+    start = src.find("_gate_commit_writer_dirt() {")
+    end = src.find("\n_gate_run_precommit()")
+    assert start != -1 and end != -1
+    harness = (
+        f'WS="{repo}"\nstatus_before="{status_before_file}"\n'
+        + src[start:end]
+        + "\n_gate_commit_writer_dirt\n"
+    )
+    proc = _run(["bash", "-c", harness], cwd=repo)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "committed" in proc.stdout
+    clean = subprocess.run(
+        ["git", "-C", str(repo), "status", "--porcelain"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    assert clean.strip() == ""
+    log = subprocess.run(
+        ["git", "-C", str(repo), "log", "-1", "--pretty=%s"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    assert "make pr finishes once" in log
+
+
 def test_precommit_repo_fails_closed_on_tracked_dirt(tmp_path: Path) -> None:
     repo = _init_repo(tmp_path, feature=True)
     _stamp_kernel(repo)
@@ -636,6 +678,8 @@ def test_gate_hard_stop_precedes_pytest() -> None:
     assert fn_at != -1 and fn_at < heal_at
     assert "--check --quiet --no-receipt" not in gate[fn_at:heal_at]
     assert "PR_PRECOMMIT_DEFER_DIRTY_STOP=1" in gate
+    assert "_gate_commit_writer_dirt" in gate
+    assert "committing rewrites and continuing this make pr" in gate
     assert "OK: skip root-file protection (no root-level path in change set)" in gate
     assert "OK: skip local-activation --check (healed this run)" in gate
     assert "OK: skip wiring (isolate/ssot_checkout; wiring sources unchanged)" in gate
@@ -718,6 +762,35 @@ def test_open_pr_after_gate_remediates_defaults_to_one() -> None:
     script = (SCRIPTS / "open_pr_after_gate.sh").read_text(encoding="utf-8")
     assert 'PR_REMEDIATE="${PR_REMEDIATE:-1}"' in script
     assert 'PR_REMEDIATE="${PR_REMEDIATE:-0}"' not in script
+
+
+def test_push_recovery_reattests_before_the_retry_push() -> None:
+    """Audit R3: a recovery merge moves HEAD; the retry must not publish it unattested.
+
+    The bounded-recover loop records the HEAD it is about to move, and between
+    the recovery commit(s) and the next `git push` it re-runs the local PR gate
+    on the merged tree and re-binds the L4 receipt with `extend-release` (which
+    refuses unless the attested sha is an ancestor of the new HEAD). A failure
+    in either returns before the loop can push.
+    """
+    script = (SCRIPTS / "open_pr_after_gate.sh").read_text(encoding="utf-8")
+    recover = script[script.index("_push_with_bounded_recover() {") :]
+    recover = recover[: recover.index("_push_with_bounded_recover\n")]
+    assert 'prior_head="$(git rev-parse HEAD)"' in recover
+    reattest_at = recover.index('_reattest_recovered_head "$prior_head" || return 1')
+    assert recover.index("git merge --no-edit") < reattest_at
+    assert reattest_at < recover.index("attempt=$((attempt + 1))")
+    helper = script[
+        script.index("_reattest_recovered_head() {") : script.index(
+            "_push_with_bounded_recover() {"
+        )
+    ]
+    assert "run_pr_gate.sh" in helper
+    assert "extend-release" in helper and '--from-head "$prior"' in helper
+    assert "check-remote" in helper
+    assert helper.index("run_pr_gate.sh") < helper.index("extend-release")
+    # A HEAD that did not move needs no re-attestation.
+    assert 'if [[ "$now" == "$prior" ]]; then' in helper
 
 
 def test_open_pr_after_gate_subscribes_via_graphql() -> None:

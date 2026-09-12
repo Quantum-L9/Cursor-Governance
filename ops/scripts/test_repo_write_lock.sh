@@ -77,6 +77,26 @@ rm -rf "$dead_dir"
 out="$(env -u L9_REPO_WRITE_LOCK_OWNER L9_REPO_WRITE_LOCK=0 bash -c ". '$LIB'; repo_write_lock_acquire '$WS_A' 0; echo \$?")"
 check "L9_REPO_WRITE_LOCK=0 disables the lock" "$out" "0"
 
+# --- L9_REPO_WRITE_LOCK_REQUIRED: an unusable lock directory is a refusal ----
+# Default stays fail-soft for reconcilers; a verdict-bearing caller (the PR
+# gate) must not be told it holds a lock that could not be created.
+out="$(env -u L9_REPO_WRITE_LOCK_OWNER HOME=/dev/null/no-such-home bash -c ". '$LIB'; repo_write_lock_acquire '$WS_B' 0; echo \$?")"
+check "unusable HOME is fail-soft by default" "$out" "0"
+out="$(env -u L9_REPO_WRITE_LOCK_OWNER HOME=/dev/null/no-such-home L9_REPO_WRITE_LOCK_REQUIRED=1 bash -c ". '$LIB'; repo_write_lock_acquire '$WS_B' 0; echo \$?")"
+check "unusable HOME is refused when the lock is required" "$out" "1"
+out="$(env -u L9_REPO_WRITE_LOCK_OWNER L9_REPO_WRITE_LOCK_REQUIRED=1 bash -c ". '$LIB'; repo_write_lock_acquire '$WS_B' 0; echo \$?")"
+check "required mode still acquires a usable free lock" "$out" "0"
+rm -rf "$(repo_write_lock_dir "$WS_B")"
+
+# --- lock id is a digest, not a 32-bit CRC ----------------------------------
+id_a="$(repo_write_lock_id "$WS_A")"
+id_b="$(repo_write_lock_id "$WS_B")"
+if [ "$id_a" != "$id_b" ] && [ "${#id_a}" -ge 16 ]; then
+  pass "lock id is a 16+ hex digest and differs per workspace"
+else
+  fail "lock id is a 16+ hex digest and differs per workspace (got '$id_a' / '$id_b')"
+fi
+
 if [ "$FAILED" -eq 0 ]; then
   echo "RESULT: PASS"
 else

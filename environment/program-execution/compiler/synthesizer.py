@@ -457,12 +457,23 @@ def _validation_task(
             "trigger": "validation_failure",
             "validation": "Tree unchanged by the validation task itself.",
         },
-        "risk": {"tier": "T0", "reversibility": "fully_reversible", "blast_radius": "none"},
+        # risk-tiers.yaml: T0 is read-only. A validation run whose profile
+        # ceiling grants a write is a "reversible ... test" change — T1 — and
+        # only an inspect-only ceiling may carry T0 (audit R6).
+        "risk": {
+            "tier": "T1" if any(ceiling.get(a) for a in _WRITE_ACTIONS) else "T0",
+            "reversibility": "fully_reversible",
+            "blast_radius": "none",
+        },
         "authorization_ceiling": {
             action: bool(ceiling.get(action, False)) for action in AUTH_ACTIONS
         },
         "completion_gate_ids": ["GATE-002"],
     }
+
+
+#: Ceiling actions that make a task a writer of its target.
+_WRITE_ACTIONS = ("local_write", "commit", "destructive_change")
 
 
 def _verification_task(task_id: str, predecessors: list[str]) -> dict[str, Any]:

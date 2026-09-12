@@ -293,19 +293,40 @@ def classify_outcome(outcome: Any) -> tuple[str, str]:
 
 
 # ---------------------------------------------------------------- execution
-def _write_retry_receipt(request: PeerExecutionRequest, payload: dict[str, Any]) -> Path | None:
-    try:
-        root = request.workspace / "runtime" / "peer-execution" / "retry-receipts"
-        root.mkdir(parents=True, exist_ok=True)
-        name = f"{request.task_id or 'task'}-{request.attempt_id or 'attempt'}.json"
-        target = root / name
-        with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=root, delete=False) as handle:
-            handle.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
-            temp = handle.name
-        os.replace(temp, target)
-        return target
-    except OSError:
-        return None
+class RetryReceiptUnrecorded(RuntimeError):
+    """The retry receipt could not be persisted, so the try is NOT recorded.
+
+    "Every try is recorded in ``runtime/peer-execution/retry-receipts/``" is the
+    front door's contract (README). A receipt write that failed used to be
+    swallowed into ``retry_receipt=""`` while the claim was still returned as
+    if recorded (audit R5) — the Controller then had a provider claim with no
+    durable record of the attempts behind it. The claim travels on the
+    exception (``result``) for diagnostics; it is never returned as a success.
+    """
+
+    def __init__(self, target: Path, cause: OSError, result: dict[str, Any]) -> None:
+        super().__init__(f"RETRY_RECEIPT_UNRECORDED: cannot write {target}: {cause}")
+        self.target = target
+        self.cause = cause
+        self.result = result
+
+
+def _write_retry_receipt(request: PeerExecutionRequest, payload: dict[str, Any]) -> Path:
+    """Persist the retry receipt atomically. Raises OSError; never returns None."""
+    root = request.workspace / "runtime" / "peer-execution" / "retry-receipts"
+    root.mkdir(parents=True, exist_ok=True)
+    name = f"{request.task_id or 'task'}-{request.attempt_id or 'attempt'}.json"
+    target = root / name
+    with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=root, delete=False) as handle:
+        handle.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+        temp = handle.name
+    os.replace(temp, target)
+    return target
+
+
+def retry_receipt_target(request: PeerExecutionRequest) -> Path:
+    root = request.workspace / "runtime" / "peer-execution" / "retry-receipts"
+    return root / f"{request.task_id or 'task'}-{request.attempt_id or 'attempt'}.json"
 
 
 def execute(
@@ -356,21 +377,22 @@ def execute(
         result.update(identity)
         result["attempts"] = history
         result["failover_unsafe"] = unsafe
-        result["retry_receipt"] = str(
-            _write_retry_receipt(
-                request,
-                {
-                    "schema": RETRY_RECEIPT_SCHEMA,
-                    **identity,
-                    "status": result.get("status"),
-                    "failure_class": result.get("failure_class"),
-                    "reason": result.get("reason"),
-                    "failover_unsafe": unsafe,
-                    "attempts": history,
-                },
-            )
-            or ""
-        )
+        payload = {
+            "schema": RETRY_RECEIPT_SCHEMA,
+            **identity,
+            "status": result.get("status"),
+            "failure_class": result.get("failure_class"),
+            "reason": result.get("reason"),
+            "failover_unsafe": unsafe,
+            "attempts": history,
+        }
+        try:
+            result["retry_receipt"] = str(_write_retry_receipt(request, payload))
+        except OSError as exc:
+            # Fail closed: an unrecorded try is a contract violation, not a
+            # blank field. The claim rides the exception for diagnostics.
+            result["retry_receipt"] = ""
+            raise RetryReceiptUnrecorded(retry_receipt_target(request), exc, result) from exc
         return result
 
     for candidate in candidates:
@@ -519,7 +541,47 @@ def execute(
                     }
                 )
             if str(outcome.status) == "PASS":
-                result = lifecycle.collect_provider(adapter=adapter, dispatch_id=dispatch_id)
+                # --- collect (post-dispatch, window confirmed ended) -------
+                # The provider said PASS, so its window is KNOWN_TERMINAL and
+                # the writable scope may hold its work; a collection failure
+                # means the CLAIM is unknown, not that the worker may still
+                # run. It used to escape this function as a raw exception,
+                # bypassing the failure classifier and the retry receipt
+                # (audit R4). Never retried or failed over here: the scope
+                # may already be mutated, and the Controller must fence the
+                # attempt before anything runs again.
+                try:
+                    result = lifecycle.collect_provider(adapter=adapter, dispatch_id=dispatch_id)
+                except Exception as exc:  # noqa: BLE001 - classify, never escape
+                    reason = f"provider_collect_failed: {type(exc).__name__}: {exc}"
+                    record(
+                        {
+                            "provider_ref": provider_ref,
+                            "stage": "collect",
+                            "status": "UNKNOWN",
+                            "failure_class": KNOWN_TERMINAL,
+                            "reason": reason,
+                            "dispatch_id": dispatch_id,
+                            "retryable": False,
+                        }
+                    )
+                    if request.mutating:
+                        unsafe = True
+                        reason = f"{PROVIDER_FAILOVER_UNSAFE}: {reason}"
+                    return finish(
+                        {
+                            "status": "UNKNOWN",
+                            "reason": reason,
+                            "failure_class": KNOWN_TERMINAL,
+                            "receipt": {},
+                            "dispatch_id": dispatch_id,
+                            "provider_ref": provider_ref,
+                            "execution_profile_ref": binding.execution_profile_ref,
+                            "prepare": prepared,
+                            "dispatch": dispatched,
+                            "run": outcome.to_dict() if hasattr(outcome, "to_dict") else {},
+                        }
+                    )
                 record(
                     {
                         "provider_ref": provider_ref,

@@ -322,10 +322,12 @@ session_start_block: |
     open campaign PRs against `main`. Do **not** mix campaign commits onto
     unrelated feature branches.
   - Mid-execution `make pr` and the MCP write tools are **denied** by
-    `ops/autonomy/local_execution_gate.py` until release_authorized. Raw
-    `git push` / `gh pr create` are off doctrine but NOT gate-denied — git and
-    gh answer to `ops/autonomy/git_guardrails.py` by effect. See
-    CANONICAL_LAW §6.2.4.
+    `ops/autonomy/local_execution_gate.py` until release_authorized. git and
+    gh are never denied by L4 state (CANONICAL_LAW §6.2.4); they answer by
+    effect: `git_guardrails.py` (destruction) and
+    `first_publication_gate.py` (§6.2.8 — a raw `git push` of a branch with
+    no open PR, or `gh pr create`, is a first publication and is denied; a
+    push advancing an open PR stays allowed).
   - **On adapter surfaces, `make pr` is the local validation and publish
     path — a whole-catalog pytest run belongs to CI, not to a chat turn.**
     The gate leaf (`pr-check` / `OPEN_PR=0 make pr`) runs precommit once and

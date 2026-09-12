@@ -19,7 +19,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "76cfeadcb82ff9011b91d28d35e583c1be656ba97778a3c19d62d3fcbc47c1f5"
+      "sha256": "15701cffad963ef1432680247e763a35248bb1ba5f8164d575730fa88105a34d"
     },
     {
       "path": "Run 1 Agent Feedback Analysis.md",
@@ -963,7 +963,7 @@
     },
     {
       "path": "compiler/architecture_to_campaign.py",
-      "sha256": "7e75e6348cc620a61e8d3ac57f88afc8653e08208d42a4e9f65739f87ea2203d"
+      "sha256": "50cab29d8b5c8521621bbfc7de503bdea3bfd8129bbe23087698cd88db3077a0"
     },
     {
       "path": "compiler/blueprint_validate.py",
@@ -1051,7 +1051,7 @@
     },
     {
       "path": "compiler/synthesizer.py",
-      "sha256": "042242c01c309d9fdea3fa9ede461d4308949c06b9d330025dfac7e2113ca6cd"
+      "sha256": "3a2ecea848ea2b58a6fa77f08f1e893caf90237daee01f300c19fc81e728cd64"
     },
     {
       "path": "compiler/tests/conformance/__init__.py",
@@ -1663,7 +1663,7 @@
     },
     {
       "path": "peer_execution/README.md",
-      "sha256": "d439d139eb80965f40166cd6e257b321336afe0a34d48da7f59b298829b62ae3"
+      "sha256": "9deb93ce79453a00aa8743b3efa163f8e842e8c4c12cf5d5dfbaa4560f5d5e70"
     },
     {
       "path": "peer_execution/__init__.py",
@@ -1831,7 +1831,7 @@
     },
     {
       "path": "peer_execution/front_door.py",
-      "sha256": "d22ef9dc1f9c866c7a3e3e09ede49b7c6a3013aa3046ca92610e78e9708bbc92"
+      "sha256": "684e0387896c06a89394e5a741e8496712101e80a2c05cf39d6117211b4bfe85"
     },
     {
       "path": "peer_execution/golden_vectors.py",
@@ -1903,7 +1903,7 @@
     },
     {
       "path": "peer_execution/tests/test_front_door.py",
-      "sha256": "d1967ef80e1086c8eeca11f7ecf4706703dd50a1656cdd685374f37cb0a3e43b"
+      "sha256": "4d1f2451a0d26cb620904006734554b60ddaef636aa285e1a23e4eae44fe9cb9"
     },
     {
       "path": "peer_execution/tests/test_peer_execution_contracts.py",
@@ -2015,7 +2015,7 @@
     },
     {
       "path": "scripts/compile_campaign_source.py",
-      "sha256": "cd4091ff5b5b97bf327cdc2f05faa13271b763e0e4318eae2db29e5c936bfc89"
+      "sha256": "1bba0eb37d490dec4bab8b2abcdafcc9d3252e12c278336a1df2f2f5a9b937f7"
     },
     {
       "path": "scripts/context7_stack_proof.py",
@@ -2083,7 +2083,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "28181bb2b22d7489636a8f4a960fed89579ff6553201a8016f3a51ec983d5c90"
+      "sha256": "2cce5dffae0a8d4553cd91d0aa5bf98d475c82e86789580484e0dc45ead8237d"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -2131,11 +2131,11 @@
     },
     {
       "path": "scripts/tests/test_compile_architecture_intent.py",
-      "sha256": "5e5eefb47de6d06d2f86d17975c8f10fa3ee4df65d5ee700b3951f60619bf747"
+      "sha256": "075d6b4f3de64a65d074c6b40ea12fa7b4acc480ece7dfbeb7df76848d5d32d1"
     },
     {
       "path": "scripts/tests/test_compile_campaign_source.py",
-      "sha256": "7380f231bce631f5b1d0b808198b85cbc1fbace779671da953033b92f2108e7d"
+      "sha256": "2a6668a2b2a8dc42c0bcd703dac97e389da73b8d4c0ab1ce5e6f0eac4b7456bf"
     },
     {
       "path": "scripts/tests/test_context7_stack_proof.py",
@@ -2163,7 +2163,7 @@
     },
     {
       "path": "scripts/tests/test_pe_local_commit_only.py",
-      "sha256": "5e8064102e9253d320e16def1b87b44f0bd64b0c0cd9bebeb1e1e20737b0fe9e"
+      "sha256": "48967df3c91170944c8d47a0105974d24f14809e6994d3a95bfc153ce6353371"
     },
     {
       "path": "scripts/tests/test_pe_prepare_state.py",
@@ -2175,7 +2175,7 @@
     },
     {
       "path": "scripts/tests/test_pe_smoke_campaign.py",
-      "sha256": "463be80f672f90ed225408e1eccf4ed8cd657d62b6855ea27f4c58ff5798f292"
+      "sha256": "ecc99ddeaf25d5baec5eaa403340289b01389350a67acb7aaa9c6cc1dea127e4"
     },
     {
       "path": "scripts/tests/test_pe_trace.py",

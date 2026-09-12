@@ -14,7 +14,10 @@
 #     is an independent long-lived human kill switch; do not conflate them.
 #   - serializes automation only. Parallel humans/agents on one clone remain
 #     governed by rules/49-shared-worktree-isolation.mdc (use a worktree).
-#   - fail-soft: an unusable lock never blocks the caller.
+#   - fail-soft by default: an unusable lock directory never blocks a caller
+#     that only reconciles. A caller whose VERDICT depends on an unchanging
+#     tree (run_pr_gate.sh) sets L9_REPO_WRITE_LOCK_REQUIRED=1, and then an
+#     unusable lock directory is refused (return 1) like a held lock is.
 #
 # Usage:
 #   source ops/scripts/lib/repo_write_lock.sh
@@ -23,6 +26,8 @@
 #
 # Env:
 #   L9_REPO_WRITE_LOCK=0        disable entirely (acquire always succeeds)
+#   L9_REPO_WRITE_LOCK_REQUIRED=1  refuse (return 1) when the lock dir cannot
+#                               be created, instead of reporting it held
 #   L9_REPO_WRITE_LOCK_OWNER    pid of the holder; set by the acquirer and
 #                               inherited by children so nested governance
 #                               scripts do not self-block
@@ -43,9 +48,19 @@ repo_write_lock_disabled() {
 }
 
 # Stable per-workspace lock id without invoking python (this runs on hot paths).
+# A cryptographic digest, not `cksum`: a 32-bit CRC over two workspace paths can
+# collide, and with the gate now holding the lock fail-closed a collision would
+# make two unrelated checkouts block each other's `make pr`. `cksum` stays only
+# as the last resort where no sha256 tool exists.
 repo_write_lock_id() {
   local ws="${1:-$PWD}"
-  printf '%s' "$ws" | cksum | awk '{print $1}'
+  if command -v sha256sum >/dev/null 2>&1; then
+    printf '%s' "$ws" | sha256sum | awk '{print substr($1, 1, 16)}'
+  elif command -v shasum >/dev/null 2>&1; then
+    printf '%s' "$ws" | shasum -a 256 | awk '{print substr($1, 1, 16)}'
+  else
+    printf '%s' "$ws" | cksum | awk '{print $1}'
+  fi
 }
 
 repo_write_lock_dir() {
@@ -115,7 +130,15 @@ repo_write_lock_acquire() {
   fi
 
   dir="$(repo_write_lock_dir "$ws")"
-  mkdir -p "$(dirname "$dir")" 2>/dev/null || return 0 # unusable HOME: fail-soft
+  if ! mkdir -p "$(dirname "$dir")" 2>/dev/null; then
+    # Unusable HOME. Reconcilers proceed (fail-soft); a caller that requires
+    # the lock for its verdict is refused rather than told it holds a lock
+    # that does not exist.
+    case "${L9_REPO_WRITE_LOCK_REQUIRED:-0}" in
+      1 | true | yes) return 1 ;;
+      *) return 0 ;;
+    esac
+  fi
 
   while :; do
     if mkdir "$dir" 2>/dev/null; then
