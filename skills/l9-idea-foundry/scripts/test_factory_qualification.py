@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Regression tests for the Foundry -> repository-factory qualification seam."""
+
 from __future__ import annotations
 
-import hashlib
 import json
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 import self_test as core
 
@@ -76,7 +76,7 @@ sibling_templates:
         root / "scripts/birth-runner/schemas/birth-payload.schema.json",
         json.dumps(schema, indent=2) + "\n",
     )
-    compiler = r'''#!/usr/bin/env python3
+    compiler = r"""#!/usr/bin/env python3
 import argparse, hashlib, json, subprocess
 from pathlib import Path
 
@@ -107,9 +107,14 @@ def main():
     mode="authoritative" if set(matched)==set(shape) else "additive"
     if a.require_mode and mode!=a.require_mode:
         raise SystemExit(3)
+    source={
+      "repository":a.source_repository or "Quantum-L9/fixture",
+      "revision":git(src,"rev-parse","HEAD"),
+      "tree_sha":git(src,"rev-parse","HEAD^{tree}"),
+    }
     doc={
       "schema":"l9.birth-payload/v1",
-      "source":{"repository":a.source_repository or "Quantum-L9/fixture","revision":git(src,"rev-parse","HEAD"),"tree_sha":git(src,"rev-parse","HEAD^{tree}")},
+      "source":source,
       "mode":mode,
       "repository_shape":{"matched":matched},
       "packages":{"python":["foundry_fixture"]},
@@ -119,9 +124,22 @@ def main():
     a.out.parent.mkdir(parents=True,exist_ok=True)
     a.out.write_text(json.dumps(doc,indent=2,sort_keys=True)+"\n")
 if __name__=="__main__": main()
-'''
+"""
     write(root / "scripts/birth-runner/compile_birth_payload.py", compiler)
-    write(root / "scripts/birth-runner/new_repo.py", "print('fixture; not executed')\n")
+    # Interface fixture for the factory's no-remote birth engine: it accepts the
+    # real argument shape and reports the factory's own PASS token. It never
+    # creates a repository; the seam under test is Foundry's evidence binding.
+    write(
+        root / "scripts/birth-runner/new_repo.py",
+        (
+            "import sys\n"
+            "args = sys.argv[1:]\n"
+            "assert '--no-remote' in args, args\n"
+            "assert '--org-profile-src' in args, args\n"
+            "print('fixture birth engine (no repository created)')\n"
+            "print('BIRTH: PASS')\n"
+        ),
+    )
     write(root / "docs/ops/REPO_BIRTH.md", "# Fixture birth contract\n")
     write(root / "scripts/birth-runner/README.md", "# Fixture birth runner\n")
     run("git", "init", cwd=root)
@@ -156,6 +174,47 @@ def build_frozen_foundry(root: Path, base: Path) -> Path:
     return freeze
 
 
+def build_org_profile(root: Path) -> None:
+    write(root / "profile/CODEOWNERS", "* @quantum-l9/owners\n")
+    write(root / "profile/policy.yaml", "schema: fixture-org-profile/v1\nbranch_protection: true\n")
+    run("git", "init", cwd=root)
+    run("git", "config", "user.email", "org@example.invalid", cwd=root)
+    run("git", "config", "user.name", "Org Profile Fixture", cwd=root)
+    run("git", "add", ".", cwd=root)
+    run("git", "commit", "-m", "org profile fixture", cwd=root)
+
+
+def qualify(
+    source: Path, freeze: Path, factory: Path, out: Path, *extra: str, expect: int = 0
+) -> subprocess.CompletedProcess[str]:
+    return run(
+        PYTHON,
+        str(SCRIPT_DIR / "qualify_birth_handoff.py"),
+        str(source),
+        "--freeze-receipt",
+        str(freeze),
+        "--repo-template-root",
+        str(factory),
+        "--source-repository",
+        "Quantum-L9/foundry-fixture",
+        "--out-dir",
+        str(out),
+        *extra,
+        expect=expect,
+    )
+
+
+def revalidate(receipt: Path, *, expect: int = 0) -> subprocess.CompletedProcess[str]:
+    return run(
+        PYTHON, str(SCRIPT_DIR / "validate_birth_qualification.py"), str(receipt), expect=expect
+    )
+
+
+def expect_reason(proc: subprocess.CompletedProcess[str], needle: str, label: str) -> None:
+    if needle not in proc.stdout:
+        raise AssertionError(f"{label}: expected {needle!r} in:\n{proc.stdout}")
+
+
 def main() -> int:
     with tempfile.TemporaryDirectory(prefix="foundry-factory-test-") as td:
         base = Path(td)
@@ -167,54 +226,119 @@ def main() -> int:
         build_factory_fixture(factory)
         out = base / "qualification"
 
-        run(
+        # F3: pre-qualification exact-state validation cannot emit BIRTH_READY.
+        pre = run(
             PYTHON,
-            str(SCRIPT_DIR / "qualify_birth_handoff.py"),
+            str(SCRIPT_DIR / "validate_foundry_payload.py"),
             str(source),
+            "--freeze-validated",
             "--freeze-receipt",
             str(freeze),
-            "--repo-template-root",
-            str(factory),
-            "--source-repository",
-            "Quantum-L9/foundry-fixture",
-            "--out-dir",
-            str(out),
         )
+        if "BIRTH_READY" in pre.stdout or "phase: FREEZE_VALIDATED" not in pre.stdout:
+            raise AssertionError(f"pre-factory validation claimed readiness:\n{pre.stdout}")
+
+        # F3: successful FACTORY_COMPILE_PASS is the only source of BIRTH_READY.
+        proc = qualify(source, freeze, factory, out)
+        expect_reason(proc, "foundry_state=BIRTH_READY", "qualification stdout")
         receipt = out / "birth-qualification-receipt.json"
         doc = json.loads(receipt.read_text(encoding="utf-8"))
         if doc["status"] != "FACTORY_COMPILE_PASS":
             raise AssertionError("factory qualification did not reach FACTORY_COMPILE_PASS")
+        if doc["foundry_state"] != "BIRTH_READY":
+            raise AssertionError("FACTORY_COMPILE_PASS did not record BIRTH_READY")
         if doc["compiled_birth_payload"]["mode"] != "authoritative":
             raise AssertionError("factory compiler did not prove authoritative mode")
-        run(PYTHON, str(SCRIPT_DIR / "validate_birth_qualification.py"), str(receipt))
+        if not doc["source"]["tracked_tree_digest"].startswith("sha256:"):
+            raise AssertionError("qualification did not bind source tracked bytes")
+        revalidate(receipt)
+
+        # A receipt cannot self-assert a state its status does not support.
+        forged = out / "forged-receipt.json"
+        forged_doc = dict(doc)
+        forged_doc["foundry_state"] = "LOCAL_BIRTH_PASS"
+        forged.write_text(json.dumps(forged_doc, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        expect_reason(revalidate(forged, expect=1), "does not follow from", "forged state")
 
         # Qualification outputs must never be inside the source they describe.
-        run(
-            PYTHON,
-            str(SCRIPT_DIR / "qualify_birth_handoff.py"),
-            str(source),
-            "--freeze-receipt",
-            str(freeze),
-            "--repo-template-root",
-            str(factory),
-            "--source-repository",
-            "Quantum-L9/foundry-fixture",
-            "--out-dir",
-            str(source / "bad-output"),
-            expect=1,
+        qualify(source, freeze, factory, source / "bad-output", expect=1)
+
+        # F4: post-qualification dirty source bytes invalidate the receipt even
+        # though HEAD and HEAD^{tree} are unchanged.
+        core_py = source / "src/foundry_fixture/core.py"
+        original = core_py.read_text(encoding="utf-8")
+        core_py.write_text(original + "\n# uncommitted drift\n", encoding="utf-8")
+        expect_reason(revalidate(receipt, expect=1), "source worktree is dirty", "dirty tracked")
+        core_py.write_text(original, encoding="utf-8")
+        revalidate(receipt)
+        stray = source / "src/foundry_fixture/stray.py"
+        stray.write_text("print('untracked')\n", encoding="utf-8")
+        expect_reason(revalidate(receipt, expect=1), "source worktree is dirty", "untracked file")
+        stray.unlink()
+        revalidate(receipt)
+
+        # F4: local birth binds the organization profile it consumed, and
+        # profile drift invalidates LOCAL_BIRTH_PASS.
+        org = base / "org-profile"
+        org.mkdir()
+        build_org_profile(org)
+        local_out = base / "local-qualification"
+        proc = qualify(
+            source,
+            freeze,
+            factory,
+            local_out,
+            "--run-local-birth",
+            "--repo",
+            "foundry-fixture",
+            "--pkg",
+            "foundry_fixture",
+            "--desc",
+            "fixture product",
+            "--org-profile-src",
+            str(org),
+        )
+        expect_reason(proc, "status=LOCAL_BIRTH_PASS foundry_state=LOCAL_BIRTH_PASS", "local birth")
+        local_receipt = local_out / "birth-qualification-receipt.json"
+        local_doc = json.loads(local_receipt.read_text(encoding="utf-8"))
+        bound = local_doc["local_birth"]["org_profile"]
+        if bound["kind"] != "directory" or not bound["git_revision"] or not bound["git_clean"]:
+            raise AssertionError(f"organization profile binding incomplete: {bound}")
+        revalidate(local_receipt)
+
+        policy = org / "profile/policy.yaml"
+        policy_text = policy.read_text(encoding="utf-8")
+        policy.write_text(policy_text + "require_signed_commits: true\n", encoding="utf-8")
+        expect_reason(
+            revalidate(local_receipt, expect=1), "organization profile content drift", "org drift"
+        )
+        run("git", "add", "profile/policy.yaml", cwd=org)
+        run("git", "commit", "-m", "policy change", cwd=org)
+        expect_reason(
+            revalidate(local_receipt, expect=1), "organization profile content drift", "org commit"
+        )
+        # Reverting bytes without reverting the revision is still drift.
+        policy.write_text(policy_text, encoding="utf-8")
+        run("git", "add", "profile/policy.yaml", cwd=org)
+        run("git", "commit", "-m", "revert policy change", cwd=org)
+        expect_reason(
+            revalidate(local_receipt, expect=1), "organization profile revision drift", "org rev"
         )
 
         # Factory drift invalidates an earlier qualification receipt.
         ownership = factory / "scripts/birth-runner/payload-ownership.yaml"
         ownership.write_text(ownership.read_text(encoding="utf-8") + "\n", encoding="utf-8")
-        run(PYTHON, str(SCRIPT_DIR / "validate_birth_qualification.py"), str(receipt), expect=1)
+        revalidate(receipt, expect=1)
 
     print("FOUNDRY_FACTORY_QUALIFICATION_TEST: PASS")
     print("- factory_probe=PASS")
     print("- factory_owned_compile=PASS")
     print("- authoritative_mode=PASS")
+    print("- birth_ready_state_ordering=PASS")
     print("- external_contract_location=PASS")
     print("- qualification_revalidation=PASS")
+    print("- dirty_source_invalidation=PASS")
+    print("- org_profile_binding_and_invalidation=PASS")
     print("- factory_drift_invalidation=PASS")
     return 0
 
