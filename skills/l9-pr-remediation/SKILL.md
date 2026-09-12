@@ -316,7 +316,7 @@ edit_axis_owner: scripts/protocol.py
 - `git add -u` / `reset --hard` denied → stage explicit paths only
 - Result document rejected (`pr_fleet.py accept`) → the lane did not complete; re-assign with the reason or take the PR into the main lane
 - Head SHA moved under a lane → its document is `blocked`; re-plan the fleet (fingerprint) and re-assign
-- `SONAR_TOKEN` unbound after `capability_bind` (Infisical CLI only; AWS is not a bind path) → fetch runs unauthenticated and says so; record `authenticated: false`, resolve what is visible, note the gap in status — do not paste a token
+- `SONAR_TOKEN` unbound after `capability_bind` (env or the Infisical machine profile `l9-machine.json` over HTTP; the CLI keyring and AWS are not bind paths) → fetch runs unauthenticated and says so; record `authenticated: false`, resolve what is visible, note the gap in status — do not paste a token
 - `SEMGREP_APP_TOKEN` unbound after `capability_bind` → App fetch is BLOCKED; record `authenticated: false`, continue other clusters, local CE confirm still available — do not paste a token
 - CI logs missing → retry annotations/job logs once; if ownership unknown, note and continue other clusters
 - Rate limit → honor reset, retry once, continue

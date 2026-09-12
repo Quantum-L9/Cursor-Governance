@@ -158,6 +158,8 @@ def test_exact_binding_reports_the_proof_shape(tmp_path: Path, monkeypatch) -> N
     assert binding.ok and binding.status == rb.STATUS_EXACT
     proof = binding.as_dict()
     assert proof["binding_status"] == "exact"
+    assert proof["ok"] is True
+    assert "status" not in proof
     assert proof["memory_cli"] == str(env.cli)
     assert proof["memory_version"] == EXPECTED_VERSION
     assert proof["contract_version"] == CONTRACT
@@ -576,6 +578,7 @@ def test_13_the_proof_shape_carries_the_artifact_evidence(tmp_path: Path, monkey
     monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
     proof = bind(Environment(tmp_path)).as_dict()
     assert proof["binding_status"] == "exact"
+    assert proof["ok"] is True
     assert proof["artifact_provenance"] == rb.PROVENANCE_ARTIFACT_DIGEST
     assert proof["installed_artifact_digest"] == ARTIFACT_SHA256
     assert proof["expected_artifact_digest"] == ARTIFACT_SHA256
