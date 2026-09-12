@@ -483,6 +483,41 @@ def test_precommit_repo_kernel_hook_fails_before_hooks(tmp_path: Path) -> None:
     assert "lint-ruff" not in combined
 
 
+def test_gate_commit_writer_dirt_finishes_without_second_make_pr(tmp_path: Path) -> None:
+    """make pr commits writer rewrites and continues; standalone precommit-repo still stops."""
+    repo = _init_repo(tmp_path, feature=True)
+    (repo / "a.txt").write_text("rewritten-by-ruff\n", encoding="utf-8")
+    dirty = subprocess.run(
+        ["git", "-C", str(repo), "status", "--porcelain"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    assert "a.txt" in dirty
+    src = (SCRIPTS / "run_pr_gate.sh").read_text(encoding="utf-8")
+    start = src.find("_gate_commit_writer_dirt() {")
+    end = src.find("\n_gate_run_precommit()")
+    assert start != -1 and end != -1
+    harness = f'WS="{repo}"\n' + src[start:end] + "\n_gate_commit_writer_dirt\n"
+    proc = _run(["bash", "-c", harness], cwd=repo)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "committed" in proc.stdout
+    clean = subprocess.run(
+        ["git", "-C", str(repo), "status", "--porcelain"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    assert clean.strip() == ""
+    log = subprocess.run(
+        ["git", "-C", str(repo), "log", "-1", "--pretty=%s"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    assert "make pr finishes once" in log
+
+
 def test_precommit_repo_fails_closed_on_tracked_dirt(tmp_path: Path) -> None:
     repo = _init_repo(tmp_path, feature=True)
     _stamp_kernel(repo)
@@ -636,6 +671,8 @@ def test_gate_hard_stop_precedes_pytest() -> None:
     assert fn_at != -1 and fn_at < heal_at
     assert "--check --quiet --no-receipt" not in gate[fn_at:heal_at]
     assert "PR_PRECOMMIT_DEFER_DIRTY_STOP=1" in gate
+    assert "_gate_commit_writer_dirt" in gate
+    assert "committing rewrites and continuing this make pr" in gate
     assert "OK: skip root-file protection (no root-level path in change set)" in gate
     assert "OK: skip local-activation --check (healed this run)" in gate
     assert "OK: skip wiring (isolate/ssot_checkout; wiring sources unchanged)" in gate
