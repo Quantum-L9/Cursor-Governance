@@ -56,7 +56,7 @@ Two different uses of Semgrep, and they do not share a credential path:
 
 | Path | What | Token |
 |---|---|---|
-| **Retrieve** | `scripts/semgrep_fetch.py` — read-only `GET /deployments/{slug}/findings` | `capability_bind` resolves `SEMGREP_APP_TOKEN` in-process (env if already present, else Infisical CLI user profile, else AWS `openclaw-igorbot/semgrep#token`). Never print, paste, export, or write it. |
+| **Retrieve** | `scripts/semgrep_fetch.py` — read-only `GET /deployments/{slug}/findings` | `capability_bind` resolves `SEMGREP_APP_TOKEN` in-process (env if already present, else `l9-machine.json` via Infisical HTTP). AWS is not a bind path. Never print, paste, export, or write it. |
 | **Confirm** | `ops/scripts/run_pr_security.sh` — local community edition | Child **unsets** the token so a CE scan cannot upgrade to an App upload (`l9.no-semgrep-app-token-in-child-env`). |
 
 Never paste a token. The capability broker never shipped and is not the

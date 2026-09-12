@@ -253,7 +253,11 @@ validation:
   results: []
 birth:
   template_repo: Quantum-L9/l9-repo-template
+  factory_probe_ref: null
+  factory_revision: null
+  qualification_receipt_ref: null
   payload_contract: null
+  payload_contract_digest: null
   local_birth_state: null
   remote_birth_state: null
   repository_url: null
@@ -267,7 +271,7 @@ Allowed run statuses:
 
 `INTAKE | MODELED | PLANNED | CODE_REALIZED_LOCAL | BIRTH_READY | LOCAL_BIRTH_PASS | PROVISIONAL_REPOSITORY | QUARANTINED | BLOCKED`
 
-There is no `DEPLOYED` state.
+`BIRTH_READY` is not merely a clean Foundry freeze. It requires a passing factory qualification receipt proving the current factory's own compiler accepted that exact frozen source as the intended payload mode. `LOCAL_BIRTH_PASS` requires observed no-remote birth success from the canonical factory engine. There is no `DEPLOYED` state, and repository birth does not itself produce `BORN`.
 
 ## 6. FoundryIndex
 
@@ -335,7 +339,42 @@ Emit this **outside** the staging repository after the payload, including `FOUND
 
 The birth-ready validator must recompute HEAD, tracked-tree digest, plan binding, source inventory binding, and index digest and require exact equality.
 
-## 8. Typed Foundry blockers
+## 8. BirthQualificationReceipt
+
+Emit `birth-qualification-receipt.json` **outside** the staging repository after exact-state Foundry validation and factory compilation. It binds the product source and the factory contract used to admit it.
+
+Required semantics:
+
+```json
+{
+  "schema": "l9.idea-foundry.birth-qualification/v1",
+  "status": "FACTORY_COMPILE_PASS | LOCAL_BIRTH_PASS",
+  "source": {
+    "revision": "<40hex>",
+    "tree_sha": "<40hex>",
+    "foundry_freeze_receipt_sha256": "<64hex>"
+  },
+  "factory": {
+    "revision": "<40hex>",
+    "tree_sha": "<40hex>",
+    "probe_sha256": "<64hex>",
+    "contract_files": {}
+  },
+  "compiled_birth_payload": {
+    "schema": "l9.birth-payload/v1",
+    "mode": "authoritative",
+    "manifest_sha256": "<64hex>",
+    "sha256": "<64hex>"
+  },
+  "local_birth": {"status": "NOT_RUN | PASS"},
+  "remote_birth": {"status": "NOT_PERFORMED"},
+  "deployment": {"performed": false}
+}
+```
+
+The receipt is invalid after staging HEAD/tree changes, factory HEAD/tree changes, any bound factory contract file changes, freeze receipt drift, or compiled birth-payload drift. Validate it with `scripts/validate_birth_qualification.py`.
+
+## 9. Typed Foundry blockers
 
 Use stable blocker labels in receipts and final output:
 
@@ -348,6 +387,8 @@ Use stable blocker labels in receipts and final output:
 - `CODE_REALIZATION_FAILED`
 - `VALIDATION_FAILED`
 - `TEMPLATE_MISMATCH`
+- `FACTORY_CONTRACT_DRIFT`
+- `FACTORY_COMPILE_FAILED`
 - `BIRTH_INTEGRATION_FAILED`
 - `REMOTE_BIRTH_BLOCKED`
 

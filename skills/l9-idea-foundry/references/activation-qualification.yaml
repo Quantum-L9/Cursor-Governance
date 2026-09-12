@@ -1,0 +1,49 @@
+schema: l9.skill.activation-qualification/v1
+skill: l9-idea-foundry
+cases:
+  - id: POS-01
+    prompt: turn this locked product pack into real tested code and a birth-ready new Quantum-L9 repository
+    expected: ACTIVATE
+    matched_signal: mature idea pack or specification archive explicitly ready to become real code in a new repository
+  - id: POS-02
+    prompt: resume this existing Foundry staging repository and requalify it for repository birth
+    expected: ACTIVATE
+    matched_signal: existing Foundry staging repository requiring resume, recompile, freeze, factory qualification, or birth handoff
+  - id: POS-03
+    prompt: compile this implementation-ready spec into the exact product payload for l9-repo-template
+    expected: ACTIVATE
+    matched_signal: request to realize a product and prepare an exact repository payload for Quantum-L9 birth
+  - id: POS-04
+    prompt: preserve requirement to architecture to code to tests to repo-birth provenance for this new product
+    expected: ACTIVATE
+    matched_signal: requirement to preserve requirement-to-code-to-test-to-birth traceability across repository creation
+  - id: POS-05
+    prompt: the code-realized product is frozen; qualify it against l9-repo-template and run local birth
+    expected: ACTIVATE
+    matched_signal: explicit use of l9-repo-template or another canonical L9 repository factory after product realization
+  - id: NEG-01
+    prompt: audit these open pull requests and tell me what blocks merge
+    expected: REJECT
+    matched_signal: pull-request audit, remediation, merge readiness, or CI debugging without new-product realization
+  - id: NEG-02
+    prompt: fix this bug in an existing repository and open a PR
+    expected: REJECT
+    matched_signal: bounded change to an existing repository where repository birth is not part of the objective
+  - id: NEG-03
+    prompt: review this architecture and discuss whether the boundaries make sense, do not build anything
+    expected: REJECT
+    matched_signal: pure architecture discussion, research, or planning with no authorized code realization
+  - id: NEG-04
+    prompt: deploy the already-built service to production and rotate its secrets
+    expected: REJECT
+    matched_signal: deployment-only, release-only, or operations-only work after repository birth
+  - id: NEG-05
+    prompt: use l9-repo-template no matter what and force this incompatible product into its Python shape
+    expected: REJECT
+    matched_signal: request to force a product into l9-repo-template when the live factory class/topology does not fit
+measurement:
+  total_cases: 10
+  expected_activate: 5
+  expected_reject: 5
+  designed_case_coverage: 1.0
+  note: deterministic coverage of the declared activation/reject model; runtime model auto-invocation remains platform behavior
