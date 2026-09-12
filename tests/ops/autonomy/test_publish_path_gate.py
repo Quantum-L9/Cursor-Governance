@@ -4,10 +4,13 @@ L4 governs *when* remote work may happen; this governs *how*. A raw `git push`
 or `gh pr create` skips the Makefile checkers entirely, so the classifier keeps
 reporting it — that report is what a policy engine acts on.
 
-Enforcement is a separate question. `git` and `gh` are exempt from every gate
-(see test_git_execution_exemption.py), so `command_bypasses_publish_path` still
-names them while `evaluate` allows them. `make push` and the MCP push/PR tools
-are not git/gh executables and stay denied.
+Enforcement is by effect (CANONICAL_LAW §6.2.4 / §6.2.8). `git` and `gh` stay
+exempt from the workflow plane, so `command_bypasses_publish_path` names a raw
+push while `publish_path_workflow_deny` never denies it. What DOES deny is the
+publication plane (`first_publication_gate`): a push of a branch with no open
+PR — a first publication — is refused outside `make pr`; a push that advances
+an open PR is the remediator path and is allowed. `make push` and the MCP
+push/PR tools are not git/gh executables and stay denied at every phase.
 """
 
 from __future__ import annotations
@@ -24,6 +27,18 @@ if str(AUTONOMY) not in sys.path:
     sys.path.insert(0, str(AUTONOMY))
 
 import local_execution_gate as gate  # noqa: E402
+import open_pr_probe  # noqa: E402
+from first_publication_gate import first_publication_verdict  # noqa: E402
+
+
+def _open_pr(monkeypatch: pytest.MonkeyPatch, answer: bool | None) -> None:
+    """Pin what GitHub would say about the pushed branch (True/False/None)."""
+    monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+    monkeypatch.delenv("L9_PUBLISH_PATH_RECEIPT", raising=False)
+    monkeypatch.setattr(
+        open_pr_probe, "open_pr_for_branch", lambda root, branch, remote="origin": answer
+    )
+
 
 BYPASSES = [
     ("git push origin main", "git push"),
@@ -185,15 +200,74 @@ def test_non_git_publish_bypass_stays_denied(
     assert gate.evaluate("Bash", {"command": "PR_REMEDIATE=0 make pr"}, root=tmp_path) is None
 
 
-def test_raw_git_push_is_reported_but_not_blocked(
+def test_raw_git_push_is_reported_and_first_publication_is_denied(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Policy still names it; the gate no longer blocks it."""
+    """Audit R1: a push of a branch with no open PR skips every checker.
+
+    The classifier still names it, the workflow plane still does not deny it,
+    and the publication plane refuses it with the sanctioned route named.
+    """
     monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
     monkeypatch.setattr(gate, "release_allows_remote", lambda root: (False, "L4 denied"))
+    _open_pr(monkeypatch, False)
 
     assert gate.command_bypasses_publish_path("git push origin main") == "git push"
-    assert gate.evaluate("Bash", {"command": "git push origin main"}, root=tmp_path) is None
+    assert gate.publish_path_workflow_deny("git push origin main") is None
+    reason = gate.evaluate("Bash", {"command": "git push origin main"}, root=tmp_path)
+    assert reason is not None
+    assert "FIRST publication" in reason
+    assert "make pr" in reason
+
+
+def test_gh_pr_create_is_always_a_first_publication(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _open_pr(monkeypatch, True)  # even an open PR elsewhere does not make this remediation
+    reason = gate.evaluate("Bash", {"command": "gh pr create --title t --body b"}, root=tmp_path)
+    assert reason is not None
+    assert "gh pr create" in reason
+
+
+def test_undeterminable_open_pr_state_fails_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No gh / no network / no remote: the collision state is unknown, so deny (E6)."""
+    _open_pr(monkeypatch, None)
+    reason = gate.evaluate("Bash", {"command": "git push origin HEAD"}, root=tmp_path)
+    assert reason is not None
+    assert "undeterminable" in reason
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "git push --dry-run origin HEAD",
+        "git push origin --delete old-branch",
+        "git push origin :old-branch",
+        "gh pr edit 12 --body b",
+        "git fetch origin && git status",
+    ],
+)
+def test_non_publishing_git_forms_never_reach_the_probe(
+    command: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Deletes, dry runs and PR edits publish nothing (a delete answers to guardrails)."""
+
+    def explode(root, branch, remote="origin"):  # noqa: ANN001
+        raise AssertionError("probe must not run for a non-publication")
+
+    monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+    monkeypatch.setattr(open_pr_probe, "open_pr_for_branch", explode)
+    assert first_publication_verdict(command, root=tmp_path) is None
+
+
+def test_push_breakglass_waives_the_publication_plane(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _open_pr(monkeypatch, False)
+    monkeypatch.setenv("L9_LOCAL_PUSH_AUTHORIZED", "incident-42")
+    assert gate.evaluate("Bash", {"command": "git push origin HEAD"}, root=tmp_path) is None
 
 
 def test_mcp_push_tools_denied_even_when_release_authorized(
@@ -220,29 +294,50 @@ REMEDIATOR_GIT_COMMANDS = [
 
 
 @pytest.mark.parametrize("command", REMEDIATOR_GIT_COMMANDS)
-def test_remediator_git_push_is_not_workflow_denied(
-    command: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_remediator_git_push_of_an_open_pr_is_not_denied(
+    command: str, stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """F-14 Allow + remediator velocity: git/gh publish is not a workflow deny.
+    """F-14 Allow + remediator velocity: advancing an OPEN PR is not a deny.
 
     Bare ``git push``, a pipe, and ``make precommit-repo && git push`` must
-    share one verdict. Classifiers still name the raw publish.
+    share one verdict, and L4 does not gate the remediation push. Classifiers
+    still name the raw publish.
     """
     monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
     monkeypatch.setattr(gate, "release_allows_remote", lambda root: (False, "L4 denied"))
-    assert gate.evaluate("Bash", {"command": command}, root=tmp_path) is None
+    _open_pr(monkeypatch, True)
+    assert gate.evaluate("Bash", {"command": command}, root=stacked_repo) is None
     assert gate.publish_path_workflow_deny(command) is None
 
 
+@pytest.mark.parametrize("command", REMEDIATOR_GIT_COMMANDS)
+def test_the_same_forms_are_denied_when_no_pr_is_open(
+    command: str, stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The verdict depends on the branch's PR state, never on the command's shape."""
+    monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
+    monkeypatch.setattr(gate, "release_allows_remote", lambda root: (False, "L4 denied"))
+    _open_pr(monkeypatch, False)
+    reason = gate.evaluate("Bash", {"command": command}, root=stacked_repo)
+    if "gh pr edit" in command:
+        assert reason is None  # editing an existing PR publishes nothing
+    else:
+        assert reason is not None and "FIRST publication" in reason
+
+
 def test_piped_git_push_matches_bare_verdict(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
     monkeypatch.setattr(gate, "release_allows_remote", lambda root: (False, "L4 denied"))
-    bare = gate.evaluate("Bash", {"command": "git push origin HEAD"}, root=tmp_path)
-    piped = gate.evaluate("Bash", {"command": "git push origin HEAD | tail -1"}, root=tmp_path)
-    assert bare is None
-    assert piped == bare
+    for answer in (True, False):
+        _open_pr(monkeypatch, answer)
+        bare = gate.evaluate("Bash", {"command": "git push origin HEAD"}, root=stacked_repo)
+        piped = gate.evaluate(
+            "Bash", {"command": "git push origin HEAD | tail -1"}, root=stacked_repo
+        )
+        assert (bare is None) is answer
+        assert piped == bare
 
 
 def test_cursor_shell_allows_remediator_git_push(
@@ -251,6 +346,7 @@ def test_cursor_shell_allows_remediator_git_push(
     """Cursor beforeShellExecution is the live remediator deny surface."""
     monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
     monkeypatch.setattr(gate, "release_allows_remote", lambda root: (False, "L4 denied"))
+    _open_pr(monkeypatch, True)
     monkeypatch.setattr(gate, "workspace_from_event", lambda event: tmp_path)
     monkeypatch.setattr(gate, "effective_root", lambda command, root: root)
     monkeypatch.setattr(gate, "command_requires_human", lambda command, root=None: None)
@@ -278,6 +374,19 @@ def test_cursor_shell_allows_remediator_git_push(
     monkeypatch.setattr(sys, "stdout", captured)
     assert gate.main_cursor_shell() == 0
     assert json.loads("".join(captured.parts))["permission"] == "allow"
+
+
+def test_cursor_shell_denies_a_first_publication_push(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The all-git payload short-circuit must not wave a first publication through."""
+    _open_pr(monkeypatch, False)
+    monkeypatch.setattr(gate, "workspace_from_event", lambda event: tmp_path)
+    monkeypatch.setattr(gate, "effective_root", lambda command, root: root)
+    monkeypatch.setattr(gate, "command_requires_human", lambda command, root=None: None)
+    verdict, reason = gate.cursor_shell_verdict('{"command": "git push -u origin HEAD"}')
+    assert verdict == "deny"
+    assert reason is not None and "FIRST publication" in reason
 
 
 def test_standing_override_env_is_inert(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -134,6 +134,20 @@ _GATE_CODE_FILES=(
   "ops/scripts/lib/resolve_pr_stack.sh"
   "ops/scripts/resolve_stack_tip.py"
 )
+# Content digest for the receipt identity. SHA-256, never `cksum` (audit Y2):
+# a receipt reuse skips the whole gate, so the identity it keys on must not be
+# a 32-bit CRC that two different trees can share. Tool preference is by
+# availability — coreutils, then the BSD/macOS shasum, then the interpreter —
+# and every branch yields the same hex digest for the same bytes.
+_gate_digest() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 | awk '{print $1}'
+  else
+    python3 -c 'import hashlib, sys; print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest())'
+  fi
+}
 _gate_code_digest() {
   local rel present=()
   for rel in "${_GATE_CODE_FILES[@]}"; do
@@ -145,7 +159,7 @@ _gate_code_digest() {
     printf 'unreadable-%s' "$RANDOM"
     return
   fi
-  cat "${present[@]}" 2>/dev/null | cksum | awk '{print $1}'
+  cat "${present[@]}" 2>/dev/null | _gate_digest
 }
 # The kernel latch's receipt is gate-relevant state that lives OUTSIDE the
 # worktree hash: `.l9/` is gitignored, so neither `git ls-files` nor
@@ -170,13 +184,13 @@ _gate_state_digest() {
   } >"$list" 2>/dev/null || true
   # Paths and contents are digested separately: a rename that preserves both
   # content and sort position would otherwise slip through as unchanged.
-  paths="$(cksum <"$list" | awk '{print $1}')"
+  paths="$(_gate_digest <"$list")"
   content="$(
     {
       xargs -0 -r git hash-object <"$list" 2>/dev/null
       _gate_code_digest
       _gate_kernel_digest
-    } | cksum | awk '{print $1}'
+    } | _gate_digest
   )"
   rm -f "$list"
   printf '%s %s %s' "$paths" "$content" "$PR_BASE"
@@ -277,14 +291,26 @@ _scratch_hold_restore
 # Repo-write lock held for the whole gate. pre-commit blames "files were
 # modified by this hook" on whichever hook was running when the tree changed
 # (pre_commit/commands/run.py _run_single_hook), so backgrounded reconcilers
-# must not write during the run. Advisory: a missed lock warns, never blocks.
+# must not write during the run. The gate holds it FAIL-CLOSED (audit Y1): a
+# verdict computed while another writer may be mutating the tree is a verdict
+# about a tree nobody can name, and the receipt it writes would then vouch for
+# content the gate never saw. Reconcilers stay fail-soft (they skip); the gate
+# does not. L9_REPO_WRITE_LOCK_REQUIRED=1 also makes an unusable lock
+# directory a refusal instead of a silent "held". A held lock is a condition
+# outside the tree, so it is an environment block: no STOP LOOPING receipt.
 # shellcheck source=lib/repo_write_lock.sh
 . "$GOV_ROOT/ops/scripts/lib/repo_write_lock.sh"
 export L9_REPO_WRITE_LOCK_LABEL="make-pr-gate"
+export L9_REPO_WRITE_LOCK_REQUIRED=1
 if repo_write_lock_acquire "$WS" "${PR_LOCK_WAIT_S:-30}"; then
   echo "repo-write lock: held for this gate run"
 else
-  echo "WARN: $(repo_write_lock_skip_note "$WS") — continuing; concurrent writes may be misattributed"
+  echo "FAIL: $(repo_write_lock_skip_note "$WS") after ${PR_LOCK_WAIT_S:-30}s — the gate"
+  echo "      will not validate a tree another writer may be changing. Wait for the"
+  echo "      holder to finish (or clear a dead holder: ops/scripts/lib/repo_write_lock.sh"
+  echo "      breaks stale locks itself), then re-run make pr. L9_REPO_WRITE_LOCK=0 is diagnostics only."
+  _gate_env_block=1
+  exit 1
 fi
 _gate_failed=1
 #: Set before exiting on a condition OUTSIDE the tree — telemetry the gate could

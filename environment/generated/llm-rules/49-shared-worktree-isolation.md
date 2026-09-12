@@ -60,7 +60,12 @@ Per-agent worktrees answer *parallel agents*. They do not answer *automation*
 that writes into whichever workspace is open. `ops/scripts/lib/repo_write_lock.sh`
 serializes that automation:
 
-1. `make pr` holds the lock for its whole run.
+1. `make pr` holds the lock for its whole run, **fail-closed**: the gate's
+   verdict names one tree, so `run_pr_gate.sh` refuses to run while another
+   writer holds the lock (`FAIL` after `PR_LOCK_WAIT_S`, an environment block
+   — no STOP LOOPING receipt) and refuses when the lock directory cannot be
+   created (`L9_REPO_WRITE_LOCK_REQUIRED=1`). `L9_REPO_WRITE_LOCK=0` is
+   diagnostics only.
 2. sessionStart reconcilers (`install_ide_profile.sh`,
    `setup_claude_code_plugins.sh`, via `run_reconciler`) wait briefly and then
    skip fail-soft. An explicit human invocation warns and proceeds.

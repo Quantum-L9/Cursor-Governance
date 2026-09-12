@@ -1,9 +1,16 @@
-"""git/gh execution is never blocked by governance state.
+"""git/gh execution is never blocked by governance STATE.
 
 Policy still says `make pr` is the publish path, shared worktrees are fragile,
-and force-push is forbidden. The execution gates no longer enforce any of that
-by denying the command: an agent that decides a git/gh invocation is necessary
+and force-push is forbidden. The execution gates do not enforce any of that by
+denying the command: an agent that decides a git/gh invocation is necessary
 gets to run it, and a policy engine may object afterwards.
+
+Three effect planes still answer before the exemption, and each can deny a
+git command from what it would DO, never from governance state: destruction
+(`git_guardrails`), verification bypass (`verification_bypass_gate`) and first
+publication (`first_publication_gate`, CANONICAL_LAW §6.2.8 — a push of a
+branch with no open PR skips every checker and is refused outside `make pr`;
+a push advancing an open PR is the remediation path and stays allowed).
 
 Non-git commands must keep going through the normal governance machinery — the
 exemption is scoped to the executable, not widened into a general escape hatch.
@@ -26,6 +33,17 @@ if str(AUTONOMY) not in sys.path:
 import git_execution_exemption as exemption  # noqa: E402
 import local_execution_gate as gate  # noqa: E402
 import merge_gate  # noqa: E402
+import open_pr_probe  # noqa: E402
+
+
+@pytest.fixture
+def open_pr(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The pushed branch has an OPEN PR: a push is remediation, not publication."""
+    monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+    monkeypatch.setattr(
+        open_pr_probe, "open_pr_for_branch", lambda root, branch, remote="origin": True
+    )
+
 
 # The contract's required regression set, plus the forms the gates used to deny.
 EXEMPT = [
@@ -112,14 +130,40 @@ GATE_COMMANDS = [
 
 
 @pytest.mark.parametrize("command", GATE_COMMANDS)
+@pytest.mark.usefixtures("open_pr")
 def test_local_execution_gate_allows_git_without_l4_release(
     command: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """No release receipt, no publish-path allowance — still allowed."""
+    """No release receipt, no publish-path allowance — still allowed.
+
+    The push in this set advances an open PR (remediation); L4 state never
+    decides a git command.
+    """
     monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
     monkeypatch.setattr(gate, "release_allows_remote", lambda root: (False, "L4 denied"))
     assert gate.evaluate("Bash", {"command": command}, root=tmp_path) is None
+
+
+def test_first_publication_is_the_one_workflow_effect_git_still_answers_for(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Audit R1: with no open PR, a raw push is a first publication and is denied.
+
+    Governance state is still not the reason: an authorized L4 release does
+    not make the raw push allowed either, because the checkers never ran.
+    """
+    monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+    monkeypatch.setattr(
+        open_pr_probe, "open_pr_for_branch", lambda root, branch, remote="origin": False
+    )
+    for l4 in ((False, "L4 denied"), (True, None)):
+        monkeypatch.setattr(gate, "release_allows_remote", lambda root, l4=l4: l4)
+        reason = gate.evaluate("Bash", {"command": "git push origin main"}, root=tmp_path)
+        assert reason is not None and "FIRST publication" in reason
+    # Every other git command in the set is untouched by the plane.
+    for command in ("git status", "git commit -m 'wip'", "gh pr list", "gh api repos/o/r/pulls"):
+        assert gate.evaluate("Bash", {"command": command}, root=tmp_path) is None
 
 
 @pytest.mark.parametrize("command", GATE_COMMANDS)
@@ -210,10 +254,23 @@ def test_unresolvable_workspace_still_allows_git(tmp_path: Path) -> None:
     non_repo = tmp_path / "plain"
     non_repo.mkdir()
     out = _run_gate(
-        {"tool_name": "Bash", "tool_input": {"command": "git push origin main"}},
+        {"tool_name": "Bash", "tool_input": {"command": "gh pr list"}},
         cwd=non_repo,
     )
     assert out.strip() == ""
+
+
+def test_unresolvable_workspace_fails_a_push_closed(tmp_path: Path) -> None:
+    """A push whose open-PR state cannot be observed is a first publication."""
+    non_repo = tmp_path / "plain"
+    non_repo.mkdir()
+    out = _run_gate(
+        {"tool_name": "Bash", "tool_input": {"command": "git push origin main"}},
+        cwd=non_repo,
+    )
+    decision = json.loads(out)["hookSpecificOutput"]
+    assert decision["permissionDecision"] == "deny"
+    assert "FIRST publication" in decision["permissionDecisionReason"]
 
 
 def test_cursor_shell_entrypoint_allows_git_when_evaluation_would_fail(
@@ -222,11 +279,26 @@ def test_cursor_shell_entrypoint_allows_git_when_evaluation_would_fail(
     monkeypatch.setattr(
         gate, "effective_root", lambda command, root: (_ for _ in ()).throw(RuntimeError("boom"))
     )
-    monkeypatch.setattr(sys, "stdin", _Stdin({"command": "git push origin main"}))
+    monkeypatch.setattr(sys, "stdin", _Stdin({"command": "git fetch origin main"}))
     captured = _Capture()
     monkeypatch.setattr(sys, "stdout", captured)
     assert gate.main_cursor_shell() == 0
     assert json.loads(captured.text())["permission"] == "allow"
+
+
+def test_cursor_shell_entrypoint_denies_a_push_when_evaluation_would_fail(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Undeterminable state on a publication is a denial, not an allow (F-11)."""
+    monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+    monkeypatch.setattr(
+        gate, "effective_root", lambda command, root: (_ for _ in ()).throw(RuntimeError("boom"))
+    )
+    monkeypatch.setattr(sys, "stdin", _Stdin({"command": "git push origin main"}))
+    captured = _Capture()
+    monkeypatch.setattr(sys, "stdout", captured)
+    assert gate.main_cursor_shell() == 0
+    assert json.loads(captured.text())["permission"] == "deny"
 
 
 class _Stdin:

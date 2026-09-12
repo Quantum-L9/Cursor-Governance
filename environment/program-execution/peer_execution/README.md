@@ -45,6 +45,12 @@ Failure classes and what the front door does about them:
 
 Program, lock, task, contract, lease and Controller attempt identity never
 change across a failover; provider ref and provider execution id do. Every try
-is recorded in `runtime/peer-execution/retry-receipts/`. Provider health is
+is recorded in `runtime/peer-execution/retry-receipts/`, and that record is
+fail-closed: a receipt that cannot be written raises
+`RetryReceiptUnrecorded` (the claim rides the exception for diagnostics) rather
+than returning a claim with an empty `retry_receipt`. A `collect` failure after
+a confirmed `PASS` is classified `KNOWN_TERMINAL` at stage `collect` (status
+`UNKNOWN`, never retried or failed over here; `PROVIDER_FAILOVER_UNSAFE` for a
+mutating contract) instead of escaping the lifecycle. Provider health is
 advisory ordering only: a stale healthy record never bypasses a live probe and
 a stale unhealthy one never blacklists a provider.

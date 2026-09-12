@@ -375,6 +375,62 @@ class FailoverTests(unittest.TestCase):
         self.assertEqual(len(receipt["attempts"]), 2)
         self.assertEqual(receipt["attempt_id"], "attempt-0001")
 
+    def test_an_unwritable_retry_receipt_fails_closed(self) -> None:
+        """Audit R5: "every try is recorded" — a try that cannot be recorded is not returned."""
+        from peer_execution.front_door import RetryReceiptUnrecorded
+
+        blocker = self.tmp / "runtime"
+        blocker.write_text("not a directory\n", encoding="utf-8")  # mkdir -p will fail here
+        lifecycle = _Lifecycle({"primary": {}})
+        with self.assertRaises(RetryReceiptUnrecorded) as ctx:
+            _run(lifecycle, _request(self.tmp, provider_ref="primary"))
+        self.assertIn("RETRY_RECEIPT_UNRECORDED", str(ctx.exception))
+        # The claim is diagnostics on the exception, never a returned success.
+        self.assertEqual(ctx.exception.result["status"], "PASS")
+        self.assertEqual(ctx.exception.result["retry_receipt"], "")
+
+    def test_collect_failure_after_pass_is_classified_not_raised(self) -> None:
+        """Audit R4: a collect() exception is a KNOWN_TERMINAL collect-stage failure.
+
+        The provider confirmed its window ended, so the scope may hold its work;
+        the claim is unknown. It is recorded, never retried or failed over, and
+        unsafe for a mutating contract until the Controller fences the attempt.
+        """
+
+        class _CollectFails(_Lifecycle):
+            def collect_provider(self, *, dispatch_id: str, **_: Any) -> dict[str, Any]:
+                raise OSError("receipt directory vanished")
+
+        lifecycle = _CollectFails({"primary": {}, "alternate": {}})
+        result = _run(
+            lifecycle,
+            _request(self.tmp, provider_ref="primary", provider_candidates=("alternate",)),
+        )
+        self.assertEqual(result["status"], "UNKNOWN")
+        self.assertEqual(result["failure_class"], KNOWN_TERMINAL)
+        self.assertTrue(result["failover_unsafe"])
+        self.assertIn(PROVIDER_FAILOVER_UNSAFE, result["reason"])
+        self.assertIn("provider_collect_failed", result["reason"])
+        self.assertEqual(result["attempts"][-1]["stage"], "collect")
+        self.assertEqual(result["attempts"][-1]["status"], "UNKNOWN")
+        self.assertFalse(result["attempts"][-1]["retryable"])
+        self.assertEqual(lifecycle.dispatches, 1)
+        self.assertNotIn(("resolve", "alternate"), lifecycle.calls)
+        receipt = json.loads(Path(result["retry_receipt"]).read_text(encoding="utf-8"))
+        self.assertEqual(receipt["attempts"][-1]["stage"], "collect")
+
+    def test_collect_failure_of_an_inspection_task_is_terminal_but_not_unsafe(self) -> None:
+        class _CollectFails(_Lifecycle):
+            def collect_provider(self, *, dispatch_id: str, **_: Any) -> dict[str, Any]:
+                raise RuntimeError("collector crashed")
+
+        lifecycle = _CollectFails({"primary": {}})
+        result = _run(lifecycle, _request(self.tmp, mutating=False, provider_ref="primary"))
+        self.assertEqual(result["status"], "UNKNOWN")
+        self.assertEqual(result["failure_class"], KNOWN_TERMINAL)
+        self.assertFalse(result["failover_unsafe"])
+        self.assertNotIn(PROVIDER_FAILOVER_UNSAFE, result["reason"])
+
 
 class ProviderHealthTests(unittest.TestCase):
     def test_stale_unhealthy_is_deprioritized_never_removed(self) -> None:

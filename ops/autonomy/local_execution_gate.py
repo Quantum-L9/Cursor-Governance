@@ -10,11 +10,14 @@ The classifiers still report a raw publish, so a policy engine can say "you
 bypassed `make pr`" after the fact; this gate no longer turns that report into
 a blocked command.
 
-Two planes answer before that exemption, so a git command can still earn a
-denial: ``git_guardrails`` (destruction) and ``verification_bypass_gate``
+Three planes answer before that exemption, so a git command can still earn a
+denial: ``git_guardrails`` (destruction), ``verification_bypass_gate``
 (skipping the hooks that verify a commit — contract
 ``l9-commit-verification-integrity``, declared in
-``ops/config/commit-verification-contract.json``).
+``ops/config/commit-verification-contract.json``) and
+``first_publication_gate`` (a ``git push`` / ``gh pr create`` that would be a
+FIRST publication — a branch with no open PR — is denied outside ``make pr``;
+advancing an open PR stays allowed; CANONICAL_LAW §6.2.8, audit R1).
 
 That exemption is about workflow preference, not about destroying work, and it
 is NOT a blanket allow of git: every shell command is first evaluated by
@@ -72,6 +75,7 @@ from command_parse import (  # noqa: E402
     strip_heredoc_bodies,
     wrapper_subcommands,
 )
+from first_publication_gate import first_publication_verdict  # noqa: E402
 from git_execution_exemption import (  # noqa: E402
     SHELL_TOOL_NAMES,
     event_is_git_or_gh,
@@ -592,6 +596,12 @@ def _evaluate(tool_name: str, tool_input: dict[str, Any], *, root: Path) -> str 
         bypass = command_bypasses_verification(raw_command)
         if bypass:
             return bypass
+        # Publication plane, also before the exemption: a first publication is
+        # an effect (a branch reaches GitHub with none of the checkers run),
+        # and it is the one workflow question a raw git command still answers.
+        publication = first_publication_verdict(raw_command, root=root)
+        if publication:
+            return publication
 
     if event_is_git_or_gh(tool_name, tool_input):
         return None
@@ -713,6 +723,34 @@ def _command_from_payload(raw: str) -> str | None:
     return command or None
 
 
+def _first_publication_from_payload(raw: str) -> str | None:
+    """Publication-plane verdict for a raw hook payload.
+
+    Answers only when the git/gh exemption would otherwise short-circuit the
+    event before ``evaluate`` sees it (``payload_is_git_or_gh``); a compound
+    command that is not all-git reaches ``_evaluate``, which asks the same
+    question once. Fails closed: a fault while deciding about a command that
+    names a publication is a denial, never an allow (F-11).
+    """
+    command = _command_from_payload(raw)
+    if not command or not command.strip():
+        return None
+    # Broad by design; the handler below carries the reason.
+    # nosemgrep: l9.baseline.python.broad-except
+    try:
+        event = json.loads(raw)
+        root: Path | None = workspace_from_event(event) if isinstance(event, dict) else None
+        if root is not None:
+            root = effective_root(command, root)
+    except Exception:  # noqa: BLE001 - an unresolvable workspace is undeterminable state
+        root = None
+    try:
+        return first_publication_verdict(command, root=root)
+    except Exception as exc:  # noqa: BLE001 - security boundary: deny on any fault
+        _fail_closed_note(exc)
+        return INTERNAL_EVALUATION_ERROR
+
+
 def _verification_bypass_from_payload(raw: str) -> str | None:
     """Verification-bypass verdict for a raw hook payload. Never raises.
 
@@ -780,8 +818,12 @@ def main_claude() -> int:
         return _deny_claude(bypass)
     # Answered before parsing, and outside the fail-closed handler below: for a
     # git/gh command, execution permission must not depend on this gate being
-    # able to evaluate anything at all.
+    # able to evaluate anything at all — except a first publication, which is
+    # the one effect the exemption must not wave through (§6.2.8).
     if payload_is_git_or_gh(raw):
+        publication = _first_publication_from_payload(raw)
+        if publication:
+            return _deny_claude(publication)
         return 0
     try:
         event = json.loads(raw)
@@ -924,6 +966,9 @@ def cursor_shell_verdict(raw: str) -> tuple[str, str | None]:
     if bypass:
         return "deny", bypass
     if payload_is_git_or_gh(raw):
+        publication = _first_publication_from_payload(raw)
+        if publication:
+            return "deny", publication
         return "allow", None
     try:
         event = json.loads(raw)

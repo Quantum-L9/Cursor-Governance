@@ -422,6 +422,20 @@ def validate(root: Path, mode: str) -> list[str]:
             errors.append(
                 f"task {task['id']}: T4 task must explicitly declare destructive_change ceiling"
             )
+        # risk-tiers.yaml: T0 is read-only (maximum_autonomy: inspect). A T0
+        # task whose ceiling grants any mutating action tells the Controller it
+        # only inspects while authorizing it to write (audit R6).
+        writable = [
+            action
+            for action in ("local_write", "commit", "destructive_change")
+            if task["authorization_ceiling"].get(action)
+        ]
+        if task["risk"]["tier"] == "T0" and writable:
+            errors.append(
+                f"task {task['id']}: T0 is read-only (risk-tiers.yaml) but the ceiling grants "
+                f"{', '.join(writable)}; declare T1/T2 for a reversible write, or make the task "
+                "inspection-only"
+            )
 
     for gate in gates:
         if "status" in gate:

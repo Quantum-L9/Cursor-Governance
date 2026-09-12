@@ -42,14 +42,16 @@ the formatter block).
 
 ## The things most often got wrong here
 
-- **`make pr` (any capitalization) is the sanctioned route to GitHub — and
-  nothing blocks the alternatives.** Raw `git push` is *not* denied by
-  `ops/autonomy/local_execution_gate.py`; git and gh are exempt from the
-  workflow plane and answer to `ops/autonomy/git_guardrails.py`, which denies by
-  effect (CANONICAL_LAW §6.2.4). Prefer `make pr` because it runs the checkers,
-  not because pushing errors — it will not. What *is* denied at every phase:
-  `make push` and the MCP `create_pull_request` / `push_files` tools. If
-  `make pr` is what is denied, that is a fault.
+- **`make pr` (any capitalization) is the sanctioned route to GitHub, and a
+  FIRST publication has no other route.** git and gh are exempt from the
+  workflow plane and answer by effect: `ops/autonomy/git_guardrails.py`
+  (destruction), `verification_bypass_gate.py` (hook skipping) and
+  `first_publication_gate.py` (CANONICAL_LAW §6.2.8). A raw `git push` of a
+  branch with **no open PR**, or `gh pr create`, is denied because none of the
+  checkers ran; a `git push` that advances an **open** PR is the remediator
+  path and stays allowed. Undeterminable PR state (no gh, no network) denies.
+  Also denied at every phase: `make push` and the MCP `create_pull_request` /
+  `push_files` tools. If `make pr` is what is denied, that is a fault.
 - **This surface holds no credentials.** It is `model-controlled`: no Infisical
   import, no PAT, no bearer. The capability-broker experiment never shipped;
   authenticated Sonar/Semgrep/Context7 are not delivered through a broker. A

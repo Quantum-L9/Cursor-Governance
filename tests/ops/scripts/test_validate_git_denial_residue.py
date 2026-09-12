@@ -164,3 +164,32 @@ def test_a_negated_claim_is_exonerated() -> None:
     unit = "`git push` is not denied by the gate"
     assert validator.DENIAL_CLAIM.search(unit)
     assert validator.ALLOW_LINE.search(unit)
+
+
+# --- publication plane (CANONICAL_LAW §6.2.8) ------------------------------
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "`git push` of a branch with **no open PR** is denied as a first publication.",
+        "A raw `git push` / `gh pr create` that would be a FIRST publication is refused.",
+        "Denied by ops/autonomy/first_publication_gate.py: `git push` with no open pull request.",
+    ],
+)
+def test_first_publication_denials_are_truthful(tmp_path: Path, line: str) -> None:
+    """A denial scoped to the publication plane is a live, effect-based gate."""
+    assert _scan_line(tmp_path, line) == [], f"gate false-positived on: {line}"
+
+
+def test_an_unscoped_push_denial_is_still_caught(tmp_path: Path) -> None:
+    """A push that advances an open PR is NOT denied, so the bare claim stays false."""
+    line = "`git push` is denied; use make pr."
+    assert _scan_line(tmp_path, line), f"unscoped denial exempted: {line}"
+
+
+def test_publication_plane_exemption_vouches_for_a_gate_that_exists() -> None:
+    """The exemption is only truthful while the gate it names is on disk."""
+    assert validator.PUBLICATION_GATE.is_file(), validator.PUBLICATION_GATE
+    source = validator.PUBLICATION_GATE.read_text(encoding="utf-8")
+    assert "def first_publication_verdict" in source

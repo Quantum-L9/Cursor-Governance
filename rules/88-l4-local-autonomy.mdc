@@ -21,8 +21,11 @@ Default ON (`L9_L4_LOCAL_AUTONOMY=1`).
 1. Execute programs/contracts on a **stacked feature branch** with **local commits only**.
 2. **Do not** `git push`, `gh pr create`, or `make pr` mid-execution. `make pr`
    and the MCP write tools are mechanically denied until release; `git` and `gh`
-   are not blocked (CANONICAL_LAW §6.2.4), so mid-execution restraint on those
-   is doctrine you keep, not a gate that stops you.
+   are not blocked by L4 state (CANONICAL_LAW §6.2.4). A raw push of a branch
+   with no open PR, or `gh pr create`, is denied by effect as a first
+   publication (§6.2.8, `ops/autonomy/first_publication_gate.py`); a push
+   advancing an open PR stays allowed. Mid-execution restraint on the latter is
+   doctrine you keep, not a gate that stops you.
 3. **Do not** stall for push-approval pacing during local execution.
 4. When the program/contract is finished locally on **every** surface
    (Cursor, Claude Code desktop, Claude Code Mobile): scoped-commit,

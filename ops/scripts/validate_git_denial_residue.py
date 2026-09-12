@@ -16,6 +16,13 @@ model, is allowed — the point is truthfulness, not banning the words.
 
 Historical evidence (docs/plans, reports, releases, WIP) is out of scope, same as
 the sibling gate `validate_legacy_doctrine_residue.py`.
+
+One denial of a git command IS performed, since CANONICAL_LAW §6.2.8 (2026-09-12):
+`ops/autonomy/first_publication_gate.py` refuses a `git push` of a branch with
+no open pull request, and `gh pr create`, as a first publication outside
+`make pr`. A claim scoped to that effect — it names the first publication, the
+missing open PR, or the gate itself — is truthful and is allowed; a bare "git
+push is denied" still is not, because a push that advances an open PR is not.
 """
 
 from __future__ import annotations
@@ -91,9 +98,19 @@ ALLOW_LINE = re.compile(
     r"if .*denied|"
     r"where .*denied|"
     r"elsewhere|"
-    r"off doctrine but"
+    r"off doctrine but|"
+    # The publication plane (§6.2.8): a denial scoped to a FIRST publication is
+    # a live, effect-based gate, not the retired name-based one.
+    r"first[\s*_`-]*publication|"
+    r"no\s+open\s+(?:pull\s+request|pr)\b|"
+    r"first_publication_gate"
     r")"
 )
+
+#: The live gate the publication-plane exemption above vouches for. Its absence
+#: would make every "first publication is denied" sentence the exact untruth
+#: this validator exists to catch, so the exemption is only valid while it exists.
+PUBLICATION_GATE = ROOT / "ops" / "autonomy" / "first_publication_gate.py"
 
 
 def _candidates() -> list[Path]:
@@ -177,6 +194,15 @@ def scan(paths: list[Path]) -> list[str]:
 
 def main(argv: list[str] | None = None) -> int:
     del argv
+    if not PUBLICATION_GATE.is_file():
+        # The publication-plane exemption vouches for this gate. Without it every
+        # "first publication is denied" sentence is the untruth this validator
+        # exists to catch, so the exemption cannot stand.
+        print(
+            "FAIL: ops/autonomy/first_publication_gate.py is missing, so doctrine claiming a "
+            "first-publication denial (CANONICAL_LAW §6.2.8) names a gate that does not exist"
+        )
+        return 1
     findings = scan(_candidates())
     if findings:
         print("FAIL: active doctrine claims `git`/`gh` is denied by a gate")

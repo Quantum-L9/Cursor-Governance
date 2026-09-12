@@ -240,9 +240,9 @@
       "alias": null,
       "class": "always",
       "output": "49-shared-worktree-isolation.md",
-      "output_sha256": "daafc9ceffca4a88cce6745157286386bf9de468740efc6e458282c7beadfe11",
+      "output_sha256": "9649e8dc0158e8071d1a6bab4aef037819f8cdf350db9ebad7826c32bd47ecae",
       "source": "rules/49-shared-worktree-isolation.mdc",
-      "source_sha256": "6171469f551631fad67777364ed10603c33db8d90dc97ee7353d26ff1bd42da9",
+      "source_sha256": "dadf116a8b865b410b137697a3bb8c9a52c6c13e655207923d14537496cb0518",
       "stem": "49-shared-worktree-isolation"
     },
     {
@@ -276,9 +276,9 @@
       "alias": null,
       "class": "always",
       "output": "53-pr-overlap-guardrail.md",
-      "output_sha256": "9596a0a18667d93f00184f25c1a96399c05019e4b69160dbb4478a415dfb8ea3",
+      "output_sha256": "fe4da3ffec6d281ba9292fb612d8e92cfd2d98d94309d50d0a3e7cece8362167",
       "source": "rules/53-pr-overlap-guardrail.mdc",
-      "source_sha256": "f0ca4633d6a1c4a84e437e218577c9dc82351d418da9b4034eb905e6932d90a0",
+      "source_sha256": "04d0e57616e8a0fd7cbf1a66e6deb33afc94ead6c678d1d09848e527a7bdf28f",
       "stem": "53-pr-overlap-guardrail"
     },
     {
@@ -528,9 +528,9 @@
       "alias": null,
       "class": "always",
       "output": "88-l4-local-autonomy.md",
-      "output_sha256": "848e90ce85bc5c105454c581ef7a48b32ce8ed4294a359bcb13ee1335edc13e4",
+      "output_sha256": "4fc1127686db362c61a17bdc0dd114da49ecbc23650bf418244fa802213280cc",
       "source": "rules/88-l4-local-autonomy.mdc",
-      "source_sha256": "ba0ae0775f99d905aa3380a2bca6a530a05f021abfbd1dfc888b6c09d0907a1c",
+      "source_sha256": "1cb82c2099d69bca6c9ac9338480a4abc9bdf2ed4b2cac904a1c801aadd6cbd0",
       "stem": "88-l4-local-autonomy"
     },
     {
@@ -638,7 +638,7 @@
       "output": "zz-autonomy-surface-override.md",
       "output_sha256": "48e7424d2425389d850258602c9dae7dcf3bc40287b47aaa34a11477a0531217",
       "source": "ops/autonomy/surface_profile.yaml",
-      "source_sha256": "2a3c26a9a97b4c774652fd438d3f6ea9e30bcfde24d746a9f13f4d35835d7ae7",
+      "source_sha256": "9c1a0a418b27a01c2c73f73e204454efabcc59551c6ab70d2d10baf141c84d8a",
       "stem": "zz-autonomy-surface-override"
     }
   ],
@@ -650,5 +650,5 @@
     "skipped_agent_requested": 17,
     "source_mdc": 71
   },
-  "tree_sha256": "c4febcbc0f763adfae45bb3c12b94416a5163450ad60c067db4028ab4ceb5a8a"
+  "tree_sha256": "24805fc0d1cdc29e1f8c786604f46a725977e517183759007cb368885c5a6621"
 }

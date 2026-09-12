@@ -247,6 +247,53 @@ class LocalCommitOnlyTests(unittest.TestCase):
                 self.mod.run_cmd(["git", "-C", ".", "push", "origin", "main"], timeout=5)
             self.assertIn("local-commit-only", str(ctx.exception))
 
+    def test_refused_publication_functions_carry_no_publication_machinery(self) -> None:
+        """Audit Y7: the refusal is the whole function, not a guard over live code.
+
+        `make pr`, `git push`, `gh pr create` and `gh pr merge` implementations
+        used to sit under `refuse_publication()`, unreachable but readable as a
+        live publication path. The runner now carries none of it.
+        """
+        import inspect
+
+        for function in (
+            self.mod.default_make_pr,
+            self.mod.default_authorize_and_merge,
+            self.mod.push_integration_branch,
+            self.mod.maybe_open_task_pr,
+        ):
+            source = inspect.getsource(function)
+            self.assertIn("refuse_publication(", source)
+            for token in ("run_cmd(", '"gh"', '"push"', '"make"', "AUTHORIZE_SCRIPT"):
+                self.assertNotIn(token, source, msg=f"{function.__name__} still carries {token}")
+        # Every live campaign path refuses before any publish block, and no
+        # publish block follows the refusal.
+        refusing = [
+            function
+            for _, function in inspect.getmembers(self.mod, inspect.isfunction)
+            if function.__module__ == self.mod.__name__
+            and (
+                'refuse_publication("publish the campaign")' in inspect.getsource(function)
+                or 'refuse_publication("merge recorded stack pull requests")'
+                in inspect.getsource(function)
+            )
+        ]
+        self.assertGreaterEqual(len(refusing), 2, [f.__name__ for f in refusing])
+        for function in refusing:
+            source = inspect.getsource(function)
+            after = source.split("refuse_publication(", 1)[1]
+            for token in (
+                "push_integration_branch",
+                "default_make_pr",
+                "default_authorize_and_merge",
+                "hooks.make_pr",
+                "hooks.push_integration",
+                "hooks.authorize_and_merge",
+            ):
+                self.assertNotIn(
+                    token, after, msg=f"{function.__name__} keeps {token} after refusal"
+                )
+
     def test_publication_functions_refuse_without_release(self) -> None:
         with unittest.mock.patch.dict("os.environ", {}, clear=False):
             os.environ.pop("L9_PE_RELEASE_AUTHORIZED", None)

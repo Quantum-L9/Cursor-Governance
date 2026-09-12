@@ -993,3 +993,41 @@ artifact (`l9-graphite-memory==2.3.1`).
    Do not float `@main`. Do not move `v2.3.0` or `v2.3.1`.
 3. **Contract.** `memory-control-plane/v1` is unchanged. §8.2 / §8.3 front-door
    law still stands; only the release identity moves.
+
+<!-- FIRST_PUBLICATION_PLANE_V1 -->
+## 6.2.8 First publication is gated by effect (2026-09-12) — narrows §6.2.4's "a plain `git push` is not denied"
+
+Append-only. §6.2.4 stands: `git` and `gh` are never denied by governance
+*state* (L4 phase, Graphiti, worktree isolation, publish-path preference), and
+naming a command is never a reason. What the 2026-09 Program Execution seam
+audit (R1) showed is that one **effect** had no plane: a raw `git push` of a
+branch with no open pull request, or a `gh pr create`, publishes a tree that
+none of the checkers, the overlap gate, the main-bound gate, or the L4 receipt
+check ever saw. That is a first publication, and it is an effect, not a name.
+
+A fourth plane therefore answers before the exemption, beside the effect and
+verification planes: [`ops/autonomy/first_publication_gate.py`](ops/autonomy/first_publication_gate.py).
+
+1. **Denied:** `gh pr create`; `git push` of a branch with **no open PR**;
+   `git push --all/--mirror/--tags`. The route for a first publication is
+   `PR_REMEDIATE=0 make pr` (`ops/scripts/open_pr_after_gate.sh`), which is the
+   only route that runs the gates before it pushes.
+2. **Allowed:** `git push` of a branch that already has an **open PR** — the
+   remediator path of §6.2.3 / rule 48 (`make precommit-repo` then `git push`),
+   in every spelling (`make precommit-repo && git push`, `git push | tail`).
+   `gh pr edit` publishes nothing and is untouched. Deletes, dry runs, fetches,
+   commits and every read-only form never reach the probe.
+3. **Undeterminable → denied.** No `gh`, no network, no GitHub remote,
+   unreadable branch: the PR state cannot be observed, so the push fails closed
+   (the E6 rule the overlap gate already applies). `make pr` is always the
+   available alternative. The probe is REST-first (`gh api repos/…/pulls?head=`)
+   per §14, GraphQL as fallback.
+4. **Breakglass** is human/ops: `L9_LOCAL_PUSH_AUTHORIZED=<reason>` or a scoped
+   expiring receipt (`ops/autonomy/breakglass_receipt.py`). The permission-layer
+   rule of §6.2.4 is unchanged: no `Bash(git …)` deny entries.
+
+Two receipts close the same audit's R2 and R3 beside this plane: an L4 release
+receipt binds the exact HEAD sha it attested and a later commit voids it (the
+phase file alone authorizes nothing), and the publish path's push recovery
+re-runs the gate and `l4_local.py extend-release` on the merged tree before it
+retries a push.

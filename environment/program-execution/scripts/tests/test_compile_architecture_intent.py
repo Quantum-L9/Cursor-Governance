@@ -806,3 +806,159 @@ class SourceRevisionTests(unittest.TestCase):
         with self.assertRaises(COMPILER.CompileError) as ctx:
             self._compile_edited(edited, target="forged")
         self.assertIn("architecture source drifted", str(ctx.exception))
+
+
+class OwnershipAndOrderingTests(unittest.TestCase):
+    """Audit Y3 / Y4 / R6: ownership by evidence, ordering by seam, tier by ceiling."""
+
+    def _compile_doc(self, doc: str) -> dict:
+        with TemporaryDirectory() as raw:
+            path = Path(raw) / "arch.md"
+            path.write_text(textwrap.dedent(doc), encoding="utf-8")
+            return _source(_compile(Path(raw), intent=path))
+
+    @staticmethod
+    def _impl(source: dict) -> dict[str, dict]:
+        """Section tasks by title (discovery tasks are titled "Resolve open questions: …")."""
+        return {
+            task["title"]: task
+            for task in source["tasks"]
+            if not task["title"].startswith("Resolve open questions")
+        }
+
+    def test_independent_sections_are_not_serialized_by_document_order(self) -> None:
+        """Y4: three sections that share nothing run as one wave, with no edges."""
+        source = self._compile_doc(
+            """\
+            # Head
+
+            ## Alpha
+
+            Alpha MUST hold.
+
+            ## Beta
+
+            Beta MUST hold.
+
+            ## Gamma
+
+            Gamma MUST hold.
+            """
+        )
+        impl = self._impl(source)
+        self.assertEqual(sorted(impl), ["Alpha", "Beta", "Gamma"])
+        self.assertEqual(source["dependency_edges"], [])
+        self.assertEqual({task["wave_id"] for task in impl.values()}, {"W0"})
+
+    def test_a_shared_seam_keeps_document_order_between_its_writers_only(self) -> None:
+        """Y4: the one ordering the source states is two tasks writing one path."""
+        source = self._compile_doc(
+            """\
+            # Head
+
+            ## Alpha
+
+            Alpha MUST update src/shared.ts.
+
+            ## Beta
+
+            Beta MUST update src/shared.ts.
+
+            ## Gamma
+
+            Gamma MUST update src/other.ts.
+            """
+        )
+        impl = self._impl(source)
+        edges = {(edge["from"], edge["to"]) for edge in source["dependency_edges"]}
+        self.assertEqual(edges, {(impl["Alpha"]["id"], impl["Beta"]["id"])})
+        self.assertEqual(impl["Gamma"]["wave_id"], "W0")
+        self.assertEqual(impl["Beta"]["wave_id"], "W1")
+
+    def test_an_orphan_acceptance_belongs_to_its_enclosing_section(self) -> None:
+        """Y3: a subsection's acceptance goes to the section it is nested under.
+
+        The old nearest-section rule measured index distance: Alpha's acceptance
+        subsection sits one index before Beta and two after Alpha, so it landed
+        on Beta.
+        """
+        source = self._compile_doc(
+            """\
+            # Head
+
+            ## Alpha
+
+            Alpha MUST hold.
+
+            ### Alpha background
+
+            Some context about alpha that states no obligation.
+
+            ### Alpha acceptance
+
+            ACCEPTANCE: alpha passes its own suite.
+
+            ## Beta
+
+            Beta MUST hold.
+            """
+        )
+        impl = self._impl(source)
+        alpha_text = " ".join(item["statement"] for item in impl["Alpha"]["acceptance"])
+        beta_text = " ".join(item["statement"] for item in impl["Beta"]["acceptance"])
+        self.assertIn("alpha passes its own suite", alpha_text)
+        self.assertNotIn("alpha passes its own suite", beta_text)
+
+    def test_program_level_acceptance_becomes_a_final_gate_not_a_guessed_owner(self) -> None:
+        """Y3: an obligation no evidence can place is a program gate, never a nearest task."""
+        source = self._compile_doc(
+            """\
+            # Head
+
+            ## Alpha
+
+            Alpha MUST hold.
+
+            ## Beta
+
+            Beta MUST hold.
+
+            ## Acceptance criteria
+
+            ACCEPTANCE: the whole program passes the full suite.
+            """
+        )
+        impl = self._impl(source)
+        for task in impl.values():
+            for item in task["acceptance"]:
+                self.assertNotIn("whole program passes", item["statement"])
+        program_gate = next(
+            gate for gate in source["gates"] if gate["name"] == "program_obligations_complete"
+        )
+        self.assertTrue(
+            any("whole program passes" in text for text in program_gate["pass_criteria"])
+        )
+        last_wave = source["waves"][-1]
+        self.assertEqual(set(program_gate["task_ids"]), set(last_wave["task_ids"]))
+        self.assertIn(program_gate["id"], last_wave["exit_gate_ids"])
+        if len(source["waves"]) > 1:
+            self.assertNotIn(program_gate["id"], source["waves"][0]["exit_gate_ids"])
+
+    def test_writable_tasks_carry_t2_and_inspection_tasks_t0(self) -> None:
+        """R6: the tier says what the ceiling allows (risk-tiers.yaml)."""
+        source = self._compile_doc(
+            """\
+            # Head
+
+            ## Alpha
+
+            We need to determine whether alpha already holds.
+
+            Alpha MUST update src/alpha.ts.
+            """
+        )
+        by_kind = {task["execution_kind"]: task for task in source["tasks"]}
+        self.assertEqual(by_kind["read_only"]["risk"]["tier"], "T0")
+        self.assertFalse(by_kind["read_only"]["authorization_ceiling"]["local_write"])
+        self.assertEqual(by_kind["repo_local"]["risk"]["tier"], "T2")
+        self.assertTrue(by_kind["repo_local"]["authorization_ceiling"]["local_write"])

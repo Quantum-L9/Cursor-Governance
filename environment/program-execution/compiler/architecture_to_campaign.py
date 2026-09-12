@@ -187,6 +187,8 @@ def _default_branch(root: Path) -> str:
 class Section:
     index: int
     title: str
+    #: Heading depth (`#` count); 0 for the document root before any heading.
+    level: int = 0
     unit_ids: list[str] = field(default_factory=list)
 
     @property
@@ -199,20 +201,45 @@ def sections_for(intent: ArchitectureIntent) -> tuple[list[Section], dict[str, i
 
     Sections are the natural task boundary in an architecture document: the
     author already grouped obligations that belong together, and honoring that
-    beats any clustering the compiler could invent.
+    beats any clustering the compiler could invent. The heading depth is kept
+    because it is the one structural fact the author states about which
+    section a subsection belongs to.
     """
     sections: list[Section] = []
     by_unit: dict[str, int] = {}
-    current = Section(index=0, title=intent.title or "Architecture")
+    current = Section(index=0, title=intent.title or "Architecture", level=0)
     sections.append(current)
     for unit in intent.units:
         if unit.kind == "heading":
-            title = unit.text.lstrip("#").strip()[:_SECTION_TITLE_LIMIT]
-            current = Section(index=len(sections), title=title or f"Section {len(sections)}")
+            raw = unit.text.strip()
+            level = len(raw) - len(raw.lstrip("#"))
+            title = raw.lstrip("#").strip()[:_SECTION_TITLE_LIMIT]
+            current = Section(
+                index=len(sections),
+                title=title or f"Section {len(sections)}",
+                level=max(1, level),
+            )
             sections.append(current)
         current.unit_ids.append(unit.id)
         by_unit[unit.id] = current.index
     return sections, by_unit
+
+
+def section_parents(sections: Sequence[Section]) -> dict[int, int | None]:
+    """Each section's enclosing section: the nearest preceding shallower heading.
+
+    This is document STRUCTURE, not proximity: a `###` under a `##` belongs to
+    that `##` however many sibling `###` sit between them, and a `##` never
+    belongs to the `##` before it.
+    """
+    parents: dict[int, int | None] = {}
+    stack: list[Section] = []
+    for section in sections:
+        while stack and stack[-1].level >= section.level:
+            stack.pop()
+        parents[section.index] = stack[-1].index if stack else None
+        stack.append(section)
+    return parents
 
 
 def _section_of(item: SemanticItem, by_unit: dict[str, int]) -> int:
@@ -544,7 +571,33 @@ def lower(
     if not tasks:
         raise LoweringError("architecture source produced no executable tasks")
 
-    _adopt_orphans(items, mappings, tasks, impl_by_section, by_unit, map_item)
+    parents = section_parents(sections)
+    unowned = _adopt_orphans(items, mappings, tasks, impl_by_section, by_unit, map_item, parents)
+    program_items = [item for item in unowned if item.kind in _PROGRAM_LEVEL_KINDS]
+    program_criteria = [_clip(item.statement, 300) for item in program_items]
+    unplaceable: list[SemanticItem] = []
+    for item in unowned:
+        if item.kind in _PROGRAM_LEVEL_KINDS:
+            continue
+        if item.kind == "file_seam":
+            # A seam stated beside a prohibition and nothing else ("src/x is
+            # the seam and MUST NOT be renamed") is that prohibition's subject,
+            # not work: it is recorded on the DNB entry the same section
+            # produced. Evidence is the shared section, never proximity.
+            seam_section = _section_of(item, by_unit)
+            dnb_ids = [
+                entry["id"]
+                for prohibition in prohibitions
+                if _section_of(prohibition, by_unit) == seam_section
+                for entry in mappings.get(prohibition.id, [])
+                if entry.get("kind") == "prohibited_path" and entry.get("id")
+            ]
+            if dnb_ids:
+                map_item(item.id, "prohibited_path", id=dnb_ids[0])
+                continue
+        unplaceable.append(item)
+    if unplaceable:
+        raise _unowned_error(unplaceable, sections, by_unit)
 
     # Any evidence_requirement item the source stated directly.
     for item in [entry for entry in material if entry.kind == "evidence_requirement"]:
@@ -581,14 +634,19 @@ def lower(
         )
 
     # ---- ordering ------------------------------------------------------
-    edges = _dependency_edges(discovery_by_section, impl_by_section, tasks)
+    edges = _dependency_edges(discovery_by_section, impl_by_section, tasks, parents)
     for item in [entry for entry in material if entry.kind in {"dependency", "ordering"}]:
         if mappings.get(item.id):
             map_item(item.id, "dependency_edge")
     waves = _waves(tasks, edges)
     for task in tasks:
         task["wave_id"] = next(wave["id"] for wave in waves if task["id"] in wave["task_ids"])
-    gates = _gates(waves, tasks)
+    gates = _gates(waves, tasks, program_criteria)
+    if program_items:
+        # The program-obligations gate is the last one emitted; the unowned
+        # acceptance/validation items are covered by it, and provenance says so.
+        for item in program_items:
+            map_item(item.id, "gate", id=gates[-1]["id"])
     for wave in waves:
         wave["exit_gate_ids"] = [
             gate["id"] for gate in gates if set(gate["task_ids"]) & set(wave["task_ids"])
@@ -1146,8 +1204,14 @@ def _task(
             "trigger": "validation_failure",
             "validation": "worktree_matches_prior_head",
         },
+        # risk-tiers.yaml: T0 is "read-only program control or inspection"
+        # (maximum_autonomy: inspect); a task whose ceiling grants local_write
+        # and commit is a "reversible implementation change on one target",
+        # which is T2. Emitting T0 for writable work (audit R6) declared the
+        # task inspection-only to the Controller while the ceiling let it
+        # mutate and commit.
         "risk": {
-            "tier": "T0",
+            "tier": "T0" if inspection_only else "T2",
             "reversibility": "fully_reversible",
             "blast_radius": "inspection_only" if inspection_only else "declared_paths",
         },
@@ -1167,6 +1231,58 @@ def _task(
     }
 
 
+def _normalized_paths(candidates: Sequence[str]) -> set[str]:
+    return {path.strip().lstrip("./") for path in candidates if path.strip().lstrip("./")}
+
+
+def _owner_by_evidence(
+    item: SemanticItem,
+    tasks: Sequence[dict[str, Any]],
+    impl_by_section: dict[int, dict[str, Any]],
+    by_unit: dict[str, int],
+    parents: dict[int, int | None],
+) -> dict[str, Any] | None:
+    """The task an orphan obligation belongs to, or None when nothing shows it.
+
+    Two kinds of evidence, in order:
+
+    1. **Shared seam.** The item names a path a task already owns. The task
+       with the most paths in common wins; ties go to the earlier task.
+    2. **Enclosing section.** The item's section, or an ancestor of it by
+       heading depth, produced an implementation task. A subsection's
+       acceptance belongs to the section it is nested under.
+
+    Proximity is not evidence (audit Y3): the previous rule attached an
+    obligation to whichever task's section happened to be numerically
+    closest, which put a section's acceptance criteria on an unrelated task
+    two headings away as readily as on the right one.
+    """
+    wanted = _normalized_paths(item.suggested_paths)
+    if wanted:
+        best: tuple[int, int] | None = None
+        owner: dict[str, Any] | None = None
+        for position, task in enumerate(tasks):
+            overlap = len(wanted & _normalized_paths(task.get("paths") or []))
+            if overlap and (best is None or (-overlap, position) < best):
+                best = (-overlap, position)
+                owner = task
+        if owner is not None:
+            return owner
+    section: int | None = _section_of(item, by_unit)
+    while section is not None:
+        task = impl_by_section.get(section)
+        if task is not None:
+            return task
+        section = parents.get(section)
+    return None
+
+
+#: Orphan kinds that state a program-wide obligation when no task owns them:
+#: an acceptance or validation nobody's section produced still has to be met,
+#: and the honest place for it is a program completion gate, not a guessed task.
+_PROGRAM_LEVEL_KINDS = frozenset({"acceptance", "validation"})
+
+
 def _adopt_orphans(
     items: Sequence[SemanticItem],
     mappings: dict[str, list[dict[str, Any]]],
@@ -1174,32 +1290,28 @@ def _adopt_orphans(
     impl_by_section: dict[int, dict[str, Any]],
     by_unit: dict[str, int],
     map_item: Any,
-) -> None:
+    parents: dict[int, int | None],
+) -> list[SemanticItem]:
     """Attach material items whose section produced no task of its own.
 
     An architecture states acceptance in one section and the work it accepts in
-    another all the time. Dropping those would show up as a coverage failure,
-    which is correct but useless: the obligation belongs on the nearest task, so
-    that is where it goes.
+    another all the time. Each such item goes to the task that EVIDENCE names
+    (`_owner_by_evidence`). Items no evidence can place are returned: an
+    acceptance or validation becomes a program-level gate criterion, and any
+    other executable obligation is a lowering error the author has to resolve
+    by stating it under the section whose work it belongs to.
     """
+    unowned: list[SemanticItem] = []
     if not tasks:
-        return
-    fallback = next(
-        (task for task in tasks if task["workstream_id"] != "WS-02"),
-        tasks[0],
-    )
-
-    def nearest(item: SemanticItem) -> dict[str, Any]:
-        if not impl_by_section:
-            return fallback
-        target_section = _section_of(item, by_unit)
-        best = min(impl_by_section, key=lambda index: (abs(index - target_section), index))
-        return impl_by_section[best]
+        return unowned
 
     for item in items:
         if not item.executable or mappings.get(item.id):
             continue
-        task = nearest(item)
+        task = _owner_by_evidence(item, tasks, impl_by_section, by_unit, parents)
+        if task is None:
+            unowned.append(item)
+            continue
         suffix = task["id"].split("-")[-1]
         if item.kind == "validation":
             entry: dict[str, Any] = {
@@ -1234,41 +1346,73 @@ def _adopt_orphans(
         else:
             task.setdefault("actions", []).append(_action(item))
             map_item(item.id, "task_action", task_id=task["id"])
+    return unowned
+
+
+def _unowned_error(
+    unowned: Sequence[SemanticItem], sections: Sequence[Section], by_unit: dict[str, int]
+) -> LoweringError:
+    titles = {section.index: section.title for section in sections}
+    lines = [
+        f"  - {item.id} ({item.kind}) in section "
+        f"{titles.get(_section_of(item, by_unit), 'Architecture')!r}: {_clip(item.statement, 120)}"
+        for item in unowned
+    ]
+    return LoweringError(
+        "architecture source states obligations no task can be shown to own — no task "
+        "declares a path they name and no enclosing section produced a task:\n"
+        + "\n".join(lines)
+        + "\nState each under the section whose implementation it belongs to, or name the "
+        "file it touches."
+    )
 
 
 def _dependency_edges(
     discovery_by_section: dict[int, str],
     impl_by_section: dict[int, dict[str, Any]],
     tasks: Sequence[dict[str, Any]],
+    parents: dict[int, int | None],
 ) -> list[dict[str, str]]:
-    """Discovery precedes the work that consumes it; sections stay ordered.
+    """Discovery precedes the work that consumes it; shared seams stay ordered.
 
     This is where "we must first determine X" becomes a ready evidence task with
     the implementation edged behind it, instead of a task marked blocked. The
     edge is drawn from the section the question was asked in to the task that
-    section produced — never from a positional guess, which pointed the evidence
-    at whichever task happened to sit at the same index.
+    section produced — or, when that section produced none, to the task of its
+    enclosing section; a question asked outside every implementation section is
+    a program-level question and every implementation task waits on it.
+
+    Implementation tasks are otherwise independent. The compiler used to chain
+    them in document order (audit Y4), which turned a parallel program into a
+    serial one on the author's paragraph order. The one ordering the source
+    does state is a shared seam: two tasks that declare the same path cannot
+    write it at once, and the document order is the only order given for them.
     """
     edges: list[dict[str, str]] = []
     ordered_sections = sorted(impl_by_section)
-    first_impl = impl_by_section[ordered_sections[0]]["id"] if ordered_sections else None
     for section_index, discovery_id in sorted(discovery_by_section.items()):
-        owner = impl_by_section.get(section_index)
-        if owner is None:
-            # The question was asked in a section that produced no task of its
-            # own; the nearest following section that did is what consumes it.
-            following = [index for index in ordered_sections if index > section_index]
-            dependent = impl_by_section[following[0]]["id"] if following else first_impl
-        else:
-            dependent = owner["id"]
-        if dependent and dependent != discovery_id:
-            edges.append({"from": discovery_id, "to": dependent})
-    previous: str | None = None
-    for section_index in ordered_sections:
-        current = impl_by_section[section_index]["id"]
-        if previous is not None:
-            edges.append({"from": previous, "to": current})
-        previous = current
+        section: int | None = section_index
+        dependents: list[str] = []
+        while section is not None:
+            owner = impl_by_section.get(section)
+            if owner is not None:
+                dependents = [owner["id"]]
+                break
+            section = parents.get(section)
+        if not dependents:
+            dependents = [impl_by_section[index]["id"] for index in ordered_sections]
+        for dependent in dependents:
+            if dependent != discovery_id:
+                edges.append({"from": discovery_id, "to": dependent})
+    for position, later_index in enumerate(ordered_sections):
+        later = impl_by_section[later_index]
+        later_paths = _normalized_paths(later.get("paths") or [])
+        if not later_paths:
+            continue
+        for earlier_index in ordered_sections[:position]:
+            earlier = impl_by_section[earlier_index]
+            if later_paths & _normalized_paths(earlier.get("paths") or []):
+                edges.append({"from": earlier["id"], "to": later["id"]})
     known = {task["id"] for task in tasks}
     seen: set[tuple[str, str]] = set()
     unique: list[dict[str, str]] = []
@@ -1319,7 +1463,9 @@ def _waves(
 
 
 def _gates(
-    waves: Sequence[dict[str, Any]], tasks: Sequence[dict[str, Any]]
+    waves: Sequence[dict[str, Any]],
+    tasks: Sequence[dict[str, Any]],
+    program_criteria: Sequence[str] = (),
 ) -> list[dict[str, Any]]:
     by_id = {task["id"]: task for task in tasks}
     gates: list[dict[str, Any]] = []
@@ -1342,6 +1488,24 @@ def _gates(
                 "task_ids": list(wave["task_ids"]),
                 "required_evidence_ids": [],
                 "pass_criteria": criteria or ["Wave tasks are complete."],
+                "failure_effect": "block_successor_tasks",
+            }
+        )
+    if program_criteria and waves:
+        # Program-wide obligations no task owns close on the LAST wave: they
+        # are met when the program is, and pinning them to an earlier wave
+        # would block that wave's exit on work that comes after it.
+        last = waves[-1]
+        gates.append(
+            {
+                "id": f"GATE-{len(waves) + 1:03d}",
+                "name": "program_obligations_complete",
+                "gate_type": "completion",
+                "blocking": True,
+                "owner_authority_id": "AUTH-001",
+                "task_ids": list(last["task_ids"]),
+                "required_evidence_ids": [],
+                "pass_criteria": [_clip(text, 300) for text in program_criteria],
                 "failure_effect": "block_successor_tasks",
             }
         )

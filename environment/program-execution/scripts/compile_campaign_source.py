@@ -757,6 +757,33 @@ def _is_mutating_task(item: dict[str, Any]) -> bool:
     return bool(effective_authorization_ceiling(item).get("local_write"))
 
 
+#: risk-tiers.yaml: T0 is "read-only program control or inspection"
+#: (maximum_autonomy: inspect). The lowest tier a task whose ceiling grants a
+#: repository write can honestly carry is T1; T2 ("reversible implementation
+#: change on one target") is the floor the compiler applies when the source
+#: gave no write-capable tier, because nothing in a Task Card says whether the
+#: change is documentation-only.
+_WRITE_TIER_FLOOR = "T2"
+
+
+def effective_risk_tier(item: dict[str, Any]) -> tuple[str, str | None]:
+    """(tier the Task Card carries, tier it was lifted from or None).
+
+    The same narrowing-in-one-place rule as `effective_authorization_ceiling`,
+    in the other direction: a declared tier is never lowered, but a T0 on a
+    task whose EFFECTIVE ceiling still writes is lifted to the write floor.
+    Left as declared (audit R6), the Controller admitted the task as
+    inspection-only while its Source Contract requested `local_write` and
+    `commit`. Lifting is conservative — every later gate reads the higher
+    tier — and the lift is reported by the caller so the source can be
+    corrected; it is never silent.
+    """
+    declared = str(((item.get("risk") or {}).get("tier")) or "").strip() or "T0"
+    if declared == "T0" and _is_mutating_task(item):
+        return _WRITE_TIER_FLOOR, declared
+    return declared, None
+
+
 def _require_consistent_execution_authority(item: dict[str, Any]) -> None:
     """Refuse a repo_local ceiling the runner has no terminal state for.
 
@@ -1609,6 +1636,16 @@ def _compile_into(
     compiled_tasks = []
     for item in tasks:
         ceiling = effective_authorization_ceiling(item)
+        tier, lifted_from = effective_risk_tier(item)
+        risk = dict(item["risk"])
+        if lifted_from is not None:
+            print(
+                f"NOTE: task {item['id']} declares risk tier {lifted_from} (read-only) but its "
+                f"ceiling grants local_write; compiled as {tier} (risk-tiers.yaml). "
+                "Correct the source tier.",
+                file=sys.stderr,
+            )
+            risk["tier"] = tier
         suffix = item["id"].split("-")[-1]
         output_locations = _task_output_locations(item)
         compiled_tasks.append(
@@ -1644,7 +1681,7 @@ def _compile_into(
                 "validation": _task_validations(item, suffix),
                 "negative_cases": item["negative_cases"],
                 "rollback": item["rollback"],
-                "risk": item["risk"],
+                "risk": risk,
                 "authorization_ceiling": ceiling,
                 "completion_gate_ids": item["completion_gate_ids"],
             }

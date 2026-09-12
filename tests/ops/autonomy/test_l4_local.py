@@ -13,9 +13,12 @@ import pytest
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "ops" / "autonomy"))
 
+import l4_local  # noqa: E402
+import open_pr_probe  # noqa: E402
 from l4_local import (  # noqa: E402
     authorize_release,
     begin,
+    extend_release,
     receipt_path,
     record_kernels,
     release_allows_remote,
@@ -55,18 +58,163 @@ def test_begin_kernels_authorize_allows_push(
 def test_gate_denies_mid_execution_remote_mutation(
     stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """L4 still gates remote mutation — but not by blocking git itself.
+    """L4 gates `make pr`; a raw push is judged by the publication plane instead.
 
-    `git push` is exempt from execution denial
-    (ops/autonomy/git_execution_exemption.py), so the L4 remote gate is pinned
-    here on `make pr`, the sanctioned publish path it actually governs.
+    L4 state never decides a git command (git_execution_exemption). A raw push
+    of this branch — which has no open PR and no GitHub remote — is a first
+    publication and is denied by `first_publication_gate`, not by L4; the same
+    push with an open PR is remediation and passes regardless of L4 phase.
     """
     monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
     reason = evaluate("Bash", {"command": "make pr"}, root=stacked_repo)
     assert reason is not None
+    assert "L4" in reason
 
+    monkeypatch.setattr(
+        open_pr_probe, "open_pr_for_branch", lambda root, branch, remote="origin": False
+    )
+    push = evaluate("Bash", {"command": "git push -u origin HEAD"}, root=stacked_repo)
+    assert push is not None and "FIRST publication" in push and "L4" not in push.split(".")[0]
+
+    monkeypatch.setattr(
+        open_pr_probe, "open_pr_for_branch", lambda root, branch, remote="origin": True
+    )
     assert evaluate("Bash", {"command": "git push -u origin HEAD"}, root=stacked_repo) is None
+
+
+# ---------------------------------------------------------------------------
+# Audit R2: release_authorized is bound to the attested HEAD sha
+# ---------------------------------------------------------------------------
+
+
+def _move_head(repo: Path, message: str = "move head") -> None:
+    subprocess.run(
+        ["git", "-C", str(repo), "commit", "--allow-empty", "-m", message],
+        check=True,
+        capture_output=True,
+    )
+
+
+def test_release_does_not_survive_head_movement(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A commit after authorize-release voids the release unless a PR is open."""
+    monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+    monkeypatch.setattr(l4_local, "pr_open_for_branch", lambda root, branch=None: False)
+    begin(stacked_repo, contract_id="r2")
+    record_kernels(stacked_repo)
+    authorize_release(stacked_repo)
+    assert release_allows_remote(stacked_repo)[0] is True
+    _move_head(stacked_repo)
+    allowed, reason = release_allows_remote(stacked_repo)
+    assert allowed is False
+    assert "stale" in reason
+    # The phase file still says release_authorized; that word alone is not an attestation.
+    assert json.loads(state_path(stacked_repo).read_text())["phase"] == "release_authorized"
+
+
+def test_remediation_of_an_open_pr_still_allows_after_head_moves(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+    monkeypatch.setattr(l4_local, "pr_open_for_branch", lambda root, branch=None: True)
+    begin(stacked_repo, contract_id="r2-open")
+    record_kernels(stacked_repo)
+    authorize_release(stacked_repo)
+    _move_head(stacked_repo)
+    allowed, reason = release_allows_remote(stacked_repo)
+    assert allowed is True
+    assert "remediation" in reason
+
+
+def test_phase_file_alone_never_authorizes(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A release_authorized phase without its sha-bound receipt denies."""
+    monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+    begin(stacked_repo, contract_id="r2-phase")
+    record_kernels(stacked_repo)
+    authorize_release(stacked_repo)
+    receipt_path(stacked_repo).unlink()
+    allowed, reason = release_allows_remote(stacked_repo)
+    assert allowed is False
+    assert "receipt" in reason
+
+
+def test_receipt_without_head_sha_is_refused(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+    monkeypatch.setattr(l4_local, "pr_open_for_branch", lambda root, branch=None: False)
+    begin(stacked_repo, contract_id="r2-nosha")
+    record_kernels(stacked_repo)
+    authorize_release(stacked_repo)
+    doc = json.loads(receipt_path(stacked_repo).read_text())
+    doc.pop("head_sha")
+    receipt_path(stacked_repo).write_text(json.dumps(doc))
+    allowed, reason = release_allows_remote(stacked_repo)
+    assert allowed is False
+    assert "head_sha" in reason
+
+
+# ---------------------------------------------------------------------------
+# Audit R3: extend-release is the only re-bind, and it is narrow
+# ---------------------------------------------------------------------------
+
+
+def test_extend_release_rebinds_only_a_fast_forward_of_the_attested_head(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+    monkeypatch.setattr(l4_local, "pr_open_for_branch", lambda root, branch=None: False)
+    begin(stacked_repo, contract_id="r3")
+    record_kernels(stacked_repo)
+    attested = authorize_release(stacked_repo)["head_sha"]
+    _move_head(stacked_repo, "merge origin/main (push recovery)")
+    assert release_allows_remote(stacked_repo)[0] is False
+
+    # The claimed prior head must be the one the receipt attests.
+    with pytest.raises(RuntimeError, match="not the claimed prior head"):
+        extend_release(stacked_repo, from_head="0" * 40, reason="push-recovery")
+
+    extended = extend_release(stacked_repo, from_head=attested, reason="push-recovery")
+    assert extended["extended_from"] == attested
+    assert extended["head_sha"] == l4_local.current_head(stacked_repo)
+    assert extended["extension_reason"] == "push-recovery"
+    assert release_allows_remote(stacked_repo)[0] is True
+
+    # A second extension needs the NEW attested sha, never the original one.
+    _move_head(stacked_repo, "another commit")
+    with pytest.raises(RuntimeError, match="not the claimed prior head"):
+        extend_release(stacked_repo, from_head=attested, reason="push-recovery")
+
+
+def test_extend_release_refuses_a_rewritten_history(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+    begin(stacked_repo, contract_id="r3-rewrite")
+    record_kernels(stacked_repo)
+    attested = authorize_release(stacked_repo)["head_sha"]
+    subprocess.run(
+        ["git", "-C", str(stacked_repo), "commit", "--amend", "--allow-empty", "-m", "rewritten"],
+        check=True,
+        capture_output=True,
+    )
+    with pytest.raises(RuntimeError, match="not an ancestor"):
+        extend_release(stacked_repo, from_head=attested, reason="push-recovery")
+
+
+def test_extend_release_requires_a_release_receipt(stacked_repo: Path) -> None:
+    begin(stacked_repo, contract_id="r3-none")
+    with pytest.raises(RuntimeError, match="release_authorized receipt"):
+        extend_release(stacked_repo, from_head="0" * 40, reason="push-recovery")
 
 
 def test_gate_allows_local_commit(stacked_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
