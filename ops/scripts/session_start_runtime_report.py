@@ -451,6 +451,13 @@ def classify_backup(detail: str) -> dict[str, Any]:
     return _line("backup", OK, text)
 
 
+#: ``aws.code`` the secrets plane writes when the seeding path was never
+#: attempted because the surface may not hold raw secret material
+#: (``session_start_secrets.NOT_ATTEMPTED``). The plane owns the string; this is
+#: the receipt contract, read here rather than re-derived from the environment.
+SECRETS_SEEDING_NOT_APPLICABLE = "SEEDING_NOT_APPLICABLE"
+
+
 def classify_aws_cli(result: dict[str, Any] | None) -> dict[str, Any]:
     """Derived view of the secrets-plane receipt aws object. Never prints account ids."""
     if not result:
@@ -459,6 +466,20 @@ def classify_aws_cli(result: dict[str, Any] | None) -> dict[str, Any]:
             FAILED,
             "aws-cli receipt unread",
             evidence="no receipt",
+        )
+    if str(result.get("code") or "") == SECRETS_SEEDING_NOT_APPLICABLE:
+        # `aws.ok` is false here because no probe ran — claiming an authorized
+        # CLI that was never invoked would be a false READY. But an absence the
+        # surface is designed for is not this session's fault, so it is `n/a`,
+        # the same call `classify_skill_usage` makes for a log Cursor never
+        # writes. Left as FAILED it drove `### FAILED` and exit 1 on every
+        # hosted session — the second false-degradation surface for the one
+        # by-design condition, after the bootstrap DEGRADED counter.
+        return _line(
+            "aws-cli",
+            NA,
+            str(result.get("summary") or "seeding not applicable on this surface"),
+            evidence=SECRETS_SEEDING_NOT_APPLICABLE,
         )
     if result.get("ok"):
         return _line("aws-cli", OK, str(result.get("summary") or "authorized"))

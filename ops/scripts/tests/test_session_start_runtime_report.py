@@ -178,6 +178,54 @@ class SecretsPlaneClassificationTests(unittest.TestCase):
         self.assertIn("aws-cli receipt unread", line["summary"])
         self.assertNotIn("aws_cli_preflight", line["summary"])
 
+    def test_seeding_not_applicable_is_na_not_a_failure(self) -> None:
+        """A by-design absence is not this session's fault.
+
+        `aws.ok` is false because no probe ran, so reading `ok` alone made the
+        reporter print `### FAILED` and exit 1 on every hosted session — for a
+        surface the secrets plane is designed not to seed.
+        """
+        line = report.classify_aws_cli(
+            {
+                "ok": False,
+                "code": "SEEDING_NOT_APPLICABLE",
+                "summary": "seeding not applicable on a model-controlled surface",
+            }
+        )
+        self.assertEqual(line["class"], report.NA)
+        self.assertFalse(line["include_in_degraded"])
+        self.assertIn("not applicable", line["summary"])
+
+    def test_the_not_applicable_code_is_the_planes_own_constant(self) -> None:
+        """The carve-out keys on the receipt contract, not on a re-derived guess."""
+        from session_start_secrets import NOT_ATTEMPTED
+
+        self.assertEqual(report.SECRETS_SEEDING_NOT_APPLICABLE, NOT_ATTEMPTED)
+
+    def test_a_real_preflight_failure_is_still_a_failure(self) -> None:
+        """The carve-out must not swallow the surface it does not apply to."""
+        line = report.classify_aws_cli(
+            {"ok": False, "code": "AWS_CLI_NOT_FOUND", "summary": "not installed"}
+        )
+        self.assertEqual(line["class"], report.FAILED)
+        md = report.format_markdown([line])
+        self.assertTrue(md.startswith("### FAILED"))
+
+    def test_a_not_applicable_plane_does_not_print_the_failed_block(self) -> None:
+        md = report.format_markdown(
+            [
+                report.classify_aws_cli(
+                    {
+                        "ok": False,
+                        "code": "SEEDING_NOT_APPLICABLE",
+                        "summary": "seeding not applicable on a model-controlled surface",
+                    }
+                )
+            ]
+        )
+        self.assertFalse(md.startswith("### FAILED"))
+        self.assertIn("aws-cli: n/a", md)
+
 
 class VenvBackupClassificationTests(unittest.TestCase):
     def test_cached_uv_line_is_ok(self) -> None:

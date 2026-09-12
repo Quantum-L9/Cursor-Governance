@@ -18,6 +18,7 @@ import os
 import re
 import subprocess
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -27,6 +28,7 @@ SECRETS_DIR = REPO_ROOT / "ops" / "secrets"
 if str(SECRETS_DIR) not in sys.path:
     sys.path.insert(0, str(SECRETS_DIR))
 
+import capability_bind as cb  # noqa: E402
 import capability_client as cc  # noqa: E402
 import surface_trust  # noqa: E402
 import validate_capability_contract as vcc  # noqa: E402
@@ -34,6 +36,26 @@ from capability_registry import load_registry  # noqa: E402
 
 MODEL_SURFACES = ["claude-code", "codex", "gemini", "manus", "cursor", "generic"]
 UNKNOWN_SURFACES = ["", "unknown", "brand-new-adapter", "OPERATOR-ish", "trusted"]
+
+
+@pytest.fixture(autouse=True)
+def _clear_bind_cache() -> Iterator[None]:
+    """Every case starts from an empty bind cache.
+
+    `capability_bind` memoizes a resolved value in module-level `_VALUES`, which
+    is correct for a short-lived fetcher process and wrong across tests in one
+    interpreter: the canary token a `build_transport` case binds stays bound for
+    every later case, so
+    `test_sonar_consumer_reports_unauthenticated_when_no_token_is_present`
+    deleted both env names and still saw an authenticated transport. It passed
+    alone and failed in file order — a fixture defect, not a product one, and
+    `reset_cache` is the hook the module ships for exactly this. The same
+    autouse fixture already guards `test_capability_bind.py`; this file reaches
+    the same cache through `sonar_fetch` and needs it too.
+    """
+    cb.reset_cache()
+    yield
+    cb.reset_cache()
 
 
 # ---------------------------------------------------------------------------
