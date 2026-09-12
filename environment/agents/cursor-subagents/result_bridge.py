@@ -170,16 +170,24 @@ def with_artifact_digest(document: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _workspace_head(workspace: str) -> str | None:
-    """Same resolution Start uses: ``git rev-parse HEAD`` in the workspace."""
+    """Same resolution Start uses: ``git rev-parse HEAD`` in the workspace.
+
+    Process-launch failures and a hung git must fail soft so Stop ingestion
+    can classify an unresolved HEAD instead of stalling.
+    """
     root = Path(workspace).expanduser() if workspace else None
     if root is None or not root.exists():
         return None
-    proc = subprocess.run(
-        ["git", "-C", str(root), "rev-parse", "HEAD"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
     sha = (proc.stdout or "").strip()
     return sha or None
 
@@ -213,6 +221,28 @@ def _incomplete_base_sha(return_receipt: Mapping[str, Any], dispatch: Mapping[st
     if resolved and _SHA_PATTERN.fullmatch(resolved):
         return resolved
     raise ResultValidationError("document.identity.base_sha must be an exact 40-character Git SHA")
+
+
+def _stable_incomplete_produced_at(
+    return_receipt: Mapping[str, Any],
+    dispatch: Mapping[str, Any],
+    raw_digest: str,
+) -> str:
+    """Return a produced_at that is stable for the same incomplete identity.
+
+    Wall-clock now() would keep result_id/raw digest stable while changing
+    document bytes on retry. Prefer dispatch/return evidence; otherwise derive
+    a deterministic UTC stamp from the raw digest.
+    """
+    for source in (return_receipt, dispatch):
+        for key in ("produced_at", "returned_at", "dispatched_at", "observed_at"):
+            value = str(source.get(key) or "").strip()
+            if value:
+                return value
+    digest = str(raw_digest or "").strip().encode("utf-8")
+    hashed = hashlib.sha256(digest).hexdigest()
+    seconds = int(hashed[:8], 16) % 2_000_000_000
+    return datetime.fromtimestamp(seconds, UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _incomplete_result_id(raw_digest: str) -> str:
@@ -306,7 +336,11 @@ def compile_incomplete_result(
             },
             "visibility": "repository_local",
         },
-        "provenance": {"produced_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")},
+        "provenance": {
+            "produced_at": _stable_incomplete_produced_at(
+                return_receipt, dispatch, raw_digest
+            )
+        },
     }
     validate_result_document(document)
     return document
