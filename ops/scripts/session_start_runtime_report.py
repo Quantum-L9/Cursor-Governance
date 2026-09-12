@@ -306,6 +306,12 @@ def proof_is_live(proof: dict[str, Any] | None) -> bool:
     return "binding_status" in proof or "ok" in proof
 
 
+# Faults a live probe is expected to hit: unreadable manifests, malformed
+# bindings, a runtime that refuses to resolve. Anything else is a defect in the
+# binding code and must surface, not be reported as "no proof".
+_PROBE_FAULTS = (OSError, ValueError, RuntimeError, TypeError, KeyError, AttributeError)
+
+
 def probe_memory_binding() -> dict[str, Any] | None:
     try:
         from ops.memory.runtime_binding import resolve_runtime_binding
@@ -313,8 +319,9 @@ def probe_memory_binding() -> dict[str, Any] | None:
         return None
     try:
         return resolve_runtime_binding().as_dict()
-    except Exception:
-        return None
+    except _PROBE_FAULTS as exc:
+        reason = f"{type(exc).__name__}: {exc}".strip()[:200]
+        return {"ok": False, "binding_status": "probe-error", "reasons": [reason]}
 
 
 def classify_memory_proof(proof: dict[str, Any]) -> dict[str, Any]:
