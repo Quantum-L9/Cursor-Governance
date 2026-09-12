@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 from typing import Any
 
 from _common import ContractError, assert_acyclic, load_data, nonempty_string, semantic_digest
@@ -144,16 +145,38 @@ def validate_graph(data: Any, envelope: Any | None = None) -> dict[str, Any]:
     return data
 
 
+def _resolve_envelope_path(graph_path: Path, explicit: str | None) -> Path:
+    if explicit:
+        return Path(explicit)
+    for name in (
+        "IDEA_EXECUTION_ENVELOPE.yaml",
+        "IDEA_EXECUTION_ENVELOPE.yml",
+        "IDEA_EXECUTION_ENVELOPE.json",
+    ):
+        candidate = graph_path.with_name(name)
+        if candidate.is_file():
+            return candidate
+    raise ContractError(
+        "full graph validation requires the current Idea Execution Envelope; "
+        "pass it as the second argument or place IDEA_EXECUTION_ENVELOPE.yaml beside the graph"
+    )
+
+
 def main() -> int:
-    if len(sys.argv) != 3:
+    if len(sys.argv) not in (2, 3):
         print(
             "usage: validate_graph.py <EXECUTION_GRAPH.yaml|json> "
-            "<IDEA_EXECUTION_ENVELOPE.yaml|json>",
+            "[IDEA_EXECUTION_ENVELOPE.yaml|json]",
             file=sys.stderr,
         )
         return 2
     try:
-        validate_graph(load_data(sys.argv[1]), load_data(sys.argv[2]))
+        graph_path = Path(sys.argv[1])
+        envelope_path = _resolve_envelope_path(
+            graph_path,
+            sys.argv[2] if len(sys.argv) == 3 else None,
+        )
+        validate_graph(load_data(graph_path), load_data(envelope_path))
     except ContractError as exc:
         print(f"IDEA_EXECUTION_GRAPH: FAIL\n- {exc}", file=sys.stderr)
         return 1
