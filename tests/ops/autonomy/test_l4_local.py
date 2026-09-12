@@ -13,11 +13,11 @@ import pytest
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "ops" / "autonomy"))
 
-import l4_local  # noqa: E402
 import open_pr_probe  # noqa: E402
 from l4_local import (  # noqa: E402
     authorize_release,
     begin,
+    current_head,
     extend_release,
     receipt_path,
     record_kernels,
@@ -102,7 +102,7 @@ def test_release_does_not_survive_head_movement(
     """A commit after authorize-release voids the release unless a PR is open."""
     monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
-    monkeypatch.setattr(l4_local, "pr_open_for_branch", lambda root, branch=None: False)
+    monkeypatch.setattr("l4_local.pr_open_for_branch", lambda root, branch=None: False)
     begin(stacked_repo, contract_id="r2")
     record_kernels(stacked_repo)
     authorize_release(stacked_repo)
@@ -120,7 +120,7 @@ def test_remediation_of_an_open_pr_still_allows_after_head_moves(
 ) -> None:
     monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
-    monkeypatch.setattr(l4_local, "pr_open_for_branch", lambda root, branch=None: True)
+    monkeypatch.setattr("l4_local.pr_open_for_branch", lambda root, branch=None: True)
     begin(stacked_repo, contract_id="r2-open")
     record_kernels(stacked_repo)
     authorize_release(stacked_repo)
@@ -150,7 +150,7 @@ def test_receipt_without_head_sha_is_refused(
 ) -> None:
     monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
-    monkeypatch.setattr(l4_local, "pr_open_for_branch", lambda root, branch=None: False)
+    monkeypatch.setattr("l4_local.pr_open_for_branch", lambda root, branch=None: False)
     begin(stacked_repo, contract_id="r2-nosha")
     record_kernels(stacked_repo)
     authorize_release(stacked_repo)
@@ -172,7 +172,7 @@ def test_extend_release_rebinds_only_a_fast_forward_of_the_attested_head(
 ) -> None:
     monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
-    monkeypatch.setattr(l4_local, "pr_open_for_branch", lambda root, branch=None: False)
+    monkeypatch.setattr("l4_local.pr_open_for_branch", lambda root, branch=None: False)
     begin(stacked_repo, contract_id="r3")
     record_kernels(stacked_repo)
     attested = authorize_release(stacked_repo)["head_sha"]
@@ -185,7 +185,7 @@ def test_extend_release_rebinds_only_a_fast_forward_of_the_attested_head(
 
     extended = extend_release(stacked_repo, from_head=attested, reason="push-recovery")
     assert extended["extended_from"] == attested
-    assert extended["head_sha"] == l4_local.current_head(stacked_repo)
+    assert extended["head_sha"] == current_head(stacked_repo)
     assert extended["extension_reason"] == "push-recovery"
     assert release_allows_remote(stacked_repo)[0] is True
 
