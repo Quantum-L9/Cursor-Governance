@@ -27,10 +27,13 @@ sys.path.insert(0, str(REPO / "ops" / "scripts"))
 
 import probe_network_posture  # noqa: E402
 from verify_account_env import (  # noqa: E402
+    DELIBERATELY_ABSENT,
+    PROHIBITED_PRESENT,
     RUNTIME_MANAGED,
     account_fields_markdown,
     compare,
     parse_env_example,
+    retired_transport_present,
     run,
     stub_revision_actual,
     stub_revision_expected,
@@ -81,8 +84,18 @@ class AccountEnvDriftTests(unittest.TestCase):
 
     def test_deliberately_absent_keys_are_never_reported_missing(self) -> None:
         """GH_TOKEN's absence is the contract, not drift."""
-        for key in ("GH_TOKEN", "SONAR_TOKEN", "INFISICAL_CLIENT_SECRET"):
+        for key in ("GH_TOKEN", "SONAR_TOKEN", "INFISICAL_CLIENT_SECRET", "GRAPHITI_MCP_URL"):
             self.assertNotIn(key, self.expected)
+        self.assertIn("GRAPHITI_MCP_URL", DELIBERATELY_ABSENT)
+        self.assertNotIn("GRAPHITI_MCP_URL", PROHIBITED_PRESENT)
+
+    def test_retired_graphiti_url_is_flagged_but_is_not_a_credential(self) -> None:
+        env = {**self.expected, "GRAPHITI_MCP_URL": "https://example.invalid/mcp"}
+        self.assertEqual(retired_transport_present(env), ["GRAPHITI_MCP_URL"])
+        result = run({**env, "L9_STUB_REVISION": stub_revision_expected()})
+        self.assertEqual(result["retired_transport_present"], ["GRAPHITI_MCP_URL"])
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["prohibited_present"], [])
 
     def test_runtime_managed_keys_are_excluded(self) -> None:
         """The harness decrements spawn depth per nesting level; comparing it
@@ -126,6 +139,9 @@ class StubRevisionTests(unittest.TestCase):
     def test_stub_writes_its_revision_into_the_session_env(self) -> None:
         stub = (ADAPTER / "web" / "setup.bootstrap.sh").read_text(encoding="utf-8")
         self.assertIn("export L9_STUB_REVISION=", stub)
+        self.assertIn("unset GRAPHITI_MCP_URL GRAPHITI_MCP_TOKEN", stub)
+        self.assertIn("bind_l9_memory_interpreter", stub)
+        self.assertIn("export L9_MEMORY_INTERPRETER=", stub)
 
 
 class AccountFieldsDocumentTests(unittest.TestCase):

@@ -9,14 +9,12 @@ rebuilt — which is the failure this file exists to make detectable.
 
 ## 1. Environment variables
 
-Checksum `e82ec18f72308215` — `verify_account_env.py` confirms a paste by comparing
+Checksum `e16eb92d2f4e29ee` — `verify_account_env.py` confirms a paste by comparing
 the live runtime against this set.
 
 ```dotenv
 CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS=480
 CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=3
-GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp
-GRAPHITI_MEMORY_ENABLED=1
 L9_AGENT_ROLE=implementation-agent
 L9_AUTONOMY_AUTHORITY=A4_CAMPAIGN_BOUNDED_EXTERNAL_WRITE
 L9_AUTONOMY_ENABLED=true
@@ -49,8 +47,8 @@ USER_ID=claude_code_agent
 
 Paste `environment/agents/adapters/claude-code/web/setup.bootstrap.sh` verbatim.
 
-- Revision: `2026-08-29.1`
-- Checksum: `a435d71d53771d79`
+- Revision: `2026-09-11.1`
+- Checksum: `f1d9fe2cbe929b18`
 
 The stub records its own revision into `~/.l9/cloud-session.env`, so a later
 session can tell whether the pasted copy is current without reading the field.

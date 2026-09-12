@@ -127,28 +127,128 @@ def _levels(**overrides: str) -> dict[str, str]:
     return base
 
 
-def test_memory_layers_map_to_three_dimensions() -> None:
-    """R0/R1 -> cli, R2/R3/R6 -> control plane, R4 -> mcp; never one word."""
+def _stub_interpreter(
+    tmp_path: Path, *, carries_package: bool = True, name: str = "python"
+) -> Path:
+    """A REAL executable standing in for a bound interpreter.
+
+    READY must mean "actually runnable": the previous fixtures exported a
+    nonexistent `/venv/bin/python` and still expected READY, which positively
+    encoded the false-ready the emitter exists to prevent (PR #548 review,
+    F-548-005). The stub answers the package probe the emitter asks of it.
+    """
+    venv_bin = tmp_path / "venv" / "bin"
+    venv_bin.mkdir(parents=True, exist_ok=True)
+    stub = venv_bin / name
+    stub.write_text(f"#!/bin/sh\nexit {0 if carries_package else 1}\n", encoding="utf-8")
+    stub.chmod(0o755)
+    return stub
+
+
+def tmp_path_of(gov: Path) -> Path:
+    """The pytest tmp dir a fake gov lives in (`_init_fake_gov` puts it at tmp/gov)."""
+    return gov.parent
+
+
+def _render_memory_server(workspace: Path, command: str = "${L9_MEMORY_INTERPRETER}") -> None:
+    (workspace / ".mcp.json").write_text(
+        json.dumps({"mcpServers": {"l9-graphite-memory": {"command": command}}}),
+        encoding="utf-8",
+    )
+
+
+def test_memory_layers_map_to_three_dimensions(tmp_path: Path, monkeypatch) -> None:
+    """R0/R1 -> cli, R2/R3/R6 -> control plane; mcp is Claude .mcp.json + env, not R4."""
     assert er._memory_cli_health(_levels())[0] == READY
     assert er._memory_control_plane_health(_levels())[0] == READY
-    assert er._memory_mcp_health(_levels())[0] == READY
     status, note = er._memory_cli_health(_levels(R0="fail"))
     assert status == DEGRADED and "unbound" in note
     status, note = er._memory_control_plane_health(_levels(R2="fail"))
     assert status == DEGRADED and "store" in note
     status, note = er._memory_control_plane_health(_levels(R6="fail"))
     assert status == DEGRADED and "namespace" in note
-    status, note = er._memory_mcp_health(_levels(R4="fail"))
-    assert status == DEGRADED and "mcp_config" in note
     # An unrunnable readiness report is UNKNOWN, never PASS.
     assert er._memory_cli_health(None)[0] == UNKNOWN
     assert er._memory_control_plane_health(None)[0] == UNKNOWN
-    assert er._memory_mcp_health(None)[0] == UNKNOWN
+
+    monkeypatch.delenv("L9_MEMORY_INTERPRETER", raising=False)
+    status, note = er._claude_mcp_health(tmp_path)
+    assert status == DEGRADED and "L9_MEMORY_INTERPRETER" in note
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(_stub_interpreter(tmp_path)))
+    status, note = er._claude_mcp_health(tmp_path)
+    assert status == DEGRADED and "mcp.json" in note
+    _render_memory_server(tmp_path)
+    assert er._claude_mcp_health(tmp_path)[0] == READY
+
+
+# --- F-548-005: readiness is executable binding truth, not configuration presence
+
+
+def test_nonexistent_interpreter_is_not_ready(tmp_path: Path, monkeypatch) -> None:
+    """The exact fixture the old tests accepted: an exported path that does not exist."""
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", "/venv/bin/python")
+    _render_memory_server(tmp_path)
+    status, note = er._claude_mcp_health(tmp_path)
+    assert status == DEGRADED
+    assert "not a file" in note and "mcp_config" in note
+
+
+def test_non_executable_interpreter_is_not_ready(tmp_path: Path, monkeypatch) -> None:
+    stub = _stub_interpreter(tmp_path)
+    stub.chmod(0o644)
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(stub))
+    _render_memory_server(tmp_path)
+    status, note = er._claude_mcp_health(tmp_path)
+    assert status == DEGRADED and "not executable" in note
+
+
+def test_rendered_command_not_bound_to_the_interpreter_is_not_ready(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """What Claude would launch must be what was proven."""
+    stub = _stub_interpreter(tmp_path)
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(stub))
+    _render_memory_server(tmp_path, command="/usr/bin/python3")
+    status, note = er._claude_mcp_health(tmp_path)
+    assert status == DEGRADED and "not bound to L9_MEMORY_INTERPRETER" in note
+    # The same path spelled out literally is the same binding.
+    _render_memory_server(tmp_path, command=str(stub))
+    assert er._claude_mcp_health(tmp_path)[0] == READY
+
+
+def test_stale_interpreter_without_the_package_is_not_ready(tmp_path: Path, monkeypatch) -> None:
+    """An interpreter that runs but no longer carries l9_graphite_memory is a stale binding."""
+    stub = _stub_interpreter(tmp_path, carries_package=False)
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(stub))
+    _render_memory_server(tmp_path)
+    status, note = er._claude_mcp_health(tmp_path)
+    assert status == DEGRADED and "stale binding" in note
+
+
+def test_interpreter_probe_that_cannot_run_is_unknown_never_ready(
+    tmp_path: Path, monkeypatch
+) -> None:
+    stub = _stub_interpreter(tmp_path)
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(stub))
+    _render_memory_server(tmp_path)
+    monkeypatch.setattr(er, "_interpreter_carries_memory_package", lambda _p: None)
+    status, note = er._claude_mcp_health(tmp_path)
+    assert status == UNKNOWN and "did not complete" in note
+
+
+def test_the_package_probe_asks_the_bound_interpreter_itself(tmp_path: Path) -> None:
+    """Executed, not inferred: the probe runs the interpreter and reads its exit."""
+    yes = _stub_interpreter(tmp_path, carries_package=True, name="yes-python")
+    no = _stub_interpreter(tmp_path, carries_package=False, name="no-python")
+    assert er._interpreter_carries_memory_package(yes) is True
+    assert er._interpreter_carries_memory_package(no) is False
+    assert er._interpreter_carries_memory_package(tmp_path / "missing") is None
 
 
 def test_memory_probe_reads_no_provider_url(monkeypatch) -> None:
     """Stage C9: the probe is the canonical readiness report, not an HTTP front door."""
     monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels(R4="fail"))
+    monkeypatch.delenv("L9_MEMORY_INTERPRETER", raising=False)
     for name in er._MEMORY_PROBE_SKIP_ENVS:
         monkeypatch.delenv(name, raising=False)
     probe = er.memory_probe(Path("/nowhere"))
@@ -157,6 +257,20 @@ def test_memory_probe_reads_no_provider_url(monkeypatch) -> None:
     assert probe["mcp"]["status"] == DEGRADED
     assert not hasattr(er, "_graphiti_mcp_http_health")
     assert not hasattr(er, "graphiti_mcp_url")
+    assert not hasattr(er, "_memory_mcp_health")
+
+
+def test_claude_mcp_ready_when_cursor_r4_would_fail(tmp_path: Path, monkeypatch) -> None:
+    """Claude mcp is workspace .mcp.json + interpreter, not Cursor diagnostics R4."""
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(_stub_interpreter(tmp_path)))
+    _render_memory_server(tmp_path)
+    monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels(R4="fail"))
+    for name in er._MEMORY_PROBE_SKIP_ENVS:
+        monkeypatch.delenv(name, raising=False)
+    probe = er.memory_probe(tmp_path, tmp_path)
+    assert probe["mcp"]["status"] == READY
+    assert probe["cli"]["status"] == READY
+    assert probe["control_plane"]["status"] == READY
 
 
 def test_memory_probe_skip_env_honors_both_names(monkeypatch) -> None:
@@ -184,31 +298,44 @@ def test_bound_cli_and_missing_mcp_entry_are_not_one_word(tmp_path: Path, monkey
     assert receipt["overall_readiness"] == DEGRADED
 
 
-def test_a_server_the_projection_gated_out_is_not_a_degraded_memory_entry() -> None:
+def test_a_server_the_projection_gated_out_is_an_unbound_interpreter(
+    tmp_path: Path, monkeypatch
+) -> None:
     """The Claude authority over `.mcp.json` is the projection, not `~/.cursor`.
 
     R4 asks the memory package for `client cursor status`, which reads
-    `~/.cursor/mcp.json`. Grading a Claude surface from a Cursor artifact is a
-    permanent false DEGRADED on Web and Mobile, where that path cannot exist
-    (SESSION_START_SPEC hard constraint 4). When the projection reports the
-    server gated out — its `_requires_env` variable unproxied — that is the
-    state governance intends, and `context7` in the same template is already
-    reported that way.
+    `~/.cursor/mcp.json`; grading a Claude surface from a Cursor artifact was
+    a permanent false DEGRADED on Web and Mobile, and R4 is no longer read.
+    But the projection gates l9-graphite-memory out on exactly one condition —
+    L9_MEMORY_INTERPRETER unbound — and since PR #548 the SessionStart binder
+    is what establishes that variable, so a gated-out memory server is a
+    binding that did not happen, not a state governance intends. It reads
+    DEGRADED with the gating named; only `context7` (a platform-proxied
+    credential) is an absence by design.
     """
+    monkeypatch.delenv("L9_MEMORY_INTERPRETER", raising=False)
     gated = frozenset({er._MEMORY_MCP_SERVER})
-    status, note = er._memory_mcp_health(_levels(R4="fail"), gated_out=gated)
-    assert status == READY
-    assert "absent by design" in note
-    assert "L9_MEMORY_INTERPRETER" in note
-    # Unrunnable diagnostics must not turn a by-design absence into UNKNOWN.
-    assert er._memory_mcp_health(None, gated_out=gated)[0] == READY
+    status, note = er._claude_mcp_health(tmp_path, gated_out=gated)
+    assert status == DEGRADED
+    assert "L9_MEMORY_INTERPRETER" in note and "gated" in note
+    # Gating cannot upgrade a bound-and-rendered verdict either way.
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(_stub_interpreter(tmp_path)))
+    _render_memory_server(tmp_path)
+    assert er._claude_mcp_health(tmp_path, gated_out=gated)[0] == READY
+    assert er._claude_mcp_health(tmp_path, gated_out=frozenset({"context7"}))[0] == READY
 
 
-def test_a_server_that_is_rendered_is_still_graded_by_r4() -> None:
-    """The fix narrows the R4 verdict; it does not delete it."""
-    other = frozenset({"context7"})
-    assert er._memory_mcp_health(_levels(R4="fail"), gated_out=other)[0] == DEGRADED
-    assert er._memory_mcp_health(_levels(), gated_out=other)[0] == READY
+def test_r4_is_never_consulted_for_the_claude_mcp_verdict(tmp_path: Path, monkeypatch) -> None:
+    """The Cursor client-config level cannot degrade or pass a Claude surface."""
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(_stub_interpreter(tmp_path)))
+    _render_memory_server(tmp_path)
+    for name in er._MEMORY_PROBE_SKIP_ENVS:
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels(R4="fail"))
+    assert er.memory_probe(tmp_path, tmp_path)["mcp"]["status"] == READY
+    monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels(R4="pass"))
+    monkeypatch.delenv("L9_MEMORY_INTERPRETER")
+    assert er.memory_probe(tmp_path, tmp_path)["mcp"]["status"] == DEGRADED
 
 
 def test_gated_out_servers_are_read_from_the_receipt_not_the_environment(monkeypatch) -> None:
@@ -232,25 +359,46 @@ def test_probe_without_a_projection_lets_r4_decide_alone() -> None:
     assert "Path.home()" not in source
 
 
-def test_gated_memory_entry_reports_ready_and_still_warns(tmp_path: Path, monkeypatch) -> None:
-    """READY because it is in the intended state; warned because it is absent."""
+def test_gated_memory_entry_is_degraded_and_names_the_gating(tmp_path: Path, monkeypatch) -> None:
+    """An unbound interpreter is a binding that did not happen: DEGRADED, warned, legible."""
     gov = _init_fake_gov(tmp_path, merge_denies=True)
     home = _fake_home(tmp_path, mcp="READY", gated_out=[er._MEMORY_MCP_SERVER, "context7"])
-    monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels(R4="fail"))
-    receipt = _build_with_levels(gov, home, monkeypatch)
-    assert receipt["memory_mcp_status"] == READY
-    assert receipt["overall_readiness"] == READY
-    assert any("absent by design" in w for w in receipt["warnings"])
-
-
-def test_a_rendered_but_drifted_memory_entry_still_degrades(tmp_path: Path, monkeypatch) -> None:
-    """The cascade that armed the repair stays available for a real defect."""
-    gov = _init_fake_gov(tmp_path, merge_denies=True)
-    home = _fake_home(tmp_path, mcp="READY", gated_out=[])
+    monkeypatch.delenv("L9_MEMORY_INTERPRETER", raising=False)
     monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels(R4="fail"))
     receipt = _build_with_levels(gov, home, monkeypatch)
     assert receipt["memory_mcp_status"] == DEGRADED
     assert receipt["overall_readiness"] == DEGRADED
+    assert any("L9_MEMORY_INTERPRETER" in w and "gated" in w for w in receipt["warnings"])
+
+
+def test_a_rendered_but_unbound_memory_entry_still_degrades(tmp_path: Path, monkeypatch) -> None:
+    """The cascade that arms the repair stays available for a real defect."""
+    gov = _init_fake_gov(tmp_path, merge_denies=True)
+    home = _fake_home(tmp_path, mcp="READY", gated_out=[])
+    # Rendered, but bound to some other python than the proven one.
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(_stub_interpreter(tmp_path)))
+    _render_memory_server(gov, command="/usr/bin/python3")
+    monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels())
+    receipt = _build_with_levels(gov, home, monkeypatch)
+    assert receipt["memory_mcp_status"] == DEGRADED
+    assert receipt["overall_readiness"] == DEGRADED
+    assert any("not bound to L9_MEMORY_INTERPRETER" in w for w in receipt["warnings"])
+
+
+def test_ready_requires_a_real_executable_binding_end_to_end(tmp_path: Path, monkeypatch) -> None:
+    """The full receipt: nonexistent interpreter is not READY; a real stub is."""
+    gov = _init_fake_gov(tmp_path, merge_denies=True)
+    home = _fake_home(tmp_path, mcp="READY")
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", "/venv/bin/python")
+    _render_memory_server(gov)
+    monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels())
+    receipt = _build_with_levels(gov, home, monkeypatch)
+    assert receipt["memory_mcp_status"] == DEGRADED
+    assert receipt["overall_readiness"] != READY
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(_stub_interpreter(tmp_path)))
+    receipt = _build_with_levels(gov, home, monkeypatch)
+    assert receipt["memory_mcp_status"] == READY
+    assert receipt["overall_readiness"] == READY, receipt["warnings"]
 
 
 def test_memory_probe_does_not_call_broker(tmp_path: Path, monkeypatch) -> None:
@@ -359,7 +507,9 @@ def _fake_home(tmp_path: Path, *, mcp: str = "READY", gated_out: list[str] | Non
 
 def _build(gov: Path, home: Path, monkeypatch) -> dict:
     monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(_stub_interpreter(tmp_path_of(gov))))
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
+    _render_memory_server(gov)
     for name in er._MEMORY_PROBE_SKIP_ENVS:
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels())
@@ -522,9 +672,9 @@ def test_memory_transport_is_a_posture_not_a_measured_credential(
 def test_receipt_carries_a_write_time_and_expires(tmp_path: Path, monkeypatch) -> None:
     """A receipt whose age is unknowable must not be reported as current.
 
-    `timestamp` is the COMMIT date of governance_SHA and reads exactly like a
-    write time, so the receipt had no age at all: one written at container
-    creation was printed as the live capability plane many hours later.
+    Historical `timestamp` was git %cI (commit date) and read like a write
+    time, so freshness inverted. Both clocks are now the UTC write instant;
+    commit date lives under governance_committed_at.
     """
     from datetime import UTC, datetime, timedelta
 
@@ -533,22 +683,17 @@ def test_receipt_carries_a_write_time_and_expires(tmp_path: Path, monkeypatch) -
     receipt = _build(gov, home, monkeypatch)
 
     assert receipt["generated_at"], "receipt must record when it was written"
+    assert receipt["timestamp"] == receipt["generated_at"]
     assert receipt["ttl_seconds"] == er.RECEIPT_TTL_SECONDS
+    datetime.strptime(receipt["generated_at"], er._TIMESTAMP_FORMAT)
 
-    # `timestamp` stays the governance COMMIT date. Assert that against git
-    # rather than against `generated_at`: the two carry different meanings but
-    # can carry the same instant, and a fixture repo committed in the same
-    # second as the receipt makes an inequality check fail for a reason that
-    # says nothing about the contract. (It did, in CI, on a fresh runner.)
     commit_date = subprocess.run(
         ["git", "-C", str(gov), "log", "-1", "--format=%cI"],
         capture_output=True,
         text=True,
         check=True,
     ).stdout.strip()
-    assert receipt["timestamp"] == commit_date, "timestamp must be the governance commit date"
-    # And `generated_at` is a write time in the receipt's own UTC format.
-    datetime.strptime(receipt["generated_at"], er._TIMESTAMP_FORMAT)
+    assert receipt["governance_committed_at"] == commit_date
 
     assert er.receipt_freshness(receipt)["state"] == er.FRESH
 

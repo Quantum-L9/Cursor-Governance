@@ -50,6 +50,7 @@ DELIBERATELY_ABSENT = frozenset(
     {
         "GH_TOKEN",
         "L9_GOVERNANCE_DIR",
+        "GRAPHITI_MCP_URL",
         "GRAPHITI_MCP_TOKEN",
         "GRAPHITI_GROUP_ID",
         "SONAR_TOKEN",
@@ -240,6 +241,18 @@ def prohibited_present(env: dict[str, str] | None = None) -> list[str]:
         for key in PROHIBITED_PRESENT
         if (live.get(key) or "").strip() and (live.get(key) or "").strip() != PROXY_SENTINEL
     )
+
+
+#: Retired provider transport. Not a credential (so not PROHIBITED_PRESENT) and
+#: not an expected account field (so in DELIBERATELY_ABSENT). Presence means the
+#: Environment variables paste or a leftover shell still points at Graphiti HTTP.
+RETIRED_TRANSPORT = frozenset({"GRAPHITI_MCP_URL"})
+
+
+def retired_transport_present(env: dict[str, str] | None = None) -> list[str]:
+    """Retired provider-transport names still set in the live runtime."""
+    live = os.environ if env is None else env
+    return sorted(key for key in RETIRED_TRANSPORT if (live.get(key) or "").strip())
 
 
 def compare(expected: dict[str, str], env: dict[str, str] | None = None) -> list[dict[str, str]]:
@@ -441,6 +454,7 @@ def run(
     drift = bool(want_rev) and have_rev != want_rev
     leaked = prohibited_present(env)
     pinned = pinned_opt_outs_present(env)
+    retired = retired_transport_present(env)
     return {
         "expected_keys": len(expected),
         "deviations": deviations,
@@ -449,8 +463,9 @@ def run(
         "stub_drift": drift,
         "stub_drift_direction": revision_direction(have_rev, want_rev) if drift else "same",
         "prohibited_present": leaked,
+        "retired_transport_present": retired,
         "pinned_opt_outs": pinned,
-        "ok": not deviations and not drift and not leaked and not pinned,
+        "ok": not deviations and not drift and not leaked and not pinned and not retired,
     }
 
 
@@ -505,6 +520,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  PROHIBITED: {key} is set in this environment (value not shown)")
         print("              delete it from the Environment variables field; a pasted")
         print("              credential is never a workaround (contract S1/S2/S3)")
+    for key in result["retired_transport_present"]:
+        print(f"  RETIRED: {key} is set in this environment")
+        print("           it is leftover Graphiti HTTP transport; unset it. Memory")
+        print("           is the bound stdio control plane (L9_MEMORY_INTERPRETER).")
     if result["stub_drift"]:
         actual = result["stub_revision_actual"] or "<unrecorded>"
         print(

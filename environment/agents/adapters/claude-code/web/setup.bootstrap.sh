@@ -96,7 +96,7 @@ unset _l9_contaminated
 # to see it from inside the sandbox. Recording the revision that actually ran
 # turns "is the pasted stub current?" from unanswerable into a comparison
 # (audit B-06). verify_account_env.py reads it back from cloud-session.env.
-L9_STUB_REVISION="2026-08-29.1"
+L9_STUB_REVISION="2026-09-11.1"
 
 warn() { printf 'L9 bootstrap WARN: %s\n' "$*" >&2; }
 note() { printf 'L9 bootstrap: %s\n' "$*"; }
@@ -273,9 +273,19 @@ mkdir -p "$(dirname "$L9_ENV_FILE")"
   # ~/.profile, and an unset here would strip a proxied value from every
   # login shell — disabling the proxying rather than removing a secret.
   echo "unset L9_MEMORY_HTTP_URL L9_MEMORY_CLIENT_TOKEN L9_MEMORY_HTTP_TOKEN"
+  echo "unset GRAPHITI_MCP_URL GRAPHITI_MCP_TOKEN"
   echo "unset INFISICAL_CLIENT_SECRET INFISICAL_TOKEN INFISICAL_PASSWORD"
   echo "unset SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN"
   echo "unset AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID AWS_SESSION_TOKEN"
+  if [ -f "$GOV_DIR/ops/scripts/lib/bind_memory_interpreter.sh" ] \
+     && [ -x "$GOV_DIR/.venv/bin/python3" ]; then
+    # shellcheck source=/dev/null
+    . "$GOV_DIR/ops/scripts/lib/bind_memory_interpreter.sh"
+    bind_l9_memory_interpreter "$GOV_DIR/.venv/bin/python3" "$GOV_DIR"
+    if [ -n "${L9_MEMORY_INTERPRETER:-}" ]; then
+      echo "export L9_MEMORY_INTERPRETER=$(printf %q "$L9_MEMORY_INTERPRETER")"
+    fi
+  fi
 } > "$L9_ENV_FILE"
 
 # NOTE: Sonar project identity is deliberately NOT written here. It is

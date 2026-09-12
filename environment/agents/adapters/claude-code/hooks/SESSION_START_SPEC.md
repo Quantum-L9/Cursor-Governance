@@ -105,10 +105,12 @@ and retired (gates dispatch only through the launcher, INV-1).
 
 ## Must emit when governance found
 
-1. Governance rev (branch@sha) — on `CLAUDE_CODE_REMOTE=true` the ephemeral
-   governance clone is refreshed from `origin/main` first (fetch, reset, record
-   exact revision); on local/Desktop the checkout is **never reset** — report
-   revision + drift against origin/main only.
+1. Governance rev (branch@sha) — on `CLAUDE_CODE_REMOTE=true` the launcher
+   (`l9_hook_exec.sh`) is the **sole** refresh owner and refreshes the
+   ephemeral clone from trusted `origin/main` only (no `L9_GOVERNANCE_BRANCH`
+   selector). This hook never independently `git fetch` / `checkout -f`.
+   On local/Desktop the checkout is **never reset** — report revision +
+   drift against origin/main only.
 2. Authority order including Autonomy Surface Profile
 3. Verbatim Profile `session_start_block` via `ops/autonomy/profile_loader.py` (stdlib-only extract; no PyYAML required on SessionStart path)
 4. Read-only autonomy `bootstrap.py` context when available
@@ -143,19 +145,21 @@ Consequences of that split, both load-bearing:
 - The synchronous side waits on a `.done` file, not on `kill -0 $!`: the worker
   is no longer a child of the waiter.
 
-## Sibling ordering is not available; skips are surfaced
+## Sibling ordering is not available; the launcher refreshes first
 
-SessionStart hooks run concurrently and the platform offers no ordering, so
-on a cached hosted environment the siblings (preflight, memory prefetch, deps)
-dispatch against the governance revision checked out **before** this hook's
-cloud refresh lands. A hook file that exists only on the new tip is skipped by
-the launcher for exactly one session — observed as
-`bootstrap_capability_preflight.sh hook file absent` recorded 4 s before the
-refresh receipt. The launcher records every such skip in
-`~/.l9/claude/hook-skips.log`; this hook reads the entries stamped at or after
-its own start and emits them as `hook skips this SessionStart`, so the gap is
-visible in-session. Recombining the siblings to force an order is not the fix
-(see the dependency section below).
+SessionStart hooks still run concurrently and the platform still offers no
+ordering. The race that used to skip tip-only files (`bootstrap_capability_preflight.sh
+hook file absent` before this hook's refresh landed) is closed in the
+launcher: `l9_hook_exec.sh` flock-refreshes the ephemeral clone **before**
+resolving `HOOK_PATH`. This hook never runs a second fetch/reset brain: if
+the launcher did not establish the tree (untrusted origin, lock miss, fetch
+failure, or no bound attempt), SessionStart records that outcome and
+continues. Fail-open; SessionStart still exits 0.
+
+The launcher still records every skip in `~/.l9/claude/hook-skips.log`; this
+hook reads the entries stamped at or after its own start and emits them as
+`hook skips this SessionStart`. Recombining the siblings to force an order
+is still not the fix (see the dependency section below).
 
 ## Readiness receipt: reuse when fresh, rebuild otherwise
 
