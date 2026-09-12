@@ -425,7 +425,15 @@ class SelfImposedDeadlineTest(unittest.TestCase):
 class RepairBudgetTest(unittest.TestCase):
     """The repair is sized by what is LEFT, and records that it was attempted."""
 
-    def _fake_governance(self, tmp: Path, *, installer_body: str, state: str = "blocked") -> Path:
+    def _fake_governance(
+        self,
+        tmp: Path,
+        *,
+        installer_body: str,
+        state: str = "blocked",
+        components: dict[str, str] | None = None,
+        reasons: dict[str, str] | None = None,
+    ) -> Path:
         gov = tmp / "home" / ".cursor-governance"
         (gov / "ops" / "scripts" / "lib").mkdir(parents=True)
         (gov / "environment" / "agents" / "adapters" / "claude-code").mkdir(parents=True)
@@ -436,16 +444,23 @@ class RepairBudgetTest(unittest.TestCase):
         # Reader stub. `blocked` is the default because these tests are about
         # the repair's BUDGET and its marker, and they need a state that arms
         # it: `blocked` is "a required component could not be wired", which a
-        # re-run can genuinely move. `degraded` deliberately no longer arms —
-        # see test_a_degraded_receipt_does_not_re_run_the_installer below — so
-        # using it here would have made these two tests assert the budget
-        # behaviour of a repair that never starts.
+        # re-run can genuinely move. `degraded` arms too unless its CAUSE is
+        # proven futile, so `components`/`reasons` carry that cause the way the
+        # real receipt does — the hook classifies on those, never on the state
+        # token alone.
+        payload = json.dumps(
+            {
+                "state": state,
+                "components": components or {},
+                "reasons": reasons or {},
+            }
+        )
         (gov / "ops" / "scripts" / "claude_bootstrap_receipt.py").write_text(
             textwrap.dedent(
                 f"""
                 import sys
                 if "--json" in sys.argv:
-                    print('{{"state": "{state}"}}')
+                    print({payload!r})
                 else:
                     print("claude bootstrap: {state} — stub")
                 """
@@ -514,21 +529,33 @@ class RepairBudgetTest(unittest.TestCase):
             self.assertIn("attempted", body)
             self.assertIn("failed rc=", body, "the outcome is recorded alongside the attempt")
 
-    def test_a_degraded_receipt_does_not_re_run_the_installer(self) -> None:
-        """`degraded` is the one non-ready state a re-run cannot move.
+    def _run_hook(self, tmp: str, root: Path) -> str:
+        return self._run_hook_with(tmp, root, {})
 
-        The reader's ladder returns `unknown` first for a receipt that covers
-        another workspace, has no parseable stamp, outlived its TTL, or was
-        produced against a superseded governance revision. So `degraded`
-        reaching the hook already proves the receipt describes this workspace,
-        is inside its TTL, and was written by an installer run against the live
-        revision — and `degraded` there means "an optional component is
-        unavailable", which no re-run inside a 30 s hook can supply.
+    def _run_hook_with(self, tmp: str, root: Path, extra: dict[str, str]) -> str:
+        env = _base_env(root / "home")
+        env["L9_SESSION_START_BUDGET"] = "120"  # ample: only the cause decides
+        env.update(extra)
+        proc = subprocess.run(
+            ["bash", str(HOOK)],
+            capture_output=True,
+            text=True,
+            env=env,
+            cwd=tmp,
+            timeout=120,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0)
+        return _context(proc.stdout)
 
-        Measured before this changed: provisioning wrote the receipt, the hook
-        read it seconds later and spent 7 s of its budget reaching the same
-        verdict. On a hosted surface the clone and ~/.l9 are fresh every
-        session, so the per-revision marker bounded that to once per session.
+    def test_a_degraded_cause_the_rerun_inherits_declines(self) -> None:
+        """The futile half of `degraded`: a cause that is an INPUT to the run.
+
+        `L9_SKIP_SHARED_BOOTSTRAP=1` makes install.sh record "shared bootstrap
+        skipped by request". The repair this hook would launch runs under this
+        same environment, so it re-reads the same switch and records the same
+        verdict — futile by construction, not by severity. The switch is
+        confirmed here rather than inferred from the reason text.
         """
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -536,29 +563,124 @@ class RepairBudgetTest(unittest.TestCase):
                 root,
                 installer_body="#!/usr/bin/env bash\necho 'installer ran' >&2\nexit 0\n",
                 state="degraded",
+                components={"shared_bootstrap": "DEGRADED", "skills": "READY"},
+                reasons={"shared_bootstrap": "shared bootstrap skipped by request"},
             )
-            env = _base_env(root / "home")
-            env["L9_SESSION_START_BUDGET"] = "120"  # ample: nothing but state declines it
-            proc = subprocess.run(
-                ["bash", str(HOOK)],
-                capture_output=True,
-                text=True,
-                env=env,
-                cwd=tmp,
-                timeout=120,
-                check=False,
-            )
-            self.assertEqual(proc.returncode, 0)
-            context = _context(proc.stdout)
+            env_marker = root / "home" / ".l9" / "claude"
+            # The switch must be set for the hook's own process, because that
+            # is exactly what makes the cause non-remediable.
+            context = self._run_hook_with(tmp, root, {"L9_SKIP_SHARED_BOOTSTRAP": "1"})
             self.assertIn("bootstrap repair: NOT ARMED", context)
+            self.assertIn("L9_SKIP_SHARED_BOOTSTRAP set", context)
             self.assertNotIn("running the installer once", context)
             self.assertNotIn("bootstrap repair: DEFERRED", context)
             # The remediation still reaches the operator, so this is a decline,
             # not a silence.
             self.assertIn("make claude-install", context)
             # No attempt marker: nothing was attempted.
-            markers = list((root / "home" / ".l9" / "claude").glob("*.attempted"))
-            self.assertEqual(markers, [], "a declined repair must not record an attempt")
+            self.assertEqual(
+                list(env_marker.glob("*.attempted")),
+                [],
+                "a declined repair must not record an attempt",
+            )
+
+    def test_a_degraded_cause_the_installer_converges_still_arms(self) -> None:
+        """The remediable half — the class the state-only guard also suppressed.
+
+        install.sh emits DEGRADED for a projection engine that failed, an
+        `.mcp.json` that drifted, a memory plane that did not answer, a failed
+        structural validation and an absent `claude` CLI. Every one of those is
+        a state a later idempotent run converges, so SessionStart's bounded
+        auto-heal has to survive for them (SESSION_START_SPEC, "Bootstrap
+        repair convergence"). Severity is not repairability.
+        """
+        remediable = (
+            ("skills", "projection engine failed (exit 1)"),
+            ("mcp", ".mcp.json drifted from mcp.template.json (check mode)"),
+            ("memory", "memory control plane unreachable"),
+            ("settings", "validate_claude_env structural fail"),
+            ("plugins", "claude CLI unavailable — plugins not converged"),
+        )
+        for component, reason in remediable:
+            with self.subTest(reason=reason), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                self._fake_governance(
+                    root,
+                    installer_body="#!/usr/bin/env bash\nexit 0\n",
+                    state="degraded",
+                    components={component: "DEGRADED"},
+                    reasons={component: reason},
+                )
+                context = self._run_hook(tmp, root)
+                self.assertIn(
+                    "running the installer once",
+                    context,
+                    f"a degraded cause the installer converges must arm: {reason}",
+                )
+                self.assertNotIn("bootstrap repair: NOT ARMED", context)
+
+    def test_a_degraded_receipt_with_no_recorded_cause_arms(self) -> None:
+        """Unproven is not futile.
+
+        Suppression is only ever earned by a cause shown non-remediable. A
+        receipt that reports `degraded` while naming no degraded component
+        proves nothing, so the bounded repair still runs — the same fail-open
+        direction the rest of this hook takes.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._fake_governance(
+                root,
+                installer_body="#!/usr/bin/env bash\nexit 0\n",
+                state="degraded",
+            )
+            context = self._run_hook(tmp, root)
+            self.assertIn("running the installer once", context)
+
+    def test_a_futile_reason_whose_switch_is_unset_still_arms(self) -> None:
+        """The switch is the proof, not the prose.
+
+        A receipt carrying the skip reason from an environment that no longer
+        sets the switch describes a cause this hook's own re-run would NOT
+        inherit. Matching the string alone would inherit a stale verdict for
+        the life of the receipt; confirming the switch is what keeps auto-heal
+        after the environment changes.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._fake_governance(
+                root,
+                installer_body="#!/usr/bin/env bash\nexit 0\n",
+                state="degraded",
+                components={"shared_bootstrap": "DEGRADED"},
+                reasons={"shared_bootstrap": "shared bootstrap skipped by request"},
+            )
+            context = self._run_hook(tmp, root)  # switch NOT set
+            self.assertIn("running the installer once", context)
+            self.assertNotIn("bootstrap repair: NOT ARMED", context)
+
+    def test_a_mixed_degraded_receipt_arms(self) -> None:
+        """One futile component does not make the receipt futile.
+
+        Declining needs EVERY degraded component to be non-remediable. A
+        receipt carrying the skip alongside a failed projection still has work
+        a re-run can do, and that work is what the repair exists for.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._fake_governance(
+                root,
+                installer_body="#!/usr/bin/env bash\nexit 0\n",
+                state="degraded",
+                components={"shared_bootstrap": "DEGRADED", "skills": "DEGRADED"},
+                reasons={
+                    "shared_bootstrap": "shared bootstrap skipped by request",
+                    "skills": "projection engine failed (exit 1)",
+                },
+            )
+            context = self._run_hook_with(tmp, root, {"L9_SKIP_SHARED_BOOTSTRAP": "1"})
+            self.assertIn("running the installer once", context)
+            self.assertNotIn("bootstrap repair: NOT ARMED", context)
 
     def test_states_a_re_run_can_move_still_arm(self) -> None:
         """Narrowing `degraded` must not disarm the states that need the repair.

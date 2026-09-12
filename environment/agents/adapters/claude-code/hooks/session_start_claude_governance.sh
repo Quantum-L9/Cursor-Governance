@@ -687,13 +687,80 @@ emit_bootstrap_status() {
   # only thing that re-arms it. That is what makes this converge instead of
   # re-running every session. Fail-open throughout — a repair that cannot run
   # degrades the session, it never blocks it.
-  local state revision marker installer
-  state="$("$py" "$reader" --read --json 2>/dev/null \
-    | "$py" -c 'import json,sys
+  #
+  # The verdict is read alongside the state, from the same single reader run.
+  # `degraded` on its own does not say whether a re-run can help: the reader
+  # defines it as severity ("an optional component is unavailable"), and the
+  # installer emits it for a projection engine that failed, an `.mcp.json` that
+  # drifted, a memory plane that did not answer, a structural validation that
+  # failed, and a `claude` CLI that was absent — every one of which a later
+  # idempotent run genuinely converges. Declining on the state token alone
+  # therefore removed auto-heal from the whole class, not from the futile part
+  # of it.
+  #
+  # What IS futile is a cause that is an INPUT to the installer run rather than
+  # a state it converges: the re-run this hook would launch inherits the same
+  # environment and reaches the identical verdict by construction. Those are
+  # named below, each with the switch that produces it, and each is confirmed
+  # against this hook's own environment rather than matched on prose.
+  local state repair_verdict repair_detail revision marker installer verdict_block
+  state=""; repair_verdict="arm"; repair_detail=""
+  verdict_block="$("$py" "$reader" --read --json 2>/dev/null \
+    | "$py" -c 'import json, os, sys
+
+# reason recorded by install.sh -> the environment switch that produced it.
+# A cause is only non-remediable while its switch is still set HERE, because
+# that is the environment the repair would re-run under.
+FUTILE_CAUSES = {
+    "shared bootstrap skipped by request": "L9_SKIP_SHARED_BOOTSTRAP",
+}
+OFF = {"", "0", "false", "no"}
+
+
+def emit(state: str, verdict: str, detail: str) -> None:
+    print(state)
+    print(verdict)
+    print(detail[:240])
+
+
 try:
-    print(json.load(sys.stdin).get("state", ""))
+    receipt = json.load(sys.stdin)
 except Exception:
-    print("")' 2>/dev/null || true)"
+    emit("", "arm", "")
+    raise SystemExit(0)
+
+state = str(receipt.get("state") or "")
+if state != "degraded":
+    emit(state, "arm", "")
+    raise SystemExit(0)
+
+components = receipt.get("components") or {}
+reasons = receipt.get("reasons") or {}
+degraded = [k for k, v in components.items() if str(v).upper() == "DEGRADED"]
+if not degraded:
+    # The verdict is degraded but no component owns it, so no cause is proven
+    # non-remediable. Arm: an unproven cause is not a futile one.
+    emit(state, "arm", "cause not recorded in the receipt")
+    raise SystemExit(0)
+
+futile = []
+for key in degraded:
+    switch = FUTILE_CAUSES.get(str(reasons.get(key) or "").strip())
+    if not switch or os.environ.get(switch, "").strip().lower() in OFF:
+        named = []
+        for other in degraded:
+            why = str(reasons.get(other) or "").strip() or "reason not recorded"
+            named.append(other + ": " + why)
+        emit(state, "arm", ", ".join(named))
+        raise SystemExit(0)
+    futile.append(key + " (" + switch + " set)")
+
+emit(state, "decline", ", ".join(futile))' 2>/dev/null || true)"
+  { IFS= read -r state || true
+    IFS= read -r repair_verdict || true
+    IFS= read -r repair_detail || true
+  } <<< "$verdict_block"
+  : "${state:=}"; : "${repair_verdict:=arm}"; : "${repair_detail:=}"
   revision="$(git -C "$GOV" rev-parse HEAD 2>/dev/null || echo unknown)"
   marker="$HOME/.l9/claude/bootstrap-repair-${revision}.attempted"
   installer="$GOV/environment/agents/adapters/claude-code/install.sh"
@@ -735,39 +802,33 @@ except Exception:
     [ -n "$refresh" ] && say "$refresh"
   fi
 
+  # Arming is by REPAIRABILITY, not by state token. `never_ran` (no
+  # bookkeeping), `failed` (died at a stage), `blocked` (a required component
+  # unwired) and `unknown` (an expired receipt or a superseded revision, which
+  # is what carries auto-heal after an environment change) all arm outright.
+  # `degraded` arms too, unless the classifier above proved every degraded
+  # component's cause is one this hook's own environment reproduces.
+  local arm_repair=0
   case "$state" in
     ready|"") : ;;
     degraded)
-      # `degraded` is the ONE non-ready state a re-run cannot change, and the
-      # reader has already proved why by the time it says so. Its own ladder
-      # returns `unknown` first for a receipt that covers another workspace,
-      # carries no parseable stamp, outlived its TTL, or was produced against a
-      # superseded governance revision — so `degraded` arriving here means the
-      # receipt describes THIS workspace, is inside its TTL, and was written by
-      # an installer run against the revision currently checked out. And
-      # `degraded` is defined there as "an optional component is unavailable"
-      # (`blocked` is the required-component state, and it still arms below).
-      #
-      # Re-running the installer inside what is left of a 30 s hook cannot make
-      # an optional component available. Measured on a hosted container: the
-      # provisioning `web/setup.sh` -> `install.sh` run wrote the receipt, this
-      # hook read it seconds later, and spent 7 s of its budget reaching the
-      # identical verdict. Hosted containers get a fresh clone and a fresh
-      # ~/.l9 every session, so the per-revision marker bounds that to once per
-      # revision — which on that surface is once per session, forever.
-      #
-      # Arming stays for every state a re-run can actually move: `never_ran`
-      # (no bookkeeping), `failed` (died at a stage), `blocked` (a required
-      # component unwired), and `unknown` — which is what an expired receipt or
-      # a revision bump becomes, so auto-heal after an environment change is
-      # preserved rather than traded away.
-      say "bootstrap repair: NOT ARMED — receipt is 'degraded' (an optional component is"
-      say "bootstrap repair:   unavailable) at ${revision:0:8}, which is this revision's own"
-      say "bootstrap repair:   installer verdict; re-running cannot change it. Components and"
-      say "bootstrap repair:   reasons are in the environment block above."
-      say "bootstrap repair:   force a re-run with 'make claude-install' once the cause is fixed"
+      if [ "$repair_verdict" = "decline" ]; then
+        # Declined without an attempt marker: nothing was attempted, and the
+        # next session re-decides from a fresh receipt rather than inheriting
+        # a marker that would outlive the switch that caused this.
+        say "bootstrap repair: NOT ARMED — the degraded cause is an input to the installer"
+        say "bootstrap repair:   run, not a state it converges, so the re-run this hook would"
+        say "bootstrap repair:   launch inherits it: ${repair_detail}"
+        say "bootstrap repair:   clear that switch and run 'make claude-install' to repair"
+      else
+        arm_repair=1
+        [ -n "$repair_detail" ] && say "bootstrap repair: degraded cause is repairable — ${repair_detail}"
+      fi
       ;;
-    *)
+    *) arm_repair=1 ;;
+  esac
+
+  if [ "$arm_repair" = "1" ]; then
       if [ ! -f "$marker" ] && [ -f "$installer" ]; then
         mkdir -p "$HOME/.l9/claude"
         # Clamp to what is LEFT of this hook's budget. A fixed 90 s ceiling
@@ -804,8 +865,7 @@ except Exception:
           fi
         fi
       fi
-      ;;
-  esac
+  fi
 }
 
 # --- Account-field drift (WS-4.1) -------------------------------------------
