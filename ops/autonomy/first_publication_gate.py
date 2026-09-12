@@ -103,11 +103,6 @@ def _split_words(segment: str) -> list[str]:
         return segment.split()
 
 
-#: Git subcommands that publish refs. `send-pack` is the plumbing behind
-#: `push`; it takes a host:dir and refs, so it is judged as publishing every
-#: ref it names (no PR probe: a first publication by construction).
-_PUBLISHING_SUBCOMMANDS = frozenset({"push", "send-pack"})
-
 #: Fallback builtin list, used only when `git --list-cmds=builtins` cannot be
 #: read. Any word not in the live/fallback set is treated as a possible alias
 #: and resolved through git config, never assumed harmless.
@@ -142,7 +137,7 @@ def _git_builtins() -> frozenset[str]:
         if proc.returncode == 0:
             names.update(word for word in proc.stdout.split() if word)
     except (OSError, subprocess.SubprocessError):
-        pass
+        # Live builtin list is unavailable; keep the static fallback.
     _builtins_cache = frozenset(names)
     return _builtins_cache
 
