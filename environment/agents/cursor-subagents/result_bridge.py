@@ -337,9 +337,7 @@ def compile_incomplete_result(
             "visibility": "repository_local",
         },
         "provenance": {
-            "produced_at": _stable_incomplete_produced_at(
-                return_receipt, dispatch, raw_digest
-            )
+            "produced_at": _stable_incomplete_produced_at(return_receipt, dispatch, raw_digest)
         },
     }
     validate_result_document(document)
