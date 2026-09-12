@@ -158,9 +158,9 @@ class HookWriterTests(unittest.TestCase):
 
             parsed = json.loads(receipt_file.read_text(encoding="utf-8"))
             self.assertEqual(parsed["schema"], "l9.governance-refresh.v1")
-            # No remote is configured, so the fetch cannot succeed: origin is
-            # genuinely unobserved and must not be recorded as equal to local.
-            self.assertEqual(parsed["outcome"], "fetch-failed")
+            # PR #551 architecture moves refresh ownership to the launcher, so
+            # SessionStart reports 'launcher-absent' when no attempt ID is set.
+            self.assertEqual(parsed["outcome"], "launcher-absent")
             self.assertEqual(parsed["origin_sha"], "unknown")
             self.assertRegex(parsed["refreshed_at"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
             self.assertIsInstance(parsed["ttl_seconds"], int)

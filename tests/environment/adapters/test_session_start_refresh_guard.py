@@ -1,18 +1,17 @@
-"""Conformance: the cloud governance refresh never discards in-flight work.
+"""Conformance: the cloud governance refresh is launcher-owned.
 
-The refresh block resets the ephemeral governance clone with `git checkout -f
--B main origin/main`. That is correct for a throwaway clone and destructive
-anywhere else: it discards uncommitted changes AND moves HEAD off the checked
-out branch. It ran unguarded, and did exactly that to a governance checkout
-carrying in-flight work — reachable whenever `$HOME/.cursor-governance`
-resolves to a working clone rather than the throwaway one.
+PR #551 moved refresh authority to the launcher (l9_hook_exec.sh). The hook
+(session_start_claude_governance.sh) no longer independently fetches or resets;
+it reads the refresh receipt and reports what the launcher did.
 
-The reset only ever has work to do on a clean clone, so refusing a dirty one
-costs the intended path nothing.
+The dirty-clone guard that prevented resetting in-flight work is now the
+launcher's responsibility. These tests verify the hook's new role: report
+based on the launcher's receipt, never independently fetch/reset.
 """
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -39,41 +38,26 @@ def test_hook_exists_and_parses() -> None:
     assert subprocess.run(["bash", "-n", str(HOOK)]).returncode == 0
 
 
-def test_dirty_clone_is_probed_before_any_reset() -> None:
-    text = body()
-    probe = text.index("gov_dirty=")
-    reset = text.index('checkout -f -B "$GOV_BRANCH"')
-    assert probe < reset, "the dirtiness probe must precede the reset"
+def test_hook_never_independently_fetches_or_resets() -> None:
+    """The hook must not have its own fetch/checkout brain.
 
-
-def test_probe_is_observational() -> None:
-    """A probe that mutates to measure state is the defect, not the guard.
-
-    `git status --porcelain` reads; `git stash` would not.
+    The launcher (l9_hook_exec.sh) is the sole refresh authority. This hook
+    reporting from a receipt it didn't write is correct; this hook doing its
+    own fetch/reset when the launcher didn't would be a second refresh brain.
     """
     text = body()
-    guard = text[text.index("gov_dirty=") : text.index('checkout -f -B "$GOV_BRANCH"')]
-    assert "status --porcelain" in guard
-    for mutating in ("git stash", "git clean", "git reset", "git restore"):
-        assert mutating not in guard
+    # The hook has the sole-authority comment
+    assert "sole refresh authority" in text.lower() or "one refresh authority" in text.lower()
+    # The hook must not have an independent checkout -f -B block outside of
+    # an attempt-ID-gated condition
+    assert "not independently fetching origin/main" in text or "no SessionStart fetch/reset" in text
 
 
-def test_dirty_clone_skips_the_reset_and_says_so() -> None:
+def test_launcher_absent_is_reported() -> None:
+    """When the launcher didn't set an attempt ID, the outcome is launcher-absent."""
     text = body()
-    assert "reset-skipped-dirty" in text, "the skip must be recorded in the receipt"
-    assert "reset SKIPPED" in text, "the skip must be visible in the session banner"
-
-
-def test_reset_is_reachable_only_when_clean() -> None:
-    """The fetch+reset path must sit on the else branch of the dirtiness test."""
-    text = body()
-    guard = re.search(
-        r'if \[ -n "\$gov_dirty" \]; then(?P<dirty>.*?)elif git -C "\$GOV" fetch',
-        text,
-        re.S,
-    )
-    assert guard is not None, "reset must hang off the dirtiness branch"
-    assert "checkout -f" not in guard.group("dirty")
+    assert "launcher-absent" in text
+    assert "no launcher attempt bound" in text or "launcher did not establish" in text
 
 
 def test_hook_still_fails_open() -> None:
@@ -212,36 +196,34 @@ def _run(home: Path, receipt: Path):
     )
 
 
-def test_tracked_dirt_actually_prevents_the_reset(tmp_path: Path) -> None:
-    """Behavioural proof, not a text match: in-flight tracked work survives."""
-    import json
+def test_no_launcher_attempt_reports_launcher_absent(tmp_path: Path) -> None:
+    """When the launcher didn't set an attempt ID, outcome is launcher-absent.
 
+    The hook must NOT independently fetch or reset. It reports that the launcher
+    didn't establish the tree and continues with the local state.
+    """
     gov = _synthetic_gov(tmp_path, tracked_dirt=True, untracked_dirt=False)
     receipt = tmp_path / "receipt.json"
     result = _run(tmp_path, receipt)
 
     assert result.returncode == 0, "SessionStart must never block"
+    # In-flight work survives because the hook doesn't reset without launcher
     assert (gov / "CANONICAL_LAW.md").read_text(encoding="utf-8") == (
         "synthetic + in-flight work\n"
-    ), "the reset discarded tracked work the guard exists to protect"
-    assert json.loads(receipt.read_text(encoding="utf-8"))["outcome"] == "reset-skipped-dirty"
+    ), "hook must not reset without launcher authority"
+    assert json.loads(receipt.read_text(encoding="utf-8"))["outcome"] == "launcher-absent"
 
 
-def test_untracked_residue_does_not_trip_the_guard(tmp_path: Path) -> None:
-    """A fresh ephemeral clone carries untracked bootstrap residue.
-
-    `checkout -f` leaves untracked files alone, so counting them would strand
-    the very clone this refresh exists to reset.
-    """
-    import json
-
+def test_untracked_residue_with_no_launcher_reports_absent(tmp_path: Path) -> None:
+    """Without a launcher attempt, even a clean clone reports launcher-absent."""
     _synthetic_gov(tmp_path, tracked_dirt=False, untracked_dirt=True)
     receipt = tmp_path / "receipt.json"
     result = _run(tmp_path, receipt)
 
     assert result.returncode == 0
     outcome = json.loads(receipt.read_text(encoding="utf-8"))["outcome"]
-    assert outcome != "reset-skipped-dirty", "untracked residue must not block the reset"
+    # Without launcher, outcome is launcher-absent regardless of dirtiness
+    assert outcome == "launcher-absent"
 
 
 def test_cursor_skip_precedes_claude_banner() -> None:
@@ -260,7 +242,6 @@ def test_cursor_runtime_emits_empty_context(tmp_path: Path) -> None:
     Without a Claude Code runtime marker it must not inject account-field
     drift, broker probes, or never_ran installer receipts.
     """
-    import json
     import subprocess
 
     home = tmp_path / "home"

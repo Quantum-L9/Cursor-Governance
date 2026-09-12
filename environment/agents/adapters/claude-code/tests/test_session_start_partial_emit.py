@@ -425,7 +425,9 @@ class SelfImposedDeadlineTest(unittest.TestCase):
 class RepairBudgetTest(unittest.TestCase):
     """The repair is sized by what is LEFT, and records that it was attempted."""
 
-    def _fake_governance(self, tmp: Path, *, installer_body: str, state: str = "blocked") -> Path:
+    def _fake_governance(
+        self, tmp: Path, *, installer_body: str, state: str = "blocked", repairable_cause: str = ""
+    ) -> Path:
         gov = tmp / "home" / ".cursor-governance"
         (gov / "ops" / "scripts" / "lib").mkdir(parents=True)
         (gov / "environment" / "agents" / "adapters" / "claude-code").mkdir(parents=True)
@@ -436,16 +438,29 @@ class RepairBudgetTest(unittest.TestCase):
         # Reader stub. `blocked` is the default because these tests are about
         # the repair's BUDGET and its marker, and they need a state that arms
         # it: `blocked` is "a required component could not be wired", which a
-        # re-run can genuinely move. `degraded` deliberately no longer arms —
-        # see test_a_degraded_receipt_does_not_re_run_the_installer below — so
-        # using it here would have made these two tests assert the budget
-        # behaviour of a repair that never starts.
+        # re-run can genuinely move. `degraded` with a futile cause (and the
+        # env var set) no longer arms — see
+        # test_a_degraded_receipt_does_not_re_run_the_installer below.
+        # `degraded` with no cause or a non-futile cause DOES arm — see
+        # test_degraded_with_unknown_cause_arms_repair.
+        #
+        # The hook's inline Python expects this JSON structure when state=degraded:
+        #   {"state": "degraded", "components": {"shared_bootstrap": "DEGRADED"},
+        #    "reasons": {"shared_bootstrap": "<cause>"}}
+        # If repairable_cause is set, we need a component that is DEGRADED and
+        # whose reason matches the cause.
+        if repairable_cause and state == "degraded":
+            components_json = ', "components": {"shared_bootstrap": "DEGRADED"}'
+            reasons_json = f', "reasons": {{"shared_bootstrap": "{repairable_cause}"}}'
+        else:
+            components_json = ""
+            reasons_json = ""
         (gov / "ops" / "scripts" / "claude_bootstrap_receipt.py").write_text(
             textwrap.dedent(
                 f"""
                 import sys
                 if "--json" in sys.argv:
-                    print('{{"state": "{state}"}}')
+                    print('{{"state": "{state}"{components_json}{reasons_json}}}')
                 else:
                     print("claude bootstrap: {state} — stub")
                 """
@@ -515,20 +530,14 @@ class RepairBudgetTest(unittest.TestCase):
             self.assertIn("failed rc=", body, "the outcome is recorded alongside the attempt")
 
     def test_a_degraded_receipt_does_not_re_run_the_installer(self) -> None:
-        """`degraded` is the one non-ready state a re-run cannot move.
+        """A degraded receipt with a known futile cause does not arm repair.
 
-        The reader's ladder returns `unknown` first for a receipt that covers
-        another workspace, has no parseable stamp, outlived its TTL, or was
-        produced against a superseded governance revision. So `degraded`
-        reaching the hook already proves the receipt describes this workspace,
-        is inside its TTL, and was written by an installer run against the live
-        revision — and `degraded` there means "an optional component is
-        unavailable", which no re-run inside a 30 s hook can supply.
+        When the receipt records a degraded component whose reason is in the
+        FUTILE_CAUSES map AND the corresponding env var is set, the repair is
+        not armed because running it again would reach the same verdict.
 
-        Measured before this changed: provisioning wrote the receipt, the hook
-        read it seconds later and spent 7 s of its budget reaching the same
-        verdict. On a hosted surface the clone and ~/.l9 are fresh every
-        session, so the per-revision marker bounded that to once per session.
+        For degraded receipts with unknown causes, see
+        test_degraded_with_unknown_cause_arms_repair below.
         """
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -536,9 +545,11 @@ class RepairBudgetTest(unittest.TestCase):
                 root,
                 installer_body="#!/usr/bin/env bash\necho 'installer ran' >&2\nexit 0\n",
                 state="degraded",
+                repairable_cause="shared bootstrap skipped by request",
             )
             env = _base_env(root / "home")
             env["L9_SESSION_START_BUDGET"] = "120"  # ample: nothing but state declines it
+            env["L9_SKIP_SHARED_BOOTSTRAP"] = "1"  # must be set for this cause to be futile
             proc = subprocess.run(
                 ["bash", str(HOOK)],
                 capture_output=True,
@@ -559,6 +570,39 @@ class RepairBudgetTest(unittest.TestCase):
             # No attempt marker: nothing was attempted.
             markers = list((root / "home" / ".l9" / "claude").glob("*.attempted"))
             self.assertEqual(markers, [], "a declined repair must not record an attempt")
+
+    def test_degraded_with_unknown_cause_arms_repair(self) -> None:
+        """A degraded receipt with an unknown cause DOES arm repair.
+
+        If the receipt is degraded but the cause is not in FUTILE_CAUSES (or the
+        env var is not set), the repair is armed because the cause might be
+        transient or fixable.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            # No repairable_cause: the stub outputs state=degraded without
+            # the components/reasons structure, so the inline Python sees
+            # "cause not recorded in the receipt" and arms.
+            self._fake_governance(
+                root,
+                installer_body="#!/usr/bin/env bash\nexit 0\n",
+                state="degraded",
+            )
+            env = _base_env(root / "home")
+            env["L9_SESSION_START_BUDGET"] = "120"
+            proc = subprocess.run(
+                ["bash", str(HOOK)],
+                capture_output=True,
+                text=True,
+                env=env,
+                cwd=tmp,
+                timeout=120,
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 0)
+            context = _context(proc.stdout)
+            self.assertIn("running the installer once", context)
+            self.assertIn("cause not recorded in the receipt", context)
 
     def test_states_a_re_run_can_move_still_arm(self) -> None:
         """Narrowing `degraded` must not disarm the states that need the repair.
