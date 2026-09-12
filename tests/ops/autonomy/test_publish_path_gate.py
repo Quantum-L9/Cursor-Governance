@@ -452,6 +452,8 @@ def test_publication_forms_enumerate_every_push_refspec() -> None:
             "whole_repo": None,
             "form": "git push",
             "named_root": None,
+            "git_dir": None,
+            "work_tree": None,
         }
     ]
 
@@ -537,3 +539,242 @@ def test_gh_read_and_edit_forms_with_the_repo_option_stay_allowed(
     _open_pr(monkeypatch, False)
     assert publication_forms(command) == []
     assert gate.evaluate("Bash", {"command": command}, root=tmp_path) is None
+
+
+# --------------------------------------------------------------------------
+# Audit F2 (PR #553 re-audit): the repository git targets and alias effects
+# --------------------------------------------------------------------------
+
+
+def _git(repo: Path, *args: str) -> None:
+    import subprocess
+
+    subprocess.run(["git", "-C", str(repo), *args], check=True, capture_output=True)
+
+
+@pytest.fixture
+def other_repo(tmp_path: Path) -> Path:
+    """A second repository whose branch has NO open PR, beside the ambient one."""
+    repo = tmp_path / "other"
+    repo.mkdir()
+    _git(repo, "init")
+    _git(repo, "config", "user.email", "test@example.com")
+    _git(repo, "config", "user.name", "test")
+    (repo / "README.md").write_text("y\n", encoding="utf-8")
+    _git(repo, "add", "README.md")
+    _git(repo, "commit", "-m", "init")
+    _git(repo, "checkout", "-b", "new-branch")
+    return repo
+
+
+def _open_pr_by_root(
+    monkeypatch: pytest.MonkeyPatch, open_root: Path, probed: list[tuple[Path, str]]
+) -> None:
+    """Every branch of ``open_root`` has an open PR; every other repository has none."""
+    monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+    monkeypatch.delenv("L9_PUBLISH_PATH_RECEIPT", raising=False)
+
+    def probe(root, branch, remote="origin"):  # noqa: ANN001
+        probed.append((Path(root).resolve(), branch))
+        return Path(root).resolve() == open_root.resolve()
+
+    monkeypatch.setattr(open_pr_probe, "open_pr_for_branch", probe)
+
+
+def _selector_commands(other: Path) -> list[str]:
+    return [
+        f"git --git-dir={other}/.git push origin new-branch",
+        f"git --git-dir {other}/.git push origin new-branch",
+        f"git --work-tree={other} --git-dir={other}/.git push origin new-branch",
+        f"git --work-tree {other} push origin new-branch",
+        f"GIT_DIR={other}/.git git push origin new-branch",
+        f"GIT_WORK_TREE={other} GIT_DIR={other}/.git git push origin new-branch",
+        f"git -C {other} push origin new-branch",
+        f"git -C {other.parent} -C other push origin new-branch",
+    ]
+
+
+def test_repository_selector_binds_the_probe_to_the_targeted_repository(
+    stacked_repo: Path, other_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """F2 negative 1: the ambient repo has an open PR; the selected one does not → DENY.
+
+    The probe must be asked about the repository the command acts on. Before
+    F2 the selectors were parsed but never bound, so the ambient checkout's
+    open PR authorized a first publication of another repository's branch.
+    """
+    for command in _selector_commands(other_repo):
+        probed: list[tuple[Path, str]] = []
+        _open_pr_by_root(monkeypatch, stacked_repo, probed)
+        reason = gate.evaluate("Bash", {"command": command}, root=stacked_repo)
+        assert reason is not None and "FIRST publication" in reason, command
+        assert "'new-branch'" in reason, command
+        assert probed == [(other_repo.resolve(), "new-branch")], command
+
+
+def test_same_repository_push_of_an_open_pr_stays_allowed_with_or_without_selector(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """F2 negative 4 / P1: advancing an open PR of the same repository is remediation."""
+    for command in (
+        "git push origin feat/l4-stack",
+        "git push",
+        f"git -C {stacked_repo} push origin feat/l4-stack",
+        f"git --git-dir={stacked_repo}/.git push origin feat/l4-stack",
+        f"GIT_DIR={stacked_repo}/.git git push origin feat/l4-stack",
+        f"git --work-tree={stacked_repo} push origin feat/l4-stack",
+    ):
+        probed: list[tuple[Path, str]] = []
+        _open_pr_by_root(monkeypatch, stacked_repo, probed)
+        assert gate.evaluate("Bash", {"command": command}, root=stacked_repo) is None, command
+        assert probed == [(stacked_repo.resolve(), "feat/l4-stack")], command
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "git --git-dir=/nonexistent/repo/.git push origin feat/l4-stack",
+        "git --work-tree=/nonexistent/tree push origin feat/l4-stack",
+        "git -C /nonexistent push origin feat/l4-stack",
+        "GIT_DIR=/nonexistent/.git git push origin feat/l4-stack",
+        "git --git-dir=$OTHER/.git push origin feat/l4-stack",
+        "git -C $(mktemp -d) push origin feat/l4-stack",
+        "git --work-tree=~/repos/*/x push origin feat/l4-stack",
+    ],
+)
+def test_unresolvable_repository_selector_fails_closed(
+    command: str, stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """F2 negative 3: a selector that cannot be pinned never falls back to the ambient repo."""
+    probed: list[tuple[Path, str]] = []
+    _open_pr_by_root(monkeypatch, stacked_repo, probed)
+    reason = gate.evaluate("Bash", {"command": command}, root=stacked_repo)
+    assert reason is not None and "could not be resolved" in reason
+    assert probed == []
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "git -c alias.p=push p origin new-branch",
+        "git -c alias.p=push -c color.ui=never p origin new-branch",
+        "git -c alias.a=b -c alias.b=push a origin new-branch",
+        "git -c 'alias.p=push -u' p origin new-branch",
+        "git -c alias.p=push p -u origin HEAD:refs/heads/new-branch",
+    ],
+)
+def test_alias_mediated_first_publication_is_denied(
+    command: str, stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """F2 negative 2: `git -c alias.p=push p …` is a push and is judged as one."""
+    _open_pr_by_branch(monkeypatch, {"feat/l4-stack"})
+    forms = publication_forms(command, root=stacked_repo)
+    assert [form["branch"] for form in forms] == ["new-branch"]
+    reason = gate.evaluate("Bash", {"command": command}, root=stacked_repo)
+    assert reason is not None and "FIRST publication" in reason and "'new-branch'" in reason
+
+
+def test_configured_alias_is_resolved_in_the_targeted_repository(
+    stacked_repo: Path, other_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An alias from git config is a push too — read from the repository git would use."""
+    _git(other_repo, "config", "alias.pu", "push")
+    probed: list[tuple[Path, str]] = []
+    _open_pr_by_root(monkeypatch, stacked_repo, probed)
+    # The ambient repo has no such alias: `git pu` there is an unknown command.
+    assert publication_forms("git pu origin new-branch", root=stacked_repo) == []
+    assert gate.evaluate("Bash", {"command": "git pu origin new-branch"}, root=stacked_repo) is None
+    # Selected repo defines it: the alias expands to a push of a branch with no PR.
+    command = f"git -C {other_repo} pu origin new-branch"
+    reason = gate.evaluate("Bash", {"command": command}, root=stacked_repo)
+    assert reason is not None and "'new-branch'" in reason
+    assert probed == [(other_repo.resolve(), "new-branch")]
+
+
+def test_alias_mediated_push_of_an_open_pr_stays_remediation(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _open_pr_by_branch(monkeypatch, {"feat/l4-stack"})
+    assert (
+        gate.evaluate(
+            "Bash", {"command": "git -c alias.p=push p origin feat/l4-stack"}, root=stacked_repo
+        )
+        is None
+    )
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "git -c alias.s=status s",
+        "git -c alias.l='log --oneline' l -5",
+        "git -c alias.p=push status",
+        "git lfs push origin main",
+        "git -c alias.p=push p --dry-run origin new-branch",
+        "git -c alias.p=push p origin --delete new-branch",
+    ],
+)
+def test_aliases_that_do_not_publish_never_reach_the_probe(
+    command: str, stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    probed: list[tuple[Path, str]] = []
+    _open_pr_by_root(monkeypatch, stacked_repo, probed)
+    assert publication_forms(command, root=stacked_repo) == []
+    assert gate.evaluate("Bash", {"command": command}, root=stacked_repo) is None
+    assert probed == []
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "git -c 'alias.p=!git push origin new-branch' p",
+        "git -c 'alias.x=!sh -c \"git push\"' x",
+        "git -c alias.a=b -c alias.b=c -c alias.c=d -c alias.d=e -c alias.e=push a origin x",
+    ],
+)
+def test_shell_or_unbounded_alias_is_undeterminable_and_denied(
+    command: str, stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """F2 negative 3: an alias whose effect cannot be read fails closed."""
+    probed: list[tuple[Path, str]] = []
+    _open_pr_by_root(monkeypatch, stacked_repo, probed)
+    forms = publication_forms(command, root=stacked_repo)
+    assert len(forms) == 1 and forms[0]["undeterminable"]
+    reason = gate.evaluate("Bash", {"command": command}, root=stacked_repo)
+    assert reason is not None and "undeterminable" in reason
+    assert probed == []
+
+
+def test_send_pack_is_a_first_publication(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    probed: list[tuple[Path, str]] = []
+    _open_pr_by_root(monkeypatch, stacked_repo, probed)
+    command = "git send-pack git@github.com:o/r.git refs/heads/feat/l4-stack"
+    assert publication_forms(command, root=stacked_repo)[0]["form"] == "git send-pack"
+    reason = gate.evaluate("Bash", {"command": command}, root=stacked_repo)
+    assert reason is not None and "send-pack" in reason
+    assert probed == []
+
+
+def test_f1_closures_hold_under_f2(
+    stacked_repo: Path, other_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """F2 negative 5: multi-ref and gh -R/--repo pr create remain closed."""
+    _open_pr_by_branch(monkeypatch, {"feat-open"})
+    reason = gate.evaluate(
+        "Bash",
+        {"command": f"git -C {other_repo} push origin feat-open feat-new"},
+        root=stacked_repo,
+    )
+    assert reason is not None and "'feat-new'" in reason
+    reason = gate.evaluate(
+        "Bash", {"command": "git -c alias.p=push p origin feat-open feat-new"}, root=stacked_repo
+    )
+    assert reason is not None and "'feat-new'" in reason
+    for command in (
+        "gh -R o/r pr create --fill",
+        f"cd {other_repo} && gh --repo=o/r pr create --fill",
+    ):
+        reason = gate.evaluate("Bash", {"command": command}, root=stacked_repo)
+        assert reason is not None and "gh pr create" in reason, command
