@@ -44,7 +44,6 @@ def normalize(
 
     # Use the stronger bridge correlation only when the lifecycle assignment
     # contains the exact fields its contract requires.
-    document_assignment = normalized["assignment"]
     required = {
         "campaign_id",
         "graph_id",
@@ -61,13 +60,16 @@ def normalize(
         expected_role = result_bridge.canonical_cursor_role(
             assignment.get("result_role")
             or assignment.get("subagent_role")
-            or document_assignment["role"]
+            or assignment.get("expected_subagent_type")
+            or assignment.get("subagent_type")
+            or assignment.get("cursor_subagent_type")
+            or ""
         )
         if expected_role not in result_bridge.ROLE_TO_RESULT_KIND:
-            # Host-native Task types (generalPurpose, shell, …) are not schema
-            # roles. Incomplete harvest maps them to recon; do not fail closed
-            # on the unmapped spelling.
-            expected_role = document_assignment["role"]
+            # Host-native Task types are not schema roles. Map the admitted
+            # host type the same way compile_incomplete_result does. Never
+            # let the returned document choose the role used to validate it.
+            expected_role = "recon"
         exact.update(
             {
                 "role": expected_role,
