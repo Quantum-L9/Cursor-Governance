@@ -7,7 +7,8 @@
 3. Bounded existing repository
 4. PR Cognitive Convergence
 5. Mixed product plus website
-6. Negative cases
+6. IgorBot lineage regression
+7. Negative cases
 
 ## 1. SplitWisely
 
@@ -42,26 +43,20 @@ Foundry is not called merely because Website-Bot may provision a site repository
 
 Requirement:
 
-- one existing repository needs a bounded code/documentation/configuration change;
+- one existing repository needs a bounded change;
 - no cross-repository convergence.
 
 Expected:
 
 ```text
-EXISTING_REPO_CHANGE -> l9-plan-simple path if planning is still needed
+EXISTING_REPO_CHANGE -> l9-plan-simple when planning is still needed
 ```
 
 If a valid executable plan already exists and the current downstream executor accepts it, reuse it rather than re-plan.
 
 ## 4. PR Cognitive Convergence
 
-Requirements affect:
-
-- `Quantum-L9/l9-pr-repair`;
-- `Quantum-L9/LLM-Router`;
-- `Quantum-L9/l9-cognitive-runtime`.
-
-The source pack already includes dependency-ordered contracts, acceptance tests, rollback/replay, and a Program Execution handoff.
+Requirements affect multiple existing repositories and form one causal program.
 
 Expected topology:
 
@@ -69,15 +64,13 @@ Expected topology:
 EXISTING_SYSTEM_CAMPAIGN -> Program Execution adapter
 ```
 
-Do not call Foundry, Website-Bot, or Plan Simple as the primary route.
-
-On the 2026-09-02 PE baseline, current admission is single-target, so compatibility result must be:
+If a validated current Program Execution snapshot explicitly denies multi-target admission, compatibility is:
 
 ```text
 EXECUTOR_CAPABILITY_GAP
 ```
 
-Do not lie by naming only PR_Repair as the target or launching three independent campaigns.
+If multi-target support is unresolved, the result is `ADAPTER_CAPABILITY_UNKNOWN`, never a guessed gap and never silent decomposition.
 
 ## 5. Mixed product plus website
 
@@ -95,20 +88,76 @@ unit-website -> Website-Bot
 
 If website authoring needs product identity produced by Foundry, add an explicit dependency. Otherwise run independently.
 
-## 6. Negative cases
+## 6. IgorBot lineage regression
+
+This fixture captures the real failure that motivated v1.1.
+
+Source outcome:
+
+- a mature voice/follow-up idea pack initially looks birth-shaped;
+- repository reality proves `Quantum-L9/igorbot` already owns the product/runtime;
+- no new repository is born;
+- the route becomes one `EXISTING_REPO_CHANGE` owned by `l9-plan-simple`;
+- a supplied Execution Graph is structurally valid but its `source_envelope_digest` belongs to an older Envelope;
+- a supplied Plan Simple capability snapshot has the wrong shape and falsely appears to show incapability.
+
+Required behavior:
+
+```text
+validated Envelope
+  -> supplied stale Graph rejected as DERIVED_ARTIFACT_STALE
+  -> regenerate Graph from Envelope
+  -> malformed adapter evidence rejected as ADAPTER_SNAPSHOT_INVALID
+  -> inspect current Plan Simple contract
+  -> compile revision-bound adapter-capabilities/v2 snapshot
+  -> COMPATIBLE when single-target support is proven
+  -> hand off bounded existing-repo unit
+```
+
+Never interpret the stale graph as current because it passes structural validation. Never interpret malformed adapter evidence as `EXECUTOR_CAPABILITY_GAP`.
+
+## 7. Negative cases
 
 ### Raw idea with no IdeaOS decision
 
 Expected: `IDEAOS_DECISION_REQUIRED`.
 
-### Unknown specialized capability
+### Unknown capability
 
 Expected: `CAPABILITY_OWNER_UNKNOWN`, not nearest-sounding skill selection.
 
 ### Website plus generic repository duplicate
 
-If the generic repository requirement refers only to Website-Bot's internal site repository, reject the duplicate requirement as an ownership modeling error.
+If the generic repository requirement refers only to Website-Bot's internal site repository, reject the duplicate requirement as an ownership-modeling error.
 
-### Multi-repo campaign on single-target PE
+### Stale graph
 
-Expected: `EXECUTOR_CAPABILITY_GAP`, never silent decomposition.
+If graph `source_envelope_digest` does not equal the semantic digest of the current Envelope:
+
+```text
+DERIVED_ARTIFACT_STALE
+```
+
+Regenerate from the Envelope and invalidate dependent receipts.
+
+### Invalid adapter snapshot
+
+Missing source revision bindings or topology declarations:
+
+```text
+ADAPTER_SNAPSHOT_INVALID
+```
+
+Do not emit `EXECUTOR_CAPABILITY_GAP`.
+
+### Unknown adapter support
+
+A valid snapshot with `multi_target: null` or `single_target: null` yields:
+
+```text
+ADAPTER_CAPABILITY_UNKNOWN
+```
+
+### Stale receipt
+
+A Receipt whose Envelope or Graph digest no longer matches current parents is `DERIVED_ARTIFACT_STALE` and must be regenerated without reopening unrelated upstream decisions.

@@ -14,7 +14,7 @@ from _common import (
 )
 
 SCHEMA = "l9.idea-execution-envelope/v1"
-DECISIONS = {"GO", "CONDITIONAL"}
+DECISIONS = {"GO", "CONDITIONAL_GO"}
 FORBIDDEN_REQUIREMENT_KEYS = {"owner", "adapter", "executor", "skill", "provider", "model"}
 
 
@@ -33,7 +33,7 @@ def validate_envelope(data: Any) -> dict[str, Any]:
             if not nonempty_string(idea.get(key)):
                 errors.append(f"idea.{key} must be a non-empty string")
         if idea.get("decision_status") not in DECISIONS:
-            errors.append("idea.decision_status must be GO or CONDITIONAL")
+            errors.append("idea.decision_status must be GO or CONDITIONAL_GO")
         refs = idea.get("source_refs", [])
         if not isinstance(refs, list) or not all(nonempty_string(x) for x in refs):
             errors.append("idea.source_refs must be a list of non-empty strings")
