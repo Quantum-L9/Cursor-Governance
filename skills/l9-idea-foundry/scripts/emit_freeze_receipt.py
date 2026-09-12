@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Emit an external receipt binding a clean Foundry payload git revision."""
+
 from __future__ import annotations
 
 import argparse

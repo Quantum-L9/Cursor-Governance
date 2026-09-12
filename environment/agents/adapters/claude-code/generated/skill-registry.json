@@ -1,5 +1,5 @@
 {
-  "generation_id": "2bc90ec09291c6b6cce5c2cc7e5ff9b9be693be7065f1fd918d008afcc1e6d17",
+  "generation_id": "d7382b07c0d52b746e3c6c8b5a8476147801ae9ae12766cc93d18c158725ccc4",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -1228,14 +1228,14 @@
     },
     {
       "composition_role": "general",
-      "description": "compile an implementation-ready idea pack into tested code and a birth-ready quantum-l9 repository. use when a mature idea should leave specification and become a real repo via l9-repo-template. do not use for websites, existing-repo changes, or production deployment.",
+      "description": "Compile mature idea packs and locked product specifications into real tested code, exact-state provenance, and repository-factory-qualified birth payloads for new Quantum-L9 products. Use when an idea leaves planning to become a new repository, when a Foundry staging product must be resumed or recompiled, or when a frozen product must be qualified against the live l9-repo-template birth contract. Never authors the birth payload; requires local birth evidence; stops before production deployment.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-idea-foundry",
       "path": "skills/l9-idea-foundry",
       "reason": "compiles idea packs into tested code and l9-repo-template births; repository creation and code realization are high blast radius; disable-model-invocation",
       "skill_md": "skills/l9-idea-foundry/SKILL.md",
-      "skill_sha256": "ad8edd26c317f4ce3dfafde696c9351580dfb07140a9bd1bd222ad799e99093a",
+      "skill_sha256": "bb981c5611b5d5beab795718b52de6bbf274a0dee230eb70fa7a1237d43b9f17",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1606,5 +1606,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "b71df84c03ba02fa5a638d03749e4bf08c7efcb5354d85fb0fe4928cf31c5587",
-  "source_skill_corpus_sha256": "2ee2808a3ce8a82d061934c4fa6dfee0666f2e555a4da526c564daddf912fcf2"
+  "source_skill_corpus_sha256": "32bb9308d3ceec71a4613ad901004a88a9d9ec8cd11d75560eb932b35d47e0b3"
 }

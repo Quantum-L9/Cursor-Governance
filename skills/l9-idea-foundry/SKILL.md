@@ -1,14 +1,14 @@
 ---
 name: l9-idea-foundry
+disable-model-invocation: true
 description: >-
-  Compile mature idea packs, locked product specifications, and build handoffs into
-  real tested code, exact-state provenance, and repository-factory-qualified birth
-  payloads for new Quantum-L9 products. Use when an idea is leaving planning and must
-  become a new repository, when a Foundry staging product must be resumed/recompiled,
-  or when an exact frozen product must be qualified against the live l9-repo-template
-  birth contract before local or remote birth. Preserve canonical owner boundaries,
-  use the factory's own birth-payload compiler rather than authoring a second manifest,
-  require local birth evidence before publication, and stop before production deployment.
+  Compile mature idea packs and locked product specifications into real tested code,
+  exact-state provenance, and repository-factory-qualified birth payloads for new
+  Quantum-L9 products. Use when an idea leaves planning to become a new repository,
+  when a Foundry staging product must be resumed or recompiled, or when a frozen
+  product must be qualified against the live l9-repo-template birth contract. Never
+  authors the birth payload; requires local birth evidence; stops before production
+  deployment.
 ---
 
 # L9 Idea Foundry
@@ -274,9 +274,11 @@ python3 scripts/emit_freeze_receipt.py <staging> \
   --out /tmp/<repo>.foundry-freeze.json
 
 python3 scripts/validate_foundry_payload.py <staging> \
-  --birth-ready \
+  --freeze-validated \
   --freeze-receipt /tmp/<repo>.foundry-freeze.json
 ```
+
+A passing freeze validation reports `phase: FREEZE_VALIDATED`. It is not a readiness signal: `BIRTH_READY` is emitted only by a passing `qualify_birth_handoff.py` receipt (`foundry_state: BIRTH_READY`) after the live factory compiler returns `FACTORY_COMPILE_PASS` for those same bytes. (`--birth-ready` remains a compatibility alias for `--freeze-validated` and carries the same non-readiness semantics.)
 
 Then qualify those exact bytes against the **live factory's own compiler**:
 

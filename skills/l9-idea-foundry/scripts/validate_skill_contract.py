@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Validate L9 Idea Foundry's exemplary control-plane contract."""
+
 from __future__ import annotations
 
-import json
-from pathlib import Path
 import py_compile
 import re
 import sys
+from pathlib import Path
 
 import yaml
 
@@ -87,7 +87,9 @@ else:
     negative = [c for c in cases if c.get("expected") == "REJECT"]
     if len(positive) != 5 or len(negative) != 5:
         fail("activation qualification must contain 5 ACTIVATE and 5 REJECT cases")
-    signals = set(expertise.get("activation_signals", [])) | set(expertise.get("reject_signals", []))
+    signals = set(expertise.get("activation_signals", [])) | set(
+        expertise.get("reject_signals", [])
+    )
     for case in cases:
         if case.get("matched_signal") not in signals:
             fail(f"activation case {case.get('id')} references unknown signal")
@@ -102,7 +104,8 @@ for name, status in gates.items():
     if str(status).upper() != "PASS":
         fail(f"exemplary gate not PASS: {name}={status}")
 
-# Every reference is reachable from the control plane, except the intelligence files which are also required above.
+# Every reference is reachable from the control plane (the intelligence files are
+# also required above).
 for ref in sorted((ROOT / "references").glob("*")):
     if not ref.is_file():
         continue

@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Probe the live repository factory contract without copying its authority."""
+
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 from typing import Any
 
 try:
@@ -16,6 +17,8 @@ except ImportError as exc:  # pragma: no cover
     raise SystemExit(f"PyYAML required: {exc}")
 
 SCHEMA = "l9.idea-foundry.factory-probe/v1"
+# A hung git (lock contention, unresponsive filesystem) must fail loudly.
+GIT_TIMEOUT_SECONDS = 120
 REQUIRED = {
     "architecture": ".l9/architecture.yaml",
     "ownership": "scripts/birth-runner/payload-ownership.yaml",
@@ -36,13 +39,16 @@ def sha256(path: Path) -> str:
 
 
 def git(root: Path, *args: str) -> str:
-    proc = subprocess.run(
-        ["git", "-C", str(root), *args],
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-    )
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(root), *args],
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=GIT_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise ProbeError(f"git {' '.join(args)} exceeded {GIT_TIMEOUT_SECONDS}s") from exc
     if proc.returncode != 0:
         raise ProbeError(f"git {' '.join(args)} failed: {proc.stderr.strip()}")
     return proc.stdout.strip()
@@ -69,7 +75,8 @@ def probe(root: Path, *, allow_dirty: bool = False) -> dict[str, Any]:
     status = [line for line in git(root, "status", "--porcelain").splitlines() if line.strip()]
     if status and not allow_dirty:
         raise ProbeError(
-            f"factory checkout is dirty ({len(status)} path(s)); qualify against a clean exact revision"
+            f"factory checkout is dirty ({len(status)} path(s)); "
+            "qualify against a clean exact revision"
         )
 
     architecture = load_json_in_yaml(paths["architecture"])
@@ -80,8 +87,10 @@ def probe(root: Path, *, allow_dirty: bool = False) -> dict[str, Any]:
     repository_shape = ownership.get("repository_shape")
     if not isinstance(role, str) or not role:
         raise ProbeError("factory architecture has no metadata.role")
-    if not isinstance(repository_shape, list) or not repository_shape or not all(
-        isinstance(item, str) and item for item in repository_shape
+    if (
+        not isinstance(repository_shape, list)
+        or not repository_shape
+        or not all(isinstance(item, str) and item for item in repository_shape)
     ):
         raise ProbeError("factory ownership contract has invalid repository_shape")
     if payload_schema.get("title") != "l9.birth-payload/v1":
@@ -118,7 +127,9 @@ def probe(root: Path, *, allow_dirty: bool = False) -> dict[str, Any]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Probe the exact live l9 repository factory contract.")
+    parser = argparse.ArgumentParser(
+        description="Probe the exact live l9 repository factory contract."
+    )
     parser.add_argument("repo_template_root", type=Path)
     parser.add_argument("--out", type=Path)
     parser.add_argument("--allow-dirty", action="store_true")
