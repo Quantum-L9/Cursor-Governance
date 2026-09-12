@@ -7,7 +7,7 @@ tags: [ideaos, execution, lineage, reconciliation, digests]
 owner: igor_beylin
 status: active
 version: 1.1.0
-updated: 2026-09-11
+updated: 2026-09-12
 /L9_META -->
 
 # Artifact reconciliation
@@ -22,13 +22,14 @@ Derived execution artifacts are reusable only when their parent bindings indepen
 validated IdeaOS authority
   -> Idea Execution Envelope
   -> Execution Graph
-  -> validated Adapter Capability Snapshot
+  -> unit-bound Adapter Capability Snapshot
+  -> freshly discovered current adapter evidence
   -> owner-native handoff
   -> downstream owner receipt/state
   -> Idea Execution Receipt
 ```
 
-Every derived layer must either bind to its governing parent by digest/revision or remain explicitly unverified.
+Every derived layer must either bind to its governing parent/current authority by digest or revision evidence, or remain explicitly unverified.
 
 ## Preflight dispositions
 
@@ -45,9 +46,11 @@ Artifact-level dispositions:
 - `INVALID`
 - `UNRESOLVED`
 
+A supplied adapter snapshot is `UNRESOLVED` until fresh current evidence for the same Graph unit is available. Structural validation of the snapshot alone is never enough to mark it reusable.
+
 ## Earliest-invalid-layer law
 
-When a derived artifact is stale, regenerate from the earliest invalid layer and invalidate only its dependency cone.
+When a derived artifact is stale, regenerate or rediscover from the earliest invalid layer and invalidate only its dependency cone.
 
 Examples:
 
@@ -59,9 +62,16 @@ Envelope current + Graph stale
 ```
 
 ```text
-Graph current + Adapter snapshot stale
-  -> rediscover Adapter snapshot
+Graph current + supplied Adapter snapshot stale
+  -> rediscover current Adapter snapshot
+  -> reconcile supplied evidence against current source bindings
   -> do not regenerate Envelope or Graph
+```
+
+```text
+Graph current + Adapter snapshot bound to another unit
+  -> ADAPTER_CONTRACT_CONFLICT
+  -> do not reuse the unrelated evidence
 ```
 
 Do not re-run IdeaOS merely because a derived execution artifact is stale.
@@ -73,12 +83,13 @@ Use these reason codes where applicable:
 - `DERIVED_ARTIFACT_STALE`
 - `PARENT_DIGEST_MISMATCH`
 - `SOURCE_REVISION_CHANGED`
+- `GRAPH_REQUIREMENT_COVERAGE_MISMATCH`
 - `ADAPTER_SNAPSHOT_INVALID`
 - `ADAPTER_SNAPSHOT_STALE`
 - `ADAPTER_CONTRACT_CONFLICT`
 - `ADAPTER_CAPABILITY_UNKNOWN`
 
-Reserve `EXECUTOR_CAPABILITY_GAP` for a validated current adapter snapshot that positively proves the requested topology is unsupported.
+Reserve `EXECUTOR_CAPABILITY_GAP` for a validated freshly discovered adapter snapshot that positively proves the requested topology is unsupported.
 
 ## Reconciliation receipt
 

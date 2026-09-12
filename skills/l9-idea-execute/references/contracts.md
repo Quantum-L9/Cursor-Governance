@@ -7,7 +7,7 @@ tags: [ideaos, envelope, graph, adapter, receipt, lineage]
 owner: igor_beylin
 status: active
 version: 1.1.0
-updated: 2026-09-11
+updated: 2026-09-12
 /L9_META -->
 
 # Contracts
@@ -77,22 +77,25 @@ python3 scripts/validate_graph.py EXECUTION_GRAPH.yaml IDEA_EXECUTION_ENVELOPE.y
 Graph rules:
 
 - unit IDs are unique;
-- each requirement appears in exactly one unit;
+- every Envelope requirement is represented exactly once, either by one execution unit or one requirement-scoped blocker;
+- a requirement cannot appear in both a unit and a blocker;
 - dependency edges are acyclic;
 - specialized factories never route through Foundry;
 - bounded existing-repo units target exactly one repository;
 - campaign units target at least two repositories;
 - `READY` means routable to adapter discovery, not permission to mutate;
-- a graph whose `source_envelope_digest` no longer matches its Envelope is `DERIVED_ARTIFACT_STALE` even when structurally valid.
+- a graph whose `source_envelope_digest` no longer matches its Envelope is `DERIVED_ARTIFACT_STALE` even when structurally valid;
+- missing, extra, or duplicated requirement coverage is `GRAPH_REQUIREMENT_COVERAGE_MISMATCH` or a structural validation failure.
 
 ## 3. Adapter Capability Snapshot
 
-Use `l9.idea-execute.adapter-capabilities/v2` for live adapter evidence:
+Use `l9.idea-execute.adapter-capabilities/v2` for live adapter evidence. Each snapshot is scoped to one exact Graph unit:
 
 ```yaml
 schema: l9.idea-execute.adapter-capabilities/v2
+unit_id: unit-existing-repo-change
 adapter: l9-plan-simple
-observed_at: 2026-09-11T00:00:00Z
+observed_at: 2026-09-12T00:00:00Z
 source_refs:
   - skills/l9-plan-simple/SKILL.md
 source_bindings:
@@ -115,19 +118,35 @@ authority:
 
 `true` means proven support, `false` means proven non-support, and `null` means Unknown.
 
-The snapshot is evidence about a moving owner contract. Source revision bindings are mandatory. Validate it before capability judgment:
+A snapshot is evidence about a moving owner contract. It must bind to the Graph unit it evaluates and to exact repository source revisions/paths. Structural validity alone never proves freshness.
+
+Validate shape:
 
 ```bash
-python3 scripts/validate_adapter_snapshot.py adapter-capabilities.yaml
+python3 scripts/validate_adapter_snapshot.py current-adapter-capabilities.yaml
 ```
 
-When a fresh discovery snapshot exists, compare bindings:
+When a supplied/reused snapshot exists, compare it with freshly discovered current evidence:
 
 ```bash
-python3 scripts/validate_adapter_snapshot.py old.yaml --current current.yaml
+python3 scripts/validate_adapter_snapshot.py \
+  supplied-adapter-capabilities.yaml \
+  --current current-adapter-capabilities.yaml
 ```
 
-Different bindings produce `ADAPTER_SNAPSHOT_STALE`; conflicting adapter identity produces `ADAPTER_CONTRACT_CONFLICT`.
+Different source bindings produce `ADAPTER_SNAPSHOT_STALE`. A different adapter/unit identity or contradictory contract fields at the same source bindings produce `ADAPTER_CONTRACT_CONFLICT`.
+
+Capability judgment must use the freshly discovered current snapshot. A supplied snapshot may be reconciled in the same call:
+
+```bash
+python3 scripts/check_adapter_capability.py \
+  EXECUTION_GRAPH.yaml current-adapter-capabilities.yaml \
+  --supplied supplied-adapter-capabilities.yaml \
+  --envelope IDEA_EXECUTION_ENVELOPE.yaml \
+  --unit unit-existing-repo-change
+```
+
+Only validated current evidence may produce `EXECUTOR_CAPABILITY_GAP`.
 
 ## 4. Owner-native handoff
 
@@ -172,7 +191,7 @@ python3 scripts/validate_receipt.py \
   IDEA_EXECUTION_RECEIPT.yaml EXECUTION_GRAPH.yaml IDEA_EXECUTION_ENVELOPE.yaml
 ```
 
-Receipt units must exactly match graph units. The receipt must bind to the exact Envelope and Graph digests.
+Receipt units must exactly match Graph units by `unit_id`, `owner`, and `adapter`. The Receipt must also bind to the exact Envelope and Graph digests.
 
 ## 6. Binding and reconciliation law
 
@@ -183,18 +202,19 @@ Required chain:
 ```text
 Envelope -> Graph -> owner-native handoff -> downstream receipt/state
              \
-              -> Adapter Capability Snapshot source revisions
+              -> unit-bound Adapter Capability Snapshot -> current source bindings
 Graph + Envelope -> Idea Execution Receipt
 ```
 
-Before reusing supplied derived artifacts, run:
+Before reusing supplied derived artifacts, reconcile them against current evidence:
 
 ```bash
 python3 scripts/preflight_execution_pack.py \
   --envelope IDEA_EXECUTION_ENVELOPE.yaml \
   --graph EXECUTION_GRAPH.yaml \
   --receipt IDEA_EXECUTION_RECEIPT.yaml \
-  --adapter adapter-capabilities.yaml
+  --adapter supplied-adapter-capabilities.yaml \
+  --current-adapter current-adapter-capabilities.yaml
 ```
 
-The pack result is `REUSABLE`, `REPAIRABLE`, or `BLOCKED`. See `artifact-reconciliation.md` for earliest-invalid-layer behavior and provenance rules.
+A supplied adapter snapshot without fresh current evidence is `UNRESOLVED`, not reusable. The pack result is `REUSABLE`, `REPAIRABLE`, or `BLOCKED`. See `artifact-reconciliation.md` for earliest-invalid-layer behavior and provenance rules.

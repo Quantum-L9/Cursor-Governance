@@ -7,7 +7,7 @@ tags: [ideaos, foundry, website-bot, plan-simple, program-execution, evidence]
 owner: igor_beylin
 status: active
 version: 1.1.0
-updated: 2026-09-11
+updated: 2026-09-12
 /L9_META -->
 
 # Adapter contracts
@@ -28,16 +28,19 @@ For every execution unit:
 
 1. discover the current owner contract;
 2. capture authoritative source refs plus exact repository revision/path bindings;
-3. compile `l9.idea-execute.adapter-capabilities/v2`;
+3. compile a current `l9.idea-execute.adapter-capabilities/v2` snapshot bound to the exact Graph unit;
 4. validate the snapshot;
-5. verify requested topology with `check_adapter_capability.py`;
-6. compile only the owner's native public input;
-7. validate through owner-native validation where available;
-8. invoke only the canonical public front door;
-9. stop at the owner's terminal boundary;
-10. reference the owner's canonical receipt/state.
+5. reconcile any supplied/reused snapshot against the current snapshot before reuse;
+6. verify requested topology with `check_adapter_capability.py` using current evidence;
+7. compile only the owner's native public input;
+8. validate through owner-native validation where available;
+9. invoke only the canonical public front door;
+10. stop at the owner's terminal boundary;
+11. reference the owner's canonical receipt/state.
 
 Adapters translate. They do not absorb downstream business logic.
+
+A snapshot is not reusable merely because its schema validates. It must identify the Graph unit it evaluates and, when reused from an earlier run, its source bindings and contract fields must agree with freshly discovered current evidence.
 
 ## 2. Capability evidence states
 
@@ -50,10 +53,11 @@ A valid current snapshot may establish:
 Evidence defects are separate:
 
 - `ADAPTER_SNAPSHOT_INVALID`: snapshot shape/provenance is invalid;
-- `ADAPTER_SNAPSHOT_STALE`: source revision/path bindings changed;
-- `ADAPTER_CONTRACT_CONFLICT`: authoritative adapter evidence conflicts.
+- `ADAPTER_SNAPSHOT_STALE`: supplied snapshot source revision/path bindings differ from current evidence;
+- `ADAPTER_CONTRACT_CONFLICT`: snapshot identity, Graph-unit binding, or same-source contract facts conflict;
+- `UNRESOLVED`: supplied evidence has no fresh current snapshot available for a reuse decision.
 
-Never convert missing, malformed, or stale evidence into `EXECUTOR_CAPABILITY_GAP`.
+Never convert missing, malformed, stale, conflicting, or unrefreshed evidence into `EXECUTOR_CAPABILITY_GAP`.
 
 ## 3. l9-idea-foundry
 
@@ -78,7 +82,8 @@ Use for bounded existing-repository work when current execution artifacts are in
 Before invoking:
 
 - inspect the current `l9-plan-simple` contract;
-- bind the snapshot to the exact revision/path inspected;
+- bind the current snapshot to the exact Graph unit plus revision/path inspected;
+- reconcile any prior snapshot against that current evidence;
 - determine the current planning/execution handoff mode;
 - reuse a valid existing plan rather than replacing it.
 
@@ -98,9 +103,9 @@ Distinguish exactly:
 
 - `ADAPTER_CONTRACT_UNAVAILABLE`: cannot discover current public intake;
 - `ADAPTER_SNAPSHOT_INVALID`: discovered evidence cannot satisfy the snapshot contract;
-- `ADAPTER_SNAPSHOT_STALE`: snapshot bindings no longer match current source bindings;
-- `ADAPTER_CONTRACT_CONFLICT`: authoritative sources disagree materially;
-- `ADAPTER_CAPABILITY_UNKNOWN`: valid evidence does not resolve support;
+- `ADAPTER_SNAPSHOT_STALE`: supplied snapshot bindings no longer match current source bindings;
+- `ADAPTER_CONTRACT_CONFLICT`: authoritative sources, adapter identity, or Graph-unit binding disagree materially;
+- `ADAPTER_CAPABILITY_UNKNOWN`: valid current evidence does not resolve support;
 - `EXECUTOR_CAPABILITY_GAP`: valid current evidence proves the requested topology unsupported;
 - `OWNER_NATIVE_INPUT_INVALID`: compiled native input is rejected by owner validation;
 - `DOWNSTREAM_EXECUTION_FAILED`: canonical front door ran and failed;
