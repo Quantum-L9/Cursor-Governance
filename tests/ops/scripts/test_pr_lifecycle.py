@@ -501,7 +501,11 @@ def test_gate_commit_writer_dirt_finishes_without_second_make_pr(tmp_path: Path)
     start = src.find("_gate_commit_writer_dirt() {")
     end = src.find("\n_gate_run_precommit()")
     assert start != -1 and end != -1
-    harness = f'WS="{repo}"\nstatus_before="{status_before_file}"\n' + src[start:end] + "\n_gate_commit_writer_dirt\n"
+    harness = (
+        f'WS="{repo}"\nstatus_before="{status_before_file}"\n'
+        + src[start:end]
+        + "\n_gate_commit_writer_dirt\n"
+    )
     proc = _run(["bash", "-c", harness], cwd=repo)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "committed" in proc.stdout
