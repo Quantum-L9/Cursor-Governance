@@ -68,4 +68,3 @@ Treat repository-factory evidence as a downstream cache, not product authority.
 - prior remote birth state never upgrades automatically from a later retry or unrelated CI event.
 
 Never reuse an `l9.birth-payload/v1` document across source commits. Reinvoke the current factory compiler instead.
-
