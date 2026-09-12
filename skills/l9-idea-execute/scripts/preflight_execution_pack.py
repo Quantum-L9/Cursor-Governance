@@ -114,6 +114,36 @@ def preflight(
             status = "STALE_REGENERATE" if "ADAPTER_SNAPSHOT_STALE" in str(exc) else "INVALID"
             artifacts.append(_artifact(ref, status, str(exc)))
 
+    coverage_refs: set[str] = set()
+    if receipt is not None and validated_graph is not None:
+        # Completed-pack reuse is a closed-world claim: every graph unit is adapter-bound,
+        # so a unit with no fresh current evidence leaves its reuse unprovable. Absent
+        # evidence must fail closed exactly like stale or conflicting evidence rather than
+        # being silently skipped because no snapshot happened to be supplied for it.
+        for unit in validated_graph["units"]:
+            if unit["id"] in current_by_unit:
+                continue
+            ref = f"current-adapter:{unit['id']}"
+            coverage_refs.add(ref)
+            overall = "REPAIRABLE"
+            artifacts.append(
+                _artifact(
+                    ref,
+                    "UNRESOLVED",
+                    "ADAPTER_CAPABILITY_UNKNOWN: completed-pack reuse requires freshly "
+                    f"discovered current adapter evidence for graph unit {unit['id']}",
+                )
+            )
+            blockers.append(
+                {
+                    "code": "ADAPTER_CAPABILITY_UNKNOWN",
+                    "detail": (
+                        "no current adapter evidence bound to graph unit "
+                        f"{unit['id']} ({unit['adapter']})"
+                    ),
+                }
+            )
+
     if receipt is not None:
         if validated_graph is None:
             overall = "REPAIRABLE"
@@ -146,7 +176,7 @@ def preflight(
     if earliest is None:
         adapter_refs = {
             ref for ref, _ in (adapter_snapshots or []) + (current_adapter_snapshots or [])
-        }
+        } | coverage_refs
         invalid_adapter = next(
             (a for a in artifacts if a["ref"] in adapter_refs and a["status"] != "REUSABLE"),
             None,

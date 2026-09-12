@@ -1,5 +1,5 @@
 {
-  "generation_id": "2bc90ec09291c6b6cce5c2cc7e5ff9b9be693be7065f1fd918d008afcc1e6d17",
+  "generation_id": "2bb49ede0c4091e2606b1210c26076e6143d245f51d6152aee8f88abe77f7f8b",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -1222,7 +1222,7 @@
       "path": "skills/l9-idea-execute",
       "reason": "routes validated IdeaOS decisions into Foundry, Website-Bot, plan-simple, or Program Execution; owner-selection and downstream invocation are high blast radius; disable-model-invocation",
       "skill_md": "skills/l9-idea-execute/SKILL.md",
-      "skill_sha256": "c5a37daab554ffe7831d22d917a6da566283204d78d350cc677732f523f1079f",
+      "skill_sha256": "d9d0dc70b6620a1dcc8abcf9e174fd7952a26137732db15b504a4ff820355c51",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1606,5 +1606,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "b71df84c03ba02fa5a638d03749e4bf08c7efcb5354d85fb0fe4928cf31c5587",
-  "source_skill_corpus_sha256": "2ee2808a3ce8a82d061934c4fa6dfee0666f2e555a4da526c564daddf912fcf2"
+  "source_skill_corpus_sha256": "d889753d7ee17642ac546c013e828c85cabe8f8ad8ac62a6d64c54eec901e313"
 }
