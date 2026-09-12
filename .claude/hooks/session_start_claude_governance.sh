@@ -737,6 +737,36 @@ except Exception:
 
   case "$state" in
     ready|"") : ;;
+    degraded)
+      # `degraded` is the ONE non-ready state a re-run cannot change, and the
+      # reader has already proved why by the time it says so. Its own ladder
+      # returns `unknown` first for a receipt that covers another workspace,
+      # carries no parseable stamp, outlived its TTL, or was produced against a
+      # superseded governance revision — so `degraded` arriving here means the
+      # receipt describes THIS workspace, is inside its TTL, and was written by
+      # an installer run against the revision currently checked out. And
+      # `degraded` is defined there as "an optional component is unavailable"
+      # (`blocked` is the required-component state, and it still arms below).
+      #
+      # Re-running the installer inside what is left of a 30 s hook cannot make
+      # an optional component available. Measured on a hosted container: the
+      # provisioning `web/setup.sh` -> `install.sh` run wrote the receipt, this
+      # hook read it seconds later, and spent 7 s of its budget reaching the
+      # identical verdict. Hosted containers get a fresh clone and a fresh
+      # ~/.l9 every session, so the per-revision marker bounds that to once per
+      # revision — which on that surface is once per session, forever.
+      #
+      # Arming stays for every state a re-run can actually move: `never_ran`
+      # (no bookkeeping), `failed` (died at a stage), `blocked` (a required
+      # component unwired), and `unknown` — which is what an expired receipt or
+      # a revision bump becomes, so auto-heal after an environment change is
+      # preserved rather than traded away.
+      say "bootstrap repair: NOT ARMED — receipt is 'degraded' (an optional component is"
+      say "bootstrap repair:   unavailable) at ${revision:0:8}, which is this revision's own"
+      say "bootstrap repair:   installer verdict; re-running cannot change it. Components and"
+      say "bootstrap repair:   reasons are in the environment block above."
+      say "bootstrap repair:   force a re-run with 'make claude-install' once the cause is fixed"
+      ;;
     *)
       if [ ! -f "$marker" ] && [ -f "$installer" ]; then
         mkdir -p "$HOME/.l9/claude"
