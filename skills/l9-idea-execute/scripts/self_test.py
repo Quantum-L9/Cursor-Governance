@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import copy
+from pathlib import Path
 
 from _common import ContractError, dump_yaml, load_data, semantic_digest
 from check_adapter_capability import check_unit
@@ -80,28 +81,52 @@ def caps(adapter: str, unit_id: str, *, single=True, multi=False, revision="fixt
     }
 
 
-def receipt_for(env, graph):
+def receipt_for(env, graph, *, state="READY", evidence=True, status=None, blockers=None):
     return {
         "schema": "l9.idea-execution-receipt/v1",
         "idea_id": env["idea"]["id"],
         "envelope_digest": semantic_digest(env),
         "graph_digest": semantic_digest(graph),
-        "status": "READY",
+        "status": status or state,
         "units": [
             {
                 "unit_id": unit["id"],
                 "owner": unit["owner"],
                 "adapter": unit["adapter"],
                 "requested_terminal_state": "owner_native_handoff",
-                "resulting_state": "READY",
-                "evidence_refs": [],
+                "resulting_state": state,
+                "evidence_refs": (
+                    [f"downstream/{unit['id']}/owner-receipt.json"] if evidence else []
+                ),
             }
             for unit in graph["units"]
         ],
-        "blockers": [],
+        "blockers": list(blockers or []),
         "next_legal_transition": "invoke validated owner-native handoff",
         "reconciliation": {"reused": [], "regenerated": [], "superseded": []},
     }
+
+
+SKILL_ROOT = Path(__file__).resolve().parent.parent
+
+# Gates the authoritative SKILL entrypoint must require, not merely ship.
+MANDATORY_GATES = (
+    "scripts/validate_envelope.py",
+    "scripts/validate_graph.py",
+    "scripts/validate_adapter_snapshot.py",
+    "scripts/preflight_execution_pack.py",
+    "scripts/validate_receipt.py",
+)
+
+
+def skill_section(heading: str) -> str:
+    lines = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8").splitlines()
+    try:
+        start = next(i for i, line in enumerate(lines) if line.strip() == heading)
+    except StopIteration:
+        raise AssertionError(f"SKILL.md has no {heading} section") from None
+    end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith("## ")), len(lines))
+    return "\n".join(lines[start:end])
 
 
 def expect_contract_error(fn, needle: str) -> None:
@@ -116,6 +141,26 @@ def expect_contract_error(fn, needle: str) -> None:
 def main() -> int:
     registry = load_data(REGISTRY_PATH)
     checks = []
+
+    # F-552-001: the hardening must be reachable from the control plane. A validator that
+    # exists only as an unreferenced helper script is optional ceremony, so fail if the
+    # authoritative entrypoint stops requiring or documenting any mandatory gate.
+    validation = skill_section("## Validation")
+    scripts_doc = skill_section("## Scripts")
+    workflow = skill_section("## Workflow")
+    missing_required = [gate for gate in MANDATORY_GATES if gate not in validation]
+    assert not missing_required, f"SKILL.md Validation omits mandatory gates: {missing_required}"
+    missing_doc = [gate for gate in MANDATORY_GATES if gate not in scripts_doc]
+    assert not missing_doc, f"SKILL.md Scripts omits mandatory gates: {missing_doc}"
+    missing_file = [gate for gate in MANDATORY_GATES if not (SKILL_ROOT / gate).is_file()]
+    assert not missing_file, f"documented gates are not executable: {missing_file}"
+    for gate in (
+        "preflight_execution_pack.py",
+        "validate_adapter_snapshot.py",
+        "validate_receipt.py",
+    ):
+        assert gate in workflow, f"SKILL.md workflow never invokes {gate}"
+    checks.append("control_plane_gate_reachability=PASS")
 
     e = envelope([req("ER-001", "product_repository", "new")])
     g = route_envelope(validate_envelope(e), registry)
@@ -240,6 +285,134 @@ def main() -> int:
     false_adapter["units"][0]["adapter"] = "wrong-adapter"
     expect_contract_error(lambda: validate_receipt(false_adapter, g, e), ".adapter does not match")
     checks.append("receipt_chain_and_identity_binding=PASS")
+
+    # F-552-003: a terminal claim must be earned by downstream evidence, and an
+    # unrecognized state must fail closed rather than pass as "not really a claim".
+    expect_contract_error(
+        lambda: validate_receipt(receipt_for(e, g, evidence=False), g, e),
+        "DOWNSTREAM_EVIDENCE_MISSING",
+    )
+    expect_contract_error(
+        lambda: validate_receipt(receipt_for(e, g, state="TOTALLY_DONE", evidence=False), g, e),
+        "DOWNSTREAM_EVIDENCE_MISSING",
+    )
+    # blocked / not-yet-invoked lineage stays representable without inventing completion
+    validate_receipt(receipt_for(e, g, state="NOT_RUN", evidence=False), g, e)
+    validate_receipt(receipt_for(e, g, state="PENDING_HANDOFF", evidence=False), g, e)
+    validate_receipt(receipt_for(e, g, state="EXECUTOR_CAPABILITY_GAP", evidence=False), g, e)
+    checks.append("receipt_requires_downstream_evidence=PASS")
+
+    # F-552-003: overall/unit/blocker/graph semantics must agree
+    expect_contract_error(
+        lambda: validate_receipt(
+            receipt_for(e, g, blockers=[{"code": "PROTECTED_ACTION_REQUIRES_AUTHORITY"}]), g, e
+        ),
+        "unresolved receipt blockers remain",
+    )
+    mixed = receipt_for(e, g)
+    mixed["units"][0]["resulting_state"] = "NOT_RUN"
+    mixed["units"][0]["evidence_refs"] = []
+    expect_contract_error(
+        lambda: validate_receipt(mixed, g, e), "units did not reach a terminal state"
+    )
+    blocked_admission = copy.deepcopy(g)
+    blocked_admission["units"][0]["admission_status"] = "BLOCKED"
+    validate_graph(blocked_admission, e)
+    expect_contract_error(
+        lambda: validate_receipt(receipt_for(e, blocked_admission), blocked_admission, e),
+        "admission_status is BLOCKED",
+    )
+
+    blocked_env = envelope([req("ER-001", "quantum_telepathy", "new")])
+    blocked_graph = route_envelope(validate_envelope(blocked_env), registry)
+    assert blocked_graph["status"] == "BLOCKED" and not blocked_graph["units"]
+    expect_contract_error(
+        lambda: validate_receipt(
+            receipt_for(blocked_env, blocked_graph), blocked_graph, blocked_env
+        ),
+        "the bound graph status is BLOCKED",
+    )
+    expect_contract_error(
+        lambda: validate_receipt(
+            receipt_for(blocked_env, blocked_graph, state="CAPABILITY_OWNER_UNKNOWN"),
+            blocked_graph,
+            blocked_env,
+        ),
+        "does not represent graph blockers",
+    )
+    validate_receipt(
+        receipt_for(
+            blocked_env,
+            blocked_graph,
+            state="CAPABILITY_OWNER_UNKNOWN",
+            blockers=[{"code": "CAPABILITY_OWNER_UNKNOWN", "detail": "no demonstrated owner"}],
+        ),
+        blocked_graph,
+        blocked_env,
+    )
+
+    # Guard against over-tightening: a genuinely completed unit under a partially
+    # blocked graph must stay representable. One routable requirement plus one
+    # unowned capability yields a unit AND a requirement-scoped blocker.
+    mixed_env = envelope(
+        [req("ER-001", "website", "new"), req("ER-002", "quantum_telepathy", "new")]
+    )
+    mixed_graph = route_envelope(validate_envelope(mixed_env), registry)
+    validate_graph(mixed_graph, mixed_env)
+    assert mixed_graph["status"] == "BLOCKED" and len(mixed_graph["units"]) == 1, mixed_graph
+    validate_receipt(
+        receipt_for(
+            mixed_env,
+            mixed_graph,
+            state="READY",
+            status="BLOCKED",
+            blockers=[{"code": "CAPABILITY_OWNER_UNKNOWN", "detail": "ER-002 unowned"}],
+        ),
+        mixed_graph,
+        mixed_env,
+    )
+    checks.append("receipt_truth_binding=PASS")
+
+    # F-552-002: completed-pack reuse needs current adapter evidence for EVERY graph unit
+    multi_env = envelope(
+        [req("ER-001", "product_repository", "new"), req("ER-002", "website", "new")]
+    )
+    multi_graph = route_envelope(validate_envelope(multi_env), registry)
+    validate_graph(multi_graph, multi_env)
+    multi_ids = [unit["id"] for unit in multi_graph["units"]]
+    assert len(multi_ids) == 2, multi_ids
+    multi_receipt = receipt_for(multi_env, multi_graph)
+    validate_receipt(multi_receipt, multi_graph, multi_env)
+    currents = [
+        (f"current-{unit['id']}.yaml", caps(unit["adapter"], unit["id"]))
+        for unit in multi_graph["units"]
+    ]
+
+    zero = preflight(multi_env, graph=multi_graph, receipt=multi_receipt)
+    assert zero["status"] == "REPAIRABLE", zero
+    assert {a["ref"] for a in zero["artifacts"] if a["status"] == "UNRESOLVED"} == {
+        f"current-adapter:{uid}" for uid in multi_ids
+    }, zero
+    assert zero["earliest_invalid_layer"] == f"current-adapter:{multi_ids[0]}", zero
+    assert [b["code"] for b in zero["blockers"]] == ["ADAPTER_CAPABILITY_UNKNOWN"] * 2, zero
+
+    partial = preflight(
+        multi_env,
+        graph=multi_graph,
+        receipt=multi_receipt,
+        current_adapter_snapshots=currents[:1],
+    )
+    assert partial["status"] == "REPAIRABLE", partial
+    assert {a["ref"] for a in partial["artifacts"] if a["status"] == "UNRESOLVED"} == {
+        f"current-adapter:{multi_ids[1]}"
+    }, partial
+
+    full = preflight(
+        multi_env, graph=multi_graph, receipt=multi_receipt, current_adapter_snapshots=currents
+    )
+    assert full["status"] == "REUSABLE", full
+    assert full["earliest_invalid_layer"] is None and not full["blockers"], full
+    checks.append("closed_world_adapter_reuse=PASS")
 
     current = caps("l9-plan-simple", g["units"][0]["id"])
     wrong_adapter = caps("program-execution", g["units"][0]["id"])
