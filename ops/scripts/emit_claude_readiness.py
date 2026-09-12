@@ -40,6 +40,7 @@ import os
 import re
 import subprocess
 import sys
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -401,7 +402,7 @@ def _claude_mcp_health(
     workspace: Path,
     *,
     gated_out: frozenset[str] = frozenset(),
-    environ: dict[str, str] | None = None,
+    environ: Mapping[str, str] | None = None,
 ) -> tuple[str, str]:
     """Claude project MCP is READY only when the rendered entry will actually run.
 

@@ -686,6 +686,14 @@ def main() -> int:
                 print(f"  {path}")
         else:
             print("CURRENT: Claude settings triad already reconciled")
+        # Apply mode still REPORTS what it deliberately did not write: a
+        # tracked consumer hook that drifted from the SSOT, or a tracked file
+        # at a retired projection path. Silence here would hide the ownership
+        # boundary the reconciler just honoured.
+        if result["drift"]:
+            print("REPORTED (repo-owned, left as is):")
+            for path in result["drift"]:
+                print(f"  {path}")
     return 0 if result.get("ok", True) else 1
 
 
