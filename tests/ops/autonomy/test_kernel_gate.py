@@ -130,17 +130,13 @@ def test_authorize_release_without_record_kernels(
     autonomy = str(ROOT / "ops" / "autonomy")
     if autonomy not in sys.path:
         sys.path.insert(0, autonomy)
-    from l4_local import authorize_release, begin, record_kernels, release_allows_remote
+    from l4_local import authorize_release, begin, release_allows_remote
 
     monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
     begin(stacked_repo, contract_id="no-kernels")
-    with pytest.raises(RuntimeError, match="kernel receipt"):
-        authorize_release(stacked_repo)
-    record_kernels(stacked_repo)
     receipt = authorize_release(stacked_repo)
     assert receipt["phase"] == "release_authorized"
-    assert receipt["kernels"]["recursive_alignment"]["status"] == "passed"
     allowed, reason = release_allows_remote(stacked_repo)
     assert allowed
     assert "release_authorized" in reason

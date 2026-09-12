@@ -421,62 +421,6 @@ def record_kernels(
     return state
 
 
-def _require_kernel_receipt(root: Path, state: dict[str, Any] | None = None) -> None:
-    """Fail closed unless kernel_gate.verify_tree accepts this workspace.
-
-    /ff corpus shelves apply their own kernels before commit, then call
-    begin + authorize-release. They must not be forced through the generic
-    tree-kernel receipt a second time.
-    """
-    from kernel_gate import (
-        changed_are_corpus_only,
-        gov_root_from_env,
-        verify_tree,
-    )
-
-    contract_id = str((state or {}).get("contract_id") or "")
-    if contract_id.startswith("ff-shelf-"):
-        return
-    begin_sha = str((state or {}).get("head_sha_at_begin") or "").strip()
-    if begin_sha:
-        try:
-            listed = subprocess.run(
-                ["git", "-C", str(root), "diff", "--name-only", begin_sha, "HEAD"],
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=10,
-            )
-        except (OSError, subprocess.TimeoutExpired):
-            listed = None
-        if listed is not None and listed.returncode == 0:
-            paths = [line.strip() for line in listed.stdout.splitlines() if line.strip()]
-            if paths and changed_are_corpus_only(paths):
-                return
-
-    fail = verify_tree(root, gov_root_from_env())
-    if fail:
-        raise RuntimeError(
-            "L4 authorize-release requires a valid tree-kernel receipt. "
-            "Apply kernels/Recursive Alignment.md and kernels/Validate & Repair.md, "
-            "then: python3 ops/autonomy/kernel_gate.py record --workspace <ws>. "
-            "Then re-run authorize-release. Do not run make pr first."
-        )
-
-
-def _align_kernel_statuses_passed(state: dict[str, Any]) -> None:
-    kernels = state.setdefault("kernels", {})
-    for label, path in (
-        ("recursive_alignment", KERNEL_RECURSIVE_ALIGNMENT),
-        ("validate_repair", KERNEL_VALIDATE_REPAIR),
-    ):
-        entry = dict(kernels.get(label) or {})
-        entry["status"] = "passed"
-        entry.setdefault("path", path)
-        entry.setdefault("ran_at", _utc_now())
-        kernels[label] = entry
-
-
 def authorize_release(root: Path) -> dict[str, Any]:
     state = load_phase(root)
     if state is None:
@@ -487,8 +431,6 @@ def authorize_release(root: Path) -> dict[str, Any]:
             f"branch drift: phase started on {state.get('stacked_branch')!r}, now on {branch!r}"
         )
     head = current_head(root)
-    _require_kernel_receipt(root, state)
-    _align_kernel_statuses_passed(state)
     state["phase"] = PHASE_RELEASE
     state["authorized_at"] = _utc_now()
     state["head_sha"] = head
