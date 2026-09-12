@@ -127,7 +127,9 @@ def preflight(
         else:
             try:
                 validate_receipt(receipt, validated_graph, validated_envelope)
-                artifacts.append(_artifact("receipt", "REUSABLE", "digest and unit bindings verified"))
+                artifacts.append(
+                    _artifact("receipt", "REUSABLE", "digest and unit bindings verified")
+                )
             except ContractError as exc:
                 overall = "REPAIRABLE"
                 artifacts.append(_artifact("receipt", "STALE_REGENERATE", str(exc)))
