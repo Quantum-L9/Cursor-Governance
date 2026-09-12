@@ -38,14 +38,14 @@ def test_bind_uses_already_present_env(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "CANARY_ENV" not in json.dumps(status)
 
 
-def test_bind_uses_infisical_cli_when_env_empty(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_bind_uses_infisical_when_env_empty(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("SEMGREP_APP_TOKEN", raising=False)
     value = cb.bind(
         "SEMGREP_APP_TOKEN",
         infisical_cli=lambda name: "CANARY_CLI" if name == "SEMGREP_APP_TOKEN" else None,
     )
     assert value == "CANARY_CLI"
-    assert cb.bind_status("SEMGREP_APP_TOKEN")["source"] == "infisical-cli"
+    assert cb.bind_status("SEMGREP_APP_TOKEN")["source"] == "infisical"
     assert _env_lacks("SEMGREP_APP_TOKEN")
 
 
@@ -56,11 +56,33 @@ def test_bind_does_not_use_aws(monkeypatch: pytest.MonkeyPatch) -> None:
     assert cb.bind_status("SEMGREP_APP_TOKEN")["source"] == "unbound"
 
 
-def test_missing_cli_is_absent(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_missing_machine_profile_is_absent(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("SEMGREP_APP_TOKEN", raising=False)
-    monkeypatch.setattr(cb.shutil, "which", lambda _name: None)
+    monkeypatch.setattr(cb, "_machine_profile", lambda: None)
     assert cb.bind("SEMGREP_APP_TOKEN") is None
-    assert cb.bind_status("SEMGREP_APP_TOKEN")["source"] == "infisical-cli-absent"
+    assert cb.bind_status("SEMGREP_APP_TOKEN")["source"] == "infisical-machine-absent"
+
+
+def test_bind_uses_machine_profile_not_cli(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SEMGREP_APP_TOKEN", raising=False)
+    # A clean runner has no ~/.infisical/l9-machine.json; without a present
+    # profile _resolve reports infisical-machine-absent before any fetch runs.
+    # Stub the profile too, so the assertion exercises the machine path.
+    monkeypatch.setattr(
+        cb,
+        "_machine_profile",
+        lambda: {
+            "host": "https://infisical.invalid",
+            "project_id": "fixture-project",
+            "environment": "fixture",
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+        },
+    )
+    monkeypatch.setattr(cb, "_from_machine_profile", lambda _name: "CANARY_MACHINE")
+    assert cb.bind("SEMGREP_APP_TOKEN") == "CANARY_MACHINE"
+    assert cb.bind_status("SEMGREP_APP_TOKEN")["source"] == "infisical"
+    assert "infisical secrets" not in Path(cb.__file__).read_text(encoding="utf-8")
 
 
 def test_bind_refuses_bootstrap_names(monkeypatch: pytest.MonkeyPatch) -> None:

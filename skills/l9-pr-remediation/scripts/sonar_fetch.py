@@ -8,9 +8,10 @@ secret-free JSON snapshot (`sonarcloud-issues-before.json` by convention).
 Read-only against SonarCloud: this never mutates issue or hotspot state.
 
 Authentication: ``capability_bind.bind_first`` resolves SONAR_TOKEN (or
-SONARCLOUD_TOKEN) in-process (already-present env, then the Infisical CLI
-profile). The value is never exported to ``os.environ``, never printed, and
-never written to the snapshot. AWS is not a bind path. Without a bound token
+SONARCLOUD_TOKEN) in-process (already-present env, then the Infisical machine
+profile ``~/.infisical/l9-machine.json`` over HTTP). The value is never
+exported to ``os.environ``, never printed, and never written to the snapshot.
+The Infisical CLI keyring and AWS are not bind paths. Without a bound token
 the fetch is an unauthenticated public read and says so. Authorization
 headers are redacted.
 
@@ -32,7 +33,7 @@ import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 
-# Local bind (Infisical CLI profile). The capability broker is retired.
+# Local bind (Infisical machine profile over HTTP). The capability broker is retired.
 _OPS_SECRETS = Path(__file__).resolve().parents[3] / "ops" / "secrets"
 _OPS_LIB = Path(__file__).resolve().parents[3] / "ops" / "lib"
 for _extra in (_OPS_SECRETS, _OPS_LIB):
@@ -106,14 +107,15 @@ def build_transport(base_url: str, surface: str | None = None) -> DirectTranspor
     """Authenticated when bind_first finds a token, on any surface.
 
     The token may already be in the process environment, or capability_bind
-    may resolve it from the Infisical CLI machine profile. ops/secrets still
-    refuses to export a value onto a model-controlled surface. Without a
-    token the read is public and the receipt says ``authenticated: false``.
+    may resolve it from the Infisical machine profile (l9-machine.json over
+    HTTP; the CLI keyring is not consulted). ops/secrets still refuses to
+    export a value onto a model-controlled surface. Without a token the read
+    is public and the receipt says ``authenticated: false``.
     """
     token = bind_first(*TOKEN_ENV)
     if not token:
         print(
-            "sonar_fetch: no SONAR_TOKEN bound (env or Infisical CLI); continuing "
+            "sonar_fetch: no SONAR_TOKEN bound (env or Infisical machine profile); continuing "
             "UNAUTHENTICATED — private findings will be absent and the quality "
             "gate may be incomplete",
             file=sys.stderr,

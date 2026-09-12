@@ -1,5 +1,5 @@
 {
-  "generation_id": "2bc90ec09291c6b6cce5c2cc7e5ff9b9be693be7065f1fd918d008afcc1e6d17",
+  "generation_id": "e40cd4b34cc63a81af10da1ac4cd4828c85028236e541a4d5b836129bec532c7",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -1228,14 +1228,14 @@
     },
     {
       "composition_role": "general",
-      "description": "compile an implementation-ready idea pack into tested code and a birth-ready quantum-l9 repository. use when a mature idea should leave specification and become a real repo via l9-repo-template. do not use for websites, existing-repo changes, or production deployment.",
+      "description": "Compile mature idea packs and locked product specifications into real tested code, exact-state provenance, and repository-factory-qualified birth payloads for new Quantum-L9 products. Use when an idea leaves planning to become a new repository, when a Foundry staging product must be resumed or recompiled, or when a frozen product must be qualified against the live l9-repo-template birth contract. Never authors the birth payload; requires local birth evidence; stops before production deployment.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-idea-foundry",
       "path": "skills/l9-idea-foundry",
       "reason": "compiles idea packs into tested code and l9-repo-template births; repository creation and code realization are high blast radius; disable-model-invocation",
       "skill_md": "skills/l9-idea-foundry/SKILL.md",
-      "skill_sha256": "ad8edd26c317f4ce3dfafde696c9351580dfb07140a9bd1bd222ad799e99093a",
+      "skill_sha256": "bb981c5611b5d5beab795718b52de6bbf274a0dee230eb70fa7a1237d43b9f17",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1417,7 +1417,7 @@
       "path": "skills/l9-pr-remediation",
       "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked). The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Above-paygrade HUMAN / unfixable required CI / ENVIRONMENT after best-effort opens a GitHub issue and launches l9-issue-remediation via cursor-subagents; do not ask the human to unblock. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
       "skill_md": "skills/l9-pr-remediation/SKILL.md",
-      "skill_sha256": "c61971c53b430dd890eda2346ed0f0c40da45248b0f51548953b92305366876b",
+      "skill_sha256": "50cddd2286a46301e69b0bd503a2cd823c7b560da01ab3d17c135bcd0edcd89e",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1606,5 +1606,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "b71df84c03ba02fa5a638d03749e4bf08c7efcb5354d85fb0fe4928cf31c5587",
-  "source_skill_corpus_sha256": "2ee2808a3ce8a82d061934c4fa6dfee0666f2e555a4da526c564daddf912fcf2"
+  "source_skill_corpus_sha256": "bbdaf38c0864bb9611152117651d318b6ca74576c5dbf23253a007321c0279e3"
 }
