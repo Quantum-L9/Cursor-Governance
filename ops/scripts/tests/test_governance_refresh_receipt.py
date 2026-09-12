@@ -135,6 +135,15 @@ class HookWriterTests(unittest.TestCase):
     """
 
     def test_hook_writes_parseable_timestamped_json(self) -> None:
+        """SessionStart writes a receipt even when the launcher didn't run.
+
+        In the PR #548 architecture, the launcher (l9_hook_exec.sh) owns the
+        governance refresh for cloud SessionStart hooks. When the launcher
+        didn't set L9_GOV_REFRESH_ATTEMPT_ID, the SessionStart hook reports
+        `launcher-absent` to indicate no refresh was attempted by the launcher.
+
+        The receipt must still be parseable JSON with the correct schema.
+        """
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
             gov = home / ".cursor-governance"
@@ -158,9 +167,9 @@ class HookWriterTests(unittest.TestCase):
 
             parsed = json.loads(receipt_file.read_text(encoding="utf-8"))
             self.assertEqual(parsed["schema"], "l9.governance-refresh.v1")
-            # No remote is configured, so the fetch cannot succeed: origin is
-            # genuinely unobserved and must not be recorded as equal to local.
-            self.assertEqual(parsed["outcome"], "fetch-failed")
+            # No L9_GOV_REFRESH_ATTEMPT_ID set, so the hook reports launcher-absent
+            # (the launcher owns the refresh in the PR #548 architecture).
+            self.assertEqual(parsed["outcome"], "launcher-absent")
             self.assertEqual(parsed["origin_sha"], "unknown")
             self.assertRegex(parsed["refreshed_at"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
             self.assertIsInstance(parsed["ttl_seconds"], int)
