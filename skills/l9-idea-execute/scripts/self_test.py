@@ -350,6 +350,27 @@ def main() -> int:
         blocked_graph,
         blocked_env,
     )
+
+    # Guard against over-tightening: a genuinely completed unit under a partially
+    # blocked graph must stay representable. One routable requirement plus one
+    # unowned capability yields a unit AND a requirement-scoped blocker.
+    mixed_env = envelope(
+        [req("ER-001", "website", "new"), req("ER-002", "quantum_telepathy", "new")]
+    )
+    mixed_graph = route_envelope(validate_envelope(mixed_env), registry)
+    validate_graph(mixed_graph, mixed_env)
+    assert mixed_graph["status"] == "BLOCKED" and len(mixed_graph["units"]) == 1, mixed_graph
+    validate_receipt(
+        receipt_for(
+            mixed_env,
+            mixed_graph,
+            state="READY",
+            status="BLOCKED",
+            blockers=[{"code": "CAPABILITY_OWNER_UNKNOWN", "detail": "ER-002 unowned"}],
+        ),
+        mixed_graph,
+        mixed_env,
+    )
     checks.append("receipt_truth_binding=PASS")
 
     # F-552-002: completed-pack reuse needs current adapter evidence for EVERY graph unit
