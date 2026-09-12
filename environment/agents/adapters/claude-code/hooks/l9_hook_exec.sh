@@ -389,7 +389,7 @@ l9_cloud_refresh_gov() {
   [ -d "$GOV_DIR/.git" ] || return 0
   local lockdir="${L9_GOV_REFRESH_LOCKDIR:-$HOME/.l9/claude/gov-refresh.lock.d}"
   local receipt="${L9_GOV_REFRESH_RECEIPT:-$HOME/.l9/claude/gov-refresh.json}"
-  local branch="${L9_GOVERNANCE_BRANCH:-main}"
+  local branch="main"
   local lease="${L9_GOV_REFRESH_LEASE:-60}"
   local wait_ticks="${L9_GOV_REFRESH_WAIT_TICKS:-80}"
   local fetch_timeout="${L9_GOV_REFRESH_FETCH_TIMEOUT:-20}"

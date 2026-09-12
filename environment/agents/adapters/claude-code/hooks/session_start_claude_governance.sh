@@ -432,18 +432,11 @@ commits_behind() {
 if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
   if GOV=$(resolve_governance_dir); then
     GOV_REMOTE="${L9_GOVERNANCE_REMOTE:-https://github.com/Quantum-L9/Cursor-Governance.git}"
-    GOV_BRANCH="${L9_GOVERNANCE_BRANCH:-main}"
-    # The launcher (l9_hook_exec.sh) refreshes before this hook resolves, and
-    # binds that attempt to this process through L9_GOV_REFRESH_ATTEMPT_ID,
-    # which the receipt it wrote carries as attempt_id. The fallback below is
-    # suppressed ONLY on a receipt proven to be the current attempt's: same
-    # attempt id, outcome fetched, local_sha equal to HEAD, and written within
-    # the last few minutes. Never on a receipt that merely says `fresh`: the
-    # first version read state/local_sha off the file, so when the current
-    # launcher lost its lock or its fetch failed and left an older receipt
-    # untouched, an unchanged HEAD made the old claim pass and this hook
-    # reported "already applied" over a clone that could be behind origin
-    # (governance_refresh_receipt.py: never trust state-at-write).
+    GOV_BRANCH="main"
+    # The launcher (l9_hook_exec.sh) is the sole refresh authority. Hosted
+    # origin/main is the only executable tip. This hook never independently
+    # fetches or resets: an untrusted origin, a refused refresh, or a missed
+    # launcher attempt must not fall into a second fetch/checkout brain.
     _refresh_head=$(git -C "$GOV" rev-parse --verify --quiet HEAD 2>/dev/null || echo '')
     _refresh_sha=""
     _refresh_attempt=""
@@ -465,45 +458,13 @@ if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
        && [ -n "$_refresh_sha" ] && [ "$_refresh_sha" = "$_refresh_head" ]; then
       say "governance refresh: already applied this SessionStart (launcher attempt $_refresh_attempt)"
     else
+    local_sha=$(git -C "$GOV" rev-parse --verify --quiet HEAD 2>/dev/null || echo 'unknown')
     if [ -n "${L9_GOV_REFRESH_OUTCOME:-}" ]; then
-      say "governance refresh: launcher attempt did not establish the tree (${L9_GOV_REFRESH_OUTCOME}) — running the SessionStart fallback"
-    fi
-    # The reset below is `checkout -f`, which DISCARDS uncommitted work and moves
-    # HEAD off whatever branch is checked out. That is correct for the ephemeral
-    # cloud clone it is written for, and destructive for anything else. It ran
-    # unguarded, so a governance checkout carrying in-flight work — reachable
-    # here whenever $HOME/.cursor-governance resolves to a working clone rather
-    # than the throwaway one — lost that work silently, HEAD included. The reset
-    # only ever has something to do on a clean clone, so refusing a dirty one
-    # costs the intended path nothing and makes the destructive case impossible.
-    # TRACKED changes only. `checkout -f` discards tracked modifications and
-    # staged content — what this session actually lost — but leaves untracked
-    # files alone, so counting them would refuse a reset that was never
-    # dangerous and strand the ephemeral clone (a fresh one legitimately
-    # carries untracked bootstrap residue).
-    gov_dirty=$(git -C "$GOV" status --porcelain --untracked-files=no 2>/dev/null | head -c 1)
-    if [ -n "$gov_dirty" ]; then
-      local_sha=$(git -C "$GOV" rev-parse --verify --quiet HEAD 2>/dev/null || echo 'unknown')
-      write_refresh_receipt reset-skipped-dirty "$local_sha" unknown -1 stale
-      say "governance refresh: WARN $GOV has uncommitted changes — reset SKIPPED (refusing to discard in-flight work)"
-    elif git -C "$GOV" fetch --depth 1 origin "$GOV_BRANCH" >/dev/null 2>&1; then
-      remote_sha=$(git -C "$GOV" rev-parse --verify --quiet FETCH_HEAD 2>/dev/null || echo 'unknown')
-      if git -C "$GOV" checkout -f -B "$GOV_BRANCH" "origin/$GOV_BRANCH" >/dev/null 2>&1; then
-        local_sha=$(git -C "$GOV" rev-parse --verify --quiet HEAD 2>/dev/null || echo 'unknown')
-        write_refresh_receipt fetched "$local_sha" "$remote_sha" \
-          "$(commits_behind "$GOV" HEAD FETCH_HEAD)" fresh
-        say "governance refresh: cloud session — reset ephemeral clone to origin/$GOV_BRANCH"
-      else
-        local_sha=$(git -C "$GOV" rev-parse --verify --quiet HEAD 2>/dev/null || echo 'unknown')
-        write_refresh_receipt reset-failed "$local_sha" "$remote_sha" \
-          "$(commits_behind "$GOV" HEAD FETCH_HEAD)" stale
-        say "governance refresh: WARN reset to origin/$GOV_BRANCH failed — reusing clone"
-      fi
+      write_refresh_receipt "launcher-${L9_GOV_REFRESH_OUTCOME}" "$local_sha" unknown -1 stale
+      say "governance refresh: launcher did not establish the tree (${L9_GOV_REFRESH_OUTCOME}) — no SessionStart fetch/reset (one refresh authority)"
     else
-      local_sha=$(git -C "$GOV" rev-parse --verify --quiet HEAD 2>/dev/null || echo 'unknown')
-      # The fetch failed, so origin is genuinely unknown — not "equal to local".
-      write_refresh_receipt fetch-failed "$local_sha" unknown -1 unknown
-      say "governance refresh: WARN fetch origin/$GOV_BRANCH failed — reusing clone (may be stale)"
+      write_refresh_receipt launcher-absent "$local_sha" unknown -1 stale
+      say "governance refresh: no launcher attempt bound — not independently fetching origin/main"
     fi
     # Dependency provisioning is NOT run from here. It was, and it is why this
     # hook never finished: `session_deps_cloud.sh` blocks for its own 20 s

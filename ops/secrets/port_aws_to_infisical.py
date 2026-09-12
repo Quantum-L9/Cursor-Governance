@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -252,16 +253,26 @@ def infisical_req(
     delay = 1.5
     last_status = 0
     last_payload: dict[str, Any] = {}
+    timeout = float(os.environ.get("L9_INFISICAL_HTTP_TIMEOUT", "8"))
     for attempt in range(retries):
         req = urllib.request.Request(f"{host}{path}", data=data, method=method, headers=headers)
         try:
-            with exchange(req, timeout=60, label="Infisical URL") as resp:
+            with exchange(req, timeout=timeout, label="Infisical URL") as resp:
                 raw = resp.read().decode()
                 return resp.status, json.loads(raw) if raw else {}
         except urllib.error.HTTPError as e:
             snippet = e.read().decode(errors="replace")[:400]
             last_status, last_payload = e.code, {"error": snippet}
             if e.code != 429 or attempt == retries - 1:
+                return last_status, last_payload
+            time.sleep(delay)
+            delay = min(delay * 2, 20)
+        except (urllib.error.URLError, TimeoutError, OSError):
+            # DNS / TLS / socket / deadline. Do not echo host, path, or
+            # exception text — those can carry secret material. Callers map
+            # status 0 to unbound/degraded.
+            last_status, last_payload = 0, {"error": "infisical-unreachable"}
+            if attempt == retries - 1:
                 return last_status, last_payload
             time.sleep(delay)
             delay = min(delay * 2, 20)
