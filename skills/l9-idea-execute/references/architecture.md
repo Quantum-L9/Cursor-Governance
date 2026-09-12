@@ -3,11 +3,11 @@ l9_schema: 1
 parent: l9-idea-execute
 layer: reference
 role: architecture
-tags: [ideaos, execution, topology, routing]
+tags: [ideaos, execution, topology, routing, lineage]
 owner: igor_beylin
 status: active
-version: 1.0.0
-updated: 2026-09-02
+version: 1.1.0
+updated: 2026-09-11
 /L9_META -->
 
 # Architecture
@@ -16,12 +16,12 @@ updated: 2026-09-02
 
 1. Authority stack
 2. Single ingress
-3. Execution topology
-4. Atomic execution units
-5. Owner versus executor
-6. Specialized factories
+3. Derived-artifact lineage
+4. Execution topology
+5. Atomic execution units
+6. Owner versus executor
 7. Planning reuse
-8. Concurrency
+8. Adapter evidence
 9. Authority
 10. Resume and invalidation
 11. Non-expansion rules
@@ -31,120 +31,100 @@ updated: 2026-09-02
 Preserve this order:
 
 1. current user intent and explicit overrides;
-2. validated IdeaOS decision and its source-authority/supersession model;
+2. validated IdeaOS decision and source-authority/supersession model;
 3. current authoritative downstream owner contract;
 4. current repository state and repo-local law;
-5. execution artifacts validated against the above;
+5. execution artifacts whose parent bindings validate against the above;
 6. older plans, examples, or historical evidence.
 
-Idea Execute does not outrank any downstream owner inside that owner's domain.
+Idea Execute does not outrank a downstream owner inside that owner's domain.
 
 ## 2. Single ingress
 
-Normalize accepted IdeaOS execution semantics into one Idea Execution Envelope. After acceptance, route from the envelope. Treat the raw pack as cited evidence unless an explicit change invalidates the envelope.
+Normalize accepted execution semantics into one Idea Execution Envelope. After acceptance, route from the Envelope. Treat the raw pack as cited evidence unless an explicit change invalidates the Envelope.
 
-Do not let each adapter independently reinterpret the original pack.
+Do not let each adapter reinterpret the raw idea independently.
 
-## 3. Execution topology
+## 3. Derived-artifact lineage
 
-Classify by the requested outcome and existing ownership, not by a preferred tool.
+A derived artifact is never current merely because its schema validates.
 
-### NEW_PRODUCT_REPOSITORY
+```text
+IdeaOS authority
+  -> Envelope
+  -> Graph
+  -> Adapter Snapshot
+  -> owner-native handoff
+  -> owner receipt/state
+  -> Idea Execution Receipt
+```
 
-Use when a standalone new product/system repository is required and no specialized factory owns its creation.
+The Graph binds to the exact semantic Envelope digest. Adapter snapshots bind to exact repository revisions/paths. The Idea Execution Receipt binds to both Envelope and Graph.
 
-### SPECIALIZED_FACTORY
+On rerun, validate bindings before reuse. See `artifact-reconciliation.md`.
 
-Use when an existing factory owns the artifact lifecycle. A factory may internally provision repositories without routing through Foundry.
+## 4. Execution topology
 
-### EXISTING_REPO_CHANGE
+Classify by requested outcome and existing ownership, not preferred tooling.
 
-Use for bounded work in one existing repository without cross-repository convergence requirements.
+- `NEW_PRODUCT_REPOSITORY`: standalone new product/system repository and no specialized factory owns creation.
+- `SPECIALIZED_FACTORY`: an existing factory owns the artifact lifecycle.
+- `EXISTING_REPO_CHANGE`: bounded work in one existing repository without cross-repository convergence.
+- `EXISTING_SYSTEM_CAMPAIGN`: multiple existing repositories participate in one causal program or shared convergence makes the work atomic.
 
-### EXISTING_SYSTEM_CAMPAIGN
+A `cross_repository: true` declaration with fewer than two distinct repository-change targets is invalid evidence, not a campaign.
 
-Use when multiple existing repositories/owners participate in one causal program, or when cross-repository joins, shared acceptance, rollback, or terminal convergence make the work atomic.
+## 5. Atomic execution units
 
-## 4. Atomic execution units
+An execution unit is the smallest body of work that can be handed to one owner without losing semantics.
 
-An execution unit is the smallest body of work that can be handed to one owner without losing required semantics.
+Do not split a unit merely because one executor cannot currently represent it, multiple repositories are involved, or parallel execution looks faster.
 
-Do not split a unit merely because:
+Split only when units are semantically independent or connected by explicit output-to-input dependencies downstream owners can honor independently.
 
-- one executor cannot currently represent it;
-- separate repositories are involved;
-- parallel execution would appear faster.
+## 6. Owner versus executor
 
-Split only when the units are semantically independent or connected by explicit output-to-input dependencies that downstream owners can honor independently.
+Record both:
 
-## 5. Owner versus executor
+- runtime/artifact owner: who permanently owns the capability;
+- execution adapter: the mechanism performing the requested change.
 
-Record both where needed:
-
-- **runtime/artifact owner**: the repository or factory that permanently owns the capability;
-- **execution adapter**: the mechanism that performs the current requested change.
-
-Program Execution modifying PR_Repair does not make Program Execution the owner of PR repair semantics.
-
-## 6. Specialized factories
-
-Resolve specialized owners before generic routes.
-
-Demonstrated initial owner:
-
-- `website` -> `Quantum-L9/Website-Bot`.
-
-A website requirement should not also produce a generic `product_repository` requirement for the Website-Bot-generated site repository. The factory owns that implementation detail.
+An execution adapter never becomes the semantic owner merely by modifying an owner's repository.
 
 ## 7. Planning reuse
-
-Evaluate readiness before invoking planning.
 
 Use this ladder:
 
 ```text
 raw idea -> IdeaOS required
-validated decision, no execution plan -> planning may be required
+validated decision, no sufficient plan -> planning may be required
 valid implementation plan -> reuse
 valid execution-ready contracts + deps + gates -> hand directly to compatible executor intake
 ```
 
-If the selected executor requires a canonical projection of an already-valid plan, compile that projection without reopening the design.
+Reuse means **current and independently bound**. A stale plan or handoff reference is history, not authority.
 
-## 8. Concurrency
+For bounded existing-repo changes, `l9-plan-simple` is conditional. If an existing valid plan is sufficient for the executor, do not re-plan ceremonially.
 
-Dependencies determine order.
+## 8. Adapter evidence
 
-Independent example:
+Adapter contracts move. Discover them live and record a revision-bound capability snapshot.
 
-```text
-new product repo ----\
-                      > run concurrently
-marketing website ---/
-```
+Capability evaluation is three-state:
 
-Dependent example:
+- proven support -> `COMPATIBLE`;
+- proven non-support -> `EXECUTOR_CAPABILITY_GAP`;
+- unresolved support -> `ADAPTER_CAPABILITY_UNKNOWN`.
 
-```text
-product identity -> website authoring projection -> Website-Bot
-```
-
-Never use concurrency to bypass shared authority or atomic campaign semantics.
+Malformed or stale evidence is not executor incapability. Use `ADAPTER_SNAPSHOT_INVALID`, `ADAPTER_SNAPSHOT_STALE`, or `ADAPTER_CONTRACT_CONFLICT` as appropriate.
 
 ## 9. Authority
 
 Attach authority to each execution unit and protected transition.
 
-Local code realization does not imply:
+Local code realization does not imply remote repository creation, push, PR publication, merge, deployment, or protected business/legal action.
 
-- remote repository creation;
-- push;
-- PR publication;
-- merge;
-- production deployment;
-- protected business/legal action.
-
-Respect downstream owner's narrower authority even when the user grants broader intent elsewhere.
+Never reuse publication/deployment authorization merely because local execution evidence remains reusable.
 
 ## 10. Resume and invalidation
 
@@ -153,16 +133,14 @@ A completed unit is reusable only when:
 - its governing requirement is unchanged;
 - upstream dependency outputs it consumed are unchanged;
 - target repository state still satisfies its receipt assumptions;
-- the adapter contract has not changed in a way that invalidates the handoff;
+- adapter source bindings remain current;
 - its canonical downstream receipt/state remains valid.
 
-Invalidate the earliest affected unit and its dependency cone.
+Invalidate the earliest affected layer and its dependency cone, not unrelated siblings.
 
 ## 11. Non-expansion rules
 
-Do not add a new capability owner to the registry until a real consumer exists.
-
-Do not create a generic abstraction solely to make the graph look complete.
+Do not add a new capability owner until a real consumer exists. Do not create a generic abstraction merely to make the graph look complete.
 
 Prefer, in order:
 

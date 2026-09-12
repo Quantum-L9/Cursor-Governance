@@ -3,11 +3,11 @@ l9_schema: 1
 parent: l9-idea-execute
 layer: reference
 role: contracts
-tags: [ideaos, envelope, graph, receipt]
+tags: [ideaos, envelope, graph, adapter, receipt, lineage]
 owner: igor_beylin
 status: active
-version: 1.0.0
-updated: 2026-09-02
+version: 1.1.0
+updated: 2026-09-11
 /L9_META -->
 
 # Contracts
@@ -19,7 +19,7 @@ updated: 2026-09-02
 3. Adapter Capability Snapshot
 4. Owner-native handoff
 5. Idea Execution Receipt
-6. Digests and traceability
+6. Binding and reconciliation law
 
 ## 1. Idea Execution Envelope
 
@@ -28,29 +28,25 @@ Use YAML or JSON with this semantic shape:
 ```yaml
 schema: l9.idea-execution-envelope/v1
 idea:
-  id: cognitive-convergence
-  title: L9 PR Cognitive Convergence
+  id: example
+  title: Example
   decision_status: GO
-  source_refs:
-    - 06_ROUTING_DECISION.md
+  source_refs: [06_ROUTING_DECISION.md]
 requirements:
   - id: ER-001
     capability: repository_change
     target_state: modify
     required: true
-    target_repo: Quantum-L9/l9-pr-repair
+    target_repo: Quantum-L9/example
     dependencies: []
     authority_refs: []
     unknown_ids: []
 execution_characteristics:
-  cross_repository: true
+  cross_repository: false
   code_required: true
   runtime_validation_required: true
   protected_actions: []
-  repositories:
-    - Quantum-L9/l9-pr-repair
-    - Quantum-L9/LLM-Router
-    - Quantum-L9/l9-cognitive-runtime
+  repositories: [Quantum-L9/example]
 existing_execution:
   plan_refs: []
   contract_refs: []
@@ -61,123 +57,144 @@ existing_execution:
 
 Rules:
 
-- `decision_status` must be `GO` or `CONDITIONAL` to route execution.
-- Every requirement has a stable unique ID.
-- `dependencies` refer to requirement IDs.
-- `capability` expresses the needed outcome, not a skill/tool name.
+- `decision_status` is `GO` or `CONDITIONAL_GO`.
+- Every requirement has one stable unique ID.
+- Requirements declare capabilities/outcomes, never executor names.
 - `target_repo` is required for `repository_change`.
-- `website` should not also request a generic repository for the factory's internal site repo.
+- `cross_repository: true` requires at least two distinct repository-change targets.
 - Unknowns that prevent truthful compilation remain explicit.
 
 ## 2. Execution Graph
 
-`route_execution.py` emits:
+`route_execution.py` emits `l9.idea-execution-graph/v1` and binds it to the exact semantic Envelope with `source_envelope_digest`.
 
-```yaml
-schema: l9.idea-execution-graph/v1
-source_envelope_digest: sha256:...
-status: READY
-units:
-  - id: unit-campaign
-    topology: EXISTING_SYSTEM_CAMPAIGN
-    owner: Cursor-Governance/Program-Execution
-    adapter: program-execution
-    requirement_ids: [ER-001, ER-002, ER-003]
-    target_repos:
-      - Quantum-L9/l9-pr-repair
-      - Quantum-L9/LLM-Router
-      - Quantum-L9/l9-cognitive-runtime
-    depends_on_units: []
-    admission_status: UNCHECKED
-blockers: []
+Operational validation requires both artifacts:
+
+```bash
+python3 scripts/validate_graph.py EXECUTION_GRAPH.yaml IDEA_EXECUTION_ENVELOPE.yaml
 ```
 
 Graph rules:
 
 - unit IDs are unique;
 - each requirement appears in exactly one unit;
-- dependency edges must be acyclic;
-- specialized-factory units never route through Foundry;
-- a campaign unit may contain multiple runtime owners but only one execution adapter;
-- `READY` means routable to adapter probing, not permission to mutate.
+- dependency edges are acyclic;
+- specialized factories never route through Foundry;
+- bounded existing-repo units target exactly one repository;
+- campaign units target at least two repositories;
+- `READY` means routable to adapter discovery, not permission to mutate;
+- a graph whose `source_envelope_digest` no longer matches its Envelope is `DERIVED_ARTIFACT_STALE` even when structurally valid.
 
 ## 3. Adapter Capability Snapshot
 
-Capture live discovery in a small snapshot before mutation:
+Use `l9.idea-execute.adapter-capabilities/v2` for live adapter evidence:
 
 ```yaml
-schema: l9.idea-execute.adapter-capabilities/v1
-adapter: program-execution
-observed_at: 2026-09-02T00:00:00Z
+schema: l9.idea-execute.adapter-capabilities/v2
+adapter: l9-plan-simple
+observed_at: 2026-09-11T00:00:00Z
 source_refs:
-  - skills/l9-pe-campaign-activate/SKILL.md
-  - skills/l9-pe-campaign-activate/references/source-contract.md
+  - skills/l9-plan-simple/SKILL.md
+source_bindings:
+  - repo: Quantum-L9/Cursor-Governance
+    revision: <commit-sha>
+    path: skills/l9-plan-simple/SKILL.md
+    digest: sha256:<optional-content-digest>
 front_door:
-  kind: command
-  value: make campaign INTENT=<path>
-accepted_inputs:
-  - brief
-  - activate_yaml
+  kind: skill
+  value: l9-plan-simple
+accepted_inputs: [planning_intent]
 topologies:
   single_target: true
-  multi_target: false
+  multi_target: null
 authority:
-  local_commits: true
+  local_changes: true
   push: false
-  open_pr: false
   merge: false
 ```
 
-The snapshot is evidence about a moving owner contract. It is not a permanent registry entry.
+`true` means proven support, `false` means proven non-support, and `null` means Unknown.
+
+The snapshot is evidence about a moving owner contract. Source revision bindings are mandatory. Validate it before capability judgment:
+
+```bash
+python3 scripts/validate_adapter_snapshot.py adapter-capabilities.yaml
+```
+
+When a fresh discovery snapshot exists, compare bindings:
+
+```bash
+python3 scripts/validate_adapter_snapshot.py old.yaml --current current.yaml
+```
+
+Different bindings produce `ADAPTER_SNAPSHOT_STALE`; conflicting adapter identity produces `ADAPTER_CONTRACT_CONFLICT`.
 
 ## 4. Owner-native handoff
 
-The owner-native input must be compiled from the execution unit plus authoritative source facts.
+Compile the owner-native input from the execution unit plus authoritative source facts. Never invent a universal execution payload and force downstream owners to consume it.
 
 Examples:
 
 - Website-Bot: rich `domain_spec.source.yaml`;
-- Program Execution: whatever current live `make campaign INTENT=` accepts;
-- Foundry: its current idea-to-repository intake;
-- Plan Simple: its current planning input.
-
-Never invent a universal handoff schema and force downstream owners to consume it.
+- Program Execution: current public campaign intake;
+- Foundry: current idea-to-repository intake;
+- Plan Simple: current planning input/mode.
 
 ## 5. Idea Execution Receipt
 
-Use a thin join record:
+Use a thin `l9.idea-execution-receipt/v1` join record:
 
 ```yaml
 schema: l9.idea-execution-receipt/v1
-idea_id: cognitive-convergence
+idea_id: example
 envelope_digest: sha256:...
 graph_digest: sha256:...
 status: BLOCKED
 units:
-  - unit_id: unit-campaign
-    owner: Cursor-Governance/Program-Execution
-    adapter: program-execution
-    requested_terminal_state: verified_local_commits
-    resulting_state: EXECUTOR_CAPABILITY_GAP
-    native_input_ref: null
-    downstream_receipt_ref: null
-    evidence_refs:
-      - pe-capabilities.yaml
-blockers:
-  - code: EXECUTOR_CAPABILITY_GAP
-    unit_id: unit-campaign
-    detail: current PE admission contract cannot represent a multi-target campaign
-next_legal_transition: re-probe Program Execution after its admission contract changes
+  - unit_id: unit-existing-repo-change
+    owner: l9-plan-simple
+    adapter: l9-plan-simple
+    requested_terminal_state: owner_native_handoff
+    resulting_state: ADAPTER_CAPABILITY_UNKNOWN
+    evidence_refs: [plan-simple-capabilities.yaml]
+blockers: []
+next_legal_transition: refresh adapter evidence
+reconciliation:
+  reused: []
+  regenerated: []
+  superseded: []
 ```
 
-Do not duplicate downstream evidence inside this receipt.
+Validate the whole lineage:
 
-## 6. Digests and traceability
+```bash
+python3 scripts/validate_receipt.py \
+  IDEA_EXECUTION_RECEIPT.yaml EXECUTION_GRAPH.yaml IDEA_EXECUTION_ENVELOPE.yaml
+```
 
-Prefer SHA-256 over machine artifacts when available. Bind:
+Receipt units must exactly match graph units. The receipt must bind to the exact Envelope and Graph digests.
 
-- envelope -> graph;
-- graph unit -> native handoff;
-- native handoff -> downstream receipt/state where supported.
+## 6. Binding and reconciliation law
 
-Keep human source refs alongside digests so an operator can understand why a route exists.
+Prefer SHA-256 semantic digests for machine artifacts and revision/path bindings for moving repository contracts.
+
+Required chain:
+
+```text
+Envelope -> Graph -> owner-native handoff -> downstream receipt/state
+             \
+              -> Adapter Capability Snapshot source revisions
+Graph + Envelope -> Idea Execution Receipt
+```
+
+Before reusing supplied derived artifacts, run:
+
+```bash
+python3 scripts/preflight_execution_pack.py \
+  --envelope IDEA_EXECUTION_ENVELOPE.yaml \
+  --graph EXECUTION_GRAPH.yaml \
+  --receipt IDEA_EXECUTION_RECEIPT.yaml \
+  --adapter adapter-capabilities.yaml
+```
+
+The pack result is `REUSABLE`, `REPAIRABLE`, or `BLOCKED`. See `artifact-reconciliation.md` for earliest-invalid-layer behavior and provenance rules.

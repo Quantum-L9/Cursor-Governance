@@ -1,16 +1,16 @@
 ---
 name: l9-idea-execute
-description: route a validated ideaos decision into the shortest governed execution owner. use when idea-to-execution work needs a new product repo, website-bot build, bounded existing-repo change, or program-execution campaign. do not use for raw idea refinement or when ideaos has not decided outcomes.
+description: route a validated IdeaOS decision or execution-ready idea pack into the shortest governed downstream owner, while independently validating derived-artifact lineage and live adapter capability evidence. use for new product repositories, specialized factories, bounded existing-repo changes, or multi-repo Program Execution campaigns after IdeaOS has decided outcomes. do not use for raw idea refinement, generic coding, or implied publication/merge/deployment authority.
 disable-model-invocation: true
 metadata:
   skill_schema: 1
   layer: control_plane
   role: skill_entrypoint
-  tags: [l9, ideaos, execution, routing, foundry, website-bot, program-execution]
+  tags: [l9, ideaos, execution, routing, lineage, foundry, website-bot, program-execution]
   owner: igor_beylin
   status: active
-  version: 1.0.0
-  updated: 2026-09-02
+  version: 1.1.0
+  updated: 2026-09-11
 ---
 
 # L9 Idea Execute
@@ -19,7 +19,7 @@ metadata:
 
 Turn validated IdeaOS intent into governed downstream execution without becoming another planner, factory, coding runtime, or Program Execution engine.
 
-Preserve this authority chain:
+Preserve:
 
 ```text
 IdeaOS -> l9-idea-execute -> authoritative downstream owner -> owner-native receipt
@@ -27,313 +27,335 @@ IdeaOS -> l9-idea-execute -> authoritative downstream owner -> owner-native rece
 
 IdeaOS decides **what outcomes are required**. This skill decides **which existing owner can satisfy each outcome and how to hand it off correctly**. The downstream owner decides **how to perform its work**.
 
-## Core Contract
+## Core contract
 
 | Input | Output | Scope |
-|-------|--------|-------|
-| Validated IdeaOS decision or execution-ready pack | Envelope + Execution Graph + thin Receipt | Route and hand off only — never become IdeaOS, Foundry, Website-Bot, or PE |
+|---|---|---|
+| Validated IdeaOS decision or execution-ready pack | Envelope + Execution Graph + thin Receipt | Route, reconcile, and hand off only |
 
-Load [references/contracts.md](references/contracts.md) and [references/architecture.md](references/architecture.md).
+Load:
 
-## Authority Order
+- `references/contracts.md`
+- `references/architecture.md`
+- `references/artifact-reconciliation.md` when supplied execution artifacts may be reused
+- `references/adapters.md` before adapter probing
 
-1. Explicit user outcome and named constraints.
-2. Validated IdeaOS decision / pack (source authority + supersession).
-3. Live downstream owner contracts (Website-Bot, Foundry, PE, `l9-plan-simple`).
-4. This skill's envelope, graph, and adapter references.
-5. `Unknown` — stop with an explicit failure state; do not guess an owner.
+## Authority order
 
-## Activation / Reject
+1. Explicit current user outcome and constraints.
+2. Validated IdeaOS decision / pack, including source authority and supersession.
+3. Live downstream owner contracts.
+4. Current repository state and repo-local law.
+5. This skill's **independently validated** Envelope, Graph, adapter evidence, and Receipt.
+6. Older artifacts and historical examples.
+7. Unknown: fail closed rather than guessing.
 
-**Activate** when a validated IdeaOS decision must become governed execution across a new product repo, Website-Bot, bounded existing-repo change, or PE-shaped campaign.
+A supplied derived artifact does not outrank its parent merely because it says READY.
 
-**Reject** a raw idea that still needs IdeaOS. Reject generic coding, ceremonial re-planning of a valid execution-ready pack, and any request that treats publication or merge as implied by execution.
+## Activation / reject
 
-Cursor and Claude load this pack only on explicit invoke or a hint-allowed Read/attach. `disable-model-invocation: true` is the mechanism; a ChatGPT implicit-invocation policy is not.
+Activate after IdeaOS has established required outcomes, constraints, unresolved unknowns, and affected surfaces.
+
+Reject:
+
+- raw ideas that still require IdeaOS semantic development;
+- generic coding requests;
+- ceremonial re-planning of a current execution-ready pack;
+- requests that treat local execution as implicit push, PR, merge, publication, or deployment authority.
 
 ## Non-goals
 
 Never:
 
-- redo IdeaOS semantic refinement, product judgment, or go/no-go reasoning;
-- create a new repository when a specialized factory already owns the artifact;
-- send raw IdeaOS packs directly to Website-Bot;
-- compile or mutate PE internals such as Blueprint, Program Lock, PEC task state, or LAUNCH.json;
-- split one atomic cross-repository campaign into independent campaigns merely to bypass an executor limitation;
-- regenerate a valid higher-authority execution plan or contract chain ceremonially;
-- become a generic code mutation authority;
-- treat publication or merge authority as implied by execution authority;
-- guess an owner for an unbound capability.
+- redo IdeaOS product judgment;
+- create a new repository when an existing owner or specialized factory already owns the capability;
+- compile or mutate Program Execution internals to bypass its public front door;
+- split one atomic multi-repo campaign merely to fit an executor limitation;
+- regenerate a current higher-authority plan ceremonially;
+- treat malformed or stale adapter evidence as executor incapability;
+- create a fourth top-level remediation artifact beside Envelope, Graph, and Receipt;
+- guess an owner, adapter capability, publication authority, or downstream terminal state.
 
 ## Core artifacts
 
-Use three layers only:
+Use three top-level execution artifacts only:
 
-1. **Idea Execution Envelope**: normalized execution requirements derived from validated IdeaOS output.
-2. **Execution Graph**: atomic execution units, owner adapters, dependencies, and blockers.
-3. **Idea Execution Receipt**: references and digests to authoritative downstream receipts/states.
+1. **Idea Execution Envelope**: normalized execution requirements.
+2. **Execution Graph**: atomic units, owners/adapters, dependencies, blockers, and exact Envelope digest binding.
+3. **Idea Execution Receipt**: thin join over the exact Envelope + Graph plus downstream owner states and reconciliation provenance.
 
-Do not create a second implementation plan between these layers.
-
-Read [references/contracts.md](references/contracts.md) when creating or validating these artifacts.
+Adapter Capability Snapshots are evidence artifacts, not a fourth control-plane layer.
 
 ## Workflow
 
 ### 1. Establish IdeaOS authority
 
-Require a validated IdeaOS decision, IdeaOS pack, or equivalent source that clearly establishes the required outcomes, constraints, unresolved unknowns, and affected surfaces.
+Require a validated IdeaOS decision, pack, or equivalent execution authority.
 
-If only a raw idea is present and semantic development is still required, stop with `IDEAOS_DECISION_REQUIRED`. Do not silently become IdeaOS.
+Accepted decision vocabulary:
 
-Preserve source authority and supersession rules. Do not reinterpret stale or explicitly superseded material as current intent.
+```text
+GO
+CONDITIONAL_GO
+```
+
+If semantic development is still required, stop with `IDEAOS_DECISION_REQUIRED`.
+
+Preserve supersession. Never resurrect stale source material as current intent.
 
 ### 2. Compile the Idea Execution Envelope
 
-Normalize the accepted IdeaOS decision into `l9.idea-execution-envelope/v1`.
+Normalize once into `l9.idea-execution-envelope/v1`.
 
-Express requirements as capabilities and outcomes, not executor names. For example:
+Requirements express capabilities and outcomes, never executor names.
 
-```yaml
-requirements:
-  - id: ER-001
-    capability: product_repository
-    target_state: new
-    required: true
-  - id: ER-002
-    capability: website
-    target_state: new
-    required: true
-```
-
-IdeaOS-facing requirements must not say `use_foundry`, `use_website_bot`, `use_pe`, or choose a provider/model.
-
-Run:
+Validate:
 
 ```bash
 python3 scripts/validate_envelope.py IDEA_EXECUTION_ENVELOPE.yaml
 ```
 
-Stop on validation failure.
+Stop on failure.
 
-### 3. Preserve the highest-authority existing execution artifact
+### 3. Reconcile supplied execution artifacts before reuse
 
-Before planning anything, inspect the source for valid current execution artifacts such as:
+If the source includes a Graph, Receipt, adapter snapshot, plan, handoff, or other derived execution artifact, prove it is current before preserving it.
 
-- dependency-ordered implementation contracts;
-- machine-validated plans;
-- acceptance matrices;
-- rollback and replay contracts;
-- explicit Program Execution handoffs;
-- target filetrees or scoped modification plans.
+Run the deterministic pack preflight when applicable:
 
-If an artifact is current, compatible with repository state, and sufficient for the selected executor, reuse it.
+```bash
+python3 scripts/preflight_execution_pack.py \
+  --envelope IDEA_EXECUTION_ENVELOPE.yaml \
+  --graph EXECUTION_GRAPH.yaml \
+  --receipt IDEA_EXECUTION_RECEIPT.yaml \
+  --adapter adapter-capabilities.yaml
+```
 
-Apply the rule:
+Use these dispositions:
 
-> Never downgrade an execution-ready pack back into an unplanned idea.
+- `REUSABLE`
+- `REPAIRABLE`
+- `BLOCKED`
 
-Planning is conditional, not ceremonial.
+Regenerate from the earliest invalid derived layer. Do not rerun IdeaOS merely because a Graph or Receipt is stale.
+
+Apply:
+
+> Preserve the highest-authority **currently bound and independently validated** execution artifact.
 
 ### 4. Classify execution topology
 
-Use the deterministic routing rules in [references/architecture.md](references/architecture.md) and the bundled capability registry.
-
-Run:
+Compile from the validated Envelope:
 
 ```bash
 python3 scripts/route_execution.py IDEA_EXECUTION_ENVELOPE.yaml > EXECUTION_GRAPH.yaml
-python3 scripts/validate_graph.py EXECUTION_GRAPH.yaml
+python3 scripts/validate_graph.py EXECUTION_GRAPH.yaml IDEA_EXECUTION_ENVELOPE.yaml
 ```
 
-Initial topologies:
+Topologies:
 
 - `NEW_PRODUCT_REPOSITORY`
 - `SPECIALIZED_FACTORY`
 - `EXISTING_REPO_CHANGE`
 - `EXISTING_SYSTEM_CAMPAIGN`
 
-If multiple independent units exist, keep them separate and preserve explicit dependency edges. Dependencies determine ordering; category does not.
+A structurally valid Graph with the wrong `source_envelope_digest` is `DERIVED_ARTIFACT_STALE`.
 
 ### 5. Resolve owners before executors
-
-Resolve runtime/artifact ownership first, then execution adapter.
 
 Examples:
 
 - website artifact -> `Quantum-L9/Website-Bot`;
 - generic unowned new product/system repository -> `l9-idea-foundry`;
-- bounded existing-repository change -> current `l9-plan-simple` path when planning/execution is required;
-- campaign-shaped coordinated existing-system change -> Program Execution adapter.
+- bounded existing-repository change -> current `l9-plan-simple` path when planning is needed;
+- coordinated existing-system campaign -> Program Execution adapter.
 
-A coding executor does not become the runtime owner of the repositories it modifies.
+A coding executor never becomes runtime/artifact owner merely by modifying a repository.
 
-Unknown ownership -> `CAPABILITY_OWNER_UNKNOWN` and stop.
+Unknown ownership -> `CAPABILITY_OWNER_UNKNOWN`.
 
-### 6. Probe the adapter's current public contract
+### 6. Discover and bind the adapter contract
 
-Treat downstream adapters as version-sensitive boundaries.
+Treat downstream adapters as moving boundaries.
 
-Before invoking any mutable downstream system:
+Before mutable handoff:
 
-1. Inspect its current public intake/front-door documentation.
-2. Determine supported topology and authority.
-3. Verify the requested execution unit is faithfully representable.
-4. Compile only the owner-native input it currently accepts.
-5. Validate using owner-native validation where available.
-6. Invoke only the canonical public front door.
+1. inspect the current public intake/front door;
+2. capture exact repository revision/path evidence;
+3. compile `l9.idea-execute.adapter-capabilities/v2`;
+4. validate the snapshot;
+5. determine whether requested topology is supported;
+6. compile only current owner-native input;
+7. validate owner-native input where supported;
+8. invoke only the canonical public front door.
 
-If the executor is conceptually correct but cannot represent the topology, stop with `EXECUTOR_CAPABILITY_GAP`. Never degrade the idea to fit the tool.
+Validate adapter evidence:
 
-Read [references/adapters.md](references/adapters.md) for all adapter contracts.
+```bash
+python3 scripts/validate_adapter_snapshot.py adapter-capabilities.yaml
+```
+
+Evaluate a unit:
+
+```bash
+python3 scripts/check_adapter_capability.py \
+  EXECUTION_GRAPH.yaml adapter-capabilities.yaml \
+  --envelope IDEA_EXECUTION_ENVELOPE.yaml \
+  --unit <unit-id>
+```
+
+Capability states:
+
+- `COMPATIBLE`: valid current evidence proves support;
+- `EXECUTOR_CAPABILITY_GAP`: valid current evidence proves non-support;
+- `ADAPTER_CAPABILITY_UNKNOWN`: valid evidence does not resolve support.
+
+Malformed or stale evidence instead produces `ADAPTER_SNAPSHOT_INVALID`, `ADAPTER_SNAPSHOT_STALE`, or `ADAPTER_CONTRACT_CONFLICT`.
+
+Never degrade the requested topology merely to fit the tool.
 
 ### 7. Invoke only with bounded authority
 
-Execution authority is unit-local. Publication, remote repository creation, deployment, and merge remain separate unless explicitly authorized by the downstream owner's current contract and the user.
+Execution authority is unit-local. Push, PR publication, remote repo creation, merge, deployment, and protected actions remain separate unless explicitly authorized by the user and downstream contract.
 
-Do not widen authority because another unit in the graph has stronger permission.
+Never widen one unit's authority because another unit has stronger permission.
 
-### 8. Observe authoritative terminal state
+### 8. Observe authoritative downstream state
 
-After downstream work, capture references to the owner's canonical receipt/state. Verify that it binds to the expected input or source revision when the owner provides such evidence.
+Capture the downstream owner's canonical receipt/state and its input binding where available.
 
-Do not recreate or summarize downstream evidence as a substitute for its receipt.
+Do not recreate downstream evidence as a substitute for the owner's receipt.
 
-### 9. Join into the Idea Execution Receipt
+### 9. Join the Idea Execution Receipt
 
-Produce a thin `l9.idea-execution-receipt/v1` that records:
+Produce `l9.idea-execution-receipt/v1` with:
 
-- source IdeaOS decision/envelope digest;
-- graph digest;
-- per-unit owner, adapter, requested terminal state, resulting state;
-- authoritative receipt/state references and digests when available;
-- unresolved blockers;
-- next legal transition.
+- exact Envelope digest;
+- exact Graph digest;
+- every Graph unit;
+- owner/adapter/resulting state;
+- canonical downstream receipt/state references;
+- blockers;
+- next legal transition;
+- reconciliation provenance for reused, regenerated, and superseded artifacts.
 
-### 10. Resume from the earliest invalid unit
+Validate:
 
-On a rerun:
+```bash
+python3 scripts/validate_receipt.py \
+  IDEA_EXECUTION_RECEIPT.yaml EXECUTION_GRAPH.yaml IDEA_EXECUTION_ENVELOPE.yaml
+```
 
-- reuse completed units whose source inputs, dependency outputs, owner contract, and receipt bindings remain valid;
-- invalidate a unit when its governing input or adapter contract changed materially;
-- invalidate downstream dependent units, not unrelated siblings;
-- never reuse a publication/deployment authorization merely because local execution evidence is reusable.
+### 10. Resume from the earliest invalid layer
+
+On rerun:
+
+- reuse units only when governing inputs, dependency outputs, adapter source bindings, and downstream receipts remain valid;
+- invalidate the earliest changed layer and its dependency cone;
+- preserve unrelated siblings;
+- never reuse publication/deployment authorization merely because local code evidence is reusable.
 
 ## Topology rules
 
-### Specialized factory outranks generic repository birth
+### Specialized factory outranks generic birth
 
-If a specialized factory owns creation of the required artifact, route directly to it even if that factory internally provisions a repository.
-
-Therefore:
-
-```text
-website -> Website-Bot
-```
-
-not:
-
-```text
-website -> Foundry -> Website-Bot
-```
-
-Use Foundry only when a new **product/system repository** is required and no specialized downstream factory already owns that artifact.
+Use Foundry only for an unowned new **product/system repository**. A website routes directly to Website-Bot even if Website-Bot internally provisions a repository.
 
 ### Existing system campaign
 
-Classify coordinated work as `EXISTING_SYSTEM_CAMPAIGN` when multiple existing repositories/owners participate in one causal program or when cross-repository dependencies, joins, shared rollback, or terminal convergence make the work atomic.
+Use `EXISTING_SYSTEM_CAMPAIGN` when multiple existing repositories participate in one causal program or share convergence/rollback/join requirements.
 
-Do not decompose one atomic campaign solely because the current executor has an admission limitation.
+Do not decompose an atomic campaign solely because current admission cannot represent it.
 
 ### Bounded existing-repository change
 
 Use `EXISTING_REPO_CHANGE` when one existing repository can satisfy the outcome without cross-repository convergence.
 
-Use existing valid plans first. Invoke current planning only if the work is not already sufficiently planned for its executor.
+This is a first-class success path, not failed repository birth.
+
+Reuse a valid existing plan first. Invoke planning only when current execution artifacts are insufficient.
 
 ## Adapter invariants
 
 ### Foundry
 
-Use `l9-idea-foundry` only for an unowned new product/system repository. Let Foundry own its blueprint, code realization, traceability, freeze, and `l9-repo-template` seam.
-
-If Foundry is unavailable, stop. Do not recreate it inside this skill.
+Use only for unowned new product/system repositories. Let Foundry own realization, traceability, freeze, and repo-template birth.
 
 ### Website-Bot
 
-Compile a rich `domain_spec.source.yaml` projection from IdeaOS truth. Never hand-maintain Website-Bot's generated flat DomainSpec.
-
-Let Website-Bot own normalization, pipeline planning, build stages, provisioning, publication, deployment, and its downstream SEO handoff.
-
-### Program Execution
-
-Program Execution is an **evolving adapter**. Always inspect its live current contract before use.
-
-Current baseline as of 2026-09-02: the sole live front door is `make campaign INTENT=<brief.md|activate.yaml>` and the structured activation compiler is single-target. Multi-repository campaigns must therefore fail `EXECUTOR_CAPABILITY_GAP` on that baseline rather than being forced through one target.
-
-Read [references/program-execution-adapter.md](references/program-execution-adapter.md) before every PE-shaped handoff. Treat that file as a baseline/discovery guide, not permanent PE law.
+Compile rich authoring input and let Website-Bot own its internal normalization, pipeline, provisioning, publication, and deployment boundaries.
 
 ### Plan Simple
 
-Treat `l9-plan-simple` as conditional for bounded existing-repository work. Reuse an existing valid plan when present. Verify the live skill contract before invocation because planning/execution handoff modes may evolve.
+Conditional for bounded existing-repository work. Inspect its live contract and current handoff modes. Reuse valid planning evidence when sufficient.
+
+### Program Execution
+
+Always inspect the live front door. `references/program-execution-adapter.md` is a discovery baseline, not permanent law.
 
 ## Determinism and evidence
 
-- Normalize the IdeaOS decision once.
-- Route from the normalized envelope, not repeatedly from raw pack prose.
-- Keep stable requirement IDs and execution-unit IDs.
-- Use explicit dependencies and stop states.
-- Cite exact source artifacts for non-obvious routing facts.
-- Prefer digests for machine artifacts when available.
-- Keep adapter discovery evidence with the run when a moving executor contract affects the route.
+- Normalize IdeaOS authority once.
+- Route from the Envelope, not repeatedly from raw prose.
+- Keep stable requirement and unit IDs.
+- Use explicit dependencies and failure states.
+- Bind derived machine artifacts to parents by digest.
+- Bind moving repository contracts by revision/path and optional content digest.
+- Keep human-readable source refs alongside machine bindings.
+- Never let structural validity substitute for lineage validity.
 
 ## Failure states
 
-Use explicit states rather than improvisation:
+Use explicit states:
 
 - `IDEAOS_DECISION_REQUIRED`
 - `ENVELOPE_INVALID`
+- `DERIVED_ARTIFACT_STALE`
 - `CAPABILITY_OWNER_UNKNOWN`
 - `EXECUTION_TOPOLOGY_UNSUPPORTED`
 - `ADAPTER_CONTRACT_UNAVAILABLE`
+- `ADAPTER_SNAPSHOT_INVALID`
+- `ADAPTER_SNAPSHOT_STALE`
+- `ADAPTER_CONTRACT_CONFLICT`
+- `ADAPTER_CAPABILITY_UNKNOWN`
 - `EXECUTOR_CAPABILITY_GAP`
 - `OWNER_NATIVE_INPUT_INVALID`
 - `DOWNSTREAM_EXECUTION_FAILED`
 - `DOWNSTREAM_RECEIPT_INVALID`
 - `PROTECTED_ACTION_REQUIRES_AUTHORITY`
 
-A blocked route is a valid result when the idea is sound but the current executor substrate is incomplete.
+A blocked route is valid when the idea is sound but current evidence or executor substrate is incomplete.
 
-## Battle-test examples
+## Regression examples
 
-Read [references/examples.md](references/examples.md) when validating routing behavior. The canonical regression cases are:
+Read `references/examples.md`. The canonical cases include:
 
-- SplitWisely -> Foundry, not Website-Bot;
-- a website-only requirement -> Website-Bot, not Foundry;
-- one bounded existing repo -> existing-repo route;
-- PR Cognitive Convergence -> PE-shaped multi-repo campaign, but blocked on the 2026-09-02 single-target PE baseline;
-- mixed new product + website -> two units, concurrent unless an explicit dependency requires product identity first.
+- new standalone product -> Foundry;
+- website-only -> Website-Bot;
+- bounded existing repo -> Plan Simple path;
+- multi-repo campaign -> Program Execution path;
+- mixed product + website -> separate units with explicit dependencies;
+- IgorBot voice/follow-up exercise -> existing owner, stale Graph rejected, malformed adapter evidence rejected, current Plan Simple evidence accepted.
 
 ## Validation
 
-- Envelope, graph, and adapter scripts MUST be the deterministic gates named below.
-- A blocked route with an explicit failure state is a valid result.
-- Do not claim a downstream owner ran unless its canonical receipt/state is referenced.
+Run:
+
+```bash
+python3 scripts/self_test.py
+```
+
+The self-test must prove both positive routing and negative lineage/evidence behavior.
 
 ## Scripts
 
-- `scripts/validate_envelope.py`: validate the normalized Idea Execution Envelope.
-- `scripts/route_execution.py`: deterministically compile the initial Execution Graph from validated requirements and the capability registry.
-- `scripts/validate_graph.py`: validate graph shape, dependencies, cycles, topology/adapter invariants, and blocker consistency.
-- `scripts/check_adapter_capability.py`: test an execution unit against a discovered adapter capability snapshot.
-- `scripts/self_test.py`: run deterministic positive and negative regression fixtures.
+- `scripts/validate_envelope.py`: validate normalized execution authority.
+- `scripts/route_execution.py`: deterministically compile the initial Graph.
+- `scripts/validate_graph.py`: validate Graph structure and exact Envelope binding.
+- `scripts/validate_adapter_snapshot.py`: validate revision-bound adapter evidence and compare source bindings.
+- `scripts/check_adapter_capability.py`: evaluate topology support as compatible, proven gap, or Unknown.
+- `scripts/validate_receipt.py`: validate Receipt against exact Envelope and Graph.
+- `scripts/preflight_execution_pack.py`: classify supplied execution artifacts as reusable, repairable, or blocked.
+- `scripts/self_test.py`: deterministic regression suite.
 
-These scripts validate and route declared execution semantics. They do not replace model judgment for ambiguous IdeaOS meaning or downstream owner-specific compilation.
-
-## Reference map
-
-- [references/architecture.md](references/architecture.md): authority, topology, decomposition, concurrency, and reuse rules.
-- [references/contracts.md](references/contracts.md): Envelope, Graph, adapter capability snapshot, and Receipt contracts.
-- [references/adapters.md](references/adapters.md): Foundry, Website-Bot, Plan Simple, and Program Execution adapter behavior.
-- [references/program-execution-adapter.md](references/program-execution-adapter.md): moving PE discovery seam and current baseline.
-- [references/examples.md](references/examples.md): regression examples and expected routing outcomes.
-- [references/capability-registry.yaml](references/capability-registry.yaml): minimal demonstrated-owner registry; expand only for real consumers.
+These scripts validate declared execution semantics. They do not replace semantic judgment for ambiguous IdeaOS meaning or downstream owner-specific input compilation.

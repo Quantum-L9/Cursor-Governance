@@ -9,6 +9,9 @@ from _common import ContractError, dump_yaml, load_data, semantic_digest
 from validate_envelope import validate_envelope
 
 REGISTRY_PATH = Path(__file__).resolve().parent.parent / "references" / "capability-registry.yaml"
+RESERVED_AGGREGATE_UNIT_IDS = frozenset(
+    {"unit-existing-repo-change", "unit-existing-system-campaign"}
+)
 
 
 def _require_unique_requirement_ids(requirements: list[dict[str, Any]]) -> None:
@@ -26,10 +29,25 @@ def _require_unique_requirement_ids(requirements: list[dict[str, Any]]) -> None:
         seen_folded[folded] = rid
 
 
-def _unit_for_req(req: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
+def _allocate_unit_id(preferred: str, used_ids: set[str]) -> str:
+    if preferred not in used_ids:
+        used_ids.add(preferred)
+        return preferred
+    n = 2
+    while f"{preferred}-{n}" in used_ids:
+        n += 1
+    allocated = f"{preferred}-{n}"
+    used_ids.add(allocated)
+    return allocated
+
+
+def _unit_for_req(req: dict[str, Any], spec: dict[str, Any], used_ids: set[str]) -> dict[str, Any]:
     rid = req["id"]
+    preferred = f"unit-{rid}"
+    if preferred in RESERVED_AGGREGATE_UNIT_IDS:
+        raise ContractError(f"requirement id {rid!r} is reserved for aggregate execution units")
     return {
-        "id": f"unit-{rid}",
+        "id": _allocate_unit_id(preferred, used_ids),
         "topology": spec["topology"],
         "owner": spec["owner"],
         "adapter": spec["adapter"],
@@ -52,16 +70,17 @@ def route_envelope(envelope: dict[str, Any], registry: dict[str, Any]) -> dict[s
     blockers: list[dict[str, str]] = []
     req_to_unit: dict[str, str] = {}
     repo_changes: list[dict[str, Any]] = []
+    used_ids: set[str] = set()
 
     for req in requirements:
         cap = req["capability"]
         rid = req["id"]
         if cap in special:
-            unit = _unit_for_req(req, special[cap])
+            unit = _unit_for_req(req, special[cap], used_ids)
             units.append(unit)
             req_to_unit[rid] = unit["id"]
         elif cap == "product_repository" and req.get("target_state") == "new":
-            unit = _unit_for_req(req, generic["new_product_repository"])
+            unit = _unit_for_req(req, generic["new_product_repository"], used_ids)
             units.append(unit)
             req_to_unit[rid] = unit["id"]
         elif cap == "repository_change":
@@ -77,9 +96,15 @@ def route_envelope(envelope: dict[str, Any], registry: dict[str, Any]) -> dict[s
 
     if repo_changes:
         repos = sorted({req["target_repo"] for req in repo_changes})
-        campaign = bool(chars.get("cross_repository")) or len(repos) > 1
+        if chars.get("cross_repository") is True and len(repos) < 2:
+            raise ContractError(
+                "execution_characteristics.cross_repository is true but "
+                "repository_change targets fewer than two unique repositories"
+            )
+        campaign = len(repos) > 1
         spec = generic["existing_system_campaign" if campaign else "bounded_existing_repo"]
-        unit_id = "unit-existing-system-campaign" if campaign else "unit-existing-repo-change"
+        preferred = "unit-existing-system-campaign" if campaign else "unit-existing-repo-change"
+        unit_id = _allocate_unit_id(preferred, used_ids)
         unit = {
             "id": unit_id,
             "topology": spec["topology"],

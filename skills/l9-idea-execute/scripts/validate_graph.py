@@ -4,7 +4,8 @@ from __future__ import annotations
 import sys
 from typing import Any
 
-from _common import ContractError, assert_acyclic, load_data, nonempty_string
+from _common import ContractError, assert_acyclic, load_data, nonempty_string, semantic_digest
+from validate_envelope import validate_envelope
 
 SCHEMA = "l9.idea-execution-graph/v1"
 TOPOLOGIES = {
@@ -16,12 +17,14 @@ TOPOLOGIES = {
 ADMISSION = {"UNCHECKED", "COMPATIBLE", "BLOCKED"}
 
 
-def validate_graph(data: Any) -> dict[str, Any]:
+def validate_graph(data: Any, envelope: Any | None = None) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ContractError("graph must be a mapping")
     errors: list[str] = []
     if data.get("schema") != SCHEMA:
         errors.append(f"schema must equal {SCHEMA}")
+    if not nonempty_string(data.get("source_envelope_digest")):
+        errors.append("source_envelope_digest must be a non-empty string")
     blockers = data.get("blockers")
     if not isinstance(blockers, list):
         errors.append("blockers must be a list")
@@ -97,15 +100,28 @@ def validate_graph(data: Any) -> dict[str, Any]:
 
     if errors:
         raise ContractError("; ".join(errors))
+
+    if envelope is not None:
+        validated_envelope = validate_envelope(envelope)
+        expected = semantic_digest(validated_envelope)
+        observed = data.get("source_envelope_digest")
+        if observed != expected:
+            raise ContractError(
+                "DERIVED_ARTIFACT_STALE: graph source_envelope_digest does not match "
+                f"current envelope digest (observed={observed}, expected={expected})"
+            )
     return data
 
 
 def main() -> int:
-    if len(sys.argv) != 2:
-        print("usage: validate_graph.py <EXECUTION_GRAPH.yaml|json>", file=sys.stderr)
+    if len(sys.argv) != 3:
+        print(
+            "usage: validate_graph.py <EXECUTION_GRAPH.yaml|json> <IDEA_EXECUTION_ENVELOPE.yaml|json>",
+            file=sys.stderr,
+        )
         return 2
     try:
-        validate_graph(load_data(sys.argv[1]))
+        validate_graph(load_data(sys.argv[1]), load_data(sys.argv[2]))
     except ContractError as exc:
         print(f"IDEA_EXECUTION_GRAPH: FAIL\n- {exc}", file=sys.stderr)
         return 1

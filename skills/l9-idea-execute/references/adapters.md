@@ -3,11 +3,11 @@ l9_schema: 1
 parent: l9-idea-execute
 layer: reference
 role: adapters
-tags: [ideaos, foundry, website-bot, program-execution]
+tags: [ideaos, foundry, website-bot, plan-simple, program-execution, evidence]
 owner: igor_beylin
 status: active
-version: 1.0.0
-updated: 2026-09-02
+version: 1.1.0
+updated: 2026-09-11
 /L9_META -->
 
 # Adapter contracts
@@ -15,98 +15,95 @@ updated: 2026-09-02
 ## Table of contents
 
 1. Common adapter protocol
-2. l9-idea-foundry
-3. Website-Bot
-4. l9-plan-simple
-5. Program Execution
-6. Adapter failure behavior
+2. Capability evidence states
+3. l9-idea-foundry
+4. Website-Bot
+5. l9-plan-simple
+6. Program Execution
+7. Failure behavior
 
 ## 1. Common adapter protocol
 
 For every execution unit:
 
 1. discover the current owner contract;
-2. capture the relevant contract revision/path or other evidence;
-3. verify the requested topology is supported;
-4. compile only the owner's native public input;
-5. validate through owner-native validation where available;
-6. invoke only the owner's canonical front door;
-7. stop at the owner's terminal boundary;
-8. reference the owner's canonical receipt/state.
+2. capture authoritative source refs plus exact repository revision/path bindings;
+3. compile `l9.idea-execute.adapter-capabilities/v2`;
+4. validate the snapshot;
+5. verify requested topology with `check_adapter_capability.py`;
+6. compile only the owner's native public input;
+7. validate through owner-native validation where available;
+8. invoke only the canonical public front door;
+9. stop at the owner's terminal boundary;
+10. reference the owner's canonical receipt/state.
 
 Adapters translate. They do not absorb downstream business logic.
 
-## 2. l9-idea-foundry
+## 2. Capability evidence states
 
-Use when:
+A valid current snapshot may establish:
 
-- a new standalone product/system repository is required;
-- no specialized factory already owns that artifact.
+- `COMPATIBLE`: requested topology is explicitly supported;
+- `EXECUTOR_CAPABILITY_GAP`: requested topology is explicitly unsupported;
+- `ADAPTER_CAPABILITY_UNKNOWN`: snapshot is valid but support remains unresolved.
 
-Do not use for:
+Evidence defects are separate:
 
-- Website-Bot-generated sites;
-- modifications to an existing repository;
-- generic code changes merely because code is required.
+- `ADAPTER_SNAPSHOT_INVALID`: snapshot shape/provenance is invalid;
+- `ADAPTER_SNAPSHOT_STALE`: source revision/path bindings changed;
+- `ADAPTER_CONTRACT_CONFLICT`: authoritative adapter evidence conflicts.
 
-Load and obey the current `l9-idea-foundry` skill. Let it own architecture compilation, planning composition, realization, exact-state validation, freeze, and repo-template birth.
+Never convert missing, malformed, or stale evidence into `EXECUTOR_CAPABILITY_GAP`.
 
-## 3. Website-Bot
+## 3. l9-idea-foundry
+
+Use only when a new standalone product/system repository is required and no specialized factory already owns the artifact.
+
+Do not use for Website-Bot-generated sites, existing-repository modifications, or generic code changes merely because code is required.
+
+Load the current Foundry contract and let Foundry own its blueprint, code realization, traceability, exact-state validation, freeze, and repo-template seam.
+
+## 4. Website-Bot
 
 Owner: `Quantum-L9/Website-Bot`.
 
-Before use, inspect the current authoring contract, especially:
+Before use, inspect the current authoring and provisioning contract. Compile rich `domain_spec.source.yaml`, not a hand-maintained generated DomainSpec.
 
-- `README.md` authoring flow;
-- `src/pipeline/BuildContext.ts` `DomainSpec` type;
-- `scripts/normalize-spec.ts`;
-- current examples and validation;
-- provisioning contract when remote/provisioning work is requested.
+Preserve missing facts as Unknown. Do not invent credentials, phone numbers, proof, case studies, legal claims, geographic facts, or deployment identifiers to satisfy a schema.
 
-Compile **rich authoring input**, not the generated flat DomainSpec.
+## 5. l9-plan-simple
 
-Expected ownership chain on the current baseline:
-
-```text
-IdeaOS truth
-  -> domain_spec.source.yaml
-  -> Website-Bot normalize-spec
-  -> domain_spec.normalized.yaml
-  -> Website-Bot pipeline
-```
-
-Preserve missing facts as missing/unknown. Never invent phone numbers, credentials, proof, case studies, legal claims, geographic facts, or deployment identifiers merely to satisfy a schema.
-
-Let Website-Bot own its internal SEO intelligence, design stages, images, schema generation, site assembly, provisioning, publication, deployment, and SEO-Bot handoff.
-
-## 4. l9-plan-simple
-
-Use only for bounded existing-repository work when current execution artifacts are insufficient.
+Use for bounded existing-repository work when current execution artifacts are insufficient.
 
 Before invoking:
 
-- inspect the current live `l9-plan-simple` contract;
-- verify its planning/execution handoff mode;
+- inspect the current `l9-plan-simple` contract;
+- bind the snapshot to the exact revision/path inspected;
+- determine the current planning/execution handoff mode;
 - reuse a valid existing plan rather than replacing it.
 
-If the source is already execution-ready and the selected executor accepts it, skip planning.
+The existence of embedded mode or another accepted handoff must be proven from the live contract. An old capability snapshot is not sufficient evidence.
 
-## 5. Program Execution
+## 6. Program Execution
 
 Use for campaign-shaped coordinated modifications to existing systems.
 
-Program Execution remains under development. Read [program-execution-adapter.md](program-execution-adapter.md) for the required live discovery procedure and current baseline.
+Program Execution is an evolving adapter. Read `program-execution-adapter.md` as a discovery guide, then inspect the live front door before each mutating handoff.
 
-The adapter must never call inner PE components to bypass the public front door.
+Never call inner PE components to bypass public admission. Never decompose one atomic campaign merely because the current adapter cannot represent it.
 
-## 6. Adapter failure behavior
+## 7. Failure behavior
 
-Distinguish:
+Distinguish exactly:
 
-- `ADAPTER_CONTRACT_UNAVAILABLE`: cannot determine current public intake;
-- `EXECUTOR_CAPABILITY_GAP`: correct executor, unsupported requested topology;
-- `OWNER_NATIVE_INPUT_INVALID`: adapter compilation produced an input rejected by owner validation;
+- `ADAPTER_CONTRACT_UNAVAILABLE`: cannot discover current public intake;
+- `ADAPTER_SNAPSHOT_INVALID`: discovered evidence cannot satisfy the snapshot contract;
+- `ADAPTER_SNAPSHOT_STALE`: snapshot bindings no longer match current source bindings;
+- `ADAPTER_CONTRACT_CONFLICT`: authoritative sources disagree materially;
+- `ADAPTER_CAPABILITY_UNKNOWN`: valid evidence does not resolve support;
+- `EXECUTOR_CAPABILITY_GAP`: valid current evidence proves the requested topology unsupported;
+- `OWNER_NATIVE_INPUT_INVALID`: compiled native input is rejected by owner validation;
 - `DOWNSTREAM_EXECUTION_FAILED`: canonical front door ran and failed;
-- `DOWNSTREAM_RECEIPT_INVALID`: reported completion does not satisfy expected owner evidence.
+- `DOWNSTREAM_RECEIPT_INVALID`: claimed completion does not satisfy owner evidence.
 
-Do not reroute to a weaker generic executor automatically after one of these failures.
+Do not automatically reroute to a weaker executor after any of these failures.
