@@ -99,10 +99,7 @@ def validate_graph(data: Any, envelope: Any | None = None) -> dict[str, Any]:
             if not nonempty_string(rid):
                 errors.append(f"blockers[{idx}].requirement_id must be a non-empty string")
             elif rid in blocker_req_ids:
-                errors.append(
-                    f"requirement {rid} appears in multiple "
-                    "requirement-scoped blockers"
-                )
+                errors.append(f"requirement {rid} appears in multiple requirement-scoped blockers")
             else:
                 blocker_req_ids.add(rid)
 
