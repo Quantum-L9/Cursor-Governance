@@ -42,7 +42,7 @@ def test_session_start_never_owns_fetch_or_reset() -> None:
     assert "checkout -f" not in cloud
     assert 'git -C "$GOV" fetch' not in cloud
     assert "gov_dirty=" not in cloud
-    assert "GOV_BRANCH=\"main\"" in cloud
+    assert 'GOV_BRANCH="main"' in cloud
     assert "L9_GOVERNANCE_BRANCH" not in cloud
     assert "launcher-absent" in cloud
     assert "no SessionStart fetch/reset" in cloud
