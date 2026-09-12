@@ -116,7 +116,8 @@ def validate_graph(data: Any, envelope: Any | None = None) -> dict[str, Any]:
 def main() -> int:
     if len(sys.argv) != 3:
         print(
-            "usage: validate_graph.py <EXECUTION_GRAPH.yaml|json> <IDEA_EXECUTION_ENVELOPE.yaml|json>",
+            "usage: validate_graph.py <EXECUTION_GRAPH.yaml|json> "
+            "<IDEA_EXECUTION_ENVELOPE.yaml|json>",
             file=sys.stderr,
         )
         return 2

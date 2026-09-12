@@ -55,7 +55,11 @@ def preflight(
         if validated_graph is None:
             overall = "REPAIRABLE"
             artifacts.append(
-                _artifact("receipt", "STALE_REGENERATE", "graph is not reusable; receipt depends on graph")
+                _artifact(
+                    "receipt",
+                    "STALE_REGENERATE",
+                    "graph is not reusable; receipt depends on graph",
+                )
             )
         else:
             try:
@@ -75,7 +79,10 @@ def preflight(
 
     earliest = None
     for layer in ("envelope", "graph", "receipt"):
-        match = next((a for a in artifacts if a["ref"] == layer and a["status"] != "REUSABLE"), None)
+        match = next(
+            (a for a in artifacts if a["ref"] == layer and a["status"] != "REUSABLE"),
+            None,
+        )
         if match:
             earliest = layer
             break
