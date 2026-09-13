@@ -199,7 +199,7 @@ def doctrine_check(contract: dict, failures: list[str]) -> None:
     if not isinstance(imw, dict):
         _fail(
             "interactive_memory_write block missing: the contract must state the model's "
-            "durable-write path (cold: memory.write_agent; high-stakes: memory.phase_lock -> memory.write_governed)",
+            "durable-write path (cold write_agent; high-stakes phase_lock -> write_governed)",
             failures,
         )
     else:

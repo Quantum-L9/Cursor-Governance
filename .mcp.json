@@ -1,15 +1,4 @@
 {
   "_generated": "Rendered from environment/agents/adapters/claude-code/mcp.template.json by ops/scripts/claude_projection.py (domain: mcp). Do not edit \u2014 edit the template. Consumer-owned servers not defined by the template are preserved.",
-  "mcpServers": {
-    "l9-graphite-memory": {
-      "type": "stdio",
-      "command": "${L9_MEMORY_INTERPRETER}",
-      "args": [
-        "-m",
-        "l9_graphite_memory.server",
-        "--transport",
-        "stdio"
-      ]
-    }
-  }
+  "mcpServers": {}
 }

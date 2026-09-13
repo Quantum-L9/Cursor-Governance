@@ -148,7 +148,7 @@ class FrontDoorTests(unittest.TestCase):
         return vme
 
     def test_contract_states_the_governed_interactive_write(self) -> None:
-        """Positive: dual write path — cold write_agent + high-stakes phase_lock -> write_governed."""
+        """Positive: dual write — cold write_agent; high-stakes phase_lock -> write_governed."""
         imw = self._contract()["interactive_memory_write"]
         self.assertEqual(imw["canonical_mcp_server"], "l9-graphite-memory")
         self.assertEqual(imw["cold_write_operation"], "memory.write_agent")
