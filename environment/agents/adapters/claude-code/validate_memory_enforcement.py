@@ -232,7 +232,9 @@ def doctrine_check(contract: dict, failures: list[str]) -> None:
                     failures,
                 )
     if len(failures) == before:
-        print("  OK: contract carries no retired provider/write doctrine (ADR-0030/0031 dual write)")
+        print(
+            "  OK: contract carries no retired provider/write doctrine (ADR-0030/0031 dual write)"
+        )
 
 
 def _wiring_parity(contract: dict, settings: dict, failures: list[str]) -> None:

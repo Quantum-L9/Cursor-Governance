@@ -5,6 +5,7 @@ Formats:
   shell (default) — export KEY='value' lines for eval
   json — object suitable for sessionStart env merge
 """
+
 from __future__ import annotations
 
 import argparse

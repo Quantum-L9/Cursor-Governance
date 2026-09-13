@@ -147,9 +147,7 @@ def require_signing_key(
     """Per-agent HMAC signing key — MUST be unique (ADR-0031 spoof prevention)."""
     key = keys.get(agent_id)
     if not key or not isinstance(key, str) or len(key) < 24:
-        fail(
-            f"agent {agent_id}: signing key missing or shorter than 24 chars in {tokens_path}"
-        )
+        fail(f"agent {agent_id}: signing key missing or shorter than 24 chars in {tokens_path}")
     if key in seen_keys:
         fail(
             f"agents '{seen_keys[key]}' and '{agent_id}' share a signing key "
@@ -172,9 +170,12 @@ def load_local_secret_map(tokens_path: Path) -> tuple[str, str, dict[str, str]]:
     else:
         door = raw.get("_agents_door_secret") or raw.get("agents_door_secret")
         human = raw.get("_human_door_secret") or raw.get("human_door_secret")
-        keys = {k: v for k, v in raw.items() if not k.startswith("_") and k not in {
-            "agents_door_secret", "human_door_secret", "agent_signing_keys"
-        }}
+        keys = {
+            k: v
+            for k, v in raw.items()
+            if not k.startswith("_")
+            and k not in {"agents_door_secret", "human_door_secret", "agent_signing_keys"}
+        }
     if not isinstance(keys, dict):
         fail("agent_signing_keys must be an object")
     if not door or not isinstance(door, str) or len(door) < 24:
@@ -377,8 +378,7 @@ def main() -> int:
     except OSError as e:
         sys.stderr.write(f"warning: could not chmod 0600 {out_path}: {e}\n")
     sys.stderr.write(
-        f"wrote {len(grants)} grant(s) -> {out_path} "
-        f"(agents: {', '.join(sorted(grants))})\n"
+        f"wrote {len(grants)} grant(s) -> {out_path} (agents: {', '.join(sorted(grants))})\n"
     )
     return 0
 

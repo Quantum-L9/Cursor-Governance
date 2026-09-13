@@ -6,7 +6,6 @@ Never loads or emits L9_MEMORY_HUMAN_DOOR_SECRET into agent processes.
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 from typing import Any
 

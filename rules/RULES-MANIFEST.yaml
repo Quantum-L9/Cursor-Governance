@@ -1,12 +1,12 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-09-12T03:23:48Z'
+generated_utc: '2026-09-13T19:58:55Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:50341e5c73457d269335f66349e7ebdbe789599f0d781dfb7f4fa4162390b036
+source_tree_digest: sha256:526c39f7e56ca624754756de98b5401eabc6476b99cd94817ac9d158ecb4e925
 summary:
   total_mdc_files: 70
-  always_apply_true: 34
-  always_apply_false: 36
+  always_apply_true: 35
+  always_apply_false: 35
   no_boolean_always_apply: 0
   explicit_rule_ids: 69
   derived_rule_ids: 1
@@ -91,8 +91,8 @@ rules:
   globs: null
   first_heading: Graphiti Memory (SSOT)
   has_yaml_frontmatter: true
-  line_count: 87
-  content_digest: sha256:05e654828e511e2d23d60dbc8fe4cc18be083a57e1816d77f65e7a762d1df534
+  line_count: 90
+  content_digest: sha256:e935797ee23f590e0bc8bc11d96fcb604ab9dbe68b6605996793c9406b82b089
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -1131,18 +1131,18 @@ rules:
 - file: 77-cursor-subagent-orchestration.mdc
   id: l9.rule.77.cursor.subagent.orchestration
   id_source: explicit
-  version: 1.0.0
-  description: Govern Cursor-native concurrent subagent delegation.
+  version: 1.1.0
+  description: Govern Cursor-native concurrent subagent delegation on PE-token and host-native paths.
   scope: global
   domain: governance
-  activation: agent_requested
+  activation: always
   activation_source: explicit
-  always_apply: false
+  always_apply: true
   globs: null
   first_heading: Cursor-native subagent orchestration (L9)
   has_yaml_frontmatter: true
-  line_count: 24
-  content_digest: sha256:67cc9f7af1be2a4c66d51c7060801a03710a1d94042cfc039cb505435efd65a1
+  line_count: 28
+  content_digest: sha256:ee79f4d8ce9beeceb0b5261f3e1c34a6d16a6964877a47a0ba091d8de401f6de
   authority: canonical_global
   context_cost: minimal
   deprecated: false
@@ -1366,8 +1366,8 @@ rules:
   globs: null
   first_heading: Cursor Memory Kernel Enforcement
   has_yaml_frontmatter: true
-  line_count: 191
-  content_digest: sha256:e5531fdcdba815c6648fa860553cf704b2b0f963e99aeef76523c8761ce3fcd9
+  line_count: 194
+  content_digest: sha256:f0543aac23823a5c73e163fac95d79df25461f53dcc2aa9115b418e627b01cda
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -1608,8 +1608,8 @@ rules:
   globs: null
   first_heading: Memory Gate (canonical control plane)
   has_yaml_frontmatter: true
-  line_count: 74
-  content_digest: sha256:e715326b41a9cb50dee7c43655cd5c2dff4448ff19e2e7afa51e08bf486fc454
+  line_count: 77
+  content_digest: sha256:d1f99f8bbcb9b12ed4ea5246165aac1a9217f1e1274dcca2f83258e319af57ef
   authority: canonical_global
   context_cost: minimal
   deprecated: false
