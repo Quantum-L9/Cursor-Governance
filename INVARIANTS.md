@@ -1,7 +1,7 @@
 # Cursor-Governance — invariants index
 
-**Version:** 1.4.0
-**Updated:** 2026-09-11
+**Version:** 1.5.0
+**Updated:** 2026-09-13
 **Role:** this-repo operating-invariant index plus a CI enforcement map.
 
 This file does **not** replace [`ORG_INVARIANTS.yaml`](ORG_INVARIANTS.yaml). That YAML is the machine-readable organization policy SSOT. The operator note for org policy is [`docs/governance/ORG_INVARIANTS.md`](docs/governance/ORG_INVARIANTS.md). Do not copy `L9-ORG-*` requirement bodies into this file.
@@ -17,9 +17,9 @@ Named pointers only. One line + path. Bind from live law at refresh time.
 | One governance root; no Dropbox / cloud-storage fallback | [`CANONICAL_LAW.md`](CANONICAL_LAW.md) §1; [`ops/scripts/resolve_governance_paths.sh`](ops/scripts/resolve_governance_paths.sh) |
 | Cursor-primary capability; thin adapters wrap outward | `CANONICAL_LAW.md` §2.1 |
 | Symlink law (consumers `.cursor-commands` → clone; SSOT must not self-alias) | [`AGENTS.md`](AGENTS.md) §10; `CANONICAL_LAW.md` §1–3 |
-| Sole sanctioned publish path is `make pr` (any capitalization); raw `git push` / `gh pr create` skip the Makefile checkers (not a hook denial in this repo) | `AGENTS.md` §4; `CANONICAL_LAW.md` §6.2.4 |
+| Sole sanctioned first-publication path is `make pr` (any capitalization); a raw `git push` of a branch with no open PR, or `gh pr create`, is denied by effect | `AGENTS.md` `FIRST_PUBLICATION_PLANE_V1`; `CANONICAL_LAW.md` §6.2.8; [`ops/autonomy/first_publication_gate.py`](ops/autonomy/first_publication_gate.py) |
 | L4: local commits only during execution; no mid-execution push | `AGENTS.md` §3.1; `ops/autonomy/surface_profile.yaml` |
-| Graphiti is the episodic resume SSOT; do not write `memory-bank/` | `AGENTS.md` §7; `ops/graphiti/MEMORY_BANK_POLICY.md` |
+| Resume SSOT is the `l9-graphite-memory` control plane (`ops/memory`); Graphiti is a projection; do not write `memory-bank/` | `AGENTS.md` `MEMORY_CONTROL_PLANE_V1`; `CANONICAL_LAW.md` §8.2; [`ops/memory/README.md`](ops/memory/README.md); `ops/graphiti/MEMORY_BANK_POLICY.md` |
 | Memory egress crosses the `l9-graphite-memory` control plane only; no direct provider calls, no provider credentials in Cursor code (INV-03/04/06/07/11). Enforce mode since stage C11 (merge-blocking; ADR-0030); the boundary's shape is enforced on the AST and at runtime since audit closure C14 (no network/provider transport imports on the memory path, process spawn only through the binding modules, the client launches only the bound `l9-memory`), and the binding is proved against the exact memory artifact by a required, non-skippable job | `ops/memory/README.md`; [`ops/config/memory-binding.json`](ops/config/memory-binding.json); [`ops/scripts/validate_memory_egress_boundary.py`](ops/scripts/validate_memory_egress_boundary.py); [`tests/ops/memory/test_transport_boundary.py`](tests/ops/memory/test_transport_boundary.py); `.semgrep/l9-pr.yml` (`l9.memory-boundary-*`); [`.github/workflows/memory-cross-repo.yml`](.github/workflows/memory-cross-repo.yml) |
 | Secret values never in git, logs, receipts, or chat | `AGENTS.md` §8; `ops/secrets/` |
 | Root files are classified; new root files must be registered; `additive_only` files are append-only | `AGENTS.md` §14; [`ops/config/root-file-protection.json`](ops/config/root-file-protection.json) |
@@ -49,6 +49,11 @@ Invariant → workflow or script that actually checks it. Local procedure remain
 | No hardcoded `/Users` / `/home` paths | `.pre-commit-config.yaml` hook `no-hardcoded-paths` → `ops/scripts/validate_governance_no_hardcoded_paths.sh` |
 | No Dropbox SSOT / L9_MEMORY_HTTP residue | pre-commit `legacy-doctrine-residue` → `ops/scripts/validate_legacy_doctrine_residue.py` |
 | Lint / format / tests | `.github/workflows/l9-lint-test.yml`; local `make pr` |
+| Biome JSON/JS/TS (advisory `enforce-biome: false`) | `.github/workflows/l9-lint-test-node.yml` job `biome` |
+| Semgrep analysis publish | `.github/workflows/l9-analysis.yml` jobs `analyze`, `publish` |
+| Claude Code preservation contract | `.github/workflows/claude-preservation.yml` job `claude-preservation` |
+| First publication by effect | `ops/autonomy/first_publication_gate.py` (local PreToolUse / beforeShellExecution; not a GitHub workflow) |
+| Cursor virtual skill plane | pre-commit `cursor-skill-projection` → `environment/agents/adapters/cursor/validate_skill_projection.py` |
 | Peer Execution / adapter conformance | `.github/workflows/peer-execution.yml` |
 | Supply chain | `.github/workflows/supply-chain.yml` |
 | CodeQL | `.github/workflows/codeql.yml` (reusable: `codeql-reusable.yml`) |
@@ -57,7 +62,7 @@ Invariant → workflow or script that actually checks it. Local procedure remain
 | Maximum-velocity execution profile | pre-commit `max-velocity` → `ops/scripts/validate_max_velocity.py`; `tests/ops/scripts/test_validate_max_velocity.py` |
 | `/ff` overwrite-untracked high-velocity | `skills/l9-repo-sync/scripts/validate_pack_structure.py`; `skills/l9-repo-sync/scripts/self_test.py` `ignored_colliding` |
 
-Workflow file count at write time: **14** under `.github/workflows/`. Recount from that directory on refresh. Blocking vs janitor split: [`ARCHITECTURE.md`](ARCHITECTURE.md) CI/CD architecture.
+Workflow file count at write time: **18** under `.github/workflows/`. Recount from that directory on refresh. Blocking vs janitor split: [`ARCHITECTURE.md`](ARCHITECTURE.md) CI/CD architecture.
 
 ## False positives
 
@@ -71,6 +76,7 @@ Only items with a cited exclude or ignore. No invented flakes.
 | `pyproject.toml` `[tool.ruff.lint.per-file-ignores]` | `E501` on named skill script globs; `E402` on `subagent-generated-data/**` and `environment/agents/generated-data/**` | Intentional long evidence strings; sys.path bootstrap before imports (comments in `pyproject.toml`) |
 | `pyproject.toml` `[tool.mypy] exclude` and `[tool.pytest.ini_options] norecursedirs` | same scratch trees | Do not type-check or collect WIP / archived / vendored suites |
 | `.github/workflows/l9-lint-test.yml` `lint` / `mypy` | `continue-on-error: true` | Advisory only; pre-existing mypy debt (`TODO.md`); does not gate merge |
+| `.github/workflows/l9-lint-test-node.yml` job `biome` | `enforce-biome: false` | Advisory rollout; cited in that file |
 | Several workflows `paths-ignore: WIP/**` | WIP-only events skip lint/PE/CodeQL | Scratch corpus; mixed PRs still scan non-WIP paths |
 | `ops/scripts/sync_generated_artifacts.py` `GENERATED_PATH_PREFIXES` | generated manifests / llm-rules / skill registries | Overlap-gate exempt; merge driver `l9-generated` |
 | `AGENTS.md` §6 | `SEMGREP_APP_TOKEN` / `semgrep login`, `SONAR_TOKEN` | **Not required** for `make pr` |
