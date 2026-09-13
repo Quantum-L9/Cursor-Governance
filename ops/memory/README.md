@@ -231,7 +231,8 @@ the `l9.memory-boundary-*` semgrep rules in `.semgrep/l9-pr.yml` on
 transport (`urllib`, `http`, `socket`, `ssl`, `requests`, `httpx`, `aiohttp`,
 `websockets`, the MCP client SDK, `graphiti_core`, `neo4j`, `asyncio`); only
 `runtime_binding.py` (the bound `l9-memory`), `namespace_context.py` (git
-identity), `mcp_instantiation.py` (the memory-owned installer) and the Claude
+identity), `mcp_instantiation.py` (the memory-owned MCP installer),
+`seal_artifact_provenance.py` (the memory-owned wheel installer) and the Claude
 `memory_state.py` git probe may spawn a process, always as an argv list; and
 `MemoryControlPlaneClient` launches exactly `binding.memory_cli` for every
 operation.
