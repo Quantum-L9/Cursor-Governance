@@ -278,18 +278,25 @@ class CompileCampaignSourceTests(unittest.TestCase):
         """The reusable source is complete input, not a partial YAML fragment."""
         self.assertTrue(CANONICAL_TEMPLATE.is_file())
         text = CANONICAL_TEMPLATE.read_text(encoding="utf-8")
-        self.assertNotRegex(text, r"REPLACE_WITH_[A-Z0-9_]+|\\{\\{[A-Z0-9_]+\\}\\}")
+        placeholder_pattern = r"REPLACE_WITH_[A-Z0-9_]+|\{\{[A-Z0-9_]+\}\}"
+        self.assertRegex("REPLACE_WITH_TOKEN", placeholder_pattern)
+        self.assertRegex("{{TOKEN}}", placeholder_pattern)
+        self.assertNotRegex(text, placeholder_pattern)
         source = yaml.safe_load(text)
         self.assertEqual(source["metadata"]["campaign_id"], source["program"]["id"])
         self.assertEqual(self.compiler.preflight_campaign_source_document(source), [])
         with tempfile.TemporaryDirectory() as raw:
             target = Path(raw) / "blueprint"
+            source_digest = hashlib.sha256(CANONICAL_TEMPLATE.read_bytes()).hexdigest()
             self.compiler.compile_source(
                 CANONICAL_TEMPLATE,
                 target,
                 stack_proof=_pass_proof(
                     Path(raw) / "stack-proof.json", "campaign-source-v2-example"
                 ),
+            )
+            self.assertEqual(
+                hashlib.sha256(CANONICAL_TEMPLATE.read_bytes()).hexdigest(), source_digest
             )
             self.assertEqual(self.validator.validate(target, "template"), [])
 

@@ -2135,7 +2135,7 @@
     },
     {
       "path": "scripts/tests/test_compile_campaign_source.py",
-      "sha256": "f824effa16cef144c7c69a95c72027f72d3a1895b1a85e743b62be2c5f4ab31a"
+      "sha256": "1d499adfb7e12ce9109efec07be26711404ffb7813af505bd8b5fe8ed28aeed2"
     },
     {
       "path": "scripts/tests/test_context7_stack_proof.py",
@@ -2247,11 +2247,11 @@
     },
     {
       "path": "templates/campaign-source-v2/CAMPAIGN_SOURCE.yaml",
-      "sha256": "fecd811f1140651741c53c4893479056fe594783c940440e007d643803ccc6c2"
+      "sha256": "8db216e3f6632db9f185922dacb54e5299ffe0050e149251070f674e726738ef"
     },
     {
       "path": "templates/campaign-source-v2/README.md",
-      "sha256": "b8f7689105e5e1c3c6d3f7bb5d834d7e4b1437cbb5b075d19c85bbf1bcf7dc63"
+      "sha256": "c530f02c8dcc32574093f8bbb9c9325e173df4c6e08d32f397ff17e4e6a8df73"
     },
     {
       "path": "tests/__init__.py",

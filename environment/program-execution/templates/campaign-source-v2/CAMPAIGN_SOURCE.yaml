@@ -1,3 +1,15 @@
+# --- L9_META ---
+# l9_schema: 1
+# artifact_type: program_execution_campaign_source_template
+# component: canonical_campaign_source_v2
+# tags: [program-execution, campaign, template, blueprint, pec]
+# retrieval: on_demand
+# owner: program_execution
+# status: active
+# version: 1.0.0
+# updated: '2026-09-13'
+# --- /L9_META ---
+#
 # Canonical, self-contained Program Execution campaign source.
 # This document is intentionally concrete so it compiles unchanged. Copy it into
 # a new campaign, replace every example fact with verified campaign facts, then
