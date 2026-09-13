@@ -402,6 +402,7 @@ def test_default_branch_binding_has_one_sealed_implementation() -> None:
     )
     assert archive.is_file()
     assert "sole executable authority" in archive.read_text(encoding="utf-8")
+    assert "_archived" in (gov / "pyproject.toml").read_text(encoding="utf-8")
 
 
 def test_pr_index_pages_past_200() -> None:

@@ -67,7 +67,13 @@ _git_remote_head_is_sourced() {
 if ! _git_remote_head_is_sourced; then
   case "${1:-}" in
     -h | --help)
-      sed -n '1,11p' "$0" | sed 's/^# \{0,1\}//'
+      cat <<'USAGE'
+usage: git_remote_head.sh WORKSPACE
+
+Bind refs/remotes/origin/HEAD in WORKSPACE. The helper discovers origin's
+advertised default branch, fetches only that remote-tracking ref when absent,
+and binds origin/HEAD. It changes no remote configuration.
+USAGE
       exit 0
       ;;
     "")
