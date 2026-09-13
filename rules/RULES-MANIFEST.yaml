@@ -1,12 +1,12 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-09-12T03:23:48Z'
+generated_utc: '2026-09-13T00:01:33Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:50341e5c73457d269335f66349e7ebdbe789599f0d781dfb7f4fa4162390b036
+source_tree_digest: sha256:c6e4fbd650a119171e269069e802c80c4eccda19b316402f8b29199c2b90e401
 summary:
   total_mdc_files: 70
-  always_apply_true: 34
-  always_apply_false: 36
+  always_apply_true: 35
+  always_apply_false: 35
   no_boolean_always_apply: 0
   explicit_rule_ids: 69
   derived_rule_ids: 1
@@ -1131,18 +1131,18 @@ rules:
 - file: 77-cursor-subagent-orchestration.mdc
   id: l9.rule.77.cursor.subagent.orchestration
   id_source: explicit
-  version: 1.0.0
-  description: Govern Cursor-native concurrent subagent delegation.
+  version: 1.1.0
+  description: Govern Cursor-native concurrent subagent delegation on PE-token and host-native paths.
   scope: global
   domain: governance
-  activation: agent_requested
+  activation: always
   activation_source: explicit
-  always_apply: false
+  always_apply: true
   globs: null
   first_heading: Cursor-native subagent orchestration (L9)
   has_yaml_frontmatter: true
-  line_count: 24
-  content_digest: sha256:67cc9f7af1be2a4c66d51c7060801a03710a1d94042cfc039cb505435efd65a1
+  line_count: 28
+  content_digest: sha256:ee79f4d8ce9beeceb0b5261f3e1c34a6d16a6964877a47a0ba091d8de401f6de
   authority: canonical_global
   context_cost: minimal
   deprecated: false

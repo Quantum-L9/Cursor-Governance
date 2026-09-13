@@ -1,14 +1,14 @@
 # Cursor governance rules manifest
 
-Generated: `2026-09-12T03:23:48Z`. Source: `rules/*.mdc`.
+Generated: `2026-09-13T00:01:33Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
 | Bucket | Count |
 |---|---:|
 | Total MDC files | **70** |
-| `alwaysApply: true` | **34** |
-| `alwaysApply: false` | **36** |
+| `alwaysApply: true` | **35** |
+| `alwaysApply: false` | **35** |
 | No boolean `alwaysApply` | **0** |
 | Explicit stable IDs | **69** |
 | Derived compatibility IDs | **1** |
@@ -65,7 +65,7 @@ Generated: `2026-09-12T03:23:48Z`. Source: `rules/*.mdc`.
 | `74-ai-safety-policy.mdc` | `l9.rule.74.ai.safety.policy` | global | security | agent_requested | 44 | `30dafdd1c06c` |
 | `75-bounded-session-autonomy.mdc` | `l9.rule.75.bounded.session.autonomy` | global | execution | agent_requested | 25 | `0127f988d59b` |
 | `76-wire-workflow-guard.mdc` | `l9.rule.76.wire.workflow.guard` | global | governance | auto_attached | 55 | `f94087db811a` |
-| `77-cursor-subagent-orchestration.mdc` | `l9.rule.77.cursor.subagent.orchestration` | global | governance | agent_requested | 24 | `67cc9f7af1be` |
+| `77-cursor-subagent-orchestration.mdc` | `l9.rule.77.cursor.subagent.orchestration` | global | governance | always | 28 | `ee79f4d8ce9b` |
 | `78-perplexity-run-harness.mdc` | `l9.rule.78.perplexity.run.harness` | global | general | agent_requested | 62 | `ff0c6fe1e02f` |
 | `79-output-discipline.mdc` | `l9.rule.output-discipline` | global | output | agent_requested | 26 | `ea8f58ae1f55` |
 | `80-gmp-execution.mdc` | `l9.rule.80.gmp.execution` | global | ci | always | 85 | `e5a0e63b42c1` |
