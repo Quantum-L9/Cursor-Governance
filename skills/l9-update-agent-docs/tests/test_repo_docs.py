@@ -257,21 +257,22 @@ def test_module_change_resolves_exact_generator_target_and_lifecycle(tmp_path: P
     base = commit(root, "base")
     write(root / "skills/demo/x.py", "def x():\n    return 2\n")
     commit(root, "code")
-    red = rd.audit_repository(root, changed_since=base)
-    module = next(row for row in red["obligations"] if row["surface"] == "module_readmes")
-    assert red["final_status"] == "PARTIAL"
-    assert module["target"]["path"] == "skills/README.md"
-    assert module["owner"]["id"] == "readme-pipeline-v1"
-    assert module["required_action"]["type"] == "REGENERATE"
-    write(
-        root / "skills/README.md",
-        "# Skills\n\n## Purpose\n\nDocs.\n\n## Components\n\nGenerated.\n",
-    )
-    commit(root, "generated README")
-    green = rd.audit_repository(root, changed_since=base)
-    module = next(row for row in green["obligations"] if row["surface"] == "module_readmes")
-    assert module["lifecycle"]["status"] == "CLOSED"
-    assert green["final_status"] == "PASS"
+    receipt = rd.audit_repository(root, changed_since=base)
+    modules = [row for row in receipt["obligations"] if row["surface"] == "module_readmes"]
+    paths = {row["target"]["path"] for row in modules}
+    assert (root / "skills/README.md").is_file()
+    assert (root / "skills/demo/README.md").is_file()
+    assert "skills/README.md" in paths
+    assert "skills/demo/README.md" in paths
+    assert all(row["owner"]["id"] == "l9-update-agent-docs" for row in modules)
+    assert all(row["lifecycle"]["status"] == "CLOSED" for row in modules)
+    assert (root / "filetree.md").is_file()
+    assert receipt["filetree"]["path"] == "filetree.md"
+    assert receipt["filetree"]["status"] == "PASS"
+    assert "filetree.md" in receipt["changes"]["run_mutations"]
+    filetree = next(row for row in receipt["obligations"] if row["surface"] == "filetree")
+    assert filetree["lifecycle"]["status"] == "CLOSED"
+    assert receipt["final_status"] == "PASS"
 
 
 def test_policy_capability_controls_are_executable(tmp_path: Path):
@@ -281,13 +282,15 @@ def test_policy_capability_controls_are_executable(tmp_path: Path):
     stack(root)
     policy = dp.load_policy()
     capability = dc.probe_module_readme_capability(root, policy, ["skills/x.py"])
-    assert capability["status"] == "NotApplicable"
-    write(root / "scripts/generate_subsystem_readmes.py", "")
-    partial = dc.probe_module_readme_capability(root, policy, ["skills/x.py"])
-    assert partial["status"] == "BLOCKED"
+    assert capability["status"] == "AVAILABLE"
+    assert capability["owner"] == "l9-update-agent-docs"
+    assert capability["present"]["generator"] is True
+    partial = dc.probe_module_readme_capability(root, policy, ["skills/x.xml"])
+    assert partial["status"] == "PARTIAL"
+    assert partial["unsupported_impacted_extensions"] == [".xml"]
 
 
-def test_optional_llms_projection_is_terminal_not_applicable(tmp_path: Path):
+def test_default_llm_projection_is_created_and_closed(tmp_path: Path):
     root = tmp_path / "repo"
     root.mkdir()
     init(root)
@@ -296,13 +299,94 @@ def test_optional_llms_projection_is_terminal_not_applicable(tmp_path: Path):
     write(root / "ARCHITECTURE.md", "# Architecture\n\nChanged.\n")
     commit(root)
     receipt = rd.audit_repository(root, changed_since=base)
-    llms = next(row for row in receipt["obligations"] if row["surface"] == "llms_txt")
-    assert llms["lifecycle"] == {
+    llm = next(row for row in receipt["obligations"] if row["surface"] == "llm_txt")
+    assert (root / "llm.txt").is_file()
+    assert (root / "filetree.md").is_file()
+    assert receipt["filetree"]["written"] is True
+    assert receipt["llm_txt"]["enabled"] is True
+    assert receipt["llm_txt"]["written"] is True
+    assert receipt["llm_txt"]["admission"] == "create"
+    assert "<!-- l9-llm-txt: generated-projection -->" in (root / "llm.txt").read_text(
+        encoding="utf-8"
+    )
+    assert llm["target"]["path"] == "llm.txt"
+    assert llm["lifecycle"]["status"] == "CLOSED"
+    assert receipt["final_status"] == "PASS"
+
+
+def test_adapter_can_disable_llm_projection(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    write(
+        root / ".claude/adapters/test-repo-update-agent-docs.md",
+        "<!-- L9_DOCS\nllm_txt: disabled\n-->\n",
+    )
+    base = commit(root, "base")
+    write(root / "ARCHITECTURE.md", "# Architecture\n\nChanged.\n")
+    commit(root)
+    receipt = rd.audit_repository(root, changed_since=base)
+    llm = next(row for row in receipt["obligations"] if row["surface"] == "llm_txt")
+    assert receipt["llm_txt"]["enabled"] is False
+    assert llm["lifecycle"] == {
         "status": "NOT_APPLICABLE",
         "reason": "surface has no applicable target for this change",
         "terminal": True,
     }
-    assert receipt["final_status"] == "PASS"
+    assert not (root / "llm.txt").exists()
+
+
+def test_legacy_llms_txt_is_renamed_when_llm_txt_is_missing(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    handwritten = "# Quantum-L9 Test\n\n## Authority\n\n- [Law](CANONICAL_LAW.md)\n"
+    write(root / "llms.txt", handwritten)
+    base = commit(root, "base")
+    write(root / "ARCHITECTURE.md", "# Architecture\n\nChanged.\n")
+    commit(root)
+    receipt = rd.audit_repository(root, changed_since=base)
+    assert (root / "llm.txt").read_text(encoding="utf-8") == handwritten
+    assert not (root / "llms.txt").exists()
+    assert receipt["llm_txt"]["admission"] == "preserve"
+    assert receipt["llm_txt"]["written"] is False
+    assert "retired:llms.txt" in receipt["changes"]["run_mutations"]
+
+
+def test_legacy_llms_txt_is_deleted_when_llm_txt_exists(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    handwritten = "# Keep this\n\n- [Law](CANONICAL_LAW.md)\n"
+    write(root / "llm.txt", handwritten)
+    write(root / "llms.txt", "# leftover name\n")
+    base = commit(root, "base")
+    write(root / "ARCHITECTURE.md", "# Architecture\n\nChanged.\n")
+    commit(root)
+    receipt = rd.audit_repository(root, changed_since=base)
+    assert (root / "llm.txt").read_text(encoding="utf-8") == handwritten
+    assert not (root / "llms.txt").exists()
+    assert receipt["llm_txt"]["admission"] == "preserve"
+    assert "retired:llms.txt" in receipt["changes"]["run_mutations"]
+
+
+def test_write_llm_does_not_overwrite_unowned_llm_txt(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    handwritten = "# Keep this\n\n- [Law](CANONICAL_LAW.md)\n"
+    write(root / "llm.txt", handwritten)
+    base = commit(root, "base")
+    write(root / "ARCHITECTURE.md", "# Architecture\n\nChanged.\n")
+    commit(root)
+    receipt = rd.audit_repository(root, changed_since=base, write_llm=True)
+    assert (root / "llm.txt").read_text(encoding="utf-8") == handwritten
+    assert receipt["llm_txt"]["admission"] == "preserve"
+    assert receipt["llm_txt"]["written"] is False
 
 
 def test_dirty_managed_region_fails_closed(tmp_path: Path):

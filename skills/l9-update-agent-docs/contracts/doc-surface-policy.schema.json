@@ -4,7 +4,7 @@
   "title": "L9 Repository Documentation Surface Policy",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "version", "owner", "managed_regions", "surfaces", "impact_rules", "semantic_harvest", "capabilities", "llms_txt"],
+  "required": ["schema", "version", "owner", "managed_regions", "surfaces", "impact_rules", "semantic_harvest", "capabilities", "llm_txt"],
   "properties": {
     "schema": {"const": "l9.repo-docs.surface-policy.v3"},
     "version": {"const": 3},
@@ -47,7 +47,7 @@
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["owner", "role", "authority_class", "requirement", "selectors", "create_policy", "refresh_policy", "generator", "evidence_sources", "prohibited_mutations", "llms_include"],
+        "required": ["owner", "role", "authority_class", "requirement", "selectors", "create_policy", "refresh_policy", "generator", "evidence_sources", "prohibited_mutations", "llm_include"],
         "properties": {
           "owner": {"type": "string", "minLength": 1},
           "role": {"type": "string", "minLength": 1},
@@ -59,7 +59,7 @@
           "generator": {"type": ["string", "null"]},
           "evidence_sources": {"type": "array", "items": {"type": "string"}},
           "prohibited_mutations": {"type": "array", "items": {"type": "string"}},
-          "llms_include": {"type": "boolean"},
+          "llm_include": {"type": "boolean"},
           "kind": {"type": "string", "minLength": 1},
           "ownership": {
             "type": "object",
@@ -168,15 +168,16 @@
         }
       }
     },
-    "llms_txt": {
+    "llm_txt": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["owner", "spec_version", "published_surface_markers", "adapter_directive_block", "surface_order"],
+      "required": ["owner", "spec_version", "published_surface_markers", "adapter_directive_block", "default_enabled", "surface_order"],
       "properties": {
         "owner": {"type": "string"},
         "spec_version": {"type": "string"},
         "published_surface_markers": {"type": "array", "items": {"type": "string"}},
         "adapter_directive_block": {"type": "string"},
+        "default_enabled": {"const": true},
         "surface_order": {"type": "array", "items": {"type": "string"}}
       }
     }
