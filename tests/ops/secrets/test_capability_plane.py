@@ -28,6 +28,7 @@ if str(SECRETS_DIR) not in sys.path:
     sys.path.insert(0, str(SECRETS_DIR))
 
 import capability_client as cc  # noqa: E402
+import capability_bind as cb  # noqa: E402
 import surface_trust  # noqa: E402
 import validate_capability_contract as vcc  # noqa: E402
 from capability_registry import load_registry  # noqa: E402
@@ -334,6 +335,8 @@ def test_sonar_consumer_reports_unauthenticated_when_no_token_is_present(
 
     monkeypatch.delenv("SONAR_TOKEN", raising=False)
     monkeypatch.delenv("SONARCLOUD_TOKEN", raising=False)
+    cb.reset_cache()
+    monkeypatch.setattr(cb, "_machine_profile", lambda: None)
     transport = sonar_fetch.build_transport("https://sonarcloud.io/api")
     assert not transport.authenticated
 

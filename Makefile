@@ -910,6 +910,7 @@ cursor-install-check:
 		--governance "$(CURDIR)" --workspace "$(if $(WS),$(WS),$(CURDIR))" --check
 	L9_GOV_ROOT="$(CURDIR)" $(PYTHON) ops/scripts/claude_bootstrap_receipt.py \
 		--surface cursor --path "$$HOME/.l9/cursor/bootstrap-check.json" --json
+
 # --- Manus adapter (environment/agents/adapters/manus/) ----------------------
 # Thin remote-surface binding: project instructions remain platform-owned while
 # this target proves the committed adapter carrier and shared bootstrap contract.
