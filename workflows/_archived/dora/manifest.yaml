@@ -1,0 +1,32 @@
+archive_id: CG-DORA-FULL-RETIREMENT-2026-09-13
+component: Deterministic Operational Repository Automation source metadata and trace model
+status: deprecated_archived
+archive_policy:
+  active_runtime: false
+  source_mutation: false
+  ci_enforcement: false
+  cursor_rule_discovery: false
+  command_discovery: false
+  reactivation_requires:
+    - architecture_decision_record
+    - explicit_runtime_consumer
+    - append_only_external_evidence_store
+    - security_review
+    - release_validation
+replacement_controls:
+  governed_behavior: rules/00-global.mdc
+  observability: rules/65-observability-performance.mdc
+  testing: rules/50-qa-testing.mdc
+  workflow_quality: workflows/dags/inspect_dag.py
+  command_discovery: commands/COMMANDS_MANIFEST.yaml
+archived_artifacts:
+  cursor_rule_archive: rules/_archived/dora/
+  command_archive: commands/_archived/dora/
+removed_active_surfaces:
+  - Python source metadata assignments: __dora_meta__, __dora_footer__, __l9_trace__, __footer_meta__
+  - Workflow quality enforcement requiring a DORA header
+  - Active DORA slash-command discovery and its dedicated manifest exclusion
+  - Copilot guidance requiring source-file metadata and machine-updated traces
+notes:
+  - Historical plans and archival records may retain DORA references as evidence only.
+  - Active runtime evidence belongs in governed telemetry and reviewable artifacts, not mutable source files.

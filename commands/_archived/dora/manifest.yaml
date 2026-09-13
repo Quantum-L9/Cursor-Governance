@@ -1,0 +1,24 @@
+archive_id: CG-DORA-COMMAND-RETIREMENT-2026-09-13
+component: DORA slash-command corpus
+status: deprecated_archived
+archive_policy:
+  command_discoverable: false
+  plugin_loadable: false
+  executable: false
+  reactivation_requires:
+    - architecture_decision_record
+    - explicit_operational_consumer
+    - external_append_only_evidence_store
+    - security_review
+replacement_controls:
+  governance: rules/00-global.mdc
+  observability: rules/65-observability-performance.mdc
+  verification: rules/50-qa-testing.mdc
+archived_artifacts:
+  - do-README.md
+  - do-deploy.md
+  - do-end.md
+  - do-init.md
+  - do-metrics.md
+  - do-next.md
+  - do-status.md
