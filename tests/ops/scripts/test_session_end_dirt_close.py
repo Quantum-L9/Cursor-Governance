@@ -316,9 +316,7 @@ def test_park_failure_does_not_delete_worktree(repo: Path, monkeypatch: pytest.M
 def test_hook_retired_does_not_dirt_close() -> None:
     text = (REPO / "ops" / "hooks" / "session_end_repo_hygiene.sh").read_text(encoding="utf-8")
     assert "RETIRED" in text
-    live = "\n".join(
-        line for line in text.splitlines() if not line.lstrip().startswith("#")
-    )
+    live = "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("#"))
     assert "session_end_dirt_close.py" not in live
     assert "repo_hygiene.py" not in live
     assert "exit 0" in live

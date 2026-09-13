@@ -1,14 +1,14 @@
 # Cursor governance rules manifest
 
-Generated: `2026-09-12T03:23:48Z`. Source: `rules/*.mdc`.
+Generated: `2026-09-13T20:59:02Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
 | Bucket | Count |
 |---|---:|
 | Total MDC files | **70** |
-| `alwaysApply: true` | **34** |
-| `alwaysApply: false` | **36** |
+| `alwaysApply: true` | **35** |
+| `alwaysApply: false` | **35** |
 | No boolean `alwaysApply` | **0** |
 | Explicit stable IDs | **69** |
 | Derived compatibility IDs | **1** |
@@ -44,7 +44,7 @@ Generated: `2026-09-12T03:23:48Z`. Source: `rules/*.mdc`.
 | `46-kernel-pack-new-branch.mdc` | `l9.rule.46.kernel.pack.new.branch` | global | general | agent_requested | 36 | `76c8cba8c93a` |
 | `47-agent-pattern-activation.mdc` | `l9.rule.47.agent.pattern.activation` | global | memory | agent_requested | 116 | `058301b4286b` |
 | `48-make-pr-remediation.mdc` | `l9.rule.48.make.pr.remediation` | global | general | always | 158 | `c9f6cc6236d9` |
-| `49-shared-worktree-isolation.mdc` | `l9.rule.49.shared.worktree.isolation` | global | git | always | 99 | `dadf116a8b86` |
+| `49-shared-worktree-isolation.mdc` | `l9.rule.49.shared.worktree.isolation` | global | git | always | 102 | `27c0da311804` |
 | `50-qa-testing.mdc` | `l9.rule.50.qa.testing` | global | testing | auto_attached | 207 | `4e739913c198` |
 | `51-qa-playwright.mdc` | `l9.rule.51.qa.playwright` | global | testing | agent_requested | 34 | `ea8a218a6725` |
 | `52-qa-jest.mdc` | `l9.rule.52.qa.jest` | global | testing | agent_requested | 35 | `38f6e2e26683` |
@@ -65,7 +65,7 @@ Generated: `2026-09-12T03:23:48Z`. Source: `rules/*.mdc`.
 | `74-ai-safety-policy.mdc` | `l9.rule.74.ai.safety.policy` | global | security | agent_requested | 44 | `30dafdd1c06c` |
 | `75-bounded-session-autonomy.mdc` | `l9.rule.75.bounded.session.autonomy` | global | execution | agent_requested | 25 | `0127f988d59b` |
 | `76-wire-workflow-guard.mdc` | `l9.rule.76.wire.workflow.guard` | global | governance | auto_attached | 55 | `f94087db811a` |
-| `77-cursor-subagent-orchestration.mdc` | `l9.rule.77.cursor.subagent.orchestration` | global | governance | agent_requested | 24 | `67cc9f7af1be` |
+| `77-cursor-subagent-orchestration.mdc` | `l9.rule.77.cursor.subagent.orchestration` | global | governance | always | 28 | `ee79f4d8ce9b` |
 | `78-perplexity-run-harness.mdc` | `l9.rule.78.perplexity.run.harness` | global | general | agent_requested | 62 | `ff0c6fe1e02f` |
 | `79-output-discipline.mdc` | `l9.rule.output-discipline` | global | output | agent_requested | 26 | `ea8f58ae1f55` |
 | `80-gmp-execution.mdc` | `l9.rule.80.gmp.execution` | global | ci | always | 85 | `e5a0e63b42c1` |
