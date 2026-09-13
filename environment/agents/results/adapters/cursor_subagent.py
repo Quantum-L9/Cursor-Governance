@@ -44,7 +44,6 @@ def normalize(
 
     # Use the stronger bridge correlation only when the lifecycle assignment
     # contains the exact fields its contract requires.
-    document_assignment = normalized["assignment"]
     required = {
         "campaign_id",
         "graph_id",
@@ -58,13 +57,22 @@ def normalize(
         # Scope and subject come from the rendered assignment only. A document
         # that names its own writable paths or its own review subject is
         # self-attesting the very authority the gateway exists to check.
+        expected_role = result_bridge.canonical_cursor_role(
+            assignment.get("result_role")
+            or assignment.get("subagent_role")
+            or assignment.get("expected_subagent_type")
+            or assignment.get("subagent_type")
+            or assignment.get("cursor_subagent_type")
+            or ""
+        )
+        if expected_role not in result_bridge.ROLE_TO_RESULT_KIND:
+            # Host-native Task types are not schema roles. Map the admitted
+            # host type the same way compile_incomplete_result does. Never
+            # let the returned document choose the role used to validate it.
+            expected_role = "recon"
         exact.update(
             {
-                "role": result_bridge.canonical_cursor_role(
-                    assignment.get("result_role")
-                    or assignment.get("subagent_role")
-                    or document_assignment["role"]
-                ),
+                "role": expected_role,
                 "allowed_paths": list(assignment.get("allowed_paths") or []),
                 "action_allowed_paths": list(assignment.get("action_allowed_paths") or []),
                 "forbidden_paths": list(assignment.get("forbidden_paths") or []),

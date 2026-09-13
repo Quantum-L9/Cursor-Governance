@@ -52,33 +52,40 @@ Only accepted result documents are projected into the existing
 The generated-data subsystem remains authoritative for validation, harvesting,
 classification, routing, promotion, delivery, retrieval, and invalidation.
 Raw subagent chat must not be written directly to memory.
-### Admission token
-Mint one token per native Task with
-`python -m autonomy.adapters.cursor.mint_admission` (calls only
-`CursorHostBridge.create_admission`). Embed `L9_ADMISSION_TOKEN=…`.
-A Task without a READY Autonomy action stays denied. Do not add a second
-token store.
+### Admission: PE token or host-native
+Two paths, one Stop gateway:
+
+1. **PE token** — mint one token per native Task with
+   `python -m autonomy.adapters.cursor.mint_admission` (calls only
+   `CursorHostBridge.create_admission`). Embed `L9_ADMISSION_TOKEN=…`.
+   A token without a READY Autonomy action or runtime database stays denied.
+2. **Host-native** — a Task with no token and an allowlisted
+   `subagent_type` (`explore`, `generalPurpose`, remediator, recon, …) is
+   admitted as `campaign_id=host-native` with a `no-root-lease-…` sentinel.
+   `subagentStart` writes Assignment + Dispatch and omits `runtime_database`
+   so the results gateway does not demand a PE lease.
+
+Do not add a second token store. A Task with no token and no allowlisted
+type stays denied. `parent_conversation_id` is already persisted on host
+correlation when the host sends it.
 ## Execution lifecycle
 ```text
-ready campaign action or bounded main-agent task
+ready campaign action or bounded main-agent Task
     ↓
-autonomy lease and resource claims
+PE token: autonomy lease + mint admission
+host-native: allowlisted type, no PE database
     ↓
-mint admission (`autonomy/adapters/cursor/mint_admission.py` → `create_admission`)
+subagentStart writes Assignment + DispatchReceipt
     ↓
-existing Cursor task renderer embeds `L9_ADMISSION_TOKEN=…`
+child returns result.v1  OR  a non-document
     ↓
-main Cursor agent launches native subagent
+Stop: accept_and_ingest  OR  compile_incomplete_result then ingest
     ↓
-subagent returns one structured result document
-    ↓
-main agent accepts or rejects the document
-    ↓
-result_bridge validates and projects the document
+ACCEPTED / ACCEPTED_INCOMPLETE  (invalid dict stays REJECTED)
     ↓
 existing generated-data processor
     ↓
-governed promotion and eventual memory delivery
+governed promotion only for completed accepted documents
 
 Concurrency law
 
