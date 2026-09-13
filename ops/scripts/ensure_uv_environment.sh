@@ -49,10 +49,23 @@ expected="$(fingerprint)"
 current=""
 [ -f "$STATE_FILE" ] && current="$(cat "$STATE_FILE")"
 
+_seal_memory_artifact() {
+  # Fail-open: an offline or unsealed venv stays compatible/unproven rather
+  # than taking SessionStart down. The binder still reports the gap.
+  if [ ! -f "$GOV_ROOT/ops/memory/seal_artifact_provenance.py" ]; then
+    return 0
+  fi
+  PYTHONPATH="$GOV_ROOT" "$GOV_ROOT/.venv/bin/python" \
+    -m ops.memory.seal_artifact_provenance --root "$GOV_ROOT" >&2 || true
+}
+
 if [ "$current" = "$expected" ] && [ -x "$GOV_ROOT/.venv/bin/python3" ]; then
   # Diagnostic, not a machine result: stdout in this chain is the sessionStart
   # JSON payload, so every human-readable line must go to stderr (F-08).
   echo "UV: cached locked environment" >&2
+  if [ "$MODE" != "check" ]; then
+    _seal_memory_artifact
+  fi
   exit 0
 fi
 
@@ -84,3 +97,4 @@ tmp="${STATE_FILE}.tmp.$$"
 printf '%s\n' "$expected" > "$tmp"
 mv "$tmp" "$STATE_FILE"
 echo "UV: synchronized locked environment" >&2
+_seal_memory_artifact

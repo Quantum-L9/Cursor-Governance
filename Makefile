@@ -205,6 +205,7 @@ campaign-reset:
 ## Recreate the pinned .venv from uv.lock (interpreter + deps, incl. dev extras). Same as sessionStart hook.
 venv:
 	uv sync --locked --extra dev
+	PYTHONPATH="$(CURDIR)" $(PYTHON) -m ops.memory.seal_artifact_provenance --root "$(CURDIR)"
 
 ## Fast-forward-only pull of this clone from origin/main (same as sessionStart hook)
 sync:
