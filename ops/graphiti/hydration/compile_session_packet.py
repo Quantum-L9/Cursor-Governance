@@ -31,7 +31,7 @@ if str(_REPO_ROOT) not in sys.path:
 from ops.graphiti.hydration.identity import resolve_write_identity  # noqa: E402
 from ops.graphiti.hydration.session_latches import (  # noqa: E402
     close_gap_reason,
-    resolve_session_id,
+    resolve_or_create_session_id,
 )
 from ops.memory.hydration import (  # noqa: E402
     STATUS_NAMESPACE_UNRESOLVED,
@@ -88,7 +88,7 @@ def compile_session_packet(
 ) -> dict[str, Any]:
     """Build a SessionHydrationPacket dict (fail-open; never raises to hooks)."""
     project = Path(project_dir).expanduser().resolve()
-    conversation_id = resolve_session_id(explicit=conversation_id)
+    conversation_id = resolve_or_create_session_id(project, explicit=conversation_id)
     close_gap_text = close_gap_reason(project, conversation_id)
     close_gap = bool(close_gap_text)
     # Broad by design; the handler below carries the reason.

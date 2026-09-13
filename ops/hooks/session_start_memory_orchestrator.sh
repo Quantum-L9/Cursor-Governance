@@ -14,7 +14,47 @@ REPO="${CURSOR_PROJECT_DIR:-}"
 
 export L9_MEMORY_AGENT_ID="${L9_MEMORY_AGENT_ID:-cursor}"
 export USER_ID="${USER_ID:-cursor_agent}"
-export CURSOR_CONVERSATION_ID="${CURSOR_CONVERSATION_ID:-${CURSOR_SESSION_ID:-default}}"
+# SessionStart owns session_id (once per session). conversation_id is a later
+# chat key and must not become the session id — that lets every agent share one
+# write-gate pass.
+if [ -z "${CURSOR_SESSION_ID:-}" ] || [ "${CURSOR_SESSION_ID}" = "default" ]; then
+  _HOOK_SID="$(python3 -c '
+import json, os
+raw = os.environ.get("L9_HOOK_PAYLOAD", "")
+try:
+    data = json.loads(raw) if raw.strip() else {}
+except Exception:
+    data = {}
+sid = ""
+if isinstance(data, dict):
+    sid = str(data.get("session_id") or data.get("sessionId") or "").strip()
+print(sid if sid and sid != "default" else "")
+' 2>/dev/null || true)"
+  if [ -n "$_HOOK_SID" ]; then
+    export CURSOR_SESSION_ID="$_HOOK_SID"
+  fi
+  unset _HOOK_SID
+fi
+export CURSOR_SESSION_ID="${CURSOR_SESSION_ID:-default}"
+if [ -z "${CURSOR_CONVERSATION_ID:-}" ] || [ "${CURSOR_CONVERSATION_ID}" = "default" ]; then
+  _HOOK_CID="$(python3 -c '
+import json, os
+raw = os.environ.get("L9_HOOK_PAYLOAD", "")
+try:
+    data = json.loads(raw) if raw.strip() else {}
+except Exception:
+    data = {}
+cid = ""
+if isinstance(data, dict):
+    cid = str(data.get("conversation_id") or data.get("conversationId") or "").strip()
+print(cid if cid and cid != "default" else "")
+' 2>/dev/null || true)"
+  if [ -n "$_HOOK_CID" ]; then
+    export CURSOR_CONVERSATION_ID="$_HOOK_CID"
+  fi
+  unset _HOOK_CID
+fi
+export CURSOR_CONVERSATION_ID="${CURSOR_CONVERSATION_ID:-}"
 
 CODEGRAPH_MD="skipped"
 if [ -n "$REPO" ] && [ -d "$REPO/plasticos_base" ]; then

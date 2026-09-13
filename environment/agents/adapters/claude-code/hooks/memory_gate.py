@@ -108,6 +108,10 @@ def main() -> int:
         session_id = st.resolve_session_id(event=event)
     except ValueError:
         session_id = ""
+    try:
+        receipt_id = st.resolve_receipt_id(event=event)
+    except ValueError:
+        receipt_id = ""
 
     try:
         contract = st.load_contract()
@@ -142,18 +146,18 @@ def main() -> int:
         # Raises on any precondition beyond hydration (E7 fail-closed).
         requires = st.validate_requires(rule)
 
-        if "session_prefetch" in requires and not st.usable_receipt(contract, session_id):
-            # Name the session id the gate itself resolved: on Cursor the hook
-            # event id is NOT the newest ~/.claude/projects jsonl, and pointing
-            # at that heuristic sent agents to prefetch for the wrong session.
+        if "session_prefetch" in requires and not st.usable_receipt(
+            contract, receipt_id or session_id
+        ):
+            # Name the writer receipt id the gate itself resolved. SessionStart's
+            # session id is a different key and must not be used as this hint.
             sid_hint = (
-                f"--session-id {session_id}"
-                if session_id
+                f"--session-id {receipt_id or session_id}"
+                if (receipt_id or session_id)
                 else (
-                    "--session-id <session-id-from-hook-event> "
-                    "(best-effort fallback only if the hook event has no "
-                    "session_id: newest ~/.claude/projects/<project>/<uuid>.jsonl "
-                    "— on Cursor that heuristic is often wrong)"
+                    "--session-id <chat-id-from-hook-event> "
+                    "(prefetch stamps a writer receipt, not the SessionStart "
+                    "session id)"
                 )
             )
             _deny(

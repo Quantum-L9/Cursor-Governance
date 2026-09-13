@@ -65,8 +65,18 @@ class MemoryGateTests(unittest.TestCase):
         else:
             os.environ["CLAUDE_PROJECT_DIR"] = self._prev_project_dir
 
+    def _receipt_event(self) -> dict:
+        return {"session_id": self.session}
+
+    def _receipt_id(self) -> str:
+        return st.resolve_receipt_id(event=self._receipt_event())
+
     def _write_receipt(self) -> None:
-        st.write_receipt(self.contract, self.session, {"namespaces": ["cursor-governance"]})
+        st.write_receipt(
+            self.contract,
+            self._receipt_id(),
+            {"namespaces": ["cursor-governance"], "session_id": self.session},
+        )
 
     def test_denies_governed_write_without_receipt(self) -> None:
         out, _ = run_gate(
@@ -107,11 +117,11 @@ class MemoryGateTests(unittest.TestCase):
         """A degraded SessionStart receipt must not permanently deny writes."""
         st.write_receipt(
             self.contract,
-            self.session,
-            {"namespaces": [], "degraded": True, "status": "degraded"},
+            self._receipt_id(),
+            {"namespaces": [], "degraded": True, "status": "degraded", "session_id": self.session},
         )
-        self.assertFalse(st.fresh_receipt(self.contract, self.session))
-        self.assertTrue(st.usable_receipt(self.contract, self.session))
+        self.assertFalse(st.fresh_receipt(self.contract, self._receipt_id()))
+        self.assertTrue(st.usable_receipt(self.contract, self._receipt_id()))
         out, code = run_gate(
             {
                 "tool_name": "Edit",
@@ -331,6 +341,9 @@ class MemoryDoesNotGateRepositoryWritesTests(unittest.TestCase):
             os.environ["CLAUDE_PROJECT_DIR"] = self._prev
         os.environ.pop("CURSOR_PROJECT_DIR", None)
 
+    def _receipt_id(self) -> str:
+        return st.resolve_receipt_id(event={"session_id": self.session})
+
     def _authority_edit(self, env: dict | None = None) -> str:
         out, _ = run_gate(
             {
@@ -362,12 +375,20 @@ class MemoryDoesNotGateRepositoryWritesTests(unittest.TestCase):
         self.assertTrue(is_deny(self._authority_edit()), "a lock artifact must not grant authority")
 
         # With hydration, the write is allowed -- and still not because of the lock.
-        st.write_receipt(self.contract, self.session, {"namespaces": ["cursor-governance"]})
+        st.write_receipt(
+            self.contract,
+            self._receipt_id(),
+            {"namespaces": ["cursor-governance"], "session_id": self.session},
+        )
         self.assertFalse(is_deny(self._authority_edit()))
 
     def test_another_sessions_lock_does_not_revoke_authority(self) -> None:
         """E10: another agent's memory state cannot block this agent's write."""
-        st.write_receipt(self.contract, self.session, {"namespaces": ["cursor-governance"]})
+        st.write_receipt(
+            self.contract,
+            self._receipt_id(),
+            {"namespaces": ["cursor-governance"], "session_id": self.session},
+        )
         locks = st.state_root(self.contract) / "locks"
         locks.mkdir(parents=True, exist_ok=True)
         (locks / "cursor-governance.json").write_text(
@@ -381,7 +402,11 @@ class MemoryDoesNotGateRepositoryWritesTests(unittest.TestCase):
 
     def test_divergent_project_dirs_do_not_block_writes(self) -> None:
         """The lock-identity mismatch check went with the lock it protected."""
-        st.write_receipt(self.contract, self.session, {"namespaces": ["cursor-governance"]})
+        st.write_receipt(
+            self.contract,
+            self._receipt_id(),
+            {"namespaces": ["cursor-governance"], "session_id": self.session},
+        )
         env = {**self.env, "CURSOR_PROJECT_DIR": str(Path(tempfile.mkdtemp()).resolve())}
         self.assertFalse(is_deny(self._authority_edit(env)))
 
@@ -390,6 +415,17 @@ class MemoryDoesNotGateRepositoryWritesTests(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             st.validate_requires({"id": "x", "requires": ["session_prefetch", "phase_lock"]})
         self.assertIn("non-conformant precondition", str(ctx.exception))
+
+    def test_receipt_id_is_not_session_id_and_isolates_agents(self) -> None:
+        same_chat = {"session_id": "sess-shared", "conversation_id": "chat-1"}
+        a = st.resolve_receipt_id(event={**same_chat, "agent_id": "agent-a"})
+        b = st.resolve_receipt_id(event={**same_chat, "agent_id": "agent-b"})
+        self.assertNotEqual(a, "sess-shared")
+        self.assertNotEqual(b, "sess-shared")
+        self.assertNotEqual(a, b)
+        st.write_receipt(self.contract, a, {"namespaces": ["cursor-governance"], "session_id": "sess-shared"})
+        self.assertTrue(st.usable_receipt(self.contract, a))
+        self.assertFalse(st.usable_receipt(self.contract, b))
 
     def test_bridge_overwrites_stale_conversation_id(self) -> None:
         sys.path.insert(0, str(MEM))

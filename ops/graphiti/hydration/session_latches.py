@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -77,20 +78,84 @@ CLOSE_REQUEST_FIELDS: dict[str, int] = {
 }
 
 
-def resolve_session_id(*, explicit: str | None = None) -> str:
-    """Single session id for open, close, compile, and fallback.
+def _usable_session_id(candidate: str | None) -> str:
+    """Return a real session id, or empty when the value is missing/placeholder.
 
-    Order: explicit → CURSOR_CONVERSATION_ID → CURSOR_SESSION_ID → ``default``.
-    ``default`` is last resort (shared-id collision risk).
+    ``default`` is the last-resort shared id. Treating it as a real explicit
+    value made SessionStart stamp ``default.json`` while the write gate looked
+    up the hook conversation UUID.
+    """
+    value = str(candidate).strip() if candidate else ""
+    if not value or value == "default":
+        return ""
+    return value[:120]
+
+
+def _payload_session_id() -> str:
+    """session_id from the SessionStart hook payload. Never conversation_id.
+
+    SessionStart runs once per session. conversation_id is a later-chat key
+    and must not become the session id (that lets every chat share one pass).
+    """
+    raw = os.environ.get("L9_HOOK_PAYLOAD", "")
+    if not raw.strip():
+        return ""
+    try:
+        data = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return ""
+    if not isinstance(data, dict):
+        return ""
+    for key in ("session_id", "sessionId"):
+        value = data.get(key)
+        if isinstance(value, str):
+            usable = _usable_session_id(value)
+            if usable:
+                return usable
+    return ""
+
+
+def resolve_session_id(*, explicit: str | None = None) -> str:
+    """Session-scoped id for open, close, and SessionStart compile.
+
+    Order: explicit → CURSOR_SESSION_ID → ``L9_HOOK_PAYLOAD`` session_id →
+    ``default``. conversation_id is never a session id.
     """
     for candidate in (
         explicit,
-        os.environ.get("CURSOR_CONVERSATION_ID"),
         os.environ.get("CURSOR_SESSION_ID"),
+        _payload_session_id(),
     ):
-        if candidate and str(candidate).strip():
-            return str(candidate).strip()[:120]
+        usable = _usable_session_id(candidate)
+        if usable:
+            return usable
     return "default"
+
+
+def resolve_or_create_session_id(
+    project_dir: str | Path, *, explicit: str | None = None
+) -> str:
+    """Return the session id, generating and persisting one if SessionStart has none."""
+    found = resolve_session_id(explicit=explicit)
+    if found != "default":
+        return found
+    pointer = Path(project_dir).expanduser().resolve() / ".l9" / "memory" / "session.json"
+    if pointer.is_file():
+        try:
+            data = json.loads(pointer.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            data = {}
+        if isinstance(data, dict):
+            usable = _usable_session_id(str(data.get("session_id") or ""))
+            if usable:
+                return usable
+    generated = str(uuid.uuid4())
+    pointer.parent.mkdir(parents=True, exist_ok=True)
+    pointer.write_text(
+        json.dumps({"session_id": generated, "source": "session_start_generated"}) + "\n",
+        encoding="utf-8",
+    )
+    return generated
 
 
 def re_safe(session_id: str) -> str:

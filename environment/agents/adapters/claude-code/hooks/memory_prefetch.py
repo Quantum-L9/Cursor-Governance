@@ -167,7 +167,19 @@ def main() -> int:
         event = json.load(sys.stdin)
     except (json.JSONDecodeError, ValueError):
         event = {}
-    session_id = args.session_id or str(event.get("session_id", "")) or "unknown-session"
+    try:
+        session_id = st.resolve_session_id(event=event, cli_arg=args.session_id)
+    except ValueError:
+        session_id = (
+            args.session_id
+            or os.environ.get("CURSOR_SESSION_ID")
+            or "unknown-session"
+        )
+    try:
+        receipt_id = st.resolve_receipt_id(event=event, cli_arg=args.session_id)
+    except ValueError:
+        receipt_id = ""
+    chat_id, _chat_key = st.extract_chat_id(event)
 
     try:
         contract = st.load_contract()
@@ -226,10 +238,15 @@ def main() -> int:
                 contexts.append(header + "\n" + body if len(roots) > 1 else body)
 
         degraded = degraded_any or not group_ids
+        if not receipt_id:
+            raise ValueError("prefetch refused to stamp a session-scoped write-gate receipt")
         st.write_receipt(
             contract,
-            session_id,
+            receipt_id,
             {
+                "session_id": session_id,
+                "agent_id": st.extract_writer_agent_id(event),
+                "conversation_id": chat_id,
                 "namespaces": namespaces,
                 "transport": TRANSPORT,
                 "group_id": group_ids[0] if len(group_ids) == 1 else "",

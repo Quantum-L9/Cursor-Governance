@@ -93,14 +93,65 @@ def workspace_root() -> Path:
     return cwd
 
 
+def _safe_id_part(value: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9_.-]", "_", value or "").strip("._")
+    return cleaned[:80] or "unknown"
+
+
+def extract_chat_id(event: dict[str, Any] | None) -> tuple[str, str]:
+    """Per-chat discriminator for the write-gate receipt. Never the session id.
+
+    Cursor payloads carry ``conversation_id``. Claude's conversation is
+    ``session_id`` on the hook event; that string is still only a chat
+    component — the receipt key always includes writer identity so two
+    agents cannot share one pass.
+    """
+    if not event:
+        return "", ""
+    for key in ("conversation_id", "conversationId"):
+        value = str(event.get(key) or "").strip()
+        if value and value != "default":
+            return value, key
+    sid = str(event.get("session_id") or "").strip()
+    if sid and sid != "default":
+        return sid, "session_id"
+    return "", ""
+
+
+def extract_writer_agent_id(event: dict[str, Any] | None) -> str:
+    if event:
+        for key in ("agent_id", "agentId"):
+            value = str(event.get(key) or "").strip()
+            if value:
+                return value
+    return os.environ.get("L9_MEMORY_AGENT_ID", "").strip() or "unknown-agent"
+
+
+def resolve_receipt_id(
+    *, event: dict[str, Any] | None = None, cli_arg: str | None = None
+) -> str:
+    """Writer-scoped receipt key. Distinct from SessionStart's session id.
+
+    SessionStart runs once per session and must not authorize later chats or
+    agents. Prefetch and the write gate both call this so they stamp and
+    look up the same file.
+    """
+    chat, _key = extract_chat_id(event)
+    if not chat:
+        chat = str(cli_arg or "").strip()
+    if not chat or chat == "default":
+        raise ValueError("receipt_id requires a chat id")
+    return f"{_safe_id_part(extract_writer_agent_id(event))}__{_safe_id_part(chat)}"
+
+
 def resolve_session_id(*, event: dict[str, Any] | None = None, cli_arg: str | None = None) -> str:
-    """Authoritative session id: hook event first, else required CLI arg.
+    """SessionStart session id only. Never a write-gate receipt key.
 
     Lock and gate paths MUST NOT default to ``unknown-session``.
     """
     if event:
         sid = str(event.get("session_id") or "").strip()
-        if sid:
+        if sid and sid != "default":
             return sid
     sid = str(cli_arg or "").strip()
     if sid:
@@ -188,6 +239,13 @@ def validate_memory_writer(identity: dict[str, str]) -> None:
             raise MemoryWriteDenied(msg)
 
 
+def _receipt_key_matches(data: dict[str, Any], lookup: str) -> bool:
+    """Match the writer receipt key. Legacy files used session_id as the key."""
+    if data.get("receipt_id") == lookup:
+        return True
+    return not data.get("receipt_id") and data.get("session_id") == lookup
+
+
 # --- receipts ---------------------------------------------------------------
 def receipt_path(contract: dict[str, Any], session_id: str) -> Path:
     safe = re.sub(r"[^A-Za-z0-9_.-]", "_", session_id or "unknown")
@@ -197,7 +255,9 @@ def receipt_path(contract: dict[str, Any], session_id: str) -> Path:
 def write_receipt(contract: dict[str, Any], session_id: str, payload: dict[str, Any]) -> Path:
     path = receipt_path(contract, session_id)
     path.parent.mkdir(parents=True, exist_ok=True)
-    body = {"session_id": session_id, "created_at": time.time(), **payload}
+    body = {"created_at": time.time(), **payload}
+    body["receipt_id"] = session_id
+    body.setdefault("session_id", payload.get("session_id") or "")
     path.write_text(json.dumps(body, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return path
 
@@ -211,7 +271,7 @@ def fresh_receipt(contract: dict[str, Any], session_id: str) -> bool:
     except (json.JSONDecodeError, OSError):
         return False
     ttl = int(contract.get("state", {}).get("session_ttl_seconds", 86400))
-    if data.get("session_id") != session_id:
+    if not _receipt_key_matches(data, session_id):
         return False
     if (time.time() - float(data.get("created_at", 0))) >= ttl:
         return False
@@ -239,7 +299,7 @@ def usable_receipt(contract: dict[str, Any], session_id: str) -> bool:
     except (json.JSONDecodeError, OSError):
         return False
     ttl = int(contract.get("state", {}).get("session_ttl_seconds", 86400))
-    if data.get("session_id") != session_id:
+    if not _receipt_key_matches(data, session_id):
         return False
     return (time.time() - float(data.get("created_at", 0))) < ttl
 

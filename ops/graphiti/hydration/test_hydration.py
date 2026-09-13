@@ -135,6 +135,8 @@ def test_compile_packet_fail_open(monkeypatch, tmp_path):
     assert "memory-bank" not in ctx
     assert "hydrate_stats" in ctx
     assert (tmp_path / "state").is_dir()
+    receipts = tmp_path / ".l9" / "memory" / "receipts"
+    assert not receipts.exists() or not any(receipts.glob("*.json"))
 
 
 def test_compile_packet_transport_failure_is_not_empty_search(monkeypatch, tmp_path):
@@ -425,12 +427,56 @@ def test_resolve_session_id_order(monkeypatch):
 
     monkeypatch.delenv("CURSOR_CONVERSATION_ID", raising=False)
     monkeypatch.delenv("CURSOR_SESSION_ID", raising=False)
+    monkeypatch.delenv("L9_HOOK_PAYLOAD", raising=False)
     assert resolve_session_id() == "default"
     monkeypatch.setenv("CURSOR_SESSION_ID", "sess-env")
     assert resolve_session_id() == "sess-env"
     monkeypatch.setenv("CURSOR_CONVERSATION_ID", "conv-env")
-    assert resolve_session_id() == "conv-env"
+    assert resolve_session_id() == "sess-env"
     assert resolve_session_id(explicit="explicit-1") == "explicit-1"
+
+
+def test_resolve_session_id_ignores_conversation_id_payload(monkeypatch):
+    from ops.graphiti.hydration.session_latches import resolve_session_id
+
+    monkeypatch.delenv("CURSOR_CONVERSATION_ID", raising=False)
+    monkeypatch.delenv("CURSOR_SESSION_ID", raising=False)
+    monkeypatch.setenv(
+        "L9_HOOK_PAYLOAD",
+        json.dumps({"conversation_id": "aab87627-ee20-4502-89f2-ecc73082b566"}),
+    )
+    assert resolve_session_id(explicit="default") == "default"
+    monkeypatch.setenv("L9_HOOK_PAYLOAD", json.dumps({"session_id": "sess-from-payload"}))
+    assert resolve_session_id(explicit="default") == "sess-from-payload"
+
+
+def test_compile_does_not_stamp_write_gate_receipt(monkeypatch, tmp_path):
+    """SessionStart writes session state only. Prefetch owns the write-gate receipt."""
+    _canonical(monkeypatch, tmp_path, _hydration("OK"))
+    monkeypatch.delenv("CURSOR_CONVERSATION_ID", raising=False)
+    monkeypatch.delenv("CURSOR_SESSION_ID", raising=False)
+    monkeypatch.setenv(
+        "L9_HOOK_PAYLOAD",
+        json.dumps({"session_id": "sess-once", "conversation_id": "chat-later"}),
+    )
+    packet = comp.compile_session_packet(
+        project_dir=tmp_path, conversation_id="default", agent_id="cursor"
+    )
+    assert packet["conversation_id"] == "sess-once"
+    receipts = tmp_path / ".l9" / "memory" / "receipts"
+    assert not receipts.exists() or not any(receipts.glob("*.json"))
+
+
+def test_orchestrator_reads_hook_payload_before_defaulting() -> None:
+    text = (ROOT / "ops" / "hooks" / "session_start_memory_orchestrator.sh").read_text(
+        encoding="utf-8"
+    )
+    assert "L9_HOOK_PAYLOAD" in text
+    assert 'CURSOR_SESSION_ID="${CURSOR_SESSION_ID:-default}"' in text
+    assert (
+        'CURSOR_CONVERSATION_ID="${CURSOR_CONVERSATION_ID:-${CURSOR_SESSION_ID:-default}}"'
+        not in text
+    )
 
 
 def test_orchestrator_opens_latch_before_graphiti_enabled() -> None:
