@@ -36,8 +36,9 @@ The runner registers a valid campaign by patching only these host surfaces:
 | `ops/autonomy/surface_profile.yaml` | Add `campaign_execution.campaigns.<id>`. |
 | `environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml` | Create or update lifecycle tracking; active execution is runner-owned. |
 
-`environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml` is historical.
-Do **not** patch it: valid source semantics, not list membership, admit a campaign.
+There is no compile allowlist. A complete source is admitted by exact
+`campaign-source.v2` schema and semantic preflight, never list membership. Do
+not recreate a preregistration surface.
 
 ## Runtime (not in Git)
 
@@ -70,3 +71,11 @@ Never emit these as companion campaign files:
 A three-file historical campaign pack is not a live input. The only direct
 operator-authored input is a complete `CAMPAIGN_SOURCE.yaml`; its receipt,
 Blueprint, and PEC state are generated artifacts.
+
+## Retired input evidence
+
+`environment/program-execution/archive/campaign-input-v1/` is an immutable
+evidence boundary, not a campaign directory. It retains legacy v1 inputs with
+an `ARCHIVE_RECORD.yaml` containing provenance and hashes. The front door must
+reject their declared schemas; a new campaign requires a newly authored v2
+source.

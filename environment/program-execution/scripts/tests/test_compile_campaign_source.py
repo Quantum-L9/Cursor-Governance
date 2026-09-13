@@ -300,6 +300,27 @@ class CompileCampaignSourceTests(unittest.TestCase):
             )
             self.assertEqual(self.validator.validate(target, "template"), [])
 
+    def test_retired_campaign_schemas_refuse_before_blueprint_creation(self) -> None:
+        """The compiler itself remains a strict v2 boundary behind the router."""
+        for schema in (
+            "l9.quantum/campaign-source/v1",
+            "l9.quantum/campaign-pack/v1",
+        ):
+            with self.subTest(schema=schema), tempfile.TemporaryDirectory() as raw:
+                source = _with_declared_scope(yaml.safe_load(SOURCE.read_text(encoding="utf-8")))
+                source["schema"] = schema
+                path = Path(raw) / "legacy.yaml"
+                path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
+                target = Path(raw) / "blueprint"
+                with self.assertRaises(self.compiler.CompileError) as ctx:
+                    self.compiler.compile_source(
+                        path,
+                        target,
+                        stack_proof=_pass_proof(Path(raw) / "stack-proof.json"),
+                    )
+                self.assertIn("schema", str(ctx.exception))
+                self.assertFalse(target.exists(), "retired source created a Blueprint directory")
+
     def test_compiler_has_no_allowlist_surface(self) -> None:
         """The preregistration path is gone, not merely unused."""
         self.assertFalse(hasattr(self.compiler, "load_allowlist"))

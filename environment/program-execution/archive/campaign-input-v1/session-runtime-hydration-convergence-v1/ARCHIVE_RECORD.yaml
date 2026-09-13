@@ -1,0 +1,26 @@
+schema: l9.program-execution.campaign-input-archive.v2
+schema_version: 2.0.0
+archive_id: session-runtime-hydration-convergence-v1
+classification: retired_pre_v2_campaign_input
+live_ingress: false
+may_be_compiled: false
+may_be_executed: false
+replacement:
+  campaign_source_schema: l9.program-execution.campaign-source.v2
+  campaign_id: session-runtime-hydration-convergence-v2
+  authoring_template: environment/program-execution/templates/campaign-source-v2/CAMPAIGN_SOURCE.yaml
+provenance:
+  original_repository_path: environment/program-execution/campaigns/session-runtime-hydration-convergence-v1
+  archived_at: '2026-09-13T17:56:36+00:00'
+  migration: campaign-source-v2-only
+files:
+- path: CAMPAIGN_SOURCE.yaml
+  sha256: fb515ef0a82ebe5d388f80116641466e07b9c5bd4898c06abb3f8ed23282174b
+  bytes: 50125
+- path: source-integrity-receipt.json
+  sha256: 90218ded733e4a5844daffe15468bfe36ef15a6b060fadde4eb29e0eb4d0c79c
+  bytes: 597
+retention:
+  mode: immutable_evidence
+  rule: Preserve archived bytes; author a new v2 source instead of converting this
+    evidence in place.

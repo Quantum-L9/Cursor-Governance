@@ -41,13 +41,6 @@ campaigns:
     execute_order: 2
 """
 
-COMPILE_ALLOWLIST = """\
-schema: l9.program-execution.campaign-compile-allowlist.v1
-campaign_ids:
-  - alpha-v1
-  - beta-v1
-"""
-
 STATUS_LEDGER = """\
 schema: l9.program-execution.campaign-status-ledger.v1
 campaigns:
@@ -67,7 +60,6 @@ def build_repo(root: Path) -> None:
     """Materialize a minimal, fully valid promotion surface."""
     write(root / validator.SURFACE_PROFILE, SURFACE_PROFILE)
     write(root / validator.EXECUTION_POLICY, EXECUTION_POLICY)
-    write(root / validator.COMPILE_ALLOWLIST, COMPILE_ALLOWLIST)
     write(root / validator.STATUS_LEDGER, STATUS_LEDGER)
 
 
@@ -164,10 +156,6 @@ class PromotionValidatorTest(unittest.TestCase):
         )
         self.assertFailsWith(validator.validate(self.root), "duplicate campaign id")
 
-    def test_duplicate_allowlist_id_fails(self) -> None:
-        write(self.root / validator.COMPILE_ALLOWLIST, COMPILE_ALLOWLIST + "  - alpha-v1\n")
-        self.assertFailsWith(validator.validate(self.root), "duplicate campaign id")
-
     def test_duplicate_ledger_id_fails(self) -> None:
         write(
             self.root / validator.STATUS_LEDGER,
@@ -197,27 +185,6 @@ class PromotionValidatorTest(unittest.TestCase):
             EXECUTION_POLICY.split("  - id: beta-v1")[0],
         )
         self.assertFailsWith(validator.validate(self.root), "absent from policy")
-
-    def test_promoted_campaign_absent_from_allowlist_passes(self) -> None:
-        """Allowlist membership is not admission, so absence is not a failure.
-
-        The inverted assertion this replaces made every new campaign wait on an
-        edit to a shared registry before it could compile.
-        """
-        write(
-            self.root / validator.COMPILE_ALLOWLIST,
-            COMPILE_ALLOWLIST.replace("  - beta-v1\n", ""),
-        )
-        report = validator.validate(self.root)
-        self.assertEqual(report["status"], "PASS", msg=json.dumps(report["errors"], indent=2))
-
-    def test_duplicate_allowlist_entry_still_fails(self) -> None:
-        """It is still a ledger; a broken ledger is still worth reporting."""
-        write(
-            self.root / validator.COMPILE_ALLOWLIST,
-            COMPILE_ALLOWLIST + "  - beta-v1\n",
-        )
-        self.assertFailsWith(validator.validate(self.root), "duplicate campaign id")
 
     # -- condition 5: machine-local paths ----------------------------------
 

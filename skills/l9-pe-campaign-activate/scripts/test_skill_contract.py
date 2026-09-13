@@ -29,14 +29,14 @@ class CampaignSkillContractTests(unittest.TestCase):
         self.assertTrue(CANONICAL_GUIDE.is_file())
         reference = CANONICAL_REFERENCE.read_text(encoding="utf-8")
         self.assertIn("source-of-truth", reference)
-        self.assertIn("COMPILE_ALLOWLIST.yaml", reference)
-        self.assertIn("Do **not** patch the", reference)
+        self.assertIn("Do not create a compile", reference)
+        self.assertIn("archive/campaign-input-v1", reference)
 
     def test_contract_and_file_set_reject_retired_preregistration(self) -> None:
         source_contract = SOURCE_CONTRACT.read_text(encoding="utf-8")
         file_set = FILE_SET.read_text(encoding="utf-8")
-        self.assertIn("not admitted through `COMPILE_ALLOWLIST.yaml`", source_contract)
-        self.assertIn("Do **not** patch it", file_set)
+        self.assertIn("not preregistered", source_contract)
+        self.assertIn("There is no compile allowlist", file_set)
         self.assertNotIn("append `<id>`", file_set)
 
     def test_canonical_source_contract_is_direct_route_compatible(self) -> None:

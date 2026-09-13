@@ -29,7 +29,14 @@ This directory contains the **only operator-supplied artifact required for the d
 
 The `make campaign` front door supports five representations: a direct `campaign-source.v2`, architecture intent, activate seed, plan, or brief. **Only the direct route preserves the complete source semantics without rebuilding it from a weaker representation.** The runner serializes that accepted source into its isolated campaign worktree before the compiler reads it. PEC itself bootstraps from a validated Blueprint directory; it does not take three companion operator files. Therefore, the complete campaign source is the canonical reusable authoring template.
 
-The historical three-file pack at `environment/program-execution-campaigns/CG-PES-RUN2-HARDENING/` is not the live campaign ingress: its `CAMPAIGN_CHARTER.yaml`, `CAMPAIGN_AUTHORIZATION.yaml`, and `CAMPAIGN_EXECUTION.yaml` each declare themselves compiled `l9.quantum/campaign-pack/v1` artifacts sourced from the older `l9.quantum/campaign-source/v1`. The current `make campaign` router accepts `l9.program-execution.campaign-source.v2` and compiles this template into the Blueprint that PEC consumes.
+Retired v1 campaign inputs are immutable evidence under
+`environment/program-execution/archive/campaign-input-v1/`. The three-file
+`CG-PES-RUN2-HARDENING` pack retains its original
+`l9.quantum/campaign-pack/v1` provenance there, and the former v1-named session
+campaign retains its original source and receipt there. Neither is live ingress
+or eligible for conversion through activation. The current `make campaign`
+router accepts only `l9.program-execution.campaign-source.v2` for a direct
+source and compiles this template into the Blueprint that PEC consumes.
 
 ## Reuse procedure
 

@@ -32,6 +32,12 @@ Read [canonical-template.md](canonical-template.md) before authoring a direct
 source. Direct input preserves complete source semantics; the runner serializes it
 into the isolated campaign worktree before compilation.
 
+`l9.quantum/campaign-source/v1` and `l9.quantum/campaign-pack/v1` are retired.
+The front door rejects either declaration before it can fall through to activate
+seed handling. Preserve their immutable evidence under
+`environment/program-execution/archive/campaign-input-v1/`; never convert a
+retired artifact in place or call private compiler/PEC stages to bypass rejection.
+
 Architecture prose must not be rebuilt through brief → activate merely because it
 lacks frontmatter. A classifier-selected free-form brief fails closed when it has
 no numbered work items; do not invent tasks.
@@ -90,4 +96,4 @@ make campaign-check-input INTENT=path/to/input
 The direct route emits `source-integrity-receipt.json` after source placement.
 Do not hand-edit the emitted `CAMPAIGN_SOURCE.yaml` after its receipt exists;
 change the original authoring source and re-run the front door. Campaign IDs are
-not admitted through `COMPILE_ALLOWLIST.yaml`; that file is historical only.
+not preregistered: schema and semantic preflight are the only admission boundary.

@@ -41,9 +41,11 @@ all explicit remote-action ceilings as `false`.
 A `repo_local` task with `local_write: true` needs explicit writable paths and an
 admissible single-operation terminal validation command. Express task ordering
 only with top-level `dependency_edges`; do not add task-local dependency fields.
-Do not leave `REPLACE_WITH_*` or `{{TOKEN}}` markers. Do **not** patch the
-historical `COMPILE_ALLOWLIST.yaml`; campaign IDs are admitted by valid source
-semantics, not preregistration.
+Do not leave `REPLACE_WITH_*` or `{{TOKEN}}` markers. Do not create a compile
+allowlist: campaign IDs are admitted by valid source semantics, not
+preregistration. Retired v1 source or pack documents belong only in the
+immutable `environment/program-execution/archive/campaign-input-v1/` evidence
+boundary and must never be resubmitted to activation.
 
 ## Validate before live execution
 
