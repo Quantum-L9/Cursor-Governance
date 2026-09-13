@@ -140,15 +140,6 @@
     {
       "alias": null,
       "class": "paths",
-      "output": "25-python-dora-header.md",
-      "output_sha256": "70b64a35db5aa1beb23eab5eeefdf6e66e63c69386cd03c2e319d2b61cd3def5",
-      "source": "rules/25-python-dora-header.mdc",
-      "source_sha256": "49302e69c080624cbf70972d5415cd308dcc2107f04b6884c17bea6d3ab6bfed",
-      "stem": "25-python-dora-header"
-    },
-    {
-      "alias": null,
-      "class": "paths",
       "output": "30-framework-react.md",
       "output_sha256": "67f6ef7f128a8b2ae24c23f73511e03d2a7145f0ad56760ac648dcc447952117",
       "source": "rules/30-framework-react.mdc",
@@ -427,11 +418,11 @@
     },
     {
       "alias": null,
-      "class": "skipped_agent_requested",
-      "output": null,
-      "output_sha256": null,
+      "class": "always",
+      "output": "77-cursor-subagent-orchestration.md",
+      "output_sha256": "3233da335244155ae5ad836d9795c2c5c8df08070d19f0c6b09b265e15ce882c",
       "source": "rules/77-cursor-subagent-orchestration.mdc",
-      "source_sha256": "67cc9f7af1be2a4c66d51c7060801a03710a1d94042cfc039cb505435efd65a1",
+      "source_sha256": "ee79f4d8ce9beeceb0b5261f3e1c34a6d16a6964877a47a0ba091d8de401f6de",
       "stem": "77-cursor-subagent-orchestration"
     },
     {
@@ -647,8 +638,8 @@
   "summary": {
     "denied": 1,
     "projected": 53,
-    "skipped_agent_requested": 17,
-    "source_mdc": 71
+    "skipped_agent_requested": 16,
+    "source_mdc": 70
   },
-  "tree_sha256": "24805fc0d1cdc29e1f8c786604f46a725977e517183759007cb368885c5a6621"
+  "tree_sha256": "8c468d51097ea9ad093ff2f99ad330410fb15542bbab371059f348e77c48ccac"
 }

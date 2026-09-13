@@ -1,14 +1,14 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-09-12T03:23:48Z'
+generated_utc: '2026-09-13T22:10:21Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:50341e5c73457d269335f66349e7ebdbe789599f0d781dfb7f4fa4162390b036
+source_tree_digest: sha256:0ae3f57c58c46d6f4420178983cbcdba76455ba2a21b5c6cadb996c49f0c9485
 summary:
-  total_mdc_files: 70
-  always_apply_true: 34
-  always_apply_false: 36
+  total_mdc_files: 69
+  always_apply_true: 35
+  always_apply_false: 34
   no_boolean_always_apply: 0
-  explicit_rule_ids: 69
+  explicit_rule_ids: 68
   derived_rule_ids: 1
   deprecated_rules: 0
 rules:
@@ -341,29 +341,6 @@ rules:
   has_yaml_frontmatter: true
   line_count: 82
   content_digest: sha256:02847ef31093cec426386e741da06cd915cad8bdbb9aebbbf367b06aa8784a79
-  authority: canonical_global
-  context_cost: moderate
-  deprecated: false
-  replacement: null
-  removal_plan: null
-  extends: null
-  classification_source: mixed_or_derived
-- file: 25-python-dora-header.mdc
-  id: l9.rule.25.python.dora.header
-  id_source: explicit
-  version: 1.0.0
-  description: 'L9 Python module structure: header meta, footer meta, and DORA __l9_trace__ block per codegen contract.'
-  scope: global
-  domain: python
-  activation: auto_attached
-  activation_source: explicit
-  always_apply: false
-  globs:
-  - '**/*.py'
-  first_heading: 'Python L9 Module Structure: Three-Block System'
-  has_yaml_frontmatter: true
-  line_count: 173
-  content_digest: sha256:49302e69c080624cbf70972d5415cd308dcc2107f04b6884c17bea6d3ab6bfed
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -1131,18 +1108,18 @@ rules:
 - file: 77-cursor-subagent-orchestration.mdc
   id: l9.rule.77.cursor.subagent.orchestration
   id_source: explicit
-  version: 1.0.0
-  description: Govern Cursor-native concurrent subagent delegation.
+  version: 1.1.0
+  description: Govern Cursor-native concurrent subagent delegation on PE-token and host-native paths.
   scope: global
   domain: governance
-  activation: agent_requested
+  activation: always
   activation_source: explicit
-  always_apply: false
+  always_apply: true
   globs: null
   first_heading: Cursor-native subagent orchestration (L9)
   has_yaml_frontmatter: true
-  line_count: 24
-  content_digest: sha256:67cc9f7af1be2a4c66d51c7060801a03710a1d94042cfc039cb505435efd65a1
+  line_count: 28
+  content_digest: sha256:ee79f4d8ce9beeceb0b5261f3e1c34a6d16a6964877a47a0ba091d8de401f6de
   authority: canonical_global
   context_cost: minimal
   deprecated: false
