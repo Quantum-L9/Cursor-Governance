@@ -247,23 +247,23 @@ def _receipt_key_matches(data: dict[str, Any], lookup: str) -> bool:
 
 
 # --- receipts ---------------------------------------------------------------
-def receipt_path(contract: dict[str, Any], session_id: str) -> Path:
-    safe = re.sub(r"[^A-Za-z0-9_.-]", "_", session_id or "unknown")
+def receipt_path(contract: dict[str, Any], receipt_id: str) -> Path:
+    safe = re.sub(r"[^A-Za-z0-9_.-]", "_", receipt_id or "unknown")
     return state_root(contract) / "receipts" / f"{safe}.json"
 
 
-def write_receipt(contract: dict[str, Any], session_id: str, payload: dict[str, Any]) -> Path:
-    path = receipt_path(contract, session_id)
+def write_receipt(contract: dict[str, Any], receipt_id: str, payload: dict[str, Any]) -> Path:
+    path = receipt_path(contract, receipt_id)
     path.parent.mkdir(parents=True, exist_ok=True)
     body = {"created_at": time.time(), **payload}
-    body["receipt_id"] = session_id
+    body["receipt_id"] = receipt_id
     body.setdefault("session_id", payload.get("session_id") or "")
     path.write_text(json.dumps(body, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return path
 
 
-def fresh_receipt(contract: dict[str, Any], session_id: str) -> bool:
-    path = receipt_path(contract, session_id)
+def fresh_receipt(contract: dict[str, Any], receipt_id: str) -> bool:
+    path = receipt_path(contract, receipt_id)
     if not path.is_file():
         return False
     try:
@@ -271,7 +271,7 @@ def fresh_receipt(contract: dict[str, Any], session_id: str) -> bool:
     except (json.JSONDecodeError, OSError):
         return False
     ttl = int(contract.get("state", {}).get("session_ttl_seconds", 86400))
-    if not _receipt_key_matches(data, session_id):
+    if not _receipt_key_matches(data, receipt_id):
         return False
     if (time.time() - float(data.get("created_at", 0))) >= ttl:
         return False
@@ -283,15 +283,17 @@ def fresh_receipt(contract: dict[str, Any], session_id: str) -> bool:
     return not data.get("degraded", False)
 
 
-def usable_receipt(contract: dict[str, Any], session_id: str) -> bool:
-    """True when this session already ran SessionStart prefetch.
+def usable_receipt(contract: dict[str, Any], receipt_id: str) -> bool:
+    """True when prefetch stamped a writer receipt for this receipt_id.
 
-    Degraded hydrations are still usable for the write gate: denying on
-    ``fresh_receipt() is False`` after a degraded receipt permanently blocked
-    every governed Edit/Write for the TTL. Prefetch retries on the next
-    SessionStart; the gate continues either way.
+    SessionStart's session id is not this key. Degraded hydrations are still
+    usable for the write gate: denying on ``fresh_receipt() is False`` after a
+    degraded receipt permanently blocked every governed Edit/Write for the TTL.
+    Prefetch retries on the next chat; the gate continues either way.
     """
-    path = receipt_path(contract, session_id)
+    if not receipt_id:
+        return False
+    path = receipt_path(contract, receipt_id)
     if not path.is_file():
         return False
     try:
@@ -299,7 +301,7 @@ def usable_receipt(contract: dict[str, Any], session_id: str) -> bool:
     except (json.JSONDecodeError, OSError):
         return False
     ttl = int(contract.get("state", {}).get("session_ttl_seconds", 86400))
-    if not _receipt_key_matches(data, session_id):
+    if not _receipt_key_matches(data, receipt_id):
         return False
     return (time.time() - float(data.get("created_at", 0))) < ttl
 

@@ -427,6 +427,40 @@ class MemoryDoesNotGateRepositoryWritesTests(unittest.TestCase):
         self.assertTrue(st.usable_receipt(self.contract, a))
         self.assertFalse(st.usable_receipt(self.contract, b))
 
+    def test_session_scoped_receipt_does_not_pass_the_write_gate(self) -> None:
+        """A leftover SessionStart file named after session_id is not a pass."""
+        st.write_receipt(
+            self.contract,
+            self.session,
+            {"namespaces": ["cursor-governance"], "session_id": self.session},
+        )
+        out, _ = run_gate(
+            {
+                "tool_name": "Edit",
+                "tool_input": {"file_path": "skills/x/SKILL.md"},
+                "session_id": self.session,
+                "conversation_id": "later-chat",
+                "agent_id": "agent-a",
+            },
+            self.env,
+        )
+        self.assertTrue(is_deny(out), "session-keyed receipt must not authorize another chat")
+
+    def test_gate_denies_when_receipt_id_cannot_be_resolved(self) -> None:
+        st.write_receipt(
+            self.contract,
+            self.session,
+            {"namespaces": ["cursor-governance"], "session_id": self.session},
+        )
+        out, _ = run_gate(
+            {
+                "tool_name": "Edit",
+                "tool_input": {"file_path": "skills/x/SKILL.md"},
+            },
+            self.env,
+        )
+        self.assertTrue(is_deny(out), "missing chat id must not fall back to session_id")
+
     def test_bridge_overwrites_stale_conversation_id(self) -> None:
         sys.path.insert(0, str(MEM))
         import memory_bridge as mb

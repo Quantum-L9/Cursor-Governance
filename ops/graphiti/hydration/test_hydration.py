@@ -477,6 +477,8 @@ def test_orchestrator_reads_hook_payload_before_defaulting() -> None:
         'CURSOR_CONVERSATION_ID="${CURSOR_CONVERSATION_ID:-${CURSOR_SESSION_ID:-default}}"'
         not in text
     )
+    assert '--session-id "$CURSOR_SESSION_ID"' in text
+    assert '--session-id "$CURSOR_CONVERSATION_ID"' not in text
 
 
 def test_orchestrator_opens_latch_before_graphiti_enabled() -> None:

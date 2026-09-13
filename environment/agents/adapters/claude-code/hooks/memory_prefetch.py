@@ -148,8 +148,8 @@ def main() -> int:
         "--session-id",
         default=None,
         help=(
-            "stamp the receipt for this session id instead of reading stdin "
-            "(newest ~/.claude/projects/<project>/<uuid>.jsonl for this conversation)"
+            "repair: use this chat id for the writer receipt (and as session id "
+            "when stdin has none). Newest ~/.claude/projects/<project>/<uuid>.jsonl"
         ),
     )
     args = parser.parse_args()

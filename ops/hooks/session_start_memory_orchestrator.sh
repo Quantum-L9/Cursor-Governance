@@ -85,7 +85,7 @@ if [ -n "$REPO" ] && [ -f "$GOV_ROOT/ops/graphiti/hydration/cli.py" ]; then
   fi
   (cd "$GOV_ROOT" && PYTHONPATH="$GOV_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
     "$PY" -m ops.graphiti.hydration.cli open \
-    --project-dir "$REPO" --session-id "$CURSOR_CONVERSATION_ID" \
+    --project-dir "$REPO" --session-id "$CURSOR_SESSION_ID" \
     "${BG_OPEN[@]}" >/dev/null 2>&1) || true
 fi
 
@@ -94,7 +94,7 @@ if graphiti_enabled; then
     if OUT="$(cd "$GOV_ROOT" && PYTHONPATH="$GOV_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
         "$PY" -m ops.graphiti.hydration.cli compile \
         --project-dir "$REPO" \
-        --session-id "$CURSOR_CONVERSATION_ID" \
+        --session-id "$CURSOR_SESSION_ID" \
         --agent-id "$L9_MEMORY_AGENT_ID" \
         --format json 2>/dev/null)"; then
       HYDRATE_MD="$(echo "$OUT" | python3 -c '

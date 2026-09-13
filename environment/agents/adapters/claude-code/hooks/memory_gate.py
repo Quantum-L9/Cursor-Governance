@@ -105,10 +105,6 @@ def main() -> int:
         return 0
 
     try:
-        session_id = st.resolve_session_id(event=event)
-    except ValueError:
-        session_id = ""
-    try:
         receipt_id = st.resolve_receipt_id(event=event)
     except ValueError:
         receipt_id = ""
@@ -146,14 +142,14 @@ def main() -> int:
         # Raises on any precondition beyond hydration (E7 fail-closed).
         requires = st.validate_requires(rule)
 
-        if "session_prefetch" in requires and not st.usable_receipt(
-            contract, receipt_id or session_id
+        if "session_prefetch" in requires and (
+            not receipt_id or not st.usable_receipt(contract, receipt_id)
         ):
             # Name the writer receipt id the gate itself resolved. SessionStart's
             # session id is a different key and must not be used as this hint.
             sid_hint = (
-                f"--session-id {receipt_id or session_id}"
-                if (receipt_id or session_id)
+                f"--session-id {receipt_id}"
+                if receipt_id
                 else (
                     "--session-id <chat-id-from-hook-event> "
                     "(prefetch stamps a writer receipt, not the SessionStart "
