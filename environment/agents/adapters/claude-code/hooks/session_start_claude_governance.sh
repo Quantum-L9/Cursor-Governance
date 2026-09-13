@@ -21,11 +21,14 @@ set -uo pipefail
 
 # ADR-0031: signed agent assertion for MCP stdio (never human door).
 # Fail-soft when secret maps are absent (memory-blind cold start OK).
-_ASSERT_EXPORT="${L9_GOVERNANCE_DIR:-$HOME/.cursor-governance}/ops/memory/export_agent_assertion_env.sh"
-if [[ -z "${L9_MEMORY_AGENT_ASSERTION:-}" && -f "$_ASSERT_EXPORT" ]]; then
+# Never `source` a helper that may `exit` — that would kill SessionStart.
+if [[ -z "${L9_MEMORY_AGENT_ASSERTION:-}" ]]; then
   export L9_MEMORY_AGENT_ID="${L9_MEMORY_AGENT_ID:-claude-code}"
-  # shellcheck disable=SC1090
-  source "$_ASSERT_EXPORT" || true
+  _assert_py="${L9_GOVERNANCE_DIR:-$HOME/.cursor-governance}/ops/memory/print_agent_assertion_env.py"
+  if [[ -f "$_assert_py" ]]; then
+    # shellcheck disable=SC1090
+    eval "$("${L9_MEMORY_INTERPRETER:-python3}" "$_assert_py" --agent-id "${L9_MEMORY_AGENT_ID}" --format shell 2>/dev/null || true)" || true
+  fi
 fi
 
 
