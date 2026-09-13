@@ -127,9 +127,7 @@ def extract_writer_agent_id(event: dict[str, Any] | None) -> str:
     return os.environ.get("L9_MEMORY_AGENT_ID", "").strip() or "unknown-agent"
 
 
-def resolve_receipt_id(
-    *, event: dict[str, Any] | None = None, cli_arg: str | None = None
-) -> str:
+def resolve_receipt_id(*, event: dict[str, Any] | None = None, cli_arg: str | None = None) -> str:
     """Writer-scoped receipt key. Distinct from SessionStart's session id.
 
     SessionStart runs once per session and must not authorize later chats or

@@ -170,11 +170,7 @@ def main() -> int:
     try:
         session_id = st.resolve_session_id(event=event, cli_arg=args.session_id)
     except ValueError:
-        session_id = (
-            args.session_id
-            or os.environ.get("CURSOR_SESSION_ID")
-            or "unknown-session"
-        )
+        session_id = args.session_id or os.environ.get("CURSOR_SESSION_ID") or "unknown-session"
     try:
         receipt_id = st.resolve_receipt_id(event=event, cli_arg=args.session_id)
     except ValueError:

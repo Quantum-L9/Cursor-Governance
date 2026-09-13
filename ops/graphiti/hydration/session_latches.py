@@ -132,9 +132,7 @@ def resolve_session_id(*, explicit: str | None = None) -> str:
     return "default"
 
 
-def resolve_or_create_session_id(
-    project_dir: str | Path, *, explicit: str | None = None
-) -> str:
+def resolve_or_create_session_id(project_dir: str | Path, *, explicit: str | None = None) -> str:
     """Return the session id, generating and persisting one if SessionStart has none."""
     found = resolve_session_id(explicit=explicit)
     if found != "default":

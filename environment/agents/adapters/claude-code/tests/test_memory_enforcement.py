@@ -423,7 +423,9 @@ class MemoryDoesNotGateRepositoryWritesTests(unittest.TestCase):
         self.assertNotEqual(a, "sess-shared")
         self.assertNotEqual(b, "sess-shared")
         self.assertNotEqual(a, b)
-        st.write_receipt(self.contract, a, {"namespaces": ["cursor-governance"], "session_id": "sess-shared"})
+        st.write_receipt(
+            self.contract, a, {"namespaces": ["cursor-governance"], "session_id": "sess-shared"}
+        )
         self.assertTrue(st.usable_receipt(self.contract, a))
         self.assertFalse(st.usable_receipt(self.contract, b))
 
