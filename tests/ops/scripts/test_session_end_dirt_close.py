@@ -313,7 +313,12 @@ def test_park_failure_does_not_delete_worktree(repo: Path, monkeypatch: pytest.M
     assert "keep.md" in result["status"]["dirty_files"]
 
 
-def test_hook_uses_ssot_script_only() -> None:
+def test_hook_retired_does_not_dirt_close() -> None:
     text = (REPO / "ops" / "hooks" / "session_end_repo_hygiene.sh").read_text(encoding="utf-8")
-    assert 'DIRT_CLOSE="$GLOBAL_COMMANDS/ops/scripts/session_end_dirt_close.py"' in text
-    assert 'DIRT_CLOSE="$WS/ops/scripts/session_end_dirt_close.py"' not in text
+    assert "RETIRED" in text
+    live = "\n".join(
+        line for line in text.splitlines() if not line.lstrip().startswith("#")
+    )
+    assert "session_end_dirt_close.py" not in live
+    assert "repo_hygiene.py" not in live
+    assert "exit 0" in live

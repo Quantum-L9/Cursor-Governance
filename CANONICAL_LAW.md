@@ -1031,3 +1031,21 @@ receipt binds the exact HEAD sha it attested and a later commit voids it (the
 phase file alone authorizes nothing), and the publish path's push recovery
 re-runs the gate and `l4_local.py extend-release` on the merged tree before it
 retries a push.
+
+<!-- SESSION_END_PRESERVE_V1 -->
+## 5.1 SessionEnd does not push or sweep dirt (2026-09-13) — supersedes §5 "Automatic (every session end)"
+
+Append-only. The §5 table's `backup_to_github.sh` row and the operator
+`make backup` / `GOVERNANCE_BACKUP_FORCE=1` path stay. What the 2026-09-13
+dirt-close incident showed is that an unattended `sessionEnd` must not
+mutate another conversation's bytes.
+
+1. **Denied on sessionEnd:** `backup_to_github.sh` (`git add -A` + push),
+   `session_end_dirt_close.py --apply`, `repo_hygiene.py --apply`. Hook 3
+   (`session-end-repo-hygiene.sh`) is retired.
+2. **Allowed on sessionEnd:** hook 1 canonical `memory.close`; hook 2
+   copy-only park of **this** `session_id`'s authored ledger onto
+   `refs/l9/preserved/session/<session_id>` in the payload workspace.
+   Empty ledger → skip. Never porcelain. Never a sibling worktree.
+3. **Operator push** remains `make backup` / `backup_to_github.sh`, gated
+   only when the human or `governance_sync.sh` asked for it.

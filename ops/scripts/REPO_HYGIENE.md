@@ -16,15 +16,14 @@ python3 ops/scripts/repo_hygiene.py --apply --json       # receipt for automatio
 python3 ops/scripts/repo_hygiene.py --assert-origin Quantum-L9/Cursor-Governance
 ```
 
-It runs automatically at `sessionEnd` via
-`ops/hooks/session_end_repo_hygiene.sh`, last in the chain so that
-`governance-backup.sh` has already committed and pushed. Dirt-close
-(`session_end_dirt_close.py --apply`) runs **before** this tool's
-`--apply` so landed copies in the **session workspace** are gone and
-novel unique bytes sit on `l9/dirt-shelf`. Receipts land in
-`<workspace>/.l9/hygiene/`; the log is `~/.cursor-governance/hygiene.log`.
-Kill switch: `L9_REPO_HYGIENE=0`. Dirt-close kill switch:
-`L9_HYGIENE_DIRT_CLOSE=0`. Report-only: `L9_REPO_HYGIENE_MODE=--report`.
+It is **on-demand only**. `sessionEnd` must not run this tool or
+`session_end_dirt_close.py` — that pair scooped other chats on a shared
+clone. `ops/hooks/session_end_repo_hygiene.sh` is a retired no-op.
+`setup_workspace_symlinks.sh` strips `./hooks/session-end-repo-hygiene.sh`
+from a stale `hooks.json`. Receipts land in `<workspace>/.l9/hygiene/`
+when you invoke `--apply` yourself. Kill switch: `L9_REPO_HYGIENE=0`.
+Dirt-close kill switch: `L9_HYGIENE_DIRT_CLOSE=0`. Report-only:
+`L9_REPO_HYGIENE_MODE=--report`.
 
 ## Why deletion is safe here
 
@@ -75,15 +74,15 @@ Both are printed under `UNLANDED WORK` with a recovery SHA.
   in-flight agent's stash is not yanked out from under it.
 - `main`, `master`, `campaign/*`, and a novel `l9/dirt-shelf` tip.
 
-SessionEnd dirt-close **does** change porcelain in the **session workspace
-only** (the payload `$WS`): landed copies (`origin/main` or an open-PR blob
-at the same path) and generated deltas are restored or removed and are
-**not** parked. Novel unique bytes are parked on one rolling
-`refs/heads/l9/dirt-shelf`, then restored/removed only after `git cat-file`
-proves the path on that tip. Secrets / `WIP/Legal Defense/` stay on disk.
-Absorbed dirt-shelf (and leftover `refs/l9/preserved/worktree-dirt/*`) tips
-are deleted **after** the tip SHA is written to the dirt-close receipt.
-Sibling dirty worktrees stay untouched. Do not call `/ff` or
+On-demand dirt-close **does** change porcelain in the workspace you name:
+landed copies (`origin/main` or an open-PR blob at the same path) and
+generated deltas are restored or removed and are **not** parked. Novel
+unique bytes are parked on one rolling `refs/heads/l9/dirt-shelf`, then
+restored/removed only after `git cat-file` proves the path on that tip.
+Secrets / `WIP/Legal Defense/` stay on disk. Absorbed dirt-shelf (and
+leftover `refs/l9/preserved/worktree-dirt/*`) tips are deleted **after**
+the tip SHA is written to the dirt-close receipt. Sibling dirty worktrees
+stay untouched. Do not call this from `sessionEnd`. Do not call `/ff` or
 `prune_execute.py` for this close.
 
 The honest answer to "what dirty files are there" is
@@ -112,7 +111,7 @@ as `open_pr`.
 `[gone]` locals whose content is not yet proven spent. Branch/worktree prune
 beyond absorbed locals is still
 `skills/l9-git-work-preserve/scripts/prune_execute.py` (receipt +
-`L9_GIT_PRUNE_AUTHORIZED`, preserve-ref, local only by default). Session
+`L9_GIT_PRUNE_AUTHORIZED`, preserve-ref, local only by default). On-demand
 workspace porcelain is closed by `session_end_dirt_close.py`, which reuses
 `prune_open_pr_copies.py` blob identity and does **not** invoke
 `prune_execute.py`. See `skills/l9-git-work-preserve/references/prune-policy.md`.

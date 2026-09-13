@@ -144,7 +144,7 @@ bash .cursor-commands/ops/scripts/backup_to_github.sh "chore(governance): end-se
 
 Or: `/governance-backup` / `make governance-backup` (PlasticOS).
 
-Also runs automatically on **sessionEnd** after `setup_workspace_symlinks.sh` (see `~/.cursor/hooks.json`).
+sessionEnd does **not** push. Run this step when you intend a GitHub backup.
 
 ### 5. HANDOFF
 

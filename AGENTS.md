@@ -1575,3 +1575,32 @@ Two companions from the same audit: the L4 release receipt binds the exact
 HEAD sha it attested (a later commit voids it; the phase file alone authorizes
 nothing), and `make pr` push recovery re-runs the gate and
 `l4_local.py extend-release` on the merged tree before it retries a push.
+
+<!-- SESSION_END_PRESERVE_V1 -->
+## SessionEnd preserve is this conversation only (2026-09-13)
+
+This fragment supersedes only the sessionEnd dirt-close / auto-hygiene /
+`backup_to_github.sh` sentences in §2.3, `PR_GATE_VELOCITY_V1`, and
+`L9_SESSION_END_DIRT_CLOSE_V1`. Those paragraphs stay on disk
+(additive_only). Do not fold them. CANONICAL_LAW §5.1 is the law.
+
+- Hook 1 (`graphiti-session-end.sh`) is unchanged: transcript archive +
+  canonical `memory.close`.
+- Hook 2 (`governance-backup.sh`) parks **this conversation's** authored
+  paths onto `refs/l9/preserved/session/<session_id>` in the payload
+  workspace only. Paths come from
+  `~/.cursor/l9/sessions/<session_id>/authored.json` (`postToolUse`
+  `session_authored_paths.py`). Empty ledger → skip. It does **not**
+  read porcelain, `git add -A`, push, or call `backup_to_github.sh`.
+  Operator push stays `make backup` / `backup_to_github.sh`.
+- Hook 3 (`session-end-repo-hygiene.sh`) is **retired**. sessionEnd must
+  not run `session_end_dirt_close.py` or `repo_hygiene.py`. Those scripts
+  stay for on-demand use. A stale `hooks.json` merge only appends —
+  `setup_workspace_symlinks.sh` strips the retired command.
+  `check_governance_wiring.sh` fails if it is still registered.
+- sessionEnd never affects another session, sibling worktree, or foreign
+  ledger. Kill switch: `L9_SESSION_PRESERVE=0` (also honors
+  `GOVERNANCE_BACKUP_SKIP=1`). Skip background agents and a missing
+  `session_id`. Never delete worktree files.
+- Agents asked "what dirty files are there" still run
+  `session_end_dirt_close.py --status`. That is a report, not the closer.
