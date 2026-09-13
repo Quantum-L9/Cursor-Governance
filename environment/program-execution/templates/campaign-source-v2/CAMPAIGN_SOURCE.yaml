@@ -1,0 +1,295 @@
+# Canonical, self-contained Program Execution campaign source.
+# This document is intentionally concrete so it compiles unchanged. Copy it into
+# a new campaign, replace every example fact with verified campaign facts, then
+# re-run campaign-check-input before campaign execution.
+schema: l9.program-execution.campaign-source.v2
+schema_version: 2.0.0
+
+metadata:
+  campaign_id: campaign-source-v2-example
+  title: Canonical Program Execution Campaign Source Example
+  version: 1.0.0
+  created_at: '2026-09-13T00:00:00Z'
+  status: operator_intake
+  owner: template_maintainer
+  intended_host: Quantum-L9/Cursor-Governance
+  intended_drop_path: >-
+    environment/program-execution/campaigns/campaign-source-v2-example/CAMPAIGN_SOURCE.yaml
+  source_is_immutable: true
+  remote_mutation_during_admission: false
+
+integrity:
+  digest_algorithm: sha256
+  canonical_encoding: utf-8
+  canonical_line_endings: lf
+  digest_record_location: source-integrity-receipt.json
+  generated_counts_or_digests_may_be_hand_edited: false
+
+pipeline_contract:
+  pair: program-execution-system.v2
+  blueprint: program-execution-blueprint.v2
+  controller: program-execution-controller.v2
+  compilation_sequence:
+    - preserve_immutable_campaign_source
+    - compile_source_into_complete_native_blueprint
+    - validate_blueprint_in_template_mode
+    - collect_admission_evidence
+    - accept_blueprint
+    - bootstrap_pec
+  authority_boundaries:
+    campaign_source_owns: immutable_operator_intent_and_campaign_semantics
+    blueprint_owns: accepted_program_definition
+    controller_owns: mutable_runtime_state_and_gate_results
+    adapters_own: target_translation_and_execution_receipts
+
+operator_directive:
+  objective: >-
+    Demonstrate the complete, direct campaign-source.v2 route from immutable
+    operator intent to a validated native Blueprint and PEC runtime.
+  mode: controlled_autonomous_until_material_boundary
+  auto_continue:
+    - read_only_inspection
+    - blueprint_materialization
+    - reversible_repo_local_work
+    - local_validation
+  pause_only_for:
+    - missing_or_conflicting_semantic_authority
+    - material_scope_expansion
+    - unresolved_blocking_unknown
+    - failed_blocking_gate
+    - security_or_secret_boundary
+    - exact_remote_mutation_approval
+
+program:
+  id: campaign-source-v2-example
+  name: Canonical Campaign Source v2 Example
+  version: 1.0.0
+  owner: template_maintainer
+  definition_status: draft
+  snapshot_at: '2026-09-13'
+  target_repository_id: Quantum-L9/Cursor-Governance
+  contracts:
+    blueprint: program-execution-blueprint.v2
+    controller_minimum: program-execution-controller.v2
+    pair: program-execution-system.v2
+  objective: >-
+    Create one explicitly scoped, reversible documentation deliverable and
+    validate it with an admissible command.
+  problem_statement: >-
+    A campaign source is not executable when it omits target identity, authority,
+    task scope, a terminal validation mechanism, or a gate/evidence path.
+  target_state: >-
+    A native Blueprint validates in template mode with one target, one authority,
+    one workstream, one wave, one task, one evidence requirement, and one gate.
+  scope:
+    include:
+      - docs/program-execution/campaign-source-v2-example/DELIVERABLE.md
+      - campaign source to Blueprint compilation
+    exclude:
+      - remote repository mutation
+      - merge
+      - publish
+      - deploy
+      - destructive changes
+  authority_order:
+    - applicable_safety_legal_security_requirements
+    - cursor_governance_canonical_law
+    - latest_explicit_operator_instruction
+    - accepted_program_decision
+    - approved_task_card
+    - repository_local_governance
+    - implementation
+    - documentation
+  operating_rules:
+    - source_is_immutable_after_intake
+    - targets_array_is_the_single_repository_identity
+    - dependency_edges_are_the_only_task_ordering_authority
+    - writable_paths_are_explicit
+    - validation_commands_are_single_admissible_shell_operations
+    - remote_actions_are_forbidden_in_program_execution
+  terminal_verdicts:
+    - CONVERGED
+    - CONVERGED_WITH_NON_BLOCKING_RISKS
+    - NOT_CONVERGED
+    - INCONCLUSIVE
+
+targets:
+  - id: TARGET-001
+    name: Cursor-Governance example target
+    kind: git_repository
+    authority_owner: Quantum-L9/Cursor-Governance
+    execution_mode: repo_local
+    adapter: git
+    repository_id: Quantum-L9/Cursor-Governance
+    source_of_truth: repository_origin_main
+    environments:
+      - local
+    mutability: reversible
+    expected_revision: UNKNOWN
+
+authorities:
+  - id: AUTH-001
+    responsibility: program_definition_and_terminal_verdict
+    owner: template_maintainer
+    scope:
+      - whole_program
+      - scope_changes
+      - terminal_verdict
+  - id: AUTH-002
+    responsibility: controller_evidence_and_gate_evaluation
+    owner: controller
+    scope:
+      - evidence_collection
+      - gate_evaluation
+
+decisions: []
+unknowns: []
+
+evidence_requirements:
+  - id: EVID-001
+    claim: >-
+      The declared target repository identity and the pre-execution revision are
+      recorded at admission.
+    source_type: repository_inspection
+    source_location: Quantum-L9/Cursor-Governance
+    collection_method: read_only_inspection
+    freshness: collect_at_admission
+    producer: controller
+    supports:
+      - GATE-001
+    contradicts: []
+
+workstreams:
+  - id: WS-01
+    name: scoped_documentation_change
+    objective: >-
+      Produce and verify the single deliverable named by the task's explicit
+      writable path.
+    owner: template_maintainer
+    target_id: TARGET-001
+
+dependency_edges: []
+
+waves:
+  - id: W0
+    name: scoped_delivery
+    task_ids:
+      - TASK-001
+    predecessor_wave_ids: []
+    exit_gate_ids:
+      - GATE-001
+
+tasks:
+  - id: TASK-001
+    title: Produce the scoped campaign deliverable
+    definition_status: ready
+    workstream_id: WS-01
+    wave_id: W0
+    target_id: TARGET-001
+    execution_kind: repo_local
+    kernel_profile: BUILD
+    objective: >-
+      Create the one declared documentation deliverable without modifying any
+      path outside this task's explicit writable scope.
+    authority_basis_ids:
+      - AUTH-001
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids:
+      - EVID-001
+    paths:
+      - docs/program-execution/campaign-source-v2-example/DELIVERABLE.md
+    consumers:
+      - program_execution_controller
+      - campaign_operator
+    entrypoints:
+      - make campaign
+    actions:
+      - create_the_declared_documentation_deliverable
+      - record_the_local_validation_result
+    acceptance:
+      - id: AC-001
+        statement: >-
+          The declared deliverable exists, is non-empty, and records the
+          campaign-specific result within the permitted path.
+        required_evidence_types:
+          - test_result
+          - inspection
+    validation:
+      - id: VAL-001
+        method: command
+        command_or_inspection: test -s docs/program-execution/campaign-source-v2-example/DELIVERABLE.md
+        environment: repo_local
+        expected_result: PASS
+    negative_cases:
+      - missing_declared_deliverable
+      - empty_declared_deliverable
+      - write_outside_declared_scope
+    rollback:
+      strategy: discard_unaccepted_artifacts_or_revert_local_commit
+      trigger: validation_failure_or_scope_violation
+      validation: git status --short
+    risk:
+      tier: T2
+      reversibility: reversible
+      blast_radius: one_declared_documentation_path
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-001
+
+gates:
+  - id: GATE-001
+    name: scoped_deliverable_validated
+    gate_type: completion
+    blocking: true
+    owner_authority_id: AUTH-002
+    task_ids:
+      - TASK-001
+    required_evidence_ids:
+      - EVID-001
+    pass_criteria:
+      - TASK-001 is complete with its declared validation passing.
+      - Admission evidence binds the target repository revision.
+      - No remote mutation was attempted by the campaign.
+    failure_effect: BLOCKED
+
+risks:
+  - id: RISK-001
+    statement: The copied template could retain example target facts.
+    owner: template_maintainer
+    likelihood: unlikely
+    impact: low
+    mitigations:
+      - Verify all target-specific facts before intake.
+      - Run campaign-check-input before make campaign.
+    acceptance_status: accepted
+
+prohibited_paths:
+  - id: DNB-001
+    statement: .github/workflows/**
+    rationale: The example campaign must not change CI workflow authority.
+
+observability:
+  program_progress_fields:
+    - compiled_blueprint
+    - admission_evidence
+    - task_completion
+    - gate_status
+
+cutover_and_rollback:
+  preconditions:
+    - accepted_blueprint
+    - GATE-001_PASS
+  rollback_rules:
+    - preserve_receipts
+    - revert_the_single_local_commit_when_the_validation_fails
