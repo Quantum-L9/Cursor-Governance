@@ -17,6 +17,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/resolve_governance_paths.sh"
 # shellcheck source=lib/workspace_kind.sh
 source "$SCRIPT_DIR/lib/workspace_kind.sh"
+# shellcheck source=lib/workspace_link_health.sh
+source "$SCRIPT_DIR/lib/workspace_link_health.sh"
 # shellcheck source=lib/cursor_plans_store.sh
 source "$SCRIPT_DIR/lib/cursor_plans_store.sh"
 
@@ -35,12 +37,7 @@ GC="$GLOBAL_COMMANDS"
 WS_KIND="$(classify_workspace_kind "$WORKSPACE")"
 
 _link_ok() {
-  local link=$1 expected=$2
-  [ -L "$link" ] || return 1
-  local rt re
-  rt="$(python3 -c "import os; print(os.path.realpath('$link'))")"
-  re="$(python3 -c "import os; print(os.path.realpath('$expected'))")"
-  [ "$rt" = "$re" ]
+  workspace_link_realpath_ok "$1" "$2"
 }
 
 _link_or_update() {
@@ -60,14 +57,7 @@ _link_or_update() {
 }
 
 already_wired=0
-if [ "$WS_KIND" = "ssot" ] || [ "$WS_KIND" = "ssot_checkout" ]; then
-  if [ ! -e "$WORKSPACE/.cursor-commands" ] && [ ! -L "$WORKSPACE/.cursor-commands" ] \
-    && _link_ok "$WORKSPACE/.cursor/plans" "$HOME/.cursor/plans" \
-    && _link_ok "$WORKSPACE/.cursor/governance/CANONICAL_LAW.md" "$GOV_ROOT/CANONICAL_LAW.md"; then
-    already_wired=1
-  fi
-elif _link_ok "$WORKSPACE/.cursor-commands" "$GC" \
-  && _link_ok "$WORKSPACE/.cursor/plans" "$HOME/.cursor/plans" \
+if workspace_links_healthy "$WORKSPACE" \
   && _link_ok "$WORKSPACE/.cursor/governance/CANONICAL_LAW.md" "$GOV_ROOT/CANONICAL_LAW.md"; then
   already_wired=1
 fi
@@ -98,6 +88,8 @@ mkdir -p "$WORKSPACE/.cursor/governance"
 _link_or_update "$WORKSPACE/.cursor/governance/CANONICAL_LAW.md" \
   "$GOV_ROOT/CANONICAL_LAW.md" ".cursor/governance/CANONICAL_LAW.md"
 _link_or_update "$WORKSPACE/.cursor/plans" "$HOME/.cursor/plans" ".cursor/plans"
+_link_or_update "$HOME/.cursor/plugins/local/l9-governance" "$GC" \
+  "~/.cursor/plugins/local/l9-governance"
 
 if [ "${L9_WIRE_LINKS_ONLY:-0}" = "1" ]; then
   echo "OK: links-only wire (L9_WIRE_LINKS_ONLY=1)"
