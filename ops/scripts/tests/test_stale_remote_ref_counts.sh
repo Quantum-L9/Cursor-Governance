@@ -12,7 +12,8 @@
 #   T2 prune alone goes SILENT (0) with real unpushed commits — the worse failure
 #   T3 prune + set-head reports the true count
 #   T4 both steps are idempotent
-#   T5 no remote => activation still succeeds (fail-soft)
+#   T5 shallow single-branch clone fetches the advertised default branch first
+#   T6 no remote => activation still succeeds (fail-soft)
 set -uo pipefail
 
 FAILED=0
@@ -49,6 +50,11 @@ echo feature > "$CLONE/g"
 git_q "$CLONE" add g
 git_q "$CLONE" commit -m feature
 git_q "$CLONE" push -u origin feature
+
+# Keep a pre-deletion shallow clone for T5. This is the cloud-session shape:
+# only the feature branch is fetched, so origin/main and origin/HEAD are absent.
+SHALLOW="$WORK/shallow"
+git clone --quiet --depth 1 --single-branch --branch feature "file://$UP" "$SHALLOW"
 
 # upstream merges it and advances main by several more commits, then deletes
 # the feature branch — exactly what a squash-merge with --delete-branch does.
@@ -138,7 +144,20 @@ else
   fail "T4 second run changed the count to $again"
 fi
 
-# --- T5 no remote is fail-soft ------------------------------------------------
+# --- T5 shallow single-branch clone binds origin/HEAD ------------------------
+if git -C "$SHALLOW" symbolic-ref --quiet refs/remotes/origin/HEAD >/dev/null 2>&1; then
+  fail "T5 fixture invalid: shallow single-branch clone unexpectedly has origin/HEAD"
+else
+  # shellcheck source=../lib/git_remote_head.sh
+  source "${BASH_SOURCE[0]%/*}/../lib/git_remote_head.sh"
+  if bind_origin_head "$SHALLOW" && [ "$(git -C "$SHALLOW" symbolic-ref --short refs/remotes/origin/HEAD)" = "origin/main" ]; then
+    pass "T5 shallow single-branch clone fetches main and binds origin/HEAD"
+  else
+    fail "T5 expected shallow clone origin/HEAD -> origin/main (${GIT_REMOTE_HEAD_ERROR:-no detail})"
+  fi
+fi
+
+# --- T6 no remote is fail-soft ------------------------------------------------
 NOREMOTE="$WORK/noremote"
 git init --quiet -b main "$NOREMOTE"
 git -C "$NOREMOTE" config user.email t@example.com
@@ -147,14 +166,16 @@ echo x > "$NOREMOTE/f"
 git_q "$NOREMOTE" add f
 git_q "$NOREMOTE" commit -m only
 if git -C "$NOREMOTE" remote get-url origin >/dev/null 2>&1; then
-  fail "T5 fixture invalid: expected no origin remote"
+  fail "T6 fixture invalid: expected no origin remote"
 else
-  pass "T5 repo with no origin is skipped by the guard (activation not aborted)"
+  pass "T6 repo with no origin is skipped by the guard (activation not aborted)"
 fi
 
 # --- the shipped script carries both halves -----------------------------------
 SCRIPT="${BASH_SOURCE[0]%/*}/../bootstrap_agent_environment.sh"
-if grep -q "remote prune origin" "$SCRIPT" && grep -q "remote set-head origin -a" "$SCRIPT"; then
+HELPER="${BASH_SOURCE[0]%/*}/../lib/git_remote_head.sh"
+if grep -q "remote prune origin" "$SCRIPT" && grep -q "bind_origin_head" "$SCRIPT" && \
+  grep -q "ls-remote --symref origin HEAD" "$HELPER"; then
   pass "bootstrap ships prune and set-head together"
 else
   fail "bootstrap is missing prune and/or set-head"

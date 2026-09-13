@@ -319,6 +319,40 @@ def test_sync_remote_refs_sets_origin_head_when_missing(tmp_path: Path) -> None:
     )
 
 
+def test_sync_remote_refs_recovers_origin_head_in_shallow_single_branch_clone(
+    tmp_path: Path,
+) -> None:
+    """Fetch the advertised default when `set-head -a` lacks its target ref."""
+    upstream, seed = _bare_upstream_with_clone(tmp_path)
+    git(seed, "config", "user.email", "t@example.com")
+    git(seed, "config", "user.name", "test")
+    git(seed, "checkout", "-qb", "feature")
+    commit(seed, "feature.txt")
+    git(seed, "push", "-qu", "origin", "feature")
+
+    shallow = tmp_path / "shallow"
+    subprocess.run(
+        [
+            "git",
+            "clone",
+            "-q",
+            "--depth",
+            "1",
+            "--single-branch",
+            "--branch",
+            "feature",
+            f"file://{upstream}",
+            str(shallow),
+        ],
+        check=True,
+    )
+    shallow_git = repo_hygiene.Git(shallow)
+    assert not shallow_git.ok("symbolic-ref", "--quiet", "refs/remotes/origin/HEAD")
+
+    assert repo_hygiene.sync_remote_refs(shallow_git) is None
+    assert shallow_git.out("symbolic-ref", "--short", "refs/remotes/origin/HEAD") == "origin/main"
+
+
 def test_sync_remote_refs_prunes_a_branch_deleted_upstream(tmp_path: Path) -> None:
     upstream, clone = _bare_upstream_with_clone(tmp_path)
     subprocess.run(
@@ -357,10 +391,15 @@ def test_both_call_sites_ship_both_halves() -> None:
 
     # bash: prune, then guarantee the fallback the prune creates a need for
     assert "remote prune origin" in bootstrap
-    assert "remote set-head origin -a" in bootstrap
+    assert "bind_origin_head" in bootstrap
+    helper = (gov / "ops" / "scripts" / "lib" / "git_remote_head.sh").read_text(encoding="utf-8")
+    assert "ls-remote --symref origin HEAD" in helper
+    assert 'fetch --no-tags origin "$refspec"' in helper
 
     # python: the same pair, through sync_remote_refs
     assert '"fetch", "--prune", "origin"' in hygiene
+    assert '"ls-remote", "--symref", "origin", "HEAD"' in hygiene
+    assert '"fetch", "--no-tags", "origin", refspec' in hygiene
     assert '"remote", "set-head", "origin", "-a"' in hygiene
     assert "sync_remote_refs" in hygiene
 

@@ -484,6 +484,20 @@ def sync_remote_refs(git: Git) -> str | None:
         )
     if git.ok("symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"):
         return None
+    # `remote set-head -a` only succeeds when the remote-tracking ref it needs
+    # already exists. A `--depth 1 --single-branch` clone has only its checked
+    # out feature ref, so discover origin's advertised default and fetch that
+    # bounded ref before binding origin/HEAD.
+    symref = git.out("ls-remote", "--symref", "origin", "HEAD")
+    match = re.search(r"^ref: refs/heads/(.+)\tHEAD$", symref, flags=re.MULTILINE)
+    if not match:
+        return "origin/HEAD unset and origin did not advertise a default branch"
+    default_branch = match.group(1)
+    if not git.ok("check-ref-format", "--branch", default_branch):
+        return "origin/HEAD unset and origin advertised an invalid default branch name"
+    refspec = f"+refs/heads/{default_branch}:refs/remotes/origin/{default_branch}"
+    if not git.ok("fetch", "--no-tags", "origin", refspec):
+        return f"origin/HEAD unset and could not fetch origin default branch '{default_branch}'"
     if git.ok("remote", "set-head", "origin", "-a"):
         return None
     return (
