@@ -148,12 +148,12 @@ fi
 if git -C "$SHALLOW" symbolic-ref --quiet refs/remotes/origin/HEAD >/dev/null 2>&1; then
   fail "T5 fixture invalid: shallow single-branch clone unexpectedly has origin/HEAD"
 else
-  # shellcheck source=../lib/git_remote_head.sh
-  source "${BASH_SOURCE[0]%/*}/../lib/git_remote_head.sh"
-  if bind_origin_head "$SHALLOW" && [ "$(git -C "$SHALLOW" symbolic-ref --short refs/remotes/origin/HEAD)" = "origin/main" ]; then
+  HELPER_CLI="${BASH_SOURCE[0]%/*}/../lib/git_remote_head.sh"
+  if "$HELPER_CLI" "$SHALLOW" >/dev/null && \
+    [ "$(git -C "$SHALLOW" symbolic-ref --short refs/remotes/origin/HEAD)" = "origin/main" ]; then
     pass "T5 shallow single-branch clone fetches main and binds origin/HEAD"
   else
-    fail "T5 expected shallow clone origin/HEAD -> origin/main (${GIT_REMOTE_HEAD_ERROR:-no detail})"
+    fail "T5 expected sealed helper CLI to bind origin/HEAD -> origin/main"
   fi
 fi
 

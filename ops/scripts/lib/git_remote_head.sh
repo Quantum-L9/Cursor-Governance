@@ -56,3 +56,29 @@ bind_origin_head() {
     return 1
   fi
 }
+
+_git_remote_head_is_sourced() {
+  [ "${BASH_SOURCE[0]}" != "$0" ]
+}
+
+# A CLI entry point seals this helper as the single executable binding path for
+# non-shell callers. They may orchestrate their own prune/reporting, but must
+# delegate all default-ref discovery, fetch, and origin/HEAD mutation here.
+if ! _git_remote_head_is_sourced; then
+  case "${1:-}" in
+    -h | --help)
+      sed -n '1,11p' "$0" | sed 's/^# \{0,1\}//'
+      exit 0
+      ;;
+    "")
+      echo "usage: git_remote_head.sh WORKSPACE" >&2
+      exit 2
+      ;;
+  esac
+  if bind_origin_head "$1"; then
+    git -C "$1" symbolic-ref --short refs/remotes/origin/HEAD
+    exit 0
+  fi
+  echo "git_remote_head: $GIT_REMOTE_HEAD_ERROR" >&2
+  exit 1
+fi

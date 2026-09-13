@@ -467,10 +467,10 @@ def sync_remote_refs(git: Git) -> str | None:
     reads 0 with real unpushed commits present. A false negative on a real
     condition is worse than an inflated one.
 
-    ops/scripts/bootstrap_agent_environment.sh ships both halves at session
-    start. This function is the same contract for the tool that DELETES
-    branches on that evidence, which previously pruned without ever ensuring
-    the fallback it creates a dependence on.
+    `ops/scripts/lib/git_remote_head.sh` is the sole implementation of the
+    default-branch discovery, bounded default-ref fetch, and origin/HEAD
+    binding. This function owns only the hygiene-specific prune/reporting and
+    delegates any missing-head repair to that sealed helper.
 
     Both halves are fail-soft: they need the remote, and a session with no
     network is not a reason to abort hygiene. Returns a warning, or None.
@@ -484,25 +484,23 @@ def sync_remote_refs(git: Git) -> str | None:
         )
     if git.ok("symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"):
         return None
-    # `remote set-head -a` only succeeds when the remote-tracking ref it needs
-    # already exists. A `--depth 1 --single-branch` clone has only its checked
-    # out feature ref, so discover origin's advertised default and fetch that
-    # bounded ref before binding origin/HEAD.
-    symref = git.out("ls-remote", "--symref", "origin", "HEAD")
-    match = re.search(r"^ref: refs/heads/(.+)\tHEAD$", symref, flags=re.MULTILINE)
-    if not match:
-        return "origin/HEAD unset and origin did not advertise a default branch"
-    default_branch = match.group(1)
-    if not git.ok("check-ref-format", "--branch", default_branch):
-        return "origin/HEAD unset and origin advertised an invalid default branch name"
-    refspec = f"+refs/heads/{default_branch}:refs/remotes/origin/{default_branch}"
-    if not git.ok("fetch", "--no-tags", "origin", refspec):
-        return f"origin/HEAD unset and could not fetch origin default branch '{default_branch}'"
-    if git.ok("remote", "set-head", "origin", "-a"):
+    helper = Path(__file__).with_name("lib") / "git_remote_head.sh"
+    try:
+        repair = subprocess.run(
+            ["bash", str(helper), str(git.root)],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+    except OSError as exc:
+        return f"origin/HEAD unset and shared binder could not start: {exc}"
+    if repair.returncode == 0:
         return None
+    detail = (repair.stderr or repair.stdout or "shared binder failed").strip().splitlines()[-1]
     return (
-        "origin/HEAD unset and could not be resolved — with stale refs pruned, "
-        "a deleted branch leaves unpushed counts unreportable rather than merely wrong"
+        f"origin/HEAD unset and shared binder could not resolve it ({detail}) — "
+        "with stale refs pruned, a deleted branch leaves unpushed counts unreportable"
     )
 
 
