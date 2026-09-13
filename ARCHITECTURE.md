@@ -15,7 +15,7 @@ Highest first. This file is an index, not a rung.
 3. [`AGENTS.md`](AGENTS.md) — operating instructions
 4. `skills/l9-*` — task-scoped procedures
 
-Subsystem architecture stays in its home (cite, do not restated):
+Subsystem architecture stays in its home (cite, do not restate):
 
 - Program Execution — [`environment/program-execution/ARCHITECTURE.md`](environment/program-execution/ARCHITECTURE.md)
 - Claude Code gold-standard pack — `environment/agents/adapters/claude-code/`
@@ -51,7 +51,7 @@ Verified on disk 2026-09-13 against the repository root (not recalled from [`REA
 | `kernels/` | Recursive Alignment / Validate & Repair and related kernels. Cite by path; do not land KERNEL packs on an unrelated dirty branch. |
 | `WIP/` | Dated scratch corpus on `main`. Pre-commit and CI `paths-ignore` treat it as non-gating. |
 
-Root agent-doc surface (this change): `CANONICAL_LAW.md`, `AGENTS.md`, `CLAUDE.md`, `README.md`, `ORG_INVARIANTS.yaml`, this file, [`INVARIANTS.md`](INVARIANTS.md).
+Root agent-doc surface: `CANONICAL_LAW.md`, `AGENTS.md`, `CLAUDE.md`, `README.md`, `ORG_INVARIANTS.yaml`, this file, [`INVARIANTS.md`](INVARIANTS.md).
 
 ## Repository documentation obligation compiler
 
