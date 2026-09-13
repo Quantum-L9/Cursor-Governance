@@ -52,40 +52,70 @@ Fail-closed extract/apply error. ``code`` is the process exit status.
 - File: `skills/l9-git-work-preserve/scripts/extract_path_union.py` (L22–27)
 - Methods: _none_
 
+### `ContractError`
+
+No description
+
+- File: `skills/l9-idea-execute/scripts/_common.py` (L14–15)
+- Methods: _none_
+
+### `FoundryContractError`
+
+Raised when a Foundry machine contract is malformed.
+
+- File: `skills/l9-idea-foundry/scripts/_common.py` (L21–22)
+- Methods: _none_
+
+### `ProbeError`
+
+No description
+
+- File: `skills/l9-idea-foundry/scripts/probe_birth_factory.py` (L33–34)
+- Methods: _none_
+
+### `QualificationError`
+
+No description
+
+- File: `skills/l9-idea-foundry/scripts/qualify_birth_handoff.py` (L37–38)
+- Methods: _none_
+
 ### `CompileError`
 
 No description
 
-- File: `skills/l9-pe-campaign-activate/scripts/compile_activation_files.py` (L52–53)
+- File: `skills/l9-pe-campaign-activate/scripts/compile_activation_files.py` (L58–59)
 - Methods: _none_
 
 ### `BriefError`
 
 No description
 
-- File: `skills/l9-pe-campaign-activate/scripts/compile_brief.py` (L77–80)
+- File: `skills/l9-pe-campaign-activate/scripts/compile_brief.py` (L83–86)
 - Methods: _none_
 
-### `NuggetError`
+### Shell entrypoints
 
-No description
-
-- File: `skills/l9-pe-nuggets/scripts/extract_nuggets.py` (L18–19)
-- Methods: _none_
-
-### `PlanFinding`
-
-No description
-
-- File: `skills/l9-pipeline-audit/scripts/audit_plans.py` (L41–49)
-- Methods: _none_
-
-### `DirectTransport`
-
-Token-in-process path. TRUSTED OPERATOR ONLY.
-
-- File: `skills/l9-pr-remediation/scripts/sonar_fetch.py` (L59–92)
-- Methods: `authenticated`, `get`
+- `skills/l9-code-graph-rag-mcp/scripts/code_graph_batch_index.sh`
+- `skills/l9-code-graph-rag-mcp/scripts/code_graph_gmp_baseline.sh`
+- `skills/l9-code-graph-rag-mcp/scripts/code_graph_health.sh`
+- `skills/l9-mac-storage-triage/scripts/00-diagnose.sh`
+- `skills/l9-mac-storage-triage/scripts/01-summarize.sh`
+- `skills/l9-mac-storage-triage/scripts/02-initialize-env.sh`
+- `skills/l9-mac-storage-triage/scripts/03-validate-env.sh`
+- `skills/l9-mac-storage-triage/scripts/04-plan.sh`
+- `skills/l9-mac-storage-triage/scripts/05-apply.sh`
+- `skills/l9-mac-storage-triage/scripts/06-verify.sh`
+- `skills/l9-mac-storage-triage/scripts/07-inventory-noise.sh`
+- `skills/l9-mac-storage-triage/scripts/08-focus-layout.sh`
+- `skills/l9-mac-storage-triage/scripts/09-emit-findings.sh`
+- `skills/l9-mac-storage-triage/scripts/actions/delete-verified-source.sh`
+- `skills/l9-mac-storage-triage/scripts/actions/docker-prune-unused.sh`
+- `skills/l9-mac-storage-triage/scripts/actions/empty-trash.sh`
+- `skills/l9-mac-storage-triage/scripts/actions/mail-cache-remove.sh`
+- `skills/l9-mac-storage-triage/scripts/actions/offload-rclone.sh`
+- `skills/l9-mac-storage-triage/scripts/actions/purge-stale-caches.sh`
+- `skills/l9-mac-storage-triage/scripts/actions/spotlight-exclusions.sh`
 
 ## Functions
 
@@ -116,4 +146,4 @@ Token-in-process path. TRUSTED OPERATOR ONLY.
 
 ## Dependencies
 
-`__future__`, `_common`, `argparse`, `ast`, `audit_plans`, `build_commit_pack`, `classify_conversion_disposition`, `classify_graph_kind`, `close_resolved_issue`, `cluster_rank`, `collections`, `collections.abc`, `common`, `compile_semantic_obligations`, `convert_session_to_langgraph`, `copy`, `dataclasses`, `datetime`, `diagnose_ref_value`, `difflib`, `doc_change`, `doc_llms`, `doc_obligations`, `doc_policy`
+`__future__`, `_common`, `argparse`, `ast`, `audit_plans`, `build_commit_pack`, `capability_bind`, `check_adapter_capability`, `classify_conversion_disposition`, `classify_graph_kind`, `close_resolved_issue`, `cluster_rank`, `collections`, `collections.abc`, `common`, `compile_semantic_obligations`, `convert_session_to_langgraph`, `copy`, `dataclasses`, `datetime`, `diagnose_ref_value`, `difflib`, `doc_change`, `doc_llms`

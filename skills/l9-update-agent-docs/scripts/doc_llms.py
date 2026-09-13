@@ -1,4 +1,4 @@
-"""Small llms.txt projection mechanics for repository documentation."""
+"""Small llm.txt projection mechanics for repository documentation."""
 
 from __future__ import annotations
 
@@ -8,6 +8,8 @@ from typing import Any
 from urllib.parse import urljoin
 
 from doc_policy import repo_slug
+
+PROJECTION_FILENAME = "llm.txt"
 
 HEADINGS = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
 LINKS = re.compile(r"^- \[[^\]]+\]\(([^)]+)\)", re.MULTILINE)
@@ -66,11 +68,11 @@ def render_llms_txt(root: Path, policy: dict[str, Any], base_url: str) -> str:
 def validate_llms_txt(text: str) -> list[str]:
     errors = []
     if not text.startswith("# ") or text.startswith("## "):
-        errors.append("llms.txt must begin with one H1 title")
+        errors.append(f"{PROJECTION_FILENAME} must begin with one H1 title")
     if any(len(level) >= 3 for level, _ in HEADINGS.findall(text)):
-        errors.append("llms.txt must stay shallow")
+        errors.append(f"{PROJECTION_FILENAME} must stay shallow")
     errors.extend(
-        f"llms.txt link is not absolute: {url}"
+        f"{PROJECTION_FILENAME} link is not absolute: {url}"
         for url in LINKS.findall(text)
         if not url.startswith(("https://", "http://"))
     )

@@ -19,7 +19,13 @@ from doc_change import (
     semantic_harvest_required,
     validate_managed_regions,
 )
-from doc_llms import llms_base_url, llms_enabled, render_llms_txt, validate_llms_txt
+from doc_llms import (
+    PROJECTION_FILENAME,
+    llms_base_url,
+    llms_enabled,
+    render_llms_txt,
+    validate_llms_txt,
+)
 from doc_obligations import (
     apply_semantic_resolutions,
     build_obligations,
@@ -234,26 +240,30 @@ def build_llms_state(
         "enabled": enabled,
         "enabled_reason": enabled_reason,
         "base_url_source": base_source,
-        "path": "llms.txt",
+        "path": PROJECTION_FILENAME,
         "written": False,
         "findings": [],
     }
     if enabled and not base_url:
         state.update(
-            status="PARTIAL", findings=["llms.txt eligible but canonical llms_base_url is UNKNOWN"]
+            status="PARTIAL",
+            findings=[f"{PROJECTION_FILENAME} eligible but canonical llms_base_url is UNKNOWN"],
         )
     elif enabled and base_url:
         rendered = render_llms_txt(root, policy, base_url)
         state["findings"] = validate_llms_txt(rendered)
         state["status"] = "FAIL" if state["findings"] else "PASS"
         if write_llms and state["status"] == "PASS":
-            target = resolve_under_root(root, "llms.txt")
+            target = resolve_under_root(root, PROJECTION_FILENAME)
             if target is None:
-                state.update(status="BLOCKED", findings=["llms.txt target escaped repository root"])
+                state.update(
+                    status="BLOCKED",
+                    findings=[f"{PROJECTION_FILENAME} target escaped repository root"],
+                )
             else:
                 target.write_text(rendered, encoding="utf-8")
                 state["written"] = True
-                mutations.append("llms.txt")
+                mutations.append(PROJECTION_FILENAME)
     return state, mutations
 
 
@@ -376,7 +386,7 @@ def audit_repository(
             if obligation["surface"] == "llms_txt" and not obligation["lifecycle"]["terminal"]:
                 obligation["lifecycle"] = {
                     "status": "BLOCKED",
-                    "reason": "llms.txt projection failed validation",
+                    "reason": f"{PROJECTION_FILENAME} projection failed validation",
                     "terminal": False,
                 }
                 obligation["blockers"] = sorted(set(obligation["blockers"] + llms["findings"]))

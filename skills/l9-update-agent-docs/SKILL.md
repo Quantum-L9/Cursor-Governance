@@ -52,7 +52,7 @@ Machine authority:
 
 ## Ownership boundaries
 
-- `l9-update-agent-docs` owns documentation topology, impact qualification, target resolution, obligation compilation, deterministic materiality assessment for explicitly registered operational surfaces, freshness semantics, admission of semantic evidence, optional `llms.txt`, and the repo-docs receipt.
+- `l9-update-agent-docs` owns documentation topology, impact qualification, target resolution, obligation compilation, deterministic materiality assessment for explicitly registered operational surfaces, freshness semantics, admission of semantic evidence, optional `llm.txt`, and the repo-docs receipt.
 - `DocumentationObligation` remains the only durable work unit. `assessment` is evidence attached to an obligation, never a second findings ledger or second obligation system.
 - operational-surface ownership is split explicitly:
   - `obligation_owner` owns compilation and lifecycle accounting;
@@ -203,7 +203,7 @@ If the analyzer cannot be resolved, the obligation is `BLOCKED`. Do not guess a 
 | operational contract / `repository-native` execution owner | Apply only the bounded repair justified by assessment, subject to the resolved mutation guard and repository-native validation. |
 | `readme-pipeline-v1` / generator | Run `scripts/generate_subsystem_readmes.py` for the resolved subsystem. Do not hand-write a generated module README. |
 | specialist/external owner | Handoff or use that owner's canonical capability. Do not absorb its implementation here. |
-| `llms.txt` projection | Generate only when enabled and a canonical base URL exists. It is projection, never authority. |
+| `llm.txt` projection | Generate only when enabled and a canonical base URL exists. It is projection, never authority. |
 
 Module README config SSOT: `config/subsystems/readme_config.yaml`. Sequencer: `workflows/dags/readme_pipeline_dag.py` (`readme-pipeline-v1`). Polyglot parsing remains at the generator owner.
 
@@ -276,7 +276,7 @@ Do not introduce a generic plugin system merely to avoid adding a static registr
 - Authoring ADRs or API contracts here
 - Adding general language parsers here
 - Hand-editing generated module README content instead of using its owner
-- Treating `llms.txt` as doctrine
+- Treating `llm.txt` as doctrine
 - Creating root files not permitted by topology
 - Changing generated formatter ownership blocks by hand
 - Inventing a new CI workflow for this capability when an existing CI owner can consume the receipt
