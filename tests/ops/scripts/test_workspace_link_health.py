@@ -32,9 +32,7 @@ def _seed_identity(root: Path) -> None:
     (root / "CANONICAL_LAW.md").write_text("# law\n", encoding="utf-8")
     (root / "skills/AUTONOMY_MANIFEST.yaml").write_text("x\n", encoding="utf-8")
     (root / "rules/RULES-MANIFEST.yaml").write_text("x\n", encoding="utf-8")
-    (root / "ops/scripts/check_governance_wiring.sh").write_text(
-        "#!/bin/sh\n", encoding="utf-8"
-    )
+    (root / "ops/scripts/check_governance_wiring.sh").write_text("#!/bin/sh\n", encoding="utf-8")
 
 
 def _env(home: Path) -> dict[str, str]:
@@ -172,9 +170,9 @@ def test_links_only_repairs_wrong_target_and_skips_claude_projection(
         text=True,
         env=env,
     )
-    assert Path(os.path.realpath(ws / ".cursor-commands")) == Path(
-        os.path.realpath(ssot)
-    ), first.stdout + first.stderr
+    assert Path(os.path.realpath(ws / ".cursor-commands")) == Path(os.path.realpath(ssot)), (
+        first.stdout + first.stderr
+    )
     assert Path(os.path.realpath(ws / ".cursor/plans")) == Path(
         os.path.realpath(home / ".cursor/plans")
     )
