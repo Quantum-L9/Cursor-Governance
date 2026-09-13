@@ -60,7 +60,8 @@ One authority, one egress, two adapters. Who calls what:
 
 | Caller | Adapter | Operation(s) | Role |
 |---|---|---|---|
-| Model, mid-session, recording a durable fact | `l9-graphite-memory` MCP server (stdio, package-owned) | `memory.phase_lock` → `memory.write_governed` | **The only model write.** `MemoryService` grants the lock after a conflict check on the namespace snapshot and re-verifies the digest inside the admitting transaction; a refused lock or write is the verdict |
+| Model, mid-session, ordinary durable fact (cold OK) | `l9-graphite-memory` MCP stdio | `memory.write_agent` | **Cold path (ADR-0031).** No SessionStart receipt, no phase_lock. Allowlisted classes only. |
+| Model, mid-session, conflict-sensitive durable fact | `l9-graphite-memory` MCP stdio | `memory.phase_lock` → `memory.write_governed` | **High-stakes path.** Lock + snapshot digest required. |
 | Model, reading | MCP `memory.search` / `memory.hydrate`; or `cli.py search` / `hydrate` | read | evidence only |
 | SessionStart hook | `hydration.py` (`canonical_hydrate`) | `health`, `hydrate` | deterministic adapter |
 | sessionEnd hook | `ops/graphiti/hydration/close_session.py` | `ingest_candidate`, `close` (idempotent, exact-request replay) | deterministic adapter |

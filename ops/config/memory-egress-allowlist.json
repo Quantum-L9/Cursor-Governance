@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "description": "Exact path-based exceptions for ops/scripts/validate_memory_egress_boundary.py. Every entry names why the path may spell a forbidden token and an expiry; an expired entry is a finding. Nothing here authorizes provider egress — since stage C11 every remaining entry is a negative check, a scanner/allowlist self-reference, a protected operator-owned file, or a secret-inventory row, never a code path that calls a provider (CURSOR_GOVERNANCE_MEMORY_CONTROL_PLANE_REALIGNMENT_BUILD_PLAN §8).",
+  "description": "Exact path-based exceptions for ops/scripts/validate_memory_egress_boundary.py. Every entry names why the path may spell a forbidden token and an expiry; an expired entry is a finding. Nothing here authorizes provider egress \u2014 since stage C11 every remaining entry is a negative check, a scanner/allowlist self-reference, a protected operator-owned file, or a secret-inventory row, never a code path that calls a provider (CURSOR_GOVERNANCE_MEMORY_CONTROL_PLANE_REALIGNMENT_BUILD_PLAN \u00a78).",
   "mode": "enforce",
   "mode_note": "enforce (stage C11+): any unlisted or expired finding fails the validator and tests/ops/memory/test_egress_boundary.py. The legacy provider client, env plane, shadow reader, distiller and their tests were deleted at C11; ops/graphiti/graphiti_memory_client.py is a tombstone that spells no provider token.",
   "entries": [
@@ -104,6 +104,54 @@
       "path": "ops/secrets/infisical-cursor-governance.yaml",
       "reason": "Secret inventory row for the provider bearer the memory service deployment owns. No Cursor surface resolves it (stage C9); the row is retired by the operator with the provider deployment (C12 note in the inventory).",
       "retire_at_stage": "operator",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "environment/agents/adapters/claude-code/memory/memory-enforcement.contract.json",
+      "reason": "Enforcement contract names forbidden HTTP/provider side doors as deny-list (negative check, ADR-0031).",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "ops/scripts/validate_legacy_doctrine_residue.py",
+      "reason": "Doctrine residue scanner names forbidden HTTP memory tokens as patterns to reject.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "ops/scripts/tests/test_validate_legacy_doctrine_residue.py",
+      "reason": "Negative tests for doctrine residue name forbidden HTTP tokens as fixtures.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "tests/ops/scripts/**",
+      "reason": "Negative tests for validators name forbidden tokens as fixtures.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "environment/agents/adapters/claude-code/settings.template.json",
+      "reason": "Claude settings deny-list names retired graphiti.write_governed tool as a blocked capability.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "environment/agents/adapters/claude-code/tests/**",
+      "reason": "Adapter negative tests name forbidden provider/HTTP tokens as fixtures.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "environment/agents/adapters/claude-code/validate_memory_enforcement.py",
+      "reason": "Enforcement validator asserts forbidden side-door tokens are listed in the contract.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "ops/scripts/lib/bind_memory_interpreter.sh",
+      "reason": "Interpreter binder unsets retired provider transport vars (negative hygiene).",
+      "retire_at_stage": "never",
       "expires": "2099-01-01"
     }
   ]

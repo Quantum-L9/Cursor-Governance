@@ -148,11 +148,16 @@ class FrontDoorTests(unittest.TestCase):
         return vme
 
     def test_contract_states_the_governed_interactive_write(self) -> None:
-        """Positive: the model's durable write is phase_lock -> write_governed."""
+        """Positive: dual write path — cold write_agent + high-stakes phase_lock -> write_governed."""
         imw = self._contract()["interactive_memory_write"]
         self.assertEqual(imw["canonical_mcp_server"], "l9-graphite-memory")
+        self.assertEqual(imw["cold_write_operation"], "memory.write_agent")
+        self.assertEqual(imw["cold_write_prerequisite"], "none")
+        self.assertEqual(imw["governed_write_prerequisite"], "memory.phase_lock")
+        self.assertEqual(imw["governed_write_operation"], "memory.write_governed")
         self.assertEqual(imw["prerequisite"], "memory.phase_lock")
         self.assertEqual(imw["write_operation"], "memory.write_governed")
+        self.assertEqual(imw["http_transport"], "forbidden")
         self.assertIs(imw["repository_authority"], False)
         self.assertEqual(imw["provider_direct"], "forbidden")
         self.assertEqual(imw["generic_ingest_as_model_write"], "forbidden")
@@ -164,6 +169,9 @@ class FrontDoorTests(unittest.TestCase):
         schema = self._schema()
         self.assertIn("interactive_memory_write", schema["required"])
         props = schema["properties"]["interactive_memory_write"]["properties"]
+        self.assertEqual(props["cold_write_operation"]["const"], "memory.write_agent")
+        self.assertEqual(props["cold_write_prerequisite"]["const"], "none")
+        self.assertEqual(props["governed_write_operation"]["const"], "memory.write_governed")
         self.assertEqual(props["prerequisite"]["const"], "memory.phase_lock")
         self.assertEqual(props["write_operation"]["const"], "memory.write_governed")
         self.assertIs(props["repository_authority"]["const"], False)

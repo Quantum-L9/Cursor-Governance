@@ -19,6 +19,16 @@
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
+# ADR-0031: signed agent assertion for MCP stdio (never human door).
+# Fail-soft when secret maps are absent (memory-blind cold start OK).
+_ASSERT_EXPORT="${L9_GOVERNANCE_DIR:-$HOME/.cursor-governance}/ops/memory/export_agent_assertion_env.sh"
+if [[ -z "${L9_MEMORY_AGENT_ASSERTION:-}" && -f "$_ASSERT_EXPORT" ]]; then
+  export L9_MEMORY_AGENT_ID="${L9_MEMORY_AGENT_ID:-claude-code}"
+  # shellcheck disable=SC1090
+  source "$_ASSERT_EXPORT" || true
+fi
+
+
 # Wall clock for the whole hook. Every bounded sub-operation below sizes itself
 # against what is LEFT of the registration's `timeout`, not against a constant
 # of its own: the repair used to be launched with a fixed 90 s ceiling inside a

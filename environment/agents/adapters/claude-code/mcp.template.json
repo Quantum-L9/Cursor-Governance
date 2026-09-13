@@ -56,7 +56,7 @@
       "_requires_env": [
         "L9_MEMORY_INTERPRETER"
       ],
-      "_owner": "l9-graphite-memory: this argv is the package's managed_server_entry (client_config/cursor.py) declared for Claude Code's project scope, where a ${VAR} interpreter is the only secret-free, machine-agnostic form. tests/ops/memory/test_mcp_surfaces.py holds it equal to the package. No env block ever: the server resolves its own credentials (ADR-016)."
+      "_owner": "l9-graphite-memory: this argv is the package's managed_server_entry (client_config/cursor.py) declared for Claude Code's project scope, where a ${VAR} interpreter is the only secret-free, machine-agnostic form. tests/ops/memory/test_mcp_surfaces.py holds it equal to the package. No secret values in this template (ADR-016). ADR-0031 assertion env (L9_MEMORY_AGENTS_DOOR_SECRET / L9_MEMORY_AGENT_ASSERTION / grants JSON) is injected by session bootstrap into the process environment, never into this file."
     },
     "context7": {
       "type": "http",

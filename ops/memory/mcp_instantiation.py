@@ -43,7 +43,7 @@ MASTER_PATH = _REPO_ROOT / "environment" / "mcp" / "master.mcp.json"
 
 MEMORY_KEY = "l9-graphite-memory"
 #: Legacy direct-provider front door keys, removed from every rendered file.
-LEGACY_KEYS = frozenset({"graphiti-memory"})
+LEGACY_KEYS = frozenset({"graphiti-memory", "l9-shared-memory"})
 RECEIPT_SCHEMA = "cursor.mcp-instantiation/v1"
 ENV_MEMORY_INTERPRETER = "L9_MEMORY_INTERPRETER"
 
