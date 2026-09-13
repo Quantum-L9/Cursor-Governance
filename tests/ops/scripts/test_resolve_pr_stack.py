@@ -201,7 +201,8 @@ def test_generated_heal_is_serialized_before_reader_wave() -> None:
     assert heal_at < wave_at
     assert "_wave_start sync " not in gate
     heal_block = gate[heal_at:wave_at]
-    assert "commit the rewrite, then re-run make pr." in heal_block
+    assert "committing rewrites and continuing this make pr" in heal_block
+    assert "_gate_commit_writer_dirt" in heal_block
     assert "_gate_run_projection_heal" in heal_block
     fn_at = gate.find("_gate_run_projection_heal() {")
     assert fn_at != -1 and fn_at < heal_at

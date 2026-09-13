@@ -1,4 +1,4 @@
-"""Kernel hook owns tree/plan kernels; L4 authorize does not."""
+"""Kernel hook stamps/verifies tree kernels; L4 authorize requires the receipt."""
 
 from __future__ import annotations
 
