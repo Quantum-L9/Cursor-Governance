@@ -6,11 +6,11 @@ metadata:
   skill_schema: 1
   layer: control_plane
   role: skill_entrypoint
-  tags: [l9, ideaos, execution, routing, foundry, website-bot, program-execution]
+  tags: [l9, ideaos, execution, routing, gar, plan, website-bot, program-execution, birth]
   owner: igor_beylin
   status: active
-  version: 1.1.0
-  updated: 2026-09-12
+  version: 1.2.0
+  updated: 2026-09-13
 ---
 
 # L9 Idea Execute
@@ -25,13 +25,13 @@ Preserve this authority chain:
 IdeaOS -> l9-idea-execute -> authoritative downstream owner -> owner-native receipt
 ```
 
-IdeaOS decides **what outcomes are required**. This skill decides **which existing owner can satisfy each outcome and how to hand it off correctly**. The downstream owner decides **how to perform its work**.
+IdeaOS decides **what outcomes are required**. This skill decides **which existing owner can satisfy each outcome and how to hand it off correctly**. The downstream owner decides **how to perform its work**. For a selected new-product Graph, Idea Execute is the sole cross-owner orchestrator; it never embeds orchestration inside a downstream skill.
 
 ## Core Contract
 
 | Input | Output | Scope |
 |-------|--------|-------|
-| Validated IdeaOS decision or execution-ready pack | Envelope + Execution Graph + thin Receipt | Route and hand off only — never become IdeaOS, Foundry, Website-Bot, or PE |
+| Validated IdeaOS decision or execution-ready pack | Envelope + Execution Graph + thin Receipt | Route and hand off only — never become IdeaOS, scoped greenfield chain, Website-Bot, or PE |
 
 Load [references/contracts.md](references/contracts.md) and [references/architecture.md](references/architecture.md).
 
@@ -39,7 +39,7 @@ Load [references/contracts.md](references/contracts.md) and [references/architec
 
 1. Explicit user outcome and named constraints.
 2. Validated IdeaOS decision / pack (source authority + supersession).
-3. Live downstream owner contracts (Website-Bot, Foundry, PE, `l9-plan-simple`).
+3. Live downstream owner contracts (Website-Bot, GAR, `l9-plan`, PE, `l9-repo-birth`, and `l9-repo-template`).
 4. This skill's envelope, graph, and adapter references.
 5. `Unknown` — stop with an explicit failure state; do not guess an owner.
 
@@ -59,6 +59,7 @@ Never:
 - create a new repository when a specialized factory already owns the artifact;
 - send raw IdeaOS packs directly to Website-Bot;
 - compile or mutate PE internals such as Blueprint, Program Lock, PEC task state, or LAUNCH.json;
+- cause one owner to invoke another owner merely because it completed;
 - split one atomic cross-repository campaign into independent campaigns merely to bypass an executor limitation;
 - regenerate a valid higher-authority execution plan or contract chain ceremonially;
 - become a generic code mutation authority;
@@ -105,7 +106,7 @@ requirements:
     required: true
 ```
 
-IdeaOS-facing requirements must not say `use_foundry`, `use_website_bot`, `use_pe`, or choose a provider/model.
+IdeaOS-facing requirements must not say `use_scoped-greenfield`, `use_website_bot`, `use_pe`, or choose a provider/model.
 
 Run:
 
@@ -172,7 +173,7 @@ Resolve runtime/artifact ownership first, then execution adapter.
 Examples:
 
 - website artifact -> `Quantum-L9/Website-Bot`;
-- generic unowned new product/system repository -> `l9-idea-foundry`;
+- generic unowned new product/system repository -> `l9-idea-execute greenfield profile`;
 - bounded existing-repository change -> current `l9-plan-simple` path when planning/execution is required;
 - campaign-shaped coordinated existing-system change -> Program Execution adapter.
 
@@ -214,6 +215,20 @@ Read [references/adapters.md](references/adapters.md) for all adapter contracts.
 Execution authority is unit-local. Publication, remote repository creation, deployment, and merge remain separate unless explicitly authorized by the downstream owner's current contract and the user.
 
 Do not widen authority because another unit in the graph has stronger permission.
+
+### Greenfield orchestration profile
+
+For a `NEW_PRODUCT_REPOSITORY` Graph, resolve GAR, `l9-plan`, and
+`l9-pe-campaign-activate` as a cohort at graph activation. Their native work
+remains ordered: GAR Decision -> Plan -> campaign-source.v2 -> PE/PEC receipt.
+The cohort exists only for that selected Graph and does not change direct use of
+any member skill.
+
+PE/PEC completion is a valid terminal realization result. Do **not** invoke
+`l9-repo-birth` automatically. Add birth stages only when
+`execution_characteristics.birth_handoff_requested: true` is authorized by
+IdeaOS, then validate source commit/tree, all upstream receipts, and current
+factory capability evidence before invoking the explicit-only birth skill.
 
 ### 8. Observe authoritative terminal state
 
@@ -267,10 +282,10 @@ website -> Website-Bot
 not:
 
 ```text
-website -> Foundry -> Website-Bot
+website -> scoped greenfield chain -> Website-Bot
 ```
 
-Use Foundry only when a new **product/system repository** is required and no specialized downstream factory already owns that artifact.
+Use scoped greenfield chain only when a new **product/system repository** is required and no specialized downstream factory already owns that artifact.
 
 ### Existing system campaign
 
@@ -286,11 +301,11 @@ Use existing valid plans first. Invoke current planning only if the work is not 
 
 ## Adapter invariants
 
-### Foundry
+### scoped greenfield chain
 
-Use `l9-idea-foundry` only for an unowned new product/system repository. Let Foundry own its blueprint, code realization, traceability, freeze, and `l9-repo-template` seam.
+Use `l9-idea-execute greenfield profile` only for an unowned new product/system repository. Let scoped greenfield chain own its blueprint, code realization, traceability, freeze, and `l9-repo-template` seam.
 
-If Foundry is unavailable, stop. Do not recreate it inside this skill.
+If scoped greenfield chain is unavailable, stop. Do not recreate it inside this skill.
 
 ### Website-Bot
 
@@ -341,8 +356,8 @@ A blocked route is a valid result when the idea is sound but the current executo
 
 Read [references/examples.md](references/examples.md) when validating routing behavior. The canonical regression cases are:
 
-- SplitWisely -> Foundry, not Website-Bot;
-- a website-only requirement -> Website-Bot, not Foundry;
+- SplitWisely -> scoped greenfield chain, not Website-Bot;
+- a website-only requirement -> Website-Bot, not scoped greenfield chain;
 - one bounded existing repo -> existing-repo route;
 - PR Cognitive Convergence -> PE-shaped multi-repo campaign, but blocked on the 2026-09-02 single-target PE baseline;
 - mixed new product + website -> two units, concurrent unless an explicit dependency requires product identity first.
@@ -384,7 +399,7 @@ These scripts validate and route declared execution semantics. They do not repla
 - [references/architecture.md](references/architecture.md): authority, topology, decomposition, concurrency, and reuse rules.
 - [references/contracts.md](references/contracts.md): Envelope, Graph, adapter capability snapshot, and Receipt contracts.
 - [references/artifact-reconciliation.md](references/artifact-reconciliation.md): lineage currentness, preflight dispositions, and earliest-invalid-layer law.
-- [references/adapters.md](references/adapters.md): Foundry, Website-Bot, Plan Simple, and Program Execution adapter behavior.
+- [references/adapters.md](references/adapters.md): scoped greenfield chain, Website-Bot, Plan Simple, and Program Execution adapter behavior.
 - [references/program-execution-adapter.md](references/program-execution-adapter.md): moving PE discovery seam and current baseline.
 - [references/examples.md](references/examples.md): regression examples and expected routing outcomes.
 - [references/capability-registry.yaml](references/capability-registry.yaml): minimal demonstrated-owner registry; expand only for real consumers.

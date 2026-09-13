@@ -20,7 +20,7 @@ Requirements:
 Expected:
 
 ```text
-NEW_PRODUCT_REPOSITORY -> l9-idea-foundry
+NEW_PRODUCT_REPOSITORY -> l9-idea-execute greenfield profile
 ```
 
 Website-Bot is not called unless a separate website requirement exists.
@@ -37,7 +37,7 @@ Expected:
 SPECIALIZED_FACTORY -> Quantum-L9/Website-Bot
 ```
 
-Foundry is not called merely because Website-Bot may provision a site repository.
+scoped greenfield chain is not called merely because Website-Bot may provision a site repository.
 
 ## 3. Bounded existing repository
 
@@ -82,11 +82,11 @@ Requirements:
 Expected graph:
 
 ```text
-unit-product -> Foundry
+unit-product -> scoped greenfield chain
 unit-website -> Website-Bot
 ```
 
-If website authoring needs product identity produced by Foundry, add an explicit dependency. Otherwise run independently.
+If website authoring needs product identity produced by scoped greenfield chain, add an explicit dependency. Otherwise run independently.
 
 ## 6. IgorBot lineage regression
 

@@ -3,11 +3,11 @@ l9_schema: 1
 parent: l9-idea-execute
 layer: reference
 role: adapters
-tags: [ideaos, foundry, website-bot, plan-simple, program-execution, evidence]
+tags: [ideaos, gar, plan, website-bot, program-execution, birth, evidence]
 owner: igor_beylin
 status: active
-version: 1.1.0
-updated: 2026-09-12
+version: 1.2.0
+updated: 2026-09-13
 /L9_META -->
 
 # Adapter contracts
@@ -16,7 +16,7 @@ updated: 2026-09-12
 
 1. Common adapter protocol
 2. Capability evidence states
-3. l9-idea-foundry
+3. Scoped greenfield owner chain
 4. Website-Bot
 5. l9-plan-simple
 6. Program Execution
@@ -59,13 +59,18 @@ Evidence defects are separate:
 
 Never convert missing, malformed, stale, conflicting, or unrefreshed evidence into `EXECUTOR_CAPABILITY_GAP`.
 
-## 3. l9-idea-foundry
+## 3. Scoped greenfield owner chain
 
 Use only when a new standalone product/system repository is required and no specialized factory already owns the artifact.
 
 Do not use for Website-Bot-generated sites, existing-repository modifications, or generic code changes merely because code is required.
 
-Load the current Foundry contract and let Foundry own its blueprint, code realization, traceability, exact-state validation, freeze, and repo-template seam.
+Idea Execute is the cross-owner orchestrator for this Graph only. It resolves
+GAR, `l9-plan`, and `l9-pe-campaign-activate` as a cohort, then observes their
+ordered native outputs. GAR does not invoke Plan; Plan does not invoke campaign
+activation; PEC does not invoke birth. `l9-repo-birth` is an explicit-only
+optional handoff after a verified PE receipt, and `l9-repo-template` owns
+factory validation and birth state.
 
 ## 4. Website-Bot
 

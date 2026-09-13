@@ -1999,7 +1999,7 @@
     },
     {
       "path": "scripts/campaign_input.py",
-      "sha256": "cf0b67d92306ef67543799003646791480ec7b2e335aa0d0ec5645f79a192605"
+      "sha256": "4ae70d786bb3cab2df17bb56925909a32befa20ca87c9f0b091e0b682d21d2cd"
     },
     {
       "path": "scripts/campaign_pr_copy.py",
@@ -2015,7 +2015,7 @@
     },
     {
       "path": "scripts/compile_campaign_source.py",
-      "sha256": "1bba0eb37d490dec4bab8b2abcdafcc9d3252e12c278336a1df2f2f5a9b937f7"
+      "sha256": "80573b0e73739ad21b145fec47e59a55c7cd8f980735922b5aa54650994b316a"
     },
     {
       "path": "scripts/context7_stack_proof.py",
@@ -2083,7 +2083,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "2cce5dffae0a8d4553cd91d0aa5bf98d475c82e86789580484e0dc45ead8237d"
+      "sha256": "4af0eba1813515ded69fff85bb0cc5a35ce12e2878b2789550d33f467be1979c"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -2184,6 +2184,10 @@
     {
       "path": "scripts/tests/test_pe_worker.py",
       "sha256": "518de93173b8998a0ccd0d58a178e253656e307110aad791a4359d54d83691cb"
+    },
+    {
+      "path": "scripts/tests/test_pre_birth_workspace.py",
+      "sha256": "615c43cfc2c4a0b23d30fb071e07a494bfe43b8e9c7b7d62edfc3ce6d21fe7ef"
     },
     {
       "path": "scripts/tests/test_prepare_benchmark.py",

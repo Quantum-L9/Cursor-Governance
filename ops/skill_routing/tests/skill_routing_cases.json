@@ -226,8 +226,8 @@
       "expected_source": "explicit_hint"
     },
     {
-      "prompt": "Use the idea foundry to compile this idea pack into a birth-ready repository",
-      "expected_primary": "l9-idea-foundry",
+      "prompt": "Use /l9-repo-birth to package this verified PEC commit for local factory validation",
+      "expected_primary": "l9-repo-birth",
       "expected_supporting": [
         "l9-structured-reasoning"
       ],
@@ -238,7 +238,7 @@
       "expected_primary": null,
       "forbidden": [
         "l9-idea-execute",
-        "l9-idea-foundry"
+        "l9-repo-birth"
       ]
     }
   ]

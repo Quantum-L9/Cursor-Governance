@@ -240,7 +240,10 @@ def build(report_path: Path, repo_root: Path, output_parent: Path) -> tuple[Path
         original, flipped = _flipped_content(repo, rel, by_file[rel])
         _write(pack_root, pack_root / "change" / "files" / rel, flipped)
         patch_parts.append(_unified(rel, original, flipped))
-    patch_text = report.get("diff") or "".join(patch_parts)
+    # The report's captured diff inherits the operator's Git color settings and
+    # is evidence, not a portable patch artifact. Re-render from the proven
+    # before/after bytes so `git apply` always receives deterministic plain text.
+    patch_text = "".join(patch_parts)
     _write(pack_root, pack_root / "change" / "commit.patch", patch_text)
 
     _write(pack_root, pack_root / "README.md", _render_readme(report, pack_name))

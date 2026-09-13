@@ -16,6 +16,8 @@ TOPOLOGIES = {
     "EXISTING_SYSTEM_CAMPAIGN",
 }
 ADMISSION = {"UNCHECKED", "COMPATIBLE", "BLOCKED"}
+GREENFIELD_CORE_STAGES = ("architecture", "planning", "campaign", "realization")
+GREENFIELD_COHORT = {"l9-global-architect", "l9-plan", "l9-pe-campaign-activate"}
 
 
 def validate_graph(data: Any, envelope: Any | None = None) -> dict[str, Any]:
@@ -80,10 +82,48 @@ def validate_graph(data: Any, envelope: Any | None = None) -> dict[str, Any]:
         if unit.get("admission_status") not in ADMISSION:
             errors.append(f"{label}.admission_status is invalid")
 
-        if topology == "SPECIALIZED_FACTORY" and unit.get("adapter") == "l9-idea-foundry":
-            errors.append(f"{label}: specialized factory cannot route through Foundry")
-        if topology == "NEW_PRODUCT_REPOSITORY" and unit.get("adapter") != "l9-idea-foundry":
-            errors.append(f"{label}: new product repository must use Foundry in registry v1")
+        if topology == "NEW_PRODUCT_REPOSITORY":
+            if unit.get("adapter") != "l9-idea-execute" or unit.get("owner") != "l9-idea-execute":
+                errors.append(
+                    f"{label}: new product repository must use the scoped Idea Execute route"
+                )
+            orchestration = unit.get("orchestration")
+            if not isinstance(orchestration, dict):
+                errors.append(f"{label}.orchestration must declare the scoped lifecycle")
+            else:
+                if orchestration.get("profile") != "idea_execute_greenfield_v1":
+                    errors.append(f"{label}.orchestration.profile is invalid")
+                cohort = orchestration.get("cohort")
+                if not isinstance(cohort, list) or set(cohort) != GREENFIELD_COHORT:
+                    errors.append(
+                        f"{label}.orchestration.cohort must load GAR, Plan, and Campaign Activation"
+                    )
+                stages = orchestration.get("stages")
+                if not isinstance(stages, list):
+                    errors.append(f"{label}.orchestration.stages must be a list")
+                else:
+                    stage_ids = [stage.get("id") for stage in stages if isinstance(stage, dict)]
+                    if tuple(stage_ids[:4]) != GREENFIELD_CORE_STAGES:
+                        errors.append(
+                            f"{label}.orchestration must start with GAR, Plan, Campaign, "
+                            "and realization"
+                        )
+                    requested = orchestration.get("birth_handoff_requested")
+                    if not isinstance(requested, bool):
+                        errors.append(
+                            f"{label}.orchestration.birth_handoff_requested must be boolean"
+                        )
+                    elif requested:
+                        if stage_ids[4:] != ["birth_handoff", "birth"]:
+                            errors.append(
+                                f"{label}.orchestration requested birth must declare handoff "
+                                "then factory"
+                            )
+                    elif any(stage in {"birth_handoff", "birth"} for stage in stage_ids):
+                        errors.append(
+                            f"{label}.orchestration must omit birth stages unless explicitly "
+                            "requested"
+                        )
         if topology == "EXISTING_REPO_CHANGE" and len(set(repos)) != 1:
             errors.append(f"{label}: bounded existing-repo unit must target exactly one repo")
         if topology == "EXISTING_SYSTEM_CAMPAIGN" and len(set(repos)) < 2:

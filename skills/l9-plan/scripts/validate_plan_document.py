@@ -167,6 +167,29 @@ def _check_convergence(plan: dict, todos: list[dict]) -> list[str]:
     return errors
 
 
+def _check_idea_execute_binding(plan: dict) -> list[str]:
+    """Keep the greenfield binding opt-in without weakening its closed contract."""
+    binding = plan.get("idea_execute_binding")
+    if binding is None:
+        return []
+    if not isinstance(binding, dict):
+        return ["G_IDEA_EXECUTE_BINDING: idea_execute_binding must be an object"]
+    target = binding.get("target")
+    if not isinstance(target, dict):
+        return ["G_IDEA_EXECUTE_BINDING: target must be an object"]
+    if target.get("lifecycle") != "pre_birth_local_execution_workspace":
+        return [
+            "G_IDEA_EXECUTE_BINDING: target lifecycle must be pre_birth_local_execution_workspace"
+        ]
+    intent = str(target.get("future_repository_intent") or "").strip()
+    if "://" in intent or intent.endswith(".git"):
+        return [
+            "G_IDEA_EXECUTE_BINDING: future_repository_intent is intent only and cannot name "
+            "a remote URL"
+        ]
+    return []
+
+
 def semantic_errors(plan: dict) -> list[str]:
     todos = [t for t in (plan.get("todos") or []) if isinstance(t, dict)]
     todo_errs, todo_ids, _deps = _check_todos(todos)
@@ -183,6 +206,7 @@ def semantic_errors(plan: dict) -> list[str]:
     if not (plan.get("leverage") or {}).get("ranked_todo_ids"):
         errors.append("G_LEVERAGE: leverage.ranked_todo_ids empty")
     errors.extend(_check_convergence(plan, todos))
+    errors.extend(_check_idea_execute_binding(plan))
     return errors
 
 

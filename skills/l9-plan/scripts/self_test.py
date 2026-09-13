@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import copy
+import json
 import os
 import re
 import subprocess
@@ -14,6 +16,7 @@ if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
 from sync_cursor_plan_template import _under_repo  # noqa: E402
+from validate_plan_document import semantic_errors  # noqa: E402
 
 # Keep in parity with SKILL.md ## Validation fenced block.
 INVOKED = [
@@ -102,6 +105,29 @@ def main() -> int:
             errors.append(
                 f"expected {needle} in failure output for {rel}\n{proc.stdout}\n{proc.stderr}"
             )
+
+    greenfield = json.loads((ROOT / "fixtures" / "plan_pass.json").read_text(encoding="utf-8"))
+    greenfield["idea_execute_binding"] = {
+        "schema": "l9.idea-execute.plan-binding/v1",
+        "gar_decision_ref": "GAR_DECISION.json",
+        "gar_decision_digest": "sha256:" + "a" * 64,
+        "gar_status": "ACCEPTED",
+        "graph_unit_ids": ["unit-ER-001"],
+        "lifecycle_run_id": "fixture-run",
+        "target": {
+            "lifecycle": "pre_birth_local_execution_workspace",
+            "logical_target_id": "fixture-product",
+            "future_repository_intent": "Quantum-L9/fixture-product",
+        },
+    }
+    if semantic_errors(greenfield):
+        errors.append("valid Idea Execute Plan binding produced semantic errors")
+    remote_intent = copy.deepcopy(greenfield)
+    remote_intent["idea_execute_binding"]["target"]["future_repository_intent"] = (
+        "https://github.com/Quantum-L9/fixture-product.git"
+    )
+    if not any("future_repository_intent" in item for item in semantic_errors(remote_intent)):
+        errors.append("remote future repository intent was not rejected")
 
     # Helpers smoke (legacy + default PE/autonomy projector)
     for cmd in (

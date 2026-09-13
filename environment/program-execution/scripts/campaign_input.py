@@ -678,10 +678,14 @@ def seed_view(source: dict[str, Any]) -> dict[str, Any]:
     program = source.get("program") or {}
     target = dict(source.get("target") or {})
     # `targets[]` owns execution target identity for a direct campaign source.
-    # Resolving the runner's repository from `program.target_repository_id` /
-    # `metadata.intended_host` instead let the runner bind one repository while
-    # the compiler built the Blueprint against another.
-    target["repository_id"] = _compile_module().resolve_campaign_target_repository(source)
+    # A pre-birth target deliberately carries a local workspace and a logical
+    # identity rather than a fabricated GitHub repository id.
+    compiler = _compile_module()
+    # Retain the canonical alias-conflict gate before projecting richer local
+    # target metadata into the runner seed.
+    compiler.resolve_campaign_target_repository(source)
+    resolved_target = compiler.resolve_campaign_target(source)
+    target.update(resolved_target)
     return {
         "campaign_id": str(metadata.get("campaign_id") or program.get("id") or "").strip(),
         "title": str(metadata.get("title") or program.get("name") or "").strip(),

@@ -55,7 +55,7 @@ Select `embedded` **only** when the caller asks for it explicitly and observably
 
 ## Intended Embedded Callers
 
-Nested skills; pre-birth and repository-birth workflows; orchestration pipelines; L9 Idea Foundry and comparable systems; any caller that needs L9 planning depth while owning branch, mutation, verification, publication, and release itself under its own contract.
+Nested skills; pre-birth and repository-birth workflows; orchestration pipelines; L9 Idea scoped greenfield chain and comparable systems; any caller that needs L9 planning depth while owning branch, mutation, verification, publication, and release itself under its own contract.
 
 ## Core Contract
 

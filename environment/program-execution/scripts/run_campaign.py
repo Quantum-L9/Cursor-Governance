@@ -1240,6 +1240,63 @@ def default_ensure_target_checkout(
     return dest
 
 
+def default_ensure_pre_birth_workspace(dest: Path) -> Path:
+    """Create or verify the local-only source boundary for a greenfield run.
+
+    This is intentionally not a factory staging API.  It is the normal PE
+    execution checkout with a reproducible initial commit and no remote.  A
+    remote here would make a completed PE run accidentally publishable.
+    """
+    dest = dest.resolve()
+    if dest.exists() and not is_git_repo(dest):
+        raise CampaignError(f"pre-birth workspace exists and is not a git checkout: {dest}")
+    if not dest.exists():
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        created = run_cmd(
+            ["git", "init", "-b", "main", str(dest)], timeout=GIT_TIMEOUT_S, env=git_env()
+        )
+        if created.returncode != 0:
+            raise CampaignError(f"cannot initialize pre-birth workspace {dest}: {created.stderr}")
+    origin = run_cmd(
+        ["git", "-C", str(dest), "remote", "get-url", "origin"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if origin.returncode == 0 and (origin.stdout or "").strip():
+        raise CampaignError(
+            f"pre-birth workspace {dest} has an origin remote; PE local realization must not "
+            "attach to a remote repository"
+        )
+    if is_dirty(dest):
+        raise CampaignError(f"pre-birth workspace is dirty: {dest}")
+    has_head = run_cmd(
+        ["git", "-C", str(dest), "rev-parse", "--verify", "HEAD"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if has_head.returncode != 0:
+        committed = run_cmd(
+            [
+                "git",
+                "-C",
+                str(dest),
+                "-c",
+                "user.name=Program Execution",
+                "-c",
+                "user.email=program-execution@local.invalid",
+                "commit",
+                "--allow-empty",
+                "-m",
+                "chore: initialize pre-birth execution workspace",
+            ],
+            timeout=GIT_TIMEOUT_S,
+            env=git_env(),
+        )
+        if committed.returncode != 0:
+            raise CampaignError(f"cannot initialize pre-birth revision: {committed.stderr}")
+    return dest
+
+
 def donor_matches_repository(donor: Path, repository_id: str) -> bool:
     url = run_cmd(
         ["git", "-C", str(donor), "remote", "get-url", "origin"],
@@ -5093,7 +5150,9 @@ def resume_live_campaign(
     admit_resume_identity(pec_workspace, campaign_id)
     log(f"resume {campaign_id} (runtime active; workspace kept, not quarantined)")
     report.stages_completed.append("resume")
-    repository_id = str((seed.get("target") or {}).get("repository_id") or host_repo)
+    target = seed.get("target") if isinstance(seed.get("target"), dict) else {}
+    target_lifecycle = str(target.get("lifecycle") or "existing_repository")
+    repository_id = str(target.get("repository_id") or host_repo)
     target_path = Path(target_worktree) if target_worktree else None
     if target_path is not None and target_path.exists() and is_git_repo(target_path):
         if is_dirty(target_path):
@@ -5101,8 +5160,11 @@ def resume_live_campaign(
                 f"target checkout is dirty: {target_path}; "
                 "make campaign will not attach to a dirty target"
             )
-        with traced(trace, "reconcile", "ensure_target_history"):
-            ensure_target_history(target_path, repository_id)
+        if target_lifecycle == "pre_birth_local_execution_workspace":
+            default_ensure_pre_birth_workspace(target_path)
+        else:
+            with traced(trace, "reconcile", "ensure_target_history"):
+                ensure_target_history(target_path, repository_id)
     log(f"execute {campaign_id}")
     with traced(trace, "execute", "execute"):
         if hooks.execute is not None:
@@ -5518,7 +5580,11 @@ def _stage_isolate_and_emit(run: _CampaignRun) -> CampaignReport | None:
                     compile_activation(activation_input, write_root)
                 staged.value = {"path": str(emitted)}
     assert_allowed_campaign_dir(write_root, campaign_id)
-    target_worktree = str(l9_home / "program-worktrees" / campaign_id)
+    target = seed.get("target") if isinstance(seed.get("target"), dict) else {}
+    if str(target.get("lifecycle") or "") == "pre_birth_local_execution_workspace":
+        target_worktree = str(Path(str(target["workspace_path"])).expanduser().resolve())
+    else:
+        target_worktree = str(l9_home / "program-worktrees" / campaign_id)
     mark_host_campaign_active(
         write_root,
         campaign_id,
@@ -5729,7 +5795,9 @@ def _stage_admit(run: _CampaignRun) -> CampaignReport | None:
     until = run.until
     write_root = run.write_root
 
-    repository_id = str((seed.get("target") or {}).get("repository_id") or host_repo)
+    target = seed.get("target") if isinstance(seed.get("target"), dict) else {}
+    target_lifecycle = str(target.get("lifecycle") or "existing_repository")
+    repository_id = str(target.get("repository_id") or host_repo)
     target_path = Path(target_worktree)
 
     def ensure_target_checkout_once() -> None:
@@ -5739,11 +5807,14 @@ def _stage_admit(run: _CampaignRun) -> CampaignReport | None:
         is admission evidence and is always read fresh: reusing a recorded SHA
         would bind a campaign to a revision the checkout no longer has.
         """
-        key = timing.fingerprint(str(target_path), repository_id)
+        key = timing.fingerprint(str(target_path), repository_id, target_lifecycle)
         with reuse.stage(timer, "target_checkout", key, outputs=[target_path]) as checkout:
             if not checkout.reused:
                 with traced(trace, "workspace", "ensure_target_checkout"):
-                    default_ensure_target_checkout(target_path, repository_id, donor=write_root)
+                    if target_lifecycle == "pre_birth_local_execution_workspace":
+                        default_ensure_pre_birth_workspace(target_path)
+                    else:
+                        default_ensure_target_checkout(target_path, repository_id, donor=write_root)
                 checkout.value = {"path": str(target_path)}
 
     with timer.stage("admission_evidence") as entry:
@@ -5761,7 +5832,7 @@ def _stage_admit(run: _CampaignRun) -> CampaignReport | None:
                 )
             host_revision = str(measured["revision"])
         else:
-            host_revision = str((seed.get("target") or {}).get("repository_id") or host_repo)
+            host_revision = repository_id
     log(f"admit EVID-001 bind {host_revision}")
     # Keyed on the compiled blueprint instance plus the revision being bound, so
     # a rebuilt blueprint is always admitted again and an unchanged one is not.

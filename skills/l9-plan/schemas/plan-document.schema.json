@@ -78,6 +78,38 @@
         }
       }
     },
+    "idea_execute_binding": {
+      "description": "Optional binding used only when Idea Execute orchestrates a greenfield graph.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "gar_decision_ref",
+        "gar_decision_digest",
+        "gar_status",
+        "graph_unit_ids",
+        "lifecycle_run_id",
+        "target"
+      ],
+      "properties": {
+        "schema": {"const": "l9.idea-execute.plan-binding/v1"},
+        "gar_decision_ref": {"type": "string", "minLength": 1},
+        "gar_decision_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "gar_status": {"const": "ACCEPTED"},
+        "graph_unit_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "lifecycle_run_id": {"type": "string", "minLength": 1},
+        "target": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["lifecycle", "logical_target_id", "future_repository_intent"],
+          "properties": {
+            "lifecycle": {"const": "pre_birth_local_execution_workspace"},
+            "logical_target_id": {"type": "string", "minLength": 1},
+            "future_repository_intent": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    },
     "code_in_scope": {
       "type": "boolean"
     },

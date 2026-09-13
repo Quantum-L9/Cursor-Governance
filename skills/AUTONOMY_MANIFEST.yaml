@@ -139,9 +139,9 @@ tiers:
   - skill: l9-global-architect
     reason: experimental GAR runtime bootloader whose broad architect-engineer description would hijack ordinary routing if auto-invoked; load when the user explicitly invokes the global architect runtime, iterates on the pack, or when l9-plan-simple loads it as the required upstream planner; disable-model-invocation
   - skill: l9-idea-execute
-    reason: routes validated IdeaOS decisions into Foundry, Website-Bot, plan-simple, or Program Execution; owner-selection and downstream invocation are high blast radius; disable-model-invocation
-  - skill: l9-idea-foundry
-    reason: compiles idea packs into tested code and l9-repo-template births; repository creation and code realization are high blast radius; disable-model-invocation
+    reason: routes validated IdeaOS decisions into a scoped GAR/Plan/Campaign/PE graph, Website-Bot, plan-simple, or Program Execution; owner-selection and downstream invocation are high blast radius; disable-model-invocation
+  - skill: l9-repo-birth
+    reason: packages an exact verified PE/PEC source commit for the factory; it is an explicit lifecycle boundary and never a default PE successor; disable-model-invocation
   do_not_migrate_to_skills:
   - item: commands/_archived/violation.md
     reason: violation handling belongs in always-applied rules or hooks, not optional skill context
@@ -882,30 +882,25 @@ claude_routing:
     note: 'explicit_only + hint_allowed — Read/attach only. Mutation requires explicit user invoke. Never auto-select as IdeaOS or as a generic coder.
 
       '
-  - id: idea_foundry
-    primary: l9-idea-foundry
+  - id: repo_birth
+    primary: l9-repo-birth
     signal_weight: 8
     hint_allowed: true
     required_any:
-    - /l9-idea-foundry
-    - idea foundry
-    - birth-ready repository
-    - idea pack to code
-    - l9-repo-template birth
+    - /l9-repo-birth
+    - repo birth handoff
+    - package verified pec commit
     positive_signals:
-    - /l9-idea-foundry
-    - idea foundry
-    - compile this idea pack
-    - birth-ready repository
-    - l9-repo-template birth
-    - idea pack to code
+    - /l9-repo-birth
+    - birth handoff
+    - package verified pec commit
+    - factory payload
     negative_signals:
-    - website only
-    - deploy to production
+    - brainstorm
     - existing repo change
     supporting:
     - l9-structured-reasoning
-    note: 'explicit_only + hint_allowed — Read/attach only. Mutation requires explicit user invoke. Never birth a repo from a hint.
+    note: 'explicit_only + hint_allowed — Package an already verified clean source commit only. Never invoke as a default PE successor or create a remote repository from a hint.
 
       '
 slash_commands:
