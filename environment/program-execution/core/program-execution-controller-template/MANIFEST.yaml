@@ -103,7 +103,7 @@ files:
 - path: scripts/pec/contracts.py
   sha256: 946e53429aa413bda374070057ea5e9043d66ef5773344e2b593fb3e575fda51
 - path: scripts/pec/controller.py
-  sha256: b6b71050c6cf48137996c7bc3f020f4928b529f13a9b01d2394114711fc272e1
+  sha256: 303e7ba07d80fb734a2b5f9d4d555bdc834d614014de7c6af84670d08624cf06
 - path: scripts/pec/dispatch.py
   sha256: 87e8619e49131144071d7eff92100888241b4903e742c68a2cf09ffbb2603fb7
 - path: scripts/pec/exec_env.py
@@ -185,7 +185,7 @@ files:
 - path: scripts/tests/test_preflight.py
   sha256: d3ecd4c701fe9053fb23baa9f9565f728100d61a4e3c78ae42e41dbed801ecf5
 - path: scripts/tests/test_prepare_reuse.py
-  sha256: 5a792a14e6dc7bdf051ece2b162ccf131e7e3f824c8ad54b701f3f9ba49f0c82
+  sha256: bccf1e4120c45f62bde499ccbbea2c2571a5e0d2414a908c483881199ef95a63
 - path: scripts/tests/test_program_control.py
   sha256: dbe6434dcfb45ee7316483027219020d549ae825cd2fa6bb9da085e6567b4ba0
 - path: scripts/tests/test_program_lock_drift.py

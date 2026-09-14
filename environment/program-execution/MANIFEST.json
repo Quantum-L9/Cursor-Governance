@@ -135,7 +135,7 @@
     },
     {
       "path": "adapters/claude-code/provider.py",
-      "sha256": "83a324ba5e82be0b36de5af9f2c8ea9ae9fcf921647e89df4340ebd17425dbb5"
+      "sha256": "3b91f1e3f90a4ce62b454818a68251e6a2019d1ee8564d11700a922f9d0c29ab"
     },
     {
       "path": "adapters/claude-code/stream_parser.py",
@@ -2027,7 +2027,7 @@
     },
     {
       "path": "scripts/campaign_input.py",
-      "sha256": "7987eed6529c8e9dcacd9922a5490e7db317baf689aefaa88b5863f3de52a97b"
+      "sha256": "65e4ab3a6f4120666aaf77dddc35b3b784d0219158f87a7c6f5ab5c2a81985bc"
     },
     {
       "path": "scripts/campaign_pr_copy.py",
@@ -2043,7 +2043,7 @@
     },
     {
       "path": "scripts/compile_campaign_source.py",
-      "sha256": "1ff520b900f3658e221a1ebcff79c223ed909249ee779fedefdebd5da4cab0a5"
+      "sha256": "0c4659dd334f1f519bbbc89fa21984bde0ae36e5852cda61957556d8d039a738"
     },
     {
       "path": "scripts/context7_stack_proof.py",
@@ -2111,7 +2111,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "15851ad326acb7d56420cd1c64104804aff20f459fc2c85bbdb885fd1fea70de"
+      "sha256": "c4a8ac5b96205bbcbea176c86885132d5fad85ebc6019000725c0d4b7f7389ed"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -2159,11 +2159,11 @@
     },
     {
       "path": "scripts/tests/test_compile_architecture_intent.py",
-      "sha256": "075d6b4f3de64a65d074c6b40ea12fa7b4acc480ece7dfbeb7df76848d5d32d1"
+      "sha256": "910f8fa0e4c6e563856a5f3989fe9c5e2154fcea5eede9287e792abbf73e5878"
     },
     {
       "path": "scripts/tests/test_compile_campaign_source.py",
-      "sha256": "4f2a9373b42d6e210f274762746a050f1ee3b459c598f8088dcb7f4eb9c64aac"
+      "sha256": "9d3b0b377117fae06a4b64645d244ed5c07060abecf3448f49ff1308d2c09132"
     },
     {
       "path": "scripts/tests/test_context7_stack_proof.py",
@@ -2239,7 +2239,7 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "8a2cb0aec5390f5a783846c8be378bc0908c77f9bce21ae48601eb100b084928"
+      "sha256": "58507aafd4742868abf280ebd070089dfa7af052a7a38560425a3c9a82d6355d"
     },
     {
       "path": "scripts/tests/test_run_campaign_repairs.py",
@@ -2279,11 +2279,11 @@
     },
     {
       "path": "templates/campaign-source-v2/CAMPAIGN_SOURCE.yaml",
-      "sha256": "8db216e3f6632db9f185922dacb54e5299ffe0050e149251070f674e726738ef"
+      "sha256": "15d2e4039d52ad5d80d6acffde91561cedba8439b37a67a9df31fd4e878a545b"
     },
     {
       "path": "templates/campaign-source-v2/README.md",
-      "sha256": "413eecdda8ae219c5d2895d2c6cc427bd810e91d465910ad4a962b66491fdf1d"
+      "sha256": "5acab2a4584520934296ecba5d9774e2b2575f140701ec1e2f87e3627ba9048d"
     },
     {
       "path": "tests/__init__.py",
