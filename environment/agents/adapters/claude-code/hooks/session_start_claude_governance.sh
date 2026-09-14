@@ -19,19 +19,6 @@
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
-# ADR-0031: signed agent assertion for MCP stdio (never human door).
-# Fail-soft when secret maps are absent (memory-blind cold start OK).
-# Never `source` a helper that may `exit` — that would kill SessionStart.
-if [[ -z "${L9_MEMORY_AGENT_ASSERTION:-}" ]]; then
-  export L9_MEMORY_AGENT_ID="${L9_MEMORY_AGENT_ID:-claude-code}"
-  _assert_py="${L9_GOVERNANCE_DIR:-$HOME/.cursor-governance}/ops/memory/print_agent_assertion_env.py"
-  if [[ -f "$_assert_py" ]]; then
-    # shellcheck disable=SC1090
-    eval "$("${L9_MEMORY_INTERPRETER:-python3}" "$_assert_py" --agent-id "${L9_MEMORY_AGENT_ID}" --format shell 2>/dev/null || true)" || true
-  fi
-fi
-
-
 # Wall clock for the whole hook. Every bounded sub-operation below sizes itself
 # against what is LEFT of the registration's `timeout`, not against a constant
 # of its own: the repair used to be launched with a fixed 90 s ceiling inside a
@@ -672,6 +659,36 @@ fi
 
 # --- Memory: single front door = Cursor Graphiti (CANONICAL_LAW §8)
 say "shared memory: canonical memory control plane only (ops/memory; l9-graphite-memory, memory-control-plane/v1); no provider client, no L9_MEMORY_HTTP side door; memory-bank retired; memory never gates repository writes"
+
+# --- ADR-0031 signed-agent door: pre-launch handoff probe (audit P570-F2) ----
+# The l9-graphite-memory stdio server is launched by Claude Code from .mcp.json
+# with Claude's OWN environment, and this hook is a child of that same process:
+# nothing a hook exports reaches its parent or a sibling server. The only
+# delivery that works is therefore a PRE-LAUNCH handoff — the assertion env
+# already present in the environment Claude was started with (source
+# ops/memory/export_agent_assertion_env.sh in the launching shell). An earlier
+# revision minted here and `eval`ed the exports into this hook's own process,
+# which activated nothing anywhere. This block never mints and never exports;
+# it reports, by variable NAME only, whether the inherited environment carries
+# the door. Values are never printed. Memory never gates repository writes.
+_l9_door_status() {
+  local missing=()
+  [ -n "${L9_MEMORY_AGENTS_DOOR_SECRET:-}" ] || missing+=(L9_MEMORY_AGENTS_DOOR_SECRET)
+  [ -n "${L9_MEMORY_AGENT_ASSERTION:-}" ] || missing+=(L9_MEMORY_AGENT_ASSERTION)
+  [ -n "${L9_MEMORY_AGENT_SIGNING_KEYS_JSON:-}" ] || missing+=(L9_MEMORY_AGENT_SIGNING_KEYS_JSON)
+  [ -n "${L9_MEMORY_AGENT_GRANTS_JSON:-}" ] || missing+=(L9_MEMORY_AGENT_GRANTS_JSON)
+  if [ -n "${L9_MEMORY_HUMAN_DOOR_SECRET:-}" ]; then
+    say "signed-agent door: WARN L9_MEMORY_HUMAN_DOOR_SECRET is present in an agent session environment — the human private entrance must never reach agent processes (ADR-0031); unset it in the launching shell"
+  fi
+  if [ "${#missing[@]}" -eq 0 ]; then
+    say "signed-agent door: pre-launch handoff PRESENT (agent_id=${L9_MEMORY_AGENT_ID:-unset}) — the l9-graphite-memory stdio server inherits it from the Claude parent environment"
+  elif [ "${#missing[@]}" -eq 4 ]; then
+    say "signed-agent door: UNAVAILABLE — no assertion env in the Claude parent environment, and a SessionStart hook cannot deliver it to the separately launched MCP server. Provision BEFORE launch: 'source ops/memory/export_agent_assertion_env.sh' (L9_MEMORY_AGENT_ID=${L9_MEMORY_AGENT_ID:-claude-code}) in the shell that starts Claude. This session the package server runs without the agents door (operator fallback tier); memory.write_agent / write_governed carry no signed principal"
+  else
+    say "signed-agent door: PARTIAL pre-launch handoff — missing ${missing[*]}; the package server refuses the door when L9_MEMORY_AGENTS_DOOR_SECRET is set without the assertion, key map, and grants (fail-closed). Re-source ops/memory/export_agent_assertion_env.sh in the launching shell"
+  fi
+}
+_l9_door_status
 
 # --- L9 Claude environment status (from the installer receipt) --------------
 # The canonical installer writes ~/.l9/claude/bootstrap-state.json

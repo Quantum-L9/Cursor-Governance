@@ -364,11 +364,18 @@ def main() -> int:
     out_name = args.out
     if out_name == "auth_tokens.json":
         out_name = "agent_grants.json"
+    # The grants file is secret-free by construction: principals plus the ids of
+    # the granted agents whose signing key was validated above. Ids are taken
+    # from the rendered grants, never from the secret store's key material.
     payload = {
         "schema_version": 1,
         "auth_scheme": "shared-door-plus-signed-assertion",
         "grants": grants,
-        "signing_key_agent_ids": sorted(signing_keys.keys()),
+        "signing_key_agent_ids": sorted(
+            agent_id
+            for agent_id in grants
+            if not (agents.get(agent_id) or {}).get("private_entrance")
+        ),
     }
     out_path = write_under_root(
         out_dir, out_name, json.dumps(payload, indent=2) + "\n", label="--out"

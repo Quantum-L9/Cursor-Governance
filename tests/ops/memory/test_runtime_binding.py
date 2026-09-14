@@ -785,8 +785,6 @@ def test_the_binding_names_the_release_tag_and_the_commit_it_resolves_to() -> No
     A moved tag fails the proof instead of silently rebinding.
     Live target: ADR-0031 candidate feac2a60… (package 2.4.0) pending PyPI tag.
     """
-    import re
-
     manifest = rb.BindingManifest.load()
     raw = json.loads(rb.DEFAULT_MANIFEST_PATH.read_text(encoding="utf-8"))
     evidence = raw["release_evidence"]
