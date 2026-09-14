@@ -13,6 +13,7 @@ No network and no real credentials.
 
 from __future__ import annotations
 
+import importlib
 import json
 import os
 import re
@@ -27,7 +28,7 @@ SECRETS_DIR = REPO_ROOT / "ops" / "secrets"
 if str(SECRETS_DIR) not in sys.path:
     sys.path.insert(0, str(SECRETS_DIR))
 
-import capability_bind as cb  # noqa: E402
+cb = importlib.import_module("capability_bind")
 import capability_client as cc  # noqa: E402
 import surface_trust  # noqa: E402
 import validate_capability_contract as vcc  # noqa: E402

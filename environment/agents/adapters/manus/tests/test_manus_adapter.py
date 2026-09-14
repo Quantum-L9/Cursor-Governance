@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 import subprocess
 import sys
@@ -14,7 +15,7 @@ ADAPTER = Path(__file__).resolve().parents[1]
 REPOSITORY = ADAPTER.parents[3]
 sys.path.insert(0, str(ADAPTER))
 
-import validate_manus_adapter as validator  # noqa: E402
+validator = importlib.import_module("validate_manus_adapter")
 
 
 class ManusAdapterContractTests(unittest.TestCase):
