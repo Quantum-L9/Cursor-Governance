@@ -5,8 +5,8 @@
 #   layer: registry
 #   owner: governance-control-plane
 #   status: active
-#   version: 2.1.0
-#   updated: 2026-08-12
+#   version: 2.2.0
+#   updated: 2026-09-13
 #
 # AGENT REGISTRY — the single source of truth for WHO writes memory (identity
 # plane only). Executable topology (which Program adapters / autonomy /
@@ -24,12 +24,12 @@
 #   * user_id unique, snake_case, "<agent_id with _>_agent"
 #   * source == agent_id
 #   * principal_id == "<agent_id>-memory-client"
-#   * token_env == "L9_MEMORY_TOKEN__<AGENT_ID upper snake>"
-#     (legacy_token_env preserves already-deployed names; both are accepted)
+#   * signing_key_env == "L9_MEMORY_AGENT_SIGNING_KEY__<AGENT upper snake>"
+#     (legacy token_env retained as alias for older adapters)
 #   * role must exist in the roles catalog below
-#   * NO tokens in this file, ever. Tokens live in the account environment
-#     of each surface and in agent_tokens.local.json (gitignored) on the
-#     machine that renders auth_tokens.json for the memory server.
+#   * NO secrets in this file. Shared agents door secret, per-agent signing
+#     keys, and the human door secret live only in gitignored local maps /
+#     OS secret stores (ADR-0031).
 
 schema_version: 2
 workspace_group: igor-workspace
@@ -79,6 +79,14 @@ roles:
     write_namespaces: []
     promote_namespaces: []
     is_admin: false
+  human-operator:
+    description: >
+      Private human entrance only (ADR-0031). Full admin/promote. Never
+      issued to an agent surface.
+    read_namespaces: ["*"]
+    write_namespaces: ["*"]
+    promote_namespaces: ["*"]
+    is_admin: true
 
 # ---------------------------------------------------------------------------
 # Agents — one entry per writing identity. Adding an agent = add an entry
@@ -92,6 +100,7 @@ agents:
     source: cursor
     principal_id: cursor-memory-client
     token_env: L9_MEMORY_TOKEN__CURSOR
+    signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__CURSOR
     role: orchestrator
     surfaces: [cursor-ide]
     assigned_groups: ["*"]
@@ -104,6 +113,7 @@ agents:
     source: claude-code
     principal_id: claude-code-memory-client
     token_env: L9_MEMORY_TOKEN__CLAUDE_CODE
+    signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__CLAUDE_CODE
     role: implementer
     surfaces: [claude-cli, claude-web, claude-mobile]
     assigned_groups: [cursor-governance, l9-graphiti-memory, l9-node-template]
@@ -116,6 +126,7 @@ agents:
     source: manus
     principal_id: manus-memory-client
     token_env: L9_MEMORY_TOKEN__MANUS
+    signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__MANUS
     role: researcher-builder
     surfaces: [manus-cloud]
     assigned_groups: [cursor-governance, l9-graphiti-memory, cognitive-engine-graphs, igorbot]
@@ -128,6 +139,7 @@ agents:
     source: codex
     principal_id: codex-memory-client
     token_env: L9_MEMORY_TOKEN__CODEX
+    signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__CODEX
     role: implementer
     surfaces: [codex-cloud, codex-cli]
     assigned_groups: [l9-node-template]
@@ -140,14 +152,29 @@ agents:
     source: gemini
     principal_id: gemini-memory-client
     token_env: L9_MEMORY_TOKEN__GEMINI
+    signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__GEMINI
     role: reviewer
     surfaces: [gemini-cli]
     assigned_groups: [cursor-governance, l9-graphiti-memory]
     adapter: gemini
     status: active
 
+  human:
+    agent_id: human
+    user_id: human_agent
+    source: human
+    principal_id: human-memory-client
+    token_env: L9_MEMORY_TOKEN__HUMAN
+    signing_key_env: L9_MEMORY_HUMAN_DOOR_SECRET
+    role: human-operator
+    surfaces: [operator-local]
+    assigned_groups: ["*"]
+    adapter: none
+    status: active
+    private_entrance: true
+
 # ---------------------------------------------------------------------------
-# Shared memory contract (realignment stage C9). Memory is the canonical
+# Shared memory contract (realignment stage C9 / ADR-0031). Memory is the canonical
 # l9-graphite-memory control plane (MemoryService, memory-control-plane/v1),
 # bound per checkout by ops/config/memory-binding.json and reached through
 # ops/memory over stdio. No surface holds a provider URL or a memory bearer:
@@ -160,7 +187,12 @@ memory:
   contract: memory-control-plane/v1
   binding: ops/config/memory-binding.json
   transport: stdio
-  auth_scheme: none-on-surface
+  auth_scheme: shared-door-plus-signed-assertion  # ADR-0031
+  agents_door_secret_env: L9_MEMORY_AGENTS_DOOR_SECRET
+  human_door_secret_env: L9_MEMORY_HUMAN_DOOR_SECRET
+  agent_assertion_env: L9_MEMORY_AGENT_ASSERTION
+  agent_signing_keys_json_env: L9_MEMORY_AGENT_SIGNING_KEYS_JSON
+  agent_grants_json_env: L9_MEMORY_AGENT_GRANTS_JSON
   interpreter_env: L9_MEMORY_INTERPRETER
   identity_env:
     user_id: USER_ID

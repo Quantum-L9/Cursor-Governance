@@ -189,3 +189,6 @@ Before committing, verify:
 | `environment/agents/adapters/claude-code/memory/memory-enforcement.contract.json` | Machine form of the interactive write contract (`interactive_memory_write`) |
 | `ops/graphiti/MEMORY_BANK_POLICY.md` | Deprecated T0 policy — archival note |
 | `ops/graphiti/GATES-002-ACTIVATION.md` | Soak + gate flip runbook |
+
+<!-- ADR-0031 2026-09-13 -->
+<!-- Cold model write: MCP memory.write_agent (no phase_lock). High-stakes: phase_lock → write_governed. Agent HTTP sealed. Shared agents door + signed assertion; human door private. -->

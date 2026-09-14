@@ -935,7 +935,7 @@ and §8.2 are the law.
 2. **Agents MUST be able to write durable memory, and MUST NOT write to the
    provider transport.** The model-initiated durable write is
    `memory.phase_lock {namespace, task_signature}` then
-   `memory.write_governed {…, task_signature}` on the `l9-graphite-memory`
+   `memory.write_agent / memory.write_governed {…, task_signature}` on the `l9-graphite-memory`
    MCP server. `MemoryService` grants the lock only after a conflict check on
    the namespace snapshot and re-verifies the digest inside the transaction
    that admits the record; a refused lock or write is the verdict.
@@ -995,6 +995,23 @@ artifact (`l9-graphite-memory==2.3.1`).
    law still stands; only the release identity moves.
 
 <!-- FIRST_PUBLICATION_PLANE_V1 -->
+
+## 8.5 Memory release 2.4.0 (2026-09-13) — ADR-0031 signed-agent door
+
+Supersedes the agent-identity and write-class doctrine in §8.3 for model
+durable writes while keeping MCP stdio as the sole agent front door.
+
+1. **Trust model.** Shared `L9_MEMORY_AGENTS_DOOR_SECRET` + per-agent signed
+   assertion → registry grants. Distinct `L9_MEMORY_HUMAN_DOOR_SECRET` for the
+   human private entrance only (never in agent env).
+2. **Dual writes.** Cold agents use `memory.write_agent` (no phase_lock).
+   Conflict-sensitive facts use `memory.phase_lock` → `memory.write_governed`.
+3. **Bound head.** `ops/config/memory-binding.json` pins package `2.4.0` at
+   commit `e3a79626aaaf3e9503d15eaa061a46dbb9b201ab` until a PyPI tag is cut;
+   `uv.lock` sources the candidate wheel under `ops/vendor/wheels/`.
+4. **HTTP sealed.** Agent adapters must not select `L9_MEMORY_HTTP_*`,
+   `l9-shared-memory`, or Graphiti provider transport.
+
 ## 6.2.8 First publication is gated by effect (2026-09-12) — narrows §6.2.4's "a plain `git push` is not denied"
 
 Append-only. §6.2.4 stands: `git` and `gh` are never denied by governance

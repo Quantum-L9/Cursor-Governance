@@ -78,4 +78,7 @@ memcli readiness --json
 
 Load skill: **`l9-graphiti-memory`**
 
+<!-- ADR-0031 2026-09-13 -->
+<!-- Cold model write: MCP memory.write_agent (no phase_lock). High-stakes: phase_lock → write_governed. Agent HTTP sealed. Shared agents door + signed assertion; human door private. -->
+
 <!-- generated-from: rules/03-graphiti-memory.mdc; do-not-edit -->

@@ -632,7 +632,22 @@ ${ROUTE_LOCATOR_MD}
 EOF
 )"
 
-COMBINED="$COMBINED" ROUTE_LOCATOR_ENV="$ROUTE_LOCATOR_ENV" python3 - <<'PY'
+# ADR-0031: mint signed agent assertion for MCP stdio (never human door secret).
+# Must run BEFORE exit — dead code after exit 0 never executes. Env is merged into
+# the sessionStart JSON `env` block so Cursor/Claude surfaces receive it.
+ASSERTION_ENV_JSON="{}"
+if [[ -z "${L9_MEMORY_AGENT_ASSERTION:-}" ]]; then
+  _assert_py="${L9_GOVERNANCE_DIR:-$HOME/.cursor-governance}/ops/memory/print_agent_assertion_env.py"
+  if [[ -f "$_assert_py" ]]; then
+    _assert_path="$("${L9_MEMORY_INTERPRETER:-python3}" "$_assert_py" --agent-id "${L9_MEMORY_AGENT_ID:-cursor}" --format json 2>/dev/null || true)"
+    if [[ -n "${_assert_path:-}" && -f "$_assert_path" ]]; then
+      ASSERTION_ENV_JSON="$(cat "$_assert_path" 2>/dev/null || echo '{}')"
+      rm -f "$_assert_path"
+    fi
+  fi
+fi
+
+COMBINED="$COMBINED" ROUTE_LOCATOR_ENV="$ROUTE_LOCATOR_ENV" ASSERTION_ENV_JSON="$ASSERTION_ENV_JSON" python3 - <<'PY'
 import json, os
 env = {
     "GRAPHITI_MEMORY_ENABLED": os.environ.get("GRAPHITI_MEMORY_ENABLED", "1"),
@@ -645,6 +660,14 @@ except json.JSONDecodeError:
     locator_env = {}
 if isinstance(locator_env, dict):
     env.update({k: str(v) for k, v in locator_env.items() if isinstance(k, str)})
+try:
+    assertion_env = json.loads(os.environ.get("ASSERTION_ENV_JSON", "{}") or "{}")
+except json.JSONDecodeError:
+    assertion_env = {}
+if isinstance(assertion_env, dict):
+    # Never allow a human door secret into agent session env.
+    assertion_env.pop("L9_MEMORY_HUMAN_DOOR_SECRET", None)
+    env.update({k: str(v) for k, v in assertion_env.items() if isinstance(k, str) and v})
 print(json.dumps({
     "env": env,
     "additional_context": os.environ.get("COMBINED", ""),

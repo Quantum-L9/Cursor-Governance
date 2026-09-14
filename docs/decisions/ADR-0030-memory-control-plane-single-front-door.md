@@ -150,3 +150,15 @@ v1.1.0, `l9-gmp-protocol` v2.0.1, `CANONICAL_LAW.md` §8.3 and the `AGENTS.md`
 - `tests/ops/memory/test_cross_repo_lifecycle.py` (plan §35 exact-head proof)
 - `Quantum-L9/l9-graphiti-memory` ADR-016 (runtime-owned configuration),
   ADR-082 (governed candidates)
+
+## Amendment (2026-09-13) — dual write classes + signed-agent door (ADR-0031)
+
+Decision item 7 is amended: model-initiated durable writes are **either**
+
+1. `memory.write_agent` (cold path — no phase-lock; allowlisted classes), or
+2. `memory.phase_lock` → `memory.write_governed` (conflict-sensitive path).
+
+Identity for agent MCP stdio follows ADR-0031 trust model 2: shared
+`L9_MEMORY_AGENTS_DOOR_SECRET` + per-agent signed assertion → registry grants.
+The human private entrance is `L9_MEMORY_HUMAN_DOOR_SECRET` only.
+Agent HTTP / provider entry remains forbidden (items 5 and 9 unchanged).

@@ -305,7 +305,8 @@ def test_undeterminable_collision_state_blocks_autonomous_publication(
         PATH=f"{empty_path}:/usr/bin:/bin",  # no gh on PATH
         L9_AUTONOMY_ENABLED="true",
     )
-    assert result.returncode == 1, result.stdout
+    # TELEMETRY_DENIED_EXIT is 3 (distinct from ordinary overlap deny=1).
+    assert result.returncode == 3, result.stdout
     assert "publication is denied" in result.stdout
     assert "Local work is unaffected" in result.stdout
     # The commit is untouched.
