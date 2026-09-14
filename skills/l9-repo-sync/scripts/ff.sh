@@ -389,6 +389,97 @@ _switch_to_target() {
   echo "OK: step 0 switched ${BRANCH_BEFORE} -> ${TARGET_BRANCH} (ref ${BRANCH_BEFORE} unchanged)"
 }
 
+_switch_back_to_prior() {
+  if [ "$BRANCH_BEFORE" = "$TARGET_BRANCH" ]; then
+    return 0
+  fi
+  if [ "$BRANCH_BEFORE" = "HEAD" ]; then
+    echo "OK: started detached; staying on ${TARGET_BRANCH} after catch-up"
+    return 0
+  fi
+  if ! git -C "$CLONE" switch --quiet "$BRANCH_BEFORE"; then
+    echo "FAIL: git switch back to ${BRANCH_BEFORE} aborted after catch-up." >&2
+    echo "main is at origin/${TARGET_BRANCH}. Dirty park: ${DIRTY_REF:-none}. Hold: ${HOLD_ROOT}." >&2
+    exit 1
+  fi
+  echo "OK: restored HEAD to ${BRANCH_BEFORE} after catch-up (main ref unchanged)"
+}
+
+_restore_parked_homes() {
+  local src rel dest
+  RESTORED_TRACKED=""
+  RESTORED_UNTRACKED=""
+  HELD_UNTRACKED=""
+  if [ -d "$HOLD_ROOT/tracked" ]; then
+    while IFS= read -r -d '' src; do
+      rel="${src#"$HOLD_ROOT/tracked/"}"
+      [ -n "$rel" ] || continue
+      if [[ "$rel" == *.deleted ]]; then
+        rel="${rel%.deleted}"
+        rm -f "$CLONE/$rel" 2>/dev/null || true
+        RESTORED_TRACKED="${RESTORED_TRACKED}${rel}"$'\n'
+        echo "OK: restored parked deletion for $rel to original home"
+        continue
+      fi
+      dest="$CLONE/$rel"
+      mkdir -p "$(dirname "$dest")"
+      cp -a "$src" "$dest"
+      RESTORED_TRACKED="${RESTORED_TRACKED}${rel}"$'\n'
+      echo "OK: restored parked $rel to original home"
+    done < <(find "$HOLD_ROOT/tracked" \( -type f -o -type l \) -print0)
+  fi
+  if [ -d "$HOLD_ROOT/untracked" ]; then
+    while IFS= read -r -d '' src; do
+      rel="${src#"$HOLD_ROOT/untracked/"}"
+      [ -n "$rel" ] || continue
+      if git -C "$CLONE" ls-files --error-unmatch -- "$rel" >/dev/null 2>&1; then
+        HELD_UNTRACKED="${HELD_UNTRACKED}${rel}"$'\n'
+        echo "OK: held colliding untracked $rel (now tracked; original copy remains in hold)"
+        continue
+      fi
+      dest="$CLONE/$rel"
+      mkdir -p "$(dirname "$dest")"
+      cp -a "$src" "$dest"
+      RESTORED_UNTRACKED="${RESTORED_UNTRACKED}${rel}"$'\n'
+      echo "OK: restored parked untracked $rel to original home"
+    done < <(find "$HOLD_ROOT/untracked" \( -type f -o -type l \) -print0)
+  fi
+}
+
+_write_ff_restore_receipt() {
+  local branch_after dest
+  branch_after="$(git -C "$CLONE" rev-parse --abbrev-ref HEAD)"
+  dest="$CLONE/.l9/ff-restore-receipt.json"
+  mkdir -p "$CLONE/.l9"
+  HOLD_ROOT="$HOLD_ROOT" CLONE="$CLONE" BRANCH_BEFORE="$BRANCH_BEFORE" \
+    BRANCH_AFTER="$branch_after" TARGET_BRANCH="$TARGET_BRANCH" \
+    RESTORED_TRACKED="${RESTORED_TRACKED:-}" RESTORED_UNTRACKED="${RESTORED_UNTRACKED:-}" \
+    HELD_UNTRACKED="${HELD_UNTRACKED:-}" DIRTY_REF="${DIRTY_REF:-}" \
+    dest="$dest" python3 - <<'PY'
+import json
+import os
+from pathlib import Path
+
+def lines(raw):
+    return [item for item in (raw or "").splitlines() if item]
+
+receipt = {
+    "schema": "l9.ff-restore.v1",
+    "branch_before": os.environ["BRANCH_BEFORE"],
+    "branch_after": os.environ["BRANCH_AFTER"],
+    "target_branch": os.environ["TARGET_BRANCH"],
+    "hold": os.environ.get("HOLD_ROOT", ""),
+    "dirty_ref": os.environ.get("DIRTY_REF", ""),
+    "restored_tracked": lines(os.environ.get("RESTORED_TRACKED", "")),
+    "restored_untracked": lines(os.environ.get("RESTORED_UNTRACKED", "")),
+    "held_untracked_colliding": lines(os.environ.get("HELD_UNTRACKED", "")),
+}
+path = Path(os.environ["dest"])
+path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+print(f"OK: wrote restore receipt {path}")
+PY
+}
+
 if [ "$BRANCH_BEFORE" != "$TARGET_BRANCH" ]; then
   echo "ff: step 0 — park then switch to ${TARGET_BRANCH} (do not reset ${BRANCH_BEFORE})"
   _park_dirty_tracked always
@@ -476,24 +567,6 @@ if [ "$BEHIND" -gt 0 ] || [ "$AHEAD" -gt 0 ] || [ -n "$OVERWRITE_UNTRACKED" ] ||
   git -C "$CLONE" checkout -f "origin/${TARGET_BRANCH}" -- .
 fi
 
-if [ -n "$CORPUS_KEPT" ]; then
-  while IFS= read -r rel; do
-    [ -z "$rel" ] && continue
-    src="$HOLD_ROOT/tracked/$rel"
-    if [ ! -e "$src" ] && [ ! -L "$src" ] && [ ! -f "${src}.deleted" ]; then
-      continue
-    fi
-    if [ -f "${src}.deleted" ]; then
-      rm -f "$CLONE/$rel" 2>/dev/null || true
-      echo "OK: restored corpus_keep deletion for $rel after catch-up"
-      continue
-    fi
-    mkdir -p "$(dirname "$CLONE/$rel")"
-    cp -a "$src" "$CLONE/$rel"
-    echo "OK: restored corpus_keep $rel after catch-up"
-  done <<<"$CORPUS_KEPT"
-fi
-
 if [ -d "$HOLD_ROOT/machine-local" ] && [ -n "$KEEP_BEFORE" ]; then
   while IFS= read -r rel; do
     [ -z "$rel" ] && continue
@@ -507,16 +580,32 @@ if [ -d "$HOLD_ROOT/machine-local" ] && [ -n "$KEEP_BEFORE" ]; then
   done <<<"$KEEP_BEFORE"
 fi
 
+_switch_back_to_prior
+_restore_parked_homes
+_write_ff_restore_receipt
+
 GITDIR_AFTER="$(git -C "$CLONE" rev-parse --git-common-dir)"
 BRANCH_AFTER="$(git -C "$CLONE" rev-parse --abbrev-ref HEAD)"
 if [ "$GITDIR_BEFORE" != "$GITDIR_AFTER" ]; then
   echo "FAIL: gitdir changed (swap). This is not an in-place catch-up." >&2
   exit 2
 fi
-if [ "$BRANCH_AFTER" != "$TARGET_BRANCH" ]; then
-  echo "FAIL: expected HEAD on ${TARGET_BRANCH} after catch-up, got ${BRANCH_AFTER}." >&2
+_MAIN_SHA="$(git -C "$CLONE" rev-parse "refs/heads/${TARGET_BRANCH}")"
+_ORIGIN_SHA="$(git -C "$CLONE" rev-parse "origin/${TARGET_BRANCH}")"
+if [ "$_MAIN_SHA" != "$_ORIGIN_SHA" ]; then
+  echo "FAIL: ${TARGET_BRANCH} ref is not at origin/${TARGET_BRANCH} after catch-up." >&2
   exit 2
 fi
+unset _MAIN_SHA _ORIGIN_SHA
+_EXPECTED_BRANCH="$BRANCH_BEFORE"
+if [ "$BRANCH_BEFORE" = "HEAD" ]; then
+  _EXPECTED_BRANCH="$TARGET_BRANCH"
+fi
+if [ "$BRANCH_AFTER" != "$_EXPECTED_BRANCH" ]; then
+  echo "FAIL: expected HEAD on ${_EXPECTED_BRANCH} after restore, got ${BRANCH_AFTER}." >&2
+  exit 2
+fi
+unset _EXPECTED_BRANCH
 
 if [ -n "$VENV_BEFORE" ]; then
   if [ ! -e "$CLONE/.venv" ]; then
@@ -568,10 +657,13 @@ if [ -n "$MISSING_UNTRACKED" ]; then
 fi
 
 echo "OK: in-place catch-up ($CLONE @ $(git -C "$CLONE" rev-parse --short HEAD); was ${HEAD_BEFORE:0:12}; behind_was=${BEHIND} ahead_was=${AHEAD})"
+if [ -n "$RESTORED_TRACKED" ] || [ -n "$RESTORED_UNTRACKED" ]; then
+  echo "OK: parked files restored to original homes (HEAD=${BRANCH_AFTER})"
+fi
 if [ -n "$DIRTY_REF" ]; then
-  echo "OK: dirty-tracked is recoverable: git stash apply ${DIRTY_REF}"
+  echo "OK: dirty-tracked also remains at ${DIRTY_REF} (never deleted)"
 fi
 if [ -n "$HOLD" ]; then
-  echo "OK: parked copies are at ${HOLD}"
+  echo "OK: parked copies remain at ${HOLD}"
 fi
 exit 0

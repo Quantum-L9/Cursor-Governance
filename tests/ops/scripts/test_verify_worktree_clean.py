@@ -66,11 +66,38 @@ def test_unpushed_commit_fails(repo: Path, monkeypatch: pytest.MonkeyPatch) -> N
     assert any("ahead" in e for e in errors)
 
 
-def test_dirty_unique_fails(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_unknown_dirty_unique_does_not_require_shelf(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(verify, "_run_dirt_status", lambda _r, _b: {"dirty_unique": 2})
+    ok, errors, warnings = verify.verify(repo, fetch=False)
+    assert ok
+    assert not errors
+    assert any("does not shelf" in w for w in warnings)
+
+
+def test_leftover_corpus_warns(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        verify,
+        "_run_dirt_status",
+        lambda _r, _b: {
+            "dirty_unique": 1,
+            "dirty_files": ["docs/plans/remediator.plan.md"],
+        },
+    )
+    ok, errors, warnings = verify.verify(repo, fetch=False)
+    assert ok
+    assert not errors
+    assert any("leftover corpus stays" in w for w in warnings)
+
+
+def test_non_corpus_dirty_fails(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        verify,
+        "_run_dirt_status",
+        lambda _r, _b: {"dirty_unique": 1, "dirty_files": ["ops/scripts/ff.sh"]},
+    )
     ok, errors, _warnings = verify.verify(repo, fetch=False)
     assert not ok
-    assert any("dirty_unique" in e for e in errors)
+    assert any("non-corpus" in e for e in errors)
 
 
 def test_cli_json(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:

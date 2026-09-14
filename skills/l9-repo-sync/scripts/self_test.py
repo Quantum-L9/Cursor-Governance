@@ -136,12 +136,15 @@ def test_behind_with_colliding_and_hold() -> int:
                 + " stdout="
                 + repr(proc.stdout)
             )
-        if (clone / "tracked.txt").read_text(encoding="utf-8") != "v2\n":
-            return _fail("did not catch up tracked.txt")
-        if "local-dirty" in (clone / "tracked.txt").read_text(encoding="utf-8"):
-            return _fail("unique dirty was left in the worktree instead of parked")
+        if (clone / "tracked.txt").read_text(encoding="utf-8") != "local-dirty\n":
+            return _fail("unique dirty was not restored to its original home")
+        committed = run(["git", "-C", str(clone), "show", "HEAD:tracked.txt"]).stdout
+        if committed != "v2\n":
+            return _fail("HEAD:tracked.txt must be origin/main after catch-up")
         if "class=unique" not in proc.stdout:
             return _fail("did not classify unique dirty tracked")
+        if "restored parked tracked.txt to original home" not in proc.stdout:
+            return _fail("missing restore-to-home log for unique dirty")
         refs = run(
             [
                 "git",
@@ -477,10 +480,12 @@ def test_non_overlapping_dirty_still_parks() -> int:
                 f"FAIL: ff.sh rc={proc.returncode}\n{proc.stdout}\n{proc.stderr}", file=sys.stderr
             )
             return 1
-        if (clone / "a.txt").read_text(encoding="utf-8") != "a2\n":
-            return _fail("did not catch up a.txt")
-        if (clone / "b.txt").read_text(encoding="utf-8") != "b1\n":
-            return _fail("b.txt should be origin/HEAD after park+restore+keep")
+        if run(["git", "-C", str(clone), "show", "HEAD:a.txt"]).stdout != "a2\n":
+            return _fail("did not catch up a.txt on HEAD")
+        if (clone / "b.txt").read_text(encoding="utf-8") != "b-local-unique\n":
+            return _fail("unique b.txt was not restored to its original home")
+        if run(["git", "-C", str(clone), "show", "HEAD:b.txt"]).stdout != "b1\n":
+            return _fail("HEAD:b.txt must stay the committed tip after restore")
         if "class=unique" not in proc.stdout:
             return _fail("unique b.txt dirt was not classified")
         hold_hits = list(home.joinpath(".cursor/l9-ff-hold").rglob("b.txt"))
@@ -559,8 +564,10 @@ def test_unrelated_history_with_dirty() -> int:
                 f"FAIL: ff.sh rc={proc.returncode}\n{proc.stdout}\n{proc.stderr}", file=sys.stderr
             )
             return 1
-        if (clone / "tracked.txt").read_text(encoding="utf-8") != "origin\n":
-            return _fail("unrelated-history clone did not land on origin/main content")
+        if (clone / "tracked.txt").read_text(encoding="utf-8") != "local-unique-unrelated\n":
+            return _fail("unrelated-history unique dirt was not restored to its original home")
+        if run(["git", "-C", str(clone), "show", "HEAD:tracked.txt"]).stdout != "origin\n":
+            return _fail("HEAD:tracked.txt must be origin/main after unrelated-history catch-up")
         if (clone / "notes.untracked").read_text(encoding="utf-8") != "keep\n":
             return _fail("untracked lost on unrelated-history catch-up")
         if not (clone / ".venv" / "pyvenv.cfg").is_file():
@@ -624,7 +631,7 @@ def test_origin_tracked_env_local_does_not_clobber() -> int:
 
 
 def test_feature_branch_switches_to_main() -> int:
-    """Off-main clone: switch to main, keep the feature ref, park feature dirt."""
+    """Off-main clone: catch up main, return to the feature branch, restore dirt."""
     with tempfile.TemporaryDirectory() as tmp:
         remote = Path(tmp) / "remote.git"
         clone = Path(tmp) / "clone"
@@ -671,19 +678,25 @@ def test_feature_branch_switches_to_main() -> int:
             )
             return 1
         branch = run(["git", "-C", str(clone), "rev-parse", "--abbrev-ref", "HEAD"]).stdout.strip()
-        if branch != "main":
-            return _fail(f"expected HEAD on main, got {branch}")
-        if (clone / "tracked.txt").read_text(encoding="utf-8") != "v2\n":
-            return _fail("did not catch up tracked.txt from origin/main")
-        if (clone / "feature.txt").is_file():
-            return _fail("feature-only tracked file leaked onto main")
+        if branch != "feat/unique":
+            return _fail(f"expected HEAD restored to feat/unique, got {branch}")
+        main_sha = run(["git", "-C", str(clone), "rev-parse", "refs/heads/main"]).stdout.strip()
+        origin_sha = run(["git", "-C", str(clone), "rev-parse", "origin/main"]).stdout.strip()
+        if main_sha != origin_sha:
+            return _fail("main ref must be at origin/main after catch-up")
+        if run(["git", "-C", str(clone), "show", "main:tracked.txt"]).stdout != "v2\n":
+            return _fail("main:tracked.txt must be origin/main after catch-up")
+        if (clone / "tracked.txt").read_text(encoding="utf-8") != "feature-dirty\n":
+            return _fail("feature dirty was not restored to its original home")
+        if not (clone / "feature.txt").is_file():
+            return _fail("feature-only tracked file missing after switch-back")
         still = run(["git", "-C", str(clone), "rev-parse", "feat/unique"]).stdout.strip()
         if still != feature_sha:
             return _fail("feature branch tip moved; unique commits must stay")
         if "step 0 switched feat/unique -> main" not in proc.stdout:
             return _fail("missing step 0 switch log")
-        if "feature-dirty" in (clone / "tracked.txt").read_text(encoding="utf-8"):
-            return _fail("feature dirty was left on main")
+        if "restored HEAD to feat/unique after catch-up" not in proc.stdout:
+            return _fail("missing switch-back log")
         hold_hits = list(home.joinpath(".cursor/l9-ff-hold").rglob("tracked.txt"))
         if not any(p.read_text(encoding="utf-8") == "feature-dirty\n" for p in hold_hits):
             return _fail("feature dirty bytes were not copied to l9-ff-hold")

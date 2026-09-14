@@ -35,6 +35,7 @@ That primitive keeps unique untracked and `.venv`. It does **not** delete
 files to unblock catch-up.
 
 If the clone is not on `main`, that is **not** a stop. `ff.sh` parks dirt
-then `git switch`es to `main`; the feature branch ref stays. Do not reset a
-feature branch onto `origin/main`. Extra worktrees use
+then `git switch`es to `main`; the feature branch ref stays. After catch-up
+it switches back and restores parked files to those original paths. Do not
+reset a feature branch onto `origin/main`. Extra worktrees use
 `worktree_add_wired.sh` only when the user asked for a new tree.
