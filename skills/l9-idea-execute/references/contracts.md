@@ -6,8 +6,8 @@ role: contracts
 tags: [ideaos, envelope, graph, adapter, receipt, lineage]
 owner: igor_beylin
 status: active
-version: 1.1.0
-updated: 2026-09-12
+version: 1.2.0
+updated: 2026-09-13
 /L9_META -->
 
 # Contracts
@@ -80,7 +80,7 @@ Graph rules:
 - every Envelope requirement is represented exactly once, either by one execution unit or one requirement-scoped blocker;
 - a requirement cannot appear in both a unit and a blocker;
 - dependency edges are acyclic;
-- specialized factories never route through Foundry;
+- specialized factories never route through scoped greenfield chain;
 - bounded existing-repo units target exactly one repository;
 - campaign units target at least two repositories;
 - `READY` means routable to adapter discovery, not permission to mutate;
@@ -156,7 +156,7 @@ Examples:
 
 - Website-Bot: rich `domain_spec.source.yaml`;
 - Program Execution: current public campaign intake;
-- Foundry: current idea-to-repository intake;
+- scoped greenfield chain: current idea-to-repository intake;
 - Plan Simple: current planning input/mode.
 
 ## 5. Idea Execution Receipt
@@ -194,6 +194,27 @@ python3 scripts/validate_receipt.py \
 Receipt units must exactly match Graph units by `unit_id`, `owner`, and `adapter`. The Receipt must also bind to the exact Envelope and Graph digests.
 
 ## 6. Binding and reconciliation law
+
+## 7. Scoped greenfield orchestration
+
+For `NEW_PRODUCT_REPOSITORY`, Idea Execute is the pipeline orchestrator and
+the Graph carries `idea_execute_greenfield_v1`. It resolves GAR, `l9-plan`, and
+`l9-pe-campaign-activate` together as a graph-local cohort while preserving
+their native ordered artifacts:
+
+```text
+GAR Decision -> Plan -> campaign-source.v2 -> PE/PEC receipt
+```
+
+No owner invokes the next owner. A completion receipt is observed by Idea
+Execute, which decides the next legal Graph stage. `birth_handoff` appears only
+when `birth_handoff_requested` is explicit on the Envelope. PE/PEC has no
+automatic outbound birth transition.
+
+The optional lifecycle stage join in the Idea Execution Receipt records owner,
+state, and evidence references for each declared Graph stage. It is lineage
+only; it does not duplicate GAR, Plan, campaign, PE, birth-skill, or factory
+state machines.
 
 Prefer SHA-256 semantic digests for machine artifacts and revision/path bindings for moving repository contracts.
 

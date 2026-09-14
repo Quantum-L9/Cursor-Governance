@@ -76,6 +76,64 @@ def _validate_reconciliation(value: Any, errors: list[str]) -> None:
                 errors.append(f"{label}.replacement_ref must be a non-empty string when present")
 
 
+def _validate_lifecycle_stages(
+    root: dict[str, Any], graph_by_id: dict[str, dict[str, Any]], errors: list[str]
+) -> None:
+    """Validate optional stage joins without turning any owner into an orchestrator."""
+    declared: dict[str, dict[str, str]] = {}
+    for unit_id, unit in graph_by_id.items():
+        orchestration = unit.get("orchestration")
+        if isinstance(orchestration, dict):
+            declared[unit_id] = {
+                str(stage.get("id")): str(stage.get("owner") or "")
+                for stage in orchestration.get("stages", [])
+                if isinstance(stage, dict) and stage.get("id")
+            }
+    stages = root.get("lifecycle_stages")
+    if not declared:
+        if stages is not None:
+            errors.append("lifecycle_stages is only valid for a scoped Idea Execute graph")
+        return
+    if not isinstance(stages, list):
+        errors.append("lifecycle_stages must be a list for a scoped Idea Execute graph")
+        return
+    observed: dict[str, list[str]] = {}
+    for idx, stage in enumerate(stages):
+        label = f"lifecycle_stages[{idx}]"
+        if not isinstance(stage, dict):
+            errors.append(f"{label} must be a mapping")
+            continue
+        unit_id, stage_id = stage.get("unit_id"), stage.get("stage_id")
+        if unit_id not in declared or stage_id not in declared.get(unit_id, {}):
+            errors.append(f"{label} names an undeclared graph lifecycle stage")
+            continue
+        if not nonempty_string(stage.get("owner")) or not nonempty_string(stage.get("state")):
+            errors.append(f"{label} must name owner and state")
+        expected_owner = declared[str(unit_id)][str(stage_id)]
+        reported_owner = stage.get("owner")
+        if nonempty_string(reported_owner) and expected_owner and reported_owner != expected_owner:
+            errors.append(
+                f"{label}.owner {reported_owner!r} does not match graph stage owner "
+                f"{expected_owner!r}"
+            )
+        refs = stage.get("evidence_refs", [])
+        if not isinstance(refs, list) or not all(nonempty_string(ref) for ref in refs):
+            errors.append(f"{label}.evidence_refs must be a string list")
+        if _claims_completion(stage.get("state")) and not refs:
+            errors.append(
+                f"DOWNSTREAM_EVIDENCE_MISSING: {label} claims completion without evidence"
+            )
+        observed.setdefault(str(unit_id), []).append(str(stage_id))
+    for unit_id, expected in declared.items():
+        seen = observed.get(unit_id, [])
+        graph_order = list(expected)
+        if seen != graph_order:
+            errors.append(
+                f"lifecycle stages for {unit_id} must exactly match graph order "
+                f"(receipt={seen}, graph={graph_order})"
+            )
+
+
 def validate_receipt(data: Any, graph: Any, envelope: Any) -> dict[str, Any]:
     root = require_mapping(data, "idea execution receipt")
     validated_envelope = validate_envelope(envelope)
@@ -205,6 +263,7 @@ def validate_receipt(data: Any, graph: Any, envelope: Any) -> dict[str, Any]:
         )
 
     _validate_reconciliation(root.get("reconciliation"), errors)
+    _validate_lifecycle_stages(root, graph_by_id, errors)
 
     if errors:
         raise ContractError("; ".join(errors))

@@ -780,7 +780,7 @@ def build_patch(repo_root: Path, base_ref: str, changed_files: list[str]) -> byt
     chunks: list[bytes] = []
     if tracked:
         result = subprocess.run(
-            ["git", "diff", "--binary", "--no-ext-diff", base_ref, "--", *tracked],
+            ["git", "diff", "--no-color", "--binary", "--no-ext-diff", base_ref, "--", *tracked],
             cwd=repo_root,
             capture_output=True,
             check=False,
@@ -790,7 +790,7 @@ def build_patch(repo_root: Path, base_ref: str, changed_files: list[str]) -> byt
         chunks.append(result.stdout)
     for relative in untracked:
         result = subprocess.run(
-            ["git", "diff", "--no-index", "--binary", "--", "/dev/null", relative],
+            ["git", "diff", "--no-color", "--no-index", "--binary", "--", "/dev/null", relative],
             cwd=repo_root,
             capture_output=True,
             check=False,
@@ -875,10 +875,10 @@ def render_readme(spec: dict[str, Any]) -> str:
 
 Status: `{spec["status"]}`
 
-Repository: `{spec["repository"]}`  
-Base ref: `{spec["base_ref"]}`  
-Branch: `{spec["branch"]}`  
-Utilization gap: `{spec["optimization"]["utilization_gap_class"]}`  
+Repository: `{spec["repository"]}`
+Base ref: `{spec["base_ref"]}`
+Branch: `{spec["branch"]}`
+Utilization gap: `{spec["optimization"]["utilization_gap_class"]}`
 Measured improvement: `{delta}`
 
 ## Summary

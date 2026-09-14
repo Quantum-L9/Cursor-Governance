@@ -41,12 +41,14 @@ def _allocate_unit_id(preferred: str, used_ids: set[str]) -> str:
     return allocated
 
 
-def _unit_for_req(req: dict[str, Any], spec: dict[str, Any], used_ids: set[str]) -> dict[str, Any]:
+def _unit_for_req(
+    req: dict[str, Any], spec: dict[str, Any], used_ids: set[str], *, birth_requested: bool = False
+) -> dict[str, Any]:
     rid = req["id"]
     preferred = f"unit-{rid}"
     if preferred in RESERVED_AGGREGATE_UNIT_IDS:
         raise ContractError(f"requirement id {rid!r} is reserved for aggregate execution units")
-    return {
+    unit = {
         "id": _allocate_unit_id(preferred, used_ids),
         "topology": spec["topology"],
         "owner": spec["owner"],
@@ -56,6 +58,19 @@ def _unit_for_req(req: dict[str, Any], spec: dict[str, Any], used_ids: set[str])
         "depends_on_units": [],
         "admission_status": "UNCHECKED",
     }
+    if spec.get("orchestration"):
+        stages = [dict(stage) for stage in spec.get("stages", [])]
+        if not birth_requested:
+            stages = [
+                stage for stage in stages if stage.get("id") not in {"birth_handoff", "birth"}
+            ]
+        unit["orchestration"] = {
+            "profile": spec["orchestration"],
+            "cohort": list(spec.get("cohort", [])),
+            "stages": stages,
+            "birth_handoff_requested": birth_requested,
+        }
+    return unit
 
 
 def route_envelope(envelope: dict[str, Any], registry: dict[str, Any]) -> dict[str, Any]:
@@ -80,7 +95,12 @@ def route_envelope(envelope: dict[str, Any], registry: dict[str, Any]) -> dict[s
             units.append(unit)
             req_to_unit[rid] = unit["id"]
         elif cap == "product_repository" and req.get("target_state") == "new":
-            unit = _unit_for_req(req, generic["new_product_repository"], used_ids)
+            unit = _unit_for_req(
+                req,
+                generic["new_product_repository"],
+                used_ids,
+                birth_requested=bool(chars.get("birth_handoff_requested")),
+            )
             units.append(unit)
             req_to_unit[rid] = unit["id"]
         elif cap == "repository_change":

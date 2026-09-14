@@ -625,12 +625,17 @@ def validate(root: Path) -> list[str]:
         errors.append("commit.patch is empty")
     if hashlib.sha256(patch).hexdigest() != manifest.get("patch_sha256"):
         errors.append("manifest.patch_sha256 does not match commit.patch")
-    patch_text = patch.decode("utf-8", "replace")
+    # Git inherits color.ui from the operator environment. A valid patch may
+    # therefore carry ANSI SGR escapes around header lines; normalize only the
+    # parser view, never the byte-bound artifact or manifest checksum.
+    patch_text = re.sub(r"\x1b\[[0-9;]*m", "", patch.decode("utf-8", "replace"))
     patch_paths = set()
-    for match in re.finditer(r"^\+\+\+ b/(.+)$", patch_text, re.MULTILINE):
-        patch_paths.add(match.group(1).strip())
-    for match in re.finditer(r"^diff --git a/.+? b/(.+)$", patch_text, re.MULTILINE):
-        patch_paths.add(match.group(1).strip())
+    for match in re.finditer(r"^\+\+\+ (.+)$", patch_text, re.MULTILINE):
+        path = match.group(1).strip().removeprefix("b/")
+        if path != "/dev/null":
+            patch_paths.add(path)
+    for match in re.finditer(r"^diff --git .+? (.+)$", patch_text, re.MULTILINE):
+        patch_paths.add(match.group(1).strip().removeprefix("b/"))
     for raw in changed:
         if isinstance(raw, str) and raw not in deleted and raw not in patch_paths:
             errors.append(f"commit.patch does not modify declared changed file: {raw}")

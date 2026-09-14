@@ -21,7 +21,7 @@ RECEIPT_SUBJECT_LIST_CAP = 100
 
 def _run(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        ["git", "-C", str(repo), *args],
+        ["git", "-C", str(repo), "-c", "color.ui=false", *args],
         text=True,
         capture_output=True,
         check=False,

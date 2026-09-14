@@ -115,6 +115,24 @@
           },
           "repository_id": {
             "type": ["string", "null"]
+          },
+          "lifecycle": {
+            "enum": [
+              "existing_repository",
+              "pre_birth_local_execution_workspace"
+            ]
+          },
+          "logical_target_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "workspace_path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "future_repository_intent": {
+            "type": "string",
+            "minLength": 1
           }
         }
       }

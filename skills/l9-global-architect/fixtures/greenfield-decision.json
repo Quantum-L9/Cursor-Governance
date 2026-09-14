@@ -1,0 +1,27 @@
+{
+  "schema": "l9.gar.product-architecture-decision/v1",
+  "status": "ACCEPTED",
+  "idea_execute": {
+    "envelope_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "graph_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "graph_unit_ids": ["unit-ER-001"],
+    "lifecycle_run_id": "fixture-run",
+    "authority_refs": ["IdeaOS/decision.json"]
+  },
+  "architecture": {
+    "topology": "NEW_PRODUCT_REPOSITORY",
+    "selected": "Python package with explicit local-only delivery boundary",
+    "rejected_alternatives": ["Remote birth during execution"],
+    "owner_dispositions": [{"capability": "product code", "disposition": "OWN_LOCALLY"}],
+    "constraints": ["No remote publication from Program Execution"],
+    "material_unknowns": []
+  },
+  "plan_obligations": ["Bind this decision digest"],
+  "validation_obligations": ["Prove clean source tree"],
+  "currentness": {
+    "input_digests": [
+      "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    ]
+  }
+}

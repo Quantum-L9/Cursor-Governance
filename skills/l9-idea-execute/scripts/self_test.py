@@ -82,7 +82,7 @@ def caps(adapter: str, unit_id: str, *, single=True, multi=False, revision="fixt
 
 
 def receipt_for(env, graph, *, state="READY", evidence=True, status=None, blockers=None):
-    return {
+    receipt = {
         "schema": "l9.idea-execution-receipt/v1",
         "idea_id": env["idea"]["id"],
         "envelope_digest": semantic_digest(env),
@@ -105,6 +105,24 @@ def receipt_for(env, graph, *, state="READY", evidence=True, status=None, blocke
         "next_legal_transition": "invoke validated owner-native handoff",
         "reconciliation": {"reused": [], "regenerated": [], "superseded": []},
     }
+    lifecycle_stages = []
+    for unit in graph["units"]:
+        orchestration = unit.get("orchestration")
+        if not isinstance(orchestration, dict):
+            continue
+        for stage in orchestration.get("stages", []):
+            lifecycle_stages.append(
+                {
+                    "unit_id": unit["id"],
+                    "stage_id": stage["id"],
+                    "owner": stage["owner"],
+                    "state": "NOT_RUN",
+                    "evidence_refs": [],
+                }
+            )
+    if lifecycle_stages:
+        receipt["lifecycle_stages"] = lifecycle_stages
+    return receipt
 
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
@@ -165,8 +183,30 @@ def main() -> int:
     e = envelope([req("ER-001", "product_repository", "new")])
     g = route_envelope(validate_envelope(e), registry)
     validate_graph(g, e)
-    assert find_unit(g, "NEW_PRODUCT_REPOSITORY")["adapter"] == "l9-idea-foundry"
-    checks.append("new_product_to_foundry=PASS")
+    greenfield = find_unit(g, "NEW_PRODUCT_REPOSITORY")
+    assert greenfield["adapter"] == "l9-idea-execute"
+    assert [stage["id"] for stage in greenfield["orchestration"]["stages"]] == [
+        "architecture",
+        "planning",
+        "campaign",
+        "realization",
+    ]
+    assert not greenfield["orchestration"]["birth_handoff_requested"]
+    birth_requested = copy.deepcopy(e)
+    birth_requested["execution_characteristics"]["birth_handoff_requested"] = True
+    birth_graph = route_envelope(validate_envelope(birth_requested), registry)
+    validate_graph(birth_graph, birth_requested)
+    stages = find_unit(birth_graph, "NEW_PRODUCT_REPOSITORY")["orchestration"]["stages"]
+    assert [stage["id"] for stage in stages][-2:] == ["birth_handoff", "birth"]
+    greenfield_receipt = receipt_for(e, g)
+    validate_receipt(greenfield_receipt, g, e)
+    false_stage_owner = copy.deepcopy(greenfield_receipt)
+    false_stage_owner["lifecycle_stages"][0]["owner"] = "wrong-stage-owner"
+    expect_contract_error(
+        lambda: validate_receipt(false_stage_owner, g, e),
+        "does not match graph stage owner",
+    )
+    checks.append("new_product_scoped_orchestrator_and_explicit_birth=PASS")
 
     e = envelope([req("ER-001", "website", "new")])
     g = route_envelope(validate_envelope(e), registry)

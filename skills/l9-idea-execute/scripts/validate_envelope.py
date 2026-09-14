@@ -99,7 +99,12 @@ def validate_envelope(data: Any) -> dict[str, Any]:
     if not isinstance(chars, dict):
         errors.append("execution_characteristics must be a mapping")
     else:
-        for key in ("cross_repository", "code_required", "runtime_validation_required"):
+        for key in (
+            "cross_repository",
+            "code_required",
+            "runtime_validation_required",
+            "birth_handoff_requested",
+        ):
             if key in chars and not isinstance(chars[key], bool):
                 errors.append(f"execution_characteristics.{key} must be boolean")
         for key in ("protected_actions", "repositories"):

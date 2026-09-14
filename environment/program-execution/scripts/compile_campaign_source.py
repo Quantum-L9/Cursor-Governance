@@ -825,6 +825,75 @@ def _alias_value(src: dict[str, Any], path: tuple[str, ...]) -> str:
     return str(node or "").strip()
 
 
+def resolve_campaign_target(src: dict[str, Any]) -> dict[str, Any]:
+    """Resolve the one execution target without inventing a remote identity.
+
+    Existing sources retain the repository-id contract.  The opt-in
+    pre-birth lifecycle names an initialized local workspace instead; it is
+    deliberately not translated into a GitHub URL or a future repository id.
+    """
+    targets = [item for item in src.get("targets") or [] if isinstance(item, dict)]
+    local_targets = [
+        item
+        for item in targets
+        if str(item.get("lifecycle") or "existing_repository").strip()
+        == "pre_birth_local_execution_workspace"
+    ]
+    if local_targets:
+        if len(targets) != 1 or len(local_targets) != 1:
+            raise CompileError(
+                "pre-birth lifecycle must declare exactly one local execution target"
+            )
+        target = local_targets[0]
+        lifecycle = "pre_birth_local_execution_workspace"
+        required = ("logical_target_id", "workspace_path", "future_repository_intent")
+        missing = [key for key in required if not str(target.get(key) or "").strip()]
+        if missing:
+            raise CompileError(
+                "pre-birth target is missing required local-workspace binding(s): "
+                + ", ".join(missing)
+            )
+        if str(target.get("repository_id") or "").strip():
+            raise CompileError(
+                "pre-birth target must not declare repository_id; a future repository is intent, "
+                "not an existing remote execution target"
+            )
+        intent = str(target["future_repository_intent"])
+        if "://" in intent or intent.endswith(".git"):
+            raise CompileError("pre-birth future_repository_intent must not be a remote URL")
+        return {
+            "lifecycle": lifecycle,
+            "logical_target_id": str(target["logical_target_id"]),
+            "workspace_path": str(target["workspace_path"]),
+            "future_repository_intent": intent,
+            "repository_id": f"local/{target['logical_target_id']}",
+        }
+    unsupported = [
+        str(item.get("lifecycle") or "existing_repository").strip()
+        for item in targets
+        if str(item.get("lifecycle") or "existing_repository").strip() != "existing_repository"
+    ]
+    if unsupported:
+        raise CompileError(f"unknown campaign target lifecycle {unsupported[0]!r}")
+    found: list[str] = []
+    for item in targets:
+        repository_id = str(item.get("repository_id") or "").strip()
+        if repository_id and repository_id not in found:
+            found.append(repository_id)
+    if not found:
+        raise CompileError(
+            "campaign source declares no targets[].repository_id; the execution target "
+            "repository is never inferred from metadata. Declare the target repository in targets[]"
+        )
+    if len(found) > 1:
+        raise CompileError(
+            f"campaign source declares multiple distinct targets[].repository_id ({found!r}); "
+            "the Program Execution runner executes one repository per campaign. Split the "
+            "campaign so each one names a single execution repository"
+        )
+    return {"lifecycle": "existing_repository", "repository_id": found[0]}
+
+
 def resolve_campaign_target_repository(src: dict[str, Any]) -> str:
     """The one repository identity a direct campaign source binds execution to.
 
@@ -839,26 +908,8 @@ def resolve_campaign_target_repository(src: dict[str, Any]) -> str:
     multiple distinct ids are both refused -- taking the first would invent a
     primary target the source never declared.
     """
-    found: list[str] = []
-    for entry in src.get("targets") or []:
-        if not isinstance(entry, dict):
-            continue
-        value = str(entry.get("repository_id") or "").strip()
-        if value and value not in found:
-            found.append(value)
-    if not found:
-        raise CompileError(
-            "campaign source declares no targets[].repository_id; the execution target "
-            "repository is never inferred from metadata. Declare the target repository in "
-            "targets[]"
-        )
-    if len(found) > 1:
-        raise CompileError(
-            f"campaign source declares multiple distinct targets[].repository_id ({found!r}); "
-            "the Program Execution runner executes one repository per campaign. Split the "
-            "campaign so each one names a single execution repository"
-        )
-    canonical = found[0]
+    target = resolve_campaign_target(src)
+    canonical = str(target["repository_id"])
     for name, path in TARGET_REPOSITORY_ALIASES:
         value = _alias_value(src, path)
         if value and value != canonical:

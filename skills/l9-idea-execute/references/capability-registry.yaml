@@ -10,9 +10,35 @@ specialized_factories:
     note: Website-Bot owns any website-specific provisioning or generated site repository.
 generic_routes:
   new_product_repository:
-    owner: l9-idea-foundry
-    adapter: l9-idea-foundry
+    owner: l9-idea-execute
+    adapter: l9-idea-execute
     topology: NEW_PRODUCT_REPOSITORY
+    orchestration: idea_execute_greenfield_v1
+    cohort:
+      - l9-global-architect
+      - l9-plan
+      - l9-pe-campaign-activate
+    stages:
+      - id: architecture
+        owner: l9-global-architect
+        produces: product_architecture_decision
+      - id: planning
+        owner: l9-plan
+        produces: validated_execution_plan
+      - id: campaign
+        owner: l9-pe-campaign-activate
+        produces: validated_campaign_source_v2
+      - id: realization
+        owner: program-execution
+        produces: verified_pec_source
+      - id: birth_handoff
+        owner: l9-repo-birth
+        activation: explicit_graph_request
+        produces: factory_birth_payload_and_contract
+      - id: birth
+        owner: l9-repo-template
+        activation: separately_authorized
+        produces: repository_birth_state
   bounded_existing_repo:
     owner: l9-plan-simple
     adapter: l9-plan-simple

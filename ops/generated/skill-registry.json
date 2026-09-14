@@ -1,5 +1,5 @@
 {
-  "generation_id": "fcd543b0641a1828514d00b72aa3d35c0e08bc153c6575fb42f7ad311fed454b",
+  "generation_id": "a57bde67f412b792d47af309fa7f703dd89fd8e9d2f25fe305e9f22dc97d02c0",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -813,28 +813,23 @@
       },
       {
         "hint_allowed": true,
-        "id": "idea_foundry",
+        "id": "repo_birth",
         "negative_signals": [
-          "website only",
-          "deploy to production",
+          "brainstorm",
           "existing repo change"
         ],
-        "note": "explicit_only + hint_allowed \u2014 Read/attach only. Mutation requires explicit user invoke. Never birth a repo from a hint.\n",
+        "note": "explicit_only + hint_allowed \u2014 Package an already verified clean source commit only. Never invoke as a default PE successor or create a remote repository from a hint.\n",
         "positive_signals": [
-          "/l9-idea-foundry",
-          "idea foundry",
-          "compile this idea pack",
-          "birth-ready repository",
-          "l9-repo-template birth",
-          "idea pack to code"
+          "/l9-repo-birth",
+          "birth handoff",
+          "package verified pec commit",
+          "factory payload"
         ],
-        "primary": "l9-idea-foundry",
+        "primary": "l9-repo-birth",
         "required_any": [
-          "/l9-idea-foundry",
-          "idea foundry",
-          "birth-ready repository",
-          "idea pack to code",
-          "l9-repo-template birth"
+          "/l9-repo-birth",
+          "repo birth handoff",
+          "package verified pec commit"
         ],
         "signal_weight": 8,
         "supporting": [
@@ -1220,22 +1215,9 @@
       "invocation": "explicit_only",
       "name": "l9-idea-execute",
       "path": "skills/l9-idea-execute",
-      "reason": "routes validated IdeaOS decisions into Foundry, Website-Bot, plan-simple, or Program Execution; owner-selection and downstream invocation are high blast radius; disable-model-invocation",
+      "reason": "routes validated IdeaOS decisions into a scoped GAR/Plan/Campaign/PE graph, Website-Bot, plan-simple, or Program Execution; owner-selection and downstream invocation are high blast radius; disable-model-invocation",
       "skill_md": "skills/l9-idea-execute/SKILL.md",
-      "skill_sha256": "d9d0dc70b6620a1dcc8abcf9e174fd7952a26137732db15b504a4ff820355c51",
-      "user_invocable": true,
-      "when_to_use": ""
-    },
-    {
-      "composition_role": "general",
-      "description": "Compile mature idea packs and locked product specifications into real tested code, exact-state provenance, and repository-factory-qualified birth payloads for new Quantum-L9 products. Use when an idea leaves planning to become a new repository, when a Foundry staging product must be resumed or recompiled, or when a frozen product must be qualified against the live l9-repo-template birth contract. Never authors the birth payload; requires local birth evidence; stops before production deployment.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
-      "name": "l9-idea-foundry",
-      "path": "skills/l9-idea-foundry",
-      "reason": "compiles idea packs into tested code and l9-repo-template births; repository creation and code realization are high blast radius; disable-model-invocation",
-      "skill_md": "skills/l9-idea-foundry/SKILL.md",
-      "skill_sha256": "bb981c5611b5d5beab795718b52de6bbf274a0dee230eb70fa7a1237d43b9f17",
+      "skill_sha256": "76c9fe3f936c56b36ae1b81f9d3fff97ccb7f1cd3b53a105df08d8fd03dcb6b4",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1391,7 +1373,7 @@
       "path": "skills/l9-plan-simple",
       "reason": "",
       "skill_md": "skills/l9-plan-simple/SKILL.md",
-      "skill_sha256": "60cda8c0868585f58402d0740348f3f68d334efc98fc7fc5f8e13a766bec24e6",
+      "skill_sha256": "1c13b6953d98dd244dcdbc36b904fae102e6178261fc3dbd2c58f7791e6b8c1d",
       "user_invocable": true,
       "when_to_use": "an ordinary execution plan or spec is needed, scope is unclear, or Plan mode is on \u2014 rules/23-l9-skill-routing.mdc already routes every ordinary planning deliverable here, so the model must be able to select it"
     },
@@ -1459,6 +1441,19 @@
       "skill_sha256": "794971aa9f6eca95a3c3e7b9dd9c600a2c11980b90cc7b82310409af388cab4c",
       "user_invocable": true,
       "when_to_use": "recursively aligning, improving, or converging artifact groups, packs, prompts, or agent outputs until execution-ready"
+    },
+    {
+      "composition_role": "general",
+      "description": "package a verified local PE/PEC source commit into the current l9-repo-template factory payload and a digest-bound birth contract. Use when an explicit repository-birth request or a validated Idea Execute REQUEST_BIRTH_HANDOFF graph stage requires factory packaging; never invoke after PE by default.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-repo-birth",
+      "path": "skills/l9-repo-birth",
+      "reason": "packages an exact verified PE/PEC source commit for the factory; it is an explicit lifecycle boundary and never a default PE successor; disable-model-invocation",
+      "skill_md": "skills/l9-repo-birth/SKILL.md",
+      "skill_sha256": "7b15f2836cef3a68121042c237882025b5dab6dbf5521997c967c3ff4fa72719",
+      "user_invocable": true,
+      "when_to_use": ""
     },
     {
       "composition_role": "general",
@@ -1605,6 +1600,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "293ceee3e313fa2e06571c601de04a66219727442d8fb5347d634f9a4f3165aa",
-  "source_skill_corpus_sha256": "28f23e4fd4003bbac97821e45ccbbb3807442e7da5dae15e9a82309b12183173"
+  "source_manifest_sha256": "bf415873fe91b1779e0cea47ca987f01c3b919d78bae8ac8c0a49fea06eb8def",
+  "source_skill_corpus_sha256": "a262861d450be25a18ed5e6911543946d838a91c8b2ec0eab9182c15256c93bd"
 }
