@@ -148,8 +148,11 @@ def main() -> int:
         "--session-id",
         default=None,
         help=(
-            "repair: use this chat id for the writer receipt (and as session id "
-            "when stdin has none). Newest ~/.claude/projects/<project>/<uuid>.jsonl"
+            "repair: the RAW chat id for the writer receipt (and the session id "
+            "when stdin has none) — exactly what memory_gate.py names in its "
+            "denial. The receipt key is composed here, once; a precomposed "
+            "<writer>__<chat> key for this writer is reduced, never doubled. "
+            "Newest ~/.claude/projects/<project>/<uuid>.jsonl"
         ),
     )
     args = parser.parse_args()
@@ -171,8 +174,12 @@ def main() -> int:
         session_id = st.resolve_session_id(event=event, cli_arg=args.session_id)
     except ValueError:
         session_id = args.session_id or os.environ.get("CURSOR_SESSION_ID") or "unknown-session"
+    # One composition of the writer receipt key, from the same raw identity the
+    # gate names in its denial hint (audit P573-F1): the file stamped here is
+    # the file the gate looks up.
     try:
-        receipt_id = st.resolve_receipt_id(event=event, cli_arg=args.session_id)
+        writer_agent, receipt_chat = st.receipt_identity(event=event, cli_arg=args.session_id)
+        receipt_id = st.compose_receipt_id(writer_agent, receipt_chat)
     except ValueError:
         receipt_id = ""
     chat_id, _chat_key = st.extract_chat_id(event)

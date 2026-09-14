@@ -132,28 +132,105 @@ def resolve_session_id(*, explicit: str | None = None) -> str:
     return "default"
 
 
-def resolve_or_create_session_id(project_dir: str | Path, *, explicit: str | None = None) -> str:
-    """Return the session id, generating and persisting one if SessionStart has none."""
+#: ``source`` stamped on a generated lifecycle id (``.l9/memory/session.json``).
+SESSION_POINTER_SOURCE = "session_start_generated"
+
+
+def session_pointer_path(project_dir: str | Path) -> Path:
+    """Where SessionStart records the lifecycle id it generated for this repo."""
+    return Path(project_dir).expanduser().resolve() / ".l9" / "memory" / "session.json"
+
+
+def persisted_session_id(project_dir: str | Path) -> str:
+    """The lifecycle id an earlier SessionStart persisted, or empty. Never raises."""
+    try:
+        pointer = session_pointer_path(project_dir)
+        if not pointer.is_file():
+            return ""
+        data = json.loads(pointer.read_text(encoding="utf-8"))
+    except (OSError, ValueError, RuntimeError):
+        # ValueError covers json.JSONDecodeError; RuntimeError is expanduser()
+        # with no resolvable home. A pointer that cannot be read is no pointer.
+        return ""
+    if not isinstance(data, dict):
+        return ""
+    return _usable_session_id(str(data.get("session_id") or ""))
+
+
+def create_session_id(
+    project_dir: str | Path, *, conversation_id: str | None = None
+) -> tuple[str, str]:
+    """Generate a lifecycle id and try to persist it. Never raises.
+
+    Returns ``(session_id, persistence_error)``: the id is always usable, and
+    ``persistence_error`` is ``""`` or the exception class name when the
+    pointer could not be written (``.l9/memory`` is a file, ``session.json``
+    is a directory, a read-only checkout). Persistence is a convenience for
+    later hooks, not a precondition — the SessionStart hooks are fail-open
+    and a filesystem fault must not raise into them (audit P573-F3).
+    """
+    generated = str(uuid.uuid4())
+    payload: dict[str, Any] = {
+        "session_id": generated,
+        "source": SESSION_POINTER_SOURCE,
+        "created_at": datetime.now(UTC).isoformat(),
+    }
+    conversation = _usable_session_id(conversation_id)
+    if conversation:
+        payload["conversation_id"] = conversation
+    try:
+        pointer = session_pointer_path(project_dir)
+        pointer.parent.mkdir(parents=True, exist_ok=True)
+        pointer.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    except (OSError, ValueError, RuntimeError) as exc:
+        return generated, type(exc).__name__
+    return generated, ""
+
+
+def resolve_session_lifecycle(
+    project_dir: str | Path,
+    *,
+    explicit: str | None = None,
+    rotate: bool = False,
+    conversation_id: str | None = None,
+) -> tuple[str, str]:
+    """ONE lifecycle id for open, compile and close, plus its persistence status.
+
+    Order: a real id from :func:`resolve_session_id` (explicit →
+    ``CURSOR_SESSION_ID`` → hook payload ``session_id``) is returned unchanged.
+    Otherwise — a conversation-only SessionStart payload, or none at all — the
+    id is generated here and persisted under ``.l9/memory/session.json`` so
+    every later caller in the session resolves the same value.
+
+    ``rotate=True`` is SessionStart's mode: it is the only hook that knows a
+    new session began, so it never reuses the pointer a previous session left
+    behind (a shared ``default`` open rotated nothing and hid every close
+    gap — audit P573-F2). Later callers keep ``rotate=False`` and reuse.
+
+    Never raises; see :func:`create_session_id` for the persistence status.
+    """
     found = resolve_session_id(explicit=explicit)
     if found != "default":
-        return found
-    pointer = Path(project_dir).expanduser().resolve() / ".l9" / "memory" / "session.json"
-    if pointer.is_file():
-        try:
-            data = json.loads(pointer.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            data = {}
-        if isinstance(data, dict):
-            usable = _usable_session_id(str(data.get("session_id") or ""))
-            if usable:
-                return usable
-    generated = str(uuid.uuid4())
-    pointer.parent.mkdir(parents=True, exist_ok=True)
-    pointer.write_text(
-        json.dumps({"session_id": generated, "source": "session_start_generated"}) + "\n",
-        encoding="utf-8",
+        return found, ""
+    if not rotate:
+        persisted = persisted_session_id(project_dir)
+        if persisted:
+            return persisted, ""
+    return create_session_id(project_dir, conversation_id=conversation_id)
+
+
+def resolve_or_create_session_id(
+    project_dir: str | Path,
+    *,
+    explicit: str | None = None,
+    rotate: bool = False,
+    conversation_id: str | None = None,
+) -> str:
+    """The session id from :func:`resolve_session_lifecycle`, status dropped."""
+    session_id, _error = resolve_session_lifecycle(
+        project_dir, explicit=explicit, rotate=rotate, conversation_id=conversation_id
     )
-    return generated
+    return session_id
 
 
 def re_safe(session_id: str) -> str:

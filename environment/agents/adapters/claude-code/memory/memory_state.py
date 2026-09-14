@@ -127,6 +127,42 @@ def extract_writer_agent_id(event: dict[str, Any] | None) -> str:
     return os.environ.get("L9_MEMORY_AGENT_ID", "").strip() or "unknown-agent"
 
 
+def receipt_identity(
+    *, event: dict[str, Any] | None = None, cli_arg: str | None = None
+) -> tuple[str, str]:
+    """The two RAW components of a writer receipt key: ``(writer_agent, chat)``.
+
+    Both parts come back path-safe (``_safe_id_part``), so composing them with
+    :func:`compose_receipt_id` is idempotent and a denial hint can name them
+    verbatim as ``L9_MEMORY_AGENT_ID=<writer_agent> … --session-id <chat>``.
+
+    ``cli_arg`` is the explicit repair override (``memory_prefetch.py
+    --session-id``). It is a raw chat id; prefetch composes the key exactly
+    once. A hint that carried the *composed* key was composed again on repair
+    (``claude-code__claude-code__<chat>``), so the repair stamped a file the
+    gate never looked up and could not unblock a governed write (audit
+    P573-F1). A precomposed key whose writer prefix matches this run's writer
+    is therefore accepted and reduced to its chat part rather than doubled.
+
+    Raises :class:`ValueError` when no chat id is available.
+    """
+    writer_agent = _safe_id_part(extract_writer_agent_id(event))
+    chat, _key = extract_chat_id(event)
+    if not chat:
+        chat = str(cli_arg or "").strip()
+        prefix = f"{writer_agent}__"
+        if chat.startswith(prefix) and len(chat) > len(prefix):
+            chat = chat[len(prefix) :]
+    if not chat or chat == "default":
+        raise ValueError("receipt_id requires a chat id")
+    return writer_agent, _safe_id_part(chat)
+
+
+def compose_receipt_id(writer_agent: str, chat: str) -> str:
+    """``<writer_agent>__<chat>`` — the one place the receipt key is spelled."""
+    return f"{_safe_id_part(writer_agent)}__{_safe_id_part(chat)}"
+
+
 def resolve_receipt_id(*, event: dict[str, Any] | None = None, cli_arg: str | None = None) -> str:
     """Writer-scoped receipt key. Distinct from SessionStart's session id.
 
@@ -134,12 +170,8 @@ def resolve_receipt_id(*, event: dict[str, Any] | None = None, cli_arg: str | No
     agents. Prefetch and the write gate both call this so they stamp and
     look up the same file.
     """
-    chat, _key = extract_chat_id(event)
-    if not chat:
-        chat = str(cli_arg or "").strip()
-    if not chat or chat == "default":
-        raise ValueError("receipt_id requires a chat id")
-    return f"{_safe_id_part(extract_writer_agent_id(event))}__{_safe_id_part(chat)}"
+    writer_agent, chat = receipt_identity(event=event, cli_arg=cli_arg)
+    return compose_receipt_id(writer_agent, chat)
 
 
 def resolve_session_id(*, event: dict[str, Any] | None = None, cli_arg: str | None = None) -> str:

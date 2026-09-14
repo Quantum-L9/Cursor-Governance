@@ -23,7 +23,7 @@ import json, os
 raw = os.environ.get("L9_HOOK_PAYLOAD", "")
 try:
     data = json.loads(raw) if raw.strip() else {}
-except Exception:
+except (json.JSONDecodeError, TypeError):
     data = {}
 sid = ""
 if isinstance(data, dict):
@@ -42,7 +42,7 @@ import json, os
 raw = os.environ.get("L9_HOOK_PAYLOAD", "")
 try:
     data = json.loads(raw) if raw.strip() else {}
-except Exception:
+except (json.JSONDecodeError, TypeError):
     data = {}
 cid = ""
 if isinstance(data, dict):
@@ -78,6 +78,27 @@ HYDRATE_MD="Graphiti disabled — no resume memory"
 # so a later enabled session can still see the skipped_disabled close-gap.
 PY="${GOV_ROOT}/.venv/bin/python3"
 [ -x "$PY" ] || PY="python3"
+
+# ONE lifecycle id, resolved before the open latch (audit P573-F2).
+# SessionStart is the only hook that knows a new session began: when the
+# payload carried no session id (Cursor's conversation-only payload) the id is
+# generated HERE, once, persisted under .l9/memory/session.json, and handed to
+# both the open latch and the packet compile below — never "default" for the
+# latch while the compiler invents a UUID of its own. A real id (env or
+# payload) passes through unchanged; rotate=True means a pointer left by a
+# previous session is never reused, so previous_opened.json rotates and a
+# missed close surfaces as a close-gap. Persistence is fail-open; a resolver
+# fault keeps the default.
+if [ -n "$REPO" ] && [ -f "$GOV_ROOT/ops/graphiti/hydration/session_latches.py" ]; then
+  _LIFECYCLE_SID="$(cd "$GOV_ROOT" && PYTHONPATH="$GOV_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
+    "$PY" -c 'import sys; from ops.graphiti.hydration.session_latches import resolve_or_create_session_id; print(resolve_or_create_session_id(sys.argv[1], explicit=sys.argv[2], rotate=True, conversation_id=sys.argv[3]))' \
+    "$REPO" "$CURSOR_SESSION_ID" "$CURSOR_CONVERSATION_ID" 2>/dev/null || true)"
+  if [ -n "$_LIFECYCLE_SID" ]; then
+    export CURSOR_SESSION_ID="$_LIFECYCLE_SID"
+  fi
+  unset _LIFECYCLE_SID
+fi
+
 if [ -n "$REPO" ] && [ -f "$GOV_ROOT/ops/graphiti/hydration/cli.py" ]; then
   BG_OPEN=()
   if [ "${CURSOR_IS_BACKGROUND_AGENT:-}" = "1" ] || [ "${L9_MEMORY_BACKGROUND:-}" = "1" ]; then
@@ -101,7 +122,7 @@ if graphiti_enabled; then
 import sys, json
 try:
     d = json.load(sys.stdin)
-except Exception:
+except ValueError:  # json.JSONDecodeError / UnicodeDecodeError: not a packet
     print("hydration degraded — resume via PICKUP search when online; next=")
     raise SystemExit(0)
 ctx = d.get("additional_context") or ""

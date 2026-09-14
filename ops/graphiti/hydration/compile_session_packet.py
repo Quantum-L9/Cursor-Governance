@@ -31,7 +31,7 @@ if str(_REPO_ROOT) not in sys.path:
 from ops.graphiti.hydration.identity import resolve_write_identity  # noqa: E402
 from ops.graphiti.hydration.session_latches import (  # noqa: E402
     close_gap_reason,
-    resolve_or_create_session_id,
+    resolve_session_lifecycle,
 )
 from ops.memory.hydration import (  # noqa: E402
     STATUS_NAMESPACE_UNRESOLVED,
@@ -88,7 +88,12 @@ def compile_session_packet(
 ) -> dict[str, Any]:
     """Build a SessionHydrationPacket dict (fail-open; never raises to hooks)."""
     project = Path(project_dir).expanduser().resolve()
-    conversation_id = resolve_or_create_session_id(project, explicit=conversation_id)
+    # The orchestrator resolved the lifecycle id once, before `cli open`, and
+    # passes it here explicitly; this reuses it. Only a caller that supplied
+    # none falls through to the persisted pointer. Persistence itself is
+    # fail-open (audit P573-F3): a fault is a warning on the packet, never a
+    # raise into the SessionStart hook.
+    conversation_id, pointer_error = resolve_session_lifecycle(project, explicit=conversation_id)
     close_gap_text = close_gap_reason(project, conversation_id)
     close_gap = bool(close_gap_text)
     # Broad by design; the handler below carries the reason.
@@ -121,6 +126,8 @@ def compile_session_packet(
     next_action = ""
     rationale = ""
     warnings = list(hydration.warnings)
+    if pointer_error:
+        warnings.append(f"session id not persisted: {pointer_error}")
 
     if continuation is not None:
         capsule = continuation.capsule

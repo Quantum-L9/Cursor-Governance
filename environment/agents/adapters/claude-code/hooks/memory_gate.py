@@ -145,21 +145,33 @@ def main() -> int:
         if "session_prefetch" in requires and (
             not receipt_id or not st.usable_receipt(contract, receipt_id)
         ):
-            # Name the writer receipt id the gate itself resolved. SessionStart's
-            # session id is a different key and must not be used as this hint.
-            sid_hint = (
-                f"--session-id {receipt_id}"
-                if receipt_id
-                else (
-                    "--session-id <chat-id-from-hook-event> "
-                    "(prefetch stamps a writer receipt, not the SessionStart "
-                    "session id)"
+            # Name the RAW identity the gate composed its receipt key from —
+            # the writer agent id and the chat id — never the composed key.
+            # Prefetch composes the key itself, exactly once; a hint carrying
+            # the composed key was composed again on repair
+            # (claude-code__claude-code__<chat>), so following the denial
+            # stamped a file this gate never looked up (audit P573-F1).
+            # SessionStart's session id is a different key and is not this hint.
+            try:
+                writer_agent, chat_id = st.receipt_identity(event=event)
+            except ValueError:
+                writer_agent, chat_id = "", ""
+            if chat_id:
+                sid_hint = (
+                    f"L9_MEMORY_AGENT_ID={writer_agent} "
+                    "environment/agents/adapters/claude-code/hooks/memory_prefetch.py "
+                    f"--session-id {chat_id}"
                 )
-            )
+            else:
+                sid_hint = (
+                    "environment/agents/adapters/claude-code/hooks/memory_prefetch.py "
+                    "--session-id <chat-id-from-hook-event> (the raw chat id: prefetch "
+                    "composes the writer receipt key itself, so never pass a composed "
+                    "key or the SessionStart session id)"
+                )
             _deny(
                 f"Memory not hydrated this session. Governed write '{rule['id']}' requires the "
                 "SessionStart canonical memory prefetch. Start a fresh session, or run "
-                "environment/agents/adapters/claude-code/hooks/memory_prefetch.py "
                 f"{sid_hint}, then retry. "
                 "This is a hydration gate, not a lock: no phase-lock is required or accepted."
             )

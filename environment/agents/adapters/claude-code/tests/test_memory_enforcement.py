@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -164,6 +165,73 @@ class MemoryGateTests(unittest.TestCase):
         )
         self.assertTrue(is_deny(out))
         self.assertIn("not hydrated", out)
+
+    def test_denial_hint_repairs_with_one_identity(self) -> None:
+        """Black box (audit P573-F1): deny → run the hinted repair → allow.
+
+        The denial must name the RAW chat id (and the writer agent id the gate
+        composed its key from), never the composed receipt key: prefetch
+        composes the key itself, so a hint carrying ``claude-code__<chat>`` was
+        composed again into ``claude-code__claude-code__<chat>`` and following
+        the denial stamped a file the gate never looked up.
+        """
+        event = {
+            "tool_name": "Edit",
+            "tool_input": {"file_path": "skills/x/SKILL.md"},
+            "session_id": self.session,
+        }
+        env = {**self.env, "L9_MEMORY_SESSION_STATE_DIR": str(Path(self.workspace) / "state")}
+        out, _ = run_gate(event, env)
+        self.assertTrue(is_deny(out), "no receipt yet: the governed write must be denied")
+        reason = json.loads(out)["hookSpecificOutput"]["permissionDecisionReason"]
+        # Both identity parts are path-safe by construction (memory_state._safe_id_part).
+        match = re.search(
+            r"(?:L9_MEMORY_AGENT_ID=([A-Za-z0-9_.-]+)\s+)?(\S*memory_prefetch\.py)"
+            r"\s+--session-id\s+([A-Za-z0-9_.-]+)",
+            reason,
+        )
+        self.assertIsNotNone(match, f"denial must name a runnable repair: {reason}")
+        writer_agent, script, hinted = match.groups()
+        self.assertEqual(hinted, self.session, "hint carries the raw chat id, not the composed key")
+        self.assertNotIn("__", hinted)
+        self.assertTrue(script.endswith("memory_prefetch.py"))
+
+        # Run the repair exactly as hinted (empty stdin: a shell, not a hook event).
+        repair_env = dict(env)
+        if writer_agent:
+            repair_env["L9_MEMORY_AGENT_ID"] = writer_agent
+        proc = subprocess.run(
+            [sys.executable, str(PREFETCH), "--session-id", hinted],
+            input="",
+            capture_output=True,
+            text=True,
+            env=repair_env,
+            timeout=120,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+
+        # ONE identity end to end: the repair stamped exactly the file the gate
+        # resolves for this event — composed once, never doubled.
+        receipts = sorted((Path(self.workspace) / ".l9" / "memory" / "receipts").glob("*.json"))
+        self.assertEqual([p.name for p in receipts], [f"{self._receipt_id()}.json"])
+        self.assertNotIn("__claude-code__", receipts[0].name)
+
+        out, code = run_gate(event, env)
+        self.assertFalse(is_deny(out), "the hinted repair must unblock the same governed write")
+        self.assertEqual(code, 0)
+
+    def test_precomposed_receipt_key_is_reduced_not_doubled(self) -> None:
+        """An old-style hint that passes the composed key still repairs the right file."""
+        with mock.patch.dict(os.environ, {"L9_MEMORY_AGENT_ID": "claude-code"}):
+            raw = st.resolve_receipt_id(event={}, cli_arg="chat-42")
+            composed = st.resolve_receipt_id(event={}, cli_arg="claude-code__chat-42")
+        self.assertEqual(raw, "claude-code__chat-42")
+        self.assertEqual(composed, raw)
+        with mock.patch.dict(os.environ, {"L9_MEMORY_AGENT_ID": "agent-b"}):
+            # Another writer's prefix is chat text, not this writer's key.
+            other = st.resolve_receipt_id(event={}, cli_arg="claude-code__chat-42")
+        self.assertEqual(other, "agent-b__claude-code__chat-42")
 
     def test_allows_git_push_without_lock(self) -> None:
         """``git``/``gh`` commands are exempt from the memory gate.
