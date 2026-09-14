@@ -190,5 +190,4 @@ Before committing, verify:
 | `ops/graphiti/MEMORY_BANK_POLICY.md` | Deprecated T0 policy — archival note |
 | `ops/graphiti/GATES-002-ACTIVATION.md` | Soak + gate flip runbook |
 
-
 <!-- generated-from: rules/87-cursor-memory-kernel.mdc; do-not-edit -->

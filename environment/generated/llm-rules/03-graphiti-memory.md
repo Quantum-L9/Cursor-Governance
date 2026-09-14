@@ -81,5 +81,4 @@ memcli readiness --json
 
 Load skill: **`l9-graphiti-memory`**
 
-
 <!-- generated-from: rules/03-graphiti-memory.mdc; do-not-edit -->
