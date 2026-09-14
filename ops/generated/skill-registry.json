@@ -1,5 +1,5 @@
 {
-  "generation_id": "da4b7afc861c984654b5469ccb499251aad37fd0f3f7c8cee1ecb301ca6f679c",
+  "generation_id": "d0229eb7dfd2dce17ac5afc3d1b3603a73b0837b0af6a4b9834e29ad322283d2",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -1600,6 +1600,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "d4109ef49f34ad506e380da3becd56210897d64a41ee9b59bbfa885374bb28de",
+  "source_manifest_sha256": "bf415873fe91b1779e0cea47ca987f01c3b919d78bae8ac8c0a49fea06eb8def",
   "source_skill_corpus_sha256": "94b3c068ae47610d9f80f7b32ed23895e0b95faff949d6ad45def2ad1084d1aa"
 }
