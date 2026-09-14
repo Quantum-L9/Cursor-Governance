@@ -27,25 +27,6 @@ Source of truth: skills/l9-intelligence-harvest/meta/skill-ir.json
 """
 
 # ============================================================================
-__dora_meta__ = {
-    "component_name": "Intelligence Harvest Dag",
-    "module_version": "1.0.0",
-    "created_by": "Igor Beylin",
-    "created_at": "2026-08-28T00:00:00Z",
-    "updated_at": "2026-08-28T00:00:00Z",
-    "layer": "operations",
-    "domain": "workflows",
-    "module_name": "intelligence_harvest_dag",
-    "type": "cli",
-    "status": "active",
-    "integrates_with": {
-        "api_endpoints": [],
-        "datasources": [],
-        "memory_layers": [],
-        "imported_by": ["workflows.dags.__init__"],
-    },
-}
-# ============================================================================
 
 from workflows.session.interface import NodeType, SessionDAG, SessionEdge, SessionNode
 from workflows.session.registry import register_session_dag
@@ -324,21 +305,3 @@ if _errors:
     raise ValueError(f"intelligence-harvest-v1 DAG validation failed: {_errors}")
 
 register_session_dag(INTELLIGENCE_HARVEST_V1)
-
-
-# ============================================================================
-# L9 DORA BLOCK - AUTO-UPDATED - DO NOT EDIT
-# ============================================================================
-__l9_trace__ = {
-    "trace_id": "",
-    "task": "",
-    "timestamp": "",
-    "patterns_used": [],
-    "graph": {"nodes": [], "edges": []},
-    "inputs": {},
-    "outputs": {},
-    "metrics": {"confidence": "", "errors_detected": [], "stability_score": ""},
-}
-# ============================================================================
-# END L9 DORA BLOCK
-# ============================================================================
