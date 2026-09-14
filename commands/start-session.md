@@ -1,6 +1,6 @@
 ---
 name: start-session
-version: "3.3.0"
+version: "3.4.0"
 description: "Run the L9 sessionStart bootstrap for the open workspace (same path as Cursor hooks + make start)"
 auto_chain: null
 ---
@@ -10,8 +10,8 @@ auto_chain: null
 ## WHAT IT DOES
 
 Runs the **same** sessionStart bootstrap Cursor already uses on hook fire —
-wiring, Graphiti health/inject, IDE/plugin reconcile — without the user locating
-any script. Local `memory-bank/` T0 is **retired**; resume SSOT is Graphiti.
+wiring, canonical memory hydrate, IDE/plugin reconcile — without the user locating
+any script. Local `memory-bank/` T0 is **retired**; resume SSOT is the canonical continuation record (`ContinuationCapsuleV2`).
 
 Canonical implementation (single source of truth):
 
@@ -19,7 +19,7 @@ Canonical implementation (single source of truth):
 - Installed hook copy: `$HOME/.cursor/hooks/session-start-bootstrap.sh`
 - Human/agent entry: `make -C "$HOME/.cursor-governance" start WS="<repo>"`
 
-Do **not** re-implement wiring / Graphiti steps in this command. The bootstrap owns them.
+Do **not** re-implement wiring / memory hydrate steps in this command. The bootstrap owns them.
 
 `governance_activate_fresh.sh` (called by this command) must **not** drop
 `.venv`, `.env.local`, `env.local`, `.env.*.local`, or
@@ -49,7 +49,7 @@ fi
 | Flag / env | Meaning |
 |------------|---------|
 | `L9_BOOTSTRAP_SYNC=1` | Foreground reconcilers (set by `make start`) |
-| `CURSOR_PROJECT_DIR` | Workspace the bootstrap wires + Graphiti-resolves |
+| `CURSOR_PROJECT_DIR` | Workspace the bootstrap wires + memory-resolves |
 
 ### After bootstrap output
 
@@ -63,7 +63,7 @@ make -C "$GC" start WS="$REPO"
 ```
 
 3. Present the **STATE_SYNC** block below from bootstrap context (do not invent checks the bootstrap did not run).
-4. Resume from Graphiti PICKUP / hydration `next=` — do **not** read `memory-bank/`.
+4. Resume from hydration `next=` (canonical continuation) — do **not** read `memory-bank/`.
 
 ---
 
@@ -73,7 +73,7 @@ make -C "$GC" start WS="$REPO"
 /start-session --quick
 ```
 
-Same bootstrap; agent may skip re-printing full Graphiti prefetch bodies (still run `make start`).
+Same bootstrap; agent may skip re-printing full memory prefetch bodies (still run `make start`).
 
 ---
 
@@ -103,7 +103,7 @@ second check grid. If a section is absent, say so.
 
 - Cursor also runs this bootstrap automatically on `sessionStart` via `~/.cursor/hooks.json`. `/start-session` is the **manual / repair / new-window** entry that uses the identical script.
 - Slash commands activate when governance is wired: `~/.cursor/plugins/local/l9-governance` → SSOT (discovers `commands/`), plus repo `.cursor-commands` symlink. Bootstrap/`make start` ensures that wiring.
-- Resume stack is Graphiti only (`ops/graphiti/MEMORY_BANK_POLICY.md`).
+- Resume stack is canonical memory only (`ContinuationCapsuleV2`; `ops/graphiti/MEMORY_BANK_POLICY.md` is archival).
 - SessionStart does not read or report the plans store. On-demand harvest is `/l9-pipeline-audit`. Shelf-only is `/l9-audit-plans`.
 
 --- End Command ---

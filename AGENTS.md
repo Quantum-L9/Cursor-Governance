@@ -1690,3 +1690,20 @@ paragraph stays on disk (additive_only). Do not fold it.
   already owns X, in this turn.
 - Dropping the overlapping path so a sibling can publish, then parking
   the dropped work as a later follow-up, is the same violation.
+
+<!-- ADR0031_WRITE_AGENT_V1 -->
+## Dual memory write classes (2026-09-14) — supersedes §2 / §3 / §7 Graphiti doors
+
+This fragment supersedes only the live-path sentences in §2.1 (`inject` /
+PICKUP), §3 Cloud `GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp`,
+and §7 `add_memory` / `graphiti_memory_client.py health`. Those paragraphs
+stay on disk (additive_only). Do not fold them. CANONICAL_LAW §8.5 /
+ADR-0031 are the law.
+
+- Ordinary / cold model write: MCP `memory.write_agent` (no `phase_lock`).
+- Conflict-sensitive model write: `memory.phase_lock` → `memory.write_governed`.
+- Resume SSOT is `ContinuationCapsuleV2` / `python -m ops.memory.cli hydrate`.
+- Operator / hooks: `python -m ops.memory.cli`. Agent HTTP is sealed.
+- Do not teach `GRAPHITI_MCP_URL`, `add_memory`, or a live
+  `graphiti_memory_client.py` as the agent front door.
+
