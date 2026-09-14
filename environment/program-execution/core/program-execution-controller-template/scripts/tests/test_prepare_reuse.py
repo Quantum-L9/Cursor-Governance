@@ -42,7 +42,13 @@ class PrepareReuseTest(unittest.TestCase):
             self.assertEqual(Path(prepared["worktree"]), worktree)
             cleanup_worktree(repo, workspace)
 
-    def test_prepare_recreates_a_dirty_leftover_worktree(self) -> None:
+    def test_prepare_strips_session_residue_and_keeps_attempt_work(self) -> None:
+        """Residue goes; the attempt's own changes survive a re-prepare.
+
+        Recreating the tree on any dirtiness would discard the very work a
+        verification receipt was issued against, so `complete` would then refuse
+        with "no verification receipt for the current attempt".
+        """
         with TemporaryDirectory() as raw:
             temp = Path(raw)
             _, repo, workspace = bootstrap_repo(temp)
@@ -67,11 +73,23 @@ class PrepareReuseTest(unittest.TestCase):
                 capture_output=True,
                 text=True,
             )
-            (worktree / "session-churn.txt").write_text("concurrent\n", encoding="utf-8")
+            claude = worktree / ".claude"
+            claude.mkdir(parents=True, exist_ok=True)
+            (claude / "settings.json").write_text("{}\n", encoding="utf-8")
+            receipts = worktree / ".l9" / "memory" / "receipts"
+            receipts.mkdir(parents=True, exist_ok=True)
+            (receipts / "unknown-agent__1.json").write_text("{}\n", encoding="utf-8")
+            (worktree / "task-work.txt").write_text("attempt output\n", encoding="utf-8")
+
             prepared = run_cli("prepare", "TASK-001", "--workspace", str(workspace))
-            self.assertTrue(prepared["recovered"])
-            self.assertFalse(prepared["reused"])
-            self.assertFalse((Path(prepared["worktree"]) / "session-churn.txt").exists())
+            self.assertTrue(prepared["reused"])
+            prepared_tree = Path(prepared["worktree"])
+            self.assertFalse((prepared_tree / ".claude" / "settings.json").exists())
+            self.assertFalse((receipts / "unknown-agent__1.json").exists())
+            self.assertEqual(
+                (prepared_tree / "task-work.txt").read_text(encoding="utf-8"),
+                "attempt output\n",
+            )
             cleanup_worktree(repo, workspace)
 
     def test_prepare_refuses_a_worktree_on_a_foreign_base(self) -> None:

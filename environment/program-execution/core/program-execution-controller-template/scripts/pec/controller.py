@@ -1747,6 +1747,29 @@ def _add_task_worktree(
     )
 
 
+def _strip_session_residue(worktree: Path) -> None:
+    """Remove concurrent-SessionStart churn from an exclusive task worktree.
+
+    A Claude worker sets L9_PE_WORKER so SessionStart skips its bootstrap, but a
+    human session opened against the same directory still writes these. They are
+    never task output, so removing them keeps the tree reusable without touching
+    the attempt's own changes.
+    """
+    claude = worktree / ".claude"
+    if claude.is_dir():
+        settings = claude / "settings.json"
+        if settings.is_file() and not settings.is_symlink():
+            settings.unlink()
+        for name in ("commands", "skills"):
+            target = claude / name
+            if target.is_dir() and not target.is_symlink():
+                shutil.rmtree(target)
+    receipts = worktree / ".l9" / "memory" / "receipts"
+    if receipts.is_dir():
+        for path in receipts.glob("unknown-agent__*.json"):
+            path.unlink()
+
+
 def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
     db, ledger = open_runtime(workspace)
     try:
@@ -1790,22 +1813,13 @@ def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
         if worktree.exists():
             if not _worktree_matches_lease(worktree, lease, repo_path):
                 raise ControllerError(f"worktree already exists: {worktree}")
-            leftover_dirty = bool(run_git(worktree, "status", "--porcelain").stdout.strip())
-            if leftover_dirty:
-                # SessionStart / concurrent-session files must not pin a retry
-                # to a polluted leftover. Recreate from the lease base.
-                clean_task_execution(workspace, repo_path, task_id, branch=lease["branch"])
-                recovered = True
-                result = _add_task_worktree(repo_path, worktree, lease)
-                if result.returncode != 0:
-                    raise ControllerError(
-                        "failed to recreate exclusive worktree for "
-                        f"{task_id}: {result.stderr.strip() or result.stdout.strip()} "
-                        f"(worktree={worktree}, branch={lease['branch']}, "
-                        f"base_sha={lease['base_sha']})"
-                    )
-            else:
-                reused = True
+            # A leftover worktree is dirty for two very different reasons: the
+            # attempt's own in-progress work, which a re-prepare must preserve,
+            # or SessionStart churn from a concurrent agent. Strip only the
+            # latter; recreating the tree here would discard the work the
+            # verification receipt was issued against.
+            _strip_session_residue(worktree)
+            reused = True
         else:
             result = _add_task_worktree(repo_path, worktree, lease)
             if result.returncode != 0:
