@@ -277,3 +277,52 @@ class AddoptsIgnoreTests(unittest.TestCase):
         selected = select_pr_pytest_paths([self.DAG_MODULE, sibling])
         self.assertIn(sibling, selected)
         self.assertNotIn(self.DAG_MODULE, selected)
+
+
+class HookSettingsVelocityTests(unittest.TestCase):
+    """Popular hook/settings basenames must not fan out; owners stay selected."""
+
+    HOOK = "environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh"
+    SESSION = "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh"
+    SETTINGS = "environment/agents/adapters/claude-code/settings.template.json"
+    PE_SMOKE = "environment/program-execution/scripts/tests/test_pe_smoke_campaign.py"
+    RARE_SHELL = "ops/scripts/run_pr_gate.sh"
+    CONTRACT = SCRIPT_DIR.parent / "config" / "python-contract.json"
+
+    def _owners(self, changed: str) -> list[str]:
+        data = json.loads(self.CONTRACT.read_text(encoding="utf-8"))
+        owners = data["local_pr_check"]["shell_owners"][changed]
+        self.assertTrue(owners)
+        return [str(item) for item in owners]
+
+    def test_hook_change_does_not_select_pe_smoke(self) -> None:
+        selected = select_pr_pytest_paths([self.HOOK])
+        self.assertNotIn(self.PE_SMOKE, selected)
+
+    def test_hook_change_selects_every_owner(self) -> None:
+        selected = set(select_pr_pytest_paths([self.HOOK]))
+        missing = set(self._owners(self.HOOK)) - selected
+        self.assertFalse(missing, missing)
+
+    def test_mapped_path_never_selects_empty(self) -> None:
+        for path in (self.HOOK, self.SESSION, self.SETTINGS):
+            selected = select_pr_pytest_paths([path])
+            self.assertTrue(selected, f"empty-select on mapped path {path}")
+
+    def test_session_start_selects_every_owner(self) -> None:
+        selected = set(select_pr_pytest_paths([self.SESSION]))
+        missing = set(self._owners(self.SESSION)) - selected
+        self.assertFalse(missing, missing)
+
+    def test_settings_template_selects_every_owner(self) -> None:
+        selected = set(select_pr_pytest_paths([self.SETTINGS]))
+        missing = set(self._owners(self.SETTINGS)) - selected
+        self.assertFalse(missing, missing)
+
+    def test_rare_shell_full_path_scan_intact(self) -> None:
+        selected = select_pr_pytest_paths([self.RARE_SHELL])
+        self.assertIn("ops/scripts/tests/test_bootstrap_invariants.py", selected)
+
+    def test_makefile_generic_basename_unchanged(self) -> None:
+        makefile_only = set(select_pr_pytest_paths(["Makefile"]))
+        self.assertLess(len(makefile_only), 8, makefile_only)
