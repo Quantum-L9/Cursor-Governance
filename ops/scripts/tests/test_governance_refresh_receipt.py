@@ -47,6 +47,23 @@ SHA_A = "941ab775c3e6d2a4d8b0425b10e9cb32b9a8e403"
 SHA_B = "b406feeb4734f7029c36d718a68b004cacd6a68a"
 
 
+def tree_state(repo: Path) -> str:
+    """Everything git can see changing under ``repo``: porcelain status plus
+    the worktree diff.
+
+    Ignored paths (``.venv``, ``.l9``, coverage data, ``__pycache__``) are
+    excluded by construction, so comparing two snapshots is stable under the
+    canonical xdist + coverage runner; a tracked file rewritten, moved, or
+    deleted, and any new unignored file, all change the snapshot.
+    """
+    git = ["git", "-C", str(repo)]
+    status = subprocess.run(
+        [*git, "status", "--porcelain"], capture_output=True, text=True, check=True
+    ).stdout
+    diff = subprocess.run([*git, "diff"], capture_output=True, text=True, check=True).stdout
+    return status + diff
+
+
 def receipt(**overrides: object) -> dict[str, object]:
     """A receipt that claims to be fresh. Tests override one signal at a time."""
     base: dict[str, object] = {
@@ -187,25 +204,65 @@ class HookWriterTests(unittest.TestCase):
         same defect as B-04/B-05, one layer up. This drives the real hook against
         the real repository as its governance clone, with a HOME that carries no
         receipts at all.
+
+        The PROJECT directory is a throwaway repo, never this checkout. The hook
+        binds the pinned interpreter and runs ops/scripts/claude_projection.py
+        against ``CLAUDE_PROJECT_DIR``, which rewrites ``<project>/.mcp.json``
+        with the memory server rendered in. Handing it this checkout rewrote the
+        committed unbound ``.mcp.json`` mid-suite, so the equality test in
+        tests/ops/memory/test_mcp_surfaces.py failed or passed depending on
+        which of the two ran first — shared mutable state inside a gate. The
+        snapshot comparison below is the regression for that: nothing the hook
+        writes may land in the checked-out tree.
+
+        The hook also runs with the project directory as its cwd, exactly as
+        Claude Code launches it. Its bootstrap repair invokes install.sh with
+        no ``--workspace``, and the installer wires ``$PWD``; launched from the
+        pytest cwd — this checkout — that second projection rewrote the
+        committed ``.mcp.json`` even with ``CLAUDE_PROJECT_DIR`` moved.
         """
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
             gov = home / ".cursor-governance"
             gov.symlink_to(REPO)
+            workspace = home / "workspace"
+            workspace.mkdir()
+            subprocess.run(["git", "init", "-q", str(workspace)], check=True)
             env = {
                 "HOME": str(home),
                 "PATH": "/usr/bin:/bin:/usr/local/bin",
                 "CLAUDE_CODE_REMOTE": "false",
                 "CLAUDECODE": "1",
-                "CLAUDE_PROJECT_DIR": str(REPO),
+                "CLAUDE_PROJECT_DIR": str(workspace),
             }
+            before = tree_state(REPO)
             result = subprocess.run(
-                ["bash", str(HOOK)], capture_output=True, text=True, env=env, check=False
+                ["bash", str(HOOK)],
+                capture_output=True,
+                text=True,
+                env=env,
+                cwd=workspace,
+                check=False,
             )
+            after = tree_state(REPO)
             self.assertEqual(result.returncode, 0, "SessionStart must never block")
             context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
             self.assertIn("never_ran", context, "an absent receipt must be named, not omitted")
             self.assertIn("governance refresh", context)
+
+            self.assertEqual(
+                before,
+                after,
+                "the SessionStart hook wrote into the checked-out repository; every "
+                "projection artifact must land under the temporary project directory",
+            )
+            # When the projection ran to completion, its .mcp.json render went to
+            # the project directory the hook was handed — the temp one.
+            if "claude projection: ok" in context:
+                self.assertTrue(
+                    (workspace / ".mcp.json").is_file(),
+                    "projection reported ok but rendered no .mcp.json in the project dir",
+                )
 
 
 if __name__ == "__main__":
