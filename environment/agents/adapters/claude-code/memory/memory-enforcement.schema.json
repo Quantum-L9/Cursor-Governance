@@ -101,7 +101,12 @@
         "generic_ingest_as_model_write",
         "cli_adapter",
         "cli_write_role",
-        "deterministic_adapter_operations"
+        "deterministic_adapter_operations",
+        "cold_write_operation",
+        "cold_write_prerequisite",
+        "governed_write_prerequisite",
+        "governed_write_operation",
+        "http_transport"
       ],
       "properties": {
         "canonical_mcp_server": {
@@ -151,6 +156,21 @@
         },
         "note": {
           "type": "string"
+        },
+        "cold_write_operation": {
+          "const": "memory.write_agent"
+        },
+        "cold_write_prerequisite": {
+          "const": "none"
+        },
+        "governed_write_prerequisite": {
+          "const": "memory.phase_lock"
+        },
+        "governed_write_operation": {
+          "const": "memory.write_governed"
+        },
+        "http_transport": {
+          "const": "forbidden"
         }
       }
     },

@@ -90,6 +90,9 @@ def _check_registry_coverage(model: ExecutablePeerModel, errors: list[str]) -> N
     for key, agent in model.agents.items():
         if not isinstance(agent, dict) or agent.get("status", "active") != "active":
             continue
+        # ADR-0031 human private entrance is not an executable peer.
+        if agent.get("private_entrance") is True or agent.get("adapter") in (None, "none"):
+            continue
         if key not in model.peers:
             errors.append(f"[E3] active registry agent '{key}' omitted from bindings")
 

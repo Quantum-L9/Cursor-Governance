@@ -6,8 +6,8 @@
 #   layer: tool
 #   owner: governance-control-plane
 #   status: active
-#   version: 1.3.0
-#   updated: 2026-07-31
+#   version: 1.4.0
+#   updated: 2026-09-13
 """N-agent registry and adapter validator (peer of validate_claude_env.py).
 
 Checks:
@@ -15,13 +15,15 @@ Checks:
   R2  agent key == agent_id; kebab-case
   R3  user_id == "<agent_id with _>_agent"; source == agent_id;
       principal_id == "<agent_id>-memory-client";
-      token_env == "L9_MEMORY_TOKEN__<AGENT upper snake>"
-  R4  agent_id / user_id / principal_id / token_env unique across all agents
+      signing_key_env == "L9_MEMORY_AGENT_SIGNING_KEY__<AGENT upper snake>"
+      (human private entrance: L9_MEMORY_HUMAN_DOOR_SECRET);
+      legacy token_env still accepted when present
+  R4  agent_id / user_id / principal_id / signing_key_env unique across agents
   R5  role exists in the roles catalog; status in {active, planned, retired}
   R6  writing roles (non-observer) declare non-empty assigned_groups;
       reviewer never assigned "*"
   A1  every active agent's adapter directory exists (adapters/<adapter>/)
-      unless adapter is cursor/claude-code (pre-existing activation paths)
+      unless adapter is cursor/claude-code/none (pre-existing or human private entrance)
   A2  adapter env examples agree with the registry (USER_ID,
       L9_MEMORY_AGENT_ID, L9_MEMORY_SOURCE); GRAPHITI_MCP_URL / TOKEN
       must be absent (retired provider transport)
@@ -58,7 +60,7 @@ SECRET_ASSIGN = re.compile(
 )
 PLACEHOLDER = re.compile(r"[<>{}$*]|value of|example|CHANGE|REPLACE|\.\.\.")
 ENV_VAR_NAME = re.compile(r"^[A-Z][A-Z0-9_]*$")  # values that are env-var NAMES, not secrets
-PREEXISTING_ADAPTERS = frozenset({"cursor", "claude-code"})
+PREEXISTING_ADAPTERS = frozenset({"cursor", "claude-code", "none"})
 ENV_FIELD_CHECKS = (
     ("USER_ID", "user_id"),
     ("L9_MEMORY_AGENT_ID", "agent_id"),
@@ -103,14 +105,18 @@ def check_registry(root: Path) -> dict:
     return reg
 
 
-def _expected_identity_fields(aid: str) -> dict[str, str]:
+def _expected_identity_fields(aid: str, *, private_entrance: bool = False) -> dict[str, str]:
     snake = aid.replace("-", "_")
-    return {
+    fields = {
         "user_id": f"{snake}_agent",
         "source": aid,
         "principal_id": f"{aid}-memory-client",
-        "token_env": f"L9_MEMORY_TOKEN__{snake.upper()}",
     }
+    if private_entrance or aid == "human":
+        fields["signing_key_env"] = "L9_MEMORY_HUMAN_DOOR_SECRET"
+    else:
+        fields["signing_key_env"] = f"L9_MEMORY_AGENT_SIGNING_KEY__{snake.upper()}"
+    return fields
 
 
 def _check_identity_fields(key: str, agent: dict) -> None:
@@ -119,14 +125,15 @@ def _check_identity_fields(key: str, agent: dict) -> None:
         err("R2", f"agents.{key}: agent_id '{aid}' != key")
     if not KEBAB.match(aid or ""):
         err("R2", f"agents.{key}: agent_id not kebab-case")
-    for fld, want in _expected_identity_fields(aid or "").items():
+    private = bool(agent.get("private_entrance")) or aid == "human"
+    for fld, want in _expected_identity_fields(aid or "", private_entrance=private).items():
         got = agent.get(fld)
         if got != want:
             err("R3", f"agents.{key}.{fld}: '{got}' != expected '{want}'")
 
 
 def _check_uniqueness(key: str, agent: dict, seen: dict[str, str]) -> None:
-    for fld in ("agent_id", "user_id", "principal_id", "token_env"):
+    for fld in ("agent_id", "user_id", "principal_id", "signing_key_env"):
         val = agent.get(fld)
         if val in seen:
             err("R4", f"duplicate {fld} '{val}' (also {seen[val]})")
@@ -141,7 +148,7 @@ def _check_role_and_groups(key: str, agent: dict, roles: dict) -> None:
     if agent.get("status", "active") not in VALID_STATUS:
         err("R5", f"agents.{key}: bad status '{agent.get('status')}'")
     groups = agent.get("assigned_groups") or []
-    if role and role != "observer" and not groups:
+    if role and role not in {"observer"} and not groups:
         err("R6", f"agents.{key}: writing role '{role}' with no assigned_groups")
     if role == "reviewer" and "*" in groups:
         err("R6", f"agents.{key}: reviewer may not be assigned '*'")
@@ -260,6 +267,8 @@ def _check_adapter_contract(key: str, adir: Path) -> None:
 
 
 def check_one_adapter(key: str, agent: dict, root: Path, production_url: str | None) -> None:
+    if agent.get("private_entrance") or agent.get("adapter") == "none":
+        return
     if not isinstance(agent, dict) or agent.get("status", "active") != "active":
         return
     adapter = agent.get("adapter", key)

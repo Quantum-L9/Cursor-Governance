@@ -778,21 +778,29 @@ def test_the_probe_searches_group_resolver_as_well_as_contracts() -> None:
 
 
 def test_the_binding_names_the_release_tag_and_the_commit_it_resolves_to() -> None:
-    """RU-P1-01: the binding names the live release tag and the commit it peels to.
+    """RU-P1-01: the binding names a full SHA (or peelable tag) and matching memory_sha.
 
-    source.ref carries the TAG NAME and release_evidence.memory_sha the commit
-    it peels to. A moved tag fails the proof instead of silently rebinding.
-    Live target is v2.3.1 (first PyPI upload). v2.3.0 stays immutable.
+    For a candidate SHA pin, source.ref == release_evidence.memory_sha (40-hex).
+    For a release tag pin, source.ref is vX.Y.Z and memory_sha is the peeled commit.
+    A moved tag fails the proof instead of silently rebinding.
+    Live target: ADR-0031 candidate feac2a60… (package 2.4.0) pending PyPI tag.
     """
     manifest = rb.BindingManifest.load()
     raw = json.loads(rb.DEFAULT_MANIFEST_PATH.read_text(encoding="utf-8"))
     evidence = raw["release_evidence"]
-    assert raw["source"]["ref"] == "v2.3.1"
-    assert evidence["memory_tag"] == "v2.3.1"
-    assert evidence["memory_tag_object_sha"] == "f65ff2bb1c8cb43a55b78732c4ab74f711ee8c2f"
-    assert manifest.memory_sha == "84eedcdfab83020776eab290599751b3b6af8dbf"
-    assert manifest.artifact_sha256 == (
-        "b3b045e482fd157a0242d5ad861a3609057c6d66dd2095673f55f1efe888ff89"
+    ref = raw["source"]["ref"]
+    sha_re = re.compile(r"^[0-9a-f]{40}$")
+    assert sha_re.match(evidence["memory_sha"])
+    assert manifest.memory_sha == evidence["memory_sha"]
+    assert manifest.artifact_sha256 == evidence["artifact_sha256"]
+    if sha_re.match(ref):
+        assert ref == evidence["memory_sha"]
+    else:
+        assert ref.startswith("v")
+        assert evidence["memory_tag"] == ref
+    assert evidence["package_version"] == raw["expected_package_version"]
+    assert evidence["artifact_sha256"] == (
+        "0be114d1fa25f7c1778d735d7e2adb5c8459c3a2065df775689c9b2fe4736989"
     )
 
 

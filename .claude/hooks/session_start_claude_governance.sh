@@ -575,7 +575,21 @@ if GOV=$(resolve_governance_dir); then
      && [ -f "$PROJECTION_ENGINE" ] && command -v "$PY" >/dev/null 2>&1; then
     # Bounded: the engine's own ceilings (30 s classify, 600 s plugin fallback)
     # are sized for install time, not for what is left of this hook.
-    PROJECTION_LINE=$(_l9_bounded 5 "$PY" "$PROJECTION_ENGINE" --root "$GOV" --workspace "$WORKSPACE" \
+    # ssot / ssot_checkout commit the unbound .mcp.json (no interpreter).
+    # Projecting with L9_MEMORY_INTERPRETER set rewrites that tracked file and
+    # races Test Suite (PR 570: test_committed_projection_is_current_for_an_unbound_environment).
+    _L9_PROJ_UNBIND=""
+    if [ -f "$GOV/ops/scripts/lib/workspace_kind.sh" ]; then
+      # shellcheck source=/dev/null
+      . "$GOV/ops/scripts/lib/workspace_kind.sh"
+      case "$(classify_workspace_kind "$WORKSPACE")" in
+        ssot|ssot_checkout)
+          _L9_PROJ_UNBIND="env -u L9_MEMORY_INTERPRETER -u CONTEXT7_API_KEY"
+          ;;
+      esac
+    fi
+    # shellcheck disable=SC2086
+    PROJECTION_LINE=$(_l9_bounded 5 $_L9_PROJ_UNBIND "$PY" "$PROJECTION_ENGINE" --root "$GOV" --workspace "$WORKSPACE" \
       --summary 2>/dev/null | tail -1)
     _projection_rc=$?
     if [ "$_projection_rc" = 125 ]; then
@@ -659,6 +673,36 @@ fi
 
 # --- Memory: single front door = Cursor Graphiti (CANONICAL_LAW §8)
 say "shared memory: canonical memory control plane only (ops/memory; l9-graphite-memory, memory-control-plane/v1); no provider client, no L9_MEMORY_HTTP side door; memory-bank retired; memory never gates repository writes"
+
+# --- ADR-0031 signed-agent door: pre-launch handoff probe (audit P570-F2) ----
+# The l9-graphite-memory stdio server is launched by Claude Code from .mcp.json
+# with Claude's OWN environment, and this hook is a child of that same process:
+# nothing a hook exports reaches its parent or a sibling server. The only
+# delivery that works is therefore a PRE-LAUNCH handoff — the assertion env
+# already present in the environment Claude was started with (source
+# ops/memory/export_agent_assertion_env.sh in the launching shell). An earlier
+# revision minted here and `eval`ed the exports into this hook's own process,
+# which activated nothing anywhere. This block never mints and never exports;
+# it reports, by variable NAME only, whether the inherited environment carries
+# the door. Values are never printed. Memory never gates repository writes.
+_l9_door_status() {
+  local missing=()
+  [ -n "${L9_MEMORY_AGENTS_DOOR_SECRET:-}" ] || missing+=(L9_MEMORY_AGENTS_DOOR_SECRET)
+  [ -n "${L9_MEMORY_AGENT_ASSERTION:-}" ] || missing+=(L9_MEMORY_AGENT_ASSERTION)
+  [ -n "${L9_MEMORY_AGENT_SIGNING_KEYS_JSON:-}" ] || missing+=(L9_MEMORY_AGENT_SIGNING_KEYS_JSON)
+  [ -n "${L9_MEMORY_AGENT_GRANTS_JSON:-}" ] || missing+=(L9_MEMORY_AGENT_GRANTS_JSON)
+  if [ -n "${L9_MEMORY_HUMAN_DOOR_SECRET:-}" ]; then
+    say "signed-agent door: WARN L9_MEMORY_HUMAN_DOOR_SECRET is present in an agent session environment — the human private entrance must never reach agent processes (ADR-0031); unset it in the launching shell"
+  fi
+  if [ "${#missing[@]}" -eq 0 ]; then
+    say "signed-agent door: pre-launch handoff PRESENT (agent_id=${L9_MEMORY_AGENT_ID:-unset}) — the l9-graphite-memory stdio server inherits it from the Claude parent environment"
+  elif [ "${#missing[@]}" -eq 4 ]; then
+    say "signed-agent door: UNAVAILABLE — no assertion env in the Claude parent environment, and a SessionStart hook cannot deliver it to the separately launched MCP server. Provision BEFORE launch: 'source ops/memory/export_agent_assertion_env.sh' (L9_MEMORY_AGENT_ID=${L9_MEMORY_AGENT_ID:-claude-code}) in the shell that starts Claude. This session the package server runs without the agents door (operator fallback tier); memory.write_agent / write_governed carry no signed principal"
+  else
+    say "signed-agent door: PARTIAL pre-launch handoff — missing ${missing[*]}; the package server refuses the door when L9_MEMORY_AGENTS_DOOR_SECRET is set without the assertion, key map, and grants (fail-closed). Re-source ops/memory/export_agent_assertion_env.sh in the launching shell"
+  fi
+}
+_l9_door_status
 
 # --- L9 Claude environment status (from the installer receipt) --------------
 # The canonical installer writes ~/.l9/claude/bootstrap-state.json

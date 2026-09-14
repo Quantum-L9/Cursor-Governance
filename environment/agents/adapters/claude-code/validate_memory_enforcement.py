@@ -60,13 +60,19 @@ RETIRED_TRANSPORT_MARKERS = (
     "127.0.0.1:8100",
 )
 
-#: Every value the ``interactive_memory_write`` block must carry verbatim.
+#: Every value the ``interactive_memory_write`` block must carry verbatim (ADR-0031).
 INTERACTIVE_WRITE_CONSTS: dict[str, object] = {
     "canonical_mcp_server": CANONICAL_MCP_SERVER,
+    "cold_write_operation": "memory.write_agent",
+    "cold_write_prerequisite": "none",
+    "governed_write_prerequisite": "memory.phase_lock",
+    "governed_write_operation": "memory.write_governed",
+    # Legacy aliases for the high-stakes path (kept for older readers).
     "prerequisite": "memory.phase_lock",
     "write_operation": "memory.write_governed",
     "repository_authority": False,
     "provider_direct": "forbidden",
+    "http_transport": "forbidden",
     "generic_ingest_as_model_write": "forbidden",
     "cli_adapter": "python -m ops.memory.cli",
     "cli_write_role": "operator_and_deterministic_adapters",
@@ -193,7 +199,7 @@ def doctrine_check(contract: dict, failures: list[str]) -> None:
     if not isinstance(imw, dict):
         _fail(
             "interactive_memory_write block missing: the contract must state the model's "
-            "durable-write path (memory.phase_lock -> memory.write_governed)",
+            "durable-write path (cold write_agent; high-stakes phase_lock -> write_governed)",
             failures,
         )
     else:
@@ -226,7 +232,9 @@ def doctrine_check(contract: dict, failures: list[str]) -> None:
                     failures,
                 )
     if len(failures) == before:
-        print("  OK: contract carries no retired provider/write doctrine (ADR-0030 items 7-9)")
+        print(
+            "  OK: contract carries no retired provider/write doctrine (ADR-0030/0031 dual write)"
+        )
 
 
 def _wiring_parity(contract: dict, settings: dict, failures: list[str]) -> None:
