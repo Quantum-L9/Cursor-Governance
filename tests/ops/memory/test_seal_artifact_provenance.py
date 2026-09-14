@@ -19,9 +19,7 @@ def test_lock_wheel_digest_matches_the_audited_artifact() -> None:
     manifest = BindingManifest.load(ROOT / "ops" / "config" / "memory-binding.json")
     url, digest = seal._lock_wheel(ROOT / "uv.lock", manifest.distribution)
     assert digest == manifest.artifact_sha256
-    assert url.endswith(
-        f"l9_graphite_memory-{manifest.expected_package_version}-py3-none-any.whl"
-    )
+    assert url.endswith(f"l9_graphite_memory-{manifest.expected_package_version}-py3-none-any.whl")
 
 
 def test_hash_from_direct_url_reads_pip_archive_hashes() -> None:

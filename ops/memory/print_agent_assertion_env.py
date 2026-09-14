@@ -131,9 +131,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.format == "json":
         payload = json.dumps(env, separators=(",", ":"))
     else:
-        payload = "\n".join(
-            f"export {key}='{_shell_escape(value)}'" for key, value in env.items()
-        )
+        payload = "\n".join(f"export {key}='{_shell_escape(value)}'" for key, value in env.items())
     path = _write_secret_file(payload)
     print(str(path.resolve()))
     return 0
