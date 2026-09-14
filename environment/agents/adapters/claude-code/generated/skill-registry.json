@@ -1,5 +1,5 @@
 {
-  "generation_id": "c3b9bd7f953af3e2d96350ccd17ba5f41644164a21bf0ec23b3602e7ec83f112",
+  "generation_id": "d436cbe78b301e04d9170be22643077946a25a5c179cc916055736a5591b48f2",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -1113,7 +1113,7 @@
       "path": "skills/l9-end-session",
       "reason": "session lifecycle boundary",
       "skill_md": "skills/l9-end-session/SKILL.md",
-      "skill_sha256": "471e4d6d3151682d2e377b090bfd146901199aca76d98d4cdac77db732a02c9e",
+      "skill_sha256": "e48abbadf15e94c8cc7c337581da1fee152eef5bc3299f8f598e7ff00220949d",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1601,5 +1601,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "bf415873fe91b1779e0cea47ca987f01c3b919d78bae8ac8c0a49fea06eb8def",
-  "source_skill_corpus_sha256": "99e921aa37f8dbfd3f6060bfbcd8d41501ca2d473686de6f726e63bd29ac12a5"
+  "source_skill_corpus_sha256": "6c1cf30c2ad53b6b1662cdb2a28176ceccda82ad2892be42926cea9792cab266"
 }
