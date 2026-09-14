@@ -22,6 +22,7 @@ REPO = Path(__file__).resolve().parents[3]
 BOOTSTRAP = REPO / "ops" / "scripts" / "bootstrap_agent_environment.sh"
 SESSION_START = REPO / "ops" / "hooks" / "session_start_bootstrap.sh"
 ENSURE_UV = REPO / "ops" / "scripts" / "ensure_uv_environment.sh"
+ENSURE_WIRED = REPO / "ops" / "scripts" / "ensure_workspace_wired.sh"
 RENDERER = REPO / "ops" / "scripts" / "render_bootstrap_context.py"
 
 #: A gate that behaves like the real one: the path rule denies a raw push and
@@ -94,6 +95,73 @@ def tree_state(repo: Path) -> str:
         [*git, "diff", "--no-ext-diff"], capture_output=True, text=True, check=True
     ).stdout
     return status + diff
+
+
+def run_session_start(home: Path, workspace: Path) -> subprocess.CompletedProcess[str]:
+    """Run the real Cursor SessionStart hook against a moved HOME.
+
+    resolve_governance_paths() is pinned to $HOME/.cursor-governance by design
+    (rule 06 admits no alternate root), so the chain is isolated by moving HOME:
+    the caller has already pointed ``home/.cursor-governance`` at this checkout,
+    and every artifact the hook writes lands in the temp tree.
+    """
+    env = {
+        **os.environ,
+        "HOME": str(home),
+        "CURSOR_PROJECT_DIR": str(workspace),
+        "GOVERNANCE_BACKUP_SKIP": "1",
+    }
+    return subprocess.run(
+        ["bash", str(SESSION_START)],
+        capture_output=True,
+        text=True,
+        timeout=900,
+        env=env,
+        # Cursor launches the hook with the workspace as cwd; the hook's
+        # `${CURSOR_PROJECT_DIR:-$PWD}` fallbacks must never see the checkout.
+        cwd=workspace,
+        check=False,
+    )
+
+
+class PlansStoreSnapshot:
+    """Byte-level identity of a real ``~/.cursor/plans`` directory.
+
+    Inode, entry names, file bytes, the ``~/.cursor`` sibling listing and the
+    pinned store's contents together prove the three mutations the
+    plans-store helper performs on a legacy directory did not happen: copy
+    (``store`` gains files), rename (``plans.pre-repo-store.*`` sibling),
+    replace (symlink).
+    """
+
+    def __init__(self, plans: Path, store: Path) -> None:
+        self.plans = plans
+        self.store = store
+        self.inode = os.lstat(plans).st_ino
+        self.is_symlink = plans.is_symlink()
+        self.is_dir = plans.is_dir()
+        self.files = {
+            str(p.relative_to(plans)): p.read_bytes()
+            for p in sorted(plans.rglob("*"))
+            if p.is_file()
+        }
+        self.siblings = sorted(p.name for p in plans.parent.iterdir())
+
+    def assert_untouched(self, case: unittest.TestCase, evidence: str) -> None:
+        plans = self.plans
+        case.assertFalse(plans.is_symlink(), f"~/.cursor/plans became a symlink:\n{evidence}")
+        case.assertTrue(plans.is_dir(), f"~/.cursor/plans is no longer a directory:\n{evidence}")
+        case.assertEqual(os.lstat(plans).st_ino, self.inode, "~/.cursor/plans was replaced")
+        after = PlansStoreSnapshot(plans, self.store)
+        case.assertEqual(after.files, self.files, "plan file contents changed under SessionStart")
+        renamed = [
+            name
+            for name in after.siblings
+            if name.startswith("plans.") and name not in self.siblings
+        ]
+        case.assertEqual(renamed, [], f"legacy plans directory was renamed aside: {renamed}")
+        copied = sorted(str(p.relative_to(self.store)) for p in self.store.rglob("*"))
+        case.assertEqual(copied, [], f"legacy plans were copied into the store: {copied}")
 
 
 class BootstrapFixture(unittest.TestCase):
@@ -225,24 +293,8 @@ class StdoutMachineContractTests(BootstrapFixture):
         (self.workspace / "WIP").mkdir()
         (home / ".cursor").mkdir()
         (home / ".cursor" / "l9-plans-store").write_text(f"{plans_store}\n", encoding="utf-8")
-        env = {
-            **os.environ,
-            "HOME": str(home),
-            "CURSOR_PROJECT_DIR": str(self.workspace),
-            "GOVERNANCE_BACKUP_SKIP": "1",
-        }
         before = tree_state(REPO)
-        proc = subprocess.run(
-            ["bash", str(SESSION_START)],
-            capture_output=True,
-            text=True,
-            timeout=900,
-            env=env,
-            # Cursor launches the hook with the workspace as cwd; the hook's
-            # `${CURSOR_PROJECT_DIR:-$PWD}` fallbacks must never see the checkout.
-            cwd=self.workspace,
-            check=False,
-        )
+        proc = run_session_start(home, self.workspace)
         after = tree_state(REPO)
         # No find-first-brace, no line filtering, no take-last-line.
         payload = json.loads(proc.stdout)
@@ -276,6 +328,143 @@ class StdoutMachineContractTests(BootstrapFixture):
         self.assertEqual(render.returncode, 0, f"renderer rejected stdout: {render.stdout}")
         # Diagnostics survived; they simply moved off the machine channel.
         self.assertNotEqual(proc.stderr.strip(), "")
+
+
+class SessionStartPlansStoreTests(BootstrapFixture):
+    """SessionStart performs no plans-store mutation (SESSIONSTART_NO_PLAN_SURFACE_V1).
+
+    The direct plan-audit call was removed from the hook, but the hook still
+    heals unhealthy links through ``ensure_workspace_wired.sh``, whose default
+    plans mode migrates a legacy real ``~/.cursor/plans`` directory into the
+    tracked store (copy, rename aside, replace with a symlink). The first
+    SessionStart on a legacy machine is a supported initialization path, so the
+    hook must wire the workspace links without touching that directory.
+    Migration stays with the manual setup commands.
+    """
+
+    def _legacy_home(self) -> tuple[Path, Path, PlansStoreSnapshot]:
+        """Temp HOME whose ``~/.cursor/plans`` is a legacy real directory.
+
+        The machine store a consumer workspace would migrate into defaults to
+        ``<gov>/docs/plans``, i.e. this checkout, so it is pinned to an empty
+        temp directory through the library's own first-run stamp
+        (``~/.cursor/l9-plans-store``): a migration then lands in ``store``
+        instead of polluting the repository, and an empty ``store`` afterwards
+        is the proof that no copy happened.
+        """
+        home = Path(self._tmp.name) / "home"
+        home.mkdir()
+        (home / ".cursor-governance").symlink_to(REPO)
+        store = Path(self._tmp.name) / "store"
+        store.mkdir()
+        plans = home / ".cursor" / "plans"
+        (plans / "BUILT").mkdir(parents=True)
+        (home / ".cursor" / "l9-plans-store").write_text(f"{store}\n", encoding="utf-8")
+        (plans / "legacy_abcd1234.plan.md").write_text(
+            "---\nname: legacy\ntodos: []\n---\n\n# legacy\n", encoding="utf-8"
+        )
+        (plans / "BUILT" / "old_deadbeef.plan.md").write_text("built\n", encoding="utf-8")
+        return home, plans, PlansStoreSnapshot(plans, store)
+
+    def _assert_workspace_wired(self, home: Path, evidence: str) -> None:
+        ws = self.workspace
+        gc = Path(os.path.realpath(home / ".cursor-governance"))
+        self.assertTrue((ws / ".cursor-commands").is_symlink(), evidence)
+        self.assertEqual(Path(os.path.realpath(ws / ".cursor-commands")), gc)
+        plans_link = ws / ".cursor" / "plans"
+        self.assertTrue(plans_link.is_symlink(), evidence)
+        self.assertEqual(
+            Path(os.path.realpath(plans_link)),
+            Path(os.path.realpath(home / ".cursor" / "plans")),
+            "workspace .cursor/plans must resolve to the legacy directory as-is",
+        )
+        law = ws / ".cursor" / "governance" / "CANONICAL_LAW.md"
+        self.assertTrue(law.is_symlink(), evidence)
+        plugin = home / ".cursor" / "plugins" / "local" / "l9-governance"
+        self.assertTrue(plugin.is_symlink(), evidence)
+        self.assertEqual(Path(os.path.realpath(plugin)), gc)
+
+    def test_session_start_never_migrates_a_legacy_real_plans_directory(self) -> None:
+        home, _plans, snapshot = self._legacy_home()
+        before = tree_state(REPO)
+        proc = run_session_start(home, self.workspace)
+        after = tree_state(REPO)
+        evidence = f"stdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
+        payload = json.loads(proc.stdout)
+        context = payload["additional_context"]
+        self.assertEqual(before, after, "the hook wrote into the checked-out repository")
+        snapshot.assert_untouched(self, evidence)
+        # Wiring still succeeded: the links ensure_workspace_wired.sh owns exist
+        # and the hook reports the links-only heal, not the full-setup fallback
+        # (setup_workspace_symlinks.sh migrates unconditionally).
+        self._assert_workspace_wired(home, evidence)
+        self.assertIn("- wire: auto-wired links-only", context, evidence)
+        self.assertNotIn("auto-wired (full setup)", context, evidence)
+
+    def test_links_only_plans_mode_wires_without_touching_the_store(self) -> None:
+        """The mode the hook sets, exercised directly on the helper."""
+        home, _plans, snapshot = self._legacy_home()
+        env = {**os.environ, "HOME": str(home)}
+        env["L9_WIRE_LINKS_ONLY"] = "1"
+        env["L9_PLANS_STORE_MODE"] = "links-only"
+        proc = subprocess.run(
+            ["bash", str(ENSURE_WIRED), str(self.workspace)],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            env=env,
+            check=False,
+        )
+        evidence = f"stdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
+        self.assertEqual(proc.returncode, 0, evidence)
+        snapshot.assert_untouched(self, evidence)
+        self._assert_workspace_wired(home, evidence)
+        self.assertNotIn("MIGRATED:", proc.stdout, evidence)
+        second = subprocess.run(
+            ["bash", str(ENSURE_WIRED), str(self.workspace)],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            env=env,
+            check=False,
+        )
+        self.assertIn("already wired", second.stdout, second.stdout + second.stderr)
+        snapshot.assert_untouched(self, second.stdout + second.stderr)
+
+    def test_default_plans_mode_still_migrates_for_manual_callers(self) -> None:
+        """Manual setup keeps ownership of the migration; only SessionStart opts out."""
+        home, plans, snapshot = self._legacy_home()
+        env = {**os.environ, "HOME": str(home)}
+        env["L9_WIRE_LINKS_ONLY"] = "1"
+        env.pop("L9_PLANS_STORE_MODE", None)
+        proc = subprocess.run(
+            ["bash", str(ENSURE_WIRED), str(self.workspace)],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            env=env,
+            check=False,
+        )
+        evidence = f"stdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
+        self.assertEqual(proc.returncode, 0, evidence)
+        self.assertIn("MIGRATED:", proc.stdout, evidence)
+        self.assertTrue(plans.is_symlink(), evidence)
+        renamed = [p for p in plans.parent.iterdir() if p.name.startswith("plans.pre-repo-store.")]
+        self.assertEqual(len(renamed), 1, evidence)
+        self.assertTrue((renamed[0] / "legacy_abcd1234.plan.md").is_file())
+        # The copy went to the pinned temp store, never into this checkout.
+        self.assertEqual(Path(os.path.realpath(plans)), Path(os.path.realpath(snapshot.store)))
+        self.assertTrue((snapshot.store / "legacy_abcd1234.plan.md").is_file(), evidence)
+        self.assertTrue((snapshot.store / "BUILT" / "old_deadbeef.plan.md").is_file(), evidence)
+
+    def test_hook_sets_links_only_plans_mode_on_every_heal(self) -> None:
+        """Static twin of the behavioral case: no ENSURE call without the mode."""
+        text = SESSION_START.read_text(encoding="utf-8")
+        calls = [line for line in text.splitlines() if 'bash "$ENSURE"' in line]
+        self.assertGreaterEqual(len(calls), 2, "hook lost its links-only heal / retry")
+        for line in calls:
+            self.assertIn("L9_PLANS_STORE_MODE=links-only", line, line)
+            self.assertIn("L9_WIRE_LINKS_ONLY=1", line, line)
 
 
 class PublishPathProbeStateTests(BootstrapFixture):

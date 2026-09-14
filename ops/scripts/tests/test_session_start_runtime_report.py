@@ -471,6 +471,29 @@ class HookWiringTests(unittest.TestCase):
         self.assertNotIn("else probe_", reporter)
         self.assertNotIn("bind_status", reporter)
 
+    def test_cursor_hook_heals_links_in_non_migrating_plans_mode(self) -> None:
+        """F-08: SessionStart wires links without the plans-store migration.
+
+        ensure_workspace_wired.sh unconditionally called the machine
+        plans-store helper, which copies, renames aside and replaces a legacy
+        real ~/.cursor/plans directory. The hook must call it in a mode where
+        that helper never runs against an existing entry, and must not fall
+        through to setup_workspace_symlinks.sh / check_governance_wiring.sh
+        (both call the helper unconditionally) while such a directory exists.
+        """
+        text = (REPO / "ops" / "hooks" / "session_start_bootstrap.sh").read_text(encoding="utf-8")
+        for line in text.splitlines():
+            if 'bash "$ENSURE"' in line:
+                self.assertIn("L9_PLANS_STORE_MODE=links-only", line, line)
+        self.assertIn("plans_store_is_legacy_real", text)
+        ensure = (REPO / "ops" / "scripts" / "ensure_workspace_wired.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("L9_PLANS_STORE_MODE", ensure)
+        self.assertIn("links-only", ensure)
+        # The helper is still the default for manual callers, never removed.
+        self.assertIn("ensure_machine_cursor_plans_store", ensure)
+
     def test_claude_hook_uses_portable_timeout(self) -> None:
         text = (
             REPO
