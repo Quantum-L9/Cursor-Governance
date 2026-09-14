@@ -6,7 +6,7 @@ layer: contract
 owner: governance-control-plane
 status: active
 version: 2.0.0
-updated: 2026-08-12
+updated: 2026-09-13
 /L9_META -->
 
 # Agent surface adapter contract
@@ -41,9 +41,11 @@ The capability-broker experiment never shipped. Do not restore a brokered or
 direct provider URL to "fix" memory: an unbound runtime is an honest
 `memory-blind`, repaired with `make memory-binding` / `make memory-mcp-install`.
 
-Writer identity is separate and comes from `agent_registry.yaml` through
-`USER_ID`, `L9_MEMORY_AGENT_ID`, and `L9_MEMORY_SOURCE`. Surface adapters never
-invent a second `agent_id`.
+Writer identity comes from `agent_registry.yaml` through a short-lived
+signed agent assertion (ADR-0031) plus `USER_ID` / `L9_MEMORY_AGENT_ID` /
+`L9_MEMORY_SOURCE`. All agents share one door secret; only the human holds
+`L9_MEMORY_HUMAN_DOOR_SECRET`. Surface adapters never invent a second
+`agent_id` and never receive a private HTTPS memory bearer.
 
 ## Publish path
 

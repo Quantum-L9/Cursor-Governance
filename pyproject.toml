@@ -26,9 +26,9 @@ dependencies = [
     # issuer JWKS. Explicit rather than adding PyJWT: the broker checks exactly the
     # claims the capability contract names, and pins alg itself.
     "cryptography>=42,<51",
-    # Canonical memory control plane (ops/config/memory-binding.json). Exact
-    # release on PyPI; do not float and do not use a git extra.
-    "l9-graphite-memory==2.3.1",
+    # Canonical memory control plane (ops/config/memory-binding.json).
+    # ADR-0031 candidate 2.4.0: pin exact; source override below until PyPI.
+    "l9-graphite-memory==2.4.0",
 ]
 
 [project.optional-dependencies]
@@ -67,6 +67,11 @@ package = false
 # Floor-pin uv so ancient binaries fail closed, but stay compatible with
 # Anthropic/Linux sandbox images that ship uv 0.8.x (0.11+ is preferred locally).
 required-version = ">=0.8.0"
+
+# Candidate wheel until l9-graphite-memory 2.4.0 is on PyPI (ADR-0031).
+# Replace with registry pin and drop this override after publish.
+[tool.uv.sources]
+l9-graphite-memory = { path = "ops/vendor/wheels/l9_graphite_memory-2.4.0-py3-none-any.whl" }
 
 [tool.ruff]
 line-length = 100

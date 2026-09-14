@@ -1,10 +1,10 @@
 {
   "schema_version": "1.0.0",
-  "description": "Cursor-Governance binding to the canonical memory control plane (l9-graphiti-memory). Read by ops/memory/runtime_binding.py, which proves the exact package, interpreter, and console script before any lifecycle call. This is a Cursor-owned statement of what Cursor expects to run; it grants nothing and resolves no provider. Production binding is an immutable release artifact locked in uv.lock; MEMORY_TARGET_VERSION is release 2.3.1 (PyPI-clean patch over 2.3.0). source.ref is the v2.3.1 release tag on Quantum-L9/l9-graphiti-memory (annotated, cut 2026-09-08); release_evidence.memory_sha is the commit that tag resolves to, and the cross-repo proof resolves the tag and refuses any other commit.",
+  "description": "Cursor-Governance binding to the canonical memory control plane (l9-graphiti-memory). ADR-0031 pins release 2.4.0 (signed-agent door + memory.write_agent / memory.write_governed).",
   "distribution": "l9-graphite-memory",
   "import_package": "l9_graphite_memory",
   "console_script": "l9-memory",
-  "expected_package_version": "2.3.1",
+  "expected_package_version": "2.4.0",
   "expected_contract_version": "memory-control-plane/v1",
   "required_cli_operations": [
     "resolve",
@@ -23,8 +23,8 @@
   "source": {
     "kind": "git",
     "repository": "Quantum-L9/l9-graphiti-memory",
-    "ref": "v2.3.1",
-    "ref_note": "Release 2.3.1 = MEMORY_TARGET_VERSION. Annotated tag v2.3.1 (tag object f65ff2bb1c8cb43a55b78732c4ab74f711ee8c2f, cut 2026-09-08 after Quantum-L9/l9-graphiti-memory#60 merged as 84eedcd) resolves to 84eedcdfab83020776eab290599751b3b6af8dbf. v2.3.0 stays immutable; 2.3.1 is the first PyPI upload (constellation Gate_SDK moved off published extras). The tag is a name, not the proof: .github/workflows/memory-cross-repo.yml peels it and refuses a commit other than release_evidence.memory_sha."
+    "ref": "e3a79626aaaf3e9503d15eaa061a46dbb9b201ab",
+    "ref_note": "v2.4.0 candidate commit e3a79626aaaf3e9503d15eaa061a46dbb9b201ab (feat/memory-front-door-signed-agent). Pin is full SHA until a PyPI release tag is cut."
   },
   "binding_policy": {
     "production": "exact release artifact locked in uv.lock; runtime_mode=pinned_environment",
@@ -45,24 +45,24 @@
   ],
   "release_evidence": {
     "description": "Exact-head proof of the binding (audit P1-01/P2-02). The wheel is built from source.ref with uv build --wheel under the fixed SOURCE_DATE_EPOCH below and is byte-reproducible (the digest reproduced from a fresh clone of the same commit). .github/workflows/memory-cross-repo.yml rebuilds it from the same ref, refuses a digest mismatch, installs the wheel into a clean environment, and runs tests/ops/memory/test_cross_repo_lifecycle.py with L9_MEMORY_CROSS_REPO_REQUIRED=1 (a skip is a failure) and no provider credential in the environment. A digest here without that job green on the same Cursor head is a claim, not a proof.",
-    "memory_sha": "84eedcdfab83020776eab290599751b3b6af8dbf",
-    "memory_tag": "v2.3.1",
-    "memory_tag_object_sha": "f65ff2bb1c8cb43a55b78732c4ab74f711ee8c2f",
-    "package_version": "2.3.1",
-    "artifact": "l9_graphite_memory-2.3.1-py3-none-any.whl",
-    "artifact_sha256": "b3b045e482fd157a0242d5ad861a3609057c6d66dd2095673f55f1efe888ff89",
+    "memory_sha": "e3a79626aaaf3e9503d15eaa061a46dbb9b201ab",
+    "memory_tag": "candidate-2.4.0",
+    "memory_tag_object_sha": "e3a79626aaaf3e9503d15eaa061a46dbb9b201ab",
+    "package_version": "2.4.0",
+    "artifact": "l9_graphite_memory-2.4.0-py3-none-any.whl",
+    "artifact_sha256": "0be114d1fa25f7c1778d735d7e2adb5c8459c3a2065df775689c9b2fe4736989",
     "build": "uv build --wheel (SOURCE_DATE_EPOCH=1784592000)",
     "source_date_epoch": 1784592000,
     "proved_by": "tests/ops/memory/test_cross_repo_lifecycle.py",
     "proof_workflow": ".github/workflows/memory-cross-repo.yml",
-    "proved_at": "2026-09-08",
-    "rebound_at": "2026-09-08 (MEMORY_TARGET_VERSION moved to v2.3.1 after PyPI accepted the first upload; v2.3.0 tag unchanged)",
+    "proved_at": "2026-09-13",
+    "rebound_at": "2026-09-13 (ADR-0031 signed-agent door + write_agent/write_governed; candidate SHA pending PyPI)",
     "operator_gated": [
-      "uv.lock pin of l9-graphite-memory==2.3.1: published by Quantum-L9/l9-graphiti-memory publish.yml run 34172985608 (workflow_dispatch from main, release_tag=v2.3.1). Served wheel sha256 b3b045e482fd157a0242d5ad861a3609057c6d66dd2095673f55f1efe888ff89."
+      "uv.lock sources candidate wheel ops/vendor/wheels/l9_graphite_memory-2.4.0-py3-none-any.whl (sha256 0be114d1fa25f7c1778d735d7e2adb5c8459c3a2065df775689c9b2fe4736989) built from e3a79626aaaf3e9503d15eaa061a46dbb9b201ab. Drop tool.uv.sources after PyPI publish of 2.4.0."
     ],
     "installed_record_digest": null,
     "artifact_provenance_note": "In-place artifact proof needs a PEP 610 archive hash, which pip/uv record for index and URL installs but NOT for the local-file install the proof workflow performs. So the workflow proves the artifact instead, and more strongly: it rebuilds the wheel from source.ref and refuses any sha256 other than artifact_sha256 before installing. The binding reports 'compatible' there and says why. L9_MEMORY_REQUIRE_EXACT_ARTIFACT=1 remains for environments whose installer records provenance.",
-    "installed_record_digest_note": "RETRACTED as an exactness proof, on evidence. FOUR installs of the byte-identical wheel (artifact_sha256 re-verified by rebuild each time) produced four different installed-RECORD digests: fbe247ae..., 7c875776..., be59801c... on GitHub runners and 52b6df58... in a Claude Code container — the last three under identical normalisation. The installed RECORD is therefore not a deterministic function of the wheel, and a pin would flap the binding between exact and unbound on an unchanged release. runtime_binding still verifies a RECORD digest when one is pinned; nothing pins one until it is shown stable across machines."
+    "installed_record_digest_note": "RETRACTED as an exactness proof, on evidence. FOUR installs of the byte-identical wheel (artifact_sha256 re-verified by rebuild each time) produced four different installed-RECORD digests: fbe247ae..., 7c875776..., be59801c... on GitHub runners and 52b6df58... in a Claude Code container \u2014 the last three under identical normalisation. The installed RECORD is therefore not a deterministic function of the wheel, and a pin would flap the binding between exact and unbound on an unchanged release. runtime_binding still verifies a RECORD digest when one is pinned; nothing pins one until it is shown stable across machines."
   },
   "contract_model_aliases": {
     "_note": "Cursor view name -> the model names the bound release actually exports, discovered from the schema probe's `available` list in the memory-cross-repo job. Cursor requests its own name; the probe accepts any alias, and the schema is keyed by the Cursor name so validation lookup is unchanged. A name this side guessed is not a contract the release owes.",

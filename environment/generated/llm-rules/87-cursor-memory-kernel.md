@@ -183,4 +183,7 @@ Before committing, verify:
 | `ops/graphiti/MEMORY_BANK_POLICY.md` | Deprecated T0 policy — archival note |
 | `ops/graphiti/GATES-002-ACTIVATION.md` | Soak + gate flip runbook |
 
+<!-- ADR-0031 2026-09-13 -->
+<!-- Cold model write: MCP memory.write_agent (no phase_lock). High-stakes: phase_lock → write_governed. Agent HTTP sealed. Shared agents door + signed assertion; human door private. -->
+
 <!-- generated-from: rules/87-cursor-memory-kernel.mdc; do-not-edit -->

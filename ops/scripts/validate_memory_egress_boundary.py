@@ -40,6 +40,9 @@ ALLOWLIST_PATH = REPO_ROOT / "ops" / "config" / "memory-egress-allowlist.json"
 FORBIDDEN_TOKENS: tuple[str, ...] = (
     "GRAPHITI_MCP_URL",
     "GRAPHITI_MCP_TOKEN",
+    "L9_MEMORY_HTTP_URL",
+    "L9_MEMORY_CLIENT_TOKEN",
+    "memory.quantumaipartners.com",
     "search_memory_facts",
     "search_nodes",
     "search_facts",

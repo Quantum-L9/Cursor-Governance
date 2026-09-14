@@ -1,6 +1,6 @@
 ---
 name: l9-graphiti-memory
-description: Canonical agent memory control plane (l9-graphite-memory) — readiness, namespace resolution, canonical hydrate/search, governed interactive write (memory.phase_lock → memory.write_governed), operator CLI write, GMP Phase 0 MEMORY_PREFETCH, /end-session repair. Use when wiring memory, debugging hydration, checking memory health, writing a durable fact, reconciling legacy provider history, or closing a session.
+description: "Canonical agent memory control plane (l9-graphite-memory) — readiness, namespace resolution, canonical hydrate/search, interactive write (cold: memory.write_agent; high-stakes: memory.phase_lock → memory.write_governed), operator CLI write, GMP Phase 0 MEMORY_PREFETCH, /end-session repair. Use when wiring memory, debugging hydration, checking memory health, writing a durable fact, reconciling legacy provider history, or closing a session."
 disable-model-invocation: false
 metadata:
   skill_schema: 1
@@ -37,7 +37,8 @@ episodic memory.
 
 | Caller | Adapter | Operation |
 |--------|---------|-----------|
-| Model, mid-session, recording a durable fact | MCP `l9-graphite-memory` | `memory.phase_lock` → `memory.write_governed` |
+| Model, mid-session, ordinary durable fact | MCP `l9-graphite-memory` | `memory.write_agent` (no phase_lock) |
+| Model, mid-session, conflict-sensitive fact | MCP `l9-graphite-memory` | `memory.phase_lock` → `memory.write_governed` |
 | Model, reading | MCP `memory.search` / `memory.hydrate`, or `memcli search` / `memcli hydrate` | read-only |
 | SessionStart / sessionEnd hooks | `ops/memory` (`canonical_hydrate`, `close_session.py`) | `hydrate`, `ingest_candidate`, `close` |
 | `/end-session` repair, reconciliation, diagnostics, Program Execution, human operator | `python -m ops.memory.cli` / `hydration.cli repair-write` / `make memory-reconcile-legacy` | purpose-specific; `write` is the operator form |

@@ -65,4 +65,7 @@ remove the memory-side prerequisite of a governed write:
   and the schema still rejects `phase_lock` as a `governed_writes[].requires`
   value.
 
+<!-- ADR-0031 2026-09-13 -->
+<!-- Cold model write: MCP memory.write_agent (no phase_lock). High-stakes: phase_lock → write_governed. Agent HTTP sealed. Shared agents door + signed assertion; human door private. -->
+
 <!-- generated-from: rules/98-graphiti-memory-gate.mdc; do-not-edit -->
