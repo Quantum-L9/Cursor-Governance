@@ -38,6 +38,9 @@ def test_ensure_workspace_wired_creates_links_and_is_idempotent(tmp_path: Path) 
     assert (ws / ".cursor/governance/CANONICAL_LAW.md").is_symlink()
     gc = Path(os.path.realpath(ssot))
     assert Path(os.path.realpath(ws / ".cursor-commands")) == gc
+    plugin = home / ".cursor/plugins/local/l9-governance"
+    assert plugin.is_symlink()
+    assert Path(os.path.realpath(plugin)) == gc
     second = subprocess.run(
         ["bash", str(HELPER), str(ws)],
         check=True,

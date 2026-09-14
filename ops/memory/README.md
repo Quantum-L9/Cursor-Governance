@@ -152,6 +152,14 @@ records no archive hash for the local-file install it performs. The artifact is
 proved there by the job instead, and more strongly — it rebuilds the wheel from
 `source.ref` and refuses any sha256 but the audited one before installing.
 
+A locked `uv sync` on a developer machine likewise leaves no PEP 610 archive
+hash (uv 0.11 writes no `direct_url.json`, or empty `archive_info` for a hashed
+URL). `python -m ops.memory.seal_artifact_provenance` reinstalls the lockfile
+wheel with pip's hashed URL so the installer records
+`archive_info.hashes.sha256`. `make venv` and `ensure_uv_environment.sh` run
+that seal. The digest still comes from `uv.lock` agreeing with
+`release_evidence.artifact_sha256`; a mismatch is refused.
+
 `L9_MEMORY_REQUIRE_EXACT_ARTIFACT=1` turns `compatible` from "usable, and
 reported as unproved" into a refusal; the required cross-repo proof sets it.
 
@@ -227,7 +235,8 @@ the `l9.memory-boundary-*` semgrep rules in `.semgrep/l9-pr.yml` on
 transport (`urllib`, `http`, `socket`, `ssl`, `requests`, `httpx`, `aiohttp`,
 `websockets`, the MCP client SDK, `graphiti_core`, `neo4j`, `asyncio`); only
 `runtime_binding.py` (the bound `l9-memory`), `namespace_context.py` (git
-identity), `mcp_instantiation.py` (the memory-owned installer) and the Claude
+identity), `mcp_instantiation.py` (the memory-owned MCP installer),
+`seal_artifact_provenance.py` (the memory-owned wheel installer) and the Claude
 `memory_state.py` git probe may spawn a process, always as an argv list; and
 `MemoryControlPlaneClient` launches exactly `binding.memory_cli` for every
 operation.

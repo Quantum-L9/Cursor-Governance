@@ -72,6 +72,30 @@ print(json_ish)
 """
 
 
+def tree_state(repo: Path) -> str:
+    """Everything git can see changing under ``repo``: porcelain status plus
+    the worktree diff.
+
+    Ignored paths (``.venv``, ``.l9``, coverage data, ``__pycache__``) are
+    excluded by construction, so comparing two snapshots is stable under the
+    canonical xdist + coverage runner; a tracked file rewritten, moved, or
+    deleted, and any new unignored file, all change the snapshot. Both flags
+    are pinned so a developer's git config (``status.showUntrackedFiles=no``,
+    ``diff.external``) cannot blind or reshape the comparison.
+    """
+    git = ["git", "-C", str(repo)]
+    status = subprocess.run(
+        [*git, "status", "--porcelain", "--untracked-files=normal"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    diff = subprocess.run(
+        [*git, "diff", "--no-ext-diff"], capture_output=True, text=True, check=True
+    ).stdout
+    return status + diff
+
+
 class BootstrapFixture(unittest.TestCase):
     """Builds a synthetic governance root whose gate we control."""
 
@@ -176,28 +200,63 @@ class StdoutMachineContractTests(BootstrapFixture):
         design (rule 06 admits no alternate root), so the chain is isolated by
         moving HOME instead: the temp HOME's clone points at this checkout, and
         every artifact the hook writes lands in the temp tree.
+
+        "Every artifact" has to be arranged, not assumed. The hook's plan audit
+        runs ``audit_pipeline.py --archive-spent``, which moves spent plans out
+        of the resolved plan store and landed WIP into ``WIP/_archived``. Both
+        roots fall back to the governance clone — this checkout — when the
+        workspace carries neither, and the machine plans store that
+        setup_workspace_symlinks.sh wires into ``<ws>/.cursor/plans`` defaults
+        to ``<gov>/docs/plans`` for a consumer workspace. Left alone, this test
+        moved tracked ``docs/plans/*.plan.md`` files into ``docs/plans/BUILT/``
+        in the checkout under test. So the store is pinned to the workspace
+        through the library's own stamp (ops/scripts/lib/cursor_plans_store.sh
+        reads ``~/.cursor/l9-plans-store`` first), the workspace gets its own
+        WIP root, and the snapshot comparison below proves the checkout is
+        untouched.
         """
         home = Path(self._tmp.name) / "home"
         home.mkdir()
         (home / ".cursor-governance").symlink_to(REPO)
+        plans_store = self.workspace / "docs" / "plans"
+        plans_store.mkdir(parents=True)
+        (self.workspace / "WIP").mkdir()
+        (home / ".cursor").mkdir()
+        (home / ".cursor" / "l9-plans-store").write_text(f"{plans_store}\n", encoding="utf-8")
         env = {
             **os.environ,
             "HOME": str(home),
             "CURSOR_PROJECT_DIR": str(self.workspace),
             "GOVERNANCE_BACKUP_SKIP": "1",
         }
+        before = tree_state(REPO)
         proc = subprocess.run(
             ["bash", str(SESSION_START)],
             capture_output=True,
             text=True,
             timeout=900,
             env=env,
+            # Cursor launches the hook with the workspace as cwd; the hook's
+            # `${CURSOR_PROJECT_DIR:-$PWD}` fallbacks must never see the checkout.
+            cwd=self.workspace,
             check=False,
         )
+        after = tree_state(REPO)
         # No find-first-brace, no line filtering, no take-last-line.
         payload = json.loads(proc.stdout)
         self.assertIsInstance(payload, dict)
         self.assertIn("additional_context", payload)
+        self.assertEqual(
+            before,
+            after,
+            "the Cursor SessionStart hook wrote into the checked-out repository; the "
+            "plan store, WIP root and every reconciler target must resolve to the temp tree",
+        )
+        # The plan store the hook wired for this workspace is the temp one, so the
+        # archive pass — which still runs — had nowhere else to move anything.
+        wired = self.workspace / ".cursor" / "plans"
+        if wired.exists():
+            self.assertEqual(wired.resolve(), plans_store.resolve())
 
         render = subprocess.run(
             [str(REPO / ".venv" / "bin" / "python"), str(RENDERER)],

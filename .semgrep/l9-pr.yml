@@ -76,8 +76,10 @@ rules:
     message: >-
       Only ops/memory/runtime_binding.py (the bound l9-memory), ops/memory/
       namespace_context.py (git identity), ops/memory/mcp_instantiation.py
-      (memory-owned installer) and the Claude memory_state git probe may spawn
-      a process on the memory path; everything else calls MemoryControlPlaneClient.
+      (memory-owned MCP installer), ops/memory/seal_artifact_provenance.py
+      (memory-owned wheel installer) and the Claude memory_state git probe may
+      spawn a process on the memory path; everything else calls
+      MemoryControlPlaneClient.
     languages: [python]
     severity: ERROR
     metadata:
@@ -96,6 +98,7 @@ rules:
         - ops/memory/runtime_binding.py
         - ops/memory/namespace_context.py
         - ops/memory/mcp_instantiation.py
+        - ops/memory/seal_artifact_provenance.py
         - environment/agents/adapters/claude-code/memory/memory_state.py
     pattern-either:
       - pattern: subprocess.run(...)
