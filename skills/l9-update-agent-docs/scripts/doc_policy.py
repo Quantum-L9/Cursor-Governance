@@ -14,6 +14,8 @@ from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
 PACK = Path(__file__).resolve().parents[1]
+LLM_SURFACE_ID = "llm_txt"
+FILETREE_SURFACE_ID = "filetree"
 POLICY_PATH = PACK / "references/doc-surface-policy.yaml"
 POLICY_SCHEMA = PACK / "contracts/doc-surface-policy.schema.json"
 OBLIGATION_SCHEMA = PACK / "contracts/documentation-obligation.schema.json"
@@ -235,7 +237,7 @@ def surface_action(spec: dict[str, Any], *, exists: bool, enabled: bool = False)
 
 
 def discover_surfaces(
-    root: Path, policy: dict[str, Any], llms_enabled: bool
+    root: Path, policy: dict[str, Any], llm_enabled: bool
 ) -> list[dict[str, Any]]:
     rows = []
     for name, spec in policy["surfaces"].items():
@@ -252,7 +254,7 @@ def discover_surfaces(
                 "action": surface_action(
                     spec,
                     exists=bool(paths),
-                    enabled=llms_enabled if name == "llms_txt" else False,
+                    enabled=llm_enabled if name == LLM_SURFACE_ID else False,
                 ),
             }
         )

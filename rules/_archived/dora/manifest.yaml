@@ -1,0 +1,21 @@
+archive_id: CG-DORA-RULE-RETIREMENT-2026-09-13
+component: Python DORA header and source-trace Cursor rule
+status: deprecated_archived
+archive_policy:
+  cursor_discoverable: false
+  generated_projection: false
+  enforcement: false
+  reactivation_requires:
+    - architecture_decision_record
+    - explicit_runtime_consumer
+    - external_append_only_evidence_store
+    - security_review
+replacement_controls:
+  governance: rules/00-global.mdc
+  observability: rules/65-observability-performance.mdc
+  validation: rules/50-qa-testing.mdc
+archived_artifacts:
+  - rules/_archived/dora/25-python-dora-header.mdc.disabled
+migration_note: >-
+  Source-file metadata and self-mutating runtime traces are retired. Governance
+  evidence and telemetry must use the repository's active governed surfaces.

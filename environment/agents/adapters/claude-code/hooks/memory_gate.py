@@ -105,9 +105,9 @@ def main() -> int:
         return 0
 
     try:
-        session_id = st.resolve_session_id(event=event)
+        receipt_id = st.resolve_receipt_id(event=event)
     except ValueError:
-        session_id = ""
+        receipt_id = ""
 
     try:
         contract = st.load_contract()
@@ -142,24 +142,36 @@ def main() -> int:
         # Raises on any precondition beyond hydration (E7 fail-closed).
         requires = st.validate_requires(rule)
 
-        if "session_prefetch" in requires and not st.usable_receipt(contract, session_id):
-            # Name the session id the gate itself resolved: on Cursor the hook
-            # event id is NOT the newest ~/.claude/projects jsonl, and pointing
-            # at that heuristic sent agents to prefetch for the wrong session.
-            sid_hint = (
-                f"--session-id {session_id}"
-                if session_id
-                else (
-                    "--session-id <session-id-from-hook-event> "
-                    "(best-effort fallback only if the hook event has no "
-                    "session_id: newest ~/.claude/projects/<project>/<uuid>.jsonl "
-                    "— on Cursor that heuristic is often wrong)"
+        if "session_prefetch" in requires and (
+            not receipt_id or not st.usable_receipt(contract, receipt_id)
+        ):
+            # Name the RAW identity the gate composed its receipt key from —
+            # the writer agent id and the chat id — never the composed key.
+            # Prefetch composes the key itself, exactly once; a hint carrying
+            # the composed key was composed again on repair
+            # (claude-code__claude-code__<chat>), so following the denial
+            # stamped a file this gate never looked up (audit P573-F1).
+            # SessionStart's session id is a different key and is not this hint.
+            try:
+                writer_agent, chat_id = st.receipt_identity(event=event)
+            except ValueError:
+                writer_agent, chat_id = "", ""
+            if chat_id:
+                sid_hint = (
+                    f"L9_MEMORY_AGENT_ID={writer_agent} "
+                    "environment/agents/adapters/claude-code/hooks/memory_prefetch.py "
+                    f"--session-id {chat_id}"
                 )
-            )
+            else:
+                sid_hint = (
+                    "environment/agents/adapters/claude-code/hooks/memory_prefetch.py "
+                    "--session-id <chat-id-from-hook-event> (the raw chat id: prefetch "
+                    "composes the writer receipt key itself, so never pass a composed "
+                    "key or the SessionStart session id)"
+                )
             _deny(
                 f"Memory not hydrated this session. Governed write '{rule['id']}' requires the "
                 "SessionStart canonical memory prefetch. Start a fresh session, or run "
-                "environment/agents/adapters/claude-code/hooks/memory_prefetch.py "
                 f"{sid_hint}, then retry. "
                 "This is a hydration gate, not a lock: no phase-lock is required or accepted."
             )

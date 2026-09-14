@@ -242,7 +242,12 @@ else
 fi
 
 SETUP="$GC/ops/scripts/setup_workspace_symlinks.sh"
+ENSURE="$GC/ops/scripts/ensure_workspace_wired.sh"
 ORCH="$GC/ops/hooks/session_start_memory_orchestrator.sh"
+# shellcheck source=/dev/null
+[ -f "$GC/ops/scripts/lib/workspace_kind.sh" ] && source "$GC/ops/scripts/lib/workspace_kind.sh"
+# shellcheck source=/dev/null
+[ -f "$GC/ops/scripts/lib/workspace_link_health.sh" ] && source "$GC/ops/scripts/lib/workspace_link_health.sh"
 
 # Claude projection is Claude Code SessionStart's job
 # (session_start_claude_governance.sh). Running it from Cursor SessionStart
@@ -271,34 +276,44 @@ if [ -x "$IDE_SETUP" ] && [ -n "$REPO" ]; then
   fi
 fi
 
-# Auto-wire consumer (includes .cursor/plans); never require SSOT self-alias
+# Auto-wire: realpath-healthy 3-link predicate + links-only healer.
+# classify_workspace_kind so ssot_checkout does not demand .cursor-commands.
+# Full setup only when links-only cannot restore health (missing hook copy).
 needs_wire=0
 if [ -n "$REPO" ]; then
-  WS_REAL="$(python3 -c "import os; print(os.path.realpath('$REPO'))" 2>/dev/null || echo "")"
-  GC_REAL="$(python3 -c "import os; print(os.path.realpath('$GC'))" 2>/dev/null || echo "")"
-  if [ -n "$WS_REAL" ] && [ "$WS_REAL" = "$GC_REAL" ]; then
-    # SSOT workspace: heal plans + plugin only; remove self-alias if present
-    rm -f "$REPO/.cursor-commands" 2>/dev/null || true
-    for check in "$HOME/.cursor/plugins/local/l9-governance" "$REPO/.cursor/plans"; do
-      if [ ! -L "$check" ]; then
-        needs_wire=1
-        break
-      fi
-    done
+  if declare -F workspace_links_healthy >/dev/null 2>&1; then
+    if ! workspace_links_healthy "$REPO"; then
+      needs_wire=1
+    fi
   else
-    for check in "$REPO/.cursor-commands" "$HOME/.cursor/plugins/local/l9-governance" "$REPO/.cursor/plans"; do
-      if [ ! -L "$check" ]; then
-        needs_wire=1
-        break
-      fi
-    done
+    WS_REAL="$(python3 -c "import os; print(os.path.realpath('$REPO'))" 2>/dev/null || echo "")"
+    GC_REAL="$(python3 -c "import os; print(os.path.realpath('$GC'))" 2>/dev/null || echo "")"
+    if [ -n "$WS_REAL" ] && [ "$WS_REAL" = "$GC_REAL" ]; then
+      rm -f "$REPO/.cursor-commands" 2>/dev/null || true
+      for check in "$HOME/.cursor/plugins/local/l9-governance" "$REPO/.cursor/plans"; do
+        if [ ! -L "$check" ]; then
+          needs_wire=1
+          break
+        fi
+      done
+    else
+      for check in "$REPO/.cursor-commands" "$HOME/.cursor/plugins/local/l9-governance" "$REPO/.cursor/plans"; do
+        if [ ! -L "$check" ]; then
+          needs_wire=1
+          break
+        fi
+      done
+    fi
   fi
 fi
 
 WIRE_NOTE="symlinks OK"
-if [ "$needs_wire" -eq 1 ] && [ -n "$REPO" ] && [ -f "$SETUP" ]; then
-  if (cd "$REPO" && bash "$SETUP" >/dev/null 2>&1); then
-    WIRE_NOTE="auto-wired symlinks"
+if [ "$needs_wire" -eq 1 ] && [ -n "$REPO" ]; then
+  if [ -f "$ENSURE" ] && L9_WIRE_LINKS_ONLY=1 bash "$ENSURE" "$REPO" >/dev/null 2>&1 \
+    && { ! declare -F workspace_links_healthy >/dev/null 2>&1 || workspace_links_healthy "$REPO"; }; then
+    WIRE_NOTE="auto-wired links-only"
+  elif [ -f "$SETUP" ] && (cd "$REPO" && bash "$SETUP" >/dev/null 2>&1); then
+    WIRE_NOTE="auto-wired (full setup)"
   else
     WIRE_NOTE="auto-wire failed — run: bash \"$SETUP\""
   fi
@@ -339,14 +354,23 @@ if [ "${GRAPHITI_MEMORY_ENABLED:-1}" != "0" ] && [ -f "$GC/ops/memory/diagnostic
 fi
 
 WIRING_CHECK="skipped"
+WIRE_FALLBACK="$GC/ops/scripts/wire_governance_workspace.sh"
 if [ -n "$REPO" ] && [ -f "$GC/ops/scripts/check_governance_wiring.sh" ]; then
   WIRE_OUT="$(bash "$GC/ops/scripts/check_governance_wiring.sh" "$REPO" 2>&1)"
   WIRE_RC=$?
+  if [ "$WIRE_RC" -ne 0 ] && [ -f "$ENSURE" ]; then
+    L9_WIRE_LINKS_ONLY=1 bash "$ENSURE" "$REPO" >/dev/null 2>&1 || true
+    WIRE_OUT="$(bash "$GC/ops/scripts/check_governance_wiring.sh" "$REPO" 2>&1)"
+    WIRE_RC=$?
+    if [ "$WIRE_RC" -eq 0 ]; then
+      WIRING_CHECK="PASS (after links-only retry)"
+    fi
+  fi
   if [ "$WIRE_RC" -eq 0 ]; then
-    WIRING_CHECK="PASS"
+    [ "$WIRING_CHECK" = "skipped" ] && WIRING_CHECK="PASS"
   else
     WIRE_TAIL="$(printf '%s\n' "$WIRE_OUT" | tail -n 4 | tr '\n' ' ')"
-    WIRING_CHECK="FAIL rc=${WIRE_RC} — ${WIRE_TAIL} — run bash \"$GC/ops/scripts/wire_governance_workspace.sh\" \"$REPO\""
+    WIRING_CHECK="FAIL rc=${WIRE_RC} — ${WIRE_TAIL} — exhausted auto-repair; fallback: /wire or bash \"$WIRE_FALLBACK\" \"$REPO\""
   fi
 fi
 

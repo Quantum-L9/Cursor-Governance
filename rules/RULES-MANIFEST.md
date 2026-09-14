@@ -1,16 +1,16 @@
 # Cursor governance rules manifest
 
-Generated: `2026-09-13T19:58:55Z`. Source: `rules/*.mdc`.
+Generated: `2026-09-14T03:47:00Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
 | Bucket | Count |
 |---|---:|
-| Total MDC files | **70** |
+| Total MDC files | **69** |
 | `alwaysApply: true` | **35** |
-| `alwaysApply: false` | **35** |
+| `alwaysApply: false` | **34** |
 | No boolean `alwaysApply` | **0** |
-| Explicit stable IDs | **69** |
+| Explicit stable IDs | **68** |
 | Derived compatibility IDs | **1** |
 | Deprecated rules | **0** |
 
@@ -33,7 +33,6 @@ Generated: `2026-09-13T19:58:55Z`. Source: `rules/*.mdc`.
 | `20-lang-python.mdc` | `l9.rule.20.lang.python` | global | python | agent_requested | 190 | `fa976f39b458` |
 | `22-context7-auto-invoke.mdc` | `l9.rule.22.context7.auto.invoke` | global | git | always | 83 | `f1c56c69c455` |
 | `23-l9-skill-routing.mdc` | `l9.rule.skill-routing` | global | governance | always | 82 | `02847ef31093` |
-| `25-python-dora-header.mdc` | `l9.rule.25.python.dora.header` | global | python | auto_attached | 173 | `49302e69c080` |
 | `30-framework-react.mdc` | `l9.rule.30.framework.react` | global | typescript | agent_requested | 145 | `935829c0a8d1` |
 | `40-domain-autonomy.mdc` | `l9.rule.40.domain.autonomy` | global | security | agent_requested | 182 | `fbbfa0dc8cc4` |
 | `41-graph-engine-architecture.mdc` | `l9.rule.41.graph.engine.architecture` | global | security | agent_requested | 104 | `db87e22cdb8a` |

@@ -131,5 +131,8 @@ pass "setup_workspace_symlinks.sh uses classify_workspace_kind"
 grep -q 'classify_workspace_kind' "$OPS_DIR/ensure_workspace_wired.sh" \
   || fail_now "ensure_workspace_wired.sh must call classify_workspace_kind"
 pass "ensure_workspace_wired.sh uses classify_workspace_kind"
+grep -q 'workspace_link_health.sh' "$OPS_DIR/ensure_workspace_wired.sh" \
+  || fail_now "ensure_workspace_wired.sh must source workspace_link_health.sh"
+pass "ensure_workspace_wired.sh sources workspace_link_health.sh"
 
 echo "RESULT: PASS — workspace kind ($PASS checks)"
