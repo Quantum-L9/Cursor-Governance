@@ -8,8 +8,8 @@ metadata:
   tags: [l9, docs, obligations, agents, ci, maintenance]
   owner: igor_beylin
   status: active
-  version: 3.1.0
-  updated: 2026-09-08
+  version: 3.5.0
+  updated: 2026-09-13
   when_to_use: compile documentation obligations after repository changes, assess supported operational contract surfaces, refresh governed documentation through its canonical owner, or prove closure with a machine receipt
 ---
 
@@ -27,6 +27,8 @@ The compiler is not a doctrine author, general docs writer, generic parser frame
 
 ```text
 repository state + repository delta
+  -> filetree.md inventory (required, first)
+  -> missing module/submodule README diagnosis from that inventory
   -> documentation topology
   -> deterministic impact qualification
   -> target resolution
@@ -45,6 +47,8 @@ Machine authority:
 - obligation schema: `contracts/documentation-obligation.schema.json`
 - receipt schema: `contracts/repo-docs-receipt.schema.json`
 - machine compiler: `scripts/repo_docs.py`
+- filetree generator: `scripts/doc_filetree.py`
+- module README generator: `scripts/generate_module_readmes.py`
 - operational assessment registry: `scripts/doc_surface_analysis.py`
 - compatibility CLI: `scripts/validate_pointer_headings.py`
 
@@ -52,7 +56,7 @@ Machine authority:
 
 ## Ownership boundaries
 
-- `l9-update-agent-docs` owns documentation topology, impact qualification, target resolution, obligation compilation, deterministic materiality assessment for explicitly registered operational surfaces, freshness semantics, admission of semantic evidence, optional `llms.txt`, and the repo-docs receipt.
+- `l9-update-agent-docs` owns documentation topology, impact qualification, target resolution, obligation compilation, deterministic materiality assessment for explicitly registered operational surfaces, freshness semantics, admission of semantic evidence, required `filetree.md`, default-enabled `llm.txt`, and the repo-docs receipt.
 - `DocumentationObligation` remains the only durable work unit. `assessment` is evidence attached to an obligation, never a second findings ledger or second obligation system.
 - operational-surface ownership is split explicitly:
   - `obligation_owner` owns compilation and lifecycle accounting;
@@ -62,7 +66,7 @@ Machine authority:
 - `l9-update-agent-docs` must not absorb Make/Python semantic ownership merely because it detects a material defect.
 - `ops/config/root-file-protection.json` remains the canonical mutation-protection contract. Repo Docs reads and resolves its rule at runtime; it must not copy `additive_only` or other guard semantics into a second authority.
 - `l9-intelligence-harvest` owns semantic discovery and qualification. The compiler consumes canonical `harvest.json`; it never copies Harvest reasoning or mutates the donor through Harvest.
-- `readme-pipeline-v1` and `scripts/generate_subsystem_readmes.py` own module README rendering and language extraction.
+- `l9-update-agent-docs` owns the root `filetree.md` inventory (`scripts/doc_filetree.py`) and AST module/submodule README generation (`scripts/generate_module_readmes.py`). `filetree.md` is generated or refreshed first; missing README diagnosis reads that inventory. It does not call an LLM and does not import the donor repo. `readme-pipeline-v1` remains an optional sequencer that calls the repo re-export.
 - `l9-architecture-decision-records` owns ADR authoring.
 - repository/API owners own API reference generation.
 - organization/community-health owners remain external.
@@ -146,7 +150,13 @@ For GitHub PR execution, pass the source PR head and the tested checkout revisio
 
 Never collapse source head and tested revision into one ambiguous SHA.
 
-### 2. Read obligations, not only surfaces
+### 2. Generate or refresh `filetree.md` first
+
+`filetree.md` is a required root output of this skill. The compiler writes or updates it from the live tree in code before it diagnoses missing files.
+
+Then diagnose missing module and submodule `README.md` files from that inventory. Do not walk the tree as a second source of truth after `filetree.md` has been written.
+
+### 3. Read obligations, not only surfaces
 
 For every non-terminal obligation inspect:
 
@@ -167,7 +177,7 @@ For every non-terminal obligation inspect:
 
 Do not invent a target to make the receipt green. `c-bind-before-write` remains the bind-before-write rule.
 
-### 3. Qualify semantic obligations upstream
+### 4. Qualify semantic obligations upstream
 
 If an obligation is `AWAITING_QUALIFICATION`, run `l9-intelligence-harvest` against the bounded request emitted under `semantic_harvest.request`. Supply its canonical `harvest.json` on rerun:
 
@@ -179,7 +189,7 @@ A changed `harvest.json` or `*.harvest.json` may be auto-discovered only when it
 
 Only qualified nuggets with resolvable `CONFIRMED` evidence may satisfy semantic qualification. Accepted dispositions come from the topology. `MERGE_WITH_EXISTING` with stronger beneficiary semantics produces `PRESERVE`, not overwrite.
 
-### 4. Assess supported operational surfaces
+### 5. Assess supported operational surfaces
 
 Operational assessment runs after obligation compilation and semantic qualification, before closure validation.
 
@@ -195,34 +205,39 @@ For each configured operational surface:
 
 If the analyzer cannot be resolved, the obligation is `BLOCKED`. Do not guess a fallback. A repository that does not declare `ops/config/root-file-protection.json` does not block assessment. If that guard is declared but cannot be resolved, block only when a mutation would otherwise be proposed.
 
-### 5. Execute through the named owner
+### 6. Execute through the named owner
 
 | Obligation owner/mode | Allowed action |
 |---|---|
 | `l9-update-agent-docs` / owner-native root index | Surgical pointer/index refresh permitted by topology. |
 | operational contract / `repository-native` execution owner | Apply only the bounded repair justified by assessment, subject to the resolved mutation guard and repository-native validation. |
-| `readme-pipeline-v1` / generator | Run `scripts/generate_subsystem_readmes.py` for the resolved subsystem. Do not hand-write a generated module README. |
+| `l9-update-agent-docs` / `filetree.md` | Required. Create if absent. Refresh only when the live file already carries `<!-- l9-filetree: generated-from-tree -->`. An unowned `filetree.md` is preserved; diagnosis still walks the live tree. |
+| `l9-update-agent-docs` / module READMEs | After `filetree.md`, write missing module and submodule `README.md` files via `scripts/generate_module_readmes.py` (AST only). Refresh only files this generator owns: those that carry `<!-- l9-module-readme: generated-from-ast -->`, plus the legacy corpus written before the marker existed (the `README_TEMPLATE` header line and section set of `scripts/generate_subsystem_readmes.py`, e.g. `skills/README.md`), which a `--regenerate` refresh migrates to the marker. `auto_generated: false` front matter, or any other shape, is handwritten and is never overwritten without `--force`. Do not hand-write a generated module README. Optional sequencer: `readme-pipeline-v1`. |
 | specialist/external owner | Handoff or use that owner's canonical capability. Do not absorb its implementation here. |
-| `llms.txt` projection | Generate only when enabled and a canonical base URL exists. It is projection, never authority. |
+| `llm.txt` projection | Default enabled. Create if absent. Refresh only when the live file already carries `<!-- l9-llm-txt: generated-projection -->`. If `llm.txt` is missing and `llms.txt` exists, rename (preserve bytes). If both exist, delete leftover `llms.txt`. Never overwrite an unowned `llm.txt`. `--write-llm` does not authorize that overwrite. Projection, never authority. |
 
-Module README config SSOT: `config/subsystems/readme_config.yaml`. Sequencer: `workflows/dags/readme_pipeline_dag.py` (`readme-pipeline-v1`). Polyglot parsing remains at the generator owner.
+`filetree.md` is required and skill-owned. Module README generation reads that inventory and is executable without a consumer-root generator, YAML map, or donor repo. Optional overlay: `config/subsystems/readme_config.yaml` (purpose/skip). Optional sequencer: `workflows/dags/readme_pipeline_dag.py` (`readme-pipeline-v1`). Unsupported extensions stay PARTIAL.
 
 For `Makefile` and `pyproject.toml`, always resolve `ops/config/root-file-protection.json` before treating a proposed mutation as admissible. A guard justification mechanism authorizes the guard only; it does not transfer semantic ownership to Repo Docs.
 
-### 6. Root-document write rules
+### 7. Root-document write rules
 
 - `CLAUDE.md`: load pointer only. Create only when topology permits `create_if_absent`. No doctrine, CI table, or registry dump.
 - `AGENTS.md`: surgical additive operating-instruction update only. Never fold to a pointer.
 - root `README.md`: pointer/index correction only. Never generate from the module README generator.
 - `ARCHITECTURE.md`: surgical architecture-index refresh only when present; never create when topology says `never`.
 - `INVARIANTS.md`: invariant/enforcement index. Create only when topology permits. Point to enforcing sources; do not copy organization-law bodies.
+- `filetree.md`: required inventory. Create if absent; refresh only a marker-owned generated file. Projection, never authority.
+- `llm.txt`: default-enabled LLM discovery index. Create if absent; refresh only a marker-owned generated file. Retire leftover `llms.txt` once `llm.txt` exists (rename first when the canonical name is still missing). Do not treat as doctrine.
+- Owned-write rule for every skill-handled file: missing → create when policy allows; generator marker present and stale → refresh; any other existing file → preserve. Do not infer overwrite from staleness, validation noise, or `--write-llm`.
+- Each admission is receipt evidence, not silence: `create` / `refresh` satisfy the obligation through the run mutation; `unchanged` (render byte-identical to the target) closes it with `target_freshness: PASS`; `preserve` (unowned target left in place) is the terminal `PRESERVED` lifecycle with the admission recorded as evidence. A `skipped` admission (no-write mode, or a blocked write) keeps the obligation open. A filesystem error during retirement or an owned write is a `BLOCKED` receipt state and structural failure, never a crash.
 - `CANONICAL_LAW.md`: never mutate through this skill.
 
 Required pointer headings remain governed by `references/pointer-heading-map.yaml` and `c-required-section-validation`.
 
 If ownership or source-of-truth is in doubt, read `kernels/Recursive Alignment.md`. If a confirmed defect needs repair, read `kernels/Validate & Repair.md`. Cite those kernels by path; do not wrap or compress them into this skill.
 
-### 7. Validate owner action and close obligations
+### 8. Validate owner action and close obligations
 
 Rerun the compiler against the same change base. A touched file alone is not terminal proof.
 
@@ -274,9 +289,13 @@ Do not introduce a generic plugin system merely to avoid adding a static registr
 - Making Repo Docs the semantic owner of Make, Python packaging, CI, dependency policy, or root-file protection
 - Dynamic analyzer/plugin discovery
 - Authoring ADRs or API contracts here
-- Adding general language parsers here
+- Adding LLM-authored or donor-repo README generation
+- Overwriting a handwritten module README, an unowned skill-handled file, or the repository-root README.md
+- Leaving `llms.txt` in place after `llm.txt` exists
+- Skipping source files because an ancestor directory is named `.l9` (skip only paths relative to the scanned module or repo root)
 - Hand-editing generated module README content instead of using its owner
-- Treating `llms.txt` as doctrine
+- Treating `filetree.md` or `llm.txt` as doctrine
+- Diagnosing missing module READMEs without a current `filetree.md` inventory
 - Creating root files not permitted by topology
 - Changing generated formatter ownership blocks by hand
 - Inventing a new CI workflow for this capability when an existing CI owner can consume the receipt

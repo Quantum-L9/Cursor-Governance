@@ -257,21 +257,22 @@ def test_module_change_resolves_exact_generator_target_and_lifecycle(tmp_path: P
     base = commit(root, "base")
     write(root / "skills/demo/x.py", "def x():\n    return 2\n")
     commit(root, "code")
-    red = rd.audit_repository(root, changed_since=base)
-    module = next(row for row in red["obligations"] if row["surface"] == "module_readmes")
-    assert red["final_status"] == "PARTIAL"
-    assert module["target"]["path"] == "skills/README.md"
-    assert module["owner"]["id"] == "readme-pipeline-v1"
-    assert module["required_action"]["type"] == "REGENERATE"
-    write(
-        root / "skills/README.md",
-        "# Skills\n\n## Purpose\n\nDocs.\n\n## Components\n\nGenerated.\n",
-    )
-    commit(root, "generated README")
-    green = rd.audit_repository(root, changed_since=base)
-    module = next(row for row in green["obligations"] if row["surface"] == "module_readmes")
-    assert module["lifecycle"]["status"] == "CLOSED"
-    assert green["final_status"] == "PASS"
+    receipt = rd.audit_repository(root, changed_since=base)
+    modules = [row for row in receipt["obligations"] if row["surface"] == "module_readmes"]
+    paths = {row["target"]["path"] for row in modules}
+    assert (root / "skills/README.md").is_file()
+    assert (root / "skills/demo/README.md").is_file()
+    assert "skills/README.md" in paths
+    assert "skills/demo/README.md" in paths
+    assert all(row["owner"]["id"] == "l9-update-agent-docs" for row in modules)
+    assert all(row["lifecycle"]["status"] == "CLOSED" for row in modules)
+    assert (root / "filetree.md").is_file()
+    assert receipt["filetree"]["path"] == "filetree.md"
+    assert receipt["filetree"]["status"] == "PASS"
+    assert "filetree.md" in receipt["changes"]["run_mutations"]
+    filetree = next(row for row in receipt["obligations"] if row["surface"] == "filetree")
+    assert filetree["lifecycle"]["status"] == "CLOSED"
+    assert receipt["final_status"] == "PASS"
 
 
 def test_policy_capability_controls_are_executable(tmp_path: Path):
@@ -281,13 +282,15 @@ def test_policy_capability_controls_are_executable(tmp_path: Path):
     stack(root)
     policy = dp.load_policy()
     capability = dc.probe_module_readme_capability(root, policy, ["skills/x.py"])
-    assert capability["status"] == "NotApplicable"
-    write(root / "scripts/generate_subsystem_readmes.py", "")
-    partial = dc.probe_module_readme_capability(root, policy, ["skills/x.py"])
-    assert partial["status"] == "BLOCKED"
+    assert capability["status"] == "AVAILABLE"
+    assert capability["owner"] == "l9-update-agent-docs"
+    assert capability["present"]["generator"] is True
+    partial = dc.probe_module_readme_capability(root, policy, ["skills/x.xml"])
+    assert partial["status"] == "PARTIAL"
+    assert partial["unsupported_impacted_extensions"] == [".xml"]
 
 
-def test_optional_llms_projection_is_terminal_not_applicable(tmp_path: Path):
+def test_default_llm_projection_is_created_and_closed(tmp_path: Path):
     root = tmp_path / "repo"
     root.mkdir()
     init(root)
@@ -296,13 +299,258 @@ def test_optional_llms_projection_is_terminal_not_applicable(tmp_path: Path):
     write(root / "ARCHITECTURE.md", "# Architecture\n\nChanged.\n")
     commit(root)
     receipt = rd.audit_repository(root, changed_since=base)
-    llms = next(row for row in receipt["obligations"] if row["surface"] == "llms_txt")
-    assert llms["lifecycle"] == {
+    llm = next(row for row in receipt["obligations"] if row["surface"] == "llm_txt")
+    assert (root / "llm.txt").is_file()
+    assert (root / "filetree.md").is_file()
+    assert receipt["filetree"]["written"] is True
+    assert receipt["llm_txt"]["enabled"] is True
+    assert receipt["llm_txt"]["written"] is True
+    assert receipt["llm_txt"]["admission"] == "create"
+    assert "<!-- l9-llm-txt: generated-projection -->" in (root / "llm.txt").read_text(
+        encoding="utf-8"
+    )
+    assert llm["target"]["path"] == "llm.txt"
+    assert llm["lifecycle"]["status"] == "CLOSED"
+    assert receipt["final_status"] == "PASS"
+
+
+def test_adapter_can_disable_llm_projection(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    write(
+        root / ".claude/adapters/test-repo-update-agent-docs.md",
+        "<!-- L9_DOCS\nllm_txt: disabled\n-->\n",
+    )
+    base = commit(root, "base")
+    write(root / "ARCHITECTURE.md", "# Architecture\n\nChanged.\n")
+    commit(root)
+    receipt = rd.audit_repository(root, changed_since=base)
+    llm = next(row for row in receipt["obligations"] if row["surface"] == "llm_txt")
+    assert receipt["llm_txt"]["enabled"] is False
+    assert llm["lifecycle"] == {
         "status": "NOT_APPLICABLE",
         "reason": "surface has no applicable target for this change",
         "terminal": True,
     }
+    assert not (root / "llm.txt").exists()
+
+
+def test_legacy_llms_txt_is_renamed_when_llm_txt_is_missing(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    handwritten = "# Quantum-L9 Test\n\n## Authority\n\n- [Law](CANONICAL_LAW.md)\n"
+    write(root / "llms.txt", handwritten)
+    base = commit(root, "base")
+    write(root / "ARCHITECTURE.md", "# Architecture\n\nChanged.\n")
+    commit(root)
+    receipt = rd.audit_repository(root, changed_since=base)
+    assert (root / "llm.txt").read_text(encoding="utf-8") == handwritten
+    assert not (root / "llms.txt").exists()
+    assert receipt["llm_txt"]["admission"] == "preserve"
+    assert receipt["llm_txt"]["written"] is False
+    assert "retired:llms.txt" in receipt["changes"]["run_mutations"]
+
+
+def test_retirement_oserror_becomes_blocked_receipt(tmp_path: Path, monkeypatch):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    write(root / "llms.txt", "# leftover\n")
+    base = commit(root, "base")
+    write(root / "ARCHITECTURE.md", "# Architecture\n\nChanged.\n")
+    commit(root)
+
+    def refuse(root: Path, *, rename_missing: bool = True) -> list[str]:
+        raise OSError("read-only filesystem")
+
+    monkeypatch.setattr(rd, "retire_legacy_llms_txt", refuse)
+    receipt = rd.audit_repository(root, changed_since=base)
+    assert receipt["final_status"] == "BLOCKED"
+    assert receipt["llm_txt"]["status"] == "BLOCKED"
+    assert receipt["llm_txt"]["admission"] == "skipped"
+    assert any("read-only filesystem" in item for item in receipt["llm_txt"]["findings"])
+    assert any(
+        item["code"] == "llm_txt" and item["severity"] == "BLOCKED"
+        for item in receipt["structural_failures"]
+    )
+    llm = next(row for row in receipt["obligations"] if row["surface"] == "llm_txt")
+    assert llm["lifecycle"]["status"] == "BLOCKED"
+    assert (root / "llms.txt").is_file()
+    assert rd.validate_receipt_shape(receipt) == []
+
+
+def test_disabled_projection_retirement_oserror_is_blocked(tmp_path: Path, monkeypatch):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    write(root / "llm.txt", "# Keep this\n")
+    write(root / "llms.txt", "# leftover\n")
+    write(
+        root / ".claude/adapters/test-repo-update-agent-docs.md",
+        "<!-- L9_DOCS\nllm_txt: disabled\n-->\n",
+    )
+    base = commit(root, "base")
+    write(root / "ARCHITECTURE.md", "# Architecture\n\nChanged.\n")
+    commit(root)
+
+    def refuse(root: Path, *, rename_missing: bool = True) -> list[str]:
+        assert rename_missing is False
+        raise PermissionError("locked")
+
+    monkeypatch.setattr(rd, "retire_legacy_llms_txt", refuse)
+    receipt = rd.audit_repository(root, changed_since=base)
+    assert receipt["final_status"] == "BLOCKED"
+    assert receipt["llm_txt"]["enabled"] is False
+    assert receipt["llm_txt"]["status"] == "BLOCKED"
+    assert rd.validate_receipt_shape(receipt) == []
+
+
+def test_filetree_oserror_becomes_blocked_receipt(tmp_path: Path, monkeypatch):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    base = commit(root, "base")
+    write(root / "ARCHITECTURE.md", "# Architecture\n\nChanged.\n")
+    commit(root)
+
+    def refuse(root: Path, *, write: bool = True):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(rd, "build_filetree_state", refuse)
+    receipt = rd.audit_repository(root, changed_since=base)
+    assert receipt["final_status"] == "BLOCKED"
+    assert receipt["filetree"]["status"] == "BLOCKED"
+    assert receipt["filetree"]["written"] is False
+    assert any(item["code"] == "filetree" for item in receipt["structural_failures"])
+    assert rd.validate_receipt_shape(receipt) == []
+
+
+def test_legacy_llms_txt_is_deleted_when_llm_txt_exists(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    handwritten = "# Keep this\n\n- [Law](CANONICAL_LAW.md)\n"
+    write(root / "llm.txt", handwritten)
+    write(root / "llms.txt", "# leftover name\n")
+    base = commit(root, "base")
+    write(root / "ARCHITECTURE.md", "# Architecture\n\nChanged.\n")
+    commit(root)
+    receipt = rd.audit_repository(root, changed_since=base)
+    assert (root / "llm.txt").read_text(encoding="utf-8") == handwritten
+    assert not (root / "llms.txt").exists()
+    assert receipt["llm_txt"]["admission"] == "preserve"
+    assert "retired:llms.txt" in receipt["changes"]["run_mutations"]
+
+
+def test_write_llm_does_not_overwrite_unowned_llm_txt(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    handwritten = "# Keep this\n\n- [Law](CANONICAL_LAW.md)\n"
+    write(root / "llm.txt", handwritten)
+    base = commit(root, "base")
+    write(root / "ARCHITECTURE.md", "# Architecture\n\nChanged.\n")
+    commit(root)
+    receipt = rd.audit_repository(root, changed_since=base, write_llm=True)
+    assert (root / "llm.txt").read_text(encoding="utf-8") == handwritten
+    assert receipt["llm_txt"]["admission"] == "preserve"
+    assert receipt["llm_txt"]["written"] is False
+
+
+def test_preserved_unowned_targets_are_terminal_obligations(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    write(root / "llm.txt", "# Keep this\n\n- [Law](CANONICAL_LAW.md)\n")
+    write(root / "filetree.md", "# My own tree\n")
+    base = commit(root, "base")
+    write(root / "ARCHITECTURE.md", "# Architecture\n\nChanged.\n")
+    commit(root)
+    receipt = rd.audit_repository(root, changed_since=base, write_llm=True)
+    assert (root / "llm.txt").read_text(encoding="utf-8").startswith("# Keep this")
+    assert (root / "filetree.md").read_text(encoding="utf-8") == "# My own tree\n"
+    assert receipt["llm_txt"]["admission"] == "preserve"
+    assert receipt["filetree"]["admission"] == "preserve"
+    rows = {row["surface"]: row for row in receipt["obligations"]}
+    for surface in ("llm_txt", "filetree"):
+        assert rows[surface]["lifecycle"]["status"] == "PRESERVED"
+        assert rows[surface]["lifecycle"]["terminal"] is True
+        assert rows[surface]["required_action"]["type"] == "PRESERVE"
+        assert any(
+            row["locator"]["value"] == "admission:preserve" and row["supports"] == "preservation"
+            for row in rows[surface]["evidence"]
+        )
+    assert receipt["summary"]["open"] == 0
     assert receipt["final_status"] == "PASS"
+    assert rd.validate_receipt_shape(receipt) == []
+
+
+def test_current_owned_targets_close_without_a_rewrite(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    base = commit(root, "base")
+    write(root / "ARCHITECTURE.md", "# Architecture\n\nChanged.\n")
+    commit(root)
+    first = rd.audit_repository(root, changed_since=base)
+    assert first["llm_txt"]["admission"] == "create"
+    assert first["filetree"]["written"] is True
+    commit(root, "projections")
+    write(root / "ARCHITECTURE.md", "# Architecture\n\nChanged again.\n")
+    commit(root)
+    receipt = rd.audit_repository(root, changed_since=base)
+    assert receipt["llm_txt"]["admission"] == "unchanged"
+    assert receipt["llm_txt"]["written"] is False
+    assert receipt["filetree"]["admission"] == "unchanged"
+    assert receipt["filetree"]["written"] is False
+    assert "llm.txt" not in receipt["changes"]["run_mutations"]
+    rows = {row["surface"]: row for row in receipt["obligations"]}
+    for surface in ("llm_txt", "filetree"):
+        assert rows[surface]["lifecycle"]["status"] == "CLOSED"
+        freshness = next(
+            row
+            for row in rows[surface]["validation"]["results"]
+            if row["name"] == "target_freshness"
+        )
+        assert freshness["status"] == "PASS"
+        assert freshness["evidence_ids"]
+        assert all(
+            any(row["id"] == ev_id for row in rows[surface]["evidence"])
+            for ev_id in freshness["evidence_ids"]
+        )
+    assert receipt["final_status"] == "PASS"
+    assert rd.validate_receipt_shape(receipt) == []
+
+
+def test_skipped_admission_keeps_refresh_obligation_open(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    base = commit(root, "base")
+    write(root / "ARCHITECTURE.md", "# Architecture\n\nChanged.\n")
+    commit(root)
+    receipt = rd.audit_repository(root, changed_since=base, write_filetree=False)
+    assert receipt["filetree"]["admission"] == "skipped"
+    assert not (root / "filetree.md").exists()
+    filetree = next(row for row in receipt["obligations"] if row["surface"] == "filetree")
+    assert filetree["lifecycle"]["status"] == "OPEN"
+    freshness = next(
+        row for row in filetree["validation"]["results"] if row["name"] == "target_freshness"
+    )
+    assert freshness["status"] == "UNKNOWN"
+    assert receipt["final_status"] == "PARTIAL"
 
 
 def test_dirty_managed_region_fails_closed(tmp_path: Path):
