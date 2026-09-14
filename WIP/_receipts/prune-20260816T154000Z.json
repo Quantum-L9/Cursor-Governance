@@ -1,0 +1,498 @@
+{
+  "created_at": "2026-08-16T15:40:00Z",
+  "removed": [
+    {
+      "action": "removed",
+      "landed_path": "contracts/schemas/canonical.schema.capability_contract.v1.yaml",
+      "sha256": "28fe43ab6ae16ea1d15de95683caccddf5aedfd404179c62eb783f9b5b2657b4",
+      "wip_path": "WIP/CG/contracts/schemas/canonical.schema.capability_contract.v1.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "contracts/schemas/canonical.schema.contract_extraction_record.v1.yaml",
+      "sha256": "098841123e6fba9f96308cf794548d2feb96ffa2d15d155b3f276ccd0bae5cac",
+      "wip_path": "WIP/CG/contracts/schemas/canonical.schema.contract_extraction_record.v1.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "contracts/schemas/canonical.schema.contract_projection_binding.v1.yaml",
+      "sha256": "0f5de727ff4a71ee7f7ca667a602821c4ceae994ce5a270845cd432372e70ffa",
+      "wip_path": "WIP/CG/contracts/schemas/canonical.schema.contract_projection_binding.v1.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "contracts/schemas/canonical.schema.contract_registry.v1.yaml",
+      "sha256": "ae35b281f4e0802478bd5cbdce7d2200ce562ad96fa6e7b9bf07cf322445390e",
+      "wip_path": "WIP/CG/contracts/schemas/canonical.schema.contract_registry.v1.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "contracts/schemas/canonical.schema.cursor_rules_manifest.v3.yaml",
+      "sha256": "f8a63350745d52f77f2c8aacfabcb7c935207f237da7a551a7f13b72edb29e11",
+      "wip_path": "WIP/CG/contracts/schemas/canonical.schema.cursor_rules_manifest.v3.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "contracts/schemas/canonical.schema.evidence_contract.v1.yaml",
+      "sha256": "f3dc81f9a80c50a1f129e879f85c419514b65ceb5d76bfa2105ee5a4d4d17166",
+      "wip_path": "WIP/CG/contracts/schemas/canonical.schema.evidence_contract.v1.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "contracts/schemas/canonical.schema.governance_contract.v1.yaml",
+      "sha256": "f04cee7b798b4779e68dc77f10b77f1b7428d3a55fb6d3441b83baf4df10fc02",
+      "wip_path": "WIP/CG/contracts/schemas/canonical.schema.governance_contract.v1.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "contracts/schemas/canonical.schema.invariant_contract.v1.yaml",
+      "sha256": "c69c841ff921b5ede97e5b92184f8397e6a8c8536ce308a5c5fa80f4801347e4",
+      "wip_path": "WIP/CG/contracts/schemas/canonical.schema.invariant_contract.v1.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "contracts/schemas/canonical.schema.policy_contract.v1.yaml",
+      "sha256": "9cb8369b044a147ff840c179d56b6968c203e19c8f58fe7e8d30f8c0f1cb9ba1",
+      "wip_path": "WIP/CG/contracts/schemas/canonical.schema.policy_contract.v1.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "contracts/schemas/canonical.schema.rule_activation_binding.v1.yaml",
+      "sha256": "7701fe7a6171700041315aadb1d5e6dccbc5eb3c0c5a446ed7521932b68535f9",
+      "wip_path": "WIP/CG/contracts/schemas/canonical.schema.rule_activation_binding.v1.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "contracts/schemas/canonical.schema.workflow_contract.v1.yaml",
+      "sha256": "2a39e0fa96d17ffec84b2543e0f883529f49ab03ed3d80549998ffb61717af42",
+      "wip_path": "WIP/CG/contracts/schemas/canonical.schema.workflow_contract.v1.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "docs/decisions/ADR-0007-contracts-own-rule-semantics.md",
+      "sha256": "ef2b294bfb4020b395fd6ff2515b2054975da84daee7f124f5da591a9907ecc9",
+      "wip_path": "WIP/CG/docs/decisions/ADR-0007-contracts-own-rule-semantics.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "docs/decisions/ADR-0008-rule-activation-binding-intermediate-representation.md",
+      "sha256": "ea5e333a21688d0a0321c34123c814db4271a3fc66bf9982a084d6b542b4968d",
+      "wip_path": "WIP/CG/docs/decisions/ADR-0008-rule-activation-binding-intermediate-representation.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "docs/decisions/ADR-0009-normative-advisory-rule-channels.md",
+      "sha256": "a26310c862b63b4d6e72ab0da381a992d148fd447db3215a9fe50d1edad3c837",
+      "wip_path": "WIP/CG/docs/decisions/ADR-0009-normative-advisory-rule-channels.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "docs/decisions/ADR-0010-rule-activation-and-context-budget.md",
+      "sha256": "957569e748bfbb28bc46dda1a9efd603df6f9ec2b24f6d8b62642f66af8013dc",
+      "wip_path": "WIP/CG/docs/decisions/ADR-0010-rule-activation-and-context-budget.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "docs/decisions/ADR-0011-deterministic-generated-cursor-rule-projections.md",
+      "sha256": "a8312fef08cd7f626264c90d5920d769253a69226e083a0f92583e3ba789780f",
+      "wip_path": "WIP/CG/docs/decisions/ADR-0011-deterministic-generated-cursor-rule-projections.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "docs/decisions/ADR-0012-rules-manifest-generated-projection-registry.md",
+      "sha256": "38c0f7097d82a7b2150d286b2ba58397ae7d666a1cbd4db74708335322a5082b",
+      "wip_path": "WIP/CG/docs/decisions/ADR-0012-rules-manifest-generated-projection-registry.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "docs/decisions/ADR-0013-rule-compiler-fail-closed-conflicts-scope-and-drift.md",
+      "sha256": "8b7538f383c726d0d6609fda32f30c94c8fa0448db5b63b16baa5c1c54cc7169",
+      "wip_path": "WIP/CG/docs/decisions/ADR-0013-rule-compiler-fail-closed-conflicts-scope-and-drift.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "docs/decisions/ADR-0014-rules-strangler-migration-and-doctrine-ratchet.md",
+      "sha256": "c19009f09437f6eea7005285882a3693da79a8832c1279345729e2d7349118c9",
+      "wip_path": "WIP/CG/docs/decisions/ADR-0014-rules-strangler-migration-and-doctrine-ratchet.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "ops/config/doctrine-baseline.rules.yaml",
+      "sha256": "ac772bcf8da9f68c0c2b6bc22ecf0b6243726374765bba2790a9a9dcc5cd9973",
+      "wip_path": "WIP/CG/ops/config/doctrine-baseline.rules.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/agents/adapters/claude-code/web/setup.bootstrap.sh",
+      "sha256": "47387afb203d42cb0effc57093edf4da55b4ff90f1d9e5425eaeee511622d25e",
+      "wip_path": "WIP/claude code environment/script.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "scripts/claude-deepseek.ps1",
+      "sha256": "fdb5f66ca1253c66c9698202930baf8e22d511daad0e4357b0651b7ced098a7f",
+      "wip_path": "WIP/deepseek-claude-pack/scripts/claude-deepseek.ps1"
+    },
+    {
+      "action": "removed",
+      "landed_path": "scripts/preflight.ps1",
+      "sha256": "7397713b9d60e79da742b7dc8b22056043bdc1acc960921f6eb950df118fb0b8",
+      "wip_path": "WIP/deepseek-claude-pack/scripts/preflight.ps1"
+    },
+    {
+      "action": "removed",
+      "landed_path": "scripts/preflight.sh",
+      "sha256": "7b332567b5ab939ebb8d27674aa0b8bab81646fe63969a6cc8af08bd7782d12a",
+      "wip_path": "WIP/deepseek-claude-pack/scripts/preflight.sh"
+    },
+    {
+      "action": "removed",
+      "landed_path": "scripts/verify-routing.sh",
+      "sha256": "013dffe5c2e3740d37ab3f26bb2927882862cb7fbde4b612e6a57c5d4d09a6ef",
+      "wip_path": "WIP/deepseek-claude-pack/scripts/verify-routing.sh"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/contracts/execution/adr/ADR-0017-peer-execution-core-upstream-of-adapters.md",
+      "sha256": "2083a32877a0f1eea59620278299b2947e9009037b349f74091a81b9a21c7e77",
+      "wip_path": "WIP/llm_peer_execution_core/architecture_authority/ADR-0017-peer-execution-core-upstream-of-adapters.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/contracts/execution/adr/ADR-0018-separate-peer-identity-profile-transport-provider.md",
+      "sha256": "66fa7360e1f73dd0e4579ea0d1710ddaf9c931f6cfcd2216977d475646fcac46",
+      "wip_path": "WIP/llm_peer_execution_core/architecture_authority/ADR-0018-separate-peer-identity-profile-transport-provider.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/contracts/execution/adr/ADR-0019-canonical-execution-request-result-and-shared-transports.md",
+      "sha256": "c0aa48fcd2375dee39a6291f9b95cee38f9528bf7745ec473e091e8e38e9d47b",
+      "wip_path": "WIP/llm_peer_execution_core/architecture_authority/ADR-0019-canonical-execution-request-result-and-shared-transports.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/contracts/execution/adr/ADR-0020-provider-neutral-inference-routing-deepseek-deferred.md",
+      "sha256": "7337cd05d9c597c27846218a6368eaa5a7a4dcefe7509325d86ba96a564301bf",
+      "wip_path": "WIP/llm_peer_execution_core/architecture_authority/ADR-0020-provider-neutral-inference-routing-deepseek-deferred.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/contracts/execution/adr/ADR-0021-decompose-claude-code-thick-adapter.md",
+      "sha256": "b31251bc3054b49b1dab96d33963b9cc7a14a70268bf7a5776e1c1cd16ac0975",
+      "wip_path": "WIP/llm_peer_execution_core/architecture_authority/ADR-0021-decompose-claude-code-thick-adapter.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/contracts/execution/adr/ADR-0022-thin-adapter-conformance-is-merge-blocking.md",
+      "sha256": "f2dfb58d2da424eb0ecf521053c7fc0cae9fc8e05a964efa2db7ee9eb7bf095a",
+      "wip_path": "WIP/llm_peer_execution_core/architecture_authority/ADR-0022-thin-adapter-conformance-is-merge-blocking.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/contracts/execution/PEER_EXECUTION_THIN_ADAPTER_LAW.yaml",
+      "sha256": "aa6998a0817d884b52cc6d7541319f2307aa26afd516b4fd5bbf977c4b148c86",
+      "wip_path": "WIP/llm_peer_execution_core/architecture_authority/PEER_EXECUTION_THIN_ADAPTER_LAW.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/agents/PEER_EXECUTION.md",
+      "sha256": "019dc3fe883630ef45a06815db86013e1b04b3bfa6a4494ae74e07c8b4bbc6dc",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/agents/PEER_EXECUTION.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/agents/PEER_RUNTIME_BINDINGS.yaml",
+      "sha256": "b951cd69c8302a3831ebc9df930bcb7c745dc1cb395354c777dc0de8baa24c12",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/agents/PEER_RUNTIME_BINDINGS.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/agents/schemas/peer-runtime-bindings.schema.json",
+      "sha256": "5ddd7bb99b7ec4f0336e10a8bd269520bf5ab710e34205bf2d8cc1dbcecb4c03",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/agents/schemas/peer-runtime-bindings.schema.json"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/contracts/autonomy/README.md",
+      "sha256": "b5679586610e46c523ce5b16e0b1bb84bd66809366a4236205971b8fc0e8c0ba",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/contracts/autonomy/README.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/contracts/autonomy/meta/peer-execution-bounded-autonomy-runtime.meta.md",
+      "sha256": "f2754ccf54f7be9ccf6efd850765838d4f07fa31a27a1f208cc306dd021a27cf",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/contracts/autonomy/meta/peer-execution-bounded-autonomy-runtime.meta.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/contracts/execution/MANIFEST.yaml",
+      "sha256": "9117552dbef250ef92e3f9e82efe93f39dba0e0c7d8fc30ba2825cc9e1f9cb22",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/contracts/execution/MANIFEST.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/contracts/execution/PEER_EXECUTION_THIN_ADAPTER_LAW.yaml",
+      "sha256": "aa6998a0817d884b52cc6d7541319f2307aa26afd516b4fd5bbf977c4b148c86",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/contracts/execution/PEER_EXECUTION_THIN_ADAPTER_LAW.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/contracts/execution/README.md",
+      "sha256": "346d2eb5d26791351735cf1329987052b5d2336504588b7dbd96d64b045bc45a",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/contracts/execution/README.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/contracts/execution/adr/ADR-0017-peer-execution-core-upstream-of-adapters.md",
+      "sha256": "2083a32877a0f1eea59620278299b2947e9009037b349f74091a81b9a21c7e77",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/contracts/execution/adr/ADR-0017-peer-execution-core-upstream-of-adapters.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/contracts/execution/adr/ADR-0018-separate-peer-identity-profile-transport-provider.md",
+      "sha256": "66fa7360e1f73dd0e4579ea0d1710ddaf9c931f6cfcd2216977d475646fcac46",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/contracts/execution/adr/ADR-0018-separate-peer-identity-profile-transport-provider.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/contracts/execution/adr/ADR-0019-canonical-execution-request-result-and-shared-transports.md",
+      "sha256": "c0aa48fcd2375dee39a6291f9b95cee38f9528bf7745ec473e091e8e38e9d47b",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/contracts/execution/adr/ADR-0019-canonical-execution-request-result-and-shared-transports.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/contracts/execution/adr/ADR-0020-provider-neutral-inference-routing-deepseek-deferred.md",
+      "sha256": "7337cd05d9c597c27846218a6368eaa5a7a4dcefe7509325d86ba96a564301bf",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/contracts/execution/adr/ADR-0020-provider-neutral-inference-routing-deepseek-deferred.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/contracts/execution/adr/ADR-0021-decompose-claude-code-thick-adapter.md",
+      "sha256": "b31251bc3054b49b1dab96d33963b9cc7a14a70268bf7a5776e1c1cd16ac0975",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/contracts/execution/adr/ADR-0021-decompose-claude-code-thick-adapter.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/contracts/execution/adr/ADR-0022-thin-adapter-conformance-is-merge-blocking.md",
+      "sha256": "f2dfb58d2da424eb0ecf521053c7fc0cae9fc8e05a964efa2db7ee9eb7bf095a",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/contracts/execution/adr/ADR-0022-thin-adapter-conformance-is-merge-blocking.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/adapters/ci/github-actions/provider.py",
+      "sha256": "10d5c06b273ba2295984cc4b87a8b0e37e6ecb24295d30c32e906bc5ad71cc05",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/ci/github-actions/provider.py"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/adapters/claude-code/stream_parser.py",
+      "sha256": "3a178cabe5c1f0e75539cda4977ec36b8449b8f1f18c9bab870600ab760c4923",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/claude-code/stream_parser.py"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/adapters/codex/ADAPTER.yaml",
+      "sha256": "7e012b0245c9135a0de986b8f285f33965598d7fb2d04f01d95cac94449a7ce0",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/codex/ADAPTER.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/adapters/cursor-background/ADAPTER.yaml",
+      "sha256": "2c2cc7a5dae787a59bf4ea21d9aacff2297a09311ca434c6f8eb8886c3a416b6",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/cursor-background/ADAPTER.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/adapters/cursor-foreground/ADAPTER.yaml",
+      "sha256": "3c44c9540dae3722026283453be2940ea7178d3f162a41e59760d772deaf09cb",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/cursor-foreground/ADAPTER.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/adapters/deployment/target-specific/provider.py",
+      "sha256": "165010b9b6aff5438eaef6044f346b9a8c527f2d41cb8fa6460dda63aaedaa12",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/deployment/target-specific/provider.py"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/adapters/gemini/ADAPTER.yaml",
+      "sha256": "0b8508e8abf4dc73bf131060c94863861ccd69704044c47118127c1e0bca6b87",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/gemini/ADAPTER.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/adapters/github/checks/provider.py",
+      "sha256": "72ea752c013daba81f0067b001d142d2cb7b2b30fad4a09969ac311b0842b96c",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/github/checks/provider.py"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/adapters/github/deployments/provider.py",
+      "sha256": "5e05edcbb8bbea72157049fada8757bcb5ede2ba9cfd724cd01bdf70e3fa96f5",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/github/deployments/provider.py"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/adapters/manus/ADAPTER.yaml",
+      "sha256": "7d92ced52144b08124a820d0e61224afac28a92f9aee66c5e0d5d4c95d8c2f13",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/manus/ADAPTER.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/conformance/schemas/canonical-execution-request.schema.json",
+      "sha256": "5be2686a0dea34aee640a73d78f38c5311073509d16b9a5dfba763c96e6deb77",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/conformance/schemas/canonical-execution-request.schema.json"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/conformance/schemas/canonical-provider-result.schema.json",
+      "sha256": "dfbc69884e3384f297badd6497d0963d8806ec7d8ba4166dab890d042d854a12",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/conformance/schemas/canonical-provider-result.schema.json"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/conformance/schemas/context-manifest.schema.json",
+      "sha256": "c6f98fe50066e68ed368b3bc18e3e47e79d252fed0ade01172a4f207dce76b4a",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/conformance/schemas/context-manifest.schema.json"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/conformance/schemas/execution-adapter-spec.schema.json",
+      "sha256": "4b54c1efd8158f0a1891155d1630c5a6ee083bcae32bacb1b9aa76d880581ed0",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/conformance/schemas/execution-adapter-spec.schema.json"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/conformance/schemas/execution-profile.schema.json",
+      "sha256": "f4c89230b66b3499c50c0ed6f3e4a8d8f479e182c58552fa53aad78992b276b4",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/conformance/schemas/execution-profile.schema.json"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/integrations/agent-identity/identity_binding.py",
+      "sha256": "5967fefabad499e1dddaaae2d06d454dbe5e6acc3acaf8a99614d6e292f85a9e",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/integrations/agent-identity/identity_binding.py"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/peer_execution/README.md",
+      "sha256": "8494397945f6d85e03cf97ed8f2d4730149cbba3962e049ec4f27382f2bd12e0",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/README.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/peer_execution/__init__.py",
+      "sha256": "8adeb4908bba5f6a5fe78066a8c3df5d3b8356ba47eb2ffe5c70897bedcb52e5",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/__init__.py"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/peer_execution/autonomy/README.md",
+      "sha256": "262d4b59cde3ed9268ac6efb8bc7457ccce741bbe2f441c67fd7653459ce73bc",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/autonomy/README.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/peer_execution/bindings.py",
+      "sha256": "36d4fbbe38f4c7bed41e9e82252ef74af05c7a2303d0577a3a99aeeffb0569cc",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/bindings.py"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/peer_execution/context.py",
+      "sha256": "50e56ccd71aaf6bd3107dd4c0d7b2886b1758f88dbd81e1e42de819081901717",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/context.py"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/peer_execution/digests.py",
+      "sha256": "75fdccca72d5c80750bce58c8960198eb17da50948c049f04808be4d173db4b5",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/digests.py"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/peer_execution/imports.py",
+      "sha256": "8847fdfd6313b03d907701d12b16a4fd03007439ae3d330e47a70ef8d6b83ac7",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/imports.py"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/peer_execution/profiles.py",
+      "sha256": "aa1fd58c5815a8e747a3f85c89fb88e77c3c3fe685a4c7d71c901551fee071ab",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/profiles.py"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/peer_execution/runtime_store.py",
+      "sha256": "d0a073947e2bdc6059238230750d26d020f608520e107301e7211430ca635577",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/runtime_store.py"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/peer_execution/schema_registry.py",
+      "sha256": "eb7cd357fc48abbbde4719e2ac651c3c8f0321b7c0019821f81fe001deae02cc",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/schema_registry.py"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/registry/EXECUTION_ADAPTER_HEALTH.yaml",
+      "sha256": "582fc9abd771f928f60bc6dea08f81cdab68c054e20b884942b46028c4f8837a",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/registry/EXECUTION_ADAPTER_HEALTH.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/registry/EXECUTION_ADAPTER_REGISTRY.yaml",
+      "sha256": "5dc61cdb25ca98c76a775d2fcfe7c0e8eb7f961327b96c25f92233573a16c464",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/registry/EXECUTION_ADAPTER_REGISTRY.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/registry/EXECUTION_CONCURRENCY_POLICY.yaml",
+      "sha256": "f285ff70c137e0c4f5a3fd6b1eba5fc6f00be3574dd32b79aa47fd326697669a",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/registry/EXECUTION_CONCURRENCY_POLICY.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/registry/EXECUTION_PROFILE_REGISTRY.yaml",
+      "sha256": "84e22c36e0e19a3e59032455f20c0954538d44abbdcb07ed3d5f715f9a66ddb9",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/registry/EXECUTION_PROFILE_REGISTRY.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/registry/EXECUTION_ROUTING_POLICY.yaml",
+      "sha256": "dd75195c3d5be7ae75e610b0f17446ff965d08c62c738a83dc3596f4fc22abb2",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/registry/EXECUTION_ROUTING_POLICY.yaml"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/scripts/render_adapter_matrix.py",
+      "sha256": "c66fb68911f03ddaf9146af80390e0d388050aea32bf61aa4d6853dfb4f2340d",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/scripts/render_adapter_matrix.py"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/validation/README.md",
+      "sha256": "b7cf56aa747119dfce74837e8de0557645b6a322cd9de43104b9dc5304485fce",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/validation/README.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "environment/program-execution/validation/VALIDATION.md",
+      "sha256": "670b748cf6ad4359d28d774712a28633f64c1553cdfcc08704065553e18a03c2",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/validation/VALIDATION.md"
+    },
+    {
+      "action": "removed",
+      "landed_path": "ops/scripts/validate_autonomy_contracts.py",
+      "sha256": "07db813ae014e47997c14ec1171e6b9973a1d5ec0c60da1ed8e93c9a3f6ece7e",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/ops/scripts/validate_autonomy_contracts.py"
+    },
+    {
+      "action": "removed",
+      "landed_path": "skills/l9-bounded-autonomy/references/claude-code-bridge.md",
+      "sha256": "2580525ea70bce316bd442485dd20f1db8ae39b022c108f3664071a2faf1308d",
+      "wip_path": "WIP/llm_peer_execution_core/repo_overlay/skills/l9-bounded-autonomy/references/claude-code-bridge.md"
+    }
+  ],
+  "schema": "l9.wip.prune_receipt.v1"
+}

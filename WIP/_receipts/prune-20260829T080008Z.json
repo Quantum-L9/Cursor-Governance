@@ -1,0 +1,113 @@
+{
+  "created_at": "2026-08-29T08:00:08Z",
+  "pr": 384,
+  "reason": "bytes-match copies of files pushed on PR 384; leave PR worktree intact",
+  "ref": "origin/agent/cursor/leftover-wt-harvest",
+  "removed": [
+    {
+      "action": "removed",
+      "landed_path": "PR#384:WIP/8-28-26/intelligence-harvest/no-regress-git-work-preserve/DONOR-HARVEST-BRIEF.md",
+      "sha256": "06f8ca09ff1d5dd02724c58f8cdb5180f0e26beedd0ad65900ee06fa176318ad",
+      "wip_path": "WIP/8-28-26/intelligence-harvest/no-regress-git-work-preserve/DONOR-HARVEST-BRIEF.md",
+      "worktree": "/Users/ib-mac/Cursor-Governance"
+    },
+    {
+      "action": "removed",
+      "landed_path": "PR#384:WIP/8-28-26/intelligence-harvest/no-regress-git-work-preserve/harvest-receipt.json",
+      "sha256": "1813385ef71d11ae1c0f6cd4e0740835b0cb5359876fec21fbdbbc58d98e35c9",
+      "wip_path": "WIP/8-28-26/intelligence-harvest/no-regress-git-work-preserve/harvest-receipt.json",
+      "worktree": "/Users/ib-mac/Cursor-Governance"
+    },
+    {
+      "action": "removed",
+      "landed_path": "PR#384:WIP/8-28-26/intelligence-harvest/no-regress-git-work-preserve/harvest.json",
+      "sha256": "3a3ca9eca5b5c45ab489310e90b64fc43aa89a7f67912137a6b56c64852dd39e",
+      "wip_path": "WIP/8-28-26/intelligence-harvest/no-regress-git-work-preserve/harvest.json",
+      "worktree": "/Users/ib-mac/Cursor-Governance"
+    },
+    {
+      "action": "removed",
+      "landed_path": "PR#384:WIP/8-28-26/novel-remainder-harvest/allowlist.json",
+      "sha256": "6c0465557d2152c343f191e453ff8d6065ac5dd863e4d31ec849fcdd2971f4aa",
+      "wip_path": "WIP/8-28-26/novel-remainder-harvest/allowlist.json",
+      "worktree": "/Users/ib-mac/Cursor-Governance"
+    },
+    {
+      "action": "removed",
+      "landed_path": "PR#384:WIP/8-28-26/novel-remainder-harvest/skip.json",
+      "sha256": "b593bff52cb006762b1b72fe2c796b195aa546b581781574cac0db32759d2e09",
+      "wip_path": "WIP/8-28-26/novel-remainder-harvest/skip.json",
+      "worktree": "/Users/ib-mac/Cursor-Governance"
+    },
+    {
+      "action": "removed",
+      "landed_path": "PR#384:WIP/8-28-26/novel-remainder-harvest/triage-ssot.json",
+      "sha256": "59d94323860bd3f17dcde8aa974ba46fc15690ddf206a3f13d41bf2d6bdf21ef",
+      "wip_path": "WIP/8-28-26/novel-remainder-harvest/triage-ssot.json",
+      "worktree": "/Users/ib-mac/Cursor-Governance"
+    },
+    {
+      "action": "removed",
+      "landed_path": "PR#384:WIP/8-28-26/novel-remainder-harvest/triage-ws.json",
+      "sha256": "f2c585e1d791fbd994ad2ad96cd43b660ec8b064e8552a4e855978103c93cf1d",
+      "wip_path": "WIP/8-28-26/novel-remainder-harvest/triage-ws.json",
+      "worktree": "/Users/ib-mac/Cursor-Governance"
+    },
+    {
+      "action": "removed",
+      "landed_path": "PR#384:WIP/PE Odoo/Odoo Intent 1.md",
+      "sha256": "16dff38c1bb3bec2d9b55c5e92336e1392056c2db39fdcc95d93ea9b30f0a32b",
+      "wip_path": "WIP/PE Odoo/Odoo Intent 1.md",
+      "worktree": "/Users/ib-mac/Cursor-Governance"
+    },
+    {
+      "action": "removed",
+      "landed_path": "PR#384:WIP/PE Odoo/Odoo Intent 2.md",
+      "sha256": "259402a6f2e08b55910d2a48d4c3a836f98bdcb1acd06c973f826bb5c4db06f6",
+      "wip_path": "WIP/PE Odoo/Odoo Intent 2.md",
+      "worktree": "/Users/ib-mac/Cursor-Governance"
+    },
+    {
+      "action": "removed",
+      "landed_path": "PR#384:WIP/PE Odoo/PE Odoo.md",
+      "sha256": "2902d962714ad17ef2bef9aad7fa9367abeae534c55139da5c3bd7fc5f8425c2",
+      "wip_path": "WIP/PE Odoo/PE Odoo.md",
+      "worktree": "/Users/ib-mac/Cursor-Governance"
+    },
+    {
+      "action": "removed",
+      "landed_path": "PR#384:docs/plans/no-regress_invariant_harvest_22917263.plan.md",
+      "sha256": "370490c16ef4343bb3c993cf30ddc0363e16d8e625543ba02e6b7fb3456abb15",
+      "wip_path": "docs/plans/no-regress_invariant_harvest_22917263.plan.md",
+      "worktree": "/Users/ib-mac/Cursor-Governance"
+    },
+    {
+      "action": "removed",
+      "landed_path": "PR#384:WIP/8-28-26/novel-remainder-harvest/prune-execute.json",
+      "sha256": "2bb20ea54d98482ad8e861b5ee5cd97cacc65074e19182f55caa1a55c985a430",
+      "wip_path": "WIP/8-28-26/novel-remainder-harvest/prune-execute.json",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/cursor__novel-remainder-product"
+    },
+    {
+      "action": "removed",
+      "landed_path": "PR#384:WIP/8-28-26/novel-remainder-harvest/prune-propose.json",
+      "sha256": "0cf784c29ce69ecadb4c0287533d74f05d680d2135702ce5f27905686b7ad7d6",
+      "wip_path": "WIP/8-28-26/novel-remainder-harvest/prune-propose.json",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/cursor__novel-remainder-product"
+    }
+  ],
+  "schema": "l9.wip.prune_receipt.v1",
+  "skipped": [
+    {
+      "local_sha256": "19deb171ef651163d9c64ee0f97b17639cd947cc9b7a6c9f87d3ed32a388852b",
+      "path": "docs/plans/stop_dirt_at_source_f93621d0.plan.md",
+      "pr_sha256": "5a1b0e26ec527a3de1769901d1187054b9e964b3a79e35c58e1f513476e8c4aa",
+      "reason": "sha_mismatch_keep",
+      "worktree": "/Users/ib-mac/Cursor-Governance"
+    },
+    {
+      "reason": "keep_pr_worktree",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/cursor__leftover-wt-harvest"
+    }
+  ]
+}

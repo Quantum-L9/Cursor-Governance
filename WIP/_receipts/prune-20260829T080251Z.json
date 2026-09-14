@@ -1,0 +1,78 @@
+{
+  "created_at": "2026-08-29T08:02:51Z",
+  "indexed_paths": 312,
+  "kept_mismatch": [
+    {
+      "path": "docs/plans/fleet_issues_diagnose_ee5fa300.plan.md",
+      "reason": "sha_mismatch",
+      "worktree": "/Users/ib-mac/Cursor-Governance"
+    },
+    {
+      "path": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md",
+      "reason": "sha_mismatch",
+      "worktree": "/Users/ib-mac/Cursor-Governance"
+    },
+    {
+      "path": "docs/plans/stop_dirt_at_source_f93621d0.plan.md",
+      "reason": "sha_mismatch",
+      "worktree": "/Users/ib-mac/Cursor-Governance"
+    },
+    {
+      "path": "commands/ff.md",
+      "reason": "sha_mismatch",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "path": "environment/generated/llm-rules/55-ff-only-ssot-sync.md",
+      "reason": "sha_mismatch",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "path": "rules/55-ff-only-ssot-sync.mdc",
+      "reason": "sha_mismatch",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "path": "skills/l9-repo-sync/SKILL.md",
+      "reason": "sha_mismatch",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "path": "skills/l9-repo-sync/references/diagnose-first.md",
+      "reason": "sha_mismatch",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "path": "skills/l9-repo-sync/references/execute.md",
+      "reason": "sha_mismatch",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "path": "skills/l9-repo-sync/references/forbidden.md",
+      "reason": "sha_mismatch",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "path": "skills/l9-repo-sync/scripts/ff.sh",
+      "reason": "sha_mismatch",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "path": "skills/l9-repo-sync/scripts/validate_pack_structure.py",
+      "reason": "sha_mismatch",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    }
+  ],
+  "open_prs": [
+    384,
+    383,
+    382,
+    381,
+    380,
+    379
+  ],
+  "reason": "untracked copies whose bytes match a blob on an open PR; tracked PR checkouts left intact",
+  "removed": [],
+  "scanned_untracked": 76,
+  "schema": "l9.wip.prune_receipt.v1"
+}

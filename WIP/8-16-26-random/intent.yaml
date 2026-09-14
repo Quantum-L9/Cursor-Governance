@@ -1,0 +1,641 @@
+schema: l9.program-execution.campaign-source.v2
+schema_version: 2.0.0
+
+metadata:
+  campaign_id: adr-identity-integrity-v1
+  title: ADR Identity Integrity and Machine Authority Hardening
+  version: 1.0.0
+  created_at: "2026-08-16T13:41:00Z"
+  status: operator_intake
+  owner: "Igor Beylin"
+
+  intended_host: Quantum-L9/Cursor-Governance
+  intended_drop_path: >-
+    environment/program-execution/campaigns/adr-identity-integrity-v1/CAMPAIGN_SOURCE.yaml
+
+  runtime_root: "$HOME/.l9/programs/adr-identity-integrity-v1"
+  worktree_root: "$HOME/.l9/program-worktrees/adr-identity-integrity-v1"
+
+  source_is_immutable: true
+  remote_mutation_during_admission: false
+
+
+integrity:
+  digest_algorithm: sha256
+  canonical_encoding: utf-8
+  canonical_line_endings: lf
+  digest_record_location: controller/admission/source-integrity-receipt.json
+  generated_counts_or_digests_may_be_hand_edited: false
+
+
+pipeline_contract:
+  pair: program-execution-system.v2
+  blueprint: program-execution-blueprint.v2
+  controller: program-execution-controller.v2
+
+  required_host_surfaces:
+    - docs/decisions
+    - skills/l9-architecture-decision-records
+    - environment/program-execution
+    - environment/program-execution/core
+    - environment/program-execution/campaigns
+    - existing repository validation / CI surfaces
+
+  compilation_sequence:
+    - preserve_immutable_campaign_source
+    - bind_exact_cursor_governance_revision
+    - inventory_every_adr_filename_heading_and_reference
+    - prove_current_collision_set
+    - validate_proposed_identity_migration
+    - instantiate_native_blueprint_and_controller
+    - validate_blueprint
+    - create_program_lock
+    - perform_git_aware_adr_renames
+    - rewrite_references_semantically
+    - harden_machine_adr_references
+    - add_permanent_uniqueness_validation
+    - run_full_reference_and_governance_validation
+    - independently_verify_no_semantic_adr_changes
+    - publish_scoped_green_campaign_pr
+    - halt_before_merge
+    - export_controller_handoff_receipt
+
+  authority_boundaries:
+    campaign_source_owns: operator_intent_and_identity_migration_plan
+    docs_decisions_owns: architecture_decision_content
+    program_execution_owns: machine_authority_consumption
+    existing_validation_surface_owns: permanent_integrity_enforcement
+    controller_owns: mutable_runtime_state_and_gate_results
+    activation_prompt_owns: launch_mechanics_only
+
+
+operator_directive:
+  objective: >-
+    Eliminate duplicate Architecture Decision Record identities from
+    Cursor-Governance without changing any accepted architectural decision.
+
+    Restore a globally unique ADR namespace, update every affected semantic
+    reference, eliminate ambiguous machine consumption of ADR identifiers,
+    and add a permanent fail-closed validation gate that prevents duplicate
+    ADR identities from entering the repository again.
+
+  mode: controlled_autonomous_until_material_boundary
+
+  auto_continue:
+    - repository_inspection
+    - reference_graph_construction
+    - git_history_inspection
+    - reversible_git_rename
+    - deterministic_reference_rewrite
+    - machine_reference_hardening
+    - validator_implementation
+    - local_validation
+    - independent_verification
+    - commit
+    - push
+    - pull_request_creation
+    - green_pr_remediation_within_campaign_policy
+
+  pause_only_for:
+    - evidence_contradicts_the_locked_migration_plan
+    - an_adr_semantic_decision_would_need_to_change
+    - an_ambiguous_reference_cannot_be_resolved_from_repository_evidence
+    - renumbering_would_change_program_execution_authority
+    - unrelated_repository_failure_blocks_validation
+    - merge_authorization_required
+
+
+program:
+  id: adr-identity-integrity-v1
+  name: ADR Identity Integrity and Machine Authority Hardening
+  version: 1.0.0
+  owner: "Igor Beylin"
+  definition_status: accepted
+  snapshot_at: "2026-08-16"
+
+  objective: >-
+    Make every ADR numeric identity globally unique and every machine-consumed
+    ADR reference unambiguous while preserving all accepted decision semantics.
+
+  problem_statement: >-
+    docs/decisions currently contains duplicate numeric ADR identities.
+
+    ADR-0007 has three independent decisions.
+
+    ADR-0008 through ADR-0014 each have multiple independent decisions.
+
+    Program Execution already consumes ADR-0011 through ADR-0016 as governing
+    authority for program-execution.replan.v1.
+
+    Bare numeric identifiers therefore cannot be trusted as globally unique
+    authority references.
+
+  target_state: >-
+    Every docs/decisions/ADR-NNNN-*.md file has a globally unique NNNN.
+
+    Filename number and document heading number agree.
+
+    Existing Program Execution ADR-0007 through ADR-0016 retain their current
+    identities.
+
+    ADR-0017 through ADR-0022 retain their current identities.
+
+    The Cloud Graphiti decision becomes ADR-0023.
+
+    The contract-first rule compiler decision series becomes ADR-0024 through
+    ADR-0031 while preserving its internal semantic order.
+
+    Every repository reference resolves to exactly one intended ADR.
+
+    Machine-readable authority contracts use exact canonical ADR references
+    where their schemas permit doing so.
+
+    Immutable historical CAMPAIGN_SOURCE.yaml files are not rewritten.
+
+    CI / repository validation rejects duplicate ADR numbers, filename-heading
+    mismatch, malformed references, and unresolved machine ADR references.
+
+
+scope:
+  include:
+    - docs/decisions
+    - references to affected ADRs throughout Cursor-Governance
+    - environment/program-execution/core/shared/REPLAN_CONTRACT.yaml
+    - other active machine-readable contracts that consume ADR identifiers
+    - skills/l9-architecture-decision-records/SKILL.md
+    - existing validation / CI wiring required to enforce ADR integrity
+
+  exclude:
+    - changing the substance of an accepted ADR
+    - changing ADR Status values
+    - rewriting immutable historical CAMPAIGN_SOURCE.yaml bytes
+    - renumbering already-unique ADR-0001 through ADR-0006
+    - renumbering the Program Execution ADR-0007 through ADR-0016 series
+    - renumbering ADR-0017 through ADR-0022
+    - unrelated documentation cleanup
+    - new repository creation
+    - new governance subsystem
+    - merge
+    - release
+    - deployment
+    - destructive history rewriting
+
+
+identity_policy:
+  canonical_namespace: docs/decisions/ADR-NNNN-*.md
+
+  invariants:
+    - numeric_id_is_globally_unique
+    - filename_number_matches_h1_number
+    - one_numeric_id_resolves_to_exactly_one_current_adr
+    - renumbering_does_not_change_decision_semantics
+    - immutable_campaign_sources_remain_byte_identical
+    - machine_authority_references_must_be_unambiguous
+    - new_adr_number_is_max_existing_plus_one
+    - validator_fails_closed_on_duplicate_identity
+
+  preservation:
+    keep_unchanged:
+      - ADR-0001
+      - ADR-0002
+      - ADR-0003
+      - ADR-0004
+      - ADR-0005
+      - ADR-0006
+      - ADR-0007-goal-level-intent-front-door
+      - ADR-0008-intent-resolution-provenance-boundary
+      - ADR-0009-named-autonomy-policy-profiles
+      - ADR-0010-blueprint-synthesis-controller-boundary
+      - ADR-0011-bounded-replanning-within-program-lock
+      - ADR-0012-evidence-gated-replan-revisions
+      - ADR-0013-canonical-peer-semantics-no-local-forks
+      - ADR-0014-atomic-all-peer-semantic-revisions
+      - ADR-0015-golden-semantic-vectors-peer-parity
+      - ADR-0016-typed-runtime-state-context-projections
+      - ADR-0017-peer-execution-core-upstream-of-adapters
+      - ADR-0018-separate-peer-identity-profile-transport-provider
+      - ADR-0019-canonical-execution-request-result-and-shared-transports
+      - ADR-0020-provider-neutral-inference-routing-deepseek-deferred
+      - ADR-0021-decompose-claude-code-thick-adapter
+      - ADR-0022-thin-adapter-conformance-is-merge-blocking
+
+
+migration_plan:
+  # Identity correction only.
+  # Use git mv so rename history remains visible.
+
+  renames:
+    - from: docs/decisions/ADR-0007-cloud-graphiti-https-reachability.md
+      to: docs/decisions/ADR-0023-cloud-graphiti-https-reachability.md
+      old_id: ADR-0007
+      new_id: ADR-0023
+
+    - from: docs/decisions/ADR-0007-contracts-own-rule-semantics.md
+      to: docs/decisions/ADR-0024-contracts-own-rule-semantics.md
+      old_id: ADR-0007
+      new_id: ADR-0024
+
+    - from: docs/decisions/ADR-0008-rule-activation-binding-intermediate-representation.md
+      to: docs/decisions/ADR-0025-rule-activation-binding-intermediate-representation.md
+      old_id: ADR-0008
+      new_id: ADR-0025
+
+    - from: docs/decisions/ADR-0009-normative-advisory-rule-channels.md
+      to: docs/decisions/ADR-0026-normative-advisory-rule-channels.md
+      old_id: ADR-0009
+      new_id: ADR-0026
+
+    - from: docs/decisions/ADR-0010-rule-activation-and-context-budget.md
+      to: docs/decisions/ADR-0027-rule-activation-and-context-budget.md
+      old_id: ADR-0010
+      new_id: ADR-0027
+
+    - from: docs/decisions/ADR-0011-deterministic-generated-cursor-rule-projections.md
+      to: docs/decisions/ADR-0028-deterministic-generated-cursor-rule-projections.md
+      old_id: ADR-0011
+      new_id: ADR-0028
+
+    - from: docs/decisions/ADR-0012-rules-manifest-generated-projection-registry.md
+      to: docs/decisions/ADR-0029-rules-manifest-generated-projection-registry.md
+      old_id: ADR-0012
+      new_id: ADR-0029
+
+    - from: docs/decisions/ADR-0013-rule-compiler-fail-closed-conflicts-scope-and-drift.md
+      to: docs/decisions/ADR-0030-rule-compiler-fail-closed-conflicts-scope-and-drift.md
+      old_id: ADR-0013
+      new_id: ADR-0030
+
+    - from: docs/decisions/ADR-0014-rules-strangler-migration-and-doctrine-ratchet.md
+      to: docs/decisions/ADR-0031-rules-strangler-migration-and-doctrine-ratchet.md
+      old_id: ADR-0014
+      new_id: ADR-0031
+
+  content_changes_allowed:
+    - update_H1_ADR_number_to_match_new_filename
+    - update_internal_Related_references
+    - update_cross_repository_internal_references_to_new_identity
+    - replace_ambiguous_machine_reference_with_exact_canonical_reference
+
+  content_changes_forbidden:
+    - alter_Context_semantics
+    - alter_Decision_semantics
+    - alter_Options_considered
+    - alter_Consequences_semantics
+    - alter_Status
+    - silently_change_authority_relationships
+
+
+reference_resolution:
+  before_mutation:
+    - inventory_every_occurrence_of_ADR_0007_through_ADR_0014
+    - inventory_exact_path_references_to_every_moved_file
+    - inventory_machine_readable_governing_adrs_fields
+    - inventory_markdown_links
+    - inventory_generated_artifacts_that_must_be_regenerated_not_hand_edited
+
+  resolution_rules:
+    - exact_path_reference_wins
+    - exact_title_reference_wins
+    - semantic_context_may_resolve_only_when_unique
+    - bare_numeric_reference_that_matches_multiple_pre_migration_ADRs_is_ambiguous
+    - ambiguous_reference_must_not_be_guessed
+    - immutable_historical_sources_are_evidence_not_rewrite_targets
+
+  machine_reference_policy:
+    preferred_form: exact_repo_relative_adr_path
+    example: >-
+      docs/decisions/ADR-0011-bounded-replanning-within-program-lock.md
+
+    requirements:
+      - active_machine_contracts_must_not_depend_on_ambiguous_numeric_ids
+      - schemas_must_not_be_widened_merely_to_avoid_reference_cleanup
+      - generated_files_must_be_regenerated_from_their_owner
+
+
+authorities:
+  - id: AUTH-001
+    responsibility: terminal_program_verdict
+    owner: Igor Beylin
+    authority_type: human_owner
+
+  - id: AUTH-002
+    responsibility: accepted_adr_semantics
+    owner: docs/decisions
+    authority_type: architecture_authority
+
+  - id: AUTH-003
+    responsibility: program_execution_machine_authority
+    owner: environment/program-execution/core
+    authority_type: canonical_system_owner
+
+  - id: AUTH-004
+    responsibility: adr_creation_and_numbering_contract
+    owner: skills/l9-architecture-decision-records
+    authority_type: governance_contract
+
+  - id: AUTH-005
+    responsibility: adr_integrity_verification
+    owner: existing_repository_validation_surface
+    authority_type: independent_validation
+
+
+unknowns:
+  - id: UNK-001
+    statement: >-
+      Exact full set of repository references to collided ADR numbers must be
+      established from the execution checkout before mutation.
+    blocks:
+      - TASK-002
+    resolution: repository_wide_reference_graph
+
+  - id: UNK-002
+    statement: >-
+      Exact existing repository validation hook in which ADR identity integrity
+      belongs must be discovered rather than creating a parallel validation
+      framework.
+    blocks:
+      - TASK-003
+    resolution: inspect_existing_make_ci_precommit_and_governance_validation
+
+
+prohibited_actions:
+  - modify_accepted_decision_semantics
+  - delete_an_adr_to_remove_collision
+  - preserve_duplicate_numeric_ids_through_aliasing
+  - treat_ambiguous_numeric_id_as_machine_authority
+  - rewrite_immutable_campaign_source
+  - edit_generated_artifact_instead_of_its_owner
+  - create_parallel_adr_registry_when_existing_repository_structure_suffices
+  - create_new_repository
+  - rewrite_git_history
+  - merge
+  - release
+  - deploy
+
+
+workstreams:
+  - id: WS-01
+    name: Identity migration
+    objective: Remove the existing collision without changing architecture.
+
+  - id: WS-02
+    name: Reference integrity
+    objective: Make every active reference resolve to exactly one ADR.
+
+  - id: WS-03
+    name: Permanent enforcement
+    objective: Make duplicate ADR identity impossible to land again.
+
+  - id: WS-04
+    name: Independent verification and landing
+    objective: Prove semantic preservation and publish a green scoped PR.
+
+
+tasks:
+  - id: TASK-001
+    workstream_id: WS-01
+    title: Prove collision set and lock migration
+    objective: >-
+      Establish the exact ADR inventory and reference graph and verify that the
+      migration_plan remains valid against the current checkout.
+    actions:
+      - parse_all_ADR_filenames
+      - parse_all_ADR_H1_identifiers
+      - detect_duplicate_numeric_ids
+      - construct_repo_wide_reference_graph
+      - inspect_git_status_and_base_revision
+      - verify_destination_ids_0023_through_0031_are_free
+      - verify_preserved_program_execution_series_matches_REPLAN_CONTRACT
+    acceptance:
+      - duplicate_set_is_exact
+      - migration_has_no_destination_collision
+      - every_affected_reference_is_inventoryed
+    completion_gate: GATE-001
+
+  - id: TASK-002
+    workstream_id: WS-01
+    title: Execute ADR identity migration
+    objective: >-
+      Rename the nine conflicting ADRs with git-aware moves and update only
+      identity-bearing content and resolved references.
+    actions:
+      - perform_migration_plan_with_git_mv
+      - update_each_moved_ADR_H1
+      - update_rule_series_internal_cross_references
+      - update_graphiti_references
+      - update_repository_references_using_reference_graph
+      - preserve_immutable_campaign_sources
+    acceptance:
+      - every_ADR_numeric_id_is_unique
+      - every_filename_matches_heading
+      - all_decision_semantics_are_preserved
+      - no_immutable_campaign_source_changed
+    completion_gate: GATE-002
+
+  - id: TASK-003
+    workstream_id: WS-02
+    title: Harden active machine ADR references
+    objective: >-
+      Remove bare ambiguous ADR authority references from active machine
+      contracts where exact paths are supported.
+    actions:
+      - inspect_all_active_machine_readable_ADR_consumers
+      - update_REPLAN_CONTRACT_governing_adrs_to_exact_canonical_paths
+      - update_other_active_machine_consumers_when_supported
+      - preserve_historical_immutable_sources
+    acceptance:
+      - REPLAN_CONTRACT_resolves_exactly_the_bounded_replanning_ADRs
+      - no_active_machine_reference_resolves_to_multiple_ADRs
+    completion_gate: GATE-003
+
+  - id: TASK-004
+    workstream_id: WS-03
+    title: Add permanent ADR identity integrity gate
+    objective: >-
+      Extend the existing repository validation architecture so ADR collisions
+      fail before merge.
+    actions:
+      - discover_existing_validation_owner
+      - add_deterministic_ADR_identity_check_there
+      - enforce_unique_numeric_prefix
+      - enforce_filename_heading_match
+      - enforce_sequential_new_ADR_allocation
+      - enforce_resolvable_machine_ADR_references
+      - add_negative_duplicate_fixture
+      - add_negative_heading_mismatch_fixture
+      - add_negative_unresolved_reference_fixture
+      - update_l9_architecture_decision_records_skill_to_fail_closed_on_existing_collision
+      - wire_check_into_existing_blocking_validation
+    acceptance:
+      - duplicate_ADR_fixture_fails
+      - filename_heading_mismatch_fails
+      - unresolved_machine_reference_fails
+      - current_repository_passes
+      - no_parallel_validation_framework_created
+    completion_gate: GATE-004
+
+  - id: TASK-005
+    workstream_id: WS-04
+    title: Independently verify semantic preservation
+    objective: >-
+      Prove this is an identity correction only.
+    actions:
+      - compare_pre_and_post_ADR_content_excluding_allowed_identity_edits
+      - verify_Status_unchanged
+      - verify_Decision_sections_semantically_unchanged
+      - verify_Options_and_Consequences_semantically_unchanged
+      - verify_every_old_moved_path_has_one_new_destination
+      - run_repository_validation
+      - run_program_execution_conformance
+      - run_replan_contract_tests
+      - scan_again_for_duplicate_ADR_ids
+    acceptance:
+      - zero_duplicate_ADR_numbers
+      - zero_unresolved_active_ADR_references
+      - zero_unapproved_semantic_changes
+      - Program_Execution_conformance_PASS
+      - repository_validation_PASS
+    completion_gate: GATE-005
+
+  - id: TASK-006
+    workstream_id: WS-04
+    title: Publish scoped correction PR and close program
+    objective: >-
+      Publish only the ADR identity correction and permanent integrity gate,
+      using existing campaign landing policy.
+    actions:
+      - commit_scoped_changes
+      - execute_PR_REMEDIATE_0_make_pr
+      - converge_PR_to_green_merge_ready_within_existing_policy
+      - do_not_merge
+      - export_Controller_handoff
+    acceptance:
+      - PR_is_green
+      - PR_is_merge_ready
+      - PR_contains_no_unrelated_changes
+      - merge_not_performed
+      - handoff_receipt_valid
+    completion_gate: GATE-006
+
+
+gates:
+  - id: GATE-001
+    name: Collision and migration proof
+    blocking: true
+    pass_when:
+      - current collision set exactly matches evidence
+      - ADR-0023 through ADR-0031 are available
+      - all affected references are inventoried
+      - migration preserves locked Program Execution ADR IDs
+
+  - id: GATE-002
+    name: Unique ADR namespace
+    blocking: true
+    pass_when:
+      - every current ADR number is globally unique
+      - filename and H1 agree
+      - nine planned renames completed
+      - no decision semantics changed
+
+  - id: GATE-003
+    name: Machine authority resolution
+    blocking: true
+    pass_when:
+      - active machine ADR references resolve uniquely
+      - REPLAN_CONTRACT resolves exactly ADR-0011 through ADR-0016 by canonical path
+      - immutable campaign sources are unchanged
+
+  - id: GATE-004
+    name: Permanent integrity enforcement
+    blocking: true
+    pass_when:
+      - duplicate fixture fails
+      - heading mismatch fixture fails
+      - unresolved machine reference fixture fails
+      - valid repository passes
+      - check is part of existing blocking validation
+
+  - id: GATE-005
+    name: Semantic preservation
+    blocking: true
+    pass_when:
+      - independent comparison detects no decision-semantic changes
+      - Program Execution validation passes
+      - repository validation passes
+      - no duplicate ADR ids remain
+
+  - id: GATE-006
+    name: Scoped handoff
+    blocking: true
+    pass_when:
+      - scoped PR exists
+      - PR is green and merge-ready
+      - no unrelated changes exist
+      - Controller handoff validates
+      - merge has not occurred
+
+
+registration:
+  campaign_policy:
+    file: environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml
+    action: >-
+      Register adr-identity-integrity-v1 as the next Cursor-Governance
+      governance-integrity campaign before further architecture evolution.
+      Preserve completed campaign ordering. Shift later planned execute_order
+      values as necessary rather than reusing an existing order.
+
+  compile_allowlist:
+    file: environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml
+    action: add adr-identity-integrity-v1
+
+  live_ledger:
+    file: environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml
+    initial_state: planned
+    rule: >-
+      Do not edit immutable completed campaign source files. Use the existing
+      live ledger/closeout mechanism for runtime lifecycle.
+
+  documentation:
+    action: >-
+      Update the existing campaign README/status presentation through its
+      canonical owner if required; do not create a second campaign index.
+
+
+rollback:
+  strategy: revert_campaign_changes_as_one_identity_migration
+  requirements:
+    - preserve_campaign_evidence
+    - never_revert_only_half_of_the_renumbering
+    - ADR_rename_and_reference_updates_are_atomic
+    - permanent_validator_may_not_activate_against_half_migrated_namespace
+    - no_git_history_rewrite
+
+  trigger:
+    - unresolved_reference_after_migration
+    - semantic_ADR_change_detected
+    - Program_Execution_authority_regression
+    - repository_validation_regression
+
+
+closeout:
+  required:
+    - exact_base_sha
+    - exact_candidate_sha
+    - old_to_new_ADR_mapping
+    - duplicate_count_before
+    - duplicate_count_after
+    - reference_count_updated
+    - ambiguous_references_remaining
+    - immutable_campaign_source_digest_check
+    - Program_Execution_validation_result
+    - ADR_integrity_validation_result
+    - scoped_PR
+    - merge_status
+    - remaining_risks
+    - recommended_terminal_verdict
+
+  success:
+    duplicate_count_after: 0
+    ambiguous_active_references_remaining: 0
+    immutable_campaign_sources_modified: 0
+    merge_status: not_merged
