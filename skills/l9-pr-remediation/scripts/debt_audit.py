@@ -10,19 +10,6 @@ Summary:
     Detects a repository's owned toolchain (Python: ruff/mypy/pytest; Node:
     eslint/tsc/tests/build), records preferred invocations, runs runnable gates, and
     writes a secret-free JSON baseline snapshot (`debt-baseline.json` by convention).
-
-Extended Metadata:
-    See __footer_meta__ at module footer for full governance, classification,
-    and audit metadata. Runtime trace in __l9_trace__ at very end.
-
-================================================================================
-# HEADER META - Module Identity (Static)
-# component_id: SKILL-PRREM-DEBT-001
-# layer: skill
-# domain: pr-remediation
-# governance_level: standard
-# created_at: 2026-08-04
-================================================================================
 """
 
 from __future__ import annotations
@@ -381,55 +368,12 @@ def main() -> int:
     return 0
 
 
-__footer_meta__ = {
-    "component_id": "SKILL-PRREM-DEBT-001",
-    "component_name": "debt_audit",
-    "module_version": "1.0.0",
-    "created_at": "2026-08-04",
-    "created_by": "l9-pr-remediation",
-    "layer": "skill",
-    "domain": "pr-remediation",
-    "type": "cli_script",
-    "status": "active",
-    "governance_level": "standard",
-    "compliance_required": True,
-    "audit_trail": True,
-    "purpose": "Fail-closed pre-existing debt baseline auditor",
-    "summary": "Stdlib-only debt baseline snapshot for l9-pr-remediation",
-    "dependencies": [],
-}
-
 __all__ = [
     "main",
     "count_suppressions",
     "detect_languages",
     "run_gates",
-    "__footer_meta__",
-    "__l9_trace__",
 ]
-
-# ============================================================================
-# L9 DORA BLOCK - AUTO-UPDATED - DO NOT EDIT
-# ============================================================================
-
-__l9_trace__ = {
-    "trace_id": "",
-    "task": "",
-    "timestamp": "",
-    "patterns_used": [],
-    "graph": {"nodes": [], "edges": []},
-    "inputs": {},
-    "outputs": {},
-    "metrics": {
-        "confidence": "",
-        "errors_detected": [],
-        "stability_score": "",
-    },
-}
-
-# ============================================================================
-# END L9 DORA BLOCK
-# ============================================================================
 
 
 if __name__ == "__main__":
