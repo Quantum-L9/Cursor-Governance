@@ -7,8 +7,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-import yaml
-from doc_policy import OBLIGATION_SCHEMA, schema_errors, selector_paths
+from doc_policy import LLM_SURFACE_ID, OBLIGATION_SCHEMA, schema_errors, selector_paths
+from generate_module_readmes import discover_module_paths, load_config, spec_for_path
 
 OBLIGATION_ID = "l9.repo-docs.obligation.v1"
 
@@ -66,18 +66,12 @@ def _module_targets(
     policy: dict[str, Any],
     changed: list[str],
 ) -> list[dict[str, Any]]:
-    config_rel = policy["capabilities"]["module_readmes"]["required_paths"]["config"]
-    config_path = root / config_rel
-    if not config_path.is_file():
-        return []
-    raw = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
-    subsystems = raw.get("subsystems") or {}
+    del policy
+    config = load_config(root)
     targets: dict[str, dict[str, Any]] = {}
-    for key, spec in subsystems.items():
-        if not isinstance(spec, dict) or spec.get("skip"):
-            continue
-        prefix = str(spec.get("path") or "").strip("/")
-        if not prefix:
+    for prefix in discover_module_paths(root, config):
+        spec = spec_for_path(prefix, config)
+        if spec.get("skip"):
             continue
         hits = sorted(path for path in changed if path == prefix or path.startswith(prefix + "/"))
         if not hits:
@@ -86,7 +80,7 @@ def _module_targets(
         targets[target] = {
             "kind": "generated_file",
             "path": target,
-            "selector": f"subsystem:{key}",
+            "selector": f"module:{prefix}",
             "present": (root / target).is_file(),
             "source_changes": hits,
         }
@@ -98,14 +92,14 @@ def _generic_targets(
     surface: str,
     spec: dict[str, Any],
     *,
-    llms_enabled: bool,
+    llm_enabled: bool,
 ) -> list[dict[str, Any]]:
     paths = selector_paths(root, spec["selectors"])
     if paths:
         kind = "external" if spec["create_policy"] == "external_only" else "file"
         return [{"kind": kind, "path": path, "selector": path, "present": True} for path in paths]
-    if surface == "llms_txt" and not llms_enabled:
-        return [{"kind": "surface", "path": None, "selector": "llms_txt", "present": False}]
+    if surface == LLM_SURFACE_ID and not llm_enabled:
+        return [{"kind": "surface", "path": None, "selector": LLM_SURFACE_ID, "present": False}]
     if spec["requirement"] == "conditional" and spec["create_policy"] in {
         "never",
         "external_only",
@@ -145,9 +139,9 @@ def _target_applicable(
     spec: dict[str, Any],
     target: dict[str, Any],
     *,
-    llms_enabled: bool,
+    llm_enabled: bool,
 ) -> bool:
-    if surface == "llms_txt" and not llms_enabled:
+    if surface == LLM_SURFACE_ID and not llm_enabled:
         return False
     if target.get("path") is None:
         return False
@@ -178,17 +172,51 @@ def _validation_result(
     }
 
 
+ADMISSION_EVIDENCE_SOURCE = "l9-update-agent-docs/doc_owned_write"
+
+
+def _admission_evidence(admission: str, supports: str) -> dict[str, Any]:
+    value = f"admission:{admission}"
+    return {
+        "id": _evidence_id("admission", value),
+        "type": "validation",
+        "source": ADMISSION_EVIDENCE_SOURCE,
+        "locator": {"kind": "value", "value": value},
+        "epistemic": "CONFIRMED",
+        "supports": supports,
+    }
+
+
+def _byte_identity_evidence(evidence: list[dict[str, Any]]) -> list[str]:
+    """Evidence ids proving the owner render was byte-identical to the target."""
+    return [
+        row["id"]
+        for row in evidence
+        if row["type"] == "validation"
+        and row["source"] == ADMISSION_EVIDENCE_SOURCE
+        and row["supports"] == "target_freshness"
+    ]
+
+
 def build_obligations(
     root: Path,
     policy: dict[str, Any],
     impact: dict[str, Any],
     revision: dict[str, Any],
     *,
-    llms_enabled: bool,
+    llm_enabled: bool,
     run_mutations: list[str],
     semantic_required: list[str],
     module_capability: dict[str, Any],
+    owned_admissions: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
+    """Compile obligations. ``owned_admissions`` maps a skill-owned surface
+    (llm_txt, filetree) to the owned-write admission observed this run:
+    ``preserve`` (unowned target left in place) becomes a terminal PRESERVED
+    obligation; ``unchanged`` (render byte-identical to the target) carries
+    freshness evidence so validation can close it. Every other admission keeps
+    strict refresh validation."""
+    owned_admissions = dict(owned_admissions or {})
     impacted = set(impact.get("impacted_surfaces", []))
     for surface, spec in policy["surfaces"].items():
         if spec["requirement"] == "required" and not selector_paths(root, spec["selectors"]):
@@ -213,10 +241,10 @@ def build_obligations(
                     }
                 ]
         else:
-            targets = _generic_targets(root, surface, spec, llms_enabled=llms_enabled)
+            targets = _generic_targets(root, surface, spec, llm_enabled=llm_enabled)
         for target in targets:
             local_sources = sorted(set(target.get("source_changes", source_changes)))
-            applicable = _target_applicable(surface, spec, target, llms_enabled=llms_enabled)
+            applicable = _target_applicable(surface, spec, target, llm_enabled=llm_enabled)
             if surface == "module_readmes" and target.get("path") is None:
                 applicable = False
             execution_mode, executor = _execution(spec, applicable)
@@ -282,7 +310,7 @@ def build_obligations(
                     {
                         "id": cap_ev,
                         "type": "capability",
-                        "source": "readme-pipeline-v1",
+                        "source": "l9-update-agent-docs",
                         "locator": {"kind": "value", "value": cap_status},
                         "epistemic": "CONFIRMED",
                         "supports": "owner_capability",
@@ -299,6 +327,8 @@ def build_obligations(
             if semantic:
                 required_validation.append("semantic_qualification")
             touched = bool(target.get("path") and target["path"] in touched_paths)
+            admission = owned_admissions.get(surface) if applicable and not semantic else None
+            qualification: dict[str, Any]
             if not applicable:
                 lifecycle = {
                     "status": "NOT_APPLICABLE",
@@ -308,6 +338,38 @@ def build_obligations(
                 qualification = {
                     "kind": "deterministic",
                     "status": "NOT_REQUIRED",
+                    "semantic_owner": None,
+                    "harvest_target": None,
+                    "harvest_request_id": None,
+                    "concept_ids": [],
+                }
+            elif admission == "preserve":
+                action_type = "PRESERVE"
+                evidence.append(_admission_evidence(admission, "preservation"))
+                lifecycle = {
+                    "status": "PRESERVED",
+                    "reason": "existing target is unowned (no generator marker); "
+                    "the skill preserved it instead of overwriting",
+                    "terminal": True,
+                }
+                qualification = {
+                    "kind": "deterministic",
+                    "status": "QUALIFIED",
+                    "semantic_owner": None,
+                    "harvest_target": None,
+                    "harvest_request_id": None,
+                    "concept_ids": [],
+                }
+            elif admission == "unchanged":
+                evidence.append(_admission_evidence(admission, "target_freshness"))
+                lifecycle = {
+                    "status": "SATISFIED",
+                    "reason": "owner render is byte-identical to the target at this revision",
+                    "terminal": False,
+                }
+                qualification = {
+                    "kind": "deterministic",
+                    "status": "QUALIFIED",
                     "semantic_owner": None,
                     "harvest_target": None,
                     "harvest_request_id": None,
@@ -522,9 +584,17 @@ def validate_and_close_obligations(
         existing = {row["name"]: row for row in obligation["validation"]["results"]}
         target = obligation["target"]["path"]
         if "target_freshness" in obligation["validation"]["required"]:
+            identity_ids = _byte_identity_evidence(obligation["evidence"])
             if obligation["required_action"]["type"] in {"NO_ACTION", "PRESERVE"}:
                 existing["target_freshness"] = _validation_result(
                     "target_freshness", "NotApplicable", "no target mutation required"
+                )
+            elif identity_ids:
+                existing["target_freshness"] = _validation_result(
+                    "target_freshness",
+                    "PASS",
+                    "owner render is byte-identical to the target",
+                    identity_ids,
                 )
             elif target and target in touched:
                 target_ev = next(
