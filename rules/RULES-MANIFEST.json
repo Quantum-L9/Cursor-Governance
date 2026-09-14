@@ -1,6 +1,6 @@
 {
   "$schema": "l9.cursor-rules-manifest/v2",
-  "generated_utc": "2026-09-13T22:10:21Z",
+  "generated_utc": "2026-09-14T03:38:23Z",
   "generator": "ops/scripts/generate_rules_manifest.py",
   "rules_directory": "rules",
   "source_tree_digest": "sha256:0ae3f57c58c46d6f4420178983cbcdba76455ba2a21b5c6cadb996c49f0c9485",

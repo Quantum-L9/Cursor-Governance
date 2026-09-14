@@ -6,11 +6,12 @@
     "layer": "adapter-config",
     "owner": "governance-control-plane",
     "status": "retired",
-    "version": "2.0.0",
-    "updated": "2026-09-06",
-    "note": "Manus Custom MCP connector. The direct-provider connector (graphiti-memory over a provider URL) was retired at realignment stage C7/C8: Cursor-Governance no longer publishes a provider transport to any surface. The canonical memory control plane (l9-graphite-memory) is a stdio server owned by the memory package; Manus, a remote surface, has no sanctioned transport to it until the memory package publishes one. No connector is declared here on purpose — an entry naming a transport memory did not authorize would be a claim memory never made."
+    "version": "3.0.0",
+    "updated": "2026-09-13",
+    "note": "The package-owned l9-graphite-memory server currently exposes only stdio. Manus is a remote surface, so this adapter declares no Custom MCP connector until memory publishes a sanctioned remote transport."
   },
   "name": "l9-graphite-memory",
   "transport": "none",
-  "status": "retired-pending-memory-remote-transport"
+  "status": "retired-pending-memory-remote-transport",
+  "retired_server_keys": ["graphiti-memory"]
 }
