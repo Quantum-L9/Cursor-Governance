@@ -1,5 +1,12 @@
 ## Issue unblock (session reference)
 
+**Cluster:** Quantum-L9/Cursor-Governance#578
+**Owning fix:** https://github.com/Quantum-L9/Cursor-Governance/pull/576 commit c72097a3249d7bc58977d3a287335e3a62f07d1d
+**Next:** none — #578 closed
+**Pickup:** Graphiti PICKUP written 2026-09-14 record 6c8c08a8-2cdd-4be4-a56a-494e7dc350ed
+
+## Issue unblock (session reference)
+
 **Cluster:** Quantum-L9/l9-ci-sdk#79 closed on PR 83; #82 .l9 detect exclusion on same PR
 **Owning fix:** https://github.com/Quantum-L9/l9-ci-sdk/pull/83
 **Next:** l9-ci-core#122 pin is CI_PIPELINE; CG#454 pytest collection; remaining HUMAN/EXTERNAL
