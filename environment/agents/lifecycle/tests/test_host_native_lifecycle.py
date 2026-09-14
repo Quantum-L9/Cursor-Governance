@@ -198,6 +198,26 @@ class HostNativeLifecycleTests(unittest.TestCase):
         self.assertEqual(inflight, [])
         self.assertIsNone(receipts.load_host_admission("tu-stale"))
 
+    def test_correlation_index_maps_tool_use_and_call_id(self) -> None:
+        receipts.write_host_correlation(
+            {
+                "subagent_id": "sub-idx-1",
+                "assignment_id": "host-native-tu-idx",
+                "tool_use_id": "tu-idx",
+                "tool_call_id": "call-idx-alt",
+            }
+        )
+        index = receipts._load_host_correlation_index()
+        self.assertIn("tu-idx", index)
+        self.assertIn("call-idx-alt", index)
+        self.assertEqual(index["tu-idx"].get("subagent_id"), "sub-idx-1")
+        self.assertTrue(
+            receipts._host_admission_has_start({"tool_use_id": "tu-idx"}, index=index)
+        )
+        self.assertFalse(
+            receipts._host_admission_has_stop({"tool_use_id": "tu-idx"}, index=index)
+        )
+
     def test_corrupt_assignment_id_does_not_crash_in_flight(self) -> None:
         receipts.write_host_admission(
             {

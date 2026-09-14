@@ -193,23 +193,43 @@ def _parse_observed_at(raw: Any) -> datetime | None:
     return parsed
 
 
-def _host_admission_has_start(body: dict[str, Any]) -> bool:
-    tool_use_id = str(body.get("tool_use_id") or "")
+def _load_host_correlation_index() -> dict[str, dict[str, Any]]:
+    """Map tool_use_id / tool_call_id → correlation body. One directory scan."""
+    index: dict[str, dict[str, Any]] = {}
     corr_root = subagent_receipt_root() / "host-correlation"
-    if not tool_use_id or not corr_root.is_dir():
-        return False
+    if not corr_root.is_dir():
+        return index
     for path in corr_root.glob("*.json"):
         try:
             corr = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             continue
-        if corr.get("tool_use_id") == tool_use_id or corr.get("tool_call_id") == tool_use_id:
-            return True
-    return False
+        if not isinstance(corr, dict):
+            continue
+        for key in (corr.get("tool_use_id"), corr.get("tool_call_id")):
+            text = str(key or "").strip()
+            if text:
+                index[text] = corr
+    return index
 
 
-def _host_admission_expired(body: dict[str, Any], *, now: datetime | None = None) -> bool:
-    if _host_admission_has_start(body) or _host_admission_has_stop(body):
+def _host_admission_has_start(
+    body: dict[str, Any], *, index: dict[str, dict[str, Any]] | None = None
+) -> bool:
+    tool_use_id = str(body.get("tool_use_id") or "")
+    if not tool_use_id:
+        return False
+    table = index if index is not None else _load_host_correlation_index()
+    return tool_use_id in table
+
+
+def _host_admission_expired(
+    body: dict[str, Any],
+    *,
+    now: datetime | None = None,
+    index: dict[str, dict[str, Any]] | None = None,
+) -> bool:
+    if _host_admission_has_start(body, index=index) or _host_admission_has_stop(body, index=index):
         return False
     observed = _parse_observed_at(body.get("observed_at"))
     if observed is None:
@@ -218,28 +238,23 @@ def _host_admission_expired(body: dict[str, Any], *, now: datetime | None = None
     return clock - observed > HOST_ADMISSION_RESERVE_TTL
 
 
-def _host_admission_has_stop(body: dict[str, Any]) -> bool:
+def _host_admission_has_stop(
+    body: dict[str, Any], *, index: dict[str, dict[str, Any]] | None = None
+) -> bool:
     tool_use_id = str(body.get("tool_use_id") or "")
-    corr_root = subagent_receipt_root() / "host-correlation"
-    if not tool_use_id or not corr_root.is_dir():
+    if not tool_use_id:
         return False
-    for path in corr_root.glob("*.json"):
-        try:
-            corr = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            continue
-        if corr.get("tool_use_id") != tool_use_id and corr.get("tool_call_id") != tool_use_id:
-            continue
-        subagent_id = str(corr.get("subagent_id") or "").strip()
-        if not subagent_id:
-            continue
-        try:
-            stopped = host_stop_path(subagent_id).is_file()
-        except ValueError:
-            continue
-        if stopped:
-            return True
-    return False
+    table = index if index is not None else _load_host_correlation_index()
+    corr = table.get(tool_use_id)
+    if not corr:
+        return False
+    subagent_id = str(corr.get("subagent_id") or "").strip()
+    if not subagent_id:
+        return False
+    try:
+        return host_stop_path(subagent_id).is_file()
+    except ValueError:
+        return False
 
 
 def list_in_flight_host_admissions() -> list[dict[str, Any]]:
@@ -247,6 +262,7 @@ def list_in_flight_host_admissions() -> list[dict[str, Any]]:
     root = subagent_receipt_root() / "host-admission"
     if not root.is_dir():
         return []
+    index = _load_host_correlation_index()
     open_ones: list[dict[str, Any]] = []
     for path in root.glob("*.json"):
         try:
@@ -263,9 +279,9 @@ def list_in_flight_host_admissions() -> list[dict[str, Any]]:
                 continue
             if returned:
                 continue
-        if _host_admission_has_stop(body):
+        if _host_admission_has_stop(body, index=index):
             continue
-        if _host_admission_expired(body):
+        if _host_admission_expired(body, index=index):
             path.unlink(missing_ok=True)
             continue
         open_ones.append(body)
