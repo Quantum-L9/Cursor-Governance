@@ -6,8 +6,6 @@ Summarizes all steps, artifacts, and results.
 
 from __future__ import annotations
 
-# ============================================================================
-
 import time
 from datetime import datetime
 

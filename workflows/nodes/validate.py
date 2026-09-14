@@ -6,8 +6,6 @@ Supports: py_compile, exists, grep, shell, import checks.
 
 from __future__ import annotations
 
-# ============================================================================
-
 import asyncio
 import time
 from datetime import datetime

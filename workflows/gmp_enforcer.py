@@ -30,8 +30,6 @@ Version: 1.0.0
 
 from __future__ import annotations
 
-# ============================================================================
-
 import argparse
 import json
 import sys

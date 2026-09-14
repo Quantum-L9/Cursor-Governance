@@ -13,8 +13,6 @@ External code mode runs validate_external_code.py checks automatically.
 Version: 3.0.0
 """
 
-# ============================================================================
-
 import ast
 from pathlib import Path
 from typing import Any, Literal
@@ -105,7 +103,6 @@ class InspectState(BaseModel):
     )
     structural_ok: bool = Field(default=True)
     async_ok: bool = Field(default=True)
-    quality_ok: bool = Field(default=True)
     import_ok: bool = Field(default=True)
     adr_ok: bool = Field(default=True)
     config_ok: bool = Field(default=True)
@@ -422,9 +419,6 @@ async def compliance_node(state: InspectState) -> dict[str, Any]:
                 }
             )
 
-    # --- Quality checks reserved for active repository contracts ---
-    quality_ok = True
-
     # --- Convert issues to anti_patterns for existing report format ---
     for issue in all_issues:
         if issue.severity in ("critical", "high"):
@@ -442,7 +436,6 @@ async def compliance_node(state: InspectState) -> dict[str, Any]:
     deductions += len(config_issues) * 5
     deductions += 0 if structural_ok else 20
     deductions += 0 if async_ok else 20
-    deductions += 0 if quality_ok else 10
     deductions += 0 if import_ok else 25
     health_score = max(0, 100 - deductions)
 
@@ -454,7 +447,6 @@ async def compliance_node(state: InspectState) -> dict[str, Any]:
         "validation_issues": validation_issues,
         "structural_ok": structural_ok,
         "async_ok": async_ok,
-        "quality_ok": quality_ok,
         "import_ok": import_ok,
         "adr_ok": adr_ok,
         "config_ok": config_ok,
@@ -596,7 +588,6 @@ async def report_node(state: InspectState) -> dict[str, Any]:
 - Config: {"✅" if state.config_ok else "❌"}
 - Structural: {"✅" if state.structural_ok else "❌"}
 - Async: {"✅" if state.async_ok else "❌"}
-- Quality (DORA): {"✅" if state.quality_ok else "❌"}
 {issues_section}
 ### Structure
 {structure_section}
