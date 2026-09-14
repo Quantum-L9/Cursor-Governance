@@ -5,8 +5,8 @@ path: environment/agents/docs/network-allowlist.md
 layer: doc
 owner: governance-control-plane
 status: active
-version: 1.1.0
-updated: 2026-09-13
+version: 1.2.0
+updated: 2026-09-14
 /L9_META -->
 
 # Network allowlist — multi-agent cloud surfaces
@@ -15,31 +15,34 @@ Peer of `environment/agents/adapters/claude-code/web/network-policy.md`. Apply t
 on Manus / Codex cloud / Gemini / any Custom-network sandbox that must reach
 GitHub. Agent memory is stdio MCP (ADR-0031) and does **not** require an HTTPS host.
 
-## Required for governance (memory is not an HTTPS host)
+## Required for governance
+
+Every row here is a host an adapter actually calls. Memory is not among them:
+agent memory is stdio MCP and opens no HTTPS egress (ADR-0031).
 
 | Host | Why |
 |---|---|
-| `memory.quantumaipartners.com` | **Leftover** — retired Graphiti HTTPS MCP. Not required for agent memory (ADR-0031: stdio MCP; HTTP sealed). Operator projection only |
-| `broker.quantumaipartners.com` | **nobody** — capability-broker experiment retired; never shipped. Do not allowlist a host no adapter calls |
 | `github.com`, `*.githubusercontent.com` | clone governance + consumer repos |
 | `api.github.com` | `gh` / GitHub API |
 | `pypi.org`, `files.pythonhosted.org` | Python toolchains when the surface installs packages |
 | `registry.npmjs.org` | Node toolchains when applicable |
 | `npm.pkg.github.com` | GitHub Packages for `@quantum-l9/*` (`ops/secrets/gh_npm.sh` + `gh auth token` on hosted; Infisical `authed_npm.sh` for trusted operators). Do not paste `NODE_AUTH_TOKEN` |
 
-## Production memory
+## Historical — not required, do not allowlist
+
+Hosts that once appeared in agent allowlists and no longer belong there. Keep
+them out of the copyable list of every surface.
+
+| Host | Status |
+|---|---|
+| `memory.quantumaipartners.com` | **Retired** as the agent memory front door (the former Graphiti HTTPS MCP at `/graphiti/mcp`). Not required for agent memory — ADR-0031: stdio MCP only, agent HTTP sealed. What remains behind that name is operator infrastructure (TLS still terminates at Caddy on C1), never an adapter target |
+| `broker.quantumaipartners.com` | **Never shipped** — capability-broker experiment retired. No adapter calls it |
+
+## Agent memory (no HTTPS host)
 
 Agent memory is package-owned `l9-graphite-memory` stdio MCP. There is no
-required HTTPS host and no `GRAPHITI_MCP_URL` on the agent surface.
-
-Historical leftover (retired as the agent front door):
-
-```text
-https://memory.quantumaipartners.com/graphiti/mcp
-```
-
-TLS on that leftover still terminates at Caddy on C1. Do not teach cloud
-adapters to hold that URL or a bearer.
+required HTTPS host and no `GRAPHITI_MCP_URL` on the agent surface. Do not
+teach cloud adapters to hold the retired URL above or any memory bearer.
 
 ## Surface notes
 

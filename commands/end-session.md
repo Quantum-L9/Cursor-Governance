@@ -42,6 +42,7 @@ Do **not** prefer `hydration.cli close` as the repair (ADR-0028).
 GOV="${HOME}/.cursor-governance"
 GRAPHITI_PY="${GOV}/.venv/bin/python"
 WS="${CURSOR_PROJECT_DIR:-$(pwd)}"
+memcli() { (cd "$GOV" && PYTHONPATH="$GOV" "$GRAPHITI_PY" -m ops.memory.cli "$@" --workspace "${WS:-$PWD}"); }
 export L9_MEMORY_AGENT_ID=cursor USER_ID=cursor_agent
 PRIOR_FILE="$WS/.l9/memory/previous_opened.json"
 REPAIR_SID=""
@@ -64,6 +65,12 @@ Skip if the close receipt is already `closed` and `write_count>0` unless
 superseding. Do **not** write `memory-bank/`.
 
 ### Phase 2 — LESSONS & ERRORS (optional)
+
+Model-authored lessons take the MCP model write on `l9-graphite-memory`:
+`memory.write_agent` (ordinary; no `phase_lock`), or `memory.phase_lock` →
+`memory.write_governed` only when the fact is conflict-sensitive (ADR-0031).
+The CLI form below is the operator / offline-repair form, using the `memcli`
+defined in Phase 1:
 
 ```bash
 memcli write \

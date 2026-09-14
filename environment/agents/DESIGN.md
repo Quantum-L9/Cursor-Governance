@@ -5,8 +5,8 @@ path: environment/agents/DESIGN.md
 layer: design
 owner: governance-control-plane
 status: active
-version: 1.0.0
-updated: 2026-07-28
+version: 1.1.0
+updated: 2026-09-14
 /L9_META -->
 
 # L9 Multi-Agent Environment — Design
@@ -65,7 +65,7 @@ Roles are enforced at two levels — **namespace grants** (hard, server-side) an
 |---|---|---|
 | Cursor | existing `.cursor-commands` + `ops/graphiti` (unchanged) | `USER_ID=cursor_agent` machine env |
 | Claude Code | existing `environment/agents/adapters/claude-code/` (env example now rendered from registry) | account environment |
-| Manus | `environment/agents/adapters/manus/` — connector + env + bootstrap + setup.md | Manus session env / custom MCP connector |
+| Manus | `environment/agents/adapters/manus/` — env + bootstrap (project instruction) + setup.md; `mcp-connector.json` is retired (`transport: none`) | Manus project / session env — no memory connector until memory publishes a sanctioned remote transport |
 | Codex / OpenAI | `environment/agents/adapters/codex/` — MCP + config.toml + AGENTS.md block + setup.md | account env / `~/.codex/config.toml` |
 | Gemini CLI | `environment/agents/adapters/gemini/` — settings + GEMINI.md block + setup.md | `~/.gemini/settings.json` env refs |
 | Generic CLI | `environment/agents/adapters/generic/` — env + mcp.template + bootstrap | shell profile |
@@ -74,11 +74,11 @@ Contract SSOT for the four rows above: `adapters/ADAPTER_CONTRACT.md`
 (three carriers copied from the Claude Code gold standard). Production
 memory URL: `memory.production_url` in `agent_registry.yaml`.
 
-Every adapter does the same three things, per the claude-code precedent: discover skills (governance clone), boot context (session-start hook or equivalent), reach shared memory (package-owned `l9-graphite-memory` stdio MCP; no agent HTTP, no per-agent bearer).
+Every adapter does the same three things, per the claude-code precedent: discover skills (governance clone), boot context (session-start hook or equivalent), reach shared memory. The memory leg applies to adapters that can launch the package locally (Cursor, Claude Code, Codex, Gemini CLI, generic CLI): package-owned `l9-graphite-memory` stdio MCP, no agent HTTP, no per-agent bearer. A remote surface that cannot launch the package declares no memory connector and is memory-blind until the package publishes a sanctioned remote transport — Manus today (`adapters/manus/README.md`, `adapters/manus/mcp-connector.json`: `transport: none`).
 
 ## 6. Server-side wiring
 
-`tools/render_principals.py` reads the registry plus a local token file (`agent_tokens.local.json`, never committed) and emits the l9-graphiti-memory `auth_tokens.json` — one principal per agent with role-appropriate namespace grants. Cloud agents reach the same `MemoryService` through the package-owned stdio MCP (or the deterministic `ops/memory` CLI). Agent HTTP / `l9-shared-memory` HTTPS / Graphiti provider clients stay sealed (ADR-0031). A leftover C1 HTTPS projection is operator infrastructure, not the adapter front door.
+`tools/render_principals.py` reads the registry plus a local token file (`agent_tokens.local.json`, never committed) and emits the l9-graphiti-memory `auth_tokens.json` — one principal per agent with role-appropriate namespace grants. Agents that can launch the package locally reach the same `MemoryService` through the package-owned stdio MCP (or the deterministic `ops/memory` CLI); a remote surface without a local package launch (Manus) has no memory door until a sanctioned remote transport ships. Agent HTTP / `l9-shared-memory` HTTPS / Graphiti provider clients stay sealed (ADR-0031). A leftover C1 HTTPS projection is operator infrastructure, not the adapter front door.
 
 **One control plane, one workspace-group contract.** This pack's renderer targets `l9-graphite-memory` (`MemoryPrincipal` / grant map). `ops/graphiti/graphiti_memory_client.py` is a tombstone — not the deployed live path. The `workspace_group` in `agent_registry.yaml` MUST stay equal to the one in `group_registry.yaml`. Namespace grants are control-plane grants, never a license to call a provider client.
 
