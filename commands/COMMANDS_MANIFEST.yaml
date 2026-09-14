@@ -80,6 +80,9 @@ commands:
 - slash: /use-harvest
   file: commands/use-harvest.md
   enabled: true
+- slash: /wire
+  file: commands/wire.md
+  enabled: true
 excluded:
 - commands/README.md
 - commands/commands-index.md

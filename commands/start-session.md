@@ -54,7 +54,8 @@ fi
 ### After bootstrap output
 
 1. Parse the rendered `env:` + `context:` lines (or raw JSON if renderer skipped).
-2. If `wiring: FAIL` appears → auto-run:
+2. SessionStart already realpath-heals links (links-only + one retry).
+   If `wiring: FAIL` / `exhausted auto-repair` still appears → fallback `/wire`:
 
 ```bash
 bash "$GC/ops/scripts/wire_governance_workspace.sh" "$REPO"
