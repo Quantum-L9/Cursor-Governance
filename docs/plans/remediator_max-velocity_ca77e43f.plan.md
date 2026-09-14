@@ -1,6 +1,6 @@
 ---
 name: Remediator max-velocity
-overview: Make `/l9-pr-remediation` honor maximum_velocity and mechanically enforce one census → one commit → one CI run per PR. This run’s slowness was not `make pr`; it was a 10-lane cap, UNKNOWN-as-wait, catch-up-instead-of-fix, and prose-only one-and-done.
+overview: Make `/l9-pr-remediation` honor maximum_velocity and mechanically enforce one census → one commit → one CI run per PR. This run’s slowness was not `make pr`; it was a 10-lane cap, a watch loop that did not re-poll an UNKNOWN merge_state to a decision, catch-up-instead-of-fix, and prose-only one-and-done. UNKNOWN stays fail-closed (board=WAIT); polling resolves it, never conversion.
 todos:
   - id: pe-lock-baseline
     content: "W0: isolated worktree from origin/main; prefetch; Program Lock; stop if HEAD drifts. No product edits."
@@ -9,7 +9,7 @@ todos:
     content: "W1a: pr_fleet.skill_caps pass-through + validate_max_velocity ratchet + skill/test needles. Parallel with W1b."
     status: in_progress
   - id: board-unknown-behind
-    content: "W1b: pr_board.decide UNKNOWN+green=MERGE; failing required before BEHIND; flip/add board tests. Parallel with W1a."
+    content: "W1b: pr_board.decide fail-closed: UNKNOWN merge_state + green required = WAIT (watch loop re-polls); failing required before BEHIND = FIX naming the check; keep UNKNOWN-waits test, add red-CI+BEHIND test. Parallel with W1a."
     status: in_progress
   - id: ingest-complete-one-commit
     content: "W1c: ingest auto-Sonar; validate_plan --findings required; Gate E git log; cycle-2 reject; activation cases. After W1a+W1b."
@@ -35,10 +35,11 @@ kernel_pass:
       - ff_shelf corpus pass
   validate_repair:
     kernel: kernels/Validate & Repair.md
-    ran_at: 2026-09-14T16:49:09Z
-    body_sha256: "43e89a4ffacfe936003bf4ec8e56416b9c805d3af0bf02692f9ad1f51525624f"
+    ran_at: 2026-09-14T22:33:32Z
+    body_sha256: "8cad3acfe85a8c2066184737b172f8db0ec4115d2062bb7361d7f2d4b9facc75"
     deltas:
       - ff_shelf corpus pass
+      - F-01: pr_board UNKNOWN merge_state is fail-closed (WAIT + re-poll); MERGE conversion removed from every line
 ---
 
 # Remediator one-commit max-velocity
@@ -88,7 +89,7 @@ PR_STACK=auto PR_REMEDIATE=0 make pr
 - New branch from fetched `origin/main` (or unique stack tip). Rule 46. Pathspecs only.
 - Caps = execution profile (`max_parallel>=480`, `max_mutation_lanes>=128`). Safety is `claim_scopes_conflict` + `waves()`, not 10.
 - One-and-done is mechanical: complete ingest before first edit; Gate E reads `git log`; cycle 2 rejected for plan-time finding ids.
-- `pr_board.decide`: green required + `UNKNOWN` → `merge`; failing required checks **before** BEHIND.
+- `pr_board.decide` is fail-closed on merge_state: green required + `UNKNOWN` → `wait` ("GitHub has not finished computing mergeability"); the watch loop re-polls until the fact resolves — polling, not conversion. Failing required checks **before** BEHIND → FIX naming the check.
 - Verify is exactly `L9_REMEDIATOR=1 PR_STACK= PR_BASE=origin/main make precommit-repo`.
 - `L9_REMEDIATOR=1` skips `pr_stack_apply_publish_base`.
 - After `plan --board`, first status line is `merge_order` + `merge_now` + wave sizes.
@@ -98,7 +99,7 @@ PR_STACK=auto PR_REMEDIATE=0 make pr
 ## Must not do
 
 - Keep `SKILL_SUBAGENT_CAP = 10`. Invent a second scheduler. Edit `stack_safe_merge.py`, `execution_profile.py`, `resolve_pr_stack.sh`, Makefile, workflows, `CANONICAL_LAW.md`.
-- Teach `git merge origin/main` as a CI fix. Treat UNKNOWN with no check evidence as merge. Weaken tests to keep wait-on-UNKNOWN or first-wave=10.
+- Teach `git merge origin/main` as a CI fix. Convert an `UNKNOWN` merge_state into `merge` under any check evidence — UNKNOWN resolves only by re-poll. Flip or weaken `test_unknown_merge_state_waits`; weaken tests to keep first-wave=10.
 - Remediator-push leftover PRs. `--admin`, force-push, `--no-verify`. Implement on `rem-pr-*` worktrees.
 
 ## Files to touch
@@ -114,8 +115,8 @@ PR_STACK=auto PR_REMEDIATE=0 make pr
 
 ### W1b — board
 
-- [ops/autonomy/pr_board.py](ops/autonomy/pr_board.py) `decide()`: failing required before BEHIND; UNKNOWN+green required → MERGE
-- [tests/ops/autonomy/test_pr_board.py](tests/ops/autonomy/test_pr_board.py): flip `test_unknown_merge_state_waits`; add red-CI+BEHIND; keep `test_no_evidence_at_all_waits`
+- [ops/autonomy/pr_board.py](ops/autonomy/pr_board.py) `decide()`: failing required before BEHIND → FIX naming the check; UNKNOWN merge_state + green required → WAIT with reason "GitHub has not finished computing mergeability" (fail-closed; the watch loop re-polls)
+- [tests/ops/autonomy/test_pr_board.py](tests/ops/autonomy/test_pr_board.py): keep `test_unknown_merge_state_waits` (UNKNOWN → wait is the contract); add red-CI+BEHIND → FIX naming the check; keep `test_no_evidence_at_all_waits`
 
 ### W1c — census + one commit
 
@@ -174,16 +175,16 @@ Isolated clean worktree; HEAD is authorized base; gov venv imports yaml; MEMORY_
 
 ## Why (kept short)
 
-User corrections: one-line CI loops; no parallelism; merge order invisible; sitting on green 570 through UNKNOWN; catch-up on 576 instead of fixing the test.
+User corrections: one-line CI loops; no parallelism; merge order invisible; sitting on green 570 through UNKNOWN without re-polling it to a decision; catch-up on 576 instead of fixing the test.
 
-Code owners: `SKILL_SUBAGENT_CAP=10`; Gate E self-attested; ingest scanners opt-in; `decide()` UNKNOWN→wait and BEHIND before failing checks; remediator verify inherits `PR_STACK=auto`; generated-heal teaches `git merge origin/main`.
+Code owners: `SKILL_SUBAGENT_CAP=10`; Gate E self-attested; ingest scanners opt-in; `decide()` orders BEHIND before failing checks (UNKNOWN→wait itself is correct and stays); remediator verify inherits `PR_STACK=auto`; generated-heal teaches `git merge origin/main`.
 
 Previous speed plan already removed `make pr` from remediator publish. Do not redo that.
 
 ## Success properties
 
 - SP-01: `skill_caps()` parallel ≥ 480 and mutation ≥ 128. Twelve independent PRs launch twelve remediations.
-- SP-02: green required + `UNKNOWN` → `board=merge`. Red required + `BEHIND` → FIX naming the check, not catch-up.
+- SP-02: green required + `UNKNOWN` merge_state → `board=wait` ("GitHub has not finished computing mergeability") and the watch loop re-polls to a decision; `merge` needs a computed mergeable state. Red required + `BEHIND` → FIX naming the check, not catch-up.
 - SP-03: ingest without `--sonar` still emits Sonar ids when `sonar-project.properties` exists. Converge `validate_plan` without `--findings` is FAIL.
 - SP-04: Gate E FAIL on two remediator commits whose finding ids ⊆ plan-time ingest.
 - SP-05: `L9_REMEDIATOR=1 make precommit-repo` does not call `pr_stack_apply_publish_base`.
