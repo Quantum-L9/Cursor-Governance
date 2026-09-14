@@ -1,16 +1,16 @@
 # Cursor governance rules manifest
 
-Generated: `2026-09-14T15:46:20Z`. Source: `rules/*.mdc`.
+Generated: `2026-09-14T21:33:36Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
 | Bucket | Count |
 |---|---:|
-| Total MDC files | **69** |
-| `alwaysApply: true` | **35** |
+| Total MDC files | **70** |
+| `alwaysApply: true` | **36** |
 | `alwaysApply: false` | **34** |
 | No boolean `alwaysApply` | **0** |
-| Explicit stable IDs | **68** |
+| Explicit stable IDs | **69** |
 | Derived compatibility IDs | **1** |
 | Deprecated rules | **0** |
 
@@ -50,6 +50,7 @@ Generated: `2026-09-14T15:46:20Z`. Source: `rules/*.mdc`.
 | `53-pr-overlap-guardrail.mdc` | `l9.rule.53.pr.overlap.guardrail` | global | git | always | 118 | `04d0e57616e8` |
 | `54-context-sensitive-git-guardrails.mdc` | `l9.rule.54.git.guardrails` | global | git | always | 78 | `22327366534e` |
 | `55-ff-only-ssot-sync.mdc` | `l9.rule.55.ff.only.ssot.sync` | global | git | always | 76 | `9c83eecc7427` |
+| `56-wip-main-bound.mdc` | `l9.rule.56.wip.main.bound` | global | git | always | 54 | `a240b7e64d27` |
 | `59-incident-lessons.mdc` | `l9.rule.incident.lessons` | global | deployment | agent_requested | 22 | `3fb8e334a6b1` |
 | `60-anti-patterns.mdc` | `l9.rule.anti.patterns` | global | testing | always | 27 | `664ff6afbb7f` |
 | `61-secrets-and-dependencies.mdc` | `l9.rule.61.secrets.and.dependencies` | global | security | agent_requested | 50 | `d90a13c2549a` |

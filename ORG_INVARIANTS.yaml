@@ -43,7 +43,7 @@ metadata:
     name: Quantum-L9
     github_owner: Quantum-L9
 
-  policy_version: 3.0.0
+  policy_version: 3.1.0
   schema_version: 2
 
   owner:
@@ -1000,6 +1000,72 @@ invariants:
         Approved break-glass actors, notification paths, and audit integrations
         are not yet verified.
 
+  # ---------------------------------------------------------------------------
+  # Work-corpus distribution
+  # ---------------------------------------------------------------------------
+
+  - id: L9-ORG-014
+    title: Work-corpus packs must be main-bound
+    domain: work_corpus_distribution
+    severity: high
+    policy_state: active
+
+    requirement:
+      statement: >-
+        A work-corpus pack (WIP, plan, campaign source, or any artifact authored
+        as an input to later execution) must be committed on the default branch,
+        or committed and landed on the default branch within the same working
+        session in which it appears. A pack whose only copy lives on a feature
+        or campaign branch, a preserve ref, a shelf ref, a stash, or an
+        uncommitted worktree is not distributed and must not be treated as
+        available to other clones, worktrees, agents, or sessions.
+
+      enforcement_requirement: blocking
+      fail_behavior: closed
+
+    applies_to:
+      operations:
+        - work_corpus_author
+        - work_corpus_commit
+        - branch_publish
+        - session_end
+
+    allowed:
+      - authored_on_default_branch_checkout
+      - committed_same_session_and_landed_on_default_branch
+      - copied_onto_default_branch_based_branch_when_found_elsewhere
+      - default_branch_landing_through_sanctioned_publication_path
+
+    forbidden:
+      - pack_left_only_on_feature_branch
+      - pack_left_only_on_campaign_branch
+      - pack_mixed_into_unrelated_feature_branch_history
+      - pack_delivery_claimed_from_preserve_or_shelf_ref
+      - pack_delivery_claimed_from_stash_or_uncommitted_worktree
+      - pack_consumed_before_default_branch_visibility
+      - direct_push_to_default_branch
+
+    violation:
+      code: L9_ORG_WORK_CORPUS_NOT_MAIN_BOUND
+      action: block_and_alert
+      message: >-
+        A work-corpus pack is not present on the default branch and is therefore
+        not visible to other clones, worktrees, or sessions.
+
+    control_requirements:
+      minimum_preventive_controls: 1
+      minimum_detective_controls: 1
+      maximum_detection_latency: P1D
+
+    assurance:
+      effective_enforcement_state: unenforced
+      assurance_state: insufficient_evidence
+      reason: >-
+        The requirement is declared and carried by repository rule
+        rules/56-wip-main-bound.mdc, but no verified control yet compares
+        branch-local work-corpus paths against the default branch, so this is
+        currently agent-side discipline rather than an enforced boundary.
+
 control_registry:
   # Controls remain "planned" until executable and platform evidence exists.
   # A planned control is not an enforcement claim.
@@ -1182,6 +1248,26 @@ control_registry:
       - verify_expiration
       - verify_notification
       - verify_retrospective_review
+
+    evidence: []
+
+  - id: L9-CTRL-009
+    title: Work-corpus main-binding audit
+    control_type: detective
+    execution_boundary: scheduled_github_action
+    implementation_state: absent
+    enforcement_state: unenforced
+
+    covers:
+      - L9-ORG-014
+
+    required_capabilities:
+      - enumerate_work_corpus_paths_on_non_default_branches
+      - compare_paths_against_default_branch_tree
+      - detect_pack_present_only_on_non_default_branch
+      - detect_pack_present_only_on_preserve_or_shelf_ref
+      - report_pack_age_since_first_appearance
+      - emit_machine_readable_report
 
     evidence: []
 
