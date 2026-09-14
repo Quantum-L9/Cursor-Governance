@@ -1,5 +1,5 @@
 {
-  "generation_id": "d0229eb7dfd2dce17ac5afc3d1b3603a73b0837b0af6a4b9834e29ad322283d2",
+  "generation_id": "a57bde67f412b792d47af309fa7f703dd89fd8e9d2f25fe305e9f22dc97d02c0",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -1197,14 +1197,14 @@
     },
     {
       "composition_role": "primary",
-      "description": "Canonical agent memory control plane (l9-graphite-memory) \u2014 readiness, namespace resolution, canonical hydrate/search, governed interactive write (memory.phase_lock \u2192 memory.write_governed), operator CLI write, GMP Phase 0 MEMORY_PREFETCH, /end-session repair. Use when wiring memory, debugging hydration, checking memory health, writing a durable fact, reconciling legacy provider history, or closing a session.",
+      "description": "Canonical agent memory control plane (l9-graphite-memory) \u2014 readiness, namespace resolution, canonical hydrate/search, interactive write (cold: memory.write_agent; high-stakes: memory.phase_lock \u2192 memory.write_governed), operator CLI write, GMP Phase 0 MEMORY_PREFETCH, /end-session repair. Use when wiring memory, debugging hydration, checking memory health, writing a durable fact, reconciling legacy provider history, or closing a session.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-graphiti-memory",
       "path": "skills/l9-graphiti-memory",
       "reason": "",
       "skill_md": "skills/l9-graphiti-memory/SKILL.md",
-      "skill_sha256": "7b3b12b09a8723f1f7b3e130fdd07c8f61010bc9bbcae7bcff0aae8104d0e02c",
+      "skill_sha256": "c75d2005432baedfde847e4579b5404cc9f798a8365ff20e5738dd5ec1a5ee3a",
       "user_invocable": true,
       "when_to_use": "wiring memory, debugging prefetch/bootstrap, GMP Phase 0 MEMORY_PREFETCH, episode/T0 memory-bank writes, or checking Graphiti health"
     },
@@ -1601,5 +1601,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "bf415873fe91b1779e0cea47ca987f01c3b919d78bae8ac8c0a49fea06eb8def",
-  "source_skill_corpus_sha256": "94b3c068ae47610d9f80f7b32ed23895e0b95faff949d6ad45def2ad1084d1aa"
+  "source_skill_corpus_sha256": "a262861d450be25a18ed5e6911543946d838a91c8b2ec0eab9182c15256c93bd"
 }
