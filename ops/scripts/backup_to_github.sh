@@ -53,8 +53,9 @@ else
 fi
 
 # The push refspec is HEAD:$BRANCH, so work done on a feature branch in this clone
-# still lands on $BRANCH. That is the intended behavior for an unattended sessionEnd
-# hook — warn so it is never silent, but never block, or the hook starts failing.
+# still lands on $BRANCH. That is the intended behavior for an operator
+# `make backup` — warn so it is never silent, but never block. sessionEnd
+# must not call this script (SESSION_END_PRESERVE_V1).
 CURRENT_BRANCH="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || echo HEAD)"
 warn_branch_mismatch() {
   if [ "$CURRENT_BRANCH" != "$BRANCH" ]; then

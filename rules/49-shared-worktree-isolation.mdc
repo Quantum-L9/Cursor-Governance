@@ -54,13 +54,16 @@ wiping untracked in-flight fix files.
    missing `.cursor-commands`, `.cursor/plans`, `.cursor/governance`, or an
    IDE profile stamp. Machine hooks stay fail-closed. Classifier:
    `ops/scripts/lib/workspace_kind.sh`.
-8. **SessionEnd dirt-close is this session workspace only.**
-   `session_end_dirt_close.py` may restore or remove porcelain in the
-   payload workspace after `git cat-file` proves a novel path on
-   `l9/dirt-shelf`, or when the path is already on `origin/main` / an
-   open-PR blob. That is the close, not a scoop. Do not classify, park,
-   or delete dirt in a **sibling** worktree. Do not dump raw
-   `git status --porcelain` as "dirty files" — use `--status`.
+8. **SessionEnd preserve is this conversation only.**
+   `session_end_preserve.py` copies paths from
+   `~/.cursor/l9/sessions/<session_id>/authored.json` onto
+   `refs/l9/preserved/session/<session_id>` in the payload workspace.
+   Empty ledger → skip. Never porcelain. Never `git add -A`. Never
+   delete worktree files. Never walk a sibling worktree or another
+   session's ledger. `session_end_dirt_close.py` and `repo_hygiene.py`
+   are on-demand only — sessionEnd must not run them. Agents asked
+   "what dirty files are there" still use
+   `session_end_dirt_close.py --status`, not raw porcelain.
 
 ## Automated writers: the repo-write lock
 

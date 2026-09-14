@@ -302,6 +302,7 @@ install_session_end_governance_hook() {
     "before_shell_execution_gate.py:before_shell_execution_gate.py" \
     "pr_gate_failure_shell.sh:pr-gate-failure-shell.sh" \
     "session_end_repo_hygiene.sh:session-end-repo-hygiene.sh" \
+    "session_authored_paths.py:session-authored-paths.py" \
     "before_submit_skill_router.py:before-submit-skill-router.py" \
     "plan_memory_prefetch.py:plan-memory-prefetch.py" \
     "plan_kernel_gate.py:plan-kernel-gate.py" \
@@ -383,6 +384,23 @@ ss = [bootstrap_entry] + [
     e for e in ss if "session-start-bootstrap.sh" not in (e.get("command") or "")
 ]
 hooks["sessionStart"] = ss
+
+# sessionEnd: dirt-close + auto-hygiene scooped other chats on a shared
+# clone. Merge only appends, so a stale hooks.json keeps the retired
+# command until this strip removes it. The installed script is a no-op
+# if a leftover entry survives one reconcile.
+retired_session_end = {
+    "./hooks/session-end-repo-hygiene.sh",
+}
+ends = hooks.setdefault("sessionEnd", [])
+ends = [
+    e
+    for e in ends
+    if isinstance(e, dict)
+    and "session-end-repo-hygiene.sh" not in (e.get("command") or "")
+    and (e.get("command") or "") not in retired_session_end
+]
+hooks["sessionEnd"] = ends
 
 # beforeShellExecution: one combined gate. Drop the three predecessors so
 # a merge that only appended would otherwise run four processes.

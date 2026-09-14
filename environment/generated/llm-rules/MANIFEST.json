@@ -231,9 +231,9 @@
       "alias": null,
       "class": "always",
       "output": "49-shared-worktree-isolation.md",
-      "output_sha256": "9649e8dc0158e8071d1a6bab4aef037819f8cdf350db9ebad7826c32bd47ecae",
+      "output_sha256": "039eb5f59c42eed94283535068e159d7e081a4122994302f9a6e152a266c1810",
       "source": "rules/49-shared-worktree-isolation.mdc",
-      "source_sha256": "dadf116a8b865b410b137697a3bb8c9a52c6c13e655207923d14537496cb0518",
+      "source_sha256": "27c0da311804378630d6d7edfe96a32953406ebf83ef15f596cb182ce682b563",
       "stem": "49-shared-worktree-isolation"
     },
     {
@@ -641,5 +641,5 @@
     "skipped_agent_requested": 16,
     "source_mdc": 70
   },
-  "tree_sha256": "4a59cdfed52dc0a4c3d2cd8543bac7029338f04b3f2c7a53f1c1274212987ea2"
+  "tree_sha256": "ed56ce01f544c938af3dcccac557fc1f74601cf0713b487816c19c1ccf9e2eed"
 }
