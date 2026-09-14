@@ -140,15 +140,6 @@
     {
       "alias": null,
       "class": "paths",
-      "output": "25-python-dora-header.md",
-      "output_sha256": "70b64a35db5aa1beb23eab5eeefdf6e66e63c69386cd03c2e319d2b61cd3def5",
-      "source": "rules/25-python-dora-header.mdc",
-      "source_sha256": "49302e69c080624cbf70972d5415cd308dcc2107f04b6884c17bea6d3ab6bfed",
-      "stem": "25-python-dora-header"
-    },
-    {
-      "alias": null,
-      "class": "paths",
       "output": "30-framework-react.md",
       "output_sha256": "67f6ef7f128a8b2ae24c23f73511e03d2a7145f0ad56760ac648dcc447952117",
       "source": "rules/30-framework-react.mdc",
@@ -646,9 +637,9 @@
   "source_relative": "rules",
   "summary": {
     "denied": 1,
-    "projected": 54,
+    "projected": 53,
     "skipped_agent_requested": 16,
-    "source_mdc": 71
+    "source_mdc": 70
   },
-  "tree_sha256": "20a9888a1fc8839ab5d225c4540f5ee5fb00e028ae2672933a70c33e4158141d"
+  "tree_sha256": "b9ee2233775b0e68b552f194115b1d1096ef0c157c7384bb8a098738b5157114"
 }
