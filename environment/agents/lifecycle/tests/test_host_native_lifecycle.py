@@ -211,12 +211,8 @@ class HostNativeLifecycleTests(unittest.TestCase):
         self.assertIn("tu-idx", index)
         self.assertIn("call-idx-alt", index)
         self.assertEqual(index["tu-idx"].get("subagent_id"), "sub-idx-1")
-        self.assertTrue(
-            receipts._host_admission_has_start({"tool_use_id": "tu-idx"}, index=index)
-        )
-        self.assertFalse(
-            receipts._host_admission_has_stop({"tool_use_id": "tu-idx"}, index=index)
-        )
+        self.assertTrue(receipts._host_admission_has_start({"tool_use_id": "tu-idx"}, index=index))
+        self.assertFalse(receipts._host_admission_has_stop({"tool_use_id": "tu-idx"}, index=index))
 
     def test_corrupt_assignment_id_does_not_crash_in_flight(self) -> None:
         receipts.write_host_admission(
