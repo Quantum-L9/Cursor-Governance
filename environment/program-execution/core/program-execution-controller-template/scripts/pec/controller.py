@@ -2483,7 +2483,7 @@ def _dod_gates_from_verify(
 
 
 def _latest_verification(workspace: Path, task_id: str) -> dict[str, Any]:
-    path = workspace / "receipts" / "verification" / f"{task_id}.json"
+    path = verification_receipt_path(workspace, task_id)
     if not path.is_file():
         return {}
     return load_json(path)
@@ -2497,6 +2497,14 @@ def _dod_complete(verification: dict[str, Any]) -> bool:
 
 
 def verification_receipt_path(workspace: Path, task_id: str) -> Path:
+    """The one derivation of a task's verification receipt path.
+
+    `receipts.artifact_path` is matched by exact string, so the recorded and the
+    looked-up spelling must agree. Deriving it anywhere else without `resolve()`
+    makes the lookup miss wherever the workspace is reached through a symlink --
+    on macOS both `/tmp` and `/var/folders` are, so `complete` refused with "no
+    verification receipt for the current attempt" while Linux CI stayed green.
+    """
     return workspace.resolve() / "receipts" / "verification" / f"{task_id}.json"
 
 
@@ -2842,7 +2850,7 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
         }
         verification["receipt_digest"] = digest_object(verification)
         _validate_schema(workspace, "verification-receipt.schema.json", verification)
-        target = workspace / "receipts" / "verification" / f"{task_id}.json"
+        target = verification_receipt_path(workspace, task_id)
         # One transaction: the canonical receipt record, the evidence it
         # backs, the task transition and the event become durable together
         # (PEC-P1-004). The receipt FILE is a projection materialized after
