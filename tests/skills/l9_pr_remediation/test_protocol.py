@@ -599,3 +599,31 @@ def test_gate_e_measures_git_log(tmp_path: Path) -> None:
     )
     assert any("exactly one commit" in item for item in two)
     assert twice == []
+
+
+def test_gate_e_git_log_timeout_fails_fast(monkeypatch, tmp_path: Path) -> None:
+    """A hung `git log` must fail Gate E with a timeout error, never stall."""
+    base = "a" * 40
+    calls: list[dict[str, object]] = []
+
+    def hung_run(*args, **kwargs):  # noqa: ANN001, ANN002, ANN003
+        calls.append(dict(kwargs))
+        raise subprocess.TimeoutExpired(cmd=args[0], timeout=kwargs.get("timeout"))
+
+    monkeypatch.setattr(protocol.subprocess, "run", hung_run)
+    errors = protocol.validate_gate(
+        "E",
+        {
+            "base_sha": base,
+            "workspace": str(tmp_path),
+            "push_record": {
+                "commit_sha": "b" * 40,
+                "publish_count_this_cycle": 1,
+                "publish_command": "git push",
+                "base_sha": base,
+                "workspace": str(tmp_path),
+            },
+        },
+    )
+    assert calls and calls[0].get("timeout") == protocol.GIT_TIMEOUT_S
+    assert any("timed out" in item for item in errors), errors

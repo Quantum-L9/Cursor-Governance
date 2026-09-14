@@ -13,6 +13,10 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+#: Gate E shells out to `git log`; a hung git (stuck filesystem, wedged
+#: process) must fail the gate fast instead of stalling remediation.
+GIT_TIMEOUT_S = 30
+
 CRA_LOGINS = frozenset(
     {
         "github-code-quality",
@@ -470,12 +474,17 @@ def validate_gate(
         if not re.fullmatch(r"[0-9a-f]{40}", base_sha):
             errors.append("Gate E requires base_sha (40-char hex) for git log")
         else:
-            proc = subprocess.run(
-                ["git", "-C", str(workspace), "log", "--format=%H", f"{base_sha}..HEAD"],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
+            try:
+                proc = subprocess.run(
+                    ["git", "-C", str(workspace), "log", "--format=%H", f"{base_sha}..HEAD"],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    timeout=GIT_TIMEOUT_S,
+                )
+            except subprocess.TimeoutExpired:
+                errors.append(f"Gate E git log timed out after {GIT_TIMEOUT_S}s")
+                return errors
             if proc.returncode != 0:
                 errors.append(
                     "Gate E git log failed: " + (proc.stderr or proc.stdout or "unknown").strip()
