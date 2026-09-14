@@ -8,7 +8,7 @@ todos:
     phase: preflight
     depends_on: []
   - id: T-02
-    content: Create reconciliation branch feat/ideaos-12-unified from main
+    content: "Create reconciliation branch feat/ideaos-12-unified on the unique open-PR chain tip (PR_STACK=auto); origin/main only when no open PR exists"
     status: pending
     phase: preflight
     depends_on: [T-01]
@@ -83,14 +83,14 @@ todos:
     phase: validate
     depends_on: [T-10, T-12, T-13, T-15]
   - id: T-17
-    content: "Open reconciliation PR targeting main, close PRs #4-#8 as superseded"
+    content: "Open reconciliation PR via PR_STACK=auto PR_REMEDIATE=0 make pr (base = open-PR stack tip, else main), close PRs #4-#8 as superseded"
     status: pending
     phase: converge
     depends_on: [T-16]
 isProject: false
 kind: simple
 execute_via: cursor-build
-status: current
+status: superseded
 kernel_pass:
   bound_path: ideaos_12_reconciliation_5a8034b7.plan.md
   improve:
@@ -105,17 +105,20 @@ kernel_pass:
       - ff_shelf corpus pass
   validate_repair:
     kernel: kernels/Validate & Repair.md
-    ran_at: 2026-09-13T15:43:09Z
-    body_sha256: "2eb41c606c4a1a9cf871e5bb2cee410b5c04cbbce2bd53dff4bc940fe0a9e567"
+    ran_at: 2026-09-14T03:11:24Z
+    body_sha256: "e65432ce879874da97695a4fec98a61fcdaad76b9a961ab2da3a5f905670ea17"
     deltas:
       - ff_shelf corpus pass
+      - "PR #563 remediation (2026-09-14): F1 one stack-tip branch rule; F2 full immutable baseline SHA and truthful IdeaOS PR #3 state (open, unmerged); F3 governed make pr publication, raw gh pr create removed; operator supersession by skills/l9-idea-execute and skills/l9-idea-foundry"
 ---
 
 # PLAN: IdeaOS 12.0 Architecture Reconciliation
 
+> **Superseded (2026-09-14, operator direction):** the repository `Quantum-L9/IdeaOS` is superseded by the local skills `skills/l9-idea-execute/` and `skills/l9-idea-foundry/` in Cursor-Governance. This plan is retained as archival corpus (ff-shelf) and is **not** to be built or executed against `Quantum-L9/IdeaOS`. Its branch-base, baseline, and publication instructions were corrected on the same date so the archival record is truthful (PR #563 remediation).
+
 > **First-class SSOT:** `environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md`
 > **Schema:** `canonical.schema.plan_document.v1` (status: fill -> `executable` only when law holds)
-> **Execute:** Press **Build**. Stack on the unique open-PR tip if any open PR exists. After todos: `PR_STACK=auto PR_REMEDIATE=0 make pr` and display the PR URL. Do not run `make campaign`.
+> **Execute:** superseded — do not press **Build**. Original contract, kept for the record: stack on the unique open-PR tip if any open PR exists; after todos `PR_STACK=auto PR_REMEDIATE=0 make pr` and display the PR URL. Do not run `make campaign`.
 > **Cursor todos:** frontmatter `todos` project to Build todos. Body is the binding contract.
 > **Law:** executable only when baseline matches, capability probes pass, invariants match, and envelope is respected.
 
@@ -123,10 +126,12 @@ kernel_pass:
 
 ## Execute via Cursor Build
 
-Press **Build**. Plan on the current workspace. Execute on the unique open-PR chain tip.
+> Superseded — do not press **Build** for this plan (see banner above). The contract below is the corrected archival record.
+
+Plan on the current workspace. Execute on the unique open-PR chain tip (this is the one branch-base rule; T-02 states the same).
 
 - If any open PR exists: **never** branch from `origin/main`. Start from the unique chain tip (`PR_STACK=auto`). Sibling open-PR chains fail closed.
-- If the board is empty: `origin/main` is allowed.
+- Only when no open PR exists: start from `origin/main`.
 - Do not run `make campaign`.
 - Do not admit a Program Lock or Controller lease.
 - Do not write `Lock: origin/main = <sha>`.
@@ -143,11 +148,11 @@ Press **Build**. Plan on the current workspace. Execute on the unique open-PR ch
 | name | IdeaOS 12.0 Reconciliation |
 | overview | Merge three competing lifecycle visions into unified IdeaOS 12.0 |
 | schema_version | `1.0.0` |
-| status | `current` |
+| status | `superseded` |
 | is_project | `false` |
 | owner | agent |
 | created_at | `2026-09-13` |
-| updated_at | `2026-09-13` |
+| updated_at | `2026-09-14` |
 
 ---
 
@@ -155,11 +160,11 @@ Press **Build**. Plan on the current workspace. Execute on the unique open-PR ch
 
 | Field | Value |
 |-------|-------|
-| planning_ssot | `Quantum-L9/IdeaOS/.l9/architecture.yaml` |
+| planning_ssot | `Quantum-L9/IdeaOS/.l9/architecture.yaml` — superseded by `skills/l9-idea-execute/SKILL.md` and `skills/l9-idea-foundry/SKILL.md` (operator direction, 2026-09-14) |
 | plan_class | `remediation_plan` |
 | redesign_allowed | `false` |
 | follow_on_schema_evolution_separate | `true` |
-| framing_notes | Execute via Cursor Build; no redesign - reconcile existing features only |
+| framing_notes | Superseded — archival only. Original framing: execute via Cursor Build; no redesign - reconcile existing features only |
 
 ---
 
@@ -172,7 +177,7 @@ Press **Build**. Plan on the current workspace. Execute on the unique open-PR ch
 | workspace | `/tmp/IdeaOS-reconcile` |
 | ssot_clone | n/a |
 | branch | `feat/ideaos-12-unified` |
-| commit_sha | `80a84c759f22...` (main after PR #3 merge) |
+| commit_sha | `80a84c759f227f1de45d9bfffd43b299eac9250d` (IdeaOS `main` tip from PR #2, observed 2026-09-14 via `gh api repos/Quantum-L9/IdeaOS/commits/main`; IdeaOS PR #3 is **open and unmerged**, so this baseline is *before* T-01, not after it) |
 | dirty | `false` |
 | artifact_hashes | `{}` |
 | allowed_local_dirt | `[]` |
@@ -219,7 +224,7 @@ Reconcile three competing lifecycle visions in IdeaOS (realization depth, execut
 |----|------------|-------------------|---------------|----------|
 | CP-01 | `gh_cli_available` | `gh --version` | version string returned | true |
 | CP-02 | `repo_cloneable` | `gh repo clone Quantum-L9/IdeaOS /tmp/IdeaOS-reconcile` | exit 0 | true |
-| CP-03 | `pr_3_mergeable` | `gh pr view 3 --repo Quantum-L9/IdeaOS --json mergeable` | `mergeable: true` | true |
+| CP-03 | `pr_3_mergeable` | `gh api repos/Quantum-L9/IdeaOS/pulls/3 --jq '{state,merged,mergeable}'` (REST; `gh pr view` is GraphQL and is unavailable on Claude surfaces) | `state: open`, `merged: false`, `mergeable: true` | true |
 | CP-04 | `uv_available` | `uv --version` | version string returned | true |
 
 ---
@@ -245,9 +250,9 @@ Reconcile three competing lifecycle visions in IdeaOS (realization depth, execut
 
 ### Commands
 
-**allow:** `gh pr create`, `gh pr close`, `git cherry-pick`, `git commit`, `git push`, `uv lock`, `uv sync`, `make verify`, `make lint`, `make test`, `pre-commit run`
+**allow:** `git cherry-pick`, `git commit` (explicit pathspecs), `uv lock`, `uv sync`, `make verify`, `make lint`, `make test`, `pre-commit run`, `python3 ops/autonomy/l4_local.py authorize-release`, `PR_STACK=auto PR_REMEDIATE=0 make pr` (the only publication route; it performs the push and opens the PR), `gh pr close`
 
-**deny:** force-push, secret exfiltration, CI workflow modifications
+**deny:** raw `gh pr create`, raw `git push` as a first publication, `make push`, force-push, secret exfiltration, CI workflow modifications
 
 ### Network
 
@@ -330,7 +335,7 @@ Reconcile three competing lifecycle visions in IdeaOS (realization depth, execut
 
 ### Rollback Verification
 
-- `gh pr list --repo Quantum-L9/IdeaOS --state open` shows PRs #4-#8 reopened
+- `gh api "repos/Quantum-L9/IdeaOS/pulls?state=open"` shows PRs #4-#8 reopened
 - `git log --oneline -1 origin/main` shows revert commit if reconciliation was merged
 
 ---
@@ -421,7 +426,7 @@ flowchart TD
 | EV-SP-03 | SP-03 | `runtime_behavior_evidence` | python | runtime_capabilities assertion | assertion passes | `not_run` |
 | EV-SP-04 | SP-04 | `quality_gate_evidence` | make | `make verify` | exit 0 | `not_run` |
 | EV-SP-05 | SP-05 | `quality_gate_evidence` | pre-commit | `pre-commit run --all-files` | exit 0 | `not_run` |
-| EV-SP-06 | SP-06 | `network_observation_evidence` | gh | `gh pr create` | PR URL returned | `not_run` |
+| EV-SP-06 | SP-06 | `network_observation_evidence` | make | `PR_STACK=auto PR_REMEDIATE=0 make pr` | PR URL displayed (`.l9/pr/pr-summary.json`) | `not_run` |
 
 ---
 
@@ -484,7 +489,7 @@ flowchart TD
 |-------|-------|
 | convergence_id | `conv.plan.ideaos.reconciliation-12.v1` |
 | source_ref | this plan_id |
-| current_state | `draft` |
+| current_state | `superseded` |
 | implementation_ready | `false` |
 
 ### Gates
@@ -524,7 +529,7 @@ flowchart TD
 
 | Field | Value |
 |-------|-------|
-| next_convergence_gate | `draft` -> `executable` -> `executing` -> `converged` |
-| minimum_safe_next_action | Press **Build**, execute todos, then `PR_STACK=auto PR_REMEDIATE=0 make pr` and display PR URL |
-| execute_via | Cursor Build |
+| next_convergence_gate | none — `superseded`; successor work routes through `skills/l9-idea-execute` / `skills/l9-idea-foundry` |
+| minimum_safe_next_action | None for this plan (superseded). Successor work: invoke `l9-idea-execute` / `l9-idea-foundry`; any publication uses `PR_STACK=auto PR_REMEDIATE=0 make pr` and displays the PR URL |
+| execute_via | Cursor Build (historical; superseded) |
 | broader_work_requires_separate_contract | `true` |

@@ -93,14 +93,95 @@ def workspace_root() -> Path:
     return cwd
 
 
+def _safe_id_part(value: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9_.-]", "_", value or "").strip("._")
+    return cleaned[:80] or "unknown"
+
+
+def extract_chat_id(event: dict[str, Any] | None) -> tuple[str, str]:
+    """Per-chat discriminator for the write-gate receipt. Never the session id.
+
+    Cursor payloads carry ``conversation_id``. Claude's conversation is
+    ``session_id`` on the hook event; that string is still only a chat
+    component — the receipt key always includes writer identity so two
+    agents cannot share one pass.
+    """
+    if not event:
+        return "", ""
+    for key in ("conversation_id", "conversationId"):
+        value = str(event.get(key) or "").strip()
+        if value and value != "default":
+            return value, key
+    sid = str(event.get("session_id") or "").strip()
+    if sid and sid != "default":
+        return sid, "session_id"
+    return "", ""
+
+
+def extract_writer_agent_id(event: dict[str, Any] | None) -> str:
+    if event:
+        for key in ("agent_id", "agentId"):
+            value = str(event.get(key) or "").strip()
+            if value:
+                return value
+    return os.environ.get("L9_MEMORY_AGENT_ID", "").strip() or "unknown-agent"
+
+
+def receipt_identity(
+    *, event: dict[str, Any] | None = None, cli_arg: str | None = None
+) -> tuple[str, str]:
+    """The two RAW components of a writer receipt key: ``(writer_agent, chat)``.
+
+    Both parts come back path-safe (``_safe_id_part``), so composing them with
+    :func:`compose_receipt_id` is idempotent and a denial hint can name them
+    verbatim as ``L9_MEMORY_AGENT_ID=<writer_agent> … --session-id <chat>``.
+
+    ``cli_arg`` is the explicit repair override (``memory_prefetch.py
+    --session-id``). It is a raw chat id; prefetch composes the key exactly
+    once. A hint that carried the *composed* key was composed again on repair
+    (``claude-code__claude-code__<chat>``), so the repair stamped a file the
+    gate never looked up and could not unblock a governed write (audit
+    P573-F1). A precomposed key whose writer prefix matches this run's writer
+    is therefore accepted and reduced to its chat part rather than doubled.
+
+    Raises :class:`ValueError` when no chat id is available.
+    """
+    writer_agent = _safe_id_part(extract_writer_agent_id(event))
+    chat, _key = extract_chat_id(event)
+    if not chat:
+        chat = str(cli_arg or "").strip()
+        prefix = f"{writer_agent}__"
+        if chat.startswith(prefix) and len(chat) > len(prefix):
+            chat = chat[len(prefix) :]
+    if not chat or chat == "default":
+        raise ValueError("receipt_id requires a chat id")
+    return writer_agent, _safe_id_part(chat)
+
+
+def compose_receipt_id(writer_agent: str, chat: str) -> str:
+    """``<writer_agent>__<chat>`` — the one place the receipt key is spelled."""
+    return f"{_safe_id_part(writer_agent)}__{_safe_id_part(chat)}"
+
+
+def resolve_receipt_id(*, event: dict[str, Any] | None = None, cli_arg: str | None = None) -> str:
+    """Writer-scoped receipt key. Distinct from SessionStart's session id.
+
+    SessionStart runs once per session and must not authorize later chats or
+    agents. Prefetch and the write gate both call this so they stamp and
+    look up the same file.
+    """
+    writer_agent, chat = receipt_identity(event=event, cli_arg=cli_arg)
+    return compose_receipt_id(writer_agent, chat)
+
+
 def resolve_session_id(*, event: dict[str, Any] | None = None, cli_arg: str | None = None) -> str:
-    """Authoritative session id: hook event first, else required CLI arg.
+    """SessionStart session id only. Never a write-gate receipt key.
 
     Lock and gate paths MUST NOT default to ``unknown-session``.
     """
     if event:
         sid = str(event.get("session_id") or "").strip()
-        if sid:
+        if sid and sid != "default":
             return sid
     sid = str(cli_arg or "").strip()
     if sid:
@@ -188,22 +269,31 @@ def validate_memory_writer(identity: dict[str, str]) -> None:
             raise MemoryWriteDenied(msg)
 
 
+def _receipt_key_matches(data: dict[str, Any], lookup: str) -> bool:
+    """Match the writer receipt key. Legacy files used session_id as the key."""
+    if data.get("receipt_id") == lookup:
+        return True
+    return not data.get("receipt_id") and data.get("session_id") == lookup
+
+
 # --- receipts ---------------------------------------------------------------
-def receipt_path(contract: dict[str, Any], session_id: str) -> Path:
-    safe = re.sub(r"[^A-Za-z0-9_.-]", "_", session_id or "unknown")
+def receipt_path(contract: dict[str, Any], receipt_id: str) -> Path:
+    safe = re.sub(r"[^A-Za-z0-9_.-]", "_", receipt_id or "unknown")
     return state_root(contract) / "receipts" / f"{safe}.json"
 
 
-def write_receipt(contract: dict[str, Any], session_id: str, payload: dict[str, Any]) -> Path:
-    path = receipt_path(contract, session_id)
+def write_receipt(contract: dict[str, Any], receipt_id: str, payload: dict[str, Any]) -> Path:
+    path = receipt_path(contract, receipt_id)
     path.parent.mkdir(parents=True, exist_ok=True)
-    body = {"session_id": session_id, "created_at": time.time(), **payload}
+    body = {"created_at": time.time(), **payload}
+    body["receipt_id"] = receipt_id
+    body.setdefault("session_id", payload.get("session_id") or "")
     path.write_text(json.dumps(body, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return path
 
 
-def fresh_receipt(contract: dict[str, Any], session_id: str) -> bool:
-    path = receipt_path(contract, session_id)
+def fresh_receipt(contract: dict[str, Any], receipt_id: str) -> bool:
+    path = receipt_path(contract, receipt_id)
     if not path.is_file():
         return False
     try:
@@ -211,7 +301,7 @@ def fresh_receipt(contract: dict[str, Any], session_id: str) -> bool:
     except (json.JSONDecodeError, OSError):
         return False
     ttl = int(contract.get("state", {}).get("session_ttl_seconds", 86400))
-    if data.get("session_id") != session_id:
+    if not _receipt_key_matches(data, receipt_id):
         return False
     if (time.time() - float(data.get("created_at", 0))) >= ttl:
         return False
@@ -223,15 +313,17 @@ def fresh_receipt(contract: dict[str, Any], session_id: str) -> bool:
     return not data.get("degraded", False)
 
 
-def usable_receipt(contract: dict[str, Any], session_id: str) -> bool:
-    """True when this session already ran SessionStart prefetch.
+def usable_receipt(contract: dict[str, Any], receipt_id: str) -> bool:
+    """True when prefetch stamped a writer receipt for this receipt_id.
 
-    Degraded hydrations are still usable for the write gate: denying on
-    ``fresh_receipt() is False`` after a degraded receipt permanently blocked
-    every governed Edit/Write for the TTL. Prefetch retries on the next
-    SessionStart; the gate continues either way.
+    SessionStart's session id is not this key. Degraded hydrations are still
+    usable for the write gate: denying on ``fresh_receipt() is False`` after a
+    degraded receipt permanently blocked every governed Edit/Write for the TTL.
+    Prefetch retries on the next chat; the gate continues either way.
     """
-    path = receipt_path(contract, session_id)
+    if not receipt_id:
+        return False
+    path = receipt_path(contract, receipt_id)
     if not path.is_file():
         return False
     try:
@@ -239,7 +331,7 @@ def usable_receipt(contract: dict[str, Any], session_id: str) -> bool:
     except (json.JSONDecodeError, OSError):
         return False
     ttl = int(contract.get("state", {}).get("session_ttl_seconds", 86400))
-    if data.get("session_id") != session_id:
+    if not _receipt_key_matches(data, receipt_id):
         return False
     return (time.time() - float(data.get("created_at", 0))) < ttl
 

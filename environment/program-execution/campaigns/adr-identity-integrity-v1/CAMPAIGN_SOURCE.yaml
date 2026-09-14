@@ -584,10 +584,6 @@ registration:
       Preserve completed campaign ordering. Shift later planned execute_order
       values as necessary rather than reusing an existing order.
 
-  compile_allowlist:
-    file: environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml
-    action: add adr-identity-integrity-v1
-
   live_ledger:
     file: environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml
     initial_state: planned

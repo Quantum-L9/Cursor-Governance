@@ -148,8 +148,11 @@ def main() -> int:
         "--session-id",
         default=None,
         help=(
-            "stamp the receipt for this session id instead of reading stdin "
-            "(newest ~/.claude/projects/<project>/<uuid>.jsonl for this conversation)"
+            "repair: the RAW chat id for the writer receipt (and the session id "
+            "when stdin has none) — exactly what memory_gate.py names in its "
+            "denial. The receipt key is composed here, once; a precomposed "
+            "<writer>__<chat> key for this writer is reduced, never doubled. "
+            "Newest ~/.claude/projects/<project>/<uuid>.jsonl"
         ),
     )
     args = parser.parse_args()
@@ -167,7 +170,19 @@ def main() -> int:
         event = json.load(sys.stdin)
     except (json.JSONDecodeError, ValueError):
         event = {}
-    session_id = args.session_id or str(event.get("session_id", "")) or "unknown-session"
+    try:
+        session_id = st.resolve_session_id(event=event, cli_arg=args.session_id)
+    except ValueError:
+        session_id = args.session_id or os.environ.get("CURSOR_SESSION_ID") or "unknown-session"
+    # One composition of the writer receipt key, from the same raw identity the
+    # gate names in its denial hint (audit P573-F1): the file stamped here is
+    # the file the gate looks up.
+    try:
+        writer_agent, receipt_chat = st.receipt_identity(event=event, cli_arg=args.session_id)
+        receipt_id = st.compose_receipt_id(writer_agent, receipt_chat)
+    except ValueError:
+        receipt_id = ""
+    chat_id, _chat_key = st.extract_chat_id(event)
 
     try:
         contract = st.load_contract()
@@ -226,10 +241,15 @@ def main() -> int:
                 contexts.append(header + "\n" + body if len(roots) > 1 else body)
 
         degraded = degraded_any or not group_ids
+        if not receipt_id:
+            raise ValueError("prefetch refused to stamp a session-scoped write-gate receipt")
         st.write_receipt(
             contract,
-            session_id,
+            receipt_id,
             {
+                "session_id": session_id,
+                "agent_id": st.extract_writer_agent_id(event),
+                "conversation_id": chat_id,
                 "namespaces": namespaces,
                 "transport": TRANSPORT,
                 "group_id": group_ids[0] if len(group_ids) == 1 else "",
