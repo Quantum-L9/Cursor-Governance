@@ -49,10 +49,36 @@ expected="$(fingerprint)"
 current=""
 [ -f "$STATE_FILE" ] && current="$(cat "$STATE_FILE")"
 
-if [ "$current" = "$expected" ] && [ -x "$GOV_ROOT/.venv/bin/python3" ]; then
+# One interpreter predicate for the whole script: the cached-environment guard,
+# the post-sync check and the seal all name this binary. A venv that ships only
+# a python3 shim (no python alias) passes the guard and must seal with it too.
+VENV_PYTHON="$GOV_ROOT/.venv/bin/python3"
+
+_seal_memory_artifact() {
+  # Fail-open, never silent: an offline or unsealed venv stays
+  # compatible/unproven rather than taking SessionStart down, and the binder
+  # still reports the gap — but the reason is printed, not swallowed. The
+  # module bounds its own subprocesses (timeouts, no prompts).
+  if [ ! -f "$GOV_ROOT/ops/memory/seal_artifact_provenance.py" ]; then
+    return 0
+  fi
+  local rc=0
+  PYTHONPATH="$GOV_ROOT" "$VENV_PYTHON" \
+    -m ops.memory.seal_artifact_provenance \
+    --root "$GOV_ROOT" --interpreter "$VENV_PYTHON" >&2 || rc=$?
+  if [ "$rc" -ne 0 ]; then
+    echo "UV: memory artifact seal did not complete (rc=$rc); binding stays compatible/unproved" >&2
+  fi
+  return 0
+}
+
+if [ "$current" = "$expected" ] && [ -x "$VENV_PYTHON" ]; then
   # Diagnostic, not a machine result: stdout in this chain is the sessionStart
   # JSON payload, so every human-readable line must go to stderr (F-08).
   echo "UV: cached locked environment" >&2
+  if [ "$MODE" != "check" ]; then
+    _seal_memory_artifact
+  fi
   exit 0
 fi
 
@@ -74,7 +100,7 @@ fi
   uv sync --locked --no-build --extra dev >&2
 )
 
-if [ ! -x "$GOV_ROOT/.venv/bin/python3" ]; then
+if [ ! -x "$VENV_PYTHON" ]; then
   echo "UV: sync completed without a usable .venv/bin/python3" >&2
   exit 1
 fi
@@ -84,3 +110,4 @@ tmp="${STATE_FILE}.tmp.$$"
 printf '%s\n' "$expected" > "$tmp"
 mv "$tmp" "$STATE_FILE"
 echo "UV: synchronized locked environment" >&2
+_seal_memory_artifact
