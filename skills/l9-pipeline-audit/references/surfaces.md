@@ -3,7 +3,7 @@ l9_schema: 1
 parent: l9-pipeline-audit
 tags: [pipeline-audit, surfaces]
 status: active
-version: 1.1.0
+version: 1.2.0
 /L9_META -->
 
 # Pipeline-audit surfaces
@@ -11,7 +11,7 @@ version: 1.1.0
 Same component verdicts (`live_invariant`, `stale_wiring`,
 `superseded_mission`, `spent`). `harvestable` = live + stale/superseded.
 
-Plans, WIP, and campaigns are one family. SessionStart NEXT 1–3 takes **one
+Plans, WIP, and campaigns are one family. The slash report NEXT 1–3 takes **one
 slot per surface** first (plans, then wip, then campaigns), then fills leftover
 slots. Eligible WIP is harvestable (`possible-landed`) or pending-active — not
 inventory-`landed`. Cap 3.
@@ -22,8 +22,7 @@ inventory-`landed`. Cap 3.
 | wip | `WIP/` except Legal Defense and secret globs | inventory `landed` (sha match or `landed:`); `possible-landed` is leftover | `WIP/<M-D-YY>/<concern>/` |
 | campaigns | `environment/program-execution/campaigns/*/CAMPAIGN_SOURCE.yaml` | lifecycle complete / cancelled | `<campaign>/HARVEST_INTENT.md` |
 
-SessionStart is display-only (fail-open, no `--archive-spent`). Do not
-`shutil.move` plans or WIP from the hook. A human slash (`/l9-pipeline-audit`
+SessionStart does not run this scan. A human slash (`/l9-pipeline-audit`
 / `/plan-audit` with `--archive-spent`, or `/l9-audit-plans`) may move spent
 root plans to `built/` or `archive/superseded/` and inventory-`landed` WIP to
 `WIP/_archived/` (cap 8). Do not move mixed harvestable donors. Do not move

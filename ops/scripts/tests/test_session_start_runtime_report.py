@@ -433,6 +433,10 @@ class HookWiringTests(unittest.TestCase):
         self.assertIn("resolve_runtime_reporter", text)
         self.assertNotIn("ARCHIVE_ARGS=(--archive-spent)", text)
         self.assertNotIn('"${ARCHIVE_ARGS[@]}"', text)
+        self.assertNotIn("audit_pipeline.py", text)
+        self.assertNotIn("audit_plans.py", text)
+        self.assertNotIn("### Plan audit", text)
+        self.assertNotIn("PLAN_AUDIT_MD", text)
         bootstrap = (REPO / "ops" / "scripts" / "bootstrap_agent_environment.sh").read_text(
             encoding="utf-8"
         )

@@ -35,8 +35,8 @@ def main() -> int:
         return 0
 
     # additional_context is sectioned markdown (Governance / Runtime / Graphiti /
-    # Code-graph / Plan audit). Do not split on " | " — wiring and plan-audit
-    # headers use pipes as field separators, and a 300-char chop hid Plan audit.
+    # Code-graph / Route locator). Do not split on " | " — wiring headers use
+    # pipes as field separators. SessionStart has no plan-store section.
     print("context:")
     print(context.rstrip())
     return 0

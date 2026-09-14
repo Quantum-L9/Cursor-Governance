@@ -169,8 +169,6 @@ if ! resolve_global_commands; then
 - Graphiti disabled — no resume memory
 ### Code-graph
 - skipped
-### Plan audit
-- pipeline audit: skipped (no SSOT)
 EOF
 )"
   COMBINED="$COMBINED" python3 - <<'PY'
@@ -191,7 +189,7 @@ GC="$GLOBAL_COMMANDS"
 
 # Generic hydration (uv, scratch_hold, checkers, capabilities, identity) lives
 # only in the shared bootstrap. Cursor keeps tip activation, wiring, hydrate,
-# plan audit, and the additional_context JSON envelope.
+# and the additional_context JSON envelope. Plans work is slash-only.
 # Same order as resolve_runtime_reporter: this checkout, then live SSOT.
 resolve_shared_bootstrap() {
   if [ -n "${CURSOR_PROJECT_DIR:-}" ] && [ -f "$CURSOR_PROJECT_DIR/ops/scripts/bootstrap_agent_environment.sh" ]; then
@@ -426,54 +424,10 @@ fi
 GOV_HEAD="$(short_sha "$ACTIVATE_SHA")"
 REMOTE_HEAD="$(short_sha "$ACTIVATE_REMOTE_SHA")"
 
-# Pipeline audit: fail-open, budget-capped; never fail sessionStart.
-# Heading stays ### Plan audit (bootstrap tests). Display-only: do not pass
-# --archive-spent. Manual /l9-audit-plans or /plan-audit may mutate.
-# Store hop is .cursor/plans → ~/.cursor/plans. Also scans WIP + PE campaigns.
-# Never mutates CAMPAIGN_SOURCE.yaml. No auto-Build.
-PLAN_AUDIT_MD="pipeline audit: skipped"
-AUDIT_PY="$GC/skills/l9-pipeline-audit/scripts/audit_pipeline.py"
-if [ ! -f "$AUDIT_PY" ]; then
-  _ws_audit="${CURSOR_PROJECT_DIR:-$PWD}/skills/l9-pipeline-audit/scripts/audit_pipeline.py"
-  if [ -f "$_ws_audit" ]; then
-    AUDIT_PY="$_ws_audit"
-  fi
-fi
+# Shared interpreter for runtime reporter / hydrate classifier / route locator.
+# SessionStart does not read, scan, or emit the plans store (slash-only).
 AUDIT_PY_BIN="$GC/.venv/bin/python"
 [ -x "$AUDIT_PY_BIN" ] || AUDIT_PY_BIN=python3
-# shellcheck source=/dev/null
-[ -f "$GC/ops/scripts/lib/run_with_timeout.sh" ] && . "$GC/ops/scripts/lib/run_with_timeout.sh"
-[ -f "${CURSOR_PROJECT_DIR:-}/ops/scripts/lib/run_with_timeout.sh" ] && . "${CURSOR_PROJECT_DIR}/ops/scripts/lib/run_with_timeout.sh"
-# Display-only. --archive-spent is opt-in on the CLI for a manual slash.
-if [ -f "$AUDIT_PY" ]; then
-  PLAN_AUDIT_ERR="$(mktemp "${TMPDIR:-/tmp}/l9-plan-audit.XXXXXX")"
-  if type run_with_timeout >/dev/null 2>&1; then
-    PLAN_AUDIT_MD="$(
-      run_with_timeout 4 "$AUDIT_PY_BIN" "$AUDIT_PY" \
-        --workspace "${CURSOR_PROJECT_DIR:-$PWD}" \
-        --gov-root "$GC" \
-        --window-days 7 \
-        --format session-start \
-        --budget-chars 1600 \
-        2>"$PLAN_AUDIT_ERR" || true
-    )"
-  else
-    PLAN_AUDIT_MD="$(
-      "$AUDIT_PY_BIN" "$AUDIT_PY" \
-        --workspace "${CURSOR_PROJECT_DIR:-$PWD}" \
-        --gov-root "$GC" \
-        --window-days 7 \
-        --format session-start \
-        --budget-chars 1600 \
-        2>"$PLAN_AUDIT_ERR" || true
-    )"
-  fi
-  if [ -z "$PLAN_AUDIT_MD" ]; then
-    PLAN_AUDIT_TAIL="$(head -c 240 "$PLAN_AUDIT_ERR" | tr '\n' ' ')"
-    PLAN_AUDIT_MD="pipeline audit: unavailable — ${PLAN_AUDIT_TAIL:-no stderr captured}"
-  fi
-  rm -f "$PLAN_AUDIT_ERR"
-fi
 
 # T-CI007 / T-CI015 / T-CI021 / T-CI022 — live Cursor SessionStart caller (U2).
 # Classification lives in session_start_runtime_report.py so slogans cannot
@@ -623,8 +577,6 @@ ${RUNTIME_MD}
 ${HYDRATE_BLOCK}
 ### Code-graph
 ${CODEGRAPH_MD}
-### Plan audit
-${PLAN_AUDIT_MD}
 ${ROUTE_LOCATOR_MD}
 EOF
 )"

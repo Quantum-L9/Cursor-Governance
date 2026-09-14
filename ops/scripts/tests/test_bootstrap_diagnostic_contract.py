@@ -201,11 +201,11 @@ class StdoutMachineContractTests(BootstrapFixture):
         moving HOME instead: the temp HOME's clone points at this checkout, and
         every artifact the hook writes lands in the temp tree.
 
-        "Every artifact" has to be arranged, not assumed. SessionStart plan
-        audit is display-only (no ``--archive-spent``). The machine plans store
-        that setup_workspace_symlinks.sh wires into ``<ws>/.cursor/plans``
-        still defaults to ``<gov>/docs/plans`` for a consumer workspace, so
-        the store is pinned to the workspace through the library's own stamp
+        "Every artifact" has to be arranged, not assumed. SessionStart does
+        not read or emit the plans store. The machine plans store that
+        setup_workspace_symlinks.sh wires into ``<ws>/.cursor/plans`` still
+        defaults to ``<gov>/docs/plans`` for a consumer workspace, so the
+        store is pinned to the workspace through the library's own stamp
         (ops/scripts/lib/cursor_plans_store.sh reads
         ``~/.cursor/l9-plans-store`` first), the workspace gets its own WIP
         root, and the snapshot comparison below proves the checkout is
@@ -248,6 +248,8 @@ class StdoutMachineContractTests(BootstrapFixture):
         payload = json.loads(proc.stdout)
         self.assertIsInstance(payload, dict)
         self.assertIn("additional_context", payload)
+        self.assertNotIn("### Plan audit", payload["additional_context"])
+        self.assertNotIn("audit_pipeline.py", payload["additional_context"])
         self.assertEqual(
             before,
             after,

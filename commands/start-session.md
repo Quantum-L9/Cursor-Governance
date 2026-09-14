@@ -1,6 +1,6 @@
 ---
 name: start-session
-version: "3.2.0"
+version: "3.3.0"
 description: "Run the L9 sessionStart bootstrap for the open workspace (same path as Cursor hooks + make start)"
 auto_chain: null
 ---
@@ -88,7 +88,6 @@ second check grid. If a section is absent, say so.
 {### FAILED — if present; else omit}
 {### Runtime}
 {### Degraded}
-{### Plan audit}
 
 ### Ready For
 → `/ynp` — next action
@@ -105,6 +104,6 @@ second check grid. If a section is absent, say so.
 - Cursor also runs this bootstrap automatically on `sessionStart` via `~/.cursor/hooks.json`. `/start-session` is the **manual / repair / new-window** entry that uses the identical script.
 - Slash commands activate when governance is wired: `~/.cursor/plugins/local/l9-governance` → SSOT (discovers `commands/`), plus repo `.cursor-commands` symlink. Bootstrap/`make start` ensures that wiring.
 - Resume stack is Graphiti only (`ops/graphiti/MEMORY_BANK_POLICY.md`).
-- Plan-audit wording lives in bootstrap `### Plan audit`. Do not restate it here. On-demand harvest is `/l9-pipeline-audit`. Shelf-only is `/l9-audit-plans`.
+- SessionStart does not read or report the plans store. On-demand harvest is `/l9-pipeline-audit`. Shelf-only is `/l9-audit-plans`.
 
 --- End Command ---

@@ -1656,3 +1656,22 @@ sentences in `L9_SESSION_PIPELINE_AUDIT_V1`. Those paragraphs stay on disk
   `/plan-audit` (`/l9-pipeline-audit` with `--archive-spent`) may mutate.
 - Do not invent a second kill switch. CLI `--archive-spent` stays opt-in.
 - Do not auto-Build. Do not `make campaign`.
+
+<!-- SESSIONSTART_NO_PLAN_SURFACE_V1 -->
+## SessionStart has no plan surface (2026-09-14)
+
+Append-only. Supersedes the SessionStart plan-scan sentences in §16,
+`L9_SESSION_PIPELINE_AUDIT_V1`, `L9_PLAN_AUDIT_ABSORBED_V1`, and
+`SESSIONSTART_PLANS_DISPLAY_ONLY_V1`. Those paragraphs stay on disk
+(additive_only). Do not fold them.
+
+- SessionStart does **not** read, scan, analyze, archive, or emit the
+  plans store, `WIP/` harvest queue, or PE campaign sources.
+- `additional_context` has no `### Plan audit` section and must not
+  invoke `audit_pipeline.py` / `audit_plans.py`.
+- Plans work is slash-only: `/l9-audit-plans` (shelf) and
+  `/plan-audit` / `/l9-pipeline-audit` (harvest). `--archive-spent`
+  stays opt-in on those CLIs.
+- `--format session-start` on `audit_pipeline.py` is a leftover report
+  shape, not a SessionStart caller.
+- Do not auto-Build. Do not `make campaign`.
