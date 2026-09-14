@@ -44,7 +44,9 @@ _link_or_update() {
   local link=$1 target=$2 label=$3
   mkdir -p "$(dirname "$link")"
   if [ -L "$link" ]; then
-    if [ "$(python3 -c "import os; print(os.path.realpath('$link'))")" = "$(python3 -c "import os; print(os.path.realpath('$target'))")" ]; then
+    # Same predicate as the health check: right realpath AND reachable
+    # terminal target. A dangling link is re-created, never reported OK.
+    if _link_ok "$link" "$target"; then
       echo "OK: $label"
       return
     fi

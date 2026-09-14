@@ -123,6 +123,104 @@ def test_consumer_healthy_when_three_links_match(tmp_path: Path) -> None:
 
 
 @pytest.mark.skipif(not HEALTH.is_file(), reason="helper missing")
+def test_expected_but_absent_target_unhealthy_until_it_exists(tmp_path: Path) -> None:
+    """P564-F1: realpath equality is not reachability.
+
+    Every link text is exactly the expected path, but the SSOT directory
+    and the ~/.cursor/plans store do not exist. The predicate must say
+    unhealthy, and flip to healthy only once each terminal target exists.
+    """
+    home = tmp_path / "home"
+    ssot = home / ".cursor-governance"  # not created
+    store = home / ".cursor/plans"  # not created
+    ws = tmp_path / "consumer"
+    (ws / ".cursor").mkdir(parents=True)
+    (ws / ".cursor-commands").symlink_to(ssot)
+    (ws / ".cursor/plans").symlink_to(store)
+    plugin = home / ".cursor/plugins/local/l9-governance"
+    plugin.parent.mkdir(parents=True)
+    plugin.symlink_to(ssot)
+    assert Path(os.path.realpath(ws / ".cursor-commands")) == Path(os.path.realpath(ssot))
+    assert not _healthy(home, ws)
+
+    _seed_ssot(home)
+    assert not _healthy(home, ws), "plans store still absent"
+
+    store.mkdir(parents=True)
+    assert _healthy(home, ws)
+
+
+@pytest.mark.skipif(not ENSURE.is_file(), reason="ensure missing")
+def test_links_only_repair_creates_absent_plans_store_target(tmp_path: Path) -> None:
+    """P564-F1 repair half: a dangling .cursor/plans -> ~/.cursor/plans must
+    not short-circuit as 'already wired'; links-only repair creates the store."""
+    home = tmp_path / "home"
+    ssot = _seed_ssot(home)
+    ws = tmp_path / "consumer"
+    (ws / ".cursor").mkdir(parents=True)
+    (ws / ".cursor-commands").symlink_to(ssot)
+    _link_plugin(home, ssot)
+    store = home / ".cursor/plans"
+    (ws / ".cursor/plans").symlink_to(store)
+    assert not store.exists()
+    assert not _healthy(home, ws)
+
+    env = _env(home)
+    env["L9_WIRE_LINKS_ONLY"] = "1"
+    first = subprocess.run(
+        ["bash", str(ENSURE), str(ws)],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert "already wired" not in first.stdout, first.stdout + first.stderr
+    assert store.exists(), first.stdout + first.stderr
+    assert Path(os.path.realpath(ws / ".cursor/plans")) == Path(os.path.realpath(store))
+    assert _healthy(home, ws)
+    _assert_no_claude_projection(home)
+
+    second = subprocess.run(
+        ["bash", str(ENSURE), str(ws)],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert "already wired" in second.stdout
+
+
+@pytest.mark.skipif(not ENSURE.is_file(), reason="ensure missing")
+def test_links_only_repair_never_claims_health_when_ssot_absent(tmp_path: Path) -> None:
+    """P564-F1 repair half: with the SSOT absent, right-path links stay
+    unhealthy after repair — the healer cannot create the terminal target
+    and must not report the workspace as already wired."""
+    home = tmp_path / "home"
+    ssot = home / ".cursor-governance"  # not created
+    ws = tmp_path / "consumer"
+    (ws / ".cursor").mkdir(parents=True)
+    (ws / ".cursor-commands").symlink_to(ssot)
+    _link_plans(home, ws)
+    plugin = home / ".cursor/plugins/local/l9-governance"
+    plugin.parent.mkdir(parents=True)
+    plugin.symlink_to(ssot)
+    assert not _healthy(home, ws)
+
+    env = _env(home)
+    env["L9_WIRE_LINKS_ONLY"] = "1"
+    proc = subprocess.run(
+        ["bash", str(ENSURE), str(ws)],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert "already wired" not in proc.stdout, proc.stdout + proc.stderr
+    assert not ssot.exists()
+    assert not _healthy(home, ws)
+    _assert_no_claude_projection(home)
+
+
+@pytest.mark.skipif(not HEALTH.is_file(), reason="helper missing")
 def test_ssot_and_ssot_checkout_reject_cursor_commands(tmp_path: Path) -> None:
     home = tmp_path / "home"
     ssot = _seed_ssot(home)

@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # 3-link SessionStart health predicate.
 # Checks: .cursor-commands (consumer only), .cursor/plans, and
-# ~/.cursor/plugins/local/l9-governance. Realpath-compare, not -L.
+# ~/.cursor/plugins/local/l9-governance. Realpath-compare, not -L —
+# and the terminal target must be reachable: realpath normalizes a
+# path whether or not it exists, so a dangling link whose target
+# string equals the expected path would otherwise compare healthy.
 # classify_workspace_kind decides ssot / ssot_checkout (no consumer link).
 # This is not check_governance_wiring.sh and must not grow into it.
 # shellcheck shell=bash
@@ -23,10 +26,14 @@ workspace_plugin_link() {
   printf '%s\n' "${HOME}/.cursor/plugins/local/l9-governance"
 }
 
-# True when $1 is a symlink whose realpath equals $2.
+# True when $1 is a symlink whose terminal target exists and whose
+# realpath equals $2. -e follows the link chain, so an expected-but-
+# absent target (missing SSOT, missing ~/.cursor/plans store) is
+# unhealthy even when the link text is exactly right.
 workspace_link_realpath_ok() {
   local link=$1 expected=$2
   [ -L "$link" ] || return 1
+  [ -e "$link" ] || return 1
   local rt re
   rt="$(python3 -c 'import os,sys; print(os.path.realpath(os.path.expanduser(sys.argv[1])))' "$link" 2>/dev/null || true)"
   re="$(python3 -c 'import os,sys; print(os.path.realpath(os.path.expanduser(sys.argv[1])))' "$expected" 2>/dev/null || true)"
