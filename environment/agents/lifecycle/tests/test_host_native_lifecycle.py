@@ -11,6 +11,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 _GOV_ROOT = Path(__file__).resolve().parents[4]
 if str(_GOV_ROOT) not in sys.path:
@@ -210,9 +211,73 @@ class HostNativeLifecycleTests(unittest.TestCase):
         index = receipts._load_host_correlation_index()
         self.assertIn("tu-idx", index)
         self.assertIn("call-idx-alt", index)
-        self.assertEqual(index["tu-idx"].get("subagent_id"), "sub-idx-1")
+        self.assertEqual([c.get("subagent_id") for c in index["tu-idx"]], ["sub-idx-1"])
         self.assertTrue(receipts._host_admission_has_start({"tool_use_id": "tu-idx"}, index=index))
         self.assertFalse(receipts._host_admission_has_stop({"tool_use_id": "tu-idx"}, index=index))
+
+    @staticmethod
+    def _forced_glob_order(*, reverse: bool):
+        """Pin ``Path.glob`` iteration order so the test is independent of the filesystem."""
+        original = Path.glob
+
+        def ordered(self_path: Path, pattern: str, *args, **kwargs):
+            return iter(sorted(original(self_path, pattern, *args, **kwargs), reverse=reverse))
+
+        return mock.patch.object(Path, "glob", ordered)
+
+    def test_duplicate_correlation_any_stopped_closes_admission(self) -> None:
+        """F-06: two correlations share one identifier; only one subagent stopped.
+
+        The pre-index scan answered "any matching correlation stopped" and so
+        closed the admission. A one-to-one index keeps whichever receipt the
+        directory scan yields last, so the answer would depend on glob order.
+        Both orders are forced here: the stopped receipt sorts first in one
+        subtest and last in the other, so a last-writer-wins index fails one
+        of them regardless of the platform's native ordering.
+        """
+        cases = (
+            ("tool_use_id", "tu-dup", "sub-dup-a-stopped", "sub-dup-z-live"),
+            ("tool_call_id", "call-dup", "sub-call-a-stopped", "sub-call-z-live"),
+        )
+        for key, shared_id, stopped_sub, live_sub in cases:
+            receipts.write_host_correlation(
+                {
+                    "subagent_id": stopped_sub,
+                    "assignment_id": f"host-native-{shared_id}",
+                    key: shared_id,
+                }
+            )
+            receipts.write_host_correlation(
+                {
+                    "subagent_id": live_sub,
+                    "assignment_id": f"host-native-{shared_id}",
+                    key: shared_id,
+                }
+            )
+            receipts.write_host_stop(stopped_sub, {"status": "completed"})
+            receipts.write_host_admission(
+                {"tool_use_id": shared_id, "assignment_id": f"host-native-{shared_id}"}
+            )
+            for reverse in (False, True):
+                with (
+                    self.subTest(key=key, reverse=reverse),
+                    self._forced_glob_order(reverse=reverse),
+                ):
+                    index = receipts._load_host_correlation_index()
+                    body = {"tool_use_id": shared_id}
+                    self.assertTrue(receipts._host_admission_has_start(body, index=index))
+                    self.assertTrue(receipts._host_admission_has_stop(body, index=index))
+                    self.assertTrue(receipts._host_admission_has_stop(body))
+                    self.assertFalse(receipts._host_admission_expired(body, index=index))
+                    self.assertNotIn(
+                        shared_id,
+                        [a.get("tool_use_id") for a in receipts.list_in_flight_host_admissions()],
+                    )
+                    self.assertIsNotNone(receipts.load_host_admission(shared_id))
+                    self.assertEqual(
+                        sorted(c.get("subagent_id") for c in index[shared_id]),
+                        sorted((stopped_sub, live_sub)),
+                    )
 
     def test_corrupt_assignment_id_does_not_crash_in_flight(self) -> None:
         receipts.write_host_admission(

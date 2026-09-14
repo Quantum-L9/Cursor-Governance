@@ -193,9 +193,19 @@ def _parse_observed_at(raw: Any) -> datetime | None:
     return parsed
 
 
-def _load_host_correlation_index() -> dict[str, dict[str, Any]]:
-    """Map tool_use_id / tool_call_id → correlation body. One directory scan."""
-    index: dict[str, dict[str, Any]] = {}
+HostCorrelationIndex = dict[str, list[dict[str, Any]]]
+
+
+def _load_host_correlation_index() -> HostCorrelationIndex:
+    """Map tool_use_id / tool_call_id → every correlation body carrying it.
+
+    One directory scan. The relation is many-to-one: several correlation
+    receipts may share an identifier, so every match is retained. Consumers
+    aggregate over the list exactly as the pre-index scan aggregated over the
+    directory (any match → started; any stopped match → stopped), which keeps
+    the answer independent of the order ``glob()`` yields files.
+    """
+    index: HostCorrelationIndex = {}
     corr_root = subagent_receipt_root() / "host-correlation"
     if not corr_root.is_dir():
         return index
@@ -206,15 +216,17 @@ def _load_host_correlation_index() -> dict[str, dict[str, Any]]:
             continue
         if not isinstance(corr, dict):
             continue
+        seen: set[str] = set()
         for key in (corr.get("tool_use_id"), corr.get("tool_call_id")):
             text = str(key or "").strip()
-            if text:
-                index[text] = corr
+            if text and text not in seen:
+                seen.add(text)
+                index.setdefault(text, []).append(corr)
     return index
 
 
 def _host_admission_has_start(
-    body: dict[str, Any], *, index: dict[str, dict[str, Any]] | None = None
+    body: dict[str, Any], *, index: HostCorrelationIndex | None = None
 ) -> bool:
     tool_use_id = str(body.get("tool_use_id") or "")
     if not tool_use_id:
@@ -227,7 +239,7 @@ def _host_admission_expired(
     body: dict[str, Any],
     *,
     now: datetime | None = None,
-    index: dict[str, dict[str, Any]] | None = None,
+    index: HostCorrelationIndex | None = None,
 ) -> bool:
     if _host_admission_has_start(body, index=index) or _host_admission_has_stop(body, index=index):
         return False
@@ -239,22 +251,24 @@ def _host_admission_expired(
 
 
 def _host_admission_has_stop(
-    body: dict[str, Any], *, index: dict[str, dict[str, Any]] | None = None
+    body: dict[str, Any], *, index: HostCorrelationIndex | None = None
 ) -> bool:
+    """True when ANY correlation sharing the admission's id has a host-stop receipt."""
     tool_use_id = str(body.get("tool_use_id") or "")
     if not tool_use_id:
         return False
     table = index if index is not None else _load_host_correlation_index()
-    corr = table.get(tool_use_id)
-    if not corr:
-        return False
-    subagent_id = str(corr.get("subagent_id") or "").strip()
-    if not subagent_id:
-        return False
-    try:
-        return host_stop_path(subagent_id).is_file()
-    except ValueError:
-        return False
+    for corr in table.get(tool_use_id, ()):
+        subagent_id = str(corr.get("subagent_id") or "").strip()
+        if not subagent_id:
+            continue
+        try:
+            stopped = host_stop_path(subagent_id).is_file()
+        except ValueError:
+            continue
+        if stopped:
+            return True
+    return False
 
 
 def list_in_flight_host_admissions() -> list[dict[str, Any]]:
