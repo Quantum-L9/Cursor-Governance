@@ -51,7 +51,7 @@ Stay silent on anything these own. Exception: still flag logic that *defeats* ty
 
 - **Protected surfaces** (`90-protected-core`): edits to `kernel_loader.py`, `executor.py`, `websocket_orchestrator.py`, `memory_substrate_service.py`, `docker-compose.yml`, `infra/**`, `deploy/**`, `kubernetes/**`, `helm/**` must not ride in on normal feature/refactor work — they need a dedicated plan.
 - **Secrets & config** (`61-secrets-and-dependencies`, `63-env-no-hardcode`, `74-ai-safety-policy`): no keys/tokens/passwords in tracked files or test data; config via env / `.env` (with `.env.example` placeholders); no hardcoded DB/host/port/paths; no real PII in examples.
-- **L9 module structure** (`25-python-dora-header`): new/edited `.py` carry the three blocks — Header Meta docstring, `__footer_meta__`, and the `__l9_trace__` DORA block. **Never hand-edit `__l9_trace__`** (machine-managed).
+- **Governance evidence:** new or edited code must preserve the active governance, observability, and test contracts. Runtime evidence belongs in governed telemetry and reviewable artifacts, never mutable source-file metadata.
 - **Graph layer boundary** (`97-graph-layer-boundary`): don't use Graphiti for symbol/import location or `code-graph` for decision/ADR recall — keep episodic vs structural graphs distinct.
 - **Org invariant** (`ORG_INVARIANTS.yaml`): every repo route stays under `https://github.com/Quantum-L9/`; flag any personal-account owner.
 - **Honesty** (universal hard bans): no stubs/placeholders/TODO presented as complete; no fabricated results/paths/citations; honest `PASS/FAIL/BLOCKED` — reject pass-only validation claims.

@@ -153,8 +153,8 @@ tiers:
     reason: repo-specific Emma wiring; omit from GlobalCommands
   - item: commands/workflow executors/
     reason: obsolete duplicate executor folder; prefer Cursor-native skill instructions and optional skill-local scripts only when needed
-  - item: commands/dora-commands/
-    reason: unwired legacy DORA commands; archive or rebuild only if aligned to the current stack
+  - item: commands/_archived/dora/
+    reason: retired DORA command corpus; excluded from live command discovery and never auto-reactivated
   - item: skills/_archived/l9-pr-analysis/
     reason: superseded by skills/l9-pr-remediation/; archived out of live skills/ discovery — never auto-invoke or reconcile
   - item: skills/_archived/l9-pr-remediation-deprecated/
