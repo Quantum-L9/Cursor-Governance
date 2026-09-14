@@ -70,11 +70,16 @@ def render_llm_txt(root: Path, policy: dict[str, Any], base_url: str | None) -> 
     return "\n".join(lines).rstrip() + "\n"
 
 
-def retire_legacy_llms_txt(root: Path) -> list[str]:
+def retire_legacy_llms_txt(root: Path, *, rename_missing: bool = True) -> list[str]:
     """Keep handwritten bytes; only drop the obsolete name once llm.txt exists.
 
-    Missing llm.txt + present llms.txt → rename (preserve content).
     Both present → delete leftover llms.txt.
+    Missing llm.txt + present llms.txt → rename (preserve content), only when
+    ``rename_missing`` is true (the projection is enabled). A disabled
+    projection never creates llm.txt, so the leftover stays until it exists.
+
+    Filesystem failures (``OSError``) propagate; the caller maps them to a
+    BLOCKED receipt state instead of a crash.
     """
     mutations: list[str] = []
     canonical = resolve_under_root(root, PROJECTION_FILENAME)
@@ -85,7 +90,7 @@ def retire_legacy_llms_txt(root: Path) -> list[str]:
         legacy.unlink()
         mutations.append(f"retired:{LEGACY_FILENAME}")
         return mutations
-    if not canonical.is_file() and legacy.is_file():
+    if rename_missing and not canonical.is_file() and legacy.is_file():
         legacy.replace(canonical)
         mutations.append(PROJECTION_FILENAME)
         mutations.append(f"retired:{LEGACY_FILENAME}")
@@ -93,6 +98,11 @@ def retire_legacy_llms_txt(root: Path) -> list[str]:
 
 
 def write_llm_txt(root: Path, rendered: str) -> tuple[bool, Admission]:
+    """Owned write of llm.txt.
+
+    ``ValueError`` on an escaped target; a filesystem ``OSError`` propagates
+    for the caller to map to a receipt state.
+    """
     target = resolve_under_root(root, PROJECTION_FILENAME)
     if target is None:
         raise ValueError(f"{PROJECTION_FILENAME} target escaped repository root")

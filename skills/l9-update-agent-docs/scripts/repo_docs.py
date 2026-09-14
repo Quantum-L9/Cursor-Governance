@@ -252,17 +252,18 @@ def build_llm_state(
         "admission": "skipped",
         "findings": [],
     }
-    if enabled:
-        mutations.extend(retire_legacy_llms_txt(root))
-    else:
-        # Drop the obsolete name only when the canonical file already exists.
-        leftover = resolve_under_root(root, LEGACY_FILENAME)
-        canonical = resolve_under_root(root, PROJECTION_FILENAME)
-        leftover_present = leftover is not None and leftover.is_file()
-        canonical_present = canonical is not None and canonical.is_file()
-        if leftover_present and canonical_present:
-            leftover.unlink()
-            mutations.append(f"retired:{LEGACY_FILENAME}")
+    # A disabled projection never creates llm.txt, so the leftover name is
+    # dropped only once the canonical file already exists (no rename).
+    try:
+        mutations.extend(retire_legacy_llms_txt(root, rename_missing=enabled))
+    except OSError as exc:
+        state.update(
+            status="BLOCKED",
+            admission="skipped",
+            findings=[f"{LEGACY_FILENAME} retirement failed: {exc}"],
+        )
+        return state, mutations
+    if not enabled:
         return state, mutations
     rendered = render_llm_txt(root, policy, base_url)
     render_findings = validate_llm_txt(rendered)
@@ -285,6 +286,13 @@ def build_llm_state(
     except ValueError as exc:
         state.update(status="BLOCKED", admission="skipped", findings=[str(exc)])
         return state, mutations
+    except OSError as exc:
+        state.update(
+            status="BLOCKED",
+            admission="skipped",
+            findings=[f"{PROJECTION_FILENAME} owned write failed: {exc}"],
+        )
+        return state, mutations
     if written:
         state["written"] = True
         if PROJECTION_FILENAME not in mutations:
@@ -300,6 +308,18 @@ def build_llm_state(
 
 def _structural_failure(code: str, severity: str, detail: str) -> dict[str, str]:
     return {"code": code, "severity": severity, "detail": detail}
+
+
+def _failed_filetree_state(severity: str, detail: str) -> dict[str, Any]:
+    return {
+        "status": "FAIL" if severity == "FAIL" else "BLOCKED",
+        "path": "filetree.md",
+        "written": False,
+        "admission": "skipped",
+        "module_count": 0,
+        "missing_readme_count": 0,
+        "findings": [detail],
+    }
 
 
 def _status_with_structural(obligation_status: str, failures: list[dict[str, str]]) -> str:
@@ -382,40 +402,53 @@ def audit_repository(
         )
     module_changes = impact.get("matched_rules", {}).get("module_implementation_change", [])
     module_cap = probe_module_readme_capability(root, policy, module_changes)
+    run_mutations: list[str] = []
     try:
         filetree, inventory, run_mutations = build_filetree_state(root, write=write_filetree)
     except ValueError as exc:
-        filetree = {
-            "status": "FAIL",
-            "path": "filetree.md",
-            "written": False,
-            "admission": "skipped",
-            "module_count": 0,
-            "missing_readme_count": 0,
-            "findings": [str(exc)],
-        }
+        # The render is invalid: a defect in this skill, so FAIL.
+        filetree = _failed_filetree_state("FAIL", str(exc))
         inventory = FiletreeInventory()
-        run_mutations = []
         structural.append(_structural_failure("filetree", "FAIL", str(exc)))
+    except OSError as exc:
+        # The filesystem refused the owned write: environment, so BLOCKED.
+        detail = f"filetree.md owned write failed: {exc}"
+        filetree = _failed_filetree_state("BLOCKED", detail)
+        inventory = FiletreeInventory()
+        structural.append(_structural_failure("filetree", "BLOCKED", detail))
     llm, llm_mutations = build_llm_state(root, policy, directives, llm_base_url_value, write_llm)
     run_mutations.extend(llm_mutations)
-    if write_module_readmes and module_cap["status"] == "AVAILABLE":
-        run_mutations.extend(
-            write_missing_module_readmes(
-                root, write=True, changed=module_changes, inventory=inventory
+    if llm["status"] == "BLOCKED":
+        structural.append(
+            _structural_failure(LLM_SURFACE_ID, "BLOCKED", "; ".join(llm["findings"]))
+        )
+    if (
+        write_module_readmes
+        and module_cap["status"] == "AVAILABLE"
+        and filetree["status"] not in {"FAIL", "BLOCKED"}
+    ):
+        try:
+            run_mutations.extend(
+                write_missing_module_readmes(
+                    root, write=True, changed=module_changes, inventory=inventory
+                )
             )
-        )
-        refreshed, later_inventory, later_mutations = build_filetree_state(
-            root, write=write_filetree
-        )
-        filetree = refreshed
-        inventory = later_inventory
-        run_mutations.extend(later_mutations)
+            refreshed, _, later_mutations = build_filetree_state(root, write=write_filetree)
+        except OSError as exc:
+            detail = f"module README owned write failed: {exc}"
+            structural.append(_structural_failure("module_readmes", "BLOCKED", detail))
+        else:
+            filetree = refreshed
+            run_mutations.extend(later_mutations)
     if "filetree.md" in run_mutations:
         impacted = sorted(set(impact.get("impacted_surfaces", [])) | {FILETREE_SURFACE_ID})
         impact["impacted_surfaces"] = impacted
         impact_internal["impacted_surfaces"] = impacted
     semantic_required = semantic_harvest_required(policy, impact, root)
+    owned_admissions = {
+        LLM_SURFACE_ID: str(llm.get("admission") or "skipped"),
+        FILETREE_SURFACE_ID: str(filetree.get("admission") or "skipped"),
+    }
     obligations = build_obligations(
         root,
         policy,
@@ -425,6 +458,7 @@ def audit_repository(
         run_mutations=run_mutations,
         semantic_required=semantic_required,
         module_capability=module_cap,
+        owned_admissions=owned_admissions,
     )
     semantic_state, semantic_compiled = semantic_harvest_state(
         root, policy, impact, changed_files, harvest_path

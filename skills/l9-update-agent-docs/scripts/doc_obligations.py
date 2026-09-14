@@ -172,6 +172,32 @@ def _validation_result(
     }
 
 
+ADMISSION_EVIDENCE_SOURCE = "l9-update-agent-docs/doc_owned_write"
+
+
+def _admission_evidence(admission: str, supports: str) -> dict[str, Any]:
+    value = f"admission:{admission}"
+    return {
+        "id": _evidence_id("admission", value),
+        "type": "validation",
+        "source": ADMISSION_EVIDENCE_SOURCE,
+        "locator": {"kind": "value", "value": value},
+        "epistemic": "CONFIRMED",
+        "supports": supports,
+    }
+
+
+def _byte_identity_evidence(evidence: list[dict[str, Any]]) -> list[str]:
+    """Evidence ids proving the owner render was byte-identical to the target."""
+    return [
+        row["id"]
+        for row in evidence
+        if row["type"] == "validation"
+        and row["source"] == ADMISSION_EVIDENCE_SOURCE
+        and row["supports"] == "target_freshness"
+    ]
+
+
 def build_obligations(
     root: Path,
     policy: dict[str, Any],
@@ -182,7 +208,15 @@ def build_obligations(
     run_mutations: list[str],
     semantic_required: list[str],
     module_capability: dict[str, Any],
+    owned_admissions: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
+    """Compile obligations. ``owned_admissions`` maps a skill-owned surface
+    (llm_txt, filetree) to the owned-write admission observed this run:
+    ``preserve`` (unowned target left in place) becomes a terminal PRESERVED
+    obligation; ``unchanged`` (render byte-identical to the target) carries
+    freshness evidence so validation can close it. Every other admission keeps
+    strict refresh validation."""
+    owned_admissions = dict(owned_admissions or {})
     impacted = set(impact.get("impacted_surfaces", []))
     for surface, spec in policy["surfaces"].items():
         if spec["requirement"] == "required" and not selector_paths(root, spec["selectors"]):
@@ -293,6 +327,8 @@ def build_obligations(
             if semantic:
                 required_validation.append("semantic_qualification")
             touched = bool(target.get("path") and target["path"] in touched_paths)
+            admission = owned_admissions.get(surface) if applicable and not semantic else None
+            qualification: dict[str, Any]
             if not applicable:
                 lifecycle = {
                     "status": "NOT_APPLICABLE",
@@ -302,6 +338,38 @@ def build_obligations(
                 qualification = {
                     "kind": "deterministic",
                     "status": "NOT_REQUIRED",
+                    "semantic_owner": None,
+                    "harvest_target": None,
+                    "harvest_request_id": None,
+                    "concept_ids": [],
+                }
+            elif admission == "preserve":
+                action_type = "PRESERVE"
+                evidence.append(_admission_evidence(admission, "preservation"))
+                lifecycle = {
+                    "status": "PRESERVED",
+                    "reason": "existing target is unowned (no generator marker); "
+                    "the skill preserved it instead of overwriting",
+                    "terminal": True,
+                }
+                qualification = {
+                    "kind": "deterministic",
+                    "status": "QUALIFIED",
+                    "semantic_owner": None,
+                    "harvest_target": None,
+                    "harvest_request_id": None,
+                    "concept_ids": [],
+                }
+            elif admission == "unchanged":
+                evidence.append(_admission_evidence(admission, "target_freshness"))
+                lifecycle = {
+                    "status": "SATISFIED",
+                    "reason": "owner render is byte-identical to the target at this revision",
+                    "terminal": False,
+                }
+                qualification = {
+                    "kind": "deterministic",
+                    "status": "QUALIFIED",
                     "semantic_owner": None,
                     "harvest_target": None,
                     "harvest_request_id": None,
@@ -516,9 +584,17 @@ def validate_and_close_obligations(
         existing = {row["name"]: row for row in obligation["validation"]["results"]}
         target = obligation["target"]["path"]
         if "target_freshness" in obligation["validation"]["required"]:
+            identity_ids = _byte_identity_evidence(obligation["evidence"])
             if obligation["required_action"]["type"] in {"NO_ACTION", "PRESERVE"}:
                 existing["target_freshness"] = _validation_result(
                     "target_freshness", "NotApplicable", "no target mutation required"
+                )
+            elif identity_ids:
+                existing["target_freshness"] = _validation_result(
+                    "target_freshness",
+                    "PASS",
+                    "owner render is byte-identical to the target",
+                    identity_ids,
                 )
             elif target and target in touched:
                 target_ev = next(

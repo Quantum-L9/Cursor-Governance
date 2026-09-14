@@ -16,7 +16,7 @@ import sys
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 from doc_filetree import (
@@ -27,11 +27,50 @@ from doc_filetree import (
     walk_inventory,
 )
 
+__all__ = [
+    "CONFIG_PATH",
+    "GENERATED_MARKER",
+    "LEGACY_HANDWRITTEN_RE",
+    "README_TEMPLATE",
+    "ROOT_README",
+    "ClassInfo",
+    "FunctionInfo",
+    "ModuleFacts",
+    "classify_readme",
+    "discover_module_paths",
+    "extract_subsystem_facts",
+    "generate_readme",
+    "is_generated",
+    "is_handwritten",
+    "is_legacy_generated",
+    "is_root_readme",
+    "list_subsystems",
+    "load_config",
+    "main",
+    "report_gaps",
+    "resolve_repo_root",
+    "resolve_under_root",
+    "select_targets",
+    "spec_for_path",
+    "validate_sections",
+    "validate_subsystem_config",
+    "write_missing_module_readmes",
+    "write_readme",
+]
+
 CONFIG_PATH = Path("config/subsystems/readme_config.yaml")
 ROOT_README = Path("README.md")
 FORBIDDEN_RELATIVE_PATHS = {"", ".", ".."}
 GENERATED_MARKER = "<!-- l9-module-readme: generated-from-ast -->"
 HEADING_RE = re.compile(r"^##\s+(.+?)\s*$", re.MULTILINE)
+# Pre-marker contract of scripts/generate_subsystem_readmes.py: a README whose
+# front matter (or first 400 bytes) declares `auto_generated: false` is
+# handwritten; everything that generator wrote carries the README_TEMPLATE
+# header line and section set below, but no marker.
+LEGACY_HANDWRITTEN_RE = re.compile(r"^auto_generated:\s*false\b", re.MULTILINE | re.IGNORECASE)
+LEGACY_HEADER_RE = re.compile(r"^\*\*Path:\*\* `[^`\n]+` \| \*\*Tier:\*\* \S.*$", re.MULTILINE)
+LEGACY_REQUIRED_HEADINGS = ("Purpose", "Components", "Functions", "Exports", "Dependencies")
+ReadmeOwnership = Literal["missing", "generated", "legacy_generated", "handwritten"]
 
 README_TEMPLATE = (
     """# {title}
@@ -385,17 +424,54 @@ def is_root_readme(repo_root: Path, dest: Path) -> bool:
         return dest.name == "README.md" and dest.parent.resolve() == repo_root.resolve()
 
 
-def is_handwritten(path: Path) -> bool:
-    if not path.is_file():
+def _legacy_handwritten(text: str) -> bool:
+    front = text.split("---", 2)
+    if len(front) >= 3 and LEGACY_HANDWRITTEN_RE.search(front[1]):
+        return True
+    return bool(LEGACY_HANDWRITTEN_RE.search(text[:400]))
+
+
+def _legacy_generated_shape(text: str) -> bool:
+    if not LEGACY_HEADER_RE.search(text):
         return False
-    text = path.read_text(encoding="utf-8")
+    found = {normalize_heading(match.group(1)) for match in HEADING_RE.finditer(text)}
+    return all(normalize_heading(name) in found for name in LEGACY_REQUIRED_HEADINGS)
+
+
+def classify_readme_text(text: str) -> ReadmeOwnership:
+    """Ownership of an existing README body.
+
+    ``generated``: carries GENERATED_MARKER, so this generator owns it.
+    ``legacy_generated``: written by the pre-marker generator (README_TEMPLATE
+    header line plus its section set) and not opted out with
+    ``auto_generated: false``; a refresh migrates it to the marker.
+    ``handwritten``: everything else; never overwritten without ``--force``.
+    """
     if GENERATED_MARKER in text:
-        return False
-    return True
+        return "generated"
+    if _legacy_handwritten(text):
+        return "handwritten"
+    if _legacy_generated_shape(text):
+        return "legacy_generated"
+    return "handwritten"
+
+
+def classify_readme(path: Path) -> ReadmeOwnership:
+    if not path.is_file():
+        return "missing"
+    return classify_readme_text(path.read_text(encoding="utf-8"))
+
+
+def is_handwritten(path: Path) -> bool:
+    return classify_readme(path) == "handwritten"
+
+
+def is_legacy_generated(path: Path) -> bool:
+    return classify_readme(path) == "legacy_generated"
 
 
 def is_generated(path: Path) -> bool:
-    return path.is_file() and GENERATED_MARKER in path.read_text(encoding="utf-8")
+    return classify_readme(path) in {"generated", "legacy_generated"}
 
 
 def write_readme(path: Path, content: str, *, backup: bool) -> None:
@@ -561,6 +637,7 @@ def list_subsystems(config: dict[str, Any], repo_root: Path | None = None) -> No
 def report_gaps(repo_root: Path, config: dict[str, Any]) -> int:
     stale: list[str] = []
     handwritten: list[str] = []
+    legacy: list[str] = []
     missing: list[str] = []
     for rel in discover_module_paths(repo_root, config):
         module_dir = resolve_under_root(repo_root, rel)
@@ -570,18 +647,22 @@ def report_gaps(repo_root: Path, config: dict[str, Any]) -> int:
         if not module_dir.exists():
             stale.append(f"{rel}\tmissing")
             continue
-        readme = module_dir / "README.md"
-        if not readme.is_file():
+        ownership = classify_readme(module_dir / "README.md")
+        if ownership == "missing":
             missing.append(rel)
-        elif is_handwritten(readme):
+        elif ownership == "handwritten":
             handwritten.append(rel)
+        elif ownership == "legacy_generated":
+            legacy.append(rel)
     for row in stale:
         print(f"stale\t{row}")
     for row in missing:
         print(f"missing\t{row}")
+    for row in legacy:
+        print(f"legacy\t{row}")
     for row in handwritten:
         print(f"handwritten\t{row}")
-    if not stale and not missing and not handwritten:
+    if not stale and not missing and not legacy and not handwritten:
         print("gaps\tnone")
     return 1 if stale else 0
 
