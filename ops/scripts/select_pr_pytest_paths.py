@@ -85,7 +85,7 @@ def _generic_basenames(registry: Path) -> frozenset[str]:
     extra = _local_pr_check(registry).get("generic_basenames") or []
     if not isinstance(extra, list):
         extra = []
-    return _GENERIC_BASENAMES | frozenset(str(item) for item in extra if str(item).strip())
+    return _GENERIC_BASENAMES | frozenset(str(item).strip() for item in extra if str(item).strip())
 
 
 def _shell_owners(registry: Path) -> dict[str, list[str]]:
@@ -97,7 +97,7 @@ def _shell_owners(registry: Path) -> dict[str, list[str]]:
         key = str(path).strip()
         if not key or not isinstance(tests, list):
             continue
-        owners[key] = [str(item) for item in tests if str(item).strip()]
+        owners[key] = [str(item).strip() for item in tests if str(item).strip()]
     return owners
 
 
@@ -105,7 +105,7 @@ def _velocity_exclude(registry: Path) -> frozenset[str]:
     raw = _local_pr_check(registry).get("velocity_exclude") or []
     if not isinstance(raw, list):
         return frozenset()
-    return frozenset(str(item) for item in raw if str(item).strip())
+    return frozenset(str(item).strip() for item in raw if str(item).strip())
 
 
 def is_dot_owned(suite: dict) -> bool:

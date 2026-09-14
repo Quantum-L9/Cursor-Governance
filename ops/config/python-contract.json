@@ -23,11 +23,13 @@
         "tests/environment/adapters/test_session_start_refresh_guard.py",
         "environment/agents/adapters/claude-code/tests/test_session_start_hosted_truth.py",
         "environment/agents/adapters/claude-code/tests/test_session_start_partial_emit.py",
-        "ops/scripts/tests/test_governance_refresh_receipt.py"
+        "ops/scripts/tests/test_governance_refresh_receipt.py",
+        "ops/scripts/tests/test_session_start_runtime_report.py"
       ],
       "environment/agents/adapters/claude-code/settings.template.json": [
         "tests/ops/scripts/test_reconcile_claude_settings.py",
-        "ops/scripts/tests/test_claude_projection.py"
+        "ops/scripts/tests/test_claude_projection.py",
+        "environment/agents/adapters/claude-code/tests/test_session_start_partial_emit.py"
       ]
     },
     "velocity_exclude": [

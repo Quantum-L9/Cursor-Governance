@@ -335,3 +335,56 @@ class HookSettingsVelocityTests(unittest.TestCase):
             selected,
         )
         self.assertNotIn(self.PE_SMOKE, selected)
+
+    def test_session_start_selects_portable_timeout_owner(self) -> None:
+        selected = select_pr_pytest_paths([self.SESSION])
+        self.assertIn("ops/scripts/tests/test_session_start_runtime_report.py", selected)
+
+    def test_settings_template_selects_budget_parity_owner(self) -> None:
+        selected = select_pr_pytest_paths([self.SETTINGS])
+        self.assertIn(
+            "environment/agents/adapters/claude-code/tests/test_session_start_partial_emit.py",
+            selected,
+        )
+
+
+class ContractIngestStripTests(unittest.TestCase):
+    """Padded contract entries must match after ingest, not keep the spaces."""
+
+    def test_padded_generic_basename_and_exclude_are_stripped(self) -> None:
+        from select_pr_pytest_paths import (
+            _generic_basenames,
+            _shell_owners,
+            _velocity_exclude,
+        )
+
+        padded_exclude = " environment/program-execution/scripts/tests/test_pe_smoke_campaign.py "
+        with tempfile.TemporaryDirectory() as raw:
+            registry = Path(raw) / "python-contract.json"
+            registry.write_text(
+                json.dumps(
+                    {
+                        "suites": [{"id": "repo-root", "owned_paths": ["."]}],
+                        "local_pr_check": {
+                            "generic_basenames": [" settings.json "],
+                            "shell_owners": {
+                                " environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh ": [
+                                    " tests/environment/adapters/test_l9_hook_exec_refresh.py "
+                                ]
+                            },
+                            "velocity_exclude": [padded_exclude],
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            self.assertIn("settings.json", _generic_basenames(registry))
+            owners = _shell_owners(registry)
+            self.assertEqual(
+                owners["environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh"],
+                ["tests/environment/adapters/test_l9_hook_exec_refresh.py"],
+            )
+            self.assertIn(
+                "environment/program-execution/scripts/tests/test_pe_smoke_campaign.py",
+                _velocity_exclude(registry),
+            )
