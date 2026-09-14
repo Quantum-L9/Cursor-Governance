@@ -22,11 +22,13 @@ This session uses the immutable registry identity `agent_id=manus`,
 The session environment must set `L9_GOVERNANCE_SURFACE=manus` exactly; do not
 invent a variant identifier or impersonate another agent.
 
-Apply authority in this order: `CANONICAL_LAW.md`, then `AGENTS.md`, then the
+Apply authority in this order: `CANONICAL_LAW.md`, then the Autonomy Surface
+Profile `ops/autonomy/surface_profile.yaml`, then `AGENTS.md`, then the
 applicable `SKILL.md`, then repository-local instructions, then this document.
-The shared autonomy policy is
-`ops/autonomy/surface_profile.yaml`; this adapter never forks its prose,
-limits, gates, or merge authority.
+That is the same chain the repository's `CLAUDE.md` and authority rules
+declare; a lower rung never overrides a higher one. The surface profile is the
+shared autonomy policy, and this adapter never forks its prose, limits, gates,
+or merge authority.
 
 ## Session activation
 

@@ -43,6 +43,39 @@ REQUIRED_BOOTSTRAP_TEXT = (
     "ops/autonomy/surface_profile.yaml",
     "PR_REMEDIATE=0 make pr",
 )
+# Repository authority chain (CLAUDE.md / rules 01-authority-chain), highest
+# first. The bootstrap must state these rungs in exactly this order inside its
+# "Apply authority in this order:" sentence; marker presence alone is not enough.
+AUTHORITY_SENTENCE_PREFIX = "Apply authority in this order:"
+AUTHORITY_ORDER = (
+    "CANONICAL_LAW.md",
+    "ops/autonomy/surface_profile.yaml",
+    "AGENTS.md",
+    "SKILL.md",
+)
+
+
+def authority_order_errors(bootstrap: str) -> list[str]:
+    """Return violations of the declared authority order in ``bootstrap``.
+
+    The check is order-sensitive: every rung of ``AUTHORITY_ORDER`` must appear
+    in the authority sentence, and each must appear after the previous one.
+    """
+    start = bootstrap.find(AUTHORITY_SENTENCE_PREFIX)
+    if start < 0:
+        return [f"session bootstrap has no {AUTHORITY_SENTENCE_PREFIX!r} sentence"]
+    end = bootstrap.find("\n\n", start)
+    sentence = bootstrap[start:] if end < 0 else bootstrap[start:end]
+    expected = " -> ".join(AUTHORITY_ORDER)
+    positions: list[int] = []
+    for rung in AUTHORITY_ORDER:
+        index = sentence.find(rung)
+        if index < 0:
+            return [f"session bootstrap authority sentence omits {rung}; expected {expected}"]
+        positions.append(index)
+    if positions != sorted(positions) or len(set(positions)) != len(positions):
+        return [f"session bootstrap authority order is wrong; expected {expected}"]
+    return []
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -126,6 +159,7 @@ def validate(repo_root: Path) -> list[str]:
     for marker in REQUIRED_BOOTSTRAP_TEXT:
         if marker not in bootstrap:
             errors.append(f"session bootstrap is missing required authority marker: {marker}")
+    errors.extend(authority_order_errors(bootstrap))
     for forbidden in ("Authorization:", "Bearer ", "GRAPHITI_MCP_URL", "https://memory."):
         if forbidden in bootstrap:
             errors.append(f"session bootstrap contains retired provider material: {forbidden}")

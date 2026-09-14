@@ -336,6 +336,11 @@ def test_sonar_consumer_reports_unauthenticated_when_no_token_is_present(
 
     monkeypatch.delenv("SONAR_TOKEN", raising=False)
     monkeypatch.delenv("SONARCLOUD_TOKEN", raising=False)
+    # `_machine_profile` is private on purpose and has no public override: it
+    # reads the SessionStart machine profile from a fixed on-disk path. Patching
+    # it to None isolates this test from any real profile present on the
+    # machine running the suite, so "no token anywhere" is the state under test
+    # and a failure here points at the transport, not at the host's secrets.
     cb.reset_cache()
     monkeypatch.setattr(cb, "_machine_profile", lambda: None)
     transport = sonar_fetch.build_transport("https://sonarcloud.io/api")

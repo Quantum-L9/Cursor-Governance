@@ -22,6 +22,49 @@ class ManusAdapterContractTests(unittest.TestCase):
     def test_pack_passes_its_structural_validator(self) -> None:
         self.assertEqual(validator.validate(REPOSITORY), [])
 
+    def test_bootstrap_states_the_repository_authority_order(self) -> None:
+        bootstrap = (ADAPTER / "session_bootstrap.md").read_text(encoding="utf-8")
+        self.assertEqual(validator.authority_order_errors(bootstrap), [])
+        self.assertEqual(
+            validator.AUTHORITY_ORDER,
+            ("CANONICAL_LAW.md", "ops/autonomy/surface_profile.yaml", "AGENTS.md", "SKILL.md"),
+        )
+
+    def test_authority_order_check_rejects_agents_before_the_surface_profile(self) -> None:
+        # Regression for the audited defect: every marker was present, but
+        # AGENTS.md was placed ahead of the Autonomy Surface Profile SSOT.
+        # The exact shape of the audited paragraph: the profile is named only
+        # after AGENTS.md and SKILL.md, inside the same paragraph.
+        swapped = (
+            "Apply authority in this order: `CANONICAL_LAW.md`, then `AGENTS.md`, then the\n"
+            "applicable `SKILL.md`, then this document.\n"
+            "The shared autonomy policy is `ops/autonomy/surface_profile.yaml`.\n"
+        )
+        errors = validator.authority_order_errors(swapped)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("authority order is wrong", errors[0])
+
+        omitted = (
+            "Apply authority in this order: `CANONICAL_LAW.md`, then `AGENTS.md`, then the\n"
+            "applicable `SKILL.md`, then this document.\n"
+            "\n"
+            "The shared autonomy policy is `ops/autonomy/surface_profile.yaml`.\n"
+        )
+        errors = validator.authority_order_errors(omitted)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("omits ops/autonomy/surface_profile.yaml", errors[0])
+
+        reordered = (
+            "Apply authority in this order: `CANONICAL_LAW.md`, then `AGENTS.md`, then\n"
+            "`ops/autonomy/surface_profile.yaml`, then the applicable `SKILL.md`.\n"
+        )
+        errors = validator.authority_order_errors(reordered)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("authority order is wrong", errors[0])
+
+        missing_sentence = "The shared autonomy policy is `ops/autonomy/surface_profile.yaml`.\n"
+        self.assertEqual(len(validator.authority_order_errors(missing_sentence)), 1)
+
     def test_environment_identity_derives_from_the_registry(self) -> None:
         environment = (ADAPTER / "environment.env.example").read_text(encoding="utf-8")
         self.assertIn("L9_GOVERNANCE_SURFACE=manus", environment)
