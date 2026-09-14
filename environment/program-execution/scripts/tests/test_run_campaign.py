@@ -20,12 +20,6 @@ PE_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = PE_ROOT / "scripts/run_campaign.py"
 ACTIVATE = PE_ROOT.parents[1] / "skills/l9-pe-campaign-activate/scripts/compile_activation_files.py"
 
-HOST_ALLOWLIST = """schema: l9.program-execution.campaign-compile-allowlist.v1
-schema_version: 1.0.0
-campaign_ids:
-  - bounded-replanning-v1
-"""
-
 HOST_POLICY = """schema: l9.program-execution.campaign-execution-policy.v1
 campaigns:
   - id: bounded-replanning-v1
@@ -277,9 +271,6 @@ def _architecture_hook(intent, *, target, admission, repo_root, primed_dir, targ
 def _host_repo(tmp: Path) -> Path:
     (tmp / "environment/program-execution/campaigns").mkdir(parents=True)
     (tmp / "ops/autonomy").mkdir(parents=True)
-    (tmp / "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml").write_text(
-        HOST_ALLOWLIST, encoding="utf-8"
-    )
     (tmp / "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml").write_text(
         HOST_POLICY, encoding="utf-8"
     )
@@ -805,8 +796,8 @@ class RunCampaignTests(unittest.TestCase):
             self.assertIs(found.kind, module.CampaignInputKind.ARCHITECTURE_INTENT_V1)
             self.assertEqual(found.route, "architecture -> campaign_source -> blueprint -> PEC")
 
-    def test_compile_fingerprint_ignores_unrelated_campaign_registrations(self) -> None:
-        """Registering another campaign must not invalidate this one's compile."""
+    def test_compile_fingerprint_ignores_retired_preregistration_artifacts(self) -> None:
+        """A retired allowlist file is neither an input nor a compile dependency."""
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             source = root / "CAMPAIGN_SOURCE.yaml"
@@ -814,7 +805,7 @@ class RunCampaignTests(unittest.TestCase):
             proof = root / "stack-proof.json"
             proof.write_text("{}\n", encoding="utf-8")
             before = self.mod.pe_trace.fingerprint(source, proof)
-            allowlist = root / "COMPILE_ALLOWLIST.yaml"
+            allowlist = root / "retired-allowlist.yaml"
             allowlist.write_text("campaign_ids:\n  - unrelated-v1\n", encoding="utf-8")
             self.assertEqual(self.mod.pe_trace.fingerprint(source, proof), before)
 
@@ -2310,6 +2301,34 @@ class CampaignInputRoutingTests(unittest.TestCase):
             self.assertFalse(
                 (root / "environment/program-execution/campaigns/demo-activate-v1").exists()
             )
+
+    def test_legacy_campaign_source_v1_fails_before_workspace_creation(self) -> None:
+        """A v1-shaped document must not be rebuilt as an activate seed."""
+        for schema in sorted(self.ci.LEGACY_CAMPAIGN_SCHEMAS):
+            with self.subTest(schema=schema), tempfile.TemporaryDirectory() as raw:
+                root = _host_repo(Path(raw))
+                l9 = Path(raw) / "l9"
+                legacy = root / "legacy.yaml"
+                _dump(legacy, {"schema": schema, **READY_SEED})
+                with self.assertRaises(self.ci.CampaignInputRejected) as ctx:
+                    self.mod.run_campaign(
+                        legacy,
+                        until="execute",
+                        primary=Path(raw) / "primary",
+                        repo_root=root,
+                        l9_root=l9,
+                        hooks=self.mod.Hooks(context7_stack=_stack_ok),
+                    )
+                payload = ctx.exception.to_dict()
+                self.assertEqual(payload["schema"], schema)
+                self.assertTrue(payload["nothing_executed"])
+                self.assertFalse(payload["workspace_created"])
+                self.assertEqual(payload["tasks_started"], 0)
+                self.assertFalse(l9.exists(), msg="legacy rejection created runtime state")
+                self.assertFalse(
+                    (root / "environment/program-execution/campaigns/demo-activate-v1").exists(),
+                    msg="legacy rejection generated an activate campaign",
+                )
 
     def test_campaign_source_v2_routes_directly_to_compile_source(self) -> None:
         seen: dict[str, object] = {}

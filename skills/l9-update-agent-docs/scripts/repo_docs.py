@@ -19,7 +19,18 @@ from doc_change import (
     semantic_harvest_required,
     validate_managed_regions,
 )
-from doc_llms import llms_base_url, llms_enabled, render_llms_txt, validate_llms_txt
+from doc_filetree import FILETREE_SURFACE_ID, FiletreeInventory, build_filetree_state
+from doc_llm import (
+    LEGACY_FILENAME,
+    LLM_MARKER,
+    PROJECTION_FILENAME,
+    llm_base_url,
+    llm_enabled,
+    render_llm_txt,
+    retire_legacy_llms_txt,
+    validate_llm_txt,
+    write_llm_txt,
+)
 from doc_obligations import (
     apply_semantic_resolutions,
     build_obligations,
@@ -29,6 +40,7 @@ from doc_obligations import (
     validate_and_close_obligations,
 )
 from doc_policy import (
+    LLM_SURFACE_ID,
     RECEIPT_SCHEMA,
     adapter_directives,
     discover_surfaces,
@@ -43,6 +55,7 @@ from doc_policy import (
     validate_policy,
 )
 from doc_surface_analysis import assess_surface_obligations
+from generate_module_readmes import write_missing_module_readmes
 
 RECEIPT_ID = "l9.repo-docs.receipt.v3"
 PACK = Path(__file__).resolve().parents[1]
@@ -219,46 +232,94 @@ def semantic_harvest_state(
     return state, compiled
 
 
-def build_llms_state(
+def build_llm_state(
     root: Path,
     policy: dict[str, Any],
     directives: dict[str, Any],
     base_url_value: str | None,
-    write_llms: bool,
+    write_llm: bool,
 ) -> tuple[dict[str, Any], list[str]]:
-    enabled, enabled_reason = llms_enabled(root, policy, directives)
-    base_url, base_source = llms_base_url(directives, base_url_value)
+    enabled, enabled_reason = llm_enabled(root, policy, directives)
+    base_url, base_source = llm_base_url(directives, base_url_value)
     mutations: list[str] = []
     state: dict[str, Any] = {
         "status": "NotApplicable",
         "enabled": enabled,
         "enabled_reason": enabled_reason,
         "base_url_source": base_source,
-        "path": "llms.txt",
+        "path": PROJECTION_FILENAME,
         "written": False,
+        "admission": "skipped",
         "findings": [],
     }
-    if enabled and not base_url:
+    # A disabled projection never creates llm.txt, so the leftover name is
+    # dropped only once the canonical file already exists (no rename).
+    try:
+        mutations.extend(retire_legacy_llms_txt(root, rename_missing=enabled))
+    except OSError as exc:
         state.update(
-            status="PARTIAL", findings=["llms.txt eligible but canonical llms_base_url is UNKNOWN"]
+            status="BLOCKED",
+            admission="skipped",
+            findings=[f"{LEGACY_FILENAME} retirement failed: {exc}"],
         )
-    elif enabled and base_url:
-        rendered = render_llms_txt(root, policy, base_url)
-        state["findings"] = validate_llms_txt(rendered)
-        state["status"] = "FAIL" if state["findings"] else "PASS"
-        if write_llms and state["status"] == "PASS":
-            target = resolve_under_root(root, "llms.txt")
-            if target is None:
-                state.update(status="BLOCKED", findings=["llms.txt target escaped repository root"])
-            else:
-                target.write_text(rendered, encoding="utf-8")
-                state["written"] = True
-                mutations.append("llms.txt")
+        return state, mutations
+    if not enabled:
+        return state, mutations
+    rendered = render_llm_txt(root, policy, base_url)
+    render_findings = validate_llm_txt(rendered)
+    if LLM_MARKER not in rendered:
+        render_findings.append(f"{PROJECTION_FILENAME} render missing generator marker")
+    target = resolve_under_root(root, PROJECTION_FILENAME)
+    if target is None:
+        state.update(
+            status="BLOCKED",
+            admission="skipped",
+            findings=[f"{PROJECTION_FILENAME} target escaped repository root"],
+        )
+        return state, mutations
+    if render_findings:
+        state.update(status="FAIL", admission="skipped", findings=render_findings)
+        return state, mutations
+    _ = write_llm  # never authorizes overwrite of an unowned file
+    try:
+        written, admission = write_llm_txt(root, rendered)
+    except ValueError as exc:
+        state.update(status="BLOCKED", admission="skipped", findings=[str(exc)])
+        return state, mutations
+    except OSError as exc:
+        state.update(
+            status="BLOCKED",
+            admission="skipped",
+            findings=[f"{PROJECTION_FILENAME} owned write failed: {exc}"],
+        )
+        return state, mutations
+    if written:
+        state["written"] = True
+        if PROJECTION_FILENAME not in mutations:
+            mutations.append(PROJECTION_FILENAME)
+    findings: list[str] = []
+    if admission == "preserve":
+        findings.append(
+            f"{PROJECTION_FILENAME} exists without {LLM_MARKER}; left unowned file in place"
+        )
+    state.update(status="PASS", admission=admission, findings=findings)
     return state, mutations
 
 
 def _structural_failure(code: str, severity: str, detail: str) -> dict[str, str]:
     return {"code": code, "severity": severity, "detail": detail}
+
+
+def _failed_filetree_state(severity: str, detail: str) -> dict[str, Any]:
+    return {
+        "status": "FAIL" if severity == "FAIL" else "BLOCKED",
+        "path": "filetree.md",
+        "written": False,
+        "admission": "skipped",
+        "module_count": 0,
+        "missing_readme_count": 0,
+        "findings": [detail],
+    }
 
 
 def _status_with_structural(obligation_status: str, failures: list[dict[str, str]]) -> str:
@@ -278,11 +339,13 @@ def audit_repository(
     *,
     changed_since: str | None = None,
     adapter: str | None = None,
-    llms_base_url_value: str | None = None,
-    write_llms: bool = False,
+    llm_base_url_value: str | None = None,
+    write_llm: bool = False,
     harvest_path: str | None = None,
     source_head_sha: str | None = None,
     tested_revision_sha: str | None = None,
+    write_module_readmes: bool = True,
+    write_filetree: bool = True,
 ) -> dict[str, Any]:
     root = root.resolve()
     structural: list[dict[str, str]] = []
@@ -339,19 +402,63 @@ def audit_repository(
         )
     module_changes = impact.get("matched_rules", {}).get("module_implementation_change", [])
     module_cap = probe_module_readme_capability(root, policy, module_changes)
-    llms, run_mutations = build_llms_state(
-        root, policy, directives, llms_base_url_value, write_llms
-    )
+    run_mutations: list[str] = []
+    try:
+        filetree, inventory, run_mutations = build_filetree_state(root, write=write_filetree)
+    except ValueError as exc:
+        # The render is invalid: a defect in this skill, so FAIL.
+        filetree = _failed_filetree_state("FAIL", str(exc))
+        inventory = FiletreeInventory()
+        structural.append(_structural_failure("filetree", "FAIL", str(exc)))
+    except OSError as exc:
+        # The filesystem refused the owned write: environment, so BLOCKED.
+        detail = f"filetree.md owned write failed: {exc}"
+        filetree = _failed_filetree_state("BLOCKED", detail)
+        inventory = FiletreeInventory()
+        structural.append(_structural_failure("filetree", "BLOCKED", detail))
+    llm, llm_mutations = build_llm_state(root, policy, directives, llm_base_url_value, write_llm)
+    run_mutations.extend(llm_mutations)
+    if llm["status"] == "BLOCKED":
+        structural.append(
+            _structural_failure(LLM_SURFACE_ID, "BLOCKED", "; ".join(llm["findings"]))
+        )
+    if (
+        write_module_readmes
+        and module_cap["status"] == "AVAILABLE"
+        and filetree["status"] not in {"FAIL", "BLOCKED"}
+    ):
+        try:
+            run_mutations.extend(
+                write_missing_module_readmes(
+                    root, write=True, changed=module_changes, inventory=inventory
+                )
+            )
+            refreshed, _, later_mutations = build_filetree_state(root, write=write_filetree)
+        except OSError as exc:
+            detail = f"module README owned write failed: {exc}"
+            structural.append(_structural_failure("module_readmes", "BLOCKED", detail))
+        else:
+            filetree = refreshed
+            run_mutations.extend(later_mutations)
+    if "filetree.md" in run_mutations:
+        impacted = sorted(set(impact.get("impacted_surfaces", [])) | {FILETREE_SURFACE_ID})
+        impact["impacted_surfaces"] = impacted
+        impact_internal["impacted_surfaces"] = impacted
     semantic_required = semantic_harvest_required(policy, impact, root)
+    owned_admissions = {
+        LLM_SURFACE_ID: str(llm.get("admission") or "skipped"),
+        FILETREE_SURFACE_ID: str(filetree.get("admission") or "skipped"),
+    }
     obligations = build_obligations(
         root,
         policy,
         impact_internal,
         revision,
-        llms_enabled=llms["enabled"],
+        llm_enabled=llm["enabled"],
         run_mutations=run_mutations,
         semantic_required=semantic_required,
         module_capability=module_cap,
+        owned_admissions=owned_admissions,
     )
     semantic_state, semantic_compiled = semantic_harvest_state(
         root, policy, impact, changed_files, harvest_path
@@ -371,16 +478,16 @@ def audit_repository(
     obligations = validate_and_close_obligations(
         obligations, changed_files=changed_files, run_mutations=run_mutations
     )
-    if llms["status"] in {"FAIL", "BLOCKED"}:
+    if llm["status"] in {"FAIL", "BLOCKED"}:
         for obligation in obligations:
-            if obligation["surface"] == "llms_txt" and not obligation["lifecycle"]["terminal"]:
+            if obligation["surface"] == LLM_SURFACE_ID and not obligation["lifecycle"]["terminal"]:
                 obligation["lifecycle"] = {
                     "status": "BLOCKED",
-                    "reason": "llms.txt projection failed validation",
+                    "reason": f"{PROJECTION_FILENAME} projection failed validation",
                     "terminal": False,
                 }
-                obligation["blockers"] = sorted(set(obligation["blockers"] + llms["findings"]))
-    surfaces = discover_surfaces(root, policy, llms["enabled"])
+                obligation["blockers"] = sorted(set(obligation["blockers"] + llm["findings"]))
+    surfaces = discover_surfaces(root, policy, llm["enabled"])
     impacted = set(impact["impacted_surfaces"])
     for row in surfaces:
         row["impacted"] = row["id"] in impacted
@@ -398,7 +505,12 @@ def audit_repository(
             "status": module_cap["status"] if module_cap["status"] != "AVAILABLE" else "PASS",
             "findings": module_cap["unsupported_impacted_extensions"],
         },
-        {"name": "llms_txt", "status": llms["status"], "findings": llms["findings"]},
+        {"name": LLM_SURFACE_ID, "status": llm["status"], "findings": llm["findings"]},
+        {
+            "name": FILETREE_SURFACE_ID,
+            "status": filetree["status"],
+            "findings": filetree["findings"],
+        },
     ]
     summary = summarize_obligations(obligations)
     final_status = _status_with_structural(status_from_obligations(obligations), structural)
@@ -428,7 +540,8 @@ def audit_repository(
         "summary": summary,
         "semantic_harvest": semantic_state,
         "capabilities": {"module_readmes": module_cap},
-        "llms_txt": llms,
+        LLM_SURFACE_ID: llm,
+        FILETREE_SURFACE_ID: filetree,
         "validators_executed": validators,
         "evidence_index": evidence_index,
         "structural_failures": structural,
@@ -455,8 +568,18 @@ def main() -> int:
     parser.add_argument("--changed-since")
     parser.add_argument("--adapter")
     parser.add_argument("--receipt")
-    parser.add_argument("--llms-base-url")
-    parser.add_argument("--write-llms", action="store_true")
+    parser.add_argument("--llm-base-url")
+    parser.add_argument("--write-llm", action="store_true")
+    parser.add_argument(
+        "--no-write-module-readmes",
+        action="store_true",
+        help="Compile module README obligations without creating missing files.",
+    )
+    parser.add_argument(
+        "--no-write-filetree",
+        action="store_true",
+        help="Compile without refreshing filetree.md. Diagnosis still reads it when present.",
+    )
     parser.add_argument("--harvest")
     parser.add_argument("--source-head-sha")
     parser.add_argument("--tested-revision-sha")
@@ -469,11 +592,13 @@ def main() -> int:
             root,
             changed_since=args.changed_since,
             adapter=args.adapter,
-            llms_base_url_value=args.llms_base_url,
-            write_llms=args.write_llms,
+            llm_base_url_value=args.llm_base_url,
+            write_llm=args.write_llm,
             harvest_path=args.harvest,
             source_head_sha=args.source_head_sha,
             tested_revision_sha=args.tested_revision_sha,
+            write_module_readmes=not args.no_write_module_readmes,
+            write_filetree=not args.no_write_filetree,
         )
     except RuntimeError as exc:
         print(json.dumps({"schema": RECEIPT_ID, "final_status": "FAIL", "error": str(exc)}))

@@ -312,8 +312,22 @@ def _memory_levels(gov: Path) -> dict[str, str] | None:
         py = Path(sys.executable)
     if not (gov / "ops" / "memory" / "diagnostics.py").is_file():
         return None
+    # --no-verify-mcp: R5 is default-on for interactive readiness, but this
+    # emitter reads only R0/R1/R2/R3/R6 (see _memory_cli_health and
+    # _memory_control_plane_health) and the Claude MCP verdict comes from
+    # _claude_mcp_health, never from R4/R5. Running the handshake here would
+    # spawn a server for ~1.2s of the SessionStart hook's 8s budget for a level
+    # nothing reads.
     code, out, _err = _run(
-        [str(py), "-m", "ops.memory.diagnostics", "--workspace", str(gov), "--json"],
+        [
+            str(py),
+            "-m",
+            "ops.memory.diagnostics",
+            "--workspace",
+            str(gov),
+            "--json",
+            "--no-verify-mcp",
+        ],
         timeout=90,
         cwd=str(gov),
         env={**os.environ, "PYTHONPATH": f"{gov}{os.pathsep}{os.environ.get('PYTHONPATH', '')}"},

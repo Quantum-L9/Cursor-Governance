@@ -31,6 +31,30 @@ class OverlayHostedSettingsEnvTests(unittest.TestCase):
         )
         self.assertEqual(payload, {"L9_AUTONOMY_MAX_PARALLEL": "4"})
 
+    def test_copies_the_memory_interpreter_so_claude_can_expand_the_mcp_ref(self) -> None:
+        """L9_MEMORY_INTERPRETER must reach settings env, or the MCP server dies.
+
+        mcp.template.json renders l9-graphite-memory with command
+        "${L9_MEMORY_INTERPRETER}" to keep the tracked .mcp.json machine-agnostic.
+        Claude Code expands that at load from the session env, not from the
+        SessionStart hook shell where bind_memory_interpreter.sh exports it.
+        Observed failure: the server rendered (projection ran in the hook shell,
+        saw the variable) and then failed ENOENT at load, while the readiness
+        receipt still said memory_mcp=READY because it too ran in that shell.
+        """
+        payload = overlay_payload_from_environ(
+            {"L9_MEMORY_INTERPRETER": "/gov/.venv/bin/python", "SOME_TOKEN": "nope"}
+        )
+        self.assertEqual(payload, {"L9_MEMORY_INTERPRETER": "/gov/.venv/bin/python"})
+
+        settings: dict = {"env": {}}
+        apply_overlay(settings, payload)
+        self.assertEqual(settings["env"]["L9_MEMORY_INTERPRETER"], "/gov/.venv/bin/python")
+
+    def test_unbound_memory_interpreter_is_not_written_as_empty(self) -> None:
+        """An empty binding must stay absent, so _requires_env still gates the server."""
+        self.assertEqual(overlay_payload_from_environ({"L9_MEMORY_INTERPRETER": ""}), {})
+
     def test_surface_id_cannot_be_overwritten(self) -> None:
         settings = {"env": {"L9_GOVERNANCE_SURFACE": "claude-code-mobile"}}
         apply_overlay(settings, {"L9_AUTONOMY_ENABLED": "false"})

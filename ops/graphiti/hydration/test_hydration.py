@@ -135,6 +135,8 @@ def test_compile_packet_fail_open(monkeypatch, tmp_path):
     assert "memory-bank" not in ctx
     assert "hydrate_stats" in ctx
     assert (tmp_path / "state").is_dir()
+    receipts = tmp_path / ".l9" / "memory" / "receipts"
+    assert not receipts.exists() or not any(receipts.glob("*.json"))
 
 
 def test_compile_packet_transport_failure_is_not_empty_search(monkeypatch, tmp_path):
@@ -425,12 +427,58 @@ def test_resolve_session_id_order(monkeypatch):
 
     monkeypatch.delenv("CURSOR_CONVERSATION_ID", raising=False)
     monkeypatch.delenv("CURSOR_SESSION_ID", raising=False)
+    monkeypatch.delenv("L9_HOOK_PAYLOAD", raising=False)
     assert resolve_session_id() == "default"
     monkeypatch.setenv("CURSOR_SESSION_ID", "sess-env")
     assert resolve_session_id() == "sess-env"
     monkeypatch.setenv("CURSOR_CONVERSATION_ID", "conv-env")
-    assert resolve_session_id() == "conv-env"
+    assert resolve_session_id() == "sess-env"
     assert resolve_session_id(explicit="explicit-1") == "explicit-1"
+
+
+def test_resolve_session_id_ignores_conversation_id_payload(monkeypatch):
+    from ops.graphiti.hydration.session_latches import resolve_session_id
+
+    monkeypatch.delenv("CURSOR_CONVERSATION_ID", raising=False)
+    monkeypatch.delenv("CURSOR_SESSION_ID", raising=False)
+    monkeypatch.setenv(
+        "L9_HOOK_PAYLOAD",
+        json.dumps({"conversation_id": "aab87627-ee20-4502-89f2-ecc73082b566"}),
+    )
+    assert resolve_session_id(explicit="default") == "default"
+    monkeypatch.setenv("L9_HOOK_PAYLOAD", json.dumps({"session_id": "sess-from-payload"}))
+    assert resolve_session_id(explicit="default") == "sess-from-payload"
+
+
+def test_compile_does_not_stamp_write_gate_receipt(monkeypatch, tmp_path):
+    """SessionStart writes session state only. Prefetch owns the write-gate receipt."""
+    _canonical(monkeypatch, tmp_path, _hydration("OK"))
+    monkeypatch.delenv("CURSOR_CONVERSATION_ID", raising=False)
+    monkeypatch.delenv("CURSOR_SESSION_ID", raising=False)
+    monkeypatch.setenv(
+        "L9_HOOK_PAYLOAD",
+        json.dumps({"session_id": "sess-once", "conversation_id": "chat-later"}),
+    )
+    packet = comp.compile_session_packet(
+        project_dir=tmp_path, conversation_id="default", agent_id="cursor"
+    )
+    assert packet["conversation_id"] == "sess-once"
+    receipts = tmp_path / ".l9" / "memory" / "receipts"
+    assert not receipts.exists() or not any(receipts.glob("*.json"))
+
+
+def test_orchestrator_reads_hook_payload_before_defaulting() -> None:
+    text = (ROOT / "ops" / "hooks" / "session_start_memory_orchestrator.sh").read_text(
+        encoding="utf-8"
+    )
+    assert "L9_HOOK_PAYLOAD" in text
+    assert 'CURSOR_SESSION_ID="${CURSOR_SESSION_ID:-default}"' in text
+    assert (
+        'CURSOR_CONVERSATION_ID="${CURSOR_CONVERSATION_ID:-${CURSOR_SESSION_ID:-default}}"'
+        not in text
+    )
+    assert '--session-id "$CURSOR_SESSION_ID"' in text
+    assert '--session-id "$CURSOR_CONVERSATION_ID"' not in text
 
 
 def test_orchestrator_opens_latch_before_graphiti_enabled() -> None:
@@ -439,6 +487,135 @@ def test_orchestrator_opens_latch_before_graphiti_enabled() -> None:
     )
     assert text.index("cli open") < text.index("if graphiti_enabled")
     assert text.index("if graphiti_enabled") < text.index("cli compile")
+
+
+def test_orchestrator_resolves_one_lifecycle_id_before_open() -> None:
+    """Audit P573-F2: the id handed to `cli open` is the id `cli compile` gets.
+
+    A conversation-only payload used to open ``opens/default.json`` while the
+    compiler generated a UUID for itself; now the orchestrator resolves once
+    (SessionStart mode: ``rotate=True``) before either call.
+    """
+    text = (ROOT / "ops" / "hooks" / "session_start_memory_orchestrator.sh").read_text(
+        encoding="utf-8"
+    )
+    assert "resolve_or_create_session_id" in text
+    assert "rotate=True" in text
+    assert text.index("resolve_or_create_session_id") < text.index("cli open")
+    assert text.count('--session-id "$CURSOR_SESSION_ID"') == 2
+    # Copilot: the payload parsers name the failures they tolerate.
+    assert "except Exception" not in text
+    assert text.count("except (json.JSONDecodeError, TypeError)") == 2
+
+
+def test_conversation_only_payload_yields_one_lifecycle_id_and_rotates(monkeypatch, tmp_path):
+    """Audit P573-F2 regression: open, compile and the pointer share ONE id.
+
+    Two SessionStarts with the documented conversation-only payload and no
+    close in between must (1) never fall back to ``default``, (2) rotate
+    ``previous_opened.json``, and (3) surface the missed close as a close-gap.
+    """
+    from ops.graphiti.hydration.session_latches import (
+        persisted_session_id,
+        read_last_opened,
+        read_previous_opened,
+        resolve_or_create_session_id,
+        write_open_latch,
+    )
+
+    monkeypatch.delenv("CURSOR_SESSION_ID", raising=False)
+    monkeypatch.setenv("L9_HOOK_PAYLOAD", json.dumps({"conversation_id": "conv-1"}))
+    _canonical(monkeypatch, tmp_path, _hydration("NO_HITS"))
+
+    first = resolve_or_create_session_id(
+        tmp_path, explicit="default", rotate=True, conversation_id="conv-1"
+    )
+    assert first not in {"", "default", "conv-1"}
+    assert persisted_session_id(tmp_path) == first
+    pointer = json.loads((tmp_path / ".l9" / "memory" / "session.json").read_text())
+    assert pointer["conversation_id"] == "conv-1"
+    write_open_latch(tmp_path, first)
+    packet = comp.compile_session_packet(
+        project_dir=tmp_path, conversation_id=first, agent_id="cursor"
+    )
+    assert packet["conversation_id"] == first
+    assert read_last_opened(tmp_path)["session_id"] == first
+    assert packet["close_gap"] is False
+    assert not any(w.startswith("session id not persisted") for w in packet["warnings"])
+
+    second = resolve_or_create_session_id(
+        tmp_path, explicit="default", rotate=True, conversation_id="conv-1"
+    )
+    assert second not in {"", "default", first}
+    assert persisted_session_id(tmp_path) == second
+    write_open_latch(tmp_path, second)
+    assert read_previous_opened(tmp_path)["session_id"] == first
+    packet = comp.compile_session_packet(
+        project_dir=tmp_path, conversation_id=second, agent_id="cursor"
+    )
+    assert packet["conversation_id"] == second
+    assert packet["close_gap"] is True
+    assert first in packet["hydrate_stats"]["degrade_reason"]
+    assert comp.format_additional_context(packet).startswith("DEGRADED")
+
+
+def test_lifecycle_id_reuses_pointer_unless_rotating(monkeypatch, tmp_path):
+    from ops.graphiti.hydration.session_latches import (
+        persisted_session_id,
+        resolve_or_create_session_id,
+        resolve_session_lifecycle,
+    )
+
+    monkeypatch.delenv("CURSOR_SESSION_ID", raising=False)
+    monkeypatch.delenv("L9_HOOK_PAYLOAD", raising=False)
+    first = resolve_or_create_session_id(tmp_path, explicit="default", rotate=True)
+    # Later callers in the same session (compile, prefetch) reuse the pointer.
+    assert resolve_or_create_session_id(tmp_path, explicit="default") == first
+    assert resolve_session_lifecycle(tmp_path, explicit=None) == (first, "")
+    # A real id always wins and never touches the pointer.
+    assert resolve_session_lifecycle(tmp_path, explicit="real-1", rotate=True) == ("real-1", "")
+    assert persisted_session_id(tmp_path) == first
+
+
+@pytest.mark.parametrize("fault", ["mkdir", "write", "readonly"])
+def test_lifecycle_id_persistence_faults_are_fail_open(monkeypatch, tmp_path, fault):
+    """Audit P573-F3: persistence faults return a usable id; compile never raises."""
+    from ops.graphiti.hydration import session_latches as latches
+
+    monkeypatch.delenv("CURSOR_SESSION_ID", raising=False)
+    monkeypatch.delenv("L9_HOOK_PAYLOAD", raising=False)
+    memory_dir = tmp_path / ".l9" / "memory"
+    if fault == "mkdir":
+        memory_dir.parent.mkdir(parents=True)
+        memory_dir.write_text("not a directory\n", encoding="utf-8")
+        expected = {"FileExistsError", "NotADirectoryError"}
+    elif fault == "write":
+        (memory_dir / "session.json").mkdir(parents=True)
+        expected = {"IsADirectoryError"}
+    else:
+        memory_dir.mkdir(parents=True)
+        original = Path.write_text
+
+        def read_only(self, *args, **kwargs):
+            if self.name == "session.json":
+                raise PermissionError(13, "Permission denied", str(self))
+            return original(self, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "write_text", read_only)
+        expected = {"PermissionError"}
+
+    session_id, error = latches.resolve_session_lifecycle(tmp_path, explicit="default", rotate=True)
+    assert session_id not in {"", "default"}
+    assert error in expected
+    assert latches.resolve_or_create_session_id(tmp_path, explicit="default") not in {"", "default"}
+
+    _canonical(monkeypatch, tmp_path, _hydration("NO_HITS"))
+    packet = comp.compile_session_packet(
+        project_dir=tmp_path, conversation_id="default", agent_id="cursor"
+    )
+    assert packet["conversation_id"] not in {"", "default"}
+    assert any(w == f"session id not persisted: {error}" for w in packet["warnings"])
+    assert packet["degraded"] is False
 
 
 def test_background_open_does_not_rotate_last_opened(tmp_path):

@@ -39,6 +39,7 @@ def _with_capabilities(bound: RuntimeBinding) -> RuntimeBinding:
 def _healthy_cli(cli: FakeMemoryCli, **health_kwargs) -> FakeMemoryCli:
     cli.reply("health", 0, health_payload(**health_kwargs))
     cli.reply("client cursor status", 0, {"status": "complete"})
+    cli.reply("client cursor verify", 0, {"status": "complete"})
     cli.reply("hydrate", 0, hydration_payload())
     cli.reply("write", 0, {"status": "admitted", "record_id": None})
     cli.reply("close", 3, close_payload(status="partial", record_id=None))
@@ -53,7 +54,10 @@ def test_all_green_with_projection_none_is_ready(bound, fake_cli) -> None:
     levels = _levels(report)
     assert report["overall_status"] == "READY"
     assert levels["R0"] == levels["R2"] == levels["R6"] == levels["R7"] == levels["R8"] == "pass"
-    assert levels["R5"] == "skipped" and levels["R9"] == "skipped"
+    # R5 runs by default: the handshake is the only level that proves the server
+    # actually answers, and leaving it opt-in is how a skipped level got read as
+    # reassurance. R9 stays skipped because no projection backend is configured.
+    assert levels["R5"] == "pass" and levels["R9"] == "skipped"
     # Nothing was committed by the probes: close ran as a dry run.
     assert "--dry-run" in fake_cli.last("close")
     assert "--dry-run" in fake_cli.last("write")
@@ -96,6 +100,45 @@ def test_mcp_missing_with_healthy_cli_is_partial_surface_ready(bound, fake_cli) 
     )
     assert report["overall_status"] == "PARTIAL_SURFACE_READY"
     assert _levels(report)["R4"] == "fail" and _levels(report)["R6"] == "pass"
+
+
+def test_handshake_runs_by_default_and_opt_out_is_honoured(bound, fake_cli) -> None:
+    """R5 is default-on; --no-verify-mcp is the only way to skip it.
+
+    Regression: R5 shipped opt-in, so every routine readiness run printed
+    "skipped" for the one level that spawns a server and proves the package
+    answers. A skipped level reads as reassurance next to eight passes.
+    """
+    client = MemoryControlPlaneClient(bound, runner=_healthy_cli(fake_cli).run)
+    report = diagnostics.readiness_report(
+        workspace=ROOT, binding=_with_capabilities(bound), client=client
+    )
+    assert _levels(report)["R5"] == "pass"
+    assert any(
+        tuple(args[1:4]) == ("client", "cursor", "verify") for args, _cwd, _in in fake_cli.calls
+    )
+
+    opted_out = diagnostics.readiness_report(
+        workspace=ROOT,
+        binding=_with_capabilities(bound),
+        client=MemoryControlPlaneClient(bound, runner=_healthy_cli(fake_cli).run),
+        verify_mcp=False,
+    )
+    level = next(lv for lv in opted_out["levels"] if lv["level"] == "R5")
+    assert level["status"] == "skipped"
+    assert "--no-verify-mcp" in level["detail"]
+
+
+def test_failed_handshake_is_partial_surface_ready_not_ready(bound, fake_cli) -> None:
+    """A server that cannot complete `initialize` must not report READY."""
+    cli = _healthy_cli(fake_cli)
+    cli.reply("client cursor verify", 1, {"status": "incomplete", "reasons": ["handshake timeout"]})
+    client = MemoryControlPlaneClient(bound, runner=cli.run)
+    report = diagnostics.readiness_report(
+        workspace=ROOT, binding=_with_capabilities(bound), client=client
+    )
+    assert _levels(report)["R5"] == "fail"
+    assert report["overall_status"] == "PARTIAL_SURFACE_READY"
 
 
 def test_unbound_package_is_package_unbound_and_spawns_nothing(fake_cli) -> None:

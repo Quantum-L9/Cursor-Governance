@@ -16,7 +16,8 @@
     "summary",
     "semantic_harvest",
     "capabilities",
-    "llms_txt",
+    "llm_txt",
+    "filetree",
     "validators_executed",
     "evidence_index",
     "structural_failures",
@@ -140,7 +141,7 @@
         }
       }
     },
-    "llms_txt": {
+    "llm_txt": {
       "type": "object",
       "additionalProperties": false,
       "required": ["status", "enabled", "enabled_reason", "base_url_source", "path", "written", "findings"],
@@ -151,6 +152,21 @@
         "base_url_source": {"type": "string"},
         "path": {"type": "string"},
         "written": {"type": "boolean"},
+        "admission": {"enum": ["create", "refresh", "preserve", "unchanged", "skipped"]},
+        "findings": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "filetree": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "path", "written", "module_count", "missing_readme_count", "findings"],
+      "properties": {
+        "status": {"enum": ["PASS", "PARTIAL", "FAIL", "BLOCKED", "NotApplicable"]},
+        "path": {"const": "filetree.md"},
+        "written": {"type": "boolean"},
+        "admission": {"enum": ["create", "refresh", "preserve", "unchanged", "skipped"]},
+        "module_count": {"type": "integer", "minimum": 0},
+        "missing_readme_count": {"type": "integer", "minimum": 0},
         "findings": {"type": "array", "items": {"type": "string"}}
       }
     },
