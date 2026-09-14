@@ -16,8 +16,9 @@
 # Pull half (remote -> local):
 #   - NEVER destroys local edits: fast-forward only; if the tree is dirty, stash -> ff -> pop.
 # Push half (local -> remote):
-#   - Delegates to backup_to_github.sh, the same script sessionEnd uses, so local work
-#     reaches GitHub at session START too — not only on a clean session close. Reusing it
+#   - Delegates to backup_to_github.sh, the same script `make backup` uses, so local work
+#     reaches GitHub when this sync's push-half is enabled. sessionEnd does not call it.
+#     Reusing it
 #     inherits all its guards (refuses unmerged paths, staged conflict markers, stale
 #     uv.lock; rebases onto origin/main and aborts rather than pushing a conflicted tree).
 #     Disable with GOVERNANCE_SYNC_PUSH=0.

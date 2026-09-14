@@ -8,7 +8,8 @@ closable path was processed. Novel unique bytes live on one rolling
 refs/heads/l9/dirt-shelf. Absorbed shelf tips are deleted after the tip SHA
 is recorded.
 
-This is the sessionEnd closer. It does not call /ff, make pr, or merge.
+On-demand closer only — sessionEnd must not invoke this script.
+It does not call /ff, make pr, or merge.
 """
 
 from __future__ import annotations

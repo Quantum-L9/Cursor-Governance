@@ -361,6 +361,24 @@ PY
   else
     fail "sessionEnd hook not registered (expected command: $EXPECTED_CMD)"
   fi
+  if python3 - "$HOOKS_JSON" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+data = json.loads(Path(sys.argv[1]).read_text())
+entries = data.get("hooks", {}).get("sessionEnd", [])
+retired = any(
+    isinstance(e, dict) and "session-end-repo-hygiene.sh" in (e.get("command") or "")
+    for e in entries
+)
+sys.exit(1 if retired else 0)
+PY
+  then
+    pass "sessionEnd does not register retired session-end-repo-hygiene.sh"
+  else
+    fail "sessionEnd still registers retired session-end-repo-hygiene.sh — run setup_workspace_symlinks.sh"
+  fi
 fi
 
 # Native subagent lifecycle hooks are referenced by hooks.json and must exist
