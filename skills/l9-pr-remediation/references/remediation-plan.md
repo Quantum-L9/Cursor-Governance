@@ -25,8 +25,8 @@ RUN_CONTRACT (once) → THIS PR'S FINDINGS → PLAN → FIX BATCH + COMPANIONS �
 MAKEFILE + CITED-PATH VERIFY → ONE COMMIT → SANCTIONED PUBLISH → REPLY
 ```
 
-- **No fleet-wide census** after `RUN_CONTRACT` exists. Ingest the PR you are editing.
-- **No file edits** until that PR's plan has a disposition for every ingested finding (or a locked plan is being executed).
+- **No fleet-wide census** after `RUN_CONTRACT` exists. Ingest the PR you are editing — complete census (CI + threads + reviews; Sonar when `sonar-project.properties` exists).
+- **No file edits** until `validate_plan.py --findings` PASSes for that PR (required on Converge). Cycle 2 is rejected when finding ids were already in the plan-time ingest.
 - **No commit** until the Makefile primary gate is green and cited/planned paths were checked.
 - **No second commit** to "see what CI says."
 - **No merge** because this PR is now green. Merge waits for FIRST_MERGE_GATE.
@@ -35,7 +35,7 @@ A locked `Remediation-Cycle` / plan whose files still match is executed, not rew
 
 ## 1. This PR's findings (not a second fleet census)
 
-Ingest open surfaces on **this** head. Skip Sonar/CodeQL/Semgrep/debt unless that check is failing or configured-and-blocking.
+Ingest open surfaces on **this** head. Always include Sonar when `sonar-project.properties` exists. Skip CodeQL/Semgrep/debt unless that check is failing or configured-and-blocking.
 
 | Surface | How | Track as |
 |---------|-----|----------|
@@ -100,7 +100,7 @@ remediation_plan:
     no_verify: false
 ```
 
-**Plan gate (blocks edits):** run `scripts/validate_plan.py --plan plan.json --findings findings.json`. Disposition *choice* stays here; the script only refuses a missing field, a `fix` without cause, a per-finding `board`, or an ingested id with no row.
+**Plan gate (blocks edits):** run `scripts/validate_plan.py --plan plan.json --findings findings.json` (`--findings` is required). Disposition *choice* stays here; the script only refuses a missing field, a `fix` without cause, a per-finding `board`, an ingested id with no row, or a cycle-2 plan whose ids existed at plan time.
 
 - [ ] `RUN_CONTRACT` exists for the run
 - [ ] `board` + `board_reason` came from `pr_board.py` at `head_sha`; `leftover` carries its `board_declaration`

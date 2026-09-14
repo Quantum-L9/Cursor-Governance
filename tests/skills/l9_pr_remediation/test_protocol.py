@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -423,3 +424,134 @@ def test_issue_handoff_rejects_codebase(tmp_path: Path, monkeypatch: pytest.Monk
                 "handoff.json",
             ]
         )
+
+
+def test_ingest_auto_sonar_without_flag(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    fixture = tmp_path / "fx"
+    fixture.mkdir()
+    (fixture / "pr.json").write_text(json.dumps({"head": {"sha": "c" * 40}}), encoding="utf-8")
+    (fixture / "reviews.json").write_text("[]", encoding="utf-8")
+    (fixture / "comments.json").write_text("[]", encoding="utf-8")
+    (fixture / "issue_comments.json").write_text("[]", encoding="utf-8")
+    (fixture / "checks.json").write_text("[]", encoding="utf-8")
+    (fixture / "threads.json").write_text(json.dumps({"nodes": []}), encoding="utf-8")
+    (fixture / "sonar.json").write_text(
+        json.dumps({"issues": [{"key": "S1", "message": "unused", "component": "src:a.py"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "sonar-project.properties").write_text("sonar.projectKey=demo\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    out = tmp_path / "findings.json"
+    rc = ingest_signals.main(
+        [
+            "--repo",
+            "acme/app",
+            "--pr",
+            "7",
+            "--output",
+            "findings.json",
+            "--fixture-dir",
+            str(fixture),
+        ]
+    )
+    assert rc == 0
+    snap = json.loads(out.read_text(encoding="utf-8"))
+    assert any(item["id"].startswith("sonar-") for item in snap["findings"])
+
+
+def test_validate_plan_requires_findings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "plan.json").write_text(json.dumps({"board": "fix"}), encoding="utf-8")
+    with pytest.raises(SystemExit):
+        validate_plan.main(["--plan", "plan.json"])
+
+
+def test_cycle_two_rejects_plan_time_ids() -> None:
+    plan = {
+        "board": "fix",
+        "board_reason": "lint",
+        "cycle": 2,
+        "cycle1_ingest_ids": ["ci-1"],
+        "findings": [
+            {
+                "id": "ci-1",
+                "source": "ci",
+                "ownership": "CODEBASE",
+                "disposition": "fix",
+                "evidence": "ruff",
+                "root_cause": "unused",
+                "confidence": "high",
+            }
+        ],
+        "clusters": [
+            {"id": "c", "finding_ids": ["ci-1"], "files": ["a.py"], "action": "drop"}
+        ],
+        "verify": {"makefile_targets": ["precommit-repo"]},
+        "commit_policy": {"commits": 1, "publish": "git push", "no_verify": False},
+    }
+    errors = protocol.validate_plan(plan, [{"id": "ci-1"}])
+    assert any("cycle 2 rejected" in item for item in errors)
+
+
+def test_gate_e_measures_git_log(tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "t@t"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "t"], cwd=tmp_path, check=True)
+    (tmp_path / "a.txt").write_text("one\n", encoding="utf-8")
+    subprocess.run(["git", "add", "a.txt"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-m", "base"], cwd=tmp_path, check=True)
+    base = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp_path, text=True).strip()
+    (tmp_path / "a.txt").write_text("two\n", encoding="utf-8")
+    subprocess.run(["git", "add", "a.txt"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-m", "fix"], cwd=tmp_path, check=True)
+    head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp_path, text=True).strip()
+    ok = protocol.validate_gate(
+        "E",
+        {
+            "base_sha": base,
+            "workspace": str(tmp_path),
+            "push_record": {
+                "commit_sha": head,
+                "publish_count_this_cycle": 1,
+                "publish_command": "git push",
+                "base_sha": base,
+                "workspace": str(tmp_path),
+            },
+        },
+    )
+    assert ok == []
+    twice = protocol.validate_gate(
+        "E",
+        {
+            "base_sha": base,
+            "workspace": str(tmp_path),
+            "push_record": {
+                "commit_sha": head,
+                "publish_count_this_cycle": 1,
+                "publish_command": "git push",
+                "base_sha": base,
+                "workspace": str(tmp_path),
+            },
+        },
+    )
+    (tmp_path / "a.txt").write_text("three\n", encoding="utf-8")
+    subprocess.run(["git", "add", "a.txt"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-m", "second"], cwd=tmp_path, check=True)
+    two = protocol.validate_gate(
+        "E",
+        {
+            "base_sha": base,
+            "workspace": str(tmp_path),
+            "push_record": {
+                "commit_sha": subprocess.check_output(
+                    ["git", "rev-parse", "HEAD"], cwd=tmp_path, text=True
+                ).strip(),
+                "publish_count_this_cycle": 1,
+                "publish_command": "git push",
+                "base_sha": base,
+                "workspace": str(tmp_path),
+            },
+        },
+    )
+    assert any("exactly one commit" in item for item in two)
+    assert twice == []

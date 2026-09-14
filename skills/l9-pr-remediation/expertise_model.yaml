@@ -23,14 +23,14 @@ expertise_model:
   invariants:
     - Diagnose never commits, pushes, edits, or merges
     - Converge invocation is merge authorization for every open PR in the target repo
-    - remediator verify is `L9_REMEDIATOR=1 PR_BASE=origin/main make precommit-repo`; publish is `git push` of the already-open PR branch; `make pr` / `make pr-check` are never invoked
+    - remediator verify is `L9_REMEDIATOR=1 PR_STACK= PR_BASE=origin/main make precommit-repo`; publish is `git push` of the already-open PR branch; `make pr` / `make pr-check` are never invoked
     - two mutation lanes never share a branch or a non-generated path (claim primitive decides)
     - 'a result document is judged against its assignment: identity, base SHA, role, writable scope'
     - a red check outside the required set never holds the merge train
     - "`leftover` requires `--human-decision` or `--unfixable-check`; unknown telemetry is `wait`"
     - never force-push, `--admin`, hand-typed `--squash`, `update-branch` after a parent squash
     - never edit `.github/workflows/**`, actions, protection, secrets, or CI wiring
-    - lane caps are min(ops/autonomy/execution_profile.py, skill_subagent_cap 10) via pr_fleet.skill_caps
+    - lane caps pass through ops/autonomy/execution_profile.py via pr_fleet.skill_caps (no remediator clamp)
   authority_hierarchy:
     - latest user instruction and explicit PR scope
     - current repository source and tests at the PR head

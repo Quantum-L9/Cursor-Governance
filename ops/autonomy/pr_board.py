@@ -742,16 +742,6 @@ def decide(
         verdict["reason"] = "GitHub reports a conflict; resolve against the base"
         return verdict
 
-    if merge_state == "BEHIND":
-        verdict["board"] = FIX
-        verdict["reason"] = (
-            "strict required-status-checks policy: head is behind the base; catch up "
-            "(merge from base for a sibling, rebase --onto after a parent squash)"
-            if strict
-            else "head is behind the base; catch up before merge"
-        )
-        return verdict
-
     if fixable_failing:
         verdict["board"] = FIX
         verdict["reason"] = "required check(s) failing: " + ", ".join(fixable_failing)
@@ -763,6 +753,16 @@ def decide(
         )
         verdict["board"] = FIX
         verdict["reason"] = f"required workflow job(s) failing: {detail}"
+        return verdict
+
+    if merge_state == "BEHIND":
+        verdict["board"] = FIX
+        verdict["reason"] = (
+            "strict required-status-checks policy: head is behind the base; catch up "
+            "(merge from base for a sibling, rebase --onto after a parent squash)"
+            if strict
+            else "head is behind the base; catch up before merge"
+        )
         return verdict
 
     if unresolved:
@@ -817,6 +817,11 @@ def decide(
     # Everything this helper can name is green, and GitHub still will not merge.
     # Whatever is left (an approval, a thread, a protection rule this probe did
     # not see) is unnamed -- so say that, rather than calling it a merge.
+    # UNKNOWN with green required (none pending) is merge-ready: GitHub has not
+    # finished the merge-state word, but every named required check passed.
+    # Empty required + empty merge_state stays WAIT below. BLOCKED stays FIX.
+    if merge_state == "UNKNOWN" and required:
+        merge_state = "CLEAN"
     if merge_state and merge_state not in MERGE_READY_STATES:
         verdict["board"] = FIX if merge_state == "BLOCKED" else WAIT
         verdict["reason"] = (

@@ -1492,6 +1492,24 @@ and the remediator pack v5.3 hot path. Those paragraphs stay on disk
   `open_prs=0`. Watchers never merge and never waive that poll duty.
 - Mission remains `open_prs=0`.
 
+<!-- L9_PR_REMEDIATE_MAX_VELOCITY_V1 -->
+## `/l9-pr-remediation` caps are the execution profile (2026-09-14)
+
+This fragment supersedes only the `skill_subagent_cap: 10` / skill-clamp
+sentences in `L9_PR_REMEDIATE_MERGE_NOW_V1`. That paragraph stays on disk
+(additive_only). Live pack: `skills/l9-pr-remediation` v5.5.0.
+
+- `pr_fleet.skill_caps()` passes through `execution_profile` (`max_parallel>=480`,
+  `max_mutation_lanes>=128`). Do not reintroduce `SKILL_SUBAGENT_CAP = 10`.
+- Safety is `claim_scopes_conflict` plus `waves()`, not a remediator clamp.
+- UNKNOWN + green required is `board=merge`. Failing required checks outrank
+  `BEHIND`. Do not merge `origin/main` to "fix" CI.
+- Remediator verify is `L9_REMEDIATOR=1 PR_STACK= PR_BASE=origin/main make
+  precommit-repo` (`L9_REMEDIATOR=1` skips stack-tip rewrite).
+- Complete census before the first edit: ingest includes CI + threads + reviews,
+  and Sonar when `sonar-project.properties` exists. `validate_plan --findings`
+  is required on Converge. Gate E measures `git log <base_sha>..HEAD`.
+
 <!-- SESSIONSTART_SECRETS_PLANE_V1 -->
 ## SessionStart owns the secrets plane (2026-09-07)
 

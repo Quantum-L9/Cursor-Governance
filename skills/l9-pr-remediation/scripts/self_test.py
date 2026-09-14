@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contract tests for l9-pr-remediation 5.4.0. Stdlib only.
+"""Contract tests for l9-pr-remediation 5.5.0. Stdlib only.
 
 Structural and wiring checks: every link resolves, every deterministic owner
 the pack names exists, the pre-v5 contradictions stay gone, and the pack never
@@ -75,7 +75,7 @@ def _forbid(text: str, needle: str, where: str) -> None:
 
 
 def test_frontmatter_and_map() -> None:
-    _need(SKILL, "version: 5.4.0", "SKILL.md")
+    _need(SKILL, "version: 5.5.0", "SKILL.md")
     _need(SKILL, "tier: exemplary", "SKILL.md")
     _need(SKILL, "disable-model-invocation: true", "SKILL.md")
     match = re.search(r"^description: (.+)$", SKILL, re.M)
@@ -224,7 +224,8 @@ def test_no_second_plane() -> None:
     for needle in ("max_wait_snapshots", "poll_interval_seconds", "Max 4 total", "max 2 mutation"):
         _forbid(PACK, needle, "l9-pr-remediation pack (lane caps belong to execution_profile.py)")
     _need(SKILL, "concurrency_caps_owner: ops/autonomy/pr_fleet.py skill_caps", "SKILL.md")
-    _need(SKILL, "skill_subagent_cap: 10", "SKILL.md")
+    _forbid(SKILL, "skill_subagent_cap: 10", "SKILL.md")
+    _need(SKILL, "skill_caps_pass_through: true", "SKILL.md")
     _need(SKILL, "ops/autonomy/execution_profile.py", "SKILL.md")
     _need(SKILL, "no campaign, no Program Execution", "SKILL.md")
     for word in ("surface_profile.yaml", "lease", "scheduler"):
@@ -233,7 +234,7 @@ def test_no_second_plane() -> None:
 
 
 def test_verbs_and_publish() -> None:
-    _need(SKILL, "L9_REMEDIATOR=1 PR_BASE=origin/main make precommit-repo", "SKILL.md")
+    _need(SKILL, "L9_REMEDIATOR=1 PR_STACK= PR_BASE=origin/main make precommit-repo", "SKILL.md")
     _need(SKILL, "publish: git push", "SKILL.md")
     _need(SKILL, "do not run `make pr`", "SKILL.md")
     _need(SKILL, "must not invoke `make pr`", "SKILL.md")
@@ -275,7 +276,7 @@ def test_fleet_and_waves() -> None:
         "l9-pr-remediation",
         "l9-recon",
         "execution_profile.py",
-        "skill_subagent_cap: 10",
+        "`skill_caps` pass through",
         "merge_now",
     ):
         _need(waves, needle, "fleet-waves.md")
@@ -403,6 +404,8 @@ REJECT_SIGNALS = (
     "edit the workflow",
     "diff i pasted",
     "campaign branch",
+    "one ci finding",
+    "catch up from main",
 )
 
 

@@ -54,7 +54,8 @@ Hand-typed `gh pr merge --squash` of a stack parent is denied by
 `ops/autonomy/merge_gate.py` on Shell and MCP (unless human
 `L9_STACK_CHECK_BYPASS` / `L9_MERGE_AUTHORIZED`).
 
-After a **parent squash**, never `gh pr update-branch` and never merge `main`
+Never `git merge origin/main` to "fix" a failing required check. After a
+**parent squash**, never `gh pr update-branch` and never merge `main`
 into the child. Rebase the child onto the new base:
 
 ```bash

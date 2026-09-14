@@ -262,6 +262,35 @@ def _already_ingested(findings: list[dict[str, Any]], candidate: dict[str, Any])
     return False
 
 
+def resolve_sonar_snapshot(
+    cwd: Path,
+    fixture_dir: Path | None,
+    explicit: str | None,
+) -> Path | None:
+    """Attach Sonar whenever sonar-project.properties exists. --sonar stays optional."""
+    if explicit:
+        return Path(explicit)
+    if not (cwd / "sonar-project.properties").is_file():
+        return None
+    candidates: list[Path] = []
+    if fixture_dir is not None:
+        candidates.extend([fixture_dir / "sonar.json", fixture_dir / "sonarcloud.json"])
+    candidates.extend(
+        [
+            cwd / "sonarcloud-issues-before.json",
+            cwd / ".l9" / "pr" / "sonarcloud-issues-before.json",
+        ]
+    )
+    for path in candidates:
+        if path.is_file():
+            return path
+    _fail(
+        "sonar-project.properties exists; complete census requires a Sonar snapshot "
+        "(--sonar or sonarcloud-issues-before.json / fixture sonar.json)"
+    )
+    return None
+
+
 def collect(
     *,
     owner: str,
@@ -409,10 +438,11 @@ def main(argv: list[str] | None = None) -> int:
     fixture_dir = Path(args.fixture_dir) if args.fixture_dir else None
     if fixture_dir and not fixture_dir.is_dir():
         _fail(f"fixture-dir missing: {fixture_dir}")
+    sonar_path = resolve_sonar_snapshot(Path.cwd(), fixture_dir, args.sonar)
     scanners = {
         key: Path(value)
         for key, value in (
-            ("sonar", args.sonar),
+            ("sonar", str(sonar_path) if sonar_path else None),
             ("semgrep", args.semgrep),
             ("codeql", args.codeql),
             ("debt", args.debt),
