@@ -65,7 +65,7 @@ def _prefix(interpreter: Path) -> Path:
     follows it and would look for dist-info under the toolchain, not the venv.
     """
 
-    completed = subprocess.run(  # noqa: S603
+    completed = subprocess.run(
         [str(interpreter), "-c", "import sys; print(sys.prefix)"],
         check=False,
         capture_output=True,
@@ -108,7 +108,7 @@ def already_sealed(interpreter: Path, expected_sha256: str, version: str) -> boo
 
 
 def _ensure_pip(python: Path) -> int:
-    probe = subprocess.run(  # noqa: S603
+    probe = subprocess.run(
         [str(python), "-m", "pip", "--version"],
         check=False,
         capture_output=True,
@@ -116,7 +116,7 @@ def _ensure_pip(python: Path) -> int:
     )
     if probe.returncode == 0:
         return 0
-    bootstrap = subprocess.run(  # noqa: S603
+    bootstrap = subprocess.run(
         [str(python), "-m", "ensurepip", "--upgrade"],
         check=False,
         capture_output=True,
@@ -169,7 +169,7 @@ def seal(
         hashed,
     ]
     try:
-        completed = subprocess.run(  # noqa: S603 - argv list, never a shell string
+        completed = subprocess.run(  # argv list, never a shell string
             cmd,
             cwd=str(root),
             check=False,
