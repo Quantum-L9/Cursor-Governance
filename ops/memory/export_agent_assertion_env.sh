@@ -32,15 +32,19 @@ if [[ ! -f "$SECRET_MAP" || ! -f "$GRANTS_MAP" ]]; then
   echo "assertion env skipped: secret/grants map missing (memory-blind OK)" >&2
   _done 0
 fi
-# The helper refuses a terminal stdout; the command substitution below is a
-# pipe, and eval is the only consumer of the export lines.
-# shellcheck disable=SC1090
-eval "$(
+# The helper refuses a terminal stdout and writes secrets to a 0600 file.
+# stdout is only that path; source it, then unlink.
+_assert_path="$(
   PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}$GOV_ROOT" \
-  "$PY" "$GOV_ROOT/ops/memory/print_agent_assertion_env.py" \
+    "$PY" "$GOV_ROOT/ops/memory/print_agent_assertion_env.py" \
     --agent-id "$AGENT_ID" \
     --secret-map "$SECRET_MAP" \
     --grants-map "$GRANTS_MAP" \
     --format shell
 )" || true
+if [[ -n "${_assert_path:-}" && -f "$_assert_path" ]]; then
+  # shellcheck disable=SC1090
+  source "$_assert_path"
+  rm -f "$_assert_path"
+fi
 _done 0

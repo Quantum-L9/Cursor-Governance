@@ -167,10 +167,14 @@ def test_print_helper_emits_per_principal_env_only_to_a_pipe(
 
     monkeypatch.setattr(sys.stdout, "isatty", lambda: False)
     assert helper.main(argv) == 0
-    out = capsys.readouterr().out
-    env = json.loads(out)
-    assert json.loads(env[ENV_AGENT_SIGNING_KEYS_JSON]) == {"claude-code": CLAUDE_KEY}
+    out = capsys.readouterr().out.strip()
+    path = Path(out)
+    assert path.is_file()
+    assert DOOR not in out and CLAUDE_KEY not in out
     assert CURSOR_KEY not in out and HUMAN not in out
+    env = json.loads(path.read_text(encoding="utf-8"))
+    path.unlink()
+    assert json.loads(env[ENV_AGENT_SIGNING_KEYS_JSON]) == {"claude-code": CLAUDE_KEY}
 
     monkeypatch.setattr(sys.stdout, "isatty", lambda: True)
     assert helper.main(argv) == 2

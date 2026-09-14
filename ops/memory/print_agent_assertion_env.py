@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """Emit the ADR-0031 agent MCP assertion env for ONE principal (no human secret).
 
-Formats:
-  shell (default) — export KEY='value' lines, consumed by ``eval`` in the
-                    launching shell (ops/memory/export_agent_assertion_env.sh)
+Formats written to a 0600 file (never to stdout):
+  shell (default) — export KEY='value' lines, consumed by
+                    ops/memory/export_agent_assertion_env.sh
   json            — one object, consumed by the sessionStart env merge
 
-stdout is an IPC channel to the consuming process, never a log: the helper
-refuses to write when stdout is a terminal, emits only the launching
-principal's signing key and grant entry, and never emits the human door.
+stdout is the absolute path of that file, or empty when assertion is skipped.
+It is never a log of secrets: the helper refuses a terminal, emits only the
+launching principal's signing key and grant entry, and never emits the human
+door.
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ import argparse
 import json
 import os
 import sys
+import tempfile
 from pathlib import Path
 
 # Allow running as a script from anywhere: the repository root is the import
@@ -50,6 +52,34 @@ def _default_grants_map() -> Path:
     )
 
 
+def _runtime_dir() -> str | None:
+    runtime = os.environ.get("XDG_RUNTIME_DIR", "").strip()
+    if runtime and Path(runtime).is_dir() and os.access(runtime, os.W_OK):
+        return runtime
+    return None
+
+
+def _write_secret_file(payload: str) -> Path:
+    """Write payload to a 0600 tempfile. stdout later gets only this path."""
+    fd, name = tempfile.mkstemp(
+        prefix="l9-agent-assertion-",
+        suffix=".tmp",
+        dir=_runtime_dir(),
+        text=True,
+    )
+    try:
+        os.fchmod(fd, 0o600)
+        data = payload if payload.endswith("\n") else f"{payload}\n"
+        os.write(fd, data.encode("utf-8"))
+    except Exception:
+        os.close(fd)
+        Path(name).unlink(missing_ok=True)
+        raise
+    else:
+        os.close(fd)
+    return Path(name)
+
+
 def main(argv: list[str] | None = None) -> int:
     if str(_ROOT) not in sys.path:
         sys.path.insert(0, str(_ROOT))
@@ -81,9 +111,7 @@ def main(argv: list[str] | None = None) -> int:
         print("refusing to export human private entrance into agent env", file=sys.stderr)
         return 2
     if not args.tokens_map.is_file() or not args.grants_map.is_file():
-        if args.format == "json":
-            print("{}")
-        else:
+        if args.format != "json":
             print(
                 "# assertion skipped: local agent token store or grants map not found "
                 "(memory-blind cold start OK)",
@@ -92,8 +120,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if sys.stdout.isatty():
         print(
-            "refusing to write assertion env to a terminal: pipe it to eval "
-            "(--format shell) or to a JSON env merge (--format json)",
+            "refusing to write assertion env to a terminal: pipe it to a consumer "
+            "that reads the emitted path (--format shell or --format json)",
             file=sys.stderr,
         )
         return 2
@@ -101,10 +129,13 @@ def main(argv: list[str] | None = None) -> int:
     # Structural guarantee from the library; kept as a hard refusal here too.
     env.pop(ENV_HUMAN_DOOR_SECRET, None)
     if args.format == "json":
-        print(json.dumps(env, separators=(",", ":")))
-        return 0
-    for key, value in env.items():
-        print(f"export {key}='{_shell_escape(value)}'")
+        payload = json.dumps(env, separators=(",", ":"))
+    else:
+        payload = "\n".join(
+            f"export {key}='{_shell_escape(value)}'" for key, value in env.items()
+        )
+    path = _write_secret_file(payload)
+    print(str(path.resolve()))
     return 0
 
 

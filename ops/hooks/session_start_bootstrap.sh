@@ -639,7 +639,11 @@ ASSERTION_ENV_JSON="{}"
 if [[ -z "${L9_MEMORY_AGENT_ASSERTION:-}" ]]; then
   _assert_py="${L9_GOVERNANCE_DIR:-$HOME/.cursor-governance}/ops/memory/print_agent_assertion_env.py"
   if [[ -f "$_assert_py" ]]; then
-    ASSERTION_ENV_JSON="$("${L9_MEMORY_INTERPRETER:-python3}" "$_assert_py" --agent-id "${L9_MEMORY_AGENT_ID:-cursor}" --format json 2>/dev/null || echo '{}')"
+    _assert_path="$("${L9_MEMORY_INTERPRETER:-python3}" "$_assert_py" --agent-id "${L9_MEMORY_AGENT_ID:-cursor}" --format json 2>/dev/null || true)"
+    if [[ -n "${_assert_path:-}" && -f "$_assert_path" ]]; then
+      ASSERTION_ENV_JSON="$(cat "$_assert_path" 2>/dev/null || echo '{}')"
+      rm -f "$_assert_path"
+    fi
   fi
 fi
 
