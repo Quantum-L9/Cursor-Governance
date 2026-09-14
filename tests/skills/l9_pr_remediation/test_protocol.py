@@ -491,6 +491,52 @@ def test_cycle_two_rejects_plan_time_ids() -> None:
     assert any("cycle 2 rejected" in item for item in errors)
 
 
+def _cycle_two_plan(finding_ids: list[str]) -> dict:
+    """A cycle-2 plan whose ingest is exactly ``finding_ids``; ci-1 existed at plan time."""
+    return {
+        "board": "fix",
+        "board_reason": "lint",
+        "cycle": 2,
+        "cycle1_ingest_ids": ["ci-1"],
+        "findings": [
+            {
+                "id": fid,
+                "source": "ci",
+                "ownership": "CODEBASE",
+                "disposition": "fix",
+                "evidence": "ruff",
+                "root_cause": "unused",
+                "confidence": "high",
+            }
+            for fid in finding_ids
+        ],
+        "clusters": [{"id": "c", "finding_ids": finding_ids, "files": ["a.py"], "action": "drop"}],
+        "verify": {"makefile_targets": ["precommit-repo"]},
+        "commit_policy": {"commits": 1, "publish": "git push", "no_verify": False},
+    }
+
+
+def test_cycle_two_rejects_mixed_old_and_new_ids() -> None:
+    """One fresh finding must not smuggle a plan-time finding into an extra cycle.
+
+    The contract allows a later cycle only for signals that did not exist at
+    plan time; any overlap with `cycle1_ingest_ids` is a rejection, and the
+    error names the stale id so the operator can drop it.
+    """
+    errors = protocol.validate_plan(
+        _cycle_two_plan(["ci-1", "ci-2"]), [{"id": "ci-1"}, {"id": "ci-2"}]
+    )
+    rejected = [item for item in errors if "cycle 2 rejected" in item]
+    assert rejected, errors
+    assert "ci-1" in rejected[0]
+    assert "ci-2" not in rejected[0]
+
+
+def test_cycle_two_accepts_fresh_only_ids() -> None:
+    errors = protocol.validate_plan(_cycle_two_plan(["ci-2"]), [{"id": "ci-2"}])
+    assert not any("cycle 2 rejected" in item for item in errors), errors
+
+
 def test_gate_e_measures_git_log(tmp_path: Path) -> None:
     subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
     subprocess.run(["git", "config", "user.email", "t@t"], cwd=tmp_path, check=True)

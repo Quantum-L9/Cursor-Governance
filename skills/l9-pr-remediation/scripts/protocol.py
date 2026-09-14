@@ -374,8 +374,11 @@ def validate_plan(plan: dict[str, Any], findings: list[dict[str, Any]] | None = 
                 for item in (body.get("cycle1_ingest") or [])
                 if isinstance(item, dict) and item.get("id")
             }
-        if cycle >= 2 and ingested and prior_ids and ingested <= prior_ids:
-            errors.append("cycle 2 rejected: finding ids existed at plan time")
+        # A later cycle exists only for signals that were absent at plan time, so
+        # any overlap with the plan-time set is stale -- not merely an all-old set.
+        stale = ingested & prior_ids if cycle >= 2 else set()
+        if stale:
+            errors.append(f"cycle 2 rejected: finding ids existed at plan time: {sorted(stale)}")
     return errors
 
 
