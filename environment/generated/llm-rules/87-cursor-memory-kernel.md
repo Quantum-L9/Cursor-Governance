@@ -12,7 +12,7 @@ description: Cursor Memory Kernel enforcement — authoritative source for memor
 
 **Updated: 2026-09-06** — Memory realignment C11/C12: the sole front door is the canonical `l9-graphite-memory` control plane through `ops/memory` (`python -m ops.memory.cli`); Graphiti is a projection memory owns. `ops/graphiti/graphiti_memory_client.py` is a tombstone, no surface holds a provider URL or bearer, and `~/.cursor/graphiti.env` carries switches only. CANONICAL_LAW §8.2, ADR-0030.
 
-**Updated: 2026-09-07** — Doctrine closure (CANONICAL_LAW §8.3, ADR-0030 items 7–9): the model's durable write is `memory.phase_lock` → `memory.write_governed` on the `l9-graphite-memory` MCP server. The CLI `write` below is the operator / deterministic-adapter path. The phase-lock is a memory-write precondition, never repository-write authority.
+**Updated: 2026-09-07** *(single-path write wording superseded 2026-09-13)* — Doctrine closure (CANONICAL_LAW §8.3, ADR-0030 items 7–9): the model's durable write is `memory.phase_lock` → `memory.write_governed` on the `l9-graphite-memory` MCP server. The CLI `write` below is the operator / deterministic-adapter path. The phase-lock is a memory-write precondition, never repository-write authority.
 
 **Updated: 2026-09-13** — ADR-0031 / CANONICAL_LAW §8.5: ordinary / cold model writes use MCP `memory.write_agent` (no `phase_lock`). Conflict-sensitive writes remain `memory.phase_lock` → `memory.write_governed`. Agent HTTP is sealed.
 
