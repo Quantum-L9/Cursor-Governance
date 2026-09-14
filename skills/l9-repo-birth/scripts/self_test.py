@@ -2,22 +2,73 @@
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-FACTORY = Path(os.environ["L9_REPO_TEMPLATE"]) if os.environ.get("L9_REPO_TEMPLATE") else Path()
 sys.path.insert(0, str(ROOT / "scripts"))
 from package_birth_handoff import HandoffError, package, sha256  # noqa: E402
+
+FIXTURE_COMPILER = r"""#!/usr/bin/env python3
+import argparse
+import json
+import subprocess
+from pathlib import Path
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--source", required=True)
+parser.add_argument("--template-src", required=True)
+parser.add_argument("--out", required=True)
+parser.add_argument("--source-repository", required=True)
+args = parser.parse_args()
+source = Path(args.source)
+revision = subprocess.check_output(
+    ["git", "-C", str(source), "rev-parse", "HEAD"], text=True
+).strip()
+tree = subprocess.check_output(
+    ["git", "-C", str(source), "rev-parse", "HEAD^{tree}"], text=True
+).strip()
+Path(args.out).write_text(
+    json.dumps(
+        {
+            "schema": "l9.birth-payload/v1",
+            "source": {
+                "revision": revision,
+                "tree_sha": tree,
+                "repository": args.source_repository,
+            },
+        }
+    )
+    + "\n",
+    encoding="utf-8",
+)
+"""
 
 
 def run(*args: str, cwd: Path) -> None:
     proc = subprocess.run(args, cwd=cwd, text=True, capture_output=True, check=False)
     if proc.returncode:
         raise AssertionError(proc.stderr or proc.stdout)
+
+
+def git_init(path: Path) -> None:
+    run("git", "init", "-b", "main", cwd=path)
+    run(
+        "git", "-c", "user.name=test", "-c", "user.email=test@example.invalid", "add", ".", cwd=path
+    )
+    run(
+        "git",
+        "-c",
+        "user.name=test",
+        "-c",
+        "user.email=test@example.invalid",
+        "commit",
+        "-m",
+        "fixture",
+        cwd=path,
+    )
 
 
 def write_lineage(source: Path) -> dict[str, str]:
@@ -52,82 +103,111 @@ def write_lineage(source: Path) -> dict[str, str]:
     return out
 
 
+def make_source(tmp: Path) -> tuple[Path, dict[str, str], str, str]:
+    source = tmp / "source"
+    source.mkdir()
+    (source / "README.md").write_text("# Fixture\n", encoding="utf-8")
+    lineage = write_lineage(source)
+    git_init(source)
+    revision = subprocess.check_output(
+        ["git", "-C", str(source), "rev-parse", "HEAD"], text=True
+    ).strip()
+    tree = subprocess.check_output(
+        ["git", "-C", str(source), "rev-parse", "HEAD^{tree}"], text=True
+    ).strip()
+    return source, lineage, revision, tree
+
+
+def make_factory(tmp: Path) -> Path:
+    factory = tmp / "factory"
+    runner = factory / "scripts" / "birth-runner"
+    runner.mkdir(parents=True)
+    (runner / "compile_birth_payload.py").write_text(FIXTURE_COMPILER, encoding="utf-8")
+    (runner / "new_repo.py").write_text("#!/usr/bin/env python3\n", encoding="utf-8")
+    git_init(factory)
+    return factory
+
+
+def evidence_for(lineage: dict[str, str], revision: str, tree: str) -> dict[str, object]:
+    return {
+        "schema": "l9.repo-birth-evidence/v1",
+        "source_repository": "Quantum-L9/fixture",
+        "source_revision": revision,
+        "source_tree_sha": tree,
+        "acceptance_evidence_refs": ["receipts/pec.json"],
+        **lineage,
+    }
+
+
 def main() -> int:
-    if not FACTORY.is_dir():
-        print("SKIP: l9-repo-template checkout unavailable; set L9_REPO_TEMPLATE")
-        return 0
-    with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
-        source = Path(tmp) / "source"
-        source.mkdir()
-        run("git", "init", "-b", "main", cwd=source)
-        (source / "README.md").write_text("# Fixture\n", encoding="utf-8")
-        lineage = write_lineage(source)
-        run("git", "add", "README.md", "lineage", "receipts", cwd=source)
-        run(
-            "git",
-            "-c",
-            "user.name=test",
-            "-c",
-            "user.email=test@example.invalid",
-            "commit",
-            "-m",
-            "fixture",
-            cwd=source,
-        )
-        revision = subprocess.check_output(
-            ["git", "-C", str(source), "rev-parse", "HEAD"], text=True
-        ).strip()
-        tree = subprocess.check_output(
-            ["git", "-C", str(source), "rev-parse", "HEAD^{tree}"], text=True
-        ).strip()
-        evidence = {
-            "schema": "l9.repo-birth-evidence/v1",
-            "source_repository": "Quantum-L9/fixture",
-            "source_revision": revision,
-            "source_tree_sha": tree,
-            "acceptance_evidence_refs": ["receipts/pec.json"],
-            **lineage,
-        }
-        evidence_path = Path(tmp) / "evidence.json"
+    with tempfile.TemporaryDirectory(dir=ROOT) as tmp_raw:
+        tmp = Path(tmp_raw)
+        source, lineage, revision, tree = make_source(tmp)
+        factory = make_factory(tmp)
+        evidence = evidence_for(lineage, revision, tree)
+        evidence_path = tmp / "evidence.json"
         evidence_path.write_text(json.dumps(evidence), encoding="utf-8")
+
+        missing = tmp / "missing-factory"
+        missing.mkdir()
+        try:
+            package(
+                source=source,
+                evidence_path=evidence_path,
+                factory=missing,
+                out_dir=tmp / "missing",
+                operation="local_validation",
+            )
+        except HandoffError as exc:
+            if "FACTORY_BIRTH_INTERFACE_UNAVAILABLE" not in str(exc):
+                raise AssertionError(exc) from exc
+        else:
+            raise AssertionError("missing factory interface was accepted")
+
         result = package(
             source=source,
             evidence_path=evidence_path,
-            factory=FACTORY,
-            out_dir=Path(tmp) / "out",
+            factory=factory,
+            out_dir=tmp / "out",
             operation="local_validation",
         )
         contract = json.loads(Path(result["contract"]).read_text(encoding="utf-8"))
-        assert contract["source"]["revision"] == revision
-        assert contract["payload"]["schema"] == "l9.birth-payload/v1"
+        if contract["source"]["revision"] != revision:
+            raise AssertionError("contract revision mismatch")
+        if contract["payload"]["schema"] != "l9.birth-payload/v1":
+            raise AssertionError("payload schema mismatch")
+
         (source / "dirty.txt").write_text("drift\n", encoding="utf-8")
         try:
             package(
                 source=source,
                 evidence_path=evidence_path,
-                factory=FACTORY,
-                out_dir=Path(tmp) / "dirty",
+                factory=factory,
+                out_dir=tmp / "dirty",
                 operation="local_validation",
             )
         except HandoffError as exc:
-            assert "dirty" in str(exc)
+            if "dirty" not in str(exc):
+                raise AssertionError(exc) from exc
         else:
             raise AssertionError("dirty source was accepted")
+
         fake = dict(evidence)
         fake["idea_execute_receipt"] = "sha256:" + "b" * 64
-        fake_path = Path(tmp) / "fake.json"
+        fake_path = tmp / "fake.json"
         fake_path.write_text(json.dumps(fake), encoding="utf-8")
         (source / "dirty.txt").unlink()
         try:
             package(
                 source=source,
                 evidence_path=fake_path,
-                factory=FACTORY,
-                out_dir=Path(tmp) / "fake",
+                factory=factory,
+                out_dir=tmp / "fake",
                 operation="local_validation",
             )
         except HandoffError as exc:
-            assert "does not match hashed" in str(exc)
+            if "does not match hashed" not in str(exc):
+                raise AssertionError(exc) from exc
         else:
             raise AssertionError("unhashed lineage digest was accepted")
     print("PASS: l9-repo-birth self_test")
