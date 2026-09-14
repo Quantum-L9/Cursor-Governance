@@ -552,8 +552,6 @@ def format_session_start(payload: dict[str, Any], budget: int) -> str:
     archived = payload.get("archived") or []
     if archived:
         lines.append(f"- archived: {len(archived)} spent " + "; ".join(archived[:6]))
-    else:
-        lines.append("- archived: 0 (mixed harvestable donors kept)")
     text = "\n".join(lines)
     if len(text) > budget:
         return text[: max(0, budget - 1)] + "…"
