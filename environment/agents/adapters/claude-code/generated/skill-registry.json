@@ -1,5 +1,5 @@
 {
-  "generation_id": "d6588e14d9d4804f3cb48bbeba7fb0c7ea63c5da9372c0626823e34f06855014",
+  "generation_id": "0c3fec5d32c77a05d71e5af86401da511c1088dcc596a43cc4599b4c48a279e9",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -478,7 +478,6 @@
           "stale plans",
           "audit .cursor/plans",
           "which plans are unbuilt",
-          "sessionStart plan audit",
           "harvest WIP campaigns",
           "audit program-execution campaigns",
           "harvestable components"
@@ -1327,14 +1326,14 @@
     },
     {
       "composition_role": "general",
-      "description": "audit plans, WIP, and PE campaigns as one family; harvest via l9-intelligence-harvest. use when /l9-pipeline-audit or /plan-audit runs, or session context shows Plan audit.",
+      "description": "audit plans, WIP, and PE campaigns as one family; harvest via l9-intelligence-harvest. use when /l9-pipeline-audit or /plan-audit runs. SessionStart does not run this pack.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pipeline-audit",
       "path": "skills/l9-pipeline-audit",
-      "reason": "on-demand multi-surface harvest (plans + WIP + PE campaigns) can emit new WIP or campaign INTENT; slash /l9-pipeline-audit is the explicit invoke; sessionStart runs audit_pipeline.py display+spent-archive only; disable-model-invocation",
+      "reason": "on-demand multi-surface harvest (plans + WIP + PE campaigns) can emit new WIP or campaign INTENT; slash /l9-pipeline-audit is the explicit invoke; SessionStart does not run this pack; disable-model-invocation",
       "skill_md": "skills/l9-pipeline-audit/SKILL.md",
-      "skill_sha256": "93ce55afee0cb266d1bd630428b703016eefd566f6b46c43be638aa92a74cc0e",
+      "skill_sha256": "373ced2b30fdc0603744ffa115aa19e2736d625bdf2c4e209a5ba12e1a097af6",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1600,6 +1599,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "bf415873fe91b1779e0cea47ca987f01c3b919d78bae8ac8c0a49fea06eb8def",
-  "source_skill_corpus_sha256": "bbaaa65c992e8f29d510529f7d4526df0de583d97405673387545666029b5fbe"
+  "source_manifest_sha256": "619ee9ae7bcc643598c8f54beeff4e4d598b0893a4331237debf156eaa86f044",
+  "source_skill_corpus_sha256": "6b40b62e5acfadd304d64b8b561b8323a979bbc5a7e94fe3f68ff731744a1e76"
 }
