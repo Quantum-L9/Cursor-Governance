@@ -11,7 +11,15 @@ Replaces "Graphiti is up" with ten levels, projection last:
     R2 CANONICAL_STORE_READY  memory.health reports the store healthy
     R3 MEMORY_SERVICE_READY   health status complete/partial on the expected contract
     R4 MCP_CONFIG_INSTALLED   memory-owned `client cursor status` is complete
-    R5 MCP_HANDSHAKE_VERIFIED memory-owned `client cursor verify` (opt-in; spawns a server)
+    R5 MCP_HANDSHAKE_VERIFIED memory-owned `client cursor verify` (default on;
+                              spawns a server and completes a real handshake,
+                              ~1.2s measured. Opt out with --no-verify-mcp.
+                              NOTE it verifies the SERVER via generated argv
+                              (argv_source=generated, config_path=null), so it
+                              proves the package answers `initialize` and
+                              carries its tools — it does NOT prove any client's
+                              config expands. Claude's rendered .mcp.json is
+                              emit_claude_readiness._claude_mcp_health.
     R6 HYDRATION_READY        canonical hydrate answered (hits or a clean no-hit)
     R7 WRITE_READY            write admission dry run passed
     R8 CLOSE_READY            close admission dry run passed (nothing committed)
@@ -82,7 +90,7 @@ def readiness_report(
     workspace: str | Path,
     binding: RuntimeBinding | None = None,
     client: MemoryControlPlaneClient | None = None,
-    verify_mcp: bool = False,
+    verify_mcp: bool = True,
     mcp_config_path: str | None = None,
 ) -> dict[str, Any]:
     workspace_path = str(Path(workspace).expanduser().resolve())
@@ -138,7 +146,7 @@ def readiness_report(
                 verify_outcome.error or "handshake complete",
             )
         else:
-            record("R5", SKIPPED, "pass --verify-mcp to run the real MCP handshake")
+            record("R5", SKIPPED, "handshake opted out with --no-verify-mcp")
     else:
         record("R4", FAIL, "binding failed")
         record("R5", SKIPPED, "binding failed")
@@ -235,7 +243,19 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Layered memory readiness (R0..R9)")
     parser.add_argument("--workspace", default=".")
     parser.add_argument("--binding-only", action="store_true", help="print only the binding proof")
-    parser.add_argument("--verify-mcp", action="store_true", help="run the real MCP handshake (R5)")
+    parser.add_argument(
+        "--verify-mcp",
+        dest="verify_mcp",
+        action="store_true",
+        default=True,
+        help="run the real MCP handshake (R5) — now the default; accepted for compatibility",
+    )
+    parser.add_argument(
+        "--no-verify-mcp",
+        dest="verify_mcp",
+        action="store_false",
+        help="skip the R5 handshake (it spawns a server for ~1.2s)",
+    )
     parser.add_argument("--mcp-config-path", default=None)
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)

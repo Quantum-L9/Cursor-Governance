@@ -46,8 +46,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
-# Autonomy / concurrency only. Capability URLs and identity live in the
-# account env and in mcp.template.json — they are not restated here.
+# Autonomy / concurrency knobs, plus the memory MCP transport binding (see the
+# note on L9_MEMORY_INTERPRETER below). Credentials, capability URLs and identity
+# are still never restated here: they live in the account env and in
+# mcp.template.json as ${VAR} references.
 OVERLAY_KEYS = (
     "L9_AUTONOMY_ENABLED",
     "L9_AUTONOMY_AUTHORITY",
@@ -64,6 +66,25 @@ OVERLAY_KEYS = (
     "L9_L4_LOCAL_AUTONOMY",
     "L9_WORKTREE_ISOLATION",
     "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS",
+    # Not an autonomy knob: the MCP transport binding, and the one value whose
+    # absence from THIS object silently kills the memory server.
+    #
+    # mcp.template.json renders l9-graphite-memory with command
+    # "${L9_MEMORY_INTERPRETER}" so the tracked .mcp.json stays machine-agnostic
+    # (tests/ops/memory/test_mcp_surfaces.py pins that form). Claude Code expands
+    # ${VAR} at load from the session env — NOT from the SessionStart hook shell,
+    # which is the only place bind_memory_interpreter.sh exports it. The observed
+    # failure: the projection ran inside that hook shell, saw the variable, and
+    # rendered the server; Claude Code then expanded ${L9_MEMORY_INTERPRETER}
+    # against a session env without it and the server failed ENOENT, while every
+    # receipt still read READY because each check ran in the hook shell too.
+    #
+    # Overlaying it here closes that gap: the resolved interpreter lands in
+    # .claude/settings.local.json, which Claude Code reads as session env, so the
+    # reference the render keeps is one the client can actually expand. Safe to
+    # write: an absolute interpreter path is not a credential, and the local file
+    # is gitignored, so no machine-specific path reaches a tracked file (rule 06).
+    "L9_MEMORY_INTERPRETER",
 )
 
 #: Deliberately NOT overlaid: CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH.
