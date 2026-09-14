@@ -82,6 +82,10 @@
       {
         "command": "./hooks/pr-gate-failure-shell.sh",
         "timeout": 5
+      },
+      {
+        "command": "./hooks/session-authored-paths.py",
+        "timeout": 10
       }
     ],
     "beforeMCPExecution": [

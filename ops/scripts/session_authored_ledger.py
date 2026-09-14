@@ -3,6 +3,21 @@
 Records paths this conversation mutated under its own workspace. sessionEnd
 preserve reads only this ledger — never porcelain — so another chat's dirt
 cannot be scooped.
+
+Two authoring routes feed it, both workspace-confined:
+
+- ``postToolUse`` for the named edit tools (Write / StrReplace / Delete …):
+  the path is the tool input.
+- ``afterShellExecution`` for shell-authored writes (generators, formatters,
+  heredocs, ``sed -i``, ``rm``): the paths are the workspace inventory
+  entries whose mtime falls inside that command's execution window
+  (``duration`` from the Cursor payload plus a small slack), and tracked
+  paths that vanished while their parent directory changed in the window.
+  Dirt written before the window is never attributed. The one residual
+  over-attribution is a tracked file another chat deleted earlier from a
+  directory this command also changed; the consumer is copy-only, so the
+  cost is an extra tombstone on this session's preserve ref, never a
+  mutation of anyone's worktree.
 """
 
 from __future__ import annotations
@@ -10,6 +25,8 @@ from __future__ import annotations
 import json
 import os
 import re
+import subprocess
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -17,6 +34,11 @@ from typing import Any
 SCHEMA = "l9.session-authored.v1"
 SAFE_SESSION = re.compile(r"[^A-Za-z0-9._-]+")
 LEDGER_HOME = Path.home() / ".cursor" / "l9" / "sessions"
+SHELL_EVENTS = frozenset({"afterShellExecution", "after_shell_execution"})
+SHELL_WINDOW_SLACK_S = 2.0
+#: Below the hook's own 10s budget so a slow inventory returns "nothing"
+#: cleanly instead of being killed mid-write.
+INVENTORY_TIMEOUT_S = 8
 
 
 def safe_session_id(session_id: str) -> str:
@@ -100,6 +122,99 @@ def written_rels(event: dict[str, Any], workspace: Path) -> list[str]:
     return rels
 
 
+def is_shell_event(event: dict[str, Any]) -> bool:
+    """True for a Cursor ``afterShellExecution`` payload (command + duration)."""
+    name = str(event.get("hook_event_name") or event.get("hookEventName") or "")
+    if name in SHELL_EVENTS:
+        return True
+    return isinstance(event.get("command"), str) and "duration" in event
+
+
+def shell_window_start(event: dict[str, Any], *, now: float | None = None) -> float:
+    """Epoch seconds at which this shell command may have started writing."""
+    end = time.time() if now is None else now
+    try:
+        duration_ms = max(float(event.get("duration") or 0.0), 0.0)
+    except (TypeError, ValueError):
+        duration_ms = 0.0
+    return end - duration_ms / 1000.0 - SHELL_WINDOW_SLACK_S
+
+
+def _workspace_inventory(workspace: Path) -> list[str] | None:
+    """Tracked plus untracked-unignored paths. None when git cannot answer."""
+    try:
+        proc = subprocess.run(  # noqa: S603
+            [
+                "git",
+                "-C",
+                str(workspace),
+                "ls-files",
+                "-z",
+                "--cached",
+                "--others",
+                "--exclude-standard",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=INVENTORY_TIMEOUT_S,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode != 0:
+        return None
+    return [rel for rel in proc.stdout.split("\0") if rel]
+
+
+def _dir_changed_since(
+    directory: Path, workspace: Path, start_ns: int, cache: dict[Path, bool]
+) -> bool:
+    """Nearest existing ancestor (inside the workspace) had its entries changed."""
+    current = directory
+    while True:
+        if current in cache:
+            return cache[current]
+        try:
+            changed = current.lstat().st_mtime_ns >= start_ns
+        except FileNotFoundError:
+            if current == workspace or current.parent == current:
+                changed = False
+            else:
+                changed = _dir_changed_since(current.parent, workspace, start_ns, cache)
+        except OSError:
+            changed = False
+        cache[current] = changed
+        return changed
+
+
+def shell_written_rels(
+    event: dict[str, Any],
+    workspace: Path,
+    *,
+    now: float | None = None,
+) -> list[str]:
+    """Workspace paths written or deleted inside this shell command's window."""
+    start_ns = int(shell_window_start(event, now=now) * 1_000_000_000)
+    inventory = _workspace_inventory(workspace)
+    if inventory is None:
+        return []
+    rels: list[str] = []
+    dir_cache: dict[Path, bool] = {}
+    for rel in inventory:
+        path = workspace / rel
+        try:
+            stat = path.lstat()
+        except FileNotFoundError:
+            if _dir_changed_since(path.parent, workspace, start_ns, dir_cache):
+                rels.append(rel)
+            continue
+        except OSError:
+            continue
+        if stat.st_mtime_ns >= start_ns:
+            rels.append(rel)
+    return sorted(rels)
+
+
 def load_ledger(session_id: str, *, home: Path | None = None) -> dict[str, Any]:
     path = ledger_path(session_id, home=home)
     if not path.is_file():
@@ -139,6 +254,7 @@ def record_event(
     event: dict[str, Any],
     *,
     home: Path | None = None,
+    now: float | None = None,
 ) -> dict[str, Any]:
     """Append this event's in-workspace paths. Foreign workspaces are ignored."""
     session_id = session_id_from_event(event)
@@ -146,6 +262,12 @@ def record_event(
     if not session_id or workspace is None:
         return {"ok": False, "reason": "no_session_or_workspace", "paths": []}
     rels = written_rels(event, workspace)
+    if is_shell_event(event):
+        known = set(rels)
+        for rel in shell_written_rels(event, workspace, now=now):
+            if rel not in known:
+                rels.append(rel)
+                known.add(rel)
     if not rels:
         return {"ok": True, "reason": "no_paths", "session_id": session_id, "paths": []}
     current = load_ledger(session_id, home=home)

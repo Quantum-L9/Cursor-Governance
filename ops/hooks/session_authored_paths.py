@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""postToolUse: record paths this conversation authored. Fail-open. Never deny."""
+"""postToolUse + afterShellExecution: record paths this conversation authored.
+
+Fail-open. Never deny. The ledger is a preservation aid, not a gate, so a
+failure to write it is reported on stderr and the tool result continues.
+"""
 
 from __future__ import annotations
 
@@ -24,8 +28,11 @@ def main() -> int:
         event = {}
     try:
         record_event(event)
-    except Exception:
-        pass
+    except (OSError, ValueError) as exc:
+        # Expected failure modes only: an unwritable ledger home, an
+        # unresolvable path, or a malformed path value. Fail-open by contract —
+        # name the cause so a silent ledger gap is diagnosable.
+        print(f"session-authored-paths: ledger not updated: {exc}", file=sys.stderr)
     print(json.dumps({"continue": True}))
     return 0
 
