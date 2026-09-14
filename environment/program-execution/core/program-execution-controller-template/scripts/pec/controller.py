@@ -1790,7 +1790,22 @@ def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
         if worktree.exists():
             if not _worktree_matches_lease(worktree, lease, repo_path):
                 raise ControllerError(f"worktree already exists: {worktree}")
-            reused = True
+            leftover_dirty = bool(run_git(worktree, "status", "--porcelain").stdout.strip())
+            if leftover_dirty:
+                # SessionStart / concurrent-session files must not pin a retry
+                # to a polluted leftover. Recreate from the lease base.
+                clean_task_execution(workspace, repo_path, task_id, branch=lease["branch"])
+                recovered = True
+                result = _add_task_worktree(repo_path, worktree, lease)
+                if result.returncode != 0:
+                    raise ControllerError(
+                        "failed to recreate exclusive worktree for "
+                        f"{task_id}: {result.stderr.strip() or result.stdout.strip()} "
+                        f"(worktree={worktree}, branch={lease['branch']}, "
+                        f"base_sha={lease['base_sha']})"
+                    )
+            else:
+                reused = True
         else:
             result = _add_task_worktree(repo_path, worktree, lease)
             if result.returncode != 0:

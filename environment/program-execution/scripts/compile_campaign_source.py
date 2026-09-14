@@ -82,6 +82,12 @@ EVIDENCE_TYPE = {
 CONTRACT_KEYS = ("pair", "blueprint", "controller_minimum")
 AUTH_REQUIRED = ("id", "responsibility", "owner")
 DECISION_REQUIRED = ("id", "question", "status")
+# Source keys `_compile_into` hard-reads into UNKNOWN_REGISTER.yaml. Empty
+# `unknowns: []` is valid; a present entry that omits these used to pass
+# campaign-check-input and then KeyError at Blueprint compile.
+UNKNOWN_REQUIRED = ("id", "statement", "owner", "resolution_method", "status")
+RISK_REQUIRED = ("id", "statement", "owner")
+PROHIBITED_PATH_REQUIRED = ("id", "statement", "rationale")
 TASK_STATUSES_ADMITTED = {"ready", "blocked", "cancelled", "superseded"}
 # Actions the sealed Program Execution runner cannot perform. A source may
 # still declare them -- historical sources declare push and pull_request --
@@ -460,6 +466,60 @@ def _require_auth(item: dict[str, Any]) -> None:
         raise CompileError(f"authority missing required keys: {missing}")
 
 
+def _require_register_keys(
+    src: dict[str, Any], kind: str, bucket: str, keys: tuple[str, ...]
+) -> None:
+    """Refuse a register entry that `_compile_into` would KeyError on."""
+    for item in src.get(bucket) or []:
+        if not isinstance(item, dict):
+            raise CompileError(f"{kind} entries must be mappings")
+        missing = [key for key in keys if not str(item.get(key) or "").strip()]
+        if missing:
+            raise CompileError(
+                f"{kind} {item.get('id')!r} is missing required keys {missing}; "
+                "the compiled Blueprint register admits no entry without them -- "
+                "fix the source, never synthesize the missing fields"
+            )
+
+
+def _require_unknown_compile_shape(src: dict[str, Any]) -> None:
+    """Unknowns must already be Blueprint-register complete at preflight.
+
+    Architecture compile emits this shape. Hand-authored domain sources that
+    only declared id/statement/blocking_task_ids used to pass
+    `campaign-check-input` and then KeyError on `owner` during Blueprint
+    compile. Preflight is the single admission authority.
+    """
+    _require_register_keys(src, "unknown", "unknowns", UNKNOWN_REQUIRED)
+    admitted = blueprint_unknown_statuses()
+    known_evidence = {
+        str(item.get("id"))
+        for item in (src.get("evidence_requirements") or [])
+        if isinstance(item, dict) and str(item.get("id") or "").strip()
+    }
+    for item in src.get("unknowns") or []:
+        if "resolution_evidence_ids" not in item:
+            raise CompileError(
+                f"unknown {item.get('id')!r} omits resolution_evidence_ids; "
+                "declare the list explicitly (empty is allowed while status is open)"
+            )
+        evidence = item.get("resolution_evidence_ids")
+        if not isinstance(evidence, list):
+            raise CompileError(f"unknown {item.get('id')!r} resolution_evidence_ids must be a list")
+        if item["status"] not in admitted:
+            raise CompileError(
+                f"unknown {item['id']!r}: status {item['status']!r} is not one of "
+                f"{sorted(admitted)}"
+            )
+        missing_evidence = sorted(
+            {str(value) for value in evidence if str(value).strip()} - known_evidence
+        )
+        if missing_evidence:
+            raise CompileError(
+                f"unknown {item['id']!r} cites unknown resolution_evidence_ids: {missing_evidence}"
+            )
+
+
 def _semantic_precheck(src: dict[str, Any]) -> list[str]:
     """Fail loudly on source shapes that have no valid compiled representation.
 
@@ -489,6 +549,9 @@ def _semantic_precheck(src: dict[str, Any]) -> list[str]:
                 f"{sorted(admitted)}"
             )
         _decision_authority(decision, src)
+    _require_unknown_compile_shape(src)
+    _require_register_keys(src, "risk", "risks", RISK_REQUIRED)
+    _require_register_keys(src, "prohibited path", "prohibited_paths", PROHIBITED_PATH_REQUIRED)
     _require_unique_task_ids(src)
     for task in src.get("tasks") or []:
         status = task.get("definition_status")
@@ -713,6 +776,7 @@ def blueprint_gate_id_pattern() -> str:
 
 
 DECISION_SCHEMA = BLUEPRINT_TEMPLATE / "schemas/decision-register.schema.json"
+UNKNOWN_SCHEMA = BLUEPRINT_TEMPLATE / "schemas/unknown-register.schema.json"
 
 
 def blueprint_decision_statuses() -> frozenset[str]:
@@ -724,6 +788,19 @@ def blueprint_decision_statuses() -> frozenset[str]:
         raise CompileError(
             f"{DECISION_SCHEMA.name} declares no decisions[].status enum; the admitted "
             "decision statuses cannot be sourced and preflight would be guessing"
+        )
+    return frozenset(str(value) for value in enum)
+
+
+def blueprint_unknown_statuses() -> frozenset[str]:
+    """The `unknowns[*].status` values the instantiated Unknown Register admits."""
+    schema = json.loads(UNKNOWN_SCHEMA.read_text(encoding="utf-8"))
+    node = schema.get("properties", {}).get("unknowns", {})
+    enum = node.get("items", {}).get("properties", {}).get("status", {}).get("enum")
+    if not isinstance(enum, list) or not enum:
+        raise CompileError(
+            f"{UNKNOWN_SCHEMA.name} declares no unknowns[].status enum; the admitted "
+            "unknown statuses cannot be sourced and preflight would be guessing"
         )
     return frozenset(str(value) for value in enum)
 
@@ -891,7 +968,16 @@ def resolve_campaign_target(src: dict[str, Any]) -> dict[str, Any]:
             "the Program Execution runner executes one repository per campaign. Split the "
             "campaign so each one names a single execution repository"
         )
-    return {"lifecycle": "existing_repository", "repository_id": found[0]}
+    source_of_truth = ""
+    for item in targets:
+        raw = str(item.get("source_of_truth") or "").strip()
+        if raw:
+            source_of_truth = raw
+            break
+    payload = {"lifecycle": "existing_repository", "repository_id": found[0]}
+    if source_of_truth:
+        payload["source_of_truth"] = source_of_truth
+    return payload
 
 
 def resolve_campaign_target_repository(src: dict[str, Any]) -> str:

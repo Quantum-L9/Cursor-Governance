@@ -47,6 +47,17 @@ class CampaignSkillContractTests(unittest.TestCase):
         self.assertIn("PEC itself bootstraps from a validated Blueprint", guide)
         self.assertIn("source-integrity-receipt.json", guide)
 
+    def test_complete_source_requires_unknown_register_compile_keys(self) -> None:
+        """Hand-authored unknowns must be compile-complete at campaign-check-input."""
+        skill = SKILL.read_text(encoding="utf-8")
+        contract = SOURCE_CONTRACT.read_text(encoding="utf-8")
+        template = CANONICAL_SOURCE.read_text(encoding="utf-8")
+        self.assertIn("resolution_method", skill)
+        self.assertIn("resolution_evidence_ids", contract)
+        self.assertIn("is the admission authority", contract)
+        self.assertIn("resolution_method", template)
+        self.assertIn("resolution_evidence_ids", template)
+
 
 if __name__ == "__main__":
     unittest.main()

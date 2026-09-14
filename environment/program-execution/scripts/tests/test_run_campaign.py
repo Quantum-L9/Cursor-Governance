@@ -1177,15 +1177,44 @@ class RunCampaignTests(unittest.TestCase):
             self.assertFalse(occupied.exists())
             self.assertTrue((moved / "runtime" / "state.sqlite").is_file())
 
-    def test_refuses_dirty_target_checkout(self) -> None:
+    def test_quarantines_dirty_target_and_rebinds_from_donor(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             dest = Path(raw) / "target"
             dest.mkdir()
             _git_init(dest)
             (dest / "dirty.txt").write_text("no\n", encoding="utf-8")
-            with self.assertRaises(self.mod.CampaignError) as ctx:
-                self.mod.default_ensure_target_checkout(dest, "Quantum-L9/Cursor-Governance")
-            self.assertIn("dirty", str(ctx.exception))
+            donor = Path(raw) / "donor"
+            donor.mkdir()
+            _git_init(donor)
+            env = _isolated_git_env()
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(donor),
+                    "remote",
+                    "add",
+                    "origin",
+                    "https://github.com/Quantum-L9/Cursor-Governance.git",
+                ],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            subprocess.run(
+                ["git", "-C", str(donor), "update-ref", "refs/remotes/origin/main", "HEAD"],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            self.mod.default_ensure_target_checkout(
+                dest, "Quantum-L9/Cursor-Governance", donor=donor
+            )
+            self.assertTrue((dest / "README.md").is_file())
+            self.assertFalse((dest / "dirty.txt").exists())
+            stale = list((Path(raw) / "stale").glob("target-*"))
+            self.assertEqual(len(stale), 1)
+            self.assertTrue((stale[0] / "dirty.txt").is_file())
 
     def test_real_admit_bootstrap_reconcile_claims_task_001(self) -> None:
         """No mocks on the live tunnel: leftover pec dir cannot block claim."""
@@ -1385,6 +1414,176 @@ class RunCampaignTests(unittest.TestCase):
             self.assertEqual(got, worktree)
             self.assertEqual(wired, [worktree])
             self.assertTrue(worktree.is_dir())
+
+    def test_isolate_resets_leftover_feat_branch_to_origin_main(self) -> None:
+        """A local feat/<id> with extra commits is not the exclusive isolate base."""
+        with tempfile.TemporaryDirectory() as raw:
+            primary = Path(raw) / "primary"
+            worktree = Path(raw) / "wt"
+            primary.mkdir()
+            _git_init(primary)
+            env = _isolated_git_env()
+            subprocess.run(
+                ["git", "-C", str(primary), "branch", "-M", "main"],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            subprocess.run(
+                ["git", "-C", str(primary), "update-ref", "refs/remotes/origin/main", "HEAD"],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            base = subprocess.run(
+                ["git", "-C", str(primary), "rev-parse", "HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            ).stdout.strip()
+            subprocess.run(
+                ["git", "-C", str(primary), "checkout", "-q", "-b", "feat/demo-activate-v1"],
+                check=True,
+                env=env,
+            )
+            (primary / "local-only.txt").write_text("leftover\n", encoding="utf-8")
+            subprocess.run(
+                ["git", "-C", str(primary), "add", "local-only.txt"],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            subprocess.run(
+                ["git", *_GIT_IDENTITY, "-C", str(primary), "commit", "-qm", "leftover"],
+                check=True,
+                env=env,
+            )
+            subprocess.run(
+                ["git", "-C", str(primary), "checkout", "-q", "main"],
+                check=True,
+                env=env,
+            )
+
+            def fake_git(*args: str) -> str:
+                if args[:2] == ("fetch", "origin"):
+                    return ""
+                if args[:2] == ("worktree", "add"):
+                    subprocess.run(
+                        ["git", "-C", str(primary), *args],
+                        check=True,
+                        capture_output=True,
+                        env=env,
+                    )
+                    return ""
+                raise AssertionError(args)
+
+            original = self.mod.ensure_workspace_wired
+            self.mod.ensure_workspace_wired = lambda _workspace: None  # type: ignore[method-assign]
+            try:
+                self.mod.isolate_worktree(primary, "demo-activate-v1", worktree, git_fn=fake_git)
+            finally:
+                self.mod.ensure_workspace_wired = original  # type: ignore[method-assign]
+            head = subprocess.run(
+                ["git", "-C", str(worktree), "rev-parse", "HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            ).stdout.strip()
+            self.assertEqual(head, base)
+            self.assertFalse((worktree / "local-only.txt").exists())
+
+    def test_remote_lineage_prefers_odoo_staging(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            repo = Path(raw) / "repo"
+            repo.mkdir()
+            _git_init(repo)
+            env = _isolated_git_env()
+            subprocess.run(
+                ["git", "-C", str(repo), "branch", "-M", "Staging"],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            subprocess.run(
+                ["git", "-C", str(repo), "update-ref", "refs/remotes/origin/Staging", "HEAD"],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(repo),
+                    "symbolic-ref",
+                    "refs/remotes/origin/HEAD",
+                    "refs/remotes/origin/Staging",
+                ],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            ref = self.mod.remote_lineage_ref(
+                repo,
+                repository_id="cryptoxdog/IB-Odoo_19",
+                declared="origin/Staging",
+            )
+            self.assertEqual(ref, "origin/Staging")
+
+    def test_integration_branch_starts_from_origin_staging_not_dirty_head(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            temp = Path(raw)
+            origin = temp / "origin"
+            origin.mkdir()
+            _git_init(origin)
+            env = _isolated_git_env()
+            subprocess.run(
+                ["git", "-C", str(origin), "branch", "-M", "Staging"],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            staging = subprocess.run(
+                ["git", "-C", str(origin), "rev-parse", "HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            ).stdout.strip()
+            clone = temp / "clone"
+            subprocess.run(
+                ["git", "clone", "-q", str(origin), str(clone)],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            (clone / "local-only.txt").write_text("operator\n", encoding="utf-8")
+            subprocess.run(
+                ["git", "-C", str(clone), "add", "local-only.txt"],
+                check=True,
+                env=env,
+            )
+            subprocess.run(
+                ["git", *_GIT_IDENTITY, "-C", str(clone), "commit", "-qm", "local leftover"],
+                check=True,
+                env=env,
+            )
+            branch = self.mod.ensure_integration_branch(
+                clone,
+                "demo",
+                repository_id="cryptoxdog/IB-Odoo_19",
+                source_of_truth="origin/Staging",
+            )
+            local = subprocess.run(
+                ["git", "-C", str(clone), "rev-parse", branch],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            ).stdout.strip()
+            self.assertEqual(local, staging)
 
     def test_policy_remediation_scope_is_stacked_only(self) -> None:
         policy = yaml.safe_load(

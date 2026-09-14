@@ -9,8 +9,8 @@ artifacts: [CAMPAIGN_SOURCE.yaml, README.md]
 tags: [campaign, campaign-source-v2, template, blueprint, pec]
 owner: igor_beylin
 status: active
-version: 1.0.0
-updated: 2026-09-13
+version: 1.1.0
+updated: 2026-09-14
 --- /L9_META ---
 -->
 
@@ -41,7 +41,11 @@ all explicit remote-action ceilings as `false`.
 A `repo_local` task with `local_write: true` needs explicit writable paths and an
 admissible single-operation terminal validation command. Express task ordering
 only with top-level `dependency_edges`; do not add task-local dependency fields.
-Do not leave `REPLACE_WITH_*` or `{{TOKEN}}` markers. Do not create a compile
+Leave `unknowns: []` unless every added unknown already has `owner`,
+`resolution_method`, `status`, and explicit `resolution_evidence_ids` — the
+template comments the required shape. `campaign-check-input` now refuses a
+partial unknown the same way it refuses a decision without `options`. Do not
+leave `REPLACE_WITH_*` or `{{TOKEN}}` markers. Do not create a compile
 allowlist: campaign IDs are admitted by valid source semantics, not
 preregistration. Retired v1 source or pack documents belong only in the
 immutable `environment/program-execution/archive/campaign-input-v1/` evidence

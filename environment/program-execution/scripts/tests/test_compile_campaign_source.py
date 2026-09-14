@@ -344,6 +344,28 @@ class CompileCampaignSourceTests(unittest.TestCase):
                 )
             self.assertIn("options", str(ctx.exception))
 
+    def test_unknowns_missing_compile_keys_fail_preflight(self) -> None:
+        """Partial unknowns must not classify as SUPPORTED then KeyError at compile."""
+        source = _with_declared_scope(yaml.safe_load(SOURCE.read_text(encoding="utf-8")))
+        unknown = source["unknowns"][0]
+        unknown_id = unknown["id"]
+        del unknown["owner"]
+        del unknown["resolution_method"]
+        del unknown["status"]
+        del unknown["resolution_evidence_ids"]
+        with self.assertRaises(self.compiler.CompileError) as ctx:
+            self.compiler.preflight_campaign_source_document(source)
+        message = str(ctx.exception)
+        self.assertIn(unknown_id, message)
+        self.assertIn("owner", message)
+
+    def test_unknowns_without_explicit_resolution_evidence_ids_fail_preflight(self) -> None:
+        source = _with_declared_scope(yaml.safe_load(SOURCE.read_text(encoding="utf-8")))
+        del source["unknowns"][0]["resolution_evidence_ids"]
+        with self.assertRaises(self.compiler.CompileError) as ctx:
+            self.compiler.preflight_campaign_source_document(source)
+        self.assertIn("resolution_evidence_ids", str(ctx.exception))
+
     def test_full_admission_loop_compile_collect_accept_bootstrap(self) -> None:
         """The closed loop: compile → collect → accept → bootstrap → validate."""
         with tempfile.TemporaryDirectory() as raw:

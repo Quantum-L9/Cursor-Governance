@@ -42,6 +42,38 @@ class PrepareReuseTest(unittest.TestCase):
             self.assertEqual(Path(prepared["worktree"]), worktree)
             cleanup_worktree(repo, workspace)
 
+    def test_prepare_recreates_a_dirty_leftover_worktree(self) -> None:
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            _, repo, workspace = bootstrap_repo(temp)
+            register_contract(temp, workspace)
+            lease = run_cli(
+                "claim", "TASK-001", "--workspace", str(workspace), "--holder", "worker"
+            )
+            worktree = workspace / "worktrees" / "TASK-001"
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(repo),
+                    "worktree",
+                    "add",
+                    "-b",
+                    lease["branch"],
+                    str(worktree),
+                    lease["base_sha"],
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            (worktree / "session-churn.txt").write_text("concurrent\n", encoding="utf-8")
+            prepared = run_cli("prepare", "TASK-001", "--workspace", str(workspace))
+            self.assertTrue(prepared["recovered"])
+            self.assertFalse(prepared["reused"])
+            self.assertFalse((Path(prepared["worktree"]) / "session-churn.txt").exists())
+            cleanup_worktree(repo, workspace)
+
     def test_prepare_refuses_a_worktree_on_a_foreign_base(self) -> None:
         """Right branch name, wrong lineage: the leftover belongs to an older lease."""
         with TemporaryDirectory() as raw:

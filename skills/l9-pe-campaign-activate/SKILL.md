@@ -9,8 +9,8 @@ metadata:
   tags: [l9, program-execution, campaign, campaign-source-v2, compiler, activate, merge]
   owner: igor_beylin
   status: active
-  version: 1.4.0
-  updated: 2026-09-13
+  version: 1.6.0
+  updated: 2026-09-14
 ---
 
 # PE Campaign Activation
@@ -26,10 +26,14 @@ environment/program-execution/templates/campaign-source-v2/CAMPAIGN_SOURCE.yaml
 
 Read [references/canonical-template.md](references/canonical-template.md) before
 editing a direct source. Copy the template to a working authoring location,
-replace its verified campaign facts, then run the read-only preflight. Do **not**
-put a hand-authored campaign directory under `environment/program-execution/campaigns/`;
-the runner serializes the accepted source and generated integrity receipt into an
-isolated worktree.
+replace its verified campaign facts, then run the read-only preflight. A
+hand-authored domain source that adds `unknowns` must already be
+Blueprint-register complete (`owner`, `resolution_method`, `status`, explicit
+`resolution_evidence_ids`). `campaign-check-input` is compile-complete: if it
+says SUPPORTED, Blueprint compile must not KeyError on a register field. Do
+**not** put a hand-authored campaign directory under
+`environment/program-execution/campaigns/`; the runner serializes the accepted
+source and generated integrity receipt into an isolated worktree.
 
 ```bash
 repo_root="${L9_REPO:-$HOME/.cursor-governance}"
@@ -62,6 +66,9 @@ lacks frontmatter.
 
 - Program Execution owns design projection, readiness, leases, worktrees,
   provider-neutral execution, independent verification, evidence, and local commits.
+  Exclusive trees are created from the remote default (`origin/main` for
+  governance, `origin/Staging` for `cryptoxdog/IB-Odoo_19`) and never attach to
+  a dirty local operator branch or a concurrent session's worktree.
 - Program Execution **never** pushes, opens or updates a PR, writes merge
   authority, or merges. `L9_PE_RELEASE_AUTHORIZED` cannot widen this boundary.
 - Publication is a later root operation: `PR_REMEDIATE=0 make pr`.

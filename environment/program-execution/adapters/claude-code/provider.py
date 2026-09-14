@@ -157,6 +157,7 @@ class ClaudeCodeProvider:
             timeout_seconds=int(request.timeout_budget["dispatch_seconds"]),
             environment={
                 "L9_AUTONOMY_REQUIRED": "1",
+                "L9_PE_WORKER": "1",
                 "L9_PROGRAM_LOCK_DIGEST": request.program_lock_digest,
                 **self._authority_environment(request),
             },
