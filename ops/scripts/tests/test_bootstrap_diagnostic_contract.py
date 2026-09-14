@@ -79,13 +79,20 @@ def tree_state(repo: Path) -> str:
     Ignored paths (``.venv``, ``.l9``, coverage data, ``__pycache__``) are
     excluded by construction, so comparing two snapshots is stable under the
     canonical xdist + coverage runner; a tracked file rewritten, moved, or
-    deleted, and any new unignored file, all change the snapshot.
+    deleted, and any new unignored file, all change the snapshot. Both flags
+    are pinned so a developer's git config (``status.showUntrackedFiles=no``,
+    ``diff.external``) cannot blind or reshape the comparison.
     """
     git = ["git", "-C", str(repo)]
     status = subprocess.run(
-        [*git, "status", "--porcelain"], capture_output=True, text=True, check=True
+        [*git, "status", "--porcelain", "--untracked-files=normal"],
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout
-    diff = subprocess.run([*git, "diff"], capture_output=True, text=True, check=True).stdout
+    diff = subprocess.run(
+        [*git, "diff", "--no-ext-diff"], capture_output=True, text=True, check=True
+    ).stdout
     return status + diff
 
 
