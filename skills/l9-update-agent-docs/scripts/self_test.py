@@ -26,6 +26,11 @@ def main() -> int:
         "repo-docs-receipt.schema.json",
         "l9-intelligence-harvest",
         "readme-pipeline-v1",
+        "generate_module_readmes.py",
+        "filetree.md",
+        "doc_filetree.py",
+        "llms.txt",
+        "generator marker",
         "doc_surface_analysis.py",
         "makefile-contract-v1",
         "python-project-contract-v1",
@@ -60,6 +65,10 @@ def main() -> int:
         errors.append("missing doc-surface-policy.yaml")
     if not ANALYSIS.is_file():
         errors.append("missing doc_surface_analysis.py")
+    if not (PACK / "scripts" / "generate_module_readmes.py").is_file():
+        errors.append("missing generate_module_readmes.py")
+    if not (PACK / "scripts" / "doc_filetree.py").is_file():
+        errors.append("missing doc_filetree.py")
     for path, expected in (
         (OBLIGATION, "l9.repo-docs.obligation.v1"),
         (RECEIPT, "l9.repo-docs.receipt.v3"),
