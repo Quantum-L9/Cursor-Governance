@@ -15,7 +15,6 @@ DEFAULT_EXCLUDED = [
     "commands/COMMANDS_MANIFEST.yaml",
     "commands/_harvest-copy-REVIEW.md",
     "commands/_archived/",
-    "commands/dora-commands/",
     "commands/emma-repo-commands/",
 ]
 

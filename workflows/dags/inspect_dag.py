@@ -13,27 +13,6 @@ External code mode runs validate_external_code.py checks automatically.
 Version: 3.0.0
 """
 
-# ============================================================================
-__dora_meta__ = {
-    "component_name": "Inspect Dag",
-    "module_version": "3.0.0",
-    "created_by": "Igor Beylin",
-    "created_at": "2026-01-31T20:27:26Z",
-    "updated_at": "2026-01-31T22:21:54Z",
-    "layer": "operations",
-    "domain": "data_models",
-    "module_name": "inspect_dag",
-    "type": "schema",
-    "status": "active",
-    "integrates_with": {
-        "api_endpoints": [],
-        "datasources": ["Redis"],
-        "memory_layers": [],
-        "imported_by": ["workflows.dags.__init__"],
-    },
-}
-# ============================================================================
-
 import ast
 from pathlib import Path
 from typing import Any, Literal
@@ -124,7 +103,6 @@ class InspectState(BaseModel):
     )
     structural_ok: bool = Field(default=True)
     async_ok: bool = Field(default=True)
-    quality_ok: bool = Field(default=True)
     import_ok: bool = Field(default=True)
     adr_ok: bool = Field(default=True)
     config_ok: bool = Field(default=True)
@@ -441,20 +419,6 @@ async def compliance_node(state: InspectState) -> dict[str, Any]:
                 }
             )
 
-    # --- Quality: missing DORA header ---
-    quality_ok = True
-    for code in code_snippets:
-        if "class " in code or "def " in code:
-            if "__dora_meta__" not in code:
-                quality_ok = False
-                anti_patterns.append(
-                    {
-                        "pattern": "missing_dora_header",
-                        "location": "No __dora_meta__ dict found",
-                    }
-                )
-                break  # Only flag once
-
     # --- Convert issues to anti_patterns for existing report format ---
     for issue in all_issues:
         if issue.severity in ("critical", "high"):
@@ -472,7 +436,6 @@ async def compliance_node(state: InspectState) -> dict[str, Any]:
     deductions += len(config_issues) * 5
     deductions += 0 if structural_ok else 20
     deductions += 0 if async_ok else 20
-    deductions += 0 if quality_ok else 10
     deductions += 0 if import_ok else 25
     health_score = max(0, 100 - deductions)
 
@@ -484,7 +447,6 @@ async def compliance_node(state: InspectState) -> dict[str, Any]:
         "validation_issues": validation_issues,
         "structural_ok": structural_ok,
         "async_ok": async_ok,
-        "quality_ok": quality_ok,
         "import_ok": import_ok,
         "adr_ok": adr_ok,
         "config_ok": config_ok,
@@ -626,7 +588,6 @@ async def report_node(state: InspectState) -> dict[str, Any]:
 - Config: {"✅" if state.config_ok else "❌"}
 - Structural: {"✅" if state.structural_ok else "❌"}
 - Async: {"✅" if state.async_ok else "❌"}
-- Quality (DORA): {"✅" if state.quality_ok else "❌"}
 {issues_section}
 ### Structure
 {structure_section}
@@ -711,55 +672,3 @@ async def run_inspect(target: str) -> InspectState:
 # =============================================================================
 
 INSPECT_DAG = build_inspect_graph()
-# ============================================================================
-# DORA FOOTER META - AUTO-GENERATED - DO NOT EDIT MANUALLY
-# ============================================================================
-__dora_footer__ = {
-    "component_id": "WOR-OPER-034",
-    "governance_level": "medium",
-    "compliance_required": True,
-    "audit_trail": True,
-    "dependencies": [],
-    "tags": [
-        "async",
-        "data-models",
-        "logging",
-        "operations",
-        "pydantic",
-        "schema",
-        "static-analysis",
-        "streaming",
-        "validation",
-    ],
-    "keywords": [
-        "build",
-        "classify",
-        "compliance",
-        "dag",
-        "graph",
-        "impact",
-        "inspect",
-        "orient",
-    ],
-    "business_value": "EXECUTABLE graph with real validation. External code gate. Version: 3.0.0",
-    "last_modified": "2026-01-31T22:21:54Z",
-    "modified_by": "L9_Codegen_Engine",
-    "change_summary": "Initial generation with DORA compliance",
-}
-# ============================================================================
-# L9 DORA BLOCK - AUTO-UPDATED - DO NOT EDIT
-# Runtime execution trace - updated automatically on every execution
-# ============================================================================
-__l9_trace__ = {
-    "trace_id": "",
-    "task": "",
-    "timestamp": "",
-    "patterns_used": [],
-    "graph": {"nodes": [], "edges": []},
-    "inputs": {},
-    "outputs": {},
-    "metrics": {"confidence": "", "errors_detected": [], "stability_score": ""},
-}
-# ============================================================================
-# END L9 DORA BLOCK
-# ============================================================================
