@@ -494,6 +494,101 @@ def test_non_overlapping_dirty_still_parks() -> int:
     return 0
 
 
+def test_deleted_suffix_file_is_user_data_not_tombstone() -> int:
+    """A parked file literally named `*.deleted` is user data, never a marker.
+
+    Deletion state must travel through hold metadata that cannot collide with
+    a repo-relative path. The fixture pairs each collision shape with a real
+    tracked deletion: `artifact.deleted` (modified) beside an untouched
+    sibling `artifact`, and `gone.txt.deleted` (modified) beside the deleted
+    `gone.txt` — the exact name the old suffix tombstone would have written.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        remote = Path(tmp) / "remote.git"
+        clone = Path(tmp) / "clone"
+        run(["git", "init", "--bare", str(remote)])
+        run(["git", "clone", str(remote), str(clone)])
+        git(clone, "config", "user.email", "test@example.com")
+        git(clone, "config", "user.name", "Test")
+        (clone / "tracked.txt").write_text("v1\n", encoding="utf-8")
+        (clone / "artifact").write_text("sibling-committed\n", encoding="utf-8")
+        (clone / "artifact.deleted").write_text("committed\n", encoding="utf-8")
+        (clone / "gone.txt").write_text("will be deleted locally\n", encoding="utf-8")
+        (clone / "gone.txt.deleted").write_text("committed twin\n", encoding="utf-8")
+        git(
+            clone,
+            "add",
+            "tracked.txt",
+            "artifact",
+            "artifact.deleted",
+            "gone.txt",
+            "gone.txt.deleted",
+        )
+        git(clone, "commit", "-m", "base")
+        git(clone, "branch", "-M", "main")
+        git(clone, "push", "-u", "origin", "main")
+        git(remote, "symbolic-ref", "HEAD", "refs/heads/main")
+
+        other = Path(tmp) / "other"
+        run(["git", "clone", str(remote), str(other)])
+        git(other, "config", "user.email", "test@example.com")
+        git(other, "config", "user.name", "Test")
+        (other / "tracked.txt").write_text("v2\n", encoding="utf-8")
+        git(other, "add", "tracked.txt")
+        git(other, "commit", "-m", "origin ahead")
+        git(other, "push")
+
+        (clone / "artifact.deleted").write_text("modified-local\n", encoding="utf-8")
+        (clone / "gone.txt.deleted").write_text("modified-twin\n", encoding="utf-8")
+        (clone / "gone.txt").unlink()
+
+        home = Path(tmp) / "home"
+        home.mkdir()
+        proc = run(
+            ["bash", str(FF)],
+            env={"CURSOR_GOVERNANCE_DIR": str(clone), "HOME": str(home)},
+        )
+        if proc.returncode != 0:
+            return _fail(f"ff.sh rc={proc.returncode}\n{proc.stdout}\n{proc.stderr}")
+        if run(["git", "-C", str(clone), "show", "HEAD:tracked.txt"]).stdout != "v2\n":
+            return _fail("did not catch up tracked.txt on HEAD")
+        got = (clone / "artifact.deleted").read_text(encoding="utf-8")
+        if got != "modified-local\n":
+            return _fail(f"artifact.deleted did not return with its modified bytes: {got!r}")
+        if not (clone / "artifact").is_file():
+            return _fail("sibling `artifact` was removed — `.deleted` suffix read as a tombstone")
+        sibling = (clone / "artifact").read_text(encoding="utf-8")
+        if sibling != "sibling-committed\n":
+            return _fail(f"sibling `artifact` was altered: {sibling!r}")
+        got = (clone / "gone.txt.deleted").read_text(encoding="utf-8")
+        if got != "modified-twin\n":
+            return _fail(f"gone.txt.deleted did not return with its modified bytes: {got!r}")
+        if (clone / "gone.txt").exists():
+            return _fail("real tracked deletion of gone.txt was not reproduced")
+        if run(["git", "-C", str(clone), "show", "HEAD:gone.txt"]).returncode != 0:
+            return _fail("HEAD:gone.txt must still exist; the deletion is worktree state")
+        if "restored parked deletion for gone.txt to original home" not in proc.stdout:
+            return _fail("missing restore-deletion log for gone.txt")
+        if "restored parked artifact.deleted to original home" not in proc.stdout:
+            return _fail("missing restore log for artifact.deleted")
+        hold = home / ".cursor" / "l9-ff-hold"
+        suffix_hits = {p.name: p.read_text(encoding="utf-8") for p in hold.rglob("*.deleted")}
+        if suffix_hits != {
+            "artifact.deleted": "modified-local\n",
+            "gone.txt.deleted": "modified-twin\n",
+        }:
+            return _fail(f"hold encodes deletion state in the filename namespace: {suffix_hits}")
+        receipt = json.loads(
+            (clone / ".l9" / "ff-restore-receipt.json").read_text(encoding="utf-8")
+        )
+        restored = set(receipt.get("restored_tracked", []))
+        if not {"gone.txt", "artifact.deleted", "gone.txt.deleted"} <= restored:
+            return _fail(f"restore receipt missing parked paths: {sorted(restored)}")
+        if "artifact" in restored:
+            return _fail("restore receipt claims the untouched sibling `artifact` was restored")
+    return 0
+
+
 def test_already_at_tip_leaves_dirty() -> int:
     with tempfile.TemporaryDirectory() as tmp:
         remote = Path(tmp) / "remote.git"
@@ -1154,6 +1249,7 @@ def main() -> int:
         ("scan_temp_cleanup", test_scan_temp_files_are_cleaned_on_success_and_failure),
         ("scan_repeatable", test_repeated_invocation_is_stable),
         ("non_overlapping_dirty", test_non_overlapping_dirty_still_parks),
+        ("deleted_suffix_is_user_data", test_deleted_suffix_file_is_user_data_not_tombstone),
         ("already_at_tip", test_already_at_tip_leaves_dirty),
         ("unrelated_history", test_unrelated_history_with_dirty),
         ("keep_env_local", test_origin_tracked_env_local_does_not_clobber),
