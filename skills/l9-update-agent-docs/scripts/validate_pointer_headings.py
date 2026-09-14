@@ -23,8 +23,8 @@ def main() -> int:
     parser.add_argument("--changed-since")
     parser.add_argument("--adapter")
     parser.add_argument("--receipt")
-    parser.add_argument("--llms-base-url")
-    parser.add_argument("--write-llms", action="store_true")
+    parser.add_argument("--llm-base-url")
+    parser.add_argument("--write-llm", action="store_true")
     parser.add_argument("--harvest")
     parser.add_argument("--fail-on-partial", action="store_true")
     parser.add_argument("--json", action="store_true")
@@ -34,8 +34,8 @@ def main() -> int:
         root,
         changed_since=args.changed_since,
         adapter=args.adapter,
-        llms_base_url_value=args.llms_base_url,
-        write_llms=args.write_llms,
+        llm_base_url_value=args.llm_base_url,
+        write_llm=args.write_llm,
         harvest_path=args.harvest,
     )
     if args.receipt:

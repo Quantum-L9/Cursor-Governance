@@ -28,12 +28,6 @@ from compile_activation_files import (  # noqa: E402
     dump_yaml,
 )
 
-HOST_ALLOWLIST = """schema: l9.program-execution.campaign-compile-allowlist.v1
-schema_version: 1.0.0
-campaign_ids:
-  - bounded-replanning-v1
-"""
-
 HOST_POLICY = """schema: l9.program-execution.campaign-execution-policy.v1
 campaigns:
   - id: bounded-replanning-v1
@@ -121,9 +115,6 @@ INTENT = {
 def _repo(tmp: Path) -> Path:
     (tmp / "environment/program-execution/campaigns").mkdir(parents=True)
     (tmp / "ops/autonomy").mkdir(parents=True)
-    (tmp / "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml").write_text(
-        HOST_ALLOWLIST, encoding="utf-8"
-    )
     (tmp / "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml").write_text(
         HOST_POLICY, encoding="utf-8"
     )
@@ -152,8 +143,8 @@ class CompileActivationTests(unittest.TestCase):
                     "environment/program-execution/campaigns/demo-activate-v1/source-integrity-receipt.json",
                 ],
             )
-            # No COMPILE_ALLOWLIST entry: compilation admits by validity, so
-            # activation does not preregister the campaign anywhere.
+            # A valid source needs no preregistration; activation only patches
+            # runner-owned policy, profile, and status surfaces.
             self.assertEqual(
                 set(result["patched"]),
                 {
@@ -200,10 +191,9 @@ class CompileActivationTests(unittest.TestCase):
             compile_activation(root / "intent.yaml", root, stamp="2026-08-15T00:00:00Z")
             second = compile_activation(root / "intent.yaml", root, stamp="2026-08-15T00:00:00Z")
             self.assertEqual(second["patched"], [])
-            allow = (
-                root / "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml"
-            ).read_text(encoding="utf-8")
-            self.assertEqual(allow.count("demo-activate-v1"), 0)
+            self.assertFalse(
+                (root / "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml").exists()
+            )
 
     def test_refuses_stub_actions_and_unsealed_plan(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
