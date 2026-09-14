@@ -96,10 +96,14 @@ operations, and the exact memory git SHA this stage was proven against. The
 binding is verified at runtime, never assumed:
 
 ```bash
-make memory-binding              # proof shape from plan §7
-make memory-readiness            # R0..R9; MEMORY_VERIFY_MCP=1 runs the real handshake
-L9_MEMORY_DEV_CHECKOUT=/path/to/l9-graphiti-memory make memory-readiness   # explicit dev opt-in
+make memory-binding                                      # proof shape from plan §7
+make memory-readiness                                    # R0..R9; R5 runs the real MCP handshake by default
+MEMORY_SKIP_VERIFY_MCP=1 make memory-readiness           # bounded diagnosis: skip R5 only
+L9_MEMORY_DEV_CHECKOUT=/path/to/l9-graphite-memory make memory-readiness   # explicit dev opt-in
 ```
+
+Direct callers use `python -m ops.memory.diagnostics --no-verify-mcp` for the
+same bounded R5 opt-out; `--verify-mcp` remains accepted for compatibility.
 
 Interpreter resolution order: explicit argument → `L9_MEMORY_DEV_CHECKOUT`
 (`runtime_mode=development_checkout`, reported, never silent) →
