@@ -41,7 +41,14 @@ class TraceWriterTest(unittest.TestCase):
     def setUp(self) -> None:
         self.mod = load_module("pe_trace_writer_under_test", TRACE_SCRIPT)
         self._tmp = tempfile.TemporaryDirectory()
-        self.workspace = Path(self._tmp.name)
+        # `stepped_aside` stages a SIBLING of the workspace, so the workspace
+        # needs a private parent. Using the TemporaryDirectory itself made that
+        # sibling `$TMPDIR/staging` -- one path shared by every test in this
+        # class and by every concurrent process, so the two stepped-aside tests
+        # raced each other under the parallel runner and one of them failed on
+        # a staging directory the other had already moved back.
+        self.workspace = Path(self._tmp.name) / "workspace"
+        self.workspace.mkdir()
         self.addCleanup(self._tmp.cleanup)
 
     def events(self) -> list[dict]:
