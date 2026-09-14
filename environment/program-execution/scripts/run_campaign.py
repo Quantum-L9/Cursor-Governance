@@ -1240,6 +1240,17 @@ def default_ensure_target_checkout(
     return dest
 
 
+def pre_birth_target_worktree(target: dict[str, Any]) -> str:
+    """Resolve the local workspace path or fail closed with a CampaignError."""
+    workspace_path = str(target.get("workspace_path") or "").strip()
+    if not workspace_path:
+        raise CampaignError(
+            "pre-birth target is missing workspace_path; the local execution workspace "
+            "is never inferred"
+        )
+    return str(Path(workspace_path).expanduser().resolve())
+
+
 def default_ensure_pre_birth_workspace(dest: Path) -> Path:
     """Create or verify the local-only source boundary for a greenfield run.
 
@@ -1257,14 +1268,15 @@ def default_ensure_pre_birth_workspace(dest: Path) -> Path:
         )
         if created.returncode != 0:
             raise CampaignError(f"cannot initialize pre-birth workspace {dest}: {created.stderr}")
-    origin = run_cmd(
-        ["git", "-C", str(dest), "remote", "get-url", "origin"],
+    remotes = run_cmd(
+        ["git", "-C", str(dest), "remote"],
         timeout=GIT_TIMEOUT_S,
         env=git_env(),
     )
-    if origin.returncode == 0 and (origin.stdout or "").strip():
+    names = [line.strip() for line in (remotes.stdout or "").splitlines() if line.strip()]
+    if remotes.returncode == 0 and names:
         raise CampaignError(
-            f"pre-birth workspace {dest} has an origin remote; PE local realization must not "
+            f"pre-birth workspace {dest} has remotes {names}; PE local realization must not "
             "attach to a remote repository"
         )
     if is_dirty(dest):
@@ -5582,7 +5594,7 @@ def _stage_isolate_and_emit(run: _CampaignRun) -> CampaignReport | None:
     assert_allowed_campaign_dir(write_root, campaign_id)
     target = seed.get("target") if isinstance(seed.get("target"), dict) else {}
     if str(target.get("lifecycle") or "") == "pre_birth_local_execution_workspace":
-        target_worktree = str(Path(str(target["workspace_path"])).expanduser().resolve())
+        target_worktree = pre_birth_target_worktree(target)
     else:
         target_worktree = str(l9_home / "program-worktrees" / campaign_id)
     mark_host_campaign_active(

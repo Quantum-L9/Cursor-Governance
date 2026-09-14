@@ -80,15 +80,15 @@ def _validate_lifecycle_stages(
     root: dict[str, Any], graph_by_id: dict[str, dict[str, Any]], errors: list[str]
 ) -> None:
     """Validate optional stage joins without turning any owner into an orchestrator."""
-    declared: dict[str, list[str]] = {}
+    declared: dict[str, dict[str, str]] = {}
     for unit_id, unit in graph_by_id.items():
         orchestration = unit.get("orchestration")
         if isinstance(orchestration, dict):
-            declared[unit_id] = [
-                str(stage.get("id"))
+            declared[unit_id] = {
+                str(stage.get("id")): str(stage.get("owner") or "")
                 for stage in orchestration.get("stages", [])
-                if isinstance(stage, dict)
-            ]
+                if isinstance(stage, dict) and stage.get("id")
+            }
     stages = root.get("lifecycle_stages")
     if not declared:
         if stages is not None:
@@ -104,11 +104,18 @@ def _validate_lifecycle_stages(
             errors.append(f"{label} must be a mapping")
             continue
         unit_id, stage_id = stage.get("unit_id"), stage.get("stage_id")
-        if unit_id not in declared or stage_id not in declared.get(unit_id, []):
+        if unit_id not in declared or stage_id not in declared.get(unit_id, {}):
             errors.append(f"{label} names an undeclared graph lifecycle stage")
             continue
         if not nonempty_string(stage.get("owner")) or not nonempty_string(stage.get("state")):
             errors.append(f"{label} must name owner and state")
+        expected_owner = declared[str(unit_id)][str(stage_id)]
+        reported_owner = stage.get("owner")
+        if nonempty_string(reported_owner) and expected_owner and reported_owner != expected_owner:
+            errors.append(
+                f"{label}.owner {reported_owner!r} does not match graph stage owner "
+                f"{expected_owner!r}"
+            )
         refs = stage.get("evidence_refs", [])
         if not isinstance(refs, list) or not all(nonempty_string(ref) for ref in refs):
             errors.append(f"{label}.evidence_refs must be a string list")
@@ -119,10 +126,11 @@ def _validate_lifecycle_stages(
         observed.setdefault(str(unit_id), []).append(str(stage_id))
     for unit_id, expected in declared.items():
         seen = observed.get(unit_id, [])
-        if seen != expected:
+        graph_order = list(expected)
+        if seen != graph_order:
             errors.append(
                 f"lifecycle stages for {unit_id} must exactly match graph order "
-                f"(receipt={seen}, graph={expected})"
+                f"(receipt={seen}, graph={graph_order})"
             )
 
 

@@ -910,8 +910,6 @@ def resolve_campaign_target_repository(src: dict[str, Any]) -> str:
     """
     target = resolve_campaign_target(src)
     canonical = str(target["repository_id"])
-    if target["lifecycle"] == "pre_birth_local_execution_workspace":
-        return canonical
     for name, path in TARGET_REPOSITORY_ALIASES:
         value = _alias_value(src, path)
         if value and value != canonical:

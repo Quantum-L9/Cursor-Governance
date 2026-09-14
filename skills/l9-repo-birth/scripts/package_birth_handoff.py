@@ -21,10 +21,28 @@ class HandoffError(ValueError):
     pass
 
 
+GIT_TIMEOUT_S = 45
+FACTORY_TIMEOUT_S = 120
+LINEAGE_KEYS = (
+    "idea_execute_receipt",
+    "gar_decision",
+    "plan",
+    "campaign_source",
+    "pe_receipt",
+)
+
+
 def git(source: Path, *args: str) -> str:
-    proc = subprocess.run(
-        ["git", "-C", str(source), *args], text=True, capture_output=True, check=False
-    )
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(source), "-c", "color.ui=false", *args],
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=GIT_TIMEOUT_S,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise HandoffError(f"source git {' '.join(args)} timed out after {GIT_TIMEOUT_S}s") from exc
     if proc.returncode:
         raise HandoffError(
             f"source git {' '.join(args)} failed: {(proc.stderr or proc.stdout).strip()}"
@@ -53,11 +71,35 @@ def require_digest(evidence: dict[str, Any], key: str) -> str:
     return value
 
 
+def resolve_lineage_path(source: Path, ref: str) -> Path:
+    raw = str(ref or "").strip()
+    if not raw:
+        raise HandoffError("lineage path is empty")
+    path = Path(raw)
+    if not path.is_absolute():
+        path = source / path
+    path = path.resolve()
+    if not path.is_file():
+        raise HandoffError(f"lineage artifact missing: {ref}")
+    return path
+
+
 def validate_evidence(evidence: dict[str, Any], source: Path) -> tuple[str, str, str]:
     if evidence.get("schema") != "l9.repo-birth-evidence/v1":
         raise HandoffError("evidence.schema must equal l9.repo-birth-evidence/v1")
-    for key in ("idea_execute_receipt", "gar_decision", "plan", "campaign_source", "pe_receipt"):
-        require_digest(evidence, key)
+    for key in LINEAGE_KEYS:
+        digest = require_digest(evidence, key)
+        path_key = f"{key}_path"
+        raw_path = str(evidence.get(path_key) or "").strip()
+        if not raw_path:
+            raise HandoffError(f"evidence.{path_key} must locate the {key} artifact")
+        artifact = resolve_lineage_path(source, raw_path)
+        if sha256(artifact) != digest:
+            raise HandoffError(f"evidence.{key} does not match hashed {path_key}")
+        if key == "pe_receipt":
+            payload = load_json(artifact)
+            if not str(payload.get("schema") or "").strip():
+                raise HandoffError("pe_receipt artifact must declare schema")
     refs = evidence.get("acceptance_evidence_refs")
     if (
         not isinstance(refs, list)
@@ -65,6 +107,8 @@ def validate_evidence(evidence: dict[str, Any], source: Path) -> tuple[str, str,
         or not all(isinstance(ref, str) and ref.strip() for ref in refs)
     ):
         raise HandoffError("evidence.acceptance_evidence_refs must be a non-empty string list")
+    for ref in refs:
+        resolve_lineage_path(source, ref)
     revision = git(source, "rev-parse", "HEAD")
     tree_sha = git(source, "rev-parse", "HEAD^{tree}")
     if git(source, "status", "--porcelain"):
@@ -101,23 +145,29 @@ def package(
         repository = source_repository
     out_dir.mkdir(parents=True, exist_ok=True)
     payload_path = out_dir / "birth-payload.json"
-    proc = subprocess.run(
-        [
-            sys.executable,
-            str(compiler),
-            "--source",
-            str(source),
-            "--template-src",
-            str(factory),
-            "--out",
-            str(payload_path),
-            "--source-repository",
-            repository,
-        ],
-        text=True,
-        capture_output=True,
-        check=False,
-    )
+    try:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(compiler),
+                "--source",
+                str(source),
+                "--template-src",
+                str(factory),
+                "--out",
+                str(payload_path),
+                "--source-repository",
+                repository,
+            ],
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=FACTORY_TIMEOUT_S,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise HandoffError(
+            f"factory payload compiler timed out after {FACTORY_TIMEOUT_S}s"
+        ) from exc
     if proc.returncode:
         raise HandoffError(
             f"factory payload compiler failed: {(proc.stderr or proc.stdout).strip()}"

@@ -198,6 +198,14 @@ def main() -> int:
     validate_graph(birth_graph, birth_requested)
     stages = find_unit(birth_graph, "NEW_PRODUCT_REPOSITORY")["orchestration"]["stages"]
     assert [stage["id"] for stage in stages][-2:] == ["birth_handoff", "birth"]
+    greenfield_receipt = receipt_for(e, g)
+    validate_receipt(greenfield_receipt, g, e)
+    false_stage_owner = copy.deepcopy(greenfield_receipt)
+    false_stage_owner["lifecycle_stages"][0]["owner"] = "wrong-stage-owner"
+    expect_contract_error(
+        lambda: validate_receipt(false_stage_owner, g, e),
+        "does not match graph stage owner",
+    )
     checks.append("new_product_scoped_orchestrator_and_explicit_birth=PASS")
 
     e = envelope([req("ER-001", "website", "new")])

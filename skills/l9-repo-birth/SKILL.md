@@ -43,8 +43,10 @@ python3 scripts/package_birth_handoff.py \
 ```
 
 The evidence must bind Idea Execute lineage, GAR, Plan, campaign-source v2,
-PE receipt, exact commit/tree, and acceptance evidence. The script rejects drift
-before the factory compiler runs.
+PE receipt, exact commit/tree, and acceptance evidence. Each lineage digest
+must have a sibling `*_path` whose file hashes to that digest; acceptance
+refs must exist. The script rejects drift before the factory compiler runs.
+`scripts/self_test.py` honors `L9_REPO_TEMPLATE` for the factory checkout.
 
 ## Validation
 
