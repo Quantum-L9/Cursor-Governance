@@ -50,7 +50,7 @@ def test_named_root_with_release_receipt_is_allowed(
     monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
     begin(stacked_repo, contract_id="c1")
-    record_kernels(stacked_repo)
+    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
     authorize_release(stacked_repo)
 
     session = _session_root(tmp_path)
@@ -98,6 +98,6 @@ def test_session_root_fallback_unchanged(
     assert reason is not None
     # and a session root WITH a receipt still allows as before
     begin(stacked_repo, contract_id="c2")
-    record_kernels(stacked_repo)
+    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
     authorize_release(stacked_repo)
     assert evaluate("Bash", {"command": "make pr"}, root=stacked_repo) is None

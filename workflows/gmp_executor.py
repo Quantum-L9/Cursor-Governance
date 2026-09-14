@@ -419,7 +419,13 @@ class GMPExecutor:
             return
         if not L4_LOCAL.is_file():
             return
-        for sub in ("record-kernels", "authorize-release"):
+        # `record-kernels` is deliberately NOT called here. An executor cannot
+        # observe a kernel pass, and stamping one as a side effect of automation
+        # forged the kernel_gate receipt that is supposed to gate publication
+        # (INC-2026-09-14-001). Kernels are not an L4 phase: leaving them
+        # unrecorded lets the kernel latch surface its L9_AGENT_REQUIRED block
+        # so an agent applies them to the finished tree, then records.
+        for sub in ("authorize-release",):
             argv = [sys.executable, str(L4_LOCAL), "--workspace", str(REPO_ROOT), sub]
             code, stdout, stderr = self._run_argv(argv)
             if code != 0:
