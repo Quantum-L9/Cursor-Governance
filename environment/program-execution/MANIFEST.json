@@ -2207,7 +2207,7 @@
     },
     {
       "path": "scripts/tests/test_pe_trace.py",
-      "sha256": "5db6d6911d3d21d89e3a22cd490daec8489cb510df016224c7aee4f3db24ec92"
+      "sha256": "03ea5253f29633c19058b307825faa246afd2b496fcee9fa3daed567996f1f9a"
     },
     {
       "path": "scripts/tests/test_pe_worker.py",
