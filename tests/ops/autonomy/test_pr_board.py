@@ -234,10 +234,18 @@ def test_draft_is_fix() -> None:
     assert decide(facts)["board"] == FIX
 
 
-def test_unknown_merge_state_with_green_required_merges() -> None:
+def test_unknown_merge_state_with_green_required_waits() -> None:
+    """UNKNOWN is an epistemic state, not a merge verdict (fail-closed).
+
+    Green required checks say nothing about mergeability GitHub has not yet
+    computed; the watch loop re-polls until the word arrives. Skill law 17:
+    unknown telemetry degrades to `wait`, never to `merge`.
+    """
     verdict = decide(_facts(rollup=_green(), merge_state="UNKNOWN"))
-    assert verdict["board"] == MERGE
-    assert "stack_safe_merge.py --run" in verdict["reason"]
+    assert verdict["board"] == WAIT
+    assert verdict["failing_required"] == []
+    assert "has not finished computing mergeability" in verdict["reason"]
+    assert "stack_safe_merge.py --run" not in verdict["reason"]
 
 
 def test_failing_required_before_behind_does_not_say_catch_up() -> None:

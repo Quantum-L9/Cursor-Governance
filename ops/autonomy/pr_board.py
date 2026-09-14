@@ -817,11 +817,10 @@ def decide(
     # Everything this helper can name is green, and GitHub still will not merge.
     # Whatever is left (an approval, a thread, a protection rule this probe did
     # not see) is unnamed -- so say that, rather than calling it a merge.
-    # UNKNOWN with green required (none pending) is merge-ready: GitHub has not
-    # finished the merge-state word, but every named required check passed.
-    # Empty required + empty merge_state stays WAIT below. BLOCKED stays FIX.
-    if merge_state == "UNKNOWN" and required:
-        merge_state = "CLEAN"
+    # UNKNOWN is an epistemic state, not a verdict: green required checks do not
+    # stand in for a mergeability word GitHub has not computed yet. Fail closed
+    # to WAIT and let the watch loop re-poll; polling, not conversion, resolves
+    # the missing fact. BLOCKED stays FIX.
     if merge_state and merge_state not in MERGE_READY_STATES:
         verdict["board"] = FIX if merge_state == "BLOCKED" else WAIT
         verdict["reason"] = (
