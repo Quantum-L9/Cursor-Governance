@@ -282,7 +282,21 @@ def _host_repo(tmp: Path) -> Path:
     return tmp
 
 
+#: Where `_git_init` keeps the fixture's bare origin. Inside `.git/` so it never
+#: shows in porcelain, never lands outside the TemporaryDirectory when the repo
+#: *is* the temp root, and travels with the tree when a test quarantines it.
+_FIXTURE_ORIGIN = Path(".git") / "l9-test-origin.git"
+
+
 def _git_init(path: Path) -> None:
+    """A checkout fixture: one commit, published to a local bare ``origin``.
+
+    An exclusive PE checkout always has a remote lineage to prove, and
+    `_bind_exclusive_remote_lineage` fails closed when origin cannot confirm
+    one. A fixture that models a checkout therefore carries a reachable origin
+    whose ``main`` is the fixture's HEAD; `_git_publish` re-syncs it after the
+    test commits more.
+    """
     env = _isolated_git_env()
     subprocess.run(["git", "init"], cwd=path, check=True, capture_output=True, env=env)
     subprocess.run(
@@ -294,6 +308,63 @@ def _git_init(path: Path) -> None:
     subprocess.run(
         ["git", "commit", "-m", "init"], cwd=path, check=True, capture_output=True, env=env
     )
+    origin = path / _FIXTURE_ORIGIN
+    subprocess.run(
+        ["git", "init", "--bare", "-q", "--initial-branch=main", str(origin)],
+        check=True,
+        capture_output=True,
+        env=env,
+    )
+    subprocess.run(
+        ["git", "remote", "add", "origin", str(origin)],
+        cwd=path,
+        check=True,
+        capture_output=True,
+        env=env,
+    )
+    _git_publish(path)
+    subprocess.run(
+        ["git", "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main"],
+        cwd=path,
+        check=True,
+        capture_output=True,
+        env=env,
+    )
+
+
+def _git_publish(path: Path) -> str:
+    """Push the fixture's HEAD to its origin ``main``; return the published SHA."""
+    env = _isolated_git_env()
+    subprocess.run(
+        ["git", "push", "-q", "origin", "HEAD:refs/heads/main"],
+        cwd=path,
+        check=True,
+        capture_output=True,
+        env=env,
+    )
+    return subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=path,
+        check=True,
+        capture_output=True,
+        text=True,
+        env=env,
+    ).stdout.strip()
+
+
+def _github_redirect(repository_id: str, target: Path) -> dict[str, str]:
+    """Environment that routes the GitHub URL run_campaign hardcodes to a local repo.
+
+    `default_ensure_target_checkout` rewrites origin to
+    ``https://github.com/<repository_id>.git`` after a donor clone, so a fetch
+    would otherwise reach the network. ``url.<local>.insteadOf`` keeps the test
+    hermetic without changing what the code under test does.
+    """
+    return {
+        "GIT_CONFIG_COUNT": "1",
+        "GIT_CONFIG_KEY_0": f"url.{target}.insteadOf",
+        "GIT_CONFIG_VALUE_0": f"https://github.com/{repository_id}.git",
+    }
 
 
 class RunCampaignTests(unittest.TestCase):
@@ -1193,7 +1264,7 @@ class RunCampaignTests(unittest.TestCase):
                     "-C",
                     str(donor),
                     "remote",
-                    "add",
+                    "set-url",
                     "origin",
                     "https://github.com/Quantum-L9/Cursor-Governance.git",
                 ],
@@ -1207,9 +1278,13 @@ class RunCampaignTests(unittest.TestCase):
                 capture_output=True,
                 env=env,
             )
-            self.mod.default_ensure_target_checkout(
-                dest, "Quantum-L9/Cursor-Governance", donor=donor
-            )
+            with patch.dict(
+                os.environ,
+                _github_redirect("Quantum-L9/Cursor-Governance", donor / _FIXTURE_ORIGIN),
+            ):
+                self.mod.default_ensure_target_checkout(
+                    dest, "Quantum-L9/Cursor-Governance", donor=donor
+                )
             self.assertTrue((dest / "README.md").is_file())
             self.assertFalse((dest / "dirty.txt").exists())
             stale = list((Path(raw) / "stale").glob("target-*"))
@@ -1532,6 +1607,131 @@ class RunCampaignTests(unittest.TestCase):
             )
             self.assertEqual(ref, "origin/Staging")
 
+    def test_existing_checkout_fetches_remote_default_before_trusting_stale_ref(self) -> None:
+        """An exclusive checkout whose origin/main is stale is rebound to the live tip.
+
+        The remote-tracking ref proves what origin *had* when the checkout was
+        made. Nothing later in the run fetches the default branch, so the
+        admission SHA and campaign/<id> would otherwise be based on that day.
+        """
+        with tempfile.TemporaryDirectory() as raw:
+            temp = Path(raw)
+            env = _isolated_git_env()
+            seed = temp / "seed"
+            seed.mkdir()
+            _git_init(seed)
+            remote = seed / _FIXTURE_ORIGIN
+            dest = temp / "target"
+            subprocess.run(
+                ["git", "clone", "-q", str(remote), str(dest)],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            stale = subprocess.run(
+                ["git", "-C", str(dest), "rev-parse", "origin/main"],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            ).stdout.strip()
+            # origin advances after the checkout was created.
+            (seed / "advanced.txt").write_text("newer\n", encoding="utf-8")
+            subprocess.run(
+                ["git", "-C", str(seed), "add", "advanced.txt"],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            subprocess.run(
+                ["git", *_GIT_IDENTITY, "-C", str(seed), "commit", "-qm", "advance origin"],
+                check=True,
+                env=env,
+            )
+            tip = _git_publish(seed)
+            self.assertNotEqual(tip, stale)
+
+            got = self.mod.default_ensure_target_checkout(dest, "Quantum-L9/Cursor-Governance")
+
+            self.assertEqual(got, dest.resolve())
+            head = subprocess.run(
+                ["git", "-C", str(dest), "rev-parse", "HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            ).stdout.strip()
+            self.assertEqual(head, tip, "checkout was bound to the stale remote-tracking ref")
+            tracking = subprocess.run(
+                ["git", "-C", str(dest), "rev-parse", "origin/main"],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            ).stdout.strip()
+            self.assertEqual(tracking, tip)
+            self.assertTrue((dest / "advanced.txt").is_file())
+
+    def test_existing_checkout_stops_when_lineage_unprovable_after_fetch(self) -> None:
+        """No remote-tracking ref and an unreachable origin: stop, never return."""
+        with tempfile.TemporaryDirectory() as raw:
+            temp = Path(raw)
+            env = _isolated_git_env()
+            dest = temp / "target"
+            dest.mkdir()
+            _git_init(dest)
+            subprocess.run(
+                ["git", "-C", str(dest), "remote", "set-url", "origin", str(temp / "missing.git")],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            subprocess.run(
+                ["git", "-C", str(dest), "symbolic-ref", "--delete", "refs/remotes/origin/HEAD"],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            subprocess.run(
+                ["git", "-C", str(dest), "update-ref", "-d", "refs/remotes/origin/main"],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            with self.assertRaises(self.mod.CampaignError) as ctx:
+                self.mod.default_ensure_target_checkout(dest, "Quantum-L9/Cursor-Governance")
+            self.assertIn("remote lineage", str(ctx.exception))
+
+    def test_existing_remote_tracking_ref_is_not_lineage_when_origin_cannot_confirm_it(
+        self,
+    ) -> None:
+        """origin/main exists locally but origin is unreachable: the ref is not trusted."""
+        with tempfile.TemporaryDirectory() as raw:
+            temp = Path(raw)
+            env = _isolated_git_env()
+            dest = temp / "target"
+            dest.mkdir()
+            _git_init(dest)
+            subprocess.run(
+                ["git", "-C", str(dest), "remote", "set-url", "origin", str(temp / "missing.git")],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            verify = subprocess.run(
+                ["git", "-C", str(dest), "rev-parse", "--verify", "origin/main"],
+                check=False,
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+            self.assertEqual(verify.returncode, 0, "fixture must keep a stale origin/main")
+            with self.assertRaises(self.mod.CampaignError) as ctx:
+                self.mod._bind_exclusive_remote_lineage(
+                    dest, repository_id="Quantum-L9/Cursor-Governance"
+                )
+            self.assertIn("remote lineage", str(ctx.exception))
+
     def test_integration_branch_starts_from_origin_staging_not_dirty_head(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             temp = Path(raw)
@@ -1810,7 +2010,7 @@ class RunCampaignTests(unittest.TestCase):
                 env=git_env,
             )
             subprocess.run(
-                ["git", "remote", "add", "origin", str(origin)],
+                ["git", "remote", "set-url", "origin", str(origin)],
                 cwd=primary,
                 check=True,
                 capture_output=True,
@@ -2163,7 +2363,7 @@ class RunCampaignTests(unittest.TestCase):
                     "-C",
                     str(repo),
                     "remote",
-                    "add",
+                    "set-url",
                     "origin",
                     "https://github.com/Other/Repo.git",
                 ],

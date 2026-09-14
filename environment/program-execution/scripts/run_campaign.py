@@ -651,16 +651,17 @@ def known_remote_default_branch(repository_id: str) -> str:
     return KNOWN_REMOTE_DEFAULT_BRANCHES.get(str(repository_id or "").strip().lower(), "")
 
 
-def remote_lineage_ref(
+def remote_lineage_candidates(
     repo: Path,
     *,
     repository_id: str = "",
     declared: str = "",
-) -> str:
-    """Remote default branch for an exclusive PE checkout. Never a local branch.
+) -> list[str]:
+    """Ordered ``origin/<branch>`` candidates for the remote default, deduplicated.
 
-    IB-Odoo_19's remote default is Staging, not main. Governance stays origin/main.
-    Declared ``source_of_truth`` wins, then origin/HEAD, then the known default.
+    Declared ``source_of_truth`` wins, then origin/HEAD, then the known default,
+    then ``origin/main``. Shared by the fetch that refreshes the candidates and
+    the resolution that trusts one, so both see the same lineage.
     """
     candidates: list[str] = []
     if declared:
@@ -676,11 +677,77 @@ def remote_lineage_ref(
     if known:
         candidates.append(f"origin/{known}")
     candidates.append("origin/main")
-    seen: set[str] = set()
+    ordered: list[str] = []
     for ref in candidates:
-        if not ref or ref in seen:
+        if ref and ref not in ordered:
+            ordered.append(ref)
+    return ordered
+
+
+def refresh_remote_lineage(
+    repo: Path,
+    *,
+    repository_id: str = "",
+    declared: str = "",
+) -> list[str]:
+    """Fetch every lineage candidate from origin; return the refs that refreshed.
+
+    A remote-tracking ref proves only that origin *once* had that tip. An
+    exclusive checkout that survived from an earlier campaign still carries
+    ``origin/main`` from that day, and nothing later in the run fetches the
+    default branch (``fetch_stack_refs`` fetches campaign and pec refs only), so
+    trusting the ref as-is bases ``campaign/<id>`` and the admission SHA on a
+    stale tip. Each branch is fetched with an explicit refspec so a
+    single-branch clone refreshes a declared non-default lineage too.
+
+    Fails closed when no candidate could be fetched: an exclusive PE tree whose
+    remote cannot be reached has no provable lineage.
+    """
+    fetched: list[str] = []
+    failures: list[str] = []
+    for ref in remote_lineage_candidates(repo, repository_id=repository_id, declared=declared):
+        branch = ref.removeprefix("origin/")
+        result = run_cmd(
+            [
+                "git",
+                "-C",
+                str(repo),
+                "fetch",
+                "--no-tags",
+                "origin",
+                f"+refs/heads/{branch}:refs/remotes/origin/{branch}",
+            ],
+            timeout=GIT_TIMEOUT_S,
+            env=git_env(),
+        )
+        if result.returncode == 0:
+            fetched.append(ref)
             continue
-        seen.add(ref)
+        detail = (result.stderr or result.stdout or "").strip().splitlines()
+        failures.append(f"{ref}: {detail[-1] if detail else 'fetch failed'}")
+    if not fetched:
+        raise CampaignError(
+            f"cannot refresh remote lineage for {repo} from origin ({'; '.join(failures)}); "
+            "an exclusive PE checkout is bound to the remote default only after a fetch "
+            "proves it (IB-Odoo_19: origin/Staging)"
+        )
+    return fetched
+
+
+def remote_lineage_ref(
+    repo: Path,
+    *,
+    repository_id: str = "",
+    declared: str = "",
+) -> str:
+    """Remote default branch for an exclusive PE checkout. Never a local branch.
+
+    IB-Odoo_19's remote default is Staging, not main. Governance stays origin/main.
+    Declared ``source_of_truth`` wins, then origin/HEAD, then the known default.
+    Resolves against whatever remote-tracking refs exist; callers that need the
+    ref to be *current* run ``refresh_remote_lineage`` first.
+    """
+    for ref in remote_lineage_candidates(repo, repository_id=repository_id, declared=declared):
         verify = run_cmd(
             ["git", "-C", str(repo), "rev-parse", "--verify", ref],
             timeout=GIT_TIMEOUT_S,
@@ -1311,19 +1378,27 @@ def ensure_target_history(dest: Path, repository_id: str) -> None:
 def _bind_exclusive_remote_lineage(
     dest: Path, *, repository_id: str, source_of_truth: str = ""
 ) -> None:
-    """Point an exclusive target clone at the remote default, never a local leftover."""
+    """Point an exclusive target clone at the remote default, never a local leftover.
+
+    The remote default is fetched *before* any remote-tracking ref is trusted:
+    an existing ``origin/main`` is evidence of a past tip, not of the current
+    one. When lineage still cannot be proven after the fetch, execution stops
+    here — returning would leave the exclusive checkout on whatever local HEAD
+    it happened to have and let ``ensure_integration_branch`` fall back to it.
+    """
+    fetched = refresh_remote_lineage(dest, repository_id=repository_id, declared=source_of_truth)
     try:
         ref = remote_lineage_ref(dest, repository_id=repository_id, declared=source_of_truth)
-    except CampaignError:
-        run_cmd(
-            ["git", "-C", str(dest), "fetch", "origin"],
-            timeout=GIT_TIMEOUT_S,
-            env=git_env(),
+    except CampaignError as exc:
+        raise CampaignError(
+            f"exclusive checkout {dest} has no provable remote lineage after fetching origin "
+            f"({exc}); refusing to leave it on an arbitrary local HEAD"
+        ) from exc
+    if ref not in fetched:
+        raise CampaignError(
+            f"exclusive checkout {dest} resolved {ref} from a remote-tracking ref that origin "
+            f"did not refresh (fetched: {', '.join(fetched)}); a stale ref is not lineage"
         )
-        try:
-            ref = remote_lineage_ref(dest, repository_id=repository_id, declared=source_of_truth)
-        except CampaignError:
-            return
     wanted = run_cmd(
         ["git", "-C", str(dest), "rev-parse", ref],
         timeout=GIT_TIMEOUT_S,
