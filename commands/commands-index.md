@@ -14,7 +14,7 @@ recognition_rule: rules/02-slash-commands.mdc
 delegating to one skill pack are **retired** under `commands/_archived/`.
 Invoke the skill directly (Cursor plugin / Claude Code `~/.claude/skills/` symlink).
 
-Machine registry: [`COMMANDS_MANIFEST.yaml`](COMMANDS_MANIFEST.yaml) — **18** live
+Machine registry: [`COMMANDS_MANIFEST.yaml`](COMMANDS_MANIFEST.yaml) — **21** live
 commands (executors, DAGs, bootstrap, or protocols with no 1:1 skill name).
 
 ---
@@ -24,6 +24,7 @@ commands (executors, DAGs, bootstrap, or protocols with no 1:1 skill name).
 | Command | What it does |
 |---------|--------------|
 | `/start-session` | Run L9 sessionStart bootstrap (`make start`) |
+| `/wire` | Exhausted-repair fallback after SessionStart auto-wire |
 | `/gmp` | GMP executor + plan Build (not a skill wrapper) |
 | `/governance-backup` | Push governance SSOT to GitHub |
 | `/clean` | Workspace cleanup via `make clean` |
@@ -77,8 +78,9 @@ Cursor: skills load via the `l9-governance` plugin; attach or route per
 
 | Mechanism | Role |
 |-----------|------|
-| `sessionStart` hook | Auto bootstrap |
+| `sessionStart` hook | Auto bootstrap + links-only realpath repair |
 | `/start-session` / `make start` | Manual bootstrap |
+| `/wire` | Last-resort full setup after auto-repair exhausted |
 | `.cursor-commands` → SSOT | Command + skill reference plane |
 | `l9-governance` plugin | Skill + rule activation |
 
