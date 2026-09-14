@@ -319,6 +319,40 @@ def test_sync_remote_refs_sets_origin_head_when_missing(tmp_path: Path) -> None:
     )
 
 
+def test_sync_remote_refs_recovers_origin_head_in_shallow_single_branch_clone(
+    tmp_path: Path,
+) -> None:
+    """Fetch the advertised default when `set-head -a` lacks its target ref."""
+    upstream, seed = _bare_upstream_with_clone(tmp_path)
+    git(seed, "config", "user.email", "t@example.com")
+    git(seed, "config", "user.name", "test")
+    git(seed, "checkout", "-qb", "feature")
+    commit(seed, "feature.txt")
+    git(seed, "push", "-qu", "origin", "feature")
+
+    shallow = tmp_path / "shallow"
+    subprocess.run(
+        [
+            "git",
+            "clone",
+            "-q",
+            "--depth",
+            "1",
+            "--single-branch",
+            "--branch",
+            "feature",
+            f"file://{upstream}",
+            str(shallow),
+        ],
+        check=True,
+    )
+    shallow_git = repo_hygiene.Git(shallow)
+    assert not shallow_git.ok("symbolic-ref", "--quiet", "refs/remotes/origin/HEAD")
+
+    assert repo_hygiene.sync_remote_refs(shallow_git) is None
+    assert shallow_git.out("symbolic-ref", "--short", "refs/remotes/origin/HEAD") == "origin/main"
+
+
 def test_sync_remote_refs_prunes_a_branch_deleted_upstream(tmp_path: Path) -> None:
     upstream, clone = _bare_upstream_with_clone(tmp_path)
     subprocess.run(
@@ -341,33 +375,34 @@ def test_sync_remote_refs_is_fail_soft_without_a_remote(tmp_path: Path) -> None:
     assert repo_hygiene.sync_remote_refs(repo_hygiene.Git(solo)) is None
 
 
-def test_both_call_sites_ship_both_halves() -> None:
-    """The contract, asserted at every site that claims it.
-
-    ops/scripts/tests/test_stale_remote_ref_counts.sh already pins the bash
-    half. Nothing pinned the pair ACROSS the two implementations, which is how
-    they diverged: one language got both halves and the other got one, and only
-    prose said they were the same contract. Prose is what failed here.
-    """
+def test_default_branch_binding_has_one_sealed_implementation() -> None:
+    """All callers delegate binding to one shell helper, never inline copies."""
     gov = Path(__file__).resolve().parents[3]
     bootstrap = (gov / "ops" / "scripts" / "bootstrap_agent_environment.sh").read_text(
         encoding="utf-8"
     )
     hygiene = (gov / "ops" / "scripts" / "repo_hygiene.py").read_text(encoding="utf-8")
+    archive = gov / "ops" / "scripts" / "_archived" / "origin-head-python-duplicate" / "RETIRED.md"
+    helper_path = gov / "ops" / "scripts" / "lib" / "git_remote_head.sh"
+    helper = helper_path.read_text(encoding="utf-8")
 
-    # bash: prune, then guarantee the fallback the prune creates a need for
+    # Bootstrap sources the authoritative helper. Hygiene invokes its sealed
+    # CLI so Python cannot silently recreate the Git protocol.
     assert "remote prune origin" in bootstrap
-    assert "remote set-head origin -a" in bootstrap
-
-    # python: the same pair, through sync_remote_refs
+    assert "bind_origin_head" in bootstrap
+    assert '"bash", str(helper), str(git.root)' in hygiene
+    assert "ls-remote --symref origin HEAD" in helper
+    assert 'fetch --no-tags origin "$refspec"' in helper
     assert '"fetch", "--prune", "origin"' in hygiene
-    assert '"remote", "set-head", "origin", "-a"' in hygiene
-    assert "sync_remote_refs" in hygiene
-
-    # and the python fetch must not be reachable except through the pair
+    assert '"ls-remote", "--symref", "origin", "HEAD"' not in hygiene
+    assert '"fetch", "--no-tags", "origin", refspec' not in hygiene
+    assert '"remote", "set-head", "origin", "-a"' not in hygiene
     assert hygiene.count('"fetch", "--prune", "origin"') == 1, (
-        "a second prune site would be able to skip the set-head half again"
+        "a second prune site would create another incomplete telemetry path"
     )
+    assert archive.is_file()
+    assert "sole executable authority" in archive.read_text(encoding="utf-8")
+    assert "_archived" in (gov / "pyproject.toml").read_text(encoding="utf-8")
 
 
 def test_pr_index_pages_past_200() -> None:

@@ -470,6 +470,8 @@ fi
 # is forbidden; see ops/scripts/lib/session_git_excludes.sh.
 # shellcheck source=lib/session_git_excludes.sh
 source "$SCRIPT_DIR/lib/session_git_excludes.sh"
+# shellcheck source=lib/git_remote_head.sh
+source "$SCRIPT_DIR/lib/git_remote_head.sh"
 if [ "$CHECK" != "1" ] && git -C "$WORKSPACE" rev-parse --git-dir >/dev/null 2>&1; then
   log "Shared local git excludes"
   if apply_session_git_excludes "$WORKSPACE"; then
@@ -501,10 +503,10 @@ if [ "$CHECK" != "1" ] && git -C "$WORKSPACE" rev-parse --git-dir >/dev/null 2>&
     fi
     if git -C "$WORKSPACE" symbolic-ref --quiet refs/remotes/origin/HEAD >/dev/null 2>&1; then
       say "origin/HEAD -> $(git -C "$WORKSPACE" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null)"
-    elif git -C "$WORKSPACE" remote set-head origin -a >/dev/null 2>&1; then
+    elif bind_origin_head "$WORKSPACE"; then
       say "set origin/HEAD -> $(git -C "$WORKSPACE" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null)"
     else
-      warn "origin/HEAD unset and could not be resolved — a deleted branch leaves unpushed counts unreportable"
+      warn "origin/HEAD unset and could not be resolved ($GIT_REMOTE_HEAD_ERROR) — a deleted branch leaves unpushed counts unreportable"
     fi
   fi
 fi
