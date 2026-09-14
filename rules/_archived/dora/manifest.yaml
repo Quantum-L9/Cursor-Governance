@@ -15,7 +15,7 @@ replacement_controls:
   observability: rules/65-observability-performance.mdc
   validation: rules/50-qa-testing.mdc
 archived_artifacts:
-  - rules/25-python-dora-header.mdc.disabled
+  - rules/_archived/dora/25-python-dora-header.mdc.disabled
 migration_note: >-
   Source-file metadata and self-mutating runtime traces are retired. Governance
   evidence and telemetry must use the repository's active governed surfaces.

@@ -9,6 +9,8 @@ from typing import Any
 
 from doc_policy import git, selector_paths
 
+PACK = Path(__file__).resolve().parents[1]
+
 
 def changed_files_since(root: Path, base: str) -> tuple[list[str] | None, str | None]:
     if git(root, "rev-parse", "--verify", f"{base}^{{commit}}").returncode != 0:
@@ -127,17 +129,25 @@ def validate_managed_regions(
     return ("FAIL", errors) if errors else ("PASS", [])
 
 
+def _capability_path(root: Path, rel: str) -> Path:
+    if rel.startswith("skill:"):
+        return PACK / rel.removeprefix("skill:")
+    return root / rel
+
+
 def probe_module_readme_capability(
     root: Path,
     policy: dict[str, Any],
     changed: list[str] | None = None,
 ) -> dict[str, Any]:
     cap = policy["capabilities"]["module_readmes"]
-    present = {name: (root / rel).is_file() for name, rel in cap["required_paths"].items()}
-    count = sum(present.values())
-    if count == len(present):
+    present = {
+        name: _capability_path(root, rel).is_file() for name, rel in cap["required_paths"].items()
+    }
+    generator_ok = present.get("generator", False)
+    if generator_ok:
         status = "AVAILABLE"
-    elif count == 0:
+    elif not any(present.values()):
         status = cap["absence_behavior"]
     else:
         status = cap["partial_behavior"]

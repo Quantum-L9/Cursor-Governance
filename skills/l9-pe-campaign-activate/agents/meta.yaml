@@ -3,5 +3,5 @@
 # Keep discovery triggers in SKILL.md frontmatter; this file is display-only.
 interface:
   display_name: "L9 PE Campaign Activate"
-  short_description: "Compile the minimum PE campaign file set, then run, remediate, and merge"
+  short_description: "Run canonical campaign source or intent through local-commit-only Program Execution"
   brand_color: "#7C3AED"
