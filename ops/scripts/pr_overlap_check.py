@@ -582,6 +582,7 @@ def main() -> int:
     print("  1) commit this work into the overlapping open PR branch instead of a sibling PR")
     print("  2) stack on the open PR head: PR_STACK=auto (or PR_BASE=origin/<open-pr-head>)")
     print("  3) bypass with stated justification: PR_OVERLAP=ignore")
+    print("  Wait for merge is forbidden — not a routing option.")
     if mode == "warn":
         _write_ok()
         return 0

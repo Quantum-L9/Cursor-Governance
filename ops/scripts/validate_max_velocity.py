@@ -38,6 +38,26 @@ def _int(value: Any) -> int | None:
         return None
 
 
+REQUIRED_NO_WAIT_PHRASE = "Wait for merge is forbidden"
+NO_WAIT_SURFACES = (
+    Path("rules/07-max-velocity-research.mdc"),
+    Path("rules/53-pr-overlap-guardrail.mdc"),
+)
+
+
+def _wait_for_merge_defects(root: Path) -> list[str]:
+    """Doctrine latch: velocity forbids wait-for-merge as a finish."""
+    defects: list[str] = []
+    for rel in NO_WAIT_SURFACES:
+        path = root / rel
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        if REQUIRED_NO_WAIT_PHRASE not in text:
+            defects.append(f"{rel}: missing {REQUIRED_NO_WAIT_PHRASE!r}")
+    return defects
+
+
 def collect_defects(root: Path) -> list[str]:
     defects: list[str] = []
     policy_path = root / POLICY_REL
@@ -104,6 +124,7 @@ def collect_defects(root: Path) -> list[str]:
                 f"{SURFACE_REL}: claude_execution_profiles.{key}="
                 f"{block.get(key)!r} (required {PROFILE})"
             )
+    defects.extend(_wait_for_merge_defects(root))
     return defects
 
 

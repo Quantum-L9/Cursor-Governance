@@ -1,6 +1,6 @@
 # Cursor-Governance — invariants index
 
-**Version:** 1.5.0
+**Version:** 1.6.0
 **Updated:** 2026-09-14
 **Role:** this-repo operating-invariant index plus a CI enforcement map.
 
@@ -30,7 +30,7 @@ Named pointers only. One line + path. Bind from live law at refresh time.
 | `pr-check` is the INTERNAL gate leaf of `make pr`; Diagnose is `OPEN_PR=0 make pr`; do not run `pr-check` after `precommit-repo` | `AGENTS.md` `PR_CHECK_FOLDED_V1`; `rules/48-make-pr-remediation.mdc` |
 | Repository documentation closure is obligation-based: a receipt may be `PASS` only when every applicable `DocumentationObligation` is terminal and its required validation is evidenced; any required non-terminal obligation remains `PARTIAL`, and a blocked obligation yields `BLOCKED` | `skills/l9-update-agent-docs/contracts/documentation-obligation.schema.json`; `skills/l9-update-agent-docs/scripts/doc_obligations.py` |
 | Semantic documentation obligations require admitted, change-bound `l9-intelligence-harvest` evidence; the Harvest input must bind the evaluated repository, required surfaces, and semantic source digest before it may qualify an obligation | `skills/l9-update-agent-docs/scripts/repo_docs.py`; `skills/l9-update-agent-docs/scripts/compile_semantic_obligations.py` |
-| Maximum velocity is the committed execution personality on every surface (Cursor and Claude): `maximum_velocity`, `max_parallel>=480`, `max_mutation_lanes>=128`, `native_subagent_limit>=480`. Independent research launches as concurrent Tasks, not one in-session lane | `ops/autonomy/claude-execution-profiles.json`; `ops/autonomy/surface_profile.yaml` `claude_execution_profiles`; `rules/07-max-velocity-research.mdc`; `ops/scripts/validate_max_velocity.py` |
+| Maximum velocity is the committed execution personality on every surface (Cursor and Claude): `maximum_velocity`, `max_parallel>=480`, `max_mutation_lanes>=128`, `native_subagent_limit>=480`. Independent research launches as concurrent Tasks, not one in-session lane. **Wait for merge is forbidden** — overlap commits into the owning open PR this turn | `ops/autonomy/claude-execution-profiles.json`; `ops/autonomy/surface_profile.yaml` `claude_execution_profiles`; `rules/07-max-velocity-research.mdc`; `rules/53-pr-overlap-guardrail.mdc`; `ops/scripts/validate_max_velocity.py` |
 | `/ff` overwrite-untracked scan is two git processes (`ls-files` + `ls-tree` + `comm -13`), never one `ls-files --error-unmatch` per origin path | `skills/l9-repo-sync/scripts/ff.sh`; `skills/l9-repo-sync/scripts/validate_pack_structure.py` |
 | Tree kernels latch at precommit (first writers step of `make pr`), never at L4 authorize-release; every local surface latches and unmarked CI is the only skip | `ops/autonomy/kernel_gate.py`; `ops/autonomy/surface_detect.py`; `CANONICAL_LAW.md` `KERNEL_PRECOMMIT_HOOK_V1`; `AGENTS.md` `KERNEL_LATCH_BARE_LOCAL_V1` |
 | SessionStart does not read, scan, analyze, archive, or emit plan-store findings; plans work is slash-only | `AGENTS.md` `SESSIONSTART_NO_PLAN_SURFACE_V1`; [`ops/hooks/session_start_bootstrap.sh`](ops/hooks/session_start_bootstrap.sh); [`environment/agents/adapters/cursor/SESSION_START_SPEC.md`](environment/agents/adapters/cursor/SESSION_START_SPEC.md) |
@@ -109,3 +109,13 @@ read, scan, analyze, archive, or emit the plans store. Plans work is
 slash-only (`/l9-audit-plans`, `/plan-audit` / `/l9-pipeline-audit`).
 A hook that calls `audit_pipeline.py` or emits `### Plan audit` is a
 fail-closed regression (`HookWiringTests`).
+
+<!-- OVERLAP_NO_WAIT_V1 -->
+## Wait for merge is forbidden (2026-09-14)
+
+Additive index row only. Do not fold the table. Finishing with
+wait / defer-until-#N-merges / "after those PRs land" is a
+fail-closed maximum-velocity regression
+(`rules/07-max-velocity-research.mdc`, `rules/53-pr-overlap-guardrail.mdc`,
+`ops/scripts/validate_max_velocity.py`). Overlap commits into the
+owning open PR this turn, or stacks. It does not wait.

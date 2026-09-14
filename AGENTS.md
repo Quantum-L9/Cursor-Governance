@@ -1675,3 +1675,18 @@ Append-only. Supersedes the SessionStart plan-scan sentences in §16,
 - `--format session-start` on `audit_pipeline.py` is a leftover report
   shape, not a SessionStart caller.
 - Do not auto-Build. Do not `make campaign`.
+
+<!-- OVERLAP_NO_WAIT_V1 -->
+## Overlap is not wait (2026-09-14)
+
+This fragment supersedes only the "else wait" sentence in §4.1. That
+paragraph stays on disk (additive_only). Do not fold it.
+
+- Overlap remedy is: commit into the overlapping open PR this turn, or
+  stack (`PR_STACK=auto`).
+- **Wait for merge is forbidden.** It is not a finish, not a routing
+  option, and not a velocity exception.
+- "Do not put path X in this PR" means commit X into the open PR that
+  already owns X, in this turn.
+- Dropping the overlapping path so a sibling can publish, then parking
+  the dropped work as a later follow-up, is the same violation.
