@@ -93,6 +93,7 @@ help:
 	@echo "  Prefer l9-ci-core thin Makefile (identical across repos) when adopting the common workflow."
 	@echo "  make clean / workspace-clean — ship leftover work to scoped PRs by repo, prune merged locals, prime main (CLEAN_MODE=plan to preview; CLEAN_REMOTE=0 to stay local)"
 	@echo "  Consumer repos: make -C \"\$$HOME/.cursor-governance\" clean WS=\"\$$(pwd)\""
+	@echo "  make manus-adapter-check / manus-install WS=<repo> — validate or run the thin Manus surface binding"
 	@echo "  make gov-python — fail-closed .venv interpreter + runtime import probe"
 	@echo "  Happy path: finish → scoped-commit → make pr (tests once; remediates=1; PR_REMEDIATE=0 to opt out)"
 
@@ -205,6 +206,7 @@ campaign-reset:
 ## Recreate the pinned .venv from uv.lock (interpreter + deps, incl. dev extras). Same as sessionStart hook.
 venv:
 	uv sync --locked --extra dev
+	PYTHONPATH="$(CURDIR)" $(PYTHON) -m ops.memory.seal_artifact_provenance --root "$(CURDIR)"
 
 ## Fast-forward-only pull of this clone from origin/main (same as sessionStart hook)
 sync:
@@ -910,6 +912,22 @@ cursor-install-check:
 	L9_GOV_ROOT="$(CURDIR)" $(PYTHON) ops/scripts/claude_bootstrap_receipt.py \
 		--surface cursor --path "$$HOME/.l9/cursor/bootstrap-check.json" --json
 
+# --- Manus adapter (environment/agents/adapters/manus/) ----------------------
+# Thin remote-surface binding: project instructions remain platform-owned while
+# this target proves the committed adapter carrier and shared bootstrap contract.
+.PHONY: manus-adapter-check manus-install manus-install-check
+## Validate the Manus carrier files, identity binding, and no-provider posture.
+manus-adapter-check:
+	$(PYTHON) environment/agents/adapters/manus/validate_manus_adapter.py \
+		--repo-root "$(CURDIR)"
+## Run shared Manus readiness for a real repository workspace.
+manus-install:
+	bash "$(CURDIR)/environment/agents/adapters/manus/install.sh" \
+		--governance "$(CURDIR)" --workspace "$(if $(WS),$(WS),$(CURDIR))"
+## Diagnostic-only shared Manus readiness; does not configure the Manus project.
+manus-install-check:
+	bash "$(CURDIR)/environment/agents/adapters/manus/install.sh" \
+		--governance "$(CURDIR)" --workspace "$(if $(WS),$(WS),$(CURDIR))" --check
 # --- Virtual Skill Plane (Cursor virtual gateway) -----------------------------
 # Cursor discovers exactly one native skill (l9-skill-gateway under
 # environment/agents/adapters/cursor/skills); the canonical corpus stays under

@@ -5,34 +5,51 @@ path: environment/agents/adapters/manus/setup.md
 layer: adapter
 owner: governance-control-plane
 status: active
-version: 1.0.0
-updated: 2026-07-31
+version: 2.0.0
+updated: 2026-09-13
 /L9_META -->
 
-# Manus setup (deploy-ready)
+# Manus adapter setup
 
-Manus maps onto Claude Code's three carriers (skills / bootstrap / HTTP MCP)
-using Manus-native persistence. See `README.md` for the carrier table.
+The Manus adapter is a **thin remote-surface binding**. It deliberately reuses
+the shared L9 bootstrap, agent registry, autonomy profile, and secret boundary.
+It does not reproduce the Cursor hook plane or Claude Code projection engine.
 
-## Prerequisites
+## Required project configuration
 
-1. `https://memory.quantumaipartners.com/healthz` → 200
-2. Token for `manus` rendered into C1 `auth_tokens.json` (`docs/DEPLOY.md`)
-3. Allowlist: `memory.quantumaipartners.com` (`docs/network-allowlist.md`)
+1. Make `Quantum-L9/Cursor-Governance` available through the Manus GitHub
+   integration so a session can clone or open the governance checkout.
+2. Copy the non-secret values from `environment.env.example` to the Manus
+   project/session environment. Do not add a literal `L9_GOVERNANCE_DIR`; hosted
+   environment values do not expand `$HOME`.
+3. Install `session_bootstrap.md` as a project instruction or project-scoped
+   Manus skill. This gives each session the exact identity, authority order, and
+   upstream activation route.
+4. Do **not** create a Custom MCP connector from `mcp-connector.json`. Its
+   `transport: none` value is intentional: the memory package has not published
+   a sanctioned remote transport for Manus.
 
-## Steps
+## Local checkout verification
 
-1. Create Custom MCP connector from `mcp-connector.json`:
-   - URL: `https://memory.quantumaipartners.com/mcp`
-   - Header: `Authorization: Bearer <manus token>`
-2. Paste `environment.env.example` into the connector/session env (token
-   placeholder → real manus bearer only).
-3. Paste `session_bootstrap.md` into project instructions or a Manus skill so
-   every task boots with identity + work-claim rules.
-4. Confirm GitHub integration can clone `Quantum-L9/Cursor-Governance`.
+From a Manus workspace that has both an active git repository and the governance
+checkout, run:
 
-## Verify
+```bash
+make -C "$HOME/.cursor-governance" manus-adapter-check
+make -C "$HOME/.cursor-governance" manus-install-check WS="$(pwd)"
+```
 
-- Connector tools list succeeds with Bearer; fails without
-- Claims/writes attribute to `manus_agent` / `manus`
-- No impersonation of `cursor_agent` or `claude_code_agent`
+`manus-adapter-check` validates the committed carrier files and registry
+identity. `manus-install-check` invokes only the shared bootstrap in diagnostic
+mode; it does not modify Manus account configuration or create a remote memory
+connection. A degraded named capability is an honest result, not a reason to
+persist a credential.
+
+## Operating limits
+
+The current Manus Program Execution provider (`manus-cloud`) is intentionally
+dormant until a Controller execution transport exists. This surface adapter does
+not change that status. Manus may perform the ordinary in-session work available
+to the platform, governed by the shared L4 and publish-path gates, but it must
+not advertise a background execution bridge, a remote memory path, or a secret
+capability that the upstream packages do not supply.
