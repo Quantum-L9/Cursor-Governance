@@ -1,8 +1,8 @@
 ---
 id: l9.rule.85.workflow.state.bridge
-version: 1.0.0
-description: 'Bridge Cursor runs to session resume: Graphiti PICKUP/inject SSOT; workflow_state.md
-  legacy where present.'
+version: 1.1.0
+description: 'Bridge Cursor runs to session resume: ContinuationCapsuleV2 /
+  ops.memory.cli hydrate; workflow_state.md legacy where present.'
 scope: global
 activation: agent_requested
 authority: canonical_global
@@ -11,13 +11,15 @@ alwaysApply: false
 
 # Session resume bridge (L9)
 
-**Updated: 2026-08-06** — Resume SSOT is **Graphiti** (`inject` / PICKUP episodes via `graphiti_memory_client.py`). `memory-bank/activeContext.md` and `workflow_state.md` are **legacy/archival** where still present — do not treat them as SSOT.
+**Updated: 2026-08-06** *(resume-SSOT wording superseded 2026-09-13)* — `memory-bank/activeContext.md` and `workflow_state.md` are **legacy/archival** where still present — do not treat them as SSOT.
+
+**Updated: 2026-09-13** — Resume SSOT is the canonical continuation record (`ContinuationCapsuleV2`) via SessionStart hydrate / `python -m ops.memory.cli hydrate`. Never Graphiti `inject` / PICKUP or `graphiti_memory_client.py`. ADR-0031 / CANONICAL_LAW §8.5.
 
 ## State sync required before edits
 
 - Before making ANY code changes, always:
-  - Run Graphiti health + `inject` for the current task (skill `l9-graphiti-memory`).
-  - Search recent PICKUP episodes for this repo `group_id`.
+  - Run `memcli health` + `memcli hydrate` for the current task (skill `l9-graphiti-memory`).
+  - Read the hydrated `next=` / continuation capsule for this repo namespace.
   - If a legacy `workflow_state.md` exists, skim it as archival context only.
 - For every task, first produce a **STATE_SYNC summary** in the chat before touching any file.
 
@@ -25,9 +27,9 @@ alwaysApply: false
 
 When starting a run, use:
 
-> 1. Graphiti `inject` + search PICKUP for this repo group.
+> 1. `memcli hydrate` (or SessionStart packet) for this repo namespace.
 > 2. Summarize in bullets:
->    - Last PICKUP task / next / blocker
+>    - Last continuation task / next / blocker
 >    - Context summary
 >    - Open questions
 >    - Current next steps
@@ -43,7 +45,7 @@ Do not modify repository files until STATE_SYNC is complete (and confirmed when 
 - When a legacy `workflow_state.md` records PHASE, map it to GMP v1.7 phases (0–6).
 - For each run, explicitly state:
   - `PHASE: <0–6>` (or `n/a` if no GMP)
-  - Why this phase is correct given Graphiti/PICKUP context.
+  - Why this phase is correct given the canonical continuation context.
 - Do not silently advance phases:
   - Only move from one phase to the next after its closure conditions are satisfied (plan locked, baseline verified, tests passing, audit done, etc.).
 
@@ -51,7 +53,7 @@ Do not modify repository files until STATE_SYNC is complete (and confirmed when 
 
 ## Recording outcomes
 
-- Prefer Graphiti writes: PICKUP at session end (`--kind pickup_context`) and atomic lessons (`--kind lesson`).
+- Prefer canonical writes: sessionEnd close (`ContinuationCapsuleV2`) and atomic model facts (`memory.write_agent`; `memory.write_governed` when concurrent writers matter).
 - Do **not** append handoffs to `memory-bank/`.
 - If a legacy `workflow_state.md` is still maintained in a repo, keep it concise and archival — it is not the resume authority.
 
@@ -60,12 +62,12 @@ Do not modify repository files until STATE_SYNC is complete (and confirmed when 
 ## Hand-off and resume discipline
 
 - When ending a session:
-  - Write Graphiti PICKUP with 2–5 concrete next items.
+  - Let sessionEnd write the continuation capsule with 2–5 concrete next items (`/end-session` only on close-gap).
 - When resuming:
-  - Always perform STATE_SYNC from Graphiti first and restate:
+  - Always perform STATE_SYNC from canonical hydrate first and restate:
     - What was last done.
     - What the next smallest safe change is.
-- Treat Graphiti PICKUP / `inject` as the source of truth for:
+- Treat the canonical continuation record as the source of truth for:
   - Session resume.
   - Active TODOs handed off between agents.
   - Known risks and open questions from the prior session.
@@ -75,17 +77,17 @@ Do not modify repository files until STATE_SYNC is complete (and confirmed when 
 ## Anti-patterns
 
 ❌ **DON'T** treat `memory-bank/` or `workflow_state.md` as resume SSOT
-✅ **DO** resume from Graphiti inject / PICKUP
+✅ **DO** resume from SessionStart hydrate / `memcli hydrate` (`ContinuationCapsuleV2`)
 
-❌ **DON'T** skip PICKUP writes at session end when Graphiti is healthy
-✅ **DO** write `--kind pickup_context` via the locked governance venv
+❌ **DON'T** skip sessionEnd close when canonical memory is bound
+✅ **DO** close via the hook (`memory.close`); `/end-session` `repair-write` only on a close-gap
 
 ---
 
 ## Session end checklist
 
 Before closing a session, verify:
-- [ ] Graphiti PICKUP written (or WARN logged if Graphiti unavailable)
-- [ ] Next steps in PICKUP are 2–5 concrete actionable items
+- [ ] Continuation capsule written (or WARN logged if canonical memory unbound)
+- [ ] Next steps in the capsule are 2–5 concrete actionable items
 - [ ] Atomic lessons written for durable corrections
 - [ ] No new writes to `memory-bank/`

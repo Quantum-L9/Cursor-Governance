@@ -43,7 +43,7 @@ Every agent entry declares, and every derived artifact must agree on:
 | `role` | one of the role catalog below | `researcher-builder` |
 | `surfaces` | where this agent runs | `[manus-cloud]` |
 
-Uniqueness is enforced three ways: (a) the validator fails on any duplicate `agent_id`/`user_id`/`principal_id`; (b) the principal generator refuses to emit two principals with the same claims; (c) the memory server itself authenticates each bearer token to exactly one principal (constant-time compare, `authz/authenticator.py`).
+Uniqueness is enforced three ways: (a) the validator fails on any duplicate `agent_id`/`user_id`/`principal_id`; (b) the principal generator refuses to emit two principals with the same claims; (c) the memory server authenticates a shared agents-door secret plus a short-lived signed `agent_id` assertion (ADR-0031). Per-agent HTTPS bearers are retired. The human door stays private.
 
 ## 4. Role catalog and overlap prevention
 
@@ -74,13 +74,13 @@ Contract SSOT for the four rows above: `adapters/ADAPTER_CONTRACT.md`
 (three carriers copied from the Claude Code gold standard). Production
 memory URL: `memory.production_url` in `agent_registry.yaml`.
 
-Every adapter does the same three things, per the claude-code precedent: discover skills (governance clone), boot context (session-start hook or equivalent), reach shared memory (HTTP MCP with the agent's own bearer token and identity env block).
+Every adapter does the same three things, per the claude-code precedent: discover skills (governance clone), boot context (session-start hook or equivalent), reach shared memory (package-owned `l9-graphite-memory` stdio MCP; no agent HTTP, no per-agent bearer).
 
 ## 6. Server-side wiring
 
-`tools/render_principals.py` reads the registry plus a local token file (`agent_tokens.local.json`, never committed) and emits the l9-graphiti-memory `auth_tokens.json` — one principal per agent with role-appropriate namespace grants. The memory server must be reachable by cloud agents: bind to a routable host (or keep the C1 pattern — server on VPS, each surface reaches it directly over HTTPS with auth required). Loopback-only deployments cannot serve Manus/Claude-Web; this is a stated constraint, not a fabricated capability.
+`tools/render_principals.py` reads the registry plus a local token file (`agent_tokens.local.json`, never committed) and emits the l9-graphiti-memory `auth_tokens.json` — one principal per agent with role-appropriate namespace grants. Cloud agents reach the same `MemoryService` through the package-owned stdio MCP (or the deterministic `ops/memory` CLI). Agent HTTP / `l9-shared-memory` HTTPS / Graphiti provider clients stay sealed (ADR-0031). A leftover C1 HTTPS projection is operator infrastructure, not the adapter front door.
 
-**Two memory planes, one workspace-group contract.** This pack's renderer targets the *planned* `l9-graphiti-memory` control-plane server (its `MemoryPrincipal`/`auth_tokens.json` model). The memory stack *deployed today* is the `zepai/knowledge-graph-mcp` MCP server driven by `ops/graphiti/graphiti_memory_client.py` — a different code path with its own hardened gate: an explicit `group_id` override that contradicts the resolved repo match fails closed, path hints match whole path segments only, and direct `write` to the shared workspace group (`igor-workspace`, per `ops/graphiti/group_registry.yaml`) is rejected unconditionally — only bootstrap's integration-edge mirror writes there. The `workspace_group` in `agent_registry.yaml` MUST stay equal to the one in `group_registry.yaml`, and any server-side grant of that namespace (researcher-builder role) is a grant on the *control-plane* server, not a license to bypass the CLI gate on the deployed stack.
+**One control plane, one workspace-group contract.** This pack's renderer targets `l9-graphite-memory` (`MemoryPrincipal` / grant map). `ops/graphiti/graphiti_memory_client.py` is a tombstone — not the deployed live path. The `workspace_group` in `agent_registry.yaml` MUST stay equal to the one in `group_registry.yaml`. Namespace grants are control-plane grants, never a license to call a provider client.
 
 ## 7. Validator
 

@@ -1,5 +1,5 @@
 {
-  "generation_id": "a57bde67f412b792d47af309fa7f703dd89fd8e9d2f25fe305e9f22dc97d02c0",
+  "generation_id": "c3b9bd7f953af3e2d96350ccd17ba5f41644164a21bf0ec23b3602e7ec83f112",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -1204,7 +1204,7 @@
       "path": "skills/l9-graphiti-memory",
       "reason": "",
       "skill_md": "skills/l9-graphiti-memory/SKILL.md",
-      "skill_sha256": "c75d2005432baedfde847e4579b5404cc9f798a8365ff20e5738dd5ec1a5ee3a",
+      "skill_sha256": "3cf0c9507aea25b4c3073a79d84279c2f7689f7f98891b17f0373233a805478a",
       "user_invocable": true,
       "when_to_use": "wiring memory, debugging prefetch/bootstrap, GMP Phase 0 MEMORY_PREFETCH, episode/T0 memory-bank writes, or checking Graphiti health"
     },
@@ -1601,5 +1601,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "bf415873fe91b1779e0cea47ca987f01c3b919d78bae8ac8c0a49fea06eb8def",
-  "source_skill_corpus_sha256": "a262861d450be25a18ed5e6911543946d838a91c8b2ec0eab9182c15256c93bd"
+  "source_skill_corpus_sha256": "99e921aa37f8dbfd3f6060bfbcd8d41501ca2d473686de6f726e63bd29ac12a5"
 }

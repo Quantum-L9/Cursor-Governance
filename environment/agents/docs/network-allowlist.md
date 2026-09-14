@@ -5,21 +5,21 @@ path: environment/agents/docs/network-allowlist.md
 layer: doc
 owner: governance-control-plane
 status: active
-version: 1.0.0
-updated: 2026-07-31
+version: 1.1.0
+updated: 2026-09-13
 /L9_META -->
 
 # Network allowlist — multi-agent cloud surfaces
 
 Peer of `environment/agents/adapters/claude-code/web/network-policy.md`. Apply the same hosts
 on Manus / Codex cloud / Gemini / any Custom-network sandbox that must reach
-shared memory and GitHub.
+GitHub. Agent memory is stdio MCP (ADR-0031) and does **not** require an HTTPS host.
 
-## Required for shared memory + governance
+## Required for governance (memory is not an HTTPS host)
 
 | Host | Why |
 |---|---|
-| `memory.quantumaipartners.com` | Graphiti HTTPS MCP (`GRAPHITI_MCP_URL` …/graphiti/mcp) |
+| `memory.quantumaipartners.com` | **Leftover** — retired Graphiti HTTPS MCP. Not required for agent memory (ADR-0031: stdio MCP; HTTP sealed). Operator projection only |
 | `broker.quantumaipartners.com` | **nobody** — capability-broker experiment retired; never shipped. Do not allowlist a host no adapter calls |
 | `github.com`, `*.githubusercontent.com` | clone governance + consumer repos |
 | `api.github.com` | `gh` / GitHub API |
@@ -29,13 +29,17 @@ shared memory and GitHub.
 
 ## Production memory
 
+Agent memory is package-owned `l9-graphite-memory` stdio MCP. There is no
+required HTTPS host and no `GRAPHITI_MCP_URL` on the agent surface.
+
+Historical leftover (retired as the agent front door):
+
 ```text
 https://memory.quantumaipartners.com/graphiti/mcp
 ```
 
-TLS terminates at Caddy on C1 → `l9-memory-server` (loopback on the host).
-Unauthenticated MCP calls must receive **401**. Cloud adapters use the
-HTTPS hostname above — never a loopback URL as the default.
+TLS on that leftover still terminates at Caddy on C1. Do not teach cloud
+adapters to hold that URL or a bearer.
 
 ## Surface notes
 

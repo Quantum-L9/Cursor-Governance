@@ -33,9 +33,9 @@
       "alias": null,
       "class": "always",
       "output": "03-graphiti-memory.md",
-      "output_sha256": "7f8a29a66e764cdcdb662ff76075fd83904275447cd4e434720e1ec66938a688",
+      "output_sha256": "c816c8a305d5d6709b81a7794cf1dd20db6473218c1805f69bac16603329bd57",
       "source": "rules/03-graphiti-memory.mdc",
-      "source_sha256": "e935797ee23f590e0bc8bc11d96fcb604ab9dbe68b6605996793c9406b82b089",
+      "source_sha256": "6466ad00153435dad26d32bd20f5a1c852e5bef21fe401df08a3d883043daa8d",
       "stem": "03-graphiti-memory"
     },
     {
@@ -494,7 +494,7 @@
       "output": null,
       "output_sha256": null,
       "source": "rules/85-workflow-state-bridge.mdc",
-      "source_sha256": "3e623c8e396dc0f747bbef455f5e7b0daada207a97d8c902e8fb0c6480ac1109",
+      "source_sha256": "240b44175cfd912ae1b01500572c63e92f707d0f6611446ee6cb398f8c739364",
       "stem": "85-workflow-state-bridge"
     },
     {
@@ -510,9 +510,9 @@
       "alias": null,
       "class": "always",
       "output": "87-cursor-memory-kernel.md",
-      "output_sha256": "8c748c6a91041e47c4aba66861581f56d433af19635f1dffd7cdd98fad53cb5c",
+      "output_sha256": "6f2376f40f40f0cff7d55be5a0b284eae474d3cdc74b77e2656172f1ed2d7ff4",
       "source": "rules/87-cursor-memory-kernel.mdc",
-      "source_sha256": "f0543aac23823a5c73e163fac95d79df25461f53dcc2aa9115b418e627b01cda",
+      "source_sha256": "183d4438a2c9edf2c3e3f0377a8baec1095d66ae78ad9aa7254b511164a9b5b5",
       "stem": "87-cursor-memory-kernel"
     },
     {
@@ -641,5 +641,5 @@
     "skipped_agent_requested": 16,
     "source_mdc": 70
   },
-  "tree_sha256": "ed56ce01f544c938af3dcccac557fc1f74601cf0713b487816c19c1ccf9e2eed"
+  "tree_sha256": "ce16eb3ef5821b68afa84155b496d5c762d6821584267e172943e6b259e6aa74"
 }
