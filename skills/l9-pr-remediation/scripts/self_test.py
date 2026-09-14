@@ -352,6 +352,103 @@ def test_sonar_directive() -> None:
     _need(REFS["signal-ingestion.md"], "never blocks merge", "signal-ingestion.md")
 
 
+def _sonar_census_fixture(root: Path) -> Path:
+    """Offline GitHub payloads for a PR whose head carries no Sonar fixture."""
+    fixture = root / "fx"
+    fixture.mkdir()
+    (fixture / "pr.json").write_text(json.dumps({"head": {"sha": "c" * 40}}), encoding="utf-8")
+    for name in ("reviews.json", "comments.json", "issue_comments.json", "checks.json"):
+        (fixture / name).write_text("[]", encoding="utf-8")
+    (fixture / "threads.json").write_text(json.dumps({"nodes": []}), encoding="utf-8")
+    (root / "sonar-project.properties").write_text("sonar.projectKey=demo\n", encoding="utf-8")
+    return fixture
+
+
+def _run_ingest_in(root: Path, fixture: Path, pr_number: str) -> tuple[int | None, str]:
+    """Run ingest_signals.main with cwd=root; return (rc or None on SystemExit, stderr)."""
+    import contextlib
+    import io
+    import os
+
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import ingest_signals  # noqa: PLC0415
+
+    argv = [
+        "--repo",
+        "acme/app",
+        "--pr",
+        pr_number,
+        "--output",
+        "findings.json",
+        "--fixture-dir",
+        str(fixture),
+    ]
+    stderr = io.StringIO()
+    previous = Path.cwd()
+    os.chdir(root)
+    try:
+        with contextlib.redirect_stderr(stderr), contextlib.redirect_stdout(io.StringIO()):
+            try:
+                rc: int | None = ingest_signals.main(argv)
+            except SystemExit as exc:
+                rc = None if exc.code not in (0, None) else 0
+    finally:
+        os.chdir(previous)
+    return rc, stderr.getvalue()
+
+
+def test_sonar_snapshot_binding() -> None:
+    """A worktree-retained Sonar snapshot enters the census only when bound to --pr.
+
+    File presence is not evidence identity: `sonarcloud-issues-before.json` left
+    behind by another PR or an earlier run must be rejected with a diagnostic,
+    while a snapshot whose `branch_or_pull_request.pullRequest` names the
+    current PR still ingests. A snapshot with no binding at all is unbound.
+    """
+    import tempfile
+
+    stale_issue = {"key": "S1", "message": "stale finding", "component": "src:a.py"}
+    cases = (
+        ("other PR", {"branch_or_pull_request": {"pullRequest": "123"}}),
+        ("main analysis", {"branch_or_pull_request": {"scope": "main-analysis"}}),
+        ("branch scope", {"branch_or_pull_request": {"branch": "feature/x"}}),
+        ("no binding", {}),
+    )
+    for label, binding in cases:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            fixture = _sonar_census_fixture(root)
+            (root / "sonarcloud-issues-before.json").write_text(
+                json.dumps({**binding, "issues": [stale_issue]}), encoding="utf-8"
+            )
+            rc, err = _run_ingest_in(root, fixture, "584")
+            if rc is not None:
+                _fail(f"ingest_signals ingested a Sonar snapshot with {label} binding (rc={rc})")
+            if (root / "findings.json").is_file():
+                _fail(f"ingest_signals wrote a census from a Sonar snapshot with {label} binding")
+            if "sonarcloud-issues-before.json" not in err or "584" not in err:
+                _fail(f"rejection diagnostic for {label} names neither the snapshot nor the PR")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        fixture = _sonar_census_fixture(root)
+        (root / "sonarcloud-issues-before.json").write_text(
+            json.dumps(
+                {
+                    "branch_or_pull_request": {"pullRequest": "584"},
+                    "issues": [{"key": "S2", "message": "live", "component": "src:b.py"}],
+                }
+            ),
+            encoding="utf-8",
+        )
+        rc, err = _run_ingest_in(root, fixture, "584")
+        if rc != 0:
+            _fail(f"ingest_signals rejected a Sonar snapshot bound to the current PR: {err}")
+        census = json.loads((root / "findings.json").read_text(encoding="utf-8"))
+        if not any(str(item.get("id", "")).startswith("sonar-") for item in census["findings"]):
+            _fail("a Sonar snapshot bound to the current PR did not reach the census")
+
+
 def test_semgrep_directive() -> None:
     _need(SKILL, "references/semgrep-remediation.md", "SKILL.md resource map")
     _need(SKILL, "scripts/semgrep_fetch.py", "SKILL.md")
@@ -507,6 +604,7 @@ def main() -> None:
     test_fleet_and_waves()
     test_board_and_merge()
     test_sonar_directive()
+    test_sonar_snapshot_binding()
     test_semgrep_directive()
     test_venv_and_counters()
     test_activation_precision()

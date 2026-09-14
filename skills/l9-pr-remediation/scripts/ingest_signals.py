@@ -262,31 +262,88 @@ def _already_ingested(findings: list[dict[str, Any]], candidate: dict[str, Any])
     return False
 
 
+def sonar_snapshot_binding_error(
+    snapshot: Any,
+    pr: int,
+    *,
+    require_binding: bool,
+) -> str | None:
+    """Explain why a Sonar snapshot is not evidence for ``pr``; None when it binds.
+
+    ``sonar_fetch.py`` records the analysis scope it was asked for under
+    ``branch_or_pull_request`` (``{"pullRequest": N}``, ``{"branch": ...}`` or
+    ``{"scope": "main-analysis"}``); ``analysis_revision`` is a Sonar analysis
+    id, not a git SHA, so the pull-request scope is the only field that can bind
+    a snapshot to the PR under census. File presence is not evidence identity.
+    """
+    if not isinstance(snapshot, dict):
+        return "snapshot is not an object"
+    scope = snapshot.get("branch_or_pull_request")
+    if not isinstance(scope, dict) or not scope:
+        return (
+            "snapshot carries no branch_or_pull_request binding; it is unbound"
+            if require_binding
+            else None
+        )
+    bound_pr = scope.get("pullRequest")
+    if bound_pr is None:
+        described = ", ".join(f"{key}={value}" for key, value in sorted(scope.items()))
+        return f"snapshot is scoped to {described}, not to pullRequest={pr}"
+    if str(bound_pr).strip() != str(pr):
+        return f"snapshot is bound to pullRequest={bound_pr}, not to pullRequest={pr}"
+    return None
+
+
 def resolve_sonar_snapshot(
     cwd: Path,
     fixture_dir: Path | None,
     explicit: str | None,
+    *,
+    pr: int,
 ) -> Path | None:
-    """Attach Sonar whenever sonar-project.properties exists. --sonar stays optional."""
+    """Attach Sonar whenever sonar-project.properties exists. --sonar stays optional.
+
+    ``--sonar`` is the operator's explicit assertion and is returned unchecked.
+    Auto-selected candidates must prove they describe ``pr``: a worktree-retained
+    ``sonarcloud-issues-before.json`` (from another PR or an earlier run) is
+    rejected unless ``branch_or_pull_request.pullRequest`` names this PR, and an
+    unbound one is rejected too. A ``--fixture-dir`` snapshot is an explicit
+    offline payload for this invocation, so it is rejected only when it names a
+    different scope outright.
+    """
     if explicit:
         return Path(explicit)
     if not (cwd / "sonar-project.properties").is_file():
         return None
-    candidates: list[Path] = []
+    candidates: list[tuple[Path, bool]] = []
     if fixture_dir is not None:
-        candidates.extend([fixture_dir / "sonar.json", fixture_dir / "sonarcloud.json"])
+        candidates.extend(
+            [(fixture_dir / "sonar.json", False), (fixture_dir / "sonarcloud.json", False)]
+        )
     candidates.extend(
         [
-            cwd / "sonarcloud-issues-before.json",
-            cwd / ".l9" / "pr" / "sonarcloud-issues-before.json",
+            (cwd / "sonarcloud-issues-before.json", True),
+            (cwd / ".l9" / "pr" / "sonarcloud-issues-before.json", True),
         ]
     )
-    for path in candidates:
-        if path.is_file():
+    rejected: list[str] = []
+    for path, require_binding in candidates:
+        if not path.is_file():
+            continue
+        error = sonar_snapshot_binding_error(_load_json(path), pr, require_binding=require_binding)
+        if error is None:
             return path
+        rejected.append(f"{path}: {error}")
+        print(
+            f"ingest_signals: rejected Sonar snapshot {path} for pullRequest={pr}: {error}",
+            file=sys.stderr,
+            flush=True,
+        )
+    detail = ("; rejected " + "; ".join(rejected)) if rejected else ""
     _fail(
         "sonar-project.properties exists; complete census requires a Sonar snapshot "
-        "(--sonar or sonarcloud-issues-before.json / fixture sonar.json)"
+        f"bound to pullRequest={pr} (--sonar, or sonarcloud-issues-before.json / fixture "
+        f"sonar.json fetched with `sonar_fetch.py --pull-request {pr}`){detail}"
     )
     return None
 
@@ -438,7 +495,7 @@ def main(argv: list[str] | None = None) -> int:
     fixture_dir = Path(args.fixture_dir) if args.fixture_dir else None
     if fixture_dir and not fixture_dir.is_dir():
         _fail(f"fixture-dir missing: {fixture_dir}")
-    sonar_path = resolve_sonar_snapshot(Path.cwd(), fixture_dir, args.sonar)
+    sonar_path = resolve_sonar_snapshot(Path.cwd(), fixture_dir, args.sonar, pr=args.pr)
     scanners = {
         key: Path(value)
         for key, value in (
