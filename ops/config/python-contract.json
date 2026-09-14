@@ -9,7 +9,8 @@
       "l9_hook_exec.sh",
       "session_start_claude_governance.sh",
       "settings.json",
-      "settings.template.json"
+      "settings.template.json",
+      "python-contract.json"
     ],
     "shell_owners": {
       "environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh": [
@@ -30,7 +31,8 @@
       ]
     },
     "velocity_exclude": [
-      "environment/program-execution/scripts/tests/test_pe_smoke_campaign.py"
+      "environment/program-execution/scripts/tests/test_pe_smoke_campaign.py",
+      "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_import_graph.py"
     ]
   },
   "skill_self_test_roots": [

@@ -326,3 +326,12 @@ class HookSettingsVelocityTests(unittest.TestCase):
     def test_makefile_generic_basename_unchanged(self) -> None:
         makefile_only = set(select_pr_pytest_paths(["Makefile"]))
         self.assertLess(len(makefile_only), 8, makefile_only)
+
+    def test_contract_change_does_not_select_pe_controller_import_graph(self) -> None:
+        selected = select_pr_pytest_paths(["ops/config/python-contract.json"])
+        self.assertNotIn(
+            "environment/program-execution/core/program-execution-controller-template"
+            "/scripts/tests/test_import_graph.py",
+            selected,
+        )
+        self.assertNotIn(self.PE_SMOKE, selected)
