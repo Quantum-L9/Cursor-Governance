@@ -2111,7 +2111,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "c4a8ac5b96205bbcbea176c86885132d5fad85ebc6019000725c0d4b7f7389ed"
+      "sha256": "043b8584bfed276be9d7db2e0a3dd03a93ea684f7d394f6cdf20cd36440aae6e"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -2239,7 +2239,7 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "58507aafd4742868abf280ebd070089dfa7af052a7a38560425a3c9a82d6355d"
+      "sha256": "bd1cba1281e80fdd4464c91363051c91b49dfbd75ed25d00bdf1de713808bfcf"
     },
     {
       "path": "scripts/tests/test_run_campaign_repairs.py",
