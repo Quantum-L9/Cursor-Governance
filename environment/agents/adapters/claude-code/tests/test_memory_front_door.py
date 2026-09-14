@@ -390,6 +390,25 @@ class FrontDoorTests(unittest.TestCase):
         for token in ("GH_TOKEN", "GRAPHITI_MCP_TOKEN", "INFISICAL_CLIENT_SECRET", "SONAR_TOKEN"):
             self.assertNotRegex(env, rf"^\s*{token}\s*=", f"{token} must not be assigned")
 
+    def test_session_start_projects_unbound_mcp_on_ssot_checkouts(self) -> None:
+        """PR 570: SessionStart must not bind the interpreter into a projection
+        that writes the tracked unbound .mcp.json of an ssot / ssot_checkout.
+
+        test_governance_refresh_receipt points CLAUDE_PROJECT_DIR at the real
+        checkout; a bound projection then races
+        test_committed_projection_is_current_for_an_unbound_environment.
+        """
+        hook = (HOOKS / "session_start_claude_governance.sh").read_text(encoding="utf-8")
+        copy = (REPO / ".claude" / "hooks" / "session_start_claude_governance.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(hook, copy, "mobile hook copy must stay lockstep with the adapter hook")
+        self.assertIn("classify_workspace_kind", hook)
+        self.assertIn("ssot_checkout", hook)
+        self.assertIn("env -u L9_MEMORY_INTERPRETER -u CONTEXT7_API_KEY", hook)
+        committed = json.loads((REPO / ".mcp.json").read_text(encoding="utf-8"))
+        self.assertEqual(committed.get("mcpServers"), {})
+
 
 if __name__ == "__main__":
     unittest.main()

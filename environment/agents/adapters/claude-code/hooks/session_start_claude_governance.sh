@@ -575,7 +575,21 @@ if GOV=$(resolve_governance_dir); then
      && [ -f "$PROJECTION_ENGINE" ] && command -v "$PY" >/dev/null 2>&1; then
     # Bounded: the engine's own ceilings (30 s classify, 600 s plugin fallback)
     # are sized for install time, not for what is left of this hook.
-    PROJECTION_LINE=$(_l9_bounded 5 "$PY" "$PROJECTION_ENGINE" --root "$GOV" --workspace "$WORKSPACE" \
+    # ssot / ssot_checkout commit the unbound .mcp.json (no interpreter).
+    # Projecting with L9_MEMORY_INTERPRETER set rewrites that tracked file and
+    # races Test Suite (PR 570: test_committed_projection_is_current_for_an_unbound_environment).
+    _L9_PROJ_UNBIND=""
+    if [ -f "$GOV/ops/scripts/lib/workspace_kind.sh" ]; then
+      # shellcheck source=/dev/null
+      . "$GOV/ops/scripts/lib/workspace_kind.sh"
+      case "$(classify_workspace_kind "$WORKSPACE")" in
+        ssot|ssot_checkout)
+          _L9_PROJ_UNBIND="env -u L9_MEMORY_INTERPRETER -u CONTEXT7_API_KEY"
+          ;;
+      esac
+    fi
+    # shellcheck disable=SC2086
+    PROJECTION_LINE=$(_l9_bounded 5 $_L9_PROJ_UNBIND "$PY" "$PROJECTION_ENGINE" --root "$GOV" --workspace "$WORKSPACE" \
       --summary 2>/dev/null | tail -1)
     _projection_rc=$?
     if [ "$_projection_rc" = 125 ]; then
