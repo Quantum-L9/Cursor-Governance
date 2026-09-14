@@ -4,7 +4,38 @@
   "local_pr_check": {
     "never_pass_repo_root_dot": true,
     "selector": "ops/scripts/select_pr_pytest_paths.py",
-    "note": "make pr passes --changed-file to the runner. make test, make pr-full, and CI keep the catalog including repo-root '.'."
+    "note": "make pr passes --changed-file to the runner. make test, make pr-full, and CI keep the catalog including repo-root '.'. shell_owners and velocity_exclude apply only on this local selector.",
+    "generic_basenames": [
+      "l9_hook_exec.sh",
+      "session_start_claude_governance.sh",
+      "settings.json",
+      "settings.template.json",
+      "python-contract.json"
+    ],
+    "shell_owners": {
+      "environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh": [
+        "tests/environment/adapters/test_l9_hook_exec_refresh.py",
+        "environment/agents/adapters/claude-code/tests/test_hook_exec_failclosed.py",
+        "environment/agents/adapters/claude-code/tests/test_hook_interpreter_contract.py",
+        "tests/adapters/claude_code/test_l9_hook_exec_guard.py"
+      ],
+      "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh": [
+        "tests/environment/adapters/test_session_start_refresh_guard.py",
+        "environment/agents/adapters/claude-code/tests/test_session_start_hosted_truth.py",
+        "environment/agents/adapters/claude-code/tests/test_session_start_partial_emit.py",
+        "ops/scripts/tests/test_governance_refresh_receipt.py",
+        "ops/scripts/tests/test_session_start_runtime_report.py"
+      ],
+      "environment/agents/adapters/claude-code/settings.template.json": [
+        "tests/ops/scripts/test_reconcile_claude_settings.py",
+        "ops/scripts/tests/test_claude_projection.py",
+        "environment/agents/adapters/claude-code/tests/test_session_start_partial_emit.py"
+      ]
+    },
+    "velocity_exclude": [
+      "environment/program-execution/scripts/tests/test_pe_smoke_campaign.py",
+      "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_import_graph.py"
+    ]
   },
   "skill_self_test_roots": [
     "skills/l9-audit-plans",

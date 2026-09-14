@@ -277,3 +277,114 @@ class AddoptsIgnoreTests(unittest.TestCase):
         selected = select_pr_pytest_paths([self.DAG_MODULE, sibling])
         self.assertIn(sibling, selected)
         self.assertNotIn(self.DAG_MODULE, selected)
+
+
+class HookSettingsVelocityTests(unittest.TestCase):
+    """Popular hook/settings basenames must not fan out; owners stay selected."""
+
+    HOOK = "environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh"
+    SESSION = "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh"
+    SETTINGS = "environment/agents/adapters/claude-code/settings.template.json"
+    PE_SMOKE = "environment/program-execution/scripts/tests/test_pe_smoke_campaign.py"
+    RARE_SHELL = "ops/scripts/run_pr_gate.sh"
+    CONTRACT = SCRIPT_DIR.parent / "config" / "python-contract.json"
+
+    def _owners(self, changed: str) -> list[str]:
+        data = json.loads(self.CONTRACT.read_text(encoding="utf-8"))
+        owners = data["local_pr_check"]["shell_owners"][changed]
+        self.assertTrue(owners)
+        return [str(item) for item in owners]
+
+    def test_hook_change_does_not_select_pe_smoke(self) -> None:
+        selected = select_pr_pytest_paths([self.HOOK])
+        self.assertNotIn(self.PE_SMOKE, selected)
+
+    def test_hook_change_selects_every_owner(self) -> None:
+        selected = set(select_pr_pytest_paths([self.HOOK]))
+        missing = set(self._owners(self.HOOK)) - selected
+        self.assertFalse(missing, missing)
+
+    def test_mapped_path_never_selects_empty(self) -> None:
+        for path in (self.HOOK, self.SESSION, self.SETTINGS):
+            selected = select_pr_pytest_paths([path])
+            self.assertTrue(selected, f"empty-select on mapped path {path}")
+
+    def test_session_start_selects_every_owner(self) -> None:
+        selected = set(select_pr_pytest_paths([self.SESSION]))
+        missing = set(self._owners(self.SESSION)) - selected
+        self.assertFalse(missing, missing)
+
+    def test_settings_template_selects_every_owner(self) -> None:
+        selected = set(select_pr_pytest_paths([self.SETTINGS]))
+        missing = set(self._owners(self.SETTINGS)) - selected
+        self.assertFalse(missing, missing)
+
+    def test_rare_shell_full_path_scan_intact(self) -> None:
+        selected = select_pr_pytest_paths([self.RARE_SHELL])
+        self.assertIn("ops/scripts/tests/test_bootstrap_invariants.py", selected)
+
+    def test_makefile_generic_basename_unchanged(self) -> None:
+        makefile_only = set(select_pr_pytest_paths(["Makefile"]))
+        self.assertLess(len(makefile_only), 8, makefile_only)
+
+    def test_contract_change_does_not_select_pe_controller_import_graph(self) -> None:
+        selected = select_pr_pytest_paths(["ops/config/python-contract.json"])
+        self.assertNotIn(
+            "environment/program-execution/core/program-execution-controller-template"
+            "/scripts/tests/test_import_graph.py",
+            selected,
+        )
+        self.assertNotIn(self.PE_SMOKE, selected)
+
+    def test_session_start_selects_portable_timeout_owner(self) -> None:
+        selected = select_pr_pytest_paths([self.SESSION])
+        self.assertIn("ops/scripts/tests/test_session_start_runtime_report.py", selected)
+
+    def test_settings_template_selects_budget_parity_owner(self) -> None:
+        selected = select_pr_pytest_paths([self.SETTINGS])
+        self.assertIn(
+            "environment/agents/adapters/claude-code/tests/test_session_start_partial_emit.py",
+            selected,
+        )
+
+
+class ContractIngestStripTests(unittest.TestCase):
+    """Padded contract entries must match after ingest, not keep the spaces."""
+
+    def test_padded_generic_basename_and_exclude_are_stripped(self) -> None:
+        from select_pr_pytest_paths import (
+            _generic_basenames,
+            _shell_owners,
+            _velocity_exclude,
+        )
+
+        padded_exclude = " environment/program-execution/scripts/tests/test_pe_smoke_campaign.py "
+        with tempfile.TemporaryDirectory() as raw:
+            registry = Path(raw) / "python-contract.json"
+            registry.write_text(
+                json.dumps(
+                    {
+                        "suites": [{"id": "repo-root", "owned_paths": ["."]}],
+                        "local_pr_check": {
+                            "generic_basenames": [" settings.json "],
+                            "shell_owners": {
+                                " environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh ": [
+                                    " tests/environment/adapters/test_l9_hook_exec_refresh.py "
+                                ]
+                            },
+                            "velocity_exclude": [padded_exclude],
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            self.assertIn("settings.json", _generic_basenames(registry))
+            owners = _shell_owners(registry)
+            self.assertEqual(
+                owners["environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh"],
+                ["tests/environment/adapters/test_l9_hook_exec_refresh.py"],
+            )
+            self.assertIn(
+                "environment/program-execution/scripts/tests/test_pe_smoke_campaign.py",
+                _velocity_exclude(registry),
+            )
