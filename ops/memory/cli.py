@@ -16,7 +16,7 @@ Usage (always through the governance interpreter)::
     python -m ops.memory.cli write "fact" --kind lesson [--tag T ...] [--dry-run]
     python -m ops.memory.cli hydrate "task" [--workspace DIR]
     python -m ops.memory.cli conflicts [--workspace DIR]
-    python -m ops.memory.cli readiness [--workspace DIR] [--json]
+    python -m ops.memory.cli readiness [--workspace DIR] [--json] [--no-verify-mcp]
 
 Exit codes: ``0`` the operation completed (including ``NO_HITS`` and a dry
 run), ``1`` memory refused, was unavailable, or returned an invalid receipt,
@@ -261,6 +261,8 @@ def cmd_readiness(args: argparse.Namespace) -> int:
         argv.append("--json")
     if args.binding_only:
         argv.append("--binding-only")
+    if not args.verify_mcp:
+        argv.append("--no-verify-mcp")
     return diagnostics.main(argv)
 
 
@@ -332,6 +334,19 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--workspace", default=None)
     p.add_argument("--json", action="store_true")
     p.add_argument("--binding-only", action="store_true")
+    p.add_argument(
+        "--verify-mcp",
+        dest="verify_mcp",
+        action="store_true",
+        default=True,
+        help="run the R5 MCP handshake — the default; accepted for compatibility",
+    )
+    p.add_argument(
+        "--no-verify-mcp",
+        dest="verify_mcp",
+        action="store_false",
+        help="skip the R5 handshake (it spawns a server for ~1.2s)",
+    )
     p.set_defaults(func=cmd_readiness)
     return parser
 
