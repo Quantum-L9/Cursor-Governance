@@ -246,9 +246,9 @@ def test_remediate_objective_isolates_verify_and_forbids_merge_main(
         run_id="run1",
         graph_id="abcd",
     )
-    assert "L9_REMEDIATOR=1 PR_STACK= PR_BASE=origin/main make precommit-repo" in packet[
-        "objective"
-    ]
+    assert (
+        "L9_REMEDIATOR=1 PR_STACK= PR_BASE=origin/main make precommit-repo" in packet["objective"]
+    )
     assert "Never merge origin/main" in packet["objective"]
     watch = pr_fleet.build_assignment(
         TARGET,

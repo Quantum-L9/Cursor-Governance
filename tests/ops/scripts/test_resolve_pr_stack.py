@@ -235,13 +235,13 @@ def test_makefile_passes_pr_stack_into_gate_recipes() -> None:
     apply_at = precommit.find("pr_stack_apply_publish_base")
     assert rem_at != -1
     assert rem_at < apply_at
-    assert "elif [[ -z \"${PR_CHANGED_FILE:-}\"" in precommit
+    assert 'elif [[ -z "${PR_CHANGED_FILE:-}"' in precommit
 
 
 def test_l9_remediator_skips_stack_tip_rewrite() -> None:
     precommit = (ROOT / "ops" / "scripts" / "run_pr_precommit.sh").read_text(encoding="utf-8")
     skip = precommit[
-        precommit.find("_REMEDIATOR=") : precommit.find("elif [[ -z \"${PR_CHANGED_FILE:-}\"")
+        precommit.find("_REMEDIATOR=") : precommit.find('elif [[ -z "${PR_CHANGED_FILE:-}"')
     ]
     assert "pr_stack_apply_publish_base" not in skip
     assert "PR_BASE=" in skip

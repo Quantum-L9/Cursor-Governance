@@ -483,9 +483,7 @@ def test_cycle_two_rejects_plan_time_ids() -> None:
                 "confidence": "high",
             }
         ],
-        "clusters": [
-            {"id": "c", "finding_ids": ["ci-1"], "files": ["a.py"], "action": "drop"}
-        ],
+        "clusters": [{"id": "c", "finding_ids": ["ci-1"], "files": ["a.py"], "action": "drop"}],
         "verify": {"makefile_targets": ["precommit-repo"]},
         "commit_policy": {"commits": 1, "publish": "git push", "no_verify": False},
     }
