@@ -1492,6 +1492,24 @@ and the remediator pack v5.3 hot path. Those paragraphs stay on disk
   `open_prs=0`. Watchers never merge and never waive that poll duty.
 - Mission remains `open_prs=0`.
 
+<!-- L9_PR_REMEDIATE_MAX_VELOCITY_V1 -->
+## `/l9-pr-remediation` caps are the execution profile (2026-09-14)
+
+This fragment supersedes only the `skill_subagent_cap: 10` / skill-clamp
+sentences in `L9_PR_REMEDIATE_MERGE_NOW_V1`. That paragraph stays on disk
+(additive_only). Live pack: `skills/l9-pr-remediation` v5.5.0.
+
+- `pr_fleet.skill_caps()` passes through `execution_profile` (`max_parallel>=480`,
+  `max_mutation_lanes>=128`). Do not reintroduce `SKILL_SUBAGENT_CAP = 10`.
+- Safety is `claim_scopes_conflict` plus `waves()`, not a remediator clamp.
+- UNKNOWN + green required is `board=merge`. Failing required checks outrank
+  `BEHIND`. Do not merge `origin/main` to "fix" CI.
+- Remediator verify is `L9_REMEDIATOR=1 PR_STACK= PR_BASE=origin/main make
+  precommit-repo` (`L9_REMEDIATOR=1` skips stack-tip rewrite).
+- Complete census before the first edit: ingest includes CI + threads + reviews,
+  and Sonar when `sonar-project.properties` exists. `validate_plan --findings`
+  is required on Converge. Gate E measures `git log <base_sha>..HEAD`.
+
 <!-- SESSIONSTART_SECRETS_PLANE_V1 -->
 ## SessionStart owns the secrets plane (2026-09-07)
 
@@ -1625,3 +1643,85 @@ This fragment supersedes only the sessionEnd dirt-close / auto-hygiene /
   `session_id`. Never delete worktree files.
 - Agents asked "what dirty files are there" still run
   `session_end_dirt_close.py --status`. That is a report, not the closer.
+
+<!-- FF_NO_SHELF_V1 -->
+## `/ff` does not shelf (2026-09-14)
+
+This fragment supersedes only the “caller then runs `ff_shelf.py`” / shelf
+publish / post-shelf closer sentences in `FF_SHELF_WIP_PLANS_V1`,
+`FF_CLOSE_PUBLISH_LOOP_V1`, `FF_SHELF_SCRIPT_V1`, and
+`FF_SHELF_CORPUS_REMAINDER_V1`. Those paragraphs stay on disk
+(additive_only). Do not fold them.
+
+- `/ff` ends when `ff.sh` prints `OK:` and parked files are back at their
+  original paths.
+- Do not run `ff_shelf.py`, `run_ff_post_shelf.sh`, or
+  `verify_worktree_clean.py` as a closer.
+- Unique WIP/plans stay in the tree. Hold copies stay as backup.
+  No commit. No push. No PR.
+
+<!-- SESSIONSTART_PLANS_DISPLAY_ONLY_V1 -->
+## SessionStart does not mutate plans (2026-09-14)
+
+Append-only. Supersedes only the “SessionStart may archive spent root plans”
+sentences in `L9_SESSION_PIPELINE_AUDIT_V1`. Those paragraphs stay on disk
+(additive_only). Do not fold them.
+
+- SessionStart `### Plan audit` is display-only:
+  `audit_pipeline.py --format session-start` with **no** `--archive-spent`.
+- Do not `shutil.move` plans or inventory-`landed` WIP from the hook.
+- Plans stay on the `~/.cursor/plans` hop. Manual `/l9-audit-plans` or
+  `/plan-audit` (`/l9-pipeline-audit` with `--archive-spent`) may mutate.
+- Do not invent a second kill switch. CLI `--archive-spent` stays opt-in.
+- Do not auto-Build. Do not `make campaign`.
+
+<!-- SESSIONSTART_NO_PLAN_SURFACE_V1 -->
+## SessionStart has no plan surface (2026-09-14)
+
+Append-only. Supersedes the SessionStart plan-scan sentences in §16,
+`L9_SESSION_PIPELINE_AUDIT_V1`, `L9_PLAN_AUDIT_ABSORBED_V1`, and
+`SESSIONSTART_PLANS_DISPLAY_ONLY_V1`. Those paragraphs stay on disk
+(additive_only). Do not fold them.
+
+- SessionStart does **not** read, scan, analyze, archive, or emit the
+  plans store, `WIP/` harvest queue, or PE campaign sources.
+- `additional_context` has no `### Plan audit` section and must not
+  invoke `audit_pipeline.py` / `audit_plans.py`.
+- Plans work is slash-only: `/l9-audit-plans` (shelf) and
+  `/plan-audit` / `/l9-pipeline-audit` (harvest). `--archive-spent`
+  stays opt-in on those CLIs.
+- `--format session-start` on `audit_pipeline.py` is a leftover report
+  shape, not a SessionStart caller.
+- Do not auto-Build. Do not `make campaign`.
+
+<!-- OVERLAP_NO_WAIT_V1 -->
+## Overlap is not wait (2026-09-14)
+
+This fragment supersedes only the "else wait" sentence in §4.1. That
+paragraph stays on disk (additive_only). Do not fold it.
+
+- Overlap remedy is: commit into the overlapping open PR this turn, or
+  stack (`PR_STACK=auto`).
+- **Wait for merge is forbidden.** It is not a finish, not a routing
+  option, and not a velocity exception.
+- "Do not put path X in this PR" means commit X into the open PR that
+  already owns X, in this turn.
+- Dropping the overlapping path so a sibling can publish, then parking
+  the dropped work as a later follow-up, is the same violation.
+
+<!-- ADR0031_WRITE_AGENT_V1 -->
+## Dual memory write classes (2026-09-14) — supersedes §2 / §3 / §7 Graphiti doors
+
+This fragment supersedes only the live-path sentences in §2.1 (`inject` /
+PICKUP), §3 Cloud `GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp`,
+and §7 `add_memory` / `graphiti_memory_client.py health`. Those paragraphs
+stay on disk (additive_only). Do not fold them. CANONICAL_LAW §8.5 /
+ADR-0031 are the law.
+
+- Ordinary / cold model write: MCP `memory.write_agent` (no `phase_lock`).
+- Conflict-sensitive model write: `memory.phase_lock` → `memory.write_governed`.
+- Resume SSOT is `ContinuationCapsuleV2` / `python -m ops.memory.cli hydrate`.
+- Operator / hooks: `python -m ops.memory.cli`. Agent HTTP is sealed.
+- Do not teach `GRAPHITI_MCP_URL`, `add_memory`, or a live
+  `graphiti_memory_client.py` as the agent front door.
+
