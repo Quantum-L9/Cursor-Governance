@@ -1,5 +1,5 @@
 {
-  "generation_id": "a57bde67f412b792d47af309fa7f703dd89fd8e9d2f25fe305e9f22dc97d02c0",
+  "generation_id": "d6588e14d9d4804f3cb48bbeba7fb0c7ea63c5da9372c0626823e34f06855014",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -1477,7 +1477,7 @@
       "path": "skills/l9-repo-sync",
       "reason": "in-place /ff catch-up mutates a named clone (park unique work, then reset --keep); explicit only, hint_allowed for Read/attach",
       "skill_md": "skills/l9-repo-sync/SKILL.md",
-      "skill_sha256": "2bdec4422e403f40c016b686935c1b9133223c24d18bc9512221a0a754a67e4c",
+      "skill_sha256": "04a6088f608406573644ea319875889bbf661823ff640ba6ae064beff21f1735",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1601,5 +1601,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "bf415873fe91b1779e0cea47ca987f01c3b919d78bae8ac8c0a49fea06eb8def",
-  "source_skill_corpus_sha256": "a262861d450be25a18ed5e6911543946d838a91c8b2ec0eab9182c15256c93bd"
+  "source_skill_corpus_sha256": "bbaaa65c992e8f29d510529f7d4526df0de583d97405673387545666029b5fbe"
 }

@@ -66,7 +66,9 @@ def test_unpushed_commit_fails(repo: Path, monkeypatch: pytest.MonkeyPatch) -> N
     assert any("ahead" in e for e in errors)
 
 
-def test_unknown_dirty_unique_does_not_require_shelf(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_unknown_dirty_unique_does_not_require_shelf(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(verify, "_run_dirt_status", lambda _r, _b: {"dirty_unique": 2})
     ok, errors, warnings = verify.verify(repo, fetch=False)
     assert ok

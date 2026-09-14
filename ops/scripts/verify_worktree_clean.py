@@ -148,8 +148,7 @@ def verify(
             other = [path for path in dirty_files if path not in corpus]
             if corpus:
                 warnings.append(
-                    f"leftover corpus stays in the tree: {corpus}; "
-                    "/ff does not shelf or open a PR"
+                    f"leftover corpus stays in the tree: {corpus}; /ff does not shelf or open a PR"
                 )
             if other:
                 errors.append(
