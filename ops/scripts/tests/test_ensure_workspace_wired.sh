@@ -18,6 +18,7 @@ bash "$HELPER" "$ws"
 [ -L "$ws/.cursor-commands" ]
 [ -L "$ws/.cursor/plans" ]
 [ -L "$ws/.cursor/governance/CANONICAL_LAW.md" ]
+[ -L "$HOME/.cursor/plugins/local/l9-governance" ]
 gc="$(python3 -c "import os; print(os.path.realpath('$HOME/.cursor-governance'))")"
 rt="$(python3 -c "import os; print(os.path.realpath('$ws/.cursor-commands'))")"
 [ "$rt" = "$gc" ]
