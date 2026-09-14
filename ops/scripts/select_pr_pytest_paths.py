@@ -49,18 +49,63 @@ _GENERIC_BASENAMES = frozenset(
         "source.yaml",
         "MANIFEST.yaml",
         "MANIFEST.json",
+        # Popular hook/settings names appear in too many suites to mean
+        # "this file changed". Full-path matches still count. The contract
+        # `local_pr_check.generic_basenames` is unioned at select time.
+        "l9_hook_exec.sh",
+        "session_start_claude_governance.sh",
+        "settings.json",
+        "settings.template.json",
     }
 )
 
 _SKIP_TEST_PARTS = frozenset({".venv", ".git", "node_modules", "fixtures"})
 
 
-def _load_suites(registry: Path) -> list[dict]:
+def _load_contract(registry: Path) -> dict:
     data = json.loads(registry.read_text(encoding="utf-8"))
-    suites = data.get("suites") or []
+    if not isinstance(data, dict):
+        raise SystemExit("python-contract.json must be an object")
+    return data
+
+
+def _load_suites(registry: Path) -> list[dict]:
+    suites = _load_contract(registry).get("suites") or []
     if not isinstance(suites, list):
         raise SystemExit("python-contract.json suites must be a list")
     return [item for item in suites if isinstance(item, dict)]
+
+
+def _local_pr_check(registry: Path) -> dict:
+    block = _load_contract(registry).get("local_pr_check") or {}
+    return block if isinstance(block, dict) else {}
+
+
+def _generic_basenames(registry: Path) -> frozenset[str]:
+    extra = _local_pr_check(registry).get("generic_basenames") or []
+    if not isinstance(extra, list):
+        extra = []
+    return _GENERIC_BASENAMES | frozenset(str(item).strip() for item in extra if str(item).strip())
+
+
+def _shell_owners(registry: Path) -> dict[str, list[str]]:
+    raw = _local_pr_check(registry).get("shell_owners") or {}
+    if not isinstance(raw, dict):
+        return {}
+    owners: dict[str, list[str]] = {}
+    for path, tests in raw.items():
+        key = str(path).strip()
+        if not key or not isinstance(tests, list):
+            continue
+        owners[key] = [str(item).strip() for item in tests if str(item).strip()]
+    return owners
+
+
+def _velocity_exclude(registry: Path) -> frozenset[str]:
+    raw = _local_pr_check(registry).get("velocity_exclude") or []
+    if not isinstance(raw, list):
+        return frozenset()
+    return frozenset(str(item).strip() for item in raw if str(item).strip())
 
 
 def is_dot_owned(suite: dict) -> bool:
@@ -246,7 +291,12 @@ def _iter_test_modules(repo_root: Path) -> list[Path]:
     return found
 
 
-def tests_naming_path(changed: str, *, repo_root: Path = REPO_ROOT) -> list[str]:
+def tests_naming_path(
+    changed: str,
+    *,
+    repo_root: Path = REPO_ROOT,
+    generic_basenames: frozenset[str] | None = None,
+) -> list[str]:
     """Test files that name a non-Python changed file.
 
     A shell script, workflow, or config file has no `test_<stem>.py` twin, so
@@ -265,10 +315,11 @@ def tests_naming_path(changed: str, *, repo_root: Path = REPO_ROOT) -> list[str]
         return []
     if target.endswith(".md"):
         return []
+    names = _GENERIC_BASENAMES if generic_basenames is None else generic_basenames
     basename = Path(target).name
-    if basename in _GENERIC_BASENAMES and "/" not in target:
+    if basename in names and "/" not in target:
         return []
-    skip_basename = basename in _GENERIC_BASENAMES
+    skip_basename = basename in names
     by_path: list[str] = []
     by_name: list[str] = []
     for path in sorted(_iter_test_modules(repo_root)):
@@ -303,12 +354,18 @@ def select_pr_pytest_paths(changed: list[str], *, registry: Path = REGISTRY_PATH
     if not py_changed and not other_changed:
         return []
     suites = _load_suites(registry)
+    generic = _generic_basenames(registry)
+    owners = _shell_owners(registry)
+    exclude = _velocity_exclude(registry)
     selected: list[str] = []
     missing: list[str] = []
     for path in other_changed:
-        for target in tests_naming_path(path):
+        for target in tests_naming_path(path, generic_basenames=generic):
             if target not in selected:
                 selected.append(target)
+        for owner in owners.get(path, []):
+            if owner not in selected:
+                selected.append(owner)
     for path in py_changed:
         if Path(path).name == "conftest.py":
             # Fixture module, not a collectable test. Passing it as an explicit
@@ -357,6 +414,8 @@ def select_pr_pytest_paths(changed: list[str], *, registry: Path = REGISTRY_PATH
         if item in directories or not any(path_under(item, root) for root in directories)
     ]
     selected, unrunnable = _drop_unrunnable(selected, suites)
+    if exclude:
+        selected = [item for item in selected if item not in exclude]
     if missing:
         still_missing = [path for path in missing if path not in unrunnable]
         if still_missing:
