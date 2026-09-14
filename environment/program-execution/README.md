@@ -82,6 +82,7 @@ no third outcome.
 | `l9.program-execution.architecture-intent.v1` (declared or deterministically classified from architecture-grade prose) | architecture → campaign source → blueprint → PEC |
 | activate seed (`campaign_id`, `title`, `objective`, `tasks`) | activate → campaign source → blueprint → PEC |
 | brief memo (`.md`) | brief → activate → campaign source → blueprint → PEC |
+| `l9.quantum/campaign-source/v1` or `l9.quantum/campaign-pack/v1` | **rejected** — retired immutable evidence, never activation input |
 | `program-execution.intent.v1` | **rejected** — design-time compiler input, no live adapter |
 | anything else | **rejected** |
 
@@ -151,12 +152,11 @@ Details: `compiler/README.md`.
 ### Campaign ids are not preregistered
 
 A campaign compiles because it is valid, not because its id appears in
-`campaigns/COMPILE_ALLOWLIST.yaml`. That file is a historical ledger; nothing
-admits against it, activation no longer patches it, and no campaign's compile
-fingerprint depends on another campaign's registration. Id **collisions** are
-still detected, from real state — existing campaign directories, the status
-ledger, and the completed archive — which answers "does this id already exist",
-never "is this id permitted to exist".
+an allowlist. No preregistration file exists, activation never creates one, and
+no campaign's compile fingerprint depends on another campaign's registration. Id
+**collisions** are still detected from real state — existing campaign directories,
+the status ledger, and the completed archive — which answers "does this id already
+exist", never "is this id permitted to exist".
 
 ### When the front door rejects an input
 

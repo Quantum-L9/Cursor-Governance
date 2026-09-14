@@ -16,6 +16,7 @@ PE_ROOT = Path(__file__).resolve().parents[2]
 SOURCE = PE_ROOT / "campaigns/bounded-replanning-v1/CAMPAIGN_SOURCE.yaml"
 EXPECTED_DIGEST = "9528abeaf8117dd0598036216784593a62e88948800636c2eced9dc6262ae010"
 PEC_CLI = PE_ROOT / "core/program-execution-controller-template/scripts/pec.py"
+CANONICAL_TEMPLATE = PE_ROOT / "templates/campaign-source-v2/CAMPAIGN_SOURCE.yaml"
 
 
 def _pass_proof(
@@ -272,6 +273,53 @@ class CompileCampaignSourceTests(unittest.TestCase):
             )
             self.assertEqual(result["campaign_id"], "never-preregistered-v1")
             self.assertEqual(self.validator.validate(target, "template"), [])
+
+    def test_canonical_campaign_source_template_preflights_and_compiles(self) -> None:
+        """The reusable source is complete input, not a partial YAML fragment."""
+        self.assertTrue(CANONICAL_TEMPLATE.is_file())
+        text = CANONICAL_TEMPLATE.read_text(encoding="utf-8")
+        placeholder_pattern = r"REPLACE_WITH_[A-Z0-9_]+|\{\{[A-Z0-9_]+\}\}"
+        self.assertRegex("REPLACE_WITH_TOKEN", placeholder_pattern)
+        self.assertRegex("{{TOKEN}}", placeholder_pattern)
+        self.assertNotRegex(text, placeholder_pattern)
+        source = yaml.safe_load(text)
+        self.assertEqual(source["metadata"]["campaign_id"], source["program"]["id"])
+        self.assertEqual(self.compiler.preflight_campaign_source_document(source), [])
+        with tempfile.TemporaryDirectory() as raw:
+            target = Path(raw) / "blueprint"
+            source_digest = hashlib.sha256(CANONICAL_TEMPLATE.read_bytes()).hexdigest()
+            self.compiler.compile_source(
+                CANONICAL_TEMPLATE,
+                target,
+                stack_proof=_pass_proof(
+                    Path(raw) / "stack-proof.json", "campaign-source-v2-example"
+                ),
+            )
+            self.assertEqual(
+                hashlib.sha256(CANONICAL_TEMPLATE.read_bytes()).hexdigest(), source_digest
+            )
+            self.assertEqual(self.validator.validate(target, "template"), [])
+
+    def test_retired_campaign_schemas_refuse_before_blueprint_creation(self) -> None:
+        """The compiler itself remains a strict v2 boundary behind the router."""
+        for schema in (
+            "l9.quantum/campaign-source/v1",
+            "l9.quantum/campaign-pack/v1",
+        ):
+            with self.subTest(schema=schema), tempfile.TemporaryDirectory() as raw:
+                source = _with_declared_scope(yaml.safe_load(SOURCE.read_text(encoding="utf-8")))
+                source["schema"] = schema
+                path = Path(raw) / "legacy.yaml"
+                path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
+                target = Path(raw) / "blueprint"
+                with self.assertRaises(self.compiler.CompileError) as ctx:
+                    self.compiler.compile_source(
+                        path,
+                        target,
+                        stack_proof=_pass_proof(Path(raw) / "stack-proof.json"),
+                    )
+                self.assertIn("schema", str(ctx.exception))
+                self.assertFalse(target.exists(), "retired source created a Blueprint directory")
 
     def test_compiler_has_no_allowlist_surface(self) -> None:
         """The preregistration path is gone, not merely unused."""

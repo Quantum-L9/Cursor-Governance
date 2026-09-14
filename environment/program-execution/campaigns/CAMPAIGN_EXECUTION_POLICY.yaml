@@ -102,9 +102,9 @@ campaigns:
       - bounded-replanning-v1
       - l9-devpack-program-execution-hardening
       - cc-pe-intent-compiler-v1
-  - id: session-runtime-hydration-convergence-v1
-    integration_branch: campaign/session-runtime-hydration-convergence-v1
-    pr_base: campaign/session-runtime-hydration-convergence-v1
+  - id: session-runtime-hydration-convergence-v2
+    integration_branch: campaign/session-runtime-hydration-convergence-v2
+    pr_base: campaign/session-runtime-hydration-convergence-v2
     execute_order: 5
     lane: session_runtime
     parallel_with:
