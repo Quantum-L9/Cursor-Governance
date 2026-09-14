@@ -38,6 +38,13 @@ PLAN_DOC = (
     "# PLAN: Tip\n"
 )
 
+LEGACY_SHAPED_SEED = {
+    "campaign_id": "legacy-campaign",
+    "title": "Legacy campaign",
+    "objective": "Prove legacy inputs cannot reach activation.",
+    "tasks": [{"title": "Do not execute", "objective": "Reject at ingress."}],
+}
+
 
 def _load():
     spec = importlib.util.spec_from_file_location("campaign_input_front_door", SCRIPT)
@@ -154,6 +161,40 @@ class NormalizedRoutingTests(unittest.TestCase):
 
         raw = "﻿# T\r\nMUST x\r\n"
         self.assertEqual(self.ci._normalize_text(raw), normalize_source(raw))
+
+    def test_legacy_campaign_schemas_cannot_fall_through_to_activate(self) -> None:
+        """A declared retired schema wins over the activate-shape heuristic."""
+        for schema in sorted(self.ci.LEGACY_CAMPAIGN_SCHEMAS):
+            with self.subTest(schema=schema):
+                path = self.root / f"{schema.rsplit('/', 1)[-1]}.yaml"
+                document = {"schema": schema, **LEGACY_SHAPED_SEED}
+                import yaml
+
+                path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
+                found = self.ci.classify(path)
+                self.assertIs(found.kind, self.ci.CampaignInputKind.LEGACY_CAMPAIGN_V1)
+                self.assertFalse(found.supported)
+                rejected = self.ci.reject(found)
+                payload = rejected.to_dict()
+                self.assertEqual(payload["schema"], schema)
+                self.assertTrue(payload["nothing_executed"])
+                self.assertFalse(payload["workspace_created"])
+                self.assertEqual(payload["tasks_started"], 0)
+                self.assertIn("campaign-source.v2", payload["fix"])
+
+    def test_declared_noncanonical_source_v2_schema_is_not_accepted(self) -> None:
+        path = self.root / "near-v2.yaml"
+        document = {
+            "schema": "example.invalid/campaign-source.v2",
+            **LEGACY_SHAPED_SEED,
+        }
+        import yaml
+
+        path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
+        found = self.ci.classify(path)
+        self.assertIs(found.kind, self.ci.CampaignInputKind.UNKNOWN)
+        self.assertIn("only", found.reason or "")
+        self.assertIn(self.ci.CAMPAIGN_SOURCE_SCHEMA, found.reason or "")
 
 
 if __name__ == "__main__":

@@ -946,9 +946,10 @@ claude-preservation-baseline:
 memory-binding:
 	PYTHONPATH="$(CURDIR)" $(PYTHON) -m ops.memory.diagnostics --binding-only
 
-## Layered readiness R0..R9 (projection last). Add MEMORY_VERIFY_MCP=1 for the real MCP handshake.
+## Layered readiness R0..R9 (projection last); the real R5 MCP handshake runs by default.
+## Set MEMORY_SKIP_VERIFY_MCP=1 only for bounded diagnosis that must skip R5.
 memory-readiness:
-	PYTHONPATH="$(CURDIR)" $(PYTHON) -m ops.memory.diagnostics --workspace "$(if $(WS),$(WS),$(CURDIR))" $(if $(MEMORY_VERIFY_MCP),--verify-mcp,)
+	PYTHONPATH="$(CURDIR)" $(PYTHON) -m ops.memory.diagnostics --workspace "$(if $(WS),$(WS),$(CURDIR))" $(if $(MEMORY_SKIP_VERIFY_MCP),--no-verify-mcp,)
 
 ## Provider egress firewall: warning mode until stage C11 (MEMORY_EGRESS_ENFORCE=1 to block).
 memory-egress-check:
