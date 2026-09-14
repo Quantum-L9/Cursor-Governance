@@ -244,14 +244,24 @@ _wt_blob() {
   fi
 }
 
+# Deletion state lives in hold metadata, never in the user filename namespace.
+# `$HOLD_ROOT/tracked/<rel>` holds bytes only; a tracked path the worktree had
+# deleted is recorded as one line of `$HOLD_ROOT/.l9-ff-deleted.list`. That
+# file is a sibling of `tracked/`, so no repo-relative path can spell it and
+# the restore walk over `tracked/` can never mistake user data for a marker.
+# The retired `<rel>.deleted` stub collided with legitimate `*.deleted` files:
+# restore then left them at HEAD and `rm -f`'d the unrelated sibling `<rel>`.
+DELETED_LIST_NAME=".l9-ff-deleted.list"
+
 _copy_hold_tracked() {
   local rel="$1"
   local dest="$HOLD_ROOT/tracked/$rel"
-  mkdir -p "$(dirname "$dest")"
   if [ -e "$CLONE/$rel" ] || [ -L "$CLONE/$rel" ]; then
+    mkdir -p "$(dirname "$dest")"
     cp -a "$CLONE/$rel" "$dest"
   else
-    printf '%s\n' "__deleted__" >"${dest}.deleted"
+    mkdir -p "$HOLD_ROOT"
+    printf '%s\n' "$rel" >>"$HOLD_ROOT/$DELETED_LIST_NAME"
   fi
 }
 
@@ -410,23 +420,27 @@ _restore_parked_homes() {
   RESTORED_TRACKED=""
   RESTORED_UNTRACKED=""
   HELD_UNTRACKED=""
+  # Every entry under tracked/ is user bytes: restore it to its own path,
+  # whatever its name. Deletions are applied from the manifest afterwards and
+  # only for the paths it names, so no sibling is ever removed by inference.
   if [ -d "$HOLD_ROOT/tracked" ]; then
     while IFS= read -r -d '' src; do
       rel="${src#"$HOLD_ROOT/tracked/"}"
       [ -n "$rel" ] || continue
-      if [[ "$rel" == *.deleted ]]; then
-        rel="${rel%.deleted}"
-        rm -f "$CLONE/$rel" 2>/dev/null || true
-        RESTORED_TRACKED="${RESTORED_TRACKED}${rel}"$'\n'
-        echo "OK: restored parked deletion for $rel to original home"
-        continue
-      fi
       dest="$CLONE/$rel"
       mkdir -p "$(dirname "$dest")"
       cp -a "$src" "$dest"
       RESTORED_TRACKED="${RESTORED_TRACKED}${rel}"$'\n'
       echo "OK: restored parked $rel to original home"
     done < <(find "$HOLD_ROOT/tracked" \( -type f -o -type l \) -print0)
+  fi
+  if [ -f "$HOLD_ROOT/$DELETED_LIST_NAME" ]; then
+    while IFS= read -r rel; do
+      [ -n "$rel" ] || continue
+      rm -f "$CLONE/$rel" 2>/dev/null || true
+      RESTORED_TRACKED="${RESTORED_TRACKED}${rel}"$'\n'
+      echo "OK: restored parked deletion for $rel to original home"
+    done <"$HOLD_ROOT/$DELETED_LIST_NAME"
   fi
   if [ -d "$HOLD_ROOT/untracked" ]; then
     while IFS= read -r -d '' src; do
