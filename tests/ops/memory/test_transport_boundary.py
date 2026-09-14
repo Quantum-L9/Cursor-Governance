@@ -87,6 +87,7 @@ SPAWN_ALLOWED = frozenset(
         "ops/memory/runtime_binding.py",  # proves + launches the bound l9-memory
         "ops/memory/namespace_context.py",  # git identity of the checkout
         "ops/memory/mcp_instantiation.py",  # memory-owned MCP installer/verify
+        "ops/memory/seal_artifact_provenance.py",  # memory-owned wheel PEP 610 seal
         "environment/agents/adapters/claude-code/memory/memory_state.py",  # git toplevel
     }
 )
