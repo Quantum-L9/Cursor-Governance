@@ -427,10 +427,10 @@ GOV_HEAD="$(short_sha "$ACTIVATE_SHA")"
 REMOTE_HEAD="$(short_sha "$ACTIVATE_REMOTE_SHA")"
 
 # Pipeline audit: fail-open, budget-capped; never fail sessionStart.
-# Heading stays ### Plan audit (bootstrap tests). Store is tracked docs/plans
-# via .cursor/plans → ~/.cursor/plans. Also scans WIP + PE campaigns.
-# Archives spent root plans and inventory-landed WIP only; mixed harvestable
-# donors stay. Never mutates CAMPAIGN_SOURCE.yaml. No auto-Build.
+# Heading stays ### Plan audit (bootstrap tests). Display-only: do not pass
+# --archive-spent. Manual /l9-audit-plans or /plan-audit may mutate.
+# Store hop is .cursor/plans → ~/.cursor/plans. Also scans WIP + PE campaigns.
+# Never mutates CAMPAIGN_SOURCE.yaml. No auto-Build.
 PLAN_AUDIT_MD="pipeline audit: skipped"
 AUDIT_PY="$GC/skills/l9-pipeline-audit/scripts/audit_pipeline.py"
 if [ ! -f "$AUDIT_PY" ]; then
@@ -444,8 +444,7 @@ AUDIT_PY_BIN="$GC/.venv/bin/python"
 # shellcheck source=/dev/null
 [ -f "$GC/ops/scripts/lib/run_with_timeout.sh" ] && . "$GC/ops/scripts/lib/run_with_timeout.sh"
 [ -f "${CURSOR_PROJECT_DIR:-}/ops/scripts/lib/run_with_timeout.sh" ] && . "${CURSOR_PROJECT_DIR}/ops/scripts/lib/run_with_timeout.sh"
-# Archive gating lives in audit_pipeline.py (acquires the $GC write lock).
-ARCHIVE_ARGS=(--archive-spent)
+# Display-only. --archive-spent is opt-in on the CLI for a manual slash.
 if [ -f "$AUDIT_PY" ]; then
   PLAN_AUDIT_ERR="$(mktemp "${TMPDIR:-/tmp}/l9-plan-audit.XXXXXX")"
   if type run_with_timeout >/dev/null 2>&1; then
@@ -456,7 +455,6 @@ if [ -f "$AUDIT_PY" ]; then
         --window-days 7 \
         --format session-start \
         --budget-chars 1600 \
-        "${ARCHIVE_ARGS[@]}" \
         2>"$PLAN_AUDIT_ERR" || true
     )"
   else
@@ -467,7 +465,6 @@ if [ -f "$AUDIT_PY" ]; then
         --window-days 7 \
         --format session-start \
         --budget-chars 1600 \
-        "${ARCHIVE_ARGS[@]}" \
         2>"$PLAN_AUDIT_ERR" || true
     )"
   fi

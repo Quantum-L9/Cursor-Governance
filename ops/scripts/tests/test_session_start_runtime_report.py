@@ -431,6 +431,8 @@ class HookWiringTests(unittest.TestCase):
         text = (REPO / "ops" / "hooks" / "session_start_bootstrap.sh").read_text(encoding="utf-8")
         self.assertIn("session_start_runtime_report.py", text)
         self.assertIn("resolve_runtime_reporter", text)
+        self.assertNotIn("ARCHIVE_ARGS=(--archive-spent)", text)
+        self.assertNotIn('"${ARCHIVE_ARGS[@]}"', text)
         bootstrap = (REPO / "ops" / "scripts" / "bootstrap_agent_environment.sh").read_text(
             encoding="utf-8"
         )

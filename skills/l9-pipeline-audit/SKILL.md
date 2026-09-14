@@ -9,8 +9,8 @@ metadata:
   tags: [l9, pipeline-audit, plans, wip, campaigns, harvest]
   owner: igor_beylin
   status: active
-  version: 1.1.0
-  updated: 2026-08-29
+  version: 1.2.0
+  updated: 2026-09-14
 ---
 
 # l9-pipeline-audit
@@ -18,9 +18,9 @@ metadata:
 Sole live-queue + harvest orchestrator. Slash `/l9-pipeline-audit` (alias
 `/plan-audit`) is the explicit invoke. SessionStart runs
 `scripts/audit_pipeline.py --format session-start` (heading `### Plan audit`)
-against tracked `docs/plans` plus `WIP/` and PE campaigns. Plans, WIP, and
-campaigns share NEXT 1–3 (one slot per surface first). That path archives
-spent plans and inventory-landed WIP only.
+against the plans hop (`.cursor/plans` → `~/.cursor/plans`) plus `WIP/` and
+PE campaigns. Display-only: SessionStart must not pass `--archive-spent`.
+Plans, WIP, and campaigns share NEXT 1–3 (one slot per surface first).
 
 ## Skills this workflow calls
 
@@ -37,12 +37,12 @@ spent plans and inventory-landed WIP only.
 flip it to PE-integrated mode.
 
 Plans-store refine (fold/compile leftover todos, `harvested: true` omit) is
-`/l9-audit-plans`. SessionStart stays display-only and must not call refine.
-Omit `harvested: true` donors from the live queue.
+`/l9-audit-plans`. SessionStart stays display-only: no refine, no
+`--archive-spent`. Omit `harvested: true` donors from the live queue.
 
 ## Compact workflow
 
-1. Run `scripts/audit_pipeline.py --workspace "$(pwd)" --gov-root "$HOME/.cursor-governance" --format markdown`.
+1. Run `scripts/audit_pipeline.py --workspace "$(pwd)" --gov-root "$HOME/.cursor-governance" --format markdown --archive-spent`.
 2. List `harvestable` by surface and concern. Do not auto-shelf mixed donors.
 3. Harvest only named donors through `scripts/run_intelligence_harvest.py`.
 4. Emit compiled packets to `docs/plans/`, `WIP/<M-D-YY>/<concern>/`, or a

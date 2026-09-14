@@ -201,18 +201,14 @@ class StdoutMachineContractTests(BootstrapFixture):
         moving HOME instead: the temp HOME's clone points at this checkout, and
         every artifact the hook writes lands in the temp tree.
 
-        "Every artifact" has to be arranged, not assumed. The hook's plan audit
-        runs ``audit_pipeline.py --archive-spent``, which moves spent plans out
-        of the resolved plan store and landed WIP into ``WIP/_archived``. Both
-        roots fall back to the governance clone — this checkout — when the
-        workspace carries neither, and the machine plans store that
-        setup_workspace_symlinks.sh wires into ``<ws>/.cursor/plans`` defaults
-        to ``<gov>/docs/plans`` for a consumer workspace. Left alone, this test
-        moved tracked ``docs/plans/*.plan.md`` files into ``docs/plans/BUILT/``
-        in the checkout under test. So the store is pinned to the workspace
-        through the library's own stamp (ops/scripts/lib/cursor_plans_store.sh
-        reads ``~/.cursor/l9-plans-store`` first), the workspace gets its own
-        WIP root, and the snapshot comparison below proves the checkout is
+        "Every artifact" has to be arranged, not assumed. SessionStart plan
+        audit is display-only (no ``--archive-spent``). The machine plans store
+        that setup_workspace_symlinks.sh wires into ``<ws>/.cursor/plans``
+        still defaults to ``<gov>/docs/plans`` for a consumer workspace, so
+        the store is pinned to the workspace through the library's own stamp
+        (ops/scripts/lib/cursor_plans_store.sh reads
+        ``~/.cursor/l9-plans-store`` first), the workspace gets its own WIP
+        root, and the snapshot comparison below proves the checkout is
         untouched.
         """
         home = Path(self._tmp.name) / "home"
@@ -220,6 +216,12 @@ class StdoutMachineContractTests(BootstrapFixture):
         (home / ".cursor-governance").symlink_to(REPO)
         plans_store = self.workspace / "docs" / "plans"
         plans_store.mkdir(parents=True)
+        spent = plans_store / "spent_stay_abcd1234.plan.md"
+        spent.write_text(
+            "---\nname: spent-stay\nbuilt: true\ntodos:\n"
+            "  - id: t1\n    content: done\n    status: completed\n---\n\n# stay\n",
+            encoding="utf-8",
+        )
         (self.workspace / "WIP").mkdir()
         (home / ".cursor").mkdir()
         (home / ".cursor" / "l9-plans-store").write_text(f"{plans_store}\n", encoding="utf-8")
@@ -252,11 +254,14 @@ class StdoutMachineContractTests(BootstrapFixture):
             "the Cursor SessionStart hook wrote into the checked-out repository; the "
             "plan store, WIP root and every reconciler target must resolve to the temp tree",
         )
-        # The plan store the hook wired for this workspace is the temp one, so the
-        # archive pass — which still runs — had nowhere else to move anything.
+        # The plan store the hook wired for this workspace is the temp one.
         wired = self.workspace / ".cursor" / "plans"
         if wired.exists():
             self.assertEqual(wired.resolve(), plans_store.resolve())
+        self.assertTrue(
+            spent.is_file(),
+            "SessionStart must not move a spent plan out of the live store",
+        )
 
         render = subprocess.run(
             [str(REPO / ".venv" / "bin" / "python"), str(RENDERER)],

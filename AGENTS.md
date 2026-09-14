@@ -1641,3 +1641,18 @@ publish / post-shelf closer sentences in `FF_SHELF_WIP_PLANS_V1`,
   `verify_worktree_clean.py` as a closer.
 - Unique WIP/plans stay in the tree. Hold copies stay as backup.
   No commit. No push. No PR.
+
+<!-- SESSIONSTART_PLANS_DISPLAY_ONLY_V1 -->
+## SessionStart does not mutate plans (2026-09-14)
+
+Append-only. Supersedes only the “SessionStart may archive spent root plans”
+sentences in `L9_SESSION_PIPELINE_AUDIT_V1`. Those paragraphs stay on disk
+(additive_only). Do not fold them.
+
+- SessionStart `### Plan audit` is display-only:
+  `audit_pipeline.py --format session-start` with **no** `--archive-spent`.
+- Do not `shutil.move` plans or inventory-`landed` WIP from the hook.
+- Plans stay on the `~/.cursor/plans` hop. Manual `/l9-audit-plans` or
+  `/plan-audit` (`/l9-pipeline-audit` with `--archive-spent`) may mutate.
+- Do not invent a second kill switch. CLI `--archive-spent` stays opt-in.
+- Do not auto-Build. Do not `make campaign`.
