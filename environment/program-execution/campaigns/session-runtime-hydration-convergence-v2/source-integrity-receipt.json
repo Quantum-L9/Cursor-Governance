@@ -1,0 +1,14 @@
+{
+  "schema": "source-integrity-receipt.v1",
+  "campaign_id": "session-runtime-hydration-convergence-v2",
+  "source_file": "CAMPAIGN_SOURCE.yaml",
+  "digest_algorithm": "sha256",
+  "digest": "e5dde1cb762e77dea084f7ac4080e51dc158665c2eae8e15d6251ba71dcab707",
+  "bytes": 49886,
+  "pack_recorded_digest": "e5dde1cb762e77dea084f7ac4080e51dc158665c2eae8e15d6251ba71dcab707",
+  "pack_recorded_bytes": 49886,
+  "digest_matches_pack": true,
+  "collected_at": "2026-09-13T17:58:59+00:00",
+  "collection_method": "machine_generated_from_exact_immutable_source_bytes",
+  "producer": "campaign-source-v2-migration"
+}
