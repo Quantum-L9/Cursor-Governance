@@ -287,6 +287,10 @@ def _host_repo(tmp: Path) -> Path:
 #: *is* the temp root, and travels with the tree when a test quarantines it.
 _FIXTURE_ORIGIN = Path(".git") / "l9-test-origin.git"
 
+#: Known bytes for a tracked `.claude/settings.json`; the preservation tests
+#: compare the file byte-for-byte after cleanup.
+_TRACKED_SETTINGS = '{"permissions": {"allow": ["Bash(make pr)"]}}\n'
+
 
 def _git_init(path: Path) -> None:
     """A checkout fixture: one commit, published to a local bare ``origin``.
@@ -1731,6 +1735,95 @@ class RunCampaignTests(unittest.TestCase):
                     dest, repository_id="Quantum-L9/Cursor-Governance"
                 )
             self.assertIn("remote lineage", str(ctx.exception))
+
+    def _checkout_tracking_settings(self, dest: Path) -> str:
+        """A checkout that tracks `.claude/settings.json`, published to its origin."""
+        env = _isolated_git_env()
+        dest.mkdir()
+        _git_init(dest)
+        settings = dest / ".claude" / "settings.json"
+        settings.parent.mkdir()
+        settings.write_text(_TRACKED_SETTINGS, encoding="utf-8")
+        subprocess.run(
+            ["git", "-C", str(dest), "add", "--", ".claude/settings.json"],
+            check=True,
+            capture_output=True,
+            env=env,
+        )
+        subprocess.run(
+            ["git", *_GIT_IDENTITY, "-C", str(dest), "commit", "-qm", "track settings"],
+            check=True,
+            env=env,
+        )
+        return _git_publish(dest)
+
+    def test_strip_session_residue_keeps_tracked_settings_and_removes_untracked(self) -> None:
+        """P-PE-TRACKED-CONFIG at the campaign-side cleanup site."""
+        with tempfile.TemporaryDirectory() as raw:
+            dest = Path(raw) / "target"
+            self._checkout_tracking_settings(dest)
+            settings = dest / ".claude" / "settings.json"
+            commands = dest / ".claude" / "commands"
+            commands.mkdir()
+            (commands / "session.md").write_text("residue\n", encoding="utf-8")
+            receipts = dest / ".l9" / "memory" / "receipts"
+            receipts.mkdir(parents=True)
+            (receipts / "unknown-agent__1.json").write_text("{}\n", encoding="utf-8")
+
+            self.mod.strip_session_residue(dest)
+
+            self.assertEqual(settings.read_text(encoding="utf-8"), _TRACKED_SETTINGS)
+            self.assertFalse(commands.exists())
+            self.assertFalse((receipts / "unknown-agent__1.json").exists())
+            self.assertFalse(self.mod.has_foreign_session_residue(dest))
+            self.assertFalse(self.mod.is_dirty(dest))
+
+    def test_untracked_settings_file_is_still_residue(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            dest = Path(raw) / "target"
+            dest.mkdir()
+            _git_init(dest)
+            settings = dest / ".claude" / "settings.json"
+            settings.parent.mkdir()
+            settings.write_text('{"untracked": true}\n', encoding="utf-8")
+            self.assertTrue(self.mod.has_foreign_session_residue(dest))
+            self.mod.strip_session_residue(dest)
+            self.assertFalse(settings.exists())
+            self.assertFalse(self.mod.has_foreign_session_residue(dest))
+
+    def test_existing_checkout_with_tracked_settings_is_reused_not_quarantined(self) -> None:
+        """Re-preparing a checkout that tracks its settings must not quarantine it.
+
+        Deleting the tracked file made the tree dirty, which sent the whole
+        checkout to `stale/` and re-cloned it on every campaign run.
+        """
+        with tempfile.TemporaryDirectory() as raw:
+            temp = Path(raw)
+            dest = temp / "target"
+            tip = self._checkout_tracking_settings(dest)
+            settings = dest / ".claude" / "settings.json"
+            commands = dest / ".claude" / "commands"
+            commands.mkdir()
+            (commands / "session.md").write_text("residue\n", encoding="utf-8")
+            with patch.dict(
+                os.environ,
+                _github_redirect("Quantum-L9/Cursor-Governance", dest / _FIXTURE_ORIGIN),
+            ):
+                got = self.mod.default_ensure_target_checkout(dest, "Quantum-L9/Cursor-Governance")
+
+            self.assertEqual(got, dest.resolve())
+            self.assertEqual(list((temp / "stale").glob("target-*")), [])
+            self.assertEqual(settings.read_text(encoding="utf-8"), _TRACKED_SETTINGS)
+            self.assertFalse(commands.exists())
+            self.assertFalse(self.mod.is_dirty(dest))
+            head = subprocess.run(
+                ["git", "-C", str(dest), "rev-parse", "HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=_isolated_git_env(),
+            ).stdout.strip()
+            self.assertEqual(head, tip)
 
     def test_integration_branch_starts_from_origin_staging_not_dirty_head(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

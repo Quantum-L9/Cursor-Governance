@@ -610,30 +610,63 @@ KNOWN_REMOTE_DEFAULT_BRANCHES = {
 }
 
 
+def proven_untracked(repo: Path, path: Path) -> bool:
+    """True only when git proves nothing under ``path`` is tracked in ``repo``.
+
+    Residue is decided by provenance, not by pathname: Cursor-Governance tracks
+    `.claude/settings.json` itself, and that is the same regular-file shape
+    SessionStart writes into a consumer checkout. ``ls-files --error-unmatch``
+    exits 1 when the pathspec matches no tracked file (a directory pathspec
+    matches every tracked file below it). Tracked (0) or git unable to answer
+    (128) both keep the path: cleanup destroys, so an unproven target stays.
+    """
+    try:
+        rel = path.relative_to(repo)
+    except ValueError:
+        return False
+    result = run_cmd(
+        ["git", "-C", str(repo), "ls-files", "--error-unmatch", "--", str(rel)],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    return result.returncode == 1
+
+
 def has_foreign_session_residue(repo: Path) -> bool:
-    """SessionStart / concurrent-agent files that porcelain can miss when ignored."""
+    """SessionStart / concurrent-agent files that porcelain can miss when ignored.
+
+    A tracked `.claude/settings.json` is repository configuration, not residue;
+    flagging it quarantined every Cursor-Governance target on every reuse.
+    """
     settings = repo / ".claude" / "settings.json"
-    if settings.is_file() and not settings.is_symlink():
+    if settings.is_file() and not settings.is_symlink() and proven_untracked(repo, settings):
         return True
     receipts = repo / ".l9" / "memory" / "receipts"
-    return receipts.is_dir() and any(receipts.glob("unknown-agent__*.json"))
+    return receipts.is_dir() and any(
+        proven_untracked(repo, path) for path in receipts.glob("unknown-agent__*.json")
+    )
 
 
 def strip_session_residue(repo: Path) -> None:
-    """Remove SessionStart churn so an exclusive PE tree can stay isolated."""
+    """Remove SessionStart churn so an exclusive PE tree can stay isolated.
+
+    Only paths git proves untracked are removed; a tracked settings file is
+    left byte-for-byte so the checkout is neither dirtied nor quarantined.
+    """
     claude = repo / ".claude"
     if claude.is_dir():
         settings = claude / "settings.json"
-        if settings.is_file() and not settings.is_symlink():
+        if settings.is_file() and not settings.is_symlink() and proven_untracked(repo, settings):
             settings.unlink()
         for name in ("commands", "skills"):
             target = claude / name
-            if target.is_dir() and not target.is_symlink():
+            if target.is_dir() and not target.is_symlink() and proven_untracked(repo, target):
                 shutil.rmtree(target)
     receipts = repo / ".l9" / "memory" / "receipts"
     if receipts.is_dir():
         for path in receipts.glob("unknown-agent__*.json"):
-            path.unlink()
+            if proven_untracked(repo, path):
+                path.unlink()
 
 
 def normalize_remote_ref(value: str) -> str:

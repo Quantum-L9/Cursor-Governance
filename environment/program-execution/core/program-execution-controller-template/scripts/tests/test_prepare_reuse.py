@@ -6,11 +6,116 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from helpers import bootstrap_repo, cleanup_worktree, register_contract, run_cli
+from helpers import (
+    bootstrap_repo,
+    cleanup_worktree,
+    make_blueprint,
+    make_repo,
+    register_contract,
+    run_cli,
+)
+
+TRACKED_SETTINGS = '{"permissions": {"allow": ["Bash(make pr)"]}}\n'
+
+
+def _git(repo: Path, *args: str) -> str:
+    return subprocess.run(
+        ["git", "-C", str(repo), *args],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+
+
+def _bootstrap_repo_tracking_settings(temp: Path) -> tuple[Path, Path]:
+    """Like `bootstrap_repo`, but the repository tracks `.claude/settings.json`.
+
+    The commit lands before reconcile so the lease base carries the file — the
+    shape of a Cursor-Governance checkout, which tracks that exact path.
+    """
+    blueprint = make_blueprint(temp / "blueprint")
+    repo = make_repo(temp / "repo")
+    settings = repo / ".claude" / "settings.json"
+    settings.parent.mkdir(parents=True)
+    settings.write_text(TRACKED_SETTINGS, encoding="utf-8")
+    _git(repo, "add", "--", ".claude/settings.json")
+    _git(repo, "commit", "-qm", "track claude settings")
+    workspace = temp / "runtime"
+    run_cli("bootstrap", "--workspace", str(workspace), "--blueprint", str(blueprint))
+    run_cli("reconcile", "--workspace", str(workspace), "--repository", f"repo-a={repo}")
+    return repo, workspace
 
 
 class PrepareReuseTest(unittest.TestCase):
     """A stopped campaign leaves its task worktree behind; prepare must reuse it."""
+
+    def test_prepare_reuse_keeps_tracked_settings_and_still_strips_residue(self) -> None:
+        """P-PE-TRACKED-CONFIG: tracked `.claude/settings.json` survives a re-prepare.
+
+        Residue was inferred from the pathname, so a re-prepare of a worktree
+        whose repository tracks `.claude/settings.json` deleted the tracked
+        file and left an unrelated deletion in the task diff. Provenance now
+        decides: the tracked file stays byte-for-byte while untracked residue
+        beside it is still removed.
+        """
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            repo, workspace = _bootstrap_repo_tracking_settings(temp)
+            register_contract(temp, workspace)
+            lease = run_cli(
+                "claim", "TASK-001", "--workspace", str(workspace), "--holder", "worker"
+            )
+            worktree = workspace / "worktrees" / "TASK-001"
+            _git(repo, "worktree", "add", "-b", lease["branch"], str(worktree), lease["base_sha"])
+            settings = worktree / ".claude" / "settings.json"
+            self.assertEqual(settings.read_text(encoding="utf-8"), TRACKED_SETTINGS)
+            # Untracked residue beside the tracked file: SessionStart output.
+            commands = worktree / ".claude" / "commands"
+            commands.mkdir()
+            (commands / "session.md").write_text("residue\n", encoding="utf-8")
+            receipts = worktree / ".l9" / "memory" / "receipts"
+            receipts.mkdir(parents=True)
+            (receipts / "unknown-agent__1.json").write_text("{}\n", encoding="utf-8")
+
+            prepared = run_cli("prepare", "TASK-001", "--workspace", str(workspace))
+
+            self.assertTrue(prepared["reused"])
+            self.assertFalse(prepared["recovered"])
+            self.assertEqual(Path(prepared["worktree"]), worktree)
+            self.assertTrue(settings.is_file())
+            self.assertFalse(settings.is_symlink())
+            self.assertEqual(settings.read_text(encoding="utf-8"), TRACKED_SETTINGS)
+            self.assertEqual(_git(worktree, "status", "--porcelain").strip(), "")
+            self.assertEqual(
+                _git(worktree, "ls-files", "--", ".claude/settings.json").strip(),
+                ".claude/settings.json",
+            )
+            self.assertFalse(commands.exists())
+            self.assertFalse((receipts / "unknown-agent__1.json").exists())
+            cleanup_worktree(repo, workspace)
+
+    def test_prepare_reuse_still_strips_an_untracked_settings_file(self) -> None:
+        """The residue contract holds: an untracked regular settings file goes."""
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            _, repo, workspace = bootstrap_repo(temp)
+            register_contract(temp, workspace)
+            lease = run_cli(
+                "claim", "TASK-001", "--workspace", str(workspace), "--holder", "worker"
+            )
+            worktree = workspace / "worktrees" / "TASK-001"
+            _git(repo, "worktree", "add", "-b", lease["branch"], str(worktree), lease["base_sha"])
+            settings = worktree / ".claude" / "settings.json"
+            settings.parent.mkdir(parents=True)
+            settings.write_text('{"untracked": true}\n', encoding="utf-8")
+            self.assertEqual(_git(worktree, "ls-files", "--", ".claude/settings.json").strip(), "")
+
+            prepared = run_cli("prepare", "TASK-001", "--workspace", str(workspace))
+
+            self.assertTrue(prepared["reused"])
+            self.assertFalse(settings.exists())
+            self.assertEqual(_git(worktree, "status", "--porcelain").strip(), "")
+            cleanup_worktree(repo, workspace)
 
     def test_prepare_reuses_worktree_matching_the_lease(self) -> None:
         with TemporaryDirectory() as raw:

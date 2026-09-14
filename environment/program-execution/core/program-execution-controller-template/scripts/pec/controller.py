@@ -1747,6 +1747,24 @@ def _add_task_worktree(
     )
 
 
+def _proven_untracked(worktree: Path, path: Path) -> bool:
+    """True only when git proves nothing under ``path`` is tracked in ``worktree``.
+
+    Residue cleanup destroys, so provenance is decided by the index, not by the
+    pathname: this repository itself tracks `.claude/settings.json`, and the
+    same regular-file shape is what SessionStart writes into a consumer
+    worktree. ``ls-files --error-unmatch`` exits 1 when the pathspec matches no
+    tracked file (a directory pathspec matches every tracked file below it).
+    Any other answer — tracked (0) or git unable to say (128) — keeps the path.
+    """
+    try:
+        rel = path.relative_to(worktree)
+    except ValueError:
+        return False
+    result = run_git(worktree, "ls-files", "--error-unmatch", "--", str(rel), check=False)
+    return result.returncode == 1
+
+
 def _strip_session_residue(worktree: Path) -> None:
     """Remove concurrent-SessionStart churn from an exclusive task worktree.
 
@@ -1754,20 +1772,29 @@ def _strip_session_residue(worktree: Path) -> None:
     human session opened against the same directory still writes these. They are
     never task output, so removing them keeps the tree reusable without touching
     the attempt's own changes.
+
+    Only paths git proves untracked are residue. A tracked `.claude/settings.json`
+    is repository configuration: deleting it left an unrelated deletion in the
+    task diff every time a Cursor-Governance worktree was prepared again.
     """
     claude = worktree / ".claude"
     if claude.is_dir():
         settings = claude / "settings.json"
-        if settings.is_file() and not settings.is_symlink():
+        if (
+            settings.is_file()
+            and not settings.is_symlink()
+            and _proven_untracked(worktree, settings)
+        ):
             settings.unlink()
         for name in ("commands", "skills"):
             target = claude / name
-            if target.is_dir() and not target.is_symlink():
+            if target.is_dir() and not target.is_symlink() and _proven_untracked(worktree, target):
                 shutil.rmtree(target)
     receipts = worktree / ".l9" / "memory" / "receipts"
     if receipts.is_dir():
         for path in receipts.glob("unknown-agent__*.json"):
-            path.unlink()
+            if _proven_untracked(worktree, path):
+                path.unlink()
 
 
 def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
