@@ -1575,3 +1575,24 @@ Two companions from the same audit: the L4 release receipt binds the exact
 HEAD sha it attested (a later commit voids it; the phase file alone authorizes
 nothing), and `make pr` push recovery re-runs the gate and
 `l4_local.py extend-release` on the merged tree before it retries a push.
+
+<!-- ZERO_FRICTION_AUTO_WIRE_V1 -->
+## SessionStart auto-wires links; `/wire` is exhausted-repair fallback (2026-09-13)
+
+Append-only. Does not rewrite §2.1 steps.
+
+- SessionStart (`ops/hooks/session_start_bootstrap.sh`) realpath-validates
+  `.cursor-commands` (consumers only), `.cursor/plans`, and
+  `~/.cursor/plugins/local/l9-governance` via
+  `ops/scripts/lib/workspace_link_health.sh` + `classify_workspace_kind`.
+  Unhealthy links call `ensure_workspace_wired.sh` with `L9_WIRE_LINKS_ONLY=1`.
+  A failed `check_governance_wiring.sh` gets one links-only retry before the
+  report names `/wire` / `wire_governance_workspace.sh`.
+- `ssot` / `ssot_checkout` must not demand `.cursor-commands`.
+- First machine is `make cursor-install` or `make start` (chicken-egg clone
+  already in bootstrap). A clone alone does not register hooks. Do not add a
+  fourth installer script.
+- Cursor SessionStart still must not run Claude projection
+  (`CURSOR_SESSIONSTART_NO_CLAUDE_CLOUD_V1`).
+- `/wire` (`commands/wire.md`) is the last-resort full setup after auto-repair
+  is exhausted — not the day-to-day path.

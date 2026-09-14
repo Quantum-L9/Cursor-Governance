@@ -31,6 +31,12 @@ except ImportError:  # pragma: no cover - PyYAML is a hard dependency of the gat
     yaml = None  # type: ignore[assignment]
 
 CAMPAIGN_SOURCE_SCHEMA = "l9.program-execution.campaign-source.v2"
+LEGACY_CAMPAIGN_SCHEMAS = frozenset(
+    {
+        "l9.quantum/campaign-source/v1",
+        "l9.quantum/campaign-pack/v1",
+    }
+)
 PROGRAM_INTENT_SCHEMA = "program-execution.intent.v1"
 ARCHITECTURE_INTENT_SCHEMA = "l9.program-execution.architecture-intent.v1"
 FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*(?:\n|\Z)", re.S)
@@ -49,6 +55,7 @@ class CampaignInputKind(Enum):
     PLAN = "plan"
     ACTIVATE = "activate"
     CAMPAIGN_SOURCE_V2 = "campaign-source.v2"
+    LEGACY_CAMPAIGN_V1 = "campaign-source.v1"
     ARCHITECTURE_INTENT_V1 = "architecture-intent.v1"
     PROGRAM_INTENT_V1 = "program-execution.intent.v1"
     UNKNOWN = "unknown"
@@ -302,7 +309,7 @@ def _is_plan_intent(doc: dict[str, Any] | None) -> bool:
     schema = str(doc.get("schema") or "").strip()
     if schema in {ARCHITECTURE_INTENT_SCHEMA, PROGRAM_INTENT_SCHEMA}:
         return False
-    if schema == CAMPAIGN_SOURCE_SCHEMA or schema.endswith("campaign-source.v2"):
+    if schema == CAMPAIGN_SOURCE_SCHEMA or schema in LEGACY_CAMPAIGN_SCHEMAS:
         return False
     todos = doc.get("todos")
     if not isinstance(todos, list) or not todos:
@@ -459,6 +466,14 @@ def classify(path: Path) -> Classification:
             )
         return Classification(kind=CampaignInputKind.UNKNOWN, path=path, reason=parse_error)
     schema = str(doc.get("schema") or "").strip()
+    if schema in LEGACY_CAMPAIGN_SCHEMAS:
+        return Classification(
+            kind=CampaignInputKind.LEGACY_CAMPAIGN_V1,
+            path=path,
+            schema=schema,
+            document=doc,
+            reason="legacy campaign-source.v1 and campaign-pack.v1 inputs are retired",
+        )
     if schema == ARCHITECTURE_INTENT_SCHEMA:
         return Classification(
             kind=CampaignInputKind.ARCHITECTURE_INTENT_V1,
@@ -467,15 +482,37 @@ def classify(path: Path) -> Classification:
             document=doc,
             admission="declared",
         )
-    if schema == CAMPAIGN_SOURCE_SCHEMA or schema.endswith("campaign-source.v2"):
+    if schema == CAMPAIGN_SOURCE_SCHEMA:
         return Classification(
             kind=CampaignInputKind.CAMPAIGN_SOURCE_V2, path=path, schema=schema, document=doc
+        )
+    if schema.endswith("campaign-source.v2"):
+        return Classification(
+            kind=CampaignInputKind.UNKNOWN,
+            path=path,
+            schema=schema,
+            document=doc,
+            reason=(
+                f"noncanonical campaign-source schema {schema!r}; only "
+                f"{CAMPAIGN_SOURCE_SCHEMA!r} is accepted"
+            ),
         )
     if schema == PROGRAM_INTENT_SCHEMA:
         return Classification(
             kind=CampaignInputKind.PROGRAM_INTENT_V1, path=path, schema=schema, document=doc
         )
     if _is_activate_seed(doc):
+        if schema:
+            return Classification(
+                kind=CampaignInputKind.UNKNOWN,
+                path=path,
+                schema=schema,
+                document=doc,
+                reason=(
+                    "activate seeds must not declare a schema; declared schemas are "
+                    "routed only by their explicit contract"
+                ),
+            )
         return Classification(
             kind=CampaignInputKind.ACTIVATE, path=path, schema=schema, document=doc
         )
@@ -624,6 +661,23 @@ def preflight(classification: Classification) -> list[str]:
 
 def reject(classification: Classification) -> CampaignInputRejected:
     """Build the terminal refusal for an unsupported classification."""
+    if classification.kind is CampaignInputKind.LEGACY_CAMPAIGN_V1:
+        return CampaignInputRejected(
+            detected=classification.kind,
+            schema=classification.schema,
+            path=classification.path,
+            reason=(
+                f"{classification.schema} is retired and is never converted through the "
+                "activate-seed route"
+            ),
+            fix=(
+                "Author a complete canonical campaign source with "
+                f"schema: {CAMPAIGN_SOURCE_SCHEMA} from "
+                "environment/program-execution/templates/campaign-source-v2/"
+                "CAMPAIGN_SOURCE.yaml, then run make campaign-check-input. "
+                "Do not invoke private compiler or PEC stages to migrate a legacy pack."
+            ),
+        )
     if classification.kind is CampaignInputKind.PROGRAM_INTENT_V1:
         return CampaignInputRejected(
             detected=classification.kind,

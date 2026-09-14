@@ -9,12 +9,18 @@ the binder can prove in place.
 This module does not invent a digest: it refuses unless ``uv.lock`` and
 ``release_evidence.artifact_sha256`` agree, then asks pip to record that
 hash.
+
+It runs inside SessionStart (``ensure_uv_environment.sh``) and ``make venv``,
+so every subprocess it spawns is bounded by a timeout, reads no terminal, and
+maps a timeout or a launch failure to a nonzero result with the reason on
+stderr — a hung pip must not hang the bootstrap.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import tomllib
@@ -23,6 +29,23 @@ from pathlib import Path
 from ops.memory.runtime_binding import BindingManifest
 
 _DIRECT_URL = "direct_url.json"
+
+# Seconds. The probe asks an interpreter for sys.prefix or pip for its version;
+# the bootstrap runs ensurepip; the install downloads one wheel and reinstalls
+# it without dependencies.
+PROBE_TIMEOUT_S = 30
+BOOTSTRAP_TIMEOUT_S = 120
+INSTALL_TIMEOUT_S = 300
+
+# Exit codes a bounded run synthesizes when the child never produced one.
+TIMEOUT_RC = 124
+LAUNCH_FAILURE_RC = 127
+
+# pip must never wait on a terminal here: no prompts, no version nag.
+_NONINTERACTIVE_ENV = {
+    "PIP_NO_INPUT": "1",
+    "PIP_DISABLE_PIP_VERSION_CHECK": "1",
+}
 
 
 def _dist_info_name(version: str) -> str:
@@ -58,6 +81,46 @@ def _installed_direct_url(site_packages: Path, version: str) -> dict[str, object
     return payload if isinstance(payload, dict) else None
 
 
+def _run(
+    cmd: list[str],
+    *,
+    timeout: float,
+    cwd: Path | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """Run ``cmd`` bounded and noninteractive; never raise for the child.
+
+    argv list, never a shell string. stdin is closed so nothing can prompt.
+    A timeout or a launch failure comes back as a ``CompletedProcess`` with a
+    synthesized nonzero ``returncode`` and the reason in ``stderr``, so every
+    caller handles one shape and reports one actionable line.
+    """
+
+    env = {**os.environ, **_NONINTERACTIVE_ENV}
+    try:
+        return subprocess.run(
+            cmd,
+            cwd=str(cwd) if cwd is not None else None,
+            check=False,
+            capture_output=True,
+            text=True,
+            stdin=subprocess.DEVNULL,
+            timeout=timeout,
+            env=env,
+        )
+    except subprocess.TimeoutExpired:
+        return subprocess.CompletedProcess(
+            cmd, TIMEOUT_RC, "", f"timed out after {timeout:g}s: {' '.join(cmd[:4])}"
+        )
+    except OSError as exc:
+        return subprocess.CompletedProcess(
+            cmd, LAUNCH_FAILURE_RC, "", f"failed to start {cmd[0]}: {exc}"
+        )
+
+
+def _detail(completed: subprocess.CompletedProcess[str]) -> str:
+    return (completed.stderr or completed.stdout or "").strip()[:400]
+
+
 def _prefix(interpreter: Path) -> Path:
     """The environment prefix the interpreter serves, not the resolved binary.
 
@@ -65,15 +128,14 @@ def _prefix(interpreter: Path) -> Path:
     follows it and would look for dist-info under the toolchain, not the venv.
     """
 
-    completed = subprocess.run(  # noqa: S603
+    completed = _run(
         [str(interpreter), "-c", "import sys; print(sys.prefix)"],
-        check=False,
-        capture_output=True,
-        text=True,
+        timeout=PROBE_TIMEOUT_S,
     )
     prefix = (completed.stdout or "").strip()
     if completed.returncode != 0 or not prefix:
-        raise RuntimeError(f"{interpreter} did not report sys.prefix")
+        reason = _detail(completed) or f"exit {completed.returncode}"
+        raise RuntimeError(f"{interpreter} did not report sys.prefix: {reason}")
     return Path(prefix)
 
 
@@ -107,22 +169,20 @@ def already_sealed(interpreter: Path, expected_sha256: str, version: str) -> boo
     return _hash_from_direct_url(direct) == expected_sha256
 
 
-def _ensure_pip(python: Path) -> int:
-    probe = subprocess.run(  # noqa: S603
-        [str(python), "-m", "pip", "--version"],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
+def _ensure_pip(python: Path) -> subprocess.CompletedProcess[str]:
+    """Make ``python -m pip`` answer; bootstrap it with ensurepip if it does not.
+
+    Returns the last bounded run: the probe when pip already answers, else the
+    ensurepip bootstrap. A nonzero ``returncode`` carries the reason.
+    """
+
+    probe = _run([str(python), "-m", "pip", "--version"], timeout=PROBE_TIMEOUT_S)
     if probe.returncode == 0:
-        return 0
-    bootstrap = subprocess.run(  # noqa: S603
+        return probe
+    return _run(
         [str(python), "-m", "ensurepip", "--upgrade"],
-        check=False,
-        capture_output=True,
-        text=True,
+        timeout=BOOTSTRAP_TIMEOUT_S,
     )
-    return bootstrap.returncode
 
 
 def seal(
@@ -137,7 +197,11 @@ def seal(
     if not expected:
         print("seal: manifest records no artifact_sha256", file=sys.stderr)
         return 2
-    url, lock_digest = _lock_wheel(root / "uv.lock", manifest.distribution)
+    try:
+        url, lock_digest = _lock_wheel(root / "uv.lock", manifest.distribution)
+    except (OSError, ValueError, tomllib.TOMLDecodeError) as exc:
+        print(f"seal: cannot read the lockfile wheel: {exc}", file=sys.stderr)
+        return 2
     if lock_digest != expected:
         print(
             f"seal: uv.lock digest {lock_digest} is not release_evidence.artifact_sha256 "
@@ -149,14 +213,25 @@ def seal(
     if not python.is_file():
         print(f"seal: interpreter missing: {python}", file=sys.stderr)
         return 2
-    if already_sealed(python, expected, manifest.expected_package_version):
+    version = manifest.expected_package_version
+    try:
+        sealed = already_sealed(python, expected, version)
+    except (RuntimeError, FileNotFoundError) as exc:
+        print(f"seal: cannot inspect the locked interpreter: {exc}", file=sys.stderr)
+        return 1
+    if sealed:
         print(f"seal: already exact ({expected[:12]}…)", file=sys.stderr)
         return 0
     if check_only:
         print("seal: PEP 610 archive hash is missing", file=sys.stderr)
         return 1
-    if _ensure_pip(python) != 0:
-        print("seal: pip is not available in the locked interpreter", file=sys.stderr)
+    pip_ready = _ensure_pip(python)
+    if pip_ready.returncode != 0:
+        print(
+            "seal: pip is not available in the locked interpreter: "
+            f"{_detail(pip_ready) or f'exit {pip_ready.returncode}'}",
+            file=sys.stderr,
+        )
         return 1
     hashed = f"{url}#sha256={expected}"
     cmd = [
@@ -164,26 +239,24 @@ def seal(
         "-m",
         "pip",
         "install",
+        "--no-input",
         "--no-deps",
         "--force-reinstall",
         hashed,
     ]
-    try:
-        completed = subprocess.run(  # noqa: S603 - argv list, never a shell string
-            cmd,
-            cwd=str(root),
-            check=False,
-            capture_output=True,
-            text=True,
-        )
-    except OSError as exc:
-        print(f"seal: pip install failed to start: {exc}", file=sys.stderr)
-        return 1
+    completed = _run(cmd, timeout=INSTALL_TIMEOUT_S, cwd=root)
     if completed.returncode != 0:
-        err = (completed.stderr or completed.stdout or "").strip()[:400]
-        print(f"seal: pip install failed: {err}", file=sys.stderr)
+        print(
+            f"seal: pip install failed: {_detail(completed) or f'exit {completed.returncode}'}",
+            file=sys.stderr,
+        )
         return 1
-    if not already_sealed(python, expected, manifest.expected_package_version):
+    try:
+        sealed = already_sealed(python, expected, version)
+    except (RuntimeError, FileNotFoundError) as exc:
+        print(f"seal: install finished but the interpreter is unreadable: {exc}", file=sys.stderr)
+        return 1
+    if not sealed:
         print("seal: install finished but PEP 610 hash is still missing", file=sys.stderr)
         return 1
     print(f"seal: recorded PEP 610 hash {expected[:12]}…", file=sys.stderr)

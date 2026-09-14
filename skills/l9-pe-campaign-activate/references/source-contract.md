@@ -3,111 +3,97 @@ l9_schema: 1
 parent: l9-pe-campaign-activate
 layer: reference
 role: source_contract
-tags: [campaign, intent, schema, pe]
+tags: [campaign, intent, schema, campaign-source-v2, pe]
 owner: igor_beylin
 status: active
-version: 1.0.0
-updated: 2026-08-15
+version: 1.1.0
+updated: 2026-09-13
 /L9_META -->
 
-# Intent and seed contract
+# Campaign input and source contract
 
-Purpose: minimum inputs this skill accepts, and the seed fields it must emit
-so `compile_campaign_source.py` can succeed.
+Use `make campaign INTENT=<path>` as the only live Program Execution campaign
+front door. It classifies the input before choosing a compiler. Do not override
+the classifier or invoke PEC and inner compiler scripts as a substitute.
 
-## Operator input (memo or activate YAML)
+## Accepted input forms
 
-The public entry is always `make campaign INTENT=<path>`. It classifies the
-document before choosing a compiler. Explicit structured schemas/seed shapes
-take precedence; architecture-grade prose is deterministically admitted as
-Architecture Intent without source mutation; only remaining memo traffic enters
-the brief compiler.
+| Input | Use when | Route |
+|---|---|---|
+| Complete `campaign-source.v2` YAML | Campaign semantics are already fully specified. Start from the canonical template. | `campaign_source → blueprint → PEC` |
+| Architecture intent | The source is rich architecture prose. | `architecture → campaign_source → blueprint → PEC` |
+| Activate YAML | The user intentionally supplied the compact seed shape. | `activate → campaign_source → blueprint → PEC` |
+| Plan | The user supplied a supported plan representation. | `plan → activate → campaign_source → blueprint → PEC` |
+| Brief | The user supplied a free-form memo with numbered work items. | `brief → activate → campaign_source → blueprint → PEC` |
 
-Architecture prose therefore does **not** require numbered release blocks and
-must never be rebuilt through brief → activate. `make campaign-architecture`
-is compatibility syntax for the same classifier, not a representation override.
+The direct template source of truth is
+`environment/program-execution/templates/campaign-source-v2/CAMPAIGN_SOURCE.yaml`.
+Read [canonical-template.md](canonical-template.md) before authoring a direct
+source. Direct input preserves complete source semantics; the runner serializes it
+into the isolated campaign worktree before compilation.
 
-For a classifier-selected free-form program brief (`.md`), `make campaign INTENT=brief.md`
-assigns `campaign_id` from the filename slug (`PE- Memory.md` → `pe-memory`,
-then `-v2` on collision). You do not write a campaign id or a PE schema.
+`l9.quantum/campaign-source/v1` and `l9.quantum/campaign-pack/v1` are retired.
+The front door rejects either declaration before it can fall through to activate
+seed handling. Preserve their immutable evidence under
+`environment/program-execution/archive/campaign-input-v1/`; never convert a
+retired artifact in place or call private compiler/PEC stages to bypass rejection.
 
-The brief compiler (`scripts/compile_brief.py`) extracts:
+Architecture prose must not be rebuilt through brief → activate merely because it
+lacks frontmatter. A classifier-selected free-form brief fails closed when it has
+no numbered work items; do not invent tasks.
 
-- tasks from numbered `Release A — …` blocks, else a `Program ordering` list
-- objective from `It is:` under Final architectural judgment (not an earlier `It is:`)
-- `problem_statement` = the full memo
-- target = github-shaped `owner/repo` (hyphen or `github.com/…`), else
-  `Quantum-L9/Cursor-Governance` (`TARGET=` override). Slash-noise like
-  `MCP/API` is not a repo.
+## Complete direct campaign source
 
-It fails closed if there are no numbered work items. It does not invent tasks.
-Generated seed lands in `$HOME/.l9/primed/<id>.activate.yaml`, never as
-`INTENT.yaml` under `campaigns/<id>/`.
+The direct source must declare:
 
-Optional power-user activate YAML (passthrough):
+- `schema: l9.program-execution.campaign-source.v2` and `schema_version: 2.0.0`
+- matching `metadata.campaign_id` and `program.id`, plus title, owner, and draft
+  definition state
+- a target with an accepted adapter, repository identity, and current binding facts
+- authorities, evidence requirements, workstreams, waves, top-level dependency
+  edges, tasks, gates, risks, and prohibited paths
+- every task's ready/blocked/cancelled/superseded definition status, objective,
+  actions, acceptance statement, target/workstream/wave bindings, authority
+  basis, negative cases, rollback, risk, and completion gates
+- explicit writable paths and an admissible terminal validation for each mutable
+  `repo_local` task
+- remote-action ceilings restricted to `false`
+
+Keep `metadata.status: operator_intake` and `program.definition_status: draft`
+until the controller has collected and bound required evidence. Do not leave
+placeholder markers, task-local dependency fields, or unverified example facts.
+
+## Activate YAML alternative
+
+Use compact activate YAML only when the input is intentionally a seed rather than
+a complete direct source:
 
 ```yaml
-campaign_id: kebab-case-id          # required only for this YAML form
-title: Human title                  # required
-objective: One paragraph            # required
-owner: Quantum AI Partners          # canonical PE default; explicit owner may override
+campaign_id: kebab-case-id
+title: Human title
+objective: One paragraph
+owner: Quantum AI Partners
 target:
   repository_id: Quantum-L9/Cursor-Governance
   source_of_truth: environment/program-execution
   adapter: git
-tasks:                              # required, ≥1
+tasks:
   - title: Lock current state
     objective: ...
-    paths: []                       # optional include paths
+    paths: []
 ```
 
-`scripts/compile_activation_files.py` fills PE-required defaults
-(`problem_statement`, `target_state`, `scope`, `authority_order`,
-`operating_rules`, `terminal_verdicts`, authorities, workstreams, waves,
-gates, task rollback/risk/acceptance). Do not invent extra seed sections.
+`scripts/compile_activation_files.py` fills the required campaign-source defaults.
+Do not add invented seed sections. The compiler will write the emitted source and
+integrity receipt in the isolated worktree.
 
-## Seed fields the PE compiler requires
+## Preflight and receipt
 
-Schema required (`core/shared/schemas/campaign-source.schema.json`):
-
-- `schema: l9.program-execution.campaign-source.v2`
-- `schema_version: 2.0.0`
-- `metadata.campaign_id`, `metadata.title`
-- `program.id`, `program.name`, `program.definition_status`
-
-Compiler-admissible (or compile raises):
-
-- `program.owner`, `objective`, `problem_statement`, `target_state`, `scope`
-- `program.authority_order`, `operating_rules`, `terminal_verdicts`
-- `targets[]` with `id` + `adapter` in `{git, git_repo_adapter, controller}`
-- `authorities[]` with `id`, `responsibility`, `owner`
-- each task: `definition_status` in `{ready, blocked, cancelled, superseded}`
-- each task: `title`, `objective`, `actions`, `acceptance[0].statement`,
-  `workstream_id`, `wave_id`, `target_id`, `execution_kind`,
-  `authority_basis_ids`, `negative_cases`, `rollback`, `risk`,
-  `completion_gate_ids`
-- decisions, if present, must include non-empty `options`
-
-`metadata.status` stays `operator_intake`. `program.definition_status` stays
-`draft` until evidence exists. The PE compiler itself rewrites compiled
-`PROGRAM.yaml` to `draft`.
-
-## Integrity receipt
-
-```json
-{
-  "schema": "source-integrity-receipt.v1",
-  "campaign_id": "<id>",
-  "source_file": "CAMPAIGN_SOURCE.yaml",
-  "digest_algorithm": "sha256",
-  "digest": "<hex>",
-  "bytes": 0,
-  "pack_recorded_digest": "<hex>",
-  "pack_recorded_bytes": 0,
-  "digest_matches_pack": true,
-  "producer": "l9-pe-campaign-activate"
-}
+```bash
+make campaign-check-input INTENT=path/to/input
 ```
 
-After the receipt is written, do not hand-edit `CAMPAIGN_SOURCE.yaml`.
-Re-run the compiler instead.
+The direct route emits `source-integrity-receipt.json` after source placement.
+Do not hand-edit the emitted `CAMPAIGN_SOURCE.yaml` after its receipt exists;
+change the original authoring source and re-run the front door. Campaign IDs are
+not preregistered: schema and semantic preflight are the only admission boundary.

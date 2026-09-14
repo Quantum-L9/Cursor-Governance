@@ -1,14 +1,14 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-09-13T03:53:49Z'
+generated_utc: '2026-09-14T03:38:23Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:c6e4fbd650a119171e269069e802c80c4eccda19b316402f8b29199c2b90e401
+source_tree_digest: sha256:0ae3f57c58c46d6f4420178983cbcdba76455ba2a21b5c6cadb996c49f0c9485
 summary:
-  total_mdc_files: 70
+  total_mdc_files: 69
   always_apply_true: 35
-  always_apply_false: 35
+  always_apply_false: 34
   no_boolean_always_apply: 0
-  explicit_rule_ids: 69
+  explicit_rule_ids: 68
   derived_rule_ids: 1
   deprecated_rules: 0
 rules:
@@ -341,29 +341,6 @@ rules:
   has_yaml_frontmatter: true
   line_count: 82
   content_digest: sha256:02847ef31093cec426386e741da06cd915cad8bdbb9aebbbf367b06aa8784a79
-  authority: canonical_global
-  context_cost: moderate
-  deprecated: false
-  replacement: null
-  removal_plan: null
-  extends: null
-  classification_source: mixed_or_derived
-- file: 25-python-dora-header.mdc
-  id: l9.rule.25.python.dora.header
-  id_source: explicit
-  version: 1.0.0
-  description: 'L9 Python module structure: header meta, footer meta, and DORA __l9_trace__ block per codegen contract.'
-  scope: global
-  domain: python
-  activation: auto_attached
-  activation_source: explicit
-  always_apply: false
-  globs:
-  - '**/*.py'
-  first_heading: 'Python L9 Module Structure: Three-Block System'
-  has_yaml_frontmatter: true
-  line_count: 173
-  content_digest: sha256:49302e69c080624cbf70972d5415cd308dcc2107f04b6884c17bea6d3ab6bfed
   authority: canonical_global
   context_cost: moderate
   deprecated: false
