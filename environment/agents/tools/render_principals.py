@@ -6,16 +6,28 @@
 #   layer: tool
 #   owner: governance-control-plane
 #   status: active
-#   version: 1.1.0
-#   updated: 2026-07-30
-"""Render l9-graphiti-memory auth_tokens.json from the agent registry.
+#   version: 2.0.0
+#   updated: 2026-09-13
+"""Render agent grants + validate ADR-0031 door/signing secrets.
 
 Reads (relative to trusted bases — never free-form absolute CLI paths):
-  * ``--root`` / ``--registry``     agent_registry.yaml (identities + roles, NO tokens)
-  * ``--out-dir`` / ``--tokens``    agent_tokens.local.json (gitignored token map)
+  * ``--root`` / ``--registry``     agent_registry.yaml (identities + roles, NO secrets)
+  * ``--out-dir`` / ``--tokens``    agent_tokens.local.json (gitignored map; see shape below)
 
 Writes:
-  * ``--out-dir`` / ``--out``       auth_tokens.json for the memory server
+  * ``--out-dir`` / ``--out``       agent_grants.json (agent_id -> principal grants)
+
+Local map shape (gitignored)::
+
+  {
+    "agents_door_secret": "<shared >=24 chars>",
+    "human_door_secret": "<human-only >=24 chars, distinct>",
+    "agent_signing_keys": {"cursor": "...", "claude-code": "...", ...}
+  }
+
+Signing keys MUST be unique per agent (spoof prevention). The shared door
+secret is shared across agents by design (ADR-0031). Human door secret must
+never equal the agents door secret or any signing key.
 
 CLI contract (Sonar LLM/CLI path-escape):
   * ``--root`` and ``--out-dir`` are the only trusted directory roots.
@@ -25,7 +37,7 @@ CLI contract (Sonar LLM/CLI path-escape):
     ``os.path.join`` + ``realpath`` + ``commonpath``.
 
 Fails loudly on: path escape, duplicate identities, unknown roles,
-missing/duplicate tokens, or empty grants for writing roles.
+missing/duplicate signing keys, or empty grants for writing roles.
 """
 
 from __future__ import annotations
@@ -129,19 +141,52 @@ def require_unique(value: str, seen_ids: set[str]) -> None:
     seen_ids.add(value)
 
 
-def require_token(
-    agent_id: str, token_map: dict, tokens_path: Path, seen_tokens: dict[str, str]
+def require_signing_key(
+    agent_id: str, keys: dict, tokens_path: Path, seen_keys: dict[str, str]
 ) -> str:
-    token = token_map.get(agent_id)
-    if not token or not isinstance(token, str) or len(token) < 24:
-        fail(f"agent {agent_id}: token missing or shorter than 24 chars in {tokens_path}")
-    if token in seen_tokens:
+    """Per-agent HMAC signing key — MUST be unique (ADR-0031 spoof prevention)."""
+    key = keys.get(agent_id)
+    if not key or not isinstance(key, str) or len(key) < 24:
+        fail(f"agent {agent_id}: signing key missing or shorter than 24 chars in {tokens_path}")
+    if key in seen_keys:
         fail(
-            f"agents '{seen_tokens[token]}' and '{agent_id}' share a token "
-            "— every agent MUST have its own bearer token"
+            f"agents '{seen_keys[key]}' and '{agent_id}' share a signing key "
+            "— each agent MUST have its own signing key (door secret is shared separately)"
         )
-    seen_tokens[token] = agent_id
-    return token
+    seen_keys[key] = agent_id
+    return key
+
+
+def load_local_secret_map(tokens_path: Path) -> tuple[str, str, dict[str, str]]:
+    with open(tokens_path, encoding="utf-8") as fh:
+        raw = json.load(fh)
+    if not isinstance(raw, dict):
+        fail("local secret map must be a JSON object")
+    # Backward compatible: flat agent_id->token map becomes signing keys only
+    if "agent_signing_keys" in raw or "agents_door_secret" in raw:
+        door = raw.get("agents_door_secret")
+        human = raw.get("human_door_secret")
+        keys = raw.get("agent_signing_keys") or {}
+    else:
+        door = raw.get("_agents_door_secret") or raw.get("agents_door_secret")
+        human = raw.get("_human_door_secret") or raw.get("human_door_secret")
+        keys = {
+            k: v
+            for k, v in raw.items()
+            if not k.startswith("_")
+            and k not in {"agents_door_secret", "human_door_secret", "agent_signing_keys"}
+        }
+    if not isinstance(keys, dict):
+        fail("agent_signing_keys must be an object")
+    if not door or not isinstance(door, str) or len(door) < 24:
+        fail(f"agents_door_secret missing or too short in {tokens_path}")
+    if not human or not isinstance(human, str) or len(human) < 24:
+        fail(f"human_door_secret missing or too short in {tokens_path}")
+    if human == door:
+        fail("human_door_secret must not equal agents_door_secret")
+    if human in keys.values() or door in keys.values():
+        fail("door secrets must not equal any agent signing key")
+    return door, human, {str(k): str(v) for k, v in keys.items()}
 
 
 def build_principal(
@@ -175,10 +220,10 @@ def process_agent(
     roles: dict,
     *,
     include_planned: bool,
-    token_map: dict,
+    signing_keys: dict,
     tokens_path: Path,
     seen_ids: set[str],
-    seen_tokens: dict[str, str],
+    seen_keys: dict[str, str],
     tenant: str,
     organization: str,
     workspace: str,
@@ -192,12 +237,23 @@ def process_agent(
     role = agent.get("role")
     if role not in roles:
         fail(f"agent {agent_id}: unknown role '{role}'")
-    for fld in ("user_id", "source", "principal_id", "token_env"):
+    for fld in ("user_id", "source", "principal_id"):
         if not agent.get(fld):
             fail(f"agent {agent_id}: missing field '{fld}'")
+    if not agent.get("signing_key_env") and not agent.get("token_env"):
+        fail(f"agent {agent_id}: missing signing_key_env (or legacy token_env)")
     for uniq in (agent_id, agent["user_id"], agent["principal_id"]):
         require_unique(uniq, seen_ids)
-    token = require_token(agent_id, token_map, tokens_path, seen_tokens)
+    # Human private entrance uses human_door_secret, not an agent signing key
+    if agent.get("private_entrance"):
+        return agent_id, build_principal(
+            agent,
+            roles[role],
+            tenant=tenant,
+            organization=organization,
+            workspace=workspace,
+        )
+    require_signing_key(agent_id, signing_keys, tokens_path, seen_keys)
     principal = build_principal(
         agent,
         roles[role],
@@ -205,7 +261,7 @@ def process_agent(
         organization=organization,
         workspace=workspace,
     )
-    return token, principal
+    return agent_id, principal
 
 
 def write_under_root(root: Path, rel: str, content: str, *, label: str) -> Path:
@@ -245,12 +301,12 @@ def main() -> int:
     ap.add_argument(
         "--tokens",
         default="agent_tokens.local.json",
-        help="Token map basename under --out-dir (default: agent_tokens.local.json)",
+        help="Secret map basename under --out-dir (default: agent_tokens.local.json)",
     )
     ap.add_argument(
         "--out",
-        default="auth_tokens.json",
-        help="Output basename under --out-dir (default: auth_tokens.json)",
+        default="agent_grants.json",
+        help="Output basename under --out-dir (default: agent_grants.json)",
     )
     ap.add_argument("--tenant", default="l9")
     ap.add_argument("--organization", default="quantum-l9")
@@ -275,15 +331,12 @@ def main() -> int:
     workspace = registry.get("workspace_group", "igor-workspace")
 
     if not tokens_path.is_file():
-        fail(f"token map not found: {tokens_path} (create it locally; never commit it)")
-    with open(tokens_path, encoding="utf-8") as fh:
-        token_map = json.load(fh)
-    if not isinstance(token_map, dict):
-        fail("token map must be a JSON object of agent_id -> token")
+        fail(f"secret map not found: {tokens_path} (create it locally; never commit it)")
+    _door, _human, signing_keys = load_local_secret_map(tokens_path)
 
-    seen_tokens: dict[str, str] = {}
+    seen_keys: dict[str, str] = {}
     seen_ids: set[str] = set()
-    out: dict[str, dict] = {}
+    grants: dict[str, dict] = {}
 
     for key, agent in agents.items():
         result = process_agent(
@@ -291,31 +344,48 @@ def main() -> int:
             agent,
             roles,
             include_planned=args.include_planned,
-            token_map=token_map,
+            signing_keys=signing_keys,
             tokens_path=tokens_path,
             seen_ids=seen_ids,
-            seen_tokens=seen_tokens,
+            seen_keys=seen_keys,
             tenant=args.tenant,
             organization=args.organization,
             workspace=workspace,
         )
         if result is None:
             continue
-        token, principal = result
-        out[token] = principal
+        agent_id, principal = result
+        grants[agent_id] = principal
 
-    if not out:
-        fail("no active agents produced principals")
+    if not grants:
+        fail("no active agents produced grants")
 
-    out_path = write_under_root(out_dir, args.out, json.dumps(out, indent=2) + "\n", label="--out")
+    # Default output name for ADR-0031
+    out_name = args.out
+    if out_name == "auth_tokens.json":
+        out_name = "agent_grants.json"
+    # The grants file is secret-free by construction: principals plus the ids of
+    # the granted agents whose signing key was validated above. Ids are taken
+    # from the rendered grants, never from the secret store's key material.
+    payload = {
+        "schema_version": 1,
+        "auth_scheme": "shared-door-plus-signed-assertion",
+        "grants": grants,
+        "signing_key_agent_ids": sorted(
+            agent_id
+            for agent_id in grants
+            if not (agents.get(agent_id) or {}).get("private_entrance")
+        ),
+    }
+    out_path = write_under_root(
+        out_dir, out_name, json.dumps(payload, indent=2) + "\n", label="--out"
+    )
     try:
         out_path.chmod(0o600)
     except OSError as e:
-        # Non-fatal: principals still written; operator should fix perms.
         sys.stderr.write(f"warning: could not chmod 0600 {out_path}: {e}\n")
     sys.stderr.write(
-        f"wrote {len(out)} principal(s) -> {out_path} "
-        f"(agents: {', '.join(sorted(v['agent_id'] for v in out.values()))})\n"
+        f"wrote {len(grants)} grant(s) -> {out_path} (agents: {', '.join(sorted(grants))})\n"
     )
     return 0
 

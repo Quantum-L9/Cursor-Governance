@@ -5,8 +5,8 @@ path: environment/agents/docs/MEMORY_TOPOLOGY.md
 layer: doc
 owner: governance-control-plane
 status: active
-version: 2.0.0
-updated: 2026-09-07
+version: 2.1.0
+updated: 2026-09-13
 /L9_META -->
 
 # Memory Topology — one MemoryService, N surfaces
@@ -45,9 +45,9 @@ surface (Cursor / Claude / Codex / Gemini / Manus / generic)
 | Canonical egress | `ops/memory/control_plane_client.py` (INV-03); binding proven by `ops/memory/runtime_binding.py` (INV-11) |
 | Adapter — CLI | `python -m ops.memory.cli health\|resolve\|search\|write\|hydrate\|conflicts\|readiness` (operator, hooks, deterministic adapters) |
 | Adapter — MCP | `l9-graphite-memory` stdio server, rendered only when `L9_MEMORY_INTERPRETER` is bound (`make memory-mcp-install`); no `env`, `url` or `headers` |
-| Model write | `memory.phase_lock` → `memory.write_governed` (ADR-0030 item 7) |
+| Model write | cold: `memory.write_agent`; high-stakes: `memory.phase_lock` → `memory.write_governed` (ADR-0031) |
 | Resume SSOT | canonical `session_continuation` record (`ContinuationCapsuleV2`), current git state wins |
-| Credentials on a surface | **none** — no provider URL, no bearer (stage C9); the runtime resolves its own configuration (memory ADR-016) |
+| Credentials on a surface | **no provider URL / HTTPS bearer** (stage C9). Agent MCP uses shared `L9_MEMORY_AGENTS_DOOR_SECRET` + signed assertion (ADR-0031). Human-only `L9_MEMORY_HUMAN_DOOR_SECRET`. Runtime still resolves store config (memory ADR-016). |
 | Namespace | a *request* from `python -m ops.memory.cli resolve`; memory authorizes (INV-07) |
 
 ## 3. Per-surface wiring

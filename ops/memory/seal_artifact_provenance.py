@@ -64,8 +64,17 @@ def _lock_wheel(lock_path: Path, distribution: str) -> tuple[str, str]:
         url = str(wheel.get("url") or "").strip()
         raw = str(wheel.get("hash") or "").strip()
         digest = raw.split(":", 1)[-1] if raw.startswith("sha256:") else raw
-        if not url or not digest:
+        if not digest:
             raise ValueError(f"{lock_path} wheel for {distribution} is missing url/hash")
+        if not url:
+            source = package.get("source") or {}
+            rel = str(source.get("path") or "").strip()
+            if not rel:
+                raise ValueError(f"{lock_path} wheel for {distribution} is missing url/hash")
+            resolved = (lock_path.parent / rel).resolve()
+            if not resolved.is_file():
+                raise ValueError(f"{lock_path} path wheel {rel} is not a file")
+            url = resolved.as_uri()
         return url, digest
     raise ValueError(f"{lock_path} does not pin {distribution}")
 
