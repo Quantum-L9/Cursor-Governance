@@ -103,7 +103,7 @@ files:
 - path: scripts/pec/contracts.py
   sha256: 946e53429aa413bda374070057ea5e9043d66ef5773344e2b593fb3e575fda51
 - path: scripts/pec/controller.py
-  sha256: 303e7ba07d80fb734a2b5f9d4d555bdc834d614014de7c6af84670d08624cf06
+  sha256: abadd75ca1f94137dc4a4ddc12cfd899eef2b39cb83a16c8be9fca266984f342
 - path: scripts/pec/dispatch.py
   sha256: 87e8619e49131144071d7eff92100888241b4903e742c68a2cf09ffbb2603fb7
 - path: scripts/pec/exec_env.py
@@ -177,7 +177,7 @@ files:
 - path: scripts/tests/test_legacy_reconciliation.py
   sha256: 5b7175756b29ac1f62d7cdd04b4b4c70abc2f4a5f5b77233cc66e0a89dc179ab
 - path: scripts/tests/test_pe_clean_startup.py
-  sha256: 6aeb90005d5ba0e36a3f93932ef9a8715f9bd9479a723b2ba7d2ce4ef5ccd9cf
+  sha256: c128f2550ce65f47dcd077a120684e2bf945b1643f9ed34ec63a4dea2c1cfb40
 - path: scripts/tests/test_persistence_convergence.py
   sha256: 8af06d11df3e5f2ec66c53eb11ab5a8e8a229d013eb02cf248b3ffd9b96670d8
 - path: scripts/tests/test_pipeline_assembly_fill.py
@@ -185,7 +185,7 @@ files:
 - path: scripts/tests/test_preflight.py
   sha256: d3ecd4c701fe9053fb23baa9f9565f728100d61a4e3c78ae42e41dbed801ecf5
 - path: scripts/tests/test_prepare_reuse.py
-  sha256: bccf1e4120c45f62bde499ccbbea2c2571a5e0d2414a908c483881199ef95a63
+  sha256: ddbc15ed193c695bdee65946368231f1a0993b7ebd0fd9fb63eb3384965bc25b
 - path: scripts/tests/test_program_control.py
   sha256: dbe6434dcfb45ee7316483027219020d549ae825cd2fa6bb9da085e6567b4ba0
 - path: scripts/tests/test_program_lock_drift.py
