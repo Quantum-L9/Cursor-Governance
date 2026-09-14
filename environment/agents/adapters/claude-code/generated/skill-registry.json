@@ -1,5 +1,5 @@
 {
-  "generation_id": "473be0a94f877470ba44a6c798580b0cea4aa12f941226dd608ae90528ef42ab",
+  "generation_id": "da4b7afc861c984654b5469ccb499251aad37fd0f3f7c8cee1ecb301ca6f679c",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -1301,14 +1301,14 @@
     },
     {
       "composition_role": "general",
-      "description": "invoke make campaign INTENT= as the only live PE campaign front door. use when the user asks to activate a campaign, run a pe campaign, compile campaign source, emit campaign seeds, or take a brief through verified local commits. the run ends at verified local commits, so publication stays PR_REMEDIATE=0 make pr and merge stays /l9-pr-remediation. do not call pec, the intent compiler, or inner compile/accept scripts as a substitute.",
+      "description": "Run the only live Program Execution campaign front door, `make campaign INTENT=`, from a complete direct campaign-source.v2, architecture intent, activate seed, plan, or brief through verified local commits. Use when the user asks to author from the canonical campaign template, activate a campaign, run a PE campaign, compile campaign source, emit campaign seeds, or take a brief through Program Execution. Do not call PEC, inner compile/accept scripts, PR publication, or merge as substitutes.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pe-campaign-activate",
       "path": "skills/l9-pe-campaign-activate",
       "reason": "Live PE campaigns go through make campaign INTENT= only. hint_allowed is Read/attach so agents load that sealed front door. The run is local-commit-only and invoking the skill is not merge authority; publication is PR_REMEDIATE=0 make pr and merge of open PRs is /l9-pr-remediation. disable-model-invocation.",
       "skill_md": "skills/l9-pe-campaign-activate/SKILL.md",
-      "skill_sha256": "a6293ac0e47a64bc18dbba6951e41d5949b9bf15a0a252b0d6eb5ff06dbb5656",
+      "skill_sha256": "6c07fec95d343d57d29809b9ef30c92bbef6f3a885772fb07d52f12d1e865718",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1451,7 +1451,7 @@
       "path": "skills/l9-repo-birth",
       "reason": "packages an exact verified PE/PEC source commit for the factory; it is an explicit lifecycle boundary and never a default PE successor; disable-model-invocation",
       "skill_md": "skills/l9-repo-birth/SKILL.md",
-      "skill_sha256": "dc4d29b1d8610d1926aa8673d285c450cf18d37589a074809ad18b579dbefb98",
+      "skill_sha256": "7b15f2836cef3a68121042c237882025b5dab6dbf5521997c967c3ff4fa72719",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1568,7 +1568,7 @@
       "path": "skills/l9-update-agent-docs",
       "reason": "",
       "skill_md": "skills/l9-update-agent-docs/SKILL.md",
-      "skill_sha256": "1b1e3135eccbc2e34942c8efd8dbf8e6014754e717e64bea9b8465253d87ba46",
+      "skill_sha256": "2e95a2eb6ab0fc2aed5632130660f1cc8d3ec34b7dbad8ce1b0028694019c473",
       "user_invocable": true,
       "when_to_use": "refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes, or creating root CLAUDE.md / INVARIANTS.md when missing"
     },
@@ -1601,5 +1601,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "d4109ef49f34ad506e380da3becd56210897d64a41ee9b59bbfa885374bb28de",
-  "source_skill_corpus_sha256": "b2b172fab10b26414c45c3975ab7d4d6049131f174d2530a3813f8a4f33ee921"
+  "source_skill_corpus_sha256": "94b3c068ae47610d9f80f7b32ed23895e0b95faff949d6ad45def2ad1084d1aa"
 }
