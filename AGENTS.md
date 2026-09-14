@@ -1625,19 +1625,3 @@ This fragment supersedes only the sessionEnd dirt-close / auto-hygiene /
   `session_id`. Never delete worktree files.
 - Agents asked "what dirty files are there" still run
   `session_end_dirt_close.py --status`. That is a report, not the closer.
-
-<!-- FF_NO_SHELF_V1 -->
-## `/ff` does not shelf (2026-09-14)
-
-This fragment supersedes only the “caller then runs `ff_shelf.py`” / shelf
-publish / post-shelf closer sentences in `FF_SHELF_WIP_PLANS_V1`,
-`FF_CLOSE_PUBLISH_LOOP_V1`, `FF_SHELF_SCRIPT_V1`, and
-`FF_SHELF_CORPUS_REMAINDER_V1`. Those paragraphs stay on disk
-(additive_only). Do not fold them.
-
-- `/ff` ends when `ff.sh` prints `OK:` and parked files are back at their
-  original paths.
-- Do not run `ff_shelf.py`, `run_ff_post_shelf.sh`, or
-  `verify_worktree_clean.py` as a closer.
-- Unique WIP/plans stay in the tree. Hold copies stay as backup.
-  No commit. No push. No PR.
