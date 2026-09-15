@@ -1,5 +1,5 @@
 ---
-description: Cursor Memory Kernel enforcement — authoritative source for memory operations, kinds, dual interactive writes (write_agent + write_governed), and session lifecycle
+description: Cursor Memory Kernel enforcement — authoritative source for memory operations, kinds, two lanes (agent write_agent direct; hooks bounded), and session lifecycle
 ---
 
 # Cursor Memory Kernel Enforcement
@@ -15,6 +15,8 @@ description: Cursor Memory Kernel enforcement — authoritative source for memor
 **Updated: 2026-09-07** *(single-path write wording superseded 2026-09-13)* — Doctrine closure (CANONICAL_LAW §8.3, ADR-0030 items 7–9): the model's durable write is `memory.phase_lock` → `memory.write_governed` on the `l9-graphite-memory` MCP server. The CLI `write` below is the operator / deterministic-adapter path. The phase-lock is a memory-write precondition, never repository-write authority.
 
 **Updated: 2026-09-13** — ADR-0031 / CANONICAL_LAW §8.5: ordinary / cold model writes use MCP `memory.write_agent` (no `phase_lock`). Conflict-sensitive writes remain `memory.phase_lock` → `memory.write_governed`. Agent HTTP is sealed.
+
+**Updated: 2026-09-15** — ADR-0033 / CANONICAL_LAW §8.6 (two lanes, one `MemoryService`; INV-03b). The agent lane is direct: `memory.write_agent` is the ordinary write and is not gated by any Cursor-Governance receipt, phase, session close or PR step; `phase_lock` → `write_governed` is optional. The hook lane (`SessionStart` / `sessionEnd` / prefetch / PR publish / PE-SGD ingest) is `MemoryControlPlaneClient(surface=…)` bounded by `ops/config/memory-hook-envelopes.json` and stamped `principal.type=hook`. "Sole front door through `ops/memory`" above describes the hook lane and the operator CLI, not a toll booth on agent writes. `graphiti_memory_client.py` is deleted at C15; local Phase B distill / promotion is gone — sessionEnd calls `l9-memory distill`.
 
 **Effective: 2026-02-14**
 
