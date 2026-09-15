@@ -103,7 +103,7 @@ files:
 - path: scripts/pec/contracts.py
   sha256: 949dc350361c43754353102992e6cbdd39c92a66c31152732cd27a418c41e403
 - path: scripts/pec/controller.py
-  sha256: e6d2bfa4bd1d0e64d25588a252e6eadcda671a1ec6041b7c0dab8392a822fcae
+  sha256: 12b6e01a86c457cf06b76df52ac63bd88928cbb3572fe4856c12ddc4da37dfe3
 - path: scripts/pec/dispatch.py
   sha256: 87e8619e49131144071d7eff92100888241b4903e742c68a2cf09ffbb2603fb7
 - path: scripts/pec/exec_env.py
