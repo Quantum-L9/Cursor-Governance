@@ -162,3 +162,26 @@ Identity for agent MCP stdio follows ADR-0031 trust model 2: shared
 `L9_MEMORY_AGENTS_DOOR_SECRET` + per-agent signed assertion → registry grants.
 The human private entrance is `L9_MEMORY_HUMAN_DOOR_SECRET` only.
 Agent HTTP / provider entry remains forbidden (items 5 and 9 unchanged).
+
+## Amendment (2026-09-15) — two lanes, one `MemoryService` (ADR-0033)
+
+Decision items 7–9 are amended where they read "one canonical egress" as *all
+memory traffic passes through Cursor-Governance* or name the governed pair as
+*the* model write:
+
+1. **Agent lane.** `memory.write_agent` (MCP) / `l9-memory write` is the
+   ordinary agent write; it is direct, ungated by any Cursor-Governance
+   receipt, phase, session close or PR step, and immediately visible to the
+   next `hydrate` / `search`. `memory.phase_lock` → `memory.write_governed`
+   stays an optional conflict-sensitive pair. Cursor-Governance must not
+   mediate or gate agent writes (`memory_gate.py` exempts the memory lane).
+2. **Hook lane.** Automatic machinery (SessionStart / End, prefetch, PR
+   publish, PE/SGD ingest) uses `MemoryControlPlaneClient(surface=…)` bounded
+   by `ops/config/memory-hook-envelopes.json` and stamped `principal.type=hook`.
+   "One egress (`ops/memory`)" describes this lane and the operator form.
+3. **No local cognition (C15).** Phase B extraction, `promotion_rules.yaml`,
+   `resume_signal_scorer`, the S3 distill queue and its worker, and the
+   `graphiti_memory_client.py` tombstone are deleted; the close hands the
+   redacted excerpt to `l9-memory distill`.
+
+Items 5 and 9 (no provider entry) are unchanged. Law: CANONICAL_LAW §8.6.

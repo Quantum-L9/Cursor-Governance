@@ -1599,11 +1599,11 @@
     },
     {
       "path": "integrations/graphiti/README.md",
-      "sha256": "6d35fe1f7919ac8ebfe778390806e0941eb231039a15cb45fe2f40f49ddf83c6"
+      "sha256": "c7a57ee166dd6d4299eaa12a33f4a7cac170a9d97a8f2987fd18a16738e8e8cb"
     },
     {
       "path": "integrations/graphiti/context_reader.py",
-      "sha256": "6c9f00a9e903f6aeec2899acefe2a3b2c3ceaacb8b839f3bcfd0d34795e889b3"
+      "sha256": "34b800327107de2b25d1319f95b7a200a33f52918ded2e09db3e543c0c5b6baa"
     },
     {
       "path": "integrations/graphiti/tests/test_context_reader.py",

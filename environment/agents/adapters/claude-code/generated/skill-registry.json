@@ -1,5 +1,5 @@
 {
-  "generation_id": "88ed8af853598bd48d8201f43736f8218362687eee1c0456b5d3f4128261b112",
+  "generation_id": "2c4735d1f16f77aae1595a40d11bc34cd7fc20eb94a2d3bcb779949784665c9b",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -956,7 +956,7 @@
       "path": "skills/l9-chat-extraction",
       "reason": "",
       "skill_md": "skills/l9-chat-extraction/SKILL.md",
-      "skill_sha256": "ae7c2cb59b1792a6822ee459ff607c8b1fb4a9cece8f2bff74ef0067811f4955",
+      "skill_sha256": "2cbe7a0d9f54ce082797489e3eb3f1bbb9c94e2bdb1fe50af8232e2d27a82e40",
       "user_invocable": true,
       "when_to_use": "a user correction, lesson, pattern, error, or decision should reach memory \u2014 rules/87-cursor-memory-kernel.mdc requires extracting a lesson immediately, not at session end"
     },
@@ -1196,14 +1196,14 @@
     },
     {
       "composition_role": "primary",
-      "description": "Canonical agent memory control plane (l9-graphite-memory) \u2014 readiness, namespace resolution, canonical hydrate/search, interactive write (cold: memory.write_agent; high-stakes: memory.phase_lock \u2192 memory.write_governed), operator CLI write, GMP Phase 0 MEMORY_PREFETCH, /end-session repair. Use when wiring memory, debugging hydration, checking memory health, writing a durable fact, reconciling legacy provider history, or closing a session.",
+      "description": "Canonical agent memory control plane (l9-graphite-memory) \u2014 readiness, namespace resolution, canonical hydrate/search, agent-lane write (ordinary: memory.write_agent, direct and ungated; conflict-sensitive: memory.phase_lock \u2192 memory.write_governed), bounded hook-lane client, operator CLI write, GMP Phase 0 MEMORY_PREFETCH, /end-session repair. Use when wiring memory, debugging hydration, checking memory health, writing a durable fact, reconciling legacy provider history, or closing a session.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-graphiti-memory",
       "path": "skills/l9-graphiti-memory",
       "reason": "",
       "skill_md": "skills/l9-graphiti-memory/SKILL.md",
-      "skill_sha256": "116c618baac5b8687d2c011390d69d21f9a0829c3be29828f261c943ea955da0",
+      "skill_sha256": "3e641210a181f4c3399d0542ca4d40c91538060a30efaa76a3780c0a303a501a",
       "user_invocable": true,
       "when_to_use": "wiring memory, debugging prefetch/bootstrap, GMP Phase 0 MEMORY_PREFETCH, episode/T0 memory-bank writes, or checking Graphiti health"
     },
@@ -1600,5 +1600,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "619ee9ae7bcc643598c8f54beeff4e4d598b0893a4331237debf156eaa86f044",
-  "source_skill_corpus_sha256": "80b452499b7f4840f936e71269faf0ca67bae107a8ea6658d17758317f9660fe"
+  "source_skill_corpus_sha256": "a3a3f3e990d02b40301cdb9e22673878f600e92becb362b37e3adb30e20cf981"
 }

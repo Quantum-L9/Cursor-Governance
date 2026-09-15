@@ -20,14 +20,17 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
+from pathlib import Path
 from typing import Any
 
 from ops.memory.canonical_validation import CanonicalValidator, ValidationUnavailable
+from ops.memory.hook_envelope import HookEnvelope, envelope_for, operator_principal
 from ops.memory.receipts import (
     CandidateReceipt,
     CapabilitiesReceipt,
     CloseReceipt,
     ConflictsReceipt,
+    DistillationReceipt,
     HealthReceipt,
     HydrationReceipt,
     InvalidReceiptError,
@@ -175,7 +178,20 @@ class _Raw:
 
 
 class MemoryControlPlaneClient:
-    """Cursor's only door to memory; every call becomes one CLI invocation."""
+    """The hook lane's door to memory; every call becomes one CLI invocation.
+
+    This client is for *automatic* machinery (SessionStart / SessionEnd, plan
+    prefetch, ``make pr`` publish, SGD ingest) and for the human operator form
+    (``python -m ops.memory.cli``). It is not the agent lane: an agent writes
+    and reads through the package's public ``l9-memory`` / MCP surface
+    directly and Cursor-Governance does not mediate that (ADR-0033, INV-03b).
+
+    A hook caller names its ``surface``; the matching envelope in
+    ``ops/config/memory-hook-envelopes.json`` narrows what this instance may
+    ask memory for and is enforced *before a process is spawned*. Same
+    ``MemoryService``, same admission, same store — narrower capability. A
+    client with no surface is the operator form and is stamped as such.
+    """
 
     def __init__(
         self,
@@ -186,12 +202,19 @@ class MemoryControlPlaneClient:
         env: Mapping[str, str] | None = None,
         session_id: str | None = None,
         validator: CanonicalValidator | None = None,
+        surface: str | None = None,
     ) -> None:
         self.binding = binding
         self._run = runner or default_runner
         self.timeout = timeout
         self._env = dict(env) if env is not None else None
         self.session_id = session_id
+        #: ADR-0033 B7. ``None`` is the operator form; a hook surface binds the
+        #: envelope at construction so an unregistered surface fails here, not
+        #: on the first memory call.
+        self.surface = surface
+        self.envelope: HookEnvelope | None = envelope_for(surface) if surface else None
+        self._records_committed = 0
         #: CG-P1-02. Every receipt this client accepts as authoritative is
         #: validated against the schema the *bound release* exported, before
         #: the structural view in ``receipts.py`` reads a single field.
@@ -277,14 +300,60 @@ class MemoryControlPlaneClient:
         error_name, error_message = _parse_stderr(completed.stderr or "")
         return _Raw(completed.returncode, payload, error_name, error_message, _ms(started))
 
-    def _guard(self, operation: str) -> OperationOutcome | None:
-        if self.binding.ok and self.binding.memory_cli:
+    def _guard(
+        self,
+        operation: str,
+        *,
+        memory_class: str | None = None,
+        records: int = 0,
+        byte_size: int | None = None,
+        provenance: bool | None = None,
+    ) -> OperationOutcome | None:
+        """Refuse before spawning: unbound runtime, then hook-envelope violation.
+
+        The envelope check is the hook lane's bound (ADR-0033 B7). A refusal is
+        ``REJECTED`` with ``fault_class=canonical`` on purpose: nothing about
+        the runtime is wrong and nothing canonical is degraded — the *caller*
+        asked for more than its surface may. The error text starts with
+        ``REJECTED:envelope`` so consumers can tell it from a memory rejection.
+        """
+
+        if not (self.binding.ok and self.binding.memory_cli):
+            return self._outcome(
+                operation,
+                OutcomeStatus.BINDING_FAILED,
+                _Raw(None, None, "BindingError", "; ".join(self.binding.reasons), 0),
+            )
+        if self.envelope is None:
+            return None
+        reason = self.envelope.violation(
+            operation,
+            memory_class=memory_class,
+            records_used=self._records_committed,
+            records=records,
+            byte_size=byte_size,
+            provenance=provenance,
+        )
+        if reason is None:
             return None
         return self._outcome(
             operation,
-            OutcomeStatus.BINDING_FAILED,
-            _Raw(None, None, "BindingError", "; ".join(self.binding.reasons), 0),
+            OutcomeStatus.REJECTED,
+            _Raw(None, None, "EnvelopeViolation", reason, 0),
+            error_override=reason,
         )
+
+    def _count_committed(self, outcome: OperationOutcome, records: int = 1) -> OperationOutcome:
+        """Tally a committed write against the surface's ``max_records``."""
+
+        if outcome.ok and self.envelope is not None:
+            self._records_committed += records
+        return outcome
+
+    def principal(self) -> dict[str, Any]:
+        """Which lane this instance runs on, as stamped into every receipt."""
+
+        return self.envelope.principal() if self.envelope else operator_principal()
 
     def _outcome(
         self,
@@ -305,6 +374,7 @@ class MemoryControlPlaneClient:
         integration = {
             "operation": operation,
             "session_id": self.session_id,
+            "principal": self.principal(),
             "task_signature": task_signature,
             "requested_namespaces": list(namespaces),
             "memory_package_version": self.binding.memory_version,
@@ -608,7 +678,13 @@ class MemoryControlPlaneClient:
         stay visible, a duplicate names the record already committed.
         """
 
-        if guard := self._guard("write"):
+        if guard := self._guard(
+            "write",
+            memory_class=memory_class,
+            records=0 if dry_run else 1,
+            byte_size=len(content.encode("utf-8")),
+            provenance=bool(source and source_id),
+        ):
             return guard
         argv = [
             "write",
@@ -652,19 +728,27 @@ class MemoryControlPlaneClient:
             status = OutcomeStatus.OK
         else:
             status = OutcomeStatus.INVALID_RECEIPT
-        return self._outcome("write", status, raw, receipt, namespaces=namespaces)
+        return self._count_committed(
+            self._outcome("write", status, raw, receipt, namespaces=namespaces)
+        )
 
     def ingest_candidate(self, candidate: Mapping[str, Any], *, workspace: str) -> OperationOutcome:
         """Admit a governed candidate (the continuation capsule's ingress)."""
 
-        if guard := self._guard("ingest_candidate"):
+        source = candidate.get("source") or {}
+        knowledge = candidate.get("knowledge") or {}
+        primary_class = knowledge.get("primary_class") if isinstance(knowledge, Mapping) else None
+        body = json.dumps(dict(candidate), sort_keys=True)
+        if guard := self._guard(
+            "ingest_candidate",
+            memory_class=str(primary_class) if primary_class else None,
+            records=1,
+            byte_size=len(body.encode("utf-8")),
+            provenance=bool(isinstance(source, Mapping) and source.get("repository")),
+        ):
             return guard
         namespace = str((candidate.get("source") or {}).get("namespace") or "")
-        raw = self._invoke(
-            ["ingest-governed-candidate"],
-            cwd=workspace,
-            input_text=json.dumps(dict(candidate), sort_keys=True),
-        )
+        raw = self._invoke(["ingest-governed-candidate"], cwd=workspace, input_text=body)
         namespaces = (namespace,) if namespace else ()
         if raw.payload is None:
             return self._outcome(
@@ -694,7 +778,9 @@ class MemoryControlPlaneClient:
             status = OutcomeStatus.OK
         else:
             status = OutcomeStatus.INVALID_RECEIPT
-        return self._outcome("ingest_candidate", status, raw, receipt, namespaces=namespaces)
+        return self._count_committed(
+            self._outcome("ingest_candidate", status, raw, receipt, namespaces=namespaces)
+        )
 
     def close(
         self,
@@ -709,7 +795,12 @@ class MemoryControlPlaneClient:
     ) -> OperationOutcome:
         """Canonical close. Only ``OK`` means CLOSED_CANONICALLY."""
 
-        if guard := self._guard("close"):
+        if guard := self._guard(
+            "close",
+            records=0 if dry_run else 1,
+            byte_size=len(summary.encode("utf-8")),
+            provenance=bool(session_id or self.session_id),
+        ):
             return guard
         argv = ["close", "--summary", summary, "--group-id", namespace]
         if session_id or self.session_id:
@@ -760,13 +851,99 @@ class MemoryControlPlaneClient:
                 f"replayed digest {receipt.replay_digest}); "
                 "the returned record is the first close, not this request"
             )
-        return self._outcome(
-            "close",
-            status,
-            raw,
-            receipt,
-            namespaces=namespaces,
-            error_override=conflict_detail,
+        return self._count_committed(
+            self._outcome(
+                "close",
+                status,
+                raw,
+                receipt,
+                namespaces=namespaces,
+                error_override=conflict_detail,
+            )
+        )
+
+    def distill(
+        self,
+        *,
+        workspace: str,
+        namespace: str,
+        source_path: str | Path,
+        repository: str | None = None,
+        dry_run: bool = False,
+    ) -> OperationOutcome:
+        """Canonical distillation of a redacted source (``l9-memory distill``).
+
+        Memory extracts atomic candidates from ``source_path`` and admits each
+        through its own ``MemoryService.write`` under a source-digest
+        idempotency key; this side neither extracts, scores nor promotes
+        (ADR-0033). ``source_path`` must already be redacted — the hook lane
+        prepares the excerpt, it does not interpret it. Only ``OK`` means at
+        least one atomic record exists; ``NO_HITS`` means memory found nothing
+        to distill, which is not a fault.
+        """
+
+        source = Path(source_path)
+        try:
+            source_bytes: int | None = source.stat().st_size
+        except OSError:
+            source_bytes = None
+        # ``records`` stays 0: memory's extractor decides how many atomic
+        # candidates a source yields, and the receipt's ``written_count`` is
+        # tallied after the fact. The bound this side owns is the source size.
+        if guard := self._guard(
+            "distill",
+            byte_size=source_bytes,
+            provenance=bool(namespace and source_bytes is not None),
+        ):
+            return guard
+        argv = ["distill", str(source_path), "--group-id", namespace]
+        if repository:
+            argv += ["--repository", repository]
+        if dry_run:
+            argv.append("--dry-run")
+        raw = self._invoke(argv, cwd=workspace)
+        namespaces = (namespace,)
+        if raw.payload is None:
+            return self._outcome("distill", self._classify_failure(raw), raw, namespaces=namespaces)
+        try:
+            receipt = self._checked(raw.payload, "DistillationReceipt", DistillationReceipt.parse)
+        except InvalidReceiptError as exc:
+            return self._outcome(
+                "distill", OutcomeStatus.INVALID_RECEIPT, _err(raw, exc), namespaces=namespaces
+            )
+        except ValidationUnavailable as exc:
+            return self._outcome(
+                "distill",
+                OutcomeStatus.VALIDATION_UNAVAILABLE,
+                _err(raw, exc),
+                namespaces=namespaces,
+            )
+        detail = None
+        if receipt.failed or raw.exit_code == EXIT_FAILED:
+            status = OutcomeStatus.REJECTED
+            detail = (
+                f"memory rejected every distilled candidate ({receipt.candidate_count} "
+                f"candidates, {len(receipt.rejected_items)} rejected items)"
+            )
+        elif receipt.candidate_count == 0:
+            status = OutcomeStatus.NO_HITS
+        elif dry_run:
+            status = OutcomeStatus.NOT_COMMITTED
+        elif receipt.wrote_something:
+            status = OutcomeStatus.OK
+        else:
+            # Candidates without a single record and no dry run: the receipt
+            # contradicts itself, and half the evidence is never a success.
+            status = OutcomeStatus.INVALID_RECEIPT
+            detail = (
+                f"distill reported {receipt.candidate_count} candidates and status "
+                f"{receipt.status!r} but wrote no record"
+            )
+        return self._count_committed(
+            self._outcome(
+                "distill", status, raw, receipt, namespaces=namespaces, error_override=detail
+            ),
+            records=int(receipt.written_count or 0),
         )
 
     def conflicts(self, *, workspace: str, namespace: str) -> OperationOutcome:
@@ -795,7 +972,7 @@ class MemoryControlPlaneClient:
     def phase_lock(
         self, *, workspace: str, namespace: str, task_signature: str, ttl_seconds: int = 1_800
     ) -> OperationOutcome:
-        if guard := self._guard("phase_lock"):
+        if guard := self._guard("phase_lock", provenance=bool(task_signature)):
             return guard
         raw = self._invoke(
             [

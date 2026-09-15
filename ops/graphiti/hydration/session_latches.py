@@ -33,6 +33,8 @@ RECEIPT_STATUSES = frozenset(
         STATUS_CLOSE_INCOMPLETE,
         STATUS_CLOSE_CONFLICTED,
         "closed",
+        # Retired at stage C15 (ADR-0033): kept so receipts written before the
+        # S3 distill queue was removed still parse; never written again.
         "closed_enqueue_failed",
         "close_failed",
         "skipped_no_project",
@@ -260,6 +262,30 @@ def closes_dir(project_dir: Path) -> str:
     return _bounded_child(_memory_dir(project_dir), "closes")
 
 
+def distill_dir(project_dir: Path) -> str:
+    """Redacted session excerpts handed to canonical ``l9-memory distill``."""
+
+    return _bounded_child(_memory_dir(project_dir), "distill")
+
+
+def distill_source_path(project_dir: Path, session_id: str) -> str:
+    """Bounded path of the redacted excerpt memory distills for one session.
+
+    Memory records this path as the distillation ``source_id``; its
+    idempotency key is the excerpt digest, so a re-close under the same
+    session rewrites the same file and memory replays rather than duplicates.
+    """
+
+    safe = re_safe(session_id)
+    if not _SAFE_NAME.match(safe):
+        raise ValueError("invalid session_id for distill source path")
+    distill_r = distill_dir(project_dir)
+    path_r = os.path.realpath(os.path.join(distill_r, f"{safe}.md"))
+    if os.path.commonpath([distill_r, path_r]) != distill_r:
+        raise ValueError("distill source path escapes distill directory")
+    return path_r
+
+
 def shadow_dir(project_dir: Path) -> str:
     """Discrepancy receipts from the migration-only legacy shadow read (plan §11)."""
 
@@ -413,15 +439,11 @@ def write_receipt(project_dir: Path, session_id: str, payload: dict[str, Any]) -
     path_r = receipt_path(project_dir, session_id)
     status = payload.get("status")
     status_out = status if status in RECEIPT_STATUSES else "close_failed"
-    enqueue_ok = payload.get("enqueue_ok")
     safe: dict[str, Any] = {
         "status": status_out,
         "session_id": str(session_id),
         "head_hash": str(payload.get("head_hash") or ""),
         "phase_a": bool(payload.get("phase_a") is True),
-        "phase_b": bool(payload.get("phase_b") is True),
-        "enqueue_ok": True if enqueue_ok is True else (False if enqueue_ok is False else None),
-        "enqueue_error_present": bool(payload.get("enqueue_error")),
         "write_count": int(payload.get("write_count") or 0),
         "closed_at": str(payload.get("closed_at") or datetime.now(UTC).isoformat())[:64],
         "attempt_timestamp": str(payload.get("attempt_timestamp") or "")[:64],
@@ -452,7 +474,6 @@ def record_skip_receipt(
         "session_id": session_id,
         "write_count": write_count,
         "phase_a": False,
-        "phase_b": False,
         "closed_at": datetime.now(UTC).isoformat(),
     }
     write_receipt(project_dir, session_id, payload)

@@ -1709,3 +1709,33 @@ paragraph stays on disk (additive_only). Do not fold it.
   while the repo write lock is held) and the verdict is on the binding as
   `environment_heal`. A `BINDING_FAILED` that survives the heal is an
   environment fault to fix, not memory to distrust.
+
+<!-- MEMORY_TWO_LANES_V1 -->
+## Two lanes, one `MemoryService` (2026-09-15) — supersedes "That is the only model write" in the Interactive memory write contract (2026-09-07)
+
+Append-only. CANONICAL_LAW §8.6, ADR-0033, INV-03b. The 2026-09-07 paragraph
+stays on disk (additive_only). Do not fold it.
+
+- **Agent lane is direct.** A model-authored fact goes `memory.write_agent`
+  on the `l9-graphite-memory` MCP server (or `l9-memory write` from a shell)
+  and is visible to the next `hydrate` / `search` immediately. No SessionStart
+  receipt, no phase completion, no session close, no PR lifecycle, no
+  Cursor-Governance approval, no governance receipt is a precondition.
+  `memory.phase_lock` → `memory.write_governed` is an **optional**
+  conflict-sensitive pair, not the ordinary write. Cursor-Governance must not
+  mediate or gate agent writes; the hydration gate exempts `l9-memory`,
+  `python -m ops.memory.cli` and `memory_prefetch.py`.
+- **Hook lane is bounded.** SessionStart / End, plan prefetch, PR publish and
+  PE/SGD ingest go through `MemoryControlPlaneClient(surface=<name>)` with the
+  envelope in `ops/config/memory-hook-envelopes.json` (allowed ops, record
+  classes, `max_records`, `max_bytes`, `provenance_required`), enforced
+  client-side before any spawn and stamped `principal.type=hook`. The
+  no-surface operator form is for humans and deterministic adapters only.
+- **Both lanes end at `MemoryService`.** Cursor-Governance holds no provider
+  client, model id, promotion rule, scorer or distill queue (C15); sessionEnd
+  hands the redacted excerpt to `l9-memory distill`. `graphiti_memory_client.py`
+  is deleted; `make graphiti-health` is `make memory-readiness`.
+- **Ratchets.** `validate_legacy_doctrine_residue.py` (`local-memory-cognition`,
+  `agent-lane-interposition`), `validate_memory_egress_boundary.py` lane scan,
+  `tests/ops/memory/test_hook_envelope.py`,
+  `tests/ops/memory/test_no_agent_lane_interposition.py`.

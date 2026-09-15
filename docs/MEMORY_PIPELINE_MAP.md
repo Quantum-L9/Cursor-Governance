@@ -7,6 +7,8 @@ Authority: CANONICAL_LAW §2.1 / §8 / §8.2 / §8.5, ADR-0005, ADR-0028, ADR-00
 
 **Updated 2026-09-07 (doctrine closure, CANONICAL_LAW §8.3, ADR-0030 items 7–9):** *(single-path write wording superseded 2026-09-13)* ONE authority (`MemoryService`), ONE canonical egress (`ops/memory`), two adapters (CLI, MCP). A model-initiated durable write is `memory.phase_lock` → `memory.write_governed` on the `l9-graphite-memory` MCP server; the CLI `write` is the operator / deterministic-adapter form. The phase-lock governs memory-write consistency only — never repository authority.
 
+**Updated 2026-09-15 (ADR-0033, INV-03b — two lanes, one `MemoryService`):** agents are first-class real-time writers on the public `l9-memory` / MCP surface (`memory.write_agent` is the ordinary write; `phase_lock → write_governed` is optional, conflict-sensitive); Cursor-Governance never mediates or gates those writes. Automatic hooks use bounded write / distill / close through `ops/memory/control_plane_client.py`. Cursor-local memory cognition — Phase B OpenAI distill, `promotion_rules.yaml`, `resume_signal_scorer`, the S3 distill queue and its worker — is deleted (stage C15); the close hands the redacted excerpt to memory's own `l9-memory distill`. See "Lanes" below. The 2026-09-07 "A model-initiated durable write is `phase_lock → write_governed`" sentence is superseded.
+
 **Updated 2026-09-13 (ADR-0031, CANONICAL_LAW §8.5 — dual write classes):** the model has two MCP writes on `l9-graphite-memory`. Ordinary / cold facts use `memory.write_agent` — no SessionStart receipt, no `phase_lock`. Conflict-sensitive facts use `memory.phase_lock` → `memory.write_governed`. `memory.ingest` and the CLI `write` are a bypass of neither. Agent HTTP stays sealed; identity is the shared agents door plus a signed `agent_id` assertion.
 
 ## One store
@@ -14,13 +16,37 @@ Authority: CANONICAL_LAW §2.1 / §8 / §8.2 / §8.5, ADR-0005, ADR-0028, ADR-00
 | Layer | Role |
 |-------|------|
 | `l9-graphite-memory` MemoryService (`memory-control-plane/v1`) | Sole agent episodic SSOT; Graphiti is its projection |
-| `ops/memory/control_plane_client.py` (`python -m ops.memory.cli`) | Cursor's only egress (INV-03); bound runtime per `ops/config/memory-binding.json`; operator / hook / deterministic-adapter CLI |
+| `ops/memory/control_plane_client.py` (`python -m ops.memory.cli`) | The **hook lane** client (INV-03/03b): bound runtime per `ops/config/memory-binding.json`, per-surface envelope per `ops/config/memory-hook-envelopes.json`; operator / hook / deterministic-adapter CLI. Not a mandatory route for agents |
 | `l9-graphite-memory` MCP server (stdio, package-owned; `make memory-mcp-install`) | The model's interactive adapter to the same MemoryService: `memory.search`, `memory.hydrate`, `memory.write_agent` (ordinary / cold), `memory.phase_lock` → `memory.write_governed` (conflict-sensitive) |
 | `ops/graphiti/hydration/` | sessionStart compile + sessionEnd close (deterministic adapters) |
 | Claude `environment/agents/adapters/claude-code/memory/` | Thin adapter only (no second brain); `memory-enforcement.contract.json` `interactive_memory_write` is the machine form of the write contract |
 | `memory-bank/` | **RETIRED** — do not scaffold/read/write; delete residual trees |
 | `.l9/pr/` | `make pr` remediation handoff JSON (not memory) |
 | PE Graphiti projection | Observability only — never write authority |
+
+## Lanes (ADR-0033, INV-03b)
+
+```text
+                         l9-graphiti-memory
+          ┌──────────────── Agent lane ────────────────┐
+ Agent ───┴─► memory.write_agent / MCP write ──────────┤   direct, ungated, immediately
+ Agent ─────► handoff write (same call) ───────────────┤   visible to another agent's
+ Agent ─────► search / hydrate ────────────────────────┤   hydrate / search
+                                                       ▼
+                                                 MemoryService
+                                                       ▲
+          ┌──────────────── Hook lane ─────────────────┤
+ SessionStart/End ─► bounded write / close ────────────┤   same pipeline, narrower
+ automatic hook ───► bounded distill ──────────────────┘   capability envelope
+```
+
+| Producer | Route | Authority |
+|---|---|---|
+| Agent explicit write | public `memory.write_agent` / MCP → `MemoryService` | memory-service contracts (principal, namespace grants, schema, admission) — not a Cursor-Governance wall |
+| Agent real-time handoff | the same call | the same; no phase, receipt, close, PR or queue in front of it |
+| Automatic hook | bounded write / distill / close via `MemoryControlPlaneClient` → `MemoryService` | constrained hook principal + envelope (`ops/config/memory-hook-envelopes.json`) |
+
+Cursor-Governance gates **repository edits** on hydration (Claude `memory_gate` on `Edit|Write`, Cursor "edit-other"); it never gates a memory write. `memory_gate.py` exempts `l9-memory` / `python -m ops.memory.cli` from its `Bash` matcher the way it exempts git/gh.
 
 ## Write paths (caller taxonomy)
 
@@ -65,29 +91,31 @@ session work
   → operator CLI `python -m ops.memory.cli write` is the human / adapter form only
 
 sessionEnd (X-out / window_close / completed / aborted)
-  → Phase A/B via close_session.py: capsule → governed candidate → memory.close (idempotent)
+  → Phase A via close_session.py: capsule → governed candidate → memory.close (idempotent)
   → local obligation under .l9/memory/closes/ (authority: none); no provider fallback
-  → stderr ERROR on skip/fail; enqueue failure still exit 2
+  → stderr ERROR on skip/fail; the close receipt carries the verdict (no exit-2 queue path)
   → idempotent receipt under .l9/memory/closes/{session_id}.json
     (latches only — not resume SSOT)
-  → Phase A (≤8s): heuristic pickup_context + session_summary
-  → Phase B (≤18s, if key + time): SessionSignalPacket via fixed-host OpenAI
-    helper (`ops/graphiti/hydration/openai_fixed_host.py`); ephemeral key from
-    env or AWS SM `l9/OPENAI_API_KEY` (never long-lived in `graphiti.env`)
-  → Enqueue redacted excerpt (≤12k) to S3 distill queue when
-    `MEMORY_DISTILL_S3_BUCKET` is set — content-hash idempotent; enqueue
-    failure is fail-loud (receipt + stderr). Rollback flags:
-    `MEMORY_PHASE_B=0`, `MEMORY_DISTILL_ENQUEUE=0`
+  → Phase A (≤8s): heuristic pickup_context + session_summary (capsule *input*, not cognition)
+  → bounded distill (after the close, within the remaining ≤30s budget, ADR-0033):
+    the already-redacted excerpt (≤12k) is written to .l9/memory/distill/<session>.excerpt.txt
+    and handed to memory's own `l9-memory distill <path> --group-id <ns>`; extraction,
+    admission and every record are MemoryService's. NO_HITS / REJECTED / failure never
+    unmakes a canonical close. Kill switch: `L9_MEMORY_DISTILL=0`
+  → RETIRED at C15: Phase B (fixed-host OpenAI SessionSignalPacket, promotion rules,
+    resume-signal scorer) and the S3 distill queue + GHA worker. `closed_enqueue_failed`
+    receipts still parse as closes; none is written
   → Archive **full chat words** (user/assistant text + timestamps, no sqlite/tools)
     to S3 `L9_CHAT_TRANSCRIPT_S3_BUCKET` / `l9-chat-transcripts-020125249784`
     (`ops.graphiti.hydration.archive_transcript`, background from sessionEnd)
   → never raise hook timeout into silent “nothing written” without Phase A attempt
 
-Batch catch-up (no Mac awake at cron time)
-  → GitHub Actions `.github/workflows/memory-distill.yml` (schedule + dispatch)
-  → pull pending S3 jobs → OpenAI distill → canonical ingest (ops/memory control plane)
+Batch catch-up — RETIRED at C15 (ADR-0033)
+  → there is no offline distill lane: `.github/workflows/memory-distill.yml`,
+    the S3 job queue (`ops/graphiti/distill_queue/`) and `run_distiller.sh` are
+    deleted; the close distills in-process through `l9-memory distill` above
   → Mac LaunchAgent `com.l9.transcript-distiller` / Dropbox / C1 `save_memory`
-    are RETIRED (see `ops/scripts/RETIRED_transcript_distiller_launchagent.md`)
+    were RETIRED earlier (see `ops/scripts/RETIRED_transcript_distiller_launchagent.md`)
 ```
 
 Entry points:
@@ -132,20 +160,16 @@ ADR-0028 (amended 2026-09-07), ADR-0030 and ADR-0031.
 | `MEMORY_HYDRATION_CHAR_BUDGET` | 4000 |
 | `MEMORY_CLOSE_TRANSCRIPT_CHARS` | 12000 |
 | sessionEnd Graphiti hook timeout | 30s (template) |
-| Phase A / B | ≤8s / ≤18s |
-| `MEMORY_PHASE_B` | `1` (set `0` to skip sync distill) |
-| `MEMORY_DISTILL_ENQUEUE` | `1` when bucket set (set `0` to skip S3) |
-| `MEMORY_DISTILL_S3_BUCKET` | unset = enqueue skipped (warn) |
-| `MEMORY_DISTILL_S3_PREFIX` | `distill-queue/pending/` |
-| `MEMORY_DISTILL_TOKEN_BUDGET` | 300 |
+| Phase A / total close | ≤8s / ≤30s |
+| `L9_MEMORY_DISTILL` | `1` (set `0` to skip the bounded canonical distill) |
+| `L9_MEMORY_ENV_HEAL` | `1` (set `0` to skip the one-shot `.venv` heal on binding drift, ADR-0032) |
 
 T3 full-chat ingest remains **forbidden** — redacted excerpts only.
 
 ## Schemas
 
 - `ops/graphiti/hydration/session_hydration_packet.schema.yaml`
-- `ops/graphiti/hydration/session_signal_packet.schema.yaml`
-- `ops/graphiti/hydration/promotion_rules.yaml`
-- `ops/graphiti/distill_queue/schema.yaml`
+- `ops/config/memory-receipt-contract.json` (Cursor's view of memory's receipts, incl. `DistillationReceipt`)
+- `ops/config/memory-hook-envelopes.json` (hook-lane capability envelopes)
 
 WIP packs under `WIP/World Model/` are design evidence only — not runtime SSOT.

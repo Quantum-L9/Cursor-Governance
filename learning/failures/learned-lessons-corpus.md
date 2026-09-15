@@ -330,7 +330,7 @@ If user says any of these:
 
 ### Graphiti is the only episodic memory plane (ADR-0006)
 
-- **Canonical client:** `ops/graphiti/graphiti_memory_client.py` + `graphiti-memory` MCP
+- **Canonical client (2026-09-15):** the `l9-graphite-memory` MCP server / `l9-memory` CLI for agents; `python -m ops.memory.cli` for hooks and operators. The former `ops/graphiti/graphiti_memory_client.py` was retired at C11 and deleted at C15 (ADR-0033)
 - **NO second plane:** retired `L9_MEMORY_HTTP_*` / `l9-shared-memory` / `cursor_memory_client.py` lifecycle use
 - **NO local-only fallback mode** — Graphiti must be reachable (tunnel `:8100` or cloud `/graphiti/mcp`)
 - If Graphiti is down → memory operations FAIL (do not invent a side door)

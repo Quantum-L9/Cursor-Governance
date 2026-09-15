@@ -9,32 +9,40 @@ from adapters.common.subprocess_runner import run_argv
 
 
 class GraphitiContextReader:
-    """Read-only memory lookup for evidence collection.
+    """Read-only memory lookup for evidence collection — agent lane (ADR-0033).
 
-    Since realignment stage C11 the reader crosses the canonical memory
-    control plane (``python -m ops.memory.cli search``) and never a provider.
+    A Program Execution worker reading memory for its own task is an *agent*,
+    not an automatic hook. Since realignment stage C15 it therefore calls the
+    memory package's public ``l9-memory search`` directly and never crosses
+    ``MemoryControlPlaneClient`` (the hook lane) or a provider. Cursor-Governance
+    is consulted only to *locate* the bound interpreter
+    (``ops.memory.runtime_binding``); it interposes nothing on the read.
+
     It exposes ``search`` only: no write, claim, phase-lock, or promotion.
     """
 
     def __init__(self, repository_root: str | Path) -> None:
         self.root = Path(repository_root).resolve()
-        self.client = self.root / "ops/memory/cli.py"
+        self.binding_module = self.root / "ops/memory/runtime_binding.py"
+
+    def _memory_cli(self) -> str:
+        """The bound ``l9-memory`` console script, or raise with the binding's reasons."""
+        if not self.binding_module.is_file():
+            raise FileNotFoundError(self.binding_module)
+        if str(self.root) not in sys.path:
+            sys.path.insert(0, str(self.root))
+        from ops.memory.runtime_binding import resolve_runtime_binding
+
+        binding = resolve_runtime_binding()
+        if not (binding.ok and binding.memory_cli):
+            raise RuntimeError(
+                "memory runtime unbound: " + ("; ".join(binding.reasons) or "no reason recorded")
+            )
+        return str(binding.memory_cli)
 
     def search(self, query: str, *, limit: int = 8) -> dict[str, Any]:
-        if not self.client.is_file():
-            raise FileNotFoundError(self.client)
         result = run_argv(
-            [
-                sys.executable,
-                "-m",
-                "ops.memory.cli",
-                "search",
-                query,
-                "--limit",
-                str(limit),
-                "--workspace",
-                str(self.root),
-            ],
+            [self._memory_cli(), "search", query, "--limit", str(limit)],
             cwd=self.root,
             timeout_seconds=30,
         )

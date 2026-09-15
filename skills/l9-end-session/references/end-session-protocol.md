@@ -22,8 +22,9 @@ automatic `sessionEnd` hook, ADR-0028):
 
 1. Repair-write the canonical continuation record (`ContinuationCapsuleV2`)
    through `ops/memory` and stamp the close receipt
-2. Extract learnings as governed memory writes (`memory.phase_lock` →
-   `memory.write_governed`; see `docs/MEMORY_PIPELINE_MAP.md`)
+2. Extract learnings as agent memory writes (`memory.write_agent`; the
+   optional `memory.phase_lock` → `memory.write_governed` pair when a fact
+   wants conflict checking; see `docs/MEMORY_PIPELINE_MAP.md`)
 3. Save Redis session context for cross-window resume
 4. Create handoff summary
 5. **Backup GlobalCommands to GitHub** (`Quantum-L9/Cursor-Governance`)
@@ -79,34 +80,42 @@ Only runs when step 1's health check passed. If it did not, skip learnings
 writes and note the gap in the handoff report.
 
 Session learnings are **model-authored durable facts**, so they take the
-interactive write contract: `memory.phase_lock` then `memory.write_governed`
-on the `l9-graphite-memory` MCP server (ADR-0030 item 7). They get the same
-admission, audit, supersession and projection as every other canonical record.
-See `docs/MEMORY_PIPELINE_MAP.md`.
+agent lane (ADR-0033, superseding ADR-0030 item 7's "only model write"): one
+`memory.write_agent` per fact on the `l9-graphite-memory` MCP server. The
+write is immediately visible to another agent's `hydrate` / `search`; it
+waits on no phase, receipt, close or PR state. They get the same admission,
+audit, supersession and projection as every other canonical record. See
+`docs/MEMORY_PIPELINE_MAP.md` "Lanes".
 
-- **Path:** MCP `l9-graphite-memory` → `MemoryService.write_governed` →
+- **Path:** MCP `l9-graphite-memory` → `MemoryService` (`write_agent`) →
   canonical store → outbox → projection. The retired provider path
   (`graphiti_memory_client.py`, `add_memory`-class episodes) and the legacy C1
   path (`cursor_memory_client.py` → `save_memory`) are gone — do not use them.
-- The memory phase-lock is a memory-write precondition only; it authorizes no
-  file edit, commit or push.
+- `memory.phase_lock` → `memory.write_governed` remains an **optional**
+  conflict-sensitive pair for a fact that should be checked against
+  contradictions first (a plan lock, a GMP Phase 0). It is a ceremony memory
+  offers, not one this protocol imposes; the phase-lock is a memory-write
+  precondition only and authorizes no file edit, commit or push.
 
 **Write atomic memories — one fact per write, not one big blob.**
 See `.cursor/rules/87-cursor-memory-kernel.mdc` → "Memory Write Format" for the full spec.
 
 ```text
+memory.write_agent     {namespace: "{resolved namespace}", content: "{terse fact 1}",
+                        memory_class: "lesson", tags: ["agent:cursor", "session:{REPAIR_SID}"]}
+
+memory.write_agent     {namespace: "{resolved namespace}", content: "{terse fact 2}",
+                        memory_class: "insight", tags: ["agent:cursor", "session:{REPAIR_SID}"]}
+
+# optional, conflict-sensitive:
 memory.phase_lock      {namespace: "{resolved namespace}", task_signature: "end-session:{REPAIR_SID}"}
-
 memory.write_governed  {namespace: "{resolved namespace}", task_signature: "end-session:{REPAIR_SID}",
-                        content: "{terse fact 1}", memory_class: "lesson", tags: ["agent:cursor"]}
-
-memory.write_governed  {namespace: "{resolved namespace}", task_signature: "end-session:{REPAIR_SID}",
-                        content: "{terse fact 2}", memory_class: "insight", tags: ["agent:cursor"]}
+                        content: "{decision that must not contradict prior state}", memory_class: "decision"}
 ```
 
 A human operator running the close by hand may use the operator CLI
 (`memcli write "{fact}" --kind lesson --agent-id cursor`); the model does not
-substitute it for the governed write.
+substitute it for the agent write.
 
 ### 3. REDIS SESSION CONTEXT (cache_set_session_context)
 

@@ -54,8 +54,9 @@ invariants:
       The canonical l9-graphite-memory control plane is the single
       session-memory front door (ops/memory/control_plane_client.py; operator
       CLI python -m ops.memory.cli). The direct provider client
-      (ops/graphiti/graphiti_memory_client.py) is a C11 tombstone and the
-      retired agents/cursor/cursor_memory_client.py must not be invoked by the
+      (ops/graphiti/graphiti_memory_client.py) was a C11 tombstone and is
+      deleted at C15 (ADR-0033); it and the retired
+      agents/cursor/cursor_memory_client.py must not be invoked by the
       session protocol.
     projections:
       - type: file_exists

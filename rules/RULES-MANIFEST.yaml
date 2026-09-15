@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-09-15T19:15:05Z'
+generated_utc: '2026-09-15T22:12:35Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:c916b76f738df4543c0db0cdd84884cf0922512f9dfbcf8af8605106c6c61a23
+source_tree_digest: sha256:7338b6844a8790dc70ff2290955c5d83990e54fa99d35994b19d3f5ed607385b
 summary:
   total_mdc_files: 69
   always_apply_true: 35
@@ -81,8 +81,8 @@ rules:
 - file: 03-graphiti-memory.mdc
   id: l9.rule.graphiti.memory
   id_source: explicit
-  version: 1.4.0
-  description: Agent memory SSOT (canonical l9-graphite-memory control plane) — retrieval authority, namespace, dual interactive write (write_agent + write_governed), temporal supersedes/conflicts
+  version: 1.5.0
+  description: Agent memory SSOT (canonical l9-graphite-memory control plane) — retrieval authority, namespace, two lanes (agent write_agent direct; hooks bounded), temporal supersedes/conflicts
   scope: global
   domain: memory
   activation: always
@@ -91,8 +91,8 @@ rules:
   globs: null
   first_heading: Graphiti Memory (SSOT)
   has_yaml_frontmatter: true
-  line_count: 90
-  content_digest: sha256:815aa99500c1a7b504e368d471c620b99d7fa2035a1e2abc1e96b800320ed14d
+  line_count: 92
+  content_digest: sha256:ffde2b85e830e4a54a0f38ca5373f584b13bf8dca6ac0f2ed4cb7a21303117c2
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -113,8 +113,8 @@ rules:
   globs: null
   first_heading: Cursor + Redis Session Context (no amnesia)
   has_yaml_frontmatter: true
-  line_count: 70
-  content_digest: sha256:64a0e957121bb68ace388ae9e41928768cfc6998952a8acfc6e9f8a1e4d07c88
+  line_count: 72
+  content_digest: sha256:7f6cee55bbaaaafe719ab5b21cc5399d08ad0510b8a7c2aa3047464e37841e7b
   authority: canonical_global
   context_cost: minimal
   deprecated: false
@@ -1333,8 +1333,8 @@ rules:
 - file: 87-cursor-memory-kernel.mdc
   id: l9.rule.cursor.memory.kernel
   id_source: explicit
-  version: 1.3.0
-  description: Cursor Memory Kernel enforcement — authoritative source for memory operations, kinds, dual interactive writes (write_agent + write_governed), and session lifecycle
+  version: 1.4.0
+  description: Cursor Memory Kernel enforcement — authoritative source for memory operations, kinds, two lanes (agent write_agent direct; hooks bounded), and session lifecycle
   scope: global
   domain: memory
   activation: always
@@ -1343,8 +1343,8 @@ rules:
   globs: null
   first_heading: Cursor Memory Kernel Enforcement
   has_yaml_frontmatter: true
-  line_count: 198
-  content_digest: sha256:06cb2bf2a6e4bbd23d5e5cf7989c0613dc48bad26271504d646a4b9da8bc0c23
+  line_count: 200
+  content_digest: sha256:b501443cdc9c23f471ea4321a19b3055f060c9183a6e072dba19f91de7403ca7
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -1575,8 +1575,8 @@ rules:
 - file: 98-graphiti-memory-gate.mdc
   id: l9.rule.graphiti.memory.gate
   id_source: explicit
-  version: 1.2.0
-  description: Memory namespace gate — forbidden namespaces; hydration-only write gates when L9_MEMORY_WRITE_GATES=1; memory phase-lock is a governed-write precondition, never repository authority
+  version: 1.3.0
+  description: Memory namespace gate — forbidden namespaces; hydration-only write gates when L9_MEMORY_WRITE_GATES=1; memory phase-lock is a governed-write precondition, never repository authority; the gate never interposes on the agent memory lane
   scope: global
   domain: memory
   activation: always
@@ -1585,8 +1585,8 @@ rules:
   globs: null
   first_heading: Memory Gate (canonical control plane)
   has_yaml_frontmatter: true
-  line_count: 77
-  content_digest: sha256:d1f99f8bbcb9b12ed4ea5246165aac1a9217f1e1274dcca2f83258e319af57ef
+  line_count: 79
+  content_digest: sha256:f539c06c295b80cb369e99c7a51d5a649023e80fc7460c79bacb46fddb02d8e8
   authority: canonical_global
   context_cost: minimal
   deprecated: false

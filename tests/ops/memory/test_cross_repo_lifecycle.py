@@ -47,6 +47,7 @@ from ops.memory.runtime_binding import (
     STATUS_COMPATIBLE,
     STATUS_EXACT,
     BindingManifest,
+    default_runner,
     resolve_runtime_binding,
 )
 from ops.memory.session_contracts import (
@@ -213,7 +214,19 @@ def runtime(tmp_path: Path, request) -> tuple[MemoryControlPlaneClient, dict[str
             "validate nothing"
         )
     _record_evidence(binding, test=request.node.name)
-    return MemoryControlPlaneClient(binding, env=env, session_id="proof-session"), env
+    calls: list[list[str]] = []
+
+    def recording_runner(argv, **kwargs):
+        # The real CLI runs; the proof only keeps the argv so it can assert on
+        # exactly what crossed the boundary (never a payload).
+        calls.append([str(a) for a in argv])
+        return default_runner(argv, **kwargs)
+
+    client = MemoryControlPlaneClient(
+        binding, env=env, session_id="proof-session", runner=recording_runner
+    )
+    client._proof_calls = calls  # type: ignore[attr-defined]
+    return client, env
 
 
 def test_lifecycle_against_the_real_memory_runtime(runtime, tmp_path: Path, monkeypatch) -> None:
@@ -374,15 +387,44 @@ def test_lifecycle_against_the_real_memory_runtime(runtime, tmp_path: Path, monk
     project.mkdir()
     monkeypatch.setattr(cs, "resolve_namespace_context", lambda *_a, **_k: context)
     monkeypatch.setattr(cs, "repository_state_digest", lambda _p: head)
-    monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **_k: ("user: finish C6", "test"))
-    monkeypatch.setenv("MEMORY_PHASE_B", "0")
-    monkeypatch.setenv("MEMORY_DISTILL_ENQUEUE", "0")
+    excerpt = (
+        "user: finish C6\n"
+        "assistant: Decision: the close is idempotent by key. "
+        "Lesson: use the bound CLI, never PATH.\n"
+    )
+    monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **_k: (excerpt, "test"))
     report = cs.close_session(
         project_dir=project, session_id="proof-close", agent_id="cursor", client=client
     )
     assert report["status"] == "closed_canonically", report["warnings"]
     assert report["continuation"]["status"] == "admitted"
     assert report["close"]["replayed"] is False
+    # ADR-0033: the redacted excerpt is distilled by memory itself, after the
+    # close, through the bound release's own `l9-memory distill`. The hook lane
+    # only wrote the excerpt to a bounded path; extraction, admission and every
+    # record are memory's. The manifest lists `distill` under
+    # bounded_hook_cli_commands because the 2.4.0 capabilities receipt does not
+    # advertise it, so this is the proof that the bound release ships it.
+    distill = report["distill"]
+    assert distill["status"] == "OK", distill
+    assert distill["extractor"]
+    assert distill["candidate_count"] >= 1
+    assert distill["written_count"] == len(distill["record_ids"]) >= 1
+    assert Path(distill_source := _distill_argv(client)[2]).is_file()
+    assert Path(distill_source).parent == project / ".l9" / "memory" / "distill"
+    for record_id in distill["record_ids"]:
+        assert _record_state(client, record_id, namespace) == "active"
+    assert next(w for w in report["writes"] if w["kind"] == "distill")["status"] == "OK"
+    # A re-run against the same excerpt is a replay, not a second set of records:
+    # memory keys each atomic write by the source digest.
+    again_distill = client.distill(
+        workspace=str(project),
+        namespace=namespace,
+        source_path=distill_source,
+        repository=repository_identity_for(context),
+    )
+    assert again_distill.ok, again_distill.error
+    assert set(again_distill.receipt.record_ids) == set(distill["record_ids"])
     obligation = load_close_receipt(project, "proof-close")
     assert obligation["status"] == "closed_canonically"
     assert obligation["canonical_operation_id"]
@@ -466,6 +508,17 @@ def test_lifecycle_against_the_real_memory_runtime(runtime, tmp_path: Path, monk
     )
     assert strict_unknown.continuation is None
     assert strict_unknown.continuation_excluded == strict_unknown.continuation_candidates > 0
+
+
+def _distill_argv(client: MemoryControlPlaneClient) -> list[str]:
+    """The argv close_session handed the real CLI for its one distill call."""
+    calls = getattr(client, "_proof_calls", None)
+    assert calls is not None, "the proof client did not record its calls"
+    return next(argv for argv in calls if len(argv) > 1 and argv[1] == "distill")
+
+
+def repository_identity_for(context) -> str:
+    return context.repository_identity or "Quantum-L9/Cursor-Governance"
 
 
 def _record_state(client: MemoryControlPlaneClient, record_id: str, namespace: str) -> str:
@@ -606,8 +659,6 @@ def test_task_isolation_and_refinement_supersession_against_the_real_runtime(
         monkeypatch.setattr(module, "resolve_namespace_context", lambda *_a, **_k: context)
         monkeypatch.setattr(module, "repository_state_digest", lambda _p: head)
     monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **_k: ("user: finish C13", "test"))
-    monkeypatch.setenv("MEMORY_PHASE_B", "0")
-    monkeypatch.setenv("MEMORY_DISTILL_ENQUEUE", "0")
 
     class LostResponse:
         """The real client, except the first close's response never arrives."""

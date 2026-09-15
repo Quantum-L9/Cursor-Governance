@@ -39,7 +39,12 @@ from ops.memory.hydration import (  # noqa: E402
 )
 from ops.memory.session_state import write_session_state  # noqa: E402
 
-_RULES_PATH = Path(__file__).resolve().parent / "promotion_rules.yaml"
+#: Default hydration budget (chars). Formerly read from promotion_rules.yaml,
+#: which was Cursor-local memory cognition and is gone (ADR-0033).
+HYDRATION_CHAR_BUDGET_DEFAULT = 4000
+#: Hook-lane surface this compiler hydrates under (ADR-0033 B7): read-only
+#: envelope, ``ops/config/memory-hook-envelopes.json``.
+HOOK_SURFACE = "cursor-session-start"
 
 HEADING = "### memory hydrate"
 
@@ -48,15 +53,7 @@ def _hydration_budget() -> int:
     raw = os.environ.get("MEMORY_HYDRATION_CHAR_BUDGET", "").strip()
     if raw.isdigit():
         return max(500, int(raw))
-    # Broad by design; the handler below carries the reason.
-    # nosemgrep: l9.baseline.python.broad-except
-    try:
-        import yaml
-
-        rules = yaml.safe_load(_RULES_PATH.read_text(encoding="utf-8")) or {}
-        return int(rules.get("hydration_char_budget_default", 4000))
-    except Exception:  # noqa: BLE001
-        return 4000
+    return HYDRATION_CHAR_BUDGET_DEFAULT
 
 
 # ---------------------------------------------------------------------------
@@ -142,6 +139,7 @@ def compile_session_packet(
         task=task,
         session_id=conversation_id,
         continuation_policy="repository_fallback",
+        surface=HOOK_SURFACE,
     )
     namespace = hydration.namespace_context.write_namespace_hint or "unresolved"
     packet_id = hashlib.sha256(f"{conversation_id}:{namespace}:{project}".encode()).hexdigest()[:16]
