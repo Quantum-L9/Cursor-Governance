@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-09-15T18:58:01Z'
+generated_utc: '2026-09-15T21:00:31Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:3940e8914064525edf95247494ac23bb0e9ec128f5b88355174e7c773f2f39f0
+source_tree_digest: sha256:858c6efaf0f5ee79762752111f9d9ea7060d8a2eaed72dcb5391ea67fbe8a500
 summary:
   total_mdc_files: 69
   always_apply_true: 35
@@ -1365,10 +1365,10 @@ rules:
   globs: null
   first_heading: L4 Local Autonomy (no mid-execution push)
   has_yaml_frontmatter: true
-  line_count: 74
-  content_digest: sha256:1cb82c2099d69bca6c9ac9338480a4abc9bdf2ed4b2cac904a1c801aadd6cbd0
+  line_count: 90
+  content_digest: sha256:d18076074e4faada3d3f89051d0e6854df9d2112799ec792f7af60d036cde3bb
   authority: canonical_global
-  context_cost: minimal
+  context_cost: moderate
   deprecated: false
   replacement: null
   removal_plan: null

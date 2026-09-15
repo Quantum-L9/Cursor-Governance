@@ -65,6 +65,9 @@ class MechanicalFacts:
     template_path: str = ""
     additive_only_paths: list[str] = field(default_factory=list)
     deletion_markers: dict[str, str] = field(default_factory=dict)
+    # False when no caller measured the range. An empty list then means "unknown",
+    # not "none", and the Protected-root block must not claim otherwise.
+    additive_only_measured: bool = True
 
 
 @dataclass
@@ -144,6 +147,7 @@ def collect_mechanical(
     template_path: str = "",
     campaign_body: str = "",
     additive_only_paths: list[str] | None = None,
+    additive_only_measured: bool = True,
 ) -> MechanicalFacts:
     log = _run_git(workspace, "log", f"{pr_base}..HEAD", "--format=%s%n%b---END---")
     commits: list[str] = []
@@ -172,6 +176,7 @@ def collect_mechanical(
         template_path=template_path,
         additive_only_paths=[p for p in (additive_only_paths or []) if p.strip()],
         deletion_markers=markers,
+        additive_only_measured=additive_only_measured,
     )
 
 
@@ -252,12 +257,29 @@ def _annotate_unchecked_boxes(text: str) -> str:
     return "\n".join(lines)
 
 
+def _receipt_binding(receipt: dict[str, Any]) -> str:
+    """Name what a receipt is actually bound to, per its own schema.
+
+    A v2 gate receipt is keyed on content digests and carries no `head`, so
+    reading that one field for every schema printed `head=None` — a PR body
+    stating the receipt was bound to nothing.
+    """
+    for field_name in ("content_digest", "tree_digest", "report_sha256"):
+        value = receipt.get(field_name)
+        if value:
+            return f"{field_name}={value}"
+    head = receipt.get("head") or receipt.get("head_sha")
+    if head:
+        return f"head={head}"
+    return "binding=none recorded"
+
+
 def _evidence_lines(facts: MechanicalFacts) -> list[str]:
     evidence: list[str] = []
     if facts.gate_receipt:
         evidence.append(
             f"gate-receipt.json present: schema={facts.gate_receipt.get('schema')} "
-            f"head={facts.gate_receipt.get('head')} "
+            f"{_receipt_binding(facts.gate_receipt)} "
             f"passed_at={facts.gate_receipt.get('passed_at')}"
         )
     else:
@@ -265,7 +287,7 @@ def _evidence_lines(facts: MechanicalFacts) -> list[str]:
     if facts.l4_receipt:
         evidence.append(
             f"L4 receipt present: phase={facts.l4_receipt.get('phase')} "
-            f"head={facts.l4_receipt.get('head_sha')}"
+            f"{_receipt_binding(facts.l4_receipt)}"
         )
     else:
         evidence.append("L4 receipt absent — release authorization not measured here")
@@ -301,12 +323,16 @@ def _fill_protected_root(text: str, facts: MechanicalFacts) -> str:
     if PROTECTED_STAMP not in text and paths:
         text = PROTECTED_STAMP + "\n" + text
     if not paths:
-        text = text.replace(
-            "- ` `",
-            "- N/A — no additive_only root files",
-            1,
-        )
-        why = "N/A — no additive_only root files in this diff."
+        if facts.additive_only_measured:
+            listed = "- N/A — no additive_only root files"
+            why = "N/A — no additive_only root files in this diff."
+            citation = "N/A — append-only — none."
+        else:
+            # Never convert an absent measurement into a negative claim.
+            listed = "- NOT MEASURED — validate_root_file_protection.py did not run"
+            why = "Not measured here — the additive_only range was never computed."
+            citation = "Not measured — treat the Root-file gate verdict as unknown."
+        text = text.replace("- ` `", listed, 1)
         text = text.replace(
             "<!-- What cannot be done in a non-root path. Composer fills. -->",
             why,
@@ -314,7 +340,7 @@ def _fill_protected_root(text: str, facts: MechanicalFacts) -> str:
         )
         text = text.replace(
             "<!-- Issue, failing gate, or law citation. Empty if every path is append-only. -->",
-            "N/A — append-only — none.",
+            citation,
             1,
         )
         text = _na_unchecked_in_section(text, "### Edit mode", "## Problem")
@@ -574,8 +600,13 @@ def write_handoff(
 
 
 def _load_additive_only(path: Path | None) -> list[str]:
-    if path is None or not path.is_file():
+    if path is None:
         return []
+    if not path.is_file():
+        # The caller named a measurement file; a missing one is an unmeasured
+        # range, which must not silently become "no additive_only root files".
+        msg = f"--additive-only-file does not exist: {path}"
+        raise FileNotFoundError(msg)
     return [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
@@ -587,6 +618,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--handoff", type=Path, default=None)
     parser.add_argument("--campaign-body-file", type=Path, default=None)
     parser.add_argument("--additive-only-file", type=Path, default=None)
+    parser.add_argument(
+        "--additive-only-unmeasured",
+        action="store_true",
+        help="No caller computed the additive_only range; say so instead of claiming none",
+    )
     parser.add_argument("--pr-number", type=int, default=None)
     args = parser.parse_args(argv)
 
@@ -604,6 +640,7 @@ def main(argv: list[str] | None = None) -> int:
         template_path=template_path,
         campaign_body=campaign,
         additive_only_paths=_load_additive_only(args.additive_only_file),
+        additive_only_measured=not args.additive_only_unmeasured,
     )
     result = compose_pr_body(facts, template_text or None)
     if args.handoff:
