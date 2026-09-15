@@ -54,24 +54,44 @@ MemoryService  →  canonical store  →  outbox  →  optional Graphiti project
 | `mcp_instantiation.py` | `~/.cursor/mcp.json` as a real per-machine file rendered from `environment/mcp/master.mcp.json`; drops the retired `graphiti-memory` key; delegates the memory entry to `l9-memory client cursor install/verify` against the bound runtime | authoring the memory entry |
 | `diagnostics.py` | readiness R0 `PACKAGE_BOUND` … R9 `PROJECTION_READY` | "Graphiti is up" == healthy |
 
-## Caller taxonomy (ADR-0030 items 7–9, CANONICAL_LAW §8.3)
+## Caller taxonomy (ADR-0033 two lanes; ADR-0030 items 7–9 as amended; CANONICAL_LAW §8.3 / §8.6)
 
-One authority, one egress, two adapters. Who calls what:
+One authority (`MemoryService`), **two lanes** into it. This package is the
+**hook lane** and the operator form; the **agent lane** does not pass through
+it. Who calls what:
 
-| Caller | Adapter | Operation(s) | Role |
-|---|---|---|---|
-| Model, mid-session, ordinary durable fact (cold OK) | `l9-graphite-memory` MCP stdio | `memory.write_agent` | **Cold path (ADR-0031).** No SessionStart receipt, no phase_lock. Allowlisted classes only. |
-| Model, mid-session, conflict-sensitive durable fact | `l9-graphite-memory` MCP stdio | `memory.phase_lock` → `memory.write_governed` | **High-stakes path.** Lock + snapshot digest required. |
-| Model, reading | MCP `memory.search` / `memory.hydrate`; or `cli.py search` / `hydrate` | read | evidence only |
-| SessionStart hook | `hydration.py` (`canonical_hydrate`) | `health`, `hydrate` | deterministic adapter |
-| sessionEnd hook | `ops/graphiti/hydration/close_session.py` | `ingest_candidate`, `close` (idempotent, exact-request replay) | deterministic adapter |
-| `/end-session` repair | `ops/graphiti/hydration/pickup_write.py` (`hydration.cli repair-write`) | canonical `write` + close-receipt stamp | deterministic adapter |
-| Legacy provider history | `legacy_reconciliation.py` | canonical admission, tag `legacy_unverified` | operator |
-| Diagnostics | `diagnostics.py`, `runtime_binding.py` | `readiness`, `health`, `capabilities` | operator / hooks |
-| Human operator, Program Execution, GMP Phase 0 | `cli.py` (`python -m ops.memory.cli`) | `write` (operator form), `conflicts`, `resolve` | operator |
-| `control_plane_client.py` `phase_lock` / `verify_phase_lock` | consumer-side view of the memory lock | governed-write precondition only | never repository authority |
+| Lane | Caller | Adapter | Operation(s) | Role |
+|---|---|---|---|---|
+| agent | Model, mid-session, ordinary durable fact (cold OK); real-time handoff to another agent | `l9-graphite-memory` MCP stdio (or `l9-memory write` from a shell) | `memory.write_agent` | **Ordinary agent write (ADR-0031 / ADR-0033).** Direct and ungated — no SessionStart receipt, no phase, no session close, no PR step, no Cursor-Governance approval. Immediately visible to the next `hydrate` / `search`. |
+| agent | Model, mid-session, conflict-sensitive durable fact | `l9-graphite-memory` MCP stdio | `memory.phase_lock` → `memory.write_governed` | **Optional high-stakes pair.** Lock + snapshot digest; never required before `write_agent`. |
+| agent | Model or PE worker reading on its own behalf | MCP `memory.search` / `memory.hydrate`; `l9-memory search` located via `runtime_binding.resolve_runtime_binding()` (`context_reader.py`) | read | evidence only; never constructs the hook client |
+| hook | SessionStart (`cursor-session-start`, `claude-session-start`) | `hydration.py` (`canonical_hydrate(surface=…)`) | `health`, `hydrate` | bounded, read-only envelope |
+| hook | sessionEnd (`cursor-session-end`, `claude-session-end`) | `ops/graphiti/hydration/close_session.py` | `ingest_candidate`, `close` (idempotent, exact-request replay), `distill` (redacted excerpt → `l9-memory distill`) | bounded write envelope; `principal.type=hook` |
+| hook | Plan prefetch (`plan-prefetch`), PR publish (`pr-publish`), PE/SGD ingest (`pe-sgd-ingest`) | `cli.py --surface <name>` / `MemoryControlPlaneClient(surface=…)` | read / `write` / `ingest_candidate` per envelope | bounded; refused client-side outside `ops/config/memory-hook-envelopes.json` |
+| operator | `/end-session` repair | `ops/graphiti/hydration/pickup_write.py` (`hydration.cli repair-write`) | canonical `write` + close-receipt stamp | deterministic adapter |
+| operator | Legacy provider history | `legacy_reconciliation.py` | canonical admission, tag `legacy_unverified` | human-run one-shot |
+| operator | Diagnostics | `diagnostics.py`, `runtime_binding.py`, `environment_heal.py` | `readiness`, `health`, `capabilities`; one-shot lock-drift heal | operator / hooks |
+| operator | Human operator, GMP Phase 0 | `cli.py` (`python -m ops.memory.cli`, no `--surface`) | `write` (operator form), `conflicts`, `resolve` | operator; `principal.type=operator` |
+| — | `control_plane_client.py` `phase_lock` / `verify_phase_lock` | consumer-side view of the memory lock | governed-write precondition only | never repository authority |
 
 Rules that follow from the table:
+
+- **Cursor-Governance never gates the agent lane.** No hook matcher, deny list,
+  contract or doctrine may make `memory.write_agent` (or `l9-memory` /
+  `python -m ops.memory.cli` from a shell) wait on a receipt, phase, close, PR
+  or approval (`memory_gate.py` exempts the memory lane;
+  `tests/ops/memory/test_no_agent_lane_interposition.py`).
+- **The hook lane is the same pipeline with a narrower envelope**, not an
+  alternate one: every automatic caller names its surface; the client refuses
+  out-of-envelope operations, record classes, counts and bytes before any
+  process is spawned and stamps `principal` on the integration receipt
+  (`hook_envelope.py`, `tests/ops/memory/test_hook_envelope.py`). The lane scan in
+  `ops/scripts/validate_memory_egress_boundary.py` keeps hook modules off the
+  package / console script and agent-lane modules off this client.
+- **No memory cognition lives here** (C15): no provider client, model id,
+  promotion rule, scorer or distill queue; extraction, admission and promotion
+  are `MemoryService`'s (`ops/scripts/validate_legacy_doctrine_residue.py`
+  `local-memory-cognition`).
 
 - The memory phase-lock is a **memory-write consistency precondition**. It
   never authorizes a source edit, never serializes git, never replaces

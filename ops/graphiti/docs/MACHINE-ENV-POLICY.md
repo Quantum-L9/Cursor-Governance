@@ -93,7 +93,7 @@ Graphiti env is inherited from the Mac — not recreated per clone.
 | `OPENAI_API_KEY` | **Never long-lived** in `graphiti.env` / disk. Ephemeral process resolve from AWS SM `l9/OPENAI_API_KEY` is OK for SessionEnd Phase B / local distill worker only | VPS `graphiti.env` for Graphiti server embeddings |
 | `NEO4J_PASSWORD` | **Never** | VPS only |
 | SSH key | `~/.ssh/` or keychain | N/A |
-| `MEMORY_DISTILL_S3_BUCKET` | Optional; enables SessionEnd S3 enqueue | N/A (GHA uses repo var) |
+| `MEMORY_DISTILL_S3_BUCKET` | **Retired at C15 (ADR-0033)** — no S3 enqueue exists; the close distills in-process via `l9-memory distill` (`L9_MEMORY_DISTILL=0` is the only knob) | N/A |
 
 ---
 
@@ -113,7 +113,7 @@ make -C "$HOME/.cursor-governance" memory-readiness
 | Commit `graphiti.env` to any repo | Machine + keychain |
 | Copy example into each clone | `init_graphiti_machine_env.sh` once |
 | Put VPS `OPENAI_API_KEY` on Mac long-lived | Ephemeral SM resolve for Phase B / GHA only; VPS `graphiti.env` for server |
-| Reintroduce Dropbox LaunchAgent distill | GHA `memory-distill.yml` + S3 queue |
+| Reintroduce Dropbox LaunchAgent distill | In-process `l9-memory distill` at sessionEnd (the GHA `memory-distill.yml` + S3 queue that replaced it was itself retired at C15) |
 | Require `/start-session` before env exists | `sessionStart` bootstrap + defaults |
 
 ---

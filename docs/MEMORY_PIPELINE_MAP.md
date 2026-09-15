@@ -110,11 +110,12 @@ sessionEnd (X-out / window_close / completed / aborted)
     (`ops.graphiti.hydration.archive_transcript`, background from sessionEnd)
   → never raise hook timeout into silent “nothing written” without Phase A attempt
 
-Batch catch-up (no Mac awake at cron time)
-  → GitHub Actions `.github/workflows/memory-distill.yml` (schedule + dispatch)
-  → pull pending S3 jobs → OpenAI distill → canonical ingest (ops/memory control plane)
+Batch catch-up — RETIRED at C15 (ADR-0033)
+  → there is no offline distill lane: `.github/workflows/memory-distill.yml`,
+    the S3 job queue (`ops/graphiti/distill_queue/`) and `run_distiller.sh` are
+    deleted; the close distills in-process through `l9-memory distill` above
   → Mac LaunchAgent `com.l9.transcript-distiller` / Dropbox / C1 `save_memory`
-    are RETIRED (see `ops/scripts/RETIRED_transcript_distiller_launchagent.md`)
+    were RETIRED earlier (see `ops/scripts/RETIRED_transcript_distiller_launchagent.md`)
 ```
 
 Entry points:
