@@ -17,8 +17,9 @@ deterministic owner of that gap, and deliberately nothing more:
            then remediation, then read-only recon/watch/poll. Mutation lanes
            admitted only when their write claims do not conflict under the
            canonical claim primitive (autonomy.runtime.claims.claim_scopes_conflict).
-           Profile caps come from ops/autonomy/execution_profile.py; this
-           remediator then applies SKILL_SUBAGENT_CAP (10).
+           Profile caps come from ops/autonomy/execution_profile.py and
+           pass through unchanged (maximum_velocity). Safety is
+           claim_scopes_conflict plus waves(), not a remediator clamp.
   assign   one bounded assignment packet per (PR, role) in the shape
            environment/agents/cursor-subagents/DELEGATION_CONTRACT.yaml
            requires, plus the Task prompt to launch it with.
@@ -29,7 +30,7 @@ deterministic owner of that gap, and deliberately nothing more:
            the wave plan). A model of the prose, not a timing.
 
 Not a scheduler: no leases, no claims registry, no admission, no capacity
-accounting beyond the skill cap it applies to the profile. Not a merge
+accounting beyond the execution-profile caps it passes through. Not a merge
 executor: it names ``merge_now`` and emits merge assignments; only
 ``stack_safe_merge.py --run`` merges. Not a campaign: identity fields on assignments are
 run-scoped correlation keys (``lease_id`` is ``no-root-lease-<assignment>``),
@@ -92,10 +93,8 @@ KINDS = {
     "merge": ROLE_REMEDIATE,  # assigned merge kind only; watchers never merge
 }
 
-#: Remediator-owned concurrent-subagent ceiling. The execution profile may
-#: saturate far higher; this skill launches at most this many lanes at once.
-SKILL_SUBAGENT_CAP = 10
-SKILL_CAP_OWNER = "skills/l9-pr-remediation Defaults.skill_subagent_cap"
+#: Caps are the execution profile. Do not reintroduce a remediator clamp.
+SKILL_CAP_OWNER = "ops/autonomy/execution_profile.py"
 
 RESULT_SCHEMA_PATH = (
     "environment/agents/cursor-subagents/schemas/cursor-subagent-result.schema.json"
@@ -294,17 +293,16 @@ def profile_caps(surface: str | None = None) -> dict[str, Any]:
 
 
 def skill_caps(profile: dict[str, Any]) -> dict[str, Any]:
-    """Apply the remediator skill ceiling on top of the execution-profile caps."""
-    cap = SKILL_SUBAGENT_CAP
+    """Pass through execution-profile caps. Safety is claim_scopes_conflict + waves()."""
     profile_parallel = int(profile["max_parallel"])
     profile_lanes = int(profile["max_mutation_lanes"])
     return {
         **profile,
         "profile_max_parallel": profile_parallel,
         "profile_max_mutation_lanes": profile_lanes,
-        "max_parallel": min(profile_parallel, cap),
-        "max_mutation_lanes": min(profile_lanes, cap),
-        "skill_subagent_cap": cap,
+        "max_parallel": profile_parallel,
+        "max_mutation_lanes": profile_lanes,
+        "skill_subagent_cap": profile_parallel,
         "skill_cap_owner": SKILL_CAP_OWNER,
     }
 
@@ -651,10 +649,11 @@ def _objective(kind: str, repo: str, pr: dict[str, Any]) -> str:
         )
     if kind == "watch":
         return (
-            f"Observe {repo}#{number} at head {head} until mergeStateStatus is CLEAN or a "
-            "required check turns red; report the terminal observation with the exact head. "
-            "The remediator main agent also polls this PR; this report does not waive that "
-            "duty. Never push, merge, edit, or resolve threads."
+            f"Observe {repo}#{number} at head {head} until pr_board.py reports board=merge "
+            "or a required check turns red; report the terminal observation with the exact "
+            "head. Do not stop at mergeStateStatus CLEAN alone. The remediator main agent "
+            "also polls this PR; this report does not waive that duty. Never push, merge, "
+            "edit, or resolve threads."
         )
     if kind == "merge":
         return (
@@ -668,10 +667,11 @@ def _objective(kind: str, repo: str, pr: dict[str, Any]) -> str:
     return (
         f"Remediate {repo}#{number} on branch {pr['headRefName']} from head {head}: plan every "
         "ingested finding, fix only CODEBASE clusters inside the allowed paths, run "
-        "`L9_REMEDIATOR=1 PR_BASE=origin/main make precommit-repo`, one commit, one `git push` "
-        "of this already-open PR branch, reply to every thread with "
-        "skills/l9-pr-remediation/scripts/reply_threads.py. Never merge, never force-push, "
-        "never edit CI surfaces, never ask the human to unblock."
+        "`L9_REMEDIATOR=1 PR_STACK= PR_BASE=origin/main make precommit-repo`, one commit, "
+        "one `git push` of this already-open PR branch, reply to every thread with "
+        "skills/l9-pr-remediation/scripts/reply_threads.py. Never merge origin/main into "
+        "this branch to 'fix' CI. Never merge the PR, never force-push, never edit CI "
+        "surfaces, never ask the human to unblock."
     )
 
 
@@ -1025,9 +1025,20 @@ def main(argv: list[str] | None = None) -> int:
                     run_id=run_id,
                     graph_id=str(fleet["fingerprint"]),
                 )
-                packet["path"] = str(write_assignment(packet))
+                written = write_assignment(packet)
+                if not written.is_file():
+                    raise FleetError(
+                        f"assign failed: assignment file missing at {written} "
+                        f"(.l9/pr/{ASSIGNMENT_DIR}/ must exist before Task launch)"
+                    )
+                packet["path"] = str(written)
                 if args.record:
                     record_lifecycle_assignment(packet, Path.cwd())
+                    if not written.is_file():
+                        raise FleetError(
+                            f"--record failed: assignment file missing at {written} "
+                            "before Task launch"
+                        )
                     packet["lifecycle_recorded"] = True
                 if args.prompt:
                     packet["prompt"] = render_prompt(packet)
