@@ -26,7 +26,6 @@ files.pythonhosted.org
 registry.npmjs.org
 astral.sh
 *.astral.sh
-memory.quantumaipartners.com
 semgrep.dev
 *.semgrep.dev
 ```
@@ -63,9 +62,9 @@ that can reach a secret backend is one mistake away from using one.
 | AWS Secrets Manager endpoints | **nobody** | The AWS bootstrap path is removed entirely (contract S1). Do not re-add it |
 
 Broker egress allow-list (if a broker is ever deployed — it is **not** the
-Graphiti health plane): `app.infisical.com`, `memory.quantumaipartners.com`,
-`sonarcloud.io`, `semgrep.dev`, plus any host a newly registered capability
-declares.
+Graphiti health plane): `app.infisical.com`, `sonarcloud.io`, `semgrep.dev`,
+plus any host a newly registered capability declares. The retired memory
+host is not on it: agent HTTP to the memory projection is sealed (ADR-0031).
 
 ### Deliberately absent
 
@@ -75,6 +74,11 @@ declares.
 - Any host not tied to a capability above. Do not widen this list to make a
   test pass — a capability that cannot reach its host must report DEGRADED.
 
-`memory.quantumaipartners.com` is required for HTTPS Graphiti (`/graphiti/mcp`).
-MCP connectors routed through Anthropic may not need allowlisting; keep the host
-for setup probes and `.mcp.json` HTTP clients.
+### Historical — not required, do not allowlist
+
+- `memory.quantumaipartners.com` — the retired HTTPS Graphiti projection
+  (`/graphiti/mcp`). Memory is the canonical `l9-graphite-memory` control plane
+  over **stdio** (ADR-0030); model writes are `memory.write_agent` or
+  `memory.phase_lock` → `memory.write_governed`, and agent HTTP side doors are
+  sealed (ADR-0031). Keep this host out of every agent allowlist; it appears
+  here only so an operator recognises it as historical.

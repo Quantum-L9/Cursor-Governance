@@ -6,11 +6,11 @@ metadata:
   skill_schema: 1
   layer: control_plane
   role: skill_entrypoint
-  tags: [l9, memory, control-plane, prefetch, gmp, end-session, write-governed]
+  tags: [l9, memory, control-plane, prefetch, gmp, end-session, write-agent, write-governed]
   owner: igor_beylin
   status: active
-  version: 2.1.0
-  updated: 2026-09-07
+  version: 2.2.0
+  updated: 2026-09-13
 ---
 
 # Agent memory (canonical control plane)
@@ -46,7 +46,7 @@ episodic memory.
 The memory phase-lock is a memory-write consistency precondition. It is
 **never** repository-write authority (rule 96 E7/E8/E10, rule 98). Generic
 `memory.ingest` and the operator CLI `write` are not the model's alternative
-to `write_governed`.
+to `write_agent` or `write_governed`.
 
 **Required by:** `/end-session` / skill `l9-end-session`, GMP Phase 0, the
 Claude adapter hooks (`memory_prefetch.py`, `memory_writeback.py`) and the
@@ -83,12 +83,20 @@ discovered.
 `~/.cursor/graphiti.env` carries switches only. It never carries a URL or a
 bearer; the memory runtime resolves its own configuration (memory ADR-016).
 
-## Interactive write (model-initiated) — governed
+## Interactive write (model-initiated)
 
 On the `l9-graphite-memory` MCP server (rendered only when
-`L9_MEMORY_INTERPRETER` is bound; `make memory-mcp-install`):
+`L9_MEMORY_INTERPRETER` is bound; `make memory-mcp-install`). ADR-0031 dual
+classes:
 
 ```text
+# ordinary / cold — no SessionStart receipt, no phase_lock
+memory.write_agent     {namespace: "<memcli resolve → write_namespace_hint>",
+                        content: "<one terse fact>",
+                        memory_class: "lesson" | "insight" | "decision",
+                        tags: ["agent:cursor"], idempotency_key: "<optional>"}
+
+# conflict-sensitive — lock then governed write
 memory.phase_lock      {namespace: "<memcli resolve → write_namespace_hint>",
                         task_signature: "<task>", ttl_seconds: 1800}
 memory.write_governed  {namespace, content: "<one terse fact>", task_signature,
@@ -142,9 +150,9 @@ Boundary: [`ops/memory/README.md`](../../ops/memory/README.md).
    `REPAIR: /end-session` (ADR-0028).
 2. **Resume** — follow hydrated `next=`; `memcli hydrate` if degraded; never
    read `memory-bank/`.
-3. **Session work** — atomic T2 governed writes (`memory.phase_lock` →
-   `memory.write_governed`, `memory_class: lesson|insight|decision`). Do not
-   wait for sessionEnd.
+3. **Session work** — atomic T2 writes: ordinary `memory.write_agent`;
+   conflict-sensitive `memory.phase_lock` → `memory.write_governed`
+   (`memory_class: lesson|insight|decision`). Do not wait for sessionEnd.
 4. **sessionEnd hook** — `graphiti-session-end.sh` → Phase A/B close:
    `ContinuationCapsuleV2` → governed candidate → `memory.close` with an
    idempotency key; the local obligation under `.l9/memory/closes/` answers
@@ -159,13 +167,15 @@ waiting to be asked:
 
 ```text
 memcli resolve                          # expect the repo namespace, e.g. cursor-governance
+memory.write_agent     {namespace: "cursor-governance", content: "…", memory_class: "lesson", tags: ["agent:cursor"]}
+# only when concurrent writers / snapshot consistency matter:
 memory.phase_lock      {namespace: "cursor-governance", task_signature: "<task>"}
 memory.write_governed  {namespace: "cursor-governance", content: "…", task_signature: "<task>", memory_class: "lesson", tags: ["agent:cursor"]}
 ```
 
 **MUST NOT** request the shared workspace namespace as a write target — memory
 refuses it and the refusal is the verdict. **MUST NOT** substitute
-`memory.ingest` or `memcli write` for the governed write; those are the
+`memory.ingest` or `memcli write` for `write_agent` / `write_governed`; those are the
 deterministic-adapter and operator forms.
 
 ## GMP Phase 0
@@ -209,8 +219,8 @@ bash .cursor-commands/ops/graphiti/test_gate_e2e_full.sh
 
 ## Authority
 
-1. `CANONICAL_LAW.md` §8.2 (2026-09-06) — memory control plane is the single front door; §8.3 (2026-09-07) — interactive write contract
-2. `docs/decisions/ADR-0030-memory-control-plane-single-front-door.md` (items 7–9)
+1. `CANONICAL_LAW.md` §8.2 (2026-09-06) — memory control plane is the single front door; §8.3 (2026-09-07) — interactive write contract; §8.5 (2026-09-13) — ADR-0031 dual write classes
+2. `docs/decisions/ADR-0031-signed-agent-mcp-write-classes.md` (cold `write_agent`; high-stakes `write_governed`); ADR-0030 items 7–9 as amended
 3. `rules/03-graphiti-memory.mdc`, `98-graphiti-memory-gate.mdc`, `97-graph-layer-boundary.mdc`, `87-cursor-memory-kernel.mdc`
 4. `ops/memory/README.md` (caller taxonomy), `ops/config/memory-binding.json`, `ops/graphiti/group_registry.yaml` (hints, no grants), `environment/agents/adapters/claude-code/memory/memory-enforcement.contract.json` (`interactive_memory_write`)
 5. `skills/l9-end-session/SKILL.md` — session-close repair path
