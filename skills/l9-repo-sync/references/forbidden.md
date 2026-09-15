@@ -33,7 +33,8 @@ These are **not** `/ff`. Name them so agents can refuse. Do not run them.
 ## Allowed catch-up (only inside `scripts/ff.sh`)
 
 - `git fetch origin main`
-- `git switch` **to `main`** after parking dirt (feature ref stays)
+- `git switch` **to `main`** after parking dirt (feature ref stays), then
+  switch back and restore parked files to the same relative paths
 - `git update-ref` / `git branch` for `l9/ff-preserve-*` and `ff-dirty`
 - `git stash create` (no `-u`) to park dirty tracked, then restore those paths
 - copy/move unique bytes to `$HOME/.cursor/l9-ff-hold/`

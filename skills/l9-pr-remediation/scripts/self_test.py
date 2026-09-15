@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contract tests for l9-pr-remediation 5.4.0. Stdlib only.
+"""Contract tests for l9-pr-remediation 5.5.0. Stdlib only.
 
 Structural and wiring checks: every link resolves, every deterministic owner
 the pack names exists, the pre-v5 contradictions stay gone, and the pack never
@@ -75,7 +75,7 @@ def _forbid(text: str, needle: str, where: str) -> None:
 
 
 def test_frontmatter_and_map() -> None:
-    _need(SKILL, "version: 5.4.0", "SKILL.md")
+    _need(SKILL, "version: 5.5.0", "SKILL.md")
     _need(SKILL, "tier: exemplary", "SKILL.md")
     _need(SKILL, "disable-model-invocation: true", "SKILL.md")
     match = re.search(r"^description: (.+)$", SKILL, re.M)
@@ -224,7 +224,8 @@ def test_no_second_plane() -> None:
     for needle in ("max_wait_snapshots", "poll_interval_seconds", "Max 4 total", "max 2 mutation"):
         _forbid(PACK, needle, "l9-pr-remediation pack (lane caps belong to execution_profile.py)")
     _need(SKILL, "concurrency_caps_owner: ops/autonomy/pr_fleet.py skill_caps", "SKILL.md")
-    _need(SKILL, "skill_subagent_cap: 10", "SKILL.md")
+    _forbid(SKILL, "skill_subagent_cap: 10", "SKILL.md")
+    _need(SKILL, "skill_caps_pass_through: true", "SKILL.md")
     _need(SKILL, "ops/autonomy/execution_profile.py", "SKILL.md")
     _need(SKILL, "no campaign, no Program Execution", "SKILL.md")
     for word in ("surface_profile.yaml", "lease", "scheduler"):
@@ -233,7 +234,7 @@ def test_no_second_plane() -> None:
 
 
 def test_verbs_and_publish() -> None:
-    _need(SKILL, "L9_REMEDIATOR=1 PR_BASE=origin/main make precommit-repo", "SKILL.md")
+    _need(SKILL, "L9_REMEDIATOR=1 PR_STACK= PR_BASE=origin/main make precommit-repo", "SKILL.md")
     _need(SKILL, "publish: git push", "SKILL.md")
     _need(SKILL, "do not run `make pr`", "SKILL.md")
     _need(SKILL, "must not invoke `make pr`", "SKILL.md")
@@ -275,7 +276,7 @@ def test_fleet_and_waves() -> None:
         "l9-pr-remediation",
         "l9-recon",
         "execution_profile.py",
-        "skill_subagent_cap: 10",
+        "`skill_caps` pass through",
         "merge_now",
     ):
         _need(waves, needle, "fleet-waves.md")
@@ -351,6 +352,103 @@ def test_sonar_directive() -> None:
     _need(REFS["signal-ingestion.md"], "never blocks merge", "signal-ingestion.md")
 
 
+def _sonar_census_fixture(root: Path) -> Path:
+    """Offline GitHub payloads for a PR whose head carries no Sonar fixture."""
+    fixture = root / "fx"
+    fixture.mkdir()
+    (fixture / "pr.json").write_text(json.dumps({"head": {"sha": "c" * 40}}), encoding="utf-8")
+    for name in ("reviews.json", "comments.json", "issue_comments.json", "checks.json"):
+        (fixture / name).write_text("[]", encoding="utf-8")
+    (fixture / "threads.json").write_text(json.dumps({"nodes": []}), encoding="utf-8")
+    (root / "sonar-project.properties").write_text("sonar.projectKey=demo\n", encoding="utf-8")
+    return fixture
+
+
+def _run_ingest_in(root: Path, fixture: Path, pr_number: str) -> tuple[int | None, str]:
+    """Run ingest_signals.main with cwd=root; return (rc or None on SystemExit, stderr)."""
+    import contextlib
+    import io
+    import os
+
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import ingest_signals  # noqa: PLC0415
+
+    argv = [
+        "--repo",
+        "acme/app",
+        "--pr",
+        pr_number,
+        "--output",
+        "findings.json",
+        "--fixture-dir",
+        str(fixture),
+    ]
+    stderr = io.StringIO()
+    previous = Path.cwd()
+    os.chdir(root)
+    try:
+        with contextlib.redirect_stderr(stderr), contextlib.redirect_stdout(io.StringIO()):
+            try:
+                rc: int | None = ingest_signals.main(argv)
+            except SystemExit as exc:
+                rc = None if exc.code not in (0, None) else 0
+    finally:
+        os.chdir(previous)
+    return rc, stderr.getvalue()
+
+
+def test_sonar_snapshot_binding() -> None:
+    """A worktree-retained Sonar snapshot enters the census only when bound to --pr.
+
+    File presence is not evidence identity: `sonarcloud-issues-before.json` left
+    behind by another PR or an earlier run must be rejected with a diagnostic,
+    while a snapshot whose `branch_or_pull_request.pullRequest` names the
+    current PR still ingests. A snapshot with no binding at all is unbound.
+    """
+    import tempfile
+
+    stale_issue = {"key": "S1", "message": "stale finding", "component": "src:a.py"}
+    cases = (
+        ("other PR", {"branch_or_pull_request": {"pullRequest": "123"}}),
+        ("main analysis", {"branch_or_pull_request": {"scope": "main-analysis"}}),
+        ("branch scope", {"branch_or_pull_request": {"branch": "feature/x"}}),
+        ("no binding", {}),
+    )
+    for label, binding in cases:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            fixture = _sonar_census_fixture(root)
+            (root / "sonarcloud-issues-before.json").write_text(
+                json.dumps({**binding, "issues": [stale_issue]}), encoding="utf-8"
+            )
+            rc, err = _run_ingest_in(root, fixture, "584")
+            if rc is not None:
+                _fail(f"ingest_signals ingested a Sonar snapshot with {label} binding (rc={rc})")
+            if (root / "findings.json").is_file():
+                _fail(f"ingest_signals wrote a census from a Sonar snapshot with {label} binding")
+            if "sonarcloud-issues-before.json" not in err or "584" not in err:
+                _fail(f"rejection diagnostic for {label} names neither the snapshot nor the PR")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        fixture = _sonar_census_fixture(root)
+        (root / "sonarcloud-issues-before.json").write_text(
+            json.dumps(
+                {
+                    "branch_or_pull_request": {"pullRequest": "584"},
+                    "issues": [{"key": "S2", "message": "live", "component": "src:b.py"}],
+                }
+            ),
+            encoding="utf-8",
+        )
+        rc, err = _run_ingest_in(root, fixture, "584")
+        if rc != 0:
+            _fail(f"ingest_signals rejected a Sonar snapshot bound to the current PR: {err}")
+        census = json.loads((root / "findings.json").read_text(encoding="utf-8"))
+        if not any(str(item.get("id", "")).startswith("sonar-") for item in census["findings"]):
+            _fail("a Sonar snapshot bound to the current PR did not reach the census")
+
+
 def test_semgrep_directive() -> None:
     _need(SKILL, "references/semgrep-remediation.md", "SKILL.md resource map")
     _need(SKILL, "scripts/semgrep_fetch.py", "SKILL.md")
@@ -403,6 +501,8 @@ REJECT_SIGNALS = (
     "edit the workflow",
     "diff i pasted",
     "campaign branch",
+    "one ci finding",
+    "catch up from main",
 )
 
 
@@ -504,6 +604,7 @@ def main() -> None:
     test_fleet_and_waves()
     test_board_and_merge()
     test_sonar_directive()
+    test_sonar_snapshot_binding()
     test_semgrep_directive()
     test_venv_and_counters()
     test_activation_precision()

@@ -65,8 +65,8 @@ Normalize each hit to the unified finding list with `source: semgrep`, its
 "${GOV_PY:-$PWD/.venv/bin/python}" skills/l9-pr-remediation/scripts/ingest_signals.py \
   --repo {owner}/{repo} --pr {n} --output findings.json \
   --required-checks "{comma-separated from pr_board.py}"
-# optional scanner snapshots already written under $PWD:
-#   --sonar sonarcloud-issues-before.json \
+# Sonar attaches automatically when sonar-project.properties exists
+# (fixture sonar.json or $PWD/sonarcloud-issues-before.json). --sonar is optional.
 #   --semgrep semgrep-findings-before.json \
 #   --codeql codeql-alerts-before.json \
 #   --debt debt-baseline.json

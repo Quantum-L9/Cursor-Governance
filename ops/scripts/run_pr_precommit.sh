@@ -39,7 +39,12 @@ source "$SCRIPT_DIR/lib/resolve_pr_stack.sh"
 # Standalone make precommit-repo has no PR_CHANGED_FILE. Bind the unique chain
 # tip before resolve_changed_files so kernel_gate does not see parent-stack
 # fixtures. The gate already resolved and passes PR_CHANGED_FILE — skip.
-if [[ -z "${PR_CHANGED_FILE:-}" || ! -f "${PR_CHANGED_FILE:-}" ]]; then
+# Remediator local verify must not rewrite PR_BASE onto a sibling stack tip.
+_REMEDIATOR="$(printf '%s' "${L9_REMEDIATOR:-}" | tr '[:upper:]' '[:lower:]')"
+if [[ "$_REMEDIATOR" == "1" || "$_REMEDIATOR" == "true" || "$_REMEDIATOR" == "yes" ]]; then
+  PR_BASE="${PR_BASE:-origin/main}"
+  export PR_BASE
+elif [[ -z "${PR_CHANGED_FILE:-}" || ! -f "${PR_CHANGED_FILE:-}" ]]; then
   PR_BASE="${PR_BASE:-origin/main}"
   pr_stack_apply_publish_base "$WS" || exit $?
   export PR_BASE

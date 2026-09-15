@@ -41,7 +41,7 @@ Resume discovery when: unexpected failure, scope change, new dependency, environ
 
 This host (Cursor-Governance / Makefile capability graph):
 
-- verify: `L9_REMEDIATOR=1 PR_BASE=origin/main make precommit-repo`
+- verify: `L9_REMEDIATOR=1 PR_STACK= PR_BASE=origin/main make precommit-repo`
 - kernels (optional): `make improve`
 - publish: `git push` of the already-open PR branch
 - fleet: `ops/autonomy/pr_fleet.py plan --repo {owner}/{repo} --board --json` (read-only; writes `.l9/pr/fleet.json`; never edits or merges) — waves, assignments, acceptance: [fleet-waves.md](fleet-waves.md)
@@ -175,7 +175,7 @@ run_contract:
     receipt: ".l9/pr/fleet.json"
     fingerprint: "{16 hex; re-plan when it changes}"
     caps_owner: "ops/autonomy/pr_fleet.py skill_caps"
-    skill_subagent_cap: 10
+    skill_caps_pass_through: true
     first_wave: {merge: [191], remediate: [192], recon: [], watch: [], poll: [192]}
   prs:
     - number: 192
