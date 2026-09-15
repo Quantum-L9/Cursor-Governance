@@ -42,7 +42,10 @@ Plans-store refine (fold/compile leftover todos, `harvested: true` omit) is
 
 ## Compact workflow
 
-1. Run `scripts/audit_pipeline.py --workspace "$(pwd)" --gov-root "$HOME/.cursor-governance" --format markdown --archive-spent`.
+1. Run `scripts/audit_pipeline.py --workspace "$(pwd)" --gov-root "$HOME/.cursor-governance" --format markdown`.
+   Add `--archive-spent` only when you intend the run to archive spent
+   plans — it is opt-in and mutates the plans store; the default run is
+   read-only.
 2. List `harvestable` by surface and concern. Do not auto-shelf mixed donors.
 3. Harvest only named donors through `scripts/run_intelligence_harvest.py`.
 4. Emit compiled packets to `docs/plans/`, `WIP/<M-D-YY>/<concern>/`, or a
