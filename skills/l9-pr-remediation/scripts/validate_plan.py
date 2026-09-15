@@ -46,11 +46,15 @@ def _findings_list(doc: Any) -> list[dict[str, Any]] | None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Validate a remediator plan ledger.")
     parser.add_argument("--plan", required=True)
-    parser.add_argument("--findings", help="ingest_signals.py snapshot (optional)")
+    parser.add_argument(
+        "--findings",
+        required=True,
+        help="ingest_signals.py snapshot (required on Converge)",
+    )
     args = parser.parse_args(argv)
 
     plan = _load(Path(args.plan))
-    findings = _findings_list(_load(Path(args.findings))) if args.findings else None
+    findings = _findings_list(_load(Path(args.findings)))
     errors = validate_plan(plan, findings)
     if errors:
         for error in errors:

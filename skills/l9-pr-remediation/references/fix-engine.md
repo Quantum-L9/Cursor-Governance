@@ -64,7 +64,7 @@ test -f Makefile && { grep -E '^(precommit-repo|improve):' Makefile || true; }
 ```yaml
 local_verify_commands:
   - name: "precommit-repo"
-    command: "L9_REMEDIATOR=1 PR_BASE=origin/main make precommit-repo"
+    command: "L9_REMEDIATOR=1 PR_STACK= PR_BASE=origin/main make precommit-repo"
     source: "Makefile:precommit-repo"
 ```
 
