@@ -394,6 +394,69 @@ class ComposePrBodyTests(unittest.TestCase):
         self.assertEqual(facts.path_subjects["a.py"], "two: touch a and b")
         self.assertEqual(facts.path_subjects["b.py"], "two: touch a and b")
 
+    def test_stacked_range_excludes_inherited_mainline_and_merge_commits(self) -> None:
+        """PR #602's title quoted a `main` commit that was never this branch's.
+
+        The stack parent had been cut before its own base was refreshed, so
+        `parent..HEAD` inherited a mainline commit and the merges that carried
+        it. The narrative range must be this branch's own non-merge commits.
+        """
+        import subprocess
+
+        from compose_pr_body import collect_mechanical
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            env = {
+                "PATH": __import__("os").environ["PATH"],
+                "GIT_AUTHOR_NAME": "t",
+                "GIT_AUTHOR_EMAIL": "t@x",
+                "GIT_COMMITTER_NAME": "t",
+                "GIT_COMMITTER_EMAIL": "t@x",
+                "HOME": tmp,
+            }
+
+            def git(*args: str) -> None:
+                subprocess.run(
+                    ["git", "-C", str(repo), *args], check=True, capture_output=True, env=env
+                )
+
+            git("init", "-q", "-b", "main")
+            (repo / "base.txt").write_text("base\n")
+            git("add", "base.txt")
+            git("commit", "-q", "-m", "base")
+            # Stack parent cut from main here …
+            git("checkout", "-q", "-b", "parent")
+            (repo / "parent.py").write_text("p\n")
+            git("add", "parent.py")
+            git("commit", "-q", "-m", "parent: its own work")
+            # … then main moves on without the parent noticing.
+            git("checkout", "-q", "main")
+            (repo / "mainline.py").write_text("m\n")
+            git("add", "mainline.py")
+            git("commit", "-q", "-m", "mainline: somebody else's fix (#599)")
+            # The child starts from the parent, catches up to main by merge,
+            # and does its own work.
+            git("checkout", "-q", "-b", "child", "parent")
+            git("merge", "-q", "--no-edit", "main")
+            (repo / "child.py").write_text("c\n")
+            git("add", "child.py")
+            git("commit", "-q", "-m", "child: first real change")
+            (repo / "child.py").write_text("c2\n")
+            git("add", "child.py")
+            git("commit", "-q", "-m", "child: second real change")
+            # The composer sees the mainline through its remote-tracking name.
+            git("update-ref", "refs/remotes/origin/main", "main")
+
+            facts = collect_mechanical(repo, pr_base="parent")
+
+        self.assertEqual(facts.commits, ["child: first real change", "child: second real change"])
+        self.assertNotIn("mainline.py", facts.path_subjects)
+        self.assertEqual(facts.path_subjects["child.py"], "child: second real change")
+        # The diff is still the real diff against the parent: the inherited
+        # mainline file is in it, it is only the *story* that leaves it out.
+        self.assertIn("A\tmainline.py", facts.changed_files)
+
     def test_handoff_lists_empty_needs_completion(self) -> None:
         facts = MechanicalFacts(
             commits=["a"],

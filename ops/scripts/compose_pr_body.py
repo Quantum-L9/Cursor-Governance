@@ -162,6 +162,31 @@ def _deletion_markers(text: str) -> dict[str, str]:
     return markers
 
 
+MAINLINE_REF = "origin/main"
+
+
+def _narrative_range(workspace: Path, pr_base: str) -> list[str]:
+    """The revision arguments for "what this branch says about itself".
+
+    ``pr_base..HEAD`` alone is the wrong range for a stacked PR whose parent
+    was cut before the parent's own base was refreshed: it then inherits
+    mainline commits the parent has not caught up to, plus the merge commits
+    that brought them in, and the composer's *oldest* commit — the PR title —
+    becomes somebody else's ``main`` change. Exclude everything reachable from
+    ``origin/main`` and every merge commit; what remains is this branch's own
+    story. When ``origin/main`` is not fetched, fall back to the bare range.
+    """
+    args = ["--no-merges", f"{pr_base}..HEAD"]
+    if (
+        pr_base not in {MAINLINE_REF, "main"}
+        and _run_git(
+            workspace, "rev-parse", "--verify", "--quiet", f"{MAINLINE_REF}^{{commit}}"
+        ).strip()
+    ):
+        args.append(f"^{MAINLINE_REF}")
+    return args
+
+
 def _collect_path_subjects(workspace: Path, pr_base: str) -> dict[str, str]:
     """Map each changed path to the subject of the newest commit that touched it.
 
@@ -176,7 +201,7 @@ def _collect_path_subjects(workspace: Path, pr_base: str) -> dict[str, str]:
         "--reverse",
         "--name-only",
         "--format=%x00%s",
-        f"{pr_base}..HEAD",
+        *_narrative_range(workspace, pr_base),
     )
     subjects: dict[str, str] = {}
     for block in out.split("\x00"):
@@ -198,7 +223,13 @@ def collect_mechanical(
     additive_only_paths: list[str] | None = None,
     additive_only_measured: bool = True,
 ) -> MechanicalFacts:
-    log = _run_git(workspace, "log", "--reverse", f"{pr_base}..HEAD", "--format=%s%n%b---END---")
+    log = _run_git(
+        workspace,
+        "log",
+        "--reverse",
+        "--format=%s%n%b---END---",
+        *_narrative_range(workspace, pr_base),
+    )
     commits: list[str] = []
     bodies: list[str] = []
     issue_closes: list[int] = []
