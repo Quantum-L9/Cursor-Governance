@@ -611,7 +611,7 @@ def _evaluate(tool_name: str, tool_input: dict[str, Any], *, root: Path) -> str 
         # not run the Makefile checkers — so it is denied regardless of L4 phase.
         if not _publish_path_override():
             return _publish_deny_reason(tool_name)
-        allowed, reason = release_allows_remote(root)
+        allowed, reason = release_allows_remote(root, record=True)
         return None if allowed else reason
 
     if tool_name in SHELL_TOOL_NAMES:
@@ -641,14 +641,16 @@ def _evaluate(tool_name: str, tool_input: dict[str, Any], *, root: Path) -> str 
                     "L4 named root could not be resolved to a git repository; "
                     "fail-closed on unresolved remote-mutation targets"
                 )
-            if all(release_allows_remote(item)[0] for item in resolved):  # type: ignore[union-attr]
+            if all(release_allows_remote(item, record=True)[0] for item in resolved):  # type: ignore[union-attr]
                 return None
             denied = next(
-                item for item in resolved if item is not None and not release_allows_remote(item)[0]
+                item
+                for item in resolved
+                if item is not None and not release_allows_remote(item, record=True)[0]
             )
-            _, reason = release_allows_remote(denied)
+            _, reason = release_allows_remote(denied, record=True)
             return reason
-        allowed, reason = release_allows_remote(root)
+        allowed, reason = release_allows_remote(root, record=True)
         return None if allowed else reason
     return None
 
@@ -999,7 +1001,7 @@ def cursor_shell_verdict(raw: str) -> tuple[str, str | None]:
             return "allow", None
         if not command_has_make_remote(command):
             return "allow", None
-        allowed, reason = release_allows_remote(root)
+        allowed, reason = release_allows_remote(root, record=True)
     except Exception as exc:  # noqa: BLE001 - security boundary: deny on any fault
         _fail_closed_note(exc)
         return "deny", INTERNAL_EVALUATION_ERROR

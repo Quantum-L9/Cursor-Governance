@@ -47,7 +47,7 @@ def test_push_breakglass_leaves_a_trail_bound_to_head(
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
     monkeypatch.setenv("L9_LOCAL_PUSH_AUTHORIZED", "ops: hotfix for #1")
     assert not breakglass_path(stacked_repo).exists()
-    allowed, reason = release_allows_remote(stacked_repo)
+    allowed, reason = release_allows_remote(stacked_repo, record=True)
     assert allowed
     assert "breakglass" in reason
     trail = json.loads(breakglass_path(stacked_repo).read_text(encoding="utf-8"))
@@ -65,10 +65,18 @@ def test_l4_switch_off_also_leaves_a_trail(
 ) -> None:
     monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "0")
-    assert release_allows_remote(stacked_repo)[0]
+    assert release_allows_remote(stacked_repo, record=True)[0]
     trail = json.loads(breakglass_path(stacked_repo).read_text(encoding="utf-8"))
     assert trail["variable"] == "L9_L4_LOCAL_AUTONOMY"
     assert trail["reason"] == "0"
+
+
+def test_status_probe_does_not_record_breakglass(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("L9_LOCAL_PUSH_AUTHORIZED", "ops: status only")
+    assert status_dict(stacked_repo)["remote_allowed"] is True
+    assert not breakglass_path(stacked_repo).exists()
 
 
 def test_receipt_path_leaves_no_breakglass_trail(

@@ -839,19 +839,25 @@ def _record_breakglass(root: Path, variable: str, reason: str) -> None:
                 "used_at": _utc_now(),
             },
         )
-    except OSError:
+    except Exception:  # noqa: BLE001 — trail is best-effort; never deny an authorized push
         pass
 
 
-def release_allows_remote(root: Path) -> tuple[bool, str]:
-    """Return (allowed, reason) for git push / gh pr create."""
+def release_allows_remote(root: Path, *, record: bool = False) -> tuple[bool, str]:
+    """Return (allowed, reason) for git push / gh pr create.
+
+    ``record=True`` writes the breakglass trail. Status probes must pass
+    ``record=False`` (the default) so a read-only check cannot claim a publish.
+    """
     l4_switch = os.environ.get("L9_L4_LOCAL_AUTONOMY", "1").strip()
     if l4_switch in {"0", "false", "False", "no"}:
-        _record_breakglass(root, "L9_L4_LOCAL_AUTONOMY", l4_switch)
+        if record:
+            _record_breakglass(root, "L9_L4_LOCAL_AUTONOMY", l4_switch)
         return True, "L9_L4_LOCAL_AUTONOMY disabled"
     push_auth = os.environ.get("L9_LOCAL_PUSH_AUTHORIZED", "").strip()
     if push_auth:
-        _record_breakglass(root, "L9_LOCAL_PUSH_AUTHORIZED", push_auth)
+        if record:
+            _record_breakglass(root, "L9_LOCAL_PUSH_AUTHORIZED", push_auth)
         return True, "L9_LOCAL_PUSH_AUTHORIZED breakglass"
 
     receipt = load_receipt(root)
@@ -948,7 +954,7 @@ def cmd_status(args: argparse.Namespace) -> int:
 
 
 def cmd_check_remote(args: argparse.Namespace) -> int:
-    allowed, reason = release_allows_remote(workspace_root(args.workspace))
+    allowed, reason = release_allows_remote(workspace_root(args.workspace), record=True)
     print(json.dumps({"allowed": allowed, "reason": reason}, indent=2))
     return 0 if allowed else 2
 

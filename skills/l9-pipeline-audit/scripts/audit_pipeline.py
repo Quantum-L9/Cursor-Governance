@@ -437,8 +437,11 @@ def _built_shelf(plans_dir: Path) -> Path:
     for child in candidates:
         if child.name == "BUILT":
             return child
+    preferred = [child for child in candidates if child.name == "built"]
+    if preferred:
+        return preferred[0]
     if candidates:
-        return candidates[0]
+        return sorted(candidates, key=lambda child: child.name)[0]
     return canonical
 
 
