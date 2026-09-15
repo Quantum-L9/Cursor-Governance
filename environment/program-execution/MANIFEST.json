@@ -2111,7 +2111,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "db6456a2ec88717b2d1f06a91d288ead15b6f796ea5f831e893b64e16a085a97"
+      "sha256": "79210b34108f859202702a949ccc1aa28fd1aa3a16654f39b3f7bc03233337b2"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -2239,11 +2239,11 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "a842d136aad98cc139f29ae2dfcb8e02edc8994d52c9676396a680e8462f8e66"
+      "sha256": "7341e4d331f7959cd1c8c01b2eafb7a3d0c52a6c2f6d8a26dab3ec3f71c250b3"
     },
     {
       "path": "scripts/tests/test_run_campaign_repairs.py",
-      "sha256": "5bc307aae6af9eb53110df9f5168d306d366013a84597b0117627718f5157334"
+      "sha256": "27bfb2756ba8efeaf8e35bcbf835ee82c341bb15b4ab880a22b911ae89237645"
     },
     {
       "path": "scripts/tests/test_run_conformance.py",

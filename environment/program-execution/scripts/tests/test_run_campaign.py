@@ -1180,6 +1180,123 @@ class RunCampaignTests(unittest.TestCase):
             self.assertEqual(len(revoked), 1)
             self.assertIn("recovered", revoked[0])
 
+    def test_terminal_recovery_emits_revoke_success_not_grant_presence(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            repository = workspace / "repo"
+            repository.mkdir()
+            (workspace / "runtime").mkdir()
+            (workspace / "runtime" / "LAUNCH.json").write_text(
+                json.dumps({"campaign_id": "CAMP", "target_worktree": str(repository)}),
+                encoding="utf-8",
+            )
+            self._retry_receipt(workspace, "TASK-001", "attempt-dead", "KNOWN_TERMINAL")
+            events: list[dict[str, Any]] = []
+
+            def fake_pec(ws: Path, command: str, *rest: str) -> dict[str, Any]:
+                if command == "status":
+                    return {
+                        "tasks": [
+                            {
+                                "id": "TASK-001",
+                                "repository_local_path": str(repository),
+                                "consumed_attempts": 0,
+                                "max_attempts": 3,
+                            }
+                        ],
+                        "live_execution_attempts": [],
+                    }
+                if command == "fresh-workspace":
+                    return {"recovery": {"status": "RECOVERED"}}
+                raise AssertionError(f"unexpected pec {command}")
+
+            grant = {"lease_id": "lease-dead", "task_id": "TASK-001"}
+            fake_grants = unittest.mock.Mock()
+            fake_grants.latest_grant_receipt.return_value = (1, grant)
+            fake_grants.revoke_task_grant.return_value = {
+                "revoked": False,
+                "reason": "grant carries no live runtime binding",
+            }
+            with (
+                unittest.mock.patch.object(self.mod, "pec_cmd", side_effect=fake_pec),
+                unittest.mock.patch.object(self.mod, "_grant_module", return_value=fake_grants),
+                unittest.mock.patch.object(
+                    self.mod, "emit", side_effect=lambda *a, **k: events.append(k)
+                ),
+            ):
+                self.assertTrue(
+                    self.mod._recover_terminal_peer_task(workspace, "TASK-001", trace=None)
+                )
+            self.assertEqual(events[-1]["metadata"]["grant_revoked"], False)
+
+    def test_terminal_recovery_refuses_when_consumed_generations_meet_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            self._retry_receipt(workspace, "TASK-001", "attempt-dead", "KNOWN_TERMINAL")
+
+            def fake_pec(ws: Path, command: str, *rest: str) -> dict[str, Any]:
+                if command == "status":
+                    return {
+                        "tasks": [
+                            {
+                                "id": "TASK-001",
+                                "consumed_attempts": 1,
+                                "max_attempts": 1,
+                            }
+                        ],
+                        "live_execution_attempts": [],
+                    }
+                raise AssertionError(f"unexpected pec {command}")
+
+            with (
+                unittest.mock.patch.object(self.mod, "pec_cmd", side_effect=fake_pec),
+                self.assertRaises(self.mod.CampaignError) as caught,
+            ):
+                self.mod._recover_terminal_peer_task(workspace, "TASK-001", trace=None)
+            self.assertEqual(caught.exception.error_code, "RETRY_BUDGET_EXHAUSTED")
+
+    def test_terminal_recovery_uses_the_task_registered_repository(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            campaign_target = workspace / "campaign-target"
+            campaign_target.mkdir()
+            task_repo = workspace / "task-repo"
+            task_repo.mkdir()
+            (workspace / "runtime").mkdir()
+            (workspace / "runtime" / "LAUNCH.json").write_text(
+                json.dumps({"campaign_id": "CAMP", "target_worktree": str(campaign_target)}),
+                encoding="utf-8",
+            )
+            self._retry_receipt(workspace, "TASK-002", "attempt-dead", "KNOWN_TERMINAL")
+            calls: list[tuple[str, ...]] = []
+
+            def fake_pec(ws: Path, command: str, *rest: str) -> dict[str, Any]:
+                calls.append((command, *rest))
+                if command == "status":
+                    return {
+                        "tasks": [
+                            {
+                                "id": "TASK-002",
+                                "repository_id": "org/other",
+                                "repository_local_path": str(task_repo),
+                                "consumed_attempts": 0,
+                                "max_attempts": 3,
+                            }
+                        ],
+                        "live_execution_attempts": [],
+                    }
+                if command == "fresh-workspace":
+                    return {"recovery": {"status": "RECOVERED"}}
+                raise AssertionError(f"unexpected pec {command}")
+
+            with unittest.mock.patch.object(self.mod, "pec_cmd", side_effect=fake_pec):
+                self.assertTrue(
+                    self.mod._recover_terminal_peer_task(workspace, "TASK-002", trace=None)
+                )
+            fresh = [c for c in calls if c[0] == "fresh-workspace"][0]
+            self.assertEqual(fresh[fresh.index("--repository") + 1], str(task_repo))
+            self.assertNotEqual(fresh[fresh.index("--repository") + 1], str(campaign_target))
+
     def test_stale_unittest_yields_to_inferred_pytest(self) -> None:
         self.assertTrue(
             self.mod.stale_unittest_should_yield_to_pytest(

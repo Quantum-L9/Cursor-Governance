@@ -182,6 +182,41 @@ class ScopedFreshWorkspaceTests(unittest.TestCase):
             self.assertEqual(contract["attempt_number"], 2)
             cleanup_worktree(repo, workspace)
 
+    def test_dispatched_unsubmitted_generation_consumes_a_t4_budget(self) -> None:
+        """A KNOWN_TERMINAL window that never submits still spends the T4 attempt."""
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            _, repo, workspace = bootstrap_repo(temp)
+            register_contract(temp, workspace, risk_tier="T4")
+            run_cli("claim", "TASK-001", "--workspace", str(workspace), "--holder", "worker")
+            run_cli("prepare", "TASK-001", "--workspace", str(workspace))
+            run_cli("render-contract", "TASK-001", "--workspace", str(workspace))
+            started = run_cli(
+                "start", "TASK-001", "--workspace", str(workspace), "--actor", "worker"
+            )
+            self.assertEqual(started["attempt_number"], 1)
+            run_cli(
+                "fresh-workspace",
+                "--workspace",
+                str(workspace),
+                "--repository",
+                str(repo),
+                "--task-id",
+                "TASK-001",
+                "--actor",
+                "make-campaign",
+                "--reason",
+                "peer attempt ended KNOWN_TERMINAL",
+            )
+            run_cli("claim", "TASK-001", "--workspace", str(workspace), "--holder", "worker")
+            run_cli("prepare", "TASK-001", "--workspace", str(workspace))
+            run_cli("render-contract", "TASK-001", "--workspace", str(workspace))
+            refused = run_cli(
+                "start", "TASK-001", "--workspace", str(workspace), "--actor", "worker", expect=2
+            )
+            self.assertIn("retry budget exhausted", refused["error"])
+            cleanup_worktree(repo, workspace)
+
     def test_task_id_cannot_escape_the_worktrees_directory(self) -> None:
         with TemporaryDirectory() as raw:
             temp = Path(raw)

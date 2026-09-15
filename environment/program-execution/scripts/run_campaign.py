@@ -3921,8 +3921,44 @@ def _terminal_peer_retry_receipt(workspace: Path, task_id: str) -> dict[str, Any
     return receipt
 
 
-def _task_repository_path(workspace: Path, task_id: str) -> Path | None:
-    """The local checkout the Controller registered for this task's repository."""
+def _task_repository_path(
+    workspace: Path,
+    task_id: str,
+    *,
+    status: dict[str, Any] | None = None,
+) -> Path | None:
+    """The local checkout the Controller registered for this task's repository.
+
+    Prefer the Controller registration over ``LAUNCH.json``'s campaign-level
+    target so a multi-target Program recovers the repository the task owns.
+    """
+    payload = status
+    if payload is None:
+        try:
+            payload = pec_cmd(workspace, "status")
+        except CampaignError:
+            payload = {}
+    task = next(
+        (
+            item
+            for item in (payload.get("tasks") or [])
+            if isinstance(item, dict) and str(item.get("id") or "") == task_id
+        ),
+        None,
+    )
+    raw = (task or {}).get("repository_local_path")
+    if raw and Path(str(raw)).is_dir():
+        return Path(str(raw))
+    repo_id = (task or {}).get("repository_id")
+    if repo_id:
+        for repo in payload.get("repositories") or []:
+            if not isinstance(repo, dict):
+                continue
+            if str(repo.get("repository_id") or "") != str(repo_id):
+                continue
+            path = repo.get("local_path")
+            if path and Path(str(path)).is_dir():
+                return Path(str(path))
     launch_path = workspace / "runtime" / "LAUNCH.json"
     try:
         launch = json.loads(launch_path.read_text(encoding="utf-8"))
@@ -3966,11 +4002,29 @@ def _recover_terminal_peer_task(
     ]
     if live:
         return False
-    repository = _task_repository_path(workspace, task_id)
+    task_row = next(
+        (
+            item
+            for item in (status.get("tasks") or [])
+            if isinstance(item, dict) and str(item.get("id") or "") == task_id
+        ),
+        None,
+    )
+    consumed = int(
+        (task_row or {}).get("consumed_attempts") or (task_row or {}).get("attempts") or 0
+    )
+    budget = (task_row or {}).get("max_attempts")
+    if isinstance(budget, int) and not isinstance(budget, bool) and consumed >= budget:
+        raise CampaignError(
+            f"{task_id}: KNOWN_TERMINAL recovery refused; {consumed} attempt(s) already "
+            f"meet the risk-tier budget {budget}",
+            error_code="RETRY_BUDGET_EXHAUSTED",
+        )
+    repository = _task_repository_path(workspace, task_id, status=status)
     if repository is None:
         raise CampaignError(
-            f"{task_id}: KNOWN_TERMINAL attempt is recoverable but LAUNCH.json names no "
-            "target worktree to detach its task worktree from",
+            f"{task_id}: KNOWN_TERMINAL attempt is recoverable but the Controller names no "
+            "registered repository local_path (and LAUNCH.json has no target worktree)",
             error_code="RUNTIME_RECONCILIATION_REQUIRED",
         )
     failure_class = str(receipt.get("failure_class") or PEER_KNOWN_TERMINAL)
@@ -3992,12 +4046,14 @@ def _recover_terminal_peer_task(
             reason[:500],
         )
     grant = _persisted_task_grant(workspace, {"task_id": task_id})
+    grant_revoked = False
     if grant:
         try:
-            _grant_module().revoke_task_grant(
+            revoked = _grant_module().revoke_task_grant(
                 grant, reason=f"terminal peer attempt recovered: {reason}"[:500]
             )
-        except Exception as exc:  # noqa: BLE001 — a dead generation's revoke must not mask recovery
+            grant_revoked = bool(isinstance(revoked, dict) and revoked.get("revoked"))
+        except (OSError, ValueError, TypeError, KeyError, RuntimeError, AttributeError) as exc:
             log(f"root autonomy revoke for recovered {task_id} failed: {type(exc).__name__}: {exc}")
     log(f"recovered {task_id}: {reason}; successor will dispatch as a new attempt")
     emit(
@@ -4010,7 +4066,7 @@ def _recover_terminal_peer_task(
             "attempt_id": str(receipt.get("attempt_id") or ""),
             "failure_class": failure_class,
             "recovery": (recovered.get("recovery") or {}).get("status"),
-            "grant_revoked": bool(grant),
+            "grant_revoked": grant_revoked,
         },
     )
     return True
@@ -5402,9 +5458,10 @@ def reconcile_resumed_source(
     is relocked through the Controller, exactly as a fresh `make campaign`
     would do it; an edit to the program body or the task set cannot be
     absorbed and stops the resume with `SOURCE_DRIFT_ON_RESUME`. No recorded
-    shape means the runtime was prepared before this record existed; the shape
-    is then attested in place through `attest_resume_source()`, which continues
-    only on a Controller EXACT_MATCH admission and refuses otherwise.
+    shape means the runtime was prepared before this record existed. That is
+    not attested automatically: ``attest_resume_source`` is an explicit
+    operator command because Controller ``EXACT_MATCH`` compares Blueprint to
+    Program Lock and does not prove the current source produced the runtime.
     """
     if not source.is_file():
         return {"status": "NO_SOURCE"}
@@ -5425,32 +5482,15 @@ def reconcile_resumed_source(
     cached = reuse.recorded_value("compile")
     recorded = (cached or {}).get("source") if isinstance(cached, dict) else None
     if not isinstance(recorded, dict):
-        # A runtime prepared before the shape record existed cannot prove that
-        # the source on disk is the source it was compiled from. The front door
-        # runs the one documented reconciliation itself: attest_resume_source()
-        # records the shape only when the Controller admits the Blueprint
-        # against the active Program Lock as EXACT_MATCH, and raises
-        # RESUME_SOURCE_MISMATCH for every other decision. That refusal is
-        # propagated unchanged -- nothing here resumes on the lock alone.
-        attested = attest_resume_source(
-            campaign_id=campaign_id, l9_home=l9_home, repo_root=repo_root
+        # EXACT_MATCH is Blueprint-vs-Lock, not source-to-Blueprint. Writing
+        # the current source here would make edited_task_ids compare the
+        # edited source with itself and resume an obsolete Blueprint.
+        raise CampaignError(
+            f"{campaign_id}: the prepared runtime records no compiled source shape for "
+            f"{source}; attest_resume_source is an explicit operator command after "
+            "source-to-Blueprint provenance is verified, otherwise rebuild",
+            error_code="RESUME_SOURCE_UNVERIFIED",
         )
-        log(
-            f"resume {campaign_id}: auto-attested compiled source shape "
-            f"(EXACT_MATCH, program_digest={attested.get('program_digest')})"
-        )
-        reuse = prepare.PrepareCache(
-            timing.StageCache(primed, enabled=True),
-            prepare.PrepareState.load(primed / "PREPARE_STATE.json", campaign_id=campaign_id),
-        )
-        cached = reuse.recorded_value("compile")
-        recorded = (cached or {}).get("source") if isinstance(cached, dict) else None
-        if not isinstance(recorded, dict):
-            raise CampaignError(
-                f"{campaign_id}: attestation returned but the prepared runtime still records "
-                f"no compiled source shape for {source}; rebuild instead of resuming",
-                error_code="RESUME_SOURCE_UNVERIFIED",
-            )
     edited = edited_task_ids(shape, recorded)
     if edited is None:
         raise CampaignError(

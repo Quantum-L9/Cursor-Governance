@@ -555,46 +555,15 @@ class ResumeSourceReconciliationTests(_Base):
         cached = reuse.recorded_value("compile")
         return (cached or {}).get("source") if isinstance(cached, dict) else None
 
-    def test_no_recorded_shape_is_attested_in_place_on_exact_match(self) -> None:
-        """The front door runs the one documented reconciliation itself.
+    def test_no_recorded_shape_stays_fail_closed(self) -> None:
+        """A missing compile-source shape is not auto-attested on EXACT_MATCH.
 
-        A runtime prepared before the shape record existed used to stop with
-        RESUME_SOURCE_UNVERIFIED and a command for a human to type. The same
-        proof -- the Controller admitting the Blueprint against the active lock
-        as EXACT_MATCH -- is now taken inside the resume, and the shape it
-        records is the one every later resume compares against.
+        Controller EXACT_MATCH compares Blueprint to Program Lock. Recording
+        the current source here would hide a post-compile source edit.
         """
         write_root, source, l9_home, pec_workspace = self._legacy_runtime()
         self.assertIsNone(self._recorded_shape(l9_home))
-        verdict = {"decision": "EXACT_MATCH", "program_digest": "sha256:lock", "reasons": []}
-        with unittest.mock.patch.object(self.mod, "_admit_resume", return_value=verdict) as admit:
-            outcome = self.mod.reconcile_resumed_source(
-                campaign_id="CAMP-1",
-                source=source,
-                pec_workspace=pec_workspace,
-                l9_home=l9_home,
-                repo_root=write_root,
-            )
-        admit.assert_called_once_with(pec_workspace)
-        self.assertEqual(outcome["status"], "CURRENT")
-        self.assertEqual(self._recorded_shape(l9_home), self.mod.campaign_source_shape(source))
-        # The attested shape is durable: a second resume compares, not re-attests.
-        with unittest.mock.patch.object(self.mod, "_admit_resume") as admit_again:
-            second = self.mod.reconcile_resumed_source(
-                campaign_id="CAMP-1",
-                source=source,
-                pec_workspace=pec_workspace,
-                l9_home=l9_home,
-                repo_root=write_root,
-            )
-        admit_again.assert_not_called()
-        self.assertEqual(second["status"], "CURRENT")
-
-    def test_no_recorded_shape_without_exact_match_still_refuses_to_resume(self) -> None:
-        """PEC-P1-001: an unverifiable source is still not a compatibility fallback."""
-        write_root, source, l9_home, pec_workspace = self._legacy_runtime()
-        verdict = {"decision": "TASK_SCOPED_DRIFT", "reasons": ["TASK-002 objective differs"]}
-        with unittest.mock.patch.object(self.mod, "_admit_resume", return_value=verdict):
+        with unittest.mock.patch.object(self.mod, "_admit_resume") as admit:
             with self.assertRaises(self.mod.CampaignError) as ctx:
                 self.mod.reconcile_resumed_source(
                     campaign_id="CAMP-1",
@@ -603,8 +572,24 @@ class ResumeSourceReconciliationTests(_Base):
                     l9_home=l9_home,
                     repo_root=write_root,
                 )
-        self.assertEqual(ctx.exception.error_code, "RESUME_SOURCE_MISMATCH")
-        self.assertIn("TASK_SCOPED_DRIFT", str(ctx.exception))
+        admit.assert_not_called()
+        self.assertEqual(ctx.exception.error_code, "RESUME_SOURCE_UNVERIFIED")
+        self.assertIsNone(self._recorded_shape(l9_home), "a refused resume recorded a shape")
+
+    def test_no_recorded_shape_without_exact_match_still_refuses_to_resume(self) -> None:
+        """PEC-P1-001: an unverifiable source is still not a compatibility fallback."""
+        write_root, source, l9_home, pec_workspace = self._legacy_runtime()
+        with unittest.mock.patch.object(self.mod, "_admit_resume") as admit:
+            with self.assertRaises(self.mod.CampaignError) as ctx:
+                self.mod.reconcile_resumed_source(
+                    campaign_id="CAMP-1",
+                    source=source,
+                    pec_workspace=pec_workspace,
+                    l9_home=l9_home,
+                    repo_root=write_root,
+                )
+        admit.assert_not_called()
+        self.assertEqual(ctx.exception.error_code, "RESUME_SOURCE_UNVERIFIED")
         self.assertIsNone(self._recorded_shape(l9_home), "a refused attestation recorded a shape")
 
     def test_no_recorded_shape_and_no_live_runtime_does_not_resume_on_the_lock(self) -> None:
@@ -623,7 +608,7 @@ class ResumeSourceReconciliationTests(_Base):
                     l9_home=self.tmp / "l9-empty",
                 )
         admit.assert_not_called()
-        self.assertIn("no live runtime", str(ctx.exception))
+        self.assertEqual(ctx.exception.error_code, "RESUME_SOURCE_UNVERIFIED")
 
 
 class ResumeIdentityAdmissionTests(_Base):
