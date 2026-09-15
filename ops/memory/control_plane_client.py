@@ -870,6 +870,7 @@ class MemoryControlPlaneClient:
         source_path: str | Path,
         repository: str | None = None,
         dry_run: bool = False,
+        timeout: float | None = None,
     ) -> OperationOutcome:
         """Canonical distillation of a redacted source (``l9-memory distill``).
 
@@ -887,21 +888,34 @@ class MemoryControlPlaneClient:
             source_bytes: int | None = source.stat().st_size
         except OSError:
             source_bytes = None
-        # ``records`` stays 0: memory's extractor decides how many atomic
-        # candidates a source yields, and the receipt's ``written_count`` is
-        # tallied after the fact. The bound this side owns is the source size.
+        remaining_records = 0
+        if self.envelope is not None:
+            remaining_records = max(0, self.envelope.max_records - self._records_committed)
+        # Refuse before spawn when the surface has no record slots left.
+        # When slots remain, pass that remaining cap so the extractor cannot
+        # write past the envelope (records=0 used to skip the check).
+        requested = 1 if remaining_records == 0 and self.envelope is not None else remaining_records
         if guard := self._guard(
             "distill",
+            records=requested,
             byte_size=source_bytes,
             provenance=bool(namespace and source_bytes is not None),
         ):
             return guard
         argv = ["distill", str(source_path), "--group-id", namespace]
+        if remaining_records:
+            argv += ["--max-records", str(remaining_records)]
         if repository:
             argv += ["--repository", repository]
         if dry_run:
             argv.append("--dry-run")
-        raw = self._invoke(argv, cwd=workspace)
+        previous_timeout = self.timeout
+        if timeout is not None and timeout > 0:
+            self.timeout = timeout
+        try:
+            raw = self._invoke(argv, cwd=workspace)
+        finally:
+            self.timeout = previous_timeout
         namespaces = (namespace,)
         if raw.payload is None:
             return self._outcome("distill", self._classify_failure(raw), raw, namespaces=namespaces)

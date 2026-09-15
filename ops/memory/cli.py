@@ -285,7 +285,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--timeout", type=float, default=30.0, help="seconds per memory call")
     parser.add_argument(
         "--surface",
-        default=os.environ.get("L9_MEMORY_HOOK_SURFACE") or None,
+        default=None,
         help=(
             "hook-lane surface (ops/config/memory-hook-envelopes.json). Automatic hooks "
             "that reach this CLI by subprocess name theirs; omitted = operator form"

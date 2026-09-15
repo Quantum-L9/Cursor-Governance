@@ -42,7 +42,7 @@ class GraphitiContextReader:
 
     def search(self, query: str, *, limit: int = 8) -> dict[str, Any]:
         result = run_argv(
-            [self._memory_cli(), "search", query, "--limit", str(limit)],
+            [self._memory_cli(), "search", query, "--limit", str(limit), "--include-workspace"],
             cwd=self.root,
             timeout_seconds=30,
         )

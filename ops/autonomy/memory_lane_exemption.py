@@ -65,8 +65,18 @@ _MAX_WRAPPER_DEPTH = 3
 
 SHELL_TOOL_NAMES = frozenset({"Bash", "bash", "Shell", "shell"})
 
-#: Last resort when structural parsing raises: a bare ``l9-memory …`` line.
-_PLAIN_MEMORY_RE = re.compile(r"^\s*(?:\S*/)?l9-memory(?:\s+[^\s'\"`$;&|<>()]+)*\s*$")
+#: Last resort when structural parsing raises. Covers the three allowed
+#: entrypoints and refuses shell metacharacters so a parse fault cannot
+#: exempt a redirect or substitution.
+_SAFE_TAIL = r"(?:\s+[^\s'\"`$;&|<>()]+)*\s*$"
+_PLAIN_MEMORY_RE = re.compile(
+    r"^\s*(?:"
+    r"(?:\S*/)?l9-memory"
+    r"|(?:(?:\S*/)?python(?:3(?:\.\d+)?)?)\s+-m\s+ops\.memory\.cli"
+    r"|(?:\S*/)?memory_prefetch\.py"
+    r")" + _SAFE_TAIL
+)
+_SIDE_EFFECT_RE = re.compile(r"[<>]|\$\(|`")
 
 
 def _segment_is_memory(segment: str) -> bool | None:
@@ -79,7 +89,7 @@ def _segment_is_memory(segment: str) -> bool | None:
     if name in NEUTRAL_HEADS:
         return False  # neutral: neither qualifies nor disqualifies
     if name in MEMORY_EXECUTABLES:
-        return True
+        return None if _SIDE_EFFECT_RE.search(segment) else True
     if _PYTHON_HEADS.match(name):
         words = segment_words(segment)
         try:
@@ -88,12 +98,12 @@ def _segment_is_memory(segment: str) -> bool | None:
             return None
         rest = words[start + 1 :]
         if len(rest) >= 2 and rest[0] == "-m" and rest[1] == OPERATOR_MODULE:
-            return True
+            return None if _SIDE_EFFECT_RE.search(segment) else True
         if rest and PurePosixPath(rest[0]).name == PREFETCH_SCRIPT:
-            return True
+            return None if _SIDE_EFFECT_RE.search(segment) else True
         return None
     if name == PREFETCH_SCRIPT:
-        return True
+        return None if _SIDE_EFFECT_RE.search(segment) else True
     return None
 
 

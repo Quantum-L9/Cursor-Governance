@@ -266,6 +266,7 @@ def _canonical_distill(
         source_path=source,
         repository=repository,
         dry_run=dry_run,
+        timeout=remaining,
     )
     report["writes"].append(_write_entry(outcome, kind="distill"))
     receipt = outcome.receipt

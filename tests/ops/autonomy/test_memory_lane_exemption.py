@@ -61,6 +61,8 @@ NOT_EXEMPT = [
     "cat <<EOF\nl9-memory write\nEOF",
     "echo l9-memory health",
     "bash -c 'l9-memory health && touch skills/x'",
+    "l9-memory health > skills/x",
+    'l9-memory health "$(printf x > skills/x)"',
 ]
 
 
