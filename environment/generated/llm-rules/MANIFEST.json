@@ -44,7 +44,7 @@
       "output": null,
       "output_sha256": null,
       "source": "rules/04-cursor-redis-session.mdc",
-      "source_sha256": "64a0e957121bb68ace388ae9e41928768cfc6998952a8acfc6e9f8a1e4d07c88",
+      "source_sha256": "7f6cee55bbaaaafe719ab5b21cc5399d08ad0510b8a7c2aa3047464e37841e7b",
       "stem": "04-cursor-redis-session"
     },
     {
