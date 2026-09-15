@@ -1939,7 +1939,7 @@
     },
     {
       "path": "peer_execution/tests/test_receipt_chain.py",
-      "sha256": "42f9cd4156f1dca1dc3222f2c45682d101b4fad489735d436e370827f81413e8"
+      "sha256": "001208d1711cedf7b10af657cd130260f89d0fb7c104e2eb3793fd2932455a90"
     },
     {
       "path": "peer_execution/tests/test_runner_cancellation.py",
@@ -2171,7 +2171,7 @@
     },
     {
       "path": "scripts/tests/test_execution_completeness.py",
-      "sha256": "83943c94648dcf02f2c67fcaeea3937d342a45203d29292cc143ebe2d7e9a9a6"
+      "sha256": "b8c07d229e2b68500f91f82c06630df50d1eb8ccb8c384c5d86757a800e461c1"
     },
     {
       "path": "scripts/tests/test_failed_result_harvest.py",
