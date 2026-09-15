@@ -14,10 +14,22 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "skills" / "l9-pipeline-audit" / "scripts"))
 
 from audit_pipeline import _built_shelf, archive_spent_plans  # noqa: E402
+
+
+def _fs_folds_case(directory: Path) -> bool:
+    """True when two spellings of one name share an inode (APFS default, Windows)."""
+    probe = directory / ".L9CaseProbe"
+    probe.mkdir()
+    try:
+        return (directory / ".l9caseprobe").exists()
+    finally:
+        probe.rmdir()
 
 BUILT_PLAN = """---
 name: spent
@@ -33,13 +45,23 @@ todos:
 
 def test_tracked_BUILT_wins_when_present(tmp_path: Path) -> None:
     (tmp_path / "BUILT").mkdir()
-    (tmp_path / "built").mkdir()
+    try:
+        (tmp_path / "built").mkdir()
+    except FileExistsError:
+        pytest.skip("filesystem folds BUILT/built; dual-shelf case is Linux-only")
     assert _built_shelf(tmp_path).name == "BUILT"
 
 
 def test_lowercase_is_honoured_only_when_BUILT_is_absent(tmp_path: Path) -> None:
     (tmp_path / "built").mkdir()
-    assert _built_shelf(tmp_path).name == "built"
+    shelf = _built_shelf(tmp_path)
+    assert shelf.is_dir()
+    if _fs_folds_case(tmp_path):
+        # APFS: built IS BUILT. The resolver returns the canonical spelling.
+        assert shelf.name == "BUILT"
+        assert shelf.samefile(tmp_path / "built")
+        return
+    assert shelf.name == "built"
 
 
 def test_canonical_shelf_is_created_when_neither_exists(tmp_path: Path) -> None:
@@ -75,4 +97,7 @@ def test_spent_plan_lands_in_the_tracked_shelf_not_a_stray_one(tmp_path: Path) -
 
     assert not spent.exists(), "a spent plan should be shelved"
     assert (tmp_path / "BUILT" / spent.name).is_file(), moved
-    assert not (tmp_path / "built").exists(), "no stray lowercase shelf may be created"
+    stray = tmp_path / "built"
+    if stray.exists():
+        # APFS folds the names; a Linux sibling would fail samefile.
+        assert stray.samefile(tmp_path / "BUILT"), "no stray lowercase shelf may be created"
