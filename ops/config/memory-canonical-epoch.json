@@ -49,6 +49,8 @@
   "remaining_legacy": {
     "note": "Inventoried by ops/config/memory-egress-allowlist.json; every entry names the stage that deletes it. Warning mode until C11 flips ops/scripts/validate_memory_egress_boundary.py to --enforce.",
     "shadow_reader": "ops/graphiti/hydration/compile_session_packet.py (MEMORY_LEGACY_SHADOW / MEMORY_LEGACY_CONTINUATION, off by default) \u2014 deleted at C11",
-    "provider_client": "ops/graphiti/graphiti_memory_client.py \u2014 tombstoned at C11"
+    "provider_client": "ops/graphiti/graphiti_memory_client.py \u2014 tombstoned at C11, deleted at C15 (ADR-0033)",
+    "provider_client_deleted_at": "C15",
+    "provider_client_note": "check_governance_wiring.sh reads provider_client_deleted_at from the tree it inspects: a tree that declares it must not carry the file; an older tree (no key) may still carry the C11 tombstone. The live SSOT lags an open PR by design, so the check judges each tree by its own epoch rather than by the newest law."
   }
 }
