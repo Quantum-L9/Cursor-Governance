@@ -3,6 +3,8 @@
 
 Same rule for start and publish. File overlap is not required.
 
+- the branch already has an open PR → that PR's base (reason open_pr_base);
+  the board's shape is not consulted, because the base is already a fact
 - no open PRs → origin/main (or --default-ref)
 - one unique chain → that chain's tip head
 - sibling chains or an unreadable topology → exit 2
@@ -135,14 +137,26 @@ def _is_main(ref: str) -> bool:
     return ref.strip().removeprefix("origin/") in MAIN_ALIASES or ref.strip() in MAIN_ALIASES
 
 
-def resolve_from_prs(prs: list[OpenPR], *, default_ref: str) -> TipResult:
-    """Pure topology. Callers supply the live PR list."""
+def resolve_from_prs(
+    prs: list[OpenPR], *, default_ref: str, branch: str | None = None
+) -> TipResult:
+    """Pure topology. Callers supply the live PR list.
+
+    When ``branch`` already has an open PR, that PR's base *is* the base: it is
+    a fact GitHub holds, not a choice left to make, so the chain-tip walk is not
+    consulted. Without this, a second ``make pr`` on the stack root resolved the
+    tip — its own descendant — and a sibling PR opened by someone else mid-run
+    fail-closed a publish whose base was never in question (PR #602).
+    """
     if not prs:
         return TipResult(ref=default_ref, sha="", reason="no_open_prs")
 
     by_head = {pr.head: pr for pr in prs}
     if len(by_head) != len(prs):
         raise TipError("duplicate open-PR heads; refuse to pick a tip")
+
+    if branch and branch in by_head:
+        return _open_pr_base(by_head, by_head[branch], default_ref=default_ref)
 
     roots = [pr for pr in prs if _is_main(pr.base)]
     if not roots:
@@ -177,6 +191,36 @@ def resolve_from_prs(prs: list[OpenPR], *, default_ref: str) -> TipResult:
         current = nxt
 
 
+def _open_pr_base(by_head: dict[str, OpenPR], mine: OpenPR, *, default_ref: str) -> TipResult:
+    """The base of the branch's own open PR, with the chain of open PRs above it.
+
+    The chain is walked *upward* from that base (head → its PR's base → …) until
+    main, so it is independent of sibling chains elsewhere on the board and of
+    the tip walk's fail-closed rules. An ancestor whose PR has since merged has
+    no open PR to continue through; the chain stops there.
+    """
+    if _is_main(mine.base):
+        return TipResult(ref=default_ref, sha="", reason="open_pr_base")
+    chain: list[str] = []
+    seen: set[str] = {mine.head}
+    current = mine.base
+    while current and not _is_main(current):
+        if current in seen:
+            raise TipError(f"open-PR chain cycles at {current}")
+        seen.add(current)
+        chain.append(current)
+        parent = by_head.get(current)
+        current = parent.base if parent else ""
+    chain.reverse()
+    base_pr = by_head.get(mine.base)
+    return TipResult(
+        ref=mine.base,
+        sha=base_pr.sha if base_pr else "",
+        reason="open_pr_base",
+        chain=tuple(chain),
+    )
+
+
 def resolve_default_sha(repo: Path, default_ref: str) -> str:
     fetched = run_git(repo, "rev-parse", "--verify", default_ref)
     if fetched.returncode == 0 and fetched.stdout.strip():
@@ -190,7 +234,10 @@ def resolve_stack_tip(
     default_ref: str = "origin/main",
     prs: list[OpenPR] | None = None,
     list_prs: Callable[[str], list[OpenPR] | None] | None = None,
+    branch: str | None = None,
 ) -> TipResult:
+    if branch is None:
+        branch = current_branch(repo)
     if prs is None:
         if not gh_available() and list_prs is None:
             raise TipError("gh CLI unavailable; refuse to guess the stack tip")
@@ -202,14 +249,22 @@ def resolve_stack_tip(
         if loaded is None:
             raise TipError("could not enumerate open PRs (gh api failed)")
         prs = loaded
-    result = resolve_from_prs(prs, default_ref=default_ref)
-    if result.reason == "no_open_prs":
+    result = resolve_from_prs(prs, default_ref=default_ref, branch=branch)
+    if result.ref == default_ref and not result.sha:
         return TipResult(
             ref=default_ref,
             sha=resolve_default_sha(repo, default_ref),
             reason=result.reason,
+            chain=result.chain,
         )
     return result
+
+
+def current_branch(repo: Path) -> str:
+    """The checked-out branch name, or "" on a detached HEAD."""
+    probe = run_git(repo, "rev-parse", "--abbrev-ref", "HEAD")
+    name = probe.stdout.strip() if probe.returncode == 0 else ""
+    return "" if name == "HEAD" else name
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -219,9 +274,17 @@ def main(argv: list[str] | None = None) -> int:
         "--default-ref",
         default=os.environ.get("L9_STACK_DEFAULT_REF", "origin/main"),
     )
+    parser.add_argument(
+        "--branch",
+        default=None,
+        help="Branch being published (default: the checked-out branch). Its open PR, "
+        "if any, decides the base.",
+    )
     args = parser.parse_args(argv)
     try:
-        result = resolve_stack_tip(args.workspace.resolve(), default_ref=args.default_ref)
+        result = resolve_stack_tip(
+            args.workspace.resolve(), default_ref=args.default_ref, branch=args.branch
+        )
     except TipError as exc:
         print(f"FAIL: {exc}", file=sys.stderr)
         return exc.exit_code
