@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-09-15T19:15:05Z'
+generated_utc: '2026-09-15T21:00:31Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:c916b76f738df4543c0db0cdd84884cf0922512f9dfbcf8af8605106c6c61a23
+source_tree_digest: sha256:858c6efaf0f5ee79762752111f9d9ea7060d8a2eaed72dcb5391ea67fbe8a500
 summary:
   total_mdc_files: 69
   always_apply_true: 35
@@ -426,7 +426,7 @@ rules:
   id: l9.rule.42.no.abandoned.work
   id_source: explicit
   version: 1.0.0
-  description: Committed work must be pushed, an identified bug must be fixed, and a pre-existing error is in scope the moment it is identified; enforced by a Stop-hook gate that fails closed on unpushed commits and open findings.
+  description: Committed work must be pushed, an identified bug must be fixed, and a pre-existing error is in scope the moment it is identified; recorded with ops/autonomy/session_debt.py (CLI; not installed as a Claude Stop --class gate).
   scope: global
   domain: git
   activation: always
@@ -436,7 +436,7 @@ rules:
   first_heading: No abandoned work
   has_yaml_frontmatter: true
   line_count: 98
-  content_digest: sha256:e956f6c8ae0f1d23c25adecb78bee084bf6cedb11d9774a70338d979037f448e
+  content_digest: sha256:c847d4fc91995f5f5f5f4dabaf98791e03eb8bfd17bc744e54661bb2aeb37334
   authority: canonical_global
   context_cost: moderate
   deprecated: false
