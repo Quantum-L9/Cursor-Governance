@@ -21,7 +21,6 @@ sets a known surface marker (the unit tests) still latches.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import sys
@@ -106,10 +105,6 @@ def _utc_now() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def _sha256_file(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
 def gov_root_from_env(explicit: str | None = None) -> Path:
     if explicit:
         return Path(explicit).expanduser().resolve()
@@ -138,7 +133,7 @@ def kernel_shas(gov: Path) -> dict[str, str]:
         path = gov / rel
         if not path.is_file():
             raise RuntimeError(f"kernel file missing: {path}")
-        out[label] = _sha256_file(path)
+        out[label] = kernel_predicates.sha256_file(path)
     return out
 
 
