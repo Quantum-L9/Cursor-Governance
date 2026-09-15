@@ -310,8 +310,13 @@ def _fresh(receipt: dict[str, Any], *, workspace: Path, task: str) -> bool:
     return (_now() - then).total_seconds() < FRESH_SECONDS
 
 
+#: Hook-lane surface for the plan prefetch (ADR-0033 B7): read-only envelope
+#: in ``ops/config/memory-hook-envelopes.json``.
+HOOK_SURFACE = "plan-prefetch"
+
+
 def memcli_argv(interpreter: Path, *args: str) -> list[str]:
-    return [str(interpreter), "-m", "ops.memory.cli", *args]
+    return [str(interpreter), "-m", "ops.memory.cli", "--surface", HOOK_SURFACE, *args]
 
 
 def _text(stream: Any) -> str:

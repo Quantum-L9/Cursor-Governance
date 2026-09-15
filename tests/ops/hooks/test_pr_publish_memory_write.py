@@ -121,10 +121,12 @@ def test_write_argv_is_operator_cli_pickup_not_a_provider_client() -> None:
         agent_id="cursor",
         dry_run=True,
     )
-    assert argv[:6] == [
+    assert argv[:8] == [
         "/gov/.venv/bin/python",
         "-m",
         "ops.memory.cli",
+        "--surface",
+        "pr-publish",
         "write",
         "PICKUP: PR o/n#1 published.",
         "--kind",
@@ -222,7 +224,8 @@ def _publish(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, summary_doc, **ove
     )
     assert rc == 0
     receipt = json.loads((tmp_path / hook.RECEIPT_REL).read_text(encoding="utf-8"))
-    fact = seen[0][4] if seen else ""
+    # argv: interpreter -m ops.memory.cli --surface <lane> write <content> ...
+    fact = seen[0][seen[0].index("write") + 1] if seen else ""
     return receipt, fact
 
 

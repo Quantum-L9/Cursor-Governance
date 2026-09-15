@@ -106,9 +106,23 @@ def write_receipt(project_dir: Path, session_id: str, payload: dict[str, Any]) -
     _latches.write_receipt(project_dir, session_id, payload)
 
 
-def memory_client(session_id: str | None = None) -> MemoryControlPlaneClient:
-    """The bound memory runtime (tests substitute a scripted CLI here)."""
-    return MemoryControlPlaneClient(resolve_runtime_binding(), session_id=session_id)
+#: Default hook-lane surface for a close (ADR-0033 B7). The Claude Stop hook
+#: passes ``claude-session-end``; both envelopes live in
+#: ``ops/config/memory-hook-envelopes.json``.
+DEFAULT_CLOSE_SURFACE = "cursor-session-end"
+
+
+def memory_client(
+    session_id: str | None = None, *, surface: str | None = DEFAULT_CLOSE_SURFACE
+) -> MemoryControlPlaneClient:
+    """The bound memory runtime under the close surface's envelope.
+
+    Tests substitute a scripted CLI here. ``surface=None`` is the operator
+    form (no envelope) and is reserved for ``ops.memory.cli``.
+    """
+    return MemoryControlPlaneClient(
+        resolve_runtime_binding(), session_id=session_id, surface=surface
+    )
 
 
 def _git_signal(project_dir: Path) -> str:
@@ -325,8 +339,13 @@ def close_session(
     clock: Any = None,
     budget: float | None = None,
     client: MemoryControlPlaneClient | None = None,
+    surface: str = DEFAULT_CLOSE_SURFACE,
 ) -> dict[str, Any]:
     """Canonical close. Fail-open to hooks; never raises. Never writes a provider.
+
+    ``surface`` names the hook-lane envelope this close runs under when no
+    ``client`` is injected (``cursor-session-end`` by default,
+    ``claude-session-end`` from the Claude Stop hook).
 
     ``dry_run`` admits nothing and commits nothing: the capsule and the close
     pass memory's admission dry runs and the obligation is not persisted.
@@ -405,7 +424,7 @@ def close_session(
     if is_background_agent and not transcript:
         report["warnings"].append("background agent without transcript — Phase A git-only")
 
-    client = client or memory_client(session_id)
+    client = client or memory_client(session_id, surface=surface)
     if not client.binding.ok:
         reason_text = "; ".join(client.binding.reasons) or "memory runtime unbound"
         report["warnings"].append(f"memory runtime unbound: {reason_text}")

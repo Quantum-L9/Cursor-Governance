@@ -153,7 +153,13 @@ def _runner(
     slow = slow or set()
 
     def run(argv: list[str], *, cwd: Path, timeout: float) -> SimpleNamespace:
-        sub = argv[argv.index("ops.memory.cli") + 1]
+        # The hook names its lane before the subcommand (ADR-0033 B7); every
+        # call must carry it or the CLI would run as the operator form.
+        assert argv[argv.index("ops.memory.cli") + 1 : argv.index("ops.memory.cli") + 3] == [
+            "--surface",
+            hook.HOOK_SURFACE,
+        ]
+        sub = argv[argv.index("ops.memory.cli") + 3]
         if seen is not None:
             seen.append((sub, timeout))
         if sub in slow:

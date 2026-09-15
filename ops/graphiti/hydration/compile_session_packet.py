@@ -42,6 +42,9 @@ from ops.memory.session_state import write_session_state  # noqa: E402
 #: Default hydration budget (chars). Formerly read from promotion_rules.yaml,
 #: which was Cursor-local memory cognition and is gone (ADR-0033).
 HYDRATION_CHAR_BUDGET_DEFAULT = 4000
+#: Hook-lane surface this compiler hydrates under (ADR-0033 B7): read-only
+#: envelope, ``ops/config/memory-hook-envelopes.json``.
+HOOK_SURFACE = "cursor-session-start"
 
 HEADING = "### memory hydrate"
 
@@ -136,6 +139,7 @@ def compile_session_packet(
         task=task,
         session_id=conversation_id,
         continuation_policy="repository_fallback",
+        surface=HOOK_SURFACE,
     )
     namespace = hydration.namespace_context.write_namespace_hint or "unresolved"
     packet_id = hashlib.sha256(f"{conversation_id}:{namespace}:{project}".encode()).hexdigest()[:16]

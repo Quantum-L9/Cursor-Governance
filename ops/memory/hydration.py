@@ -340,13 +340,15 @@ def canonical_hydrate(
     continuation_limit: int = 10,
     check_health: bool = True,
     continuation_policy: str = CONTINUATION_POLICY_TASK,
+    surface: str | None = None,
 ) -> CanonicalHydration:
     """Hydrate a session from canonical memory and return typed evidence.
 
     ``client`` may be injected (tests, diagnostics); otherwise the bound
-    runtime is resolved through the binding manifest. Every CLI call's
-    integration receipt is kept so the caller can persist observability
-    without logging memory content.
+    runtime is resolved through the binding manifest and, when ``surface``
+    names a hook surface (ADR-0033 B7), the client runs under that surface's
+    read envelope. Every CLI call's integration receipt is kept so the caller
+    can persist observability without logging memory content.
 
     ``continuation_policy`` is ``task`` (default: resume only a capsule
     written for this task in this repository) or ``repository_fallback``
@@ -400,7 +402,7 @@ def canonical_hydrate(
 
     if client is None:
         binding = binding or resolve_runtime_binding()
-        client = MemoryControlPlaneClient(binding, session_id=session_id)
+        client = MemoryControlPlaneClient(binding, session_id=session_id, surface=surface)
     heal_outcome = getattr(client.binding, "environment_heal", None)
     if not client.binding.ok:
         return finish(

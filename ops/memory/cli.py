@@ -38,6 +38,7 @@ from ops.memory.control_plane_client import (
     OperationOutcome,
     OutcomeStatus,
 )
+from ops.memory.hook_envelope import UnknownHookSurface
 from ops.memory.namespace_context import NamespaceContext, resolve_namespace_context
 from ops.memory.runtime_binding import resolve_runtime_binding
 
@@ -115,7 +116,9 @@ def _emit(document: dict[str, Any]) -> None:
 
 def _client(args: argparse.Namespace) -> MemoryControlPlaneClient:
     binding = resolve_runtime_binding()
-    return MemoryControlPlaneClient(binding, timeout=float(args.timeout))
+    return MemoryControlPlaneClient(
+        binding, timeout=float(args.timeout), surface=getattr(args, "surface", None) or None
+    )
 
 
 def cmd_health(args: argparse.Namespace) -> int:
@@ -272,6 +275,14 @@ def build_parser() -> argparse.ArgumentParser:
         description="Cursor's canonical memory CLI over the l9-graphite-memory control plane.",
     )
     parser.add_argument("--timeout", type=float, default=30.0, help="seconds per memory call")
+    parser.add_argument(
+        "--surface",
+        default=os.environ.get("L9_MEMORY_HOOK_SURFACE") or None,
+        help=(
+            "hook-lane surface (ops/config/memory-hook-envelopes.json). Automatic hooks "
+            "that reach this CLI by subprocess name theirs; omitted = operator form"
+        ),
+    )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p = sub.add_parser("health", help="canonical memory health receipt")
@@ -353,7 +364,20 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(list(argv) if argv is not None else None)
-    return int(args.func(args))
+    try:
+        return int(args.func(args))
+    except UnknownHookSurface as exc:
+        # A hook naming an undeclared surface is a wiring fault in the caller,
+        # refused before any memory traffic (ADR-0033 B7).
+        _emit(
+            {
+                "operation": args.cmd,
+                "status": "REJECTED",
+                "ok": False,
+                "error": f"REJECTED:envelope {exc}",
+            }
+        )
+        return EXIT_REFUSED
 
 
 if __name__ == "__main__":

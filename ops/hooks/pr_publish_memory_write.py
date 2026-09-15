@@ -31,6 +31,9 @@ SUMMARY_REL = Path(".l9/pr/pr-summary.json")
 RECEIPT_REL = Path(".l9/pr/pr-publish-memory.json")
 MAX_PATHS = 24
 KIND = "pickup_context"
+#: Hook-lane surface (ADR-0033 B7): one ``session_continuation`` record per
+#: publish, ``ops/config/memory-hook-envelopes.json``.
+HOOK_SURFACE = "pr-publish"
 
 #: An unavailable memory plane must not hang the publish tail. The PR is
 #: already open by the time this runs; the write is a handoff, not a gate.
@@ -195,6 +198,8 @@ def write_argv(
         str(interpreter),
         "-m",
         "ops.memory.cli",
+        "--surface",
+        HOOK_SURFACE,
         "write",
         content,
         "--kind",
