@@ -36,7 +36,9 @@ invalidate every local gate receipt to buy a seam that already exists.
 from __future__ import annotations
 
 import hashlib
+import os
 import re
+import stat as statmod
 import subprocess
 from collections.abc import Iterable
 from functools import cache
@@ -103,11 +105,58 @@ def _git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def _parse_stage(stdout: str) -> list[tuple[str, str, str]]:
+    """Parse ``git ls-files --stage -z`` into ``(mode, object, path)`` triples."""
+    records: list[tuple[str, str, str]] = []
+    for entry in stdout.split("\0"):
+        if not entry:
+            continue
+        try:
+            meta, path = entry.split("\t", 1)
+        except ValueError:
+            continue
+        parts = meta.split(" ", 2)
+        if len(parts) < 3:
+            continue
+        mode, obj, _stage = parts
+        records.append((mode, obj, path))
+    return records
+
+
+def _worktree_git_mode(path: Path, *, index_mode: str | None) -> str:
+    """Git-style mode for the worktree path, so chmod and gitlinks are visible."""
+    if index_mode == "160000":
+        return "160000"
+    if path.is_symlink():
+        return "120000"
+    if path.is_file():
+        return "100755" if path.stat().st_mode & statmod.S_IXUSR else "100644"
+    return index_mode or "000000"
+
+
+def _blob_digest(path: Path, *, git_mode: str, index_object: str | None) -> str:
+    if git_mode == "160000":
+        return index_object or ""
+    if git_mode == "120000":
+        return sha256_bytes(os.fsencode(os.readlink(path)))
+    return sha256_file(path)
+
+
 def tree_digest(root: Path) -> str:
     """Digest the working tree's tracked and untracked-not-ignored content.
 
-    Returns a hex sha256 over sorted ``<path>\\0<blob-sha>`` records, so both
-    content and location are bound: a rename that preserves content changes
+    Returns a hex sha256 over sorted
+    ``<path>\\0<membership>\\0<mode>\\0<blob-sha>\\n`` records. Membership is
+    ``tracked`` or ``untracked`` and mode is the git-style worktree mode
+    (``100644`` / ``100755`` / ``120000`` / ``160000``), so a ``git rm
+    --cached`` that leaves the same bytes, a chmod that flips the executable
+    bit, and a gitlink are each a different tree from the one that was
+    attested. Path+bytes alone cannot see those: the set-union of ``ls-files``
+    and ``ls-files --others`` collapsed index membership, which is how an
+    authorize-release receipt stayed valid after a later commit deleted a
+    still-on-disk file.
+
+    Content and location stay bound: a rename that preserves content changes
     the digest, and a commit that changes no bytes does not. That is the
     property the L4 release receipt needs and ``head_sha`` cannot provide —
     an amend or a rebase moves HEAD without touching the attested tree, and
@@ -128,32 +177,53 @@ def tree_digest(root: Path) -> str:
             let one receipt authorize every tree git failed to read.
     """
     root = Path(root)
-    listing = _git(root, "ls-files", "-z")
+    staged = _git(root, "ls-files", "--stage", "-z")
     others = _git(root, "ls-files", "--others", "--exclude-standard", "-z")
-    if listing.returncode != 0 or others.returncode != 0:
-        detail = (listing.stderr or others.stderr or "").strip()
+    if staged.returncode != 0 or others.returncode != 0:
+        detail = (staged.stderr or others.stderr or "").strip()
         raise RuntimeError(f"tree_digest: git could not list {root}: {detail or 'unknown error'}")
-    listed = {p for p in (listing.stdout + others.stdout).split("\0") if p}
-    # A tracked path deleted in the worktree has no blob to hash. Its absence is
-    # itself the change, and it is already visible: the path drops out of the
-    # record set, so the digest moves.
-    paths = sorted(
-        p for p in listed if not p.startswith(DIGEST_EXCLUDED_PREFIXES) and (root / p).is_file()
-    )
-    if not paths:
+    records: list[tuple[str, str, str, str]] = []
+    for mode, obj, rel in _parse_stage(staged.stdout):
+        if rel.startswith(DIGEST_EXCLUDED_PREFIXES):
+            continue
+        path = root / rel
+        git_mode = _worktree_git_mode(path, index_mode=mode)
+        if git_mode == "160000":
+            records.append((rel, "tracked", git_mode, obj))
+            continue
+        if not path.exists():
+            # A tracked path deleted in the worktree has no blob to hash. Its
+            # absence is itself the change, and it is already visible: the
+            # path drops out of the record set, so the digest moves.
+            continue
+        try:
+            blob = _blob_digest(path, git_mode=git_mode, index_object=obj)
+        except OSError as exc:
+            raise RuntimeError(f"tree_digest: cannot read {rel} under {root}: {exc}") from exc
+        records.append((rel, "tracked", git_mode, blob))
+    for rel in others.stdout.split("\0"):
+        if not rel or rel.startswith(DIGEST_EXCLUDED_PREFIXES):
+            continue
+        path = root / rel
+        if not path.is_file() and not path.is_symlink():
+            continue
+        git_mode = _worktree_git_mode(path, index_mode=None)
+        try:
+            blob = _blob_digest(path, git_mode=git_mode, index_object=None)
+        except OSError as exc:
+            raise RuntimeError(f"tree_digest: cannot read {rel} under {root}: {exc}") from exc
+        records.append((rel, "untracked", git_mode, blob))
+    if not records:
         # An empty repository is a real state with a real (empty) digest. It is
         # distinguishable from failure because git exited 0 above.
         return sha256_text("")
-    # Content is hashed here rather than by `git hash-object --stdin-paths`,
-    # which takes newline-delimited input and so cannot express a path
-    # containing a newline. git enumerates (NUL-delimited, exact); we digest.
     acc = hashlib.sha256()
-    for rel in paths:
-        try:
-            blob = sha256_file(root / rel)
-        except OSError as exc:
-            raise RuntimeError(f"tree_digest: cannot read {rel} under {root}: {exc}") from exc
+    for rel, membership, git_mode, blob in sorted(records):
         acc.update(rel.encode("utf-8"))
+        acc.update(b"\0")
+        acc.update(membership.encode("ascii"))
+        acc.update(b"\0")
+        acc.update(git_mode.encode("ascii"))
         acc.update(b"\0")
         acc.update(blob.encode("ascii"))
         acc.update(b"\n")
