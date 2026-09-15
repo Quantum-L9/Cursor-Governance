@@ -458,6 +458,12 @@ def record_kernels(
     return state
 
 
+KERNEL_EVIDENCE_EVIDENCED = "evidenced"
+KERNEL_EVIDENCE_ABSENT = "absent"
+KERNEL_EVIDENCE_STALE = "stale"
+KERNEL_EVIDENCE_ABSENT_NOTE = "kernel_gate.precommit decides exemption"
+
+
 def kernel_evidence_blocker(root: Path) -> str | None:
     """Refuse release when a kernel receipt exists but no longer re-derives.
 
@@ -481,12 +487,6 @@ def kernel_evidence_blocker(root: Path) -> str | None:
         # an exception nobody sees.
         return str(evidence.get("detail") or "FAIL: kernel receipt does not re-derive") + "\n"
     return None
-
-
-KERNEL_EVIDENCE_EVIDENCED = "evidenced"
-KERNEL_EVIDENCE_ABSENT = "absent"
-KERNEL_EVIDENCE_STALE = "stale"
-KERNEL_EVIDENCE_ABSENT_NOTE = "kernel_gate.precommit decides exemption"
 
 
 def kernel_evidence(root: Path) -> dict[str, Any]:

@@ -112,36 +112,33 @@ def _load_json(path: Path) -> dict[str, Any] | None:
     return payload if isinstance(payload, dict) else None
 
 
-def _l4_receipt_path(workspace: Path) -> Path:
-    """Ask l4_local where the receipt is; never re-derive the location here.
+def _l4_state_path(workspace: Path, resolver: str, fallback_name: str) -> Path:
+    """Ask l4_local where a piece of L4 state is; never re-derive the location here.
 
     L4 state is not always at <workspace>/.l9/autonomy: L9_AUTONOMY_STATE_DIR
     relocates it, and a relocated directory is namespaced per workspace. A
     second component resolving the same state by its own rule is how a
     consumer silently reads nothing — the PR body would simply lose its L4
-    section, with no error to notice. One owner, one resolver.
+    section, with no error to notice. One owner, one resolver. ``resolver``
+    names the l4_local function (``receipt_path``, ``breakglass_path``).
     """
     # Broad by design; the handler below carries the reason.
     # nosemgrep: l9.baseline.python.broad-except
     try:
         sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "autonomy"))
-        from l4_local import receipt_path
+        import l4_local
 
-        return receipt_path(workspace)
+        return getattr(l4_local, resolver)(workspace)
     except Exception:  # noqa: BLE001 — fall back rather than break PR composition
-        return workspace / ".l9" / "autonomy" / "l4-release-receipt.json"
+        return workspace / ".l9" / "autonomy" / fallback_name
+
+
+def _l4_receipt_path(workspace: Path) -> Path:
+    return _l4_state_path(workspace, "receipt_path", "l4-release-receipt.json")
 
 
 def _breakglass_path(workspace: Path) -> Path:
-    """Same owner, same reason as ``_l4_receipt_path``: l4_local resolves it."""
-    # nosemgrep: l9.baseline.python.broad-except
-    try:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "autonomy"))
-        from l4_local import breakglass_path
-
-        return breakglass_path(workspace)
-    except Exception:  # noqa: BLE001 — fall back rather than break PR composition
-        return workspace / ".l9" / "autonomy" / "breakglass.json"
+    return _l4_state_path(workspace, "breakglass_path", "breakglass.json")
 
 
 def _issue_numbers(text: str) -> list[int]:
