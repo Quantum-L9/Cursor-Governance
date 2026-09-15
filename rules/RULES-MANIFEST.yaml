@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-09-14T19:42:17Z'
+generated_utc: '2026-09-14T21:35:57Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:b5cde34e4217d63cc29e6d8e4b781c4faeb032d1858f02976203e4195a2e734c
+source_tree_digest: sha256:1e42edcf24eca3e8b942e564dc5a1439bb795d75fe55cac94a5d3e8beef688fd
 summary:
   total_mdc_files: 69
   always_apply_true: 35
@@ -169,7 +169,7 @@ rules:
 - file: 07-max-velocity-research.mdc
   id: l9.rule.07.max.velocity.research
   id_source: explicit
-  version: 1.0.0
+  version: 1.1.0
   description: Maximum-velocity is a repo invariant — launch research as concurrent subagents.
   scope: global
   domain: governance
@@ -179,8 +179,8 @@ rules:
   globs: null
   first_heading: Maximum velocity + research fan-out
   has_yaml_frontmatter: true
-  line_count: 39
-  content_digest: sha256:ce3021bf6cf26672946a1363a18ff14da0cf58e686ba5d2f9aba02081e1d13f9
+  line_count: 48
+  content_digest: sha256:6ea31975c138435889c47c67e3d479924dbbf1cdf14b933e2eba1f81a5c18ff1
   authority: canonical_global
   context_cost: minimal
   deprecated: false
@@ -697,7 +697,7 @@ rules:
 - file: 53-pr-overlap-guardrail.mdc
   id: l9.rule.53.pr.overlap.guardrail
   id_source: explicit
-  version: 1.1.0
+  version: 1.2.0
   description: Before opening any PR, the pre-open overlap gate must pass; a branch conflicting with its own base is blocked outright, and work overlapping an open PR routes into that PR or stacks on its head, never a sibling PR that conflicts.
   scope: global
   domain: git
@@ -707,8 +707,8 @@ rules:
   globs: null
   first_heading: PR overlap guardrail (PR_OVERLAP_GUARDRAIL_V1)
   has_yaml_frontmatter: true
-  line_count: 118
-  content_digest: sha256:04d0e57616e8a0fd7cbf1a66e6deb33afc94ead6c678d1d09848e527a7bdf28f
+  line_count: 129
+  content_digest: sha256:6de1f42606b191eb41aec56a890da2aa0c04f434a2871a9ecc5593a89dd0d2e8
   authority: canonical_global
   context_cost: moderate
   deprecated: false

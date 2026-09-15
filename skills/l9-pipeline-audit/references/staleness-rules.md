@@ -1,10 +1,10 @@
 <!-- L9_META
 l9_schema: 1
 parent: l9-pipeline-audit
-tags: [plan, audit, staleness, session-start]
+tags: [plan, audit, staleness]
 status: active
-version: 1.1.0
-updated: 2026-08-21
+version: 1.2.0
+updated: 2026-09-14
 /L9_META -->
 
 # Plan audit staleness rules
@@ -18,13 +18,13 @@ Authoritative rules for `scripts/audit_plans.py` and its self-test.
 3. Else `$HOME/.cursor/plans`.
 
 Always exclude `_TEMPLATE.plan.md`. Scan **top-level** `*.plan.md` only.
-Subfolders are out of the session-start set (see `docs/plans/README.md`):
+Subfolders are out of the live-queue set (see `docs/plans/README.md`):
 
 | Folder | Meaning |
 |---|---|
 | *(root)* | Live queue — current unbuilt plans |
 | `partially-built/` | Started but not finished (`completed` / `in_progress` todos remain) |
-| `stale/` | Open unbuilt work, parked (not current). Do not scan at SessionStart. |
+| `stale/` | Open unbuilt work, parked (not current). Do not scan as live-queue. |
 | `built/` | Executed plans |
 | `archive/` | Non-plan harvest and other dead weight |
 | `archive/superseded/` | Older same-slug copies or body `status: superseded` |
@@ -46,7 +46,7 @@ Skip when every todo is `completed` or `cancelled` (and todos is non-empty).
 Skip (treat as built/stale, do not highlight) when frontmatter has `built: true`
 or `status` in `{built, completed, cancelled, superseded}`. These markers win
 over todo inference so a Built plan with leftover `pending` todos, or a
-superseded copy, does not appear in session-start Plan audit.
+superseded copy, does not appear in the live-queue report.
 
 `compiled: true` is **not** a skip. A compiled plan with pending todos stays
 unbuilt and on the live queue. Donors keep their own shelf until a harvest
@@ -54,7 +54,7 @@ receipt stamps `compiled_into`; do not treat a mixed plan as wholly superseded.
 
 ## Component verdicts (not pass/fail)
 
-A plan may hold more than one verdict. SessionStart stays display-only.
+A plan may hold more than one verdict. The slash report is fail-open.
 
 | Verdict | Meaning |
 |---|---|
@@ -67,8 +67,8 @@ A plan may hold more than one verdict. SessionStart stays display-only.
 `stale_wiring` or `superseded_mission` share the same file.
 
 Plans-store refine (fold/compile leftover todos) is `/l9-audit-plans`.
-SessionStart stays display-only and must not call refine. Omit
-`harvested: true` donors from the live queue.
+SessionStart does not call refine. Omit `harvested: true` donors from the
+live queue.
 
 Harvest of invariants is `scripts/harvest_plan_invariants.py` (Gold Nugget
 kernel cited by path; no implementation; not `l9-harvest-pipeline`).
@@ -90,4 +90,4 @@ kernel cited by path; no implementation; not `l9-harvest-pipeline`).
 - Default markdown budget: **1200** characters
 - Default limit: **5** plans, newest mtime first
 - Soft failures (missing dir, parse errors): exit **0** with an explicit none/skipped line
-- SessionStart must remain fail-open; never raise into the bootstrap
+- The CLI must remain fail-open; never raise into a caller

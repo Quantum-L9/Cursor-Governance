@@ -14,7 +14,6 @@ may rely on. It does not define a second activation path (`AGENTS.md` §2, §20)
 | `### Degraded` | same reporter | **only** this-session, this-surface, actionable faults; `- none` on a healthy day |
 | `### Graphiti hydrate` | `compile_session_packet.py` via the memory orchestrator | packet id, objective, `next=`, stats, packet JSON fence |
 | `### Code-graph` | orchestrator | indexed or skipped |
-| `### Plan audit` | `skills/l9-pipeline-audit` | pending counts + NEXT 1–3, display-only |
 
 ## Degraded-section semantics (the honesty rules)
 
