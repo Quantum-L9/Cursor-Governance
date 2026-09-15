@@ -24,8 +24,8 @@ keep-list files** (`TODO.md`, `WIP/`, `docs/plans/`,
 unique untracked files. Unique commits and other dirty tracked bytes are parked
 (preserve branch, dirty ref, `$HOME/.cursor/l9-ff-hold/`). That is the
 success test. Do not call `governance_sync.sh` (it stashes untracked). Do
-not delete files to unblock. Do not `git stash push` corpus — shelf + commit +
-`make pr` instead. Machine-local keep-list: `.env.local`, `env.local`,
+not delete files to unblock. Do not `git stash push` corpus — leave it in
+the tree. Machine-local keep-list: `.env.local`, `env.local`,
 `.env.*.local`, `.claude/settings.local.json` (same as sessionStart swap).
 
 ## MUST
@@ -34,20 +34,12 @@ not delete files to unblock. Do not `git stash push` corpus — shelf + commit +
   (pairs this checkout + `$HOME/.cursor-governance` in parallel)
 - `/ff --clone` / `/ff --ssot`: pass that flag through; one target
 - Set `GOVERNANCE_SYNC_PUSH=0` and `GOVERNANCE_SYNC_HARD_RESET=0`
-- Do not `git switch` yourself (the script switches to `main` after parking)
-- After catch-up, shelf leftover untracked **and dirty tracked** corpus under
-  `TODO.md`, `WIP/`, `docs/plans/`, and
-  `environment/program-execution/campaigns/` onto a sibling branch — copy the
-  bytes in, apply Improve then Recursive Alignment then Validate & Repair
-  before precommit, then `l4_local.py begin` + `authorize-release` (not
-  `record-kernels`), then `PR_STACK=auto PR_REMEDIATE=0 make pr` in the shelf
-  worktree unless `FF_SHELF_PUBLISH=0`, then `run_ff_post_shelf.sh` +
-  `verify_worktree_clean.py` on the named clone. `ff.sh` stays push-off.
-- Leftover **untracked and dirty-tracked** corpus under `TODO.md`, `WIP/`,
-  `docs/plans/`, and `environment/program-execution/campaigns/` shelf
-  mutate is `skills/l9-repo-sync/scripts/ff_shelf.py` (in-clone
-  `.l9/ff-shelf-untracked.txt`, no process substitution). Secret globs
-  and `WIP/Legal Defense/` stay out.
+- Do not `git switch` yourself (the script switches to `main` after parking,
+  then switches back and restores parked files)
+- `/ff` ends when `ff.sh` prints `OK:` and files are back at their original
+  paths. Unique WIP/plans stay in the tree. Hold copies stay as backup.
+  Do not run `ff_shelf.py`, `run_ff_post_shelf.sh`, or
+  `verify_worktree_clean.py`. No commit. No push. No PR.
 - Never `git stash push` corpus paths to “prepare” for `/ff`
 
 ## MUST NOT

@@ -38,6 +38,21 @@ def _git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+_CORPUS_EXACT = frozenset({"TODO.md"})
+_CORPUS_PREFIXES = (
+    "WIP/",
+    "docs/plans/",
+    "environment/program-execution/campaigns/",
+)
+
+
+def _is_corpus_keep(rel: str) -> bool:
+    norm = rel.replace("\\", "/").lstrip("./")
+    if norm in _CORPUS_EXACT:
+        return True
+    return any(norm.startswith(prefix) for prefix in _CORPUS_PREFIXES)
+
+
 def _run_dirt_status(root: Path, baseline: str) -> dict[str, Any]:
     proc = subprocess.run(  # noqa: S603
         [
@@ -119,12 +134,27 @@ def verify(
     dirty_unique = dirt.get("dirty_unique")
     if dirty_unique is None:
         dirty_unique = len(dirt.get("dirty_files") or [])
+    dirty_files = [str(path) for path in (dirt.get("dirty_files") or [])]
     if dirty_unique == -1:
         errors.append(f"dirt-close status unavailable: {dirt.get('error', 'unknown')}")
     elif dirty_unique != 0:
-        errors.append(
-            f"dirty_unique={dirty_unique} (run session_end_dirt_close --status for paths)"
-        )
+        if not dirty_files:
+            warnings.append(
+                f"dirty_unique={dirty_unique} (paths unknown); leftover corpus may stay — "
+                "/ff does not shelf or open a PR"
+            )
+        else:
+            corpus = [path for path in dirty_files if _is_corpus_keep(path)]
+            other = [path for path in dirty_files if path not in corpus]
+            if corpus:
+                warnings.append(
+                    f"leftover corpus stays in the tree: {corpus}; /ff does not shelf or open a PR"
+                )
+            if other:
+                errors.append(
+                    f"dirty_unique non-corpus: {other} "
+                    "(run session_end_dirt_close --status for paths)"
+                )
 
     try:
         gh_proc = subprocess.run(  # noqa: S603
@@ -192,8 +222,8 @@ def main(argv: list[str] | None = None) -> int:
             for err in errors:
                 print(f"FAIL: {err}", file=sys.stderr)
             print(
-                "Remediation: finish /ff shelf publish (PR_REMEDIATE=0 make pr), "
-                "run ops/scripts/run_ff_post_shelf.sh, or FF_SHELF_PUBLISH=0 to shelf-only",
+                "Remediation: leftover corpus may stay in the tree. "
+                "/ff does not shelf, commit, or open a PR.",
                 file=sys.stderr,
             )
     return 0 if ok else 1

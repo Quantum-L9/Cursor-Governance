@@ -1,5 +1,5 @@
 {
-  "generation_id": "a57bde67f412b792d47af309fa7f703dd89fd8e9d2f25fe305e9f22dc97d02c0",
+  "generation_id": "17ed8f6152a924b93076fa6abcfa38f74a950bb18a8f9b55e1135c89f33904f6",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -1392,14 +1392,14 @@
     },
     {
       "composition_role": "general",
-      "description": "diagnose or converge github prs \u2014 plan the fleet once, launch up to 10 subagents to remediate, poll remediating PRs, and start stack-safe merge trains on the oldest green PRs that will not conflict downstream. do not wait for every PR to be green. do not run make pr. use when /l9-pr-remediation, fix, babysit, or merge failing prs.",
+      "description": "diagnose or converge github prs \u2014 plan the fleet once, launch execution-profile-capped subagents to remediate, poll remediating PRs, and start stack-safe merge trains on the oldest green PRs that will not conflict downstream. do not wait for every PR to be green. do not run make pr. use when /l9-pr-remediation, fix, babysit, or merge failing prs.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pr-remediation",
       "path": "skills/l9-pr-remediation",
       "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked). The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Above-paygrade HUMAN / unfixable required CI / ENVIRONMENT after best-effort opens a GitHub issue and launches l9-issue-remediation via cursor-subagents; do not ask the human to unblock. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
       "skill_md": "skills/l9-pr-remediation/SKILL.md",
-      "skill_sha256": "50cddd2286a46301e69b0bd503a2cd823c7b560da01ab3d17c135bcd0edcd89e",
+      "skill_sha256": "a5a39c22ff77044c5de8d6e5d3ae795e1a289f23d3ab2d35cabe39a5dc521246",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1477,7 +1477,7 @@
       "path": "skills/l9-repo-sync",
       "reason": "in-place /ff catch-up mutates a named clone (park unique work, then reset --keep); explicit only, hint_allowed for Read/attach",
       "skill_md": "skills/l9-repo-sync/SKILL.md",
-      "skill_sha256": "2bdec4422e403f40c016b686935c1b9133223c24d18bc9512221a0a754a67e4c",
+      "skill_sha256": "04a6088f608406573644ea319875889bbf661823ff640ba6ae064beff21f1735",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1601,5 +1601,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "bf415873fe91b1779e0cea47ca987f01c3b919d78bae8ac8c0a49fea06eb8def",
-  "source_skill_corpus_sha256": "a262861d450be25a18ed5e6911543946d838a91c8b2ec0eab9182c15256c93bd"
+  "source_skill_corpus_sha256": "5a8371218202d6c3905d479de1f375850f280ea2c8d061ff8f44569e1190d8db"
 }

@@ -9,8 +9,13 @@ Those stay model judgment in the reference files.
 from __future__ import annotations
 
 import re
+import subprocess
 from pathlib import Path
 from typing import Any
+
+#: Gate E shells out to `git log`; a hung git (stuck filesystem, wedged
+#: process) must fail the gate fast instead of stalling remediation.
+GIT_TIMEOUT_S = 30
 
 CRA_LOGINS = frozenset(
     {
@@ -365,6 +370,19 @@ def validate_plan(plan: dict[str, Any], findings: list[dict[str, Any]] | None = 
             errors.append(f"plan missing ingested ids: {sorted(missing)}")
         if extra:
             errors.append(f"plan has ids not in ingest: {sorted(extra)}")
+        cycle = int(body.get("cycle") or 1)
+        prior_ids = {str(x) for x in (body.get("cycle1_ingest_ids") or []) if x}
+        if not prior_ids:
+            prior_ids = {
+                str(item.get("id"))
+                for item in (body.get("cycle1_ingest") or [])
+                if isinstance(item, dict) and item.get("id")
+            }
+        # A later cycle exists only for signals that were absent at plan time, so
+        # any overlap with the plan-time set is stale -- not merely an all-old set.
+        stale = ingested & prior_ids if cycle >= 2 else set()
+        if stale:
+            errors.append(f"cycle 2 rejected: finding ids existed at plan time: {sorted(stale)}")
     return errors
 
 
@@ -451,6 +469,34 @@ def validate_gate(
             errors.append("publish_count_this_cycle must be 1")
         if record.get("publish_command") != PUBLISH_COMMAND:
             errors.append(f"publish_command must be {PUBLISH_COMMAND!r}")
+        base_sha = str(record.get("base_sha") or receipt.get("base_sha") or "")
+        workspace = Path(str(record.get("workspace") or receipt.get("workspace") or Path.cwd()))
+        if not re.fullmatch(r"[0-9a-f]{40}", base_sha):
+            errors.append("Gate E requires base_sha (40-char hex) for git log")
+        else:
+            try:
+                proc = subprocess.run(
+                    ["git", "-C", str(workspace), "log", "--format=%H", f"{base_sha}..HEAD"],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    timeout=GIT_TIMEOUT_S,
+                )
+            except subprocess.TimeoutExpired:
+                errors.append(f"Gate E git log timed out after {GIT_TIMEOUT_S}s")
+                return errors
+            if proc.returncode != 0:
+                errors.append(
+                    "Gate E git log failed: " + (proc.stderr or proc.stdout or "unknown").strip()
+                )
+            else:
+                commits = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+                if len(commits) != 1:
+                    errors.append(
+                        f"Gate E requires exactly one commit since base_sha; got {len(commits)}"
+                    )
+                elif sha and commits[0] != sha:
+                    errors.append("Gate E commit_sha is not HEAD of base_sha..HEAD")
     elif letter == "F":
         record = receipt.get("reply_record") or {}
         total = int(record.get("threads_total") or 0)

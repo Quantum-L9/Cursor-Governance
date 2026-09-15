@@ -96,13 +96,15 @@ def main() -> int:
         print("FAIL: execute.md must not teach git add -- ${shelf_paths}", file=sys.stderr)
         return 1
     for needle in (
-        "scripts/ff_shelf.py",
-        ".l9/ff-shelf-untracked.txt",
-        "GOV_PY verify_worktree_clean.py",
+        "Do not run `ff_shelf.py`",
+        "Do not run `run_ff_post_shelf.sh`",
     ):
         if needle not in execute:
             print(f"FAIL: execute.md missing {needle}", file=sys.stderr)
             return 1
+    if '"$GOV_PY" skills/l9-repo-sync/scripts/ff_shelf.py' in execute:
+        print("FAIL: execute.md must not invoke ff_shelf.py", file=sys.stderr)
+        return 1
 
     forbidden = (ROOT / "references/forbidden.md").read_text(encoding="utf-8")
     for prim in GIT_PRIMITIVES:
@@ -127,6 +129,12 @@ def main() -> int:
         return 1
     if "merge --ff-only" in live_ff:
         print("FAIL: ff.sh must never merge --ff-only", file=sys.stderr)
+        return 1
+    if "_restore_parked_homes()" not in ff_sh:
+        print("FAIL: ff.sh must restore parked files to original homes", file=sys.stderr)
+        return 1
+    if "ff-restore-receipt.json" not in ff_sh:
+        print("FAIL: ff.sh must write .l9/ff-restore-receipt.json", file=sys.stderr)
         return 1
 
     park_start = ff_sh.find("_park_overwrite_untracked()")

@@ -27,6 +27,7 @@ MIN_MUTATION_LANES = 128
 MIN_NATIVE = 480
 POLICY_REL = Path("ops/autonomy/claude-execution-profiles.json")
 SURFACE_REL = Path("ops/autonomy/surface_profile.yaml")
+FLEET_REL = Path("ops/autonomy/pr_fleet.py")
 
 
 def _int(value: Any) -> int | None:
@@ -104,6 +105,13 @@ def collect_defects(root: Path) -> list[str]:
                 f"{SURFACE_REL}: claude_execution_profiles.{key}="
                 f"{block.get(key)!r} (required {PROFILE})"
             )
+    fleet_path = root / FLEET_REL
+    if fleet_path.is_file():
+        fleet = fleet_path.read_text(encoding="utf-8")
+        if "SKILL_SUBAGENT_CAP = 10" in fleet or "SKILL_SUBAGENT_CAP=10" in fleet:
+            defects.append(f"{FLEET_REL}: remediator clamp SKILL_SUBAGENT_CAP = 10")
+        if "min(profile_parallel, cap)" in fleet:
+            defects.append(f"{FLEET_REL}: remediator min() clamp on profile caps")
     return defects
 
 
