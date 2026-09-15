@@ -258,7 +258,7 @@ def test_drift_in_a_governance_venv_is_healed_once_and_reprobed(
     gov, env = _drifted_governance_env(tmp_path)
     heals: list[Path] = []
 
-    def heal(root: Path, *, env: Mapping[str, str]) -> tuple[str, list[str]]:
+    def heal(root: Path, *, env: Mapping[str, str], **_kw: object) -> tuple[str, list[str]]:
         heals.append(root)
         fake_venv.version = EXPECTED_VERSION  # the locked sync installed the pin
         return rb.environment_heal.HEAL_HEALED, []
@@ -284,7 +284,7 @@ def test_heal_failure_is_an_environment_fault_not_degradation(tmp_path: Path, mo
     binding = rb.resolve_runtime_binding(
         env={"HOME": str(tmp_path / "nohome"), rb.ENV_GOVERNANCE_DIR: str(gov)},
         runner=env.run,
-        heal=lambda root, *, env: (rb.environment_heal.HEAL_FAILED, ["uv sync exited 2"]),
+        heal=lambda root, *, env, **_kw: (rb.environment_heal.HEAL_FAILED, ["uv sync exited 2"]),
     )
     assert binding.status == rb.STATUS_UNBOUND
     assert binding.environment_fault is True
@@ -297,13 +297,32 @@ def test_heal_failure_is_an_environment_fault_not_degradation(tmp_path: Path, mo
     assert proof["candidates_tried"] == [str(gov / ".venv" / "bin" / "python")]
 
 
+def test_heal_receives_the_caller_timeout(tmp_path: Path, monkeypatch) -> None:
+    gov, env = _drifted_governance_env(tmp_path)
+    monkeypatch.setattr(rb, "_REPO_ROOT", tmp_path / "not-a-checkout")
+    seen: list[float | None] = []
+
+    def heal(root: Path, *, env: Mapping[str, str], timeout: float | None = None, **_kw: object):
+        seen.append(timeout)
+        return rb.environment_heal.HEAL_FAILED, []
+
+    binding = rb.resolve_runtime_binding(
+        env={"HOME": str(tmp_path / "nohome"), rb.ENV_GOVERNANCE_DIR: str(gov)},
+        runner=env.run,
+        timeout=6.0,
+        heal=heal,
+    )
+    assert binding.status == rb.STATUS_UNBOUND
+    assert seen == [6.0]
+
+
 def test_a_skipped_heal_is_reported_verbatim(tmp_path: Path, monkeypatch) -> None:
     gov, env = _drifted_governance_env(tmp_path)
     monkeypatch.setattr(rb, "_REPO_ROOT", tmp_path / "not-a-checkout")
     binding = rb.resolve_runtime_binding(
         env={"HOME": str(tmp_path / "nohome"), rb.ENV_GOVERNANCE_DIR: str(gov)},
         runner=env.run,
-        heal=lambda root, *, env: ("skipped:repo-write-lock-held", []),
+        heal=lambda root, *, env, **_kw: ("skipped:repo-write-lock-held", []),
     )
     assert binding.status == rb.STATUS_UNBOUND
     assert binding.environment_heal == "skipped:repo-write-lock-held"
@@ -313,7 +332,7 @@ def test_explicit_interpreter_drift_is_never_healed(tmp_path: Path) -> None:
     env = Environment(tmp_path, version="2.1.0")
     called: list[Path] = []
 
-    def heal(root: Path, *, env: Mapping[str, str]) -> tuple[str, list[str]]:
+    def heal(root: Path, *, env: Mapping[str, str], **_kw: object) -> tuple[str, list[str]]:
         called.append(root)
         return rb.environment_heal.HEAL_HEALED, []
 
@@ -342,7 +361,10 @@ def test_a_second_governance_venv_wins_when_the_first_has_drifted(
     binding = rb.resolve_runtime_binding(
         env={"HOME": str(tmp_path / "nohome"), rb.ENV_GOVERNANCE_DIR: str(stale)},
         runner=run,
-        heal=lambda root, *, env: (heals.append(root), (rb.environment_heal.HEAL_FAILED, []))[1],
+        heal=lambda root, *, env, **_kw: (
+            heals.append(root),
+            (rb.environment_heal.HEAL_FAILED, []),
+        )[1],
     )
     # The fresh checkout bound without any heal: drift is healed only when no
     # candidate carries the pin.

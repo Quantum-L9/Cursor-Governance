@@ -54,6 +54,9 @@ CONDITION_ENVIRONMENT_FAULT = "ENVIRONMENT_FAULT"
 CONDITION_CLOSE_GAP = "CLOSE_GAP"
 CONDITION_STALE = "STALE"
 _ENVIRONMENT_STATUSES = {"BINDING_FAILED", "NAMESPACE_UNRESOLVED"}
+#: Pre-split packets always carried ``memory_status``. An answering status
+#: plus ``close_gap`` is lifecycle, not canonical degradation.
+_ANSWERING_STATUSES = {"OK", "NO_HITS"}
 
 
 @dataclass(frozen=True)
@@ -109,13 +112,18 @@ def _memory_degraded(packet: dict[str, Any], stats: dict[str, Any]) -> bool:
     if typed is not None:
         return typed is True
     # Pre-split packet: ``degraded`` was ORed with close_gap. Subtract the
-    # lifecycle bit so an old packet still reads as memory truth.
+    # lifecycle bit so an old packet still reads as memory truth — including
+    # the real legacy shape that always set ``memory_status`` (OK / NO_HITS).
     legacy = packet.get("degraded") is True or stats.get("degraded") is True
-    if legacy and stats.get("close_gap") is True and not stats.get("memory_status"):
+    if not legacy:
         return False
-    if legacy and str(stats.get("memory_status") or "") in _ENVIRONMENT_STATUSES:
+    status = str(stats.get("memory_status") or packet.get("memory_status") or "")
+    close = stats.get("close_gap") is True or packet.get("close_gap") is True
+    if close and (not status or status in _ANSWERING_STATUSES):
         return False
-    return legacy
+    if status in _ENVIRONMENT_STATUSES:
+        return False
+    return True
 
 
 def _environment_fault(packet: dict[str, Any], stats: dict[str, Any]) -> bool:

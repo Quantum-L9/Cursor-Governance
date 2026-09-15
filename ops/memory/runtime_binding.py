@@ -682,7 +682,7 @@ def resolve_runtime_binding(
         for candidate, _ in drifted:
             root = candidate.governance_root
             assert root is not None  # noqa: S101 - guaranteed by drift=True
-            heal_outcome, heal_reasons = heal_environment(root, env=environment)
+            heal_outcome, heal_reasons = heal_environment(root, env=environment, timeout=timeout)
             reasons.append(f"environment heal on {root}: {heal_outcome}")
             reasons.extend(heal_reasons)
             if heal_outcome != environment_heal.HEAL_HEALED:
