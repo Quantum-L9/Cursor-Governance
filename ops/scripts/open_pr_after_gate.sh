@@ -381,7 +381,13 @@ if [[ -n "$pr_url" && -n "$pr_number" && -n "$owner" && -n "$name" ]]; then
 fi
 
 if [[ -z "$pr_url" || -z "$pr_number" ]]; then
-  title="$(git log "${PR_BASE}..HEAD" --format='%s' --reverse | head -1)"
+  # The composer owns the range rule (no merges, nothing already on origin/main).
+  # A bare `git log base..HEAD | head -1` here titled PR #602 with a main commit
+  # the stack parent had merely not caught up to yet.
+  _title_python="$GOV_ROOT/.venv/bin/python"
+  [[ -x "$_title_python" ]] || _title_python="python3"
+  title="$("$_title_python" "$SCRIPT_DIR/compose_pr_body.py" \
+    --workspace "$WS" --pr-base "$PR_BASE" --print-title 2>/dev/null || true)"
   if [[ -z "$title" ]]; then
     title="$branch"
   fi

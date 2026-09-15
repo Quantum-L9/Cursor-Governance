@@ -45,6 +45,11 @@ class TipResult:
     sha: str
     reason: str
     siblings: tuple[str, ...] = ()
+    # Every open-PR head on the walk from the main-rooted PR to the tip, root
+    # first, tip last. A child's PR body must not tell commits that belong to any
+    # of these — a parent cut before its own base was refreshed inherits commits
+    # the child then sees in `parent..HEAD` (PR #602 was titled with one).
+    chain: tuple[str, ...] = ()
 
 
 def gh_available() -> bool:
@@ -149,6 +154,7 @@ def resolve_from_prs(prs: list[OpenPR], *, default_ref: str) -> TipResult:
 
     current = roots[0]
     seen: set[str] = {current.head}
+    chain: list[str] = [current.head]
     while True:
         children = [pr for pr in prs if pr.base == current.head]
         if not children:
@@ -156,6 +162,7 @@ def resolve_from_prs(prs: list[OpenPR], *, default_ref: str) -> TipResult:
                 ref=current.head,
                 sha=current.sha,
                 reason="unique_chain_tip",
+                chain=tuple(chain),
             )
         if len(children) > 1:
             named = ", ".join(
@@ -166,6 +173,7 @@ def resolve_from_prs(prs: list[OpenPR], *, default_ref: str) -> TipResult:
         if nxt.head in seen:
             raise TipError(f"open-PR chain cycles at {nxt.head}")
         seen.add(nxt.head)
+        chain.append(nxt.head)
         current = nxt
 
 
@@ -220,6 +228,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"STACK_TIP={result.ref}")
     print(f"STACK_TIP_SHA={result.sha}")
     print(f"REASON={result.reason}")
+    print(f"STACK_CHAIN={' '.join(result.chain)}")
     return 0
 
 

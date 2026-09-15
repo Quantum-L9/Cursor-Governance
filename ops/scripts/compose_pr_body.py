@@ -173,18 +173,36 @@ def _narrative_range(workspace: Path, pr_base: str) -> list[str]:
     mainline commits the parent has not caught up to, plus the merge commits
     that brought them in, and the composer's *oldest* commit — the PR title —
     becomes somebody else's ``main`` change. Exclude everything reachable from
-    ``origin/main`` and every merge commit; what remains is this branch's own
-    story. When ``origin/main`` is not fetched, fall back to the bare range.
+    ``origin/main``, from every other head on the open-PR chain the stack
+    resolver walked (``.l9/pr/stack-base.json`` ``chain``), and every merge
+    commit; what remains is this branch's own story. A ref that is not fetched
+    is skipped, so the worst case is the bare range, never a failure.
     """
     args = ["--no-merges", f"{pr_base}..HEAD"]
-    if (
-        pr_base not in {MAINLINE_REF, "main"}
-        and _run_git(
-            workspace, "rev-parse", "--verify", "--quiet", f"{MAINLINE_REF}^{{commit}}"
-        ).strip()
-    ):
-        args.append(f"^{MAINLINE_REF}")
+    if pr_base in {MAINLINE_REF, "main"}:
+        return args
+    own = pr_base.removeprefix("origin/")
+    exclude = [MAINLINE_REF] + [f"origin/{head}" for head in _stack_chain(workspace) if head != own]
+    for ref in exclude:
+        if _run_git(workspace, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}").strip():
+            args.append(f"^{ref}")
     return args
+
+
+def _stack_chain(workspace: Path) -> list[str]:
+    """Open-PR heads root→tip from the stack-base receipt, or [] when absent.
+
+    The tip alone is what ``pr_base`` already names. The parents above it are
+    the ones a stale child inherits from: #601 was cut from #600 before #600
+    merged main, so #602 (based on #601) saw #600's later commit as its own.
+    """
+    doc = _load_json(workspace / ".l9" / "pr" / "stack-base.json")
+    if not isinstance(doc, dict) or doc.get("schema") != "l9.stack_base.v1":
+        return []
+    chain = doc.get("chain")
+    if not isinstance(chain, list):
+        return []
+    return [str(head) for head in chain if isinstance(head, str) and head]
 
 
 def _collect_path_subjects(workspace: Path, pr_base: str) -> dict[str, str]:
@@ -319,6 +337,12 @@ def range_summary(facts: MechanicalFacts) -> str:
         return NO_SUBJECT
     more = len(facts.commits) - 1
     return facts.commits[0] + (f" (+{more} more)" if more else "")
+
+
+def range_title(facts: MechanicalFacts) -> str:
+    """The PR title: the oldest own subject, no count. Empty when the range is empty
+    so the caller can fall back to the branch name."""
+    return facts.commits[0] if facts.commits else ""
 
 
 def range_fix(facts: MechanicalFacts) -> str:
@@ -810,7 +834,20 @@ def main(argv: list[str] | None = None) -> int:
         help="No caller computed the additive_only range; say so instead of claiming none",
     )
     parser.add_argument("--pr-number", type=int, default=None)
+    parser.add_argument(
+        "--print-title",
+        action="store_true",
+        help="Print only the PR title (this branch's oldest own commit subject) and exit",
+    )
     args = parser.parse_args(argv)
+
+    if args.print_title:
+        # Same range the body is told from. open_pr_after_gate.sh used to run its
+        # own `git log base..HEAD | head -1`, a second copy of the range rule
+        # that titled PR #602 with a main commit.
+        facts = collect_mechanical(args.workspace.resolve(), pr_base=args.pr_base)
+        print(range_title(facts))
+        return 0
 
     campaign = ""
     if args.campaign_body_file and args.campaign_body_file.is_file():

@@ -40,6 +40,12 @@ class ResolveFromPrsTests(unittest.TestCase):
         self.assertEqual(result.ref, "feat/stack-safe-merge")
         self.assertEqual(result.sha, "cc" * 20)
         self.assertEqual(result.reason, "unique_chain_tip")
+        # Root first, tip last: the composer excludes each of these from a
+        # child's story, and the publish lib fetches the ones above the tip.
+        self.assertEqual(result.chain, ("feat/a", "feat/b", "feat/stack-safe-merge"))
+
+    def test_no_open_prs_has_an_empty_chain(self) -> None:
+        self.assertEqual(resolve_from_prs([], default_ref="origin/main").chain, ())
 
     def test_sibling_roots_targeting_main_exit(self) -> None:
         prs = [

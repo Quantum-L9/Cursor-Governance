@@ -17,6 +17,7 @@ from compose_pr_body import (  # noqa: E402
     UNMEASURED,
     MechanicalFacts,
     compose_pr_body,
+    range_title,
     write_handoff,
 )
 
@@ -425,37 +426,102 @@ class ComposePrBodyTests(unittest.TestCase):
             (repo / "base.txt").write_text("base\n")
             git("add", "base.txt")
             git("commit", "-q", "-m", "base")
-            # Stack parent cut from main here …
+            # The stack root (#600) is cut from main …
+            git("checkout", "-q", "-b", "root")
+            (repo / "root.py").write_text("r\n")
+            git("add", "root.py")
+            git("commit", "-q", "-m", "root: its own work")
+            # … the parent (#601) is cut from the root …
             git("checkout", "-q", "-b", "parent")
             (repo / "parent.py").write_text("p\n")
             git("add", "parent.py")
             git("commit", "-q", "-m", "parent: its own work")
-            # … then main moves on without the parent noticing.
+            # … then main moves on, and the root catches up to it — after the
+            # parent was cut, so the parent has neither of those commits.
             git("checkout", "-q", "main")
             (repo / "mainline.py").write_text("m\n")
             git("add", "mainline.py")
             git("commit", "-q", "-m", "mainline: somebody else's fix (#599)")
-            # The child starts from the parent, catches up to main by merge,
-            # and does its own work.
-            git("checkout", "-q", "-b", "child", "parent")
+            git("checkout", "-q", "root")
             git("merge", "-q", "--no-edit", "main")
+            (repo / "root.py").write_text("r2\n")
+            git("add", "root.py")
+            git("commit", "-q", "-m", "root: regenerate manifests after merging #599")
+            # The child (#602) starts from the parent, catches up to the root's
+            # new tip by merge, and does its own work.
+            git("checkout", "-q", "-b", "child", "parent")
+            git("merge", "-q", "--no-edit", "root")
             (repo / "child.py").write_text("c\n")
             git("add", "child.py")
             git("commit", "-q", "-m", "child: first real change")
             (repo / "child.py").write_text("c2\n")
             git("add", "child.py")
             git("commit", "-q", "-m", "child: second real change")
-            # The composer sees the mainline through its remote-tracking name.
+            # The composer sees mainline and the chain through remote-tracking
+            # names, and the chain itself through the stack-base receipt.
             git("update-ref", "refs/remotes/origin/main", "main")
+            git("update-ref", "refs/remotes/origin/root", "root")
+            git("update-ref", "refs/remotes/origin/parent", "parent")
+            (repo / ".l9" / "pr").mkdir(parents=True)
+            (repo / ".l9" / "pr" / "stack-base.json").write_text(
+                json.dumps(
+                    {
+                        "schema": "l9.stack_base.v1",
+                        "pr_stack": "auto",
+                        "pr_base": "origin/parent",
+                        "chain": ["root", "parent"],
+                    }
+                )
+            )
 
-            facts = collect_mechanical(repo, pr_base="parent")
+            facts = collect_mechanical(repo, pr_base="origin/parent")
+            # Without the chain, the root's later commit is "inherited" too: the
+            # receipt is what lets the composer tell whose it is.
+            (repo / ".l9" / "pr" / "stack-base.json").unlink()
+            without_chain = collect_mechanical(repo, pr_base="origin/parent")
+            (repo / ".l9" / "pr" / "stack-base.json").write_text(
+                json.dumps({"schema": "l9.stack_base.v1", "chain": ["root", "parent"]})
+            )
+            # The title the shell asks for goes through the same range, so it can
+            # never again quote a commit the body would not tell.
+            title = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO / "ops" / "scripts" / "compose_pr_body.py"),
+                    "--workspace",
+                    str(repo),
+                    "--pr-base",
+                    "origin/parent",
+                    "--print-title",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            ).stdout.strip()
 
         self.assertEqual(facts.commits, ["child: first real change", "child: second real change"])
+        self.assertEqual(title, "child: first real change")
+        self.assertEqual(range_title(facts), title)
+        self.assertEqual(range_title(MechanicalFacts()), "")
         self.assertNotIn("mainline.py", facts.path_subjects)
+        self.assertNotIn("root.py", facts.path_subjects)
         self.assertEqual(facts.path_subjects["child.py"], "child: second real change")
         # The diff is still the real diff against the parent: the inherited
-        # mainline file is in it, it is only the *story* that leaves it out.
+        # mainline and root files are in it, it is only the *story* that
+        # leaves them out.
         self.assertIn("A\tmainline.py", facts.changed_files)
+        self.assertIn("M\troot.py", facts.changed_files)
+        # Mainline and merges are excluded even with no receipt; the root's own
+        # later commit is exactly what the chain adds.
+        self.assertEqual(
+            without_chain.commits,
+            [
+                "root: regenerate manifests after merging #599",
+                "child: first real change",
+                "child: second real change",
+            ],
+        )
 
     def test_handoff_lists_empty_needs_completion(self) -> None:
         facts = MechanicalFacts(
