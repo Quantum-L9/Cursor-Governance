@@ -1642,3 +1642,37 @@ This fragment supersedes only the sessionEnd dirt-close / auto-hygiene /
   `/l9-pipeline-audit` (alias `/plan-audit`) with `--archive-spent` opt-in.
   §16's "display-only" findings and the 2026-08-28 producer description are
   historical.
+
+<!-- RECEIPT_EVIDENCE_PLANE_V1 -->
+## Kernel receipts are evidence, not stamps (2026-09-15)
+
+Append-only. Law is `CANONICAL_LAW.md` §6.2.9. This supersedes only the shape of
+the `kernel_gate.py record` step named in `CURSOR_KERNEL_LATCH_BEFORE_PYTEST_V1`
+and `KERNEL_LATCH_BARE_LOCAL_V1`; those paragraphs stay on disk. The finish path
+and the latch position are unchanged.
+
+- Finish path is still: scoped-commit → `l4_local.py authorize-release` →
+  `PR_REMEDIATE=0 make pr`. `kernel_gate.py precommit` is still the first
+  writers step, before ruff and pytest.
+- What changed is the record step. Write the apply report first, then record:
+
+```bash
+GOV="$HOME/.cursor-governance"
+"$GOV/.venv/bin/python" "$GOV/ops/autonomy/kernel_gate.py" \
+  apply-report-template --workspace "$(pwd)"        # skeleton to stdout
+# fill in deltas: one entry per file you actually changed
+"$GOV/.venv/bin/python" "$GOV/ops/autonomy/kernel_gate.py" \
+  record --workspace "$(pwd)" --report ".l9/autonomy/kernel-apply.md"
+```
+
+- The report is the receipt: `l9.kernel_apply.v1` frontmatter, both kernels, a
+  `convergence_status`, both body headings, and **non-empty `deltas`** whose
+  paths exist. Empty deltas, a path outside `.l9/autonomy/`, or a delta naming a
+  file that does not exist is refused, and **no receipt is written**.
+- `verify` re-hashes the report every read, so editing or deleting it after
+  recording fails the gate. `l9.kernel_receipt.v1` is rejected by name.
+- `record-kernels` is still not the apply path, and still not how you satisfy
+  this latch. `l4_local.py` no longer stamps the kernel receipt at all:
+  `kernel_gate.record` is the sole writer (AST-enforced).
+- `/ff` corpus kernels are unchanged, and a corpus-only changeset
+  (`WIP/`, `docs/plans/`, PE campaigns) still needs no tree receipt.
