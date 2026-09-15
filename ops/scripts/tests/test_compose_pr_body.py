@@ -232,6 +232,88 @@ class ComposePrBodyTests(unittest.TestCase):
             with self.assertRaises(FileNotFoundError):
                 _load_additive_only(missing)
 
+    def test_multi_commit_range_is_told_oldest_first_not_tip_only(self) -> None:
+        facts = MechanicalFacts(
+            commits=["first: bind receipts", "second: add ratchet", "third: delegate digest"],
+            commit_bodies=["The gate read a stale field.\n\nCloses #1", "", ""],
+            changed_files=["M\tops/a.py", "A\tops/b.py", "M\tAGENTS.md"],
+            path_subjects={
+                "ops/a.py": "first: bind receipts",
+                "ops/b.py": "second: add ratchet",
+                "AGENTS.md": "third: delegate digest",
+            },
+            additive_only_paths=["AGENTS.md"],
+        )
+        body = compose_pr_body(facts, TEMPLATE).body
+        # Problem is where the work started, plus how much follows.
+        self.assertIn("first: bind receipts (+2 more commits below)", body)
+        self.assertIn("The gate read a stale field.", body)
+        self.assertNotIn("Closes #1\n\n## ", body.split("## Problem")[1].split("## Type")[0])
+        # Fix lists every subject, in the order they were made.
+        fix_section = body.split("## Fix")[1].split("## Risk")[0]
+        self.assertLess(fix_section.index("- first:"), fix_section.index("- second:"))
+        self.assertLess(fix_section.index("- second:"), fix_section.index("- third:"))
+        # Each path is explained by the commit that touched it.
+        self.assertIn("`ops/a.py` — first: bind receipts", body)
+        self.assertIn("`ops/b.py` — second: add ratchet", body)
+        self.assertIn("`AGENTS.md` — third: delegate digest", body)
+        # Why a root file names the commit that touched the root file, not the tip
+        # or the oldest subject by accident.
+        why_section = body.split("### Why a root file")[1].split("### Proof")[0]
+        self.assertIn("third: delegate digest", why_section)
+        self.assertNotIn("first: bind receipts", why_section)
+
+    def test_single_commit_range_reads_as_before(self) -> None:
+        facts = MechanicalFacts(commits=["only: one"], changed_files=["M\tops/x.py"])
+        body = compose_pr_body(facts, TEMPLATE).body
+        self.assertNotIn("more commit", body)
+        self.assertNotIn("- only: one", body.split("## Fix")[1].split("## Risk")[0])
+        self.assertIn("`ops/x.py` — only: one", body)
+
+    def test_collect_mechanical_orders_oldest_first_and_attributes_paths(self) -> None:
+        import subprocess
+
+        from compose_pr_body import collect_mechanical
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+
+            def git(*args: str) -> None:
+                subprocess.run(
+                    ["git", "-C", str(repo), *args],
+                    check=True,
+                    capture_output=True,
+                    env={
+                        "PATH": __import__("os").environ["PATH"],
+                        "GIT_AUTHOR_NAME": "t",
+                        "GIT_AUTHOR_EMAIL": "t@x",
+                        "GIT_COMMITTER_NAME": "t",
+                        "GIT_COMMITTER_EMAIL": "t@x",
+                        "HOME": tmp,
+                    },
+                )
+
+            git("init", "-q", "-b", "main")
+            (repo / "base.txt").write_text("base\n")
+            git("add", "base.txt")
+            git("commit", "-q", "-m", "base")
+            git("checkout", "-q", "-b", "feat")
+            (repo / "a.py").write_text("a\n")
+            git("add", "a.py")
+            git("commit", "-q", "-m", "one: add a", "-m", "Why a exists.\n\nCloses #7")
+            (repo / "b.py").write_text("b\n")
+            (repo / "a.py").write_text("a2\n")
+            git("add", "a.py", "b.py")
+            git("commit", "-q", "-m", "two: touch a and b")
+            facts = collect_mechanical(repo, pr_base="main")
+        self.assertEqual(facts.commits, ["one: add a", "two: touch a and b"])
+        self.assertEqual(facts.commit_bodies[0].splitlines()[0], "Why a exists.")
+        self.assertEqual(facts.commit_bodies[1], "")
+        self.assertEqual(facts.issue_closes, [7])
+        # Newest commit that touched a path wins the attribution.
+        self.assertEqual(facts.path_subjects["a.py"], "two: touch a and b")
+        self.assertEqual(facts.path_subjects["b.py"], "two: touch a and b")
+
     def test_handoff_lists_empty_needs_completion(self) -> None:
         facts = MechanicalFacts(
             commits=["a"],

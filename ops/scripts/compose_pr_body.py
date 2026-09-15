@@ -56,8 +56,16 @@ DOCS_PREFIXES = ("docs/", "docs/plans/", "WIP/")
 
 @dataclass
 class MechanicalFacts:
+    # Oldest first. `git log base..HEAD` is newest-first, and the composer used
+    # to take element 0 of that as "the" subject, so every Problem / Fix / Why
+    # line in a multi-commit PR quoted whichever commit happened to be last.
     commits: list[str] = field(default_factory=list)
+    # Parallel to `commits`: the body of each commit, or "" when it has none.
+    commit_bodies: list[str] = field(default_factory=list)
     changed_files: list[str] = field(default_factory=list)
+    # path -> subject of the newest commit in the range that touched it. Lets a
+    # per-path bullet say why *that* file changed rather than repeating one line.
+    path_subjects: dict[str, str] = field(default_factory=dict)
     issue_closes: list[int] = field(default_factory=list)
     gate_receipt: dict[str, Any] | None = None
     l4_receipt: dict[str, Any] | None = None
@@ -140,6 +148,33 @@ def _deletion_markers(text: str) -> dict[str, str]:
     return markers
 
 
+def _collect_path_subjects(workspace: Path, pr_base: str) -> dict[str, str]:
+    """Map each changed path to the subject of the newest commit that touched it.
+
+    One `git log --name-only` pass over the range, oldest first, overwriting as
+    it goes — so the surviving value for a path is the most recent commit that
+    changed it. One process for the whole range, not one per path.
+    """
+    # %x00 marks a commit boundary; subjects and paths never contain NUL.
+    out = _run_git(
+        workspace,
+        "log",
+        "--reverse",
+        "--name-only",
+        "--format=%x00%s",
+        f"{pr_base}..HEAD",
+    )
+    subjects: dict[str, str] = {}
+    for block in out.split("\x00"):
+        lines = [line.strip() for line in block.splitlines() if line.strip()]
+        if not lines:
+            continue
+        subject, paths = lines[0], lines[1:]
+        for rel in paths:
+            subjects[rel] = subject
+    return subjects
+
+
 def collect_mechanical(
     workspace: Path,
     *,
@@ -149,15 +184,18 @@ def collect_mechanical(
     additive_only_paths: list[str] | None = None,
     additive_only_measured: bool = True,
 ) -> MechanicalFacts:
-    log = _run_git(workspace, "log", f"{pr_base}..HEAD", "--format=%s%n%b---END---")
+    log = _run_git(workspace, "log", "--reverse", f"{pr_base}..HEAD", "--format=%s%n%b---END---")
     commits: list[str] = []
+    bodies: list[str] = []
     issue_closes: list[int] = []
     markers: dict[str, str] = {}
     for block in log.split("---END---"):
-        lines = [line.strip() for line in block.splitlines() if line.strip()]
+        raw_lines = block.strip("\n").splitlines()
+        lines = [line.strip() for line in raw_lines if line.strip()]
         if not lines:
             continue
         commits.append(lines[0])
+        bodies.append("\n".join(raw_lines[1:]).strip())
         issue_closes.extend(_issue_numbers(block))
         markers.update(_deletion_markers(block))
     names = _run_git(workspace, "diff", "--name-status", f"{pr_base}...HEAD")
@@ -168,7 +206,9 @@ def collect_mechanical(
             unique_issues.append(number)
     return MechanicalFacts(
         commits=commits,
+        commit_bodies=bodies,
         changed_files=changed,
+        path_subjects=_collect_path_subjects(workspace, pr_base),
         issue_closes=unique_issues,
         gate_receipt=_load_json(workspace / ".l9" / "pr" / "gate-receipt.json"),
         l4_receipt=_load_json(_l4_receipt_path(workspace)),
@@ -196,8 +236,56 @@ def _changed_paths(facts: MechanicalFacts) -> list[str]:
     return paths
 
 
-def _first_subject(facts: MechanicalFacts) -> str:
-    return facts.commits[0] if facts.commits else "measured change (no commit subject)"
+NO_SUBJECT = "measured change (no commit subject)"
+
+
+def _first_paragraph(body: str) -> str:
+    for para in re.split(r"\n\s*\n", body.strip()):
+        text = " ".join(line.strip() for line in para.splitlines() if line.strip())
+        # Trailers (Closes #, ALLOW-ROOT-DELETION:, Co-authored-by:) are not prose.
+        if text and not re.match(r"^[A-Za-z-]+:\s", text) and not DELETION_RE.match(text):
+            return text
+    return ""
+
+
+def range_problem(facts: MechanicalFacts) -> str:
+    """The Problem statement for the whole range.
+
+    The oldest commit is where the work started, so its subject — and its body's
+    first paragraph, when the author wrote one — is the closest measured thing to
+    "what was wrong". A multi-commit range says how many commits follow, so the
+    line cannot be read as the entire change.
+    """
+    if not facts.commits:
+        return NO_SUBJECT
+    head = facts.commits[0]
+    body = facts.commit_bodies[0] if facts.commit_bodies else ""
+    para = _first_paragraph(body)
+    more = len(facts.commits) - 1
+    suffix = f" (+{more} more commit{'s' if more != 1 else ''} below)" if more else ""
+    return f"{head}{suffix}" + (f"\n\n{para}" if para else "")
+
+
+def range_summary(facts: MechanicalFacts) -> str:
+    """One line: the oldest subject plus the count of what follows."""
+    if not facts.commits:
+        return NO_SUBJECT
+    more = len(facts.commits) - 1
+    return facts.commits[0] + (f" (+{more} more)" if more else "")
+
+
+def range_fix(facts: MechanicalFacts) -> str:
+    """The Fix: every commit subject, oldest first. One commit reads as one line."""
+    if not facts.commits:
+        return NO_SUBJECT
+    if len(facts.commits) == 1:
+        return facts.commits[0]
+    return "\n".join(f"- {subject}" for subject in facts.commits)
+
+
+def path_why(facts: MechanicalFacts, path: str) -> str:
+    """Why this path changed: the subject of the commit that last touched it."""
+    return facts.path_subjects.get(path) or range_summary(facts)
 
 
 def infer_type_of_change(facts: MechanicalFacts) -> str:
@@ -368,9 +456,14 @@ def _fill_protected_root(text: str, facts: MechanicalFacts) -> str:
         )
         proof = "append-only — none."
     text = _na_unchecked_in_section(text, "### Edit mode", "## Problem")
+    # Why a root file: the commits that actually touched the protected paths,
+    # not whichever subject happens to sit at one end of the range.
+    root_why = sorted({path_why(facts, path) for path in paths})
     text = text.replace(
         "<!-- What cannot be done in a non-root path. Composer fills. -->",
-        _first_subject(facts),
+        "\n".join(f"- `{path}` — {path_why(facts, path)}" for path in paths)
+        if len(root_why) > 1
+        else root_why[0],
         1,
     )
     text = text.replace(
@@ -414,7 +507,6 @@ def _fill_risk(text: str, facts: MechanicalFacts) -> str:
 
 
 def _fill_changes_by_intent(text: str, facts: MechanicalFacts) -> str:
-    why = _first_subject(facts)
     added: list[str] = []
     modified: list[str] = []
     deleted: list[str] = []
@@ -422,7 +514,7 @@ def _fill_changes_by_intent(text: str, facts: MechanicalFacts) -> str:
         parts = line.split("\t")
         status = parts[0] if parts else "M"
         path = parts[-1] if parts else line
-        bullet = f"- `{path}` — {why}"
+        bullet = f"- `{path}` — {path_why(facts, path)}"
         if status.startswith("A"):
             added.append(bullet)
         elif status.startswith("D"):
@@ -463,24 +555,25 @@ def _fill_template(template: str, facts: MechanicalFacts) -> str:
     commit_block = _bullet_list(facts.commits)
     files_block = _bullet_list(facts.changed_files)
     closes = ", ".join(f"#{n}" for n in facts.issue_closes) if facts.issue_closes else "#"
-    subject = _first_subject(facts)
+    problem = range_problem(facts)
+    fix = range_fix(facts)
     text = _fill_protected_root(text, facts)
     error_fence = (
         "```\npaste the error / failing output here, or delete this block and describe the gap\n```"
     )
-    text = text.replace(error_fence, subject, 1)
+    text = text.replace(error_fence, problem, 1)
     if "## Summary" in text:
         text = text.replace(
             "<!-- One-sentence description of what this PR does. -->",
-            subject,
+            range_summary(facts),
             1,
         )
     text = re.sub(r"Closes #<!-- issue number -->", f"Closes {closes}", text, count=1)
     text = re.sub(r"Closes #(?!\d)", f"Closes {closes}", text, count=1)
     text = _fill_type_of_change(text, facts)
     if "## Fix" in text:
-        text = text.replace(FIX_PLACEHOLDER, subject, 1)
-        text = text.replace("<!-- What you changed -->", subject, 1)
+        text = text.replace(FIX_PLACEHOLDER, fix, 1)
+        text = text.replace("<!-- What you changed -->", fix, 1)
     text = _fill_risk(text, facts)
     text = re.sub(r"(?m)^Rollback:\s*$", "Rollback: revert this PR", text, count=1)
     text = re.sub(
@@ -542,7 +635,7 @@ def compose_pr_body(facts: MechanicalFacts, template: str | None) -> ComposeResu
             [
                 "## Problem",
                 "",
-                _first_subject(facts),
+                range_problem(facts),
                 "",
                 f"Closes {closes or '#'}",
                 "",
