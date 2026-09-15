@@ -1,7 +1,7 @@
 # Cursor-Governance — invariants index
 
-**Version:** 1.4.0
-**Updated:** 2026-09-11
+**Version:** 1.5.0
+**Updated:** 2026-09-15
 **Role:** this-repo operating-invariant index plus a CI enforcement map.
 
 This file does **not** replace [`ORG_INVARIANTS.yaml`](ORG_INVARIANTS.yaml). That YAML is the machine-readable organization policy SSOT. The operator note for org policy is [`docs/governance/ORG_INVARIANTS.md`](docs/governance/ORG_INVARIANTS.md). Do not copy `L9-ORG-*` requirement bodies into this file.
@@ -37,6 +37,7 @@ Named pointers only. One line + path. Bind from live law at refresh time.
 | A receipt binds to a digest of the artifact that constitutes the claim, never to HEAD, a phase name, or a flag; the tree-kernel artifact is a path-confined `.l9/autonomy/kernel-apply.md` with non-empty `deltas` naming files that exist | `CANONICAL_LAW.md` §6.2.9; [`ops/autonomy/kernel_predicates.py`](ops/autonomy/kernel_predicates.py); `AGENTS.md` `RECEIPT_EVIDENCE_PLANE_V1` |
 | Verifiers re-derive and never trust a recorded verdict: the artifact is re-hashed and its predicates re-run on every read, a rejected claim writes nothing, and a superseded schema (`l9.kernel_receipt.v1`) is rejected by name | `CANONICAL_LAW.md` §6.2.9; `ops/autonomy/kernel_gate.py` `verify_tree`; [`tests/ops/autonomy/test_kernel_predicates.py`](tests/ops/autonomy/test_kernel_predicates.py) |
 | Receipt invariants are enforced by source analysis only — these receipts live under gitignored `.l9/`, so no CI job may require one | `CANONICAL_LAW.md` §6.2.9; `tests/ops/autonomy/test_kernel_receipt_writers.py` |
+| **INV-03b — two lanes, one `MemoryService`.** Agents are first-class real-time memory writers and may invoke the public `l9-memory` / MCP write surface directly; Cursor-Governance must not mediate or gate those writes. Automatic hooks use purpose-bounded write / distill / close operations with restricted hook principals. Both lanes converge directly on `MemoryService`; neither may access providers or persistence behind it. Ratchet: no memory persistence or cognition bypasses `MemoryService`; agent adapters may invoke public `MemoryService` operations directly; automatic hooks may only invoke their bounded operations; Cursor-Governance may not interpose an authorization wall on agent-initiated memory writes | [`docs/decisions/ADR-0033-two-lanes-one-memoryservice.md`](docs/decisions/ADR-0033-two-lanes-one-memoryservice.md); `CANONICAL_LAW.md` `MEMORY_TWO_LANES_V1`; [`ops/config/memory-hook-envelopes.json`](ops/config/memory-hook-envelopes.json); [`tests/ops/memory/test_no_local_memory_cognition.py`](tests/ops/memory/test_no_local_memory_cognition.py); [`tests/ops/memory/test_no_agent_lane_interposition.py`](tests/ops/memory/test_no_agent_lane_interposition.py); [`ops/scripts/validate_legacy_doctrine_residue.py`](ops/scripts/validate_legacy_doctrine_residue.py) (`local-memory-cognition`, `agent-lane-interposition`) |
 
 Org-policy invariant IDs and enforcement text live only in the YAML `invariants:` block. Point there; do not duplicate.
 
