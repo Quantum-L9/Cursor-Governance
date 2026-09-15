@@ -426,12 +426,12 @@ def record_kernels(
     if ra == "passed" and vr == "passed":
         state["phase"] = PHASE_KERNELS
         state.pop("blockers", None)
-        try:
-            from kernel_gate import record as stamp_kernel_hook
-
-            stamp_kernel_hook(root, gov=Path(__file__).resolve().parents[2])
-        except Exception as exc:
-            state["kernel_hook_stamp"] = f"failed:{exc}"
+        # No kernel_gate stamp here. This function used to write the tree
+        # receipt as a side effect of an L4 self-report, which made two modules
+        # writers of .l9/autonomy/kernel-receipt.json and let the weaker claim
+        # (a CLI flag) satisfy a gate that asks for evidence. kernel_gate.record
+        # is the sole writer; it is reached by applying the kernels and
+        # recording the apply report.
     else:
         state["phase"] = PHASE_EXECUTING
         state["blockers"] = ["kernel_gate_failed"]
