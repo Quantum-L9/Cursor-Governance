@@ -130,7 +130,7 @@
     },
     "pr-publish": {
       "callers": [
-        "ops/hooks/pr_publish_memory_write.py (python -m ops.memory.cli --surface pr-publish write --kind decision)"
+        "ops/hooks/pr_publish_memory_write.py (python -m ops.memory.cli --surface pr-publish write --kind pickup_context -> episodic + tag session_continuation)"
       ],
       "allowed_operations": [
         "resolve",
@@ -138,7 +138,7 @@
         "write"
       ],
       "record_classes": [
-        "session_continuation"
+        "episodic"
       ],
       "max_records": 1,
       "max_bytes": 4096,
@@ -164,6 +164,6 @@
       "provenance_required": true
     }
   },
-  "record_class_note": "Record classes are the canonical memory_class values as they reach l9-memory (after ops.memory.cli KIND_ALIASES: pickup_context->session_continuation, lesson->procedural, note->observation, rule->decision). A governed candidate is checked on knowledge.primary_class; a distill is bounded by memory's own extractor, so record_classes does not apply to it.",
+  "record_class_note": "Record classes are the canonical memory_class values as they reach l9-memory (after ops.memory.cli KIND_ALIASES: pickup_context->episodic (+ tag session_continuation; a continuation is tag-selected, not a MemoryClass), lesson->procedural, note->observation, rule->decision). A governed candidate is checked on knowledge.primary_class, where session_continuation is the capsule class; a distill is bounded by memory's own extractor, so record_classes does not apply to it.",
   "max_bytes_note": "max_bytes bounds one call's payload: write content, the serialized governed candidate, the close summary, or the redacted distill source file (MEMORY_CLOSE_TRANSCRIPT_CHARS chars, so session-end surfaces allow 64 KiB). max_records is a per-client-instance tally of committed records (write / ingest_candidate / close count 1; distill counts the receipt's written_count). Read-only surfaces declare 0/0."
 }

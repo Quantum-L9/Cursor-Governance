@@ -94,6 +94,27 @@ def test_read_only_surfaces_carry_no_write_capability() -> None:
         assert not envelope.record_classes
 
 
+def test_write_surfaces_admit_only_classes_the_bound_release_accepts() -> None:
+    """An envelope that admits a class ``l9-memory write`` refuses is a dead lane.
+
+    ``session_continuation`` is the governed-candidate class (ingest_candidate /
+    close judge ``knowledge.primary_class``); it is not a MemoryClass, so a
+    surface whose *only* write operation is ``write`` must not list it.
+    """
+
+    from l9_graphite_memory.cli import _LEGACY_KIND_MAP  # noqa: PLC0415
+    from l9_graphite_memory.contracts import MemoryClass  # noqa: PLC0415
+
+    accepted = {item.value for item in MemoryClass} | set(_LEGACY_KIND_MAP)
+    document = json.loads(hook_envelope.ENVELOPES_PATH.read_text(encoding="utf-8"))
+    writes = set(document["write_operations"])
+    for envelope in load_envelopes().values():
+        ops = envelope.allowed_operations & writes
+        if ops == {"write"}:
+            bad = set(envelope.record_classes) - accepted
+            assert not bad, f"{envelope.surface} admits {sorted(bad)}; l9-memory write refuses them"
+
+
 def test_unknown_surface_fails_at_construction_not_first_call(bound, fake_cli) -> None:
     with pytest.raises(UnknownHookSurface):
         _client(bound, fake_cli, "not-a-surface")
@@ -166,7 +187,7 @@ def test_record_class_outside_the_envelope_is_rejected(bound, fake_cli) -> None:
 def test_provenance_is_mandatory_on_hook_writes(bound, fake_cli) -> None:
     client = _client(bound, fake_cli, "pr-publish")
     outcome = client.write(
-        "PICKUP", workspace=WS, namespace="cursor-governance", memory_class="session_continuation"
+        "PICKUP", workspace=WS, namespace="cursor-governance", memory_class="episodic"
     )
     assert outcome.status is OutcomeStatus.REJECTED
     assert "requires provenance" in (outcome.error or "")
@@ -178,7 +199,7 @@ def test_max_bytes_bounds_one_payload(bound, fake_cli) -> None:
         "x" * 5000,
         workspace=WS,
         namespace="cursor-governance",
-        memory_class="session_continuation",
+        memory_class="episodic",
         source_id="k",
     )
     assert outcome.status is OutcomeStatus.REJECTED
@@ -192,7 +213,7 @@ def test_max_records_is_a_running_tally_of_committed_records(bound, fake_cli) ->
         "PICKUP one",
         workspace=WS,
         namespace="cursor-governance",
-        memory_class="session_continuation",
+        memory_class="episodic",
         source_id="k1",
     )
     assert first.status is OutcomeStatus.OK
@@ -200,7 +221,7 @@ def test_max_records_is_a_running_tally_of_committed_records(bound, fake_cli) ->
         "PICKUP two",
         workspace=WS,
         namespace="cursor-governance",
-        memory_class="session_continuation",
+        memory_class="episodic",
         source_id="k2",
     )
     assert second.status is OutcomeStatus.REJECTED
@@ -215,7 +236,7 @@ def test_a_refused_write_does_not_consume_the_tally(bound, fake_cli) -> None:
         "PICKUP",
         workspace=WS,
         namespace="cursor-governance",
-        memory_class="session_continuation",
+        memory_class="episodic",
         source_id="k1",
     )
     assert refused.status is OutcomeStatus.REJECTED
@@ -224,7 +245,7 @@ def test_a_refused_write_does_not_consume_the_tally(bound, fake_cli) -> None:
         "PICKUP",
         workspace=WS,
         namespace="cursor-governance",
-        memory_class="session_continuation",
+        memory_class="episodic",
         source_id="k2",
     )
     assert again.status is OutcomeStatus.OK, "memory's refusal committed nothing"

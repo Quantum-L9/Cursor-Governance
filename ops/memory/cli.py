@@ -49,9 +49,15 @@ EXIT_UNBOUND = 3
 _COMPLETED = frozenset({OutcomeStatus.OK, OutcomeStatus.NO_HITS, OutcomeStatus.NOT_COMMITTED})
 
 # The legacy client accepted ``--kind`` with these names; memory classes are
-# the canonical vocabulary and the older aliases map onto them.
+# the canonical vocabulary and the older aliases map onto them. A continuation
+# is not a memory class: ``l9-memory write`` accepts only MemoryClass values
+# (identity … meta), and hydration selects continuations by the
+# ``session_continuation`` *tag* (hydration.py). ``pickup_context`` therefore
+# writes an ``episodic`` record carrying that tag; ``session_continuation`` as a
+# class exists only on the governed-candidate path (session_contracts.py).
+CONTINUATION_TAG = "session_continuation"
 KIND_ALIASES = {
-    "pickup_context": "session_continuation",
+    "pickup_context": "episodic",
     "session_summary": "session_summary",
     "note": "observation",
     "error": "lesson",
@@ -166,6 +172,8 @@ def cmd_write(args: argparse.Namespace) -> int:
     tags = list(args.tag)
     if args.agent_id:
         tags.append(f"agent:{args.agent_id}")
+    if args.kind == "pickup_context" and CONTINUATION_TAG not in tags:
+        tags.append(CONTINUATION_TAG)
     outcome = _client(args).write(
         args.content,
         workspace=_run_at(context),
