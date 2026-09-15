@@ -752,6 +752,13 @@ def build_parser() -> argparse.ArgumentParser:
     k = sub.add_parser(
         "record-kernels",
         help="Record Recursive Alignment + Validate & Repair results",
+        epilog=(
+            "Record what you observed AFTER applying both kernels. This command "
+            "does not apply them, and 'passed' is a claim about work you did, not "
+            "a flag that makes a gate go green.\n"
+            "  e.g. record-kernels --recursive-alignment passed --validate-repair passed"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     # Required, not defaulted: a bare `record-kernels` used to assert that both
     # kernels passed (INC-2026-09-14-001). State the observed outcome.

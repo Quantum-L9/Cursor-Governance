@@ -191,6 +191,47 @@ class ComposePrBodyTests(unittest.TestCase):
         self.assertIn("subject one", result.body)
         self.assertIn("A\tnew.py", result.body)
 
+    def test_v2_gate_receipt_reports_its_content_digest_not_head(self) -> None:
+        facts = MechanicalFacts(
+            commits=["a"],
+            changed_files=["M\tx"],
+            gate_receipt={
+                "schema": "l9.pr_gate_receipt.v2",
+                "paths_digest": "111",
+                "content_digest": "222",
+                "pr_base": "origin/main",
+                "passed_at": "2026-09-15T00:00:00Z",
+            },
+        )
+        body = compose_pr_body(facts, TEMPLATE).body
+        self.assertIn("content_digest=222", body)
+        self.assertNotIn("head=None", body)
+
+    def test_unmeasured_additive_only_does_not_claim_none(self) -> None:
+        facts = MechanicalFacts(
+            commits=["a"],
+            changed_files=["M\tMakefile"],
+            additive_only_paths=[],
+            additive_only_measured=False,
+        )
+        body = compose_pr_body(facts, TEMPLATE).body
+        self.assertIn("NOT MEASURED", body)
+        self.assertNotIn("no additive_only root files", body)
+
+    def test_measured_empty_additive_only_still_claims_none(self) -> None:
+        facts = MechanicalFacts(commits=["a"], changed_files=["M\tops/x.py"])
+        body = compose_pr_body(facts, TEMPLATE).body
+        self.assertIn("no additive_only root files", body)
+        self.assertNotIn("NOT MEASURED", body)
+
+    def test_named_additive_only_file_must_exist(self) -> None:
+        from compose_pr_body import _load_additive_only
+
+        with tempfile.TemporaryDirectory() as tmp:
+            missing = Path(tmp) / "additive-only.txt"
+            with self.assertRaises(FileNotFoundError):
+                _load_additive_only(missing)
+
     def test_handoff_lists_empty_needs_completion(self) -> None:
         facts = MechanicalFacts(
             commits=["a"],
