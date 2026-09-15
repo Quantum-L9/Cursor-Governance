@@ -65,6 +65,8 @@ from ops.memory.session_state import read_session_state  # noqa: E402
 
 PHASE_A_BUDGET = 8.0
 TOTAL_BUDGET = 30.0
+#: Minimum time left after the close for the canonical distill to be attempted.
+DISTILL_MIN_BUDGET = 3.0
 
 STATUS_CLOSED_CANONICALLY = _latches.STATUS_CLOSED_CANONICALLY
 STATUS_CLOSE_INCOMPLETE = _latches.STATUS_CLOSE_INCOMPLETE
@@ -198,6 +200,73 @@ def session_task_signature(session_id: str) -> str | None:
 def close_idempotency_key(namespace: str, session_id: str, head_hash: str) -> str:
     """Stable operation identity: producer, namespace, session, transcript head."""
     return f"cursor-close:{namespace}:{session_id}:{head_hash}"
+
+
+def _distill_enabled() -> bool:
+    return os.environ.get("MEMORY_DISTILL", "1").strip() not in ("0", "false", "False")
+
+
+def _canonical_distill(
+    client: MemoryControlPlaneClient,
+    *,
+    project: Path,
+    workspace: str,
+    namespace: str,
+    repository: str | None,
+    session_id: str,
+    transcript: str,
+    report: dict[str, Any],
+    remaining: float,
+    dry_run: bool,
+) -> None:
+    """Hand the redacted excerpt to canonical ``l9-memory distill`` (ADR-0033).
+
+    The hook lane prepares the excerpt (load + cap + PII redact, already done
+    by ``load_transcript_excerpt``) and writes it to a bounded path under
+    ``.l9/memory/distill``; memory extracts and admits every atomic candidate
+    through its own ``MemoryService.write``. Nothing here reads a provider,
+    scores a candidate or promotes a class, and no outcome here can turn a
+    canonical close into a non-close.
+    """
+    if not _distill_enabled():
+        report["warnings"].append("distill skipped: MEMORY_DISTILL=0")
+        return
+    if remaining < DISTILL_MIN_BUDGET:
+        report["warnings"].append("distill skipped: insufficient time budget")
+        return
+    excerpt = (transcript or "").strip()
+    if not excerpt:
+        report["warnings"].append("distill skipped: empty transcript excerpt")
+        return
+    try:
+        source = _latches.distill_source_path(project, session_id)
+        os.makedirs(os.path.dirname(source), exist_ok=True)
+        with open(source, "w", encoding="utf-8") as handle:  # NOSONAR python:S2083
+            handle.write(excerpt + "\n")
+    except (OSError, ValueError) as exc:
+        report["warnings"].append(f"distill skipped: excerpt not written ({type(exc).__name__})")
+        return
+    outcome = client.distill(
+        workspace=workspace,
+        namespace=namespace,
+        source_path=source,
+        repository=repository,
+        dry_run=dry_run,
+    )
+    report["writes"].append(_write_entry(outcome, kind="distill"))
+    receipt = outcome.receipt
+    report["distill"] = {
+        "status": outcome.status.value,
+        "candidate_count": getattr(receipt, "candidate_count", None),
+        "written_count": getattr(receipt, "written_count", None),
+        "rejected_count": len(getattr(receipt, "rejected_items", ()) or ()),
+        "record_ids": list(getattr(receipt, "record_ids", ()) or ()),
+        "source_digest": getattr(receipt, "source_digest", None),
+        "extractor": getattr(receipt, "extractor", None),
+        "error": outcome.error,
+    }
+    if outcome.status not in {OutcomeStatus.OK, OutcomeStatus.NO_HITS, OutcomeStatus.NOT_COMMITTED}:
+        report["warnings"].append(f"distill {outcome.status.value}: {outcome.error or 'no detail'}")
 
 
 def _write_entry(outcome: OperationOutcome, *, kind: str) -> dict[str, Any]:
@@ -560,6 +629,23 @@ def close_session(
     )
     if report.get("enqueue_ok") is False and final_status == STATUS_CLOSED_CANONICALLY:
         report["receipt"]["enqueue_error_present"] = True
+
+    # --- canonical distill: supplementary lifecycle capture, after the close ---
+    # The close above is what makes the session CLOSED; distillation of the
+    # redacted excerpt is memory's own cognition and rides after it, bounded
+    # by whatever budget is left, and never changes the close verdict.
+    _canonical_distill(
+        client,
+        project=project,
+        workspace=workspace,
+        namespace=namespace,
+        repository=repository_identity,
+        session_id=session_id,
+        transcript=transcript,
+        report=report,
+        remaining=total_budget - (clock() - started),
+        dry_run=dry_run,
+    )
     report["elapsed_s"] = round(clock() - started, 3)
     if report["elapsed_s"] > total_budget:
         report["warnings"].append(f"close over budget ({report['elapsed_s']:.1f}s)")

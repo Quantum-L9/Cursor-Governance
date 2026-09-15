@@ -7,7 +7,12 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from memory_boundary_fixtures import FakeMemoryCli, close_payload, error_stderr
+from memory_boundary_fixtures import (
+    FakeMemoryCli,
+    close_payload,
+    distill_payload,
+    error_stderr,
+)
 
 from ops.graphiti.hydration import close_session as cs
 from ops.graphiti.hydration import compile_session_packet as comp
@@ -102,7 +107,12 @@ def scripted(fake_cli: FakeMemoryCli, bound, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(cs, "memory_client", lambda *_a, **_k: client)
     fake_cli.reply("ingest-governed-candidate", 0, candidate_payload())
     fake_cli.reply("close", 0, close_payload())
+    fake_cli.reply("distill", 0, distill_payload())
     return client
+
+
+def _distill_calls(fake_cli: FakeMemoryCli) -> list[list[str]]:
+    return [argv for argv, _cwd, _stdin in fake_cli.calls if argv[1] == "distill"]
 
 
 def _close(project: Path, session_id: str = "sess", **kwargs: Any) -> dict:
@@ -121,7 +131,7 @@ def test_normal_close_admits_capsule_then_closes_canonically(workspace, scripted
     assert report["continuation"]["status"] == "admitted"
     assert report["continuation"]["record_id"] == RECORD
     assert report["close"]["status"] == "OK" and report["close"]["replayed"] is False
-    assert [w["kind"] for w in report["writes"]] == ["session_continuation", "close"]
+    assert [w["kind"] for w in report["writes"]] == ["session_continuation", "close", "distill"]
     # The candidate crossed the boundary as the governed envelope, on stdin.
     argv, _cwd, stdin = next(c for c in fake_cli.calls if c[0][1] == "ingest-governed-candidate")
     candidate = json.loads(stdin)
@@ -139,6 +149,7 @@ def test_normal_close_admits_capsule_then_closes_canonically(workspace, scripted
     assert receipt["canonical_operation_id"] == "44444444-4444-4444-4444-444444444444"
     assert receipt["continuation_reference"] == RECORD
     assert receipt["authority"] == "none"
+    # continuation + close; the distill rides after the obligation is persisted.
     assert receipt["write_count"] == 2
     # No provider vocabulary anywhere near the boundary.
     assert "add_memory" not in json.dumps([c[0] for c in fake_cli.calls])
@@ -151,7 +162,7 @@ def test_public_close_report_is_scalar_and_names_statuses(workspace, scripted) -
     assert public["status"] == STATUS_CLOSED_CANONICALLY
     assert public["continuation_status"] == "admitted"
     assert public["close_status"] == "OK"
-    assert public["write_count"] == 2
+    assert public["write_count"] == 3
 
 
 # ---------------------------------------------------------------------------
@@ -595,16 +606,130 @@ def test_generic_write_timeout_is_unknown_not_success(fake_cli, bound) -> None:
     assert outcome.status.value == "TIMEOUT" and not outcome.ok
 
 
-def test_close_writes_only_the_continuation_and_the_close(workspace, scripted, fake_cli) -> None:
-    """One session leaves exactly one continuation and one close; no Cursor-side
-    promotions ride along (memory owns distillation, ADR-0033)."""
+def test_close_writes_the_continuation_the_close_and_one_canonical_distill(
+    workspace, scripted, fake_cli
+) -> None:
+    """One session leaves one continuation, one close and one distill request;
+    no Cursor-side promotions ride along (memory owns cognition, ADR-0033)."""
     report = _close(workspace)
     assert report["status"] == STATUS_CLOSED_CANONICALLY
     assert "phase_b" not in report and "promoted" not in report
     kinds = [w["kind"] for w in report["writes"]]
-    assert kinds == ["session_continuation", "close"]
+    assert kinds == ["session_continuation", "close", "distill"]
     assert not any(args[1] == "write" for args, _c, _s in fake_cli.calls)
     assert len(_ingest_calls(fake_cli)) == 1
+
+
+# ---------------------------------------------------------------------------
+# Canonical distill (ADR-0033): the hook lane hands memory the redacted excerpt
+# ---------------------------------------------------------------------------
+
+
+def test_distill_hands_memory_the_redacted_excerpt_after_the_close(
+    workspace, scripted, fake_cli
+) -> None:
+    report = _close(workspace)
+    (argv,) = _distill_calls(fake_cli)
+    source = Path(argv[2])
+    assert argv[:2] == [fake_cli.last("distill")[0], "distill"]
+    assert argv[argv.index("--group-id") + 1] == "cursor-governance"
+    assert argv[argv.index("--repository") + 1] == "Quantum-L9/Cursor-Governance"
+    assert "--dry-run" not in argv
+    # The excerpt is written under the project's bounded .l9/memory/distill dir,
+    # and it is the redacted transcript load_transcript_excerpt produced.
+    assert source.is_file()
+    assert source.parent == Path(workspace) / ".l9" / "memory" / "distill"
+    assert source.read_text(encoding="utf-8").strip() == "user: ship the PR"
+    # The distill is ordered after memory.close: the close is what closes.
+    order = [argv[1] for argv, _c, _s in fake_cli.calls]
+    assert order.index("close") < order.index("distill")
+    assert report["distill"]["status"] == "OK"
+    assert report["distill"]["candidate_count"] == 1
+    assert report["distill"]["written_count"] == 1
+    assert report["distill"]["record_ids"] == ["77777777-7777-7777-7777-777777777777"]
+    assert report["distill"]["extractor"] == "deterministic-atomic/v1"
+
+
+def test_distill_failure_never_unmakes_a_canonical_close(workspace, scripted, fake_cli) -> None:
+    fake_cli.reply("distill", 1, None, error_stderr("StoreError", "distill store locked"))
+    report = _close(workspace)
+    assert report["status"] == STATUS_CLOSED_CANONICALLY
+    assert load_close_receipt(workspace, "sess")["status"] == STATUS_CLOSED_CANONICALLY
+    assert report["distill"]["status"] == "CANONICAL_UNAVAILABLE"
+    assert any(w.startswith("distill CANONICAL_UNAVAILABLE") for w in report["warnings"])
+
+
+def test_distill_rejected_by_memory_is_reported_not_retried_locally(
+    workspace, scripted, fake_cli
+) -> None:
+    fake_cli.reply(
+        "distill",
+        2,
+        distill_payload(status="failed", candidate_count=2, record_ids=(), rejected_items=("x",)),
+    )
+    report = _close(workspace)
+    assert report["status"] == STATUS_CLOSED_CANONICALLY
+    assert report["distill"]["status"] == "REJECTED"
+    assert report["distill"]["rejected_count"] == 1
+    assert len(_distill_calls(fake_cli)) == 1
+
+
+def test_distill_nothing_to_extract_is_no_hits_not_a_fault(workspace, scripted, fake_cli) -> None:
+    fake_cli.reply("distill", 0, distill_payload(candidate_count=0, record_ids=()))
+    report = _close(workspace)
+    assert report["distill"]["status"] == "NO_HITS"
+    assert not any(
+        w.startswith("distill NO_HITS") or "distill REJECTED" in w for w in report["warnings"]
+    )
+
+
+def test_distill_dry_run_is_not_committed(workspace, scripted, fake_cli) -> None:
+    fake_cli.reply("distill", 0, distill_payload(record_ids=()))
+    report = _close(workspace, dry_run=True)
+    (argv,) = _distill_calls(fake_cli)
+    assert "--dry-run" in argv
+    assert report["distill"]["status"] == "NOT_COMMITTED"
+
+
+def test_distill_skips_are_named(workspace, scripted, fake_cli, monkeypatch) -> None:
+    monkeypatch.setenv("MEMORY_DISTILL", "0")
+    report = _close(workspace)
+    assert _distill_calls(fake_cli) == []
+    assert "distill skipped: MEMORY_DISTILL=0" in report["warnings"]
+    monkeypatch.delenv("MEMORY_DISTILL")
+    monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **_k: ("", "none"))
+    report = _close(workspace, session_id="sess-empty")
+    assert _distill_calls(fake_cli) == []
+    assert "distill skipped: empty transcript excerpt" in report["warnings"]
+
+
+def test_distill_is_starved_before_the_close_is(workspace, scripted, fake_cli) -> None:
+    # start, after Phase A, distill budget probe, final elapsed
+    ticks = iter([0.0, 1.0, 28.0, 28.1])
+    report = _close(workspace, clock=lambda: next(ticks, 28.2))
+    assert report["status"] == STATUS_CLOSED_CANONICALLY
+    assert _distill_calls(fake_cli) == []
+    assert "distill skipped: insufficient time budget" in report["warnings"]
+
+
+def test_client_distill_contradictory_receipt_is_invalid(fake_cli, bound) -> None:
+    fake_cli.reply("distill", 0, distill_payload(candidate_count=2, record_ids=()))
+    client = MemoryControlPlaneClient(bound, runner=fake_cli.run)
+    outcome = client.distill(
+        workspace="/w", namespace="cursor-governance", source_path="/w/.l9/x.md"
+    )
+    assert outcome.status is OutcomeStatus.INVALID_RECEIPT
+    assert "wrote no record" in (outcome.error or "")
+
+
+def test_client_distill_timeout_is_unknown_not_success(fake_cli, bound) -> None:
+    fake_cli.timeout_on.add("distill")
+    client = MemoryControlPlaneClient(bound, runner=fake_cli.run)
+    outcome = client.distill(
+        workspace="/w", namespace="cursor-governance", source_path="/w/.l9/x.md"
+    )
+    assert outcome.status is OutcomeStatus.TIMEOUT and not outcome.ok
+    assert outcome.integration_receipt["operation"] == "distill"
 
 
 # ---------------------------------------------------------------------------

@@ -260,6 +260,30 @@ def closes_dir(project_dir: Path) -> str:
     return _bounded_child(_memory_dir(project_dir), "closes")
 
 
+def distill_dir(project_dir: Path) -> str:
+    """Redacted session excerpts handed to canonical ``l9-memory distill``."""
+
+    return _bounded_child(_memory_dir(project_dir), "distill")
+
+
+def distill_source_path(project_dir: Path, session_id: str) -> str:
+    """Bounded path of the redacted excerpt memory distills for one session.
+
+    Memory records this path as the distillation ``source_id``; its
+    idempotency key is the excerpt digest, so a re-close under the same
+    session rewrites the same file and memory replays rather than duplicates.
+    """
+
+    safe = re_safe(session_id)
+    if not _SAFE_NAME.match(safe):
+        raise ValueError("invalid session_id for distill source path")
+    distill_r = distill_dir(project_dir)
+    path_r = os.path.realpath(os.path.join(distill_r, f"{safe}.md"))
+    if os.path.commonpath([distill_r, path_r]) != distill_r:
+        raise ValueError("distill source path escapes distill directory")
+    return path_r
+
+
 def shadow_dir(project_dir: Path) -> str:
     """Discrepancy receipts from the migration-only legacy shadow read (plan §11)."""
 

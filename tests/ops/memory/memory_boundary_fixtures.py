@@ -215,6 +215,43 @@ def close_payload(
     return payload
 
 
+def distill_payload(
+    *,
+    status: str = "complete",
+    candidate_count: int = 1,
+    written_count: int | None = None,
+    rejected_items: Sequence[str] = (),
+    source_id: str = "/tmp/excerpt.md",
+    record_ids: Sequence[str] = ("77777777-7777-7777-7777-777777777777",),
+) -> dict[str, Any]:
+    """A DistillationReceipt as ``l9-memory distill`` prints it (ADR-0033).
+
+    Memory extracted ``candidate_count`` atomic candidates from the redacted
+    source and wrote ``written_count`` of them through its own service.
+    """
+
+    written = len(record_ids) if written_count is None else written_count
+    return {
+        "status": status,
+        "source_id": source_id,
+        "source_digest": "f" * 64,
+        "namespace": "cursor-governance",
+        "extractor": "deterministic-atomic/v1",
+        "candidate_count": candidate_count,
+        "written_count": written,
+        "rejected_items": list(rejected_items),
+        "write_receipts": [
+            {
+                "receipt_id": f"8888888{i}-8888-8888-8888-888888888888",
+                "status": "admitted",
+                "record_id": record_id,
+                "namespace": "cursor-governance",
+            }
+            for i, record_id in enumerate(record_ids)
+        ],
+    }
+
+
 def health_payload(
     *,
     store_healthy: bool = True,

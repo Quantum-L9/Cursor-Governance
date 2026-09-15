@@ -20,6 +20,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
+from pathlib import Path
 from typing import Any
 
 from ops.memory.canonical_validation import CanonicalValidator, ValidationUnavailable
@@ -28,6 +29,7 @@ from ops.memory.receipts import (
     CapabilitiesReceipt,
     CloseReceipt,
     ConflictsReceipt,
+    DistillationReceipt,
     HealthReceipt,
     HydrationReceipt,
     InvalidReceiptError,
@@ -767,6 +769,75 @@ class MemoryControlPlaneClient:
             receipt,
             namespaces=namespaces,
             error_override=conflict_detail,
+        )
+
+    def distill(
+        self,
+        *,
+        workspace: str,
+        namespace: str,
+        source_path: str | Path,
+        repository: str | None = None,
+        dry_run: bool = False,
+    ) -> OperationOutcome:
+        """Canonical distillation of a redacted source (``l9-memory distill``).
+
+        Memory extracts atomic candidates from ``source_path`` and admits each
+        through its own ``MemoryService.write`` under a source-digest
+        idempotency key; this side neither extracts, scores nor promotes
+        (ADR-0033). ``source_path`` must already be redacted — the hook lane
+        prepares the excerpt, it does not interpret it. Only ``OK`` means at
+        least one atomic record exists; ``NO_HITS`` means memory found nothing
+        to distill, which is not a fault.
+        """
+
+        if guard := self._guard("distill"):
+            return guard
+        argv = ["distill", str(source_path), "--group-id", namespace]
+        if repository:
+            argv += ["--repository", repository]
+        if dry_run:
+            argv.append("--dry-run")
+        raw = self._invoke(argv, cwd=workspace)
+        namespaces = (namespace,)
+        if raw.payload is None:
+            return self._outcome("distill", self._classify_failure(raw), raw, namespaces=namespaces)
+        try:
+            receipt = self._checked(raw.payload, "DistillationReceipt", DistillationReceipt.parse)
+        except InvalidReceiptError as exc:
+            return self._outcome(
+                "distill", OutcomeStatus.INVALID_RECEIPT, _err(raw, exc), namespaces=namespaces
+            )
+        except ValidationUnavailable as exc:
+            return self._outcome(
+                "distill",
+                OutcomeStatus.VALIDATION_UNAVAILABLE,
+                _err(raw, exc),
+                namespaces=namespaces,
+            )
+        detail = None
+        if receipt.failed or raw.exit_code == EXIT_FAILED:
+            status = OutcomeStatus.REJECTED
+            detail = (
+                f"memory rejected every distilled candidate ({receipt.candidate_count} "
+                f"candidates, {len(receipt.rejected_items)} rejected items)"
+            )
+        elif receipt.candidate_count == 0:
+            status = OutcomeStatus.NO_HITS
+        elif dry_run:
+            status = OutcomeStatus.NOT_COMMITTED
+        elif receipt.wrote_something:
+            status = OutcomeStatus.OK
+        else:
+            # Candidates without a single record and no dry run: the receipt
+            # contradicts itself, and half the evidence is never a success.
+            status = OutcomeStatus.INVALID_RECEIPT
+            detail = (
+                f"distill reported {receipt.candidate_count} candidates and status "
+                f"{receipt.status!r} but wrote no record"
+            )
+        return self._outcome(
+            "distill", status, raw, receipt, namespaces=namespaces, error_override=detail
         )
 
     def conflicts(self, *, workspace: str, namespace: str) -> OperationOutcome:

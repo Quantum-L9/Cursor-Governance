@@ -209,7 +209,7 @@ def test_compile_packet_stale_continuation_says_repository_wins(monkeypatch, tmp
 _BOUNDARY_FIXTURES = ROOT / "tests" / "ops" / "memory"
 if str(_BOUNDARY_FIXTURES) not in sys.path:
     sys.path.insert(0, str(_BOUNDARY_FIXTURES))
-from memory_boundary_fixtures import FakeMemoryCli, close_payload  # noqa: E402
+from memory_boundary_fixtures import FakeMemoryCli, close_payload, distill_payload  # noqa: E402
 
 from ops.memory.control_plane_client import MemoryControlPlaneClient  # noqa: E402
 from ops.memory.runtime_binding import STATUS_EXACT, RuntimeBinding  # noqa: E402
@@ -233,6 +233,7 @@ def _scripted_close(monkeypatch, tmp_path):
     fake = FakeMemoryCli()
     fake.reply("ingest-governed-candidate", 0, _candidate_payload())
     fake.reply("close", 0, close_payload())
+    fake.reply("distill", 0, distill_payload())
     cli = tmp_path / "bin" / "l9-memory"
     cli.parent.mkdir(parents=True, exist_ok=True)
     cli.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")

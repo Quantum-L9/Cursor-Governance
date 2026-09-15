@@ -402,6 +402,54 @@ class CloseReceipt:
 
 
 @dataclass(frozen=True)
+class DistillationReceipt:
+    """Cursor's view of memory's ``DistillationReceipt`` (``l9-memory distill``).
+
+    Memory extracts atomic candidates from a redacted source and submits each
+    through its own ``MemoryService.write``; this side sees only the outcome.
+    No extraction, scoring or promotion happens on this side (ADR-0033).
+    """
+
+    status: str
+    source_id: str
+    source_digest: str
+    namespace: str
+    extractor: str
+    candidate_count: int
+    written_count: int
+    raw: dict[str, Any] = field(repr=False)
+    rejected_items: tuple[str, ...] = ()
+    record_ids: tuple[str, ...] = ()
+    write_receipt_ids: tuple[str, ...] = ()
+
+    @classmethod
+    def parse(cls, raw: dict[str, Any]) -> DistillationReceipt:
+        _require(raw, "status", "source_id", "source_digest", "namespace", "extractor")
+        writes = [item for item in raw.get("write_receipts") or () if isinstance(item, dict)]
+        return cls(
+            status=str(raw["status"]),
+            source_id=str(raw["source_id"]),
+            source_digest=str(raw["source_digest"]),
+            namespace=str(raw["namespace"]),
+            extractor=str(raw["extractor"]),
+            candidate_count=int(raw.get("candidate_count") or 0),
+            written_count=int(raw.get("written_count") or 0),
+            raw=raw,
+            rejected_items=tuple(str(item) for item in raw.get("rejected_items") or ()),
+            record_ids=tuple(str(w["record_id"]) for w in writes if w.get("record_id")),
+            write_receipt_ids=tuple(str(w["receipt_id"]) for w in writes if w.get("receipt_id")),
+        )
+
+    @property
+    def failed(self) -> bool:
+        return self.status == "failed"
+
+    @property
+    def wrote_something(self) -> bool:
+        return self.written_count > 0
+
+
+@dataclass(frozen=True)
 class ConflictsReceipt:
     namespace: str
     status: str
@@ -480,6 +528,7 @@ __all__ = [
     "CapabilitiesReceipt",
     "CloseReceipt",
     "ConflictsReceipt",
+    "DistillationReceipt",
     "HealthReceipt",
     "HydrationReceipt",
     "HydrationSection",

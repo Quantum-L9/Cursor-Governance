@@ -941,7 +941,14 @@ def test_every_requested_model_resolves_by_its_own_name_or_a_declared_alias() ->
     release's own name or carries a declared, verified alias."""
     manifest = rb.BindingManifest.load()
     aliases = manifest.contract_model_aliases
-    same_name = {"SearchReceipt", "WriteReceipt", "CloseReceipt", "PhaseLockReceipt"}
+    same_name = {
+        "SearchReceipt",
+        "WriteReceipt",
+        "CloseReceipt",
+        "PhaseLockReceipt",
+        # extraction/distiller.py names it exactly; ADR-0033 canonical distill.
+        "DistillationReceipt",
+    }
     for name in rb.CANONICAL_RECEIPT_MODELS:
         if name in same_name:
             assert name not in aliases, f"{name} matches the release; it needs no alias"
@@ -959,6 +966,8 @@ def test_the_probe_searches_group_resolver_as_well_as_contracts() -> None:
     modules = rb.BindingManifest.load().contract_model_modules
     assert "l9_graphite_memory.contracts" in modules
     assert "l9_graphite_memory.group_resolver" in modules
+    # DistillationReceipt (l9-memory distill) lives in extraction/distiller.py.
+    assert "l9_graphite_memory.extraction" in modules
 
 
 def test_the_binding_names_the_release_tag_and_the_commit_it_resolves_to() -> None:

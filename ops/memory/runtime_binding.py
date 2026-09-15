@@ -160,6 +160,7 @@ CANONICAL_RECEIPT_MODELS: tuple[str, ...] = (
     "ConflictsReceipt",
     "PhaseLockReceipt",
     "PhaseLockVerificationReceipt",
+    "DistillationReceipt",
 )
 
 # Also runs inside the *target* interpreter. It exports the pinned release's
