@@ -18,6 +18,7 @@ import open_pr_probe  # noqa: E402
 from l4_local import (  # noqa: E402
     authorize_release,
     begin,
+    breakglass_path,
     current_head,
     extend_release,
     receipt_path,
@@ -38,6 +39,47 @@ def test_denies_remote_without_release(stacked_repo: Path, monkeypatch: pytest.M
     allowed, reason = release_allows_remote(stacked_repo)
     assert not allowed
     assert "mid-execution" in reason or "L4" in reason
+
+
+def test_push_breakglass_leaves_a_trail_bound_to_head(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+    monkeypatch.setenv("L9_LOCAL_PUSH_AUTHORIZED", "ops: hotfix for #1")
+    assert not breakglass_path(stacked_repo).exists()
+    allowed, reason = release_allows_remote(stacked_repo)
+    assert allowed
+    assert "breakglass" in reason
+    trail = json.loads(breakglass_path(stacked_repo).read_text(encoding="utf-8"))
+    assert trail["schema"] == "l9.l4_breakglass.v1"
+    assert trail["variable"] == "L9_LOCAL_PUSH_AUTHORIZED"
+    assert trail["reason"] == "ops: hotfix for #1"
+    assert trail["head"] == current_head(stacked_repo)
+    assert len(trail["tree_digest"]) == 64
+    assert trail["branch"]
+    assert trail["used_at"].endswith("Z") or "+" in trail["used_at"]
+
+
+def test_l4_switch_off_also_leaves_a_trail(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "0")
+    assert release_allows_remote(stacked_repo)[0]
+    trail = json.loads(breakglass_path(stacked_repo).read_text(encoding="utf-8"))
+    assert trail["variable"] == "L9_L4_LOCAL_AUTONOMY"
+    assert trail["reason"] == "0"
+
+
+def test_receipt_path_leaves_no_breakglass_trail(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+    begin(stacked_repo, contract_id="c1")
+    authorize_release(stacked_repo)
+    assert release_allows_remote(stacked_repo)[0]
+    assert not breakglass_path(stacked_repo).exists()
 
 
 def test_begin_kernels_authorize_allows_push(

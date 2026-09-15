@@ -69,6 +69,11 @@ class MechanicalFacts:
     issue_closes: list[int] = field(default_factory=list)
     gate_receipt: dict[str, Any] | None = None
     l4_receipt: dict[str, Any] | None = None
+    # `.l9/autonomy/breakglass.json`, written by l4_local when an environment
+    # variable rather than a receipt allowed remote. Reported only when its
+    # `head` is this HEAD: an older trail describes an older push.
+    breakglass: dict[str, Any] | None = None
+    head: str = ""
     campaign_body: str = ""
     template_path: str = ""
     additive_only_paths: list[str] = field(default_factory=list)
@@ -125,6 +130,18 @@ def _l4_receipt_path(workspace: Path) -> Path:
         return receipt_path(workspace)
     except Exception:  # noqa: BLE001 — fall back rather than break PR composition
         return workspace / ".l9" / "autonomy" / "l4-release-receipt.json"
+
+
+def _breakglass_path(workspace: Path) -> Path:
+    """Same owner, same reason as ``_l4_receipt_path``: l4_local resolves it."""
+    # nosemgrep: l9.baseline.python.broad-except
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "autonomy"))
+        from l4_local import breakglass_path
+
+        return breakglass_path(workspace)
+    except Exception:  # noqa: BLE001 — fall back rather than break PR composition
+        return workspace / ".l9" / "autonomy" / "breakglass.json"
 
 
 def _issue_numbers(text: str) -> list[int]:
@@ -212,6 +229,8 @@ def collect_mechanical(
         issue_closes=unique_issues,
         gate_receipt=_load_json(workspace / ".l9" / "pr" / "gate-receipt.json"),
         l4_receipt=_load_json(_l4_receipt_path(workspace)),
+        breakglass=_load_json(_breakglass_path(workspace)),
+        head=_run_git(workspace, "rev-parse", "HEAD").strip(),
         campaign_body=campaign_body.strip(),
         template_path=template_path,
         additive_only_paths=[p for p in (additive_only_paths or []) if p.strip()],
@@ -399,7 +418,29 @@ def _evidence_lines(facts: MechanicalFacts) -> list[str]:
         )
     else:
         evidence.append("L4 receipt absent — release authorization not measured here")
+    trail = _breakglass_for_head(facts)
+    if trail:
+        evidence.append(
+            f"BREAKGLASS {trail.get('variable')}={trail.get('reason')} "
+            f"head={trail.get('head')} used_at={trail.get('used_at')} — "
+            "remote was allowed by an environment variable, not by a receipt"
+        )
     return evidence
+
+
+def _breakglass_for_head(facts: MechanicalFacts) -> dict[str, Any] | None:
+    """The breakglass trail, only if it describes this HEAD.
+
+    The file is rewritten on every use and never cleaned up, so its presence
+    alone says nothing about this PR. A trail whose head matches is a claim
+    about the push being composed; any other trail is history and stays out.
+    """
+    trail = facts.breakglass
+    if not trail or not facts.head:
+        return None
+    if trail.get("head") != facts.head:
+        return None
+    return trail
 
 
 def _check_box(text: str, label: str) -> str:

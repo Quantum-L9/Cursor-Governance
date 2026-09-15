@@ -165,6 +165,8 @@ def _validated_git_root(candidate: Path) -> Path:
 
 STATE_FILENAME = "l4-local-phase.json"
 RECEIPT_FILENAME = "l4-release-receipt.json"
+BREAKGLASS_FILENAME = "breakglass.json"
+BREAKGLASS_SCHEMA = "l9.l4_breakglass.v1"
 
 
 def _expand_state_dir(raw: str, root: Path) -> Path:
@@ -230,6 +232,10 @@ def state_path(root: Path) -> Path:
 
 def receipt_path(root: Path) -> Path:
     return _autonomy_dir(root).joinpath(RECEIPT_FILENAME)
+
+
+def breakglass_path(root: Path) -> Path:
+    return _autonomy_dir(root).joinpath(BREAKGLASS_FILENAME)
 
 
 def _git(root: Path, *args: str) -> str:
@@ -325,7 +331,7 @@ def load_json(path: Path) -> dict[str, Any] | None:
 
 def write_autonomy_json(root: Path, filename: str, data: dict[str, Any]) -> None:
     """Write JSON under the resolved L4 state directory using an allowlisted filename only."""
-    if filename not in {STATE_FILENAME, RECEIPT_FILENAME}:
+    if filename not in {STATE_FILENAME, RECEIPT_FILENAME, BREAKGLASS_FILENAME}:
         raise RuntimeError(f"refusing non-allowlisted L4 filename: {filename}")
     # Route through _autonomy_dir so L9_AUTONOMY_STATE_DIR is honoured on writes
     # (same path as load_phase / load_receipt) rather than hardcoding <workspace>/.l9/autonomy.
@@ -796,11 +802,56 @@ def _state_workspace_conflict(root: Path, doc: dict[str, Any] | None, kind: str)
     )
 
 
+def _record_breakglass(root: Path, variable: str, reason: str) -> None:
+    """Leave a trail when an environment variable, not a receipt, allowed remote.
+
+    The two switches are human/ops breakglass (CANONICAL_LAW §6.2.8). They
+    used to return True before any receipt was read and record nothing, so
+    the one push that bypassed every checker was the one with no evidence at
+    all. This changes nothing about who may set them or what they allow; it
+    only writes down that they were used, against which head and tree, so the
+    PR body can say so. Best-effort: a trail that cannot be written must not
+    turn an authorized push into a denied one.
+    """
+    try:
+        head = current_head(root)
+    except Exception:  # noqa: BLE001 — trail is best-effort
+        head = ""
+    try:
+        digest = tree_digest(root)
+    except Exception:  # noqa: BLE001
+        digest = ""
+    try:
+        branch = current_branch(root)
+    except Exception:  # noqa: BLE001
+        branch = ""
+    try:
+        write_autonomy_json(
+            root,
+            BREAKGLASS_FILENAME,
+            {
+                "schema": BREAKGLASS_SCHEMA,
+                "variable": variable,
+                "reason": reason,
+                "branch": branch,
+                "head": head,
+                "tree_digest": digest,
+                "used_at": _utc_now(),
+            },
+        )
+    except OSError:
+        pass
+
+
 def release_allows_remote(root: Path) -> tuple[bool, str]:
     """Return (allowed, reason) for git push / gh pr create."""
-    if os.environ.get("L9_L4_LOCAL_AUTONOMY", "1").strip() in {"0", "false", "False", "no"}:
+    l4_switch = os.environ.get("L9_L4_LOCAL_AUTONOMY", "1").strip()
+    if l4_switch in {"0", "false", "False", "no"}:
+        _record_breakglass(root, "L9_L4_LOCAL_AUTONOMY", l4_switch)
         return True, "L9_L4_LOCAL_AUTONOMY disabled"
-    if os.environ.get("L9_LOCAL_PUSH_AUTHORIZED", "").strip():
+    push_auth = os.environ.get("L9_LOCAL_PUSH_AUTHORIZED", "").strip()
+    if push_auth:
+        _record_breakglass(root, "L9_LOCAL_PUSH_AUTHORIZED", push_auth)
         return True, "L9_LOCAL_PUSH_AUTHORIZED breakglass"
 
     receipt = load_receipt(root)

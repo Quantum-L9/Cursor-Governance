@@ -281,6 +281,37 @@ class ComposePrBodyTests(unittest.TestCase):
         self.assertIn("- [x] **Post-exec kernels**", body)
         self.assertIn("kernel_evidence=evidenced", body)
 
+    def test_breakglass_trail_is_reported_only_for_this_head(self) -> None:
+        trail = {
+            "schema": "l9.l4_breakglass.v1",
+            "variable": "L9_LOCAL_PUSH_AUTHORIZED",
+            "reason": "ops: hotfix",
+            "head": "abc123",
+            "used_at": "2026-09-15T00:00:00Z",
+        }
+        matching = MechanicalFacts(
+            commits=["a"], changed_files=["M\tops/x.py"], breakglass=trail, head="abc123"
+        )
+        body = compose_pr_body(matching, TEMPLATE).body
+        self.assertIn("BREAKGLASS L9_LOCAL_PUSH_AUTHORIZED=ops: hotfix", body)
+        self.assertIn("head=abc123", body)
+
+        # The file is never cleaned up: a trail from an earlier push is history,
+        # not a statement about this PR.
+        older = MechanicalFacts(
+            commits=["a"], changed_files=["M\tops/x.py"], breakglass=trail, head="fff999"
+        )
+        self.assertNotIn("BREAKGLASS", compose_pr_body(older, TEMPLATE).body)
+
+        # No head measured -> no claim either way.
+        unknown = MechanicalFacts(
+            commits=["a"], changed_files=["M\tops/x.py"], breakglass=trail, head=""
+        )
+        self.assertNotIn("BREAKGLASS", compose_pr_body(unknown, TEMPLATE).body)
+
+        none = MechanicalFacts(commits=["a"], changed_files=["M\tops/x.py"], head="abc123")
+        self.assertNotIn("BREAKGLASS", compose_pr_body(none, TEMPLATE).body)
+
     def test_multi_commit_range_is_told_oldest_first_not_tip_only(self) -> None:
         facts = MechanicalFacts(
             commits=["first: bind receipts", "second: add ratchet", "third: delegate digest"],
