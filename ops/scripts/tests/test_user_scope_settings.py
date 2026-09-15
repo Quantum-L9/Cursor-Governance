@@ -68,18 +68,20 @@ class UserScopeSettingsTests(unittest.TestCase):
             for matcher in group
             for entry in matcher["hooks"]
         ]
-        # 15 registrations covering 14 distinct hook scripts: skill_usage_logger
-        # is registered twice (PreToolUse and UserPromptExpansion). Four are
-        # fail-closed gates; eleven are observers. bootstrap_capability_preflight
-        # is the first SessionStart observer so capability ownership and the
-        # hosted REST-only transport rule are present before agents choose tools.
-        # session_deps_cloud.sh keeps its own concurrent SessionStart registration
-        # and timeout rather than consuming the governance-hydration hook budget.
-        self.assertEqual(len(commands), 15, "every L9 hook registration must reach user scope")
-        self.assertEqual(sum("--class gate" in c for c in commands), 4)
+        # 14 registrations covering 13 distinct hook scripts: skill_usage_logger
+        # is registered twice (PreToolUse and UserPromptExpansion). Three are
+        # fail-closed gates; eleven are observers. session_debt_wrap.py remains
+        # invocable but is not a Stop/bootstrap registration.
+        # bootstrap_capability_preflight is the first SessionStart observer so
+        # capability ownership and the hosted REST-only transport rule are
+        # present before agents choose tools. session_deps_cloud.sh keeps its
+        # own concurrent SessionStart registration and timeout rather than
+        # consuming the governance-hydration hook budget.
+        self.assertEqual(len(commands), 14, "every L9 hook registration must reach user scope")
+        self.assertEqual(sum("--class gate" in c for c in commands), 3)
         self.assertEqual(sum("--class observer" in c for c in commands), 11)
         names = {c.rsplit(" ", 1)[-1].rstrip("'") for c in commands}
-        self.assertEqual(len(names), 14, "fourteen distinct hook scripts")
+        self.assertEqual(len(names), 13, "thirteen distinct hook scripts")
         session_start_commands = [
             entry["command"]
             for matcher in settings["hooks"]["SessionStart"]

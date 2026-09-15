@@ -33,11 +33,19 @@ LAUNCHER = (
 )
 HOOKS_REL = Path("environment/agents/adapters/claude-code/hooks")
 
+# Fail-closed launcher coverage: every known gate script, including
+# session_debt_wrap.py which remains invocable manually but is no longer
+# registered on Stop.
 GATES = (
     "merge_gate_wrap.py",
     "local_execution_gate_wrap.py",
     "memory_gate.py",
     "session_debt_wrap.py",
+)
+REGISTERED_GATES = (
+    "merge_gate_wrap.py",
+    "local_execution_gate_wrap.py",
+    "memory_gate.py",
 )
 OBSERVERS = (
     "skill_usage_logger.py",
@@ -285,15 +293,19 @@ class SettingsRegistrationTests(unittest.TestCase):
                     for entry in matcher["hooks"]
                 ]
                 gate_commands = [c for c in commands if "--class gate" in c]
-                self.assertEqual(len(gate_commands), len(GATES))
+                self.assertEqual(len(gate_commands), len(REGISTERED_GATES))
                 for command in gate_commands:
                     self.assertIn("exit 2", command)
                     self.assertNotIn("|| exit 0", command)
-                for name in GATES:
+                for name in REGISTERED_GATES:
                     self.assertTrue(
                         any(f"--class gate {name}" in c for c in gate_commands),
                         f"{name} must be registered as a gate",
                     )
+                self.assertFalse(
+                    any("session_debt_wrap.py" in c for c in gate_commands),
+                    "session_debt_wrap.py must not be registered as a Stop/bootstrap gate",
+                )
 
 
 # ---------------------------------------------------------------------------
