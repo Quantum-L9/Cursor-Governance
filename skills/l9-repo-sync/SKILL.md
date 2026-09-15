@@ -9,8 +9,8 @@ metadata:
   tags: [l9, git, sync, fast-forward, ssot, cursor-governance]
   owner: igor_beylin
   status: active
-  version: 1.5.0
-  updated: 2026-08-29
+  version: 1.7.0
+  updated: 2026-09-14
 ---
 
 # Repo Sync (in-place fast-forward)
@@ -27,16 +27,13 @@ gitdirs.
 stay. Unique local commits and other dirty tracked paths are parked first.
 Nothing unique is deleted.
 
-**Shelf publish loop (2026-08-29):** when `/ff` shelves WIP/plans/campaigns, the
-caller finishes with `PR_STACK=auto PR_REMEDIATE=0 make pr` in the shelf
-worktree unless `FF_SHELF_PUBLISH=0`, then runs
-`ops/scripts/run_ff_post_shelf.sh` and `verify_worktree_clean.py` on the named
-clone. See `commands/ff.md` step 2–3 and `AGENTS.md`
-`FF_CLOSE_PUBLISH_LOOP_V1`.
+`/ff` ends when `ff.sh` prints `OK:` and parked files are back at their
+original paths. Unique WIP/plans stay in the tree. Hold copies stay as
+backup. Do not run `ff_shelf.py`, `run_ff_post_shelf.sh`, or
+`verify_worktree_clean.py`. No commit. No push. No PR.
 
-**Corpus clean-repo law:** modified corpus is committed and pushed via the
-shelf loop — never `git stash push` (incident: `wip-todo-unrelated` clobbered
-`TODO.md`). See `commands/ff.md` § Clean-repo law.
+**Corpus clean-repo law:** never `git stash push` corpus (incident:
+`wip-todo-unrelated` clobbered `TODO.md`). Leave it in the tree.
 
 Slash entry: skill `l9-repo-sync` (legacy slash file:
 [`commands/ff.md`](../../commands/ff.md)). Rule:
@@ -97,24 +94,13 @@ It classifies `refs/l9/preserved/ff/*`, `refs/l9/preserved/ff-dirty/*`, and
    `git switch` to `main` after parking.
 3. **Execute** — [references/execute.md](references/execute.md) via
    `scripts/ff.sh`. Dirt, unique commits, and not-on-main are **not** a stop.
-   Step 0 inside the script switches to `main` without moving the feature ref.
-4. **Done** when the script prints `OK:` for each clone. Do not add a second
-   census or pytest to `/ff`.
-5. **Shelf** — leftover untracked and dirty-tracked `TODO.md`, `WIP/`,
-   `docs/plans/`, and `environment/program-execution/campaigns/` via
-   **one** call:
-   `"$GOV_PY" skills/l9-repo-sync/scripts/ff_shelf.py --clone "$CLONE"`.
-   The script writes `$CLONE/.l9/ff-shelf-untracked.txt`, rsyncs
-   `--files-from` that file, appends an existing same-author
-   `feat/ff-shelf-*` PR (or cuts one stamp), applies corpus kernels
-   (`kernel_pass` YAML only on `*.plan.md`), pathspec-from-file then a
-   separate commit, then `l4_local.py begin` + `authorize-release` (not
-   `record-kernels`). **Finish the shelf publish loop** unless
-   `FF_SHELF_PUBLISH=0`: `PR_STACK=auto PR_REMEDIATE=0 make pr` in the
-   shelf worktree and display the opened **PR URL**. `ff.sh` stays
-   push-off. Secret globs stay out. Then
-   `"$GOV_PY" ops/scripts/verify_worktree_clean.py --workspace "$CLONE"`.
-   The dirty-preserve ref is **not** deleted here — see Handoff.
+   Step 0 inside the script switches to `main` without moving the feature
+   ref, then switches back and restores parked files.
+4. **Done** when the script prints `OK:` for each clone and parked files
+   are back at their original paths. Do not add a second census or pytest.
+   Do not run `ff_shelf.py`, `run_ff_post_shelf.sh`, or
+   `verify_worktree_clean.py`. The dirty-preserve ref is **not** deleted
+   here — see Handoff.
 
 ## Failure Handling
 

@@ -69,9 +69,9 @@
       "alias": null,
       "class": "always",
       "output": "07-max-velocity-research.md",
-      "output_sha256": "d6c7c24a3d7543518638f1a32d9726b4aed4242d50776b64fc5b80d46ed93b26",
+      "output_sha256": "efe6697410bd22c79a76f1cdb28adffc4d893ff71acd951ee4583c51ca60f3ff",
       "source": "rules/07-max-velocity-research.mdc",
-      "source_sha256": "ce3021bf6cf26672946a1363a18ff14da0cf58e686ba5d2f9aba02081e1d13f9",
+      "source_sha256": "6ea31975c138435889c47c67e3d479924dbbf1cdf14b933e2eba1f81a5c18ff1",
       "stem": "07-max-velocity-research"
     },
     {
@@ -267,9 +267,9 @@
       "alias": null,
       "class": "always",
       "output": "53-pr-overlap-guardrail.md",
-      "output_sha256": "fe4da3ffec6d281ba9292fb612d8e92cfd2d98d94309d50d0a3e7cece8362167",
+      "output_sha256": "eb2276b5eb18d7ea1bab8f6fe14e021d70f8cc5cc138758960a2038b58a1b389",
       "source": "rules/53-pr-overlap-guardrail.mdc",
-      "source_sha256": "04d0e57616e8a0fd7cbf1a66e6deb33afc94ead6c678d1d09848e527a7bdf28f",
+      "source_sha256": "6de1f42606b191eb41aec56a890da2aa0c04f434a2871a9ecc5593a89dd0d2e8",
       "stem": "53-pr-overlap-guardrail"
     },
     {
@@ -285,9 +285,9 @@
       "alias": null,
       "class": "always",
       "output": "55-ff-only-ssot-sync.md",
-      "output_sha256": "9410767fd01952c153fc4ca682993ce7398237e96100d01435680b47de4a111e",
+      "output_sha256": "cb32f03a513801748b644e87365a3b8260b61c76e06ae1586618937f54b605e2",
       "source": "rules/55-ff-only-ssot-sync.mdc",
-      "source_sha256": "9c83eecc7427610da8631cc653462cad04a948beb7c23b002a450678ed249f07",
+      "source_sha256": "d5a856c58a92f190b209b6e767b5c3c62c03b0f22000dd8bb2916069070f8491",
       "stem": "55-ff-only-ssot-sync"
     },
     {
@@ -641,5 +641,5 @@
     "skipped_agent_requested": 16,
     "source_mdc": 70
   },
-  "tree_sha256": "4add86deb1c64ce9656fb5a1f6b18bc0d70cca0cb2b13abda6d90c51a48c3a57"
+  "tree_sha256": "01147b5ecc5c3d20b4e5fba83e7fc42c30c0e4b4f553cffb02fed23803895c37"
 }

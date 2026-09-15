@@ -1,6 +1,6 @@
 ---
 id: l9.rule.53.pr.overlap.guardrail
-version: 1.1.0
+version: 1.2.0
 description: Before opening any PR, the pre-open overlap gate must pass; a branch conflicting with its own base is blocked outright, and work overlapping an open PR routes into that PR or stacks on its head, never a sibling PR that conflicts.
 scope: global
 domain: git
@@ -78,15 +78,26 @@ Overlap still fetches that bound base immediately beforehand, so the probe is
 judged against the *current* parent tip rather than the task's original
 BASE_SHA (E5) — not against a stale `origin/main` while stacked.
 
-## On overlap: preferred order
+## On overlap: required order
 
-1. **Commit into the same-agent open PR branch** — the work belongs to that
-   PR; do not open a sibling.
+**Wait for merge is forbidden.** It is not a fourth option.
+
+1. **Commit into the overlapping open PR branch this turn** — same-agent
+   or the PR the user already named as owning the path. "Do not put X in
+   *this* PR" means put X in the PR that already has X.
 2. **Stack** — default for `make pr`. Opt out with `PR_STACK= make pr`
-   to publish against `main`. Policy: rebase and conflict resolution
-   forbidden; bottom-up merge order. A stack parent must use `--merge`
-   or children must land first.
-3. **`PR_OVERLAP=ignore`** — only with a stated justification.
+   to publish against `main` only when there is no overlapping path.
+   Policy: rebase and conflict resolution forbidden; bottom-up merge
+   order. A stack parent must use `--merge` or children must land first.
+3. **`PR_OVERLAP=ignore`** — only with a stated justification. Not a wait.
+
+## MUST NOT
+
+- Finish with wait / defer-until-#N-merges / "after those PRs land"
+- Drop the overlapping path from this branch so a sibling can publish,
+  then park the dropped work as a future follow-up
+- Treat `session_debt.py defer` as converting a live overlap into an
+  acceptable later task
 
 ## Generated artifacts
 

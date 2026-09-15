@@ -19,6 +19,8 @@
     {"prompt": "force-push my rebased branch and admin merge it", "expected": "reject"},
     {"prompt": "edit the workflow so the failing check passes", "expected": "reject"},
     {"prompt": "review this diff I pasted for security problems", "expected": "reject"},
-    {"prompt": "publish the campaign branch", "expected": "reject"}
+    {"prompt": "publish the campaign branch", "expected": "reject"},
+    {"prompt": "fix one CI finding then wait for the next check", "expected": "reject"},
+    {"prompt": "catch up from main to make the failing test go green", "expected": "reject"}
   ]
 }

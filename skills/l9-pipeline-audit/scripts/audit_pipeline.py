@@ -552,8 +552,6 @@ def format_session_start(payload: dict[str, Any], budget: int) -> str:
     archived = payload.get("archived") or []
     if archived:
         lines.append(f"- archived: {len(archived)} spent " + "; ".join(archived[:6]))
-    else:
-        lines.append("- archived: 0 (mixed harvestable donors kept)")
     text = "\n".join(lines)
     if len(text) > budget:
         return text[: max(0, budget - 1)] + "…"
@@ -600,7 +598,7 @@ def main(argv: list[str] | None = None) -> int:
             window_days=float(args.window_days),
             archive=bool(args.archive_spent),
         )
-    except Exception as exc:  # fail-open for sessionStart
+    except Exception as exc:  # fail-open for slash callers
         print(f"pipeline audit: unavailable ({type(exc).__name__})")
         return 0
     if args.format == "json":

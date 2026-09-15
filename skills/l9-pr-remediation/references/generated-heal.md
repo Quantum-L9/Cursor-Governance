@@ -12,9 +12,9 @@ updated: 2026-08-28
 
 # Generated-artifact heal
 
-Same remediator publish path as source fixes: `make precommit-repo`, commit, `git push`. Not a second protocol.
+Same remediator publish path as source fixes: `L9_REMEDIATOR=1 PR_STACK= PR_BASE=origin/main make precommit-repo`, commit, `git push`. Not a second protocol.
 
-After the oldest ready PR merges and remaining heads `git merge origin/main`, regen. Do not file-audit generated paths.
+Never `git merge origin/main` to "fix" a failing required check. After the oldest ready PR merges, remaining heads may catch up only to heal generated companions, then regen. Do not file-audit generated paths.
 
 ## Classifier
 

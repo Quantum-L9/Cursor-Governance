@@ -31,10 +31,9 @@ that already exist:
    gateway. Wrong base SHA, wrong identity, a changed file outside the grant, a
    read-only role reporting changes, or a non-success host stop is `REJECTED`.
 
-Profile caps are read from `ops/autonomy/execution_profile.py`. This pack then
-applies `skill_subagent_cap: 10` (`pr_fleet.SKILL_SUBAGENT_CAP`). Launch at most
-10 lanes at once. There is no tighter hidden Cursor cap this skill should wait
-on.
+Profile caps are read from `ops/autonomy/execution_profile.py`. `skill_caps` pass through those caps (`max_parallel>=480`, `max_mutation_lanes>=128`).
+Safety is `claim_scopes_conflict` plus `waves()`, not a remediator clamp.
+There is no tighter hidden Cursor cap this skill should wait on.
 
 ## Wave shapes
 
@@ -60,11 +59,12 @@ GOV_PY="${GOV_PY:-$PWD/.venv/bin/python}"
 ```
 
 Then, in **one** assistant message, launch one background Task per assignment
-using its `cursor.managed_task_type` and `prompt` (at most 10). Serializing
-independent ready lanes is a protocol violation. Main agent afterwards: poll
-every PR in `first_wave.poll` (15s snapshots) and launch `--kind merge` the
-moment `merge_now` grows. Never `AwaitShell` on a lane. A watcher report does
-not waive remediator poll duty.
+using its `cursor.managed_task_type` and `prompt` (profile caps). `--record`
+must write `.l9/pr/assignments/` before launch. Serializing independent ready
+lanes is a protocol violation. Main agent afterwards: poll every PR in
+`first_wave.poll` (15s snapshots) and launch `--kind merge` the moment
+`merge_now` grows. Never `AwaitShell` on a lane. A watcher report does not
+waive remediator poll duty.
 
 Each lane works on its own worktree for its own branch (`git worktree list`
 first; `worktree_add_wired.sh` only when none holds the branch). Two lanes
@@ -98,7 +98,7 @@ of the branch lost), or `failed`.
 claims blocked it has returned. Before launching, `pr_fleet.py plan` again:
 if the fingerprint is unchanged the receipt is reused; if a head moved the
 plan is recomputed and stale assignments are discarded. Watchers persist
-across waves until their PR reaches `CLEAN` or a red required check.
+across waves until their PR reaches `board=merge` or a red required check.
 
 ## Never
 
@@ -106,4 +106,4 @@ across waves until their PR reaches `CLEAN` or a red required check.
 - two mutation lanes on one branch or one non-generated path
 - a lane closed on "done" without an accepted document
 - waiting for REMEDIATE_ALL before starting `merge_now`
-- inventing a cap other than `skill_subagent_cap: 10`
+- inventing a remediator clamp below the execution profile

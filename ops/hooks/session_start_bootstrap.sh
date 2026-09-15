@@ -169,8 +169,6 @@ if ! resolve_global_commands; then
 - Graphiti disabled — no resume memory
 ### Code-graph
 - skipped
-### Plan audit
-- pipeline audit: skipped (no SSOT)
 EOF
 )"
   COMBINED="$COMBINED" python3 - <<'PY'
@@ -191,7 +189,7 @@ GC="$GLOBAL_COMMANDS"
 
 # Generic hydration (uv, scratch_hold, checkers, capabilities, identity) lives
 # only in the shared bootstrap. Cursor keeps tip activation, wiring, hydrate,
-# plan audit, and the additional_context JSON envelope.
+# and the additional_context JSON envelope. Plans work is slash-only.
 # Same order as resolve_runtime_reporter: this checkout, then live SSOT.
 resolve_shared_bootstrap() {
   if [ -n "${CURSOR_PROJECT_DIR:-}" ] && [ -f "$CURSOR_PROJECT_DIR/ops/scripts/bootstrap_agent_environment.sh" ]; then
@@ -248,6 +246,20 @@ ORCH="$GC/ops/hooks/session_start_memory_orchestrator.sh"
 [ -f "$GC/ops/scripts/lib/workspace_kind.sh" ] && source "$GC/ops/scripts/lib/workspace_kind.sh"
 # shellcheck source=/dev/null
 [ -f "$GC/ops/scripts/lib/workspace_link_health.sh" ] && source "$GC/ops/scripts/lib/workspace_link_health.sh"
+
+# SessionStart performs no plans-store read or mutation
+# (SESSIONSTART_NO_PLAN_SURFACE_V1): it never copies, renames aside, re-points
+# or replaces an existing ~/.cursor/plans. Migration of a legacy real
+# directory into the tracked store belongs to the manual setup commands.
+#   - ensure_workspace_wired.sh honors L9_PLANS_STORE_MODE=links-only itself
+#     (the store helper runs only when ~/.cursor/plans is absent).
+#   - setup_workspace_symlinks.sh and check_governance_wiring.sh call the
+#     migrating helper unconditionally, so while a legacy real directory
+#     exists this hook does not invoke them and names the manual setup.
+plans_store_is_legacy_real() {
+  [ -e "$HOME/.cursor/plans" ] && [ ! -L "$HOME/.cursor/plans" ]
+}
+PLANS_LEGACY_NOTE="legacy real ~/.cursor/plans directory; SessionStart does not migrate the plans store — run once: bash \"$SETUP\" (or /wire)"
 
 # Claude projection is Claude Code SessionStart's job
 # (session_start_claude_governance.sh). Running it from Cursor SessionStart
@@ -309,9 +321,11 @@ fi
 
 WIRE_NOTE="symlinks OK"
 if [ "$needs_wire" -eq 1 ] && [ -n "$REPO" ]; then
-  if [ -f "$ENSURE" ] && L9_WIRE_LINKS_ONLY=1 bash "$ENSURE" "$REPO" >/dev/null 2>&1 \
+  if [ -f "$ENSURE" ] && L9_WIRE_LINKS_ONLY=1 L9_PLANS_STORE_MODE=links-only bash "$ENSURE" "$REPO" >/dev/null 2>&1 \
     && { ! declare -F workspace_links_healthy >/dev/null 2>&1 || workspace_links_healthy "$REPO"; }; then
     WIRE_NOTE="auto-wired links-only"
+  elif plans_store_is_legacy_real; then
+    WIRE_NOTE="auto-wire failed — $PLANS_LEGACY_NOTE"
   elif [ -f "$SETUP" ] && (cd "$REPO" && bash "$SETUP" >/dev/null 2>&1); then
     WIRE_NOTE="auto-wired (full setup)"
   else
@@ -355,11 +369,15 @@ fi
 
 WIRING_CHECK="skipped"
 WIRE_FALLBACK="$GC/ops/scripts/wire_governance_workspace.sh"
-if [ -n "$REPO" ] && [ -f "$GC/ops/scripts/check_governance_wiring.sh" ]; then
+if [ -n "$REPO" ] && plans_store_is_legacy_real; then
+  # check_governance_wiring.sh calls ensure_machine_cursor_plans_store before
+  # its plans assertions; running it here would migrate the directory.
+  WIRING_CHECK="FAIL — check not run: $PLANS_LEGACY_NOTE"
+elif [ -n "$REPO" ] && [ -f "$GC/ops/scripts/check_governance_wiring.sh" ]; then
   WIRE_OUT="$(bash "$GC/ops/scripts/check_governance_wiring.sh" "$REPO" 2>&1)"
   WIRE_RC=$?
   if [ "$WIRE_RC" -ne 0 ] && [ -f "$ENSURE" ]; then
-    L9_WIRE_LINKS_ONLY=1 bash "$ENSURE" "$REPO" >/dev/null 2>&1 || true
+    L9_WIRE_LINKS_ONLY=1 L9_PLANS_STORE_MODE=links-only bash "$ENSURE" "$REPO" >/dev/null 2>&1 || true
     WIRE_OUT="$(bash "$GC/ops/scripts/check_governance_wiring.sh" "$REPO" 2>&1)"
     WIRE_RC=$?
     if [ "$WIRE_RC" -eq 0 ]; then
@@ -426,57 +444,10 @@ fi
 GOV_HEAD="$(short_sha "$ACTIVATE_SHA")"
 REMOTE_HEAD="$(short_sha "$ACTIVATE_REMOTE_SHA")"
 
-# Pipeline audit: fail-open, budget-capped; never fail sessionStart.
-# Heading stays ### Plan audit (bootstrap tests). Store is tracked docs/plans
-# via .cursor/plans → ~/.cursor/plans. Also scans WIP + PE campaigns.
-# Archives spent root plans and inventory-landed WIP only; mixed harvestable
-# donors stay. Never mutates CAMPAIGN_SOURCE.yaml. No auto-Build.
-PLAN_AUDIT_MD="pipeline audit: skipped"
-AUDIT_PY="$GC/skills/l9-pipeline-audit/scripts/audit_pipeline.py"
-if [ ! -f "$AUDIT_PY" ]; then
-  _ws_audit="${CURSOR_PROJECT_DIR:-$PWD}/skills/l9-pipeline-audit/scripts/audit_pipeline.py"
-  if [ -f "$_ws_audit" ]; then
-    AUDIT_PY="$_ws_audit"
-  fi
-fi
+# Shared interpreter for runtime reporter / hydrate classifier / route locator.
+# SessionStart does not read, scan, or emit the plans store (slash-only).
 AUDIT_PY_BIN="$GC/.venv/bin/python"
 [ -x "$AUDIT_PY_BIN" ] || AUDIT_PY_BIN=python3
-# shellcheck source=/dev/null
-[ -f "$GC/ops/scripts/lib/run_with_timeout.sh" ] && . "$GC/ops/scripts/lib/run_with_timeout.sh"
-[ -f "${CURSOR_PROJECT_DIR:-}/ops/scripts/lib/run_with_timeout.sh" ] && . "${CURSOR_PROJECT_DIR}/ops/scripts/lib/run_with_timeout.sh"
-# Archive gating lives in audit_pipeline.py (acquires the $GC write lock).
-ARCHIVE_ARGS=(--archive-spent)
-if [ -f "$AUDIT_PY" ]; then
-  PLAN_AUDIT_ERR="$(mktemp "${TMPDIR:-/tmp}/l9-plan-audit.XXXXXX")"
-  if type run_with_timeout >/dev/null 2>&1; then
-    PLAN_AUDIT_MD="$(
-      run_with_timeout 4 "$AUDIT_PY_BIN" "$AUDIT_PY" \
-        --workspace "${CURSOR_PROJECT_DIR:-$PWD}" \
-        --gov-root "$GC" \
-        --window-days 7 \
-        --format session-start \
-        --budget-chars 1600 \
-        "${ARCHIVE_ARGS[@]}" \
-        2>"$PLAN_AUDIT_ERR" || true
-    )"
-  else
-    PLAN_AUDIT_MD="$(
-      "$AUDIT_PY_BIN" "$AUDIT_PY" \
-        --workspace "${CURSOR_PROJECT_DIR:-$PWD}" \
-        --gov-root "$GC" \
-        --window-days 7 \
-        --format session-start \
-        --budget-chars 1600 \
-        "${ARCHIVE_ARGS[@]}" \
-        2>"$PLAN_AUDIT_ERR" || true
-    )"
-  fi
-  if [ -z "$PLAN_AUDIT_MD" ]; then
-    PLAN_AUDIT_TAIL="$(head -c 240 "$PLAN_AUDIT_ERR" | tr '\n' ' ')"
-    PLAN_AUDIT_MD="pipeline audit: unavailable — ${PLAN_AUDIT_TAIL:-no stderr captured}"
-  fi
-  rm -f "$PLAN_AUDIT_ERR"
-fi
 
 # T-CI007 / T-CI015 / T-CI021 / T-CI022 — live Cursor SessionStart caller (U2).
 # Classification lives in session_start_runtime_report.py so slogans cannot
@@ -626,8 +597,6 @@ ${RUNTIME_MD}
 ${HYDRATE_BLOCK}
 ### Code-graph
 ${CODEGRAPH_MD}
-### Plan audit
-${PLAN_AUDIT_MD}
 ${ROUTE_LOCATOR_MD}
 EOF
 )"

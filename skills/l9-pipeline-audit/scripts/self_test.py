@@ -77,6 +77,28 @@ def main() -> int:
         )
         isolated = os.environ.copy()
         isolated["L9_REPO_WRITE_LOCK"] = "0"
+        session_first = subprocess.run(
+            [
+                sys.executable,
+                str(AUDIT),
+                "--workspace",
+                str(ws),
+                "--gov-root",
+                str(ws),
+                "--format",
+                "session-start",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            env=isolated,
+        )
+        if session_first.returncode != 0 or "NEXT 1:" not in session_first.stdout:
+            errors.append(f"session-start report missing NEXT: {session_first.stdout!r}")
+        if (ws / "docs" / "plans" / "spent_done.plan.md").is_file() is False:
+            errors.append("session-start must not archive a spent root plan")
+        if (ws / "WIP" / "8-28-26" / "topic" / "landed.md").is_file() is False:
+            errors.append("session-start must not archive landed WIP")
         proc = subprocess.run(
             [
                 sys.executable,

@@ -1625,3 +1625,20 @@ This fragment supersedes only the sessionEnd dirt-close / auto-hygiene /
   `session_id`. Never delete worktree files.
 - Agents asked "what dirty files are there" still run
   `session_end_dirt_close.py --status`. That is a report, not the closer.
+
+## SessionStart emits no plan surface (2026-09-14) — supersedes §16 and the 2026-08-28 "SessionStart pipeline audit" section
+
+- SessionStart no longer reads, scans, migrates, archives, or emits the plans
+  store: `additional_context` carries no `### Plan audit` heading, and the
+  bootstrap does not run `skills/l9-pipeline-audit/scripts/audit_pipeline.py`
+  (`SESSIONSTART_NO_PLAN_SURFACE_V1`; PR #593).
+- The links-only auto-wire the hook still performs runs
+  `ops/scripts/ensure_workspace_wired.sh` with `L9_PLANS_STORE_MODE=links-only`:
+  an existing `~/.cursor/plans` entry (real directory, file, or symlink) is
+  left byte-for-byte untouched. Migration of a legacy real directory into the
+  tracked store belongs to the manual setup commands
+  (`setup_workspace_symlinks.sh`, `/wire`), never to SessionStart.
+- Plan, WIP, and campaign audits are explicit invokes only:
+  `/l9-pipeline-audit` (alias `/plan-audit`) with `--archive-spent` opt-in.
+  §16's "display-only" findings and the 2026-08-28 producer description are
+  historical.

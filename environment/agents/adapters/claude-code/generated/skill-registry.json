@@ -1,5 +1,5 @@
 {
-  "generation_id": "d436cbe78b301e04d9170be22643077946a25a5c179cc916055736a5591b48f2",
+  "generation_id": "9c96859df5a971d2750e6e1179bd1916a09cc4fe4a176fb2c3c3776d99b280e4",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -478,7 +478,6 @@
           "stale plans",
           "audit .cursor/plans",
           "which plans are unbuilt",
-          "sessionStart plan audit",
           "harvest WIP campaigns",
           "audit program-execution campaigns",
           "harvestable components"
@@ -1327,14 +1326,14 @@
     },
     {
       "composition_role": "general",
-      "description": "audit plans, WIP, and PE campaigns as one family; harvest via l9-intelligence-harvest. use when /l9-pipeline-audit or /plan-audit runs, or session context shows Plan audit.",
+      "description": "audit plans, WIP, and PE campaigns as one family; harvest via l9-intelligence-harvest. use when /l9-pipeline-audit or /plan-audit runs. SessionStart does not run this pack.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pipeline-audit",
       "path": "skills/l9-pipeline-audit",
-      "reason": "on-demand multi-surface harvest (plans + WIP + PE campaigns) can emit new WIP or campaign INTENT; slash /l9-pipeline-audit is the explicit invoke; sessionStart runs audit_pipeline.py display+spent-archive only; disable-model-invocation",
+      "reason": "on-demand multi-surface harvest (plans + WIP + PE campaigns) can emit new WIP or campaign INTENT; slash /l9-pipeline-audit is the explicit invoke; SessionStart does not run this pack; disable-model-invocation",
       "skill_md": "skills/l9-pipeline-audit/SKILL.md",
-      "skill_sha256": "93ce55afee0cb266d1bd630428b703016eefd566f6b46c43be638aa92a74cc0e",
+      "skill_sha256": "2da723de49038a2d69ce40f41a213b89ea980d29e8f7b53a85e11cceeeb9f1af",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1392,14 +1391,14 @@
     },
     {
       "composition_role": "general",
-      "description": "diagnose or converge github prs \u2014 plan the fleet once, launch up to 10 subagents to remediate, poll remediating PRs, and start stack-safe merge trains on the oldest green PRs that will not conflict downstream. do not wait for every PR to be green. do not run make pr. use when /l9-pr-remediation, fix, babysit, or merge failing prs.",
+      "description": "diagnose or converge github prs \u2014 plan the fleet once, launch execution-profile-capped subagents to remediate, poll remediating PRs, and start stack-safe merge trains on the oldest green PRs that will not conflict downstream. do not wait for every PR to be green. do not run make pr. use when /l9-pr-remediation, fix, babysit, or merge failing prs.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pr-remediation",
       "path": "skills/l9-pr-remediation",
       "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked). The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Above-paygrade HUMAN / unfixable required CI / ENVIRONMENT after best-effort opens a GitHub issue and launches l9-issue-remediation via cursor-subagents; do not ask the human to unblock. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
       "skill_md": "skills/l9-pr-remediation/SKILL.md",
-      "skill_sha256": "50cddd2286a46301e69b0bd503a2cd823c7b560da01ab3d17c135bcd0edcd89e",
+      "skill_sha256": "a5a39c22ff77044c5de8d6e5d3ae795e1a289f23d3ab2d35cabe39a5dc521246",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1477,7 +1476,7 @@
       "path": "skills/l9-repo-sync",
       "reason": "in-place /ff catch-up mutates a named clone (park unique work, then reset --keep); explicit only, hint_allowed for Read/attach",
       "skill_md": "skills/l9-repo-sync/SKILL.md",
-      "skill_sha256": "2bdec4422e403f40c016b686935c1b9133223c24d18bc9512221a0a754a67e4c",
+      "skill_sha256": "04a6088f608406573644ea319875889bbf661823ff640ba6ae064beff21f1735",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1600,6 +1599,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "bf415873fe91b1779e0cea47ca987f01c3b919d78bae8ac8c0a49fea06eb8def",
-  "source_skill_corpus_sha256": "6c1cf30c2ad53b6b1662cdb2a28176ceccda82ad2892be42926cea9792cab266"
+  "source_manifest_sha256": "619ee9ae7bcc643598c8f54beeff4e4d598b0893a4331237debf156eaa86f044",
+  "source_skill_corpus_sha256": "029237911539d5b492bf0ca5eeb36974243b46d776a839e2075852abfa040b66"
 }
