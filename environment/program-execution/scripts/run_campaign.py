@@ -3975,7 +3975,10 @@ def _recover_terminal_peer_task(
         )
     failure_class = str(receipt.get("failure_class") or PEER_KNOWN_TERMINAL)
     reason = f"peer attempt {receipt.get('attempt_id') or '?'} ended {failure_class}"
-    with traced(trace, "task_prepare", "recover_terminal_attempt", task_id=task_id):
+    # `recovery` is the pe_trace category the summary counts under
+    # workspace_recovery_counts; filing this under task_prepare would hide the
+    # one recovery action this front door performs.
+    with traced(trace, "recovery", "recover_terminal_attempt", task_id=task_id):
         recovered = pec_cmd(
             workspace,
             "fresh-workspace",
@@ -4000,7 +4003,7 @@ def _recover_terminal_peer_task(
     emit(
         trace,
         "TASK_TERMINAL_ATTEMPT_RECOVERED",
-        "task",
+        "recovery",
         "task_terminal_attempt_recovered",
         task_id=task_id,
         metadata={

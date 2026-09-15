@@ -901,6 +901,24 @@ class PeSmokeCampaignTests(unittest.TestCase):
             self.assertTrue((workspace / "recovery" / "TASK-001").is_dir())
             ledger = (workspace / "ledger" / "events.jsonl").read_text(encoding="utf-8")
             self.assertIn('"EXECUTION_RECOVERED"', ledger)
+            # Telemetry files the recovery under pe_trace's `recovery` category, the
+            # one the run summary counts in workspace_recovery_counts; a recovery
+            # hidden under task_prepare would not be visible as a time sink.
+            events = [
+                json.loads(line)
+                for line in (workspace / "telemetry" / "events.jsonl")
+                .read_text(encoding="utf-8")
+                .splitlines()
+                if line.strip()
+            ]
+            recovery = [
+                e
+                for e in events
+                if e.get("operation")
+                in {"recover_terminal_attempt", "task_terminal_attempt_recovered"}
+            ]
+            self.assertTrue(recovery, msg="recovery left no telemetry event")
+            self.assertEqual({e.get("category") for e in recovery}, {"recovery"})
 
     def test_mixed_batch_reconciles_every_child_before_raising(self) -> None:
         """Caller-order contract for a mixed [PASS, FAIL] parallel batch:
