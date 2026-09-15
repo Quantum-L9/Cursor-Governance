@@ -203,7 +203,7 @@ def close_idempotency_key(namespace: str, session_id: str, head_hash: str) -> st
 
 
 def _distill_enabled() -> bool:
-    return os.environ.get("MEMORY_DISTILL", "1").strip() not in ("0", "false", "False")
+    return os.environ.get("L9_MEMORY_DISTILL", "1").strip() not in ("0", "false", "False")
 
 
 def _canonical_distill(
@@ -229,7 +229,7 @@ def _canonical_distill(
     canonical close into a non-close.
     """
     if not _distill_enabled():
-        report["warnings"].append("distill skipped: MEMORY_DISTILL=0")
+        report["warnings"].append("distill skipped: L9_MEMORY_DISTILL=0")
         return
     if remaining < DISTILL_MIN_BUDGET:
         report["warnings"].append("distill skipped: insufficient time budget")
@@ -299,8 +299,6 @@ def _persist_obligation(
         "session_id": session_id,
         "head_hash": report.get("head_hash", ""),
         "phase_a": bool(report.get("phase_a")),
-        "enqueue_ok": report.get("enqueue_ok"),
-        "enqueue_error": report.get("enqueue_error"),
         "write_count": len([w for w in (report.get("writes") or []) if w.get("written")]),
         "closed_at": now,
         "attempt_timestamp": now,
@@ -343,7 +341,6 @@ def close_session(
         "session_id": session_id,
         "reason": reason,
         "phase_a": False,
-        "enqueue_ok": None,
         "writes": [],
         "warnings": [],
         "continuation": None,
@@ -490,49 +487,6 @@ def close_session(
     if elapsed_a > PHASE_A_BUDGET:
         report["warnings"].append(f"Phase A over budget ({elapsed_a:.1f}s)")
 
-    # --- S3 distill enqueue (redacted excerpt; fail-loud when enabled+configured) ---
-    enqueue_result: dict[str, Any] | None = None
-    try:
-        from ops.graphiti.distill_queue.enqueue import (
-            bucket_configured,
-            enqueue_enabled,
-            enqueue_job,
-        )
-
-        if not enqueue_enabled():
-            if os.environ.get("MEMORY_DISTILL_ENQUEUE", "1").strip() in ("0", "false", "False"):
-                report["enqueue_ok"] = None
-                report["warnings"].append("distill enqueue skipped: MEMORY_DISTILL_ENQUEUE=0")
-            elif not bucket_configured():
-                report["enqueue_ok"] = None
-                report["warnings"].append("distill enqueue skipped: MEMORY_DISTILL_S3_BUCKET unset")
-        elif not (transcript or "").strip():
-            report["enqueue_ok"] = None
-            report["warnings"].append("distill enqueue skipped: empty transcript excerpt")
-        else:
-            enqueue_result = enqueue_job(
-                session_id=session_id,
-                group_id=namespace,
-                agent_id=identity["agent_id"],
-                transcript_excerpt=transcript,
-                heuristic_pickup=pickup,
-                reason=reason,
-                project_name=project.name,
-                dry_run=dry_run,
-            )
-            report["enqueue_ok"] = True
-            report["enqueue"] = {
-                "key": enqueue_result.get("key"),
-                "content_hash": enqueue_result.get("content_hash"),
-                "dry_run": bool(enqueue_result.get("dry_run")),
-            }
-    except Exception as exc:  # noqa: BLE001
-        report["enqueue_ok"] = False
-        code = f"enqueue_{type(exc).__name__}"
-        report["enqueue_error"] = code
-        report["warnings"].append(f"ERROR: distill enqueue failed: {code}")
-        print(f"ERROR: distill enqueue failed: {code}", file=sys.stderr)
-
     # --- memory.close: the only thing that can make this session CLOSED ---
     summary = (
         f"session {session_id} {reason}: {capsule.objective} | next: {capsule.next_action} | "
@@ -627,9 +581,6 @@ def close_session(
         last_error_code=None if final_status == STATUS_CLOSED_CANONICALLY else closed.status.value,
         **close_request,
     )
-    if report.get("enqueue_ok") is False and final_status == STATUS_CLOSED_CANONICALLY:
-        report["receipt"]["enqueue_error_present"] = True
-
     # --- canonical distill: supplementary lifecycle capture, after the close ---
     # The close above is what makes the session CLOSED; distillation of the
     # redacted excerpt is memory's own cognition and rides after it, bounded

@@ -262,7 +262,6 @@ def _scripted_close(monkeypatch, tmp_path):
 def test_phase_a_needs_no_provider_key(monkeypatch, tmp_path):
     """The close never touches a provider: no OpenAI key, no provider warning (ADR-0033)."""
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    monkeypatch.delenv("MEMORY_DISTILL_S3_BUCKET", raising=False)
     fake = _scripted_close(monkeypatch, tmp_path)
     monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **k: ("user: finish the PR", "test"))
     report = cs.close_session(
@@ -293,31 +292,22 @@ def test_close_session_has_no_local_cognition_surface():
         assert not hasattr(cs, name), f"{name} is Cursor-local memory cognition (ADR-0033)"
 
 
-def test_enqueue_fail_loud(monkeypatch, tmp_path):
-    monkeypatch.setenv("MEMORY_DISTILL_ENQUEUE", "1")
-    monkeypatch.setenv("MEMORY_DISTILL_S3_BUCKET", "l9-test-distill")
+def test_close_has_no_s3_queue_surface(monkeypatch, tmp_path):
+    """The S3 distill queue is retired at C15: no enqueue fields, no exit-2 path (ADR-0033)."""
     _scripted_close(monkeypatch, tmp_path)
     monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **k: ("user: enqueue me", "test"))
-
-    def boom(**kwargs):
-        raise RuntimeError("s3 put-object failed: AccessDenied")
-
-    import ops.graphiti.distill_queue.enqueue as enq
-
-    monkeypatch.setattr(enq, "enqueue_job", boom)
-
     report = cs.close_session(
-        project_dir=tmp_path,
-        session_id="close-enq",
-        agent_id="cursor",
-        dry_run=False,
+        project_dir=tmp_path, session_id="close-enq", agent_id="cursor", dry_run=False
     )
-    assert report["phase_a"] is True
-    assert report["enqueue_ok"] is False
-    assert report["receipt"]["enqueue_ok"] is False
-    assert any("enqueue failed" in w for w in report["warnings"])
-    # An enqueue failure never turns a canonical close into a non-close.
     assert report["status"] == "closed_canonically"
+    assert "enqueue_ok" not in report
+    assert "enqueue_ok" not in report["receipt"]
+    assert not any("enqueue" in w for w in report["warnings"])
+    from ops.graphiti.hydration.cli import _public_close_report
+
+    public = _public_close_report(report)
+    assert "enqueue_ok" not in public
+    assert public["distill_status"] == report["distill"]["status"]
 
 
 def test_idempotent_reclose(monkeypatch, tmp_path):
@@ -766,7 +756,8 @@ def test_compile_close_gap_write_count_zero(monkeypatch, tmp_path):
     assert comp.format_additional_context(packet).startswith("CLOSE_GAP\nREPAIR: /end-session")
 
 
-def test_compile_enqueue_failed_is_not_close_gap(monkeypatch, tmp_path):
+def test_compile_legacy_enqueue_failed_receipt_still_parses_as_a_close(monkeypatch, tmp_path):
+    """closed_enqueue_failed is parse-only since C15: old receipts stay closes, none is written."""
     from ops.graphiti.hydration.session_latches import write_open_latch, write_receipt
 
     write_open_latch(tmp_path, "old-enq", background=False)
@@ -918,7 +909,6 @@ def test_adr_0028_required_sections():
 
 
 def _close_with_budget(monkeypatch, tmp_path, budget, *, clock=None):
-    monkeypatch.delenv("MEMORY_DISTILL_S3_BUCKET", raising=False)
     _scripted_close(monkeypatch, tmp_path)
     monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **k: ("user: ship it", "test"))
     return cs.close_session(

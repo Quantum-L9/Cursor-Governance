@@ -33,6 +33,8 @@ RECEIPT_STATUSES = frozenset(
         STATUS_CLOSE_INCOMPLETE,
         STATUS_CLOSE_CONFLICTED,
         "closed",
+        # Retired at stage C15 (ADR-0033): kept so receipts written before the
+        # S3 distill queue was removed still parse; never written again.
         "closed_enqueue_failed",
         "close_failed",
         "skipped_no_project",
@@ -437,14 +439,11 @@ def write_receipt(project_dir: Path, session_id: str, payload: dict[str, Any]) -
     path_r = receipt_path(project_dir, session_id)
     status = payload.get("status")
     status_out = status if status in RECEIPT_STATUSES else "close_failed"
-    enqueue_ok = payload.get("enqueue_ok")
     safe: dict[str, Any] = {
         "status": status_out,
         "session_id": str(session_id),
         "head_hash": str(payload.get("head_hash") or ""),
         "phase_a": bool(payload.get("phase_a") is True),
-        "enqueue_ok": True if enqueue_ok is True else (False if enqueue_ok is False else None),
-        "enqueue_error_present": bool(payload.get("enqueue_error")),
         "write_count": int(payload.get("write_count") or 0),
         "closed_at": str(payload.get("closed_at") or datetime.now(UTC).isoformat())[:64],
         "attempt_timestamp": str(payload.get("attempt_timestamp") or "")[:64],

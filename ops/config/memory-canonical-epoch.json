@@ -26,6 +26,9 @@
     "cursor_gates": "ops/graphiti/graphiti_gate_lib.py over ops/memory/session_state.py since C8",
     "secret_plane": "no provider URL or bearer on any surface since C9",
     "offline_distill": "ops/memory/control_plane_client.py distill -> l9-memory distill since C15 (the Cursor-local worker ran its own extraction and is deleted, ADR-0033)",
+    "distill_queue": "retired at C15: ops/graphiti/distill_queue, .github/workflows/memory-distill.yml and run_distiller.sh are deleted; close_session hands the redacted excerpt to l9-memory distill in-process and closed_enqueue_failed is parse-only (ADR-0033)",
+    "local_cognition": "none since C15: no provider client, model id, promotion rule or scorer on any memory path; extraction, admission and promotion are MemoryService's (ADR-0033, INV-03b)",
+    "lanes": "since C15 agents write the public l9-memory / MCP surface directly (write_agent) and hooks write bounded through ops/memory/control_plane_client.py; both converge on MemoryService (ADR-0033, INV-03b)",
     "generated_data": "environment/agents/generated-data/adapters/ingest_memory_candidate.py through the control plane since C10"
   },
   "legacy_reconciliation": {

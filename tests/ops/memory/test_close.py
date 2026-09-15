@@ -95,7 +95,6 @@ def workspace(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         monkeypatch.setattr(module, "repository_state_digest", lambda _p: "c" * 40)
     monkeypatch.setattr(pw, "resolve_namespace_context", lambda *_a, **_k: context, raising=False)
     monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **_k: ("user: ship the PR", "test"))
-    monkeypatch.setenv("MEMORY_DISTILL_ENQUEUE", "0")
     monkeypatch.setenv("L9_MEMORY_SESSION_STATE_DIR", str(tmp_path / "state"))
     return project
 
@@ -692,11 +691,11 @@ def test_distill_dry_run_is_not_committed(workspace, scripted, fake_cli) -> None
 
 
 def test_distill_skips_are_named(workspace, scripted, fake_cli, monkeypatch) -> None:
-    monkeypatch.setenv("MEMORY_DISTILL", "0")
+    monkeypatch.setenv("L9_MEMORY_DISTILL", "0")
     report = _close(workspace)
     assert _distill_calls(fake_cli) == []
-    assert "distill skipped: MEMORY_DISTILL=0" in report["warnings"]
-    monkeypatch.delenv("MEMORY_DISTILL")
+    assert "distill skipped: L9_MEMORY_DISTILL=0" in report["warnings"]
+    monkeypatch.delenv("L9_MEMORY_DISTILL")
     monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **_k: ("", "none"))
     report = _close(workspace, session_id="sess-empty")
     assert _distill_calls(fake_cli) == []

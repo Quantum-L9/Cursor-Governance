@@ -393,7 +393,6 @@ def test_lifecycle_against_the_real_memory_runtime(runtime, tmp_path: Path, monk
         "Lesson: use the bound CLI, never PATH.\n"
     )
     monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **_k: (excerpt, "test"))
-    monkeypatch.setenv("MEMORY_DISTILL_ENQUEUE", "0")
     report = cs.close_session(
         project_dir=project, session_id="proof-close", agent_id="cursor", client=client
     )
@@ -660,7 +659,6 @@ def test_task_isolation_and_refinement_supersession_against_the_real_runtime(
         monkeypatch.setattr(module, "resolve_namespace_context", lambda *_a, **_k: context)
         monkeypatch.setattr(module, "repository_state_digest", lambda _p: head)
     monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **_k: ("user: finish C13", "test"))
-    monkeypatch.setenv("MEMORY_DISTILL_ENQUEUE", "0")
 
     class LostResponse:
         """The real client, except the first close's response never arrives."""
