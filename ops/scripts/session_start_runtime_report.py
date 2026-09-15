@@ -34,6 +34,10 @@ OK = "ok"
 NA = "n/a"
 DEGRADED = "degraded"
 FAILED = "failed"
+#: The plane never reached what it measures (ADR-0032): an unbound memory
+#: runtime is a bootstrap/environment fault, not memory degradation. Listed
+#: under ### Degraded so it is not hidden, but named for what it is.
+ENVIRONMENT_FAULT = "environment_fault"
 
 
 def _line(
@@ -46,7 +50,7 @@ def _line(
     include_in_degraded: bool | None = None,
 ) -> dict[str, Any]:
     if include_in_degraded is None:
-        include_in_degraded = klass in {DEGRADED, FAILED} and this_surface
+        include_in_degraded = klass in {DEGRADED, FAILED, ENVIRONMENT_FAULT} and this_surface
     return {
         "name": name,
         "class": klass,
@@ -341,9 +345,19 @@ def classify_memory_proof(proof: dict[str, Any]) -> dict[str, Any]:
         usable = bool(proof["ok"])
     else:
         usable = False
+    # An unbound runtime is an environment fault (ADR-0032): no memory
+    # operation ran, so the memory plane was not observed at all. The proof
+    # says so itself (`environment_fault`); `binding_status == unbound` is the
+    # same fact from an older proof shape.
+    environment_fault = bool(proof.get("environment_fault")) or status == "unbound"
+    heal = proof.get("environment_heal")
     head = status or "unknown"
     if provenance:
         head = f"{head} (provenance {provenance})"
+    if environment_fault and not usable:
+        head = f"ENVIRONMENT_FAULT {head}"
+        if heal:
+            head = f"{head} heal={heal}"
     identity = " ".join(part for part in (package, version) if part)
     summary = " — ".join(part for part in (head, identity, reason_text) if part)
     if not summary:
@@ -353,12 +367,16 @@ def classify_memory_proof(proof: dict[str, Any]) -> dict[str, Any]:
             "binding_status": status or None,
             "ok": proof.get("ok"),
             "artifact_provenance": provenance or None,
+            "environment_fault": environment_fault,
+            "environment_heal": heal,
             "reasons": reasons,
         },
         sort_keys=True,
     )
     lowered = f"{summary} {reason_text}".lower()
-    if not usable:
+    if not usable and environment_fault:
+        klass = ENVIRONMENT_FAULT
+    elif not usable:
         klass = FAILED if "unreachable" in lowered or "refused" in lowered else DEGRADED
     elif provenance == "unproven":
         klass = DEGRADED

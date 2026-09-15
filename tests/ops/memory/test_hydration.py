@@ -394,6 +394,58 @@ def test_binding_failure_is_named(monkeypatch, fake_cli) -> None:
     assert "not importable" in (result.error or "")
 
 
+def test_binding_failure_is_an_environment_fault_not_memory_degradation(
+    monkeypatch, fake_cli
+) -> None:
+    """ADR-0032: an unbound runtime never reached memory, so memory is not degraded."""
+
+    from ops.memory.control_plane_client import FAULT_ENVIRONMENT
+    from ops.memory.runtime_binding import STATUS_UNBOUND, RuntimeBinding
+
+    unbound = RuntimeBinding(
+        status=STATUS_UNBOUND,
+        runtime_mode="pinned_environment",
+        memory_package="l9-graphite-memory",
+        expected_version="x",
+        expected_contract_version="memory-control-plane/v1",
+        manifest_path="m",
+        reasons=("package version 2.3.1 does not match expected 2.4.0",),
+        environment_heal="skipped:ci",
+    )
+    result = _hydrate(monkeypatch, fake_cli, unbound)
+    assert result.degraded is True  # coarse: not an answering status
+    assert result.fault_class == FAULT_ENVIRONMENT
+    assert result.environment_fault is True
+    assert result.memory_degraded is False
+    assert result.environment_heal == "skipped:ci"
+    shape = result.as_dict()
+    assert shape["fault_class"] == "environment"
+    assert shape["environment_fault"] is True
+    assert shape["memory_degraded"] is False
+    assert shape["environment_heal"] == "skipped:ci"
+
+
+def test_canonical_unavailable_is_memory_degradation(monkeypatch, fake_cli, bound) -> None:
+    from ops.memory.control_plane_client import FAULT_CANONICAL
+
+    fake_cli.reply("health", 1, health_payload(store_healthy=False))
+    result = _hydrate(monkeypatch, fake_cli, bound)
+    assert result.status == OutcomeStatus.CANONICAL_UNAVAILABLE.value
+    assert result.fault_class == FAULT_CANONICAL
+    assert result.memory_degraded is True
+    assert result.environment_fault is False
+
+
+def test_answering_statuses_carry_no_fault(monkeypatch, fake_cli, bound) -> None:
+    from ops.memory.control_plane_client import FAULT_NONE
+
+    _healthy(fake_cli).reply("hydrate", 0, hydration_payload())
+    result = _hydrate(monkeypatch, fake_cli, bound)
+    assert result.ok
+    assert result.fault_class == FAULT_NONE
+    assert result.memory_degraded is False and result.environment_fault is False
+
+
 def test_session_state_is_local_and_non_authoritative(
     monkeypatch, fake_cli, bound, tmp_path
 ) -> None:

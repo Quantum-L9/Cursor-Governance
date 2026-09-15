@@ -39,9 +39,21 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from ops.memory.control_plane_client import MemoryControlPlaneClient, OutcomeStatus
+from ops.memory import environment_heal
+from ops.memory.control_plane_client import (
+    FAULT_CANONICAL,
+    FAULT_ENVIRONMENT,
+    FAULT_NONE,
+    MemoryControlPlaneClient,
+    OutcomeStatus,
+)
 from ops.memory.namespace_context import resolve_namespace_context
-from ops.memory.runtime_binding import RuntimeBinding, resolve_runtime_binding
+from ops.memory.runtime_binding import (
+    _REPO_ROOT,
+    MODE_CALLER,
+    RuntimeBinding,
+    resolve_runtime_binding,
+)
 
 PASS = "pass"
 FAIL = "fail"
@@ -229,14 +241,79 @@ def readiness_report(
         )
 
     statuses = {key: results[key].status for key, _ in LEVELS}
+    overall = _overall(statuses)
     return {
         "checked_at": datetime.now(UTC).isoformat(),
         "workspace": workspace_path,
-        "overall_status": _overall(statuses),
+        "overall_status": overall,
+        "fault_class": fault_class_for_overall(overall),
+        "remediation": remediation_for(overall, binding),
         "binding": binding.as_dict(),
         "namespace_context": context.as_dict(),
         "levels": [asdict(results[key]) for key, _ in LEVELS],
     }
+
+
+#: Overall statuses that mean the runtime never reached memory (ADR-0032).
+_ENVIRONMENT_OVERALL = frozenset({"PACKAGE_UNBOUND"})
+_READY_OVERALL = frozenset({"READY", "CANONICAL_READY_PROJECTION_DEGRADED"})
+
+
+def fault_class_for_overall(overall: str) -> str:
+    """``none`` / ``environment`` / ``canonical`` for an overall readiness status.
+
+    ``PACKAGE_UNBOUND`` is an environment fault: R0/R1 failed, so no memory
+    operation ran and nothing canonical was observed. Every other non-ready
+    status was measured *through* the bound runtime and is canonical.
+    """
+
+    if overall in _READY_OVERALL:
+        return FAULT_NONE
+    if overall in _ENVIRONMENT_OVERALL:
+        return FAULT_ENVIRONMENT
+    return FAULT_CANONICAL
+
+
+def remediation_for(overall: str, binding: RuntimeBinding) -> str | None:
+    """One actionable line for an environment fault; ``None`` otherwise.
+
+    Names what the one-shot heal already did so the operator is not told to
+    repeat a repair that just ran, and points at the governance checkout the
+    binding actually tried rather than a generic ``make venv``.
+    """
+
+    if fault_class_for_overall(overall) != FAULT_ENVIRONMENT:
+        return None
+    root = binding.governance_root or str(_REPO_ROOT)
+    heal = binding.environment_heal
+    if heal == environment_heal.HEAL_HEALED:
+        return (
+            f"ENVIRONMENT_FAULT: the locked sync of {root} succeeded but the runtime is still "
+            "unbound — the lock itself no longer pins expected_package_version; "
+            "reconcile pyproject.toml / uv.lock with ops/config/memory-binding.json"
+        )
+    if heal == environment_heal.HEAL_FAILED:
+        return (
+            f"ENVIRONMENT_FAULT: locked sync of {root} failed — run "
+            f"`bash ops/scripts/ensure_uv_environment.sh {root} apply` and read its stderr"
+        )
+    if heal and heal.startswith(environment_heal.HEAL_SKIPPED_PREFIX):
+        why = heal[len(environment_heal.HEAL_SKIPPED_PREFIX) :]
+        return (
+            f"ENVIRONMENT_FAULT: governance .venv at {root} is unbound; automatic heal skipped "
+            f"({why}) — run `bash ops/scripts/ensure_uv_environment.sh {root} apply`"
+        )
+    if binding.runtime_mode == MODE_CALLER:
+        return (
+            "ENVIRONMENT_FAULT: no governance .venv was found (L9_GOVERNANCE_DIR, "
+            "$HOME/.cursor-governance, this checkout) — run `make venv` in the governance "
+            "checkout or export L9_GOVERNANCE_DIR"
+        )
+    return (
+        f"ENVIRONMENT_FAULT: memory runtime unbound at {root} — run "
+        f"`bash ops/scripts/ensure_uv_environment.sh {root} apply` "
+        "(not a memory degradation: no canonical operation ran)"
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -272,7 +349,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.json:
         sys.stdout.write(json.dumps(result, indent=2, sort_keys=True) + "\n")
     else:
-        sys.stdout.write(f"memory readiness: {result['overall_status']}\n")
+        sys.stdout.write(
+            f"memory readiness: {result['overall_status']} (fault_class={result['fault_class']})\n"
+        )
+        if result.get("remediation"):
+            sys.stdout.write(f"  {result['remediation']}\n")
         for level in result["levels"]:
             sys.stdout.write(
                 f"  {level['level']} {level['name']:<24} {level['status']:<7} {level['detail']}\n"

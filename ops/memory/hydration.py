@@ -32,9 +32,13 @@ from pathlib import Path
 from typing import Any
 
 from ops.memory.control_plane_client import (
+    FAULT_CANONICAL,
+    FAULT_ENVIRONMENT,
+    FAULT_NONE,
     MemoryControlPlaneClient,
     OperationOutcome,
     OutcomeStatus,
+    fault_class_for,
 )
 from ops.memory.namespace_context import (
     NamespaceContext,
@@ -153,6 +157,9 @@ class CanonicalHydration:
     hydrate_receipt_digest: str | None = None
     integration_receipts: tuple[dict[str, Any], ...] = field(default_factory=tuple, repr=False)
     warnings: tuple[str, ...] = ()
+    #: What the one-shot environment heal did on the bound runtime, carried so
+    #: an ``environment`` fault names its own repair attempt.
+    environment_heal: str | None = None
 
     @property
     def ok(self) -> bool:
@@ -160,7 +167,34 @@ class CanonicalHydration:
 
     @property
     def degraded(self) -> bool:
+        """Not an answering status. Coarse; prefer :attr:`fault_class`."""
+
         return not self.ok
+
+    @property
+    def fault_class(self) -> str:
+        """``none`` / ``environment`` / ``canonical`` (ADR-0032).
+
+        ``BINDING_FAILED`` and Cursor's own ``NAMESPACE_UNRESOLVED`` never
+        reached memory: they are environment faults. Every other non-answer
+        is memory itself not answering — canonical degradation.
+        """
+
+        if self.ok:
+            return FAULT_NONE
+        if self.status == STATUS_NAMESPACE_UNRESOLVED:
+            return FAULT_ENVIRONMENT
+        return fault_class_for(self.status)
+
+    @property
+    def environment_fault(self) -> bool:
+        return self.fault_class == FAULT_ENVIRONMENT
+
+    @property
+    def memory_degraded(self) -> bool:
+        """Canonical memory ran and did not answer. False for an unbound runtime."""
+
+        return self.fault_class == FAULT_CANONICAL
 
     @property
     def has_hits(self) -> bool:
@@ -171,6 +205,10 @@ class CanonicalHydration:
 
         return {
             "status": self.status,
+            "fault_class": self.fault_class,
+            "environment_fault": self.environment_fault,
+            "memory_degraded": self.memory_degraded,
+            "environment_heal": self.environment_heal,
             "transport": "cli",
             "namespace_context": self.namespace_context.as_dict(),
             "requested_namespaces": list(self.requested_namespaces),
@@ -363,10 +401,12 @@ def canonical_hydrate(
     if client is None:
         binding = binding or resolve_runtime_binding()
         client = MemoryControlPlaneClient(binding, session_id=session_id)
+    heal_outcome = getattr(client.binding, "environment_heal", None)
     if not client.binding.ok:
         return finish(
             OutcomeStatus.BINDING_FAILED.value,
             error="; ".join(client.binding.reasons) or "memory runtime unbound",
+            environment_heal=heal_outcome,
         )
 
     health: OperationOutcome | None = None

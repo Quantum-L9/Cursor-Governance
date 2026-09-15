@@ -85,6 +85,7 @@ FORBIDDEN_TRANSPORT_ROOTS = frozenset(
 SPAWN_ALLOWED = frozenset(
     {
         "ops/memory/runtime_binding.py",  # proves + launches the bound l9-memory
+        "ops/memory/environment_heal.py",  # locked uv sync of a drifted governance .venv
         "ops/memory/namespace_context.py",  # git identity of the checkout
         "ops/memory/mcp_instantiation.py",  # memory-owned MCP installer/verify
         "ops/memory/seal_artifact_provenance.py",  # memory-owned wheel PEP 610 seal

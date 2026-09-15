@@ -41,8 +41,18 @@
     "explicit interpreter argument",
     "L9_MEMORY_DEV_CHECKOUT/.venv/bin/python (development opt-in)",
     "L9_MEMORY_INTERPRETER",
-    "the governance runtime interpreter (sys.executable)"
+    "$L9_GOVERNANCE_DIR/.venv/bin/python",
+    "$HOME/.cursor-governance/.venv/bin/python",
+    "<this checkout>/.venv/bin/python",
+    "sys.executable — only when no governance .venv exists; reported as runtime_mode=caller_interpreter"
   ],
+  "environment_heal": {
+    "description": "A governance .venv whose installed package is absent or at another version than expected_package_version is lock drift, not memory degradation. runtime_binding heals it once per attempt via ops/scripts/ensure_uv_environment.sh <root> apply (uv sync --locked) and re-probes. Skipped in unmarked CI, when L9_MEMORY_ENV_HEAL=0, while the repo-write lock for that root is held, and for development checkouts. The outcome (healed | failed | skipped:<why>) is carried on the binding as environment_heal; an unbound binding is reported as ENVIRONMENT_FAULT, never DEGRADED.",
+    "script": "ops/scripts/ensure_uv_environment.sh",
+    "kill_switch": "L9_MEMORY_ENV_HEAL=0",
+    "timeout_env": "L9_MEMORY_ENV_HEAL_TIMEOUT",
+    "default_timeout_seconds": 180
+  },
   "release_evidence": {
     "description": "Exact-head proof of the binding (audit P1-01/P2-02). The wheel is built from source.ref with uv build --wheel under the fixed SOURCE_DATE_EPOCH below and is byte-reproducible (the digest reproduced from a fresh clone of the same commit). .github/workflows/memory-cross-repo.yml rebuilds it from the same ref, refuses a digest mismatch, installs the wheel into a clean environment, and runs tests/ops/memory/test_cross_repo_lifecycle.py with L9_MEMORY_CROSS_REPO_REQUIRED=1 (a skip is a failure) and no provider credential in the environment. A digest here without that job green on the same Cursor head is a claim, not a proof.",
     "memory_sha": "e3a79626aaaf3e9503d15eaa061a46dbb9b201ab",

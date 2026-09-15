@@ -95,6 +95,44 @@ class OutcomeStatus(StrEnum):
     REQUEST_IDENTITY_UNPROVEN = "REQUEST_IDENTITY_UNPROVEN"
 
 
+#: Fault classes (ADR-0032). A memory operation that did not answer is one of
+#: exactly two different facts, and every consumer must be able to tell them
+#: apart without re-reading rendered text:
+#:
+#: - ``environment`` — the operation never reached canonical memory. The bound
+#:   runtime is unbound (a missing or drifted governance ``.venv``, a package
+#:   that predates the contract). Nothing canonical was observed, so nothing
+#:   canonical is degraded; the repair is a bootstrap repair.
+#: - ``canonical`` — memory ran and did not answer as asked: unavailable,
+#:   timed out, refused the namespace, returned an invalid receipt, rejected
+#:   or quarantined the write.
+#: - ``none`` — memory answered (``OK`` / ``NO_HITS`` / a projection warning).
+FAULT_NONE = "none"
+FAULT_ENVIRONMENT = "environment"
+FAULT_CANONICAL = "canonical"
+
+_NO_FAULT_STATUSES = frozenset(
+    {OutcomeStatus.OK, OutcomeStatus.NO_HITS, OutcomeStatus.PARTIAL_PROJECTION_DEGRADED}
+)
+_ENVIRONMENT_FAULT_STATUSES = frozenset({OutcomeStatus.BINDING_FAILED})
+
+
+def fault_class_for(status: OutcomeStatus | str) -> str:
+    """Classify an outcome status as ``none`` / ``environment`` / ``canonical``."""
+
+    try:
+        resolved = status if isinstance(status, OutcomeStatus) else OutcomeStatus(str(status))
+    except ValueError:
+        # A status this client never produces (e.g. Cursor's own
+        # NAMESPACE_UNRESOLVED) did not come from canonical memory.
+        return FAULT_ENVIRONMENT
+    if resolved in _NO_FAULT_STATUSES:
+        return FAULT_NONE
+    if resolved in _ENVIRONMENT_FAULT_STATUSES:
+        return FAULT_ENVIRONMENT
+    return FAULT_CANONICAL
+
+
 @dataclass(frozen=True)
 class OperationOutcome:
     operation: str
@@ -108,6 +146,22 @@ class OperationOutcome:
     @property
     def ok(self) -> bool:
         return self.status is OutcomeStatus.OK
+
+    @property
+    def fault_class(self) -> str:
+        return fault_class_for(self.status)
+
+    @property
+    def environment_fault(self) -> bool:
+        """The operation never reached memory (unbound runtime)."""
+
+        return self.fault_class == FAULT_ENVIRONMENT
+
+    @property
+    def memory_degraded(self) -> bool:
+        """Memory ran and failed to answer as asked. Never true for an unbound runtime."""
+
+        return self.fault_class == FAULT_CANONICAL
 
 
 @dataclass
@@ -256,6 +310,8 @@ class MemoryControlPlaneClient:
             "memory_package_version": self.binding.memory_version,
             "transport": TRANSPORT,
             "status": status.value,
+            "fault_class": fault_class_for(status),
+            "environment_heal": self.binding.environment_heal,
             "exit_code": raw.exit_code,
             "canonical_receipt_id": str(canonical_id) if canonical_id else None,
             "canonical_validation": self._last_validation,

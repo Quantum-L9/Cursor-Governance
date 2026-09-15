@@ -298,6 +298,35 @@ class MemoryProofClassificationTests(unittest.TestCase):
         self.assertIn("compatible", line["summary"])
         self.assertNotIn("unbound", line["summary"])
 
+    def test_unbound_runtime_is_an_environment_fault_not_degraded(self) -> None:
+        """ADR-0032: a drifted governance .venv is a bootstrap fault; memory was not observed."""
+
+        line = report.classify_memory_proof(
+            {
+                "binding_status": "unbound",
+                "ok": False,
+                "environment_fault": True,
+                "environment_heal": "skipped:repo-write-lock-held",
+                "memory_package": "l9-graphite-memory",
+                "memory_version": "2.3.1",
+                "reasons": ["package version 2.3.1 does not match expected 2.4.0"],
+            }
+        )
+        self.assertEqual(line["class"], report.ENVIRONMENT_FAULT)
+        self.assertTrue(line["summary"].startswith("ENVIRONMENT_FAULT unbound"))
+        self.assertIn("heal=skipped:repo-write-lock-held", line["summary"])
+        self.assertIn("does not match expected", line["summary"])
+        self.assertTrue(line["include_in_degraded"])
+        rendered = report.format_markdown([line])
+        self.assertIn("- memory: environment_fault — ENVIRONMENT_FAULT", rendered)
+        self.assertNotIn("memory: degraded", rendered)
+
+    def test_older_proof_shape_still_classifies_unbound_as_environment(self) -> None:
+        line = report.classify_memory_proof(
+            {"binding_status": "unbound", "ok": False, "reasons": ["not importable"]}
+        )
+        self.assertEqual(line["class"], report.ENVIRONMENT_FAULT)
+
     def test_slogan_is_not_a_live_proof(self) -> None:
         self.assertIsNone(report.parse_binding_proof("unbound: the install recorded no PEP 610"))
         self.assertFalse(report.proof_is_live({"status": "unbound"}))

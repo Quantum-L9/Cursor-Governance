@@ -171,6 +171,190 @@ def test_exact_binding_reports_the_proof_shape(tmp_path: Path, monkeypatch) -> N
     assert binding.schema_digest and len(binding.schema_digest) == 64
 
 
+def _governance_checkout(root: Path) -> Path:
+    """Make ``root`` look like a governance checkout with a ``.venv``."""
+
+    (root / "ops" / "memory").mkdir(parents=True, exist_ok=True)
+    (root / "ops" / "memory" / "control_plane_client.py").write_text("", encoding="utf-8")
+    (root / ".venv" / "bin").mkdir(parents=True, exist_ok=True)
+    (root / ".venv" / "bin" / "python").write_text("#!/bin/sh\n", encoding="utf-8")
+    return root
+
+
+def test_default_interpreter_is_a_governance_venv_not_the_caller(
+    tmp_path: Path, monkeypatch
+) -> None:
+    home = tmp_path / "home"
+    gov = _governance_checkout(home / ".cursor-governance")
+    monkeypatch.setattr(rb, "_REPO_ROOT", tmp_path / "not-a-checkout")
+    candidates, reasons = rb.interpreter_candidates(None, {"HOME": str(home)})
+    assert [c.interpreter for c in candidates] == [str(gov / ".venv" / "bin" / "python")]
+    assert candidates[0].mode == rb.MODE_PINNED
+    assert candidates[0].governance_root == gov.resolve()
+    assert sys.executable not in [c.interpreter for c in candidates]
+    assert reasons == []
+
+
+def test_governance_dir_outranks_home_and_this_checkout(tmp_path: Path, monkeypatch) -> None:
+    home = tmp_path / "home"
+    configured = _governance_checkout(tmp_path / "configured")
+    at_home = _governance_checkout(home / ".cursor-governance")
+    this_checkout = _governance_checkout(tmp_path / "checkout")
+    monkeypatch.setattr(rb, "_REPO_ROOT", this_checkout)
+    candidates, _ = rb.interpreter_candidates(
+        None, {"HOME": str(home), rb.ENV_GOVERNANCE_DIR: str(configured)}
+    )
+    assert [c.governance_root for c in candidates] == [
+        configured.resolve(),
+        at_home.resolve(),
+        this_checkout.resolve(),
+    ]
+
+
+def test_a_checkout_without_a_venv_is_named_and_skipped(tmp_path: Path, monkeypatch) -> None:
+    home = tmp_path / "home"
+    no_venv = _governance_checkout(home / ".cursor-governance")
+    (no_venv / ".venv" / "bin" / "python").unlink()
+    this_checkout = _governance_checkout(tmp_path / "checkout")
+    monkeypatch.setattr(rb, "_REPO_ROOT", this_checkout)
+    candidates, reasons = rb.interpreter_candidates(None, {"HOME": str(home)})
+    assert [c.governance_root for c in candidates] == [this_checkout.resolve()]
+    assert any("has no .venv/bin/python" in reason for reason in reasons)
+
+
+def test_caller_interpreter_is_the_reported_last_resort(tmp_path: Path, monkeypatch) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setattr(rb, "_REPO_ROOT", tmp_path / "not-a-checkout")
+    candidates, reasons = rb.interpreter_candidates(None, {"HOME": str(home)})
+    assert [c.interpreter for c in candidates] == [sys.executable]
+    assert candidates[0].mode == rb.MODE_CALLER
+    assert candidates[0].governance_root is None
+    assert any("no governance .venv was found" in reason for reason in reasons)
+
+
+def test_explicit_and_configured_interpreters_have_no_fallback(tmp_path: Path) -> None:
+    explicit, _ = rb.interpreter_candidates("/x/python", {"HOME": str(tmp_path)})
+    assert [(c.interpreter, c.mode) for c in explicit] == [("/x/python", rb.MODE_PINNED)]
+    configured, _ = rb.interpreter_candidates(
+        None, {"HOME": str(tmp_path), rb.ENV_INTERPRETER: "/y/python"}
+    )
+    assert [(c.interpreter, c.mode) for c in configured] == [("/y/python", rb.MODE_PINNED)]
+
+
+def _drifted_governance_env(tmp_path: Path) -> tuple[Path, Environment]:
+    """A governance checkout whose .venv serves the wrong package version."""
+
+    gov = _governance_checkout(tmp_path / "gov")
+    env = Environment(gov / ".venv", version="2.1.0")
+    return gov, env
+
+
+def test_drift_in_a_governance_venv_is_healed_once_and_reprobed(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(rb.shutil, "which", lambda _name: None)
+    monkeypatch.setattr(rb, "_REPO_ROOT", tmp_path / "not-a-checkout")
+    gov, env = _drifted_governance_env(tmp_path)
+    heals: list[Path] = []
+
+    def heal(root: Path, *, env: Mapping[str, str]) -> tuple[str, list[str]]:
+        heals.append(root)
+        fake_venv.version = EXPECTED_VERSION  # the locked sync installed the pin
+        return rb.environment_heal.HEAL_HEALED, []
+
+    fake_venv = env
+    binding = rb.resolve_runtime_binding(
+        env={"HOME": str(tmp_path / "nohome"), rb.ENV_GOVERNANCE_DIR: str(gov)},
+        runner=fake_venv.run,
+        heal=heal,
+    )
+    assert heals == [gov.resolve()]
+    assert binding.ok
+    assert binding.environment_heal == rb.environment_heal.HEAL_HEALED
+    assert binding.environment_fault is False
+    assert binding.governance_root == str(gov.resolve())
+    assert binding.candidates_tried == (str(gov / ".venv" / "bin" / "python"),)
+    assert any("environment heal on" in reason for reason in binding.reasons)
+
+
+def test_heal_failure_is_an_environment_fault_not_degradation(tmp_path: Path, monkeypatch) -> None:
+    gov, env = _drifted_governance_env(tmp_path)
+    monkeypatch.setattr(rb, "_REPO_ROOT", tmp_path / "not-a-checkout")
+    binding = rb.resolve_runtime_binding(
+        env={"HOME": str(tmp_path / "nohome"), rb.ENV_GOVERNANCE_DIR: str(gov)},
+        runner=env.run,
+        heal=lambda root, *, env: (rb.environment_heal.HEAL_FAILED, ["uv sync exited 2"]),
+    )
+    assert binding.status == rb.STATUS_UNBOUND
+    assert binding.environment_fault is True
+    assert binding.environment_heal == rb.environment_heal.HEAL_FAILED
+    assert "uv sync exited 2" in binding.reasons
+    assert any("does not match expected" in reason for reason in binding.reasons)
+    proof = binding.as_dict()
+    assert proof["environment_fault"] is True
+    assert proof["environment_heal"] == "failed"
+    assert proof["candidates_tried"] == [str(gov / ".venv" / "bin" / "python")]
+
+
+def test_a_skipped_heal_is_reported_verbatim(tmp_path: Path, monkeypatch) -> None:
+    gov, env = _drifted_governance_env(tmp_path)
+    monkeypatch.setattr(rb, "_REPO_ROOT", tmp_path / "not-a-checkout")
+    binding = rb.resolve_runtime_binding(
+        env={"HOME": str(tmp_path / "nohome"), rb.ENV_GOVERNANCE_DIR: str(gov)},
+        runner=env.run,
+        heal=lambda root, *, env: ("skipped:repo-write-lock-held", []),
+    )
+    assert binding.status == rb.STATUS_UNBOUND
+    assert binding.environment_heal == "skipped:repo-write-lock-held"
+
+
+def test_explicit_interpreter_drift_is_never_healed(tmp_path: Path) -> None:
+    env = Environment(tmp_path, version="2.1.0")
+    called: list[Path] = []
+
+    def heal(root: Path, *, env: Mapping[str, str]) -> tuple[str, list[str]]:
+        called.append(root)
+        return rb.environment_heal.HEAL_HEALED, []
+
+    binding = bind(env, heal=heal)
+    assert binding.status == rb.STATUS_UNBOUND
+    assert called == []
+    assert binding.environment_heal is None
+    assert binding.environment_fault is True
+
+
+def test_a_second_governance_venv_wins_when_the_first_has_drifted(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(rb.shutil, "which", lambda _name: None)
+    stale = _governance_checkout(tmp_path / "stale")
+    fresh = _governance_checkout(tmp_path / "fresh")
+    stale_env = Environment(stale / ".venv", version="2.1.0")
+    fresh_env = Environment(fresh / ".venv")
+    monkeypatch.setattr(rb, "_REPO_ROOT", fresh)
+
+    def run(argv: Sequence[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        target = stale_env if str(argv[0]).startswith(str(stale)) else fresh_env
+        return target.run(argv, **kwargs)
+
+    heals: list[Path] = []
+    binding = rb.resolve_runtime_binding(
+        env={"HOME": str(tmp_path / "nohome"), rb.ENV_GOVERNANCE_DIR: str(stale)},
+        runner=run,
+        heal=lambda root, *, env: (heals.append(root), (rb.environment_heal.HEAL_FAILED, []))[1],
+    )
+    # The fresh checkout bound without any heal: drift is healed only when no
+    # candidate carries the pin.
+    assert binding.ok
+    assert heals == []
+    assert binding.governance_root == str(fresh.resolve())
+    assert binding.candidates_tried == (
+        str(stale / ".venv" / "bin" / "python"),
+        str(fresh / ".venv" / "bin" / "python"),
+    )
+
+
 def test_wrong_package_version_is_unbound(tmp_path: Path) -> None:
     binding = bind(Environment(tmp_path, version="2.1.0"))
     assert binding.status == rb.STATUS_UNBOUND
