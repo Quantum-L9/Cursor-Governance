@@ -1416,6 +1416,16 @@ def status(workspace: Path) -> dict[str, Any]:
         tasks = []
         for task in db.tasks():
             detail = task_readiness_detail(db, task, workspace)
+            repo = db.repository(str(task.get("repository_id") or ""))
+            latest = db.latest_attempt(str(task["id"]))
+            consumed = max(
+                int(task.get("attempts") or 0),
+                int((latest or {}).get("attempt_number") or 0),
+            )
+            try:
+                max_attempts = _max_attempts(task)
+            except ControllerError:
+                max_attempts = None
             tasks.append(
                 {
                     "id": task["id"],
@@ -1423,6 +1433,9 @@ def status(workspace: Path) -> dict[str, Any]:
                     "definition_status": task["definition_status"],
                     "target_id": task["target_id"],
                     "repository_id": task.get("repository_id"),
+                    "repository_local_path": (repo or {}).get("local_path"),
+                    "consumed_attempts": consumed,
+                    "max_attempts": max_attempts,
                     "eligible": detail["eligible"],
                     "classification": _task_classification(task, detail),
                     "waiting_reasons": detail["waiting_reasons"],
@@ -1476,6 +1489,7 @@ def status(workspace: Path) -> dict[str, Any]:
                 ),
             },
             "tasks": tasks,
+            "repositories": db.repositories(),
             "gates": db.gates(),
             "decisions": db.decisions(),
             "unknowns": db.unknowns(),
@@ -1961,10 +1975,18 @@ def start_task(
             raise ControllerError(
                 "FAILED task has no active lease; run `pec claim` before `pec start` to retry"
             )
-        if retrying:
+        latest = db.latest_attempt(task_id)
+        consumed = max(
+            int(task.get("attempts") or 0),
+            int((latest or {}).get("attempt_number") or 0),
+        )
+        # A DISPATCHED generation that never submitted still consumed its
+        # number. Count that reservation, not only task.attempts (updated on
+        # submit), and apply the budget on any successor start — including a
+        # CONTRACTED re-entry after KNOWN_TERMINAL recovery.
+        if retrying or latest is not None:
             budget = _max_attempts(task)
-            attempts = int(task.get("attempts") or 0)
-            if attempts >= budget:
+            if consumed >= budget:
                 db.transition_task(task_id, "CANCELLED", last_error="RETRY_BUDGET_EXHAUSTED")
                 lease = db.active_lease_for_task(task_id)
                 if lease:
@@ -1976,12 +1998,12 @@ def start_task(
                     {
                         "task_id": task_id,
                         "reason": "RETRY_BUDGET_EXHAUSTED",
-                        "attempts": attempts,
+                        "attempts": consumed,
                         "max_attempts": budget,
                     },
                 )
                 raise ControllerError(
-                    f"retry budget exhausted for {task_id}: {attempts} attempt(s) recorded, "
+                    f"retry budget exhausted for {task_id}: {consumed} attempt(s) recorded, "
                     f"risk tier allows {budget}; task CANCELLED"
                 )
         _require_stack_proof_reentry(workspace, str(task_id))
@@ -2012,8 +2034,20 @@ def start_task(
         # attempt in the same transaction that moves the task to EXECUTING. A
         # crash before this commit leaves nothing to resume; a crash after it
         # leaves exactly one attempt to reconcile against exactly one baseline.
+        # The Controller is the numbering authority. A rendered contract that
+        # still names an earlier generation is the documented retry shape
+        # (`start` on a FAILED task dispatches the successor against the
+        # contract already on disk); the receipt target and the reservation
+        # below come from this allocation, never from the contract's number.
         attempt_number = db.next_execution_attempt_number(task_id)
         attempt_id = f"attempt-{uuid.uuid4().hex[:16]}"
+        receipt_target = (
+            workspace
+            / "attempts"
+            / task_id
+            / f"attempt-{attempt_number:03d}"
+            / "attempt-receipt.json"
+        )
         baseline = capture_baseline(worktree)
         baseline_path, baseline_digest = write_baseline_artifact(
             workspace,
@@ -2044,6 +2078,17 @@ def start_task(
         }
         with db.controller_transaction():
             db.create_execution_attempt(record)
+            # The generation is consumed the moment it is dispatched, not when
+            # a receipt happens to be submitted. A provider that dies without
+            # submitting still leaves this row, so the recovered successor is
+            # attempt N+1 and an executed number is never re-issued.
+            db.create_attempt(
+                task_id,
+                attempt_number,
+                str(receipt_target),
+                utc_now(),
+                status="DISPATCHED",
+            )
             db.transition_task(task_id, "EXECUTING")
             ledger.append(
                 "TASK_EXECUTION_STARTED",
@@ -2175,7 +2220,9 @@ def record_attempt(workspace: Path, task_id: str, receipt_source: Path) -> dict[
         )
         write_json(target, receipt)
         with db.controller_transaction():
-            db.create_attempt(task_id, attempt, str(target), utc_now())
+            # Upgrades the DISPATCHED reservation start_task() made for this
+            # generation; the row already exists, so this is an upsert.
+            db.create_attempt(task_id, attempt, str(target), utc_now(), status="RECORDED")
             db.update_task(task_id, attempts=attempt)
             db.update_execution_attempt(
                 str(live["attempt_id"]),

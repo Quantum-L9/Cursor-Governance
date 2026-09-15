@@ -101,9 +101,9 @@ files:
 - path: scripts/pec/common.py
   sha256: 3b5abe5832329ba6f0f6df7cf457f65ea2e26a476d6f2495e4dcb6776bd9c258
 - path: scripts/pec/contracts.py
-  sha256: 946e53429aa413bda374070057ea5e9043d66ef5773344e2b593fb3e575fda51
+  sha256: 949dc350361c43754353102992e6cbdd39c92a66c31152732cd27a418c41e403
 - path: scripts/pec/controller.py
-  sha256: 1d8b623349264c9ae4bfa6572d350d7f968fa284ea1a3301dfec5c336ec41deb
+  sha256: e6d2bfa4bd1d0e64d25588a252e6eadcda671a1ec6041b7c0dab8392a822fcae
 - path: scripts/pec/dispatch.py
   sha256: 87e8619e49131144071d7eff92100888241b4903e742c68a2cf09ffbb2603fb7
 - path: scripts/pec/exec_env.py
@@ -123,7 +123,7 @@ files:
 - path: scripts/pec/signals.py
   sha256: 181df8e54d5edd133ba000dc55df46b9459d623085f4d560e142d1f16f4e928b
 - path: scripts/pec/state.py
-  sha256: f6e77ae75f577d72498a53fb50794004476ddaa0dbb849fe1a030847e6aff1c4
+  sha256: c1eaa49b5838c31cfc6a3e6a8abfd0f2981991f7a07d2a69e4787434cf5cd17e
 - path: scripts/pec/workspace_reset.py
   sha256: 514ed27b962fe5590117b1bf2b5cbe81eef4b553bf024e59c6e5162e82c30bdf
 - path: scripts/pec.py
@@ -161,7 +161,7 @@ files:
 - path: scripts/tests/test_execution_attempts.py
   sha256: 8b20e4eb8aa2a85ffc8935140417670aeabddefa355a6181fa461cc03a310a83
 - path: scripts/tests/test_execution_recovery.py
-  sha256: c12d43517683de545d57a89db757e68f730f7890fe21501ed41fde8f5be5d998
+  sha256: 23fe5e654e89a90791404ff89ab7f93750c4f1901cfe89dbb6b4699cbec19b98
 - path: scripts/tests/test_fail_task.py
   sha256: 30531f449cf0a13676c959e74343de13ae1ff7edf119651694bbd10d9cbc6360
 - path: scripts/tests/test_gate_derivation.py
@@ -195,7 +195,7 @@ files:
 - path: scripts/tests/test_recovery.py
   sha256: 6a1ee7d5145edc6a942639256fa785baa74fa50dac9a8492ec2412302f014c02
 - path: scripts/tests/test_recovery_authority.py
-  sha256: 90d553c6dfa27b43f358aba4d0593a84b5a1bb143bbdd165bf3c48aad31068f8
+  sha256: f88ac1a5e073c7f37d333f23237b0a1ae27e0f8f6806e17bb8be56a7f23ff7b3
 - path: scripts/tests/test_relock_semantic_delta.py
   sha256: ec5a11ed426ccc7a90a7d9b292c3938b0d05ca1a337e70542d66e3daa8d30cab
 - path: scripts/tests/test_resume_admission.py
