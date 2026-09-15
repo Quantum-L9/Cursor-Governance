@@ -21,8 +21,8 @@ Operate the one agent episodic memory: the canonical **`l9-graphite-memory`**
 control plane (`memory-control-plane/v1`), reached from this repository only
 through `ops/memory` (INV-03). Graphiti is a **projection memory owns**, not a
 store this repository calls: the direct provider client was retired at
-realignment stage C11 (`ops/graphiti/graphiti_memory_client.py` is a
-tombstone), no surface holds a provider URL or bearer (stage C9), and the
+realignment stage C11 and deleted at C15 (nothing remains at
+`ops/graphiti/graphiti_memory_client.py`), no surface holds a provider URL or bearer (stage C9), and the
 resume SSOT is the canonical continuation record (`ContinuationCapsuleV2`),
 never `memory-bank/`.
 

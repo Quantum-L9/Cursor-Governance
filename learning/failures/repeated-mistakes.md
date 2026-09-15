@@ -41,8 +41,8 @@ startup_required: true
 
 ### **4. GRAPHITI MEMORY ONLY** 🚨 ULTRA
 **Historical:** Earlier guidance used `cursor_memory_client.py` / retired `L9_MEMORY_HTTP_*` side doors.
-**Current doctrine:** Episodic memory SSOT is Graphiti via `ops/graphiti/graphiti_memory_client.py` (ADR-0006). No second HTTP memory plane.
-**Client:** `python3 ops/graphiti/graphiti_memory_client.py` (inject / health / write with phase-lock)
+**Current doctrine (2026-09-15, ADR-0030/0033):** Episodic memory SSOT is the canonical `l9-graphite-memory` `MemoryService`; Graphiti is a projection memory owns. No second HTTP memory plane, and no Cursor-local provider client — `ops/graphiti/graphiti_memory_client.py` was retired at C11 and deleted at C15.
+**Client:** agents write the public surface directly (`memory.write_agent` on the `l9-graphite-memory` MCP server, or `l9-memory write`); hooks and operators use `python -m ops.memory.cli` (health / hydrate / search / write / conflicts / readiness)
 **Wrong:** `L9_MEMORY_HTTP_URL`, `l9-shared-memory`, `agents/cursor/cursor_memory_client.py`, `docker exec l9-postgres psql` for memory claims
 **MCP-ID:** `lesson-004-vps-memory`
 
@@ -225,7 +225,7 @@ Before ANY execution task:
 | 1 | NO OVERSTEP | 🚨 ULTRA | If tool fails → FIX or ASK, don't bypass |
 | 2 | VPS READ-ONLY | 🚨 ULTRA | ASK → WAIT → EXECUTE for VPS changes |
 | 3 | GOVERNANCE SSOT CLONE ONLY | 🚨 ULTRA | `$HOME/.cursor-governance` only; Dropbox forbidden |
-| 4 | GRAPHITI MEMORY ONLY | 🚨 ULTRA | graphiti_memory_client.py only (ADR-0006) |
+| 4 | ONE MEMORYSERVICE, TWO LANES | 🚨 ULTRA | agents → public `l9-memory` / MCP write; hooks → `python -m ops.memory.cli` (ADR-0030/0033) |
 | 5 | ASK QUESTIONS FIRST | 🔴 CRITICAL | 5 min questions saves 4 hrs rework |
 | 6 | RUN COMMANDS | 🔴 CRITICAL | Execute proactively, show results |
 | 7 | NO PLACEHOLDERS | 🔴 CRITICAL | Notify gap + ASK how to fill |

@@ -107,13 +107,15 @@ def test_cli_module_spells_no_provider_vocabulary() -> None:
         assert forbidden not in src
 
 
-def test_tombstone_fails_loudly_and_names_the_replacement() -> None:
+def test_the_provider_client_and_its_tombstone_are_gone() -> None:
+    """C15 (ADR-0033): nothing at the historical path, not even a stub that exits 2."""
+    assert not (ROOT / "ops" / "graphiti" / "graphiti_memory_client.py").exists()
     proc = subprocess.run(
-        [sys.executable, str(ROOT / "ops" / "graphiti" / "graphiti_memory_client.py"), "health"],
+        [sys.executable, "-m", "ops.memory.cli", "--help"],
         capture_output=True,
         text=True,
         check=False,
+        cwd=ROOT,
     )
-    assert proc.returncode == 2
-    assert "ops.memory.cli health" in proc.stderr
-    assert proc.stdout == ""
+    assert proc.returncode == 0
+    assert "health" in proc.stdout

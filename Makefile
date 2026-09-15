@@ -445,9 +445,8 @@ backup:
 ## Gate push behind changed-file precommit-repo (not --all-files). Corpus = make precommit / pr-full.
 push: precommit-repo backup
 
-## Check Graphiti tunnel + MCP tool-plane health (degraded MCP is expected pre-full-wiring)
-graphiti-health: venv
-	$(PYTHON) ops/graphiti/graphiti_memory_client.py health
+## Retired alias (C15, ADR-0033): the provider client is deleted; memory health is the R0..R9 ladder.
+graphiti-health: memory-readiness
 
 ## Hard ruff gates on CHANGED files only (make pr). Full-tree: lint-ruff-full / make pr-full.
 ## Resolver errors fail closed (do not treat as "no Python files").

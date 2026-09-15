@@ -1,7 +1,7 @@
 """Cursor's canonical memory command line (realignment stage C11).
 
-This is the executable successor of the retired provider client
-(``ops/graphiti/graphiti_memory_client.py``): the same operator vocabulary
+This is the executable successor of the retired provider client (retired at
+C11, deleted at C15 — ADR-0033): the same operator vocabulary
 (``health``, ``resolve``, ``search``, ``write``, ``hydrate``, ``conflicts``)
 routed through :class:`ops.memory.control_plane_client.MemoryControlPlaneClient`
 to the bound ``l9-memory`` runtime. It knows no provider, holds no credential

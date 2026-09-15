@@ -68,7 +68,7 @@ Graphiti env is inherited from the Mac — not recreated per clone.
 
 ## How loading works
 
-**Python** (`graphiti_memory_client.py`):
+**Python** (historical — the provider client was retired at C11 and deleted at C15; `ops/memory/runtime_binding.py` now binds the interpreter and no env plane is loaded):
 
 1. `graphiti_env_loader.load_graphiti_env()`
 2. Apply `DEFAULTS` (non-secret)
@@ -100,8 +100,8 @@ Graphiti env is inherited from the Mac — not recreated per clone.
 ## Verify after clone
 
 ```bash
-python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py health
-python3 -c "import sys; sys.path.insert(0,'.cursor-commands/ops/graphiti'); from graphiti_env_loader import env_status; import json; print(json.dumps(env_status(),indent=2))"
+make -C "$HOME/.cursor-governance" memory-readiness
+# (historical: the provider client health / env_status commands were deleted at C11/C15)
 ```
 
 ---

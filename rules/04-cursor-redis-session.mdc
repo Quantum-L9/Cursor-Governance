@@ -59,10 +59,12 @@ If MCP is unavailable, the client can use the cache REST API:
 
 > **Retired CLI:** the former `cursor_memory_client.py cache-session` /
 > `cache-set-session` commands are removed (that client and its C1 Redis backend
-> are decommissioned). Session resume is Graphiti (`03-graphiti-memory.mdc`); use
-> `.cursor-commands/ops/graphiti/graphiti_memory_client.py inject "<task>"` at
-> resume and PICKUP writes at session end. The MCP/REST session-context tools
-> above remain the only supported short-term cache surface.
+> are decommissioned). Session resume is the canonical continuation record
+> (`03-graphiti-memory.mdc`): SessionStart hydrates it and sessionEnd closes it
+> through `ops/memory`; the operator form is `python -m ops.memory.cli hydrate`.
+> The former `graphiti_memory_client.py inject` path was retired at C11 and the
+> file deleted at C15 (ADR-0033). The MCP/REST session-context tools above remain
+> the only supported short-term cache surface.
 
 ## Backend
 

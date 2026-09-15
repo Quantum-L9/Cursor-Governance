@@ -119,7 +119,7 @@ def test_real_tree_inventory_is_fully_allowlisted_and_unexpired() -> None:
     assert unlisted == [], f"new provider egress outside the allowlist: {unlisted}"
     assert expired == []
     inventoried = {item.path for item in findings if item.allowlisted}
-    # The legacy client is a tombstone and the shadow reader is gone (C11).
+    # The legacy client is gone (tombstone at C11, deleted at C15) and so is the shadow reader.
     assert "ops/graphiti/graphiti_memory_client.py" not in inventoried
     assert "ops/graphiti/hydration/compile_session_packet.py" not in inventoried
     assert "ops/graphiti/hydration/close_session.py" not in inventoried
@@ -144,11 +144,17 @@ def test_legacy_provider_modules_are_gone() -> None:
         "ops/scripts/init_graphiti_machine_env.sh",
     ):
         assert not (ROOT / rel).exists(), f"{rel} must stay deleted (stage C11)"
-    tombstone = (ROOT / "ops" / "graphiti" / "graphiti_memory_client.py").read_text(
-        encoding="utf-8"
-    )
-    assert "RETIRED_AT_STAGE" in tombstone and "ops.memory.cli" in tombstone
-    assert "urlparse" not in tombstone and "socket" not in tombstone
+    for rel in (
+        "ops/graphiti/graphiti_memory_client.py",
+        "ops/graphiti/distill_queue",
+        "ops/scripts/run_distiller.sh",
+        ".github/workflows/memory-distill.yml",
+        "ops/graphiti/hydration/openai_fixed_host.py",
+        "ops/graphiti/hydration/openai_key.py",
+        "ops/graphiti/hydration/promotion_rules.yaml",
+        "ops/graphiti/hydration/resume_signal_scorer.py",
+    ):
+        assert not (ROOT / rel).exists(), f"{rel} must stay deleted (stage C15, ADR-0033)"
 
 
 def test_ops_memory_is_provider_free() -> None:

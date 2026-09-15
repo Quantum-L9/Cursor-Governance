@@ -413,11 +413,12 @@ if [ -f "$MEMORY_BOUNDARY" ]; then
   else
     warn "memory runtime unbound — run: make -C \"$GC\" memory-binding"
   fi
-  if [ -f "$GC/ops/graphiti/graphiti_memory_client.py" ] \
-     && ! grep -q "RETIRED_AT_STAGE" "$GC/ops/graphiti/graphiti_memory_client.py" 2>/dev/null; then
-    fail "legacy provider client present at ops/graphiti/graphiti_memory_client.py (must be the C11 tombstone)"
+  # C15 (ADR-0033): the provider client and its C11 tombstone are both gone.
+  # Any file at that path is a regression, whatever it says about itself.
+  if [ -e "$GC/ops/graphiti/graphiti_memory_client.py" ]; then
+    fail "legacy provider client present at ops/graphiti/graphiti_memory_client.py (deleted at C15; use python -m ops.memory.cli)"
   else
-    pass "no provider client (tombstone only)"
+    pass "no provider client (deleted at C15)"
   fi
   # The bootstrap hook delegates to the memory orchestrator internally, so either
   # entry in sessionStart satisfies the wiring (setup retires the orchestrator-only entry).

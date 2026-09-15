@@ -355,8 +355,9 @@ epoch from which the provider is a projection memory owns.
 
 ## Legacy deletion (stage C11) and law convergence (stage C12)
 
-Deleted: the provider client (a tombstone remains at
-`ops/graphiti/graphiti_memory_client.py`, exit 2, naming the replacement),
+Deleted: the provider client (a tombstone stood at
+`ops/graphiti/graphiti_memory_client.py` from C11 until C15, when it was
+deleted outright — ADR-0033),
 the provider env plane (`graphiti_env_loader.py`, `graphiti.env.defaults`,
 `graphiti.env.example`, `init_graphiti_machine_env.sh`), the shadow reader in
 `compile_session_packet.py`, `group_resolver.py`, `episode_contract.py` (PII
