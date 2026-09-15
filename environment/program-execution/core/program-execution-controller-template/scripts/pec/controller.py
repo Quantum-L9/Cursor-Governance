@@ -47,6 +47,7 @@ from .common import (
 )
 from .contracts import (
     LOCALLY_EXECUTABLE_ACTIONS,
+    RISK_ORDER,
     ContractError,
     path_allowed,
     validate_source_contract,
@@ -984,9 +985,27 @@ def _risk_tier_policy() -> dict[str, Any]:
     return tiers
 
 
+def _budget_tier(task: dict[str, Any]) -> str:
+    """Blueprint tier, raised when a registered Source Contract names a higher one."""
+    tier = str(task.get("risk_tier") or "")
+    path = task.get("source_contract_path")
+    if not path:
+        return tier
+    try:
+        contract = load_json(Path(str(path)))
+    except (OSError, ValueError, TypeError):
+        return tier
+    if not isinstance(contract, dict):
+        return tier
+    contract_tier = str(contract.get("risk_tier") or "")
+    if RISK_ORDER.get(contract_tier, -1) > RISK_ORDER.get(tier, -1):
+        return contract_tier
+    return tier
+
+
 def _max_attempts(task: dict[str, Any]) -> int:
     """The retry budget the risk policy grants this task. Undefined is refused."""
-    tier = str(task.get("risk_tier") or "")
+    tier = _budget_tier(task)
     policy = _risk_tier_policy().get(tier)
     budget = (policy or {}).get("max_attempts") if isinstance(policy, dict) else None
     if not isinstance(budget, int) or isinstance(budget, bool) or budget < 1:
@@ -1421,6 +1440,7 @@ def status(workspace: Path) -> dict[str, Any]:
             consumed = max(
                 int(task.get("attempts") or 0),
                 int((latest or {}).get("attempt_number") or 0),
+                db.next_execution_attempt_number(str(task["id"])) - 1,
             )
             try:
                 max_attempts = _max_attempts(task)
@@ -1979,33 +1999,33 @@ def start_task(
         consumed = max(
             int(task.get("attempts") or 0),
             int((latest or {}).get("attempt_number") or 0),
+            db.next_execution_attempt_number(task_id) - 1,
         )
         # A DISPATCHED generation that never submitted still consumed its
-        # number. Count that reservation, not only task.attempts (updated on
-        # submit), and apply the budget on any successor start — including a
-        # CONTRACTED re-entry after KNOWN_TERMINAL recovery.
-        if retrying or latest is not None:
-            budget = _max_attempts(task)
-            if consumed >= budget:
-                db.transition_task(task_id, "CANCELLED", last_error="RETRY_BUDGET_EXHAUSTED")
-                lease = db.active_lease_for_task(task_id)
-                if lease:
-                    db.release_lease(lease["lease_id"])
-                    db.update_task(task_id, lease_id=None)
-                ledger.append(
-                    "TASK_CANCELLED",
-                    actor,
-                    {
-                        "task_id": task_id,
-                        "reason": "RETRY_BUDGET_EXHAUSTED",
-                        "attempts": consumed,
-                        "max_attempts": budget,
-                    },
-                )
-                raise ControllerError(
-                    f"retry budget exhausted for {task_id}: {consumed} attempt(s) recorded, "
-                    f"risk tier allows {budget}; task CANCELLED"
-                )
+        # number. Count execution_attempts as well as receipt rows, and apply
+        # the budget on any successor start — including CONTRACTED re-entry
+        # after KNOWN_TERMINAL recovery.
+        budget = _max_attempts(task)
+        if consumed >= budget:
+            db.transition_task(task_id, "CANCELLED", last_error="RETRY_BUDGET_EXHAUSTED")
+            lease = db.active_lease_for_task(task_id)
+            if lease:
+                db.release_lease(lease["lease_id"])
+                db.update_task(task_id, lease_id=None)
+            ledger.append(
+                "TASK_CANCELLED",
+                actor,
+                {
+                    "task_id": task_id,
+                    "reason": "RETRY_BUDGET_EXHAUSTED",
+                    "attempts": consumed,
+                    "max_attempts": budget,
+                },
+            )
+            raise ControllerError(
+                f"retry budget exhausted for {task_id}: {consumed} attempt(s) recorded, "
+                f"risk tier allows {budget}; task CANCELLED"
+            )
         _require_stack_proof_reentry(workspace, str(task_id))
         _require_ledger_integrity(ledger)
         _refuse_operator_memo_cwd(workspace)
