@@ -39,29 +39,38 @@ EXTRACT:
 └── Decisions (architectural choices)
 ```
 
-### 2. WRITE TO MEMORY (governed — model-authored facts)
+### 2. WRITE TO MEMORY (agent lane — model-authored facts)
 
-Extracted facts are model-authored, so they take the interactive write
-contract on the `l9-graphite-memory` MCP server: one `memory.phase_lock` per
-task signature, then one `memory.write_governed` per fact. Resolve the
-namespace first (`python -m ops.memory.cli resolve` → `write_namespace_hint`);
-never request the shared workspace namespace.
+Extracted facts are model-authored, so they take the agent lane on the
+`l9-graphite-memory` MCP server (ADR-0033): one `memory.write_agent` per fact.
+Each write is immediately visible to another agent's `hydrate` / `search` and
+waits on no phase, receipt, session close or PR gate. Resolve the namespace
+first (`python -m ops.memory.cli resolve` → `write_namespace_hint`); never
+request the shared workspace namespace.
+
+```text
+memory.write_agent     {namespace: "{ns}", content: "LESSON: {content}",
+                        memory_class: "lesson", tags: ["agent:cursor", "session:{session}"]}
+
+memory.write_agent     {namespace: "{ns}", content: "PATTERN: {content}",
+                        memory_class: "insight", tags: ["agent:cursor", "session:{session}"]}
+
+memory.write_agent     {namespace: "{ns}", content: "ERROR: {issue} → FIX: {solution}",
+                        memory_class: "lesson", tags: ["agent:cursor", "session:{session}"]}
+```
+
+For a fact that must not contradict prior state (a decision, a plan lock), the
+optional conflict-sensitive pair is available on the same server:
 
 ```text
 memory.phase_lock      {namespace: "{ns}", task_signature: "extract-chat:{session}"}
-
 memory.write_governed  {namespace: "{ns}", task_signature: "extract-chat:{session}",
-                        content: "LESSON: {content}", memory_class: "lesson", tags: ["agent:cursor"]}
-
-memory.write_governed  {namespace: "{ns}", task_signature: "extract-chat:{session}",
-                        content: "PATTERN: {content}", memory_class: "insight", tags: ["agent:cursor"]}
-
-memory.write_governed  {namespace: "{ns}", task_signature: "extract-chat:{session}",
-                        content: "ERROR: {issue} → FIX: {solution}", memory_class: "lesson", tags: ["agent:cursor"]}
+                        content: "DECISION: {content}", memory_class: "decision", tags: ["agent:cursor"]}
 ```
 
 - The phase-lock is a memory-write precondition only (namespace snapshot
-  consistency). It never authorizes an edit, commit, push or publish.
+  consistency) and only for `write_governed`. It never authorizes an edit,
+  commit, push or publish, and it is never required for `write_agent`.
 - Do not route these facts through generic `memory.ingest` or the operator CLI
   `write` to skip the lock; an unbound MCP server is reported as a gap
   (`python -m ops.memory.cli readiness`), not rerouted.

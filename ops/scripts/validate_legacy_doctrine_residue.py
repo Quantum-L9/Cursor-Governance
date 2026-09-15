@@ -1,22 +1,41 @@
 #!/usr/bin/env python3
 """Fail if active surfaces teach retired doctrine.
 
-Two ratchets, one script:
+Three ratchets, one script:
 
 1. **Side doors (2026-08).** Active surfaces must not teach the retired Dropbox
    SSOT, the ``L9_MEMORY_HTTP`` side door, or a live invocation of the retired
    ``agents/cursor/cursor_memory_client.py``.
 2. **Memory doctrine (2026-09-07, PR #509 doctrine closure; ADR-0030 items
-   7-9, CANONICAL_LAW 8.3).** Surfaces converged on the canonical memory
-   control plane must not regress to the retired direct-Graphiti
-   architecture: the tombstone ``ops/graphiti/graphiti_memory_client.py``
-   taught as a live front door, provider URL / bearer possession, Graphiti
-   ``inject`` / PICKUP taught as the current resume SSOT, or generic ingest /
-   the operator CLI ``write`` taught as the model's alternative to
-   ``memory.write_governed``. Converged surfaces must also *carry* the governed
-   write contract (positive presence), so a rewrite cannot drop it silently.
+   7-9, CANONICAL_LAW 8.3; amended 2026-09-15 by ADR-0033).** Surfaces
+   converged on the canonical memory control plane must not regress to the
+   retired direct-Graphiti architecture: the deleted
+   ``ops/graphiti/graphiti_memory_client.py`` taught as a live front door,
+   provider URL / bearer possession, Graphiti ``inject`` / PICKUP taught as
+   the current resume SSOT, or generic ingest / the operator CLI ``write``
+   taught as the model's ordinary write. Converged surfaces must also *carry*
+   the agent write contract (positive presence) — ``memory.write_agent`` is
+   the ordinary agent write; ``memory.phase_lock`` + ``memory.write_governed``
+   is an *allowed optional* conflict-sensitive pair, no longer required — so a
+   rewrite cannot drop the contract silently.
+3. **Two lanes (2026-09-15, ADR-0033, INV-03b).** No memory persistence or
+   cognition bypasses ``MemoryService``. Agent adapters may invoke public
+   ``MemoryService`` operations directly. Automatic hooks may only invoke
+   their bounded operations. Cursor-Governance may not interpose an
+   authorization wall on agent-initiated memory writes. Two finding classes:
 
-Surface classes for ratchet 2:
+   * ``local-memory-cognition`` — production code on a memory path
+     (``ops/graphiti``, ``ops/hooks``, ``ops/memory``,
+     ``environment/agents/adapters``) holds a provider / LLM client import or
+     model id, ``promotion_rules``, ``MEMORY_PHASE_B``, the retired local
+     ``MEMORY_DISTILL*`` knobs, ``boto3`` / S3, or ``graphiti_memory_client``.
+   * ``agent-lane-interposition`` — doctrine that makes an ordinary agent
+     write wait on a phase lock, receipt, session close or PR gate; or a
+     pre-execution hook matcher / gate tool-list that names a memory MCP
+     tool (``mcp__l9-graphite-memory__*``) or an ``l9-memory`` /
+     ``ops.memory.cli`` shell invocation for denial.
+
+Surface classes for ratchet 2 (and the doctrine half of ratchet 3):
 
 * ``FAIL``  - converged surfaces (rules 03/87/97/98 and their generated
   projections, the memory skills, the active memory docs). A hit fails.
@@ -37,6 +56,7 @@ is allowed on every class.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
@@ -205,51 +225,37 @@ MEMORY_DOCTRINE_FAIL_SURFACES: tuple[str, ...] = (
 MEMORY_DOCTRINE_AMENDED_ROOTS: tuple[str, ...] = ("CANONICAL_LAW.md", "AGENTS.md")
 MEMORY_DOCTRINE_ADR_GLOB = "docs/decisions/ADR-*.md"
 
+#: The ordinary agent write (ADR-0033). Every converged write-teaching surface
+#: must carry it. ``memory.phase_lock`` + ``memory.write_governed`` remain an
+#: allowed optional pair and are deliberately NOT required any more.
+AGENT_WRITE_TOKEN = "memory.write_agent"
+
 #: Positive presence: a converged surface must still CARRY the contract.
 MEMORY_DOCTRINE_REQUIRED_TOKENS: dict[str, tuple[str, ...]] = {
-    "rules/03-graphiti-memory.mdc": ("memory.phase_lock", "memory.write_governed"),
-    "rules/87-cursor-memory-kernel.mdc": ("memory.phase_lock", "memory.write_governed"),
-    "rules/97-graph-layer-boundary.mdc": (
-        "memory.write_governed",
-        "ContinuationCapsuleV2",
-    ),
-    "rules/98-graphiti-memory-gate.mdc": ("memory.phase_lock", "memory.write_governed"),
-    "environment/generated/llm-rules/03-graphiti-memory.md": (
-        "memory.phase_lock",
-        "memory.write_governed",
-    ),
-    "environment/generated/llm-rules/87-cursor-memory-kernel.md": (
-        "memory.phase_lock",
-        "memory.write_governed",
-    ),
+    "rules/03-graphiti-memory.mdc": (AGENT_WRITE_TOKEN,),
+    "rules/87-cursor-memory-kernel.mdc": (AGENT_WRITE_TOKEN,),
+    "rules/97-graph-layer-boundary.mdc": (AGENT_WRITE_TOKEN, "ContinuationCapsuleV2"),
+    "rules/98-graphiti-memory-gate.mdc": (AGENT_WRITE_TOKEN,),
+    "environment/generated/llm-rules/03-graphiti-memory.md": (AGENT_WRITE_TOKEN,),
+    "environment/generated/llm-rules/87-cursor-memory-kernel.md": (AGENT_WRITE_TOKEN,),
     "environment/generated/llm-rules/97-graph-layer-boundary.md": (
-        "memory.write_governed",
+        AGENT_WRITE_TOKEN,
         "ContinuationCapsuleV2",
     ),
-    "environment/generated/llm-rules/98-graphiti-memory-gate.md": (
-        "memory.phase_lock",
-        "memory.write_governed",
-    ),
-    "skills/l9-graphiti-memory/SKILL.md": ("memory.phase_lock", "memory.write_governed"),
-    "skills/l9-end-session/SKILL.md": ("memory.write_governed", "repair-write"),
+    "environment/generated/llm-rules/98-graphiti-memory-gate.md": (AGENT_WRITE_TOKEN,),
+    "skills/l9-graphiti-memory/SKILL.md": (AGENT_WRITE_TOKEN,),
+    "skills/l9-end-session/SKILL.md": (AGENT_WRITE_TOKEN, "repair-write"),
     "skills/l9-end-session/references/end-session-protocol.md": (
-        "memory.phase_lock",
-        "memory.write_governed",
+        AGENT_WRITE_TOKEN,
         "repair-write",
     ),
-    "skills/l9-chat-extraction/SKILL.md": ("memory.phase_lock", "memory.write_governed"),
-    "skills/l9-chat-extraction/references/extract-chat.md": (
-        "memory.phase_lock",
-        "memory.write_governed",
-    ),
+    "skills/l9-chat-extraction/SKILL.md": (AGENT_WRITE_TOKEN,),
+    "skills/l9-chat-extraction/references/extract-chat.md": (AGENT_WRITE_TOKEN,),
     "skills/l9-gmp-protocol/SKILL.md": ("snapshot_digest",),
     "skills/l9-gmp-protocol/references/phase-contracts.md": ("snapshot_digest",),
-    "docs/MEMORY_PIPELINE_MAP.md": ("memory.phase_lock", "memory.write_governed"),
-    "environment/agents/docs/MEMORY_TOPOLOGY.md": (
-        "memory.phase_lock",
-        "memory.write_governed",
-    ),
-    "ops/memory/README.md": ("memory.phase_lock", "memory.write_governed"),
+    "docs/MEMORY_PIPELINE_MAP.md": (AGENT_WRITE_TOKEN,),
+    "environment/agents/docs/MEMORY_TOPOLOGY.md": (AGENT_WRITE_TOKEN,),
+    "ops/memory/README.md": (AGENT_WRITE_TOKEN,),
 }
 
 #: Positive absence: stale semantics a converged surface must not re-teach.
@@ -320,6 +326,101 @@ _DATED_HEADING = re.compile(r"^##+ .*\(20\d\d-\d\d-\d\d\)")
 #: tree without the binding manifest (a fixture, a consumer checkout) is not
 #: required to carry the converged surfaces; one that has it must.
 MEMORY_BINDING_MANIFEST = "ops/config/memory-binding.json"
+
+# --------------------------------------------------------------------------- #
+# Two-lane ratchet (2026-09-15, ADR-0033 / INV-03b)
+# --------------------------------------------------------------------------- #
+
+#: Production code on a memory path may hold no memory cognition of its own.
+LOCAL_COGNITION_ROOTS: tuple[str, ...] = (
+    "ops/graphiti",
+    "ops/hooks",
+    "ops/memory",
+    "environment/agents/adapters",
+)
+LOCAL_COGNITION_SUFFIXES = frozenset({".py", ".sh"})
+
+#: Adjacent, explicitly out of scope (ADR-0033 "Consequences"): the S3 chat
+#: transcript archive is not memory and keeps its S3 client.
+LOCAL_COGNITION_ALLOW_PATHS: tuple[str, ...] = ("ops/graphiti/hydration/archive_transcript.py",)
+
+LOCAL_COGNITION_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    (
+        "provider-client-import",
+        re.compile(
+            r"^\s*(?:from|import)\s+"
+            r"(?:openai|anthropic|langchain\w*|litellm|google\.generativeai|vertexai|"
+            r"cohere|mistralai|together|groq)\b"
+        ),
+    ),
+    (
+        "provider-model-id",
+        re.compile(
+            r"(?<![\w-])(?:gpt-[3-5][\w.-]*|o[134]-(?:mini|preview)|"
+            r"claude-(?:3|4|opus|sonnet|haiku)[\w.-]*|text-embedding-[\w-]+)(?![\w-])"
+        ),
+    ),
+    ("promotion-rules", re.compile(r"promotion_rules")),
+    ("phase-b-knob", re.compile(r"\bMEMORY_PHASE_B\b")),
+    # The retired local knobs; the canonical kill switch is L9_MEMORY_DISTILL.
+    ("local-distill-knob", re.compile(r"(?<![A-Z0-9_])MEMORY_DISTILL(?:_[A-Z0-9_]+)?\b")),
+    ("s3-on-memory-path", re.compile(r"\bboto3\b|\baws\s+s3api\b|\bs3://")),
+    ("retired-client", re.compile(r"graphiti_memory_client")),
+)
+
+#: Doctrine that turns the agent lane into a ceremony. Checked on the same
+#: surfaces as ratchet 2; allowed only when the line / paragraph marks it as
+#: superseded, optional, or forbidden.
+AGENT_LANE_INTERPOSITION_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    (
+        "only-model-write",
+        re.compile(r"(?i)\b(?:is|as)\s+the\s+only\s+(?:model|agent)\s+write\b"),
+    ),
+    (
+        "ceremony-before-write",
+        re.compile(
+            r"(?i)\bagents?\s+(?:must|shall|need to|have to)\s+"
+            r"(?:phase[- _]?lock|obtain\s+an?\s+(?:governance\s+)?receipt|"
+            r"close\s+(?:the|a)\s+session|pass\s+(?:the\s+)?(?:PR|publish)\s+gate|"
+            r"wait\s+for\s+(?:a\s+)?(?:phase|receipt|close|PR))\b[^\n]*\bbefore\b"
+            r"[^\n]*\b(?:write|writing)\b"
+        ),
+    ),
+    (
+        "write-agent-gated",
+        re.compile(
+            r"(?i)\b(?:write_agent|l9-memory write)\b[^\n.]*\b(?:requires?|denied|blocked|"
+            r"waits?\s+(?:for|on))\b[^\n.]*\b(?:phase[- _]?lock|receipt|session close|PR gate|"
+            r"make pr)\b"
+        ),
+    ),
+)
+
+AGENT_LANE_INTERPOSITION_ALLOW = re.compile(
+    r"(?i)("
+    r"supersed|historical|retired|no longer|not the only|optional|never|"
+    r"must not|do not|forbidden|residue|amendment|ADR-0033|two lanes|two-lane"
+    r")"
+)
+
+#: The public agent-lane MCP surface. No pre-execution matcher may cover it.
+MEMORY_MCP_PREFIX = "mcp__l9-graphite-memory__"
+MEMORY_MCP_PROBES: tuple[str, ...] = tuple(
+    f"{MEMORY_MCP_PREFIX}{name}"
+    for name in ("write_agent", "write_governed", "search", "hydrate", "get", "phase_lock")
+)
+#: Shell forms of the agent lane. No gate command pattern may match them.
+MEMORY_SHELL_PROBES: tuple[str, ...] = (
+    'l9-memory write "fact" --kind insight',
+    "l9-memory search q",
+    "l9-memory hydrate --task t",
+    "python -m ops.memory.cli write 'fact' --kind lesson",
+)
+CLAUDE_SETTINGS_TEMPLATE = "environment/agents/adapters/claude-code/settings.template.json"
+CURSOR_HOOKS_TEMPLATE = "ops/hooks/hooks.json.template"
+MEMORY_ENFORCEMENT_CONTRACT = (
+    "environment/agents/adapters/claude-code/memory/memory-enforcement.contract.json"
+)
 
 
 def _skip_path(path: Path) -> bool:
@@ -404,14 +505,199 @@ def memory_doctrine_hits(text: str) -> list[tuple[int, str, str]]:
 
 
 def has_supersession_marker(text: str) -> bool:
-    """A dated ``##`` heading that names ADR-0030 or the memory control plane."""
+    """A dated ``##`` heading that names ADR-0030 / ADR-0033, the memory
+    control plane, or the two-lane model."""
     for line in text.splitlines():
         if not _DATED_HEADING.match(line):
             continue
         lowered = line.lower()
-        if "adr-0030" in lowered or "memory control plane" in lowered:
+        if any(
+            token in lowered
+            for token in ("adr-0030", "adr-0033", "memory control plane", "two lanes", "two-lane")
+        ):
             return True
     return False
+
+
+# --------------------------------------------------------------------------- #
+# Two-lane ratchet helpers
+# --------------------------------------------------------------------------- #
+
+
+def _memory_code_paths(root: Path) -> list[Path]:
+    out: list[Path] = []
+    for rel in LOCAL_COGNITION_ROOTS:
+        base = root / rel
+        if not base.is_dir():
+            continue
+        for path in base.rglob("*"):
+            if not path.is_file() or path.suffix not in LOCAL_COGNITION_SUFFIXES:
+                continue
+            relative = path.relative_to(root)
+            if set(relative.parts) & SKIP_DIR_PARTS or relative.name.startswith("test_"):
+                continue
+            if relative.as_posix() in LOCAL_COGNITION_ALLOW_PATHS:
+                continue
+            out.append(path)
+    return sorted(set(out))
+
+
+def local_cognition_hits(text: str) -> list[tuple[int, str, str]]:
+    """``(line_no, finding_class, line)`` for local memory cognition in code."""
+    lines = text.splitlines()
+    hits: list[tuple[int, str, str]] = []
+    for index, line in enumerate(lines):
+        for finding, pattern in LOCAL_COGNITION_PATTERNS:
+            if not pattern.search(line):
+                continue
+            if ALLOW_LINE.search(line) or MEMORY_DOCTRINE_ALLOW.search(line):
+                continue
+            if MEMORY_DOCTRINE_ALLOW.search(_paragraph(lines, index)):
+                continue
+            hits.append((index + 1, finding, line.strip()[:160]))
+    return hits
+
+
+def local_cognition_findings(root: Path) -> list[str]:
+    failures: list[str] = []
+    for path in _memory_code_paths(root):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        rel = path.relative_to(root).as_posix()
+        failures.extend(
+            f"{rel}:{n} [local-memory-cognition/{finding}] {line}"
+            for n, finding, line in local_cognition_hits(text)
+        )
+    return failures
+
+
+def agent_lane_doctrine_hits(text: str) -> list[tuple[int, str, str]]:
+    """``(line_no, finding_class, line)`` for doctrine that gates the agent lane."""
+    lines = text.splitlines()
+    hits: list[tuple[int, str, str]] = []
+    for index, line in enumerate(lines):
+        for finding, pattern in AGENT_LANE_INTERPOSITION_PATTERNS:
+            if not pattern.search(line):
+                continue
+            if AGENT_LANE_INTERPOSITION_ALLOW.search(line):
+                continue
+            if AGENT_LANE_INTERPOSITION_ALLOW.search(_paragraph(lines, index)):
+                continue
+            hits.append((index + 1, finding, line.strip()[:160]))
+    return hits
+
+
+def _load_json(path: Path) -> object | None:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+
+
+def hook_matcher_findings(root: Path) -> list[str]:
+    """Pre-execution matchers / gate tool-lists that would deny the agent lane."""
+    failures: list[str] = []
+
+    settings = _load_json(root / CLAUDE_SETTINGS_TEMPLATE)
+    if isinstance(settings, dict):
+        for entry in settings.get("hooks", {}).get("PreToolUse", []) or []:
+            matcher = str(entry.get("matcher", "") or "")
+            if not matcher:
+                continue
+            try:
+                compiled = re.compile(matcher)
+            except re.error:
+                continue
+            for probe in MEMORY_MCP_PROBES:
+                if compiled.fullmatch(probe):
+                    failures.append(
+                        f"{CLAUDE_SETTINGS_TEMPLATE}: PreToolUse matcher {matcher!r} "
+                        f"covers {probe} [agent-lane-interposition]"
+                    )
+                    break
+
+    cursor = _load_json(root / CURSOR_HOOKS_TEMPLATE)
+    if isinstance(cursor, dict):
+        hooks = cursor.get("hooks", cursor)
+        for phase, entries in (hooks or {}).items():
+            if not str(phase).lower().startswith("before"):
+                continue
+            for entry in entries or []:
+                matcher = str((entry or {}).get("matcher", "") or "")
+                if any(
+                    needle in matcher
+                    for needle in ("l9-graphite-memory", "memory.", "l9-memory", "ops.memory")
+                ):
+                    failures.append(
+                        f"{CURSOR_HOOKS_TEMPLATE}: {phase} matcher {matcher!r} names the "
+                        "memory lane [agent-lane-interposition]"
+                    )
+
+    contract = _load_json(root / MEMORY_ENFORCEMENT_CONTRACT)
+    if isinstance(contract, dict):
+        for rule in contract.get("rules", []) or []:
+            match = rule.get("match", {}) or {}
+            rule_id = rule.get("id", "?")
+            for tool in match.get("tools", []) or []:
+                if str(tool).startswith(MEMORY_MCP_PREFIX):
+                    failures.append(
+                        f"{MEMORY_ENFORCEMENT_CONTRACT}: rule {rule_id} governs {tool} "
+                        "[agent-lane-interposition]"
+                    )
+            for pattern in match.get("command_patterns", []) or []:
+                try:
+                    compiled = re.compile(str(pattern))
+                except re.error:
+                    continue
+                for probe in MEMORY_SHELL_PROBES:
+                    if compiled.search(probe):
+                        failures.append(
+                            f"{MEMORY_ENFORCEMENT_CONTRACT}: rule {rule_id} pattern "
+                            f"{pattern!r} matches {probe!r} [agent-lane-interposition]"
+                        )
+                        break
+    return failures
+
+
+def agent_lane_findings(root: Path) -> tuple[list[str], list[str]]:
+    """``(failures, warnings)`` for the agent-lane interposition class.
+
+    Doctrine hits follow the ratchet-2 surface classes (FAIL / AMENDED / WARN);
+    matcher hits always fail.
+    """
+    failures: list[str] = list(hook_matcher_findings(root))
+    warnings: list[str] = []
+    for path in _memory_doctrine_surfaces(root):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        rel = path.relative_to(root).as_posix()
+        hits = agent_lane_doctrine_hits(text)
+        if not hits:
+            continue
+        klass = _surface_class(root, rel)
+        if klass == "AMENDED":
+            if has_supersession_marker(text):
+                continue
+            failures.extend(
+                f"{rel}:{n} [agent-lane-interposition/{finding}; no dated supersession "
+                f"heading naming ADR-0033] {line}"
+                for n, finding, line in hits
+            )
+        elif klass == "FAIL":
+            failures.extend(
+                f"{rel}:{n} [agent-lane-interposition/{finding}] {line}"
+                for n, finding, line in hits
+            )
+        else:
+            warnings.extend(
+                f"{rel}:{n} [agent-lane-interposition/{finding}] {line}"
+                for n, finding, line in hits
+            )
+    return failures, warnings
 
 
 def _surface_class(root: Path, rel: str) -> str:
@@ -473,7 +759,9 @@ def memory_doctrine_findings(root: Path) -> tuple[list[str], list[str]]:
             if token not in text:
                 failures.append(
                     f"{rel}: converged surface no longer carries `{token}` "
-                    "(governed interactive write contract, ADR-0030 item 7)"
+                    "(agent write contract: ADR-0030 item 7 as amended by ADR-0033 — "
+                    "memory.write_agent is the ordinary agent write; "
+                    "phase_lock + write_governed is the optional pair)"
                 )
     for rel, tokens in MEMORY_DOCTRINE_FORBIDDEN_TOKENS.items():
         path = root / rel
@@ -531,9 +819,15 @@ def main(argv: list[str] | None = None) -> int:
         _scan_retired_client(rel, text, client_findings)
 
     doctrine_failures, doctrine_warnings = memory_doctrine_findings(root)
-    if args.strict_memory_doctrine and doctrine_warnings:
-        doctrine_failures.extend(f"{hit} (strict)" for hit in doctrine_warnings)
-        doctrine_warnings = []
+    lane_failures, lane_warnings = agent_lane_findings(root)
+    cognition_failures = local_cognition_findings(root)
+    if args.strict_memory_doctrine:
+        if doctrine_warnings:
+            doctrine_failures.extend(f"{hit} (strict)" for hit in doctrine_warnings)
+            doctrine_warnings = []
+        if lane_warnings:
+            lane_failures.extend(f"{hit} (strict)" for hit in lane_warnings)
+            lane_warnings = []
 
     rc = 0
     if findings:
@@ -562,29 +856,55 @@ def main(argv: list[str] | None = None) -> int:
             "architecture (ADR-0030 items 7-9, CANONICAL_LAW 8.3)"
         )
         print(
-            "One authority (MemoryService), one egress (ops/memory); the model writes "
-            "memory.phase_lock -> memory.write_governed; Graphiti is a projection."
+            "One authority (MemoryService); the ordinary agent write is memory.write_agent "
+            "(phase_lock -> write_governed is the optional pair); Graphiti is a projection."
         )
         for hit in doctrine_failures[:120]:
             print(f"  {hit}")
         if len(doctrine_failures) > 120:
             print(f"  ... and {len(doctrine_failures) - 120} more")
         rc = 1
-    if doctrine_warnings:
+    if cognition_failures:
         print(
-            f"WARN: {len(doctrine_warnings)} memory-doctrine residue hit(s) on surfaces not yet "
+            "FAIL: production code on a memory path holds local memory cognition "
+            "(ADR-0033 / INV-03b: no memory persistence or cognition bypasses MemoryService)"
+        )
+        print(
+            "Delete the provider client / model id / promotion rule / local distill knob / "
+            "S3 queue; hand the redacted material to `l9-memory distill` instead."
+        )
+        for hit in cognition_failures[:120]:
+            print(f"  {hit}")
+        if len(cognition_failures) > 120:
+            print(f"  ... and {len(cognition_failures) - 120} more")
+        rc = 1
+    if lane_failures:
+        print(
+            "FAIL: the agent lane is interposed on (ADR-0033 / INV-03b: Cursor-Governance "
+            "may not gate an agent-initiated memory write on a phase, receipt, close or PR)"
+        )
+        for hit in lane_failures[:120]:
+            print(f"  {hit}")
+        if len(lane_failures) > 120:
+            print(f"  ... and {len(lane_failures) - 120} more")
+        rc = 1
+    pending = [*doctrine_warnings, *lane_warnings]
+    if pending:
+        print(
+            f"WARN: {len(pending)} memory-doctrine residue hit(s) on surfaces not yet "
             "converged by a locked run (pending convergence; --strict-memory-doctrine fails them)"
         )
-        for hit in doctrine_warnings[:120]:
+        for hit in pending[:120]:
             print(f"  WARN {hit}")
-        if len(doctrine_warnings) > 120:
-            print(f"  ... and {len(doctrine_warnings) - 120} more")
+        if len(pending) > 120:
+            print(f"  ... and {len(pending) - 120} more")
 
     if rc:
         return rc
     print(
         "PASS: no active Dropbox SSOT / L9_MEMORY_HTTP side-door or retired-client teaching; "
-        "converged memory-doctrine surfaces carry the canonical write contract"
+        "converged memory-doctrine surfaces carry the agent write contract; no local memory "
+        "cognition; no agent-lane interposition"
     )
     return 0
 

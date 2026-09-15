@@ -7,6 +7,10 @@
     "CANONICAL_LAW.md MEMORY_TWO_LANES_V1"
   ],
   "native_principal_follow_on": "Preferred long-term form is a native hook principal on the l9-graphite-memory stdio door (signed agent assertion + grants JSON). Until the package ships one, this client-side envelope is the interim; it is a request against the package, not a Cursor-Governance expansion.",
+  "agent_lane_callers": [
+    "environment/program-execution/integrations/graphiti/context_reader.py"
+  ],
+  "agent_lane_note": "Production modules that read or write memory ON BEHALF OF AN AGENT (a PE worker's own task, a model tool). They use the package's public surface (l9-memory CLI located via ops.memory.runtime_binding, or the l9-graphite-memory MCP server) and never construct MemoryControlPlaneClient or spawn ops.memory.cli. ops/scripts/validate_memory_egress_boundary.py --lanes enforces this; tests/ops/memory/test_hook_envelope.py places every other caller.",
   "read_operations": [
     "resolve",
     "health",

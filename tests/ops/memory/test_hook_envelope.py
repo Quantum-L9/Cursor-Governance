@@ -397,8 +397,15 @@ AGENT_LANE = {
     "environment/program-execution/integrations/graphiti/context_reader.py",
 }
 
+#: Names the operator module only to *recognise* it in someone else's argv
+#: (the B8 gate exemption); never spawns it.
+RECOGNIZERS = {
+    "ops/autonomy/memory_lane_exemption.py",
+}
+
 _CONSTRUCTOR = re.compile(r"MemoryControlPlaneClient\(")
 _SUBPROCESS = re.compile(r"[\"']ops\.memory\.cli[\"']")
+_SPAWN_CALL = re.compile(r"subprocess\.|Popen\(|os\.exec|os\.system\(")
 
 
 def _production_sources() -> list[Path]:
@@ -424,7 +431,7 @@ def test_every_hook_lane_caller_names_its_declared_surface() -> None:
 
 
 def test_no_unclassified_caller_constructs_the_client_or_spawns_the_operator_cli() -> None:
-    placed = set(HOOK_LANE_CALLERS) | OPERATOR_FORM | AGENT_LANE
+    placed = set(HOOK_LANE_CALLERS) | OPERATOR_FORM | AGENT_LANE | RECOGNIZERS
     unplaced: list[str] = []
     for path in _production_sources():
         rel = path.relative_to(ROOT).as_posix()
@@ -436,8 +443,12 @@ def test_no_unclassified_caller_constructs_the_client_or_spawns_the_operator_cli
                 unplaced.append(rel)
     assert not unplaced, (
         "every caller of the hook-lane client must be classified in HOOK_LANE_CALLERS, "
-        f"OPERATOR_FORM or AGENT_LANE (ADR-0033): {unplaced}"
+        f"OPERATOR_FORM, AGENT_LANE or RECOGNIZERS (ADR-0033): {unplaced}"
     )
+    for rel in RECOGNIZERS:
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        assert not _CONSTRUCTOR.search(text), f"{rel} is a recognizer, not a client"
+        assert not _SPAWN_CALL.search(text), f"{rel} is a recognizer, it must not spawn"
 
 
 def test_agent_lane_readers_never_touch_the_hook_client() -> None:

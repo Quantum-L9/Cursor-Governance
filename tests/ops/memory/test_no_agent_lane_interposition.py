@@ -151,6 +151,139 @@ def test_the_hydration_gate_exempts_the_memory_lane_before_its_contract() -> Non
     assert exempt_at < contract_at
 
 
+# --------------------------------------------------------------------------- #
+# The residue validator's agent-lane-interposition class (make pr / pre-commit)
+# --------------------------------------------------------------------------- #
+
+VALIDATOR = REPO / "ops" / "scripts" / "validate_legacy_doctrine_residue.py"
+
+
+def _load_validator():
+    import importlib.util  # noqa: PLC0415
+
+    spec = importlib.util.spec_from_file_location("residue", VALIDATOR)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def _write(root: Path, rel: str, text: str) -> None:
+    path = root / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def _run_validator(root: Path) -> tuple[int, str]:
+    import subprocess  # noqa: PLC0415
+
+    proc = subprocess.run(
+        [sys.executable, str(VALIDATOR), "--root", str(root)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return proc.returncode, proc.stdout + proc.stderr
+
+
+def test_the_validator_finds_no_interposition_in_the_real_tree() -> None:
+    residue = _load_validator()
+    failures, _warnings = residue.agent_lane_findings(REPO)
+    assert failures == []
+    assert residue.hook_matcher_findings(REPO) == []
+
+
+def test_a_claude_matcher_that_covers_a_memory_tool_fails(tmp_path: Path) -> None:
+    settings = {
+        "hooks": {
+            "PreToolUse": [
+                {"matcher": "Bash|mcp__l9-graphite-memory__.*", "hooks": []},
+            ]
+        }
+    }
+    _write(
+        tmp_path,
+        "environment/agents/adapters/claude-code/settings.template.json",
+        json.dumps(settings),
+    )
+    rc, out = _run_validator(tmp_path)
+    assert rc == 1, out
+    assert "covers mcp__l9-graphite-memory__write_agent [agent-lane-interposition]" in out
+
+
+def test_a_cursor_before_hook_that_names_the_memory_lane_fails(tmp_path: Path) -> None:
+    template = {
+        "hooks": {
+            "beforeMCPExecution": [
+                {"command": "./hooks/x.sh", "matcher": "l9-graphite-memory", "timeout": 5}
+            ]
+        }
+    }
+    _write(tmp_path, "ops/hooks/hooks.json.template", json.dumps(template))
+    rc, out = _run_validator(tmp_path)
+    assert rc == 1, out
+    assert "beforeMCPExecution matcher 'l9-graphite-memory' names the memory lane" in out
+
+
+def test_a_contract_rule_on_a_memory_tool_or_command_fails(tmp_path: Path) -> None:
+    contract = {
+        "rules": [
+            {"id": "mem-tool", "match": {"tools": ["mcp__l9-graphite-memory__write_agent"]}},
+            {
+                "id": "mem-shell",
+                "match": {"tools": ["Bash"], "command_patterns": [r"\bl9-memory\s+write\b"]},
+            },
+        ]
+    }
+    _write(
+        tmp_path,
+        "environment/agents/adapters/claude-code/memory/memory-enforcement.contract.json",
+        json.dumps(contract),
+    )
+    rc, out = _run_validator(tmp_path)
+    assert rc == 1, out
+    assert "rule mem-tool governs mcp__l9-graphite-memory__write_agent" in out
+    assert "rule mem-shell pattern" in out
+
+
+@pytest.mark.parametrize(
+    ("body", "finding"),
+    [
+        (
+            "Use `memory.phase_lock` -> `memory.write_governed`. That is the only model write.\n",
+            "only-model-write",
+        ),
+        (
+            "Agents must phase-lock and obtain a governance receipt before any memory write.\n",
+            "ceremony-before-write",
+        ),
+        (
+            "`write_agent` requires a phase_lock and a receipt.\n",
+            "write-agent-gated",
+        ),
+    ],
+)
+def test_doctrine_that_gates_the_agent_write_fails_on_a_converged_surface(
+    tmp_path: Path, body: str, finding: str
+) -> None:
+    _write(tmp_path, "skills/l9-graphiti-memory/SKILL.md", "# memory\n\n" + body)
+    rc, out = _run_validator(tmp_path)
+    assert rc == 1, out
+    assert f"[agent-lane-interposition/{finding}]" in out, out
+
+
+def test_superseded_or_optional_wording_is_allowed(tmp_path: Path) -> None:
+    body = (
+        "# memory\n\n"
+        "ADR-0030 once named `memory.phase_lock` -> `memory.write_governed` as the only "
+        "model write; that sentence is superseded by ADR-0033. `memory.write_agent` is the "
+        "ordinary write and the governed pair is optional.\n"
+    )
+    _write(tmp_path, "skills/l9-graphiti-memory/SKILL.md", body)
+    _rc, out = _run_validator(tmp_path)
+    assert "[agent-lane-interposition/" not in out, out
+
+
 def test_no_doctrine_makes_an_agent_write_wait_on_a_ceremony() -> None:
     """Live doctrine may describe ``write_governed`` as optional, never as the
     only agent write, and may not make ``write_agent`` wait on a lock, receipt,

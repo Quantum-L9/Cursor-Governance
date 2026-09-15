@@ -180,14 +180,22 @@ def test_pickup_string_through_generic_write_fails_on_a_converged_surface(
     assert "[generic-write-as-model-write]" in out
 
 
-def test_dropping_the_governed_write_contract_fails(residue, tmp_path: Path) -> None:
+def test_dropping_the_agent_write_contract_fails(residue, tmp_path: Path) -> None:
+    """ADR-0033 flipped the required token: the ordinary agent write is
+    ``memory.write_agent``; the phase_lock + write_governed pair is optional
+    and no longer required, so a surface that only carries the pair fails."""
     _converged_tree(tmp_path)
     rel = "rules/87-cursor-memory-kernel.mdc"
-    _write(tmp_path, rel, "# rewritten\n\nUse `memcli write` for everything.\n")
+    _write(
+        tmp_path,
+        rel,
+        "# rewritten\n\nTake `memory.phase_lock`, then `memory.write_governed` for everything.\n",
+    )
     rc, out = _run(residue, tmp_path)
     assert rc == 1, out
-    assert "no longer carries `memory.write_governed`" in out
-    assert "no longer carries `memory.phase_lock`" in out
+    assert "no longer carries `memory.write_agent`" in out
+    assert "no longer carries `memory.write_governed`" not in out
+    assert "no longer carries `memory.phase_lock`" not in out
 
 
 def test_missing_converged_surface_fails_only_where_memory_is_bound(

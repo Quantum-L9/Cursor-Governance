@@ -180,3 +180,122 @@ def test_cli_entrypoint_runs_in_enforce_mode_and_passes() -> None:
 @pytest.mark.parametrize("token", scanner.FORBIDDEN_TOKENS)
 def test_every_forbidden_token_from_the_plan_is_scanned(token: str) -> None:
     assert scanner._TOKEN_RE.search(f"x {token} y")
+
+
+# --------------------------------------------------------------------------- #
+# Lane discipline (ADR-0033 / INV-03b)
+# --------------------------------------------------------------------------- #
+
+
+def _lane_tree(tmp_path: Path, files: dict[str, str]) -> Path:
+    for relative, body in files.items():
+        target = tmp_path / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(body, encoding="utf-8")
+    return tmp_path
+
+
+HOOK_OK = (
+    "from ops.memory.control_plane_client import MemoryControlPlaneClient\n"
+    "client = MemoryControlPlaneClient(surface='cursor-session-end')\n"
+)
+HOOK_IMPORTS_PACKAGE = HOOK_OK + "from l9_graphite_memory.service import MemoryService\n"
+HOOK_SPAWNS_CONSOLE = HOOK_OK + "subprocess.run(['l9-memory', 'write', fact])\n"
+AGENT_OK = (
+    "from ops.memory.runtime_binding import resolve_runtime_binding\n"
+    "subprocess.run([str(resolve_runtime_binding().memory_cli), 'search', q])\n"
+)
+AGENT_CONSTRUCTS_CLIENT = "client = MemoryControlPlaneClient(surface='pe-sgd-ingest')\n"
+AGENT_SPAWNS_OPERATOR = "subprocess.run([py, '-m', 'ops.memory.cli', 'write', fact])\n"
+
+AGENT_PATH = "environment/program-execution/integrations/graphiti/context_reader.py"
+
+
+def _lanes(root: Path, agent: frozenset[str] = frozenset({AGENT_PATH})) -> list[tuple[str, str]]:
+    return [(f.path, f.rule) for f in scanner.scan_lanes(root, agent)]
+
+
+def test_lane_scan_passes_when_each_lane_uses_its_own_door(tmp_path: Path) -> None:
+    root = _lane_tree(
+        tmp_path,
+        {
+            "ops/graphiti/hydration/close_session.py": HOOK_OK,
+            "ops/hooks/pr_publish_memory_write.py": "argv = ['-m', 'ops.memory.cli', 'write']\n",
+            AGENT_PATH: AGENT_OK,
+            # The binding may do both; it is the door.
+            "ops/memory/runtime_binding.py": "from l9_graphite_memory import x\n'l9-memory'\n",
+        },
+    )
+    assert _lanes(root) == []
+
+
+def test_hook_lane_may_not_import_the_package_or_spawn_the_console_script(
+    tmp_path: Path,
+) -> None:
+    root = _lane_tree(
+        tmp_path,
+        {
+            "ops/graphiti/hydration/a.py": HOOK_IMPORTS_PACKAGE,
+            "environment/agents/adapters/claude-code/hooks/b.py": HOOK_SPAWNS_CONSOLE,
+        },
+    )
+    rules = dict(_lanes(root))
+    assert rules["ops/graphiti/hydration/a.py"].startswith(
+        "hook-lane module imports l9_graphite_memory"
+    )
+    assert rules["environment/agents/adapters/claude-code/hooks/b.py"].startswith(
+        "hook-lane module spawns the l9-memory console script"
+    )
+
+
+def test_agent_lane_may_not_construct_the_hook_client_or_spawn_the_operator_cli(
+    tmp_path: Path,
+) -> None:
+    root = _lane_tree(
+        tmp_path, {AGENT_PATH: AGENT_OK + AGENT_CONSTRUCTS_CLIENT + AGENT_SPAWNS_OPERATOR}
+    )
+    rules = sorted(rule for _, rule in _lanes(root))
+    assert rules == [
+        "agent-lane module constructs the hook client",
+        "agent-lane module spawns the operator CLI (ops.memory.cli)",
+    ]
+
+
+def test_lane_scan_judges_code_not_prose_or_tests(tmp_path: Path) -> None:
+    root = _lane_tree(
+        tmp_path,
+        {
+            # Docstring and comment mention the other door: that is documentation.
+            "ops/graphiti/hydration/c.py": (
+                '"""Never spawn "l9-memory" here; import l9_graphite_memory is the binding."""\n'
+                "# from l9_graphite_memory import x\n" + HOOK_OK
+            ),
+            # Colocated tests fake both doors on purpose.
+            "ops/graphiti/hydration/test_c.py": HOOK_SPAWNS_CONSOLE + HOOK_IMPORTS_PACKAGE,
+            # Prose and non-lane roots are out of scope.
+            "docs/lanes.md": HOOK_SPAWNS_CONSOLE,
+            "ops/scripts/tool.py": HOOK_SPAWNS_CONSOLE,
+        },
+    )
+    assert _lanes(root) == []
+
+
+def test_lane_violation_fails_even_without_enforce(tmp_path: Path, capsys) -> None:
+    root = _lane_tree(tmp_path, {"ops/graphiti/hydration/a.py": HOOK_IMPORTS_PACKAGE})
+    lanes = scanner.scan_lanes(root, frozenset())
+    assert scanner.report([], [], enforce=False, as_json=True, lane_findings=lanes) == 1
+    summary = json.loads(capsys.readouterr().out)
+    assert summary["verdict"] == "FAIL"
+    assert summary["lane_findings"][0]["lane"] == "hook"
+    assert scanner.report([], [], enforce=False, as_json=True) == 0
+
+
+def test_agent_lane_callers_are_declared_in_the_envelope_registry() -> None:
+    declared = scanner.load_agent_lane_callers()
+    assert AGENT_PATH in declared
+    for relative in declared:
+        assert (ROOT / relative).is_file(), relative
+
+
+def test_real_tree_has_no_lane_violation() -> None:
+    assert scanner.scan_lanes(ROOT, scanner.load_agent_lane_callers()) == []
