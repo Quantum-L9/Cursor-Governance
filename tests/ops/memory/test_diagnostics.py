@@ -156,6 +156,61 @@ def test_unbound_package_is_package_unbound_and_spawns_nothing(fake_cli) -> None
     assert report["overall_status"] == "PACKAGE_UNBOUND"
     assert fake_cli.calls == []
     assert report["binding"]["binding_status"] == "unbound"
+    # ADR-0032: no memory operation ran, so this is an environment fault with a
+    # concrete repair, not memory degradation.
+    assert report["fault_class"] == "environment"
+    assert report["remediation"].startswith("ENVIRONMENT_FAULT")
+    assert "ensure_uv_environment.sh" in report["remediation"]
+
+
+def test_environment_remediation_names_what_the_heal_already_did(fake_cli) -> None:
+    def unbound(**extra) -> RuntimeBinding:
+        return RuntimeBinding(
+            status=STATUS_UNBOUND,
+            runtime_mode="pinned_environment",
+            memory_package="l9-graphite-memory",
+            expected_version=EXPECTED_VERSION,
+            expected_contract_version="memory-control-plane/v1",
+            manifest_path="m",
+            reasons=("drift",),
+            governance_root="/gov",
+            **extra,
+        )
+
+    failed = diagnostics.remediation_for("PACKAGE_UNBOUND", unbound(environment_heal="failed"))
+    assert "locked sync of /gov failed" in failed
+    skipped = diagnostics.remediation_for(
+        "PACKAGE_UNBOUND", unbound(environment_heal="skipped:repo-write-lock-held")
+    )
+    assert "skipped (repo-write-lock-held)" in skipped
+    healed = diagnostics.remediation_for("PACKAGE_UNBOUND", unbound(environment_heal="healed"))
+    assert "no longer pins expected_package_version" in healed
+    caller = RuntimeBinding(
+        status=STATUS_UNBOUND,
+        runtime_mode=diagnostics.MODE_CALLER,
+        memory_package="l9-graphite-memory",
+        expected_version=EXPECTED_VERSION,
+        expected_contract_version="memory-control-plane/v1",
+        manifest_path="m",
+    )
+    assert "no governance .venv was found" in diagnostics.remediation_for("PACKAGE_UNBOUND", caller)
+    assert diagnostics.remediation_for("READY", caller) is None
+    assert diagnostics.fault_class_for_overall("MEMORY_UNAVAILABLE") == "canonical"
+    assert diagnostics.fault_class_for_overall("MEMORY_DEGRADED") == "canonical"
+    assert diagnostics.fault_class_for_overall("CANONICAL_READY_PROJECTION_DEGRADED") == "none"
+
+
+def test_canonical_store_down_is_canonical_not_environment(bound, fake_cli) -> None:
+    from memory_boundary_fixtures import error_stderr
+
+    fake_cli.reply("health", 2, None, error_stderr("StoreError", "store unreachable"))
+    client = MemoryControlPlaneClient(bound, runner=fake_cli.run)
+    report = diagnostics.readiness_report(
+        workspace=ROOT, binding=_with_capabilities(bound), client=client, verify_mcp=False
+    )
+    assert report["overall_status"] == "MEMORY_UNAVAILABLE"
+    assert report["fault_class"] == "canonical"
+    assert report["remediation"] is None
 
 
 def test_denied_fan_in_narrows_to_the_primary_namespace(bound, fake_cli) -> None:

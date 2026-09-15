@@ -9,7 +9,7 @@ metadata:
   tags: [l9, memory, control-plane, prefetch, gmp, end-session, write-agent, write-governed]
   owner: igor_beylin
   status: active
-  version: 2.2.0
+  version: 2.2.1
   updated: 2026-09-13
 ---
 
@@ -146,10 +146,14 @@ Boundary: [`ops/memory/README.md`](../../ops/memory/README.md).
 1. **sessionStart** — open latch, then `ops.memory.hydration.canonical_hydrate`
    (health → hydrate → typed continuation records) composes the
    `SessionHydrationPacket` (`next=` + evidence). A stale capsule loses to the
-   current git state; a prior-session close-gap leads with `DEGRADED` +
-   `REPAIR: /end-session` (ADR-0028).
-2. **Resume** — follow hydrated `next=`; `memcli hydrate` if degraded; never
-   read `memory-bank/`.
+   current git state and is not a fault. The packet carries three typed
+   conditions (ADR-0032): a prior-session close-gap leads with `CLOSE_GAP` +
+   `REPAIR: /end-session`; an unbound runtime leads with `ENVIRONMENT_FAULT`
+   + `REPAIR: make -C ~/.cursor-governance memory-readiness`; only canonical
+   memory not answering leads with `DEGRADED`.
+2. **Resume** — follow hydrated `next=`; `memcli hydrate` if `DEGRADED`; repair
+   the environment (not memory) on `ENVIRONMENT_FAULT`; never read
+   `memory-bank/`.
 3. **Session work** — atomic T2 writes: ordinary `memory.write_agent`;
    conflict-sensitive `memory.phase_lock` → `memory.write_governed`
    (`memory_class: lesson|insight|decision`). Do not wait for sessionEnd.

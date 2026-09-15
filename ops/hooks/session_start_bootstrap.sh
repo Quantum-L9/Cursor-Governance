@@ -479,9 +479,12 @@ else
 fi
 HYDRATE_DEGRADED="false"
 HYDRATE_REASON=""
-# Classify from the packet JSON booleans (degraded / hydrate_stats.close_gap),
-# never by substring: every healthy packet fence contains '"degraded": false',
-# which a *degraded* glob misreads as a this-session fault.
+HYDRATE_CONDITION=""
+# Classify from the packet JSON booleans, never by substring: every healthy
+# packet fence contains '"degraded": false', which a *degraded* glob misreads
+# as a this-session fault. Line 1/2 are memory degradation (ADR-0032: canonical
+# memory ran and did not answer); line 3 is the typed non-degraded condition
+# (ENVIRONMENT_FAULT / CLOSE_GAP / STALE) the runtime report shows verbatim.
 resolve_hydrate_classifier() {
   if [ -n "${CURSOR_PROJECT_DIR:-}" ] && [ -f "$CURSOR_PROJECT_DIR/ops/scripts/classify_hydrate_state.py" ]; then
     printf '%s\n' "$CURSOR_PROJECT_DIR/ops/scripts/classify_hydrate_state.py"
@@ -495,9 +498,10 @@ resolve_hydrate_classifier() {
 }
 HYDRATE_CLASSIFIER="$(resolve_hydrate_classifier || true)"
 if [ -n "$HYDRATE_CLASSIFIER" ]; then
-  HYDRATE_CLASS_OUT="$(printf '%s' "$HYDRATE_MD" | "$AUDIT_PY_BIN" "$HYDRATE_CLASSIFIER" 2>/dev/null || printf 'false\n\n')"
+  HYDRATE_CLASS_OUT="$(printf '%s' "$HYDRATE_MD" | "$AUDIT_PY_BIN" "$HYDRATE_CLASSIFIER" 2>/dev/null || printf 'false\n\n\n')"
   HYDRATE_DEGRADED="$(printf '%s\n' "$HYDRATE_CLASS_OUT" | sed -n '1p')"
   HYDRATE_REASON="$(printf '%s\n' "$HYDRATE_CLASS_OUT" | sed -n '2p')"
+  HYDRATE_CONDITION="$(printf '%s\n' "$HYDRATE_CLASS_OUT" | sed -n '3p')"
   [ "$HYDRATE_DEGRADED" = "true" ] || HYDRATE_DEGRADED="false"
 else
   # Conservative fallback: only unambiguous markers, never a bare substring.
@@ -548,6 +552,7 @@ if [ -n "$RUNTIME_REPORTER" ] && [ -f "$RUNTIME_REPORTER" ]; then
     --codegraph "$CODEGRAPH_MD" \
     --hydrate-degraded "$HYDRATE_DEGRADED" \
     --hydrate-reason "$HYDRATE_REASON" \
+    --hydrate-condition "$HYDRATE_CONDITION" \
     --workspace "${CURSOR_PROJECT_DIR:-$PWD}" \
     2>"$RUNTIME_ERR" || true)"
   if [ -z "$RUNTIME_MD" ]; then

@@ -298,6 +298,35 @@ class MemoryProofClassificationTests(unittest.TestCase):
         self.assertIn("compatible", line["summary"])
         self.assertNotIn("unbound", line["summary"])
 
+    def test_unbound_runtime_is_an_environment_fault_not_degraded(self) -> None:
+        """ADR-0032: a drifted governance .venv is a bootstrap fault; memory was not observed."""
+
+        line = report.classify_memory_proof(
+            {
+                "binding_status": "unbound",
+                "ok": False,
+                "environment_fault": True,
+                "environment_heal": "skipped:repo-write-lock-held",
+                "memory_package": "l9-graphite-memory",
+                "memory_version": "2.3.1",
+                "reasons": ["package version 2.3.1 does not match expected 2.4.0"],
+            }
+        )
+        self.assertEqual(line["class"], report.ENVIRONMENT_FAULT)
+        self.assertTrue(line["summary"].startswith("ENVIRONMENT_FAULT unbound"))
+        self.assertIn("heal=skipped:repo-write-lock-held", line["summary"])
+        self.assertIn("does not match expected", line["summary"])
+        self.assertTrue(line["include_in_degraded"])
+        rendered = report.format_markdown([line])
+        self.assertIn("- memory: environment_fault — ENVIRONMENT_FAULT", rendered)
+        self.assertNotIn("memory: degraded", rendered)
+
+    def test_older_proof_shape_still_classifies_unbound_as_environment(self) -> None:
+        line = report.classify_memory_proof(
+            {"binding_status": "unbound", "ok": False, "reasons": ["not importable"]}
+        )
+        self.assertEqual(line["class"], report.ENVIRONMENT_FAULT)
+
     def test_slogan_is_not_a_live_proof(self) -> None:
         self.assertIsNone(report.parse_binding_proof("unbound: the install recorded no PEP 610"))
         self.assertFalse(report.proof_is_live({"status": "unbound"}))
@@ -332,7 +361,7 @@ class HydrateCollapseTests(unittest.TestCase):
                 skill_note="/tmp/x.jsonl (1 entries)",
                 codegraph="skipped",
                 hydrate_degraded=True,
-                hydrate_reason="STALE — continuation_stale=true",
+                hydrate_reason="CANONICAL_UNAVAILABLE: store unreachable",
                 home=Path(tmp),
                 aws_cli={"ok": True, "code": "OK", "summary": "authorized"},
                 secrets_bind=[
@@ -346,7 +375,78 @@ class HydrateCollapseTests(unittest.TestCase):
         self.assertIn("memory-hydrate", names)
         hydrate = next(item for item in lines if item["name"] == "memory-hydrate")
         self.assertEqual(hydrate["class"], report.DEGRADED)
-        self.assertIn("continuation_stale", hydrate["summary"])
+        self.assertIn("CANONICAL_UNAVAILABLE", hydrate["summary"])
+
+    def _collect_condition(self, condition: str) -> dict:
+        with tempfile.TemporaryDirectory() as tmp:
+            lines = report.collect(
+                surface="cursor",
+                venv="locked",
+                ide_profile="applied",
+                tunnel="open",
+                memory_detail="healthy",
+                memory_stderr="",
+                memory_healthy=True,
+                wiring="PASS",
+                backup="armed",
+                skill_note="/tmp/x.jsonl (1 entries)",
+                codegraph="skipped",
+                hydrate_degraded=False,
+                hydrate_reason="",
+                hydrate_condition=condition,
+                home=Path(tmp),
+                aws_cli={"ok": True, "code": "OK", "summary": "authorized"},
+                secrets_bind=[],
+            )
+        return next(item for item in lines if item["name"] == "memory-hydrate")
+
+    def test_stale_continuation_is_not_a_degraded_row(self) -> None:
+        """ADR-0032: the false positive this fix removes — STALE on an OK hydrate."""
+        hydrate = self._collect_condition("STALE: continuation_stale=true")
+        self.assertEqual(hydrate["class"], report.OK)
+        self.assertFalse(hydrate["include_in_degraded"])
+        self.assertTrue(hydrate["summary"].startswith("STALE"))
+        rendered = report.format_markdown([hydrate])
+        self.assertIn("### Degraded\n- none", rendered)
+
+    def test_close_gap_is_an_ok_row_naming_the_repair(self) -> None:
+        hydrate = self._collect_condition("CLOSE_GAP: session abc left no receipt")
+        self.assertEqual(hydrate["class"], report.OK)
+        self.assertFalse(hydrate["include_in_degraded"])
+        self.assertIn("session abc left no receipt", hydrate["summary"])
+        self.assertIn("REPAIR: /end-session", hydrate["summary"])
+
+    def test_environment_fault_condition_lands_in_degraded_under_its_own_name(self) -> None:
+        hydrate = self._collect_condition("ENVIRONMENT_FAULT: BINDING_FAILED: 2.3.1 != 2.4.0")
+        self.assertEqual(hydrate["class"], report.ENVIRONMENT_FAULT)
+        self.assertTrue(hydrate["include_in_degraded"])
+        self.assertIn("2.3.1 != 2.4.0", hydrate["summary"])
+        rendered = report.format_markdown([hydrate])
+        self.assertIn("- memory-hydrate: environment_fault — ENVIRONMENT_FAULT", rendered)
+        self.assertNotIn("memory-hydrate: degraded", rendered)
+
+    def test_no_condition_and_not_degraded_emits_no_hydrate_row(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            lines = report.collect(
+                surface="cursor",
+                venv="locked",
+                ide_profile="applied",
+                tunnel="open",
+                memory_detail="healthy",
+                memory_stderr="",
+                memory_healthy=True,
+                wiring="PASS",
+                backup="armed",
+                skill_note="/tmp/x.jsonl (1 entries)",
+                codegraph="skipped",
+                hydrate_degraded=False,
+                hydrate_reason="",
+                hydrate_condition="",
+                home=Path(tmp),
+                aws_cli={"ok": True, "code": "OK", "summary": "authorized"},
+                secrets_bind=[],
+            )
+        self.assertNotIn("memory-hydrate", [item["name"] for item in lines])
 
     def test_healthy_memory_keeps_hydrate_row(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

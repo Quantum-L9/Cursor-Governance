@@ -66,8 +66,14 @@ SEARCH_LIMIT = 6
 STATE_HIT = "HIT"
 STATE_NO_HIT = "NO_HIT"
 STATE_DEGRADED = "DEGRADED"
+#: The memory runtime never ran (unbound governance .venv, ADR-0032). Not a
+#: memory answer at all, so not DEGRADED memory: the planner is told the
+#: environment is at fault and what the one-shot heal did.
+STATE_ENVIRONMENT_FAULT = "ENVIRONMENT_FAULT"
 STATE_CONFLICT = "CONFLICT"
 STATE_CLEAN = "CLEAN"
+#: States in which memory gave no usable answer, whatever the cause.
+_NO_ANSWER_STATES = frozenset({STATE_DEGRADED, STATE_ENVIRONMENT_FAULT})
 
 
 def _enabled() -> bool:
@@ -196,10 +202,14 @@ def hydrate_state(document: dict[str, Any], returncode: int) -> str:
     """HIT / NO_HIT / DEGRADED from a canonical hydrate receipt.
 
     ``ops.memory.cli hydrate`` exits 0 only for the two answering statuses
-    (``OK``/``NO_HITS``); anything else — unbound runtime, timeout, refused
-    namespace, invalid receipt — is memory failing to answer, which is not the
-    same fact as an empty namespace and must not be reported as one.
+    (``OK``/``NO_HITS``); anything else — timeout, refused namespace, invalid
+    receipt — is memory failing to answer, which is not the same fact as an
+    empty namespace and must not be reported as one. An *unbound runtime*
+    (``BINDING_FAILED`` / ``fault_class: environment``) is a third fact: memory
+    never ran, so it is ENVIRONMENT_FAULT rather than DEGRADED.
     """
+    if _environment_fault(document):
+        return STATE_ENVIRONMENT_FAULT
     if returncode != 0:
         return STATE_DEGRADED
     status = str(document.get("status") or "").upper()
@@ -215,6 +225,16 @@ def hydrate_state(document: dict[str, Any], returncode: int) -> str:
     if records or document.get("continuation"):
         return STATE_HIT
     return STATE_NO_HIT
+
+
+def _environment_fault(document: dict[str, Any]) -> bool:
+    """The hydrate receipt says the runtime never reached memory."""
+
+    if document.get("environment_fault") is True:
+        return True
+    if str(document.get("fault_class") or "").lower() == "environment":
+        return True
+    return str(document.get("status") or "").upper() == "BINDING_FAILED"
 
 
 def conflicts_state(cite: dict[str, Any], returncode: int) -> str:
@@ -438,19 +458,25 @@ def prefetch(
     cite = conflicts_cite(conflicts_doc)
     c_state = conflicts_state(cite, conflicts_proc.returncode)
 
-    if h_state == STATE_DEGRADED:
-        state = STATE_DEGRADED
+    if h_state in _NO_ANSWER_STATES:
+        state = h_state
     elif c_state == STATE_CONFLICT:
         state = STATE_CONFLICT
     else:
         state = h_state
-    degraded = h_state == STATE_DEGRADED or c_state == STATE_DEGRADED
+    no_answer = h_state in _NO_ANSWER_STATES or c_state == STATE_DEGRADED
+    environment_fault = h_state == STATE_ENVIRONMENT_FAULT
     body = {
         "schema": SCHEMA,
         # `status` stays the coarse OK/WARN signal existing readers key on;
-        # `state` is the one a planner reasons with.
-        "status": "WARN" if degraded else "OK",
+        # `state` is the one a planner reasons with. `fault_class` says which
+        # of the two non-answers this is (ADR-0032).
+        "status": "WARN" if no_answer else "OK",
         "state": state,
+        "fault_class": (
+            "environment" if environment_fault else ("canonical" if no_answer else "none")
+        ),
+        "environment_heal": hydrate_doc.get("environment_heal"),
         "workspace": str(workspace),
         "task": task,
         "skills": skills,

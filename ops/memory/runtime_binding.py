@@ -12,6 +12,24 @@ Responsibilities, and nothing else:
 It never resolves Graphiti, never searches sibling repositories, and treats
 a development checkout as an explicit opt-in that is *reported* as
 ``runtime_mode = development_checkout`` rather than silently winning.
+
+The interpreter is anchored to a *governance* environment, never to whichever
+Python happened to import this module. Resolution order (also declared in
+``ops/config/memory-binding.json`` ``interpreter_resolution_order``):
+
+1. an explicit ``interpreter=`` argument
+2. ``L9_MEMORY_DEV_CHECKOUT`` (development opt-in, reported)
+3. ``L9_MEMORY_INTERPRETER``
+4. ``$L9_GOVERNANCE_DIR/.venv/bin/python``
+5. ``$HOME/.cursor-governance/.venv/bin/python``
+6. this checkout's ``.venv/bin/python``
+7. ``sys.executable`` — only when no governance environment exists at all,
+   and then reported as ``runtime_mode = caller_interpreter``
+
+A governance candidate whose installed package disagrees with the manifest is
+*lock drift*, not memory degradation: it is healed once, deterministically
+(:mod:`ops.memory.environment_heal`) and re-probed before the binding gives
+up. The outcome is carried on the binding as ``environment_heal``.
 """
 
 from __future__ import annotations
@@ -27,6 +45,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from ops.memory import environment_heal
 from ops.memory.receipt_contract import ReceiptContractError, merge_receipt_schemas
 from ops.memory.receipts import CapabilitiesReceipt, InvalidReceiptError
 
@@ -35,9 +54,21 @@ DEFAULT_MANIFEST_PATH = _REPO_ROOT / "ops" / "config" / "memory-binding.json"
 
 ENV_DEV_CHECKOUT = "L9_MEMORY_DEV_CHECKOUT"
 ENV_INTERPRETER = "L9_MEMORY_INTERPRETER"
+#: The governance checkout whose ``.venv`` is the memory runtime. Set by the
+#: bootstrap; absent in a bare shell, where ``$HOME/.cursor-governance`` and
+#: this checkout are tried in that order.
+ENV_GOVERNANCE_DIR = "L9_GOVERNANCE_DIR"
+GOVERNANCE_HOME_DIRNAME = ".cursor-governance"
+#: A directory counts as a governance checkout only if it carries the boundary
+#: this module belongs to; ``.venv`` alone is any Python project.
+_GOVERNANCE_MARKER = Path("ops") / "memory" / "control_plane_client.py"
 
 MODE_PINNED = "pinned_environment"
 MODE_DEVELOPMENT = "development_checkout"
+#: No governance environment was found anywhere, so the caller's own
+#: interpreter was probed. Reported, never silent: a binding in this mode is a
+#: bootstrap gap even when the package it finds happens to match.
+MODE_CALLER = "caller_interpreter"
 
 STATUS_EXACT = "exact"
 #: Version and contract agree with the manifest, but the *artifact* was not
@@ -351,10 +382,35 @@ class RuntimeBinding:
     installed_artifact_digest: str | None = None
     expected_artifact_digest: str | None = None
     release_tag: str | None = None
+    #: The governance checkout whose ``.venv`` was bound (``None`` for an
+    #: explicit interpreter, a development checkout, or the caller fallback).
+    governance_root: str | None = None
+    #: What the one-shot environment heal did, if drift was met:
+    #: ``healed`` / ``failed`` / ``skipped:<why>`` / ``None`` (not needed).
+    environment_heal: str | None = None
+    #: Every interpreter probed, in order, so an unbound verdict names what
+    #: was tried rather than only the last one.
+    candidates_tried: tuple[str, ...] = ()
 
     @property
     def ok(self) -> bool:
         return self.status in {STATUS_EXACT, STATUS_COMPATIBLE, STATUS_DEVELOPMENT}
+
+    @property
+    def environment_fault(self) -> bool:
+        """The runtime could not be bound for an *environment* reason.
+
+        An unbound binding is never canonical memory degradation: no memory
+        operation ran, so nothing canonical was observed. It is a bootstrap /
+        environment fault — a missing or drifted governance ``.venv``, a caller
+        interpreter with no governance environment at all, a contract the
+        installed package predates. Consumers report it as
+        ``ENVIRONMENT_FAULT`` and name the heal outcome, not as ``DEGRADED``.
+        A bound caller-interpreter runtime is *not* a fault — it is a reported
+        bootstrap gap (``runtime_mode``), and the memory it binds is real.
+        """
+
+        return self.status == STATUS_UNBOUND
 
     @property
     def is_exact(self) -> bool:
@@ -386,6 +442,10 @@ class RuntimeBinding:
             "expected_artifact_digest": self.expected_artifact_digest,
             "release_tag": self.release_tag,
             "path_shadow": self.path_shadow,
+            "governance_root": self.governance_root,
+            "environment_heal": self.environment_heal,
+            "environment_fault": self.environment_fault,
+            "candidates_tried": list(self.candidates_tried),
             "reasons": list(self.reasons),
             "manifest": self.manifest_path,
         }
@@ -404,6 +464,9 @@ def _unbound(
     contract_version: str | None = None,
     artifact_provenance: str = PROVENANCE_UNPROVEN,
     installed_artifact_digest: str | None = None,
+    governance_root: str | None = None,
+    environment_heal: str | None = None,
+    candidates_tried: Sequence[str] = (),
 ) -> RuntimeBinding:
     return RuntimeBinding(
         status=STATUS_UNBOUND,
@@ -423,17 +486,71 @@ def _unbound(
         module_path=module_path,
         path_shadow=path_shadow,
         reasons=tuple(reasons),
+        governance_root=governance_root,
+        environment_heal=environment_heal,
+        candidates_tried=tuple(candidates_tried),
     )
 
 
-def _select_interpreter(
+@dataclass(frozen=True)
+class InterpreterCandidate:
+    """One interpreter the binding may probe, and where it came from."""
+
+    interpreter: str
+    mode: str
+    #: The governance checkout owning the ``.venv`` — the only thing the heal
+    #: may act on. ``None`` for explicit, configured, dev and caller choices.
+    governance_root: Path | None = None
+
+
+def _venv_python(root: Path) -> Path | None:
+    for name in ("python", "python3"):
+        candidate = root / ".venv" / "bin" / name
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def governance_roots(env: Mapping[str, str]) -> list[Path]:
+    """Governance checkouts in resolution order, de-duplicated by real path."""
+
+    ordered: list[Path] = []
+    configured = (env.get(ENV_GOVERNANCE_DIR) or "").strip()
+    if configured:
+        ordered.append(Path(configured).expanduser())
+    home = (env.get("HOME") or "").strip()
+    ordered.append((Path(home) if home else Path.home()) / GOVERNANCE_HOME_DIRNAME)
+    ordered.append(_REPO_ROOT)
+    roots: list[Path] = []
+    seen: set[Path] = set()
+    for root in ordered:
+        try:
+            real = root.resolve()
+        except (OSError, RuntimeError):
+            continue
+        if real in seen or not (real / _GOVERNANCE_MARKER).is_file():
+            continue
+        seen.add(real)
+        roots.append(real)
+    return roots
+
+
+def interpreter_candidates(
     explicit: str | None, env: Mapping[str, str]
-) -> tuple[str | None, str, list[str]]:
-    """Return ``(interpreter, runtime_mode, reasons)`` per the manifest order."""
+) -> tuple[list[InterpreterCandidate], list[str]]:
+    """Interpreters to probe, in the order the module docstring declares.
+
+    Explicit, development and ``L9_MEMORY_INTERPRETER`` choices are single
+    candidates with no fallback — the caller named one runtime and gets a
+    verdict about that one. Otherwise every governance ``.venv`` is a
+    candidate, and ``sys.executable`` is appended only when there is none,
+    tagged ``caller_interpreter`` so the report says a governance environment
+    was never found.
+    """
 
     reasons: list[str] = []
     if explicit:
-        return explicit, MODE_PINNED, reasons
+        return [InterpreterCandidate(explicit, MODE_PINNED)], reasons
     checkout = (env.get(ENV_DEV_CHECKOUT) or "").strip()
     if checkout:
         root = Path(checkout).expanduser()
@@ -441,15 +558,83 @@ def _select_interpreter(
         interpreter = root / ".venv" / "bin" / "python"
         if not package_dir.is_file():
             reasons.append(f"{ENV_DEV_CHECKOUT} does not contain src/l9_graphite_memory: {root}")
-            return None, MODE_DEVELOPMENT, reasons
+            return [], reasons
         if not interpreter.is_file():
             reasons.append(f"{ENV_DEV_CHECKOUT} has no .venv/bin/python: {root}")
-            return None, MODE_DEVELOPMENT, reasons
-        return str(interpreter), MODE_DEVELOPMENT, reasons
+            return [], reasons
+        return [InterpreterCandidate(str(interpreter), MODE_DEVELOPMENT)], reasons
     configured = (env.get(ENV_INTERPRETER) or "").strip()
     if configured:
-        return configured, MODE_PINNED, reasons
-    return sys.executable, MODE_PINNED, reasons
+        return [InterpreterCandidate(configured, MODE_PINNED)], reasons
+    candidates: list[InterpreterCandidate] = []
+    for root in governance_roots(env):
+        interpreter_path = _venv_python(root)
+        if interpreter_path is None:
+            reasons.append(f"governance checkout {root} has no .venv/bin/python")
+            continue
+        candidates.append(InterpreterCandidate(str(interpreter_path), MODE_PINNED, root))
+    if candidates:
+        return candidates, reasons
+    reasons.append(
+        "no governance .venv was found "
+        f"({ENV_GOVERNANCE_DIR}, $HOME/{GOVERNANCE_HOME_DIRNAME}, {_REPO_ROOT}); "
+        f"probing the caller's interpreter {sys.executable} as a reported last resort"
+    )
+    return [InterpreterCandidate(sys.executable, MODE_CALLER)], reasons
+
+
+def _probe_interpreter(
+    candidate: InterpreterCandidate,
+    manifest: BindingManifest,
+    run: Runner,
+    environment: Mapping[str, str],
+    timeout: float,
+) -> tuple[dict[str, Any] | None, list[str], bool]:
+    """Probe one interpreter for the pinned package.
+
+    Returns ``(payload, reasons, drift)``. ``payload`` is ``None`` on any
+    failure; ``drift`` is True only for the one failure a locked sync can
+    repair — the package is absent or at another version inside a governance
+    ``.venv`` — so the caller heals exactly that and nothing else.
+    """
+
+    interpreter_path = Path(candidate.interpreter)
+    if not interpreter_path.is_file():
+        return None, [f"interpreter is not a file: {candidate.interpreter}"], False
+    try:
+        probe = run(
+            [str(interpreter_path), "-c", _PROBE, manifest.distribution, manifest.import_package],
+            timeout=timeout,
+            env=environment,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return None, [f"interpreter probe failed: {type(exc).__name__}: {exc}"], False
+    try:
+        payload = json.loads((probe.stdout or "").strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        return None, ["interpreter probe emitted no JSON", (probe.stderr or "")[:300]], False
+    version = payload.get("version")
+    module_path = payload.get("module")
+    healable = candidate.governance_root is not None and candidate.mode == MODE_PINNED
+    if not version or not module_path:
+        return (
+            None,
+            [
+                f"{manifest.distribution} is not importable in {interpreter_path}: "
+                f"{payload.get('error') or 'unknown'}"
+            ],
+            healable,
+        )
+    if str(version) != manifest.expected_package_version:
+        return (
+            None,
+            [
+                f"package version {version} does not match expected "
+                f"{manifest.expected_package_version} in {interpreter_path}"
+            ],
+            healable,
+        )
+    return payload, [], False
 
 
 def resolve_runtime_binding(
@@ -459,85 +644,91 @@ def resolve_runtime_binding(
     env: Mapping[str, str] | None = None,
     runner: Runner | None = None,
     timeout: float = 30.0,
+    heal: Callable[..., tuple[str, list[str]]] | None = None,
 ) -> RuntimeBinding:
     """Resolve and verify the memory runtime this process is allowed to use."""
 
     manifest = BindingManifest.load(manifest_path)
     environment = dict(os.environ if env is None else env)
     run = runner or default_runner
+    heal_environment = heal or environment_heal.heal_environment
 
-    selected, mode, reasons = _select_interpreter(interpreter, environment)
-    if selected is None:
-        return _unbound(manifest, mode=mode, reasons=reasons)
-    interpreter_path = Path(selected)
-    if not interpreter_path.is_file():
+    candidates, reasons = interpreter_candidates(interpreter, environment)
+    if not candidates:
+        return _unbound(manifest, mode=MODE_DEVELOPMENT, reasons=reasons)
+
+    # 1. Package present in a governance interpreter, at the expected version.
+    #    Every candidate is probed in order; the first that carries the pinned
+    #    package wins. Drift in a governance .venv is healed once and re-probed
+    #    before the binding gives up, and what happened is carried on the
+    #    binding rather than swallowed.
+    tried: list[str] = []
+    probe_payload: dict[str, Any] | None = None
+    chosen: InterpreterCandidate | None = None
+    heal_outcome: str | None = None
+    drifted: list[tuple[InterpreterCandidate, list[str]]] = []
+    for candidate in candidates:
+        tried.append(candidate.interpreter)
+        payload, probe_reasons, drift = _probe_interpreter(
+            candidate, manifest, run, environment, timeout
+        )
+        if payload is not None:
+            probe_payload, chosen = payload, candidate
+            break
+        reasons.extend(probe_reasons)
+        if drift:
+            drifted.append((candidate, probe_reasons))
+    if probe_payload is None:
+        for candidate, _ in drifted:
+            root = candidate.governance_root
+            assert root is not None  # noqa: S101 - guaranteed by drift=True
+            heal_outcome, heal_reasons = heal_environment(root, env=environment)
+            reasons.append(f"environment heal on {root}: {heal_outcome}")
+            reasons.extend(heal_reasons)
+            if heal_outcome != environment_heal.HEAL_HEALED:
+                continue
+            payload, probe_reasons, _ = _probe_interpreter(
+                candidate, manifest, run, environment, timeout
+            )
+            if payload is not None:
+                probe_payload, chosen = payload, candidate
+                break
+            reasons.extend(f"after heal: {reason}" for reason in probe_reasons)
+    if probe_payload is None or chosen is None:
+        last = candidates[-1]
         return _unbound(
             manifest,
-            mode=mode,
-            reasons=[*reasons, f"interpreter is not a file: {selected}"],
-            interpreter=selected,
+            mode=last.mode,
+            reasons=reasons,
+            interpreter=last.interpreter,
+            governance_root=str(last.governance_root) if last.governance_root else None,
+            environment_heal=heal_outcome,
+            candidates_tried=tried,
         )
 
-    # 1. Package present in *that* interpreter, at the expected version.
-    try:
-        probe = run(
-            [str(interpreter_path), "-c", _PROBE, manifest.distribution, manifest.import_package],
-            timeout=timeout,
-            env=environment,
-        )
-    except (OSError, subprocess.TimeoutExpired) as exc:
+    mode = chosen.mode
+    interpreter_path = Path(chosen.interpreter)
+    governance_root = str(chosen.governance_root) if chosen.governance_root else None
+
+    def fail(**kwargs: Any) -> RuntimeBinding:
         return _unbound(
             manifest,
             mode=mode,
-            reasons=[*reasons, f"interpreter probe failed: {type(exc).__name__}: {exc}"],
-            interpreter=str(interpreter_path),
+            governance_root=governance_root,
+            environment_heal=heal_outcome,
+            candidates_tried=tried,
+            **kwargs,
         )
-    try:
-        probe_payload = json.loads((probe.stdout or "").strip().splitlines()[-1])
-    except (ValueError, IndexError):
-        return _unbound(
-            manifest,
-            mode=mode,
-            reasons=[*reasons, "interpreter probe emitted no JSON", (probe.stderr or "")[:300]],
-            interpreter=str(interpreter_path),
-        )
-    version = probe_payload.get("version")
-    module_path = probe_payload.get("module")
+
+    version = probe_payload["version"]
+    module_path = probe_payload["module"]
     prefix = str(probe_payload.get("prefix") or "")
-    if not version or not module_path:
-        return _unbound(
-            manifest,
-            mode=mode,
-            reasons=[
-                *reasons,
-                f"{manifest.distribution} is not importable in {interpreter_path}: "
-                f"{probe_payload.get('error') or 'unknown'}",
-            ],
-            interpreter=str(interpreter_path),
-            memory_version=version,
-            module_path=module_path,
-        )
-    if str(version) != manifest.expected_package_version:
-        return _unbound(
-            manifest,
-            mode=mode,
-            reasons=[
-                *reasons,
-                f"package version {version} does not match expected "
-                f"{manifest.expected_package_version}",
-            ],
-            interpreter=str(interpreter_path),
-            memory_version=str(version),
-            module_path=str(module_path),
-        )
     served_from_prefix = _path_contains(prefix, str(module_path))
-    if mode == MODE_PINNED and not served_from_prefix:
+    if mode != MODE_DEVELOPMENT and not served_from_prefix:
         # An editable install or a .pth pointing at a checkout: the package
         # would come from somewhere the environment does not own. That is
         # only acceptable with the explicit development opt-in.
-        return _unbound(
-            manifest,
-            mode=mode,
+        return fail(
             reasons=[
                 *reasons,
                 f"package is served from outside the interpreter environment ({module_path}); "
@@ -565,9 +756,7 @@ def resolve_runtime_binding(
     # 2. Console script from the same environment — never from PATH.
     memory_cli = interpreter_path.parent / manifest.console_script
     if not memory_cli.is_file() or not os.access(memory_cli, os.X_OK):
-        return _unbound(
-            manifest,
-            mode=mode,
+        return fail(
             reasons=[
                 *reasons,
                 f"{manifest.console_script} is not installed beside {interpreter_path}",
@@ -589,9 +778,7 @@ def resolve_runtime_binding(
     try:
         result = run([str(memory_cli), "capabilities"], timeout=timeout, env=environment)
     except (OSError, subprocess.TimeoutExpired) as exc:
-        return _unbound(
-            manifest,
-            mode=mode,
+        return fail(
             reasons=[*reasons, f"capabilities probe failed: {type(exc).__name__}: {exc}"],
             interpreter=str(interpreter_path),
             memory_cli=str(memory_cli),
@@ -600,9 +787,7 @@ def resolve_runtime_binding(
             path_shadow=path_shadow,
         )
     if result.returncode != 0:
-        return _unbound(
-            manifest,
-            mode=mode,
+        return fail(
             reasons=[
                 *reasons,
                 f"{manifest.console_script} capabilities exited {result.returncode}; the bound "
@@ -617,9 +802,7 @@ def resolve_runtime_binding(
     try:
         capabilities = CapabilitiesReceipt.parse(json.loads(result.stdout))
     except (ValueError, InvalidReceiptError) as exc:
-        return _unbound(
-            manifest,
-            mode=mode,
+        return fail(
             reasons=[*reasons, f"capabilities receipt invalid: {exc}"],
             interpreter=str(interpreter_path),
             memory_cli=str(memory_cli),
@@ -628,9 +811,7 @@ def resolve_runtime_binding(
             path_shadow=path_shadow,
         )
     if capabilities.contract_version != manifest.expected_contract_version:
-        return _unbound(
-            manifest,
-            mode=mode,
+        return fail(
             reasons=[
                 *reasons,
                 f"contract {capabilities.contract_version} does not match expected "
@@ -644,9 +825,7 @@ def resolve_runtime_binding(
             contract_version=capabilities.contract_version,
         )
     if capabilities.package_version != str(version):
-        return _unbound(
-            manifest,
-            mode=mode,
+        return fail(
             reasons=[
                 *reasons,
                 f"CLI reports package {capabilities.package_version} but the interpreter "
@@ -665,9 +844,7 @@ def resolve_runtime_binding(
         if operation not in capabilities.cli_operations
     ]
     if missing:
-        return _unbound(
-            manifest,
-            mode=mode,
+        return fail(
             reasons=[*reasons, f"CLI lacks required operations: {', '.join(missing)}"],
             interpreter=str(interpreter_path),
             memory_cli=str(memory_cli),
@@ -703,9 +880,7 @@ def resolve_runtime_binding(
     if provenance == "contradicted":
         # The digest is present and disagrees: a foreign build of the pinned
         # version, which is the case a version check cannot see at all.
-        return _unbound(
-            manifest,
-            mode=mode,
+        return fail(
             reasons=reasons,
             artifact_provenance=provenance,
             installed_artifact_digest=installed_digest,
@@ -724,9 +899,7 @@ def resolve_runtime_binding(
     else:
         status = STATUS_COMPATIBLE
     if status is STATUS_COMPATIBLE and _require_exact_artifact(environment):
-        return _unbound(
-            manifest,
-            mode=mode,
+        return fail(
             reasons=[
                 *reasons,
                 f"{ENV_REQUIRE_EXACT} demands the audited artifact and it was not proved",
@@ -763,6 +936,9 @@ def resolve_runtime_binding(
         installed_artifact_digest=installed_digest,
         expected_artifact_digest=manifest.artifact_sha256 or manifest.installed_record_digest,
         release_tag=manifest.release_tag,
+        governance_root=governance_root,
+        environment_heal=heal_outcome,
+        candidates_tried=tuple(tried),
     )
 
 

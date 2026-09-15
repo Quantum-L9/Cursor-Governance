@@ -61,15 +61,30 @@ properties:
     type: array
     items: { type: string, maxLength: 300 }
     maxItems: 8
+  # Three typed, independent conditions (ADR-0032). `degraded` mirrors
+  # `memory_degraded` for consumers that predate the split; it is never ORed
+  # with the lifecycle gap or with an unbound runtime.
   degraded:
     type: boolean
     default: false
   degrade_reason:
     type: string
     maxLength: 500
+  memory_degraded:
+    type: boolean
+    default: false
+    description: Canonical memory ran and did not answer (fault_class=canonical).
+  environment_fault:
+    type: boolean
+    default: false
+    description: The runtime never reached memory (BINDING_FAILED / NAMESPACE_UNRESOLVED).
   close_gap:
     type: boolean
     default: false
+    description: Prior session left no close receipt — a lifecycle condition, not memory.
+  close_gap_reason:
+    type: string
+    maxLength: 500
   conversation_id:
     type: string
     maxLength: 120
