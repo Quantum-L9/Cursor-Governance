@@ -789,6 +789,31 @@ def test_open_pr_after_gate_handles_landed_pr() -> None:
     assert "opening a new PR" in script
 
 
+def test_open_pr_after_gate_refreshes_only_a_composer_authored_body() -> None:
+    """An already-open PR keeps a stale title/body unless this script wrote it.
+
+    #602 kept a title from a range rule that had since been fixed, because the
+    already-open path pushed and stopped. The body is a function of the range;
+    when the marker proves the composer authored it, recompose both. A body
+    without the marker is human-authored and is only warned about, as before.
+    """
+    script = (SCRIPTS / "open_pr_after_gate.sh").read_text(encoding="utf-8")
+    # One composer for both paths: the title never comes from a second git log.
+    assert script.count("_compose_title_and_body\n") == 2, "open + refresh both call it"
+    assert "git log \"${PR_BASE}..HEAD\" --format='%s'" not in script
+    assert "--print-title" in script
+    reopen = script[script.index('echo "PR already open: $pr_url"') :]
+    reopen = reopen[: reopen.index("_pr_summary_py=")]
+    marker_at = reopen.index('*"<!-- autonomous compile from open_pr_after_gate.sh -->"*')
+    edit_at = reopen.index('gh pr edit "$pr_number" --title "$title" --body-file')
+    assert marker_at < edit_at, "the marker check guards the edit"
+    # A refresh failure is reported, never fatal: the push already happened.
+    assert "could not refresh the PR title/body" in reopen
+    # The human-authored WARN survives for bodies we do not own.
+    assert "but its body predates them and lacks" in reopen
+    assert '"$_refreshed" -eq 0' in reopen
+
+
 def test_open_pr_after_gate_remediates_defaults_to_one() -> None:
     script = (SCRIPTS / "open_pr_after_gate.sh").read_text(encoding="utf-8")
     assert 'PR_REMEDIATE="${PR_REMEDIATE:-1}"' in script

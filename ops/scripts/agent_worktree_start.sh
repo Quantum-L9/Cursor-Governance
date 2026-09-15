@@ -65,7 +65,9 @@ _resolve_auto_stack_tip() {
   local resolver="${L9_STACK_TIP_RESOLVER:-$SCRIPT_DIR/resolve_stack_tip.py}"
   local out rc tip sha reason
   set +e
-  out="$(python3 "$resolver" --workspace "$repo_root" 2>&1)"
+  # --branch "" : this is a NEW task. The checkout we launch from may itself
+  # have an open PR; its base is that branch's fact, not the new task's start.
+  out="$(python3 "$resolver" --workspace "$repo_root" --branch "" 2>&1)"
   rc=$?
   set -e
   if [ "$rc" -ne 0 ]; then
