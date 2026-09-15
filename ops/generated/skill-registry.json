@@ -1,5 +1,5 @@
 {
-  "generation_id": "7b283bd4cc0843c4d68b59c68a138bbeb88222e386ea04dfaec94727c6ee4c24",
+  "generation_id": "709cf71063f31b9c454285e082d667925fc634c73c04eec08f7f2cb53de3daec",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -1112,7 +1112,7 @@
       "path": "skills/l9-end-session",
       "reason": "session lifecycle boundary",
       "skill_md": "skills/l9-end-session/SKILL.md",
-      "skill_sha256": "471e4d6d3151682d2e377b090bfd146901199aca76d98d4cdac77db732a02c9e",
+      "skill_sha256": "e48abbadf15e94c8cc7c337581da1fee152eef5bc3299f8f598e7ff00220949d",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1203,7 +1203,7 @@
       "path": "skills/l9-graphiti-memory",
       "reason": "",
       "skill_md": "skills/l9-graphiti-memory/SKILL.md",
-      "skill_sha256": "c75d2005432baedfde847e4579b5404cc9f798a8365ff20e5738dd5ec1a5ee3a",
+      "skill_sha256": "3cf0c9507aea25b4c3073a79d84279c2f7689f7f98891b17f0373233a805478a",
       "user_invocable": true,
       "when_to_use": "wiring memory, debugging prefetch/bootstrap, GMP Phase 0 MEMORY_PREFETCH, episode/T0 memory-bank writes, or checking Graphiti health"
     },
@@ -1600,5 +1600,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "619ee9ae7bcc643598c8f54beeff4e4d598b0893a4331237debf156eaa86f044",
-  "source_skill_corpus_sha256": "4a92a2f8513d4a67e1c9d9da55516bc10d3ce5300e3ebcda5ab2d7128f3ff9b2"
+  "source_skill_corpus_sha256": "88391508435598ce2779ecd443a6d3a9c15f47ca7b87ce95e9be8e70d3449d02"
 }
