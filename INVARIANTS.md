@@ -89,6 +89,10 @@ Cursor profile, `max_parallel` below 480, or `cursor_default` other than
 `maximum_velocity` is a fail-closed regression
 (`ops/scripts/validate_max_velocity.py`). Agents fan out independent
 research as Tasks (`rules/07-max-velocity-research.mdc`).
+Wait for merge is forbidden as a finish: velocity ends a lane by publishing
+or handing off, never by idling on an open PR. The phrase is latched on
+`rules/07-max-velocity-research.mdc` and `rules/53-pr-overlap-guardrail.mdc`
+by the same validator and by `tests/ops/scripts/test_validate_max_velocity.py`.
 
 <!-- FF_OVERWRITE_UNTRACKED_VELOCITY_V1 -->
 ## `/ff` overwrite-untracked velocity (2026-09-10)
