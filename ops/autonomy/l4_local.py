@@ -469,18 +469,81 @@ def kernel_evidence_blocker(root: Path) -> str | None:
 
     Returns a blocker message, or None when release may proceed.
     """
+    evidence = kernel_evidence(root)
+    if evidence["status"] == KERNEL_EVIDENCE_STALE:
+        # An unreadable verdict is not a pass. Naming it beats authorizing on
+        # an exception nobody sees.
+        return str(evidence.get("detail") or "FAIL: kernel receipt does not re-derive") + "\n"
+    return None
+
+
+KERNEL_EVIDENCE_EVIDENCED = "evidenced"
+KERNEL_EVIDENCE_ABSENT = "absent"
+KERNEL_EVIDENCE_STALE = "stale"
+KERNEL_EVIDENCE_ABSENT_NOTE = "kernel_gate.precommit decides exemption"
+
+
+def kernel_evidence(root: Path) -> dict[str, Any]:
+    """What the tree-kernel receipt says about this workspace, re-derived.
+
+    ``evidenced`` — a ``l9.kernel_receipt.v2`` is present and still verifies:
+    the apply report hashes to what it recorded and the kernel files have not
+    moved. ``stale`` — a receipt is present and does not verify. ``absent`` —
+    no receipt; whether that is acceptable is a changed-path question only
+    ``kernel_gate.precommit`` can answer (CANONICAL_LAW §6.2.9 item 6).
+
+    This reads through ``kernel_gate.load_receipt`` and ``verify_tree``. It
+    never records, and never spells the receipt path: ``kernel_gate`` is the
+    sole writer, and ``tests/ops/autonomy/test_kernel_receipt_writers.py``
+    keeps it that way.
+    """
     try:
         from kernel_gate import gov_root_from_env, load_receipt, verify_tree
     except ImportError:  # pragma: no cover - package import
         from ops.autonomy.kernel_gate import gov_root_from_env, load_receipt, verify_tree
-    if load_receipt(root) is None:
-        return None
+    receipt = load_receipt(root)
+    if receipt is None:
+        return {"status": KERNEL_EVIDENCE_ABSENT, "note": KERNEL_EVIDENCE_ABSENT_NOTE}
     try:
-        return verify_tree(root, gov_root_from_env())
+        verdict = verify_tree(root, gov_root_from_env())
     except (OSError, RuntimeError, ValueError) as exc:
-        # An unreadable verdict is not a pass. Naming it beats authorizing on
-        # an exception nobody sees.
-        return f"FAIL: kernel receipt could not be verified: {exc}\n"
+        verdict = f"FAIL: kernel receipt could not be verified: {exc}\n"
+    if verdict:
+        return {"status": KERNEL_EVIDENCE_STALE, "detail": verdict.strip()}
+    deltas = receipt.get("deltas")
+    return {
+        "status": KERNEL_EVIDENCE_EVIDENCED,
+        "schema": receipt.get("schema"),
+        "report_rel": receipt.get("report_rel"),
+        "report_sha256": receipt.get("report_sha256"),
+        "applied_at": receipt.get("applied_at"),
+        "delta_count": len(deltas) if isinstance(deltas, list) else 0,
+    }
+
+
+def _annotate_kernels(kernels: dict[str, Any] | None, evidence: dict[str, Any]) -> dict[str, Any]:
+    """Overlay measured kernel evidence on the self-reported kernel block.
+
+    ``record-kernels`` writes ``passed``/``failed`` from a CLI flag; that is a
+    sentence, not a measurement. When a verified receipt exists it overwrites
+    the status with ``evidenced`` and keeps the sentence as ``self_reported``.
+    When none exists the sentence stands, marked ``evidence: absent`` so a
+    reader cannot mistake it for an apply.
+    """
+    out: dict[str, Any] = {}
+    for label, raw in (kernels or {}).items():
+        entry = dict(raw or {})
+        entry["evidence"] = evidence["status"]
+        if evidence["status"] == KERNEL_EVIDENCE_EVIDENCED:
+            if entry.get("status") not in {None, KERNEL_EVIDENCE_EVIDENCED}:
+                entry["self_reported"] = entry["status"]
+            entry["status"] = KERNEL_EVIDENCE_EVIDENCED
+            for key in ("report_rel", "report_sha256", "applied_at", "delta_count"):
+                entry[key] = evidence.get(key)
+        else:
+            entry["note"] = evidence.get("note") or evidence.get("detail")
+        out[label] = entry
+    return out
 
 
 def authorize_release(root: Path) -> dict[str, Any]:
@@ -498,12 +561,17 @@ def authorize_release(root: Path) -> dict[str, Any]:
             "authorize-release: this workspace holds a kernel receipt that no longer "
             f"re-derives, so it cannot be shown to attest this tree.\n{blocker}"
         )
+    # The blocker has refused a stale receipt, so what remains is evidenced or
+    # absent. Absence still authorizes; it is annotated, never refused.
+    evidence = kernel_evidence(root)
     head = current_head(root)
     digest = tree_digest(root)
     state["phase"] = PHASE_RELEASE
     state["authorized_at"] = _utc_now()
     state["head_sha"] = head
     state["tree_digest"] = digest
+    state["kernels"] = _annotate_kernels(state.get("kernels"), evidence)
+    state["kernel_evidence"] = evidence["status"]
     write_autonomy_json(root, STATE_FILENAME, state)
     receipt = {
         "schema": RECEIPT_SCHEMA,
@@ -515,6 +583,7 @@ def authorize_release(root: Path) -> dict[str, Any]:
         "head_sha": head,
         "authorized_at": state["authorized_at"],
         "kernels": state.get("kernels"),
+        "kernel_evidence": evidence["status"],
         "pr_template": resolve_pr_template(root),
         "doctrine": "l4_local_autonomy",
     }
@@ -780,6 +849,9 @@ def status_dict(root: Path) -> dict[str, Any]:
         "reason": reason,
         "stale": stale,
         "kernels_required": [KERNEL_RECURSIVE_ALIGNMENT, KERNEL_VALIDATE_REPAIR],
+        # Live, not copied from the receipt: a receipt written while the apply
+        # report still verified must read `stale` once that report is edited.
+        "kernel_evidence": kernel_evidence(root)["status"],
         "pr_template": resolve_pr_template(root),
     }
 

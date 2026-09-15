@@ -232,6 +232,55 @@ class ComposePrBodyTests(unittest.TestCase):
             with self.assertRaises(FileNotFoundError):
                 _load_additive_only(missing)
 
+    def test_post_exec_kernels_tick_needs_evidence_not_just_release_phase(self) -> None:
+        template = (
+            TEMPLATE + "\n## L4\n\n- [ ] **L4 local autonomy** — release authorized\n"
+            "- [ ] **Post-exec kernels** — RA + V&R applied\n"
+        )
+        released_unevidenced = MechanicalFacts(
+            commits=["a"],
+            changed_files=["M\tops/x.py"],
+            l4_receipt={
+                "phase": "release_authorized",
+                "tree_digest": "d",
+                "kernel_evidence": "absent",
+                "kernels": {
+                    "recursive_alignment": {"status": "passed", "evidence": "absent"},
+                    "validate_repair": {"status": "passed", "evidence": "absent"},
+                },
+            },
+        )
+        body = compose_pr_body(released_unevidenced, template).body
+        self.assertIn("- [x] **L4 local autonomy**", body)
+        self.assertNotIn("- [x] **Post-exec kernels**", body)
+        self.assertIn("kernel_evidence=absent", body)
+
+        legacy_receipt = MechanicalFacts(
+            commits=["a"],
+            changed_files=["M\tops/x.py"],
+            l4_receipt={"phase": "release_authorized", "head_sha": "abc"},
+        )
+        body = compose_pr_body(legacy_receipt, template).body
+        self.assertNotIn("- [x] **Post-exec kernels**", body)
+        self.assertIn("kernel_evidence=not recorded", body)
+
+        evidenced = MechanicalFacts(
+            commits=["a"],
+            changed_files=["M\tops/x.py"],
+            l4_receipt={
+                "phase": "release_authorized",
+                "tree_digest": "d",
+                "kernel_evidence": "evidenced",
+                "kernels": {
+                    "recursive_alignment": {"status": "evidenced", "report_sha256": "r"},
+                    "validate_repair": {"status": "evidenced", "report_sha256": "r"},
+                },
+            },
+        )
+        body = compose_pr_body(evidenced, template).body
+        self.assertIn("- [x] **Post-exec kernels**", body)
+        self.assertIn("kernel_evidence=evidenced", body)
+
     def test_multi_commit_range_is_told_oldest_first_not_tip_only(self) -> None:
         facts = MechanicalFacts(
             commits=["first: bind receipts", "second: add ratchet", "third: delegate digest"],

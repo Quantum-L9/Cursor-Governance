@@ -198,11 +198,24 @@ class CorpusExemptionSurvives(unittest.TestCase):
 
     def test_authorize_release_never_requires_a_kernel_receipt(self) -> None:
         tree = _parse(OPS / "autonomy" / "l4_local.py")
-        blocker = _function(tree, "kernel_evidence_blocker")
-        source = ast.unparse(blocker)
+        evidence_fn = _function(tree, "kernel_evidence")
         self.assertIn(
-            "load_receipt(root) is None",
-            source,
+            "load_receipt",
+            _called_names(evidence_fn),
+            "kernel_evidence must read absence from kernel_gate.load_receipt",
+        )
+        evidence = ast.unparse(evidence_fn)
+        self.assertIn("is None", evidence)
+        self.assertLess(
+            evidence.index("is None"),
+            evidence.index("KERNEL_EVIDENCE_ABSENT"),
+            "a missing receipt must classify as absent, not stale",
+        )
+        blocker = ast.unparse(_function(tree, "kernel_evidence_blocker"))
+        self.assertIn("KERNEL_EVIDENCE_STALE", blocker, "the blocker refuses only a stale receipt")
+        self.assertNotIn(
+            "KERNEL_EVIDENCE_ABSENT",
+            blocker,
             "absence of a kernel receipt must return None (authorize), not a blocker",
         )
 

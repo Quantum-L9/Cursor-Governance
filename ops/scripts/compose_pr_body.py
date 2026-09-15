@@ -362,6 +362,25 @@ def _receipt_binding(receipt: dict[str, Any]) -> str:
     return "binding=none recorded"
 
 
+def _kernels_evidenced(facts: MechanicalFacts) -> bool:
+    """True only when the L4 receipt carries kernel evidence for every kernel.
+
+    `l4_local.authorize_release` writes `kernel_evidence` and marks each
+    kernel `evidenced` from a verified `l9.kernel_receipt.v2`. An older receipt
+    without that field, or one whose kernels are `absent` or self-reported
+    `passed`, is not evidence and does not tick the box.
+    """
+    receipt = facts.l4_receipt or {}
+    if receipt.get("kernel_evidence") != "evidenced":
+        return False
+    kernels = receipt.get("kernels")
+    if not isinstance(kernels, dict) or not kernels:
+        return False
+    return all(
+        isinstance(entry, dict) and entry.get("status") == "evidenced" for entry in kernels.values()
+    )
+
+
 def _evidence_lines(facts: MechanicalFacts) -> list[str]:
     evidence: list[str] = []
     if facts.gate_receipt:
@@ -375,7 +394,8 @@ def _evidence_lines(facts: MechanicalFacts) -> list[str]:
     if facts.l4_receipt:
         evidence.append(
             f"L4 receipt present: phase={facts.l4_receipt.get('phase')} "
-            f"{_receipt_binding(facts.l4_receipt)}"
+            f"{_receipt_binding(facts.l4_receipt)} "
+            f"kernel_evidence={facts.l4_receipt.get('kernel_evidence') or 'not recorded'}"
         )
     else:
         evidence.append("L4 receipt absent — release authorization not measured here")
@@ -605,6 +625,10 @@ def _fill_template(template: str, facts: MechanicalFacts) -> str:
     text = _fill_changes_by_intent(text, facts)
     if facts.l4_receipt and facts.l4_receipt.get("phase") == "release_authorized":
         text = text.replace("- [ ] **L4 local autonomy**", "- [x] **L4 local autonomy**", 1)
+    # release_authorized says the L4 phase advanced, not that the kernels were
+    # applied: the corpus exemption authorizes with no kernel receipt at all.
+    # Only measured evidence ticks the box.
+    if _kernels_evidenced(facts):
         text = text.replace("- [ ] **Post-exec kernels**", "- [x] **Post-exec kernels**", 1)
     del commit_block
     return _annotate_unchecked_boxes(text)
