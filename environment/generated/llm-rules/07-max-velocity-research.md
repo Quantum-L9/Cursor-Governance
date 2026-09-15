@@ -24,11 +24,20 @@ grep is available, or because launching feels slower. A denied host
 admission is a gate defect to report; it is not permission to stay
 serial.
 
+Mutation that an **open PR already owns** is the same law: commit into
+that PR (or stack) in this turn. Do not stay in-session inventing a
+follow-up for after merge.
+
 ## MUST NOT
 
 - Invent a lower cap than the execution profile (`constrained`, 4/2, "just one Task")
 - Wait for one research child before launching the next independent one
 - Treat `rules/77` (result-bridge orchestration) as required for explore recon
 - Skip a Task launch to avoid the Graphiti / lifecycle start hook
+- **Wait for merge is forbidden.** Not a finish, not a routing option,
+  not a velocity exception, not "defer until #N lands"
+- Treat "do not put path X in this PR" as wait — that means commit X
+  into the open PR that already owns X, this turn
+- Report "deferred until merge" / "after those PRs land" as a completed outcome
 
 <!-- generated-from: rules/07-max-velocity-research.mdc; do-not-edit -->

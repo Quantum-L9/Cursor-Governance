@@ -17,10 +17,10 @@ Companion `.plan.json` / `.activate.yaml` files stay next to their `.plan.md`.
 
 ## Shelves (existing mechanics)
 
-Only **top-level** `*.plan.md` files are live for Cursor Build and session-start
-(root glob only). Folders hold everything else. SessionStart `### Plan audit`
-is `l9-pipeline-audit` against this store plus `WIP/` and PE campaigns.
-On-demand organize is `/l9-audit-plans`. On-demand harvest is `/l9-pipeline-audit`.
+Only **top-level** `*.plan.md` files are live for Cursor Build
+(root glob only). Folders hold everything else. SessionStart does not
+read, scan, or emit this store. On-demand organize is `/l9-audit-plans`.
+On-demand harvest is `/l9-pipeline-audit`.
 
 | Location | Meaning | Frontmatter `status` |
 |---|---|---|

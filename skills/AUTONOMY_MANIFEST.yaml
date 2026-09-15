@@ -131,7 +131,7 @@ tiers:
   - skill: l9-intelligence-harvest
     reason: donor-to-beneficiary semantic mining is a deliberate operation with a large read surface over a foreign repo; keeps the harvest family (l9-harvest-pipeline, l9-pe-nuggets) explicit; disable-model-invocation
   - skill: l9-pipeline-audit
-    reason: on-demand multi-surface harvest (plans + WIP + PE campaigns) can emit new WIP or campaign INTENT; slash /l9-pipeline-audit is the explicit invoke; sessionStart runs audit_pipeline.py display+spent-archive only; disable-model-invocation
+    reason: on-demand multi-surface harvest (plans + WIP + PE campaigns) can emit new WIP or campaign INTENT; slash /l9-pipeline-audit is the explicit invoke; SessionStart does not run this pack; disable-model-invocation
   - skill: l9-audit-plans
     reason: plans-store shelf + leftover-todo refine mutates docs/plans (status law, harvested omit, fold/compile); slash /l9-audit-plans is the explicit invoke; disable-model-invocation
   - skill: l9-pipeline-orchestrator
@@ -610,7 +610,6 @@ claude_routing:
     - stale plans
     - audit .cursor/plans
     - which plans are unbuilt
-    - sessionStart plan audit
     - harvest WIP campaigns
     - audit program-execution campaigns
     - harvestable components
