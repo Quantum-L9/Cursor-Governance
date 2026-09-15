@@ -1603,7 +1603,7 @@
     },
     {
       "path": "integrations/graphiti/context_reader.py",
-      "sha256": "34b800327107de2b25d1319f95b7a200a33f52918ded2e09db3e543c0c5b6baa"
+      "sha256": "a57f7a4a70a01174628f5a9166cf672239ceb979d02dcbc0f29e86c73c2a3795"
     },
     {
       "path": "integrations/graphiti/tests/test_context_reader.py",
