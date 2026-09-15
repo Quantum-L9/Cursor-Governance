@@ -124,6 +124,18 @@ emit() {
   exit 0
 }
 
+# PE exclusive worktrees: do not rewrite .claude or stamp unknown-agent receipts.
+# The runner already wired links-only; SessionStart bootstrap burns the turn budget.
+_l9_pe_ws="${CLAUDE_PROJECT_DIR:-$PWD}"
+if [ "${L9_PE_WORKER:-}" = "1" ] || [ -n "${L9_PROGRAM_TASK_ID:-}" ]; then
+  emit "PE worker isolate: SessionStart bootstrap skipped; this worktree stays exclusive."
+fi
+case "$_l9_pe_ws" in
+  */.l9/programs/*/worktrees/TASK-*|*/.l9/gov-worktrees/*|*/.l9/program-worktrees/*)
+    emit "PE worker isolate: SessionStart bootstrap skipped; this worktree stays exclusive."
+    ;;
+esac
+
 # The DEGRADED INLINE path's delivery, and only that path's: when no sidecar
 # file could be created, the parent/child split below does not happen, LINES is
 # the only record, and this trap is the only thing that can emit it. On the

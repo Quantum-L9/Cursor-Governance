@@ -1,0 +1,872 @@
+schema: l9.program-execution.campaign-source.v2
+schema_version: 2.0.0
+metadata:
+  campaign_id: pe-odoo-gate-writeback-v1
+  title: PE Odoo — Gate writeback fail-closed and manual Inject
+  version: 1.0.0
+  created_at: '2026-09-14T19:40:00Z'
+  status: operator_intake
+  owner: Quantum AI Partners
+  intended_host: cryptoxdog/IB-Odoo_19
+  intended_drop_path: WIP/PE Odoo/specs/pe-odoo-gate-writeback-v1/campaign_spec.yaml
+  pec_input_name: campaign_spec.yaml
+  source_brief: WIP/PE Odoo/PE Odoo.md
+  predecessor_campaign_ids: []
+  source_is_immutable: true
+  remote_mutation_during_admission: false
+integrity:
+  digest_algorithm: sha256
+  canonical_encoding: utf-8
+  canonical_line_endings: lf
+  digest_record_location: source-integrity-receipt.json
+  generated_counts_or_digests_may_be_hand_edited: false
+pipeline_contract:
+  pair: program-execution-system.v2
+  blueprint: program-execution-blueprint.v2
+  controller: program-execution-controller.v2
+  compilation_sequence:
+  - preserve_immutable_campaign_source
+  - compile_source_into_complete_native_blueprint
+  - validate_blueprint_in_template_mode
+  - collect_admission_evidence
+  - accept_blueprint
+  - bootstrap_pec
+  authority_boundaries:
+    campaign_source_owns: immutable_operator_intent_and_campaign_semantics
+    blueprint_owns: accepted_program_definition
+    controller_owns: mutable_runtime_state_and_gate_results
+    adapters_own: target_translation_and_execution_receipts
+operator_directive:
+  objective: On cryptoxdog/IB-Odoo_19, make Gate CRM writeback fail-closed unless both plasticos.gate.auto_writeback and plasticos.gate.auto_writeback_operator_approved
+    are true; fail closed on missing EIE state and non-explicit CEG eligibility; let operators approve a stored Gate proposal
+    via the existing Inject action; reinforce the partner writeback allowlist at the database-write boundary; update tests
+    to the new contract; bump only plasticos_gate and plasticos_enrichment after behavior and tests are in place. Do not touch
+    EIE, CEG, or Gate_SDK.
+  mode: controlled_autonomous_until_material_boundary
+  auto_continue:
+  - read_only_inspection
+  - blueprint_materialization
+  - reversible_repo_local_work
+  - local_validation
+  pause_only_for:
+  - missing_or_conflicting_semantic_authority
+  - material_scope_expansion
+  - unresolved_blocking_unknown
+  - failed_blocking_gate
+  - security_or_secret_boundary
+  - exact_remote_mutation_approval
+program:
+  id: pe-odoo-gate-writeback-v1
+  name: PE Odoo — Gate writeback fail-closed and manual Inject
+  version: 1.0.0
+  owner: Quantum AI Partners
+  definition_status: draft
+  snapshot_at: '2026-09-14'
+  target_repository_id: cryptoxdog/IB-Odoo_19
+  contracts:
+    blueprint: program-execution-blueprint.v2
+    controller_minimum: program-execution-controller.v2
+    pair: program-execution-system.v2
+  objective: Dual-switch Gate auto-writeback, fail-closed EIE/CEG mapping, manual Gate Inject from review, write-boundary
+    allowlist, contract tests, and scoped module version bumps. EIE, CEG, and Gate_SDK stay unchanged.
+  problem_statement: 'The source brief targeted closed/merged PR #156 on fix/gate-writeback-match-converge. Current Staging
+    still has a single-flag gate_auto_writeback_enabled() and no plasticos.gate.auto_writeback_operator_approved seed. An
+    old database with auto_writeback=1 can still enable automatic partner writes.'
+  target_state: auto_writeback AND operator_approved are both required for automatic writeback; missing EIE state is never
+    status ok; CEG eligible is not True is never actionable; review-state Gate runs write allowlisted empty partner fields
+    only after Inject; tests assert the new contract; module versions reflect the finished behavior. Gate_SDK, EIE, and CEG
+    are unchanged.
+  scope:
+    include:
+    - plasticos_gate/services/gate_config.py
+    - plasticos_gate/data/gate_icp_seed.xml
+    - plasticos_gate/services/gate_mappers.py
+    - plasticos_gate/services/gate_allowlists.py
+    - plasticos_gate/__manifest__.py
+    - plasticos_enrichment/models/enrichment_run.py
+    - plasticos_enrichment/tests/test_gate_enrichment_fallback.py
+    - plasticos_enrichment/__manifest__.py
+    - tests/test_gate_match_contract.py
+    exclude:
+    - EIE source tree
+    - CEG source tree
+    - Gate_SDK source tree
+    - pipeline_v2.py
+    - production database mutation
+    - remote push
+    - merge
+    - deploy
+  authority_order:
+  - applicable_safety_legal_security_requirements
+  - cursor_governance_canonical_law
+  - latest_explicit_operator_instruction
+  - accepted_program_decision
+  - approved_task_card
+  - repository_local_governance
+  - implementation
+  - documentation
+  operating_rules:
+  - source_is_immutable_after_intake
+  - targets_array_is_the_single_repository_identity
+  - dependency_edges_are_the_only_task_ordering_authority
+  - writable_paths_are_explicit
+  - validation_commands_are_single_admissible_shell_operations
+  - remote_actions_are_forbidden_in_program_execution
+  - do_not_reopen_merged_pr_156
+  - branch_from_current_Staging_after_inspect
+  - bump_versions_last_after_behavior_and_tests
+  - do_not_change_existing_auto_writeback_default_back_to_1
+  terminal_verdicts:
+  - CONVERGED
+  - CONVERGED_WITH_NON_BLOCKING_RISKS
+  - NOT_CONVERGED
+  - INCONCLUSIVE
+targets:
+- id: TARGET-001
+  name: IB-Odoo_19 Gate writeback target
+  kind: git_repository
+  authority_owner: cryptoxdog/IB-Odoo_19
+  execution_mode: repo_local
+  adapter: git
+  repository_id: cryptoxdog/IB-Odoo_19
+  source_of_truth: origin/Staging
+  environments:
+  - local
+  mutability: reversible
+  expected_revision: UNKNOWN
+authorities:
+- id: AUTH-001
+  responsibility: program_definition_and_terminal_verdict
+  owner: Quantum AI Partners
+  scope:
+  - whole_program
+  - scope_changes
+  - terminal_verdict
+- id: AUTH-002
+  responsibility: controller_evidence_and_gate_evaluation
+  owner: controller
+  scope:
+  - evidence_collection
+  - gate_evaluation
+decisions:
+- id: DEC-001
+  question: Which git baseline should this campaign mutate?
+  authority_id: AUTH-001
+  status: accepted
+  selected_option_id: OPTION-A
+  blocking_task_ids: []
+  required_evidence_ids:
+  - EVID-001
+  options:
+  - id: OPTION-A
+    description: 'Inspect current Staging, then implement on a new branch from current Staging. Do not reopen merged PR #156.'
+  - id: OPTION-B
+    description: 'Reopen or continue on merged PR #156 / fix/gate-writeback-match-converge.'
+  statement: 'Do not reopen merged PR #156. Inspect current Staging, then implement on a new branch from current Staging unless
+    inspection proves the brief files already match the target contract.'
+unknowns:
+- id: UNK-001
+  statement: Brief version pins are stale versus inspected Staging. plasticos_gate manifest is 19.0.1.8.0, not 19.0.1.1.0.
+    plasticos_enrichment current version was not readable from this workspace (cursorignore). TASK-008 must bump from the
+    inspected current versions, not the brief's old pins.
+  owner: AUTH-001
+  status: open
+  blocking_task_ids: []
+  resolution_method: TASK-008 bumps from the manifest versions recorded by the TASK-001 inspection, never from the brief's
+    stale pins.
+  resolution_evidence_ids:
+  - EVID-001
+- id: UNK-002
+  statement: 'How much of the seven-item brief already landed in later Gate PRs (#169, #173) is UNKNOWN until TASK-001 classifies
+    each file.'
+  owner: AUTH-001
+  status: open
+  blocking_task_ids:
+  - TASK-002
+  - TASK-003
+  - TASK-004
+  - TASK-005
+  - TASK-006
+  resolution_method: TASK-001 classifies each brief target file read-only against current Staging; no W1 task mutates until
+    the classification lands.
+  resolution_evidence_ids:
+  - EVID-001
+evidence_requirements:
+- id: EVID-001
+  claim: 'Target repository identity, current branch, and Staging HEAD are recorded before mutation. PR #156 is treated as
+    historical, not the live worktree.'
+  source_type: repository_inspection
+  source_location: cryptoxdog/IB-Odoo_19
+  collection_method: read_only_inspection
+  freshness: collect_at_admission
+  producer: controller
+  supports:
+  - GATE-001
+  contradicts: []
+- id: EVID-002
+  claim: Dual-switch writeback, fail-closed mapping, Inject path, write-boundary allowlist, and contract tests are proven
+    locally.
+  source_type: test_result
+  source_location: cryptoxdog/IB-Odoo_19
+  collection_method: local_validation
+  freshness: collect_at_completion
+  producer: controller
+  supports:
+  - GATE-003
+  contradicts: []
+workstreams:
+- id: WS-01
+  name: gate_writeback_fail_closed
+  objective: Implement the seven-item brief on current IB-Odoo_19 without touching EIE, CEG, or Gate_SDK.
+  owner: Quantum AI Partners
+  target_id: TARGET-001
+dependency_edges:
+- from: TASK-001
+  to: TASK-002
+- from: TASK-001
+  to: TASK-003
+- from: TASK-001
+  to: TASK-004
+- from: TASK-001
+  to: TASK-005
+- from: TASK-002
+  to: TASK-003
+- from: TASK-005
+  to: TASK-006
+- from: TASK-002
+  to: TASK-007
+- from: TASK-003
+  to: TASK-007
+- from: TASK-004
+  to: TASK-007
+- from: TASK-005
+  to: TASK-007
+- from: TASK-006
+  to: TASK-007
+- from: TASK-007
+  to: TASK-008
+waves:
+- id: W0
+  name: inspect_and_classify
+  task_ids:
+  - TASK-001
+  predecessor_wave_ids: []
+  exit_gate_ids:
+  - GATE-001
+- id: W1
+  name: fail_closed_behavior
+  task_ids:
+  - TASK-002
+  - TASK-003
+  - TASK-004
+  - TASK-005
+  - TASK-006
+  predecessor_wave_ids:
+  - W0
+  exit_gate_ids:
+  - GATE-002
+- id: W2
+  name: tests_then_version_bumps
+  task_ids:
+  - TASK-007
+  - TASK-008
+  predecessor_wave_ids:
+  - W1
+  exit_gate_ids:
+  - GATE-003
+tasks:
+- id: TASK-001
+  title: Inspect current Staging before applying the brief
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W0
+  target_id: TARGET-001
+  execution_kind: repo_local
+  kernel_profile: AUDIT
+  objective: 'Verify the live worktree is IB-Odoo_19 on a clean branch from current Staging. Classify each brief target file
+    as VERIFIED, NEEDS_CORRECTION, SUPERSEDED, or UNKNOWN. Do not mutate in this task. Do not reopen PR #156.'
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids:
+  - DEC-001
+  blocking_unknown_ids: []
+  input_evidence_ids:
+  - EVID-001
+  paths: []
+  consumers:
+  - program_execution_controller
+  - campaign_operator
+  entrypoints:
+  - make campaign
+  actions:
+  - record_branch_head_and_unrelated_dirt
+  - confirm_pr_156_is_merged_historical
+  - classify_gate_config_icp_mappers_enrichment_run_and_tests
+  acceptance:
+  - id: AC-001
+    statement: Inspection names current branch, HEAD, and a per-file classification for every path in program.scope.include.
+      Unrelated dirty files are listed and not mixed into this campaign.
+    required_evidence_types:
+    - inspection
+  validation:
+  - id: VAL-001
+    method: command
+    command_or_inspection: test -f plasticos_gate/services/gate_config.py
+    command: test -f plasticos_gate/services/gate_config.py
+    environment: repo_local
+    expected_result: PASS
+  negative_cases:
+  - mutate_during_inspect
+  - reopen_merged_pr_156
+  - mix_unrelated_dirty_files
+  rollback:
+    strategy: discard_unaccepted_artifacts_or_revert_local_commit
+    trigger: validation_failure_or_scope_violation
+    validation: git status --short
+  risk:
+    tier: T2
+    reversibility: reversible
+    blast_radius: inspection_only
+  authorization_ceiling:
+    inspect: true
+    local_write: false
+    commit: false
+    push: false
+    pull_request: false
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-001
+- id: TASK-002
+  title: Require both writeback switches before automatic CRM writes
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  kernel_profile: CHANGE
+  objective: Replace gate_auto_writeback_enabled() so it returns True only when both plasticos.gate.auto_writeback and plasticos.gate.auto_writeback_operator_approved
+    are truthy.
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids:
+  - DEC-001
+  blocking_unknown_ids:
+  - UNK-002
+  input_evidence_ids:
+  - EVID-001
+  paths:
+  - plasticos_gate/services/gate_config.py
+  consumers:
+  - program_execution_controller
+  entrypoints:
+  - make campaign
+  actions:
+  - implement_dual_switch_conjunction
+  - keep_missing_approval_false
+  acceptance:
+  - id: AC-002
+    statement: gate_auto_writeback_enabled returns True only when both ICP keys are independently truthy. Missing approval
+      evaluates false.
+    required_evidence_types:
+    - inspection
+    - test_result
+  validation:
+  - id: VAL-002
+    method: command
+    command_or_inspection: git grep auto_writeback_operator_approved -- plasticos_gate/services/gate_config.py
+    command: git grep auto_writeback_operator_approved -- plasticos_gate/services/gate_config.py
+    environment: repo_local
+    expected_result: PASS
+  negative_cases:
+  - single_flag_still_enables_writeback
+  - treat_missing_approval_as_true
+  rollback:
+    strategy: discard_unaccepted_artifacts_or_revert_local_commit
+    trigger: validation_failure_or_scope_violation
+    validation: git status --short
+  risk:
+    tier: T2
+    reversibility: reversible
+    blast_radius: one_python_function
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: false
+    pull_request: false
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-002
+- id: TASK-003
+  title: Seed operator-approval ICP defaulted off
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  kernel_profile: CHANGE
+  objective: Add param_gate_auto_writeback_operator_approved immediately after the existing auto_writeback record, value 0.
+    Do not change the existing auto_writeback default back to 1.
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids:
+  - UNK-002
+  input_evidence_ids:
+  - EVID-001
+  paths:
+  - plasticos_gate/data/gate_icp_seed.xml
+  consumers:
+  - program_execution_controller
+  entrypoints:
+  - make campaign
+  actions:
+  - add_noupdate_operator_approved_icp_zero
+  - preserve_existing_auto_writeback_default
+  acceptance:
+  - id: AC-003
+    statement: The seed record exists with value 0 and auto_writeback remains 0.
+    required_evidence_types:
+    - inspection
+  validation:
+  - id: VAL-003
+    method: command
+    command_or_inspection: git grep param_gate_auto_writeback_operator_approved -- plasticos_gate/data/gate_icp_seed.xml
+    command: git grep param_gate_auto_writeback_operator_approved -- plasticos_gate/data/gate_icp_seed.xml
+    environment: repo_local
+    expected_result: PASS
+  negative_cases:
+  - flip_auto_writeback_default_to_one
+  - rely_on_xml_to_overwrite_existing_databases
+  rollback:
+    strategy: discard_unaccepted_artifacts_or_revert_local_commit
+    trigger: validation_failure_or_scope_violation
+    validation: git status --short
+  risk:
+    tier: T2
+    reversibility: reversible
+    blast_radius: one_xml_seed_record
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: false
+    pull_request: false
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-002
+- id: TASK-004
+  title: Fail closed on missing EIE state and ineligible CEG candidates
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  kernel_profile: CHANGE
+  objective: Stop defaulting missing EIE state to completed. Skip CEG candidates unless eligible is True after buyer resolution.
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids:
+  - UNK-002
+  input_evidence_ids:
+  - EVID-001
+  paths:
+  - plasticos_gate/services/gate_mappers.py
+  consumers:
+  - program_execution_controller
+  entrypoints:
+  - make campaign
+  actions:
+  - remove_completed_state_default
+  - skip_candidates_unless_eligible_is_true
+  acceptance:
+  - id: AC-004
+    statement: Missing EIE state is never status ok. Missing or false eligibility is never actionable.
+    required_evidence_types:
+    - inspection
+    - test_result
+  validation:
+  - id: VAL-004
+    method: command
+    command_or_inspection: git grep eligible -- plasticos_gate/services/gate_mappers.py
+    command: git grep eligible -- plasticos_gate/services/gate_mappers.py
+    environment: repo_local
+    expected_result: PASS
+  negative_cases:
+  - invent_completed_when_state_missing
+  - treat_missing_eligible_as_true
+  rollback:
+    strategy: discard_unaccepted_artifacts_or_revert_local_commit
+    trigger: validation_failure_or_scope_violation
+    validation: git status --short
+  risk:
+    tier: T2
+    reversibility: reversible
+    blast_radius: two_mapper_functions
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: false
+    pull_request: false
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-002
+- id: TASK-005
+  title: Inject button approves a stored Gate proposal
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  kernel_profile: CHANGE
+  objective: Add a Gate branch in action_inject when engine_used == gate. Require review state, revalidate proposed fields,
+    write via _apply_converge_writeback, and return True. Do not delete the old path.
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids:
+  - UNK-002
+  input_evidence_ids:
+  - EVID-001
+  paths:
+  - plasticos_enrichment/models/enrichment_run.py
+  consumers:
+  - program_execution_controller
+  entrypoints:
+  - make campaign
+  actions:
+  - add_gate_inject_branch
+  - preserve_non_gate_inject_path
+  acceptance:
+  - id: AC-005
+    statement: Gate review runs can be manually injected without falling through to local extraction.
+    required_evidence_types:
+    - inspection
+    - test_result
+  validation:
+  - id: VAL-005
+    method: command
+    command_or_inspection: git grep action_inject -- plasticos_enrichment/models/enrichment_run.py
+    command: git grep action_inject -- plasticos_enrichment/models/enrichment_run.py
+    environment: repo_local
+    expected_result: PASS
+  negative_cases:
+  - delete_old_inject_path
+  - allow_gate_inject_outside_review
+  - fall_through_to_local_extraction
+  rollback:
+    strategy: discard_unaccepted_artifacts_or_revert_local_commit
+    trigger: validation_failure_or_scope_violation
+    validation: git status --short
+  risk:
+    tier: T2
+    reversibility: reversible
+    blast_radius: one_enrichment_action
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: false
+    pull_request: false
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-002
+- id: TASK-006
+  title: Re-enforce writeback allowlist at the write boundary
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  kernel_profile: CHANGE
+  objective: In _apply_converge_writeback, skip any proposed field not in PARTNER_WRITEBACK_FIELD_ALLOWLIST before emptiness
+    and merge-not-overwrite checks.
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids:
+  - UNK-002
+  input_evidence_ids:
+  - EVID-001
+  paths:
+  - plasticos_enrichment/models/enrichment_run.py
+  consumers:
+  - program_execution_controller
+  entrypoints:
+  - make campaign
+  actions:
+  - apply_allowlist_before_partner_write
+  - preserve_merge_not_overwrite
+  acceptance:
+  - id: AC-006
+    statement: Non-allowlisted partner fields such as comment cannot be written from a stored proposal.
+    required_evidence_types:
+    - inspection
+    - test_result
+  validation:
+  - id: VAL-006
+    method: command
+    command_or_inspection: git grep PARTNER_WRITEBACK_FIELD_ALLOWLIST -- plasticos_enrichment/models/enrichment_run.py
+    command: git grep PARTNER_WRITEBACK_FIELD_ALLOWLIST -- plasticos_enrichment/models/enrichment_run.py
+    environment: repo_local
+    expected_result: PASS
+  negative_cases:
+  - write_non_allowlisted_partner_fields
+  - clobber_existing_partner_values
+  rollback:
+    strategy: discard_unaccepted_artifacts_or_revert_local_commit
+    trigger: validation_failure_or_scope_violation
+    validation: git status --short
+  risk:
+    tier: T2
+    reversibility: reversible
+    blast_radius: one_writeback_function
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: false
+    pull_request: false
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-002
+- id: TASK-007
+  title: Update contract and runtime tests to the new writeback semantics
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W2
+  target_id: TARGET-001
+  execution_kind: repo_local
+  kernel_profile: CHANGE
+  objective: Replace the single-flag auto-writeback assertion. Add dual-switch, seed, missing-state, and ineligible-candidate
+    tests. Convert the runtime helper to state+fields and add review-to-Inject coverage.
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids:
+  - EVID-001
+  paths:
+  - tests/test_gate_match_contract.py
+  - plasticos_enrichment/tests/test_gate_enrichment_fallback.py
+  consumers:
+  - program_execution_controller
+  entrypoints:
+  - make campaign
+  actions:
+  - update_contract_tests
+  - convert_runtime_helper_to_eie_shape
+  - add_manual_inject_and_allowlist_tests
+  acceptance:
+  - id: AC-007
+    statement: Contract tests fail closed on the old single-flag and missing-state assumptions.
+    required_evidence_types:
+    - test_result
+  validation:
+  - id: VAL-007
+    method: command
+    command_or_inspection: python3 -m pytest tests/test_gate_match_contract.py -q
+    command: python3 -m pytest tests/test_gate_match_contract.py -q
+    environment: repo_local
+    expected_result: PASS
+  negative_cases:
+  - keep_single_flag_true_assertion
+  - leave_runtime_helper_on_old_status_final_fields_shape
+  rollback:
+    strategy: discard_unaccepted_artifacts_or_revert_local_commit
+    trigger: validation_failure_or_scope_violation
+    validation: git status --short
+  risk:
+    tier: T2
+    reversibility: reversible
+    blast_radius: two_test_modules
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: false
+    pull_request: false
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-003
+- id: TASK-008
+  title: Bump gate and enrichment versions last
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W2
+  target_id: TARGET-001
+  execution_kind: repo_local
+  kernel_profile: CHANGE
+  objective: After behavior and tests exist, bump plasticos_gate and plasticos_enrichment from the inspected current versions,
+    not the brief's stale pins. Format the manifests with ruff.
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids:
+  - UNK-001
+  input_evidence_ids:
+  - EVID-002
+  paths:
+  - plasticos_gate/__manifest__.py
+  - plasticos_enrichment/__manifest__.py
+  consumers:
+  - program_execution_controller
+  entrypoints:
+  - make campaign
+  actions:
+  - bump_inspected_current_patch_versions
+  - ruff_format_manifests
+  acceptance:
+  - id: AC-008
+    statement: Both manifests have a new 19.0.X.Y.Z greater than the TASK-001 inspected versions.
+    required_evidence_types:
+    - inspection
+  validation:
+  - id: VAL-008
+    method: command
+    command_or_inspection: ruff format --check plasticos_gate/__manifest__.py plasticos_enrichment/__manifest__.py
+    command: ruff format --check plasticos_gate/__manifest__.py plasticos_enrichment/__manifest__.py
+    environment: repo_local
+    expected_result: PASS
+  negative_cases:
+  - bump_before_behavior_exists
+  - apply_stale_brief_version_numbers
+  rollback:
+    strategy: discard_unaccepted_artifacts_or_revert_local_commit
+    trigger: validation_failure_or_scope_violation
+    validation: git status --short
+  risk:
+    tier: T2
+    reversibility: reversible
+    blast_radius: two_manifests
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: false
+    pull_request: false
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-003
+gates:
+- id: GATE-001
+  name: inspect_complete
+  gate_type: completion
+  blocking: true
+  owner_authority_id: AUTH-002
+  task_ids:
+  - TASK-001
+  required_evidence_ids:
+  - EVID-001
+  pass_criteria:
+  - TASK-001 inspection recorded branch, HEAD, and per-file classification.
+  - PR 156 is not treated as the live worktree.
+  - No remote mutation was attempted.
+  failure_effect: BLOCKED
+- id: GATE-002
+  name: fail_closed_behavior_in_place
+  gate_type: completion
+  blocking: true
+  owner_authority_id: AUTH-002
+  task_ids:
+  - TASK-002
+  - TASK-003
+  - TASK-004
+  - TASK-005
+  - TASK-006
+  required_evidence_ids:
+  - EVID-001
+  pass_criteria:
+  - Dual-switch, seed, mapper fail-closed, Inject branch, and write-boundary allowlist are present.
+  - EIE, CEG, and Gate_SDK were not modified.
+  failure_effect: BLOCKED
+- id: GATE-003
+  name: tests_and_version_bumps_complete
+  gate_type: completion
+  blocking: true
+  owner_authority_id: AUTH-002
+  task_ids:
+  - TASK-007
+  - TASK-008
+  required_evidence_ids:
+  - EVID-002
+  pass_criteria:
+  - Contract tests encode the new writeback and mapping semantics.
+  - Versions were bumped last from inspected current values.
+  - No remote mutation was attempted by the campaign.
+  failure_effect: BLOCKED
+risks:
+- id: RISK-001
+  statement: Applying the brief onto the merged PR 156 branch would mix stale history with current Staging.
+  owner: Quantum AI Partners
+  likelihood: likely
+  impact: high
+  mitigations:
+  - TASK-001 inspects first.
+  - DEC-001 requires a new branch from current Staging.
+  acceptance_status: accepted
+- id: RISK-002
+  statement: Brief version pins are stale and would skip Odoo reload or collide with later Gate bumps.
+  owner: Quantum AI Partners
+  likelihood: high
+  impact: medium
+  mitigations:
+  - TASK-008 bumps from inspected current versions only.
+  acceptance_status: accepted
+prohibited_paths:
+- id: DNB-001
+  statement: EIE, CEG, and Gate_SDK trees
+  rationale: The brief forbids changing those systems in this pass.
+- id: DNB-002
+  statement: pipeline_v2.py
+  rationale: PlasticOS CI hard-rejects any touch.
+- id: DNB-003
+  statement: .github/workflows/**
+  rationale: This campaign is Odoo module behavior only.
+observability:
+  program_progress_fields:
+  - compiled_blueprint
+  - admission_evidence
+  - task_completion
+  - gate_status
+cutover_and_rollback:
+  preconditions:
+  - accepted_blueprint
+  - GATE-003_PASS
+  rollback_rules:
+  - preserve_receipts
+  - revert_local_commits_when_validation_fails

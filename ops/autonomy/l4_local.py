@@ -383,10 +383,24 @@ def begin(
 def record_kernels(
     root: Path,
     *,
-    recursive_alignment: str = "passed",
-    validate_repair: str = "passed",
+    recursive_alignment: str,
+    validate_repair: str,
     notes: str | None = None,
 ) -> dict[str, Any]:
+    """Record the outcome of the two post-execution kernels.
+
+    Both statuses are REQUIRED and have no default. They used to default to
+    ``"passed"``, which meant the laziest possible invocation -- bare
+    ``record-kernels``, no flags -- produced the strongest possible claim, and a
+    caller could attest a kernel pass without having applied either kernel
+    (INC-2026-09-14-001). The caller must now state what it observed, so a false
+    attestation is at least a deliberate sentence rather than a default.
+
+    This is still a self-report: nothing here verifies that a kernel ran. See
+    TODO.md -- the standing intent is for this to read evidence (the
+    ``kernel_gate`` receipt, plan ``kernel_pass`` blocks) instead of trusting
+    the caller.
+    """
     state = load_phase(root)
     if state is None:
         state = begin(root)
@@ -739,8 +753,10 @@ def build_parser() -> argparse.ArgumentParser:
         "record-kernels",
         help="Record Recursive Alignment + Validate & Repair results",
     )
-    k.add_argument("--recursive-alignment", default="passed", choices=["passed", "failed"])
-    k.add_argument("--validate-repair", default="passed", choices=["passed", "failed"])
+    # Required, not defaulted: a bare `record-kernels` used to assert that both
+    # kernels passed (INC-2026-09-14-001). State the observed outcome.
+    k.add_argument("--recursive-alignment", required=True, choices=["passed", "failed"])
+    k.add_argument("--validate-repair", required=True, choices=["passed", "failed"])
     k.add_argument("--notes", default=None)
     k.set_defaults(func=cmd_record_kernels)
 

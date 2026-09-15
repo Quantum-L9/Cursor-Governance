@@ -46,7 +46,7 @@ def test_begin_kernels_authorize_allows_push(
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
     begin(stacked_repo, contract_id="c1")
     assert release_allows_remote(stacked_repo)[0] is False
-    record_kernels(stacked_repo)
+    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
     assert release_allows_remote(stacked_repo)[0] is False
     receipt = authorize_release(stacked_repo)
     assert receipt["phase"] == "release_authorized"
@@ -104,7 +104,7 @@ def test_release_does_not_survive_head_movement(
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
     monkeypatch.setattr("l4_local.pr_open_for_branch", lambda root, branch=None: False)
     begin(stacked_repo, contract_id="r2")
-    record_kernels(stacked_repo)
+    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
     authorize_release(stacked_repo)
     assert release_allows_remote(stacked_repo)[0] is True
     _move_head(stacked_repo)
@@ -122,7 +122,7 @@ def test_remediation_of_an_open_pr_still_allows_after_head_moves(
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
     monkeypatch.setattr("l4_local.pr_open_for_branch", lambda root, branch=None: True)
     begin(stacked_repo, contract_id="r2-open")
-    record_kernels(stacked_repo)
+    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
     authorize_release(stacked_repo)
     _move_head(stacked_repo)
     allowed, reason = release_allows_remote(stacked_repo)
@@ -137,7 +137,7 @@ def test_phase_file_alone_never_authorizes(
     monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
     begin(stacked_repo, contract_id="r2-phase")
-    record_kernels(stacked_repo)
+    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
     authorize_release(stacked_repo)
     receipt_path(stacked_repo).unlink()
     allowed, reason = release_allows_remote(stacked_repo)
@@ -152,7 +152,7 @@ def test_receipt_without_head_sha_is_refused(
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
     monkeypatch.setattr("l4_local.pr_open_for_branch", lambda root, branch=None: False)
     begin(stacked_repo, contract_id="r2-nosha")
-    record_kernels(stacked_repo)
+    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
     authorize_release(stacked_repo)
     doc = json.loads(receipt_path(stacked_repo).read_text())
     doc.pop("head_sha")
@@ -174,7 +174,7 @@ def test_extend_release_rebinds_only_a_fast_forward_of_the_attested_head(
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
     monkeypatch.setattr("l4_local.pr_open_for_branch", lambda root, branch=None: False)
     begin(stacked_repo, contract_id="r3")
-    record_kernels(stacked_repo)
+    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
     attested = authorize_release(stacked_repo)["head_sha"]
     _move_head(stacked_repo, "merge origin/main (push recovery)")
     assert release_allows_remote(stacked_repo)[0] is False
@@ -200,7 +200,7 @@ def test_extend_release_refuses_a_rewritten_history(
 ) -> None:
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
     begin(stacked_repo, contract_id="r3-rewrite")
-    record_kernels(stacked_repo)
+    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
     attested = authorize_release(stacked_repo)["head_sha"]
     subprocess.run(
         ["git", "-C", str(stacked_repo), "commit", "--amend", "--allow-empty", "-m", "rewritten"],
@@ -258,7 +258,7 @@ def test_cli_check_remote_exit_codes(stacked_repo: Path, monkeypatch: pytest.Mon
     )
     assert denied.returncode == 2
     begin(stacked_repo)
-    record_kernels(stacked_repo)
+    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
     authorize_release(stacked_repo)
     ok = subprocess.run(
         [sys.executable, str(cli), "--workspace", str(stacked_repo), "check-remote"],
@@ -315,7 +315,7 @@ def test_pr_template_never_reports_the_governance_default_for_a_bare_repo(
     ):
         assert not (stacked_repo / rel).exists(), f"fixture unexpectedly ships {rel}"
     begin(stacked_repo, contract_id="ci-016")
-    record_kernels(stacked_repo)
+    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
     receipt = authorize_release(stacked_repo)
     assert receipt["pr_template"] is None
     assert status_dict(stacked_repo)["pr_template"] is None
@@ -323,7 +323,7 @@ def test_pr_template_never_reports_the_governance_default_for_a_bare_repo(
 
 def test_status_dict_exposes_stale_when_head_moves(stacked_repo: Path) -> None:
     begin(stacked_repo, contract_id="ci-016-stale")
-    record_kernels(stacked_repo)
+    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
     authorize_release(stacked_repo)
     status = status_dict(stacked_repo)
     assert status["stale"] is False
@@ -341,7 +341,7 @@ def test_pr_template_names_the_released_repos_own_template(stacked_repo: Path) -
     (stacked_repo / ".github").mkdir(exist_ok=True)
     (stacked_repo / ".github" / "pull_request_template.md").write_text("x", encoding="utf-8")
     begin(stacked_repo, contract_id="ci-016b")
-    record_kernels(stacked_repo)
+    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
     receipt = authorize_release(stacked_repo)
     assert receipt["pr_template"] == ".github/pull_request_template.md"
 
@@ -392,7 +392,7 @@ def test_release_in_one_workspace_does_not_authorize_another(
     monkeypatch.setenv("L9_AUTONOMY_STATE_DIR", str(shared))
 
     begin(stacked_repo, contract_id="ci-scope")
-    record_kernels(stacked_repo)
+    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
     authorize_release(stacked_repo)
     assert release_allows_remote(stacked_repo)[0] is True
 
@@ -428,7 +428,7 @@ def test_unstamped_legacy_receipt_is_refused(
     monkeypatch.delenv("L9_AUTONOMY_STATE_DIR", raising=False)
 
     begin(stacked_repo, contract_id="ci-legacy")
-    record_kernels(stacked_repo)
+    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
     authorize_release(stacked_repo)
     assert release_allows_remote(stacked_repo)[0] is True
 
@@ -444,7 +444,7 @@ def test_unstamped_legacy_receipt_is_refused(
 
 def test_receipt_and_phase_carry_the_workspace_they_authorize(stacked_repo: Path) -> None:
     begin(stacked_repo, contract_id="ci-stamp")
-    record_kernels(stacked_repo)
+    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
     receipt = authorize_release(stacked_repo)
     identity = workspace_identity(stacked_repo)
     assert receipt["workspace"] == identity

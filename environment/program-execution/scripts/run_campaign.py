@@ -604,13 +604,242 @@ def is_dirty(repo: Path) -> bool:
     return bool(result.stdout.strip())
 
 
+KNOWN_REMOTE_DEFAULT_BRANCHES = {
+    "cryptoxdog/ib-odoo_19": "Staging",
+    "quantum-l9/cursor-governance": "main",
+}
+
+
+def proven_untracked(repo: Path, path: Path) -> bool:
+    """True only when git proves nothing under ``path`` is tracked in ``repo``.
+
+    Residue is decided by provenance, not by pathname: Cursor-Governance tracks
+    `.claude/settings.json` itself, and that is the same regular-file shape
+    SessionStart writes into a consumer checkout. ``ls-files --error-unmatch``
+    exits 1 when the pathspec matches no tracked file (a directory pathspec
+    matches every tracked file below it). Tracked (0) or git unable to answer
+    (128) both keep the path: cleanup destroys, so an unproven target stays.
+    """
+    try:
+        rel = path.relative_to(repo)
+    except ValueError:
+        return False
+    result = run_cmd(
+        ["git", "-C", str(repo), "ls-files", "--error-unmatch", "--", str(rel)],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    return result.returncode == 1
+
+
+def has_foreign_session_residue(repo: Path) -> bool:
+    """SessionStart / concurrent-agent files that porcelain can miss when ignored.
+
+    A tracked `.claude/settings.json` is repository configuration, not residue;
+    flagging it quarantined every Cursor-Governance target on every reuse.
+    """
+    settings = repo / ".claude" / "settings.json"
+    if settings.is_file() and not settings.is_symlink() and proven_untracked(repo, settings):
+        return True
+    receipts = repo / ".l9" / "memory" / "receipts"
+    return receipts.is_dir() and any(
+        proven_untracked(repo, path) for path in receipts.glob("unknown-agent__*.json")
+    )
+
+
+def strip_session_residue(repo: Path) -> None:
+    """Remove SessionStart churn so an exclusive PE tree can stay isolated.
+
+    Only paths git proves untracked are removed; a tracked settings file is
+    left byte-for-byte so the checkout is neither dirtied nor quarantined.
+    """
+    claude = repo / ".claude"
+    if claude.is_dir():
+        settings = claude / "settings.json"
+        if settings.is_file() and not settings.is_symlink() and proven_untracked(repo, settings):
+            settings.unlink()
+        for name in ("commands", "skills"):
+            target = claude / name
+            if target.is_dir() and not target.is_symlink() and proven_untracked(repo, target):
+                shutil.rmtree(target)
+    receipts = repo / ".l9" / "memory" / "receipts"
+    if receipts.is_dir():
+        for path in receipts.glob("unknown-agent__*.json"):
+            if proven_untracked(repo, path):
+                path.unlink()
+
+
+def normalize_remote_ref(value: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if text.startswith("refs/remotes/"):
+        text = text[len("refs/remotes/") :]
+    if text.startswith("origin/"):
+        return text
+    return f"origin/{text}"
+
+
+def known_remote_default_branch(repository_id: str) -> str:
+    return KNOWN_REMOTE_DEFAULT_BRANCHES.get(str(repository_id or "").strip().lower(), "")
+
+
+def remote_lineage_candidates(
+    repo: Path,
+    *,
+    repository_id: str = "",
+    declared: str = "",
+) -> list[str]:
+    """Ordered ``origin/<branch>`` candidates for the remote default, deduplicated.
+
+    Declared ``source_of_truth`` wins, then origin/HEAD, then the known default,
+    then ``origin/main``. Shared by the fetch that refreshes the candidates and
+    the resolution that trusts one, so both see the same lineage.
+    """
+    candidates: list[str] = []
+    if declared:
+        candidates.append(normalize_remote_ref(declared))
+    head = run_cmd(
+        ["git", "-C", str(repo), "symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if head.returncode == 0 and (head.stdout or "").strip():
+        candidates.append(normalize_remote_ref(head.stdout.strip()))
+    known = known_remote_default_branch(repository_id)
+    if known:
+        candidates.append(f"origin/{known}")
+    candidates.append("origin/main")
+    ordered: list[str] = []
+    for ref in candidates:
+        if ref and ref not in ordered:
+            ordered.append(ref)
+    return ordered
+
+
+def refresh_remote_lineage(
+    repo: Path,
+    *,
+    repository_id: str = "",
+    declared: str = "",
+) -> list[str]:
+    """Fetch every lineage candidate from origin; return the refs that refreshed.
+
+    A remote-tracking ref proves only that origin *once* had that tip. An
+    exclusive checkout that survived from an earlier campaign still carries
+    ``origin/main`` from that day, and nothing later in the run fetches the
+    default branch (``fetch_stack_refs`` fetches campaign and pec refs only), so
+    trusting the ref as-is bases ``campaign/<id>`` and the admission SHA on a
+    stale tip. Each branch is fetched with an explicit refspec so a
+    single-branch clone refreshes a declared non-default lineage too.
+
+    Fails closed when no candidate could be fetched: an exclusive PE tree whose
+    remote cannot be reached has no provable lineage.
+    """
+    fetched: list[str] = []
+    failures: list[str] = []
+    for ref in remote_lineage_candidates(repo, repository_id=repository_id, declared=declared):
+        branch = ref.removeprefix("origin/")
+        result = run_cmd(
+            [
+                "git",
+                "-C",
+                str(repo),
+                "fetch",
+                "--no-tags",
+                "origin",
+                f"+refs/heads/{branch}:refs/remotes/origin/{branch}",
+            ],
+            timeout=GIT_TIMEOUT_S,
+            env=git_env(),
+        )
+        if result.returncode == 0:
+            fetched.append(ref)
+            continue
+        detail = (result.stderr or result.stdout or "").strip().splitlines()
+        failures.append(f"{ref}: {detail[-1] if detail else 'fetch failed'}")
+    if not fetched:
+        raise CampaignError(
+            f"cannot refresh remote lineage for {repo} from origin ({'; '.join(failures)}); "
+            "an exclusive PE checkout is bound to the remote default only after a fetch "
+            "proves it (IB-Odoo_19: origin/Staging)"
+        )
+    return fetched
+
+
+def remote_lineage_ref(
+    repo: Path,
+    *,
+    repository_id: str = "",
+    declared: str = "",
+) -> str:
+    """Remote default branch for an exclusive PE checkout. Never a local branch.
+
+    IB-Odoo_19's remote default is Staging, not main. Governance stays origin/main.
+    Declared ``source_of_truth`` wins, then origin/HEAD, then the known default.
+    Resolves against whatever remote-tracking refs exist; callers that need the
+    ref to be *current* run ``refresh_remote_lineage`` first.
+    """
+    for ref in remote_lineage_candidates(repo, repository_id=repository_id, declared=declared):
+        verify = run_cmd(
+            ["git", "-C", str(repo), "rev-parse", "--verify", ref],
+            timeout=GIT_TIMEOUT_S,
+            env=git_env(),
+        )
+        if verify.returncode == 0:
+            return ref
+    raise CampaignError(
+        f"cannot resolve remote lineage in {repo}; fetch origin and bind "
+        "source_of_truth (IB-Odoo_19: origin/Staging)"
+    )
+
+
+def isolate_matches_remote_base(worktree: Path, *, branch: str, origin_sha: str) -> bool:
+    if not origin_sha:
+        return False
+    if is_dirty(worktree) or has_foreign_session_residue(worktree):
+        return False
+    current = run_cmd(
+        ["git", "-C", str(worktree), "rev-parse", "--abbrev-ref", "HEAD"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if current.returncode != 0 or current.stdout.strip() != branch:
+        return False
+    head = run_cmd(
+        ["git", "-C", str(worktree), "rev-parse", "HEAD"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    return head.returncode == 0 and head.stdout.strip() == origin_sha
+
+
+def feat_branch_occupants(primary: Path, branch: str) -> list[str]:
+    listed = run_cmd(
+        ["git", "-C", str(primary), "worktree", "list", "--porcelain"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if listed.returncode != 0:
+        return []
+    occupants: list[str] = []
+    current_path = ""
+    want = f"refs/heads/{branch}"
+    for line in (listed.stdout or "").splitlines():
+        if line.startswith("worktree "):
+            current_path = line[len("worktree ") :]
+        elif line.startswith("branch ") and line[len("branch ") :] == want and current_path:
+            occupants.append(current_path)
+    return occupants
+
+
 def refuse_write_to_dirty_primary(primary: Path, write_root: Path) -> None:
     if write_root.resolve() != primary.resolve():
         return
     if is_dirty(primary):
         raise CampaignError(
             f"refuse writing dirty primary clone {primary}; "
-            "use an exclusive worktree from origin/main"
+            "use an exclusive worktree from the remote default branch"
         )
 
 
@@ -645,33 +874,32 @@ def isolate_worktree(
     git_fn: Callable[..., str] | None = None,
     trace: pe_trace.ExecutionTrace | None = None,
 ) -> Path:
+    """Create an exclusive host isolate from origin/main. Never attach a leftover local feat/."""
     git = git_fn or (lambda *args, repo=primary: _git(repo, *args))
     git("fetch", "origin", "main")
     worktree.parent.mkdir(parents=True, exist_ok=True)
     branch = f"feat/{campaign_id}"
-    if worktree.exists():
-        dirty = is_dirty(worktree)
-        current = run_cmd(
-            ["git", "-C", str(worktree), "rev-parse", "--abbrev-ref", "HEAD"],
-            timeout=GIT_TIMEOUT_S,
-            env=git_env(),
-        )
-        if not dirty and current.returncode == 0 and current.stdout.strip() == branch:
-            log(f"isolate reuse worktree {worktree}")
-            ensure_workspace_wired(worktree)
-            return worktree
-        log(f"isolate quarantine dirty or unexpected worktree {worktree}")
-        quarantine_occupied(worktree, trace=trace)
-        git("worktree", "prune")
-    existing = run_cmd(
-        ["git", "-C", str(primary), "rev-parse", "--verify", branch],
+    origin = run_cmd(
+        ["git", "-C", str(primary), "rev-parse", "origin/main"],
         timeout=GIT_TIMEOUT_S,
         env=git_env(),
     )
-    if existing.returncode == 0:
-        git("worktree", "add", str(worktree), branch)
-    else:
-        git("worktree", "add", "-b", branch, str(worktree), "origin/main")
+    origin_sha = origin.stdout.strip() if origin.returncode == 0 else ""
+    if worktree.exists():
+        if isolate_matches_remote_base(worktree, branch=branch, origin_sha=origin_sha):
+            log(f"isolate reuse worktree {worktree}")
+            ensure_workspace_wired(worktree)
+            return worktree
+        log(f"isolate quarantine leftover or unexpected worktree {worktree}")
+        quarantine_occupied(worktree, trace=trace)
+        git("worktree", "prune")
+    occupants = feat_branch_occupants(primary, branch)
+    if occupants:
+        raise CampaignError(
+            f"{branch} is checked out in {occupants[0]}; "
+            "a concurrent session owns that worktree. PE will not attach."
+        )
+    git("worktree", "add", "-B", branch, str(worktree), "origin/main")
     campaign_branch = f"campaign/{campaign_id}"
     has_campaign = run_cmd(
         ["git", "-C", str(worktree), "rev-parse", "--verify", f"origin/{campaign_branch}"],
@@ -686,7 +914,7 @@ def isolate_worktree(
         )
         if local.returncode != 0:
             _git(worktree, "branch", campaign_branch, "origin/main")
-    log(f"isolate worktree {worktree}")
+    log(f"isolate worktree {worktree} from origin/main")
     ensure_workspace_wired(worktree)
     return worktree
 
@@ -1180,23 +1408,84 @@ def ensure_target_history(dest: Path, repository_id: str) -> None:
         raise CampaignError(f"target checkout {dest} cannot walk its parents; refuse hollow clone")
 
 
+def _bind_exclusive_remote_lineage(
+    dest: Path, *, repository_id: str, source_of_truth: str = ""
+) -> None:
+    """Point an exclusive target clone at the remote default, never a local leftover.
+
+    The remote default is fetched *before* any remote-tracking ref is trusted:
+    an existing ``origin/main`` is evidence of a past tip, not of the current
+    one. When lineage still cannot be proven after the fetch, execution stops
+    here — returning would leave the exclusive checkout on whatever local HEAD
+    it happened to have and let ``ensure_integration_branch`` fall back to it.
+    """
+    fetched = refresh_remote_lineage(dest, repository_id=repository_id, declared=source_of_truth)
+    try:
+        ref = remote_lineage_ref(dest, repository_id=repository_id, declared=source_of_truth)
+    except CampaignError as exc:
+        raise CampaignError(
+            f"exclusive checkout {dest} has no provable remote lineage after fetching origin "
+            f"({exc}); refusing to leave it on an arbitrary local HEAD"
+        ) from exc
+    if ref not in fetched:
+        raise CampaignError(
+            f"exclusive checkout {dest} resolved {ref} from a remote-tracking ref that origin "
+            f"did not refresh (fetched: {', '.join(fetched)}); a stale ref is not lineage"
+        )
+    wanted = run_cmd(
+        ["git", "-C", str(dest), "rev-parse", ref],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    current = run_cmd(
+        ["git", "-C", str(dest), "rev-parse", "HEAD"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if (
+        wanted.returncode == 0
+        and current.returncode == 0
+        and wanted.stdout.strip() == current.stdout.strip()
+    ):
+        return
+    local = ref.removeprefix("origin/")
+    checked = run_cmd(
+        ["git", "-C", str(dest), "checkout", "-B", local, ref],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if checked.returncode != 0:
+        raise CampaignError(
+            f"cannot bind {dest} to {ref}: {(checked.stderr or checked.stdout).strip()}"
+        )
+
+
 def default_ensure_target_checkout(
-    dest: Path, repository_id: str, *, donor: Path | None = None
+    dest: Path,
+    repository_id: str,
+    *,
+    donor: Path | None = None,
+    source_of_truth: str = "",
 ) -> Path:
     dest = dest.resolve()
     if dest.exists() and is_git_repo(dest):
-        if is_dirty(dest):
-            raise CampaignError(
-                f"target checkout is dirty: {dest}; make campaign will not attach to a dirty target"
+        strip_session_residue(dest)
+        if is_dirty(dest) or has_foreign_session_residue(dest):
+            log(f"quarantine dirty exclusive target {dest}")
+            quarantine_occupied(dest)
+        else:
+            ensure_target_history(dest, repository_id)
+            _bind_exclusive_remote_lineage(
+                dest, repository_id=repository_id, source_of_truth=source_of_truth
             )
-        ensure_target_history(dest, repository_id)
-        return dest
+            return dest
     if dest.exists():
         raise CampaignError(f"target path exists and is not a git checkout: {dest}")
     dest.parent.mkdir(parents=True, exist_ok=True)
     if (
         donor is not None
         and may_clone_local(donor)
+        and not is_dirty(donor)
         and donor_matches_repository(donor, repository_id)
     ):
         clone = run_cmd(
@@ -1217,6 +1506,9 @@ def default_ensure_target_checkout(
                 env=git_env(),
             )
             if history_walkable(dest):
+                _bind_exclusive_remote_lineage(
+                    dest, repository_id=repository_id, source_of_truth=source_of_truth
+                )
                 return dest
             shutil.rmtree(dest)
     url = f"https://github.com/{repository_id}.git"
@@ -1237,6 +1529,9 @@ def default_ensure_target_checkout(
         raise CampaignError(
             f"cannot checkout {repository_id} at {dest}: {(clone.stderr or clone.stdout).strip()}"
         )
+    _bind_exclusive_remote_lineage(
+        dest, repository_id=repository_id, source_of_truth=source_of_truth
+    )
     return dest
 
 
@@ -1426,7 +1721,13 @@ def write_pr_stack(workspace: Path, stack: dict[str, Any]) -> Path:
     return path
 
 
-def ensure_integration_branch(target_path: Path, campaign_id: str) -> str:
+def ensure_integration_branch(
+    target_path: Path,
+    campaign_id: str,
+    *,
+    repository_id: str = "",
+    source_of_truth: str = "",
+) -> str:
     branch = f"campaign/{campaign_id}"
     exists = run_cmd(
         ["git", "-C", str(target_path), "rev-parse", "--verify", branch],
@@ -1434,14 +1735,23 @@ def ensure_integration_branch(target_path: Path, campaign_id: str) -> str:
         env=git_env(),
     )
     if exists.returncode != 0:
-        # Prefer the remote integration branch when one exists (fetched by the
-        # caller); only a campaign with no remote lineage starts at HEAD.
+        # Prefer the remote campaign branch when one exists. Otherwise start
+        # from the repository's remote default (IB-Odoo_19: origin/Staging),
+        # never a dirty local leftover branch.
         remote = run_cmd(
             ["git", "-C", str(target_path), "rev-parse", "--verify", f"origin/{branch}"],
             timeout=GIT_TIMEOUT_S,
             env=git_env(),
         )
-        start = f"origin/{branch}" if remote.returncode == 0 else "HEAD"
+        if remote.returncode == 0:
+            start = f"origin/{branch}"
+        else:
+            try:
+                start = remote_lineage_ref(
+                    target_path, repository_id=repository_id, declared=source_of_truth
+                )
+            except CampaignError:
+                start = "HEAD"
         created = run_cmd(
             ["git", "-C", str(target_path), "branch", branch, start],
             timeout=GIT_TIMEOUT_S,
@@ -1611,16 +1921,22 @@ def default_arm(
     *,
     repository_id: str,
     target_path: Path,
+    source_of_truth: str = "",
     trace: pe_trace.ExecutionTrace | None = None,
 ) -> dict[str, Any]:
     refuse_hash_campaign_id(campaign_id)
     # Read the remote lineage BEFORE deciding where the local integration
     # branch starts: every task lease bases itself on refs/heads/campaign/<id>,
-    # so a local branch minted from a fresh clone's default-branch HEAD while
-    # origin/campaign/<id> already carries integrated work puts every later
-    # lease and verification on the wrong lineage.
+    # so a local branch minted from a dirty local Staging/main HEAD while
+    # origin/Staging (or origin/campaign/<id>) already carries the remote
+    # lineage puts every later lease and verification on the wrong tree.
     fetch_stack_refs(target_path, campaign_id)
-    ensure_integration_branch(target_path, campaign_id)
+    ensure_integration_branch(
+        target_path,
+        campaign_id,
+        repository_id=repository_id,
+        source_of_truth=source_of_truth,
+    )
     with traced(trace, "reconcile", "reconcile", metadata={"repository": repository_id}):
         reconciled = default_reconcile(workspace, repository_id, target_path)
     tasks = locked_tasks(workspace)
@@ -5167,10 +5483,12 @@ def resume_live_campaign(
     repository_id = str(target.get("repository_id") or host_repo)
     target_path = Path(target_worktree) if target_worktree else None
     if target_path is not None and target_path.exists() and is_git_repo(target_path):
+        strip_session_residue(target_path)
         if is_dirty(target_path):
             raise CampaignError(
                 f"target checkout is dirty: {target_path}; "
-                "make campaign will not attach to a dirty target"
+                "PE will not attach to a leftover local tree — quarantine and recreate "
+                "from the remote default (IB-Odoo_19: origin/Staging)"
             )
         if target_lifecycle == "pre_birth_local_execution_workspace":
             default_ensure_pre_birth_workspace(target_path)
@@ -5311,6 +5629,7 @@ class _CampaignRun:
     reuse: Any = None
     scoped_resume: Any = None
     seed: Any = None
+    source_of_truth: str = ""
     stack_proof_path: Any = None
     target_checkout: Any = None
     target_override: Any = None
@@ -5810,6 +6129,7 @@ def _stage_admit(run: _CampaignRun) -> CampaignReport | None:
     target = seed.get("target") if isinstance(seed.get("target"), dict) else {}
     target_lifecycle = str(target.get("lifecycle") or "existing_repository")
     repository_id = str(target.get("repository_id") or host_repo)
+    source_of_truth = str(target.get("source_of_truth") or "").strip()
     target_path = Path(target_worktree)
 
     def ensure_target_checkout_once() -> None:
@@ -5826,7 +6146,12 @@ def _stage_admit(run: _CampaignRun) -> CampaignReport | None:
                     if target_lifecycle == "pre_birth_local_execution_workspace":
                         default_ensure_pre_birth_workspace(target_path)
                     else:
-                        default_ensure_target_checkout(target_path, repository_id, donor=write_root)
+                        default_ensure_target_checkout(
+                            target_path,
+                            repository_id,
+                            donor=write_root,
+                            source_of_truth=source_of_truth,
+                        )
                 checkout.value = {"path": str(target_path)}
 
     with timer.stage("admission_evidence") as entry:
@@ -5894,6 +6219,7 @@ def _stage_admit(run: _CampaignRun) -> CampaignReport | None:
 
     run.ensure_target_checkout_once = ensure_target_checkout_once
     run.repository_id = repository_id
+    run.source_of_truth = source_of_truth
     run.target_path = target_path
     return None
 
@@ -5911,6 +6237,7 @@ def _stage_runtime(run: _CampaignRun) -> CampaignReport:
     reuse = run.reuse
     scoped_resume = run.scoped_resume
     seed = run.seed
+    source_of_truth = run.source_of_truth
     target_path = run.target_path
     target_worktree = run.target_worktree
     timer = run.timer
@@ -6001,6 +6328,7 @@ def _stage_runtime(run: _CampaignRun) -> CampaignReport:
                     campaign_id,
                     repository_id=repository_id,
                     target_path=target_path,
+                    source_of_truth=source_of_truth,
                     trace=trace,
                 )
     assert_blueprint_immutable(blueprint, accepted_blueprint_inventory, phase="arm")

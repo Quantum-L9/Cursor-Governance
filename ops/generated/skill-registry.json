@@ -1,5 +1,5 @@
 {
-  "generation_id": "9c96859df5a971d2750e6e1179bd1916a09cc4fe4a176fb2c3c3776d99b280e4",
+  "generation_id": "709cf71063f31b9c454285e082d667925fc634c73c04eec08f7f2cb53de3daec",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -1307,7 +1307,7 @@
       "path": "skills/l9-pe-campaign-activate",
       "reason": "Live PE campaigns go through make campaign INTENT= only. hint_allowed is Read/attach so agents load that sealed front door. The run is local-commit-only and invoking the skill is not merge authority; publication is PR_REMEDIATE=0 make pr and merge of open PRs is /l9-pr-remediation. disable-model-invocation.",
       "skill_md": "skills/l9-pe-campaign-activate/SKILL.md",
-      "skill_sha256": "6c07fec95d343d57d29809b9ef30c92bbef6f3a885772fb07d52f12d1e865718",
+      "skill_sha256": "621321f754e6066011549ed9c15b33ab1d6192fa774f887c853cdeb2a0a3c3cd",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1600,5 +1600,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "619ee9ae7bcc643598c8f54beeff4e4d598b0893a4331237debf156eaa86f044",
-  "source_skill_corpus_sha256": "029237911539d5b492bf0ca5eeb36974243b46d776a839e2075852abfa040b66"
+  "source_skill_corpus_sha256": "88391508435598ce2779ecd443a6d3a9c15f47ca7b87ce95e9be8e70d3449d02"
 }

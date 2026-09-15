@@ -77,16 +77,25 @@ class CleanStartupTests(unittest.TestCase):
             # one; repository-write authority now comes from worktree/branch
             # isolation and the publication gate instead
             # (rules/96-multi-agent-main-bound-execution, E7).
-            st.write_receipt(contract, session_id, {"namespaces": ["cursor-governance"]})
+            #
+            # Prefetch is a pre-write task keyed by the CHAT id, not a
+            # SessionStart task: the receipt key is writer-scoped
+            # (`<writer_agent>__<chat>`), so stamping the bare session id left
+            # the gate looking up a key nothing had written. Derive it from the
+            # same event the gate reads so there is one spelling.
+            gate_event = {
+                "tool_name": "Edit",
+                "tool_input": {"file_path": "environment/agents/adapters/claude-code/x.py"},
+                "session_id": session_id,
+            }
+            st.write_receipt(
+                contract,
+                st.resolve_receipt_id(event=gate_event),
+                {"namespaces": ["cursor-governance"]},
+            )
             gate = subprocess.run(
                 [sys.executable, str(GATE)],
-                input=json.dumps(
-                    {
-                        "tool_name": "Edit",
-                        "tool_input": {"file_path": "environment/agents/adapters/claude-code/x.py"},
-                        "session_id": session_id,
-                    }
-                ),
+                input=json.dumps(gate_event),
                 capture_output=True,
                 text=True,
                 env={**os.environ, "CLAUDE_PROJECT_DIR": str(agent_ws)},

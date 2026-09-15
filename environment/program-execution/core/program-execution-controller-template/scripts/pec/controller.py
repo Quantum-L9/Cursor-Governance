@@ -1747,6 +1747,56 @@ def _add_task_worktree(
     )
 
 
+def _proven_untracked(worktree: Path, path: Path) -> bool:
+    """True only when git proves nothing under ``path`` is tracked in ``worktree``.
+
+    Residue cleanup destroys, so provenance is decided by the index, not by the
+    pathname: this repository itself tracks `.claude/settings.json`, and the
+    same regular-file shape is what SessionStart writes into a consumer
+    worktree. ``ls-files --error-unmatch`` exits 1 when the pathspec matches no
+    tracked file (a directory pathspec matches every tracked file below it).
+    Any other answer — tracked (0) or git unable to say (128) — keeps the path.
+    """
+    try:
+        rel = path.relative_to(worktree)
+    except ValueError:
+        return False
+    result = run_git(worktree, "ls-files", "--error-unmatch", "--", str(rel), check=False)
+    return result.returncode == 1
+
+
+def _strip_session_residue(worktree: Path) -> None:
+    """Remove concurrent-SessionStart churn from an exclusive task worktree.
+
+    A Claude worker sets L9_PE_WORKER so SessionStart skips its bootstrap, but a
+    human session opened against the same directory still writes these. They are
+    never task output, so removing them keeps the tree reusable without touching
+    the attempt's own changes.
+
+    Only paths git proves untracked are residue. A tracked `.claude/settings.json`
+    is repository configuration: deleting it left an unrelated deletion in the
+    task diff every time a Cursor-Governance worktree was prepared again.
+    """
+    claude = worktree / ".claude"
+    if claude.is_dir():
+        settings = claude / "settings.json"
+        if (
+            settings.is_file()
+            and not settings.is_symlink()
+            and _proven_untracked(worktree, settings)
+        ):
+            settings.unlink()
+        for name in ("commands", "skills"):
+            target = claude / name
+            if target.is_dir() and not target.is_symlink() and _proven_untracked(worktree, target):
+                shutil.rmtree(target)
+    receipts = worktree / ".l9" / "memory" / "receipts"
+    if receipts.is_dir():
+        for path in receipts.glob("unknown-agent__*.json"):
+            if _proven_untracked(worktree, path):
+                path.unlink()
+
+
 def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
     db, ledger = open_runtime(workspace)
     try:
@@ -1790,6 +1840,12 @@ def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
         if worktree.exists():
             if not _worktree_matches_lease(worktree, lease, repo_path):
                 raise ControllerError(f"worktree already exists: {worktree}")
+            # A leftover worktree is dirty for two very different reasons: the
+            # attempt's own in-progress work, which a re-prepare must preserve,
+            # or SessionStart churn from a concurrent agent. Strip only the
+            # latter; recreating the tree here would discard the work the
+            # verification receipt was issued against.
+            _strip_session_residue(worktree)
             reused = True
         else:
             result = _add_task_worktree(repo_path, worktree, lease)
@@ -2454,7 +2510,7 @@ def _dod_gates_from_verify(
 
 
 def _latest_verification(workspace: Path, task_id: str) -> dict[str, Any]:
-    path = workspace / "receipts" / "verification" / f"{task_id}.json"
+    path = verification_receipt_path(workspace, task_id)
     if not path.is_file():
         return {}
     return load_json(path)
@@ -2468,6 +2524,14 @@ def _dod_complete(verification: dict[str, Any]) -> bool:
 
 
 def verification_receipt_path(workspace: Path, task_id: str) -> Path:
+    """The one derivation of a task's verification receipt path.
+
+    `receipts.artifact_path` is matched by exact string, so the recorded and the
+    looked-up spelling must agree. Deriving it anywhere else without `resolve()`
+    makes the lookup miss wherever the workspace is reached through a symlink --
+    on macOS both `/tmp` and `/var/folders` are, so `complete` refused with "no
+    verification receipt for the current attempt" while Linux CI stayed green.
+    """
     return workspace.resolve() / "receipts" / "verification" / f"{task_id}.json"
 
 
@@ -2813,7 +2877,7 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
         }
         verification["receipt_digest"] = digest_object(verification)
         _validate_schema(workspace, "verification-receipt.schema.json", verification)
-        target = workspace / "receipts" / "verification" / f"{task_id}.json"
+        target = verification_receipt_path(workspace, task_id)
         # One transaction: the canonical receipt record, the evidence it
         # backs, the task transition and the event become durable together
         # (PEC-P1-004). The receipt FILE is a projection materialized after

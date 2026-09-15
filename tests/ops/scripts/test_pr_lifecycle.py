@@ -127,7 +127,17 @@ def test_preflight_passes_after_authorize(tmp_path: Path) -> None:
     )
     assert (
         _run(
-            ["python3", str(L4), "--workspace", str(repo), "record-kernels"],
+            [
+                "python3",
+                str(L4),
+                "--workspace",
+                str(repo),
+                "record-kernels",
+                "--recursive-alignment",
+                "passed",
+                "--validate-repair",
+                "passed",
+            ],
             cwd=repo,
             env=env,
         ).returncode

@@ -6,8 +6,8 @@ role: pipeline
 tags: [campaign, pe, compile, bootstrap, l4]
 owner: igor_beylin
 status: active
-version: 1.2.0
-updated: 2026-09-06
+version: 1.3.0
+updated: 2026-09-14
 /L9_META -->
 
 # PE activation pipeline
@@ -60,9 +60,16 @@ and `program_deploying` stays false. Do not forge the timestamp.
 
 | Tree | Path | Role |
 |---|---|---|
-| Host isolate | `$L9/gov-worktrees/<id>` on `feat/<id>` | emit files only |
-| Target | `$L9/program-worktrees/<id>` | reconcile + campaign/<id> |
+| Host isolate | `$L9/gov-worktrees/<id>` on `feat/<id>` from `origin/main` | emit files only |
+| Target | `$L9/program-worktrees/<id>` from the remote default | reconcile + campaign/<id> |
 | Write tree | `$L9/programs/<id>/worktrees/TASK-00N` | pec prepare mutation checkout |
+
+The remote default is per repository: Cursor-Governance is `origin/main`;
+`cryptoxdog/IB-Odoo_19` is `origin/Staging` (`source_of_truth` / `origin/HEAD`).
+`TARGET_CHECKOUT` is inspect-only. Never attach a leftover local `feat/` or a
+dirty operator checkout. Leftover exclusive trees that are dirty or carry
+SessionStart residue are quarantined and recreated from the remote default.
+Concurrent sessions that already hold `feat/<id>` are refused, not shared.
 
 Never mutate the dirty primary. Never treat `--single-branch main` as the
 only history once stacking is required. Do not open the operator memo.
@@ -71,7 +78,8 @@ Do not attach to a leftover `pe-<intent-hash>` workspace.
 ## Stop conditions
 
 - Runner FAIL → report; do not retry with `--admission-draft`
-- Dirty primary or dirty target → runner refuses; do not `git switch`
+- Concurrent session already owns `feat/<id>` → runner refuses; do not attach
+- Dirty exclusive leftover → quarantine and recreate from the remote default; do not `git switch` on the operator clone
 - A document classified as **brief** with no numbered tasks → brief compiler STOP; do not invent tasks
 - Architecture-grade prose is classified before brief compilation and does not require numbered tasks
 - Provider or Controller verification failure → stop and report; do not publish from PE

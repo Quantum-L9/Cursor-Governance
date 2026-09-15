@@ -298,7 +298,10 @@ class ForwardProgressTests(unittest.TestCase):
         self.assertTrue(self.source["unknowns"])
         for unknown in self.source["unknowns"]:
             self.assertEqual(unknown["blocking_task_ids"], [])
+            self.assertTrue(unknown["owner"])
+            self.assertEqual(unknown["status"], "open")
             self.assertTrue(unknown["resolution_method"])
+            self.assertIn("resolution_evidence_ids", unknown)
 
     def test_every_task_carries_runnable_validation(self) -> None:
         for task in self.source["tasks"]:
