@@ -20,6 +20,40 @@ def _gate():
     return kernel_gate
 
 
+def write_apply_report(repo: Path, *, delta_path: str = "a.txt", body: str = "") -> Path:
+    """Write a valid apply report naming a file that exists in `repo`.
+
+    Tests used to call `record()` bare, which is exactly the honor-system stamp
+    this latch removed. Producing the artifact is now part of setup.
+    """
+    target = repo / delta_path
+    if not target.exists():
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("touched\n", encoding="utf-8")
+    report = repo / ".l9" / "autonomy" / "kernel-apply.md"
+    report.parent.mkdir(parents=True, exist_ok=True)
+    report.write_text(
+        "---\n"
+        "schema: l9.kernel_apply.v1\n"
+        "kernels: [recursive_alignment, validate_repair]\n"
+        "convergence_status: converged\n"
+        "deltas:\n"
+        f"  - path: {delta_path}\n"
+        "    kernel: recursive_alignment\n"
+        "    note: narrowed a guard\n"
+        "---\n"
+        "\n## Recursive Alignment\n\nsurfaced and applied\n"
+        f"\n## Validate & Repair\n\nran the checks{body}\n",
+        encoding="utf-8",
+    )
+    return report
+
+
+def record_with_evidence(gate, repo: Path, *, delta_path: str = "a.txt") -> dict:
+    write_apply_report(repo, delta_path=delta_path)
+    return gate.record(repo, gov=ROOT)
+
+
 @pytest.fixture(autouse=True)
 def adapter_kernel_surface(monkeypatch: pytest.MonkeyPatch) -> None:
     """Existing latch tests prove Claude Code / adapter behavior."""
@@ -37,17 +71,112 @@ def test_precommit_fails_before_receipt(stacked_repo: Path) -> None:
     assert rc == 2
 
 
-def test_record_then_precommit_passes_without_plans(stacked_repo: Path) -> None:
+def test_record_with_evidence_then_precommit_passes_without_plans(stacked_repo: Path) -> None:
     gate = _gate()
-    receipt = gate.record(stacked_repo, gov=ROOT)
+    receipt = record_with_evidence(gate, stacked_repo)
     assert receipt["schema"] == gate.SCHEMA
     assert receipt["kernel_shas"] == gate.kernel_shas(ROOT)
+    # The claim is bound to an artifact, not to ambient state.
+    assert receipt["report_rel"] == ".l9/autonomy/kernel-apply.md"
+    assert len(receipt["report_sha256"]) == 64
+    assert receipt["deltas"] == [
+        {"path": "a.txt", "kernel": "recursive_alignment", "note": "narrowed a guard"}
+    ]
     assert gate.precommit(stacked_repo, ROOT, None) == 0
+
+
+def test_bare_record_without_a_report_writes_no_receipt(stacked_repo: Path) -> None:
+    """The honor-system stamp, asserted gone.
+
+    `record()` with no apply report is what produced INC-2026-09-14-001. It must
+    raise AND leave no receipt: a caller that swallows the exception must not
+    end up with something a gate accepts.
+    """
+    gate = _gate()
+    with pytest.raises(gate.ReportError):
+        gate.record(stacked_repo, gov=ROOT)
+    assert not gate.receipt_path(stacked_repo).is_file()
+    assert gate.precommit(stacked_repo, ROOT, None) == 2
+
+
+def test_v1_receipt_is_rejected_by_name(stacked_repo: Path) -> None:
+    gate = _gate()
+    gate.write_receipt(
+        stacked_repo,
+        {
+            "schema": gate.SCHEMA_V1,
+            "head": "deadbeef",
+            "kernel_shas": gate.kernel_shas(ROOT),
+            "phase": "recorded",
+        },
+    )
+    failure = gate.verify_tree(stacked_repo, ROOT)
+    assert failure is not None
+    assert gate.SCHEMA_V1 in failure
+    assert gate.precommit(stacked_repo, ROOT, None) == 2
+
+
+def test_editing_the_report_after_recording_fails_verify(stacked_repo: Path) -> None:
+    """Verify re-derives. A receipt is not a durable permission slip."""
+    gate = _gate()
+    report = write_apply_report(stacked_repo)
+    gate.record(stacked_repo, gov=ROOT)
+    assert gate.verify_tree(stacked_repo, ROOT) is None
+    report.write_text(report.read_text(encoding="utf-8") + "\nadded later\n", encoding="utf-8")
+    failure = gate.verify_tree(stacked_repo, ROOT)
+    assert failure is not None
+    assert "no longer satisfies" in failure
+
+
+def test_deleting_the_report_after_recording_fails_verify(stacked_repo: Path) -> None:
+    gate = _gate()
+    report = write_apply_report(stacked_repo)
+    gate.record(stacked_repo, gov=ROOT)
+    report.unlink()
+    assert gate.verify_tree(stacked_repo, ROOT) is not None
+
+
+def test_delta_naming_a_nonexistent_path_is_refused(stacked_repo: Path) -> None:
+    gate = _gate()
+    report = stacked_repo / ".l9" / "autonomy" / "kernel-apply.md"
+    report.parent.mkdir(parents=True, exist_ok=True)
+    report.write_text(
+        "---\n"
+        "schema: l9.kernel_apply.v1\n"
+        "kernels: [recursive_alignment, validate_repair]\n"
+        "convergence_status: converged\n"
+        "deltas:\n"
+        "  - path: never/existed.py\n"
+        "    kernel: validate_repair\n"
+        "    note: invented\n"
+        "---\n\n## Recursive Alignment\n\nx\n\n## Validate & Repair\n\ny\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(gate.ReportError):
+        gate.record(stacked_repo, gov=ROOT)
+    assert not gate.receipt_path(stacked_repo).is_file()
+
+
+def test_report_outside_the_autonomy_dir_is_refused(stacked_repo: Path) -> None:
+    gate = _gate()
+    with pytest.raises(gate.ReportError):
+        gate.record(stacked_repo, gov=ROOT, report=Path("../escape.md"))
+    assert not gate.receipt_path(stacked_repo).is_file()
+
+
+def test_template_cannot_be_recorded_as_written(stacked_repo: Path) -> None:
+    """The scaffold must not be stampable: its deltas are placeholders."""
+    gate = _gate()
+    report = stacked_repo / ".l9" / "autonomy" / "kernel-apply.md"
+    report.parent.mkdir(parents=True, exist_ok=True)
+    report.write_text(gate.apply_report_template(), encoding="utf-8")
+    with pytest.raises(gate.ReportError):
+        gate.record(stacked_repo, gov=ROOT)
 
 
 def test_head_move_does_not_require_second_apply(stacked_repo: Path) -> None:
     gate = _gate()
-    gate.record(stacked_repo, gov=ROOT)
+    record_with_evidence(gate, stacked_repo)
     extra = stacked_repo / "b.txt"
     extra.write_text("b\n", encoding="utf-8")
     import subprocess
@@ -63,7 +192,7 @@ def test_head_move_does_not_require_second_apply(stacked_repo: Path) -> None:
 
 def test_changed_plan_template_is_skipped(stacked_repo: Path, tmp_path: Path) -> None:
     gate = _gate()
-    gate.record(stacked_repo, gov=ROOT)
+    record_with_evidence(gate, stacked_repo)
     rel = "environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md"
     template = stacked_repo / rel
     template.parent.mkdir(parents=True)
@@ -75,7 +204,7 @@ def test_changed_plan_template_is_skipped(stacked_repo: Path, tmp_path: Path) ->
 
 def test_changed_plan_without_receipt_is_skipped(stacked_repo: Path, tmp_path: Path) -> None:
     gate = _gate()
-    gate.record(stacked_repo, gov=ROOT)
+    record_with_evidence(gate, stacked_repo)
     plan = stacked_repo / "docs" / "plans" / "hook_test_00000000.plan.md"
     plan.parent.mkdir(parents=True)
     plan.write_text("---\nname: hook test\n---\n\n# bare\n", encoding="utf-8")
@@ -202,7 +331,7 @@ def test_cursor_requires_tree_receipt_before_pass(
     changed = tmp_path / "changed.txt"
     changed.write_text("ops/foo.py\n")
     assert gate.precommit(stacked_repo, ROOT, changed) == 2
-    gate.record(stacked_repo, gov=ROOT)
+    record_with_evidence(gate, stacked_repo, delta_path="ops/foo.py")
     assert gate.precommit(stacked_repo, ROOT, changed) == 0
 
 

@@ -34,12 +34,23 @@ _HERE = Path(__file__).resolve().parent
 _ROOT = _HERE.parents[1]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
+from ops.autonomy import kernel_predicates  # noqa: E402
+from ops.autonomy.kernel_predicates import (  # noqa: E402
+    APPLY_REL,
+    APPLY_SCHEMA,
+    ReportError,
+)
 from ops.autonomy.surface_detect import (  # noqa: E402
     ADAPTER_KERNEL_SURFACES,
     kernel_latch_surface,
 )
 
-SCHEMA = "l9.kernel_receipt.v1"
+#: v1 was a stamp: schema, head, kernel file SHAs, a timestamp. Every field was
+#: ambient or about files the agent never touched, so writing the claim was
+#: cheaper than doing the work (INC-2026-09-14-001). v2 binds the claim to a
+#: hashed, path-confined apply report the verifier re-derives.
+SCHEMA_V1 = "l9.kernel_receipt.v1"
+SCHEMA = "l9.kernel_receipt.v2"
 RECEIPT_REL = Path(".l9") / "autonomy" / "kernel-receipt.json"
 KERNELS: tuple[tuple[str, str], ...] = (
     ("recursive_alignment", "kernels/Recursive Alignment.md"),
@@ -149,17 +160,44 @@ def write_receipt(root: Path, data: dict[str, Any]) -> Path:
     return path
 
 
-def record(root: Path, *, gov: Path) -> dict[str, Any]:
-    """Honor-system stamp after the agent applied the two tree kernels."""
+def record(root: Path, *, gov: Path, report: Path | None = None) -> dict[str, Any]:
+    """Record the tree-kernel claim, bound to a hashed apply report.
+
+    The report is the artifact that constitutes the claim. It is validated
+    BEFORE anything is written, so a failed predicate leaves no receipt behind:
+    a caller cannot get a usable receipt by ignoring an exception.
+
+    This does not prove judgment — nothing can re-run an LLM apply
+    deterministically. It moves the claim from unfalsifiable to falsifiable: a
+    forged ``deltas`` entry names a specific path with a specific note, which a
+    reviewer can contradict.
+
+    Raises:
+        ReportError: the report is missing, escapes ``.l9/autonomy/``, has bad
+            frontmatter, has empty deltas, or names paths that do not exist.
+    """
+    root_r = root.resolve()
+    target = report if report is not None else Path(APPLY_REL)
+    confined = kernel_predicates.confine_report_path(root_r, target)
+    structure = kernel_predicates.report_structure(root_r, confined)
+    if structure:
+        raise ReportError("; ".join(structure))
+    # Raises on a delta path that does not exist in this tree.
+    deltas = kernel_predicates.load_validated_deltas(root_r, confined)
     receipt = {
         "schema": SCHEMA,
-        "head": _git_head(root),
+        "report_rel": confined.relative_to(root_r).as_posix(),
+        "report_sha256": kernel_predicates.sha256_file(confined),
+        "deltas": deltas,
         "kernel_shas": kernel_shas(gov),
         "applied_at": _utc_now(),
         "agent_id": os.environ.get("L9_MEMORY_AGENT_ID", ""),
         "phase": "recorded",
+        # Recorded metadata, deliberately NOT the binding: a later rewrite
+        # commit must not force a second LLM apply.
+        "head": _git_head(root_r),
     }
-    write_receipt(root, receipt)
+    write_receipt(root_r, receipt)
     return receipt
 
 
@@ -190,7 +228,48 @@ def record_command(root: Path, gov: Path) -> str:
     locked = gov / ".venv" / "bin" / "python"
     interpreter = str(locked) if locked.is_file() else "python3"
     script = gov / "ops" / "autonomy" / "kernel_gate.py"
-    return f'{interpreter} {script} record --workspace "{root}"'
+    # --report is explicit even though it defaults: the printed line teaches the
+    # contract, and the artifact is the point of the command.
+    return f'{interpreter} {script} record --workspace "{root}" --report "{APPLY_REL.as_posix()}"'
+
+
+def template_command(root: Path, gov: Path) -> str:
+    locked = gov / ".venv" / "bin" / "python"
+    interpreter = str(locked) if locked.is_file() else "python3"
+    script = gov / "ops" / "autonomy" / "kernel_gate.py"
+    return f'{interpreter} {script} apply-report-template --workspace "{root}"'
+
+
+def apply_report_template() -> str:
+    """Skeleton for the apply report. Deltas are left empty on purpose.
+
+    An empty ``deltas`` list fails ``record``, so this scaffold cannot be
+    stamped as-is. Filling it in is the work.
+    """
+    return (
+        "---\n"
+        f"schema: {APPLY_SCHEMA}\n"
+        "kernels:\n"
+        "  - recursive_alignment\n"
+        "  - validate_repair\n"
+        "convergence_status: converged  # converged | partial | blocked\n"
+        "deltas:\n"
+        "  # One entry per file you actually changed. Non-empty, real paths.\n"
+        "  - path: relative/path/you/changed.py\n"
+        "    kernel: recursive_alignment  # or validate_repair\n"
+        "    note: what the kernel changed and why\n"
+        "---\n"
+        "\n"
+        "## Recursive Alignment\n"
+        "\n"
+        "What the kernel surfaced on this tree, and what you did about it.\n"
+        "\n"
+        "## Validate & Repair\n"
+        "\n"
+        "What you validated, what failed, what you repaired. Report Passed /\n"
+        "Failed / Skipped / Unknown honestly — a clean report with no validation\n"
+        "run is the failure mode this gate exists to catch.\n"
+    )
 
 
 def _agent_required_tree(root: Path, gov: Path) -> str:
@@ -203,9 +282,16 @@ def _agent_required_tree(root: Path, gov: Path) -> str:
         "  1. Apply kernels/Recursive Alignment.md to the finished local tree\n"
         "  2. Apply kernels/Validate & Repair.md independently on the same tree\n"
         "  3. Commit any revisions on this stacked branch (no push)\n"
-        f"  4. {record_command(root, gov)}\n"
-        "  5. Re-run the same command (make precommit-repo / make pr-check / make pr).\n"
+        f"  4. Write the apply report at {APPLY_REL.as_posix()} — frontmatter\n"
+        f"     ({APPLY_SCHEMA}, both kernels, convergence_status) and one deltas\n"
+        "     entry per file you changed (path + kernel + note). For a skeleton:\n"
+        f"       {template_command(root, gov)}\n"
+        f"  5. {record_command(root, gov)}\n"
+        "  6. Re-run the same command (make precommit-repo / make pr-check / make pr).\n"
         "     Hooks and tests run once after this hook passes.\n"
+        "The report IS the receipt. record refuses an absent report, empty deltas, a\n"
+        "path outside .l9/autonomy/, or a delta naming a file that does not exist —\n"
+        "and verify re-hashes it, so editing the report afterwards fails the gate.\n"
         "Kernels are not an L4 phase. Do not record-kernels / IMPROVE_RECORD to apply them.\n"
         "Do not run pre-commit or pytest first.\n"
         "=== END L9_AGENT_REQUIRED ===\n"
@@ -227,13 +313,27 @@ def _agent_required_plan(path: Path) -> str:
 
 
 def verify_tree(root: Path, gov: Path) -> str | None:
-    """Return a failure message, or None when the tree-kernel receipt is valid.
+    """Return a failure message, or None when the tree-kernel receipt holds.
 
-    Receipt is bound to kernel file SHAs, not HEAD, so a later rewrite commit
-    does not force a second LLM apply.
+    Every check re-derives from live files. Nothing recorded in the receipt is
+    taken on trust: the report is re-hashed and its predicates re-run, so a
+    receipt that was valid when written fails once the report it names is
+    edited or deleted.
+
+    Binding is the report digest plus the kernel file SHAs, not HEAD, so a
+    later rewrite commit does not force a second LLM apply.
     """
     receipt = load_receipt(root)
-    if receipt is None or receipt.get("schema") != SCHEMA:
+    if receipt is None:
+        return _agent_required_tree(root, gov)
+    schema = receipt.get("schema")
+    if schema == SCHEMA_V1:
+        return (
+            f"FAIL: kernel-receipt is {SCHEMA_V1}, which asserted a kernel apply with no\n"
+            "      artifact behind it and is no longer accepted. Write the apply report\n"
+            f"      and re-record to produce {SCHEMA}.\n" + _agent_required_tree(root, gov)
+        )
+    if schema != SCHEMA:
         return _agent_required_tree(root, gov)
     try:
         current = kernel_shas(gov)
@@ -244,6 +344,13 @@ def verify_tree(root: Path, gov: Path) -> str | None:
         return (
             "FAIL: kernel-receipt kernel_shas do not match the live kernel files.\n"
             + _agent_required_tree(root, gov)
+        )
+    errors = kernel_predicates.run_predicates(root, receipt)
+    if errors:
+        detail = "\n".join(f"  {err}" for err in errors)
+        return (
+            "FAIL: kernel apply report no longer satisfies its own receipt.\n"
+            f"{detail}\n" + _agent_required_tree(root, gov)
         )
     return None
 
@@ -324,8 +431,33 @@ def precommit(root: Path, gov: Path, changed_file: Path | None) -> int:
 
 
 def cmd_record(args: argparse.Namespace) -> int:
-    receipt = record(workspace_root(args.workspace), gov=gov_root_from_env(args.gov_root))
+    root = workspace_root(args.workspace)
+    gov = gov_root_from_env(args.gov_root)
+    report = Path(args.report) if args.report else None
+    try:
+        receipt = record(root, gov=gov, report=report)
+    except ReportError as exc:
+        sys.stderr.write(f"FAIL: apply report rejected — {exc}\n")
+        sys.stderr.write("      No receipt was written.\n")
+        sys.stderr.write(_agent_required_tree(root, gov))
+        return 2
     print(json.dumps(receipt, indent=2, sort_keys=True))
+    return 0
+
+
+def cmd_apply_report_template(args: argparse.Namespace) -> int:
+    root = workspace_root(args.workspace)
+    target = root / APPLY_REL
+    if args.write:
+        if target.exists() and not args.force:
+            sys.stderr.write(f"FAIL: {target} already exists (use --force to overwrite)\n")
+            return 2
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(apply_report_template(), encoding="utf-8")
+        print(f"template written: {target}")
+        print("Fill in deltas with the files you actually changed; empty deltas fail record.")
+        return 0
+    sys.stdout.write(apply_report_template())
     return 0
 
 
@@ -359,9 +491,23 @@ def build_parser() -> argparse.ArgumentParser:
     rec = sub.add_parser(
         "record",
         parents=[shared],
-        help="stamp tree-kernel receipt after applying kernels",
+        help="record tree-kernel receipt from a hashed apply report",
+    )
+    rec.add_argument(
+        "--report",
+        default=None,
+        help=f"apply report path, workspace-relative (default {APPLY_REL.as_posix()})",
     )
     rec.set_defaults(func=cmd_record)
+
+    tpl = sub.add_parser(
+        "apply-report-template",
+        parents=[shared],
+        help="print (or --write) an apply-report skeleton",
+    )
+    tpl.add_argument("--write", action="store_true", help=f"write it to {APPLY_REL.as_posix()}")
+    tpl.add_argument("--force", action="store_true", help="overwrite an existing report")
+    tpl.set_defaults(func=cmd_apply_report_template)
 
     ver = sub.add_parser("verify", parents=[shared], help="check tree-kernel receipt only")
     ver.set_defaults(func=cmd_verify)

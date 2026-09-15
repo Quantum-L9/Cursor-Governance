@@ -446,21 +446,42 @@ def test_precommit_missing_binary_fails_after_files(tmp_path: Path) -> None:
 
 
 def _stamp_kernel(repo: Path) -> None:
-    assert (
-        _run(
-            [
-                "python3",
-                str(KERNEL_GATE),
-                "record",
-                "--workspace",
-                str(repo),
-                "--gov-root",
-                str(ROOT),
-            ],
-            cwd=repo,
-        ).returncode
-        == 0
+    """Satisfy the tree latch the way an agent must: report, then record.
+
+    `record` refuses to write a receipt without a hashed, path-confined apply
+    report whose deltas name files that exist, so the artifact is part of
+    fixture setup now rather than a bare CLI call.
+    """
+    delta = "a.txt"
+    if not (repo / delta).exists():
+        (repo / delta).write_text("a\n", encoding="utf-8")
+    report = repo / ".l9" / "autonomy" / "kernel-apply.md"
+    report.parent.mkdir(parents=True, exist_ok=True)
+    report.write_text(
+        "---\n"
+        "schema: l9.kernel_apply.v1\n"
+        "kernels: [recursive_alignment, validate_repair]\n"
+        "convergence_status: converged\n"
+        "deltas:\n"
+        f"  - path: {delta}\n"
+        "    kernel: recursive_alignment\n"
+        "    note: fixture apply\n"
+        "---\n\n## Recursive Alignment\n\nfixture\n\n## Validate & Repair\n\nfixture\n",
+        encoding="utf-8",
     )
+    proc = _run(
+        [
+            "python3",
+            str(KERNEL_GATE),
+            "record",
+            "--workspace",
+            str(repo),
+            "--gov-root",
+            str(ROOT),
+        ],
+        cwd=repo,
+    )
+    assert proc.returncode == 0, proc.stderr
 
 
 def test_precommit_repo_kernel_hook_fails_before_hooks(tmp_path: Path) -> None:

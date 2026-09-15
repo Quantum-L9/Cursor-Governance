@@ -128,6 +128,9 @@ _GATE_CODE_FILES=(
   "ops/scripts/pr_gate_failure.py"
   "ops/config/python-contract.json"
   "ops/autonomy/kernel_gate.py"
+  # Decides the kernel verdict as of the evidence latch, so a change here can
+  # flip PASS to FAIL exactly like kernel_gate.py itself.
+  "ops/autonomy/kernel_predicates.py"
   ".pre-commit-config.yaml"
   "ops/scripts/run_pr_security.sh"
   "ops/scripts/lib/fetch_receipt.sh"
