@@ -131,6 +131,9 @@ _GATE_CODE_FILES=(
   # Decides the kernel verdict as of the evidence latch, so a change here can
   # flip PASS to FAIL exactly like kernel_gate.py itself.
   "ops/autonomy/kernel_predicates.py"
+  # Owns the digest those predicates compare, so a change to the binding can
+  # flip the same verdict one level down.
+  "ops/autonomy/receipt_binding.py"
   ".pre-commit-config.yaml"
   "ops/scripts/run_pr_security.sh"
   "ops/scripts/lib/fetch_receipt.sh"

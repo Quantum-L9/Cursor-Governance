@@ -6,17 +6,24 @@ State + receipts live under <workspace>/.l9/autonomy/ (gitignored).
 
 Tree kernels are owned by ops/autonomy/kernel_gate.py (first step of
 precommit-repo). They are not an L4 phase, and authorize-release does not
-require a kernel stamp (CANONICAL_LAW KERNEL_PRECOMMIT_HOOK_V1).
+require a kernel stamp (CANONICAL_LAW KERNEL_PRECOMMIT_HOOK_V1). It does
+require kernel *evidence* when a kernel receipt exists: a present receipt
+must still re-derive clean, and an absent one authorizes, which is what
+keeps the corpus-only `/ff` publish path working (CANONICAL_LAW §6.2.9
+item 6, the mechanical blocker `eace25ed` named).
 
 Phases:
   executing          — local commits on stacked branch; push/PR denied
   kernels_recorded   — compat only; record-kernels still stamps kernel_gate
   release_authorized — scoped push + PR using PULL_REQUEST_TEMPLATE allowed
 
-The release receipt binds the exact HEAD sha it attested. Moving HEAD after
-authorize-release voids it (audit R2); the only re-bind is `extend-release`,
-which the publish path's push recovery calls after the gate has re-validated
-the merged tree (audit R3).
+The release receipt binds the working tree's content digest. `head_sha`
+stays recorded, and remains what `extend-release` chains on, but it is
+metadata rather than the binding: HEAD is a proxy for a tree, so an amend
+or a rebase that changes no bytes used to void an attestation that was
+still true — and a receipt that expires for reasons unrelated to its
+subject teaches re-stamping on a schedule. A content change still voids it,
+which is the part that has to hold.
 """
 
 from __future__ import annotations
@@ -31,8 +38,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+try:
+    from receipt_binding import tree_digest
+except ImportError:  # pragma: no cover - package import
+    from ops.autonomy.receipt_binding import tree_digest
+
 SCHEMA = "l9.l4_local_phase/v1"
-RECEIPT_SCHEMA = "l9.l4_local_release_receipt/v1"
+RECEIPT_SCHEMA = "l9.l4_local_release_receipt/v2"
+RECEIPT_SCHEMA_V1 = "l9.l4_local_release_receipt/v1"
 STATE_REL = Path(".l9/autonomy/l4-local-phase.json")
 RECEIPT_REL = Path(".l9/autonomy/l4-release-receipt.json")
 
@@ -439,6 +452,37 @@ def record_kernels(
     return state
 
 
+def kernel_evidence_blocker(root: Path) -> str | None:
+    """Refuse release when a kernel receipt exists but no longer re-derives.
+
+    This is the narrow coupling CANONICAL_LAW §6.2.9 item 6 licenses, and it
+    is deliberately not the one `eace25ed` reverted. That coupling *required*
+    a kernel receipt, which `authorize_release` cannot do: it has no
+    changed-path context, so it cannot tell a corpus-only `/ff` changeset
+    (exempt) from a code changeset (not exempt), and requiring one broke the
+    `/ff` publish flow outright.
+
+    So absence authorizes. What is refused is a receipt that is present and
+    false — an edited or deleted apply report, or kernel files that moved
+    since the apply. Nothing here recomputes the exemption; the only reader
+    of changed paths is still `kernel_gate.precommit`.
+
+    Returns a blocker message, or None when release may proceed.
+    """
+    try:
+        from kernel_gate import gov_root_from_env, load_receipt, verify_tree
+    except ImportError:  # pragma: no cover - package import
+        from ops.autonomy.kernel_gate import gov_root_from_env, load_receipt, verify_tree
+    if load_receipt(root) is None:
+        return None
+    try:
+        return verify_tree(root, gov_root_from_env())
+    except (OSError, RuntimeError, ValueError) as exc:
+        # An unreadable verdict is not a pass. Naming it beats authorizing on
+        # an exception nobody sees.
+        return f"FAIL: kernel receipt could not be verified: {exc}\n"
+
+
 def authorize_release(root: Path) -> dict[str, Any]:
     state = load_phase(root)
     if state is None:
@@ -448,10 +492,18 @@ def authorize_release(root: Path) -> dict[str, Any]:
         raise RuntimeError(
             f"branch drift: phase started on {state.get('stacked_branch')!r}, now on {branch!r}"
         )
+    blocker = kernel_evidence_blocker(root)
+    if blocker:
+        raise RuntimeError(
+            "authorize-release: this workspace holds a kernel receipt that no longer "
+            f"re-derives, so it cannot be shown to attest this tree.\n{blocker}"
+        )
     head = current_head(root)
+    digest = tree_digest(root)
     state["phase"] = PHASE_RELEASE
     state["authorized_at"] = _utc_now()
     state["head_sha"] = head
+    state["tree_digest"] = digest
     write_autonomy_json(root, STATE_FILENAME, state)
     receipt = {
         "schema": RECEIPT_SCHEMA,
@@ -459,6 +511,7 @@ def authorize_release(root: Path) -> dict[str, Any]:
         "contract_id": state.get("contract_id"),
         "stacked_branch": branch,
         "stacked_base": state.get("stacked_base"),
+        "tree_digest": digest,
         "head_sha": head,
         "authorized_at": state["authorized_at"],
         "kernels": state.get("kernels"),
@@ -537,7 +590,14 @@ def extend_release(root: Path, *, from_head: str, reason: str) -> dict[str, Any]
             "history was rewritten; re-run authorize-release"
         )
     extended = dict(receipt)
+    extended["schema"] = RECEIPT_SCHEMA
     extended["head_sha"] = head
+    # The recovery merge changed content, so the old digest is genuinely spent.
+    # Re-binding here is the attestation step: the caller has already re-run the
+    # gate on the merged tree, and the ancestry check above proved nothing was
+    # rewritten. Without this the extended receipt would carry the pre-merge
+    # digest and _allow_from_receipt would correctly refuse the retry.
+    extended["tree_digest"] = tree_digest(root)
     extended["extended_from"] = pinned
     extended["extension_reason"] = reason.strip() or "push-recovery"
     extended["extended_at"] = _utc_now()
@@ -545,6 +605,7 @@ def extend_release(root: Path, *, from_head: str, reason: str) -> dict[str, Any]
     state = load_phase(root)
     if state:
         state["head_sha"] = head
+        state["tree_digest"] = extended["tree_digest"]
         write_autonomy_json(root, STATE_FILENAME, state)
     return extended
 
@@ -552,16 +613,20 @@ def extend_release(root: Path, *, from_head: str, reason: str) -> dict[str, Any]
 def _allow_from_receipt(
     root: Path, receipt: dict[str, Any], state: dict[str, Any] | None, branch: str
 ) -> tuple[bool, str] | None:
-    """Decide from the release receipt. The receipt binds branch AND head sha.
+    """Decide from the release receipt. The receipt binds branch AND content.
 
     A release is authorized for the exact tree the operator attested, so the
-    receipt's ``head_sha`` is the authorization, not a detail of it. The
-    phase file used to short-circuit this comparison — ``phase ==
-    release_authorized`` on the same branch answered "allowed" before the sha
-    was ever read — so every commit made after ``authorize-release`` inherited
-    an attestation nobody gave it (audit R2). The phase file now decides
-    nothing on its own; only the sha-bound receipt, or an open PR on this
-    branch (the remediation path), can allow.
+    binding *is* the authorization, not a detail of it. The phase file used to
+    short-circuit this comparison — ``phase == release_authorized`` on the
+    same branch answered "allowed" before anything was re-derived — so every
+    commit made after ``authorize-release`` inherited an attestation nobody
+    gave it (audit R2). The phase file now decides nothing on its own.
+
+    ``tree_digest`` is the binding as of v2, re-derived here on every read.
+    ``head_sha`` remains the fallback for a v1 receipt written before the
+    upgrade: it is a weaker proxy, not a falsehood, so it is honored rather
+    than rejected by name (unlike the v1 *kernel* receipt, which attested
+    nothing at all).
     """
     del state  # the phase file never authorizes remote work by itself
     if receipt.get("phase") != PHASE_RELEASE:
@@ -571,14 +636,29 @@ def _allow_from_receipt(
             f"L4 receipt is for branch {receipt['stacked_branch']!r}, "
             f"current is {branch!r} — begin a new L4 phase or switch branch"
         )
+    bound = str(receipt.get("tree_digest") or "").strip()
+    if bound:
+        try:
+            live = tree_digest(root)
+        except RuntimeError as exc:
+            return False, f"L4 receipt binds a tree digest this workspace cannot re-derive: {exc}"
+        if live == bound:
+            return True, "L4 release_authorized (receipt matches worktree content)"
+        if pr_open_for_branch(root, branch):
+            return True, "L4 remediation push on open PR"
+        return False, (
+            f"L4 receipt stale: authorized tree {bound[:12]}, this worktree is "
+            f"{live[:12]} and no PR is open for this branch. Re-run kernels + "
+            "authorize-release (or extend-release after a governed push-recovery merge)."
+        )
     pinned = str(receipt.get("head_sha") or "").strip()
     head = current_head(root)
     if pinned and head and pinned == head:
-        return True, "L4 release_authorized (receipt matches HEAD)"
+        return True, "L4 release_authorized (v1 receipt matches HEAD)"
     if not pinned:
         return False, (
-            "L4 receipt carries no head_sha, so it cannot be shown to authorize this "
-            "tree — re-run: python3 ops/autonomy/l4_local.py authorize-release"
+            "L4 receipt binds neither a tree digest nor a head_sha, so it cannot be shown "
+            "to authorize this tree — re-run: python3 ops/autonomy/l4_local.py authorize-release"
         )
     if pr_open_for_branch(root, branch):
         return True, "L4 remediation push on open PR"
@@ -676,12 +756,23 @@ def status_dict(root: Path) -> dict[str, Any]:
     allowed, reason = release_allows_remote(root)
     receipt = load_receipt(root)
     head = current_head(root)
-    pinned = str((receipt or {}).get("head_sha") or "")
-    stale = bool(pinned and head and pinned != head)
+    # Staleness is reported against whatever the receipt actually binds, so
+    # `make l4-status` cannot say "stale" about a v2 receipt that a no-op
+    # commit moved past — the case the content binding exists to stop.
+    bound = str((receipt or {}).get("tree_digest") or "")
+    if bound:
+        try:
+            stale = tree_digest(root) != bound
+        except RuntimeError:
+            stale = True
+    else:
+        pinned = str((receipt or {}).get("head_sha") or "")
+        stale = bool(pinned and head and pinned != head)
     return {
         "workspace": str(root),
         "branch": current_branch(root),
         "head": head,
+        "tree_digest": bound or None,
         "phase": (load_phase(root) or {}).get("phase"),
         "receipt": receipt,
         "state": load_phase(root),

@@ -34,7 +34,23 @@ except ImportError:  # pragma: no cover - stdlib fallback
     yaml = None  # type: ignore[assignment]
 
 
+try:  # governance clone: one owner for canonicalize-then-digest
+    from ops.autonomy import receipt_binding as _binding
+except ImportError:  # consumer clone: this pack is copied without ops/
+    _binding = None  # type: ignore[assignment]
+
+
 def canonicalize(text: str) -> str:
+    """Zero the self-referential body_sha256 so the plan can hash itself.
+
+    The governance clone delegates to ``ops/autonomy/receipt_binding.py``,
+    which owns this operation for every receipt plane. The local body is the
+    fallback for consumer repos that receive this skill pack without ``ops/``;
+    ``tests/ops/autonomy/test_receipt_binding.py`` pins the two to identical
+    output, so the fallback cannot drift into a second dialect.
+    """
+    if _binding is not None:
+        return _binding.canonicalize(text, self_fields=("body_sha256",))
     return SHA_FIELD_RE.sub(lambda m: f"{m.group(1)}{ZERO_DIGEST}{m.group(3)}", text)
 
 
