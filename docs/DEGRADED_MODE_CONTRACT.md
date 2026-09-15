@@ -19,9 +19,11 @@ Retirement closes both questions: do not set `L9_CAPABILITY_BROKER_URL`, do not
 probe a never-shipped host, and do not paste a reusable secret into a
 model-controlled sandbox to "enable" Sonar / Semgrep / Context7.
 
-Graphiti memory uses `${GRAPHITI_MCP_URL}` (default
-`https://memory.quantumaipartners.com/graphiti/mcp`) with **no bearer**. Cursor
-on this machine may still use the SSH tunnel at `127.0.0.1:8100`.
+Canonical memory is package-owned `l9-graphite-memory` (stdio MCP +
+`python -m ops.memory.cli`). A surface that cannot bind the interpreter is
+**memory-blind**. That is reported (`make memory-binding` / `make memory-readiness`),
+not repaired by pasting `GRAPHITI_MCP_URL` or a bearer. Cursor on this machine
+does not hold a provider tunnel as the front door.
 
 Archived implementation: `ops/secrets/_archived/capability-broker/RETIRED.md`.
 
@@ -40,7 +42,7 @@ work today.
 | Local `semgrep` CE, `bandit`, `pip-audit` | Credential-free rulesets |
 | `gitleaks` | Once provisioned; the security gate fails closed without it |
 | Every `l9-*` skill that does not call a capability | |
-| Graphiti MCP at `GRAPHITI_MCP_URL` | No bearer; session may be memory-blind |
+| Canonical memory (`ops.memory.cli` / MCP stdio) | Unbound = memory-blind; do not paste a URL or bearer |
 
 | Does not work | Consequence |
 |---|---|

@@ -1,8 +1,9 @@
 ---
 id: l9.rule.graph-layer-boundary
-version: 1.1.0
+version: 1.2.0
 description: Keep structural code graphs, canonical episodic memory (MemoryService),
-  repository resume state, and static law distinct.
+  repository resume state, and static law distinct; interactive write is dual
+  (write_agent + write_governed).
 scope: global
 activation: always
 authority: canonical_global
@@ -11,21 +12,24 @@ alwaysApply: true
 
 # Graph Layer Boundary
 
-**Updated: 2026-09-07** — episodic and resume rows rebound to the canonical control plane (CANONICAL_LAW §8.2/§8.3, ADR-0030). Graphiti is a projection memory owns, not a layer this repository reads or writes.
+**Updated: 2026-09-07** *(single-path write row superseded 2026-09-13)* — episodic and resume rows rebound to the canonical control plane (CANONICAL_LAW §8.2/§8.3, ADR-0030). Graphiti is a projection memory owns, not a layer this repository reads or writes.
+
+**Updated: 2026-09-13** — ADR-0031 / CANONICAL_LAW §8.5: the interactive-write row is dual. Ordinary / cold model writes use MCP `memory.write_agent` (no `phase_lock`, no SessionStart receipt); conflict-sensitive writes remain `memory.phase_lock` → `memory.write_governed`.
 
 | Layer | Tool | Answers |
 |---|---|---|
 | Structural | `code-graph-rag` MCP | Where in code? Who imports it? What is the blast radius? |
 | Episodic | Canonical memory: `l9-graphite-memory` `MemoryService` (**one authority**; `python -m ops.memory.cli` and the `l9-graphite-memory` MCP server are adapters — ADR-0005/ADR-0030; Graphiti is its downstream projection) | What was decided? Which ADR or operating lesson applies? |
 | Session resume | Canonical continuation record (`ContinuationCapsuleV2`, `python -m ops.memory.cli hydrate`) | Where did the repository session stop? |
-| Interactive write | `memory.phase_lock` → `memory.write_governed` (MCP) | How does a model record a durable fact mid-session? |
+| Interactive write | MCP `l9-graphite-memory`: ordinary / cold `memory.write_agent` (no `phase_lock`); conflict-sensitive `memory.phase_lock` → `memory.write_governed` (ADR-0031) | How does a model record a durable fact mid-session? |
 | Static law | Rules and `AGENTS.md` | Which constraints are non-negotiable? |
 
 `memory-bank/` is deprecated/archival and is not a resume layer. A Graphiti
 `inject` / PICKUP read is not a resume layer either: the provider client is a
 tombstone and no surface holds a provider URL or bearer.
 
-The memory phase-lock in the interactive-write row governs memory-write
+The memory phase-lock in the interactive-write row (taken only by the
+`write_governed` path; `write_agent` takes none) governs memory-write
 consistency only. It is not repository-write authority: a source edit, a
 commit, a push or a publication is authorized by worktree / branch /
 publication governance (`96-multi-agent-main-bound-execution` E7/E8/E10),
@@ -45,4 +49,4 @@ Repository overlays may add domain-specific structural-graph procedures without 
 - **Agent episodic memory** — the canonical `MemoryService` only, reached through `ops/memory` (INV-03). CLI and MCP are adapters to it, not competing products; the provider is never called directly.
 - **Product / domain memory** — application runtime stores (e.g. consumer product Neo4j matching, Odoo state, Gate intelligence) are **not** agent resume SSOT and must not be written or read as Cursor session memory.
 - Do not invent a second agent-memory stack when one adapter (CLI or MCP) is unhealthy — fix the binding (`make memory-binding`).
-- Do not route a model-authored fact through generic `memory.ingest` or the operator CLI `write` to avoid `memory.write_governed`.
+- Do not route a model-authored fact through generic `memory.ingest` or the operator CLI `write` to avoid `memory.write_agent` / `memory.write_governed`.

@@ -36,9 +36,11 @@ Before any memory CLI call, **load and follow** [`l9-graphiti-memory`](../l9-gra
 - `write` accepts `--kind`, `--group-id`, `--agent-id`, `--dry-run` — **never** `--scope`.
 - Stamp `L9_MEMORY_AGENT_ID=cursor` (or `--agent-id cursor`).
 - The repair is a **deterministic adapter** (`hydration.cli repair-write`);
-  model-authored learnings are **governed writes** (`memory.phase_lock` →
-  `memory.write_governed` on the `l9-graphite-memory` MCP server). Neither
-  reaches a provider; both admit through the same `MemoryService`.
+  model-authored learnings are MCP writes on the `l9-graphite-memory` server:
+  ordinary / cold lessons use `memory.write_agent` (no `phase_lock`), and
+  conflict-sensitive facts use `memory.phase_lock` → `memory.write_governed`
+  (ADR-0031, CANONICAL_LAW §8.5). Neither reaches a provider; all admit
+  through the same `MemoryService`.
 
 Slash command entry: [`commands/end-session.md`](../../commands/end-session.md).
 
@@ -73,11 +75,14 @@ cd "$GOV" && PYTHONPATH="$GOV" "$GRAPHITI_PY" -m ops.graphiti.hydration.cli repa
 ```
 
 Optional lesson writes after `repair-write` (same store; these do not stamp a
-close receipt). Model-authored facts are governed writes on the MCP server;
-`memcli write` is the human-operator form only:
+close receipt). Model-authored facts are MCP writes on the `l9-graphite-memory`
+server; `memcli write` is the human-operator form only. An ordinary / cold
+lesson is `memory.write_agent`; a conflict-sensitive fact takes the lock first
+(ADR-0031, CANONICAL_LAW §8.5):
 
 ```text
-memory.phase_lock      {namespace: "<memcli resolve write hint>", task_signature: "end-session:<session_id>"}
+memory.write_agent     {namespace: "<memcli resolve write hint>", content: "{terse fact}", memory_class: "lesson", tags: ["agent:cursor"]}
+memory.phase_lock      {namespace: "<memcli resolve write hint>", task_signature: "end-session:<session_id>"}   # conflict-sensitive only
 memory.write_governed  {namespace, content: "{terse fact}", task_signature: "end-session:<session_id>", memory_class: "lesson", tags: ["agent:cursor"]}
 ```
 

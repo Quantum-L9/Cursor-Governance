@@ -1,11 +1,13 @@
 # Memory Pipeline Map (live path SSOT)
 
 Canonical narrative for agent episodic memory in Quantum-L9 coding workspaces.
-Authority: CANONICAL_LAW §2.1 / §8 / §8.2, ADR-0005, ADR-0028, ADR-0030, rules `03-graphiti-memory` + `87-cursor-memory-kernel`.
+Authority: CANONICAL_LAW §2.1 / §8 / §8.2 / §8.5, ADR-0005, ADR-0028, ADR-0030, ADR-0031, rules `03-graphiti-memory` + `87-cursor-memory-kernel`.
 
 **Updated 2026-09-06 (realignment C11/C12):** the store is the canonical `l9-graphite-memory` control plane; Graphiti is a projection memory owns. The direct provider client is a tombstone; every row below that once named it now names `ops/memory`.
 
-**Updated 2026-09-07 (doctrine closure, CANONICAL_LAW §8.3, ADR-0030 items 7–9):** ONE authority (`MemoryService`), ONE canonical egress (`ops/memory`), two adapters (CLI, MCP). A model-initiated durable write is `memory.phase_lock` → `memory.write_governed` on the `l9-graphite-memory` MCP server; the CLI `write` is the operator / deterministic-adapter form. The phase-lock governs memory-write consistency only — never repository authority.
+**Updated 2026-09-07 (doctrine closure, CANONICAL_LAW §8.3, ADR-0030 items 7–9):** *(single-path write wording superseded 2026-09-13)* ONE authority (`MemoryService`), ONE canonical egress (`ops/memory`), two adapters (CLI, MCP). A model-initiated durable write is `memory.phase_lock` → `memory.write_governed` on the `l9-graphite-memory` MCP server; the CLI `write` is the operator / deterministic-adapter form. The phase-lock governs memory-write consistency only — never repository authority.
+
+**Updated 2026-09-13 (ADR-0031, CANONICAL_LAW §8.5 — dual write classes):** the model has two MCP writes on `l9-graphite-memory`. Ordinary / cold facts use `memory.write_agent` — no SessionStart receipt, no `phase_lock`. Conflict-sensitive facts use `memory.phase_lock` → `memory.write_governed`. `memory.ingest` and the CLI `write` are a bypass of neither. Agent HTTP stays sealed; identity is the shared agents door plus a signed `agent_id` assertion.
 
 ## One store
 
@@ -13,7 +15,7 @@ Authority: CANONICAL_LAW §2.1 / §8 / §8.2, ADR-0005, ADR-0028, ADR-0030, rule
 |-------|------|
 | `l9-graphite-memory` MemoryService (`memory-control-plane/v1`) | Sole agent episodic SSOT; Graphiti is its projection |
 | `ops/memory/control_plane_client.py` (`python -m ops.memory.cli`) | Cursor's only egress (INV-03); bound runtime per `ops/config/memory-binding.json`; operator / hook / deterministic-adapter CLI |
-| `l9-graphite-memory` MCP server (stdio, package-owned; `make memory-mcp-install`) | The model's interactive adapter to the same MemoryService: `memory.search`, `memory.hydrate`, `memory.phase_lock` → `memory.write_governed` |
+| `l9-graphite-memory` MCP server (stdio, package-owned; `make memory-mcp-install`) | The model's interactive adapter to the same MemoryService: `memory.search`, `memory.hydrate`, `memory.write_agent` (ordinary / cold), `memory.phase_lock` → `memory.write_governed` (conflict-sensitive) |
 | `ops/graphiti/hydration/` | sessionStart compile + sessionEnd close (deterministic adapters) |
 | Claude `environment/agents/adapters/claude-code/memory/` | Thin adapter only (no second brain); `memory-enforcement.contract.json` `interactive_memory_write` is the machine form of the write contract |
 | `memory-bank/` | **RETIRED** — do not scaffold/read/write; delete residual trees |
@@ -24,12 +26,13 @@ Authority: CANONICAL_LAW §2.1 / §8 / §8.2, ADR-0005, ADR-0028, ADR-0030, rule
 
 | Caller | Path | Operation | Note |
 |--------|------|-----------|------|
-| Model, mid-session (lesson / insight / decision) | MCP `l9-graphite-memory` | `memory.phase_lock` → `memory.write_governed` | The **only** model write. Lock = namespace-snapshot consistency precondition; refused lock/write is the verdict |
+| Model, mid-session, ordinary / cold fact (lesson / insight / decision) | MCP `l9-graphite-memory` | `memory.write_agent` | ADR-0031 cold-safe model write: no SessionStart receipt, no `phase_lock`; a refused write is the verdict |
+| Model, mid-session, conflict-sensitive fact (concurrent writers / namespace snapshot) | MCP `l9-graphite-memory` | `memory.phase_lock` → `memory.write_governed` | Lock = namespace-snapshot consistency precondition; refused lock/write is the verdict |
 | sessionEnd hook | `close_session.py` → `ops/memory` | `ingest_candidate` → `memory.close` (idempotent) | Deterministic adapter |
 | SessionStart hook | `canonical_hydrate` → `ops/memory` | `hydrate` | Read only |
 | `/end-session` repair | `hydration.cli repair-write` → `ops/memory` | canonical `write` + close-receipt stamp | Deterministic adapter; not the model's lesson path |
 | Legacy provider history | `legacy_reconciliation.py` | canonical admission, tag `legacy_unverified` | Operator |
-| Human operator / Program Execution | `python -m ops.memory.cli write` | generic canonical write | Operator form — not a bypass of `write_governed` for a model-authored fact |
+| Human operator / Program Execution | `python -m ops.memory.cli write` | generic canonical write | Operator form — not a bypass of `write_agent` / `write_governed` for a model-authored fact |
 | Anything | provider transport (`add_memory`-class tools, provider URL/bearer) | — | **Forbidden**; no surface holds one |
 
 A memory phase-lock never authorizes a source edit, commit, push or publication (`rules/96` E7/E8/E10, `rules/98`).
@@ -48,8 +51,10 @@ sessionStart
   → canonical session state for the hydration-only gates (fail-open if memory down)
 
 session work
-  → atomic T2 governed writes: `memory.phase_lock` → `memory.write_governed`
-    (`memory_class: lesson|insight|decision`) on the `l9-graphite-memory` MCP server
+  → atomic T2 model writes on the `l9-graphite-memory` MCP server
+    (`memory_class: lesson|insight|decision`, ADR-0031):
+      ordinary / cold   → `memory.write_agent` (no phase_lock, no SessionStart receipt)
+      conflict-sensitive → `memory.phase_lock` → `memory.write_governed`
   → every write is a canonical receipt (admitted / duplicate / rejected / quarantined)
   → operator CLI `python -m ops.memory.cli write` is the human / adapter form only
 
@@ -109,9 +114,10 @@ SessionStart prints `REPAIR: /end-session`, or:
 **Primary repair** is `hydration.cli repair-write` (canonical write + receipt stamp).
 Do not prefer `hydration.cli close`; there is no provider `write` fallback (C11).
 Learnings extracted during `/end-session` are model-authored facts and take the
-governed write (`memory.phase_lock` → `memory.write_governed`), not the
+MCP model write — `memory.write_agent` for an ordinary lesson, `memory.phase_lock`
+→ `memory.write_governed` only when the fact is conflict-sensitive — not the
 operator CLI. Do not treat `/end-session` as required for every X-out. See
-ADR-0028 (amended 2026-09-07) and ADR-0030.
+ADR-0028 (amended 2026-09-07), ADR-0030 and ADR-0031.
 
 ## Budgets
 
