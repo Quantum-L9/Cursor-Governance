@@ -3,7 +3,7 @@
 Close sequence (plan §15):
 
     1. gather session state (transcript excerpt, git HEAD, identity)
-    2. construct ContinuationCapsuleV2 (heuristic; Phase B may refine it)
+    2. construct ContinuationCapsuleV2 (heuristic gathering — Phase A)
     3. canonical serialize + digest
     4. submit it as a governed candidate through the memory control plane
     5. validate the candidate receipt (admitted / duplicate / rejected / quarantined)
@@ -21,7 +21,8 @@ stage 3), and no rollback path may restore a direct write (plan §30).
 
 ``budget`` stays a per-call ceiling: a caller closing several repositories in
 one hook window divides its own allowance. Phase A (capsule admission + close)
-is always attempted; a small budget only starves Phase B distillation.
+is always attempted. Distillation of the redacted excerpt is a canonical
+``l9-memory distill`` operation (ADR-0033); no local cognition runs here.
 """
 
 from __future__ import annotations
@@ -48,10 +49,6 @@ if str(_REPO_ROOT) not in sys.path:
 
 from ops.graphiti.hydration import session_latches as _latches  # noqa: E402
 from ops.graphiti.hydration.identity import IdentityError, resolve_write_identity  # noqa: E402
-from ops.graphiti.hydration.resume_signal_scorer import (  # noqa: E402
-    should_persist_derived_episode,
-    signals_from_close,
-)
 from ops.graphiti.hydration.transcript import load_transcript_excerpt  # noqa: E402
 from ops.memory.control_plane_client import (  # noqa: E402
     MemoryControlPlaneClient,
@@ -67,16 +64,12 @@ from ops.memory.session_contracts import ContinuationCapsuleV2  # noqa: E402
 from ops.memory.session_state import read_session_state  # noqa: E402
 
 PHASE_A_BUDGET = 8.0
-PHASE_B_BUDGET = 18.0
 TOTAL_BUDGET = 30.0
 
 STATUS_CLOSED_CANONICALLY = _latches.STATUS_CLOSED_CANONICALLY
 STATUS_CLOSE_INCOMPLETE = _latches.STATUS_CLOSE_INCOMPLETE
 STATUS_CLOSE_CONFLICTED = _latches.STATUS_CLOSE_CONFLICTED
 PRODUCER_VERSION = "2.0.0"
-
-#: Phase B promotion kinds -> canonical memory classes (write taxonomy, plan §14).
-_PROMOTION_CLASSES = {"lesson": "insight", "insight": "insight", "decision": "decision"}
 
 
 def re_safe(session_id: str) -> str:
@@ -86,18 +79,6 @@ def re_safe(session_id: str) -> str:
 def _closes_dir(project_dir: Path) -> str:
     """Real path to project_dir/.l9/memory/closes (must stay under project root)."""
     return _latches.closes_dir(project_dir)
-
-
-def _load_rules() -> dict[str, Any]:
-    path = Path(__file__).resolve().parent / "promotion_rules.yaml"
-    # Broad by design; the handler below carries the reason.
-    # nosemgrep: l9.baseline.python.broad-except
-    try:
-        import yaml
-
-        return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    except Exception:  # noqa: BLE001
-        return {}
 
 
 def already_closed(project_dir: Path, session_id: str, head_hash: str) -> bool:
@@ -219,96 +200,6 @@ def close_idempotency_key(namespace: str, session_id: str, head_hash: str) -> st
     return f"cursor-close:{namespace}:{session_id}:{head_hash}"
 
 
-def _phase_b_enabled() -> bool:
-    return os.environ.get("MEMORY_PHASE_B", "1").strip() not in ("0", "false", "False")
-
-
-def _strip_code_fence(text: str) -> str:
-    if not text.startswith("```"):
-        return text
-    cleaned = text.strip("`")
-    if cleaned.startswith("json"):
-        cleaned = cleaned[4:].strip()
-    return cleaned
-
-
-def _distill_signal_packet(
-    *,
-    session_id: str,
-    transcript: str,
-    pickup: dict[str, Any],
-    timeout: float,
-) -> tuple[dict[str, Any] | None, str]:
-    """Return (packet, skip_reason). skip_reason empty on success.
-
-    Uses the fixed-host OpenAI helper (``openai_fixed_host``); never builds a
-    URL from caller input. Key: env or ephemeral SM resolve (opaque skip codes).
-    """
-    if not _phase_b_enabled():
-        return None, "MEMORY_PHASE_B=0"
-
-    from ops.graphiti.hydration.openai_fixed_host import (
-        OpenAIFixedHostError,
-        chat_completions,
-        message_content,
-    )
-    from ops.graphiti.hydration.openai_key import resolve_openai_api_key
-
-    key, key_reason = resolve_openai_api_key()
-    if not key:
-        return None, key_reason or "openai_key_absent"
-
-    budget_tokens = int(os.environ.get("MEMORY_DISTILL_TOKEN_BUDGET", "300"))
-    rules = _load_rules()
-    system = (
-        "Extract durable session signals. Output ONLY JSON with keys: "
-        "promotion_decisions (list of {kind, body, decision, score}), "
-        "pickup ({active_objective, next_action, context_slice, blockers}), "
-        "do_not_promote (list of strings). "
-        "kind in lesson|insight|decision|preference|constraint; "
-        "decision in promote|defer|reject. "
-        "Promote only durable facts; never dump the transcript. "
-        f"Max promote items: {rules.get('max_promotions_per_close', 5)}."
-    )
-    user = json.dumps(
-        {
-            "session_id": session_id,
-            "heuristic_pickup": {k: v for k, v in pickup.items() if k != "active_files"},
-            "transcript_excerpt": transcript[:8000],
-        },
-        ensure_ascii=False,
-    )
-    try:
-        resp = chat_completions(
-            api_key=key,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            max_tokens=budget_tokens,
-            timeout=max(1.0, timeout),
-        )
-        data = json.loads(_strip_code_fence(message_content(resp)))
-        if not isinstance(data, dict):
-            return None, "distill_non_object_json"
-        packet_id = hashlib.sha256(f"{session_id}:{time.time()}".encode()).hexdigest()[:16]
-        return {
-            "packet_id": packet_id,
-            "session_id": session_id,
-            "promotion_decisions": data.get("promotion_decisions") or [],
-            "pickup": data.get("pickup") or pickup,
-            "do_not_promote": data.get("do_not_promote") or rules.get("do_not_promote") or [],
-        }, ""
-    except OpenAIFixedHostError as exc:
-        # Opaque codes only — never interpolate exception text (may be secret-adjacent).
-        code = exc.args[0] if exc.args else "phase_b_transport"
-        if code in {"openai_http_401", "openai_http_403", "openai_timeout"}:
-            return None, f"phase_b_{code}"
-        return None, "phase_b_transport"
-    except (KeyError, json.JSONDecodeError, IndexError, OSError, TypeError) as exc:
-        return None, f"phase_b_{type(exc).__name__}"
-
-
 def _write_entry(outcome: OperationOutcome, *, kind: str) -> dict[str, Any]:
     """A canonical operation as it appears in ``report["writes"]`` (no content)."""
     receipt = outcome.receipt
@@ -339,7 +230,6 @@ def _persist_obligation(
         "session_id": session_id,
         "head_hash": report.get("head_hash", ""),
         "phase_a": bool(report.get("phase_a")),
-        "phase_b": bool(report.get("phase_b")),
         "enqueue_ok": report.get("enqueue_ok"),
         "enqueue_error": report.get("enqueue_error"),
         "write_count": len([w for w in (report.get("writes") or []) if w.get("written")]),
@@ -354,54 +244,6 @@ def _persist_obligation(
             write_receipt(project, session_id, receipt)
         except (OSError, ValueError) as exc:
             report["warnings"].append(f"obligation write failed: {exc}")
-
-
-def _promote(
-    client: MemoryControlPlaneClient,
-    *,
-    workspace: str,
-    namespace: str,
-    session_id: str,
-    decisions: list[Any],
-    rules: dict[str, Any],
-    report: dict[str, Any],
-    dry_run: bool,
-) -> int:
-    """Phase B promotions through the generic canonical write (plan §14 order)."""
-    promote_min = float(rules.get("promote_min_score", 0.65))
-    max_promo = int(rules.get("max_promotions_per_close", 5))
-    promotable = set(rules.get("promotable_kinds") or ["lesson", "insight", "decision"])
-    promoted = 0
-    for index, item in enumerate(decisions):
-        if promoted >= max_promo:
-            break
-        if not isinstance(item, dict) or item.get("decision") != "promote":
-            continue
-        kind = str(item.get("kind") or "lesson")
-        if kind not in promotable or kind not in _PROMOTION_CLASSES:
-            continue
-        if float(item.get("score") or 0) < promote_min:
-            continue
-        body = str(item.get("body") or "").strip()
-        if not body:
-            continue
-        digest = hashlib.sha256(body.encode("utf-8")).hexdigest()[:16]
-        outcome = client.write(
-            body,
-            workspace=workspace,
-            namespace=namespace,
-            memory_class=_PROMOTION_CLASSES[kind],
-            tags=("session-close", kind),
-            idempotency_key=f"cursor-promotion:{namespace}:{session_id}:{index}:{digest}",
-            source_id=f"session:{session_id}",
-            dry_run=dry_run,
-        )
-        report["writes"].append(_write_entry(outcome, kind=kind))
-        if outcome.ok or outcome.status is OutcomeStatus.NOT_COMMITTED:
-            promoted += 1
-        else:
-            report["warnings"].append(f"promote {kind} {outcome.status.value}: {outcome.error}")
-    return promoted
 
 
 def close_session(
@@ -432,7 +274,6 @@ def close_session(
         "session_id": session_id,
         "reason": reason,
         "phase_a": False,
-        "phase_b": False,
         "enqueue_ok": None,
         "writes": [],
         "warnings": [],
@@ -580,110 +421,6 @@ def close_session(
     if elapsed_a > PHASE_A_BUDGET:
         report["warnings"].append(f"Phase A over budget ({elapsed_a:.1f}s)")
 
-    # --- Phase B: distillation may refine the capsule and promote durable facts ---
-    remaining = total_budget - (clock() - started)
-    rules = _load_rules()
-    phase_b_budget = min(PHASE_B_BUDGET, max(0.0, remaining - 1.0))
-    skip_b = False
-    if not _phase_b_enabled():
-        skip_b = True
-        report["warnings"].append("Phase B skipped: MEMORY_PHASE_B=0")
-    elif phase_b_budget < 3.0:
-        skip_b = True
-        report["warnings"].append("Phase B skipped: insufficient time budget")
-    elif is_background_agent and not transcript:
-        skip_b = True
-        report["warnings"].append("Phase B skipped: background agent, no transcript")
-
-    if not skip_b:
-        signal, b_reason = _distill_signal_packet(
-            session_id=session_id,
-            transcript=transcript or pickup["context_slice"],
-            pickup=pickup,
-            timeout=phase_b_budget,
-        )
-        if signal is None:
-            report["warnings"].append(
-                f"Phase B skipped: {b_reason or 'distill failed'} — keeping Phase A"
-            )
-        else:
-            report["phase_b"] = True
-            report["signal_packet_id"] = signal.get("packet_id")
-            rich = signal.get("pickup") or {}
-            session_signals = signals_from_close(
-                transcript=transcript,
-                reason=reason,
-                promotion_decisions=signal.get("promotion_decisions") or [],
-            )
-            persist_derived = should_persist_derived_episode(session_signals, rules)
-            if not persist_derived:
-                report["warnings"].append("derived continuation dropped: low resume signal")
-            if rich.get("next_action") and rich.get("active_objective") and persist_derived:
-                rich_capsule = build_capsule(
-                    session_id=session_id,
-                    repository_identity=repository_identity,
-                    head=head,
-                    pickup={**pickup, **rich},
-                    decisions=[
-                        str(d.get("body") or "")
-                        for d in signal.get("promotion_decisions") or []
-                        if isinstance(d, dict) and d.get("kind") == "decision"
-                    ],
-                    # Same task as Phase A: the refinement replaces, never forks.
-                    task_signature=capsule.task_signature,
-                )
-                # The refinement names the Phase A record so memory supersedes
-                # it on admission and one session leaves exactly one ACTIVE
-                # continuation (audit P1-03). A refused supersession rejects the
-                # refinement and Phase A stays ACTIVE — nothing is superseded
-                # by hand here. Nothing to name when Phase A was not admitted.
-                supersedes = (
-                    (continuation_reference,) if admitted.ok and continuation_reference else ()
-                )
-                refined = client.ingest_candidate(
-                    rich_capsule.to_governed_candidate(
-                        namespace=namespace,
-                        source_sha=head or "0" * 40,
-                        agent_id=identity["agent_id"],
-                        supersedes=supersedes,
-                    ),
-                    workspace=workspace,
-                )
-                report["writes"].append(_write_entry(refined, kind="session_continuation"))
-                if refined.ok and refined.receipt is not None:
-                    capsule = rich_capsule
-                    continuation_status = refined.receipt.status
-                    continuation_reference = refined.receipt.record_id
-                    report["continuation"] = {
-                        "status": continuation_status,
-                        "record_id": continuation_reference,
-                        "capsule_digest": capsule.digest(),
-                        "session_id": session_id,
-                        "task_signature": capsule.task_signature,
-                        "refined": True,
-                        "supersedes": list(supersedes),
-                        "superseded_record_ids": list(refined.receipt.superseded_record_ids),
-                    }
-                    report["pickup"] = {k: v for k, v in rich.items() if k != "context_slice"}
-                else:
-                    report["warnings"].append(
-                        f"Phase B continuation {refined.status.value}: {refined.error}"
-                        + (" — Phase A continuation stays active" if supersedes else "")
-                    )
-            promoted = 0
-            if persist_derived:
-                promoted = _promote(
-                    client,
-                    workspace=workspace,
-                    namespace=namespace,
-                    session_id=session_id,
-                    decisions=signal.get("promotion_decisions") or [],
-                    rules=rules,
-                    report=report,
-                    dry_run=dry_run,
-                )
-            report["promoted"] = promoted
-
     # --- S3 distill enqueue (redacted excerpt; fail-loud when enabled+configured) ---
     enqueue_result: dict[str, Any] | None = None
     try:
@@ -824,4 +561,6 @@ def close_session(
     if report.get("enqueue_ok") is False and final_status == STATUS_CLOSED_CANONICALLY:
         report["receipt"]["enqueue_error_present"] = True
     report["elapsed_s"] = round(clock() - started, 3)
+    if report["elapsed_s"] > total_budget:
+        report["warnings"].append(f"close over budget ({report['elapsed_s']:.1f}s)")
     return report

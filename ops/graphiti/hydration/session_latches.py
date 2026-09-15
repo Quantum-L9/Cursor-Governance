@@ -419,7 +419,6 @@ def write_receipt(project_dir: Path, session_id: str, payload: dict[str, Any]) -
         "session_id": str(session_id),
         "head_hash": str(payload.get("head_hash") or ""),
         "phase_a": bool(payload.get("phase_a") is True),
-        "phase_b": bool(payload.get("phase_b") is True),
         "enqueue_ok": True if enqueue_ok is True else (False if enqueue_ok is False else None),
         "enqueue_error_present": bool(payload.get("enqueue_error")),
         "write_count": int(payload.get("write_count") or 0),
@@ -452,7 +451,6 @@ def record_skip_receipt(
         "session_id": session_id,
         "write_count": write_count,
         "phase_a": False,
-        "phase_b": False,
         "closed_at": datetime.now(UTC).isoformat(),
     }
     write_receipt(project_dir, session_id, payload)

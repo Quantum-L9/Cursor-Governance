@@ -48,7 +48,6 @@ def _public_close_report(report: dict) -> dict:
     return {
         "status": status if status in allowed else "other",
         "phase_a": bool(report.get("phase_a") is True),
-        "phase_b": bool(report.get("phase_b") is True),
         "enqueue_ok": True if enqueue_ok is True else (False if enqueue_ok is False else None),
         "enqueue_error_present": bool(report.get("enqueue_error")),
         "write_count": len([w for w in report.get("writes") or [] if w.get("written")]),

@@ -25,7 +25,7 @@
     "claude_hooks": "environment/agents/adapters/claude-code/memory/memory_bridge.py since C8",
     "cursor_gates": "ops/graphiti/graphiti_gate_lib.py over ops/memory/session_state.py since C8",
     "secret_plane": "no provider URL or bearer on any surface since C9",
-    "offline_distill": "ops/graphiti/distill_queue/worker.py through the control plane since C10",
+    "offline_distill": "ops/memory/control_plane_client.py distill -> l9-memory distill since C15 (the Cursor-local worker ran its own extraction and is deleted, ADR-0033)",
     "generated_data": "environment/agents/generated-data/adapters/ingest_memory_candidate.py through the control plane since C10"
   },
   "legacy_reconciliation": {

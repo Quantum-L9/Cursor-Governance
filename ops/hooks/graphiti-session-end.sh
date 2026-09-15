@@ -139,14 +139,12 @@ status = d.get("status", "?")
 writes = int(d.get("write_count") or 0)
 warns = int(d.get("warning_count") or 0)
 print(
-    "INFO: session close status=%s writes=%s warnings=%s phase_a=%s phase_b=%s"
-    % (status, writes, warns, bool(d.get("phase_a")), bool(d.get("phase_b"))),
+    "INFO: session close status=%s writes=%s warnings=%s phase_a=%s"
+    % (status, writes, warns, bool(d.get("phase_a"))),
     file=sys.stderr,
 )
 if status == "idempotent_skip":
     print("INFO: close receipt already present — skipped duplicate writes", file=sys.stderr)
-if d.get("phase_b"):
-    print("INFO: Phase B distill completed", file=sys.stderr)
 if d.get("enqueue_ok") is False:
     print("ERROR: distill S3 enqueue failed", file=sys.stderr)
 if d.get("enqueue_ok") is True:

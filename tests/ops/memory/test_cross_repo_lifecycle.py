@@ -375,7 +375,6 @@ def test_lifecycle_against_the_real_memory_runtime(runtime, tmp_path: Path, monk
     monkeypatch.setattr(cs, "resolve_namespace_context", lambda *_a, **_k: context)
     monkeypatch.setattr(cs, "repository_state_digest", lambda _p: head)
     monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **_k: ("user: finish C6", "test"))
-    monkeypatch.setenv("MEMORY_PHASE_B", "0")
     monkeypatch.setenv("MEMORY_DISTILL_ENQUEUE", "0")
     report = cs.close_session(
         project_dir=project, session_id="proof-close", agent_id="cursor", client=client
@@ -606,7 +605,6 @@ def test_task_isolation_and_refinement_supersession_against_the_real_runtime(
         monkeypatch.setattr(module, "resolve_namespace_context", lambda *_a, **_k: context)
         monkeypatch.setattr(module, "repository_state_digest", lambda _p: head)
     monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **_k: ("user: finish C13", "test"))
-    monkeypatch.setenv("MEMORY_PHASE_B", "0")
     monkeypatch.setenv("MEMORY_DISTILL_ENQUEUE", "0")
 
     class LostResponse:

@@ -26,9 +26,6 @@ from ops.memory.namespace_context import NamespaceContext
 RECORD = "66666666-6666-6666-6666-666666666666"
 
 
-REFINED = "99999999-9999-9999-9999-999999999999"
-
-
 def candidate_payload(
     *,
     status: str = "admitted",
@@ -49,41 +46,6 @@ def candidate_payload(
         else (None if status in {"admitted", "duplicate"} else f"admission {status}"),
         "superseded_record_ids": list(superseded),
     }
-
-
-PHASE_B_PACKET = {
-    "packet_id": "abcdef0123456789",
-    "session_id": "sess",
-    "promotion_decisions": [
-        {
-            "kind": "lesson",
-            "body": "Use the bound CLI, never PATH.",
-            "decision": "promote",
-            "score": 0.9,
-        },
-        {
-            "kind": "decision",
-            "body": "Close is idempotent by key.",
-            "decision": "promote",
-            "score": 0.8,
-        },
-        {"kind": "insight", "body": "low", "decision": "promote", "score": 0.1},
-    ],
-    "pickup": {
-        "active_objective": "Finish close cutover",
-        "next_action": "Open the PR",
-        "context_slice": "",
-        "blockers": [],
-    },
-    "do_not_promote": [],
-}
-
-
-def _enable_phase_b(monkeypatch: pytest.MonkeyPatch, packet: dict = PHASE_B_PACKET) -> None:
-    monkeypatch.setenv("MEMORY_PHASE_B", "1")
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
-    monkeypatch.setattr(cs, "_distill_signal_packet", lambda **_k: (packet, ""))
-    monkeypatch.setattr(cs, "should_persist_derived_episode", lambda *_a, **_k: True)
 
 
 def _ingest_calls(fake_cli: FakeMemoryCli) -> list[dict]:
@@ -128,7 +90,6 @@ def workspace(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         monkeypatch.setattr(module, "repository_state_digest", lambda _p: "c" * 40)
     monkeypatch.setattr(pw, "resolve_namespace_context", lambda *_a, **_k: context, raising=False)
     monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **_k: ("user: ship the PR", "test"))
-    monkeypatch.setenv("MEMORY_PHASE_B", "0")
     monkeypatch.setenv("MEMORY_DISTILL_ENQUEUE", "0")
     monkeypatch.setenv("L9_MEMORY_SESSION_STATE_DIR", str(tmp_path / "state"))
     return project
@@ -455,88 +416,6 @@ def test_capsule_without_session_state_derives_its_own_signature(
     )
 
 
-# ---------------------------------------------------------------------------
-# Phase B supersedes Phase A (audit P1-03): one ACTIVE continuation per session
-# ---------------------------------------------------------------------------
-
-
-def test_phase_b_refinement_supersedes_the_phase_a_record(
-    workspace, scripted, fake_cli, monkeypatch
-) -> None:
-    _enable_phase_b(monkeypatch)
-    fake_cli.reply("write", 0, write_payload())
-    verdicts = iter(
-        [
-            candidate_payload(),  # Phase A admitted -> RECORD
-            candidate_payload(record_id=REFINED, superseded=(RECORD,)),  # Phase B
-        ]
-    )
-    fake_cli.on("ingest-governed-candidate", lambda _a, _s: (0, next(verdicts), ""))
-    report = _close(workspace)
-    assert report["status"] == STATUS_CLOSED_CANONICALLY
-    phase_a, phase_b = _ingest_calls(fake_cli)
-    assert "supersedes" not in phase_a
-    assert phase_b["supersedes"] == [RECORD]
-    assert phase_b["candidate_id"] != phase_a["candidate_id"]
-    assert (
-        phase_b["knowledge"]["structured_payload"]["task_signature"]
-        == phase_a["knowledge"]["structured_payload"]["task_signature"]
-    )
-    assert report["continuation"]["refined"] is True
-    assert report["continuation"]["record_id"] == REFINED
-    assert report["continuation"]["supersedes"] == [RECORD]
-    assert report["continuation"]["superseded_record_ids"] == [RECORD]
-    # The close names the refined capsule, and the obligation points at it.
-    assert load_close_receipt(workspace, "sess")["continuation_reference"] == REFINED
-
-
-def test_rejected_refinement_keeps_phase_a_active(
-    workspace, scripted, fake_cli, monkeypatch
-) -> None:
-    _enable_phase_b(monkeypatch)
-    fake_cli.reply("write", 0, write_payload())
-    verdicts = iter(
-        [
-            (0, candidate_payload(), ""),
-            (
-                7,
-                candidate_payload(
-                    status="rejected",
-                    record_id=None,
-                    reason="supersession refused: record not found",
-                ),
-                "",
-            ),
-        ]
-    )
-    fake_cli.on("ingest-governed-candidate", lambda _a, _s: next(verdicts))
-    report = _close(workspace)
-    assert report["status"] == STATUS_CLOSED_CANONICALLY
-    assert report["continuation"]["record_id"] == RECORD
-    assert report["continuation"].get("refined") is None
-    assert any("Phase A continuation stays active" in w for w in report["warnings"])
-    assert load_close_receipt(workspace, "sess")["continuation_reference"] == RECORD
-
-
-def test_refinement_names_nothing_when_phase_a_was_not_admitted(
-    workspace, scripted, fake_cli, monkeypatch
-) -> None:
-    _enable_phase_b(monkeypatch)
-    fake_cli.reply("write", 0, write_payload())
-    verdicts = iter(
-        [
-            (7, candidate_payload(status="rejected", record_id=None), ""),
-            (0, candidate_payload(record_id=REFINED), ""),
-        ]
-    )
-    fake_cli.on("ingest-governed-candidate", lambda _a, _s: next(verdicts))
-    report = _close(workspace)
-    _phase_a, phase_b = _ingest_calls(fake_cli)
-    assert "supersedes" not in phase_b
-    assert report["continuation"]["supersedes"] == []
-    assert report["continuation"]["record_id"] == REFINED
-
-
 def test_restart_with_open_obligation_is_a_close_gap(
     workspace, scripted, fake_cli, monkeypatch
 ) -> None:
@@ -716,20 +595,16 @@ def test_generic_write_timeout_is_unknown_not_success(fake_cli, bound) -> None:
     assert outcome.status.value == "TIMEOUT" and not outcome.ok
 
 
-def test_phase_b_promotions_use_the_generic_write_with_idempotency(
-    workspace, scripted, fake_cli, monkeypatch
-) -> None:
-    _enable_phase_b(monkeypatch)
-    fake_cli.reply("write", 0, write_payload())
+def test_close_writes_only_the_continuation_and_the_close(workspace, scripted, fake_cli) -> None:
+    """One session leaves exactly one continuation and one close; no Cursor-side
+    promotions ride along (memory owns distillation, ADR-0033)."""
     report = _close(workspace)
     assert report["status"] == STATUS_CLOSED_CANONICALLY
-    assert report["phase_b"] is True and report["promoted"] == 2
+    assert "phase_b" not in report and "promoted" not in report
     kinds = [w["kind"] for w in report["writes"]]
-    assert kinds == ["session_continuation", "session_continuation", "lesson", "decision", "close"]
-    assert report["continuation"]["refined"] is True
-    argv = fake_cli.last("write")
-    assert "--idempotency-key" in argv
-    assert argv[argv.index("--kind") + 1] == "decision"
+    assert kinds == ["session_continuation", "close"]
+    assert not any(args[1] == "write" for args, _c, _s in fake_cli.calls)
+    assert len(_ingest_calls(fake_cli)) == 1
 
 
 # ---------------------------------------------------------------------------
