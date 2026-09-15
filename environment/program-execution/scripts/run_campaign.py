@@ -3882,6 +3882,137 @@ def _dispatch_peer_batch(
     return outcomes, failures
 
 
+PEER_RETRY_RECEIPT_SCHEMA = "l9.peer-execution.retry-receipt.v1"
+PEER_KNOWN_TERMINAL = "KNOWN_TERMINAL"
+
+
+def _terminal_peer_retry_receipt(workspace: Path, task_id: str) -> dict[str, Any] | None:
+    """The newest Peer Execution retry receipt that classified this task KNOWN_TERMINAL.
+
+    Receipts are written by the peer front door at
+    ``runtime/peer-execution/retry-receipts/<task_id>-<attempt_id>.json`` and are
+    read-only here. ``None`` when there is no receipt for the task, or when its
+    latest receipt is any other failure class (SAFE_BEFORE_DISPATCH and
+    AMBIGUOUS_SIDE_EFFECT are not evidence that the window is over).
+    """
+    root = workspace / "runtime" / "peer-execution" / "retry-receipts"
+    if not root.is_dir():
+        return None
+    newest: tuple[float, dict[str, Any]] | None = None
+    for path in root.glob(f"{task_id}-*.json"):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            mtime = path.stat().st_mtime
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, dict):
+            continue
+        if str(payload.get("schema") or "") != PEER_RETRY_RECEIPT_SCHEMA:
+            continue
+        if str(payload.get("task_id") or "") != task_id:
+            continue
+        if newest is None or mtime > newest[0]:
+            newest = (mtime, payload)
+    if newest is None:
+        return None
+    receipt = newest[1]
+    if str(receipt.get("failure_class") or "") != PEER_KNOWN_TERMINAL:
+        return None
+    return receipt
+
+
+def _task_repository_path(workspace: Path, task_id: str) -> Path | None:
+    """The local checkout the Controller registered for this task's repository."""
+    launch_path = workspace / "runtime" / "LAUNCH.json"
+    try:
+        launch = json.loads(launch_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        launch = {}
+    target = str(launch.get("target_worktree") or launch.get("target_tree") or "")
+    if target and Path(target).is_dir():
+        return Path(target)
+    return None
+
+
+def _recover_terminal_peer_task(
+    workspace: Path,
+    task_id: str,
+    *,
+    trace: pe_trace.ExecutionTrace | None,
+) -> bool:
+    """Recover a FAILED task whose window ended KNOWN_TERMINAL, through the Controller.
+
+    Fires only when all three hold: the task is FAILED, its newest peer retry
+    receipt is ``KNOWN_TERMINAL``, and the Controller reports no live execution
+    attempt for it. Then, in order: ``pec fresh-workspace --task-id`` (which is
+    ``recover_execution`` -- evidence preserved, attempt fenced, lease released,
+    task STALE -- followed by the worktree / ``pec/*`` sweep), revoke the
+    persisted root-Autonomy grant of the finished generation so it holds no
+    live authority, and return True so the caller re-enters the ordinary
+    claim. The successor is numbered by the Controller (attempt N+1) and
+    granted as a new generation; nothing here re-dispatches the old one.
+
+    Returns False when the preconditions do not hold; the caller's guard then
+    refuses the task exactly as before.
+    """
+    receipt = _terminal_peer_retry_receipt(workspace, task_id)
+    if receipt is None:
+        return False
+    status = pec_cmd(workspace, "status")
+    live = [
+        item
+        for item in (status.get("live_execution_attempts") or [])
+        if isinstance(item, dict) and str(item.get("task_id") or "") == task_id
+    ]
+    if live:
+        return False
+    repository = _task_repository_path(workspace, task_id)
+    if repository is None:
+        raise CampaignError(
+            f"{task_id}: KNOWN_TERMINAL attempt is recoverable but LAUNCH.json names no "
+            "target worktree to detach its task worktree from",
+            error_code="RUNTIME_RECONCILIATION_REQUIRED",
+        )
+    failure_class = str(receipt.get("failure_class") or PEER_KNOWN_TERMINAL)
+    reason = f"peer attempt {receipt.get('attempt_id') or '?'} ended {failure_class}"
+    with traced(trace, "task_prepare", "recover_terminal_attempt", task_id=task_id):
+        recovered = pec_cmd(
+            workspace,
+            "fresh-workspace",
+            "--repository",
+            str(repository),
+            "--task-id",
+            task_id,
+            "--actor",
+            "make-campaign",
+            "--reason",
+            reason[:500],
+        )
+    grant = _persisted_task_grant(workspace, {"task_id": task_id})
+    if grant:
+        try:
+            _grant_module().revoke_task_grant(
+                grant, reason=f"terminal peer attempt recovered: {reason}"[:500]
+            )
+        except Exception as exc:  # noqa: BLE001 — a dead generation's revoke must not mask recovery
+            log(f"root autonomy revoke for recovered {task_id} failed: {type(exc).__name__}: {exc}")
+    log(f"recovered {task_id}: {reason}; successor will dispatch as a new attempt")
+    emit(
+        trace,
+        "TASK_TERMINAL_ATTEMPT_RECOVERED",
+        "task",
+        "task_terminal_attempt_recovered",
+        task_id=task_id,
+        metadata={
+            "attempt_id": str(receipt.get("attempt_id") or ""),
+            "failure_class": failure_class,
+            "recovery": (recovered.get("recovery") or {}).get("status"),
+            "grant_revoked": bool(grant),
+        },
+    )
+    return True
+
+
 def _prepare_peer_unit(
     workspace: Path,
     task: dict[str, Any],
@@ -3891,6 +4022,14 @@ def _prepare_peer_unit(
     task_id = str(task["id"])
     states = {str(item["id"]): item for item in pec_status_tasks(workspace)}
     state = str((states.get(task_id) or {}).get("runtime_state") or "")
+    # A FAILED task whose Peer Execution window ended KNOWN_TERMINAL, with no
+    # execution attempt still live, is a finished generation -- not a retry of
+    # an unknown one. It is recovered through the Controller's own path
+    # (recover_execution: evidence preserved, attempt fenced, lease released,
+    # STALE) and re-enters the ordinary claim below as attempt N+1. Every other
+    # FAILED / STALE / CANCELLED task still meets the guard unchanged.
+    if state == "FAILED" and _recover_terminal_peer_task(workspace, task_id, trace=trace):
+        state = "RECOVERED"
     if state in {"STALE", "CANCELLED", "FAILED"}:
         raise CampaignError(f"{task_id} is {state}; Peer Core does not blind-retry failed attempts")
     # An EXECUTING task at entry is a window PE dispatched earlier and lost
@@ -5251,6 +5390,7 @@ def reconcile_resumed_source(
     source: Path,
     pec_workspace: Path,
     l9_home: Path,
+    repo_root: Path | None = None,
 ) -> dict[str, Any]:
     """Refuse or absorb authored-source drift before a resumed runtime executes.
 
@@ -5259,8 +5399,9 @@ def reconcile_resumed_source(
     is relocked through the Controller, exactly as a fresh `make campaign`
     would do it; an edit to the program body or the task set cannot be
     absorbed and stops the resume with `SOURCE_DRIFT_ON_RESUME`. No recorded
-    shape means nothing to compare -- the runtime was prepared before this
-    record existed -- and the resume proceeds on the lock alone.
+    shape means the runtime was prepared before this record existed; the shape
+    is then attested in place through `attest_resume_source()`, which continues
+    only on a Controller EXACT_MATCH admission and refuses otherwise.
     """
     if not source.is_file():
         return {"status": "NO_SOURCE"}
@@ -5282,17 +5423,31 @@ def reconcile_resumed_source(
     recorded = (cached or {}).get("source") if isinstance(cached, dict) else None
     if not isinstance(recorded, dict):
         # A runtime prepared before the shape record existed cannot prove that
-        # the source on disk is the source it was compiled from. Resuming on the
-        # lock alone was the silent compatibility fallback PEC-P1-001 names; the
-        # honest answer is a stop with the one documented reconciliation step.
-        raise CampaignError(
-            f"{campaign_id}: the prepared runtime records no compiled source shape, so the "
-            f"campaign source {source} cannot be proven to be what the runtime was compiled "
-            "from. Reconcile explicitly with "
-            f"`run_campaign.py attest-resume-source --campaign-id {campaign_id}` (which "
-            "admits the Blueprint against the active Program Lock first), or rebuild.",
-            error_code="RESUME_SOURCE_UNVERIFIED",
+        # the source on disk is the source it was compiled from. The front door
+        # runs the one documented reconciliation itself: attest_resume_source()
+        # records the shape only when the Controller admits the Blueprint
+        # against the active Program Lock as EXACT_MATCH, and raises
+        # RESUME_SOURCE_MISMATCH for every other decision. That refusal is
+        # propagated unchanged -- nothing here resumes on the lock alone.
+        attested = attest_resume_source(
+            campaign_id=campaign_id, l9_home=l9_home, repo_root=repo_root
         )
+        log(
+            f"resume {campaign_id}: auto-attested compiled source shape "
+            f"(EXACT_MATCH, program_digest={attested.get('program_digest')})"
+        )
+        reuse = prepare.PrepareCache(
+            timing.StageCache(primed, enabled=True),
+            prepare.PrepareState.load(primed / "PREPARE_STATE.json", campaign_id=campaign_id),
+        )
+        cached = reuse.recorded_value("compile")
+        recorded = (cached or {}).get("source") if isinstance(cached, dict) else None
+        if not isinstance(recorded, dict):
+            raise CampaignError(
+                f"{campaign_id}: attestation returned but the prepared runtime still records "
+                f"no compiled source shape for {source}; rebuild instead of resuming",
+                error_code="RESUME_SOURCE_UNVERIFIED",
+            )
     edited = edited_task_ids(shape, recorded)
     if edited is None:
         raise CampaignError(
@@ -5469,6 +5624,7 @@ def resume_live_campaign(
         source=campaign_source_path(write_root, campaign_id),
         pec_workspace=pec_workspace,
         l9_home=l9_home,
+        repo_root=write_root,
     )
     # Immutable Program identity is the Controller's decision, taken from the
     # semantic delta between the active lock and the compiled Blueprint. The

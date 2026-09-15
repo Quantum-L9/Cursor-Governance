@@ -513,23 +513,117 @@ class ResumeSourceReconciliationTests(_Base):
             "NO_SOURCE",
         )
 
-    def test_no_recorded_shape_fails_closed_instead_of_resuming_on_the_lock(self) -> None:
-        """PEC-P1-001: an unverifiable source is not a compatibility fallback."""
+    def _legacy_runtime(self) -> tuple[Path, Path, Path, Path]:
+        """A live runtime prepared before the compiled-source shape record existed."""
         write_root = self.tmp / "root"
         source = self.mod.campaign_source_path(write_root, "CAMP-1")
         source.parent.mkdir(parents=True)
         import yaml
 
         source.write_text(yaml.safe_dump(self.SOURCE, sort_keys=False), encoding="utf-8")
-        with self.assertRaises(self.mod.CampaignError) as ctx:
-            self.mod.reconcile_resumed_source(
+        l9_home = self.tmp / "l9"
+        pec_workspace = l9_home / "programs" / "CAMP-1"
+        runtime = pec_workspace / "runtime"
+        runtime.mkdir(parents=True)
+        (runtime / "LAUNCH.json").write_text(
+            json.dumps(
+                {
+                    "campaign_id": "CAMP-1",
+                    "runtime_status": "active",
+                    "host_lifecycle": "in_progress",
+                    "host_worktree": str(write_root),
+                }
+            ),
+            encoding="utf-8",
+        )
+        (runtime / "program-lock.json").write_text("{}", encoding="utf-8")
+        primed = l9_home / "primed" / "CAMP-1"
+        prepare = self.mod._load_script("pe_prepare_state", PE_ROOT / "scripts/pe_prepare_state.py")
+        state = prepare.PrepareState.load(primed / "PREPARE_STATE.json", campaign_id="CAMP-1")
+        state.stages["compile"] = {"key": "compile-key"}
+        state.save()
+        return write_root, source, l9_home, pec_workspace
+
+    def _recorded_shape(self, l9_home: Path) -> Any:
+        primed = l9_home / "primed" / "CAMP-1"
+        timing = self.mod._load_script("pe_timing", PE_ROOT / "scripts/pe_timing.py")
+        prepare = self.mod._load_script("pe_prepare_state", PE_ROOT / "scripts/pe_prepare_state.py")
+        reuse = prepare.PrepareCache(
+            timing.StageCache(primed, enabled=True),
+            prepare.PrepareState.load(primed / "PREPARE_STATE.json", campaign_id="CAMP-1"),
+        )
+        cached = reuse.recorded_value("compile")
+        return (cached or {}).get("source") if isinstance(cached, dict) else None
+
+    def test_no_recorded_shape_is_attested_in_place_on_exact_match(self) -> None:
+        """The front door runs the one documented reconciliation itself.
+
+        A runtime prepared before the shape record existed used to stop with
+        RESUME_SOURCE_UNVERIFIED and a command for a human to type. The same
+        proof -- the Controller admitting the Blueprint against the active lock
+        as EXACT_MATCH -- is now taken inside the resume, and the shape it
+        records is the one every later resume compares against.
+        """
+        write_root, source, l9_home, pec_workspace = self._legacy_runtime()
+        self.assertIsNone(self._recorded_shape(l9_home))
+        verdict = {"decision": "EXACT_MATCH", "program_digest": "sha256:lock", "reasons": []}
+        with unittest.mock.patch.object(self.mod, "_admit_resume", return_value=verdict) as admit:
+            outcome = self.mod.reconcile_resumed_source(
                 campaign_id="CAMP-1",
                 source=source,
-                pec_workspace=self.tmp / "ws",
-                l9_home=self.tmp / "l9-empty",
+                pec_workspace=pec_workspace,
+                l9_home=l9_home,
+                repo_root=write_root,
             )
-        self.assertEqual(ctx.exception.error_code, "RESUME_SOURCE_UNVERIFIED")
-        self.assertIn("attest-resume-source", str(ctx.exception))
+        admit.assert_called_once_with(pec_workspace)
+        self.assertEqual(outcome["status"], "CURRENT")
+        self.assertEqual(self._recorded_shape(l9_home), self.mod.campaign_source_shape(source))
+        # The attested shape is durable: a second resume compares, not re-attests.
+        with unittest.mock.patch.object(self.mod, "_admit_resume") as admit_again:
+            second = self.mod.reconcile_resumed_source(
+                campaign_id="CAMP-1",
+                source=source,
+                pec_workspace=pec_workspace,
+                l9_home=l9_home,
+                repo_root=write_root,
+            )
+        admit_again.assert_not_called()
+        self.assertEqual(second["status"], "CURRENT")
+
+    def test_no_recorded_shape_without_exact_match_still_refuses_to_resume(self) -> None:
+        """PEC-P1-001: an unverifiable source is still not a compatibility fallback."""
+        write_root, source, l9_home, pec_workspace = self._legacy_runtime()
+        verdict = {"decision": "TASK_SCOPED_DRIFT", "reasons": ["TASK-002 objective differs"]}
+        with unittest.mock.patch.object(self.mod, "_admit_resume", return_value=verdict):
+            with self.assertRaises(self.mod.CampaignError) as ctx:
+                self.mod.reconcile_resumed_source(
+                    campaign_id="CAMP-1",
+                    source=source,
+                    pec_workspace=pec_workspace,
+                    l9_home=l9_home,
+                    repo_root=write_root,
+                )
+        self.assertEqual(ctx.exception.error_code, "RESUME_SOURCE_MISMATCH")
+        self.assertIn("TASK_SCOPED_DRIFT", str(ctx.exception))
+        self.assertIsNone(self._recorded_shape(l9_home), "a refused attestation recorded a shape")
+
+    def test_no_recorded_shape_and_no_live_runtime_does_not_resume_on_the_lock(self) -> None:
+        write_root = self.tmp / "root"
+        source = self.mod.campaign_source_path(write_root, "CAMP-1")
+        source.parent.mkdir(parents=True)
+        import yaml
+
+        source.write_text(yaml.safe_dump(self.SOURCE, sort_keys=False), encoding="utf-8")
+        with unittest.mock.patch.object(self.mod, "_admit_resume") as admit:
+            with self.assertRaises(self.mod.CampaignError) as ctx:
+                self.mod.reconcile_resumed_source(
+                    campaign_id="CAMP-1",
+                    source=source,
+                    pec_workspace=self.tmp / "ws",
+                    l9_home=self.tmp / "l9-empty",
+                )
+        admit.assert_not_called()
+        self.assertIn("no live runtime", str(ctx.exception))
 
 
 class ResumeIdentityAdmissionTests(_Base):

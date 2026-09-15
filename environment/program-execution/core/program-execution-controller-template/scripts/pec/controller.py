@@ -996,6 +996,26 @@ def _max_attempts(task: dict[str, Any]) -> int:
     return budget
 
 
+def _rendered_attempt_number(task: dict[str, Any]) -> int | None:
+    """The attempt generation the task's rendered contract was minted for.
+
+    ``None`` when the contract is absent, unreadable or carries no integer
+    ``attempt_number`` (legacy v1 renders) -- the caller then trusts the
+    Controller allocation alone rather than refusing dispatch.
+    """
+    path = str(task.get("rendered_contract_path") or "")
+    if not path or not Path(path).is_file():
+        return None
+    try:
+        rendered = load_json(Path(path))
+    except (OSError, ValueError):
+        return None
+    value = rendered.get("attempt_number") if isinstance(rendered, dict) else None
+    if isinstance(value, bool) or not isinstance(value, int):
+        return None
+    return value
+
+
 ACTIVE_RUNTIME_STATES = {
     "LEASED",
     "PREPARED",
@@ -2013,7 +2033,21 @@ def start_task(
         # crash before this commit leaves nothing to resume; a crash after it
         # leaves exactly one attempt to reconcile against exactly one baseline.
         attempt_number = db.next_execution_attempt_number(task_id)
+        rendered_attempt = _rendered_attempt_number(task)
+        if rendered_attempt is not None and rendered_attempt != attempt_number:
+            raise ControllerError(
+                f"{task_id}: rendered contract names attempt {rendered_attempt} but the "
+                f"Controller allocates attempt {attempt_number}; re-render before dispatch",
+                error_code="ATTEMPT_NUMBER_DRIFT",
+            )
         attempt_id = f"attempt-{uuid.uuid4().hex[:16]}"
+        receipt_target = (
+            workspace
+            / "attempts"
+            / task_id
+            / f"attempt-{attempt_number:03d}"
+            / "attempt-receipt.json"
+        )
         baseline = capture_baseline(worktree)
         baseline_path, baseline_digest = write_baseline_artifact(
             workspace,
@@ -2044,6 +2078,17 @@ def start_task(
         }
         with db.controller_transaction():
             db.create_execution_attempt(record)
+            # The generation is consumed the moment it is dispatched, not when
+            # a receipt happens to be submitted. A provider that dies without
+            # submitting still leaves this row, so the recovered successor is
+            # attempt N+1 and an executed number is never re-issued.
+            db.create_attempt(
+                task_id,
+                attempt_number,
+                str(receipt_target),
+                utc_now(),
+                status="DISPATCHED",
+            )
             db.transition_task(task_id, "EXECUTING")
             ledger.append(
                 "TASK_EXECUTION_STARTED",
@@ -2175,7 +2220,9 @@ def record_attempt(workspace: Path, task_id: str, receipt_source: Path) -> dict[
         )
         write_json(target, receipt)
         with db.controller_transaction():
-            db.create_attempt(task_id, attempt, str(target), utc_now())
+            # Upgrades the DISPATCHED reservation start_task() made for this
+            # generation; the row already exists, so this is an upsert.
+            db.create_attempt(task_id, attempt, str(target), utc_now(), status="RECORDED")
             db.update_task(task_id, attempts=attempt)
             db.update_execution_attempt(
                 str(live["attempt_id"]),

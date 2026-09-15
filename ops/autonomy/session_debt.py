@@ -215,8 +215,13 @@ def publish_debt(root: Path) -> dict[str, Any] | None:
 def candidate_roots(explicit: list[str] | None = None) -> list[Path]:
     """Repositories this session could have committed in.
 
-    The Stop hook carries no workspace, and a cloud session's cwd is a container
-    root holding many clones, so the roots are discovered rather than passed.
+    When the caller names roots -- ``explicit`` arguments or
+    ``L9_SESSION_DEBT_ROOTS`` -- those are the session's own repositories and
+    the scan is confined to them: a Stop hook that knows its project dir must
+    not be blocked by debt another session left in a sibling worktree under
+    ``~/.l9/gov-worktrees``. Only when nothing is named does discovery widen
+    (the Stop hook carries no workspace, and a cloud session's cwd is a
+    container root holding many clones).
     """
     seen: list[Path] = []
 
@@ -233,6 +238,9 @@ def candidate_roots(explicit: list[str] | None = None) -> list[Path]:
     env = os.environ.get("L9_SESSION_DEBT_ROOTS", "")
     for raw in filter(None, (part.strip() for part in env.split(os.pathsep))):
         add(git_root(Path(raw)))
+
+    if seen:
+        return seen
 
     add(git_root(Path.cwd()))
 

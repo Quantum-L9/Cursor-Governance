@@ -48,6 +48,18 @@ class RunPeerTaskPipelineFrontDoorTests(unittest.TestCase):
         self.assertIn("not a live campaign front door", str(ctx.exception))
         self.assertIn("campaign INTENT=", str(ctx.exception))
 
+    def test_pec_helper_cannot_recover_a_terminal_task_either(self) -> None:
+        """Terminal-task recovery belongs to the campaign front door, not this pipeline."""
+        with self.assertRaises(RuntimeError) as ctx:
+            self.mod._pec(
+                Path("/tmp/l9-unused-campaign-workspace"),
+                "fresh-workspace",
+                "--task-id",
+                "TASK-001",
+            )
+        self.assertIn("not a live campaign front door", str(ctx.exception))
+        self.assertNotIn("fresh-workspace", SCRIPT.read_text(encoding="utf-8"))
+
     def _assert_cli_refused(self, env: dict[str, str]) -> None:
         with tempfile.TemporaryDirectory() as raw:
             workspace = Path(raw)
