@@ -34,11 +34,15 @@ directly*. Three things drifted in the year since:
    into a mandatory toll booth and makes real-time agent handoff impossible: an
    agent's fact would only become visible to another agent after a session
    close, a distill, a PR gate, or a governance receipt.
-3. **A Claude PreToolUse gate interposed on the agent lane.** `memory_gate.py`
-   denied `Bash` until the session had hydrated, and its matcher did not exempt
-   `l9-memory` / `python -m ops.memory.cli`, so an agent that wanted to *write
-   memory* to recover from a missed hydrate could be refused by a gate whose
-   purpose was to protect repository edits.
+3. **A Claude PreToolUse gate sat on the agent lane with no exemption.**
+   `memory_gate.py` runs on every `Bash` call and fails closed: its
+   `git-mutation` rule was the only shell pattern, but a widened pattern, an
+   unreadable contract state, or a classify fault would deny whatever command
+   was in flight — including `l9-memory write`, `python -m ops.memory.cli`,
+   and the `memory_prefetch.py` repair the gate's own denial text tells the
+   agent to run. `git`/`gh` had an explicit exemption for exactly that reason;
+   memory did not. A hydration gate whose purpose is to protect repository
+   edits must never be in a position to refuse the write that repairs memory.
 
 The owner's intent (2026-09-15): one canonical service and persistence
 pipeline; agents are first-class real-time producers on it; hooks are bounded
