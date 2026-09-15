@@ -21,6 +21,17 @@ todos:
     content: Replace the honor-system test; add fail/pass cases; run the locked pytest file list
     status: completed
 isProject: false
+status: superseded
+superseded_by: feat/make-pr-kernels — receipt plane hardening (kernel_predicates wired into kernel_gate)
+superseded_reason: >-
+  Six todos are marked completed for code that is not in the tree. Verified on
+  origin/main 1acb62fc: ops/autonomy/kernel_gate.py SCHEMA is still
+  l9.kernel_receipt.v1, record() takes no report argument, and
+  ops/autonomy/kernel_predicates.py has zero importers. Commit eace25ed
+  ("Repair #545: restore the canonical L4 boundary") reverted the L4 coupling.
+  close-l4-bypass remains a correct objective and is carried forward; only the
+  authorize-release coupling was ruled out, by CANONICAL_LAW
+  KERNEL_PRECOMMIT_HOOK_V1.
 kernel_pass:
   bound_path: tighten_kernel_latch_6cc8332a.plan.md
   improve:
@@ -38,6 +49,16 @@ kernel_pass:
 ---
 
 # Tighten kernel latch evidence
+
+> **SUPERSEDED 2026-09-15.** Every todo below reads `completed`; the code does
+> not exist. On `origin/main` 1acb62fc, `kernel_gate.SCHEMA` is
+> `l9.kernel_receipt.v1`, `record()` has no `report` parameter, and
+> `ops/autonomy/kernel_predicates.py` — the module this plan called for — sits
+> with zero importers. `eace25ed` reverted the L4 half. This file sits in
+> `built/`, where the next agent looks for settled work, so read it as a
+> specification that was written and never landed. The work is carried by
+> `feat/make-pr-kernels`; `close-l4-bypass` is still correct, and the
+> `authorize-release` coupling is not (CANONICAL_LAW `KERNEL_PRECOMMIT_HOOK_V1`).
 
 ## Objective
 
