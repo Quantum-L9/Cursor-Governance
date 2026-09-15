@@ -1,5 +1,5 @@
 ---
-description: Committed work must be pushed, an identified bug must be fixed, and a pre-existing error is in scope the moment it is identified; enforced by a Stop-hook gate that fails closed on unpushed commits and open findings.
+description: Committed work must be pushed, an identified bug must be fixed, and a pre-existing error is in scope the moment it is identified; recorded with ops/autonomy/session_debt.py (CLI; not installed as a Claude Stop --class gate).
 ---
 
 # No abandoned work
@@ -15,9 +15,9 @@ discharging it.
 
 ## Mechanism
 
-`ops/autonomy/session_debt.py`, registered on the Claude `Stop` hook as
-`--class gate`. Exit 2 blocks the turn from ending and returns the reason to
-the model, so a session cannot close over abandoned work.
+`ops/autonomy/session_debt.py` remains the ledger and CLI (`check` exits 2
+when anything is open). It is not installed as a Claude `Stop` `--class gate`.
+Invoke it manually; a session can end while foreign unpushed work remains.
 
 | Debt | Source | Cleared by |
 |---|---|---|
