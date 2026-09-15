@@ -39,7 +39,7 @@ pipeline_contract:
 operator_directive:
   objective: On cryptoxdog/IB-Odoo_19, make Gate CRM writeback fail-closed unless both plasticos.gate.auto_writeback and plasticos.gate.auto_writeback_operator_approved
     are true; fail closed on missing EIE state and non-explicit CEG eligibility; let operators approve a stored Gate proposal
-    via the existing Inject action; re-enforce the partner writeback allowlist at the database-write boundary; update tests
+    via the existing Inject action; reinforce the partner writeback allowlist at the database-write boundary; update tests
     to the new contract; bump only plasticos_gate and plasticos_enrichment after behavior and tests are in place. Do not touch
     EIE, CEG, or Gate_SDK.
   mode: controlled_autonomous_until_material_boundary
