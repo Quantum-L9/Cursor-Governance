@@ -996,26 +996,6 @@ def _max_attempts(task: dict[str, Any]) -> int:
     return budget
 
 
-def _rendered_attempt_number(task: dict[str, Any]) -> int | None:
-    """The attempt generation the task's rendered contract was minted for.
-
-    ``None`` when the contract is absent, unreadable or carries no integer
-    ``attempt_number`` (legacy v1 renders) -- the caller then trusts the
-    Controller allocation alone rather than refusing dispatch.
-    """
-    path = str(task.get("rendered_contract_path") or "")
-    if not path or not Path(path).is_file():
-        return None
-    try:
-        rendered = load_json(Path(path))
-    except (OSError, ValueError):
-        return None
-    value = rendered.get("attempt_number") if isinstance(rendered, dict) else None
-    if isinstance(value, bool) or not isinstance(value, int):
-        return None
-    return value
-
-
 ACTIVE_RUNTIME_STATES = {
     "LEASED",
     "PREPARED",
@@ -2032,14 +2012,12 @@ def start_task(
         # attempt in the same transaction that moves the task to EXECUTING. A
         # crash before this commit leaves nothing to resume; a crash after it
         # leaves exactly one attempt to reconcile against exactly one baseline.
+        # The Controller is the numbering authority. A rendered contract that
+        # still names an earlier generation is the documented retry shape
+        # (`start` on a FAILED task dispatches the successor against the
+        # contract already on disk); the receipt target and the reservation
+        # below come from this allocation, never from the contract's number.
         attempt_number = db.next_execution_attempt_number(task_id)
-        rendered_attempt = _rendered_attempt_number(task)
-        if rendered_attempt is not None and rendered_attempt != attempt_number:
-            raise ControllerError(
-                f"{task_id}: rendered contract names attempt {rendered_attempt} but the "
-                f"Controller allocates attempt {attempt_number}; re-render before dispatch",
-                error_code="ATTEMPT_NUMBER_DRIFT",
-            )
         attempt_id = f"attempt-{uuid.uuid4().hex[:16]}"
         receipt_target = (
             workspace

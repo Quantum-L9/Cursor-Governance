@@ -24,6 +24,7 @@ from helpers import (
     SCRIPTS,
     bootstrap_repo,
     cleanup_worktree,
+    prepare_attempt,
     register_contract,
     run_cli,
     write_json,
@@ -417,24 +418,47 @@ class AttemptGenerationTests(unittest.TestCase):
             )
             cleanup_worktree(repo, workspace)
 
-    def test_rendered_contract_that_names_another_generation_is_refused(self) -> None:
+    def test_a_stale_rendered_contract_never_reissues_the_consumed_generation(self) -> None:
+        """The Controller's documented retry shape stays valid.
+
+        `start` on a FAILED task dispatches the successor against the contract
+        already on disk (test_verify_lifecycle / test_persistence_convergence
+        rely on this). The stale render still says `attempt_number: 1`; the
+        Controller allocation, the receipt target and the reservation are all
+        attempt 2 regardless, because none of them is read from the contract.
+        """
         with TemporaryDirectory() as raw:
             temp = Path(raw)
             _, repo, workspace = bootstrap_repo(temp)
             register_contract(temp, workspace)
-            run_cli("claim", "TASK-001", "--workspace", str(workspace), "--holder", "worker")
-            run_cli("prepare", "TASK-001", "--workspace", str(workspace))
-            rendered = run_cli("render-contract", "TASK-001", "--workspace", str(workspace))
-            path = Path(rendered["contract"])
-            contract = json.loads(path.read_text(encoding="utf-8"))
-            contract["attempt_number"] = 7
-            path.write_text(json.dumps(contract), encoding="utf-8")
-            refused = run_cli(
-                "start", "TASK-001", "--workspace", str(workspace), "--actor", "worker", expect=2
+            first_contract, _ = prepare_attempt(
+                temp, workspace, declared_changed=["docs/never-written.txt"]
             )
-            self.assertEqual(refused.get("error_code"), "ATTEMPT_NUMBER_DRIFT")
-            self.assertEqual(_rows(workspace, "attempts"), [])
-            self.assertEqual(_rows(workspace, "execution_attempts"), [])
+            failed = run_cli("verify", "TASK-001", "--workspace", str(workspace))
+            self.assertEqual(failed["verdict"], "FAILED")
+            path = workspace / "contracts" / "rendered" / "TASK-001.json"
+            stale = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(stale["attempt_number"], 1)
+
+            # Repair re-enters execution without a re-render.
+            successor = run_cli(
+                "start", "TASK-001", "--workspace", str(workspace), "--actor", "worker"
+            )
+            self.assertEqual(successor["attempt_number"], 2)
+            self.assertEqual(
+                sorted((r["attempt_number"], r["status"]) for r in _rows(workspace, "attempts")),
+                [(1, "RECORDED"), (2, "DISPATCHED")],
+            )
+            self.assertTrue(
+                [r for r in _rows(workspace, "attempts") if r["attempt_number"] == 2][0][
+                    "receipt_path"
+                ].endswith("attempt-002/attempt-receipt.json")
+            )
+            # The stale render is what is on disk; it was not consulted.
+            self.assertEqual(
+                json.loads(path.read_text(encoding="utf-8"))["attempt_number"],
+                first_contract["attempt_number"],
+            )
             cleanup_worktree(repo, workspace)
 
 

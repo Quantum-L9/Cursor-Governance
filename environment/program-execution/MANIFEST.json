@@ -1543,7 +1543,7 @@
     },
     {
       "path": "integrations/autonomy-control-plane/grant.py",
-      "sha256": "88ee83561adf6f2d67ebc216348d4ae1383d45fd4ee1104402d544e69011b7d2"
+      "sha256": "74070527671825c96c23d2b99140ae7b73793c6b1971f9e3029b9078e48d0316"
     },
     {
       "path": "integrations/autonomy-control-plane/program_authority.py",
@@ -1551,7 +1551,7 @@
     },
     {
       "path": "integrations/autonomy-control-plane/tests/test_bridge.py",
-      "sha256": "a2718dff70f110a624fc6bf33bd7feda9f1ff09a56851fd17cfa0b7cde10dd7c"
+      "sha256": "8f58a3a2c4546f8a5b25fdb4c95e140ee6afeebefd3130f7a701685349fa276d"
     },
     {
       "path": "integrations/bootstrap/README.md",
@@ -2111,7 +2111,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "043b8584bfed276be9d7db2e0a3dd03a93ea684f7d394f6cdf20cd36440aae6e"
+      "sha256": "db6456a2ec88717b2d1f06a91d288ead15b6f796ea5f831e893b64e16a085a97"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -2151,7 +2151,7 @@
     },
     {
       "path": "scripts/tests/test_campaign_tunnel_airtight.py",
-      "sha256": "fe8ec03594daa5219d0c062eed022a7b087c5a8adac90d02593e8192ceb62c0c"
+      "sha256": "6184990effc1287d3b53c6da38a198288f3314b816e64d1099ccb48d2fe74d02"
     },
     {
       "path": "scripts/tests/test_collect_evidence_memory_lookup.py",
@@ -2203,7 +2203,7 @@
     },
     {
       "path": "scripts/tests/test_pe_smoke_campaign.py",
-      "sha256": "ecc99ddeaf25d5baec5eaa403340289b01389350a67acb7aaa9c6cc1dea127e4"
+      "sha256": "bcdbc5a53d9d4f4626a33135f46b64a70fffffabeee61ce3b10b7b4fd4cf6be4"
     },
     {
       "path": "scripts/tests/test_pe_trace.py",
@@ -2239,11 +2239,11 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "bd1cba1281e80fdd4464c91363051c91b49dfbd75ed25d00bdf1de713808bfcf"
+      "sha256": "a842d136aad98cc139f29ae2dfcb8e02edc8994d52c9676396a680e8462f8e66"
     },
     {
       "path": "scripts/tests/test_run_campaign_repairs.py",
-      "sha256": "05ef188021d667963e71465b0831e6f72cd81f423034772d45edbf0dd9b953e2"
+      "sha256": "5bc307aae6af9eb53110df9f5168d306d366013a84597b0117627718f5157334"
     },
     {
       "path": "scripts/tests/test_run_conformance.py",
@@ -2251,7 +2251,7 @@
     },
     {
       "path": "scripts/tests/test_run_peer_task_pipeline.py",
-      "sha256": "0a465cdd767d959527688c9522564797e5b246c1978cd67dc3b9f9ff84b9690f"
+      "sha256": "c0100a9f569c08ea7f8883a059573ecebe9b5006e6e11cea6d5c75bd7f474999"
     },
     {
       "path": "scripts/tests/test_universal_architecture_ingress.py",
