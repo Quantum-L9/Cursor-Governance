@@ -14,7 +14,13 @@ from memory_boundary_fixtures import (
     hydration_payload,
 )
 
-from ops.memory.control_plane_client import MemoryControlPlaneClient, OutcomeStatus
+from ops.memory.control_plane_client import (
+    FAULT_CANONICAL,
+    FAULT_ENVIRONMENT,
+    FAULT_NONE,
+    MemoryControlPlaneClient,
+    OutcomeStatus,
+)
 from ops.memory.runtime_binding import STATUS_UNBOUND, RuntimeBinding
 
 WS = "/tmp/workspace"
@@ -310,6 +316,51 @@ def test_unbound_runtime_never_spawns_anything(fake_cli) -> None:
     assert outcome.status is OutcomeStatus.BINDING_FAILED
     assert "2.1.0" in (outcome.error or "")
     assert fake_cli.calls == []
+
+
+def test_binding_failed_is_an_environment_fault_not_memory_degradation(fake_cli) -> None:
+    """ADR-0032: the binding is a bootstrap fact; canonical memory was never observed."""
+
+    unbound = RuntimeBinding(
+        status=STATUS_UNBOUND,
+        runtime_mode="pinned_environment",
+        memory_package="l9-graphite-memory",
+        expected_version=EXPECTED_VERSION,
+        expected_contract_version="memory-control-plane/v1",
+        manifest_path="m",
+        reasons=("package version 2.1.0 does not match expected " + EXPECTED_VERSION,),
+        environment_heal="skipped:ci",
+    )
+    outcome = MemoryControlPlaneClient(unbound, runner=fake_cli.run).hydrate(
+        "t", workspace=WS, write_namespace_hint="ns", read_namespace_hints=("ns",)
+    )
+    assert outcome.fault_class == FAULT_ENVIRONMENT
+    assert outcome.environment_fault is True
+    assert outcome.memory_degraded is False
+    receipt = outcome.integration_receipt
+    assert receipt["fault_class"] == FAULT_ENVIRONMENT
+    assert receipt["environment_heal"] == "skipped:ci"
+
+
+def test_canonical_failures_are_memory_degradation(bound, fake_cli) -> None:
+    fake_cli.reply("hydrate", 1, hydration_payload(status="failed"))
+    outcome = client(bound, fake_cli).hydrate(
+        "t", workspace=WS, write_namespace_hint="ns", read_namespace_hints=("ns",)
+    )
+    assert outcome.status is OutcomeStatus.CANONICAL_UNAVAILABLE
+    assert outcome.fault_class == FAULT_CANONICAL
+    assert outcome.memory_degraded is True
+    assert outcome.environment_fault is False
+
+
+def test_ok_and_no_hits_carry_no_fault(bound, fake_cli) -> None:
+    fake_cli.reply("hydrate", 0, hydration_payload())
+    outcome = client(bound, fake_cli).hydrate(
+        "t", workspace=WS, write_namespace_hint="ns", read_namespace_hints=("ns",)
+    )
+    assert outcome.fault_class == FAULT_NONE
+    assert outcome.memory_degraded is False
+    assert outcome.environment_fault is False
 
 
 @pytest.mark.parametrize("variable", ["GRAPHITI_MCP_URL", "GRAPHITI_MCP_TOKEN"])
