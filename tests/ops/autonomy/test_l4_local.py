@@ -21,6 +21,7 @@ from l4_local import (  # noqa: E402
     breakglass_path,
     current_head,
     extend_release,
+    kernel_evidence,
     receipt_path,
     record_kernels,
     release_allows_remote,
@@ -351,6 +352,41 @@ def test_authorize_release_refuses_a_kernel_receipt_that_no_longer_derives(
         json.dumps({"schema": "l9.kernel_receipt.v1", "phase": "recorded"}),
         encoding="utf-8",
     )
+    with pytest.raises(RuntimeError, match="no longer re-derives"):
+        authorize_release(stacked_repo)
+
+
+def test_authorize_release_refuses_a_malformed_existing_kernel_receipt(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An existing file that is not JSON is a claim, not absence.
+
+    load_receipt used to return None for both a missing file and a
+    broken one, so authorize-release took the corpus exemption. The
+    exemption is only for genuine absence (CANONICAL_LAW §6.2.9 item 6).
+    """
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+    begin(stacked_repo, contract_id="p6-kernel-malformed")
+    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
+    kernel_receipt = stacked_repo / ".l9" / "autonomy" / "kernel-receipt.json"
+    kernel_receipt.parent.mkdir(parents=True, exist_ok=True)
+    kernel_receipt.write_text("{not-json", encoding="utf-8")
+    assert kernel_evidence(stacked_repo)["status"] == "stale"
+    with pytest.raises(RuntimeError, match="no longer re-derives"):
+        authorize_release(stacked_repo)
+
+
+def test_authorize_release_refuses_a_non_object_existing_kernel_receipt(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A JSON array (or other non-object) is present-and-false, not absent."""
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+    begin(stacked_repo, contract_id="p6-kernel-array")
+    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
+    kernel_receipt = stacked_repo / ".l9" / "autonomy" / "kernel-receipt.json"
+    kernel_receipt.parent.mkdir(parents=True, exist_ok=True)
+    kernel_receipt.write_text("[]", encoding="utf-8")
+    assert kernel_evidence(stacked_repo)["status"] == "stale"
     with pytest.raises(RuntimeError, match="no longer re-derives"):
         authorize_release(stacked_repo)
 

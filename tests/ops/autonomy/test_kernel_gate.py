@@ -116,6 +116,23 @@ def test_v1_receipt_is_rejected_by_name(stacked_repo: Path) -> None:
     assert gate.precommit(stacked_repo, ROOT, None) == 2
 
 
+def test_load_receipt_none_only_when_the_file_is_absent(stacked_repo: Path) -> None:
+    """None means no claim. An existing unreadable file must not be None."""
+    gate = _gate()
+    assert gate.load_receipt(stacked_repo) is None
+    path = gate.receipt_path(stacked_repo)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("{not-json", encoding="utf-8")
+    with pytest.raises(gate.ReceiptLoadError, match="not valid JSON"):
+        gate.load_receipt(stacked_repo)
+    path.write_text("[]", encoding="utf-8")
+    with pytest.raises(gate.ReceiptLoadError, match="not a JSON object"):
+        gate.load_receipt(stacked_repo)
+    failure = gate.verify_tree(stacked_repo, ROOT)
+    assert failure is not None
+    assert "not a JSON object" in failure
+
+
 def test_editing_the_report_after_recording_fails_verify(stacked_repo: Path) -> None:
     """Verify re-derives. A receipt is not a durable permission slip."""
     gate = _gate()

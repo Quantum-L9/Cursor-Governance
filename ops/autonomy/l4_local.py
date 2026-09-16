@@ -501,13 +501,23 @@ def kernel_evidence(root: Path) -> dict[str, Any]:
     This reads through ``kernel_gate.load_receipt`` and ``verify_tree``. It
     never records, and never spells the receipt path: ``kernel_gate`` is the
     sole writer, and ``tests/ops/autonomy/test_kernel_receipt_writers.py``
-    keeps it that way.
+    keeps it that way. ``load_receipt`` returns None only for a missing file;
+    an existing unreadable or non-object receipt raises and is classified
+    ``stale``, not ``absent``.
     """
     try:
-        from kernel_gate import gov_root_from_env, load_receipt, verify_tree
+        from kernel_gate import ReceiptLoadError, gov_root_from_env, load_receipt, verify_tree
     except ImportError:  # pragma: no cover - package import
-        from ops.autonomy.kernel_gate import gov_root_from_env, load_receipt, verify_tree
-    receipt = load_receipt(root)
+        from ops.autonomy.kernel_gate import (
+            ReceiptLoadError,
+            gov_root_from_env,
+            load_receipt,
+            verify_tree,
+        )
+    try:
+        receipt = load_receipt(root)
+    except ReceiptLoadError as exc:
+        return {"status": KERNEL_EVIDENCE_STALE, "detail": f"FAIL: {exc}"}
     if receipt is None:
         return {"status": KERNEL_EVIDENCE_ABSENT, "note": KERNEL_EVIDENCE_ABSENT_NOTE}
     try:
