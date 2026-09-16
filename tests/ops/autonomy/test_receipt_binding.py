@@ -209,6 +209,28 @@ def test_tree_digest_moves_when_tracked_file_becomes_untracked(repo: Path) -> No
     assert receipt_binding.tree_digest(repo) != before
 
 
+def test_tree_digest_tracks_a_broken_symlink_payload(repo: Path) -> None:
+    """A tracked broken symlink is content, not a deleted path.
+
+    Path.exists() follows the missing target and would drop the entry.
+    Changing the readlink payload must move tree_digest; a later no-op
+    commit must not.
+    """
+    link = repo / "broken"
+    link.symlink_to("missing-a")
+    _git(repo, "add", "broken")
+    _git(repo, "commit", "-qm", "add broken link")
+    before = receipt_binding.tree_digest(repo)
+    link.unlink()
+    link.symlink_to("missing-b")
+    assert receipt_binding.tree_digest(repo) != before
+    _git(repo, "add", "broken")
+    _git(repo, "commit", "-qm", "retarget")
+    after = receipt_binding.tree_digest(repo)
+    _git(repo, "commit", "-q", "--allow-empty", "-m", "no-op")
+    assert receipt_binding.tree_digest(repo) == after
+
+
 def test_tree_digest_moves_on_executable_bit(repo: Path) -> None:
     before = receipt_binding.tree_digest(repo)
     path = repo / "a.py"
