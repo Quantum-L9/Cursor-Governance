@@ -29,6 +29,7 @@ from __future__ import annotations
 import fcntl
 import hashlib
 import os
+import shutil
 import subprocess
 import time
 from collections.abc import Callable, Mapping
@@ -97,6 +98,122 @@ def repo_write_lock_held(root: Path, env: Mapping[str, str]) -> bool:
     return True
 
 
+def repo_write_lock_disabled(env: Mapping[str, str]) -> bool:
+    return str(env.get("L9_REPO_WRITE_LOCK", "1")).strip().lower() in _FALSE
+
+
+def repo_write_lock_held_by_me(root: Path, env: Mapping[str, str]) -> bool:
+    mine = str(env.get("L9_REPO_WRITE_LOCK_OWNER") or "").strip()
+    if not mine:
+        return False
+    owner = repo_write_lock_dir(root, env) / "owner"
+    try:
+        first = owner.read_text(encoding="utf-8").split()
+    except OSError:
+        return False
+    return bool(first) and first[0] == mine
+
+
+def _repo_write_lock_stale_s(env: Mapping[str, str]) -> int:
+    raw = str(env.get("L9_REPO_WRITE_LOCK_STALE_S") or "").strip()
+    return int(raw) if raw.isdigit() else 300
+
+
+def _owner_is_alive(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _break_stale_repo_write_lock(lock_dir: Path, env: Mapping[str, str]) -> bool:
+    """Remove a lock whose owner is gone or whose ledger is older than stale age."""
+
+    owner = lock_dir / "owner"
+    try:
+        parts = owner.read_text(encoding="utf-8").split()
+    except OSError:
+        parts = []
+    pid = 0
+    ts = 0
+    if parts:
+        try:
+            pid = int(parts[0])
+        except ValueError:
+            pid = 0
+    if len(parts) > 1:
+        try:
+            ts = int(parts[1])
+        except ValueError:
+            ts = 0
+    if pid > 0 and not _owner_is_alive(pid):
+        shutil.rmtree(lock_dir, ignore_errors=True)
+        return True
+    now = int(time.time())
+    if ts > 0 and now - ts > _repo_write_lock_stale_s(env):
+        shutil.rmtree(lock_dir, ignore_errors=True)
+        return True
+    return False
+
+
+def acquire_repo_write_lock(
+    root: Path, env: Mapping[str, str], *, timeout: float = 0.0
+) -> tuple[Path | None, str | None]:
+    """Acquire the shared repo-write lock for ``root``.
+
+    Returns ``(lock_dir, skip_reason)``. ``lock_dir`` is set only when this
+    process created the directory and must release it. ``skip_reason`` is set
+    when another live owner holds the lock. Disabled / already-ours succeed
+    with ``(None, None)`` so the caller proceeds without releasing.
+    """
+
+    if repo_write_lock_disabled(env):
+        return None, None
+    if repo_write_lock_held_by_me(root, env):
+        return None, None
+    lock_dir = repo_write_lock_dir(root, env)
+    try:
+        lock_dir.parent.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        required = str(env.get("L9_REPO_WRITE_LOCK_REQUIRED", "0")).strip().lower() in _TRUE
+        if required:
+            return None, "repo-write-lock-held"
+        return None, None
+    deadline = time.monotonic() + max(0.0, timeout)
+    while True:
+        try:
+            lock_dir.mkdir()
+        except FileExistsError:
+            if _break_stale_repo_write_lock(lock_dir, env):
+                continue
+            if time.monotonic() >= deadline:
+                return None, "repo-write-lock-held"
+            time.sleep(0.2)
+            continue
+        except OSError:
+            return None, "repo-write-lock-held"
+        try:
+            (lock_dir / "owner").write_text(
+                f"{os.getpid()} {int(time.time())} {root} memory-env-heal\n",
+                encoding="utf-8",
+            )
+        except OSError:
+            shutil.rmtree(lock_dir, ignore_errors=True)
+            return None, "repo-write-lock-held"
+        return lock_dir, None
+
+
+def release_repo_write_lock(lock_dir: Path | None) -> None:
+    if lock_dir is None:
+        return
+    shutil.rmtree(lock_dir, ignore_errors=True)
+
+
 def heal_script(root: Path) -> Path | None:
     script = root / HEAL_SCRIPT_REL
     return script if script.is_file() else None
@@ -146,18 +263,24 @@ def heal_environment(
     script = heal_script(root)
     if script is None:
         return f"{HEAL_SKIPPED_PREFIX}no-heal-script", reasons
-    if repo_write_lock_held(root, env):
-        return f"{HEAL_SKIPPED_PREFIX}repo-write-lock-held", reasons
-
     budget = timeout if timeout is not None else heal_timeout(env)
+    started = time.monotonic()
+    repo_lock, skip = acquire_repo_write_lock(root, env, timeout=0.0)
+    if skip:
+        return f"{HEAL_SKIPPED_PREFIX}{skip}", reasons
+
     run = runner or _default_runner
+    child_env = dict(env)
+    if repo_lock is not None:
+        child_env["L9_REPO_WRITE_LOCK_OWNER"] = str(os.getpid())
+        child_env["L9_REPO_WRITE_LOCK_LABEL"] = "memory-env-heal"
     lock_path = root / HEAL_LOCK_REL
     try:
         lock_path.parent.mkdir(parents=True, exist_ok=True)
         handle = open(lock_path, "a+", encoding="utf-8")  # noqa: SIM115 - held across the sync
     except OSError as exc:
+        release_repo_write_lock(repo_lock)
         return f"{HEAL_SKIPPED_PREFIX}lock-unusable", [f"heal lock unusable: {exc}"]
-    started = time.monotonic()
     try:
         while True:
             try:
@@ -178,12 +301,14 @@ def heal_environment(
             pass
         except OSError as exc:
             reasons.append(f"fingerprint not cleared: {exc}")
-        remaining = max(1.0, budget - (time.monotonic() - started))
+        remaining = budget - (time.monotonic() - started)
+        if remaining <= 0:
+            return HEAL_FAILED, [*reasons, f"environment heal timed out after {budget:.0f}s"]
         try:
             completed = run(
                 ["bash", str(script), str(root), "apply"],
                 timeout=remaining,
-                env=env,
+                env=child_env,
             )
         except subprocess.TimeoutExpired:
             return HEAL_FAILED, [*reasons, f"environment heal timed out after {budget:.0f}s"]
@@ -202,3 +327,4 @@ def heal_environment(
         except OSError:
             pass
         handle.close()
+        release_repo_write_lock(repo_lock)

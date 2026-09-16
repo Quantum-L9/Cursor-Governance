@@ -49,7 +49,6 @@ from ops.memory.control_plane_client import (
 )
 from ops.memory.namespace_context import resolve_namespace_context
 from ops.memory.runtime_binding import (
-    _REPO_ROOT,
     MODE_CALLER,
     RuntimeBinding,
     resolve_runtime_binding,
@@ -284,26 +283,26 @@ def remediation_for(overall: str, binding: RuntimeBinding) -> str | None:
 
     if fault_class_for_overall(overall) != FAULT_ENVIRONMENT:
         return None
-    root = binding.governance_root or str(_REPO_ROOT)
+    root = binding.governance_root
     heal = binding.environment_heal
-    if heal == environment_heal.HEAL_HEALED:
+    if heal == environment_heal.HEAL_HEALED and root:
         return (
             f"ENVIRONMENT_FAULT: the locked sync of {root} succeeded but the runtime is still "
             "unbound — the lock itself no longer pins expected_package_version; "
             "reconcile pyproject.toml / uv.lock with ops/config/memory-binding.json"
         )
-    if heal == environment_heal.HEAL_FAILED:
+    if heal == environment_heal.HEAL_FAILED and root:
         return (
             f"ENVIRONMENT_FAULT: locked sync of {root} failed — run "
             f"`bash ops/scripts/ensure_uv_environment.sh {root} apply` and read its stderr"
         )
-    if heal and heal.startswith(environment_heal.HEAL_SKIPPED_PREFIX):
+    if heal and heal.startswith(environment_heal.HEAL_SKIPPED_PREFIX) and root:
         why = heal[len(environment_heal.HEAL_SKIPPED_PREFIX) :]
         return (
             f"ENVIRONMENT_FAULT: governance .venv at {root} is unbound; automatic heal skipped "
             f"({why}) — run `bash ops/scripts/ensure_uv_environment.sh {root} apply`"
         )
-    if binding.runtime_mode == MODE_CALLER:
+    if binding.runtime_mode == MODE_CALLER or not root:
         return (
             "ENVIRONMENT_FAULT: no governance .venv was found (L9_GOVERNANCE_DIR, "
             "$HOME/.cursor-governance, this checkout) — run `make venv` in the governance "

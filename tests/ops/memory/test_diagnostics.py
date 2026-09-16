@@ -160,7 +160,8 @@ def test_unbound_package_is_package_unbound_and_spawns_nothing(fake_cli) -> None
     # concrete repair, not memory degradation.
     assert report["fault_class"] == "environment"
     assert report["remediation"].startswith("ENVIRONMENT_FAULT")
-    assert "ensure_uv_environment.sh" in report["remediation"]
+    assert "L9_GOVERNANCE_DIR" in report["remediation"]
+    assert "ensure_uv_environment.sh" not in report["remediation"]
 
 
 def test_environment_remediation_names_what_the_heal_already_did(fake_cli) -> None:

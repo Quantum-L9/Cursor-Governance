@@ -11,9 +11,9 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from receipt_binding import sha256_file
-except ImportError:  # pragma: no cover - package import
     from ops.autonomy.receipt_binding import sha256_file
+except ImportError:  # pragma: no cover - script invocation from ops/autonomy
+    from receipt_binding import sha256_file
 
 APPLY_SCHEMA = "l9.kernel_apply.v1"
 APPLY_DIR_REL = Path(".l9") / "autonomy"

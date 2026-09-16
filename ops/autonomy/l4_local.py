@@ -39,9 +39,9 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from receipt_binding import tree_digest
-except ImportError:  # pragma: no cover - package import
     from ops.autonomy.receipt_binding import tree_digest
+except ImportError:  # pragma: no cover - script invocation from ops/autonomy
+    from receipt_binding import tree_digest
 
 SCHEMA = "l9.l4_local_phase/v1"
 RECEIPT_SCHEMA = "l9.l4_local_release_receipt/v2"

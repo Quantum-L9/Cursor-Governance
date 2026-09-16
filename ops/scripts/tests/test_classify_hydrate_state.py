@@ -181,6 +181,18 @@ class LegacyPacketTests(unittest.TestCase):
         self.assertFalse(verdict.degraded)
         self.assertEqual(verdict.condition, chs.CONDITION_CLOSE_GAP)
 
+    def test_legacy_close_gap_with_answering_status_is_not_degraded(self) -> None:
+        for status in ("OK", "NO_HITS"):
+            md = _packet(
+                degraded=True,
+                close_gap=True,
+                memory_status=status,
+                reason="prior session close-gap",
+            )
+            verdict = chs.classify_verdict(md)
+            self.assertFalse(verdict.degraded, status)
+            self.assertEqual(verdict.condition, chs.CONDITION_CLOSE_GAP, status)
+
     def test_legacy_binding_failed_packet_is_an_environment_fault(self) -> None:
         md = _packet(degraded=True, memory_status="BINDING_FAILED", reason="BINDING_FAILED: x")
         verdict = chs.classify_verdict(md)

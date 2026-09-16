@@ -162,3 +162,62 @@ def test_module_writes_no_receipt_and_decides_no_policy() -> None:
     source = (REPO / "ops" / "autonomy" / "receipt_binding.py").read_text(encoding="utf-8")
     for forbidden in ("write_text", "write_bytes", "json.dump", "receipt_path", "RECEIPT_REL"):
         assert forbidden not in source, f"receipt_binding must not reference {forbidden}"
+
+
+def test_callers_prefer_in_repo_receipt_binding() -> None:
+    """Bare `receipt_binding` on sys.path is a third-party module, not ours."""
+    for rel in ("ops/autonomy/l4_local.py", "ops/autonomy/kernel_predicates.py"):
+        src = (REPO / rel).read_text(encoding="utf-8")
+        in_repo = src.index("from ops.autonomy.receipt_binding import")
+        local = src.index("from receipt_binding import")
+        assert in_repo < local, rel
+
+
+def test_skill_pack_loads_binding_by_file_location() -> None:
+    src = (REPO / "skills" / "l9-plan" / "scripts" / "validate_plan_kernel_receipt.py").read_text(
+        encoding="utf-8"
+    )
+    assert "spec_from_file_location" in src
+    assert "from ops.autonomy import receipt_binding" not in src
+
+
+def test_skill_pack_ignores_a_sys_path_ops_package(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake_root = tmp_path / "site"
+    fake_ops = fake_root / "ops" / "autonomy"
+    fake_ops.mkdir(parents=True)
+    (fake_root / "ops" / "__init__.py").write_text("", encoding="utf-8")
+    (fake_ops / "__init__.py").write_text("", encoding="utf-8")
+    (fake_ops / "receipt_binding.py").write_text(
+        "def canonicalize(text, self_fields=None):\n    return 'FAKE'\n",
+        encoding="utf-8",
+    )
+    monkeypatch.syspath_prepend(str(fake_root))
+    module = _load_plan_validator()
+    text = 'body_sha256: "deadbeef"\nbody\n'
+    expected = receipt_binding.canonicalize(text, self_fields=("body_sha256",))
+    assert module.canonicalize(text) == expected
+    assert module.canonicalize(text) != "FAKE"
+
+
+def test_tree_digest_moves_when_tracked_file_becomes_untracked(repo: Path) -> None:
+    """git rm --cached leaves the bytes; membership must still move the digest."""
+    before = receipt_binding.tree_digest(repo)
+    _git(repo, "rm", "--cached", "-q", "a.py")
+    assert (repo / "a.py").is_file()
+    assert receipt_binding.tree_digest(repo) != before
+
+
+def test_tree_digest_moves_on_executable_bit(repo: Path) -> None:
+    before = receipt_binding.tree_digest(repo)
+    path = repo / "a.py"
+    path.chmod(path.stat().st_mode | 0o111)
+    assert receipt_binding.tree_digest(repo) != before
+
+
+def test_tree_digest_includes_gitlink_mode(repo: Path) -> None:
+    before = receipt_binding.tree_digest(repo)
+    sha = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], text=True).strip()
+    _git(repo, "update-index", "--add", "--cacheinfo", f"160000,{sha},vendor/lib")
+    assert receipt_binding.tree_digest(repo) != before
