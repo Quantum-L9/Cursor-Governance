@@ -141,3 +141,41 @@ def test_heal_timeout_defaults_and_rejects_nonsense() -> None:
     assert eh.heal_timeout({eh.ENV_HEAL_TIMEOUT: "45"}) == 45.0
     assert eh.heal_timeout({eh.ENV_HEAL_TIMEOUT: "zero"}) == eh.DEFAULT_HEAL_TIMEOUT
     assert eh.heal_timeout({eh.ENV_HEAL_TIMEOUT: "-3"}) == eh.DEFAULT_HEAL_TIMEOUT
+
+
+def test_heal_does_not_floor_remaining_budget_to_one_second(tmp_path: Path) -> None:
+    root = _governance_root(tmp_path)
+    seen: list[float] = []
+
+    def run(
+        argv: list[str], *, timeout: float, env: Mapping[str, str]
+    ) -> subprocess.CompletedProcess[str]:
+        seen.append(timeout)
+        return subprocess.CompletedProcess(argv, 0, "", "")
+
+    outcome, _ = eh.heal_environment(root, env=_env(tmp_path), runner=run, timeout=0.4)
+    assert outcome == eh.HEAL_HEALED
+    assert seen and 0 < seen[0] <= 0.4
+
+
+def test_heal_holds_the_repo_write_lock_during_the_sync(tmp_path: Path) -> None:
+    root = _governance_root(tmp_path)
+    env = _env(tmp_path)
+    seen: dict[str, object] = {}
+
+    def run(
+        argv: list[str], *, timeout: float, env: Mapping[str, str]
+    ) -> subprocess.CompletedProcess[str]:
+        lock_dir = eh.repo_write_lock_dir(root, env)
+        owner = lock_dir / "owner"
+        seen["exists"] = lock_dir.is_dir()
+        seen["owner"] = owner.read_text(encoding="utf-8") if owner.is_file() else ""
+        seen["child_owner"] = env.get("L9_REPO_WRITE_LOCK_OWNER")
+        return subprocess.CompletedProcess(argv, 0, "", "")
+
+    outcome, _ = eh.heal_environment(root, env=env, runner=run)
+    assert outcome == eh.HEAL_HEALED
+    assert seen["exists"] is True
+    assert str(os.getpid()) in str(seen["owner"])
+    assert seen["child_owner"] == str(os.getpid())
+    assert not eh.repo_write_lock_dir(root, env).exists()

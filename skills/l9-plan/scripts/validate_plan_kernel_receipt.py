@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import re
 from datetime import datetime
 from pathlib import Path
@@ -34,17 +35,41 @@ except ImportError:  # pragma: no cover - stdlib fallback
     yaml = None  # type: ignore[assignment]
 
 
-try:  # governance clone: one owner for canonicalize-then-digest
-    from ops.autonomy import receipt_binding as _binding
-except ImportError:  # consumer clone: this pack is copied without ops/
-    _binding = None  # type: ignore[assignment]
+def _load_governance_binding() -> Any:
+    """Load the governance digest library by file location, never by sys.path.
+
+    This script is invoked as ``python3 scripts/validate_plan_kernel_receipt.py``
+    from ``skills/l9-plan``, so repo-root is not on ``sys.path``. A package
+    import of ``ops.autonomy`` would also bind a consumer repo's unrelated
+    ``ops`` package. Load ``ops/autonomy/receipt_binding.py`` only when it is a
+    sibling of this skill pack at the same repository root; otherwise keep the
+    local fallback for consumer copies that ship without ``ops/``.
+    """
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        if (parent / "skills" / "l9-plan" / "scripts" / here.name).resolve() != here:
+            continue
+        candidate = parent / "ops" / "autonomy" / "receipt_binding.py"
+        if not candidate.is_file():
+            return None
+        spec = importlib.util.spec_from_file_location("_l9_governance_receipt_binding", candidate)
+        if spec is None or spec.loader is None:
+            return None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    return None
+
+
+_binding = _load_governance_binding()
 
 
 def canonicalize(text: str) -> str:
     """Zero the self-referential body_sha256 so the plan can hash itself.
 
-    The governance clone delegates to ``ops/autonomy/receipt_binding.py``,
-    which owns this operation for every receipt plane. The local body is the
+    The governance clone delegates to ``ops/autonomy/receipt_binding.py``
+    loaded by file location (never a ``sys.path`` ``ops`` package), which
+    owns this operation for every receipt plane. The local body is the
     fallback for consumer repos that receive this skill pack without ``ops/``;
     ``tests/ops/autonomy/test_receipt_binding.py`` pins the two to identical
     output, so the fallback cannot drift into a second dialect.
