@@ -65,6 +65,17 @@ SAFE_METADATA_FIELDS = frozenset(
         "revision",
         "command_count",
         "host_repo",
+        # Terminal-attempt recovery (TASK_TERMINAL_ATTEMPT_RECOVERED): the
+        # fenced attempt's campaign-minted id, its failure-class enum, the
+        # Controller recovery status enum, and the verified root-Autonomy
+        # retirement -- what the revoke call did plus the lease-row status read
+        # back afterwards. Without these the persisted event could not say
+        # whether generation N's authority was actually retired.
+        "attempt_id",
+        "failure_class",
+        "recovery",
+        "grant_revoked",
+        "grant_lease_status",
     }
 )
 

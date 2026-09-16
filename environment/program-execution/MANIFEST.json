@@ -1543,7 +1543,7 @@
     },
     {
       "path": "integrations/autonomy-control-plane/grant.py",
-      "sha256": "74070527671825c96c23d2b99140ae7b73793c6b1971f9e3029b9078e48d0316"
+      "sha256": "9eb8650a24006778645045bec6e067adf98cbedded606d1d09bc2501e0061cee"
     },
     {
       "path": "integrations/autonomy-control-plane/program_authority.py",
@@ -2071,7 +2071,7 @@
     },
     {
       "path": "scripts/pe_trace.py",
-      "sha256": "2f53432d5ad718a8c5748ea6d3dbf736379411ff9a471d41b7d0ea1d4a2b9558"
+      "sha256": "c693ca513f358f23f6d672336f182b4130f4713cf85a78423008a8884fc9aadf"
     },
     {
       "path": "scripts/pe_worker.py",
@@ -2111,7 +2111,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "79210b34108f859202702a949ccc1aa28fd1aa3a16654f39b3f7bc03233337b2"
+      "sha256": "b4674ed946e8c575afc2a3b07fbff12ba356b5d5d8df6ffefd661baf69c104e3"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -2203,11 +2203,11 @@
     },
     {
       "path": "scripts/tests/test_pe_smoke_campaign.py",
-      "sha256": "bcdbc5a53d9d4f4626a33135f46b64a70fffffabeee61ce3b10b7b4fd4cf6be4"
+      "sha256": "9d42f8632bf327e2e9aa46501d8a4675fad3c0fb11d1743d3090a4e4279d84ed"
     },
     {
       "path": "scripts/tests/test_pe_trace.py",
-      "sha256": "03ea5253f29633c19058b307825faa246afd2b496fcee9fa3daed567996f1f9a"
+      "sha256": "6cbb0771431841792634c14b26987cf6f2d097fd68c3e5d6684b84e6d0aad601"
     },
     {
       "path": "scripts/tests/test_pe_worker.py",
@@ -2239,7 +2239,7 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "7341e4d331f7959cd1c8c01b2eafb7a3d0c52a6c2f6d8a26dab3ec3f71c250b3"
+      "sha256": "3412eed707fadd9e4dab9b532cee924aa2fb38be329f95419240d27b412a35c3"
     },
     {
       "path": "scripts/tests/test_run_campaign_repairs.py",

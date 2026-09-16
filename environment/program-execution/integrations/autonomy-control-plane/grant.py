@@ -321,6 +321,17 @@ def _lease_status(grant: Mapping[str, Any]) -> str | None:
     return str(lease.status.value)
 
 
+def grant_lease_status(grant: Mapping[str, Any]) -> str | None:
+    """Live status of a persisted grant's root-Autonomy lease, or None if unbound.
+
+    This is the postcondition a caller checks after `revoke_task_grant`: the
+    revoke call's return value says what that call did, while the lease row
+    says whether the generation still holds authority. ``None`` means the grant
+    names no readable runtime database or lease, so there is nothing live.
+    """
+    return _lease_status(grant)
+
+
 def _resume_persisted_grant(
     grant: Mapping[str, Any],
     *,

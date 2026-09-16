@@ -919,6 +919,15 @@ class PeSmokeCampaignTests(unittest.TestCase):
             ]
             self.assertTrue(recovery, msg="recovery left no telemetry event")
             self.assertEqual({e.get("category") for e in recovery}, {"recovery"})
+            # The report states the verified retirement, not receipt presence:
+            # what the revoke call did and what the lease row says afterwards.
+            recovered_event = next(
+                e for e in recovery if e.get("operation") == "task_terminal_attempt_recovered"
+            )
+            metadata = recovered_event.get("safe_metadata") or {}
+            self.assertIs(metadata.get("grant_revoked"), True)
+            self.assertEqual(metadata.get("grant_lease_status"), row[0])
+            self.assertNotEqual(metadata.get("grant_lease_status"), "ACTIVE")
 
     def test_mixed_batch_reconciles_every_child_before_raising(self) -> None:
         """Caller-order contract for a mixed [PASS, FAIL] parallel batch:

@@ -3980,13 +3980,16 @@ def _recover_terminal_peer_task(
 
     Fires only when all three hold: the task is FAILED, its newest peer retry
     receipt is ``KNOWN_TERMINAL``, and the Controller reports no live execution
-    attempt for it. Then, in order: ``pec fresh-workspace --task-id`` (which is
-    ``recover_execution`` -- evidence preserved, attempt fenced, lease released,
-    task STALE -- followed by the worktree / ``pec/*`` sweep), revoke the
-    persisted root-Autonomy grant of the finished generation so it holds no
-    live authority, and return True so the caller re-enters the ordinary
-    claim. The successor is numbered by the Controller (attempt N+1) and
-    granted as a new generation; nothing here re-dispatches the old one.
+    attempt for it. Then, in order: retire the finished generation's persisted
+    root-Autonomy grant and prove its lease is no longer ACTIVE (a generation
+    that still holds live mutation authority is not recovered -- the task stays
+    FAILED and the run stops with ``GRANT_RETIREMENT_FAILED``); then
+    ``pec fresh-workspace --task-id`` (``recover_execution`` -- evidence
+    preserved, attempt fenced, Controller lease released, task STALE --
+    followed by the worktree / ``pec/*`` sweep); then return True so the caller
+    re-enters the ordinary claim. The successor is numbered by the Controller
+    (attempt N+1) and granted as a new generation; nothing here re-dispatches
+    the old one.
 
     Returns False when the preconditions do not hold; the caller's guard then
     refuses the task exactly as before.
@@ -4029,6 +4032,12 @@ def _recover_terminal_peer_task(
         )
     failure_class = str(receipt.get("failure_class") or PEER_KNOWN_TERMINAL)
     reason = f"peer attempt {receipt.get('attempt_id') or '?'} ended {failure_class}"
+    # Authority is retired before the workspace is touched. If the old
+    # generation's root-Autonomy lease cannot be proven non-ACTIVE, nothing
+    # below runs: the task stays FAILED with its receipt in place, so the next
+    # front-door pass retries this same step instead of finding a STALE task
+    # whose old window still holds live mutation authority.
+    grant_revoked, lease_status = _retire_recovered_grant(workspace, task_id, reason)
     # `recovery` is the pe_trace category the summary counts under
     # workspace_recovery_counts; filing this under task_prepare would hide the
     # one recovery action this front door performs.
@@ -4045,16 +4054,6 @@ def _recover_terminal_peer_task(
             "--reason",
             reason[:500],
         )
-    grant = _persisted_task_grant(workspace, {"task_id": task_id})
-    grant_revoked = False
-    if grant:
-        try:
-            revoked = _grant_module().revoke_task_grant(
-                grant, reason=f"terminal peer attempt recovered: {reason}"[:500]
-            )
-            grant_revoked = bool(isinstance(revoked, dict) and revoked.get("revoked"))
-        except (OSError, ValueError, TypeError, KeyError, RuntimeError, AttributeError) as exc:
-            log(f"root autonomy revoke for recovered {task_id} failed: {type(exc).__name__}: {exc}")
     log(f"recovered {task_id}: {reason}; successor will dispatch as a new attempt")
     emit(
         trace,
@@ -4067,9 +4066,47 @@ def _recover_terminal_peer_task(
             "failure_class": failure_class,
             "recovery": (recovered.get("recovery") or {}).get("status"),
             "grant_revoked": grant_revoked,
+            "grant_lease_status": lease_status,
         },
     )
     return True
+
+
+def _retire_recovered_grant(workspace: Path, task_id: str, reason: str) -> tuple[bool, str | None]:
+    """Retire the root-Autonomy grant of a finished generation, or refuse recovery.
+
+    Returns ``(revoked, lease_status)``: ``revoked`` is what this revoke call
+    did; ``lease_status`` is the authoritative postcondition read back from the
+    Autonomy runtime (``None`` when the grant names no readable lease, so there
+    is nothing live). A revoke that raises is logged and then judged by the
+    lease row, not by the exception: an ACTIVE lease after the attempt is a
+    generation still holding mutation authority, and recovering the workspace
+    under it would hand the successor a live sibling. That case raises
+    ``GRANT_RETIREMENT_FAILED`` before anything else changes.
+    """
+    grant = _persisted_task_grant(workspace, {"task_id": task_id})
+    if not grant:
+        return False, None
+    grants = _grant_module()
+    revoked_flag = False
+    try:
+        revoked = grants.revoke_task_grant(
+            grant, reason=f"terminal peer attempt recovered: {reason}"[:500]
+        )
+        revoked_flag = bool(isinstance(revoked, dict) and revoked.get("revoked"))
+    except (OSError, ValueError, TypeError, KeyError, RuntimeError, AttributeError) as exc:
+        log(f"root autonomy revoke for recovered {task_id} failed: {type(exc).__name__}: {exc}")
+    lease_status = grants.grant_lease_status(grant)
+    lease_status = str(lease_status) if lease_status is not None else None
+    if lease_status == "ACTIVE":
+        raise CampaignError(
+            f"{task_id}: KNOWN_TERMINAL recovery refused; root-Autonomy lease "
+            f"{grant.get('lease_id')} of the finished generation is still ACTIVE after "
+            "revoke, so the old window would keep live mutation authority beside its "
+            "successor. Retire that lease, then re-run make campaign",
+            error_code="GRANT_RETIREMENT_FAILED",
+        )
+    return revoked_flag, lease_status
 
 
 def _prepare_peer_unit(
@@ -5487,8 +5524,11 @@ def reconcile_resumed_source(
         # edited source with itself and resume an obsolete Blueprint.
         raise CampaignError(
             f"{campaign_id}: the prepared runtime records no compiled source shape for "
-            f"{source}; attest_resume_source is an explicit operator command after "
-            "source-to-Blueprint provenance is verified, otherwise rebuild",
+            f"{source}, so this resume cannot tell an edited source from the one the "
+            "Blueprint was compiled from. Once you have verified that this source is the "
+            "one that produced the runtime's Blueprint, record it with "
+            f"`run_campaign.py attest-resume-source --campaign-id {campaign_id}` and "
+            "re-run make campaign; otherwise rebuild the runtime",
             error_code="RESUME_SOURCE_UNVERIFIED",
         )
     edited = edited_task_ids(shape, recorded)
@@ -6849,7 +6889,10 @@ def build_attest_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="run_campaign.py attest-resume-source",
         description=(
-            "Record the compiled-source shape of a live runtime after Controller admission."
+            "Operator attestation for a runtime prepared before compile.source was recorded: "
+            "record the current campaign source as the shape the Blueprint was compiled from. "
+            "The Controller's EXACT_MATCH (Blueprint vs Program Lock) is required but does not "
+            "itself prove source-to-Blueprint provenance -- the operator asserts that."
         ),
     )
     parser.add_argument("--campaign-id", required=True)

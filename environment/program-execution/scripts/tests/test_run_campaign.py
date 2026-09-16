@@ -1229,6 +1229,128 @@ class RunCampaignTests(unittest.TestCase):
                 )
             self.assertEqual(events[-1]["metadata"]["grant_revoked"], False)
 
+    def _recovery_workspace(self, raw: str) -> tuple[Path, Path]:
+        workspace = Path(raw)
+        repository = workspace / "repo"
+        repository.mkdir()
+        (workspace / "runtime").mkdir()
+        (workspace / "runtime" / "LAUNCH.json").write_text(
+            json.dumps({"campaign_id": "CAMP", "target_worktree": str(repository)}),
+            encoding="utf-8",
+        )
+        self._retry_receipt(workspace, "TASK-001", "attempt-dead", "KNOWN_TERMINAL")
+        return workspace, repository
+
+    def _recovery_pec(self, repository: Path, calls: list[str]) -> Any:
+        def fake_pec(ws: Path, command: str, *rest: str) -> dict[str, Any]:
+            calls.append(command)
+            if command == "status":
+                return {
+                    "tasks": [
+                        {
+                            "id": "TASK-001",
+                            "repository_local_path": str(repository),
+                            "consumed_attempts": 1,
+                            "max_attempts": 3,
+                        }
+                    ],
+                    "live_execution_attempts": [],
+                }
+            if command == "fresh-workspace":
+                return {"recovery": {"status": "RECOVERED"}}
+            raise AssertionError(f"unexpected pec {command}")
+
+        return fake_pec
+
+    def test_terminal_recovery_halts_when_the_old_lease_is_still_active(self) -> None:
+        """A revoke that fails while the lease stays ACTIVE stops recovery cold.
+
+        Nothing about the Controller workspace changes: `fresh-workspace` is
+        never issued, so the task stays FAILED with its receipt in place and the
+        next front-door pass retries this same step instead of finding a STALE
+        task whose old window still holds live mutation authority.
+        """
+        with tempfile.TemporaryDirectory() as raw:
+            workspace, repository = self._recovery_workspace(raw)
+            calls: list[str] = []
+            events: list[dict[str, Any]] = []
+            fake_grants = unittest.mock.Mock()
+            fake_grants.latest_grant_receipt.return_value = (
+                1,
+                {"lease_id": "lease-live", "task_id": "TASK-001"},
+            )
+            fake_grants.revoke_task_grant.side_effect = RuntimeError("autonomy store unreachable")
+            fake_grants.grant_lease_status.return_value = "ACTIVE"
+            with (
+                unittest.mock.patch.object(
+                    self.mod, "pec_cmd", side_effect=self._recovery_pec(repository, calls)
+                ),
+                unittest.mock.patch.object(self.mod, "_grant_module", return_value=fake_grants),
+                unittest.mock.patch.object(
+                    self.mod, "emit", side_effect=lambda *a, **k: events.append(k)
+                ),
+                self.assertRaises(self.mod.CampaignError) as ctx,
+            ):
+                self.mod._recover_terminal_peer_task(workspace, "TASK-001", trace=None)
+            self.assertEqual(ctx.exception.error_code, "GRANT_RETIREMENT_FAILED")
+            self.assertIn("lease-live", str(ctx.exception))
+            self.assertNotIn("fresh-workspace", calls)
+            self.assertEqual(events, [])
+
+    def test_terminal_recovery_continues_when_a_failed_revoke_left_no_live_lease(self) -> None:
+        """The lease row, not the exception, decides; the report stays truthful."""
+        with tempfile.TemporaryDirectory() as raw:
+            workspace, repository = self._recovery_workspace(raw)
+            calls: list[str] = []
+            events: list[dict[str, Any]] = []
+            fake_grants = unittest.mock.Mock()
+            fake_grants.latest_grant_receipt.return_value = (
+                1,
+                {"lease_id": "lease-dead", "task_id": "TASK-001"},
+            )
+            fake_grants.revoke_task_grant.side_effect = RuntimeError("autonomy store unreachable")
+            fake_grants.grant_lease_status.return_value = "REVOKED"
+            with (
+                unittest.mock.patch.object(
+                    self.mod, "pec_cmd", side_effect=self._recovery_pec(repository, calls)
+                ),
+                unittest.mock.patch.object(self.mod, "_grant_module", return_value=fake_grants),
+                unittest.mock.patch.object(
+                    self.mod, "emit", side_effect=lambda *a, **k: events.append(k)
+                ),
+            ):
+                self.assertTrue(
+                    self.mod._recover_terminal_peer_task(workspace, "TASK-001", trace=None)
+                )
+            self.assertIn("fresh-workspace", calls)
+            metadata = events[-1]["metadata"]
+            self.assertEqual(metadata["grant_revoked"], False)
+            self.assertEqual(metadata["grant_lease_status"], "REVOKED")
+
+    def test_terminal_recovery_retires_authority_before_touching_the_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace, repository = self._recovery_workspace(raw)
+            order: list[str] = []
+            fake_grants = unittest.mock.Mock()
+            fake_grants.latest_grant_receipt.return_value = (
+                1,
+                {"lease_id": "lease-1", "task_id": "TASK-001"},
+            )
+            fake_grants.revoke_task_grant.side_effect = lambda *a, **k: (
+                order.append("revoke") or {"revoked": True}
+            )
+            fake_grants.grant_lease_status.return_value = "REVOKED"
+            pec = self._recovery_pec(repository, order)
+            with (
+                unittest.mock.patch.object(self.mod, "pec_cmd", side_effect=pec),
+                unittest.mock.patch.object(self.mod, "_grant_module", return_value=fake_grants),
+                unittest.mock.patch.object(self.mod, "emit"),
+            ):
+                self.assertTrue(
+                    self.mod._recover_terminal_peer_task(workspace, "TASK-001", trace=None)
+                )
+            self.assertLess(order.index("revoke"), order.index("fresh-workspace"))
+
     def test_terminal_recovery_refuses_when_consumed_generations_meet_budget(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             workspace = Path(raw)
