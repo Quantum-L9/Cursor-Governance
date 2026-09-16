@@ -57,6 +57,13 @@ EXIT_FAILED = 2
 EXIT_DRY_RUN = 3
 EXIT_CANDIDATE_REJECTED = 7
 
+#: The options ``l9-memory distill`` parses at the bound ref (memory-binding
+#: ``bounded_hook_cli_commands.distill.options``). There is no input record
+#: cap on this release; the hook lane bounds records with a ``--dry-run``
+#: preflight instead (see ``MemoryControlPlaneClient.distill``). Anything the
+#: client emits outside this set is a cross-repository contract break.
+DISTILL_CLI_OPTIONS = frozenset({"--group-id", "--repository", "--dry-run"})
+
 # Provider transport variables a stale machine environment may still carry.
 # Assembled from parts on purpose: the boundary never spells the provider
 # vocabulary, and the secret-isolation suite asserts exactly that.
@@ -888,27 +895,117 @@ class MemoryControlPlaneClient:
             source_bytes: int | None = source.stat().st_size
         except OSError:
             source_bytes = None
-        remaining_records = 0
-        if self.envelope is not None:
-            remaining_records = max(0, self.envelope.max_records - self._records_committed)
-        # Refuse before spawn when the surface has no record slots left.
-        # When slots remain, pass that remaining cap so the extractor cannot
-        # write past the envelope (records=0 used to skip the check).
-        requested = 1 if remaining_records == 0 and self.envelope is not None else remaining_records
+        # A committing distill needs at least one record slot; the exact count
+        # is only known after memory has extracted, so the preflight below
+        # refines this before anything is written.
         if guard := self._guard(
             "distill",
-            records=requested,
+            records=1 if self.envelope is not None else 0,
             byte_size=source_bytes,
             provenance=bool(namespace and source_bytes is not None),
         ):
             return guard
+        namespaces = (namespace,)
+        argv = self._distill_argv(source_path, namespace, repository, dry_run=dry_run)
+        if self.envelope is not None and not dry_run:
+            # Hook-lane record bound (ADR-0033 B7). The bound release's
+            # ``distill`` takes no input cap (DISTILL_CLI_OPTIONS), so the
+            # bound is proved with memory's own cognition: the same
+            # deterministic distill under ``--dry-run`` reports exactly the
+            # candidates the committing pass would write, and nothing is
+            # persisted. Refuse here when that count exceeds the remaining
+            # allowance — before the write, not after it.
+            preflight, counted = self._distill_pass(
+                self._distill_argv(source_path, namespace, repository, dry_run=True),
+                workspace=workspace,
+                timeout=timeout,
+                namespaces=namespaces,
+                dry_run=True,
+            )
+            if counted is None or preflight.status is not OutcomeStatus.NOT_COMMITTED:
+                # Nothing to distill, memory rejected every candidate, or memory
+                # did not answer: the preflight verdict is the verdict.
+                return preflight
+            reason = self.envelope.violation(
+                "distill",
+                records_used=self._records_committed,
+                records=counted.candidate_count,
+            )
+            if reason is not None:
+                reason = (
+                    f"{reason}; preflight distill of {counted.source_digest} refused before write"
+                )
+                return self._outcome(
+                    "distill",
+                    OutcomeStatus.REJECTED,
+                    _Raw(None, None, "EnvelopeViolation", reason, preflight.latency_ms),
+                    namespaces=namespaces,
+                    error_override=reason,
+                )
+            outcome, receipt = self._distill_pass(
+                argv, workspace=workspace, timeout=timeout, namespaces=namespaces, dry_run=False
+            )
+            if receipt is not None and receipt.source_digest != counted.source_digest:
+                # The excerpt changed between the counting pass and the commit:
+                # the bound was proved for a different source. Report it; the
+                # tally below still charges every record memory says it wrote.
+                outcome = self._outcome(
+                    "distill",
+                    OutcomeStatus.INVALID_RECEIPT,
+                    _Raw(
+                        outcome.exit_code,
+                        receipt.raw,
+                        "DistillPreflightMismatch",
+                        f"source digest moved between preflight ({counted.source_digest}) "
+                        f"and commit ({receipt.source_digest})",
+                        outcome.latency_ms,
+                    ),
+                    receipt,
+                    namespaces=namespaces,
+                    error_override=(
+                        "distill source changed between the counting pass and the commit "
+                        f"(preflight {counted.source_digest}, commit {receipt.source_digest})"
+                    ),
+                )
+            return outcome
+        outcome, _receipt = self._distill_pass(
+            argv, workspace=workspace, timeout=timeout, namespaces=namespaces, dry_run=dry_run
+        )
+        return outcome
+
+    @staticmethod
+    def _distill_argv(
+        source_path: str | Path,
+        namespace: str,
+        repository: str | None,
+        *,
+        dry_run: bool,
+    ) -> list[str]:
+        """The exact ``distill`` argv the bound release parses.
+
+        Every option here is in ``DISTILL_CLI_OPTIONS``; anything else is a
+        cross-repository contract break that argparse turns into a failed
+        session-end distill (audit F-604-DISTILL-CAP).
+        """
+
         argv = ["distill", str(source_path), "--group-id", namespace]
-        if remaining_records:
-            argv += ["--max-records", str(remaining_records)]
         if repository:
             argv += ["--repository", repository]
         if dry_run:
             argv.append("--dry-run")
+        return argv
+
+    def _distill_pass(
+        self,
+        argv: Sequence[str],
+        *,
+        workspace: str,
+        timeout: float | None,
+        namespaces: tuple[str, ...],
+        dry_run: bool,
+    ) -> tuple[OperationOutcome, DistillationReceipt | None]:
+        """One ``l9-memory distill`` spawn, classified. Tallies committed records."""
+
         previous_timeout = self.timeout
         if timeout is not None and timeout > 0:
             self.timeout = timeout
@@ -916,21 +1013,29 @@ class MemoryControlPlaneClient:
             raw = self._invoke(argv, cwd=workspace)
         finally:
             self.timeout = previous_timeout
-        namespaces = (namespace,)
         if raw.payload is None:
-            return self._outcome("distill", self._classify_failure(raw), raw, namespaces=namespaces)
+            return (
+                self._outcome("distill", self._classify_failure(raw), raw, namespaces=namespaces),
+                None,
+            )
         try:
             receipt = self._checked(raw.payload, "DistillationReceipt", DistillationReceipt.parse)
         except InvalidReceiptError as exc:
-            return self._outcome(
-                "distill", OutcomeStatus.INVALID_RECEIPT, _err(raw, exc), namespaces=namespaces
+            return (
+                self._outcome(
+                    "distill", OutcomeStatus.INVALID_RECEIPT, _err(raw, exc), namespaces=namespaces
+                ),
+                None,
             )
         except ValidationUnavailable as exc:
-            return self._outcome(
-                "distill",
-                OutcomeStatus.VALIDATION_UNAVAILABLE,
-                _err(raw, exc),
-                namespaces=namespaces,
+            return (
+                self._outcome(
+                    "distill",
+                    OutcomeStatus.VALIDATION_UNAVAILABLE,
+                    _err(raw, exc),
+                    namespaces=namespaces,
+                ),
+                None,
             )
         detail = None
         if receipt.failed or raw.exit_code == EXIT_FAILED:
@@ -953,12 +1058,12 @@ class MemoryControlPlaneClient:
                 f"distill reported {receipt.candidate_count} candidates and status "
                 f"{receipt.status!r} but wrote no record"
             )
-        return self._count_committed(
-            self._outcome(
-                "distill", status, raw, receipt, namespaces=namespaces, error_override=detail
-            ),
-            records=int(receipt.written_count or 0),
+        outcome = self._outcome(
+            "distill", status, raw, receipt, namespaces=namespaces, error_override=detail
         )
+        if dry_run:
+            return outcome, receipt
+        return self._count_committed(outcome, records=int(receipt.written_count or 0)), receipt
 
     def conflicts(self, *, workspace: str, namespace: str) -> OperationOutcome:
         if guard := self._guard("conflicts"):

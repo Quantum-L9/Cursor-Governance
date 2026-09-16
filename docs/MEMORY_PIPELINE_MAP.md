@@ -101,7 +101,14 @@ sessionEnd (X-out / window_close / completed / aborted)
     the already-redacted excerpt (≤12k) is written to .l9/memory/distill/<session>.excerpt.txt
     and handed to memory's own `l9-memory distill <path> --group-id <ns>`; extraction,
     admission and every record are MemoryService's. NO_HITS / REJECTED / failure never
-    unmakes a canonical close. Kill switch: `L9_MEMORY_DISTILL=0`
+    unmakes a canonical close. Kill switch: `L9_MEMORY_DISTILL=0`.
+    Record bound (hook envelope `max_records`): the bound 2.4.0 `distill` parses only
+    `path --group-id --repository --dry-run` (no input cap), so the hook client counts
+    first with the same deterministic `distill --dry-run` (memory extracts, nothing
+    persists) and refuses the committing pass before any write when the count exceeds
+    the surface's remaining slots. Contract: `memory-binding.json`
+    `bounded_hook_cli_commands.distill`; proof against the exact bound parser:
+    `tests/ops/memory/test_cross_repo_lifecycle.py`
   → RETIRED at C15: Phase B (fixed-host OpenAI SessionSignalPacket, promotion rules,
     resume-signal scorer) and the S3 distill queue + GHA worker. `closed_enqueue_failed`
     receipts still parse as closes; none is written

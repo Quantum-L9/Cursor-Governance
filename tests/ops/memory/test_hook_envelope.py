@@ -285,6 +285,167 @@ def test_session_end_envelope_admits_the_close_path_end_to_end(bound, fake_cli, 
         assert argv[1] in {"ingest-governed-candidate", "close", "distill"}
 
 
+# ---------------------------------------------------------------------------
+# Hook-lane distill record bound (audit F-604-DISTILL-CAP)
+#
+# The bound release's `distill` parses path, --group-id, --repository and
+# --dry-run — no input record cap. The hook lane proves its max_records bound
+# with memory's own cognition: the same deterministic distill under --dry-run
+# counts the candidates the committing pass would write, and the commit is
+# refused before any write when that count exceeds the remaining allowance.
+# ---------------------------------------------------------------------------
+
+
+def _scripted_distill(fake_cli: FakeMemoryCli, *, candidates: int, source_digest: str = "f" * 64):
+    """Answer the dry-run pass with a count and the commit pass with records."""
+
+    def handler(argv, _stdin):
+        payload = distill_payload(
+            candidate_count=candidates,
+            record_ids=tuple(f"7777777{i}-7777-7777-7777-777777777777" for i in range(candidates)),
+        )
+        payload["source_digest"] = source_digest
+        if "--dry-run" in argv:
+            payload["written_count"] = 0
+            payload["write_receipts"] = []
+        return 0, payload, ""
+
+    fake_cli.on("distill", handler)
+
+
+def _distill_argvs(fake_cli: FakeMemoryCli) -> list[list[str]]:
+    return [argv for argv, _cwd, _stdin in fake_cli.calls if argv[1] == "distill"]
+
+
+def test_hook_distill_emits_only_options_the_bound_release_parses(
+    bound, fake_cli, tmp_path
+) -> None:
+    from ops.memory.control_plane_client import DISTILL_CLI_OPTIONS
+
+    _scripted_distill(fake_cli, candidates=2)
+    excerpt = tmp_path / "excerpt.md"
+    excerpt.write_text("redacted\n", encoding="utf-8")
+    client = _client(bound, fake_cli, "cursor-session-end")
+    outcome = client.distill(
+        workspace=WS, namespace="cursor-governance", source_path=excerpt, repository="o/r"
+    )
+    assert outcome.status is OutcomeStatus.OK
+    preflight, commit = _distill_argvs(fake_cli)
+    for argv in (preflight, commit):
+        options = {a for a in argv[2:] if a.startswith("--")}
+        assert options <= DISTILL_CLI_OPTIONS, options
+        assert "--max-records" not in argv
+        assert argv[2] == str(excerpt) and argv[argv.index("--group-id") + 1] == "cursor-governance"
+    assert "--dry-run" in preflight and "--dry-run" not in commit
+    assert client._records_committed == 2
+    # The declared contract and the client's mirror of it agree.
+    binding = json.loads((ROOT / "ops/config/memory-binding.json").read_text(encoding="utf-8"))
+    declared = binding["bounded_hook_cli_commands"]["distill"]
+    assert set(declared["options"]) == DISTILL_CLI_OPTIONS
+    assert declared["record_bound"] == "preflight-dry-run"
+
+
+def test_hook_distill_refuses_before_write_when_candidates_exceed_remaining(
+    bound, fake_cli, tmp_path
+) -> None:
+    fake_cli.reply("close", 0, close_payload())
+    _scripted_distill(fake_cli, candidates=8)
+    excerpt = tmp_path / "excerpt.md"
+    excerpt.write_text("redacted\n", encoding="utf-8")
+    client = _client(bound, fake_cli, "claude-session-end")  # max_records=8
+    assert (
+        client.close(
+            workspace=WS, namespace="cursor-governance", summary="done", session_id="s-1"
+        ).status
+        is OutcomeStatus.OK
+    )
+    outcome = client.distill(workspace=WS, namespace="cursor-governance", source_path=excerpt)
+    assert outcome.status is OutcomeStatus.REJECTED
+    assert outcome.fault_class == FAULT_CANONICAL
+    assert (outcome.error or "").startswith(REJECTED_PREFIX)
+    assert "max_records=8" in outcome.error and "requested 8" in outcome.error
+    assert "refused before write" in outcome.error
+    # Only the counting pass crossed the boundary; nothing was asked to commit.
+    (only,) = _distill_argvs(fake_cli)
+    assert "--dry-run" in only
+    assert client._records_committed == 1
+
+
+def test_hook_distill_commits_when_the_count_fits_the_remaining_allowance(
+    bound, fake_cli, tmp_path
+) -> None:
+    fake_cli.reply("close", 0, close_payload())
+    _scripted_distill(fake_cli, candidates=7)
+    excerpt = tmp_path / "excerpt.md"
+    excerpt.write_text("redacted\n", encoding="utf-8")
+    client = _client(bound, fake_cli, "claude-session-end")  # max_records=8, 1 used by close
+    client.close(workspace=WS, namespace="cursor-governance", summary="done", session_id="s-1")
+    outcome = client.distill(workspace=WS, namespace="cursor-governance", source_path=excerpt)
+    assert outcome.status is OutcomeStatus.OK
+    assert client._records_committed == 8
+    # The surface is now full: the next distill is refused before spawn.
+    fake_cli.calls.clear()
+    again = client.distill(workspace=WS, namespace="cursor-governance", source_path=excerpt)
+    assert again.status is OutcomeStatus.REJECTED and fake_cli.calls == []
+
+
+def test_hook_distill_preflight_verdict_stands_when_there_is_nothing_to_commit(
+    bound, fake_cli, tmp_path
+) -> None:
+    excerpt = tmp_path / "excerpt.md"
+    excerpt.write_text("redacted\n", encoding="utf-8")
+    client = _client(bound, fake_cli, "cursor-session-end")
+    _scripted_distill(fake_cli, candidates=0)
+    assert (
+        client.distill(workspace=WS, namespace="cursor-governance", source_path=excerpt).status
+        is OutcomeStatus.NO_HITS
+    )
+    assert len(_distill_argvs(fake_cli)) == 1, "no candidates: the commit pass is not spawned"
+    fake_cli.calls.clear()
+    fake_cli.reply(
+        "distill", 2, distill_payload(status="failed", record_ids=(), rejected_items=("x",))
+    )
+    assert (
+        client.distill(workspace=WS, namespace="cursor-governance", source_path=excerpt).status
+        is OutcomeStatus.REJECTED
+    )
+    assert len(_distill_argvs(fake_cli)) == 1
+    assert client._records_committed == 0
+
+
+def test_hook_distill_reports_a_source_that_moved_between_count_and_commit(
+    bound, fake_cli, tmp_path
+) -> None:
+    excerpt = tmp_path / "excerpt.md"
+    excerpt.write_text("redacted\n", encoding="utf-8")
+
+    def handler(argv, _stdin):
+        payload = distill_payload(candidate_count=1)
+        payload["source_digest"] = ("a" if "--dry-run" in argv else "b") * 64
+        if "--dry-run" in argv:
+            payload["written_count"], payload["write_receipts"] = 0, []
+        return 0, payload, ""
+
+    fake_cli.on("distill", handler)
+    client = _client(bound, fake_cli, "cursor-session-end")
+    outcome = client.distill(workspace=WS, namespace="cursor-governance", source_path=excerpt)
+    assert outcome.status is OutcomeStatus.INVALID_RECEIPT
+    assert "changed between the counting pass and the commit" in (outcome.error or "")
+    assert client._records_committed == 1, "what memory wrote is still charged to the surface"
+
+
+def test_operator_distill_has_no_preflight(bound, fake_cli, tmp_path) -> None:
+    _scripted_distill(fake_cli, candidates=3)
+    excerpt = tmp_path / "excerpt.md"
+    excerpt.write_text("redacted\n", encoding="utf-8")
+    outcome = _client(bound, fake_cli, None).distill(
+        workspace=WS, namespace="cursor-governance", source_path=excerpt
+    )
+    assert outcome.status is OutcomeStatus.OK
+    (only,) = _distill_argvs(fake_cli)
+    assert "--dry-run" not in only and "--max-records" not in only
+
+
 def test_claude_session_end_may_not_generic_write(bound, fake_cli) -> None:
     client = _client(bound, fake_cli, "claude-session-end")
     outcome = client.write(
