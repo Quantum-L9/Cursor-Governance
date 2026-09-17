@@ -555,8 +555,10 @@ def test_conversation_only_payload_yields_one_lifecycle_id_and_rotates(monkeypat
     )
     assert packet["conversation_id"] == second
     assert packet["close_gap"] is True
-    assert first in packet["hydrate_stats"]["degrade_reason"]
-    assert comp.format_additional_context(packet).startswith("DEGRADED")
+    assert first in packet["close_gap_reason"]
+    assert packet["degraded"] is False
+    assert packet["hydrate_stats"]["degrade_reason"] == ""
+    assert comp.format_additional_context(packet).startswith("CLOSE_GAP\nREPAIR: /end-session")
 
 
 def test_lifecycle_id_reuses_pointer_unless_rotating(monkeypatch, tmp_path):
@@ -640,11 +642,148 @@ def test_compile_close_gap_missing_receipt(monkeypatch, tmp_path):
     packet = comp.compile_session_packet(
         project_dir=tmp_path, conversation_id="new-sess", agent_id="cursor"
     )
-    assert packet["degraded"] is True
+    # ADR-0032: the prior session not closing is a lifecycle gap; canonical
+    # memory answered NO_HITS cleanly, so nothing about memory is degraded.
+    assert packet["degraded"] is False
+    assert packet["memory_degraded"] is False
+    assert packet["environment_fault"] is False
     assert packet["close_gap"] is True
+    assert packet["close_gap_reason"]
+    assert packet["hydrate_stats"]["close_gap_reason"] == packet["close_gap_reason"]
+    assert packet["hydrate_stats"]["degrade_reason"] == ""
+    assert packet["next_action_contract"]["next_action"] == "/end-session"
     ctx = comp.format_additional_context(packet)
-    assert ctx.startswith("DEGRADED")
-    assert "REPAIR: /end-session" in ctx
+    assert ctx.startswith("CLOSE_GAP\nREPAIR: /end-session\n### memory hydrate")
+    assert "DEGRADED" not in ctx.split("```")[0]
+    assert "status=NO_HITS CLOSE_GAP" in ctx
+    assert "close-gap: " in ctx
+
+
+def test_compile_environment_fault_is_typed_and_leads(monkeypatch, tmp_path):
+    """An unbound runtime never reached memory: ENVIRONMENT_FAULT, not DEGRADED."""
+    hydration = hyd.CanonicalHydration(
+        status="BINDING_FAILED",
+        namespace_context=_context(),
+        requested_namespaces=("cursor-governance",),
+        repository_state_digest="a" * 40,
+        task_signature="sig",
+        error="package version 2.3.1 does not match expected 2.4.0",
+        environment_heal="skipped:repo-write-lock-held",
+    )
+    _canonical(monkeypatch, tmp_path, hydration)
+    packet = comp.compile_session_packet(
+        project_dir=tmp_path, conversation_id="env-fault", agent_id="cursor"
+    )
+    assert packet["environment_fault"] is True
+    assert packet["memory_degraded"] is False
+    assert packet["degraded"] is False
+    assert packet["close_gap"] is False
+    stats = packet["hydrate_stats"]
+    assert stats["fault_class"] == "environment"
+    assert stats["environment_heal"] == "skipped:repo-write-lock-held"
+    assert "2.3.1" in stats["environment_fault_reason"]
+    assert "heal=skipped:repo-write-lock-held" in stats["environment_fault_reason"]
+    assert stats["degrade_reason"] == ""
+    assert "environment fault" in packet["active_objective"]
+    ctx = comp.format_additional_context(packet)
+    assert ctx.startswith(
+        "ENVIRONMENT_FAULT\nREPAIR: make -C ~/.cursor-governance memory-readiness"
+    )
+    assert "status=BINDING_FAILED ENVIRONMENT_FAULT" in ctx
+    assert "environment fault: BINDING_FAILED:" in ctx
+    assert "hydration degraded" not in ctx
+    fence = json.loads(ctx.split("```json\n")[1].split("\n```")[0])
+    assert fence["environment_fault"] is True
+    assert fence["memory_degraded"] is False
+    assert fence["degraded"] is False
+
+
+def test_compile_mixed_conditions_lead_by_class(monkeypatch, tmp_path):
+    """Environment fault + close-gap together: both typed, neither is DEGRADED."""
+    from ops.graphiti.hydration.session_latches import write_open_latch
+
+    write_open_latch(tmp_path, "old-mixed", background=False)
+    write_open_latch(tmp_path, "new-mixed", background=False)
+    hydration = hyd.CanonicalHydration(
+        status="BINDING_FAILED",
+        namespace_context=_context(),
+        requested_namespaces=("cursor-governance",),
+        repository_state_digest="a" * 40,
+        task_signature="sig",
+        error="not importable",
+    )
+    _canonical(monkeypatch, tmp_path, hydration)
+    packet = comp.compile_session_packet(
+        project_dir=tmp_path, conversation_id="new-mixed", agent_id="cursor"
+    )
+    assert packet["environment_fault"] is True
+    assert packet["close_gap"] is True
+    assert packet["memory_degraded"] is False
+    assert packet["degraded"] is False
+    ctx = comp.format_additional_context(packet)
+    lead = ctx.split("### memory hydrate")[0].splitlines()
+    assert lead == [
+        "ENVIRONMENT_FAULT",
+        "REPAIR: make -C ~/.cursor-governance memory-readiness",
+        "CLOSE_GAP",
+        "REPAIR: /end-session",
+    ]
+    assert "status=BINDING_FAILED ENVIRONMENT_FAULT CLOSE_GAP" in ctx
+
+
+def _validate_packet_schema(packet) -> None:
+    import jsonschema
+    import yaml
+
+    schema = yaml.safe_load(
+        (GRAPHITI / "hydration" / "session_hydration_packet.schema.yaml").read_text(
+            encoding="utf-8"
+        )
+    )
+    jsonschema.Draft202012Validator(schema).validate(packet)
+
+
+def test_compiled_packets_validate_against_the_declared_schema(monkeypatch, tmp_path):
+    """The schema is additionalProperties:false — every typed field must be declared."""
+    from ops.graphiti.hydration.session_latches import write_open_latch
+
+    write_open_latch(tmp_path, "old-schema", background=False)
+    write_open_latch(tmp_path, "new-schema", background=False)
+    cases = [
+        _hydration("NO_HITS"),
+        _hydration("OK", continuation=_continuation(stale=True)),
+        _hydration("CANONICAL_UNAVAILABLE", error="store unreachable"),
+        hyd.CanonicalHydration(
+            status="BINDING_FAILED",
+            namespace_context=_context(),
+            requested_namespaces=("cursor-governance",),
+            repository_state_digest="a" * 40,
+            task_signature="sig",
+            error="not importable",
+            environment_heal="failed",
+        ),
+    ]
+    for hydration in cases:
+        _canonical(monkeypatch, tmp_path, hydration)
+        packet = comp.compile_session_packet(
+            project_dir=tmp_path, conversation_id="new-schema", agent_id="cursor"
+        )
+        assert packet["close_gap"] is True
+        _validate_packet_schema(packet)
+
+
+def test_compile_canonical_degradation_still_leads_degraded(monkeypatch, tmp_path):
+    _canonical(monkeypatch, tmp_path, _hydration("TIMEOUT", error="memory.hydrate exceeded 20s"))
+    packet = comp.compile_session_packet(
+        project_dir=tmp_path, conversation_id="slow", agent_id="cursor"
+    )
+    assert packet["memory_degraded"] is True
+    assert packet["degraded"] is True
+    assert packet["environment_fault"] is False
+    assert packet["hydrate_stats"]["fault_class"] == "canonical"
+    ctx = comp.format_additional_context(packet)
+    assert ctx.startswith("DEGRADED\n### memory hydrate")
+    assert "hydration degraded: TIMEOUT: memory.hydrate exceeded 20s" in ctx
 
 
 def test_compile_close_gap_write_count_zero(monkeypatch, tmp_path):
@@ -662,7 +801,8 @@ def test_compile_close_gap_write_count_zero(monkeypatch, tmp_path):
         project_dir=tmp_path, conversation_id="new-zero", agent_id="cursor"
     )
     assert packet["close_gap"] is True
-    assert comp.format_additional_context(packet).startswith("DEGRADED")
+    assert packet["degraded"] is False
+    assert comp.format_additional_context(packet).startswith("CLOSE_GAP\nREPAIR: /end-session")
 
 
 def test_compile_enqueue_failed_is_not_close_gap(monkeypatch, tmp_path):
@@ -681,7 +821,7 @@ def test_compile_enqueue_failed_is_not_close_gap(monkeypatch, tmp_path):
     )
     assert packet["close_gap"] is False
     ctx = comp.format_additional_context(packet)
-    assert not ctx.startswith("DEGRADED")
+    assert ctx.startswith("### memory hydrate")
 
 
 def test_compile_first_session_no_receipt_gap(monkeypatch, tmp_path):
@@ -690,9 +830,10 @@ def test_compile_first_session_no_receipt_gap(monkeypatch, tmp_path):
         project_dir=tmp_path, conversation_id="first", agent_id="cursor"
     )
     assert packet.get("close_gap") is False
+    assert packet["close_gap_reason"] == ""
     assert packet["hydrate_stats"]["degrade_reason"] == ""
     assert packet["hydrate_stats"]["memory_status"] == "NO_HITS"
-    assert not comp.format_additional_context(packet).startswith("DEGRADED")
+    assert comp.format_additional_context(packet).startswith("### memory hydrate")
 
 
 def test_retry_close_discharges_an_open_obligation(monkeypatch, tmp_path):

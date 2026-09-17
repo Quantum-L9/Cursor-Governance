@@ -6,10 +6,14 @@ path-confined apply artifact whose hash and delta paths still hold.
 
 from __future__ import annotations
 
-import hashlib
 import re
 from pathlib import Path
 from typing import Any
+
+try:
+    from ops.autonomy.receipt_binding import sha256_file
+except ImportError:  # pragma: no cover - script invocation from ops/autonomy
+    from receipt_binding import sha256_file
 
 APPLY_SCHEMA = "l9.kernel_apply.v1"
 APPLY_DIR_REL = Path(".l9") / "autonomy"
@@ -35,8 +39,21 @@ class ReportError(ValueError):
     """Apply-report contract failure."""
 
 
-def sha256_file(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+# sha256_file is re-exported from receipt_binding, which owns
+# canonicalize-then-digest for every receipt plane. Imported rather than
+# reimplemented so this module's binding cannot drift from the others'.
+__all__ = [
+    "APPLY_REL",
+    "APPLY_SCHEMA",
+    "ReportError",
+    "confine_report_path",
+    "delta_paths_exist",
+    "load_validated_deltas",
+    "report_sha",
+    "report_structure",
+    "run_predicates",
+    "sha256_file",
+]
 
 
 def confine_report_path(root: Path, report: Path) -> Path:

@@ -410,12 +410,28 @@ if [[ -z "$pr_url" || -z "$pr_number" ]]; then
   _gov_python="${GOV_ROOT}/.venv/bin/python"
   [[ -x "$_gov_python" ]] || _gov_python="python3"
   _touched_additive=""
+  # An empty list here becomes a written claim in the PR body ("no additive_only
+  # root files"), so a swallowed measurement failure published a confident
+  # negative about a range nobody measured. Separate the two states: measured
+  # and empty is an answer, unmeasured is not.
+  _additive_measured=0
   if [[ -f "$_root_protect_py" ]]; then
-    _touched_additive="$(
+    mkdir -p "$WS/.l9/pr"
+    _additive_err="$WS/.l9/pr/additive-only.err"
+    if _touched_additive="$(
       "$_gov_python" "$_root_protect_py" \
         --list-touched-additive-only --base "$PR_BASE" --head HEAD --repo "$WS" \
-        2>/dev/null || true
-    )"
+        2>"$_additive_err"
+    )"; then
+      _additive_measured=1
+      rm -f "$_additive_err"
+    else
+      echo "ERROR: could not measure additive_only root files in ${PR_BASE}..HEAD." >&2
+      [[ -s "$_additive_err" ]] && sed 's/^/       /' "$_additive_err" >&2
+      echo "       Refusing to compose a PR body that would claim there are none." >&2
+      echo "       Fix the range or the policy file, then re-run." >&2
+      exit 1
+    fi
   fi
   for candidate in \
     "$WS/.github/pull_request_template.md" \
@@ -448,6 +464,8 @@ if [[ -z "$pr_url" || -z "$pr_number" ]]; then
   if [[ -n "$_touched_additive" ]]; then
     printf '%s\n' "$_touched_additive" > "$WS/.l9/pr/additive-only.txt"
     compose_args+=(--additive-only-file "$WS/.l9/pr/additive-only.txt")
+  elif [[ "$_additive_measured" -eq 0 ]]; then
+    compose_args+=(--additive-only-unmeasured)
   fi
   if [[ -n "${campaign_body:-}" ]]; then
     printf '%s\n' "$campaign_body" > "$WS/.l9/pr/campaign-body.md"

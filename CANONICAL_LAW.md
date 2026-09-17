@@ -1066,3 +1066,64 @@ mutate another conversation's bytes.
    Empty ledger → skip. Never porcelain. Never a sibling worktree.
 3. **Operator push** remains `make backup` / `backup_to_github.sh`, gated
    only when the human or `governance_sync.sh` asked for it.
+
+<!-- RECEIPT_EVIDENCE_PLANE_V1 -->
+## 6.2.9 Receipts bind to artifacts (2026-09-15) — supersedes KERNEL_PRECOMMIT_HOOK_V1's stamp model
+
+Append-only. The `KERNEL_PRECOMMIT_HOOK_V1` clause above stays on disk and its
+boundary sentence is still law: post-finish kernels are **not** an L4 phase, and
+`authorize-release` does not require a kernel *stamp*. What this clause replaces
+is the *form* of the receipt that clause presumed, and it names what
+`authorize-release` may require instead of a stamp.
+
+An agent that can satisfy a gate more cheaply than it can do the work will
+satisfy the gate. Three symptoms were reported — agents restamping, gates
+reading stale receipts, agents falsifying receipts — and they are two defects:
+
+- **Unbound claim.** A receipt asserts work no verifier can re-derive. The v1
+  kernel receipt recorded ambient state (HEAD, kernel file SHAs, a timestamp)
+  and nothing about the work, so falsification was free and restamping was its
+  economic consequence.
+- **Proxy binding.** A receipt binds a stand-in for its subject — `head_sha`
+  where the subject is a tree — so it goes stale for reasons unrelated to the
+  attested work, and an agent learns to re-stamp on a schedule.
+
+Therefore, for every receipt plane in this repository:
+
+1. **One canonical writer per plane.** Exactly one module writes a given receipt
+   file. No other module may import its writer, call it, or construct the
+   receipt path. A second writer lets the weakest claim in the codebase satisfy
+   the strongest gate (`ops/autonomy/l4_local.py` wrote the kernel receipt as a
+   side effect of a two-flag self-report).
+2. **A claim binds to a digest of the artifact that constitutes it.** Not to
+   HEAD, not to a phase name, not to a flag. For the tree kernels that artifact
+   is the apply report (`.l9/autonomy/kernel-apply.md`): path-confined,
+   hashed, with non-empty `deltas` naming files that exist.
+3. **The verifier re-derives; it never trusts a recorded verdict.** Re-hash the
+   artifact and re-run the predicates on every read. A receipt is evidence at
+   the moment of reading, not a durable permission slip.
+4. **A rejected claim writes nothing.** Validate before write, so a caller that
+   swallows the exception does not end up holding a receipt a gate accepts.
+5. **A superseded schema is rejected by name**, with the upgrade path, rather
+   than read as an unknown or accepted for compatibility.
+6. **`authorize-release` may require kernel *evidence*, and no longer only
+   declines to require a stamp.** When a kernel receipt exists it must
+   re-derive clean. The corpus exemption is honored from recorded evidence —
+   `/ff`-owned `WIP/`, `docs/plans/`, and PE campaign changesets never require
+   a tree receipt, and a corpus-only changeset with no receipt at all still
+   authorizes. `eace25ed` reverted an earlier coupling precisely because
+   `authorize_release` could not honor that exemption; a coupling that cannot
+   is still forbidden.
+7. **Receipt invariants are enforced statically.** These receipts live under
+   gitignored `.l9/`, so no CI job can inspect one. Enforcement is source
+   analysis (AST / static checks). Never add a CI job that requires a receipt.
+
+Honest ceiling, stated so nobody claims more: structural impossibility is
+reachable for staleness, because a content digest either matches or it does
+not. It is **not** reachable for the kernel claim itself, because the attested
+work is model judgement with no deterministic re-run. What this buys is moving
+that claim from unfalsifiable to falsifiable — a forged delta names a specific
+file with a specific note, which a reviewer can contradict. And this surface is
+`model-controlled` with no credentials, so a signature would not help: the
+signer and the liar are the same process. `L9_L4_LOCAL_AUTONOMY=0` and
+`L9_LOCAL_PUSH_AUTHORIZED` remain above every gate described here.

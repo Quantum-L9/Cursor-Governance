@@ -34,6 +34,10 @@ OK = "ok"
 NA = "n/a"
 DEGRADED = "degraded"
 FAILED = "failed"
+#: The plane never reached what it measures (ADR-0032): an unbound memory
+#: runtime is a bootstrap/environment fault, not memory degradation. Listed
+#: under ### Degraded so it is not hidden, but named for what it is.
+ENVIRONMENT_FAULT = "environment_fault"
 
 
 def _line(
@@ -46,7 +50,7 @@ def _line(
     include_in_degraded: bool | None = None,
 ) -> dict[str, Any]:
     if include_in_degraded is None:
-        include_in_degraded = klass in {DEGRADED, FAILED} and this_surface
+        include_in_degraded = klass in {DEGRADED, FAILED, ENVIRONMENT_FAULT} and this_surface
     return {
         "name": name,
         "class": klass,
@@ -341,9 +345,19 @@ def classify_memory_proof(proof: dict[str, Any]) -> dict[str, Any]:
         usable = bool(proof["ok"])
     else:
         usable = False
+    # An unbound runtime is an environment fault (ADR-0032): no memory
+    # operation ran, so the memory plane was not observed at all. The proof
+    # says so itself (`environment_fault`); `binding_status == unbound` is the
+    # same fact from an older proof shape.
+    environment_fault = bool(proof.get("environment_fault")) or status == "unbound"
+    heal = proof.get("environment_heal")
     head = status or "unknown"
     if provenance:
         head = f"{head} (provenance {provenance})"
+    if environment_fault and not usable:
+        head = f"ENVIRONMENT_FAULT {head}"
+        if heal:
+            head = f"{head} heal={heal}"
     identity = " ".join(part for part in (package, version) if part)
     summary = " — ".join(part for part in (head, identity, reason_text) if part)
     if not summary:
@@ -353,12 +367,16 @@ def classify_memory_proof(proof: dict[str, Any]) -> dict[str, Any]:
             "binding_status": status or None,
             "ok": proof.get("ok"),
             "artifact_provenance": provenance or None,
+            "environment_fault": environment_fault,
+            "environment_heal": heal,
             "reasons": reasons,
         },
         sort_keys=True,
     )
     lowered = f"{summary} {reason_text}".lower()
-    if not usable:
+    if not usable and environment_fault:
+        klass = ENVIRONMENT_FAULT
+    elif not usable:
         klass = FAILED if "unreachable" in lowered or "refused" in lowered else DEGRADED
     elif provenance == "unproven":
         klass = DEGRADED
@@ -624,6 +642,7 @@ def collect(
     codegraph: str,
     hydrate_degraded: bool,
     hydrate_reason: str,
+    hydrate_condition: str = "",
     home: Path | None = None,
     workspace: str = "",
     aws_cli: dict[str, Any] | None = None,
@@ -675,7 +694,45 @@ def collect(
                 evidence=hydrate_reason,
             )
         )
+    elif hydrate_condition.strip():
+        lines.append(classify_hydrate_condition(hydrate_condition))
     return lines
+
+
+def classify_hydrate_condition(condition: str) -> dict[str, Any]:
+    """Render the classifier's typed non-degraded condition (ADR-0032).
+
+    ``ENVIRONMENT_FAULT`` is a fault to repair and lands in ``### Degraded``
+    under its own name; ``CLOSE_GAP`` and ``STALE`` are lifecycle facts and
+    stay informational. None of the three is memory degradation.
+    """
+
+    text = condition.strip()
+    name, _, detail = text.partition(":")
+    name = name.strip().upper()
+    detail = detail.strip()
+    if name == "ENVIRONMENT_FAULT":
+        return _line(
+            "memory-hydrate",
+            ENVIRONMENT_FAULT,
+            f"ENVIRONMENT_FAULT — {detail or 'memory runtime unbound'}",
+            evidence=text,
+        )
+    if name == "CLOSE_GAP":
+        return _line(
+            "memory-hydrate",
+            OK,
+            f"CLOSE_GAP — {detail or 'prior session did not close'} — REPAIR: /end-session",
+            evidence=text,
+        )
+    if name == "STALE":
+        return _line(
+            "memory-hydrate",
+            OK,
+            "STALE — continuation predates the current repository state; git wins",
+            evidence=text,
+        )
+    return _line("memory-hydrate", OK, text, evidence=text)
 
 
 def resolve_reporter_path(
@@ -723,6 +780,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--hydrate-degraded", default="false")
     parser.add_argument("--hydrate-reason", default="")
     parser.add_argument(
+        "--hydrate-condition",
+        default="",
+        help="classifier line 3: ENVIRONMENT_FAULT / CLOSE_GAP / STALE[: detail] (ADR-0032)",
+    )
+    parser.add_argument(
         "--workspace",
         default=os.environ.get("CURSOR_PROJECT_DIR", os.getcwd()),
         help="session git root; receipts recorded for another workspace are stale_other_surface",
@@ -750,6 +812,7 @@ def main(argv: list[str] | None = None) -> int:
         codegraph=args.codegraph,
         hydrate_degraded=_truthy(args.hydrate_degraded),
         hydrate_reason=args.hydrate_reason,
+        hydrate_condition=args.hydrate_condition,
         workspace=args.workspace,
         aws_cli=aws_cli,
         secrets_bind=secrets_bind,

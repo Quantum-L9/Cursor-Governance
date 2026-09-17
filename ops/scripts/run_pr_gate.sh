@@ -128,6 +128,12 @@ _GATE_CODE_FILES=(
   "ops/scripts/pr_gate_failure.py"
   "ops/config/python-contract.json"
   "ops/autonomy/kernel_gate.py"
+  # Decides the kernel verdict as of the evidence latch, so a change here can
+  # flip PASS to FAIL exactly like kernel_gate.py itself.
+  "ops/autonomy/kernel_predicates.py"
+  # Owns the digest those predicates compare, so a change to the binding can
+  # flip the same verdict one level down.
+  "ops/autonomy/receipt_binding.py"
   ".pre-commit-config.yaml"
   "ops/scripts/run_pr_security.sh"
   "ops/scripts/lib/fetch_receipt.sh"
@@ -162,23 +168,35 @@ _gate_kernel_digest() {
   return 0
 }
 _gate_state_digest() {
-  local list paths content
+  local tracked others list paths content
+  tracked="$(mktemp)"
+  others="$(mktemp)"
   list="$(mktemp)"
+  git ls-files -z >"$tracked" 2>/dev/null || true
+  git ls-files --others --exclude-standard -z >"$others" 2>/dev/null || true
+  # Membership is part of the candidate: a tracked path that becomes
+  # untracked (git rm --cached, bytes left on disk) is a deletion of the
+  # publication tree, not the same state. Prefix each stream so the two
+  # sets cannot collapse into one path+blob union. Staging or committing
+  # an already-tracked path does not cross this boundary.
   {
-    git ls-files -z
-    git ls-files --others --exclude-standard -z
-  } >"$list" 2>/dev/null || true
+    printf 'T\0'
+    cat "$tracked"
+    printf 'U\0'
+    cat "$others"
+  } >"$list"
   # Paths and contents are digested separately: a rename that preserves both
   # content and sort position would otherwise slip through as unchanged.
   paths="$(cksum <"$list" | awk '{print $1}')"
   content="$(
     {
-      xargs -0 -r git hash-object <"$list" 2>/dev/null
+      xargs -0 -r git hash-object <"$tracked" 2>/dev/null
+      xargs -0 -r git hash-object <"$others" 2>/dev/null
       _gate_code_digest
       _gate_kernel_digest
     } | cksum | awk '{print $1}'
   )"
-  rm -f "$list"
+  rm -f "$tracked" "$others" "$list"
   printf '%s %s %s' "$paths" "$content" "$PR_BASE"
 }
 

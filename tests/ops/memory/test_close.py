@@ -559,7 +559,10 @@ def test_restart_with_open_obligation_is_a_close_gap(
     )
     packet = comp.compile_session_packet(project_dir=workspace, conversation_id="next")
     assert packet["close_gap"] is True
-    assert "close_incomplete" in packet["degrade_reason"]
+    assert "close_incomplete" in packet["close_gap_reason"]
+    # ADR-0032: an open close obligation is a lifecycle gap, not memory degradation.
+    assert packet["degraded"] is False
+    assert packet["memory_degraded"] is False
 
 
 def test_retry_when_already_closed_is_a_skip(workspace, scripted) -> None:
