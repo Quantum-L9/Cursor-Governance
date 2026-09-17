@@ -18,8 +18,10 @@ import open_pr_probe  # noqa: E402
 from l4_local import (  # noqa: E402
     authorize_release,
     begin,
+    breakglass_path,
     current_head,
     extend_release,
+    kernel_evidence,
     receipt_path,
     record_kernels,
     release_allows_remote,
@@ -38,6 +40,55 @@ def test_denies_remote_without_release(stacked_repo: Path, monkeypatch: pytest.M
     allowed, reason = release_allows_remote(stacked_repo)
     assert not allowed
     assert "mid-execution" in reason or "L4" in reason
+
+
+def test_push_breakglass_leaves_a_trail_bound_to_head(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+    monkeypatch.setenv("L9_LOCAL_PUSH_AUTHORIZED", "ops: hotfix for #1")
+    assert not breakglass_path(stacked_repo).exists()
+    allowed, reason = release_allows_remote(stacked_repo, record=True)
+    assert allowed
+    assert "breakglass" in reason
+    trail = json.loads(breakglass_path(stacked_repo).read_text(encoding="utf-8"))
+    assert trail["schema"] == "l9.l4_breakglass.v1"
+    assert trail["variable"] == "L9_LOCAL_PUSH_AUTHORIZED"
+    assert trail["reason"] == "ops: hotfix for #1"
+    assert trail["head"] == current_head(stacked_repo)
+    assert len(trail["tree_digest"]) == 64
+    assert trail["branch"]
+    assert trail["used_at"].endswith("Z") or "+" in trail["used_at"]
+
+
+def test_l4_switch_off_also_leaves_a_trail(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "0")
+    assert release_allows_remote(stacked_repo, record=True)[0]
+    trail = json.loads(breakglass_path(stacked_repo).read_text(encoding="utf-8"))
+    assert trail["variable"] == "L9_L4_LOCAL_AUTONOMY"
+    assert trail["reason"] == "0"
+
+
+def test_status_probe_does_not_record_breakglass(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("L9_LOCAL_PUSH_AUTHORIZED", "ops: status only")
+    assert status_dict(stacked_repo)["remote_allowed"] is True
+    assert not breakglass_path(stacked_repo).exists()
+
+
+def test_receipt_path_leaves_no_breakglass_trail(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+    begin(stacked_repo, contract_id="c1")
+    authorize_release(stacked_repo)
+    assert release_allows_remote(stacked_repo)[0]
+    assert not breakglass_path(stacked_repo).exists()
 
 
 def test_begin_kernels_authorize_allows_push(
@@ -202,6 +253,91 @@ def test_authorize_release_still_works_with_no_kernel_receipt(
     assert receipt["tree_digest"]
 
 
+def _record_kernel_evidence(repo: Path, *, delta_path: str = "evidenced.txt") -> dict:
+    """Produce a real v2 kernel receipt in `repo` through the sole writer."""
+    import kernel_gate
+
+    target = repo / delta_path
+    target.write_text("touched\n", encoding="utf-8")
+    report = repo / ".l9" / "autonomy" / "kernel-apply.md"
+    report.parent.mkdir(parents=True, exist_ok=True)
+    report.write_text(
+        "---\n"
+        "schema: l9.kernel_apply.v1\n"
+        "kernels: [recursive_alignment, validate_repair]\n"
+        "convergence_status: converged\n"
+        "deltas:\n"
+        f"  - path: {delta_path}\n"
+        "    kernel: recursive_alignment\n"
+        "    note: narrowed a guard\n"
+        "---\n"
+        "\n## Recursive Alignment\n\napplied\n"
+        "\n## Validate & Repair\n\nran the checks\n",
+        encoding="utf-8",
+    )
+    return kernel_gate.record(repo, gov=ROOT)
+
+
+def test_authorize_release_annotates_kernels_from_the_kernel_receipt(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A real apply must read as one: evidence overwrites the self-report."""
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+    monkeypatch.setenv("GOV_ROOT", str(ROOT))
+    begin(stacked_repo, contract_id="r2-evidenced")
+    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
+    kernel_receipt = _record_kernel_evidence(stacked_repo)
+    receipt = authorize_release(stacked_repo)
+    assert receipt["kernel_evidence"] == "evidenced"
+    for label in ("recursive_alignment", "validate_repair"):
+        entry = receipt["kernels"][label]
+        assert entry["status"] == "evidenced"
+        assert entry["self_reported"] == "passed"
+        assert entry["evidence"] == "evidenced"
+        assert entry["report_rel"] == kernel_receipt["report_rel"]
+        assert entry["report_sha256"] == kernel_receipt["report_sha256"]
+        assert entry["applied_at"] == kernel_receipt["applied_at"]
+        assert entry["delta_count"] == 1
+    assert status_dict(stacked_repo)["kernel_evidence"] == "evidenced"
+
+
+def test_authorize_release_marks_kernels_absent_when_no_receipt(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No receipt: still authorizes, and says so instead of looking applied."""
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+    begin(stacked_repo, contract_id="r2-absent")
+    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
+    receipt = authorize_release(stacked_repo)
+    assert receipt["phase"] == "release_authorized"
+    assert receipt["kernel_evidence"] == "absent"
+    for label in ("recursive_alignment", "validate_repair"):
+        entry = receipt["kernels"][label]
+        assert entry["status"] == "passed", "the self-report stands, labelled"
+        assert entry["evidence"] == "absent"
+        assert entry["note"] == "kernel_gate.precommit decides exemption"
+    assert status_dict(stacked_repo)["kernel_evidence"] == "absent"
+
+
+def test_status_dict_reports_stale_kernel_evidence_live(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Editing the apply report after release flips the live status to stale."""
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+    monkeypatch.setenv("GOV_ROOT", str(ROOT))
+    begin(stacked_repo, contract_id="r2-stale")
+    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
+    _record_kernel_evidence(stacked_repo)
+    receipt = authorize_release(stacked_repo)
+    assert receipt["kernel_evidence"] == "evidenced"
+    report = stacked_repo / ".l9" / "autonomy" / "kernel-apply.md"
+    report.write_text(report.read_text(encoding="utf-8") + "\nedited after the fact\n")
+    assert status_dict(stacked_repo)["kernel_evidence"] == "stale"
+    # And a fresh authorize refuses the stale receipt rather than re-annotating it.
+    with pytest.raises(RuntimeError, match="no longer re-derives"):
+        authorize_release(stacked_repo)
+
+
 def test_authorize_release_refuses_a_kernel_receipt_that_no_longer_derives(
     stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -216,6 +352,41 @@ def test_authorize_release_refuses_a_kernel_receipt_that_no_longer_derives(
         json.dumps({"schema": "l9.kernel_receipt.v1", "phase": "recorded"}),
         encoding="utf-8",
     )
+    with pytest.raises(RuntimeError, match="no longer re-derives"):
+        authorize_release(stacked_repo)
+
+
+def test_authorize_release_refuses_a_malformed_existing_kernel_receipt(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An existing file that is not JSON is a claim, not absence.
+
+    load_receipt used to return None for both a missing file and a
+    broken one, so authorize-release took the corpus exemption. The
+    exemption is only for genuine absence (CANONICAL_LAW §6.2.9 item 6).
+    """
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+    begin(stacked_repo, contract_id="p6-kernel-malformed")
+    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
+    kernel_receipt = stacked_repo / ".l9" / "autonomy" / "kernel-receipt.json"
+    kernel_receipt.parent.mkdir(parents=True, exist_ok=True)
+    kernel_receipt.write_text("{not-json", encoding="utf-8")
+    assert kernel_evidence(stacked_repo)["status"] == "stale"
+    with pytest.raises(RuntimeError, match="no longer re-derives"):
+        authorize_release(stacked_repo)
+
+
+def test_authorize_release_refuses_a_non_object_existing_kernel_receipt(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A JSON array (or other non-object) is present-and-false, not absent."""
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+    begin(stacked_repo, contract_id="p6-kernel-array")
+    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
+    kernel_receipt = stacked_repo / ".l9" / "autonomy" / "kernel-receipt.json"
+    kernel_receipt.parent.mkdir(parents=True, exist_ok=True)
+    kernel_receipt.write_text("[]", encoding="utf-8")
+    assert kernel_evidence(stacked_repo)["status"] == "stale"
     with pytest.raises(RuntimeError, match="no longer re-derives"):
         authorize_release(stacked_repo)
 

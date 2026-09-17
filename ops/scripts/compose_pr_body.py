@@ -56,11 +56,24 @@ DOCS_PREFIXES = ("docs/", "docs/plans/", "WIP/")
 
 @dataclass
 class MechanicalFacts:
+    # Oldest first. `git log base..HEAD` is newest-first, and the composer used
+    # to take element 0 of that as "the" subject, so every Problem / Fix / Why
+    # line in a multi-commit PR quoted whichever commit happened to be last.
     commits: list[str] = field(default_factory=list)
+    # Parallel to `commits`: the body of each commit, or "" when it has none.
+    commit_bodies: list[str] = field(default_factory=list)
     changed_files: list[str] = field(default_factory=list)
+    # path -> subject of the newest commit in the range that touched it. Lets a
+    # per-path bullet say why *that* file changed rather than repeating one line.
+    path_subjects: dict[str, str] = field(default_factory=dict)
     issue_closes: list[int] = field(default_factory=list)
     gate_receipt: dict[str, Any] | None = None
     l4_receipt: dict[str, Any] | None = None
+    # `.l9/autonomy/breakglass.json`, written by l4_local when an environment
+    # variable rather than a receipt allowed remote. Reported only when its
+    # `head` is this HEAD: an older trail describes an older push.
+    breakglass: dict[str, Any] | None = None
+    head: str = ""
     campaign_body: str = ""
     template_path: str = ""
     additive_only_paths: list[str] = field(default_factory=list)
@@ -99,24 +112,33 @@ def _load_json(path: Path) -> dict[str, Any] | None:
     return payload if isinstance(payload, dict) else None
 
 
-def _l4_receipt_path(workspace: Path) -> Path:
-    """Ask l4_local where the receipt is; never re-derive the location here.
+def _l4_state_path(workspace: Path, resolver: str, fallback_name: str) -> Path:
+    """Ask l4_local where a piece of L4 state is; never re-derive the location here.
 
     L4 state is not always at <workspace>/.l9/autonomy: L9_AUTONOMY_STATE_DIR
     relocates it, and a relocated directory is namespaced per workspace. A
     second component resolving the same state by its own rule is how a
     consumer silently reads nothing — the PR body would simply lose its L4
-    section, with no error to notice. One owner, one resolver.
+    section, with no error to notice. One owner, one resolver. ``resolver``
+    names the l4_local function (``receipt_path``, ``breakglass_path``).
     """
     # Broad by design; the handler below carries the reason.
     # nosemgrep: l9.baseline.python.broad-except
     try:
         sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "autonomy"))
-        from l4_local import receipt_path
+        import l4_local
 
-        return receipt_path(workspace)
+        return getattr(l4_local, resolver)(workspace)
     except Exception:  # noqa: BLE001 — fall back rather than break PR composition
-        return workspace / ".l9" / "autonomy" / "l4-release-receipt.json"
+        return workspace / ".l9" / "autonomy" / fallback_name
+
+
+def _l4_receipt_path(workspace: Path) -> Path:
+    return _l4_state_path(workspace, "receipt_path", "l4-release-receipt.json")
+
+
+def _breakglass_path(workspace: Path) -> Path:
+    return _l4_state_path(workspace, "breakglass_path", "breakglass.json")
 
 
 def _issue_numbers(text: str) -> list[int]:
@@ -140,6 +162,76 @@ def _deletion_markers(text: str) -> dict[str, str]:
     return markers
 
 
+MAINLINE_REF = "origin/main"
+
+
+def _narrative_range(workspace: Path, pr_base: str) -> list[str]:
+    """The revision arguments for "what this branch says about itself".
+
+    ``pr_base..HEAD`` alone is the wrong range for a stacked PR whose parent
+    was cut before the parent's own base was refreshed: it then inherits
+    mainline commits the parent has not caught up to, plus the merge commits
+    that brought them in, and the composer's *oldest* commit — the PR title —
+    becomes somebody else's ``main`` change. Exclude everything reachable from
+    ``origin/main``, from every other head on the open-PR chain the stack
+    resolver walked (``.l9/pr/stack-base.json`` ``chain``), and every merge
+    commit; what remains is this branch's own story. A ref that is not fetched
+    is skipped, so the worst case is the bare range, never a failure.
+    """
+    args = ["--no-merges", f"{pr_base}..HEAD"]
+    if pr_base in {MAINLINE_REF, "main"}:
+        return args
+    own = pr_base.removeprefix("origin/")
+    exclude = [MAINLINE_REF] + [f"origin/{head}" for head in _stack_chain(workspace) if head != own]
+    for ref in exclude:
+        if _run_git(workspace, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}").strip():
+            args.append(f"^{ref}")
+    return args
+
+
+def _stack_chain(workspace: Path) -> list[str]:
+    """Open-PR heads root→tip from the stack-base receipt, or [] when absent.
+
+    The tip alone is what ``pr_base`` already names. The parents above it are
+    the ones a stale child inherits from: #601 was cut from #600 before #600
+    merged main, so #602 (based on #601) saw #600's later commit as its own.
+    """
+    doc = _load_json(workspace / ".l9" / "pr" / "stack-base.json")
+    if not isinstance(doc, dict) or doc.get("schema") != "l9.stack_base.v1":
+        return []
+    chain = doc.get("chain")
+    if not isinstance(chain, list):
+        return []
+    return [str(head) for head in chain if isinstance(head, str) and head]
+
+
+def _collect_path_subjects(workspace: Path, pr_base: str) -> dict[str, str]:
+    """Map each changed path to the subject of the newest commit that touched it.
+
+    One `git log --name-only` pass over the range, oldest first, overwriting as
+    it goes — so the surviving value for a path is the most recent commit that
+    changed it. One process for the whole range, not one per path.
+    """
+    # %x00 marks a commit boundary; subjects and paths never contain NUL.
+    out = _run_git(
+        workspace,
+        "log",
+        "--reverse",
+        "--name-only",
+        "--format=%x00%s",
+        *_narrative_range(workspace, pr_base),
+    )
+    subjects: dict[str, str] = {}
+    for block in out.split("\x00"):
+        lines = [line.strip() for line in block.splitlines() if line.strip()]
+        if not lines:
+            continue
+        subject, paths = lines[0], lines[1:]
+        for rel in paths:
+            subjects[rel] = subject
+    return subjects
+
+
 def collect_mechanical(
     workspace: Path,
     *,
@@ -149,15 +241,24 @@ def collect_mechanical(
     additive_only_paths: list[str] | None = None,
     additive_only_measured: bool = True,
 ) -> MechanicalFacts:
-    log = _run_git(workspace, "log", f"{pr_base}..HEAD", "--format=%s%n%b---END---")
+    log = _run_git(
+        workspace,
+        "log",
+        "--reverse",
+        "--format=%s%n%b---END---",
+        *_narrative_range(workspace, pr_base),
+    )
     commits: list[str] = []
+    bodies: list[str] = []
     issue_closes: list[int] = []
     markers: dict[str, str] = {}
     for block in log.split("---END---"):
-        lines = [line.strip() for line in block.splitlines() if line.strip()]
+        raw_lines = block.strip("\n").splitlines()
+        lines = [line.strip() for line in raw_lines if line.strip()]
         if not lines:
             continue
         commits.append(lines[0])
+        bodies.append("\n".join(raw_lines[1:]).strip())
         issue_closes.extend(_issue_numbers(block))
         markers.update(_deletion_markers(block))
     names = _run_git(workspace, "diff", "--name-status", f"{pr_base}...HEAD")
@@ -168,10 +269,14 @@ def collect_mechanical(
             unique_issues.append(number)
     return MechanicalFacts(
         commits=commits,
+        commit_bodies=bodies,
         changed_files=changed,
+        path_subjects=_collect_path_subjects(workspace, pr_base),
         issue_closes=unique_issues,
         gate_receipt=_load_json(workspace / ".l9" / "pr" / "gate-receipt.json"),
         l4_receipt=_load_json(_l4_receipt_path(workspace)),
+        breakglass=_load_json(_breakglass_path(workspace)),
+        head=_run_git(workspace, "rev-parse", "HEAD").strip(),
         campaign_body=campaign_body.strip(),
         template_path=template_path,
         additive_only_paths=[p for p in (additive_only_paths or []) if p.strip()],
@@ -196,8 +301,62 @@ def _changed_paths(facts: MechanicalFacts) -> list[str]:
     return paths
 
 
-def _first_subject(facts: MechanicalFacts) -> str:
-    return facts.commits[0] if facts.commits else "measured change (no commit subject)"
+NO_SUBJECT = "measured change (no commit subject)"
+
+
+def _first_paragraph(body: str) -> str:
+    for para in re.split(r"\n\s*\n", body.strip()):
+        text = " ".join(line.strip() for line in para.splitlines() if line.strip())
+        # Trailers (Closes #, ALLOW-ROOT-DELETION:, Co-authored-by:) are not prose.
+        if text and not re.match(r"^[A-Za-z-]+:\s", text) and not DELETION_RE.match(text):
+            return text
+    return ""
+
+
+def range_problem(facts: MechanicalFacts) -> str:
+    """The Problem statement for the whole range.
+
+    The oldest commit is where the work started, so its subject — and its body's
+    first paragraph, when the author wrote one — is the closest measured thing to
+    "what was wrong". A multi-commit range says how many commits follow, so the
+    line cannot be read as the entire change.
+    """
+    if not facts.commits:
+        return NO_SUBJECT
+    head = facts.commits[0]
+    body = facts.commit_bodies[0] if facts.commit_bodies else ""
+    para = _first_paragraph(body)
+    more = len(facts.commits) - 1
+    suffix = f" (+{more} more commit{'s' if more != 1 else ''} below)" if more else ""
+    return f"{head}{suffix}" + (f"\n\n{para}" if para else "")
+
+
+def range_summary(facts: MechanicalFacts) -> str:
+    """One line: the oldest subject plus the count of what follows."""
+    if not facts.commits:
+        return NO_SUBJECT
+    more = len(facts.commits) - 1
+    return facts.commits[0] + (f" (+{more} more)" if more else "")
+
+
+def range_title(facts: MechanicalFacts) -> str:
+    """The PR title: the oldest own subject, no count. Empty when the range is empty
+    so the caller can fall back to the branch name."""
+    return facts.commits[0] if facts.commits else ""
+
+
+def range_fix(facts: MechanicalFacts) -> str:
+    """The Fix: every commit subject, oldest first. One commit reads as one line."""
+    if not facts.commits:
+        return NO_SUBJECT
+    if len(facts.commits) == 1:
+        return facts.commits[0]
+    return "\n".join(f"- {subject}" for subject in facts.commits)
+
+
+def path_why(facts: MechanicalFacts, path: str) -> str:
+    """Why this path changed: the subject of the commit that last touched it."""
+    return facts.path_subjects.get(path) or range_summary(facts)
 
 
 def infer_type_of_change(facts: MechanicalFacts) -> str:
@@ -274,6 +433,25 @@ def _receipt_binding(receipt: dict[str, Any]) -> str:
     return "binding=none recorded"
 
 
+def _kernels_evidenced(facts: MechanicalFacts) -> bool:
+    """True only when the L4 receipt carries kernel evidence for every kernel.
+
+    `l4_local.authorize_release` writes `kernel_evidence` and marks each
+    kernel `evidenced` from a verified `l9.kernel_receipt.v2`. An older receipt
+    without that field, or one whose kernels are `absent` or self-reported
+    `passed`, is not evidence and does not tick the box.
+    """
+    receipt = facts.l4_receipt or {}
+    if receipt.get("kernel_evidence") != "evidenced":
+        return False
+    kernels = receipt.get("kernels")
+    if not isinstance(kernels, dict) or not kernels:
+        return False
+    return all(
+        isinstance(entry, dict) and entry.get("status") == "evidenced" for entry in kernels.values()
+    )
+
+
 def _evidence_lines(facts: MechanicalFacts) -> list[str]:
     evidence: list[str] = []
     if facts.gate_receipt:
@@ -287,11 +465,34 @@ def _evidence_lines(facts: MechanicalFacts) -> list[str]:
     if facts.l4_receipt:
         evidence.append(
             f"L4 receipt present: phase={facts.l4_receipt.get('phase')} "
-            f"{_receipt_binding(facts.l4_receipt)}"
+            f"{_receipt_binding(facts.l4_receipt)} "
+            f"kernel_evidence={facts.l4_receipt.get('kernel_evidence') or 'not recorded'}"
         )
     else:
         evidence.append("L4 receipt absent — release authorization not measured here")
+    trail = _breakglass_for_head(facts)
+    if trail:
+        evidence.append(
+            f"BREAKGLASS {trail.get('variable')}={trail.get('reason')} "
+            f"head={trail.get('head')} used_at={trail.get('used_at')} — "
+            "remote was allowed by an environment variable, not by a receipt"
+        )
     return evidence
+
+
+def _breakglass_for_head(facts: MechanicalFacts) -> dict[str, Any] | None:
+    """The breakglass trail, only if it describes this HEAD.
+
+    The file is rewritten on every use and never cleaned up, so its presence
+    alone says nothing about this PR. A trail whose head matches is a claim
+    about the push being composed; any other trail is history and stays out.
+    """
+    trail = facts.breakglass
+    if not trail or not facts.head:
+        return None
+    if trail.get("head") != facts.head:
+        return None
+    return trail
 
 
 def _check_box(text: str, label: str) -> str:
@@ -368,9 +569,14 @@ def _fill_protected_root(text: str, facts: MechanicalFacts) -> str:
         )
         proof = "append-only — none."
     text = _na_unchecked_in_section(text, "### Edit mode", "## Problem")
+    # Why a root file: the commits that actually touched the protected paths,
+    # not whichever subject happens to sit at one end of the range.
+    root_why = sorted({path_why(facts, path) for path in paths})
     text = text.replace(
         "<!-- What cannot be done in a non-root path. Composer fills. -->",
-        _first_subject(facts),
+        "\n".join(f"- `{path}` — {path_why(facts, path)}" for path in paths)
+        if len(root_why) > 1
+        else root_why[0],
         1,
     )
     text = text.replace(
@@ -414,7 +620,6 @@ def _fill_risk(text: str, facts: MechanicalFacts) -> str:
 
 
 def _fill_changes_by_intent(text: str, facts: MechanicalFacts) -> str:
-    why = _first_subject(facts)
     added: list[str] = []
     modified: list[str] = []
     deleted: list[str] = []
@@ -422,7 +627,7 @@ def _fill_changes_by_intent(text: str, facts: MechanicalFacts) -> str:
         parts = line.split("\t")
         status = parts[0] if parts else "M"
         path = parts[-1] if parts else line
-        bullet = f"- `{path}` — {why}"
+        bullet = f"- `{path}` — {path_why(facts, path)}"
         if status.startswith("A"):
             added.append(bullet)
         elif status.startswith("D"):
@@ -463,24 +668,25 @@ def _fill_template(template: str, facts: MechanicalFacts) -> str:
     commit_block = _bullet_list(facts.commits)
     files_block = _bullet_list(facts.changed_files)
     closes = ", ".join(f"#{n}" for n in facts.issue_closes) if facts.issue_closes else "#"
-    subject = _first_subject(facts)
+    problem = range_problem(facts)
+    fix = range_fix(facts)
     text = _fill_protected_root(text, facts)
     error_fence = (
         "```\npaste the error / failing output here, or delete this block and describe the gap\n```"
     )
-    text = text.replace(error_fence, subject, 1)
+    text = text.replace(error_fence, problem, 1)
     if "## Summary" in text:
         text = text.replace(
             "<!-- One-sentence description of what this PR does. -->",
-            subject,
+            range_summary(facts),
             1,
         )
     text = re.sub(r"Closes #<!-- issue number -->", f"Closes {closes}", text, count=1)
     text = re.sub(r"Closes #(?!\d)", f"Closes {closes}", text, count=1)
     text = _fill_type_of_change(text, facts)
     if "## Fix" in text:
-        text = text.replace(FIX_PLACEHOLDER, subject, 1)
-        text = text.replace("<!-- What you changed -->", subject, 1)
+        text = text.replace(FIX_PLACEHOLDER, fix, 1)
+        text = text.replace("<!-- What you changed -->", fix, 1)
     text = _fill_risk(text, facts)
     text = re.sub(r"(?m)^Rollback:\s*$", "Rollback: revert this PR", text, count=1)
     text = re.sub(
@@ -512,6 +718,10 @@ def _fill_template(template: str, facts: MechanicalFacts) -> str:
     text = _fill_changes_by_intent(text, facts)
     if facts.l4_receipt and facts.l4_receipt.get("phase") == "release_authorized":
         text = text.replace("- [ ] **L4 local autonomy**", "- [x] **L4 local autonomy**", 1)
+    # release_authorized says the L4 phase advanced, not that the kernels were
+    # applied: the corpus exemption authorizes with no kernel receipt at all.
+    # Only measured evidence ticks the box.
+    if _kernels_evidenced(facts):
         text = text.replace("- [ ] **Post-exec kernels**", "- [x] **Post-exec kernels**", 1)
     del commit_block
     return _annotate_unchecked_boxes(text)
@@ -542,7 +752,7 @@ def compose_pr_body(facts: MechanicalFacts, template: str | None) -> ComposeResu
             [
                 "## Problem",
                 "",
-                _first_subject(facts),
+                range_problem(facts),
                 "",
                 f"Closes {closes or '#'}",
                 "",
@@ -624,7 +834,20 @@ def main(argv: list[str] | None = None) -> int:
         help="No caller computed the additive_only range; say so instead of claiming none",
     )
     parser.add_argument("--pr-number", type=int, default=None)
+    parser.add_argument(
+        "--print-title",
+        action="store_true",
+        help="Print only the PR title (this branch's oldest own commit subject) and exit",
+    )
     args = parser.parse_args(argv)
+
+    if args.print_title:
+        # Same range the body is told from. open_pr_after_gate.sh used to run its
+        # own `git log base..HEAD | head -1`, a second copy of the range rule
+        # that titled PR #602 with a main commit.
+        facts = collect_mechanical(args.workspace.resolve(), pr_base=args.pr_base)
+        print(range_title(facts))
+        return 0
 
     campaign = ""
     if args.campaign_body_file and args.campaign_body_file.is_file():
