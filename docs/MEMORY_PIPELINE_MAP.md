@@ -45,8 +45,14 @@ sessionStart
   → write open latch (.l9/memory/opens + rotate previous_opened / last_opened)
   → canonical_hydrate: health → hydrate → typed ContinuationCapsuleV2 (stale loses to git)
   → compile SessionHydrationPacket (continuation + context sections + close-gap check)
-  → if prior session missing receipt / write_count=0 / no session PICKUP:
-      lead additional_context with DEGRADED + REPAIR: /end-session (ADR-0028)
+  → three typed conditions, never ORed (ADR-0032):
+      environment_fault (BINDING_FAILED / NAMESPACE_UNRESOLVED — runtime never reached memory)
+        → lead ENVIRONMENT_FAULT + REPAIR: make memory-readiness
+      close_gap (prior session missing receipt / write_count=0 / no session continuation)
+        → lead CLOSE_GAP + REPAIR: /end-session
+      memory_degraded (canonical memory ran and did not answer)
+        → lead DEGRADED; `degraded` mirrors this one field only
+      continuation_stale is a fact on the capsule, not a condition (git wins)
   → emit additional_context with objective + next= + compact JSON
   → canonical session state for the hydration-only gates (fail-open if memory down)
 

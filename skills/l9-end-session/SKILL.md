@@ -9,7 +9,7 @@ metadata:
   tags: [l9, session, handoff, memory, governance, control-plane, force-retry]
   owner: igor_beylin
   status: active
-  version: 1.7.0
+  version: 1.7.1
   updated: 2026-09-07
 ---
 
@@ -21,10 +21,13 @@ metadata:
 `ops/hooks/graphiti-session-end.sh` → `ops/graphiti/hydration/close_session.py`.
 You should **not** need this skill for a routine X-out.
 
-Use `/end-session` when SessionStart prints `DEGRADED` + `REPAIR: /end-session`,
-or the auto-close hook failed / the memory runtime was unbound, or you need a
-richer manual continuation record. See ADR-0028 (as amended 2026-09-07) and
-ADR-0030.
+Use `/end-session` when SessionStart prints `CLOSE_GAP` + `REPAIR: /end-session`,
+or the auto-close hook failed, or you need a richer manual continuation
+record. A close-gap is a **lifecycle** condition, not memory degradation
+(ADR-0032): `DEGRADED` means canonical memory did not answer, and
+`ENVIRONMENT_FAULT` means the memory runtime was never bound — repair those
+with `make memory-readiness`, not with this skill. See ADR-0028 (as amended
+2026-09-07), ADR-0030 and ADR-0032.
 
 Map: [`docs/MEMORY_PIPELINE_MAP.md`](../../docs/MEMORY_PIPELINE_MAP.md).
 
@@ -103,7 +106,7 @@ is already `closed` and `write_count>0`, unless `--supersede`.
 
 ## Compact Workflow
 
-1. Confirm close-gap (hydrate `REPAIR: /end-session`, missing receipt, or `write_count=0`).
+1. Confirm close-gap (hydrate `CLOSE_GAP` + `REPAIR: /end-session`, `close_gap_reason`, missing receipt, or `write_count=0`).
 2. HEALTH, then `repair-write` targeting the prior session id. Do not use client `write` as the close-gap repair.
 3. Optional Redis `cache_set_session_context`; the canonical continuation record (`ContinuationCapsuleV2`) is the resume SSOT either way.
 4. Run governance backup if needed.

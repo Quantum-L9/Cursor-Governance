@@ -153,6 +153,18 @@
       "reason": "Interpreter binder unsets retired provider transport vars (negative hygiene).",
       "retire_at_stage": "never",
       "expires": "2099-01-01"
+    },
+    {
+      "path": "environment/agents/adapters/manus/validate_manus_adapter.py",
+      "reason": "Negative checks: the manus adapter validator names the retired provider transport vars and the memory credential so their presence in the rendered adapter environment is rejected (PR #568; unregistered when #570 introduced enforce mode).",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "environment/agents/adapters/manus/tests/test_manus_adapter.py",
+      "reason": "Negative checks (assertNotIn) that the rendered manus environment carries no provider URL or token.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
     }
   ]
 }

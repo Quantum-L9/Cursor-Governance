@@ -19,8 +19,11 @@ See [`docs/MEMORY_PIPELINE_MAP.md`](../docs/MEMORY_PIPELINE_MAP.md) and
 
 ## WHEN TO USE
 
-- SessionStart printed `DEGRADED` + `REPAIR: /end-session`
-- Auto-close hook failed / canonical memory was unbound
+- SessionStart printed `CLOSE_GAP` + `REPAIR: /end-session` (ADR-0032: a
+  close-gap is a lifecycle condition; `DEGRADED` is canonical memory not
+  answering and `ENVIRONMENT_FAULT` is an unbound runtime — neither is
+  repaired here)
+- Auto-close hook failed
 - Richer manual continuation after a thin Phase A close
 - Force governance backup / Redis handoff interactively
 
