@@ -335,8 +335,8 @@ tasks:
     expected_result: PASS
   - id: VAL-001e
     method: command
-    command_or_inspection: git log -1 --oneline origin/Staging
-    command: git log -1 --oneline origin/Staging
+    command_or_inspection: git --no-pager log -1 --oneline origin/Staging
+    command: git --no-pager log -1 --oneline origin/Staging
     environment: repo_local
     expected_result: PASS
   negative_cases:
