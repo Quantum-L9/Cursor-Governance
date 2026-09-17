@@ -191,10 +191,13 @@ def tree_digest(root: Path) -> str:
         if git_mode == "160000":
             records.append((rel, "tracked", git_mode, obj))
             continue
-        if not path.exists():
+        if not os.path.lexists(path):
             # A tracked path deleted in the worktree has no blob to hash. Its
             # absence is itself the change, and it is already visible: the
             # path drops out of the record set, so the digest moves.
+            # lexists, not Path.exists(): exists() follows the target, so a
+            # broken symlink looks deleted and would drop out of the digest
+            # even though mode 120000 and readlink hashing already exist.
             continue
         try:
             blob = _blob_digest(path, git_mode=git_mode, index_object=obj)
