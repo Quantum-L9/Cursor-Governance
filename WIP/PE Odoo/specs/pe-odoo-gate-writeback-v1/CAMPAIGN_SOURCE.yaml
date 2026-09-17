@@ -315,6 +315,30 @@ tasks:
     command: test -f plasticos_gate/services/gate_config.py
     environment: repo_local
     expected_result: PASS
+  - id: VAL-001b
+    method: command
+    command_or_inspection: git rev-parse --abbrev-ref HEAD
+    command: git rev-parse --abbrev-ref HEAD
+    environment: repo_local
+    expected_result: PASS
+  - id: VAL-001c
+    method: command
+    command_or_inspection: git rev-parse HEAD
+    command: git rev-parse HEAD
+    environment: repo_local
+    expected_result: PASS
+  - id: VAL-001d
+    method: command
+    command_or_inspection: git rev-parse origin/Staging
+    command: git rev-parse origin/Staging
+    environment: repo_local
+    expected_result: PASS
+  - id: VAL-001e
+    method: command
+    command_or_inspection: git log -1 --oneline origin/Staging
+    command: git log -1 --oneline origin/Staging
+    environment: repo_local
+    expected_result: PASS
   negative_cases:
   - mutate_during_inspect
   - reopen_merged_pr_156
