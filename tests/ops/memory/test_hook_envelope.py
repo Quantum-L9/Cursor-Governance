@@ -272,12 +272,10 @@ def test_session_end_envelope_admits_the_close_path_end_to_end(bound, fake_cli, 
     excerpt.write_text("redacted\n", encoding="utf-8")
     client = _client(bound, fake_cli, "claude-session-end")
     assert client.ingest_candidate(_candidate(), workspace=WS).status is OutcomeStatus.OK
-    assert (
-        client.close(
-            workspace=WS, namespace="cursor-governance", summary="done", session_id="s-1"
-        ).status
-        is OutcomeStatus.OK
+    closed = client.close(
+        workspace=WS, namespace="cursor-governance", summary="done", session_id="s-1"
     )
+    assert closed.status is OutcomeStatus.OK
     distilled = client.distill(workspace=WS, namespace="cursor-governance", source_path=excerpt)
     assert distilled.status is OutcomeStatus.OK
     assert client._records_committed == 1 + 1 + 2
@@ -353,12 +351,10 @@ def test_hook_distill_refuses_before_write_when_candidates_exceed_remaining(
     excerpt = tmp_path / "excerpt.md"
     excerpt.write_text("redacted\n", encoding="utf-8")
     client = _client(bound, fake_cli, "claude-session-end")  # max_records=8
-    assert (
-        client.close(
-            workspace=WS, namespace="cursor-governance", summary="done", session_id="s-1"
-        ).status
-        is OutcomeStatus.OK
+    close_outcome = client.close(
+        workspace=WS, namespace="cursor-governance", summary="done", session_id="s-1"
     )
+    assert close_outcome.status is OutcomeStatus.OK
     outcome = client.distill(workspace=WS, namespace="cursor-governance", source_path=excerpt)
     assert outcome.status is OutcomeStatus.REJECTED
     assert outcome.fault_class == FAULT_CANONICAL

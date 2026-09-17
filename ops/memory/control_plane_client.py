@@ -993,6 +993,13 @@ class MemoryControlPlaneClient:
             argv += ["--repository", repository]
         if dry_run:
             argv.append("--dry-run")
+        emitted = {flag for flag in argv if flag.startswith("--")}
+        extras = emitted - DISTILL_CLI_OPTIONS
+        if extras:
+            raise RuntimeError(
+                "distill argv emitted options outside DISTILL_CLI_OPTIONS: "
+                + ", ".join(sorted(extras))
+            )
         return argv
 
     def _distill_pass(

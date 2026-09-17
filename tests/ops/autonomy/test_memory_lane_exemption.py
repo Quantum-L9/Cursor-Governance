@@ -35,10 +35,14 @@ EXEMPT = [
     ".venv/bin/python -m ops.memory.cli write 'fact' --kind lesson",
     "L9_MEMORY_AGENT_ID=cursor .venv/bin/python -m ops.memory.cli conflicts --task t",
     "environment/agents/adapters/claude-code/hooks/memory_prefetch.py --session-id abc",
-    "L9_MEMORY_AGENT_ID=unknown-agent "
-    "environment/agents/adapters/claude-code/hooks/memory_prefetch.py --session-id abc",
-    ".venv/bin/python environment/agents/adapters/claude-code/hooks/memory_prefetch.py "
-    "--session-id abc",
+    (
+        "L9_MEMORY_AGENT_ID=unknown-agent "
+        + "environment/agents/adapters/claude-code/hooks/memory_prefetch.py --session-id abc"
+    ),
+    (
+        ".venv/bin/python environment/agents/adapters/claude-code/hooks/memory_prefetch.py "
+        + "--session-id abc"
+    ),
     "cd /some/repo && l9-memory health",
     "l9-memory health; l9-memory search q",
     'bash -c "l9-memory health"',
