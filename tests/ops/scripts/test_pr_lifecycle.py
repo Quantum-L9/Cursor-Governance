@@ -844,7 +844,7 @@ def test_open_pr_composer_skips_root_protect_without_workspace_config() -> None:
     gate = (SCRIPTS / "run_pr_gate.sh").read_text(encoding="utf-8")
     assert '-f "$WS/ops/config/root-file-protection.json"' in gate
     compose = script[script.index("_compose_title_and_body() {") :]
-    compose = compose[: compose.index("if [[ -z \"$pr_url\" || -z \"$pr_number\" ]]; then")]
+    compose = compose[: compose.index('if [[ -z "$pr_url" || -z "$pr_number" ]]; then')]
     assert '[[ -f "$_root_protect_py" && -f "$_root_protect_cfg" ]]' in compose
     assert "skip additive_only measurement" in compose
     reopen = script[script.index('echo "PR already open: $pr_url"') :]
