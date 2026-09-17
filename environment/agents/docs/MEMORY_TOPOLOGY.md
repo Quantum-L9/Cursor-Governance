@@ -57,7 +57,7 @@ Every surface wires the same door; only the registration differs.
 | Surface | Lifecycle (deterministic) | Interactive |
 |---|---|---|
 | Cursor IDE | `ops/hooks/session_start_memory_orchestrator.sh` / `ops/hooks/graphiti-session-end.sh` → `ops/graphiti/hydration/` → `ops/memory` | `~/.cursor/mcp.json` entry written by `l9-memory client cursor install` (`ops/memory/mcp_instantiation.py`) |
-| Claude Code (desktop / Web / Mobile) | `hooks/memory_prefetch.py` / `hooks/memory_writeback.py` → `memory/memory_bridge.py` → `ops/memory` | `mcp.template.json` `l9-graphite-memory` (`${L9_MEMORY_INTERPRETER}`) |
+| Claude Code (desktop / Web / Mobile) | `hooks/memory_prefetch.py` / `hooks/memory_writeback.py` → `memory/memory_bridge.py` → `ops/memory` | `mcp.template.json` `l9-graphite-memory` (`${HOME}/.cursor-governance/ops/memory/run_memory_mcp.sh`; wrapper is the bind gate) |
 | Codex / Gemini / Manus / generic | thin adapter hooks → `ops/memory` | package-owned `l9-graphite-memory` entry, same shape |
 
 Identity: `L9_MEMORY_AGENT_ID` (`cursor`, `claude-code`, …) and `USER_ID` per

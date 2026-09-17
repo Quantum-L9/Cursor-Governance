@@ -562,16 +562,12 @@ _gate_run_projection_heal() {
   if [[ -f "$GOV_ROOT/ops/scripts/project_llm_rules.py" ]]; then
     python3 "$GOV_ROOT/ops/scripts/project_llm_rules.py" --root "$WS" --quiet
   fi
-  # env -u L9_MEMORY_INTERPRETER: the mcp domain gates l9-graphite-memory on
-  # _requires_env, so a bound interpreter renders the server into the TRACKED
-  # .mcp.json. CI renders unbound, and
+  # env -u L9_MEMORY_INTERPRETER: Claude Code's memory entry is the spawn
+  # wrapper (not _requires_env-gated). CI and the committed .mcp.json must
+  # still render that wrapper without a parent interpreter. Healing with a
+  # bound interpreter used to rewrite the tracked file and fail
   # tests/ops/memory/test_mcp_surfaces.py::test_committed_projection_is_current
-  # _for_an_unbound_environment pins the committed file to that unbound render.
-  # Healing with the variable bound made _gate_commit_writer_dirt auto-commit the
-  # bound form, which turned that test red on the gate's own commit — and once
-  # the interpreter reaches the session env (overlay_hosted_settings_env.py),
-  # that is every surface, so the gate re-created the commit on every run.
-  # Render the way CI does; SessionStart still renders the bound form locally.
+  # _for_an_unbound_environment. Render the way CI does.
   env -u L9_MEMORY_INTERPRETER python3 "$GOV_ROOT/ops/scripts/claude_projection.py" \
     --root "$WS" --workspace "$WS" --domains skills,commands,rules,mcp \
     --quiet --no-receipt

@@ -103,11 +103,14 @@ through `memory/memory_bridge.py` → `ops/memory`: stdio to the exact
 `l9-graphite-memory` runtime `ops/memory/runtime_binding.py` proves, never a
 URL. `memory.cli` is the binding proof + canonical health (R0–R3);
 `memory.mcp` is the package-owned stdio server entry in `.mcp.json`
-(`l9-memory client cursor install`, gated on `L9_MEMORY_INTERPRETER`). A bound
-CLI with a missing MCP entry is not one word DEGRADED. `.mcp.json` is a
-projection of `mcp.template.json`; the template carries no `env`, no `url`,
-no `headers` (memory ADR-016), and the retired `graphiti-memory` key is
-dropped from every rendered file.
+(spawn wrapper `${HOME}/.cursor-governance/ops/memory/run_memory_mcp.sh`
+plus the package argv). The wrapper bind-proves `L9_MEMORY_INTERPRETER`
+via `runtime_binding`; the template is not `_requires_env`-gated on that
+variable, so a Dock-started desktop session still renders the server.
+A bound CLI with a missing MCP entry is not one word DEGRADED.
+`.mcp.json` is a projection of `mcp.template.json`; the template carries
+no `env`, no `url`, no `headers` (memory ADR-016), and the retired
+`graphiti-memory` key is dropped from every rendered file.
 
 An unbound runtime is an honest `memory-blind`. Do not paste anything.
 
