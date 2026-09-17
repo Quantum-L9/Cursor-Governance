@@ -49,21 +49,24 @@ pr_stack_receipt_path() {
 }
 
 pr_stack_receipt_write() {
-  local ws="$1" base="$2" reason="$3" sha="$4" path
+  local ws="$1" base="$2" reason="$3" sha="$4" chain="${5:-}" path
   path="$(pr_stack_receipt_path "$ws")"
   mkdir -p "$(dirname "$path")"
-  python3 - "$path" "$base" "$reason" "$sha" <<'PY'
+  python3 - "$path" "$base" "$reason" "$sha" "$chain" <<'PY'
 import json
 import sys
 from datetime import datetime, timezone
 
-path, base, reason, sha = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+path, base, reason, sha, chain = sys.argv[1:6]
 doc = {
     "schema": "l9.stack_base.v1",
     "pr_stack": "auto",
     "pr_base": base,
     "reason": reason,
     "tip_sha": sha,
+    # Space-separated open-PR heads root→tip. compose_pr_body.py excludes every
+    # one of these from the branch's story, not only the tip it is based on.
+    "chain": [head for head in chain.split() if head],
     "resolved_at": datetime.now(timezone.utc)
     .replace(microsecond=0)
     .isoformat()
@@ -146,7 +149,7 @@ pr_stack_is_telemetry_fail() {
 # Bind PR_BASE for make pr / pr-check / pr-preflight / open_pr_after_gate.
 # Does not rewrite an explicit non-main PR_BASE. Empty PR_STACK is a no-op.
 pr_stack_apply_publish_base() {
-  local workspace="$1" out rc tip sha reason base
+  local workspace="$1" out rc tip sha reason base chain
   workspace="$(cd "$workspace" && pwd)"
   PR_BASE="${PR_BASE:-origin/main}"
 
@@ -187,12 +190,21 @@ pr_stack_apply_publish_base() {
   tip="$(printf '%s\n' "$out" | sed -n 's/^STACK_TIP=//p' | head -n 1)"
   sha="$(printf '%s\n' "$out" | sed -n 's/^STACK_TIP_SHA=//p' | head -n 1)"
   reason="$(printf '%s\n' "$out" | sed -n 's/^REASON=//p' | head -n 1)"
+  chain="$(printf '%s\n' "$out" | sed -n 's/^STACK_CHAIN=//p' | head -n 1)"
   if [ -z "$tip" ]; then
     echo "FAIL: stack-tip resolver returned no STACK_TIP" >&2
     return 2
   fi
   base="$(pr_stack_normalize_ref "$tip")"
   if [ "$base" != "origin/main" ]; then
+    # The parents above the tip are not ancestors of the tip when a child was cut
+    # before its parent refreshed. Fetch them so the composer can exclude their
+    # commits by ref; best-effort, the tip fetch below is the one that gates.
+    local parent
+    for parent in $chain; do
+      [ "$parent" = "${base#origin/}" ] && continue
+      git -C "$workspace" fetch -q origin "$parent" 2>/dev/null || true
+    done
     local_sha="$(git -C "$workspace" rev-parse --verify "$base" 2>/dev/null || true)"
     if [ -n "$sha" ] && [ "$local_sha" = "$sha" ]; then
       :
@@ -216,6 +228,6 @@ pr_stack_apply_publish_base() {
   export PR_BASE
   echo "NOTE: PR_STACK=auto resolved stack tip ${PR_BASE} (reason=${reason:-unknown})"
   printf '%s\n' "$out"
-  pr_stack_receipt_write "$workspace" "$PR_BASE" "${reason:-unknown}" "$sha" || true
+  pr_stack_receipt_write "$workspace" "$PR_BASE" "${reason:-unknown}" "$sha" "$chain" || true
   return 0
 }

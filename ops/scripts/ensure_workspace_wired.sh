@@ -32,6 +32,8 @@ source "$SCRIPT_DIR/lib/workspace_kind.sh"
 source "$SCRIPT_DIR/lib/workspace_link_health.sh"
 # shellcheck source=lib/cursor_plans_store.sh
 source "$SCRIPT_DIR/lib/cursor_plans_store.sh"
+# shellcheck source=lib/plugin_siblings.sh
+source "$SCRIPT_DIR/lib/plugin_siblings.sh"
 
 WORKSPACE="${1:-$(pwd)}"
 if [ ! -d "$WORKSPACE" ]; then
@@ -109,11 +111,17 @@ _link_or_update() {
     fi
     rm "$link"
   elif [ -e "$link" ]; then
-    mv "$link" "${link}.backup.$(date +%Y%m%d_%H%M%S)"
+    echo "BACKED UP: $label -> $(l9_backup_aside "$link")"
   fi
   ln -sfn "$target" "$link"
   echo "LINKED: $label -> $target"
 }
+
+# Before the health short-circuit: the three links can all be healthy while a
+# stale l9-governance.backup.* sibling still loads as a second plugin. This is
+# the SessionStart auto-heal for that (links-only mode included); moves, never
+# deletes.
+l9_relocate_plugin_siblings
 
 already_wired=0
 if workspace_links_healthy "$WORKSPACE" \

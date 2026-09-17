@@ -110,6 +110,12 @@ def run_session_start(home: Path, workspace: Path) -> subprocess.CompletedProces
         "HOME": str(home),
         "CURSOR_PROJECT_DIR": str(workspace),
         "GOVERNANCE_BACKUP_SKIP": "1",
+        # Reconcilers (install_ide_profile.sh) are double-forked into the
+        # background by default, so the hook's exit is not the end of its
+        # writes: tearDown's rmtree then races a detached installer still
+        # extracting an extension into this temp HOME ("Directory not empty").
+        # The hook's own foreground switch makes exit mean done.
+        "L9_BOOTSTRAP_SYNC": "1",
     }
     return subprocess.run(
         ["bash", str(SESSION_START)],

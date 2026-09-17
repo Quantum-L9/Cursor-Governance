@@ -44,6 +44,16 @@ from ops.autonomy.surface_detect import (  # noqa: E402
     kernel_latch_surface,
 )
 
+
+class ReceiptLoadError(RuntimeError):
+    """An existing kernel receipt could not be read as a JSON object.
+
+    Distinct from absence: a missing file is not a claim. A file that is
+    unreadable, not JSON, or not an object *is* a claim that cannot be
+    re-derived, and must fail closed (CANONICAL_LAW §6.2.9 item 6).
+    """
+
+
 #: v1 was a stamp: schema, head, kernel file SHAs, a timestamp. Every field was
 #: ambient or about files the agent never touched, so writing the claim was
 #: cheaper than doing the work (INC-2026-09-14-001). v2 binds the claim to a
@@ -138,14 +148,29 @@ def kernel_shas(gov: Path) -> dict[str, str]:
 
 
 def load_receipt(root: Path) -> dict[str, Any] | None:
+    """Load the kernel receipt, or None when no file exists.
+
+    Absence is a first-class answer (the corpus exemption). An existing file
+    that cannot be parsed as a JSON object is a present-and-false claim:
+    raise ``ReceiptLoadError`` so callers cannot collapse it into absence.
+    """
     path = receipt_path(root)
     if not path.is_file():
         return None
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
-    return data if isinstance(data, dict) else None
+        raw = path.read_text(encoding="utf-8")
+        data = json.loads(raw)
+    except OSError as exc:
+        raise ReceiptLoadError(f"kernel receipt exists but is unreadable: {path}: {exc}") from exc
+    except json.JSONDecodeError as exc:
+        raise ReceiptLoadError(
+            f"kernel receipt exists but is not valid JSON: {path}: {exc}"
+        ) from exc
+    if not isinstance(data, dict):
+        raise ReceiptLoadError(
+            f"kernel receipt exists but is not a JSON object: {path} ({type(data).__name__})"
+        )
+    return data
 
 
 def write_receipt(root: Path, data: dict[str, Any]) -> Path:
@@ -318,7 +343,10 @@ def verify_tree(root: Path, gov: Path) -> str | None:
     Binding is the report digest plus the kernel file SHAs, not HEAD, so a
     later rewrite commit does not force a second LLM apply.
     """
-    receipt = load_receipt(root)
+    try:
+        receipt = load_receipt(root)
+    except ReceiptLoadError as exc:
+        return f"FAIL: {exc}\n" + _agent_required_tree(root, gov)
     if receipt is None:
         return _agent_required_tree(root, gov)
     schema = receipt.get("schema")

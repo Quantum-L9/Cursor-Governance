@@ -1677,6 +1677,24 @@ GOV="$HOME/.cursor-governance"
 - `/ff` corpus kernels are unchanged, and a corpus-only changeset
   (`WIP/`, `docs/plans/`, PE campaigns) still needs no tree receipt.
 
+<!-- WORKTREE_ADD_TWO_ENTRANCES_V1 -->
+## Raw `git worktree add` is denied; two sanctioned entrances (2026-09-15)
+
+Append-only companion to §2.1.1. That section is unchanged.
+
+- A bare `git worktree add …` (including `git -C <path> worktree add`) is
+  denied at `beforeShellExecution` / PreToolUse by
+  `ops/autonomy/worktree_isolation_gate.py`: the new folder would have no
+  `.cursor` links and no L4 state, and sessionStart does not fire for it.
+  A compound command is refused at that stage; later stages do not run.
+- **New task** → `bash "$HOME/.cursor-governance/ops/scripts/agent_worktree_start.sh" --agent-id <id> --task-id <task>`
+  (bases on the unique open-PR chain tip under `PR_STACK=auto`; begins L4).
+- **Existing branch, or your own base** → `bash ops/scripts/worktree_add_wired.sh <git worktree add args…>`
+  (same argv as `git worktree add` after the subcommand, e.g.
+  `-b feat/x /path/to/wt origin/main`; wires links and the locked `.venv`).
+- Do not set `L9_WORKTREE_ADD_AUTHORIZED` yourself to get past the gate; the
+  two scripts set it for the one inner git call they own.
+
 <!-- CLOSE_GAP_NOT_MEMORY_DEGRADED_V1 -->
 ## A close-gap is lifecycle; an unbound runtime is environment; only memory not answering is DEGRADED (2026-09-15)
 
