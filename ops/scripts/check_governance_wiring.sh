@@ -10,6 +10,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/resolve_governance_paths.sh"
 # shellcheck source=lib/cursor_plans_store.sh
 source "$SCRIPT_DIR/lib/cursor_plans_store.sh"
+# shellcheck source=lib/plugin_siblings.sh
+source "$SCRIPT_DIR/lib/plugin_siblings.sh"
 
 CHECK_WORKSPACE=0
 CHECK_MACHINE=0
@@ -318,6 +320,23 @@ fi
 fi
 
 if [ "$CHECK_MACHINE" -eq 1 ]; then
+CURRENT_FAIL_CLASS=wiring
+echo ""
+echo "=== Cursor plugin directory (one l9-governance, no siblings) ==="
+# Cursor loads every child of ~/.cursor/plugins/local as a plugin. A stale
+# l9-governance.backup.<stamp> beside the live link is a second copy of the
+# rules tree, loaded always-apply. A sibling is a FAIL, not a WARN.
+SIBLINGS="$(l9_plugin_siblings)"
+if [ -n "$SIBLINGS" ]; then
+  while IFS= read -r sib; do
+    [ -n "$sib" ] || continue
+    fail "plugin sibling loads as a second plugin: $sib"
+  done <<< "$SIBLINGS"
+  echo "        fix: $(l9_relocate_plugin_siblings_command)"
+else
+  pass "no l9-governance siblings under $(l9_plugins_local_dir)"
+fi
+
 CURRENT_FAIL_CLASS=sessionend
 echo ""
 echo "=== sessionEnd governance backup hook ==="

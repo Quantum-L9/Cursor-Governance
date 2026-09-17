@@ -18,6 +18,8 @@ source "$SCRIPT_DIR/lib/cursor_plans_store.sh"
 source "$SCRIPT_DIR/lib/retire_leftover_launchagents.sh"
 # shellcheck source=lib/session_git_excludes.sh
 source "$SCRIPT_DIR/lib/session_git_excludes.sh"
+# shellcheck source=lib/plugin_siblings.sh
+source "$SCRIPT_DIR/lib/plugin_siblings.sh"
 
 FALLBACK_LOG="$HOME/.cursor-globalcommands-fallback.log"
 DISABLE_FALLBACK=${DISABLE_FALLBACK:-1}
@@ -47,7 +49,9 @@ link_or_update() {
     fi
     rm "$link"
   elif [ -e "$link" ]; then
-    mv "$link" "${link}.backup.$(date +%Y%m%d_%H%M%S)"
+    # Out of the directory, not beside the link: a sibling left under
+    # ~/.cursor/plugins/local is discovered by Cursor as a second plugin.
+    echo "BACKED UP: $label -> $(l9_backup_aside "$link")"
   fi
   ln -sfn "$target" "$link"
   echo "LINKED: $label -> $target"
@@ -59,8 +63,7 @@ remove_repo_duplicate() {
     rm "$path"
     echo "REMOVED: $label"
   elif [ -e "$path" ]; then
-    mv "$path" "${path}.backup.$(date +%Y%m%d_%H%M%S)"
-    echo "BACKED UP: $label"
+    echo "BACKED UP: $label -> $(l9_backup_aside "$path")"
   else
     echo "OK: no $label"
   fi
@@ -188,6 +191,9 @@ echo ""
 # v3.0.0), not as whole-directory symlinks into Cursor's native rules/skills/commands
 # dirs. Cursor auto-discovers rules/, skills/, commands/ under the plugin root itself.
 link_or_update "$HOME/.cursor/plugins/local/l9-governance" "$GLOBAL_COMMANDS" "~/.cursor/plugins/local/l9-governance"
+# Anything else named l9-governance* in that directory is a second plugin
+# Cursor will load — move it out (never delete) so only the live link remains.
+l9_relocate_plugin_siblings
 
 # Migration cleanup: pre-4.0.0 runs created these whole-directory symlinks. They are
 # wiring artifacts, not repository or user content, so they are removed outright

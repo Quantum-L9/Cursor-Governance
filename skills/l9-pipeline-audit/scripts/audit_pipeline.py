@@ -415,18 +415,33 @@ def _built_shelf(plans_dir: Path) -> Path:
     is honoured only where `BUILT/` is absent, which keeps a repository that
     genuinely uses the lowercase spelling working; `BUILT` is created when
     neither exists.
+
+    The answer is always the **on-disk spelling**, read from the directory
+    listing rather than probed with `is_dir()`. On a case-insensitive
+    filesystem `(plans_dir / "BUILT").is_dir()` is true when the only entry is
+    `built`, and returning the probe's spelling makes the caller `git add` a
+    path whose casing differs from the one git will later read back — the same
+    split, one layer down.
     """
     canonical = plans_dir / "BUILT"
-    if canonical.is_dir():
-        return canonical
     try:
-        for child in plans_dir.iterdir():
-            if child.is_dir() and child.name.lower() == "built":
-                return child
+        candidates = [
+            child
+            for child in plans_dir.iterdir()
+            if child.is_dir() and child.name.lower() == "built"
+        ]
     except OSError:
         # Directory scan is best-effort. Fall back to canonical BUILT when
         # iterdir cannot run (unreadable parent, vanished path).
-        pass
+        return canonical
+    for child in candidates:
+        if child.name == "BUILT":
+            return child
+    preferred = [child for child in candidates if child.name == "built"]
+    if preferred:
+        return preferred[0]
+    if candidates:
+        return sorted(candidates, key=lambda child: child.name)[0]
     return canonical
 
 
