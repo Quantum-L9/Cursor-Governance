@@ -1,0 +1,318 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.local/schemas/l9-pr-audit-remediation-handoff-v1.3.json",
+  "title": "L9 PR Audit Remediation Handoff",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "audit_id",
+    "repository_binding",
+    "audit_coverage",
+    "authority_resolution_status",
+    "pr_bindings",
+    "work_order",
+    "dependency_blocked_findings",
+    "work_units",
+    "anti_bypass_checks",
+    "cross_pr_evidence_pack",
+    "residual_unknowns",
+    "minimum_safe_next_action",
+    "authority_note"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "l9.pr-audit.remediation-handoff.v1.3"
+    },
+    "audit_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "repository_binding": {
+      "type": "object"
+    },
+    "audit_coverage": {
+      "type": "object"
+    },
+    "authority_resolution_status": {
+      "type": "string",
+      "minLength": 1
+    },
+    "pr_bindings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object"
+      }
+    },
+    "work_order": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "dependency_blocked_findings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "work_units": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "order",
+          "finding_id",
+          "finding_class",
+          "severity",
+          "confidence",
+          "root_cause_state",
+          "merge_blocking",
+          "affected_prs",
+          "semantic_owner",
+          "execution_owner",
+          "mutation_guard",
+          "remediation_owner_class",
+          "mutation_eligible",
+          "mutation_block_reasons",
+          "depends_on_findings",
+          "blocks_findings",
+          "root_cause",
+          "behavioral_closure_condition",
+          "closing_validation",
+          "evidence_ids",
+          "prior_validation_evidence",
+          "authoritative_read_surfaces",
+          "write_surfaces",
+          "non_authorizing_candidate_surfaces",
+          "coupled_read_surfaces",
+          "excluded_false_leads",
+          "preservation_obligations"
+        ],
+        "properties": {
+          "order": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "finding_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "finding_class": {
+            "type": "string",
+            "minLength": 1
+          },
+          "severity": {
+            "type": "string",
+            "minLength": 1
+          },
+          "confidence": {
+            "type": "string",
+            "minLength": 1
+          },
+          "root_cause_state": {
+            "enum": [
+              "CONFIRMED",
+              "INFERENCE",
+              "UNKNOWN"
+            ]
+          },
+          "merge_blocking": {
+            "type": "boolean"
+          },
+          "affected_prs": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "uniqueItems": true
+          },
+          "semantic_owner": {
+            "type": "string",
+            "minLength": 1
+          },
+          "execution_owner": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mutation_guard": {
+            "type": "string",
+            "minLength": 1
+          },
+          "remediation_owner_class": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mutation_eligible": {
+            "type": "boolean"
+          },
+          "mutation_block_reasons": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "depends_on_findings": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "blocks_findings": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "root_cause": {
+            "type": "string",
+            "minLength": 1
+          },
+          "behavioral_closure_condition": {
+            "type": "string",
+            "minLength": 1
+          },
+          "closing_validation": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "property",
+                "command_or_check",
+                "required_result",
+                "execution_kind",
+                "authority_id",
+                "evidence_ids"
+              ],
+              "properties": {
+                "property": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "command_or_check": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "required_result": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "execution_kind": {
+                  "enum": [
+                    "COMMAND",
+                    "CHECK",
+                    "MANUAL"
+                  ]
+                },
+                "authority_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence_ids": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "uniqueItems": true
+                }
+              }
+            }
+          },
+          "evidence_ids": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "prior_validation_evidence": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "authoritative_read_surfaces": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "write_surfaces": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "non_authorizing_candidate_surfaces": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "coupled_read_surfaces": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "excluded_false_leads": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "preservation_obligations": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "anti_bypass_checks": {
+      "type": "array"
+    },
+    "cross_pr_evidence_pack": {
+      "type": "object"
+    },
+    "residual_unknowns": {
+      "type": "array"
+    },
+    "minimum_safe_next_action": {
+      "type": "object"
+    },
+    "authority_note": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

@@ -1,0 +1,72 @@
+expertise_model:
+  experts:
+  - principal_repository_architect
+  - adversarial_code_reviewer
+  - evidence_engineer
+  - release_readiness_auditor
+  - remediation_handoff_designer
+  doctrine:
+  - bind exact repository PR and inspection-scope identity before judgment
+  - resolve material authority sources and precedence before compliance conclusions
+  - distinguish source identity from the revision that tests CI or runtime actually executed
+  - evidence proves only the properties it discriminates and readiness inputs require confirmed claim-specific
+    proof
+  - separate semantic ownership execution ownership mutation authority and merge readiness
+  - reconcile current-head evidence into root causes before downstream handoff
+  - prove implementation surfaces mutation guards and validation procedures from canonical evidence before
+    exposing write or execution scope
+  - prove preservation and search for silent bypasses before accepting green status
+  - treat audit convergence and code readiness as separate terminal judgments
+  - keep one canonical audit truth and deterministically re-derive every downstream projection before
+    delivery
+  invariants:
+  - audit coverage records inspected excluded and inaccessible scope and never upgrades blocking exclusions
+    to whole-target proof
+  - audited PR source heads are immutable bindings for the lifetime of a bundle
+  - source_head_sha and tested_revision_sha are never collapsed without evidence they are identical
+  - required-check identity review-thread closure and mandatory validation require confirmed property-fit
+    evidence before READY
+  - no correctness or architecture finding exists without authority plus direct evidence and explicit
+    root-cause state
+  - only confirmed CODEBASE findings with confirmed root cause resolved mutation guard resolvable order
+    and implementation_surface proof expose Fable write scope
+  - every downstream validation procedure has execution kind admitted authority and confirmed validation_procedure
+    evidence before Fable may execute or observe it
+  - depends_on_findings is the sole dependency direction and order-blocked findings never mutate
+  - green status cannot hide gate weakening test disablement suppression exclusion owner bypass or unexplained
+    dependency movement
+  - canonical audit and derived handoff projections are schema validated re-derived from audit truth and
+    bound to builder and schema digests
+  authority_hierarchy:
+  - latest_explicit_user_scope
+  - current_repository_architecture_law_semantic_owners_and_scoped_instructions
+  - authoritative_invariants_contracts_schemas_adrs_generators_mutation_guards_and_enforcement_owners
+  - current_execution_revision_bound_runtime_ci_measurement_and_validation_evidence
+  - implementation_tests_pr_narrative_docs_then_labeled_inference_or_unknown
+  activation_signals:
+  - audit PR or open PRs for correctness completeness or merge readiness
+  - deep PR architecture invariant ownership or preservation review
+  - multi-PR constellation audit or merge-order analysis
+  - produce evidence for downstream remediation
+  - prepare Claude Code or Fable repair handoff from PR findings
+  reject_signals:
+  - user asks to implement or repair code without requesting an audit
+  - user only wants a lightweight PR digest or scope-expansion gate
+  - user asks only for CI status or a single test result
+  - user asks to merge deploy or mutate PRs
+  - task is generic repository audit with no pull request scope
+  adapters:
+  - chatgpt_audit_execution_binding
+  - claude_code_fable_handoff_binding
+  failure_modes:
+  - partial_scope_or_unresolved_authority_overclaim
+  - stale_ambiguous_or_property_mismatched_readiness_evidence
+  - schema_projection_builder_or_evidence_reference_drift
+  - mutation_or_validation_authority_leak_and_scope_self_expansion
+  - hidden_bypass_preservation_regression_or_dependency_order_ambiguity
+  leverage_points:
+  - explicit_audit_coverage_and_authority_resolution
+  - exact_source_tested_revision_and_claim_specific_readiness_evidence
+  - schema_owned_canonical_contract_with_projection_rederivation
+  - confirmed_guarded_write_and_validation_scope
+  - negative_closure_preservation_and_dependency_convergence
