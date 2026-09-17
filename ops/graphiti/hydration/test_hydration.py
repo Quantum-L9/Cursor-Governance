@@ -209,7 +209,7 @@ def test_compile_packet_stale_continuation_says_repository_wins(monkeypatch, tmp
 _BOUNDARY_FIXTURES = ROOT / "tests" / "ops" / "memory"
 if str(_BOUNDARY_FIXTURES) not in sys.path:
     sys.path.insert(0, str(_BOUNDARY_FIXTURES))
-from memory_boundary_fixtures import FakeMemoryCli, close_payload  # noqa: E402
+from memory_boundary_fixtures import FakeMemoryCli, close_payload, distill_payload  # noqa: E402
 
 from ops.memory.control_plane_client import MemoryControlPlaneClient  # noqa: E402
 from ops.memory.runtime_binding import STATUS_EXACT, RuntimeBinding  # noqa: E402
@@ -233,6 +233,7 @@ def _scripted_close(monkeypatch, tmp_path):
     fake = FakeMemoryCli()
     fake.reply("ingest-governed-candidate", 0, _candidate_payload())
     fake.reply("close", 0, close_payload())
+    fake.reply("distill", 0, distill_payload())
     cli = tmp_path / "bin" / "l9-memory"
     cli.parent.mkdir(parents=True, exist_ok=True)
     cli.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
@@ -258,10 +259,9 @@ def _scripted_close(monkeypatch, tmp_path):
     return fake
 
 
-def test_phase_a_without_api_key(monkeypatch, tmp_path):
-    monkeypatch.setenv("OPENAI_API_KEY", "")
-    monkeypatch.setenv("MEMORY_PHASE_B_RESOLVE_SM", "0")
-    monkeypatch.delenv("MEMORY_DISTILL_S3_BUCKET", raising=False)
+def test_phase_a_needs_no_provider_key(monkeypatch, tmp_path):
+    """The close never touches a provider: no OpenAI key, no provider warning (ADR-0033)."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     fake = _scripted_close(monkeypatch, tmp_path)
     monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **k: ("user: finish the PR", "test"))
     report = cs.close_session(
@@ -272,91 +272,42 @@ def test_phase_a_without_api_key(monkeypatch, tmp_path):
         dry_run=True,
     )
     assert report["phase_a"] is True
-    assert report["phase_b"] is False
+    assert "phase_b" not in report
+    assert "phase_b" not in report["receipt"]
     assert any(w["kind"] == "session_continuation" for w in report["writes"])
-    assert any("openai_key" in w for w in report["warnings"])
+    assert not any("openai" in w.lower() for w in report["warnings"])
     assert any(args[1] == "ingest-governed-candidate" for args, _c, _s in fake.calls)
 
 
-def test_phase_b_success_with_mocked_transport(monkeypatch, tmp_path):
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
-    monkeypatch.delenv("MEMORY_DISTILL_S3_BUCKET", raising=False)
-    monkeypatch.setenv("MEMORY_DISTILL_ENQUEUE", "0")
-    fake = _scripted_close(monkeypatch, tmp_path)
-    fake.reply(
-        "write",
-        0,
-        {
-            "receipt_id": "88888888-8888-8888-8888-888888888888",
-            "status": "admitted",
-            "namespace": "cursor-governance",
-            "record_id": "99999999-9999-9999-9999-999999999999",
-            "admission": {"reasons": []},
-        },
-    )
-    monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **k: ("user: ship phase b", "test"))
-
-    packet = {
-        "packet_id": "abcdef0123456789",
-        "session_id": "close-b",
-        "promotion_decisions": [
-            {
-                "kind": "lesson",
-                "body": "Use fixed-host OpenAI helper for Phase B.",
-                "decision": "promote",
-                "score": 0.9,
-            }
-        ],
-        "pickup": {
-            "active_objective": "Finish Phase B restore",
-            "next_action": "Open PR after pr-check",
-            "context_slice": "phase b",
-            "blockers": [],
-        },
-        "do_not_promote": [],
-    }
-    monkeypatch.setattr(cs, "_distill_signal_packet", lambda **k: (packet, ""))
-    monkeypatch.setattr(cs, "should_persist_derived_episode", lambda *a, **k: True)
-
-    report = cs.close_session(
-        project_dir=tmp_path,
-        session_id="close-b",
-        agent_id="cursor",
-        dry_run=True,
-    )
-    assert report["phase_a"] is True
-    assert report["phase_b"] is True
-    assert report["receipt"]["phase_b"] is True
-    assert report.get("promoted") == 1
-    assert report["continuation"]["refined"] is True
+def test_close_session_has_no_local_cognition_surface():
+    """Phase B (local distill / promote / scoring) is gone; memory owns cognition."""
+    for name in (
+        "_distill_signal_packet",
+        "_promote",
+        "_load_rules",
+        "_phase_b_enabled",
+        "PHASE_B_BUDGET",
+        "_PROMOTION_CLASSES",
+    ):
+        assert not hasattr(cs, name), f"{name} is Cursor-local memory cognition (ADR-0033)"
 
 
-def test_enqueue_fail_loud(monkeypatch, tmp_path):
-    monkeypatch.setenv("MEMORY_PHASE_B", "0")
-    monkeypatch.setenv("MEMORY_DISTILL_ENQUEUE", "1")
-    monkeypatch.setenv("MEMORY_DISTILL_S3_BUCKET", "l9-test-distill")
+def test_close_has_no_s3_queue_surface(monkeypatch, tmp_path):
+    """The S3 distill queue is retired at C15: no enqueue fields, no exit-2 path (ADR-0033)."""
     _scripted_close(monkeypatch, tmp_path)
     monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **k: ("user: enqueue me", "test"))
-
-    def boom(**kwargs):
-        raise RuntimeError("s3 put-object failed: AccessDenied")
-
-    import ops.graphiti.distill_queue.enqueue as enq
-
-    monkeypatch.setattr(enq, "enqueue_job", boom)
-
     report = cs.close_session(
-        project_dir=tmp_path,
-        session_id="close-enq",
-        agent_id="cursor",
-        dry_run=False,
+        project_dir=tmp_path, session_id="close-enq", agent_id="cursor", dry_run=False
     )
-    assert report["phase_a"] is True
-    assert report["enqueue_ok"] is False
-    assert report["receipt"]["enqueue_ok"] is False
-    assert any("enqueue failed" in w for w in report["warnings"])
-    # An enqueue failure never turns a canonical close into a non-close.
     assert report["status"] == "closed_canonically"
+    assert "enqueue_ok" not in report
+    assert "enqueue_ok" not in report["receipt"]
+    assert not any("enqueue" in w for w in report["warnings"])
+    from ops.graphiti.hydration.cli import _public_close_report
+
+    public = _public_close_report(report)
+    assert "enqueue_ok" not in public
+    assert public["distill_status"] == report["distill"]["status"]
 
 
 def test_idempotent_reclose(monkeypatch, tmp_path):
@@ -373,15 +324,15 @@ def test_idempotent_reclose(monkeypatch, tmp_path):
     assert fake.calls == []
 
 
-def test_phase_a_kept_when_phase_b_would_exceed_budget(monkeypatch, tmp_path):
-    """Synthetic clock: after Phase A, remaining budget < 3s -> skip B."""
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-test-not-used")
+def test_over_budget_close_is_reported_not_failed(monkeypatch, tmp_path):
+    """Synthetic clock: a slow close still commits Phase A and names the overrun."""
     _scripted_close(monkeypatch, tmp_path)
     monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **k: ("user: hi", "test"))
-    ticks = iter([0.0, 0.0, 28.5, 28.6, 28.7, 28.8, 29.0, 29.1, 29.2, 29.3, 29.4, 29.5])
+    # start -> after Phase A -> final elapsed
+    ticks = iter([0.0, 28.5, 31.0])
 
     def clock():
-        return next(ticks, 30.0)
+        return next(ticks, 31.0)
 
     report = cs.close_session(
         project_dir=tmp_path,
@@ -391,8 +342,8 @@ def test_phase_a_kept_when_phase_b_would_exceed_budget(monkeypatch, tmp_path):
         clock=clock,
     )
     assert report["phase_a"] is True
-    assert report["phase_b"] is False
-    assert any("insufficient time budget" in w for w in report["warnings"])
+    assert any("Phase A over budget" in w for w in report["warnings"])
+    assert any("close over budget" in w for w in report["warnings"])
 
 
 def test_unresolved_namespace_close_is_skipped_with_warning(monkeypatch, tmp_path):
@@ -805,7 +756,8 @@ def test_compile_close_gap_write_count_zero(monkeypatch, tmp_path):
     assert comp.format_additional_context(packet).startswith("CLOSE_GAP\nREPAIR: /end-session")
 
 
-def test_compile_enqueue_failed_is_not_close_gap(monkeypatch, tmp_path):
+def test_compile_legacy_enqueue_failed_receipt_still_parses_as_a_close(monkeypatch, tmp_path):
+    """closed_enqueue_failed is parse-only since C15: old receipts stay closes, none is written."""
     from ops.graphiti.hydration.session_latches import write_open_latch, write_receipt
 
     write_open_latch(tmp_path, "old-enq", background=False)
@@ -956,13 +908,9 @@ def test_adr_0028_required_sections():
 # record of how far it got.
 
 
-def _close_with_budget(monkeypatch, tmp_path, budget):
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
-    monkeypatch.setenv("MEMORY_PHASE_B", "1")
-    monkeypatch.delenv("MEMORY_DISTILL_S3_BUCKET", raising=False)
+def _close_with_budget(monkeypatch, tmp_path, budget, *, clock=None):
     _scripted_close(monkeypatch, tmp_path)
     monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **k: ("user: ship it", "test"))
-    monkeypatch.setattr(cs, "_distill_signal_packet", lambda **k: (None, "stubbed"))
     return cs.close_session(
         project_dir=tmp_path,
         session_id="budget-1",
@@ -970,21 +918,23 @@ def _close_with_budget(monkeypatch, tmp_path, budget):
         agent_id="cursor",
         dry_run=True,
         budget=budget,
+        clock=clock,
     )
 
 
-def test_small_budget_starves_phase_b_but_keeps_phase_a(monkeypatch, tmp_path):
-    """Phase A (the PICKUP write) survives a starved budget; only Phase B yields."""
-    report = _close_with_budget(monkeypatch, tmp_path, budget=2.0)
-    assert report["phase_a"] is True, "the PICKUP write must not be sacrificed to the budget"
-    assert any("insufficient time budget" in w for w in report["warnings"])
+def test_small_budget_keeps_phase_a_and_names_the_overrun(monkeypatch, tmp_path):
+    """Phase A (the continuation write) survives a starved budget; the overrun is reported."""
+    ticks = iter([0.0, 1.0, 2.5])
+    report = _close_with_budget(monkeypatch, tmp_path, budget=2.0, clock=lambda: next(ticks, 2.5))
+    assert report["phase_a"] is True, "the continuation write must not be sacrificed to the budget"
+    assert any("close over budget" in w for w in report["warnings"])
 
 
 def test_default_budget_is_unchanged_when_not_passed(monkeypatch, tmp_path):
     """budget=None keeps TOTAL_BUDGET, so every existing single-repo caller is untouched."""
     report = _close_with_budget(monkeypatch, tmp_path, budget=None)
     assert report["phase_a"] is True
-    assert not any("insufficient time budget" in w for w in report["warnings"])
+    assert not any("over budget" in w for w in report["warnings"])
 
 
 def test_budget_is_accepted_as_a_keyword(monkeypatch, tmp_path):

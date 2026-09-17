@@ -224,6 +224,7 @@ def main() -> int:
                 is_background_agent=False,
                 dry_run=False,
                 budget=per_root,
+                surface="claude-session-end",
             )
             statuses.append(f"{repo.name}={report.get('status')}")
             writes += len(report.get("writes") or [])

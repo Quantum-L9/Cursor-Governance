@@ -43,7 +43,7 @@ do not gate the edit, and no phase-lock is required to mutate the repository
 (`rules/96-multi-agent-main-bound-execution`, E7).
 
 ```bash
-python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py conflicts
+"$HOME/.cursor-governance/.venv/bin/python" -m ops.memory.cli conflicts
 ```
 
 ## Tests

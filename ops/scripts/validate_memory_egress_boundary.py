@@ -16,6 +16,15 @@ Modes:
 
 Only ``l9-graphiti-memory`` is authorized to understand the provider dialect.
 
+Lane discipline (ADR-0033, INV-03b) rides on the same scan and always
+enforces: the **hook lane's** only client is ``MemoryControlPlaneClient``
+(a hook module may not import the package or spawn the ``l9-memory`` console
+script itself), and the **agent lane's** only surface is the package's public
+CLI / MCP (an agent-lane module, declared in
+``ops/config/memory-hook-envelopes.json`` ``agent_lane_callers``, may not
+construct the hook client or spawn ``ops.memory.cli``). ``ops/memory`` itself
+is the binding and is exempt from the hook-lane rule.
+
 Usage:
     python3 ops/scripts/validate_memory_egress_boundary.py [--enforce] [--json] [--root PATH]
 """
@@ -83,6 +92,124 @@ EXCLUDED_PARTS = frozenset(
 )
 
 _TOKEN_RE = re.compile("|".join(re.escape(token) for token in FORBIDDEN_TOKENS))
+
+# --------------------------------------------------------------------------- #
+# Lane discipline (ADR-0033 / INV-03b)
+# --------------------------------------------------------------------------- #
+
+ENVELOPES_PATH = REPO_ROOT / "ops" / "config" / "memory-hook-envelopes.json"
+
+#: Where hook-lane and agent-lane production modules live.
+LANE_ROOTS: tuple[str, ...] = (
+    "ops/graphiti/",
+    "ops/hooks/",
+    "environment/agents/adapters/",
+    "environment/agents/generated-data/",
+    "environment/program-execution/",
+)
+#: The binding itself: it spawns ``l9-memory`` and imports the package on purpose.
+LANE_EXEMPT_PREFIX = "ops/memory/"
+
+_HOOK_CLIENT_USE = re.compile(
+    r"\bMemoryControlPlaneClient\b|[\"']ops\.memory\.cli[\"']|\bcanonical_hydrate\(|"
+    r"\bfrom ops\.memory\.control_plane_client import\b"
+)
+_PACKAGE_IMPORT = re.compile(r"^\s*(?:from|import)\s+l9_graphite_memory\b", re.MULTILINE)
+_CONSOLE_SPAWN = re.compile(r"[\"']l9-memory[\"']|/\s*[\"']l9-memory[\"']|\bbin/l9-memory\b")
+_CONTROL_PLANE_SPAWN = re.compile(r"[\"']ops\.memory\.cli[\"']")
+_CLIENT_CONSTRUCT = re.compile(r"\bMemoryControlPlaneClient\s*\(")
+
+
+@dataclass(frozen=True)
+class LaneFinding:
+    path: str
+    lane: str
+    rule: str
+    excerpt: str
+
+
+def load_agent_lane_callers(path: Path = ENVELOPES_PATH) -> frozenset[str]:
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return frozenset()
+    callers = raw.get("agent_lane_callers") if isinstance(raw, dict) else None
+    return frozenset(str(item) for item in (callers or ()))
+
+
+def _first_line(text: str, pattern: re.Pattern[str]) -> str:
+    match = pattern.search(text)
+    if not match:
+        return ""
+    start = text.rfind("\n", 0, match.start()) + 1
+    end = text.find("\n", match.end())
+    return text[start : end if end != -1 else None].strip()[:160]
+
+
+def _strip_comments_and_docstrings(text: str) -> str:
+    """Lane rules judge code, not prose about code."""
+    text = re.sub(r'"""[\s\S]*?"""|\'\'\'[\s\S]*?\'\'\'', "", text)
+    return "\n".join(line.split("#", 1)[0] for line in text.splitlines())
+
+
+def scan_lanes(root: Path, agent_lane: frozenset[str]) -> list[LaneFinding]:
+    findings: list[LaneFinding] = []
+    for path in tracked_files(root):
+        if not path.is_file() or path.suffix != ".py":
+            continue
+        relative = path.relative_to(root).as_posix()
+        if relative.startswith(LANE_EXEMPT_PREFIX) or not is_production_path(relative):
+            continue
+        if not relative.startswith(LANE_ROOTS):
+            continue
+        # Colocated test modules fake both doors on purpose; the lanes judge callers.
+        if path.name.startswith("test_") or path.name.endswith("_test.py"):
+            continue
+        try:
+            code = _strip_comments_and_docstrings(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError):
+            continue
+        if relative in agent_lane:
+            if _CLIENT_CONSTRUCT.search(code):
+                findings.append(
+                    LaneFinding(
+                        relative,
+                        "agent",
+                        "agent-lane module constructs the hook client",
+                        _first_line(code, _CLIENT_CONSTRUCT),
+                    )
+                )
+            if _CONTROL_PLANE_SPAWN.search(code):
+                findings.append(
+                    LaneFinding(
+                        relative,
+                        "agent",
+                        "agent-lane module spawns the operator CLI (ops.memory.cli)",
+                        _first_line(code, _CONTROL_PLANE_SPAWN),
+                    )
+                )
+            continue
+        if not _HOOK_CLIENT_USE.search(code):
+            continue
+        if _PACKAGE_IMPORT.search(code):
+            findings.append(
+                LaneFinding(
+                    relative,
+                    "hook",
+                    "hook-lane module imports l9_graphite_memory directly",
+                    _first_line(code, _PACKAGE_IMPORT),
+                )
+            )
+        if _CONSOLE_SPAWN.search(code):
+            findings.append(
+                LaneFinding(
+                    relative,
+                    "hook",
+                    "hook-lane module spawns the l9-memory console script itself",
+                    _first_line(code, _CONSOLE_SPAWN),
+                )
+            )
+    return findings
 
 
 @dataclass(frozen=True)
@@ -200,11 +327,17 @@ def report(
     *,
     enforce: bool,
     as_json: bool,
+    lane_findings: list[LaneFinding] | None = None,
 ) -> int:
+    lanes = list(lane_findings or [])
     unlisted = [item for item in findings if not item.allowlisted]
     listed = [item for item in findings if item.allowlisted]
     blocking = bool(unlisted or expired)
-    verdict = "FAIL" if (enforce and blocking) else ("WARN" if blocking or listed else "PASS")
+    # Lane discipline has no warning mode and no allowlist: the two lanes were
+    # declared at ADR-0033 with every caller already placed.
+    verdict = (
+        "FAIL" if ((enforce and blocking) or lanes) else ("WARN" if blocking or listed else "PASS")
+    )
     allowlisted_by_file = _by_file(listed)
     summary: dict[str, Any] = {
         "validator": "memory_egress_boundary",
@@ -217,6 +350,7 @@ def report(
         "allowlist_expired": [asdict(entry) for entry in expired],
         "unlisted": [asdict(item) for item in unlisted],
         "allowlisted_by_file": allowlisted_by_file,
+        "lane_findings": [asdict(item) for item in lanes],
     }
     if as_json:
         sys.stdout.write(json.dumps(summary, indent=2, sort_keys=True) + "\n")
@@ -224,7 +358,8 @@ def report(
         sys.stdout.write(
             f"memory egress boundary [{summary['mode']}]: {verdict} — "
             f"{len(findings)} provider references in production paths "
-            f"({len(listed)} allowlisted for retirement, {len(unlisted)} unlisted)\n"
+            f"({len(listed)} allowlisted for retirement, {len(unlisted)} unlisted); "
+            f"{len(lanes)} lane violation(s)\n"
         )
         for path, count in sorted(allowlisted_by_file.items()):
             sys.stdout.write(f"  allowlisted  {path} ({count})\n")
@@ -234,11 +369,15 @@ def report(
             )
         for entry in expired:
             sys.stdout.write(f"  EXPIRED      allowlist {entry.path} (expired {entry.expires})\n")
+        for item in lanes:
+            sys.stdout.write(
+                f"  LANE         {item.path} [{item.lane} lane] {item.rule} — {item.excerpt}\n"
+            )
         if verdict == "WARN" and not enforce:
             sys.stdout.write(
                 "  warning mode: exit 0. Stage C11 flips this validator to --enforce.\n"
             )
-    return 1 if (enforce and blocking) else 0
+    return 1 if ((enforce and blocking) or lanes) else 0
 
 
 def _by_file(findings: list[Finding]) -> dict[str, int]:
@@ -258,12 +397,21 @@ def main(argv: list[str] | None = None) -> int:
         "--enforce", action="store_true", help="fail on unlisted or expired findings"
     )
     parser.add_argument("--json", action="store_true")
+    parser.add_argument(
+        "--envelopes",
+        default=str(ENVELOPES_PATH),
+        help="hook-envelope registry that declares agent_lane_callers",
+    )
+    parser.add_argument(
+        "--no-lanes", action="store_true", help="skip the ADR-0033 lane-discipline scan"
+    )
     args = parser.parse_args(argv)
     root = Path(args.root).resolve()
     mode, allowlist = load_allowlist(Path(args.allowlist))
     enforce = args.enforce or mode == "enforce"
     findings, expired = scan(root, allowlist)
-    return report(findings, expired, enforce=enforce, as_json=args.json)
+    lanes = [] if args.no_lanes else scan_lanes(root, load_agent_lane_callers(Path(args.envelopes)))
+    return report(findings, expired, enforce=enforce, as_json=args.json, lane_findings=lanes)
 
 
 if __name__ == "__main__":

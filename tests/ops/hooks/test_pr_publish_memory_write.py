@@ -121,10 +121,12 @@ def test_write_argv_is_operator_cli_pickup_not_a_provider_client() -> None:
         agent_id="cursor",
         dry_run=True,
     )
-    assert argv[:6] == [
+    assert argv[:8] == [
         "/gov/.venv/bin/python",
         "-m",
         "ops.memory.cli",
+        "--surface",
+        "pr-publish",
         "write",
         "PICKUP: PR o/n#1 published.",
         "--kind",
@@ -175,6 +177,41 @@ def test_cli_failure_is_warn_and_exit_zero(tmp_path: Path, monkeypatch: pytest.M
     assert receipt["returncode"] == 3
 
 
+def test_cli_is_spawned_from_the_hooks_own_tree_not_the_resolver_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The hook and ``ops.memory.cli`` are co-versioned.
+
+    ``open_pr_after_gate.sh`` hands over the resolver's ``--gov-root`` — the
+    live SSOT clone, which lags an open PR by design. Spawning the CLI there
+    sent ``--surface`` to a parser that did not know it yet (argparse then
+    reported the surface name as an invalid subcommand). cwd and interpreter
+    come from this tree; the foreign root only donates an interpreter when
+    this tree has none.
+    """
+
+    (tmp_path / ".l9" / "pr").mkdir(parents=True)
+    (tmp_path / hook.SUMMARY_REL).write_text(json.dumps(_summary()), encoding="utf-8")
+    monkeypatch.delenv("L9_PR_PUBLISH_MEMORY", raising=False)
+    monkeypatch.setenv("L9_MEMORY_ENABLED", "1")
+    foreign = tmp_path / "ssot"
+    (foreign / ".venv" / "bin").mkdir(parents=True)
+    (foreign / ".venv" / "bin" / "python").write_text("", encoding="utf-8")
+    seen: dict[str, object] = {}
+
+    def fake(argv, *, cwd, timeout=0.0):
+        seen["argv"], seen["cwd"] = argv, cwd
+        return SimpleNamespace(returncode=0, stdout="OK", stderr="")
+
+    monkeypatch.setattr(hook, "run_write", fake)
+    assert hook.main(["--workspace", str(tmp_path), "--gov-root", str(foreign)]) == 0
+    assert seen["cwd"] == hook.OWN_ROOT
+    assert hook.OWN_ROOT == Path(hook.__file__).resolve().parents[2]
+    own_python = hook.OWN_ROOT / ".venv" / "bin" / "python"
+    expected = own_python if own_python.is_file() else foreign / ".venv" / "bin" / "python"
+    assert Path(seen["argv"][0]) == expected
+
+
 CURRENT = {
     "repo": "Quantum-L9/Cursor-Governance",
     "number": 543,
@@ -222,7 +259,8 @@ def _publish(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, summary_doc, **ove
     )
     assert rc == 0
     receipt = json.loads((tmp_path / hook.RECEIPT_REL).read_text(encoding="utf-8"))
-    fact = seen[0][4] if seen else ""
+    # argv: interpreter -m ops.memory.cli --surface <lane> write <content> ...
+    fact = seen[0][seen[0].index("write") + 1] if seen else ""
     return receipt, fact
 
 

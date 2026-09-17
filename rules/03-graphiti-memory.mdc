@@ -1,8 +1,8 @@
 ---
 id: l9.rule.graphiti.memory
-version: 1.4.0
+version: 1.5.0
 description: "Agent memory SSOT (canonical l9-graphite-memory control plane) \u2014 retrieval\
-  \ authority, namespace, dual interactive write (write_agent + write_governed), temporal supersedes/conflicts"
+  \ authority, namespace, two lanes (agent write_agent direct; hooks bounded), temporal supersedes/conflicts"
 scope: global
 domain: memory
 activation: always
@@ -25,6 +25,8 @@ alwaysApply: true
 **Updated: 2026-09-07** *(single-path write wording superseded 2026-09-13)* — Doctrine closure (CANONICAL_LAW §8.3, ADR-0030 items 7–9): ONE authority (`MemoryService`), ONE canonical egress (`ops/memory`), Graphiti is a downstream projection. Resume SSOT is the canonical continuation record (`ContinuationCapsuleV2`), never Graphiti `inject` / PICKUP. A model-initiated durable write is `memory.phase_lock` → `memory.write_governed` on the `l9-graphite-memory` MCP server; that lock governs memory-write consistency only and is never repository-write authority.
 
 **Updated: 2026-09-13** — ADR-0031 / CANONICAL_LAW §8.5: ordinary / cold model writes use MCP `memory.write_agent` (no `phase_lock`). Conflict-sensitive writes remain `memory.phase_lock` → `memory.write_governed`. Agent HTTP is sealed. Identity is the shared agents door + a signed `agent_id` assertion; the human door stays private.
+
+**Updated: 2026-09-15** — ADR-0033 / CANONICAL_LAW §8.6 (two lanes, one `MemoryService`; INV-03b). "ONE canonical egress (`ops/memory`)" above means *no provider bypass*, not *all memory traffic passes through Cursor-Governance*. **Agent lane:** the ordinary write is `memory.write_agent` (MCP) or `l9-memory write`, immediately visible to the next `hydrate` / `search`; it waits on no receipt, phase, session close, PR or governance approval, and Cursor-Governance must not gate it (`memory_gate.py` exempts `l9-memory` / `ops.memory.cli`). `phase_lock` → `write_governed` is an optional conflict-sensitive pair. **Hook lane:** SessionStart / End, prefetch, PR publish and PE/SGD ingest use `MemoryControlPlaneClient(surface=…)` under `ops/config/memory-hook-envelopes.json`. Cursor-Governance holds no local memory cognition (Phase B, promotion rules, distill queue deleted at C15); sessionEnd hands the redacted excerpt to `l9-memory distill`. `graphiti_memory_client.py` is deleted (the C11 tombstone is gone); `make graphiti-health` is `make memory-readiness`.
 
 
 ## Retrieval authority (canonical order)

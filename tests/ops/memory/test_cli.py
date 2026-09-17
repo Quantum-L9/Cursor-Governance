@@ -72,6 +72,39 @@ def test_write_maps_legacy_kinds_and_stamps_the_agent_tag(
     assert document["namespace"]["write_namespace_hint"] == "cursor-governance"
 
 
+def test_pickup_context_writes_an_episodic_record_tagged_as_a_continuation(
+    monkeypatch, bound, fake_cli: FakeMemoryCli
+) -> None:
+    """A continuation is tag-selected (hydration.py), not a MemoryClass.
+
+    ``l9-memory write`` rejects ``session_continuation`` as a class, so the
+    alias that used to emit it produced INVALID_RECEIPT on every publish.
+    """
+
+    fake_cli.reply("write", 0, _write_payload())
+    _use(monkeypatch, bound, fake_cli)
+    code = cli.main(
+        ["write", "PICKUP", "--kind", "pickup_context", "--workspace", str(ROOT), "--tag", "x"]
+    )
+    assert code == cli.EXIT_OK
+    argv = fake_cli.calls[-1][0]
+    assert argv[argv.index("--kind") + 1] == "episodic"
+    tags = [argv[i + 1] for i, a in enumerate(argv) if a == "--tag"]
+    assert tags == ["x", cli.CONTINUATION_TAG]
+    assert "session_continuation" not in argv[argv.index("--kind") + 1 :][:1]
+
+
+def test_every_write_alias_reaches_a_class_the_bound_release_accepts(bound) -> None:
+    """KIND_ALIASES only exists to land on memory's vocabulary; prove it does."""
+
+    from l9_graphite_memory.cli import _LEGACY_KIND_MAP  # noqa: PLC0415
+    from l9_graphite_memory.contracts import MemoryClass  # noqa: PLC0415
+
+    accepted = {item.value for item in MemoryClass} | set(_LEGACY_KIND_MAP)
+    for kind, target in cli.KIND_ALIASES.items():
+        assert target in accepted, f"--kind {kind} maps to {target!r}, which memory refuses"
+
+
 def test_search_with_no_hits_completes(monkeypatch, bound, fake_cli: FakeMemoryCli, capsys) -> None:
     fake_cli.reply("search", 0, search_payload())
     _use(monkeypatch, bound, fake_cli)
@@ -107,13 +140,15 @@ def test_cli_module_spells_no_provider_vocabulary() -> None:
         assert forbidden not in src
 
 
-def test_tombstone_fails_loudly_and_names_the_replacement() -> None:
+def test_the_provider_client_and_its_tombstone_are_gone() -> None:
+    """C15 (ADR-0033): nothing at the historical path, not even a stub that exits 2."""
+    assert not (ROOT / "ops" / "graphiti" / "graphiti_memory_client.py").exists()
     proc = subprocess.run(
-        [sys.executable, str(ROOT / "ops" / "graphiti" / "graphiti_memory_client.py"), "health"],
+        [sys.executable, "-m", "ops.memory.cli", "--help"],
         capture_output=True,
         text=True,
         check=False,
+        cwd=ROOT,
     )
-    assert proc.returncode == 2
-    assert "ops.memory.cli health" in proc.stderr
-    assert proc.stdout == ""
+    assert proc.returncode == 0
+    assert "health" in proc.stdout

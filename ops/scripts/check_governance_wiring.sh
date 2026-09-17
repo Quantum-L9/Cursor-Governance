@@ -432,11 +432,23 @@ if [ -f "$MEMORY_BOUNDARY" ]; then
   else
     warn "memory runtime unbound — run: make -C \"$GC\" memory-binding"
   fi
-  if [ -f "$GC/ops/graphiti/graphiti_memory_client.py" ] \
-     && ! grep -q "RETIRED_AT_STAGE" "$GC/ops/graphiti/graphiti_memory_client.py" 2>/dev/null; then
+  # C15 (ADR-0033): the provider client and its C11 tombstone are both gone.
+  # The tree under inspection is judged by the epoch it declares: once
+  # memory-canonical-epoch.json carries provider_client_deleted_at, any file at
+  # that path is a regression whatever it says about itself. An older tree (the
+  # live SSOT legitimately lags an open PR) may still carry the C11 tombstone,
+  # but never a live client.
+  PROVIDER_CLIENT="$GC/ops/graphiti/graphiti_memory_client.py"
+  if grep -q '"provider_client_deleted_at"' "$GC/ops/config/memory-canonical-epoch.json" 2>/dev/null; then
+    if [ -e "$PROVIDER_CLIENT" ]; then
+      fail "legacy provider client present at ops/graphiti/graphiti_memory_client.py (deleted at C15; use python -m ops.memory.cli)"
+    else
+      pass "no provider client (deleted at C15)"
+    fi
+  elif [ -f "$PROVIDER_CLIENT" ] && ! grep -q "RETIRED_AT_STAGE" "$PROVIDER_CLIENT" 2>/dev/null; then
     fail "legacy provider client present at ops/graphiti/graphiti_memory_client.py (must be the C11 tombstone)"
   else
-    pass "no provider client (tombstone only)"
+    pass "no provider client (pre-C15 tree: tombstone only)"
   fi
   # The bootstrap hook delegates to the memory orchestrator internally, so either
   # entry in sessionStart satisfies the wiring (setup retires the orchestrator-only entry).

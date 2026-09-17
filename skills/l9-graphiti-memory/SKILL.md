@@ -1,16 +1,16 @@
 ---
 name: l9-graphiti-memory
-description: "Canonical agent memory control plane (l9-graphite-memory) — readiness, namespace resolution, canonical hydrate/search, interactive write (cold: memory.write_agent; high-stakes: memory.phase_lock → memory.write_governed), operator CLI write, GMP Phase 0 MEMORY_PREFETCH, /end-session repair. Use when wiring memory, debugging hydration, checking memory health, writing a durable fact, reconciling legacy provider history, or closing a session."
+description: "Canonical agent memory control plane (l9-graphite-memory) — readiness, namespace resolution, canonical hydrate/search, agent-lane write (ordinary: memory.write_agent, direct and ungated; conflict-sensitive: memory.phase_lock → memory.write_governed), bounded hook-lane client, operator CLI write, GMP Phase 0 MEMORY_PREFETCH, /end-session repair. Use when wiring memory, debugging hydration, checking memory health, writing a durable fact, reconciling legacy provider history, or closing a session."
 disable-model-invocation: false
 metadata:
   skill_schema: 1
   layer: control_plane
   role: skill_entrypoint
-  tags: [l9, memory, control-plane, prefetch, gmp, end-session, write-agent, write-governed]
+  tags: [l9, memory, control-plane, prefetch, gmp, end-session, write-agent, write-governed, two-lanes]
   owner: igor_beylin
   status: active
-  version: 2.2.1
-  updated: 2026-09-13
+  version: 2.3.0
+  updated: 2026-09-15
 ---
 
 # Agent memory (canonical control plane)
@@ -21,8 +21,8 @@ Operate the one agent episodic memory: the canonical **`l9-graphite-memory`**
 control plane (`memory-control-plane/v1`), reached from this repository only
 through `ops/memory` (INV-03). Graphiti is a **projection memory owns**, not a
 store this repository calls: the direct provider client was retired at
-realignment stage C11 (`ops/graphiti/graphiti_memory_client.py` is a
-tombstone), no surface holds a provider URL or bearer (stage C9), and the
+realignment stage C11 and deleted at C15 (nothing remains at
+`ops/graphiti/graphiti_memory_client.py`), no surface holds a provider URL or bearer (stage C9), and the
 resume SSOT is the canonical continuation record (`ContinuationCapsuleV2`),
 never `memory-bank/`.
 
@@ -83,11 +83,28 @@ discovered.
 `~/.cursor/graphiti.env` carries switches only. It never carries a URL or a
 bearer; the memory runtime resolves its own configuration (memory ADR-016).
 
-## Interactive write (model-initiated)
+## Two lanes, one `MemoryService` (ADR-0033, INV-03b)
+
+- **Agent lane — you.** `memory.write_agent` (MCP) or `l9-memory write` from a
+  shell is the ordinary write. It is direct and ungated: no SessionStart
+  receipt, no phase, no session close, no PR step, no Cursor-Governance
+  approval or receipt stands in front of it, and the fact is visible to the next
+  `hydrate` / `search` immediately (real-time handoff). Cursor-Governance's
+  hydration gate exempts `l9-memory` / `python -m ops.memory.cli`.
+- **Hook lane — automatic machinery.** SessionStart / End, plan prefetch, PR
+  publish and PE/SGD ingest go through `MemoryControlPlaneClient(surface=…)`
+  under `ops/config/memory-hook-envelopes.json` (allowed ops, record classes,
+  `max_records`, `max_bytes`, `provenance_required`; `principal.type=hook`).
+  Cursor-Governance keeps no memory cognition of its own: the close hands the
+  redacted excerpt to `l9-memory distill`.
+- Both lanes end at `MemoryService`. Neither touches a provider.
+
+## Interactive write (agent lane)
 
 On the `l9-graphite-memory` MCP server (rendered only when
 `L9_MEMORY_INTERPRETER` is bound; `make memory-mcp-install`). ADR-0031 dual
-classes:
+classes — `write_agent` is the ordinary write; the governed pair is optional
+and conflict-sensitive:
 
 ```text
 # ordinary / cold — no SessionStart receipt, no phase_lock
@@ -223,9 +240,10 @@ bash .cursor-commands/ops/graphiti/test_gate_e2e_full.sh
 
 ## Authority
 
-1. `CANONICAL_LAW.md` §8.2 (2026-09-06) — memory control plane is the single front door; §8.3 (2026-09-07) — interactive write contract; §8.5 (2026-09-13) — ADR-0031 dual write classes
-2. `docs/decisions/ADR-0031-signed-agent-mcp-write-classes.md` (cold `write_agent`; high-stakes `write_governed`); ADR-0030 items 7–9 as amended
-3. `rules/03-graphiti-memory.mdc`, `98-graphiti-memory-gate.mdc`, `97-graph-layer-boundary.mdc`, `87-cursor-memory-kernel.mdc`
-4. `ops/memory/README.md` (caller taxonomy), `ops/config/memory-binding.json`, `ops/graphiti/group_registry.yaml` (hints, no grants), `environment/agents/adapters/claude-code/memory/memory-enforcement.contract.json` (`interactive_memory_write`)
-5. `skills/l9-end-session/SKILL.md` — session-close repair path
-6. `docs/decisions/ADR-0005-one-agent-memory-domain-out-of-band.md`
+1. `CANONICAL_LAW.md` §8.2 (2026-09-06) — memory control plane is the single front door; §8.3 (2026-09-07) — interactive write contract; §8.5 (2026-09-13) — ADR-0031 dual write classes; §8.6 (2026-09-15) — two lanes, one `MemoryService` (agent lane direct and ungated; hook lane bounded)
+2. `docs/decisions/ADR-0033-two-lanes-one-memoryservice.md`; `INVARIANTS.md` INV-03b; `ops/config/memory-hook-envelopes.json`
+3. `docs/decisions/ADR-0031-signed-agent-mcp-write-classes.md` (cold `write_agent`; high-stakes `write_governed`); ADR-0030 items 7–9 as amended
+4. `rules/03-graphiti-memory.mdc`, `98-graphiti-memory-gate.mdc`, `97-graph-layer-boundary.mdc`, `87-cursor-memory-kernel.mdc`
+5. `ops/memory/README.md` (caller taxonomy), `ops/config/memory-binding.json`, `ops/graphiti/group_registry.yaml` (hints, no grants), `environment/agents/adapters/claude-code/memory/memory-enforcement.contract.json` (`interactive_memory_write`)
+6. `skills/l9-end-session/SKILL.md` — session-close repair path
+7. `docs/decisions/ADR-0005-one-agent-memory-domain-out-of-band.md`

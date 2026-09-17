@@ -20,6 +20,16 @@
     "phase_lock",
     "verify_phase_lock"
   ],
+  "bounded_hook_cli_commands": {
+    "_note": "CLI subcommands the bound release ships for the hook lane but does not advertise in capabilities.transports[cli].operations, verified against the merged source at the bound ref. runtime_binding cannot require them through the capabilities receipt; tests/ops/memory/test_cross_repo_lifecycle.py proves each against the real runtime. When upstream advertises one, move it into required_cli_operations.",
+    "distill": {
+      "subcommand": "distill",
+      "positional": ["path"],
+      "options": ["--group-id", "--repository", "--dry-run"],
+      "record_bound": "preflight-dry-run",
+      "record_bound_note": "The bound parser defines no input record cap (no --max-records at e3a79626). The hook lane bounds max_records by running the same deterministic distill with --dry-run first — memory extracts and counts, nothing persists — and refuses the committing pass before any write when candidate_count exceeds the surface's remaining allowance. Emitting an option outside `options` is a contract break (audit F-604-DISTILL-CAP); ops/memory/control_plane_client.py DISTILL_CLI_OPTIONS mirrors this list and tests/ops/memory/test_cross_repo_lifecycle.py proves it against the exact bound parser."
+    }
+  },
   "source": {
     "kind": "git",
     "repository": "Quantum-L9/l9-graphiti-memory",
@@ -101,7 +111,8 @@
   },
   "contract_model_modules": [
     "l9_graphite_memory.contracts",
-    "l9_graphite_memory.group_resolver"
+    "l9_graphite_memory.group_resolver",
+    "l9_graphite_memory.extraction"
   ],
-  "contract_model_modules_note": "Modules the schema probe searches for canonical receipt models. The contracts package is walked including its submodules; GroupResolution (Cursor's ResolveReceipt) lives in group_resolver.py and is not re-exported from contracts, so it must be named explicitly. Verified against the merged source at the bound ref, not inferred."
+  "contract_model_modules_note": "Modules the schema probe searches for canonical receipt models. The contracts package is walked including its submodules; GroupResolution (Cursor's ResolveReceipt) lives in group_resolver.py and is not re-exported from contracts, so it must be named explicitly. Verified against the merged source at the bound ref, not inferred. DistillationReceipt is defined in extraction/distiller.py (ADR-0033 canonical distill) and is likewise not re-exported from contracts."
 }

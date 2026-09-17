@@ -1,7 +1,7 @@
 """Cursor's canonical memory command line (realignment stage C11).
 
-This is the executable successor of the retired provider client
-(``ops/graphiti/graphiti_memory_client.py``): the same operator vocabulary
+This is the executable successor of the retired provider client (retired at
+C11, deleted at C15 — ADR-0033): the same operator vocabulary
 (``health``, ``resolve``, ``search``, ``write``, ``hydrate``, ``conflicts``)
 routed through :class:`ops.memory.control_plane_client.MemoryControlPlaneClient`
 to the bound ``l9-memory`` runtime. It knows no provider, holds no credential
@@ -38,6 +38,7 @@ from ops.memory.control_plane_client import (
     OperationOutcome,
     OutcomeStatus,
 )
+from ops.memory.hook_envelope import UnknownHookSurface
 from ops.memory.namespace_context import NamespaceContext, resolve_namespace_context
 from ops.memory.runtime_binding import resolve_runtime_binding
 
@@ -48,9 +49,15 @@ EXIT_UNBOUND = 3
 _COMPLETED = frozenset({OutcomeStatus.OK, OutcomeStatus.NO_HITS, OutcomeStatus.NOT_COMMITTED})
 
 # The legacy client accepted ``--kind`` with these names; memory classes are
-# the canonical vocabulary and the older aliases map onto them.
+# the canonical vocabulary and the older aliases map onto them. A continuation
+# is not a memory class: ``l9-memory write`` accepts only MemoryClass values
+# (identity … meta), and hydration selects continuations by the
+# ``session_continuation`` *tag* (hydration.py). ``pickup_context`` therefore
+# writes an ``episodic`` record carrying that tag; ``session_continuation`` as a
+# class exists only on the governed-candidate path (session_contracts.py).
+CONTINUATION_TAG = "session_continuation"
 KIND_ALIASES = {
-    "pickup_context": "session_continuation",
+    "pickup_context": "episodic",
     "session_summary": "session_summary",
     "note": "observation",
     "error": "lesson",
@@ -115,7 +122,9 @@ def _emit(document: dict[str, Any]) -> None:
 
 def _client(args: argparse.Namespace) -> MemoryControlPlaneClient:
     binding = resolve_runtime_binding()
-    return MemoryControlPlaneClient(binding, timeout=float(args.timeout))
+    return MemoryControlPlaneClient(
+        binding, timeout=float(args.timeout), surface=getattr(args, "surface", None) or None
+    )
 
 
 def cmd_health(args: argparse.Namespace) -> int:
@@ -163,6 +172,8 @@ def cmd_write(args: argparse.Namespace) -> int:
     tags = list(args.tag)
     if args.agent_id:
         tags.append(f"agent:{args.agent_id}")
+    if args.kind == "pickup_context" and CONTINUATION_TAG not in tags:
+        tags.append(CONTINUATION_TAG)
     outcome = _client(args).write(
         args.content,
         workspace=_run_at(context),
@@ -272,6 +283,14 @@ def build_parser() -> argparse.ArgumentParser:
         description="Cursor's canonical memory CLI over the l9-graphite-memory control plane.",
     )
     parser.add_argument("--timeout", type=float, default=30.0, help="seconds per memory call")
+    parser.add_argument(
+        "--surface",
+        default=None,
+        help=(
+            "hook-lane surface (ops/config/memory-hook-envelopes.json). Automatic hooks "
+            "that reach this CLI by subprocess name theirs; omitted = operator form"
+        ),
+    )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p = sub.add_parser("health", help="canonical memory health receipt")
@@ -353,7 +372,20 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(list(argv) if argv is not None else None)
-    return int(args.func(args))
+    try:
+        return int(args.func(args))
+    except UnknownHookSurface as exc:
+        # A hook naming an undeclared surface is a wiring fault in the caller,
+        # refused before any memory traffic (ADR-0033 B7).
+        _emit(
+            {
+                "operation": args.cmd,
+                "status": "REJECTED",
+                "ok": False,
+                "error": f"REJECTED:envelope {exc}",
+            }
+        )
+        return EXIT_REFUSED
 
 
 if __name__ == "__main__":

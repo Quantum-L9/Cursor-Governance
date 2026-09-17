@@ -1,9 +1,9 @@
 ---
 id: l9.rule.graphiti.memory.gate
-version: 1.2.0
+version: 1.3.0
 description: "Memory namespace gate \u2014 forbidden namespaces; hydration-only write gates\
   \ when L9_MEMORY_WRITE_GATES=1; memory phase-lock is a governed-write precondition, never\
-  \ repository authority"
+  \ repository authority; the gate never interposes on the agent memory lane"
 scope: global
 activation: always
 authority: canonical_global
@@ -13,6 +13,8 @@ alwaysApply: true
 # Memory Gate (canonical control plane)
 
 **Updated: 2026-09-06** — Memory realignment C11/C12: the sole front door is the canonical `l9-graphite-memory` control plane through `ops/memory` (`python -m ops.memory.cli`); Graphiti is a projection memory owns. `ops/graphiti/graphiti_memory_client.py` is a tombstone, no surface holds a provider URL or bearer, and `~/.cursor/graphiti.env` carries switches only. CANONICAL_LAW §8.2, ADR-0030.
+
+**Updated: 2026-09-15** — ADR-0033 / CANONICAL_LAW §8.6 (two lanes, one `MemoryService`; INV-03b). This gate gates **repository edits** on hydration; it never gates a memory write. The Bash matcher exempts `l9-memory`, `python -m ops.memory.cli` and `memory_prefetch.py` (`ops/autonomy/memory_lane_exemption.py`), and no PreToolUse / `before*` matcher, deny list or contract may name a memory MCP tool (`mcp__l9-graphite-memory__*`) — `tests/ops/memory/test_no_agent_lane_interposition.py`. The ordinary agent write is `memory.write_agent`, ungated; `phase_lock` → `write_governed` below is the optional conflict-sensitive pair. `graphiti_memory_client.py` is deleted at C15.
 
 ## Namespace contract
 

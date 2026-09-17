@@ -31,7 +31,6 @@ def _cmd_compile(args: argparse.Namespace) -> int:
 
 def _public_close_report(report: dict) -> dict:
     """Stdout-safe close report — ints/bools only (breaks secret taint to logs)."""
-    enqueue_ok = report.get("enqueue_ok")
     status = report.get("status")
     allowed = {
         "closed_canonically",
@@ -48,13 +47,11 @@ def _public_close_report(report: dict) -> dict:
     return {
         "status": status if status in allowed else "other",
         "phase_a": bool(report.get("phase_a") is True),
-        "phase_b": bool(report.get("phase_b") is True),
-        "enqueue_ok": True if enqueue_ok is True else (False if enqueue_ok is False else None),
-        "enqueue_error_present": bool(report.get("enqueue_error")),
         "write_count": len([w for w in report.get("writes") or [] if w.get("written")]),
         "warning_count": len(report.get("warnings") or []),
         "continuation_status": str(continuation.get("status") or "none"),
         "close_status": str(close.get("status") or "none"),
+        "distill_status": str((report.get("distill") or {}).get("status") or "none"),
         "close_replayed": bool(close.get("replayed")),
     }
 
@@ -135,8 +132,6 @@ def _cmd_close(args: argparse.Namespace) -> int:
     status = report.get("status")
     if status in {"failed", "close_failed", "close_incomplete"}:
         return 1
-    if report.get("enqueue_ok") is False:
-        return 2
     return 0
 
 
