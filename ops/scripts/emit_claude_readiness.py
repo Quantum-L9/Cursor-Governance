@@ -25,7 +25,7 @@ since realignment stage C9):
   ~/.l9/claude/bootstrap-state.json      capabilities / memory / mcp coarse words
   ops/memory/diagnostics.py              memory.cli (R0/R1 binding + executable),
                                          memory control plane (R2/R3 store + service)
-  workspace .mcp.json + L9_MEMORY_INTERPRETER
+  workspace .mcp.json + spawn wrapper + bound interpreter
                                          Claude mcp (not Cursor diagnostics R4)
   make -C $GOV l9-consumer-safe-list     Makefile facade
   ops/scripts/install_l9_dispatcher.sh --check   dispatcher install
@@ -377,11 +377,12 @@ def _memory_control_plane_health(levels: dict[str, str] | None) -> tuple[str, st
     return READY, "canonical store and service ready"
 
 
-#: The environment variable mcp.template.json expands into the memory server's
-#: ``command``. The rendered entry is bound to the interpreter only when its
-#: command is that reference (or the same path spelled out).
+#: Claude Code's projected command is the spawn wrapper. HOME is expanded by
+#: the client at load; readiness accepts the ${HOME} reference or the same
+#: path spelled out against the environ used for the probe.
 _MEMORY_INTERPRETER_ENV = "L9_MEMORY_INTERPRETER"
-_MEMORY_INTERPRETER_REF = "${" + _MEMORY_INTERPRETER_ENV + "}"
+_MEMORY_WRAPPER_REF = "${HOME}/.cursor-governance/ops/memory/run_memory_mcp.sh"
+_MEMORY_WRAPPER_REL = Path(".cursor-governance") / "ops" / "memory" / "run_memory_mcp.sh"
 
 #: Asked of the bound interpreter itself. ``find_spec`` on the top-level
 #: package imports nothing, so the probe proves the package is reachable from
@@ -412,55 +413,64 @@ def _interpreter_carries_memory_package(interpreter: Path) -> bool | None:
     return proc.returncode == 0
 
 
+def _memory_wrapper_path(environ: Mapping[str, str]) -> Path:
+    home = (environ.get("HOME") or "").strip() or str(Path.home())
+    return Path(home) / _MEMORY_WRAPPER_REL
+
+
+def _resolve_memory_interpreter(environ: Mapping[str, str]) -> str:
+    """Proven interpreter path, or empty.
+
+    An explicit ``L9_MEMORY_INTERPRETER`` is a candidate the parent already
+    chose. When it is absent the wrapper will resolve via runtime_binding, so
+    readiness must do the same — a desktop session is READY without the
+    parent exporting the variable.
+    """
+    explicit = (environ.get(_MEMORY_INTERPRETER_ENV) or "").strip()
+    if explicit:
+        return explicit
+    try:
+        from ops.memory.runtime_binding import resolve_runtime_binding
+    except Exception:
+        return ""
+    try:
+        binding = resolve_runtime_binding()
+    except Exception:
+        return ""
+    if getattr(binding, "status", None) not in ("exact", "compatible"):
+        return ""
+    return str(getattr(binding, "interpreter", None) or "").strip()
+
+
 def _claude_mcp_health(
     workspace: Path,
     *,
     gated_out: frozenset[str] = frozenset(),
     environ: Mapping[str, str] | None = None,
 ) -> tuple[str, str]:
-    """Claude project MCP is READY only when the rendered entry will actually run.
+    """Claude project MCP is READY only when the rendered wrapper will actually run.
 
     Diagnostics R4 is Cursor ``client cursor status`` (``~/.cursor/mcp.json``).
     That is the wrong file on Claude Code, and structurally absent on Web and
     Mobile (SESSION_START_SPEC hard constraint 4), so R4 is never read here.
 
-    What IS read is executable binding truth, not configuration presence. The
-    first version of this check returned READY for any non-empty
-    ``L9_MEMORY_INTERPRETER`` and any ``.mcp.json`` carrying the server key,
-    which is exactly the false-READY the receipt exists to prevent: a cached
-    shell exporting a deleted venv, a hand-edited ``.mcp.json`` whose command
-    names some other python, or a bound interpreter that no longer carries the
-    package all read as healthy. Each is now a named DEGRADED:
+    READY requires the spawn wrapper in ``.mcp.json``, the wrapper file on
+    disk, and a proven interpreter that carries ``l9_graphite_memory``. The
+    parent does not have to export ``L9_MEMORY_INTERPRETER`` — that is the
+    desktop bind gap the wrapper closes. Named DEGRADED states:
 
-      unbound          the variable is empty (the projection gates the server
-                       out on the same condition, so ``gated_out`` only adds
-                       that fact to the note — it never upgrades the verdict)
-      not a file /     the exported path does not exist or cannot execute
-      not executable   (a stale binding from a previous environment build)
       not rendered     ``.mcp.json`` missing, unreadable, or without the server
-      not bound        the rendered command is not ``${L9_MEMORY_INTERPRETER}``
-                       (nor that same path), so what Claude would launch is not
-                       what was proven
+      not bound        the rendered command is not the spawn wrapper
+      wrapper missing  the HOME-relative wrapper path is not a file
+      not executable   the wrapper (or the bound interpreter) cannot execute
+      unbound          runtime_binding did not prove an interpreter
       stale package    the interpreter runs but cannot find
                        ``l9_graphite_memory``
 
-    Only an executable interpreter that carries the package, referenced by the
-    rendered entry, is READY. A probe that cannot run is UNKNOWN — never PASS.
+    A probe that cannot run is UNKNOWN — never PASS. ``gated_out`` only
+    annotates an absent server; it never upgrades a verdict.
     """
     env = os.environ if environ is None else environ
-    interp = (env.get(_MEMORY_INTERPRETER_ENV) or "").strip()
-    if not interp:
-        gated = (
-            "; projection gated l9-graphite-memory out on the same unbound variable"
-            if _MEMORY_MCP_SERVER in gated_out
-            else ""
-        )
-        return DEGRADED, f"L9_MEMORY_INTERPRETER unbound (blocker: mcp_config){gated}"
-    interp_path = Path(interp)
-    if not interp_path.is_file():
-        return DEGRADED, f"L9_MEMORY_INTERPRETER is not a file: {interp} (blocker: mcp_config)"
-    if not os.access(interp_path, os.X_OK):
-        return DEGRADED, f"L9_MEMORY_INTERPRETER not executable: {interp} (blocker: mcp_config)"
     mcp_path = Path(workspace) / ".mcp.json"
     if not mcp_path.is_file():
         return DEGRADED, "workspace .mcp.json missing (blocker: mcp_config)"
@@ -470,23 +480,45 @@ def _claude_mcp_health(
         return DEGRADED, "workspace .mcp.json unreadable (blocker: mcp_config)"
     servers = decoded.get("mcpServers") if isinstance(decoded, dict) else None
     if not isinstance(servers, dict) or _MEMORY_MCP_SERVER not in servers:
-        return DEGRADED, "l9-graphite-memory absent from .mcp.json (blocker: mcp_config)"
+        gated = (
+            "; projection gated l9-graphite-memory out" if _MEMORY_MCP_SERVER in gated_out else ""
+        )
+        return DEGRADED, f"l9-graphite-memory absent from .mcp.json (blocker: mcp_config){gated}"
     entry = servers.get(_MEMORY_MCP_SERVER)
     command = str(entry.get("command") or "").strip() if isinstance(entry, dict) else ""
-    if command not in {_MEMORY_INTERPRETER_REF, interp}:
+    wrapper_path = _memory_wrapper_path(env)
+    if command not in {_MEMORY_WRAPPER_REF, str(wrapper_path)}:
         return DEGRADED, (
-            "l9-graphite-memory command is not bound to L9_MEMORY_INTERPRETER "
+            "l9-graphite-memory command is not the spawn wrapper "
             f"(rendered {command or 'nothing'}) (blocker: mcp_config)"
         )
+    if not wrapper_path.is_file():
+        return DEGRADED, f"memory spawn wrapper is not a file: {wrapper_path} (blocker: mcp_config)"
+    if not os.access(wrapper_path, os.X_OK):
+        return DEGRADED, (
+            f"memory spawn wrapper not executable: {wrapper_path} (blocker: mcp_config)"
+        )
+    interp = _resolve_memory_interpreter(env)
+    if not interp:
+        return DEGRADED, (
+            "memory interpreter unbound — wrapper will fail closed (blocker: mcp_config)"
+        )
+    interp_path = Path(interp)
+    if not interp_path.is_file():
+        return DEGRADED, f"memory interpreter is not a file: {interp} (blocker: mcp_config)"
+    if not os.access(interp_path, os.X_OK):
+        return DEGRADED, f"memory interpreter not executable: {interp} (blocker: mcp_config)"
     carries = _interpreter_carries_memory_package(interp_path)
     if carries is None:
-        return UNKNOWN, "L9_MEMORY_INTERPRETER probe did not complete (blocker: mcp_config)"
+        return UNKNOWN, "memory interpreter probe did not complete (blocker: mcp_config)"
     if not carries:
         return DEGRADED, (
-            "L9_MEMORY_INTERPRETER cannot find l9_graphite_memory — stale binding "
+            "memory interpreter cannot find l9_graphite_memory — stale binding "
             f"{interp} (blocker: mcp_config)"
         )
-    return READY, "claude mcp entry bound to an executable interpreter carrying l9_graphite_memory"
+    return READY, (
+        "claude mcp entry bound to the spawn wrapper and an interpreter carrying l9_graphite_memory"
+    )
 
 
 def memory_probe(

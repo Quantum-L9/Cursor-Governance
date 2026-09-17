@@ -142,7 +142,7 @@ second place to drift.
 | `render.claude.json` | all | Rendering map: how `policy.json` reaches Claude Code (peer of `render.cursor.json`). IDE-neutral policy never changes for it. |
 | `settings.template.json` | all | Committable `.claude/settings.json` for a consumer repo: SessionStart hook + conservative permission + env defaults. |
 | `hooks/session_start_claude_governance.sh` | all | Mobile-safe SessionStart bootstrap. Git-only, **no `~/.cursor` dependency**. Emits Claude Code `additionalContext` JSON. |
-| `mcp.template.json` | all | Package-owned `l9-graphite-memory` stdio server (`${L9_MEMORY_INTERPRETER} -m l9_graphite_memory.server --transport stdio`) + context7. **Never a URL, env block, token, or bearer. Broker retired.** |
+| `mcp.template.json` | all | Package-owned `l9-graphite-memory` stdio server (`${HOME}/.cursor-governance/ops/memory/run_memory_mcp.sh` + package argv) + context7. **Never a URL, env block, token, or bearer. Broker retired.** |
 | `web/README.md` | Web · Mobile | Install guide for the account environment (the Network / Env / Setup triad). |
 | `web/network-policy.md` | Web · Mobile | Network-access decision (Full vs Custom allowlist) with the concrete allowlist. |
 | `web/environment.env.example` | Web · Mobile | Environment-variables template. No credentials, no GH token — the platform proxy injects. |
