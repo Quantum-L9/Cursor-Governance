@@ -41,10 +41,16 @@ def _append_many(root: str, count: int) -> None:
 
 class ReceiptChainTests(unittest.TestCase):
     def test_concurrent_processes_extend_one_valid_chain(self) -> None:
+        # `fork`, not the platform default: the conformance runner binds this
+        # file under a synthetic module name (`pes_test_module_<n>`), and a
+        # spawned or forkserver child re-imports the target by that name, which
+        # does not exist there -- the worker dies with exit 1 before touching
+        # the chain. macOS defaults to spawn (and Linux to forkserver from
+        # 3.14), so only a forked child, which inherits the loaded module,
+        # exercises what this test is about: the cross-process append lock.
+        context = multiprocessing.get_context("fork")
         with tempfile.TemporaryDirectory() as raw:
-            workers = [
-                multiprocessing.Process(target=_append_many, args=(raw, 25)) for _ in range(4)
-            ]
+            workers = [context.Process(target=_append_many, args=(raw, 25)) for _ in range(4)]
             for worker in workers:
                 worker.start()
             for worker in workers:

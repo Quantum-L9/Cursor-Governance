@@ -321,6 +321,17 @@ def _lease_status(grant: Mapping[str, Any]) -> str | None:
     return str(lease.status.value)
 
 
+def grant_lease_status(grant: Mapping[str, Any]) -> str | None:
+    """Live status of a persisted grant's root-Autonomy lease, or None if unbound.
+
+    This is the postcondition a caller checks after `revoke_task_grant`: the
+    revoke call's return value says what that call did, while the lease row
+    says whether the generation still holds authority. ``None`` means the grant
+    names no readable runtime database or lease, so there is nothing live.
+    """
+    return _lease_status(grant)
+
+
 def _resume_persisted_grant(
     grant: Mapping[str, Any],
     *,
@@ -334,10 +345,24 @@ def _resume_persisted_grant(
     with a fresh payload) or would mint a second authority for the same
     attempt. Instead the recorded grant is resumed -- after proving it is the
     one this exact Program parent and peer binding issued and that its lease
-    is still ACTIVE. Returns None when the lease is terminal, which means the
-    next generation must be minted; raises on drift, which means nothing here
-    is resumable.
+    is still ACTIVE.
+
+    Order matters: integrity first (a tampered receipt is never trusted for
+    anything), then lease liveness, then drift. A grant whose lease is already
+    terminal belongs to a dead generation -- the Program parent that recovered
+    it has legitimately moved on to a new lease and contract, so comparing the
+    two is not drift but succession. Returns None for a terminal or unknown
+    lease, which means the next generation must be minted; raises on drift of
+    an ACTIVE lease, which means nothing here is resumable.
     """
+    authority = grant.get("autonomy_authority")
+    if not isinstance(authority, dict) or authority_digest(authority) != str(
+        authority.get("authority_digest") or ""
+    ):
+        raise AutonomyGrantError("GRANT_RECEIPT_TAMPERED: persisted grant fails its own digest")
+    status = _lease_status(grant)
+    if status != "ACTIVE":
+        return None
     recorded_parent = dict(grant.get("program_parent") or {})
     for field_name in ("lease_id", "base_sha", "contract_digest"):
         recorded = str(recorded_parent.get(field_name) or "")
@@ -355,15 +380,7 @@ def _resume_persisted_grant(
             raise AutonomyGrantError(
                 f"GRANT_BINDING_DRIFT: persisted grant {field_name} {recorded!r} != {live!r}"
             )
-    authority = grant.get("autonomy_authority")
-    if not isinstance(authority, dict) or authority_digest(authority) != str(
-        authority.get("authority_digest") or ""
-    ):
-        raise AutonomyGrantError("GRANT_RECEIPT_TAMPERED: persisted grant fails its own digest")
-    status = _lease_status(grant)
-    if status == "ACTIVE":
-        return dict(grant)
-    return None
+    return dict(grant)
 
 
 def grant_task_mutation(
