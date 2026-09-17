@@ -197,6 +197,49 @@ def test_improve_begin_then_record(tmp_path: Path) -> None:
     assert receipt["phase"] == "release_authorized"
 
 
+def test_gate_receipt_invalidates_on_tracked_deletion_leaving_bytes(tmp_path: Path) -> None:
+    """git rm --cached leaves the bytes; the PASS receipt must not reuse.
+
+    The publication candidate is now a deletion even though the worktree
+    still has the same blob. Staging and an empty commit of unchanged
+    tracked content must still reuse (PRESERVE-1).
+    """
+    repo = _init_repo(tmp_path, feature=True)
+    paths, content = _state_digest(repo)
+    receipt_dir = repo / ".l9" / "pr"
+    receipt_dir.mkdir(parents=True)
+    payload = {
+        "schema": "l9.pr_gate_receipt.v2",
+        "paths_digest": paths,
+        "content_digest": content,
+        "pr_base": "main",
+    }
+    (receipt_dir / "gate-receipt.json").write_text(
+        json.dumps(payload) + "\n",
+        encoding="utf-8",
+    )
+    git_in(repo, "add", "a.txt")
+    git_in(repo, "commit", "--allow-empty", "-m", "no-op")
+    assert _state_digest(repo) == (paths, content)
+    reuse = _run(
+        ["bash", str(SCRIPTS / "run_pr_gate.sh")],
+        cwd=repo,
+        env={"WS": str(repo), "PR_BASE": "main", "PR_LOCK_WAIT_S": "1"},
+    )
+    assert reuse.returncode == 0, reuse.stderr + reuse.stdout
+    assert "receipt reuse" in reuse.stdout
+
+    git_in(repo, "rm", "--cached", "a.txt")
+    assert (repo / "a.txt").is_file()
+    assert _state_digest(repo) != (paths, content)
+    after = _run(
+        ["bash", str(SCRIPTS / "run_pr_gate.sh")],
+        cwd=repo,
+        env={"WS": str(repo), "PR_BASE": "main", "PR_LOCK_WAIT_S": "1"},
+    )
+    assert "receipt reuse" not in after.stdout
+
+
 def test_gate_receipt_skip_on_unchanged_state(tmp_path: Path) -> None:
     repo = _init_repo(tmp_path, feature=True)
     paths, content = _state_digest(repo)

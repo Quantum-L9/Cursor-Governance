@@ -298,6 +298,7 @@ def heal_environment(
         try:
             fingerprint.unlink()
         except FileNotFoundError:
+            # Absent cache file is the desired state; unlink is idempotent.
             pass
         except OSError as exc:
             reasons.append(f"fingerprint not cleared: {exc}")
@@ -325,6 +326,9 @@ def heal_environment(
         try:
             fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
         except OSError:
+            # Unlock can fail if the fd is already closed; handle.close()
+            # still releases the lock. Teardown must not override the heal
+            # outcome.
             pass
         handle.close()
         release_repo_write_lock(repo_lock)
