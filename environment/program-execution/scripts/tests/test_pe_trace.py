@@ -847,6 +847,41 @@ class SecretRedactionTest(unittest.TestCase):
         self.assertNotIn("verdict", safe)
         self.assertEqual(safe["redacted_keys"], ["count", "verdict"])
 
+    def test_terminal_recovery_retirement_survives_into_the_persisted_event(self) -> None:
+        """The recovery event must be able to say whether authority was retired.
+
+        `grant_revoked` / `grant_lease_status` were emitted by the front door
+        but fell off the allowlist, so the persisted event carried only
+        `redacted_keys` and could not distinguish a retired generation from a
+        live one.
+        """
+        trace = self.mod.ExecutionTrace(self.workspace, "demo-v1")
+        trace.event(
+            "TASK_TERMINAL_ATTEMPT_RECOVERED",
+            "recovery",
+            "task_terminal_attempt_recovered",
+            task_id="TASK-001",
+            metadata={
+                "attempt_id": "attempt-dead",
+                "failure_class": "KNOWN_TERMINAL",
+                "recovery": "RECOVERED",
+                "grant_revoked": True,
+                "grant_lease_status": "REVOKED",
+            },
+        )
+        safe = self.mod.read_events(self.workspace)[0]["safe_metadata"]
+        self.assertEqual(
+            safe,
+            {
+                "attempt_id": "attempt-dead",
+                "failure_class": "KNOWN_TERMINAL",
+                "recovery": "RECOVERED",
+                "grant_revoked": True,
+                "grant_lease_status": "REVOKED",
+            },
+        )
+        self.assertNotIn("redacted_keys", safe)
+
 
 class FingerprintInputsTest(unittest.TestCase):
     """Operator inputs are fingerprinted strictly; emitted artifacts stay normalised."""

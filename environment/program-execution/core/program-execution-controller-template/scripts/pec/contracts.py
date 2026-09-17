@@ -309,7 +309,9 @@ def render_contract(
     if digest_object(source) != task["source_contract_digest"]:
         raise ContractError("Source Contract digest mismatch")
     program_digest = db.get_meta("program_digest")
-    attempt_number = db.next_attempt_number(task_id)
+    # Same authority start_task() allocates from: a dispatched-but-unsubmitted
+    # generation has consumed its number and is never rendered again.
+    attempt_number = db.next_execution_attempt_number(task_id)
     receipt_path = (
         workspace / "attempts" / task_id / f"attempt-{attempt_number:03d}" / "attempt-receipt.json"
     )

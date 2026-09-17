@@ -353,3 +353,104 @@ def test_status_never_fails_the_caller(clone: Path) -> None:
     result = _run(clone, "status")
     assert result.returncode == 0
     assert "UNPUSHED" in result.stdout
+
+
+# --- Root scoping: a session is gated on its own repositories ----------------
+
+
+def test_named_roots_confine_the_scan_to_the_session(
+    origin: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Debt another session left in a sibling gov-worktree does not block this one.
+
+    Run 2 of pe-odoo-gate-writeback-v1 was blocked at Stop by an unpushed
+    branch in a foreign `~/.l9/gov-worktrees/*` clone. A caller that names its
+    roots (explicit `--root`, `L9_SESSION_DEBT_ROOTS`) owns exactly those.
+    """
+    home = tmp_path / "home"
+    foreign_origin = make_origin(tmp_path / "foreign-origin.git")
+    foreign = make_clone(foreign_origin, home / ".l9" / "gov-worktrees" / "other-agent__task")
+    commit_on_branch(foreign, "feat/foreign-debt")
+    mine = make_clone(origin, tmp_path / "mine")
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.delenv("L9_SESSION_DEBT_ROOTS", raising=False)
+    monkeypatch.chdir(mine)
+
+    scoped = session_debt.candidate_roots([str(mine)])
+    assert scoped == [mine.resolve()]
+    assert session_debt.collect(scoped)["clean"] is True
+
+    monkeypatch.setenv("L9_SESSION_DEBT_ROOTS", str(mine))
+    assert session_debt.candidate_roots() == [mine.resolve()]
+
+    # Nothing named: discovery still widens to the machine's worktrees, so the
+    # unscoped Stop hook (no project dir) keeps its fail-closed reach.
+    monkeypatch.delenv("L9_SESSION_DEBT_ROOTS")
+    widened = session_debt.candidate_roots()
+    assert foreign.resolve() in widened
+    assert session_debt.collect(widened)["clean"] is False
+
+
+def test_explicit_root_that_is_not_a_repository_falls_back_to_discovery(
+    clone: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("L9_SESSION_DEBT_ROOTS", raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path / "empty-home"))
+    monkeypatch.chdir(clone)
+    roots = session_debt.candidate_roots([str(tmp_path / "not-a-repo")])
+    assert clone.resolve() in roots
+
+
+def test_check_scoped_by_root_ignores_a_foreign_worktree(origin: Path, tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    foreign_origin = make_origin(tmp_path / "foreign-origin.git")
+    foreign = make_clone(foreign_origin, home / ".l9" / "gov-worktrees" / "other-agent__task")
+    commit_on_branch(foreign, "feat/foreign-debt")
+    mine = make_clone(origin, tmp_path / "mine")
+    env = {"PATH": "/usr/bin:/bin", "HOME": str(home)}
+    unscoped = subprocess.run(
+        [sys.executable, str(REPO / "ops" / "autonomy" / "session_debt.py"), "check"],
+        cwd=mine,
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env,
+    )
+    assert unscoped.returncode == 2
+    assert "feat/foreign-debt" in unscoped.stderr
+    scoped = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "ops" / "autonomy" / "session_debt.py"),
+            "--root",
+            str(mine),
+            "check",
+        ],
+        cwd=mine,
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env,
+    )
+    assert scoped.returncode == 0, scoped.stderr
+
+
+def test_claude_stop_wrapper_scopes_the_gate_to_the_session_roots(tmp_path: Path) -> None:
+    sys.path.insert(0, str(REPO / "environment" / "agents" / "adapters" / "claude-code" / "hooks"))
+    try:
+        import session_debt_wrap
+    finally:
+        sys.path.pop(0)
+    project = tmp_path / "project"
+    event = json.dumps({"hook_event_name": "Stop", "cwd": str(tmp_path / "cwd")})
+    roots = session_debt_wrap.session_roots(event, {"CLAUDE_PROJECT_DIR": str(project)})
+    assert roots == [str(project), str(tmp_path / "cwd")]
+    assert session_debt_wrap.session_roots("", {}) == []
+    assert session_debt_wrap.session_roots("not json", {"CLAUDE_PROJECT_DIR": str(project)}) == [
+        str(project)
+    ]
+    # Duplicate project dir and cwd collapse to one root.
+    same = json.dumps({"cwd": str(project)})
+    assert session_debt_wrap.session_roots(same, {"CLAUDE_PROJECT_DIR": str(project)}) == [
+        str(project)
+    ]

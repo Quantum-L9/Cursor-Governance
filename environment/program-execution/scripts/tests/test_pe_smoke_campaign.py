@@ -547,13 +547,19 @@ class PeSmokeCampaignTests(unittest.TestCase):
             connection = sqlite3.connect(workspace / "runtime" / "state.sqlite")
             try:
                 recorded = connection.execute(
-                    "SELECT COUNT(*) FROM attempts WHERE task_id=?", ("TASK-001",)
+                    "SELECT COUNT(*) FROM attempts WHERE task_id=? AND status='RECORDED'",
+                    ("TASK-001",),
                 ).fetchone()[0]
+                reserved = connection.execute(
+                    "SELECT attempt_number, status FROM attempts WHERE task_id=?", ("TASK-001",)
+                ).fetchall()
             finally:
                 connection.close()
             self.assertEqual(
                 recorded, 0, msg="an unmediated write was recorded as a Program attempt"
             )
+            # Dispatch reserved the generation; the reservation is not a result.
+            self.assertEqual(reserved, [(1, "DISPATCHED")])
             self.assertFalse((workspace / "receipts/verification/TASK-001.json").is_file())
 
             # The write really happened — this is a coverage failure, not a
@@ -814,6 +820,114 @@ class PeSmokeCampaignTests(unittest.TestCase):
             self.assertNotEqual(row[0], "ACTIVE")
             # Evidence preserved: the task worktree survives for diagnosis.
             self.assertTrue((workspace / "worktrees" / "TASK-001").is_dir())
+
+    def test_a_known_terminal_attempt_is_recovered_and_succeeded_by_the_front_door(self) -> None:
+        """Run 2 of pe-odoo-gate-writeback-v1, end to end, with no human in the loop.
+
+        A window ends KNOWN_TERMINAL and the Controller lands the task FAILED.
+        Re-entering the same front door used to stop on the blind-retry guard
+        until an operator ran `pec fresh-workspace`, and then re-rendered the
+        contract as attempt 1 -- which the root store refused as already
+        registered. Now the resume recovers the finished generation through the
+        Controller, allocates attempt 2 everywhere (rendered contract, execution
+        attempt, root grant), retires generation 1's authority, and finishes
+        the campaign at local commits.
+        """
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            env = _peer_test_env(tmp)
+            env["SMOKE_FAIL_TASK"] = "TASK-001"
+            with unittest.mock.patch.dict("os.environ", env):
+                with self.assertRaises(self.mod.CampaignError):
+                    self._run_smoke(tmp)
+            workspace = tmp / "l9" / "programs/demo-activate-v1"
+            retry_receipts = workspace / "runtime" / "peer-execution" / "retry-receipts"
+            receipts = sorted(retry_receipts.glob("TASK-001-*.json"))
+            self.assertTrue(receipts, msg="the failed window left no peer retry receipt")
+            receipt = json.loads(receipts[-1].read_text(encoding="utf-8"))
+            self.assertEqual(receipt["failure_class"], "KNOWN_TERMINAL")
+            states = {i["id"]: i["runtime_state"] for i in _pec(workspace, "status")["tasks"]}
+            self.assertEqual(states["TASK-001"], "FAILED")
+            grants = self.mod._grant_module()
+            first_generation, first_grant = grants.latest_grant_receipt(workspace, "TASK-001")
+            self.assertEqual(first_generation, 1)
+
+            # The same front door, no knobs, no manual PEC / grant intervention.
+            with unittest.mock.patch.dict("os.environ", _peer_test_env(tmp)):
+                report = self._resume(tmp)
+            self.assertIn("execute", report.stages_completed)
+            states = {i["id"]: i["runtime_state"] for i in _pec(workspace, "status")["tasks"]}
+            self.assertEqual(states["TASK-001"], "COMPLETED")
+            self.assertEqual(states["TASK-002"], "COMPLETED")
+
+            # Attempt 2 everywhere; generation 1 consumed, never re-issued.
+            contract = json.loads(
+                (workspace / "contracts" / "rendered" / "TASK-001.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(contract["attempt_number"], 2)
+            import sqlite3
+
+            connection = sqlite3.connect(workspace / "runtime" / "state.sqlite")
+            try:
+                attempts = connection.execute(
+                    "SELECT attempt_number, status FROM attempts WHERE task_id=? "
+                    "ORDER BY attempt_number",
+                    ("TASK-001",),
+                ).fetchall()
+                executions = connection.execute(
+                    "SELECT attempt_number FROM execution_attempts WHERE task_id=? "
+                    "ORDER BY attempt_number",
+                    ("TASK-001",),
+                ).fetchall()
+            finally:
+                connection.close()
+            self.assertEqual(attempts, [(1, "DISPATCHED"), (2, "RECORDED")])
+            self.assertEqual([row[0] for row in executions], [1, 2])
+            second_generation, second_grant = grants.latest_grant_receipt(workspace, "TASK-001")
+            self.assertEqual(second_generation, 2)
+            self.assertNotEqual(second_grant["lease_id"], first_grant["lease_id"])
+            self.assertNotEqual(second_grant["campaign_id"], first_grant["campaign_id"])
+            # Generation 1 holds no live authority after recovery.
+            connection = sqlite3.connect(first_grant["runtime_database"])
+            try:
+                row = connection.execute(
+                    "SELECT status FROM leases WHERE lease_id=?", (first_grant["lease_id"],)
+                ).fetchone()
+            finally:
+                connection.close()
+            self.assertIsNotNone(row)
+            self.assertNotEqual(row[0], "ACTIVE")
+            # Recovery went through the Controller: evidence preserved, ledgered.
+            self.assertTrue((workspace / "recovery" / "TASK-001").is_dir())
+            ledger = (workspace / "ledger" / "events.jsonl").read_text(encoding="utf-8")
+            self.assertIn('"EXECUTION_RECOVERED"', ledger)
+            # Telemetry files the recovery under pe_trace's `recovery` category, the
+            # one the run summary counts in workspace_recovery_counts; a recovery
+            # hidden under task_prepare would not be visible as a time sink.
+            events = [
+                json.loads(line)
+                for line in (workspace / "telemetry" / "events.jsonl")
+                .read_text(encoding="utf-8")
+                .splitlines()
+                if line.strip()
+            ]
+            recovery = [
+                e
+                for e in events
+                if e.get("operation")
+                in {"recover_terminal_attempt", "task_terminal_attempt_recovered"}
+            ]
+            self.assertTrue(recovery, msg="recovery left no telemetry event")
+            self.assertEqual({e.get("category") for e in recovery}, {"recovery"})
+            # The report states the verified retirement, not receipt presence:
+            # what the revoke call did and what the lease row says afterwards.
+            recovered_event = next(
+                e for e in recovery if e.get("operation") == "task_terminal_attempt_recovered"
+            )
+            metadata = recovered_event.get("safe_metadata") or {}
+            self.assertIs(metadata.get("grant_revoked"), True)
+            self.assertEqual(metadata.get("grant_lease_status"), row[0])
+            self.assertNotEqual(metadata.get("grant_lease_status"), "ACTIVE")
 
     def test_mixed_batch_reconciles_every_child_before_raising(self) -> None:
         """Caller-order contract for a mixed [PASS, FAIL] parallel batch:

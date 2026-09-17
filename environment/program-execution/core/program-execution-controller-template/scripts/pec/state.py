@@ -856,18 +856,39 @@ class StateDB:
         self._commit()
 
     def next_attempt_number(self, task_id: str) -> int:
-        row = self.conn.execute(
-            "SELECT COALESCE(MAX(attempt_number),0)+1 AS n FROM attempts WHERE task_id=?",
-            (task_id,),
-        ).fetchone()
-        return int(row["n"])
+        """One numbering authority for rendering and dispatch.
+
+        Delegates to ``next_execution_attempt_number`` so a rendered contract
+        and the execution attempt it dispatches never disagree about which
+        generation they are. Reading the ``attempts`` table alone re-issued an
+        executed generation whose receipt was never submitted.
+        """
+        return self.next_execution_attempt_number(task_id)
 
     def create_attempt(
-        self, task_id: str, attempt_number: int, receipt_path: str, created_at: str
+        self,
+        task_id: str,
+        attempt_number: int,
+        receipt_path: str,
+        created_at: str,
+        *,
+        status: str = "RECORDED",
     ) -> None:
+        """Reserve or record one attempt generation (idempotent per number).
+
+        ``start_task`` reserves the row as ``DISPATCHED`` before any provider
+        runs so the generation is consumed even when no receipt is ever
+        submitted; ``submit`` upgrades the same row to ``RECORDED``. The
+        UNIQUE(task_id, attempt_number) constraint is what makes the upsert
+        land on the reservation instead of a second row.
+        """
         self.conn.execute(
-            "INSERT INTO attempts(task_id,attempt_number,receipt_path,status,created_at) VALUES(?,?,?,?,?)",  # noqa: E501
-            (task_id, attempt_number, receipt_path, "RECORDED", created_at),
+            "INSERT INTO attempts(task_id,attempt_number,receipt_path,status,created_at) "
+            "VALUES(?,?,?,?,?) "
+            "ON CONFLICT(task_id, attempt_number) DO UPDATE SET "
+            "receipt_path=excluded.receipt_path, status=excluded.status, "
+            "created_at=excluded.created_at",
+            (task_id, attempt_number, receipt_path, status, created_at),
         )
         self._commit()
 
