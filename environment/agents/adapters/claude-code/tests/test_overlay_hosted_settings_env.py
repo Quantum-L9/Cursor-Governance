@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -119,6 +120,49 @@ class OverlayHostedSettingsEnvTests(unittest.TestCase):
                 },
             )
             self.assertEqual(tracked.read_bytes(), before)
+
+    def test_tracked_settings_does_not_clobber_the_reconciler_projection(self) -> None:
+        """When settings.json is repo-owned, the local file's env is the fresh
+        projection and the tracked file's is unrelated repository content —
+        possibly from another revision. Re-seeding from the tracked file would
+        overwrite the new projection with a stale one at every SessionStart."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, home = self._build(Path(tmp))
+            subprocess.run(["git", "init", "-q"], cwd=workspace, check=True)
+            subprocess.run(["git", "add", ".claude/settings.json"], cwd=workspace, check=True)
+            # A key only the stale committed file carries: it must not come back.
+            tracked = workspace / ".claude" / "settings.json"
+            stale = json.loads(tracked.read_text(encoding="utf-8"))
+            stale["env"]["L9_RETIRED_KEY"] = "from-an-older-revision"
+            tracked.write_text(json.dumps(stale), encoding="utf-8")
+
+            # What the reconciler projected from the CURRENT template.
+            local = workspace / ".claude" / "settings.local.json"
+            local.write_text(
+                json.dumps({"env": {"L9_SIGNAL": "from-current-template"}}), encoding="utf-8"
+            )
+
+            overlay_hosted_settings(
+                workspace=workspace, home=home, environ={"L9_AUTONOMY_MAX_PARALLEL": "8"}
+            )
+
+            env = json.loads(local.read_text(encoding="utf-8"))["env"]
+            self.assertEqual(env["L9_SIGNAL"], "from-current-template")
+            self.assertEqual(env["L9_AUTONOMY_MAX_PARALLEL"], "8")
+            self.assertNotIn("L9_RETIRED_KEY", env, "the stale tracked env must not be re-seeded")
+
+    def test_untracked_settings_still_seeds_env_from_settings_json(self) -> None:
+        """Governance owns an untracked settings.json, so it holds the
+        authoritative projection and the local file seeds from it as before."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, home = self._build(Path(tmp))
+            overlay_hosted_settings(
+                workspace=workspace, home=home, environ={"L9_AUTONOMY_MAX_PARALLEL": "8"}
+            )
+            env = json.loads(
+                (workspace / ".claude" / "settings.local.json").read_text(encoding="utf-8")
+            )["env"]
+            self.assertEqual(env["L9_GOVERNANCE_SURFACE"], "claude-code")
 
     def test_local_file_carries_complete_env_not_just_overlay_keys(self) -> None:
         """Written whole because Claude Code's precedence table does not say

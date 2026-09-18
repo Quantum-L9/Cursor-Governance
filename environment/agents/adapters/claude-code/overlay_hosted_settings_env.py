@@ -23,6 +23,11 @@ and always wins (see UNCLAMPED_RUNTIME_KEYS).
 `.claude/settings.local.json` is already gitignored, and project-local settings
 outrank shared project settings, so the values still reach the session.
 
+Since the tracked-settings ownership fix, `reconcile_claude_settings` writes to
+that same local file whenever the workspace tracks `.claude/settings.json`, and
+this overlay patches what it finds there rather than re-seeding from the tracked
+file. `_write_workspace_local` documents both orders.
+
 The local file receives the COMPLETE merged env, not just the overlay keys.
 Claude Code's published precedence table does not state whether `env` merges
 key-by-key across scopes or is taken whole from the highest scope that sets it.
@@ -42,6 +47,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -147,6 +153,51 @@ def apply_overlay(settings: dict[str, Any], overlay: dict[str, str]) -> dict[str
     return settings
 
 
+def _read_env(path: Path) -> dict[str, Any]:
+    """The `env` object of a settings file, or empty when it has none."""
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if isinstance(data, dict) and isinstance(data.get("env"), dict):
+        return dict(data["env"])
+    return {}
+
+
+def _local_env_is_authoritative(workspace: Path, local: Path) -> bool:
+    """True when the reconciler projects the template's env into `local`.
+
+    That is exactly the case where the workspace TRACKS `.claude/settings.json`
+    — see `reconcile_claude_settings.WHY_LOCAL_FOR_TRACKED`. Ownership is asked
+    of git, the same signal the reconciler branches on, so the two cannot drift
+    apart. A workspace that is not a git repository, or a machine with no git,
+    answers "not tracked" and takes the settings.json path, which is the
+    historical behaviour.
+    """
+    if not local.is_file():
+        return False
+    try:
+        proc = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(workspace),
+                "ls-files",
+                "--error-unmatch",
+                "--",
+                ".claude/settings.json",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return False
+    return proc.returncode == 0
+
+
 def _patch_file(path: Path, overlay: dict[str, str]) -> bool:
     if not path.is_file() or not overlay:
         return False
@@ -164,9 +215,30 @@ def _patch_file(path: Path, overlay: dict[str, str]) -> bool:
 def _write_workspace_local(workspace: Path, overlay: dict[str, str]) -> bool:
     """Write the merged env into the gitignored project-local settings file.
 
-    Base is the tracked settings.json env when it is readable, so the local file
-    is a complete picture rather than a fragment. Any other keys already in
-    settings.local.json (personal permissions, for example) are preserved.
+    The base is a COMPLETE env, not a fragment, so the file is correct whether
+    Claude Code merges `env` key-by-key across scopes or takes it whole from the
+    highest scope that sets it. Where that base comes from depends on who owns
+    the workspace's settings.json:
+
+    * **Repo-owned (git-tracked) settings.json.** `reconcile_claude_settings`
+      does not write that file at all; it projects the template's managed keys,
+      `env` included, into this same local file moments earlier
+      (WHY_LOCAL_FOR_TRACKED). The local file's own env is then the current
+      projection and the tracked file's is unrelated repository content —
+      possibly from another revision entirely. So patch what is here, exactly
+      as `_patch_file` does for `~/.claude/settings.json`. Re-seeding from the
+      tracked file instead would overwrite a fresh projection with a stale one,
+      which is the regression this whole path exists to end.
+    * **Governance-injected (untracked) settings.json.** The reconciler wrote
+      the projection THERE, so that file holds the authoritative env and the
+      local file is this overlay's alone. Seed from it.
+
+    Either way the base is refreshed from a file the reconciler rewrites every
+    SessionStart, so a change to the template still reaches the session on the
+    next start rather than being masked indefinitely.
+
+    Any other keys already in settings.local.json (personal permissions, for
+    example) are preserved.
     """
     if not overlay:
         return False
@@ -174,17 +246,13 @@ def _write_workspace_local(workspace: Path, overlay: dict[str, str]) -> bool:
     if not claude_dir.is_dir():
         return False
 
-    base_env: dict[str, Any] = {}
-    tracked = claude_dir / "settings.json"
-    if tracked.is_file():
-        try:
-            tracked_data = json.loads(tracked.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            tracked_data = None
-        if isinstance(tracked_data, dict) and isinstance(tracked_data.get("env"), dict):
-            base_env = dict(tracked_data["env"])
-
     local = claude_dir / "settings.local.json"
+    base_env: dict[str, Any] = {}
+    if _local_env_is_authoritative(workspace, local):
+        base_env = _read_env(local)
+    else:
+        base_env = _read_env(claude_dir / "settings.json")
+
     data: dict[str, Any] = {}
     if local.is_file():
         try:
