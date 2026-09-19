@@ -6,6 +6,7 @@ parsed into argv and executed without a shell. Shell syntax requires explicit
 ``--allow-shell`` authorization. The temporary copy is filesystem isolation, not
 an OS/process sandbox; execute only an authorized project validation command.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -42,7 +43,9 @@ def apply_candidate(path: Path, c: dict[str, Any]) -> None:
     else:
         current = lines[sl][sc:] + "".join(lines[sl + 1 : el]) + lines[el][:ec]
         if current != c["original_source"]:
-            raise ValueError("candidate original_source does not match bound multi-line source range")
+            raise ValueError(
+                "candidate original_source does not match bound multi-line source range"
+            )
         lines[sl : el + 1] = [lines[sl][:sc] + c["mutant_source"] + lines[el][ec:]]
     path.write_text("".join(lines), encoding="utf-8")
 
@@ -124,13 +127,17 @@ def run(command: str, cwd: Path, timeout: int, *, allow_shell: bool) -> dict[str
 
 
 def _validate_result(result: dict[str, Any]) -> None:
-    schema_path = Path(__file__).resolve().parent.parent / "schemas" / "mutation-probe-result.schema.json"
+    schema_path = (
+        Path(__file__).resolve().parent.parent / "schemas" / "mutation-probe-result.schema.json"
+    )
     if not schema_path.is_file():
         raise RuntimeError("mutation-probe result schema is missing")
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     errors = sorted(Draft202012Validator(schema).iter_errors(result), key=lambda e: list(e.path))
     if errors:
-        rendered = "; ".join(f"{'.'.join(str(x) for x in e.path) or '$'}: {e.message}" for e in errors)
+        rendered = "; ".join(
+            f"{'.'.join(str(x) for x in e.path) or '$'}: {e.message}" for e in errors
+        )
         raise RuntimeError("mutation-probe result failed schema validation: " + rendered)
 
 

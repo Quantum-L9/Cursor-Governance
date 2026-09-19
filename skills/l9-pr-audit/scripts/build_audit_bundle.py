@@ -15,9 +15,10 @@ import shutil
 import sys
 import zipfile
 from collections import defaultdict, deque
+from collections.abc import Iterable
+from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
-from typing import Any, Iterable
-from datetime import datetime, timezone
+from typing import Any
 from uuid import uuid4
 
 try:
@@ -45,10 +46,18 @@ ANTI_BYPASS_KINDS = {
 }
 MUTATION_OWNER = "CODEBASE"
 AUDIT_DOMAINS = {
-    "INTENT_SCOPE", "COMMUNICATION_CONTRACTS", "ROUTING_INTEGRATION",
-    "OWNERSHIP_AUTHORITY", "STRUCTURE_SOURCE_OF_TRUTH", "SCHEMA_CONFIGURATION",
-    "SECURITY", "RELIABILITY_OBSERVABILITY", "TESTING_VALIDATION",
-    "LEVERAGE_SIMPLICITY", "CROSS_PR", "CHANGE_DISCIPLINE",
+    "INTENT_SCOPE",
+    "COMMUNICATION_CONTRACTS",
+    "ROUTING_INTEGRATION",
+    "OWNERSHIP_AUTHORITY",
+    "STRUCTURE_SOURCE_OF_TRUTH",
+    "SCHEMA_CONFIGURATION",
+    "SECURITY",
+    "RELIABILITY_OBSERVABILITY",
+    "TESTING_VALIDATION",
+    "LEVERAGE_SIMPLICITY",
+    "CROSS_PR",
+    "CHANGE_DISCIPLINE",
 }
 CHANGE_LEDGER_SCHEMA = "l9.pr-audit.change-ledger.v1.4"
 CHANGE_LEDGER_GENERATOR_VERSION = "1.4.0"
@@ -197,7 +206,6 @@ def builder_path() -> Path:
     return Path(__file__).resolve()
 
 
-
 def load_change_ledger_paths(paths: Iterable[Path]) -> dict[int, dict[str, Any]]:
     out: dict[int, dict[str, Any]] = {}
     for path in paths:
@@ -235,7 +243,12 @@ def load_change_ledger_set(data: dict[str, Any]) -> dict[int, dict[str, Any]]:
         pr = item.get("pr_number")
         ledger = item.get("ledger")
         digest = item.get("source_sha256")
-        if not isinstance(pr, int) or pr < 1 or not isinstance(ledger, dict) or not isinstance(digest, str):
+        if (
+            not isinstance(pr, int)
+            or pr < 1
+            or not isinstance(ledger, dict)
+            or not isinstance(digest, str)
+        ):
             raise ValueError("invalid change-ledger set entry")
         if pr in out:
             raise ValueError(f"duplicate change ledger for PR {pr}")
@@ -273,27 +286,48 @@ def red_team_semantic_errors(
     if set(binding_map) != expected_prs:
         errors.append("deterministic_census_binding must cover every audited PR exactly once")
     for num, binding in binding_map.items():
-        if num in pr_map(audit) and binding["head_sha"].lower() != pr_map(audit)[num]["head_sha"].lower():
-            errors.append(f"PR {num} deterministic census binding head_sha does not match canonical PR head")
+        if (
+            num in pr_map(audit)
+            and binding["head_sha"].lower() != pr_map(audit)[num]["head_sha"].lower()
+        ):
+            errors.append(
+                f"PR {num} deterministic census binding head_sha does not match canonical PR head"
+            )
 
-    valid_objectives = {item["objective_id"] for item in audit["intent_contract"]["objectives"] if item["status"] == "ACTIVE"}
+    valid_objectives = {
+        item["objective_id"]
+        for item in audit["intent_contract"]["objectives"]
+        if item["status"] == "ACTIVE"
+    }
     for symbol in symbols:
         for eid in symbol["evidence_ids"]:
             if eid not in emap:
-                errors.append(f"changed symbol {symbol['symbol_id']} references unknown evidence {eid}")
+                errors.append(
+                    f"changed symbol {symbol['symbol_id']} references unknown evidence {eid}"
+                )
         for cid in symbol["claim_ids"]:
             if cid not in claim_map:
-                errors.append(f"changed symbol {symbol['symbol_id']} references unknown claim {cid}")
+                errors.append(
+                    f"changed symbol {symbol['symbol_id']} references unknown claim {cid}"
+                )
         for fid in symbol["finding_ids"]:
             if fid not in fmap:
-                errors.append(f"changed symbol {symbol['symbol_id']} references unknown finding {fid}")
+                errors.append(
+                    f"changed symbol {symbol['symbol_id']} references unknown finding {fid}"
+                )
         unknown_obj = set(symbol["objective_ids"]) - valid_objectives
         if unknown_obj:
-            errors.append(f"changed symbol {symbol['symbol_id']} references unknown/inactive objectives {sorted(unknown_obj)}")
+            errors.append(
+                f"changed symbol {symbol['symbol_id']} references unknown/inactive objectives {sorted(unknown_obj)}"
+            )
         if symbol["scope_disposition"] == "SCOPE_EXTENSION" and not symbol["finding_ids"]:
-            errors.append(f"changed symbol {symbol['symbol_id']} SCOPE_EXTENSION requires finding_ids")
+            errors.append(
+                f"changed symbol {symbol['symbol_id']} SCOPE_EXTENSION requires finding_ids"
+            )
         if symbol["source"] == "MACHINE" and symbol["detection_method"] == "AUDITOR_SEMANTIC":
-            errors.append(f"changed symbol {symbol['symbol_id']} MACHINE source cannot use AUDITOR_SEMANTIC detection")
+            errors.append(
+                f"changed symbol {symbol['symbol_id']} MACHINE source cannot use AUDITOR_SEMANTIC detection"
+            )
 
     for claim in claims:
         for aid in claim["authority_ids"]:
@@ -309,87 +343,182 @@ def red_team_semantic_errors(
             if falid not in fals_map:
                 errors.append(f"claim {claim['claim_id']} references unknown falsification {falid}")
             elif fals_map[falid]["claim_id"] != claim["claim_id"]:
-                errors.append(f"claim {claim['claim_id']} references falsification {falid} owned by another claim")
+                errors.append(
+                    f"claim {claim['claim_id']} references falsification {falid} owned by another claim"
+                )
         if claim["materiality"] == "MATERIAL":
-            if not evidence_discriminates(claim["evidence_ids"], emap, f"claim:{claim['claim_id']}"):
+            if not evidence_discriminates(
+                claim["evidence_ids"], emap, f"claim:{claim['claim_id']}"
+            ):
                 errors.append(f"material claim {claim['claim_id']} lacks claim-specific evidence")
             if not claim["falsification_ids"]:
-                errors.append(f"material claim {claim['claim_id']} requires at least one falsification probe")
-            results = [fals_map[fid]["result"] for fid in claim["falsification_ids"] if fid in fals_map]
-            if claim["status"] == "SUPPORTED" and (not results or any(result != "SURVIVED" for result in results)):
-                errors.append(f"material SUPPORTED claim {claim['claim_id']} requires all applicable falsification probes to SURVIVE")
+                errors.append(
+                    f"material claim {claim['claim_id']} requires at least one falsification probe"
+                )
+            results = [
+                fals_map[fid]["result"] for fid in claim["falsification_ids"] if fid in fals_map
+            ]
+            if claim["status"] == "SUPPORTED" and (
+                not results or any(result != "SURVIVED" for result in results)
+            ):
+                errors.append(
+                    f"material SUPPORTED claim {claim['claim_id']} requires all applicable falsification probes to SURVIVE"
+                )
             if claim["status"] == "REFUTED" and "FALSIFIED" not in results:
-                errors.append(f"material REFUTED claim {claim['claim_id']} requires a FALSIFIED probe")
-            if claim["status"] == "UNKNOWN" and "FALSIFIED" not in results and "INCONCLUSIVE" not in results:
-                errors.append(f"material UNKNOWN claim {claim['claim_id']} requires an INCONCLUSIVE probe")
-            if claim["status"] == "NOT_APPLICABLE" and any(result != "NOT_APPLICABLE" for result in results):
-                errors.append(f"material NOT_APPLICABLE claim {claim['claim_id']} requires NOT_APPLICABLE probes")
+                errors.append(
+                    f"material REFUTED claim {claim['claim_id']} requires a FALSIFIED probe"
+                )
+            if (
+                claim["status"] == "UNKNOWN"
+                and "FALSIFIED" not in results
+                and "INCONCLUSIVE" not in results
+            ):
+                errors.append(
+                    f"material UNKNOWN claim {claim['claim_id']} requires an INCONCLUSIVE probe"
+                )
+            if claim["status"] == "NOT_APPLICABLE" and any(
+                result != "NOT_APPLICABLE" for result in results
+            ):
+                errors.append(
+                    f"material NOT_APPLICABLE claim {claim['claim_id']} requires NOT_APPLICABLE probes"
+                )
         if claim["status"] == "SUPPORTED":
             if not confirmed_evidence(claim["evidence_ids"], emap):
                 errors.append(f"SUPPORTED claim {claim['claim_id']} requires CONFIRMED evidence")
             for prop in claim["validation_properties"]:
                 if not evidence_discriminates(claim["validation_evidence_ids"], emap, prop):
-                    errors.append(f"SUPPORTED claim {claim['claim_id']} lacks validation evidence discriminating {prop}")
+                    errors.append(
+                        f"SUPPORTED claim {claim['claim_id']} lacks validation evidence discriminating {prop}"
+                    )
             if claim["materiality"] == "MATERIAL":
-                survived = [fals_map[fid] for fid in claim["falsification_ids"] if fid in fals_map and fals_map[fid]["result"] == "SURVIVED"]
+                survived = [
+                    fals_map[fid]
+                    for fid in claim["falsification_ids"]
+                    if fid in fals_map and fals_map[fid]["result"] == "SURVIVED"
+                ]
                 if not survived:
-                    errors.append(f"material SUPPORTED claim {claim['claim_id']} requires a SURVIVED falsification probe")
-        if claim["status"] == "REFUTED" and not claim["finding_ids"] and claim["claim_kind"] not in {"AUDIT_DOMAIN", "READINESS", "CONVERGENCE"}:
+                    errors.append(
+                        f"material SUPPORTED claim {claim['claim_id']} requires a SURVIVED falsification probe"
+                    )
+        if (
+            claim["status"] == "REFUTED"
+            and not claim["finding_ids"]
+            and claim["claim_kind"] not in {"AUDIT_DOMAIN", "READINESS", "CONVERGENCE"}
+        ):
             errors.append(f"REFUTED claim {claim['claim_id']} requires finding_ids")
 
     for fal in falsifications:
         claim = claim_map.get(fal["claim_id"])
         if claim is None:
-            errors.append(f"falsification {fal['falsification_id']} references unknown claim {fal['claim_id']}")
+            errors.append(
+                f"falsification {fal['falsification_id']} references unknown claim {fal['claim_id']}"
+            )
             continue
         for eid in fal["evidence_ids"]:
             if eid not in emap:
-                errors.append(f"falsification {fal['falsification_id']} references unknown evidence {eid}")
+                errors.append(
+                    f"falsification {fal['falsification_id']} references unknown evidence {eid}"
+                )
         for fid in fal["finding_ids"]:
             if fid not in fmap:
-                errors.append(f"falsification {fal['falsification_id']} references unknown finding {fid}")
+                errors.append(
+                    f"falsification {fal['falsification_id']} references unknown finding {fid}"
+                )
         if fal["result"] in {"SURVIVED", "FALSIFIED"}:
             prop = f"falsification:{fal['claim_id']}"
             if not evidence_discriminates(fal["evidence_ids"], emap, prop):
-                errors.append(f"falsification {fal['falsification_id']} lacks claim-specific discriminating evidence {prop}")
+                errors.append(
+                    f"falsification {fal['falsification_id']} lacks claim-specific discriminating evidence {prop}"
+                )
         if fal["result"] == "FALSIFIED" and claim["status"] == "SUPPORTED":
-            errors.append(f"claim {claim['claim_id']} cannot be SUPPORTED after falsification {fal['falsification_id']} FALSIFIED")
-        if fal["result"] == "INCONCLUSIVE" and claim["materiality"] == "MATERIAL" and claim["status"] == "SUPPORTED":
-            errors.append(f"material claim {claim['claim_id']} cannot be SUPPORTED with INCONCLUSIVE falsification")
+            errors.append(
+                f"claim {claim['claim_id']} cannot be SUPPORTED after falsification {fal['falsification_id']} FALSIFIED"
+            )
+        if (
+            fal["result"] == "INCONCLUSIVE"
+            and claim["materiality"] == "MATERIAL"
+            and claim["status"] == "SUPPORTED"
+        ):
+            errors.append(
+                f"material claim {claim['claim_id']} cannot be SUPPORTED with INCONCLUSIVE falsification"
+            )
         if fal["judgment_required"] and fal["execution_kind"] not in {"LLM_JUDGMENT", "HYBRID"}:
-            errors.append(f"falsification {fal['falsification_id']} judgment_required requires LLM_JUDGMENT or HYBRID")
+            errors.append(
+                f"falsification {fal['falsification_id']} judgment_required requires LLM_JUDGMENT or HYBRID"
+            )
         if fal["execution_kind"] in {"LLM_JUDGMENT", "HYBRID"} and not fal["judgment_required"]:
-            errors.append(f"falsification {fal['falsification_id']} {fal['execution_kind']} requires judgment_required=true")
+            errors.append(
+                f"falsification {fal['falsification_id']} {fal['execution_kind']} requires judgment_required=true"
+            )
         if fal["execution_kind"] in {"STATIC", "COMMAND", "CHECK"} and fal["judgment_required"]:
-            errors.append(f"falsification {fal['falsification_id']} deterministic execution kind cannot require LLM judgment")
+            errors.append(
+                f"falsification {fal['falsification_id']} deterministic execution kind cannot require LLM judgment"
+            )
         if fal["judgment_required"] and not fal["judgment_rationale"]:
-            errors.append(f"falsification {fal['falsification_id']} judgment_required requires judgment_rationale")
+            errors.append(
+                f"falsification {fal['falsification_id']} judgment_required requires judgment_rationale"
+            )
 
     # Canonical claim outcomes mirror existing audit truth instead of creating another verdict store.
-    objective_status = {item["objective_id"]: item["status"] for item in audit["change_discipline"]["objective_closure"]}
-    domain_status = {item["domain"]: item["status"] for item in audit["audit_coverage"]["domain_assessments"]}
+    objective_status = {
+        item["objective_id"]: item["status"]
+        for item in audit["change_discipline"]["objective_closure"]
+    }
+    domain_status = {
+        item["domain"]: item["status"] for item in audit["audit_coverage"]["domain_assessments"]
+    }
     pr_verdicts = {item["pr_number"]: item["merge_readiness"] for item in audit["per_pr_verdicts"]}
     for claim in claims:
         kind = claim["claim_kind"]
         if kind == "OBJECTIVE" and claim["subject"] in objective_status:
-            expected = {"SATISFIED":"SUPPORTED","UNPROVEN":"UNKNOWN","NOT_IMPLEMENTED":"REFUTED","CONFLICTED":"REFUTED"}[objective_status[claim["subject"]]]
+            expected = {
+                "SATISFIED": "SUPPORTED",
+                "UNPROVEN": "UNKNOWN",
+                "NOT_IMPLEMENTED": "REFUTED",
+                "CONFLICTED": "REFUTED",
+            }[objective_status[claim["subject"]]]
             if claim["status"] != expected:
-                errors.append(f"objective claim {claim['claim_id']} status {claim['status']} must mirror {expected}")
+                errors.append(
+                    f"objective claim {claim['claim_id']} status {claim['status']} must mirror {expected}"
+                )
         elif kind == "AUDIT_DOMAIN" and claim["subject"] in domain_status:
-            expected = {"PASS":"SUPPORTED","FAIL":"REFUTED","NOT_APPLICABLE":"NOT_APPLICABLE","UNKNOWN":"UNKNOWN"}[domain_status[claim["subject"]]]
+            expected = {
+                "PASS": "SUPPORTED",
+                "FAIL": "REFUTED",
+                "NOT_APPLICABLE": "NOT_APPLICABLE",
+                "UNKNOWN": "UNKNOWN",
+            }[domain_status[claim["subject"]]]
             if claim["status"] != expected:
-                errors.append(f"domain claim {claim['claim_id']} status {claim['status']} must mirror {expected}")
+                errors.append(
+                    f"domain claim {claim['claim_id']} status {claim['status']} must mirror {expected}"
+                )
         elif kind == "READINESS" and len(claim["pr_numbers"]) == 1:
             num = claim["pr_numbers"][0]
             if num in pr_verdicts:
-                expected = "SUPPORTED" if pr_verdicts[num] in READY_STATES else "REFUTED" if pr_verdicts[num] == "NOT_READY" else "UNKNOWN"
+                expected = (
+                    "SUPPORTED"
+                    if pr_verdicts[num] in READY_STATES
+                    else "REFUTED"
+                    if pr_verdicts[num] == "NOT_READY"
+                    else "UNKNOWN"
+                )
                 if claim["status"] != expected:
-                    errors.append(f"readiness claim {claim['claim_id']} status {claim['status']} must mirror {expected}")
+                    errors.append(
+                        f"readiness claim {claim['claim_id']} status {claim['status']} must mirror {expected}"
+                    )
         elif kind == "CONVERGENCE":
             state = audit["executive_verdict"]["convergence_status"]
-            expected = "SUPPORTED" if state == "CONVERGED" else "REFUTED" if state == "NOT_CONVERGED" else "UNKNOWN"
+            expected = (
+                "SUPPORTED"
+                if state == "CONVERGED"
+                else "REFUTED"
+                if state == "NOT_CONVERGED"
+                else "UNKNOWN"
+            )
             if claim["status"] != expected:
-                errors.append(f"convergence claim {claim['claim_id']} status {claim['status']} must mirror {expected}")
+                errors.append(
+                    f"convergence claim {claim['claim_id']} status {claim['status']} must mirror {expected}"
+                )
 
     # Every machine symbol has a matching CHANGED_SYMBOL claim and every changed-symbol claim references its machine symbol through the seed assertion.
     symbol_claims = [c for c in claims if c["claim_kind"] == "CHANGED_SYMBOL"]
@@ -398,35 +527,64 @@ def red_team_semantic_errors(
         if not linked:
             errors.append(f"changed symbol {symbol['symbol_id']} lacks CHANGED_SYMBOL claim")
             continue
-        expected = "REFUTED" if symbol["finding_ids"] else "UNKNOWN" if symbol["scope_disposition"] == "UNKNOWN" else "NOT_APPLICABLE" if symbol["scope_disposition"] == "NOT_APPLICABLE" else "SUPPORTED"
+        expected = (
+            "REFUTED"
+            if symbol["finding_ids"]
+            else "UNKNOWN"
+            if symbol["scope_disposition"] == "UNKNOWN"
+            else "NOT_APPLICABLE"
+            if symbol["scope_disposition"] == "NOT_APPLICABLE"
+            else "SUPPORTED"
+        )
         for claim in linked:
             if claim["status"] != expected:
-                errors.append(f"changed-symbol claim {claim['claim_id']} status {claim['status']} must mirror {expected}")
+                errors.append(
+                    f"changed-symbol claim {claim['claim_id']} status {claim['status']} must mirror {expected}"
+                )
 
     machine_symbol_ids = {item["symbol_id"] for item in symbols if item["source"] == "MACHINE"}
-    symbol_obligation_subjects = {item["subject"] for item in audit["audit_obligation_ledger"] if item["kind"] == "CHANGED_SYMBOL"}
+    symbol_obligation_subjects = {
+        item["subject"]
+        for item in audit["audit_obligation_ledger"]
+        if item["kind"] == "CHANGED_SYMBOL"
+    }
     if symbol_obligation_subjects != machine_symbol_ids:
-        errors.append(f"CHANGED_SYMBOL obligations must exactly match machine changed symbols: missing={sorted(machine_symbol_ids-symbol_obligation_subjects)}, extra={sorted(symbol_obligation_subjects-machine_symbol_ids)}")
+        errors.append(
+            f"CHANGED_SYMBOL obligations must exactly match machine changed symbols: missing={sorted(machine_symbol_ids - symbol_obligation_subjects)}, extra={sorted(symbol_obligation_subjects - machine_symbol_ids)}"
+        )
 
     if change_ledgers is not None:
         pr_numbers = {p["pr_number"] for p in audit["pr_bindings"]}
         if set(change_ledgers) != pr_numbers:
-            errors.append(f"change-ledger PR set must exactly match audited PRs: expected={sorted(pr_numbers)} actual={sorted(change_ledgers)}")
-        bindings = {item["pr_number"]: item for item in audit["deterministic_census_binding"]["ledger_bindings"]}
+            errors.append(
+                f"change-ledger PR set must exactly match audited PRs: expected={sorted(pr_numbers)} actual={sorted(change_ledgers)}"
+            )
+        bindings = {
+            item["pr_number"]: item
+            for item in audit["deterministic_census_binding"]["ledger_bindings"]
+        }
         if set(bindings) != pr_numbers:
-            errors.append("deterministic_census_binding ledger_bindings must exactly cover audited PRs")
+            errors.append(
+                "deterministic_census_binding ledger_bindings must exactly cover audited PRs"
+            )
         expected_machine_symbols: dict[str, dict[str, Any]] = {}
         expected_claim_seeds: dict[str, dict[str, Any]] = {}
         expected_fal_seeds: dict[str, dict[str, Any]] = {}
         for pr, wrapper in change_ledgers.items():
             ledger = wrapper["ledger"]
             digest = wrapper["sha256"]
-            if ledger.get("schema_version") != CHANGE_LEDGER_SCHEMA or ledger.get("generator_version") != CHANGE_LEDGER_GENERATOR_VERSION:
+            if (
+                ledger.get("schema_version") != CHANGE_LEDGER_SCHEMA
+                or ledger.get("generator_version") != CHANGE_LEDGER_GENERATOR_VERSION
+            ):
                 errors.append(f"PR {pr} change ledger version mismatch")
                 continue
             if ledger.get("repository") != audit["repository_binding"]["repository"]:
                 errors.append(f"PR {pr} change ledger repository mismatch")
-            if pr in pr_map(audit) and ledger.get("head_sha", "").lower() != pr_map(audit)[pr]["head_sha"].lower():
+            if (
+                pr in pr_map(audit)
+                and ledger.get("head_sha", "").lower() != pr_map(audit)[pr]["head_sha"].lower()
+            ):
                 errors.append(f"PR {pr} change ledger head_sha mismatch")
             binding = bindings.get(pr)
             if binding:
@@ -440,36 +598,64 @@ def red_team_semantic_errors(
                 expected_claim_seeds[item["claim_id"]] = item
             for item in ledger.get("falsification_seeds", []):
                 expected_fal_seeds[item["falsification_id"]] = item
-        actual_machine = {item["symbol_id"]: item for item in symbols if item["source"] == "MACHINE"}
+        actual_machine = {
+            item["symbol_id"]: item for item in symbols if item["source"] == "MACHINE"
+        }
         if set(actual_machine) != set(expected_machine_symbols):
-            errors.append(f"machine changed-symbol ledger must exactly match deterministic census: missing={sorted(set(expected_machine_symbols)-set(actual_machine))}, extra={sorted(set(actual_machine)-set(expected_machine_symbols))}")
+            errors.append(
+                f"machine changed-symbol ledger must exactly match deterministic census: missing={sorted(set(expected_machine_symbols) - set(actual_machine))}, extra={sorted(set(actual_machine) - set(expected_machine_symbols))}"
+            )
         for sid, expected in expected_machine_symbols.items():
             actual = actual_machine.get(sid)
             if not actual:
                 continue
-            for key in ("pr_number","path","symbol_name","symbol_kind","change_type","detection_method","detection_confidence"):
+            for key in (
+                "pr_number",
+                "path",
+                "symbol_name",
+                "symbol_kind",
+                "change_type",
+                "detection_method",
+                "detection_confidence",
+            ):
                 if actual.get(key) != expected.get(key):
-                    errors.append(f"machine changed symbol {sid} field {key} differs from deterministic census")
-        actual_machine_claims = {item["claim_id"]: item for item in claims if item["source"] == "MACHINE_SEEDED"}
+                    errors.append(
+                        f"machine changed symbol {sid} field {key} differs from deterministic census"
+                    )
+        actual_machine_claims = {
+            item["claim_id"]: item for item in claims if item["source"] == "MACHINE_SEEDED"
+        }
         if not set(expected_claim_seeds).issubset(actual_machine_claims):
-            errors.append(f"claim matrix omitted deterministic claim seeds: {sorted(set(expected_claim_seeds)-set(actual_machine_claims))}")
+            errors.append(
+                f"claim matrix omitted deterministic claim seeds: {sorted(set(expected_claim_seeds) - set(actual_machine_claims))}"
+            )
         for cid, expected in expected_claim_seeds.items():
             actual = actual_machine_claims.get(cid)
             if not actual:
                 continue
-            for key in ("claim_kind","subject","assertion","materiality","source"):
+            for key in ("claim_kind", "subject", "assertion", "materiality", "source"):
                 if actual.get(key) != expected.get(key):
-                    errors.append(f"machine claim {cid} field {key} differs from deterministic census")
-        actual_machine_fals = {item["falsification_id"]: item for item in falsifications if item["source"] == "MACHINE_SEEDED"}
+                    errors.append(
+                        f"machine claim {cid} field {key} differs from deterministic census"
+                    )
+        actual_machine_fals = {
+            item["falsification_id"]: item
+            for item in falsifications
+            if item["source"] == "MACHINE_SEEDED"
+        }
         if not set(expected_fal_seeds).issubset(actual_machine_fals):
-            errors.append(f"falsification ledger omitted deterministic seeds: {sorted(set(expected_fal_seeds)-set(actual_machine_fals))}")
+            errors.append(
+                f"falsification ledger omitted deterministic seeds: {sorted(set(expected_fal_seeds) - set(actual_machine_fals))}"
+            )
         for fid, expected in expected_fal_seeds.items():
             actual = actual_machine_fals.get(fid)
             if not actual:
                 continue
-            for key in ("claim_id","source","attack_class","hypothesis"):
+            for key in ("claim_id", "source", "attack_class", "hypothesis"):
                 if actual.get(key) != expected.get(key):
-                    errors.append(f"machine falsification {fid} field {key} differs from deterministic census")
+                    errors.append(
+                        f"machine falsification {fid} field {key} differs from deterministic census"
+                    )
     return errors
 
 
@@ -498,7 +684,9 @@ def deterministic_closure_errors(
             if missing:
                 errors.append(f"deterministic_closure_ledger missing machine seeds {missing}")
             if extra:
-                errors.append(f"deterministic_closure_ledger contains unbound machine seeds {extra}")
+                errors.append(
+                    f"deterministic_closure_ledger contains unbound machine seeds {extra}"
+                )
         for cid, seed in machine_seeds.items():
             row = machine_rows.get(cid)
             if not row:
@@ -518,195 +706,376 @@ def deterministic_closure_errors(
                 errors.append(f"closure {cid} references unknown finding {fid}")
         if row["status"] == "FINDING" and not row["finding_ids"]:
             errors.append(f"closure {cid} FINDING requires finding_ids")
-        if row["status"] == "UNKNOWN" and audit["executive_verdict"]["convergence_status"] == "CONVERGED":
+        if (
+            row["status"] == "UNKNOWN"
+            and audit["executive_verdict"]["convergence_status"] == "CONVERGED"
+        ):
             errors.append(f"CONVERGED cannot retain UNKNOWN deterministic closure {cid}")
         d = row["details"]
         kind = row["closure_kind"]
         if kind == "PUBLIC_CONTRACT":
             disp = d.get("disposition")
-            if disp not in {"PRESERVED", "MIGRATION_AUTHORIZED", "BREAKING_FINDING", "NOT_APPLICABLE", "UNKNOWN"}:
+            if disp not in {
+                "PRESERVED",
+                "MIGRATION_AUTHORIZED",
+                "BREAKING_FINDING",
+                "NOT_APPLICABLE",
+                "UNKNOWN",
+            }:
                 errors.append(f"closure {cid} PUBLIC_CONTRACT invalid disposition")
             if disp == "BREAKING_FINDING" and not row["finding_ids"]:
                 errors.append(f"closure {cid} BREAKING_FINDING requires finding")
             preservation_ids = {x["obligation_id"] for x in audit["preservation_obligations"]}
             claimed = set(d.get("preservation_obligation_ids") or [])
             if disp in {"PRESERVED", "MIGRATION_AUTHORIZED", "BREAKING_FINDING"} and not claimed:
-                errors.append(f"closure {cid} public-contract delta requires preservation_obligation_ids")
+                errors.append(
+                    f"closure {cid} public-contract delta requires preservation_obligation_ids"
+                )
             if claimed - preservation_ids:
-                errors.append(f"closure {cid} references unknown preservation obligations {sorted(claimed-preservation_ids)}")
+                errors.append(
+                    f"closure {cid} references unknown preservation obligations {sorted(claimed - preservation_ids)}"
+                )
         elif kind == "SSOT_UNIQUENESS":
             disp = d.get("disposition")
-            allowed = {"UNIQUE", "CANDIDATES_ENUMERATED", "SAME_AUTHORITY", "DISTINCT_SEMANTIC", "COMPETING_AUTHORITY", "UNKNOWN"}
+            allowed = {
+                "UNIQUE",
+                "CANDIDATES_ENUMERATED",
+                "SAME_AUTHORITY",
+                "DISTINCT_SEMANTIC",
+                "COMPETING_AUTHORITY",
+                "UNKNOWN",
+            }
             if disp not in allowed:
                 errors.append(f"closure {cid} SSOT_UNIQUENESS invalid disposition")
             if disp == "COMPETING_AUTHORITY" and not row["finding_ids"]:
                 errors.append(f"closure {cid} competing authority requires finding")
-            seed = machine_seeds.get(cid,{}).get("payload",{})
+            seed = machine_seeds.get(cid, {}).get("payload", {})
             if seed.get("coverage_only"):
                 if not seed.get("repository_files_complete") and disp != "UNKNOWN":
-                    errors.append(f"closure {cid} SSOT coverage cannot close from incomplete repository corpus")
-                expected = "UNIQUE" if seed.get("candidate_count",0) == 0 else "CANDIDATES_ENUMERATED"
-                if seed.get("repository_files_complete") and disp not in {expected,"UNKNOWN"}:
-                    errors.append(f"closure {cid} SSOT coverage disposition must be {expected} or UNKNOWN")
-            elif row["source"] == "MACHINE_SEEDED" and not seed.get("repository_files_complete",False) and disp in {"SAME_AUTHORITY","DISTINCT_SEMANTIC"}:
-                errors.append(f"closure {cid} cannot prove SSOT candidate disposition from incomplete repository corpus")
+                    errors.append(
+                        f"closure {cid} SSOT coverage cannot close from incomplete repository corpus"
+                    )
+                expected = (
+                    "UNIQUE" if seed.get("candidate_count", 0) == 0 else "CANDIDATES_ENUMERATED"
+                )
+                if seed.get("repository_files_complete") and disp not in {expected, "UNKNOWN"}:
+                    errors.append(
+                        f"closure {cid} SSOT coverage disposition must be {expected} or UNKNOWN"
+                    )
+            elif (
+                row["source"] == "MACHINE_SEEDED"
+                and not seed.get("repository_files_complete", False)
+                and disp in {"SAME_AUTHORITY", "DISTINCT_SEMANTIC"}
+            ):
+                errors.append(
+                    f"closure {cid} cannot prove SSOT candidate disposition from incomplete repository corpus"
+                )
         elif kind == "BYPASS_PATH":
             disp = d.get("disposition")
-            if disp not in {"COVERAGE_COMPLETE", "REQUIRED_BOUNDARY_PRESENT", "ALLOWED_DIRECT_PATH", "BYPASS_FINDING", "UNKNOWN"}:
+            if disp not in {
+                "COVERAGE_COMPLETE",
+                "REQUIRED_BOUNDARY_PRESENT",
+                "ALLOWED_DIRECT_PATH",
+                "BYPASS_FINDING",
+                "UNKNOWN",
+            }:
                 errors.append(f"closure {cid} BYPASS_PATH invalid disposition")
             if disp == "BYPASS_FINDING" and not row["finding_ids"]:
                 errors.append(f"closure {cid} bypass finding requires finding")
-            seed = machine_seeds.get(cid,{}).get("payload",{})
+            seed = machine_seeds.get(cid, {}).get("payload", {})
             if seed.get("coverage_only"):
                 if not seed.get("repository_files_complete") and disp != "UNKNOWN":
-                    errors.append(f"closure {cid} bypass coverage cannot close from incomplete repository corpus")
-                if seed.get("repository_files_complete") and disp not in {"COVERAGE_COMPLETE","UNKNOWN"}:
-                    errors.append(f"closure {cid} bypass coverage requires COVERAGE_COMPLETE or UNKNOWN")
-            elif disp == "REQUIRED_BOUNDARY_PRESENT" and seed and not seed.get("required_token_present"):
-                errors.append(f"closure {cid} cannot claim required boundary present when machine census did not observe it")
+                    errors.append(
+                        f"closure {cid} bypass coverage cannot close from incomplete repository corpus"
+                    )
+                if seed.get("repository_files_complete") and disp not in {
+                    "COVERAGE_COMPLETE",
+                    "UNKNOWN",
+                }:
+                    errors.append(
+                        f"closure {cid} bypass coverage requires COVERAGE_COMPLETE or UNKNOWN"
+                    )
+            elif (
+                disp == "REQUIRED_BOUNDARY_PRESENT"
+                and seed
+                and not seed.get("required_token_present")
+            ):
+                errors.append(
+                    f"closure {cid} cannot claim required boundary present when machine census did not observe it"
+                )
         elif kind == "SUPERSESSION_LIVENESS":
             cls = d.get("classification")
-            if cls not in {"LIVE","DEAD","DOC_ONLY","TEST_ONLY","GENERATED","UNKNOWN"}:
+            if cls not in {"LIVE", "DEAD", "DOC_ONLY", "TEST_ONLY", "GENERATED", "UNKNOWN"}:
                 errors.append(f"closure {cid} SUPERSESSION_LIVENESS invalid classification")
             if cls == "LIVE" and not row["finding_ids"]:
                 errors.append(f"closure {cid} LIVE supersession reference requires finding")
         elif kind == "FAILURE_EDGE":
-            if d.get("disposition") not in {"TESTED","STRUCTURALLY_PROVEN","NOT_APPLICABLE","UNKNOWN"}:
+            if d.get("disposition") not in {
+                "TESTED",
+                "STRUCTURALLY_PROVEN",
+                "NOT_APPLICABLE",
+                "UNKNOWN",
+            }:
                 errors.append(f"closure {cid} FAILURE_EDGE invalid disposition")
         elif kind == "CONFIG_PRECEDENCE":
-            disp=d.get("disposition")
-            if disp not in {"SINGLE_WINNER","CONFLICT","NONE","UNKNOWN"}:
+            disp = d.get("disposition")
+            if disp not in {"SINGLE_WINNER", "CONFLICT", "NONE", "UNKNOWN"}:
                 errors.append(f"closure {cid} CONFIG_PRECEDENCE invalid disposition")
-            seed=machine_seeds.get(cid,{}).get("payload",{})
-            paths={x.get("path") for x in seed.get("sources",[]) if isinstance(x,dict)}
+            seed = machine_seeds.get(cid, {}).get("payload", {})
+            paths = {x.get("path") for x in seed.get("sources", []) if isinstance(x, dict)}
             if disp == "SINGLE_WINNER":
-                winner=d.get("winner_path")
+                winner = d.get("winner_path")
                 if not seed.get("repository_files_complete"):
-                    errors.append(f"closure {cid} SINGLE_WINNER requires complete repository corpus")
+                    errors.append(
+                        f"closure {cid} SINGLE_WINNER requires complete repository corpus"
+                    )
                 if winner not in paths:
-                    errors.append(f"closure {cid} SINGLE_WINNER winner_path must be a discovered source")
-                src=next((x for x in seed.get("sources",[]) if x.get("path")==winner),{})
-                if src.get("authority_kind") in {None,"UNKNOWN"}:
+                    errors.append(
+                        f"closure {cid} SINGLE_WINNER winner_path must be a discovered source"
+                    )
+                src = next((x for x in seed.get("sources", []) if x.get("path") == winner), {})
+                if src.get("authority_kind") in {None, "UNKNOWN"}:
                     errors.append(f"closure {cid} SINGLE_WINNER requires known winner authority")
             if disp == "CONFLICT" and not row["finding_ids"]:
                 errors.append(f"closure {cid} config conflict requires finding")
         elif kind == "DEPENDENCY_CAUSALITY":
-            disp=d.get("disposition")
-            if disp not in {"JUSTIFIED","UNJUSTIFIED","TRANSITIVE","LOCK_ONLY","UNKNOWN"}:
+            disp = d.get("disposition")
+            if disp not in {"JUSTIFIED", "UNJUSTIFIED", "TRANSITIVE", "LOCK_ONLY", "UNKNOWN"}:
                 errors.append(f"closure {cid} DEPENDENCY_CAUSALITY invalid disposition")
             if disp == "JUSTIFIED" and not d.get("objective_ids") and not row["finding_ids"]:
-                errors.append(f"closure {cid} justified dependency movement requires objective_ids or finding linkage")
+                errors.append(
+                    f"closure {cid} justified dependency movement requires objective_ids or finding linkage"
+                )
             if disp == "UNJUSTIFIED" and not row["finding_ids"]:
                 errors.append(f"closure {cid} unjustified dependency movement requires finding")
         elif kind == "DEPENDENCY_PAIRING":
-            disp=d.get("disposition")
-            if disp not in {"CONSISTENT","MISMATCH","NOT_APPLICABLE","UNKNOWN"}:
+            disp = d.get("disposition")
+            if disp not in {"CONSISTENT", "MISMATCH", "NOT_APPLICABLE", "UNKNOWN"}:
                 errors.append(f"closure {cid} DEPENDENCY_PAIRING invalid disposition")
             if disp == "MISMATCH" and not row["finding_ids"]:
                 errors.append(f"closure {cid} manifest/lock mismatch requires finding")
         elif kind == "DIFF_HUNK":
-            disp=d.get("disposition")
-            if disp not in {"REQUIRED","DIRECTLY_COUPLED","VALIDATION_REQUIRED","GENERATED","FORMATTING_ONLY","FINDING","UNKNOWN"}:
+            disp = d.get("disposition")
+            if disp not in {
+                "REQUIRED",
+                "DIRECTLY_COUPLED",
+                "VALIDATION_REQUIRED",
+                "GENERATED",
+                "FORMATTING_ONLY",
+                "FINDING",
+                "UNKNOWN",
+            }:
                 errors.append(f"closure {cid} DIFF_HUNK invalid disposition")
             if disp == "FINDING" and not row["finding_ids"]:
                 errors.append(f"closure {cid} hunk FINDING requires finding_ids")
-            if disp in {"REQUIRED","DIRECTLY_COUPLED","VALIDATION_REQUIRED"} and not d.get("objective_ids"):
+            if disp in {"REQUIRED", "DIRECTLY_COUPLED", "VALIDATION_REQUIRED"} and not d.get(
+                "objective_ids"
+            ):
                 errors.append(f"closure {cid} substantive hunk requires objective_ids")
         elif kind == "CI_CAUSALITY":
-            cause=d.get("causality")
-            if cause not in {"PR_CAUSED","PRE_EXISTING","ENVIRONMENT","PIPELINE","UNKNOWN"}:
+            cause = d.get("causality")
+            if cause not in {"PR_CAUSED", "PRE_EXISTING", "ENVIRONMENT", "PIPELINE", "UNKNOWN"}:
                 errors.append(f"closure {cid} CI_CAUSALITY invalid causality")
             if cause == "PR_CAUSED" and not row["finding_ids"]:
                 errors.append(f"closure {cid} PR_CAUSED CI failure requires finding")
-            if cause == "PRE_EXISTING" and not evidence_discriminates(row["evidence_ids"], emap, "ci_baseline"):
-                errors.append(f"closure {cid} PRE_EXISTING CI attribution requires ci_baseline evidence")
+            if cause == "PRE_EXISTING" and not evidence_discriminates(
+                row["evidence_ids"], emap, "ci_baseline"
+            ):
+                errors.append(
+                    f"closure {cid} PRE_EXISTING CI attribution requires ci_baseline evidence"
+                )
         elif kind == "GENERATED_PROVENANCE":
-            disp=d.get("disposition")
-            if disp not in {"MATCHED","MISMATCHED","UNKNOWN","NOT_APPLICABLE"}:
+            disp = d.get("disposition")
+            if disp not in {"MATCHED", "MISMATCHED", "UNKNOWN", "NOT_APPLICABLE"}:
                 errors.append(f"closure {cid} GENERATED_PROVENANCE invalid disposition")
-            seed=machine_seeds.get(cid,{}).get("payload",{})
+            seed = machine_seeds.get(cid, {}).get("payload", {})
             if disp == "MATCHED":
-                if not seed.get("generator_path") or not seed.get("source_inputs") or not seed.get("generation_command"):
-                    errors.append(f"closure {cid} MATCHED generated provenance requires generator/source/command")
-                if not seed.get("generated_head_sha") or seed.get("generated_head_sha") != seed.get("regenerated_sha"):
-                    errors.append(f"closure {cid} MATCHED generated provenance requires equal generated/regenerated hashes")
+                if (
+                    not seed.get("generator_path")
+                    or not seed.get("source_inputs")
+                    or not seed.get("generation_command")
+                ):
+                    errors.append(
+                        f"closure {cid} MATCHED generated provenance requires generator/source/command"
+                    )
+                if not seed.get("generated_head_sha") or seed.get("generated_head_sha") != seed.get(
+                    "regenerated_sha"
+                ):
+                    errors.append(
+                        f"closure {cid} MATCHED generated provenance requires equal generated/regenerated hashes"
+                    )
             if disp == "MISMATCHED" and not row["finding_ids"]:
                 errors.append(f"closure {cid} generated mismatch requires finding")
         elif kind == "PRODUCER_CONSUMER":
-            disp=d.get("disposition")
-            allowed={"COVERAGE_COMPLETE","UNCHANGED_COMPATIBLE","UPDATED","MIGRATION_REQUIRED","NOT_APPLICABLE","UNKNOWN"}
-            if disp not in allowed: errors.append(f"closure {cid} PRODUCER_CONSUMER invalid disposition")
-            seed=machine_seeds.get(cid,{}).get("payload",{})
+            disp = d.get("disposition")
+            allowed = {
+                "COVERAGE_COMPLETE",
+                "UNCHANGED_COMPATIBLE",
+                "UPDATED",
+                "MIGRATION_REQUIRED",
+                "NOT_APPLICABLE",
+                "UNKNOWN",
+            }
+            if disp not in allowed:
+                errors.append(f"closure {cid} PRODUCER_CONSUMER invalid disposition")
+            seed = machine_seeds.get(cid, {}).get("payload", {})
             if seed.get("coverage_only"):
-                if not seed.get("repository_files_complete") and disp != "UNKNOWN": errors.append(f"closure {cid} producer/consumer coverage cannot close from incomplete corpus")
-                if seed.get("repository_files_complete") and disp not in {"COVERAGE_COMPLETE","UNKNOWN"}: errors.append(f"closure {cid} producer/consumer coverage requires COVERAGE_COMPLETE or UNKNOWN")
+                if not seed.get("repository_files_complete") and disp != "UNKNOWN":
+                    errors.append(
+                        f"closure {cid} producer/consumer coverage cannot close from incomplete corpus"
+                    )
+                if seed.get("repository_files_complete") and disp not in {
+                    "COVERAGE_COMPLETE",
+                    "UNKNOWN",
+                }:
+                    errors.append(
+                        f"closure {cid} producer/consumer coverage requires COVERAGE_COMPLETE or UNKNOWN"
+                    )
             else:
-                if disp == "MIGRATION_REQUIRED" and not row["finding_ids"] and not d.get("preservation_obligation_ids"):
-                    errors.append(f"closure {cid} MIGRATION_REQUIRED requires finding or preservation obligation")
-                preservation_ids={x["obligation_id"] for x in audit["preservation_obligations"]}
-                claimed=set(d.get("preservation_obligation_ids") or [])
-                if claimed-preservation_ids: errors.append(f"closure {cid} references unknown preservation obligations {sorted(claimed-preservation_ids)}")
+                if (
+                    disp == "MIGRATION_REQUIRED"
+                    and not row["finding_ids"]
+                    and not d.get("preservation_obligation_ids")
+                ):
+                    errors.append(
+                        f"closure {cid} MIGRATION_REQUIRED requires finding or preservation obligation"
+                    )
+                preservation_ids = {x["obligation_id"] for x in audit["preservation_obligations"]}
+                claimed = set(d.get("preservation_obligation_ids") or [])
+                if claimed - preservation_ids:
+                    errors.append(
+                        f"closure {cid} references unknown preservation obligations {sorted(claimed - preservation_ids)}"
+                    )
         elif kind == "MUTATION_EXECUTION":
-            result=d.get("result")
-            allowed={"KILLED","SURVIVED","BASELINE_FAILED","EXECUTION_ERROR","NOT_EXECUTED","NOT_APPLICABLE"}
-            if result not in allowed: errors.append(f"closure {cid} MUTATION_EXECUTION invalid result")
+            result = d.get("result")
+            allowed = {
+                "KILLED",
+                "SURVIVED",
+                "BASELINE_FAILED",
+                "EXECUTION_ERROR",
+                "NOT_EXECUTED",
+                "NOT_APPLICABLE",
+            }
+            if result not in allowed:
+                errors.append(f"closure {cid} MUTATION_EXECUTION invalid result")
             if result == "KILLED":
-                if d.get("baseline_exit_code") != 0 or not isinstance(d.get("mutant_exit_code"),int) or d.get("mutant_exit_code") == 0: errors.append(f"closure {cid} KILLED requires baseline pass and mutant failure")
-                if row["status"] != "PASS": errors.append(f"closure {cid} KILLED must have PASS status")
+                if (
+                    d.get("baseline_exit_code") != 0
+                    or not isinstance(d.get("mutant_exit_code"), int)
+                    or d.get("mutant_exit_code") == 0
+                ):
+                    errors.append(f"closure {cid} KILLED requires baseline pass and mutant failure")
+                if row["status"] != "PASS":
+                    errors.append(f"closure {cid} KILLED must have PASS status")
             elif result == "SURVIVED":
-                if d.get("baseline_exit_code") != 0 or d.get("mutant_exit_code") != 0: errors.append(f"closure {cid} SURVIVED requires baseline and mutant pass")
-                if row["status"] != "FINDING" or not row["finding_ids"]: errors.append(f"closure {cid} SURVIVED requires FINDING status and finding")
-            elif result in {"BASELINE_FAILED","EXECUTION_ERROR","NOT_EXECUTED"}:
-                if row["status"] != "UNKNOWN": errors.append(f"closure {cid} {result} must remain UNKNOWN")
-                if not d.get("reason"): errors.append(f"closure {cid} {result} requires reason")
-            elif result == "NOT_APPLICABLE" and row["status"] != "NOT_APPLICABLE": errors.append(f"closure {cid} NOT_APPLICABLE result requires NOT_APPLICABLE status")
-            if d.get("original_repository_unchanged") is False: errors.append(f"closure {cid} mutation execution altered audited repository")
+                if d.get("baseline_exit_code") != 0 or d.get("mutant_exit_code") != 0:
+                    errors.append(f"closure {cid} SURVIVED requires baseline and mutant pass")
+                if row["status"] != "FINDING" or not row["finding_ids"]:
+                    errors.append(f"closure {cid} SURVIVED requires FINDING status and finding")
+            elif result in {"BASELINE_FAILED", "EXECUTION_ERROR", "NOT_EXECUTED"}:
+                if row["status"] != "UNKNOWN":
+                    errors.append(f"closure {cid} {result} must remain UNKNOWN")
+                if not d.get("reason"):
+                    errors.append(f"closure {cid} {result} requires reason")
+            elif result == "NOT_APPLICABLE" and row["status"] != "NOT_APPLICABLE":
+                errors.append(f"closure {cid} NOT_APPLICABLE result requires NOT_APPLICABLE status")
+            if d.get("original_repository_unchanged") is False:
+                errors.append(f"closure {cid} mutation execution altered audited repository")
         elif kind == "REVIEW_THREAD_SEMANTIC":
-            disp=d.get("disposition")
-            allowed={"FIXED_BY_FINDING","DISPROVEN_WITH_EVIDENCE","ACCEPTED_NONBLOCKER","DUPLICATE","OUT_OF_SCOPE","UNKNOWN"}
-            if disp not in allowed: errors.append(f"closure {cid} REVIEW_THREAD_SEMANTIC invalid disposition")
-            if disp == "FIXED_BY_FINDING" and not row["finding_ids"]: errors.append(f"closure {cid} FIXED_BY_FINDING requires finding")
-            if disp == "DISPROVEN_WITH_EVIDENCE" and not evidence_discriminates(row["evidence_ids"],emap,"review_thread_disposition"):
-                errors.append(f"closure {cid} disproven thread requires review_thread_disposition evidence")
-            if disp == "ACCEPTED_NONBLOCKER" and not evidence_discriminates(row["evidence_ids"],emap,"review_thread_acceptance"):
-                errors.append(f"closure {cid} accepted nonblocker requires review_thread_acceptance authority evidence")
-            if disp == "DUPLICATE" and not d.get("duplicate_of"): errors.append(f"closure {cid} DUPLICATE requires duplicate_of")
-            if disp == "OUT_OF_SCOPE" and not evidence_discriminates(row["evidence_ids"],emap,"review_thread_scope"):
+            disp = d.get("disposition")
+            allowed = {
+                "FIXED_BY_FINDING",
+                "DISPROVEN_WITH_EVIDENCE",
+                "ACCEPTED_NONBLOCKER",
+                "DUPLICATE",
+                "OUT_OF_SCOPE",
+                "UNKNOWN",
+            }
+            if disp not in allowed:
+                errors.append(f"closure {cid} REVIEW_THREAD_SEMANTIC invalid disposition")
+            if disp == "FIXED_BY_FINDING" and not row["finding_ids"]:
+                errors.append(f"closure {cid} FIXED_BY_FINDING requires finding")
+            if disp == "DISPROVEN_WITH_EVIDENCE" and not evidence_discriminates(
+                row["evidence_ids"], emap, "review_thread_disposition"
+            ):
+                errors.append(
+                    f"closure {cid} disproven thread requires review_thread_disposition evidence"
+                )
+            if disp == "ACCEPTED_NONBLOCKER" and not evidence_discriminates(
+                row["evidence_ids"], emap, "review_thread_acceptance"
+            ):
+                errors.append(
+                    f"closure {cid} accepted nonblocker requires review_thread_acceptance authority evidence"
+                )
+            if disp == "DUPLICATE" and not d.get("duplicate_of"):
+                errors.append(f"closure {cid} DUPLICATE requires duplicate_of")
+            if disp == "OUT_OF_SCOPE" and not evidence_discriminates(
+                row["evidence_ids"], emap, "review_thread_scope"
+            ):
                 errors.append(f"closure {cid} OUT_OF_SCOPE requires review_thread_scope evidence")
         elif kind == "ORPHAN_ARTIFACT":
-            disp=d.get("disposition")
-            allowed={"REACHABLE","REGISTERED","CONTRACT_AUTHORIZED","ORPHAN","UNKNOWN"}
-            if disp not in allowed: errors.append(f"closure {cid} ORPHAN_ARTIFACT invalid disposition")
-            seed=machine_seeds.get(cid,{}).get("payload",{})
+            disp = d.get("disposition")
+            allowed = {"REACHABLE", "REGISTERED", "CONTRACT_AUTHORIZED", "ORPHAN", "UNKNOWN"}
+            if disp not in allowed:
+                errors.append(f"closure {cid} ORPHAN_ARTIFACT invalid disposition")
+            seed = machine_seeds.get(cid, {}).get("payload", {})
             if disp == "REACHABLE":
-                if not seed.get("repository_files_complete") or int(seed.get("consumer_count",0)) < 1: errors.append(f"closure {cid} REACHABLE requires complete corpus and discovered consumer")
-            if disp == "REGISTERED" and not evidence_discriminates(row["evidence_ids"],emap,"artifact_registration"):
+                if (
+                    not seed.get("repository_files_complete")
+                    or int(seed.get("consumer_count", 0)) < 1
+                ):
+                    errors.append(
+                        f"closure {cid} REACHABLE requires complete corpus and discovered consumer"
+                    )
+            if disp == "REGISTERED" and not evidence_discriminates(
+                row["evidence_ids"], emap, "artifact_registration"
+            ):
                 errors.append(f"closure {cid} REGISTERED requires artifact_registration evidence")
-            if disp == "CONTRACT_AUTHORIZED" and not evidence_discriminates(row["evidence_ids"],emap,"future_contract_authority"):
-                errors.append(f"closure {cid} CONTRACT_AUTHORIZED requires future_contract_authority evidence")
-            if disp == "ORPHAN" and (row["status"] != "FINDING" or not row["finding_ids"]): errors.append(f"closure {cid} ORPHAN requires finding")
+            if disp == "CONTRACT_AUTHORIZED" and not evidence_discriminates(
+                row["evidence_ids"], emap, "future_contract_authority"
+            ):
+                errors.append(
+                    f"closure {cid} CONTRACT_AUTHORIZED requires future_contract_authority evidence"
+                )
+            if disp == "ORPHAN" and (row["status"] != "FINDING" or not row["finding_ids"]):
+                errors.append(f"closure {cid} ORPHAN requires finding")
         elif kind == "ARCHITECTURE_ECONOMY":
-            basis=d.get("justification_basis")
-            allowed={"REQUIREMENT_NECESSITATES_BOUNDARY","VERIFIED_PATTERN_EXTENSION","EXISTING_OWNER_CANNOT_ABSORB","UNJUSTIFIED","UNKNOWN"}
+            basis = d.get("justification_basis")
+            allowed = {
+                "REQUIREMENT_NECESSITATES_BOUNDARY",
+                "VERIFIED_PATTERN_EXTENSION",
+                "EXISTING_OWNER_CANNOT_ABSORB",
+                "UNJUSTIFIED",
+                "UNKNOWN",
+            }
             if basis not in allowed:
                 errors.append(f"closure {cid} ARCHITECTURE_ECONOMY invalid justification_basis")
             if basis == "UNJUSTIFIED" and not row["finding_ids"]:
                 errors.append(f"closure {cid} unjustified architecture requires finding")
-            if basis in allowed - {"UNJUSTIFIED","UNKNOWN"} and not d.get("objective_ids") and not d.get("authority_ids"):
-                errors.append(f"closure {cid} justified architecture requires objective_ids or authority_ids")
-
+            if (
+                basis in allowed - {"UNJUSTIFIED", "UNKNOWN"}
+                and not d.get("objective_ids")
+                and not d.get("authority_ids")
+            ):
+                errors.append(
+                    f"closure {cid} justified architecture requires objective_ids or authority_ids"
+                )
 
     # Cross-link deterministic candidates back to the pre-existing canonical change-discipline stores.
     machine_failure_edges = {
         seed["subject"] for seed in machine_seeds.values() if seed["closure_kind"] == "FAILURE_EDGE"
     }
-    failure_rows = {item["failure_path_id"] for item in audit["change_discipline"]["failure_path_coverage"]}
+    failure_rows = {
+        item["failure_path_id"] for item in audit["change_discipline"]["failure_path_coverage"]
+    }
     if machine_failure_edges != failure_rows:
         errors.append(
-            f"failure_path_coverage must exactly cover machine failure edges: missing={sorted(machine_failure_edges-failure_rows)}, extra={sorted(failure_rows-machine_failure_edges)}"
+            f"failure_path_coverage must exactly cover machine failure edges: missing={sorted(machine_failure_edges - failure_rows)}, extra={sorted(failure_rows - machine_failure_edges)}"
         )
 
-    supersession_rows = {item["supersession_id"]: item for item in audit["change_discipline"]["supersession_closure"]}
+    supersession_rows = {
+        item["supersession_id"]: item for item in audit["change_discipline"]["supersession_closure"]
+    }
     live_by_sup: dict[str, list[str]] = defaultdict(list)
     unknown_by_sup: dict[str, list[str]] = defaultdict(list)
     for row in rows:
@@ -715,21 +1084,33 @@ def deterministic_closure_errors(
         seed = machine_seeds.get(row["closure_id"], {}).get("payload", {})
         sid = seed.get("supersession_id")
         cls = row["details"].get("classification")
-        if sid and cls == "LIVE": live_by_sup[sid].append(row["subject"])
-        if sid and cls == "UNKNOWN": unknown_by_sup[sid].append(row["subject"])
+        if sid and cls == "LIVE":
+            live_by_sup[sid].append(row["subject"])
+        if sid and cls == "UNKNOWN":
+            unknown_by_sup[sid].append(row["subject"])
     for sid, discipline_row in supersession_rows.items():
-        if discipline_row["status"] == "CLOSED" and (live_by_sup.get(sid) or unknown_by_sup.get(sid)):
-            errors.append(f"supersession {sid} cannot be CLOSED with LIVE/UNKNOWN liveness references")
+        if discipline_row["status"] == "CLOSED" and (
+            live_by_sup.get(sid) or unknown_by_sup.get(sid)
+        ):
+            errors.append(
+                f"supersession {sid} cannot be CLOSED with LIVE/UNKNOWN liveness references"
+            )
         if discipline_row["status"] == "RESIDUAL" and not live_by_sup.get(sid):
-            errors.append(f"supersession {sid} RESIDUAL requires at least one LIVE liveness reference")
+            errors.append(
+                f"supersession {sid} RESIDUAL requires at least one LIVE liveness reference"
+            )
 
-    economy_rows = {item["candidate_id"]: item for item in audit["change_discipline"]["architectural_economy"]}
+    economy_rows = {
+        item["candidate_id"]: item for item in audit["change_discipline"]["architectural_economy"]
+    }
     economy_closures = {
-        row["subject"]: row for row in rows if row["closure_kind"] == "ARCHITECTURE_ECONOMY" and row["source"] == "MACHINE_SEEDED"
+        row["subject"]: row
+        for row in rows
+        if row["closure_kind"] == "ARCHITECTURE_ECONOMY" and row["source"] == "MACHINE_SEEDED"
     }
     if set(economy_closures) != set(economy_rows):
         errors.append(
-            f"architecture-economy closure must exactly cover canonical candidates: missing={sorted(set(economy_rows)-set(economy_closures))}, extra={sorted(set(economy_closures)-set(economy_rows))}"
+            f"architecture-economy closure must exactly cover canonical candidates: missing={sorted(set(economy_rows) - set(economy_closures))}, extra={sorted(set(economy_closures) - set(economy_rows))}"
         )
     for candidate_id, discipline_row in economy_rows.items():
         closure = economy_closures.get(candidate_id)
@@ -737,13 +1118,21 @@ def deterministic_closure_errors(
             continue
         basis = closure["details"].get("justification_basis")
         if discipline_row["disposition"] == "JUSTIFIED" and basis not in {
-            "REQUIREMENT_NECESSITATES_BOUNDARY", "VERIFIED_PATTERN_EXTENSION", "EXISTING_OWNER_CANNOT_ABSORB"
+            "REQUIREMENT_NECESSITATES_BOUNDARY",
+            "VERIFIED_PATTERN_EXTENSION",
+            "EXISTING_OWNER_CANNOT_ABSORB",
         }:
-            errors.append(f"architecture candidate {candidate_id} JUSTIFIED requires a concrete deterministic justification basis")
+            errors.append(
+                f"architecture candidate {candidate_id} JUSTIFIED requires a concrete deterministic justification basis"
+            )
         if discipline_row["disposition"] == "UNJUSTIFIED" and basis != "UNJUSTIFIED":
-            errors.append(f"architecture candidate {candidate_id} UNJUSTIFIED must use UNJUSTIFIED closure basis")
+            errors.append(
+                f"architecture candidate {candidate_id} UNJUSTIFIED must use UNJUSTIFIED closure basis"
+            )
         if discipline_row["disposition"] == "UNKNOWN" and basis != "UNKNOWN":
-            errors.append(f"architecture candidate {candidate_id} UNKNOWN must use UNKNOWN closure basis")
+            errors.append(
+                f"architecture candidate {candidate_id} UNKNOWN must use UNKNOWN closure basis"
+            )
 
     # A required check observed failing in the bound deterministic census cannot coexist with READY.
     if audit["executive_verdict"]["readiness_status"] in {"READY", "CONDITIONALLY_READY"}:
@@ -751,83 +1140,169 @@ def deterministic_closure_errors(
             if row["closure_kind"] != "CI_CAUSALITY" or row["source"] != "MACHINE_SEEDED":
                 continue
             seed = machine_seeds.get(row["closure_id"], {}).get("payload", {})
-            if seed.get("required") and str(seed.get("conclusion", "")).lower() in {"failure", "failed", "error", "cancelled", "timed_out"}:
-                errors.append(f"READY cannot coexist with current required failed check {seed.get('name')}")
+            if seed.get("required") and str(seed.get("conclusion", "")).lower() in {
+                "failure",
+                "failed",
+                "error",
+                "cancelled",
+                "timed_out",
+            }:
+                errors.append(
+                    f"READY cannot coexist with current required failed check {seed.get('name')}"
+                )
 
     # v2.0 closure cross-rules.
-    review_seed_ids={seed["subject"] for seed in machine_seeds.values() if seed["closure_kind"]=="REVIEW_THREAD_SEMANTIC"}
-    review_rows={row["subject"] for row in rows if row["closure_kind"]=="REVIEW_THREAD_SEMANTIC" and row["source"]=="MACHINE_SEEDED"}
+    review_seed_ids = {
+        seed["subject"]
+        for seed in machine_seeds.values()
+        if seed["closure_kind"] == "REVIEW_THREAD_SEMANTIC"
+    }
+    review_rows = {
+        row["subject"]
+        for row in rows
+        if row["closure_kind"] == "REVIEW_THREAD_SEMANTIC" and row["source"] == "MACHINE_SEEDED"
+    }
     if review_rows != review_seed_ids:
-        errors.append(f"review-thread semantic closure must exactly cover machine threads: missing={sorted(review_seed_ids-review_rows)}, extra={sorted(review_rows-review_seed_ids)}")
+        errors.append(
+            f"review-thread semantic closure must exactly cover machine threads: missing={sorted(review_seed_ids - review_rows)}, extra={sorted(review_rows - review_seed_ids)}"
+        )
     # Strong test discrimination cannot coexist with a survived or unresolved executable mutation candidate.
-    mutation_by_path=defaultdict(list)
+    mutation_by_path = defaultdict(list)
     for row in rows:
-        if row["closure_kind"]=="MUTATION_EXECUTION":
-            seed=machine_seeds.get(row["closure_id"],{}).get("payload",{})
+        if row["closure_kind"] == "MUTATION_EXECUTION":
+            seed = machine_seeds.get(row["closure_id"], {}).get("payload", {})
             mutation_by_path[seed.get("path")].append(row)
     for td in audit["change_discipline"]["test_discrimination"]:
-        if td["status"] != "DISCRIMINATING": continue
-        related=mutation_by_path.get(td.get("surface")) or mutation_by_path.get(td.get("path")) or []
+        if td["status"] != "DISCRIMINATING":
+            continue
+        related = (
+            mutation_by_path.get(td.get("surface")) or mutation_by_path.get(td.get("path")) or []
+        )
         if related and any(r["details"].get("result") != "KILLED" for r in related):
-            errors.append(f"test discrimination {td.get('test_discrimination_id')} cannot be DISCRIMINATING while mutation candidates are not all KILLED")
+            errors.append(
+                f"test discrimination {td.get('test_discrimination_id')} cannot be DISCRIMINATING while mutation candidates are not all KILLED"
+            )
     # Complete producer/consumer coverage is required for each machine public-contract delta when repository corpus is complete.
-    pc_coverage=[r for r in rows if r["closure_kind"]=="PRODUCER_CONSUMER" and machine_seeds.get(r["closure_id"],{}).get("payload",{}).get("coverage_only")]
+    pc_coverage = [
+        r
+        for r in rows
+        if r["closure_kind"] == "PRODUCER_CONSUMER"
+        and machine_seeds.get(r["closure_id"], {}).get("payload", {}).get("coverage_only")
+    ]
     for row in pc_coverage:
-        seed=machine_seeds.get(row["closure_id"],{}).get("payload",{})
-        if seed.get("repository_files_complete") and row["details"].get("disposition") != "COVERAGE_COMPLETE":
-            errors.append(f"producer/consumer coverage {row['closure_id']} must close COVERAGE_COMPLETE on complete corpus")
+        seed = machine_seeds.get(row["closure_id"], {}).get("payload", {})
+        if (
+            seed.get("repository_files_complete")
+            and row["details"].get("disposition") != "COVERAGE_COMPLETE"
+        ):
+            errors.append(
+                f"producer/consumer coverage {row['closure_id']} must close COVERAGE_COMPLETE on complete corpus"
+            )
     # Orphan candidates cannot converge as UNKNOWN.
     if audit["executive_verdict"]["convergence_status"] == "CONVERGED":
         for row in rows:
-            if row["closure_kind"] in {"REVIEW_THREAD_SEMANTIC","ORPHAN_ARTIFACT","MUTATION_EXECUTION","PRODUCER_CONSUMER"} and row["status"] == "UNKNOWN":
-                errors.append(f"CONVERGED cannot retain unresolved v2.0 closure {row['closure_id']}")
+            if (
+                row["closure_kind"]
+                in {
+                    "REVIEW_THREAD_SEMANTIC",
+                    "ORPHAN_ARTIFACT",
+                    "MUTATION_EXECUTION",
+                    "PRODUCER_CONSUMER",
+                }
+                and row["status"] == "UNKNOWN"
+            ):
+                errors.append(
+                    f"CONVERGED cannot retain unresolved v2.0 closure {row['closure_id']}"
+                )
 
     post = audit["post_judgment_closure"]
     # Root-cause dominance: same semantic owner + overlapping implementation surface creates a mandatory pair.
-    surfaces = {x["finding_id"]: set(x["implementation_surfaces"]) for x in audit["remediation_surface_index"]}
+    surfaces = {
+        x["finding_id"]: set(x["implementation_surfaces"])
+        for x in audit["remediation_surface_index"]
+    }
     findings = audit["findings"]
-    required_pairs=set()
-    for i,a in enumerate(findings):
-        for b in findings[i+1:]:
-            if a["ownership"]["semantic_owner"] == b["ownership"]["semantic_owner"] and surfaces.get(a["finding_id"],set()) & surfaces.get(b["finding_id"],set()):
-                required_pairs.add(tuple(sorted((a["finding_id"],b["finding_id"]))))
-    pair_rows={tuple(sorted((x["finding_a"],x["finding_b"]))):x for x in post["root_cause_dominance"]}
+    required_pairs = set()
+    for i, a in enumerate(findings):
+        for b in findings[i + 1 :]:
+            if a["ownership"]["semantic_owner"] == b["ownership"][
+                "semantic_owner"
+            ] and surfaces.get(a["finding_id"], set()) & surfaces.get(b["finding_id"], set()):
+                required_pairs.add(tuple(sorted((a["finding_id"], b["finding_id"]))))
+    pair_rows = {
+        tuple(sorted((x["finding_a"], x["finding_b"]))): x for x in post["root_cause_dominance"]
+    }
     if set(pair_rows) != required_pairs:
-        errors.append(f"root_cause_dominance must exactly cover machine candidate pairs {sorted(required_pairs)}")
-    for pair,row in pair_rows.items():
-        if row["disposition"] == "UNKNOWN" and audit["executive_verdict"]["convergence_status"] == "CONVERGED":
+        errors.append(
+            f"root_cause_dominance must exactly cover machine candidate pairs {sorted(required_pairs)}"
+        )
+    for pair, row in pair_rows.items():
+        if (
+            row["disposition"] == "UNKNOWN"
+            and audit["executive_verdict"]["convergence_status"] == "CONVERGED"
+        ):
             errors.append(f"CONVERGED cannot retain UNKNOWN root-cause dominance {pair}")
         for eid in row["evidence_ids"]:
-            if eid not in emap: errors.append(f"root-cause pair {pair} references unknown evidence {eid}")
+            if eid not in emap:
+                errors.append(f"root-cause pair {pair} references unknown evidence {eid}")
 
     # Severity floors/ceilings. Blocking findings default floor High; Critical requires confirmed, blocking, high-impact class.
-    rank={"Low":0,"Medium":1,"High":2,"Critical":3}
-    high_impact={"SECURITY","CORRECTNESS","CONTRACT","INVARIANT","RELIABILITY","PRESERVATION","CROSS_PR","SOURCE_OF_TRUTH"}
-    sev_rows={x["finding_id"]:x for x in post["severity_consistency"]}
+    rank = {"Low": 0, "Medium": 1, "High": 2, "Critical": 3}
+    high_impact = {
+        "SECURITY",
+        "CORRECTNESS",
+        "CONTRACT",
+        "INVARIANT",
+        "RELIABILITY",
+        "PRESERVATION",
+        "CROSS_PR",
+        "SOURCE_OF_TRUTH",
+    }
+    sev_rows = {x["finding_id"]: x for x in post["severity_consistency"]}
     if set(sev_rows) != set(fmap):
         errors.append("severity_consistency must cover every finding exactly once")
-    for fid,f in fmap.items():
-        row=sev_rows.get(fid)
-        if not row: continue
-        floor="High" if f["merge_blocking"] else "Low"
-        ceiling="Critical" if f["merge_blocking"] and f["confidence"]=="Confirmed" and f["finding_class"] in high_impact else "High"
-        if row["machine_floor"] != floor or row["machine_ceiling"] != ceiling or row["actual_severity"] != f["severity"]:
+    for fid, f in fmap.items():
+        row = sev_rows.get(fid)
+        if not row:
+            continue
+        floor = "High" if f["merge_blocking"] else "Low"
+        ceiling = (
+            "Critical"
+            if f["merge_blocking"]
+            and f["confidence"] == "Confirmed"
+            and f["finding_class"] in high_impact
+            else "High"
+        )
+        if (
+            row["machine_floor"] != floor
+            or row["machine_ceiling"] != ceiling
+            or row["actual_severity"] != f["severity"]
+        ):
             errors.append(f"severity row {fid} does not match deterministic bounds/actual severity")
-        consistent=rank[floor] <= rank[f["severity"]] <= rank[ceiling]
+        consistent = rank[floor] <= rank[f["severity"]] <= rank[ceiling]
         if row["status"] == "CONSISTENT" and not consistent:
-            errors.append(f"finding {fid} severity outside deterministic bounds requires authority override")
-        if row["status"] == "OVERRIDDEN_WITH_AUTHORITY" and not evidence_discriminates(row["evidence_ids"], emap, "severity_override"):
+            errors.append(
+                f"finding {fid} severity outside deterministic bounds requires authority override"
+            )
+        if row["status"] == "OVERRIDDEN_WITH_AUTHORITY" and not evidence_discriminates(
+            row["evidence_ids"], emap, "severity_override"
+        ):
             errors.append(f"finding {fid} severity override lacks severity_override evidence")
-        if row["status"] == "UNKNOWN" and audit["executive_verdict"]["convergence_status"] == "CONVERGED":
+        if (
+            row["status"] == "UNKNOWN"
+            and audit["executive_verdict"]["convergence_status"] == "CONVERGED"
+        ):
             errors.append(f"CONVERGED cannot retain UNKNOWN severity consistency for {fid}")
 
     # Every executed validation is either claim-closing or explicitly justified non-closing evidence.
-    exec_ids={eid for eid,e in emap.items() if e["evidence_type"] in EXECUTION_EVIDENCE}
-    cov={x["evidence_id"]:x for x in post["validation_run_coverage"]}
+    exec_ids = {eid for eid, e in emap.items() if e["evidence_type"] in EXECUTION_EVIDENCE}
+    cov = {x["evidence_id"]: x for x in post["validation_run_coverage"]}
     if set(cov) != exec_ids:
-        errors.append("validation_run_coverage must exactly cover every TEST/CI/RUNTIME/MEASUREMENT evidence record")
-    claims={x["claim_id"]:x for x in audit["claim_validation_matrix"]}
-    for eid,row in cov.items():
+        errors.append(
+            "validation_run_coverage must exactly cover every TEST/CI/RUNTIME/MEASUREMENT evidence record"
+        )
+    claims = {x["claim_id"]: x for x in audit["claim_validation_matrix"]}
+    for eid, row in cov.items():
         if row["disposition"] == "CLAIM_CLOSING":
             if not row["claim_ids"]:
                 errors.append(f"validation evidence {eid} CLAIM_CLOSING requires claim_ids")
@@ -836,11 +1311,17 @@ def deterministic_closure_errors(
                     errors.append(f"validation evidence {eid} does not actually close claim {cid}")
         elif row["disposition"] == "JUSTIFIED_NON_CLOSING" and not row["rationale"].strip():
             errors.append(f"validation evidence {eid} non-closing disposition requires rationale")
-        elif row["disposition"] == "UNKNOWN" and audit["executive_verdict"]["convergence_status"] == "CONVERGED":
+        elif (
+            row["disposition"] == "UNKNOWN"
+            and audit["executive_verdict"]["convergence_status"] == "CONVERGED"
+        ):
             errors.append(f"CONVERGED cannot retain UNKNOWN validation coverage for {eid}")
     return errors
 
-def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str, Any]] | None = None) -> list[str]:
+
+def validate_semantics(
+    audit: dict[str, Any], change_ledgers: dict[int, dict[str, Any]] | None = None
+) -> list[str]:
     """Validate cross-field invariants that JSON Schema cannot express cleanly."""
     errors: list[str] = []
     if audit.get("schema_version") != SCHEMA_VERSION:
@@ -880,24 +1361,40 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
     # Evidence integrity, execution revision identity, and secret-safe repository binding.
     for eid, item in emap.items():
         if item["repository"] != repo_name:
-            errors.append(f"evidence {eid} repository {item['repository']!r} != canonical {repo_name!r}")
+            errors.append(
+                f"evidence {eid} repository {item['repository']!r} != canonical {repo_name!r}"
+            )
         if item["evidence_type"] in EXECUTION_EVIDENCE:
             source = item.get("source_head_sha")
             tested = item.get("tested_revision_sha")
             result = item.get("validation_result")
             if source is None or tested is None or result is None:
-                errors.append(f"execution evidence {eid} requires source_head_sha, tested_revision_sha, validation_result")
+                errors.append(
+                    f"execution evidence {eid} requires source_head_sha, tested_revision_sha, validation_result"
+                )
                 continue
-            if source != "UNKNOWN" and (not is_sha(source) or source.lower() not in set(heads.values())):
-                errors.append(f"execution evidence {eid}.source_head_sha must equal an audited PR source head or UNKNOWN")
+            if source != "UNKNOWN" and (
+                not is_sha(source) or source.lower() not in set(heads.values())
+            ):
+                errors.append(
+                    f"execution evidence {eid}.source_head_sha must equal an audited PR source head or UNKNOWN"
+                )
             if tested != "UNKNOWN" and not is_sha(tested):
-                errors.append(f"execution evidence {eid}.tested_revision_sha must be SHA or UNKNOWN")
+                errors.append(
+                    f"execution evidence {eid}.tested_revision_sha must be SHA or UNKNOWN"
+                )
             if result in {"PASS", "FAIL"} and not is_sha(tested):
-                errors.append(f"execution evidence {eid} cannot claim {result} without exact tested_revision_sha")
-        elif any(key in item for key in ("source_head_sha", "tested_revision_sha", "validation_result")):
+                errors.append(
+                    f"execution evidence {eid} cannot claim {result} without exact tested_revision_sha"
+                )
+        elif any(
+            key in item for key in ("source_head_sha", "tested_revision_sha", "validation_result")
+        ):
             # Permitted structurally, but avoid ambiguous execution semantics on non-execution evidence.
             if item.get("validation_result") in {"PASS", "FAIL"}:
-                errors.append(f"non-execution evidence {eid} must not carry PASS/FAIL validation_result")
+                errors.append(
+                    f"non-execution evidence {eid} must not carry PASS/FAIL validation_result"
+                )
 
     # Intent/change-discipline integrity and complete deterministic disposition.
     intent = audit["intent_contract"]
@@ -907,7 +1404,9 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
     objective_ids = {item["objective_id"] for item in intent["objectives"]}
     if len(objective_ids) != len(intent["objectives"]):
         errors.append("intent_contract.objectives contains duplicate objective_id values")
-    active_objectives = {item["objective_id"] for item in intent["objectives"] if item["status"] == "ACTIVE"}
+    active_objectives = {
+        item["objective_id"] for item in intent["objectives"] if item["status"] == "ACTIVE"
+    }
     for src in intent["sources"]:
         for eid in src["evidence_ids"]:
             if eid not in emap:
@@ -915,7 +1414,9 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
     for obj in intent["objectives"]:
         for sid in obj["source_ids"]:
             if sid not in source_ids:
-                errors.append(f"objective {obj['objective_id']} references unknown intent source {sid}")
+                errors.append(
+                    f"objective {obj['objective_id']} references unknown intent source {sid}"
+                )
     original = intent["original_pr_prompt"]
     if original["availability"] in {"PROVIDED", "RECOVERED"}:
         if not original.get("source_id") or original["source_id"] not in source_ids:
@@ -945,10 +1446,14 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
     for item in discipline["objective_closure"]:
         for eid in item["implementation_evidence_ids"] + item["validation_evidence_ids"]:
             if eid not in emap:
-                errors.append(f"objective closure {item['objective_id']} references missing evidence {eid}")
+                errors.append(
+                    f"objective closure {item['objective_id']} references missing evidence {eid}"
+                )
         for fid in item["finding_ids"]:
             if fid not in fmap:
-                errors.append(f"objective closure {item['objective_id']} references unknown finding {fid}")
+                errors.append(
+                    f"objective closure {item['objective_id']} references unknown finding {fid}"
+                )
 
     scope_by_pr: dict[int, set[str]] = defaultdict(set)
     for item in discipline["scope_fidelity"]["changed_surfaces"]:
@@ -975,7 +1480,7 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
         observed = scope_by_pr.get(num, set())
         if observed != expected:
             errors.append(
-                f"PR {num} scope_fidelity must disposition every changed file exactly once; missing={sorted(expected-observed)} extra={sorted(observed-expected)}"
+                f"PR {num} scope_fidelity must disposition every changed file exactly once; missing={sorted(expected - observed)} extra={sorted(observed - expected)}"
             )
 
     complexity_by_pr = {item["pr_number"]: item for item in discipline["complexity_delta"]}
@@ -989,9 +1494,13 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
         expected_deleted = sum(1 for f in files if f["status"] == "deleted")
         expected_modified = len(files) - expected_added - expected_deleted
         if (item["files_added"], item["files_deleted"], item["files_modified"]) != (
-            expected_added, expected_deleted, expected_modified
+            expected_added,
+            expected_deleted,
+            expected_modified,
         ):
-            errors.append(f"PR {num} complexity_delta file counts do not match changed_files inventory")
+            errors.append(
+                f"PR {num} complexity_delta file counts do not match changed_files inventory"
+            )
         for eid in item["evidence_ids"]:
             if eid not in emap:
                 errors.append(f"PR {num} complexity_delta references missing evidence {eid}")
@@ -1019,20 +1528,36 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
             for oid in item.get("objective_ids", []):
                 if oid not in objective_ids:
                     errors.append(f"{section} {ident} references unknown objective {oid}")
-            if bad_state is not None and item.get("disposition", item.get("status")) == bad_state and not item["finding_ids"]:
+            if (
+                bad_state is not None
+                and item.get("disposition", item.get("status")) == bad_state
+                and not item["finding_ids"]
+            ):
                 errors.append(f"{section} {ident} state {bad_state} requires finding_ids")
             if section == "architectural_economy" and item["disposition"] == "JUSTIFIED":
                 if not item["objective_ids"]:
                     errors.append(f"architectural economy {ident} JUSTIFIED requires objective_ids")
                 if not item["existing_owner_considered"]:
-                    errors.append(f"architectural economy {ident} JUSTIFIED requires existing_owner_considered=true")
-            if section == "supersession_closure" and item["status"] == "RESIDUAL" and not item["finding_ids"]:
+                    errors.append(
+                        f"architectural economy {ident} JUSTIFIED requires existing_owner_considered=true"
+                    )
+            if (
+                section == "supersession_closure"
+                and item["status"] == "RESIDUAL"
+                and not item["finding_ids"]
+            ):
                 errors.append(f"supersession {ident} RESIDUAL requires finding_ids")
-            if section == "test_discrimination" and item["status"] in {"WEAK", "ABSENT"} and not item["finding_ids"]:
+            if (
+                section == "test_discrimination"
+                and item["status"] in {"WEAK", "ABSENT"}
+                and not item["finding_ids"]
+            ):
                 errors.append(f"test discrimination {ident} {item['status']} requires finding_ids")
 
     seen_controls: set[str] = set()
-    known_control_boundaries = {item["boundary_id"]: item for item in audit["boundary_map"]["boundaries"]}
+    known_control_boundaries = {
+        item["boundary_id"]: item for item in audit["boundary_map"]["boundaries"]
+    }
     for item in discipline["control_adequacy"]:
         ident = item["control_id"]
         if ident in seen_controls:
@@ -1051,14 +1576,19 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
                 errors.append(f"control_adequacy {ident} references unknown boundary {boundary_id}")
         if item["status"] == "UNDERBUILT" and not item["finding_ids"]:
             errors.append(f"control_adequacy {ident} UNDERBUILT requires finding_ids")
-    control_covered_boundaries = {bid for item in discipline["control_adequacy"] for bid in item["boundary_ids"]}
+    control_covered_boundaries = {
+        bid for item in discipline["control_adequacy"] for bid in item["boundary_ids"]
+    }
     required_control_boundaries = {
-        bid for bid, boundary in known_control_boundaries.items()
+        bid
+        for bid, boundary in known_control_boundaries.items()
         if boundary["kind"] in {"SECURITY", "POLICY_ENFORCEMENT", "VALIDATION", "SOURCE_OF_TRUTH"}
     }
     missing_control_boundaries = required_control_boundaries - control_covered_boundaries
     if missing_control_boundaries:
-        errors.append(f"control_adequacy must cover every material control boundary: {sorted(missing_control_boundaries)}")
+        errors.append(
+            f"control_adequacy must cover every material control boundary: {sorted(missing_control_boundaries)}"
+        )
 
     obligations = audit["audit_obligation_ledger"]
     ob_ids = [item["obligation_id"] for item in obligations]
@@ -1067,13 +1597,19 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
     obs_by_kind_pr: dict[tuple[str, int], list[dict[str, Any]]] = defaultdict(list)
     for item in obligations:
         if item["pr_number"] not in pr_by_num:
-            errors.append(f"obligation {item['obligation_id']} references unknown PR {item['pr_number']}")
+            errors.append(
+                f"obligation {item['obligation_id']} references unknown PR {item['pr_number']}"
+            )
         for eid in item["evidence_ids"]:
             if eid not in emap:
-                errors.append(f"obligation {item['obligation_id']} references missing evidence {eid}")
+                errors.append(
+                    f"obligation {item['obligation_id']} references missing evidence {eid}"
+                )
         for fid in item["finding_ids"]:
             if fid not in fmap:
-                errors.append(f"obligation {item['obligation_id']} references unknown finding {fid}")
+                errors.append(
+                    f"obligation {item['obligation_id']} references unknown finding {fid}"
+                )
         if item["status"] == "FINDING" and not item["finding_ids"]:
             errors.append(f"obligation {item['obligation_id']} FINDING requires finding_ids")
         obs_by_kind_pr[(item["kind"], item["pr_number"])].append(item)
@@ -1082,13 +1618,15 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
     objective_subjects = {item["subject"] for item in obligations if item["kind"] == "OBJECTIVE"}
     missing_objective_obligations = active_objectives - objective_subjects
     if missing_objective_obligations:
-        errors.append(f"audit obligation ledger missing OBJECTIVE obligations: {sorted(missing_objective_obligations)}")
+        errors.append(
+            f"audit obligation ledger missing OBJECTIVE obligations: {sorted(missing_objective_obligations)}"
+        )
     for num, pr in pr_by_num.items():
         changed_subjects = {item["subject"] for item in obs_by_kind_pr[("CHANGED_SURFACE", num)]}
         expected_changed = {item["path"] for item in pr["changed_files"]}
         if changed_subjects != expected_changed:
             errors.append(
-                f"PR {num} CHANGED_SURFACE obligations must exactly match changed_files; missing={sorted(expected_changed-changed_subjects)} extra={sorted(changed_subjects-expected_changed)}"
+                f"PR {num} CHANGED_SURFACE obligations must exactly match changed_files; missing={sorted(expected_changed - changed_subjects)} extra={sorted(changed_subjects - expected_changed)}"
             )
         review = pr["review_thread_coverage"]
         if isinstance(review["unresolved_discovered"], int):
@@ -1099,20 +1637,51 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
                 )
 
     for item in discipline["architectural_economy"]:
-        if not any(o["kind"] == "ARCHITECTURAL_GROWTH" and o["pr_number"] == item["pr_number"] and o["subject"] == item["candidate_id"] for o in obligations):
-            errors.append(f"architectural candidate {item['candidate_id']} lacks ARCHITECTURAL_GROWTH obligation")
+        if not any(
+            o["kind"] == "ARCHITECTURAL_GROWTH"
+            and o["pr_number"] == item["pr_number"]
+            and o["subject"] == item["candidate_id"]
+            for o in obligations
+        ):
+            errors.append(
+                f"architectural candidate {item['candidate_id']} lacks ARCHITECTURAL_GROWTH obligation"
+            )
     for item in discipline["supersession_closure"]:
-        if not any(o["kind"] == "SUPERSESSION" and o["pr_number"] == item["pr_number"] and o["subject"] == item["supersession_id"] for o in obligations):
+        if not any(
+            o["kind"] == "SUPERSESSION"
+            and o["pr_number"] == item["pr_number"]
+            and o["subject"] == item["supersession_id"]
+            for o in obligations
+        ):
             errors.append(f"supersession {item['supersession_id']} lacks SUPERSESSION obligation")
     for item in discipline["failure_path_coverage"]:
-        if not any(o["kind"] == "FAILURE_PATH" and o["pr_number"] == item["pr_number"] and o["subject"] == item["failure_path_id"] for o in obligations):
+        if not any(
+            o["kind"] == "FAILURE_PATH"
+            and o["pr_number"] == item["pr_number"]
+            and o["subject"] == item["failure_path_id"]
+            for o in obligations
+        ):
             errors.append(f"failure path {item['failure_path_id']} lacks FAILURE_PATH obligation")
     for item in discipline["test_discrimination"]:
-        if not any(o["kind"] == "TEST_DISCRIMINATION" and o["pr_number"] == item["pr_number"] and o["subject"] == item["test_obligation_id"] for o in obligations):
-            errors.append(f"test obligation {item['test_obligation_id']} lacks TEST_DISCRIMINATION obligation")
+        if not any(
+            o["kind"] == "TEST_DISCRIMINATION"
+            and o["pr_number"] == item["pr_number"]
+            and o["subject"] == item["test_obligation_id"]
+            for o in obligations
+        ):
+            errors.append(
+                f"test obligation {item['test_obligation_id']} lacks TEST_DISCRIMINATION obligation"
+            )
     for item in discipline["control_adequacy"]:
-        if not any(o["kind"] == "CONTROL_ADEQUACY" and o["pr_number"] == item["pr_number"] and o["subject"] == item["control_id"] for o in obligations):
-            errors.append(f"control adequacy {item['control_id']} lacks CONTROL_ADEQUACY obligation")
+        if not any(
+            o["kind"] == "CONTROL_ADEQUACY"
+            and o["pr_number"] == item["pr_number"]
+            and o["subject"] == item["control_id"]
+            for o in obligations
+        ):
+            errors.append(
+                f"control adequacy {item['control_id']} lacks CONTROL_ADEQUACY obligation"
+            )
 
     failed_by_pr: dict[int, set[str]] = defaultdict(set)
     for item in audit["failed_check_evidence"]:
@@ -1120,9 +1689,18 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
     for num, checks in failed_by_pr.items():
         observed = {item["subject"] for item in obs_by_kind_pr[("CI_FAILURE", num)]}
         if not checks.issubset(observed):
-            errors.append(f"PR {num} audit obligation ledger missing CI_FAILURE obligations: {sorted(checks-observed)}")
+            errors.append(
+                f"PR {num} audit obligation ledger missing CI_FAILURE obligations: {sorted(checks - observed)}"
+            )
 
-    change_domain = next((item for item in audit["audit_coverage"]["domain_assessments"] if item["domain"] == "CHANGE_DISCIPLINE"), None)
+    change_domain = next(
+        (
+            item
+            for item in audit["audit_coverage"]["domain_assessments"]
+            if item["domain"] == "CHANGE_DISCIPLINE"
+        ),
+        None,
+    )
     if change_domain is None or change_domain["status"] in {"NOT_APPLICABLE", "UNKNOWN"}:
         errors.append("CHANGE_DISCIPLINE must be explicitly assessed before audit convergence")
 
@@ -1141,47 +1719,74 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
             errors.append(f"artifact inventory path is unsafe: {path}")
         for eid in item["evidence_ids"]:
             if eid not in emap:
-                errors.append(f"artifact inventory {item['artifact_id']} references missing evidence {eid}")
+                errors.append(
+                    f"artifact inventory {item['artifact_id']} references missing evidence {eid}"
+                )
         if item["revision"] != "UNKNOWN":
             allowed_revisions = {baseline, *heads.values()}
             if item["revision"].lower() not in allowed_revisions:
-                errors.append(f"artifact inventory {item['artifact_id']} revision is outside audited baseline/PR heads")
+                errors.append(
+                    f"artifact inventory {item['artifact_id']} revision is outside audited baseline/PR heads"
+                )
         for num in item["pr_numbers"]:
             if num not in pr_by_num:
-                errors.append(f"artifact inventory {item['artifact_id']} references unknown PR {num}")
+                errors.append(
+                    f"artifact inventory {item['artifact_id']} references unknown PR {num}"
+                )
             if "CHANGED" in item["roles"]:
                 changed_inventory[(num, path)] += 1
                 if item["revision"] != "UNKNOWN" and item["revision"].lower() != heads.get(num):
-                    errors.append(f"artifact inventory changed surface {path} for PR {num} must bind the PR head revision")
+                    errors.append(
+                        f"artifact inventory changed surface {path} for PR {num} must bind the PR head revision"
+                    )
     for num, pr in pr_by_num.items():
         for changed in pr["changed_files"]:
             key = (num, changed["path"])
             if changed_inventory.get(key) != 1:
-                errors.append(f"PR {num} changed file {changed['path']} must appear exactly once as CHANGED in artifact_inventory")
+                errors.append(
+                    f"PR {num} changed file {changed['path']} must appear exactly once as CHANGED in artifact_inventory"
+                )
     for surface in audit["remediation_surface_index"]:
-        for path in surface["authoritative_surfaces"] + surface["implementation_surfaces"] + surface["coupled_surfaces"]:
+        for path in (
+            surface["authoritative_surfaces"]
+            + surface["implementation_surfaces"]
+            + surface["coupled_surfaces"]
+        ):
             if safe_repo_path(path) and path not in inventory_paths:
-                errors.append(f"remediation surface {path} is not represented in artifact_inventory")
+                errors.append(
+                    f"remediation surface {path} is not represented in artifact_inventory"
+                )
     if coverage["status"] == "COMPLETE":
-        unknown_inventory = [item["artifact_id"] for item in artifact_records if item["revision"] == "UNKNOWN"]
+        unknown_inventory = [
+            item["artifact_id"] for item in artifact_records if item["revision"] == "UNKNOWN"
+        ]
         if unknown_inventory:
-            errors.append(f"COMPLETE audit coverage cannot contain UNKNOWN artifact revisions: {sorted(unknown_inventory)}")
+            errors.append(
+                f"COMPLETE audit coverage cannot contain UNKNOWN artifact revisions: {sorted(unknown_inventory)}"
+            )
 
     # PR readiness inputs must themselves be evidence-backed.
     for num, pr in pr_by_num.items():
         required = pr["required_check_resolution"]
         review = pr["review_thread_coverage"]
-        for label, claim in (("required_check_resolution", required), ("review_thread_coverage", review)):
+        for label, claim in (
+            ("required_check_resolution", required),
+            ("review_thread_coverage", review),
+        ):
             for eid in claim["evidence_ids"]:
                 if eid not in emap:
                     errors.append(f"PR {num} {label} references missing evidence {eid}")
             if claim["status"] in {"RESOLVED", "NONE", "COMPLETE"}:
                 if not claim["evidence_ids"] or not confirmed_evidence(claim["evidence_ids"], emap):
-                    errors.append(f"PR {num} {label} status {claim['status']} requires CONFIRMED evidence")
+                    errors.append(
+                        f"PR {num} {label} status {claim['status']} requires CONFIRMED evidence"
+                    )
         if required["status"] in {"RESOLVED", "NONE"} and not evidence_discriminates(
             required["evidence_ids"], emap, "required_check_identity"
         ):
-            errors.append(f"PR {num} resolved required-check identity lacks discriminating evidence")
+            errors.append(
+                f"PR {num} resolved required-check identity lacks discriminating evidence"
+            )
         if review["status"] == "COMPLETE" and not evidence_discriminates(
             review["evidence_ids"], emap, "review_thread_coverage"
         ):
@@ -1189,19 +1794,29 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
         if required["status"] == "NONE" and required.get("checks", []):
             errors.append(f"PR {num} required_check_resolution NONE requires empty checks")
         if required["status"] == "RESOLVED" and not required.get("checks"):
-            errors.append(f"PR {num} required_check_resolution RESOLVED requires at least one check")
+            errors.append(
+                f"PR {num} required_check_resolution RESOLVED requires at least one check"
+            )
         if review["status"] == "COMPLETE":
-            counts = (review["unresolved_discovered"], review["classified"], review["unresolved_remaining"])
+            counts = (
+                review["unresolved_discovered"],
+                review["classified"],
+                review["unresolved_remaining"],
+            )
             if not all(isinstance(value, int) for value in counts):
                 errors.append(f"PR {num} COMPLETE review coverage requires integer counts")
             elif review["unresolved_discovered"] != review["classified"]:
-                errors.append(f"PR {num} COMPLETE review coverage requires discovered == classified")
+                errors.append(
+                    f"PR {num} COMPLETE review coverage requires discovered == classified"
+                )
 
     # Authority resolution and traceability.
     for source in audit["authority_resolution"]["sources"]:
         for eid in source["evidence_ids"]:
             if eid not in emap:
-                errors.append(f"authority {source['authority_id']} references missing evidence {eid}")
+                errors.append(
+                    f"authority {source['authority_id']} references missing evidence {eid}"
+                )
         if source["kind"] != "USER" and not source["evidence_ids"]:
             errors.append(f"authority {source['authority_id']} requires evidence_ids")
     for conflict in audit["authority_resolution"]["conflicts"]:
@@ -1210,7 +1825,8 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
                 errors.append(f"authority conflict references unknown authority_id {aid}")
     if audit["authority_resolution"]["status"] == "RESOLVED":
         unresolved_conflicts = [
-            conflict["description"] for conflict in audit["authority_resolution"]["conflicts"]
+            conflict["description"]
+            for conflict in audit["authority_resolution"]["conflicts"]
             if conflict["status"] in {"UNKNOWN", "BLOCKING"}
         ]
         if unresolved_conflicts:
@@ -1224,7 +1840,7 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
     if set(assessments) != AUDIT_DOMAINS:
         errors.append(
             f"domain_assessments must cover every audit domain exactly once; "
-            f"missing={sorted(AUDIT_DOMAINS-set(assessments))} extra={sorted(set(assessments)-AUDIT_DOMAINS)}"
+            f"missing={sorted(AUDIT_DOMAINS - set(assessments))} extra={sorted(set(assessments) - AUDIT_DOMAINS)}"
         )
     for domain, item in assessments.items():
         for eid in item["evidence_ids"]:
@@ -1235,23 +1851,34 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
                 errors.append(f"domain assessment {domain} references unknown finding {fid}")
         if item["status"] in {"PASS", "FAIL"}:
             if not item["evidence_ids"] or not confirmed_evidence(item["evidence_ids"], emap):
-                errors.append(f"domain assessment {domain} {item['status']} requires CONFIRMED evidence_ids")
+                errors.append(
+                    f"domain assessment {domain} {item['status']} requires CONFIRMED evidence_ids"
+                )
             if not evidence_discriminates(item["evidence_ids"], emap, f"audit_domain:{domain}"):
-                errors.append(f"domain assessment {domain} {item['status']} lacks audit_domain:{domain} discriminating evidence")
+                errors.append(
+                    f"domain assessment {domain} {item['status']} lacks audit_domain:{domain} discriminating evidence"
+                )
         if item["status"] == "FAIL" and not item["finding_ids"]:
             errors.append(f"domain assessment {domain} FAIL requires finding_ids")
         if item["status"] == "NOT_APPLICABLE" and item["finding_ids"]:
             errors.append(f"domain assessment {domain} NOT_APPLICABLE must not reference findings")
     if coverage["status"] == "COMPLETE":
-        unknown_domains = sorted(domain for domain, item in assessments.items() if item["status"] == "UNKNOWN")
+        unknown_domains = sorted(
+            domain for domain, item in assessments.items() if item["status"] == "UNKNOWN"
+        )
         if unknown_domains:
-            errors.append(f"audit_coverage COMPLETE cannot contain UNKNOWN domain assessments: {unknown_domains}")
+            errors.append(
+                f"audit_coverage COMPLETE cannot contain UNKNOWN domain assessments: {unknown_domains}"
+            )
         blocking_exclusions = [
-            item["surface"] for item in coverage["excluded_or_inaccessible"]
+            item["surface"]
+            for item in coverage["excluded_or_inaccessible"]
             if item["impact"] != "NON_BLOCKING"
         ]
         if blocking_exclusions:
-            errors.append(f"audit_coverage COMPLETE cannot contain blocking exclusions: {sorted(blocking_exclusions)}")
+            errors.append(
+                f"audit_coverage COMPLETE cannot contain blocking exclusions: {sorted(blocking_exclusions)}"
+            )
 
     # Project architecture-policy adapters are explicit and scope-bound.
     adapter_resolution = audit["architecture_policy_adapters"]
@@ -1261,23 +1888,40 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
     if adapter_resolution["status"] == "NOT_APPLICABLE" and adapters:
         errors.append("architecture_policy_adapters NOT_APPLICABLE requires an empty adapters list")
     if adapter_resolution["status"] == "RESOLVED" and not adapters:
-        errors.append("architecture_policy_adapters with no applicable adapters must use NOT_APPLICABLE")
-    if adapter_resolution["status"] == "RESOLVED" and any(item["status"] in {"UNKNOWN", "CONFLICTED"} for item in adapters.values()):
-        errors.append("architecture_policy_adapters RESOLVED cannot contain UNKNOWN/CONFLICTED adapters")
+        errors.append(
+            "architecture_policy_adapters with no applicable adapters must use NOT_APPLICABLE"
+        )
+    if adapter_resolution["status"] == "RESOLVED" and any(
+        item["status"] in {"UNKNOWN", "CONFLICTED"} for item in adapters.values()
+    ):
+        errors.append(
+            "architecture_policy_adapters RESOLVED cannot contain UNKNOWN/CONFLICTED adapters"
+        )
     for adapter_id, item in adapters.items():
         for aid in item["governing_authority_ids"]:
             if aid not in amap:
-                errors.append(f"architecture adapter {adapter_id} references unknown authority {aid}")
+                errors.append(
+                    f"architecture adapter {adapter_id} references unknown authority {aid}"
+                )
         for eid in item["evidence_ids"]:
             if eid not in emap:
-                errors.append(f"architecture adapter {adapter_id} references missing evidence {eid}")
-        if item["status"] in {"APPLIED", "PARTIALLY_APPLIED"} and (not item["governing_authority_ids"] or not confirmed_evidence(item["evidence_ids"], emap)):
-            errors.append(f"architecture adapter {adapter_id} {item['status']} requires governing authority and CONFIRMED evidence")
+                errors.append(
+                    f"architecture adapter {adapter_id} references missing evidence {eid}"
+                )
+        if item["status"] in {"APPLIED", "PARTIALLY_APPLIED"} and (
+            not item["governing_authority_ids"]
+            or not confirmed_evidence(item["evidence_ids"], emap)
+        ):
+            errors.append(
+                f"architecture adapter {adapter_id} {item['status']} requires governing authority and CONFIRMED evidence"
+            )
     adapter_ids = set(adapters)
     for conflict in adapter_resolution["conflicts"]:
         unknown = set(conflict["adapter_ids"]) - adapter_ids
         if unknown:
-            errors.append(f"architecture adapter conflict references unknown adapters: {sorted(unknown)}")
+            errors.append(
+                f"architecture adapter conflict references unknown adapters: {sorted(unknown)}"
+            )
 
     # Boundary ownership is canonical rather than an implicit reasoning trail.
     bmap = audit["boundary_map"]
@@ -1290,13 +1934,19 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
     for component_id, item in components.items():
         for aid in item["authority_ids"]:
             if aid not in amap:
-                errors.append(f"boundary component {component_id} references unknown authority {aid}")
+                errors.append(
+                    f"boundary component {component_id} references unknown authority {aid}"
+                )
         for eid in item["evidence_ids"]:
             if eid not in emap:
-                errors.append(f"boundary component {component_id} references missing evidence {eid}")
+                errors.append(
+                    f"boundary component {component_id} references missing evidence {eid}"
+                )
     for boundary_id, item in boundaries.items():
         if item["owner_component_id"] not in components:
-            errors.append(f"boundary {boundary_id} references unknown owner component {item['owner_component_id']}")
+            errors.append(
+                f"boundary {boundary_id} references unknown owner component {item['owner_component_id']}"
+            )
         for aid in item["authority_ids"]:
             if aid not in amap:
                 errors.append(f"boundary {boundary_id} references unknown authority {aid}")
@@ -1309,10 +1959,14 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
     # Findings: immutable head bindings, authority, root cause state, evidence reciprocity.
     for fid, finding in fmap.items():
         if finding["repository_revision"].lower() != baseline:
-            errors.append(f"finding {fid}.repository_revision must equal audited default-branch SHA")
+            errors.append(
+                f"finding {fid}.repository_revision must equal audited default-branch SHA"
+            )
         affected = set(finding["affected_prs"])
         if not affected.issubset(pr_by_num):
-            errors.append(f"finding {fid} references unbound PRs: {sorted(affected - set(pr_by_num))}")
+            errors.append(
+                f"finding {fid} references unbound PRs: {sorted(affected - set(pr_by_num))}"
+            )
         bindings = {b["pr_number"]: b["head_sha"].lower() for b in finding["pr_head_bindings"]}
         if len(bindings) != len(finding["pr_head_bindings"]):
             errors.append(f"finding {fid} pr_head_bindings contains duplicate PR bindings")
@@ -1325,18 +1979,28 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
         if aid not in amap:
             errors.append(f"finding {fid} references unknown authority_id {aid}")
         elif finding["governing_authority"]["source"]["path"] != amap[aid]["source"]:
-            errors.append(f"finding {fid} governing source does not match authority_resolution {aid}")
+            errors.append(
+                f"finding {fid} governing source does not match authority_resolution {aid}"
+            )
         semantic_owner = finding["ownership"]["semantic_owner"]
         if semantic_owner != "UNKNOWN" and semantic_owner not in components:
-            errors.append(f"finding {fid} semantic_owner {semantic_owner!r} is absent from boundary_map.components")
+            errors.append(
+                f"finding {fid} semantic_owner {semantic_owner!r} is absent from boundary_map.components"
+            )
         for eid in finding["origin_evidence_ids"]:
             if eid not in emap:
-                errors.append(f"finding {fid} origin_evidence_ids references missing evidence {eid}")
+                errors.append(
+                    f"finding {fid} origin_evidence_ids references missing evidence {eid}"
+                )
         if finding["origin"] != "UNKNOWN":
             if not confirmed_evidence(finding["origin_evidence_ids"], emap):
-                errors.append(f"finding {fid} origin {finding['origin']} requires CONFIRMED origin evidence")
+                errors.append(
+                    f"finding {fid} origin {finding['origin']} requires CONFIRMED origin evidence"
+                )
             if not evidence_discriminates(finding["origin_evidence_ids"], emap, "finding_origin"):
-                errors.append(f"finding {fid} origin {finding['origin']} lacks finding_origin discriminating evidence")
+                errors.append(
+                    f"finding {fid} origin {finding['origin']} lacks finding_origin discriminating evidence"
+                )
         basis = finding["merge_blocking_basis"]
         expected_basis = "BLOCKING" if finding["merge_blocking"] else "NON_BLOCKING"
         if basis["status"] != expected_basis:
@@ -1354,59 +2018,91 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
             if finding["origin"] == "PRE_EXISTING" and not evidence_discriminates(
                 basis["evidence_ids"], emap, "pre_existing_blocking_relevance"
             ):
-                errors.append(f"pre-existing finding {fid} cannot block merge without pre_existing_blocking_relevance evidence")
+                errors.append(
+                    f"pre-existing finding {fid} cannot block merge without pre_existing_blocking_relevance evidence"
+                )
         elif basis.get("authority_id") is not None and basis["authority_id"] not in amap:
             errors.append(f"finding {fid} non-blocking basis references unknown authority_id")
         for eid in basis["evidence_ids"]:
             if eid not in emap:
-                errors.append(f"finding {fid} merge_blocking_basis references missing evidence {eid}")
+                errors.append(
+                    f"finding {fid} merge_blocking_basis references missing evidence {eid}"
+                )
         for eid in finding["evidence_ids"]:
             if eid not in emap:
                 errors.append(f"finding {fid} references missing evidence {eid}")
             elif fid not in emap[eid]["findings_using_this_evidence"]:
-                errors.append(f"finding {fid} -> evidence {eid} missing reciprocal evidence finding reference")
-        if finding["confidence"] == "Confirmed" and not confirmed_evidence(finding["evidence_ids"], emap):
+                errors.append(
+                    f"finding {fid} -> evidence {eid} missing reciprocal evidence finding reference"
+                )
+        if finding["confidence"] == "Confirmed" and not confirmed_evidence(
+            finding["evidence_ids"], emap
+        ):
             errors.append(f"confirmed finding {fid} requires at least one CONFIRMED evidence item")
-        if finding["root_cause_state"] == "CONFIRMED" and not confirmed_evidence(finding["evidence_ids"], emap):
+        if finding["root_cause_state"] == "CONFIRMED" and not confirmed_evidence(
+            finding["evidence_ids"], emap
+        ):
             errors.append(f"finding {fid} confirmed root cause requires CONFIRMED evidence")
-        if finding["finding_class"] == "PERFORMANCE" and finding["confidence"] in {"Confirmed", "Probable"}:
-            if not any(emap.get(eid, {}).get("evidence_type") == "MEASUREMENT" for eid in finding["evidence_ids"]):
-                errors.append(f"performance finding {fid} requires MEASUREMENT evidence for {finding['confidence']} confidence")
+        if finding["finding_class"] == "PERFORMANCE" and finding["confidence"] in {
+            "Confirmed",
+            "Probable",
+        }:
+            if not any(
+                emap.get(eid, {}).get("evidence_type") == "MEASUREMENT"
+                for eid in finding["evidence_ids"]
+            ):
+                errors.append(
+                    f"performance finding {fid} requires MEASUREMENT evidence for {finding['confidence']} confidence"
+                )
         guard = finding["ownership"]["mutation_guard"]
         if guard != "NOT_APPLICABLE":
             if guard not in amap:
-                errors.append(f"finding {fid} mutation_guard must be NOT_APPLICABLE or a known authority_id")
+                errors.append(
+                    f"finding {fid} mutation_guard must be NOT_APPLICABLE or a known authority_id"
+                )
             elif amap[guard]["kind"] != "MUTATION_GUARD":
-                errors.append(f"finding {fid} mutation_guard authority {guard} must have kind MUTATION_GUARD")
+                errors.append(
+                    f"finding {fid} mutation_guard authority {guard} must have kind MUTATION_GUARD"
+                )
         for check in finding["closing_validation"]:
             authority_id = check["authority_id"]
             if authority_id not in amap:
-                errors.append(f"finding {fid} closing validation references unknown authority_id {authority_id}")
+                errors.append(
+                    f"finding {fid} closing validation references unknown authority_id {authority_id}"
+                )
             for eid in check["evidence_ids"]:
                 if eid not in emap:
-                    errors.append(f"finding {fid} closing validation references missing evidence {eid}")
+                    errors.append(
+                        f"finding {fid} closing validation references missing evidence {eid}"
+                    )
             if not confirmed_evidence(check["evidence_ids"], emap):
-                errors.append(f"finding {fid} closing validation requires CONFIRMED provenance evidence")
+                errors.append(
+                    f"finding {fid} closing validation requires CONFIRMED provenance evidence"
+                )
             if not evidence_discriminates(check["evidence_ids"], emap, "validation_procedure"):
-                errors.append(f"finding {fid} closing validation lacks validation_procedure provenance evidence")
+                errors.append(
+                    f"finding {fid} closing validation lacks validation_procedure provenance evidence"
+                )
 
     for eid, evidence in emap.items():
         for fid in evidence["findings_using_this_evidence"]:
             if fid not in fmap:
                 errors.append(f"evidence {eid} references unknown finding {fid}")
             elif eid not in fmap[fid]["evidence_ids"]:
-                errors.append(f"evidence {eid} -> finding {fid} missing reciprocal finding evidence reference")
+                errors.append(
+                    f"evidence {eid} -> finding {fid} missing reciprocal finding evidence reference"
+                )
 
     # Every finding gets exactly one surface record and dependency node. Implementation paths are proven.
     if set(smap) != set(fmap):
         errors.append(
             "remediation_surface_index finding IDs must exactly equal findings: "
-            f"missing={sorted(set(fmap)-set(smap))}, extra={sorted(set(smap)-set(fmap))}"
+            f"missing={sorted(set(fmap) - set(smap))}, extra={sorted(set(smap) - set(fmap))}"
         )
     if set(gmap) != set(fmap):
         errors.append(
             "finding_dependency_graph IDs must exactly equal findings: "
-            f"missing={sorted(set(fmap)-set(gmap))}, extra={sorted(set(gmap)-set(fmap))}"
+            f"missing={sorted(set(fmap) - set(gmap))}, extra={sorted(set(gmap) - set(fmap))}"
         )
     for fid, surface in smap.items():
         impl = surface["implementation_surfaces"]
@@ -1419,15 +2115,26 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
                 errors.append(f"finding {fid} surface_evidence has unsafe path {record['path']!r}")
             for eid in record["evidence_ids"]:
                 if eid not in emap:
-                    errors.append(f"finding {fid} surface {record['path']} references missing evidence {eid}")
+                    errors.append(
+                        f"finding {fid} surface {record['path']} references missing evidence {eid}"
+                    )
         for path in impl:
             records = [r for r in sev if r["path"] == path and r["role"] == "IMPLEMENTATION"]
             if not records:
-                errors.append(f"finding {fid} implementation surface {path!r} lacks IMPLEMENTATION surface_evidence")
+                errors.append(
+                    f"finding {fid} implementation surface {path!r} lacks IMPLEMENTATION surface_evidence"
+                )
             elif not any(confirmed_evidence(r["evidence_ids"], emap) for r in records):
-                errors.append(f"finding {fid} implementation surface {path!r} lacks CONFIRMED surface evidence")
-            elif not any(evidence_discriminates(r["evidence_ids"], emap, "implementation_surface") for r in records):
-                errors.append(f"finding {fid} implementation surface {path!r} lacks evidence that discriminates implementation_surface")
+                errors.append(
+                    f"finding {fid} implementation surface {path!r} lacks CONFIRMED surface evidence"
+                )
+            elif not any(
+                evidence_discriminates(r["evidence_ids"], emap, "implementation_surface")
+                for r in records
+            ):
+                errors.append(
+                    f"finding {fid} implementation surface {path!r} lacks evidence that discriminates implementation_surface"
+                )
 
     for fid, node in gmap.items():
         deps = node["depends_on_findings"]
@@ -1442,22 +2149,38 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
     # Preservation, anti-bypass, failed-check, and regression evidence references.
     for item in audit["preservation_obligations"]:
         if item["authority"] not in amap:
-            errors.append(f"preservation {item['obligation_id']} references unknown authority_id {item['authority']}")
+            errors.append(
+                f"preservation {item['obligation_id']} references unknown authority_id {item['authority']}"
+            )
         for eid in item["evidence_ids"]:
             if eid not in emap:
-                errors.append(f"preservation {item['obligation_id']} references missing evidence {eid}")
-        if item["status"] in {"PRESERVED", "MIGRATION_AUTHORIZED"} and not confirmed_evidence(item["evidence_ids"], emap):
-            errors.append(f"preservation {item['obligation_id']} status {item['status']} requires CONFIRMED evidence")
+                errors.append(
+                    f"preservation {item['obligation_id']} references missing evidence {eid}"
+                )
+        if item["status"] in {"PRESERVED", "MIGRATION_AUTHORIZED"} and not confirmed_evidence(
+            item["evidence_ids"], emap
+        ):
+            errors.append(
+                f"preservation {item['obligation_id']} status {item['status']} requires CONFIRMED evidence"
+            )
         for check in item["validation"]:
             if check["authority_id"] not in amap:
-                errors.append(f"preservation {item['obligation_id']} validation references unknown authority_id {check['authority_id']}")
+                errors.append(
+                    f"preservation {item['obligation_id']} validation references unknown authority_id {check['authority_id']}"
+                )
             for eid in check["evidence_ids"]:
                 if eid not in emap:
-                    errors.append(f"preservation {item['obligation_id']} validation references missing evidence {eid}")
+                    errors.append(
+                        f"preservation {item['obligation_id']} validation references missing evidence {eid}"
+                    )
             if not confirmed_evidence(check["evidence_ids"], emap):
-                errors.append(f"preservation {item['obligation_id']} validation requires CONFIRMED provenance evidence")
+                errors.append(
+                    f"preservation {item['obligation_id']} validation requires CONFIRMED provenance evidence"
+                )
             if not evidence_discriminates(check["evidence_ids"], emap, "validation_procedure"):
-                errors.append(f"preservation {item['obligation_id']} validation lacks validation_procedure provenance evidence")
+                errors.append(
+                    f"preservation {item['obligation_id']} validation lacks validation_procedure provenance evidence"
+                )
     bypass_by_pr: dict[int, dict[str, Any]] = {}
     for item in audit["anti_bypass_checks"]:
         num = item["pr_number"]
@@ -1466,17 +2189,31 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
         bypass_by_pr[num] = item
         kinds = [check["kind"] for check in item["checks"]]
         if set(kinds) != ANTI_BYPASS_KINDS or len(kinds) != len(ANTI_BYPASS_KINDS):
-            errors.append(f"PR {num} anti-bypass coverage must contain each required kind exactly once")
+            errors.append(
+                f"PR {num} anti-bypass coverage must contain each required kind exactly once"
+            )
         for check in item["checks"]:
             for eid in check["evidence_ids"]:
                 if eid not in emap:
-                    errors.append(f"PR {num} anti-bypass {check['kind']} references missing evidence {eid}")
-            if check["status"] in {"PASS", "FINDING", "NOT_APPLICABLE"} and not confirmed_evidence(check["evidence_ids"], emap):
-                errors.append(f"PR {num} anti-bypass {check['kind']}={check['status']} requires CONFIRMED evidence")
-            if check["status"] in {"PASS", "FINDING", "NOT_APPLICABLE"} and not evidence_discriminates(
+                    errors.append(
+                        f"PR {num} anti-bypass {check['kind']} references missing evidence {eid}"
+                    )
+            if check["status"] in {"PASS", "FINDING", "NOT_APPLICABLE"} and not confirmed_evidence(
+                check["evidence_ids"], emap
+            ):
+                errors.append(
+                    f"PR {num} anti-bypass {check['kind']}={check['status']} requires CONFIRMED evidence"
+                )
+            if check["status"] in {
+                "PASS",
+                "FINDING",
+                "NOT_APPLICABLE",
+            } and not evidence_discriminates(
                 check["evidence_ids"], emap, f"anti_bypass:{check['kind']}"
             ):
-                errors.append(f"PR {num} anti-bypass {check['kind']} lacks claim-specific discriminating evidence")
+                errors.append(
+                    f"PR {num} anti-bypass {check['kind']} lacks claim-specific discriminating evidence"
+                )
     if set(bypass_by_pr) != set(pr_by_num):
         errors.append("anti_bypass_checks must contain exactly one entry for every bound PR")
 
@@ -1493,14 +2230,23 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
                 continue
             evidence = emap[eid]
             if evidence["evidence_type"] not in EXECUTION_EVIDENCE:
-                errors.append(f"failed_check_evidence PR {num} evidence {eid} must be execution evidence")
+                errors.append(
+                    f"failed_check_evidence PR {num} evidence {eid} must be execution evidence"
+                )
                 continue
-            if evidence.get("source_head_sha", "UNKNOWN").lower() != item["source_head_sha"].lower():
+            if (
+                evidence.get("source_head_sha", "UNKNOWN").lower()
+                != item["source_head_sha"].lower()
+            ):
                 errors.append(f"failed_check_evidence PR {num} evidence {eid} source head mismatch")
             if evidence.get("tested_revision_sha") != item["tested_revision_sha"]:
-                errors.append(f"failed_check_evidence PR {num} evidence {eid} tested revision mismatch")
+                errors.append(
+                    f"failed_check_evidence PR {num} evidence {eid} tested revision mismatch"
+                )
             if evidence.get("path_or_check") != item["check"]:
-                errors.append(f"failed_check_evidence PR {num} evidence {eid} check identity mismatch")
+                errors.append(
+                    f"failed_check_evidence PR {num} evidence {eid} check identity mismatch"
+                )
         for fid in item["affected_finding_ids"]:
             if fid not in fmap:
                 errors.append(f"failed_check_evidence PR {num} references missing finding {fid}")
@@ -1509,7 +2255,9 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
             and emap.get(eid, {}).get("epistemic_state") == "CONFIRMED"
             for eid in item["evidence_ids"]
         ):
-            errors.append(f"failed_check_evidence PR {num} requires at least one CONFIRMED FAIL execution evidence")
+            errors.append(
+                f"failed_check_evidence PR {num} requires at least one CONFIRMED FAIL execution evidence"
+            )
 
     for item in audit["regression_proof"]:
         fid = item["finding_id"]
@@ -1520,13 +2268,17 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
                 errors.append(f"regression_proof {fid} references missing evidence {eid}")
         if item["pre_remediation_result"] in {"PASS", "FAIL"}:
             matching = [
-                emap[eid] for eid in item["evidence_ids"] if eid in emap
+                emap[eid]
+                for eid in item["evidence_ids"]
+                if eid in emap
                 and emap[eid].get("epistemic_state") == "CONFIRMED"
                 and emap[eid].get("validation_result") == item["pre_remediation_result"]
                 and emap[eid].get("evidence_type") in EXECUTION_EVIDENCE
             ]
             if not matching:
-                errors.append(f"regression_proof {fid} result {item['pre_remediation_result']} lacks matching CONFIRMED execution evidence")
+                errors.append(
+                    f"regression_proof {fid} result {item['pre_remediation_result']} lacks matching CONFIRMED execution evidence"
+                )
 
     # Cross-PR evidence is first-class when more than one PR is bound.
     cross = audit["cross_pr_evidence_pack"]
@@ -1534,7 +2286,9 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
         if cross["status"] != "NOT_APPLICABLE":
             errors.append("single-PR audit requires cross_pr_evidence_pack.status NOT_APPLICABLE")
         if cross["relationships"] or cross["merge_order"]:
-            errors.append("single-PR audit cross_pr_evidence_pack must have empty relationships and merge_order")
+            errors.append(
+                "single-PR audit cross_pr_evidence_pack must have empty relationships and merge_order"
+            )
     else:
         relation_ids: set[str] = set()
         covered_prs: set[int] = set()
@@ -1553,12 +2307,18 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
             if cross["status"] == "COMPLETE" and not evidence_discriminates(
                 relation["evidence_ids"], emap, "cross_pr_relationship"
             ):
-                errors.append(f"cross-PR relationship {rid} lacks discriminating cross_pr_relationship evidence")
+                errors.append(
+                    f"cross-PR relationship {rid} lacks discriminating cross_pr_relationship evidence"
+                )
         if cross["status"] == "COMPLETE":
             if set(cross["merge_order"]) != set(pr_by_num):
-                errors.append("COMPLETE cross-PR evidence requires merge_order to contain every bound PR exactly once")
+                errors.append(
+                    "COMPLETE cross-PR evidence requires merge_order to contain every bound PR exactly once"
+                )
             if covered_prs != set(pr_by_num):
-                errors.append("COMPLETE cross-PR evidence requires every bound PR to appear in a classified relationship")
+                errors.append(
+                    "COMPLETE cross-PR evidence requires every bound PR to appear in a classified relationship"
+                )
 
     # Residual unknowns are explicit and readiness impact is typed.
     unknown_by_id = {item["unknown_id"]: item for item in audit["residual_unknowns"]}
@@ -1593,30 +2353,48 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
                 errors.append(f"audit pass {item['pass_number']} references missing evidence {eid}")
         unknown_findings = set(item["observed_finding_ids"]) - all_finding_ids
         if unknown_findings:
-            errors.append(f"audit pass {item['pass_number']} references unknown findings: {sorted(unknown_findings)}")
+            errors.append(
+                f"audit pass {item['pass_number']} references unknown findings: {sorted(unknown_findings)}"
+            )
         unknown_obligations = set(item["observed_obligation_ids"]) - all_obligation_ids
         if unknown_obligations:
-            errors.append(f"audit pass {item['pass_number']} references unknown obligations: {sorted(unknown_obligations)}")
+            errors.append(
+                f"audit pass {item['pass_number']} references unknown obligations: {sorted(unknown_obligations)}"
+            )
         unknown_claims = set(item["observed_claim_ids"]) - all_claim_ids
         if unknown_claims:
-            errors.append(f"audit pass {item['pass_number']} references unknown claims: {sorted(unknown_claims)}")
+            errors.append(
+                f"audit pass {item['pass_number']} references unknown claims: {sorted(unknown_claims)}"
+            )
         unknown_falsifications = set(item["observed_falsification_ids"]) - all_falsification_ids
         if unknown_falsifications:
-            errors.append(f"audit pass {item['pass_number']} references unknown falsifications: {sorted(unknown_falsifications)}")
+            errors.append(
+                f"audit pass {item['pass_number']} references unknown falsifications: {sorted(unknown_falsifications)}"
+            )
         unknown_closures = set(item["observed_closure_ids"]) - all_closure_ids
         if unknown_closures:
-            errors.append(f"audit pass {item['pass_number']} references unknown deterministic closures: {sorted(unknown_closures)}")
+            errors.append(
+                f"audit pass {item['pass_number']} references unknown deterministic closures: {sorted(unknown_closures)}"
+            )
     final_pass = passes[-1]
     if set(final_pass["observed_finding_ids"]) != all_finding_ids:
-        errors.append("final VERIFICATION pass must re-observe every retained finding exactly once by ID")
+        errors.append(
+            "final VERIFICATION pass must re-observe every retained finding exactly once by ID"
+        )
     if set(final_pass["observed_obligation_ids"]) != all_obligation_ids:
-        errors.append("final VERIFICATION pass must re-observe every audit obligation exactly once by ID")
+        errors.append(
+            "final VERIFICATION pass must re-observe every audit obligation exactly once by ID"
+        )
     if set(final_pass["observed_claim_ids"]) != all_claim_ids:
         errors.append("final VERIFICATION pass must re-observe every claim exactly once by ID")
     if set(final_pass["observed_falsification_ids"]) != all_falsification_ids:
-        errors.append("final VERIFICATION pass must re-observe every falsification probe exactly once by ID")
+        errors.append(
+            "final VERIFICATION pass must re-observe every falsification probe exactly once by ID"
+        )
     if set(final_pass["observed_closure_ids"]) != all_closure_ids:
-        errors.append("final VERIFICATION pass must re-observe every deterministic closure exactly once by ID")
+        errors.append(
+            "final VERIFICATION pass must re-observe every deterministic closure exactly once by ID"
+        )
     if audit["executive_verdict"]["convergence_status"] == "CONVERGED":
         if final_pass["new_information_count"] != 0:
             errors.append("CONVERGED requires final VERIFICATION pass new_information_count == 0")
@@ -1631,10 +2409,14 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
         errors.append("per_pr_verdicts must contain exactly one verdict for every bound PR")
     for num, verdict in verdicts.items():
         actual_blocking = sorted(
-            fid for fid, finding in fmap.items() if finding["merge_blocking"] and num in finding["affected_prs"]
+            fid
+            for fid, finding in fmap.items()
+            if finding["merge_blocking"] and num in finding["affected_prs"]
         )
         actual_unknowns = sorted(
-            uid for uid, item in unknown_by_id.items() if item["blocks_readiness"] and num in item["affected_prs"]
+            uid
+            for uid, item in unknown_by_id.items()
+            if item["blocks_readiness"] and num in item["affected_prs"]
         )
         if sorted(verdict["blocking_finding_ids"]) != actual_blocking:
             errors.append(f"PR {num} blocking_finding_ids != actual merge-blocking findings")
@@ -1643,19 +2425,27 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
         validation_ids = verdict["mandatory_validation_evidence_ids"]
         for eid in validation_ids:
             if eid not in emap:
-                errors.append(f"PR {num} mandatory_validation_evidence_ids references missing evidence {eid}")
+                errors.append(
+                    f"PR {num} mandatory_validation_evidence_ids references missing evidence {eid}"
+                )
                 continue
             evidence = emap[eid]
             if evidence.get("epistemic_state") != "CONFIRMED":
                 errors.append(f"PR {num} mandatory validation evidence {eid} must be CONFIRMED")
             if "mandatory_validation" not in evidence.get("properties_discriminated", []):
-                errors.append(f"PR {num} mandatory validation evidence {eid} lacks mandatory_validation property")
+                errors.append(
+                    f"PR {num} mandatory validation evidence {eid} lacks mandatory_validation property"
+                )
             if evidence["evidence_type"] in EXECUTION_EVIDENCE:
                 if evidence.get("source_head_sha", "UNKNOWN").lower() != heads[num]:
-                    errors.append(f"PR {num} mandatory validation evidence {eid} source head mismatch")
+                    errors.append(
+                        f"PR {num} mandatory validation evidence {eid} source head mismatch"
+                    )
         if verdict["validation_sufficiency"] == "PASS":
             usable = [
-                emap[eid] for eid in validation_ids if eid in emap
+                emap[eid]
+                for eid in validation_ids
+                if eid in emap
                 and emap[eid].get("epistemic_state") == "CONFIRMED"
                 and "mandatory_validation" in emap[eid].get("properties_discriminated", [])
                 and (
@@ -1664,20 +2454,31 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
                 )
             ]
             if not usable:
-                errors.append(f"PR {num} validation_sufficiency PASS requires usable CONFIRMED mandatory validation evidence")
+                errors.append(
+                    f"PR {num} validation_sufficiency PASS requires usable CONFIRMED mandatory validation evidence"
+                )
         readiness = verdict["merge_readiness"]
         if readiness in READY_STATES:
-            domain_failures = [item for item in coverage["domain_assessments"] if item["status"] == "FAIL"]
+            domain_failures = [
+                item for item in coverage["domain_assessments"] if item["status"] == "FAIL"
+            ]
             if readiness == "READY" and domain_failures:
                 errors.append(f"PR {num} READY requires all audit domains PASS or NOT_APPLICABLE")
             if readiness == "READY_WITH_NON_BLOCKING_NOTES":
                 for domain_item in domain_failures:
-                    if any(fmap.get(fid, {}).get("merge_blocking") for fid in domain_item["finding_ids"]):
-                        errors.append(f"PR {num} READY_WITH_NON_BLOCKING_NOTES cannot retain merge-blocking domain failures")
+                    if any(
+                        fmap.get(fid, {}).get("merge_blocking")
+                        for fid in domain_item["finding_ids"]
+                    ):
+                        errors.append(
+                            f"PR {num} READY_WITH_NON_BLOCKING_NOTES cannot retain merge-blocking domain failures"
+                        )
             if actual_blocking or actual_unknowns:
                 errors.append(f"PR {num} cannot be {readiness} with blocking findings/unknowns")
             if verdict["validation_sufficiency"] != "PASS":
-                errors.append(f"PR {num} cannot be {readiness} unless validation_sufficiency is PASS")
+                errors.append(
+                    f"PR {num} cannot be {readiness} unless validation_sufficiency is PASS"
+                )
             pr = pr_by_num[num]
             if str(pr["state"]).lower() != "open":
                 errors.append(f"PR {num} cannot be {readiness} unless state is open")
@@ -1687,7 +2488,9 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
                 errors.append(f"PR {num} cannot be {readiness} unless mergeability is MERGEABLE")
             required = pr["required_check_resolution"]
             if required["status"] == "UNKNOWN":
-                errors.append(f"PR {num} cannot be {readiness} with UNKNOWN required-check identity")
+                errors.append(
+                    f"PR {num} cannot be {readiness} with UNKNOWN required-check identity"
+                )
             if required["status"] == "RESOLVED":
                 for check_name in required.get("checks", []):
                     passed = any(
@@ -1696,31 +2499,52 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
                         and emap[eid].get("source_head_sha", "UNKNOWN").lower() == heads[num]
                         and emap[eid].get("path_or_check") == check_name
                         and emap[eid].get("validation_result") == "PASS"
-                        for eid in validation_ids if eid in emap
+                        for eid in validation_ids
+                        if eid in emap
                     )
                     if not passed:
-                        errors.append(f"PR {num} required check {check_name!r} lacks CONFIRMED PASS evidence in mandatory validation set")
+                        errors.append(
+                            f"PR {num} required check {check_name!r} lacks CONFIRMED PASS evidence in mandatory validation set"
+                        )
             if any(
                 emap[eid].get("validation_result") != "PASS"
-                for eid in validation_ids if eid in emap and emap[eid]["evidence_type"] in EXECUTION_EVIDENCE
+                for eid in validation_ids
+                if eid in emap and emap[eid]["evidence_type"] in EXECUTION_EVIDENCE
             ):
-                errors.append(f"PR {num} cannot be {readiness} while mandatory validation contains non-PASS result")
+                errors.append(
+                    f"PR {num} cannot be {readiness} while mandatory validation contains non-PASS result"
+                )
             review = pr["review_thread_coverage"]
             if review["status"] != "COMPLETE":
                 errors.append(f"PR {num} cannot be {readiness} without COMPLETE review coverage")
             elif review["unresolved_remaining"] != 0:
-                errors.append(f"PR {num} cannot be {readiness} with unresolved review threads remaining")
+                errors.append(
+                    f"PR {num} cannot be {readiness} with unresolved review threads remaining"
+                )
             for preserve in audit["preservation_obligations"]:
-                if num in preserve["affected_prs"] and preserve["status"] in {"VIOLATED", "UNPROVEN", "UNKNOWN"}:
-                    errors.append(f"PR {num} cannot be {readiness} with preservation {preserve['status']}")
+                if num in preserve["affected_prs"] and preserve["status"] in {
+                    "VIOLATED",
+                    "UNPROVEN",
+                    "UNKNOWN",
+                }:
+                    errors.append(
+                        f"PR {num} cannot be {readiness} with preservation {preserve['status']}"
+                    )
             for check in bypass_by_pr[num]["checks"]:
                 if check["status"] in {"FINDING", "UNKNOWN"}:
-                    errors.append(f"PR {num} cannot be {readiness} with anti-bypass {check['kind']}={check['status']}")
+                    errors.append(
+                        f"PR {num} cannot be {readiness} with anti-bypass {check['kind']}={check['status']}"
+                    )
 
     # Change-discipline readiness and convergence are fail-closed.
     discipline_unknown = (
-        any(item["status"] in {"UNPROVEN", "CONFLICTED"} for item in discipline["objective_closure"])
-        or any(item["disposition"] == "UNKNOWN" for item in discipline["scope_fidelity"]["changed_surfaces"])
+        any(
+            item["status"] in {"UNPROVEN", "CONFLICTED"} for item in discipline["objective_closure"]
+        )
+        or any(
+            item["disposition"] == "UNKNOWN"
+            for item in discipline["scope_fidelity"]["changed_surfaces"]
+        )
         or any(item["disposition"] == "UNKNOWN" for item in discipline["architectural_economy"])
         or any(item["status"] == "UNKNOWN" for item in discipline["supersession_closure"])
         or any(item["status"] == "UNKNOWN" for item in discipline["failure_path_coverage"])
@@ -1728,12 +2552,26 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
         or any(item["status"] == "UNKNOWN" for item in discipline["control_adequacy"])
         or any(item["status"] == "UNKNOWN" for item in obligations)
         or any(item["scope_disposition"] == "UNKNOWN" for item in audit["changed_symbol_ledger"])
-        or any(item["materiality"] == "MATERIAL" and item["status"] == "UNKNOWN" for item in audit["claim_validation_matrix"])
-        or any(item["result"] == "INCONCLUSIVE" and next((c for c in audit["claim_validation_matrix"] if c["claim_id"] == item["claim_id"]), {}).get("materiality") == "MATERIAL" for item in audit["falsification_ledger"])
+        or any(
+            item["materiality"] == "MATERIAL" and item["status"] == "UNKNOWN"
+            for item in audit["claim_validation_matrix"]
+        )
+        or any(
+            item["result"] == "INCONCLUSIVE"
+            and next(
+                (c for c in audit["claim_validation_matrix"] if c["claim_id"] == item["claim_id"]),
+                {},
+            ).get("materiality")
+            == "MATERIAL"
+            for item in audit["falsification_ledger"]
+        )
     )
     discipline_blocker = (
         any(item["status"] != "SATISFIED" for item in discipline["objective_closure"])
-        or any(item["disposition"] == "SCOPE_EXTENSION" for item in discipline["scope_fidelity"]["changed_surfaces"])
+        or any(
+            item["disposition"] == "SCOPE_EXTENSION"
+            for item in discipline["scope_fidelity"]["changed_surfaces"]
+        )
         or any(item["disposition"] == "UNJUSTIFIED" for item in discipline["architectural_economy"])
         or any(item["status"] == "RESIDUAL" for item in discipline["supersession_closure"])
         or any(item["status"] in {"WEAK", "ABSENT"} for item in discipline["test_discrimination"])
@@ -1746,15 +2584,22 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
         if any(v["merge_readiness"] not in READY_STATES for v in verdicts.values()):
             errors.append(f"combined {combined} requires every PR individually ready")
         if dependency_blocked:
-            errors.append(f"combined {combined} cannot contain dependency cycles/blocked ordering: {dependency_blocked}")
+            errors.append(
+                f"combined {combined} cannot contain dependency cycles/blocked ordering: {dependency_blocked}"
+            )
         if len(pr_by_num) > 1 and cross["status"] != "COMPLETE":
             errors.append(f"combined {combined} requires COMPLETE cross-PR evidence")
         if any(item["blocks_readiness"] for item in audit["residual_unknowns"]):
             errors.append(f"combined {combined} cannot retain readiness-blocking unknowns")
         if coverage["status"] != "COMPLETE":
             errors.append(f"combined {combined} requires COMPLETE audit coverage")
-        if any(item["impact"] in {"BLOCKS_READINESS", "BLOCKS_CONVERGENCE"} for item in coverage["excluded_or_inaccessible"]):
-            errors.append(f"combined {combined} cannot retain readiness/convergence-blocking exclusions")
+        if any(
+            item["impact"] in {"BLOCKS_READINESS", "BLOCKS_CONVERGENCE"}
+            for item in coverage["excluded_or_inaccessible"]
+        ):
+            errors.append(
+                f"combined {combined} cannot retain readiness/convergence-blocking exclusions"
+            )
         if audit["authority_resolution"]["status"] != "RESOLVED":
             errors.append(f"combined {combined} requires RESOLVED authority")
         if discipline_blocker or discipline_unknown:
@@ -1769,15 +2614,26 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
         or p["review_thread_coverage"]["status"] != "COMPLETE"
         for p in audit["pr_bindings"]
     )
-    if combined in READY_STATES and executive["readiness_status"] not in {"READY", "CONDITIONALLY_READY"}:
-        errors.append("combined ready state requires executive readiness READY or CONDITIONALLY_READY")
+    if combined in READY_STATES and executive["readiness_status"] not in {
+        "READY",
+        "CONDITIONALLY_READY",
+    }:
+        errors.append(
+            "combined ready state requires executive readiness READY or CONDITIONALLY_READY"
+        )
     if executive["readiness_status"] in {"READY", "CONDITIONALLY_READY"}:
         if has_blocker:
-            errors.append("executive readiness cannot be READY/CONDITIONALLY_READY with merge-blocking findings")
+            errors.append(
+                "executive readiness cannot be READY/CONDITIONALLY_READY with merge-blocking findings"
+            )
         if has_blocking_unknown or has_unresolved_binding:
-            errors.append("executive readiness cannot be READY/CONDITIONALLY_READY with readiness-blocking Unknowns")
+            errors.append(
+                "executive readiness cannot be READY/CONDITIONALLY_READY with readiness-blocking Unknowns"
+            )
         if combined not in READY_STATES:
-            errors.append("executive readiness READY/CONDITIONALLY_READY requires combined ready state")
+            errors.append(
+                "executive readiness READY/CONDITIONALLY_READY requires combined ready state"
+            )
     if executive["convergence_status"] == "CONVERGED":
         if coverage["status"] != "COMPLETE":
             errors.append("CONVERGED requires COMPLETE audit coverage")
@@ -1786,7 +2642,9 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
         if any(item["status"] == "UNKNOWN" for item in coverage["domain_assessments"]):
             errors.append("CONVERGED cannot retain UNKNOWN audit-domain assessments")
         if audit["architecture_policy_adapters"]["status"] in {"PARTIAL", "UNKNOWN", "CONFLICTED"}:
-            errors.append("CONVERGED requires architecture policy adapter applicability to be resolved or NOT_APPLICABLE")
+            errors.append(
+                "CONVERGED requires architecture policy adapter applicability to be resolved or NOT_APPLICABLE"
+            )
         if audit["boundary_map"]["status"] != "COMPLETE":
             errors.append("CONVERGED requires COMPLETE boundary_map")
         if dependency_blocked:
@@ -1800,22 +2658,34 @@ def validate_semantics(audit: dict[str, Any], change_ledgers: dict[int, dict[str
         if discipline_unknown:
             errors.append("CONVERGED cannot retain UNKNOWN change-discipline obligations")
         final_pass = audit["audit_passes"][-1]
-        if set(final_pass["observed_claim_ids"]) != {item["claim_id"] for item in audit["claim_validation_matrix"]}:
+        if set(final_pass["observed_claim_ids"]) != {
+            item["claim_id"] for item in audit["claim_validation_matrix"]
+        }:
             errors.append("CONVERGED final verification must re-observe every claim")
-        if set(final_pass["observed_falsification_ids"]) != {item["falsification_id"] for item in audit["falsification_ledger"]}:
+        if set(final_pass["observed_falsification_ids"]) != {
+            item["falsification_id"] for item in audit["falsification_ledger"]
+        }:
             errors.append("CONVERGED final verification must re-observe every falsification probe")
-        if set(final_pass["observed_closure_ids"]) != {item["closure_id"] for item in audit["deterministic_closure_ledger"]}:
-            errors.append("CONVERGED final verification must re-observe every deterministic closure")
+        if set(final_pass["observed_closure_ids"]) != {
+            item["closure_id"] for item in audit["deterministic_closure_ledger"]
+        }:
+            errors.append(
+                "CONVERGED final verification must re-observe every deterministic closure"
+            )
     if executive["audit_status"] == "SUCCEEDED" and executive["convergence_status"] != "CONVERGED":
         errors.append("audit_status SUCCEEDED requires convergence_status CONVERGED")
 
     secret_pattern = contains_secret_material(audit)
     if secret_pattern:
-        errors.append(f"audit contains high-confidence secret material matching packaging tripwire: {secret_pattern}")
+        errors.append(
+            f"audit contains high-confidence secret material matching packaging tripwire: {secret_pattern}"
+        )
     return errors
 
 
-def validate_audit(audit: dict[str, Any], change_ledgers: dict[int, dict[str, Any]] | None = None) -> list[str]:
+def validate_audit(
+    audit: dict[str, Any], change_ledgers: dict[int, dict[str, Any]] | None = None
+) -> list[str]:
     errors = schema_errors(audit)
     if errors:
         return errors
@@ -1854,7 +2724,9 @@ def dependency_order(audit: dict[str, Any]) -> tuple[list[str], list[str]]:
             indegree[nxt] -= 1
             if indegree[nxt] == 0:
                 newly_ready.append(nxt)
-        newly_ready.sort(key=lambda item: (priority.get(nodes[item]["remediation_order_class"], 9), item))
+        newly_ready.sort(
+            key=lambda item: (priority.get(nodes[item]["remediation_order_class"], 9), item)
+        )
         queue.extend(newly_ready)
     blocked = sorted(fid for fid, degree in indegree.items() if degree > 0)
     ordered.extend(blocked)
@@ -1872,7 +2744,8 @@ def reverse_dependencies(audit: dict[str, Any]) -> dict[str, list[str]]:
 def relevant_preservation(audit: dict[str, Any], affected_prs: list[int]) -> list[dict[str, Any]]:
     target = set(affected_prs)
     return [
-        item for item in audit["preservation_obligations"]
+        item
+        for item in audit["preservation_obligations"]
         if target.intersection(item["affected_prs"])
     ]
 
@@ -1885,7 +2758,8 @@ def implementation_paths_with_confirmed_evidence(
     valid: list[str] = []
     for path in surface["implementation_surfaces"]:
         records = [
-            record for record in surface["surface_evidence"]
+            record
+            for record in surface["surface_evidence"]
             if record["path"] == path and record["role"] == "IMPLEMENTATION"
         ]
         if any(
@@ -1924,7 +2798,10 @@ def make_handoff(audit: dict[str, Any], autoremediate: int = 0) -> dict[str, Any
         if finding["origin"] == "UNKNOWN":
             mutation_reasons.append("origin=UNKNOWN")
         guard = ownership["mutation_guard"]
-        if guard != "NOT_APPLICABLE" and (guard not in authority_map(audit) or authority_map(audit)[guard]["kind"] != "MUTATION_GUARD"):
+        if guard != "NOT_APPLICABLE" and (
+            guard not in authority_map(audit)
+            or authority_map(audit)[guard]["kind"] != "MUTATION_GUARD"
+        ):
             mutation_reasons.append("mutation_guard_unresolved")
         if fid in dependency_blocked:
             mutation_reasons.append("dependency_order_unresolved")
@@ -1938,63 +2815,81 @@ def make_handoff(audit: dict[str, Any], autoremediate: int = 0) -> dict[str, Any
         for eid in finding["evidence_ids"]:
             evidence = emap[eid]
             if evidence["evidence_type"] in EXECUTION_EVIDENCE:
-                validation_evidence.append({
-                    "evidence_id": eid,
-                    "type": evidence["evidence_type"],
-                    "source_head_sha": evidence.get("source_head_sha", "UNKNOWN"),
-                    "tested_revision_sha": evidence.get("tested_revision_sha", "UNKNOWN"),
-                    "result": evidence.get("validation_result", "UNKNOWN"),
-                    "properties_discriminated": evidence["properties_discriminated"],
-                })
+                validation_evidence.append(
+                    {
+                        "evidence_id": eid,
+                        "type": evidence["evidence_type"],
+                        "source_head_sha": evidence.get("source_head_sha", "UNKNOWN"),
+                        "tested_revision_sha": evidence.get("tested_revision_sha", "UNKNOWN"),
+                        "result": evidence.get("validation_result", "UNKNOWN"),
+                        "properties_discriminated": evidence["properties_discriminated"],
+                    }
+                )
 
-        work_units.append({
-            "order": index,
-            "finding_id": fid,
-            "finding_class": finding["finding_class"],
-            "severity": finding["severity"],
-            "confidence": finding["confidence"],
-            "root_cause_state": finding["root_cause_state"],
-            "origin": finding["origin"],
-            "origin_evidence_ids": finding["origin_evidence_ids"],
-            "merge_blocking": finding["merge_blocking"],
-            "merge_blocking_basis": finding["merge_blocking_basis"],
-            "affected_prs": finding["affected_prs"],
-            "semantic_owner": ownership["semantic_owner"],
-            "execution_owner": ownership["execution_owner"],
-            "mutation_guard": ownership["mutation_guard"],
-            "remediation_owner_class": owner_class,
-            "mutation_eligible": mutation_eligible,
-            "mutation_block_reasons": mutation_reasons,
-            "depends_on_findings": gmap[fid]["depends_on_findings"],
-            "blocks_findings": reverse.get(fid, []),
-            "governing_authority": finding["governing_authority"],
-            "observed_behavior": finding["observed_behavior"],
-            "expected_behavior": finding["expected_behavior"],
-            "proof_of_mismatch": finding["proof_of_mismatch"],
-            "impact": finding["impact"],
-            "root_cause": finding["root_cause"],
-            "behavioral_closure_condition": finding["behavioral_closure_condition"],
-            "closing_validation": finding["closing_validation"],
-            "evidence_ids": finding["evidence_ids"],
-            "prior_validation_evidence": validation_evidence,
-            "authoritative_read_surfaces": surface["authoritative_surfaces"],
-            "write_surfaces": proven_paths if mutation_eligible else [],
-            "non_authorizing_candidate_surfaces": [] if mutation_eligible else surface["implementation_surfaces"],
-            "coupled_read_surfaces": surface["coupled_surfaces"],
-            "excluded_false_leads": surface.get("excluded_false_leads", []),
-            "preservation_obligations": relevant_preservation(audit, finding["affected_prs"]),
-        })
+        work_units.append(
+            {
+                "order": index,
+                "finding_id": fid,
+                "finding_class": finding["finding_class"],
+                "severity": finding["severity"],
+                "confidence": finding["confidence"],
+                "root_cause_state": finding["root_cause_state"],
+                "origin": finding["origin"],
+                "origin_evidence_ids": finding["origin_evidence_ids"],
+                "merge_blocking": finding["merge_blocking"],
+                "merge_blocking_basis": finding["merge_blocking_basis"],
+                "affected_prs": finding["affected_prs"],
+                "semantic_owner": ownership["semantic_owner"],
+                "execution_owner": ownership["execution_owner"],
+                "mutation_guard": ownership["mutation_guard"],
+                "remediation_owner_class": owner_class,
+                "mutation_eligible": mutation_eligible,
+                "mutation_block_reasons": mutation_reasons,
+                "depends_on_findings": gmap[fid]["depends_on_findings"],
+                "blocks_findings": reverse.get(fid, []),
+                "governing_authority": finding["governing_authority"],
+                "observed_behavior": finding["observed_behavior"],
+                "expected_behavior": finding["expected_behavior"],
+                "proof_of_mismatch": finding["proof_of_mismatch"],
+                "impact": finding["impact"],
+                "root_cause": finding["root_cause"],
+                "behavioral_closure_condition": finding["behavioral_closure_condition"],
+                "closing_validation": finding["closing_validation"],
+                "evidence_ids": finding["evidence_ids"],
+                "prior_validation_evidence": validation_evidence,
+                "authoritative_read_surfaces": surface["authoritative_surfaces"],
+                "write_surfaces": proven_paths if mutation_eligible else [],
+                "non_authorizing_candidate_surfaces": []
+                if mutation_eligible
+                else surface["implementation_surfaces"],
+                "coupled_read_surfaces": surface["coupled_surfaces"],
+                "excluded_false_leads": surface.get("excluded_false_leads", []),
+                "preservation_obligations": relevant_preservation(audit, finding["affected_prs"]),
+            }
+        )
 
-    material_claims = [item for item in audit["claim_validation_matrix"] if item["materiality"] == "MATERIAL"]
+    material_claims = [
+        item for item in audit["claim_validation_matrix"] if item["materiality"] == "MATERIAL"
+    ]
     adversarial_assurance = {
         "changed_symbol_count": len(audit["changed_symbol_ledger"]),
         "material_claim_count": len(material_claims),
-        "supported_material_claim_count": sum(1 for item in material_claims if item["status"] == "SUPPORTED"),
+        "supported_material_claim_count": sum(
+            1 for item in material_claims if item["status"] == "SUPPORTED"
+        ),
         "falsification_probe_count": len(audit["falsification_ledger"]),
-        "survived_probe_count": sum(1 for item in audit["falsification_ledger"] if item["result"] == "SURVIVED"),
-        "falsified_probe_count": sum(1 for item in audit["falsification_ledger"] if item["result"] == "FALSIFIED"),
-        "inconclusive_probe_count": sum(1 for item in audit["falsification_ledger"] if item["result"] == "INCONCLUSIVE"),
-        "unknown_material_claim_ids": sorted(item["claim_id"] for item in material_claims if item["status"] == "UNKNOWN"),
+        "survived_probe_count": sum(
+            1 for item in audit["falsification_ledger"] if item["result"] == "SURVIVED"
+        ),
+        "falsified_probe_count": sum(
+            1 for item in audit["falsification_ledger"] if item["result"] == "FALSIFIED"
+        ),
+        "inconclusive_probe_count": sum(
+            1 for item in audit["falsification_ledger"] if item["result"] == "INCONCLUSIVE"
+        ),
+        "unknown_material_claim_ids": sorted(
+            item["claim_id"] for item in material_claims if item["status"] == "UNKNOWN"
+        ),
     }
 
     return {
@@ -2071,7 +2966,10 @@ def render_audit_md(audit: dict[str, Any]) -> str:
         "",
         "## Coverage",
         "",
-        "Domain assessments: " + ", ".join(f"{item['domain']}={item['status']}" for item in coverage['domain_assessments']),
+        "Domain assessments: "
+        + ", ".join(
+            f"{item['domain']}={item['status']}" for item in coverage["domain_assessments"]
+        ),
         f"Architecture policy adapters: {audit['architecture_policy_adapters']['status']}",
         f"Boundary map: {audit['boundary_map']['status']} ({len(audit['boundary_map']['components'])} components / {len(audit['boundary_map']['boundaries'])} boundaries)",
     ]
@@ -2098,11 +2996,25 @@ def render_audit_md(audit: dict[str, Any]) -> str:
         )
 
     lines += ["", "## Deterministic red-team assurance", ""]
-    material_claims = [item for item in audit["claim_validation_matrix"] if item["materiality"] == "MATERIAL"]
+    material_claims = [
+        item for item in audit["claim_validation_matrix"] if item["materiality"] == "MATERIAL"
+    ]
     lines.append(f"Changed symbols: {len(audit['changed_symbol_ledger'])}")
     lines.append(f"Material claims: {len(material_claims)}")
-    lines.append("Claim states: " + ", ".join(f"{state}={sum(1 for item in material_claims if item['status'] == state)}" for state in ("SUPPORTED","REFUTED","NOT_APPLICABLE","UNKNOWN")))
-    lines.append("Falsification probes: " + ", ".join(f"{state}={sum(1 for item in audit['falsification_ledger'] if item['result'] == state)}" for state in ("SURVIVED","FALSIFIED","INCONCLUSIVE","NOT_APPLICABLE")))
+    lines.append(
+        "Claim states: "
+        + ", ".join(
+            f"{state}={sum(1 for item in material_claims if item['status'] == state)}"
+            for state in ("SUPPORTED", "REFUTED", "NOT_APPLICABLE", "UNKNOWN")
+        )
+    )
+    lines.append(
+        "Falsification probes: "
+        + ", ".join(
+            f"{state}={sum(1 for item in audit['falsification_ledger'] if item['result'] == state)}"
+            for state in ("SURVIVED", "FALSIFIED", "INCONCLUSIVE", "NOT_APPLICABLE")
+        )
+    )
 
     lines += ["", "## PR verdicts", ""]
     for item in audit["per_pr_verdicts"]:
@@ -2185,7 +3097,9 @@ def render_read_first(audit: dict[str, Any], handoff: dict[str, Any]) -> str:
         "",
     ]
     for pr in audit["pr_bindings"]:
-        lines.append(f"- PR #{pr['pr_number']}: source head `{pr['head_sha']}` (base `{pr['base_sha']}`)")
+        lines.append(
+            f"- PR #{pr['pr_number']}: source head `{pr['head_sha']}` (base `{pr['base_sha']}`)"
+        )
     lines += [
         "",
         "## Identity law",
@@ -2226,14 +3140,14 @@ def render_pr_remediation_contract(audit: dict[str, Any], handoff: dict[str, Any
     scope_q = json.dumps(
         f"The PRs and work units defined by audit {audit['audit_id']} for {prs} that are still open and whose current source heads satisfy the pack freshness requirements."
     )
-    return f'''# PR Remediation Contract
+    return f"""# PR Remediation Contract
 
 ```yaml
 role:
   identity: "Claude Code Fable remediation executor"
 
 run_control:
-  autoremediate: {handoff['autoremediate']}
+  autoremediate: {handoff["autoremediate"]}
   default: 0
   law: >
     autoremediate=0 means audit generation stops after producing and validating
@@ -2648,7 +3562,7 @@ stop_conditions:
   - do_not_publish_without_resolving_the_canonical_SSOT_Makefile_make_pr_surface
   - do_not_merge
 ```
-'''
+"""
 
 
 def verify_zip(zip_path: Path) -> list[str]:
@@ -2665,7 +3579,9 @@ def verify_zip(zip_path: Path) -> list[str]:
     with zipfile.ZipFile(zip_path, "r") as zf:
         names = set(zf.namelist())
         if names != required:
-            errors.append(f"bundle file set mismatch: missing={sorted(required-names)}, extra={sorted(names-required)}")
+            errors.append(
+                f"bundle file set mismatch: missing={sorted(required - names)}, extra={sorted(names - required)}"
+            )
             return errors
         try:
             manifest = json.loads(zf.read("MANIFEST.json").decode("utf-8"))
@@ -2694,7 +3610,9 @@ def verify_zip(zip_path: Path) -> list[str]:
         expected_projections = {
             "audit.md": render_audit_md(audit).encode("utf-8"),
             "00_READ_FIRST.md": render_read_first(audit, expected_handoff).encode("utf-8"),
-            "PR_REMEDIATION_CONTRACT.md": render_pr_remediation_contract(audit, expected_handoff).encode("utf-8"),
+            "PR_REMEDIATION_CONTRACT.md": render_pr_remediation_contract(
+                audit, expected_handoff
+            ).encode("utf-8"),
         }
         for name, expected_bytes in expected_projections.items():
             if zf.read(name) != expected_bytes:
@@ -2726,7 +3644,6 @@ def verify_zip(zip_path: Path) -> list[str]:
     return errors
 
 
-
 def _filename_token(value: str) -> str:
     token = re.sub(r"[^A-Za-z0-9._-]+", "-", value).strip("-._")
     return token or "unknown"
@@ -2740,15 +3657,21 @@ def unique_bundle_filename(audit: dict[str, Any]) -> str:
     elif len(pr_numbers) <= 6:
         scope_tag = "prs-" + "-".join(pr_numbers)
     else:
-        scope_tag = "prs-" + "-".join(pr_numbers[:6]) + f"-plus-{len(pr_numbers)-6}"
-    build_tag = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+        scope_tag = "prs-" + "-".join(pr_numbers[:6]) + f"-plus-{len(pr_numbers) - 6}"
+    build_tag = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
     unique_tag = uuid4().hex[:8]
     return (
         f"l9-pr-audit__{_filename_token(repo_name)}__{_filename_token(scope_tag)}__"
         f"{build_tag}__{unique_tag}.zip"
     )
 
-def build_bundle(audit_path: Path, output_dir: Path, change_ledgers: dict[int, dict[str, Any]], autoremediate: int = 0) -> Path:
+
+def build_bundle(
+    audit_path: Path,
+    output_dir: Path,
+    change_ledgers: dict[int, dict[str, Any]],
+    autoremediate: int = 0,
+) -> Path:
     audit = load_json(audit_path)
     errors = validate_audit(audit, change_ledgers=change_ledgers)
     if errors:
@@ -2763,7 +3686,10 @@ def build_bundle(audit_path: Path, output_dir: Path, change_ledgers: dict[int, d
     canonical = stage / "audit.json"
     canonical.write_text(json.dumps(audit, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     ledger_set_path = stage / "change-ledger.json"
-    ledger_set_path.write_text(json.dumps(change_ledger_set(change_ledgers), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    ledger_set_path.write_text(
+        json.dumps(change_ledger_set(change_ledgers), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     handoff = make_handoff(audit, autoremediate)
     handoff_errors = validate_against_schema(handoff, handoff_schema_path(), "handoff")
     if handoff_errors:
@@ -2773,10 +3699,13 @@ def build_bundle(audit_path: Path, output_dir: Path, change_ledgers: dict[int, d
     )
     (stage / "audit.md").write_text(render_audit_md(audit), encoding="utf-8")
     (stage / "00_READ_FIRST.md").write_text(render_read_first(audit, handoff), encoding="utf-8")
-    (stage / "PR_REMEDIATION_CONTRACT.md").write_text(render_pr_remediation_contract(audit, handoff), encoding="utf-8")
+    (stage / "PR_REMEDIATION_CONTRACT.md").write_text(
+        render_pr_remediation_contract(audit, handoff), encoding="utf-8"
+    )
 
     files = [
-        stage / name for name in [
+        stage / name
+        for name in [
             "00_READ_FIRST.md",
             "audit.json",
             "audit.md",
@@ -2798,21 +3727,31 @@ def build_bundle(audit_path: Path, output_dir: Path, change_ledgers: dict[int, d
         "manifest_schema_sha256": sha256(manifest_schema_path()),
         "repository_binding": audit["repository_binding"],
         "pr_bindings": [
-            {"pr_number": p["pr_number"], "base_sha": p["base_sha"], "source_head_sha": p["head_sha"]}
+            {
+                "pr_number": p["pr_number"],
+                "base_sha": p["base_sha"],
+                "source_head_sha": p["head_sha"],
+            }
             for p in audit["pr_bindings"]
         ],
-        "files": {path.name: {"sha256": sha256(path), "bytes": path.stat().st_size} for path in files},
+        "files": {
+            path.name: {"sha256": sha256(path), "bytes": path.stat().st_size} for path in files
+        },
     }
     manifest_errors = validate_against_schema(manifest, manifest_schema_path(), "manifest")
     if manifest_errors:
         raise ValueError("derived manifest validation failed:\n- " + "\n- ".join(manifest_errors))
-    (stage / "MANIFEST.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (stage / "MANIFEST.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
     secret_pattern = contains_secret_material(
         {path.name: path.read_text(encoding="utf-8") for path in stage.iterdir() if path.is_file()}
     )
     if secret_pattern:
-        raise ValueError(f"derived bundle contains high-confidence secret material: {secret_pattern}")
+        raise ValueError(
+            f"derived bundle contains high-confidence secret material: {secret_pattern}"
+        )
 
     zip_path = output_dir / unique_bundle_filename(audit)
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -2858,7 +3797,12 @@ def main() -> int:
         if args.validate_only:
             print("PASS: canonical audit validation passed")
             return 0
-        path = build_bundle(args.audit, args.output_dir, change_ledgers=change_ledgers, autoremediate=args.autoremediate)
+        path = build_bundle(
+            args.audit,
+            args.output_dir,
+            change_ledgers=change_ledgers,
+            autoremediate=args.autoremediate,
+        )
         print(path)
         return 0
     except Exception as exc:
