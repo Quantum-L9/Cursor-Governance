@@ -192,6 +192,49 @@ def test_ready_without_parent_interpreter_when_binding_resolves(
     assert er._claude_mcp_health(tmp_path)[0] == READY
 
 
+def test_resolve_memory_interpreter_forwards_environ(monkeypatch) -> None:
+    """A custom environ must reach resolve_runtime_binding; os.environ is not a stand-in."""
+    seen: dict[str, object] = {}
+
+    class _Binding:
+        status = "exact"
+        interpreter = "/tmp/bound-python"
+
+    def fake_resolve(*, env=None, **_kw):
+        seen["env"] = env
+        return _Binding()
+
+    import ops.memory.runtime_binding as rb
+
+    monkeypatch.setattr(rb, "resolve_runtime_binding", fake_resolve)
+    custom = {"HOME": "/tmp/custom-home", "PATH": "/bin"}
+    assert er._resolve_memory_interpreter(custom) == "/tmp/bound-python"
+    assert seen["env"] is custom
+
+
+def test_resolve_memory_interpreter_explicit_env_skips_resolver(monkeypatch) -> None:
+    def boom(**_kw):
+        raise AssertionError("resolver must not run when L9_MEMORY_INTERPRETER is set")
+
+    import ops.memory.runtime_binding as rb
+
+    monkeypatch.setattr(rb, "resolve_runtime_binding", boom)
+    assert (
+        er._resolve_memory_interpreter({er._MEMORY_INTERPRETER_ENV: "/explicit/python"})
+        == "/explicit/python"
+    )
+
+
+def test_resolve_memory_interpreter_narrows_resolver_errors(monkeypatch) -> None:
+    import ops.memory.runtime_binding as rb
+
+    def boom(**_kw):
+        raise OSError("no bind")
+
+    monkeypatch.setattr(rb, "resolve_runtime_binding", boom)
+    assert er._resolve_memory_interpreter({"HOME": "/x"}) == ""
+
+
 def test_memory_layers_map_to_three_dimensions(tmp_path: Path, monkeypatch) -> None:
     """R0/R1 -> cli, R2/R3/R6 -> control plane; mcp is Claude .mcp.json + env, not R4."""
     assert er._memory_cli_health(_levels())[0] == READY

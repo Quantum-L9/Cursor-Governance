@@ -431,11 +431,11 @@ def _resolve_memory_interpreter(environ: Mapping[str, str]) -> str:
         return explicit
     try:
         from ops.memory.runtime_binding import resolve_runtime_binding
-    except Exception:
+    except ImportError:
         return ""
     try:
-        binding = resolve_runtime_binding()
-    except Exception:
+        binding = resolve_runtime_binding(env=environ)
+    except (ImportError, OSError, RuntimeError, ValueError, TypeError, AttributeError):
         return ""
     if getattr(binding, "status", None) not in ("exact", "compatible"):
         return ""
