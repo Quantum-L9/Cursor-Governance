@@ -51,6 +51,13 @@ $KG apply-report-template --workspace "$PWD"     # skeleton; fill in deltas
 $KG record --workspace "$PWD" --report ".l9/autonomy/kernel-apply.md"
 ```
 
+That kernel commit changes worktree bytes, and the L4 release receipt is bound
+to them (`ops/autonomy/receipt_binding.py`): a receipt issued before the
+kernel apply no longer matches the tree, and nothing re-binds it across a
+commit you authored. `kernel_gate.py record` prints a `NEXT:` line when that
+is the case — run `authorize-release` again before the re-run, or the remote
+check refuses at the end of `make pr` with `L4 receipt stale`.
+
 The report **is** the receipt (CANONICAL_LAW §6.2.9). `record` refuses an
 absent report, empty `deltas`, a path outside `.l9/autonomy/`, or a delta
 naming a file that does not exist — and writes nothing when it refuses, so

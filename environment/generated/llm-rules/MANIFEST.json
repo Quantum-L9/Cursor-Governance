@@ -519,9 +519,9 @@
       "alias": null,
       "class": "always",
       "output": "88-l4-local-autonomy.md",
-      "output_sha256": "df95ea6586723e9affc239c04e2d77e80eff1e91537e7044739191db0ef38b49",
+      "output_sha256": "54b33336dd28bed077cdcc791aeffe78c37cefe17639c0bb41fe8e5bcb89ee63",
       "source": "rules/88-l4-local-autonomy.mdc",
-      "source_sha256": "d18076074e4faada3d3f89051d0e6854df9d2112799ec792f7af60d036cde3bb",
+      "source_sha256": "0f0ecc46a36fc23d666a87675ea46a58321f895158eb1fbd29a522146946e8e3",
       "stem": "88-l4-local-autonomy"
     },
     {
@@ -641,5 +641,5 @@
     "skipped_agent_requested": 16,
     "source_mdc": 70
   },
-  "tree_sha256": "7ef1a43b77767d52c436b277c1f623c5da8a52f4c77b677f1da7fb9bd9d24b71"
+  "tree_sha256": "970b7f41126a9b03079f93ef35eec9ef7fbd8c064d433916840a5ef8ed736431"
 }

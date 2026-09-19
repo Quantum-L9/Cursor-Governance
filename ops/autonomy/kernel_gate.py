@@ -465,7 +465,50 @@ def cmd_record(args: argparse.Namespace) -> int:
         sys.stderr.write(_agent_required_tree(root, gov))
         return 2
     print(json.dumps(receipt, indent=2, sort_keys=True))
+    hint = l4_release_drift_hint(root)
+    if hint:
+        sys.stderr.write(hint)
     return 0
+
+
+def l4_release_drift_hint(root: Path) -> str:
+    """A ``NEXT:`` line when an L4 release receipt attests a tree this is not.
+
+    The kernel receipt deliberately does not bind to the tree (see ``record``),
+    but the L4 release receipt does: ``authorize-release`` hashes worktree
+    bytes. The kernel apply this record attests normally changed bytes and was
+    committed, so a release receipt issued before it is already stale — and
+    the documented recovery ("record, then re-run the same make pr") used to
+    surface that only at the very end of the next gate run, as ``L4 receipt
+    stale``, costing a full cycle. Naming it at record time is the fix.
+
+    Advisory only: this never writes, never authorizes, and an L4 state it
+    cannot read is silence rather than an error. Kernels remain not an L4
+    phase; the hint reports drift the operator caused, not a coupling.
+    """
+    try:
+        try:
+            from ops.autonomy import l4_local
+        except ImportError:  # pragma: no cover - bare-script import
+            import l4_local  # type: ignore[no-redef]
+        receipt = l4_local.load_receipt(root)
+        if not receipt or receipt.get("phase") != l4_local.PHASE_RELEASE:
+            return ""
+        bound = str(receipt.get("tree_digest") or "").strip()
+        if not bound:
+            return ""
+        live = l4_local.tree_digest(root)
+    except Exception:  # noqa: BLE001 - advisory; never turn a record into a failure
+        return ""
+    if live == bound:
+        return ""
+    return (
+        "NEXT: the L4 release receipt attests a different tree than this one "
+        f"({bound[:12]} vs {live[:12]}); the kernel apply moved it. Run\n"
+        "      python3 ops/autonomy/l4_local.py authorize-release\n"
+        "      before re-running make pr, or its remote check refuses with "
+        "'L4 receipt stale'.\n"
+    )
 
 
 def cmd_apply_report_template(args: argparse.Namespace) -> int:

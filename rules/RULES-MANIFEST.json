@@ -1,9 +1,9 @@
 {
   "$schema": "l9.cursor-rules-manifest/v2",
-  "generated_utc": "2026-09-16T00:10:24Z",
+  "generated_utc": "2026-09-19T21:55:20Z",
   "generator": "ops/scripts/generate_rules_manifest.py",
   "rules_directory": "rules",
-  "source_tree_digest": "sha256:66b984d3fa1a83f9657a4bbf27d6a75a55109e1197d36e4dfc849d01c7569464",
+  "source_tree_digest": "sha256:4023814463e7ccabf6b5d1ffabc5e13e2fc630642caffa0b54fb8b2e0501a275",
   "summary": {
     "total_mdc_files": 69,
     "always_apply_true": 35,
@@ -1500,8 +1500,8 @@
       "globs": null,
       "first_heading": "L4 Local Autonomy (no mid-execution push)",
       "has_yaml_frontmatter": true,
-      "line_count": 90,
-      "content_digest": "sha256:d18076074e4faada3d3f89051d0e6854df9d2112799ec792f7af60d036cde3bb",
+      "line_count": 97,
+      "content_digest": "sha256:0f0ecc46a36fc23d666a87675ea46a58321f895158eb1fbd29a522146946e8e3",
       "authority": "canonical_global",
       "context_cost": "moderate",
       "deprecated": false,
