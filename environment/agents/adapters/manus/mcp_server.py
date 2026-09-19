@@ -226,8 +226,8 @@ class GovernanceMcpService:
                 "name": "governance_search",
                 "description": (
                     "Search allowed governance text for a literal, case-insensitive query. "
-                    "Returns "
-                    "bounded path, line, and excerpt results; it never searches secret or Git paths."
+                    "Returns bounded path, line, and excerpt results; it never searches secret "
+                    "or Git paths."
                 ),
                 "inputSchema": {
                     "type": "object",
@@ -409,7 +409,8 @@ class GovernanceMcpService:
             raise ToolInputError("governance bootstrap requires a bearer-protected MCP deployment")
         if mode == "apply" and not self.bootstrap_apply_enabled:
             raise ToolInputError(
-                "bootstrap apply requires a bearer-protected MCP deployment with --allow-bootstrap-apply"
+                "bootstrap apply requires a bearer-protected MCP deployment with "
+                "--allow-bootstrap-apply"
             )
         command = [
             "bash",
@@ -539,8 +540,9 @@ class GovernanceMcpService:
                 "capabilities": {"tools": {"listChanged": False}},
                 "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
                 "instructions": (
-                    "Use this MCP server to inspect the shared L9 governance contract and run the existing Manus bootstrap. "
-                    "It intentionally provides no memory provider, credentials, shell, arbitrary file access, or repository-writing tool."
+                    "Use this MCP server to inspect the shared L9 governance contract and run the "
+                    "existing Manus bootstrap. It intentionally provides no memory provider, "
+                    "credentials, shell, arbitrary file access, or repository-writing tool."
                 ),
             }
             return self._result(request_id, result)
@@ -675,7 +677,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--auth-token-file",
         type=Path,
-        help="Optional file containing the bearer token required on POST /mcp; the token is never logged.",
+        help=(
+            "Optional file containing the bearer token required on POST /mcp; the token is never "
+            "logged."
+        ),
     )
     parser.add_argument(
         "--allow-bootstrap-apply",
@@ -702,7 +707,8 @@ def main(argv: list[str] | None = None) -> int:
     server = GovernanceMcpHttpServer((args.host, args.port), service, bearer_token)
     auth_mode = "bearer" if bearer_token else "none"
     print(
-        f"{SERVER_NAME} listening on http://{args.host}:{args.port}/mcp (auth={auth_mode}; health=/health)",
+        f"{SERVER_NAME} listening on http://{args.host}:{args.port}/mcp "
+        f"(auth={auth_mode}; health=/health)",
         file=sys.stderr,
         flush=True,
     )
