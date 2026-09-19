@@ -139,7 +139,21 @@ def validate_against_schema(data: dict[str, Any], path: Path, label: str) -> lis
     errors: list[str] = []
     for error in sorted(validator.iter_errors(data), key=lambda e: list(e.absolute_path)):
         location = ".".join(str(part) for part in error.absolute_path) or "$"
-        errors.append(f"{label} schema {location}: {error.message}")
+        # jsonschema's `error.message` embeds the offending *instance* value
+        # ("'ghp_...' is not of type 'integer'"). These errors are printed to
+        # stderr, so echoing the instance duplicates audited material into the
+        # log — which this pack explicitly promises not to do. Redact just that
+        # value and keep the rest of the message: the wording, the failing
+        # keyword and `location` all survive, so the error still says what rule
+        # failed and exactly where. Containers are left alone because their
+        # repr does not appear in the message, and the scalars jsonschema
+        # renders structurally (bool/int/float/None) carry nothing to leak.
+        message = error.message
+        if isinstance(error.instance, str):
+            instance_repr = repr(error.instance)
+            if instance_repr in message:
+                message = message.replace(instance_repr, "'<redacted>'")
+        errors.append(f"{label} schema {location}: {message}")
     return errors
 
 
@@ -3072,7 +3086,7 @@ def render_audit_md(audit: dict[str, Any]) -> str:
         "## Evidence",
         "",
         "Canonical exact evidence is in `audit.json` under `shared_evidence_index`. "
-        "This projection intentionally avoids duplicating source excerpts or secret material.",
+        + "This projection intentionally avoids duplicating source excerpts or secret material.",
         "",
     ]
     return "\n".join(lines)
@@ -3105,7 +3119,7 @@ def render_read_first(audit: dict[str, Any], handoff: dict[str, Any]) -> str:
         "## Identity law",
         "",
         "A PR source head is not automatically the revision that a test or CI job executed. "
-        "Use each evidence entry's `tested_revision_sha`; never rewrite it as the source head by assumption.",
+        + "Use each evidence entry's `tested_revision_sha`; never rewrite it as the source head by assumption.",
         "",
         "## Start order",
         "",
@@ -3118,11 +3132,11 @@ def render_read_first(audit: dict[str, Any], handoff: dict[str, Any]) -> str:
         "7. `MANIFEST.json` for bundle integrity when applicable.",
         "",
         "Before editing any PR, independently verify its current source head still equals the audited SHA above. "
-        "If it differs or cannot be proven, do not mutate from this audit.",
+        + "If it differs or cannot be proven, do not mutate from this audit.",
         "",
         "Only work units marked `mutation_eligible: true` carry a write allowlist.",
         "Publication, when remediation is explicitly invoked, must use `make pr` from the canonical SSOT Makefile surface. "
-        "The target repository Makefile is not a publication authority. If the SSOT publication path cannot be proven, return `PUBLICATION_BLOCKED`.",
+        + "The target repository Makefile is not a publication authority. If the SSOT publication path cannot be proven, return `PUBLICATION_BLOCKED`.",
         "",
     ]
     return "\n".join(lines)

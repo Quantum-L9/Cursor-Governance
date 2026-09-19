@@ -162,6 +162,11 @@ def public_surface_deltas(
                 payload["surface_id"] = stable_id("PUB", pr, path, kind, name)
                 out.append(payload)
         except SyntaxError:
+            # Deliberate: the blob is whatever the PR contains at this path and
+            # need not parse. Public-surface detection is best-effort — an
+            # unparseable file yields no surfaces rather than failing the
+            # census, and the configuration/schema/workflow pass below still
+            # runs against it.
             pass
     if classification in {"CONFIGURATION", "SCHEMA", "WORKFLOW"}:
         added: set[str] = set()
@@ -499,6 +504,9 @@ def _artifact_reference_tokens(raw: dict[str, Any]) -> list[str]:
                 ) and not node.name.startswith("_"):
                     tokens.add(node.name)
         except SyntaxError:
+            # Deliberate: same best-effort contract as above. An unparseable
+            # file contributes no AST-derived reference tokens; the filename
+            # stem gathered by the caller remains as the reference candidate.
             pass
     return sorted(t for t in tokens if t)
 

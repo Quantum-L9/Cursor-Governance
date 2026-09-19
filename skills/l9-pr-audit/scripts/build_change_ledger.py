@@ -300,6 +300,12 @@ def changed_symbols_for_file(
                     }
                 )
         except SyntaxError:
+            # Deliberate: the blob is whatever the PR contains at this path, so
+            # it need not parse — a partial file, a template, or a .py that is
+            # invalid on this Python version. AST symbol extraction is
+            # best-effort, and an unparseable file simply contributes no
+            # symbols; the caller below falls back to the non-AST census rather
+            # than treating this as an error.
             pass
 
     if not symbols and classification in SEMANTIC_CLASSES:
