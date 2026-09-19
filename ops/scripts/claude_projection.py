@@ -521,15 +521,17 @@ def project_mcp(root: Path, workspace: Path, check: bool) -> DomainOutcome:
 def _mcp_is_git_tracked(workspace: Path) -> tuple[bool, bool]:
     """(is_tracked, probe_succeeded) for `<workspace>/.mcp.json`.
 
-    Reuses the settings reconciler's probe rather than re-deriving one, and
-    imports it lazily exactly as `project_settings` imports `run`.
+    Reuses the settings reconciler's public probe — the sibling of
+    `settings_is_git_tracked` and `hook_is_git_tracked` — rather than
+    re-deriving one, and imports it lazily exactly as `project_settings`
+    imports `run`.
     """
     try:
-        from reconcile_claude_settings import _path_is_git_tracked
+        from reconcile_claude_settings import mcp_is_git_tracked
     except Exception:  # noqa: BLE001
         return False, False
     try:
-        return _path_is_git_tracked(workspace, ".mcp.json"), True
+        return mcp_is_git_tracked(workspace), True
     except Exception:  # noqa: BLE001
         return False, False
 

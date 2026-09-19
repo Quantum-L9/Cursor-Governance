@@ -30,11 +30,12 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
+
+from protocol import rest_only as _rest_only
 
 GH_TIMEOUT_SEC = 30
 CHUNK_SIZE = 6
@@ -45,7 +46,7 @@ def _log(msg: str) -> None:
     print(msg, flush=True)
 
 
-def _fail(msg: str) -> None:
+def _fail(msg: str) -> NoReturn:
     print(f"FAIL: {msg}", file=sys.stderr, flush=True)
     raise SystemExit(1)
 
@@ -80,21 +81,6 @@ def _graphql(payload: dict[str, Any]) -> dict[str, Any]:
     return data
 
 
-def _rest_only() -> bool:
-    """Mirror `_gh_graphql_surface_rest_only` in ops/scripts/lib/gh_graphql.sh.
-
-    That library guards `gh api graphql` with a *bash function*, so it never
-    protected this script: `_run_gh` execs the `gh` binary through subprocess
-    and no shell function is in scope. The classification is therefore
-    re-derived here from the same environment contract.
-    """
-    return (
-        os.environ.get("L9_GITHUB_GRAPHQL_MODE") == "rest-only"
-        or os.environ.get("CLAUDE_CODE_REMOTE") == "true"
-        or os.environ.get("GH_GRAPHQL_UNSUPPORTED") == "1"
-    )
-
-
 def _rest(method: str, path: str, payload: dict[str, Any] | None = None) -> str:
     argv = ["gh", "api", "--method", method, path]
     if payload is None:
@@ -121,7 +107,6 @@ def _comment_id(th: dict[str, Any]) -> int:
             f"comment_id ({raw!r}) — REST surfaces key on comment_id, which "
             "ingest_signals.py sources from ccr/review_threads"
         )
-        raise  # unreachable; _fail raises SystemExit
 
 
 def _reply_rest(repo: str, number: int, threads: list[dict[str, Any]]) -> int:

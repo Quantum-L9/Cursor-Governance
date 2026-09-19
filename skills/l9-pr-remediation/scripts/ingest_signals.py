@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import subprocess
 import sys
 from datetime import UTC, datetime
@@ -29,6 +28,7 @@ from protocol import (
     reviewer_class,
     severity_hint,
 )
+from protocol import rest_only as _rest_only
 from protocol import validated_output as _validated_output
 
 GH_TIMEOUT_SEC = 30
@@ -201,19 +201,6 @@ def _from_thread(node: dict[str, Any], index: int) -> dict[str, Any] | None:
         "comment_id": node.get("comment_id") or first.get("id"),
         "severity_label": _severity_label(body),
     }
-
-
-def _rest_only() -> bool:
-    """Mirror `_gh_graphql_surface_rest_only` in ops/scripts/lib/gh_graphql.sh.
-
-    That library guards `gh api graphql` with a bash function; this script
-    execs the `gh` binary via subprocess, so the guard was never in scope.
-    """
-    return (
-        os.environ.get("L9_GITHUB_GRAPHQL_MODE") == "rest-only"
-        or os.environ.get("CLAUDE_CODE_REMOTE") == "true"
-        or os.environ.get("GH_GRAPHQL_UNSUPPORTED") == "1"
-    )
 
 
 def _rest_thread_nodes(owner: str, repo: str, pr: int) -> list[dict[str, Any]]:
