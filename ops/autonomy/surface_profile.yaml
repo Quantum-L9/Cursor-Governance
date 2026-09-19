@@ -160,9 +160,16 @@ l4_local_autonomy:
     halt_before_merge: campaign_only
     older_open_prs: merge_bottom_up
 
-# Stacked-PR policy (operator default 2026-08-15): when a PR is already open,
-# the next PR stacks on top of its head. Merges are bottom-up; rebasing and
-# conflict resolution are forbidden — disjoint scopes keep the stack mergeable.
+# Stacked-PR policy (operator default 2026-08-15; OPT-IN since 2026-09-19,
+# superseding the earlier "default" wording here and in AGENTS.md §2.1.1/§4.1):
+# `PR_STACK` is empty by default, so a task branch starts from fetched
+# origin/main and `make pr` publishes against PR_BASE (usually main). Stacking
+# is chosen deliberately with `PR_STACK=auto`; only then does the next PR base
+# on the unique open-PR chain tip. Ambiguous sibling chains still block. When a
+# stack is chosen, merges are bottom-up; rebasing and conflict resolution are
+# forbidden — disjoint scopes keep the stack mergeable. The machine fields
+# below (`pr_overlap.auto_stack_env`, `pr_overlap.stack_default`) are the
+# authoritative default; this header must agree with them.
 pr_stacking:
   first_pr_base: pr_base_or_main
   subsequent_pr_base: open_pr_head
@@ -176,7 +183,8 @@ pr_stacking:
     mode_default: block # PR_OVERLAP env: block | warn | ignore
     exemptions: generated_path_prefixes # ops/scripts/sync_generated_artifacts.py SSOT
     probe: git_merge_tree # git merge-tree --write-tree textual-conflict probe
-    auto_stack_env: PR_STACK # auto: start on the unique open-PR tip; PR_STACK= keeps main
+    auto_stack_env: PR_STACK # default empty (keeps PR_BASE); opt in with auto to start on the unique open-PR tip
+    stack_default: none # 2026-09-19: was auto; ambiguous sibling chains made it a blocked publish by default
     gate_resolves_tip: true # pr-preflight / pr-check / open_pr bind resolve_stack_tip.py when PR_STACK=auto
     gate: ops/scripts/pr_overlap_check.py
   # GITHUB_REST_ROUTE_V1 — same openclaw PAT; not a second secret.
@@ -275,9 +283,11 @@ session_start_block: |
 
   - Proceed in **L4 local autonomy**: commit on a stacked feature branch with
     **no mid-execution push** and no useless push-approval pacing.
-  - Start that branch from the unique open-PR stack tip when `PR_STACK=auto`
-    (`ops/scripts/agent_worktree_start.sh`). Do not invent an `origin/main`
-    fork and restack at `make pr`. Empty `PR_STACK` still uses `origin/main`.
+  - Branch from fetched `origin/main` by default — `PR_STACK` is empty unless
+    you set it. When you deliberately opt in with `PR_STACK=auto`, start that
+    branch from the unique open-PR stack tip
+    (`ops/scripts/agent_worktree_start.sh`) rather than inventing an
+    `origin/main` fork and restacking at `make pr`.
   - YOU ARE AUTHORIZED to scoped local `git commit` without per-action ask
     on **every** surface, including Cursor. Ask only before a raw `git push`
     / `gh pr create` that is not the finish path. Finished work is
@@ -447,7 +457,8 @@ llm_rules_override: |
     writes `ops/autonomy/authorize_merge.py --all-open` and each PR is green +
     mergeable. Force-push / admin-merge stay forbidden. Tree kernels fire
     on Cursor and adapters before pytest; CI / unknown skip.
-  - Stacked PRs: when a PR is already open for the workstream, the next PR
+  - Stacked PRs are opt-in (`PR_STACK=auto`; empty by default): when you
+    choose to stack and a PR is already open for the workstream, the next PR
     bases on the open PR's head (bottom-up merge order). Rebase and conflict
     resolution are forbidden; one feature branch per program.
 
