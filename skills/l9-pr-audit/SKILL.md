@@ -1,6 +1,7 @@
 ---
 name: l9-pr-audit
 description: deep-audit exact current heads of one or more GitHub pull requests against repository architecture, invariants, contracts, CI, reviews, preservation, and cross-PR interactions, then emit revision-bound remediation evidence. use when auditing PR correctness, completeness, architecture alignment, merge readiness, or downstream repair evidence.
+disable-model-invocation: true
 ---
 
 # L9 PR Audit
