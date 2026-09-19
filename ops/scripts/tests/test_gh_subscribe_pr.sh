@@ -4,6 +4,19 @@
 # must not resolve gh_graphql.sh relative to CWD.
 set -euo pipefail
 
+# Neutralise the ambient surface classification for the WHOLE file.
+#
+# gh_graphql.sh pre-classifies at SOURCE time from the environment, so a session
+# that exports CLAUDE_CODE_REMOTE=true — every Claude Code Web/Mobile run — made
+# every SUBSCRIBED assertion below take the skip branch instead. The suite could
+# not pass on the surface it exists to protect, and the failure looked like a
+# regression in the helper rather than in the harness.
+#
+# Unset here, once, rather than per case: the one case that needs the REST-only
+# classification drives it through a 403-returning gh stub, which is a real
+# runtime classification and does not depend on these being set.
+unset CLAUDE_CODE_REMOTE L9_GITHUB_GRAPHQL_MODE GH_GRAPHQL_UNSUPPORTED
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SCRIPTS_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 LIB="$SCRIPTS_DIR/lib/gh_subscribe_pr.sh"

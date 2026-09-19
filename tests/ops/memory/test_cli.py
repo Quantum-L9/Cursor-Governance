@@ -90,7 +90,15 @@ def test_pickup_context_writes_an_episodic_record_tagged_as_a_continuation(
     argv = fake_cli.calls[-1][0]
     assert argv[argv.index("--kind") + 1] == "episodic"
     tags = [argv[i + 1] for i, a in enumerate(argv) if a == "--tag"]
-    assert tags == ["x", cli.CONTINUATION_TAG]
+    # Intent: the caller's tag survives and the continuation tag is added.
+    # Not an exact-list assertion: every write also carries an `agent:<id>`
+    # stamp (rule 87 / 03-graphiti-memory), whose value is the surface's
+    # L9_MEMORY_AGENT_ID. Pinning the whole list made this pass only where that
+    # variable happened to be unset — never on a governed Claude or Cursor
+    # session, which is exactly where the suite most needs to run.
+    assert tags[0] == "x"
+    assert cli.CONTINUATION_TAG in tags
+    assert any(t.startswith("agent:") for t in tags), "write must stamp agent_id"
     assert "session_continuation" not in argv[argv.index("--kind") + 1 :][:1]
 
 
