@@ -9,6 +9,7 @@ import sys
 import time
 from pathlib import Path
 
+import pytest
 from memory_boundary_fixtures import FakeMemoryCli, health_payload, search_payload
 
 from ops.memory import cli
@@ -36,6 +37,23 @@ def _write_payload() -> dict:
 def _use(monkeypatch, bound, fake_cli: FakeMemoryCli) -> None:
     client = MemoryControlPlaneClient(bound, runner=fake_cli.run)
     monkeypatch.setattr(cli, "_client", lambda args: client)
+
+
+@pytest.fixture(autouse=True)
+def _no_ambient_agent_identity(monkeypatch) -> None:
+    """Keep the shell's identity out of every test in this module.
+
+    ``--agent-id`` and the prefetch bind both default from the environment:
+    ``L9_MEMORY_AGENT_ID`` adds an ``agent:<id>`` tag to a write, and it also
+    selects which prefetch receipt ``read_prefetch_bind`` considers applicable.
+    Every real Claude or Cursor session exports it, so assertions written
+    against a bare default passed on CI and failed in any developer shell.
+
+    Module-wide rather than per-test: the dependency is the module's, and
+    tests added later inherit the isolation instead of rediscovering it.
+    """
+    monkeypatch.delenv("L9_MEMORY_AGENT_ID", raising=False)
+    monkeypatch.delenv("CURSOR_CONVERSATION_ID", raising=False)
 
 
 def test_exit_codes_follow_the_outcome_taxonomy() -> None:
