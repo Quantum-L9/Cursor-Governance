@@ -340,7 +340,8 @@ The master inventory never authors the memory entry. Every renderer (Cursor,
 Claude Desktop) hands it to `l9-memory client cursor install --path …` against
 the runtime `runtime_binding.py` proved, so the same atomic, digest-backed,
 secret-free entry lands on every surface; Claude Code's project template
-declares the identical argv gated on `L9_MEMORY_INTERPRETER`. The retired
+launches the same argv through `ops/memory/run_memory_mcp.sh` (HOME-expanded
+wrapper; the wrapper is the bind gate). The retired
 `graphiti-memory` front door is dropped from every rendered file and rejected
 by `validate_claude_env.py`, `environment/agents/tools/validate_agents.py`, the
 repo hygiene check and the governance self-check.

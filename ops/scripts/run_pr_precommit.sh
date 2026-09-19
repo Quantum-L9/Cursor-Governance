@@ -179,10 +179,30 @@ _run_kernel() {
 
 _run_hooks() {
   local skip="$1" rc=0
+  # System hooks in .pre-commit-config.yaml call `python3`. On a governance
+  # checkout that must be the locked interpreter (`make gov-python`), not the
+  # host that installed the pre-commit CLI. Cursor-Governance#567: uv-tool
+  # pre-commit + host python3 without PyYAML failed max-velocity after
+  # gov-python had already passed.
+  local _saved_path=""
+  if [[ "$WS" == "$GOV_ROOT" ]]; then
+    local _locked_bin="$GOV_ROOT/.venv/bin"
+    if [[ ! -x "$_locked_bin/python3" ]]; then
+      echo "FAIL: locked interpreter missing at $_locked_bin/python3 (run: make venv)" >&2
+      return 1
+    fi
+    _saved_path="$PATH"
+    PATH="$_locked_bin:${PATH}"
+    export PATH
+  fi
   set +e
   SKIP="$skip" pre-commit run --config "$GOV_PRECOMMIT_CONFIG" --files "${files[@]}"
   rc=$?
   set -e
+  if [[ -n "$_saved_path" ]]; then
+    PATH="$_saved_path"
+    export PATH
+  fi
   return "$rc"
 }
 
