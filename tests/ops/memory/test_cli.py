@@ -87,10 +87,6 @@ def test_pickup_context_writes_an_episodic_record_tagged_as_a_continuation(
     fake_cli.reply("write", 0, _write_payload())
     _use(monkeypatch, bound, fake_cli)
     monkeypatch.setattr(cli, "read_prefetch_bind", lambda _ws: None)
-    # `--agent-id` defaults from the ambient L9_MEMORY_AGENT_ID, which appends
-    # an `agent:<id>` tag. Asserting exact tag equality without pinning that
-    # env made the test pass on CI and fail in any shell that exports it.
-    monkeypatch.delenv("L9_MEMORY_AGENT_ID", raising=False)
     code = cli.main(
         ["write", "PICKUP", "--kind", "pickup_context", "--workspace", str(ROOT), "--tag", "x"]
     )
