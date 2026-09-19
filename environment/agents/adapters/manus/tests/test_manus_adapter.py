@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Manus adapter tests: shared binding, identity, and retired memory transport."""
+"""Manus adapter tests: shared binding, identity, and governance MCP boundary."""
 
 from __future__ import annotations
 
@@ -75,10 +75,16 @@ class ManusAdapterContractTests(unittest.TestCase):
         self.assertNotIn("GRAPHITI_MCP_TOKEN=", environment)
         self.assertNotIn("INFISICAL_CLIENT_SECRET=", environment)
 
-    def test_mcp_carrier_advertises_no_unprovisioned_remote_transport(self) -> None:
+    def test_mcp_carrier_exposes_only_the_governance_control_plane(self) -> None:
         connector = json.loads((ADAPTER / "mcp-connector.json").read_text(encoding="utf-8"))
-        self.assertEqual(connector["transport"], "none")
-        self.assertEqual(connector["status"], "retired-pending-memory-remote-transport")
+        self.assertEqual(connector["transport"], "streamable-http")
+        self.assertEqual(connector["endpoint_path"], "/mcp")
+        self.assertEqual(connector["health_path"], "/health")
+        self.assertEqual(connector["memory"], "not-exposed")
+        self.assertTrue(connector["safety"]["no_shell"])
+        self.assertTrue(connector["safety"]["no_credentials"])
+        self.assertTrue(connector["safety"]["no_arbitrary_file_access"])
+        self.assertTrue(connector["safety"]["no_repository_write_tools"])
         self.assertNotIn("mcpServers", connector)
         self.assertNotIn("url", connector)
         self.assertNotIn("headers", connector)
@@ -102,6 +108,19 @@ class ManusAdapterContractTests(unittest.TestCase):
         text = installer.read_text(encoding="utf-8")
         self.assertIn("bootstrap_agent_environment.sh", text)
         self.assertIn("--surface manus", text)
+
+    def test_mcp_launcher_uses_the_locked_interpreter(self) -> None:
+        launcher = ADAPTER / "serve_mcp.sh"
+        syntax = subprocess.run(
+            ["bash", "-n", str(launcher)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(syntax.returncode, 0, syntax.stderr)
+        text = launcher.read_text(encoding="utf-8")
+        self.assertIn(".venv/bin/python", text)
+        self.assertIn("mcp_server.py", text)
 
     def test_installer_refuses_a_non_repository_before_bootstrapping(self) -> None:
         installer = ADAPTER / "install.sh"

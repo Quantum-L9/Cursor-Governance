@@ -118,6 +118,9 @@ def validate(repo_root: Path) -> list[str]:
         "environment.env.example",
         "install.sh",
         "mcp-connector.json",
+        "mcp_server.py",
+        "render_mcp_connector.py",
+        "serve_mcp.sh",
         "session_bootstrap.md",
         "setup.md",
     }
@@ -148,12 +151,33 @@ def validate(repo_root: Path) -> list[str]:
         errors.append("environment must not declare L9_GOVERNANCE_DIR with a literal hosted path")
 
     connector = json.loads((adapter / "mcp-connector.json").read_text(encoding="utf-8"))
-    if connector.get("status") != "retired-pending-memory-remote-transport":
-        errors.append("MCP carrier must state the remote memory transport is not provisioned")
-    if connector.get("transport") != "none":
-        errors.append("MCP carrier must not invent a Manus memory transport")
+    if connector.get("transport") != "streamable-http":
+        errors.append("MCP carrier must declare the streamable HTTP governance transport")
+    if connector.get("endpoint_path") != "/mcp" or connector.get("health_path") != "/health":
+        errors.append("MCP carrier must declare /mcp and /health endpoints")
+    if connector.get("memory") != "not-exposed":
+        errors.append("MCP carrier must not claim to expose a Manus memory transport")
+    if connector.get("safety") != {
+        "no_shell": True,
+        "no_credentials": True,
+        "no_arbitrary_file_access": True,
+        "no_repository_write_tools": True,
+    }:
+        errors.append("MCP carrier must preserve the governance MCP safety boundary")
+    authentication = connector.get("authentication")
+    if (
+        not isinstance(authentication, dict)
+        or authentication.get("bootstrap_requires") != "bearer-token-file"
+    ):
+        errors.append("MCP carrier must require bearer protection before bootstrap access")
+    elif authentication.get("apply_bootstrap_requires") != (
+        "bearer-token-file plus --allow-bootstrap-apply"
+    ):
+        errors.append("MCP carrier must require an explicit apply authorization flag")
     if "mcpServers" in connector or _contains_forbidden_key(connector):
-        errors.append("MCP carrier must not contain a URL, headers, environment, or server entry")
+        errors.append(
+            "MCP carrier must not contain a deployment URL, headers, environment, or server entry"
+        )
 
     bootstrap = (adapter / "session_bootstrap.md").read_text(encoding="utf-8")
     for marker in REQUIRED_BOOTSTRAP_TEXT:
@@ -163,6 +187,24 @@ def validate(repo_root: Path) -> list[str]:
     for forbidden in ("Authorization:", "Bearer ", "GRAPHITI_MCP_URL", "https://memory."):
         if forbidden in bootstrap:
             errors.append(f"session bootstrap contains retired provider material: {forbidden}")
+
+    server = (adapter / "mcp_server.py").read_text(encoding="utf-8")
+    for marker in (
+        "governance_status",
+        "governance_validate",
+        "governance_bootstrap",
+        "streamable-http",
+    ):
+        if marker not in server:
+            errors.append(f"MCP server is missing required governance tool marker: {marker}")
+    for forbidden in ("shell=True", "os.system(", "GRAPHITI_MCP_URL", "L9_MEMORY_HTTP_URL"):
+        if forbidden in server:
+            errors.append(f"MCP server contains prohibited surface behavior: {forbidden}")
+
+    launcher = (adapter / "serve_mcp.sh").read_text(encoding="utf-8")
+    for marker in (".venv/bin/python", "mcp_server.py", "--governance-root"):
+        if marker not in launcher:
+            errors.append(f"MCP launcher is missing required marker: {marker}")
 
     installer = (adapter / "install.sh").read_text(encoding="utf-8")
     for marker in ("bootstrap_agent_environment.sh", "--surface manus", "--workspace"):

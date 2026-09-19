@@ -5,13 +5,26 @@
     "path": "environment/agents/adapters/manus/mcp-connector.json",
     "layer": "adapter-config",
     "owner": "governance-control-plane",
-    "status": "retired",
-    "version": "3.0.0",
-    "updated": "2026-09-13",
-    "note": "The package-owned l9-graphite-memory server currently exposes only stdio. Manus is a remote surface, so this adapter declares no Custom MCP connector until memory publishes a sanctioned remote transport."
+    "status": "active",
+    "version": "4.0.0",
+    "updated": "2026-09-19",
+    "note": "This is a no-secret carrier for the L9 Governance streamable-HTTP MCP server. It is not a memory transport and never exposes the retired Graphiti provider endpoint. Render a deployment-specific connector draft with render_mcp_connector.py."
   },
-  "name": "l9-graphite-memory",
-  "transport": "none",
-  "status": "retired-pending-memory-remote-transport",
+  "name": "l9-governance",
+  "transport": "streamable-http",
+  "endpoint_path": "/mcp",
+  "health_path": "/health",
+  "authentication": {
+    "default": "none-read-only-governance-tools",
+    "bootstrap_requires": "bearer-token-file",
+    "apply_bootstrap_requires": "bearer-token-file plus --allow-bootstrap-apply"
+  },
+  "memory": "not-exposed",
+  "safety": {
+    "no_shell": true,
+    "no_credentials": true,
+    "no_arbitrary_file_access": true,
+    "no_repository_write_tools": true
+  },
   "retired_server_keys": ["graphiti-memory"]
 }

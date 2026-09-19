@@ -118,6 +118,9 @@ select = ["E", "F", "I", "UP"]
 "skills/l9-intelligence-harvest/scripts/**" = ["E501"]
 "skills/l9-skill-compiler/scripts/**" = ["E501"]
 "skills/l9-pipeline-orchestrator/*.py" = ["E501"]
+# Manus MCP tools preserve human-readable schema descriptions and operator
+# diagnostics as literals; F/I/UP stay enforced.
+"environment/agents/adapters/manus/**" = ["E501"]
 # subagent-generated-data runtime/adapters/tests bootstrap sys.path before
 # importing sibling modules (the packages are not installed), so imports
 # legitimately follow executable statements — E402 is expected here.
