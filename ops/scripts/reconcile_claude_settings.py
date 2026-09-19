@@ -3,11 +3,16 @@
 
 1. Sync governance committed `.claude/settings.json` + hooks from template
 2. Merge-patch `~/.claude/settings.json` (preserve enabledPlugins / theme / extras)
-3. Merge-patch consumer `<workspace>/.claude/settings.json` (template-managed
-   keys win; consumer-owned keys such as `enabledPlugins` survive) and install
-   `<workspace>/.claude/hooks/*` as real files. A git-tracked workspace
-   settings file keeps its own `hooks` registrations, composed with the
-   template's — never wholesale-replaced (issue #281)
+3. Project into the consumer workspace and install `<workspace>/.claude/hooks/*`
+   as real files. Which settings file receives the managed keys depends on who
+   owns the workspace's `.claude/settings.json`:
+
+   * **untracked** (governance injected it) — merge-patch it in place;
+     template-managed keys win, consumer-owned keys such as `enabledPlugins`
+     survive.
+   * **git-tracked** (repository content) — leave its bytes ALONE and write the
+     managed keys to the gitignored `<workspace>/.claude/settings.local.json`
+     instead. See WHY_LOCAL_FOR_TRACKED below.
 
 Usage:
   python3 ops/scripts/reconcile_claude_settings.py --root "$HOME/.cursor-governance"
@@ -29,6 +34,59 @@ from typing import Any
 TEMPLATE_REL = Path("environment/agents/adapters/claude-code/settings.template.json")
 HOOKS_SRC_REL = Path("environment/agents/adapters/claude-code/hooks")
 SESSION_START_NAME = "session_start_claude_governance.sh"
+
+#: Project-local settings file. Gitignored by contract on every governed
+#: workspace (`.gitignore`, `session_git_excludes.sh` session + machine lists).
+WORKSPACE_LOCAL_NAME = "settings.local.json"
+
+#: Wall-clock ceiling for a `git ls-files` ownership probe, in seconds.
+#:
+#: Required, not defensive: every external call carries an explicit timeout
+#: (`.github/copilot-instructions.md`, "Explicit failure semantics"; rules
+#: `00-global`, `20-lang-python`, `60-anti-patterns`). These probes run on the
+#: SessionStart path, where an unbounded `subprocess.run` turns a slow or wedged
+#: filesystem into a hung session start rather than a degraded one. Generous
+#: against a single-path query that normally returns in microseconds, and small
+#: against the 30s hook budget even when several run.
+GIT_QUERY_TIMEOUT_S = 5
+
+#: WHY_LOCAL_FOR_TRACKED — why a git-tracked workspace settings.json is never
+#: written, and the managed keys go to settings.local.json instead.
+#:
+#: This reconciler runs from the governance SSOT clone at every SessionStart and
+#: writes the template's projection into whatever workspace is open. When that
+#: workspace TRACKS `.claude/settings.json`, the write lands on repository
+#: content, and the two revisions are independent: the SSOT clone is a shallow
+#: fetch of governance `main`, the workspace is at its own commit. A clean
+#: checkout therefore came up ` M .claude/settings.json` seconds into every
+#: session — the file rewritten to a projection of a DIFFERENT tree's HEAD,
+#: reverting whatever the workspace had committed.
+#:
+#: That is not drift for the consumer to reconcile; it is governance writing
+#: over bytes it does not own. The reconciler already draws exactly this line
+#: for a tracked HOOK file (`sync_hook_file`: report, never overwrite) and for
+#: a tracked file at a retired projection path (`prune_retired_hooks`). This
+#: extends the same ownership rule to the settings file, which was the one
+#: managed artifact still exempt from it.
+#:
+#: `settings.local.json` is the additive channel that keeps governance
+#: effective without touching those bytes: project-local settings outrank
+#: shared project settings, hook entries merge across scopes (identical
+#: handlers dedupe), and list keys such as `permissions.allow` combine rather
+#: than override — so the governance registrations still reach the session
+#: alongside whatever the repository committed.
+#:
+#: Honest limit, stated rather than assumed: Anthropic's cloud-session docs say
+#: project-local settings are "not read" in a cloud session, on the grounds
+#: that the file "isn't in the clone". That reasoning is about what transfers
+#: from a developer's machine, not about paths the runtime loads, and it is not
+#: a claim this repository can verify from inside a container. The design is
+#: deliberately correct either way: if local settings ARE read, governance
+#: applies in full; if they are NOT, the workspace's own committed
+#: `.claude/settings.json` still applies, so a tracked-settings consumer runs
+#: governance at its committed revision instead of the SSOT's. Degraded, never
+#: dark — and never at the cost of dirtying the tree. An untracked workspace
+#: settings.json is unaffected and still carries everything.
 
 # Keys taken wholly from the template when reconciling managed settings.
 # workflowSizeGuideline is managed: the Claude surface policy is "size the
@@ -114,6 +172,14 @@ def workspace_artifacts() -> tuple[str, ...]:
     they are the ones that show as untracked dirt in a consumer that has not
     committed them. Named here, beside `CONSUMER_HOOK_FILES`, so the installer
     reads the list instead of restating it in shell.
+
+    `.claude/settings.local.json` is deliberately NOT listed, although this
+    reconciler writes it for a repo-owned workspace (WHY_LOCAL_FOR_TRACKED).
+    The list exists to get *injected* wiring excluded from git, and that file
+    is already excluded unconditionally — by the repository `.gitignore`, and
+    by both the session and machine lists in `session_git_excludes.sh`. Adding
+    it here would say something the list does not otherwise say: that the path
+    is one a consumer might legitimately commit.
     """
     return (".claude/settings.json", *(f".claude/hooks/{name}" for name in CONSUMER_HOOK_FILES))
 
@@ -235,12 +301,13 @@ def _compose_hook_groups(
 
 
 def merge_workspace_settings(
-    template: dict[str, Any],
-    existing: dict[str, Any] | None,
-    *,
-    compose_hooks: bool = False,
+    template: dict[str, Any], existing: dict[str, Any] | None
 ) -> dict[str, Any]:
     """Managed keys from the template; every consumer-owned key survives.
+
+    This is the UNTRACKED workspace path only — a settings.json governance
+    injected and therefore owns, so `hooks` is taken wholly from the template
+    and a retired governance registration cannot linger.
 
     Ordering is template-first so a workspace file that carries no consumer
     keys is byte-identical to `consumer_settings(template)` — the historical
@@ -249,16 +316,107 @@ def merge_workspace_settings(
     are appended, never dropped: the old whole-file write silently deleted
     them on every settings reconcile that ran after a plugin install.
 
-    `compose_hooks` (set when the workspace settings file is git-tracked)
-    unions hook registrations instead of letting the template win wholesale:
-    the repo owns a tracked file, and its PreToolUse/Stop guards must survive
-    reconciliation (issue #281). An untracked injected file stays wholly
-    template-managed so retired governance hooks do not linger.
+    A `compose_hooks` flag used to live here, for the git-tracked case where
+    the repo's own PreToolUse/Stop guards had to survive reconciliation
+    (issue #281). That case no longer writes this file at all
+    (WHY_LOCAL_FOR_TRACKED), so the flag became unreachable from production
+    while its tests still implied it was live. Composition now happens where it
+    is actually needed, in `merge_workspace_local_settings`.
     """
     base = dict(existing or {})
     out = consumer_settings(template)
-    if compose_hooks and isinstance(base.get("hooks"), dict):
-        out["hooks"] = _compose_hook_groups(template.get("hooks", {}), base["hooks"])
+    for key, value in base.items():
+        if key in out or str(key).startswith("_"):
+            continue
+        out[key] = value
+    return out
+
+
+def _merge_permission_lists(
+    template_perms: dict[str, Any], existing_perms: dict[str, Any]
+) -> dict[str, Any]:
+    """Union the template's permission rules with whatever is already local.
+
+    `settings.local.json` is where Claude Code records a standing approval —
+    "Yes, and don't ask again" writes an `allow` rule there. Taking
+    `permissions` wholly from the template, the way the tracked file could
+    safely be treated, would erase every one of those approvals at each
+    SessionStart. So merge instead: template rules first (governance order is
+    preserved), then any local rule the template does not already carry.
+
+    Non-list permission keys fall back to the template when it defines them,
+    since those are policy rather than accumulated personal state.
+    """
+    out: dict[str, Any] = {}
+    for key, value in template_perms.items():
+        out[key] = deepcopy(value)
+    for key, value in existing_perms.items():
+        if not isinstance(value, list):
+            out.setdefault(key, deepcopy(value))
+            continue
+        merged = list(out.get(key, [])) if isinstance(out.get(key), list) else []
+        seen = {json.dumps(item, sort_keys=True) for item in merged}
+        for item in value:
+            marker = json.dumps(item, sort_keys=True)
+            if marker not in seen:
+                merged.append(deepcopy(item))
+                seen.add(marker)
+        out[key] = merged
+    return out
+
+
+def merge_workspace_local_settings(
+    template: dict[str, Any], existing: dict[str, Any] | None, *, root: Path | None = None
+) -> dict[str, Any]:
+    """Managed keys for a workspace whose settings.json is repo-owned.
+
+    Ordering mirrors `merge_workspace_settings`: managed keys first, consumer
+    keys appended, so a local file governance alone writes is stable across
+    sessions and reconciliation stays churn-free.
+
+    Three managed keys behave differently here than in the tracked-file path,
+    because this file is not governance's alone — the person using the
+    workspace writes to it, and so does the hosted-env overlay:
+
+    * `hooks` — always composed, never wholesale. Previously projected L9
+      groups are dropped and the current template's appended, so a retired
+      governance hook cannot linger; a group the person added survives.
+    * `permissions` — unioned (see `_merge_permission_lists`), so standing
+      approvals are not erased every session.
+    * `env` — from the template, but keys `overlay_hosted_settings_env.py` owns
+      are kept when the file already carries them. `reconcile_user` needs that
+      exemption for `~/.claude/settings.json` and now this file needs it for the
+      same reason: the overlay patches its account values in right after this
+      write, so taking `env` wholly from the template would report the healthy
+      result as drift on the next `--check` and strip it on the next write,
+      while the overlay put it back — an `ok: false` that no correctly
+      configured container could ever clear.
+    """
+    base = dict(existing or {})
+    out: dict[str, Any] = {}
+    if "$schema" in template:
+        out["$schema"] = template["$schema"]
+    for key in MANAGED_TOP_LEVEL:
+        if key not in template:
+            continue
+        if key == "hooks":
+            existing_hooks = base.get("hooks") if isinstance(base.get("hooks"), dict) else {}
+            out["hooks"] = _compose_hook_groups(template["hooks"], existing_hooks)
+        elif key == "permissions" and isinstance(base.get("permissions"), dict):
+            template_perms = template["permissions"]
+            out["permissions"] = _merge_permission_lists(
+                template_perms if isinstance(template_perms, dict) else {},
+                base["permissions"],
+            )
+        else:
+            out[key] = deepcopy(template[key])
+    if root is not None and isinstance(out.get("env"), dict):
+        base_env = base.get("env") if isinstance(base.get("env"), dict) else {}
+        merged_env = dict(out["env"])
+        for key in _overlay_env_keys(root):
+            if key in base_env and key not in merged_env:
+                merged_env[key] = base_env[key]
+        out["env"] = merged_env
     for key, value in base.items():
         if key in out or str(key).startswith("_"):
             continue
@@ -465,6 +623,22 @@ def _path_is_git_tracked(workspace: Path, rel: Path | str) -> bool:
     file is untracked and wholly governance-managed, while a tracked file is
     repo content. A workspace that is not a git repository, or a machine with
     no git, is untracked by definition — the managed path is the fallback.
+
+    The two failure modes answer differently, because they are different facts:
+
+    * **git absent** (`OSError`) — nothing can be tracked, so `False` is the
+      true answer, not a guess.
+    * **git hung** (`TimeoutExpired`) — the answer is UNKNOWN. Every caller
+      uses `True` as its non-destructive branch: settings projects to the
+      gitignored local file, `sync_hook_file` preserves bytes, and
+      `prune_retired_hooks` reports instead of deleting. So an unknown answers
+      `True`. A single slow `git` must never be what overwrites repo-owned
+      bytes or unlinks a repository file; the cost of guessing wrong the other
+      way is one session projecting to `settings.local.json`, which the next
+      healthy session corrects.
+
+    This call runs several times per SessionStart, so the timeout is bounded
+    well inside the hook budget (`L9_SESSION_START_BUDGET`, 30s).
     """
     try:
         proc = subprocess.run(
@@ -480,7 +654,11 @@ def _path_is_git_tracked(workspace: Path, rel: Path | str) -> bool:
             capture_output=True,
             text=True,
             check=False,
+            timeout=GIT_QUERY_TIMEOUT_S,
         )
+    except subprocess.TimeoutExpired:
+        # Ownership unknown — answer with the branch that destroys nothing.
+        return True
     except OSError:
         # git missing — fall back to the managed whole-file path.
         return False
@@ -515,16 +693,35 @@ def reconcile_workspace(
     preserved: list[str] = []
     claude = workspace / ".claude"
     settings_path = claude / "settings.json"
-    existing = load_json(settings_path) if settings_path.is_file() else None
     tracked = settings_is_git_tracked(workspace)
-    drift.extend(
-        write_if_changed(
-            settings_path,
-            dump_json(merge_workspace_settings(template, existing, compose_hooks=tracked)),
-            check=check,
-            wrote=wrote,
+    preserved_settings: str | None = None
+    if tracked:
+        # Repo-owned bytes: project into the gitignored local file instead.
+        # Deliberately NOT reported as drift — under this design nothing is
+        # pending for the consumer to reconcile, and a permanent `ok: false`
+        # on a correctly configured checkout is the cry-wolf failure this file
+        # already calls out for the overlay `env` keys.
+        preserved_settings = str(settings_path)
+        local_path = claude / WORKSPACE_LOCAL_NAME
+        existing_local = load_json(local_path) if local_path.is_file() else None
+        drift.extend(
+            write_if_changed(
+                local_path,
+                dump_json(merge_workspace_local_settings(template, existing_local, root=root)),
+                check=check,
+                wrote=wrote,
+            )
         )
-    )
+    else:
+        existing = load_json(settings_path) if settings_path.is_file() else None
+        drift.extend(
+            write_if_changed(
+                settings_path,
+                dump_json(merge_workspace_settings(template, existing)),
+                check=check,
+                wrote=wrote,
+            )
+        )
     hooks_src = root / HOOKS_SRC_REL
     hooks_dest = claude / "hooks"
     for name in CONSUMER_HOOK_FILES:
@@ -543,13 +740,19 @@ def reconcile_workspace(
     drift.extend(
         prune_retired_hooks(hooks_dest, workspace, check=check, wrote=wrote, removed=removed)
     )
-    return {
+    result: dict[str, Any] = {
         "wrote": wrote,
         "drift": drift,
         "removed": removed,
         "preserved_tracked_hooks": preserved,
         "workspace": str(workspace),
     }
+    if preserved_settings is not None:
+        result["preserved_tracked_settings"] = preserved_settings
+        result["settings_target"] = str(claude / WORKSPACE_LOCAL_NAME)
+    else:
+        result["settings_target"] = str(settings_path)
+    return result
 
 
 def run(
@@ -694,6 +897,14 @@ def main() -> int:
             print("REPORTED (repo-owned, left as is):")
             for path in result["drift"]:
                 print(f"  {path}")
+        # Not drift, so it is not in the block above — but silence would hide
+        # which file the session's governance keys actually came from. Human
+        # branch only: `--json` callers parse stdout, and a stray line here
+        # made three of them fail with "Extra data".
+        ws = result.get("workspace")
+        if isinstance(ws, dict) and ws.get("preserved_tracked_settings"):
+            print(f"PRESERVED (repo-owned): {ws['preserved_tracked_settings']}")
+            print(f"  managed keys projected to: {ws.get('settings_target')}")
     return 0 if result.get("ok", True) else 1
 
 
