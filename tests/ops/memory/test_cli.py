@@ -68,7 +68,9 @@ def test_write_maps_legacy_kinds_and_stamps_the_agent_tag(
     assert code == cli.EXIT_OK
     argv, cwd, _ = fake_cli.calls[-1]
     assert argv[argv.index("--kind") + 1] == "procedural"
-    assert "error" not in cli.KIND_ALIASES, "error aliased a class it could not be distinguished from"
+    assert "error" not in cli.KIND_ALIASES, (
+        "error aliased a class it could not be distinguished from"
+    )
     assert "agent:cursor" in argv
     assert argv[argv.index("--group-id") + 1] == "cursor-governance"
     assert cwd == str(ROOT), "the CLI runs at the repository root"
