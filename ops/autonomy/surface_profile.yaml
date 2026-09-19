@@ -176,7 +176,8 @@ pr_stacking:
     mode_default: block # PR_OVERLAP env: block | warn | ignore
     exemptions: generated_path_prefixes # ops/scripts/sync_generated_artifacts.py SSOT
     probe: git_merge_tree # git merge-tree --write-tree textual-conflict probe
-    auto_stack_env: PR_STACK # auto: start on the unique open-PR tip; PR_STACK= keeps main
+    auto_stack_env: PR_STACK # default empty (keeps PR_BASE); opt in with auto to start on the unique open-PR tip
+    stack_default: none # 2026-09-19: was auto; ambiguous sibling chains made it a blocked publish by default
     gate_resolves_tip: true # pr-preflight / pr-check / open_pr bind resolve_stack_tip.py when PR_STACK=auto
     gate: ops/scripts/pr_overlap_check.py
   # GITHUB_REST_ROUTE_V1 — same openclaw PAT; not a second secret.
@@ -275,9 +276,11 @@ session_start_block: |
 
   - Proceed in **L4 local autonomy**: commit on a stacked feature branch with
     **no mid-execution push** and no useless push-approval pacing.
-  - Start that branch from the unique open-PR stack tip when `PR_STACK=auto`
-    (`ops/scripts/agent_worktree_start.sh`). Do not invent an `origin/main`
-    fork and restack at `make pr`. Empty `PR_STACK` still uses `origin/main`.
+  - Branch from fetched `origin/main` by default — `PR_STACK` is empty unless
+    you set it. When you deliberately opt in with `PR_STACK=auto`, start that
+    branch from the unique open-PR stack tip
+    (`ops/scripts/agent_worktree_start.sh`) rather than inventing an
+    `origin/main` fork and restacking at `make pr`.
   - YOU ARE AUTHORIZED to scoped local `git commit` without per-action ask
     on **every** surface, including Cursor. Ask only before a raw `git push`
     / `gh pr create` that is not the finish path. Finished work is

@@ -51,8 +51,8 @@ merged. Do not route around it — a base conflict is not a stacking candidate.
 | `PR_OVERLAP=block` (default) | Fail closed pre-push on a non-generated textual conflict with an open PR; names the PR, head branch, files, and routing options |
 | `PR_OVERLAP=warn` | Same detection, but proceeds with a WARN (exit 0) |
 | `PR_OVERLAP=ignore` | Skips the gate — only with stated justification |
-| `PR_STACK=auto` (`make pr` default) | Instead of blocking, re-resolves the PR base to the overlapping open PR's head branch (never main) when the blocking set is one unambiguous chain; ambiguous sibling chains still block |
-| `PR_STACK=` | Opt out: keep `PR_BASE` (usually `origin/main`); overlap still blocks |
+| `PR_STACK=` (`make pr` default since 2026-09-19) | Do not stack: keep `PR_BASE` (usually `origin/main`); overlap still blocks |
+| `PR_STACK=auto` | Opt in. Instead of blocking, re-resolves the PR base to the overlapping open PR's head branch (never main) when the blocking set is one unambiguous chain; ambiguous sibling chains still block |
 
 Detection is REST-only (`gh api`): open PR list → per-PR file lists →
 filename intersection with `git diff --name-only $PR_BASE...HEAD` →
@@ -85,8 +85,12 @@ BASE_SHA (E5) — not against a stale `origin/main` while stacked.
 1. **Commit into the overlapping open PR branch this turn** — same-agent
    or the PR the user already named as owning the path. "Do not put X in
    *this* PR" means put X in the PR that already has X.
-2. **Stack** — default for `make pr`. Opt out with `PR_STACK= make pr`
-   to publish against `main` only when there is no overlapping path.
+2. **Stack** — opt in with `PR_STACK=auto make pr` when the overlapping
+   path genuinely belongs to the open PR's chain. It is no longer the
+   `make pr` default: auto resolves a base only for one unambiguous
+   chain, so with several sibling chains open it fails preflight and the
+   caller passes `PR_STACK=` anyway. Publishing against `PR_BASE` is the
+   default; this option stays for a deliberate train.
    Policy: rebase and conflict resolution forbidden; bottom-up merge
    order. A stack parent must use `--merge` or children must land first.
 3. **`PR_OVERLAP=ignore`** — only with a stated justification. Not a wait.

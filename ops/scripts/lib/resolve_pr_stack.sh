@@ -3,9 +3,10 @@
 # shellcheck shell=bash
 #
 # Same topology as ops/scripts/resolve_stack_tip.py (start and publish).
-# This lib is the *when*: Makefile default PR_STACK=auto must bind PR_BASE
-# before pr-check selects changed files, not only after the gate in
-# open_pr_after_gate.sh.
+# This lib is the *when*: an opted-in PR_STACK=auto must bind PR_BASE before
+# pr-check selects changed files, not only after the gate in
+# open_pr_after_gate.sh. (auto was the Makefile default until 2026-09-19; the
+# binding order matters identically now that it is opt-in.)
 #
 # Usage:
 #   source ops/scripts/lib/resolve_pr_stack.sh
