@@ -832,6 +832,26 @@ def test_open_pr_after_gate_handles_landed_pr() -> None:
     assert "opening a new PR" in script
 
 
+def test_open_pr_composer_skips_root_protect_without_workspace_config() -> None:
+    """Consumer workspaces do not ship the governance root-protect policy.
+
+    run_pr_gate.sh already skips when WS lacks ops/config/root-file-protection.json.
+    The composer used to invoke validate_root_file_protection.py anyway, fail
+    closed, and abort after a successful push. Both compose and reopen paths
+    must use the same config-existence guard as the gate.
+    """
+    script = (SCRIPTS / "open_pr_after_gate.sh").read_text(encoding="utf-8")
+    gate = (SCRIPTS / "run_pr_gate.sh").read_text(encoding="utf-8")
+    assert '-f "$WS/ops/config/root-file-protection.json"' in gate
+    compose = script[script.index("_compose_title_and_body() {") :]
+    compose = compose[: compose.index('if [[ -z "$pr_url" || -z "$pr_number" ]]; then')]
+    assert '[[ -f "$_root_protect_py" && -f "$_root_protect_cfg" ]]' in compose
+    assert "skip additive_only measurement" in compose
+    reopen = script[script.index('echo "PR already open: $pr_url"') :]
+    reopen = reopen[: reopen.index("_pr_summary_py=")]
+    assert '-f "$WS/ops/config/root-file-protection.json"' in reopen
+
+
 def test_open_pr_after_gate_refreshes_only_a_composer_authored_body() -> None:
     """An already-open PR keeps a stale title/body unless this script wrote it.
 
