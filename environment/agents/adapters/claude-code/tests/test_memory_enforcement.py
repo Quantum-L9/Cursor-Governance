@@ -195,13 +195,17 @@ class MemoryGateTests(unittest.TestCase):
         self.assertEqual(hinted, self.session, "hint carries the raw chat id, not the composed key")
         self.assertNotIn("__", hinted)
         self.assertTrue(script.endswith("memory_prefetch.py"))
+        self.assertNotIn(
+            "--workspace /", reason, "repair must not hardcode a Cursor-Governance path"
+        )
 
         # Run the repair exactly as hinted (empty stdin: a shell, not a hook event).
         repair_env = dict(env)
         if writer_agent:
             repair_env["L9_MEMORY_AGENT_ID"] = writer_agent
+        repair_cmd = [sys.executable, str(PREFETCH), "--session-id", hinted]
         proc = subprocess.run(
-            [sys.executable, str(PREFETCH), "--session-id", hinted],
+            repair_cmd,
             input="",
             capture_output=True,
             text=True,
@@ -219,6 +223,25 @@ class MemoryGateTests(unittest.TestCase):
 
         out, code = run_gate(event, env)
         self.assertFalse(is_deny(out), "the hinted repair must unblock the same governed write")
+        self.assertEqual(code, 0)
+
+    def test_one_session_receipt_allows_edit_in_another_clone(self) -> None:
+        """Remediator from this session: one prefetch, not a second CG hydrate."""
+        other = Path(tempfile.mkdtemp())
+        subprocess.run(["git", "init"], cwd=other, check=True, capture_output=True, text=True)
+        target = other / "skills" / "x.md"
+        target.parent.mkdir()
+        target.write_text("x\n", encoding="utf-8")
+        self._write_receipt()
+        out, code = run_gate(
+            {
+                "tool_name": "Edit",
+                "tool_input": {"file_path": str(target)},
+                "session_id": self.session,
+            },
+            self.env,
+        )
+        self.assertFalse(is_deny(out), "one session receipt is enough to edit another repo")
         self.assertEqual(code, 0)
 
     def test_precomposed_receipt_key_is_reduced_not_doubled(self) -> None:
