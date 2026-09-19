@@ -281,6 +281,28 @@ class SecretsReceiptLoadTests(unittest.TestCase):
         line = report.classify_aws_cli(legacy["aws"], report.secrets_plane_state(legacy))
         self.assertEqual(line["class"], report.FAILED)
 
+    def test_unrecognized_state_is_fail_closed(self) -> None:
+        """An unknown state degrades to no-state, never to the carve-out."""
+        for raw in ("unavailable", "OK", "ok ", "sudo", "", None, 1, {"a": 1}):
+            with self.subTest(state=raw):
+                self.assertEqual(report.secrets_plane_state({"state": raw}), "")
+
+    def test_state_returned_is_the_module_literal_not_the_receipt_string(self) -> None:
+        """Nothing read from the receipt may leave this reader.
+
+        The report is printed, so a value flowing from the receipt into the
+        rendered output is a clear-text-logging path (CodeQL flagged exactly
+        that). Returning the allowlisted literal is the barrier: the object
+        returned is the module's own constant, never the parsed string.
+        """
+        parsed = json.loads('{"state": "unavailable_by_surface"}')
+        returned = report.secrets_plane_state(parsed)
+        self.assertEqual(returned, report.PLANE_UNAVAILABLE_BY_SURFACE)
+        self.assertIn(returned, report.PLANE_STATES)
+        # Identity, not just equality: the literal, not the receipt's string.
+        self.assertIs(returned, report.PLANE_UNAVAILABLE_BY_SURFACE)
+        self.assertIsNot(returned, parsed["state"])
+
 
 class AwsCliSurfaceClassificationTests(unittest.TestCase):
     """The third state renders as neither ok nor FAILED."""

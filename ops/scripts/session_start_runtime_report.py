@@ -578,11 +578,23 @@ def secrets_receipt_parts(
     )
 
 
+#: The only plane states this reader will propagate. Anything else — a
+#: pre-carve-out receipt, a truncated write, a value from a newer producer —
+#: reads as no-state, which classifies FAILED exactly as before the carve-out.
+#: The allowlist is what keeps receipt content out of the rendered report: only
+#: these literals can ever leave this function, never a value read from disk.
+PLANE_STATES = frozenset({"ok", PLANE_UNAVAILABLE_BY_SURFACE, "failed"})
+
+
 def secrets_plane_state(receipt: dict[str, Any] | None) -> str:
-    """The plane's tri-state. Absent on a pre-carve-out receipt, which reads ''."""
+    """The plane's tri-state, fail-closed. Absent or unrecognized reads ''."""
     if not receipt:
         return ""
-    return str(receipt.get("state") or "")
+    raw = str(receipt.get("state") or "")
+    for known in PLANE_STATES:
+        if raw == known:
+            return known
+    return ""
 
 
 def classify_skill_usage(detail: str) -> dict[str, Any]:
