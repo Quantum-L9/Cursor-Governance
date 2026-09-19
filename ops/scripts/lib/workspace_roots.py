@@ -25,7 +25,7 @@ callers keep their existing behaviour byte-for-byte.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import NamedTuple
 
@@ -182,7 +182,10 @@ def projection_roots(workspace: Path, *, cap: int = DEFAULT_MAX_ROOTS) -> list[P
 
 
 def adopted_projection_roots(
-    workspace: Path, relative_target: Path | str, state_name: str
+    workspace: Path,
+    relative_target: Path | str,
+    state_name: str,
+    exclude_targets: Iterable[Path] = (),
 ) -> list[Path]:
     """Ancestors of `workspace` that already hold a projection of this adapter.
 
@@ -206,6 +209,15 @@ def adopted_projection_roots(
     workspace's line of parents (`/root/.claude` while the workspace is under
     `/home/user`) is not reachable from here.
 
+    `exclude_targets` is how a caller keeps the USER-scope projection out. A
+    normal checkout sits under `$HOME`, and `$HOME/.claude/skills` then answers
+    this scan with the same relative path and the same state filename as a
+    container mirror — the state file records a governance root, not a scope, so
+    nothing in it distinguishes the two. Adopting it would hand the user's own
+    projection to a project-scope reconcile, which would rewrite user-level
+    links or fail `--check` on drift that has nothing to do with the project.
+    Callers pass their resolved user target and it is skipped by path.
+
     Returned nearest-ancestor first. Pass a *relative* target — an absolute one
     is the same directory for every ancestor and says nothing about ownership,
     and one containing `..` is refused outright: `../../.claude/skills` is
@@ -221,10 +233,19 @@ def adopted_projection_roots(
         resolved = Path(workspace).resolve()
     except OSError:
         return []
+    blocked = set()
+    for candidate in exclude_targets:
+        try:
+            blocked.add(Path(candidate).resolve())
+        except OSError:
+            continue
     adopted: list[Path] = []
     for ancestor in resolved.parents:
+        target = ancestor / relative
         try:
-            if (ancestor / relative / state_name).is_file():
+            if target.resolve() in blocked:
+                continue
+            if (target / state_name).is_file():
                 adopted.append(ancestor)
         except OSError:
             continue

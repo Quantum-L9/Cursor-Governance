@@ -87,6 +87,32 @@ def test_adoption_requires_our_own_state_file(tmp_path: Path) -> None:
     )
 
 
+def test_the_user_scope_target_is_never_adopted_as_a_project_mount(tmp_path: Path) -> None:
+    """A checkout under `$HOME` makes the user projection answer the scan.
+
+    `$HOME/.claude/skills` carries the same relative path and the same state
+    filename as a container mirror, and the state file records a governance
+    root rather than a scope, so nothing in it separates the two. Adopting it
+    would hand the user's own projection to a project-scope reconcile.
+    """
+    home = tmp_path / "home" / "dev"
+    repo = make_repo(home, "checkout")
+    user_target = home / ".claude" / "skills"
+    user_target.mkdir(parents=True)
+    (user_target / ".l9-managed-skills.json").write_text("{}", encoding="utf-8")
+
+    relative = Path(".claude") / "skills"
+    assert adopted_projection_roots(repo, relative, ".l9-managed-skills.json") == [home], (
+        "without the exclusion the user projection is adopted — that is the hazard"
+    )
+    assert (
+        adopted_projection_roots(
+            repo, relative, ".l9-managed-skills.json", exclude_targets=[user_target]
+        )
+        == []
+    )
+
+
 def test_a_traversing_target_is_never_adopted(tmp_path: Path) -> None:
     """`..` is relative, so an absolute-only check would let it climb out of the
     ancestor it was joined to and adopt a directory outside the lineage."""

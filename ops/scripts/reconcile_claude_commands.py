@@ -250,7 +250,15 @@ def reconcile(
             # would keep symlinks to commands the SSOT has retired.
             mount_roots += [
                 ancestor
-                for ancestor in adopted_projection_roots(workspace, PROJECT_TARGET_REL, STATE_NAME)
+                for ancestor in adopted_projection_roots(
+                    workspace,
+                    PROJECT_TARGET_REL,
+                    STATE_NAME,
+                    # reconcile_commands_scope's own user-scope target. A
+                    # checkout under $HOME would otherwise adopt it as a
+                    # project mount root and reconcile user links as project.
+                    exclude_targets=[Path.home() / ".claude" / "commands"],
+                )
                 if ancestor not in mount_roots
             ]
         else:
