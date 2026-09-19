@@ -87,10 +87,12 @@ def workspace_root() -> Path:
     if toplevel is not None:
         found = [base for base in found if base == toplevel or toplevel in base.parents]
     if found:
-        return found[-1]
-    if toplevel is not None:
-        return toplevel
-    return cwd
+        chosen = found[-1]
+    elif toplevel is not None:
+        chosen = toplevel
+    else:
+        chosen = cwd
+    return chosen
 
 
 def _safe_id_part(value: str) -> str:
@@ -202,10 +204,37 @@ def identity_snapshot(contract: dict[str, Any], session_id: str) -> dict[str, st
     }
 
 
-def state_root(contract: dict[str, Any]) -> Path:
+def workspace_for_target(tool_input: dict[str, Any] | None = None) -> Path:
+    """Git root of the file being edited, else the session workspace.
+
+    The write-gate receipt must live on the repository that is mutating.
+    ``CURSOR_PROJECT_DIR`` can be a different clone (a remediator session
+    opened in Cursor-Governance while editing Cognitive.Engine.Graphs), and
+    stamping prefetch there writes the wrong namespace.
+    """
+    raw = ""
+    if tool_input:
+        raw = str(tool_input.get("file_path") or tool_input.get("notebook_path") or "").strip()
+    if raw:
+        path = Path(raw).expanduser()
+        if not path.is_absolute():
+            path = workspace_root() / path
+        try:
+            path = path.resolve()
+        except OSError:
+            pass
+        base = path if path.is_dir() else path.parent
+        toplevel = _git_toplevel(base)
+        if toplevel is not None:
+            return toplevel
+    return workspace_root()
+
+
+def state_root(contract: dict[str, Any], workspace: Path | None = None) -> Path:
     root = contract.get("state", {}).get("root", ".l9/memory")
     path = Path(root)
-    return path if path.is_absolute() else workspace_root() / path
+    base = workspace if workspace is not None else workspace_root()
+    return path if path.is_absolute() else Path(base).resolve() / path
 
 
 def resolve_namespaces(contract: dict[str, Any]) -> list[str]:
@@ -277,13 +306,18 @@ def _receipt_key_matches(data: dict[str, Any], lookup: str) -> bool:
 
 
 # --- receipts ---------------------------------------------------------------
-def receipt_path(contract: dict[str, Any], receipt_id: str) -> Path:
+def receipt_path(contract: dict[str, Any], receipt_id: str, workspace: Path | None = None) -> Path:
     safe = re.sub(r"[^A-Za-z0-9_.-]", "_", receipt_id or "unknown")
-    return state_root(contract) / "receipts" / f"{safe}.json"
+    return state_root(contract, workspace) / "receipts" / f"{safe}.json"
 
 
-def write_receipt(contract: dict[str, Any], receipt_id: str, payload: dict[str, Any]) -> Path:
-    path = receipt_path(contract, receipt_id)
+def write_receipt(
+    contract: dict[str, Any],
+    receipt_id: str,
+    payload: dict[str, Any],
+    workspace: Path | None = None,
+) -> Path:
+    path = receipt_path(contract, receipt_id, workspace)
     path.parent.mkdir(parents=True, exist_ok=True)
     body = {"created_at": time.time(), **payload}
     body["receipt_id"] = receipt_id
@@ -292,8 +326,8 @@ def write_receipt(contract: dict[str, Any], receipt_id: str, payload: dict[str, 
     return path
 
 
-def fresh_receipt(contract: dict[str, Any], receipt_id: str) -> bool:
-    path = receipt_path(contract, receipt_id)
+def fresh_receipt(contract: dict[str, Any], receipt_id: str, workspace: Path | None = None) -> bool:
+    path = receipt_path(contract, receipt_id, workspace)
     if not path.is_file():
         return False
     try:
@@ -313,17 +347,21 @@ def fresh_receipt(contract: dict[str, Any], receipt_id: str) -> bool:
     return not data.get("degraded", False)
 
 
-def usable_receipt(contract: dict[str, Any], receipt_id: str) -> bool:
+def usable_receipt(
+    contract: dict[str, Any], receipt_id: str, workspace: Path | None = None
+) -> bool:
     """True when prefetch stamped a writer receipt for this receipt_id.
 
     SessionStart's session id is not this key. Degraded hydrations are still
     usable for the write gate: denying on ``fresh_receipt() is False`` after a
     degraded receipt permanently blocked every governed Edit/Write for the TTL.
     Prefetch retries on the next chat; the gate continues either way.
+    ``workspace`` is the repository being mutated (edited-file git root), not
+    the session's ``CURSOR_PROJECT_DIR`` when those differ.
     """
     if not receipt_id:
         return False
-    path = receipt_path(contract, receipt_id)
+    path = receipt_path(contract, receipt_id, workspace)
     if not path.is_file():
         return False
     try:

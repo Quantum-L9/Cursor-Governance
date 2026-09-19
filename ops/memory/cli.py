@@ -29,6 +29,7 @@ import argparse
 import json
 import os
 import sys
+import time
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -39,7 +40,11 @@ from ops.memory.control_plane_client import (
     OutcomeStatus,
 )
 from ops.memory.hook_envelope import UnknownHookSurface
-from ops.memory.namespace_context import NamespaceContext, resolve_namespace_context
+from ops.memory.namespace_context import (
+    NamespaceContext,
+    locate_clone_for_namespace,
+    resolve_namespace_context,
+)
 from ops.memory.runtime_binding import resolve_runtime_binding
 
 EXIT_OK = 0
@@ -79,6 +84,51 @@ def _run_at(context: NamespaceContext) -> str:
     # Memory derives the local principal from the directory it is invoked in,
     # so every call runs at the repository root, never at a subdirectory.
     return context.git_root or context.workspace
+
+
+_PREFETCH_RECEIPT_TTL = 86400
+
+
+def read_prefetch_bind(workspace: str) -> dict[str, Any] | None:
+    """Newest usable SessionStart / repair receipt under this checkout.
+
+    One prefetch binds one write namespace. The receipt lives on the session
+    workspace; ``group_id`` is the repo the agent is working in — not a
+    hardcoded cursor-governance default.
+    """
+
+    root = Path(workspace) / ".l9" / "memory" / "receipts"
+    if not root.is_dir():
+        return None
+    newest: dict[str, Any] | None = None
+    newest_mtime = 0.0
+    now = time.time()
+    for path in root.glob("*.json"):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            created = float(data.get("created_at", 0))
+            mtime = path.stat().st_mtime
+        except (OSError, ValueError, json.JSONDecodeError):
+            continue
+        if created and (now - created) >= _PREFETCH_RECEIPT_TTL:
+            continue
+        if mtime >= newest_mtime:
+            newest = data if isinstance(data, dict) else None
+            newest_mtime = mtime
+    return newest
+
+
+def bound_write_namespace(bind: dict[str, Any] | None) -> str | None:
+    if not bind:
+        return None
+    group_id = str(bind.get("group_id") or "").strip()
+    if group_id and group_id != "unresolved":
+        return group_id
+    ids = [str(item).strip() for item in (bind.get("group_ids") or []) if str(item).strip()]
+    ids = [item for item in ids if item != "unresolved"]
+    if len(ids) == 1:
+        return ids[0]
+    return None
 
 
 def outcome_document(
@@ -156,8 +206,41 @@ def cmd_search(args: argparse.Namespace) -> int:
 
 
 def cmd_write(args: argparse.Namespace) -> int:
-    context = _context(_workspace(args.workspace), args.group_id)
-    namespace = args.group_id or context.write_namespace_hint
+    session_ws = _workspace(args.workspace)
+    bind = read_prefetch_bind(session_ws)
+    bound_ns = bound_write_namespace(bind)
+    session_hint = _context(session_ws, None).write_namespace_hint
+    exclusive_bind = bool(bind and bind.get("exclusive_bind")) or (
+        bool(bound_ns) and bool(session_hint) and bound_ns != session_hint
+    )
+    if args.group_id and exclusive_bind and bound_ns and args.group_id != bound_ns:
+        _emit(
+            {
+                "operation": "write",
+                "status": "PREFETCH_BOUND",
+                "ok": False,
+                "error": (
+                    f"one prefetch already bound this session to {bound_ns!r}. "
+                    f"--group-id {args.group_id!r} would write a different repo. "
+                    "Re-run memory_prefetch.py --session-id <chat> --workspace "
+                    "<owning-clone> to switch that one bind."
+                ),
+                "namespace": {
+                    "prefetch_bound": bound_ns,
+                    "requested": args.group_id,
+                },
+            }
+        )
+        return EXIT_REFUSED
+    namespace = args.group_id or bound_ns
+    run_ws = session_ws
+    if namespace:
+        located = locate_clone_for_namespace(namespace, from_workspace=session_ws)
+        if located is not None:
+            run_ws = str(located)
+    context = _context(run_ws, namespace)
+    if not namespace:
+        namespace = context.write_namespace_hint
     if not namespace:
         _emit(
             {

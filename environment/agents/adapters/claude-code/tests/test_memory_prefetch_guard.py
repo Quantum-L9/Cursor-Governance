@@ -81,6 +81,52 @@ class PrefetchRuntimeGuardTests(unittest.TestCase):
         classify_pos = text.index("classify_hydrate_state(body)")
         self.assertGreater(classify_pos, compile_pos)
         self.assertNotIn("_claude_runtime_marker_present", text)
+        self.assertNotIn('agent_id="claude-code"', text)
+        self.assertNotIn('or ["cursor-governance"]', text)
+
+    def test_prefetch_agent_id_follows_canonical_surface(self) -> None:
+        sys.path.insert(0, str(PREFETCH.parent))
+        import memory_prefetch as prefetch
+
+        self.assertEqual(prefetch.prefetch_agent_id({"CURSOR_AGENT": "1"}), "cursor")
+        self.assertEqual(
+            prefetch.prefetch_agent_id(
+                {"CURSOR_AGENT": "1", "L9_GOVERNANCE_SURFACE": "claude-code"}
+            ),
+            "cursor",
+        )
+        self.assertEqual(prefetch.prefetch_agent_id({"CLAUDECODE": "1"}), "claude-code")
+        self.assertEqual(
+            prefetch.prefetch_agent_id({"L9_GOVERNANCE_SURFACE": "claude-code"}),
+            "claude-code",
+        )
+
+    def test_emit_is_pretty_json_one_field_per_line(self) -> None:
+        sys.path.insert(0, str(PREFETCH.parent))
+        import memory_prefetch as prefetch
+
+        context = (
+            "L9 memory: ENFORCED\n"
+            "transport=memory-control-plane/v1\n"
+            "namespace=cursor-governance\n"
+            "law=CANONICAL_LAW §8"
+        )
+        payload = prefetch.hook_session_start_payload(context)
+        lines = payload["hookSpecificOutput"]["additionalContext"]
+        self.assertEqual(
+            lines,
+            [
+                "L9 memory: ENFORCED",
+                "transport=memory-control-plane/v1",
+                "namespace=cursor-governance",
+                "law=CANONICAL_LAW §8",
+            ],
+        )
+        rendered = json.dumps(payload, ensure_ascii=False, indent=2)
+        self.assertIn('\n      "transport=memory-control-plane/v1",\n', rendered)
+        self.assertNotIn("\\n", rendered)
+        self.assertIn("CANONICAL_LAW §8", rendered)
+        self.assertNotIn("\\u00a7", rendered)
 
     def test_false_packet_boolean_is_not_degraded(self) -> None:
         sys.path.insert(0, str(ROOT / "ops" / "scripts"))
