@@ -126,7 +126,7 @@ class ManusMcpServerTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             renderer.validate_endpoint("https://token@example.com/mcp")
         draft = renderer.draft("https://governance.example.com/mcp")
-        self.assertEqual(draft["mode"], "url")
+        self.assertEqual(draft["mode"], "form")
         self.assertEqual(set(draft), {"mode", "mcpServers"})
         self.assertEqual(
             json.loads(json.dumps(draft))["mcpServers"]["l9-governance"]["url"],

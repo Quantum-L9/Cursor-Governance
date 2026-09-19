@@ -59,7 +59,7 @@ bash environment/agents/adapters/manus/serve_mcp.sh --port 8787
 
 The public/default server exposes only the five read/validation tools. To enable `governance_bootstrap`, supply a token file managed outside the repository and launch with `--auth-token-file`; additionally pass `--allow-bootstrap-apply` for `apply` mode. Do not place the token in this repository, a command line, a project environment, or an MCP URL.
 
-Use [`render_mcp_connector.py`](render_mcp_connector.py) to create a no-secret URL-mode Custom MCP connector draft after the service is available over HTTPS. The committed [`mcp-connector.json`](mcp-connector.json) is a deployment-neutral carrier, not a server URL or a memory connector.
+Use [`render_mcp_connector.py`](render_mcp_connector.py) to create a no-secret Custom MCP **form-mode** connector draft after the service is available over HTTPS. Form mode avoids treating this intentionally unauthenticated endpoint as an OAuth server. The committed [`mcp-connector.json`](mcp-connector.json) is a deployment-neutral carrier, not a server URL or a memory connector.
 
 ## Current memory posture
 

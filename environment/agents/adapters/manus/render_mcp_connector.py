@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render a no-secret Manus Custom MCP connector draft for the L9 MCP service."""
+"""Render a no-secret form-mode Manus Custom MCP draft for the L9 MCP service."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ def validate_endpoint(value: str) -> str:
 
 def draft(endpoint: str) -> dict[str, object]:
     return {
-        "mode": "url",
+        "mode": "form",
         "mcpServers": {"l9-governance": {"url": endpoint}},
     }
 
