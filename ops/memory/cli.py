@@ -105,31 +105,94 @@ def _run_at(context: NamespaceContext) -> str:
 _PREFETCH_RECEIPT_TTL = 86400
 
 
+#: Receipt-key suffix stamped by ``memory_writeback.py``. Write-back receipts
+#: share the receipts directory with prefetch receipts by design (one mechanism,
+#: distinct ids) and must never be read as a write bind.
+_WRITEBACK_RECEIPT_SUFFIX = ".writeback"
+
+#: ``status`` values ``memory_prefetch.py`` stamps. A receipt that carries
+#: neither is not a prefetch receipt, whatever else is in the directory.
+_PREFETCH_RECEIPT_STATUSES = frozenset({"prefetched", "degraded"})
+
+
+def _current_writer_agent() -> str:
+    """The writer identity the prefetch stamps, resolved the same way.
+
+    Mirrors ``memory_state.extract_writer_agent_id`` — including its
+    ``unknown-agent`` fallback — so a receipt is matched against the identity
+    that produced it rather than against a second convention invented here.
+    """
+    return os.environ.get("L9_MEMORY_AGENT_ID", "").strip() or "unknown-agent"
+
+
+def _is_applicable_prefetch_receipt(data: Any, *, writer_agent: str, chat_id: str) -> bool:
+    """Whether this receipt is *this* writer/session's prefetch receipt.
+
+    The receipts directory is shared: write-back receipts live beside prefetch
+    receipts, and one checkout can be used by several chats and several agents.
+    Recency alone therefore identifies nothing, so identity is checked against
+    the canonical fields the producer stamps.
+    """
+    if not isinstance(data, dict):
+        return False
+    receipt_id = str(data.get("receipt_id") or "")
+    if receipt_id.endswith(_WRITEBACK_RECEIPT_SUFFIX):
+        return False
+    # Positive identification: a prefetch receipt records what happened.
+    if str(data.get("status") or "") not in _PREFETCH_RECEIPT_STATUSES:
+        return False
+    receipt_agent = str(data.get("agent_id") or "").strip()
+    if receipt_agent and receipt_agent != writer_agent:
+        return False
+    # Chat is constrained only when this process can name one; the operator CLI
+    # usually cannot, and inventing a chat id would reject every valid receipt.
+    if chat_id:
+        receipt_chat = str(data.get("conversation_id") or "").strip()
+        if receipt_chat and receipt_chat != chat_id:
+            return False
+    return True
+
+
 def read_prefetch_bind(workspace: str) -> dict[str, Any] | None:
-    """Newest usable SessionStart / repair receipt under this checkout.
+    """Newest usable SessionStart / repair receipt **for this writer/session**.
 
     One prefetch binds one write namespace. The receipt lives on the session
     workspace; ``group_id`` is the repo the agent is working in — not a
     hardcoded cursor-governance default.
+
+    Selection is by receipt identity, not directory recency. Taking the newest
+    file in the directory let an unrelated write-back receipt, or another
+    chat's prefetch, supply the bind: the operator write then inherited the
+    wrong namespace, or lost an exclusive bind that was still in force.
     """
 
     root = Path(workspace) / ".l9" / "memory" / "receipts"
     if not root.is_dir():
         return None
+    writer_agent = _current_writer_agent()
+    chat_id = os.environ.get("CURSOR_CONVERSATION_ID", "").strip()
     newest: dict[str, Any] | None = None
     newest_mtime = 0.0
     now = time.time()
     for path in root.glob("*.json"):
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
-            created = float(data.get("created_at", 0))
             mtime = path.stat().st_mtime
         except (OSError, ValueError, json.JSONDecodeError):
             continue
+        if not _is_applicable_prefetch_receipt(data, writer_agent=writer_agent, chat_id=chat_id):
+            continue
+        try:
+            created = float(data.get("created_at", 0))
+        except (TypeError, ValueError):
+            continue
         if created and (now - created) >= _PREFETCH_RECEIPT_TTL:
             continue
+        # Only a receipt that passed every check above may advance the
+        # watermark. Advancing it for a rejected file discarded an older but
+        # valid receipt and returned nothing at all.
         if mtime >= newest_mtime:
-            newest = data if isinstance(data, dict) else None
+            newest = data
             newest_mtime = mtime
     return newest
 

@@ -210,3 +210,27 @@ def test_unknown_repository_requests_only_the_shared_read(tmp_path: Path) -> Non
     assert context.write_namespace_hint is None
     assert context.read_namespace_hints == ("l9-workspace",)
     assert context.repository_identity == "Someone/mystery"
+
+
+def test_locate_clone_survives_an_unresolvable_start_path(tmp_path: Path) -> None:
+    """Path resolution here is best-effort; a bad start must not crash routing.
+
+    The roots loop already skipped a hint whose ``resolve()`` failed, but the
+    starting workspace was resolved outside that guard, so a broken link or an
+    unreadable parent raised out of write routing instead of degrading to "no
+    clone located" — which the caller already handles by staying put.
+
+    A symlink loop is the canonical case and is *not* an OSError on CPython
+    3.12; it surfaces as RuntimeError, which is why the guard covers both.
+    """
+    loop_a = tmp_path / "loop-a"
+    loop_b = tmp_path / "loop-b"
+    loop_a.symlink_to(loop_b)
+    loop_b.symlink_to(loop_a)
+
+    assert nc.locate_clone_for_namespace("cursor-governance", from_workspace=loop_a) is None
+
+    # A path whose components simply do not exist resolves without raising, and
+    # must also come back as "not located" rather than a false positive.
+    missing = tmp_path / "absent" / "deeper"
+    assert nc.locate_clone_for_namespace("cursor-governance", from_workspace=missing) is None

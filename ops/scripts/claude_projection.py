@@ -493,9 +493,53 @@ def project_mcp(root: Path, workspace: Path, check: bool) -> DomainOutcome:
         outcome.status = "drift"
         outcome.detail["drift"] = str(target)
         return outcome
+
+    tracked, probed = _mcp_is_git_tracked(workspace)
+    if not probed:
+        # Ownership undeterminable (no git, probe timeout, import error). Fail
+        # closed on the decision: an existing file might be repo-owned, and
+        # overwriting it is exactly the failure this guard exists to catch, so
+        # report drift instead. Only create a missing file, which cannot be
+        # repo-owned and which a fresh consumer still needs.
+        outcome.detail["ownership_probe"] = "unavailable"
+        if target.is_file():
+            outcome.status = "drift"
+            outcome.detail["unprobed_drift"] = str(target)
+            return outcome
+    elif tracked:
+        # Repo-owned: report, never overwrite. This is the doctrine
+        # reconcile_claude_settings already applies to tracked settings and hooks
+        # (#611, #281), and .mcp.json is the one projected worktree path that never
+        # got it. A projection that rewrites a committed file makes every
+        # SessionStart dirty the tree, and in a two-clone layout it writes the
+        # OLDER clone's bytes over the newer clone's commit. Regenerating a
+        # committed .mcp.json is a deliberate act on a branch, not a side effect
+        # of opening a session.
+        outcome.status = "drift"
+        outcome.detail["tracked_drift"] = str(target)
+        return outcome
+
     atomic_write(target, content)
     outcome.detail["wrote"] = str(target)
     return outcome
+
+
+def _mcp_is_git_tracked(workspace: Path) -> tuple[bool, bool]:
+    """(is_tracked, probe_succeeded) for `<workspace>/.mcp.json`.
+
+    Reuses the settings reconciler's public probe — the sibling of
+    `settings_is_git_tracked` and `hook_is_git_tracked` — rather than
+    re-deriving one, and imports it lazily exactly as `project_settings`
+    imports `run`.
+    """
+    try:
+        from reconcile_claude_settings import mcp_is_git_tracked
+    except Exception:  # noqa: BLE001
+        return False, False
+    try:
+        return mcp_is_git_tracked(workspace), True
+    except Exception:  # noqa: BLE001
+        return False, False
 
 
 def atomic_write(path: Path, content: str) -> None:

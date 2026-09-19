@@ -1,11 +1,12 @@
 """MCP surfaces for the memory control plane: Claude Code template + Claude Desktop render.
 
-The memory package owns the shape of its MCP entry. Claude Code's project
-scope can only carry a ``${VAR}`` interpreter, so the template *declares* that
-shape and these tests hold it equal to the package. Claude Desktop cannot
-expand variables at all, so a renderer derives its file from the master
-inventory under Desktop's constraints and hands the memory entry to the
-package's configurator.
+The memory package owns the argv of its MCP entry. Claude Code's project
+scope launches that argv through the bootstrap spawn wrapper
+(``${HOME}/.cursor-governance/ops/memory/run_memory_mcp.sh``) so a Dock
+session does not need ``L9_MEMORY_INTERPRETER`` in the parent env. Claude
+Desktop cannot expand variables at all, so a renderer derives its file from
+the master inventory under Desktop's constraints and hands the memory entry
+to the package's configurator.
 """
 
 from __future__ import annotations
@@ -34,6 +35,7 @@ RENDERER = (
 )
 
 MEMORY_ARGS = ["-m", "l9_graphite_memory.server", "--transport", "stdio"]
+MEMORY_WRAPPER = "${HOME}/.cursor-governance/ops/memory/run_memory_mcp.sh"
 
 
 def _load(name: str, path: Path) -> Any:
@@ -58,34 +60,52 @@ def test_template_memory_entry_matches_the_package_shape_and_is_secret_free() ->
     template = json.loads(TEMPLATE.read_text(encoding="utf-8"))
     entry = template["mcpServers"]["l9-graphite-memory"]
     assert entry["type"] == "stdio"
-    assert entry["command"] == "${L9_MEMORY_INTERPRETER}"
+    assert entry["command"] == MEMORY_WRAPPER
     assert entry["args"] == MEMORY_ARGS
-    assert "L9_MEMORY_INTERPRETER" in entry["_requires_env"]
+    assert "L9_MEMORY_INTERPRETER" not in (entry.get("_requires_env") or [])
     for forbidden in ("env", "url", "headers"):
         assert forbidden not in entry
+    wrapper = ROOT / "ops" / "memory" / "run_memory_mcp.sh"
+    assert wrapper.is_file() and os.access(wrapper, os.X_OK)
 
 
-def test_memory_entry_renders_only_when_the_interpreter_is_bound() -> None:
+def test_memory_entry_renders_without_a_parent_interpreter() -> None:
+    """The wrapper is the bind gate; desktop must still render the server."""
     template = json.loads(TEMPLATE.read_text(encoding="utf-8"))
-    without = projection.render_mcp(template, None, environ={"GRAPHITI_MCP_URL": "x"})
-    assert "l9-graphite-memory" not in without["mcpServers"]
-    with_var = projection.render_mcp(
-        template,
-        None,
-        environ={"GRAPHITI_MCP_URL": "x", "L9_MEMORY_INTERPRETER": "/venv/bin/python"},
+    rendered = projection.render_mcp(template, None, environ={"GRAPHITI_MCP_URL": "x"})
+    entry = rendered["mcpServers"]["l9-graphite-memory"]
+    assert entry["command"] == MEMORY_WRAPPER
+    assert entry["args"] == MEMORY_ARGS
+    assert not any(key.startswith("_") for key in entry)
+
+
+def _committed_mcp_json() -> dict:
+    """The COMMITTED .mcp.json, not whatever is sitting in the worktree.
+
+    This assertion is about what ships in git. Reading ROOT/".mcp.json" read
+    whatever a SessionStart reconciler had last written into the checkout, so it
+    passed or failed on ambient dirt rather than on the committed projection —
+    the same shared-mutable-state trap test_governance_refresh_receipt.py
+    documents for this very file. Measured on a dirtied checkout: the worktree
+    copy fails this assertion while the committed blob passes.
+    """
+    proc = subprocess.run(
+        ["git", "-C", str(ROOT), "show", "HEAD:.mcp.json"],
+        capture_output=True,
+        text=True,
+        check=False,
     )
-    rendered = with_var["mcpServers"]["l9-graphite-memory"]
-    # Claude Code expands ${VAR} at load; the render keeps the reference, never a path.
-    assert rendered["command"] == "${L9_MEMORY_INTERPRETER}"
-    assert rendered["args"] == MEMORY_ARGS
-    assert not any(key.startswith("_") for key in rendered)
+    if proc.returncode == 0 and proc.stdout.strip():
+        return json.loads(proc.stdout)
+    # Not a git checkout (exported tree): the file on disk is all there is.
+    return json.loads((ROOT / ".mcp.json").read_text(encoding="utf-8"))
 
 
 def test_committed_projection_is_current_for_an_unbound_environment() -> None:
-    """CI renders without L9_MEMORY_INTERPRETER, so the committed .mcp.json omits the entry."""
+    """CI renders without L9_MEMORY_INTERPRETER; the wrapper entry still ships."""
 
     template = json.loads(TEMPLATE.read_text(encoding="utf-8"))
-    committed = json.loads((ROOT / ".mcp.json").read_text(encoding="utf-8"))
+    committed = _committed_mcp_json()
     environ = {
         k: v
         for k, v in os.environ.items()
@@ -94,6 +114,7 @@ def test_committed_projection_is_current_for_an_unbound_environment() -> None:
     environ.setdefault("GRAPHITI_MCP_URL", "https://example.invalid/mcp")
     rendered = projection.render_mcp(template, committed, environ=environ)
     assert rendered["mcpServers"] == committed["mcpServers"]
+    assert committed["mcpServers"]["l9-graphite-memory"]["command"] == MEMORY_WRAPPER
 
 
 @pytest.mark.skipif(

@@ -1,5 +1,5 @@
 {
-  "canonical_skill_count": 57,
+  "canonical_skill_count": 58,
   "canonical_skills": [
     "l9-api-smoke-testing",
     "l9-architecture-decision-records",
@@ -41,6 +41,7 @@
     "l9-pipeline-orchestrator",
     "l9-plan",
     "l9-plan-simple",
+    "l9-pr-audit",
     "l9-pr-digest",
     "l9-pr-remediation",
     "l9-prompt-engineering",
@@ -100,6 +101,7 @@
     "l9-pipeline-orchestrator": "explicit_only",
     "l9-plan": "model_allowed",
     "l9-plan-simple": "model_allowed",
+    "l9-pr-audit": "explicit_only",
     "l9-pr-digest": "model_allowed",
     "l9-pr-remediation": "explicit_only",
     "l9-prompt-engineering": "model_allowed",
@@ -258,6 +260,7 @@
     "l9-pe-nuggets": "user-invocable-only",
     "l9-pipeline-audit": "user-invocable-only",
     "l9-pipeline-orchestrator": "user-invocable-only",
+    "l9-pr-audit": "user-invocable-only",
     "l9-pr-remediation": "user-invocable-only",
     "l9-repo-birth": "user-invocable-only",
     "l9-repo-index": "user-invocable-only",
@@ -289,6 +292,7 @@
     "l9-pe-nuggets": "user-invocable-only",
     "l9-pipeline-audit": "user-invocable-only",
     "l9-pipeline-orchestrator": "user-invocable-only",
+    "l9-pr-audit": "user-invocable-only",
     "l9-pr-remediation": "user-invocable-only",
     "l9-repo-birth": "user-invocable-only",
     "l9-repo-index": "user-invocable-only",

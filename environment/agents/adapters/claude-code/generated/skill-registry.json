@@ -1,5 +1,5 @@
 {
-  "generation_id": "2c4735d1f16f77aae1595a40d11bc34cd7fc20eb94a2d3bcb779949784665c9b",
+  "generation_id": "deb10fe57cd1b06d097bb8c9d27c75e0178b4b5aac291a9ff03f2ac0ee57861d",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -1378,6 +1378,19 @@
     },
     {
       "composition_role": "general",
+      "description": "deep-audit one or more GitHub pull requests against current repository architecture, invariants, contracts, ownership, CI, reviews, change proportionality, and cross-PR interactions, using a deterministic evidence census plus recursive verification to produce a revision-bound audit and PR Remediation Contract without mutating the target repository. use when auditing PR correctness, completeness, architecture alignment, merge readiness, or downstream remediation evidence.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-pr-audit",
+      "path": "skills/l9-pr-audit",
+      "reason": "deep revision-bound PR audit that emits evidence bundles and Fable handoffs; never mutates audited PRs; slash or explicit invoke only; disable-model-invocation",
+      "skill_md": "skills/l9-pr-audit/SKILL.md",
+      "skill_sha256": "df6b03833d5fc6f96dbfcd8e7963bd3f75009b39187fbf9f79101ec92d174860",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
       "description": "digest one PR into evidence, scope, and a bounded remediation packet without modifying it. use when judging agent PR scope before remediation or running the pre-remediation quality gate.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
@@ -1599,6 +1612,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "619ee9ae7bcc643598c8f54beeff4e4d598b0893a4331237debf156eaa86f044",
-  "source_skill_corpus_sha256": "a3a3f3e990d02b40301cdb9e22673878f600e92becb362b37e3adb30e20cf981"
+  "source_manifest_sha256": "bf7f5c46dc824b84f99edf7f4f718008e59a40c75efcb39f2d293b649a7518ef",
+  "source_skill_corpus_sha256": "7831d23967fb264fb5fc48a0a929239c7ca1f961281945548e24533fae003ad1"
 }
