@@ -216,9 +216,7 @@ def _rest_thread_nodes(owner: str, repo: str, pr: int) -> list[dict[str, Any]]:
     if not isinstance(threads, list):
         _fail(f"ccr/review_threads returned {type(threads).__name__}, expected list")
     comments = _gh_json(f"repos/{owner}/{repo}/pulls/{pr}/comments")
-    by_id = {
-        c["id"]: c for c in comments if isinstance(c, dict) and c.get("id") is not None
-    }
+    by_id = {c["id"]: c for c in comments if isinstance(c, dict) and c.get("id") is not None}
 
     nodes: list[dict[str, Any]] = []
     for thread in threads:
@@ -492,9 +490,7 @@ def collect(
         for node in (threads or [])
         if isinstance(node, dict) and node.get("isResolved") is not True
     ]
-    ledger_key, node_key = (
-        ("comment_id", "comment_id") if _rest_only() else ("thread_id", "id")
-    )
+    ledger_key, node_key = ("comment_id", "comment_id") if _rest_only() else ("thread_id", "id")
     completeness = {
         "makefile_verbs": True,
         "cra_logins_present": sorted(cra_seen),

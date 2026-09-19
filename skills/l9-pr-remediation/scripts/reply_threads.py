@@ -159,9 +159,7 @@ def _require_inspected(prs: list[dict[str, Any]], *, summary_only: bool = False)
                 )
             disp = str(th.get("disposition") or "").lower()
             if disp not in VALID_DISPOSITIONS:
-                _fail(
-                    f"PR #{pr.get('number')} thread {label} invalid disposition {disp!r}"
-                )
+                _fail(f"PR #{pr.get('number')} thread {label} invalid disposition {disp!r}")
             if not summary_only and not str(th.get("body") or "").strip():
                 _fail(f"PR #{pr.get('number')} thread {label} empty body")
             if not str(th.get(key) or "").strip():

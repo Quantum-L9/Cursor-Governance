@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-09-16T00:10:24Z`. Source: `rules/*.mdc`.
+Generated: `2026-09-19T18:37:54Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -53,7 +53,7 @@ Generated: `2026-09-16T00:10:24Z`. Source: `rules/*.mdc`.
 | `59-incident-lessons.mdc` | `l9.rule.incident.lessons` | global | deployment | agent_requested | 22 | `3fb8e334a6b1` |
 | `60-anti-patterns.mdc` | `l9.rule.anti.patterns` | global | testing | always | 27 | `664ff6afbb7f` |
 | `61-secrets-and-dependencies.mdc` | `l9.rule.61.secrets.and.dependencies` | global | security | agent_requested | 50 | `d90a13c2549a` |
-| `62-github-openclaw-authority.mdc` | `l9.rule.62.github.openclaw.authority` | global | git | always | 71 | `985a7374a064` |
+| `62-github-openclaw-authority.mdc` | `l9.rule.62.github.openclaw.authority` | global | git | always | 96 | `974e7ffaf232` |
 | `63-env-no-hardcode.mdc` | `l9.rule.configuration.no-hardcode` | global | general | auto_attached | 42 | `369e0ab6d90f` |
 | `65-observability-performance.mdc` | `l9.rule.65.observability.performance` | global | memory | agent_requested | 43 | `888c5c4b9057` |
 | `69-ide-profile-exceptions.mdc` | `l9.rule.ide-profile-exceptions` | global | general | agent_requested | 49 | `2bc076e7c46c` |

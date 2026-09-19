@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-09-16T00:10:24Z'
+generated_utc: '2026-09-19T18:37:54Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:66b984d3fa1a83f9657a4bbf27d6a75a55109e1197d36e4dfc849d01c7569464
+source_tree_digest: sha256:28a1aa3f1e1e643abd702edd1720cf01f663b661099815765365163983e5a02b
 summary:
   total_mdc_files: 69
   always_apply_true: 35
@@ -846,10 +846,10 @@ rules:
   globs: null
   first_heading: GitHub Openclaw PAT authority (CANONICAL_LAW §14)
   has_yaml_frontmatter: true
-  line_count: 71
-  content_digest: sha256:985a7374a0641c01e6d95a091c6f23c1713bc8f6ef6983a8ff1eade69738c4c2
+  line_count: 96
+  content_digest: sha256:974e7ffaf23227a0acbc2614a7921e35f292e740d0af5570a464ed6b8dbed31b
   authority: canonical_global
-  context_cost: minimal
+  context_cost: moderate
   deprecated: false
   replacement: null
   removal_plan: null

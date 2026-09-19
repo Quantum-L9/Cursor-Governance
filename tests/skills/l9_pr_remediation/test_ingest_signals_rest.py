@@ -61,12 +61,8 @@ COMMENTS = [
 ]
 
 
-def test_rest_discovery_uses_no_graphql(
-    rest: None, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    seen = _fake_gh_json(
-        monkeypatch, {"ccr/review_threads": THREADS, "/comments": COMMENTS}
-    )
+def test_rest_discovery_uses_no_graphql(rest: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    seen = _fake_gh_json(monkeypatch, {"ccr/review_threads": THREADS, "/comments": COMMENTS})
 
     def explode(*_a: Any, **_k: Any) -> str:
         raise AssertionError("_run_gh reached on a REST surface (graphql path)")
@@ -144,9 +140,7 @@ def _collect(fixtures: Path, nodes: list[dict[str, Any]], tmp: Path) -> dict[str
     )
 
 
-def test_rest_completeness_reports_capture(
-    rest: None, tmp_path: Path
-) -> None:
+def test_rest_completeness_reports_capture(rest: None, tmp_path: Path) -> None:
     fixtures = tmp_path / "fx"
     fixtures.mkdir()
     snap = _collect(fixtures, [_rest_node(11), _rest_node(12)], tmp_path)
@@ -170,9 +164,7 @@ def test_rest_completeness_is_not_vacuously_true(
     assert snap["completeness"]["unresolved_threads_captured"] is False
 
 
-def test_graphql_surface_still_uses_graphql(
-    graphql: None, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_graphql_surface_still_uses_graphql(graphql: None, monkeypatch: pytest.MonkeyPatch) -> None:
     called: list[list[str]] = []
 
     def fake_run_gh(argv: list[str], *, input_text: str | None = None) -> str:

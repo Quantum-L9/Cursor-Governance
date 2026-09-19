@@ -139,9 +139,7 @@ def test_resolve_rejects_unconfirmed_response(
 # --- ledger key contract ---------------------------------------------------
 
 
-def test_rest_ledger_requires_comment_id(
-    clean_env: None, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_rest_ledger_requires_comment_id(clean_env: None, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CLAUDE_CODE_REMOTE", "true")
     prs = [{"number": 612, "threads": [_thread(comment_id=None)]}]
     with pytest.raises(SystemExit):
@@ -154,18 +152,12 @@ def test_graphql_ledger_requires_thread_id(clean_env: None) -> None:
         reply_threads._require_inspected(prs)
 
 
-def test_each_surface_accepts_its_own_key(
-    clean_env: None, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_each_surface_accepts_its_own_key(clean_env: None, monkeypatch: pytest.MonkeyPatch) -> None:
     # A REST ledger carries no node id at all — ccr/review_threads cannot emit one.
     monkeypatch.setenv("CLAUDE_CODE_REMOTE", "true")
-    reply_threads._require_inspected(
-        [{"number": 612, "threads": [_thread(thread_id=None)]}]
-    )
+    reply_threads._require_inspected([{"number": 612, "threads": [_thread(thread_id=None)]}])
     monkeypatch.delenv("CLAUDE_CODE_REMOTE")
-    reply_threads._require_inspected(
-        [{"number": 612, "threads": [_thread(comment_id=None)]}]
-    )
+    reply_threads._require_inspected([{"number": 612, "threads": [_thread(comment_id=None)]}])
 
 
 def test_summary_survives_a_ledger_with_no_thread_id(clean_env: None) -> None:
