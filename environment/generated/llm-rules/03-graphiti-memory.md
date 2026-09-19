@@ -55,13 +55,23 @@ description: Agent memory SSOT (canonical l9-graphite-memory control plane) — 
   with `memory.write_agent {…, dry_run: true}`: `namespace did not match any
   write grant` is this, not a malformed call.
 
+  **This is a bounded agent-lane limitation, not a lane swap.** A fact the
+  agent lane cannot write this session is reported as a gap — name the
+  namespace and the `dry_run` verdict — exactly like an unbound server. It is
+  **not** rerouted through the operator CLI: ADR-0033 / INV-03b classifies
+  `ops/memory/cli.py` as operator form, and a model-authored fact does not
+  change lane because its grant is missing. The fix belongs at the
+  package/principal boundary: provision the signed door before launch
+  (`source ops/memory/export_agent_assertion_env.sh` in the shell that starts
+  the session) so the principal carries its grants, or wait for the 2.5.0
+  per-request resolution below.
+
   **Removal trigger:** `l9-graphite-memory` 2.5.0 resolves Tier 3 per request
-  (its ADR-083), so this bullet and the carve-out below are **deleted** in the
-  same PR that re-vendors the 2.5.0 wheel and bumps `pyproject.toml` /
-  `uv.lock`. Check the pin before trusting this paragraph: a scope limit
-  documented after it stopped existing misleads exactly as the original silence
-  did.
-- **No evasion.** Generic `memory.ingest` and the generic CLI `write` are not the model's alternative to `write_agent` or `write_governed`. If the MCP server is unbound, the write is reported as a gap (`L9_MEMORY_INTERPRETER` / `make memory-binding`), not rerouted. **Exception — the scope limit above:** when the agent lane holds no grant for the namespace a fact belongs to, the operator adapter (`python -m ops.memory.cli write --workspace <repo-root>`) is the correct route, because it resolves authorization per call. Say plainly which lane was used and why; that is a disclosed gap, not a silent reroute.
+  (its ADR-083), so this bullet is **deleted** in the same PR that re-vendors
+  the 2.5.0 wheel and bumps `pyproject.toml` / `uv.lock`. Check the pin before
+  trusting this paragraph: a scope limit documented after it stopped existing
+  misleads exactly as the original silence did.
+- **No evasion.** Generic `memory.ingest` and the generic CLI `write` are not the model's alternative to `write_agent` or `write_governed`. If the MCP server is unbound, or the agent lane holds no grant for the namespace a fact belongs to (the 2.4.0 scope limit above), the write is reported as a gap (`L9_MEMORY_INTERPRETER` / `make memory-binding`; namespace + `dry_run` verdict), not rerouted.
 - **Deterministic adapters** (SessionStart hydrate, sessionEnd close, `repair-write`, reconciliation, diagnostics) use purpose-specific `ops/memory` operations over the same admission path — adapters, not second egresses.
 - **No provider transport.** Neither CLI nor MCP carries a provider URL, bearer, or raw provider tool; agents never write to the provider directly.
 

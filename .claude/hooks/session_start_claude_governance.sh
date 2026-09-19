@@ -715,8 +715,12 @@ _l9_door_status() {
     # namespace argument on memory.write_agent is checked against a grant set
     # fixed from this workspace. A session with a second root (the governance
     # SSOT beside the workspace) cannot agent-write that second namespace at all,
-    # and no tool usage from inside the session changes it.
-    say "agent lane scope: memory.write_agent can write ONLY the namespace derived from the MCP server's working directory (${WORKSPACE:-\$PWD}) — its principal is frozen at spawn (Tier 3). Any OTHER repository in this session, including the governance SSOT, is NOT writable through the agent lane; use the operator adapter for it, which resolves per call: python -m ops.memory.cli write \"<fact>\" --kind <class> --workspace <repo-root>"
+    # and no tool usage from inside the session changes it. That is an
+    # agent-lane gap to REPORT, never a reason to route a model-authored fact
+    # through the operator CLI (ADR-0033 / INV-03b: ops/memory/cli.py is
+    # operator form). The lift is at the principal boundary — the signed door
+    # before launch — or the package's 2.5.0 per-request resolution (ADR-083).
+    say "agent lane scope: memory.write_agent can write ONLY the namespace derived from the MCP server's working directory (${WORKSPACE:-\$PWD}) — its principal is frozen at spawn (Tier 3, l9_graphite_memory 2.4.0). Any OTHER repository in this session, including the governance SSOT, is NOT writable through the agent lane this session. Report such a fact as an agent-lane gap (namespace + dry_run verdict); do not reroute it through the operator CLI (ADR-0033 / INV-03b). Lift: provision the signed door before launch, or the 2.5.0 wheel (per-request Tier 3, ADR-083)"
   else
     say "signed-agent door: PARTIAL pre-launch handoff — missing ${missing[*]}; the package server refuses the door when L9_MEMORY_AGENTS_DOOR_SECRET is set without the assertion, key map, and grants (fail-closed). Re-source ops/memory/export_agent_assertion_env.sh in the launching shell"
   fi

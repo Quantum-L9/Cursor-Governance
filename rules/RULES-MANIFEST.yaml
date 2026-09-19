@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-09-19T18:57:20Z'
+generated_utc: '2026-09-19T21:58:06Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:f9d096c1e95b7171d0caf34ad3a879c93ef1133be206b04031b043043e38d9f0
+source_tree_digest: sha256:1eb44848fbf27206002fdf3eecad207ef2eb6e16d8704d16bc18c9f36d9c8397
 summary:
   total_mdc_files: 69
   always_apply_true: 35
@@ -91,8 +91,8 @@ rules:
   globs: null
   first_heading: Graphiti Memory (SSOT)
   has_yaml_frontmatter: true
-  line_count: 108
-  content_digest: sha256:856f977285b81ed9e40fec9deb1f3b2f924936a463083d9db094cde757a3c504
+  line_count: 118
+  content_digest: sha256:d696f599ed7ece7549c0aec85f339c07c0783fdf73b780bbe06f68c0c69cdc8c
   authority: canonical_global
   context_cost: moderate
   deprecated: false
