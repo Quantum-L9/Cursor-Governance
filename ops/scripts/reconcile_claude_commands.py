@@ -130,7 +130,11 @@ _GOV_LIB = Path(__file__).resolve().parent / "lib"
 if str(_GOV_LIB) not in sys.path:
     sys.path.insert(0, str(_GOV_LIB))
 
-from workspace_roots import projection_roots  # noqa: E402
+from workspace_roots import adopted_projection_roots, projection_roots  # noqa: E402
+
+#: Project-scope target, relative to a mount root. Kept beside the target
+#: computation it mirrors so the two cannot drift apart.
+PROJECT_TARGET_REL = Path(".claude") / "commands"
 
 
 def reconcile_commands_scope(
@@ -147,7 +151,7 @@ def reconcile_commands_scope(
     elif scope == "user":
         target = Path.home() / ".claude" / "commands"
     else:
-        target = workspace / ".claude" / "commands"
+        target = workspace / PROJECT_TARGET_REL
 
     state_path = target / STATE_NAME
     old_state = read_state(state_path)
@@ -240,6 +244,15 @@ def reconcile(
     for scope in dict.fromkeys(scopes):
         if scope == "project" and target_override is None:
             mount_roots = projection_roots(workspace)
+            # Same adoption as the skill adapters: a `<container>/.claude/
+            # commands` mirror written when the container was the workspace is
+            # invisible to `projection_roots` from a repository workspace, and
+            # would keep symlinks to commands the SSOT has retired.
+            mount_roots += [
+                ancestor
+                for ancestor in adopted_projection_roots(workspace, PROJECT_TARGET_REL, STATE_NAME)
+                if ancestor not in mount_roots
+            ]
         else:
             mount_roots = [workspace]
         for mount_root in mount_roots:

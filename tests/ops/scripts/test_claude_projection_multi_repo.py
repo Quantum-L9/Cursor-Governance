@@ -17,7 +17,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "ops" / "scripts"))
 sys.path.insert(0, str(REPO_ROOT / "ops" / "scripts" / "lib"))
 
-from workspace_roots import projection_roots  # noqa: E402
+from workspace_roots import adopted_projection_roots, projection_roots  # noqa: E402
 
 SKILL_ADAPTERS = REPO_ROOT / "ops" / "scripts" / "reconcile_llm_skill_adapters.py"
 COMMAND_ADAPTERS = REPO_ROOT / "ops" / "scripts" / "reconcile_claude_commands.py"
@@ -54,6 +54,53 @@ def test_single_repository_workspace_is_not_fanned_out(tmp_path: Path) -> None:
     """A normal developer checkout must reconcile exactly one mirror."""
     repo = make_repo(tmp_path, "solo")
     assert projection_roots(repo) == [repo]
+
+
+def test_a_container_mirror_is_adopted_from_a_repository_workspace(tmp_path: Path) -> None:
+    """The half of the defect `projection_roots` alone cannot reach.
+
+    The boot-time reconcile ran with the container as its workspace and wrote
+    `<container>/.claude/skills`. Every later session ran with the repository as
+    its workspace, where `projection_roots` correctly answers `[repository]`, so
+    that mirror left every target set and its obsolete-entry sweep stopped
+    running. It kept a symlink to a skill the SSOT had removed.
+    """
+    repo = make_repo(tmp_path, "solo")
+    mirror = tmp_path / ".claude" / "skills"
+    mirror.mkdir(parents=True)
+    (mirror / ".l9-managed-skills.json").write_text("{}", encoding="utf-8")
+
+    assert projection_roots(repo) == [repo], "discovery must stay unchanged"
+    assert adopted_projection_roots(
+        repo, Path(".claude") / "skills", ".l9-managed-skills.json"
+    ) == [tmp_path]
+
+
+def test_adoption_requires_our_own_state_file(tmp_path: Path) -> None:
+    """Ownership is proven, never assumed: an ancestor holding a same-named
+    directory we never wrote is somebody else's and stays untouched."""
+    repo = make_repo(tmp_path, "solo")
+    (tmp_path / ".claude" / "skills").mkdir(parents=True)
+
+    assert (
+        adopted_projection_roots(repo, Path(".claude") / "skills", ".l9-managed-skills.json") == []
+    )
+
+
+def test_an_absolute_target_is_never_adopted(tmp_path: Path) -> None:
+    """A user-scope target is the same directory for every ancestor, so it
+    proves nothing about which root owns it."""
+    repo = make_repo(tmp_path, "solo")
+
+    assert adopted_projection_roots(repo, Path("/etc"), "passwd") == []
+
+
+def test_both_adapters_adopt_an_ancestor_mirror() -> None:
+    for script in (SKILL_ADAPTERS, COMMAND_ADAPTERS):
+        body = script.read_text(encoding="utf-8")
+        assert "adopted_projection_roots" in body, (
+            f"{script.name} must reconcile container mirrors it already owns"
+        )
 
 
 def test_live_container_has_no_dangling_managed_links() -> None:

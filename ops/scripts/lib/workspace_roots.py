@@ -179,3 +179,48 @@ def projection_roots(workspace: Path, *, cap: int = DEFAULT_MAX_ROOTS) -> list[P
     if repos == [workspace]:
         return [workspace]
     return [workspace, *repos]
+
+
+def adopted_projection_roots(
+    workspace: Path, relative_target: Path | str, state_name: str
+) -> list[Path]:
+    """Ancestors of `workspace` that already hold a projection of this adapter.
+
+    `projection_roots` answers *which roots does this session project into*. It
+    cannot answer *which roots did an earlier session project into*, and the two
+    stop agreeing the moment the value a caller passes as the workspace changes.
+    That happened in a cloud container: the boot-time reconcile ran with the
+    container as its workspace and wrote `<container>/.claude/skills`, while
+    every later session ran with the repository as its workspace, where
+    `projection_roots` correctly returns `[repository]` alone. The container
+    mirror then belonged to no reconciler's target set, so the obsolete-entry
+    sweep never reached it and it kept a symlink to a skill the SSOT had since
+    removed — a dangling link that fails the consumer test walking the tree.
+
+    The rule here is deliberately narrower than discovery: a directory is
+    adopted only when it *already carries our own state file* at exactly this
+    adapter's relative target. Nothing new is ever created outside `workspace`,
+    an unrelated directory can never be adopted, and the worst case is that a
+    projection we already own is reconciled to the state we would have written
+    anyway. Only ancestors are considered, so a user-scope target outside the
+    workspace's line of parents (`/root/.claude` while the workspace is under
+    `/home/user`) is not reachable from here.
+
+    Returned nearest-ancestor first. Pass a *relative* target — an absolute one
+    is the same directory for every ancestor and says nothing about ownership.
+    """
+    relative = Path(relative_target)
+    if relative.is_absolute():
+        return []
+    try:
+        resolved = Path(workspace).resolve()
+    except OSError:
+        return []
+    adopted: list[Path] = []
+    for ancestor in resolved.parents:
+        try:
+            if (ancestor / relative / state_name).is_file():
+                adopted.append(ancestor)
+        except OSError:
+            continue
+    return adopted
