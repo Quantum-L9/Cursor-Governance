@@ -13,9 +13,9 @@ from pathlib import Path
 
 sys.dont_write_bytecode = True
 
-import build_audit_bundle as bab
-import build_change_ledger as bcl
-import deterministic_closure as dc
+import build_audit_bundle as bab  # noqa: E402
+import build_change_ledger as bcl  # noqa: E402
+import deterministic_closure as dc  # noqa: E402
 
 A = "a" * 40
 B = "b" * 40

@@ -92,9 +92,17 @@ def run(command: str, cwd: Path, timeout: int, *, allow_shell: bool) -> dict[str
                 "stderr_hash": _hash_text(""),
             }
     try:
-        cp = subprocess.run(
+        # nosec B602 - shell is opt-in and off by default. `--allow-shell` is
+        # store_true, so the default path above is shlex.split with shell=False;
+        # the string form is reached only when the operator asks for it for a
+        # test command that needs a shell. The command is the operator's own
+        # `--test-command`, run in a disposable copy of the tree by an operator
+        # who already has a shell, so this is not a privilege boundary. The
+        # choice is recorded in the probe output as execution_mode
+        # SHELL_EXPLICIT / ARGV_NO_SHELL rather than left implicit.
+        cp = subprocess.run(  # noqa: S602
             argv,
-            shell=allow_shell,
+            shell=allow_shell,  # nosec B602
             cwd=cwd,
             text=True,
             capture_output=True,

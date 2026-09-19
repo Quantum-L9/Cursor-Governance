@@ -847,7 +847,7 @@ def build_closure_seeds(
         ("Cargo.toml", {"Cargo.lock"}),
     ]
     for manifest, locks in manifest_lock_pairs:
-        if manifest in dep_paths or any(l in dep_paths for l in locks):
+        if manifest in dep_paths or any(lock in dep_paths for lock in locks):
             seeds.append(
                 make_seed(
                     pr,
