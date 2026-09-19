@@ -30,6 +30,15 @@ bash environment/agents/adapters/manus/serve_mcp.sh --port 8787
 
 Expose that process through an HTTPS reverse proxy. The endpoint must end in `/mcp`; do not place credentials in the URL. After confirming `GET /health` responds with `{"status":"ok"}`, run `render_mcp_connector.py --help` and render a connector draft with the actual deployed HTTPS endpoint. Then add the generated JSON through Manus **Settings → Integrations → Custom MCP Servers**. The draft uses Manus’s direct Custom MCP form mode so it does not attempt OAuth discovery on this intentionally unauthenticated read-only endpoint, and registers the `l9-governance` server. It gives the Manus project focused access to governance status, validation, bounded policy/skill reads and search, skill inventory, and the diagnostic shared bootstrap.
 
+After the connector is enabled, verify discovery and the no-secret posture from a Manus shell:
+
+```bash
+manus-mcp-cli tool list --server l9-governance
+manus-mcp-cli tool call governance_status --server l9-governance --input '{}'
+```
+
+The status response must report `status: ready`, `memory: not exposed by this adapter`, and `bootstrap_enabled: false` for the public endpoint. Any result that reports a memory provider, credentials, an arbitrary shell, or enabled bootstrap access is a deployment error; disable the connector and correct the server configuration before use.
+
 The default public service exposes only read/validation tools. Because both bootstrap modes write local readiness metadata, `governance_bootstrap` is available only from a bearer-protected service. To permit `apply` as well, launch with an externally managed token file and both bootstrap flags:
 
 ```bash
