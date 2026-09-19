@@ -64,16 +64,27 @@ CHANGE_LEDGER_GENERATOR_VERSION = "1.4.0"
 CHANGE_LEDGER_SET_SCHEMA = "l9.pr-audit.change-ledger-set.v1.0"
 
 # High-confidence packaging tripwire, not a substitute for repository secret scanning.
-SECRET_PATTERNS = [
-    re.compile(r"AKIA[0-9A-Z]{16}"),
-    re.compile(r"gh[pousr]_[A-Za-z0-9]{20,}"),
-    re.compile(r"sk_live_[A-Za-z0-9]{16,}"),
-    re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
-    re.compile(
-        r"(?i)\b(?:password|passwd|api[_-]?key|access[_-]?token|secret)\s*[:=]\s*"
-        r"['\"]?[A-Za-z0-9+/_.-]{12,}"
+# Each tripwire carries a stable label. `contains_secret_material` reports the
+# label rather than the regex source, because its return value is interpolated
+# into validation errors that are printed: a short name says which tripwire
+# fired more clearly than a regex does, and it is self-evidently a constant
+# from this tuple rather than anything derived from the audited data.
+SECRET_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("aws-access-key-id", re.compile(r"AKIA[0-9A-Z]{16}")),
+    ("github-token", re.compile(r"gh[pousr]_[A-Za-z0-9]{20,}")),
+    ("stripe-live-key", re.compile(r"sk_live_[A-Za-z0-9]{16,}")),
+    (
+        "private-key-block",
+        re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
     ),
-]
+    (
+        "credential-assignment",
+        re.compile(
+            r"(?i)\b(?:password|passwd|api[_-]?key|access[_-]?token|secret)\s*[:=]\s*"
+            r"['\"]?[A-Za-z0-9+/_.-]{12,}"
+        ),
+    ),
+)
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -127,9 +138,9 @@ def contains_secret_material(value: Any) -> str | None:
         # Redaction markers protect only the replaced token, not the entire string.
         # Continue scanning surrounding text so "REDACTED ... api_key=<live>" cannot bypass the tripwire.
         scrubbed = re.sub(r"(?i)\bREDACTED\b", "<redacted>", text)
-        for pattern in SECRET_PATTERNS:
+        for label, pattern in SECRET_PATTERNS:
             if pattern.search(scrubbed):
-                return pattern.pattern
+                return label
     return None
 
 
