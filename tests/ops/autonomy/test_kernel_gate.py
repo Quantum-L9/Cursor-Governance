@@ -443,23 +443,50 @@ def test_record_names_a_release_receipt_the_kernel_apply_left_behind(
     gate = _gate()
     begin(stacked_repo, contract_id="drift")
     authorize_release(stacked_repo)
-    assert gate.l4_release_drift_hint(stacked_repo) == ""
+    assert gate.l4_release_drift_hint(stacked_repo, ROOT) == ""
 
     # The kernel apply: bytes change, then the report names the changed path.
     (stacked_repo / "a.txt").write_text("a\naligned\n", encoding="utf-8")
     write_apply_report(stacked_repo)
     rc = gate.cmd_record(
-        gate.build_parser().parse_args(["record", "--workspace", str(stacked_repo)])
+        gate.build_parser().parse_args(
+            ["record", "--workspace", str(stacked_repo), "--gov-root", str(ROOT)]
+        )
     )
     assert rc == 0
     err = capsys.readouterr().err
     assert "NEXT:" in err
-    assert "authorize-release" in err
     assert "L4 receipt stale" in err
+    # The printed command is runnable from a consumer workspace: governance
+    # script path, explicit workspace, never a cwd-relative path.
+    line = next(ln for ln in err.splitlines() if "authorize-release" in ln)
+    assert str(ROOT / "ops" / "autonomy" / "l4_local.py") in line
+    assert f'--workspace "{stacked_repo}"' in line
+    assert "python3 ops/autonomy/l4_local.py" not in err
+    assert line.strip() == gate.authorize_command(stacked_repo, ROOT)
     # Advisory: the receipt on disk is untouched.
     from l4_local import load_receipt
 
     assert load_receipt(stacked_repo)["phase"] == "release_authorized"
+
+
+def test_drift_hint_never_imports_l4_local() -> None:
+    """l4_local imports kernel_gate for kernel evidence; the reverse is a cycle.
+
+    The hint probes ``l4_local.py status`` as a subprocess instead, and the
+    only failures it swallows are the ones a probe can have.
+    """
+    source = (ROOT / "ops" / "autonomy" / "kernel_gate.py").read_text(encoding="utf-8")
+    assert "import l4_local" not in source
+    assert "from ops.autonomy import l4_local" not in source
+    hint_body = source.split("def l4_release_drift_hint", 1)[1].split("\ndef ", 1)[0]
+    assert "except Exception" not in hint_body
+
+
+def test_drift_hint_is_silent_when_the_probe_cannot_run(stacked_repo: Path, tmp_path: Path) -> None:
+    gate = _gate()
+    # No governance script at this root: nothing to probe, nothing to say.
+    assert gate.l4_release_drift_hint(stacked_repo, tmp_path / "no-gov") == ""
 
 
 def test_record_is_silent_without_an_l4_release_receipt(
@@ -468,7 +495,9 @@ def test_record_is_silent_without_an_l4_release_receipt(
     gate = _gate()
     write_apply_report(stacked_repo)
     rc = gate.cmd_record(
-        gate.build_parser().parse_args(["record", "--workspace", str(stacked_repo)])
+        gate.build_parser().parse_args(
+            ["record", "--workspace", str(stacked_repo), "--gov-root", str(ROOT)]
+        )
     )
     assert rc == 0
     assert "NEXT:" not in capsys.readouterr().err
