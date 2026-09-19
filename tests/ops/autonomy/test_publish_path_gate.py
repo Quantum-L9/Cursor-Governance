@@ -43,6 +43,8 @@ def _release(allowed: bool, reason: str | None = None):
         return (allowed, reason)
 
     return _stub
+
+
 from first_publication_gate import (  # noqa: E402
     first_publication_verdict,
     publication_forms,
