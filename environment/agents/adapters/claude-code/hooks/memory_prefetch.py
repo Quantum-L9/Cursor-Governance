@@ -68,6 +68,7 @@ def prefetch_agent_id(env: dict[str, str] | None = None) -> str:
     """
     return "claude-code" if is_claude_gate_surface(env) else "cursor"
 
+
 #: Cloud containers put several repositories side by side. Hydrating each costs
 #: one packet of context, so the count is capped rather than unbounded — and the
 #: cap is reported in the emitted text, because a silent truncation reads as

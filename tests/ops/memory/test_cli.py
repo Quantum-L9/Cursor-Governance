@@ -124,9 +124,7 @@ def test_write_unbound_group_id_runs_at_the_owning_clone(
     _use(monkeypatch, bound, fake_cli)
     ceg = Path("/Users/ib-mac/Cognitive.Engine.Graphs")
     monkeypatch.setattr(cli, "read_prefetch_bind", lambda _ws: None)
-    monkeypatch.setattr(
-        cli, "locate_clone_for_namespace", lambda slug, from_workspace=None: ceg
-    )
+    monkeypatch.setattr(cli, "locate_clone_for_namespace", lambda slug, from_workspace=None: ceg)
     code = cli.main(
         [
             "write",
@@ -157,11 +155,12 @@ def test_write_follows_one_prefetch_bind(
     monkeypatch.setattr(
         cli,
         "read_prefetch_bind",
-        lambda _ws: {"group_id": "cognitive-engine-graphs", "group_ids": ["cognitive-engine-graphs"]},
+        lambda _ws: {
+            "group_id": "cognitive-engine-graphs",
+            "group_ids": ["cognitive-engine-graphs"],
+        },
     )
-    monkeypatch.setattr(
-        cli, "locate_clone_for_namespace", lambda slug, from_workspace=None: ceg
-    )
+    monkeypatch.setattr(cli, "locate_clone_for_namespace", lambda slug, from_workspace=None: ceg)
     code = cli.main(
         [
             "write",

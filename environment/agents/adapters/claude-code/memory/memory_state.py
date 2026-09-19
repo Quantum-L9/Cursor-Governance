@@ -306,9 +306,7 @@ def _receipt_key_matches(data: dict[str, Any], lookup: str) -> bool:
 
 
 # --- receipts ---------------------------------------------------------------
-def receipt_path(
-    contract: dict[str, Any], receipt_id: str, workspace: Path | None = None
-) -> Path:
+def receipt_path(contract: dict[str, Any], receipt_id: str, workspace: Path | None = None) -> Path:
     safe = re.sub(r"[^A-Za-z0-9_.-]", "_", receipt_id or "unknown")
     return state_root(contract, workspace) / "receipts" / f"{safe}.json"
 
@@ -328,9 +326,7 @@ def write_receipt(
     return path
 
 
-def fresh_receipt(
-    contract: dict[str, Any], receipt_id: str, workspace: Path | None = None
-) -> bool:
+def fresh_receipt(contract: dict[str, Any], receipt_id: str, workspace: Path | None = None) -> bool:
     path = receipt_path(contract, receipt_id, workspace)
     if not path.is_file():
         return False

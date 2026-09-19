@@ -195,7 +195,9 @@ class MemoryGateTests(unittest.TestCase):
         self.assertEqual(hinted, self.session, "hint carries the raw chat id, not the composed key")
         self.assertNotIn("__", hinted)
         self.assertTrue(script.endswith("memory_prefetch.py"))
-        self.assertNotIn("--workspace /", reason, "repair must not hardcode a Cursor-Governance path")
+        self.assertNotIn(
+            "--workspace /", reason, "repair must not hardcode a Cursor-Governance path"
+        )
 
         # Run the repair exactly as hinted (empty stdin: a shell, not a hook event).
         repair_env = dict(env)
@@ -226,9 +228,7 @@ class MemoryGateTests(unittest.TestCase):
     def test_one_session_receipt_allows_edit_in_another_clone(self) -> None:
         """Remediator from this session: one prefetch, not a second CG hydrate."""
         other = Path(tempfile.mkdtemp())
-        subprocess.run(
-            ["git", "init"], cwd=other, check=True, capture_output=True, text=True
-        )
+        subprocess.run(["git", "init"], cwd=other, check=True, capture_output=True, text=True)
         target = other / "skills" / "x.md"
         target.parent.mkdir()
         target.write_text("x\n", encoding="utf-8")
