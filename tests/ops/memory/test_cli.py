@@ -79,12 +79,18 @@ def test_write_maps_legacy_kinds_and_stamps_the_agent_tag(
     fake_cli.reply("write", 0, _write_payload())
     _use(monkeypatch, bound, fake_cli)
     monkeypatch.setattr(cli, "read_prefetch_bind", lambda _ws: None)
+    # ``lesson`` is the primary legacy alias. ``error`` used to be one too, but
+    # it resolved to the same class as ``lesson`` and so could not be told apart
+    # from it; it is no longer aliased and callers say ``lesson`` directly.
     code = cli.main(
-        ["write", "a fact", "--kind", "error", "--agent-id", "cursor", "--workspace", str(ROOT)]
+        ["write", "a fact", "--kind", "lesson", "--agent-id", "cursor", "--workspace", str(ROOT)]
     )
     assert code == cli.EXIT_OK
     argv, cwd, _ = fake_cli.calls[-1]
-    assert argv[argv.index("--kind") + 1] == "lesson"
+    assert argv[argv.index("--kind") + 1] == "procedural"
+    assert "error" not in cli.KIND_ALIASES, (
+        "error aliased a class it could not be distinguished from"
+    )
     assert "agent:cursor" in argv
     assert argv[argv.index("--group-id") + 1] == "cursor-governance"
     assert cwd == str(ROOT), "the CLI runs at the repository root"
@@ -105,6 +111,11 @@ def test_pickup_context_writes_an_episodic_record_tagged_as_a_continuation(
     fake_cli.reply("write", 0, _write_payload())
     _use(monkeypatch, bound, fake_cli)
     monkeypatch.setattr(cli, "read_prefetch_bind", lambda _ws: None)
+    # --agent-id defaults to os.environ["L9_MEMORY_AGENT_ID"], which every real
+    # Claude/Cursor session sets, and the CLI then appends an ``agent:<id>`` tag.
+    # Without controlling it this exact-equality assertion passes only on a
+    # machine where the variable happens to be unset.
+    monkeypatch.delenv("L9_MEMORY_AGENT_ID", raising=False)
     code = cli.main(
         ["write", "PICKUP", "--kind", "pickup_context", "--workspace", str(ROOT), "--tag", "x"]
     )
@@ -117,14 +128,33 @@ def test_pickup_context_writes_an_episodic_record_tagged_as_a_continuation(
 
 
 def test_every_write_alias_reaches_a_class_the_bound_release_accepts(bound) -> None:
-    """KIND_ALIASES only exists to land on memory's vocabulary; prove it does."""
+    """KIND_ALIASES must land on memory's vocabulary in ONE hop.
 
-    from l9_graphite_memory.cli import _LEGACY_KIND_MAP  # noqa: PLC0415
+    This assertion used to accept ``_LEGACY_KIND_MAP`` keys as targets too, and
+    that permissiveness is what let two defects sit in the table:
+    ``error`` -> ``lesson`` and ``session_summary`` -> ``session_summary``.
+    Neither is a MemoryClass. They resolved only because resolution is single
+    pass (``KIND_ALIASES.get(kind, kind)``) and the *package* carried a second
+    table that finished the job — so ``error`` and ``lesson`` both arrived at
+    ``procedural`` and became indistinguishable. Targets are canonical only.
+    """
+
     from l9_graphite_memory.contracts import MemoryClass  # noqa: PLC0415
 
-    accepted = {item.value for item in MemoryClass} | set(_LEGACY_KIND_MAP)
+    canonical = {item.value for item in MemoryClass}
     for kind, target in cli.KIND_ALIASES.items():
-        assert target in accepted, f"--kind {kind} maps to {target!r}, which memory refuses"
+        assert target in canonical, (
+            f"--kind {kind} maps to {target!r}, which is not a MemoryClass. "
+            f"Single-pass resolution sends it downstream verbatim; do not rely "
+            f"on a second table to finish it. Canonical: {sorted(canonical)}"
+        )
+        assert target not in cli.KIND_ALIASES, (
+            f"--kind {kind} points at {target!r}, which is itself an alias."
+        )
+        assert kind not in canonical, (
+            f"{kind!r} is a canonical MemoryClass; aliasing it makes "
+            f"--kind {kind} mean something other than itself."
+        )
 
 
 def test_search_with_no_hits_completes(monkeypatch, bound, fake_cli: FakeMemoryCli, capsys) -> None:

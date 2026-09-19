@@ -26,7 +26,18 @@ The file `agents/cursor/cursor_memory_kernel.yaml` is the **authoritative source
 
 ## Before ANY Memory Operation
 
-1. **Kind:** Use the correct kind: `preference`, `lesson`, `error`, `insight`, `note`, `rule`, `pickup_context`, `session_summary`.
+1. **Kind:** The canonical vocabulary is the `MemoryClass` enum — `identity`,
+   `preference`, `constraint`, `decision`, `episodic`, `semantic`, `procedural`,
+   `observation`, `insight`, `meta`. The operator CLI additionally accepts the
+   legacy aliases in `ops/memory/cli.py::KIND_ALIASES` (`lesson`→`procedural`,
+   `note`→`observation`, `rule`→`decision`, `pattern`→`insight`,
+   `pickup_context`/`session_summary`→`episodic`). **`error` is not a kind** — it
+   resolved to the same class as `lesson`, so the two were indistinguishable;
+   write `lesson` and carry the distinction in the content prefix.
+   **The adapters disagree and that is a known defect:** `lesson` resolves to
+   `procedural` on the CLI but to `insight` on `memory.write_agent`, and the
+   agent lane cannot emit `procedural` at all. Until that is unified, do not
+   filter a search by `memory_classes` and assume it spans both lanes.
 2. **Endpoint:** the canonical memory control plane — one `MemoryService`, two adapters. Interactive (model-initiated) writes: the `l9-graphite-memory` MCP server — ordinary / cold `memory.write_agent` (no `phase_lock`); conflict-sensitive `memory.phase_lock` → `memory.write_governed`. Operator / hook / deterministic-adapter operations: `python -m ops.memory.cli` from the locked governance venv (stdio to the bound runtime). No tunnel, no URL, no bearer on this surface; C1 legacy `:9002` / `/memory` **retired**.
 3. **Namespace:** Resolve via `python -m ops.memory.cli resolve` (a request; memory authorizes) — never hardcode the shared workspace / `main` / `default` as write targets.
 4. **No `--scope` flag:** Semantic “cursor scope” is tags/kind discipline, **not** a CLI argument on `write`.
@@ -118,7 +129,7 @@ memcli write \
 
 1. **One fact per write.** If you have 4 lessons, make 4 separate writes.
 2. **Terse.** No "SESSION: 2026-02-16. WORK: ..." preamble. Just the fact.
-3. **Pre-classify.** Use the correct `--kind` (lesson, insight, error, note, rule, preference, pickup_context).
+3. **Pre-classify.** Use the correct `--kind` (lesson, insight, note, rule, pattern, preference, decision, observation, pickup_context) — see the canonical list above. Not `error`.
 4. **No prose summaries.** The distiller exists to convert prose into facts — don't make it redo work you can do at write time.
 5. **Stamp identity.** Pass `--agent-id` or export `L9_MEMORY_AGENT_ID` (Cursor=`cursor`).
 
