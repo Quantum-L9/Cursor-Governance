@@ -83,11 +83,6 @@ def test_pickup_context_writes_an_episodic_record_tagged_as_a_continuation(
 
     fake_cli.reply("write", 0, _write_payload())
     _use(monkeypatch, bound, fake_cli)
-    # --agent-id defaults to os.environ["L9_MEMORY_AGENT_ID"], which every real
-    # Claude/Cursor session sets, and the CLI then appends an ``agent:<id>`` tag.
-    # Without controlling it this exact-equality assertion passes only on a
-    # machine where the variable happens to be unset.
-    monkeypatch.delenv("L9_MEMORY_AGENT_ID", raising=False)
     code = cli.main(
         ["write", "PICKUP", "--kind", "pickup_context", "--workspace", str(ROOT), "--tag", "x"]
     )
