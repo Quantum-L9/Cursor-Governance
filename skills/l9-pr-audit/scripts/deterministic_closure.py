@@ -447,6 +447,20 @@ def _mutated_expr(node: ast.AST) -> tuple[str, str] | None:
     return None
 
 
+def _char_column(source_lines: list[str], lineno: int, byte_column: int) -> int:
+    """Convert an AST UTF-8 byte column into a character column.
+
+    `ast` reports `col_offset`/`end_col_offset` as offsets into the UTF-8
+    encoding of the line, while the mutation applier slices the decoded string.
+    The two coincide only for ASCII lines. AST offsets always land on character
+    boundaries, so decoding the byte prefix and measuring it is exact.
+    """
+    index = lineno - 1
+    if index < 0 or index >= len(source_lines):
+        return byte_column
+    return len(source_lines[index].encode("utf-8")[:byte_column].decode("utf-8"))
+
+
 def mutation_candidates(raw: dict[str, Any], pr: int) -> list[dict[str, Any]]:
     path = str(raw.get("path") or "")
     head = raw.get("head_content")
@@ -460,6 +474,7 @@ def mutation_candidates(raw: dict[str, Any], pr: int) -> list[dict[str, Any]]:
         tree = ast.parse(head)
     except SyntaxError:
         return []
+    source_lines = head.splitlines(keepends=True)
     out: list[dict[str, Any]] = []
     for node in ast.walk(tree):
         if not hasattr(node, "lineno") or int(getattr(node, "lineno")) not in changed:
@@ -471,20 +486,28 @@ def mutation_candidates(raw: dict[str, Any], pr: int) -> list[dict[str, Any]]:
         original = ast.get_source_segment(head, node)
         if not original or replacement == original:
             continue
+        # `col_offset` is a UTF-8 *byte* offset, but the consumer
+        # (execute_mutation_probe.apply_candidate) slices the decoded line by
+        # character. They agree only while the line is pure ASCII; one
+        # multibyte character earlier on the line shifts every later column and
+        # the candidate fails its own original_source check. Emit character
+        # offsets so the two agree for any source.
+        column = _char_column(source_lines, node.lineno, node.col_offset)
+        end_column = _char_column(source_lines, node.end_lineno, node.end_col_offset)
         payload = {
             "pr_number": pr,
             "path": path,
             "line": int(node.lineno),
-            "column": int(node.col_offset),
+            "column": column,
             "end_line": int(node.end_lineno),
-            "end_column": int(node.end_col_offset),
+            "end_column": end_column,
             "mutation_kind": kind,
             "original_source": original,
             "mutant_source": replacement,
             "source_sha256": hashlib.sha256(head.encode()).hexdigest(),
         }
         payload["mutation_id"] = stable_id(
-            "MUT", pr, path, node.lineno, node.col_offset, kind, original, replacement
+            "MUT", pr, path, node.lineno, column, kind, original, replacement
         )
         out.append(payload)
     return list({x["mutation_id"]: x for x in out}.values())

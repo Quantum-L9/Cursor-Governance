@@ -100,11 +100,16 @@ def run(command: str, cwd: Path, timeout: int, *, allow_shell: bool) -> dict[str
         # who already has a shell, so this is not a privilege boundary. The
         # choice is recorded in the probe output as execution_mode
         # SHELL_EXPLICIT / ARGV_NO_SHELL rather than left implicit.
+        # Bytes, not text: only stable hashes of the output are ever recorded,
+        # so decoding buys nothing and adds a failure mode. A test command that
+        # emits bytes undecodable under the ambient locale would raise
+        # UnicodeDecodeError here and the probe would die without writing a
+        # schema-valid result. Hashing the raw bytes is also locale-independent,
+        # which a deterministic probe needs.
         cp = subprocess.run(  # noqa: S602
             argv,
             shell=allow_shell,  # nosec B602
             cwd=cwd,
-            text=True,
             capture_output=True,
             timeout=timeout,
             check=False,
@@ -203,7 +208,22 @@ def main() -> int:
                 repo,
                 tmp,
                 symlinks=True,
-                ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc"),
+                ignore=shutil.ignore_patterns(
+                    ".git",
+                    "__pycache__",
+                    "*.pyc",
+                    # Large, regenerable, and never the subject of a mutation
+                    # probe. Copying them makes the probe slow and disk-hungry
+                    # for no discrimination value.
+                    ".venv",
+                    "venv",
+                    "node_modules",
+                    ".pytest_cache",
+                    ".mypy_cache",
+                    ".ruff_cache",
+                    ".tox",
+                    ".l9",
+                ),
             )
             baseline = run(a.test_command, tmp, a.timeout, allow_shell=a.allow_shell)
             result["baseline"] = baseline
@@ -218,7 +238,35 @@ def main() -> int:
                 result["reason"] = "baseline validation did not pass"
             else:
                 target = tmp / c["path"]
-                apply_candidate(target, c)
+                # The disposable copy is the whole safety story of this probe,
+                # and `symlinks=True` can undo it. The containment check on the
+                # audited side resolves the *target* of a link, so a repo path
+                # that is an absolute symlink (or sits under one) passes it —
+                # and copytree then recreates that same absolute link inside
+                # `tmp`. Writing through it would mutate the audited working
+                # tree permanently, which is exactly what this probe promises
+                # never to do. Re-check containment on the copy, after copying.
+                resolved_target = target.resolve()
+                if not resolved_target.is_relative_to(tmp.resolve()):
+                    result["result"] = "EXECUTION_ERROR"
+                    result["reason"] = (
+                        "candidate path escapes the disposable copy via a link; "
+                        "refusing to mutate outside the temporary tree"
+                    )
+                    # `finally` below writes the result and runs the audited-tree
+                    # integrity check, so returning here still emits a
+                    # schema-valid outcome.
+                    return 2
+                try:
+                    apply_candidate(target, c)
+                except (ValueError, OSError, UnicodeError) as exc:
+                    # A candidate that will not apply is evidence about the
+                    # candidate, not a reason to die without a result. Emitting
+                    # a schema-valid EXECUTION_ERROR keeps the deterministic
+                    # closure pipeline able to read an outcome for every probe.
+                    result["result"] = "EXECUTION_ERROR"
+                    result["reason"] = f"candidate application failed: {type(exc).__name__}"
+                    return 2
                 mutant = run(a.test_command, tmp, a.timeout, allow_shell=a.allow_shell)
                 result["mutant"] = mutant
                 if mutant["timed_out"]:

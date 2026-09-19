@@ -469,9 +469,16 @@ def build(doc: dict[str, Any]) -> dict[str, Any]:
             )
         )
 
-    for raw in doc["files"]:
-        if not isinstance(raw, dict) or not raw.get("path"):
-            continue
+    for index, raw in enumerate(doc["files"]):
+        # Fail closed, like the duplicate-path check immediately below. Skipping
+        # a malformed row silently would still emit a ledger presenting itself
+        # as *the* deterministic census for this head while omitting that
+        # file's symbols, obligations, claims and closure seeds — so every
+        # downstream completeness check would pass over a gap it cannot see.
+        if not isinstance(raw, dict):
+            raise ValueError(f"changed file entry {index} is not an object")
+        if not raw.get("path"):
+            raise ValueError(f"changed file entry {index} has no path")
         path = str(raw["path"])
         if path in seen_paths:
             raise ValueError(f"duplicate changed file: {path}")
@@ -657,9 +664,14 @@ def build(doc: dict[str, Any]) -> dict[str, Any]:
             }
         )
 
-    for raw in doc["files"]:
-        if not isinstance(raw, dict) or not raw.get("path"):
-            continue
+    for index, raw in enumerate(doc["files"]):
+        # Same fail-closed contract as the census pass above. Repeated rather
+        # than assumed: this loop lives in its own function, so it cannot rely
+        # on the other having run first to reject malformed rows.
+        if not isinstance(raw, dict):
+            raise ValueError(f"changed file entry {index} is not an object")
+        if not raw.get("path"):
+            raise ValueError(f"changed file entry {index} has no path")
         path = str(raw["path"])
         if not is_test(path) and str(raw.get("status") or "modified").lower() != "deleted":
             obligations.append(
