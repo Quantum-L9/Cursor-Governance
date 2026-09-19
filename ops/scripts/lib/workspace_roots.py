@@ -207,10 +207,15 @@ def adopted_projection_roots(
     `/home/user`) is not reachable from here.
 
     Returned nearest-ancestor first. Pass a *relative* target — an absolute one
-    is the same directory for every ancestor and says nothing about ownership.
+    is the same directory for every ancestor and says nothing about ownership,
+    and one containing `..` is refused outright: `../../.claude/skills` is
+    relative, so an absolute-only check lets it climb back out of the ancestor
+    it was joined to and adopt a directory outside the lineage entirely. The
+    containment above is a claim this function has to enforce, not merely
+    describe.
     """
     relative = Path(relative_target)
-    if relative.is_absolute():
+    if relative.is_absolute() or any(part == ".." for part in relative.parts):
         return []
     try:
         resolved = Path(workspace).resolve()

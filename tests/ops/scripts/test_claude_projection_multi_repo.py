@@ -87,6 +87,18 @@ def test_adoption_requires_our_own_state_file(tmp_path: Path) -> None:
     )
 
 
+def test_a_traversing_target_is_never_adopted(tmp_path: Path) -> None:
+    """`..` is relative, so an absolute-only check would let it climb out of the
+    ancestor it was joined to and adopt a directory outside the lineage."""
+    outside = tmp_path / "outside" / ".claude" / "skills"
+    outside.mkdir(parents=True)
+    (outside / ".l9-managed-skills.json").write_text("{}", encoding="utf-8")
+    repo = make_repo(tmp_path / "nest", "solo")
+
+    escaping = Path("..") / "outside" / ".claude" / "skills"
+    assert adopted_projection_roots(repo, escaping, ".l9-managed-skills.json") == []
+
+
 def test_an_absolute_target_is_never_adopted(tmp_path: Path) -> None:
     """A user-scope target is the same directory for every ancestor, so it
     proves nothing about which root owns it."""
