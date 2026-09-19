@@ -151,6 +151,38 @@ class OverlayHostedSettingsEnvTests(unittest.TestCase):
             self.assertEqual(env["L9_AUTONOMY_MAX_PARALLEL"], "8")
             self.assertNotIn("L9_RETIRED_KEY", env, "the stale tracked env must not be re-seeded")
 
+    def test_ownership_probe_is_bounded_and_agrees_with_the_reconciler(self) -> None:
+        """PR #611 review (Copilot): no timeout on a SessionStart-path call.
+
+        Bounded now. The timeout answers True rather than the reviewer's
+        suggested settings.json fallback, so it agrees with
+        reconcile_claude_settings._path_is_git_tracked: that one resolves the
+        same unknown to True and has therefore just written the current
+        projection into the local file. Seeding from the tracked file here
+        would overwrite it with an unrelated env.
+        """
+        import overlay_hosted_settings_env as ov
+
+        calls: list[dict] = []
+
+        def fake_run(*args, **kwargs):
+            calls.append(kwargs)
+            raise subprocess.TimeoutExpired(cmd="git", timeout=kwargs.get("timeout"))
+
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, _ = self._build(Path(tmp))
+            local = workspace / ".claude" / "settings.local.json"
+            local.write_text(json.dumps({"env": {}}), encoding="utf-8")
+            original = ov.subprocess.run
+            ov.subprocess.run = fake_run
+            try:
+                self.assertTrue(ov._local_env_is_authoritative(workspace, local))
+            finally:
+                ov.subprocess.run = original
+
+        self.assertTrue(calls, "the probe must actually invoke git")
+        self.assertEqual(calls[0].get("timeout"), ov.GIT_QUERY_TIMEOUT_S)
+
     def test_untracked_settings_still_seeds_env_from_settings_json(self) -> None:
         """Governance owns an untracked settings.json, so it holds the
         authoritative projection and the local file seeds from it as before."""

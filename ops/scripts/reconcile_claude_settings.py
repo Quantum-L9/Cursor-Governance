@@ -39,6 +39,17 @@ SESSION_START_NAME = "session_start_claude_governance.sh"
 #: workspace (`.gitignore`, `session_git_excludes.sh` session + machine lists).
 WORKSPACE_LOCAL_NAME = "settings.local.json"
 
+#: Wall-clock ceiling for a `git ls-files` ownership probe, in seconds.
+#:
+#: Required, not defensive: every external call carries an explicit timeout
+#: (`.github/copilot-instructions.md`, "Explicit failure semantics"; rules
+#: `00-global`, `20-lang-python`, `60-anti-patterns`). These probes run on the
+#: SessionStart path, where an unbounded `subprocess.run` turns a slow or wedged
+#: filesystem into a hung session start rather than a degraded one. Generous
+#: against a single-path query that normally returns in microseconds, and small
+#: against the 30s hook budget even when several run.
+GIT_QUERY_TIMEOUT_S = 5
+
 #: WHY_LOCAL_FOR_TRACKED — why a git-tracked workspace settings.json is never
 #: written, and the managed keys go to settings.local.json instead.
 #:
@@ -612,6 +623,22 @@ def _path_is_git_tracked(workspace: Path, rel: Path | str) -> bool:
     file is untracked and wholly governance-managed, while a tracked file is
     repo content. A workspace that is not a git repository, or a machine with
     no git, is untracked by definition — the managed path is the fallback.
+
+    The two failure modes answer differently, because they are different facts:
+
+    * **git absent** (`OSError`) — nothing can be tracked, so `False` is the
+      true answer, not a guess.
+    * **git hung** (`TimeoutExpired`) — the answer is UNKNOWN. Every caller
+      uses `True` as its non-destructive branch: settings projects to the
+      gitignored local file, `sync_hook_file` preserves bytes, and
+      `prune_retired_hooks` reports instead of deleting. So an unknown answers
+      `True`. A single slow `git` must never be what overwrites repo-owned
+      bytes or unlinks a repository file; the cost of guessing wrong the other
+      way is one session projecting to `settings.local.json`, which the next
+      healthy session corrects.
+
+    This call runs several times per SessionStart, so the timeout is bounded
+    well inside the hook budget (`L9_SESSION_START_BUDGET`, 30s).
     """
     try:
         proc = subprocess.run(
@@ -627,7 +654,11 @@ def _path_is_git_tracked(workspace: Path, rel: Path | str) -> bool:
             capture_output=True,
             text=True,
             check=False,
+            timeout=GIT_QUERY_TIMEOUT_S,
         )
+    except subprocess.TimeoutExpired:
+        # Ownership unknown — answer with the branch that destroys nothing.
+        return True
     except OSError:
         # git missing — fall back to the managed whole-file path.
         return False

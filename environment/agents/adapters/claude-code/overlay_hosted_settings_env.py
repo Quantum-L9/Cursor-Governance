@@ -107,6 +107,13 @@ UNCLAMPED_RUNTIME_KEYS = ("CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH",)
 SURFACE_KEY = "L9_GOVERNANCE_SURFACE"
 REQUIRED_SURFACE = "claude-code"
 
+#: Wall-clock ceiling for the `git ls-files` ownership probe, in seconds.
+#: Kept equal to `reconcile_claude_settings.GIT_QUERY_TIMEOUT_S` — the two ask
+#: git the same question on the same SessionStart path and must not disagree
+#: about when it has taken too long. Restated rather than imported: this
+#: adapter deliberately does not depend on `ops/scripts` path resolution.
+GIT_QUERY_TIMEOUT_S = 5
+
 TEMPLATE_REL = Path("environment/agents/adapters/claude-code/settings.template.json")
 
 
@@ -175,6 +182,21 @@ def _local_env_is_authoritative(workspace: Path, local: Path) -> bool:
     apart. A workspace that is not a git repository, or a machine with no git,
     answers "not tracked" and takes the settings.json path, which is the
     historical behaviour.
+
+    The probe is bounded (`GIT_QUERY_TIMEOUT_S`): it runs on the SessionStart
+    path, and every external call needs an explicit timeout
+    (`.github/copilot-instructions.md`, "Explicit failure semantics").
+
+    A timeout answers `True`, deliberately, and NOT the "fall back to
+    settings.json seeding" a first reading suggests. The two probes must agree:
+    `reconcile_claude_settings._path_is_git_tracked` resolves the same unknown
+    to `True` so it never overwrites repo-owned bytes, which means it has just
+    written the current projection into the local file. Seeding from
+    `settings.json` here would then overwrite that fresh projection with the
+    tracked file's unrelated env — reintroducing, in the timeout case, exactly
+    the staleness this function exists to prevent. Preferring the local file
+    costs nothing when the workspace is genuinely untracked: the overlay owns
+    that file too, so its env is still the right base.
     """
     if not local.is_file():
         return False
@@ -192,7 +214,10 @@ def _local_env_is_authoritative(workspace: Path, local: Path) -> bool:
             capture_output=True,
             text=True,
             check=False,
+            timeout=GIT_QUERY_TIMEOUT_S,
         )
+    except subprocess.TimeoutExpired:
+        return True
     except OSError:
         return False
     return proc.returncode == 0

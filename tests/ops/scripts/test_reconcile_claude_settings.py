@@ -365,6 +365,50 @@ def test_check_stays_green_after_the_hosted_env_overlay_patches_the_local_file(
     assert env["L9_AUTONOMY_MAX_PARALLEL"] == "8", "a later write must not strip the overlay's key"
 
 
+def test_ownership_probe_is_bounded_and_a_hang_destroys_nothing(tmp_path: Path) -> None:
+    """PR #611 review (Copilot): the probe runs on the SessionStart path and
+    had no timeout, so a slow or wedged git hung session start.
+
+    Bounded now, and the unknown resolves to the branch that destroys nothing:
+    a hung git must never be what overwrites repo-owned bytes.
+    """
+    import reconcile_claude_settings as rc
+
+    calls: list[dict] = []
+
+    def fake_run(*args, **kwargs):
+        calls.append(kwargs)
+        raise subprocess.TimeoutExpired(cmd="git", timeout=kwargs.get("timeout"))
+
+    original = rc.subprocess.run
+    rc.subprocess.run = fake_run
+    try:
+        assert rc._path_is_git_tracked(tmp_path, ".claude/settings.json") is True
+    finally:
+        rc.subprocess.run = original
+
+    assert calls, "the probe must actually invoke git"
+    assert calls[0].get("timeout") == rc.GIT_QUERY_TIMEOUT_S, (
+        "every external call carries an explicit timeout"
+    )
+
+
+def test_absent_git_still_answers_untracked(tmp_path: Path) -> None:
+    """Distinct from a hang: with no git, nothing CAN be tracked, so False is
+    the true answer rather than a guess, and the managed path stays correct."""
+    import reconcile_claude_settings as rc
+
+    def fake_run(*args, **kwargs):
+        raise OSError("git not found")
+
+    original = rc.subprocess.run
+    rc.subprocess.run = fake_run
+    try:
+        assert rc._path_is_git_tracked(tmp_path, ".claude/settings.json") is False
+    finally:
+        rc.subprocess.run = original
+
+
 def test_untracked_workspace_settings_still_written_in_place(tmp_path: Path) -> None:
     """The container-injected case is unchanged: governance owns that file.
 
