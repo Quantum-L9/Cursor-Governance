@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -27,7 +28,8 @@ from pathlib import Path
 # The capability broker never shipped. Never register l9-shared-memory, and
 # never the retired direct-provider front door.
 MEMORY_SERVER_KEY = "l9-graphite-memory"
-MEMORY_INTERPRETER_REF = "${L9_MEMORY_INTERPRETER}"
+MEMORY_WRAPPER_REF = "${HOME}/.cursor-governance/ops/memory/run_memory_mcp.sh"
+MEMORY_WRAPPER_REL = Path("ops/memory/run_memory_mcp.sh")
 MEMORY_SERVER_ARGS = ["-m", "l9_graphite_memory.server", "--transport", "stdio"]
 RETIRED_MEMORY_SERVER_KEYS = ("graphiti-memory", "l9-shared-memory")
 # Memory credential / transport names that must never reach functional MCP
@@ -174,22 +176,29 @@ def check_mcp_uses_env_refs(failures: list[str]) -> None:
     if not isinstance(mem, dict) or not mem:
         _fail(f"mcp.template.json must define the {MEMORY_SERVER_KEY} stdio server", failures)
         return
-    if mem.get("command") != MEMORY_INTERPRETER_REF or list(mem.get("args") or []) != (
+    if mem.get("command") != MEMORY_WRAPPER_REF or list(mem.get("args") or []) != (
         MEMORY_SERVER_ARGS
     ):
         _fail(
-            f"mcp.template.json {MEMORY_SERVER_KEY} must launch {MEMORY_INTERPRETER_REF} "
-            f"{' '.join(MEMORY_SERVER_ARGS)} (the package's managed entry)",
+            f"mcp.template.json {MEMORY_SERVER_KEY} must launch {MEMORY_WRAPPER_REF} "
+            f"{' '.join(MEMORY_SERVER_ARGS)} (spawn wrapper + package argv)",
             failures,
         )
     else:
-        print(f"  OK: {MEMORY_SERVER_KEY} is the package's managed argv, interpreter as ${{VAR}}")
-    if "L9_MEMORY_INTERPRETER" not in (mem.get("_requires_env") or []):
+        print(f"  OK: {MEMORY_SERVER_KEY} launches the spawn wrapper with the package argv")
+    if "L9_MEMORY_INTERPRETER" in (mem.get("_requires_env") or []):
         _fail(
-            f"mcp.template.json {MEMORY_SERVER_KEY} must be gated on L9_MEMORY_INTERPRETER "
-            "(_requires_env) so an unbound session renders no memory server",
+            f"mcp.template.json {MEMORY_SERVER_KEY} must not _requires_env-gate on "
+            "L9_MEMORY_INTERPRETER: the spawn wrapper is the bind gate",
             failures,
         )
+    wrapper = _governance_root() / MEMORY_WRAPPER_REL
+    if not wrapper.is_file():
+        _fail(f"memory spawn wrapper missing: {MEMORY_WRAPPER_REL}", failures)
+    elif not os.access(wrapper, os.X_OK):
+        _fail(f"memory spawn wrapper is not executable: {MEMORY_WRAPPER_REL}", failures)
+    else:
+        print(f"  OK: {MEMORY_WRAPPER_REL} exists and is executable")
     for forbidden in ("env", "url", "headers"):
         if forbidden in mem:
             _fail(
