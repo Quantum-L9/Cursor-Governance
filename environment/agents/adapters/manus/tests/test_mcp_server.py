@@ -3,9 +3,11 @@
 
 from __future__ import annotations
 
+import http.client
 import importlib.util
 import json
 import sys
+import threading
 import unittest
 from pathlib import Path
 
@@ -107,6 +109,24 @@ class ManusMcpServerTests(unittest.TestCase):
         result = self.service.call_tool("governance_status", {"workspace": str(REPOSITORY)})
         self.assertTrue(result["isError"])
         self.assertIn("bearer-protected MCP deployment", result["structuredContent"]["error"])
+
+    def test_http_transport_rejects_non_json_content_type(self) -> None:
+        server = mcp_server.GovernanceMcpHttpServer(("127.0.0.1", 0), self.service, "")
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            connection = http.client.HTTPConnection(
+                "127.0.0.1", server.server_address[1], timeout=2
+            )
+            connection.request("POST", "/mcp", body="{}", headers={"Content-Type": "text/plain"})
+            response = connection.getresponse()
+            payload = json.loads(response.read().decode("utf-8"))
+            self.assertEqual(response.status, 415)
+            self.assertEqual(payload["error"], "Content-Type must be application/json")
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
 
     def test_notifications_have_no_json_rpc_response(self) -> None:
         self.assertIsNone(

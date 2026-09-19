@@ -593,6 +593,13 @@ class GovernanceMcpRequestHandler(BaseHTTPRequestHandler):
         if not self._authorized():
             self._send_json(HTTPStatus.UNAUTHORIZED, {"error": "missing or invalid bearer token"})
             return
+        content_type = self.headers.get("Content-Type", "").split(";", maxsplit=1)[0].strip()
+        if content_type.casefold() != "application/json":
+            self._send_json(
+                HTTPStatus.UNSUPPORTED_MEDIA_TYPE,
+                {"error": "Content-Type must be application/json"},
+            )
+            return
         content_length = self.headers.get("Content-Length")
         try:
             size = int(content_length or "0")
