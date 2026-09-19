@@ -38,6 +38,10 @@ FAILED = "failed"
 #: runtime is a bootstrap/environment fault, not memory degradation. Listed
 #: under ### Degraded so it is not hidden, but named for what it is.
 ENVIRONMENT_FAULT = "environment_fault"
+#: Secrets-plane state (ops/secrets/session_start_secrets.py) meaning the plane
+#: did not bind because this surface holds no credential plane at all. Distinct
+#: from a bind that should have happened and failed.
+PLANE_UNAVAILABLE_BY_SURFACE = "unavailable_by_surface"
 
 
 def _line(
@@ -469,7 +473,7 @@ def classify_backup(detail: str) -> dict[str, Any]:
     return _line("backup", OK, text)
 
 
-def classify_aws_cli(result: dict[str, Any] | None) -> dict[str, Any]:
+def classify_aws_cli(result: dict[str, Any] | None, plane_state: str = "") -> dict[str, Any]:
     """Derived view of the secrets-plane receipt aws object. Never prints account ids."""
     if not result:
         return _line(
@@ -480,6 +484,19 @@ def classify_aws_cli(result: dict[str, Any] | None) -> dict[str, Any]:
         )
     if result.get("ok"):
         return _line("aws-cli", OK, str(result.get("summary") or "authorized"))
+    if plane_state == PLANE_UNAVAILABLE_BY_SURFACE:
+        # Neither ok nor FAILED: the CLI is absent because this surface holds no
+        # credential plane at all. Reported, never hidden — but not this
+        # session's fault and not a repair anyone can perform here.
+        return _line(
+            "aws-cli",
+            NA,
+            "unavailable by surface — model-controlled surface holds no "
+            "Infisical bind by design; do not install a CLI or paste a secret",
+            evidence=str(result.get("code") or ""),
+            this_surface=False,
+            include_in_degraded=False,
+        )
     return _line(
         "aws-cli",
         FAILED,
@@ -559,6 +576,13 @@ def secrets_receipt_parts(
         aws if isinstance(aws, dict) else None,
         binds if isinstance(binds, list) else None,
     )
+
+
+def secrets_plane_state(receipt: dict[str, Any] | None) -> str:
+    """The plane's tri-state. Absent on a pre-carve-out receipt, which reads ''."""
+    if not receipt:
+        return ""
+    return str(receipt.get("state") or "")
 
 
 def classify_skill_usage(detail: str) -> dict[str, Any]:
@@ -647,6 +671,7 @@ def collect(
     workspace: str = "",
     aws_cli: dict[str, Any] | None = None,
     secrets_bind: list[dict[str, Any]] | None = None,
+    plane_state: str = "",
 ) -> list[dict[str, Any]]:
     root = home or Path.home()
     lines: list[dict[str, Any]] = [
@@ -657,7 +682,7 @@ def collect(
         if memory_proof is not None
         else classify_memory(detail=memory_detail, stderr=memory_stderr, healthy=memory_healthy),
         classify_publish_path(evaluate(load_receipt())),
-        classify_aws_cli(aws_cli),
+        classify_aws_cli(aws_cli, plane_state),
         classify_secrets_bind(secrets_bind),
         classify_skill_usage(skill_note),
         classify_itest(error=probe_neo4j(), codegraph=codegraph),
@@ -796,7 +821,8 @@ def main(argv: list[str] | None = None) -> int:
         raw_proof=args.memory_proof,
         raw_detail=args.memory_detail,
     )
-    aws_cli, secrets_bind = secrets_receipt_parts(load_secrets_plane_receipt(args.workspace))
+    plane_receipt = load_secrets_plane_receipt(args.workspace)
+    aws_cli, secrets_bind = secrets_receipt_parts(plane_receipt)
     lines = collect(
         surface=args.surface,
         venv=args.venv,
@@ -816,6 +842,7 @@ def main(argv: list[str] | None = None) -> int:
         workspace=args.workspace,
         aws_cli=aws_cli,
         secrets_bind=secrets_bind,
+        plane_state=secrets_plane_state(plane_receipt),
     )
     aws_failed = any(item["name"] == "aws-cli" and item["class"] == FAILED for item in lines)
     if args.json:

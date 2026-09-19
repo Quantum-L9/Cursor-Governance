@@ -32,7 +32,9 @@ print(json.dumps({"hookSpecificOutput": {
 """
 
 
-class RetiredCapabilityPlaneTests(unittest.TestCase):
+class _PlaneBootstrapCase(unittest.TestCase):
+    """Shared bootstrap fixture. Carries no tests of its own."""
+
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
         self.root = Path(self._tmp.name)
@@ -69,9 +71,26 @@ class RetiredCapabilityPlaneTests(unittest.TestCase):
         subprocess.run(["git", "init", "-q", str(self.workspace)], check=False, capture_output=True)
         self.addCleanup(self._tmp.cleanup)
 
-    def _run(self) -> subprocess.CompletedProcess[str]:
+    def _write_owner(self, *, exit_code: int, receipt: dict[str, object] | None = None) -> None:
+        """Stand in for session_start_secrets.py with a chosen exit + receipt."""
+        owner = self.gov / "ops" / "secrets" / "session_start_secrets.py"
+        owner.write_text(
+            "#!/usr/bin/env python3\n"
+            "import json, sys\n"
+            "receipt = " + repr(json.dumps(receipt) if receipt is not None else None) + "\n"
+            "if receipt is not None and '--receipt-out' in sys.argv:\n"
+            "    dest = sys.argv[sys.argv.index('--receipt-out') + 1]\n"
+            "    open(dest, 'w', encoding='utf-8').write(receipt)\n"
+            f"raise SystemExit({exit_code})\n",
+            encoding="utf-8",
+        )
+
+    def _run(self, extra_env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
         env = dict(os.environ)
         env.pop("L9_GOVERNANCE_SURFACE", None)
+        env.pop("CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE", None)
+        env.pop("CLAUDE_CODE_REMOTE_ENVIRONMENT_ID", None)
+        env.update(extra_env or {})
         env["PATH"] = f"{self.bin}:{env.get('PATH', '')}"
         return subprocess.run(
             [
@@ -90,9 +109,14 @@ class RetiredCapabilityPlaneTests(unittest.TestCase):
             check=False,
         )
 
+    def _degraded_count(self) -> int:
+        argv = json.loads(self.receipt_argv.read_text(encoding="utf-8"))
+        return int(argv[argv.index("--degraded-count") + 1])
+
+
+class RetiredCapabilityPlaneTests(_PlaneBootstrapCase):
     def test_retired_plane_does_not_degrade_or_call_the_stub(self) -> None:
-        owner = self.gov / "ops" / "secrets" / "session_start_secrets.py"
-        owner.write_text("#!/usr/bin/env python3\nraise SystemExit(0)\n", encoding="utf-8")
+        self._write_owner(exit_code=0)
         stub = self.gov / "ops" / "secrets" / "bootstrap_agent_env.sh"
         stub.write_text("#!/usr/bin/env bash\necho STUB_RAN >&2\nexit 1\n", encoding="utf-8")
         stub.chmod(0o755)
@@ -101,8 +125,53 @@ class RetiredCapabilityPlaneTests(unittest.TestCase):
         self.assertIn("secrets plane: session_start_secrets.py", result.stderr)
         self.assertNotIn("STUB_RAN", result.stderr)
         self.assertIn("Agent environment ready", result.stderr)
-        argv = json.loads(self.receipt_argv.read_text(encoding="utf-8"))
-        self.assertEqual(int(argv[argv.index("--degraded-count") + 1]), 0)
+        self.assertEqual(self._degraded_count(), 0)
+
+
+class SecretsPlaneSurfaceCarveOutTests(_PlaneBootstrapCase):
+    """The AWS-absent path at the plane counter — previously uncovered.
+
+    That gap is why the sentinel carve-out shipped without this one: nothing
+    failed when the counter scored an environment property as a fault.
+    """
+
+    HOSTED = {"CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE": "cloud_default"}
+
+    UNAVAILABLE: dict[str, object] = {
+        "ok": False,
+        "state": "unavailable_by_surface",
+        "surface_class": "model_controlled",
+        "login": "skipped",
+        "aws": {"ok": False, "code": "AWS_CLI_NOT_FOUND", "summary": "absent"},
+        "binds": [],
+    }
+
+    def test_unavailable_by_surface_does_not_degrade(self) -> None:
+        self._write_owner(exit_code=0, receipt=self.UNAVAILABLE)
+        result = self._run(self.HOSTED)
+        self.assertEqual(result.returncode, 0, result.stderr[-2000:])
+        self.assertIn("secrets plane unavailable by surface", result.stderr)
+        self.assertNotIn("session_start_secrets failed", result.stderr)
+        self.assertIn("Agent environment ready", result.stderr)
+        self.assertEqual(self._degraded_count(), 0)
+
+    def test_owner_failure_still_degrades(self) -> None:
+        """The negative: a surface that should have bound, and did not."""
+        self._write_owner(exit_code=1)
+        result = self._run()
+        self.assertIn("session_start_secrets failed", result.stderr)
+        self.assertNotIn("unavailable by surface", result.stderr)
+        self.assertEqual(self._degraded_count(), 1)
+
+    def test_plane_ok_says_nothing_about_the_surface(self) -> None:
+        """state=ok must not print the carve-out line."""
+        self._write_owner(
+            exit_code=0,
+            receipt={"ok": True, "state": "ok", "surface_class": "operator", "binds": []},
+        )
+        result = self._run(self.HOSTED)
+        self.assertNotIn("unavailable by surface", result.stderr)
+        self.assertEqual(self._degraded_count(), 0)
 
 
 if __name__ == "__main__":
