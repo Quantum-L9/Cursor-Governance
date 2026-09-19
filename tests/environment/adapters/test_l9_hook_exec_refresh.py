@@ -167,19 +167,71 @@ def test_tip_only_hook_is_found_after_launcher_refresh(tmp_path: Path) -> None:
     assert isinstance(receipt["refreshed_epoch"], int)
 
 
-def test_dirty_tracked_clone_is_not_force_reset(tmp_path: Path) -> None:
+def test_dirty_clone_is_reset_to_tip_and_the_dirt_is_preserved(tmp_path: Path) -> None:
+    """Every session starts on the exact code main carried at bootstrap.
+
+    This used to assert the opposite — a dirty tracked clone was left alone and
+    the receipt read reset-skipped-dirty. That protected nothing: this clone is
+    not a workspace, it is the tree every rule, skill and hook is READ from, so
+    declining to reset it serves stale governance for as long as the dirt lasts.
+
+    And the dirt outlived its cause. A regenerated llm-rules manifest blocked
+    the very update that carried its regenerated form, so the real clone sat 102
+    commits behind for a week and could not recover on its own. A gate whose own
+    failure mode prevents its repair cannot be left conditional.
+
+    The protection the old test actually wanted — in-flight bytes are not lost —
+    is now asserted directly, and by two independent routes.
+    """
     origin, old = _origin_with_tip_only_hook(tmp_path)
     home = tmp_path / "home"
     home.mkdir()
     gov = _clone_at(home, origin, old)
     (gov / "CANONICAL_LAW.md").write_text("in-flight\n", encoding="utf-8")
+
     result = _run_launcher(home, origin, TIP_HOOK)
+
+    # The requirement: the clone advanced, and the tip-only hook now exists.
     assert result.returncode == 0, result.stderr
-    assert (gov / "CANONICAL_LAW.md").read_text(encoding="utf-8") == "in-flight\n"
-    assert "hook file absent" in result.stderr
-    assert "TIP_ONLY_RAN" not in result.stdout
-    assert not _tip_present(gov)
+    assert _receipt(home)["outcome"] == "fetched"
+    assert _tip_present(gov)
+    assert "TIP_ONLY_RAN" in result.stdout
+    assert (gov / "CANONICAL_LAW.md").read_text(encoding="utf-8") != "in-flight\n"
+
+    # Route 1 — the bytes, copied out before the reset.
+    holds = sorted((home / ".l9" / "claude" / "gov-preserved").glob("*/CANONICAL_LAW.md"))
+    assert holds, "dirty bytes were not preserved to the hold directory"
+    assert holds[-1].read_text(encoding="utf-8") == "in-flight\n"
+
+    # Route 2 — a reachable stash commit, so `git stash apply` restores it.
+    refs = _git(gov, "for-each-ref", "--format=%(refname)", "refs/l9/preserved/gov-refresh")
+    ref = refs.stdout.strip().splitlines()
+    assert ref, "no preserve ref was written"
+    shown = _git(gov, "show", f"{ref[-1]}:CANONICAL_LAW.md")
+    assert shown.stdout == "in-flight\n"
+
+    # The operator is told which paths blocked, which the old skip never did.
+    assert "CANONICAL_LAW.md" in result.stderr
+
+
+def test_keep_dirty_breakglass_restores_the_skip(tmp_path: Path) -> None:
+    """One documented escape for a clone someone is deliberately editing."""
+    origin, old = _origin_with_tip_only_hook(tmp_path)
+    home = tmp_path / "home"
+    home.mkdir()
+    gov = _clone_at(home, origin, old)
+    (gov / "CANONICAL_LAW.md").write_text("in-flight\n", encoding="utf-8")
+
+    result = _run_launcher(
+        home, origin, TIP_HOOK, extra={"L9_GOV_REFRESH_KEEP_DIRTY": "1"}
+    )
+
+    assert result.returncode == 0, result.stderr
     assert _receipt(home)["outcome"] == "reset-skipped-dirty"
+    assert (gov / "CANONICAL_LAW.md").read_text(encoding="utf-8") == "in-flight\n"
+    assert not _tip_present(gov)
+    # Stale by explicit request, and said so rather than blaming "dirty clone".
+    assert "L9_GOV_REFRESH_KEEP_DIRTY=1" in result.stderr
 
 
 # --- F-548-002: only SessionStart hooks refresh ---------------------------------
