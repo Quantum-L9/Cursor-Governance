@@ -67,11 +67,19 @@ def test_canonical_hit_with_typed_continuation(monkeypatch, fake_cli, bound) -> 
     assert result.continuation.record_id == RECORD
     assert result.continuation.capsule.next_action == "Wire runtime binding"
     assert result.continuation.stale is False
-    assert result.calls == 3
-    # The search asked memory for typed records by tag, on the primary namespace only.
-    search_argv = fake_cli.last("search")
-    assert "--tag" in search_argv and "session_continuation" in search_argv
-    assert search_argv.count("--namespace") == 1
+    assert result.calls == 4
+    # The continuation search asked memory for typed records by tag, on the
+    # primary namespace only. The 24h agent-lane search is a later call.
+    tagged = [
+        args
+        for args, _c, _s in fake_cli.calls
+        if len(args) > 1 and args[1] == "search" and "session_continuation" in args
+    ]
+    assert tagged, "continuation search must request the session_continuation tag"
+    assert tagged[0].count("--namespace") == 1
+    recent = fake_cli.last("search")
+    assert "--recorded-after" in recent
+    assert "session_continuation" not in recent
     # Hydrate requested the fan-in; memory authorized it.
     assert fake_cli.last("hydrate").count("--namespace") == 2
     assert result.requested_namespaces == ("cursor-governance", "l9-workspace")
