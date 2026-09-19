@@ -436,8 +436,15 @@ _gate_commit_writer_dirt() {
   # re-binds the receipt across this commit instead. Capture HEAD first: extend
   # -release refuses unless the sha it is handed is exactly what the receipt
   # attests.
-  local l4_head_before
-  l4_head_before="$(git -C "$WS" rev-parse HEAD 2>/dev/null || true)"
+  # `if` consumes a failed read, so no `|| true` is needed and the swallowed-
+  # failure ratchet (test_bootstrap_invariants SWALLOW_BASELINE) stays at its
+  # measured count. An unreadable HEAD leaves this empty, which makes
+  # _gate_extend_l4_receipt a no-op and leaves the downstream L4 remote check
+  # as the authority — the same outcome as before this function existed.
+  local l4_head_before=""
+  if git -C "$WS" rev-parse HEAD >/dev/null 2>&1; then
+    l4_head_before="$(git -C "$WS" rev-parse HEAD)"
+  fi
 
   python3 - "$WS" "$status_before" <<'PY'
 import subprocess
@@ -502,9 +509,11 @@ _gate_extend_l4_receipt() {
   # validated by the remainder of THIS gate run (readers, validators, security),
   # which is the same standard _reattest_recovered_head applies in
   # open_pr_after_gate.sh.
-  local before="${1:-}" head l4_cli
+  local before="${1:-}" head="" l4_cli
   l4_cli="$GOV_ROOT/ops/autonomy/l4_local.py"
-  head="$(git -C "$WS" rev-parse HEAD 2>/dev/null || true)"
+  if git -C "$WS" rev-parse HEAD >/dev/null 2>&1; then
+    head="$(git -C "$WS" rev-parse HEAD)"
+  fi
   [ -n "$before" ] && [ -n "$head" ] || return 0
   [ "$before" != "$head" ] || return 0          # nothing was committed
   [ -f "$l4_cli" ] || return 0
