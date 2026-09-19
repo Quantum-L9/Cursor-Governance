@@ -61,11 +61,26 @@ _COMPLETED = frozenset({OutcomeStatus.OK, OutcomeStatus.NO_HITS, OutcomeStatus.N
 # writes an ``episodic`` record carrying that tag; ``session_continuation`` as a
 # class exists only on the governed-candidate path (session_contracts.py).
 CONTINUATION_TAG = "session_continuation"
+# Resolution is SINGLE PASS (``KIND_ALIASES.get(kind, kind)``), so every value
+# here must already be a canonical ``MemoryClass``. An alias pointing at another
+# alias is a latent bug: it only resolved because the package happened to carry
+# a second table, and it silently lands in whatever that table says. Two entries
+# were exactly that and are fixed here —
+#   ``error`` -> ``lesson``           chained, and collided with ``lesson``
+#                                     (both ended at ``procedural``, so an error
+#                                     and a lesson were indistinguishable).
+#                                     Removed; callers say ``lesson`` directly,
+#                                     which is the class they were already
+#                                     getting.
+#   ``session_summary`` -> itself     not a MemoryClass; it only worked because
+#                                     the package CLI maps it to ``episodic``.
+#                                     Stated explicitly instead.
+# ``tests/ops/memory/test_kind_aliases.py`` fails if a value stops being a real
+# MemoryClass or starts pointing at another alias.
 KIND_ALIASES = {
     "pickup_context": "episodic",
-    "session_summary": "session_summary",
+    "session_summary": "episodic",
     "note": "observation",
-    "error": "lesson",
     "lesson": "procedural",
     "pattern": "insight",
     "rule": "decision",
