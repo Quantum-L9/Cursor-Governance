@@ -45,14 +45,22 @@ description: Agent memory SSOT (canonical l9-graphite-memory control plane) — 
 
 - **Agents MUST be able to write durable memory.** Ordinary / cold facts use `memory.write_agent {namespace, content, memory_class, tags…}` on the package-owned `l9-graphite-memory` MCP server — no SessionStart receipt and no `phase_lock`. Conflict-sensitive facts use `memory.phase_lock {namespace, task_signature}` then `memory.write_governed {namespace, content, task_signature, memory_class, tags…}`. `MemoryService` grants the lock only after a conflict check, binds the write to the namespace snapshot digest, and refuses it if the namespace moved.
 - **The phase-lock is a memory-write precondition only.** It never authorizes a source edit, never serializes git, never replaces worktree / branch / publication governance (`96-multi-agent-main-bound-execution` E7/E8/E10; `98-graphiti-memory-gate`).
-- **The agent lane is scoped to ONE namespace per session.** Without the signed
-  door the stdio server falls back to Tier 3, which resolves its principal once
-  at spawn from the server's working directory and freezes it. The `namespace`
-  argument is then checked against that frozen grant set, so a second repository
-  in the session — typically the governance SSOT beside the workspace — is
-  **not** writable through `write_agent`, whatever the argument says. Confirm
-  cheaply with `memory.write_agent {…, dry_run: true}`: `namespace did not match
-  any write grant` is this, not a malformed call.
+- **The agent lane is scoped to ONE namespace per session — while the vendored
+  wheel is `l9_graphite_memory-2.4.0`.** Without the signed door the stdio
+  server falls back to Tier 3, which resolves its principal once at spawn from
+  the server's working directory and freezes it. The `namespace` argument is
+  then checked against that frozen grant set, so a second repository in the
+  session — typically the governance SSOT beside the workspace — is **not**
+  writable through `write_agent`, whatever the argument says. Confirm cheaply
+  with `memory.write_agent {…, dry_run: true}`: `namespace did not match any
+  write grant` is this, not a malformed call.
+
+  **Removal trigger:** `l9-graphite-memory` 2.5.0 resolves Tier 3 per request
+  (its ADR-083), so this bullet and the carve-out below are **deleted** in the
+  same PR that re-vendors the 2.5.0 wheel and bumps `pyproject.toml` /
+  `uv.lock`. Check the pin before trusting this paragraph: a scope limit
+  documented after it stopped existing misleads exactly as the original silence
+  did.
 - **No evasion.** Generic `memory.ingest` and the generic CLI `write` are not the model's alternative to `write_agent` or `write_governed`. If the MCP server is unbound, the write is reported as a gap (`L9_MEMORY_INTERPRETER` / `make memory-binding`), not rerouted. **Exception — the scope limit above:** when the agent lane holds no grant for the namespace a fact belongs to, the operator adapter (`python -m ops.memory.cli write --workspace <repo-root>`) is the correct route, because it resolves authorization per call. Say plainly which lane was used and why; that is a disclosed gap, not a silent reroute.
 - **Deterministic adapters** (SessionStart hydrate, sessionEnd close, `repair-write`, reconciliation, diagnostics) use purpose-specific `ops/memory` operations over the same admission path — adapters, not second egresses.
 - **No provider transport.** Neither CLI nor MCP carries a provider URL, bearer, or raw provider tool; agents never write to the provider directly.

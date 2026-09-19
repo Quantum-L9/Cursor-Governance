@@ -1,9 +1,9 @@
 {
   "$schema": "l9.cursor-rules-manifest/v2",
-  "generated_utc": "2026-09-19T18:13:09Z",
+  "generated_utc": "2026-09-19T18:57:20Z",
   "generator": "ops/scripts/generate_rules_manifest.py",
   "rules_directory": "rules",
-  "source_tree_digest": "sha256:ab75d8af156747f21fd99d3b0aeb7cd3baf57c361acfe6c3177b08de523ff6ee",
+  "source_tree_digest": "sha256:f9d096c1e95b7171d0caf34ad3a879c93ef1133be206b04031b043043e38d9f0",
   "summary": {
     "total_mdc_files": 69,
     "always_apply_true": 35,
@@ -100,8 +100,8 @@
       "globs": null,
       "first_heading": "Graphiti Memory (SSOT)",
       "has_yaml_frontmatter": true,
-      "line_count": 100,
-      "content_digest": "sha256:afaffd4a61e7c5e5999308e76958b5893acc814077436c93a3e50aa150490ed4",
+      "line_count": 108,
+      "content_digest": "sha256:856f977285b81ed9e40fec9deb1f3b2f924936a463083d9db094cde757a3c504",
       "authority": "canonical_global",
       "context_cost": "moderate",
       "deprecated": false,

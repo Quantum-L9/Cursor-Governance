@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-09-19T18:13:09Z`. Source: `rules/*.mdc`.
+Generated: `2026-09-19T18:57:20Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -21,7 +21,7 @@ Generated: `2026-09-19T18:13:09Z`. Source: `rules/*.mdc`.
 | `00-global.mdc` | `l9.rule.00.global` | global | governance | always | 41 | `d92b573ca45a` |
 | `01-authority-chain.mdc` | `l9.rule.01.authority.chain` | global | general | always | 64 | `a2f5f3993a02` |
 | `02-slash-commands.mdc` | `l9.rule.slash-commands` | global | governance | always | 135 | `76d110e9c449` |
-| `03-graphiti-memory.mdc` | `l9.rule.graphiti.memory` | global | memory | always | 100 | `afaffd4a61e7` |
+| `03-graphiti-memory.mdc` | `l9.rule.graphiti.memory` | global | memory | always | 108 | `856f977285b8` |
 | `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | agent_requested | 72 | `7f6cee55bbaa` |
 | `05-ask-mode.mdc` | `l9.rule.05.ask.mode` | global | governance | always | 65 | `4b2f5f472100` |
 | `06-governance-ssot-paths.mdc` | `l9.rule.governance-ssot-paths` | global | git | always | 56 | `d08e5923b2c6` |
