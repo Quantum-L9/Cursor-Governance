@@ -264,22 +264,6 @@ capability is a delivery problem; a pasted secret is a permanent compromise on
 this surface.
 
 
-## Memory rows after the realignment (2026-09-06) — supersedes the Graphiti rows above
-
-Dated counter-observation, not a rewrite of the rows above. Since campaign
-stage C9/C11 (ADR-0030) no surface reaches `GRAPHITI_MCP_URL` and no surface
-adds an `Authorization` header for memory: the memory plane is the canonical
-`l9-graphite-memory` control plane over **stdio** to the runtime this checkout
-binds (`ops/config/memory-binding.json`). What the readiness receipt now
-reports is `memory_control_plane_status` from `ops/memory/diagnostics.py`
-(`cli` / `control_plane` / `mcp`) and the posture `memory_transport:
-stdio-control-plane`; the `Graphiti_reachability` dimension and the
-`graphiti_transport_auth` observation described above no longer exist. A
-model-controlled surface with the memory package unbound is `memory-blind` for
-the honest reason "no runtime bound", never "no bearer", and is still never a
-reason to paste a credential.
-
-
 ## Context7 row after the gate removal (2026-09-19) — supersedes the `context7.mcp` row above
 
 Dated counter-observation, not a rewrite of the row above. `context7` in
@@ -299,3 +283,19 @@ the secret populating (Infisical inventory key `CONTEXT7_API_KEY`, proxied into
 the session environment). That is a delivery problem to fix, never a server to
 gate out again, and — as everywhere in this contract — never a reason to paste
 the value into the account variables field or any file.
+
+
+## Memory rows after the realignment (2026-09-06) — supersedes the Graphiti rows above
+
+Dated counter-observation, not a rewrite of the rows above. Since campaign
+stage C9/C11 (ADR-0030) no surface reaches `GRAPHITI_MCP_URL` and no surface
+adds an `Authorization` header for memory: the memory plane is the canonical
+`l9-graphite-memory` control plane over **stdio** to the runtime this checkout
+binds (`ops/config/memory-binding.json`). What the readiness receipt now
+reports is `memory_control_plane_status` from `ops/memory/diagnostics.py`
+(`cli` / `control_plane` / `mcp`) and the posture `memory_transport:
+stdio-control-plane`; the `Graphiti_reachability` dimension and the
+`graphiti_transport_auth` observation described above no longer exist. A
+model-controlled surface with the memory package unbound is `memory-blind` for
+the honest reason "no runtime bound", never "no bearer", and is still never a
+reason to paste a credential.
