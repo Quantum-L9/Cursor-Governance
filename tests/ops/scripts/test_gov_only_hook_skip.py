@@ -124,6 +124,10 @@ def test_hook_still_runs_in_the_governance_workspace(tmp_path: Path, hook: str) 
 
 def test_governance_hooks_resolve_python3_to_locked_venv(tmp_path: Path) -> None:
     """Cursor-Governance#567: host python3 must not win over `.venv/bin`."""
+    locked_python3 = ROOT / ".venv" / "bin" / "python3"
+    assert locked_python3.is_file(), (
+        f"locked interpreter missing at {locked_python3} (run: make venv)"
+    )
     changed = tmp_path / "changed.txt"
     changed.write_text("package.json\n", encoding="utf-8")
     bin_dir = _stub_precommit(tmp_path)
@@ -143,8 +147,11 @@ def test_governance_hooks_resolve_python3_to_locked_venv(tmp_path: Path) -> None
         },
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
-    path_line = next(line for line in proc.stdout.splitlines() if line.startswith("PATH="))
-    first = path_line.removeprefix("PATH=").split(":", 1)[0]
+    path_lines = [line for line in proc.stdout.splitlines() if line.startswith("PATH=")]
+    assert path_lines, (
+        "stub pre-commit did not emit PATH=; stdout/stderr:\n" + proc.stdout + proc.stderr
+    )
+    first = path_lines[0].removeprefix("PATH=").split(":", 1)[0]
     assert first == str(ROOT / ".venv" / "bin")
 
 
