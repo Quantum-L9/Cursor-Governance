@@ -356,6 +356,8 @@ class GovernanceMcpService:
             },
         }
         if "workspace" in arguments:
+            if not self.bootstrap_enabled:
+                raise ToolInputError("workspace status requires a bearer-protected MCP deployment")
             workspace = self._resolve_workspace(arguments["workspace"])
             workspace_status = _run(["git", "status", "--porcelain=v1", "--branch"], cwd=workspace)
             workspace_head = _run(["git", "rev-parse", "--short", "HEAD"], cwd=workspace)

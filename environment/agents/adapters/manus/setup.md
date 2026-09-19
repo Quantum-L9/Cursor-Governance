@@ -37,7 +37,7 @@ manus-mcp-cli tool list --server l9-governance
 manus-mcp-cli tool call governance_status --server l9-governance --input '{}'
 ```
 
-The status response must report `status: ready`, `memory: not exposed by this adapter`, and `bootstrap_enabled: false` for the public endpoint. Any result that reports a memory provider, credentials, an arbitrary shell, or enabled bootstrap access is a deployment error; disable the connector and correct the server configuration before use.
+The status response must report `status: ready`, `memory: not exposed by this adapter`, and `bootstrap_enabled: false` for the public endpoint. On that endpoint, the optional `workspace` argument is also refused so an unauthenticated caller cannot inspect arbitrary local Git status. Any result that reports a memory provider, credentials, an arbitrary shell, enabled bootstrap access, or public workspace inspection is a deployment error; disable the connector and correct the server configuration before use.
 
 The default public service exposes only read/validation tools. Because both bootstrap modes write local readiness metadata, `governance_bootstrap` is available only from a bearer-protected service. To permit `apply` as well, launch with an externally managed token file and both bootstrap flags:
 

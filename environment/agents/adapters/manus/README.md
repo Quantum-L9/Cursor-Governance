@@ -42,7 +42,7 @@ make -C "$HOME/.cursor-governance" manus-install WS="$(pwd)"
 
 | Tool | Behavior | Mutation posture |
 |---|---|---|
-| `governance_status` | Reports governance, adapter, and optional workspace Git status. | Read-only. |
+| `governance_status` | Reports governance and adapter status; optional workspace Git status is available only on a bearer-protected service. | Read-only. |
 | `governance_validate` | Runs the existing Manus adapter validator; `full` also runs existing agent and PE descriptor validators. | Read-only. |
 | `governance_read` | Reads bounded text from an allowlisted governance path. | Read-only. |
 | `governance_search` | Searches bounded, allowlisted governance text. | Read-only. |

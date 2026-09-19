@@ -103,6 +103,11 @@ class ManusMcpServerTests(unittest.TestCase):
         self.assertTrue(result["isError"])
         self.assertIn("bearer-protected MCP deployment", result["structuredContent"]["error"])
 
+    def test_workspace_status_requires_a_bearer_protected_deployment(self) -> None:
+        result = self.service.call_tool("governance_status", {"workspace": str(REPOSITORY)})
+        self.assertTrue(result["isError"])
+        self.assertIn("bearer-protected MCP deployment", result["structuredContent"]["error"])
+
     def test_notifications_have_no_json_rpc_response(self) -> None:
         self.assertIsNone(
             self.service.handle_rpc(
