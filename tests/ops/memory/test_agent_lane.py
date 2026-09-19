@@ -116,3 +116,29 @@ def test_24h_prefetch_fail_open_does_not_degrade(
     assert result.ok
     assert result.agent_lane_record_ids == ()
     assert any("24h agent-lane search" in warning for warning in result.warnings)
+
+
+def test_agent_authored_meta_survives_the_hook_class_filter() -> None:
+    """Provenance decides hook exclusion, not memory class (F613-3).
+
+    ADR-0034 excludes hook capsules, META closes and Cursor-Governance
+    producers — who wrote the record. Banning the `meta` class outright also
+    dropped agent-authored meta/pickup writes, so legitimate content vanished
+    from SessionStart recall and sessionEnd enrichment alike.
+    """
+    record = SimpleNamespace(
+        tags=("agent:cursor",),
+        metadata={
+            "producer": "l9-graphite-memory",
+            "provenance": {"producer": "l9-graphite-memory", "source_agent_id": "cursor"},
+        },
+        memory_class="meta",
+        raw={},
+    )
+    assert is_agent_lane_record(record) is True
+
+
+def test_unattributed_meta_is_still_excluded() -> None:
+    """Fail closed: a meta record naming no author stays a hook artifact."""
+    record = SimpleNamespace(tags=(), metadata={}, memory_class="meta", raw={})
+    assert is_agent_lane_record(record) is False

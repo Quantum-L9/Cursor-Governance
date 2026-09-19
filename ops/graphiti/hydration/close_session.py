@@ -40,6 +40,37 @@ from typing import Any
 _SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$")
 _FILE_RE = re.compile(r"[\w./-]+\.(?:py|md|ya?ml|json|sh|ts|tsx|js|jsx)")
 
+#: An explicit "this is not finished" marker at the head of an agent write.
+#: ADR-0034 folds *decisions, unfinished work and file paths* into the capsule
+#: — three signals, not two. There is no `unfinished` memory class, so without
+#: a marker the enrichment had nothing to test and treated every non-decision
+#: record as pending work; a completed lesson then came back to the next
+#: session as an outstanding task.
+_UNFINISHED_RE = re.compile(
+    r"^\s*(?:TODO|NEXT|BLOCKED|BLOCKER|UNFINISHED|WIP|IN[ _-]?PROGRESS|FOLLOW[ _-]?UP)\b[:\-—]?",
+    re.IGNORECASE,
+)
+
+#: Tags that say the same thing on the record rather than in its text.
+_UNFINISHED_TAGS = frozenset(
+    {"unfinished", "todo", "next", "blocked", "blocker", "wip", "in-progress", "follow-up"}
+)
+
+
+def _is_unfinished_record(record: Any) -> bool:
+    """Whether an agent-lane record explicitly represents outstanding work.
+
+    Deliberately narrow. Admitting only explicitly-marked records keeps
+    completed insights and lessons as evidence; the cost of a miss is a fact
+    that stays out of ``unfinished_work``, while the cost of a false positive
+    is the next session being told finished work is still pending.
+    """
+    tags = {str(tag).strip().lower() for tag in (getattr(record, "tags", ()) or ())}
+    if tags & _UNFINISHED_TAGS:
+        return True
+    return bool(_UNFINISHED_RE.match(record.content or ""))
+
+
 _GRAPHITI_DIR = Path(__file__).resolve().parent.parent
 _REPO_ROOT = _GRAPHITI_DIR.parent.parent
 if str(_GRAPHITI_DIR) not in sys.path:
@@ -215,10 +246,16 @@ def _enrich_pickup_from_agent_writes(
             head = record.content.strip().splitlines()[0][:200]
         kind = (record.memory_class or "").lower()
         if head:
-            if kind == "decision" and head not in decisions:
-                decisions.append(head)
-            elif head not in unfinished and head not in decisions:
-                unfinished.append(head)
+            if kind == "decision":
+                if head not in decisions:
+                    decisions.append(head)
+            elif _is_unfinished_record(record):
+                # Only an explicitly-marked record is pending work. Everything
+                # else stays evidence: a completed insight or lesson is not a
+                # task, and reporting it as one made the next continuation
+                # instruct the agent to redo finished work.
+                if head not in unfinished and head not in decisions:
+                    unfinished.append(head)
         for match in _FILE_RE.findall(record.content or ""):
             if match not in files:
                 files.append(match)

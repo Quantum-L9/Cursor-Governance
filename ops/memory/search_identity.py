@@ -194,7 +194,20 @@ def verify_request_identity(
     )
     if echoed_after is None:
         unbound.append("recorded_after")
-    elif requested_after is not None and str(echoed_after) != requested_after:
+    elif requested_after is None:
+        # A selector present only in the receipt is drift, not agreement.
+        # `recorded_after` is result-affecting (ADR-0035), so a receipt that
+        # carries one the request never set describes a *narrower* search than
+        # Cursor asked for. Falling through to `bound` here let Cursor accept a
+        # result set filtered by a selector it did not request — the one case
+        # the equality check below cannot see, because it only runs when the
+        # request set a value to compare against.
+        mismatched.append("recorded_after")
+        detail.append(
+            f"receipt recorded_after {echoed_after!r} but the request set none; "
+            "the result set is filtered by a selector Cursor did not ask for"
+        )
+    elif str(echoed_after) != requested_after:
         mismatched.append("recorded_after")
         detail.append(f"receipt recorded_after {echoed_after!r} != requested {requested_after!r}")
     else:

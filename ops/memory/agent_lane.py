@@ -61,17 +61,30 @@ def is_agent_lane_record(record: Any) -> bool:
     metadata = _mapping(getattr(record, "metadata", None))
     if metadata.get("payload_schema") == CONTINUATION_SCHEMA:
         return False
-    memory_class = str(getattr(record, "memory_class", "") or "").strip().lower()
-    if memory_class in _HOOK_MEMORY_CLASSES:
-        return False
+
+    # Provenance is decisive for hook exclusion, not memory class. ADR-0034
+    # excludes *hook capsules, META closes and Cursor-Governance producers* —
+    # who wrote the record, not what class it carries. Banning the class
+    # outright also discarded agent-authored meta/pickup writes, so legitimate
+    # content vanished from both SessionStart recall and sessionEnd enrichment.
     provenance = _provenance(record)
     producer = str(provenance.get("producer") or metadata.get("producer") or "")
     lowered = producer.lower()
     if any(marker.lower() in lowered for marker in _HOOK_PRODUCER_MARKERS if marker):
         return False
-    if any(tag.startswith("agent:") for tag in tags):
-        return True
-    return bool(provenance.get("source_agent_id"))
+
+    agent_authored = any(tag.startswith("agent:") for tag in tags) or bool(
+        provenance.get("source_agent_id")
+    )
+
+    # Still fail closed on the hook classes when nothing identifies an author:
+    # an unattributed meta record is a hook artifact, so the class remains a
+    # tiebreaker — it is just no longer able to overrule real agent identity.
+    memory_class = str(getattr(record, "memory_class", "") or "").strip().lower()
+    if memory_class in _HOOK_MEMORY_CLASSES and not agent_authored:
+        return False
+
+    return agent_authored
 
 
 __all__ = [

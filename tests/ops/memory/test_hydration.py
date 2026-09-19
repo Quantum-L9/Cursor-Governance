@@ -10,6 +10,7 @@ from memory_boundary_fixtures import (
     OBJECTIVE,
     REPOSITORY,
     FakeMemoryCli,
+    agent_lane_record,
     continuation_record,
     error_stderr,
     health_payload,
@@ -472,3 +473,63 @@ def test_session_state_is_local_and_non_authoritative(
     assert "GRAPHITI" not in json.dumps(data).upper()
     assert ss.read_session_state("sess", directory=tmp_path) == data
     assert ss.read_session_state("other", directory=tmp_path) is None
+
+
+def _many_sections_payload(count: int) -> dict:
+    """A hydrate receipt with ``count`` ordinary sections."""
+    payload = hydration_payload(RECORD)
+    payload["sections"] = [
+        {
+            "memory_class": "semantic",
+            "content": f"ordinary context {i}",
+            "record_ids": [f"{i}" * 8 + "-0000-0000-0000-000000000000"],
+            "tokens_estimated": 12,
+            "highest_score": 0.9,
+        }
+        for i in range(count)
+    ]
+    return payload
+
+
+def test_agent_lane_sections_survive_packet_truncation(monkeypatch, fake_cli, bound) -> None:
+    """24h agent-lane facts must reach the packet, not sit behind the cut.
+
+    ``compile_session_packet`` renders only the first few ``context_sections``.
+    Appending the agent-lane sections put them past that boundary, so the
+    search could report OK while exposing none of the agent-written content to
+    the next session.
+    """
+    lane = [
+        agent_lane_record(
+            record_id=f"aaaaaaaa-0000-0000-0000-00000000000{i}",
+            content=f"agent fact {i}",
+        )
+        for i in range(2)
+    ]
+
+    def _search(argv, _stdin):
+        # The agent-lane search is the one bounded by --recorded-after.
+        if "--recorded-after" in argv and "session_continuation" not in argv:
+            return (0, search_payload(*lane), "")
+        return (0, search_payload(), "")
+
+    _healthy(fake_cli).reply("hydrate", 0, _many_sections_payload(7)).on("search", _search)
+    result = _hydrate(monkeypatch, fake_cli, bound)
+
+    assert result.status == "OK"
+    assert result.agent_lane_record_ids, "the agent-lane search returned records"
+
+    # The packet compiler's window is the property under test: agent-lane
+    # content must be inside it, not merely present somewhere in the tuple.
+    window = [content for _cls, content in result.context_sections[:6]]
+    assert "agent fact 0" in window
+    assert "agent fact 1" in window
+
+    # Ordinary hydration is not evicted by the reservation.
+    assert any(c.startswith("ordinary context") for c in window)
+
+    # record_ids stays index-aligned with context_sections: the packet zips them.
+    assert len(result.record_ids) == len(result.context_sections)
+    for record_id, (_cls, content) in zip(result.record_ids, result.context_sections, strict=True):
+        if content.startswith("agent fact "):
+            assert record_id.startswith("aaaaaaaa-"), "agent-lane id must move with its section"

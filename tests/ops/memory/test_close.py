@@ -174,6 +174,50 @@ def test_close_enriches_capsule_from_agent_lane_hits(workspace, scripted, fake_c
     assert any("pin recorded_after" in item for item in payload["decisions"])
 
 
+def test_completed_insights_are_not_reported_as_unfinished_work(
+    workspace, scripted, fake_cli
+) -> None:
+    """A finished lesson is evidence, not a pending task (F613-2).
+
+    Every non-decision record used to land in ``unfinished_work``, so the next
+    continuation instructed the agent to redo work that was already done.
+    """
+    done = agent_lane_record(
+        record_id="bbbbbbbb-0000-0000-0000-000000000001",
+        content="cypher lint landed for issue 272 and is green on main",
+        memory_class="insight",
+    )
+    fake_cli.reply("search", 0, search_payload(done))
+    report = _close(workspace)
+    assert report["status"] == STATUS_CLOSED_CANONICALLY
+    payload = _ingest_calls(fake_cli)[-1]["knowledge"]["structured_payload"]
+    assert not any("cypher lint landed" in item for item in payload["unfinished_work"])
+    assert not any("cypher lint landed" in item for item in payload["decisions"])
+
+
+def test_explicitly_marked_records_still_reach_unfinished_work(
+    workspace, scripted, fake_cli
+) -> None:
+    """The signal is the marker, by content head or by tag."""
+    by_content = agent_lane_record(
+        record_id="bbbbbbbb-0000-0000-0000-000000000002",
+        content="TODO: port the recorded_after guard to the close path",
+        memory_class="insight",
+    )
+    by_tag = agent_lane_record(
+        record_id="bbbbbbbb-0000-0000-0000-000000000003",
+        content="sonar identity still unresolved for the consumer clone",
+        memory_class="observation",
+    )
+    by_tag["tags"] = [*by_tag.get("tags", []), "blocked"]
+    fake_cli.reply("search", 0, search_payload(by_content, by_tag))
+    report = _close(workspace)
+    assert report["status"] == STATUS_CLOSED_CANONICALLY
+    unfinished = _ingest_calls(fake_cli)[-1]["knowledge"]["structured_payload"]["unfinished_work"]
+    assert any("port the recorded_after guard" in item for item in unfinished)
+    assert any("sonar identity still unresolved" in item for item in unfinished)
+
+
 def test_public_close_report_is_scalar_and_names_statuses(workspace, scripted) -> None:
     from ops.graphiti.hydration.cli import _public_close_report
 

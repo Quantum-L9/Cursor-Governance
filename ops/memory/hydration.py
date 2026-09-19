@@ -70,6 +70,15 @@ SOURCE_LEGACY_UNVERIFIED = "legacy_unverified"
 
 _OK_STATUSES = frozenset({OutcomeStatus.OK.value, OutcomeStatus.NO_HITS.value})
 
+#: How many 24h agent-lane sections are placed ahead of ordinary hydration
+#: sections, so they survive the packet compiler's truncation of
+#: ``context_sections``. Deliberately small: ``AGENT_LANE_LIMIT`` is 20 and the
+#: packet renders only a handful, so an unbounded prepend would evict ordinary
+#: hydration entirely. This reserves a guaranteed head without owning the
+#: consumer's window size — agent-lane facts beyond the reserve keep their old
+#: position after the ordinary sections.
+AGENT_LANE_PACKET_RESERVE = 3
+
 #: Continuation selection policies (audit P1-02). ``task`` is the default and
 #: the only one a task-bearing caller should use: a capsule is resumed only
 #: when it was written for the *same task in the same repository*, matched
@@ -537,8 +546,27 @@ def canonical_hydrate(
                 extra_ids.append(record.record_id)
                 seen.add(record.record_id)
             if extra_sections:
-                sections = sections + tuple(extra_sections)
-                record_ids = record_ids + tuple(extra_ids)
+                # Reserve packet space rather than appending. The packet
+                # compiler renders only the first `context_sections`, so
+                # appending put the 24h agent-lane facts behind a truncation
+                # boundary: the search could report OK and expose none of the
+                # agent-written content to the next session.
+                #
+                # Not a bare prepend either — AGENT_LANE_LIMIT is 20 against a
+                # much smaller packet window, so leading with all of them would
+                # evict ordinary hydration completely. The reserved head is
+                # guaranteed, the remainder keeps its old place behind the
+                # ordinary sections.
+                #
+                # `record_ids` is index-aligned with `context_sections`
+                # downstream (the packet zips the two), so both are reordered
+                # identically.
+                head = tuple(extra_sections[:AGENT_LANE_PACKET_RESERVE])
+                tail = tuple(extra_sections[AGENT_LANE_PACKET_RESERVE:])
+                head_ids = tuple(extra_ids[:AGENT_LANE_PACKET_RESERVE])
+                tail_ids = tuple(extra_ids[AGENT_LANE_PACKET_RESERVE:])
+                sections = head + sections + tail
+                record_ids = head_ids + record_ids + tail_ids
                 agent_lane_ids = tuple(extra_ids)
         elif recent.status is not OutcomeStatus.NO_HITS:
             warnings.append(
