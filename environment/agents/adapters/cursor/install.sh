@@ -9,6 +9,9 @@
 #                              (schema l9.cursor-bootstrap.v1; read by
 #                              ops/scripts/claude_bootstrap_receipt.py
 #                              --surface cursor — one reader, one expiry rule)
+# SessionStart / make start / /start-session is the required writer: it
+# overwrites this receipt on every bootstrap. This target remains the
+# explicit adapter wire.
 #
 # --check is a diagnosis: it writes bootstrap-check.json beside the real
 # receipt and never overwrites the session's own verdicts (same rule the

@@ -191,6 +191,38 @@ def test_compile_packet_with_pickup(monkeypatch, tmp_path):
     assert '"hydrate_stats"' in ctx
 
 
+def test_format_additional_context_is_not_truncated():
+    blob = "hydrated-fact-" * 400
+    packet = {
+        "packet_id": "abc",
+        "group_id": "cursor-governance",
+        "agent_id": "cursor",
+        "active_objective": "see full hydrate",
+        "next_action_contract": {"next_action": "continue", "rationale": "test", "blockers": []},
+        "degraded": False,
+        "memory_degraded": False,
+        "environment_fault": False,
+        "close_gap": False,
+        "close_gap_reason": "",
+        "fact_previews": [{"uuid": "11111111-1111-1111-1111-111111111111", "text_head": blob}],
+        "context_slice": blob,
+        "memory": {"status": "OK", "record_ids": ["11111111-1111-1111-1111-111111111111"]},
+        "hydrate_stats": {
+            "facts_returned": 1,
+            "pickup_parsed": True,
+            "context_chars": len(blob),
+            "search_queries_used": 1,
+            "budget_chars": 4000,
+            "memory_status": "OK",
+        },
+    }
+    ctx = comp.format_additional_context(packet)
+    assert "…[truncated]" not in ctx
+    assert blob in ctx
+    assert '"memory"' in ctx
+    assert "facts_preview (1):" in ctx
+
+
 def test_compile_packet_stale_continuation_says_repository_wins(monkeypatch, tmp_path):
     _canonical(monkeypatch, tmp_path, _hydration("OK", continuation=_continuation(stale=True)))
     packet = comp.compile_session_packet(
