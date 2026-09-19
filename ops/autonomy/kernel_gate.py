@@ -180,7 +180,13 @@ def write_receipt(root: Path, data: dict[str, Any]) -> Path:
     return path
 
 
-def record(root: Path, *, gov: Path, report: Path | None = None) -> dict[str, Any]:
+def record(
+    root: Path,
+    *,
+    gov: Path,
+    report: Path | None = None,
+    changed_paths: list[str] | None = None,
+) -> dict[str, Any]:
     """Record the tree-kernel claim, bound to a hashed apply report.
 
     The report is the artifact that constitutes the claim. It is validated
@@ -191,6 +197,13 @@ def record(root: Path, *, gov: Path, report: Path | None = None) -> dict[str, An
     deterministically. It moves the claim from unfalsifiable to falsifiable: a
     forged ``deltas`` entry names a specific path with a specific note, which a
     reviewer can contradict.
+
+    Args:
+        root: Workspace root.
+        gov: Governance root.
+        report: Apply report path (defaults to APPLY_REL).
+        changed_paths: List of changed file paths for diff coverage check.
+            If provided, verifies deltas cover the git diff (minus exempt paths).
 
     Raises:
         ReportError: the report is missing, escapes ``.l9/autonomy/``, has bad
@@ -204,6 +217,13 @@ def record(root: Path, *, gov: Path, report: Path | None = None) -> dict[str, An
         raise ReportError("; ".join(structure))
     # Raises on a delta path that does not exist in this tree.
     deltas = kernel_predicates.load_validated_deltas(root_r, confined)
+
+    # Phase 1 hardening: check diff coverage if changed_paths provided
+    if changed_paths is not None:
+        diff_errors = kernel_predicates.deltas_cover_diff(deltas, changed_paths)
+        if diff_errors:
+            raise ReportError("; ".join(diff_errors))
+
     receipt = {
         "schema": SCHEMA,
         "report_rel": confined.relative_to(root_r).as_posix(),
@@ -216,6 +236,8 @@ def record(root: Path, *, gov: Path, report: Path | None = None) -> dict[str, An
         # Recorded metadata, deliberately NOT the binding: a later rewrite
         # commit must not force a second LLM apply.
         "head": _git_head(root_r),
+        # Record the changed paths that were covered (for audit)
+        "changed_paths_count": len(changed_paths) if changed_paths else None,
     }
     write_receipt(root_r, receipt)
     return receipt
@@ -261,10 +283,17 @@ def template_command(root: Path, gov: Path) -> str:
 
 
 def apply_report_template() -> str:
-    """Skeleton for the apply report. Deltas are left empty on purpose.
+    """Skeleton for the apply report.
 
-    An empty ``deltas`` list fails ``record``, so this scaffold cannot be
-    stamped as-is. Filling it in is the work.
+    This template is **intentionally unstampable** — empty deltas, findings,
+    passes_run, and null unknowns all fail the hardened predicates. Filling
+    the template with real content is the work.
+
+    Phase 4 hardening: v2 reports require:
+    - Non-empty deltas (both kernels) with real notes
+    - Non-empty findings OR audit_scope + passes_run explaining clean state
+    - Required passes (context_and_scope_lock, reconciliation_and_convergence)
+    - Explicit unknowns key (empty list is OK)
     """
     return (
         "---\n"
@@ -275,9 +304,15 @@ def apply_report_template() -> str:
         "convergence_status: converged  # converged | partial | blocked\n"
         "deltas:\n"
         "  # One entry per file you actually changed. Non-empty, real paths.\n"
+        "  # Both kernels must have at least one delta.\n"
         "  - path: relative/path/you/changed.py\n"
         "    kernel: recursive_alignment  # or validate_repair\n"
-        "    note: what the kernel changed and why\n"
+        "    note: what the kernel changed and why  # MUST BE REAL, NOT TEMPLATE\n"
+        "findings: []  # UNSTAMPABLE: empty findings require audit_scope + passes_run\n"
+        "passes_run: []  # UNSTAMPABLE: must include required passes\n"
+        "passes_skipped: []  # List passes you intentionally skipped and why\n"
+        "unknowns: null  # UNSTAMPABLE: must be list (empty OK)\n"
+        "audit_scope: null  # Required when findings is empty\n"
         "---\n"
         "\n"
         "## Recursive Alignment\n"
@@ -457,8 +492,11 @@ def cmd_record(args: argparse.Namespace) -> int:
     root = workspace_root(args.workspace)
     gov = gov_root_from_env(args.gov_root)
     report = Path(args.report) if args.report else None
+    changed_paths = (
+        read_changed_file(Path(args.changed_file)) if args.changed_file else None
+    )
     try:
-        receipt = record(root, gov=gov, report=report)
+        receipt = record(root, gov=gov, report=report, changed_paths=changed_paths)
     except ReportError as exc:
         sys.stderr.write(f"FAIL: apply report rejected — {exc}\n")
         sys.stderr.write("      No receipt was written.\n")
@@ -520,6 +558,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--report",
         default=None,
         help=f"apply report path, workspace-relative (default {APPLY_REL.as_posix()})",
+    )
+    rec.add_argument(
+        "--changed-file",
+        default=None,
+        help="path to file listing changed paths (one per line) for diff coverage check",
     )
     rec.set_defaults(func=cmd_record)
 
