@@ -81,6 +81,24 @@ class PrefetchRuntimeGuardTests(unittest.TestCase):
         classify_pos = text.index("classify_hydrate_state(body)")
         self.assertGreater(classify_pos, compile_pos)
         self.assertNotIn("_claude_runtime_marker_present", text)
+        self.assertNotIn('agent_id="claude-code"', text)
+
+    def test_prefetch_agent_id_follows_canonical_surface(self) -> None:
+        sys.path.insert(0, str(PREFETCH.parent))
+        import memory_prefetch as prefetch
+
+        self.assertEqual(prefetch.prefetch_agent_id({"CURSOR_AGENT": "1"}), "cursor")
+        self.assertEqual(
+            prefetch.prefetch_agent_id(
+                {"CURSOR_AGENT": "1", "L9_GOVERNANCE_SURFACE": "claude-code"}
+            ),
+            "cursor",
+        )
+        self.assertEqual(prefetch.prefetch_agent_id({"CLAUDECODE": "1"}), "claude-code")
+        self.assertEqual(
+            prefetch.prefetch_agent_id({"L9_GOVERNANCE_SURFACE": "claude-code"}),
+            "claude-code",
+        )
 
     def test_false_packet_boolean_is_not_degraded(self) -> None:
         sys.path.insert(0, str(ROOT / "ops" / "scripts"))

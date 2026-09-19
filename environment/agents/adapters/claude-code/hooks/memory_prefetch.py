@@ -57,6 +57,17 @@ from surface_detect import is_claude_gate_surface  # noqa: E402
 from workspace_roots import DROPPED_CAP  # noqa: E402
 from workspace_roots import select_workspace_roots as _shared_select_workspace_roots  # noqa: E402
 
+
+def prefetch_agent_id(env: dict[str, str] | None = None) -> str:
+    """Writer id for this prefetch run.
+
+    The hook is Claude-owned, but ``--session-id`` is a repair override that
+    also runs on Cursor. Hard-coding ``claude-code`` stamped the wrong
+    surface onto Cursor hydrate blocks (SESSION_START_SPEC: a Cursor session
+    contains zero ``agent_id=claude-code`` hydrate blocks).
+    """
+    return "claude-code" if is_claude_gate_surface(env) else "cursor"
+
 #: Cloud containers put several repositories side by side. Hydrating each costs
 #: one packet of context, so the count is capped rather than unbounded — and the
 #: cap is reported in the emitted text, because a silent truncation reads as
@@ -191,8 +202,11 @@ def main() -> int:
 
     namespaces = st.resolve_namespaces(contract) or ["cursor-governance"]
     workspace = st.workspace_root()
-    os.environ.setdefault("L9_MEMORY_AGENT_ID", "claude-code")
-    os.environ.setdefault("USER_ID", "claude_code_agent")
+    agent_id = prefetch_agent_id()
+    os.environ.setdefault("L9_MEMORY_AGENT_ID", agent_id)
+    os.environ.setdefault(
+        "USER_ID", "claude_code_agent" if agent_id == "claude-code" else "cursor_agent"
+    )
 
     # BEFORE root selection: the namespace predicate imports ops.memory from the
     # governance root, and its except-branch fails OPEN so a resolver fault can
@@ -216,7 +230,7 @@ def main() -> int:
             compiled = compile_and_format(
                 project_dir=root,
                 conversation_id=session_id,
-                agent_id="claude-code",
+                agent_id=agent_id,
             )
             packet = compiled.get("packet") or {}
             group_id = str(packet.get("group_id") or "")
