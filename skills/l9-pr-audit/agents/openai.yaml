@@ -1,0 +1,12 @@
+interface:
+  display_name: L9 PR Audit
+  short_description: Deep evidence-backed PR and cross-PR audit with Fable handoff
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true
