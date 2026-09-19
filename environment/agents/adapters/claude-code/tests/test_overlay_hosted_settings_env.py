@@ -14,7 +14,9 @@ REPO = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(REPO / "environment" / "agents" / "adapters" / "claude-code"))
 
 from overlay_hosted_settings_env import (  # noqa: E402
+    GIT_QUERY_TIMEOUT_S,
     REQUIRED_SURFACE,
+    _local_env_is_authoritative,
     apply_overlay,
     overlay_hosted_settings,
     overlay_payload_from_environ,
@@ -161,8 +163,6 @@ class OverlayHostedSettingsEnvTests(unittest.TestCase):
         projection into the local file. Seeding from the tracked file here
         would overwrite it with an unrelated env.
         """
-        import overlay_hosted_settings_env as ov
-
         calls: list[dict] = []
 
         def fake_run(*args, **kwargs):
@@ -173,15 +173,17 @@ class OverlayHostedSettingsEnvTests(unittest.TestCase):
             workspace, _ = self._build(Path(tmp))
             local = workspace / ".claude" / "settings.local.json"
             local.write_text(json.dumps({"env": {}}), encoding="utf-8")
-            original = ov.subprocess.run
-            ov.subprocess.run = fake_run
+            # One module object process-wide: patching `.run` here is the same
+            # attribute the overlay resolves through its own globals.
+            original = subprocess.run
+            subprocess.run = fake_run
             try:
-                self.assertTrue(ov._local_env_is_authoritative(workspace, local))
+                self.assertTrue(_local_env_is_authoritative(workspace, local))
             finally:
-                ov.subprocess.run = original
+                subprocess.run = original
 
         self.assertTrue(calls, "the probe must actually invoke git")
-        self.assertEqual(calls[0].get("timeout"), ov.GIT_QUERY_TIMEOUT_S)
+        self.assertEqual(calls[0].get("timeout"), GIT_QUERY_TIMEOUT_S)
 
     def test_untracked_settings_still_seeds_env_from_settings_json(self) -> None:
         """Governance owns an untracked settings.json, so it holds the

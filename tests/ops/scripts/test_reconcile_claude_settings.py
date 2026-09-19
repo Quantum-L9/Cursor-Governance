@@ -11,6 +11,8 @@ SCRIPTS = Path(__file__).resolve().parents[3] / "ops" / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 from reconcile_claude_settings import (  # noqa: E402
+    GIT_QUERY_TIMEOUT_S,
+    _path_is_git_tracked,
     merge_user_settings,
     merge_workspace_local_settings,
     merge_workspace_settings,
@@ -372,23 +374,23 @@ def test_ownership_probe_is_bounded_and_a_hang_destroys_nothing(tmp_path: Path) 
     Bounded now, and the unknown resolves to the branch that destroys nothing:
     a hung git must never be what overwrites repo-owned bytes.
     """
-    import reconcile_claude_settings as rc
-
     calls: list[dict] = []
 
     def fake_run(*args, **kwargs):
         calls.append(kwargs)
         raise subprocess.TimeoutExpired(cmd="git", timeout=kwargs.get("timeout"))
 
-    original = rc.subprocess.run
-    rc.subprocess.run = fake_run
+    # `subprocess` is one module object process-wide, so patching `.run` here
+    # is the same attribute the reconciler resolves through its own globals.
+    original = subprocess.run
+    subprocess.run = fake_run
     try:
-        assert rc._path_is_git_tracked(tmp_path, ".claude/settings.json") is True
+        assert _path_is_git_tracked(tmp_path, ".claude/settings.json") is True
     finally:
-        rc.subprocess.run = original
+        subprocess.run = original
 
     assert calls, "the probe must actually invoke git"
-    assert calls[0].get("timeout") == rc.GIT_QUERY_TIMEOUT_S, (
+    assert calls[0].get("timeout") == GIT_QUERY_TIMEOUT_S, (
         "every external call carries an explicit timeout"
     )
 
@@ -396,17 +398,16 @@ def test_ownership_probe_is_bounded_and_a_hang_destroys_nothing(tmp_path: Path) 
 def test_absent_git_still_answers_untracked(tmp_path: Path) -> None:
     """Distinct from a hang: with no git, nothing CAN be tracked, so False is
     the true answer rather than a guess, and the managed path stays correct."""
-    import reconcile_claude_settings as rc
 
     def fake_run(*args, **kwargs):
         raise OSError("git not found")
 
-    original = rc.subprocess.run
-    rc.subprocess.run = fake_run
+    original = subprocess.run
+    subprocess.run = fake_run
     try:
-        assert rc._path_is_git_tracked(tmp_path, ".claude/settings.json") is False
+        assert _path_is_git_tracked(tmp_path, ".claude/settings.json") is False
     finally:
-        rc.subprocess.run = original
+        subprocess.run = original
 
 
 def test_untracked_workspace_settings_still_written_in_place(tmp_path: Path) -> None:
