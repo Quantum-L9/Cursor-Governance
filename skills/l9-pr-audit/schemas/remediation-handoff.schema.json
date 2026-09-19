@@ -1,15 +1,18 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://quantum-l9.local/schemas/l9-pr-audit-remediation-handoff-v1.3.json",
-  "title": "L9 PR Audit Remediation Handoff",
+  "$id": "https://quantum-l9.local/schemas/l9-pr-audit-remediation-handoff-v2.0.json",
+  "title": "L9 PR Audit Remediation Handoff v2.0",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "schema_version",
+    "autoremediate",
     "audit_id",
     "repository_binding",
     "audit_coverage",
     "authority_resolution_status",
+    "architecture_policy_adapters",
+    "boundary_map",
     "pr_bindings",
     "work_order",
     "dependency_blocked_findings",
@@ -17,12 +20,22 @@
     "anti_bypass_checks",
     "cross_pr_evidence_pack",
     "residual_unknowns",
+    "adversarial_assurance",
     "minimum_safe_next_action",
+    "convergence_requirements",
+    "publication",
     "authority_note"
   ],
   "properties": {
     "schema_version": {
-      "const": "l9.pr-audit.remediation-handoff.v1.3"
+      "const": "l9.pr-audit.remediation-handoff.v2.0"
+    },
+    "autoremediate": {
+      "type": "integer",
+      "enum": [
+        0,
+        1
+      ]
     },
     "audit_id": {
       "type": "string",
@@ -73,7 +86,10 @@
           "severity",
           "confidence",
           "root_cause_state",
+          "origin",
+          "origin_evidence_ids",
           "merge_blocking",
+          "merge_blocking_basis",
           "affected_prs",
           "semantic_owner",
           "execution_owner",
@@ -83,6 +99,11 @@
           "mutation_block_reasons",
           "depends_on_findings",
           "blocks_findings",
+          "governing_authority",
+          "observed_behavior",
+          "expected_behavior",
+          "proof_of_mismatch",
+          "impact",
           "root_cause",
           "behavioral_closure_condition",
           "closing_validation",
@@ -294,6 +315,78 @@
             "items": {
               "type": "object"
             }
+          },
+          "origin": {
+            "enum": [
+              "PR_INTRODUCED",
+              "PR_EXPOSED",
+              "PRE_EXISTING",
+              "UNKNOWN"
+            ]
+          },
+          "merge_blocking_basis": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "authority_id",
+              "rationale",
+              "evidence_ids"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "BLOCKING",
+                  "NON_BLOCKING",
+                  "UNKNOWN"
+                ]
+              },
+              "authority_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "rationale": {
+                "type": "string",
+                "minLength": 1
+              },
+              "evidence_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
+              }
+            }
+          },
+          "governing_authority": {
+            "type": "object"
+          },
+          "observed_behavior": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expected_behavior": {
+            "type": "string",
+            "minLength": 1
+          },
+          "proof_of_mismatch": {
+            "type": "string",
+            "minLength": 1
+          },
+          "impact": {
+            "type": "string",
+            "minLength": 1
+          },
+          "origin_evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
           }
         }
       }
@@ -310,9 +403,149 @@
     "minimum_safe_next_action": {
       "type": "object"
     },
+    "publication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command",
+        "makefile_authority",
+        "target_repository_makefile_authorized",
+        "preserve_pr_identity",
+        "blocked_status",
+        "merge_authorized"
+      ],
+      "properties": {
+        "command": {
+          "const": "make pr"
+        },
+        "makefile_authority": {
+          "const": "SSOT_MAKEFILE"
+        },
+        "target_repository_makefile_authorized": {
+          "const": false
+        },
+        "preserve_pr_identity": {
+          "const": true
+        },
+        "blocked_status": {
+          "const": "PUBLICATION_BLOCKED"
+        },
+        "merge_authorized": {
+          "const": false
+        }
+      }
+    },
     "authority_note": {
       "type": "string",
       "minLength": 1
+    },
+    "convergence_requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_objective",
+        "additional_requirements",
+        "merge_authorized",
+        "ci_policy",
+        "review_thread_policy"
+      ],
+      "properties": {
+        "primary_objective": {
+          "const": "RESOLVE_AUDIT_FINDINGS"
+        },
+        "additional_requirements": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "RESOLVE_CURRENT_CI_FAILURES",
+              "RESOLVE_ALL_CURRENT_CODE_REVIEW_THREADS"
+            ]
+          },
+          "allOf": [
+            {
+              "contains": {
+                "const": "RESOLVE_CURRENT_CI_FAILURES"
+              }
+            },
+            {
+              "contains": {
+                "const": "RESOLVE_ALL_CURRENT_CODE_REVIEW_THREADS"
+              }
+            }
+          ]
+        },
+        "merge_authorized": {
+          "const": false
+        },
+        "ci_policy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "review_thread_policy": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "architecture_policy_adapters": {
+      "type": "object"
+    },
+    "boundary_map": {
+      "type": "object"
+    },
+    "adversarial_assurance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "changed_symbol_count",
+        "material_claim_count",
+        "supported_material_claim_count",
+        "falsification_probe_count",
+        "survived_probe_count",
+        "falsified_probe_count",
+        "inconclusive_probe_count",
+        "unknown_material_claim_ids"
+      ],
+      "properties": {
+        "changed_symbol_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "material_claim_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "supported_material_claim_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "falsification_probe_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "survived_probe_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "falsified_probe_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "inconclusive_probe_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unknown_material_claim_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      }
     }
   }
 }

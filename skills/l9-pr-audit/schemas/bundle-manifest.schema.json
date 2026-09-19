@@ -1,15 +1,17 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://quantum-l9.local/schemas/l9-pr-audit-bundle-manifest-v1.3.json",
-  "title": "L9 PR Audit Bundle Manifest",
+  "$id": "https://quantum-l9.local/schemas/l9-pr-audit-bundle-manifest-v2.0.json",
+  "title": "L9 PR Audit Bundle Manifest v2.0",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "schema_version",
     "builder_version",
     "builder_sha256",
+    "autoremediate",
     "audit_id",
     "canonical_audit_sha256",
+    "change_ledger_set_sha256",
     "audit_schema_sha256",
     "handoff_schema_sha256",
     "manifest_schema_sha256",
@@ -19,10 +21,17 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "l9.pr-audit.bundle-manifest.v1.3"
+      "const": "l9.pr-audit.bundle-manifest.v2.0"
     },
     "builder_version": {
-      "const": "1.3.0"
+      "const": "2.0.0"
+    },
+    "autoremediate": {
+      "type": "integer",
+      "enum": [
+        0,
+        1
+      ]
     },
     "audit_id": {
       "type": "string",
@@ -95,6 +104,10 @@
       }
     },
     "builder_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "change_ledger_set_sha256": {
       "type": "string",
       "pattern": "^[0-9a-f]{64}$"
     }
