@@ -164,6 +164,38 @@ def test_rest_completeness_is_not_vacuously_true(
     assert snap["completeness"]["unresolved_threads_captured"] is False
 
 
+def test_graphql_thread_keys_comment_id_on_databaseid_not_node_id() -> None:
+    """A GraphQL-built ledger must stay usable on a REST surface.
+
+    Regression: comment_id fell back to the comment's GraphQL node id
+    (`PRRC_…`), so the ledger looked REST-portable and then failed in
+    reply_threads._comment_id, which int()s that value.
+    """
+    node = {
+        "id": "PRRT_kwDOabc",
+        "isResolved": False,
+        "comments": {
+            "nodes": [
+                {
+                    "id": "PRRC_kwDOxyz",
+                    "databaseId": 4053495282,
+                    "body": "finding",
+                    "path": "a.py",
+                    "line": 1,
+                    "author": {"login": "bot"},
+                }
+            ]
+        },
+    }
+    finding = ingest_signals._from_thread(node, 0)
+    assert finding is not None
+    assert finding["thread_id"] == "PRRT_kwDOabc"
+    assert finding["comment_id"] == 4053495282
+    assert finding["comment_id"] != "PRRC_kwDOxyz"
+    # The point of carrying it: reply_threads can address it on a REST surface.
+    assert int(str(finding["comment_id"])) == 4053495282
+
+
 def test_graphql_surface_still_uses_graphql(graphql: None, monkeypatch: pytest.MonkeyPatch) -> None:
     called: list[list[str]] = []
 

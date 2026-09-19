@@ -44,6 +44,7 @@ query($owner: String!, $repo: String!, $pr: Int!, $cursor: String) {
           comments(first: 20) {
             nodes {
               id
+              databaseId
               body
               path
               line
@@ -196,9 +197,12 @@ def _from_thread(node: dict[str, Any], index: int) -> dict[str, Any] | None:
         "gate": None,
         "raw": body,
         "thread_id": node.get("id"),
-        # REST surfaces have no node id; reply_threads.py addresses the thread
-        # by its first comment instead. Carry both so a ledger is portable.
-        "comment_id": node.get("comment_id") or first.get("id"),
+        # REST surfaces have no node id; reply_threads.py addresses the thread by
+        # its first comment instead. Carry both so a ledger is portable — but the
+        # REST key is the comment's *databaseId*, never its GraphQL node id.
+        # `id` here is `PRRC_…`, which int() rejects, so storing it would make a
+        # GraphQL-built ledger look REST-portable and fail on the REST surface.
+        "comment_id": node.get("comment_id") or first.get("databaseId"),
         "severity_label": _severity_label(body),
     }
 

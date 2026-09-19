@@ -496,10 +496,16 @@ def project_mcp(root: Path, workspace: Path, check: bool) -> DomainOutcome:
 
     tracked, probed = _mcp_is_git_tracked(workspace)
     if not probed:
-        # Ownership undeterminable (no git, probe timeout). Preserve the historical
-        # write so a fresh consumer still gets an .mcp.json, but never silently:
-        # a tracked file overwritten here is the failure this guard exists to catch.
+        # Ownership undeterminable (no git, probe timeout, import error). Fail
+        # closed on the decision: an existing file might be repo-owned, and
+        # overwriting it is exactly the failure this guard exists to catch, so
+        # report drift instead. Only create a missing file, which cannot be
+        # repo-owned and which a fresh consumer still needs.
         outcome.detail["ownership_probe"] = "unavailable"
+        if target.is_file():
+            outcome.status = "drift"
+            outcome.detail["unprobed_drift"] = str(target)
+            return outcome
     elif tracked:
         # Repo-owned: report, never overwrite. This is the doctrine
         # reconcile_claude_settings already applies to tracked settings and hooks

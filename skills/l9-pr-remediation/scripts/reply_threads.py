@@ -88,15 +88,6 @@ def _rest(method: str, path: str, payload: dict[str, Any] | None = None) -> str:
     return _run_gh([*argv, "--input", "-"], input_text=json.dumps(payload))
 
 
-def _ccr_threads(repo: str, number: int) -> list[dict[str, Any]]:
-    """Live review-thread state. The only listing available on a REST surface."""
-    raw = _rest("GET", f"repos/{repo}/pulls/{number}/ccr/review_threads")
-    data = json.loads(raw)
-    if not isinstance(data, list):
-        _fail(f"ccr/review_threads returned {type(data).__name__}, expected list")
-    return data
-
-
 def _comment_id(th: dict[str, Any]) -> int:
     raw = th.get("comment_id")
     try:
@@ -107,6 +98,10 @@ def _comment_id(th: dict[str, Any]) -> int:
             f"comment_id ({raw!r}) — REST surfaces key on comment_id, which "
             "ingest_signals.py sources from ccr/review_threads"
         )
+        # Unreachable: _fail raises SystemExit. Stated explicitly because static
+        # analysis does not infer NoReturn through the helper, and an `except`
+        # that falls through implicitly returns None from a `-> int` function.
+        raise
 
 
 def _reply_rest(repo: str, number: int, threads: list[dict[str, Any]]) -> int:
