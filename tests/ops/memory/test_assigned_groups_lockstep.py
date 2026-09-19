@@ -3,8 +3,9 @@
 
 ``environment/agents/tools/render_principals.py`` turns each agent's
 ``assigned_groups`` straight into that principal's write grants, and its own
-comment says the list "must stay in lockstep with ops/graphiti/group_registry
-.yaml" -- but nothing enforced it. A typo, or a repository that was never
+comment says the list must stay in lockstep with
+``ops/graphiti/group_registry.yaml`` -- but nothing enforced it. A typo, or a
+repository that was never
 registered, renders a grant for a namespace memory will never resolve, and the
 failure surfaces much later as an opaque "namespace did not match any write
 grant" at the moment an agent tries to record something.

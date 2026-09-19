@@ -75,7 +75,8 @@ CONTINUATION_TAG = "session_continuation"
 #   ``session_summary`` -> itself     not a MemoryClass; it only worked because
 #                                     the package CLI maps it to ``episodic``.
 #                                     Stated explicitly instead.
-# ``tests/ops/memory/test_kind_aliases.py`` fails if a value stops being a real
+# ``test_every_write_alias_reaches_a_class_the_bound_release_accepts`` in
+# ``tests/ops/memory/test_cli.py`` fails if a value stops being a real
 # MemoryClass or starts pointing at another alias.
 KIND_ALIASES = {
     "pickup_context": "episodic",
