@@ -222,6 +222,8 @@ def workspace_for_target(tool_input: dict[str, Any] | None = None) -> Path:
         try:
             path = path.resolve()
         except OSError:
+            # Broken symlink or unreadable parent: keep the unresolved Path
+            # so the parent walk / git toplevel probe can still succeed.
             pass
         base = path if path.is_dir() else path.parent
         toplevel = _git_toplevel(base)

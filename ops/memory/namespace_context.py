@@ -352,6 +352,7 @@ def locate_clone_for_namespace(
         if slug in repository_matches(registry, start):
             return start
     except _RESOLVE_ERRORS:
+        # Start path is not this slug or cannot be read; keep looking.
         pass
     roots: list[Path] = []
     for raw in (start, start.parent, Path.home()):
