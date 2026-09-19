@@ -147,17 +147,23 @@ import memory_state as st  # noqa: E402
 
 
 def hook_session_start_payload(context: str) -> dict[str, object]:
-    """SessionStart envelope a human can audit without unescaping.
+    """SessionStart envelope.
 
-    Claude Code still requires one JSON document. A compact string value hid
-    every field behind ``\\n`` and ``\\u00a7``. One array element per line
-    keeps the host contract (additionalContext arrays concatenate) and makes
-    stdout one field/value per line.
+    ``additionalContext`` is a **string**. SESSION_START_SPEC.md §3 and the
+    Claude Code provider contract both define it that way, and the host reads
+    it as one: an array is not concatenated, it is not injected at all, so the
+    prefetch can hydrate successfully and still deliver nothing.
+
+    An earlier revision split the context on newlines to make stdout readable
+    one field per line. That traded the wire type for presentation. The
+    readability it was after is in the *content* — the context keeps its own
+    newlines and its non-ASCII intact (``ensure_ascii=False`` at the emit
+    site), which is what a human reading the log needs.
     """
     return {
         "hookSpecificOutput": {
             "hookEventName": "SessionStart",
-            "additionalContext": context.split("\n"),
+            "additionalContext": context,
         }
     }
 

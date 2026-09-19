@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from memory_boundary_fixtures import FakeMemoryCli, health_payload, search_payload
@@ -85,6 +87,10 @@ def test_pickup_context_writes_an_episodic_record_tagged_as_a_continuation(
     fake_cli.reply("write", 0, _write_payload())
     _use(monkeypatch, bound, fake_cli)
     monkeypatch.setattr(cli, "read_prefetch_bind", lambda _ws: None)
+    # `--agent-id` defaults from the ambient L9_MEMORY_AGENT_ID, which appends
+    # an `agent:<id>` tag. Asserting exact tag equality without pinning that
+    # env made the test pass on CI and fail in any shell that exports it.
+    monkeypatch.delenv("L9_MEMORY_AGENT_ID", raising=False)
     code = cli.main(
         ["write", "PICKUP", "--kind", "pickup_context", "--workspace", str(ROOT), "--tag", "x"]
     )
@@ -117,12 +123,16 @@ def test_search_with_no_hits_completes(monkeypatch, bound, fake_cli: FakeMemoryC
 
 
 def test_write_unbound_group_id_runs_at_the_owning_clone(
-    monkeypatch, bound, fake_cli: FakeMemoryCli, capsys
+    monkeypatch, bound, fake_cli: FakeMemoryCli, capsys, tmp_path
 ) -> None:
     """Remediator from CG: --group-id CEG writes CEG, it does not fall through to CG."""
     fake_cli.reply("write", 0, _write_payload())
     _use(monkeypatch, bound, fake_cli)
-    ceg = Path("/Users/ib-mac/Cognitive.Engine.Graphs")
+    # A synthetic owning clone. The path only has to be a second location that
+    # is not this checkout; a developer's real clone made the test host-specific
+    # for no added coverage (INVARIANTS: no hardcoded /Users or /home paths).
+    ceg = tmp_path / "Cognitive.Engine.Graphs"
+    ceg.mkdir()
     monkeypatch.setattr(cli, "read_prefetch_bind", lambda _ws: None)
     monkeypatch.setattr(cli, "locate_clone_for_namespace", lambda slug, from_workspace=None: ceg)
     code = cli.main(
@@ -151,7 +161,9 @@ def test_write_follows_one_prefetch_bind(
 ) -> None:
     fake_cli.reply("write", 0, _write_payload())
     _use(monkeypatch, bound, fake_cli)
-    ceg = Path("/Users/ib-mac/Cognitive.Engine.Graphs")
+    # Synthetic owning clone — see the sibling test above.
+    ceg = tmp_path / "Cognitive.Engine.Graphs"
+    ceg.mkdir()
     monkeypatch.setattr(
         cli,
         "read_prefetch_bind",
@@ -277,3 +289,125 @@ def test_the_provider_client_and_its_tombstone_are_gone() -> None:
     )
     assert proc.returncode == 0
     assert "health" in proc.stdout
+
+
+def _receipt(path: Path, *, mtime: float, **fields: object) -> None:
+    """Write one receipt and pin its mtime, so recency is controllable."""
+    body: dict = {"created_at": time.time(), **fields}
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(body), encoding="utf-8")
+    os.utime(path, (mtime, mtime))
+
+
+def test_prefetch_bind_ignores_a_newer_writeback_receipt(tmp_path, monkeypatch) -> None:
+    """Recency does not identify a bind (F612-2).
+
+    Write-back receipts share the receipts directory with prefetch receipts by
+    design. Selecting the newest file let a write-back — which carries no
+    namespace — supply the bind, so the operator write silently lost the
+    exclusive bind that was still in force.
+    """
+    monkeypatch.setenv("L9_MEMORY_AGENT_ID", "claude-code")
+    monkeypatch.delenv("CURSOR_CONVERSATION_ID", raising=False)
+    receipts = tmp_path / ".l9" / "memory" / "receipts"
+
+    _receipt(
+        receipts / "claude-code__chat-1.json",
+        mtime=1000.0,
+        receipt_id="claude-code__chat-1",
+        agent_id="claude-code",
+        conversation_id="chat-1",
+        status="prefetched",
+        group_id="owning-repo",
+        exclusive_bind=True,
+    )
+    _receipt(
+        receipts / "chat-1.writeback.json",
+        mtime=2000.0,  # newer than the prefetch receipt
+        receipt_id="chat-1" + ".writeback",
+        status="closed",
+    )
+
+    bind = cli.read_prefetch_bind(str(tmp_path))
+    assert bind is not None, "the prefetch receipt must still be found"
+    assert bind["receipt_id"] == "claude-code__chat-1"
+    assert cli.bound_write_namespace(bind) == "owning-repo"
+
+
+def test_prefetch_bind_ignores_another_chat_and_another_agent(tmp_path, monkeypatch) -> None:
+    """A bind is this writer's, not whoever wrote most recently."""
+    monkeypatch.setenv("L9_MEMORY_AGENT_ID", "claude-code")
+    monkeypatch.setenv("CURSOR_CONVERSATION_ID", "chat-1")
+    receipts = tmp_path / ".l9" / "memory" / "receipts"
+
+    _receipt(
+        receipts / "claude-code__chat-1.json",
+        mtime=1000.0,
+        receipt_id="claude-code__chat-1",
+        agent_id="claude-code",
+        conversation_id="chat-1",
+        status="prefetched",
+        group_id="mine",
+    )
+    _receipt(
+        receipts / "claude-code__chat-2.json",
+        mtime=3000.0,  # newest, but a different chat
+        receipt_id="claude-code__chat-2",
+        agent_id="claude-code",
+        conversation_id="chat-2",
+        status="prefetched",
+        group_id="other-chat",
+    )
+    _receipt(
+        receipts / "cursor__chat-1.json",
+        mtime=4000.0,  # newest overall, but a different writer
+        receipt_id="cursor__chat-1",
+        agent_id="cursor",
+        conversation_id="chat-1",
+        status="prefetched",
+        group_id="other-agent",
+    )
+
+    assert cli.bound_write_namespace(cli.read_prefetch_bind(str(tmp_path))) == "mine"
+
+
+def test_prefetch_bind_skips_non_dict_and_expired_receipts(tmp_path, monkeypatch) -> None:
+    """A rejected file must not consume the recency watermark.
+
+    The newest entry being a JSON array used to set the result to None *and*
+    advance the watermark, so a valid older receipt could never win.
+    """
+    monkeypatch.setenv("L9_MEMORY_AGENT_ID", "claude-code")
+    monkeypatch.delenv("CURSOR_CONVERSATION_ID", raising=False)
+    receipts = tmp_path / ".l9" / "memory" / "receipts"
+
+    _receipt(
+        receipts / "claude-code__chat-1.json",
+        mtime=1000.0,
+        receipt_id="claude-code__chat-1",
+        agent_id="claude-code",
+        conversation_id="chat-1",
+        status="prefetched",
+        group_id="mine",
+    )
+    receipts.mkdir(parents=True, exist_ok=True)
+    not_a_dict = receipts / "zz-array.json"
+    not_a_dict.write_text(json.dumps(["not", "a", "receipt"]), encoding="utf-8")
+    os.utime(not_a_dict, (5000.0, 5000.0))
+
+    expired = receipts / "claude-code__chat-old.json"
+    expired.write_text(
+        json.dumps(
+            {
+                "created_at": time.time() - (cli._PREFETCH_RECEIPT_TTL + 60),
+                "receipt_id": "claude-code__chat-old",
+                "agent_id": "claude-code",
+                "status": "prefetched",
+                "group_id": "stale",
+            }
+        ),
+        encoding="utf-8",
+    )
+    os.utime(expired, (6000.0, 6000.0))
+
+    assert cli.bound_write_namespace(cli.read_prefetch_bind(str(tmp_path))) == "mine"

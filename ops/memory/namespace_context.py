@@ -316,6 +316,14 @@ def resolve_namespace_context(
     )
 
 
+#: What a best-effort ``Path.resolve()`` can raise here. A permission or
+#: missing-component fault surfaces as OSError, but CPython reports a symlink
+#: loop as RuntimeError on 3.12 (only later versions fold it into OSError), so
+#: catching OSError alone still let the canonical broken-link case crash write
+#: routing.
+_RESOLVE_ERRORS = (OSError, RuntimeError)
+
+
 def locate_clone_for_namespace(
     slug: str, *, from_workspace: str | Path | None = None
 ) -> Path | None:
@@ -329,14 +337,27 @@ def locate_clone_for_namespace(
     registry = load_registry()
     config = (registry.get("repos") or {}).get(slug) or {}
     hints = [str(item) for item in config.get("path_hints") or [] if str(item).strip()]
-    start = Path(from_workspace or os.getcwd()).expanduser().resolve()
-    if slug in repository_matches(registry, start):
-        return start
+    # Resolution is best-effort throughout this helper: the roots loop below
+    # already treats an OSError from `.resolve()` as "skip this hint, keep
+    # looking". This first resolution bypassed that and raised instead, so a
+    # broken symlink or an unreadable parent on the *starting* path crashed
+    # write routing rather than degrading to "no clone located" — which the
+    # caller already handles by staying in the session workspace.
+    raw_start = Path(from_workspace or os.getcwd()).expanduser()
+    try:
+        start = raw_start.resolve()
+    except _RESOLVE_ERRORS:
+        start = raw_start
+    try:
+        if slug in repository_matches(registry, start):
+            return start
+    except _RESOLVE_ERRORS:
+        pass
     roots: list[Path] = []
     for raw in (start, start.parent, Path.home()):
         try:
             resolved = raw.resolve()
-        except OSError:
+        except _RESOLVE_ERRORS:
             continue
         if resolved not in roots:
             roots.append(resolved)

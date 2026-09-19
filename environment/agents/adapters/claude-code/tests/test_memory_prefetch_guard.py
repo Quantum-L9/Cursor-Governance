@@ -101,7 +101,14 @@ class PrefetchRuntimeGuardTests(unittest.TestCase):
             "claude-code",
         )
 
-    def test_emit_is_pretty_json_one_field_per_line(self) -> None:
+    def test_additional_context_is_a_string_not_an_array(self) -> None:
+        """SESSION_START_SPEC §3: ``additionalContext`` is a string.
+
+        An array is not concatenated by the host — it is not injected at all,
+        so the prefetch can hydrate successfully and still deliver nothing.
+        The wire type is therefore asserted directly, since that is the
+        property the host contract turns on.
+        """
         sys.path.insert(0, str(PREFETCH.parent))
         import memory_prefetch as prefetch
 
@@ -112,19 +119,20 @@ class PrefetchRuntimeGuardTests(unittest.TestCase):
             "law=CANONICAL_LAW §8"
         )
         payload = prefetch.hook_session_start_payload(context)
-        lines = payload["hookSpecificOutput"]["additionalContext"]
-        self.assertEqual(
-            lines,
-            [
-                "L9 memory: ENFORCED",
-                "transport=memory-control-plane/v1",
-                "namespace=cursor-governance",
-                "law=CANONICAL_LAW §8",
-            ],
-        )
+        emitted = payload["hookSpecificOutput"]["additionalContext"]
+        self.assertIsInstance(emitted, str)
+        self.assertNotIsInstance(emitted, list)
+        self.assertEqual(emitted, context)
+        self.assertEqual(payload["hookSpecificOutput"]["hookEventName"], "SessionStart")
+
+        # Assert the shape on the wire form too — that is what the host parses.
         rendered = json.dumps(payload, ensure_ascii=False, indent=2)
-        self.assertIn('\n      "transport=memory-control-plane/v1",\n', rendered)
-        self.assertNotIn("\\n", rendered)
+        reparsed = json.loads(rendered)
+        self.assertIsInstance(reparsed["hookSpecificOutput"]["additionalContext"], str)
+        self.assertEqual(reparsed["hookSpecificOutput"]["additionalContext"], context)
+
+        # Readability of the *content* is still guaranteed: ensure_ascii=False
+        # keeps the section sign literal rather than §-escaped.
         self.assertIn("CANONICAL_LAW §8", rendered)
         self.assertNotIn("\\u00a7", rendered)
 
