@@ -9,9 +9,11 @@ from typing import Any
 import pytest
 from memory_boundary_fixtures import (
     FakeMemoryCli,
+    agent_lane_record,
     close_payload,
     distill_payload,
     error_stderr,
+    search_payload,
 )
 
 from ops.graphiti.hydration import close_session as cs
@@ -104,6 +106,7 @@ def scripted(fake_cli: FakeMemoryCli, bound, monkeypatch: pytest.MonkeyPatch):
     """A canonical client over the scripted CLI, injected into every close path."""
     client = MemoryControlPlaneClient(bound, runner=fake_cli.run, session_id="sess")
     monkeypatch.setattr(cs, "memory_client", lambda *_a, **_k: client)
+    fake_cli.reply("search", 0, search_payload())
     fake_cli.reply("ingest-governed-candidate", 0, candidate_payload())
     fake_cli.reply("close", 0, close_payload())
     fake_cli.reply("distill", 0, distill_payload())
@@ -152,6 +155,23 @@ def test_normal_close_admits_capsule_then_closes_canonically(workspace, scripted
     assert receipt["write_count"] == 2
     # No provider vocabulary anywhere near the boundary.
     assert "add_memory" not in json.dumps([c[0] for c in fake_cli.calls])
+    assert report["pickup"]["active_objective"] == "Continue work in Cursor-Governance"
+    assert any(
+        args[1] == "search" and "--recorded-after" in args for args, _c, _s in fake_cli.calls
+    )
+
+
+def test_close_enriches_capsule_from_agent_lane_hits(workspace, scripted, fake_cli) -> None:
+    agent = agent_lane_record(
+        content="decision: pin recorded_after before the 24h prefetch ships",
+        memory_class="decision",
+    )
+    fake_cli.reply("search", 0, search_payload(agent))
+    report = _close(workspace)
+    assert report["status"] == STATUS_CLOSED_CANONICALLY
+    candidate = _ingest_calls(fake_cli)[-1]
+    payload = candidate["knowledge"]["structured_payload"]
+    assert any("pin recorded_after" in item for item in payload["decisions"])
 
 
 def test_public_close_report_is_scalar_and_names_statuses(workspace, scripted) -> None:
