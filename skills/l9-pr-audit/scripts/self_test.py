@@ -13,9 +13,21 @@ from pathlib import Path
 
 sys.dont_write_bytecode = True
 
+# Running this file directly puts its own directory on sys.path; pytest
+# collecting it (the name matches `*_test.py`) does not. Insert it explicitly
+# so the sibling imports below resolve under both, as the previous revision of
+# this pack did.
+_SCRIPTS = Path(__file__).resolve().parent
+if str(_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS))
+
 import build_audit_bundle as bab  # noqa: E402
 import build_change_ledger as bcl  # noqa: E402
 import deterministic_closure as dc  # noqa: E402
+
+# This is a standalone self-test driver, not a pytest suite; pytest must not
+# collect its module-level helpers as tests.
+__test__ = False
 
 A = "a" * 40
 B = "b" * 40
