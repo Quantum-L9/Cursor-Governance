@@ -14,6 +14,7 @@ sys.path.insert(0, str(REPO / "ops" / "scripts"))
 
 from compose_pr_body import (  # noqa: E402
     SCHEMA,
+    THIN_PROBLEM_NOTE,
     UNMEASURED,
     MechanicalFacts,
     compose_pr_body,
@@ -522,6 +523,49 @@ class ComposePrBodyTests(unittest.TestCase):
                 "child: second real change",
             ],
         )
+
+    def test_subject_only_problem_is_marked_thin(self) -> None:
+        """A Problem with no commit body paragraph says so, in the body and the handoff.
+
+        The composer has no prose source beyond subjects and the oldest commit's
+        first body paragraph. When that paragraph is absent the Problem is a
+        subject line, which read as a finished description until a reviewer
+        noticed (#614). The note is the floor made visible.
+        """
+        thin = MechanicalFacts(
+            commits=["fix(x): first", "fix(x): second"],
+            commit_bodies=["", ""],
+            changed_files=["M\tx"],
+            template_path=".github/pull_request_template.md",
+        )
+        result = compose_pr_body(thin, TEMPLATE)
+        problem = result.body.split("## Problem")[1].split("## Type")[0]
+        self.assertIn("fix(x): first (+1 more commit below)", problem)
+        self.assertIn(THIN_PROBLEM_NOTE, problem)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "handoff.json"
+            write_handoff(path, result=result, facts=thin, pr_number=1)
+            self.assertTrue(json.loads(path.read_text(encoding="utf-8"))["thin_problem"])
+
+        told = MechanicalFacts(
+            commits=["fix(x): first", "fix(x): second"],
+            commit_bodies=["The gate read a stale field.\n\nCloses #1", ""],
+            changed_files=["M\tx"],
+            template_path=".github/pull_request_template.md",
+        )
+        result = compose_pr_body(told, TEMPLATE)
+        problem = result.body.split("## Problem")[1].split("## Type")[0]
+        self.assertIn("The gate read a stale field.", problem)
+        self.assertNotIn(THIN_PROBLEM_NOTE, result.body)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "handoff.json"
+            write_handoff(path, result=result, facts=told, pr_number=1)
+            self.assertFalse(json.loads(path.read_text(encoding="utf-8"))["thin_problem"])
+
+    def test_template_does_not_cite_a_workflow_that_does_not_exist(self) -> None:
+        root = (REPO / ".github" / "pull_request_template.md").read_text(encoding="utf-8")
+        self.assertNotIn("pr-gates.yml", root)
+        self.assertFalse((REPO / ".github" / "workflows" / "pr-gates.yml").exists())
 
     def test_handoff_lists_empty_needs_completion(self) -> None:
         facts = MechanicalFacts(
