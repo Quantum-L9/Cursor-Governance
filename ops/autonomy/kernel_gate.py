@@ -492,9 +492,7 @@ def cmd_record(args: argparse.Namespace) -> int:
     root = workspace_root(args.workspace)
     gov = gov_root_from_env(args.gov_root)
     report = Path(args.report) if args.report else None
-    changed_paths = (
-        read_changed_file(Path(args.changed_file)) if args.changed_file else None
-    )
+    changed_paths = read_changed_file(Path(args.changed_file)) if args.changed_file else None
     try:
         receipt = record(root, gov=gov, report=report, changed_paths=changed_paths)
     except ReportError as exc:

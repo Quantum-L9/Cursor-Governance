@@ -1818,4 +1818,3 @@ stay on disk (additive_only). Do not fold them.
   --limit 5`). Display-only. No archive, no harvest, no auto-Build. Kill
   switch: `L9_SESSIONSTART_UNBUILT_PLANS=0`. Full harvest stays
   `/l9-pipeline-audit`. Links-only auto-wire is unchanged.
-

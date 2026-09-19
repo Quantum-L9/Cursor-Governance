@@ -28,23 +28,27 @@ CONVERGENCE_STATUSES = frozenset({"converged", "partial", "blocked"})
 # Finding ledger constraints (Phase 2)
 FINDING_SEVERITIES = frozenset({"Critical", "High", "Medium", "Low"})
 FINDING_CONFIDENCES = frozenset({"Confirmed", "Probable", "Possible", "Unknown"})
-FINDING_STATUSES = frozenset({
-    "Open",
-    "Resolved",
-    "AcceptedRisk",
-    "FalsePositive",
-    "OutOfScope",
-    "Blocked",
-    "Unknown",
-})
+FINDING_STATUSES = frozenset(
+    {
+        "Open",
+        "Resolved",
+        "AcceptedRisk",
+        "FalsePositive",
+        "OutOfScope",
+        "Blocked",
+        "Unknown",
+    }
+)
 # Statuses that can coexist with converged (no open Critical/High)
 CONVERGENCE_BLOCKING_STATUSES = frozenset({"Open"})
 CONVERGENCE_BLOCKING_SEVERITIES = frozenset({"Critical", "High"})
 # Minimum passes that must be run for a valid report
-REQUIRED_PASSES = frozenset({
-    "context_and_scope_lock",
-    "reconciliation_and_convergence",
-})
+REQUIRED_PASSES = frozenset(
+    {
+        "context_and_scope_lock",
+        "reconciliation_and_convergence",
+    }
+)
 PREDICATE_IDS: tuple[str, ...] = (
     # Phase 1 (mechanical)
     "report_structure",
@@ -97,18 +101,20 @@ GENERATED_PATH_PREFIXES: tuple[str, ...] = (
 )
 
 # Allowed keys in the apply report frontmatter. Extra keys are rejected.
-ALLOWED_FRONTMATTER_KEYS: frozenset[str] = frozenset({
-    "schema",
-    "kernels",
-    "convergence_status",
-    "deltas",
-    "findings",
-    "validation",
-    "unknowns",
-    "passes_run",
-    "passes_skipped",
-    "audit_scope",
-})
+ALLOWED_FRONTMATTER_KEYS: frozenset[str] = frozenset(
+    {
+        "schema",
+        "kernels",
+        "convergence_status",
+        "deltas",
+        "findings",
+        "validation",
+        "unknowns",
+        "passes_run",
+        "passes_skipped",
+        "audit_scope",
+    }
+)
 
 # Template note placeholders that should be rejected.
 TEMPLATE_NOTE_PATTERNS: tuple[str, ...] = (
@@ -321,9 +327,7 @@ def _is_exempt_path(rel: str) -> bool:
     return False
 
 
-def deltas_cover_diff(
-    deltas: list[dict[str, str]], changed_paths: list[str]
-) -> list[str]:
+def deltas_cover_diff(deltas: list[dict[str, str]], changed_paths: list[str]) -> list[str]:
     """Check that deltas cover all changed paths (minus exempt prefixes)."""
     errors: list[str] = []
     delta_paths = {item["path"].strip().lstrip("./") for item in deltas}
@@ -374,9 +378,7 @@ def notes_not_template(deltas: list[dict[str, str]]) -> list[str]:
             continue
         for pattern in TEMPLATE_NOTE_PATTERNS:
             if pattern.lower() in note or note in pattern.lower():
-                errors.append(
-                    f"delta[{idx}].note is template boilerplate: {item.get('note')!r}"
-                )
+                errors.append(f"delta[{idx}].note is template boilerplate: {item.get('note')!r}")
                 break
     return errors
 
@@ -594,11 +596,13 @@ def finding_rules_exist(root: Path, findings: list[dict[str, Any]]) -> list[str]
     root_r = root.resolve()
 
     # Known rule ID patterns that don't require file existence
-    known_patterns = frozenset({
-        "CANONICAL_LAW.md",
-        "AGENTS.md",
-        "ORG_INVARIANTS.yaml",
-    })
+    known_patterns = frozenset(
+        {
+            "CANONICAL_LAW.md",
+            "AGENTS.md",
+            "ORG_INVARIANTS.yaml",
+        }
+    )
 
     for finding in findings:
         rule = finding.get("rule", "").strip()
@@ -770,12 +774,14 @@ SEED_VR_COVERAGE = "SEED-VR-coverage"
 SEED_RA_REVIEW = "SEED-RA-review"
 
 # Allowed seed disposition statuses (agent can only dispose, not delete)
-ALLOWED_SEED_DISPOSITIONS = frozenset({
-    "Resolved",  # Requires close_validation
-    "FalsePositive",  # Requires evidence
-    "OutOfScope",  # Requires evidence
-    "AcceptedRisk",  # Requires evidence
-})
+ALLOWED_SEED_DISPOSITIONS = frozenset(
+    {
+        "Resolved",  # Requires close_validation
+        "FalsePositive",  # Requires evidence
+        "OutOfScope",  # Requires evidence
+        "AcceptedRisk",  # Requires evidence
+    }
+)
 
 
 def _has_matching_test(path: str, changed_paths: set[str]) -> bool:
@@ -871,25 +877,25 @@ def seed_findings(changed_paths: list[str]) -> list[dict[str, Any]]:
         if _requires_coverage_audit(path):
             if not _has_matching_test(path, changed_set):
                 seed_id = f"{SEED_VR_COVERAGE}-{Path(path).stem}"
-                seeds.append({
-                    "id": seed_id,
-                    "kernel": "validate_repair",
-                    "path": path,
-                    "severity": "Medium",
-                    "confidence": "Probable",
-                    "rule": "AGENTS.md",
-                    "evidence": f"Changed {path} without corresponding test file change",
-                    "status": "Open",
-                    "close_validation": "",
-                    "_seed": True,  # Mark as seed for tracking
-                })
+                seeds.append(
+                    {
+                        "id": seed_id,
+                        "kernel": "validate_repair",
+                        "path": path,
+                        "severity": "Medium",
+                        "confidence": "Probable",
+                        "rule": "AGENTS.md",
+                        "evidence": f"Changed {path} without corresponding test file change",
+                        "status": "Open",
+                        "close_validation": "",
+                        "_seed": True,  # Mark as seed for tracking
+                    }
+                )
 
     return seeds
 
 
-def seed_findings_present(
-    findings: list[dict[str, Any]], seeds: list[dict[str, Any]]
-) -> list[str]:
+def seed_findings_present(findings: list[dict[str, Any]], seeds: list[dict[str, Any]]) -> list[str]:
     """Check that all seed findings are present and properly disposed.
 
     Seeds cannot be deleted. They must be disposed with an allowed status.
@@ -938,16 +944,12 @@ def seed_findings_present(
         if status == "Resolved":
             close = finding.get("close_validation", "").strip()
             if not close:
-                errors.append(
-                    f"seed finding {seed_id} is Resolved but has no close_validation"
-                )
+                errors.append(f"seed finding {seed_id} is Resolved but has no close_validation")
 
         # FalsePositive/OutOfScope/AcceptedRisk requires evidence
         if status in {"FalsePositive", "OutOfScope", "AcceptedRisk"}:
             evidence = finding.get("evidence", "").strip()
             if not evidence or evidence == seed.get("evidence", "").strip():
-                errors.append(
-                    f"seed finding {seed_id} is {status} but has no updated evidence"
-                )
+                errors.append(f"seed finding {seed_id} is {status} but has no updated evidence")
 
     return errors

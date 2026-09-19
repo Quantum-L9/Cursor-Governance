@@ -572,9 +572,7 @@ def test_v2_resolved_requires_close_validation(workspace_v2: Path) -> None:
 def test_v2_resolved_with_close_validation_passes(workspace_v2: Path) -> None:
     """Resolved findings with close_validation pass."""
     preds = _preds()
-    findings = [
-        {"id": "RA-001", "status": "Resolved", "close_validation": "tests/test_foo.py"}
-    ]
+    findings = [{"id": "RA-001", "status": "Resolved", "close_validation": "tests/test_foo.py"}]
     errors = preds.resolved_has_close_validation(findings)
     assert errors == []
 
@@ -738,9 +736,7 @@ def test_seed_findings_present_resolved_needs_close_validation() -> None:
     """Resolved seeds need close_validation."""
     preds = _preds()
     seeds = [{"id": "SEED-VR-coverage-test", "evidence": "original"}]
-    findings = [
-        {"id": "SEED-VR-coverage-test", "status": "Resolved", "close_validation": ""}
-    ]
+    findings = [{"id": "SEED-VR-coverage-test", "status": "Resolved", "close_validation": ""}]
     errors = preds.seed_findings_present(findings, seeds)
     assert any("close_validation" in err for err in errors)
 
