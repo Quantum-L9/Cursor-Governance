@@ -18,11 +18,6 @@ from ops.memory.control_plane_client import (
 
 ROOT = Path(__file__).resolve().parents[3]
 
-#: Pinned so the agent stamp is deterministic on every surface: CI leaves
-#: L9_MEMORY_AGENT_ID unset, a governed session sets it to claude-code or
-#: cursor, and a test must not depend on which one is running it.
-_AGENT_ID = "test-agent"
-
 
 def _write_payload() -> dict:
     return {
@@ -88,7 +83,11 @@ def test_pickup_context_writes_an_episodic_record_tagged_as_a_continuation(
 
     fake_cli.reply("write", 0, _write_payload())
     _use(monkeypatch, bound, fake_cli)
-    monkeypatch.setenv("L9_MEMORY_AGENT_ID", _AGENT_ID)
+    # --agent-id defaults to os.environ["L9_MEMORY_AGENT_ID"], which every real
+    # Claude/Cursor session sets, and the CLI then appends an ``agent:<id>`` tag.
+    # Without controlling it this exact-equality assertion passes only on a
+    # machine where the variable happens to be unset.
+    monkeypatch.delenv("L9_MEMORY_AGENT_ID", raising=False)
     code = cli.main(
         ["write", "PICKUP", "--kind", "pickup_context", "--workspace", str(ROOT), "--tag", "x"]
     )
@@ -96,15 +95,7 @@ def test_pickup_context_writes_an_episodic_record_tagged_as_a_continuation(
     argv = fake_cli.calls[-1][0]
     assert argv[argv.index("--kind") + 1] == "episodic"
     tags = [argv[i + 1] for i, a in enumerate(argv) if a == "--tag"]
-    # Every write also carries an `agent:<id>` stamp (rule 87 /
-    # 03-graphiti-memory) whose value comes from L9_MEMORY_AGENT_ID, read as an
-    # argparse default. The original exact-list assertion therefore passed only
-    # where that variable was unset — never on a governed Claude or Cursor
-    # session. Asserting the stamp is merely PRESENT swaps one ambient
-    # dependency for another and fails in CI, where it is unset. So pin the
-    # variable and assert the exact list: deterministic on every surface, and
-    # it covers the stamp rather than tolerating it.
-    assert tags == ["x", f"agent:{_AGENT_ID}", cli.CONTINUATION_TAG]
+    assert tags == ["x", cli.CONTINUATION_TAG]
     assert "session_continuation" not in argv[argv.index("--kind") + 1 :][:1]
 
 
