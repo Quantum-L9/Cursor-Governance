@@ -493,9 +493,45 @@ def project_mcp(root: Path, workspace: Path, check: bool) -> DomainOutcome:
         outcome.status = "drift"
         outcome.detail["drift"] = str(target)
         return outcome
+
+    tracked, probed = _mcp_is_git_tracked(workspace)
+    if not probed:
+        # Ownership undeterminable (no git, probe timeout). Preserve the historical
+        # write so a fresh consumer still gets an .mcp.json, but never silently:
+        # a tracked file overwritten here is the failure this guard exists to catch.
+        outcome.detail["ownership_probe"] = "unavailable"
+    elif tracked:
+        # Repo-owned: report, never overwrite. This is the doctrine
+        # reconcile_claude_settings already applies to tracked settings and hooks
+        # (#611, #281), and .mcp.json is the one projected worktree path that never
+        # got it. A projection that rewrites a committed file makes every
+        # SessionStart dirty the tree, and in a two-clone layout it writes the
+        # OLDER clone's bytes over the newer clone's commit. Regenerating a
+        # committed .mcp.json is a deliberate act on a branch, not a side effect
+        # of opening a session.
+        outcome.status = "drift"
+        outcome.detail["tracked_drift"] = str(target)
+        return outcome
+
     atomic_write(target, content)
     outcome.detail["wrote"] = str(target)
     return outcome
+
+
+def _mcp_is_git_tracked(workspace: Path) -> tuple[bool, bool]:
+    """(is_tracked, probe_succeeded) for `<workspace>/.mcp.json`.
+
+    Reuses the settings reconciler's probe rather than re-deriving one, and
+    imports it lazily exactly as `project_settings` imports `run`.
+    """
+    try:
+        from reconcile_claude_settings import _path_is_git_tracked
+    except Exception:  # noqa: BLE001
+        return False, False
+    try:
+        return _path_is_git_tracked(workspace, ".mcp.json"), True
+    except Exception:  # noqa: BLE001
+        return False, False
 
 
 def atomic_write(path: Path, content: str) -> None:
