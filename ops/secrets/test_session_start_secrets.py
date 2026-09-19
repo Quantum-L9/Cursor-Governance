@@ -6,6 +6,7 @@ from __future__ import annotations
 import importlib.util
 import io
 import json
+import sys
 import tempfile
 import unittest
 import unittest.mock as mock
@@ -24,17 +25,22 @@ def _bind_status(rows: list[dict[str, Any]]) -> Any:
     return _lookup
 
 
-def _load() -> Any:
-    path = SECRETS / "session_start_secrets.py"
-    spec = importlib.util.spec_from_file_location("session_start_secrets", path)
+def _load(name: str = "session_start_secrets") -> Any:
+    path = SECRETS / f"{name}.py"
+    spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"cannot load {path}")
     mod = importlib.util.module_from_spec(spec)
+    # Register before exec: a module-level @dataclass resolves its annotations
+    # through sys.modules[cls.__module__], which is None for an unregistered
+    # module (capability_client.SessionIdentity fails to build otherwise).
+    sys.modules[name] = mod
     spec.loader.exec_module(mod)
     return mod
 
 
 plane = _load()
+capability_client = _load("capability_client")
 
 
 class SessionStartSecretsTests(unittest.TestCase):
@@ -260,6 +266,35 @@ class SurfaceCarveOutTests(unittest.TestCase):
                 self.assertEqual(result["state"], plane.STATE_FAILED)
                 self.assertEqual(rc, 1)
                 self.assertIn("FAILED: AWS CLI is missing or not authorized", err)
+
+    def test_predicate_agrees_with_the_capability_client_precedent(self) -> None:
+        """The surface predicate now has two owners. Pin them together.
+
+        ``surface_class`` copies the hosted/pool distinction from
+        ``capability_client.session_identity``. Copying it is what makes the
+        carve-out narrow and reviewable, but it also means the two can drift
+        apart silently — and a drift that reclassified a pool as hosted would
+        silence a real fault. This test fails when they stop agreeing.
+        """
+        # capability_client treats cloud_default as issuing no session identity,
+        # with a hosted-specific reason. That is its name for model_controlled.
+        hosted_identity = capability_client.session_identity(self.HOSTED)
+        self.assertEqual(hosted_identity.reason, "hosted_surface_issues_no_session_identity")
+        self.assertEqual(plane.surface_class(self.HOSTED), plane.MODEL_CONTROLLED)
+
+        # An operator machine is neither hosted nor a pool in either module.
+        operator_identity = capability_client.session_identity(self.OPERATOR)
+        self.assertEqual(operator_identity.reason, "no_session_identity_available")
+        self.assertEqual(plane.surface_class(self.OPERATOR), plane.OPERATOR)
+
+        # The ccpool_ prefix is the pool signal in both. capability_client also
+        # needs a token file to mint one, which is why this asserts the prefix
+        # rather than its return value.
+        self.assertTrue(
+            (self.POOL.get("CLAUDE_CODE_REMOTE_ENVIRONMENT_ID") or "").startswith("ccpool_")
+        )
+        self.assertEqual(plane.surface_class(self.POOL), plane.SELF_HOSTED)
+        self.assertNotEqual(plane.surface_class(self.POOL), plane.MODEL_CONTROLLED)
 
     def test_receipt_carries_state_and_surface_class(self) -> None:
         result, _, _ = self._plane(self.HOSTED, plane.aws_preflight.AWS_CLI_NOT_FOUND)
