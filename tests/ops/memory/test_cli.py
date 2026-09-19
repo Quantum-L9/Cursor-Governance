@@ -58,6 +58,7 @@ def test_write_maps_legacy_kinds_and_stamps_the_agent_tag(
 ) -> None:
     fake_cli.reply("write", 0, _write_payload())
     _use(monkeypatch, bound, fake_cli)
+    monkeypatch.setattr(cli, "read_prefetch_bind", lambda _ws: None)
     code = cli.main(
         ["write", "a fact", "--kind", "error", "--agent-id", "cursor", "--workspace", str(ROOT)]
     )
@@ -83,6 +84,7 @@ def test_pickup_context_writes_an_episodic_record_tagged_as_a_continuation(
 
     fake_cli.reply("write", 0, _write_payload())
     _use(monkeypatch, bound, fake_cli)
+    monkeypatch.setattr(cli, "read_prefetch_bind", lambda _ws: None)
     code = cli.main(
         ["write", "PICKUP", "--kind", "pickup_context", "--workspace", str(ROOT), "--tag", "x"]
     )
@@ -112,6 +114,130 @@ def test_search_with_no_hits_completes(monkeypatch, bound, fake_cli: FakeMemoryC
     argv = fake_cli.calls[-1][0]
     assert argv[argv.index("--limit") + 1] == "3"
     assert json.loads(capsys.readouterr().out)["status"] == "NO_HITS"
+
+
+def test_write_unbound_group_id_runs_at_the_owning_clone(
+    monkeypatch, bound, fake_cli: FakeMemoryCli, capsys
+) -> None:
+    """Remediator from CG: --group-id CEG writes CEG, it does not fall through to CG."""
+    fake_cli.reply("write", 0, _write_payload())
+    _use(monkeypatch, bound, fake_cli)
+    ceg = Path("/Users/ib-mac/Cognitive.Engine.Graphs")
+    monkeypatch.setattr(cli, "read_prefetch_bind", lambda _ws: None)
+    monkeypatch.setattr(
+        cli, "locate_clone_for_namespace", lambda slug, from_workspace=None: ceg
+    )
+    code = cli.main(
+        [
+            "write",
+            "PICKUP: CEG#272 closed",
+            "--kind",
+            "pickup_context",
+            "--workspace",
+            str(ROOT),
+            "--group-id",
+            "cognitive-engine-graphs",
+            "--agent-id",
+            "cursor",
+        ]
+    )
+    assert code == cli.EXIT_OK
+    argv, cwd, _ = fake_cli.calls[-1]
+    assert argv[argv.index("--group-id") + 1] == "cognitive-engine-graphs"
+    assert cwd == str(ceg)
+    assert json.loads(capsys.readouterr().out)["status"] == "OK"
+
+
+def test_write_follows_one_prefetch_bind(
+    monkeypatch, bound, fake_cli: FakeMemoryCli, capsys, tmp_path
+) -> None:
+    fake_cli.reply("write", 0, _write_payload())
+    _use(monkeypatch, bound, fake_cli)
+    ceg = Path("/Users/ib-mac/Cognitive.Engine.Graphs")
+    monkeypatch.setattr(
+        cli,
+        "read_prefetch_bind",
+        lambda _ws: {"group_id": "cognitive-engine-graphs", "group_ids": ["cognitive-engine-graphs"]},
+    )
+    monkeypatch.setattr(
+        cli, "locate_clone_for_namespace", lambda slug, from_workspace=None: ceg
+    )
+    code = cli.main(
+        [
+            "write",
+            "PICKUP: CEG#272 closed",
+            "--kind",
+            "pickup_context",
+            "--workspace",
+            str(tmp_path),
+            "--agent-id",
+            "cursor",
+        ]
+    )
+    assert code == cli.EXIT_OK
+    argv, cwd, _ = fake_cli.calls[-1]
+    assert argv[argv.index("--group-id") + 1] == "cognitive-engine-graphs"
+    assert cwd == str(ceg)
+
+
+def test_write_refuses_group_id_that_contradicts_prefetch_bind(
+    monkeypatch, bound, fake_cli: FakeMemoryCli, capsys
+) -> None:
+    _use(monkeypatch, bound, fake_cli)
+    monkeypatch.setattr(
+        cli,
+        "read_prefetch_bind",
+        lambda _ws: {
+            "group_id": "cognitive-engine-graphs",
+            "group_ids": ["cognitive-engine-graphs"],
+            "exclusive_bind": True,
+        },
+    )
+    code = cli.main(
+        [
+            "write",
+            "PICKUP: should stay on CEG bind",
+            "--kind",
+            "pickup_context",
+            "--workspace",
+            str(ROOT),
+            "--group-id",
+            "cursor-governance",
+            "--agent-id",
+            "cursor",
+        ]
+    )
+    assert code == cli.EXIT_REFUSED
+    assert fake_cli.calls == []
+    document = json.loads(capsys.readouterr().out)
+    assert document["status"] == "PREFETCH_BOUND"
+    assert document["namespace"]["prefetch_bound"] == "cognitive-engine-graphs"
+
+
+def test_write_accepts_group_id_that_matches_workspace(
+    monkeypatch, bound, fake_cli: FakeMemoryCli, capsys
+) -> None:
+    fake_cli.reply("write", 0, _write_payload())
+    _use(monkeypatch, bound, fake_cli)
+    monkeypatch.setattr(cli, "read_prefetch_bind", lambda _ws: None)
+    code = cli.main(
+        [
+            "write",
+            "a fact",
+            "--kind",
+            "lesson",
+            "--workspace",
+            str(ROOT),
+            "--group-id",
+            "cursor-governance",
+            "--agent-id",
+            "cursor",
+        ]
+    )
+    assert code == cli.EXIT_OK
+    argv = fake_cli.calls[-1][0]
+    assert argv[argv.index("--group-id") + 1] == "cursor-governance"
+    assert json.loads(capsys.readouterr().out)["status"] == "OK"
 
 
 def test_write_without_a_namespace_is_refused_locally(

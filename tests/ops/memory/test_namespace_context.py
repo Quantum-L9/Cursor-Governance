@@ -10,6 +10,14 @@ from ops.memory import namespace_context as nc
 ROOT = Path(__file__).resolve().parents[3]
 
 
+def test_locate_clone_for_namespace_finds_a_sibling_when_present() -> None:
+    found = nc.locate_clone_for_namespace("cursor-governance", from_workspace=ROOT)
+    assert found == ROOT
+    ceg = nc.locate_clone_for_namespace("cognitive-engine-graphs", from_workspace=ROOT)
+    if ceg is not None:
+        assert "Cognitive.Engine.Graphs" in ceg.parts or "cognitive-engine-graphs" in ceg.parts
+
+
 def test_this_checkout_yields_one_write_hint_and_a_read_fan_in() -> None:
     context = nc.resolve_namespace_context(ROOT)
     assert context.write_namespace_hint == "cursor-governance"

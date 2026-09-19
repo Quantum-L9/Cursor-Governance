@@ -11,7 +11,7 @@ a hydration that resolved no namespace is ``degraded``, never ``prefetched``.
 Mid-session repair: when the automatic SessionStart stamp is stale or missing,
 run with an explicit session id instead of guessing:
 
-    python3 memory_prefetch.py --session-id <uuid>
+    python3 memory_prefetch.py --session-id <uuid> --workspace <owning-clone>
 
 Find your session id as the newest
 ``~/.claude/projects/<project>/<uuid>.jsonl`` for this conversation.
@@ -145,12 +145,24 @@ import memory_bridge as mb  # noqa: E402
 import memory_state as st  # noqa: E402
 
 
+def hook_session_start_payload(context: str) -> dict[str, object]:
+    """SessionStart envelope a human can audit without unescaping.
+
+    Claude Code still requires one JSON document. A compact string value hid
+    every field behind ``\\n`` and ``\\u00a7``. One array element per line
+    keeps the host contract (additionalContext arrays concatenate) and makes
+    stdout one field/value per line.
+    """
+    return {
+        "hookSpecificOutput": {
+            "hookEventName": "SessionStart",
+            "additionalContext": context.split("\n"),
+        }
+    }
+
+
 def _emit(context: str) -> None:
-    print(
-        json.dumps(
-            {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": context}}
-        )
-    )
+    print(json.dumps(hook_session_start_payload(context), ensure_ascii=False, indent=2))
 
 
 def main() -> int:
@@ -164,6 +176,15 @@ def main() -> int:
             "denial. The receipt key is composed here, once; a precomposed "
             "<writer>__<chat> key for this writer is reduced, never doubled. "
             "Newest ~/.claude/projects/<project>/<uuid>.jsonl"
+        ),
+    )
+    parser.add_argument(
+        "--workspace",
+        default=None,
+        help=(
+            "git root of the repository being mutated. Repair from a session "
+            "opened in a different clone MUST pass this so the receipt and "
+            "hydrate namespace match the edited repo, not the session cwd."
         ),
     )
     args = parser.parse_args()
@@ -200,8 +221,13 @@ def main() -> int:
     except (OSError, json.JSONDecodeError):
         return 0
 
-    namespaces = st.resolve_namespaces(contract) or ["cursor-governance"]
-    workspace = st.workspace_root()
+    session_ws = st.workspace_root()
+    if args.workspace:
+        workspace = Path(args.workspace).expanduser().resolve()
+        namespaces = []
+    else:
+        workspace = session_ws
+        namespaces = st.resolve_namespaces(contract)
     agent_id = prefetch_agent_id()
     os.environ.setdefault("L9_MEMORY_AGENT_ID", agent_id)
     os.environ.setdefault(
@@ -281,29 +307,31 @@ def main() -> int:
                 # satisfied.
                 "status": "degraded" if degraded else "prefetched",
                 "degraded": degraded,
+                "exclusive_bind": bool(args.workspace),
             },
+            workspace=session_ws,
         )
         resolved = ", ".join(group_ids) if group_ids else "unresolved"
         lines = [
-            "L9 memory: ENFORCED via canonical memory hydrate "
-            f"({TRANSPORT}; namespace={resolved}; requested {', '.join(namespaces)}). "
-            "Rule 03-graphiti-memory; skill l9-graphiti-memory; CANONICAL_LAW §8.",
+            "L9 memory: ENFORCED",
+            f"transport={TRANSPORT}",
+            f"namespace={resolved}",
+            f"requested={', '.join(namespaces) or 'none'}",
+            "rule=03-graphiti-memory",
+            "skill=l9-graphiti-memory",
+            "law=CANONICAL_LAW §8",
             *contexts,
-            "Governed writes require this hydration only. Repository isolation is a "
-            "dedicated worktree (ops/scripts/agent_worktree_start.sh), history isolation a "
-            "branch off fetched origin/main, and collision safety the publication gate. "
-            "No phase-lock is required or accepted for repository mutation.",
+            "note=Governed writes require this hydration only.",
+            "isolation=dedicated worktree + branch off origin/main + publication gate",
+            "phase_lock=not required",
         ]
         if len(roots) > 1:
             dropped_note = _dropped_summary(dropped)
             lines.insert(
                 1,
-                f"Multi-repo container: hydrated {len(roots)} of "
-                f"{_repo_count(workspace)} repositories under {workspace}. "
-                + (f"Excluded — {dropped_note}. " if dropped_note else "")
-                + "A namespace is repository identity, never container "
-                "identity — resolving one from the container root matches every repo "
-                "and returns none.",
+                f"multi_repo=hydrated {len(roots)} of "
+                f"{_repo_count(workspace)} under {workspace}"
+                + (f"; excluded={dropped_note}" if dropped_note else ""),
             )
         _emit("\n".join(line for line in lines if line))
     except Exception as exc:  # fail-open
