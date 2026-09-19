@@ -1062,7 +1062,35 @@ emit_account_drift "$PY"
 emit_readiness_receipt "$PY"
 emit_capability_readiness "$PY"
 
-if [ "${SKIP_PLUGIN_MARKETPLACE:-}" = "true" ]; then
+# Why Context7 is absent, from the evidence that decided it. claude_projection
+# records every template server it left out of .mcp.json (an unproxied
+# _requires_env variable) as gated_out_servers in the projection receipt. That
+# is the cause; the marketplace flag below is only a correlate, and blaming it
+# sent readers to the plugin catalog instead of the account variable.
+_ctx7_gated="$(python3 - "$HOME/.l9/claude/projection-receipt.json" <<'PY' 2>/dev/null
+import json
+import sys
+
+try:
+    with open(sys.argv[1], encoding="utf-8") as handle:
+        doc = json.load(handle)
+except Exception:
+    sys.exit(0)
+domains = doc.get("domains") if isinstance(doc, dict) else None
+if isinstance(domains, dict):  # same two shapes emit_claude_readiness accepts
+    entries = [dict(v, domain=k) for k, v in domains.items() if isinstance(v, dict)]
+else:
+    entries = domains if isinstance(domains, list) else []
+for entry in entries:
+    if isinstance(entry, dict) and entry.get("domain") == "mcp":
+        detail = entry.get("detail") or {}
+        if "context7" in (detail.get("gated_out_servers") or []):
+            print("gated")
+PY
+)"
+if [ "$_ctx7_gated" = "gated" ]; then
+  say "Context7: governed remote server not rendered — CONTEXT7_API_KEY is not proxied on this surface (projection receipt gated_out_servers); use skill l9-context7-docs or an official docs GET"
+elif [ "${SKIP_PLUGIN_MARKETPLACE:-}" = "true" ]; then
   say "Context7 (hosted skip): MCP tools absent — use skill l9-context7-docs"
 fi
 
