@@ -156,6 +156,11 @@ def build_registry(root: Path) -> dict[str, Any]:
     return {
         "schema_version": 2,
         "generation_id": generation_id,
+        # Self-describing, like RULES-MANIFEST and COMMANDS_MANIFEST already are:
+        # a reader of the generated file learns its writer and the heal command
+        # from the file itself instead of grepping for the path.
+        "generator": "ops/scripts/build_claude_skill_registry.py",
+        "regenerate": "make claude-skill-registry",
         "source": "skills/AUTONOMY_MANIFEST.yaml",
         "source_manifest_sha256": manifest_sha,
         "source_skill_corpus_sha256": corpus_sha,
