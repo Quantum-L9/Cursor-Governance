@@ -304,6 +304,62 @@ class SecretsReceiptLoadTests(unittest.TestCase):
         self.assertIsNot(returned, parsed["state"])
 
 
+class SecretsBindSurfaceClassificationTests(unittest.TestCase):
+    """The carve-out reaches the bind classifier too.
+
+    Without this the report contradicted itself: aws-cli named the surface and
+    said "not a fault" while secrets-bind degraded on the very same cause.
+    """
+
+    UNBOUND = [
+        {"name": "SEMGREP_APP_TOKEN", "bound": False, "source": "infisical-machine-absent"},
+        {"name": "SONAR_TOKEN", "bound": False, "source": "infisical-machine-absent"},
+        {"name": "GITHUB_TOKEN", "bound": True, "source": "env"},
+    ]
+
+    def test_unbound_by_surface_is_not_degraded(self) -> None:
+        line = report.classify_secrets_bind(self.UNBOUND, report.PLANE_UNAVAILABLE_BY_SURFACE)
+        self.assertEqual(line["class"], report.NA)
+        self.assertFalse(line["include_in_degraded"])
+        self.assertIn("unbound by surface", line["summary"])
+        # Still named, so the unbound inventory stays visible in the report.
+        self.assertIn("SEMGREP_APP_TOKEN", line["evidence"])
+
+    def test_unbound_without_the_carve_out_still_degrades(self) -> None:
+        for state in ("failed", "ok", ""):
+            with self.subTest(state=state):
+                line = report.classify_secrets_bind(self.UNBOUND, state)
+                self.assertEqual(line["class"], report.DEGRADED)
+                self.assertTrue(line["include_in_degraded"])
+
+    def test_source_aws_is_a_fault_on_every_surface(self) -> None:
+        """A real fault is never carved out — checked before the unbound branch."""
+        leftover = [{"name": "SONAR_TOKEN", "bound": True, "source": "aws"}]
+        for state in (report.PLANE_UNAVAILABLE_BY_SURFACE, "failed", ""):
+            with self.subTest(state=state):
+                line = report.classify_secrets_bind(leftover, state)
+                self.assertEqual(line["class"], report.FAILED)
+                self.assertTrue(line["include_in_degraded"])
+
+    def test_unread_receipt_is_degraded_whatever_the_state(self) -> None:
+        line = report.classify_secrets_bind(None, report.PLANE_UNAVAILABLE_BY_SURFACE)
+        self.assertEqual(line["class"], report.DEGRADED)
+
+    def test_report_does_not_contradict_itself_on_a_carved_out_surface(self) -> None:
+        """The regression Codex caught: both lines, one cause, one verdict."""
+        aws = {"ok": False, "code": "AWS_CLI_NOT_FOUND", "summary": "absent"}
+        state = report.PLANE_UNAVAILABLE_BY_SURFACE
+        lines = [
+            report.classify_aws_cli(aws, state),
+            report.classify_secrets_bind(self.UNBOUND, state),
+        ]
+        self.assertEqual([item["class"] for item in lines], [report.NA, report.NA])
+        rendered = report.format_markdown(lines)
+        self.assertNotIn("### FAILED", rendered)
+        degraded_section = rendered.split("### Degraded", 1)[1]
+        self.assertIn("none", degraded_section)
+
+
 class AwsCliSurfaceClassificationTests(unittest.TestCase):
     """The third state renders as neither ok nor FAILED."""
 

@@ -52,11 +52,20 @@ STATE_FAILED = "failed"
 def surface_class(env: Mapping[str, str] | None = None) -> str:
     """Classify the surface this plane is running on.
 
-    The predicate is taken from ``capability_client.session_identity`` rather
-    than invented, including its order: the ``ccpool_`` test runs first, so a
-    self-hosted pool is never mistaken for a hosted one. That order is also the
-    safe direction — misreading a pool as model-controlled would silence a real
-    fault, while the reverse only reports one loudly.
+    The ``ccpool_`` / ``cloud_default`` signals and their precedence are taken
+    from ``capability_client.session_identity`` rather than invented: the pool
+    test runs first there and here, so a self-hosted pool is never mistaken for
+    a hosted one. That order is also the safe direction — misreading a pool as
+    model-controlled would silence a real fault, while the reverse only reports
+    one loudly.
+
+    The two are not equivalent, and this is deliberately the broader of the
+    two. ``session_identity`` mints a pool identity only when
+    ``CLAUDE_SESSION_IDENTITY_TOKEN_FILE`` is also present and readable,
+    because it needs a token to return; classification needs no token, so any
+    ``ccpool_`` prefix is enough here. The difference only ever moves a surface
+    *out* of the carve-out: a pool whose token file is missing is still scored
+    ``self_hosted`` and still degrades.
     """
     source = os.environ if env is None else env
     pool = (source.get("CLAUDE_CODE_REMOTE_ENVIRONMENT_ID") or "").strip()

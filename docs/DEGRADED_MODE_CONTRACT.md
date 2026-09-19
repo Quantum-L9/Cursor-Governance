@@ -53,7 +53,7 @@ work today.
 | `context7.mcp` | No library docs retrieval via the retired broker |
 | `gitguardian.mcp` | No brokered secret scanning; `gitleaks` still runs locally |
 | `github.mcp`, `github.packages_read` | Platform GitHub MCP (where connected) covers most of this |
-| Infisical / AWS Secrets Manager bind | The AWS CLI is absent here, so the one login seed cannot be read and the inventoried secrets (`SEMGREP_APP_TOKEN`, `SONAR_TOKEN`) stay unbound. The SessionStart plane reports `state: unavailable_by_surface` and is **not** counted DEGRADED — an environment property, not a bootstrap fault. Do not install a CLI or paste a credential to clear it |
+| Infisical / AWS Secrets Manager bind | The AWS CLI is absent here, so the one login seed cannot be read and the Infisical-bound names in the plane's inventory (`SEMGREP_APP_TOKEN`, `SONAR_TOKEN`) stay unbound. The third inventoried name, `GITHUB_TOKEN`, is unaffected — it binds from the proxied environment, not from Infisical. The SessionStart plane reports `state: unavailable_by_surface` and is **not** counted DEGRADED — an environment property, not a bootstrap fault. Do not install a CLI or paste a credential to clear it |
 
 ## Observed GitHub transports
 

@@ -287,12 +287,29 @@ class SurfaceCarveOutTests(unittest.TestCase):
         self.assertEqual(operator_identity.reason, "no_session_identity_available")
         self.assertEqual(plane.surface_class(self.OPERATOR), plane.OPERATOR)
 
-        # The ccpool_ prefix is the pool signal in both. capability_client also
-        # needs a token file to mint one, which is why this asserts the prefix
-        # rather than its return value.
-        self.assertTrue(
-            (self.POOL.get("CLAUDE_CODE_REMOTE_ENVIRONMENT_ID") or "").startswith("ccpool_")
-        )
+        # The pool case, asserted against session_identity's real behaviour
+        # rather than against the prefix. session_identity only mints a pool
+        # identity when CLAUDE_SESSION_IDENTITY_TOKEN_FILE is present and
+        # readable, so the environment has to carry one for this to exercise
+        # its pool branch at all.
+        with tempfile.TemporaryDirectory() as tmp:
+            token_file = Path(tmp) / "session-identity.jwt"
+            token_file.write_text("not-a-real-token", encoding="utf-8")
+            pool_env = dict(self.POOL)
+            pool_env["CLAUDE_SESSION_IDENTITY_TOKEN_FILE"] = str(token_file)
+
+            pool_identity = capability_client.session_identity(pool_env)
+            # capability_client took its pool branch: it classifies this
+            # environment as self-hosted, NOT as the hosted surface.
+            self.assertEqual(pool_identity.method, "ccr-session-jwt")
+            self.assertIn("self-hosted", pool_identity.detail)
+            self.assertNotEqual(pool_identity.reason, "hosted_surface_issues_no_session_identity")
+            # And surface_class agrees on the same environment.
+            self.assertEqual(plane.surface_class(pool_env), plane.SELF_HOSTED)
+
+        # Precedence is the part that matters: both modules must prefer the
+        # pool signal over cloud_default, since this environment carries both.
+        self.assertEqual(self.POOL["CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE"], "cloud_default")
         self.assertEqual(plane.surface_class(self.POOL), plane.SELF_HOSTED)
         self.assertNotEqual(plane.surface_class(self.POOL), plane.MODEL_CONTROLLED)
 

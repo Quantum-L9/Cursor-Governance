@@ -505,11 +505,21 @@ def classify_aws_cli(result: dict[str, Any] | None, plane_state: str = "") -> di
     )
 
 
-def classify_secrets_bind(statuses: list[dict[str, Any]] | None) -> dict[str, Any]:
+def classify_secrets_bind(
+    statuses: list[dict[str, Any]] | None, plane_state: str = ""
+) -> dict[str, Any]:
     """SessionStart visibility for local bind. Never includes a secret value.
 
     source=aws is a fault: bind is Infisical only. Unbound is a vault miss,
     not a reason to paste a token.
+
+    The carve-out reaches this classifier too. When the plane is
+    ``unavailable_by_surface`` there is no vault to miss — the surface holds no
+    Infisical bind by design — so an unbound inventory name is the expected
+    state, not a degradation. Scoring it DEGRADED made the report contradict
+    itself: ``aws-cli`` named the surface and said "not a fault" while
+    ``secrets-bind`` degraded on the very same cause. A fault stays a fault:
+    ``source=aws`` is checked first and is unconditional on every surface.
     """
     if statuses is None:
         return _line(
@@ -540,6 +550,16 @@ def classify_secrets_bind(statuses: list[dict[str, Any]] | None) -> dict[str, An
             evidence="aws " + ",".join(aws_leftover),
         )
     if unbound:
+        if plane_state == PLANE_UNAVAILABLE_BY_SURFACE:
+            return _line(
+                "secrets-bind",
+                NA,
+                f"{summary} — unbound by surface; this surface holds no "
+                "Infisical bind, so there is nothing to retry and nothing to paste",
+                evidence="unbound " + ",".join(unbound),
+                this_surface=False,
+                include_in_degraded=False,
+            )
         return _line(
             "secrets-bind",
             DEGRADED,
@@ -695,7 +715,7 @@ def collect(
         else classify_memory(detail=memory_detail, stderr=memory_stderr, healthy=memory_healthy),
         classify_publish_path(evaluate(load_receipt())),
         classify_aws_cli(aws_cli, plane_state),
-        classify_secrets_bind(secrets_bind),
+        classify_secrets_bind(secrets_bind, plane_state),
         classify_skill_usage(skill_note),
         classify_itest(error=probe_neo4j(), codegraph=codegraph),
     ]
