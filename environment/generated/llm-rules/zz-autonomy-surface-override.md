@@ -72,7 +72,8 @@ AND `L9_AUTONOMY_ENABLED=true`:
   writes `ops/autonomy/authorize_merge.py --all-open` and each PR is green +
   mergeable. Force-push / admin-merge stay forbidden. Tree kernels fire
   on Cursor and adapters before pytest; CI / unknown skip.
-- Stacked PRs: when a PR is already open for the workstream, the next PR
+- Stacked PRs are opt-in (`PR_STACK=auto`; empty by default): when you
+  choose to stack and a PR is already open for the workstream, the next PR
   bases on the open PR's head (bottom-up merge order). Rebase and conflict
   resolution are forbidden; one feature branch per program.
 

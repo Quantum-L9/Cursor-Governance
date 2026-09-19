@@ -28,6 +28,7 @@ from protocol import (
     reviewer_class,
     severity_hint,
 )
+from protocol import rest_only as _rest_only
 from protocol import validated_output as _validated_output
 
 GH_TIMEOUT_SEC = 30
@@ -43,6 +44,7 @@ query($owner: String!, $repo: String!, $pr: Int!, $cursor: String) {
           comments(first: 20) {
             nodes {
               id
+              databaseId
               body
               path
               line
@@ -195,11 +197,57 @@ def _from_thread(node: dict[str, Any], index: int) -> dict[str, Any] | None:
         "gate": None,
         "raw": body,
         "thread_id": node.get("id"),
+        # REST surfaces have no node id; reply_threads.py addresses the thread by
+        # its first comment instead. Carry both so a ledger is portable — but the
+        # REST key is the comment's *databaseId*, never its GraphQL node id.
+        # `id` here is `PRRC_…`, which int() rejects, so storing it would make a
+        # GraphQL-built ledger look REST-portable and fail on the REST surface.
+        "comment_id": node.get("comment_id") or first.get("databaseId"),
         "severity_label": _severity_label(body),
     }
 
 
+def _rest_thread_nodes(owner: str, repo: str, pr: int) -> list[dict[str, Any]]:
+    """THREADS_QUERY's node shape, rebuilt from REST for GraphQL-less surfaces.
+
+    `ccr/review_threads` supplies the grouping and resolved state but no bodies
+    or authors, and no GraphQL node id — so `id` is None here and `comment_id`
+    carries the addressable key instead. Bodies come from the native review
+    comments route. `_login` already reads either `user` or `author`, so REST
+    comment objects need no reshaping.
+    """
+    threads = _gh_json(f"repos/{owner}/{repo}/pulls/{pr}/ccr/review_threads")
+    if not isinstance(threads, list):
+        _fail(f"ccr/review_threads returned {type(threads).__name__}, expected list")
+    comments = _gh_json(f"repos/{owner}/{repo}/pulls/{pr}/comments")
+    by_id = {c["id"]: c for c in comments if isinstance(c, dict) and c.get("id") is not None}
+
+    nodes: list[dict[str, Any]] = []
+    for thread in threads:
+        if not isinstance(thread, dict):
+            continue
+        ids = [cid for cid in (thread.get("comment_ids") or []) if cid in by_id]
+        if not ids:
+            # A thread whose comments the REST route did not return is not
+            # silently dropped: without a body there is nothing to disposition.
+            _fail(
+                f"thread on {thread.get('path')}:{thread.get('line')} has no "
+                f"retrievable comments (ids={thread.get('comment_ids')})"
+            )
+        nodes.append(
+            {
+                "id": None,
+                "comment_id": ids[0],
+                "isResolved": bool(thread.get("resolved")),
+                "comments": {"nodes": [by_id[cid] for cid in ids]},
+            }
+        )
+    return nodes
+
+
 def _paginate_threads(owner: str, repo: str, pr: int) -> list[dict[str, Any]]:
+    if _rest_only():
+        return _rest_thread_nodes(owner, repo, pr)
     nodes: list[dict[str, Any]] = []
     cursor: str | None = None
     while True:
@@ -446,6 +494,7 @@ def collect(
         for node in (threads or [])
         if isinstance(node, dict) and node.get("isResolved") is not True
     ]
+    ledger_key, node_key = ("comment_id", "comment_id") if _rest_only() else ("thread_id", "id")
     completeness = {
         "makefile_verbs": True,
         "cra_logins_present": sorted(cra_seen),
@@ -453,10 +502,14 @@ def collect(
         "cra_findings": len(cra_findings),
         "cra_comments_ingested": (not cra_seen) or bool(cra_before_merge),
         "unresolved_threads": len(unresolved),
+        # Key on the id the active surface actually produces. Keyed on "id"
+        # unconditionally this went vacuously true on REST — every node has
+        # id=None, the `if` filters them all out, and `all([])` is True — so a
+        # surface that captured nothing would have reported full capture.
         "unresolved_threads_captured": all(
-            any(item.get("thread_id") == node.get("id") for item in pre_merge)
+            any(item.get(ledger_key) == node.get(node_key) for item in pre_merge)
             for node in unresolved
-            if node.get("id")
+            if node.get(node_key)
         ),
     }
     return {
@@ -526,7 +579,10 @@ def main(argv: list[str] | None = None) -> int:
     if not complete["cra_comments_ingested"]:
         _fail("CRA comments present on the PR were not ingested")
     if not complete["unresolved_threads_captured"]:
-        _fail("unresolved review threads were collapsed before thread_id capture")
+        _fail(
+            "unresolved review threads were collapsed before "
+            f"{'comment_id' if _rest_only() else 'thread_id'} capture"
+        )
     print(
         f"snapshot: {output} findings={len(snapshot['findings'])} "
         f"cra={complete['cra_findings']} threads={complete['unresolved_threads']}",

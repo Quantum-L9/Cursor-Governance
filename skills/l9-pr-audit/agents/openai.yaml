@@ -1,0 +1,12 @@
+interface:
+  display_name: L9 PR Audit
+  short_description: Adversarial PR audit with deterministic red-team closure
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

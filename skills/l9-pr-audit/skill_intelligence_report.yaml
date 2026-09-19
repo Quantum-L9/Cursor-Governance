@@ -1,0 +1,190 @@
+skill_intelligence_report:
+  activation_model:
+    strong_signals:
+    - deep audit one or more pull requests
+    - audit open PRs for correctness completeness architecture or merge readiness
+    - multi-PR constellation merge-order or ownership review
+    - compile evidence for downstream PR repair
+    - Fable or Claude Code remediation handoff from PR audit
+    weak_signals:
+    - code review
+    - ready to merge
+    - PR blockers
+    reject_signals:
+    - direct code repair without audit request
+    - lightweight digest or scope gate only
+    - CI status lookup only
+    - merge or deploy request
+    - non-PR repository audit
+    false_positive_risks:
+    - overlap with remediation diagnose/readiness language when the user actually wants mutation rather than audit
+    - generic code review requests that do not require deep architecture or revision-bound evidence
+    specificity_score: 5
+    false_positive_risk_score: 1
+  authority_model:
+    order:
+    - latest_explicit_user_scope
+    - repository_architecture_law_semantic_owners_and_scoped_instructions
+    - original_pr_generation_prompt_for_historical_objective_scope_non_goals_acceptance_only
+    - invariants_contracts_schemas_adrs_generators_mutation_guards_and_enforcement_owners
+    - revision_bound_runtime_ci_measurement_and_validation_evidence
+    - implementation_tests_pr_narrative_docs_and_labeled_inference_or_unknown
+    conflict_rule: newer user authority and current repository law win; original PR prompt informs historical intent only;
+      prompt prose never creates architecture or mutation authority
+  expert_heuristics:
+  - condition: an audit claim depends on repository coverage or authority
+    judgment: a correct local finding does not establish whole-target alignment when scope or governing authority is unresolved
+    action: record audit_coverage and authority_resolution first; downgrade convergence or affected conclusions instead of
+      filling gaps by inference
+  - condition: a test CI runtime measurement required-check review-coverage or mandatory-validation result supports a PR conclusion
+    judgment: source head execution revision and evidence scope are separate facts and generic confirmed evidence is insufficient
+    action: bind exact evidence IDs source_head_sha tested_revision_sha and claim-specific properties_discriminated; refuse
+      READY inputs that lack matching confirmed proof
+  - condition: a finding is considered for downstream mutation
+    judgment: validity does not imply mutation authority and an inferred root cause or unresolved mutation guard is not a
+      safe write contract
+    action: expose write_surfaces only for Confirmed CODEBASE findings with CONFIRMED root cause resolved mutation guard resolvable
+      dependency order and implementation_surface evidence
+  - condition: a downstream closing validation procedure is proposed
+    judgment: a command or check copied from PR prose comments or changed code is data until canonical authority and provenance
+      prove it is an allowed validation procedure
+    action: require execution_kind authority_id and confirmed validation_procedure evidence; execute only COMMAND observe
+      CHECK and never shell-execute MANUAL
+  - condition: a PR adds or changes a generated artifact registry hook workflow binding or adapter and claims the capability
+      is active
+    judgment: existence is weaker than registration discovery routing enforcement or execution
+    action: require evidence at the exact claimed lifecycle layer before marking the property satisfied
+  - condition: a PR is green or reduces findings while tests gates ignores suppressions dependencies or generated ownership
+      also changed
+    judgment: success may have been manufactured by weakening the proof surface
+    action: run complete per-kind anti-bypass and preservation proof and block readiness until each material concern is disproved
+      or represented
+  - condition: a material positive audit claim is about to be accepted
+    judgment: positive evidence alone is insufficient because a second auditor may discover a counterexample the first never
+      sought
+    action: require the canonical claim row plus all machine-seeded applicable falsification probes; prefer static command
+      or check evidence and use LLM judgment only when deterministic closure is insufficient
+  doctrine:
+  - bound deterministic census and machine changed-symbol claim and falsification surfaces before semantic judgment
+  - explicit objective scope and original-prompt provenance before proportionality conclusions
+  - every audit domain changed surface machine changed symbol structural closure audit obligation material claim and falsification probe dispositioned
+    before convergence
+  - exact inspected artifact inventory before whole-audit coverage claims
+  - recursive discovery and final adversarial verification over findings obligations claims and probes until a verification
+    pass yields zero new material information
+  - architecture policy adapters and boundary ownership are explicit; architectural economy and underbuilt controls are judged
+    against requirements not diff size
+  - source and tested revisions remain distinct
+  - evidence property fit before conclusion
+  - owner axes root-cause state and mutation guard before downstream mutation
+  - negative closure preservation failure paths and test discrimination before green readiness
+  - audit finding closure is remediation primary mission; CI and review convergence are mandatory addenda
+  - remediation stops before merge
+  invariants:
+  - exact changed-file inventory equals scope-fidelity coverage and bound machine changed-symbol coverage
+  - every active objective has closure disposition
+  - deterministic obligations symbols claims and falsification seeds may be added to but never omitted or rewritten by the
+    model
+  - new abstraction or large diff is never proof of overengineering without requirement and owner evidence
+  - no stale ambiguous property-mismatched or ungrounded merge-blocking/origin claim reaches READY
+  - only confirmed PR-related CODEBASE findings with evidence-bound origin confirmed root cause resolved mutation guard and
+    implementation_surface evidence expose write scope
+  - green checks cannot erase anti-bypass preservation failure-path or test-discrimination obligations
+  - target repository remains read-only during audit and secret values never enter the bundle
+  - PR Remediation Contract requires audit plus CI plus review convergence and merge_authorized false
+  - final verification pass re-observes every retained finding obligation material claim falsification probe and deterministic closure before CONVERGED
+  adapter_map:
+    core_default: provider-neutral read-only PR audit with owner-separated evidence and negative closure
+    adapters:
+    - name: chatgpt
+      load_when: ChatGPT performs the audit
+      changes:
+      - tool_binding
+      - evidence_retrieval_order
+      - revision_capture
+      - review_coverage
+      - artifact_delivery
+    - name: claude-code-fable
+      load_when: Claude Code Fable consumes the remediation handoff
+      changes:
+      - cold_start_guard
+      - mutation_eligibility
+      - context_economy
+      - work_order
+      - preservation_scope
+      - completion_report
+  failure_modes:
+  - mode: model_skips_enumerable_evidence_or_attack
+    prevention_rule: bound deterministic census seeds exact changed symbols obligations claims and falsification probes before
+      semantic judgment
+  - mode: scope_or_proportionality_judgment_without_original_intent
+    prevention_rule: intent_contract records original prompt availability and provenance; Unknown stays explicit when intent
+      evidence is insufficient
+  - mode: overengineering_called_from_diff_size_alone
+    prevention_rule: architectural economy requires active-objective linkage existing-owner consideration and evidence; complexity
+      delta is evidence only
+  - mode: positive_claim_closes_without_adversarial_proof
+    prevention_rule: material SUPPORTED claims require claim-specific validation and every applicable falsification probe
+      to SURVIVE; inconclusive attacks block closure
+  - mode: single_pass_audit_stops_before_search_saturation
+    prevention_rule: explicit artifact inventory plus recursive pass ledger; CONVERGED requires a zero-new-information final
+      verification pass
+  - mode: remediation_finishes_after_code_fix_but_leaves_ci_or_reviews_red
+    prevention_rule: generated contract makes audit findings primary and adds mandatory CI/review convergence with merge false
+  leverage_points:
+  - name: explicit_audit_coverage_and_authority_resolution
+    score: 25
+    reason: prevents partial-scope policy-unknown or blocking-exclusion audits from presenting whole-target certainty
+  - name: bound_changed_symbol_claim_validation_and_falsification_surfaces
+    score: 25
+    reason: forces identical machine enumeration and counterexample obligations across auditors before semantic judgment can
+      diverge
+  - name: schema_owned_canonical_contract_with_projection_rederivation
+    score: 25
+    reason: removes structural split-brain and detects manually rewritten downstream projections even when manifest hashes
+      are recomputed
+  - name: confirmed_guarded_write_and_validation_scope
+    score: 25
+    reason: turns audit evidence into precise Fable write and validation authority without granting execution from prose or
+      uncertain ownership
+  - name: negative_closure_preservation_and_dependency_convergence
+    score: 24
+    reason: prevents manufactured green unsafe work ordering and incomplete constellation reasoning while protecting consumed
+      behavior
+  evidence_hierarchy:
+    highest: current user scope plus repository-owned semantic law mutation guards and explicit audit coverage
+    middle: current source plus exact revision-bound runtime CI measurement mandatory-validation required-check review and
+      enforcement evidence with property-fit provenance
+    lowest: pointer indexes documentation historical plans prior reviews and labeled inference
+    unknown_rule: material unknowns remain explicit and cannot support whole-target convergence READY or Fable mutation authority
+  self_improvement_hook:
+    capture_only_when_user_reports_bad_run_or_requests_iteration: true
+    capture:
+    - missed_trigger
+    - false_trigger
+    - coverage_overclaim
+    - authority_resolution_error
+    - revision_identity_error
+    - property_mismatched_readiness_input
+    - mutation_or_validation_authority_leak
+    - dependency_order_error
+    - escaped_bypass
+    - manual_output_repair
+  exemplary_gate_results:
+    activation_precision: pass
+    adapter_architecture: pass
+    evidence_hierarchy: pass
+    doctrine_extraction: pass
+    expert_heuristics: pass
+    failure_modes: pass
+    leverage_model: pass
+    self_improvement_hook: pass
+    compiler_enforcement_gates: pass
+    skill_intelligence_report: pass
+  tier_decision: exemplary
+
+# v2.0 deterministic closures
+producer_consumer_closure: true
+mutation_execution: isolated_temp_copy
+review_thread_semantic_closure: true
+no_orphan_artifact_closure: true

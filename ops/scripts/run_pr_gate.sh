@@ -428,6 +428,24 @@ _gate_classify_dirtiness() {
 _gate_commit_writer_dirt() {
   # Commit only paths the writers/heal made dirty. Pre-existing tracked dirt
   # stays out of the automatic commit (fail closed at classify, do not scoop).
+  #
+  # This commit moves HEAD, which used to stale the L4 release receipt the
+  # caller had just issued — so `make pr` invalidated its own precondition and
+  # failed at the remote check with "L4 receipt stale", telling the operator to
+  # re-run authorize-release and the whole gate. _gate_extend_l4_receipt below
+  # re-binds the receipt across this commit instead. Capture HEAD first: extend
+  # -release refuses unless the sha it is handed is exactly what the receipt
+  # attests.
+  # `if` consumes a failed read, so no `|| true` is needed and the swallowed-
+  # failure ratchet (test_bootstrap_invariants SWALLOW_BASELINE) stays at its
+  # measured count. An unreadable HEAD leaves this empty, which makes
+  # _gate_extend_l4_receipt a no-op and leaves the downstream L4 remote check
+  # as the authority — the same outcome as before this function existed.
+  local l4_head_before=""
+  if git -C "$WS" rev-parse HEAD >/dev/null 2>&1; then
+    l4_head_before="$(git -C "$WS" rev-parse HEAD)"
+  fi
+
   python3 - "$WS" "$status_before" <<'PY'
 import subprocess
 import sys
@@ -474,6 +492,43 @@ if proc.returncode != 0:
     raise SystemExit(1)
 print(f"OK: committed {len(paths)} writer-rewrite path(s) — continuing this make pr")
 PY
+
+  _gate_extend_l4_receipt "$l4_head_before"
+}
+
+_gate_extend_l4_receipt() {
+  # Re-bind the L4 release receipt across the commit _gate_commit_writer_dirt
+  # just authored, so `make pr` stops invalidating its own precondition.
+  #
+  # Safe because of what that commit contains and what extend-release checks.
+  # Content: formatter output and regenerated artifacts the gate itself wrote —
+  # never authored work, which fails classification earlier. Checks: the CLI
+  # refuses unless the receipt attests exactly $before AND $before is an
+  # ancestor of the new HEAD on the same branch, so a rewritten history still
+  # forces a fresh authorize-release. And the tree this commit produced is
+  # validated by the remainder of THIS gate run (readers, validators, security),
+  # which is the same standard _reattest_recovered_head applies in
+  # open_pr_after_gate.sh.
+  local before="${1:-}" head="" l4_cli
+  l4_cli="$GOV_ROOT/ops/autonomy/l4_local.py"
+  if git -C "$WS" rev-parse HEAD >/dev/null 2>&1; then
+    head="$(git -C "$WS" rev-parse HEAD)"
+  fi
+  [ -n "$before" ] && [ -n "$head" ] || return 0
+  [ "$before" != "$head" ] || return 0          # nothing was committed
+  [ -f "$l4_cli" ] || return 0
+  [ "${L9_L4_LOCAL_AUTONOMY:-1}" != "0" ] || return 0
+  if python3 "$l4_cli" --workspace "$WS" extend-release \
+      --from-head "$before" \
+      --reason "make pr gate writer rewrites (formatter + generated artifacts)" \
+      >/dev/null 2>&1; then
+    echo "OK: L4 receipt extended across the gate's writer-rewrite commit (${before:0:12} -> ${head:0:12})"
+  else
+    # Never silent, and never fatal here: the remote check downstream is the
+    # authority and refuses with its own message. Saying nothing would make a
+    # failed extension look like a successful one.
+    echo "WARN: L4 receipt not extended across the gate commit — authorize-release will be required" >&2
+  fi
 }
 
 _gate_run_precommit() {
@@ -562,16 +617,12 @@ _gate_run_projection_heal() {
   if [[ -f "$GOV_ROOT/ops/scripts/project_llm_rules.py" ]]; then
     python3 "$GOV_ROOT/ops/scripts/project_llm_rules.py" --root "$WS" --quiet
   fi
-  # env -u L9_MEMORY_INTERPRETER: the mcp domain gates l9-graphite-memory on
-  # _requires_env, so a bound interpreter renders the server into the TRACKED
-  # .mcp.json. CI renders unbound, and
+  # env -u L9_MEMORY_INTERPRETER: Claude Code's memory entry is the spawn
+  # wrapper (not _requires_env-gated). CI and the committed .mcp.json must
+  # still render that wrapper without a parent interpreter. Healing with a
+  # bound interpreter used to rewrite the tracked file and fail
   # tests/ops/memory/test_mcp_surfaces.py::test_committed_projection_is_current
-  # _for_an_unbound_environment pins the committed file to that unbound render.
-  # Healing with the variable bound made _gate_commit_writer_dirt auto-commit the
-  # bound form, which turned that test red on the gate's own commit — and once
-  # the interpreter reaches the session env (overlay_hosted_settings_env.py),
-  # that is every surface, so the gate re-created the commit on every run.
-  # Render the way CI does; SessionStart still renders the bound form locally.
+  # _for_an_unbound_environment. Render the way CI does.
   env -u L9_MEMORY_INTERPRETER python3 "$GOV_ROOT/ops/scripts/claude_projection.py" \
     --root "$WS" --workspace "$WS" --domains skills,commands,rules,mcp \
     --quiet --no-receipt

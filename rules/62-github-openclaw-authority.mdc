@@ -31,6 +31,31 @@ alwaysApply: true
   repos/...` is a sanctioned route for the same `openclaw-igorbot/github#token`.
   Do not provision another GitHub credential to "fix" a GraphQL 403.
 
+- **A GraphQL 403 is a transport swap, not a lost capability.** The operations
+  that once needed GraphQL have dedicated REST routes on the same gateway, and
+  the 403 body names them. Verified 2026-09-19 (`docs/DEGRADED_MODE_CONTRACT.md`):
+
+  | Operation | Route |
+  |---|---|
+  | list review threads | `GET  /repos/{o}/{r}/pulls/{n}/ccr/review_threads` |
+  | resolve / unresolve | `POST /repos/{o}/{r}/pulls/{n}/ccr/comments/{cid}/resolve` \| `/unresolve` |
+  | auto-merge | `PUT` \| `DELETE /repos/{o}/{r}/pulls/{n}/ccr/auto_merge` |
+  | ready for review | `POST /repos/{o}/{r}/pulls/{n}/ccr/ready_for_review` |
+  | convert to draft | `POST /repos/{o}/{r}/pulls/{n}/ccr/convert_to_draft` |
+
+  These routes key on `comment_id`. `ccr/review_threads` emits **no** GraphQL
+  node id, so a `thread_id` (`PRRT_…`) is unobtainable on such a surface and any
+  tool demanding one — `mcp__github__resolve_review_thread` included — cannot be
+  made to work there. Key ledgers on `comment_id`.
+
+- **`ops/scripts/lib/gh_graphql.sh` guards a shell, not a process.** Its `gh`
+  override is a bash function, so a Python caller running
+  `subprocess.run(["gh","api","graphql",…])` never sees it. A subprocess caller
+  must classify the surface itself (`L9_GITHUB_GRAPHQL_MODE` / `CLAUDE_CODE_REMOTE`
+  / `GH_GRAPHQL_UNSUPPORTED`). Note `gh pr comment` is GraphQL-backed and is
+  **absent** from that library's guard list — it fails while looking allowed; the
+  REST equivalent is `POST /repos/{o}/{r}/issues/{n}/comments`.
+
 ## Surface transport (model-controlled surfaces)
 
 A `model-controlled` surface holds **no** credential of its own: no Infisical import,

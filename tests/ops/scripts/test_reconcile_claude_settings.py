@@ -11,7 +11,10 @@ SCRIPTS = Path(__file__).resolve().parents[3] / "ops" / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 from reconcile_claude_settings import (  # noqa: E402
+    GIT_QUERY_TIMEOUT_S,
+    _path_is_git_tracked,
     merge_user_settings,
+    merge_workspace_local_settings,
     merge_workspace_settings,
     run,
 )
@@ -66,10 +69,14 @@ def test_reconcile_workspace_and_check(tmp_path: Path) -> None:
     assert result["wrote"]
 
 
-# -- issue #281: a git-tracked workspace settings file owns its hooks --------
+# -- issue #281: a repo-owned workspace keeps its own hooks -------------------
+#
+# The tracked settings.json is no longer written at all
+# (WHY_LOCAL_FOR_TRACKED); these assert the composition that now happens in
+# the gitignored settings.local.json instead.
 
 
-def test_merge_composes_hooks_for_tracked_file() -> None:
+def test_merge_composes_hooks_into_the_local_file() -> None:
     template = {
         "hooks": {
             "SessionStart": [{"hooks": [{"type": "command", "command": "gov-session-start"}]}],
@@ -95,7 +102,7 @@ def test_merge_composes_hooks_for_tracked_file() -> None:
         },
         "enabledPlugins": {"plugin@official": True},
     }
-    merged = merge_workspace_settings(template, existing, compose_hooks=True)
+    merged = merge_workspace_local_settings(template, existing)
     pretool = merged["hooks"]["PreToolUse"]
     # Consumer guard first and kept, governance group appended.
     assert pretool[0]["hooks"][0]["command"] == "python3 tools/contract_scanner.py --quick"
@@ -128,7 +135,7 @@ def test_compose_churn_free_when_hooks_already_match_template() -> None:
         }
     }
     existing = {"hooks": template["hooks"], "theme": "dark"}
-    merged = merge_workspace_settings(template, existing, compose_hooks=True)
+    merged = merge_workspace_local_settings(template, existing)
     assert merged["hooks"] == template["hooks"]
     assert merged["theme"] == "dark"
 
@@ -145,7 +152,7 @@ def test_compose_replaces_malformed_event_value_with_template() -> None:
             "Stop": [{"hooks": [{"type": "command", "command": "consumer-stop"}]}],
         }
     }
-    merged = merge_workspace_settings(template, existing, compose_hooks=True)
+    merged = merge_workspace_local_settings(template, existing)
     # A malformed event value is not a hook list: governance groups replace it.
     assert merged["hooks"]["SessionStart"][0]["hooks"][0]["command"] == "gov-session-start"
     # Consumer-owned events stay verbatim.
@@ -176,7 +183,7 @@ def test_compose_drops_stale_l9_managed_hooks_before_appending_template() -> Non
             ],
         }
     }
-    merged = merge_workspace_settings(template, existing, compose_hooks=True)
+    merged = merge_workspace_local_settings(template, existing)
     commands = [g["hooks"][0]["command"] for g in merged["hooks"]["SessionStart"]]
     assert stale not in commands
     assert "python3 tools/contract_scanner.py" in commands
@@ -184,7 +191,7 @@ def test_compose_drops_stale_l9_managed_hooks_before_appending_template() -> Non
     assert commands.count(fresh) == 1
 
 
-def test_reconcile_workspace_composes_tracked_settings(tmp_path: Path) -> None:
+def test_reconcile_workspace_preserves_tracked_settings(tmp_path: Path) -> None:
     root = tmp_path / "gov"
     hooks = root / "environment" / "agents" / "adapters" / "claude-code" / "hooks"
     hooks.mkdir(parents=True)
@@ -232,19 +239,212 @@ def test_reconcile_workspace_composes_tracked_settings(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     subprocess.run(["git", "add", ".claude/settings.json"], cwd=ws, check=True)
+    before = settings.read_bytes()
 
     result = run(root, workspace=ws, user=False, gov=True, check=False)
     assert result["wrote"]
 
-    reconciled = json.loads(settings.read_text(encoding="utf-8"))
-    pretool_commands = [g["hooks"][0]["command"] for g in reconciled["hooks"]["PreToolUse"]]
+    # The repo owns a tracked settings.json: its bytes are never rewritten.
+    assert settings.read_bytes() == before, (
+        "a git-tracked consumer settings.json must not be written by governance"
+    )
+    assert result["workspace"]["preserved_tracked_settings"] == str(settings)
+
+    # ...and the governance keys still reach the session, via the local file.
+    local = json.loads((ws / ".claude" / "settings.local.json").read_text(encoding="utf-8"))
+    assert local["hooks"]["SessionStart"], "governance hooks must still land"
+
+    # The consumer's own guard survives — now because it was never touched.
+    tracked = json.loads(settings.read_text(encoding="utf-8"))
+    pretool_commands = [g["hooks"][0]["command"] for g in tracked["hooks"]["PreToolUse"]]
     assert "python3 tools/contract_scanner.py --quick" in pretool_commands, (
         "a tracked consumer guard must survive reconciliation"
     )
-    assert reconciled["hooks"]["SessionStart"], "governance hooks must still land"
 
-    # Idempotent: the composed file must not churn on the next reconcile.
+    # Idempotent: the projection must not churn on the next reconcile.
     second = run(root, workspace=ws, user=False, gov=True, check=False)
     assert second["wrote"] == []
     check = run(root, workspace=ws, user=False, gov=True, check=True)
-    assert check["ok"] is True
+    assert check["ok"] is True, "a correctly projected tracked-settings workspace is not drift"
+
+
+def test_tracked_settings_survives_a_template_from_another_revision(tmp_path: Path) -> None:
+    """The reported bug: ` M .claude/settings.json` seconds into every session.
+
+    The governance clone and the workspace are independent checkouts, so the
+    template routinely projects to something other than what the workspace
+    committed. That must show up as a local-file difference, never as a dirty
+    tracked file.
+    """
+    root, ws = _fixture(
+        tmp_path,
+        template_hooks={"SessionStart": [{"hooks": [{"type": "command", "command": "v1"}]}]},
+    )
+    settings = ws / ".claude" / "settings.json"
+    settings.write_text(
+        json.dumps(
+            {"hooks": {"SessionStart": [{"hooks": [{"type": "command", "command": "v0"}]}]}},
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    subprocess.run(["git", "add", ".claude/settings.json"], cwd=ws, check=True)
+    subprocess.run(
+        ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "settings"],
+        cwd=ws,
+        check=True,
+    )
+
+    run(root, workspace=ws, user=False, gov=True, check=False)
+
+    porcelain = subprocess.run(
+        ["git", "status", "--porcelain", "--", ".claude/settings.json"],
+        cwd=ws,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    assert porcelain == "", f"SessionStart dirtied a tracked file: {porcelain!r}"
+
+
+def test_local_projection_keeps_standing_permission_approvals(tmp_path: Path) -> None:
+    """ "Yes, and don't ask again" writes an allow rule into settings.local.json.
+
+    Governance now writes the same file, so taking `permissions` wholly from
+    the template would erase the person's standing approvals at every
+    SessionStart.
+    """
+    root, ws = _fixture(tmp_path)
+    settings = ws / ".claude" / "settings.json"
+    settings.write_text("{}\n", encoding="utf-8")
+    subprocess.run(["git", "add", ".claude/settings.json"], cwd=ws, check=True)
+    local = ws / ".claude" / "settings.local.json"
+    local.write_text(
+        json.dumps({"permissions": {"allow": ["Bash(npm test:*)"]}}, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    run(root, workspace=ws, user=False, gov=True, check=False)
+
+    allow = json.loads(local.read_text(encoding="utf-8"))["permissions"]["allow"]
+    assert "Bash(npm test:*)" in allow, "a standing approval must survive reconciliation"
+    assert "Read" in allow, "the template's own rules must still be present"
+
+
+def test_check_stays_green_after_the_hosted_env_overlay_patches_the_local_file(
+    tmp_path: Path,
+) -> None:
+    """The overlay writes `env` into this same file right after the reconciler.
+
+    Taking `env` wholly from the template would report that healthy result as
+    drift on every later --check and strip it on every later write, while the
+    overlay put it back — a gate no correct container could clear.
+    """
+    root, ws = _fixture(tmp_path)
+    # Make the overlay's key set readable the way the reconciler sources it.
+    overlay = root / "environment" / "agents" / "adapters" / "claude-code"
+    (overlay / "overlay_hosted_settings_env.py").write_text(
+        'OVERLAY_KEYS = ("L9_AUTONOMY_MAX_PARALLEL",)\n', encoding="utf-8"
+    )
+    settings = ws / ".claude" / "settings.json"
+    settings.write_text("{}\n", encoding="utf-8")
+    subprocess.run(["git", "add", ".claude/settings.json"], cwd=ws, check=True)
+
+    run(root, workspace=ws, user=False, gov=True, check=False)
+
+    # The overlay then patches its account value into the same file.
+    local = ws / ".claude" / "settings.local.json"
+    data = json.loads(local.read_text(encoding="utf-8"))
+    data["env"]["L9_AUTONOMY_MAX_PARALLEL"] = "8"
+    local.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+    check = run(root, workspace=ws, user=False, gov=True, check=True)
+    assert check["ok"] is True, f"overlay keys reported as drift: {check['drift']}"
+
+    run(root, workspace=ws, user=False, gov=True, check=False)
+    env = json.loads(local.read_text(encoding="utf-8"))["env"]
+    assert env["L9_AUTONOMY_MAX_PARALLEL"] == "8", "a later write must not strip the overlay's key"
+
+
+def test_ownership_probe_is_bounded_and_a_hang_destroys_nothing(tmp_path: Path) -> None:
+    """PR #611 review (Copilot): the probe runs on the SessionStart path and
+    had no timeout, so a slow or wedged git hung session start.
+
+    Bounded now, and the unknown resolves to the branch that destroys nothing:
+    a hung git must never be what overwrites repo-owned bytes.
+    """
+    calls: list[dict] = []
+
+    def fake_run(*args, **kwargs):
+        calls.append(kwargs)
+        raise subprocess.TimeoutExpired(cmd="git", timeout=kwargs.get("timeout"))
+
+    # `subprocess` is one module object process-wide, so patching `.run` here
+    # is the same attribute the reconciler resolves through its own globals.
+    original = subprocess.run
+    subprocess.run = fake_run
+    try:
+        assert _path_is_git_tracked(tmp_path, ".claude/settings.json") is True
+    finally:
+        subprocess.run = original
+
+    assert calls, "the probe must actually invoke git"
+    assert calls[0].get("timeout") == GIT_QUERY_TIMEOUT_S, (
+        "every external call carries an explicit timeout"
+    )
+
+
+def test_absent_git_still_answers_untracked(tmp_path: Path) -> None:
+    """Distinct from a hang: with no git, nothing CAN be tracked, so False is
+    the true answer rather than a guess, and the managed path stays correct."""
+
+    def fake_run(*args, **kwargs):
+        raise OSError("git not found")
+
+    original = subprocess.run
+    subprocess.run = fake_run
+    try:
+        assert _path_is_git_tracked(tmp_path, ".claude/settings.json") is False
+    finally:
+        subprocess.run = original
+
+
+def test_untracked_workspace_settings_still_written_in_place(tmp_path: Path) -> None:
+    """The container-injected case is unchanged: governance owns that file.
+
+    It is untracked, excluded from git, and the only scope a cloud session is
+    documented to read — so it keeps receiving the full projection.
+    """
+    root, ws = _fixture(tmp_path)
+
+    run(root, workspace=ws, user=False, gov=True, check=False)
+
+    settings = json.loads((ws / ".claude" / "settings.json").read_text(encoding="utf-8"))
+    assert settings["hooks"]["SessionStart"]
+    assert not (ws / ".claude" / "settings.local.json").exists(), (
+        "the local file is for repo-owned workspaces only"
+    )
+
+
+def _fixture(tmp_path: Path, template_hooks: dict | None = None) -> tuple[Path, Path]:
+    """A governance root with a template, and an initialized git workspace."""
+    root = tmp_path / "gov"
+    hooks = root / "environment" / "agents" / "adapters" / "claude-code" / "hooks"
+    hooks.mkdir(parents=True)
+    (hooks / "session_start_claude_governance.sh").write_text("#!/bin/bash\n", encoding="utf-8")
+    tmpl = {
+        "$schema": "https://example.com/schema.json",
+        "hooks": template_hooks
+        or {"SessionStart": [{"hooks": [{"type": "command", "command": "gov-session-start"}]}]},
+        "permissions": {"allow": ["Read"], "deny": []},
+        "env": {"L9_GOVERNANCE_SURFACE": "claude-code"},
+        "skillOverrides": {},
+    }
+    (
+        root / "environment" / "agents" / "adapters" / "claude-code" / "settings.template.json"
+    ).write_text(json.dumps(tmpl, indent=2) + "\n", encoding="utf-8")
+    ws = tmp_path / "consumer"
+    (ws / ".claude").mkdir(parents=True)
+    subprocess.run(["git", "init", "-q"], cwd=ws, check=True)
+    return root, ws
