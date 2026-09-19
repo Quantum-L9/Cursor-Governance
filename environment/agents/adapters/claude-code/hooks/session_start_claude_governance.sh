@@ -590,13 +590,17 @@ if GOV=$(resolve_governance_dir); then
     # ssot / ssot_checkout commit the unbound .mcp.json (no interpreter).
     # Projecting with L9_MEMORY_INTERPRETER set rewrites that tracked file and
     # races Test Suite (PR 570: test_committed_projection_is_current_for_an_unbound_environment).
+    # CONTEXT7_API_KEY is no longer stripped here: context7 renders
+    # unconditionally (mcp.template.json), so the variable no longer changes
+    # the render, and stripping it was one half of how a populated secret still
+    # produced an absent server on governance checkouts.
     _L9_PROJ_UNBIND=""
     if [ -f "$GOV/ops/scripts/lib/workspace_kind.sh" ]; then
       # shellcheck source=/dev/null
       . "$GOV/ops/scripts/lib/workspace_kind.sh"
       case "$(classify_workspace_kind "$WORKSPACE")" in
         ssot|ssot_checkout)
-          _L9_PROJ_UNBIND="env -u L9_MEMORY_INTERPRETER -u CONTEXT7_API_KEY"
+          _L9_PROJ_UNBIND="env -u L9_MEMORY_INTERPRETER"
           ;;
       esac
     fi
@@ -1062,36 +1066,19 @@ emit_account_drift "$PY"
 emit_readiness_receipt "$PY"
 emit_capability_readiness "$PY"
 
-# Why Context7 is absent, from the evidence that decided it. claude_projection
-# records every template server it left out of .mcp.json (an unproxied
-# _requires_env variable) as gated_out_servers in the projection receipt. That
-# is the cause; the marketplace flag below is only a correlate, and blaming it
-# sent readers to the plugin catalog instead of the account variable.
-_ctx7_gated="$(python3 - "$HOME/.l9/claude/projection-receipt.json" <<'PY' 2>/dev/null
-import json
-import sys
-
-try:
-    with open(sys.argv[1], encoding="utf-8") as handle:
-        doc = json.load(handle)
-except Exception:
-    sys.exit(0)
-domains = doc.get("domains") if isinstance(doc, dict) else None
-if isinstance(domains, dict):  # same two shapes emit_claude_readiness accepts
-    entries = [dict(v, domain=k) for k, v in domains.items() if isinstance(v, dict)]
-else:
-    entries = domains if isinstance(domains, list) else []
-for entry in entries:
-    if isinstance(entry, dict) and entry.get("domain") == "mcp":
-        detail = entry.get("detail") or {}
-        if "context7" in (detail.get("gated_out_servers") or []):
-            print("gated")
-PY
-)"
-if [ "$_ctx7_gated" = "gated" ]; then
-  say "Context7: governed remote server not rendered — CONTEXT7_API_KEY is not proxied on this surface (projection receipt gated_out_servers); use skill l9-context7-docs or an official docs GET"
-elif [ "${SKIP_PLUGIN_MARKETPLACE:-}" = "true" ]; then
-  say "Context7 (hosted skip): MCP tools absent — use skill l9-context7-docs"
+# Context7 is rendered unconditionally (mcp.template.json); what decides
+# whether its tools work is the secret. Report that fact, never the value:
+# an absent key is an authentication failure to fix by populating
+# CONTEXT7_API_KEY (Infisical inventory, proxied into the session), not a
+# server to gate out and not a reason to paste anything. The marketplace flag
+# only says the plugin route is closed on hosted surfaces.
+if [ -n "${CONTEXT7_API_KEY:-}" ]; then
+  say "Context7: rendered in .mcp.json; CONTEXT7_API_KEY proxied — mcp__context7__* expected on this session"
+else
+  say "Context7: rendered in .mcp.json but CONTEXT7_API_KEY is ABSENT — the server will fail to authenticate until the secret populates (Infisical CONTEXT7_API_KEY); do not paste it, and use skill l9-context7-docs or an official docs GET until then"
+fi
+if [ "${SKIP_PLUGIN_MARKETPLACE:-}" = "true" ]; then
+  say "Context7 (hosted skip): marketplace plugin route closed on this surface — the governed remote server above is the route"
 fi
 
 skill_log="$HOME/.claude/l9/skill-usage.jsonl"
