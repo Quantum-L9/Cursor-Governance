@@ -222,9 +222,7 @@ def test_keep_dirty_breakglass_restores_the_skip(tmp_path: Path) -> None:
     gov = _clone_at(home, origin, old)
     (gov / "CANONICAL_LAW.md").write_text("in-flight\n", encoding="utf-8")
 
-    result = _run_launcher(
-        home, origin, TIP_HOOK, extra={"L9_GOV_REFRESH_KEEP_DIRTY": "1"}
-    )
+    result = _run_launcher(home, origin, TIP_HOOK, extra={"L9_GOV_REFRESH_KEEP_DIRTY": "1"})
 
     assert result.returncode == 0, result.stderr
     assert _receipt(home)["outcome"] == "reset-skipped-dirty"
