@@ -31,7 +31,7 @@
     },
     {
       "path": "adapters/README.md",
-      "sha256": "e719decc90bf2f9a78079af0c95d7cf80c1bb91d64e88037be13eb10ffbcb63d"
+      "sha256": "b16ee1d11c86da63b400afb91f26141558d4a4ee1c0317e6b30cde2021c52659"
     },
     {
       "path": "adapters/__init__.py",
@@ -71,7 +71,7 @@
     },
     {
       "path": "adapters/ci/README.md",
-      "sha256": "1f7f9802571ba7bc103066d6be2c6921623393e1edebb193846dce29bbd60e40"
+      "sha256": "5a38dd5c307f897c72fa7a4f324451d075313f97ceb98e843d23a58e97bcae06"
     },
     {
       "path": "adapters/ci/generic-shell/ADAPTER.yaml",
@@ -175,7 +175,7 @@
     },
     {
       "path": "adapters/common/README.md",
-      "sha256": "9ce6f59f3039a76176b1e0fe340ee3d17f2121d680c6ce6105720da1a64da8a2"
+      "sha256": "f75336dfc5cf7c9b6de1908cd702e7cca4a2ba08798950d718b24b948cfa7cb5"
     },
     {
       "path": "adapters/common/__init__.py",
@@ -315,7 +315,7 @@
     },
     {
       "path": "adapters/github/README.md",
-      "sha256": "d8aea2d35a9ff52b7b5f31a6003680095b857a4b5773a25fde9964d6d4568d1f"
+      "sha256": "431c30c983be21f0b8430655235d763bc7083d09e25e694bbb7d763455c4b536"
     },
     {
       "path": "adapters/github/__init__.py",
@@ -347,7 +347,7 @@
     },
     {
       "path": "adapters/github/common/README.md",
-      "sha256": "d5209e14e673a4057be4ec748c46ec5398aa8de4d0abae060fc4c34ab2c6ceea"
+      "sha256": "a618510a3812d6b0950f9210e4267e6510c508cdca503a85ba8f777631c4cb31"
     },
     {
       "path": "adapters/github/common/__init__.py",
@@ -459,7 +459,11 @@
     },
     {
       "path": "archive/campaign-input-v1/CG-PES-RUN2-HARDENING/README.md",
-      "sha256": "a47339fc0071f31bcf85e1a50046a70f04992e3a94094752f60d1440001acb54"
+      "sha256": "a5bdc97e95520ec13e29d9f81b25e496c34eb11ab89d482638f919cda1bdc532"
+    },
+    {
+      "path": "archive/campaign-input-v1/README.md",
+      "sha256": "fd117d523e7e8a1978da9eabcb65b4755ac8e6af36eb953e2851fd56c402aac5"
     },
     {
       "path": "archive/campaign-input-v1/session-runtime-hydration-convergence-v1/ARCHIVE_RECORD.yaml",
@@ -471,7 +475,7 @@
     },
     {
       "path": "archive/campaign-input-v1/session-runtime-hydration-convergence-v1/README.md",
-      "sha256": "e217e9e9f3a961d44519eedb8673837703e429c249acb65d3606355b4aa93e22"
+      "sha256": "90be4fd41f2a2f86f29da017e4e1b66a3f8c64ac968259b18436c283dbf69e15"
     },
     {
       "path": "archive/campaign-input-v1/session-runtime-hydration-convergence-v1/source-integrity-receipt.json",
@@ -479,7 +483,7 @@
     },
     {
       "path": "audits/README.md",
-      "sha256": "4ec3c67447c9bcd1ac258b4108aff43eb7bc9c0776df84e260753a86b32da964"
+      "sha256": "bcec34b7c9d1bf2811b26dc5701c4e4d3252f4ac8d22f63c6d452ecf9a1ea4af"
     },
     {
       "path": "audits/pec-remediation-workpack.v1.yaml",
@@ -511,7 +515,7 @@
     },
     {
       "path": "campaigns/COMPLETED/level3-make-pr-single-path/README.md",
-      "sha256": "f0ae842359511b84bfe075e3a83f3b2eee9f921f8ac0a0c7306d503c742dab1e"
+      "sha256": "c1c46a60cbb316cf5b1bea58885d49e3dde3643851d9db118a057ffd95e7ef63"
     },
     {
       "path": "campaigns/COMPLETED/level3-make-pr-single-path/handoff/CLOSEOUT.yaml",
@@ -603,7 +607,7 @@
     },
     {
       "path": "campaigns/eie-inference-isolation-v1/README.md",
-      "sha256": "9326f67dfe058d3555181c246cc84dda8e475df6a876b58e083010a6c12cd5ea"
+      "sha256": "2869a6d90501ab4bccf5b697cfcb30c6a7f0cdcd5fe8d169be047f8bbe1e3f70"
     },
     {
       "path": "campaigns/eie-inference-isolation-v1/source-integrity-receipt.json",
@@ -678,10 +682,6 @@
       "sha256": "851f6c5cae3227a654a968f413141a81063a794e8992450b79807ff8c9cbe432"
     },
     {
-      "path": "campaigns/l9-ecosystem-fix-plan/deliverables/ib-odoo_19/reference/README.md",
-      "sha256": "92d29e612ce04afe2571b20058cad0f8a0a743c73f8efaa3d99d8ec6e3a2aaf6"
-    },
-    {
       "path": "campaigns/l9-ecosystem-fix-plan/deliverables/ib-odoo_19/reference/plasticos_ceg_match_mapper.py",
       "sha256": "9c6dfd9a0abb6a48cf5076db636ea519b375b81c45a272a1aed7ebd2a01343e3"
     },
@@ -723,7 +723,7 @@
     },
     {
       "path": "campaigns/pe-router-capability-safety-v4/README.md",
-      "sha256": "d122756813a71ac448904abb53e89637fba2b3531bea2f19d59806cce6de1187"
+      "sha256": "85906d4880c4a2166370d2e9b4ab17a3ea036a0ef770a72e1f79d5530517e163"
     },
     {
       "path": "campaigns/pe-router-capability-safety-v4/source-integrity-receipt.json",
@@ -735,11 +735,11 @@
     },
     {
       "path": "campaigns/pe-v3-hardening/README.md",
-      "sha256": "1459a3a8a3303d278cefc8247436f954bb98dab0465f506f1ad34a8b8350f156"
+      "sha256": "e81fd5c1be1235fb10b8f096b5df8ad34d24b706b0d3e550e14eb7f7a6947975"
     },
     {
       "path": "campaigns/pe-v3-hardening/audits/README.md",
-      "sha256": "a2585848c9c2ab8e2a1e3743172a9f14fa9d6e9278686035b875cb2f6e8fbc94"
+      "sha256": "2703da75fc30187ea14443b643bdaa134eb864770ba9f6452855ca5ba273643a"
     },
     {
       "path": "campaigns/pe-v3-hardening/audits/recursive-alignment.md",
@@ -895,7 +895,7 @@
     },
     {
       "path": "campaigns/pe-v3-hardening/blueprint/schemas/README.md",
-      "sha256": "7a078879a2880ed1e2488873a1523e64145f5366fdd09ef0cb466fbaa689752c"
+      "sha256": "5a31902991e5e9cab8610a8a0d3e708b285b65985c002613708d648b8162d1e3"
     },
     {
       "path": "campaigns/pe-v3-hardening/blueprint/schemas/acceptance-receipt.schema.json",
@@ -991,7 +991,7 @@
     },
     {
       "path": "campaigns/pe-v3-hardening/blueprint/scripts/README.md",
-      "sha256": "1e128f676e12cf0c42de68bf7583c80107a69a325a597cf39d1288b84ac2bb6c"
+      "sha256": "e0827283ac0cfe17e20bfe1d5196290f1c21ea41d54dcce6d73d50ef3445e3e4"
     },
     {
       "path": "campaigns/pe-v3-hardening/blueprint/scripts/instantiate.py",
@@ -1003,7 +1003,7 @@
     },
     {
       "path": "campaigns/scripts/README.md",
-      "sha256": "da93f5abeb1df0c1165c629239309bd4d34c2e9d08bb42e318fd342a028e8f59"
+      "sha256": "dfcf7285e6001561c69863662a6a41e0a1685e5e87821cd387e27588e96a8717"
     },
     {
       "path": "campaigns/scripts/close_campaign.py",
@@ -1016,6 +1016,10 @@
     {
       "path": "campaigns/session-runtime-hydration-convergence-v2/CAMPAIGN_SOURCE.yaml",
       "sha256": "e5dde1cb762e77dea084f7ac4080e51dc158665c2eae8e15d6251ba71dcab707"
+    },
+    {
+      "path": "campaigns/session-runtime-hydration-convergence-v2/README.md",
+      "sha256": "cdcf049a28f27bf7b88a04bab87b4ceaf8395b02377d07970ba2ac3d7609b8da"
     },
     {
       "path": "campaigns/session-runtime-hydration-convergence-v2/source-integrity-receipt.json",
@@ -1111,7 +1115,7 @@
     },
     {
       "path": "compiler/schemas/README.md",
-      "sha256": "d340e5527dba4a965a9d174ff0ee5f6eb0b38c8aed606a0542161b56d8641893"
+      "sha256": "59248c1075e40fa41e36fcff65a06a22867370bebc9b03eb7dabc832e564c426"
     },
     {
       "path": "compiler/schemas/architecture-extractor-request.schema.json",
@@ -1366,10 +1370,6 @@
       "sha256": "5a52752e2f70325628709a6039ddb12e31b53b49ccdf3b68ed13c32ac5c04d0c"
     },
     {
-      "path": "conformance/fixtures/hostile/README.md",
-      "sha256": "1b6db20be1f4c81cf680741f50021b81abf5dcf8b8ab8f9d58b3e803ee1f24c6"
-    },
-    {
       "path": "conformance/fixtures/hostile/cancellation-without-evidence.yaml",
       "sha256": "bb4a9995e13d18903a3100ac2bb880ba2cadc9c402c61b03baf6690b29a922b3"
     },
@@ -1402,10 +1402,6 @@
       "sha256": "b2f7d7c55787e04c8838a838e274d862fb53fd22fb66b59a06078397eaf57b92"
     },
     {
-      "path": "conformance/fixtures/negative/README.md",
-      "sha256": "d73d19ba9471b1248a13484116a22920ad63d8117cfd49ffc4691f7405af5695"
-    },
-    {
       "path": "conformance/fixtures/negative/authority-widening.yaml",
       "sha256": "05c89acc47b6babf77368dc8ab0f91e0909c671ae9d4e74483d6bbc45d119d0c"
     },
@@ -1428,10 +1424,6 @@
     {
       "path": "conformance/fixtures/negative/unsupported-capability.yaml",
       "sha256": "5012d884002e31f71dab7037101c7c228999989310f1a04d3a99eea0aac04e5e"
-    },
-    {
-      "path": "conformance/fixtures/positive/README.md",
-      "sha256": "0d24c3e9e1aa849976ebaddc752a2851e39029cf541d876c3800882971603844"
     },
     {
       "path": "conformance/fixtures/positive/claude-code-direct-write.yaml",
@@ -1459,7 +1451,7 @@
     },
     {
       "path": "conformance/schemas/README.md",
-      "sha256": "3911bcf79d351b2231e1148c1c389ad53d0b5a9c0377372f251043d526e6b4ab"
+      "sha256": "78786cba89aa9222ed5548a4bc0d1c835651a693262fe8d41c2d00c486137dd2"
     },
     {
       "path": "conformance/schemas/canonical-execution-request.schema.json",
@@ -1595,7 +1587,7 @@
     },
     {
       "path": "integrations/README.md",
-      "sha256": "7dc3164ac9a21eb598ec08af80694002648905c046cf4b4d11d7afb9a0edba37"
+      "sha256": "b715b8af4c8d3a785986167ea6b5c366168ced01878029f60b7d104661b013cf"
     },
     {
       "path": "integrations/__init__.py",
@@ -1759,7 +1751,7 @@
     },
     {
       "path": "mission/schemas/README.md",
-      "sha256": "382f2a45a0cfa0bceaabc01562f687330046d0582538f6377e323d3032114085"
+      "sha256": "02f22d1bf03bb71e2518d4dd181c7c1b34bc7c2a548f7718b02f527049a980b9"
     },
     {
       "path": "mission/schemas/mission-program-binding.schema.json",
@@ -2099,11 +2091,11 @@
     },
     {
       "path": "registry/README.md",
-      "sha256": "8a1152f1df946bcafd869f1841c49c8ca663867887176d7a0a9dfad62852f1b9"
+      "sha256": "51e7b038063392d0565e7063c4ffa817f334aa5f37c0ab1fede6ecaae29b771d"
     },
     {
       "path": "scripts/README.md",
-      "sha256": "f3546648f4f712fa325e9ce641998c4a35ea9ca89f4fddee3764878c25a56e57"
+      "sha256": "5d4f88baab3526a2f5df2f7dee49740d65ac6fab5a0c0a4a824abafbb137709b"
     },
     {
       "path": "scripts/__init__.py",
@@ -2511,7 +2503,7 @@
     },
     {
       "path": "validation/history/README.md",
-      "sha256": "e2befcb0fb58479bb8f19d8b24751b84c2457421f460501500a89a581e112efa"
+      "sha256": "2c37e07fa19a37539774685193b9617f4568f09d6bbc546e423025e0a29c8da3"
     },
     {
       "path": "validation/history/VALIDATION.pre_peer_execution_core.md",
