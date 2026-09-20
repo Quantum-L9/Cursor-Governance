@@ -53,6 +53,9 @@ if [ "$LIFECYCLE" = "1" ]; then
   export L9_MEMORY_SOURCE=manus
   # shellcheck source=/dev/null
   source "$GOVERNANCE/ops/memory/export_agent_assertion_env.sh"
+  # memory_lifecycle.py imports the checkout-local `ops` package. The locked
+  # interpreter does not put the governance root on sys.path by itself.
+  export PYTHONPATH="$GOVERNANCE${PYTHONPATH:+:$PYTHONPATH}"
 fi
 
 exec "$PYTHON" "$SCRIPT_DIR/mcp_server.py" --governance-root "$GOVERNANCE" "$@"

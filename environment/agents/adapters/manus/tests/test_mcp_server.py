@@ -116,6 +116,21 @@ class ManusMcpServerTests(unittest.TestCase):
         self.assertTrue(refused.get("isError", False))
         self.assertIn("bearer-protected", refused["structuredContent"]["error"])
 
+    def test_lifecycle_status_loads_ops_without_a_preloaded_repo_sys_path(self) -> None:
+        protected = mcp_server.GovernanceMcpService(REPOSITORY, memory_lifecycle_enabled=True)
+        restored = list(sys.path)
+        try:
+            sys.path[:] = [entry for entry in sys.path if Path(entry).resolve() != REPOSITORY]
+            stripped = list(sys.path)
+            status = protected.call_tool("memory_lifecycle_status", {})
+            self.assertEqual(sys.path, stripped)
+        finally:
+            sys.path[:] = restored
+        self.assertFalse(status.get("isError", False))
+        payload = status["structuredContent"]
+        self.assertIn(payload["status"], {"ready", "blocked"})
+        self.assertEqual(payload["transport"], "memory-control-plane/v1")
+
     def test_lifecycle_start_refuses_unsigned_agent_fallback_before_memory_io(self) -> None:
         protected = mcp_server.GovernanceMcpService(REPOSITORY, memory_lifecycle_enabled=True)
         with mock.patch.dict(
