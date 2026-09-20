@@ -5,51 +5,65 @@ path: environment/agents/adapters/manus/setup.md
 layer: adapter
 owner: governance-control-plane
 status: active
-version: 2.0.0
-updated: 2026-09-13
+version: 3.0.0
+updated: 2026-09-19
 /L9_META -->
 
 # Manus adapter setup
 
-The Manus adapter is a **thin remote-surface binding**. It deliberately reuses
-the shared L9 bootstrap, agent registry, autonomy profile, and secret boundary.
-It does not reproduce the Cursor hook plane or Claude Code projection engine.
+The Manus adapter has a native Infisical capability lane. It is intentionally
+independent of Cursor activation: it does not install a Cursor hook, read a
+Cursor machine profile, call a shared SessionStart secret plane, or export
+secrets to the Manus session.
 
-## Required project configuration
+## Required setup
 
-1. Make `Quantum-L9/Cursor-Governance` available through the Manus GitHub
-   integration so a session can clone or open the governance checkout.
-2. Copy the non-secret values from `environment.env.example` to the Manus
-   project/session environment. Do not add a literal `L9_GOVERNANCE_DIR`; hosted
-   environment values do not expand `$HOME`.
-3. Install `session_bootstrap.md` as a project instruction or project-scoped
-   Manus skill. This gives each session the exact identity, authority order, and
-   upstream activation route.
-4. Do **not** create a Custom MCP connector from `mcp-connector.json`. Its
-   `transport: none` value is intentional: the memory package has not published
-   a sanctioned remote transport for Manus.
+1. Create a **Manus-specific Infisical Machine Identity**. Give it project
+   access that is limited to the required secret paths and permissions. A
+   read-only initial capability needs only access to `GITHUB_TOKEN` in the
+   chosen project scope.
+2. Configure **Universal Auth** for that identity. Keep the Client ID and Client
+   Secret outside this repository and outside Manus project/session environment.
+3. Render a temporary local Custom MCP draft with
+   `render_infisical_mcp_connector.py`. The renderer reads the Client Secret from
+   a mode-0600 file and creates a mode-0600 draft with encrypted connector
+   environment values.
+4. Add that draft as the `l9-manus-infisical` Custom MCP server. Its command is
+   the checked-in `serve_infisical_mcp.sh`; no remote URL, bearer header, or
+   project environment secret is required.
+5. Delete the temporary draft immediately after it has been accepted. Retain the
+   client-secret source only in the approved operator secret store.
 
-## Local checkout verification
+## Runtime behavior
 
-From a Manus workspace that has both an active git repository and the governance
-checkout, run:
+The server sends the machine identity Client ID and Client Secret only to
+Infisical's Universal Auth login endpoint. It retains the resulting access token
+in process memory until shortly before expiry. For metadata listing it sends
+`viewSecretValue=false`. For invocation it reads exactly one manifest-declared
+secret, uses it in one fixed HTTPS request, serializes an allowlisted response
+subset, and refuses the response if the resolved value appears in it.
+
+No MCP tool returns a secret value. There is no `get_secret`, `resolve_secret`,
+generic outbound HTTP, command execution, environment dump, or arbitrary
+capability-selection tool.
+
+## Adding a capability
+
+Edit `infisical_capabilities.json` and the accompanying tests in the same
+change. A capability must have a unique identifier, a single approved inventory
+key, a fixed HTTPS origin, an allowlisted method, strict caller argument regexes,
+a path template that uses only declared arguments, and an explicit response
+field allowlist. The adapter's Python validator and tests must be extended for
+every new upstream family before it can be used.
+
+## Diagnostic checks
 
 ```bash
-make -C "$HOME/.cursor-governance" manus-adapter-check
-make -C "$HOME/.cursor-governance" manus-install-check WS="$(pwd)"
+make manus-adapter-check
+make manus-install-check WS="$(pwd)"
 ```
 
-`manus-adapter-check` validates the committed carrier files and registry
-identity. `manus-install-check` invokes only the shared bootstrap in diagnostic
-mode; it does not modify Manus account configuration or create a remote memory
-connection. A degraded named capability is an honest result, not a reason to
-persist a credential.
-
-## Operating limits
-
-The current Manus Program Execution provider (`manus-cloud`) is intentionally
-dormant until a Controller execution transport exists. This surface adapter does
-not change that status. Manus may perform the ordinary in-session work available
-to the platform, governed by the shared L4 and publish-path gates, but it must
-not advertise a background execution bridge, a remote memory path, or a secret
-capability that the upstream packages do not supply.
+These checks validate the carrier assets and repository workspace only. They do
+not authenticate to Infisical, create a Manus Custom MCP connector, or retrieve
+a secret. At runtime, use `infisical_status` for connector posture and
+`infisical_list_secret_metadata` for an explicit, value-free scope check.

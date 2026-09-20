@@ -83,7 +83,18 @@ class ManusAdapterContractTests(unittest.TestCase):
         self.assertNotIn("url", connector)
         self.assertNotIn("headers", connector)
 
-    def test_installer_is_syntax_valid_and_calls_the_shared_bootstrap(self) -> None:
+    def test_native_infisical_carrier_is_local_and_secret_free(self) -> None:
+        connector = json.loads(
+            (ADAPTER / "infisical-mcp-connector.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(connector["name"], "l9-manus-infisical")
+        self.assertEqual(connector["transport"], "stdio")
+        self.assertEqual(connector["secret_delivery"], "encrypted-connector-env")
+        self.assertNotIn("url", connector)
+        self.assertNotIn("headers", connector)
+        self.assertNotIn("env", connector)
+
+    def test_installer_is_syntax_valid_and_validates_native_carrier(self) -> None:
         installer = ADAPTER / "install.sh"
         syntax = subprocess.run(
             ["bash", "-n", str(installer)],
@@ -100,8 +111,8 @@ class ManusAdapterContractTests(unittest.TestCase):
         )
         self.assertEqual(help_output.returncode, 0, help_output.stderr)
         text = installer.read_text(encoding="utf-8")
-        self.assertIn("bootstrap_agent_environment.sh", text)
-        self.assertIn("--surface manus", text)
+        self.assertIn("validate_manus_adapter.py", text)
+        self.assertNotIn("bootstrap_agent_environment.sh", text)
 
     def test_installer_refuses_a_non_repository_before_bootstrapping(self) -> None:
         installer = ADAPTER / "install.sh"

@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-# Manus adapter installer — thin surface binding over the shared bootstrap.
+# Manus adapter installer — native Infisical connector readiness check.
 #
-# Vendor-neutral readiness, secret posture, repository identity, and autonomy
-# gates stay in ops/. This script only selects the Manus surface and validates
-# that an actual git workspace was supplied. It cannot install Manus project
-# instructions or create a remote MCP transport; those are explicit platform
-# configuration concerns documented in setup.md.
+# This script validates the committed Manus carrier and the caller's actual Git
+# workspace. The connector's Universal Auth fields belong only in Manus Custom
+# MCP encrypted configuration. This installer never inherits Cursor SessionStart
+# behavior, resolves a secret, or writes a credential into the workspace.
 #
 # Usage:
 #   install.sh [--governance <dir>] [--workspace <dir>] [--check] [--quiet]
@@ -55,19 +54,16 @@ fi
 GOVERNANCE="$(cd "$GOVERNANCE" 2>/dev/null && pwd -P)" || fail "governance directory does not exist"
 [ -f "$GOVERNANCE/CANONICAL_LAW.md" ] || fail "no governance SSOT at $GOVERNANCE"
 
-BOOTSTRAP="$GOVERNANCE/ops/scripts/bootstrap_agent_environment.sh"
-[ -f "$BOOTSTRAP" ] || fail "missing shared bootstrap at $BOOTSTRAP"
+VALIDATOR="$GOVERNANCE/environment/agents/adapters/manus/validate_manus_adapter.py"
+[ -f "$VALIDATOR" ] || fail "missing adapter validator at $VALIDATOR"
+PYTHON_BIN="$GOVERNANCE/.venv/bin/python"
+[ -x "$PYTHON_BIN" ] || PYTHON_BIN="python3"
 
-ARGS=(--surface manus --governance "$GOVERNANCE" --workspace "$WORKSPACE")
-[ "$CHECK" = "1" ] && ARGS+=(--check)
-[ "$QUIET" = "1" ] && ARGS+=(--quiet)
+say "manus-install: validating native Infisical connector for workspace=$WORKSPACE"
+"$PYTHON_BIN" "$VALIDATOR" --repo-root "$GOVERNANCE" || fail "native adapter validation failed"
 
-say "manus-install: shared bootstrap for workspace=$WORKSPACE"
-bash "$BOOTSTRAP" "${ARGS[@]}"
-status=$?
-case "$status" in
-  0) say "manus-install: READY (shared bootstrap)" ;;
-  6) say "manus-install: DEGRADED (shared bootstrap; session remains usable)" ;;
-  *) say "manus-install: BLOCKED (shared bootstrap exit $status)" ;;
-esac
-exit "$status"
+if [ "$CHECK" = "1" ]; then
+  say "manus-install: CHECKED (native connector carrier only)"
+else
+  say "manus-install: READY (configure the l9-manus-infisical Custom MCP separately)"
+fi
