@@ -49,7 +49,15 @@ from readme_model import (
     ReadmeTarget,
 )
 from readme_quality import retirement_findings, validate_readme_models
-from readme_renderers import owns_marker, render_readme
+from readme_renderers import (
+    LEGACY_FOLDER_MARKER,
+    LEGACY_MARKERS,
+    LEGACY_MODULE_MARKER,
+    MARKER_VERSION,
+    marker_version,
+    owns_any_marker,
+    render_readme,
+)
 
 __all__ = [
     "CONFIG_PATH",
@@ -91,10 +99,10 @@ SUPPORTED_OVERLAY_FIELDS = frozenset(
     {"path", "title", "tier", "description", "purpose", "skip", "sections"}
 )
 
-# --- legacy ownership markers, still recognized so an older corpus migrates ---
-GENERATED_MARKER = "<!-- l9-module-readme: generated-from-ast -->"
-FOLDER_MARKER = "<!-- l9-folder-readme: generated-from-tree -->"
-LEGACY_MARKERS = (GENERATED_MARKER, FOLDER_MARKER)
+# Legacy ownership markers, re-exported for the published API. The marker
+# authority is `readme_renderers`; these names must never diverge from it.
+GENERATED_MARKER = LEGACY_MODULE_MARKER
+FOLDER_MARKER = LEGACY_FOLDER_MARKER
 
 HEADING_RE = re.compile(r"^##\s+(.+?)\s*$", re.MULTILINE)
 # Pre-marker contract of scripts/generate_subsystem_readmes.py: a README whose
@@ -390,11 +398,15 @@ def classify_readme_text(text: str) -> ReadmeOwnership:
     header line plus its section set) and not opted out with
     ``auto_generated: false``; a refresh migrates it to the marker.
     ``handwritten``: everything else; never overwritten without ``--force``.
+
+    The explicit opt-out is checked first and wins over a marker. Someone
+    who wrote ``auto_generated: false`` into a file this generator once
+    owned has said which of the two is in charge.
     """
-    if owns_marker(text) or any(marker in text for marker in LEGACY_MARKERS):
-        return "generated"
     if _legacy_handwritten(text):
         return "handwritten"
+    if owns_any_marker(text):
+        return "generated"
     if _legacy_generated_shape(text):
         return "legacy_generated"
     return "handwritten"
@@ -768,8 +780,16 @@ def plan_module_readmes(
         rel_dest = f"{target.path}/README.md"
         expected.add(rel_dest)
         ownership = classify_readme(dest)
+        future = (
+            marker_version(dest.read_text(encoding="utf-8")) if ownership == "generated" else None
+        )
         if ownership == "missing":
             action, reason = "create", "authorized target has no README"
+        elif future is not None and future > MARKER_VERSION:
+            action, reason = (
+                "conflict",
+                f"written by format version {future}; this compiler understands {MARKER_VERSION}",
+            )
         elif ownership == "handwritten" and not force:
             action, reason = "preserve", "handwritten README is never overwritten"
         else:

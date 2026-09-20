@@ -18,7 +18,13 @@ from collections.abc import Iterable, Sequence
 from pathlib import Path
 
 from readme_model import QualityFinding, ReadmeModel
-from readme_renderers import marker_for, marker_kind, owns_marker
+from readme_renderers import (
+    MARKER_VERSION,
+    marker_for,
+    marker_kind,
+    marker_version,
+    owns_any_marker,
+)
 
 __all__ = [
     "FORBIDDEN_PURPOSE_PHRASES",
@@ -230,13 +236,30 @@ def validate_readme_models(
 
 
 def retirement_findings(path: str, text: str) -> list[QualityFinding]:
-    """Refuse to retire a README this generator does not own."""
-    if owns_marker(text):
-        return []
-    return [
-        _error(
-            "readme.retire.unowned",
-            f"{path} carries no generator ownership marker and must not be retired",
-            path,
-        )
-    ]
+    """Refuse to retire a README this generator does not strongly own.
+
+    Both version-1 markers count: this generator wrote them, so a stale
+    one is its own to clean up. What it must not touch is an unmarked
+    file, or output from a generator version it does not understand.
+    """
+    if not owns_any_marker(text):
+        return [
+            _error(
+                "readme.retire.unowned",
+                f"{path} carries no generator ownership marker and must not be retired",
+                path,
+            )
+        ]
+    version = marker_version(text)
+    if version is not None and version > MARKER_VERSION:
+        return [
+            _error(
+                "readme.marker.future_version",
+                (
+                    f"{path} was written by format version {version}; this compiler "
+                    f"understands {MARKER_VERSION} and will not rewrite or delete it"
+                ),
+                path,
+            )
+        ]
+    return []

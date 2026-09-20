@@ -25,11 +25,16 @@ from readme_model import DependencyDoc, ModuleDoc, ReadmeKind, ReadmeModel
 
 __all__ = [
     "GENERATOR_NAME",
+    "LEGACY_FOLDER_MARKER",
+    "LEGACY_MARKERS",
+    "LEGACY_MODULE_MARKER",
     "MARKER_PREFIX",
     "MARKER_VERSION",
     "RENDERERS",
     "marker_for",
     "marker_kind",
+    "marker_version",
+    "owns_any_marker",
     "owns_marker",
     "render_readme",
 ]
@@ -40,6 +45,11 @@ MARKER_VERSION = 2
 #: technique that happened to produce the bytes. `generated-from-ast` made
 #: the extraction method part of the identity; AST is evidence, not format.
 MARKER_PREFIX = "<!-- l9-readme: generated-by="
+#: Version-1 markers. Still strong ownership: this generator wrote them,
+#: so a stale one may be retired and a live one migrates on refresh.
+LEGACY_MODULE_MARKER = "<!-- l9-module-readme: generated-from-ast -->"
+LEGACY_FOLDER_MARKER = "<!-- l9-folder-readme: generated-from-tree -->"
+LEGACY_MARKERS = (LEGACY_MODULE_MARKER, LEGACY_FOLDER_MARKER)
 
 
 def marker_for(kind: str) -> str:
@@ -47,11 +57,16 @@ def marker_for(kind: str) -> str:
 
 
 def owns_marker(text: str) -> bool:
+    """True for a current-format marker only."""
     return f"{MARKER_PREFIX}{GENERATOR_NAME} " in text
 
 
-def marker_kind(text: str) -> str | None:
-    """Kind recorded in an owned README's marker, if it carries one."""
+def owns_any_marker(text: str) -> bool:
+    """True for any marker this generator has ever written."""
+    return owns_marker(text) or any(marker in text for marker in LEGACY_MARKERS)
+
+
+def _marker_token(text: str, key: str) -> str | None:
     start = text.find(f"{MARKER_PREFIX}{GENERATOR_NAME} ")
     if start == -1:
         return None
@@ -59,9 +74,30 @@ def marker_kind(text: str) -> str | None:
     if end == -1:
         return None
     for token in text[start:end].split():
-        if token.startswith("kind="):
-            return token[5:] or None
+        if token.startswith(f"{key}="):
+            return token[len(key) + 1 :] or None
     return None
+
+
+def marker_kind(text: str) -> str | None:
+    """Kind recorded in an owned README's marker, if it carries one."""
+    return _marker_token(text, "kind")
+
+
+def marker_version(text: str) -> int | None:
+    """Format version recorded in an owned README's marker.
+
+    A version this compiler does not know belongs to a newer generator.
+    Rewriting or deleting its output silently is how a rollback quietly
+    destroys work, so the planner reports it rather than acting.
+    """
+    raw = _marker_token(text, "version")
+    if raw is None:
+        return 1 if any(marker in text for marker in LEGACY_MARKERS) else None
+    try:
+        return int(raw)
+    except ValueError:
+        return None
 
 
 def _join(blocks: Sequence[str]) -> str:
