@@ -514,9 +514,7 @@ def waves(
     by_number = {pr["number"]: pr for pr in prs}
     sequence = order or [pr["number"] for pr in prs]
     surfaces = write_surfaces or {}
-    claims = {
-        number: write_claims(by_number[number], surfaces.get(number)) for number in sequence
-    }
+    claims = {number: write_claims(by_number[number], surfaces.get(number)) for number in sequence}
     board_map = boards or {}
     leftover = {n for n, board in board_map.items() if board == "leftover"}
     forced = {int(n) for n in (force_remediate or [])} - leftover
