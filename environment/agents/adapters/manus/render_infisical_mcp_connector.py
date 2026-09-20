@@ -31,8 +31,18 @@ def _read_secret_file(path: Path) -> str:
 def _write_private_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-    os.chmod(temporary, 0o600)
+    payload_text = json.dumps(payload, indent=2) + "\n"
+    fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            fd = -1
+            handle.write(payload_text)
+    except Exception:
+        if fd >= 0:
+            os.close(fd)
+        temporary.unlink(missing_ok=True)
+        raise
     temporary.replace(path)
     os.chmod(path, 0o600)
 

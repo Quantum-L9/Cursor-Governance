@@ -112,7 +112,8 @@ class ManusAdapterContractTests(unittest.TestCase):
         self.assertEqual(help_output.returncode, 0, help_output.stderr)
         text = installer.read_text(encoding="utf-8")
         self.assertIn("validate_manus_adapter.py", text)
-        self.assertNotIn("bootstrap_agent_environment.sh", text)
+        self.assertIn("bootstrap_agent_environment.sh", text)
+        self.assertIn("--surface manus", text)
 
     def test_installer_refuses_a_non_repository_before_bootstrapping(self) -> None:
         installer = ADAPTER / "install.sh"

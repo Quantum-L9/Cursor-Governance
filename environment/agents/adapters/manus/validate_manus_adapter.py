@@ -228,10 +228,16 @@ def validate(repo_root: Path) -> list[str]:
             errors.append(f"session bootstrap contains retired provider material: {forbidden}")
 
     installer = (adapter / "install.sh").read_text(encoding="utf-8")
-    for marker in ("validate_manus_adapter.py", "--repo-root", "--workspace"):
+    for marker in (
+        "validate_manus_adapter.py",
+        "--repo-root",
+        "--workspace",
+        "bootstrap_agent_environment.sh",
+        "--surface manus",
+    ):
         if marker not in installer:
             errors.append(f"installer is missing native-connector validation marker: {marker}")
-    for forbidden in ("git clone", "curl ", "bootstrap_agent_environment.sh", "GRAPHITI_MCP_"):
+    for forbidden in ("git clone", "curl ", "GRAPHITI_MCP_"):
         if forbidden in installer:
             errors.append(f"installer contains out-of-scope implementation: {forbidden}")
     return errors
