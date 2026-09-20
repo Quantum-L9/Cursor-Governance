@@ -20,6 +20,30 @@ import unittest
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
+
+# HookWriterTests runs the REAL SessionStart hook with the governance root
+# pointed at this very checkout, then asserts the checkout is unchanged across
+# that ~10s window. Several sibling files do the same thing with other real
+# writers (the bootstrap installer, the user-scope reconciler, the wiring
+# check), and one reads the worktree's .mcp.json. Every one of them ends
+# net-clean -- a per-file probe over this checkout measured no residue -- but
+# the writes are transient, so two of these files on two xdist workers straddle
+# each other's windows and a snapshot taken mid-window flips the assertion.
+# That is the whole mechanism behind the intermittent failure here (~1 in 6
+# full-directory runs; never in isolation).
+#
+# The canonical runner passes --dist loadgroup, which sends every test sharing
+# an xdist_group name to one worker, so this shared name pins the whole set
+# onto a single worker and the windows stop overlapping. Keep the name
+# identical in each file or the pinning silently stops working.
+#
+# Do NOT weaken or skip the snapshot assertions instead: the invariant they
+# guard -- nothing a governance writer emits may land in the checked-out tree
+# -- is real, and is the same class as the .mcp.json ownership defect fixed in
+# ops/scripts/claude_projection.py.
+pytestmark = pytest.mark.xdist_group("live_repo_tree")
+
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "ops" / "scripts"))
 

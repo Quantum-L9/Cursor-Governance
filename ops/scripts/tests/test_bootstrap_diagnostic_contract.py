@@ -18,6 +18,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
+# Runs the real bootstrap with the governance clone symlinked to this checkout
+# and asserts the checkout is untouched. Shares that window with the other
+# live-tree tests, so it shares their xdist group; the full rationale lives in
+# ops/scripts/tests/test_governance_refresh_receipt.py.
+pytestmark = pytest.mark.xdist_group("live_repo_tree")
+
 REPO = Path(__file__).resolve().parents[3]
 BOOTSTRAP = REPO / "ops" / "scripts" / "bootstrap_agent_environment.sh"
 SESSION_START = REPO / "ops" / "hooks" / "session_start_bootstrap.sh"
