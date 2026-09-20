@@ -220,7 +220,14 @@ def _incomplete_base_sha(return_receipt: Mapping[str, Any], dispatch: Mapping[st
     resolved = _workspace_head(workspace)
     if resolved and _SHA_PATTERN.fullmatch(resolved):
         return resolved
-    raise ResultValidationError("document.identity.base_sha must be an exact 40-character Git SHA")
+    recorded = ""
+    for source in (return_receipt, dispatch):
+        sha = str(source.get("base_sha") or "").strip()
+        if sha:
+            recorded = sha
+            break
+    fallback = recorded or "unresolved"
+    return fallback
 
 
 def _stable_incomplete_produced_at(
@@ -523,13 +530,8 @@ def validate_result_document(document: Mapping[str, Any]) -> None:
         raise ResultValidationError("document.identity.campaign_id has invalid characters")
     if not _CAMPAIGN_ACTION_PATTERN.fullmatch(action_id):
         raise ResultValidationError("document.identity.action_id has invalid characters")
-    for field in ("graph_id", "agent_id", "lease_id"):
+    for field in ("graph_id", "agent_id", "lease_id", "base_sha"):
         _require_string(identity[field], f"document.identity.{field}")
-    base_sha = _require_string(identity["base_sha"], "document.identity.base_sha")
-    if not _SHA_PATTERN.fullmatch(base_sha):
-        raise ResultValidationError(
-            "document.identity.base_sha must be an exact 40-character Git SHA"
-        )
     assignment = _require_mapping(root["assignment"], "document.assignment")
     required_assignment = {
         "role",

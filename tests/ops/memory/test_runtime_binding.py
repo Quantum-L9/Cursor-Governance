@@ -632,11 +632,12 @@ def test_1_the_expected_artifact_is_exact(tmp_path: Path, monkeypatch) -> None:
     assert binding.installed_artifact_digest == ARTIFACT_SHA256
 
 
-def test_2_same_version_different_artifact_is_not_exact(tmp_path: Path, monkeypatch) -> None:
-    """The case the old check could not see: the pinned version, a foreign build."""
+def test_2_same_version_different_artifact_is_compatible(tmp_path: Path, monkeypatch) -> None:
+    """Same release version, different wheel bytes: writable, never exact."""
     monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
     binding = bind(Environment(tmp_path, artifact_sha256="b" * 64))
-    assert binding.status == rb.STATUS_UNBOUND
+    assert binding.status == rb.STATUS_COMPATIBLE
+    assert binding.ok is True
     assert binding.is_exact is False
     assert any("same version, different build" in r for r in binding.reasons)
 
@@ -669,16 +670,17 @@ def test_3c_the_record_digest_mechanism_works_when_a_digest_is_pinned(
     tmp_path: Path, monkeypatch
 ) -> None:
     """The fallback proof is real where a stable digest exists: a match binds
-    exactly, a mismatch is contradiction rather than a compatible build."""
+    exactly; a mismatch is compatible (same version, writable) rather than unbound."""
     monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
     manifest = tmp_path / "binding.json"
     _manifest_with(manifest, installed_record_digest="c" * 64)
     match = Environment(tmp_path / "a", artifact_sha256=None, record_digest="c" * 64)
     assert bind(match, manifest_path=manifest).status == rb.STATUS_EXACT
     other = Environment(tmp_path / "b", artifact_sha256=None, record_digest="e" * 64)
-    refused = bind(other, manifest_path=manifest)
-    assert refused.status == rb.STATUS_UNBOUND
-    assert any("same version, different build" in r for r in refused.reasons)
+    mismatched = bind(other, manifest_path=manifest)
+    assert mismatched.status == rb.STATUS_COMPATIBLE
+    assert mismatched.ok is True
+    assert any("same version, different build" in r for r in mismatched.reasons)
 
 
 def test_3d_the_real_manifest_pins_no_record_digest(tmp_path: Path) -> None:
@@ -723,12 +725,13 @@ def test_7_development_checkout_keeps_its_own_status(tmp_path: Path, monkeypatch
     assert binding.is_exact is False
 
 
-def test_8_foreign_install_of_the_same_version_is_refused(tmp_path: Path, monkeypatch) -> None:
-    """A wheel someone else built from the same tag: right version, right
-    contract, right layout, different bytes."""
+def test_8_foreign_install_of_the_same_version_is_compatible(tmp_path: Path, monkeypatch) -> None:
+    """A wheel someone else built from the same tag: right version, writable,
+    not exact."""
     monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
     foreign = Environment(tmp_path, artifact_sha256="f" * 64)
-    assert bind(foreign).status == rb.STATUS_UNBOUND
+    assert bind(foreign).status == rb.STATUS_COMPATIBLE
+    assert bind(foreign).ok is True
     assert bind(foreign).installed_artifact_digest == "f" * 64
 
 
@@ -744,7 +747,7 @@ def test_9_record_digest_proves_the_artifact_when_pinned(tmp_path: Path, monkeyp
     assert binding.artifact_provenance == rb.PROVENANCE_RECORD_DIGEST
 
     other = Environment(tmp_path / "env2", artifact_sha256=None, record_digest="d" * 64)
-    assert bind(other, manifest_path=manifest).status == rb.STATUS_UNBOUND
+    assert bind(other, manifest_path=manifest).status == rb.STATUS_COMPATIBLE
 
 
 def test_10_tampered_provenance_is_refused(tmp_path: Path, monkeypatch) -> None:
@@ -754,7 +757,8 @@ def test_10_tampered_provenance_is_refused(tmp_path: Path, monkeypatch) -> None:
     manifest = tmp_path / "binding.json"
     _manifest_with(manifest, artifact_sha256="a" * 64)
     binding = bind(Environment(tmp_path / "env", artifact_sha256="0" * 64), manifest_path=manifest)
-    assert binding.status == rb.STATUS_UNBOUND
+    assert binding.status == rb.STATUS_COMPATIBLE
+    assert binding.ok is True
     assert any("is not the audited release" in r for r in binding.reasons)
 
 

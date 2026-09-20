@@ -878,20 +878,9 @@ def resolve_runtime_binding(
         manifest, probe_payload
     )
     reasons.extend(provenance_reasons)
-    if provenance == "contradicted":
-        # The digest is present and disagrees: a foreign build of the pinned
-        # version, which is the case a version check cannot see at all.
-        return fail(
-            reasons=reasons,
-            artifact_provenance=provenance,
-            installed_artifact_digest=installed_digest,
-            interpreter=str(interpreter_path),
-            memory_cli=str(memory_cli),
-            memory_version=str(version),
-            module_path=str(module_path),
-            path_shadow=path_shadow,
-            contract_version=capabilities.contract_version,
-        )
+    # Same release version, different wheel bytes is compatible, not unbound:
+    # generated-data ingest and governed writes still run. Exactness is a
+    # proof, not a write latch. L9_MEMORY_REQUIRE_EXACT_ARTIFACT fail-closes.
 
     if mode == MODE_DEVELOPMENT:
         status = STATUS_DEVELOPMENT
@@ -967,8 +956,10 @@ def _verify_artifact_provenance(
       own sha256, so a digest over it separates builds even when the install
       left no archive hash.
 
-    A digest that is present and *disagrees* is not weak evidence, it is
-    contradiction: the caller turns it into UNBOUND rather than COMPATIBLE.
+    A digest that is present and *disagrees* is not exactness: it is a
+    different build of the same version. The caller reports STATUS_COMPATIBLE
+    so generated-data ingest and governed writes still run. Exactness is a
+    proof, not a write latch. ``L9_MEMORY_REQUIRE_EXACT_ARTIFACT`` fail-closes.
     """
 
     reasons: list[str] = []

@@ -7,6 +7,7 @@ import os
 import re
 import subprocess
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -71,6 +72,25 @@ def _first_str(payload: dict[str, Any], *keys: str) -> str:
         text = str(value).strip()
         if text:
             return text
+    return ""
+
+
+def _workspace_from_host_payload(payload: Mapping[str, Any]) -> str:
+    """Cursor host Task payloads name the workspace as a list, not a scalar.
+
+    Live preToolUse sends ``workspace_roots`` and omits ``workspace_root``.
+    Runtime-database resolution already walked that list; admission did not.
+    """
+    for key in ("workspace_root", "workspace", "cwd"):
+        value = str(payload.get(key) or "").strip()
+        if value:
+            return value
+    roots = payload.get("workspace_roots")
+    if isinstance(roots, list):
+        for item in roots:
+            text = str(item or "").strip()
+            if text:
+                return text
     return ""
 
 
@@ -388,6 +408,9 @@ def _compose_host_native_pre_tool_use(payload: dict[str, Any], tool_use_id: str)
                     f"max_mutation_lanes={caps['max_mutation_lanes']} already in flight "
                     f"({caps['surface']} execution profile)"
                 )
+        workspace = _workspace_from_host_payload(payload)
+        if not base_sha:
+            base_sha = _workspace_head(workspace)
         receipts.write_host_admission(
             {
                 "tool_use_id": tool_use_id,
@@ -403,7 +426,7 @@ def _compose_host_native_pre_tool_use(payload: dict[str, Any], tool_use_id: str)
                 "allowed_paths": allowed_paths,
                 "forbidden_paths": forbidden_paths,
                 "base_sha": base_sha,
-                "workspace": str(payload.get("workspace_root") or payload.get("workspace") or ""),
+                "workspace": workspace,
             }
         )
     return {
@@ -473,9 +496,8 @@ def _correlate_host_native_start(
     recorded = receipts.load_assignment(assignment_id) or {}
     workspace = str(
         recorded.get("workspace")
-        or payload.get("workspace_root")
-        or payload.get("workspace")
         or admission.get("workspace")
+        or _workspace_from_host_payload(payload)
         or ""
     )
     base_sha = recorded.get("base_sha") or admission.get("base_sha") or _workspace_head(workspace)

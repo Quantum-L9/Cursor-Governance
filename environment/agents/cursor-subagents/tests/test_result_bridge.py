@@ -312,21 +312,22 @@ class ResultBridgeTests(unittest.TestCase):
         self.assertEqual(document["assignment"]["role"], "test")
         self.assertEqual(document["result_kind"], "TestReport")
 
-    def test_compile_incomplete_rejects_invented_sha(self) -> None:
-        with self.assertRaises(self.bridge.ResultValidationError):
-            self.bridge.compile_incomplete_result(
-                {
-                    "assignment_id": "asg-nosh",
-                    "campaign_id": "host-native",
-                    "graph_id": "host-native",
-                    "action_id": "asg-nosh",
-                    "agent_id": "asg-nosh",
-                    "lease_id": "no-root-lease-asg-nosh",
-                    "base_sha": "not-a-sha",
-                },
-                {"workspace": "/tmp/does-not-exist-incomplete-harvest"},
-                "e" * 64,
-            )
+    def test_compile_incomplete_accepts_non_git_sha(self) -> None:
+        document = self.bridge.compile_incomplete_result(
+            {
+                "assignment_id": "asg-nosh",
+                "campaign_id": "host-native",
+                "graph_id": "host-native",
+                "action_id": "asg-nosh",
+                "agent_id": "asg-nosh",
+                "lease_id": "no-root-lease-asg-nosh",
+                "base_sha": "not-a-sha",
+            },
+            {"workspace": "/tmp/does-not-exist-incomplete-harvest"},
+            "e" * 64,
+        )
+        self.assertEqual(document["identity"]["base_sha"], "not-a-sha")
+        self.assertEqual(document["status"], "partial")
 
 
 if __name__ == "__main__":
