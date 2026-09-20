@@ -62,11 +62,19 @@ def test_upper_bound_alone_is_unknown():
     assert floor.status == "unknown"
 
 
-def test_exclusion_of_the_floor_series_is_unknown():
+def test_wildcard_exclusion_of_the_floor_series_is_unknown():
     """`>=3.12,!=3.12.*` supports nothing in 3.12; a 3.12 target would lie."""
     floor = python_floor(">=3.12,!=3.12.*")
     assert floor.value is None
     assert floor.status == "unknown"
+
+
+def test_a_point_exclusion_does_not_invalidate_the_series():
+    """`!=3.12.1` rules out one patch; 3.12 is still the supported floor."""
+    for raw in (">=3.12,!=3.12.1", ">=3.12,!=3.12.4,<4", ">=3.12,!=3.13.0"):
+        floor = python_floor(raw)
+        assert floor.status == "resolved", raw
+        assert floor.value == "3.12", raw
 
 
 def test_major_only_bound_names_no_minor():

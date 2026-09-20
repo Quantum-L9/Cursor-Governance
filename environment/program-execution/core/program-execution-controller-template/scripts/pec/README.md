@@ -121,6 +121,8 @@ _+6 further module(s) in this directory._
 
 ## Dependencies
 
+**Internal:** `attempts`, `blueprint`, `common`, `contracts`, `controller`, `dispatch`, `exec_env`, `gates`, `ledger`, `runtime`, `state`, `workspace_reset`
+
 **External:** `yaml`
 
 <!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

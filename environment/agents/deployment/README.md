@@ -39,7 +39,7 @@ Validate Cursor subagent deployment readiness (effective definition + shadows).
 
 ## Dependencies
 
-**Internal:** `environment`
+**Internal:** `environment`, `renderers`
 
 **External:** `yaml`
 

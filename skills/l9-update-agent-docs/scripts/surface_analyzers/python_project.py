@@ -121,18 +121,14 @@ def python_floor(requires_python: str | None) -> VersionFloor:
     major, minor = max(lower)
     floor = f"{major}.{minor}"
     for operator, version in clauses:
-        if operator != "!=":
+        # Only a wildcard exclusion removes the whole series. `!=3.12.1`
+        # rules out one patch release; the project still supports 3.12, so
+        # treating it as an unknown floor would report a spurious
+        # misalignment against a correctly pinned Ruff or mypy.
+        if operator != "!=" or not version.endswith(".*"):
             continue
         excluded = _release(version)
-        if (
-            excluded is not None
-            and len(excluded) >= 2
-            and (excluded[0], excluded[1])
-            == (
-                major,
-                minor,
-            )
-        ):
+        if excluded is not None and len(excluded) >= 2 and excluded[:2] == (major, minor):
             return VersionFloor(
                 None, "unknown", f"{requires_python!r} excludes the {floor} series it floors at"
             )

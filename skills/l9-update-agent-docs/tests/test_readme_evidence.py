@@ -152,11 +152,21 @@ def test_dependencies_split_internal_external_and_stdlib():
     assert deps.stdlib == ("json", "pathlib")
 
 
-def test_relative_imports_are_not_dependencies(tmp_path: Path):
-    write(tmp_path / "pkg" / "mod.py", "from . import sibling\nfrom .deep import thing\n")
+def test_relative_imports_are_internal_dependencies(tmp_path: Path):
+    """A package wires itself with `from .registry import …`; that is a real
+    internal relationship, and discarding it left package-style subsystems
+    with no Dependencies section at all."""
+    write(tmp_path / "pkg" / "mod.py", "from . import sibling\nfrom .registry import thing\n")
     model = ev.compile_readme_model(tmp_path, target("pkg"))
-    assert model.dependencies.internal == ()
+    assert model.dependencies.internal == ("registry", "sibling")
     assert model.dependencies.external == ()
+
+
+def test_a_relative_import_shadowing_a_stdlib_name_stays_internal(tmp_path: Path):
+    write(tmp_path / "pkg" / "mod.py", "from .json import loads\n")
+    model = ev.compile_readme_model(tmp_path, target("pkg"))
+    assert model.dependencies.internal == ("json",)
+    assert "json" not in model.dependencies.stdlib
 
 
 def test_a_wrapped_docstring_summary_is_not_cut_at_the_newline(tmp_path: Path):

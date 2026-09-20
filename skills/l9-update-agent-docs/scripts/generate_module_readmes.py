@@ -1196,6 +1196,13 @@ def main(argv: list[str] | None = None) -> int:
         if args.plan or args.dry_run:
             _print_plan(plan, verbose=args.verbose or args.plan)
             return 1 if plan.errors else 0
+        if plan.errors:
+            # Fail closed: an ERROR means the compiler would write a README
+            # that is wrong about the repository. Writing it and reporting
+            # the failure afterwards leaves a mutated worktree behind.
+            _print_plan(plan, verbose=True)
+            print("FAIL: validation errors; nothing was written", file=sys.stderr)
+            return 1
         mutated = apply_module_readme_plan(repo_root, plan, backup=args.backup)
         for path in mutated:
             print(f"wrote {path}")

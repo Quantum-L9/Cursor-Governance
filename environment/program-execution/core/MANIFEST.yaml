@@ -360,8 +360,8 @@ files:
   sha256: b8d702fc025d096668d063b02fafd7b6f393fcf4997b3dffa3fcf3fcbe34db02
   bytes: 2977
 - path: program-execution-controller-template/scripts/pec/README.md
-  sha256: daa20ee5056837533a75798a637618fb5d780e45db2d3063b9cf1db00afa0838
-  bytes: 5738
+  sha256: 90a470bc813d7b076844ac3fbe33ebd7622e5cc9a9c036dc87db98b21471c47d
+  bytes: 5896
 - path: program-execution-controller-template/scripts/pec/__init__.py
   sha256: 1c97c455db405eead95452458bbd62c3843425adbeb120a7cf5da2848d42a2bb
   bytes: 52
@@ -688,4 +688,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 227
-  total_bytes: 1124579
+  total_bytes: 1124737

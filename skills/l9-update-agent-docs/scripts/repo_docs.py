@@ -433,19 +433,13 @@ def audit_repository(
     ):
         try:
             readme_plan = plan_module_readmes(root, inventory=inventory)
-            run_mutations.extend(apply_module_readme_plan(root, readme_plan))
-            refreshed, _, later_mutations = build_filetree_state(root, write=write_filetree)
-        except OSError as exc:
-            # The filesystem refused the owned write: environment, so BLOCKED.
-            detail = f"module README owned write failed: {exc}"
-            structural.append(_structural_failure("module_readmes", "BLOCKED", detail))
-        else:
             module_readme_plan = readme_plan.counts()
-            filetree = refreshed
-            run_mutations.extend(later_mutations)
             if readme_plan.errors:
-                # A compiled README that is wrong about the repository is a
-                # defect in this skill, so FAIL rather than BLOCKED.
+                # Validation is fail-closed: nothing is written. A compiled
+                # README that is wrong about the repository is a defect in
+                # this skill (FAIL, not BLOCKED), and applying first would
+                # leave a failed run with a mutated worktree — invalid
+                # documentation written and stale artifacts already deleted.
                 structural.append(
                     _structural_failure(
                         "module_readmes",
@@ -456,6 +450,16 @@ def audit_repository(
                         ),
                     )
                 )
+            else:
+                run_mutations.extend(apply_module_readme_plan(root, readme_plan))
+            refreshed, _, later_mutations = build_filetree_state(root, write=write_filetree)
+        except OSError as exc:
+            # The filesystem refused the owned write: environment, so BLOCKED.
+            detail = f"module README owned write failed: {exc}"
+            structural.append(_structural_failure("module_readmes", "BLOCKED", detail))
+        else:
+            filetree = refreshed
+            run_mutations.extend(later_mutations)
     if "filetree.md" in run_mutations:
         impacted = sorted(set(impact.get("impacted_surfaces", [])) | {FILETREE_SURFACE_ID})
         impact["impacted_surfaces"] = impacted

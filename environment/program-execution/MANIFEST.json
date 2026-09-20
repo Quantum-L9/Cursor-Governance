@@ -71,7 +71,7 @@
     },
     {
       "path": "adapters/ci/README.md",
-      "sha256": "5a38dd5c307f897c72fa7a4f324451d075313f97ceb98e843d23a58e97bcae06"
+      "sha256": "d0f1cedc7e4f6df6135f8f2e757b4609410e7e25336cffa53f4e4d51d47a38db"
     },
     {
       "path": "adapters/ci/generic-shell/ADAPTER.yaml",
@@ -315,7 +315,7 @@
     },
     {
       "path": "adapters/github/README.md",
-      "sha256": "431c30c983be21f0b8430655235d763bc7083d09e25e694bbb7d763455c4b536"
+      "sha256": "e2aece1a7a5041bb819227f6e48a71685ff85ea1bd009031bc64ff1bcad192cd"
     },
     {
       "path": "adapters/github/__init__.py",
@@ -515,7 +515,7 @@
     },
     {
       "path": "campaigns/COMPLETED/level3-make-pr-single-path/README.md",
-      "sha256": "c1c46a60cbb316cf5b1bea58885d49e3dde3643851d9db118a057ffd95e7ef63"
+      "sha256": "a1a1fecb7483dd41dd751a6dd92b7b9d719657cddad454c806a7ebe3d1d792cd"
     },
     {
       "path": "campaigns/COMPLETED/level3-make-pr-single-path/handoff/CLOSEOUT.yaml",

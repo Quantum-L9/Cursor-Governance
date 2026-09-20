@@ -40,4 +40,8 @@ Generic Python-project observation, free of repository policy.
 
 Exports: `PythonProjectState`, `VersionFloor`, `inspect_python_project`, `normalize_pytest_addopts`, `parse_collection_guards`, `path_is_collection_guarded`, `pytest_ignored_paths`, `python_floor`
 
+## Dependencies
+
+**Internal:** `python_project`
+
 <!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

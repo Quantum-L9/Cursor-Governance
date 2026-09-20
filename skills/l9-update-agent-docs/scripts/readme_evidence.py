@@ -228,17 +228,25 @@ def _direct_source_files(module_dir: Path, suffix: str) -> list[Path]:
     return sorted(found, key=lambda item: item.name)
 
 
-def compile_module_docs(repo_root: Path, rel: str) -> tuple[tuple[ModuleDoc, ...], list[str]]:
-    """One :class:`ModuleDoc` per direct source file, plus raw imports.
+def compile_module_docs(
+    repo_root: Path, rel: str
+) -> tuple[tuple[ModuleDoc, ...], list[str], set[str]]:
+    """Per-file :class:`ModuleDoc`s, absolute imports, and relative names.
 
     Per-file identity is preserved deliberately. Aggregating first is what
     let a directory claim one anonymous API built from unrelated files.
+
+    Relative imports are returned separately rather than discarded: a
+    package-style subsystem wires itself together with `from .registry
+    import …`, and dropping those left its README with no Dependencies
+    section at all while the relationships were the most real ones it had.
     """
     module_dir = repo_root / rel
     if not module_dir.is_dir():
-        return (), []
+        return (), [], set()
     docs: list[ModuleDoc] = []
     imports: list[str] = []
+    relative: set[str] = set()
     for py_file in _direct_source_files(module_dir, ".py"):
         try:
             tree = ast.parse(py_file.read_text(encoding="utf-8"))
@@ -252,8 +260,13 @@ def compile_module_docs(repo_root: Path, rel: str) -> tuple[tuple[ModuleDoc, ...
                 imports.extend(alias.name for alias in node.names)
             elif isinstance(node, ast.ImportFrom):
                 if node.level:
-                    continue
-                if node.module:
+                    # `from .registry import X` names a sibling module;
+                    # `from . import a, b` names the siblings directly.
+                    if node.module:
+                        relative.add(node.module.split(".", 1)[0])
+                    else:
+                        relative.update(alias.name for alias in node.names)
+                elif node.module:
                     imports.append(node.module)
             elif isinstance(node, ast.ClassDef) and _public(node.name):
                 classes.append(InterfaceDoc(name=node.name, summary=_summary(node)))
@@ -285,7 +298,7 @@ def compile_module_docs(repo_root: Path, rel: str) -> tuple[tuple[ModuleDoc, ...
                 exports=tuple(sorted(set(exports))),
             )
         )
-    return tuple(docs), imports
+    return tuple(docs), imports, relative
 
 
 def repository_module_names(repo_root: Path, paths: list[str]) -> frozenset[str]:
@@ -307,15 +320,23 @@ def repository_module_names(repo_root: Path, paths: list[str]) -> frozenset[str]
     return frozenset(names)
 
 
-def classify_dependencies(imports: list[str], internal_names: frozenset[str]) -> DependencyDoc:
+def classify_dependencies(
+    imports: list[str],
+    internal_names: frozenset[str],
+    relative_names: frozenset[str] | set[str] = frozenset(),
+) -> DependencyDoc:
     """Split imports into internal, external and standard library.
 
     Standard library is compiled but not rendered by default: a dependency
     list dominated by `json` and `pathlib` states nothing a reader of the
     directory did not already assume.
+
+    `relative_names` are internal by construction — a relative import can
+    only resolve inside this package — so they are admitted before the
+    standard-library test, which a local `json.py` would otherwise lose to.
     """
     stdlib = sys.stdlib_module_names
-    internal: set[str] = set()
+    internal: set[str] = set(relative_names)
     external: set[str] = set()
     standard: set[str] = set()
     for raw in imports:
@@ -416,8 +437,8 @@ def compile_readme_model(
     dependencies = DependencyDoc()
     shell_entrypoints: tuple[str, ...] = ()
     if target.kind in {"module", "subsystem", "skill"}:
-        modules, imports = compile_module_docs(repo_root, target.path)
-        dependencies = classify_dependencies(imports, internal_names)
+        modules, imports, relative = compile_module_docs(repo_root, target.path)
+        dependencies = classify_dependencies(imports, internal_names, relative)
         if modules:
             evidence.append(
                 EvidenceRef(

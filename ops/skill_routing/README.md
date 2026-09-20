@@ -83,4 +83,8 @@ One route-receipt identity per Cursor conversation.
 - `def locator_from_payload(payload, state_root) -> RouteLocator | None` — Return a locator, or ``None`` when the payload has no conversation.
 - _+1 more public symbol(s)_
 
+## Dependencies
+
+**Internal:** `materialize`, `receipt`, `registry`, `route_prompt`, `session_locator`
+
 <!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

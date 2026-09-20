@@ -114,9 +114,9 @@ Deterministic evidence compilation for README targets.
 - `SkillContract` — Structural reading of a `SKILL.md`. Never a full Markdown parse.
 - `def read_skill_contract(skill_md) -> SkillContract` — Extract only what is structurally unambiguous from a skill contract.
 - `def summarize_docstring(doc, limit, hard_limit) -> str | None` — First sentence of a docstring, not its first physical line.
-- `def compile_module_docs(repo_root, rel) -> tuple[tuple[ModuleDoc, ...], list[str]]` — One :class:`ModuleDoc` per direct source file, plus raw imports.
+- `def compile_module_docs(repo_root, rel) -> tuple[tuple[ModuleDoc, ...], list[str], set[str]]` — Per-file :class:`ModuleDoc`s, absolute imports, and relative names.
 - `def repository_module_names(repo_root, paths) -> frozenset[str]` — Top-level names an import could resolve to inside this repository.
-- `def classify_dependencies(imports, internal_names) -> DependencyDoc` — Split imports into internal, external and standard library.
+- `def classify_dependencies(imports, internal_names, relative_names) -> DependencyDoc` — Split imports into internal, external and standard library.
 - `def compile_readme_model(repo_root, target) -> ReadmeModel` — Compile deterministic evidence for one authorized target.
 
 Exports: `CORPUS_TYPE_LABELS`, `MAX_INTERFACES_PER_MODULE`, `MAX_MODULES_RENDERED`, `SkillContract`, `classify_dependencies`, `compile_module_docs`, `compile_readme_model`, `read_skill_contract`, `repository_module_names`, `summarize_docstring`

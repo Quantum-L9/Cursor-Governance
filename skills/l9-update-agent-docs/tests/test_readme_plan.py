@@ -210,6 +210,25 @@ def test_stale_config_entry_is_an_error_finding(tmp_path: Path):
     assert any(finding.rule_id == "readme.config.unauthorized_target" for finding in plan.errors)
 
 
+def test_validation_is_fail_closed_nothing_is_written(tmp_path: Path, capsys):
+    """An ERROR must stop the write, not be reported after it.
+
+    Applying first leaves a failed run with a mutated worktree: invalid
+    documentation written and stale artifacts already deleted.
+    """
+    write(tmp_path / "pkg" / "mod.py", "x = 1\n")
+    stale = tmp_path / "pkg" / "fixtures" / "README.md"
+    write(stale, "# F\n\n" + rr.marker_for("module") + "\n")
+    write(
+        tmp_path / "config" / "subsystems" / "readme_config.yaml",
+        'version: "1.0"\nsubsystems:\n  ghost:\n    path: ghost/path\n',
+    )
+    assert gm.main(["--root", str(tmp_path)]) == 1
+    assert "nothing was written" in capsys.readouterr().err
+    assert not (tmp_path / "pkg" / "README.md").exists()
+    assert stale.is_file(), "a retirement must not run when validation failed"
+
+
 def test_changed_scope_does_not_retire(tmp_path: Path):
     """A scoped run sees only part of the tree, so it cannot judge staleness."""
     write(tmp_path / "alpha" / "a.py", "a = 1\n")
