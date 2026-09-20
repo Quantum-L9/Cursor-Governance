@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-09-16T00:10:24Z'
+generated_utc: '2026-09-19T22:50:15Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:66b984d3fa1a83f9657a4bbf27d6a75a55109e1197d36e4dfc849d01c7569464
+source_tree_digest: sha256:08fcc51f5623f21bca8a8669f00781bb0941182effb2444473232eddaf18231e
 summary:
   total_mdc_files: 69
   always_apply_true: 35
@@ -91,8 +91,8 @@ rules:
   globs: null
   first_heading: Graphiti Memory (SSOT)
   has_yaml_frontmatter: true
-  line_count: 92
-  content_digest: sha256:ffde2b85e830e4a54a0f38ca5373f584b13bf8dca6ac0f2ed4cb7a21303117c2
+  line_count: 118
+  content_digest: sha256:d696f599ed7ece7549c0aec85f339c07c0783fdf73b780bbe06f68c0c69cdc8c
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -576,8 +576,8 @@ rules:
   globs: null
   first_heading: make pr → green merge-ready; /l9-pr-remediation → merge
   has_yaml_frontmatter: true
-  line_count: 158
-  content_digest: sha256:c9f6cc6236d9100657358206d302aa3787fd75dab578b6e0c862282d2616481f
+  line_count: 160
+  content_digest: sha256:26726244498707efc8db69774cc86de91dac0f70e9e12f1b99eccdc22ae953ae
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -707,8 +707,8 @@ rules:
   globs: null
   first_heading: PR overlap guardrail (PR_OVERLAP_GUARDRAIL_V1)
   has_yaml_frontmatter: true
-  line_count: 129
-  content_digest: sha256:6de1f42606b191eb41aec56a890da2aa0c04f434a2871a9ecc5593a89dd0d2e8
+  line_count: 133
+  content_digest: sha256:6370d6493baf0857878ed3a6e8ac4ec9e1d5e1e4af04290c58f1d2d71af0e452
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -846,10 +846,10 @@ rules:
   globs: null
   first_heading: GitHub Openclaw PAT authority (CANONICAL_LAW §14)
   has_yaml_frontmatter: true
-  line_count: 71
-  content_digest: sha256:985a7374a0641c01e6d95a091c6f23c1713bc8f6ef6983a8ff1eade69738c4c2
+  line_count: 96
+  content_digest: sha256:974e7ffaf23227a0acbc2614a7921e35f292e740d0af5570a464ed6b8dbed31b
   authority: canonical_global
-  context_cost: minimal
+  context_cost: moderate
   deprecated: false
   replacement: null
   removal_plan: null
@@ -1343,8 +1343,8 @@ rules:
   globs: null
   first_heading: Cursor Memory Kernel Enforcement
   has_yaml_frontmatter: true
-  line_count: 200
-  content_digest: sha256:b501443cdc9c23f471ea4321a19b3055f060c9183a6e072dba19f91de7403ca7
+  line_count: 211
+  content_digest: sha256:975c9e6a79dcdc45098468022d6624c6c3eaf3d92255821f34d0776976c7b4b9
   authority: canonical_global
   context_cost: moderate
   deprecated: false

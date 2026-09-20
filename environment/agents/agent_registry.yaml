@@ -116,7 +116,12 @@ agents:
     signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__CLAUDE_CODE
     role: implementer
     surfaces: [claude-cli, claude-web, claude-mobile]
-    assigned_groups: [cursor-governance, l9-graphiti-memory, l9-node-template]
+    # A claude-code session routinely carries two roots: the consumer workspace
+    # it was opened on and the governance SSOT. Grants are per-agent, not
+    # per-session, so a namespace absent here is unwritable through the agent
+    # lane for that whole session (Tier 2). Tier 3 freezes the principal at
+    # spawn from the server's cwd, so it covers exactly one of the two.
+    assigned_groups: [constellation-gate, cursor-governance, l9-graphiti-memory, l9-node-template]
     adapter: claude-code             # environment/agents/adapters/claude-code/, identities now rendered from here
     status: active
 

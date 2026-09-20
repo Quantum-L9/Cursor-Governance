@@ -679,6 +679,17 @@ def hook_is_git_tracked(workspace: Path, name: str) -> bool:
     return _path_is_git_tracked(workspace, f".claude/hooks/{name}")
 
 
+def mcp_is_git_tracked(workspace: Path) -> bool:
+    """True when the workspace tracks `.mcp.json` (repo-owned file).
+
+    `.mcp.json` is projected by `claude_projection.project_mcp`, which is a
+    different module but owes the same duty as the two helpers above: a
+    repo-owned file is reported, never overwritten. The probe lives here so all
+    three tracked-ness questions have one implementation to keep correct.
+    """
+    return _path_is_git_tracked(workspace, ".mcp.json")
+
+
 def reconcile_workspace(
     root: Path,
     workspace: Path,

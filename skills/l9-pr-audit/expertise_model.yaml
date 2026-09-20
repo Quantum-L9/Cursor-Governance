@@ -6,39 +6,40 @@ expertise_model:
   - release_readiness_auditor
   - remediation_handoff_designer
   doctrine:
-  - bind exact repository PR and inspection-scope identity before judgment
-  - resolve material authority sources and precedence before compliance conclusions
+  - bind exact repository PR heads changed-file inventory and materialized inspection universe before judgment
+  - run a bound deterministic census before semantic audit so changed surfaces symbols CI failures review threads claim seeds
+    falsification seeds and structural-growth candidates cannot be silently missed
+  - resolve material authority and intent provenance including original PR prompt when available before objective or scope
+    conclusions
   - distinguish source identity from the revision that tests CI or runtime actually executed
-  - evidence proves only the properties it discriminates and readiness inputs require confirmed claim-specific
-    proof
-  - separate semantic ownership execution ownership mutation authority and merge readiness
-  - reconcile current-head evidence into root causes before downstream handoff
-  - prove implementation surfaces mutation guards and validation procedures from canonical evidence before
-    exposing write or execution scope
+  - evidence proves only the properties it discriminates; material positive claims require claim-specific validation and must
+    survive every applicable falsification probe
+  - make audit-domain outcomes policy-adapter applicability and boundary ownership canonical before semantic ownership mutation
+    or readiness judgment
+  - audit objective closure scope fidelity architectural economy supersession failure paths test discrimination and underbuilt
+    control adequacy as first-class change discipline
+  - close deterministic closure, audit obligation, claim, and falsification ledgers through recursive discovery and adversarial verification
+    until a pass produces zero new material audit value
   - prove preservation and search for silent bypasses before accepting green status
-  - treat audit convergence and code readiness as separate terminal judgments
-  - keep one canonical audit truth and deterministically re-derive every downstream projection before
-    delivery
+  - keep one canonical audit truth and deterministically re-derive downstream projections before delivery
   invariants:
-  - audit coverage records inspected excluded and inaccessible scope and never upgrades blocking exclusions
-    to whole-target proof
+  - every changed file and machine changed symbol is inventoried and dispositioned, every active objective receives closure
+    disposition, and every deterministic obligation claim and falsification seed is represented
+  - original PR prompt is intent evidence only and never overrides current repository law or newer user authority
   - audited PR source heads are immutable bindings for the lifetime of a bundle
   - source_head_sha and tested_revision_sha are never collapsed without evidence they are identical
-  - required-check identity review-thread closure and mandatory validation require confirmed property-fit
-    evidence before READY
-  - no correctness or architecture finding exists without authority plus direct evidence and explicit
-    root-cause state
-  - only confirmed CODEBASE findings with confirmed root cause resolved mutation guard resolvable order
-    and implementation_surface proof expose Fable write scope
-  - every downstream validation procedure has execution kind admitted authority and confirmed validation_procedure
-    evidence before Fable may execute or observe it
-  - depends_on_findings is the sole dependency direction and order-blocked findings never mutate
-  - green status cannot hide gate weakening test disablement suppression exclusion owner bypass or unexplained
-    dependency movement
-  - canonical audit and derived handoff projections are schema validated re-derived from audit truth and
-    bound to builder and schema digests
+  - required-check identity review-thread closure and mandatory validation require confirmed property-fit evidence before
+    READY
+  - new architecture is never condemned by size alone; unjustified complexity requires objective owner and existing-capability
+    evidence
+  - only confirmed PR-related CODEBASE findings with evidence-bound origin confirmed root cause resolved mutation guard resolvable
+    order and implementation_surface proof expose write scope
+  - green status cannot hide gate weakening test disablement suppression exclusion owner bypass unexplained dependency movement
+    or weak tests
+  - remediation contract closes audit findings first then current CI and all review threads and always sets merge false
+  - a converged audit final verification pass re-observes all retained findings obligations material claims falsification probes and deterministic closure rows and discovers zero new material information
   authority_hierarchy:
-  - latest_explicit_user_scope
+  - latest_explicit_user_scope_with_original_pr_prompt_retained_only_as_supersedable_historical_intent_evidence
   - current_repository_architecture_law_semantic_owners_and_scoped_instructions
   - authoritative_invariants_contracts_schemas_adrs_generators_mutation_guards_and_enforcement_owners
   - current_execution_revision_bound_runtime_ci_measurement_and_validation_evidence
@@ -51,22 +52,28 @@ expertise_model:
   - prepare Claude Code or Fable repair handoff from PR findings
   reject_signals:
   - user asks to implement or repair code without requesting an audit
-  - user only wants a lightweight PR digest or scope-expansion gate
   - user asks only for CI status or a single test result
-  - user asks to merge deploy or mutate PRs
+  - user asks to merge deploy or mutate PRs without audit scope
   - task is generic repository audit with no pull request scope
+  - task is only remediation execution after an audit bundle already exists
   adapters:
   - chatgpt_audit_execution_binding
   - claude_code_fable_handoff_binding
   failure_modes:
+  - model_skips_machine_changed_symbol_claim_or_counterexample_before_judgment
   - partial_scope_or_unresolved_authority_overclaim
+  - unjustified_complexity_or_scope_expansion_missed_by_green_ci
   - stale_ambiguous_or_property_mismatched_readiness_evidence
-  - schema_projection_builder_or_evidence_reference_drift
-  - mutation_or_validation_authority_leak_and_scope_self_expansion
-  - hidden_bypass_preservation_regression_or_dependency_order_ambiguity
+  - remediation_contract_drift_from_audit_first_ci_review_merge_false_law
   leverage_points:
-  - explicit_audit_coverage_and_authority_resolution
-  - exact_source_tested_revision_and_claim_specific_readiness_evidence
-  - schema_owned_canonical_contract_with_projection_rederivation
-  - confirmed_guarded_write_and_validation_scope
-  - negative_closure_preservation_and_dependency_convergence
+  - bound_deterministic_change_census_symbol_claim_falsification_structural_closure_and_recursive_verification
+  - original_prompt_intent_provenance_plus_repository_authority_resolution
+  - exact_changed_file_scope_fidelity_and_complexity_delta
+  - architectural_economy_supersession_failure_path_and_test_discrimination_gates
+  - revision_bound_remediation_contract_with_ci_review_convergence_and_merge_false
+
+# v2.0 deterministic closures
+producer_consumer_closure: true
+mutation_execution: isolated_temp_copy
+review_thread_semantic_closure: true
+no_orphan_artifact_closure: true

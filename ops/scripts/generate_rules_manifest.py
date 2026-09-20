@@ -292,18 +292,27 @@ def main() -> int:
 
     # Keep generated_utc stable when rule digests are unchanged so autofix hooks
     # (pre-commit / make pr) are idempotent and do not churn every run.
+    #
+    # Reuse the recorded timestamp — but never return early on it. This used to
+    # `return 0` as soon as RULES-MANIFEST.json matched, without ever looking at
+    # the .yaml and .md siblings. They are separate files that drift
+    # independently, so a stale sibling could not be healed by ANY local
+    # command, `--force` included (force lives in the caller;
+    # sync_generated_artifacts delegates here and this early return won).
+    # CI's governance-self-check verifies all three paths, so the result was a
+    # red check with no local way to clear it — the unclearable gate that
+    # teaches people to bypass. Falling through costs nothing: write_if_changed
+    # is a content compare, so the unchanged case still writes nothing and still
+    # prints CURRENT.
     if json_path.is_file():
         try:
             existing = json.loads(json_path.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             existing = None
         if isinstance(existing, dict) and _strip_volatile(existing) == _strip_volatile(manifest):
-            print(
-                "CURRENT: "
-                f"{manifest['summary']['total_mdc_files']} rules; "
-                f"always={manifest['summary']['always_apply_true']}"
-            )
-            return 0
+            recorded = existing.get("generated_utc")
+            if isinstance(recorded, str) and recorded:
+                manifest["generated_utc"] = recorded
 
     serialized = serialize_manifest(manifest)
     json_text = serialized["json"]

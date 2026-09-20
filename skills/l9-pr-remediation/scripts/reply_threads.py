@@ -2,7 +2,25 @@
 """Batch reply + resolve PR review threads. Stdlib only.
 
 Replaces the 36-cold-`gh` serial loop that looked hung: unflushed stdout,
-no timeout, one REST reply + one GraphQL resolve per thread.
+no timeout, one `gh` call per thread.
+
+Two transports, selected by `_rest_only()`:
+
+GraphQL (local CLI/Desktop): batched `addPullRequestReviewThreadReply` +
+`resolveReviewThread`, CHUNK_SIZE threads per call, keyed on `thread_id`.
+
+REST (Claude Code Web/Mobile): the session gateway answers `gh api graphql`
+with 403 and names its replacements, so reply/resolve/summary each take a
+REST route, keyed on `comment_id`, one call per thread (no batch form):
+
+    reply    POST /repos/{o}/{r}/pulls/{n}/comments/{cid}/replies   (native)
+    resolve  POST /repos/{o}/{r}/pulls/{n}/ccr/comments/{cid}/resolve
+    list     GET  /repos/{o}/{r}/pulls/{n}/ccr/review_threads
+    summary  POST /repos/{o}/{r}/issues/{n}/comments                (native)
+
+`ccr/review_threads` never emits a GraphQL node id, so `thread_id` is
+unobtainable on that surface and the ledger must carry `comment_id`
+instead — see `_require_inspected`.
 
 Run with `python3 -u` (or this file's prints flush). Inspect cited files
 before setting inspected=true — this script refuses unverified dispositions.
@@ -15,7 +33,9 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
+
+from protocol import rest_only as _rest_only
 
 GH_TIMEOUT_SEC = 30
 CHUNK_SIZE = 6
@@ -26,7 +46,7 @@ def _log(msg: str) -> None:
     print(msg, flush=True)
 
 
-def _fail(msg: str) -> None:
+def _fail(msg: str) -> NoReturn:
     print(f"FAIL: {msg}", file=sys.stderr, flush=True)
     raise SystemExit(1)
 
@@ -61,28 +81,88 @@ def _graphql(payload: dict[str, Any]) -> dict[str, Any]:
     return data
 
 
+def _rest(method: str, path: str, payload: dict[str, Any] | None = None) -> str:
+    argv = ["gh", "api", "--method", method, path]
+    if payload is None:
+        return _run_gh(argv)
+    return _run_gh([*argv, "--input", "-"], input_text=json.dumps(payload))
+
+
+def _comment_id(th: dict[str, Any]) -> int:
+    raw = th.get("comment_id")
+    try:
+        return int(str(raw).strip())
+    except (TypeError, ValueError):
+        _fail(
+            f"thread {th.get('thread_id') or '<no thread_id>'} has no usable "
+            f"comment_id ({raw!r}) — REST surfaces key on comment_id, which "
+            "ingest_signals.py sources from ccr/review_threads"
+        )
+        # Unreachable: _fail raises SystemExit. Stated explicitly because static
+        # analysis does not infer NoReturn through the helper, and an `except`
+        # that falls through implicitly returns None from a `-> int` function.
+        raise
+
+
+def _reply_rest(repo: str, number: int, threads: list[dict[str, Any]]) -> int:
+    calls = 0
+    for th in threads:
+        _rest(
+            "POST",
+            f"repos/{repo}/pulls/{number}/comments/{_comment_id(th)}/replies",
+            {"body": th["body"]},
+        )
+        calls += 1
+    return calls
+
+
+def _resolve_rest(repo: str, number: int, threads: list[dict[str, Any]]) -> int:
+    calls = 0
+    for th in threads:
+        cid = _comment_id(th)
+        raw = _rest("POST", f"repos/{repo}/pulls/{number}/ccr/comments/{cid}/resolve")
+        calls += 1
+        try:
+            if json.loads(raw).get("resolved") is not True:
+                _fail(f"comment {cid}: resolve returned resolved!=true: {raw[:200]}")
+        except json.JSONDecodeError:
+            _fail(f"comment {cid}: resolve returned non-JSON: {raw[:200]}")
+    return calls
+
+
 def _chunks(items: list[Any], size: int) -> list[list[Any]]:
     return [items[i : i + size] for i in range(0, len(items), size)]
 
 
+def _th_label(th: dict[str, Any]) -> str:
+    return str(th.get("thread_id") or th.get("comment_id") or "<unkeyed>")
+
+
 def _require_inspected(prs: list[dict[str, Any]], *, summary_only: bool = False) -> None:
+    # Key requirement is transport-dependent: GraphQL addresses a thread by its
+    # node id, REST by a comment id, and ccr/review_threads cannot supply a node
+    # id at all. Demand the key this surface can actually use.
+    rest = _rest_only()
+    key, other = ("comment_id", "thread_id") if rest else ("thread_id", "comment_id")
     for pr in prs:
         for th in pr.get("threads") or []:
+            label = _th_label(th)
             if th.get("inspected") is not True:
                 _fail(
-                    f"PR #{pr.get('number')} thread {th.get('thread_id')} "
+                    f"PR #{pr.get('number')} thread {label} "
                     "missing inspected=true — read the cited file before reply"
                 )
             disp = str(th.get("disposition") or "").lower()
             if disp not in VALID_DISPOSITIONS:
-                _fail(
-                    f"PR #{pr.get('number')} thread {th.get('thread_id')} "
-                    f"invalid disposition {disp!r}"
-                )
+                _fail(f"PR #{pr.get('number')} thread {label} invalid disposition {disp!r}")
             if not summary_only and not str(th.get("body") or "").strip():
-                _fail(f"PR #{pr.get('number')} thread {th.get('thread_id')} empty body")
-            if not str(th.get("thread_id") or "").strip():
-                _fail(f"PR #{pr.get('number')} missing thread_id")
+                _fail(f"PR #{pr.get('number')} thread {label} empty body")
+            if not str(th.get(key) or "").strip():
+                _fail(
+                    f"PR #{pr.get('number')} thread {label} missing {key} "
+                    f"({'REST' if rest else 'GraphQL'} surface). Ledgers carrying "
+                    f"only {other} must be regenerated by ingest_signals.py"
+                )
 
 
 def _reply_chunk(threads: list[dict[str, Any]]) -> None:
@@ -153,7 +233,7 @@ def _summary_markdown(
         sep = "|" + "|".join(["---"] * len(cols)) + "|"
         lines = [header, sep]
         for th in items:
-            finding = str(th.get("finding") or th.get("path") or th["thread_id"][-8:])
+            finding = str(th.get("finding") or th.get("path") or _th_label(th)[-8:])
             path = str(th.get("path") or "")
             note = str(th.get("note") or th.get("disposition"))
             issue = str(th.get("issue") or "")
@@ -190,9 +270,12 @@ def _summary_markdown(
 
 
 def _post_summary(repo: str, number: int, body: str) -> None:
-    _run_gh(
-        ["gh", "pr", "comment", str(number), "--repo", repo, "--body", body],
-    )
+    # Native REST on every surface, not `gh pr comment`. That subcommand is one
+    # of the GraphQL-backed `gh pr` forms a REST-only gateway refuses, and it is
+    # absent from the guard list in ops/scripts/lib/gh_graphql.sh — so it failed
+    # here while looking allowed. A PR comment is an issue comment; this route
+    # is unconditional because it is correct on local CLI too.
+    _rest("POST", f"repos/{repo}/issues/{number}/comments", {"body": body})
 
 
 def _load_input(path: Path) -> dict[str, Any]:
@@ -221,6 +304,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    rest = _rest_only()
+    _log(f"transport: {'REST (ccr routes)' if rest else 'GraphQL (batched)'}")
+
     data = _load_input(args.input)
     prs: list[dict[str, Any]] = data["prs"]
     _require_inspected(prs, summary_only=args.summary_only)
@@ -239,16 +325,27 @@ def main(argv: list[str] | None = None) -> int:
         _log(f"PR #{number}: {len(threads)} thread(s)")
 
         if not args.summary_only and threads:
-            for i, chunk in enumerate(_chunks(threads, CHUNK_SIZE), start=1):
-                _log(f"PR #{number}: reply chunk {i} ({len(chunk)})")
-                _reply_chunk(chunk)
-                gh_calls += 1
-                replied += len(chunk)
-            for i, chunk in enumerate(_chunks(threads, CHUNK_SIZE), start=1):
-                _log(f"PR #{number}: resolve chunk {i} ({len(chunk)})")
-                _resolve_chunk(chunk)
-                gh_calls += 1
-                resolved += len(chunk)
+            if rest:
+                # No batch form on the REST routes: one call per thread, and
+                # reply before resolve so a resolve failure never strands a
+                # thread silently closed with no reply on it.
+                _log(f"PR #{number}: reply via REST ({len(threads)})")
+                gh_calls += _reply_rest(args.repo, number, threads)
+                replied += len(threads)
+                _log(f"PR #{number}: resolve via REST ({len(threads)})")
+                gh_calls += _resolve_rest(args.repo, number, threads)
+                resolved += len(threads)
+            else:
+                for i, chunk in enumerate(_chunks(threads, CHUNK_SIZE), start=1):
+                    _log(f"PR #{number}: reply chunk {i} ({len(chunk)})")
+                    _reply_chunk(chunk)
+                    gh_calls += 1
+                    replied += len(chunk)
+                for i, chunk in enumerate(_chunks(threads, CHUNK_SIZE), start=1):
+                    _log(f"PR #{number}: resolve chunk {i} ({len(chunk)})")
+                    _resolve_chunk(chunk)
+                    gh_calls += 1
+                    resolved += len(chunk)
 
         if not args.no_summary:
             _log(f"PR #{number}: posting batch summary")
@@ -268,8 +365,9 @@ def main(argv: list[str] | None = None) -> int:
             summaries += 1
 
     _log(
-        f"done replied={replied} resolved={resolved} summaries={summaries} "
-        f"gh_calls={gh_calls} timeout={GH_TIMEOUT_SEC}s"
+        f"done transport={'rest' if rest else 'graphql'} replied={replied} "
+        f"resolved={resolved} summaries={summaries} gh_calls={gh_calls} "
+        f"timeout={GH_TIMEOUT_SEC}s"
     )
     return 0
 

@@ -46,7 +46,7 @@ work today.
 
 | Does not work | Consequence |
 |---|---|
-| `gh pr view/list/checks/merge` (GraphQL) | Session gateway returns 403 — use `gh api` REST |
+| `gh pr view/list/checks/merge/comment`, `gh api graphql` | Session gateway returns 403 — use `gh api` REST. For review threads, auto-merge and draft/ready the gateway ships dedicated `ccr/*` REST routes; see the 2026-09-19 row for the list and their verification |
 | Autonomous merge | `gh pr merge` is GraphQL, so it 403s here anyway; and there is no autonomous-merge env boolean — merge needs the scoped `/l9-pr-remediation` receipt (or human `L9_MERGE_AUTHORIZED`) |
 | `sonar.read_issues` | No brokered Sonar. `sonar_fetch.py` authenticates only with a `SONAR_TOKEN` the operator environment already supplies (2026-09-04 directive: resolve Sonar fully, never merge-blocking); otherwise public reads |
 | `semgrep.appsec_scan`, `semgrep.mcp` | No authenticated AppSec; CE unaffected |
@@ -230,6 +230,52 @@ The proxy is not gating that host, and the host demands nothing. Whether IP
 allow-listing exists that happens to include this container is untested — the
 bypassed request still originated here — and settling it needs a different
 network. No `initialize` handshake was completed and no group's memory was read.
+
+### 2026-09-19 — Claude Code cloud container, `Quantum-L9/Cursor-Governance` @ `5f9f713`
+
+GraphQL was probed directly for the first time. The refusal is **not** silent: the
+403 body names its own replacements, and this row exists because no rule or doc
+carried them — which made a transport swap read as a lost capability.
+
+| Probe | Result |
+|---|---|
+| `gh api user` (REST) | **works**, exit 0 — resolves `cryptoxdog` |
+| `gh api graphql -f query='query{viewer{login}}'` | **403** — `GitHub GraphQL is not available from Claude Code sessions` |
+| `GET  /repos/{o}/{r}/pulls/{n}/ccr/review_threads` | **works** — returns `{resolved, outdated, path, line, comment_ids[]}` |
+| `POST /repos/{o}/{r}/pulls/{n}/ccr/comments/{cid}/resolve` | **works** — returns `{comment_ids, resolved: true}` |
+| `POST /repos/{o}/{r}/pulls/{n}/ccr/comments/{cid}/unresolve` | **works** — restores `resolved: false` |
+
+Resolve/unresolve were verified with a reversible round-trip on one thread of
+PR #612; state was restored (all seven threads back to `resolved: false`).
+
+**The 403 is above the token, not a scope failure.** The same PAT succeeds on REST
+in the same shell. So no credential change, no `add_repo`, and no second PAT
+affects it — rule 62 already forbids reaching for one, and this row says why that
+prohibition costs nothing.
+
+**The documented replacements**, from the 403 body verbatim:
+
+| GraphQL-only operation | REST route |
+|---|---|
+| list review threads | `GET  /repos/{o}/{r}/pulls/{n}/ccr/review_threads` |
+| resolve / unresolve | `POST /repos/{o}/{r}/pulls/{n}/ccr/comments/{cid}/resolve` \| `/unresolve` |
+| auto-merge | `PUT` \| `DELETE /repos/{o}/{r}/pulls/{n}/ccr/auto_merge` |
+| ready for review | `POST /repos/{o}/{r}/pulls/{n}/ccr/ready_for_review` |
+| convert to draft | `POST /repos/{o}/{r}/pulls/{n}/ccr/convert_to_draft` |
+
+**`ccr/review_threads` emits no GraphQL node id.** That is the load-bearing
+consequence, not a detail: the CCR routes key on `comment_id`, so a `thread_id`
+(`PRRT_…`) is *unobtainable* on this surface. Any tool requiring one — including
+`mcp__github__resolve_review_thread`, whose schema demands a node id — cannot be
+made to work here, however the transport is configured. Ledgers key on
+`comment_id` instead (`skills/l9-pr-remediation/scripts/`).
+
+**The shell guard did not cover subprocess callers.**
+`ops/scripts/lib/gh_graphql.sh` intercepts `gh api graphql` with a *bash function*,
+so any Python calling `subprocess.run(["gh","api","graphql",…])` bypassed it
+entirely and failed at the network. `gh pr comment` was a second hole — a
+GraphQL-backed `gh pr` form absent from that library's guard list, so it failed
+while looking allowed. Both are now classified in-process by `_rest_only()`.
 
 ### Relationship to the P307 pack
 
