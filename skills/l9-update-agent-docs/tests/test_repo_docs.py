@@ -74,6 +74,10 @@ def stack(root: Path, architecture: bool = True) -> None:
 
 def module_pipeline(root: Path, *, complete: bool = True) -> None:
     write(root / "scripts/generate_subsystem_readmes.py", "# generator\n")
+    # Two skill packs, so `skills` is an index the inventory authorizes on
+    # its own. The config entry below decorates that target; it must never
+    # be what creates it.
+    write(root / "skills/other/y.py", "def y():\n    return 1\n")
     write(
         root / "config/subsystems/readme_config.yaml",
         "version: 1\n"

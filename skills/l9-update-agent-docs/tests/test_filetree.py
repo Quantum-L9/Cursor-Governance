@@ -36,7 +36,9 @@ def test_write_filetree_lists_modules_and_skips_wip(tmp_path: Path):
     assert df.validate_filetree(text) == []
     paths = [row.path for row in inventory.modules]
     assert paths == ["pkg", "pkg/sub"]
-    assert {row.kind for row in inventory.modules if row.path == "pkg/sub"} == {"submodule"}
+    # `submodule` was a hierarchy relation, never a renderer identity; a
+    # nested single-module directory is a module like any other.
+    assert {row.kind for row in inventory.modules if row.path == "pkg/sub"} == {"module"}
     assert "WIP" not in text
     parsed = df.parse_inventory(text)
     assert [row.path for row in parsed.modules] == paths
@@ -57,10 +59,43 @@ def test_filetree_lists_corpus_and_index_kinds(tmp_path: Path):
     kinds = {row.path: row.kind for row in inventory.modules}
     assert kinds["protocols"] == "corpus"
     assert kinds["pkg"] == "index"
-    assert kinds["pkg/a"] == "submodule"
+    assert kinds["pkg/a"] == "module"
     text = (tmp_path / "filetree.md").read_text(encoding="utf-8")
     parsed = df.parse_inventory(text)
     assert {row.path: row.kind for row in parsed.modules}["protocols"] == "corpus"
+
+
+def test_filetree_records_skill_and_subsystem_kinds(tmp_path: Path):
+    (tmp_path / "skills" / "demo" / "scripts").mkdir(parents=True)
+    (tmp_path / "skills" / "demo" / "SKILL.md").write_text("# Demo\n", encoding="utf-8")
+    (tmp_path / "skills" / "demo" / "scripts" / "a.py").write_text("a = 1\n", encoding="utf-8")
+    (tmp_path / "skills" / "demo" / "scripts" / "b.py").write_text("b = 1\n", encoding="utf-8")
+    (tmp_path / "solo").mkdir()
+    (tmp_path / "solo" / "only.py").write_text("only = 1\n", encoding="utf-8")
+    inventory, _written, _admission = df.write_filetree(tmp_path)
+    kinds = {row.path: row.kind for row in inventory.modules}
+    assert kinds["skills/demo"] == "skill"
+    assert kinds["skills/demo/scripts"] == "subsystem"
+    assert kinds["solo"] == "module"
+    text = (tmp_path / "filetree.md").read_text(encoding="utf-8")
+    assert df.validate_filetree(text) == []
+    parsed = {row.path: row.kind for row in df.parse_inventory(text).modules}
+    assert parsed["skills/demo"] == "skill"
+    assert parsed["skills/demo/scripts"] == "subsystem"
+
+
+def test_parse_inventory_still_reads_a_legacy_submodule_row():
+    text = (
+        "# Filetree\n\n"
+        f"{df.FILETREE_MARKER}\n\n"
+        "## Root files\n\n- `README.md`\n\n"
+        "## Modules\n\n"
+        "| Path | Kind | Sources | README |\n| --- | --- | --- | --- |\n"
+        "| `pkg/sub` | submodule | 1 | present |\n\n"
+        "## Tree\n\n```\n.\n```\n"
+    )
+    parsed = df.parse_inventory(text)
+    assert [(row.path, row.kind) for row in parsed.modules] == [("pkg/sub", "submodule")]
 
 
 def test_discover_modules_reads_filetree_not_a_second_walk(tmp_path: Path):

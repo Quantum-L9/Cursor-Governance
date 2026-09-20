@@ -10,6 +10,9 @@ sys.path.insert(0, str(SCRIPTS))
 
 
 def load(name: str, path: Path):
+    cached = sys.modules.get(name)
+    if cached is not None:
+        return cached
     spec = importlib.util.spec_from_file_location(name, path)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
@@ -19,6 +22,7 @@ def load(name: str, path: Path):
 
 
 gm = load("generate_module_readmes", SCRIPTS / "generate_module_readmes.py")
+rr = load("readme_renderers", SCRIPTS / "readme_renderers.py")
 
 
 def test_discover_modules_and_submodules(tmp_path: Path):
@@ -42,9 +46,12 @@ def test_write_missing_creates_module_and_submodule_readmes(tmp_path: Path):
     assert "pkg/sub/README.md" in written
     parent = (tmp_path / "pkg" / "README.md").read_text(encoding="utf-8")
     child = (tmp_path / "pkg" / "sub" / "README.md").read_text(encoding="utf-8")
-    assert gm.GENERATED_MARKER in parent
+    assert rr.marker_for("module") in parent
+    assert gm.classify_readme(tmp_path / "pkg" / "README.md") == "generated"
+    assert "Top module." in parent
     assert "def top" in parent
     assert "`Inner`" in child
+    # Second run over an unchanged tree is a no-op: the corpus converges.
     assert gm.write_missing_module_readmes(tmp_path) == []
 
 
@@ -103,20 +110,20 @@ def test_classify_readme_distinguishes_marker_legacy_and_handwritten(tmp_path: P
     assert gm.is_handwritten(opted_out) and gm.is_handwritten(prose)
 
 
-def test_regenerate_migrates_legacy_generated_readme_to_marker(tmp_path: Path):
+def test_legacy_generated_readme_migrates_to_the_current_marker(tmp_path: Path):
     pkg = tmp_path / "pkg"
     pkg.mkdir()
     (pkg / "ok.py").write_text('"""Pkg."""\n\nclass Keep:\n    pass\n', encoding="utf-8")
     (pkg / "README.md").write_text(LEGACY_GENERATED, encoding="utf-8")
-    # Present files are not touched by the missing-only pass.
-    assert gm.write_missing_module_readmes(tmp_path) == []
-    assert (pkg / "README.md").read_text(encoding="utf-8") == LEGACY_GENERATED
-    # A regenerate pass owns the legacy corpus and stamps the marker.
-    assert gm.write_missing_module_readmes(tmp_path, regenerate=True) == ["pkg/README.md"]
+    # Reconciliation refreshes a stale generator-owned README unconditionally.
+    # A corpus that only converges behind a flag never converges.
+    assert gm.write_missing_module_readmes(tmp_path) == ["pkg/README.md"]
     text = (pkg / "README.md").read_text(encoding="utf-8")
-    assert gm.GENERATED_MARKER in text
+    assert rr.marker_for("module") in text
+    assert gm.GENERATED_MARKER not in text
     assert "`Keep`" in text
     assert gm.classify_readme(pkg / "README.md") == "generated"
+    assert gm.write_missing_module_readmes(tmp_path) == []
 
 
 def test_regenerate_keeps_legacy_opt_out_handwritten(tmp_path: Path):
@@ -129,17 +136,26 @@ def test_regenerate_keeps_legacy_opt_out_handwritten(tmp_path: Path):
     assert (pkg / "README.md").read_text(encoding="utf-8") == body
 
 
-def test_cli_regenerate_refreshes_legacy_corpus_and_gaps_reports_it(tmp_path: Path, capsys):
+def test_cli_refreshes_legacy_corpus_and_gaps_reports_it(tmp_path: Path, capsys):
     pkg = tmp_path / "pkg"
     pkg.mkdir()
     (pkg / "ok.py").write_text("class Keep:\n    pass\n", encoding="utf-8")
     (pkg / "README.md").write_text(LEGACY_GENERATED, encoding="utf-8")
     assert gm.main(["--root", str(tmp_path), "--gaps"]) == 0
-    assert "legacy\tpkg" in capsys.readouterr().out
-    assert gm.main(["--root", str(tmp_path), "--regenerate"]) == 0
-    assert gm.GENERATED_MARKER in (pkg / "README.md").read_text(encoding="utf-8")
+    assert "refresh\tpkg" in capsys.readouterr().out
+    assert gm.main(["--root", str(tmp_path)]) == 0
+    assert rr.marker_for("module") in (pkg / "README.md").read_text(encoding="utf-8")
     assert gm.main(["--root", str(tmp_path), "--gaps"]) == 0
     assert "gaps\tnone" in capsys.readouterr().out
+
+
+def test_cli_dry_run_reports_the_plan_and_writes_nothing(tmp_path: Path, capsys):
+    (tmp_path / "pkg").mkdir()
+    (tmp_path / "pkg" / "ok.py").write_text("class Keep:\n    pass\n", encoding="utf-8")
+    assert gm.main(["--root", str(tmp_path), "--dry-run"]) == 0
+    out = capsys.readouterr().out
+    assert "create=1" in out
+    assert not (tmp_path / "pkg" / "README.md").exists()
 
 
 def test_extract_facts_ignores_ancestor_dot_l9(tmp_path: Path):
@@ -175,19 +191,21 @@ def test_corpus_and_index_folders_get_type_index_readmes(tmp_path: Path):
     (tmp_path / "foundation" / "security").mkdir(parents=True)
     written = set(gm.write_missing_module_readmes(tmp_path))
     assert "protocols/README.md" in written
-    assert "prompts/README.md" in written
     assert "lib/schemas/README.md" in written
     assert "pkg/README.md" in written
     assert "pkg/a/README.md" in written
     proto = (tmp_path / "protocols" / "README.md").read_text(encoding="utf-8")
-    assert gm.FOLDER_MARKER in proto
+    assert rr.marker_for("corpus") in proto
     assert "Markdown" in proto
     assert "alpha.md" in proto
-    prompts = (tmp_path / "prompts" / "README.md").read_text(encoding="utf-8")
-    assert "reserved" in prompts.lower()
     index = (tmp_path / "pkg" / "README.md").read_text(encoding="utf-8")
-    assert gm.FOLDER_MARKER in index
+    assert rr.marker_for("index") in index
     assert "**Kind:** index" in index
+    # An empty directory earns no README: a generated page whose only claim
+    # is that the directory is reserved and has no files costs a read and
+    # returns nothing.
+    assert "prompts/README.md" not in written
+    assert not (tmp_path / "prompts" / "README.md").exists()
     assert "deep/nested/schemas/README.md" not in written
     assert "skills/demo/references/README.md" not in written
     assert "WIP/profiles/README.md" not in written
