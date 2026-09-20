@@ -1,5 +1,5 @@
 {
-  "generation_id": "195ab141c8021981c696d86a99bf1f8eef98eb27c0767072426eaa9e14a8d060",
+  "generation_id": "a22785f27f450add4ccddf6e17c555c32bad7d8556c2d0fb89f007ef3ebcc7cd",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -1203,7 +1203,7 @@
       "path": "skills/l9-graphiti-memory",
       "reason": "",
       "skill_md": "skills/l9-graphiti-memory/SKILL.md",
-      "skill_sha256": "3e641210a181f4c3399d0542ca4d40c91538060a30efaa76a3780c0a303a501a",
+      "skill_sha256": "4fc74830bbbb37273643d91f5348ec12d19d2b9b5c7ae8716b302f766b5e424a",
       "user_invocable": true,
       "when_to_use": "wiring memory, debugging prefetch/bootstrap, GMP Phase 0 MEMORY_PREFETCH, episode/T0 memory-bank writes, or checking Graphiti health"
     },
@@ -1404,14 +1404,14 @@
     },
     {
       "composition_role": "general",
-      "description": "diagnose or converge github prs \u2014 plan the fleet once, launch execution-profile-capped subagents to remediate, poll remediating PRs, and start stack-safe merge trains on the oldest green PRs that will not conflict downstream. do not wait for every PR to be green. do not run make pr. use when /l9-pr-remediation, fix, babysit, or merge failing prs.",
+      "description": "diagnose or converge github prs \u2014 bind same-head /l9-pr-audit findings first, launch execution-profile-capped concurrent remediations when claims do not overlap, poll, then start stack-safe merge trains. do not wait for every PR to be green. do not run make pr. use when /l9-pr-remediation, fix, babysit, or merge failing prs.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pr-remediation",
       "path": "skills/l9-pr-remediation",
       "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked). The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Above-paygrade HUMAN / unfixable required CI / ENVIRONMENT after best-effort opens a GitHub issue and launches l9-issue-remediation via cursor-subagents; do not ask the human to unblock. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
       "skill_md": "skills/l9-pr-remediation/SKILL.md",
-      "skill_sha256": "a5a39c22ff77044c5de8d6e5d3ae795e1a289f23d3ab2d35cabe39a5dc521246",
+      "skill_sha256": "89d2df911c9885dff57cdbb2f724d196ce12b75bbe5f0f2cf8d6770af13986a7",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1613,5 +1613,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "de4a8b1992a9b8b992e69b2a61f4f369d63a28ef094b8d3443043fe803abd6ae",
-  "source_skill_corpus_sha256": "7831d23967fb264fb5fc48a0a929239c7ca1f961281945548e24533fae003ad1"
+  "source_skill_corpus_sha256": "40a426a5ba124c200b74d4fcc06073fab133cf99a941a8ffa292750538d94773"
 }
