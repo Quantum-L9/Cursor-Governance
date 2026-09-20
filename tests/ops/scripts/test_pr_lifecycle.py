@@ -868,8 +868,14 @@ def test_open_pr_after_gate_refreshes_only_a_composer_authored_body() -> None:
     reopen = script[script.index('echo "PR already open: $pr_url"') :]
     reopen = reopen[: reopen.index("_pr_summary_py=")]
     marker_at = reopen.index('*"<!-- autonomous compile from open_pr_after_gate.sh -->"*')
-    edit_at = reopen.index('gh pr edit "$pr_number" --title "$title" --body-file')
+    # The write is REST PATCH, not `gh pr edit`: that subcommand is
+    # GraphQL-backed, so on a gateway that refuses GraphQL the refresh silently
+    # no-opped and the open PR kept a stale description. The assertion below is
+    # unchanged in intent — the marker check still guards the edit — only the
+    # call it anchors on moved.
+    edit_at = reopen.index('gh api --method PATCH "repos/${owner}/${name}/pulls/${pr_number}"')
     assert marker_at < edit_at, "the marker check guards the edit"
+    assert "gh pr edit " not in reopen, "the refresh must not reach GraphQL-backed gh pr"
     # A refresh failure is reported, never fatal: the push already happened.
     assert "could not refresh the PR title/body" in reopen
     # The human-authored WARN survives for bodies we do not own.

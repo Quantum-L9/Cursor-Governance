@@ -61,11 +61,13 @@ is why `stack_safe_merge.py` selects it in code rather than leaving it to a
 server-side default. A transport that the gate cannot see is not a licence to
 use it — reach for `stack_safe_merge.py` first.
 
-Stacked PRs (operator default 2026-08-15):
+Stacked PRs (operator default 2026-08-15; **opt-in since 2026-09-19**):
 
-- When a PR is already open for the workstream, the next PR **stacks on the
-  open PR's head** (`ops/scripts/stack_pr.py base`). Merge order is
-  **bottom-up**; older PRs first.
+- `make pr` publishes against `PR_BASE` (usually `origin/main`) and does
+  **not** stack. Stacking is `PR_STACK=auto make pr`, chosen deliberately.
+- When stacking is chosen and a PR is already open for the workstream, the
+  next PR **stacks on the open PR's head** (`ops/scripts/stack_pr.py base`).
+  Merge order is **bottom-up**; older PRs first.
 - Rebase and conflict resolution are **forbidden**. Disjoint scopes keep the
   stack mergeable; if scopes overlap, stop and re-plan.
 - One feature branch per program; exclusive worktree lease per mutating agent

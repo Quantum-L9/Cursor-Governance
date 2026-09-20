@@ -3,91 +3,116 @@ schema: 1
 parent: l9-pr-audit
 layer: reference
 role: harvest-provenance
-version: 1.3.0
+version: 2.0.0
 status: active
 -->
 
 # Harvested Invariants
 
-Load only when maintaining, auditing, or re-harvesting `l9-pr-audit`. Runtime audits should use the compiled laws in `SKILL.md`, `audit-protocol.md`, and `evidence-contract.md` instead of reloading donor material.
+## Contents
+
+- Source identity
+- Accepted nuggets H-01 through H-13
+- Rejected or bounded donor concepts
+- Recursive architecture alignment kernel harvest
+
+Load only when maintaining, auditing, or re-harvesting `l9-pr-audit`. Runtime audits use the compiled laws in `SKILL.md`, `audit-protocol.md`, `change-discipline.md`, and `evidence-contract.md` instead of reloading donor material.
 
 ## Source identity
 
 Donor repository: `Quantum-L9/Cursor-Governance`
-Pinned donor revision: `10547a2017e488642194f749a172d320dfad7aee`
-Harvest method: donor-to-beneficiary semantic transfer using the governing laws of `l9-intelligence-harvest`.
+Pinned donor revision: `acf3baa58c4703a875e412841a9806c04e22b6b7`
+Harvest date: `2026-09-18`
 
-The harvesting runtime could not be executed against a local checkout in the build host because that host lacked network clone capability. The donor repository was inspected through the GitHub connector at the pinned revision. Therefore donor observations are evidence-bound, while local Harvest script execution is `NOT_EXECUTED` rather than falsely reported as `PASS`.
+The donors were inspected through the connected GitHub capability at the pinned revision. Runtime dependency on donor skills is intentionally absent.
 
 ## Accepted nuggets
 
 ### H-01 Claim/evidence fit
 
-Donors: `l9-intelligence-harvest`, `l9-auditing-performance`, GAR epistemic discipline.
-
-Transfer: every material audit claim carries an epistemic state. Validation evidence records what property it discriminates. Performance claims require measurement when executable measurement exists.
-
-Acceptance: the canonical schema requires `epistemic_state` and `properties_discriminated`; the validator rejects strong performance findings without measurement evidence.
+Transfer: every material audit claim carries epistemic state and names the property its evidence discriminates. Performance claims require measurement when executable measurement exists.
 
 ### H-02 Source head is not tested revision
 
-Donor: `l9-update-agent-docs` and its revision schemas/workflow binding.
-
-Transfer: PR source identity and execution identity are distinct. CI, test, runtime, and measurement evidence records both when applicable.
-
-Acceptance: observed `PASS`/`FAIL` validation evidence cannot omit a concrete `tested_revision_sha`; the handoff never rewrites it as the source head.
+Transfer: PR source identity and execution identity remain distinct. CI/test/runtime/measurement evidence records both.
 
 ### H-03 Separate semantic, execution, mutation, and verdict axes
 
-Donors: `l9-update-agent-docs`, `l9-pr-remediation` ownership boundary, `l9-bounded-autonomy`.
-
-Transfer: each finding records `semantic_owner`, `execution_owner`, `mutation_guard`, and `remediation_owner_class`. Prompt prose is not authority. A valid finding does not itself grant mutation.
-
-Acceptance: only `CODEBASE` work exposes implementation surfaces as Fable write scope; non-codebase classes are emitted as non-mutation work/handoffs.
+Transfer: each finding records semantic owner, execution owner, mutation guard, and remediation owner class. Prompt prose is not mutation authority.
 
 ### H-04 Existence does not prove reachability
 
-Donor: `l9-dag-authoring` plus GAR evidence discipline.
-
 Transfer: file/object existence is distinct from registration, discovery, reachability, enforcement, and runtime execution.
-
-Acceptance: the audit protocol requires the stronger property to be evidenced whenever a PR claims an active registered/generated/bound behavior.
 
 ### H-05 Negative closure and anti-bypass proof
 
-Donors: `l9-repository-renovation`, `l9-ci-ops`.
-
 Transfer: green outcomes do not prove safety if the PR removed tests, weakened gates, added exclusions/suppressions, bypassed generators, or introduced unexplained dependency movement.
-
-Acceptance: every PR gets explicit anti-bypass coverage in `audit.json`; unresolved anti-bypass state prevents a clean readiness claim.
 
 ### H-06 Current-head reconfirmation
 
-Donors: `l9-repository-renovation`, `l9-pr-remediation` code-review-agent contract, `l9-pr-digest`.
+Transfer: prior audit/review/bot claims are hypotheses until reconfirmed against the bound current head. All unresolved review threads are accounted for regardless of author.
 
-Transfer: prior audit/review/bot claims are hypotheses until reconfirmed against the bound current head. All unresolved review threads must be accounted for; severity or author type is not a skip switch.
+### H-07 Cold-resumable bounded remediation handoff
 
-Acceptance: per-PR `review_thread_coverage` is mandatory and stale-head bundles are invalidated before remediation.
+Transfer: remediation starts from immutable identity, explicit scope, proof targets, dependency order, strict write surfaces, preservation obligations, and exact closure validation.
 
-### H-07 Cold-resumable bounded Fable handoff
+### H-08 Secret-safe evidence
 
-Donor: `l9-claude-coding-contract-compiler`.
+Transfer: evidence may prove exposure without reproducing values. Secret values never enter audit JSON, projections, contracts, or excerpts.
 
-Transfer: Fable starts from immutable identity, explicit scope, proof targets, and dependency order. A work unit that cannot fit one focused session is split, never semantically compressed.
+### H-09 Deterministic signal census from PR remediation
 
-Acceptance: the generated Fable contract includes the freshness gate, owner class, write eligibility, preservation obligations, and exact closure validation.
+Donor: `skills/l9-pr-remediation`, especially its unified signal-ingestion, plan-completeness, review-thread, board/evidence, and convergence contracts.
 
-### H-08 Secret-safe audit evidence
+Transfer: audit collection should enumerate current CI failures and unresolved review threads deterministically before semantic judgment. Every discovered signal receives an explicit disposition. The mutation/convergence/merge machinery itself is not copied into audit.
 
-Donors: `l9-auditing-security`, repository root invariants.
+Acceptance: `audit_obligation_ledger` covers in-scope CI failures and every unresolved review thread; the downstream PR Remediation Contract separately requires CI/review convergence while keeping `MERGE=False`.
 
-Transfer: evidence may prove exposure without reproducing the value. Secret values never enter audit JSON, Markdown projections, prompts, or log excerpts.
+### H-10 Scope/expansion detectors from PR digest
 
-Acceptance: evidence carries `redaction_state`; the validator rejects common high-confidence secret material in packaged text fields.
+Donor: `skills/l9-pr-digest/scripts/pr_digest_core.py` and `pr_evidence.py`.
 
-## Rejected or merged donor concepts
+Harvested detectors include changed-file census, deleted tests, suppression/ignore growth, dependency/lockfile anomalies, generated-only movement, architecture-growth candidates (registry/factory/adapter/service/compatibility/feature-flag), and deterministic expansion questions.
 
-- Generic expansion classification was not copied from `l9-pr-digest`; that skill remains the owner. `l9-pr-audit` consumes a same-head digest when useful and independently audits architecture/correctness only where material.
-- Generic architecture-option ceremony was not copied from ADR tooling because GAR already provides a stronger smallest-coherent-architecture and simpler-alternative law.
-- CI execution/remediation mechanics were not copied from `l9-ci-ops` or `l9-pr-remediation`; the audit consumes evidence and emits closure targets without becoming the mutation owner.
-- Graph registries, command binding, and workflow machinery were not copied from `l9-dag-authoring`; only the portable evidence law `existence != reachability` was retained.
+Transfer: these become self-contained audit census patterns in `scripts/build_change_ledger.py` and change-discipline gates. `l9-pr-audit` does not invoke or require `l9-pr-digest` at runtime.
+
+### H-11 Intent provenance from original task contract
+
+Donors: PR-digest intent extraction plus current audit authority law.
+
+Transfer: when the original PR-generation prompt/task contract is available, use it as strong historical evidence for requested objective, explicit scope/non-goals, acceptance criteria, proportionality, failure expectations, and expected validation. It does not override current repository law or newer user authority.
+
+Acceptance: `intent_contract.original_pr_prompt` records availability, provenance, and what audit dimensions used it.
+
+### H-12 Obligation-ledger completeness
+
+Transfer: deterministic evidence collection is insufficient unless every enumerated fact that can affect the verdict is dispositioned. A model may add semantic obligations, but may not silently omit deterministic ones.
+
+Acceptance: exact changed-file inventory must match scope-fidelity records and changed-surface obligations; active objectives and detected change-discipline candidates also require ledger coverage before audit convergence.
+
+### H-13 Deterministic red-team separation
+
+Transfer: machine code should enumerate changed semantic surfaces, canonical claim obligations, and counterexample attacks before LLM judgment. The model may adjudicate ambiguous machine candidates but may not erase them. A material positive claim requires claim-specific validation and must survive every applicable falsification probe; deterministic/static/check/command evidence is preferred over LLM judgment whenever sufficient.
+
+Acceptance: `build_change_ledger.py` seeds changed symbols, claims, falsification probes, and `CHANGED_SYMBOL` obligations; `audit.json` preserves those rows in `changed_symbol_ledger`, `claim_validation_matrix`, and `falsification_ledger`; final verification re-observes all three; bundle verification binds the exact packaged ledger bytes.
+
+## Rejected or bounded donor concepts
+
+- `l9-pr-digest` remains a donor only. No runtime dependency, mandatory invocation, or external READY gate survives in this skill.
+- `l9-pr-remediation` mutation lanes, fleet scheduling, merge execution, and campaign behavior are not imported. Audit remains read-only.
+- Generic architecture-option ceremony is not imported. Architectural economy asks whether new machinery is justified against actual objectives and existing owners.
+- CI pipeline mutation is not imported. Audit classifies evidence; the downstream remediation contract may repair codebase-owned CI failures but may not weaken or rewrite CI-owned infrastructure merely to obtain green.
+
+## Recursive architecture alignment kernel harvest
+
+Harvested from the operator-supplied recursive architecture alignment auditor and adapted to PR-audit ownership rather than copied mechanically:
+
+- keep architecture-policy adapters explicit, scoped, evidence-backed, and separate from provider/tool adapters;
+- represent component responsibilities and material boundaries canonically instead of relying on prose reconstruction;
+- give every audit domain one explicit outcome rather than parallel completed/skipped bookkeeping;
+- distinguish PR-introduced, PR-exposed, pre-existing, and unknown finding provenance with evidence;
+- require release/merge-blocking status to have a governing authority and direct risk evidence rather than follow severity rhetoric;
+- audit underbuilt controls as well as overbuilt machinery, with deterministic coverage for mapped security/policy/validation/source-of-truth boundaries;
+- keep remediation projections actionable without forcing rediscovery of governing rules or mismatch semantics.
+
+- v2.0 deterministic-closure invariant: enumerable public-contract, SSOT, bypass, supersession, failure-edge, config, dependency, hunk, CI, generated-provenance, architecture-economy, root-cause, severity, and validation-coverage work is machine-enumerated and cannot be satisfied by reviewer prose alone.

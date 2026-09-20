@@ -79,11 +79,33 @@ def test_memory_entry_renders_without_a_parent_interpreter() -> None:
     assert not any(key.startswith("_") for key in entry)
 
 
+def _committed_mcp_json() -> dict:
+    """The COMMITTED .mcp.json, not whatever is sitting in the worktree.
+
+    This assertion is about what ships in git. Reading ROOT/".mcp.json" read
+    whatever a SessionStart reconciler had last written into the checkout, so it
+    passed or failed on ambient dirt rather than on the committed projection —
+    the same shared-mutable-state trap test_governance_refresh_receipt.py
+    documents for this very file. Measured on a dirtied checkout: the worktree
+    copy fails this assertion while the committed blob passes.
+    """
+    proc = subprocess.run(
+        ["git", "-C", str(ROOT), "show", "HEAD:.mcp.json"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode == 0 and proc.stdout.strip():
+        return json.loads(proc.stdout)
+    # Not a git checkout (exported tree): the file on disk is all there is.
+    return json.loads((ROOT / ".mcp.json").read_text(encoding="utf-8"))
+
+
 def test_committed_projection_is_current_for_an_unbound_environment() -> None:
     """CI renders without L9_MEMORY_INTERPRETER; the wrapper entry still ships."""
 
     template = json.loads(TEMPLATE.read_text(encoding="utf-8"))
-    committed = json.loads((ROOT / ".mcp.json").read_text(encoding="utf-8"))
+    committed = _committed_mcp_json()
     environ = {
         k: v
         for k, v in os.environ.items()

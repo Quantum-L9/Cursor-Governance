@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.local/schemas/l9-pr-audit-mutation-probe-result-v2.0.json",
+  "title": "L9 PR Audit Mutation Probe Result v2.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "mutation_id",
+    "path",
+    "execution_mode",
+    "test_command_sha256",
+    "original_repository_sha_before",
+    "baseline",
+    "result",
+    "original_repository_sha_after",
+    "original_repository_unchanged"
+  ],
+  "properties": {
+    "schema_version": {"const": "l9.pr-audit.mutation-probe-result.v2.0"},
+    "mutation_id": {"type": "string", "minLength": 1},
+    "path": {"type": "string", "minLength": 1},
+    "execution_mode": {"enum": ["ARGV_NO_SHELL", "SHELL_EXPLICIT"]},
+    "test_command_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "original_repository_sha_before": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "baseline": {"$ref": "#/$defs/execution"},
+    "mutant": {"$ref": "#/$defs/execution"},
+    "result": {"enum": ["KILLED", "SURVIVED", "BASELINE_FAILED", "EXECUTION_ERROR"]},
+    "reason": {"type": "string", "minLength": 1},
+    "original_repository_sha_after": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "original_repository_unchanged": {"type": "boolean"}
+  },
+  "$defs": {
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["exit_code", "timed_out", "execution_error", "stdout_hash", "stderr_hash"],
+      "properties": {
+        "exit_code": {"type": ["integer", "null"]},
+        "timed_out": {"type": "boolean"},
+        "execution_error": {"type": ["string", "null"]},
+        "stdout_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "stderr_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"result": {"const": "KILLED"}}, "required": ["result"]},
+      "then": {
+        "required": ["mutant"],
+        "properties": {
+          "baseline": {"properties": {"exit_code": {"const": 0}, "timed_out": {"const": false}, "execution_error": {"type": "null"}}},
+          "mutant": {"properties": {"exit_code": {"type": "integer", "not": {"const": 0}}, "timed_out": {"const": false}, "execution_error": {"type": "null"}}},
+          "original_repository_unchanged": {"const": true}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"result": {"const": "SURVIVED"}}, "required": ["result"]},
+      "then": {
+        "required": ["mutant"],
+        "properties": {
+          "baseline": {"properties": {"exit_code": {"const": 0}, "timed_out": {"const": false}, "execution_error": {"type": "null"}}},
+          "mutant": {"properties": {"exit_code": {"const": 0}, "timed_out": {"const": false}, "execution_error": {"type": "null"}}},
+          "original_repository_unchanged": {"const": true}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"result": {"enum": ["BASELINE_FAILED", "EXECUTION_ERROR"]}}, "required": ["result"]},
+      "then": {"required": ["reason"]}
+    }
+  ]
+}

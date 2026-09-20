@@ -186,6 +186,9 @@ def main() -> int:
             # (claude-code__claude-code__<chat>), so following the denial
             # stamped a file this gate never looked up (audit P573-F1).
             # SessionStart's session id is a different key and is not this hint.
+            # One prefetch binds one work repo: add --workspace <owning-clone>
+            # when that repo is not this session window (never hardcode
+            # Cursor-Governance).
             try:
                 writer_agent, chat_id = st.receipt_identity(event=event)
             except ValueError:
@@ -205,8 +208,10 @@ def main() -> int:
                 )
             _deny(
                 f"Memory not hydrated this session. Governed write '{rule['id']}' requires the "
-                "SessionStart canonical memory prefetch. Start a fresh session, or run "
-                f"{sid_hint}, then retry. "
+                "one SessionStart prefetch of the repository this agent is working in "
+                "(not a hardcoded Cursor-Governance hydrate). Start a fresh session, or run "
+                f"{sid_hint} then retry. "
+                "To bind writes to another registered clone, add --workspace <that-clone>. "
                 "This is a hydration gate, not a lock: no phase-lock is required or accepted."
             )
         return 0
