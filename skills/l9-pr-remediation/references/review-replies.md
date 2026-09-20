@@ -6,8 +6,8 @@ role: review_replies
 tags: [pr, review, replies, threads, resolution, leverage]
 owner: igor_beylin
 status: active
-version: 2.4.0
-updated: 2026-08-29
+version: 2.5.0
+updated: 2026-09-19
 /L9_META -->
 
 # Review Reply Protocol
@@ -142,34 +142,79 @@ python3 -u skills/l9-pr-remediation/scripts/reply_threads.py \
 The helper:
 
 - refuses any thread without `inspected: true` (Law 9)
-- batches GraphQL `addPullRequestReviewThreadReply` then `resolveReviewThread`
-  (chunk of 6; reply phase before resolve phase)
+- **selects its transport itself** — `protocol.rest_only()` — and prints it
+  as the first line (`transport: GraphQL (batched)` or
+  `transport: REST (ccr routes)`); never set the transport by hand
 - times out each `gh` spawn at 30s
 - flushes every progress line
-- posts the per-PR batch summary unless `--no-summary`
+- posts the per-PR batch summary as a native REST issue comment
+  (`POST /repos/{o}/{r}/issues/{n}/comments`) on **every** surface, unless
+  `--no-summary`
 
-Do **not** spawn one REST `/comments/{id}/replies` plus one
-`resolveReviewThread` per thread. That is 2N cold `gh` starts, silent if
-stdout is buffered, and looks hung (2026-08-30: 18 threads / 107s / no
-output until exit).
+### Two transports, one helper
 
-Single-thread fallback (one thread only, or the helper is unavailable):
+| Surface | Signal | Reply | Resolve | Ledger key |
+|---|---|---|---|---|
+| Local CLI / Desktop (GraphQL reachable) | none of the REST-only signals set | batched GraphQL `addPullRequestReviewThreadReply`, chunks of 6 | batched GraphQL `resolveReviewThread`, chunks of 6 | `thread_id` (`PRRT_…` node id) |
+| Claude Code Web / Mobile (REST-only gateway) | `L9_GITHUB_GRAPHQL_MODE=rest-only`, `CLAUDE_CODE_REMOTE=true`, or `GH_GRAPHQL_UNSUPPORTED=1` | `POST /repos/{o}/{r}/pulls/{n}/comments/{cid}/replies`, one call per thread | `POST /repos/{o}/{r}/pulls/{n}/ccr/comments/{cid}/resolve`, one call per thread; the helper fails unless the response says `resolved: true` | `comment_id` (REST comment id) |
 
-### Reply to inline (diff) comments
+On both surfaces the **reply phase completes before the resolve phase**, so a
+resolve failure never leaves a thread silently closed with no reply on it.
+
+The REST-only gateway answers `gh api graphql` with 403 and names its `ccr/*`
+replacements (`rules/62-github-openclaw-authority.mdc`,
+`docs/DEGRADED_MODE_CONTRACT.md` 2026-09-19 row). Those routes key on
+`comment_id`, and `ccr/review_threads` emits **no** GraphQL node id — so a
+`thread_id` is unobtainable there, and any tool that demands one
+(`mcp__github__resolve_review_thread` included) cannot be made to work on that
+surface. The helper therefore demands the key its surface can use: a ledger
+carrying only `thread_id` is refused on a REST surface and vice versa. Ledgers
+come from `scripts/ingest_signals.py`, which sources `comment_id` from
+`ccr/review_threads` on REST surfaces and from `databaseId` on GraphQL ones;
+regenerate the ledger there rather than hand-editing keys.
+
+Per-thread REST calls (2N cold `gh` starts) are the cost of a surface with no
+batch form, not a regression: the helper bounds each spawn at 30s and flushes
+progress after every call, so it does not look hung the way the 2026-08-30
+hand-rolled loop did (18 threads / 107s / no output until exit). What remains
+forbidden is a **hand-rolled per-thread `gh` loop outside the helper** on any
+surface, and any `gh pr …` / `gh api graphql` call on a REST-only surface.
+
+Single-thread fallback (one thread only, or the helper is unavailable). Pick
+the row for your surface; do not mix:
+
+### Reply to inline (diff) comments (every surface)
 
 ```bash
 # gh has no --timeout; bound the spawn externally (same 30s as reply_threads.py).
-timeout 30s gh api /repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies \
+timeout 30s gh api --method POST /repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies \
   -f body="{canonical_reply}"
 ```
 
-### Reply to review-level comments
+### Reply to review-level comments (every surface)
+
+`gh pr comment` is GraphQL-backed and 403s on a REST-only gateway while looking
+allowed. A PR comment is an issue comment; use the native route everywhere:
 
 ```bash
-gh pr comment {pr_number} --repo {owner}/{repo} --body "{reply}"
+timeout 30s gh api --method POST /repos/{owner}/{repo}/issues/{pr_number}/comments \
+  -f body="{reply}"
 ```
 
-### Resolve a thread (GraphQL)
+### Resolve a thread — REST-only surface (Claude Code Web / Mobile)
+
+```bash
+# Discover threads + the comment_id that keys them (no node id exists here).
+gh api --method GET /repos/{owner}/{repo}/pulls/{pr_number}/ccr/review_threads
+# → [{resolved, outdated, path, line, comment_ids: [...]}, …]; bodies come from
+gh api --method GET /repos/{owner}/{repo}/pulls/{pr_number}/comments
+
+# Resolve by the thread's first comment id; the response must say resolved: true.
+timeout 30s gh api --method POST \
+  /repos/{owner}/{repo}/pulls/{pr_number}/ccr/comments/{comment_id}/resolve
+```
+
+### Resolve a thread — local CLI / Desktop (GraphQL reachable)
 
 ```bash
 timeout 30s gh api graphql -f query='
@@ -194,7 +239,7 @@ gh api graphql -f query='
             id
             isResolved
             comments(first: 1) {
-              nodes { body author { login } }
+              nodes { body author { login } databaseId }
             }
           }
         }
@@ -277,8 +322,8 @@ Each reply creates specific downstream value:
 Before proceeding to convergence check:
 - [ ] Every unresolved thread has a reply posted
 - [ ] Every `github-code-quality[bot]` / Copilot thread has a canonical reply
-- [ ] Every thread is resolved (via GraphQL mutation), including HUMAN (do not merge that PR until decided)
+- [ ] Every thread is resolved through the helper's transport — GraphQL `resolveReviewThread` locally, `ccr/comments/{cid}/resolve` on a REST-only surface — including HUMAN (do not merge that PR until decided)
 - [ ] Every HUMAN Deferred item has a linked issue
-- [ ] Review-thread pagination complete (`hasNextPage` false)
+- [ ] Review-thread discovery complete (GraphQL: `hasNextPage` false; REST: every `ccr/review_threads` entry had retrievable comments)
 - [ ] Batch summary comment posted on the PR
 - [ ] Reply count matches finding count

@@ -160,7 +160,19 @@ gh_subscribe_pr() {
   rm -f "$gql_out"
 
   if [[ "${GH_GRAPHQL_UNSUPPORTED:-0}" == "1" ]]; then
+    # GitHub exposes per-PR subscription ONLY as the GraphQL updateSubscription
+    # mutation. There is no REST equivalent and no ccr/* route for it, so this
+    # is a genuine capability gap rather than a transport that can be swapped
+    # (contrast review threads, which do have ccr/* REST routes).
+    #
+    # Name the route that DOES work here instead of skipping silently: a bare
+    # skip reads as "nothing to do", and the PR then ships unwatched. On Claude
+    # surfaces the session-side subscription is the MCP tool, which is what an
+    # operator/agent should call next.
     echo "NOTE: skip subscribe for ${owner}/${name}#${pr} — ${GH_GRAPHQL_CLASSIFICATION}"
+    echo "NEXT: GitHub per-PR subscribe is GraphQL-only (no REST, no ccr route)."
+    echo "      Subscribe this session instead:"
+    echo "      mcp__github__subscribe_pr_activity {owner: ${owner}, repo: ${name}, pullNumber: ${pr}}"
     return 0
   fi
   if [[ "$gql_rc" -ne 0 ]]; then

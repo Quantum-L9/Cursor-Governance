@@ -8,6 +8,7 @@ Those stay model judgment in the reference files.
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -133,6 +134,25 @@ GATE_TYPE_MARKERS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("build", ("vite build", "tsc --noemit", "compile", "build")),
     ("security", ("semgrep", "npm audit", "snyk", "trivy", "gitleaks", "bandit")),
 )
+
+#: Environment contract for GitHub transport selection, mirroring
+#: `_gh_graphql_surface_rest_only` in ops/scripts/lib/gh_graphql.sh. That
+#: library guards `gh api graphql` with a *bash function*, so it never covers a
+#: script that execs the `gh` binary through subprocess — every such caller has
+#: to classify the surface itself. This lives here so the skill has ONE
+#: definition: duplicating it per script is how the shell and Python copies
+#: drift apart.
+REST_ONLY_ENV: tuple[tuple[str, str], ...] = (
+    ("L9_GITHUB_GRAPHQL_MODE", "rest-only"),
+    ("CLAUDE_CODE_REMOTE", "true"),
+    ("GH_GRAPHQL_UNSUPPORTED", "1"),
+)
+
+
+def rest_only() -> bool:
+    """True when this surface refuses GitHub GraphQL and REST routes must be used."""
+    return any(os.environ.get(name) == value for name, value in REST_ONLY_ENV)
+
 
 _BOT_SUFFIX = re.compile(r"\[bot\]$", re.I)
 

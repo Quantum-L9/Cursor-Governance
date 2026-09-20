@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -298,6 +299,96 @@ class ClaudeProjectionEngineTests(unittest.TestCase):
         command_domain = next(d for d in receipt["domains"] if d["domain"] == "commands")
         self.assertEqual(command_domain["status"], "ok")
         self.assertGreater(command_domain["projected"], 0)
+
+
+class McpTrackedOwnershipTests(unittest.TestCase):
+    """A committed .mcp.json is repo-owned: report drift, never overwrite.
+
+    Regression: project_mcp was the one worktree-writing domain with no
+    ownership guard, while reconcile_claude_settings has applied exactly this
+    doctrine to tracked settings and hooks since #281/#611. In the two-clone
+    layout SessionStart rendered from the OLDER governance clone and wrote it
+    over the NEWER clone's committed file, so every boot dirtied the tree — and
+    a dirty tracked clone then blocks the governance fast-forward that would
+    have delivered the fix, which is what made it self-sustaining.
+    """
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        base = Path(self.tmp.name)
+        self.root = make_root(base)
+        self.ws = base / "consumer"
+        self.ws.mkdir()
+
+    def _git(self, *args: str) -> None:
+        subprocess.run(["git", *args], cwd=self.ws, check=True, capture_output=True)
+
+    def _commit_mcp(self, content: str) -> None:
+        self._git("init", "-q")
+        self._git("config", "user.email", "t@example.com")
+        self._git("config", "user.name", "t")
+        self._git("config", "commit.gpgsign", "false")
+        (self.ws / ".mcp.json").write_text(content, encoding="utf-8")
+        self._git("add", ".mcp.json")
+        self._git("commit", "-q", "-m", "seed .mcp.json")
+
+    def test_tracked_mcp_reported_not_overwritten(self) -> None:
+        stale = '{\n  "mcpServers": {},\n  "_stale_marker": true\n}\n'
+        self._commit_mcp(stale)
+
+        # Self-check: the committed bytes really do differ from the render, so
+        # the assertions below cannot pass via the content-equal early return.
+        precheck = claude_projection.project_mcp(self.root, self.ws, check=True)
+        self.assertEqual(precheck.status, "drift")
+
+        outcome = claude_projection.project_mcp(self.root, self.ws, check=False)
+        self.assertEqual(outcome.status, "drift")
+        self.assertIn("tracked_drift", outcome.detail)
+        self.assertNotIn("wrote", outcome.detail)
+        self.assertEqual((self.ws / ".mcp.json").read_text(encoding="utf-8"), stale)
+
+    def test_untracked_mcp_still_written(self) -> None:
+        # The guard must not starve a fresh consumer of its .mcp.json.
+        outcome = claude_projection.project_mcp(self.root, self.ws, check=False)
+        self.assertEqual(outcome.status, "ok")
+        self.assertIn("wrote", outcome.detail)
+        self.assertTrue((self.ws / ".mcp.json").is_file())
+
+    def test_untracked_inside_a_git_repo_still_written(self) -> None:
+        # Present but uncommitted is NOT repo-owned.
+        self._commit_mcp('{\n  "mcpServers": {}\n}\n')
+        (self.ws / ".mcp.json").unlink()
+        self._git("rm", "-q", "--cached", ".mcp.json")
+        outcome = claude_projection.project_mcp(self.root, self.ws, check=False)
+        self.assertEqual(outcome.status, "ok")
+        self.assertIn("wrote", outcome.detail)
+
+    def test_unprobed_existing_file_is_not_overwritten(self) -> None:
+        # Fail closed on the decision: an unprobed existing file might be
+        # repo-owned, and overwriting it is the failure this guard exists for.
+        stale = '{\n  "mcpServers": {},\n  "_stale_marker": true\n}\n'
+        self._commit_mcp(stale)
+        with mock.patch.object(
+            claude_projection, "_mcp_is_git_tracked", return_value=(False, False)
+        ):
+            outcome = claude_projection.project_mcp(self.root, self.ws, check=False)
+        self.assertEqual(outcome.detail.get("ownership_probe"), "unavailable")
+        self.assertEqual(outcome.status, "drift")
+        self.assertIn("unprobed_drift", outcome.detail)
+        self.assertNotIn("wrote", outcome.detail)
+        self.assertEqual((self.ws / ".mcp.json").read_text(encoding="utf-8"), stale)
+
+    def test_unprobed_missing_file_is_still_created(self) -> None:
+        # A file that does not exist cannot be repo-owned, and a fresh consumer
+        # still needs one — so the unprobed guard must not starve that case.
+        with mock.patch.object(
+            claude_projection, "_mcp_is_git_tracked", return_value=(False, False)
+        ):
+            outcome = claude_projection.project_mcp(self.root, self.ws, check=False)
+        self.assertEqual(outcome.detail.get("ownership_probe"), "unavailable")
+        self.assertIn("wrote", outcome.detail)
+        self.assertTrue((self.ws / ".mcp.json").is_file())
 
 
 class PluginDesiredStateTests(unittest.TestCase):

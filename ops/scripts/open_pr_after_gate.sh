@@ -571,11 +571,35 @@ else
     if [[ "$_open_body" == *"<!-- autonomous compile from open_pr_after_gate.sh -->"* ]]; then
       _compose_title_and_body
       printf '%s' "$body" > "$WS/.l9/pr/pr-body.md"
-      if gh pr edit "$pr_number" --title "$title" --body-file "$WS/.l9/pr/pr-body.md" >/dev/null 2>&1; then
+      # REST PATCH, not `gh pr edit`. That subcommand is GraphQL-backed, so on a
+      # gateway that refuses GraphQL the refresh silently no-opped and the open
+      # PR kept describing only its first commit while later pushes added
+      # unrelated work — a stale description is what reviewers read. The body
+      # READ two lines up was already REST; this makes the write match it.
+      # Unlike per-PR subscribe, this one has a REST route.
+      _edit_json="$WS/.l9/pr/pr-edit.json"
+      _edit_ok=0
+      if python3 - "$title" "$WS/.l9/pr/pr-body.md" "$_edit_json" <<'PY'
+import json
+import sys
+
+title, body_path, out_path = sys.argv[1], sys.argv[2], sys.argv[3]
+with open(body_path, encoding="utf-8") as handle:
+    body = handle.read()
+with open(out_path, "w", encoding="utf-8") as handle:
+    json.dump({"title": title, "body": body}, handle)
+PY
+      then
+        if gh api --method PATCH "repos/${owner}/${name}/pulls/${pr_number}" \
+            --input "$_edit_json" >/dev/null 2>&1; then
+          _edit_ok=1
+        fi
+      fi
+      if [[ "$_edit_ok" -eq 1 ]]; then
         _refreshed=1
         echo "Refreshed: title and body recomposed for the current range"
       else
-        echo "WARN: could not refresh the PR title/body (gh pr edit failed); the open PR keeps its previous text"
+        echo "WARN: could not refresh the PR title/body (REST PATCH failed); the open PR keeps its previous text"
       fi
     fi
   fi
