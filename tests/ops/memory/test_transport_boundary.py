@@ -58,6 +58,7 @@ MEMORY_PATH_MODULES: tuple[str, ...] = (
     "ops/graphiti/hydration/session_latches.py",
     "environment/agents/adapters/claude-code/memory/memory_bridge.py",
     "environment/agents/adapters/claude-code/memory/memory_state.py",
+    "environment/agents/adapters/manus/memory_lifecycle.py",
 )
 
 #: Top-level packages that would let a memory-path module reach a provider or

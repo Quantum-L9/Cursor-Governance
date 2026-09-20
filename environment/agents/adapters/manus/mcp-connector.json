@@ -6,9 +6,9 @@
     "layer": "adapter-config",
     "owner": "governance-control-plane",
     "status": "active",
-    "version": "4.0.0",
+    "version": "5.0.0",
     "updated": "2026-09-19",
-    "note": "This is a no-secret carrier for the L9 Governance streamable-HTTP MCP server. It is not a memory transport and never exposes the retired Graphiti provider endpoint. Render a deployment-specific connector draft with render_mcp_connector.py."
+    "note": "This is a no-secret carrier for the L9 Governance streamable-HTTP MCP server. A bearer-protected deployment can expose bounded canonical Manus lifecycle calls, but the package-owned agent memory lane remains separate and the carrier never exposes the retired Graphiti provider endpoint. Render a deployment-specific connector draft with render_mcp_connector.py."
   },
   "name": "l9-governance",
   "transport": "streamable-http",
@@ -19,7 +19,11 @@
     "bootstrap_requires": "bearer-token-file",
     "apply_bootstrap_requires": "bearer-token-file plus --allow-bootstrap-apply"
   },
-  "memory": "not-exposed",
+  "memory": {
+    "agent_lane": "package-owned-l9-graphite-memory-mcp-or-cli",
+    "lifecycle": "bearer-protected-canonical-hydrate-and-close-only",
+    "fallback": "fail-closed-no-local-operator-identity"
+  },
   "safety": {
     "no_shell": true,
     "no_credentials": true,

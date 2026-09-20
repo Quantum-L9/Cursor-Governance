@@ -1003,9 +1003,12 @@ claude-desktop-check:
 
 # --- Manus governance MCP (environment/agents/adapters/manus/) ---------------
 # Streamable-HTTP server and its focused contract tests. The server is read-only
-# by default; bootstrap apply requires an externally managed bearer token.
+# by default; bootstrap apply and canonical memory lifecycle require an externally
+# managed bearer token.
 .PHONY: manus-mcp-serve manus-mcp-test
 manus-mcp-serve:
 	bash "$(CURDIR)/environment/agents/adapters/manus/serve_mcp.sh" --governance "$(CURDIR)"
 manus-mcp-test:
-	$(PYTHON) -m unittest environment.agents.adapters.manus.tests.test_mcp_server
+	$(PYTHON) -m unittest \
+		environment.agents.adapters.manus.tests.test_mcp_server \
+		environment.agents.adapters.manus.tests.test_memory_lifecycle

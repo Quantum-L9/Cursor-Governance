@@ -9,6 +9,7 @@ import json
 import sys
 import threading
 import unittest
+import unittest.mock as mock
 from pathlib import Path
 
 ADAPTER = Path(__file__).resolve().parents[1]
@@ -83,12 +84,54 @@ class ManusMcpServerTests(unittest.TestCase):
         self.assertFalse(status.get("isError", False))
         self.assertEqual(status["structuredContent"]["manus_adapter"]["status"], "ready")
         self.assertEqual(
-            status["structuredContent"]["manus_adapter"]["memory"], "not exposed by this adapter"
+            status["structuredContent"]["manus_adapter"]["memory"]["lifecycle"], "disabled"
         )
 
         validation = self.service.call_tool("governance_validate", {"mode": "manus"})
         self.assertFalse(validation.get("isError", False))
         self.assertEqual(validation["structuredContent"]["status"], "passed")
+
+    def test_lifecycle_tools_require_explicit_protected_service_mode(self) -> None:
+        protected = mcp_server.GovernanceMcpService(REPOSITORY, memory_lifecycle_enabled=True)
+        names = {tool["name"] for tool in protected.tools()}
+        self.assertTrue(
+            {
+                "memory_lifecycle_status",
+                "memory_lifecycle_start",
+                "memory_lifecycle_close",
+            }.issubset(names)
+        )
+        status = protected.call_tool("memory_lifecycle_status", {})
+        self.assertFalse(status.get("isError", False))
+        payload = status["structuredContent"]
+        self.assertEqual(payload["transport"], "memory-control-plane/v1")
+        self.assertIn(payload["status"], {"ready", "blocked"})
+
+        refused = self.service.call_tool("memory_lifecycle_start", {})
+        self.assertTrue(refused.get("isError", False))
+        self.assertIn("bearer-protected", refused["structuredContent"]["error"])
+
+    def test_lifecycle_start_refuses_unsigned_agent_fallback_before_memory_io(self) -> None:
+        protected = mcp_server.GovernanceMcpService(REPOSITORY, memory_lifecycle_enabled=True)
+        with mock.patch.dict(
+            "os.environ",
+            {
+                "L9_MEMORY_AGENT_ID": "manus",
+                "USER_ID": "manus_agent",
+                "L9_MEMORY_SOURCE": "manus",
+            },
+            clear=True,
+        ):
+            result = protected.call_tool(
+                "memory_lifecycle_start",
+                {
+                    "workspace": str(REPOSITORY),
+                    "task": "exercise lifecycle guard",
+                    "session_id": "manus-test-session",
+                },
+            )
+        self.assertTrue(result.get("isError", False))
+        self.assertIn("signed agent door", result["structuredContent"]["error"])
 
     def test_bootstrap_requires_a_real_git_workspace(self) -> None:
         result = self.service.call_tool(
@@ -156,6 +199,11 @@ class ManusMcpServerTests(unittest.TestCase):
         self.assertEqual(
             json.loads(json.dumps(draft))["mcpServers"]["l9-governance"]["url"],
             "https://governance.example.com/mcp",
+        )
+        protected = renderer.draft("https://governance.example.com/mcp", bearer_token="test-token")
+        self.assertEqual(
+            protected["mcpServers"]["l9-governance"]["headers"],
+            {"Authorization": "Bearer test-token"},
         )
 
 

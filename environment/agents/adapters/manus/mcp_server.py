@@ -111,6 +111,7 @@ class GovernanceMcpService:
         *,
         bootstrap_enabled: bool = False,
         bootstrap_apply_enabled: bool = False,
+        memory_lifecycle_enabled: bool = False,
     ) -> None:
         self.governance_root = governance_root.resolve()
         if not (self.governance_root / "CANONICAL_LAW.md").is_file():
@@ -118,9 +119,10 @@ class GovernanceMcpService:
         self.adapter_root = self.governance_root / "environment/agents/adapters/manus"
         self.bootstrap_enabled = bootstrap_enabled
         self.bootstrap_apply_enabled = bootstrap_apply_enabled
+        self.memory_lifecycle_enabled = memory_lifecycle_enabled
 
     def tools(self) -> list[dict[str, Any]]:
-        return [
+        tools = [
             {
                 "name": "governance_status",
                 "description": (
@@ -258,6 +260,107 @@ class GovernanceMcpService:
                 "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
             },
         ]
+        if self.memory_lifecycle_enabled:
+            tools.extend(
+                [
+                    {
+                        "name": "memory_lifecycle_status",
+                        "description": (
+                            "Report names-only readiness for the signed Manus memory agent door "
+                            "and "
+                            "the bounded lifecycle bridge. It never reads or writes memory."
+                        ),
+                        "inputSchema": {
+                            "type": "object",
+                            "properties": {},
+                            "additionalProperties": False,
+                        },
+                    },
+                    {
+                        "name": "memory_lifecycle_start",
+                        "description": (
+                            "Explicit Manus session-start lifecycle call. It runs canonical "
+                            "bounded hydration and returns authorized context plus "
+                            "non-authoritative local session evidence. Requires the signed "
+                            "Manus agent door; it never falls back to an "
+                            "operator principal."
+                        ),
+                        "inputSchema": {
+                            "type": "object",
+                            "properties": {
+                                "workspace": {
+                                    "type": "string",
+                                    "description": "Absolute Git workspace path to hydrate.",
+                                },
+                                "task": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 1000,
+                                    "description": (
+                                        "Current task objective used for bounded context retrieval."
+                                    ),
+                                },
+                                "session_id": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 120,
+                                    "description": (
+                                        "Stable Manus session identifier for lifecycle evidence."
+                                    ),
+                                },
+                            },
+                            "required": ["workspace", "task", "session_id"],
+                            "additionalProperties": False,
+                        },
+                    },
+                    {
+                        "name": "memory_lifecycle_close",
+                        "description": (
+                            "Explicit Manus session-end lifecycle call. It admits a canonical "
+                            "continuation and performs idempotent canonical close under the "
+                            "bounded Manus close envelope. "
+                            "Summary text is redacted before processing and is never returned."
+                        ),
+                        "inputSchema": {
+                            "type": "object",
+                            "properties": {
+                                "workspace": {
+                                    "type": "string",
+                                    "description": "Absolute Git workspace path to close.",
+                                },
+                                "session_id": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 120,
+                                    "description": (
+                                        "The same identifier passed to memory_lifecycle_start."
+                                    ),
+                                },
+                                "summary": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 4000,
+                                    "description": (
+                                        "Concise work summary; do not include credentials "
+                                        "or raw secrets."
+                                    ),
+                                },
+                                "next_action": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 1000,
+                                    "description": (
+                                        "The next concrete action for a future continuation."
+                                    ),
+                                },
+                            },
+                            "required": ["workspace", "session_id", "summary", "next_action"],
+                            "additionalProperties": False,
+                        },
+                    },
+                ]
+            )
+        return tools
 
     def _resolve_workspace(self, raw: Any) -> Path:
         if not isinstance(raw, str) or not raw.strip():
@@ -338,6 +441,23 @@ class GovernanceMcpService:
             except ValueError:
                 pass
 
+    def _memory_lifecycle(self):
+        """Load the thin lifecycle wrapper after binding it to this checkout."""
+
+        for path in (self.governance_root, self.adapter_root):
+            if str(path) not in sys.path:
+                sys.path.insert(0, str(path))
+        import memory_lifecycle  # type: ignore[import-not-found]
+
+        return memory_lifecycle
+
+    def _require_memory_lifecycle(self) -> None:
+        if not self.memory_lifecycle_enabled:
+            raise ToolInputError(
+                "memory lifecycle requires a bearer-protected MCP deployment with "
+                "--enable-memory-lifecycle"
+            )
+
     def status(self, arguments: dict[str, Any]) -> dict[str, Any]:
         git_head = _run(["git", "rev-parse", "--short", "HEAD"], cwd=self.governance_root)
         git_branch = _run(["git", "status", "--porcelain=v1", "--branch"], cwd=self.governance_root)
@@ -350,7 +470,10 @@ class GovernanceMcpService:
                 "status": "ready" if not adapter_errors else "invalid",
                 "contract_errors": adapter_errors,
                 "mcp_server": {"transport": "streamable-http", "endpoint": "/mcp"},
-                "memory": "not exposed by this adapter",
+                "memory": {
+                    "agent_lane": "package-owned l9-graphite-memory MCP/CLI",
+                    "lifecycle": "enabled" if self.memory_lifecycle_enabled else "disabled",
+                },
                 "bootstrap_enabled": self.bootstrap_enabled,
                 "bootstrap_apply_enabled": self.bootstrap_apply_enabled,
             },
@@ -367,6 +490,38 @@ class GovernanceMcpService:
                 "git_status": workspace_status.get("stdout", "").strip(),
             }
         return result
+
+    def memory_lifecycle_status(self, _arguments: dict[str, Any]) -> dict[str, Any]:
+        self._require_memory_lifecycle()
+        lifecycle = self._memory_lifecycle()
+        status = lifecycle.signed_agent_door_status()
+        return {
+            "status": "ready" if status["status"] == "ready" else "blocked",
+            "transport": "memory-control-plane/v1",
+            "lifecycle": status,
+            "agent_lane": "package-owned l9-graphite-memory MCP/CLI",
+        }
+
+    def memory_lifecycle_start(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        self._require_memory_lifecycle()
+        workspace = self._resolve_workspace(arguments.get("workspace"))
+        lifecycle = self._memory_lifecycle()
+        return lifecycle.start_session(
+            workspace=workspace,
+            task=arguments.get("task"),
+            session_id=arguments.get("session_id"),
+        )
+
+    def memory_lifecycle_close(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        self._require_memory_lifecycle()
+        workspace = self._resolve_workspace(arguments.get("workspace"))
+        lifecycle = self._memory_lifecycle()
+        return lifecycle.close_session_from_manus(
+            workspace=workspace,
+            session_id=arguments.get("session_id"),
+            summary=arguments.get("summary"),
+            next_action=arguments.get("next_action"),
+        )
 
     def validate(self, arguments: dict[str, Any]) -> dict[str, Any]:
         mode = arguments.get("mode", "manus")
@@ -514,8 +669,14 @@ class GovernanceMcpService:
                 return _text_content(self.search(arguments))
             if name == "governance_list_skills":
                 return _text_content(self.list_skills(arguments))
+            if name == "memory_lifecycle_status":
+                return _text_content(self.memory_lifecycle_status(arguments))
+            if name == "memory_lifecycle_start":
+                return _text_content(self.memory_lifecycle_start(arguments))
+            if name == "memory_lifecycle_close":
+                return _text_content(self.memory_lifecycle_close(arguments))
             return _text_content({"error": f"unknown tool: {name}"}, is_error=True)
-        except (OSError, ToolInputError, ValueError) as exc:
+        except (OSError, RuntimeError, ToolInputError, ValueError) as exc:
             return _text_content({"error": str(exc)}, is_error=True)
 
     def handle_rpc(self, payload: Any) -> dict[str, Any] | None:
@@ -541,7 +702,8 @@ class GovernanceMcpService:
                 "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
                 "instructions": (
                     "Use this MCP server to inspect the shared L9 governance contract and run the "
-                    "existing Manus bootstrap. It intentionally provides no memory provider, "
+                    "existing Manus bootstrap. A protected deployment may additionally expose the "
+                    "bounded canonical Manus memory lifecycle. It never exposes a memory provider, "
                     "credentials, shell, arbitrary file access, or repository-writing tool."
                 ),
             }
@@ -694,6 +856,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Enable the mutating bootstrap apply mode; requires --auth-token-file.",
     )
+    parser.add_argument(
+        "--enable-memory-lifecycle",
+        action="store_true",
+        help="Enable bounded canonical Manus memory lifecycle tools; requires --auth-token-file.",
+    )
     args = parser.parse_args(argv)
     if not 1 <= args.port <= 65535:
         parser.error("port must be between 1 and 65535")
@@ -703,11 +870,14 @@ def main(argv: list[str] | None = None) -> int:
         parser.error(str(exc))
     if args.allow_bootstrap_apply and not bearer_token:
         parser.error("--allow-bootstrap-apply requires --auth-token-file")
+    if args.enable_memory_lifecycle and not bearer_token:
+        parser.error("--enable-memory-lifecycle requires --auth-token-file")
     try:
         service = GovernanceMcpService(
             args.governance_root,
             bootstrap_enabled=bool(bearer_token),
             bootstrap_apply_enabled=args.allow_bootstrap_apply,
+            memory_lifecycle_enabled=args.enable_memory_lifecycle,
         )
     except ValueError as exc:
         parser.error(str(exc))
