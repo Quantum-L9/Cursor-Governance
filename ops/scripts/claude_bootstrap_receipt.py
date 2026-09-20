@@ -25,7 +25,9 @@ caller.
 The reader is surface-parameterized (one expiry rule, one reader — never a
 second receipt brain per surface). ``--surface claude`` (default) reads
 ``~/.l9/claude/bootstrap-state.json``; ``--surface cursor`` reads
-``~/.l9/cursor/bootstrap-state.json`` written by ``make cursor-install``.
+``~/.l9/cursor/bootstrap-state.json`` written by SessionStart / ``make start``
+(schema ``l9.cursor-bootstrap.v2``; the reader still accepts v1). ``make
+cursor-install`` remains the explicit adapter wire.
 
 Usage:
   python3 ops/scripts/claude_bootstrap_receipt.py --read
@@ -38,6 +40,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -45,6 +48,19 @@ from typing import Any
 from governance_refresh_receipt import _parse_timestamp  # noqa: PLC2701
 
 SCHEMA = "l9.claude-bootstrap.v1"
+CURSOR_BOOTSTRAP_SCHEMA_V1 = "l9.cursor-bootstrap.v1"
+CURSOR_BOOTSTRAP_SCHEMA_V2 = "l9.cursor-bootstrap.v2"
+CURSOR_BOOTSTRAP_SCHEMA = CURSOR_BOOTSTRAP_SCHEMA_V2
+CURSOR_BOOTSTRAP_ACCEPTED_SCHEMAS = frozenset(
+    {CURSOR_BOOTSTRAP_SCHEMA_V1, CURSOR_BOOTSTRAP_SCHEMA_V2}
+)
+
+#: Newest bootstrap schema version per receipt directory. Writers emit this
+#: version; the reader still accepts the previous Cursor v1 during transition.
+SCHEMA_VERSIONS = {
+    "claude": 1,
+    "cursor": 2,
+}
 
 #: Per-surface receipt directory + never_ran remediation. The governance
 #: surface id `claude-code` and the short dir name `claude` are the same
@@ -60,13 +76,15 @@ SURFACES: dict[str, dict[str, str]] = {
     },
     "cursor": {
         "dir": "cursor",
-        "remediation": 'make cursor-install WS="$(pwd)"',
+        "remediation": 'make -C "$HOME/.cursor-governance" start WS="$(pwd)"',
     },
 }
 
 
 def schema_for(surface: str) -> str:
-    return f"l9.{_surface_dir(surface)}-bootstrap.v1"
+    directory = _surface_dir(surface)
+    version = SCHEMA_VERSIONS.get(directory, 1)
+    return f"l9.{directory}-bootstrap.v{version}"
 
 
 def _surface_dir(surface: str) -> str:
@@ -213,7 +231,9 @@ def evaluate(
         components["memory_cli"] = receipt.get("memory", "UNKNOWN")
     if "memory_mcp" not in receipt:
         components["memory_mcp"] = receipt.get("memory", "UNKNOWN")
+    recorded_schema = str(receipt.get("schema") or "").strip()
     carried = {
+        "schema": recorded_schema,
         "components": components,
         "stage": receipt.get("stage"),
         "workspace": receipt.get("workspace"),
@@ -221,8 +241,20 @@ def evaluate(
         "generated_at": receipt.get("generated_at"),
         "remediation": receipt.get("remediation", ""),
         "reasons": receipt.get("reasons") if isinstance(receipt.get("reasons"), dict) else {},
+        "probes": receipt.get("probes") if isinstance(receipt.get("probes"), dict) else {},
         "log_path": str(receipt.get("log_path") or ""),
     }
+
+    if (
+        _surface_dir(surface) == "cursor"
+        and recorded_schema
+        and recorded_schema not in CURSOR_BOOTSTRAP_ACCEPTED_SCHEMAS
+    ):
+        return {
+            "state": UNKNOWN,
+            "reason": f"unrecognised schema {recorded_schema!r}",
+            **carried,
+        }
 
     covered = None if workspace is None else _workspace_covered(receipt, workspace)
     carried["workspace_covered"] = covered
@@ -303,7 +335,7 @@ def reprobe_degraded(result: dict[str, Any]) -> dict[str, Any]:
     )
     result["log_path"] = log_path
     for key, value in (result.get("components") or {}).items():
-        if value in {"READY", ""}:
+        if value in {"READY", "N/A", ""}:
             continue
         if key not in reasons or not reasons[key]:
             reasons[key] = (
@@ -335,6 +367,200 @@ def read(
     if not isinstance(parsed, dict):
         return {"state": UNKNOWN, "reason": "receipt is not a JSON object", "components": {}}
     return evaluate(parsed, now=now, governance_revision=revision, surface=surface)
+
+
+def write_atomic_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle, indent=2)
+            handle.write("\n")
+        os.replace(tmp_name, path)
+    except Exception:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            # Best-effort tmp cleanup; the original write/replace error is re-raised.
+            pass
+        raise
+
+
+_CLASS_TO_STATUS_V1 = {
+    "ok": "READY",
+    "n/a": "READY",
+    "degraded": "DEGRADED",
+    "failed": "BLOCKED",
+    "environment_fault": "BLOCKED",
+}
+#: v2 keeps n/a as N/A. Mapping it to READY hid a missing probe as health.
+_CLASS_TO_STATUS_V2 = {
+    **_CLASS_TO_STATUS_V1,
+    "n/a": "N/A",
+}
+
+_LINE_TO_COMPONENT = {
+    "venv": "shared_bootstrap",
+    "ide-profile": "settings",
+    "skill-usage": "skills",
+    "wiring": "commands",
+    "secrets-bind": "capabilities",
+    "memory": "memory",
+}
+
+CURSOR_PROBES = {
+    "shared_bootstrap": "venv",
+    "settings": "ide-profile",
+    "skills": "skill-usage-log",
+    "commands": "wiring",
+    "rules": "alias:commands",
+    "capabilities": "secrets-bind",
+    "memory": "runtime_binding",
+    "memory_cli": "alias:memory",
+    "memory_mcp": "alias:memory",
+    "mcp": "alias:memory",
+    "plugins": "plugin-path",
+    "hooks": "hooks.json",
+    "plugin": "plugin-path",
+    "commands_link": "workspace-law-files",
+}
+
+
+def status_from_class(klass: str, *, schema_version: int = 2) -> str:
+    table = _CLASS_TO_STATUS_V2 if schema_version >= 2 else _CLASS_TO_STATUS_V1
+    return table.get((klass or "").strip().lower(), "UNKNOWN")
+
+
+def probe_cursor_hooks(home: Path) -> tuple[str, str]:
+    hooks = home / ".cursor" / "hooks.json"
+    try:
+        text = hooks.read_text(encoding="utf-8")
+    except OSError:
+        return "DEGRADED", "hooks.json missing"
+    if "session-start-bootstrap" in text:
+        return "READY", ""
+    return "DEGRADED", "hooks.json has no session-start-bootstrap registration"
+
+
+def probe_cursor_plugin(home: Path) -> tuple[str, str]:
+    plugin = home / ".cursor" / "plugins" / "local" / "l9-governance"
+    try:
+        if not plugin.exists():
+            return "DEGRADED", "l9-governance plugin absent"
+        plugin.resolve()
+    except OSError:
+        return "DEGRADED", "l9-governance plugin absent"
+    return "READY", ""
+
+
+def probe_cursor_commands(workspace: str) -> tuple[str, str]:
+    root = Path(workspace) if workspace else Path()
+    if (root / "CANONICAL_LAW.md").is_file() and (root / "AGENTS.md").is_file():
+        return "READY", "governance checkout — reference plane is the repo itself"
+    link = root / ".cursor-commands"
+    if link.is_symlink() and (link / "CANONICAL_LAW.md").is_file():
+        return "READY", ""
+    return "DEGRADED", "no .cursor-commands symlink"
+
+
+def build_cursor_bootstrap_payload(
+    *,
+    workspace: str,
+    lines: list[dict[str, Any]],
+    home: Path,
+    generated_at: str | None = None,
+    governance_revision: str | None = None,
+) -> dict[str, Any]:
+    """Complete l9.cursor-bootstrap.v2 payload from this SessionStart run."""
+    by_name = {str(item.get("name") or ""): item for item in lines}
+    components: dict[str, str] = {key: "UNKNOWN" for key in COMPONENTS}
+    reasons: dict[str, str] = {}
+
+    for line_name, key in _LINE_TO_COMPONENT.items():
+        item = by_name.get(line_name) or {}
+        status = status_from_class(str(item.get("class") or ""), schema_version=2)
+        components[key] = status
+        summary = str(item.get("summary") or "")
+        if status != "READY" and summary:
+            reasons[key] = summary[:200]
+
+    memory_status = components.get("memory", "UNKNOWN")
+    for alias in ("memory_cli", "memory_mcp", "mcp"):
+        components[alias] = memory_status
+        if memory_status != "READY" and reasons.get("memory"):
+            reasons[alias] = reasons["memory"]
+
+    components["rules"] = components.get("commands", "UNKNOWN")
+    if components["rules"] != "READY" and reasons.get("commands"):
+        reasons["rules"] = reasons["commands"]
+
+    plugin_probe, plugin_reason = probe_cursor_plugin(home)
+    components["plugins"] = plugin_probe
+    if components["plugins"] != "READY" and plugin_reason:
+        reasons["plugins"] = plugin_reason
+
+    hooks_status, hooks_reason = probe_cursor_hooks(home)
+    commands_status, commands_reason = probe_cursor_commands(workspace)
+
+    statuses = [components[key] for key in COMPONENTS] + [
+        hooks_status,
+        plugin_probe,
+        commands_status,
+    ]
+    state = "READY"
+    if "BLOCKED" in statuses:
+        state = "FAILED"
+    elif "DEGRADED" in statuses or "UNKNOWN" in statuses:
+        state = "DEGRADED"
+
+    payload: dict[str, Any] = {
+        "schema": CURSOR_BOOTSTRAP_SCHEMA,
+        "surface": "cursor",
+        "mode": "session-start",
+        "state": state,
+        "stage": "complete",
+        "remediation": 'make -C "$HOME/.cursor-governance" start WS="$(pwd)"',
+        "generated_at": generated_at or datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "ttl_seconds": DEFAULT_TTL_SECONDS,
+        "governance_revision": (
+            governance_revision if governance_revision is not None else live_governance_revision()
+        ),
+        "workspace": workspace,
+        "hooks": hooks_status,
+        "plugin": plugin_probe,
+        "commands_link": commands_status,
+        "probes": dict(CURSOR_PROBES),
+        "reasons": {
+            **reasons,
+            "hooks": hooks_reason,
+            "plugin": plugin_reason,
+            "commands_link": commands_reason,
+        },
+    }
+    payload.update(components)
+    return payload
+
+
+def write_cursor_bootstrap_receipt(
+    *,
+    home: Path,
+    workspace: str,
+    lines: list[dict[str, Any]],
+    governance_revision: str | None = None,
+) -> Path:
+    """Write ~/.l9/cursor/bootstrap-state.json for this bootstrap run. Atomic."""
+    if home.resolve() == Path.home().resolve():
+        path = receipt_path(surface="cursor")
+    else:
+        path = home / ".l9" / "cursor" / "bootstrap-state.json"
+    payload = build_cursor_bootstrap_payload(
+        workspace=workspace,
+        lines=lines,
+        home=home,
+        governance_revision=governance_revision,
+    )
+    write_atomic_json(path, payload)
+    return path
 
 
 def main(argv: list[str] | None = None) -> int:

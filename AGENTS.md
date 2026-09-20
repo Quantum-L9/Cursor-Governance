@@ -1677,6 +1677,41 @@ GOV="$HOME/.cursor-governance"
 - `/ff` corpus kernels are unchanged, and a corpus-only changeset
   (`WIP/`, `docs/plans/`, PE campaigns) still needs no tree receipt.
 
+## l9.kernel_apply.v2 schema (2026-09-19)
+
+Append-only addition to `RECEIPT_EVIDENCE_PLANE_V1`. The schema bumps to v2 with
+hardened predicates that close skip holes in v1:
+
+**Phase 1 (mechanical):**
+- `delta_paths_exist` now requires `is_file()` not just `exists()` — directories
+  and dangling symlinks are rejected.
+- `both_kernels_have_deltas` requires at least one delta per kernel.
+- `notes_not_template` refuses template boilerplate patterns.
+- `headings_are_atx` requires proper `## Heading` format, not substring match.
+- `closed_frontmatter` allowlists keys; extra/junk keys are rejected.
+- `no_duplicate_delta_paths` refuses duplicate paths in deltas.
+- `deltas_cover_diff` checks deltas cover the git diff (when `--changed-file`
+  is provided to `record`); corpus and generated paths are exempt.
+
+**Phase 2 (finding ledger):**
+v2 reports require a `findings` list with structured entries:
+- `findings_nonempty_or_explicit_clean`: empty findings requires `audit_scope`
+  and `passes_run` explaining the clean state.
+- `finding_paths_exist`, `finding_rules_exist`: validate referenced paths/rules.
+- `resolved_has_close_validation`: Resolved findings must name the test.
+- `convergence_derived`: cannot claim `converged` with Open Critical/High.
+- `passes_run_minimum`: must include `context_and_scope_lock` and
+  `reconciliation_and_convergence`.
+- `unknowns_key_required`: explicit unknowns list required.
+
+**Phase 3 (seed findings):**
+`seed_findings()` generates mandatory seeds from changed paths. Seeds cannot be
+deleted — only disposed (Resolved with close_validation, FalsePositive/OutOfScope
+with updated evidence).
+
+v1 reports are still accepted during transition but should be upgraded. The
+template from `apply-report-template` emits unstampable v2 scaffolding.
+
 <!-- WORKTREE_ADD_TWO_ENTRANCES_V1 -->
 ## Raw `git worktree add` is denied; two sanctioned entrances (2026-09-15)
 
@@ -1757,6 +1792,48 @@ stays on disk (additive_only). Do not fold it.
   `agent-lane-interposition`), `validate_memory_egress_boundary.py` lane scan,
   `tests/ops/memory/test_hook_envelope.py`,
   `tests/ops/memory/test_no_agent_lane_interposition.py`.
+
+<!-- SESSIONSTART_RECEIPT_HYDRATE_UNBUILT_V1 -->
+## SessionStart writes the Cursor receipt, prints full hydrate, lists 5 unbuilt plans (2026-09-19)
+
+Append-only. This supersedes only: the "Cursor SessionStart does not run
+`claude_projection.py`" sentence does **not** waive receipt writing; the
+"emits no plan surface" sentence in `SESSIONSTART_NO_PLAN_SURFACE_V1` for a
+bounded 5-plan list; and tunnel / Neo4j SessionStart rows. Those paragraphs
+stay on disk (additive_only). Do not fold them.
+
+- `/start-session` **is** the bootstrap ceremony: `make start` runs
+  `ops/hooks/session_start_bootstrap.sh` (same script as the SessionStart hook).
+- Every Cursor bootstrap run **must** write `~/.l9/cursor/bootstrap-state.json`
+  (`l9.cursor-bootstrap.v1`, `mode: session-start`) from this-run evidence.
+  A 17-day-old file after `make start` is a ceremony defect. `never_ran` and
+  TTL `unknown` are this-session failures, not `n/a`. `make cursor-install`
+  remains the explicit adapter wire; it is not the only writer.
+- Provider tunnel and local Neo4j `:7687` are not SessionStart planes. Canonical
+  memory is Graphiti via the memory control plane. Do not probe them here.
+- After Runtime, print the **full** `### memory hydrate` packet (all facts,
+  continuation, JSON fence). Do not truncate with `…[truncated]`.
+- After hydrate, print `### Unbuilt plans`: the 5 most recent unbuilt root
+  `.plan.md` files (`audit_plans.py --format session-start --window-days 0
+  --limit 5`). Display-only. No archive, no harvest, no auto-Build. Kill
+  switch: `L9_SESSIONSTART_UNBUILT_PLANS=0`. Full harvest stays
+  `/l9-pipeline-audit`. Links-only auto-wire is unchanged.
+
+<!-- SESSIONSTART_CURSOR_BOOTSTRAP_V2 -->
+## Cursor bootstrap receipt schema is v2 (2026-09-19)
+
+Append-only. This supersedes only the `l9.cursor-bootstrap.v1` schema name in
+`SESSIONSTART_RECEIPT_HYDRATE_UNBUILT_V1`. That paragraph stays on disk
+(additive_only). Do not fold it. Claude remains `l9.claude-bootstrap.v1`.
+
+- Writers emit **`l9.cursor-bootstrap.v2`** (`schema_for("cursor")`, SessionStart
+  payload, `make cursor-install`). The newest Cursor bootstrap schema is v2;
+  `l9.kernel_apply.v2` is a different receipt family.
+- The reader still accepts `l9.cursor-bootstrap.v1` during transition. An
+  unrecognised Cursor schema is `unknown`, not ready.
+- v2 `n/a` stays `N/A` (not `READY`). `probes` names the this-run source
+  (`venv`, `runtime_binding`, `alias:memory`, …). Identity fields (`surface`,
+  `mode`, `stage`, `remediation`, `ttl_seconds`) remain constants.
 
 <!-- PR_STACK_OPT_IN_V1 -->
 ## PR stacking is opt-in (2026-09-19) — supersedes §2.1.1 "Default is PR_STACK=auto" and §4.1 "`PR_STACK=auto` is the default at start and at `make pr`"

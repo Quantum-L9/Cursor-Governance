@@ -315,6 +315,31 @@ Press Build on the current checkout.
         if missing.returncode != 0 or "no plans dir" not in missing.stdout:
             errors.append(f"missing dir markdown failed: {missing.stdout!r} / {missing.stderr!r}")
 
+        session = run_audit(
+            plans,
+            workspace,
+            "--format",
+            "session-start",
+            "--window-days",
+            "0",
+            "--limit",
+            "5",
+        )
+        if session.returncode != 0:
+            errors.append(f"session-start format exit {session.returncode}: {session.stderr}")
+        elif "### Unbuilt plans" not in session.stdout:
+            errors.append(f"session-start missing heading: {session.stdout!r}")
+        else:
+            listed = [
+                line
+                for line in session.stdout.splitlines()
+                if line.startswith("- ") and ".plan.md" in line
+            ]
+            if not listed:
+                errors.append(f"session-start listed no unbuilt plans: {session.stdout!r}")
+            if len(listed) > 5:
+                errors.append(f"session-start listed {len(listed)} plans, cap is 5")
+
         sys.path.insert(0, str(ROOT / "scripts"))
         from harvest_plan_invariants import extract_invariants, reject_implementation
 
