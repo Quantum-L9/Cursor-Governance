@@ -16,7 +16,6 @@ import ast
 import fnmatch
 import re
 import shlex
-import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
@@ -27,6 +26,7 @@ __all__ = [
     "inspect_python_project",
     "normalize_pytest_addopts",
     "parse_collection_guards",
+    "path_is_collection_guarded",
     "python_floor",
     "pytest_ignored_paths",
 ]
@@ -300,7 +300,3 @@ def inspect_python_project(root: Path, data: dict[str, Any]) -> PythonProjectSta
         collect_guards_resolved=guards_resolved,
         lock_workflow_declared=_lock_workflow_declared(root),
     )
-
-
-def parse_pyproject(text: str) -> dict[str, Any]:
-    return tomllib.loads(text)

@@ -187,6 +187,24 @@ def test_validator_flags_a_purpose_leak(tmp_path: Path):
     assert any(finding.rule_id == "readme.multi_module.purpose_leak" for finding in findings)
 
 
+def test_validator_flags_a_purpose_with_no_evidence_reference(tmp_path: Path):
+    """INV-RD-004 mechanically: a claim must name where it came from."""
+    model = rm.ReadmeModel(target=target("x"), purpose="Something nobody can source.")
+    findings = rq.validate_readme_model(tmp_path, model, rr.render_readme(model))
+    assert any(finding.rule_id == "readme.purpose.unsourced" for finding in findings)
+
+
+def test_a_compiled_purpose_always_carries_its_evidence(tmp_path: Path):
+    write(tmp_path / "solo" / "only.py", '"""Solo does one thing."""\n')
+    model = ev.compile_readme_model(tmp_path, target("solo"))
+    assert model.purpose == "Solo does one thing."
+    assert any(ref.kind == "module_docstring" for ref in model.evidence)
+    findings = rq.validate_readme_model(
+        tmp_path, model, rr.render_readme(model), authorized={"solo"}
+    )
+    assert not any(finding.rule_id == "readme.purpose.unsourced" for finding in findings)
+
+
 def test_validator_flags_generic_purpose(tmp_path: Path):
     model = rm.ReadmeModel(
         target=target("x"),

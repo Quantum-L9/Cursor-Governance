@@ -239,8 +239,12 @@ def test_policy_reads_the_repository_contract(tmp_path: Path):
     )
     policy = load_python_repo_policy(tmp_path)
     assert policy.self_test_roots == frozenset({"skills/demo"})
-    assert policy.non_test_exclusions == frozenset({"a.py"})
     assert policy.require_uv_lock is None
+    assert policy.contract_source == "ops/config/python-contract.json"
+    # `non_test_exclusions` is deliberately not carried: a declaration that
+    # a path should be excluded is not evidence that it is, and that is the
+    # distinction `guard_unknown` exists to keep.
+    assert not hasattr(policy, "non_test_exclusions")
 
 
 def test_unregistered_self_test_is_a_finding(tmp_path: Path):

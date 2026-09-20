@@ -144,7 +144,7 @@ Quality validation for compiled README models and their rendering.
 - `def validate_readme_models(repo_root, pairs) -> list[QualityFinding]` — Validate every compiled model in one pass, deterministically ordered.
 - `def retirement_findings(path, text) -> list[QualityFinding]` — Refuse to retire a README this generator does not strongly own.
 
-Exports: `FORBIDDEN_PURPOSE_PHRASES`, `validate_readme_model`, `validate_readme_models`
+Exports: `FORBIDDEN_PURPOSE_PHRASES`, `PURPOSE_EVIDENCE_KINDS`, `retirement_findings`, `validate_readme_model`, `validate_readme_models`
 
 _+4 further module(s) in this directory._
 

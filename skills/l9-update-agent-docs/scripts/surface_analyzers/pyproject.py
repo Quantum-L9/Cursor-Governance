@@ -39,7 +39,6 @@ class PythonRepoPolicy:
 
     require_uv_lock: bool | None = None
     self_test_roots: frozenset[str] | None = None
-    non_test_exclusions: frozenset[str] = frozenset()
     contract_source: str | None = None
     contract_unreadable: bool = False
     self_test_globs: tuple[str, ...] = field(default=SELF_TEST_GLOBS)
@@ -96,18 +95,17 @@ def load_python_repo_policy(root: Path) -> PythonRepoPolicy:
     if not isinstance(contract, dict):
         return PythonRepoPolicy(contract_source=PYTHON_CONTRACT_REL, contract_unreadable=True)
 
+    # `non_test_exclusions` is deliberately not read. It declares which
+    # test-shaped paths are meant to be excluded, and a declaration is not
+    # a guard — which is the exact distinction `guard_unknown` exists to
+    # keep. Consulting it as evidence of exclusion would reintroduce the
+    # bug, and requiring membership in it would invent a rule the
+    # repository's own validator does not enforce.
     roots = contract.get("skill_self_test_roots")
-    exclusions = contract.get("non_test_exclusions") or []
-    excluded_paths = {
-        str(entry.get("path"))
-        for entry in exclusions
-        if isinstance(entry, dict) and entry.get("path")
-    }
     declared_lock = contract.get("uv_lock_required")
     return PythonRepoPolicy(
         require_uv_lock=declared_lock if isinstance(declared_lock, bool) else None,
         self_test_roots=frozenset(str(item) for item in roots) if isinstance(roots, list) else None,
-        non_test_exclusions=frozenset(excluded_paths),
         contract_source=PYTHON_CONTRACT_REL,
     )
 

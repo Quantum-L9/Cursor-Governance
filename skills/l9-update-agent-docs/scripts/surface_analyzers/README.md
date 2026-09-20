@@ -37,8 +37,7 @@ Generic Python-project observation, free of repository policy.
 - `def parse_collection_guards(text) -> tuple[tuple[str, ...], tuple[str, ...], bool]` — Literal `collect_ignore` / `collect_ignore_glob` from a conftest.
 - `def path_is_collection_guarded(rel) -> bool`
 - `def inspect_python_project(root, data) -> PythonProjectState` — Observe a parsed `pyproject.toml` plus the files it points at.
-- _+1 more public symbol(s)_
 
-Exports: `PythonProjectState`, `VersionFloor`, `inspect_python_project`, `normalize_pytest_addopts`, `parse_collection_guards`, `pytest_ignored_paths`, `python_floor`
+Exports: `PythonProjectState`, `VersionFloor`, `inspect_python_project`, `normalize_pytest_addopts`, `parse_collection_guards`, `path_is_collection_guarded`, `pytest_ignored_paths`, `python_floor`
 
 <!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

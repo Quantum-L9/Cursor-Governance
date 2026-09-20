@@ -28,9 +28,16 @@ from readme_renderers import (
 
 __all__ = [
     "FORBIDDEN_PURPOSE_PHRASES",
+    "PURPOSE_EVIDENCE_KINDS",
+    "retirement_findings",
     "validate_readme_model",
     "validate_readme_models",
 ]
+
+#: Evidence kinds that may support a rendered directory purpose. Anything
+#: else means the purpose reached the model without a deterministic source,
+#: which is the failure INV-RD-004 exists to prevent.
+PURPOSE_EVIDENCE_KINDS = frozenset({"configured_purpose", "skill_contract", "module_docstring"})
 
 #: Phrases the old templates emitted when they had nothing to say. They
 #: are forbidden outright rather than discouraged: a README whose Purpose
@@ -117,6 +124,15 @@ def validate_readme_model(
                 )
             )
             break
+
+    if model.purpose and not any(ref.kind in PURPOSE_EVIDENCE_KINDS for ref in model.evidence):
+        findings.append(
+            _error(
+                "readme.purpose.unsourced",
+                f"purpose {model.purpose!r} carries no evidence reference naming its source",
+                source,
+            )
+        )
 
     if target.kind == "skill" and "SKILL.md" not in rendered:
         findings.append(

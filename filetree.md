@@ -1441,7 +1441,6 @@ ops/
     README.md
     __init__.py
     graphiti_gate_lib.py
-    distill_queue/
     docs/
       CURSOR-GRAPHITI-INSTANTIATION-BRIEF.md
       MACHINE-ENV-POLICY.md

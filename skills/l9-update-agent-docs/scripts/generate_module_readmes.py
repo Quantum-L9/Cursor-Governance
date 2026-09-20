@@ -114,8 +114,9 @@ LEGACY_HEADER_RE = re.compile(r"^\*\*Path:\*\* `[^`\n]+` \| \*\*Tier:\*\* \S.*$"
 LEGACY_REQUIRED_HEADINGS = ("Purpose", "Components", "Functions", "Exports", "Dependencies")
 ReadmeOwnership = Literal["missing", "generated", "legacy_generated", "handwritten"]
 
-#: Retained for the compatibility surface and for legacy-shape detection.
-#: The live renderers are in `readme_renderers`; nothing generates this.
+#: Retained for the published compatibility surface only. Legacy-shape
+#: detection uses LEGACY_HEADER_RE and LEGACY_REQUIRED_HEADINGS, not this
+#: string, and the live renderers are in `readme_renderers`.
 README_TEMPLATE = """# {title}
 
 **Path:** `{path}` | **Tier:** {tier}
