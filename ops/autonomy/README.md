@@ -119,7 +119,7 @@ Read-only view of repository state.
 
 ## Exports
 
-`APPLY_REL`, `APPLY_SCHEMA`, `BlastRadius`, `CONTRACT_ID`, `CONTRACT_PATH`, `CONTRACT_VERSION`, `ContractError`, `Decision`, `DirtyPath`, `Effect`, `Finding`, `GuardContext`, `GuardResult`, `HUMAN_AUTHORIZATION_ENV`, `LiveProbe`, `MEMORY_EXECUTABLES`, `OPERATOR_MODULE`, `Outcome`, `Ownership`, `OwnershipOracle` (+38 more)
+`ACCEPTED_SCHEMAS`, `APPLY_REL`, `APPLY_SCHEMA`, `APPLY_SCHEMA_V1`, `APPLY_SCHEMA_V2`, `BlastRadius`, `CONTRACT_ID`, `CONTRACT_PATH`, `CONTRACT_VERSION`, `ContractError`, `Decision`, `DirtyPath`, `Effect`, `Finding`, `GuardContext`, `GuardResult`, `HUMAN_AUTHORIZATION_ENV`, `LiveProbe`, `MEMORY_EXECUTABLES`, `OPERATOR_MODULE` (+58 more)
 
 ## Dependencies
 
