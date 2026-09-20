@@ -1834,6 +1834,7 @@ Append-only. This supersedes only the `l9.cursor-bootstrap.v1` schema name in
 - v2 `n/a` stays `N/A` (not `READY`). `probes` names the this-run source
   (`venv`, `runtime_binding`, `alias:memory`, …). Identity fields (`surface`,
   `mode`, `stage`, `remediation`, `ttl_seconds`) remain constants.
+
 <!-- PR_STACK_OPT_IN_V1 -->
 ## PR stacking is opt-in (2026-09-19) — supersedes §2.1.1 "Default is PR_STACK=auto" and §4.1 "`PR_STACK=auto` is the default at start and at `make pr`"
 
