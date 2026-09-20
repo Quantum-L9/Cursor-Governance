@@ -57,6 +57,14 @@ def generate(root: Path) -> dict[str, object]:
     return {
         "schema": "program-execution-adapter-layer.manifest.v1",
         "artifact": "program-execution-adapter-layer-v1.0.0",
+        # Self-describing: the file names its writer and the command that
+        # rewrites it. It is enforced (validate_manifest.py under
+        # `make program-execution-conformance` and governance-self-check), yet
+        # it carried nothing that pointed a reader at the generator, and the
+        # obvious heal target (`make sync-generated`) did not reach it — the
+        # only correct invocation lived in a CI error string.
+        "generator": "environment/program-execution/scripts/generate_manifest.py",
+        "regenerate": "make sync-generated-pe",
         "integrity": {"algorithm": "sha256", "self_excluded": True},
         "files": files,
     }
