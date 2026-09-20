@@ -189,7 +189,7 @@ GC="$GLOBAL_COMMANDS"
 
 # Generic hydration (uv, scratch_hold, checkers, capabilities, identity) lives
 # only in the shared bootstrap. Cursor keeps tip activation, wiring, hydrate,
-# and the additional_context JSON envelope. Plans work is slash-only.
+# and the additional_context JSON envelope. Unbuilt-plan list is display-only.
 # Same order as resolve_runtime_reporter: this checkout, then live SSOT.
 resolve_shared_bootstrap() {
   if [ -n "${CURSOR_PROJECT_DIR:-}" ] && [ -f "$CURSOR_PROJECT_DIR/ops/scripts/bootstrap_agent_environment.sh" ]; then
@@ -242,6 +242,9 @@ fi
 SETUP="$GC/ops/scripts/setup_workspace_symlinks.sh"
 ENSURE="$GC/ops/scripts/ensure_workspace_wired.sh"
 ORCH="$GC/ops/hooks/session_start_memory_orchestrator.sh"
+if [ -n "${CURSOR_PROJECT_DIR:-}" ] && [ -f "$CURSOR_PROJECT_DIR/ops/hooks/session_start_memory_orchestrator.sh" ]; then
+  ORCH="$CURSOR_PROJECT_DIR/ops/hooks/session_start_memory_orchestrator.sh"
+fi
 # shellcheck source=/dev/null
 [ -f "$GC/ops/scripts/lib/workspace_kind.sh" ] && source "$GC/ops/scripts/lib/workspace_kind.sh"
 # shellcheck source=/dev/null
@@ -334,14 +337,13 @@ if [ "$needs_wire" -eq 1 ] && [ -n "$REPO" ]; then
 fi
 
 
-# Memory switches + canonical readiness (no memory-bank, no provider, no tunnel
-# since stage C9: memory is the bound control-plane runtime, proven by
-# ops/memory/runtime_binding.py, never a URL this hook reaches).
+# Memory switches + canonical readiness (no memory-bank, no provider).
+# Memory is the bound control-plane runtime, proven by
+# ops/memory/runtime_binding.py, never a URL this hook reaches.
+# Provider tunnel and local Neo4j :7687 are not SessionStart planes.
 # shellcheck source=/dev/null
 [ -f "$GC/ops/hooks/graphiti_common.sh" ] && source "$GC/ops/hooks/graphiti_common.sh"
 graphiti_load_env 2>/dev/null || true
-
-TUNNEL_NOTE="retired (memory control plane; no provider tunnel)"
 
 MEMORY_HEALTH="disabled or memory boundary missing"
 MEMORY_HEALTHY="false"
@@ -445,13 +447,14 @@ GOV_HEAD="$(short_sha "$ACTIVATE_SHA")"
 REMOTE_HEAD="$(short_sha "$ACTIVATE_REMOTE_SHA")"
 
 # Shared interpreter for runtime reporter / hydrate classifier / route locator.
-# SessionStart does not read, scan, or emit the plans store (slash-only).
+# SessionStart writes the Cursor bootstrap receipt every run, prints the full
+# hydrate packet, then lists the 5 most recent unbuilt plans (display-only).
 AUDIT_PY_BIN="$GC/.venv/bin/python"
 [ -x "$AUDIT_PY_BIN" ] || AUDIT_PY_BIN=python3
 
-# T-CI007 / T-CI015 / T-CI021 / T-CI022 — live Cursor SessionStart caller (U2).
+# T-CI007 / T-CI015 / T-CI021 — live Cursor SessionStart caller (U2).
 # Classification lives in session_start_runtime_report.py so slogans cannot
-# masquerade as this-session faults (missing breakglass = ok; :7687 = n/a).
+# masquerade as this-session faults (missing breakglass = ok).
 TWO_CLONE_NOTE=""
 WS_ROOT="${CURSOR_PROJECT_DIR:-$PWD}"
 if git -C "$WS_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -542,7 +545,6 @@ if [ -n "$RUNTIME_REPORTER" ] && [ -f "$RUNTIME_REPORTER" ]; then
     --surface "${L9_GOVERNANCE_SURFACE:-cursor}" \
     --venv "$VENV_NOTE" \
     --ide-profile "$IDE_NOTE" \
-    --tunnel "$TUNNEL_NOTE" \
     --memory-detail "$MEMORY_HEALTH" \
     --memory-stderr "$MEMORY_STDERR" \
     --memory-healthy "$MEMORY_HEALTHY" \
@@ -574,6 +576,28 @@ case "$HYDRATE_MD" in
 ${HYDRATE_MD}" ;;
 esac
 
+UNBUILT_MD="### Unbuilt plans
+- skipped"
+if [ "${L9_SESSIONSTART_UNBUILT_PLANS:-1}" != "0" ]; then
+  AUDIT_PLANS="$GC/skills/l9-pipeline-audit/scripts/audit_plans.py"
+  if [ -n "${CURSOR_PROJECT_DIR:-}" ] && [ -f "$CURSOR_PROJECT_DIR/skills/l9-pipeline-audit/scripts/audit_plans.py" ]; then
+    AUDIT_PLANS="$CURSOR_PROJECT_DIR/skills/l9-pipeline-audit/scripts/audit_plans.py"
+  fi
+  if [ -f "$AUDIT_PLANS" ]; then
+    UNBUILT_MD="$("$AUDIT_PY_BIN" "$AUDIT_PLANS" \
+      --workspace "${CURSOR_PROJECT_DIR:-$PWD}" \
+      --window-days 0 \
+      --limit 5 \
+      --format session-start \
+      --deadline-seconds 2 \
+      --budget-chars 2000 \
+      2>/dev/null || printf '### Unbuilt plans\n- unavailable')"
+  else
+    UNBUILT_MD="### Unbuilt plans
+- unavailable: audit_plans.py missing"
+  fi
+fi
+
 # Route locator: one receipt identity for this conversation, derived by the
 # Python owner from the sessionStart payload. beforeSubmitPrompt writes that
 # same locator on every prompt; rules/23-l9-skill-routing.mdc consumes it.
@@ -600,6 +624,7 @@ COMBINED="$(cat <<EOF
 ${TWO_CLONE_NOTE}
 ${RUNTIME_MD}
 ${HYDRATE_BLOCK}
+${UNBUILT_MD}
 ### Code-graph
 ${CODEGRAPH_MD}
 ${ROUTE_LOCATOR_MD}

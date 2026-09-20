@@ -21,6 +21,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
+# Runs the real settings reconciler with ``--root`` pointed at this checkout,
+# so it is a live-tree writer and shares the other live-tree tests' xdist
+# group; the full rationale lives in
+# ops/scripts/tests/test_governance_refresh_receipt.py.
+pytestmark = pytest.mark.xdist_group("live_repo_tree")
+
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "ops" / "scripts"))
 RECONCILER = REPO / "ops" / "scripts" / "reconcile_claude_settings.py"

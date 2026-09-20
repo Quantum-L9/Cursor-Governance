@@ -22,6 +22,12 @@ from pathlib import Path
 
 import pytest
 
+# Runs the real wiring scripts with the governance clone symlinked to this
+# checkout, so it is a live-tree writer and shares the other live-tree tests'
+# xdist group; the full rationale lives in
+# ops/scripts/tests/test_governance_refresh_receipt.py.
+pytestmark = pytest.mark.xdist_group("live_repo_tree")
+
 REPO = Path(__file__).resolve().parents[3]
 SCRIPTS = REPO / "ops" / "scripts"
 LIB = SCRIPTS / "lib" / "plugin_siblings.sh"

@@ -1,0 +1,20 @@
+{
+  "_l9_meta": {
+    "l9_schema": 1,
+    "repo": "Quantum-L9/Cursor-Governance",
+    "path": "environment/agents/adapters/manus/infisical-mcp-connector.json",
+    "layer": "adapter-config",
+    "owner": "governance-control-plane",
+    "status": "active",
+    "version": "1.0.0",
+    "note": "Native local stdio Custom MCP carrier. Connector-only Universal Auth is supplied as encrypted custom-connector environment values and is never added to project/session environment."
+  },
+  "name": "l9-manus-infisical",
+  "transport": "stdio",
+  "status": "native-connector-template-requires-machine-identity",
+  "launcher": "serve_infisical_mcp.sh",
+  "renderer": "render_infisical_mcp_connector.py",
+  "capability_manifest": "infisical_capabilities.json",
+  "secret_delivery": "encrypted-connector-env",
+  "secret_exposure": "forbidden"
+}

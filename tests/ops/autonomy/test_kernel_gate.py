@@ -20,16 +20,23 @@ def _gate():
     return kernel_gate
 
 
-def write_apply_report(repo: Path, *, delta_path: str = "a.txt", body: str = "") -> Path:
-    """Write a valid apply report naming a file that exists in `repo`.
+def write_apply_report(
+    repo: Path, *, delta_path: str = "a.txt", delta_path_2: str = "b.txt", body: str = ""
+) -> Path:
+    """Write a valid apply report naming files that exist in `repo`.
 
     Tests used to call `record()` bare, which is exactly the honor-system stamp
     this latch removed. Producing the artifact is now part of setup.
+
+    Phase 1 hardening requires both kernels to have at least one delta each,
+    and notes cannot be template boilerplate.
     """
     target = repo / delta_path
-    if not target.exists():
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text("touched\n", encoding="utf-8")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("touched\n", encoding="utf-8")
+    target2 = repo / delta_path_2
+    target2.parent.mkdir(parents=True, exist_ok=True)
+    target2.write_text("validated\n", encoding="utf-8")
     report = repo / ".l9" / "autonomy" / "kernel-apply.md"
     report.parent.mkdir(parents=True, exist_ok=True)
     report.write_text(
@@ -40,17 +47,22 @@ def write_apply_report(repo: Path, *, delta_path: str = "a.txt", body: str = "")
         "deltas:\n"
         f"  - path: {delta_path}\n"
         "    kernel: recursive_alignment\n"
-        "    note: narrowed a guard\n"
+        "    note: Added input validation for empty collections\n"
+        f"  - path: {delta_path_2}\n"
+        "    kernel: validate_repair\n"
+        "    note: Updated test assertions to cover edge case\n"
         "---\n"
-        "\n## Recursive Alignment\n\nsurfaced and applied\n"
-        f"\n## Validate & Repair\n\nran the checks{body}\n",
+        "\n## Recursive Alignment\n\nInspected and found missing null guard. Fixed.\n"
+        f"\n## Validate & Repair\n\nRan pytest suite. All assertions passed.{body}\n",
         encoding="utf-8",
     )
     return report
 
 
-def record_with_evidence(gate, repo: Path, *, delta_path: str = "a.txt") -> dict:
-    write_apply_report(repo, delta_path=delta_path)
+def record_with_evidence(
+    gate, repo: Path, *, delta_path: str = "a.txt", delta_path_2: str = "b.txt"
+) -> dict:
+    write_apply_report(repo, delta_path=delta_path, delta_path_2=delta_path_2)
     return gate.record(repo, gov=ROOT)
 
 
@@ -80,7 +92,16 @@ def test_record_with_evidence_then_precommit_passes_without_plans(stacked_repo: 
     assert receipt["report_rel"] == ".l9/autonomy/kernel-apply.md"
     assert len(receipt["report_sha256"]) == 64
     assert receipt["deltas"] == [
-        {"path": "a.txt", "kernel": "recursive_alignment", "note": "narrowed a guard"}
+        {
+            "path": "a.txt",
+            "kernel": "recursive_alignment",
+            "note": "Added input validation for empty collections",
+        },
+        {
+            "path": "b.txt",
+            "kernel": "validate_repair",
+            "note": "Updated test assertions to cover edge case",
+        },
     ]
     assert gate.precommit(stacked_repo, ROOT, None) == 0
 
@@ -411,8 +432,9 @@ def test_record_command_is_runnable_from_a_consumer_workspace(tmp_path: Path) ->
     assert "  4. python3 ops/autonomy/kernel_gate.py record" not in text
     # The target workspace is explicit, so it works from anywhere.
     assert f'--workspace "{consumer}"' in line
-    # And the interpreter is the locked governance one when present.
     command = gate.record_command(consumer, ROOT)
+    assert "--changed-file" in command
+    # And the interpreter is the locked governance one when present.
     locked = ROOT / ".venv" / "bin" / "python"
     if locked.is_file():
         assert command.startswith(str(locked))
@@ -509,3 +531,12 @@ def test_guidance_does_not_claim_kernels_gate_l4() -> None:
     text = gate._agent_required_tree(Path("/ws"), ROOT)
     assert "Kernels are not an L4 phase." in text
     assert "authorize-release" not in text
+
+
+def test_record_and_verify_cover_live_diff_without_changed_file(stacked_repo: Path) -> None:
+    """Omitting --changed-file must still run deltas_cover_diff on the live git set."""
+    gate = _gate()
+    receipt = record_with_evidence(gate, stacked_repo)
+    assert receipt["changed_paths_count"]
+    assert "a.txt" in gate.discover_changed_paths(stacked_repo)
+    assert gate.verify_tree(stacked_repo, ROOT) is None

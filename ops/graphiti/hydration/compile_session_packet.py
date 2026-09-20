@@ -210,23 +210,23 @@ def compile_session_packet(
         capsule = continuation.capsule
         details = []
         if capsule.active_files:
-            details.append("files: " + ", ".join(capsule.active_files[:8]))
+            details.append("files: " + ", ".join(capsule.active_files))
         if capsule.blockers:
-            details.append("blockers: " + "; ".join(capsule.blockers[:4]))
+            details.append("blockers: " + "; ".join(capsule.blockers))
         if capsule.decisions:
-            details.append("decisions: " + "; ".join(capsule.decisions[:4]))
+            details.append("decisions: " + "; ".join(capsule.decisions))
         if capsule.unfinished_work:
-            details.append("unfinished: " + "; ".join(capsule.unfinished_work[:4]))
+            details.append("unfinished: " + "; ".join(capsule.unfinished_work))
         if details:
             context_parts.append("\n".join(details))
-    for memory_class, content in hydration.context_sections[:6]:
-        context_parts.append(f"[{memory_class}]\n{content[:900]}")
-    context_slice = "\n---\n".join(p for p in context_parts if p)[:budget]
+    for memory_class, content in hydration.context_sections:
+        context_parts.append(f"[{memory_class}]\n{content}")
+    context_slice = "\n---\n".join(p for p in context_parts if p)
 
     fact_previews = [
-        {"uuid": record_id[:64], "text_head": content[:120].replace("\n", " ")}
+        {"uuid": record_id[:64], "text_head": content.replace("\n", " ")}
         for (record_id, (_cls, content)) in zip(
-            hydration.record_ids[:3], hydration.context_sections[:3], strict=False
+            hydration.record_ids, hydration.context_sections, strict=False
         )
     ]
 
@@ -369,32 +369,17 @@ def format_additional_context(packet: dict[str, Any]) -> str:
         lines.append(f"fan-in: denied by memory ({str(stats['fan_in_denied'])[:160]})")
     previews = packet.get("fact_previews") or []
     if previews:
-        lines.append("facts_preview:")
-        for prev in previews[:3]:
-            head = str(prev.get("text_head") or "").replace("\n", " ")[:120]
-            lines.append(f"- {head}")
-    slice_text = (packet.get("context_slice") or "")[: max(200, budget - 400)]
+        lines.append(f"facts_preview ({len(previews)}):")
+        for prev in previews:
+            uid = str(prev.get("uuid") or "")[:8]
+            head = str(prev.get("text_head") or "").replace("\n", " ")
+            lines.append(f"- {uid}: {head}" if uid else f"- {head}")
+    slice_text = packet.get("context_slice") or ""
     if slice_text:
         lines.append("facts:")
         lines.append(slice_text)
-    compact = {
-        "packet_id": packet.get("packet_id"),
-        "group_id": packet.get("group_id"),
-        "agent_id": packet.get("agent_id"),
-        "active_objective": packet.get("active_objective"),
-        "next_action_contract": packet.get("next_action_contract"),
-        "degraded": packet.get("degraded", False),
-        "memory_degraded": memory_degraded,
-        "environment_fault": environment_fault,
-        "close_gap": close_gap,
-        "close_gap_reason": packet.get("close_gap_reason") or stats.get("close_gap_reason") or "",
-        "hydrate_stats": stats,
-    }
-    fence = "```json\n" + json.dumps(compact, ensure_ascii=False, indent=2) + "\n```"
-    text = "\n".join(lines) + "\n" + fence
-    if len(text) > budget:
-        text = text[: budget - 20] + "\n…[truncated]"
-    return text
+    fence = "```json\n" + json.dumps(packet, ensure_ascii=False, default=str) + "\n```"
+    return "\n".join(lines) + "\n" + fence
 
 
 def compile_and_format(

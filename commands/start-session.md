@@ -1,6 +1,6 @@
 ---
 name: start-session
-version: "3.4.0"
+version: "3.6.0"
 description: "Run the L9 sessionStart bootstrap for the open workspace (same path as Cursor hooks + make start)"
 auto_chain: null
 ---
@@ -63,7 +63,9 @@ make -C "$GC" start WS="$REPO"
 ```
 
 3. Present the **STATE_SYNC** block below from bootstrap context (do not invent checks the bootstrap did not run).
-4. Resume from hydration `next=` (canonical continuation) — do **not** read `memory-bank/`.
+4. Print the **full** `### memory hydrate` block (all facts + JSON fence). Do not summarize.
+5. Print `### Unbuilt plans` (5 most recent). Display-only.
+6. Resume from hydration `next=` (canonical continuation) — do **not** read `memory-bank/`.
 
 ---
 
@@ -88,6 +90,8 @@ second check grid. If a section is absent, say so.
 {### FAILED — if present; else omit}
 {### Runtime}
 {### Degraded}
+{### memory hydrate — full packet; do not truncate}
+{### Unbuilt plans — 5 most recent}
 
 ### Ready For
 → `/ynp` — next action
@@ -104,6 +108,7 @@ second check grid. If a section is absent, say so.
 - Cursor also runs this bootstrap automatically on `sessionStart` via `~/.cursor/hooks.json`. `/start-session` is the **manual / repair / new-window** entry that uses the identical script.
 - Slash commands activate when governance is wired: `~/.cursor/plugins/local/l9-governance` → SSOT (discovers `commands/`), plus repo `.cursor-commands` symlink. Bootstrap/`make start` ensures that wiring.
 - Resume stack is canonical memory only (`ContinuationCapsuleV2`; `ops/graphiti/MEMORY_BANK_POLICY.md` is archival).
-- SessionStart does not read or report the plans store. On-demand harvest is `/l9-pipeline-audit`. Shelf-only is `/l9-audit-plans`.
+- `/start-session` **is** the bootstrap ceremony (`make start` → `session_start_bootstrap.sh`). Every run writes `~/.l9/cursor/bootstrap-state.json` (`l9.cursor-bootstrap.v2`).
+- SessionStart prints the 5 most recent unbuilt root plans after hydrate. Full harvest remains `/l9-pipeline-audit`. Shelf-only is `/l9-audit-plans`.
 
 --- End Command ---

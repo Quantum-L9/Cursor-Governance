@@ -66,6 +66,23 @@
       "max_bytes": 0,
       "provenance_required": true
     },
+    "manus-session-start": {
+      "callers": [
+        "environment/agents/adapters/manus/memory_lifecycle.py -> canonical_hydrate via protected L9 Governance MCP"
+      ],
+      "allowed_operations": [
+        "resolve",
+        "health",
+        "capabilities",
+        "hydrate",
+        "search",
+        "conflicts"
+      ],
+      "record_classes": [],
+      "max_records": 0,
+      "max_bytes": 0,
+      "provenance_required": true
+    },
     "cursor-session-end": {
       "callers": [
         "ops/hooks/graphiti-session-end.sh -> ops/graphiti/hydration/close_session.py",
@@ -103,6 +120,26 @@
         "capabilities",
         "hydrate",
         "search",
+        "ingest_candidate",
+        "close",
+        "distill"
+      ],
+      "record_classes": [
+        "session_continuation"
+      ],
+      "max_records": 8,
+      "max_bytes": 65536,
+      "provenance_required": true
+    },
+    "manus-session-end": {
+      "callers": [
+        "environment/agents/adapters/manus/memory_lifecycle.py -> ops/graphiti/hydration/close_session.py via protected L9 Governance MCP"
+      ],
+      "allowed_operations": [
+        "resolve",
+        "health",
+        "capabilities",
+        "hydrate",
         "ingest_candidate",
         "close",
         "distill"

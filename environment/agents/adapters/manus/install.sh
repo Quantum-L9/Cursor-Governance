@@ -57,6 +57,10 @@ GOVERNANCE="$(cd "$GOVERNANCE" 2>/dev/null && pwd -P)" || fail "governance direc
 
 BOOTSTRAP="$GOVERNANCE/ops/scripts/bootstrap_agent_environment.sh"
 [ -f "$BOOTSTRAP" ] || fail "missing shared bootstrap at $BOOTSTRAP"
+VALIDATOR="$GOVERNANCE/environment/agents/adapters/manus/validate_manus_adapter.py"
+[ -f "$VALIDATOR" ] || fail "missing adapter validator at $VALIDATOR"
+PYTHON_BIN="$GOVERNANCE/.venv/bin/python"
+[ -x "$PYTHON_BIN" ] || PYTHON_BIN="python3"
 
 ARGS=(--surface manus --governance "$GOVERNANCE" --workspace "$WORKSPACE")
 [ "$CHECK" = "1" ] && ARGS+=(--check)
@@ -65,6 +69,7 @@ ARGS=(--surface manus --governance "$GOVERNANCE" --workspace "$WORKSPACE")
 say "manus-install: shared bootstrap for workspace=$WORKSPACE"
 bash "$BOOTSTRAP" "${ARGS[@]}"
 status=$?
+"$PYTHON_BIN" "$VALIDATOR" --repo-root "$GOVERNANCE" || fail "native adapter validation failed"
 case "$status" in
   0) say "manus-install: READY (shared bootstrap)" ;;
   6) say "manus-install: DEGRADED (shared bootstrap; session remains usable)" ;;

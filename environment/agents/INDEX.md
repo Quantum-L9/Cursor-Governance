@@ -40,10 +40,10 @@ Intended repo destination: `Quantum-L9/Cursor-Governance` at `environment/agents
 | # | File | Description |
 |---|---|---|
 | 8 | `README.md` | Pack landing page: layout, operator quick start, add-an-agent flow, PR integration notes (CANONICAL_LAW §2 rows, `make agents-env`). |
-| 9 | `adapters/manus/README.md` | Manus adapter: carrier mapping (skills / project instructions / custom MCP connector), 4-step setup, role limits. |
+| 9 | `adapters/manus/README.md` | Manus adapter: shared-bootstrap carrier mapping, project instruction, protected governance lifecycle MCP, and separate package-owned signed stdio memory MCP setup. |
 | 10 | `adapters/manus/environment.env.example` | Manus identity env block rendered from the registry (`manus_agent` / `manus` / researcher-builder). |
-| 11 | `adapters/manus/mcp-connector.json` | Manus Custom MCP connector template (HTTP `/mcp`, bearer auth, identity headers). |
-| 12 | `adapters/manus/session_bootstrap.md` | Session bootstrap for Manus project instructions/skill: authority order, 7 binding memory rules incl. claim protocol. |
+| 11 | `adapters/manus/mcp-connector.json` | Deployment-neutral Custom MCP carrier for the L9 Governance streamable-HTTP lifecycle service; no embedded URL, bearer, or identity headers. |
+| 12 | `adapters/manus/session_bootstrap.md` | Session bootstrap for Manus project instructions/skill: authority order and explicit model-controlled memory/secret boundary. |
 | 13 | `adapters/codex/README.md` | Codex adapter (planned): `~/.codex/config.toml` MCP wiring, cloud env settings, setup, implementer role limits. |
 | 14 | `adapters/codex/environment.env.example` | Codex identity env block (`codex_agent` / implementer). |
 | 15 | `adapters/codex/agents-block.md` | Drop-in AGENTS.md block giving Codex its identity + claim rules in every governed repo. |

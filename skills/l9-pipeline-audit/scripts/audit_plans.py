@@ -380,7 +380,7 @@ def audit(
         return [], meta
 
     now = time.time()
-    cutoff = now - (window_days * 86400.0)
+    cutoff = 0.0 if window_days <= 0 else now - (window_days * 86400.0)
     head = workspace_head(workspace)
 
     try:
@@ -480,12 +480,37 @@ def format_markdown(findings: list[PlanFinding], meta: dict[str, Any], budget: i
     return text
 
 
+def format_session_start(findings: list[PlanFinding], meta: dict[str, Any]) -> str:
+    """Bounded SessionStart list: 5 most recent unbuilt plans, display-only."""
+    lines = ["### Unbuilt plans"]
+    status = meta.get("status", "ok")
+    if status == "no_plans_dir":
+        lines.append("- none: no plans dir")
+        return "\n".join(lines)
+    if status == "unreadable":
+        lines.append("- unavailable: unreadable plans dir")
+        return "\n".join(lines)
+    if not findings:
+        lines.append("- none: no unbuilt plans")
+        return "\n".join(lines)
+    for index, finding in enumerate(findings, start=1):
+        todos = f"pending={finding.pending} in_progress={finding.in_progress}/{finding.total_todos}"
+        lines.append(f"- {index}. {finding.name} (`{Path(finding.path).name}`) — {todos}")
+    if meta.get("status") == "deadline":
+        lines.append("- truncated: deadline")
+    return "\n".join(lines)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Audit recent unbuilt Cursor plans")
     parser.add_argument("--plans-dir", default=None)
     parser.add_argument("--workspace", default=os.environ.get("CURSOR_PROJECT_DIR") or os.getcwd())
     parser.add_argument("--window-days", type=float, default=7.0)
-    parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    parser.add_argument(
+        "--format",
+        choices=("markdown", "json", "session-start"),
+        default="markdown",
+    )
     parser.add_argument("--budget-chars", type=int, default=1200)
     parser.add_argument("--limit", type=int, default=5)
     parser.add_argument("--deadline-seconds", type=float, default=2.0)
@@ -513,6 +538,10 @@ def main(argv: list[str] | None = None) -> int:
             "findings": [asdict(f) for f in findings],
         }
         print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
+
+    if args.format == "session-start":
+        print(format_session_start(findings, meta))
         return 0
 
     print(format_markdown(findings, meta, int(args.budget_chars)))
