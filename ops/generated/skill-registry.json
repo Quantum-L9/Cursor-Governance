@@ -1,5 +1,5 @@
 {
-  "generation_id": "674e09ed5c3624c6af8f56721cf7111a11439ecc3108d4650b20cfc294d20ea2",
+  "generation_id": "5e30a501903842c275ed90c8f8561947ead91821768fb6a336a90eaf37005a14",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -1378,14 +1378,14 @@
     },
     {
       "composition_role": "general",
-      "description": "deep-audit exact current heads of one or more GitHub pull requests against repository architecture, invariants, contracts, CI, reviews, preservation, and cross-PR interactions, then emit revision-bound remediation evidence. use when auditing PR correctness, completeness, architecture alignment, merge readiness, or downstream repair evidence.",
+      "description": "deep-audit one or more GitHub pull requests against current repository architecture, invariants, contracts, ownership, CI, reviews, change proportionality, and cross-PR interactions, using a deterministic evidence census plus recursive verification to produce a revision-bound audit and PR Remediation Contract without mutating the target repository. use when auditing PR correctness, completeness, architecture alignment, merge readiness, or downstream remediation evidence.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pr-audit",
       "path": "skills/l9-pr-audit",
       "reason": "deep revision-bound PR audit that emits evidence bundles and Fable handoffs; never mutates audited PRs; slash or explicit invoke only; disable-model-invocation",
       "skill_md": "skills/l9-pr-audit/SKILL.md",
-      "skill_sha256": "2db9aa1b321cd368534c8b76d4ea898cd492dc1965c5ed9890acf42af0965bd6",
+      "skill_sha256": "df6b03833d5fc6f96dbfcd8e7963bd3f75009b39187fbf9f79101ec92d174860",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1613,5 +1613,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "bf7f5c46dc824b84f99edf7f4f718008e59a40c75efcb39f2d293b649a7518ef",
-  "source_skill_corpus_sha256": "a15f861e0d7100d592063071ca3109993044051336e6fe42f13a74d5b3595f2c"
+  "source_skill_corpus_sha256": "1ed292b9ad06614ca966f34ee0812404865a521df4a4415d42a733c87a9de7e9"
 }
