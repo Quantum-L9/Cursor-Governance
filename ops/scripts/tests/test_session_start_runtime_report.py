@@ -243,6 +243,156 @@ class SecretsReceiptLoadTests(unittest.TestCase):
         self.assertIsNone(aws)
         self.assertIsNone(binds)
 
+    def test_receipt_carries_the_plane_state(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp) / ".l9" / "session"
+            dest.mkdir(parents=True)
+            (dest / "secrets-plane.json").write_text(
+                json.dumps(
+                    {
+                        "ok": False,
+                        "state": "unavailable_by_surface",
+                        "surface_class": "model_controlled",
+                        "login": "skipped",
+                        "aws": {
+                            "ok": False,
+                            "code": "AWS_CLI_NOT_FOUND",
+                            "summary": "AWS_CLI_NOT_FOUND — secrets plane cannot start",
+                        },
+                        "binds": [
+                            {"name": "SONAR_TOKEN", "bound": False, "source": "unbound"},
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            receipt = report.load_secrets_plane_receipt(tmp)
+            self.assertEqual(
+                report.secrets_plane_state(receipt),
+                report.PLANE_UNAVAILABLE_BY_SURFACE,
+            )
+
+    def test_pre_carve_out_receipt_has_no_state(self) -> None:
+        """A receipt written before the carve-out reads '' and keeps failing."""
+        legacy = {"ok": False, "aws": {"ok": False, "code": "AWS_CLI_NOT_FOUND"}}
+        self.assertEqual(report.secrets_plane_state(legacy), "")
+        line = report.classify_aws_cli(legacy["aws"], report.secrets_plane_state(legacy))
+        self.assertEqual(line["class"], report.FAILED)
+
+    def test_unrecognized_state_is_fail_closed(self) -> None:
+        """An unknown state degrades to no-state, never to the carve-out."""
+        for raw in ("unavailable", "OK", "ok ", "sudo", "", None, 1, {"a": 1}):
+            with self.subTest(state=raw):
+                self.assertEqual(report.secrets_plane_state({"state": raw}), "")
+
+    def test_state_returned_is_the_module_literal_not_the_receipt_string(self) -> None:
+        """Nothing read from the receipt may leave this reader.
+
+        The report is printed, so a value flowing from the receipt into the
+        rendered output is a clear-text-logging path (CodeQL flagged exactly
+        that). Returning the allowlisted literal is the barrier: the object
+        returned is the module's own constant, never the parsed string.
+        """
+        parsed = json.loads('{"state": "unavailable_by_surface"}')
+        returned = report.secrets_plane_state(parsed)
+        self.assertEqual(returned, report.PLANE_UNAVAILABLE_BY_SURFACE)
+        self.assertIn(returned, report.PLANE_STATES)
+        # Identity, not just equality: the literal, not the receipt's string.
+        self.assertIs(returned, report.PLANE_UNAVAILABLE_BY_SURFACE)
+        self.assertIsNot(returned, parsed["state"])
+
+
+class SecretsBindSurfaceClassificationTests(unittest.TestCase):
+    """The carve-out reaches the bind classifier too.
+
+    Without this the report contradicted itself: aws-cli named the surface and
+    said "not a fault" while secrets-bind degraded on the very same cause.
+    """
+
+    UNBOUND = [
+        {"name": "SEMGREP_APP_TOKEN", "bound": False, "source": "infisical-machine-absent"},
+        {"name": "SONAR_TOKEN", "bound": False, "source": "infisical-machine-absent"},
+        {"name": "GITHUB_TOKEN", "bound": True, "source": "env"},
+    ]
+
+    def test_unbound_by_surface_is_not_degraded(self) -> None:
+        line = report.classify_secrets_bind(self.UNBOUND, report.PLANE_UNAVAILABLE_BY_SURFACE)
+        self.assertEqual(line["class"], report.NA)
+        self.assertFalse(line["include_in_degraded"])
+        self.assertIn("unbound by surface", line["summary"])
+        # Still named, so the unbound inventory stays visible in the report.
+        self.assertIn("SEMGREP_APP_TOKEN", line["evidence"])
+
+    def test_unbound_without_the_carve_out_still_degrades(self) -> None:
+        for state in ("failed", "ok", ""):
+            with self.subTest(state=state):
+                line = report.classify_secrets_bind(self.UNBOUND, state)
+                self.assertEqual(line["class"], report.DEGRADED)
+                self.assertTrue(line["include_in_degraded"])
+
+    def test_source_aws_is_a_fault_on_every_surface(self) -> None:
+        """A real fault is never carved out — checked before the unbound branch."""
+        leftover = [{"name": "SONAR_TOKEN", "bound": True, "source": "aws"}]
+        for state in (report.PLANE_UNAVAILABLE_BY_SURFACE, "failed", ""):
+            with self.subTest(state=state):
+                line = report.classify_secrets_bind(leftover, state)
+                self.assertEqual(line["class"], report.FAILED)
+                self.assertTrue(line["include_in_degraded"])
+
+    def test_unread_receipt_is_degraded_whatever_the_state(self) -> None:
+        line = report.classify_secrets_bind(None, report.PLANE_UNAVAILABLE_BY_SURFACE)
+        self.assertEqual(line["class"], report.DEGRADED)
+
+    def test_report_does_not_contradict_itself_on_a_carved_out_surface(self) -> None:
+        """The regression Codex caught: both lines, one cause, one verdict."""
+        aws = {"ok": False, "code": "AWS_CLI_NOT_FOUND", "summary": "absent"}
+        state = report.PLANE_UNAVAILABLE_BY_SURFACE
+        lines = [
+            report.classify_aws_cli(aws, state),
+            report.classify_secrets_bind(self.UNBOUND, state),
+        ]
+        self.assertEqual([item["class"] for item in lines], [report.NA, report.NA])
+        rendered = report.format_markdown(lines)
+        self.assertNotIn("### FAILED", rendered)
+        degraded_section = rendered.split("### Degraded", 1)[1]
+        self.assertIn("none", degraded_section)
+
+
+class AwsCliSurfaceClassificationTests(unittest.TestCase):
+    """The third state renders as neither ok nor FAILED."""
+
+    ABSENT = {
+        "ok": False,
+        "code": "AWS_CLI_NOT_FOUND",
+        "summary": "AWS_CLI_NOT_FOUND — secrets plane cannot start",
+    }
+
+    def test_unavailable_by_surface_is_not_failed_and_not_degraded(self) -> None:
+        line = report.classify_aws_cli(self.ABSENT, report.PLANE_UNAVAILABLE_BY_SURFACE)
+        self.assertEqual(line["class"], report.NA)
+        self.assertFalse(line["include_in_degraded"])
+        self.assertFalse(line["this_surface"])
+        self.assertIn("unavailable by surface", line["summary"])
+        # Still named in the report — visible, just not scored as a fault.
+        self.assertEqual(line["evidence"], "AWS_CLI_NOT_FOUND")
+
+    def test_failed_plane_state_still_fails(self) -> None:
+        for state in ("failed", ""):
+            with self.subTest(state=state):
+                line = report.classify_aws_cli(self.ABSENT, state)
+                self.assertEqual(line["class"], report.FAILED)
+                self.assertTrue(line["include_in_degraded"])
+
+    def test_unread_receipt_still_fails_whatever_the_state(self) -> None:
+        line = report.classify_aws_cli(None, report.PLANE_UNAVAILABLE_BY_SURFACE)
+        self.assertEqual(line["class"], report.FAILED)
+
+    def test_markdown_omits_the_failed_header_for_the_carve_out(self) -> None:
+        carved = report.classify_aws_cli(self.ABSENT, report.PLANE_UNAVAILABLE_BY_SURFACE)
+        self.assertNotIn("### FAILED", report.format_markdown([carved]))
+        failed = report.classify_aws_cli(self.ABSENT, "failed")
+        self.assertIn("### FAILED", report.format_markdown([failed]))
+
 
 class MemoryProofClassificationTests(unittest.TestCase):
     def test_compatible_unproven_is_not_unbound_or_bound(self) -> None:

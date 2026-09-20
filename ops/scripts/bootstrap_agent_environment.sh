@@ -379,7 +379,24 @@ fi
 if [ -n "$SECRETS_PY" ]; then
   say "secrets plane: session_start_secrets.py"
   mkdir -p "$(dirname "$SECRETS_RECEIPT")"
-  if ! "$GOV_PY" "$SECRETS_PY" --receipt-out "$SECRETS_RECEIPT"; then
+  # This counter and the proxy-sentinel carve-out below are ONE decision, made
+  # twice: an environment property reported as a bootstrap fault is a false
+  # DEGRADED. A model-controlled surface holds no Infisical bind by design, so
+  # the owner exits 0 with state=unavailable_by_surface there and only a surface
+  # that should have bound, and did not, still exits 1.
+  if "$GOV_PY" "$SECRETS_PY" --receipt-out "$SECRETS_RECEIPT"; then
+    SECRETS_STATE=$("$GOV_PY" -c '
+import json, sys
+try:
+    data = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception:
+    data = {}
+print(str((data or {}).get("state") or ""))
+' "$SECRETS_RECEIPT" 2>/dev/null || printf '')
+    if [ "$SECRETS_STATE" = "unavailable_by_surface" ]; then
+      say "secrets plane unavailable by surface (model-controlled; no Infisical bind by design) — not a fault"
+    fi
+  else
     warn "session_start_secrets failed — reporter will show ### FAILED"
     DEGRADED=$((DEGRADED + 1))
   fi
