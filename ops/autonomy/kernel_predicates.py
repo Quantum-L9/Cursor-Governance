@@ -429,7 +429,9 @@ def no_duplicate_delta_paths(deltas: list[dict[str, str]]) -> list[str]:
     return errors
 
 
-def run_predicates(root: Path, receipt: dict[str, Any]) -> list[str]:
+def run_predicates(
+    root: Path, receipt: dict[str, Any], changed_paths: list[str] | None = None
+) -> list[str]:
     """Re-run structural predicates against live files."""
     raw_rel = str(receipt.get("report_rel") or "").strip()
     if not raw_rel:
@@ -455,29 +457,18 @@ def run_predicates(root: Path, receipt: dict[str, Any]) -> list[str]:
         errors.extend(no_duplicate_delta_paths(deltas))
         errors.extend(headings_are_atx(str(data.get("_body") or "")))
         errors.extend(closed_frontmatter(data))
-        # Phase 2 predicates (v2 only)
-        errors.extend(run_v2_predicates(root, data))
+        # Phase 2 predicates (v2 only), plus Phase 3 seeds when a change set is known
+        errors.extend(run_v2_predicates(root, data, changed_paths=changed_paths))
+        if changed_paths is not None:
+            errors.extend(deltas_cover_diff(deltas, changed_paths))
     return errors
 
 
 def run_predicates_with_diff(
     root: Path, receipt: dict[str, Any], changed_paths: list[str]
 ) -> list[str]:
-    """Re-run predicates including diff coverage check."""
-    errors = run_predicates(root, receipt)
-    if errors:
-        return errors
-    # Load deltas for diff coverage check
-    raw_rel = str(receipt.get("report_rel") or "").strip()
-    report = Path(raw_rel)
-    try:
-        confined = confine_report_path(root, report)
-        data = parse_apply_report(confined)
-    except ReportError as exc:
-        return [str(exc)]
-    _delta_errs, deltas = _normalized_deltas(data.get("deltas"))
-    errors.extend(deltas_cover_diff(deltas, changed_paths))
-    return errors
+    """Re-run predicates including diff coverage and seed checks."""
+    return run_predicates(root, receipt, changed_paths=changed_paths)
 
 
 # -----------------------------------------------------------------------------
@@ -719,8 +710,10 @@ def unknowns_key_required(data: dict[str, Any]) -> list[str]:
     return errors
 
 
-def run_v2_predicates(root: Path, data: dict[str, Any]) -> list[str]:
-    """Run Phase 2 predicates for v2 reports."""
+def run_v2_predicates(
+    root: Path, data: dict[str, Any], changed_paths: list[str] | None = None
+) -> list[str]:
+    """Run Phase 2 predicates for v2 reports, and Phase 3 seeds when given."""
     errors: list[str] = []
 
     # Skip v2 predicates for v1 reports
@@ -745,6 +738,8 @@ def run_v2_predicates(root: Path, data: dict[str, Any]) -> list[str]:
     errors.extend(convergence_derived(data, findings))
     errors.extend(passes_run_minimum(data))
     errors.extend(unknowns_key_required(data))
+    if changed_paths is not None:
+        errors.extend(seed_findings_present(findings, seed_findings(changed_paths)))
 
     return errors
 

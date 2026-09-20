@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
 import sys
 from collections.abc import Mapping
 from datetime import UTC, datetime
@@ -218,11 +219,14 @@ def record(
     # Raises on a delta path that does not exist in this tree.
     deltas = kernel_predicates.load_validated_deltas(root_r, confined)
 
-    # Phase 1 hardening: check diff coverage if changed_paths provided
-    if changed_paths is not None:
-        diff_errors = kernel_predicates.deltas_cover_diff(deltas, changed_paths)
-        if diff_errors:
-            raise ReportError("; ".join(diff_errors))
+    live_changed = changed_paths if changed_paths is not None else discover_changed_paths(root_r)
+    diff_errors = kernel_predicates.deltas_cover_diff(deltas, live_changed)
+    if diff_errors:
+        raise ReportError("; ".join(diff_errors))
+    data = kernel_predicates.parse_apply_report(confined)
+    seed_errors = kernel_predicates.run_v2_predicates(root_r, data, changed_paths=live_changed)
+    if seed_errors:
+        raise ReportError("; ".join(seed_errors))
 
     receipt = {
         "schema": SCHEMA,
@@ -237,15 +241,14 @@ def record(
         # commit must not force a second LLM apply.
         "head": _git_head(root_r),
         # Record the changed paths that were covered (for audit)
-        "changed_paths_count": len(changed_paths) if changed_paths else None,
+        "changed_paths_count": len(live_changed),
+        "changed_paths": live_changed,
     }
     write_receipt(root_r, receipt)
     return receipt
 
 
 def _git_head(root: Path) -> str:
-    import subprocess
-
     proc = subprocess.run(
         ["git", "-C", str(root), "rev-parse", "HEAD"],
         capture_output=True,
@@ -255,6 +258,35 @@ def _git_head(root: Path) -> str:
     if proc.returncode != 0:
         return ""
     return proc.stdout.strip()
+
+
+def discover_changed_paths(root: Path) -> list[str]:
+    """Live git change set used when ``--changed-file`` is omitted.
+
+    Union of ``git diff HEAD`` and untracked files, minus ``.l9/``. Omitting
+    ``--changed-file`` is therefore not a skip of ``deltas_cover_diff``.
+    """
+    found: list[str] = []
+    seen: set[str] = set()
+
+    def _add(raw: str) -> None:
+        rel = raw.strip()
+        while rel.startswith("./"):
+            rel = rel[2:]
+        if not rel or rel.startswith(".l9/") or rel in seen:
+            return
+        seen.add(rel)
+        found.append(rel)
+
+    for args in (
+        ["git", "-C", str(root), "diff", "--name-only", "HEAD"],
+        ["git", "-C", str(root), "ls-files", "--others", "--exclude-standard"],
+    ):
+        proc = subprocess.run(args, capture_output=True, text=True, check=False)
+        if proc.returncode == 0:
+            for line in proc.stdout.splitlines():
+                _add(line)
+    return found
 
 
 def record_command(root: Path, gov: Path) -> str:
@@ -272,7 +304,10 @@ def record_command(root: Path, gov: Path) -> str:
     script = gov / "ops" / "autonomy" / "kernel_gate.py"
     # --report is explicit even though it defaults: the printed line teaches the
     # contract, and the artifact is the point of the command.
-    return f'{interpreter} {script} record --workspace "{root}" --report "{APPLY_REL.as_posix()}"'
+    return (
+        f'{interpreter} {script} record --workspace "{root}" '
+        f'--report "{APPLY_REL.as_posix()}" --changed-file .l9/pr/changed-files.txt'
+    )
 
 
 def template_command(root: Path, gov: Path) -> str:
@@ -403,7 +438,12 @@ def verify_tree(root: Path, gov: Path) -> str | None:
             "FAIL: kernel-receipt kernel_shas do not match the live kernel files.\n"
             + _agent_required_tree(root, gov)
         )
-    errors = kernel_predicates.run_predicates(root, receipt)
+    recorded_paths = receipt.get("changed_paths")
+    if isinstance(recorded_paths, list) and recorded_paths:
+        live_changed = [str(p) for p in recorded_paths]
+    else:
+        live_changed = discover_changed_paths(root)
+    errors = kernel_predicates.run_predicates(root, receipt, changed_paths=live_changed)
     if errors:
         detail = "\n".join(f"  {err}" for err in errors)
         return (
@@ -492,7 +532,11 @@ def cmd_record(args: argparse.Namespace) -> int:
     root = workspace_root(args.workspace)
     gov = gov_root_from_env(args.gov_root)
     report = Path(args.report) if args.report else None
-    changed_paths = read_changed_file(Path(args.changed_file)) if args.changed_file else None
+    changed_paths = (
+        read_changed_file(Path(args.changed_file))
+        if args.changed_file
+        else discover_changed_paths(root)
+    )
     try:
         receipt = record(root, gov=gov, report=report, changed_paths=changed_paths)
     except ReportError as exc:
