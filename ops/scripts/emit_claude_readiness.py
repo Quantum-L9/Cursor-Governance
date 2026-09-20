@@ -562,17 +562,40 @@ def _memory_health(probe: dict[str, Any]) -> tuple[str, str]:
     return DEGRADED, f"not ready (blocker: {blocker})"
 
 
-def _mcp_status(bootstrap: dict[str, Any] | None, proj_mcp: str) -> tuple[str, str]:
+def _gated_out_note(gated_out: frozenset[str]) -> str:
+    """Name the declared servers the projection left out, and why.
+
+    ``gated_out_servers`` was already in the projection receipt and already read
+    by this emitter — then used for ``l9-graphite-memory`` alone. Every other
+    name was dropped, so a hosted session saw ``context7`` missing from its
+    tool surface with the cause recorded on disk and printed nowhere; the
+    SessionStart line that did mention it blamed the plugin marketplace flag,
+    a correlate, not the gate that decided it. The memory server keeps its own
+    dimension (``memory_mcp_status``) and is not repeated here.
+    """
+    names = sorted(name for name in gated_out if name != _MEMORY_MCP_SERVER)
+    if not names:
+        return ""
+    cause = "; not rendered (a _requires_env variable is not proxied on this surface): "
+    return cause + ", ".join(names)
+
+
+def _mcp_status(
+    bootstrap: dict[str, Any] | None,
+    proj_mcp: str,
+    gated_out: frozenset[str] = frozenset(),
+) -> tuple[str, str]:
     # A configured MCP server is not a loaded MCP server. Trust the bootstrap
     # runtime word over the projection (which only proves the file was rendered).
+    gated = _gated_out_note(gated_out)
     if bootstrap:
         word = str(bootstrap.get("mcp") or "").upper()
         if word in {READY, DEGRADED, BLOCKED}:
             note = "configured; runtime load per bootstrap"
-            return word, note
+            return word, note + gated
     if proj_mcp == READY:
-        return DEGRADED, "projection rendered .mcp.json; runtime load unproven"
-    return proj_mcp, "from projection receipt"
+        return DEGRADED, "projection rendered .mcp.json; runtime load unproven" + gated
+    return proj_mcp, "from projection receipt" + gated
 
 
 def _makefile_facade(gov: Path) -> tuple[str, str]:
@@ -770,7 +793,9 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
     plane_status = str(split["control_plane"]["status"])
     plane_note = str(split["control_plane"]["reason"])
 
-    mcp_status, mcp_note = _mcp_status(bootstrap, proj_status["mcp"])
+    mcp_status, mcp_note = _mcp_status(
+        bootstrap, proj_status["mcp"], gated_out=_gated_out_servers(proj)
+    )
     facade_status, facade_note = _makefile_facade(gov)
     disp_status, disp_note = _dispatcher_status(gov)
     merge_status, merge_note = _merge_authority_status(gov)

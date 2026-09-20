@@ -14,8 +14,17 @@
     "_requires_env on a server: the server renders only when every listed variable",
     "is set and non-empty. _optional_headers: {VAR: {header: value}} merges those",
     "headers only when VAR is set and non-empty. Both are private keys, stripped",
-    "from the render like _comment. They exist so an unproxied session degrades to",
-    "an absent server instead of emitting one that cannot authenticate.",
+    "from the render like _comment. Use them for a server that has a working",
+    "fallback when its credential is absent.",
+    "",
+    "context7 is deliberately NOT _requires_env-gated. Gating it turned a missing",
+    "secret into a silently absent server: every hosted session lost the docs",
+    "MCP with nothing failing, and the rule that mandates Context7 pointed at a",
+    "tool that did not exist. The server now renders unconditionally with its",
+    "${CONTEXT7_API_KEY} header; when the variable is not populated the server",
+    "fails to authenticate, which is a visible failure whose fix is populating",
+    "the secret (Infisical inventory key CONTEXT7_API_KEY, proxied into the",
+    "session environment), never gating the server out again.",
     "",
     "l9-graphite-memory is the ONLY memory server (MemoryService over stdio;",
     "memory-control-plane/v1). command is the spawn wrapper at",
@@ -62,9 +71,6 @@
       "type": "http",
       "url": "https://mcp.context7.com/mcp",
       "timeout": 120000,
-      "_requires_env": [
-        "CONTEXT7_API_KEY"
-      ],
       "headers": {
         "Authorization": "Bearer ${CONTEXT7_API_KEY}"
       }

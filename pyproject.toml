@@ -194,9 +194,44 @@ norecursedirs = [
 # untouched.
 # skills/*/scripts/self_test.py files are skill self-check scripts, not pytest tests.
 # Every skill that adds one MUST be listed below AND in ops/config/python-contract.json:
-# they all resolve to the module name `self_test` under rootdir-relative import mode,
-# so an unregistered file collides with the first sibling collected and errors the run.
-addopts = "--ignore=workflows/dags/test_pipeline_dag.py --ignore=skills/l9-cli-optimization/scripts/self_test.py --ignore=skills/l9-plan/scripts/self_test.py --ignore=skills/l9-repository-renovation/scripts/self_test.py --ignore=skills/l9-structured-reasoning/scripts/self_test.py --ignore=skills/l9-intelligence-harvest/scripts/self_test.py"
+# they are not tests and must not be collected, whatever the import mode is.
+#
+# --import-mode=importlib is repo policy, not taste. pytest's default `prepend`
+# mode inserts each module's directory at the head of sys.path and imports the
+# file under its BASENAME whenever the directory carries no __init__.py, so two
+# same-named files under two rootless test roots claim one entry in sys.modules
+# and collection aborts with "import file mismatch".
+# ops/scripts/tests/test_validate_gh_package_deps.py and
+# tests/ops/scripts/test_validate_gh_package_deps.py are exactly that pair: both
+# hold real and DIFFERENT tests, and the short one is a routing shim whose whole
+# purpose is the path it sits at, so neither can be renamed away. Under `prepend`
+# the two roots could not be collected in one invocation at all, which meant no
+# one could run the whole suite in one command. importlib imports each file
+# without touching sys.path and derives a unique module name from the rootdir,
+# so basenames stop colliding. pytest exposes no ini key for it (`pytest --help`
+# lists --import-mode under the command line only), which is why it lives here
+# in addopts rather than as a setting of its own.
+# The cost importlib carries, paid explicitly rather than by accident.
+# `prepend` inserted each test module's own directory at the head of sys.path as
+# a side effect of importing it, and nine Program Execution tests across these
+# three directories lean on that to import a helper out of a sibling test module
+# by bare name (`from test_run_campaign import _load`). importlib does not touch
+# sys.path at all, so those imports raise ModuleNotFoundError -- CI caught it on
+# the Peer Execution Conformance suite, which is green on the base branch.
+# `pythonpath` is pytest's supported setting for exactly this, and naming the
+# three directories keeps the grant narrow instead of restoring prepend's
+# repo-wide implicit behaviour.
+#
+# The sibling-import pattern is itself the underlying smell: a helper shared by
+# two test modules belongs in a conftest or a helper module, not in whichever
+# test file happened to define it first. Refactoring those nine files is not
+# this change's business, so the dependency is recorded here rather than hidden.
+pythonpath = [
+    "environment/program-execution/core/tests",
+    "environment/program-execution/scripts/tests",
+    "environment/program-execution/tests/hardening",
+]
+addopts = "--import-mode=importlib --ignore=workflows/dags/test_pipeline_dag.py --ignore=skills/l9-cli-optimization/scripts/self_test.py --ignore=skills/l9-plan/scripts/self_test.py --ignore=skills/l9-repository-renovation/scripts/self_test.py --ignore=skills/l9-structured-reasoning/scripts/self_test.py --ignore=skills/l9-intelligence-harvest/scripts/self_test.py"
 
 [build-system]
 requires = ["setuptools>=68"]

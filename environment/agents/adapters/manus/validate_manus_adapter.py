@@ -116,8 +116,20 @@ def validate(repo_root: Path) -> list[str]:
     required_files = {
         "README.md",
         "environment.env.example",
+        "infisical-mcp-connector.json",
+        "infisical_capabilities.json",
+        "infisical_mcp_server.py",
         "install.sh",
         "mcp-connector.json",
+        "mcp_server.py",
+        "memory-mcp-connector.json",
+        "memory_lifecycle.py",
+        "render_infisical_mcp_connector.py",
+        "render_mcp_connector.py",
+        "render_memory_mcp_connector.py",
+        "serve_infisical_mcp.sh",
+        "serve_mcp.sh",
+        "serve_memory_mcp.sh",
         "session_bootstrap.md",
         "setup.md",
     }
@@ -148,12 +160,130 @@ def validate(repo_root: Path) -> list[str]:
         errors.append("environment must not declare L9_GOVERNANCE_DIR with a literal hosted path")
 
     connector = json.loads((adapter / "mcp-connector.json").read_text(encoding="utf-8"))
-    if connector.get("status") != "retired-pending-memory-remote-transport":
-        errors.append("MCP carrier must state the remote memory transport is not provisioned")
-    if connector.get("transport") != "none":
-        errors.append("MCP carrier must not invent a Manus memory transport")
+    if connector.get("transport") != "streamable-http":
+        errors.append("MCP carrier must declare the streamable HTTP governance transport")
+    if connector.get("endpoint_path") != "/mcp" or connector.get("health_path") != "/health":
+        errors.append("MCP carrier must declare /mcp and /health endpoints")
+    if connector.get("memory") != {
+        "agent_lane": "package-owned-l9-graphite-memory-mcp-or-cli",
+        "lifecycle": "bearer-protected-canonical-hydrate-and-close-only",
+        "fallback": "fail-closed-no-local-operator-identity",
+    }:
+        errors.append("MCP carrier must declare the bounded Manus memory lifecycle boundary")
+    if connector.get("safety") != {
+        "no_shell": True,
+        "no_credentials": True,
+        "no_arbitrary_file_access": True,
+        "no_repository_write_tools": True,
+    }:
+        errors.append("MCP carrier must preserve the governance MCP safety boundary")
+    authentication = connector.get("authentication")
+    if (
+        not isinstance(authentication, dict)
+        or authentication.get("bootstrap_requires") != "bearer-token-file"
+    ):
+        errors.append("MCP carrier must require bearer protection before bootstrap access")
+    elif authentication.get("apply_bootstrap_requires") != (
+        "bearer-token-file plus --allow-bootstrap-apply"
+    ):
+        errors.append("MCP carrier must require an explicit apply authorization flag")
     if "mcpServers" in connector or _contains_forbidden_key(connector):
-        errors.append("MCP carrier must not contain a URL, headers, environment, or server entry")
+        errors.append(
+            "MCP carrier must not contain a deployment URL, headers, environment, or server entry"
+        )
+
+    memory_connector = json.loads(
+        (adapter / "memory-mcp-connector.json").read_text(encoding="utf-8")
+    )
+    if memory_connector.get("transport") != "stdio":
+        errors.append("memory MCP carrier must use the package-owned stdio transport")
+    if memory_connector.get("command") != "rendered-locally":
+        errors.append("memory MCP carrier must require a locally rendered absolute command")
+    if memory_connector.get("authentication") != {
+        "mode": "inherited-signed-agent-assertion",
+        "agent_id": "manus",
+        "human_door": "forbidden",
+        "local_operator_fallback": "forbidden",
+    }:
+        errors.append("memory MCP carrier must require the signed Manus agent door")
+    if memory_connector.get("package") != {
+        "distribution": "l9-graphite-memory",
+        "entrypoint": "l9-memory-server --transport stdio",
+        "tool_authority": "package-owned-mcp-tools",
+    }:
+        errors.append("memory MCP carrier must retain package-owned tool authority")
+    if memory_connector.get("scope") != {
+        "ordinary_agent_reads": True,
+        "cold_safe_agent_writes": True,
+        "governed_writes_and_phase_locks": True,
+        "lifecycle_start_close": False,
+        "provider_transport": False,
+        "generic_shell": False,
+    }:
+        errors.append("memory MCP carrier scope must separate agent tools from lifecycle")
+    if "mcpServers" in memory_connector or _contains_forbidden_key(memory_connector):
+        errors.append(
+            "memory MCP carrier must not contain a deployment URL, headers, "
+            "environment, or server entry"
+        )
+
+    infisical_connector = json.loads(
+        (adapter / "infisical-mcp-connector.json").read_text(encoding="utf-8")
+    )
+    expected_connector = {
+        "name": "l9-manus-infisical",
+        "transport": "stdio",
+        "status": "native-connector-template-requires-machine-identity",
+        "launcher": "serve_infisical_mcp.sh",
+        "renderer": "render_infisical_mcp_connector.py",
+        "capability_manifest": "infisical_capabilities.json",
+        "secret_delivery": "encrypted-connector-env",
+        "secret_exposure": "forbidden",
+    }
+    for key, expected in expected_connector.items():
+        if infisical_connector.get(key) != expected:
+            errors.append(
+                f"Infisical connector {key}={infisical_connector.get(key)!r}, expected {expected!r}"
+            )
+    if "mcpServers" in infisical_connector or _contains_forbidden_key(infisical_connector):
+        errors.append(
+            "Infisical connector carrier must not contain a URL, headers, environment, "
+            "or server entry"
+        )
+
+    try:
+        capabilities = json.loads(
+            (adapter / "infisical_capabilities.json").read_text(encoding="utf-8")
+        )
+    except json.JSONDecodeError as exc:
+        errors.append(f"Infisical capability manifest is invalid JSON: {exc}")
+        capabilities = {}
+    if capabilities.get("schema") != "l9.manus.infisical-capabilities.v1":
+        errors.append("Infisical capability manifest has the wrong schema")
+    github = (capabilities.get("capabilities") or {}).get("github.get_repository")
+    if not isinstance(github, dict):
+        errors.append("Infisical capability manifest must declare github.get_repository")
+    else:
+        if github.get("secret_key") != "GITHUB_TOKEN":
+            errors.append("github.get_repository must use the GITHUB_TOKEN inventory key")
+        if github.get("origin") != "https://api.github.com" or github.get("method") != "GET":
+            errors.append("github.get_repository must be a fixed GitHub HTTPS GET capability")
+
+    server = (adapter / "infisical_mcp_server.py").read_text(encoding="utf-8")
+    for marker in (
+        "infisical_status",
+        "infisical_list_secret_metadata",
+        "infisical_invoke",
+        '"viewSecretValue": "false"',
+        "response was withheld",
+    ):
+        if marker not in server:
+            errors.append(f"Infisical MCP server is missing safety marker: {marker}")
+    for forbidden in ("os.environ[", "subprocess.", "shell=True", "GET /secret"):
+        if forbidden in server:
+            errors.append(
+                f"Infisical MCP server contains a forbidden secret-exposure pattern: {forbidden}"
+            )
 
     bootstrap = (adapter / "session_bootstrap.md").read_text(encoding="utf-8")
     for marker in REQUIRED_BOOTSTRAP_TEXT:
@@ -164,11 +294,74 @@ def validate(repo_root: Path) -> list[str]:
         if forbidden in bootstrap:
             errors.append(f"session bootstrap contains retired provider material: {forbidden}")
 
+    server = (adapter / "mcp_server.py").read_text(encoding="utf-8")
+    for marker in (
+        "governance_status",
+        "governance_validate",
+        "governance_bootstrap",
+        "memory_lifecycle_start",
+        "memory_lifecycle_close",
+        "--enable-memory-lifecycle",
+        "streamable-http",
+    ):
+        if marker not in server:
+            errors.append(f"MCP server is missing required governance tool marker: {marker}")
+    for forbidden in ("shell=True", "os.system(", "GRAPHITI_MCP_URL", "L9_MEMORY_HTTP_URL"):
+        if forbidden in server:
+            errors.append(f"MCP server contains prohibited surface behavior: {forbidden}")
+
+    lifecycle = (adapter / "memory_lifecycle.py").read_text(encoding="utf-8")
+    for marker in (
+        "canonical_hydrate",
+        "close_session",
+        "manus-session-start",
+        "manus-session-end",
+        "require_signed_agent_door",
+    ):
+        if marker not in lifecycle:
+            errors.append(f"Manus memory lifecycle is missing canonical marker: {marker}")
+    for forbidden in (
+        "from l9_graphite_memory import",
+        "GRAPHITI_MCP_URL",
+        "L9_MEMORY_HTTP_URL",
+    ):
+        if forbidden in lifecycle:
+            errors.append(
+                f"Manus memory lifecycle contains prohibited transport material: {forbidden}"
+            )
+
+    launcher = (adapter / "serve_mcp.sh").read_text(encoding="utf-8")
+    for marker in (".venv/bin/python", "mcp_server.py", "--governance-root"):
+        if marker not in launcher:
+            errors.append(f"MCP launcher is missing required marker: {marker}")
+
+    memory_launcher = (adapter / "serve_memory_mcp.sh").read_text(encoding="utf-8")
+    for marker in (
+        "export_agent_assertion_env.sh",
+        "L9_MEMORY_AGENT_ID=manus",
+        "l9-memory-server",
+        "--transport stdio",
+        "local-operator compatibility principal",
+    ):
+        if marker not in memory_launcher:
+            errors.append(f"memory MCP launcher is missing required marker: {marker}")
+    for forbidden in ("GRAPHITI_MCP_URL", "L9_MEMORY_HTTP_URL", "http://", "https://"):
+        if forbidden in memory_launcher:
+            errors.append(
+                f"memory MCP launcher contains prohibited transport material: {forbidden}"
+            )
+
     installer = (adapter / "install.sh").read_text(encoding="utf-8")
-    for marker in ("bootstrap_agent_environment.sh", "--surface manus", "--workspace"):
+    for marker in (
+        "validate_manus_adapter.py",
+        "--repo-root",
+        "--workspace",
+        "bootstrap_agent_environment.sh",
+        "--surface manus",
+    ):
         if marker not in installer:
-            errors.append(f"installer is missing shared-bootstrap marker: {marker}")
-    for forbidden in ("git clone", "curl ", "INFISICAL_", "GRAPHITI_MCP_"):
+            errors.append(f"installer is missing native-connector validation marker: {marker}")
+    for forbidden in ("git clone", "curl ", "GRAPHITI_MCP_"):
         if forbidden in installer:
             errors.append(f"installer contains out-of-scope implementation: {forbidden}")
     return errors

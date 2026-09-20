@@ -303,6 +303,17 @@ def _changed_paths(facts: MechanicalFacts) -> list[str]:
 
 NO_SUBJECT = "measured change (no commit subject)"
 
+#: Printed under Problem when the oldest commit carries no body paragraph. The
+#: composer has no prose source beyond commit subjects and that one paragraph,
+#: so a subject-only Problem is the honest floor, not a description — PR #614
+#: shipped one and its author had to rewrite the body by hand after noticing.
+#: Saying so in the body, and on stderr at compile time, is what makes the thin
+#: case visible before a reviewer reads it.
+THIN_PROBLEM_NOTE = (
+    "_Composer note: the oldest commit carries no body paragraph, so this Problem "
+    "is its subject line only. Rewrite it before review._"
+)
+
 
 def _first_paragraph(body: str) -> str:
     for para in re.split(r"\n\s*\n", body.strip()):
@@ -328,7 +339,7 @@ def range_problem(facts: MechanicalFacts) -> str:
     para = _first_paragraph(body)
     more = len(facts.commits) - 1
     suffix = f" (+{more} more commit{'s' if more != 1 else ''} below)" if more else ""
-    return f"{head}{suffix}" + (f"\n\n{para}" if para else "")
+    return f"{head}{suffix}\n\n{para or THIN_PROBLEM_NOTE}"
 
 
 def range_summary(facts: MechanicalFacts) -> str:
@@ -802,6 +813,7 @@ def write_handoff(
         "template": facts.template_path,
         "needs_completion": result.needs_completion,
         "mechanical_filled": result.mechanical_filled,
+        "thin_problem": THIN_PROBLEM_NOTE in result.body,
         "commit_count": len(facts.commits),
         "changed_file_count": len(facts.changed_files),
         "additive_only_paths": facts.additive_only_paths,
@@ -872,6 +884,12 @@ def main(argv: list[str] | None = None) -> int:
     if result.needs_completion:
         print(
             "PR body requires completion: " + "; ".join(result.needs_completion),
+            file=__import__("sys").stderr,
+        )
+    if THIN_PROBLEM_NOTE in result.body:
+        print(
+            "WARN: PR body Problem is a commit subject only (the oldest commit has no "
+            "body paragraph); rewrite it before review",
             file=__import__("sys").stderr,
         )
     return 0

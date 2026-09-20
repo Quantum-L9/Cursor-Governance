@@ -2,10 +2,11 @@
 """Classify SessionStart runtime probes. Never invent ok from silence.
 
 SessionStart used to dump raw receipt slogans ("no publish-path breakglass",
-"itest unavailable", "claude bootstrap: never_ran") as if they were this
-session's faults. A missing override is healthy. Local Neo4j :7687 is optional
-PlasticOS/code-graph itest, not Graphiti. Cursor does not run the Claude
-installer. This reporter names each component, its class, and the evidence.
+"claude bootstrap: never_ran") as if they were this session's faults. A missing
+override is healthy. Cursor does not run the Claude installer. Provider tunnel
+and local Neo4j :7687 are not SessionStart planes. This reporter names each
+component, its class, and the evidence. Cursor SessionStart writes
+~/.l9/cursor/bootstrap-state.json on every run.
 """
 
 from __future__ import annotations
@@ -29,6 +30,7 @@ for _path in (_REPO, _SCRIPTS, _AUTONOMY, _SECRETS):
 
 from breakglass_receipt import evaluate, load_receipt  # noqa: E402
 from claude_bootstrap_receipt import read as read_claude_receipt  # noqa: E402
+from claude_bootstrap_receipt import write_cursor_bootstrap_receipt  # noqa: E402
 
 OK = "ok"
 NA = "n/a"
@@ -229,9 +231,9 @@ def classify_cursor_adapter(
 ) -> list[dict[str, Any]]:
     """Cursor's own receipt (~/.l9/cursor/bootstrap-state.json).
 
-    `make cursor-install` is optional wiring, so never_ran is n/a, not a
-    fault. A receipt from another workspace is stale_other_surface. Only a
-    fresh, this-workspace non-ready receipt reaches ### Degraded.
+    `make start` / `/start-session` / the SessionStart hook write this
+    receipt every bootstrap. never_ran or TTL-unknown after that run is a
+    ceremony failure, not optional wiring.
     """
     if surface != "cursor":
         return []
@@ -241,10 +243,12 @@ def classify_cursor_adapter(
         return [
             _line(
                 "cursor-adapter",
-                NA,
-                "no receipt — make cursor-install never ran (optional wiring)",
-                this_surface=False,
-                include_in_degraded=False,
+                FAILED,
+                (
+                    "no receipt — SessionStart must write "
+                    "~/.l9/cursor/bootstrap-state.json on every bootstrap"
+                ),
+                evidence=reason,
             )
         ]
     belongs, why = _receipt_belongs_here(receipt, workspace)
@@ -262,17 +266,12 @@ def classify_cursor_adapter(
     if state == "ready":
         return [_line("cursor-adapter", OK, reason or "all required components READY")]
     if state == "unknown":
-        # TTL/revision expiry: the file no longer describes an observed state.
-        # That is not a this-session install failure (same reader contract as
-        # never_ran — n/a until make cursor-install writes a fresh receipt).
         return [
             _line(
                 "cursor-adapter",
-                NA,
-                f"stale_receipt — {reason or 'receipt no longer describes an observed state'}",
+                FAILED,
+                f"stale_receipt — bootstrap did not refresh ({reason or 'receipt expired'})",
                 evidence=reason,
-                this_surface=False,
-                include_in_degraded=False,
             )
         ]
     klass = FAILED if state in {"failed", "blocked"} else DEGRADED
@@ -687,7 +686,7 @@ def collect(
     surface: str,
     venv: str,
     ide_profile: str,
-    tunnel: str,
+    tunnel: str = "",
     memory_detail: str,
     memory_stderr: str,
     memory_healthy: bool,
@@ -695,7 +694,7 @@ def collect(
     wiring: str,
     backup: str,
     skill_note: str,
-    codegraph: str,
+    codegraph: str = "",
     hydrate_degraded: bool,
     hydrate_reason: str,
     hydrate_condition: str = "",
@@ -703,13 +702,14 @@ def collect(
     workspace: str = "",
     aws_cli: dict[str, Any] | None = None,
     secrets_bind: list[dict[str, Any]] | None = None,
+    write_receipt: bool = True,
     plane_state: str = "",
 ) -> list[dict[str, Any]]:
+    del tunnel, codegraph  # retired SessionStart planes (tunnel + Neo4j itest)
     root = home or Path.home()
     lines: list[dict[str, Any]] = [
         classify_venv(venv),
         classify_simple("ide-profile", ide_profile, fail_tokens=("fail", "error")),
-        classify_tunnel(tunnel),
         classify_memory_proof(memory_proof)
         if memory_proof is not None
         else classify_memory(detail=memory_detail, stderr=memory_stderr, healthy=memory_healthy),
@@ -717,7 +717,6 @@ def collect(
         classify_aws_cli(aws_cli, plane_state),
         classify_secrets_bind(secrets_bind, plane_state),
         classify_skill_usage(skill_note),
-        classify_itest(error=probe_neo4j(), codegraph=codegraph),
     ]
     receipt = read_claude_receipt(path=root / ".l9" / "claude" / "bootstrap-state.json")
     repair_log, repair_text = latest_repair_log(root / ".l9" / "claude")
@@ -730,18 +729,40 @@ def collect(
             workspace=workspace,
         )
     )
-    lines.extend(
-        classify_cursor_adapter(
-            surface=surface,
-            receipt=read_claude_receipt(
-                path=root / ".l9" / "cursor" / "bootstrap-state.json",
-                surface="cursor",
-            ),
-            workspace=workspace,
-        )
-    )
     lines.append(classify_simple("wiring", wiring, fail_tokens=("fail",)))
     lines.append(classify_backup(backup))
+    if surface == "cursor" and write_receipt:
+        try:
+            written = write_cursor_bootstrap_receipt(home=root, workspace=workspace, lines=lines)
+            cursor_receipt = read_claude_receipt(path=written, surface="cursor")
+        except OSError as exc:
+            lines.append(
+                _line(
+                    "cursor-adapter",
+                    FAILED,
+                    f"receipt write failed — {type(exc).__name__}: {exc}",
+                    evidence=str(exc),
+                )
+            )
+        else:
+            lines.extend(
+                classify_cursor_adapter(
+                    surface=surface,
+                    receipt=cursor_receipt,
+                    workspace=workspace,
+                )
+            )
+    else:
+        lines.extend(
+            classify_cursor_adapter(
+                surface=surface,
+                receipt=read_claude_receipt(
+                    path=root / ".l9" / "cursor" / "bootstrap-state.json",
+                    surface="cursor",
+                ),
+                workspace=workspace,
+            )
+        )
     if hydrate_degraded:
         lines.append(
             _line(

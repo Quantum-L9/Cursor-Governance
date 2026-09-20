@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-09-19T22:50:15Z'
+generated_utc: '2026-09-20T03:18:44Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:08fcc51f5623f21bca8a8669f00781bb0941182effb2444473232eddaf18231e
+source_tree_digest: sha256:bf6bfa80bbb72164d28c66f42738be29ff78f3a702bcf4d4f32e1ba8c497046d
 summary:
   total_mdc_files: 69
   always_apply_true: 35
@@ -317,8 +317,8 @@ rules:
   globs: null
   first_heading: Context7 Auto-Invoke (External Docs)
   has_yaml_frontmatter: true
-  line_count: 83
-  content_digest: sha256:f1c56c69c455311e0dde0b49562f6b571f8e7777470d05502071b8d7461b94e5
+  line_count: 91
+  content_digest: sha256:dd9454223e2c28ee99e7555e7dd9b9d74e1f967b78b0817c15e802d7761e92c6
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -1365,8 +1365,8 @@ rules:
   globs: null
   first_heading: L4 Local Autonomy (no mid-execution push)
   has_yaml_frontmatter: true
-  line_count: 90
-  content_digest: sha256:d18076074e4faada3d3f89051d0e6854df9d2112799ec792f7af60d036cde3bb
+  line_count: 97
+  content_digest: sha256:0f0ecc46a36fc23d666a87675ea46a58321f895158eb1fbd29a522146946e8e3
   authority: canonical_global
   context_cost: moderate
   deprecated: false

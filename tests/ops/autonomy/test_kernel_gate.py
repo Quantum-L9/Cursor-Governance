@@ -20,16 +20,23 @@ def _gate():
     return kernel_gate
 
 
-def write_apply_report(repo: Path, *, delta_path: str = "a.txt", body: str = "") -> Path:
-    """Write a valid apply report naming a file that exists in `repo`.
+def write_apply_report(
+    repo: Path, *, delta_path: str = "a.txt", delta_path_2: str = "b.txt", body: str = ""
+) -> Path:
+    """Write a valid apply report naming files that exist in `repo`.
 
     Tests used to call `record()` bare, which is exactly the honor-system stamp
     this latch removed. Producing the artifact is now part of setup.
+
+    Phase 1 hardening requires both kernels to have at least one delta each,
+    and notes cannot be template boilerplate.
     """
     target = repo / delta_path
-    if not target.exists():
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text("touched\n", encoding="utf-8")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("touched\n", encoding="utf-8")
+    target2 = repo / delta_path_2
+    target2.parent.mkdir(parents=True, exist_ok=True)
+    target2.write_text("validated\n", encoding="utf-8")
     report = repo / ".l9" / "autonomy" / "kernel-apply.md"
     report.parent.mkdir(parents=True, exist_ok=True)
     report.write_text(
@@ -40,17 +47,22 @@ def write_apply_report(repo: Path, *, delta_path: str = "a.txt", body: str = "")
         "deltas:\n"
         f"  - path: {delta_path}\n"
         "    kernel: recursive_alignment\n"
-        "    note: narrowed a guard\n"
+        "    note: Added input validation for empty collections\n"
+        f"  - path: {delta_path_2}\n"
+        "    kernel: validate_repair\n"
+        "    note: Updated test assertions to cover edge case\n"
         "---\n"
-        "\n## Recursive Alignment\n\nsurfaced and applied\n"
-        f"\n## Validate & Repair\n\nran the checks{body}\n",
+        "\n## Recursive Alignment\n\nInspected and found missing null guard. Fixed.\n"
+        f"\n## Validate & Repair\n\nRan pytest suite. All assertions passed.{body}\n",
         encoding="utf-8",
     )
     return report
 
 
-def record_with_evidence(gate, repo: Path, *, delta_path: str = "a.txt") -> dict:
-    write_apply_report(repo, delta_path=delta_path)
+def record_with_evidence(
+    gate, repo: Path, *, delta_path: str = "a.txt", delta_path_2: str = "b.txt"
+) -> dict:
+    write_apply_report(repo, delta_path=delta_path, delta_path_2=delta_path_2)
     return gate.record(repo, gov=ROOT)
 
 
@@ -80,7 +92,16 @@ def test_record_with_evidence_then_precommit_passes_without_plans(stacked_repo: 
     assert receipt["report_rel"] == ".l9/autonomy/kernel-apply.md"
     assert len(receipt["report_sha256"]) == 64
     assert receipt["deltas"] == [
-        {"path": "a.txt", "kernel": "recursive_alignment", "note": "narrowed a guard"}
+        {
+            "path": "a.txt",
+            "kernel": "recursive_alignment",
+            "note": "Added input validation for empty collections",
+        },
+        {
+            "path": "b.txt",
+            "kernel": "validate_repair",
+            "note": "Updated test assertions to cover edge case",
+        },
     ]
     assert gate.precommit(stacked_repo, ROOT, None) == 0
 
@@ -411,8 +432,9 @@ def test_record_command_is_runnable_from_a_consumer_workspace(tmp_path: Path) ->
     assert "  4. python3 ops/autonomy/kernel_gate.py record" not in text
     # The target workspace is explicit, so it works from anywhere.
     assert f'--workspace "{consumer}"' in line
-    # And the interpreter is the locked governance one when present.
     command = gate.record_command(consumer, ROOT)
+    assert "--changed-file" in command
+    # And the interpreter is the locked governance one when present.
     locked = ROOT / ".venv" / "bin" / "python"
     if locked.is_file():
         assert command.startswith(str(locked))
@@ -421,9 +443,100 @@ def test_record_command_is_runnable_from_a_consumer_workspace(tmp_path: Path) ->
     assert str(consumer / "ops" / "autonomy") not in text
 
 
+def test_record_names_a_release_receipt_the_kernel_apply_left_behind(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """After a kernel apply moved the tree, `record` says the L4 receipt is stale.
+
+    authorize-release binds worktree bytes; the kernel apply changes them and is
+    committed before `record`. The documented recovery then re-ran make pr and
+    learned only at its remote check that the receipt was stale. The hint at
+    record time is advisory: nothing is written or authorized, and a tree that
+    still matches gets no hint at all.
+    """
+    import sys
+
+    autonomy = str(ROOT / "ops" / "autonomy")
+    if autonomy not in sys.path:
+        sys.path.insert(0, autonomy)
+    from l4_local import authorize_release, begin
+
+    monkeypatch.delenv("L9_AUTONOMY_STATE_DIR", raising=False)
+    gate = _gate()
+    begin(stacked_repo, contract_id="drift")
+    authorize_release(stacked_repo)
+    assert gate.l4_release_drift_hint(stacked_repo, ROOT) == ""
+
+    # The kernel apply: bytes change, then the report names the changed path.
+    (stacked_repo / "a.txt").write_text("a\naligned\n", encoding="utf-8")
+    write_apply_report(stacked_repo)
+    rc = gate.cmd_record(
+        gate.build_parser().parse_args(
+            ["record", "--workspace", str(stacked_repo), "--gov-root", str(ROOT)]
+        )
+    )
+    assert rc == 0
+    err = capsys.readouterr().err
+    assert "NEXT:" in err
+    assert "L4 receipt stale" in err
+    # The printed command is runnable from a consumer workspace: governance
+    # script path, explicit workspace, never a cwd-relative path.
+    line = next(ln for ln in err.splitlines() if "authorize-release" in ln)
+    assert str(ROOT / "ops" / "autonomy" / "l4_local.py") in line
+    assert f'--workspace "{stacked_repo}"' in line
+    assert "python3 ops/autonomy/l4_local.py" not in err
+    assert line.strip() == gate.authorize_command(stacked_repo, ROOT)
+    # Advisory: the receipt on disk is untouched.
+    from l4_local import load_receipt
+
+    assert load_receipt(stacked_repo)["phase"] == "release_authorized"
+
+
+def test_drift_hint_never_imports_l4_local() -> None:
+    """l4_local imports kernel_gate for kernel evidence; the reverse is a cycle.
+
+    The hint probes ``l4_local.py status`` as a subprocess instead, and the
+    only failures it swallows are the ones a probe can have.
+    """
+    source = (ROOT / "ops" / "autonomy" / "kernel_gate.py").read_text(encoding="utf-8")
+    assert "import l4_local" not in source
+    assert "from ops.autonomy import l4_local" not in source
+    hint_body = source.split("def l4_release_drift_hint", 1)[1].split("\ndef ", 1)[0]
+    assert "except Exception" not in hint_body
+
+
+def test_drift_hint_is_silent_when_the_probe_cannot_run(stacked_repo: Path, tmp_path: Path) -> None:
+    gate = _gate()
+    # No governance script at this root: nothing to probe, nothing to say.
+    assert gate.l4_release_drift_hint(stacked_repo, tmp_path / "no-gov") == ""
+
+
+def test_record_is_silent_without_an_l4_release_receipt(
+    stacked_repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    gate = _gate()
+    write_apply_report(stacked_repo)
+    rc = gate.cmd_record(
+        gate.build_parser().parse_args(
+            ["record", "--workspace", str(stacked_repo), "--gov-root", str(ROOT)]
+        )
+    )
+    assert rc == 0
+    assert "NEXT:" not in capsys.readouterr().err
+
+
 def test_guidance_does_not_claim_kernels_gate_l4() -> None:
     """Nothing printed by this hook may teach the superseded L4 coupling."""
     gate = _gate()
     text = gate._agent_required_tree(Path("/ws"), ROOT)
     assert "Kernels are not an L4 phase." in text
     assert "authorize-release" not in text
+
+
+def test_record_and_verify_cover_live_diff_without_changed_file(stacked_repo: Path) -> None:
+    """Omitting --changed-file must still run deltas_cover_diff on the live git set."""
+    gate = _gate()
+    receipt = record_with_evidence(gate, stacked_repo)
+    assert receipt["changed_paths_count"]
+    assert "a.txt" in gate.discover_changed_paths(stacked_repo)
+    assert gate.verify_tree(stacked_repo, ROOT) is None
