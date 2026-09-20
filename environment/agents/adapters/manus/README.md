@@ -9,33 +9,38 @@ version: 4.0.0
 updated: 2026-09-19
 /L9_META -->
 
-# Manus adapter — thin L9 governance binding
+# Manus adapter — governance MCP and native Infisical capability binding
 
 This is the active Manus surface adapter for the `manus` registry identity. It sits beside the Cursor and Claude Code adapters while consuming the same upstream control planes rather than copying them. The canonical identity is `environment/agents/agent_registry.yaml`; the binding topology is `environment/agents/PEER_RUNTIME_BINDINGS.yaml`; the surface contract is [`../ADAPTER_CONTRACT.md`](../ADAPTER_CONTRACT.md).
+
+It also implements a small, **Manus-native stdio MCP lane** for operations that need an Infisical secret without making that secret available to the model, project environment, repository, command line, receipt, or tool result. That lane does not invoke, copy, or depend on the Cursor SessionStart secret bootstrap.
 
 | Concern | Canonical owner | Manus binding |
 |---|---|---|
 | Identity | `agent_registry.yaml` | `environment.env.example` supplies the registry-derived values. |
 | Governance readiness | `ops/scripts/bootstrap_agent_environment.sh` | `install.sh --surface manus` delegates without reimplementation. |
 | Governance discovery | This adapter’s streamable-HTTP MCP service | Read/validate/bootstrap tools wrap existing upstream sources; no shell or general write tool is exposed. |
-| Secrets and capabilities | `ops/secrets/` | SessionStart bootstrap initializes the existing Infisical machine profile without returning secret values. |
+| Secrets and capabilities | `ops/secrets/` | SessionStart bootstrap initializes the existing Infisical machine profile without returning secret values. Native Infisical MCP uses a dedicated Universal Auth machine identity as encrypted Custom MCP connector environment values only. |
+| Capability boundary | `infisical_capabilities.json` | Fixes the allowed secret reference, upstream origin, method, parameters, and output fields. |
+| Infisical MCP transport | `serve_infisical_mcp.sh` | Starts a local stdio JSON-RPC server named `l9-manus-infisical`. |
 | Autonomy and L4 | `ops/autonomy/surface_profile.yaml` | Exact `manus` surface ID plus the existing shared gates. |
 | Memory agent lane | Package-owned `l9-graphite-memory` | A separate signed stdio Custom MCP connector starts the pinned package server directly for ordinary reads and writes. |
 | Memory lifecycle | `ops/memory/hydration.py` and `ops/graphiti/hydration/close_session.py` | A bearer-protected MCP bridge invokes canonical hydrate and close under bounded `manus-session-*` envelopes. |
 | Program Execution | `environment/program-execution/` | Existing `manus-cloud` provider remains explicitly dormant. |
 
-## What activates in Manus
+## Current capability
 
 Manus does not provide Cursor’s persistent hook model or Claude Code’s tracked projection format. Its durable carrier is a **project instruction**. Install [`session_bootstrap.md`](session_bootstrap.md) into the Manus project, then add the non-secret values from [`environment.env.example`](environment.env.example) to the same project or session environment. The project instruction makes the explicit lifecycle start the first action in a governed task and makes lifecycle close the last action after the work result is complete.
 
-The shared installer remains intentionally small:
+The native Infisical lane’s initial manifest contains one read-only capability:
 
-```bash
-make -C "$HOME/.cursor-governance" manus-adapter-check
-make -C "$HOME/.cursor-governance" manus-install WS="$(pwd)"
-```
+| Capability | Secret reference | Fixed upstream operation | Returned fields |
+|---|---|---|---|
+| `github.get_repository` | `GITHUB_TOKEN` | `GET https://api.github.com/repos/{owner}/{repo}` | Curated repository metadata only |
 
-`manus-install` is not an account configurator. It validates the supplied Git workspace and delegates shared readiness to `ops/scripts/bootstrap_agent_environment.sh --surface manus`. It cannot claim that an external project instruction was installed. It does initialize the existing Infisical machine profile when its AWS preflight is authorized, then records only the profile/binding status in a local receipt.
+It is not a generic HTTP proxy, a shell runner, or a secret-reading API. Adding a capability requires an explicit manifest change, strict argument validation, a fixed HTTPS origin, and an output allowlist.
+
+The shared installer remains intentionally small: `manus-install` is not an account configurator. It validates the supplied Git workspace and delegates shared readiness to `ops/scripts/bootstrap_agent_environment.sh --surface manus`. It cannot claim that an external project instruction was installed. It does initialize the existing Infisical machine profile when its AWS preflight is authorized, then records only the profile/binding status in a local receipt.
 
 ## L9 Governance MCP
 
@@ -82,7 +87,28 @@ This connector exposes the package’s canonical tools, including `memory.search
 
 The connection is intentionally fail-closed. A missing, partial, wrong-agent, or human-door assertion causes the stdio command to exit before the package can select its compatibility `local-operator` principal. Provision the assertion/grant maps on the host that launches the connector; never put raw door material in the Manus model environment, connector draft, repository, or task text.
 
-## Current autonomy and publish posture
+## Native Infisical connector configuration
+
+1. Make `Quantum-L9/Cursor-Governance` available through the Manus GitHub integration.
+2. Copy the non-secret values from `environment.env.example` into the Manus project/session environment.
+3. Create a **dedicated** Infisical Machine Identity for Manus. Grant the smallest project role necessary and create a Universal Auth client secret for that identity. Do not reuse a Cursor profile or broad human credential.
+4. Store the client secret in a local mode-0600 file outside the repository. Render the temporary Custom MCP draft:
+
+   ```bash
+   .venv/bin/python environment/agents/adapters/manus/render_infisical_mcp_connector.py \
+     --client-id <machine-identity-client-id> \
+     --client-secret-file /secure/path/manus-infisical-client-secret \
+     --project-id <infisical-project-id> \
+     --output /tmp/l9-manus-infisical.json
+   manus-config connector create --file /tmp/l9-manus-infisical.json
+   rm -f /tmp/l9-manus-infisical.json
+   ```
+
+   The generated draft stores `L9_MANUS_INFISICAL_CLIENT_SECRET` only in the encrypted connector environment. It does not add it to a project environment, source file, launcher argument, URL, or task text.
+
+5. After the Custom MCP connector is enabled, verify it with `infisical_status`. It should report `ready`, `secret_values_exposed: false`, and the declared capability list. Then call `infisical_list_secret_metadata` with a small limit to confirm that the Machine Identity is scoped to the expected project.
+
+The connector can be configured through the Manus UI or an approved Custom MCP configuration workflow. Never paste a client secret into a chat, command line, project instruction, or project/session environment.
 
 `L9_AUTONOMY_ENABLED=true` activates only the authority already defined for the `manus` row in `ops/autonomy/surface_profile.yaml`. Local work stays bounded by the shared L4 release gate. The first publication route is `PR_REMEDIATE=0 make pr`; no adapter-specific raw publish, merge permission, or breakglass is added here. Merge, force push, hard reset, and secret exfiltration remain forbidden.
 
@@ -95,6 +121,10 @@ make memory-egress-check
 make agents-env
 make agents-runtime-bindings-validate
 make program-execution-adapters
+python -m unittest environment/agents/adapters/manus/tests/test_manus_adapter.py
+python -m unittest environment/agents/adapters/manus/tests/test_infisical_mcp_server.py
 ```
+
+The Infisical test suite uses a fake Infisical API and verifies that metadata requests explicitly exclude values, invocation output is sanitized, invalid caller input does not resolve a secret, and a response containing the resolved value is withheld.
 
 For project configuration and deployment steps, see [`setup.md`](setup.md).

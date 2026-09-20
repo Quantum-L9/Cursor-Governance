@@ -13,13 +13,20 @@ updated: 2026-09-19
 
 The Manus adapter is a **thin remote-surface binding**. It reuses the shared L9 bootstrap, agent registry, autonomy profile, Infisical profile bootstrap, and memory control plane. It does not reproduce the Cursor hook plane, Claude Code projection engine, or a direct memory provider client.
 
-## Required project configuration
+It also has a native Infisical capability lane. That lane is intentionally independent of Cursor activation: it does not install a Cursor hook, read a Cursor machine profile, call a shared SessionStart secret plane, or export secrets to the Manus session.
+
+## Required setup
 
 1. Make `Quantum-L9/Cursor-Governance` available through the Manus GitHub integration so a session can clone or open the governance checkout.
 2. Copy the non-secret values from [`environment.env.example`](environment.env.example) to the Manus project or session environment. Do not add a literal `L9_GOVERNANCE_DIR`; hosted environment values do not expand `$HOME`.
 3. Install [`session_bootstrap.md`](session_bootstrap.md) as a project instruction or project-scoped Manus skill. This gives each session the exact identity, authority order, bootstrap procedure, and explicit memory lifecycle protocol.
 4. Add the controlled L9 Governance Custom MCP server described below. The existing public connection may stay read-only; lifecycle requires a separate bearer-protected deployment.
 5. Add the separate package-owned `l9-memory-manus` stdio Custom MCP connector described below. It is the only Manus connection for ordinary `memory.*` agent tools.
+6. Create a **Manus-specific Infisical Machine Identity**. Give it project access that is limited to the required secret paths and permissions. A read-only initial capability needs only access to `GITHUB_TOKEN` in the chosen project scope.
+7. Configure **Universal Auth** for that identity. Keep the Client ID and Client Secret outside this repository and outside Manus project/session environment.
+8. Render a temporary local Custom MCP draft with `render_infisical_mcp_connector.py`. The renderer reads the Client Secret from a mode-0600 file and creates a mode-0600 draft with encrypted connector environment values.
+9. Add that draft as the `l9-manus-infisical` Custom MCP server. Its command is the checked-in `serve_infisical_mcp.sh`; no remote URL, bearer header, or project environment secret is required.
+10. Delete the temporary draft immediately after it has been accepted. Retain the client-secret source only in the approved operator secret store.
 
 ## Deploy the governance MCP service
 
@@ -105,7 +112,17 @@ manus-mcp-cli tool call memory.search --server l9-memory-manus \
 
 The connector must list package-owned `memory.search`, `memory.hydrate`, `memory.write_agent`, `memory.phase_lock`, and `memory.write_governed` tools. A failed launch or unavailable connector is an honest **memory-blind** condition until the host’s scoped assertion/grant maps are provisioned. Do not replace it with a direct provider endpoint, an HTTP proxy, a local-operator fallback, a pasted token, or a generic governance tool.
 
-## Local checkout verification
+## Runtime behavior (native Infisical)
+
+The Infisical server sends the machine identity Client ID and Client Secret only to Infisical's Universal Auth login endpoint. It retains the resulting access token in process memory until shortly before expiry. For metadata listing it sends `viewSecretValue=false`. For invocation it reads exactly one manifest-declared secret, uses it in one fixed HTTPS request, serializes an allowlisted response subset, and refuses the response if the resolved value appears in it.
+
+No MCP tool returns a secret value. There is no `get_secret`, `resolve_secret`, generic outbound HTTP, command execution, environment dump, or arbitrary capability-selection tool.
+
+## Adding a capability
+
+Edit `infisical_capabilities.json` and the accompanying tests in the same change. A capability must have a unique identifier, a single approved inventory key, a fixed HTTPS origin, an allowlisted method, strict caller argument regexes, a path template that uses only declared arguments, and an explicit response field allowlist. The adapter's Python validator and tests must be extended for every new upstream family before it can be used.
+
+## Diagnostic checks
 
 From a Manus workspace that has both an active Git repository and the governance checkout, run:
 
@@ -116,7 +133,7 @@ make -C "$HOME/.cursor-governance" manus-install-check WS="$(pwd)"
 make -C "$HOME/.cursor-governance" memory-egress-check
 ```
 
-`manus-adapter-check` validates the committed governance and memory connector carriers, registry identity, package-launch boundary, and canonical lifecycle markers. `manus-mcp-test` validates the governance tool contract and lifecycle safety boundary. `manus-install-check` invokes only the shared bootstrap in diagnostic mode; it does not modify Manus account configuration. The memory egress check confirms neither the lifecycle wrapper nor the service acquired a provider transport.
+`manus-adapter-check` validates the committed governance and memory connector carriers, registry identity, package-launch boundary, and canonical lifecycle markers. `manus-mcp-test` validates the governance tool contract and lifecycle safety boundary. `manus-install-check` invokes only the shared bootstrap in diagnostic mode; it does not modify Manus account configuration. The memory egress check confirms neither the lifecycle wrapper nor the service acquired a provider transport. These checks do not authenticate to Infisical, create a Manus Custom MCP connector, or retrieve a secret. At runtime, use `infisical_status` for connector posture and `infisical_list_secret_metadata` for an explicit, value-free scope check.
 
 ## Operating limits
 

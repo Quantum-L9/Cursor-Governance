@@ -116,13 +116,18 @@ def validate(repo_root: Path) -> list[str]:
     required_files = {
         "README.md",
         "environment.env.example",
+        "infisical-mcp-connector.json",
+        "infisical_capabilities.json",
+        "infisical_mcp_server.py",
         "install.sh",
         "mcp-connector.json",
         "mcp_server.py",
         "memory-mcp-connector.json",
         "memory_lifecycle.py",
+        "render_infisical_mcp_connector.py",
         "render_mcp_connector.py",
         "render_memory_mcp_connector.py",
+        "serve_infisical_mcp.sh",
         "serve_mcp.sh",
         "serve_memory_mcp.sh",
         "session_bootstrap.md",
@@ -222,6 +227,64 @@ def validate(repo_root: Path) -> list[str]:
             "environment, or server entry"
         )
 
+    infisical_connector = json.loads(
+        (adapter / "infisical-mcp-connector.json").read_text(encoding="utf-8")
+    )
+    expected_connector = {
+        "name": "l9-manus-infisical",
+        "transport": "stdio",
+        "status": "native-connector-template-requires-machine-identity",
+        "launcher": "serve_infisical_mcp.sh",
+        "renderer": "render_infisical_mcp_connector.py",
+        "capability_manifest": "infisical_capabilities.json",
+        "secret_delivery": "encrypted-connector-env",
+        "secret_exposure": "forbidden",
+    }
+    for key, expected in expected_connector.items():
+        if infisical_connector.get(key) != expected:
+            errors.append(
+                f"Infisical connector {key}={infisical_connector.get(key)!r}, expected {expected!r}"
+            )
+    if "mcpServers" in infisical_connector or _contains_forbidden_key(infisical_connector):
+        errors.append(
+            "Infisical connector carrier must not contain a URL, headers, environment, "
+            "or server entry"
+        )
+
+    try:
+        capabilities = json.loads(
+            (adapter / "infisical_capabilities.json").read_text(encoding="utf-8")
+        )
+    except json.JSONDecodeError as exc:
+        errors.append(f"Infisical capability manifest is invalid JSON: {exc}")
+        capabilities = {}
+    if capabilities.get("schema") != "l9.manus.infisical-capabilities.v1":
+        errors.append("Infisical capability manifest has the wrong schema")
+    github = (capabilities.get("capabilities") or {}).get("github.get_repository")
+    if not isinstance(github, dict):
+        errors.append("Infisical capability manifest must declare github.get_repository")
+    else:
+        if github.get("secret_key") != "GITHUB_TOKEN":
+            errors.append("github.get_repository must use the GITHUB_TOKEN inventory key")
+        if github.get("origin") != "https://api.github.com" or github.get("method") != "GET":
+            errors.append("github.get_repository must be a fixed GitHub HTTPS GET capability")
+
+    server = (adapter / "infisical_mcp_server.py").read_text(encoding="utf-8")
+    for marker in (
+        "infisical_status",
+        "infisical_list_secret_metadata",
+        "infisical_invoke",
+        '"viewSecretValue": "false"',
+        "response was withheld",
+    ):
+        if marker not in server:
+            errors.append(f"Infisical MCP server is missing safety marker: {marker}")
+    for forbidden in ("os.environ[", "subprocess.", "shell=True", "GET /secret"):
+        if forbidden in server:
+            errors.append(
+                f"Infisical MCP server contains a forbidden secret-exposure pattern: {forbidden}"
+            )
+
     bootstrap = (adapter / "session_bootstrap.md").read_text(encoding="utf-8")
     for marker in REQUIRED_BOOTSTRAP_TEXT:
         if marker not in bootstrap:
@@ -289,10 +352,16 @@ def validate(repo_root: Path) -> list[str]:
             )
 
     installer = (adapter / "install.sh").read_text(encoding="utf-8")
-    for marker in ("bootstrap_agent_environment.sh", "--surface manus", "--workspace"):
+    for marker in (
+        "validate_manus_adapter.py",
+        "--repo-root",
+        "--workspace",
+        "bootstrap_agent_environment.sh",
+        "--surface manus",
+    ):
         if marker not in installer:
-            errors.append(f"installer is missing shared-bootstrap marker: {marker}")
-    for forbidden in ("git clone", "curl ", "INFISICAL_", "GRAPHITI_MCP_"):
+            errors.append(f"installer is missing native-connector validation marker: {marker}")
+    for forbidden in ("git clone", "curl ", "GRAPHITI_MCP_"):
         if forbidden in installer:
             errors.append(f"installer contains out-of-scope implementation: {forbidden}")
     return errors
