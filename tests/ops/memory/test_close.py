@@ -9,9 +9,11 @@ from typing import Any
 import pytest
 from memory_boundary_fixtures import (
     FakeMemoryCli,
+    agent_lane_record,
     close_payload,
     distill_payload,
     error_stderr,
+    search_payload,
 )
 
 from ops.graphiti.hydration import close_session as cs
@@ -104,6 +106,7 @@ def scripted(fake_cli: FakeMemoryCli, bound, monkeypatch: pytest.MonkeyPatch):
     """A canonical client over the scripted CLI, injected into every close path."""
     client = MemoryControlPlaneClient(bound, runner=fake_cli.run, session_id="sess")
     monkeypatch.setattr(cs, "memory_client", lambda *_a, **_k: client)
+    fake_cli.reply("search", 0, search_payload())
     fake_cli.reply("ingest-governed-candidate", 0, candidate_payload())
     fake_cli.reply("close", 0, close_payload())
     fake_cli.reply("distill", 0, distill_payload())
@@ -152,6 +155,67 @@ def test_normal_close_admits_capsule_then_closes_canonically(workspace, scripted
     assert receipt["write_count"] == 2
     # No provider vocabulary anywhere near the boundary.
     assert "add_memory" not in json.dumps([c[0] for c in fake_cli.calls])
+    assert report["pickup"]["active_objective"] == "Continue work in Cursor-Governance"
+    assert any(
+        args[1] == "search" and "--recorded-after" in args for args, _c, _s in fake_cli.calls
+    )
+
+
+def test_close_enriches_capsule_from_agent_lane_hits(workspace, scripted, fake_cli) -> None:
+    agent = agent_lane_record(
+        content="decision: pin recorded_after before the 24h prefetch ships",
+        memory_class="decision",
+    )
+    fake_cli.reply("search", 0, search_payload(agent))
+    report = _close(workspace)
+    assert report["status"] == STATUS_CLOSED_CANONICALLY
+    candidate = _ingest_calls(fake_cli)[-1]
+    payload = candidate["knowledge"]["structured_payload"]
+    assert any("pin recorded_after" in item for item in payload["decisions"])
+
+
+def test_completed_insights_are_not_reported_as_unfinished_work(
+    workspace, scripted, fake_cli
+) -> None:
+    """A finished lesson is evidence, not a pending task (F613-2).
+
+    Every non-decision record used to land in ``unfinished_work``, so the next
+    continuation instructed the agent to redo work that was already done.
+    """
+    done = agent_lane_record(
+        record_id="bbbbbbbb-0000-0000-0000-000000000001",
+        content="cypher lint landed for issue 272 and is green on main",
+        memory_class="insight",
+    )
+    fake_cli.reply("search", 0, search_payload(done))
+    report = _close(workspace)
+    assert report["status"] == STATUS_CLOSED_CANONICALLY
+    payload = _ingest_calls(fake_cli)[-1]["knowledge"]["structured_payload"]
+    assert not any("cypher lint landed" in item for item in payload["unfinished_work"])
+    assert not any("cypher lint landed" in item for item in payload["decisions"])
+
+
+def test_explicitly_marked_records_still_reach_unfinished_work(
+    workspace, scripted, fake_cli
+) -> None:
+    """The signal is the marker, by content head or by tag."""
+    by_content = agent_lane_record(
+        record_id="bbbbbbbb-0000-0000-0000-000000000002",
+        content="TODO: port the recorded_after guard to the close path",
+        memory_class="insight",
+    )
+    by_tag = agent_lane_record(
+        record_id="bbbbbbbb-0000-0000-0000-000000000003",
+        content="sonar identity still unresolved for the consumer clone",
+        memory_class="observation",
+    )
+    by_tag["tags"] = [*by_tag.get("tags", []), "blocked"]
+    fake_cli.reply("search", 0, search_payload(by_content, by_tag))
+    report = _close(workspace)
+    assert report["status"] == STATUS_CLOSED_CANONICALLY
+    unfinished = _ingest_calls(fake_cli)[-1]["knowledge"]["structured_payload"]["unfinished_work"]
+    assert any("port the recorded_after guard" in item for item in unfinished)
+    assert any("sonar identity still unresolved" in item for item in unfinished)
 
 
 def test_public_close_report_is_scalar_and_names_statuses(workspace, scripted) -> None:

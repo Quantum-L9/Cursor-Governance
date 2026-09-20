@@ -332,6 +332,35 @@ def continuation_record(
     }
 
 
+def agent_lane_record(
+    *,
+    record_id: str = "99999999-9999-9999-9999-999999999999",
+    content: str = "cypher lint landed for issue 272",
+    memory_class: str = "insight",
+    source_agent_id: str = "cursor",
+    created_at: str = "2026-09-19T12:00:00+00:00",
+) -> dict[str, Any]:
+    """A mid-session write_agent record as `search` returns it."""
+
+    return {
+        "record_id": record_id,
+        "namespace": "cursor-governance",
+        "memory_class": memory_class,
+        "state": "active",
+        "content": content,
+        "tags": [f"agent:{source_agent_id}"],
+        "metadata": {
+            "producer": "l9-graphite-memory",
+            "provenance": {
+                "producer": "l9-graphite-memory",
+                "source_agent_id": source_agent_id,
+            },
+        },
+        "created_at": created_at,
+        "temporal": {"recorded_at": created_at, "valid_from": created_at, "valid_to": None},
+    }
+
+
 def search_payload(*records: dict[str, Any], status: str = "complete") -> dict[str, Any]:
     return {
         "receipt_id": "77777777-7777-7777-7777-777777777777",
