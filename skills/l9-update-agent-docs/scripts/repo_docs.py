@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -635,6 +636,16 @@ def main() -> int:
     if args.receipt:
         target = resolve_under_root(root, args.receipt)
         if target is None:
+            # Refusing to write outside the audited root is correct; refusing
+            # silently is not. The audit has already run and may already have
+            # mutated the tree, so say which path was rejected and still emit
+            # the receipt the caller asked for.
+            print(
+                f"ERROR: --receipt {args.receipt!r} does not resolve under {root}; "
+                "receipt not written",
+                file=sys.stderr,
+            )
+            print(json.dumps(receipt, indent=2 if args.json else None, sort_keys=True))
             return 2
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")

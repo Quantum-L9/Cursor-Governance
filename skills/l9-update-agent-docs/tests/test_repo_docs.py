@@ -621,3 +621,29 @@ def test_dirty_managed_region_fails_closed(tmp_path: Path):
     receipt = rd.audit_repository(root)
     assert receipt["final_status"] == "FAIL"
     assert any(item["code"] == "managed_regions" for item in receipt["structural_failures"])
+
+
+def test_receipt_outside_root_reports_the_rejection_and_still_emits(
+    tmp_path: Path, monkeypatch, capsys
+):
+    """`--receipt` outside the audited root must refuse loudly, not silently.
+
+    Refusing to write there is correct. Returning 2 with no stdout and no
+    stderr is not: the audit has already run and may already have mutated the
+    tree, so the caller is left with an exit code and nothing to read.
+    """
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    commit(root, "base")
+    outside = tmp_path / "outside" / "receipt.json"
+    monkeypatch.setattr(
+        sys, "argv", ["repo_docs.py", "--root", str(root), "--receipt", str(outside)]
+    )
+    code = rd.main()
+    captured = capsys.readouterr()
+    assert code == 2
+    assert not outside.exists()
+    assert str(outside) in captured.err
+    assert json.loads(captured.out)["schema"] == rd.RECEIPT_ID
