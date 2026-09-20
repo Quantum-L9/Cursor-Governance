@@ -32,13 +32,11 @@ def write_apply_report(
     and notes cannot be template boilerplate.
     """
     target = repo / delta_path
-    if not target.exists():
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text("touched\n", encoding="utf-8")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("touched\n", encoding="utf-8")
     target2 = repo / delta_path_2
-    if not target2.exists():
-        target2.parent.mkdir(parents=True, exist_ok=True)
-        target2.write_text("validated\n", encoding="utf-8")
+    target2.parent.mkdir(parents=True, exist_ok=True)
+    target2.write_text("validated\n", encoding="utf-8")
     report = repo / ".l9" / "autonomy" / "kernel-apply.md"
     report.parent.mkdir(parents=True, exist_ok=True)
     report.write_text(
@@ -434,8 +432,9 @@ def test_record_command_is_runnable_from_a_consumer_workspace(tmp_path: Path) ->
     assert "  4. python3 ops/autonomy/kernel_gate.py record" not in text
     # The target workspace is explicit, so it works from anywhere.
     assert f'--workspace "{consumer}"' in line
-    # And the interpreter is the locked governance one when present.
     command = gate.record_command(consumer, ROOT)
+    assert "--changed-file" in command
+    # And the interpreter is the locked governance one when present.
     locked = ROOT / ".venv" / "bin" / "python"
     if locked.is_file():
         assert command.startswith(str(locked))
@@ -450,3 +449,12 @@ def test_guidance_does_not_claim_kernels_gate_l4() -> None:
     text = gate._agent_required_tree(Path("/ws"), ROOT)
     assert "Kernels are not an L4 phase." in text
     assert "authorize-release" not in text
+
+
+def test_record_and_verify_cover_live_diff_without_changed_file(stacked_repo: Path) -> None:
+    """Omitting --changed-file must still run deltas_cover_diff on the live git set."""
+    gate = _gate()
+    receipt = record_with_evidence(gate, stacked_repo)
+    assert receipt["changed_paths_count"]
+    assert "a.txt" in gate.discover_changed_paths(stacked_repo)
+    assert gate.verify_tree(stacked_repo, ROOT) is None
