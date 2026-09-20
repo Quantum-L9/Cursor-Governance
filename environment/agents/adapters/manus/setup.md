@@ -99,7 +99,18 @@ manus-config connector create --file /tmp/l9-memory-manus.json
 rm -f /tmp/l9-memory-manus.json
 ```
 
-The draft contains an absolute command and `--governance` path only. It contains no URL, headers, environment values, bearer, raw assertion, or human door. When Manus starts the command, the launcher calls `ops/memory/export_agent_assertion_env.sh` and refuses to start unless all four signed-agent inputs are present. This hard stop is required: a missing assertion must never cause package memory tools to use the compatibility `local-operator` principal.
+That no-secret draft supports a pre-provisioned host map only. To make the **same enabled connector** work in every Manus chat, render the encrypted connector environment from an existing Manus-scoped authority file:
+
+```bash
+.venv/bin/python environment/agents/adapters/manus/render_memory_mcp_connector.py \
+  --governance "$HOME/.cursor-governance" \
+  --authority-file /secure/path/manus-agent-tokens.local.json \
+  --output /tmp/l9-memory-manus.json
+manus-config connector create --file /tmp/l9-memory-manus.json
+rm -f /tmp/l9-memory-manus.json
+```
+
+The authority file must contain **only** `agents_door_secret` and `agent_signing_keys.manus`; it must not contain the human door, any peer-agent key, a provider credential, or a pre-minted assertion. The renderer checks this scope, writes the temporary draft mode `0600`, and stores the map only as a Custom MCP encrypted environment value after approval. At launch, the wrapper validates it again, derives a Manus-only public grant from the canonical registry, materializes both maps under a unique mode-0700 process directory, unsets the connector value, and removes the directory at exit. This hard stop is required: a missing or over-broad assertion must never cause package memory tools to use the compatibility `local-operator` principal.
 
 After connector discovery succeeds, verify package authority rather than a wrapper inventory:
 
@@ -110,7 +121,7 @@ manus-mcp-cli tool call memory.search --server l9-memory-manus \
   --input '{"query":"current task","namespaces":["<authorized-namespace>"],"limit":5}'
 ```
 
-The connector must list package-owned `memory.search`, `memory.hydrate`, `memory.write_agent`, `memory.phase_lock`, and `memory.write_governed` tools. A failed launch or unavailable connector is an honest **memory-blind** condition until the host’s scoped assertion/grant maps are provisioned. Do not replace it with a direct provider endpoint, an HTTP proxy, a local-operator fallback, a pasted token, or a generic governance tool.
+The connector must list package-owned `memory.search`, `memory.hydrate`, `memory.write_agent`, `memory.phase_lock`, and `memory.write_governed` tools. A failed launch or unavailable connector is an honest **memory-blind** condition until either the host maps are provisioned or the connector has the approved Manus-scoped encrypted authority value. Do not replace it with a direct provider endpoint, an HTTP proxy, a local-operator fallback, a pasted token, or a generic governance tool.
 
 ## Runtime behavior (native Infisical)
 

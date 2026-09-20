@@ -124,6 +124,7 @@ def validate(repo_root: Path) -> list[str]:
         "mcp_server.py",
         "memory-mcp-connector.json",
         "memory_lifecycle.py",
+        "materialize_memory_authority.py",
         "render_infisical_mcp_connector.py",
         "render_mcp_connector.py",
         "render_memory_mcp_connector.py",
@@ -206,6 +207,13 @@ def validate(repo_root: Path) -> list[str]:
         "local_operator_fallback": "forbidden",
     }:
         errors.append("memory MCP carrier must require the signed Manus agent door")
+    if memory_connector.get("authority_delivery") != {
+        "mode": "encrypted-connector-environment",
+        "payload": "manus-scoped-agent-door-and-signing-key-only",
+        "grant": "derived-from-canonical-agent-registry",
+        "materialization": "per-process-0600-runtime-files-removed-on-exit",
+    }:
+        errors.append("memory MCP carrier must preserve scoped durable authority delivery")
     if memory_connector.get("package") != {
         "distribution": "l9-graphite-memory",
         "entrypoint": "l9-memory-server --transport stdio",
@@ -339,6 +347,10 @@ def validate(repo_root: Path) -> list[str]:
     for marker in (
         "export_agent_assertion_env.sh",
         "L9_MEMORY_AGENT_ID=manus",
+        "L9_MANUS_MEMORY_AUTHORITY_JSON",
+        "materialize_memory_authority.py",
+        "mktemp -d",
+        "trap cleanup EXIT HUP INT TERM",
         "l9-memory-server",
         "--transport stdio",
         "local-operator compatibility principal",

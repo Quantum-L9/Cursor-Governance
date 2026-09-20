@@ -1027,4 +1027,5 @@ manus-mcp-serve:
 manus-mcp-test:
 	$(PYTHON) -m unittest \
 		environment.agents.adapters.manus.tests.test_mcp_server \
-		environment.agents.adapters.manus.tests.test_memory_lifecycle
+		environment.agents.adapters.manus.tests.test_memory_lifecycle \
+		environment.agents.adapters.manus.tests.test_memory_authority

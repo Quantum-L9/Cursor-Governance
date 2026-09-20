@@ -110,6 +110,15 @@ class ManusAdapterContractTests(unittest.TestCase):
                 "local_operator_fallback": "forbidden",
             },
         )
+        self.assertEqual(
+            connector["authority_delivery"],
+            {
+                "mode": "encrypted-connector-environment",
+                "payload": "manus-scoped-agent-door-and-signing-key-only",
+                "grant": "derived-from-canonical-agent-registry",
+                "materialization": "per-process-0600-runtime-files-removed-on-exit",
+            },
+        )
         self.assertEqual(connector["package"]["distribution"], "l9-graphite-memory")
         self.assertEqual(connector["package"]["entrypoint"], "l9-memory-server --transport stdio")
         self.assertTrue(connector["scope"]["ordinary_agent_reads"])
@@ -189,6 +198,11 @@ class ManusAdapterContractTests(unittest.TestCase):
         self.assertIn("l9-memory-server", text)
         self.assertIn("export_agent_assertion_env.sh", text)
         self.assertIn("local-operator compatibility principal", text)
+        self.assertIn("L9_MANUS_MEMORY_AUTHORITY_JSON", text)
+        self.assertIn("materialize_memory_authority.py", text)
+        self.assertIn("mktemp -d", text)
+        self.assertIn("trap cleanup EXIT HUP INT TERM", text)
+        self.assertIn("unset L9_MANUS_MEMORY_AUTHORITY_JSON", text)
 
     def test_memory_mcp_renderer_emits_no_secret_stdio_draft(self) -> None:
         renderer = importlib.import_module("render_memory_mcp_connector")
@@ -198,6 +212,24 @@ class ManusAdapterContractTests(unittest.TestCase):
         self.assertEqual(server["args"], ["--governance", str(REPOSITORY)])
         self.assertNotIn("env", server)
         self.assertNotIn("headers", server)
+
+    def test_memory_mcp_renderer_accepts_only_scoped_manus_authority(self) -> None:
+        renderer = importlib.import_module("render_memory_mcp_connector")
+        authority = {
+            "agents_door_secret": "d" * 24,
+            "agent_signing_keys": {"manus": "m" * 24},
+        }
+        server = renderer.draft(REPOSITORY, authority)["mcpServers"]["l9-memory-manus"]
+        rendered = json.loads(server["env"]["L9_MANUS_MEMORY_AUTHORITY_JSON"])
+        self.assertEqual(rendered, authority)
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "authority.json"
+            source.write_text(
+                json.dumps(authority | {"human_door_secret": "h" * 24}),
+                encoding="utf-8",
+            )
+            with self.assertRaises(ValueError):
+                renderer._scoped_authority(source)
 
     def test_installer_refuses_a_non_repository_before_bootstrapping(self) -> None:
         installer = ADAPTER / "install.sh"

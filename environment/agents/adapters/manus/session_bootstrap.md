@@ -5,8 +5,8 @@ path: environment/agents/adapters/manus/session_bootstrap.md
 layer: adapter-bootstrap
 owner: governance-control-plane
 status: active
-version: 3.0.0
-updated: 2026-09-19
+version: 4.0.0
+updated: 2026-09-20
 /L9_META -->
 
 # L9 Session Bootstrap — Manus
@@ -43,11 +43,11 @@ Manus has no public SessionStart/Stop hook API. Do **not** pretend that a projec
 3. Use the **separate** package-owned `l9-memory-manus` Custom MCP connector for ordinary canonical reads or cold-safe writes when it is available. It exposes the pinned `l9-graphite-memory` MCP tools directly, including `memory.search`, `memory.hydrate`, `memory.write_agent`, `memory.phase_lock`, and `memory.write_governed`. Do not require a lifecycle receipt or phase lock for `memory.write_agent`; use `memory.write_governed` only for conflict-sensitive facts under the package’s own rules.
 4. At the end of completed, paused, or handoff work, call `memory_lifecycle_close` with the same workspace and session identifier plus a concise secret-free summary and next action. Report a non-closed status honestly and do not fabricate a close receipt.
 
-The lifecycle bridge itself calls only the upstream `canonical_hydrate` and `close_session` authorities under bounded `manus-session-start` and `manus-session-end` envelopes. Its service process must inherit a pre-launch signed Manus assertion. The separate `l9-memory-manus` connector also inherits that assertion before it starts the package-owned stdio server. Missing signing material blocks either lane; neither may degrade to a human or local-operator principal.
+The lifecycle bridge itself calls only the upstream `canonical_hydrate` and `close_session` authorities under bounded `manus-session-start` and `manus-session-end` envelopes. Its service process must inherit a pre-launch signed Manus assertion. The separate `l9-memory-manus` connector may hold the scoped Manus authority as an encrypted Custom MCP environment value; its launcher validates the shared agents door plus the Manus-only signing key, creates ephemeral private maps and the registry-derived Manus grant for the package child, then removes them on exit. Missing signing material blocks either lane; neither may degrade to a human or local-operator principal.
 
 ## Secret and provider boundary
 
-This is a model-controlled surface. Do not place a PAT, bearer, Infisical credential, cloud credential, Sonar token, Semgrep token, raw memory assertion, human memory door, or capability-broker address in the environment, repository, command line, receipt, or chat. Named capabilities that are unavailable remain honestly unavailable; do not work around that condition by requesting or pasting a secret.
+This is a model-controlled surface. Do not place a PAT, bearer, Infisical credential, cloud credential, Sonar token, Semgrep token, raw memory assertion, human memory door, peer-agent key, or capability-broker address in the project environment, repository, command line, receipt, or chat. The `l9-memory-manus` connector's encrypted environment is the sole exception for its already-approved Manus-scoped agent door and Manus signing key; its value is never exposed to the model or copied into a project environment. Named capabilities that are unavailable remain honestly unavailable; do not work around that condition by requesting or pasting a secret.
 
 Never configure a direct provider endpoint, a provider bearer, or an alternate memory client. The canonical `l9-graphite-memory` package is the sole memory authority. `l9-memory-manus` is a local stdio connector that starts that package directly, not an HTTP bridge. The `l9-governance` connection may authenticate to the governance wrapper with a token managed outside the repository, but that token is not a memory credential and must not appear in project instructions, source, or task text.
 
