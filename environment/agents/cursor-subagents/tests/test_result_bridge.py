@@ -312,21 +312,36 @@ class ResultBridgeTests(unittest.TestCase):
         self.assertEqual(document["assignment"]["role"], "test")
         self.assertEqual(document["result_kind"], "TestReport")
 
-    def test_compile_incomplete_rejects_invented_sha(self) -> None:
+    def test_compile_incomplete_never_invents_a_sha(self) -> None:
+        document = self.bridge.compile_incomplete_result(
+            {
+                "assignment_id": "asg-nosh",
+                "campaign_id": "host-native",
+                "graph_id": "host-native",
+                "action_id": "asg-nosh",
+                "agent_id": "asg-nosh",
+                "lease_id": "no-root-lease-asg-nosh",
+                "base_sha": "not-a-sha",
+            },
+            {"workspace": "/tmp/does-not-exist-incomplete-harvest"},
+            "e" * 64,
+        )
+        self.assertEqual(document["status"], "partial")
+        self.assertEqual(document["identity"]["base_sha"], "")
+        unknown_ids = {item["unknown_id"] for item in document["deliverable"]["unresolved_items"]}
+        self.assertIn("unknown-base-sha-unresolved", unknown_ids)
+
+    def test_validate_rejects_non_sha_base_sha_on_promotable_document(self) -> None:
+        document = valid_document()
+        document["identity"]["base_sha"] = "unresolved"
         with self.assertRaises(self.bridge.ResultValidationError):
-            self.bridge.compile_incomplete_result(
-                {
-                    "assignment_id": "asg-nosh",
-                    "campaign_id": "host-native",
-                    "graph_id": "host-native",
-                    "action_id": "asg-nosh",
-                    "agent_id": "asg-nosh",
-                    "lease_id": "no-root-lease-asg-nosh",
-                    "base_sha": "not-a-sha",
-                },
-                {"workspace": "/tmp/does-not-exist-incomplete-harvest"},
-                "e" * 64,
-            )
+            self.bridge.validate_result_document(document)
+
+    def test_validate_rejects_empty_base_sha_when_status_is_not_partial(self) -> None:
+        document = valid_document()
+        document["identity"]["base_sha"] = ""
+        with self.assertRaises(self.bridge.ResultValidationError):
+            self.bridge.validate_result_document(document)
 
 
 if __name__ == "__main__":

@@ -105,6 +105,24 @@ class HostNativeLifecycleTests(unittest.TestCase):
         out = compose_start.compose_host_subagent_start(self._start("tu-none", "sub-none"))
         self.assertEqual(out["permission"], "deny")
 
+    def test_workspace_roots_stamps_head_sha(self) -> None:
+        pre_payload = self._pre("tu-roots", "explore")
+        pre_payload["workspace_roots"] = [str(_GOV_ROOT)]
+        pre = compose_start.compose_host_pre_tool_use(pre_payload)
+        self.assertEqual(pre["permission"], "allow", pre)
+        start_payload = self._start("tu-roots", "sub-roots")
+        start_payload["workspace_roots"] = [str(_GOV_ROOT)]
+        start = compose_start.compose_host_subagent_start(start_payload)
+        self.assertEqual(start["permission"], "allow", start)
+        dispatch = receipts.load_dispatch(str(pre["action_id"]))
+        self.assertIsNotNone(dispatch)
+        self.assertEqual(dispatch.get("workspace"), str(_GOV_ROOT))
+        self.assertRegex(str(dispatch.get("base_sha") or ""), r"^[0-9a-fA-F]{40}$")
+        admission = receipts.load_host_admission("tu-roots")
+        self.assertIsNotNone(admission)
+        self.assertEqual(admission.get("workspace"), str(_GOV_ROOT))
+        self.assertRegex(str(admission.get("base_sha") or ""), r"^[0-9a-fA-F]{40}$")
+
     def test_explore_prose_stop_harvests_incomplete_packet(self) -> None:
         pre_payload = self._pre("tu-explore-stop", "explore")
         pre_payload["workspace_root"] = str(_GOV_ROOT)

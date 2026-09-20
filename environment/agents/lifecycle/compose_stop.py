@@ -9,7 +9,12 @@ from pathlib import Path
 from typing import Any
 
 from environment.agents.lifecycle import receipts
-from environment.agents.lifecycle.compose_start import _first_str, host_receipt_id
+from environment.agents.lifecycle.compose_start import (
+    _first_str,
+    _workspace_from_host_payload,
+    _workspace_head,
+    host_receipt_id,
+)
 from environment.agents.results.receipts import safe_receipt_id
 
 _GITHUB_RE = re.compile(
@@ -137,6 +142,15 @@ def compose_subagent_stop(payload: dict[str, Any]) -> dict[str, Any]:
     dispatch = receipts.load_dispatch(str(assignment_id))
     if dispatch is None:
         return {"status": "QUARANTINED", "reason": "orphan subagentStop: no DispatchReceipt"}
+    dispatch = dict(dispatch)
+    if not str(dispatch.get("workspace") or "").strip():
+        workspace = _workspace_from_host_payload(payload)
+        if workspace:
+            dispatch["workspace"] = workspace
+    if not str(dispatch.get("base_sha") or "").strip():
+        sha = _workspace_head(str(dispatch.get("workspace") or ""))
+        if sha:
+            dispatch["base_sha"] = sha
 
     raw_result = payload["output"] if "output" in payload else payload.get("result", "")
     raw_capture = receipts.write_raw_result(str(assignment_id), raw_result)

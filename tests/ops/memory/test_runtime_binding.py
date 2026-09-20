@@ -637,6 +637,9 @@ def test_2_same_version_different_artifact_is_not_exact(tmp_path: Path, monkeypa
     monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
     binding = bind(Environment(tmp_path, artifact_sha256="b" * 64))
     assert binding.status == rb.STATUS_UNBOUND
+    # ok gates the hook/operator spawn in control_plane_client: a foreign build
+    # of the pinned version must not be writable, not merely "not exact".
+    assert binding.ok is False
     assert binding.is_exact is False
     assert any("same version, different build" in r for r in binding.reasons)
 
@@ -728,8 +731,10 @@ def test_8_foreign_install_of_the_same_version_is_refused(tmp_path: Path, monkey
     contract, right layout, different bytes."""
     monkeypatch.setattr(rb.shutil, "which", lambda _n: None)
     foreign = Environment(tmp_path, artifact_sha256="f" * 64)
-    assert bind(foreign).status == rb.STATUS_UNBOUND
-    assert bind(foreign).installed_artifact_digest == "f" * 64
+    binding = bind(foreign)
+    assert binding.status == rb.STATUS_UNBOUND
+    assert binding.ok is False
+    assert binding.installed_artifact_digest == "f" * 64
 
 
 def test_9_record_digest_proves_the_artifact_when_pinned(tmp_path: Path, monkeypatch) -> None:
@@ -755,6 +760,7 @@ def test_10_tampered_provenance_is_refused(tmp_path: Path, monkeypatch) -> None:
     _manifest_with(manifest, artifact_sha256="a" * 64)
     binding = bind(Environment(tmp_path / "env", artifact_sha256="0" * 64), manifest_path=manifest)
     assert binding.status == rb.STATUS_UNBOUND
+    assert binding.ok is False
     assert any("is not the audited release" in r for r in binding.reasons)
 
 
