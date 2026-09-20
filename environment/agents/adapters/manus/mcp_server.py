@@ -442,6 +442,9 @@ class GovernanceMcpService:
     def _memory_lifecycle(self):
         """Load the thin lifecycle wrapper after binding it to this checkout."""
 
+        root = str(self.governance_root)
+        if root not in sys.path:
+            sys.path.insert(0, root)
         path = self.adapter_root / "memory_lifecycle.py"
         spec = importlib.util.spec_from_file_location("manus_memory_lifecycle", path)
         if spec is None or spec.loader is None:
@@ -677,7 +680,7 @@ class GovernanceMcpService:
             if name == "memory_lifecycle_close":
                 return _text_content(self.memory_lifecycle_close(arguments))
             return _text_content({"error": f"unknown tool: {name}"}, is_error=True)
-        except (OSError, RuntimeError, ToolInputError, ValueError) as exc:
+        except (ImportError, OSError, RuntimeError, ToolInputError, ValueError) as exc:
             return _text_content({"error": str(exc)}, is_error=True)
 
     def handle_rpc(self, payload: Any) -> dict[str, Any] | None:
