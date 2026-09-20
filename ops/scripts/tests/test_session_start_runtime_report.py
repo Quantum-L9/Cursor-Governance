@@ -911,7 +911,8 @@ class ReceiptReaderSurfaceTests(unittest.TestCase):
 
         path = cbr.receipt_path(env={"HOME": "/tmp/h"}, surface="cursor")
         self.assertEqual(str(path), "/tmp/h/.l9/cursor/bootstrap-state.json")
-        self.assertEqual(cbr.schema_for("cursor"), "l9.cursor-bootstrap.v1")
+        self.assertEqual(cbr.schema_for("cursor"), "l9.cursor-bootstrap.v2")
+        self.assertEqual(cbr.schema_for("claude"), "l9.claude-bootstrap.v1")
 
     def test_claude_code_alias_maps_to_claude_dir(self) -> None:
         import claude_bootstrap_receipt as cbr
@@ -1058,10 +1059,12 @@ class SessionStartCeremonyTests(unittest.TestCase):
             receipt_path = tmp / ".l9" / "cursor" / "bootstrap-state.json"
             self.assertTrue(receipt_path.is_file())
             payload = json.loads(receipt_path.read_text(encoding="utf-8"))
-            self.assertEqual(payload["schema"], "l9.cursor-bootstrap.v1")
+            self.assertEqual(payload["schema"], "l9.cursor-bootstrap.v2")
             self.assertEqual(payload["mode"], "session-start")
             self.assertEqual(payload["workspace"], str(tmp))
             self.assertIn(payload["state"], {"READY", "DEGRADED", "FAILED"})
+            self.assertEqual(payload["probes"]["mcp"], "alias:memory")
+            self.assertEqual(payload["probes"]["hooks"], "hooks.json")
             names = [item["name"] for item in lines]
             self.assertIn("cursor-adapter", names)
             cursor = next(item for item in lines if item["name"] == "cursor-adapter")

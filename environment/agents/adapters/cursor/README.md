@@ -15,7 +15,7 @@ setup.bootstrap chain. Activation is the standing wiring:
 | Rules / skills / commands | `l9-governance` local plugin at `~/.cursor/plugins/local/l9-governance` |
 | Reference plane | workspace `.cursor-commands` → `$HOME/.cursor-governance` (consumers only) |
 | Memory | Graphiti front door (`GRAPHITI_MCP_URL`) — see [`mcp.template.json`](mcp.template.json) |
-| Receipt | `~/.l9/cursor/bootstrap-state.json` (schema `l9.cursor-bootstrap.v1`), written on every SessionStart / `make start` / `/start-session` |
+| Receipt | `~/.l9/cursor/bootstrap-state.json` (schema `l9.cursor-bootstrap.v2`; reader still accepts v1), written on every SessionStart / `make start` / `/start-session` |
 
 ## Install / verify
 

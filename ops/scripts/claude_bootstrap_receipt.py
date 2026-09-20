@@ -25,7 +25,9 @@ caller.
 The reader is surface-parameterized (one expiry rule, one reader — never a
 second receipt brain per surface). ``--surface claude`` (default) reads
 ``~/.l9/claude/bootstrap-state.json``; ``--surface cursor`` reads
-``~/.l9/cursor/bootstrap-state.json`` written by ``make cursor-install``.
+``~/.l9/cursor/bootstrap-state.json`` written by SessionStart / ``make start``
+(schema ``l9.cursor-bootstrap.v2``; the reader still accepts v1). ``make
+cursor-install`` remains the explicit adapter wire.
 
 Usage:
   python3 ops/scripts/claude_bootstrap_receipt.py --read
@@ -46,6 +48,19 @@ from typing import Any
 from governance_refresh_receipt import _parse_timestamp  # noqa: PLC2701
 
 SCHEMA = "l9.claude-bootstrap.v1"
+CURSOR_BOOTSTRAP_SCHEMA_V1 = "l9.cursor-bootstrap.v1"
+CURSOR_BOOTSTRAP_SCHEMA_V2 = "l9.cursor-bootstrap.v2"
+CURSOR_BOOTSTRAP_SCHEMA = CURSOR_BOOTSTRAP_SCHEMA_V2
+CURSOR_BOOTSTRAP_ACCEPTED_SCHEMAS = frozenset(
+    {CURSOR_BOOTSTRAP_SCHEMA_V1, CURSOR_BOOTSTRAP_SCHEMA_V2}
+)
+
+#: Newest bootstrap schema version per receipt directory. Writers emit this
+#: version; the reader still accepts the previous Cursor v1 during transition.
+SCHEMA_VERSIONS = {
+    "claude": 1,
+    "cursor": 2,
+}
 
 #: Per-surface receipt directory + never_ran remediation. The governance
 #: surface id `claude-code` and the short dir name `claude` are the same
@@ -67,7 +82,9 @@ SURFACES: dict[str, dict[str, str]] = {
 
 
 def schema_for(surface: str) -> str:
-    return f"l9.{_surface_dir(surface)}-bootstrap.v1"
+    directory = _surface_dir(surface)
+    version = SCHEMA_VERSIONS.get(directory, 1)
+    return f"l9.{directory}-bootstrap.v{version}"
 
 
 def _surface_dir(surface: str) -> str:
@@ -214,7 +231,9 @@ def evaluate(
         components["memory_cli"] = receipt.get("memory", "UNKNOWN")
     if "memory_mcp" not in receipt:
         components["memory_mcp"] = receipt.get("memory", "UNKNOWN")
+    recorded_schema = str(receipt.get("schema") or "").strip()
     carried = {
+        "schema": recorded_schema,
         "components": components,
         "stage": receipt.get("stage"),
         "workspace": receipt.get("workspace"),
@@ -222,8 +241,20 @@ def evaluate(
         "generated_at": receipt.get("generated_at"),
         "remediation": receipt.get("remediation", ""),
         "reasons": receipt.get("reasons") if isinstance(receipt.get("reasons"), dict) else {},
+        "probes": receipt.get("probes") if isinstance(receipt.get("probes"), dict) else {},
         "log_path": str(receipt.get("log_path") or ""),
     }
+
+    if (
+        _surface_dir(surface) == "cursor"
+        and recorded_schema
+        and recorded_schema not in CURSOR_BOOTSTRAP_ACCEPTED_SCHEMAS
+    ):
+        return {
+            "state": UNKNOWN,
+            "reason": f"unrecognised schema {recorded_schema!r}",
+            **carried,
+        }
 
     covered = None if workspace is None else _workspace_covered(receipt, workspace)
     carried["workspace_covered"] = covered
@@ -304,7 +335,7 @@ def reprobe_degraded(result: dict[str, Any]) -> dict[str, Any]:
     )
     result["log_path"] = log_path
     for key, value in (result.get("components") or {}).items():
-        if value in {"READY", ""}:
+        if value in {"READY", "N/A", ""}:
             continue
         if key not in reasons or not reasons[key]:
             reasons[key] = (
@@ -354,13 +385,19 @@ def write_atomic_json(path: Path, payload: dict[str, Any]) -> None:
         raise
 
 
-_CLASS_TO_STATUS = {
+_CLASS_TO_STATUS_V1 = {
     "ok": "READY",
     "n/a": "READY",
     "degraded": "DEGRADED",
     "failed": "BLOCKED",
     "environment_fault": "BLOCKED",
 }
+#: v2 keeps n/a as N/A. Mapping it to READY hid a missing probe as health.
+_CLASS_TO_STATUS_V2 = {
+    **_CLASS_TO_STATUS_V1,
+    "n/a": "N/A",
+}
+_CLASS_TO_STATUS = _CLASS_TO_STATUS_V2
 
 _LINE_TO_COMPONENT = {
     "venv": "shared_bootstrap",
@@ -371,9 +408,27 @@ _LINE_TO_COMPONENT = {
     "memory": "memory",
 }
 
+CURSOR_PROBES = {
+    "shared_bootstrap": "venv",
+    "settings": "ide-profile",
+    "skills": "skill-usage-log",
+    "commands": "wiring",
+    "rules": "alias:commands",
+    "capabilities": "secrets-bind",
+    "memory": "runtime_binding",
+    "memory_cli": "alias:memory",
+    "memory_mcp": "alias:memory",
+    "mcp": "alias:memory",
+    "plugins": "plugin-path",
+    "hooks": "hooks.json",
+    "plugin": "plugin-path",
+    "commands_link": "workspace-law-files",
+}
 
-def status_from_class(klass: str) -> str:
-    return _CLASS_TO_STATUS.get((klass or "").strip().lower(), "UNKNOWN")
+
+def status_from_class(klass: str, *, schema_version: int = 2) -> str:
+    table = _CLASS_TO_STATUS_V2 if schema_version >= 2 else _CLASS_TO_STATUS_V1
+    return table.get((klass or "").strip().lower(), "UNKNOWN")
 
 
 def probe_cursor_hooks(home: Path) -> tuple[str, str]:
@@ -416,14 +471,14 @@ def build_cursor_bootstrap_payload(
     generated_at: str | None = None,
     governance_revision: str | None = None,
 ) -> dict[str, Any]:
-    """Complete l9.cursor-bootstrap.v1 payload from this SessionStart run."""
+    """Complete l9.cursor-bootstrap.v2 payload from this SessionStart run."""
     by_name = {str(item.get("name") or ""): item for item in lines}
     components: dict[str, str] = {key: "UNKNOWN" for key in COMPONENTS}
     reasons: dict[str, str] = {}
 
     for line_name, key in _LINE_TO_COMPONENT.items():
         item = by_name.get(line_name) or {}
-        status = status_from_class(str(item.get("class") or ""))
+        status = status_from_class(str(item.get("class") or ""), schema_version=2)
         components[key] = status
         summary = str(item.get("summary") or "")
         if status != "READY" and summary:
@@ -459,7 +514,7 @@ def build_cursor_bootstrap_payload(
         state = "DEGRADED"
 
     payload: dict[str, Any] = {
-        "schema": schema_for("cursor"),
+        "schema": CURSOR_BOOTSTRAP_SCHEMA,
         "surface": "cursor",
         "mode": "session-start",
         "state": state,
@@ -474,6 +529,7 @@ def build_cursor_bootstrap_payload(
         "hooks": hooks_status,
         "plugin": plugin_probe,
         "commands_link": commands_status,
+        "probes": dict(CURSOR_PROBES),
         "reasons": {
             **reasons,
             "hooks": hooks_reason,

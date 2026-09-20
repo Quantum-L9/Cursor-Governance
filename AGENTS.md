@@ -1793,6 +1793,48 @@ stays on disk (additive_only). Do not fold it.
   `tests/ops/memory/test_hook_envelope.py`,
   `tests/ops/memory/test_no_agent_lane_interposition.py`.
 
+<!-- SESSIONSTART_RECEIPT_HYDRATE_UNBUILT_V1 -->
+## SessionStart writes the Cursor receipt, prints full hydrate, lists 5 unbuilt plans (2026-09-19)
+
+Append-only. This supersedes only: the "Cursor SessionStart does not run
+`claude_projection.py`" sentence does **not** waive receipt writing; the
+"emits no plan surface" sentence in `SESSIONSTART_NO_PLAN_SURFACE_V1` for a
+bounded 5-plan list; and tunnel / Neo4j SessionStart rows. Those paragraphs
+stay on disk (additive_only). Do not fold them.
+
+- `/start-session` **is** the bootstrap ceremony: `make start` runs
+  `ops/hooks/session_start_bootstrap.sh` (same script as the SessionStart hook).
+- Every Cursor bootstrap run **must** write `~/.l9/cursor/bootstrap-state.json`
+  (`l9.cursor-bootstrap.v1`, `mode: session-start`) from this-run evidence.
+  A 17-day-old file after `make start` is a ceremony defect. `never_ran` and
+  TTL `unknown` are this-session failures, not `n/a`. `make cursor-install`
+  remains the explicit adapter wire; it is not the only writer.
+- Provider tunnel and local Neo4j `:7687` are not SessionStart planes. Canonical
+  memory is Graphiti via the memory control plane. Do not probe them here.
+- After Runtime, print the **full** `### memory hydrate` packet (all facts,
+  continuation, JSON fence). Do not truncate with `…[truncated]`.
+- After hydrate, print `### Unbuilt plans`: the 5 most recent unbuilt root
+  `.plan.md` files (`audit_plans.py --format session-start --window-days 0
+  --limit 5`). Display-only. No archive, no harvest, no auto-Build. Kill
+  switch: `L9_SESSIONSTART_UNBUILT_PLANS=0`. Full harvest stays
+  `/l9-pipeline-audit`. Links-only auto-wire is unchanged.
+
+<!-- SESSIONSTART_CURSOR_BOOTSTRAP_V2 -->
+## Cursor bootstrap receipt schema is v2 (2026-09-19)
+
+Append-only. This supersedes only the `l9.cursor-bootstrap.v1` schema name in
+`SESSIONSTART_RECEIPT_HYDRATE_UNBUILT_V1`. That paragraph stays on disk
+(additive_only). Do not fold it. Claude remains `l9.claude-bootstrap.v1`.
+
+- Writers emit **`l9.cursor-bootstrap.v2`** (`schema_for("cursor")`, SessionStart
+  payload, `make cursor-install`). The newest Cursor bootstrap schema is v2;
+  `l9.kernel_apply.v2` is a different receipt family.
+- The reader still accepts `l9.cursor-bootstrap.v1` during transition. An
+  unrecognised Cursor schema is `unknown`, not ready.
+- v2 `n/a` stays `N/A` (not `READY`). `probes` names the this-run source
+  (`venv`, `runtime_binding`, `alias:memory`, …). Identity fields (`surface`,
+  `mode`, `stage`, `remediation`, `ttl_seconds`) remain constants.
+
 <!-- PR_STACK_OPT_IN_V1 -->
 ## PR stacking is opt-in (2026-09-19) — supersedes §2.1.1 "Default is PR_STACK=auto" and §4.1 "`PR_STACK=auto` is the default at start and at `make pr`"
 
@@ -1846,29 +1888,3 @@ paragraph. That paragraph stays on disk (additive_only). Do not fold it.
 - **Pin.** Live 24h recall needs the bound `l9-graphite-memory` to accept
   `--recorded-after` (ADR-0035). Until that pin is sealed, prefetch
   fail-opens. Do not invent a second store reader to paper over it.
-
-<!-- SESSIONSTART_RECEIPT_HYDRATE_UNBUILT_V1 -->
-## SessionStart writes the Cursor receipt, prints full hydrate, lists 5 unbuilt plans (2026-09-19)
-
-Append-only. This supersedes only: the "Cursor SessionStart does not run
-`claude_projection.py`" sentence does **not** waive receipt writing; the
-"emits no plan surface" sentence in `SESSIONSTART_NO_PLAN_SURFACE_V1` for a
-bounded 5-plan list; and tunnel / Neo4j SessionStart rows. Those paragraphs
-stay on disk (additive_only). Do not fold them.
-
-- `/start-session` **is** the bootstrap ceremony: `make start` runs
-  `ops/hooks/session_start_bootstrap.sh` (same script as the SessionStart hook).
-- Every Cursor bootstrap run **must** write `~/.l9/cursor/bootstrap-state.json`
-  (`l9.cursor-bootstrap.v1`, `mode: session-start`) from this-run evidence.
-  A 17-day-old file after `make start` is a ceremony defect. `never_ran` and
-  TTL `unknown` are this-session failures, not `n/a`. `make cursor-install`
-  remains the explicit adapter wire; it is not the only writer.
-- Provider tunnel and local Neo4j `:7687` are not SessionStart planes. Canonical
-  memory is Graphiti via the memory control plane. Do not probe them here.
-- After Runtime, print the **full** `### memory hydrate` packet (all facts,
-  continuation, JSON fence). Do not truncate with `…[truncated]`.
-- After hydrate, print `### Unbuilt plans`: the 5 most recent unbuilt root
-  `.plan.md` files (`audit_plans.py --format session-start --window-days 0
-  --limit 5`). Display-only. No archive, no harvest, no auto-Build. Kill
-  switch: `L9_SESSIONSTART_UNBUILT_PLANS=0`. Full harvest stays
-  `/l9-pipeline-audit`. Links-only auto-wire is unchanged.

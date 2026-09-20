@@ -162,3 +162,39 @@ def test_workspace_binding_is_back_compatible() -> None:
     asked = receipt.evaluate(legacy, now=NOW, governance_revision="d" * 40, workspace="/anywhere")
     assert asked["workspace_covered"] is None
     assert asked["state"] == receipt.READY
+
+
+def test_cursor_writer_emits_newest_schema() -> None:
+    assert receipt.schema_for("cursor") == receipt.CURSOR_BOOTSTRAP_SCHEMA_V2
+    assert receipt.schema_for("claude") == receipt.SCHEMA
+
+
+def test_cursor_v1_receipt_still_evaluates() -> None:
+    payload = make()
+    payload["schema"] = receipt.CURSOR_BOOTSTRAP_SCHEMA_V1
+    result = receipt.evaluate(payload, now=NOW, surface="cursor", governance_revision="a" * 40)
+    assert result["state"] == receipt.READY
+
+
+def test_cursor_unknown_schema_is_unknown() -> None:
+    payload = make()
+    payload["schema"] = "l9.cursor-bootstrap.v99"
+    result = receipt.evaluate(payload, now=NOW, surface="cursor", governance_revision="a" * 40)
+    assert result["state"] == receipt.UNKNOWN
+    assert "unrecognised schema" in result["reason"]
+
+
+def test_cursor_v2_maps_na_to_na_not_ready(tmp_path: Path) -> None:
+    payload = receipt.build_cursor_bootstrap_payload(
+        workspace=str(tmp_path),
+        lines=[{"name": "skill-usage", "class": "n/a", "summary": "no skill-usage log"}],
+        home=tmp_path,
+        generated_at="2026-09-19T00:00:00Z",
+        governance_revision="a" * 40,
+    )
+    assert payload["schema"] == receipt.CURSOR_BOOTSTRAP_SCHEMA_V2
+    assert payload["skills"] == "N/A"
+    assert payload["probes"]["skills"] == "skill-usage-log"
+    assert payload["probes"]["mcp"] == "alias:memory"
+    assert receipt.status_from_class("n/a", schema_version=1) == "READY"
+    assert receipt.status_from_class("n/a", schema_version=2) == "N/A"

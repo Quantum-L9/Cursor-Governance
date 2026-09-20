@@ -1,6 +1,6 @@
 ---
 name: start-session
-version: "3.5.0"
+version: "3.6.0"
 description: "Run the L9 sessionStart bootstrap for the open workspace (same path as Cursor hooks + make start)"
 auto_chain: null
 ---
@@ -108,7 +108,7 @@ second check grid. If a section is absent, say so.
 - Cursor also runs this bootstrap automatically on `sessionStart` via `~/.cursor/hooks.json`. `/start-session` is the **manual / repair / new-window** entry that uses the identical script.
 - Slash commands activate when governance is wired: `~/.cursor/plugins/local/l9-governance` → SSOT (discovers `commands/`), plus repo `.cursor-commands` symlink. Bootstrap/`make start` ensures that wiring.
 - Resume stack is canonical memory only (`ContinuationCapsuleV2`; `ops/graphiti/MEMORY_BANK_POLICY.md` is archival).
-- `/start-session` **is** the bootstrap ceremony (`make start` → `session_start_bootstrap.sh`). Every run writes `~/.l9/cursor/bootstrap-state.json`.
+- `/start-session` **is** the bootstrap ceremony (`make start` → `session_start_bootstrap.sh`). Every run writes `~/.l9/cursor/bootstrap-state.json` (`l9.cursor-bootstrap.v2`).
 - SessionStart prints the 5 most recent unbuilt root plans after hydrate. Full harvest remains `/l9-pipeline-audit`. Shelf-only is `/l9-audit-plans`.
 
 --- End Command ---
