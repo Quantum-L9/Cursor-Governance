@@ -40,7 +40,7 @@ def _write_private_json(path: Path, payload: dict[str, Any]) -> None:
         raise
 
 
-def _scoped_tokens(raw: object) -> dict[str, object]:
+def scoped_tokens(raw: object) -> dict[str, object]:
     if not isinstance(raw, dict):
         raise AuthorityMaterializationError("connector authority must be a JSON object")
     if "human_door_secret" in raw:
@@ -100,7 +100,7 @@ def materialize(governance: Path, output_directory: Path, authority: object) -> 
     output_directory = output_directory.resolve()
     if not output_directory.is_dir() or not _mode_is_private(output_directory, 0o700):
         raise AuthorityMaterializationError("runtime authority directory must be mode 0700")
-    tokens = _scoped_tokens(authority)
+    tokens = scoped_tokens(authority)
     grants = _manus_grants(governance)
     _write_private_json(output_directory / "agent_tokens.local.json", tokens)
     try:

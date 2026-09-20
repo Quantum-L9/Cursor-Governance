@@ -54,7 +54,14 @@ if [ ! -d "$RUNTIME_PARENT" ]; then
   RUNTIME_PARENT=/tmp
 fi
 umask 077
-RUNTIME_AUTHORITY_DIRECTORY="$(mktemp -d "$RUNTIME_PARENT/l9-manus-memory.XXXXXX")"
+if ! RUNTIME_AUTHORITY_DIRECTORY="$(mktemp -d "$RUNTIME_PARENT/l9-manus-memory.XXXXXX")"; then
+  printf '%s\n' 'manus-memory-mcp ERROR: could not create private runtime authority directory' >&2
+  exit 1
+fi
+if [ -z "$RUNTIME_AUTHORITY_DIRECTORY" ] || [ ! -d "$RUNTIME_AUTHORITY_DIRECTORY" ]; then
+  printf '%s\n' 'manus-memory-mcp ERROR: runtime authority directory is missing after mktemp' >&2
+  exit 1
+fi
 chmod 700 "$RUNTIME_AUTHORITY_DIRECTORY"
 cleanup() {
   rm -rf "$RUNTIME_AUTHORITY_DIRECTORY"

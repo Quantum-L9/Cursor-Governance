@@ -61,6 +61,18 @@ class ManusMemoryAuthorityTests(unittest.TestCase):
             with self.assertRaises(authority.AuthorityMaterializationError):
                 authority.materialize(REPOSITORY, output, self._scoped_authority())
 
+    def test_public_scoped_tokens_rejects_peer_maps(self) -> None:
+        peer = {
+            "agents_door_secret": "d" * 24,
+            "agent_signing_keys": {"manus": "m" * 24, "cursor": "c" * 24},
+        }
+        with self.assertRaises(authority.AuthorityMaterializationError):
+            authority.scoped_tokens(peer)
+        self.assertEqual(
+            authority.scoped_tokens(self._scoped_authority())["agent_signing_keys"],
+            {"manus": "m" * 24},
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -31,11 +31,11 @@ def _governance_root(value: str) -> Path:
 
 
 def _scoped_authority(path: Path) -> dict[str, object]:
-    from materialize_memory_authority import AuthorityMaterializationError, _scoped_tokens
+    from materialize_memory_authority import AuthorityMaterializationError, scoped_tokens
 
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
-        return _scoped_tokens(raw)
+        return scoped_tokens(raw)
     except (OSError, json.JSONDecodeError, AuthorityMaterializationError) as exc:
         raise ValueError(f"invalid Manus-scoped authority file: {exc}") from exc
 
@@ -54,12 +54,28 @@ def draft(governance_root: Path, authority: dict[str, object] | None = None) -> 
 
 
 def _write_draft(path: Path, payload: dict[str, object], *, contains_authority: bool) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
-        handle.write(json.dumps(payload, indent=2) + "\n")
-    if contains_authority:
-        os.chmod(path, 0o600)
+    destination = path.expanduser()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if destination.is_symlink() or (destination.exists() and not destination.is_file()):
+        raise ValueError(f"refusing to write through a non-regular path: {destination}")
+    encoded = json.dumps(payload, indent=2) + "\n"
+    temporary = destination.with_name(f".{destination.name}.{os.getpid()}.tmp")
+    if temporary.is_symlink() or (temporary.exists() and not temporary.is_file()):
+        raise ValueError(f"refusing to clobber a non-regular temp path: {temporary}")
+    if temporary.exists():
+        temporary.unlink()
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(encoded)
+        os.chmod(temporary, 0o600)
+        os.replace(temporary, destination)
+        os.chmod(destination, 0o600)
+    except BaseException:
+        Path(temporary).unlink(missing_ok=True)
+        raise
+    if contains_authority and (destination.stat().st_mode & 0o777) != 0o600:
+        os.chmod(destination, 0o600)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -75,12 +91,13 @@ def main(argv: list[str] | None = None) -> int:
     try:
         governance_root = _governance_root(args.governance)
         authority = _scoped_authority(args.authority_file) if args.authority_file else None
-    except ValueError as exc:
+        _write_draft(
+            args.output,
+            draft(governance_root, authority),
+            contains_authority=authority is not None,
+        )
+    except (ValueError, OSError) as exc:
         parser.error(str(exc))
-        return 2
-    _write_draft(
-        args.output, draft(governance_root, authority), contains_authority=authority is not None
-    )
     print(str(args.output.resolve()))
     return 0
 

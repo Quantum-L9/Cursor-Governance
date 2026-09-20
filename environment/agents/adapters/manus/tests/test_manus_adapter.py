@@ -201,6 +201,7 @@ class ManusAdapterContractTests(unittest.TestCase):
         self.assertIn("L9_MANUS_MEMORY_AUTHORITY_JSON", text)
         self.assertIn("materialize_memory_authority.py", text)
         self.assertIn("mktemp -d", text)
+        self.assertIn("runtime authority directory is missing after mktemp", text)
         self.assertIn("trap cleanup EXIT HUP INT TERM", text)
         self.assertIn("unset L9_MANUS_MEMORY_AUTHORITY_JSON", text)
 
@@ -230,6 +231,27 @@ class ManusAdapterContractTests(unittest.TestCase):
             )
             with self.assertRaises(ValueError):
                 renderer._scoped_authority(source)
+
+    def test_memory_mcp_renderer_writes_authority_drafts_atomically(self) -> None:
+        renderer = importlib.import_module("render_memory_mcp_connector")
+        authority = {
+            "agents_door_secret": "d" * 24,
+            "agent_signing_keys": {"manus": "m" * 24},
+        }
+        payload = renderer.draft(REPOSITORY, authority)
+        with tempfile.TemporaryDirectory() as temporary:
+            destination = Path(temporary) / "l9-memory-manus.json"
+            destination.write_text("{}\n", encoding="utf-8")
+            destination.chmod(0o644)
+            renderer._write_draft(destination, payload, contains_authority=True)
+            self.assertEqual(destination.stat().st_mode & 0o777, 0o600)
+            written = json.loads(destination.read_text(encoding="utf-8"))
+            self.assertEqual(written, payload)
+
+            linked = Path(temporary) / "linked.json"
+            linked.symlink_to(destination)
+            with self.assertRaises(ValueError):
+                renderer._write_draft(linked, payload, contains_authority=True)
 
     def test_installer_refuses_a_non_repository_before_bootstrapping(self) -> None:
         installer = ADAPTER / "install.sh"
