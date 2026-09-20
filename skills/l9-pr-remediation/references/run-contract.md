@@ -6,8 +6,8 @@ role: run_contract
 tags: [pr, preflight, venv, command-surface, topology, cache, makefile, board]
 owner: igor_beylin
 status: active
-version: 1.6.0
-updated: 2026-09-05
+version: 1.7.0
+updated: 2026-09-19
 /L9_META -->
 
 # Run Contract (min preflight + cache)
@@ -24,12 +24,12 @@ Emit `RUN_CONTRACT` in the first Converge status. Reuse until invalidation.
 |----|-------|------|
 | `P_cmd` | Cache remediator verify=`make precommit-repo` and remediator publish=`git push` of an already-open PR branch. Name ceremony verbs `make pr-check` and `PR_REMEDIATE=0 make pr` only as **do not run**. INTERNAL: `pr-preflight`, `precommit`, `pr-full`. | Caching `make pr` / `make pr-check` as this skill's publish/verify is a skill defect. |
 | `P_venv` | `.python-version`, `.venv/pyvenv.cfg` `home`, `file` + `platform.machine()` of `.venv/bin/python`, `cryptography` + `pytest` import | Arch mismatch, miniconda `home`, or import fail → set `UV_PYTHON` to uv-managed **native** CPython matching requires-python. Never `uv python find --system` (conda `base` wins). Do not loop. |
-| `P_fleet` | `"$GOV_PY" ops/autonomy/pr_fleet.py plan --repo {owner}/{repo} --board --json` — one REST pass: every open PR with files, `stack_edges`, `overlap` (generated-only flagged), `merge_order`, `merge_now`, `waves`, board per head, `fingerprint`; receipt `.l9/pr/fleet.json` | Non-generated overlap is serialized by the planner, never by hand. Start merge trains on `merge_now` immediately; do not wait for REMEDIATE_ALL. `FAIL:` from the planner → no wave; fix the telemetry. Re-plan only when the fingerprint changes. |
+| `P_fleet` | `"$GOV_PY" ops/autonomy/pr_fleet.py plan --repo {owner}/{repo} --board --json` then `scripts/require_audit.py --fleet .l9/pr/fleet.json` then `pr_fleet.py plan --board --audit-bind .l9/pr/audit-bind.json` — inventory, `hold_merge`, waves, `merge_now`, fingerprint; receipt `.l9/pr/fleet.json` | Non-generated overlap is serialized by the planner, never by hand. When `hold_merge` is true, skip `--kind merge` until same-head eligible units publish. Absent/stale audit → no hold. Independent remediations still launch together. `FAIL:` from the planner → no wave; fix the telemetry. Re-plan only when the fingerprint changes. |
 | `P_stack` | Read `stack_edges` / `merge_order` from the receipt (parents before children) | Stacked parent: squash/rebase denied. Children first, retarget, or `--merge`. |
 | `P_wire` | `git worktree list` first; reuse the worktree that already holds the branch | `worktree_add_wired.sh` only when none exists. Do not commit wire / `AGENTS.md`. |
 | `P_board` | Per open PR: `"$GOV_PY" ops/autonomy/pr_board.py --repo {owner}/{repo} --pr {n} --json` (`pr_fleet.py plan --board` runs it for every PR concurrently) | The board verdict (`merge` / `fix` / `wait` / `leftover`) and the required-check set come from here. `statusCheckRollup` in `P_prs` is inventory, not a verdict — it lists optional checks too. Do not author a verdict from `mergeStateStatus`, a bare check conclusion, or an issue body. Re-run per head SHA; a verdict is stale the moment the head moves. |
 | `P_blockers` | Known HUMAN / CI_PIPELINE / ENVIRONMENT — **edit axis only** | Note which files you may not patch; continue independent CODEBASE work. These classes are **not** board verdicts and do not park a PR. A named human decision or an unfixable required check reaches the board only as `pr_board.py --human-decision` / `--unfixable-check`. |
-| `P_digest` | For the PR about to be edited: `skills/l9-pr-digest/scripts/pr_digest.py` → `.l9/pr/pr-digest-result.json`, then `require_digest.py --mode converge --head-sha {head}`. Diagnose-only uses `--mode diagnose` and continues after a valid non-READY packet. | Missing, unbound, or stale-head digest → do not edit. Converge non-READY → do not remediate that PR. |
+| `P_audit` | `scripts/require_audit.py --repo {owner}/{repo} --fleet .l9/pr/fleet.json`. Same-head `mutation_eligible` units hold merge and ingest via `ingest_signals.py --audit`. | Absent/stale packet → no hold, continue. Do not load `_emit*.py` generators. Skip `WIP/Legal Defense`. |
 | `P_diag` | For the PR about to be edited: `scripts/ingest_signals.py` (head SHA + failed checks + unresolved threads + CRA). Then cited-file read at that SHA. `gh run view --log-failed` is root-cause judgment, not retrieve. | Missing evidence → `Unknown`; do not edit. `disposition: fix` requires a verified root cause. |
 | `P_verify` | `make precommit-repo` (changed-file hooks plus ruff) | `make precommit-repo` is the remediator gate. Record `Passed` / `Failed` / `Unknown`. Do not run `make pr-check`. Do not run pytest or conformance. Do not treat local `Passed` as remote CI `Passed`. |
 

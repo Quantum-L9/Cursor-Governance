@@ -141,6 +141,153 @@ def test_waiting_pr_gets_a_background_watcher(tmp_path: Path, monkeypatch) -> No
     assert 1 not in plan["first_wave"]["poll"]
 
 
+def test_force_remediate_independent_audit_prs_launch_together(tmp_path: Path, monkeypatch) -> None:
+    _probe(tmp_path, monkeypatch, INDEPENDENT)
+    prs = pr_fleet.inventory(TARGET)
+    plan = pr_fleet.waves(
+        prs,
+        caps=CLAUDE,
+        order=[1, 2, 3],
+        boards={1: "merge", 2: "fix", 3: "merge"},
+        force_remediate=[1, 3],
+        hold_merge=True,
+    )
+    assert plan["hold_merge"] is True
+    assert plan["merge_now"] == []
+    assert plan["first_wave"]["merge"] == []
+    assert plan["first_wave"]["remediate"] == [1, 3, 2]
+    assert plan["first_wave"]["blocked_claim"] == []
+
+
+def test_force_remediate_overlapping_audit_prs_serialize(tmp_path: Path, monkeypatch) -> None:
+    _probe(tmp_path, monkeypatch, OVERLAP)
+    prs = pr_fleet.inventory(TARGET)
+    plan = pr_fleet.waves(
+        prs,
+        caps=CLAUDE,
+        order=[1, 2],
+        boards={1: "merge", 2: "merge"},
+        overlap=pr_fleet.overlap_matrix(prs),
+        force_remediate=[1, 2],
+        hold_merge=True,
+    )
+    assert plan["first_wave"]["merge"] == []
+    assert plan["first_wave"]["remediate"] == [1]
+    assert plan["first_wave"]["blocked_claim"] == [{"pr": 2, "conflicts_with": [1]}]
+    assert plan["mutation_waves"][1]["remediate"] == [2]
+
+
+def test_force_remediate_never_admits_leftover(tmp_path: Path, monkeypatch) -> None:
+    _probe(tmp_path, monkeypatch, INDEPENDENT)
+    prs = pr_fleet.inventory(TARGET)
+    plan = pr_fleet.waves(
+        prs,
+        caps=CLAUDE,
+        order=[1, 2, 3],
+        boards={1: "leftover", 2: "fix", 3: "merge"},
+        force_remediate=[1, 3],
+        hold_merge=True,
+    )
+    assert 1 not in plan["first_wave"]["remediate"]
+    assert 3 in plan["first_wave"]["remediate"]
+    assert 1 not in plan["force_remediate"]
+
+
+def test_all_eligible_units_leftover_releases_the_hold(tmp_path: Path, monkeypatch) -> None:
+    """A hold with nothing left to wait for must not suppress the whole board.
+
+    Every audit-eligible unit is leftover, so ``forced`` is empty. Keeping
+    ``hold_merge`` would zero ``merge_now`` for green PRs no audit ever named.
+    """
+    _probe(tmp_path, monkeypatch, INDEPENDENT)
+    prs = pr_fleet.inventory(TARGET)
+    plan = pr_fleet.waves(
+        prs,
+        caps=CLAUDE,
+        order=[1, 2, 3],
+        boards={1: "leftover", 2: "merge", 3: "merge"},
+        force_remediate=[1],
+        hold_merge=True,
+    )
+    assert plan["force_remediate"] == []
+    assert plan["hold_merge"] is False
+    assert plan["merge_now"] == [2, 3]
+
+
+def test_audit_write_surfaces_reach_claims_and_assignment(tmp_path: Path, monkeypatch) -> None:
+    """An audit-authorized surface outside the PR diff is claimed and granted."""
+    _probe(tmp_path, monkeypatch, INDEPENDENT)
+    prs = pr_fleet.inventory(TARGET)
+    surface = "ops/audit-authorized.py"
+    plan = pr_fleet.waves(
+        prs,
+        caps=CLAUDE,
+        order=[1, 2, 3],
+        boards={1: "fix", 2: "fix", 3: "fix"},
+        write_surfaces={1: [surface], 2: [surface]},
+    )
+    # PRs 1 and 2 share no file, but now share an authorized surface, so one
+    # of them has to wait rather than write the same path concurrently.
+    assert plan["first_wave"]["blocked_claim"] == [{"pr": 2, "conflicts_with": [1]}]
+
+    pr1 = next(pr for pr in prs if pr["number"] == 1)
+    packet = pr_fleet.build_assignment(
+        TARGET,
+        pr1,
+        kind="remediate",
+        run_id="run1",
+        graph_id="abcd",
+        write_surfaces=[surface],
+    )
+    assert surface in packet["allowed_paths"]
+    recon = pr_fleet.build_assignment(
+        TARGET, pr1, kind="recon", run_id="run1", graph_id="abcd", write_surfaces=[surface]
+    )
+    assert surface not in recon["allowed_paths"]
+
+
+def test_load_audit_bind_carries_write_surfaces(tmp_path: Path) -> None:
+    handoff = tmp_path / "remediation-handoff.json"
+    handoff.write_text(
+        json.dumps(
+            {
+                "hold_merge": True,
+                "eligible_prs": [1, 2],
+                "eligible_units": [
+                    {"finding_id": "F-1", "pr": 1, "write_surfaces": ["ops/x.py"]},
+                    {"finding_id": "F-2", "pr": 1, "write_surfaces": ["ops/y.py", "ops/x.py"]},
+                    {"finding_id": "F-3", "pr": 9, "write_surfaces": ["ops/z.py"]},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    bind = pr_fleet.load_audit_bind(handoff)
+    assert bind["write_surfaces"] == {1: ["ops/x.py", "ops/y.py"]}
+    # A unit for a PR that is not eligible contributes nothing.
+    assert 9 not in bind["write_surfaces"]
+    # The receipt round-trips through JSON, which stringifies the keys.
+    assert pr_fleet.surfaces_by_pr(json.loads(json.dumps(bind["write_surfaces"]))) == {
+        1: ["ops/x.py", "ops/y.py"]
+    }
+
+
+def test_no_audit_still_remediates_independent_fix_prs_together(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _probe(tmp_path, monkeypatch, INDEPENDENT)
+    prs = pr_fleet.inventory(TARGET)
+    plan = pr_fleet.waves(
+        prs,
+        caps=CLAUDE,
+        order=[1, 2, 3],
+        boards={1: "fix", 2: "fix", 3: "fix"},
+    )
+    assert plan["hold_merge"] is False
+    assert plan["first_wave"]["remediate"] == [1, 2, 3]
+    assert plan["first_wave"]["merge"] == []
+
+
 def test_merge_now_starts_independent_green_prs_without_waiting_for_the_fleet(
     tmp_path: Path, monkeypatch
 ) -> None:
@@ -390,6 +537,8 @@ def test_assignment_carries_every_delegation_contract_input() -> None:
     assert recon["cursor"]["managed_task_type"] == "l9-recon"
     prompt = pr_fleet.render_prompt(packet)
     assert packet["base_sha"] in prompt and "Natural-language completion is invalid" in prompt
+    assert "graphiti-prefetch.sh" in prompt
+    assert "graphiti-session-end.sh" in prompt
 
 
 def test_correct_document_is_accepted() -> None:

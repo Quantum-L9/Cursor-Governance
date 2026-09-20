@@ -171,6 +171,8 @@ tiers:
     reason: superseded by skills/l9-pipeline-audit/; archived out of live skills/ discovery — never auto-invoke or reconcile
   - item: skills/_archived/l9-governance-wiring/
     reason: superseded by skills/l9-wire-into-repo/ for generic repository wiring; specialized governance operations belong to their narrower owners (skills/l9-governance-symlinks/ for workspace binding) — archived out of live skills/ discovery, never auto-invoke or reconcile
+  - item: skills/_archived/l9-wire-skill-into-repo/
+    reason: superseded by skills/l9-wire-into-repo/; archived out of live skills/ discovery — never auto-invoke or reconcile
 reasoning_routing:
   purpose: Which l9-structured-reasoning reference applies to which task class.
   sources:

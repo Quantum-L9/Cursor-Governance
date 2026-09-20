@@ -32,6 +32,7 @@ under their own lifecycle contract.
 | `l9-pr-remediation-deprecated/` | `skills/l9-pr-remediation/` |
 | `l9-structured-reasoning-deprecated/` | `skills/l9-structured-reasoning/` |
 | `l9-update-command/` | `skills/l9-dag-authoring/` (COMMAND_BIND operation) |
+| `l9-wire-skill-into-repo/` | `skills/l9-wire-into-repo/` |
 
 Every directory under `skills/_archived/` must appear in this table. Rows are
 sourced from `AUTONOMY_MANIFEST.yaml` `do_not_migrate_to_skills`.

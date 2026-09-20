@@ -50,18 +50,17 @@ def test_digest_has_no_colliding_command_wrapper() -> None:
     assert "require_digest.py" in skill
 
 
-def test_remediator_consumes_digest_before_mutate() -> None:
+def test_remediator_consumes_audit_before_mutate() -> None:
     skill = (ROOT / "skills/l9-pr-remediation/SKILL.md").read_text(encoding="utf-8")
     diagnose = skill.index("## Diagnose")
     converge = skill.index("## Converge — Inputs → Actions")
-    assert skill.find("l9-pr-digest", diagnose) != -1
-    assert skill.find("require_digest.py --mode converge", converge) != -1
+    assert skill.find("require_audit.py", diagnose) != -1
+    assert skill.find("hold_merge", converge) != -1
     workflow = (ROOT / "skills/l9-pr-remediation/references/diagnose-workflow.md").read_text(
         encoding="utf-8"
     )
-    assert "Digest first (mandatory)" in workflow
-    assert "Do **not** pass `--quiet`" in workflow or "[digest]" in workflow
+    assert "require_audit.py" in workflow
     contract = (ROOT / "skills/l9-pr-remediation/references/run-contract.md").read_text(
         encoding="utf-8"
     )
-    assert "P_digest" in contract
+    assert "P_audit" in contract

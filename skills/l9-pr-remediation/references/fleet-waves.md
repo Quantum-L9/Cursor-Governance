@@ -6,15 +6,21 @@ role: fleet_waves
 tags: [pr, fleet, waves, subagents, concurrency, result-contract]
 owner: igor_beylin
 status: active
-version: 1.1.0
-updated: 2026-09-10
+version: 1.2.0
+updated: 2026-09-19
 /L9_META -->
 
 # Fleet waves (parallel remediation without a campaign)
 
 `ops/autonomy/pr_fleet.py` names the largest safe wave; the main agent launches
 it natively. Merge-train lanes (`merge_now`) start as soon as the oldest green
-PRs are safe — they do not wait for REMEDIATE_ALL. No Program Execution, no
+PRs are safe **and** `hold_merge` is false — they do not wait for REMEDIATE_ALL.
+Same-head `/l9-pr-audit` `mutation_eligible` units (`require_audit.py`) enter
+`first_wave.remediate` first, concurrently when claims do not conflict, and set
+`hold_merge`. Independent non-overlapping remediations launch in the same wave
+whether or not an audit packet exists. Host `subagentStart` runs
+`graphiti-prefetch.sh` before the write gate; host `subagentStop` runs
+`graphiti-session-end.sh`. No Program Execution, no
 campaign, no admission token, no lease store. Safety comes from three things
 that already exist:
 
@@ -49,9 +55,11 @@ There is no tighter hidden Cursor cap this skill should wait on.
 
 ```bash
 GOV_PY="${GOV_PY:-$PWD/.venv/bin/python}"
-"$GOV_PY" ops/autonomy/pr_fleet.py plan --repo {owner}/{repo} --board --json
+"$GOV_PY" ops/autonomy/pr_fleet.py plan --repo {owner}/{repo} --board --json \
+  --audit-bind .l9/pr/audit-bind.json
 # wave 1, all assignments in one call per kind; --record writes the lifecycle
 # assignment the results gateway loads; --prompt renders the Task prompt
+# skip --kind merge while hold_merge is true
 "$GOV_PY" ops/autonomy/pr_fleet.py assign --repo {owner}/{repo} --kind merge --record --prompt --json
 "$GOV_PY" ops/autonomy/pr_fleet.py assign --repo {owner}/{repo} --kind remediate --record --prompt --json
 "$GOV_PY" ops/autonomy/pr_fleet.py assign --repo {owner}/{repo} --kind recon --record --prompt --json
@@ -63,7 +71,7 @@ using its `cursor.managed_task_type` and `prompt` (profile caps). `--record`
 must write `.l9/pr/assignments/` before launch. Serializing independent ready
 lanes is a protocol violation. Main agent afterwards: poll every PR in
 `first_wave.poll` (15s snapshots) and launch `--kind merge` the moment
-`merge_now` grows. Never `AwaitShell` on a lane. A watcher report does not
+`hold_merge` is false and `merge_now` grows. Never `AwaitShell` on a lane. A watcher report does not
 waive remediator poll duty.
 
 Each lane works on its own worktree for its own branch (`git worktree list`

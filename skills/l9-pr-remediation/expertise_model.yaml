@@ -12,6 +12,8 @@ expertise_model:
   doctrine:
     - plan the fleet once with the deterministic owner; re-plan only when a head moves
     - launch the largest safe wave in one message and keep the main agent working
+    - same-head audit-eligible units hold merge and remediate first; independent non-overlapping PRs still launch together
+    - mutating subagents prefetch via host subagentStart before the write gate and close via host subagentStop
     - the board is computed from required-check identity, never judged from a red check
     - ownership answers "may I patch this file"; it never decides what happens to the PR
     - one plan, one commit, one publish per PR; cycles only for signals that did not exist

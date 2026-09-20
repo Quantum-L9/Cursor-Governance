@@ -1,6 +1,6 @@
 ---
 name: Code-graph rule skill
-overview: Compile l9-code-graph-rag-mcp via l9-skill-compiler (zero-stub pack + scripts + kernels), pair with always-on rule 87, wire via l9-wire-skill-into-repo + plasticos adapter.
+overview: Compile l9-code-graph-rag-mcp via l9-skill-compiler (zero-stub pack + scripts + kernels), pair with always-on rule 87, wire via l9-wire-into-repo + plasticos adapter.
 todos:
   - id: compile-parse
     content: "Phase A (l9-skill-compiler parse/design): source map — er77 README, installed $HOME/.local path, rule-87 constraints, memory-layer boundary (Graphiti/memory-bank)"
@@ -12,7 +12,7 @@ todos:
     content: "Create .cursor/rules/87-plasticos-code-graph-rag.mdc — alwaysApply enforcement mirror of kernel-tool-gate + pointer to skill"
     status: pending
   - id: wire-skill
-    content: "Phase C (l9-wire-skill-into-repo): AGENTS.md, .claude/README.md, 00-plasticos-master-context router; preload module-auditor only"
+    content: "Phase C (l9-wire-into-repo): AGENTS.md, .claude/README.md, 00-plasticos-master-context router; preload module-auditor only"
     status: pending
   - id: validate-pack
     content: "Phase D: validation-checklist.md gates + run scripts/code_graph_health.sh; document Validation PASS in wire report"
@@ -42,7 +42,7 @@ flowchart TB
   compiler[l9-skill-compiler build mode]
   pack[l9-code-graph-rag-mcp pack]
   rule[87-plasticos-code-graph-rag.mdc]
-  wire[l9-wire-skill-into-repo]
+  wire[l9-wire-into-repo]
   compiler --> pack
   pack --> wire
   rule -.->|mirrors| pack
@@ -60,7 +60,7 @@ Follow [`l9-skill-compiler/SKILL.md`](.cursor-commands/skills/l9-skill-compiler/
 3. **Mode:** `build` — complete files only; no stubs.
 4. **Design file tree** (below) before writing.
 5. **Build** all linked files.
-6. **Wire** — mandatory [`l9-wire-skill-into-repo`](.cursor-commands/skills/l9-wire-skill-into-repo/SKILL.md) + [`.claude/adapters/plasticos-repo-wiring.md`](.claude/adapters/plasticos-repo-wiring.md).
+6. **Wire** — mandatory [`l9-wire-into-repo`](.cursor-commands/skills/l9-wire-into-repo/SKILL.md) + [`.claude/adapters/plasticos-repo-wiring.md`](.claude/adapters/plasticos-repo-wiring.md).
 7. **Validate** — [`references/validation-checklist.md`](.cursor-commands/skills/l9-skill-compiler/references/validation-checklist.md); fail closed if any gate fails.
 
 **Do not create** `agents/openai.yaml`. **Do not** hardcode `/Users/...` — use `$HOME`, `$REPO_ROOT`, `$GOV_ROOT` per governance SSOT law.
@@ -239,7 +239,7 @@ From [`validation-checklist.md`](.cursor-commands/skills/l9-skill-compiler/refer
 - [ ] Frontmatter audit fields complete; `name` matches directory
 - [ ] No stubs, no invented paths, no `agents/openai.yaml`
 - [ ] `bash scripts/code_graph_health.sh "$REPO_ROOT"` runs (may show empty pre-index — OK)
-- [ ] `l9-wire-skill-into-repo` reports **Validation: PASS**
+- [ ] `l9-wire-into-repo` reports **Validation: PASS**
 - [ ] Rule 87 text consistent with `kernel-tool-gate.md`
 - [ ] `.code-graph-rag/` in `.gitignore`
 

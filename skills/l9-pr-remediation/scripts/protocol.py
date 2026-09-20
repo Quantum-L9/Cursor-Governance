@@ -181,7 +181,7 @@ def ledger_source(*, author: str = "", kind: str = "review") -> str:
         return "ci"
     if kind in {"sonar", "sonarcloud"}:
         return "sonar"
-    if kind in {"semgrep", "codeql", "debt"}:
+    if kind in {"semgrep", "codeql", "debt", "audit"}:
         return kind
     cls = reviewer_class(author)
     if cls == REVIEWER_CRA:
@@ -603,6 +603,50 @@ def normalize_scanner_findings(source: str, snapshot: dict[str, Any]) -> list[di
             "severity_hint": None,
         }
         out.append(finding)
+    return out
+
+
+def normalize_audit_findings(handoff: dict[str, Any], pr: int) -> list[dict[str, Any]]:
+    """Same-head mutation_eligible work units for one PR. No disposition."""
+    out: list[dict[str, Any]] = []
+    for index, unit in enumerate(handoff.get("work_units") or [], start=1):
+        if not isinstance(unit, dict) or not unit.get("mutation_eligible"):
+            continue
+        affected: list[int] = []
+        for raw in unit.get("affected_prs") or []:
+            try:
+                affected.append(int(raw))
+            except (TypeError, ValueError):
+                continue
+        if pr not in affected:
+            continue
+        surfaces = [str(p) for p in (unit.get("write_surfaces") or []) if p]
+        path = surfaces[0] if surfaces else None
+        finding_id = str(unit.get("finding_id") or f"audit-{index}")
+        message = str(
+            unit.get("observed_behavior")
+            or unit.get("proof_of_mismatch")
+            or unit.get("expected_behavior")
+            or finding_id
+        )
+        out.append(
+            {
+                "id": finding_id,
+                "source": ledger_source(author="l9-pr-audit", kind="audit"),
+                "author": "l9-pr-audit",
+                "reviewer_class": REVIEWER_BOT,
+                "file": path,
+                "line": None,
+                "message": message,
+                "gate": None,
+                "surface": "audit",
+                "local_verify_command": VERIFY_COMMAND,
+                "raw": message,
+                "ownership_hint": edit_axis(path),
+                "severity_hint": unit.get("severity"),
+                "write_surfaces": surfaces,
+            }
+        )
     return out
 
 

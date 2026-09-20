@@ -172,4 +172,4 @@ skill_intelligence_report:
     validator: "scripts/validate_exemplary_skill.py (l9-skill-compiler)"
     rationale: "All 10 exemplary gates pass; intelligence extracted (not summarized); activation scores measured; leverage >=18/25."
     caveats:
-      - "l9-wire-skill-into-repo is not available in this environment; repo-registry wiring (Gate F) is not_applicable, not fabricated."
+      - "l9-wire-into-repo is not available in this environment; repo-registry wiring (Gate F) is not_applicable, not fabricated."

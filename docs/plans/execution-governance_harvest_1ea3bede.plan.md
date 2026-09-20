@@ -144,4 +144,4 @@ Scoped commit with explicit pathspecs for `WIP/8-28-26/execution-governance-harv
 
 ## Out of scope
 
-Literal code extraction, wiring any harvested concept into the beneficiary, and the `execution-governance/` delete itself. The pack forbids all three; a follow-up would route through `l9-wire-skill-into-repo` or a normal change plan.
+Literal code extraction, wiring any harvested concept into the beneficiary, and the `execution-governance/` delete itself. The pack forbids all three; a follow-up would route through `l9-wire-into-repo` or a normal change plan.
