@@ -175,13 +175,14 @@ class ManusAdapterContractTests(unittest.TestCase):
             check=False,
         )
         self.assertEqual(syntax.returncode, 0, syntax.stderr)
-        result = subprocess.run(
-            ["bash", str(launcher), "--governance", str(REPOSITORY)],
-            capture_output=True,
-            text=True,
-            check=False,
-            env={"HOME": str(Path.home()), "PATH": "/usr/bin:/bin"},
-        )
+        with tempfile.TemporaryDirectory() as isolated_home:
+            result = subprocess.run(
+                ["bash", str(launcher), "--governance", str(REPOSITORY)],
+                capture_output=True,
+                text=True,
+                check=False,
+                env={"HOME": isolated_home, "PATH": "/usr/bin:/bin"},
+            )
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("signed Manus memory door unavailable", result.stderr)
         text = launcher.read_text(encoding="utf-8")
