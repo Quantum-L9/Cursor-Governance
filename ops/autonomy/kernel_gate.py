@@ -181,7 +181,13 @@ def write_receipt(root: Path, data: dict[str, Any]) -> Path:
     return path
 
 
-def record(root: Path, *, gov: Path, report: Path | None = None) -> dict[str, Any]:
+def record(
+    root: Path,
+    *,
+    gov: Path,
+    report: Path | None = None,
+    changed_paths: list[str] | None = None,
+) -> dict[str, Any]:
     """Record the tree-kernel claim, bound to a hashed apply report.
 
     The report is the artifact that constitutes the claim. It is validated
@@ -192,6 +198,13 @@ def record(root: Path, *, gov: Path, report: Path | None = None) -> dict[str, An
     deterministically. It moves the claim from unfalsifiable to falsifiable: a
     forged ``deltas`` entry names a specific path with a specific note, which a
     reviewer can contradict.
+
+    Args:
+        root: Workspace root.
+        gov: Governance root.
+        report: Apply report path (defaults to APPLY_REL).
+        changed_paths: List of changed file paths for diff coverage check.
+            If provided, verifies deltas cover the git diff (minus exempt paths).
 
     Raises:
         ReportError: the report is missing, escapes ``.l9/autonomy/``, has bad
@@ -205,6 +218,16 @@ def record(root: Path, *, gov: Path, report: Path | None = None) -> dict[str, An
         raise ReportError("; ".join(structure))
     # Raises on a delta path that does not exist in this tree.
     deltas = kernel_predicates.load_validated_deltas(root_r, confined)
+
+    live_changed = changed_paths if changed_paths is not None else discover_changed_paths(root_r)
+    diff_errors = kernel_predicates.deltas_cover_diff(deltas, live_changed)
+    if diff_errors:
+        raise ReportError("; ".join(diff_errors))
+    data = kernel_predicates.parse_apply_report(confined)
+    seed_errors = kernel_predicates.run_v2_predicates(root_r, data, changed_paths=live_changed)
+    if seed_errors:
+        raise ReportError("; ".join(seed_errors))
+
     receipt = {
         "schema": SCHEMA,
         "report_rel": confined.relative_to(root_r).as_posix(),
@@ -217,14 +240,15 @@ def record(root: Path, *, gov: Path, report: Path | None = None) -> dict[str, An
         # Recorded metadata, deliberately NOT the binding: a later rewrite
         # commit must not force a second LLM apply.
         "head": _git_head(root_r),
+        # Record the changed paths that were covered (for audit)
+        "changed_paths_count": len(live_changed),
+        "changed_paths": live_changed,
     }
     write_receipt(root_r, receipt)
     return receipt
 
 
 def _git_head(root: Path) -> str:
-    import subprocess
-
     proc = subprocess.run(
         ["git", "-C", str(root), "rev-parse", "HEAD"],
         capture_output=True,
@@ -234,6 +258,35 @@ def _git_head(root: Path) -> str:
     if proc.returncode != 0:
         return ""
     return proc.stdout.strip()
+
+
+def discover_changed_paths(root: Path) -> list[str]:
+    """Live git change set used when ``--changed-file`` is omitted.
+
+    Union of ``git diff HEAD`` and untracked files, minus ``.l9/``. Omitting
+    ``--changed-file`` is therefore not a skip of ``deltas_cover_diff``.
+    """
+    found: list[str] = []
+    seen: set[str] = set()
+
+    def _add(raw: str) -> None:
+        rel = raw.strip()
+        while rel.startswith("./"):
+            rel = rel[2:]
+        if not rel or rel.startswith(".l9/") or rel in seen:
+            return
+        seen.add(rel)
+        found.append(rel)
+
+    for args in (
+        ["git", "-C", str(root), "diff", "--name-only", "HEAD"],
+        ["git", "-C", str(root), "ls-files", "--others", "--exclude-standard"],
+    ):
+        proc = subprocess.run(args, capture_output=True, text=True, check=False)
+        if proc.returncode == 0:
+            for line in proc.stdout.splitlines():
+                _add(line)
+    return found
 
 
 def record_command(root: Path, gov: Path) -> str:
@@ -251,7 +304,10 @@ def record_command(root: Path, gov: Path) -> str:
     script = gov / "ops" / "autonomy" / "kernel_gate.py"
     # --report is explicit even though it defaults: the printed line teaches the
     # contract, and the artifact is the point of the command.
-    return f'{interpreter} {script} record --workspace "{root}" --report "{APPLY_REL.as_posix()}"'
+    return (
+        f'{interpreter} {script} record --workspace "{root}" '
+        f'--report "{APPLY_REL.as_posix()}" --changed-file .l9/pr/changed-files.txt'
+    )
 
 
 def template_command(root: Path, gov: Path) -> str:
@@ -276,10 +332,17 @@ def authorize_command(root: Path, gov: Path) -> str:
 
 
 def apply_report_template() -> str:
-    """Skeleton for the apply report. Deltas are left empty on purpose.
+    """Skeleton for the apply report.
 
-    An empty ``deltas`` list fails ``record``, so this scaffold cannot be
-    stamped as-is. Filling it in is the work.
+    This template is **intentionally unstampable** — empty deltas, findings,
+    passes_run, and null unknowns all fail the hardened predicates. Filling
+    the template with real content is the work.
+
+    Phase 4 hardening: v2 reports require:
+    - Non-empty deltas (both kernels) with real notes
+    - Non-empty findings OR audit_scope + passes_run explaining clean state
+    - Required passes (context_and_scope_lock, reconciliation_and_convergence)
+    - Explicit unknowns key (empty list is OK)
     """
     return (
         "---\n"
@@ -290,9 +353,15 @@ def apply_report_template() -> str:
         "convergence_status: converged  # converged | partial | blocked\n"
         "deltas:\n"
         "  # One entry per file you actually changed. Non-empty, real paths.\n"
+        "  # Both kernels must have at least one delta.\n"
         "  - path: relative/path/you/changed.py\n"
         "    kernel: recursive_alignment  # or validate_repair\n"
-        "    note: what the kernel changed and why\n"
+        "    note: what the kernel changed and why  # MUST BE REAL, NOT TEMPLATE\n"
+        "findings: []  # UNSTAMPABLE: empty findings require audit_scope + passes_run\n"
+        "passes_run: []  # UNSTAMPABLE: must include required passes\n"
+        "passes_skipped: []  # List passes you intentionally skipped and why\n"
+        "unknowns: null  # UNSTAMPABLE: must be list (empty OK)\n"
+        "audit_scope: null  # Required when findings is empty\n"
         "---\n"
         "\n"
         "## Recursive Alignment\n"
@@ -383,7 +452,12 @@ def verify_tree(root: Path, gov: Path) -> str | None:
             "FAIL: kernel-receipt kernel_shas do not match the live kernel files.\n"
             + _agent_required_tree(root, gov)
         )
-    errors = kernel_predicates.run_predicates(root, receipt)
+    recorded_paths = receipt.get("changed_paths")
+    if isinstance(recorded_paths, list) and recorded_paths:
+        live_changed = [str(p) for p in recorded_paths]
+    else:
+        live_changed = discover_changed_paths(root)
+    errors = kernel_predicates.run_predicates(root, receipt, changed_paths=live_changed)
     if errors:
         detail = "\n".join(f"  {err}" for err in errors)
         return (
@@ -472,8 +546,13 @@ def cmd_record(args: argparse.Namespace) -> int:
     root = workspace_root(args.workspace)
     gov = gov_root_from_env(args.gov_root)
     report = Path(args.report) if args.report else None
+    changed_paths = (
+        read_changed_file(Path(args.changed_file))
+        if args.changed_file
+        else discover_changed_paths(root)
+    )
     try:
-        receipt = record(root, gov=gov, report=report)
+        receipt = record(root, gov=gov, report=report, changed_paths=changed_paths)
     except ReportError as exc:
         sys.stderr.write(f"FAIL: apply report rejected — {exc}\n")
         sys.stderr.write("      No receipt was written.\n")
@@ -599,6 +678,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--report",
         default=None,
         help=f"apply report path, workspace-relative (default {APPLY_REL.as_posix()})",
+    )
+    rec.add_argument(
+        "--changed-file",
+        default=None,
+        help="path to file listing changed paths (one per line) for diff coverage check",
     )
     rec.set_defaults(func=cmd_record)
 

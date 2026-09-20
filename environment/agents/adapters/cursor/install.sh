@@ -6,9 +6,12 @@
 #   2. Cursor wiring checks    hooks.json registration, l9-governance plugin,
 #                              .cursor-commands (consumers only)
 #   3. receipt                 ~/.l9/cursor/bootstrap-state.json
-#                              (schema l9.cursor-bootstrap.v1; read by
+#                              (schema l9.cursor-bootstrap.v2; read by
 #                              ops/scripts/claude_bootstrap_receipt.py
 #                              --surface cursor — one reader, one expiry rule)
+# SessionStart / make start / /start-session is the required writer: it
+# overwrites this receipt on every bootstrap. This target remains the
+# explicit adapter wire.
 #
 # --check is a diagnosis: it writes bootstrap-check.json beside the real
 # receipt and never overwrites the session's own verdicts (same rule the
@@ -75,7 +78,7 @@ write_receipt() {
   mkdir -p "$(dirname "$RECEIPT")" 2>/dev/null || return 0
   {
     printf '{\n'
-    printf '  "schema": "l9.cursor-bootstrap.v1",\n'
+    printf '  "schema": "l9.cursor-bootstrap.v2",\n'
     printf '  "surface": "cursor",\n'
     printf '  "mode": "%s",\n' "$([ "$CHECK" = "1" ] && echo check || echo local)"
     printf '  "state": "%s",\n' "$(json_token "$state")"
@@ -90,6 +93,12 @@ write_receipt() {
     printf '  "hooks": "%s",\n' "$(json_token "$STATUS_HOOKS")"
     printf '  "plugin": "%s",\n' "$(json_token "$STATUS_PLUGIN")"
     printf '  "commands_link": "%s",\n' "$(json_token "$STATUS_COMMANDS")"
+    printf '  "probes": {\n'
+    printf '    "shared_bootstrap": "bootstrap_agent_environment.sh",\n'
+    printf '    "hooks": "hooks.json",\n'
+    printf '    "plugin": "plugin-path",\n'
+    printf '    "commands_link": "workspace-law-files"\n'
+    printf '  },\n'
     printf '  "reasons": {\n'
     printf '    "shared_bootstrap": "%s",\n' "$(json_token "$REASON_SHARED")"
     printf '    "hooks": "%s",\n' "$(json_token "$REASON_HOOKS")"
