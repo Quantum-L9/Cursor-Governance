@@ -220,7 +220,10 @@ def _incomplete_base_sha(return_receipt: Mapping[str, Any], dispatch: Mapping[st
     resolved = _workspace_head(workspace)
     if resolved and _SHA_PATTERN.fullmatch(resolved):
         return resolved
-    raise ResultValidationError("document.identity.base_sha must be an exact 40-character Git SHA")
+    # Nothing produced an exact SHA. A partial document carries the empty
+    # string and names the gap in unresolved_items; it never invents a value
+    # that reads like provenance.
+    return ""
 
 
 def _stable_incomplete_produced_at(
@@ -261,7 +264,8 @@ def compile_incomplete_result(
     """Build one schema-valid ``status: partial`` document from a non-document Stop.
 
     Identity fields come from the return receipt. ``base_sha`` may be filled
-    from the same workspace HEAD Start uses; it is never invented. Role maps
+    from the same workspace HEAD Start uses; it is never invented, and an
+    unresolvable HEAD leaves it empty with a blocking unresolved item. Role maps
     through ``ROLE_TO_RESULT_KIND`` or ``explore`` → ``recon``. Unmapped host
     types use ``recon`` / ``ReconReport``.
     """
@@ -340,6 +344,25 @@ def compile_incomplete_result(
             "produced_at": _stable_incomplete_produced_at(return_receipt, dispatch, raw_digest)
         },
     }
+    if not identity["base_sha"]:
+        document["deliverable"]["unresolved_items"].append(
+            {
+                "unknown_id": "unknown-base-sha-unresolved",
+                "description": (
+                    "Neither the return receipt, the dispatch, nor the dispatch "
+                    "workspace HEAD produced an exact 40-character Git SHA, so "
+                    "identity.base_sha is empty. This packet is not promotable."
+                ),
+                "class": "evidence_available_but_uninspected",
+                "blocking_status": "blocking",
+                "owner": "cursor-subagent-stop",
+                "next_action": (
+                    "Re-run the child with a resolvable workspace so Start can stamp base_sha."
+                ),
+                "evidence_needed": "Workspace HEAD SHA for the dispatched assignment.",
+                "source_action": source_action,
+            }
+        )
     validate_result_document(document)
     return document
 
@@ -525,11 +548,17 @@ def validate_result_document(document: Mapping[str, Any]) -> None:
         raise ResultValidationError("document.identity.action_id has invalid characters")
     for field in ("graph_id", "agent_id", "lease_id"):
         _require_string(identity[field], f"document.identity.{field}")
-    base_sha = _require_string(identity["base_sha"], "document.identity.base_sha")
+    base_sha = identity["base_sha"]
+    if not isinstance(base_sha, str):
+        raise ResultValidationError("document.identity.base_sha must be a string")
     if not _SHA_PATTERN.fullmatch(base_sha):
-        raise ResultValidationError(
-            "document.identity.base_sha must be an exact 40-character Git SHA"
-        )
+        # Only a partial harvest packet may say "the workspace HEAD was not
+        # resolvable", and it says it with the empty string. Every document
+        # that can promote still carries an exact 40-character Git SHA.
+        if not (status == "partial" and base_sha == ""):
+            raise ResultValidationError(
+                "document.identity.base_sha must be an exact 40-character Git SHA"
+            )
     assignment = _require_mapping(root["assignment"], "document.assignment")
     required_assignment = {
         "role",

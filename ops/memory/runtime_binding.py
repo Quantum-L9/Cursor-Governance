@@ -969,6 +969,7 @@ def _verify_artifact_provenance(
 
     A digest that is present and *disagrees* is not weak evidence, it is
     contradiction: the caller turns it into UNBOUND rather than COMPATIBLE.
+    Absent provenance is the only case that downgrades to STATUS_COMPATIBLE.
     """
 
     reasons: list[str] = []
