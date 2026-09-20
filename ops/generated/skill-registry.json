@@ -1,5 +1,7 @@
 {
   "generation_id": "a22785f27f450add4ccddf6e17c555c32bad7d8556c2d0fb89f007ef3ebcc7cd",
+  "generator": "ops/scripts/build_claude_skill_registry.py",
+  "regenerate": "make claude-skill-registry",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
