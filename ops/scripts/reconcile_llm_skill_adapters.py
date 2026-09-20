@@ -22,6 +22,7 @@ sys.path.insert(0, str(SCRIPT_DIR))
 
 from reconcile_claude_l9_skills import (  # noqa: E402
     REGISTRY_REL,
+    STATE_NAME,
     reconcile_scope,
 )
 
@@ -32,7 +33,7 @@ _GOV_LIB = Path(__file__).resolve().parent / "lib"
 if str(_GOV_LIB) not in sys.path:
     sys.path.insert(0, str(_GOV_LIB))
 
-from workspace_roots import projection_roots  # noqa: E402
+from workspace_roots import adopted_projection_roots, projection_roots  # noqa: E402
 
 
 def expand_path(raw: str, workspace: Path) -> Path:
@@ -104,6 +105,30 @@ def reconcile_adapters(
         # consumer test walking the repository tree. Reconciling every mount root
         # is what lets that existing sweep do its job.
         mount_roots = projection_roots(workspace) if scope == "project" else [workspace]
+        if scope == "project":
+            # An earlier session ran with the container as its workspace and
+            # projected into `<container>/.claude/skills`. `projection_roots`
+            # cannot see that from a repository workspace, so adopt any ancestor
+            # still carrying our state file and let the sweep above reach it.
+            # A checkout under $HOME makes $HOME/.claude/skills answer this scan
+            # with the same relative path and state filename as a container
+            # mirror; adopting it would reconcile the USER projection as project
+            # scope. The user adapters in this same config name those targets,
+            # so exclude every one of them by path.
+            user_targets = [
+                expand_path(str(other.get("path")), workspace)
+                for other in (config.get("adapters") or [])
+                if isinstance(other, dict)
+                and str(other.get("kind") or "") == "user"
+                and other.get("path") not in (None, "", "null")
+            ]
+            mount_roots += [
+                ancestor
+                for ancestor in adopted_projection_roots(
+                    workspace, str(raw_path), STATE_NAME, exclude_targets=user_targets
+                )
+                if ancestor not in mount_roots
+            ]
         for mount_root in mount_roots:
             target = expand_path(str(raw_path), mount_root)
             result = reconcile_scope(

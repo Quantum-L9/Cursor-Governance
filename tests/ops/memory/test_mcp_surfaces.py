@@ -21,6 +21,12 @@ from typing import Any
 
 import pytest
 
+# Reads the worktree's .mcp.json, which the live-tree tests' projections
+# rewrite; it is the reader those writers used to flip, so it joins their
+# xdist group. Full rationale in
+# ops/scripts/tests/test_governance_refresh_receipt.py.
+pytestmark = pytest.mark.xdist_group("live_repo_tree")
+
 ROOT = Path(__file__).resolve().parents[3]
 TEMPLATE = ROOT / "environment" / "agents" / "adapters" / "claude-code" / "mcp.template.json"
 MASTER = ROOT / "environment" / "mcp" / "master.mcp.json"
