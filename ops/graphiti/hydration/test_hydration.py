@@ -156,7 +156,8 @@ def test_compile_packet_transport_failure_is_not_empty_search(monkeypatch, tmp_p
     assert "unavailable" in packet["active_objective"].lower()
     ctx = comp.format_additional_context(packet)
     assert "CANONICAL_UNAVAILABLE" in ctx
-    assert "status=CANONICAL_UNAVAILABLE DEGRADED" in ctx
+    assert "status=CANONICAL_UNAVAILABLE" in ctx
+    assert "memory_degraded=DEGRADED" in ctx
 
 
 def test_compile_packet_with_pickup(monkeypatch, tmp_path):
@@ -186,7 +187,8 @@ def test_compile_packet_with_pickup(monkeypatch, tmp_path):
     assert "next=" in ctx
     assert "facts_returned=1" in ctx
     assert "pickup_parsed=yes" in ctx
-    assert "continuation: record=66666666 source=canonical" in ctx
+    assert "continuation_record=66666666" in ctx
+    assert "continuation_source=canonical" in ctx
     assert "memory-bank" not in ctx
     assert '"hydrate_stats"' in ctx
 
@@ -199,7 +201,7 @@ def test_compile_packet_stale_continuation_says_repository_wins(monkeypatch, tmp
     assert packet["hydrate_stats"]["continuation_stale"] is True
     assert "STALE" in packet["next_action_contract"]["rationale"]
     assert "current git state wins" in packet["next_action_contract"]["rationale"]
-    assert " STALE" in comp.format_additional_context(packet)
+    assert "continuation_stale=yes" in comp.format_additional_context(packet)
 
 
 # ---------------------------------------------------------------------------
@@ -606,8 +608,9 @@ def test_compile_close_gap_missing_receipt(monkeypatch, tmp_path):
     ctx = comp.format_additional_context(packet)
     assert ctx.startswith("CLOSE_GAP\nREPAIR: /end-session\n### memory hydrate")
     assert "DEGRADED" not in ctx.split("```")[0]
-    assert "status=NO_HITS CLOSE_GAP" in ctx
-    assert "close-gap: " in ctx
+    assert "status=NO_HITS" in ctx
+    assert "close_gap=CLOSE_GAP" in ctx
+    assert "close_gap_reason=" in ctx
 
 
 def test_compile_environment_fault_is_typed_and_leads(monkeypatch, tmp_path):
@@ -640,8 +643,9 @@ def test_compile_environment_fault_is_typed_and_leads(monkeypatch, tmp_path):
     assert ctx.startswith(
         "ENVIRONMENT_FAULT\nREPAIR: make -C ~/.cursor-governance memory-readiness"
     )
-    assert "status=BINDING_FAILED ENVIRONMENT_FAULT" in ctx
-    assert "environment fault: BINDING_FAILED:" in ctx
+    assert "status=BINDING_FAILED" in ctx
+    assert "environment_fault=ENVIRONMENT_FAULT" in ctx
+    assert "environment_fault_detail=BINDING_FAILED:" in ctx
     assert "hydration degraded" not in ctx
     fence = json.loads(ctx.split("```json\n")[1].split("\n```")[0])
     assert fence["environment_fault"] is True
@@ -679,7 +683,9 @@ def test_compile_mixed_conditions_lead_by_class(monkeypatch, tmp_path):
         "CLOSE_GAP",
         "REPAIR: /end-session",
     ]
-    assert "status=BINDING_FAILED ENVIRONMENT_FAULT CLOSE_GAP" in ctx
+    assert "status=BINDING_FAILED" in ctx
+    assert "environment_fault=ENVIRONMENT_FAULT" in ctx
+    assert "close_gap=CLOSE_GAP" in ctx
 
 
 def _validate_packet_schema(packet) -> None:
@@ -734,7 +740,7 @@ def test_compile_canonical_degradation_still_leads_degraded(monkeypatch, tmp_pat
     assert packet["hydrate_stats"]["fault_class"] == "canonical"
     ctx = comp.format_additional_context(packet)
     assert ctx.startswith("DEGRADED\n### memory hydrate")
-    assert "hydration degraded: TIMEOUT: memory.hydrate exceeded 20s" in ctx
+    assert "degrade_reason=TIMEOUT: memory.hydrate exceeded 20s" in ctx
 
 
 def test_compile_close_gap_write_count_zero(monkeypatch, tmp_path):

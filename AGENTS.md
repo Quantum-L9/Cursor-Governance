@@ -1758,6 +1758,34 @@ stays on disk (additive_only). Do not fold it.
   `tests/ops/memory/test_hook_envelope.py`,
   `tests/ops/memory/test_no_agent_lane_interposition.py`.
 
+<!-- PR_STACK_OPT_IN_V1 -->
+## PR stacking is opt-in (2026-09-19) — supersedes §2.1.1 "Default is PR_STACK=auto" and §4.1 "`PR_STACK=auto` is the default at start and at `make pr`"
+
+Append-only. SSOT: `ops/autonomy/surface_profile.yaml`
+`pr_stacking.pr_overlap` (`auto_stack_env: PR_STACK`, `stack_default: none`),
+`Makefile` (`PR_STACK ?=`), `rules/48-make-pr-remediation.mdc`,
+`rules/53-pr-overlap-guardrail.mdc`. The §2.1.1 comment block, the §4.1
+sentence, the 2026-08-28 "Ceremony stack-tip" section and the 2026-08-29 Make
+3.81 note stay on disk (additive_only); where they say `auto` is the default,
+this section wins.
+
+- **`PR_STACK` is empty by default.** `agent_worktree_start.sh` bases a new
+  task branch on fetched `origin/main`, and `make pr` / `l9 pr` publishes
+  against `PR_BASE` (usually `origin/main`). Nothing stacks unless you say so.
+- **`PR_STACK=auto` is the explicit opt-in**, at the launcher and at
+  `make pr`. Only then is the unique open-PR chain tip resolved
+  (`ops/scripts/resolve_stack_tip.py` via `resolve_pr_stack.sh`) and the branch
+  or PR based on it. Ambiguous sibling chains still fail closed; an explicit
+  `--base` is never rewritten.
+- **Empty `PR_STACK=` is no longer an "opt-out"** — it is the default. Sections
+  that spell `PR_STACK=auto PR_REMEDIATE=0 make pr` (shelf publish,
+  `l9-plan-simple` Build, `/issues`) are deliberate opt-ins and stay valid as
+  written.
+- **Why:** with five sibling chains open against `main`, `auto` could not
+  resolve a unique tip, so the default was a blocked publish that every caller
+  cleared by passing `PR_STACK=` anyway. Stacking policy itself is unchanged
+  once chosen: bottom-up merge order, no rebase, no conflict resolution.
+
 <!-- HYDRATE_CLOSE_AGENT_LANE_V1 -->
 ## SessionStart reads sessionEnd + last-24h agent writes (2026-09-19)
 
