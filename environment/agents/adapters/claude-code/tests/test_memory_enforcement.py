@@ -195,13 +195,17 @@ class MemoryGateTests(unittest.TestCase):
         self.assertEqual(hinted, self.session, "hint carries the raw chat id, not the composed key")
         self.assertNotIn("__", hinted)
         self.assertTrue(script.endswith("memory_prefetch.py"))
+        self.assertNotIn(
+            "--workspace /", reason, "repair must not hardcode a Cursor-Governance path"
+        )
 
         # Run the repair exactly as hinted (empty stdin: a shell, not a hook event).
         repair_env = dict(env)
         if writer_agent:
             repair_env["L9_MEMORY_AGENT_ID"] = writer_agent
+        repair_cmd = [sys.executable, str(PREFETCH), "--session-id", hinted]
         proc = subprocess.run(
-            [sys.executable, str(PREFETCH), "--session-id", hinted],
+            repair_cmd,
             input="",
             capture_output=True,
             text=True,
@@ -219,6 +223,25 @@ class MemoryGateTests(unittest.TestCase):
 
         out, code = run_gate(event, env)
         self.assertFalse(is_deny(out), "the hinted repair must unblock the same governed write")
+        self.assertEqual(code, 0)
+
+    def test_one_session_receipt_allows_edit_in_another_clone(self) -> None:
+        """Remediator from this session: one prefetch, not a second CG hydrate."""
+        other = Path(tempfile.mkdtemp())
+        subprocess.run(["git", "init"], cwd=other, check=True, capture_output=True, text=True)
+        target = other / "skills" / "x.md"
+        target.parent.mkdir()
+        target.write_text("x\n", encoding="utf-8")
+        self._write_receipt()
+        out, code = run_gate(
+            {
+                "tool_name": "Edit",
+                "tool_input": {"file_path": str(target)},
+                "session_id": self.session,
+            },
+            self.env,
+        )
+        self.assertFalse(is_deny(out), "one session receipt is enough to edit another repo")
         self.assertEqual(code, 0)
 
     def test_precomposed_receipt_key_is_reduced_not_doubled(self) -> None:
@@ -261,6 +284,56 @@ class MemoryGateTests(unittest.TestCase):
             "git/gh commands are exempt from the memory gate; deny would"
             " reintroduce the split-brain this PR removed",
         )
+
+    def test_allows_memory_lane_invocations_without_receipt(self) -> None:
+        """Memory writes / hydrates / repairs are never gated on hydration.
+
+        ADR-0033 B8 (INV-03b): an agent is a first-class memory writer, and a
+        hydration precondition on repository writes must not interpose on the
+        agent lane. Before this exemption the gate's own remediation — run
+        ``memory_prefetch.py`` — was itself a ``Bash`` call it would deny.
+        """
+        for command in (
+            'l9-memory write "gate writeback contract requires X" --kind insight',
+            "l9-memory search 'writeback'",
+            ".venv/bin/python -m ops.memory.cli --surface plan-prefetch hydrate --task t",
+            "L9_MEMORY_AGENT_ID=claude-code "
+            "environment/agents/adapters/claude-code/hooks/memory_prefetch.py "
+            f"--session-id {self.session}",
+        ):
+            with self.subTest(command=command):
+                out, _ = run_gate(
+                    {
+                        "tool_name": "Bash",
+                        "tool_input": {"command": command},
+                        "session_id": self.session,
+                    },
+                    self.env,
+                )
+                self.assertFalse(
+                    is_deny(out),
+                    "memory-lane invocations are exempt from the memory gate; a deny"
+                    " is the agent-lane interposition ADR-0033 removes",
+                )
+
+    def test_memory_lane_exemption_is_scoped_to_the_executable(self) -> None:
+        """A compound that also mutates history is still governed.
+
+        Neither exemption fires: not every segment is git, not every segment
+        is memory, so the ``git-mutation`` rule classifies it and, without a
+        receipt, denies. A memory prefix must not launder anything else.
+        """
+        out, _ = run_gate(
+            {
+                "tool_name": "Bash",
+                "tool_input": {
+                    "command": "l9-memory health && git commit -m 'x'",
+                },
+                "session_id": self.session,
+            },
+            self.env,
+        )
+        self.assertTrue(is_deny(out), "a memory prefix must not launder a governed command")
 
     def test_enforcement_off_is_not_a_side_door(self) -> None:
         """L9_MEMORY_ENFORCEMENT=off must not bypass the gate — admin breakglass only."""

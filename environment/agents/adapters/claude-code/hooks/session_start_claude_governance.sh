@@ -124,6 +124,18 @@ emit() {
   exit 0
 }
 
+# PE exclusive worktrees: do not rewrite .claude or stamp unknown-agent receipts.
+# The runner already wired links-only; SessionStart bootstrap burns the turn budget.
+_l9_pe_ws="${CLAUDE_PROJECT_DIR:-$PWD}"
+if [ "${L9_PE_WORKER:-}" = "1" ] || [ -n "${L9_PROGRAM_TASK_ID:-}" ]; then
+  emit "PE worker isolate: SessionStart bootstrap skipped; this worktree stays exclusive."
+fi
+case "$_l9_pe_ws" in
+  */.l9/programs/*/worktrees/TASK-*|*/.l9/gov-worktrees/*|*/.l9/program-worktrees/*)
+    emit "PE worker isolate: SessionStart bootstrap skipped; this worktree stays exclusive."
+    ;;
+esac
+
 # The DEGRADED INLINE path's delivery, and only that path's: when no sidecar
 # file could be created, the parent/child split below does not happen, LINES is
 # the only record, and this trap is the only thing that can emit it. On the
@@ -578,13 +590,17 @@ if GOV=$(resolve_governance_dir); then
     # ssot / ssot_checkout commit the unbound .mcp.json (no interpreter).
     # Projecting with L9_MEMORY_INTERPRETER set rewrites that tracked file and
     # races Test Suite (PR 570: test_committed_projection_is_current_for_an_unbound_environment).
+    # CONTEXT7_API_KEY is no longer stripped here: context7 renders
+    # unconditionally (mcp.template.json), so the variable no longer changes
+    # the render, and stripping it was one half of how a populated secret still
+    # produced an absent server on governance checkouts.
     _L9_PROJ_UNBIND=""
     if [ -f "$GOV/ops/scripts/lib/workspace_kind.sh" ]; then
       # shellcheck source=/dev/null
       . "$GOV/ops/scripts/lib/workspace_kind.sh"
       case "$(classify_workspace_kind "$WORKSPACE")" in
         ssot|ssot_checkout)
-          _L9_PROJ_UNBIND="env -u L9_MEMORY_INTERPRETER -u CONTEXT7_API_KEY"
+          _L9_PROJ_UNBIND="env -u L9_MEMORY_INTERPRETER"
           ;;
       esac
     fi
@@ -698,6 +714,17 @@ _l9_door_status() {
     say "signed-agent door: pre-launch handoff PRESENT (agent_id=${L9_MEMORY_AGENT_ID:-unset}) — the l9-graphite-memory stdio server inherits it from the Claude parent environment"
   elif [ "${#missing[@]}" -eq 4 ]; then
     say "signed-agent door: UNAVAILABLE — no assertion env in the Claude parent environment, and a SessionStart hook cannot deliver it to the separately launched MCP server. Provision BEFORE launch: 'source ops/memory/export_agent_assertion_env.sh' (L9_MEMORY_AGENT_ID=${L9_MEMORY_AGENT_ID:-claude-code}) in the shell that starts Claude. This session the package server runs without the agents door (operator fallback tier); memory.write_agent / write_governed carry no signed principal"
+    # Name the CONSEQUENCE, not just the missing credential. Tier 3 resolves the
+    # principal ONCE at server spawn from the server's cwd and freezes it, so the
+    # namespace argument on memory.write_agent is checked against a grant set
+    # fixed from this workspace. A session with a second root (the governance
+    # SSOT beside the workspace) cannot agent-write that second namespace at all,
+    # and no tool usage from inside the session changes it. That is an
+    # agent-lane gap to REPORT, never a reason to route a model-authored fact
+    # through the operator CLI (ADR-0033 / INV-03b: ops/memory/cli.py is
+    # operator form). The lift is at the principal boundary — the signed door
+    # before launch — or the package's 2.5.0 per-request resolution (ADR-083).
+    say "agent lane scope: memory.write_agent can write ONLY the namespace derived from the MCP server's working directory (${WORKSPACE:-\$PWD}) — its principal is frozen at spawn (Tier 3, l9_graphite_memory 2.4.0). Any OTHER repository in this session, including the governance SSOT, is NOT writable through the agent lane this session. Report such a fact as an agent-lane gap (namespace + dry_run verdict); do not reroute it through the operator CLI (ADR-0033 / INV-03b). Lift: provision the signed door before launch, or the 2.5.0 wheel (per-request Tier 3, ADR-083)"
   else
     say "signed-agent door: PARTIAL pre-launch handoff — missing ${missing[*]}; the package server refuses the door when L9_MEMORY_AGENTS_DOOR_SECRET is set without the assertion, key map, and grants (fail-closed). Re-source ops/memory/export_agent_assertion_env.sh in the launching shell"
   fi
@@ -1050,8 +1077,19 @@ emit_account_drift "$PY"
 emit_readiness_receipt "$PY"
 emit_capability_readiness "$PY"
 
+# Context7 is rendered unconditionally (mcp.template.json); what decides
+# whether its tools work is the secret. Report that fact, never the value:
+# an absent key is an authentication failure to fix by populating
+# CONTEXT7_API_KEY (Infisical inventory, proxied into the session), not a
+# server to gate out and not a reason to paste anything. The marketplace flag
+# only says the plugin route is closed on hosted surfaces.
+if [ -n "${CONTEXT7_API_KEY:-}" ]; then
+  say "Context7: rendered in .mcp.json; CONTEXT7_API_KEY proxied — mcp__context7__* expected on this session"
+else
+  say "Context7: rendered in .mcp.json but CONTEXT7_API_KEY is ABSENT — the server will fail to authenticate until the secret populates (Infisical CONTEXT7_API_KEY); do not paste it, and use skill l9-context7-docs or an official docs GET until then"
+fi
 if [ "${SKIP_PLUGIN_MARKETPLACE:-}" = "true" ]; then
-  say "Context7 (hosted skip): MCP tools absent — use skill l9-context7-docs"
+  say "Context7 (hosted skip): marketplace plugin route closed on this surface — the governed remote server above is the route"
 fi
 
 skill_log="$HOME/.claude/l9/skill-usage.jsonl"

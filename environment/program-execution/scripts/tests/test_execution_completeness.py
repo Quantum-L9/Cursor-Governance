@@ -446,7 +446,7 @@ class TypedProjectionPersistenceTest(unittest.TestCase):
                     def get_meta(self, key):
                         return "b" * 64
 
-                    def next_attempt_number(self, task_id):
+                    def next_execution_attempt_number(self, task_id):
                         return 1
 
                     def update_task(self, task_id, **fields):

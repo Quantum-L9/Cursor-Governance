@@ -127,7 +127,17 @@ def test_preflight_passes_after_authorize(tmp_path: Path) -> None:
     )
     assert (
         _run(
-            ["python3", str(L4), "--workspace", str(repo), "record-kernels"],
+            [
+                "python3",
+                str(L4),
+                "--workspace",
+                str(repo),
+                "record-kernels",
+                "--recursive-alignment",
+                "passed",
+                "--validate-repair",
+                "passed",
+            ],
             cwd=repo,
             env=env,
         ).returncode
@@ -185,6 +195,49 @@ def test_improve_begin_then_record(tmp_path: Path) -> None:
     assert rec.returncode == 0, rec.stderr
     receipt = json.loads((repo / ".l9" / "autonomy" / "l4-release-receipt.json").read_text())
     assert receipt["phase"] == "release_authorized"
+
+
+def test_gate_receipt_invalidates_on_tracked_deletion_leaving_bytes(tmp_path: Path) -> None:
+    """git rm --cached leaves the bytes; the PASS receipt must not reuse.
+
+    The publication candidate is now a deletion even though the worktree
+    still has the same blob. Staging and an empty commit of unchanged
+    tracked content must still reuse (PRESERVE-1).
+    """
+    repo = _init_repo(tmp_path, feature=True)
+    paths, content = _state_digest(repo)
+    receipt_dir = repo / ".l9" / "pr"
+    receipt_dir.mkdir(parents=True)
+    payload = {
+        "schema": "l9.pr_gate_receipt.v2",
+        "paths_digest": paths,
+        "content_digest": content,
+        "pr_base": "main",
+    }
+    (receipt_dir / "gate-receipt.json").write_text(
+        json.dumps(payload) + "\n",
+        encoding="utf-8",
+    )
+    git_in(repo, "add", "a.txt")
+    git_in(repo, "commit", "--allow-empty", "-m", "no-op")
+    assert _state_digest(repo) == (paths, content)
+    reuse = _run(
+        ["bash", str(SCRIPTS / "run_pr_gate.sh")],
+        cwd=repo,
+        env={"WS": str(repo), "PR_BASE": "main", "PR_LOCK_WAIT_S": "1"},
+    )
+    assert reuse.returncode == 0, reuse.stderr + reuse.stdout
+    assert "receipt reuse" in reuse.stdout
+
+    git_in(repo, "rm", "--cached", "a.txt")
+    assert (repo / "a.txt").is_file()
+    assert _state_digest(repo) != (paths, content)
+    after = _run(
+        ["bash", str(SCRIPTS / "run_pr_gate.sh")],
+        cwd=repo,
+        env={"WS": str(repo), "PR_BASE": "main", "PR_LOCK_WAIT_S": "1"},
+    )
+    assert "receipt reuse" not in after.stdout
 
 
 def test_gate_receipt_skip_on_unchanged_state(tmp_path: Path) -> None:
@@ -436,21 +489,42 @@ def test_precommit_missing_binary_fails_after_files(tmp_path: Path) -> None:
 
 
 def _stamp_kernel(repo: Path) -> None:
-    assert (
-        _run(
-            [
-                "python3",
-                str(KERNEL_GATE),
-                "record",
-                "--workspace",
-                str(repo),
-                "--gov-root",
-                str(ROOT),
-            ],
-            cwd=repo,
-        ).returncode
-        == 0
+    """Satisfy the tree latch the way an agent must: report, then record.
+
+    `record` refuses to write a receipt without a hashed, path-confined apply
+    report whose deltas name files that exist, so the artifact is part of
+    fixture setup now rather than a bare CLI call.
+    """
+    delta = "a.txt"
+    if not (repo / delta).exists():
+        (repo / delta).write_text("a\n", encoding="utf-8")
+    report = repo / ".l9" / "autonomy" / "kernel-apply.md"
+    report.parent.mkdir(parents=True, exist_ok=True)
+    report.write_text(
+        "---\n"
+        "schema: l9.kernel_apply.v1\n"
+        "kernels: [recursive_alignment, validate_repair]\n"
+        "convergence_status: converged\n"
+        "deltas:\n"
+        f"  - path: {delta}\n"
+        "    kernel: recursive_alignment\n"
+        "    note: fixture apply\n"
+        "---\n\n## Recursive Alignment\n\nfixture\n\n## Validate & Repair\n\nfixture\n",
+        encoding="utf-8",
     )
+    proc = _run(
+        [
+            "python3",
+            str(KERNEL_GATE),
+            "record",
+            "--workspace",
+            str(repo),
+            "--gov-root",
+            str(ROOT),
+        ],
+        cwd=repo,
+    )
+    assert proc.returncode == 0, proc.stderr
 
 
 def test_precommit_repo_kernel_hook_fails_before_hooks(tmp_path: Path) -> None:
@@ -756,6 +830,57 @@ def test_open_pr_after_gate_handles_landed_pr() -> None:
     assert "never reused after its PR merges" in script
     assert "closed, not merged" in script
     assert "opening a new PR" in script
+
+
+def test_open_pr_composer_skips_root_protect_without_workspace_config() -> None:
+    """Consumer workspaces do not ship the governance root-protect policy.
+
+    run_pr_gate.sh already skips when WS lacks ops/config/root-file-protection.json.
+    The composer used to invoke validate_root_file_protection.py anyway, fail
+    closed, and abort after a successful push. Both compose and reopen paths
+    must use the same config-existence guard as the gate.
+    """
+    script = (SCRIPTS / "open_pr_after_gate.sh").read_text(encoding="utf-8")
+    gate = (SCRIPTS / "run_pr_gate.sh").read_text(encoding="utf-8")
+    assert '-f "$WS/ops/config/root-file-protection.json"' in gate
+    compose = script[script.index("_compose_title_and_body() {") :]
+    compose = compose[: compose.index('if [[ -z "$pr_url" || -z "$pr_number" ]]; then')]
+    assert '[[ -f "$_root_protect_py" && -f "$_root_protect_cfg" ]]' in compose
+    assert "skip additive_only measurement" in compose
+    reopen = script[script.index('echo "PR already open: $pr_url"') :]
+    reopen = reopen[: reopen.index("_pr_summary_py=")]
+    assert '-f "$WS/ops/config/root-file-protection.json"' in reopen
+
+
+def test_open_pr_after_gate_refreshes_only_a_composer_authored_body() -> None:
+    """An already-open PR keeps a stale title/body unless this script wrote it.
+
+    #602 kept a title from a range rule that had since been fixed, because the
+    already-open path pushed and stopped. The body is a function of the range;
+    when the marker proves the composer authored it, recompose both. A body
+    without the marker is human-authored and is only warned about, as before.
+    """
+    script = (SCRIPTS / "open_pr_after_gate.sh").read_text(encoding="utf-8")
+    # One composer for both paths: the title never comes from a second git log.
+    assert script.count("_compose_title_and_body\n") == 2, "open + refresh both call it"
+    assert "git log \"${PR_BASE}..HEAD\" --format='%s'" not in script
+    assert "--print-title" in script
+    reopen = script[script.index('echo "PR already open: $pr_url"') :]
+    reopen = reopen[: reopen.index("_pr_summary_py=")]
+    marker_at = reopen.index('*"<!-- autonomous compile from open_pr_after_gate.sh -->"*')
+    # The write is REST PATCH, not `gh pr edit`: that subcommand is
+    # GraphQL-backed, so on a gateway that refuses GraphQL the refresh silently
+    # no-opped and the open PR kept a stale description. The assertion below is
+    # unchanged in intent — the marker check still guards the edit — only the
+    # call it anchors on moved.
+    edit_at = reopen.index('gh api --method PATCH "repos/${owner}/${name}/pulls/${pr_number}"')
+    assert marker_at < edit_at, "the marker check guards the edit"
+    assert "gh pr edit " not in reopen, "the refresh must not reach GraphQL-backed gh pr"
+    # A refresh failure is reported, never fatal: the push already happened.
+    assert "could not refresh the PR title/body" in reopen
+    # The human-authored WARN survives for bodies we do not own.
+    assert "but its body predates them and lacks" in reopen
+    assert '"$_refreshed" -eq 0' in reopen
 
 
 def test_open_pr_after_gate_remediates_defaults_to_one() -> None:

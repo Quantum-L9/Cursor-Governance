@@ -20,6 +20,16 @@
     "phase_lock",
     "verify_phase_lock"
   ],
+  "bounded_hook_cli_commands": {
+    "_note": "CLI subcommands the bound release ships for the hook lane but does not advertise in capabilities.transports[cli].operations, verified against the merged source at the bound ref. runtime_binding cannot require them through the capabilities receipt; tests/ops/memory/test_cross_repo_lifecycle.py proves each against the real runtime. When upstream advertises one, move it into required_cli_operations.",
+    "distill": {
+      "subcommand": "distill",
+      "positional": ["path"],
+      "options": ["--group-id", "--repository", "--dry-run"],
+      "record_bound": "preflight-dry-run",
+      "record_bound_note": "The bound parser defines no input record cap (no --max-records at e3a79626). The hook lane bounds max_records by running the same deterministic distill with --dry-run first — memory extracts and counts, nothing persists — and refuses the committing pass before any write when candidate_count exceeds the surface's remaining allowance. Emitting an option outside `options` is a contract break (audit F-604-DISTILL-CAP); ops/memory/control_plane_client.py DISTILL_CLI_OPTIONS mirrors this list and tests/ops/memory/test_cross_repo_lifecycle.py proves it against the exact bound parser."
+    }
+  },
   "source": {
     "kind": "git",
     "repository": "Quantum-L9/l9-graphiti-memory",
@@ -41,8 +51,18 @@
     "explicit interpreter argument",
     "L9_MEMORY_DEV_CHECKOUT/.venv/bin/python (development opt-in)",
     "L9_MEMORY_INTERPRETER",
-    "the governance runtime interpreter (sys.executable)"
+    "$L9_GOVERNANCE_DIR/.venv/bin/python",
+    "$HOME/.cursor-governance/.venv/bin/python",
+    "<this checkout>/.venv/bin/python",
+    "sys.executable — only when no governance .venv exists; reported as runtime_mode=caller_interpreter"
   ],
+  "environment_heal": {
+    "description": "A governance .venv whose installed package is absent or at another version than expected_package_version is lock drift, not memory degradation. runtime_binding heals it once per attempt via ops/scripts/ensure_uv_environment.sh <root> apply (uv sync --locked) and re-probes. Skipped in unmarked CI, when L9_MEMORY_ENV_HEAL=0, while the repo-write lock for that root is held, and for development checkouts. The outcome (healed | failed | skipped:<why>) is carried on the binding as environment_heal; an unbound binding is reported as ENVIRONMENT_FAULT, never DEGRADED.",
+    "script": "ops/scripts/ensure_uv_environment.sh",
+    "kill_switch": "L9_MEMORY_ENV_HEAL=0",
+    "timeout_env": "L9_MEMORY_ENV_HEAL_TIMEOUT",
+    "default_timeout_seconds": 180
+  },
   "release_evidence": {
     "description": "Exact-head proof of the binding (audit P1-01/P2-02). The wheel is built from source.ref with uv build --wheel under the fixed SOURCE_DATE_EPOCH below and is byte-reproducible (the digest reproduced from a fresh clone of the same commit). .github/workflows/memory-cross-repo.yml rebuilds it from the same ref, refuses a digest mismatch, installs the wheel into a clean environment, and runs tests/ops/memory/test_cross_repo_lifecycle.py with L9_MEMORY_CROSS_REPO_REQUIRED=1 (a skip is a failure) and no provider credential in the environment. A digest here without that job green on the same Cursor head is a claim, not a proof.",
     "memory_sha": "e3a79626aaaf3e9503d15eaa061a46dbb9b201ab",
@@ -91,7 +111,8 @@
   },
   "contract_model_modules": [
     "l9_graphite_memory.contracts",
-    "l9_graphite_memory.group_resolver"
+    "l9_graphite_memory.group_resolver",
+    "l9_graphite_memory.extraction"
   ],
-  "contract_model_modules_note": "Modules the schema probe searches for canonical receipt models. The contracts package is walked including its submodules; GroupResolution (Cursor's ResolveReceipt) lives in group_resolver.py and is not re-exported from contracts, so it must be named explicitly. Verified against the merged source at the bound ref, not inferred."
+  "contract_model_modules_note": "Modules the schema probe searches for canonical receipt models. The contracts package is walked including its submodules; GroupResolution (Cursor's ResolveReceipt) lives in group_resolver.py and is not re-exported from contracts, so it must be named explicitly. Verified against the merged source at the bound ref, not inferred. DistillationReceipt is defined in extraction/distiller.py (ADR-0033 canonical distill) and is likewise not re-exported from contracts."
 }

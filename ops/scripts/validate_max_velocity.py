@@ -27,6 +27,7 @@ MIN_MUTATION_LANES = 128
 MIN_NATIVE = 480
 POLICY_REL = Path("ops/autonomy/claude-execution-profiles.json")
 SURFACE_REL = Path("ops/autonomy/surface_profile.yaml")
+FLEET_REL = Path("ops/autonomy/pr_fleet.py")
 
 
 def _int(value: Any) -> int | None:
@@ -36,6 +37,26 @@ def _int(value: Any) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+REQUIRED_NO_WAIT_PHRASE = "Wait for merge is forbidden"
+NO_WAIT_SURFACES = (
+    Path("rules/07-max-velocity-research.mdc"),
+    Path("rules/53-pr-overlap-guardrail.mdc"),
+)
+
+
+def _wait_for_merge_defects(root: Path) -> list[str]:
+    """Doctrine latch: velocity forbids wait-for-merge as a finish."""
+    defects: list[str] = []
+    for rel in NO_WAIT_SURFACES:
+        path = root / rel
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        if REQUIRED_NO_WAIT_PHRASE not in text:
+            defects.append(f"{rel}: missing {REQUIRED_NO_WAIT_PHRASE!r}")
+    return defects
 
 
 def collect_defects(root: Path) -> list[str]:
@@ -104,6 +125,14 @@ def collect_defects(root: Path) -> list[str]:
                 f"{SURFACE_REL}: claude_execution_profiles.{key}="
                 f"{block.get(key)!r} (required {PROFILE})"
             )
+    defects.extend(_wait_for_merge_defects(root))
+    fleet_path = root / FLEET_REL
+    if fleet_path.is_file():
+        fleet = fleet_path.read_text(encoding="utf-8")
+        if "SKILL_SUBAGENT_CAP = 10" in fleet or "SKILL_SUBAGENT_CAP=10" in fleet:
+            defects.append(f"{FLEET_REL}: remediator clamp SKILL_SUBAGENT_CAP = 10")
+        if "min(profile_parallel, cap)" in fleet:
+            defects.append(f"{FLEET_REL}: remediator min() clamp on profile caps")
     return defects
 
 

@@ -264,6 +264,12 @@ cannot_run() {
 #                               adopted from a sibling of this session
 #   L9_GOV_REFRESH_OUTCOME      fetched | fetch-failed | reset-failed |
 #                               reset-skipped-dirty | lock-busy | origin-untrusted
+#
+# `fetched` is the ordinary outcome whether or not the clone was dirty: this is
+# a governance SOURCE tree, so every session must start on the exact code main
+# carried at bootstrap. Dirt is preserved (a reachable stash commit under
+# refs/l9/preserved/gov-refresh/, plus a byte copy) and then overwritten.
+# `reset-skipped-dirty` now occurs ONLY under L9_GOV_REFRESH_KEEP_DIRTY=1.
 # The receipt carries the same attempt_id and a refreshed_epoch, so the
 # SessionStart hook suppresses its fallback only on a receipt proven to belong
 # to the current attempt — never on an older receipt that merely says fresh.
@@ -380,6 +386,47 @@ l9_gov_adopt_receipt() {
   return 0
 }
 
+# Park everything dirty so an unconditional reset can never lose it.
+#
+# `stash create` records tracked modifications as a COMMIT OBJECT without
+# touching the working tree or the stash stack, so a concurrent reader of this
+# clone sees no flicker mid-session. `update-ref` then makes that object
+# reachable, which is what keeps gc away from it. Untracked bytes survive
+# `checkout -f` only while main does not track the same path, so they are
+# copied out as well rather than reasoned about case by case.
+l9_gov_preserve_dirt() {
+  local dir="$1" porcelain="$2" stamp hold stash_sha rel
+  stamp=$(date -u +%Y%m%dT%H%M%SZ 2>/dev/null || echo unknown)
+  hold="${L9_GOV_PRESERVE_DIR:-$HOME/.l9/claude/gov-preserved}/$stamp"
+  mkdir -p "$hold" 2>/dev/null || true
+  printf '%s\n' "$porcelain" >"$hold/status.txt" 2>/dev/null || true
+  stash_sha=$(git -C "$dir" stash create 2>/dev/null || true)
+  if [ -n "$stash_sha" ]; then
+    git -C "$dir" update-ref "refs/l9/preserved/gov-refresh/$stamp" "$stash_sha" 2>/dev/null || true
+  fi
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    rel=${line#???}
+    case "$rel" in *" -> "*) rel=${rel##* -> } ;; esac
+    [ -n "$rel" ] && [ -e "$dir/$rel" ] || continue
+    mkdir -p "$hold/$(dirname "$rel")" 2>/dev/null || true
+    cp -a "$dir/$rel" "$hold/$rel" 2>/dev/null || true
+  done <<PRESERVE_EOF
+$porcelain
+PRESERVE_EOF
+  # Name what was preserved. The old skip printed only "dirty tracked clone",
+  # and that silence is why one regenerable manifest pinned this clone 102
+  # commits behind for a week: nothing said which path to look at.
+  printf 'l9-hook: governance clone was dirty; preserved, then reset to main:\n' >&2
+  printf '%s\n' "$porcelain" | sed 's/^/l9-hook:   /' >&2
+  printf 'l9-hook:   bytes:   %s\n' "$hold" >&2
+  if [ -n "$stash_sha" ]; then
+    printf 'l9-hook:   restore: git -C %s stash apply refs/l9/preserved/gov-refresh/%s\n' \
+      "$dir" "$stamp" >&2
+  fi
+  return 0
+}
+
 l9_cloud_refresh_gov() {
   # Never inherited: a value in the account environment must not pre-seed the
   # binding the SessionStart hook keys its fallback on.
@@ -434,13 +481,25 @@ l9_cloud_refresh_gov() {
   fi
 
   attempt="$$-$start_epoch-$RANDOM"
-  gov_dirty=$(git -C "$GOV_DIR" status --porcelain --untracked-files=no 2>/dev/null | head -c 1)
+  gov_dirty=$(git -C "$GOV_DIR" status --porcelain 2>/dev/null)
   local_sha=$(git -C "$GOV_DIR" rev-parse --verify --quiet HEAD 2>/dev/null || echo 'unknown')
-  if [ -n "$gov_dirty" ]; then
-    printf 'l9-hook: governance refresh skipped — dirty tracked clone\n' >&2
+  # Every session starts on the exact code main carried at bootstrap. Dirt in a
+  # governance SOURCE clone does not postpone that; it is preserved first, then
+  # overwritten.
+  #
+  # This used to skip the reset whenever any tracked file differed. The clone is
+  # not a workspace -- it is the tree every rule, skill and hook is read from --
+  # so a skip does not protect work, it serves stale governance for as long as
+  # the dirt lasts. And the dirt outlives the cause: a regenerated manifest
+  # blocked the very update that carried its regenerated form, which held this
+  # clone 102 commits behind for a week. A gate whose own failure mode prevents
+  # its repair cannot be left conditional.
+  if [ -n "$gov_dirty" ] && [ "${L9_GOV_REFRESH_KEEP_DIRTY:-0}" = "1" ]; then
+    printf 'l9-hook: governance refresh skipped — L9_GOV_REFRESH_KEEP_DIRTY=1 (clone stays stale)\n' >&2
     l9_gov_write_receipt "$receipt" reset-skipped-dirty "$local_sha" unknown stale "$attempt"
     export L9_GOV_REFRESH_OUTCOME="reset-skipped-dirty"
   else
+    [ -n "$gov_dirty" ] && l9_gov_preserve_dirt "$GOV_DIR" "$gov_dirty"
     fetch_cmd=(git -C "$GOV_DIR" fetch --depth 1 origin "$branch")
     if command -v timeout >/dev/null 2>&1; then
       fetch_cmd=(timeout "$fetch_timeout" "${fetch_cmd[@]}")

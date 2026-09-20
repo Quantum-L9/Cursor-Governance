@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 from pathlib import Path
@@ -50,20 +51,19 @@ def _init_repo(tmp_path: Path) -> Path:
     return repo
 
 
-def _write_tip_stub(path: Path, *, tip: str, sha: str, reason: str, exit_code: int = 0) -> None:
-    path.write_text(
-        "\n".join(
-            [
-                "import sys",
-                f"print('STACK_TIP={tip}')",
-                f"print('STACK_TIP_SHA={sha}')",
-                f"print('REASON={reason}')",
-                f"raise SystemExit({exit_code})",
-                "",
-            ]
-        ),
-        encoding="utf-8",
-    )
+def _write_tip_stub(
+    path: Path, *, tip: str, sha: str, reason: str, exit_code: int = 0, chain: str = ""
+) -> None:
+    lines = [
+        "import sys",
+        f"print('STACK_TIP={tip}')",
+        f"print('STACK_TIP_SHA={sha}')",
+        f"print('REASON={reason}')",
+    ]
+    if chain:
+        lines.append(f"print('STACK_CHAIN={chain}')")
+    lines += [f"raise SystemExit({exit_code})", ""]
+    path.write_text("\n".join(lines), encoding="utf-8")
 
 
 def _apply(repo: Path, stub: Path, extra_env: dict[str, str]) -> subprocess.CompletedProcess[str]:
@@ -108,6 +108,29 @@ def test_auto_rewrites_default_main_to_unique_tip(tmp_path: Path) -> None:
     receipt = repo / ".l9" / "pr" / "stack-base.json"
     assert receipt.is_file()
     assert "origin/feat/stack-safe-merge" in receipt.read_text(encoding="utf-8")
+
+
+def test_receipt_records_the_whole_chain_not_only_the_tip(tmp_path: Path) -> None:
+    """compose_pr_body.py excludes every chain head from a child's story.
+
+    A stack parent cut before its own base was refreshed lends the child
+    commits that are not the child's (PR #602's title). The tip alone cannot
+    say which those are; the receipt has to carry the heads above it.
+    """
+    repo = _init_repo(tmp_path)
+    sha = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], text=True).strip()
+    git_in(repo, "update-ref", "refs/remotes/origin/feat/c", sha)
+    stub = tmp_path / "tip.py"
+    _write_tip_stub(
+        stub, tip="feat/c", sha=sha, reason="unique_chain_tip", chain="feat/a feat/b feat/c"
+    )
+    result = _apply(repo, stub, {"PR_STACK": "auto"})
+    combined = result.stdout + result.stderr
+    assert result.returncode == 0, combined
+    receipt = json.loads((repo / ".l9" / "pr" / "stack-base.json").read_text(encoding="utf-8"))
+    assert receipt["chain"] == ["feat/a", "feat/b", "feat/c"]
+    # No origin remote here: fetching the parents fails quietly and never gates.
+    assert "BOUND=origin/feat/c" in result.stdout
 
 
 def test_explicit_non_main_base_is_not_rewritten(tmp_path: Path) -> None:
@@ -229,9 +252,22 @@ def test_makefile_passes_pr_stack_into_gate_recipes() -> None:
     assert "pr_stack_apply_publish_base" in PREFLIGHT.read_text(encoding="utf-8")
     assert "pr_stack_apply_publish_base" in OPEN_PR.read_text(encoding="utf-8")
     assert "pr_stack_apply_publish_base" in GATE.read_text(encoding="utf-8")
-    assert "pr_stack_apply_publish_base" in (
-        ROOT / "ops" / "scripts" / "run_pr_precommit.sh"
-    ).read_text(encoding="utf-8")
+    precommit = (ROOT / "ops" / "scripts" / "run_pr_precommit.sh").read_text(encoding="utf-8")
+    assert "pr_stack_apply_publish_base" in precommit
+    rem_at = precommit.find("L9_REMEDIATOR")
+    apply_at = precommit.find("pr_stack_apply_publish_base")
+    assert rem_at != -1
+    assert rem_at < apply_at
+    assert 'elif [[ -z "${PR_CHANGED_FILE:-}"' in precommit
+
+
+def test_l9_remediator_skips_stack_tip_rewrite() -> None:
+    precommit = (ROOT / "ops" / "scripts" / "run_pr_precommit.sh").read_text(encoding="utf-8")
+    skip = precommit[
+        precommit.find("_REMEDIATOR=") : precommit.find('elif [[ -z "${PR_CHANGED_FILE:-}"')
+    ]
+    assert "pr_stack_apply_publish_base" not in skip
+    assert "PR_BASE=" in skip
 
 
 def _apple_make() -> Path | None:

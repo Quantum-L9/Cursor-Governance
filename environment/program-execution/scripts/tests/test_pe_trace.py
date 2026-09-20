@@ -41,7 +41,14 @@ class TraceWriterTest(unittest.TestCase):
     def setUp(self) -> None:
         self.mod = load_module("pe_trace_writer_under_test", TRACE_SCRIPT)
         self._tmp = tempfile.TemporaryDirectory()
-        self.workspace = Path(self._tmp.name)
+        # `stepped_aside` stages a SIBLING of the workspace, so the workspace
+        # needs a private parent. Using the TemporaryDirectory itself made that
+        # sibling `$TMPDIR/staging` -- one path shared by every test in this
+        # class and by every concurrent process, so the two stepped-aside tests
+        # raced each other under the parallel runner and one of them failed on
+        # a staging directory the other had already moved back.
+        self.workspace = Path(self._tmp.name) / "workspace"
+        self.workspace.mkdir()
         self.addCleanup(self._tmp.cleanup)
 
     def events(self) -> list[dict]:
@@ -839,6 +846,41 @@ class SecretRedactionTest(unittest.TestCase):
         self.assertNotIn("count", safe)
         self.assertNotIn("verdict", safe)
         self.assertEqual(safe["redacted_keys"], ["count", "verdict"])
+
+    def test_terminal_recovery_retirement_survives_into_the_persisted_event(self) -> None:
+        """The recovery event must be able to say whether authority was retired.
+
+        `grant_revoked` / `grant_lease_status` were emitted by the front door
+        but fell off the allowlist, so the persisted event carried only
+        `redacted_keys` and could not distinguish a retired generation from a
+        live one.
+        """
+        trace = self.mod.ExecutionTrace(self.workspace, "demo-v1")
+        trace.event(
+            "TASK_TERMINAL_ATTEMPT_RECOVERED",
+            "recovery",
+            "task_terminal_attempt_recovered",
+            task_id="TASK-001",
+            metadata={
+                "attempt_id": "attempt-dead",
+                "failure_class": "KNOWN_TERMINAL",
+                "recovery": "RECOVERED",
+                "grant_revoked": True,
+                "grant_lease_status": "REVOKED",
+            },
+        )
+        safe = self.mod.read_events(self.workspace)[0]["safe_metadata"]
+        self.assertEqual(
+            safe,
+            {
+                "attempt_id": "attempt-dead",
+                "failure_class": "KNOWN_TERMINAL",
+                "recovery": "RECOVERED",
+                "grant_revoked": True,
+                "grant_lease_status": "REVOKED",
+            },
+        )
+        self.assertNotIn("redacted_keys", safe)
 
 
 class FingerprintInputsTest(unittest.TestCase):

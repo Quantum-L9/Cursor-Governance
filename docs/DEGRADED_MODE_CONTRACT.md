@@ -19,9 +19,11 @@ Retirement closes both questions: do not set `L9_CAPABILITY_BROKER_URL`, do not
 probe a never-shipped host, and do not paste a reusable secret into a
 model-controlled sandbox to "enable" Sonar / Semgrep / Context7.
 
-Graphiti memory uses `${GRAPHITI_MCP_URL}` (default
-`https://memory.quantumaipartners.com/graphiti/mcp`) with **no bearer**. Cursor
-on this machine may still use the SSH tunnel at `127.0.0.1:8100`.
+Canonical memory is package-owned `l9-graphite-memory` (stdio MCP +
+`python -m ops.memory.cli`). A surface that cannot bind the interpreter is
+**memory-blind**. That is reported (`make memory-binding` / `make memory-readiness`),
+not repaired by pasting `GRAPHITI_MCP_URL` or a bearer. Cursor on this machine
+does not hold a provider tunnel as the front door.
 
 Archived implementation: `ops/secrets/_archived/capability-broker/RETIRED.md`.
 
@@ -40,17 +42,18 @@ work today.
 | Local `semgrep` CE, `bandit`, `pip-audit` | Credential-free rulesets |
 | `gitleaks` | Once provisioned; the security gate fails closed without it |
 | Every `l9-*` skill that does not call a capability | |
-| Graphiti MCP at `GRAPHITI_MCP_URL` | No bearer; session may be memory-blind |
+| Canonical memory (`ops.memory.cli` / MCP stdio) | Unbound = memory-blind; do not paste a URL or bearer |
 
 | Does not work | Consequence |
 |---|---|
-| `gh pr view/list/checks/merge` (GraphQL) | Session gateway returns 403 — use `gh api` REST |
+| `gh pr view/list/checks/merge/comment`, `gh api graphql` | Session gateway returns 403 — use `gh api` REST. For review threads, auto-merge and draft/ready the gateway ships dedicated `ccr/*` REST routes; see the 2026-09-19 row for the list and their verification |
 | Autonomous merge | `gh pr merge` is GraphQL, so it 403s here anyway; and there is no autonomous-merge env boolean — merge needs the scoped `/l9-pr-remediation` receipt (or human `L9_MERGE_AUTHORIZED`) |
 | `sonar.read_issues` | No brokered Sonar. `sonar_fetch.py` authenticates only with a `SONAR_TOKEN` the operator environment already supplies (2026-09-04 directive: resolve Sonar fully, never merge-blocking); otherwise public reads |
 | `semgrep.appsec_scan`, `semgrep.mcp` | No authenticated AppSec; CE unaffected |
 | `context7.mcp` | No library docs retrieval via the retired broker |
 | `gitguardian.mcp` | No brokered secret scanning; `gitleaks` still runs locally |
 | `github.mcp`, `github.packages_read` | Platform GitHub MCP (where connected) covers most of this |
+| Infisical / AWS Secrets Manager bind | The AWS CLI is absent here, so the one login seed cannot be read and the Infisical-bound names in the plane's inventory (`SEMGREP_APP_TOKEN`, `SONAR_TOKEN`) stay unbound. The third inventoried name, `GITHUB_TOKEN`, is unaffected — it binds from the proxied environment, not from Infisical. The SessionStart plane reports `state: unavailable_by_surface` and is **not** counted DEGRADED — an environment property, not a bootstrap fault. Do not install a CLI or paste a credential to clear it |
 
 ## Observed GitHub transports
 
@@ -228,6 +231,52 @@ allow-listing exists that happens to include this container is untested — the
 bypassed request still originated here — and settling it needs a different
 network. No `initialize` handshake was completed and no group's memory was read.
 
+### 2026-09-19 — Claude Code cloud container, `Quantum-L9/Cursor-Governance` @ `5f9f713`
+
+GraphQL was probed directly for the first time. The refusal is **not** silent: the
+403 body names its own replacements, and this row exists because no rule or doc
+carried them — which made a transport swap read as a lost capability.
+
+| Probe | Result |
+|---|---|
+| `gh api user` (REST) | **works**, exit 0 — resolves `cryptoxdog` |
+| `gh api graphql -f query='query{viewer{login}}'` | **403** — `GitHub GraphQL is not available from Claude Code sessions` |
+| `GET  /repos/{o}/{r}/pulls/{n}/ccr/review_threads` | **works** — returns `{resolved, outdated, path, line, comment_ids[]}` |
+| `POST /repos/{o}/{r}/pulls/{n}/ccr/comments/{cid}/resolve` | **works** — returns `{comment_ids, resolved: true}` |
+| `POST /repos/{o}/{r}/pulls/{n}/ccr/comments/{cid}/unresolve` | **works** — restores `resolved: false` |
+
+Resolve/unresolve were verified with a reversible round-trip on one thread of
+PR #612; state was restored (all seven threads back to `resolved: false`).
+
+**The 403 is above the token, not a scope failure.** The same PAT succeeds on REST
+in the same shell. So no credential change, no `add_repo`, and no second PAT
+affects it — rule 62 already forbids reaching for one, and this row says why that
+prohibition costs nothing.
+
+**The documented replacements**, from the 403 body verbatim:
+
+| GraphQL-only operation | REST route |
+|---|---|
+| list review threads | `GET  /repos/{o}/{r}/pulls/{n}/ccr/review_threads` |
+| resolve / unresolve | `POST /repos/{o}/{r}/pulls/{n}/ccr/comments/{cid}/resolve` \| `/unresolve` |
+| auto-merge | `PUT` \| `DELETE /repos/{o}/{r}/pulls/{n}/ccr/auto_merge` |
+| ready for review | `POST /repos/{o}/{r}/pulls/{n}/ccr/ready_for_review` |
+| convert to draft | `POST /repos/{o}/{r}/pulls/{n}/ccr/convert_to_draft` |
+
+**`ccr/review_threads` emits no GraphQL node id.** That is the load-bearing
+consequence, not a detail: the CCR routes key on `comment_id`, so a `thread_id`
+(`PRRT_…`) is *unobtainable* on this surface. Any tool requiring one — including
+`mcp__github__resolve_review_thread`, whose schema demands a node id — cannot be
+made to work here, however the transport is configured. Ledgers key on
+`comment_id` instead (`skills/l9-pr-remediation/scripts/`).
+
+**The shell guard did not cover subprocess callers.**
+`ops/scripts/lib/gh_graphql.sh` intercepts `gh api graphql` with a *bash function*,
+so any Python calling `subprocess.run(["gh","api","graphql",…])` bypassed it
+entirely and failed at the network. `gh pr comment` was a second hole — a
+GraphQL-backed `gh pr` form absent from that library's guard list, so it failed
+while looking allowed. Both are now classified in-process by `_rest_only()`.
+
 ### Relationship to the P307 pack
 
 `WIP/8-26-26/environment_experience_improvement_pack_p307_revised` records **CR-105**
@@ -262,6 +311,27 @@ capability is a delivery problem; a pasted secret is a permanent compromise on
 this surface.
 
 
+## Context7 row after the gate removal (2026-09-19) — supersedes the `context7.mcp` row above
+
+Dated counter-observation, not a rewrite of the row above. `context7` in
+`mcp.template.json` was `_requires_env`-gated on `CONTEXT7_API_KEY`, and the
+SessionStart hook stripped that variable before projecting on governance
+checkouts. Together they turned a missing secret into a silently absent server:
+every hosted session lost the docs MCP with nothing failing, and rule 22
+mandated a tool that did not exist. Measured on this container at `5f9f713`:
+`CONTEXT7_API_KEY` absent, projection receipt `gated_out_servers: ["context7"]`,
+no `mcp__context7__*` on the tool surface, SessionStart line blaming
+`SKIP_PLUGIN_MARKETPLACE`.
+
+The server now renders unconditionally with its `${CONTEXT7_API_KEY}` header
+and the hook no longer strips the variable. With the secret unpopulated the
+server **fails to authenticate**, and SessionStart says so and names the fix:
+the secret populating (Infisical inventory key `CONTEXT7_API_KEY`, proxied into
+the session environment). That is a delivery problem to fix, never a server to
+gate out again, and — as everywhere in this contract — never a reason to paste
+the value into the account variables field or any file.
+
+
 ## Memory rows after the realignment (2026-09-06) — supersedes the Graphiti rows above
 
 Dated counter-observation, not a rewrite of the rows above. Since campaign
@@ -276,3 +346,46 @@ stdio-control-plane`; the `Graphiti_reachability` dimension and the
 model-controlled surface with the memory package unbound is `memory-blind` for
 the honest reason "no runtime bound", never "no bearer", and is still never a
 reason to paste a credential.
+
+
+## Secrets plane, 2026-09-19 — Claude Code cloud container, `Quantum-L9/Cursor-Governance` @ `5f9f713`
+
+A dated row, not a rewrite of any row above.
+
+| Probe | Observed |
+|---|---|
+| `CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE` | `cloud_default` |
+| `CLAUDE_CODE_REMOTE_ENVIRONMENT_ID` | no `ccpool_` prefix |
+| `command -v aws` | absent |
+| `aws_cli_preflight.probe()` | `AWS_CLI_NOT_FOUND` |
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | hold the 14-character `proxy-injected` sentinel — no credential material |
+| `session_start_secrets.py` | `state: unavailable_by_surface`, `surface_class: model_controlled`, exit 0 |
+| `SEMGREP_APP_TOKEN`, `SONAR_TOKEN` | `infisical-machine-absent` (unbound) |
+| `GITHUB_TOKEN` | bound from `env` |
+
+The AWS CLI is absent here **by design**: a model-controlled surface holds no
+Infisical bind, no PAT and no bearer, so there is no login seed for the plane to
+read. Before this row, `bootstrap_agent_environment.sh` counted that absence as
+DEGRADED, and `shared_bootstrap` — and with it `overall` — read DEGRADED on an
+otherwise clean hosted bootstrap. That is a false DEGRADED: the same class of
+lie as a false READY, and just as expensive to chase.
+
+The plane now carries a tri-state, so the probe stays truthful and only the
+scoring is classified:
+
+| State | Meaning | Exit | Counts DEGRADED |
+|---|---|---|---|
+| `ok` | AWS authorized, Infisical profile seeded | 0 | no |
+| `unavailable_by_surface` | model-controlled surface holds no credential plane | 0 | **no** |
+| `failed` | a surface that *should* bind, did not | 1 | yes |
+
+Only `model_controlled` earns the carve-out. A `ccpool_` self-hosted pool and an
+operator machine *can* hold credentials, so AWS absence there is a real fault
+and still degrades. A present-but-broken CLI (`AWS_NOT_AUTHORIZED`, `TIMEOUT`)
+is a fault on **every** surface, hosted included.
+
+The plane stays visible either way: the SessionStart report renders the state as
+`aws-cli: n/a — unavailable by surface`, distinct from both `ok` and `FAILED`,
+and the receipt's `ok` field still reads `false`, because the plane did not bind.
+Nothing here is a reason to install a CLI or paste a credential — see **The rule
+that does not bend** above.

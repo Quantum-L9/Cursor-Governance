@@ -49,7 +49,7 @@ cd ~/.cursor-governance
 make wiring-check WS=/path/to/your/workspace   # check a consumer repo
 make symlinks-check                             # check this clone's own symlinks
 make path-lint                                  # fail if any script hardcodes /Users or /home
-make graphiti-health                            # Graphiti tunnel + MCP tool-plane
+make memory-readiness                           # memory control plane R0..R9 (graphiti-health is a retired alias)
 ```
 
 ## Troubleshooting

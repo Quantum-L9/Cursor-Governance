@@ -46,5 +46,5 @@ jobs:
     permissions:
       contents: read
       issues: write
-    uses: Quantum-L9/.github/.github/workflows/governance-issue.yml@de85dc52667b285e03bcc0b81629b23ffe008905  # main; github-script v9.0.0
+    uses: Quantum-L9/.github/.github/workflows/governance-issue.yml@77587b7421b2e7cfad391e5036f531d8b5833e2b  # main; github-script v9.0.0
     # secrets: inherit

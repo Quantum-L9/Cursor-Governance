@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.local/schemas/l9-pr-audit-bundle-manifest-v2.0.json",
+  "title": "L9 PR Audit Bundle Manifest v2.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "builder_version",
+    "builder_sha256",
+    "autoremediate",
+    "audit_id",
+    "canonical_audit_sha256",
+    "change_ledger_set_sha256",
+    "audit_schema_sha256",
+    "handoff_schema_sha256",
+    "manifest_schema_sha256",
+    "repository_binding",
+    "pr_bindings",
+    "files"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "l9.pr-audit.bundle-manifest.v2.0"
+    },
+    "builder_version": {
+      "const": "2.0.0"
+    },
+    "autoremediate": {
+      "type": "integer",
+      "enum": [
+        0,
+        1
+      ]
+    },
+    "audit_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "canonical_audit_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "audit_schema_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "handoff_schema_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "manifest_schema_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "repository_binding": {
+      "type": "object"
+    },
+    "pr_bindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "pr_number",
+          "base_sha",
+          "source_head_sha"
+        ],
+        "properties": {
+          "pr_number": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "base_sha": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{40,64}$"
+          },
+          "source_head_sha": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{40,64}$"
+          }
+        }
+      }
+    },
+    "files": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sha256",
+          "bytes"
+        ],
+        "properties": {
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
+    },
+    "builder_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "change_ledger_set_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

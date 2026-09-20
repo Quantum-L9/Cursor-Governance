@@ -60,11 +60,19 @@ def _candidate_from_stdin(raw: bytes) -> dict[str, Any]:
     return dict(parsed)
 
 
+#: Hook-lane surface for automatic SGD ingest (ADR-0033 B7). A PE *worker*
+#: reading or writing memory for its own task is on the agent lane and uses
+#: the public ``l9-memory`` surface instead.
+HOOK_SURFACE = "pe-sgd-ingest"
+
+
 def _memory_client(session_id: str | None) -> Any:
     from ops.memory.control_plane_client import MemoryControlPlaneClient
     from ops.memory.runtime_binding import resolve_runtime_binding
 
-    return MemoryControlPlaneClient(resolve_runtime_binding(), session_id=session_id)
+    return MemoryControlPlaneClient(
+        resolve_runtime_binding(), session_id=session_id, surface=HOOK_SURFACE
+    )
 
 
 def resolve_namespace(candidate: Mapping[str, Any], *, workspace: Path) -> str:

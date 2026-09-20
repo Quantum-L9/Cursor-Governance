@@ -162,7 +162,7 @@ def test_breakglass_allows_merge() -> None:
 
 def test_l4_release_receipt_does_not_allow_merge(stacked_repo: Path) -> None:
     begin(stacked_repo, contract_id="merge-auth-test")
-    record_kernels(stacked_repo)
+    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
     authorize_release(stacked_repo)
 
     code, out, err = _run(
@@ -179,7 +179,7 @@ def test_l4_release_receipt_does_not_allow_merge(stacked_repo: Path) -> None:
 
 def test_l4_release_receipt_still_denies_admin_merge(stacked_repo: Path) -> None:
     begin(stacked_repo, contract_id="merge-admin-test")
-    record_kernels(stacked_repo)
+    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
     authorize_release(stacked_repo)
 
     code, out, err = _run(

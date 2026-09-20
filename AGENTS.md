@@ -1492,24 +1492,6 @@ and the remediator pack v5.3 hot path. Those paragraphs stay on disk
   `open_prs=0`. Watchers never merge and never waive that poll duty.
 - Mission remains `open_prs=0`.
 
-<!-- L9_PR_REMEDIATE_MAX_VELOCITY_V1 -->
-## `/l9-pr-remediation` caps are the execution profile (2026-09-14)
-
-This fragment supersedes only the `skill_subagent_cap: 10` / skill-clamp
-sentences in `L9_PR_REMEDIATE_MERGE_NOW_V1`. That paragraph stays on disk
-(additive_only). Live pack: `skills/l9-pr-remediation` v5.5.0.
-
-- `pr_fleet.skill_caps()` passes through `execution_profile` (`max_parallel>=480`,
-  `max_mutation_lanes>=128`). Do not reintroduce `SKILL_SUBAGENT_CAP = 10`.
-- Safety is `claim_scopes_conflict` plus `waves()`, not a remediator clamp.
-- UNKNOWN + green required is `board=merge`. Failing required checks outrank
-  `BEHIND`. Do not merge `origin/main` to "fix" CI.
-- Remediator verify is `L9_REMEDIATOR=1 PR_STACK= PR_BASE=origin/main make
-  precommit-repo` (`L9_REMEDIATOR=1` skips stack-tip rewrite).
-- Complete census before the first edit: ingest includes CI + threads + reviews,
-  and Sonar when `sonar-project.properties` exists. `validate_plan --findings`
-  is required on Converge. Gate E measures `git log <base_sha>..HEAD`.
-
 <!-- SESSIONSTART_SECRETS_PLANE_V1 -->
 ## SessionStart owns the secrets plane (2026-09-07)
 
@@ -1644,83 +1626,188 @@ This fragment supersedes only the sessionEnd dirt-close / auto-hygiene /
 - Agents asked "what dirty files are there" still run
   `session_end_dirt_close.py --status`. That is a report, not the closer.
 
-<!-- FF_NO_SHELF_V1 -->
-## `/ff` does not shelf (2026-09-14)
+## SessionStart emits no plan surface (2026-09-14) — supersedes §16 and the 2026-08-28 "SessionStart pipeline audit" section
 
-This fragment supersedes only the “caller then runs `ff_shelf.py`” / shelf
-publish / post-shelf closer sentences in `FF_SHELF_WIP_PLANS_V1`,
-`FF_CLOSE_PUBLISH_LOOP_V1`, `FF_SHELF_SCRIPT_V1`, and
-`FF_SHELF_CORPUS_REMAINDER_V1`. Those paragraphs stay on disk
-(additive_only). Do not fold them.
+- SessionStart no longer reads, scans, migrates, archives, or emits the plans
+  store: `additional_context` carries no `### Plan audit` heading, and the
+  bootstrap does not run `skills/l9-pipeline-audit/scripts/audit_pipeline.py`
+  (`SESSIONSTART_NO_PLAN_SURFACE_V1`; PR #593).
+- The links-only auto-wire the hook still performs runs
+  `ops/scripts/ensure_workspace_wired.sh` with `L9_PLANS_STORE_MODE=links-only`:
+  an existing `~/.cursor/plans` entry (real directory, file, or symlink) is
+  left byte-for-byte untouched. Migration of a legacy real directory into the
+  tracked store belongs to the manual setup commands
+  (`setup_workspace_symlinks.sh`, `/wire`), never to SessionStart.
+- Plan, WIP, and campaign audits are explicit invokes only:
+  `/l9-pipeline-audit` (alias `/plan-audit`) with `--archive-spent` opt-in.
+  §16's "display-only" findings and the 2026-08-28 producer description are
+  historical.
 
-- `/ff` ends when `ff.sh` prints `OK:` and parked files are back at their
-  original paths.
-- Do not run `ff_shelf.py`, `run_ff_post_shelf.sh`, or
-  `verify_worktree_clean.py` as a closer.
-- Unique WIP/plans stay in the tree. Hold copies stay as backup.
-  No commit. No push. No PR.
+<!-- RECEIPT_EVIDENCE_PLANE_V1 -->
+## Kernel receipts are evidence, not stamps (2026-09-15)
 
-<!-- SESSIONSTART_PLANS_DISPLAY_ONLY_V1 -->
-## SessionStart does not mutate plans (2026-09-14)
+Append-only. Law is `CANONICAL_LAW.md` §6.2.9. This supersedes only the shape of
+the `kernel_gate.py record` step named in `CURSOR_KERNEL_LATCH_BEFORE_PYTEST_V1`
+and `KERNEL_LATCH_BARE_LOCAL_V1`; those paragraphs stay on disk. The finish path
+and the latch position are unchanged.
 
-Append-only. Supersedes only the “SessionStart may archive spent root plans”
-sentences in `L9_SESSION_PIPELINE_AUDIT_V1`. Those paragraphs stay on disk
-(additive_only). Do not fold them.
+- Finish path is still: scoped-commit → `l4_local.py authorize-release` →
+  `PR_REMEDIATE=0 make pr`. `kernel_gate.py precommit` is still the first
+  writers step, before ruff and pytest.
+- What changed is the record step. Write the apply report first, then record:
 
-- SessionStart `### Plan audit` is display-only:
-  `audit_pipeline.py --format session-start` with **no** `--archive-spent`.
-- Do not `shutil.move` plans or inventory-`landed` WIP from the hook.
-- Plans stay on the `~/.cursor/plans` hop. Manual `/l9-audit-plans` or
-  `/plan-audit` (`/l9-pipeline-audit` with `--archive-spent`) may mutate.
-- Do not invent a second kill switch. CLI `--archive-spent` stays opt-in.
-- Do not auto-Build. Do not `make campaign`.
+```bash
+GOV="$HOME/.cursor-governance"
+"$GOV/.venv/bin/python" "$GOV/ops/autonomy/kernel_gate.py" \
+  apply-report-template --workspace "$(pwd)"        # skeleton to stdout
+# fill in deltas: one entry per file you actually changed
+"$GOV/.venv/bin/python" "$GOV/ops/autonomy/kernel_gate.py" \
+  record --workspace "$(pwd)" --report ".l9/autonomy/kernel-apply.md"
+```
 
-<!-- SESSIONSTART_NO_PLAN_SURFACE_V1 -->
-## SessionStart has no plan surface (2026-09-14)
+- The report is the receipt: `l9.kernel_apply.v1` frontmatter, both kernels, a
+  `convergence_status`, both body headings, and **non-empty `deltas`** whose
+  paths exist. Empty deltas, a path outside `.l9/autonomy/`, or a delta naming a
+  file that does not exist is refused, and **no receipt is written**.
+- `verify` re-hashes the report every read, so editing or deleting it after
+  recording fails the gate. `l9.kernel_receipt.v1` is rejected by name.
+- `record-kernels` is still not the apply path, and still not how you satisfy
+  this latch. `l4_local.py` no longer stamps the kernel receipt at all:
+  `kernel_gate.record` is the sole writer (AST-enforced).
+- `/ff` corpus kernels are unchanged, and a corpus-only changeset
+  (`WIP/`, `docs/plans/`, PE campaigns) still needs no tree receipt.
 
-Append-only. Supersedes the SessionStart plan-scan sentences in §16,
-`L9_SESSION_PIPELINE_AUDIT_V1`, `L9_PLAN_AUDIT_ABSORBED_V1`, and
-`SESSIONSTART_PLANS_DISPLAY_ONLY_V1`. Those paragraphs stay on disk
-(additive_only). Do not fold them.
+<!-- WORKTREE_ADD_TWO_ENTRANCES_V1 -->
+## Raw `git worktree add` is denied; two sanctioned entrances (2026-09-15)
 
-- SessionStart does **not** read, scan, analyze, archive, or emit the
-  plans store, `WIP/` harvest queue, or PE campaign sources.
-- `additional_context` has no `### Plan audit` section and must not
-  invoke `audit_pipeline.py` / `audit_plans.py`.
-- Plans work is slash-only: `/l9-audit-plans` (shelf) and
-  `/plan-audit` / `/l9-pipeline-audit` (harvest). `--archive-spent`
-  stays opt-in on those CLIs.
-- `--format session-start` on `audit_pipeline.py` is a leftover report
-  shape, not a SessionStart caller.
-- Do not auto-Build. Do not `make campaign`.
+Append-only companion to §2.1.1. That section is unchanged.
 
-<!-- OVERLAP_NO_WAIT_V1 -->
-## Overlap is not wait (2026-09-14)
+- A bare `git worktree add …` (including `git -C <path> worktree add`) is
+  denied at `beforeShellExecution` / PreToolUse by
+  `ops/autonomy/worktree_isolation_gate.py`: the new folder would have no
+  `.cursor` links and no L4 state, and sessionStart does not fire for it.
+  A compound command is refused at that stage; later stages do not run.
+- **New task** → `bash "$HOME/.cursor-governance/ops/scripts/agent_worktree_start.sh" --agent-id <id> --task-id <task>`
+  (bases on the unique open-PR chain tip under `PR_STACK=auto`; begins L4).
+- **Existing branch, or your own base** → `bash ops/scripts/worktree_add_wired.sh <git worktree add args…>`
+  (same argv as `git worktree add` after the subcommand, e.g.
+  `-b feat/x /path/to/wt origin/main`; wires links and the locked `.venv`).
+- Do not set `L9_WORKTREE_ADD_AUTHORIZED` yourself to get past the gate; the
+  two scripts set it for the one inner git call they own.
 
-This fragment supersedes only the "else wait" sentence in §4.1. That
+<!-- CLOSE_GAP_NOT_MEMORY_DEGRADED_V1 -->
+## A close-gap is lifecycle; an unbound runtime is environment; only memory not answering is DEGRADED (2026-09-15)
+
+Append-only. ADR-0032 supersedes ADR-0028 §9 and the "leads with `DEGRADED`
+and `REPAIR: /end-session`" sentence in `L9_HYDRATE_CLOSE_VISIBLE_V1`. That
 paragraph stays on disk (additive_only). Do not fold it.
 
-- Overlap remedy is: commit into the overlapping open PR this turn, or
-  stack (`PR_STACK=auto`).
-- **Wait for merge is forbidden.** It is not a finish, not a routing
-  option, and not a velocity exception.
-- "Do not put path X in this PR" means commit X into the open PR that
-  already owns X, in this turn.
-- Dropping the overlapping path so a sibling can publish, then parking
-  the dropped work as a later follow-up, is the same violation.
+- `SessionHydrationPacket` carries three typed conditions that are never
+  ORed: `memory_degraded` (canonical memory ran and did not answer),
+  `environment_fault` (`BINDING_FAILED` / `NAMESPACE_UNRESOLVED` — the runtime
+  never reached memory), and `close_gap` + `close_gap_reason` (the prior
+  session left no close receipt). `degraded` mirrors `memory_degraded` only.
+  `continuation_stale` is a fact on the capsule, not a condition.
+- `additional_context` leads by class: `ENVIRONMENT_FAULT` + `REPAIR: make
+  -C ~/.cursor-governance memory-readiness`, then `CLOSE_GAP` + `REPAIR:
+  /end-session`, then `DEGRADED`. The runtime report reserves
+  `memory-hydrate: degraded` for `memory_degraded`; `ENVIRONMENT_FAULT` is
+  listed under its own name; `CLOSE_GAP` / `STALE` are `ok` rows.
+- `ops/scripts/classify_hydrate_state.py` derives `degraded` from
+  `memory_degraded` and prints the condition on a third line. Claude's
+  `memory_prefetch.py` calls that classifier and inherits the fix: a
+  close-gap or stale continuation no longer skips a writeback. Do not add a
+  second classifier in an adapter.
+- The runtime binding (`ops/memory/runtime_binding.py`) anchors to a
+  governance `.venv` (explicit > `L9_MEMORY_INTERPRETER` >
+  `L9_GOVERNANCE_DIR` > `~/.cursor-governance` > this checkout) and reports
+  `sys.executable` only as a last resort. Deterministic lock drift is healed
+  once through `ops/scripts/ensure_uv_environment.sh <root> apply`
+  (`environment_heal.py`; skipped in CI, under `L9_MEMORY_ENV_HEAL=0`, or
+  while the repo write lock is held) and the verdict is on the binding as
+  `environment_heal`. A `BINDING_FAILED` that survives the heal is an
+  environment fault to fix, not memory to distrust.
 
-<!-- ADR0031_WRITE_AGENT_V1 -->
-## Dual memory write classes (2026-09-14) — supersedes §2 / §3 / §7 Graphiti doors
+<!-- MEMORY_TWO_LANES_V1 -->
+## Two lanes, one `MemoryService` (2026-09-15) — supersedes "That is the only model write" in the Interactive memory write contract (2026-09-07)
 
-This fragment supersedes only the live-path sentences in §2.1 (`inject` /
-PICKUP), §3 Cloud `GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp`,
-and §7 `add_memory` / `graphiti_memory_client.py health`. Those paragraphs
-stay on disk (additive_only). Do not fold them. CANONICAL_LAW §8.5 /
-ADR-0031 are the law.
+Append-only. CANONICAL_LAW §8.6, ADR-0033, INV-03b. The 2026-09-07 paragraph
+stays on disk (additive_only). Do not fold it.
 
-- Ordinary / cold model write: MCP `memory.write_agent` (no `phase_lock`).
-- Conflict-sensitive model write: `memory.phase_lock` → `memory.write_governed`.
-- Resume SSOT is `ContinuationCapsuleV2` / `python -m ops.memory.cli hydrate`.
-- Operator / hooks: `python -m ops.memory.cli`. Agent HTTP is sealed.
-- Do not teach `GRAPHITI_MCP_URL`, `add_memory`, or a live
-  `graphiti_memory_client.py` as the agent front door.
+- **Agent lane is direct.** A model-authored fact goes `memory.write_agent`
+  on the `l9-graphite-memory` MCP server (or `l9-memory write` from a shell)
+  and is visible to the next `hydrate` / `search` immediately. No SessionStart
+  receipt, no phase completion, no session close, no PR lifecycle, no
+  Cursor-Governance approval, no governance receipt is a precondition.
+  `memory.phase_lock` → `memory.write_governed` is an **optional**
+  conflict-sensitive pair, not the ordinary write. Cursor-Governance must not
+  mediate or gate agent writes; the hydration gate exempts `l9-memory`,
+  `python -m ops.memory.cli` and `memory_prefetch.py`.
+- **Hook lane is bounded.** SessionStart / End, plan prefetch, PR publish and
+  PE/SGD ingest go through `MemoryControlPlaneClient(surface=<name>)` with the
+  envelope in `ops/config/memory-hook-envelopes.json` (allowed ops, record
+  classes, `max_records`, `max_bytes`, `provenance_required`), enforced
+  client-side before any spawn and stamped `principal.type=hook`. The
+  no-surface operator form is for humans and deterministic adapters only.
+- **Both lanes end at `MemoryService`.** Cursor-Governance holds no provider
+  client, model id, promotion rule, scorer or distill queue (C15); sessionEnd
+  hands the redacted excerpt to `l9-memory distill`. `graphiti_memory_client.py`
+  is deleted; `make graphiti-health` is `make memory-readiness`.
+- **Ratchets.** `validate_legacy_doctrine_residue.py` (`local-memory-cognition`,
+  `agent-lane-interposition`), `validate_memory_egress_boundary.py` lane scan,
+  `tests/ops/memory/test_hook_envelope.py`,
+  `tests/ops/memory/test_no_agent_lane_interposition.py`.
+
+<!-- PR_STACK_OPT_IN_V1 -->
+## PR stacking is opt-in (2026-09-19) — supersedes §2.1.1 "Default is PR_STACK=auto" and §4.1 "`PR_STACK=auto` is the default at start and at `make pr`"
+
+Append-only. SSOT: `ops/autonomy/surface_profile.yaml`
+`pr_stacking.pr_overlap` (`auto_stack_env: PR_STACK`, `stack_default: none`),
+`Makefile` (`PR_STACK ?=`), `rules/48-make-pr-remediation.mdc`,
+`rules/53-pr-overlap-guardrail.mdc`. The §2.1.1 comment block, the §4.1
+sentence, the 2026-08-28 "Ceremony stack-tip" section and the 2026-08-29 Make
+3.81 note stay on disk (additive_only); where they say `auto` is the default,
+this section wins.
+
+- **`PR_STACK` is empty by default.** `agent_worktree_start.sh` bases a new
+  task branch on fetched `origin/main`, and `make pr` / `l9 pr` publishes
+  against `PR_BASE` (usually `origin/main`). Nothing stacks unless you say so.
+- **`PR_STACK=auto` is the explicit opt-in**, at the launcher and at
+  `make pr`. Only then is the unique open-PR chain tip resolved
+  (`ops/scripts/resolve_stack_tip.py` via `resolve_pr_stack.sh`) and the branch
+  or PR based on it. Ambiguous sibling chains still fail closed; an explicit
+  `--base` is never rewritten.
+- **Empty `PR_STACK=` is no longer an "opt-out"** — it is the default. Sections
+  that spell `PR_STACK=auto PR_REMEDIATE=0 make pr` (shelf publish,
+  `l9-plan-simple` Build, `/issues`) are deliberate opt-ins and stay valid as
+  written.
+- **Why:** with five sibling chains open against `main`, `auto` could not
+  resolve a unique tip, so the default was a blocked publish that every caller
+  cleared by passing `PR_STACK=` anyway. Stacking policy itself is unchanged
+  once chosen: bottom-up merge order, no rebase, no conflict resolution.
+
+<!-- HYDRATE_CLOSE_AGENT_LANE_V1 -->
+## SessionStart reads sessionEnd + last-24h agent writes (2026-09-19)
+
+Append-only. ADR-0034, ADR-0035. Does not rewrite the 2026-09-15 two-lanes
+paragraph. That paragraph stays on disk (additive_only). Do not fold it.
+
+- **One session-task string.** `session_task_objective(project_name)` is
+  `Continue work in {name}`. SessionStart hydrate and sessionEnd close both
+  use it. Do not reintroduce `Resume session in {folder}` as a second
+  objective.
+- **SessionStart is four control-plane calls** when a write-namespace hint
+  exists: health, hydrate, `--tag session_continuation`, then
+  `--recorded-after <now-24h>` on the primary namespace only. The fourth
+  call is enrichment. A refused or unknown flag is a warning, never
+  `memory_degraded`.
+- **sessionEnd enriches the capsule** from that same 24h agent-lane window
+  before `ingest_candidate`. Hook envelopes `cursor-session-end` and
+  `claude-session-end` allow `search` as a read. They do not write
+  agent-lane facts and must not constrain `write_agent`.
+- **Classifier is `ops/memory/agent_lane.py`.** Typed continuations, META
+  closes, and Cursor-Governance hook producers are excluded. Cursor-Governance
+  does not open the memory store (INV-03).
+- **Pin.** Live 24h recall needs the bound `l9-graphite-memory` to accept
+  `--recorded-after` (ADR-0035). Until that pin is sealed, prefetch
+  fail-opens. Do not invent a second store reader to paper over it.

@@ -655,14 +655,17 @@ none. **This strengthens F-01:** the plane the receipt once labelled
 `Graphiti_authenticated_health: READY` does not merely lack a client credential
 — it asks for nothing.
 
-**Still genuinely unknown, and precisely why:** whether IP allow-listing exists
-that happens to include this container. The proxy-bypassed request still
-originated *here*, so it cannot exclude that. Settling it needs a request from
-an unrelated network.
+**Closed 2026-09-13 (operator-owned leftover, not a governance UNKNOWN):** those
+probes characterised the **retired public Graphiti HTTPS projection**, not the
+agent memory front door. ADR-0031 / CANONICAL_LAW §8.5 sealed agent HTTP —
+agents reach memory only through package-owned `l9-graphite-memory` stdio MCP
+(cold `memory.write_agent`; high-stakes `memory.phase_lock` →
+`memory.write_governed`). Whether C1 still IP-allowlists this container is an
+operator leftover on the projection host. It is not a live UNKNOWN and is not
+a GitHub issue.
 
 **Deliberately not done:** no `initialize` handshake was completed and no
-group's memory was read. That would exercise the exposure rather than
-characterise it, and characterisation was sufficient.
+group's memory was read. Do not exercise that leftover to “settle” it.
 
 ### Still unresolved, and immaterial
 

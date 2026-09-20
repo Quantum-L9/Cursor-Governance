@@ -1,7 +1,7 @@
 # Cursor-Governance — invariants index
 
-**Version:** 1.6.0
-**Updated:** 2026-09-14
+**Version:** 1.5.0
+**Updated:** 2026-09-15
 **Role:** this-repo operating-invariant index plus a CI enforcement map.
 
 This file does **not** replace [`ORG_INVARIANTS.yaml`](ORG_INVARIANTS.yaml). That YAML is the machine-readable organization policy SSOT. The operator note for org policy is [`docs/governance/ORG_INVARIANTS.md`](docs/governance/ORG_INVARIANTS.md). Do not copy `L9-ORG-*` requirement bodies into this file.
@@ -32,10 +32,14 @@ Named pointers only. One line + path. Bind from live law at refresh time.
 | `pr-check` is the INTERNAL gate leaf of `make pr`; Diagnose is `OPEN_PR=0 make pr`; do not run `pr-check` after `precommit-repo` | `AGENTS.md` `PR_CHECK_FOLDED_V1`; `rules/48-make-pr-remediation.mdc` |
 | Repository documentation closure is obligation-based: a receipt may be `PASS` only when every applicable `DocumentationObligation` is terminal and its required validation is evidenced; any required non-terminal obligation remains `PARTIAL`, and a blocked obligation yields `BLOCKED` | `skills/l9-update-agent-docs/contracts/documentation-obligation.schema.json`; `skills/l9-update-agent-docs/scripts/doc_obligations.py` |
 | Semantic documentation obligations require admitted, change-bound `l9-intelligence-harvest` evidence; the Harvest input must bind the evaluated repository, required surfaces, and semantic source digest before it may qualify an obligation | `skills/l9-update-agent-docs/scripts/repo_docs.py`; `skills/l9-update-agent-docs/scripts/compile_semantic_obligations.py` |
-| Maximum velocity is the committed execution personality on every surface (Cursor and Claude): `maximum_velocity`, `max_parallel>=480`, `max_mutation_lanes>=128`, `native_subagent_limit>=480`. Independent research launches as concurrent Tasks, not one in-session lane. **Wait for merge is forbidden** — overlap commits into the owning open PR this turn | `ops/autonomy/claude-execution-profiles.json`; `ops/autonomy/surface_profile.yaml` `claude_execution_profiles`; `rules/07-max-velocity-research.mdc`; `rules/53-pr-overlap-guardrail.mdc`; `ops/scripts/validate_max_velocity.py` |
+| Maximum velocity is the committed execution personality on every surface (Cursor and Claude): `maximum_velocity`, `max_parallel>=480`, `max_mutation_lanes>=128`, `native_subagent_limit>=480`. Independent research launches as concurrent Tasks, not one in-session lane | `ops/autonomy/claude-execution-profiles.json`; `ops/autonomy/surface_profile.yaml` `claude_execution_profiles`; `rules/07-max-velocity-research.mdc`; `ops/scripts/validate_max_velocity.py` |
 | `/ff` overwrite-untracked scan is two git processes (`ls-files` + `ls-tree` + `comm -13`), never one `ls-files --error-unmatch` per origin path | `skills/l9-repo-sync/scripts/ff.sh`; `skills/l9-repo-sync/scripts/validate_pack_structure.py` |
 | Tree kernels latch at precommit (first writers step of `make pr`), never at L4 authorize-release; every local surface latches and unmarked CI is the only skip | `ops/autonomy/kernel_gate.py`; `ops/autonomy/surface_detect.py`; `CANONICAL_LAW.md` `KERNEL_PRECOMMIT_HOOK_V1`; `AGENTS.md` `KERNEL_LATCH_BARE_LOCAL_V1` |
-| SessionStart does not read, scan, analyze, archive, or emit plan-store findings; plans work is slash-only | `AGENTS.md` `SESSIONSTART_NO_PLAN_SURFACE_V1`; [`ops/hooks/session_start_bootstrap.sh`](ops/hooks/session_start_bootstrap.sh); [`environment/agents/adapters/cursor/SESSION_START_SPEC.md`](environment/agents/adapters/cursor/SESSION_START_SPEC.md) |
+| One canonical writer per receipt plane: exactly one module writes a given receipt file, and no other module may import its writer, call it, or construct its path | `CANONICAL_LAW.md` §6.2.9; `ops/autonomy/kernel_gate.py`; [`tests/ops/autonomy/test_kernel_receipt_writers.py`](tests/ops/autonomy/test_kernel_receipt_writers.py) |
+| A receipt binds to a digest of the artifact that constitutes the claim, never to HEAD, a phase name, or a flag; the tree-kernel artifact is a path-confined `.l9/autonomy/kernel-apply.md` with non-empty `deltas` naming files that exist | `CANONICAL_LAW.md` §6.2.9; [`ops/autonomy/kernel_predicates.py`](ops/autonomy/kernel_predicates.py); `AGENTS.md` `RECEIPT_EVIDENCE_PLANE_V1` |
+| Verifiers re-derive and never trust a recorded verdict: the artifact is re-hashed and its predicates re-run on every read, a rejected claim writes nothing, and a superseded schema (`l9.kernel_receipt.v1`) is rejected by name | `CANONICAL_LAW.md` §6.2.9; `ops/autonomy/kernel_gate.py` `verify_tree`; [`tests/ops/autonomy/test_kernel_predicates.py`](tests/ops/autonomy/test_kernel_predicates.py) |
+| Receipt invariants are enforced by source analysis only — these receipts live under gitignored `.l9/`, so no CI job may require one | `CANONICAL_LAW.md` §6.2.9; `tests/ops/autonomy/test_kernel_receipt_writers.py` |
+| **INV-03b — two lanes, one `MemoryService`.** Agents are first-class real-time memory writers and may invoke the public `l9-memory` / MCP write surface directly; Cursor-Governance must not mediate or gate those writes. Automatic hooks use purpose-bounded write / distill / close operations with restricted hook principals. Both lanes converge directly on `MemoryService`; neither may access providers or persistence behind it. Ratchet: no memory persistence or cognition bypasses `MemoryService`; agent adapters may invoke public `MemoryService` operations directly; automatic hooks may only invoke their bounded operations; Cursor-Governance may not interpose an authorization wall on agent-initiated memory writes | [`docs/decisions/ADR-0033-two-lanes-one-memoryservice.md`](docs/decisions/ADR-0033-two-lanes-one-memoryservice.md); `CANONICAL_LAW.md` `MEMORY_TWO_LANES_V1`; [`ops/config/memory-hook-envelopes.json`](ops/config/memory-hook-envelopes.json); [`tests/ops/memory/test_no_local_memory_cognition.py`](tests/ops/memory/test_no_local_memory_cognition.py); [`tests/ops/memory/test_no_agent_lane_interposition.py`](tests/ops/memory/test_no_agent_lane_interposition.py); [`ops/scripts/validate_legacy_doctrine_residue.py`](ops/scripts/validate_legacy_doctrine_residue.py) (`local-memory-cognition`, `agent-lane-interposition`); [`ops/scripts/validate_memory_egress_boundary.py`](ops/scripts/validate_memory_egress_boundary.py) lane scan (hook lane → `MemoryControlPlaneClient` only; agent lane → public `l9-memory` / MCP only; `agent_lane_callers` declared in the envelope registry) via [`tests/ops/memory/test_egress_boundary.py`](tests/ops/memory/test_egress_boundary.py); caller placement in [`tests/ops/memory/test_hook_envelope.py`](tests/ops/memory/test_hook_envelope.py) |
 
 Org-policy invariant IDs and enforcement text live only in the YAML `invariants:` block. Point there; do not duplicate.
 
@@ -59,7 +63,6 @@ Invariant → workflow or script that actually checks it. Local procedure remain
 | Generated artifact heal | pre-commit `sync-generated-artifacts` (make pr may WARN+continue; see hook comment) |
 | Maximum-velocity execution profile | pre-commit `max-velocity` → `ops/scripts/validate_max_velocity.py`; `tests/ops/scripts/test_validate_max_velocity.py` |
 | `/ff` overwrite-untracked high-velocity | `skills/l9-repo-sync/scripts/validate_pack_structure.py`; `skills/l9-repo-sync/scripts/self_test.py` `ignored_colliding` |
-| SessionStart has no plan surface | `ops/scripts/tests/test_session_start_runtime_report.py` `HookWiringTests`; `ops/scripts/tests/test_bootstrap_diagnostic_contract.py` |
 
 Workflow file count at write time: **14** under `.github/workflows/`. Recount from that directory on refresh. Blocking vs janitor split: [`ARCHITECTURE.md`](ARCHITECTURE.md) CI/CD architecture.
 
@@ -93,6 +96,10 @@ Cursor profile, `max_parallel` below 480, or `cursor_default` other than
 `maximum_velocity` is a fail-closed regression
 (`ops/scripts/validate_max_velocity.py`). Agents fan out independent
 research as Tasks (`rules/07-max-velocity-research.mdc`).
+Wait for merge is forbidden as a finish: velocity ends a lane by publishing
+or handing off, never by idling on an open PR. The phrase is latched on
+`rules/07-max-velocity-research.mdc` and `rules/53-pr-overlap-guardrail.mdc`
+by the same validator and by `tests/ops/scripts/test_validate_max_velocity.py`.
 
 <!-- FF_OVERWRITE_UNTRACKED_VELOCITY_V1 -->
 ## `/ff` overwrite-untracked velocity (2026-09-10)
@@ -102,22 +109,3 @@ must intersect the index with `origin/main` via `comm -13` (`git ls-files`
 vs `git ls-tree`). A per-path `git ls-files --error-unmatch` loop is a
 fail-closed regression (`validate_pack_structure.py`). Do not restore
 `ls-files --others` — excludesfile misses ignored colliding copies.
-
-<!-- SESSIONSTART_NO_PLAN_SURFACE_V1 -->
-## SessionStart has no plan surface (2026-09-14)
-
-Additive index row only. Do not fold the table. SessionStart must not
-read, scan, analyze, archive, or emit the plans store. Plans work is
-slash-only (`/l9-audit-plans`, `/plan-audit` / `/l9-pipeline-audit`).
-A hook that calls `audit_pipeline.py` or emits `### Plan audit` is a
-fail-closed regression (`HookWiringTests`).
-
-<!-- OVERLAP_NO_WAIT_V1 -->
-## Wait for merge is forbidden (2026-09-14)
-
-Additive index row only. Do not fold the table. Finishing with
-wait / defer-until-#N-merges / "after those PRs land" is a
-fail-closed maximum-velocity regression
-(`rules/07-max-velocity-research.mdc`, `rules/53-pr-overlap-guardrail.mdc`,
-`ops/scripts/validate_max_velocity.py`). Overlap commits into the
-owning open PR this turn, or stacks. It does not wait.

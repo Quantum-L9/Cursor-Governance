@@ -40,8 +40,31 @@ PR_REMEDIATE=0 make pr   # or l9 pr / make -C "$GOV" pr WS="$PWD"
 ```
 
 If the kernel hook fails, apply `kernels/Recursive Alignment.md` then
-`kernels/Validate & Repair.md`, commit, `kernel_gate.py record`, and
-re-run the same `make pr`. Do not run precommit or pytest first.
+`kernels/Validate & Repair.md`, commit, **write the apply report**, record
+against it, and re-run the same `make pr`. Do not run precommit or pytest
+first.
+
+```bash
+GOV="$HOME/.cursor-governance"
+KG="$GOV/.venv/bin/python $GOV/ops/autonomy/kernel_gate.py"
+$KG apply-report-template --workspace "$PWD"     # skeleton; fill in deltas
+$KG record --workspace "$PWD" --report ".l9/autonomy/kernel-apply.md"
+```
+
+That kernel commit changes worktree bytes, and the L4 release receipt is bound
+to them (`ops/autonomy/receipt_binding.py`): a receipt issued before the
+kernel apply no longer matches the tree, and nothing re-binds it across a
+commit you authored. `kernel_gate.py record` prints a `NEXT:` line when that
+is the case — run `authorize-release` again before the re-run, or the remote
+check refuses at the end of `make pr` with `L4 receipt stale`.
+
+The report **is** the receipt (CANONICAL_LAW §6.2.9). `record` refuses an
+absent report, empty `deltas`, a path outside `.l9/autonomy/`, or a delta
+naming a file that does not exist — and writes nothing when it refuses, so
+there is no receipt to fall back on. `verify` re-hashes the report on every
+read, so editing it after recording fails the gate; `l9.kernel_receipt.v1` is
+rejected by name. The hook's own `L9_AGENT_REQUIRED` block prints the exact
+two commands bound to your workspace.
 
 On every surface, `make pr` runs the **governance** Makefile's
 `pr` target regardless of the workspace repo or its Makefile — reach it

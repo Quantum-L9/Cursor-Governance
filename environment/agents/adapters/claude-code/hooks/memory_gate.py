@@ -27,6 +27,15 @@ the repository*, and the `git-mutation` rule still describes the expected
 workflow, but an unsatisfied precondition no longer blocks the command from
 executing. See ``ops/autonomy/git_execution_exemption``. Editor writes and the
 MCP GitHub tools are governed exactly as before.
+
+Memory invocations are exempt for the same reason from the other side
+(ADR-0033 B8, INV-03b): ``l9-memory …``, ``python -m ops.memory.cli …`` and
+the ``memory_prefetch.py`` repair are *memory* actions on the agent lane, not
+repository writes. A hydration gate that refused the command which writes or
+repairs memory was an interposition on that lane — and made its own
+remediation text impossible to follow. See
+``ops/autonomy/memory_lane_exemption``. MCP memory tools
+(``mcp__l9-graphite-memory__*``) are never in this hook's matcher at all.
 """
 
 from __future__ import annotations
@@ -68,6 +77,26 @@ except ImportError:  # pragma: no cover - exemption module unreachable
         return bool(_PLAIN_GIT.match(command))
 
 
+try:
+    from memory_lane_exemption import event_is_memory_lane  # noqa: E402
+except ImportError:  # pragma: no cover - exemption module unreachable
+    import re as _re2
+
+    _PLAIN_MEMORY = _re2.compile(
+        r"^\s*(?:\S*/)?(?:l9-memory|python3?(?:\.\d+)?\s+-m\s+ops\.memory\.cli)"
+        r"(?:\s+[^\s'\"`$;&|<>()]+)*\s*$"
+    )
+
+    def event_is_memory_lane(tool_name: str, tool_input: object) -> bool:
+        """Narrow fallback: a missing module must not resurrect the interposition."""
+        if tool_name not in {"Bash", "bash", "Shell", "shell"}:
+            return False
+        if not isinstance(tool_input, dict):
+            return False
+        command = str(tool_input.get("command") or tool_input.get("cmd") or "")
+        return bool(_PLAIN_MEMORY.match(command))
+
+
 def _deny(reason: str) -> None:
     print(
         json.dumps(
@@ -102,6 +131,11 @@ def main() -> int:
     # Before contract load, classification, and the fail-closed handler: for a
     # git/gh command, execution permission does not depend on memory state.
     if event_is_git_or_gh(tool_name, tool_input):
+        return 0
+    # Same position for the agent lane: a memory write / hydrate / repair is
+    # not a repository write, and a hydration precondition never gates it
+    # (ADR-0033 B8). This also keeps the denial text above executable.
+    if event_is_memory_lane(tool_name, tool_input):
         return 0
 
     try:
@@ -152,6 +186,9 @@ def main() -> int:
             # (claude-code__claude-code__<chat>), so following the denial
             # stamped a file this gate never looked up (audit P573-F1).
             # SessionStart's session id is a different key and is not this hint.
+            # One prefetch binds one work repo: add --workspace <owning-clone>
+            # when that repo is not this session window (never hardcode
+            # Cursor-Governance).
             try:
                 writer_agent, chat_id = st.receipt_identity(event=event)
             except ValueError:
@@ -171,8 +208,10 @@ def main() -> int:
                 )
             _deny(
                 f"Memory not hydrated this session. Governed write '{rule['id']}' requires the "
-                "SessionStart canonical memory prefetch. Start a fresh session, or run "
-                f"{sid_hint}, then retry. "
+                "one SessionStart prefetch of the repository this agent is working in "
+                "(not a hardcoded Cursor-Governance hydrate). Start a fresh session, or run "
+                f"{sid_hint} then retry. "
+                "To bind writes to another registered clone, add --workspace <that-clone>. "
                 "This is a hydration gate, not a lock: no phase-lock is required or accepted."
             )
         return 0

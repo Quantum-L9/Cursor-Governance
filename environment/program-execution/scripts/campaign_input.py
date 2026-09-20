@@ -626,9 +626,11 @@ def preflight(classification: Classification) -> list[str]:
 
     Classification answers "which route"; it does not answer "will this run".
     A source with `TASK-001A`, a local_write task that names no writable path,
-    or a composed validation command used to classify as SUPPORTED and fail
-    after isolation, compile and bootstrap. Those are deterministic source
-    defects, so they are decided here, where nothing has been created yet.
+    a composed validation command, or an unknown missing `owner` /
+    `resolution_method` / `status` / `resolution_evidence_ids` used to classify
+    as SUPPORTED and fail after isolation, compile and bootstrap. Those are
+    deterministic source defects, so they are decided here, where nothing has
+    been created yet.
 
     Read-only. Returns compile warnings for supported non-direct kinds (none)
     and for a clean direct source. Raises the terminal refusal otherwise.

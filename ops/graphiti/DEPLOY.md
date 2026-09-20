@@ -34,29 +34,37 @@ Source of truth: AWS Secrets Manager `l9/OPENAI_API_KEY` (see `graphiti.env.exam
 
 ## Mac client
 
+The agent front door is **not** this tunnel. ADR-0031 sealed agent HTTP;
+`graphiti_memory_client.py` is a tombstone. Use the locked venv:
+
 ```bash
-# Terminal 1 — tunnel
+GOV="${HOME}/.cursor-governance"
+PY="${GOV}/.venv/bin/python"
+WS="${CURSOR_PROJECT_DIR:-$(pwd)}"
+(cd "$GOV" && PYTHONPATH="$GOV" "$PY" -m ops.memory.cli health --workspace "$WS")
+(cd "$GOV" && PYTHONPATH="$GOV" "$PY" -m ops.memory.cli resolve --workspace "$WS")
+```
+
+Historical projection access only (retired as the live client — do not treat
+`GRAPHITI_MCP_URL` / a bearer as memory):
+
+```bash
+# Terminal 1 — retired tunnel (projection host leftover)
 ssh -N -L 8100:127.0.0.1:8100 -i ~/.ssh/Hetzner-C1-nopass root@46.62.243.82
-
-# Terminal 2 — env
-cp GlobalCommands/ops/graphiti/graphiti.env.example ~/.cursor/graphiti.env
-# GRAPHITI_MCP_URL=http://127.0.0.1:8100/mcp/
-# GRAPHITI_MCP_TOKEN=<same as VPS>
-# GRAPHITI_MEMORY_ENABLED=1
-# GRAPHITI_WRITE_GATES=0
-
-bash GlobalCommands/ops/scripts/setup_workspace_symlinks.sh "$(pwd)"
-python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py health
-python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py resolve
 ```
 
 ## Verify
 
 ```bash
-python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py bootstrap --dry-run --group-id sandbox-test
-python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py conflicts
-bash .cursor-commands/ops/graphiti/test_gate_e2e_full.sh
+GOV="${HOME}/.cursor-governance"
+PY="${GOV}/.venv/bin/python"
+WS="${CURSOR_PROJECT_DIR:-$(pwd)}"
+(cd "$GOV" && PYTHONPATH="$GOV" "$PY" -m ops.memory.cli readiness --workspace "$WS" --json)
+(cd "$GOV" && PYTHONPATH="$GOV" "$PY" -m ops.memory.cli conflicts --workspace "$WS")
 ```
+
+`graphiti_memory_client.py bootstrap|conflicts` is retired (tombstone). Do not
+run it as a live health recipe.
 
 ## Custom ontology
 
@@ -73,7 +81,8 @@ In `~/.cursor/graphiti.env`:
 GRAPHITI_AUTOSEED=1   # default off — runs bootstrap via setup_workspace_symlinks.sh (memory-bank scaffold retired)
 ```
 
-Manual check: `python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py autoseed-check` (exit 2 = not seeded).
+Manual check (retired client — do not use as the live front door):
+`python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py autoseed-check` is a tombstone invocation. Prefer `python -m ops.memory.cli readiness`.
 
 ## Warnings
 

@@ -121,7 +121,7 @@ CLOSE_ARGS=(
 # Ensure cwd for any incidental resolve matches the project (close passes --project-dir)
 cd "$REPO" || true
 
-# Capture stdout even when close exits 2 (enqueue fail-loud after Phase A success).
+# Capture stdout even when close exits non-zero (the report is still the evidence).
 REPORT="$(cd "$GOV_ROOT" && PYTHONPATH="$GOV_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
     "$PY" -m ops.graphiti.hydration.cli close \
     "${CLOSE_ARGS[@]}" 2>/dev/null)"
@@ -139,20 +139,17 @@ status = d.get("status", "?")
 writes = int(d.get("write_count") or 0)
 warns = int(d.get("warning_count") or 0)
 print(
-    "INFO: session close status=%s writes=%s warnings=%s phase_a=%s phase_b=%s"
-    % (status, writes, warns, bool(d.get("phase_a")), bool(d.get("phase_b"))),
+    "INFO: session close status=%s writes=%s warnings=%s phase_a=%s"
+    % (status, writes, warns, bool(d.get("phase_a"))),
     file=sys.stderr,
 )
 if status == "idempotent_skip":
     print("INFO: close receipt already present — skipped duplicate writes", file=sys.stderr)
-if d.get("phase_b"):
-    print("INFO: Phase B distill completed", file=sys.stderr)
-if d.get("enqueue_ok") is False:
-    print("ERROR: distill S3 enqueue failed", file=sys.stderr)
-if d.get("enqueue_ok") is True:
-    print("INFO: distill job enqueued", file=sys.stderr)
+distill = d.get("distill_status")
+if distill:
+    print("INFO: canonical distill %s" % distill, file=sys.stderr)
 ' 2>&1 || echo "INFO: session close finished" >&2
-elif [[ "$CLOSE_RC" -ne 0 && "$CLOSE_RC" -ne 2 ]]; then
+elif [[ "$CLOSE_RC" -ne 0 ]]; then
   echo "ERROR: session close failed — attempting canonical close retry" >&2
 fi
 
@@ -169,7 +166,7 @@ try:
 except Exception:
     print("")
 ' 2>/dev/null || true)"
-if [[ "$CLOSE_STATUS" != "idempotent_skip" ]] && { [[ "$CLOSE_RC" -ne 0 && "$CLOSE_RC" -ne 2 ]] || [[ "${WRITE_COUNT:-0}" == "0" ]]; }; then
+if [[ "$CLOSE_STATUS" != "idempotent_skip" ]] && { [[ "$CLOSE_RC" -ne 0 ]] || [[ "${WRITE_COUNT:-0}" == "0" ]]; }; then
   echo "ERROR: close write_count=${WRITE_COUNT:-0} rc=${CLOSE_RC} — one canonical close retry (retry-close)" >&2
   FB_RC=0
   (cd "$GOV_ROOT" && PYTHONPATH="$GOV_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
@@ -182,8 +179,5 @@ if [[ "$CLOSE_STATUS" != "idempotent_skip" ]] && { [[ "$CLOSE_RC" -ne 0 && "$CLO
     _record_skip close_failed
   fi
 fi
-# Fail-loud on enqueue (cli exit 2); keep Graphiti availability fail-open otherwise.
-if [[ "${CLOSE_RC:-0}" == "2" ]]; then
-  exit 2
-fi
+# Memory availability stays fail-open to the hook; the close receipt carries the verdict.
 exit 0

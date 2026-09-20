@@ -43,7 +43,8 @@ AND `L9_AUTONOMY_ENABLED=true`:
 5. Cursor surface (`L9_GOVERNANCE_SURFACE` is `cursor` or unset) MUST scoped-commit locally
    after each authored chunk (pathspecs; rule 49).
    Unique dirty files you authored are a rule failure. Do not ask.
-   After finished work: apply RA + Validate & Repair, `kernel_gate.py record`,
+   After finished work: apply RA + Validate & Repair, write
+   `.l9/autonomy/kernel-apply.md`, `kernel_gate.py record --report` it,
    `authorize-release`, then `PR_REMEDIATE=0 make pr` / `l9 pr`. Do not run
    `make precommit-repo` then `make pr`. Tree kernels fire on Cursor and
    adapters before pytest. L4 remote gate still blocks mid-execution push.
@@ -71,7 +72,8 @@ AND `L9_AUTONOMY_ENABLED=true`:
   writes `ops/autonomy/authorize_merge.py --all-open` and each PR is green +
   mergeable. Force-push / admin-merge stay forbidden. Tree kernels fire
   on Cursor and adapters before pytest; CI / unknown skip.
-- Stacked PRs: when a PR is already open for the workstream, the next PR
+- Stacked PRs are opt-in (`PR_STACK=auto`; empty by default): when you
+  choose to stack and a PR is already open for the workstream, the next PR
   bases on the open PR's head (bottom-up merge order). Rebase and conflict
   resolution are forbidden; one feature branch per program.
 

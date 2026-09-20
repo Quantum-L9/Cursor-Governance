@@ -209,7 +209,9 @@ def test_merge_now_holds_a_stacked_child_until_the_parent_lands(
     assert ready["merge_blocked"][0]["blocked_by"] == [{"pr": 1, "reason": "stack_parent_open"}]
 
 
-def test_skill_cap_limits_the_first_wave_to_ten(tmp_path: Path, monkeypatch) -> None:
+def test_skill_caps_pass_through_profile_for_twelve_independent_prs(
+    tmp_path: Path, monkeypatch
+) -> None:
     fleet = [
         {
             "number": n,
@@ -225,10 +227,37 @@ def test_skill_cap_limits_the_first_wave_to_ten(tmp_path: Path, monkeypatch) -> 
     _probe(tmp_path, monkeypatch, fleet)
     result = pr_fleet.plan(TARGET, surface="claude_cloud")
     first = result["waves"]["first_wave"]
-    assert result["waves"]["caps"]["skill_subagent_cap"] == 10
-    assert first["launch_count"] == 10
-    assert first["remediate"] == list(range(1, 11))
-    assert first["blocked_cap"] == [11, 12]
+    caps = result["waves"]["caps"]
+    assert caps["max_parallel"] >= 480
+    assert caps["max_mutation_lanes"] >= 128
+    assert caps["skill_subagent_cap"] >= 480
+    assert first["launch_count"] == 12
+    assert first["remediate"] == list(range(1, 13))
+    assert first["blocked_cap"] == []
+
+
+def test_remediate_objective_isolates_verify_and_forbids_merge_main(
+    tmp_path: Path, monkeypatch
+) -> None:
+    packet = pr_fleet.build_assignment(
+        TARGET,
+        pr_fleet._normalize_pr(INDEPENDENT[0]),
+        kind="remediate",
+        run_id="run1",
+        graph_id="abcd",
+    )
+    assert (
+        "L9_REMEDIATOR=1 PR_STACK= PR_BASE=origin/main make precommit-repo" in packet["objective"]
+    )
+    assert "Never merge origin/main" in packet["objective"]
+    watch = pr_fleet.build_assignment(
+        TARGET,
+        pr_fleet._normalize_pr(INDEPENDENT[0]),
+        kind="watch",
+        run_id="run1",
+        graph_id="abcd",
+    )
+    assert "board=merge" in watch["objective"]
 
 
 def test_merge_assignment_is_stack_safe_only(tmp_path: Path, monkeypatch) -> None:

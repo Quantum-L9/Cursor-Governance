@@ -35,6 +35,8 @@ Verified live on 2026-07-28 (EDT), shallow clones at these SHAs:
 | Quantum-L9/Cursor-Governance | `bda773b` | Adapter model in CANONICAL_LAW §2 (Cursor + Claude Code active; Windsurf/VS Code planned). Memory layer §8: Graphiti/Neo4j on C1 VPS (Hetzner 46.62.243.82), container `zepai/knowledge-graph-mcp:1.0.2-graphiti-0.28.2-standalone`, Cursor reaches it via SSH tunnel `localhost:8100/mcp/`. Group registry: `ops/graphiti/group_registry.yaml` (schema 2, workspace_group `igor-workspace`, forbidden groups `main/default/""/test`, repos: ib-odoo-19, cursor-governance, cognitive-engine-graphs, l9-node-template, igorbot). Cursor identity `${USER_ID:cursor_agent}` in `ops/graphiti/config-docker-neo4j.yaml`. Claude Code env pack at `environment/agents/adapters/claude-code/` (same content as the user's uploaded `l9-claude-code-env-pack.zip`; the repo wins on disagreement). |
 | Quantum-L9/l9-graphiti-memory | `4aa86f2` | v2.3.0 memory control plane. `MemoryPrincipal` contract (`contracts/identity.py`): principal_id, tenant, org, workspace, user_id, agent_id, roles tuple, read/write/promote namespace globs, is_admin. Bearer-token auth (`authz/authenticator.py`, constant-time), namespace policy (`authz/policy.py`, fnmatch globs). `auth_tokens.json` maps token → principal. Server: `l9-memory-server --transport stdio|http|sse`; `http_auth_required` defaults true; refuses unauthenticated non-loopback bind. Guarantees used by our design: deterministic admission, idempotency (duplicate outcome), supersession, bi-temporal lineage. |
 
+**2026-09-13 supersession (ADR-0031):** the 2026-07-28 Graphiti/SSH-tunnel and per-agent HTTPS bearer facts above are historical. Live agent memory is package-owned `l9-graphite-memory` stdio MCP (`write_agent` / `write_governed`). Agent HTTP is sealed.
+
 GitHub access: Manus's `gh` is authenticated as `cryptoxdog` with **admin/push
 on both repos** — no adapter needed for repo access (answered in this session).
 
@@ -87,8 +89,11 @@ on both repos** — no adapter needed for repo access (answered in this session)
    `environment/agents/adapters/claude-code/`.
 2. **`validate_agents.py` A3** — adapter contract enforced; production_url
    must match env examples. `make agents-env` + self-tests green.
-3. **Memory Option A LIVE** — `https://memory.quantumaipartners.com` documented
-   in registry `memory.production_url` and MEMORY_TOPOLOGY.
+3. **Memory Option A (2026-07-31, superseded 2026-09-13)** — the HTTPS URL
+   `https://memory.quantumaipartners.com` was documented in registry
+   `memory.production_url` and MEMORY_TOPOLOGY. **Live front door now:**
+   ADR-0031 package-owned `l9-graphite-memory` stdio MCP (`write_agent` /
+   `write_governed`). Agent HTTP is sealed.
 
 ### Still operator / human
 
@@ -104,8 +109,9 @@ on both repos** — no adapter needed for repo access (answered in this session)
 L9_META canonical header on every generated file (hard rule). Explicit user
 confirmation before modifying repo code. Multi-file outputs delivered as one
 ZIP with an index file. Decisive, deterministic responses; unknowns labelled
-"Unknown", never fabricated. Executable deliverables preferred. Graph-database
-(Neo4j/Graphiti) architecture preferred for agent memory. No tokens/secrets in
+"Unknown", never fabricated. Executable deliverables preferred. Agent memory is
+the canonical `l9-graphite-memory` control plane (Graphiti is a projection, not
+the store agents call). No tokens/secrets in
 any repo file; account-environment or gitignored local files only.
 
 ## 7. Resume instructions for the next session (any agent)

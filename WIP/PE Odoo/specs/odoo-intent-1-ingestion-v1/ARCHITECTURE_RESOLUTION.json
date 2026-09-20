@@ -1,0 +1,2894 @@
+{
+  "admission": "declared",
+  "campaign_id": "odoo-intent-1-ingestion-v1",
+  "contradictions": [],
+  "coverage": {
+    "chunks_expected": 1,
+    "chunks_extracted": 1,
+    "classified_units": 90,
+    "failures": [],
+    "mapped_material_semantic_items": 50,
+    "mapped_material_units": 29,
+    "material_semantic_items": 50,
+    "material_units": 29,
+    "status": "PASS",
+    "total_units": 90,
+    "unmapped_material_units": 0
+  },
+  "extractor": {
+    "chunks": 1,
+    "critic_rounds": 1,
+    "id": "deterministic-lexical.v1",
+    "protocol": "l9.program-execution.architecture-extractor-response.v1",
+    "repair_rounds": 0
+  },
+  "rejected_items": [],
+  "schema": "l9.program-execution.intent-provenance.v1",
+  "semantic_items": [
+    {
+      "campaign_mappings": [],
+      "confidence": "medium",
+      "id": "SEM-001",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0001"
+      ],
+      "statement": "Document frontmatter declares the architecture intent schema and target."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "kind": "program_scope_include"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-002",
+      "kind": "scope_include",
+      "materiality": "material",
+      "rationale": "Execute the next implementation phase for https://github.com/cryptoxdog/IB-Odoo_19 by resuming from the repository\u2019s actual current state, not rebuilding existing work. Treat Staging as the working/default integration branch unless repository inspection proves otherwise. First inspect the current code, git history, tests, documentation, migration artifacts, CieTrade exports, VanillaSoft integration code, Odoo models/fields, Makefile/command conventions, and existing contract/schema work. Preserve correct existing implementation and explicitly classify anything unverified as UNKNOWN.",
+      "source_refs": [
+        "SRC-0002"
+      ],
+      "statement": "Preserve correct existing implementation and explicitly classify anything unverified as UNKNOWN."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-001",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-003",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "The primary objective is to complete and prove two deterministic, repeatable data-ingestion workflows: CieTrade \u2192 Odoo and VanillaSoft \u2192 Odoo. Both must be safe to rerun, reconcile source records to resulting Odoo state, expose a single canonical repository-supported command, fail closed on material errors, and produce machine-readable execution summaries. Do not perform production imports, production database mutations, pushes, or merges without explicit authorization.",
+      "source_refs": [
+        "SRC-0003"
+      ],
+      "statement": "Do not perform production imports, production database mutations, pushes, or merges without explicit authorization."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "kind": "task",
+          "task_id": "TASK-001"
+        },
+        {
+          "disposition": "UNKNOWN",
+          "grounding_evidence": "no_path_or_symbol_evidence",
+          "kind": "task_action",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-004",
+      "kind": "requirement",
+      "materiality": "material",
+      "rationale": "The primary objective is to complete and prove two deterministic, repeatable data-ingestion workflows: CieTrade \u2192 Odoo and VanillaSoft \u2192 Odoo. Both must be safe to rerun, reconcile source records to resulting Odoo state, expose a single canonical repository-supported command, fail closed on material errors, and produce machine-readable execution summaries. Do not perform production imports, production database mutations, pushes, or merges without explicit authorization.",
+      "source_refs": [
+        "SRC-0003"
+      ],
+      "statement": "Both must be safe to rerun, reconcile source records to resulting Odoo state, expose a single canonical repository-supported command, fail closed on material errors, and produce machine-readable execution summaries."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-002",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-005",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "For CieTrade, recover and reuse the existing plasticos_partner_import implementation, but correct the source boundary so the tracked raw CieTrade export can be imported directly without undocumented preprocessing. Inspect the actual source files and use source-native identifiers as reconciliation identities, particularly CpID, AddressID, CT_ID, and any other verified source identifiers. Do not use partner names or derived names as authoritative identity where a stable source identifier exists. Introduce or reuse the smallest coherent external-reference mechanism needed to persist (source, enti",
+      "source_refs": [
+        "SRC-0004"
+      ],
+      "statement": "Do not use partner names or derived names as authoritative identity where a stable source identifier exists."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "kind": "program_scope_include"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-006",
+      "kind": "scope_include",
+      "materiality": "material",
+      "rationale": "For CieTrade, recover and reuse the existing plasticos_partner_import implementation, but correct the source boundary so the tracked raw CieTrade export can be imported directly without undocumented preprocessing. Inspect the actual source files and use source-native identifiers as reconciliation identities, particularly CpID, AddressID, CT_ID, and any other verified source identifiers. Do not use partner names or derived names as authoritative identity where a stable source identifier exists. Introduce or reuse the smallest coherent external-reference mechanism needed to persist (source, enti",
+      "source_refs": [
+        "SRC-0004"
+      ],
+      "statement": "For CieTrade, recover and reuse the existing plasticos_partner_import implementation, but correct the source boundary so the tracked raw CieTrade export can be imported directly without undocumented preprocessing."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "kind": "program_scope_include"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-007",
+      "kind": "scope_include",
+      "materiality": "material",
+      "rationale": "For CieTrade, recover and reuse the existing plasticos_partner_import implementation, but correct the source boundary so the tracked raw CieTrade export can be imported directly without undocumented preprocessing. Inspect the actual source files and use source-native identifiers as reconciliation identities, particularly CpID, AddressID, CT_ID, and any other verified source identifiers. Do not use partner names or derived names as authoritative identity where a stable source identifier exists. Introduce or reuse the smallest coherent external-reference mechanism needed to persist (source, enti",
+      "source_refs": [
+        "SRC-0004"
+      ],
+      "statement": "Introduce or reuse the smallest coherent external-reference mechanism needed to persist (source, entity type, external id) \u2192 Odoo record identity and make reruns deterministic."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "kind": "task",
+          "task_id": "TASK-001"
+        },
+        {
+          "disposition": "UNKNOWN",
+          "grounding_evidence": "no_path_or_symbol_evidence",
+          "kind": "task_action",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-008",
+      "kind": "requirement",
+      "materiality": "material",
+      "rationale": "Validate every CieTrade source field against the actual Odoo model schema before finalizing mappings. For every source field record: source field, source type, target model, target field, transformation, required/optional status, null behavior, identity/match role, and mapping status. Allowed statuses are VERIFIED, NEEDS_CORRECTION, UNMAPPED_INTENTIONALLY, and UNKNOWN. Any intentionally excluded field must have an explicit reason. Never silently discard source data. Never infer undocumented CieTrade business semantics, including role/status codes. If a mapping cannot be established from reposi",
+      "source_refs": [
+        "SRC-0005"
+      ],
+      "statement": "Any intentionally excluded field must have an explicit reason."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "kind": "task",
+          "task_id": "TASK-001"
+        },
+        {
+          "disposition": "UNKNOWN",
+          "grounding_evidence": "no_path_or_symbol_evidence",
+          "kind": "task_action",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-009",
+      "kind": "requirement",
+      "materiality": "material",
+      "rationale": "Validate every CieTrade source field against the actual Odoo model schema before finalizing mappings. For every source field record: source field, source type, target model, target field, transformation, required/optional status, null behavior, identity/match role, and mapping status. Allowed statuses are VERIFIED, NEEDS_CORRECTION, UNMAPPED_INTENTIONALLY, and UNKNOWN. Any intentionally excluded field must have an explicit reason. Never silently discard source data. Never infer undocumented CieTrade business semantics, including role/status codes. If a mapping cannot be established from reposi",
+      "source_refs": [
+        "SRC-0005"
+      ],
+      "statement": "For every source field record: source field, source type, target model, target field, transformation, required/optional status, null behavior, identity/match role, and mapping status."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-003",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-010",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "The CieTrade pipeline must implement the complete sequence: source load, source/schema validation, normalization, mapping, entity resolution, import/upsert, reconciliation, validation, and report generation. Validate before database mutation. Support dry-run where practical. Surface partial failures explicitly. Preserve source identifiers. Define duplicate detection and rerun behavior. On the same validated input, a second execution must not create unexpected duplicates.",
+      "source_refs": [
+        "SRC-0006"
+      ],
+      "statement": "On the same validated input, a second execution must not create unexpected duplicates."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "kind": "task",
+          "task_id": "TASK-001"
+        },
+        {
+          "disposition": "UNKNOWN",
+          "grounding_evidence": "no_path_or_symbol_evidence",
+          "kind": "task_action",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-011",
+      "kind": "requirement",
+      "materiality": "material",
+      "rationale": "The CieTrade pipeline must implement the complete sequence: source load, source/schema validation, normalization, mapping, entity resolution, import/upsert, reconciliation, validation, and report generation. Validate before database mutation. Support dry-run where practical. Surface partial failures explicitly. Preserve source identifiers. Define duplicate detection and rerun behavior. On the same validated input, a second execution must not create unexpected duplicates.",
+      "source_refs": [
+        "SRC-0006"
+      ],
+      "statement": "The CieTrade pipeline must implement the complete sequence: source load, source/schema validation, normalization, mapping, entity resolution, import/upsert, reconciliation, validation, and report generation."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "kind": "program_scope_include"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-012",
+      "kind": "scope_include",
+      "materiality": "material",
+      "rationale": "The CieTrade pipeline must implement the complete sequence: source load, source/schema validation, normalization, mapping, entity resolution, import/upsert, reconciliation, validation, and report generation. Validate before database mutation. Support dry-run where practical. Surface partial failures explicitly. Preserve source identifiers. Define duplicate detection and rerun behavior. On the same validated input, a second execution must not create unexpected duplicates.",
+      "source_refs": [
+        "SRC-0006"
+      ],
+      "statement": "Preserve source identifiers."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "kind": "task",
+          "task_id": "TASK-001"
+        },
+        {
+          "disposition": "CREATE",
+          "grounding_evidence": "no_path_or_symbol_evidence",
+          "kind": "task_action",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-013",
+      "kind": "requirement",
+      "materiality": "material",
+      "rationale": "The CieTrade end-to-end validation must run against a verified nonproduction Odoo database and reconcile: source rows, accepted rows, rejected rows, created records, updated records, unchanged records, duplicate records, failed records, and resulting Odoo records. Sample and verify identifiers, names, addresses, contacts, statuses, relations, dates, numeric/monetary values where present, and custom fields. Verify parent/child relationships and company/contact relationships. Zero unexplained record loss, zero unexplained duplicates, and zero silent field truncation are required for acceptance.",
+      "source_refs": [
+        "SRC-0007"
+      ],
+      "statement": "The CieTrade end-to-end validation must run against a verified nonproduction Odoo database and reconcile: source rows, accepted rows, rejected rows, created records, updated records, unchanged records, duplicate records, failed records, and resulting Odoo records."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "kind": "task",
+          "task_id": "TASK-001"
+        },
+        {
+          "disposition": "UNKNOWN",
+          "grounding_evidence": "no_path_or_symbol_evidence",
+          "kind": "task_action",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-014",
+      "kind": "requirement",
+      "materiality": "material",
+      "rationale": "The CieTrade end-to-end validation must run against a verified nonproduction Odoo database and reconcile: source rows, accepted rows, rejected rows, created records, updated records, unchanged records, duplicate records, failed records, and resulting Odoo records. Sample and verify identifiers, names, addresses, contacts, statuses, relations, dates, numeric/monetary values where present, and custom fields. Verify parent/child relationships and company/contact relationships. Zero unexplained record loss, zero unexplained duplicates, and zero silent field truncation are required for acceptance.",
+      "source_refs": [
+        "SRC-0007"
+      ],
+      "statement": "Zero unexplained record loss, zero unexplained duplicates, and zero silent field truncation are required for acceptance."
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-015",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0008"
+      ],
+      "statement": "Expose one canonical repository command using the existing command surface, preferably the Makefile, rather than creating a parallel CLI framework. The intended operator experience is conceptually:"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-016",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0009"
+      ],
+      "statement": "make import-cietrade",
+      "suggested_tests": [
+        "make import-cietrade"
+      ]
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-004",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-017",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "with optional explicit source override where appropriate. The command itself must perform environment preflight, source validation, import, reconciliation, result validation, summary emission, and proper nonzero exit on failure. It must not hide undocumented manual preparation.",
+      "source_refs": [
+        "SRC-0010"
+      ],
+      "statement": "It must not hide undocumented manual preparation."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "kind": "task",
+          "task_id": "TASK-001"
+        },
+        {
+          "disposition": "UNKNOWN",
+          "grounding_evidence": "no_path_or_symbol_evidence",
+          "kind": "task_action",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-018",
+      "kind": "requirement",
+      "materiality": "material",
+      "rationale": "with optional explicit source override where appropriate. The command itself must perform environment preflight, source validation, import, reconciliation, result validation, summary emission, and proper nonzero exit on failure. It must not hide undocumented manual preparation.",
+      "source_refs": [
+        "SRC-0010"
+      ],
+      "statement": "The command itself must perform environment preflight, source validation, import, reconciliation, result validation, summary emission, and proper nonzero exit on failure."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-005",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-019",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "For VanillaSoft, recover the existing automated work in plasticos_crm_sync and the old manual CSV import flow before changing anything. Reuse working transport, pagination, retry, authentication, watermark, mapping, and external-reference logic where correct. Do not fabricate API behavior or credentials.",
+      "source_refs": [
+        "SRC-0011"
+      ],
+      "statement": "Do not fabricate API behavior or credentials."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-006",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-020",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "Establish one minimal CRM-neutral adapter boundary and implement VanillaSoft only. The shared pipeline must remain source-neutral. Remove or decommission HubSpot, Salesforce, Zoho, or any other CRM adapter implementations/stubs/placeholders if they exist solely as future placeholders. Do not create future CRM adapter directories, classes, fake connectors, or placeholder mappings. Future CRM support belongs in roadmap documentation only.",
+      "source_refs": [
+        "SRC-0012"
+      ],
+      "statement": "Do not create future CRM adapter directories, classes, fake connectors, or placeholder mappings."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "kind": "task",
+          "task_id": "TASK-001"
+        },
+        {
+          "disposition": "UNKNOWN",
+          "grounding_evidence": "no_path_or_symbol_evidence",
+          "kind": "task_action",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-021",
+      "kind": "requirement",
+      "materiality": "material",
+      "rationale": "Establish one minimal CRM-neutral adapter boundary and implement VanillaSoft only. The shared pipeline must remain source-neutral. Remove or decommission HubSpot, Salesforce, Zoho, or any other CRM adapter implementations/stubs/placeholders if they exist solely as future placeholders. Do not create future CRM adapter directories, classes, fake connectors, or placeholder mappings. Future CRM support belongs in roadmap documentation only.",
+      "source_refs": [
+        "SRC-0012"
+      ],
+      "statement": "The shared pipeline must remain source-neutral."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "kind": "task",
+          "task_id": "TASK-001"
+        },
+        {
+          "disposition": "UNKNOWN",
+          "grounding_evidence": "no_path_or_symbol_evidence",
+          "kind": "task_action",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-022",
+      "kind": "requirement",
+      "materiality": "material",
+      "rationale": "The VanillaSoft adapter is responsible for source authentication/access, retrieval, pagination, retries/rate-limit handling, source-specific field interpretation, translation into canonical CRM records, source identity, incremental sync markers where supported, inactive/deleted semantics where supported, malformed-record handling, and source error reporting. VanillaSoft-specific status/source semantics must be normalized inside the VanillaSoft adapter rather than leaking into the shared Odoo ingestion pipeline.",
+      "source_refs": [
+        "SRC-0013"
+      ],
+      "statement": "VanillaSoft-specific status/source semantics must be normalized inside the VanillaSoft adapter rather than leaking into the shared Odoo ingestion pipeline."
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-023",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0014"
+      ],
+      "statement": "The shared CRM pipeline is responsible only for canonical validation, normalization, Odoo mapping, entity resolution, deduplication, upsert/import, reconciliation, observability, and reporting. No VanillaSoft-specific strings, field names, or logic should remain in the shared orchestrator except at the explicit adapter"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-024",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0015"
+      ],
+      "statement": "Use the existing plasticos.crm.external.ref model, or an equivalent already-authoritative repository mechanism, as the runtime identity authority for CRM records. If legacy vanillasoft_id fields exist, treat them as migration/backfill inputs rather than an ongoing second identity authority. Perform an idempotent backfi"
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-007",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-025",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "Refactor VanillaSoft writes so each source record is deterministically classified as created, updated, unchanged, duplicate/rejected, or failed. Do not blindly write matched records when their normalized values are unchanged. Source failures and malformed records must never become silent record loss.",
+      "source_refs": [
+        "SRC-0016"
+      ],
+      "statement": "Do not blindly write matched records when their normalized values are unchanged."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-008",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-026",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "Refactor VanillaSoft writes so each source record is deterministically classified as created, updated, unchanged, duplicate/rejected, or failed. Do not blindly write matched records when their normalized values are unchanged. Source failures and malformed records must never become silent record loss.",
+      "source_refs": [
+        "SRC-0016"
+      ],
+      "statement": "Source failures and malformed records must never become silent record loss."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-009",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-027",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "Fully deprecate the old manual VanillaSoft import path. Identify its entrypoints and callers first. Migrate any required behavior to the automated path. After that, remove it if safe; otherwise leave only a compatibility entrypoint that fails immediately with a clear deprecation message directing operators to the automated command. Do not leave the manual CSV importer active as a competing authoritative path, and do not maintain duplicate mapping authority.",
+      "source_refs": [
+        "SRC-0017"
+      ],
+      "statement": "Do not leave the manual CSV importer active as a competing authoritative path, and do not maintain duplicate mapping authority."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "kind": "task",
+          "task_id": "TASK-001"
+        },
+        {
+          "disposition": "UNKNOWN",
+          "grounding_evidence": "no_path_or_symbol_evidence",
+          "kind": "task_action",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-028",
+      "kind": "requirement",
+      "materiality": "material",
+      "rationale": "Fully deprecate the old manual VanillaSoft import path. Identify its entrypoints and callers first. Migrate any required behavior to the automated path. After that, remove it if safe; otherwise leave only a compatibility entrypoint that fails immediately with a clear deprecation message directing operators to the automated command. Do not leave the manual CSV importer active as a competing authoritative path, and do not maintain duplicate mapping authority.",
+      "source_refs": [
+        "SRC-0017"
+      ],
+      "statement": "Migrate any required behavior to the automated path."
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-029",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0018"
+      ],
+      "statement": "Expose one canonical VanillaSoft command using the repository\u2019s existing command conventions, conceptually:"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-030",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0019"
+      ],
+      "statement": "make import-vanillasoft",
+      "suggested_tests": [
+        "make import-vanillasoft"
+      ]
+    },
+    {
+      "campaign_mappings": [
+        {
+          "kind": "task",
+          "task_id": "TASK-001"
+        },
+        {
+          "disposition": "UNKNOWN",
+          "grounding_evidence": "no_path_or_symbol_evidence",
+          "kind": "task_action",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-031",
+      "kind": "requirement",
+      "materiality": "material",
+      "rationale": "The command must perform preflight, VanillaSoft adapter access, retrieval, canonical translation, validation, Odoo upsert, reconciliation, summary emission, and nonzero exit on material failure. It must support safe repeated execution.",
+      "source_refs": [
+        "SRC-0020"
+      ],
+      "statement": "It must support safe repeated execution."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "kind": "task",
+          "task_id": "TASK-001"
+        },
+        {
+          "disposition": "UNKNOWN",
+          "grounding_evidence": "no_path_or_symbol_evidence",
+          "kind": "task_action",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-032",
+      "kind": "requirement",
+      "materiality": "material",
+      "rationale": "The command must perform preflight, VanillaSoft adapter access, retrieval, canonical translation, validation, Odoo upsert, reconciliation, summary emission, and nonzero exit on material failure. It must support safe repeated execution.",
+      "source_refs": [
+        "SRC-0020"
+      ],
+      "statement": "The command must perform preflight, VanillaSoft adapter access, retrieval, canonical translation, validation, Odoo upsert, reconciliation, summary emission, and nonzero exit on material failure."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "kind": "task",
+          "task_id": "TASK-001"
+        },
+        {
+          "disposition": "UNKNOWN",
+          "grounding_evidence": "no_path_or_symbol_evidence",
+          "kind": "task_action",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-033",
+      "kind": "requirement",
+      "materiality": "material",
+      "rationale": "Both import workflows must report at minimum:",
+      "source_refs": [
+        "SRC-0021"
+      ],
+      "statement": "Both import workflows must report at minimum:"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-034",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0022"
+      ],
+      "statement": "source"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-035",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0023"
+      ],
+      "statement": "start_time"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-036",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0024"
+      ],
+      "statement": "completion_time"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-037",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0025"
+      ],
+      "statement": "records_seen"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-038",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0026"
+      ],
+      "statement": "records_valid"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-039",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0027"
+      ],
+      "statement": "records_rejected"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-040",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0028"
+      ],
+      "statement": "records_created"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-041",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0029"
+      ],
+      "statement": "records_updated"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-042",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0030"
+      ],
+      "statement": "records_unchanged"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-043",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0031"
+      ],
+      "statement": "duplicates"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-044",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0032"
+      ],
+      "statement": "errors"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-045",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0033"
+      ],
+      "statement": "final_status"
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-010",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-046",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "Sensitive values and credentials must never be logged.",
+      "source_refs": [
+        "SRC-0034"
+      ],
+      "statement": "Sensitive values and credentials must never be logged."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "kind": "task",
+          "task_id": "TASK-001"
+        },
+        {
+          "disposition": "UNKNOWN",
+          "grounding_evidence": "no_path_or_symbol_evidence",
+          "kind": "task_action",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-047",
+      "kind": "requirement",
+      "materiality": "material",
+      "rationale": "Add automated tests covering mappings, transformations, identity resolution, deduplication, adapter contract behavior, CieTrade-to-Odoo integration, VanillaSoft-adapter-to-shared-pipeline integration, shared-pipeline-to-Odoo integration, invalid source, missing required fields, invalid mapping, unavailable CRM source, malformed records, duplicate source data, partial batch failure, invalid Odoo targets, and source/API failures.",
+      "source_refs": [
+        "SRC-0035"
+      ],
+      "statement": "Add automated tests covering mappings, transformations, identity resolution, deduplication, adapter contract behavior, CieTrade-to-Odoo integration, VanillaSoft-adapter-to-shared-pipeline integration, shared-pipeline-to-Odoo integration, invalid source, missing required fields, invalid mapping, unavailable CRM source,"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-048",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0036"
+      ],
+      "statement": "For each workflow, execute a representative first import and then run the exact same workflow again. Prove that the second run produces the expected unchanged/update behavior rather than duplicate creation. Also test a changed source record and verify deterministic update behavior."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "kind": "task",
+          "task_id": "TASK-001"
+        },
+        {
+          "disposition": "UNKNOWN",
+          "grounding_evidence": "no_path_or_symbol_evidence",
+          "kind": "task_action",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-049",
+      "kind": "requirement",
+      "materiality": "material",
+      "rationale": "After implementation, perform a clean replay from a clean verified repository checkout and nonproduction Odoo state using only the two documented canonical commands. No runtime code edits, undocumented preprocessing, manual field remapping, or normal-rerun database cleanup may be required.",
+      "source_refs": [
+        "SRC-0037"
+      ],
+      "statement": "No runtime code edits, undocumented preprocessing, manual field remapping, or normal-rerun database cleanup may be required."
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-050",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0038"
+      ],
+      "statement": "The repository also contains an existing draft contract/schema architecture, and there are ten recovered candidate v2 schemas outside the current authoritative tree:"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-051",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0039"
+      ],
+      "statement": "canonical-snapshot.schema.yaml"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-052",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0040"
+      ],
+      "statement": "evidence-record.schema.yaml"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-053",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0041"
+      ],
+      "statement": "temporal-episode.schema.yaml"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-054",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0042"
+      ],
+      "statement": "semantic-document.schema.yaml"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-055",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0043"
+      ],
+      "statement": "structural-projection.schema.yaml"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-056",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0044"
+      ],
+      "statement": "opportunity-protocol.schema.yaml"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-057",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0045"
+      ],
+      "statement": "transaction-candidate.schema.yaml"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-058",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0046"
+      ],
+      "statement": "packet.schema.yaml"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-059",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0047"
+      ],
+      "statement": "match-execution-packet.schema.yaml"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-060",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0048"
+      ],
+      "statement": "improvement-packet.schema.yaml"
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-011",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-061",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "These recovered schemas are not part of the import critical path. Preserve them and assess them against the current repository contracts, but do not make CieTrade or VanillaSoft runtime execution depend on them during this phase. Treat them as a later contract-convergence effort after Odoo data integrity is proven.",
+      "source_refs": [
+        "SRC-0049"
+      ],
+      "statement": "Preserve them and assess them against the current repository contracts, but do not make CieTrade or VanillaSoft runtime execution depend on them during this phase."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-012",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-062",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "Their intended architecture is that Odoo remains authoritative while canonical snapshots, evidence, temporal memory, semantic memory, structural/graph projections, opportunities, match execution, transaction candidates, and improvement proposals are replaceable downstream contracts/projections. Do not introduce a second canonical business authority.",
+      "source_refs": [
+        "SRC-0050"
+      ],
+      "statement": "Do not introduce a second canonical business authority."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "kind": "task",
+          "task_id": "TASK-001"
+        },
+        {
+          "disposition": "CREATE",
+          "grounding_evidence": "no_path_or_symbol_evidence",
+          "kind": "task_action",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-063",
+      "kind": "requirement",
+      "materiality": "material",
+      "rationale": "During schema assessment, specifically inspect and correct known likely issues before any adoption: nonstandard JSON Schema constructs such as $data; root additionalProperties: false conflicts with conditionally introduced properties; conditional minItems rules that fail to actually require the corresponding arrays; packet lineage fields that are constrained but not required for derived generations; edge deletion identity inconsistencies; and any malformed trailing YAML/prose. Reconcile these files with the existing contracts/schemas tree rather than creating a parallel schema universe.",
+      "source_refs": [
+        "SRC-0051"
+      ],
+      "statement": "During schema assessment, specifically inspect and correct known likely issues before any adoption: nonstandard JSON Schema constructs such as $data; root additionalProperties: false conflicts with conditionally introduced properties; conditional minItems rules that fail to actually require the corresponding arrays; pa"
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-013",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-064",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "Do not allow this schema work to expand or block completion of the import/data-foundation milestone. The import milestone comes first.",
+      "source_refs": [
+        "SRC-0052"
+      ],
+      "statement": "Do not allow this schema work to expand or block completion of the import/data-foundation milestone."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-014",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-065",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "Document a future CRM adapter roadmap only after the VanillaSoft implementation is complete. The roadmap must describe the adapter extension contract, onboarding requirements, canonical record contract, validation expectations, and testing requirements. Do not select future CRM vendors and do not create future adapter stubs.",
+      "source_refs": [
+        "SRC-0053"
+      ],
+      "statement": "Do not select future CRM vendors and do not create future adapter stubs."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "kind": "task",
+          "task_id": "TASK-001"
+        },
+        {
+          "disposition": "UNKNOWN",
+          "grounding_evidence": "no_path_or_symbol_evidence",
+          "kind": "task_action",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-066",
+      "kind": "requirement",
+      "materiality": "material",
+      "rationale": "Document a future CRM adapter roadmap only after the VanillaSoft implementation is complete. The roadmap must describe the adapter extension contract, onboarding requirements, canonical record contract, validation expectations, and testing requirements. Do not select future CRM vendors and do not create future adapter stubs.",
+      "source_refs": [
+        "SRC-0053"
+      ],
+      "statement": "The roadmap must describe the adapter extension contract, onboarding requirements, canonical record contract, validation expectations, and testing requirements."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "kind": "task",
+          "task_id": "TASK-001"
+        },
+        {
+          "disposition": "UNKNOWN",
+          "grounding_evidence": "no_path_or_symbol_evidence",
+          "kind": "task_action",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-067",
+      "kind": "requirement",
+      "materiality": "material",
+      "rationale": "Required architecture after convergence:",
+      "source_refs": [
+        "SRC-0054"
+      ],
+      "statement": "Required architecture after convergence:"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-068",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0055"
+      ],
+      "statement": "CieTrade source \u2192 CieTrade normalization/import boundary \u2192 shared deterministic Odoo upsert/reconciliation \u2192 Odoo authoritative state"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-069",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0056"
+      ],
+      "statement": "VanillaSoft source \u2192 VanillaSoft adapter \u2192 canonical CRM records \u2192 shared CRM-neutral Odoo upsert/reconciliation \u2192 Odoo authoritative state"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-070",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0057"
+      ],
+      "statement": "and only after authoritative data is proven:"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-071",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0058"
+      ],
+      "statement": "Odoo \u2192 canonical snapshots/evidence \u2192 semantic/temporal/structural projections \u2192 opportunities \u2192 matching \u2192 transaction candidates \u2192 outcomes \u2192 governed improvement proposals"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-072",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0059"
+      ],
+      "statement": "Implementation authority:"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-073",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0060"
+      ],
+      "statement": "repository inspection: allowed"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-074",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0061"
+      ],
+      "statement": "local repository changes: allowed"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-075",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0062"
+      ],
+      "statement": "local tests: allowed"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-076",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0063"
+      ],
+      "statement": "verified-safe nonproduction database imports: allowed"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-077",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0064"
+      ],
+      "statement": "temporary nonproduction test data: allowed"
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-015",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-078",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "production import/database mutation: forbidden without explicit authorization",
+      "source_refs": [
+        "SRC-0065"
+      ],
+      "statement": "production import/database mutation: forbidden without explicit authorization"
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-016",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-079",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "push: forbidden without explicit authorization",
+      "source_refs": [
+        "SRC-0066"
+      ],
+      "statement": "push: forbidden without explicit authorization"
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-017",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-080",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "merge: forbidden without explicit authorization",
+      "source_refs": [
+        "SRC-0067"
+      ],
+      "statement": "merge: forbidden without explicit authorization"
+    },
+    {
+      "campaign_mappings": [
+        {
+          "kind": "task",
+          "task_id": "TASK-001"
+        },
+        {
+          "disposition": "UNKNOWN",
+          "grounding_evidence": "no_path_or_symbol_evidence",
+          "kind": "task_action",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-081",
+      "kind": "requirement",
+      "materiality": "material",
+      "rationale": "Stop rather than fabricate if required source data, credentials, business semantics, Odoo schema, or runtime environment cannot be verified. Record those facts as UNKNOWN.",
+      "source_refs": [
+        "SRC-0068"
+      ],
+      "statement": "Stop rather than fabricate if required source data, credentials, business semantics, Odoo schema, or runtime environment cannot be verified."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-018",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-082",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "Do not rebuild correct existing work from scratch. Do not silently discard source fields. Do not create future CRM adapters. Do not leave placeholder adapters. Do not preserve two authoritative VanillaSoft paths. Do not claim mapping correctness without inspecting the actual Odoo schema. Do not claim import correctness without database reconciliation. Do not claim idempotency without a repeated-run test. Do not claim one-command operation while undocumented manual preparation remains.",
+      "source_refs": [
+        "SRC-0069"
+      ],
+      "statement": "Do not claim idempotency without a repeated-run test."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-019",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-083",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "Do not rebuild correct existing work from scratch. Do not silently discard source fields. Do not create future CRM adapters. Do not leave placeholder adapters. Do not preserve two authoritative VanillaSoft paths. Do not claim mapping correctness without inspecting the actual Odoo schema. Do not claim import correctness without database reconciliation. Do not claim idempotency without a repeated-run test. Do not claim one-command operation while undocumented manual preparation remains.",
+      "source_refs": [
+        "SRC-0069"
+      ],
+      "statement": "Do not claim import correctness without database reconciliation."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-020",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-084",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "Do not rebuild correct existing work from scratch. Do not silently discard source fields. Do not create future CRM adapters. Do not leave placeholder adapters. Do not preserve two authoritative VanillaSoft paths. Do not claim mapping correctness without inspecting the actual Odoo schema. Do not claim import correctness without database reconciliation. Do not claim idempotency without a repeated-run test. Do not claim one-command operation while undocumented manual preparation remains.",
+      "source_refs": [
+        "SRC-0069"
+      ],
+      "statement": "Do not claim mapping correctness without inspecting the actual Odoo schema."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-021",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-085",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "Do not rebuild correct existing work from scratch. Do not silently discard source fields. Do not create future CRM adapters. Do not leave placeholder adapters. Do not preserve two authoritative VanillaSoft paths. Do not claim mapping correctness without inspecting the actual Odoo schema. Do not claim import correctness without database reconciliation. Do not claim idempotency without a repeated-run test. Do not claim one-command operation while undocumented manual preparation remains.",
+      "source_refs": [
+        "SRC-0069"
+      ],
+      "statement": "Do not claim one-command operation while undocumented manual preparation remains."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-022",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-086",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "Do not rebuild correct existing work from scratch. Do not silently discard source fields. Do not create future CRM adapters. Do not leave placeholder adapters. Do not preserve two authoritative VanillaSoft paths. Do not claim mapping correctness without inspecting the actual Odoo schema. Do not claim import correctness without database reconciliation. Do not claim idempotency without a repeated-run test. Do not claim one-command operation while undocumented manual preparation remains.",
+      "source_refs": [
+        "SRC-0069"
+      ],
+      "statement": "Do not create future CRM adapters."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-023",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-087",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "Do not rebuild correct existing work from scratch. Do not silently discard source fields. Do not create future CRM adapters. Do not leave placeholder adapters. Do not preserve two authoritative VanillaSoft paths. Do not claim mapping correctness without inspecting the actual Odoo schema. Do not claim import correctness without database reconciliation. Do not claim idempotency without a repeated-run test. Do not claim one-command operation while undocumented manual preparation remains.",
+      "source_refs": [
+        "SRC-0069"
+      ],
+      "statement": "Do not leave placeholder adapters."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-024",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-088",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "Do not rebuild correct existing work from scratch. Do not silently discard source fields. Do not create future CRM adapters. Do not leave placeholder adapters. Do not preserve two authoritative VanillaSoft paths. Do not claim mapping correctness without inspecting the actual Odoo schema. Do not claim import correctness without database reconciliation. Do not claim idempotency without a repeated-run test. Do not claim one-command operation while undocumented manual preparation remains.",
+      "source_refs": [
+        "SRC-0069"
+      ],
+      "statement": "Do not preserve two authoritative VanillaSoft paths."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-025",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-089",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "Do not rebuild correct existing work from scratch. Do not silently discard source fields. Do not create future CRM adapters. Do not leave placeholder adapters. Do not preserve two authoritative VanillaSoft paths. Do not claim mapping correctness without inspecting the actual Odoo schema. Do not claim import correctness without database reconciliation. Do not claim idempotency without a repeated-run test. Do not claim one-command operation while undocumented manual preparation remains.",
+      "source_refs": [
+        "SRC-0069"
+      ],
+      "statement": "Do not rebuild correct existing work from scratch."
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-026",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-090",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "Do not rebuild correct existing work from scratch. Do not silently discard source fields. Do not create future CRM adapters. Do not leave placeholder adapters. Do not preserve two authoritative VanillaSoft paths. Do not claim mapping correctness without inspecting the actual Odoo schema. Do not claim import correctness without database reconciliation. Do not claim idempotency without a repeated-run test. Do not claim one-command operation while undocumented manual preparation remains.",
+      "source_refs": [
+        "SRC-0069"
+      ],
+      "statement": "Do not silently discard source fields."
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-091",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0070"
+      ],
+      "statement": "Run recursive inspect \u2192 implement \u2192 test \u2192 reconcile \u2192 replay passes until the result is stable, with at least three convergence passes. Completion requires all of the following:"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-092",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0071"
+      ],
+      "statement": "existing CieTrade work located and reused where valid"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-093",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0072"
+      ],
+      "statement": "CieTrade raw mapping verified against actual Odoo schema"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-094",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0073"
+      ],
+      "statement": "CieTrade import completed in nonproduction"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-095",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0074"
+      ],
+      "statement": "CieTrade reconciliation passed"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-096",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0075"
+      ],
+      "statement": "CieTrade repeated-run behavior passed"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-097",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0076"
+      ],
+      "statement": "canonical one-command CieTrade workflow passed"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-098",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0077"
+      ],
+      "statement": "old VanillaSoft manual flow completely accounted for"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-099",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0078"
+      ],
+      "statement": "VanillaSoft automated adapter/pipeline operational"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-100",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0079"
+      ],
+      "statement": "CRM-neutral adapter boundary enforced"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-101",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0080"
+      ],
+      "statement": "only VanillaSoft implemented"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-102",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0081"
+      ],
+      "statement": "VanillaSoft mapping verified"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-103",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0082"
+      ],
+      "statement": "VanillaSoft first and repeat imports reconciled"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-104",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0083"
+      ],
+      "statement": "changed-record update behavior verified"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-105",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0084"
+      ],
+      "statement": "manual VanillaSoft authority removed/deprecated"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-106",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0085"
+      ],
+      "statement": "canonical one-command VanillaSoft workflow passed"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-107",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0086"
+      ],
+      "statement": "future CRM integrations represented only as roadmap guidance"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-108",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0087"
+      ],
+      "statement": "clean replay of both workflows passed"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-109",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0088"
+      ],
+      "statement": "recovered v2 schema set classified and preserved without becoming an import dependency"
+    },
+    {
+      "campaign_mappings": [],
+      "confidence": "low",
+      "id": "SEM-110",
+      "kind": "informational",
+      "materiality": "informational",
+      "source_refs": [
+        "SRC-0089"
+      ],
+      "statement": "all remaining unresolved facts explicitly listed as UNKNOWN"
+    },
+    {
+      "campaign_mappings": [
+        {
+          "id": "DNB-027",
+          "kind": "prohibited_path"
+        },
+        {
+          "kind": "task_negative_case",
+          "task_id": "TASK-001"
+        }
+      ],
+      "confidence": "high",
+      "id": "SEM-111",
+      "kind": "prohibition",
+      "materiality": "material",
+      "rationale": "At completion, return the actual changed-file summary, commands executed, tests run, reconciliation results, repeat-run results, schema disposition summary, unresolved UNKNOWNs, and any remaining blockers. Do not report completion if database reconciliation, repeat execution, or clean replay has not actually been performed.",
+      "source_refs": [
+        "SRC-0090"
+      ],
+      "statement": "Do not report completion if database reconciliation, repeat execution, or clean replay has not actually been performed."
+    }
+  ],
+  "source": {
+    "media_type": "text/markdown",
+    "path": "/Users/ib-mac/.cursor-governance/WIP/PE Odoo/specs/_architecture_sources/odoo-intent-1-ingestion.md",
+    "sha256": "e176ca198224dfcabcf2ee810785c81f30952c76e4b9624eeddf2f35b75f4267",
+    "title": "Odoo Intent 1 \u2014 CieTrade and VanillaSoft ingestion"
+  },
+  "source_units": [
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0001",
+      "kind": "frontmatter",
+      "line_end": 5,
+      "line_start": 1,
+      "semantic_ids": [
+        "SEM-001"
+      ],
+      "sha256": "f2fa6243720a0707d62a53e2d8086d9fbdd17c222cbfb31236214411f3e0ad9d"
+    },
+    {
+      "disposition": "mapped_scope",
+      "id": "SRC-0002",
+      "kind": "paragraph",
+      "line_end": 7,
+      "line_start": 7,
+      "semantic_ids": [
+        "SEM-002"
+      ],
+      "sha256": "12e98ce66b2f4b7de168f684e27cd6bf8c0ab9c0dd798dabf740c85d19493f5d",
+      "signals": [
+        "PRESERVE"
+      ]
+    },
+    {
+      "disposition": "mapped_prohibition",
+      "id": "SRC-0003",
+      "kind": "paragraph",
+      "line_end": 9,
+      "line_start": 9,
+      "semantic_ids": [
+        "SEM-003",
+        "SEM-004"
+      ],
+      "sha256": "68fc01b52743041629509de5a43a90c376938215c55665b637143acc3b806cdf",
+      "signals": [
+        "DO NOT",
+        "MUST"
+      ]
+    },
+    {
+      "disposition": "mapped_prohibition",
+      "id": "SRC-0004",
+      "kind": "paragraph",
+      "line_end": 11,
+      "line_start": 11,
+      "semantic_ids": [
+        "SEM-005",
+        "SEM-006",
+        "SEM-007"
+      ],
+      "sha256": "abfb0d06f61951d8dedfd579234659f5ce65d347c2e16a0f41372ef2a0629d16",
+      "signals": [
+        "DO NOT",
+        "PRESERVE"
+      ]
+    },
+    {
+      "disposition": "mapped_requirement",
+      "id": "SRC-0005",
+      "kind": "paragraph",
+      "line_end": 13,
+      "line_start": 13,
+      "semantic_ids": [
+        "SEM-008",
+        "SEM-009"
+      ],
+      "sha256": "3e613c00d6336bbd50423a2f5523ece0bf7cbc89154a4e46c084979d2f7f88a1",
+      "signals": [
+        "MUST",
+        "REQUIRED"
+      ]
+    },
+    {
+      "disposition": "mapped_prohibition",
+      "id": "SRC-0006",
+      "kind": "paragraph",
+      "line_end": 15,
+      "line_start": 15,
+      "semantic_ids": [
+        "SEM-010",
+        "SEM-011",
+        "SEM-012"
+      ],
+      "sha256": "936a942be628669e9359f5872cac9f3633f7fdeb300b4f663519691bae676a59",
+      "signals": [
+        "MUST NOT",
+        "PRESERVE"
+      ]
+    },
+    {
+      "disposition": "mapped_requirement",
+      "id": "SRC-0007",
+      "kind": "paragraph",
+      "line_end": 17,
+      "line_start": 17,
+      "semantic_ids": [
+        "SEM-013",
+        "SEM-014"
+      ],
+      "sha256": "181ce442747c0e95c84602655059fb4e6a2f461958d83f5a9bb738cda593e297",
+      "signals": [
+        "MUST",
+        "REQUIRED"
+      ]
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0008",
+      "kind": "paragraph",
+      "line_end": 19,
+      "line_start": 19,
+      "semantic_ids": [
+        "SEM-015"
+      ],
+      "sha256": "a850478cbacd76635ce7df5d160950525d152af28c9d0e980cd701da0ebabad7"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0009",
+      "kind": "paragraph",
+      "line_end": 21,
+      "line_start": 21,
+      "semantic_ids": [
+        "SEM-016"
+      ],
+      "sha256": "2ced2d3f074e494cbb95153387742c699f94f87275b3848948b8f27bae4d11a0"
+    },
+    {
+      "disposition": "mapped_prohibition",
+      "id": "SRC-0010",
+      "kind": "paragraph",
+      "line_end": 23,
+      "line_start": 23,
+      "semantic_ids": [
+        "SEM-017",
+        "SEM-018"
+      ],
+      "sha256": "ed94d03de789c70e63f36e9116fbddda8f31a0578d0133d18b805cf6f9c575b4",
+      "signals": [
+        "MUST NOT"
+      ]
+    },
+    {
+      "disposition": "mapped_prohibition",
+      "id": "SRC-0011",
+      "kind": "paragraph",
+      "line_end": 25,
+      "line_start": 25,
+      "semantic_ids": [
+        "SEM-019"
+      ],
+      "sha256": "b0871ec6b756839259df28d1f979ddc6c05fa404ccbef88339e79f1c7fb0c613",
+      "signals": [
+        "DO NOT"
+      ]
+    },
+    {
+      "disposition": "mapped_prohibition",
+      "id": "SRC-0012",
+      "kind": "paragraph",
+      "line_end": 27,
+      "line_start": 27,
+      "semantic_ids": [
+        "SEM-020",
+        "SEM-021"
+      ],
+      "sha256": "3aa37a3da7dbd73860ea8a6b54852e5214e9759d092db585477111c0ec420c2a",
+      "signals": [
+        "DO NOT",
+        "MUST"
+      ]
+    },
+    {
+      "disposition": "mapped_requirement",
+      "id": "SRC-0013",
+      "kind": "paragraph",
+      "line_end": 29,
+      "line_start": 29,
+      "semantic_ids": [
+        "SEM-022"
+      ],
+      "sha256": "1f337d17fd622c223b03fc0201377e233281a2e4dbda2321c5530c50bef98dfc",
+      "signals": [
+        "MUST"
+      ]
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0014",
+      "kind": "paragraph",
+      "line_end": 31,
+      "line_start": 31,
+      "semantic_ids": [
+        "SEM-023"
+      ],
+      "sha256": "1c277b904b478c2ecd97fa466f15d8cd6567ec72da4796ce3fd95ed2c3017f73"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0015",
+      "kind": "paragraph",
+      "line_end": 33,
+      "line_start": 33,
+      "semantic_ids": [
+        "SEM-024"
+      ],
+      "sha256": "bb941886edd1175934c0aa8a34b060c8576e6648459b30690ca9bd7885209f05"
+    },
+    {
+      "disposition": "mapped_prohibition",
+      "id": "SRC-0016",
+      "kind": "paragraph",
+      "line_end": 35,
+      "line_start": 35,
+      "semantic_ids": [
+        "SEM-025",
+        "SEM-026"
+      ],
+      "sha256": "fdabbbc23b53d64be1d4406915498cf0c0f889e279c42105e9f184997e39188f",
+      "signals": [
+        "DO NOT",
+        "MUST",
+        "NEVER"
+      ]
+    },
+    {
+      "disposition": "mapped_prohibition",
+      "id": "SRC-0017",
+      "kind": "paragraph",
+      "line_end": 37,
+      "line_start": 37,
+      "semantic_ids": [
+        "SEM-027",
+        "SEM-028"
+      ],
+      "sha256": "eb7fcc0003509cf5874820ea5a6084b26df5673a8e741a246228d349afbf1f7e",
+      "signals": [
+        "DO NOT",
+        "REQUIRED"
+      ]
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0018",
+      "kind": "paragraph",
+      "line_end": 39,
+      "line_start": 39,
+      "semantic_ids": [
+        "SEM-029"
+      ],
+      "sha256": "c53cf4ab04958f5eb826cf40e438f398d690d43e06551f36f987b83e83f2c122"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0019",
+      "kind": "paragraph",
+      "line_end": 41,
+      "line_start": 41,
+      "semantic_ids": [
+        "SEM-030"
+      ],
+      "sha256": "36b0ec84da6c293dc1b8855e71e5cd88bdf8fc38c9a3c496a2cd4966944e215e"
+    },
+    {
+      "disposition": "mapped_requirement",
+      "id": "SRC-0020",
+      "kind": "paragraph",
+      "line_end": 43,
+      "line_start": 43,
+      "semantic_ids": [
+        "SEM-031",
+        "SEM-032"
+      ],
+      "sha256": "aa6cb1fbe30269bd518b0522a2eec283df13070d9c981cb5e47c72beb589893c",
+      "signals": [
+        "MUST"
+      ]
+    },
+    {
+      "disposition": "mapped_requirement",
+      "id": "SRC-0021",
+      "kind": "paragraph",
+      "line_end": 45,
+      "line_start": 45,
+      "semantic_ids": [
+        "SEM-033"
+      ],
+      "sha256": "094905ccfa6182ba92141bc358541d1ab25a2320bfc5d07c38bd15b82d1c75c0",
+      "signals": [
+        "MUST"
+      ]
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0022",
+      "kind": "list_item",
+      "line_end": 47,
+      "line_start": 47,
+      "semantic_ids": [
+        "SEM-034"
+      ],
+      "sha256": "cee2c915a646f6c11a45bee63bfd2137c8516cf29e0745ea054cbcf5c8063ebc"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0023",
+      "kind": "list_item",
+      "line_end": 48,
+      "line_start": 48,
+      "semantic_ids": [
+        "SEM-035"
+      ],
+      "sha256": "8c66b901d0dd630481d94c2430cad3b66b4846acd8c20398113b4ac5f84565d2"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0024",
+      "kind": "list_item",
+      "line_end": 49,
+      "line_start": 49,
+      "semantic_ids": [
+        "SEM-036"
+      ],
+      "sha256": "d43176f024562c0ad5c263248d934cb2c493be027ed174046effe779b08a0748"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0025",
+      "kind": "list_item",
+      "line_end": 50,
+      "line_start": 50,
+      "semantic_ids": [
+        "SEM-037"
+      ],
+      "sha256": "fd1b2fd3da490769ec56c5b7c1deca12829802d4e8be9b3a4b59ea1f460efeec"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0026",
+      "kind": "list_item",
+      "line_end": 51,
+      "line_start": 51,
+      "semantic_ids": [
+        "SEM-038"
+      ],
+      "sha256": "8285a77b8f4759638b42af27fc8a46fbe322383738ff4beef10141085702e5eb"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0027",
+      "kind": "list_item",
+      "line_end": 52,
+      "line_start": 52,
+      "semantic_ids": [
+        "SEM-039"
+      ],
+      "sha256": "cf03a2853818bbd703043fa94eef0de676f8ffa37baa2512be67c4792b180476"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0028",
+      "kind": "list_item",
+      "line_end": 53,
+      "line_start": 53,
+      "semantic_ids": [
+        "SEM-040"
+      ],
+      "sha256": "dfb89913c26256e3425c95fde33c168764c614133152be8e6d1c3a44a90687bf"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0029",
+      "kind": "list_item",
+      "line_end": 54,
+      "line_start": 54,
+      "semantic_ids": [
+        "SEM-041"
+      ],
+      "sha256": "7b7f9ce69fa8e5242c39ad423f9004dc9814702e031baac6a24870a373805e3f"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0030",
+      "kind": "list_item",
+      "line_end": 55,
+      "line_start": 55,
+      "semantic_ids": [
+        "SEM-042"
+      ],
+      "sha256": "43067ea3444804d09298fb218e19ef0e03b769e0d712243b5c0b6565085baa99"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0031",
+      "kind": "list_item",
+      "line_end": 56,
+      "line_start": 56,
+      "semantic_ids": [
+        "SEM-043"
+      ],
+      "sha256": "43f10293e0252f600a738e82297d607b51975fa76d7ac549287a2bf6d196473e"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0032",
+      "kind": "list_item",
+      "line_end": 57,
+      "line_start": 57,
+      "semantic_ids": [
+        "SEM-044"
+      ],
+      "sha256": "5a8fc7de528e36a4167d1c6c3711e2e4012844b72b8b3af309483f94da133c9c"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0033",
+      "kind": "list_item",
+      "line_end": 58,
+      "line_start": 58,
+      "semantic_ids": [
+        "SEM-045"
+      ],
+      "sha256": "387e137d83be99fad769fe1ec9d9302ac5c111a0038ff0e660ba1388ace528ca"
+    },
+    {
+      "disposition": "mapped_prohibition",
+      "id": "SRC-0034",
+      "kind": "paragraph",
+      "line_end": 60,
+      "line_start": 60,
+      "semantic_ids": [
+        "SEM-046"
+      ],
+      "sha256": "86a9c008e3b1b894e04cdf944af70343b0ca4385ddc5a895a8bf0d0dd3dffe13",
+      "signals": [
+        "MUST",
+        "NEVER"
+      ]
+    },
+    {
+      "disposition": "mapped_requirement",
+      "id": "SRC-0035",
+      "kind": "paragraph",
+      "line_end": 62,
+      "line_start": 62,
+      "semantic_ids": [
+        "SEM-047"
+      ],
+      "sha256": "4c295f7a5dc05e1fdf814cc3d67d59cbc256105b0c96e5f2fdb29933bebdf746",
+      "signals": [
+        "REQUIRED"
+      ]
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0036",
+      "kind": "paragraph",
+      "line_end": 64,
+      "line_start": 64,
+      "semantic_ids": [
+        "SEM-048"
+      ],
+      "sha256": "ee11d27d76091daa7d430bdf0b6b844eb9845368bc81e6d5f04dba02a40827b1"
+    },
+    {
+      "disposition": "mapped_requirement",
+      "id": "SRC-0037",
+      "kind": "paragraph",
+      "line_end": 66,
+      "line_start": 66,
+      "semantic_ids": [
+        "SEM-049"
+      ],
+      "sha256": "03ee1b4e0bf2951311f4873bde347bfdb56c9295f696e4ea0f306971fa73da9c",
+      "signals": [
+        "REQUIRED"
+      ]
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0038",
+      "kind": "paragraph",
+      "line_end": 68,
+      "line_start": 68,
+      "semantic_ids": [
+        "SEM-050"
+      ],
+      "sha256": "862533a60c1b667010142cef607075231fa60424b776818be8b2af7c6b58037f"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0039",
+      "kind": "list_item",
+      "line_end": 70,
+      "line_start": 70,
+      "semantic_ids": [
+        "SEM-051"
+      ],
+      "sha256": "ee23f07fa343b3a98ed301a1a2c1a73c5e7dd6348ab9bea0f5ae3f98736d3710"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0040",
+      "kind": "list_item",
+      "line_end": 71,
+      "line_start": 71,
+      "semantic_ids": [
+        "SEM-052"
+      ],
+      "sha256": "9230f2235a357d7feb609d29e20acf90fbd3758b02a78acd00ae280fef7dc2bf"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0041",
+      "kind": "list_item",
+      "line_end": 72,
+      "line_start": 72,
+      "semantic_ids": [
+        "SEM-053"
+      ],
+      "sha256": "f8e27837ff1eadb26cb7c6aa88f9601556c9da2e82e191e06163539eeaa30f25"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0042",
+      "kind": "list_item",
+      "line_end": 73,
+      "line_start": 73,
+      "semantic_ids": [
+        "SEM-054"
+      ],
+      "sha256": "545263a635f4bb808d308eb57a7236ce3e73ff63c4b4faea6b743054b11097a3"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0043",
+      "kind": "list_item",
+      "line_end": 74,
+      "line_start": 74,
+      "semantic_ids": [
+        "SEM-055"
+      ],
+      "sha256": "b68ecc0194076a67cbffa2cface53b8bb0de2727c7eb55763985b332ee818d9a"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0044",
+      "kind": "list_item",
+      "line_end": 75,
+      "line_start": 75,
+      "semantic_ids": [
+        "SEM-056"
+      ],
+      "sha256": "61186781d68646ad77bf63984df116884fbe716520a70b30208a742fff855a8d"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0045",
+      "kind": "list_item",
+      "line_end": 76,
+      "line_start": 76,
+      "semantic_ids": [
+        "SEM-057"
+      ],
+      "sha256": "ec911431eee9e9b788f08bdd39164a695c667d9ba8f8fc31103d07f3e10ad89d"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0046",
+      "kind": "list_item",
+      "line_end": 77,
+      "line_start": 77,
+      "semantic_ids": [
+        "SEM-058"
+      ],
+      "sha256": "1bc791139f88eab56956365b13eedd93a5e74beb5414cbbbd63814b43129ec4e"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0047",
+      "kind": "list_item",
+      "line_end": 78,
+      "line_start": 78,
+      "semantic_ids": [
+        "SEM-059"
+      ],
+      "sha256": "01602a8edb81326cbd9c85a43530f69e4db5e82f706880691454a8722730fe48"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0048",
+      "kind": "list_item",
+      "line_end": 79,
+      "line_start": 79,
+      "semantic_ids": [
+        "SEM-060"
+      ],
+      "sha256": "fa24679c565d15e2a209d0be96feacb8a015aadc85254c438b05bbce5f12cbb2"
+    },
+    {
+      "disposition": "mapped_prohibition",
+      "id": "SRC-0049",
+      "kind": "paragraph",
+      "line_end": 81,
+      "line_start": 81,
+      "semantic_ids": [
+        "SEM-061"
+      ],
+      "sha256": "3dd062c0a943ab26e5bae384f6cfab1ba0af26c5e040f72e1cdec7dc2d8a25e6",
+      "signals": [
+        "DO NOT",
+        "PRESERVE"
+      ]
+    },
+    {
+      "disposition": "mapped_prohibition",
+      "id": "SRC-0050",
+      "kind": "paragraph",
+      "line_end": 83,
+      "line_start": 83,
+      "semantic_ids": [
+        "SEM-062"
+      ],
+      "sha256": "4c19de940ff93375b481a398b00c39ee1d5ef9845dba9b0b93f2b7bb2c48a879",
+      "signals": [
+        "DO NOT"
+      ]
+    },
+    {
+      "disposition": "mapped_requirement",
+      "id": "SRC-0051",
+      "kind": "paragraph",
+      "line_end": 85,
+      "line_start": 85,
+      "semantic_ids": [
+        "SEM-063"
+      ],
+      "sha256": "61d7b7e25a486a60b308e71310797dbfd69bef5912fe54266c88360909085771",
+      "signals": [
+        "REQUIRED"
+      ]
+    },
+    {
+      "disposition": "mapped_prohibition",
+      "id": "SRC-0052",
+      "kind": "paragraph",
+      "line_end": 87,
+      "line_start": 87,
+      "semantic_ids": [
+        "SEM-064"
+      ],
+      "sha256": "6576a8c6d06bfdb04f5fb97cd93738e34cf04367ffe3e2a8e530b29cf5440894",
+      "signals": [
+        "DO NOT"
+      ]
+    },
+    {
+      "disposition": "mapped_prohibition",
+      "id": "SRC-0053",
+      "kind": "paragraph",
+      "line_end": 89,
+      "line_start": 89,
+      "semantic_ids": [
+        "SEM-065",
+        "SEM-066"
+      ],
+      "sha256": "ed80a1ea8503ddbcbaf0f32dae29d9cd07bbb506d1526bc95988bff14a28b210",
+      "signals": [
+        "DO NOT",
+        "MUST"
+      ]
+    },
+    {
+      "disposition": "mapped_requirement",
+      "id": "SRC-0054",
+      "kind": "paragraph",
+      "line_end": 91,
+      "line_start": 91,
+      "semantic_ids": [
+        "SEM-067"
+      ],
+      "sha256": "68f1d54bf7991bfd3538514d9317615ba529d99e3199a8a7811b7cf990ff839f",
+      "signals": [
+        "REQUIRED"
+      ]
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0055",
+      "kind": "paragraph",
+      "line_end": 93,
+      "line_start": 93,
+      "semantic_ids": [
+        "SEM-068"
+      ],
+      "sha256": "6b15afcb3941319630639155112f8755d0b1447cb90b7a61e8c44cbe2865cc5c"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0056",
+      "kind": "paragraph",
+      "line_end": 95,
+      "line_start": 95,
+      "semantic_ids": [
+        "SEM-069"
+      ],
+      "sha256": "cf6b73db89931d0d065b1e6ab02d25a81b94a304738e125c013c0d6cbbb279f5"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0057",
+      "kind": "paragraph",
+      "line_end": 97,
+      "line_start": 97,
+      "semantic_ids": [
+        "SEM-070"
+      ],
+      "sha256": "11a2e0546969c243788f9263452728f3aa585ef43583153183420103778bf9e2"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0058",
+      "kind": "paragraph",
+      "line_end": 99,
+      "line_start": 99,
+      "semantic_ids": [
+        "SEM-071"
+      ],
+      "sha256": "a0da5154584ced9e5559317d7c367b87836e4c155080a93813b171842397d5a5"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0059",
+      "kind": "paragraph",
+      "line_end": 101,
+      "line_start": 101,
+      "semantic_ids": [
+        "SEM-072"
+      ],
+      "sha256": "9d487775ec640a233b0153edc02613edc414dc1c1265c954fe2030997281d5a5"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0060",
+      "kind": "list_item",
+      "line_end": 103,
+      "line_start": 103,
+      "semantic_ids": [
+        "SEM-073"
+      ],
+      "sha256": "889d80c626069e2dbd14675aa82a731dae1ca2f24d9319681769a9ca3e687a8e"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0061",
+      "kind": "list_item",
+      "line_end": 104,
+      "line_start": 104,
+      "semantic_ids": [
+        "SEM-074"
+      ],
+      "sha256": "39f5bd1dcfe5b03773728b1ccf00b0ad6ed2c763acb47b4d503866810f37d5f2"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0062",
+      "kind": "list_item",
+      "line_end": 105,
+      "line_start": 105,
+      "semantic_ids": [
+        "SEM-075"
+      ],
+      "sha256": "841fcc552e0a1bab5a72e3789f32469d2e2b74c4dcaf0ed8e015e74fe2de889c"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0063",
+      "kind": "list_item",
+      "line_end": 106,
+      "line_start": 106,
+      "semantic_ids": [
+        "SEM-076"
+      ],
+      "sha256": "c8aaf5a7b4faad940955a67e6c290665f471212d95e070a0cdac9ebd455406f1"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0064",
+      "kind": "list_item",
+      "line_end": 107,
+      "line_start": 107,
+      "semantic_ids": [
+        "SEM-077"
+      ],
+      "sha256": "695583305a8212341b87f1a230b130dbaa31857c17ff95a05f0a5006b3168421"
+    },
+    {
+      "disposition": "mapped_prohibition",
+      "id": "SRC-0065",
+      "kind": "list_item",
+      "line_end": 108,
+      "line_start": 108,
+      "semantic_ids": [
+        "SEM-078"
+      ],
+      "sha256": "cef5d8ff227585948fa2cdc9c98afdbeaf5913db13512a2aae9013cf79b9b40f",
+      "signals": [
+        "FORBIDDEN"
+      ]
+    },
+    {
+      "disposition": "mapped_prohibition",
+      "id": "SRC-0066",
+      "kind": "list_item",
+      "line_end": 109,
+      "line_start": 109,
+      "semantic_ids": [
+        "SEM-079"
+      ],
+      "sha256": "e7a589661907c1483d5c71059142dac852b656849a5d0447730f8f3b7008f37b",
+      "signals": [
+        "FORBIDDEN"
+      ]
+    },
+    {
+      "disposition": "mapped_prohibition",
+      "id": "SRC-0067",
+      "kind": "list_item",
+      "line_end": 110,
+      "line_start": 110,
+      "semantic_ids": [
+        "SEM-080"
+      ],
+      "sha256": "acd7e6b42c24159ff9d078f51c0d75bd3e6d499cb23e5579fcd51a89e67e4263",
+      "signals": [
+        "FORBIDDEN"
+      ]
+    },
+    {
+      "disposition": "mapped_requirement",
+      "id": "SRC-0068",
+      "kind": "paragraph",
+      "line_end": 112,
+      "line_start": 112,
+      "semantic_ids": [
+        "SEM-081"
+      ],
+      "sha256": "b91cd54f4e2f9cd33a1d927332b2463e88169c2599528d3db6aebac0d209168a",
+      "signals": [
+        "REQUIRED"
+      ]
+    },
+    {
+      "disposition": "mapped_prohibition",
+      "id": "SRC-0069",
+      "kind": "paragraph",
+      "line_end": 114,
+      "line_start": 114,
+      "semantic_ids": [
+        "SEM-082",
+        "SEM-083",
+        "SEM-084",
+        "SEM-085",
+        "SEM-086",
+        "SEM-087",
+        "SEM-088",
+        "SEM-089",
+        "SEM-090"
+      ],
+      "sha256": "a620ca8bde9639473c10350526a6d8f4cfc2caa30e9d60e38016a5d8a871fea7",
+      "signals": [
+        "DO NOT",
+        "PRESERVE"
+      ]
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0070",
+      "kind": "paragraph",
+      "line_end": 116,
+      "line_start": 116,
+      "semantic_ids": [
+        "SEM-091"
+      ],
+      "sha256": "957ae0b001eb21dea260cf985c9d50db79b06d33eef3416b8d946bef5b574a6e"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0071",
+      "kind": "list_item",
+      "line_end": 118,
+      "line_start": 118,
+      "semantic_ids": [
+        "SEM-092"
+      ],
+      "sha256": "2ab86a502e75f9cd9809bef9c98add822e25f4c7309a4ec41442e86685409ef6"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0072",
+      "kind": "list_item",
+      "line_end": 119,
+      "line_start": 119,
+      "semantic_ids": [
+        "SEM-093"
+      ],
+      "sha256": "89e0760674a0b59f1ca1b6660b3e921a864605875a2b19161feeae384bac4f38"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0073",
+      "kind": "list_item",
+      "line_end": 120,
+      "line_start": 120,
+      "semantic_ids": [
+        "SEM-094"
+      ],
+      "sha256": "2d9fbf28c0c36efd7ed63f3ecf9f83d2a227decc14bda4edc8e03df5a2678be5"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0074",
+      "kind": "list_item",
+      "line_end": 121,
+      "line_start": 121,
+      "semantic_ids": [
+        "SEM-095"
+      ],
+      "sha256": "ff3d4eb73a6dd34ec8ff78a93f370654ca8a8bc70923c709c26af25fb939bb8b"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0075",
+      "kind": "list_item",
+      "line_end": 122,
+      "line_start": 122,
+      "semantic_ids": [
+        "SEM-096"
+      ],
+      "sha256": "d5f38d19bbf1c03a65d3a69e8d897c46523399c243d9205ba0cabba870e7b2ee"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0076",
+      "kind": "list_item",
+      "line_end": 123,
+      "line_start": 123,
+      "semantic_ids": [
+        "SEM-097"
+      ],
+      "sha256": "292f4077366a4a5ec9f06c10e44ef70464847edbd1b5582bf201bc6df4229f67"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0077",
+      "kind": "list_item",
+      "line_end": 124,
+      "line_start": 124,
+      "semantic_ids": [
+        "SEM-098"
+      ],
+      "sha256": "848f43d233f8f6796d9ed096f17c0ea05ffd7f5114eaa64c937ec72dae1336dc"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0078",
+      "kind": "list_item",
+      "line_end": 125,
+      "line_start": 125,
+      "semantic_ids": [
+        "SEM-099"
+      ],
+      "sha256": "d8dab5306de6dc12711215f8945e425d4330a5af018664613ec31f70d7ee268c"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0079",
+      "kind": "list_item",
+      "line_end": 126,
+      "line_start": 126,
+      "semantic_ids": [
+        "SEM-100"
+      ],
+      "sha256": "34df7a2dcf2d74afdec0ff56dc017ea20aff76ce27cf708b3ae80fa56d3f7432"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0080",
+      "kind": "list_item",
+      "line_end": 127,
+      "line_start": 127,
+      "semantic_ids": [
+        "SEM-101"
+      ],
+      "sha256": "c80eb6683dc517a043c640a18895955fce4df9e527eaaa69efd5314dba9e3a95"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0081",
+      "kind": "list_item",
+      "line_end": 128,
+      "line_start": 128,
+      "semantic_ids": [
+        "SEM-102"
+      ],
+      "sha256": "d6000482a5b102d5dd5e63ba7eead1073eec47f7ddb4d74c7c247efa52250dc1"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0082",
+      "kind": "list_item",
+      "line_end": 129,
+      "line_start": 129,
+      "semantic_ids": [
+        "SEM-103"
+      ],
+      "sha256": "e898a9dec5942d0bbb4d1afaadc7f0805b56c1a0ddee7e46c802dd1d30aba886"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0083",
+      "kind": "list_item",
+      "line_end": 130,
+      "line_start": 130,
+      "semantic_ids": [
+        "SEM-104"
+      ],
+      "sha256": "4481cd6477f46cc32aaa71c0ea0db90bb078d1109ccec1efdb6bf73c46966745"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0084",
+      "kind": "list_item",
+      "line_end": 131,
+      "line_start": 131,
+      "semantic_ids": [
+        "SEM-105"
+      ],
+      "sha256": "ef892db75192d2dcdc5a3f8135f874f3a35aa7ff3e1fd48f62bfcde91b0a6559"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0085",
+      "kind": "list_item",
+      "line_end": 132,
+      "line_start": 132,
+      "semantic_ids": [
+        "SEM-106"
+      ],
+      "sha256": "af1c9b07331509da4d8f186e5e333c1ed48c370e87b06bfd2613a8db8a1e62b6"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0086",
+      "kind": "list_item",
+      "line_end": 133,
+      "line_start": 133,
+      "semantic_ids": [
+        "SEM-107"
+      ],
+      "sha256": "d06ec164a03bb54314e27c22b2428cf0a01550c551e8113d53542bdba0c3da02"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0087",
+      "kind": "list_item",
+      "line_end": 134,
+      "line_start": 134,
+      "semantic_ids": [
+        "SEM-108"
+      ],
+      "sha256": "6a9c22103dc33a91f1e1451ac1302126c9ec830e36feeb635dfe0be990eb2a9e"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0088",
+      "kind": "list_item",
+      "line_end": 135,
+      "line_start": 135,
+      "semantic_ids": [
+        "SEM-109"
+      ],
+      "sha256": "c86a4c579308b9a7edfae6de38411a2bd5b028263720362e679e98942f1aadd9"
+    },
+    {
+      "disposition": "mapped_context",
+      "id": "SRC-0089",
+      "kind": "list_item",
+      "line_end": 136,
+      "line_start": 136,
+      "semantic_ids": [
+        "SEM-110"
+      ],
+      "sha256": "b4939050f488790ca95e1151b8e754dded0185692c7d8cdfb3b629303a6c1302"
+    },
+    {
+      "disposition": "mapped_prohibition",
+      "id": "SRC-0090",
+      "kind": "paragraph",
+      "line_end": 138,
+      "line_start": 138,
+      "semantic_ids": [
+        "SEM-111"
+      ],
+      "sha256": "298970eb674e6f0f500a78a6d2b237b6c842470eb0339373e93926815334dfab",
+      "signals": [
+        "DO NOT"
+      ]
+    }
+  ],
+  "target": "cryptoxdog/IB-Odoo_19"
+}

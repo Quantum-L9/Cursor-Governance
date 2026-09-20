@@ -155,6 +155,17 @@ authorities:
       - gate_evaluation
 
 decisions: []
+# Empty is valid. A present unknown must already be Blueprint-register complete:
+# id, statement, owner, status, resolution_method, and explicit
+# resolution_evidence_ids (empty list allowed while status is open).
+# campaign-check-input refuses a partial entry before make campaign isolates.
+# - id: UNK-001
+#   statement: missing fact or unresolved semantic
+#   owner: AUTH-001
+#   status: open
+#   blocking_task_ids: []
+#   resolution_method: required proof or inspecting task
+#   resolution_evidence_ids: []
 unknowns: []
 
 evidence_requirements:

@@ -7,7 +7,7 @@
     "repository": "Quantum-L9/l9-graphiti-memory",
     "ref": "v2.3.1",
     "memory_sha": "84eedcdfab83020776eab290599751b3b6af8dbf",
-    "note": "Consumer contract for every V2 control-plane receipt. Cursor narrows required fields; it does not restate the package pydantic models and does not reject a superset. Live schema probe from the bound interpreter still wins when it exports a model; this file is the canonical fallback and the SSOT the test fixtures load."
+    "note": "Consumer contract for every V2 control-plane receipt. Cursor narrows required fields; it does not restate the package pydantic models and does not reject a superset. Live schema probe from the bound interpreter still wins when it exports a model; this file is the canonical fallback and the SSOT the test fixtures load. DistillationReceipt (l9-memory distill, ADR-0033) was read from src/l9_graphite_memory/extraction/distiller.py at the bound 2.4.0 ref; it lives outside the contracts package, so the binding's contract_model_modules names l9_graphite_memory.extraction."
   },
   "aliases": {
     "HealthReceipt": ["HealthReport"],
@@ -154,6 +154,29 @@
         "reasons": { "type": "array", "items": { "type": "string" } },
         "task_signature": { "type": "string" },
         "valid": { "type": "boolean" }
+      }
+    },
+    "DistillationReceipt": {
+      "type": "object",
+      "required": [
+        "status",
+        "source_id",
+        "source_digest",
+        "namespace",
+        "extractor",
+        "candidate_count",
+        "written_count"
+      ],
+      "properties": {
+        "status": { "type": "string", "enum": ["complete", "partial", "failed"] },
+        "source_id": { "type": "string" },
+        "source_digest": { "type": "string" },
+        "namespace": { "type": "string" },
+        "extractor": { "type": "string" },
+        "candidate_count": { "type": "integer", "minimum": 0 },
+        "written_count": { "type": "integer", "minimum": 0 },
+        "rejected_items": { "type": "array", "items": { "type": "string" } },
+        "write_receipts": { "type": "array", "items": { "type": "object" } }
       }
     }
   }

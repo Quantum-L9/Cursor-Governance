@@ -57,7 +57,13 @@ def bind_session_env(env: dict[str, str], session_id: str | None) -> dict[str, s
     return env
 
 
-def memory_client(session_id: str | None = None) -> Any:
+#: Hook-lane surface for the Claude SessionStart prefetch (ADR-0033 B7):
+#: read-only envelope in ``ops/config/memory-hook-envelopes.json``. The agent
+#: itself writes through the public MCP / ``l9-memory`` surface, never here.
+HOOK_SURFACE = "claude-session-start"
+
+
+def memory_client(session_id: str | None = None, *, surface: str = HOOK_SURFACE) -> Any:
     """A canonical client bound to this checkout's memory runtime.
 
     Returns the client even when unbound: callers read ``client.binding.ok``
@@ -67,7 +73,9 @@ def memory_client(session_id: str | None = None) -> Any:
     from ops.memory.control_plane_client import MemoryControlPlaneClient
     from ops.memory.runtime_binding import resolve_runtime_binding
 
-    return MemoryControlPlaneClient(resolve_runtime_binding(), session_id=session_id)
+    return MemoryControlPlaneClient(
+        resolve_runtime_binding(), session_id=session_id, surface=surface
+    )
 
 
 def hydrate(
@@ -83,7 +91,11 @@ def hydrate(
     from ops.memory.hydration import canonical_hydrate
 
     return canonical_hydrate(
-        workspace, task=task, session_id=session_id, continuation_policy=continuation_policy
+        workspace,
+        task=task,
+        session_id=session_id,
+        continuation_policy=continuation_policy,
+        surface=HOOK_SURFACE,
     ).as_dict()
 
 

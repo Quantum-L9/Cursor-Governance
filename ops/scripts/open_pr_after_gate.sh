@@ -380,8 +380,17 @@ if [[ -n "$pr_url" && -n "$pr_number" && -n "$owner" && -n "$name" ]]; then
   esac
 fi
 
-if [[ -z "$pr_url" || -z "$pr_number" ]]; then
-  title="$(git log "${PR_BASE}..HEAD" --format='%s' --reverse | head -1)"
+# Sets title, body, compose_python, compose_handoff, _touched_additive. Used
+# both to open a PR and to refresh one this script composed earlier: the body
+# is a function of the range, and the range moves with every push.
+_compose_title_and_body() {
+  # The composer owns the range rule (no merges, nothing already on origin/main).
+  # A bare `git log base..HEAD | head -1` here titled PR #602 with a main commit
+  # the stack parent had merely not caught up to yet.
+  _title_python="$GOV_ROOT/.venv/bin/python"
+  [[ -x "$_title_python" ]] || _title_python="python3"
+  title="$("$_title_python" "$SCRIPT_DIR/compose_pr_body.py" \
+    --workspace "$WS" --pr-base "$PR_BASE" --print-title 2>/dev/null || true)"
   if [[ -z "$title" ]]; then
     title="$branch"
   fi
@@ -410,12 +419,39 @@ if [[ -z "$pr_url" || -z "$pr_number" ]]; then
   _gov_python="${GOV_ROOT}/.venv/bin/python"
   [[ -x "$_gov_python" ]] || _gov_python="python3"
   _touched_additive=""
-  if [[ -f "$_root_protect_py" ]]; then
-    _touched_additive="$(
+  # An empty list here becomes a written claim in the PR body ("no additive_only
+  # root files"), so a swallowed measurement failure published a confident
+  # negative about a range nobody measured. Separate the two states: measured
+  # and empty is an answer, unmeasured is not.
+  #
+  # Consumer workspaces do not ship ops/config/root-file-protection.json (that
+  # file is governance-only). run_pr_gate.sh already skips in that case; this
+  # composer must match or a successful push dies while writing the PR body.
+  # No policy file means this workspace has no additive_only contract, so the
+  # empty list is a measured answer — not an unmeasured range.
+  _additive_measured=0
+  _root_protect_cfg="$WS/ops/config/root-file-protection.json"
+  if [[ -f "$_root_protect_py" && -f "$_root_protect_cfg" ]]; then
+    mkdir -p "$WS/.l9/pr"
+    _additive_err="$WS/.l9/pr/additive-only.err"
+    if _touched_additive="$(
       "$_gov_python" "$_root_protect_py" \
         --list-touched-additive-only --base "$PR_BASE" --head HEAD --repo "$WS" \
-        2>/dev/null || true
-    )"
+        2>"$_additive_err"
+    )"; then
+      _additive_measured=1
+      rm -f "$_additive_err"
+    else
+      echo "ERROR: could not measure additive_only root files in ${PR_BASE}..HEAD." >&2
+      [[ -s "$_additive_err" ]] && sed 's/^/       /' "$_additive_err" >&2
+      echo "       Refusing to compose a PR body that would claim there are none." >&2
+      echo "       Fix the range or the policy file, then re-run." >&2
+      exit 1
+    fi
+  elif [[ -f "$_root_protect_py" ]]; then
+    echo "OK: skip additive_only measurement (no ops/config/root-file-protection.json in this workspace)"
+    _additive_measured=1
+    _touched_additive=""
   fi
   for candidate in \
     "$WS/.github/pull_request_template.md" \
@@ -448,6 +484,8 @@ if [[ -z "$pr_url" || -z "$pr_number" ]]; then
   if [[ -n "$_touched_additive" ]]; then
     printf '%s\n' "$_touched_additive" > "$WS/.l9/pr/additive-only.txt"
     compose_args+=(--additive-only-file "$WS/.l9/pr/additive-only.txt")
+  elif [[ "$_additive_measured" -eq 0 ]]; then
+    compose_args+=(--additive-only-unmeasured)
   fi
   if [[ -n "${campaign_body:-}" ]]; then
     printf '%s\n' "$campaign_body" > "$WS/.l9/pr/campaign-body.md"
@@ -470,6 +508,10 @@ if [[ -z "$pr_url" || -z "$pr_number" ]]; then
       exit 1
     fi
   fi
+}
+
+if [[ -z "$pr_url" || -z "$pr_number" ]]; then
+  _compose_title_and_body
   # Explicit --head: gh otherwise aborts with "must first push the current
   # branch" in worktree/CI contexts where upstream tracking is not visible
   # (2026-08-15 factory repair).
@@ -516,6 +558,51 @@ PY
   fi
 else
   echo "PR already open: $pr_url"
+  # A body this script composed is a function of the range, and the range just
+  # moved. Recompose it (and the title) so the PR describes what it now carries;
+  # #602 kept a title from a range rule that had since been fixed. Only a body
+  # that carries the composer's own marker is touched -- a human-authored body
+  # is theirs, and the WARN below is all it gets.
+  _refreshed=0
+  if [[ -n "${owner:-}" && -n "${name:-}" ]]; then
+    if ! _open_body="$(gh api "repos/${owner}/${name}/pulls/${pr_number}" --jq .body 2>/dev/null)"; then
+      _open_body=""
+    fi
+    if [[ "$_open_body" == *"<!-- autonomous compile from open_pr_after_gate.sh -->"* ]]; then
+      _compose_title_and_body
+      printf '%s' "$body" > "$WS/.l9/pr/pr-body.md"
+      # REST PATCH, not `gh pr edit`. That subcommand is GraphQL-backed, so on a
+      # gateway that refuses GraphQL the refresh silently no-opped and the open
+      # PR kept describing only its first commit while later pushes added
+      # unrelated work — a stale description is what reviewers read. The body
+      # READ two lines up was already REST; this makes the write match it.
+      # Unlike per-PR subscribe, this one has a REST route.
+      _edit_json="$WS/.l9/pr/pr-edit.json"
+      _edit_ok=0
+      if python3 - "$title" "$WS/.l9/pr/pr-body.md" "$_edit_json" <<'PY'
+import json
+import sys
+
+title, body_path, out_path = sys.argv[1], sys.argv[2], sys.argv[3]
+with open(body_path, encoding="utf-8") as handle:
+    body = handle.read()
+with open(out_path, "w", encoding="utf-8") as handle:
+    json.dump({"title": title, "body": body}, handle)
+PY
+      then
+        if gh api --method PATCH "repos/${owner}/${name}/pulls/${pr_number}" \
+            --input "$_edit_json" >/dev/null 2>&1; then
+          _edit_ok=1
+        fi
+      fi
+      if [[ "$_edit_ok" -eq 1 ]]; then
+        _refreshed=1
+        echo "Refreshed: title and body recomposed for the current range"
+      else
+        echo "WARN: could not refresh the PR title/body (REST PATCH failed); the open PR keeps its previous text"
+      fi
+    fi
+  fi
   # The protected-root contract is proven when the PR is CREATED, from the diff
   # as it stood then. A later push can add an additive_only root file to a PR
   # whose body was composed from the default template, and nothing re-checks it
@@ -524,11 +611,12 @@ else
   #
   # A warning, not a failure: the body of an open PR may be human-authored, and
   # refusing to push someone's work over a template stamp would be worse than
-  # the red check this prevents.
+  # the red check this prevents. A body we just recomposed was re-proven by
+  # _compose_title_and_body and needs no second look.
   _reopen_protect_py="$GOV_ROOT/ops/scripts/validate_root_file_protection.py"
   _reopen_python="${GOV_ROOT}/.venv/bin/python"
   [[ -x "$_reopen_python" ]] || _reopen_python="python3"
-  if [[ -f "$_reopen_protect_py" && -n "${owner:-}" && -n "${name:-}" ]]; then
+  if [[ "$_refreshed" -eq 0 && -f "$_reopen_protect_py" && -f "$WS/ops/config/root-file-protection.json" && -n "${owner:-}" && -n "${name:-}" ]]; then
     # `if !` rather than `|| true`: an advisory path must not abort the publish,
     # but erasing the failure would also hide it from the swallowed-failure
     # ratchet. Handling it explicitly keeps both properties.

@@ -27,6 +27,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import os
+import re
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
@@ -38,7 +39,12 @@ from ops.graphiti.hydration.session_latches import load_close_receipt
 from ops.memory.canonical_validation import (
     ENV_REQUIRE_VALIDATION as ENV_REQUIRE_CANONICAL_VALIDATION,
 )
-from ops.memory.control_plane_client import MemoryControlPlaneClient, OutcomeStatus
+from ops.memory.control_plane_client import (
+    DISTILL_CLI_OPTIONS,
+    MemoryControlPlaneClient,
+    OutcomeStatus,
+)
+from ops.memory.hook_envelope import REJECTED_PREFIX
 from ops.memory.hydration import canonical_hydrate
 from ops.memory.namespace_context import repository_state_digest, resolve_namespace_context
 from ops.memory.runtime_binding import (
@@ -47,6 +53,7 @@ from ops.memory.runtime_binding import (
     STATUS_COMPATIBLE,
     STATUS_EXACT,
     BindingManifest,
+    default_runner,
     resolve_runtime_binding,
 )
 from ops.memory.session_contracts import (
@@ -213,7 +220,19 @@ def runtime(tmp_path: Path, request) -> tuple[MemoryControlPlaneClient, dict[str
             "validate nothing"
         )
     _record_evidence(binding, test=request.node.name)
-    return MemoryControlPlaneClient(binding, env=env, session_id="proof-session"), env
+    calls: list[list[str]] = []
+
+    def recording_runner(argv, **kwargs):
+        # The real CLI runs; the proof only keeps the argv so it can assert on
+        # exactly what crossed the boundary (never a payload).
+        calls.append([str(a) for a in argv])
+        return default_runner(argv, **kwargs)
+
+    client = MemoryControlPlaneClient(
+        binding, env=env, session_id="proof-session", runner=recording_runner
+    )
+    client._proof_calls = calls  # type: ignore[attr-defined]
+    return client, env
 
 
 def test_lifecycle_against_the_real_memory_runtime(runtime, tmp_path: Path, monkeypatch) -> None:
@@ -374,15 +393,70 @@ def test_lifecycle_against_the_real_memory_runtime(runtime, tmp_path: Path, monk
     project.mkdir()
     monkeypatch.setattr(cs, "resolve_namespace_context", lambda *_a, **_k: context)
     monkeypatch.setattr(cs, "repository_state_digest", lambda _p: head)
-    monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **_k: ("user: finish C6", "test"))
-    monkeypatch.setenv("MEMORY_PHASE_B", "0")
-    monkeypatch.setenv("MEMORY_DISTILL_ENQUEUE", "0")
+    excerpt = (
+        "user: finish C6\n"
+        "assistant: Decision: the close is idempotent by key. "
+        "Lesson: use the bound CLI, never PATH.\n"
+    )
+    monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **_k: (excerpt, "test"))
+    # The automatic session-end hook runs under its *own* envelope (ADR-0033
+    # B7), not the operator form this fixture otherwise models. The proof
+    # therefore closes through the real `cursor-session-end` surface, so the
+    # bounded-distill path production hooks take is the path the bound release
+    # is proved against (audit F-604-DISTILL-PROOF).
+    hook = _hook_client(client, cs.DEFAULT_CLOSE_SURFACE)
+    assert hook.envelope is not None and "distill" in hook.envelope.allowed_operations
     report = cs.close_session(
-        project_dir=project, session_id="proof-close", agent_id="cursor", client=client
+        project_dir=project,
+        session_id="proof-close",
+        agent_id="cursor",
+        client=hook,
+        surface=cs.DEFAULT_CLOSE_SURFACE,
     )
     assert report["status"] == "closed_canonically", report["warnings"]
     assert report["continuation"]["status"] == "admitted"
     assert report["close"]["replayed"] is False
+    # ADR-0033: the redacted excerpt is distilled by memory itself, after the
+    # close, through the bound release's own `l9-memory distill`. The hook lane
+    # only wrote the excerpt to a bounded path; extraction, admission and every
+    # record are memory's. The manifest lists `distill` under
+    # bounded_hook_cli_commands because the 2.4.0 capabilities receipt does not
+    # advertise it, so this is the proof that the bound release ships it.
+    distill = report["distill"]
+    assert distill["status"] == "OK", distill
+    assert distill["extractor"]
+    assert distill["candidate_count"] >= 1
+    assert distill["written_count"] == len(distill["record_ids"]) >= 1
+    assert next(w for w in report["writes"] if w["kind"] == "distill")["status"] == "OK"
+    # The hook lane bounds max_records with the bound release's own contract:
+    # a --dry-run counting pass, then the commit — both parsed by the exact
+    # bound CLI (F-604-DISTILL-CAP). Every option that crossed the boundary is
+    # one the bound parser defines; the unsupported --max-records never does.
+    preflight, commit = _distill_argvs(hook)
+    parser_options = _bound_distill_options(hook)
+    assert "--max-records" not in parser_options, "the bound release grew an input cap; rebind"
+    for argv in (preflight, commit):
+        emitted = {a for a in argv[2:] if a.startswith("--")}
+        assert emitted <= parser_options, (emitted, parser_options)
+        assert emitted <= DISTILL_CLI_OPTIONS, emitted
+    assert "--dry-run" in preflight and "--dry-run" not in commit
+    assert Path(distill_source := commit[2]).is_file()
+    assert Path(distill_source).parent == project / ".l9" / "memory" / "distill"
+    assert preflight[2] == distill_source
+    assert distill["candidate_count"] <= hook.envelope.max_records
+    assert hook._records_committed == 1 + 1 + distill["written_count"]
+    for record_id in distill["record_ids"]:
+        assert _record_state(client, record_id, namespace) == "active"
+    # A re-run against the same excerpt is a replay, not a second set of records:
+    # memory keys each atomic write by the source digest.
+    again_distill = client.distill(
+        workspace=str(project),
+        namespace=namespace,
+        source_path=distill_source,
+        repository=repository_identity_for(context),
+    )
+    assert again_distill.ok, again_distill.error
+    assert set(again_distill.receipt.record_ids) == set(distill["record_ids"])
     obligation = load_close_receipt(project, "proof-close")
     assert obligation["status"] == "closed_canonically"
     assert obligation["canonical_operation_id"]
@@ -466,6 +540,103 @@ def test_lifecycle_against_the_real_memory_runtime(runtime, tmp_path: Path, monk
     )
     assert strict_unknown.continuation is None
     assert strict_unknown.continuation_excluded == strict_unknown.continuation_candidates > 0
+
+
+def _distill_argvs(client: MemoryControlPlaneClient) -> list[list[str]]:
+    """Every argv the client handed the real CLI for ``distill``, in order."""
+    calls = getattr(client, "_proof_calls", None)
+    assert calls is not None, "the proof client did not record its calls"
+    return [argv for argv in calls if len(argv) > 1 and argv[1] == "distill"]
+
+
+def _hook_client(operator: MemoryControlPlaneClient, surface: str) -> MemoryControlPlaneClient:
+    """The same bound runtime and recorder under an automatic hook's envelope."""
+    hook = MemoryControlPlaneClient(
+        operator.binding,
+        env=operator._env,
+        session_id=operator.session_id,
+        runner=operator._run,
+        surface=surface,
+    )
+    hook._proof_calls = operator._proof_calls  # type: ignore[attr-defined]
+    return hook
+
+
+def _bound_distill_options(client: MemoryControlPlaneClient) -> set[str]:
+    """The options the exact bound ``l9-memory distill`` parser defines.
+
+    Read from the parser itself (``--help``), not from any Cursor-side list:
+    this is the cross-repository contract the hook lane's argv must satisfy.
+    """
+    assert client.binding.memory_cli is not None
+    completed = subprocess.run(
+        [client.binding.memory_cli, "distill", "--help"],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        env=client._child_env(),
+        check=True,
+    )
+    return set(re.findall(r"(?<![\w-])(--[a-z][\w-]*)", completed.stdout))
+
+
+def test_hook_distill_record_bound_holds_against_the_exact_bound_cli(
+    runtime, tmp_path: Path
+) -> None:
+    """Audit F-604-DISTILL-CAP closure, against the real release.
+
+    A hook with N remaining record slots cannot write more than N: the client
+    counts with the bound release's own ``distill --dry-run`` (which persists
+    nothing) and refuses the commit before any write when the count exceeds
+    N. When it fits, the commit writes exactly what was counted.
+    """
+    operator, _env = runtime
+    context = resolve_namespace_context(ROOT)
+    namespace = context.write_namespace_hint
+    hook = _hook_client(operator, cs.DEFAULT_CLOSE_SURFACE)
+    assert hook.envelope is not None
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%f")
+    # One deterministic candidate per sentence (>= 8 chars) on this release.
+    sentences = [f"Fact {i} for bound proof {stamp} requires the exact CLI." for i in range(1, 17)]
+    excess = tmp_path / "excess.md"
+    excess.write_text("\n".join(sentences[:13]) + "\n", encoding="utf-8")
+    fits = tmp_path / "fits.md"
+    fits.write_text("\n".join(sentences[13:]) + "\n", encoding="utf-8")
+    assert 13 > hook.envelope.max_records >= 3
+
+    refused = hook.distill(workspace=str(ROOT), namespace=namespace, source_path=excess)
+    assert refused.status is OutcomeStatus.REJECTED, refused.error
+    assert (refused.error or "").startswith(REJECTED_PREFIX)
+    assert f"max_records={hook.envelope.max_records}" in refused.error
+    assert "refused before write" in refused.error
+    assert hook._records_committed == 0
+    (counting,) = _distill_argvs(hook)
+    assert "--dry-run" in counting and "--max-records" not in counting
+    # Nothing was written: an operator distill of the same excerpt admits every
+    # candidate fresh — had the refused hook pass persisted anything, memory
+    # would answer `duplicate` under the same source-digest idempotency keys.
+    proof = operator.distill(workspace=str(ROOT), namespace=namespace, source_path=excess)
+    assert proof.ok, proof.error
+    assert proof.receipt.candidate_count == 13
+    statuses = {w["status"] for w in proof.receipt.raw["write_receipts"]}
+    assert statuses == {"admitted"}, statuses
+
+    fitting = hook.distill(workspace=str(ROOT), namespace=namespace, source_path=fits)
+    assert fitting.ok, fitting.error
+    assert fitting.receipt.candidate_count == fitting.receipt.written_count == 3
+    assert hook._records_committed == 3 <= hook.envelope.max_records
+    for record_id in fitting.receipt.record_ids:
+        assert _record_state(operator, record_id, namespace) == "active"
+    counting, commit = _distill_argvs(hook)[-2:]  # the recorder is shared with `operator`
+    assert counting[2] == commit[2] == str(fits)
+    assert "--dry-run" in counting and "--dry-run" not in commit
+    parser_options = _bound_distill_options(hook)
+    for argv in (counting, commit):
+        assert {a for a in argv[2:] if a.startswith("--")} <= parser_options
+
+
+def repository_identity_for(context) -> str:
+    return context.repository_identity or "Quantum-L9/Cursor-Governance"
 
 
 def _record_state(client: MemoryControlPlaneClient, record_id: str, namespace: str) -> str:
@@ -606,8 +777,6 @@ def test_task_isolation_and_refinement_supersession_against_the_real_runtime(
         monkeypatch.setattr(module, "resolve_namespace_context", lambda *_a, **_k: context)
         monkeypatch.setattr(module, "repository_state_digest", lambda _p: head)
     monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **_k: ("user: finish C13", "test"))
-    monkeypatch.setenv("MEMORY_PHASE_B", "0")
-    monkeypatch.setenv("MEMORY_DISTILL_ENQUEUE", "0")
 
     class LostResponse:
         """The real client, except the first close's response never arrives."""

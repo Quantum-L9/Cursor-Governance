@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "description": "Exact path-based exceptions for ops/scripts/validate_memory_egress_boundary.py. Every entry names why the path may spell a forbidden token and an expiry; an expired entry is a finding. Nothing here authorizes provider egress \u2014 since stage C11 every remaining entry is a negative check, a scanner/allowlist self-reference, a protected operator-owned file, or a secret-inventory row, never a code path that calls a provider (CURSOR_GOVERNANCE_MEMORY_CONTROL_PLANE_REALIGNMENT_BUILD_PLAN \u00a78).",
   "mode": "enforce",
-  "mode_note": "enforce (stage C11+): any unlisted or expired finding fails the validator and tests/ops/memory/test_egress_boundary.py. The legacy provider client, env plane, shadow reader, distiller and their tests were deleted at C11; ops/graphiti/graphiti_memory_client.py is a tombstone that spells no provider token.",
+  "mode_note": "enforce (stage C11+): any unlisted or expired finding fails the validator and tests/ops/memory/test_egress_boundary.py. The legacy provider client, env plane, shadow reader, distiller and their tests were deleted at C11; the C11 tombstone at ops/graphiti/graphiti_memory_client.py was deleted at C15 (ADR-0033).",
   "entries": [
     {
       "path": "ops/config/memory-egress-allowlist.json",
@@ -151,6 +151,18 @@
     {
       "path": "ops/scripts/lib/bind_memory_interpreter.sh",
       "reason": "Interpreter binder unsets retired provider transport vars (negative hygiene).",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "environment/agents/adapters/manus/validate_manus_adapter.py",
+      "reason": "Negative checks: the manus adapter validator names the retired provider transport vars and the memory credential so their presence in the rendered adapter environment is rejected (PR #568; unregistered when #570 introduced enforce mode).",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "environment/agents/adapters/manus/tests/test_manus_adapter.py",
+      "reason": "Negative checks (assertNotIn) that the rendered manus environment carries no provider URL or token.",
       "retire_at_stage": "never",
       "expires": "2099-01-01"
     }

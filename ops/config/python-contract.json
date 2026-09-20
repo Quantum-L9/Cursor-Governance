@@ -51,6 +51,7 @@
     "skills/l9-plan",
     "skills/l9-plan-simple",
     "skills/l9-pr-digest",
+    "skills/l9-pr-audit",
     "skills/l9-pr-remediation",
     "skills/l9-repo-sync",
     "skills/l9-repository-renovation",
@@ -154,6 +155,8 @@
             "--ignore=environment/program-execution/core/program-execution-controller-template/scripts/tests",
             "-n",
             "auto",
+            "--dist",
+            "loadgroup",
             "--cov=.",
             "--cov-report=xml",
             "--cov-report=term-missing",
@@ -164,7 +167,7 @@
           ]
         }
       },
-      "rationale": "Root discovery over the whole repository with root autonomy/ on PYTHONPATH. Explicitly ignores the three separately-owned active suites (each has its own registry entry) so it neither shadows their packages nor double-runs them. Non-test false positives are ignored via pyproject addopts. CI profile keeps root-only coverage XML + terminal coverage, xdist, the 300s per-test timeout, and the existing zero-percent advisory threshold. Local make pr must not pass this suite's '.' collection root; it uses --changed-file and select_pr_pytest_paths.py instead."
+      "rationale": "Root discovery over the whole repository with root autonomy/ on PYTHONPATH. Explicitly ignores the three separately-owned active suites (each has its own registry entry) so it neither shadows their packages nor double-runs them. Non-test false positives are ignored via pyproject addopts. CI profile keeps root-only coverage XML + terminal coverage, xdist, the 300s per-test timeout, and the existing zero-percent advisory threshold. xdist runs '--dist loadgroup', not the default 'load' scheduler: only loadgroup honors pytest.mark.xdist_group, and the root suite carries files that MUST share one worker (the live_repo_tree group, which points real governance writers at this checkout and then asserts the checkout is unchanged). Under 'load' those marks are silently inert and the group's tests scatter across workers, which is the transient race they exist to prevent. Local make pr must not pass this suite's '.' collection root; it uses --changed-file and select_pr_pytest_paths.py instead."
     },
     {
       "id": "skill-contracts",

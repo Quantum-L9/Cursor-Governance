@@ -245,6 +245,156 @@ class SecretsReceiptLoadTests(unittest.TestCase):
         self.assertIsNone(aws)
         self.assertIsNone(binds)
 
+    def test_receipt_carries_the_plane_state(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp) / ".l9" / "session"
+            dest.mkdir(parents=True)
+            (dest / "secrets-plane.json").write_text(
+                json.dumps(
+                    {
+                        "ok": False,
+                        "state": "unavailable_by_surface",
+                        "surface_class": "model_controlled",
+                        "login": "skipped",
+                        "aws": {
+                            "ok": False,
+                            "code": "AWS_CLI_NOT_FOUND",
+                            "summary": "AWS_CLI_NOT_FOUND — secrets plane cannot start",
+                        },
+                        "binds": [
+                            {"name": "SONAR_TOKEN", "bound": False, "source": "unbound"},
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            receipt = report.load_secrets_plane_receipt(tmp)
+            self.assertEqual(
+                report.secrets_plane_state(receipt),
+                report.PLANE_UNAVAILABLE_BY_SURFACE,
+            )
+
+    def test_pre_carve_out_receipt_has_no_state(self) -> None:
+        """A receipt written before the carve-out reads '' and keeps failing."""
+        legacy = {"ok": False, "aws": {"ok": False, "code": "AWS_CLI_NOT_FOUND"}}
+        self.assertEqual(report.secrets_plane_state(legacy), "")
+        line = report.classify_aws_cli(legacy["aws"], report.secrets_plane_state(legacy))
+        self.assertEqual(line["class"], report.FAILED)
+
+    def test_unrecognized_state_is_fail_closed(self) -> None:
+        """An unknown state degrades to no-state, never to the carve-out."""
+        for raw in ("unavailable", "OK", "ok ", "sudo", "", None, 1, {"a": 1}):
+            with self.subTest(state=raw):
+                self.assertEqual(report.secrets_plane_state({"state": raw}), "")
+
+    def test_state_returned_is_the_module_literal_not_the_receipt_string(self) -> None:
+        """Nothing read from the receipt may leave this reader.
+
+        The report is printed, so a value flowing from the receipt into the
+        rendered output is a clear-text-logging path (CodeQL flagged exactly
+        that). Returning the allowlisted literal is the barrier: the object
+        returned is the module's own constant, never the parsed string.
+        """
+        parsed = json.loads('{"state": "unavailable_by_surface"}')
+        returned = report.secrets_plane_state(parsed)
+        self.assertEqual(returned, report.PLANE_UNAVAILABLE_BY_SURFACE)
+        self.assertIn(returned, report.PLANE_STATES)
+        # Identity, not just equality: the literal, not the receipt's string.
+        self.assertIs(returned, report.PLANE_UNAVAILABLE_BY_SURFACE)
+        self.assertIsNot(returned, parsed["state"])
+
+
+class SecretsBindSurfaceClassificationTests(unittest.TestCase):
+    """The carve-out reaches the bind classifier too.
+
+    Without this the report contradicted itself: aws-cli named the surface and
+    said "not a fault" while secrets-bind degraded on the very same cause.
+    """
+
+    UNBOUND = [
+        {"name": "SEMGREP_APP_TOKEN", "bound": False, "source": "infisical-machine-absent"},
+        {"name": "SONAR_TOKEN", "bound": False, "source": "infisical-machine-absent"},
+        {"name": "GITHUB_TOKEN", "bound": True, "source": "env"},
+    ]
+
+    def test_unbound_by_surface_is_not_degraded(self) -> None:
+        line = report.classify_secrets_bind(self.UNBOUND, report.PLANE_UNAVAILABLE_BY_SURFACE)
+        self.assertEqual(line["class"], report.NA)
+        self.assertFalse(line["include_in_degraded"])
+        self.assertIn("unbound by surface", line["summary"])
+        # Still named, so the unbound inventory stays visible in the report.
+        self.assertIn("SEMGREP_APP_TOKEN", line["evidence"])
+
+    def test_unbound_without_the_carve_out_still_degrades(self) -> None:
+        for state in ("failed", "ok", ""):
+            with self.subTest(state=state):
+                line = report.classify_secrets_bind(self.UNBOUND, state)
+                self.assertEqual(line["class"], report.DEGRADED)
+                self.assertTrue(line["include_in_degraded"])
+
+    def test_source_aws_is_a_fault_on_every_surface(self) -> None:
+        """A real fault is never carved out — checked before the unbound branch."""
+        leftover = [{"name": "SONAR_TOKEN", "bound": True, "source": "aws"}]
+        for state in (report.PLANE_UNAVAILABLE_BY_SURFACE, "failed", ""):
+            with self.subTest(state=state):
+                line = report.classify_secrets_bind(leftover, state)
+                self.assertEqual(line["class"], report.FAILED)
+                self.assertTrue(line["include_in_degraded"])
+
+    def test_unread_receipt_is_degraded_whatever_the_state(self) -> None:
+        line = report.classify_secrets_bind(None, report.PLANE_UNAVAILABLE_BY_SURFACE)
+        self.assertEqual(line["class"], report.DEGRADED)
+
+    def test_report_does_not_contradict_itself_on_a_carved_out_surface(self) -> None:
+        """The regression Codex caught: both lines, one cause, one verdict."""
+        aws = {"ok": False, "code": "AWS_CLI_NOT_FOUND", "summary": "absent"}
+        state = report.PLANE_UNAVAILABLE_BY_SURFACE
+        lines = [
+            report.classify_aws_cli(aws, state),
+            report.classify_secrets_bind(self.UNBOUND, state),
+        ]
+        self.assertEqual([item["class"] for item in lines], [report.NA, report.NA])
+        rendered = report.format_markdown(lines)
+        self.assertNotIn("### FAILED", rendered)
+        degraded_section = rendered.split("### Degraded", 1)[1]
+        self.assertIn("none", degraded_section)
+
+
+class AwsCliSurfaceClassificationTests(unittest.TestCase):
+    """The third state renders as neither ok nor FAILED."""
+
+    ABSENT = {
+        "ok": False,
+        "code": "AWS_CLI_NOT_FOUND",
+        "summary": "AWS_CLI_NOT_FOUND — secrets plane cannot start",
+    }
+
+    def test_unavailable_by_surface_is_not_failed_and_not_degraded(self) -> None:
+        line = report.classify_aws_cli(self.ABSENT, report.PLANE_UNAVAILABLE_BY_SURFACE)
+        self.assertEqual(line["class"], report.NA)
+        self.assertFalse(line["include_in_degraded"])
+        self.assertFalse(line["this_surface"])
+        self.assertIn("unavailable by surface", line["summary"])
+        # Still named in the report — visible, just not scored as a fault.
+        self.assertEqual(line["evidence"], "AWS_CLI_NOT_FOUND")
+
+    def test_failed_plane_state_still_fails(self) -> None:
+        for state in ("failed", ""):
+            with self.subTest(state=state):
+                line = report.classify_aws_cli(self.ABSENT, state)
+                self.assertEqual(line["class"], report.FAILED)
+                self.assertTrue(line["include_in_degraded"])
+
+    def test_unread_receipt_still_fails_whatever_the_state(self) -> None:
+        line = report.classify_aws_cli(None, report.PLANE_UNAVAILABLE_BY_SURFACE)
+        self.assertEqual(line["class"], report.FAILED)
+
+    def test_markdown_omits_the_failed_header_for_the_carve_out(self) -> None:
+        carved = report.classify_aws_cli(self.ABSENT, report.PLANE_UNAVAILABLE_BY_SURFACE)
+        self.assertNotIn("### FAILED", report.format_markdown([carved]))
+        failed = report.classify_aws_cli(self.ABSENT, "failed")
+        self.assertIn("### FAILED", report.format_markdown([failed]))
+
 
 class MemoryProofClassificationTests(unittest.TestCase):
     def test_compatible_unproven_is_not_unbound_or_bound(self) -> None:
@@ -298,6 +448,35 @@ class MemoryProofClassificationTests(unittest.TestCase):
         self.assertIn("compatible", line["summary"])
         self.assertNotIn("unbound", line["summary"])
 
+    def test_unbound_runtime_is_an_environment_fault_not_degraded(self) -> None:
+        """ADR-0032: a drifted governance .venv is a bootstrap fault; memory was not observed."""
+
+        line = report.classify_memory_proof(
+            {
+                "binding_status": "unbound",
+                "ok": False,
+                "environment_fault": True,
+                "environment_heal": "skipped:repo-write-lock-held",
+                "memory_package": "l9-graphite-memory",
+                "memory_version": "2.3.1",
+                "reasons": ["package version 2.3.1 does not match expected 2.4.0"],
+            }
+        )
+        self.assertEqual(line["class"], report.ENVIRONMENT_FAULT)
+        self.assertTrue(line["summary"].startswith("ENVIRONMENT_FAULT unbound"))
+        self.assertIn("heal=skipped:repo-write-lock-held", line["summary"])
+        self.assertIn("does not match expected", line["summary"])
+        self.assertTrue(line["include_in_degraded"])
+        rendered = report.format_markdown([line])
+        self.assertIn("- memory: environment_fault — ENVIRONMENT_FAULT", rendered)
+        self.assertNotIn("memory: degraded", rendered)
+
+    def test_older_proof_shape_still_classifies_unbound_as_environment(self) -> None:
+        line = report.classify_memory_proof(
+            {"binding_status": "unbound", "ok": False, "reasons": ["not importable"]}
+        )
+        self.assertEqual(line["class"], report.ENVIRONMENT_FAULT)
+
     def test_slogan_is_not_a_live_proof(self) -> None:
         self.assertIsNone(report.parse_binding_proof("unbound: the install recorded no PEP 610"))
         self.assertFalse(report.proof_is_live({"status": "unbound"}))
@@ -332,7 +511,7 @@ class HydrateCollapseTests(unittest.TestCase):
                 skill_note="/tmp/x.jsonl (1 entries)",
                 codegraph="skipped",
                 hydrate_degraded=True,
-                hydrate_reason="STALE — continuation_stale=true",
+                hydrate_reason="CANONICAL_UNAVAILABLE: store unreachable",
                 home=Path(tmp),
                 aws_cli={"ok": True, "code": "OK", "summary": "authorized"},
                 secrets_bind=[
@@ -346,7 +525,78 @@ class HydrateCollapseTests(unittest.TestCase):
         self.assertIn("memory-hydrate", names)
         hydrate = next(item for item in lines if item["name"] == "memory-hydrate")
         self.assertEqual(hydrate["class"], report.DEGRADED)
-        self.assertIn("continuation_stale", hydrate["summary"])
+        self.assertIn("CANONICAL_UNAVAILABLE", hydrate["summary"])
+
+    def _collect_condition(self, condition: str) -> dict:
+        with tempfile.TemporaryDirectory() as tmp:
+            lines = report.collect(
+                surface="cursor",
+                venv="locked",
+                ide_profile="applied",
+                tunnel="open",
+                memory_detail="healthy",
+                memory_stderr="",
+                memory_healthy=True,
+                wiring="PASS",
+                backup="armed",
+                skill_note="/tmp/x.jsonl (1 entries)",
+                codegraph="skipped",
+                hydrate_degraded=False,
+                hydrate_reason="",
+                hydrate_condition=condition,
+                home=Path(tmp),
+                aws_cli={"ok": True, "code": "OK", "summary": "authorized"},
+                secrets_bind=[],
+            )
+        return next(item for item in lines if item["name"] == "memory-hydrate")
+
+    def test_stale_continuation_is_not_a_degraded_row(self) -> None:
+        """ADR-0032: the false positive this fix removes — STALE on an OK hydrate."""
+        hydrate = self._collect_condition("STALE: continuation_stale=true")
+        self.assertEqual(hydrate["class"], report.OK)
+        self.assertFalse(hydrate["include_in_degraded"])
+        self.assertTrue(hydrate["summary"].startswith("STALE"))
+        rendered = report.format_markdown([hydrate])
+        self.assertIn("### Degraded\n- none", rendered)
+
+    def test_close_gap_is_an_ok_row_naming_the_repair(self) -> None:
+        hydrate = self._collect_condition("CLOSE_GAP: session abc left no receipt")
+        self.assertEqual(hydrate["class"], report.OK)
+        self.assertFalse(hydrate["include_in_degraded"])
+        self.assertIn("session abc left no receipt", hydrate["summary"])
+        self.assertIn("REPAIR: /end-session", hydrate["summary"])
+
+    def test_environment_fault_condition_lands_in_degraded_under_its_own_name(self) -> None:
+        hydrate = self._collect_condition("ENVIRONMENT_FAULT: BINDING_FAILED: 2.3.1 != 2.4.0")
+        self.assertEqual(hydrate["class"], report.ENVIRONMENT_FAULT)
+        self.assertTrue(hydrate["include_in_degraded"])
+        self.assertIn("2.3.1 != 2.4.0", hydrate["summary"])
+        rendered = report.format_markdown([hydrate])
+        self.assertIn("- memory-hydrate: environment_fault — ENVIRONMENT_FAULT", rendered)
+        self.assertNotIn("memory-hydrate: degraded", rendered)
+
+    def test_no_condition_and_not_degraded_emits_no_hydrate_row(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            lines = report.collect(
+                surface="cursor",
+                venv="locked",
+                ide_profile="applied",
+                tunnel="open",
+                memory_detail="healthy",
+                memory_stderr="",
+                memory_healthy=True,
+                wiring="PASS",
+                backup="armed",
+                skill_note="/tmp/x.jsonl (1 entries)",
+                codegraph="skipped",
+                hydrate_degraded=False,
+                hydrate_reason="",
+                hydrate_condition="",
+                home=Path(tmp),
+                aws_cli={"ok": True, "code": "OK", "summary": "authorized"},
+                secrets_bind=[],
+            )
+        self.assertNotIn("memory-hydrate", [item["name"] for item in lines])
 
     def test_healthy_memory_keeps_hydrate_row(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -431,6 +681,12 @@ class HookWiringTests(unittest.TestCase):
         text = (REPO / "ops" / "hooks" / "session_start_bootstrap.sh").read_text(encoding="utf-8")
         self.assertIn("session_start_runtime_report.py", text)
         self.assertIn("resolve_runtime_reporter", text)
+        self.assertNotIn("ARCHIVE_ARGS=(--archive-spent)", text)
+        self.assertNotIn('"${ARCHIVE_ARGS[@]}"', text)
+        self.assertNotIn("audit_pipeline.py", text)
+        self.assertNotIn("audit_plans.py", text)
+        self.assertNotIn("### Plan audit", text)
+        self.assertNotIn("PLAN_AUDIT_MD", text)
         bootstrap = (REPO / "ops" / "scripts" / "bootstrap_agent_environment.sh").read_text(
             encoding="utf-8"
         )
@@ -464,6 +720,29 @@ class HookWiringTests(unittest.TestCase):
         self.assertNotIn("def probe_secrets_bind", reporter)
         self.assertNotIn("else probe_", reporter)
         self.assertNotIn("bind_status", reporter)
+
+    def test_cursor_hook_heals_links_in_non_migrating_plans_mode(self) -> None:
+        """F-08: SessionStart wires links without the plans-store migration.
+
+        ensure_workspace_wired.sh unconditionally called the machine
+        plans-store helper, which copies, renames aside and replaces a legacy
+        real ~/.cursor/plans directory. The hook must call it in a mode where
+        that helper never runs against an existing entry, and must not fall
+        through to setup_workspace_symlinks.sh / check_governance_wiring.sh
+        (both call the helper unconditionally) while such a directory exists.
+        """
+        text = (REPO / "ops" / "hooks" / "session_start_bootstrap.sh").read_text(encoding="utf-8")
+        for line in text.splitlines():
+            if 'bash "$ENSURE"' in line:
+                self.assertIn("L9_PLANS_STORE_MODE=links-only", line, line)
+        self.assertIn("plans_store_is_legacy_real", text)
+        ensure = (REPO / "ops" / "scripts" / "ensure_workspace_wired.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("L9_PLANS_STORE_MODE", ensure)
+        self.assertIn("links-only", ensure)
+        # The helper is still the default for manual callers, never removed.
+        self.assertIn("ensure_machine_cursor_plans_store", ensure)
 
     def test_claude_hook_uses_portable_timeout(self) -> None:
         text = (

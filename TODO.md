@@ -1,5 +1,12 @@
 ## Issue unblock (session reference)
 
+**Cluster:** Quantum-L9/Cursor-Governance#597
+**Owning fix:** https://github.com/Quantum-L9/Cursor-Governance/pull/585 head 4bd0a6b2250269fdaed3fc34330399c71b300421
+**Next:** PR 585 MERGEABLE after origin/main merge; digest rebound still BLOCKED inspect-only
+**Pickup:** Graphiti PICKUP written 2026-09-15 record 46e5bd6f-2f28-4b16-99ab-fd16f50905ff
+
+## Issue unblock (session reference)
+
 **Cluster:** Quantum-L9/Cursor-Governance#578
 **Owning fix:** https://github.com/Quantum-L9/Cursor-Governance/pull/576 commit c72097a3249d7bc58977d3a287335e3a62f07d1d
 **Next:** none — #578 closed

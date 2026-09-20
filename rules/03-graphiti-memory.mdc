@@ -1,8 +1,8 @@
 ---
 id: l9.rule.graphiti.memory
-version: 1.3.0
+version: 1.5.0
 description: "Agent memory SSOT (canonical l9-graphite-memory control plane) \u2014 retrieval\
-  \ authority, namespace, governed interactive write, temporal supersedes/conflicts"
+  \ authority, namespace, two lanes (agent write_agent direct; hooks bounded), temporal supersedes/conflicts"
 scope: global
 domain: memory
 activation: always
@@ -22,7 +22,11 @@ alwaysApply: true
 
 **Updated: 2026-09-06** — Memory realignment C11/C12: the sole front door is the canonical `l9-graphite-memory` control plane through `ops/memory` (`python -m ops.memory.cli`); Graphiti is a projection memory owns. `ops/graphiti/graphiti_memory_client.py` is a tombstone, no surface holds a provider URL or bearer, and `~/.cursor/graphiti.env` carries switches only. CANONICAL_LAW §8.2, ADR-0030.
 
-**Updated: 2026-09-07** — Doctrine closure (CANONICAL_LAW §8.3, ADR-0030 items 7–9): ONE authority (`MemoryService`), ONE canonical egress (`ops/memory`), Graphiti is a downstream projection. Resume SSOT is the canonical continuation record (`ContinuationCapsuleV2`), never Graphiti `inject` / PICKUP. A model-initiated durable write is `memory.phase_lock` → `memory.write_governed` on the `l9-graphite-memory` MCP server; that lock governs memory-write consistency only and is never repository-write authority.
+**Updated: 2026-09-07** *(single-path write wording superseded 2026-09-13)* — Doctrine closure (CANONICAL_LAW §8.3, ADR-0030 items 7–9): ONE authority (`MemoryService`), ONE canonical egress (`ops/memory`), Graphiti is a downstream projection. Resume SSOT is the canonical continuation record (`ContinuationCapsuleV2`), never Graphiti `inject` / PICKUP. A model-initiated durable write is `memory.phase_lock` → `memory.write_governed` on the `l9-graphite-memory` MCP server; that lock governs memory-write consistency only and is never repository-write authority.
+
+**Updated: 2026-09-13** — ADR-0031 / CANONICAL_LAW §8.5: ordinary / cold model writes use MCP `memory.write_agent` (no `phase_lock`). Conflict-sensitive writes remain `memory.phase_lock` → `memory.write_governed`. Agent HTTP is sealed. Identity is the shared agents door + a signed `agent_id` assertion; the human door stays private.
+
+**Updated: 2026-09-15** — ADR-0033 / CANONICAL_LAW §8.6 (two lanes, one `MemoryService`; INV-03b). "ONE canonical egress (`ops/memory`)" above means *no provider bypass*, not *all memory traffic passes through Cursor-Governance*. **Agent lane:** the ordinary write is `memory.write_agent` (MCP) or `l9-memory write`, immediately visible to the next `hydrate` / `search`; it waits on no receipt, phase, session close, PR or governance approval, and Cursor-Governance must not gate it (`memory_gate.py` exempts `l9-memory` / `ops.memory.cli`). `phase_lock` → `write_governed` is an optional conflict-sensitive pair. **Hook lane:** SessionStart / End, prefetch, PR publish and PE/SGD ingest use `MemoryControlPlaneClient(surface=…)` under `ops/config/memory-hook-envelopes.json`. Cursor-Governance holds no local memory cognition (Phase B, promotion rules, distill queue deleted at C15); sessionEnd hands the redacted excerpt to `l9-memory distill`. `graphiti_memory_client.py` is deleted (the C11 tombstone is gone); `make graphiti-health` is `make memory-readiness`.
 
 
 ## Retrieval authority (canonical order)
@@ -40,15 +44,42 @@ alwaysApply: true
 |------|--------|---------|
 | T0 | `memory-bank/` | **DEPRECATED** — archival only; do not write |
 | T1 | Canonical continuation capsule (`session_continuation`) | auto sessionEnd Phase A/B — budget capped |
-| T2 | Governed interactive write: `memory.phase_lock` → `memory.write_governed` (MCP `l9-graphite-memory`; search-before-write) | model-authored lessons, insights, decisions, ADR deltas |
-| T2-op | Operator / deterministic-adapter CLI (`python -m ops.memory.cli write`, `hydration.cli repair-write`, legacy reconciliation) | human operator, `/end-session` repair, Program Execution, reconciliation — never the model's way around T2 |
+| T2 | Cold interactive write: `memory.write_agent` (MCP `l9-graphite-memory`; no `phase_lock`; search-before-write) | model-authored ordinary lessons, insights, decisions, ADR deltas |
+| T2-hs | High-stakes interactive write: `memory.phase_lock` → `memory.write_governed` (same MCP; search-before-write) | conflict-sensitive model-authored facts (concurrent writers / namespace snapshot) |
+| T2-op | Operator / deterministic-adapter CLI (`python -m ops.memory.cli write`, `hydration.cli repair-write`, legacy reconciliation) | human operator, `/end-session` repair, Program Execution, reconciliation — never the model's way around T2 / T2-hs |
 | T3 | Full chat ingest | **FORBIDDEN** |
 
 ## Interactive write contract (ADR-0030 items 7–9)
 
-- **Agents MUST be able to write durable memory.** The model-initiated write is `memory.phase_lock {namespace, task_signature}` then `memory.write_governed {namespace, content, task_signature, memory_class, tags…}` on the package-owned `l9-graphite-memory` MCP server. `MemoryService` grants the lock only after a conflict check, binds the write to the namespace snapshot digest, and refuses it if the namespace moved.
+- **Agents MUST be able to write durable memory.** Ordinary / cold facts use `memory.write_agent {namespace, content, memory_class, tags…}` on the package-owned `l9-graphite-memory` MCP server — no SessionStart receipt and no `phase_lock`. Conflict-sensitive facts use `memory.phase_lock {namespace, task_signature}` then `memory.write_governed {namespace, content, task_signature, memory_class, tags…}`. `MemoryService` grants the lock only after a conflict check, binds the write to the namespace snapshot digest, and refuses it if the namespace moved.
 - **The phase-lock is a memory-write precondition only.** It never authorizes a source edit, never serializes git, never replaces worktree / branch / publication governance (`96-multi-agent-main-bound-execution` E7/E8/E10; `98-graphiti-memory-gate`).
-- **No evasion.** Generic `memory.ingest` and the generic CLI `write` are not the model's alternative to `write_governed`. If the MCP server is unbound, the write is reported as a gap (`L9_MEMORY_INTERPRETER` / `make memory-binding`), not rerouted.
+- **The agent lane is scoped to ONE namespace per session — while the vendored
+  wheel is `l9_graphite_memory-2.4.0`.** Without the signed door the stdio
+  server falls back to Tier 3, which resolves its principal once at spawn from
+  the server's working directory and freezes it. The `namespace` argument is
+  then checked against that frozen grant set, so a second repository in the
+  session — typically the governance SSOT beside the workspace — is **not**
+  writable through `write_agent`, whatever the argument says. Confirm cheaply
+  with `memory.write_agent {…, dry_run: true}`: `namespace did not match any
+  write grant` is this, not a malformed call.
+
+  **This is a bounded agent-lane limitation, not a lane swap.** A fact the
+  agent lane cannot write this session is reported as a gap — name the
+  namespace and the `dry_run` verdict — exactly like an unbound server. It is
+  **not** rerouted through the operator CLI: ADR-0033 / INV-03b classifies
+  `ops/memory/cli.py` as operator form, and a model-authored fact does not
+  change lane because its grant is missing. The fix belongs at the
+  package/principal boundary: provision the signed door before launch
+  (`source ops/memory/export_agent_assertion_env.sh` in the shell that starts
+  the session) so the principal carries its grants, or wait for the 2.5.0
+  per-request resolution below.
+
+  **Removal trigger:** `l9-graphite-memory` 2.5.0 resolves Tier 3 per request
+  (its ADR-083), so this bullet is **deleted** in the same PR that re-vendors
+  the 2.5.0 wheel and bumps `pyproject.toml` / `uv.lock`. Check the pin before
+  trusting this paragraph: a scope limit documented after it stopped existing
+  misleads exactly as the original silence did.
+- **No evasion.** Generic `memory.ingest` and the generic CLI `write` are not the model's alternative to `write_agent` or `write_governed`. If the MCP server is unbound, or the agent lane holds no grant for the namespace a fact belongs to (the 2.4.0 scope limit above), the write is reported as a gap (`L9_MEMORY_INTERPRETER` / `make memory-binding`; namespace + `dry_run` verdict), not rerouted.
 - **Deterministic adapters** (SessionStart hydrate, sessionEnd close, `repair-write`, reconciliation, diagnostics) use purpose-specific `ops/memory` operations over the same admission path — adapters, not second egresses.
 - **No provider transport.** Neither CLI nor MCP carries a provider URL, bearer, or raw provider tool; agents never write to the provider directly.
 
@@ -61,7 +92,7 @@ alwaysApply: true
 - Never use Cursor `update_memory` / native Memories for repo/code facts
 - Never use code-graph for episodic decisions (use canonical memory)
 - Treat `python -m ops.memory.cli` and the `l9-graphite-memory` MCP server as adapters to one `MemoryService` (ADR-0005/ADR-0030); fix the binding (`make memory-binding`) instead of inventing a second stack or calling a provider directly (INV-03)
-- Model-initiated durable writes go `memory.phase_lock` → `memory.write_governed`; never route them through generic ingest or the operator CLI to skip the lock
+- Model-initiated ordinary writes go `memory.write_agent`; conflict-sensitive writes go `memory.phase_lock` → `memory.write_governed`; never route either through generic ingest or the operator CLI
 - Never treat consumer-product runtime graphs (consumer ERP/graph / Gate) as agent episodic memory
 - Do not require `/end-session` for normal X-out — hook close is the primary path
 
@@ -85,6 +116,3 @@ memcli readiness --json
 ```
 
 Load skill: **`l9-graphiti-memory`**
-
-<!-- ADR-0031 2026-09-13 -->
-<!-- Cold model write: MCP memory.write_agent (no phase_lock). High-stakes: phase_lock → write_governed. Agent HTTP sealed. Shared agents door + signed assertion; human door private. -->

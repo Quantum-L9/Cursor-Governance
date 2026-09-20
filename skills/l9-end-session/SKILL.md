@@ -9,7 +9,7 @@ metadata:
   tags: [l9, session, handoff, memory, governance, control-plane, force-retry]
   owner: igor_beylin
   status: active
-  version: 1.7.0
+  version: 1.7.1
   updated: 2026-09-07
 ---
 
@@ -21,10 +21,13 @@ metadata:
 `ops/hooks/graphiti-session-end.sh` → `ops/graphiti/hydration/close_session.py`.
 You should **not** need this skill for a routine X-out.
 
-Use `/end-session` when SessionStart prints `DEGRADED` + `REPAIR: /end-session`,
-or the auto-close hook failed / the memory runtime was unbound, or you need a
-richer manual continuation record. See ADR-0028 (as amended 2026-09-07) and
-ADR-0030.
+Use `/end-session` when SessionStart prints `CLOSE_GAP` + `REPAIR: /end-session`,
+or the auto-close hook failed, or you need a richer manual continuation
+record. A close-gap is a **lifecycle** condition, not memory degradation
+(ADR-0032): `DEGRADED` means canonical memory did not answer, and
+`ENVIRONMENT_FAULT` means the memory runtime was never bound — repair those
+with `make memory-readiness`, not with this skill. See ADR-0028 (as amended
+2026-09-07), ADR-0030 and ADR-0032.
 
 Map: [`docs/MEMORY_PIPELINE_MAP.md`](../../docs/MEMORY_PIPELINE_MAP.md).
 
@@ -36,9 +39,11 @@ Before any memory CLI call, **load and follow** [`l9-graphiti-memory`](../l9-gra
 - `write` accepts `--kind`, `--group-id`, `--agent-id`, `--dry-run` — **never** `--scope`.
 - Stamp `L9_MEMORY_AGENT_ID=cursor` (or `--agent-id cursor`).
 - The repair is a **deterministic adapter** (`hydration.cli repair-write`);
-  model-authored learnings are **governed writes** (`memory.phase_lock` →
-  `memory.write_governed` on the `l9-graphite-memory` MCP server). Neither
-  reaches a provider; both admit through the same `MemoryService`.
+  model-authored learnings are MCP writes on the `l9-graphite-memory` server:
+  ordinary / cold lessons use `memory.write_agent` (no `phase_lock`), and
+  conflict-sensitive facts use `memory.phase_lock` → `memory.write_governed`
+  (ADR-0031, CANONICAL_LAW §8.5). Neither reaches a provider; all admit
+  through the same `MemoryService`.
 
 Slash command entry: [`commands/end-session.md`](../../commands/end-session.md).
 
@@ -73,11 +78,14 @@ cd "$GOV" && PYTHONPATH="$GOV" "$GRAPHITI_PY" -m ops.graphiti.hydration.cli repa
 ```
 
 Optional lesson writes after `repair-write` (same store; these do not stamp a
-close receipt). Model-authored facts are governed writes on the MCP server;
-`memcli write` is the human-operator form only:
+close receipt). Model-authored facts are MCP writes on the `l9-graphite-memory`
+server; `memcli write` is the human-operator form only. An ordinary / cold
+lesson is `memory.write_agent`; a conflict-sensitive fact takes the lock first
+(ADR-0031, CANONICAL_LAW §8.5):
 
 ```text
-memory.phase_lock      {namespace: "<memcli resolve write hint>", task_signature: "end-session:<session_id>"}
+memory.write_agent     {namespace: "<memcli resolve write hint>", content: "{terse fact}", memory_class: "lesson", tags: ["agent:cursor"]}
+memory.phase_lock      {namespace: "<memcli resolve write hint>", task_signature: "end-session:<session_id>"}   # conflict-sensitive only
 memory.write_governed  {namespace, content: "{terse fact}", task_signature: "end-session:<session_id>", memory_class: "lesson", tags: ["agent:cursor"]}
 ```
 
@@ -98,7 +106,7 @@ is already `closed` and `write_count>0`, unless `--supersede`.
 
 ## Compact Workflow
 
-1. Confirm close-gap (hydrate `REPAIR: /end-session`, missing receipt, or `write_count=0`).
+1. Confirm close-gap (hydrate `CLOSE_GAP` + `REPAIR: /end-session`, `close_gap_reason`, missing receipt, or `write_count=0`).
 2. HEALTH, then `repair-write` targeting the prior session id. Do not use client `write` as the close-gap repair.
 3. Optional Redis `cache_set_session_context`; the canonical continuation record (`ContinuationCapsuleV2`) is the resume SSOT either way.
 4. Run governance backup if needed.

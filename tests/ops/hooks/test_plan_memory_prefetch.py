@@ -153,7 +153,13 @@ def _runner(
     slow = slow or set()
 
     def run(argv: list[str], *, cwd: Path, timeout: float) -> SimpleNamespace:
-        sub = argv[argv.index("ops.memory.cli") + 1]
+        # The hook names its lane before the subcommand (ADR-0033 B7); every
+        # call must carry it or the CLI would run as the operator form.
+        assert argv[argv.index("ops.memory.cli") + 1 : argv.index("ops.memory.cli") + 3] == [
+            "--surface",
+            hook.HOOK_SURFACE,
+        ]
+        sub = argv[argv.index("ops.memory.cli") + 3]
         if seen is not None:
             seen.append((sub, timeout))
         if sub in slow:
@@ -238,6 +244,44 @@ def test_unavailable_memory_is_degraded_not_no_hit(tmp_path: Path) -> None:
     )
     assert body["state"] == hook.STATE_DEGRADED
     assert body["status"] == "WARN"
+    assert body["fault_class"] == "canonical"
+
+
+def test_unbound_runtime_is_an_environment_fault_not_degraded_memory(tmp_path: Path) -> None:
+    """ADR-0032: memory never ran, so the planner is told the environment is at fault."""
+
+    body = hook.prefetch(
+        workspace=tmp_path,
+        gov_root=tmp_path,
+        task="plan",
+        skills=["l9-plan"],
+        runner=_runner(
+            hydrate=(
+                1,
+                {
+                    "status": "BINDING_FAILED",
+                    "ok": False,
+                    "fault_class": "environment",
+                    "environment_fault": True,
+                    "memory_degraded": False,
+                    "environment_heal": "skipped:ci",
+                },
+            )
+        ),
+    )
+    assert body["state"] == hook.STATE_ENVIRONMENT_FAULT
+    assert body["status"] == "WARN"
+    assert body["fault_class"] == "environment"
+    assert body["environment_heal"] == "skipped:ci"
+    assert body["hydrate"]["state"] == hook.STATE_ENVIRONMENT_FAULT
+
+
+def test_hydrate_state_classifies_the_three_non_answers() -> None:
+    assert hook.hydrate_state({"status": "BINDING_FAILED"}, 1) == hook.STATE_ENVIRONMENT_FAULT
+    assert hook.hydrate_state({"fault_class": "environment"}, 1) == hook.STATE_ENVIRONMENT_FAULT
+    assert hook.hydrate_state({"status": "CANONICAL_UNAVAILABLE"}, 1) == hook.STATE_DEGRADED
+    assert hook.hydrate_state({}, 3) == hook.STATE_DEGRADED
+    assert hook.hydrate_state({"status": "NO_HITS", "record_ids": []}, 0) == hook.STATE_NO_HIT
 
 
 def test_conflict_evidence_is_its_own_state(tmp_path: Path) -> None:

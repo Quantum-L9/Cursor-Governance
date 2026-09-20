@@ -47,10 +47,41 @@ def test_surface_default_regression_fails(tmp_path: Path) -> None:
     assert any("cursor_default='constrained'" in d for d in defects)
 
 
+def test_remediator_skill_cap_clamp_is_a_defect(tmp_path: Path) -> None:
+    (tmp_path / "ops" / "autonomy").mkdir(parents=True)
+    shutil.copy(ROOT / v.POLICY_REL, tmp_path / v.POLICY_REL)
+    shutil.copy(ROOT / v.SURFACE_REL, tmp_path / v.SURFACE_REL)
+    (tmp_path / v.FLEET_REL).write_text(
+        "SKILL_SUBAGENT_CAP = 10\nmax_parallel = min(profile_parallel, cap)\n",
+        encoding="utf-8",
+    )
+    defects = v.collect_defects(tmp_path)
+    assert any("SKILL_SUBAGENT_CAP = 10" in item for item in defects)
+    assert any("min() clamp" in item for item in defects)
+
+
 def test_invariants_index_points_at_the_validator() -> None:
     text = (ROOT / "INVARIANTS.md").read_text(encoding="utf-8")
     assert "validate_max_velocity.py" in text
     assert "maximum_velocity" in text
+    assert "Wait for merge is forbidden" in text
+
+
+def test_wait_for_merge_phrase_required_when_rules_present(tmp_path: Path) -> None:
+    (tmp_path / "ops" / "autonomy").mkdir(parents=True)
+    (tmp_path / "rules").mkdir()
+    import shutil
+
+    shutil.copy(ROOT / v.POLICY_REL, tmp_path / v.POLICY_REL)
+    shutil.copy(ROOT / v.SURFACE_REL, tmp_path / v.SURFACE_REL)
+    (tmp_path / "rules" / "07-max-velocity-research.mdc").write_text(
+        "# no phrase\n", encoding="utf-8"
+    )
+    (tmp_path / "rules" / "53-pr-overlap-guardrail.mdc").write_text(
+        "# Wait for merge is forbidden\n", encoding="utf-8"
+    )
+    defects = v.collect_defects(tmp_path)
+    assert any("07-max-velocity-research.mdc" in d for d in defects)
 
 
 def test_non_mapping_documents_are_defects_not_crashes(tmp_path: Path) -> None:

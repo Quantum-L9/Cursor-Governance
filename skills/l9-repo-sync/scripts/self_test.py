@@ -136,12 +136,15 @@ def test_behind_with_colliding_and_hold() -> int:
                 + " stdout="
                 + repr(proc.stdout)
             )
-        if (clone / "tracked.txt").read_text(encoding="utf-8") != "v2\n":
-            return _fail("did not catch up tracked.txt")
-        if "local-dirty" in (clone / "tracked.txt").read_text(encoding="utf-8"):
-            return _fail("unique dirty was left in the worktree instead of parked")
+        if (clone / "tracked.txt").read_text(encoding="utf-8") != "local-dirty\n":
+            return _fail("unique dirty was not restored to its original home")
+        committed = run(["git", "-C", str(clone), "show", "HEAD:tracked.txt"]).stdout
+        if committed != "v2\n":
+            return _fail("HEAD:tracked.txt must be origin/main after catch-up")
         if "class=unique" not in proc.stdout:
             return _fail("did not classify unique dirty tracked")
+        if "restored parked tracked.txt to original home" not in proc.stdout:
+            return _fail("missing restore-to-home log for unique dirty")
         refs = run(
             [
                 "git",
@@ -477,15 +480,112 @@ def test_non_overlapping_dirty_still_parks() -> int:
                 f"FAIL: ff.sh rc={proc.returncode}\n{proc.stdout}\n{proc.stderr}", file=sys.stderr
             )
             return 1
-        if (clone / "a.txt").read_text(encoding="utf-8") != "a2\n":
-            return _fail("did not catch up a.txt")
-        if (clone / "b.txt").read_text(encoding="utf-8") != "b1\n":
-            return _fail("b.txt should be origin/HEAD after park+restore+keep")
+        if run(["git", "-C", str(clone), "show", "HEAD:a.txt"]).stdout != "a2\n":
+            return _fail("did not catch up a.txt on HEAD")
+        if (clone / "b.txt").read_text(encoding="utf-8") != "b-local-unique\n":
+            return _fail("unique b.txt was not restored to its original home")
+        if run(["git", "-C", str(clone), "show", "HEAD:b.txt"]).stdout != "b1\n":
+            return _fail("HEAD:b.txt must stay the committed tip after restore")
         if "class=unique" not in proc.stdout:
             return _fail("unique b.txt dirt was not classified")
         hold_hits = list(home.joinpath(".cursor/l9-ff-hold").rglob("b.txt"))
         if not any(p.read_text(encoding="utf-8") == "b-local-unique\n" for p in hold_hits):
             return _fail("unique b.txt bytes were not copied to l9-ff-hold")
+    return 0
+
+
+def test_deleted_suffix_file_is_user_data_not_tombstone() -> int:
+    """A parked file literally named `*.deleted` is user data, never a marker.
+
+    Deletion state must travel through hold metadata that cannot collide with
+    a repo-relative path. The fixture pairs each collision shape with a real
+    tracked deletion: `artifact.deleted` (modified) beside an untouched
+    sibling `artifact`, and `gone.txt.deleted` (modified) beside the deleted
+    `gone.txt` — the exact name the old suffix tombstone would have written.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        remote = Path(tmp) / "remote.git"
+        clone = Path(tmp) / "clone"
+        run(["git", "init", "--bare", str(remote)])
+        run(["git", "clone", str(remote), str(clone)])
+        git(clone, "config", "user.email", "test@example.com")
+        git(clone, "config", "user.name", "Test")
+        (clone / "tracked.txt").write_text("v1\n", encoding="utf-8")
+        (clone / "artifact").write_text("sibling-committed\n", encoding="utf-8")
+        (clone / "artifact.deleted").write_text("committed\n", encoding="utf-8")
+        (clone / "gone.txt").write_text("will be deleted locally\n", encoding="utf-8")
+        (clone / "gone.txt.deleted").write_text("committed twin\n", encoding="utf-8")
+        git(
+            clone,
+            "add",
+            "tracked.txt",
+            "artifact",
+            "artifact.deleted",
+            "gone.txt",
+            "gone.txt.deleted",
+        )
+        git(clone, "commit", "-m", "base")
+        git(clone, "branch", "-M", "main")
+        git(clone, "push", "-u", "origin", "main")
+        git(remote, "symbolic-ref", "HEAD", "refs/heads/main")
+
+        other = Path(tmp) / "other"
+        run(["git", "clone", str(remote), str(other)])
+        git(other, "config", "user.email", "test@example.com")
+        git(other, "config", "user.name", "Test")
+        (other / "tracked.txt").write_text("v2\n", encoding="utf-8")
+        git(other, "add", "tracked.txt")
+        git(other, "commit", "-m", "origin ahead")
+        git(other, "push")
+
+        (clone / "artifact.deleted").write_text("modified-local\n", encoding="utf-8")
+        (clone / "gone.txt.deleted").write_text("modified-twin\n", encoding="utf-8")
+        (clone / "gone.txt").unlink()
+
+        home = Path(tmp) / "home"
+        home.mkdir()
+        proc = run(
+            ["bash", str(FF)],
+            env={"CURSOR_GOVERNANCE_DIR": str(clone), "HOME": str(home)},
+        )
+        if proc.returncode != 0:
+            return _fail(f"ff.sh rc={proc.returncode}\n{proc.stdout}\n{proc.stderr}")
+        if run(["git", "-C", str(clone), "show", "HEAD:tracked.txt"]).stdout != "v2\n":
+            return _fail("did not catch up tracked.txt on HEAD")
+        got = (clone / "artifact.deleted").read_text(encoding="utf-8")
+        if got != "modified-local\n":
+            return _fail(f"artifact.deleted did not return with its modified bytes: {got!r}")
+        if not (clone / "artifact").is_file():
+            return _fail("sibling `artifact` was removed — `.deleted` suffix read as a tombstone")
+        sibling = (clone / "artifact").read_text(encoding="utf-8")
+        if sibling != "sibling-committed\n":
+            return _fail(f"sibling `artifact` was altered: {sibling!r}")
+        got = (clone / "gone.txt.deleted").read_text(encoding="utf-8")
+        if got != "modified-twin\n":
+            return _fail(f"gone.txt.deleted did not return with its modified bytes: {got!r}")
+        if (clone / "gone.txt").exists():
+            return _fail("real tracked deletion of gone.txt was not reproduced")
+        if run(["git", "-C", str(clone), "show", "HEAD:gone.txt"]).returncode != 0:
+            return _fail("HEAD:gone.txt must still exist; the deletion is worktree state")
+        if "restored parked deletion for gone.txt to original home" not in proc.stdout:
+            return _fail("missing restore-deletion log for gone.txt")
+        if "restored parked artifact.deleted to original home" not in proc.stdout:
+            return _fail("missing restore log for artifact.deleted")
+        hold = home / ".cursor" / "l9-ff-hold"
+        suffix_hits = {p.name: p.read_text(encoding="utf-8") for p in hold.rglob("*.deleted")}
+        if suffix_hits != {
+            "artifact.deleted": "modified-local\n",
+            "gone.txt.deleted": "modified-twin\n",
+        }:
+            return _fail(f"hold encodes deletion state in the filename namespace: {suffix_hits}")
+        receipt = json.loads(
+            (clone / ".l9" / "ff-restore-receipt.json").read_text(encoding="utf-8")
+        )
+        restored = set(receipt.get("restored_tracked", []))
+        if not {"gone.txt", "artifact.deleted", "gone.txt.deleted"} <= restored:
+            return _fail(f"restore receipt missing parked paths: {sorted(restored)}")
+        if "artifact" in restored:
+            return _fail("restore receipt claims the untouched sibling `artifact` was restored")
     return 0
 
 
@@ -559,8 +659,10 @@ def test_unrelated_history_with_dirty() -> int:
                 f"FAIL: ff.sh rc={proc.returncode}\n{proc.stdout}\n{proc.stderr}", file=sys.stderr
             )
             return 1
-        if (clone / "tracked.txt").read_text(encoding="utf-8") != "origin\n":
-            return _fail("unrelated-history clone did not land on origin/main content")
+        if (clone / "tracked.txt").read_text(encoding="utf-8") != "local-unique-unrelated\n":
+            return _fail("unrelated-history unique dirt was not restored to its original home")
+        if run(["git", "-C", str(clone), "show", "HEAD:tracked.txt"]).stdout != "origin\n":
+            return _fail("HEAD:tracked.txt must be origin/main after unrelated-history catch-up")
         if (clone / "notes.untracked").read_text(encoding="utf-8") != "keep\n":
             return _fail("untracked lost on unrelated-history catch-up")
         if not (clone / ".venv" / "pyvenv.cfg").is_file():
@@ -624,7 +726,7 @@ def test_origin_tracked_env_local_does_not_clobber() -> int:
 
 
 def test_feature_branch_switches_to_main() -> int:
-    """Off-main clone: switch to main, keep the feature ref, park feature dirt."""
+    """Off-main clone: catch up main, return to the feature branch, restore dirt."""
     with tempfile.TemporaryDirectory() as tmp:
         remote = Path(tmp) / "remote.git"
         clone = Path(tmp) / "clone"
@@ -671,19 +773,25 @@ def test_feature_branch_switches_to_main() -> int:
             )
             return 1
         branch = run(["git", "-C", str(clone), "rev-parse", "--abbrev-ref", "HEAD"]).stdout.strip()
-        if branch != "main":
-            return _fail(f"expected HEAD on main, got {branch}")
-        if (clone / "tracked.txt").read_text(encoding="utf-8") != "v2\n":
-            return _fail("did not catch up tracked.txt from origin/main")
-        if (clone / "feature.txt").is_file():
-            return _fail("feature-only tracked file leaked onto main")
+        if branch != "feat/unique":
+            return _fail(f"expected HEAD restored to feat/unique, got {branch}")
+        main_sha = run(["git", "-C", str(clone), "rev-parse", "refs/heads/main"]).stdout.strip()
+        origin_sha = run(["git", "-C", str(clone), "rev-parse", "origin/main"]).stdout.strip()
+        if main_sha != origin_sha:
+            return _fail("main ref must be at origin/main after catch-up")
+        if run(["git", "-C", str(clone), "show", "main:tracked.txt"]).stdout != "v2\n":
+            return _fail("main:tracked.txt must be origin/main after catch-up")
+        if (clone / "tracked.txt").read_text(encoding="utf-8") != "feature-dirty\n":
+            return _fail("feature dirty was not restored to its original home")
+        if not (clone / "feature.txt").is_file():
+            return _fail("feature-only tracked file missing after switch-back")
         still = run(["git", "-C", str(clone), "rev-parse", "feat/unique"]).stdout.strip()
         if still != feature_sha:
             return _fail("feature branch tip moved; unique commits must stay")
         if "step 0 switched feat/unique -> main" not in proc.stdout:
             return _fail("missing step 0 switch log")
-        if "feature-dirty" in (clone / "tracked.txt").read_text(encoding="utf-8"):
-            return _fail("feature dirty was left on main")
+        if "restored HEAD to feat/unique after catch-up" not in proc.stdout:
+            return _fail("missing switch-back log")
         hold_hits = list(home.joinpath(".cursor/l9-ff-hold").rglob("tracked.txt"))
         if not any(p.read_text(encoding="utf-8") == "feature-dirty\n" for p in hold_hits):
             return _fail("feature dirty bytes were not copied to l9-ff-hold")
@@ -1141,6 +1249,7 @@ def main() -> int:
         ("scan_temp_cleanup", test_scan_temp_files_are_cleaned_on_success_and_failure),
         ("scan_repeatable", test_repeated_invocation_is_stable),
         ("non_overlapping_dirty", test_non_overlapping_dirty_still_parks),
+        ("deleted_suffix_is_user_data", test_deleted_suffix_file_is_user_data_not_tombstone),
         ("already_at_tip", test_already_at_tip_leaves_dirty),
         ("unrelated_history", test_unrelated_history_with_dirty),
         ("keep_env_local", test_origin_tracked_env_local_does_not_clobber),

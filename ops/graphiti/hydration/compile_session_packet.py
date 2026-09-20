@@ -37,9 +37,15 @@ from ops.memory.hydration import (  # noqa: E402
     STATUS_NAMESPACE_UNRESOLVED,
     canonical_hydrate,
 )
+from ops.memory.session_contracts import session_task_objective  # noqa: E402
 from ops.memory.session_state import write_session_state  # noqa: E402
 
-_RULES_PATH = Path(__file__).resolve().parent / "promotion_rules.yaml"
+#: Default hydration budget (chars). Formerly read from promotion_rules.yaml,
+#: which was Cursor-local memory cognition and is gone (ADR-0033).
+HYDRATION_CHAR_BUDGET_DEFAULT = 4000
+#: Hook-lane surface this compiler hydrates under (ADR-0033 B7): read-only
+#: envelope, ``ops/config/memory-hook-envelopes.json``.
+HOOK_SURFACE = "cursor-session-start"
 
 HEADING = "### memory hydrate"
 
@@ -48,15 +54,7 @@ def _hydration_budget() -> int:
     raw = os.environ.get("MEMORY_HYDRATION_CHAR_BUDGET", "").strip()
     if raw.isdigit():
         return max(500, int(raw))
-    # Broad by design; the handler below carries the reason.
-    # nosemgrep: l9.baseline.python.broad-except
-    try:
-        import yaml
-
-        rules = yaml.safe_load(_RULES_PATH.read_text(encoding="utf-8")) or {}
-        return int(rules.get("hydration_char_budget_default", 4000))
-    except Exception:  # noqa: BLE001
-        return 4000
+    return HYDRATION_CHAR_BUDGET_DEFAULT
 
 
 # ---------------------------------------------------------------------------
@@ -67,7 +65,7 @@ _DEGRADED_OBJECTIVE = {
     STATUS_NAMESPACE_UNRESOLVED: (
         "Repository identity unresolved — no memory namespace to request"
     ),
-    "BINDING_FAILED": "Memory runtime unbound — proceed without resume memory",
+    "BINDING_FAILED": "Memory runtime unbound (environment fault) — proceed without resume memory",
     "CANONICAL_UNAVAILABLE": "Canonical memory unavailable — proceed without resume memory",
     "UNAUTHORIZED_NAMESPACE": (
         "Memory refused the requested namespace — proceed without resume memory"
@@ -78,6 +76,32 @@ _DEGRADED_OBJECTIVE = {
     ),
     "PARTIAL_PROJECTION_DEGRADED": "Canonical memory ready; projection degraded",
 }
+
+# Three conditions a packet can carry, and the three lead lines they produce.
+# They are typed and independent (ADR-0032): only ``memory_degraded`` means
+# canonical memory ran and did not answer.
+LEAD_DEGRADED = "DEGRADED"
+LEAD_ENVIRONMENT_FAULT = "ENVIRONMENT_FAULT"
+LEAD_CLOSE_GAP = "CLOSE_GAP"
+REPAIR_CLOSE_GAP = "REPAIR: /end-session"
+_REPAIR_READINESS = "REPAIR: make -C ~/.cursor-governance memory-readiness"
+
+
+def environment_fault_reason(status: str, error: str | None, environment_heal: str | None) -> str:
+    """One line naming the bootstrap fault; never calls it memory degradation."""
+
+    if status == STATUS_NAMESPACE_UNRESOLVED:
+        return f"{status}: {error or 'repository identity unresolved'}"[:500]
+    detail = f"{status}: {error or 'memory runtime unbound'}"
+    if environment_heal:
+        detail += f" (heal={environment_heal})"
+    return detail[:500]
+
+
+def environment_fault_repair(status: str) -> str:
+    if status == STATUS_NAMESPACE_UNRESOLVED:
+        return "REPAIR: resolve the repository identity (git remote / ops.memory.namespace)"
+    return _REPAIR_READINESS
 
 
 def compile_session_packet(
@@ -106,7 +130,7 @@ def compile_session_packet(
             "user_id": os.environ.get("USER_ID") or "cursor_agent",
         }
 
-    task = f"Resume session in {project.name}"
+    task = session_task_objective(project.name)
     # SessionStart has no task yet, so a task-signature match is impossible
     # here by construction; the packet asks for the explicit repository
     # fallback and reports it (audit P1-02). A task-bearing caller keeps the
@@ -116,6 +140,7 @@ def compile_session_packet(
         task=task,
         session_id=conversation_id,
         continuation_policy="repository_fallback",
+        surface=HOOK_SURFACE,
     )
     namespace = hydration.namespace_context.write_namespace_hint or "unresolved"
     packet_id = hashlib.sha256(f"{conversation_id}:{namespace}:{project}".encode()).hexdigest()[:16]
@@ -147,9 +172,24 @@ def compile_session_packet(
                 "current git state wins — verify before acting)"
             )
 
-    degraded = hydration.degraded or close_gap
+    # Three typed conditions (ADR-0032). ``degraded`` mirrors ``memory_degraded``
+    # for consumers that predate the split; it is no longer ORed with the
+    # session lifecycle or with a runtime that never reached memory.
+    memory_degraded = hydration.memory_degraded
+    environment_fault = hydration.environment_fault
+    degraded = memory_degraded
     degrade_reason = ""
-    if hydration.degraded:
+    environment_fault_text = ""
+    if environment_fault:
+        environment_fault_text = environment_fault_reason(
+            hydration.status, hydration.error, hydration.environment_heal
+        )
+        objective = objective or _DEGRADED_OBJECTIVE.get(
+            hydration.status, "Memory runtime unreachable — proceed without resume memory"
+        )
+        next_action = next_action or "Proceed from user request; memory runtime not bound"
+        rationale = rationale or f"memory status {hydration.status} (environment fault)"
+    elif memory_degraded:
         degrade_reason = f"{hydration.status}: {hydration.error or 'no detail'}"[:500]
         objective = objective or _DEGRADED_OBJECTIVE.get(
             hydration.status, "Canonical memory degraded — proceed without resume memory"
@@ -162,8 +202,7 @@ def compile_session_packet(
         rationale = rationale or (
             f"canonical memory answered {hydration.status} with no continuation"
         )
-    if close_gap:
-        degrade_reason = close_gap_text or "prior session close-gap"
+    close_gap_reason_text = (close_gap_text or "prior session close-gap") if close_gap else ""
 
     budget = _hydration_budget()
     context_parts: list[str] = []
@@ -203,6 +242,13 @@ def compile_session_packet(
         "degraded": degraded,
         "degrade_reason": degrade_reason,
         "close_gap": close_gap,
+        # Typed conditions (ADR-0032).
+        "memory_degraded": memory_degraded,
+        "environment_fault": environment_fault,
+        "environment_fault_reason": environment_fault_text,
+        "environment_heal": hydration.environment_heal,
+        "fault_class": hydration.fault_class,
+        "close_gap_reason": close_gap_reason_text,
         # Canonical evidence (plan §31).
         "memory_status": hydration.status,
         "transport": "cli",
@@ -216,6 +262,8 @@ def compile_session_packet(
         "continuation_selection": continuation.selection if continuation else None,
         "fan_in_denied": hydration.fan_in_denied,
         "projection_status": hydration.projection_status,
+        "agent_lane_records": len(hydration.agent_lane_record_ids),
+        "agent_lane_window_hours": hydration.agent_lane_window_hours,
     }
 
     memory_block: dict[str, Any] = hydration.as_dict()
@@ -243,7 +291,10 @@ def compile_session_packet(
         "blockers": list(continuation.capsule.blockers[:8]) if continuation else [],
         "degraded": degraded,
         "degrade_reason": degrade_reason,
+        "memory_degraded": memory_degraded,
+        "environment_fault": environment_fault,
         "close_gap": close_gap,
+        "close_gap_reason": close_gap_reason_text,
         "conversation_id": conversation_id,
         "fact_count": len(hydration.record_ids),
         "hydrate_stats": hydrate_stats,
@@ -254,45 +305,66 @@ def compile_session_packet(
 
 
 def format_additional_context(packet: dict[str, Any]) -> str:
-    """Markdown + compact JSON for Cursor additional_context."""
+    """Human-readable hydrate block: one field=value per line, then JSON."""
     budget = _hydration_budget()
     contract = packet.get("next_action_contract") or {}
     next_action = contract.get("next_action") or ""
     stats = packet.get("hydrate_stats") or {}
     close_gap = bool(packet.get("close_gap") or stats.get("close_gap"))
-    status = str(stats.get("memory_status") or ("DEGRADED" if packet.get("degraded") else "OK"))
-    lines: list[str] = []
-    if close_gap:
-        lines.extend(["DEGRADED", "REPAIR: /end-session"])
-    lines.append(HEADING)
-    lines.append(
-        f"memory hydrate: namespace={packet.get('group_id')} "
-        f"agent_id={packet.get('agent_id')} packet={packet.get('packet_id')} "
-        f"status={status}" + (" DEGRADED" if packet.get("degraded") else "")
+    memory_degraded = bool(
+        packet.get("memory_degraded")
+        if "memory_degraded" in packet
+        else stats.get("memory_degraded", packet.get("degraded"))
     )
-    if packet.get("degraded") and packet.get("degrade_reason"):
-        lines.append(f"hydration degraded: {packet['degrade_reason']}")
-    lines.append(f"objective: {packet.get('active_objective', '')}")
+    environment_fault = bool(packet.get("environment_fault") or stats.get("environment_fault"))
+    memory_status = str(stats.get("memory_status") or "")
+    status = memory_status or (LEAD_DEGRADED if memory_degraded else "OK")
+    lines: list[str] = []
+    # Lead by class, environment first: a runtime that never reached memory
+    # outranks a lifecycle gap, and neither is canonical degradation.
+    if environment_fault:
+        lines.extend([LEAD_ENVIRONMENT_FAULT, environment_fault_repair(memory_status)])
+    if close_gap:
+        lines.extend([LEAD_CLOSE_GAP, REPAIR_CLOSE_GAP])
+    if memory_degraded:
+        lines.append(LEAD_DEGRADED)
+    lines.append(HEADING)
+    lines.append(f"namespace={packet.get('group_id')}")
+    lines.append(f"agent_id={packet.get('agent_id')}")
+    lines.append(f"packet={packet.get('packet_id')}")
+    lines.append(f"status={status}")
+    if memory_degraded:
+        lines.append(f"memory_degraded={LEAD_DEGRADED}")
+    if environment_fault:
+        lines.append(f"environment_fault={LEAD_ENVIRONMENT_FAULT}")
+    if close_gap:
+        lines.append(f"close_gap={LEAD_CLOSE_GAP}")
+    if memory_degraded and packet.get("degrade_reason"):
+        lines.append(f"degrade_reason={packet['degrade_reason']}")
+    if environment_fault:
+        detail = stats.get("environment_fault_reason") or memory_status or "runtime unbound"
+        lines.append(f"environment_fault_detail={detail}")
+    if close_gap:
+        detail = packet.get("close_gap_reason") or stats.get("close_gap_reason") or ""
+        lines.append(f"close_gap_reason={detail or 'prior session did not close'}")
+    lines.append(f"objective={packet.get('active_objective', '')}")
     lines.append(f"next={next_action}")
     if contract.get("rationale"):
-        lines.append(f"rationale: {contract['rationale']}")
+        lines.append(f"rationale={contract['rationale']}")
     record = stats.get("continuation_record_id")
     if record:
-        stale = " STALE" if stats.get("continuation_stale") else ""
-        source = stats.get("continuation_source")
-        lines.append(f"continuation: record={str(record)[:8]} source={source}{stale}")
+        lines.append(f"continuation_record={str(record)[:8]}")
+        lines.append(f"continuation_source={stats.get('continuation_source')}")
+        lines.append(f"continuation_stale={'yes' if stats.get('continuation_stale') else 'no'}")
     elif stats.get("continuation_source"):
-        lines.append(f"continuation: source={stats.get('continuation_source')}")
+        lines.append(f"continuation_source={stats.get('continuation_source')}")
     else:
-        lines.append("continuation: none")
-    lines.append(
-        "stats: "
-        f"facts_returned={stats.get('facts_returned', packet.get('fact_count', 0))} | "
-        f"pickup_parsed={'yes' if stats.get('pickup_parsed') else 'no'} | "
-        f"context_chars={stats.get('context_chars', 0)} | "
-        f"search_queries_used={stats.get('search_queries_used', 0)} | "
-        f"budget_chars={stats.get('budget_chars', budget)}"
-    )
+        lines.append("continuation=none")
+    lines.append(f"facts_returned={stats.get('facts_returned', packet.get('fact_count', 0))}")
+    lines.append(f"pickup_parsed={'yes' if stats.get('pickup_parsed') else 'no'}")
+    lines.append(f"context_chars={stats.get('context_chars', 0)}")
+    lines.append(f"search_queries_used={stats.get('search_queries_used', 0)}")
+    lines.append(f"budget_chars={stats.get('budget_chars', budget)}")
     if stats.get("fan_in_denied"):
         lines.append(f"fan-in: denied by memory ({str(stats['fan_in_denied'])[:160]})")
     previews = packet.get("fact_previews") or []
@@ -312,9 +384,13 @@ def format_additional_context(packet: dict[str, Any]) -> str:
         "active_objective": packet.get("active_objective"),
         "next_action_contract": packet.get("next_action_contract"),
         "degraded": packet.get("degraded", False),
+        "memory_degraded": memory_degraded,
+        "environment_fault": environment_fault,
+        "close_gap": close_gap,
+        "close_gap_reason": packet.get("close_gap_reason") or stats.get("close_gap_reason") or "",
         "hydrate_stats": stats,
     }
-    fence = "```json\n" + json.dumps(compact, ensure_ascii=False) + "\n```"
+    fence = "```json\n" + json.dumps(compact, ensure_ascii=False, indent=2) + "\n```"
     text = "\n".join(lines) + "\n" + fence
     if len(text) > budget:
         text = text[: budget - 20] + "\n…[truncated]"

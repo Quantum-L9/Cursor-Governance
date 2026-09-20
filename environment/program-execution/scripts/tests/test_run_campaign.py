@@ -9,9 +9,11 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 import unittest.mock
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import yaml
@@ -282,7 +284,25 @@ def _host_repo(tmp: Path) -> Path:
     return tmp
 
 
+#: Where `_git_init` keeps the fixture's bare origin. Inside `.git/` so it never
+#: shows in porcelain, never lands outside the TemporaryDirectory when the repo
+#: *is* the temp root, and travels with the tree when a test quarantines it.
+_FIXTURE_ORIGIN = Path(".git") / "l9-test-origin.git"
+
+#: Known bytes for a tracked `.claude/settings.json`; the preservation tests
+#: compare the file byte-for-byte after cleanup.
+_TRACKED_SETTINGS = '{"permissions": {"allow": ["Bash(make pr)"]}}\n'
+
+
 def _git_init(path: Path) -> None:
+    """A checkout fixture: one commit, published to a local bare ``origin``.
+
+    An exclusive PE checkout always has a remote lineage to prove, and
+    `_bind_exclusive_remote_lineage` fails closed when origin cannot confirm
+    one. A fixture that models a checkout therefore carries a reachable origin
+    whose ``main`` is the fixture's HEAD; `_git_publish` re-syncs it after the
+    test commits more.
+    """
     env = _isolated_git_env()
     subprocess.run(["git", "init"], cwd=path, check=True, capture_output=True, env=env)
     subprocess.run(
@@ -294,6 +314,63 @@ def _git_init(path: Path) -> None:
     subprocess.run(
         ["git", "commit", "-m", "init"], cwd=path, check=True, capture_output=True, env=env
     )
+    origin = path / _FIXTURE_ORIGIN
+    subprocess.run(
+        ["git", "init", "--bare", "-q", "--initial-branch=main", str(origin)],
+        check=True,
+        capture_output=True,
+        env=env,
+    )
+    subprocess.run(
+        ["git", "remote", "add", "origin", str(origin)],
+        cwd=path,
+        check=True,
+        capture_output=True,
+        env=env,
+    )
+    _git_publish(path)
+    subprocess.run(
+        ["git", "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main"],
+        cwd=path,
+        check=True,
+        capture_output=True,
+        env=env,
+    )
+
+
+def _git_publish(path: Path) -> str:
+    """Push the fixture's HEAD to its origin ``main``; return the published SHA."""
+    env = _isolated_git_env()
+    subprocess.run(
+        ["git", "push", "-q", "origin", "HEAD:refs/heads/main"],
+        cwd=path,
+        check=True,
+        capture_output=True,
+        env=env,
+    )
+    return subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=path,
+        check=True,
+        capture_output=True,
+        text=True,
+        env=env,
+    ).stdout.strip()
+
+
+def _github_redirect(repository_id: str, target: Path) -> dict[str, str]:
+    """Environment that routes the GitHub URL run_campaign hardcodes to a local repo.
+
+    `default_ensure_target_checkout` rewrites origin to
+    ``https://github.com/<repository_id>.git`` after a donor clone, so a fetch
+    would otherwise reach the network. ``url.<local>.insteadOf`` keeps the test
+    hermetic without changing what the code under test does.
+    """
+    return {
+        "GIT_CONFIG_COUNT": "1",
+        "GIT_CONFIG_KEY_0": f"url.{target}.insteadOf",
+        "GIT_CONFIG_VALUE_0": f"https://github.com/{repository_id}.git",
+    }
 
 
 class RunCampaignTests(unittest.TestCase):
@@ -974,6 +1051,374 @@ class RunCampaignTests(unittest.TestCase):
             )
             self.assertEqual(log.stdout.strip(), "emit once")
 
+    def _retry_receipt(
+        self, workspace: Path, task_id: str, attempt_id: str, failure_class: str | None
+    ) -> Path:
+        root = workspace / "runtime" / "peer-execution" / "retry-receipts"
+        root.mkdir(parents=True, exist_ok=True)
+        target = root / f"{task_id}-{attempt_id}.json"
+        target.write_text(
+            json.dumps(
+                {
+                    "schema": self.mod.PEER_RETRY_RECEIPT_SCHEMA,
+                    "task_id": task_id,
+                    "attempt_id": attempt_id,
+                    "status": "FAIL",
+                    "failure_class": failure_class,
+                    "reason": "provider_status_fail",
+                }
+            ),
+            encoding="utf-8",
+        )
+        return target
+
+    def test_terminal_recovery_reads_only_a_known_terminal_peer_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            self.assertIsNone(self.mod._terminal_peer_retry_receipt(workspace, "TASK-001"))
+            self._retry_receipt(workspace, "TASK-001", "attempt-a", "SAFE_BEFORE_DISPATCH")
+            self.assertIsNone(self.mod._terminal_peer_retry_receipt(workspace, "TASK-001"))
+            self._retry_receipt(workspace, "TASK-001", "attempt-b", "AMBIGUOUS_SIDE_EFFECT")
+            self.assertIsNone(self.mod._terminal_peer_retry_receipt(workspace, "TASK-001"))
+            newest = self._retry_receipt(workspace, "TASK-001", "attempt-c", "KNOWN_TERMINAL")
+            os.utime(newest, (time.time() + 5, time.time() + 5))
+            receipt = self.mod._terminal_peer_retry_receipt(workspace, "TASK-001")
+            self.assertIsNotNone(receipt)
+            self.assertEqual(receipt["attempt_id"], "attempt-c")
+            # Another task's receipt is never this task's evidence.
+            self.assertIsNone(self.mod._terminal_peer_retry_receipt(workspace, "TASK-002"))
+            # A receipt of a foreign schema is not evidence either.
+            (workspace / "runtime/peer-execution/retry-receipts/TASK-003-x.json").write_text(
+                json.dumps({"task_id": "TASK-003", "failure_class": "KNOWN_TERMINAL"}),
+                encoding="utf-8",
+            )
+            self.assertIsNone(self.mod._terminal_peer_retry_receipt(workspace, "TASK-003"))
+
+    def test_terminal_recovery_preconditions_fail_closed(self) -> None:
+        """No receipt, a non-terminal class, or a live attempt: the guard still holds."""
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            calls: list[tuple[str, ...]] = []
+
+            def fake_pec(ws: Path, command: str, *rest: str) -> dict[str, Any]:
+                calls.append((command, *rest))
+                if command == "status":
+                    return {
+                        "tasks": [{"id": "TASK-001", "runtime_state": "FAILED"}],
+                        "live_execution_attempts": [
+                            {"task_id": "TASK-001", "attempt_id": "attempt-live"}
+                        ],
+                    }
+                raise AssertionError(f"unexpected pec {command}")
+
+            with unittest.mock.patch.object(self.mod, "pec_cmd", side_effect=fake_pec):
+                # No receipt at all: not even status is consulted.
+                self.assertFalse(
+                    self.mod._recover_terminal_peer_task(workspace, "TASK-001", trace=None)
+                )
+                self.assertEqual(calls, [])
+                # KNOWN_TERMINAL receipt but the Controller still holds a live attempt.
+                self._retry_receipt(workspace, "TASK-001", "attempt-live", "KNOWN_TERMINAL")
+                self.assertFalse(
+                    self.mod._recover_terminal_peer_task(workspace, "TASK-001", trace=None)
+                )
+                self.assertEqual([c[0] for c in calls], ["status"])
+            # And the guard itself: FAILED without a recoverable receipt is refused
+            # with the original message, unchanged.
+            with (
+                unittest.mock.patch.object(
+                    self.mod,
+                    "pec_status_tasks",
+                    return_value=[{"id": "TASK-009", "runtime_state": "FAILED"}],
+                ),
+                self.assertRaises(self.mod.CampaignError) as caught,
+            ):
+                self.mod._prepare_peer_unit(workspace, {"id": "TASK-009"}, trace=None)
+            self.assertIn("does not blind-retry", str(caught.exception))
+
+    def test_terminal_recovery_goes_through_the_controller_front_door(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            repository = workspace / "repo"
+            repository.mkdir()
+            (workspace / "runtime").mkdir()
+            (workspace / "runtime" / "LAUNCH.json").write_text(
+                json.dumps({"campaign_id": "CAMP", "target_worktree": str(repository)}),
+                encoding="utf-8",
+            )
+            self._retry_receipt(workspace, "TASK-001", "attempt-dead", "KNOWN_TERMINAL")
+            calls: list[tuple[str, ...]] = []
+
+            def fake_pec(ws: Path, command: str, *rest: str) -> dict[str, Any]:
+                calls.append((command, *rest))
+                if command == "status":
+                    return {"tasks": [], "live_execution_attempts": []}
+                if command == "fresh-workspace":
+                    return {"recovery": {"status": "RECOVERED"}}
+                raise AssertionError(f"unexpected pec {command}")
+
+            revoked: list[str] = []
+            grant = {"lease_id": "lease-dead", "task_id": "TASK-001"}
+            fake_grants = unittest.mock.Mock()
+            fake_grants.latest_grant_receipt.return_value = (1, grant)
+            fake_grants.revoke_task_grant.side_effect = lambda g, *, reason: revoked.append(reason)
+            with (
+                unittest.mock.patch.object(self.mod, "pec_cmd", side_effect=fake_pec),
+                unittest.mock.patch.object(self.mod, "_grant_module", return_value=fake_grants),
+            ):
+                self.assertTrue(
+                    self.mod._recover_terminal_peer_task(workspace, "TASK-001", trace=None)
+                )
+            self.assertEqual(calls[0][0], "status")
+            fresh = calls[1]
+            self.assertEqual(fresh[0], "fresh-workspace")
+            self.assertIn("--task-id", fresh)
+            self.assertEqual(fresh[fresh.index("--task-id") + 1], "TASK-001")
+            self.assertEqual(fresh[fresh.index("--repository") + 1], str(repository))
+            self.assertEqual(fresh[fresh.index("--actor") + 1], "make-campaign")
+            self.assertIn("KNOWN_TERMINAL", fresh[fresh.index("--reason") + 1])
+            self.assertEqual(len(revoked), 1)
+            self.assertIn("recovered", revoked[0])
+
+    def test_terminal_recovery_emits_revoke_success_not_grant_presence(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            repository = workspace / "repo"
+            repository.mkdir()
+            (workspace / "runtime").mkdir()
+            (workspace / "runtime" / "LAUNCH.json").write_text(
+                json.dumps({"campaign_id": "CAMP", "target_worktree": str(repository)}),
+                encoding="utf-8",
+            )
+            self._retry_receipt(workspace, "TASK-001", "attempt-dead", "KNOWN_TERMINAL")
+            events: list[dict[str, Any]] = []
+
+            def fake_pec(ws: Path, command: str, *rest: str) -> dict[str, Any]:
+                if command == "status":
+                    return {
+                        "tasks": [
+                            {
+                                "id": "TASK-001",
+                                "repository_local_path": str(repository),
+                                "consumed_attempts": 0,
+                                "max_attempts": 3,
+                            }
+                        ],
+                        "live_execution_attempts": [],
+                    }
+                if command == "fresh-workspace":
+                    return {"recovery": {"status": "RECOVERED"}}
+                raise AssertionError(f"unexpected pec {command}")
+
+            grant = {"lease_id": "lease-dead", "task_id": "TASK-001"}
+            fake_grants = unittest.mock.Mock()
+            fake_grants.latest_grant_receipt.return_value = (1, grant)
+            fake_grants.revoke_task_grant.return_value = {
+                "revoked": False,
+                "reason": "grant carries no live runtime binding",
+            }
+            with (
+                unittest.mock.patch.object(self.mod, "pec_cmd", side_effect=fake_pec),
+                unittest.mock.patch.object(self.mod, "_grant_module", return_value=fake_grants),
+                unittest.mock.patch.object(
+                    self.mod, "emit", side_effect=lambda *a, **k: events.append(k)
+                ),
+            ):
+                self.assertTrue(
+                    self.mod._recover_terminal_peer_task(workspace, "TASK-001", trace=None)
+                )
+            self.assertEqual(events[-1]["metadata"]["grant_revoked"], False)
+
+    def _recovery_workspace(self, raw: str) -> tuple[Path, Path]:
+        workspace = Path(raw)
+        repository = workspace / "repo"
+        repository.mkdir()
+        (workspace / "runtime").mkdir()
+        (workspace / "runtime" / "LAUNCH.json").write_text(
+            json.dumps({"campaign_id": "CAMP", "target_worktree": str(repository)}),
+            encoding="utf-8",
+        )
+        self._retry_receipt(workspace, "TASK-001", "attempt-dead", "KNOWN_TERMINAL")
+        return workspace, repository
+
+    def _recovery_pec(self, repository: Path, calls: list[str]) -> Any:
+        def fake_pec(ws: Path, command: str, *rest: str) -> dict[str, Any]:
+            calls.append(command)
+            if command == "status":
+                return {
+                    "tasks": [
+                        {
+                            "id": "TASK-001",
+                            "repository_local_path": str(repository),
+                            "consumed_attempts": 1,
+                            "max_attempts": 3,
+                        }
+                    ],
+                    "live_execution_attempts": [],
+                }
+            if command == "fresh-workspace":
+                return {"recovery": {"status": "RECOVERED"}}
+            raise AssertionError(f"unexpected pec {command}")
+
+        return fake_pec
+
+    def test_terminal_recovery_halts_when_the_old_lease_is_still_active(self) -> None:
+        """A revoke that fails while the lease stays ACTIVE stops recovery cold.
+
+        Nothing about the Controller workspace changes: `fresh-workspace` is
+        never issued, so the task stays FAILED with its receipt in place and the
+        next front-door pass retries this same step instead of finding a STALE
+        task whose old window still holds live mutation authority.
+        """
+        with tempfile.TemporaryDirectory() as raw:
+            workspace, repository = self._recovery_workspace(raw)
+            calls: list[str] = []
+            events: list[dict[str, Any]] = []
+            fake_grants = unittest.mock.Mock()
+            fake_grants.latest_grant_receipt.return_value = (
+                1,
+                {"lease_id": "lease-live", "task_id": "TASK-001"},
+            )
+            fake_grants.revoke_task_grant.side_effect = RuntimeError("autonomy store unreachable")
+            fake_grants.grant_lease_status.return_value = "ACTIVE"
+            with (
+                unittest.mock.patch.object(
+                    self.mod, "pec_cmd", side_effect=self._recovery_pec(repository, calls)
+                ),
+                unittest.mock.patch.object(self.mod, "_grant_module", return_value=fake_grants),
+                unittest.mock.patch.object(
+                    self.mod, "emit", side_effect=lambda *a, **k: events.append(k)
+                ),
+                self.assertRaises(self.mod.CampaignError) as ctx,
+            ):
+                self.mod._recover_terminal_peer_task(workspace, "TASK-001", trace=None)
+            self.assertEqual(ctx.exception.error_code, "GRANT_RETIREMENT_FAILED")
+            self.assertIn("lease-live", str(ctx.exception))
+            self.assertNotIn("fresh-workspace", calls)
+            self.assertEqual(events, [])
+
+    def test_terminal_recovery_continues_when_a_failed_revoke_left_no_live_lease(self) -> None:
+        """The lease row, not the exception, decides; the report stays truthful."""
+        with tempfile.TemporaryDirectory() as raw:
+            workspace, repository = self._recovery_workspace(raw)
+            calls: list[str] = []
+            events: list[dict[str, Any]] = []
+            fake_grants = unittest.mock.Mock()
+            fake_grants.latest_grant_receipt.return_value = (
+                1,
+                {"lease_id": "lease-dead", "task_id": "TASK-001"},
+            )
+            fake_grants.revoke_task_grant.side_effect = RuntimeError("autonomy store unreachable")
+            fake_grants.grant_lease_status.return_value = "REVOKED"
+            with (
+                unittest.mock.patch.object(
+                    self.mod, "pec_cmd", side_effect=self._recovery_pec(repository, calls)
+                ),
+                unittest.mock.patch.object(self.mod, "_grant_module", return_value=fake_grants),
+                unittest.mock.patch.object(
+                    self.mod, "emit", side_effect=lambda *a, **k: events.append(k)
+                ),
+            ):
+                self.assertTrue(
+                    self.mod._recover_terminal_peer_task(workspace, "TASK-001", trace=None)
+                )
+            self.assertIn("fresh-workspace", calls)
+            metadata = events[-1]["metadata"]
+            self.assertEqual(metadata["grant_revoked"], False)
+            self.assertEqual(metadata["grant_lease_status"], "REVOKED")
+
+    def test_terminal_recovery_retires_authority_before_touching_the_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace, repository = self._recovery_workspace(raw)
+            order: list[str] = []
+            fake_grants = unittest.mock.Mock()
+            fake_grants.latest_grant_receipt.return_value = (
+                1,
+                {"lease_id": "lease-1", "task_id": "TASK-001"},
+            )
+            fake_grants.revoke_task_grant.side_effect = lambda *a, **k: (
+                order.append("revoke") or {"revoked": True}
+            )
+            fake_grants.grant_lease_status.return_value = "REVOKED"
+            pec = self._recovery_pec(repository, order)
+            with (
+                unittest.mock.patch.object(self.mod, "pec_cmd", side_effect=pec),
+                unittest.mock.patch.object(self.mod, "_grant_module", return_value=fake_grants),
+                unittest.mock.patch.object(self.mod, "emit"),
+            ):
+                self.assertTrue(
+                    self.mod._recover_terminal_peer_task(workspace, "TASK-001", trace=None)
+                )
+            self.assertLess(order.index("revoke"), order.index("fresh-workspace"))
+
+    def test_terminal_recovery_refuses_when_consumed_generations_meet_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            self._retry_receipt(workspace, "TASK-001", "attempt-dead", "KNOWN_TERMINAL")
+
+            def fake_pec(ws: Path, command: str, *rest: str) -> dict[str, Any]:
+                if command == "status":
+                    return {
+                        "tasks": [
+                            {
+                                "id": "TASK-001",
+                                "consumed_attempts": 1,
+                                "max_attempts": 1,
+                            }
+                        ],
+                        "live_execution_attempts": [],
+                    }
+                raise AssertionError(f"unexpected pec {command}")
+
+            with (
+                unittest.mock.patch.object(self.mod, "pec_cmd", side_effect=fake_pec),
+                self.assertRaises(self.mod.CampaignError) as caught,
+            ):
+                self.mod._recover_terminal_peer_task(workspace, "TASK-001", trace=None)
+            self.assertEqual(caught.exception.error_code, "RETRY_BUDGET_EXHAUSTED")
+
+    def test_terminal_recovery_uses_the_task_registered_repository(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            campaign_target = workspace / "campaign-target"
+            campaign_target.mkdir()
+            task_repo = workspace / "task-repo"
+            task_repo.mkdir()
+            (workspace / "runtime").mkdir()
+            (workspace / "runtime" / "LAUNCH.json").write_text(
+                json.dumps({"campaign_id": "CAMP", "target_worktree": str(campaign_target)}),
+                encoding="utf-8",
+            )
+            self._retry_receipt(workspace, "TASK-002", "attempt-dead", "KNOWN_TERMINAL")
+            calls: list[tuple[str, ...]] = []
+
+            def fake_pec(ws: Path, command: str, *rest: str) -> dict[str, Any]:
+                calls.append((command, *rest))
+                if command == "status":
+                    return {
+                        "tasks": [
+                            {
+                                "id": "TASK-002",
+                                "repository_id": "org/other",
+                                "repository_local_path": str(task_repo),
+                                "consumed_attempts": 0,
+                                "max_attempts": 3,
+                            }
+                        ],
+                        "live_execution_attempts": [],
+                    }
+                if command == "fresh-workspace":
+                    return {"recovery": {"status": "RECOVERED"}}
+                raise AssertionError(f"unexpected pec {command}")
+
+            with unittest.mock.patch.object(self.mod, "pec_cmd", side_effect=fake_pec):
+                self.assertTrue(
+                    self.mod._recover_terminal_peer_task(workspace, "TASK-002", trace=None)
+                )
+            fresh = [c for c in calls if c[0] == "fresh-workspace"][0]
+            self.assertEqual(fresh[fresh.index("--repository") + 1], str(task_repo))
+            self.assertNotEqual(fresh[fresh.index("--repository") + 1], str(campaign_target))
+
     def test_stale_unittest_yields_to_inferred_pytest(self) -> None:
         self.assertTrue(
             self.mod.stale_unittest_should_yield_to_pytest(
@@ -1177,15 +1622,48 @@ class RunCampaignTests(unittest.TestCase):
             self.assertFalse(occupied.exists())
             self.assertTrue((moved / "runtime" / "state.sqlite").is_file())
 
-    def test_refuses_dirty_target_checkout(self) -> None:
+    def test_quarantines_dirty_target_and_rebinds_from_donor(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             dest = Path(raw) / "target"
             dest.mkdir()
             _git_init(dest)
             (dest / "dirty.txt").write_text("no\n", encoding="utf-8")
-            with self.assertRaises(self.mod.CampaignError) as ctx:
-                self.mod.default_ensure_target_checkout(dest, "Quantum-L9/Cursor-Governance")
-            self.assertIn("dirty", str(ctx.exception))
+            donor = Path(raw) / "donor"
+            donor.mkdir()
+            _git_init(donor)
+            env = _isolated_git_env()
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(donor),
+                    "remote",
+                    "set-url",
+                    "origin",
+                    "https://github.com/Quantum-L9/Cursor-Governance.git",
+                ],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            subprocess.run(
+                ["git", "-C", str(donor), "update-ref", "refs/remotes/origin/main", "HEAD"],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            with patch.dict(
+                os.environ,
+                _github_redirect("Quantum-L9/Cursor-Governance", donor / _FIXTURE_ORIGIN),
+            ):
+                self.mod.default_ensure_target_checkout(
+                    dest, "Quantum-L9/Cursor-Governance", donor=donor
+                )
+            self.assertTrue((dest / "README.md").is_file())
+            self.assertFalse((dest / "dirty.txt").exists())
+            stale = list((Path(raw) / "stale").glob("target-*"))
+            self.assertEqual(len(stale), 1)
+            self.assertTrue((stale[0] / "dirty.txt").is_file())
 
     def test_real_admit_bootstrap_reconcile_claims_task_001(self) -> None:
         """No mocks on the live tunnel: leftover pec dir cannot block claim."""
@@ -1385,6 +1863,390 @@ class RunCampaignTests(unittest.TestCase):
             self.assertEqual(got, worktree)
             self.assertEqual(wired, [worktree])
             self.assertTrue(worktree.is_dir())
+
+    def test_isolate_resets_leftover_feat_branch_to_origin_main(self) -> None:
+        """A local feat/<id> with extra commits is not the exclusive isolate base."""
+        with tempfile.TemporaryDirectory() as raw:
+            primary = Path(raw) / "primary"
+            worktree = Path(raw) / "wt"
+            primary.mkdir()
+            _git_init(primary)
+            env = _isolated_git_env()
+            subprocess.run(
+                ["git", "-C", str(primary), "branch", "-M", "main"],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            subprocess.run(
+                ["git", "-C", str(primary), "update-ref", "refs/remotes/origin/main", "HEAD"],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            base = subprocess.run(
+                ["git", "-C", str(primary), "rev-parse", "HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            ).stdout.strip()
+            subprocess.run(
+                ["git", "-C", str(primary), "checkout", "-q", "-b", "feat/demo-activate-v1"],
+                check=True,
+                env=env,
+            )
+            (primary / "local-only.txt").write_text("leftover\n", encoding="utf-8")
+            subprocess.run(
+                ["git", "-C", str(primary), "add", "local-only.txt"],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            subprocess.run(
+                ["git", *_GIT_IDENTITY, "-C", str(primary), "commit", "-qm", "leftover"],
+                check=True,
+                env=env,
+            )
+            subprocess.run(
+                ["git", "-C", str(primary), "checkout", "-q", "main"],
+                check=True,
+                env=env,
+            )
+
+            def fake_git(*args: str) -> str:
+                if args[:2] == ("fetch", "origin"):
+                    return ""
+                if args[:2] == ("worktree", "add"):
+                    subprocess.run(
+                        ["git", "-C", str(primary), *args],
+                        check=True,
+                        capture_output=True,
+                        env=env,
+                    )
+                    return ""
+                raise AssertionError(args)
+
+            original = self.mod.ensure_workspace_wired
+            self.mod.ensure_workspace_wired = lambda _workspace: None  # type: ignore[method-assign]
+            try:
+                self.mod.isolate_worktree(primary, "demo-activate-v1", worktree, git_fn=fake_git)
+            finally:
+                self.mod.ensure_workspace_wired = original  # type: ignore[method-assign]
+            head = subprocess.run(
+                ["git", "-C", str(worktree), "rev-parse", "HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            ).stdout.strip()
+            self.assertEqual(head, base)
+            self.assertFalse((worktree / "local-only.txt").exists())
+
+    def test_remote_lineage_prefers_odoo_staging(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            repo = Path(raw) / "repo"
+            repo.mkdir()
+            _git_init(repo)
+            env = _isolated_git_env()
+            subprocess.run(
+                ["git", "-C", str(repo), "branch", "-M", "Staging"],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            subprocess.run(
+                ["git", "-C", str(repo), "update-ref", "refs/remotes/origin/Staging", "HEAD"],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(repo),
+                    "symbolic-ref",
+                    "refs/remotes/origin/HEAD",
+                    "refs/remotes/origin/Staging",
+                ],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            ref = self.mod.remote_lineage_ref(
+                repo,
+                repository_id="cryptoxdog/IB-Odoo_19",
+                declared="origin/Staging",
+            )
+            self.assertEqual(ref, "origin/Staging")
+
+    def test_existing_checkout_fetches_remote_default_before_trusting_stale_ref(self) -> None:
+        """An exclusive checkout whose origin/main is stale is rebound to the live tip.
+
+        The remote-tracking ref proves what origin *had* when the checkout was
+        made. Nothing later in the run fetches the default branch, so the
+        admission SHA and campaign/<id> would otherwise be based on that day.
+        """
+        with tempfile.TemporaryDirectory() as raw:
+            temp = Path(raw)
+            env = _isolated_git_env()
+            seed = temp / "seed"
+            seed.mkdir()
+            _git_init(seed)
+            remote = seed / _FIXTURE_ORIGIN
+            dest = temp / "target"
+            subprocess.run(
+                ["git", "clone", "-q", str(remote), str(dest)],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            stale = subprocess.run(
+                ["git", "-C", str(dest), "rev-parse", "origin/main"],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            ).stdout.strip()
+            # origin advances after the checkout was created.
+            (seed / "advanced.txt").write_text("newer\n", encoding="utf-8")
+            subprocess.run(
+                ["git", "-C", str(seed), "add", "advanced.txt"],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            subprocess.run(
+                ["git", *_GIT_IDENTITY, "-C", str(seed), "commit", "-qm", "advance origin"],
+                check=True,
+                env=env,
+            )
+            tip = _git_publish(seed)
+            self.assertNotEqual(tip, stale)
+
+            got = self.mod.default_ensure_target_checkout(dest, "Quantum-L9/Cursor-Governance")
+
+            self.assertEqual(got, dest.resolve())
+            head = subprocess.run(
+                ["git", "-C", str(dest), "rev-parse", "HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            ).stdout.strip()
+            self.assertEqual(head, tip, "checkout was bound to the stale remote-tracking ref")
+            tracking = subprocess.run(
+                ["git", "-C", str(dest), "rev-parse", "origin/main"],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            ).stdout.strip()
+            self.assertEqual(tracking, tip)
+            self.assertTrue((dest / "advanced.txt").is_file())
+
+    def test_existing_checkout_stops_when_lineage_unprovable_after_fetch(self) -> None:
+        """No remote-tracking ref and an unreachable origin: stop, never return."""
+        with tempfile.TemporaryDirectory() as raw:
+            temp = Path(raw)
+            env = _isolated_git_env()
+            dest = temp / "target"
+            dest.mkdir()
+            _git_init(dest)
+            subprocess.run(
+                ["git", "-C", str(dest), "remote", "set-url", "origin", str(temp / "missing.git")],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            subprocess.run(
+                ["git", "-C", str(dest), "symbolic-ref", "--delete", "refs/remotes/origin/HEAD"],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            subprocess.run(
+                ["git", "-C", str(dest), "update-ref", "-d", "refs/remotes/origin/main"],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            with self.assertRaises(self.mod.CampaignError) as ctx:
+                self.mod.default_ensure_target_checkout(dest, "Quantum-L9/Cursor-Governance")
+            self.assertIn("remote lineage", str(ctx.exception))
+
+    def test_existing_remote_tracking_ref_is_not_lineage_when_origin_cannot_confirm_it(
+        self,
+    ) -> None:
+        """origin/main exists locally but origin is unreachable: the ref is not trusted."""
+        with tempfile.TemporaryDirectory() as raw:
+            temp = Path(raw)
+            env = _isolated_git_env()
+            dest = temp / "target"
+            dest.mkdir()
+            _git_init(dest)
+            subprocess.run(
+                ["git", "-C", str(dest), "remote", "set-url", "origin", str(temp / "missing.git")],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            verify = subprocess.run(
+                ["git", "-C", str(dest), "rev-parse", "--verify", "origin/main"],
+                check=False,
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+            self.assertEqual(verify.returncode, 0, "fixture must keep a stale origin/main")
+            with self.assertRaises(self.mod.CampaignError) as ctx:
+                self.mod._bind_exclusive_remote_lineage(
+                    dest, repository_id="Quantum-L9/Cursor-Governance"
+                )
+            self.assertIn("remote lineage", str(ctx.exception))
+
+    def _checkout_tracking_settings(self, dest: Path) -> str:
+        """A checkout that tracks `.claude/settings.json`, published to its origin."""
+        env = _isolated_git_env()
+        dest.mkdir()
+        _git_init(dest)
+        settings = dest / ".claude" / "settings.json"
+        settings.parent.mkdir()
+        settings.write_text(_TRACKED_SETTINGS, encoding="utf-8")
+        subprocess.run(
+            ["git", "-C", str(dest), "add", "--", ".claude/settings.json"],
+            check=True,
+            capture_output=True,
+            env=env,
+        )
+        subprocess.run(
+            ["git", *_GIT_IDENTITY, "-C", str(dest), "commit", "-qm", "track settings"],
+            check=True,
+            env=env,
+        )
+        return _git_publish(dest)
+
+    def test_strip_session_residue_keeps_tracked_settings_and_removes_untracked(self) -> None:
+        """P-PE-TRACKED-CONFIG at the campaign-side cleanup site."""
+        with tempfile.TemporaryDirectory() as raw:
+            dest = Path(raw) / "target"
+            self._checkout_tracking_settings(dest)
+            settings = dest / ".claude" / "settings.json"
+            commands = dest / ".claude" / "commands"
+            commands.mkdir()
+            (commands / "session.md").write_text("residue\n", encoding="utf-8")
+            receipts = dest / ".l9" / "memory" / "receipts"
+            receipts.mkdir(parents=True)
+            (receipts / "unknown-agent__1.json").write_text("{}\n", encoding="utf-8")
+
+            self.mod.strip_session_residue(dest)
+
+            self.assertEqual(settings.read_text(encoding="utf-8"), _TRACKED_SETTINGS)
+            self.assertFalse(commands.exists())
+            self.assertFalse((receipts / "unknown-agent__1.json").exists())
+            self.assertFalse(self.mod.has_foreign_session_residue(dest))
+            self.assertFalse(self.mod.is_dirty(dest))
+
+    def test_untracked_settings_file_is_still_residue(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            dest = Path(raw) / "target"
+            dest.mkdir()
+            _git_init(dest)
+            settings = dest / ".claude" / "settings.json"
+            settings.parent.mkdir()
+            settings.write_text('{"untracked": true}\n', encoding="utf-8")
+            self.assertTrue(self.mod.has_foreign_session_residue(dest))
+            self.mod.strip_session_residue(dest)
+            self.assertFalse(settings.exists())
+            self.assertFalse(self.mod.has_foreign_session_residue(dest))
+
+    def test_existing_checkout_with_tracked_settings_is_reused_not_quarantined(self) -> None:
+        """Re-preparing a checkout that tracks its settings must not quarantine it.
+
+        Deleting the tracked file made the tree dirty, which sent the whole
+        checkout to `stale/` and re-cloned it on every campaign run.
+        """
+        with tempfile.TemporaryDirectory() as raw:
+            temp = Path(raw)
+            dest = temp / "target"
+            tip = self._checkout_tracking_settings(dest)
+            settings = dest / ".claude" / "settings.json"
+            commands = dest / ".claude" / "commands"
+            commands.mkdir()
+            (commands / "session.md").write_text("residue\n", encoding="utf-8")
+            with patch.dict(
+                os.environ,
+                _github_redirect("Quantum-L9/Cursor-Governance", dest / _FIXTURE_ORIGIN),
+            ):
+                got = self.mod.default_ensure_target_checkout(dest, "Quantum-L9/Cursor-Governance")
+
+            self.assertEqual(got, dest.resolve())
+            self.assertEqual(list((temp / "stale").glob("target-*")), [])
+            self.assertEqual(settings.read_text(encoding="utf-8"), _TRACKED_SETTINGS)
+            self.assertFalse(commands.exists())
+            self.assertFalse(self.mod.is_dirty(dest))
+            head = subprocess.run(
+                ["git", "-C", str(dest), "rev-parse", "HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=_isolated_git_env(),
+            ).stdout.strip()
+            self.assertEqual(head, tip)
+
+    def test_integration_branch_starts_from_origin_staging_not_dirty_head(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            temp = Path(raw)
+            origin = temp / "origin"
+            origin.mkdir()
+            _git_init(origin)
+            env = _isolated_git_env()
+            subprocess.run(
+                ["git", "-C", str(origin), "branch", "-M", "Staging"],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            staging = subprocess.run(
+                ["git", "-C", str(origin), "rev-parse", "HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            ).stdout.strip()
+            clone = temp / "clone"
+            subprocess.run(
+                ["git", "clone", "-q", str(origin), str(clone)],
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+            (clone / "local-only.txt").write_text("operator\n", encoding="utf-8")
+            subprocess.run(
+                ["git", "-C", str(clone), "add", "local-only.txt"],
+                check=True,
+                env=env,
+            )
+            subprocess.run(
+                ["git", *_GIT_IDENTITY, "-C", str(clone), "commit", "-qm", "local leftover"],
+                check=True,
+                env=env,
+            )
+            branch = self.mod.ensure_integration_branch(
+                clone,
+                "demo",
+                repository_id="cryptoxdog/IB-Odoo_19",
+                source_of_truth="origin/Staging",
+            )
+            local = subprocess.run(
+                ["git", "-C", str(clone), "rev-parse", branch],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            ).stdout.strip()
+            self.assertEqual(local, staging)
 
     def test_policy_remediation_scope_is_stacked_only(self) -> None:
         policy = yaml.safe_load(
@@ -1611,7 +2473,7 @@ class RunCampaignTests(unittest.TestCase):
                 env=git_env,
             )
             subprocess.run(
-                ["git", "remote", "add", "origin", str(origin)],
+                ["git", "remote", "set-url", "origin", str(origin)],
                 cwd=primary,
                 check=True,
                 capture_output=True,
@@ -1964,7 +2826,7 @@ class RunCampaignTests(unittest.TestCase):
                     "-C",
                     str(repo),
                     "remote",
-                    "add",
+                    "set-url",
                     "origin",
                     "https://github.com/Other/Repo.git",
                 ],

@@ -22,14 +22,27 @@ sys.path.insert(0, str(REPO_ROOT / "skills" / "l9-pipeline-audit" / "scripts"))
 from audit_pipeline import _built_shelf, archive_spent_plans  # noqa: E402
 
 
-def _fs_folds_case(directory: Path) -> bool:
-    """True when two spellings of one name share an inode (APFS default, Windows)."""
-    probe = directory / ".L9CaseProbe"
+def _listing(directory: Path) -> set[str]:
+    """Names as the filesystem reports them — the only casing git will see."""
+    return {child.name for child in directory.iterdir()}
+
+
+@pytest.fixture
+def case_sensitive_fs(tmp_path: Path) -> bool:
+    """Measure, do not assume: can two names differing only by case coexist here?
+
+    APFS and NTFS default to case-insensitive, ext4 to case-sensitive; a
+    macOS volume can be formatted either way. The probe is the truth for the
+    volume `tmp_path` sits on, which is the one the tests write to.
+    """
+    probe = tmp_path / ".case-probe"
     probe.mkdir()
+    (probe / "A").mkdir()
     try:
-        return (directory / ".l9caseprobe").exists()
-    finally:
-        probe.rmdir()
+        (probe / "a").mkdir()
+    except FileExistsError:
+        return False
+    return len(_listing(probe)) == 2
 
 
 BUILT_PLAN = """---
@@ -44,25 +57,47 @@ todos:
 """
 
 
-def test_tracked_BUILT_wins_when_present(tmp_path: Path) -> None:
+def test_tracked_BUILT_wins_when_present(tmp_path: Path, case_sensitive_fs: bool) -> None:
+    if not case_sensitive_fs:
+        # The discriminator — `BUILT/` and `built/` as two directories — cannot
+        # be constructed on this volume; the second mkdir is FileExistsError.
+        # The Linux-only regression this pins is covered where it can exist
+        # (CI containers). Owner: skills/l9-pipeline-audit. Remove if the
+        # shelver stops resolving by directory listing.
+        pytest.skip("case-insensitive volume: BUILT/ and built/ are one directory")
     (tmp_path / "BUILT").mkdir()
-    try:
-        (tmp_path / "built").mkdir()
-    except FileExistsError:
-        pytest.skip("filesystem folds BUILT/built; dual-shelf case is Linux-only")
+    (tmp_path / "built").mkdir()
     assert _built_shelf(tmp_path).name == "BUILT"
 
 
 def test_lowercase_is_honoured_only_when_BUILT_is_absent(tmp_path: Path) -> None:
     (tmp_path / "built").mkdir()
-    shelf = _built_shelf(tmp_path)
-    assert shelf.is_dir()
-    if _fs_folds_case(tmp_path):
-        # APFS: built IS BUILT. The resolver returns the canonical spelling.
-        assert shelf.name == "BUILT"
-        assert shelf.samefile(tmp_path / "built")
-        return
-    assert shelf.name == "built"
+    # On every platform the answer is the spelling the filesystem reports. A
+    # case-insensitive volume would also answer `is_dir()` for "BUILT", and
+    # that spelling is exactly what must not leak back to a caller.
+    assert _built_shelf(tmp_path).name == "built"
+    assert _built_shelf(tmp_path).name in _listing(tmp_path)
+
+
+def test_shelf_spelling_is_always_the_on_disk_spelling(tmp_path: Path) -> None:
+    """Property: the resolved shelf is a real listing entry, or BUILT when none is.
+
+    This is the platform-independent form of the two tests above. Whatever the
+    volume's casing rules, a path handed to `git add` must be spelled the way
+    `readdir` will spell it back, or the tracked and on-disk trees split.
+    """
+    for index, spelling in enumerate(("BUILT", "built", "Built")):
+        # Store names differ by more than case; the trap under test must not
+        # also catch the test's own scaffolding.
+        store = tmp_path / f"store-{index}"
+        store.mkdir()
+        (store / spelling).mkdir()
+        resolved = _built_shelf(store)
+        assert resolved.parent == store
+        assert resolved.name in _listing(store), (spelling, resolved.name, _listing(store))
+    empty = tmp_path / "s-empty"
+    empty.mkdir()
+    assert _built_shelf(empty).name == "BUILT"
 
 
 def test_canonical_shelf_is_created_when_neither_exists(tmp_path: Path) -> None:
@@ -98,7 +133,8 @@ def test_spent_plan_lands_in_the_tracked_shelf_not_a_stray_one(tmp_path: Path) -
 
     assert not spent.exists(), "a spent plan should be shelved"
     assert (tmp_path / "BUILT" / spent.name).is_file(), moved
-    stray = tmp_path / "built"
-    if stray.exists():
-        # APFS folds the names; a Linux sibling would fail samefile.
-        assert stray.samefile(tmp_path / "BUILT"), "no stray lowercase shelf may be created"
+    # `(tmp_path / "built").exists()` is true on a case-insensitive volume even
+    # when only BUILT/ was ever created, so it cannot discriminate there. The
+    # directory listing can, on every platform: a stray shelf is a second entry.
+    assert "built" not in _listing(tmp_path), "no stray lowercase shelf may be created"
+    assert _listing(tmp_path) == {"BUILT"}

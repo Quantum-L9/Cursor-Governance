@@ -10,6 +10,17 @@
 # Kind split matches setup_workspace_symlinks.sh C10: ssot and
 # ssot_checkout never get .cursor-commands. Links-only must honor that
 # too — make pr heals via this script and exits before setup.
+#
+# Plans-store mode (L9_PLANS_STORE_MODE):
+#   migrate    (default) manual setup callers — ensure_machine_cursor_plans_store
+#              may migrate a legacy real ~/.cursor/plans directory into the
+#              tracked store (copy, rename aside, replace with a symlink).
+#   links-only SessionStart — the store helper runs only when ~/.cursor/plans
+#              does not exist at all (nothing to read, migrate, archive, or
+#              rewrite). Any existing entry is left byte-for-byte untouched
+#              and the workspace .cursor/plans link points at it as-is; a
+#              dangling entry is a WARN naming the manual setup, never a
+#              migration (SESSIONSTART_NO_PLAN_SURFACE_V1).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -21,6 +32,8 @@ source "$SCRIPT_DIR/lib/workspace_kind.sh"
 source "$SCRIPT_DIR/lib/workspace_link_health.sh"
 # shellcheck source=lib/cursor_plans_store.sh
 source "$SCRIPT_DIR/lib/cursor_plans_store.sh"
+# shellcheck source=lib/plugin_siblings.sh
+source "$SCRIPT_DIR/lib/plugin_siblings.sh"
 
 WORKSPACE="${1:-$(pwd)}"
 if [ ! -d "$WORKSPACE" ]; then
@@ -35,6 +48,52 @@ fi
 
 GC="$GLOBAL_COMMANDS"
 WS_KIND="$(classify_workspace_kind "$WORKSPACE")"
+
+PLANS_STORE_MODE="${L9_PLANS_STORE_MODE:-migrate}"
+case "$PLANS_STORE_MODE" in
+  migrate|links-only) ;;
+  *)
+    echo "ERROR: L9_PLANS_STORE_MODE must be 'migrate' or 'links-only' (got: $PLANS_STORE_MODE)" >&2
+    exit 2
+    ;;
+esac
+HOME_PLANS="$HOME/.cursor/plans"
+
+# links-only: invoke the store helper only for an absent ~/.cursor/plans (its
+# sole action is then to create the link — the P564-F1 repair). An existing
+# entry — real directory, real file, healthy or dangling symlink — is never
+# handed to the helper, so it cannot be copied, renamed aside, re-pointed or
+# replaced from a SessionStart.
+_plans_store_prepare() {
+  if [ "$PLANS_STORE_MODE" = "migrate" ]; then
+    ensure_machine_cursor_plans_store
+    return 0
+  fi
+  if [ ! -e "$HOME_PLANS" ] && [ ! -L "$HOME_PLANS" ]; then
+    ensure_machine_cursor_plans_store
+    return 0
+  fi
+  if [ -L "$HOME_PLANS" ] && [ ! -e "$HOME_PLANS" ]; then
+    echo "WARN: ~/.cursor/plans is a dangling symlink — left untouched (L9_PLANS_STORE_MODE=links-only); run setup_workspace_symlinks.sh or /wire to repair the machine plans store"
+    return 0
+  fi
+  if [ ! -L "$HOME_PLANS" ]; then
+    echo "WARN: ~/.cursor/plans is a real directory — not migrated (L9_PLANS_STORE_MODE=links-only); run setup_workspace_symlinks.sh or /wire to migrate it into the tracked store"
+    return 0
+  fi
+  echo "OK: ~/.cursor/plans left as-is (L9_PLANS_STORE_MODE=links-only)"
+}
+
+# The workspace link is written whenever ~/.cursor/plans resolves; a dangling
+# store entry gets no link (it could only dangle too) and the caller's health
+# predicate reports the workspace unhealthy rather than this script migrating.
+_plans_link() {
+  if [ "$PLANS_STORE_MODE" = "links-only" ] && [ ! -e "$HOME_PLANS" ]; then
+    echo "WARN: .cursor/plans link not written — ~/.cursor/plans does not resolve (L9_PLANS_STORE_MODE=links-only)"
+    return 0
+  fi
+  _link_or_update "$WORKSPACE/.cursor/plans" "$HOME_PLANS" ".cursor/plans"
+}
 
 _link_ok() {
   workspace_link_realpath_ok "$1" "$2"
@@ -52,11 +111,17 @@ _link_or_update() {
     fi
     rm "$link"
   elif [ -e "$link" ]; then
-    mv "$link" "${link}.backup.$(date +%Y%m%d_%H%M%S)"
+    echo "BACKED UP: $label -> $(l9_backup_aside "$link")"
   fi
   ln -sfn "$target" "$link"
   echo "LINKED: $label -> $target"
 }
+
+# Before the health short-circuit: the three links can all be healthy while a
+# stale l9-governance.backup.* sibling still loads as a second plugin. This is
+# the SessionStart auto-heal for that (links-only mode included); moves, never
+# deletes.
+l9_relocate_plugin_siblings
 
 already_wired=0
 if workspace_links_healthy "$WORKSPACE" \
@@ -71,7 +136,7 @@ fi
 
 echo "WIRE: $WORKSPACE (consumer .cursor links)"
 WORKSPACE_DIR="$WORKSPACE"
-ensure_machine_cursor_plans_store
+_plans_store_prepare
 if [ "$WS_KIND" = "ssot" ] || [ "$WS_KIND" = "ssot_checkout" ]; then
   if [ -e "$WORKSPACE/.cursor-commands" ] || [ -L "$WORKSPACE/.cursor-commands" ]; then
     rm -f "$WORKSPACE/.cursor-commands"
@@ -89,7 +154,7 @@ fi
 mkdir -p "$WORKSPACE/.cursor/governance"
 _link_or_update "$WORKSPACE/.cursor/governance/CANONICAL_LAW.md" \
   "$GOV_ROOT/CANONICAL_LAW.md" ".cursor/governance/CANONICAL_LAW.md"
-_link_or_update "$WORKSPACE/.cursor/plans" "$HOME/.cursor/plans" ".cursor/plans"
+_plans_link
 _link_or_update "$HOME/.cursor/plugins/local/l9-governance" "$GC" \
   "~/.cursor/plugins/local/l9-governance"
 

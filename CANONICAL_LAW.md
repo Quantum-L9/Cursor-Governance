@@ -1066,3 +1066,125 @@ mutate another conversation's bytes.
    Empty ledger → skip. Never porcelain. Never a sibling worktree.
 3. **Operator push** remains `make backup` / `backup_to_github.sh`, gated
    only when the human or `governance_sync.sh` asked for it.
+
+<!-- RECEIPT_EVIDENCE_PLANE_V1 -->
+## 6.2.9 Receipts bind to artifacts (2026-09-15) — supersedes KERNEL_PRECOMMIT_HOOK_V1's stamp model
+
+Append-only. The `KERNEL_PRECOMMIT_HOOK_V1` clause above stays on disk and its
+boundary sentence is still law: post-finish kernels are **not** an L4 phase, and
+`authorize-release` does not require a kernel *stamp*. What this clause replaces
+is the *form* of the receipt that clause presumed, and it names what
+`authorize-release` may require instead of a stamp.
+
+An agent that can satisfy a gate more cheaply than it can do the work will
+satisfy the gate. Three symptoms were reported — agents restamping, gates
+reading stale receipts, agents falsifying receipts — and they are two defects:
+
+- **Unbound claim.** A receipt asserts work no verifier can re-derive. The v1
+  kernel receipt recorded ambient state (HEAD, kernel file SHAs, a timestamp)
+  and nothing about the work, so falsification was free and restamping was its
+  economic consequence.
+- **Proxy binding.** A receipt binds a stand-in for its subject — `head_sha`
+  where the subject is a tree — so it goes stale for reasons unrelated to the
+  attested work, and an agent learns to re-stamp on a schedule.
+
+Therefore, for every receipt plane in this repository:
+
+1. **One canonical writer per plane.** Exactly one module writes a given receipt
+   file. No other module may import its writer, call it, or construct the
+   receipt path. A second writer lets the weakest claim in the codebase satisfy
+   the strongest gate (`ops/autonomy/l4_local.py` wrote the kernel receipt as a
+   side effect of a two-flag self-report).
+2. **A claim binds to a digest of the artifact that constitutes it.** Not to
+   HEAD, not to a phase name, not to a flag. For the tree kernels that artifact
+   is the apply report (`.l9/autonomy/kernel-apply.md`): path-confined,
+   hashed, with non-empty `deltas` naming files that exist.
+3. **The verifier re-derives; it never trusts a recorded verdict.** Re-hash the
+   artifact and re-run the predicates on every read. A receipt is evidence at
+   the moment of reading, not a durable permission slip.
+4. **A rejected claim writes nothing.** Validate before write, so a caller that
+   swallows the exception does not end up holding a receipt a gate accepts.
+5. **A superseded schema is rejected by name**, with the upgrade path, rather
+   than read as an unknown or accepted for compatibility.
+6. **`authorize-release` may require kernel *evidence*, and no longer only
+   declines to require a stamp.** When a kernel receipt exists it must
+   re-derive clean. The corpus exemption is honored from recorded evidence —
+   `/ff`-owned `WIP/`, `docs/plans/`, and PE campaign changesets never require
+   a tree receipt, and a corpus-only changeset with no receipt at all still
+   authorizes. `eace25ed` reverted an earlier coupling precisely because
+   `authorize_release` could not honor that exemption; a coupling that cannot
+   is still forbidden.
+7. **Receipt invariants are enforced statically.** These receipts live under
+   gitignored `.l9/`, so no CI job can inspect one. Enforcement is source
+   analysis (AST / static checks). Never add a CI job that requires a receipt.
+
+Honest ceiling, stated so nobody claims more: structural impossibility is
+reachable for staleness, because a content digest either matches or it does
+not. It is **not** reachable for the kernel claim itself, because the attested
+work is model judgement with no deterministic re-run. What this buys is moving
+that claim from unfalsifiable to falsifiable — a forged delta names a specific
+file with a specific note, which a reviewer can contradict. And this surface is
+`model-controlled` with no credentials, so a signature would not help: the
+signer and the liar are the same process. `L9_L4_LOCAL_AUTONOMY=0` and
+`L9_LOCAL_PUSH_AUTHORIZED` remain above every gate described here.
+
+<!-- MEMORY_TWO_LANES_V1 -->
+## 8.6 Two lanes, one `MemoryService` (2026-09-15) — supersedes §8.3 item 2's "the model-initiated durable write is `phase_lock` then …" and item 4's "alternative to `write_governed`"; strengthens §8.5 item 2
+
+Append-only. ADR-0033; INV-03b. §8.1, §8.2 and §8.5 stand. Where §8.3, ADR-0030
+items 7–9, or any rule / skill still reads "one canonical egress" as *all memory
+traffic passes through Cursor-Governance*, or names `memory.phase_lock →
+memory.write_governed` as *the only model write*, this section is the law.
+
+1. **The invariant.** Agents are first-class real-time memory writers and may
+   invoke the public `l9-memory` / `l9-graphite-memory` MCP write surface
+   directly; Cursor-Governance MUST NOT mediate or gate those writes. Automatic
+   hooks use purpose-bounded write / distill / close operations with restricted
+   hook principals. Both lanes converge directly on `MemoryService`; neither may
+   access providers or persistence behind it.
+2. **Three producer classes, one service.**
+
+   | Producer | Route | Authority |
+   |---|---|---|
+   | Agent explicit write | `memory.write_agent` (MCP) / `l9-memory write` → `MemoryService` | ordinary agent memory authority |
+   | Agent real-time handoff | same call, immediately visible to the next `hydrate` / `search` | same, immediate |
+   | Automatic hook (SessionStart / End, prefetch, PR publish, PE/SGD ingest) | `ops/memory/control_plane_client.py` bounded `write` / `ingest_candidate` / `distill` / `close` → `MemoryService` | constrained hook principal (`principal.type=hook`, `surface=<name>`) |
+
+3. **The agent lane is intentionally direct.** An agent write waits on no phase
+   completion, no Cursor-Governance approval, no session close, no PR lifecycle,
+   no local distill queue and no intermediate governance receipt. Intrinsic
+   `MemoryService` controls (identity, namespace, schema, admission,
+   authorization) are memory's contracts, not a Cursor-Governance wall.
+   `memory.phase_lock → memory.write_governed` remains an **optional**
+   conflict-sensitive pair (§8.5 item 2); it is not the ordinary write and no
+   surface may require it before `memory.write_agent`.
+4. **The hook lane is bounded, not alternate.** `ops/config/memory-hook-envelopes.json`
+   declares, per surface, allowed operations, record classes, `max_records`,
+   `max_bytes` and `provenance_required`. `MemoryControlPlaneClient(surface=…)`
+   refuses out-of-envelope calls client-side before any process is spawned
+   (`REJECTED`, `envelope violation`) and stamps `principal` on every integration
+   receipt. The operator form (no surface) is a human / deterministic-adapter
+   tool, never the model's route around the agent lane. A native hook principal
+   on the package's stdio door is the preferred long-term form.
+5. **No local cognition.** Cursor-Governance holds no provider client, model id,
+   promotion rule, scorer or distill queue on any memory path (C15). Session
+   material may be gathered, redacted and latched here; extraction, admission
+   and promotion are `MemoryService`'s (`l9-memory distill`).
+6. **Gates gate repository edits, not memory.** The hydration gate
+   (`memory_gate.py`) exempts `l9-memory`, `python -m ops.memory.cli` and
+   `memory_prefetch.py`; no pre-execution hook matcher, deny list or contract
+   may name a memory MCP tool or shell command
+   (`tests/ops/memory/test_no_agent_lane_interposition.py`).
+7. **Enforcement.** `ops/scripts/validate_legacy_doctrine_residue.py`
+   (`local-memory-cognition`, `agent-lane-interposition`; the converged-surface
+   token is `memory.write_agent`), `ops/scripts/validate_memory_egress_boundary.py`
+   lane scan (hook lane → client only; agent lane → public surface only),
+   `tests/ops/memory/test_hook_envelope.py` (every caller placed),
+   `tests/ops/memory/test_no_local_memory_cognition.py`.
+
+Rules: `03-graphiti-memory.mdc`, `87-cursor-memory-kernel.mdc`,
+`98-graphiti-memory-gate.mdc` amended 2026-09-15. Skills: `l9-graphiti-memory`
+v2.3.0, `l9-end-session`, `l9-chat-extraction` v1.2.0. ADRs: ADR-0033 (new);
+ADR-0030 items 7–9 amended where they name `write_governed` as the model
+write. Docs: `docs/MEMORY_PIPELINE_MAP.md` "Lanes", `INVARIANTS.md` INV-03b,
+`ARCHITECTURE.md`.

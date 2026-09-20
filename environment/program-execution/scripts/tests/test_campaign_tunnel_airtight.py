@@ -127,6 +127,46 @@ class CampaignTunnelAirtightTests(unittest.TestCase):
         self.assertNotIn("not a live campaign front door", payload["error"])
         self.assertIn("not bootstrapped", payload["error"])
 
+    def test_terminal_task_recovery_is_a_controller_mutation_behind_the_tunnel(self) -> None:
+        """The front door recovers a KNOWN_TERMINAL task only through `pec fresh-workspace`.
+
+        Recovery takes authority away from a task, so it is a Controller
+        mutation like any other: refused outside the campaign tunnel, and never
+        reimplemented in run_campaign.py against the runtime database.
+        """
+        pec = PE_ROOT / "core/program-execution-controller-template/scripts/pec.py"
+        env = os.environ.copy()
+        env.pop("L9_CAMPAIGN_TUNNEL", None)
+        env.pop("L9_ALLOW_PEC_DIRECT", None)
+        completed = subprocess.run(
+            [
+                sys.executable,
+                str(pec),
+                "fresh-workspace",
+                "--workspace",
+                "/tmp/l9-unused-campaign-workspace",
+                "--repository",
+                "/tmp/l9-unused-campaign-repository",
+                "--task-id",
+                "TASK-001",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            env=env,
+        )
+        self.assertEqual(completed.returncode, 2, completed.stdout + completed.stderr)
+        payload = json.loads(completed.stdout)
+        self.assertIn("not a live campaign front door", payload["error"])
+
+        source = (PE_ROOT / "scripts/run_campaign.py").read_text(encoding="utf-8")
+        recovery = source[source.index("def _recover_terminal_peer_task") :]
+        recovery = recovery[: recovery.index("\ndef _prepare_peer_unit")]
+        self.assertIn('"fresh-workspace"', recovery)
+        self.assertNotIn("sqlite3", recovery)
+        self.assertNotIn("recover_execution(", recovery)
+        self.assertNotIn("transition_task", recovery)
+
 
 if __name__ == "__main__":
     unittest.main()

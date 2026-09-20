@@ -267,9 +267,12 @@ class FrontDoorTests(unittest.TestCase):
         self.assertNotIn("graphiti-memory", servers)
         memory = servers["l9-graphite-memory"]
         self.assertEqual(memory["type"], "stdio")
-        self.assertEqual(memory["command"], "${L9_MEMORY_INTERPRETER}")
+        self.assertEqual(
+            memory["command"],
+            "${HOME}/.cursor-governance/ops/memory/run_memory_mcp.sh",
+        )
         self.assertEqual(memory["args"], MEMORY_ARGS)
-        self.assertIn("L9_MEMORY_INTERPRETER", memory["_requires_env"])
+        self.assertNotIn("L9_MEMORY_INTERPRETER", memory.get("_requires_env") or [])
         for forbidden in ("env", "url", "headers"):
             self.assertNotIn(forbidden, memory)
         self.assertIn("graphiti-memory", _template().get("_retired_servers") or [])
@@ -304,18 +307,26 @@ class FrontDoorTests(unittest.TestCase):
             )
         self.assertTrue(found, "expected at least one ${VAR} bearer reference to check")
 
-    def test_render_is_gated_on_the_interpreter_and_retires_the_legacy_key(self) -> None:
-        """An unbound session renders no memory server; a bound one renders the
-        package's argv as a ${VAR} reference; a stale legacy key is removed."""
+    def test_render_ships_the_wrapper_and_retires_the_legacy_key(self) -> None:
+        """The wrapper always renders; a stale legacy key is removed; context7
+        renders whether or not its key is proxied (2026-09-19: an unpopulated
+        key is a visible auth failure to fix, never a silently absent server)."""
         sys.path.insert(0, str(REPO / "ops" / "scripts"))
         import claude_projection as cp
 
         template = _template()
         stale = {"mcpServers": {"graphiti-memory": {"type": "http", "url": "${LEGACY}"}}}
         unbound = cp.render_mcp(template, stale, environ={})["mcpServers"]
-        self.assertNotIn("l9-graphite-memory", unbound, "requires L9_MEMORY_INTERPRETER")
+        self.assertIn("l9-graphite-memory", unbound, "wrapper is the bind gate, not _requires_env")
+        self.assertEqual(
+            unbound["l9-graphite-memory"]["command"],
+            "${HOME}/.cursor-governance/ops/memory/run_memory_mcp.sh",
+        )
         self.assertNotIn("graphiti-memory", unbound, "retired keys are removed, not preserved")
-        self.assertNotIn("context7", unbound, "context7 requires a proxied key")
+        self.assertIn("context7", unbound, "context7 is never gated out; the key decides auth")
+        self.assertEqual(
+            unbound["context7"]["headers"]["Authorization"], "Bearer ${CONTEXT7_API_KEY}"
+        )
         self.assertNotIn("_requires_env", json.dumps(unbound), "private directives never ship")
 
         bound = cp.render_mcp(
@@ -323,7 +334,10 @@ class FrontDoorTests(unittest.TestCase):
             None,
             environ={"L9_MEMORY_INTERPRETER": "/venv/bin/python", "CONTEXT7_API_KEY": "proxied"},
         )["mcpServers"]
-        self.assertEqual(bound["l9-graphite-memory"]["command"], "${L9_MEMORY_INTERPRETER}")
+        self.assertEqual(
+            bound["l9-graphite-memory"]["command"],
+            "${HOME}/.cursor-governance/ops/memory/run_memory_mcp.sh",
+        )
         self.assertEqual(bound["l9-graphite-memory"]["args"], MEMORY_ARGS)
         self.assertNotIn("env", bound["l9-graphite-memory"])
         self.assertEqual(bound["context7"]["url"], "https://mcp.context7.com/mcp")
@@ -391,12 +405,12 @@ class FrontDoorTests(unittest.TestCase):
             self.assertNotRegex(env, rf"^\s*{token}\s*=", f"{token} must not be assigned")
 
     def test_session_start_projects_unbound_mcp_on_ssot_checkouts(self) -> None:
-        """PR 570: SessionStart must not bind the interpreter into a projection
-        that writes the tracked unbound .mcp.json of an ssot / ssot_checkout.
+        """PR 570: SessionStart must not bind a machine interpreter into the
+        tracked .mcp.json of an ssot / ssot_checkout.
 
-        test_governance_refresh_receipt points CLAUDE_PROJECT_DIR at the real
-        checkout; a bound projection then races
-        test_committed_projection_is_current_for_an_unbound_environment.
+        The committed file ships the HOME spawn wrapper (machine-agnostic).
+        Unbinding L9_MEMORY_INTERPRETER on ssot still prevents a bound
+        projection from writing an absolute interpreter path.
         """
         hook = (HOOKS / "session_start_claude_governance.sh").read_text(encoding="utf-8")
         copy = (REPO / ".claude" / "hooks" / "session_start_claude_governance.sh").read_text(
@@ -405,9 +419,18 @@ class FrontDoorTests(unittest.TestCase):
         self.assertEqual(hook, copy, "mobile hook copy must stay lockstep with the adapter hook")
         self.assertIn("classify_workspace_kind", hook)
         self.assertIn("ssot_checkout", hook)
-        self.assertIn("env -u L9_MEMORY_INTERPRETER -u CONTEXT7_API_KEY", hook)
+        self.assertIn("env -u L9_MEMORY_INTERPRETER", hook)
+        # context7 renders unconditionally (2026-09-19): stripping its key at
+        # projection time no longer changes the render and would only re-teach
+        # the silent-absence the gate removal ended.
+        self.assertNotIn("-u CONTEXT7_API_KEY", hook)
         committed = json.loads((REPO / ".mcp.json").read_text(encoding="utf-8"))
-        self.assertEqual(committed.get("mcpServers"), {})
+        memory = (committed.get("mcpServers") or {}).get("l9-graphite-memory") or {}
+        self.assertEqual(
+            memory.get("command"),
+            "${HOME}/.cursor-governance/ops/memory/run_memory_mcp.sh",
+        )
+        self.assertNotIn("/Users/", json.dumps(committed))
 
 
 if __name__ == "__main__":

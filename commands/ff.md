@@ -1,6 +1,6 @@
 ---
 name: ff
-version: "1.6.0"
+version: "1.7.0"
 description: "In-place catch-up: this Cursor-Governance clone + SSOT in parallel; --clone / --ssot for one target"
 auto_chain: ynp
 aliases:
@@ -43,7 +43,9 @@ Skill: [`skills/l9-repo-sync/SKILL.md`](../skills/l9-repo-sync/SKILL.md).
 Do **not** name clones. Do **not** diagnose. Do **not** wait for one clone
 then start the other. Do **not** run pytest as part of `/ff`.
 
-0. **`ff.sh` switches to `main`.** Do not `git switch` yourself.
+0. **`ff.sh` parks, switches to `main`, catch-up, then switches back
+   and restores parked files to their original paths.** Do not
+   `git switch` yourself.
 1. Pass through the user's flags. Bare `/ff` has no flags.
 
 ```bash
@@ -58,70 +60,12 @@ bash skills/l9-repo-sync/scripts/ff.sh --ssot
 `--clone` from another repo: this checkout if it is a governance identity
 tree, else `$HOME/Cursor-Governance`, else `CURSOR_GOVERNANCE_CLONE`.
 
-2. **Shelf leftover untracked and dirty-tracked `TODO.md`, `WIP/`,
-   `docs/plans/`, and `environment/program-execution/campaigns/`** with
-   one script (skip gitignored secret globs, `WIP/Legal Defense/`,
-   credential filenames).
-   Do **not** invent an rsync/`git add` recipe. `ff.sh` stays push-off.
-
-   ```bash
-   GOV_PY="${GOV_PY:-$HOME/.cursor-governance/.venv/bin/python}"
-   FF_TARGETS=()
-   # Required: initialize before the loop. ff.sh cannot export this array.
-   # Prefer every `ff: clone=` line ff.sh printed. Do not assume $(pwd).
-   # If those lines were not captured, reconstruct from the flag passed to ff.sh:
-   #   (none)  → this checkout and $HOME/.cursor-governance when they differ
-   #   --clone → working copy only
-   #   --ssot  → $HOME/.cursor-governance only
-   if [ -z "${FF_TARGETS[*]:-}" ]; then
-     _ff_here="$(cd "$(pwd)" && pwd)"
-     _ff_ssot=""
-     if [ -e "${HOME}/.cursor-governance/.git" ]; then
-       _ff_ssot="$(cd "${HOME}/.cursor-governance" && pwd)"
-     fi
-     FF_TARGETS+=("$_ff_here")
-     if [ -n "$_ff_ssot" ] && [ "$_ff_ssot" != "$_ff_here" ]; then
-       FF_TARGETS+=("$_ff_ssot")
-     fi
-   fi
-   for _ff_ws in "${FF_TARGETS[@]}"; do
-     "$GOV_PY" "$_ff_ws/skills/l9-repo-sync/scripts/ff_shelf.py" --clone "$_ff_ws"
-   done
-   ```
-
-   The script writes `$CLONE/.l9/ff-shelf-untracked.txt`, appends an existing
-   same-author `feat/ff-shelf-*` PR (or cuts one stamp), applies corpus kernels
-   (`kernel_pass` on `*.plan.md` only), pathspec-from-file then a separate
-   commit, `l4_local.py begin` + `authorize-release`, then
-   `PR_STACK=auto PR_REMEDIATE=0 make pr` unless `FF_SHELF_PUBLISH=0`.
-   Display the opened **PR URL**. If the leftover list is empty, the script
-   exits 0 without a stamp. Do not scoop other untracked paths. Do not delete
-   the copies in the named clone.
-
-   Record which clones `ff.sh` synced into `FF_TARGETS` (same resolution as the
-   table above) before post-shelf — do not assume `$(pwd)`.
-3. **Post-shelf close** — on every clone `/ff` actually synced (not
-   `$(pwd)` when that is a consumer repo, and not only one clone when bare
-   `/ff` paired two). `ff_shelf.py` already runs post-shelf; re-verify through
-   the locked interpreter:
-
-   ```bash
-   # Resolve the same target set ff.sh used:
-   #   bare /ff     → this Cursor-Governance checkout + $HOME/.cursor-governance
-   #   /ff --clone  → working-copy only
-   #   /ff --ssot   → $HOME/.cursor-governance only
-   GOV_PY="${GOV_PY:-$HOME/.cursor-governance/.venv/bin/python}"
-   for _ff_ws in "${FF_TARGETS[@]}"; do
-     bash "$_ff_ws/ops/scripts/run_ff_post_shelf.sh" "$_ff_ws"
-     "$GOV_PY" "$_ff_ws/ops/scripts/verify_worktree_clean.py" --workspace "$_ff_ws"
-   done
-   ```
-
-   `verify_worktree_clean.py` is not executable (`100644`); always invoke it
-   through the locked interpreter. For plan execution on a clean baseline
-   after verify passes, prefer `agent_worktree_start.sh` off the open-PR tip
-   or `origin/main`.
-4. Auto-chain `/ynp`.
+2. **Stop when `ff.sh` prints `OK:` and files are back at their original
+   paths.** Unique `TODO.md` / `WIP/` / `docs/plans/` / PE campaigns stay
+   in the tree. Hold copies stay as backup. No commit. No push. No PR.
+   Do not run `ff_shelf.py`, `run_ff_post_shelf.sh`, or
+   `verify_worktree_clean.py`. Do not invent a “shelf but no PR” mode.
+3. Auto-chain `/ynp`.
 
 ## FORBIDDEN
 

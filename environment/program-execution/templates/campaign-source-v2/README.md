@@ -46,6 +46,11 @@ Do not leave a `REPLACE_WITH_*` token or `{{TOKEN}}` marker in the source. The B
 
 ## Validation commands
 
+`campaign-check-input` is compile-complete. A non-empty `unknowns` entry must
+already declare `owner`, `resolution_method`, `status`, and explicit
+`resolution_evidence_ids`. Those keys are what Blueprint compile hard-reads;
+preflight refuses a partial unknown instead of isolating and then KeyErroring.
+
 From the repository root, first perform the read-only preflight:
 
 ```bash

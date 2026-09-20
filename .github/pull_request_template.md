@@ -76,8 +76,9 @@ $ ruff check . && pyright
 
 ## Gates
 
-<!-- Leave unchecked if it does not apply, and say why on the line. An unchecked box
-     with no reason blocks merge (see .github/workflows/pr-gates.yml). -->
+<!-- Leave unchecked if it does not apply, and say why on the line. No workflow
+     enforces these boxes: reviewers read them, and make pr annotates every box
+     it could not measure rather than leaving it bare. -->
 
 - [ ] Regression test added that fails without this fix
 - [ ] No secrets, tokens, or customer data in code, tests, fixtures, or logs

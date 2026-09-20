@@ -6,8 +6,8 @@ role: source_contract
 tags: [campaign, intent, schema, campaign-source-v2, pe]
 owner: igor_beylin
 status: active
-version: 1.1.0
-updated: 2026-09-13
+version: 1.2.0
+updated: 2026-09-14
 /L9_META -->
 
 # Campaign input and source contract
@@ -58,6 +58,14 @@ The direct source must declare:
 - explicit writable paths and an admissible terminal validation for each mutable
   `repo_local` task
 - remote-action ceilings restricted to `false`
+- compile-complete register entries: every present `unknowns[]` item must
+  declare `owner`, `resolution_method`, `status`, and explicit
+  `resolution_evidence_ids` (empty list is allowed while `status` is `open`);
+  every `decisions[]` item must declare `id`, `question`, `status`, `options[]`,
+  and `authority_id`; every `risks[]` item must declare `id`, `statement`, and
+  `owner`. These are the keys Blueprint compile hard-reads. `campaign-check-input`
+  is the admission authority — a source that passes it must compile. Do not
+  leave `id`/`statement`/`blocking_task_ids` as a partial unknown.
 
 Keep `metadata.status: operator_intake` and `program.definition_status: draft`
 until the controller has collected and bound required evidence. Do not leave

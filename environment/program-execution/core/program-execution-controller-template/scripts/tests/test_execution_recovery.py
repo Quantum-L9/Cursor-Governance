@@ -7,12 +7,27 @@ verdict had already moved the task out of SUBMITTED.
 
 from __future__ import annotations
 
+import json
+import sqlite3
 import subprocess
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from helpers import bootstrap_repo, cleanup_worktree, register_contract, run_cli
+
+
+def _attempt_rows(workspace: Path) -> list[tuple[int, str]]:
+    conn = sqlite3.connect(workspace / "runtime" / "state.sqlite")
+    try:
+        return [
+            (int(number), str(status))
+            for number, status in conn.execute(
+                "SELECT attempt_number, status FROM attempts ORDER BY attempt_number"
+            )
+        ]
+    finally:
+        conn.close()
 
 
 def _branches(repo: Path) -> list[str]:
@@ -117,6 +132,90 @@ class ScopedFreshWorkspaceTests(unittest.TestCase):
             )
             self.assertFalse(Path(first["worktree"]).exists())
             self.assertTrue((other / "in-flight.txt").is_file())
+
+    def test_task_scoped_reset_of_a_dispatched_task_keeps_its_generation(self) -> None:
+        """Recovering a dispatched task cleans the worktree, not the ledger of generations.
+
+        The front door recovers a KNOWN_TERMINAL attempt through this same
+        command. The consumed generation must survive it: the `attempts`
+        reservation stays, the evidence directory stays, and the next claim
+        renders attempt 2 rather than re-issuing attempt 1.
+        """
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            _, repo, workspace = bootstrap_repo(temp)
+            register_contract(temp, workspace)
+            run_cli("claim", "TASK-001", "--workspace", str(workspace), "--holder", "worker")
+            prepared = run_cli("prepare", "TASK-001", "--workspace", str(workspace))
+            run_cli("render-contract", "TASK-001", "--workspace", str(workspace))
+            started = run_cli(
+                "start", "TASK-001", "--workspace", str(workspace), "--actor", "worker"
+            )
+            self.assertEqual(started["attempt_number"], 1)
+            self.assertEqual(_attempt_rows(workspace), [(1, "DISPATCHED")])
+            evidence = workspace / "attempts" / "TASK-001" / "attempt-001"
+            evidence.mkdir(parents=True, exist_ok=True)
+            (evidence / "provider.log").write_text("KNOWN_TERMINAL\n", encoding="utf-8")
+
+            report = run_cli(
+                "fresh-workspace",
+                "--workspace",
+                str(workspace),
+                "--repository",
+                str(repo),
+                "--task-id",
+                "TASK-001",
+                "--actor",
+                "make-campaign",
+                "--reason",
+                "peer attempt ended KNOWN_TERMINAL",
+            )
+            self.assertEqual([t["task_id"] for t in report["tasks_cleaned"]], ["TASK-001"])
+            self.assertFalse(Path(prepared["worktree"]).exists())
+            self.assertTrue((evidence / "provider.log").is_file(), "evidence was erased")
+            self.assertEqual(_attempt_rows(workspace), [(1, "DISPATCHED")])
+
+            run_cli("claim", "TASK-001", "--workspace", str(workspace), "--holder", "worker")
+            run_cli("prepare", "TASK-001", "--workspace", str(workspace))
+            rendered = run_cli("render-contract", "TASK-001", "--workspace", str(workspace))
+            contract = json.loads(Path(rendered["contract"]).read_text(encoding="utf-8"))
+            self.assertEqual(contract["attempt_number"], 2)
+            cleanup_worktree(repo, workspace)
+
+    def test_dispatched_unsubmitted_generation_consumes_a_t4_budget(self) -> None:
+        """A KNOWN_TERMINAL window that never submits still spends the T4 attempt."""
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            _, repo, workspace = bootstrap_repo(temp)
+            register_contract(temp, workspace, risk_tier="T4")
+            run_cli("claim", "TASK-001", "--workspace", str(workspace), "--holder", "worker")
+            run_cli("prepare", "TASK-001", "--workspace", str(workspace))
+            run_cli("render-contract", "TASK-001", "--workspace", str(workspace))
+            started = run_cli(
+                "start", "TASK-001", "--workspace", str(workspace), "--actor", "worker"
+            )
+            self.assertEqual(started["attempt_number"], 1)
+            run_cli(
+                "fresh-workspace",
+                "--workspace",
+                str(workspace),
+                "--repository",
+                str(repo),
+                "--task-id",
+                "TASK-001",
+                "--actor",
+                "make-campaign",
+                "--reason",
+                "peer attempt ended KNOWN_TERMINAL",
+            )
+            run_cli("claim", "TASK-001", "--workspace", str(workspace), "--holder", "worker")
+            run_cli("prepare", "TASK-001", "--workspace", str(workspace))
+            run_cli("render-contract", "TASK-001", "--workspace", str(workspace))
+            refused = run_cli(
+                "start", "TASK-001", "--workspace", str(workspace), "--actor", "worker", expect=2
+            )
+            self.assertIn("retry budget exhausted", refused["error"])
+            cleanup_worktree(repo, workspace)
 
     def test_task_id_cannot_escape_the_worktrees_directory(self) -> None:
         with TemporaryDirectory() as raw:

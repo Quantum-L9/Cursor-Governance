@@ -10,6 +10,7 @@ from memory_boundary_fixtures import (
     OBJECTIVE,
     REPOSITORY,
     FakeMemoryCli,
+    agent_lane_record,
     continuation_record,
     error_stderr,
     health_payload,
@@ -67,11 +68,19 @@ def test_canonical_hit_with_typed_continuation(monkeypatch, fake_cli, bound) -> 
     assert result.continuation.record_id == RECORD
     assert result.continuation.capsule.next_action == "Wire runtime binding"
     assert result.continuation.stale is False
-    assert result.calls == 3
-    # The search asked memory for typed records by tag, on the primary namespace only.
-    search_argv = fake_cli.last("search")
-    assert "--tag" in search_argv and "session_continuation" in search_argv
-    assert search_argv.count("--namespace") == 1
+    assert result.calls == 4
+    # The continuation search asked memory for typed records by tag, on the
+    # primary namespace only. The 24h agent-lane search is a later call.
+    tagged = [
+        args
+        for args, _c, _s in fake_cli.calls
+        if len(args) > 1 and args[1] == "search" and "session_continuation" in args
+    ]
+    assert tagged, "continuation search must request the session_continuation tag"
+    assert tagged[0].count("--namespace") == 1
+    recent = fake_cli.last("search")
+    assert "--recorded-after" in recent
+    assert "session_continuation" not in recent
     # Hydrate requested the fan-in; memory authorized it.
     assert fake_cli.last("hydrate").count("--namespace") == 2
     assert result.requested_namespaces == ("cursor-governance", "l9-workspace")
@@ -394,6 +403,58 @@ def test_binding_failure_is_named(monkeypatch, fake_cli) -> None:
     assert "not importable" in (result.error or "")
 
 
+def test_binding_failure_is_an_environment_fault_not_memory_degradation(
+    monkeypatch, fake_cli
+) -> None:
+    """ADR-0032: an unbound runtime never reached memory, so memory is not degraded."""
+
+    from ops.memory.control_plane_client import FAULT_ENVIRONMENT
+    from ops.memory.runtime_binding import STATUS_UNBOUND, RuntimeBinding
+
+    unbound = RuntimeBinding(
+        status=STATUS_UNBOUND,
+        runtime_mode="pinned_environment",
+        memory_package="l9-graphite-memory",
+        expected_version="x",
+        expected_contract_version="memory-control-plane/v1",
+        manifest_path="m",
+        reasons=("package version 2.3.1 does not match expected 2.4.0",),
+        environment_heal="skipped:ci",
+    )
+    result = _hydrate(monkeypatch, fake_cli, unbound)
+    assert result.degraded is True  # coarse: not an answering status
+    assert result.fault_class == FAULT_ENVIRONMENT
+    assert result.environment_fault is True
+    assert result.memory_degraded is False
+    assert result.environment_heal == "skipped:ci"
+    shape = result.as_dict()
+    assert shape["fault_class"] == "environment"
+    assert shape["environment_fault"] is True
+    assert shape["memory_degraded"] is False
+    assert shape["environment_heal"] == "skipped:ci"
+
+
+def test_canonical_unavailable_is_memory_degradation(monkeypatch, fake_cli, bound) -> None:
+    from ops.memory.control_plane_client import FAULT_CANONICAL
+
+    fake_cli.reply("health", 1, health_payload(store_healthy=False))
+    result = _hydrate(monkeypatch, fake_cli, bound)
+    assert result.status == OutcomeStatus.CANONICAL_UNAVAILABLE.value
+    assert result.fault_class == FAULT_CANONICAL
+    assert result.memory_degraded is True
+    assert result.environment_fault is False
+
+
+def test_answering_statuses_carry_no_fault(monkeypatch, fake_cli, bound) -> None:
+    from ops.memory.control_plane_client import FAULT_NONE
+
+    _healthy(fake_cli).reply("hydrate", 0, hydration_payload())
+    result = _hydrate(monkeypatch, fake_cli, bound)
+    assert result.ok
+    assert result.fault_class == FAULT_NONE
+    assert result.memory_degraded is False and result.environment_fault is False
+
+
 def test_session_state_is_local_and_non_authoritative(
     monkeypatch, fake_cli, bound, tmp_path
 ) -> None:
@@ -412,3 +473,63 @@ def test_session_state_is_local_and_non_authoritative(
     assert "GRAPHITI" not in json.dumps(data).upper()
     assert ss.read_session_state("sess", directory=tmp_path) == data
     assert ss.read_session_state("other", directory=tmp_path) is None
+
+
+def _many_sections_payload(count: int) -> dict:
+    """A hydrate receipt with ``count`` ordinary sections."""
+    payload = hydration_payload(RECORD)
+    payload["sections"] = [
+        {
+            "memory_class": "semantic",
+            "content": f"ordinary context {i}",
+            "record_ids": [f"{i}" * 8 + "-0000-0000-0000-000000000000"],
+            "tokens_estimated": 12,
+            "highest_score": 0.9,
+        }
+        for i in range(count)
+    ]
+    return payload
+
+
+def test_agent_lane_sections_survive_packet_truncation(monkeypatch, fake_cli, bound) -> None:
+    """24h agent-lane facts must reach the packet, not sit behind the cut.
+
+    ``compile_session_packet`` renders only the first few ``context_sections``.
+    Appending the agent-lane sections put them past that boundary, so the
+    search could report OK while exposing none of the agent-written content to
+    the next session.
+    """
+    lane = [
+        agent_lane_record(
+            record_id=f"aaaaaaaa-0000-0000-0000-00000000000{i}",
+            content=f"agent fact {i}",
+        )
+        for i in range(2)
+    ]
+
+    def _search(argv, _stdin):
+        # The agent-lane search is the one bounded by --recorded-after.
+        if "--recorded-after" in argv and "session_continuation" not in argv:
+            return (0, search_payload(*lane), "")
+        return (0, search_payload(), "")
+
+    _healthy(fake_cli).reply("hydrate", 0, _many_sections_payload(7)).on("search", _search)
+    result = _hydrate(monkeypatch, fake_cli, bound)
+
+    assert result.status == "OK"
+    assert result.agent_lane_record_ids, "the agent-lane search returned records"
+
+    # The packet compiler's window is the property under test: agent-lane
+    # content must be inside it, not merely present somewhere in the tuple.
+    window = [content for _cls, content in result.context_sections[:6]]
+    assert "agent fact 0" in window
+    assert "agent fact 1" in window
+
+    # Ordinary hydration is not evicted by the reservation.
+    assert any(c.startswith("ordinary context") for c in window)
+
+    # record_ids stays index-aligned with context_sections: the packet zips them.
+    assert len(result.record_ids) == len(result.context_sections)
+    for record_id, (_cls, content) in zip(result.record_ids, result.context_sections, strict=True):
+        if content.startswith("agent fact "):
+            assert record_id.startswith("aaaaaaaa-"), "agent-lane id must move with its section"

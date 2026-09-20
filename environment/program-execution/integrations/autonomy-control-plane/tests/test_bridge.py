@@ -946,6 +946,45 @@ class GrantGenerationTests(unittest.TestCase):
             self.assertIn("GRANT_PARENT_DRIFT", str(caught.exception))
             self.assertEqual(first["attempt_number"], 1)
 
+    def test_a_terminal_grant_under_a_moved_parent_is_succeeded_not_drift(self) -> None:
+        """Lease liveness is decided before drift.
+
+        After a KNOWN_TERMINAL window is recovered, the Program parent
+        legitimately holds a new lease and a re-rendered contract. The
+        persisted generation-1 grant is terminal, so its recorded parent is
+        history, not drift -- the next generation is minted instead of the
+        resume stopping on GRANT_PARENT_DRIFT.
+        """
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            contract = self._bound(workspace)
+            module = _grant()
+            first = module.grant_task_mutation(_GOV_ROOT, workspace, contract)
+            module.revoke_task_grant(first, reason="window ended KNOWN_TERMINAL")
+            receipt = module.grant_receipt_path(workspace, "TASK-1", 1, kind="grant")
+            payload = json.loads(receipt.read_text(encoding="utf-8"))
+            payload["program_parent"]["lease_id"] = "lease-program-before-recovery"
+            payload["program_parent"]["contract_digest"] = "0" * 64
+            receipt.write_text(json.dumps(payload), encoding="utf-8")
+            second = module.grant_task_mutation(_GOV_ROOT, workspace, contract)
+            self.assertEqual(second["attempt_number"], 2)
+            self.assertNotEqual(second["lease_id"], first["lease_id"])
+
+    def test_a_tampered_grant_is_refused_before_its_lease_is_consulted(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            contract = self._bound(workspace)
+            module = _grant()
+            first = module.grant_task_mutation(_GOV_ROOT, workspace, contract)
+            module.revoke_task_grant(first, reason="window died")
+            receipt = module.grant_receipt_path(workspace, "TASK-1", 1, kind="grant")
+            payload = json.loads(receipt.read_text(encoding="utf-8"))
+            payload["autonomy_authority"]["authority_digest"] = "f" * 64
+            receipt.write_text(json.dumps(payload), encoding="utf-8")
+            with self.assertRaises(module.AutonomyGrantError) as caught:
+                module.grant_task_mutation(_GOV_ROOT, workspace, contract)
+            self.assertIn("GRANT_RECEIPT_TAMPERED", str(caught.exception))
+
 
 class WorkerEffectCapabilityTests(unittest.TestCase):
     """A worker window never names its own capability, and unknown tools deny.

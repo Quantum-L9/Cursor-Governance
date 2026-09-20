@@ -32,10 +32,19 @@ PR_SECURITY_ADVISORY ?= 0
 # Full-tree scans are nightly CI / `make precommit` / `make pr-full` — not make pr.
 PR_BASE ?= origin/main
 
-# Stack on an overlapping open PR head by default. Do not export this variable:
-# `make pr-check` pytest would inherit it and false-pass overlap tests.
-# Opt out (publish against main): PR_STACK= make pr
-PR_STACK ?= auto
+# Publish against PR_BASE (origin/main) by default — do NOT stack. Do not export
+# this variable: `make pr-check` pytest would inherit it and false-pass overlap
+# tests.
+# Opt in (stack on an overlapping open PR head): PR_STACK=auto make pr
+#
+# Stacking was the default until 2026-09-19. It resolves a base automatically
+# only when the blocking set is one unambiguous chain; with several sibling
+# chains open it cannot choose and fails preflight, so the common case became a
+# blocked publish that every caller cleared by passing PR_STACK= anyway. An
+# opt-in keeps the stack available for a deliberate train without making an
+# ordinary publish depend on how many PRs happen to be open. Overlap detection
+# is unchanged and still fails closed on a real textual conflict.
+PR_STACK ?=
 # Recipes pass PR_STACK into pr-preflight / run_pr_gate.sh only. The gate unsets
 # it before pytest (same strip as PR_OVERLAP).
 
@@ -252,6 +261,13 @@ claude-skill-registry:
 sync-generated:
 	$(PYTHON) ops/scripts/sync_generated_artifacts.py --root "$(CURDIR)" --force --check
 
+## Also heal environment/program-execution/MANIFEST.json (hashes the whole PE tree,
+## so it stays out of sync-generated). This is the enforced manifest that carried
+## no writable target: make pr and CI regenerate it, and now so does this.
+.PHONY: sync-generated-pe
+sync-generated-pe:
+	$(PYTHON) ops/scripts/sync_generated_artifacts.py --root "$(CURDIR)" --force --check --pe-manifest
+
 ## Reconcile L9 skills into Claude native user + project discovery paths.
 ## (Skills-only view of the claude-projection engine.)
 claude-skills: claude-skill-registry
@@ -355,8 +371,16 @@ l4-status:
 l4-begin:
 	$(PYTHON) ops/autonomy/l4_local.py --workspace "$(WS)" begin $(if $(CONTRACT_ID),--contract-id "$(CONTRACT_ID)",)
 
+# RA / VR are required: state what the kernels actually returned. They are not
+# defaulted, because a bare invocation used to assert that both passed
+# (INC-2026-09-14-001). Usage: make l4-record-kernels RA=passed VR=passed
 l4-record-kernels:
-	$(PYTHON) ops/autonomy/l4_local.py --workspace "$(WS)" record-kernels
+	@test -n "$(RA)" -a -n "$(VR)" || { \
+		echo "ERROR: RA and VR are required — e.g. make l4-record-kernels RA=passed VR=passed"; \
+		echo "  Record what you observed after applying both kernels. Do not use this to APPLY them."; \
+		exit 2; }
+	$(PYTHON) ops/autonomy/l4_local.py --workspace "$(WS)" record-kernels \
+		--recursive-alignment "$(RA)" --validate-repair "$(VR)"
 
 l4-authorize:
 	$(PYTHON) ops/autonomy/l4_local.py --workspace "$(WS)" authorize-release
@@ -437,9 +461,8 @@ backup:
 ## Gate push behind changed-file precommit-repo (not --all-files). Corpus = make precommit / pr-full.
 push: precommit-repo backup
 
-## Check Graphiti tunnel + MCP tool-plane health (degraded MCP is expected pre-full-wiring)
-graphiti-health: venv
-	$(PYTHON) ops/graphiti/graphiti_memory_client.py health
+## Retired alias (C15, ADR-0033): the provider client is deleted; memory health is the R0..R9 ladder.
+graphiti-health: memory-readiness
 
 ## Hard ruff gates on CHANGED files only (make pr). Full-tree: lint-ruff-full / make pr-full.
 ## Resolver errors fail closed (do not treat as "no Python files").

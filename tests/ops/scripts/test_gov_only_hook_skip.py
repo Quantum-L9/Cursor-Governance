@@ -69,11 +69,14 @@ def _consumer_repo(tmp_path: Path) -> Path:
 
 
 def _stub_precommit(tmp_path: Path) -> Path:
-    """A `pre-commit` that reports the SKIP it was handed and exits clean."""
+    """A `pre-commit` that reports the SKIP and PATH it was handed and exits clean."""
     bin_dir = tmp_path / "stub-bin"
     bin_dir.mkdir()
     stub = bin_dir / "pre-commit"
-    stub.write_text('#!/usr/bin/env bash\necho "SKIP=${SKIP:-}"\nexit 0\n', encoding="utf-8")
+    stub.write_text(
+        '#!/usr/bin/env bash\necho "SKIP=${SKIP:-}"\necho "PATH=$PATH"\nexit 0\n',
+        encoding="utf-8",
+    )
     stub.chmod(0o755)
     return bin_dir
 
@@ -117,6 +120,39 @@ def test_hook_is_skipped_in_a_consumer_workspace(tmp_path: Path, hook: str) -> N
 def test_hook_still_runs_in_the_governance_workspace(tmp_path: Path, hook: str) -> None:
     """A skip everywhere would be a deleted check. Here the entry resolves."""
     assert hook not in _effective_skips(tmp_path, ROOT)
+
+
+def test_governance_hooks_resolve_python3_to_locked_venv(tmp_path: Path) -> None:
+    """Cursor-Governance#567: host python3 must not win over `.venv/bin`."""
+    locked_python3 = ROOT / ".venv" / "bin" / "python3"
+    assert locked_python3.is_file(), (
+        f"locked interpreter missing at {locked_python3} (run: make venv)"
+    )
+    changed = tmp_path / "changed.txt"
+    changed.write_text("package.json\n", encoding="utf-8")
+    bin_dir = _stub_precommit(tmp_path)
+    proc = subprocess.run(
+        ["bash", str(SCRIPTS / "run_pr_precommit.sh"), str(ROOT)],
+        cwd=str(ROOT),
+        capture_output=True,
+        text=True,
+        check=False,
+        env={
+            **os.environ,
+            "WS": str(ROOT),
+            "PR_BASE": "main",
+            "PR_CHANGED_FILE": str(changed),
+            "PR_PRECOMMIT_STAGE": "readers",
+            "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}",
+        },
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    path_lines = [line for line in proc.stdout.splitlines() if line.startswith("PATH=")]
+    assert path_lines, (
+        "stub pre-commit did not emit PATH=; stdout/stderr:\n" + proc.stdout + proc.stderr
+    )
+    first = path_lines[0].removeprefix("PATH=").split(":", 1)[0]
+    assert first == str(ROOT / ".venv" / "bin")
 
 
 def test_a_consumer_applicable_hook_is_not_skipped(tmp_path: Path) -> None:

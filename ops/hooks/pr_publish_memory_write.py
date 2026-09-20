@@ -31,6 +31,9 @@ SUMMARY_REL = Path(".l9/pr/pr-summary.json")
 RECEIPT_REL = Path(".l9/pr/pr-publish-memory.json")
 MAX_PATHS = 24
 KIND = "pickup_context"
+#: Hook-lane surface (ADR-0033 B7): one ``session_continuation`` record per
+#: publish, ``ops/config/memory-hook-envelopes.json``.
+HOOK_SURFACE = "pr-publish"
 
 #: An unavailable memory plane must not hang the publish tail. The PR is
 #: already open by the time this runs; the write is a handoff, not a gate.
@@ -177,9 +180,21 @@ def idempotency_key(summary: dict[str, Any], fallback: dict[str, Any]) -> str:
     return f"pr-publish:{repo}#{number}@{sha}"
 
 
+# The tree this hook file lives in. ``open_pr_after_gate.sh`` passes the
+# resolver's ``--gov-root`` (the live SSOT clone), which legitimately lags an
+# open PR; the hook and ``ops.memory.cli`` are co-versioned in one repository,
+# so the CLI must be spawned from *this* tree or a flag this revision emits can
+# reach a parser that does not know it yet. ``--gov-root`` only donates an
+# interpreter when this tree has no ``.venv`` (a consumer checkout).
+OWN_ROOT = Path(__file__).resolve().parents[2]
+
+
 def _interpreter(gov_root: Path) -> Path:
-    locked = gov_root / ".venv" / "bin" / "python"
-    return locked if locked.is_file() else Path(sys.executable)
+    for root in (OWN_ROOT, gov_root):
+        locked = root / ".venv" / "bin" / "python"
+        if locked.is_file():
+            return locked
+    return Path(sys.executable)
 
 
 def write_argv(
@@ -195,6 +210,8 @@ def write_argv(
         str(interpreter),
         "-m",
         "ops.memory.cli",
+        "--surface",
+        HOOK_SURFACE,
         "write",
         content,
         "--kind",
@@ -322,7 +339,7 @@ def main(argv: list[str] | None = None) -> int:
         agent_id=agent_id,
         dry_run=args.dry_run,
     )
-    proc = run_write(argv_write, cwd=gov_root)
+    proc = run_write(argv_write, cwd=OWN_ROOT)
     status = "OK" if proc.returncode == 0 else "WARN"
     preview = (proc.stdout or proc.stderr or "").strip().splitlines()
     tail = preview[-1] if preview else f"exit {proc.returncode}"
