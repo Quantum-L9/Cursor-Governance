@@ -115,12 +115,10 @@ class MarkdownEmitTests(unittest.TestCase):
         self.assertIn("### Runtime", md)
         self.assertIn("### Degraded", md)
         self.assertIn("publish-path: ok", md)
-        self.assertIn("itest/neo4j: n/a", md)
         self.assertIn("claude-adapter: n/a", md)
         self.assertNotIn("claude-adapter-repair", md)
         self.assertIn("### Degraded\n- none", md)
         self.assertNotIn("no publish-path breakglass in force", md)
-        self.assertNotIn("itest: unavailable", md)
 
     def test_all_ok_emits_degraded_none(self) -> None:
         md = report.format_markdown(
@@ -684,9 +682,13 @@ class HookWiringTests(unittest.TestCase):
         self.assertNotIn("ARCHIVE_ARGS=(--archive-spent)", text)
         self.assertNotIn('"${ARCHIVE_ARGS[@]}"', text)
         self.assertNotIn("audit_pipeline.py", text)
-        self.assertNotIn("audit_plans.py", text)
+        self.assertIn("audit_plans.py", text)
+        self.assertIn("UNBUILT_MD", text)
+        self.assertIn("--format session-start", text)
         self.assertNotIn("### Plan audit", text)
         self.assertNotIn("PLAN_AUDIT_MD", text)
+        self.assertNotIn("TUNNEL_NOTE", text)
+        self.assertNotIn("--tunnel ", text)
         bootstrap = (REPO / "ops" / "scripts" / "bootstrap_agent_environment.sh").read_text(
             encoding="utf-8"
         )
@@ -852,15 +854,15 @@ class CursorAdapterClassificationTests(unittest.TestCase):
             [],
         )
 
-    def test_never_ran_is_na_optional_wiring(self) -> None:
+    def test_never_ran_is_ceremony_failure(self) -> None:
         lines = report.classify_cursor_adapter(
             surface="cursor",
             receipt={"state": "never_ran", "reason": "no bootstrap receipt on disk"},
             workspace="/tmp/ws",
         )
-        self.assertEqual(lines[0]["class"], report.NA)
-        self.assertIn("cursor-install", lines[0]["summary"])
-        self.assertFalse(lines[0]["include_in_degraded"])
+        self.assertEqual(lines[0]["class"], report.FAILED)
+        self.assertIn("every bootstrap", lines[0]["summary"])
+        self.assertTrue(lines[0]["include_in_degraded"])
 
     def test_ready_this_workspace_is_ok(self) -> None:
         lines = report.classify_cursor_adapter(
@@ -879,7 +881,7 @@ class CursorAdapterClassificationTests(unittest.TestCase):
         self.assertEqual(lines[0]["class"], report.NA)
         self.assertIn("stale_other_surface", lines[0]["summary"])
 
-    def test_ttl_unknown_is_na_not_this_session_degraded(self) -> None:
+    def test_ttl_unknown_is_ceremony_failure(self) -> None:
         lines = report.classify_cursor_adapter(
             surface="cursor",
             receipt={
@@ -889,9 +891,9 @@ class CursorAdapterClassificationTests(unittest.TestCase):
             },
             workspace="/tmp/ws",
         )
-        self.assertEqual(lines[0]["class"], report.NA)
+        self.assertEqual(lines[0]["class"], report.FAILED)
         self.assertIn("stale_receipt", lines[0]["summary"])
-        self.assertFalse(lines[0]["include_in_degraded"])
+        self.assertTrue(lines[0]["include_in_degraded"])
 
     def test_fresh_this_workspace_failed_reaches_degraded(self) -> None:
         lines = report.classify_cursor_adapter(
@@ -909,7 +911,8 @@ class ReceiptReaderSurfaceTests(unittest.TestCase):
 
         path = cbr.receipt_path(env={"HOME": "/tmp/h"}, surface="cursor")
         self.assertEqual(str(path), "/tmp/h/.l9/cursor/bootstrap-state.json")
-        self.assertEqual(cbr.schema_for("cursor"), "l9.cursor-bootstrap.v1")
+        self.assertEqual(cbr.schema_for("cursor"), "l9.cursor-bootstrap.v2")
+        self.assertEqual(cbr.schema_for("claude"), "l9.claude-bootstrap.v1")
 
     def test_claude_code_alias_maps_to_claude_dir(self) -> None:
         import claude_bootstrap_receipt as cbr
@@ -926,11 +929,11 @@ class ReceiptReaderSurfaceTests(unittest.TestCase):
         )
         self.assertEqual(str(path), "/tmp/x.json")
 
-    def test_never_ran_remediation_names_the_surface_installer(self) -> None:
+    def test_never_ran_remediation_names_session_start(self) -> None:
         import claude_bootstrap_receipt as cbr
 
         cursor = cbr.evaluate(None, surface="cursor")
-        self.assertIn("cursor-install", cursor["remediation"])
+        self.assertIn("start WS=", cursor["remediation"])
         claude = cbr.evaluate(None, surface="claude")
         self.assertIn("claude-code/install.sh", claude["remediation"])
 
@@ -1000,6 +1003,72 @@ class MemoryProbeFaultTests(unittest.TestCase):
             self.assertRaises(ZeroDivisionError),
         ):
             report.probe_memory_binding()
+
+
+class SessionStartCeremonyTests(unittest.TestCase):
+    def _collect(self, tmp: Path, **kwargs: object) -> list:
+        defaults: dict = {
+            "surface": "cursor",
+            "venv": "UV: cached locked environment",
+            "ide_profile": "applied",
+            "memory_detail": "healthy",
+            "memory_stderr": "",
+            "memory_healthy": True,
+            "wiring": "PASS",
+            "backup": "PROCEED: reason=- gates clear",
+            "skill_note": "/tmp/x.jsonl (1 entries)",
+            "hydrate_degraded": False,
+            "hydrate_reason": "",
+            "home": tmp,
+            "workspace": str(tmp),
+            "aws_cli": {"ok": True, "code": "OK", "summary": "authorized"},
+            "secrets_bind": [
+                {"name": "SEMGREP_APP_TOKEN", "bound": True, "source": "infisical"},
+                {"name": "SONAR_TOKEN", "bound": True, "source": "infisical"},
+                {"name": "GITHUB_TOKEN", "bound": True, "source": "infisical"},
+            ],
+        }
+        defaults.update(kwargs)
+        return report.collect(**defaults)
+
+    def test_collect_omits_tunnel_and_neo4j(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            (tmp / "CANONICAL_LAW.md").write_text("law\n", encoding="utf-8")
+            (tmp / "AGENTS.md").write_text("agents\n", encoding="utf-8")
+            names = [
+                item["name"] for item in self._collect(tmp, tunnel="open", codegraph="skipped")
+            ]
+        self.assertNotIn("tunnel", names)
+        self.assertNotIn("itest/neo4j", names)
+
+    def test_collect_writes_cursor_receipt_every_run(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            (tmp / "CANONICAL_LAW.md").write_text("law\n", encoding="utf-8")
+            (tmp / "AGENTS.md").write_text("agents\n", encoding="utf-8")
+            cursor_dir = tmp / ".cursor"
+            cursor_dir.mkdir()
+            (cursor_dir / "hooks.json").write_text(
+                '{"sessionStart":[{"command":"session-start-bootstrap.sh"}]}',
+                encoding="utf-8",
+            )
+            plugin = tmp / ".cursor" / "plugins" / "local" / "l9-governance"
+            plugin.mkdir(parents=True)
+            lines = self._collect(tmp)
+            receipt_path = tmp / ".l9" / "cursor" / "bootstrap-state.json"
+            self.assertTrue(receipt_path.is_file())
+            payload = json.loads(receipt_path.read_text(encoding="utf-8"))
+            self.assertEqual(payload["schema"], "l9.cursor-bootstrap.v2")
+            self.assertEqual(payload["mode"], "session-start")
+            self.assertEqual(payload["workspace"], str(tmp))
+            self.assertIn(payload["state"], {"READY", "DEGRADED", "FAILED"})
+            self.assertEqual(payload["probes"]["mcp"], "alias:memory")
+            self.assertEqual(payload["probes"]["hooks"], "hooks.json")
+            names = [item["name"] for item in lines]
+            self.assertIn("cursor-adapter", names)
+            cursor = next(item for item in lines if item["name"] == "cursor-adapter")
+            self.assertNotEqual(cursor["class"], report.NA)
 
 
 if __name__ == "__main__":
