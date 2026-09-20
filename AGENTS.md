@@ -1785,3 +1785,29 @@ this section wins.
   resolve a unique tip, so the default was a blocked publish that every caller
   cleared by passing `PR_STACK=` anyway. Stacking policy itself is unchanged
   once chosen: bottom-up merge order, no rebase, no conflict resolution.
+
+<!-- HYDRATE_CLOSE_AGENT_LANE_V1 -->
+## SessionStart reads sessionEnd + last-24h agent writes (2026-09-19)
+
+Append-only. ADR-0034, ADR-0035. Does not rewrite the 2026-09-15 two-lanes
+paragraph. That paragraph stays on disk (additive_only). Do not fold it.
+
+- **One session-task string.** `session_task_objective(project_name)` is
+  `Continue work in {name}`. SessionStart hydrate and sessionEnd close both
+  use it. Do not reintroduce `Resume session in {folder}` as a second
+  objective.
+- **SessionStart is four control-plane calls** when a write-namespace hint
+  exists: health, hydrate, `--tag session_continuation`, then
+  `--recorded-after <now-24h>` on the primary namespace only. The fourth
+  call is enrichment. A refused or unknown flag is a warning, never
+  `memory_degraded`.
+- **sessionEnd enriches the capsule** from that same 24h agent-lane window
+  before `ingest_candidate`. Hook envelopes `cursor-session-end` and
+  `claude-session-end` allow `search` as a read. They do not write
+  agent-lane facts and must not constrain `write_agent`.
+- **Classifier is `ops/memory/agent_lane.py`.** Typed continuations, META
+  closes, and Cursor-Governance hook producers are excluded. Cursor-Governance
+  does not open the memory store (INV-03).
+- **Pin.** Live 24h recall needs the bound `l9-graphite-memory` to accept
+  `--recorded-after` (ADR-0035). Until that pin is sealed, prefetch
+  fail-opens. Do not invent a second store reader to paper over it.

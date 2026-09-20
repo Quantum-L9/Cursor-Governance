@@ -87,7 +87,7 @@ def _hydration(status="NO_HITS", *, continuation=None, error=None, record_ids=()
         record_ids=tuple(record_ids),
         continuation=continuation,
         error=error,
-        calls=3,
+        calls=4,
     )
 
 
@@ -125,7 +125,7 @@ def test_compile_packet_fail_open(monkeypatch, tmp_path):
     assert packet["degraded"] is False
     assert packet["hydrate_stats"]["facts_returned"] == 0
     assert packet["hydrate_stats"]["memory_status"] == "NO_HITS"
-    assert packet["hydrate_stats"]["search_queries_used"] == 3
+    assert packet["hydrate_stats"]["search_queries_used"] == 4
     assert packet["memory"]["transport"] == "cli"
     ctx = comp.format_additional_context(packet)
     assert ctx.startswith("### memory hydrate")
