@@ -92,6 +92,26 @@ def test_configured_mcp_is_not_loaded_mcp() -> None:
     assert status == DEGRADED
 
 
+def test_mcp_note_names_every_gated_out_server_except_memory() -> None:
+    """The cause of an absent server reaches the printed note, not just the receipt.
+
+    `gated_out_servers` was read and then used for the memory server alone, so
+    a hosted session saw context7 missing with its cause recorded on disk and
+    printed nowhere. The memory server keeps its own dimension and is not
+    repeated here; the verdict is untouched — gating annotates, never upgrades.
+    """
+    gated = frozenset({"context7", er._MEMORY_MCP_SERVER})
+    for bootstrap, proj in ((None, READY), ({"mcp": "READY"}, READY), (None, DEGRADED)):
+        status, note = er._mcp_status(bootstrap, proj, gated_out=gated)
+        assert status == er._mcp_status(bootstrap, proj)[0]
+        assert "context7" in note
+        assert "_requires_env" in note
+        assert er._MEMORY_MCP_SERVER not in note
+    _, plain = er._mcp_status(None, READY, gated_out=frozenset({er._MEMORY_MCP_SERVER}))
+    assert "_requires_env" not in plain
+    assert er._gated_out_note(frozenset()) == ""
+
+
 def test_sanitize_remote_strips_embedded_credential() -> None:
     # A token-authenticated clone must never leak its credential into the receipt.
     got = er._sanitize_remote("https://x-access-token:ghs_SECRET@github.com/o/r.git")

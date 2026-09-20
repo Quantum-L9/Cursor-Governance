@@ -11,16 +11,24 @@ server in `mcp.template.json`) **and** `user-Context7` (Cursor).
 Hosted Web/Mobile runs with `SKIP_PLUGIN_MARKETPLACE=true`, so the marketplace
 plugin never installs there. The governed remote server closes that gap without
 a pasted secret: `mcp.template.json` declares `context7` at
-`https://mcp.context7.com/mcp` with `Authorization: Bearer ${CONTEXT7_API_KEY}`
-and `_requires_env: [CONTEXT7_API_KEY]`. The variable is **proxied**, never
-pasted — `${VAR}` is expanded by Claude Code at load, no value is written to any
-file or to the account variables field, and when nothing is proxied the server
-is simply not rendered.
+`https://mcp.context7.com/mcp` with `Authorization: Bearer ${CONTEXT7_API_KEY}`.
+The variable is **proxied**, never pasted — `${VAR}` is expanded by Claude Code
+at load and no value is written to any file or to the account variables field.
 
-So when `mcp__context7__*` tools are **absent** the obligation is unchanged:
-skill `l9-context7-docs` or an official docs GET. Never treat a missing MCP tool
-as permission to skip docs, and never close the gap by pasting a literal key
-into the account variables field, into `mcp.template.json`, or into `.mcp.json`.
+The server renders **unconditionally** (2026-09-19; it used to be
+`_requires_env`-gated, which turned a missing secret into a silently absent
+server on every hosted session). When `CONTEXT7_API_KEY` is not populated the
+server fails to authenticate. That is a failure to **fix**, never to skip or
+remove: the fix is the secret populating (Infisical inventory key
+`CONTEXT7_API_KEY`, proxied into the session environment), and SessionStart
+reports whether it did.
+
+Until it does, and only until then, the obligation when `mcp__context7__*`
+tools are **absent or failing** is unchanged: skill `l9-context7-docs` or an
+official docs GET. Never treat a missing MCP tool as permission to skip docs,
+never close the gap by pasting a literal key into the account variables field,
+into `mcp.template.json`, or into `.mcp.json`, and never close it by gating the
+server out of `.mcp.json` again.
 
 Call whichever server this surface exposes. Do not treat a missing allow-list
 entry as permission to skip.

@@ -294,6 +294,35 @@ def test_sync_pe_templates_is_idempotent(tmp_path: Path) -> None:
     assert second == [], f"second sync rewrote unchanged manifests: {second}"
 
 
+def test_make_has_a_target_that_heals_the_pe_manifest() -> None:
+    """`sync-generated` deliberately omits --pe-manifest; a named target must carry it.
+
+    Without one the enforced adapter-layer manifest had no writable make target
+    at all, and the heal command was discoverable only from a CI failure line.
+    """
+    repo = Path(__file__).resolve().parents[3]
+    makefile = (repo / "Makefile").read_text(encoding="utf-8")
+    recipe = makefile.split("\nsync-generated-pe:\n", 1)[1].split("\n\n", 1)[0]
+    assert "sync_generated_artifacts.py" in recipe
+    assert "--pe-manifest" in recipe
+    assert ".PHONY: sync-generated-pe" in makefile
+
+
+def test_skill_registry_names_its_generator_and_heal_command() -> None:
+    """The registry had no header at all: a reader could not tell it was generated."""
+    from build_claude_skill_registry import build_registry
+
+    repo = Path(__file__).resolve().parents[3]
+    registry = build_registry(repo)
+    assert registry["generator"] == "ops/scripts/build_claude_skill_registry.py"
+    assert registry["regenerate"] == "make claude-skill-registry"
+    assert makefile_has_target(repo, "claude-skill-registry")
+
+
+def makefile_has_target(repo: Path, name: str) -> bool:
+    return f"\n{name}:\n" in (repo / "Makefile").read_text(encoding="utf-8")
+
+
 def test_sync_pe_templates_tolerates_a_missing_template(tmp_path: Path) -> None:
     from sync_generated_artifacts import sync_pe_templates
 

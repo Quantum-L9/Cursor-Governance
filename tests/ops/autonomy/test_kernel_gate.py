@@ -443,6 +443,88 @@ def test_record_command_is_runnable_from_a_consumer_workspace(tmp_path: Path) ->
     assert str(consumer / "ops" / "autonomy") not in text
 
 
+def test_record_names_a_release_receipt_the_kernel_apply_left_behind(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """After a kernel apply moved the tree, `record` says the L4 receipt is stale.
+
+    authorize-release binds worktree bytes; the kernel apply changes them and is
+    committed before `record`. The documented recovery then re-ran make pr and
+    learned only at its remote check that the receipt was stale. The hint at
+    record time is advisory: nothing is written or authorized, and a tree that
+    still matches gets no hint at all.
+    """
+    import sys
+
+    autonomy = str(ROOT / "ops" / "autonomy")
+    if autonomy not in sys.path:
+        sys.path.insert(0, autonomy)
+    from l4_local import authorize_release, begin
+
+    monkeypatch.delenv("L9_AUTONOMY_STATE_DIR", raising=False)
+    gate = _gate()
+    begin(stacked_repo, contract_id="drift")
+    authorize_release(stacked_repo)
+    assert gate.l4_release_drift_hint(stacked_repo, ROOT) == ""
+
+    # The kernel apply: bytes change, then the report names the changed path.
+    (stacked_repo / "a.txt").write_text("a\naligned\n", encoding="utf-8")
+    write_apply_report(stacked_repo)
+    rc = gate.cmd_record(
+        gate.build_parser().parse_args(
+            ["record", "--workspace", str(stacked_repo), "--gov-root", str(ROOT)]
+        )
+    )
+    assert rc == 0
+    err = capsys.readouterr().err
+    assert "NEXT:" in err
+    assert "L4 receipt stale" in err
+    # The printed command is runnable from a consumer workspace: governance
+    # script path, explicit workspace, never a cwd-relative path.
+    line = next(ln for ln in err.splitlines() if "authorize-release" in ln)
+    assert str(ROOT / "ops" / "autonomy" / "l4_local.py") in line
+    assert f'--workspace "{stacked_repo}"' in line
+    assert "python3 ops/autonomy/l4_local.py" not in err
+    assert line.strip() == gate.authorize_command(stacked_repo, ROOT)
+    # Advisory: the receipt on disk is untouched.
+    from l4_local import load_receipt
+
+    assert load_receipt(stacked_repo)["phase"] == "release_authorized"
+
+
+def test_drift_hint_never_imports_l4_local() -> None:
+    """l4_local imports kernel_gate for kernel evidence; the reverse is a cycle.
+
+    The hint probes ``l4_local.py status`` as a subprocess instead, and the
+    only failures it swallows are the ones a probe can have.
+    """
+    source = (ROOT / "ops" / "autonomy" / "kernel_gate.py").read_text(encoding="utf-8")
+    assert "import l4_local" not in source
+    assert "from ops.autonomy import l4_local" not in source
+    hint_body = source.split("def l4_release_drift_hint", 1)[1].split("\ndef ", 1)[0]
+    assert "except Exception" not in hint_body
+
+
+def test_drift_hint_is_silent_when_the_probe_cannot_run(stacked_repo: Path, tmp_path: Path) -> None:
+    gate = _gate()
+    # No governance script at this root: nothing to probe, nothing to say.
+    assert gate.l4_release_drift_hint(stacked_repo, tmp_path / "no-gov") == ""
+
+
+def test_record_is_silent_without_an_l4_release_receipt(
+    stacked_repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    gate = _gate()
+    write_apply_report(stacked_repo)
+    rc = gate.cmd_record(
+        gate.build_parser().parse_args(
+            ["record", "--workspace", str(stacked_repo), "--gov-root", str(ROOT)]
+        )
+    )
+    assert rc == 0
+    assert "NEXT:" not in capsys.readouterr().err
+
+
 def test_guidance_does_not_claim_kernels_gate_l4() -> None:
     """Nothing printed by this hook may teach the superseded L4 coupling."""
     gate = _gate()

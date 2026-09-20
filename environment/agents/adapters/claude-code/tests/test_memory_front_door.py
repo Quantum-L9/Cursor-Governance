@@ -309,7 +309,8 @@ class FrontDoorTests(unittest.TestCase):
 
     def test_render_ships_the_wrapper_and_retires_the_legacy_key(self) -> None:
         """The wrapper always renders; a stale legacy key is removed; context7
-        still requires a proxied key."""
+        renders whether or not its key is proxied (2026-09-19: an unpopulated
+        key is a visible auth failure to fix, never a silently absent server)."""
         sys.path.insert(0, str(REPO / "ops" / "scripts"))
         import claude_projection as cp
 
@@ -322,7 +323,10 @@ class FrontDoorTests(unittest.TestCase):
             "${HOME}/.cursor-governance/ops/memory/run_memory_mcp.sh",
         )
         self.assertNotIn("graphiti-memory", unbound, "retired keys are removed, not preserved")
-        self.assertNotIn("context7", unbound, "context7 requires a proxied key")
+        self.assertIn("context7", unbound, "context7 is never gated out; the key decides auth")
+        self.assertEqual(
+            unbound["context7"]["headers"]["Authorization"], "Bearer ${CONTEXT7_API_KEY}"
+        )
         self.assertNotIn("_requires_env", json.dumps(unbound), "private directives never ship")
 
         bound = cp.render_mcp(
@@ -415,7 +419,11 @@ class FrontDoorTests(unittest.TestCase):
         self.assertEqual(hook, copy, "mobile hook copy must stay lockstep with the adapter hook")
         self.assertIn("classify_workspace_kind", hook)
         self.assertIn("ssot_checkout", hook)
-        self.assertIn("env -u L9_MEMORY_INTERPRETER -u CONTEXT7_API_KEY", hook)
+        self.assertIn("env -u L9_MEMORY_INTERPRETER", hook)
+        # context7 renders unconditionally (2026-09-19): stripping its key at
+        # projection time no longer changes the render and would only re-teach
+        # the silent-absence the gate removal ended.
+        self.assertNotIn("-u CONTEXT7_API_KEY", hook)
         committed = json.loads((REPO / ".mcp.json").read_text(encoding="utf-8"))
         memory = (committed.get("mcpServers") or {}).get("l9-graphite-memory") or {}
         self.assertEqual(

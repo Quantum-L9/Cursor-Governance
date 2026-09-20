@@ -16,7 +16,8 @@ Covered artifacts:
     MANIFEST.yaml — each template's own integrity manifest, gated by
     validate_pair.py in CI
 
-Opt-in via --pe-manifest (--force alone does not reach it):
+Opt-in via --pe-manifest (--force alone does not reach it; `make sync-generated-pe`
+passes it, `make sync-generated` does not):
   * environment/program-execution/MANIFEST.json — hashes the whole mutable
     Program Execution tree, so ordinary PE edits rewrite it. It is not
     advisory: `make program-execution-conformance` runs validate_manifest.py
