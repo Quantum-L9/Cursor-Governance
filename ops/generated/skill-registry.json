@@ -1,5 +1,5 @@
 {
-  "generation_id": "1063ae5e09d0503f31e61bc9babf6e0f3a8b3367f1d438cdc0d7887b81d3e79e",
+  "generation_id": "deb10fe57cd1b06d097bb8c9d27c75e0178b4b5aac291a9ff03f2ac0ee57861d",
   "routing": {
     "advisory_threshold": 6,
     "force_threshold": 8,
@@ -1378,14 +1378,14 @@
     },
     {
       "composition_role": "general",
-      "description": "deep-audit exact current heads of one or more GitHub pull requests against repository architecture, invariants, contracts, CI, reviews, preservation, and cross-PR interactions, then emit revision-bound remediation evidence. use when auditing PR correctness, completeness, architecture alignment, merge readiness, or downstream repair evidence.",
+      "description": "deep-audit one or more GitHub pull requests against current repository architecture, invariants, contracts, ownership, CI, reviews, change proportionality, and cross-PR interactions, using a deterministic evidence census plus recursive verification to produce a revision-bound audit and PR Remediation Contract without mutating the target repository. use when auditing PR correctness, completeness, architecture alignment, merge readiness, or downstream remediation evidence.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pr-audit",
       "path": "skills/l9-pr-audit",
       "reason": "deep revision-bound PR audit that emits evidence bundles and Fable handoffs; never mutates audited PRs; slash or explicit invoke only; disable-model-invocation",
       "skill_md": "skills/l9-pr-audit/SKILL.md",
-      "skill_sha256": "2db9aa1b321cd368534c8b76d4ea898cd492dc1965c5ed9890acf42af0965bd6",
+      "skill_sha256": "df6b03833d5fc6f96dbfcd8e7963bd3f75009b39187fbf9f79101ec92d174860",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1404,14 +1404,14 @@
     },
     {
       "composition_role": "general",
-      "description": "diagnose or converge github prs \u2014 bind a same-head l9-pr-audit handoff when present and implement those eligible findings concurrently before any merge train, plan the fleet once, launch execution-profile-capped subagents that prefetch before write and close via sessionEnd, poll remediating PRs, and merge the oldest non-conflicting greens. do not run make pr. use when /l9-pr-remediation, fix, babysit, or merge failing prs.",
+      "description": "diagnose or converge github prs \u2014 plan the fleet once, launch execution-profile-capped subagents to remediate, poll remediating PRs, and start stack-safe merge trains on the oldest green PRs that will not conflict downstream. do not wait for every PR to be green. do not run make pr. use when /l9-pr-remediation, fix, babysit, or merge failing prs.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pr-remediation",
       "path": "skills/l9-pr-remediation",
       "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked). The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Above-paygrade HUMAN / unfixable required CI / ENVIRONMENT after best-effort opens a GitHub issue and launches l9-issue-remediation via cursor-subagents; do not ask the human to unblock. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
       "skill_md": "skills/l9-pr-remediation/SKILL.md",
-      "skill_sha256": "b794439ff61c2797209346cf8b242b0f7e1fcf22e900b136226f45811c337ec1",
+      "skill_sha256": "a5a39c22ff77044c5de8d6e5d3ae795e1a289f23d3ab2d35cabe39a5dc521246",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1613,5 +1613,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "bf7f5c46dc824b84f99edf7f4f718008e59a40c75efcb39f2d293b649a7518ef",
-  "source_skill_corpus_sha256": "b48fce12a330ac50fb9977db118d17d8c2f4d62f1e0785c2b2cbe0ea9669e09d"
+  "source_skill_corpus_sha256": "7831d23967fb264fb5fc48a0a929239c7ca1f961281945548e24533fae003ad1"
 }
