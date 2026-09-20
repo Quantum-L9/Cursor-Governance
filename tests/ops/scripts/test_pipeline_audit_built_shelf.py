@@ -31,6 +31,7 @@ def _fs_folds_case(directory: Path) -> bool:
     finally:
         probe.rmdir()
 
+
 BUILT_PLAN = """---
 name: spent
 todos:

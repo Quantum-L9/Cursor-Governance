@@ -1724,4 +1724,3 @@ ADR-0031 are the law.
 - Operator / hooks: `python -m ops.memory.cli`. Agent HTTP is sealed.
 - Do not teach `GRAPHITI_MCP_URL`, `add_memory`, or a live
   `graphiti_memory_client.py` as the agent front door.
-
