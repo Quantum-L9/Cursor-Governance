@@ -60,6 +60,12 @@ subsystems:
     tier: control_plane
     description: Always-on and requestable .mdc rules.
     purpose: Bind agent behavior without a second governance tree.
+    # Suppressed: ops/scripts/check_rules_standard.py fails closed on any
+    # `.md` in rules/ except RULES-MANIFEST*, because Cursor ignores them.
+    # A generated README here breaks governance-self-check. This is
+    # repository policy, so it is stated in the overlay rather than taught
+    # to the compiler.
+    skip: true
   kernels:
     path: kernels
     title: Alignment kernels

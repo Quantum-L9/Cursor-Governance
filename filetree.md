@@ -209,7 +209,7 @@ Projection only. Generated from the live tree. Not authority.
 | `protocols` | corpus | 5 | present |
 | `releases` | corpus | 1 | present |
 | `reports` | corpus | 1 | present |
-| `rules` | corpus | 3 | present |
+| `rules` | corpus | 3 | missing |
 | `schemas` | corpus | 1 | present |
 | `scripts` | subsystem | 5 | present |
 | `security` | corpus | 2 | present |
