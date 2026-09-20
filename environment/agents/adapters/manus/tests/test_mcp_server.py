@@ -121,7 +121,9 @@ class ManusMcpServerTests(unittest.TestCase):
         restored = list(sys.path)
         try:
             sys.path[:] = [entry for entry in sys.path if Path(entry).resolve() != REPOSITORY]
+            stripped = list(sys.path)
             status = protected.call_tool("memory_lifecycle_status", {})
+            self.assertEqual(sys.path, stripped)
         finally:
             sys.path[:] = restored
         self.assertFalse(status.get("isError", False))

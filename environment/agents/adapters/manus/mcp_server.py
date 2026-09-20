@@ -443,14 +443,18 @@ class GovernanceMcpService:
         """Load the thin lifecycle wrapper after binding it to this checkout."""
 
         root = str(self.governance_root)
-        if root not in sys.path:
-            sys.path.insert(0, root)
         path = self.adapter_root / "memory_lifecycle.py"
         spec = importlib.util.spec_from_file_location("manus_memory_lifecycle", path)
         if spec is None or spec.loader is None:
             raise ToolInputError(f"unable to load memory lifecycle at {path}")
         module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        saved = list(sys.path)
+        try:
+            if root not in sys.path:
+                sys.path.insert(0, root)
+            spec.loader.exec_module(module)
+        finally:
+            sys.path[:] = saved
         return module
 
     def _require_memory_lifecycle(self) -> None:
