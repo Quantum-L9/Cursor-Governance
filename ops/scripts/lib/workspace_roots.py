@@ -25,7 +25,7 @@ callers keep their existing behaviour byte-for-byte.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import NamedTuple
 
@@ -179,3 +179,74 @@ def projection_roots(workspace: Path, *, cap: int = DEFAULT_MAX_ROOTS) -> list[P
     if repos == [workspace]:
         return [workspace]
     return [workspace, *repos]
+
+
+def adopted_projection_roots(
+    workspace: Path,
+    relative_target: Path | str,
+    state_name: str,
+    exclude_targets: Iterable[Path] = (),
+) -> list[Path]:
+    """Ancestors of `workspace` that already hold a projection of this adapter.
+
+    `projection_roots` answers *which roots does this session project into*. It
+    cannot answer *which roots did an earlier session project into*, and the two
+    stop agreeing the moment the value a caller passes as the workspace changes.
+    That happened in a cloud container: the boot-time reconcile ran with the
+    container as its workspace and wrote `<container>/.claude/skills`, while
+    every later session ran with the repository as its workspace, where
+    `projection_roots` correctly returns `[repository]` alone. The container
+    mirror then belonged to no reconciler's target set, so the obsolete-entry
+    sweep never reached it and it kept a symlink to a skill the SSOT had since
+    removed — a dangling link that fails the consumer test walking the tree.
+
+    The rule here is deliberately narrower than discovery: a directory is
+    adopted only when it *already carries our own state file* at exactly this
+    adapter's relative target. Nothing new is ever created outside `workspace`,
+    an unrelated directory can never be adopted, and the worst case is that a
+    projection we already own is reconciled to the state we would have written
+    anyway. Only ancestors are considered, so a user-scope target outside the
+    workspace's line of parents (`/root/.claude` while the workspace is under
+    `/home/user`) is not reachable from here.
+
+    `exclude_targets` is how a caller keeps the USER-scope projection out. A
+    normal checkout sits under `$HOME`, and `$HOME/.claude/skills` then answers
+    this scan with the same relative path and the same state filename as a
+    container mirror — the state file records a governance root, not a scope, so
+    nothing in it distinguishes the two. Adopting it would hand the user's own
+    projection to a project-scope reconcile, which would rewrite user-level
+    links or fail `--check` on drift that has nothing to do with the project.
+    Callers pass their resolved user target and it is skipped by path.
+
+    Returned nearest-ancestor first. Pass a *relative* target — an absolute one
+    is the same directory for every ancestor and says nothing about ownership,
+    and one containing `..` is refused outright: `../../.claude/skills` is
+    relative, so an absolute-only check lets it climb back out of the ancestor
+    it was joined to and adopt a directory outside the lineage entirely. The
+    containment above is a claim this function has to enforce, not merely
+    describe.
+    """
+    relative = Path(relative_target)
+    if relative.is_absolute() or any(part == ".." for part in relative.parts):
+        return []
+    try:
+        resolved = Path(workspace).resolve()
+    except OSError:
+        return []
+    blocked = set()
+    for candidate in exclude_targets:
+        try:
+            blocked.add(Path(candidate).resolve())
+        except OSError:
+            continue
+    adopted: list[Path] = []
+    for ancestor in resolved.parents:
+        target = ancestor / relative
+        try:
+            if target.resolve() in blocked:
+                continue
+            if (target / state_name).is_file():
+                adopted.append(ancestor)
+        except OSError:
+            continue
+    return adopted
