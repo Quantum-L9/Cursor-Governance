@@ -381,6 +381,7 @@ def write_atomic_json(path: Path, payload: dict[str, Any]) -> None:
         try:
             os.unlink(tmp_name)
         except OSError:
+            # Best-effort tmp cleanup; the original write/replace error is re-raised.
             pass
         raise
 
@@ -397,7 +398,6 @@ _CLASS_TO_STATUS_V2 = {
     **_CLASS_TO_STATUS_V1,
     "n/a": "N/A",
 }
-_CLASS_TO_STATUS = _CLASS_TO_STATUS_V2
 
 _LINE_TO_COMPONENT = {
     "venv": "shared_bootstrap",
