@@ -136,7 +136,21 @@
             "present": {"type": "object", "additionalProperties": {"type": "boolean"}},
             "partial_repair_route": {"type": ["string", "null"]},
             "polyglot_extension_owner": {"type": "string"},
-            "unsupported_impacted_extensions": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+            "unsupported_impacted_extensions": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+            "planned": {
+              "description": "README reconciliation histogram for this run. Diagnostic evidence attached to the capability, never a second obligation ledger.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["create", "refresh", "unchanged", "preserve", "retire", "conflict"],
+              "properties": {
+                "create": {"type": "integer", "minimum": 0},
+                "refresh": {"type": "integer", "minimum": 0},
+                "unchanged": {"type": "integer", "minimum": 0},
+                "preserve": {"type": "integer", "minimum": 0},
+                "retire": {"type": "integer", "minimum": 0},
+                "conflict": {"type": "integer", "minimum": 0}
+              }
+            }
           }
         }
       }

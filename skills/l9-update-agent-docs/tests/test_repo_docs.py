@@ -74,6 +74,10 @@ def stack(root: Path, architecture: bool = True) -> None:
 
 def module_pipeline(root: Path, *, complete: bool = True) -> None:
     write(root / "scripts/generate_subsystem_readmes.py", "# generator\n")
+    # Two skill packs, so `skills` is an index the inventory authorizes on
+    # its own. The config entry below decorates that target; it must never
+    # be what creates it.
+    write(root / "skills/other/y.py", "def y():\n    return 1\n")
     write(
         root / "config/subsystems/readme_config.yaml",
         "version: 1\n"
@@ -245,6 +249,58 @@ def test_bound_harvest_normalizes_into_same_obligations_and_closes(tmp_path: Pat
     assert semantic and all(row["lifecycle"]["status"] == "CLOSED" for row in semantic)
     assert all(row["qualification"]["status"] == "QUALIFIED" for row in semantic)
     assert rd.validate_receipt_shape(receipt) == []
+
+
+def test_audit_fills_missing_readmes_outside_the_change_set(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    module_pipeline(root)
+    write(root / "skills/demo/x.py", "def x():\n    return 1\n")
+    write(root / "environment/agents/lifecycle/mod.py", "def ready():\n    return True\n")
+    base = commit(root, "base with two modules and no readmes")
+    write(root / "skills/demo/x.py", "def x():\n    return 2\n")
+    commit(root, "touch only one module")
+    receipt = rd.audit_repository(root, changed_since=base)
+    assert (root / "skills/demo/README.md").is_file()
+    assert (root / "environment/agents/lifecycle/README.md").is_file()
+    assert "environment/agents/lifecycle/README.md" in receipt["changes"]["run_mutations"]
+    assert receipt["final_status"] == "PASS"
+
+
+def test_receipt_carries_the_readme_reconciliation_histogram(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    module_pipeline(root)
+    write(root / "skills/demo/x.py", "def x():\n    return 1\n")
+    base = commit(root, "base")
+    write(root / "skills/demo/x.py", "def x():\n    return 2\n")
+    commit(root, "code")
+    receipt = rd.audit_repository(root, changed_since=base)
+    planned = receipt["capabilities"]["module_readmes"]["planned"]
+    assert set(planned) == {
+        "create",
+        "refresh",
+        "unchanged",
+        "preserve",
+        "retire",
+        "conflict",
+    }
+    assert planned["create"] >= 1
+    assert planned["conflict"] == 0
+    # The histogram is diagnostics on the capability, not a second ledger.
+    assert receipt["final_status"] == "PASS"
+
+    # A second audit over the settled tree plans no mutation at all.
+    again = rd.audit_repository(root, changed_since=base)
+    settled = again["capabilities"]["module_readmes"]["planned"]
+    assert settled["create"] == 0
+    assert settled["refresh"] == 0
+    assert settled["retire"] == 0
+    assert settled["conflict"] == 0
 
 
 def test_module_change_resolves_exact_generator_target_and_lifecycle(tmp_path: Path):

@@ -55,7 +55,7 @@ from doc_policy import (
     validate_policy,
 )
 from doc_surface_analysis import assess_surface_obligations
-from generate_module_readmes import write_missing_module_readmes
+from generate_module_readmes import apply_module_readme_plan, plan_module_readmes
 
 RECEIPT_ID = "l9.repo-docs.receipt.v3"
 PACK = Path(__file__).resolve().parents[1]
@@ -403,6 +403,10 @@ def audit_repository(
     module_changes = impact.get("matched_rules", {}).get("module_implementation_change", [])
     module_cap = probe_module_readme_capability(root, policy, module_changes)
     run_mutations: list[str] = []
+    # Diagnostic evidence attached to the existing module_readmes capability.
+    # Not a second obligation ledger: DocumentationObligation remains the
+    # only durable work unit.
+    module_readme_plan: dict[str, int] | None = None
     try:
         filetree, inventory, run_mutations = build_filetree_state(root, write=write_filetree)
     except ValueError as exc:
@@ -428,13 +432,29 @@ def audit_repository(
         and filetree["status"] not in {"FAIL", "BLOCKED"}
     ):
         try:
-            run_mutations.extend(
-                write_missing_module_readmes(
-                    root, write=True, changed=module_changes, inventory=inventory
+            readme_plan = plan_module_readmes(root, inventory=inventory)
+            module_readme_plan = readme_plan.counts()
+            if readme_plan.errors:
+                # Validation is fail-closed: nothing is written. A compiled
+                # README that is wrong about the repository is a defect in
+                # this skill (FAIL, not BLOCKED), and applying first would
+                # leave a failed run with a mutated worktree — invalid
+                # documentation written and stale artifacts already deleted.
+                structural.append(
+                    _structural_failure(
+                        "module_readmes",
+                        "FAIL",
+                        "; ".join(
+                            f"{finding.rule_id}: {finding.message}"
+                            for finding in readme_plan.errors[:10]
+                        ),
+                    )
                 )
-            )
+            else:
+                run_mutations.extend(apply_module_readme_plan(root, readme_plan))
             refreshed, _, later_mutations = build_filetree_state(root, write=write_filetree)
         except OSError as exc:
+            # The filesystem refused the owned write: environment, so BLOCKED.
             detail = f"module README owned write failed: {exc}"
             structural.append(_structural_failure("module_readmes", "BLOCKED", detail))
         else:
@@ -539,7 +559,13 @@ def audit_repository(
         "obligations": obligations,
         "summary": summary,
         "semantic_harvest": semantic_state,
-        "capabilities": {"module_readmes": module_cap},
+        "capabilities": {
+            "module_readmes": (
+                module_cap
+                if module_readme_plan is None
+                else {**module_cap, "planned": module_readme_plan}
+            )
+        },
         LLM_SURFACE_ID: llm,
         FILETREE_SURFACE_ID: filetree,
         "validators_executed": validators,
@@ -573,7 +599,10 @@ def main() -> int:
     parser.add_argument(
         "--no-write-module-readmes",
         action="store_true",
-        help="Compile module README obligations without creating missing files.",
+        help=(
+            "Compile module README obligations without creating missing files. "
+            "Default writes every inventory gap, not only the change set."
+        ),
     )
     parser.add_argument(
         "--no-write-filetree",
