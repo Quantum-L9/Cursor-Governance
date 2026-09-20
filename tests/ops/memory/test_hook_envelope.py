@@ -73,8 +73,10 @@ def test_registry_declares_every_surface_the_pipeline_map_names() -> None:
     assert surfaces == {
         "cursor-session-start",
         "claude-session-start",
+        "manus-session-start",
         "cursor-session-end",
         "claude-session-end",
+        "manus-session-end",
         "plan-prefetch",
         "pr-publish",
         "pe-sgd-ingest",
@@ -87,7 +89,12 @@ def test_registry_declares_every_surface_the_pipeline_map_names() -> None:
 def test_read_only_surfaces_carry_no_write_capability() -> None:
     document = json.loads(hook_envelope.ENVELOPES_PATH.read_text(encoding="utf-8"))
     writes = set(document["write_operations"])
-    for name in ("cursor-session-start", "claude-session-start", "plan-prefetch"):
+    for name in (
+        "cursor-session-start",
+        "claude-session-start",
+        "manus-session-start",
+        "plan-prefetch",
+    ):
         envelope = envelope_for(name)
         assert not (envelope.allowed_operations & writes)
         assert envelope.max_records == 0 and envelope.max_bytes == 0
@@ -557,6 +564,7 @@ HOOK_LANE_CALLERS: dict[str, str] = {
     "ops/graphiti/hydration/close_session.py": "cursor-session-end",
     "environment/agents/adapters/claude-code/hooks/memory_writeback.py": "claude-session-end",
     "environment/agents/adapters/claude-code/memory/memory_bridge.py": "claude-session-start",
+    "environment/agents/adapters/manus/memory_lifecycle.py": "manus-session-start",
     "ops/hooks/plan_memory_prefetch.py": "plan-prefetch",
     "ops/hooks/pr_publish_memory_write.py": "pr-publish",
     "environment/agents/generated-data/adapters/ingest_memory_candidate.py": "pe-sgd-ingest",
