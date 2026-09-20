@@ -40,6 +40,37 @@ from typing import Any
 _SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$")
 _FILE_RE = re.compile(r"[\w./-]+\.(?:py|md|ya?ml|json|sh|ts|tsx|js|jsx)")
 
+#: An explicit "this is not finished" marker at the head of an agent write.
+#: ADR-0034 folds *decisions, unfinished work and file paths* into the capsule
+#: — three signals, not two. There is no `unfinished` memory class, so without
+#: a marker the enrichment had nothing to test and treated every non-decision
+#: record as pending work; a completed lesson then came back to the next
+#: session as an outstanding task.
+_UNFINISHED_RE = re.compile(
+    r"^\s*(?:TODO|NEXT|BLOCKED|BLOCKER|UNFINISHED|WIP|IN[ _-]?PROGRESS|FOLLOW[ _-]?UP)\b[:\-—]?",
+    re.IGNORECASE,
+)
+
+#: Tags that say the same thing on the record rather than in its text.
+_UNFINISHED_TAGS = frozenset(
+    {"unfinished", "todo", "next", "blocked", "blocker", "wip", "in-progress", "follow-up"}
+)
+
+
+def _is_unfinished_record(record: Any) -> bool:
+    """Whether an agent-lane record explicitly represents outstanding work.
+
+    Deliberately narrow. Admitting only explicitly-marked records keeps
+    completed insights and lessons as evidence; the cost of a miss is a fact
+    that stays out of ``unfinished_work``, while the cost of a false positive
+    is the next session being told finished work is still pending.
+    """
+    tags = {str(tag).strip().lower() for tag in (getattr(record, "tags", ()) or ())}
+    if tags & _UNFINISHED_TAGS:
+        return True
+    return bool(_UNFINISHED_RE.match(record.content or ""))
+
+
 _GRAPHITI_DIR = Path(__file__).resolve().parent.parent
 _REPO_ROOT = _GRAPHITI_DIR.parent.parent
 if str(_GRAPHITI_DIR) not in sys.path:
@@ -50,6 +81,11 @@ if str(_REPO_ROOT) not in sys.path:
 from ops.graphiti.hydration import session_latches as _latches  # noqa: E402
 from ops.graphiti.hydration.identity import IdentityError, resolve_write_identity  # noqa: E402
 from ops.graphiti.hydration.transcript import load_transcript_excerpt  # noqa: E402
+from ops.memory.agent_lane import (  # noqa: E402
+    AGENT_LANE_LIMIT,
+    AGENT_LANE_WINDOW,
+    is_agent_lane_record,
+)
 from ops.memory.control_plane_client import (  # noqa: E402
     MemoryControlPlaneClient,
     OperationOutcome,
@@ -60,7 +96,7 @@ from ops.memory.namespace_context import (  # noqa: E402
     resolve_namespace_context,
 )
 from ops.memory.runtime_binding import resolve_runtime_binding  # noqa: E402
-from ops.memory.session_contracts import ContinuationCapsuleV2  # noqa: E402
+from ops.memory.session_contracts import ContinuationCapsuleV2, session_task_objective  # noqa: E402
 from ops.memory.session_state import read_session_state  # noqa: E402
 
 PHASE_A_BUDGET = 8.0
@@ -143,7 +179,7 @@ def _heuristic_pickup(
     git = _git_signal(project_dir)
     last_lines = [ln for ln in transcript.splitlines() if ln.strip()][-8:]
     slice_text = "\n".join(last_lines)[:1500]
-    objective = f"Continue work in {project_dir.name}"
+    objective = session_task_objective(project_dir.name)
     next_action = "Resume from the canonical continuation and the user request"
     for ln in reversed(last_lines):
         low = ln.lower()
@@ -162,7 +198,72 @@ def _heuristic_pickup(
         "context_slice": f"{git}\nreason={reason}\nsession={session_id}\n{slice_text}"[:3500],
         "blockers": [],
         "active_files": files,
+        "decisions": [],
+        "unfinished_work": [],
     }
+
+
+def _enrich_pickup_from_agent_writes(
+    pickup: dict[str, Any],
+    client: MemoryControlPlaneClient,
+    *,
+    workspace: str,
+    namespace: str,
+    warnings: list[str],
+) -> dict[str, Any]:
+    """Fold last-24h repo-scoped agent writes into the close capsule (ADR-0034).
+
+    Fail-open: a missing ``--recorded-after`` flag, a refused search, or an
+    empty window leaves the heuristic pickup unchanged. Never writes.
+    """
+
+    recorded_after = (datetime.now(UTC) - AGENT_LANE_WINDOW).replace(microsecond=0)
+    outcome = client.search(
+        str(pickup.get("active_objective") or session_task_objective("project")),
+        workspace=workspace,
+        write_namespace_hint=namespace,
+        read_namespace_hints=(namespace,),
+        tags=(),
+        limit=AGENT_LANE_LIMIT,
+        recorded_after=recorded_after,
+    )
+    if outcome.status not in {OutcomeStatus.OK, OutcomeStatus.NO_HITS}:
+        warnings.append(
+            f"24h agent-lane search {outcome.status.value}: {outcome.error or 'no detail'}"
+        )
+        return pickup
+    if outcome.receipt is None:
+        return pickup
+    decisions = list(pickup.get("decisions") or [])
+    unfinished = list(pickup.get("unfinished_work") or [])
+    files = list(pickup.get("active_files") or [])
+    for hit in outcome.receipt.hits:
+        record = hit.record
+        if not is_agent_lane_record(record):
+            continue
+        head = ""
+        if record.content.strip():
+            head = record.content.strip().splitlines()[0][:200]
+        kind = (record.memory_class or "").lower()
+        if head:
+            if kind == "decision":
+                if head not in decisions:
+                    decisions.append(head)
+            elif _is_unfinished_record(record):
+                # Only an explicitly-marked record is pending work. Everything
+                # else stays evidence: a completed insight or lesson is not a
+                # task, and reporting it as one made the next continuation
+                # instruct the agent to redo finished work.
+                if head not in unfinished and head not in decisions:
+                    unfinished.append(head)
+        for match in _FILE_RE.findall(record.content or ""):
+            if match not in files:
+                files.append(match)
+    enriched = dict(pickup)
+    enriched["decisions"] = decisions[:8]
+    enriched["unfinished_work"] = unfinished[:8]
+    enriched["active_files"] = files[:12]
+    return enriched
 
 
 def build_capsule(
@@ -446,12 +547,21 @@ def close_session(
     pickup = _heuristic_pickup(
         project_dir=project, session_id=session_id, transcript=transcript, reason=reason
     )
+    pickup = _enrich_pickup_from_agent_writes(
+        pickup,
+        client,
+        workspace=workspace,
+        namespace=namespace,
+        warnings=report["warnings"],
+    )
     task_signature = session_task_signature(session_id)
     capsule = build_capsule(
         session_id=session_id,
         repository_identity=repository_identity,
         head=head,
         pickup=pickup,
+        decisions=list(pickup.get("decisions") or []),
+        unfinished_work=list(pickup.get("unfinished_work") or []),
         task_signature=task_signature,
     )
     candidate = capsule.to_governed_candidate(
