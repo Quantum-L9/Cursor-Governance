@@ -293,29 +293,25 @@ def walk_inventory(root: Path, extra_skip: list[str] | None = None) -> FiletreeI
                     files=files,
                 )
             )
-    qualifying = {row.path for row in found}
-    for rel, current in seen.items():
-        if rel in qualifying:
-            continue
-        if not is_corpus_dir(root, rel, current):
-            continue
-        files = corpus_files(current)
-        found.append(
-            ModuleRow(
-                path=rel,
-                kind="corpus",
-                sources=len(files),
-                readme="present" if (current / "README.md").is_file() else "missing",
-                files=files,
-            )
-        )
-        qualifying.add(rel)
+    code_paths = {row.path for row in found}
+    # Corpus candidacy is decided but not committed: a directory that also
+    # parents two or more qualifying children is an index, because its
+    # children are the structure a reader came for. `skills/` holds a
+    # manifest or two and 59 skill packs; listing the manifests and hiding
+    # the packs answers the wrong question.
+    corpus_candidates = {
+        rel
+        for rel, current in seen.items()
+        if rel not in code_paths and is_corpus_dir(root, rel, current)
+    }
+    qualifying = code_paths | corpus_candidates
+    indexes: set[str] = set()
     # Deepest first. Parent qualification depends only on already-qualified
     # direct children, so one bottom-up pass reaches the fixed point: a
     # parent-first pass left every index whose children qualified later
     # permanently unqualified.
     for rel in sorted(seen, key=lambda item: (len(Path(item).parts), item), reverse=True):
-        if rel in qualifying:
+        if rel in code_paths or rel in indexes:
             continue
         if under_skill_pack(root, rel) and Path(rel).name != "scripts":
             continue
@@ -326,16 +322,29 @@ def walk_inventory(root: Path, extra_skip: list[str] | None = None) -> FiletreeI
         ]
         if len(immediate) < 2:
             continue
+        indexes.add(rel)
+        qualifying.add(rel)
         found.append(
             ModuleRow(
                 path=rel,
                 kind="index",
                 sources=len(immediate),
                 readme="present" if (seen[rel] / "README.md").is_file() else "missing",
-                files=[],
+                files=corpus_files(seen[rel]),
             )
         )
-        qualifying.add(rel)
+    for rel in sorted(corpus_candidates - indexes):
+        current = seen[rel]
+        files = corpus_files(current)
+        found.append(
+            ModuleRow(
+                path=rel,
+                kind="corpus",
+                sources=len(files),
+                readme="present" if (current / "README.md").is_file() else "missing",
+                files=files,
+            )
+        )
     inventory.modules = sorted(found, key=lambda row: row.path)
     return inventory
 

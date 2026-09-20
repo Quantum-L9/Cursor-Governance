@@ -252,12 +252,17 @@ def _type_label(name: str) -> str | None:
 def render_index_readme(model: ReadmeModel) -> str:
     """A structural parent. No invented purpose; the children are the point."""
     children = "\n".join(f"- [`{name}/`]({name}/)" for name in model.children)
+    files = "\n".join(
+        f"- `{name}`" + (f" — {label}" if (label := _type_label(name)) else "")
+        for name in model.contents
+    )
     return _join(
         [
             _header(model),
             _section("Purpose", model.purpose),
             _section("Description", model.description),
             _section("Contents", children),
+            _section("Files", files),
             marker_for(model.target.kind),
         ]
     )

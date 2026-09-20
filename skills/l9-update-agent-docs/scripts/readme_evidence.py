@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 import yaml
-from doc_filetree import corpus_files
+from doc_filetree import corpus_files, is_excluded_path, skip_prefixes
 from readme_model import (
     DependencyDoc,
     EvidenceRef,
@@ -59,7 +59,14 @@ _FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 _HEADING_RE = re.compile(r"^(#{2,3})\s+(.+?)\s*$", re.MULTILINE)
 _BULLET_RE = re.compile(r"^[-*]\s+(.+?)\s*$", re.MULTILINE)
 _SKILL_PURPOSE_HEADINGS = ("purpose",)
-_SKILL_RESPONSIBILITY_HEADINGS = ("ownership boundaries", "canonical contract")
+#: Only a section that actually states boundaries. `## Canonical contract`
+#: holds machine-authority file pointers, which render as a list of paths
+#: under a heading promising responsibilities.
+_SKILL_RESPONSIBILITY_HEADINGS = ("ownership boundaries",)
+#: A skill `description` is two things joined: what the skill does, then
+#: the routing clause that tells a router when to pick it. Only the first
+#: half is a purpose a reader wants.
+_ROUTING_CLAUSE_RE = re.compile(r"\.\s+use when\b|\buse when\b", re.IGNORECASE)
 
 
 class SkillContract:
@@ -82,10 +89,22 @@ class SkillContract:
 
 
 def _first_sentence(text: str, limit: int = 320) -> str:
+    """Collapse whitespace and, if it must cut, cut on a word boundary."""
     cleaned = " ".join(text.split())
     if len(cleaned) <= limit:
         return cleaned
-    return cleaned[: limit - 1].rstrip() + "…"
+    head = cleaned[:limit]
+    boundary = head.rfind(" ")
+    return (head[:boundary] if boundary > 0 else head).rstrip(" ,;:-") + "…"
+
+
+def _strip_routing_clause(description: str) -> str:
+    """Keep what the skill does; drop the router's when-to-pick-it clause."""
+    match = _ROUTING_CLAUSE_RE.search(description)
+    if match is None:
+        return description.strip()
+    head = description[: match.start()].strip().rstrip(".").strip()
+    return head or description.strip()
 
 
 def _section_body(text: str, wanted: tuple[str, ...]) -> str | None:
@@ -119,7 +138,7 @@ def read_skill_contract(skill_md: Path) -> SkillContract:
         if isinstance(meta, dict):
             raw = meta.get("description")
             if isinstance(raw, str) and raw.strip():
-                description = _first_sentence(raw)
+                description = _first_sentence(_strip_routing_clause(raw)) or None
             metadata = meta.get("metadata")
             if isinstance(metadata, dict) and metadata.get("version"):
                 version = str(metadata["version"])
@@ -132,8 +151,12 @@ def read_skill_contract(skill_md: Path) -> SkillContract:
     responsibilities: tuple[str, ...] = ()
     boundary_body = _section_body(text, _SKILL_RESPONSIBILITY_HEADINGS)
     if boundary_body:
+        # A bullet ending in a colon introduces a nested list the top-level
+        # pattern does not capture, so keeping it leaves a dangling stem.
         bullets = [
-            _first_sentence(match.group(1), 200) for match in _BULLET_RE.finditer(boundary_body)
+            _first_sentence(match.group(1), 200)
+            for match in _BULLET_RE.finditer(boundary_body)
+            if not match.group(1).rstrip().endswith(":")
         ]
         responsibilities = tuple(bullets[:MAX_RESPONSIBILITIES])
     return SkillContract(
@@ -279,12 +302,19 @@ def classify_dependencies(imports: list[str], internal_names: frozenset[str]) ->
     )
 
 
-def _child_directories(module_dir: Path) -> tuple[str, ...]:
+def _child_directories(module_dir: Path, rel: str) -> tuple[str, ...]:
+    """Child directories worth linking to.
+
+    Excluded subtrees are filtered by the one exclusion predicate rather
+    than listed: an index that links `_archived/` and `fixtures/` sends a
+    reader into exactly the residue the compiler refuses to document.
+    """
+    prefixes = skip_prefixes()
     try:
         children = [
             child.name
             for child in module_dir.iterdir()
-            if child.is_dir() and not child.name.startswith(".")
+            if child.is_dir() and not is_excluded_path(f"{rel}/{child.name}", prefixes)
         ]
     except OSError:
         return ()
@@ -377,14 +407,19 @@ def compile_readme_model(
             EvidenceRef(source=target.path, kind="source_tree", detail=f"{len(names)} file(s)")
         )
     elif target.kind == "index" and module_dir.is_dir():
-        children = _child_directories(module_dir)
+        children = _child_directories(module_dir, target.path)
+        # An index may also hold direct files. They are listed rather than
+        # dropped: being a parent does not make a manifest beside it invisible.
+        names = corpus_files(module_dir)
+        contents = tuple(names[:MAX_CONTENTS])
+        file_types = _file_type_counts(names)
         evidence.append(
             EvidenceRef(
                 source=target.path, kind="source_tree", detail=f"{len(children)} child(ren)"
             )
         )
     elif target.kind == "skill" and module_dir.is_dir():
-        children = _child_directories(module_dir)
+        children = _child_directories(module_dir, target.path)
 
     purpose, purpose_evidence = _resolve_purpose(target, modules, contract)
     if purpose_evidence is not None:

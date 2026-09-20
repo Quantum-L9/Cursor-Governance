@@ -190,6 +190,37 @@ def test_multi_module_directory_is_a_subsystem(tmp_path: Path):
     assert kinds(tmp_path)["many"] == "subsystem"
 
 
+# --- a directory that is both indexes ---
+
+
+def test_index_wins_over_corpus_when_a_directory_is_both(tmp_path: Path):
+    """A parent's children are what a reader came for, not its manifests."""
+    write(tmp_path / "skills" / "MANIFEST.yaml", "a: 1\n")
+    write(tmp_path / "skills" / "REGISTRY.json", "{}\n")
+    for name in ("alpha", "beta"):
+        write(tmp_path / "skills" / name / "SKILL.md", f"# {name}\n")
+    assert kinds(tmp_path)["skills"] == "index"
+
+
+def test_an_index_still_lists_its_direct_files(tmp_path: Path):
+    write(tmp_path / "skills" / "MANIFEST.yaml", "a: 1\n")
+    write(tmp_path / "skills" / "REGISTRY.json", "{}\n")
+    for name in ("alpha", "beta"):
+        write(tmp_path / "skills" / name / "SKILL.md", f"# {name}\n")
+    gm.write_missing_module_readmes(tmp_path)
+    text = (tmp_path / "skills" / "README.md").read_text(encoding="utf-8")
+    assert "**Kind:** index" in text
+    assert "[`alpha/`](alpha/)" in text
+    assert "`MANIFEST.yaml`" in text
+    assert "`REGISTRY.json`" in text
+
+
+def test_a_corpus_without_qualifying_children_stays_a_corpus(tmp_path: Path):
+    write(tmp_path / "protocols" / "a.md", "# A\n")
+    write(tmp_path / "protocols" / "b.md", "# B\n")
+    assert kinds(tmp_path)["protocols"] == "corpus"
+
+
 # --- empty directories earn nothing ---
 
 
