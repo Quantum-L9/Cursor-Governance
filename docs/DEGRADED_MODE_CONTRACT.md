@@ -53,6 +53,7 @@ work today.
 | `context7.mcp` | No library docs retrieval via the retired broker |
 | `gitguardian.mcp` | No brokered secret scanning; `gitleaks` still runs locally |
 | `github.mcp`, `github.packages_read` | Platform GitHub MCP (where connected) covers most of this |
+| Infisical / AWS Secrets Manager bind | The AWS CLI is absent here, so the one login seed cannot be read and the Infisical-bound names in the plane's inventory (`SEMGREP_APP_TOKEN`, `SONAR_TOKEN`) stay unbound. The third inventoried name, `GITHUB_TOKEN`, is unaffected — it binds from the proxied environment, not from Infisical. The SessionStart plane reports `state: unavailable_by_surface` and is **not** counted DEGRADED — an environment property, not a bootstrap fault. Do not install a CLI or paste a credential to clear it |
 
 ## Observed GitHub transports
 
@@ -324,3 +325,46 @@ stdio-control-plane`; the `Graphiti_reachability` dimension and the
 model-controlled surface with the memory package unbound is `memory-blind` for
 the honest reason "no runtime bound", never "no bearer", and is still never a
 reason to paste a credential.
+
+
+## Secrets plane, 2026-09-19 — Claude Code cloud container, `Quantum-L9/Cursor-Governance` @ `5f9f713`
+
+A dated row, not a rewrite of any row above.
+
+| Probe | Observed |
+|---|---|
+| `CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE` | `cloud_default` |
+| `CLAUDE_CODE_REMOTE_ENVIRONMENT_ID` | no `ccpool_` prefix |
+| `command -v aws` | absent |
+| `aws_cli_preflight.probe()` | `AWS_CLI_NOT_FOUND` |
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | hold the 14-character `proxy-injected` sentinel — no credential material |
+| `session_start_secrets.py` | `state: unavailable_by_surface`, `surface_class: model_controlled`, exit 0 |
+| `SEMGREP_APP_TOKEN`, `SONAR_TOKEN` | `infisical-machine-absent` (unbound) |
+| `GITHUB_TOKEN` | bound from `env` |
+
+The AWS CLI is absent here **by design**: a model-controlled surface holds no
+Infisical bind, no PAT and no bearer, so there is no login seed for the plane to
+read. Before this row, `bootstrap_agent_environment.sh` counted that absence as
+DEGRADED, and `shared_bootstrap` — and with it `overall` — read DEGRADED on an
+otherwise clean hosted bootstrap. That is a false DEGRADED: the same class of
+lie as a false READY, and just as expensive to chase.
+
+The plane now carries a tri-state, so the probe stays truthful and only the
+scoring is classified:
+
+| State | Meaning | Exit | Counts DEGRADED |
+|---|---|---|---|
+| `ok` | AWS authorized, Infisical profile seeded | 0 | no |
+| `unavailable_by_surface` | model-controlled surface holds no credential plane | 0 | **no** |
+| `failed` | a surface that *should* bind, did not | 1 | yes |
+
+Only `model_controlled` earns the carve-out. A `ccpool_` self-hosted pool and an
+operator machine *can* hold credentials, so AWS absence there is a real fault
+and still degrades. A present-but-broken CLI (`AWS_NOT_AUTHORIZED`, `TIMEOUT`)
+is a fault on **every** surface, hosted included.
+
+The plane stays visible either way: the SessionStart report renders the state as
+`aws-cli: n/a — unavailable by surface`, distinct from both `ok` and `FAILED`,
+and the receipt's `ok` field still reads `false`, because the plane did not bind.
+Nothing here is a reason to install a CLI or paste a credential — see **The rule
+that does not bend** above.
