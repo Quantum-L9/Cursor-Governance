@@ -1,14 +1,48 @@
-"""Deterministic pyproject.toml operational-contract checks."""
+"""Deterministic pyproject.toml operational-contract assessment.
+
+Two halves, kept apart on purpose. `python_project` observes what a
+Python project declares. This module resolves what *this repository*
+expects those declarations to mean, and assesses one against the other.
+
+Repo Docs does not become the semantic owner of Python packaging by
+detecting a defect here. `ops/config/python-contract.json` remains the
+repository's test-suite topology authority; this module reads it and
+never duplicates or extends it.
+"""
 
 from __future__ import annotations
 
 import json
-import re
 import tomllib
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-_PYTHON_FLOOR = re.compile(r">=\s*(\d+)\.(\d+)")
+from .python_project import (
+    PythonProjectState,
+    inspect_python_project,
+    path_is_collection_guarded,
+    pytest_ignored_paths,
+)
+
+__all__ = ["PythonRepoPolicy", "analyze", "assess_python_project", "load_python_repo_policy"]
+
+PYTHON_CONTRACT_REL = "ops/config/python-contract.json"
+#: Where this repository keeps skill self-tests. Repository shape, so it
+#: lives with the policy rather than in the generic inspector.
+SELF_TEST_GLOBS = ("skills/*/scripts/self_test.py",)
+
+
+@dataclass(frozen=True)
+class PythonRepoPolicy:
+    """What this repository's own authorities require of its Python surface."""
+
+    require_uv_lock: bool | None = None
+    self_test_roots: frozenset[str] | None = None
+    non_test_exclusions: frozenset[str] = frozenset()
+    contract_source: str | None = None
+    contract_unreadable: bool = False
+    self_test_globs: tuple[str, ...] = field(default=SELF_TEST_GLOBS)
 
 
 def _finding(
@@ -43,77 +77,224 @@ def _line_for(text: str, needle: str) -> int | None:
     return None
 
 
-def _python_floor(requires_python: str) -> str | None:
-    match = _PYTHON_FLOOR.search(requires_python)
-    return f"{match.group(1)}.{match.group(2)}" if match else None
+def load_python_repo_policy(root: Path) -> PythonRepoPolicy:
+    """Resolve repository-native Python policy. No universal Python laws.
+
+    `require_uv_lock` is left UNKNOWN unless the repository's own
+    automation declares a locked-environment workflow. `[tool.uv]` alone
+    never implies it: many uv projects deliberately do not commit a lock,
+    and encoding one repository's habit as a law is how folklore gets
+    enforced everywhere.
+    """
+    contract_path = root / PYTHON_CONTRACT_REL
+    if not contract_path.is_file():
+        return PythonRepoPolicy(contract_source=None)
+    try:
+        contract = json.loads(contract_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, UnicodeDecodeError):
+        return PythonRepoPolicy(contract_source=PYTHON_CONTRACT_REL, contract_unreadable=True)
+    if not isinstance(contract, dict):
+        return PythonRepoPolicy(contract_source=PYTHON_CONTRACT_REL, contract_unreadable=True)
+
+    roots = contract.get("skill_self_test_roots")
+    exclusions = contract.get("non_test_exclusions") or []
+    excluded_paths = {
+        str(entry.get("path"))
+        for entry in exclusions
+        if isinstance(entry, dict) and entry.get("path")
+    }
+    declared_lock = contract.get("uv_lock_required")
+    return PythonRepoPolicy(
+        require_uv_lock=declared_lock if isinstance(declared_lock, bool) else None,
+        self_test_roots=frozenset(str(item) for item in roots) if isinstance(roots, list) else None,
+        non_test_exclusions=frozenset(excluded_paths),
+        contract_source=PYTHON_CONTRACT_REL,
+    )
+
+
+def _version_findings(state: PythonProjectState, text: str) -> list[dict[str, Any]]:
+    findings: list[dict[str, Any]] = []
+    if state.floor.status == "invalid":
+        findings.append(
+            _finding(
+                "python.interpreter.requires_python_invalid",
+                property_name="project.requires-python",
+                observed=f"{state.requires_python!r} ({state.floor.detail})",
+                expected="a valid PEP 440 version specifier",
+                line=_line_for(text, "requires-python"),
+                remediation_class="HANDOFF",
+                severity="blocking",
+                source="pyproject.toml",
+            )
+        )
+        return findings
+
+    declared = {
+        "ruff": state.ruff_target,
+        "mypy": state.mypy_python_version,
+        "pyright": state.pyright_python_version,
+    }
+    if state.floor.status == "unknown":
+        # Never a silent pass: if a tool pins a version and no floor can be
+        # derived, say the alignment is undecidable rather than aligned.
+        if state.requires_python and any(value is not None for value in declared.values()):
+            findings.append(
+                _finding(
+                    "python.interpreter.floor_unknown",
+                    property_name="project.requires-python",
+                    observed=f"{state.requires_python!r}: {state.floor.detail}",
+                    expected=(
+                        "a specifier whose lowest supported minor version can be derived, "
+                        "so Ruff/mypy/Pyright alignment is decidable"
+                    ),
+                    line=_line_for(text, "requires-python"),
+                    remediation_class="HANDOFF",
+                    severity="material",
+                    source="pyproject.toml",
+                )
+            )
+        return findings
+
+    floor = state.floor.value
+    assert floor is not None
+    expected_by_section = {
+        "ruff": ("target-version", "py" + floor.replace(".", "")),
+        "mypy": ("python_version", floor),
+        "pyright": ("pythonVersion", floor),
+    }
+    for section, observed in declared.items():
+        if observed is None:
+            # An absent optional tool setting is not a defect on its own.
+            continue
+        key, expected = expected_by_section[section]
+        if observed != expected:
+            findings.append(
+                _finding(
+                    "python.interpreter.version_alignment",
+                    property_name=f"tool.{section}.{key}",
+                    observed=observed,
+                    expected=expected,
+                    line=_line_for(text, key),
+                    source="pyproject.toml",
+                )
+            )
+    return findings
+
+
+def _lock_findings(
+    state: PythonProjectState, policy: PythonRepoPolicy, text: str
+) -> list[dict[str, Any]]:
+    required = policy.require_uv_lock
+    if required is None:
+        required = state.lock_workflow_declared and state.uv_declared
+    if not required or state.uv_lock_present:
+        return []
+    return [
+        _finding(
+            "python.uv.lock_presence",
+            property_name="uv_lock_consistency",
+            observed="uv.lock is absent",
+            expected=(
+                "uv.lock exists because this repository's own automation runs a "
+                "locked-environment workflow"
+            ),
+            line=_line_for(text, "[tool.uv]"),
+            source="pyproject.toml",
+        )
+    ]
 
 
 def _self_test_findings(
     root: Path,
-    data: dict[str, Any],
+    state: PythonProjectState,
+    policy: PythonRepoPolicy,
     text: str,
 ) -> list[dict[str, Any]]:
-    self_tests = sorted(root.glob("skills/*/scripts/self_test.py"))
-    contract_rel = "ops/config/python-contract.json"
-    contract_path = root / contract_rel
-    registered_roots: set[str] | None = None
     findings: list[dict[str, Any]] = []
-
-    if contract_path.is_file():
-        try:
-            contract = json.loads(contract_path.read_text(encoding="utf-8"))
-        except (OSError, ValueError, json.JSONDecodeError):
-            findings.append(
-                _finding(
-                    "python.self_test.contract_parse",
-                    property_name="python_contract_parseability",
-                    observed=f"{contract_rel} could not be parsed",
-                    expected="canonical Python contract is valid JSON",
-                    line=None,
-                    remediation_class="HANDOFF",
-                    severity="blocking",
-                    source=contract_rel,
-                )
+    if policy.contract_unreadable:
+        return [
+            _finding(
+                "python.self_test.contract_parse",
+                property_name="python_contract_parseability",
+                observed=f"{PYTHON_CONTRACT_REL} could not be parsed",
+                expected="canonical Python contract is valid JSON",
+                line=None,
+                remediation_class="HANDOFF",
+                severity="blocking",
+                source=PYTHON_CONTRACT_REL,
             )
-        else:
-            registered_roots = set(contract.get("skill_self_test_roots") or [])
+        ]
 
-    pytest_options = data.get("tool", {}).get("pytest", {}).get("ini_options", {})
-    addopts = str(pytest_options.get("addopts") or "")
-    conftest_path = root / "conftest.py"
-    conftest = conftest_path.read_text(encoding="utf-8") if conftest_path.is_file() else ""
+    if not state.pytest_addopts_resolved or not state.collect_guards_resolved:
+        findings.append(
+            _finding(
+                "python.self_test.guard_unknown",
+                property_name="root_pytest_collection_guard",
+                observed="pytest addopts or conftest collection guards are not statically readable",
+                expected=(
+                    "addopts is a string or list of strings and collection guards are "
+                    "literal lists, so exclusion can be verified rather than assumed"
+                ),
+                line=_line_for(text, "addopts"),
+                remediation_class="HANDOFF",
+                severity="material",
+                source="pyproject.toml",
+            )
+        )
 
-    for path in self_tests:
-        rel = path.relative_to(root).as_posix()
+    ignored = pytest_ignored_paths(state.pytest_addopts)
+    discovered: list[str] = []
+    for pattern in policy.self_test_globs:
+        discovered.extend(path.relative_to(root).as_posix() for path in sorted(root.glob(pattern)))
+
+    for rel in sorted(set(discovered)):
         skill_root = "/".join(rel.split("/")[:2])
-        if registered_roots is not None and skill_root not in registered_roots:
+        if policy.self_test_roots is not None and skill_root not in policy.self_test_roots:
             findings.append(
                 _finding(
                     "python.self_test.registry",
                     property_name="self_test_registry_coverage",
                     observed=f"{skill_root} missing from skill_self_test_roots",
                     expected=(
-                        "every live skill self_test.py is registered in "
-                        "ops/config/python-contract.json"
+                        f"every live skill self_test.py is registered in {PYTHON_CONTRACT_REL}"
                     ),
                     line=None,
-                    source=contract_rel,
+                    source=PYTHON_CONTRACT_REL,
                 )
             )
-        if f"--ignore={rel}" not in addopts and rel not in conftest:
+        guarded = path_is_collection_guarded(
+            rel,
+            addopts_ignored=ignored,
+            collect_ignore=state.collect_ignore,
+            collect_ignore_glob=state.collect_ignore_glob,
+        )
+        if not guarded:
             findings.append(
                 _finding(
                     "python.self_test.collection_guard",
                     property_name="root_pytest_collection_guard",
                     observed=f"{rel} is collectable by root pytest",
                     expected=(
-                        "self_test.py is excluded by pyproject addopts or root "
-                        "conftest collect_ignore"
+                        "self_test.py is excluded by pyproject addopts --ignore or a literal "
+                        "root conftest collect_ignore / collect_ignore_glob entry"
                     ),
                     line=_line_for(text, "addopts"),
                     source="pyproject.toml",
                 )
             )
+    return findings
+
+
+def assess_python_project(
+    root: Path,
+    state: PythonProjectState,
+    policy: PythonRepoPolicy,
+    text: str,
+) -> list[dict[str, Any]]:
+    """Judge observed state against repository policy."""
+    findings = _version_findings(state, text)
+    findings.extend(_lock_findings(state, policy, text))
+    findings.extend(_self_test_findings(root, state, policy, text))
     return findings
 
 
@@ -135,49 +316,9 @@ def analyze(root: Path, target: Path) -> dict[str, Any]:
             "blockers": [f"pyproject.toml is invalid TOML: {exc}"],
         }
 
-    findings: list[dict[str, Any]] = []
-    project = data.get("project", {})
-    tool = data.get("tool", {})
-    requires_python = str(project.get("requires-python") or "")
-    floor = _python_floor(requires_python)
-    if floor:
-        expected_ruff = "py" + floor.replace(".", "")
-        version_fields = (
-            ("mypy", "python_version", floor, "python_version"),
-            ("pyright", "pythonVersion", floor, "pythonVersion"),
-            ("ruff", "target-version", expected_ruff, "target-version"),
-        )
-        for section, key, expected, needle in version_fields:
-            value = tool.get(section, {}).get(key)
-            if value is None:
-                continue
-            observed = str(value)
-            if observed != expected:
-                findings.append(
-                    _finding(
-                        "python.interpreter.version_alignment",
-                        property_name=f"tool.{section}.{key}",
-                        observed=observed,
-                        expected=expected,
-                        line=_line_for(text, needle),
-                    )
-                )
-
-    if "uv" in tool and not (root / "uv.lock").is_file():
-        findings.append(
-            _finding(
-                "python.uv.lock_presence",
-                property_name="uv_lock_consistency",
-                observed="[tool.uv] is declared but uv.lock is absent",
-                expected=(
-                    "uv.lock exists when the repository declares uv as its "
-                    "project environment contract"
-                ),
-                line=_line_for(text, "[tool.uv]"),
-            )
-        )
-
-    findings.extend(_self_test_findings(root, data, text))
+    state = inspect_python_project(root, data)
+    policy = load_python_repo_policy(root)
+    findings = assess_python_project(root, state, policy, text)
     return {
         "status": "NEEDS_IMPROVEMENT" if findings else "PASS",
         "findings": findings,
