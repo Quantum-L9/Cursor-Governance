@@ -235,3 +235,55 @@ def test_contradiction_outranks_the_requirement(bound, fake_cli) -> None:
 def test_a_non_receipt_never_binds_anything(bad: Any) -> None:
     verdict = si.verify_request_identity(_request(), bad)
     assert set(si.RESULT_AFFECTING_SELECTORS) <= set(verdict.unbound) | set(verdict.mismatched)
+
+
+# ---------------------------------------------------------------------------
+# recorded_after: a selector present only in the receipt (F613-4, ADR-0035)
+# ---------------------------------------------------------------------------
+
+
+def test_recorded_after_present_only_in_the_receipt_is_drift() -> None:
+    """A selector Cursor never set cannot be "bound" by the receipt echoing it.
+
+    ``recorded_after`` is result-affecting, so a receipt carrying one the
+    request omitted describes a *narrower* search than Cursor asked for.
+    Treating it as agreement let Cursor accept a result set filtered by a
+    selector it did not request.
+    """
+    verdict = si.verify_request_identity(
+        _request(),  # no recorded_after
+        _receipt(recorded_after="2026-09-19T00:00:00+00:00"),
+    )
+    assert "recorded_after" in verdict.mismatched
+    assert "recorded_after" not in verdict.bound
+    assert verdict.contradicted
+    assert any("the request set none" in d for d in verdict.detail)
+
+
+def test_recorded_after_absent_from_the_receipt_stays_unbound() -> None:
+    """The omission case is unchanged: unproven, not contradicted."""
+    verdict = si.verify_request_identity(_request(), _receipt())
+    assert "recorded_after" in verdict.unbound
+    assert "recorded_after" not in verdict.mismatched
+
+
+def test_recorded_after_binds_when_both_sides_agree() -> None:
+    from datetime import UTC, datetime  # noqa: PLC0415
+
+    moment = datetime(2026, 9, 19, tzinfo=UTC)
+    verdict = si.verify_request_identity(
+        _request(recorded_after=moment),
+        _receipt(recorded_after=moment.isoformat()),
+    )
+    assert "recorded_after" in verdict.bound
+    assert "recorded_after" not in verdict.mismatched
+
+
+def test_recorded_after_isoformat_is_second_stable() -> None:
+    from datetime import UTC, datetime, timedelta  # noqa: PLC0415
+
+    raw = datetime.now(UTC) - timedelta(hours=24)
+    stable = raw.replace(microsecond=0)
+    assert "." not in stable.isoformat()
+    request = _request(recorded_after=stable)
+    assert request.canonical()["recorded_after"] == stable.isoformat()
