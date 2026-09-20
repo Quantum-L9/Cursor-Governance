@@ -328,9 +328,7 @@ class ResultBridgeTests(unittest.TestCase):
         )
         self.assertEqual(document["status"], "partial")
         self.assertEqual(document["identity"]["base_sha"], "")
-        unknown_ids = {
-            item["unknown_id"] for item in document["deliverable"]["unresolved_items"]
-        }
+        unknown_ids = {item["unknown_id"] for item in document["deliverable"]["unresolved_items"]}
         self.assertIn("unknown-base-sha-unresolved", unknown_ids)
 
     def test_validate_rejects_non_sha_base_sha_on_promotable_document(self) -> None:
