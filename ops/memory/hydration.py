@@ -520,7 +520,7 @@ def canonical_hydrate(
 
     agent_lane_ids: tuple[str, ...] = ()
     if primary:
-        recorded_after = datetime.now(UTC) - AGENT_LANE_WINDOW
+        recorded_after = (datetime.now(UTC) - AGENT_LANE_WINDOW).replace(microsecond=0)
         recent = client.search(
             task,
             workspace=workspace_path,

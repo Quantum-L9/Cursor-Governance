@@ -217,7 +217,7 @@ def _enrich_pickup_from_agent_writes(
     empty window leaves the heuristic pickup unchanged. Never writes.
     """
 
-    recorded_after = datetime.now(UTC) - AGENT_LANE_WINDOW
+    recorded_after = (datetime.now(UTC) - AGENT_LANE_WINDOW).replace(microsecond=0)
     outcome = client.search(
         str(pickup.get("active_objective") or session_task_objective("project")),
         workspace=workspace,

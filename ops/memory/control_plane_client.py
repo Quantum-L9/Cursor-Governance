@@ -591,7 +591,10 @@ class MemoryControlPlaneClient:
         for tag in tags:
             argv += ["--tag", tag]
         if recorded_after is not None:
-            argv += ["--recorded-after", recorded_after.astimezone(UTC).isoformat()]
+            argv += [
+                "--recorded-after",
+                recorded_after.astimezone(UTC).replace(microsecond=0).isoformat(),
+            ]
         raw = self._invoke(argv, cwd=workspace)
         namespaces = tuple(read_namespace_hints)
         if raw.payload is None:

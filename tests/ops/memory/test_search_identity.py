@@ -277,3 +277,13 @@ def test_recorded_after_binds_when_both_sides_agree() -> None:
     )
     assert "recorded_after" in verdict.bound
     assert "recorded_after" not in verdict.mismatched
+
+
+def test_recorded_after_isoformat_is_second_stable() -> None:
+    from datetime import UTC, datetime, timedelta  # noqa: PLC0415
+
+    raw = datetime.now(UTC) - timedelta(hours=24)
+    stable = raw.replace(microsecond=0)
+    assert "." not in stable.isoformat()
+    request = _request(recorded_after=stable)
+    assert request.canonical()["recorded_after"] == stable.isoformat()
