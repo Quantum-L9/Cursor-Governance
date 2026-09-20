@@ -624,7 +624,7 @@ broken at runtime (not just a lint nit) — traced to two nonexistent packages:
 | `startup/init_workspace.py` symlink logic | `ops/scripts/setup_workspace_symlinks.sh`, `check_governance_wiring.sh`, `wire_governance_workspace.sh` |
 | `templates/.cursorrules` | `.cursor/rules/*.mdc` + `AGENTS.md` |
 | `templates/python-header-template*.py` | `l9-skill-compiler` `meta-standard.md` (lean frontmatter) |
-| `tests/test_imports.py` | `l9-wire-skill-into-repo` validation |
+| `tests/test_imports.py` | `l9-wire-into-repo` validation |
 
 ---
 

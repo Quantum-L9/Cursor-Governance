@@ -24,6 +24,7 @@ from protocol import (
     is_code_review_agent,
     ledger_source,
     merge_findings,
+    normalize_audit_findings,
     normalize_scanner_findings,
     reviewer_class,
     severity_hint,
@@ -405,6 +406,7 @@ def collect(
     fixture_dir: Path | None,
     cwd: Path,
     scanners: dict[str, Path],
+    audit: Path | None = None,
 ) -> dict[str, Any]:
     if fixture_dir is None:
         pr_doc = _gh_json(f"repos/{owner}/{repo}/pulls/{pr}")
@@ -477,6 +479,12 @@ def collect(
             _fail(f"{source} snapshot status=BLOCKED (incomplete pagination)")
         findings.extend(normalize_scanner_findings(source, snapshot))
 
+    if audit is not None:
+        packet = _load_json(audit)
+        if not isinstance(packet, dict):
+            _fail("audit handoff is not an object")
+        findings.extend(normalize_audit_findings(packet, pr))
+
     cra_before_merge = [
         item for item in findings if item.get("reviewer_class") == "code_review_agent"
     ]
@@ -539,6 +547,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--semgrep")
     parser.add_argument("--codeql")
     parser.add_argument("--debt")
+    parser.add_argument("--audit", help="same-head remediation-handoff.json")
     args = parser.parse_args(argv)
 
     if "/" not in args.repo:
@@ -562,6 +571,9 @@ def main(argv: list[str] | None = None) -> int:
     for path in scanners.values():
         if not path.is_file():
             _fail(f"scanner snapshot missing: {path}")
+    audit_path = Path(args.audit) if args.audit else None
+    if audit_path is not None and not audit_path.is_file():
+        _fail(f"audit handoff missing: {audit_path}")
 
     output = _validated_output(args.output)
     snapshot = collect(
@@ -572,6 +584,7 @@ def main(argv: list[str] | None = None) -> int:
         fixture_dir=fixture_dir,
         cwd=Path.cwd(),
         scanners=scanners,
+        audit=audit_path,
     )
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(snapshot, indent=2, sort_keys=True) + "\n", encoding="utf-8")

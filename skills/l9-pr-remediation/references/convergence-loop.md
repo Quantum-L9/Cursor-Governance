@@ -14,7 +14,7 @@ updated: 2026-08-30
 
 ## Purpose
 
-After publishing the **single** planned commit (which has ALREADY passed `make precommit-repo`), continue the next independent PR **and** start MERGE_NOW for any PR already in `merge_now`. **Own the subscribed PRs until they are green and merged. Poll remediating PRs.** The human is not watching. Do not stop with a reinvoke YNP because required checks are still running.
+After publishing the **single** planned commit (which has ALREADY passed `make precommit-repo`), continue the next independent PR **and** start MERGE_NOW for any PR already in `merge_now` once `hold_merge` is false. Independent non-overlapping remediations stay concurrent. **Own the subscribed PRs until they are green and merged. Poll remediating PRs.** The human is not watching. Do not stop with a reinvoke YNP because required checks are still running.
 
 A second cycle is **not** the normal path. It is only for signals that did not exist at census time. See [remediation-plan.md](remediation-plan.md).
 

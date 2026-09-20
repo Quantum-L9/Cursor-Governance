@@ -12,7 +12,7 @@ todos:
     content: Recursive Leverage.md on the skill pack until no material extra-pass gain; single ingress; grounded stubs not empty placeholders
     status: pending
   - id: wire-skill
-    content: l9-wire-skill-into-repo if version/triggers/discovery tables change
+    content: l9-wire-into-repo if version/triggers/discovery tables change
     status: pending
   - id: apply-template
     content: "Apply upgraded skill in l9-repo-template: seed full root library; enrich from ground truth; README index; leave sync-ci community files untouched"
@@ -120,7 +120,7 @@ Present and **out of this library** (do not treat as missing or as a fail): sync
 
 **Filesystem write_allow**
 
-- CG (new branch/worktree from locked tip): `skills/l9-update-agent-docs/**`, skill wiring surfaces from `l9-wire-skill-into-repo` if version/description changes
+- CG (new branch/worktree from locked tip): `skills/l9-update-agent-docs/**`, skill wiring surfaces from `l9-wire-into-repo` if version/description changes
 - Template (separate clone/worktree): checklist files + `README.md`, `TEMPLATE_INVENTORY.md`, `scripts/inventory_check.py`, `scripts/sync_ci_from_pack.py`
 
 **write_deny**
@@ -155,7 +155,7 @@ flowchart LR
 1. **Audit / W0** — new branch from `origin/main`; lock full SHA; inventory missing checklist; map CI/hooks/lint for template.
 2. **Improve** on [`skills/l9-update-agent-docs`](skills/l9-update-agent-docs/) — ensure quartet + Core-10 + consumer CANONICAL_LAW; create-if-absent with grounded stubs; surgical refresh; structure-preserve; managed-block + sync-ci rules.
 3. **Recursive Leverage** — converge; single ingress; move long templates into `references/root-doc-library.md` if SKILL.md bloats.
-4. **Wire** — `l9-wire-skill-into-repo` if version/triggers change.
+4. **Wire** — `l9-wire-into-repo` if version/triggers change.
 5. **Apply** inside `l9-repo-template` — seed/enrich checklist; README index; leave community-health files alone.
 6. **Harden sync-ci fetch** — https + host allowlist before `urlopen`.
 7. **Inventory** — require full checklist in `TEMPLATE_INVENTORY.md` + `inventory_check.py`.

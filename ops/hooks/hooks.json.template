@@ -97,14 +97,14 @@
     "subagentStart": [
       {
         "command": "./hooks/lifecycle-subagent-start.sh subagent_start",
-        "timeout": 15,
+        "timeout": 30,
         "failClosed": true
       }
     ],
     "subagentStop": [
       {
         "command": "./hooks/lifecycle-subagent-stop.sh",
-        "timeout": 15,
+        "timeout": 45,
         "failClosed": true
       }
     ]

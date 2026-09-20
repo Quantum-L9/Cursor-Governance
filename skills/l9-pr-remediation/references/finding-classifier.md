@@ -31,7 +31,7 @@ Board rules that are not negotiable in prose: required-check identity is the uni
 
 | Class | Edit? | Action |
 |-------|-------|--------|
-| **CODEBASE** | yes | Fix in the concurrent batch |
+| **CODEBASE** | yes | Fix in the concurrent batch. Same-head audit `mutation_eligible` units are CODEBASE work unless `write_surfaces` prove otherwise. |
 | **CI_PIPELINE** | no | Note in status; continue other clusters. Declare to the board only if the check is required and unfixable, then [issue-handoff.md](issue-handoff.md) |
 | **ENVIRONMENT** | no | Venv preflight once; export UV_PYTHON; continue other clusters. Still broken → [issue-handoff.md](issue-handoff.md) |
 | **HUMAN** | no | Reply + resolve; name the decision; [issue-handoff.md](issue-handoff.md); `pr_board.py --human-decision`; continue other clusters |

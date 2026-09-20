@@ -1888,3 +1888,28 @@ paragraph. That paragraph stays on disk (additive_only). Do not fold it.
 - **Pin.** Live 24h recall needs the bound `l9-graphite-memory` to accept
   `--recorded-after` (ADR-0035). Until that pin is sealed, prefetch
   fail-opens. Do not invent a second store reader to paper over it.
+
+<!-- L9_PR_REMEDIATE_AUDIT_VELOCITY_V1 -->
+## `/l9-pr-remediation` binds audit, then concurrent non-overlapping remediations (2026-09-19)
+
+Append-only. This supersedes only the `skill_subagent_cap: 10` sentence in
+`L9_PR_REMEDIATE_MERGE_NOW_V1` and the digest-as-converge-gate sentences in
+`L9_PR_DIGEST_BEFORE_REMEDIATE_V1` for this skill. Those paragraphs stay on
+disk (additive_only). Do not fold them. Digest unwire is a separate lane.
+
+- Converge binds a same-head `/l9-pr-audit` `remediation-handoff.json` via
+  `skills/l9-pr-remediation/scripts/require_audit.py`, then
+  `ops/autonomy/pr_fleet.py plan --audit-bind`. Same-head `mutation_eligible`
+  units set `hold_merge` and enter `first_wave.remediate` first. Absent or
+  stale is not a hold.
+- Independent non-overlapping remediations launch in one message whether or
+  not an audit packet exists. Safety is `claim_scopes_conflict` plus `waves()`.
+- Mutation cap is the execution profile: `max_mutation_lanes=128`,
+  `max_parallel=480`, `native_subagent_limit=480`. This skill has no
+  raise-bypass. `L9_AUTONOMY_MAX_MUTATION_LANES` below 128 is a defect.
+  A denied Task admission is a host gate defect (`rules/07-max-velocity-research.mdc`).
+- Host `subagentStart` (`ops/hooks/lifecycle-subagent-start.sh`) runs
+  `graphiti-prefetch.sh` after the parent spawn gate so the child's write
+  gate sees a prefetch receipt. Host `subagentStop` runs
+  `graphiti-session-end.sh` (canonical `memory.close`). Spawn still requires
+  parent hydration.

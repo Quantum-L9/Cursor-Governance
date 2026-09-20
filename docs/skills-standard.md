@@ -132,8 +132,9 @@ Ask what actually triggers the skill. Every one of the ten gated skills answered
   `docs/adr/**`, the directory it exists to create
 - `l9-update-agent-docs` — "use when **the user says** update agent docs", a
   phrase trigger, gated on files
-- `l9-wire-skill-into-repo` — "use **immediately after** l9-skill-compiler", a
-  chain trigger, gated on files
+- `l9-wire-into-repo` (successor of retired `l9-wire-skill-into-repo`) — "use
+  when wiring or unwiring an existing artifact"; its predecessor was a chain
+  trigger wrongly gated on `skills/**`
 
 If a skill is genuinely file-triggered rather than request-triggered, gate it
 with `paths:` **and** mark it `disable-model-invocation: true`, so the manifest

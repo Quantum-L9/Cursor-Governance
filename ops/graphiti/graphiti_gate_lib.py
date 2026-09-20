@@ -11,9 +11,11 @@ prefetch freshness is an input to *policy*, not to whether git may execute. See
 ``ops/autonomy/git_execution_exemption``.
 
 The gate checks hydration only. A memory phase-lock is never a repository
-mutex (rules/96-multi-agent-main-bound-execution.mdc, E7). A subagent inherits
-its parent's evidence read-only and never writes state of its own (authority
-narrowing, stage C8).
+mutex (rules/96-multi-agent-main-bound-execution.mdc, E7). Spawn
+(``subagent_gate``) requires the parent session's hydration. Child writes
+are authorized by the child's own prefetch receipt
+(``ops/hooks/graphiti-prefetch.sh`` on host ``subagentStart``). Close is
+``ops/hooks/graphiti-session-end.sh`` on host ``subagentStop``.
 """
 
 from __future__ import annotations
@@ -139,11 +141,11 @@ def shell_gate(payload: str) -> dict:
 
 
 def subagent_gate(payload: str) -> dict:
-    """A subagent inherits the PARENT session's evidence, read-only.
+    """Spawn requires the PARENT session's hydration.
 
-    The parent's state is consulted; nothing is written for the subagent, so
-    a subagent can never manufacture its own hydration or widen the parent's
-    authority (stage C8 narrowing).
+    Child writes are a different conversation_id: host ``subagentStart``
+    runs ``graphiti-prefetch.sh`` so the write gate sees a child receipt.
+    This gate does not write child state and does not waive parent freshness.
     """
     if not gates_enabled():
         return {"permission": "allow"}

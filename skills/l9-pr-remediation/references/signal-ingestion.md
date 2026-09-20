@@ -6,8 +6,8 @@ role: signal_ingestion
 tags: [pr, ci, review, ingestion, github-api, gate-discovery]
 owner: igor_beylin
 status: active
-version: 3.0.0
-updated: 2026-09-07
+version: 3.1.0
+updated: 2026-09-19
 /L9_META -->
 
 # Signal Ingestion
@@ -16,7 +16,9 @@ updated: 2026-09-07
 
 Fetch all actionable signals from an open PR: CI gate failures, code review comments, workflow definitions, SonarCloud static-analysis findings, and Semgrep hits when that check is failing. Normalize them into a unified finding list for classification.
 
-**Deterministic retrieve** is `scripts/ingest_signals.py` (reviewer class + path ownership hints + scanner merge). Do not reconstruct `gh api` loops. Confirm / disposition / HUMAN / FALSE_POSITIVE stay judgment.
+**Deterministic retrieve** is `scripts/ingest_signals.py` (reviewer class + path ownership hints + scanner merge + `--audit` when a same-head handoff is bound). Do not reconstruct `gh api` loops. Confirm / disposition / HUMAN / FALSE_POSITIVE stay judgment.
+
+When `scripts/require_audit.py` binds a packet, pass `--audit <handoff.json>`. Only `mutation_eligible` units for this PR become findings (`source: audit`). Absent/stale is not a retrieve failure.
 
 ## SonarCloud finding ingestion
 
