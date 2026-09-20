@@ -1,0 +1,35 @@
+{
+  "_l9_meta": {
+    "l9_schema": 1,
+    "repo": "Quantum-L9/Cursor-Governance",
+    "path": "environment/agents/adapters/manus/memory-mcp-connector.json",
+    "layer": "adapter",
+    "owner": "memory-control-plane",
+    "status": "active",
+    "version": "1.0.0",
+    "updated": "2026-09-19",
+    "note": "No-secret carrier for the separate package-owned signed Manus memory MCP stdio lane. Render a local absolute command draft with render_memory_mcp_connector.py; never add an HTTP URL, provider credential, human door, or raw assertion here."
+  },
+  "name": "l9-memory-manus",
+  "transport": "stdio",
+  "command": "rendered-locally",
+  "authentication": {
+    "mode": "inherited-signed-agent-assertion",
+    "agent_id": "manus",
+    "human_door": "forbidden",
+    "local_operator_fallback": "forbidden"
+  },
+  "package": {
+    "distribution": "l9-graphite-memory",
+    "entrypoint": "l9-memory-server --transport stdio",
+    "tool_authority": "package-owned-mcp-tools"
+  },
+  "scope": {
+    "ordinary_agent_reads": true,
+    "cold_safe_agent_writes": true,
+    "governed_writes_and_phase_locks": true,
+    "lifecycle_start_close": false,
+    "provider_transport": false,
+    "generic_shell": false
+  }
+}
