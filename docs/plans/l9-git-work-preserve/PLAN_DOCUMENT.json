@@ -8,7 +8,7 @@
     "commands/git-work-preserve.md registered in COMMANDS_MANIFEST.yaml commands-index.md and rules/02-slash-commands.mdc",
     "inventory_git_work.py emits JSON covering unpushed dirty worktrees orphans stashes on fixture repo",
     "skill refs bind WIP/backlog/kernels/diagnose-first/Diagnose First Kernel.md and forbid stash drop or branch delete without auth env plus receipt",
-    "l9-wire-skill-into-repo registers l9-git-work-preserve with SSOT symlink",
+    "l9-wire-into-repo registers l9-git-work-preserve with SSOT symlink",
     "python3 skills/l9-plan/scripts/sync_cursor_plan_template.py skills/l9-plan --check exits 0 with .cursor/plans home symlink",
     "make pr-check PASS on changed files",
     "Build runs only in dedicated worktree not dirty primary clone"
@@ -20,7 +20,7 @@
       "commands/git-work-preserve.md and COMMANDS_MANIFEST.yaml and commands-index.md",
       "rules/02-slash-commands.mdc and rules/88-shared-worktree-isolation.mdc cross-link",
       "CANONICAL_LAW.md append-only section 11 Diagnose First path",
-      "skill registries via l9-wire-skill-into-repo"
+      "skill registries via l9-wire-into-repo"
     ],
     "out": [
       "worktree_isolation_gate semantics changes",
@@ -122,7 +122,7 @@
     },
     {
       "id": "todo-06-wire",
-      "task": "Run l9-wire-skill-into-repo for l9-git-work-preserve SSOT-only symlink",
+      "task": "Run l9-wire-into-repo for l9-git-work-preserve SSOT-only symlink",
       "files": ["ops/generated/skill-registry.json", ".claude/skills/"],
       "effort": "S",
       "risk": "medium",

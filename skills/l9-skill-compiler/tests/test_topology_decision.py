@@ -22,7 +22,7 @@ def live():
 
 
 def test_fixture_repo_enumerates():
-    assert set(live()) >= {"l9-skill-compiler", "l9-dag-authoring", "l9-wire-skill-into-repo"}
+    assert set(live()) >= {"l9-skill-compiler", "l9-dag-authoring", "l9-wire-into-repo"}
 
 
 def test_nested_metadata_role_is_visible():

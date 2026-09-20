@@ -15,7 +15,7 @@ todos:
     content: Append-only AGENTS.md root-doc authority map; do not fold; no ALLOW-ROOT-DELETION
     status: pending
   - id: t4-companions
-    content: If skill description/triggers change, wire registry/llm-rules via l9-wire-skill-into-repo only
+    content: If skill description/triggers change, wire registry/llm-rules via l9-wire-into-repo only
     status: pending
   - id: t5-prove
     content: Prove no-wrap + pointer invariants; make pr-check PASS in the worktree
@@ -136,7 +136,7 @@ Harvest these RA domains only:
 - `t1-audit`: read-only inventory; no writes
 - `t2-skill`: changes when agents next refresh root docs (stops CLAUDE.md doctrine dump)
 - `t3-agents-append`: AGENTS.md grows; additive-only gate must stay green without `ALLOW-ROOT-DELETION`
-- `t4-registry`: generated companions only if skill frontmatter/description changes (`l9-wire-skill-into-repo`)
+- `t4-registry`: generated companions only if skill frontmatter/description changes (`l9-wire-into-repo`)
 - `t5-pr-check`: quality receipt only
 
 Idempotent: re-running the append is a no-op if the authority-map marker already exists; skill rewrite is content-identical on a second pass.
@@ -157,7 +157,7 @@ Revert the feature-branch commits in the worktree. AGENTS.md append reverses wit
 2. **t1-audit** — read the kernel (do not copy); bind live root files + current skill write targets; record violations (invented ARCHITECTURE/INVARIANTS; CLAUDE.md Always/Never rewrite; CI-table dump vs AGENTS.md §§4–6)
 3. **t2-skill** — replace `l9-update-agent-docs` write contract with the named RA steps; cite kernel path; forbid Kernel bind / YAML dump; drop invented files; CLAUDE.md stays pointer-shaped
 4. **t3-agents-append** — append root-doc authority map to `AGENTS.md` (additive). Do not fold the 20 operating sections
-5. **t4-companions** — if skill description/triggers change, run `l9-wire-skill-into-repo` for registry / llm-rules only
+5. **t4-companions** — if skill description/triggers change, run `l9-wire-into-repo` for registry / llm-rules only
 6. **t5-prove** — fixture or grep: skill contains no kernel body and no `Kernel bind (compressed)`; CLAUDE.md still starts as authority pointer; `make pr-check` PASS
 7. **t6-plan-json** — emit `docs/plans/root_docs_ra_pointer.plan.json`, `validate_plan_document.py` PASS, PE projection retained
 
@@ -201,7 +201,7 @@ Blast radius: every Claude/Cursor session that loads CLAUDE.md or AGENTS.md; eve
 ## Complexity and uncertainty
 
 - UNK-001: whether a one-page `references/root-docs-write-contract.md` is needed vs keeping all rules in SKILL.md — resolve at t2; prefer SKILL.md-only if it stays short
-- UNK-002: generated `ops/generated/skill-registry.json` + llm-rules sync path after description change — resolve at t4 from `l9-wire-skill-into-repo`
+- UNK-002: generated `ops/generated/skill-registry.json` + llm-rules sync path after description change — resolve at t4 from `l9-wire-into-repo`
 - Not unknown: invented ARCHITECTURE/INVARIANTS targets (confirmed absent); CLAUDE.md pointer already on HEAD; AGENTS.md is `additive_only`
 
 ## Convergence
