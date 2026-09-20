@@ -261,6 +261,13 @@ claude-skill-registry:
 sync-generated:
 	$(PYTHON) ops/scripts/sync_generated_artifacts.py --root "$(CURDIR)" --force --check
 
+## Also heal environment/program-execution/MANIFEST.json (hashes the whole PE tree,
+## so it stays out of sync-generated). This is the enforced manifest that carried
+## no writable target: make pr and CI regenerate it, and now so does this.
+.PHONY: sync-generated-pe
+sync-generated-pe:
+	$(PYTHON) ops/scripts/sync_generated_artifacts.py --root "$(CURDIR)" --force --check --pe-manifest
+
 ## Reconcile L9 skills into Claude native user + project discovery paths.
 ## (Skills-only view of the claude-projection engine.)
 claude-skills: claude-skill-registry

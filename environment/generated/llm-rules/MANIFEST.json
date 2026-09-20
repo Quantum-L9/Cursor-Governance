@@ -123,9 +123,9 @@
       "alias": null,
       "class": "always",
       "output": "22-context7-auto-invoke.md",
-      "output_sha256": "e196273961089769c08ea1855a1b06d12cdcf48752551115624f8376fa51fb94",
+      "output_sha256": "979b9f16772ac3c38edb69e978c856acf595a3598785121003cf71f810dd3e88",
       "source": "rules/22-context7-auto-invoke.mdc",
-      "source_sha256": "f1c56c69c455311e0dde0b49562f6b571f8e7777470d05502071b8d7461b94e5",
+      "source_sha256": "dd9454223e2c28ee99e7555e7dd9b9d74e1f967b78b0817c15e802d7761e92c6",
       "stem": "22-context7-auto-invoke"
     },
     {
@@ -519,9 +519,9 @@
       "alias": null,
       "class": "always",
       "output": "88-l4-local-autonomy.md",
-      "output_sha256": "df95ea6586723e9affc239c04e2d77e80eff1e91537e7044739191db0ef38b49",
+      "output_sha256": "54b33336dd28bed077cdcc791aeffe78c37cefe17639c0bb41fe8e5bcb89ee63",
       "source": "rules/88-l4-local-autonomy.mdc",
-      "source_sha256": "d18076074e4faada3d3f89051d0e6854df9d2112799ec792f7af60d036cde3bb",
+      "source_sha256": "0f0ecc46a36fc23d666a87675ea46a58321f895158eb1fbd29a522146946e8e3",
       "stem": "88-l4-local-autonomy"
     },
     {
@@ -641,5 +641,5 @@
     "skipped_agent_requested": 16,
     "source_mdc": 70
   },
-  "tree_sha256": "d561dac5251efe065af7dccbc7fa38673d476712523472d7bd5444f3371afe78"
+  "tree_sha256": "ec6b168859381bb22445a90d869812df1f6ac2601f9584b7d70a9409c6360e72"
 }

@@ -153,7 +153,8 @@ done
 # without removing any secret. It is never pasted into the account variables
 # field and never exported with a value by this script. mcp.template.json
 # references it as ${VAR}, so a proxied value reaches the MCP client and
-# nothing else; with no value proxied Context7 is simply absent. Memory holds
+# nothing else; with no value proxied the (always rendered) Context7 server
+# fails to authenticate — a failure fixed by populating the secret. Memory holds
 # no transport credential on this surface at all: the only memory server is
 # the canonical l9-graphite-memory stdio entry (memory-control-plane/v1), which
 # resolves its own credentials (memory ADR-016).
