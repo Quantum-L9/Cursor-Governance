@@ -134,6 +134,9 @@ files:
 - path: program-execution-blueprint-template/WORKSTREAMS.yaml
   sha256: 4e2b907e0ee55f2a6a51c0ce5a78b4b34a6b4c51641c9b4cbf111110dcbe7f25
   bytes: 457
+- path: program-execution-blueprint-template/schemas/README.md
+  sha256: a6c2505830b916d5931a00e98620f3b2bbbe9c63e3eac65795a753c44c224467
+  bytes: 997
 - path: program-execution-blueprint-template/schemas/acceptance-receipt.schema.json
   sha256: a08d5719126e88f61b0e64c09645a622594a83f7763c1a93081c08d3395c4af6
   bytes: 875
@@ -203,6 +206,9 @@ files:
 - path: program-execution-blueprint-template/schemas/workstreams.schema.json
   sha256: 39b6a5da2ce940e03a365b45843eeb7acc160edc96c3d4566c6b17953d9d8477
   bytes: 3048
+- path: program-execution-blueprint-template/scripts/README.md
+  sha256: 9e599030b7d41e949ba8cc5bd875878dfa5de8a4a8fe46140d6c80790d500c5b
+  bytes: 818
 - path: program-execution-blueprint-template/scripts/instantiate.py
   sha256: 1820def7bc85ac2478028ef5bae0091ec07f4b9dd159f427b9e4ea3df10c29fa
   bytes: 3111
@@ -239,6 +245,9 @@ files:
 - path: program-execution-controller-template/VALIDATION.md
   sha256: c959e05aac38544b882f174dea085ff5cf827edd84fcc780525716de48512ea8
   bytes: 1498
+- path: program-execution-controller-template/policy/README.md
+  sha256: 48141d9c4591c3fe9adcc2c9794e246193b1003c5d097498fda4f95588ef3bb6
+  bytes: 413
 - path: program-execution-controller-template/policy/authority.yaml
   sha256: db71b0c919817ce37ad1a1b7c9f9a9b57efeeee4a4aec2ad8e0de7a4a5cb2dea
   bytes: 510
@@ -284,6 +293,9 @@ files:
 - path: program-execution-controller-template/references/NEGATIVE_TEST_MATRIX.md
   sha256: 3899583675c42a17e5ed6150be9d663dc100fc1b531feeea3a47414011bdfebe
   bytes: 628
+- path: program-execution-controller-template/references/README.md
+  sha256: e2fd53eb9dfbe82bd509a449cea5fe79245605a148164f42c5ac00fbc5e329d6
+  bytes: 577
 - path: program-execution-controller-template/references/RECOVERY.md
   sha256: ce5edfed9211f436133cd06951f88978de12238f78d44d3398497d303c8323df
   bytes: 522
@@ -302,6 +314,9 @@ files:
 - path: program-execution-controller-template/references/WORKER_ADAPTER.md
   sha256: 587b94c5a8f534abc218bee0b480d27ae95d6cab2c7cc33c0b0eef8539903df8
   bytes: 376
+- path: program-execution-controller-template/schemas/README.md
+  sha256: a02c57bc01cb33f70c2312daa62e35630c0baac493cd9feb2d1ce746fb32cffe
+  bytes: 616
 - path: program-execution-controller-template/schemas/approval.schema.json
   sha256: 38e2c4985a9d9ea38617b69ce760fc499d116e2ff4825792c218321c4b52d1f8
   bytes: 2382
@@ -338,9 +353,15 @@ files:
 - path: program-execution-controller-template/schemas/waiver.schema.json
   sha256: 6ff6e71f1a820ae05bbd795a50ac96e176bf971ccb8f6e9051f4da1623b087c7
   bytes: 1221
+- path: program-execution-controller-template/scripts/README.md
+  sha256: 2a792eceacd5b50912f72ebabd1cb52f485a6b9524b66e0f638f172786108366
+  bytes: 724
 - path: program-execution-controller-template/scripts/instantiate.py
   sha256: b8d702fc025d096668d063b02fafd7b6f393fcf4997b3dffa3fcf3fcbe34db02
   bytes: 2977
+- path: program-execution-controller-template/scripts/pec/README.md
+  sha256: 1b8a47136e3859e02035586a2fe1a70cde9d35bce9af6c6b2ce12a087ba43b4a
+  bytes: 4876
 - path: program-execution-controller-template/scripts/pec/__init__.py
   sha256: 1c97c455db405eead95452458bbd62c3843425adbeb120a7cf5da2848d42a2bb
   bytes: 52
@@ -551,6 +572,9 @@ files:
 - path: program-execution-controller-template/scripts/validate_controller.py
   sha256: 2e865213f2d054f47c49a869e4eb3cbcc1c935ce75519715527f2ea1657b9252
   bytes: 10025
+- path: scripts/README.md
+  sha256: efc286362079f78b97b27b96337a4d66909e70fecaec8a7a6163bd44a8396edd
+  bytes: 1339
 - path: scripts/generate_manifest.py
   sha256: 49979862e7fc48de7ec9d3e708edd9522a953d0875b475409f5868b2bc1f27ad
   bytes: 5274
@@ -584,6 +608,9 @@ files:
 - path: shared/OWNERSHIP_MATRIX.yaml
   sha256: f515db89e11c193e765a1bed55324d4f40d10d53861f3a696cb6bdcd213d06c7
   bytes: 4409
+- path: shared/README.md
+  sha256: af8b0ba34a383a52c599b6b467bbc986dbe27e066a7b1a9cdfad51727a3a047b
+  bytes: 1115
 - path: shared/REPLAN_CONTRACT.yaml
   sha256: 6d081f36eb88055270e93f23dceb06b158003688f386d6e2dd1ae9f61aeb00fb
   bytes: 1306
@@ -593,6 +620,9 @@ files:
 - path: shared/blueprint_identity.py
   sha256: bb4384df72bea24fcafccb7e61d562f263020c3965c8b2e65365b7f1f5404c5b
   bytes: 3916
+- path: shared/schemas/README.md
+  sha256: 7fb09b34247b4fd923188eb4ae233f87b8dd3927d9ea5693142acd3fbaa8a139
+  bytes: 422
 - path: shared/schemas/action-authorization.schema.json
   sha256: f6d7dce38cac015d0549f1c4d499d840c99d9a9b7e350fd81f171a1f9956b31b
   bytes: 981
@@ -635,6 +665,9 @@ files:
 - path: tests/test_replan_lifecycle.py
   sha256: 1dac7417c1cc4c83a7344001f3df43a73e98394d3dec5a8f7e60041fbd130ada
   bytes: 10284
+- path: validation/README.md
+  sha256: d8b63a2b5f2a7b56039ec003163a8ac4021d225171c62ba2ab8ced06f911dbe9
+  bytes: 300
 - path: validation/execution_trace.jsonl
   sha256: 2ae20bccfb4dcc8ecf89e7a7a8e8628b19e78b279f4cd1c24e69f2e8c19ae4d0
   bytes: 558
@@ -654,5 +687,5 @@ integrity:
   algorithm: sha256
   self_excluded: true
 summary:
-  file_count: 216
-  total_bytes: 1111501
+  file_count: 227
+  total_bytes: 1123698

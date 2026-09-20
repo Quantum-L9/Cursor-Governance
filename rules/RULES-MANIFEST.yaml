@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-09-14T21:33:36Z'
+generated_utc: '2026-09-20T03:30:01Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:ff658320ff6e701fc563bf176fc2dd8203d6254c71227ea98b75eb3c2ea90c58
+source_tree_digest: sha256:508d73b4184a1e3eeabc36f4ce770c625148091267999e2073877facc37bac4f
 summary:
   total_mdc_files: 70
   always_apply_true: 36
@@ -81,8 +81,8 @@ rules:
 - file: 03-graphiti-memory.mdc
   id: l9.rule.graphiti.memory
   id_source: explicit
-  version: 1.3.0
-  description: Agent memory SSOT (canonical l9-graphite-memory control plane) — retrieval authority, namespace, governed interactive write, temporal supersedes/conflicts
+  version: 1.5.0
+  description: Agent memory SSOT (canonical l9-graphite-memory control plane) — retrieval authority, namespace, two lanes (agent write_agent direct; hooks bounded), temporal supersedes/conflicts
   scope: global
   domain: memory
   activation: always
@@ -91,8 +91,8 @@ rules:
   globs: null
   first_heading: Graphiti Memory (SSOT)
   has_yaml_frontmatter: true
-  line_count: 90
-  content_digest: sha256:e935797ee23f590e0bc8bc11d96fcb604ab9dbe68b6605996793c9406b82b089
+  line_count: 118
+  content_digest: sha256:d696f599ed7ece7549c0aec85f339c07c0783fdf73b780bbe06f68c0c69cdc8c
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -113,8 +113,8 @@ rules:
   globs: null
   first_heading: Cursor + Redis Session Context (no amnesia)
   has_yaml_frontmatter: true
-  line_count: 70
-  content_digest: sha256:64a0e957121bb68ace388ae9e41928768cfc6998952a8acfc6e9f8a1e4d07c88
+  line_count: 72
+  content_digest: sha256:7f6cee55bbaaaafe719ab5b21cc5399d08ad0510b8a7c2aa3047464e37841e7b
   authority: canonical_global
   context_cost: minimal
   deprecated: false
@@ -169,7 +169,7 @@ rules:
 - file: 07-max-velocity-research.mdc
   id: l9.rule.07.max.velocity.research
   id_source: explicit
-  version: 1.0.0
+  version: 1.1.0
   description: Maximum-velocity is a repo invariant — launch research as concurrent subagents.
   scope: global
   domain: governance
@@ -179,8 +179,8 @@ rules:
   globs: null
   first_heading: Maximum velocity + research fan-out
   has_yaml_frontmatter: true
-  line_count: 39
-  content_digest: sha256:ce3021bf6cf26672946a1363a18ff14da0cf58e686ba5d2f9aba02081e1d13f9
+  line_count: 48
+  content_digest: sha256:6ea31975c138435889c47c67e3d479924dbbf1cdf14b933e2eba1f81a5c18ff1
   authority: canonical_global
   context_cost: minimal
   deprecated: false
@@ -317,8 +317,8 @@ rules:
   globs: null
   first_heading: Context7 Auto-Invoke (External Docs)
   has_yaml_frontmatter: true
-  line_count: 83
-  content_digest: sha256:f1c56c69c455311e0dde0b49562f6b571f8e7777470d05502071b8d7461b94e5
+  line_count: 91
+  content_digest: sha256:dd9454223e2c28ee99e7555e7dd9b9d74e1f967b78b0817c15e802d7761e92c6
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -426,7 +426,7 @@ rules:
   id: l9.rule.42.no.abandoned.work
   id_source: explicit
   version: 1.0.0
-  description: Committed work must be pushed, an identified bug must be fixed, and a pre-existing error is in scope the moment it is identified; enforced by a Stop-hook gate that fails closed on unpushed commits and open findings.
+  description: Committed work must be pushed, an identified bug must be fixed, and a pre-existing error is in scope the moment it is identified; recorded with ops/autonomy/session_debt.py (CLI; not installed as a Claude Stop --class gate).
   scope: global
   domain: git
   activation: always
@@ -436,7 +436,7 @@ rules:
   first_heading: No abandoned work
   has_yaml_frontmatter: true
   line_count: 98
-  content_digest: sha256:e956f6c8ae0f1d23c25adecb78bee084bf6cedb11d9774a70338d979037f448e
+  content_digest: sha256:c847d4fc91995f5f5f5f4dabaf98791e03eb8bfd17bc744e54661bb2aeb37334
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -576,8 +576,8 @@ rules:
   globs: null
   first_heading: make pr → green merge-ready; /l9-pr-remediation → merge
   has_yaml_frontmatter: true
-  line_count: 158
-  content_digest: sha256:c9f6cc6236d9100657358206d302aa3787fd75dab578b6e0c862282d2616481f
+  line_count: 160
+  content_digest: sha256:26726244498707efc8db69774cc86de91dac0f70e9e12f1b99eccdc22ae953ae
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -697,7 +697,7 @@ rules:
 - file: 53-pr-overlap-guardrail.mdc
   id: l9.rule.53.pr.overlap.guardrail
   id_source: explicit
-  version: 1.1.0
+  version: 1.2.0
   description: Before opening any PR, the pre-open overlap gate must pass; a branch conflicting with its own base is blocked outright, and work overlapping an open PR routes into that PR or stacks on its head, never a sibling PR that conflicts.
   scope: global
   domain: git
@@ -707,8 +707,8 @@ rules:
   globs: null
   first_heading: PR overlap guardrail (PR_OVERLAP_GUARDRAIL_V1)
   has_yaml_frontmatter: true
-  line_count: 118
-  content_digest: sha256:04d0e57616e8a0fd7cbf1a66e6deb33afc94ead6c678d1d09848e527a7bdf28f
+  line_count: 133
+  content_digest: sha256:6370d6493baf0857878ed3a6e8ac4ec9e1d5e1e4af04290c58f1d2d71af0e452
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -741,7 +741,7 @@ rules:
 - file: 55-ff-only-ssot-sync.mdc
   id: l9.rule.55.ff.only.ssot.sync
   id_source: explicit
-  version: 1.4.0
+  version: 1.5.0
   description: Sync or fast-forward a Cursor-Governance clone only via /ff and l9-repo-sync (in-place ff). Corpus keep-list like .venv. Never governance_activate_fresh swap. Never delete unique work.
   scope: global
   domain: git
@@ -751,8 +751,8 @@ rules:
   globs: null
   first_heading: Fast-forward only (no SSOT clobber)
   has_yaml_frontmatter: true
-  line_count: 76
-  content_digest: sha256:9c83eecc7427610da8631cc653462cad04a948beb7c23b002a450678ed249f07
+  line_count: 68
+  content_digest: sha256:d5a856c58a92f190b209b6e767b5c3c62c03b0f22000dd8bb2916069070f8491
   authority: canonical_global
   context_cost: minimal
   deprecated: false
@@ -868,10 +868,10 @@ rules:
   globs: null
   first_heading: GitHub Openclaw PAT authority (CANONICAL_LAW §14)
   has_yaml_frontmatter: true
-  line_count: 71
-  content_digest: sha256:985a7374a0641c01e6d95a091c6f23c1713bc8f6ef6983a8ff1eade69738c4c2
+  line_count: 96
+  content_digest: sha256:974e7ffaf23227a0acbc2614a7921e35f292e740d0af5570a464ed6b8dbed31b
   authority: canonical_global
-  context_cost: minimal
+  context_cost: moderate
   deprecated: false
   replacement: null
   removal_plan: null
@@ -1311,8 +1311,8 @@ rules:
 - file: 85-workflow-state-bridge.mdc
   id: l9.rule.85.workflow.state.bridge
   id_source: explicit
-  version: 1.0.0
-  description: 'Bridge Cursor runs to session resume: Graphiti PICKUP/inject SSOT; workflow_state.md legacy where present.'
+  version: 1.1.0
+  description: 'Bridge Cursor runs to session resume: ContinuationCapsuleV2 / ops.memory.cli hydrate; workflow_state.md legacy where present.'
   scope: global
   domain: memory
   activation: agent_requested
@@ -1321,8 +1321,8 @@ rules:
   globs: null
   first_heading: Session resume bridge (L9)
   has_yaml_frontmatter: true
-  line_count: 91
-  content_digest: sha256:3e623c8e396dc0f747bbef455f5e7b0daada207a97d8c902e8fb0c6480ac1109
+  line_count: 93
+  content_digest: sha256:240b44175cfd912ae1b01500572c63e92f707d0f6611446ee6cb398f8c739364
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -1355,8 +1355,8 @@ rules:
 - file: 87-cursor-memory-kernel.mdc
   id: l9.rule.cursor.memory.kernel
   id_source: explicit
-  version: 1.2.0
-  description: Cursor Memory Kernel enforcement — authoritative source for memory operations, kinds, governed interactive writes, and session lifecycle
+  version: 1.4.0
+  description: Cursor Memory Kernel enforcement — authoritative source for memory operations, kinds, two lanes (agent write_agent direct; hooks bounded), and session lifecycle
   scope: global
   domain: memory
   activation: always
@@ -1365,8 +1365,8 @@ rules:
   globs: null
   first_heading: Cursor Memory Kernel Enforcement
   has_yaml_frontmatter: true
-  line_count: 194
-  content_digest: sha256:f0543aac23823a5c73e163fac95d79df25461f53dcc2aa9115b418e627b01cda
+  line_count: 211
+  content_digest: sha256:975c9e6a79dcdc45098468022d6624c6c3eaf3d92255821f34d0776976c7b4b9
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -1387,10 +1387,10 @@ rules:
   globs: null
   first_heading: L4 Local Autonomy (no mid-execution push)
   has_yaml_frontmatter: true
-  line_count: 74
-  content_digest: sha256:1cb82c2099d69bca6c9ac9338480a4abc9bdf2ed4b2cac904a1c801aadd6cbd0
+  line_count: 97
+  content_digest: sha256:0f0ecc46a36fc23d666a87675ea46a58321f895158eb1fbd29a522146946e8e3
   authority: canonical_global
-  context_cost: minimal
+  context_cost: moderate
   deprecated: false
   replacement: null
   removal_plan: null
@@ -1575,8 +1575,8 @@ rules:
 - file: 97-graph-layer-boundary.mdc
   id: l9.rule.graph-layer-boundary
   id_source: explicit
-  version: 1.1.0
-  description: Keep structural code graphs, canonical episodic memory (MemoryService), repository resume state, and static law distinct.
+  version: 1.2.0
+  description: Keep structural code graphs, canonical episodic memory (MemoryService), repository resume state, and static law distinct; interactive write is dual (write_agent + write_governed).
   scope: global
   domain: memory
   activation: always
@@ -1585,8 +1585,8 @@ rules:
   globs: null
   first_heading: Graph Layer Boundary
   has_yaml_frontmatter: true
-  line_count: 48
-  content_digest: sha256:487928bd5c23b8b1d7ad9c0bb17e882e8e0be7002dd31998a171e956b202c338
+  line_count: 52
+  content_digest: sha256:9d0d1ad1eda0b1fc6f9e96df86a13b0bed674a8e845d0eee1448e33296c567b0
   authority: canonical_global
   context_cost: minimal
   deprecated: false
@@ -1597,8 +1597,8 @@ rules:
 - file: 98-graphiti-memory-gate.mdc
   id: l9.rule.graphiti.memory.gate
   id_source: explicit
-  version: 1.2.0
-  description: Memory namespace gate — forbidden namespaces; hydration-only write gates when L9_MEMORY_WRITE_GATES=1; memory phase-lock is a governed-write precondition, never repository authority
+  version: 1.3.0
+  description: Memory namespace gate — forbidden namespaces; hydration-only write gates when L9_MEMORY_WRITE_GATES=1; memory phase-lock is a governed-write precondition, never repository authority; the gate never interposes on the agent memory lane
   scope: global
   domain: memory
   activation: always
@@ -1607,8 +1607,8 @@ rules:
   globs: null
   first_heading: Memory Gate (canonical control plane)
   has_yaml_frontmatter: true
-  line_count: 77
-  content_digest: sha256:d1f99f8bbcb9b12ed4ea5246165aac1a9217f1e1274dcca2f83258e319af57ef
+  line_count: 79
+  content_digest: sha256:f539c06c295b80cb369e99c7a51d5a649023e80fc7460c79bacb46fddb02d8e8
   authority: canonical_global
   context_cost: minimal
   deprecated: false

@@ -22,6 +22,8 @@ files:
   sha256: a5dcbe7ae8ad7a7082e82ad7e5179933d29da6581bebcf38917ac68a09dc47d0
 - path: VALIDATION.md
   sha256: c959e05aac38544b882f174dea085ff5cf827edd84fcc780525716de48512ea8
+- path: policy/README.md
+  sha256: 48141d9c4591c3fe9adcc2c9794e246193b1003c5d097498fda4f95588ef3bb6
 - path: policy/authority.yaml
   sha256: db71b0c919817ce37ad1a1b7c9f9a9b57efeeee4a4aec2ad8e0de7a4a5cb2dea
 - path: policy/autonomy.yaml
@@ -52,6 +54,8 @@ files:
   sha256: 832393c499d932dc7ae6c7185494dc7765003697d1cd869788e7b734ccdc9752
 - path: references/NEGATIVE_TEST_MATRIX.md
   sha256: 3899583675c42a17e5ed6150be9d663dc100fc1b531feeea3a47414011bdfebe
+- path: references/README.md
+  sha256: e2fd53eb9dfbe82bd509a449cea5fe79245605a148164f42c5ac00fbc5e329d6
 - path: references/RECOVERY.md
   sha256: ce5edfed9211f436133cd06951f88978de12238f78d44d3398497d303c8323df
 - path: references/REMOTE_ACTIONS.md
@@ -64,6 +68,8 @@ files:
   sha256: 2f439596686cd264e325de247a1e9b6aa458ab0c1f56464bca2087ec708b7f1d
 - path: references/WORKER_ADAPTER.md
   sha256: 587b94c5a8f534abc218bee0b480d27ae95d6cab2c7cc33c0b0eef8539903df8
+- path: schemas/README.md
+  sha256: a02c57bc01cb33f70c2312daa62e35630c0baac493cd9feb2d1ce746fb32cffe
 - path: schemas/approval.schema.json
   sha256: 38e2c4985a9d9ea38617b69ce760fc499d116e2ff4825792c218321c4b52d1f8
 - path: schemas/attempt-receipt.schema.json
@@ -88,8 +94,12 @@ files:
   sha256: ca8b3a924c46f1d3823d12245a8166b429d546e8ae56e9251cfa5a2284bb32a1
 - path: schemas/waiver.schema.json
   sha256: 6ff6e71f1a820ae05bbd795a50ac96e176bf971ccb8f6e9051f4da1623b087c7
+- path: scripts/README.md
+  sha256: 2a792eceacd5b50912f72ebabd1cb52f485a6b9524b66e0f638f172786108366
 - path: scripts/instantiate.py
   sha256: b8d702fc025d096668d063b02fafd7b6f393fcf4997b3dffa3fcf3fcbe34db02
+- path: scripts/pec/README.md
+  sha256: 1b8a47136e3859e02035586a2fe1a70cde9d35bce9af6c6b2ce12a087ba43b4a
 - path: scripts/pec/__init__.py
   sha256: 1c97c455db405eead95452458bbd62c3843425adbeb120a7cf5da2848d42a2bb
 - path: scripts/pec/attempts.py

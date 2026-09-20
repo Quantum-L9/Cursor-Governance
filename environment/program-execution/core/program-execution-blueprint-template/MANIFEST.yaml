@@ -68,6 +68,8 @@ files:
   sha256: 9123fc2af10c8462475b0ddf2ff7455bb5ab62c248dc42af22e62e377b51dce1
 - path: WORKSTREAMS.yaml
   sha256: 4e2b907e0ee55f2a6a51c0ce5a78b4b34a6b4c51641c9b4cbf111110dcbe7f25
+- path: schemas/README.md
+  sha256: a6c2505830b916d5931a00e98620f3b2bbbe9c63e3eac65795a753c44c224467
 - path: schemas/acceptance-receipt.schema.json
   sha256: a08d5719126e88f61b0e64c09645a622594a83f7763c1a93081c08d3395c4af6
 - path: schemas/authority-registry.schema.json
@@ -114,6 +116,8 @@ files:
   sha256: 9b236ce4a9b85d117064a91bc352fd03d19028e75dc8fa63353cab558a64cb5a
 - path: schemas/workstreams.schema.json
   sha256: 39b6a5da2ce940e03a365b45843eeb7acc160edc96c3d4566c6b17953d9d8477
+- path: scripts/README.md
+  sha256: 9e599030b7d41e949ba8cc5bd875878dfa5de8a4a8fe46140d6c80790d500c5b
 - path: scripts/instantiate.py
   sha256: 1820def7bc85ac2478028ef5bae0091ec07f4b9dd159f427b9e4ea3df10c29fa
 - path: scripts/validate_blueprint.py
