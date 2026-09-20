@@ -28,6 +28,23 @@ if str(AUTONOMY) not in sys.path:
 
 import local_execution_gate as gate  # noqa: E402
 import open_pr_probe  # noqa: E402
+
+
+def _release(allowed: bool, reason: str | None = None):
+    """Stub for l4_local.release_allows_remote(root, *, record=False).
+
+    One definition on purpose: these stubs silently drifted from the real
+    signature when `record` was added, and every call site that exercised the
+    recording path raised TypeError instead of testing the gate. Keeping the
+    shape here means the next signature change breaks one line, not eleven.
+    """
+
+    def _stub(root, *, record=False):  # noqa: ARG001 - signature parity is the point
+        return (allowed, reason)
+
+    return _stub
+
+
 from first_publication_gate import (  # noqa: E402
     first_publication_verdict,
     publication_forms,
@@ -126,7 +143,7 @@ class TestMakeGoalsAreExactTokens:
     ) -> None:
         monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
         monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
-        monkeypatch.setattr(gate, "release_allows_remote", lambda root: (False, "L4 denied"))
+        monkeypatch.setattr(gate, "release_allows_remote", _release(False, "L4 denied"))
         assert gate.evaluate("Bash", {"command": "make pr-check"}, root=tmp_path) is None
 
     @pytest.mark.parametrize(
@@ -193,7 +210,7 @@ def test_non_git_publish_bypass_stays_denied(
     executable, so the gate still denies it even when release is authorized.
     """
     monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
-    monkeypatch.setattr(gate, "release_allows_remote", lambda root: (True, None))
+    monkeypatch.setattr(gate, "release_allows_remote", _release(True))
 
     reason = gate.evaluate("Bash", {"command": "make push"}, root=tmp_path)
     assert reason is not None
@@ -212,7 +229,7 @@ def test_raw_git_push_is_reported_and_first_publication_is_denied(
     and the publication plane refuses it with the sanctioned route named.
     """
     monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
-    monkeypatch.setattr(gate, "release_allows_remote", lambda root: (False, "L4 denied"))
+    monkeypatch.setattr(gate, "release_allows_remote", _release(False, "L4 denied"))
     _open_pr(monkeypatch, False)
 
     assert gate.command_bypasses_publish_path("git push origin main") == "git push"
@@ -277,7 +294,7 @@ def test_mcp_push_tools_denied_even_when_release_authorized(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
-    monkeypatch.setattr(gate, "release_allows_remote", lambda root: (True, None))
+    monkeypatch.setattr(gate, "release_allows_remote", _release(True))
     for tool in ("mcp__github__create_pull_request", "mcp__github__push_files"):
         reason = gate.evaluate(tool, {}, root=tmp_path)
         assert reason is not None, tool
@@ -307,7 +324,7 @@ def test_remediator_git_push_of_an_open_pr_is_not_denied(
     still name the raw publish.
     """
     monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
-    monkeypatch.setattr(gate, "release_allows_remote", lambda root: (False, "L4 denied"))
+    monkeypatch.setattr(gate, "release_allows_remote", _release(False, "L4 denied"))
     _open_pr(monkeypatch, True)
     assert gate.evaluate("Bash", {"command": command}, root=stacked_repo) is None
     assert gate.publish_path_workflow_deny(command) is None
@@ -319,7 +336,7 @@ def test_the_same_forms_are_denied_when_no_pr_is_open(
 ) -> None:
     """The verdict depends on the branch's PR state, never on the command's shape."""
     monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
-    monkeypatch.setattr(gate, "release_allows_remote", lambda root: (False, "L4 denied"))
+    monkeypatch.setattr(gate, "release_allows_remote", _release(False, "L4 denied"))
     _open_pr(monkeypatch, False)
     reason = gate.evaluate("Bash", {"command": command}, root=stacked_repo)
     if "gh pr edit" in command:
@@ -332,7 +349,7 @@ def test_piped_git_push_matches_bare_verdict(
     stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
-    monkeypatch.setattr(gate, "release_allows_remote", lambda root: (False, "L4 denied"))
+    monkeypatch.setattr(gate, "release_allows_remote", _release(False, "L4 denied"))
     for answer in (True, False):
         _open_pr(monkeypatch, answer)
         bare = gate.evaluate("Bash", {"command": "git push origin HEAD"}, root=stacked_repo)
@@ -348,7 +365,7 @@ def test_cursor_shell_allows_remediator_git_push(
 ) -> None:
     """Cursor beforeShellExecution is the live remediator deny surface."""
     monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
-    monkeypatch.setattr(gate, "release_allows_remote", lambda root: (False, "L4 denied"))
+    monkeypatch.setattr(gate, "release_allows_remote", _release(False, "L4 denied"))
     _open_pr(monkeypatch, True)
     monkeypatch.setattr(gate, "workspace_from_event", lambda event: tmp_path)
     monkeypatch.setattr(gate, "effective_root", lambda command, root: root)
@@ -396,7 +413,7 @@ def test_standing_override_env_is_inert(tmp_path: Path, monkeypatch: pytest.Monk
     """A pasted L9_PUBLISH_PATH_OVERRIDE string must not widen the publish plane."""
     monkeypatch.setenv(gate.PUBLISH_PATH_OVERRIDE_ENV, "incident-1234")
     monkeypatch.delenv("L9_PUBLISH_PATH_RECEIPT", raising=False)
-    monkeypatch.setattr(gate, "release_allows_remote", lambda root: (True, None))
+    monkeypatch.setattr(gate, "release_allows_remote", _release(True))
     reason = gate.evaluate("Bash", {"command": "make push"}, root=tmp_path)
     assert reason is not None
     assert "make push" in reason
@@ -415,11 +432,11 @@ def test_human_override_restores_prior_behaviour(
     receipt = tmp_path / "publish-path-override.json"
     write_receipt(issuer="ops", reason="incident-1234", hours=2, path=receipt)
     monkeypatch.setenv("L9_PUBLISH_PATH_RECEIPT", str(receipt))
-    monkeypatch.setattr(gate, "release_allows_remote", lambda root: (True, None))
+    monkeypatch.setattr(gate, "release_allows_remote", _release(True))
     assert gate.evaluate("Bash", {"command": "make push"}, root=tmp_path) is None
 
     # Override does not bypass L4 itself — an unauthorized workspace still denies.
-    monkeypatch.setattr(gate, "release_allows_remote", lambda root: (False, "L4 denied"))
+    monkeypatch.setattr(gate, "release_allows_remote", _release(False, "L4 denied"))
     assert gate.evaluate("Bash", {"command": "make push"}, root=tmp_path) == "L4 denied"
 
 

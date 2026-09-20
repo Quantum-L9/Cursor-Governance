@@ -1,6 +1,6 @@
 interface:
   display_name: L9 PR Audit
-  short_description: Deep evidence-backed PR and cross-PR audit with Fable handoff
+  short_description: Adversarial PR audit with deterministic red-team closure
   icon_small: assets/icon.svg
   icon_large: assets/icon.svg
 policy:

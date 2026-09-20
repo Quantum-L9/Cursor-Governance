@@ -32,10 +32,19 @@ PR_SECURITY_ADVISORY ?= 0
 # Full-tree scans are nightly CI / `make precommit` / `make pr-full` — not make pr.
 PR_BASE ?= origin/main
 
-# Stack on an overlapping open PR head by default. Do not export this variable:
-# `make pr-check` pytest would inherit it and false-pass overlap tests.
-# Opt out (publish against main): PR_STACK= make pr
-PR_STACK ?= auto
+# Publish against PR_BASE (origin/main) by default — do NOT stack. Do not export
+# this variable: `make pr-check` pytest would inherit it and false-pass overlap
+# tests.
+# Opt in (stack on an overlapping open PR head): PR_STACK=auto make pr
+#
+# Stacking was the default until 2026-09-19. It resolves a base automatically
+# only when the blocking set is one unambiguous chain; with several sibling
+# chains open it cannot choose and fails preflight, so the common case became a
+# blocked publish that every caller cleared by passing PR_STACK= anyway. An
+# opt-in keeps the stack available for a deliberate train without making an
+# ordinary publish depend on how many PRs happen to be open. Overlap detection
+# is unchanged and still fails closed on a real textual conflict.
+PR_STACK ?=
 # Recipes pass PR_STACK into pr-preflight / run_pr_gate.sh only. The gate unsets
 # it before pytest (same strip as PR_OVERLAP).
 
