@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contract tests for l9-pr-remediation 5.5.0. Stdlib only.
+"""Contract tests for l9-pr-remediation 5.7.0. Stdlib only.
 
 Structural and wiring checks: every link resolves, every deterministic owner
 the pack names exists, the pre-v5 contradictions stay gone, and the pack never
@@ -34,9 +34,11 @@ OWNERS = (
     "environment/agents/results/gateway.py",
     "environment/contracts/autonomy/MANIFEST.yaml",
     "skills/l9-issue-remediation/SKILL.md",
-    "skills/l9-pr-digest/SKILL.md",
-    "skills/l9-pr-digest/scripts/pr_digest.py",
-    "skills/l9-pr-digest/scripts/require_digest.py",
+    "skills/l9-pr-audit/SKILL.md",
+    "skills/l9-pr-audit/schemas/remediation-handoff.schema.json",
+    "skills/l9-pr-remediation/scripts/require_audit.py",
+    "ops/hooks/graphiti-prefetch.sh",
+    "ops/hooks/graphiti-session-end.sh",
     "tests/ops/autonomy/test_pr_fleet.py",
 )
 
@@ -56,6 +58,8 @@ STALE = (
     "leave true human-decision threads open",
     "except open HUMAN decisions",
     "Lazy: only if configured **and** check failing",
+    "require_digest.py --mode converge",
+    "Digest first (mandatory)",
 )
 
 
@@ -75,7 +79,7 @@ def _forbid(text: str, needle: str, where: str) -> None:
 
 
 def test_frontmatter_and_map() -> None:
-    _need(SKILL, "version: 5.5.0", "SKILL.md")
+    _need(SKILL, "version: 5.7.0", "SKILL.md")
     _need(SKILL, "tier: exemplary", "SKILL.md")
     _need(SKILL, "disable-model-invocation: true", "SKILL.md")
     match = re.search(r"^description: (.+)$", SKILL, re.M)
@@ -318,14 +322,15 @@ def test_board_and_merge() -> None:
     _need(SKILL, "**never** commit/push/merge", "SKILL.md")
     _forbid(REFS["diagnose-workflow.md"], "gh pr merge {number}", "diagnose-workflow.md")
     _need(REFS["diagnose-workflow.md"], "Diagnose never merges", "diagnose-workflow.md")
-    _need(REFS["diagnose-workflow.md"], "Digest first (mandatory)", "diagnose-workflow.md")
-    _need(REFS["diagnose-workflow.md"], "Do **not** pass `--quiet`", "diagnose-workflow.md")
+    _need(REFS["diagnose-workflow.md"], "require_audit.py", "diagnose-workflow.md")
     _need(REFS["diagnose-workflow.md"], "ingest_signals.py", "diagnose-workflow.md")
     _need(REFS["run-contract.md"], "ingest_signals.py", "run-contract.md")
     _need(REFS["code-review-agents.md"], "ingest_signals.py", "code-review-agents.md")
-    _need(SKILL, "without** `--quiet`", "SKILL.md")
-    _need(SKILL, "require_digest.py --mode converge", "SKILL.md")
-    _need(SKILL, "skills/l9-pr-digest", "SKILL.md")
+    _need(SKILL, "hold_merge", "SKILL.md")
+    _need(SKILL, "graphiti-prefetch", "SKILL.md")
+    _need(SKILL, "max_mutation_lanes: 128", "SKILL.md")
+    _need(SKILL, "require_audit.py", "SKILL.md")
+    _need(SKILL, "skills/l9-pr-audit", "SKILL.md")
     for needle in (
         "scripts/ingest_signals.py",
         "scripts/validate_plan.py",
@@ -334,7 +339,7 @@ def test_board_and_merge() -> None:
         "scripts/protocol.py",
     ):
         _need(SKILL, needle, "SKILL.md")
-    _need(REFS["run-contract.md"], "P_digest", "run-contract.md")
+    _need(REFS["run-contract.md"], "P_audit", "run-contract.md")
     _need(REFS["merge-advise.md"], "Never merge", "merge-advise.md")
     _need(REFS["merge-advise.md"], "oldest `createdAt` first", "merge-advise.md")
     _forbid(REFS["merge-advise.md"], "git checkout main", "merge-advise.md")

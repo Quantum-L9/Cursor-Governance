@@ -399,6 +399,44 @@ def _mutation_waves(
     return mutation_waves
 
 
+def load_audit_bind(path: Path | str | None) -> dict[str, Any]:
+    """Read ``require_audit.py`` output. Missing/unreadable → no hold."""
+    empty: dict[str, Any] = {
+        "hold_merge": False,
+        "eligible_prs": [],
+        "path": None,
+        "reason": "no_handoff",
+    }
+    if path is None:
+        return empty
+    bind_path = Path(path)
+    if not bind_path.is_file():
+        return empty
+    try:
+        doc = json.loads(bind_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return empty
+    if not isinstance(doc, dict):
+        return empty
+    eligible: list[int] = []
+    for raw in doc.get("eligible_prs") or []:
+        try:
+            eligible.append(int(raw))
+        except (TypeError, ValueError):
+            continue
+    return {
+        "hold_merge": bool(doc.get("hold_merge")),
+        "eligible_prs": eligible,
+        "path": str(bind_path),
+        "audit_id": doc.get("audit_id"),
+        "reason": doc.get("reason")
+        or ("same_head_mutation_eligible" if eligible else "no_handoff"),
+        "stale_prs": [
+            int(n) for n in (doc.get("stale_prs") or []) if str(n).isdigit() or isinstance(n, int)
+        ],
+    }
+
+
 def waves(
     prs: list[dict[str, Any]],
     *,
@@ -407,20 +445,26 @@ def waves(
     boards: dict[int, str] | None = None,
     overlap: list[dict[str, Any]] | None = None,
     edges: list[dict[str, Any]] | None = None,
+    force_remediate: list[int] | None = None,
+    hold_merge: bool = False,
 ) -> dict[str, Any]:
     """Assign every PR to the earliest wave in which it may safely run.
 
-    Merge-train lanes take the oldest ``merge_now`` PRs first. Remaining
-    mutation slots go to ``board=fix`` remediations whose write claims
-    conflict with no PR already admitted. ``board=wait`` is watch/poll only —
-    never a second mutation lane on the same branch. Read-only recon, watch,
-    and poll fill leftover slots. Nothing here launches anything; it only
-    names the largest currently safe wave under the skill cap.
+    Merge-train lanes take the oldest ``merge_now`` PRs first unless
+    ``hold_merge`` (same-head audit-eligible units). Remaining mutation slots
+    go to ``board=fix`` remediations — and to ``force_remediate`` PRs even when
+    their board is ``merge`` — whose write claims conflict with no PR already
+    admitted. ``leftover`` is never forced. ``board=wait`` is watch/poll only.
+    Independent non-overlapping remediations launch together up to
+    ``max_mutation_lanes``. Nothing here launches anything; it only names the
+    largest currently safe wave under the skill cap.
     """
     by_number = {pr["number"]: pr for pr in prs}
     sequence = order or [pr["number"] for pr in prs]
     claims = {number: write_claims(by_number[number]) for number in sequence}
     board_map = boards or {}
+    leftover = {n for n, board in board_map.items() if board == "leftover"}
+    forced = {int(n) for n in (force_remediate or [])} - leftover
     edge_list = edges if edges is not None else stack_edges(prs)
     overlap_list = overlap if overlap is not None else overlap_matrix(prs)
     merge_plan = (
@@ -430,14 +474,22 @@ def waves(
     )
     merge_ready = list(merge_plan["merge_now"])
     merge_blocked_nums = [int(item["pr"]) for item in merge_plan["merge_blocked"]]
-    merge_admitted = merge_ready[: caps["max_mutation_lanes"]]
-    merge_blocked_cap = merge_ready[caps["max_mutation_lanes"] :]
+    if hold_merge:
+        held_greens = [n for n in merge_ready if n not in forced]
+        merge_admitted: list[int] = []
+        merge_blocked_cap: list[int] = []
+    else:
+        held_greens = []
+        merge_admitted = merge_ready[: caps["max_mutation_lanes"]]
+        merge_blocked_cap = merge_ready[caps["max_mutation_lanes"] :]
     remediate_cap = max(0, caps["max_mutation_lanes"] - len(merge_admitted))
     if board_map:
-        exclude = set(merge_ready) | {
+        exclude = set(merge_admitted) | {
             n for n, board in board_map.items() if board in {"merge", "leftover", "wait"}
         }
-        remediate_candidates = [n for n in sequence if n not in exclude]
+        exclude -= forced
+        rest = [n for n in sequence if n not in exclude and n not in forced]
+        remediate_candidates = [n for n in sequence if n in forced] + rest
     else:
         remediate_candidates = list(sequence)
     if remediate_candidates and remediate_cap > 0:
@@ -457,7 +509,12 @@ def waves(
     first = mutation_waves[0]
     used = len(merge_admitted) + len(first["remediate"])
     read_budget = max(0, caps["max_parallel"] - used)
-    watch = [n for n in sequence if board_map.get(n) == "wait" or n in merge_blocked_nums]
+    watch = [
+        n
+        for n in sequence
+        if n not in first["remediate"]
+        and (board_map.get(n) == "wait" or n in merge_blocked_nums or n in held_greens)
+    ]
     recon = [
         n
         for n in sequence
@@ -487,6 +544,8 @@ def waves(
         },
         "mutation_waves": mutation_waves,
         "wave_count": len(mutation_waves),
+        "hold_merge": hold_merge,
+        "force_remediate": sorted(forced),
     }
 
 
@@ -507,6 +566,7 @@ def plan(
     with_boards: bool = False,
     surface: str | None = None,
     prior: dict[str, Any] | None = None,
+    audit_bind: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     prs = inventory(repo)
     edges = stack_edges(prs)
@@ -521,6 +581,9 @@ def plan(
             boards[pr["number"]] = str(verdict.get("board") or "wait")
             verdicts[str(pr["number"])] = verdict
     caps = skill_caps(profile_caps(surface))
+    bind = audit_bind or {"hold_merge": False, "eligible_prs": []}
+    hold = bool(bind.get("hold_merge"))
+    eligible = [int(n) for n in (bind.get("eligible_prs") or [])]
     wave_plan = (
         waves(
             prs,
@@ -529,6 +592,8 @@ def plan(
             boards=boards,
             overlap=overlap,
             edges=edges,
+            force_remediate=eligible,
+            hold_merge=hold,
         )
         if prs
         else None
@@ -558,6 +623,8 @@ def plan(
         "boards": verdicts if with_boards else None,
         "waves": wave_plan,
         "velocity": velocity_model(prs, wave_plan) if wave_plan else None,
+        "hold_merge": hold,
+        "audit_bind": bind,
     }
 
 
@@ -767,6 +834,12 @@ def render_prompt(packet: dict[str, Any]) -> str:
         "files_changed truthful, validations reported as PASS/FAIL/BLOCKED/NOT_RUN, and",
         "status completed|partial|blocked|failed. Natural-language completion is invalid.",
         "Stop if the head SHA moves under you; report it as blocked.",
+        "",
+        "## Memory",
+        "Host subagentStart runs ops/hooks/graphiti-prefetch.sh for this conversation",
+        "before the write gate authorizes edits. Host subagentStop runs",
+        "ops/hooks/graphiti-session-end.sh (canonical memory.close). Do not skip",
+        "prefetch. Do not invent a second close path.",
     ]
     return "\n".join(lines)
 
@@ -951,6 +1024,11 @@ def main(argv: list[str] | None = None) -> int:
     p_plan.add_argument("--surface", choices=["cursor", "claude_local", "claude_cloud"])
     p_plan.add_argument("--json", action="store_true")
     p_plan.add_argument("--no-receipt", action="store_true")
+    p_plan.add_argument(
+        "--audit-bind",
+        type=Path,
+        help="require_audit.py receipt; same-head eligible units hold merge",
+    )
 
     p_assign = sub.add_parser("assign", help="emit bounded assignments for a wave")
     p_assign.add_argument("--repo", required=True)
@@ -977,7 +1055,13 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "plan":
             prior = load_receipt()
-            payload = plan(args.repo, with_boards=args.board, surface=args.surface, prior=prior)
+            payload = plan(
+                args.repo,
+                with_boards=args.board,
+                surface=args.surface,
+                prior=prior,
+                audit_bind=load_audit_bind(args.audit_bind),
+            )
             if not args.no_receipt:
                 payload["receipt"] = str(write_receipt(payload))
             _print(payload, args.json)

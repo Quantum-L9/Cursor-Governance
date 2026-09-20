@@ -6,8 +6,8 @@ role: diagnose_workflow
 tags: [pr, diagnose, review, blockers, readiness]
 owner: igor_beylin
 status: active
-version: 1.5.0
-updated: 2026-09-05
+version: 1.6.0
+updated: 2026-09-19
 /L9_META -->
 
 # Diagnose Workflow (read-only)
@@ -27,20 +27,16 @@ When Converge loads this file it is the **per-PR ingest** half of [remediation-p
 ## Steps
 
 1. **Identify PR** — number/URL from user or list open PRs. STOP if missing.
-2. **Digest first (mandatory).** Read `skills/l9-pr-digest/SKILL.md`. Bind exact base/head and run:
+2. **Audit bind (optional).** Same-head `/l9-pr-audit` `remediation-handoff.json` via `scripts/require_audit.py`. Absent or stale is not STOP.
 
 ```bash
-python3 skills/l9-pr-digest/scripts/pr_digest.py \
-  --repo {owner}/{repo} --pr-number {n} --workspace "$PWD" \
-  --output .l9/pr/pr-digest-result.json
-python3 skills/l9-pr-digest/scripts/require_digest.py \
-  --path .l9/pr/pr-digest-result.json --mode diagnose
+python3 skills/l9-pr-remediation/scripts/require_audit.py \
+  --repo {owner}/{repo} --fleet .l9/pr/fleet.json \
+  --output .l9/pr/audit-bind.json
 ```
 
-Do **not** pass `--quiet` on a manual `/pr` or Diagnose invoke. Show the `[digest]` stream and interactive unpack in chat, then continue. `--quiet` is for poll-worker / automation only.
-
-If the head moved, discard the stale file and re-run. A valid non-READY decision still continues. An unbound or missing digest is STOP / `Unknown` for that PR. Carry `decision`, `expansion_items`, and `remediation_packet` into the verdict below. Do not re-invent intent, expansion, or CI the digest already bound.
-3. **Discovery (mandatory reviews)** — identity from `gh pr view` / `gh pr diff --stat`; **retrieve** is `scripts/ingest_signals.py` (CI + reviews + CRA + unresolved threads). Do not reconstruct `gh api` comment loops.
+Carry bound `mutation_eligible` units into the verdict. Do not load `_emit*.py` generators.
+3. **Discovery (mandatory reviews)** — identity from `gh pr view` / `gh pr diff --stat`; **retrieve** is `scripts/ingest_signals.py` (CI + reviews + CRA + unresolved threads; `--audit` when a handoff path is bound). Do not reconstruct `gh api` comment loops.
 
 ```bash
 gh pr view {number} --json title,author,files,additions,deletions,baseRefName,headRefName,mergeable,reviewDecision,statusCheckRollup
@@ -53,7 +49,7 @@ GATE: `findings.json` exists before any verdict. Attribute `github-code-quality[
 
 4. **Optional policy** — if present, load `config/policies/pr_merge_policy.yaml`, `config/policies/protected_files.yaml`, `.github/pr_review_config.yaml` for size/protected notes. Skip with `Unknown` when absent.
 5. **Optional angles** — when user asks for focused review, load [review-angles.md](review-angles.md).
-6. **Synthesize blockers** — from unresolved reviews (humans + all bots + code-review agents), failing checks + failed-job logs, protected files, merge conflicts, and the digest decision. Also list file-overlap across other open PRs (advisory). For Converge, after `RUN_CONTRACT`, ingest only the PR about to be edited, and only when `require_digest.py --mode converge` is PASS.
+6. **Synthesize blockers** — from unresolved reviews (humans + all bots + code-review agents), failing checks + failed-job logs, protected files, merge conflicts, and bound audit units. Also list file-overlap across other open PRs (advisory). For Converge, after `RUN_CONTRACT`, ingest only the PR about to be edited (`--audit` when bound).
 7. **Present inline** — format below. Load `l9-ynp` for yes/no/proceed when useful. Diagnose YNP must not emit `gh pr merge`.
 8. **Stop.** Diagnose never merges. If the user wants merge, tell them to invoke `/l9-pr-remediation` (Converge). Load [merge-advise.md](merge-advise.md) only as advise.
 
@@ -73,10 +69,9 @@ GATE: `findings.json` exists before any verdict. Attribute `github-code-quality[
 ### CI / Checks
 - {pass/fail/pending summary — only from `gh pr checks` / run logs this run}
 
-### Digest
-- **Decision:** {READY_FOR_REMEDIATION | READY_WITH_NON_BLOCKING_NOTES | NARROW_BEFORE_REMEDIATION | ARCHITECTURE_REPAIR_BEFORE_REMEDIATION | CI_OR_EXECUTION_FAILURE | INTENT_UNKNOWN_REVIEW_REQUIRED | BLOCKED | UNKNOWN}
-- **Base/Head bound:** {base_sha} / {head_sha}
-- **Expansion / narrowing:** {summary or none}
+### Audit
+- **Bind:** {path or none} | **hold_merge:** {true|false} | **reason:** {same_head_mutation_eligible|no_handoff|stale_heads|no_eligible_units}
+- **Eligible PRs:** {numbers or none}
 
 ### State (Diagnose First)
 - **Observed:** {head SHA, mergeable, failing checks, unresolved thread count}
@@ -110,8 +105,7 @@ GATE: `findings.json` exists before any verdict. Attribute `github-code-quality[
 
 | Rule | Severity |
 |------|----------|
-| Skip digest when PR number is known | HIGH — block verdict |
-| Hide digest stream behind JSON on a manual Diagnose | HIGH — stream findings |
+| Skip require_audit.py when a fleet receipt exists | HIGH — bind or record no_handoff |
 | Skip review comments | HIGH — block verdict |
 | Commit/push/merge during Diagnose | CRITICAL |
 | Emit `gh pr merge` from Diagnose YNP | CRITICAL |

@@ -442,7 +442,7 @@ starts = [
     for e in starts
     if isinstance(e, dict) and (e.get("command") or "") not in retired_start
 ]
-start_entry = {"command": canonical_start, "timeout": 15, "failClosed": True}
+start_entry = {"command": canonical_start, "timeout": 30, "failClosed": True}
 starts = [start_entry] + [
     e for e in starts if canonical_start not in (e.get("command") or "")
 ]
@@ -450,7 +450,7 @@ hooks["subagentStart"] = starts
 
 canonical_stop = "./hooks/lifecycle-subagent-stop.sh"
 stops = [e for e in hooks.setdefault("subagentStop", []) if isinstance(e, dict)]
-stop_entry = {"command": canonical_stop, "timeout": 15, "failClosed": True}
+stop_entry = {"command": canonical_stop, "timeout": 45, "failClosed": True}
 stops = [stop_entry] + [e for e in stops if canonical_stop not in (e.get("command") or "")]
 hooks["subagentStop"] = stops
 

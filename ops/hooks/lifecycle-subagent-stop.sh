@@ -11,6 +11,9 @@ REPORT="$(printf '%s\n' "$INPUT" | PYTHONPATH="$ROOT${PYTHONPATH:+:$PYTHONPATH}"
   "$PY" -m environment.agents.lifecycle.compose_stop)"
 RC=$?
 printf '%s\n' "$REPORT"
+# Governed close for the child conversation. Fail-open: compose_stop stdout
+# is the host contract and must not be mixed with close chatter.
+printf '%s\n' "$INPUT" | "$HOOK_DIR/graphiti-session-end.sh" >/dev/null 2>&1 || true
 if [ "$RC" -ne 0 ]; then
   echo "ERROR: native subagent stop evidence was captured but acceptance/ingress did not converge; inspect lifecycle receipts" >&2
   exit "$RC"
