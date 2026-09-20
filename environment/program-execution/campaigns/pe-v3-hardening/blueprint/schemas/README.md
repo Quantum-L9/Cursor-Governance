@@ -1,39 +1,27 @@
 # Schemas
 
-**Path:** `environment/program-execution/campaigns/pe-v3-hardening/blueprint/schemas` | **Kind:** corpus
+**Path:** `environment/program-execution/campaigns/pe-v3-hardening/blueprint/schemas` | **Tier:** discovered
 
 ## Purpose
 
-This directory holds 23 JSON.
+AST-extracted module documentation.
 
-## File types
 
-- JSON: 23
 
-## Contents
+## Components
 
-- `acceptance-receipt.schema.json`
-- `authority-registry.schema.json`
-- `convergence-gate.schema.json`
-- `convergence-gates.schema.json`
-- `current-state-delta.schema.json`
-- `cutover-and-rollback.schema.json`
-- `decision-register.schema.json`
-- `dependency-graph.schema.json`
-- `do-not-build.schema.json`
-- `evidence-catalog.schema.json`
-- `execution-index.schema.json`
-- `execution-targets.schema.json`
-- `execution-waves.schema.json`
-- `observability-plan.schema.json`
-- `phase0-user-config.schema.json`
-- `program.schema.json`
-- `risk-register.schema.json`
-- `source-traceability.schema.json`
-- `task-card.schema.json`
-- `task-cards.schema.json`
-- `unknown-register.schema.json`
-- `waiver-register.schema.json`
-- `workstreams.schema.json`
+_No public classes in this path._
 
-<!-- l9-folder-readme: generated-from-tree -->
+## Functions
+
+_No public module-level functions._
+
+## Exports
+
+_No `__all__` exports._
+
+## Dependencies
+
+_No imports parsed._
+
+<!-- l9-module-readme: generated-from-ast -->

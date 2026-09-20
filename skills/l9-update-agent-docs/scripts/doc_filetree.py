@@ -200,8 +200,16 @@ def walk_inventory(root: Path, extra_skip: list[str] | None = None) -> FiletreeI
     found: list[ModuleRow] = []
     seen: dict[str, Path] = {}
     for current, dirnames, _filenames in root.walk():
+        # Prune excluded folders before descending. A basename-only check at
+        # classification time still walked into them, so a `fixtures/` tree
+        # containing Python, or a child directory whose own name looks like a
+        # module, was classified and indexed from inside an excluded subtree.
         dirnames[:] = [
-            name for name in dirnames if name not in SKIP_DIR_NAMES and not name.startswith(".")
+            name
+            for name in dirnames
+            if name not in SKIP_DIR_NAMES
+            and name.lower() not in SKIP_LEAF_NAMES
+            and not name.startswith(".")
         ]
         try:
             rel = current.relative_to(root).as_posix()
@@ -242,7 +250,11 @@ def walk_inventory(root: Path, extra_skip: list[str] | None = None) -> FiletreeI
             )
         )
         qualifying.add(rel)
-    for rel, current in seen.items():
+    # Deepest first: a parent counts its qualifying children, so a child that
+    # only becomes an index in this same pass has to be decided before its
+    # parent is. `seen` is parent-first insertion order from the walk, which
+    # meant a parent was evaluated once and never revisited.
+    for rel, current in sorted(seen.items(), key=lambda item: item[0].count("/"), reverse=True):
         if rel in qualifying:
             continue
         name = Path(rel).name.lower()

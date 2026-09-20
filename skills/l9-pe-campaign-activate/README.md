@@ -1,4 +1,4 @@
-# L9 Pe Campaign Activate
+# L9 PE Campaign Activate
 
 **Path:** `skills/l9-pe-campaign-activate` | **Tier:** discovered
 

@@ -20,7 +20,6 @@ _No public classes in this path._
 - `def compose_host_subagent_start(payload) -> dict[str, Any]` — Correlate a host child to its bound admission; never manufacture identity.
 - `def main() -> int`
 - `def compose_subagent_stop(payload) -> dict[str, Any]`
-- `def main() -> int`
 - `def write_json(path, body) -> dict[str, Any]`
 - `def assignment_path(assignment_id) -> Path`
 - `def dispatch_path(assignment_id) -> Path`
@@ -34,6 +33,7 @@ _No public classes in this path._
 - `def load_host_correlation(subagent_id) -> dict[str, Any] | None`
 - `def write_host_admission(fields) -> dict[str, Any]`
 - `def load_host_admission(tool_use_id) -> dict[str, Any] | None`
+- `def list_in_flight_host_admissions() -> list[dict[str, Any]]` — Host-native admissions that have not returned or stopped.
 
 ## Exports
 

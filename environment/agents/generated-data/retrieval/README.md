@@ -110,8 +110,6 @@ Deterministic boundary for tests and explicit local simulation.
 - `def deterministic_event_id(pending) -> str`
 - `def load_state_store_module() -> ModuleType`
 - `def validate_utc_timestamp(value) -> None`
-- `def canonical_json(value) -> str`
-- `def main(argv) -> int`
 
 ## Exports
 

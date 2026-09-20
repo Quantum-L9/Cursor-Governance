@@ -36,7 +36,6 @@ Invoke code-graph-rag-mcp tools via one-shot JSON-RPC CLI (stderr suppressed).
 - `def hook_response(permission, user_message, agent_message) -> dict[str, Any]`
 - `def check_pre_tool_use(hook_input) -> dict[str, Any]`
 - `def check_before_mcp(hook_input) -> dict[str, Any]`
-- `def main() -> int`
 
 ## Exports
 

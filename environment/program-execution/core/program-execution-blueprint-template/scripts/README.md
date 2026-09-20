@@ -22,7 +22,6 @@ _No public classes in this path._
 - `def check_refs(values, valid, context, errors) -> None`
 - `def check_dag(nodes, edges, errors) -> None`
 - `def validate(root, mode) -> list[str]`
-- `def main() -> int`
 
 ## Exports
 

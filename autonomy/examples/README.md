@@ -1,19 +1,27 @@
 # Examples
 
-**Path:** `autonomy/examples` | **Kind:** corpus
+**Path:** `autonomy/examples` | **Tier:** discovered
 
 ## Purpose
 
-This directory holds 3 JSON.
+AST-extracted module documentation.
 
-## File types
 
-- JSON: 3
 
-## Contents
+## Components
 
-- `w7-actions.json`
-- `w7-campaign.json`
-- `w7-deployment.json`
+_No public classes in this path._
 
-<!-- l9-folder-readme: generated-from-tree -->
+## Functions
+
+_No public module-level functions._
+
+## Exports
+
+_No `__all__` exports._
+
+## Dependencies
+
+_No imports parsed._
+
+<!-- l9-module-readme: generated-from-ast -->

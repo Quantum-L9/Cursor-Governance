@@ -17,13 +17,6 @@ Missing or cross-surface writer identity.
 - File: `ops/graphiti/hydration/identity.py` (L9–10)
 - Methods: _none_
 
-### `OpenAIFixedHostError`
-
-Transport or protocol failure talking to the fixed OpenAI host.
-
-- File: `ops/graphiti/hydration/openai_fixed_host.py` (L26–27)
-- Methods: _none_
-
 ## Functions
 
 - `def pending_root() -> Path`
@@ -42,10 +35,10 @@ Transport or protocol failure talking to the fixed OpenAI host.
 - `def sync_raw() -> dict[str, Any]`
 - `def backfill() -> dict[str, Any]`
 - `def main(argv) -> int`
-- `def main(argv) -> int`
 - `def re_safe(session_id) -> str`
 - `def already_closed(project_dir, session_id, head_hash) -> bool`
 - `def write_receipt(project_dir, session_id, payload) -> None` — Persist the close obligation with taint-safe scalars only (plan §16).
+- `def memory_client(session_id) -> MemoryControlPlaneClient` — The bound memory runtime under the close surface's envelope.
 
 ## Exports
 
@@ -53,6 +46,6 @@ Transport or protocol failure talking to the fixed OpenAI host.
 
 ## Dependencies
 
-`__future__`, `argparse`, `datetime`, `hashlib`, `json`, `logging`, `ops.graphiti.hydration`, `ops.graphiti.hydration.identity`, `ops.graphiti.hydration.redaction`, `ops.graphiti.hydration.resume_signal_scorer`, `ops.graphiti.hydration.session_latches`, `ops.graphiti.hydration.transcript`, `ops.memory.control_plane_client`, `ops.memory.hydration`, `ops.memory.namespace_context`, `ops.memory.runtime_binding`, `ops.memory.session_contracts`, `ops.memory.session_state`, `os`, `pathlib`, `re`, `shutil`, `socket`, `ssl`
+`__future__`, `argparse`, `datetime`, `hashlib`, `json`, `logging`, `ops.graphiti.hydration`, `ops.graphiti.hydration.identity`, `ops.graphiti.hydration.redaction`, `ops.graphiti.hydration.session_latches`, `ops.graphiti.hydration.transcript`, `ops.memory.agent_lane`, `ops.memory.control_plane_client`, `ops.memory.hydration`, `ops.memory.namespace_context`, `ops.memory.runtime_binding`, `ops.memory.session_contracts`, `ops.memory.session_state`, `os`, `pathlib`, `re`, `shutil`, `socket`, `subprocess`
 
 <!-- l9-module-readme: generated-from-ast -->

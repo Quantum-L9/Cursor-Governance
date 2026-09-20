@@ -1,22 +1,27 @@
 # Routes
 
-**Path:** `environment/agents/generated-data/routes` | **Kind:** corpus
+**Path:** `environment/agents/generated-data/routes` | **Tier:** discovered
 
 ## Purpose
 
-This directory holds 6 YAML.
+AST-extracted module documentation.
 
-## File types
 
-- YAML: 6
 
-## Contents
+## Components
 
-- `architecture.yaml`
-- `contracts.yaml`
-- `memory.yaml`
-- `opportunities.yaml`
-- `patterns.yaml`
-- `validation.yaml`
+_No public classes in this path._
 
-<!-- l9-folder-readme: generated-from-tree -->
+## Functions
+
+_No public module-level functions._
+
+## Exports
+
+_No `__all__` exports._
+
+## Dependencies
+
+_No imports parsed._
+
+<!-- l9-module-readme: generated-from-ast -->

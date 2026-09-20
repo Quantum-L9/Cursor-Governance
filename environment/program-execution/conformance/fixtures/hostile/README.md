@@ -1,24 +1,27 @@
 # Hostile
 
-**Path:** `environment/program-execution/conformance/fixtures/hostile` | **Kind:** corpus
+**Path:** `environment/program-execution/conformance/fixtures/hostile` | **Tier:** discovered
 
 ## Purpose
 
-This directory holds 8 YAML.
+AST-extracted module documentation.
 
-## File types
 
-- YAML: 8
 
-## Contents
+## Components
 
-- `cancellation-without-evidence.yaml`
-- `changed-files-mismatch.yaml`
-- `copied-core-schema.yaml`
-- `credential-leak-attempt.yaml`
-- `deployment-target-omitted.yaml`
-- `forged-receipt-digest.yaml`
-- `github-merge-escalation.yaml`
-- `hostile-cases.yaml`
+_No public classes in this path._
 
-<!-- l9-folder-readme: generated-from-tree -->
+## Functions
+
+_No public module-level functions._
+
+## Exports
+
+_No `__all__` exports._
+
+## Dependencies
+
+_No imports parsed._
+
+<!-- l9-module-readme: generated-from-ast -->

@@ -60,6 +60,16 @@ __all__ = [
 ]
 
 CONFIG_PATH = Path("config/subsystems/readme_config.yaml")
+# Directories that may appear in the filetree but must never receive a
+# generated README.
+#
+# `rules/` is a budgeted surface: check_rules_standard.py fails on any
+# `rules/*.md` that is not a RULES-MANIFEST, so emitting `rules/README.md`
+# turns governance-self-check red. Archived and completed trees document
+# retired material, and the live compiler skip never rewrites them, so a
+# README written there keeps whatever stale `Path:` it was born with.
+README_SKIP_PREFIXES = ("rules",)
+README_SKIP_DIR_NAMES = frozenset({"archive", "_archived", "COMPLETED"})
 ROOT_README = Path("README.md")
 FORBIDDEN_RELATIVE_PATHS = {"", ".", ".."}
 GENERATED_MARKER = "<!-- l9-module-readme: generated-from-ast -->"
@@ -373,10 +383,18 @@ def render_functions(facts: ModuleFacts) -> str:
     if not facts.functions:
         return "_No public module-level functions._"
     lines = []
-    for func in facts.functions[:20]:
+    # The same signature can be defined in several modules of one package
+    # (`analyze()` is the common case); one row per distinct signature.
+    seen: set[str] = set()
+    for func in facts.functions:
+        if func.signature in seen:
+            continue
+        seen.add(func.signature)
         summary = _first_line(func.docstring, "")
         extra = f" — {summary}" if summary else ""
         lines.append(f"- `{func.signature}`{extra}")
+        if len(lines) == 20:
+            break
     return "\n".join(lines)
 
 
@@ -466,7 +484,7 @@ def _generate_folder_readme(rel: str, kind: str, folder: Path, spec: dict[str, A
     return _fill(
         FOLDER_TEMPLATE,
         {
-            "title": str(spec.get("title") or Path(rel).name),
+            "title": str(spec.get("title") or _titleize(Path(rel).name)),
             "path": rel,
             "kind": kind,
             "purpose": purpose,
@@ -605,7 +623,7 @@ def validate_sections(
 def _skip_prefixes(config: dict[str, Any]) -> tuple[str, ...]:
     extra = config.get("defaults", {}).get("skip_prefixes") or []
     values = [str(item).strip("/").replace("\\", "/") for item in extra]
-    return tuple(dict.fromkeys((*DEFAULT_SKIP_PREFIXES, *values)))
+    return tuple(dict.fromkeys((*DEFAULT_SKIP_PREFIXES, *README_SKIP_PREFIXES, *values)))
 
 
 def _skipped_rel(rel: str, prefixes: tuple[str, ...]) -> bool:
@@ -615,9 +633,37 @@ def _skipped_rel(rel: str, prefixes: tuple[str, ...]) -> bool:
     parts = set(Path(posix).parts)
     if parts & SKIP_DIR_NAMES:
         return True
-    if "tests" in parts or "_archived" in parts:
+    if parts & README_SKIP_DIR_NAMES:
+        return True
+    if "tests" in parts:
         return True
     return any(posix == prefix or posix.startswith(prefix + "/") for prefix in prefixes)
+
+
+# str.title() alone produced `Github` and, for a leading-underscore folder
+# like `_runtime`, a heading that started with a space.
+TITLE_CASING = {
+    "api": "API",
+    "aws": "AWS",
+    "cli": "CLI",
+    "github": "GitHub",
+    "ide": "IDE",
+    "json": "JSON",
+    "l9": "L9",
+    "mcp": "MCP",
+    "pe": "PE",
+    "pr": "PR",
+    "sdk": "SDK",
+    "ssot": "SSOT",
+    "ui": "UI",
+    "wip": "WIP",
+    "yaml": "YAML",
+}
+
+
+def _titleize(name: str) -> str:
+    words = [word for word in name.replace("_", " ").replace("-", " ").split() if word]
+    return " ".join(TITLE_CASING.get(word.lower(), word.title()) for word in words)
 
 
 def spec_for_path(rel: str, config: dict[str, Any]) -> dict[str, Any]:
@@ -625,7 +671,7 @@ def spec_for_path(rel: str, config: dict[str, Any]) -> dict[str, Any]:
     for spec in (config.get("subsystems") or {}).values():
         if isinstance(spec, dict) and str(spec.get("path") or "").strip("/") == posix:
             return dict(spec)
-    title = Path(posix).name.replace("_", " ").replace("-", " ").title()
+    title = _titleize(Path(posix).name)
     return {
         "path": posix,
         "title": title,

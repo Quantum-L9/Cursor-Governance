@@ -10,6 +10,13 @@ Wiring, publish, and hygiene CLIs used by Makefile targets.
 
 ## Components
 
+### `HydrateVerdict`
+
+No description
+
+- File: `ops/scripts/classify_hydrate_state.py` (L63–75)
+- Methods: `condition_line`
+
 ### `DomainOutcome`
 
 No description
@@ -21,14 +28,14 @@ No description
 
 No description
 
-- File: `ops/scripts/compose_pr_body.py` (L58–67)
+- File: `ops/scripts/compose_pr_body.py` (L58–83)
 - Methods: _none_
 
 ### `ComposeResult`
 
 No description
 
-- File: `ops/scripts/compose_pr_body.py` (L71–74)
+- File: `ops/scripts/compose_pr_body.py` (L87–90)
 - Methods: _none_
 
 ### `OperationalHealth`
@@ -87,13 +94,6 @@ No description
 - File: `ops/scripts/repo_hygiene.py` (L85–90)
 - Methods: _none_
 
-### `ReceiptFinding`
-
-No description
-
-- File: `ops/scripts/repo_hygiene.py` (L94–101)
-- Methods: _none_
-
 ### Shell entrypoints
 
 - `ops/scripts/agent_worktree_start.sh`
@@ -138,7 +138,7 @@ No description
 - `def coverage_for_rules(rules, blobs) -> list[dict[str, Any]]`
 - `def corpus_findings(rules) -> list[dict[str, Any]]`
 - `def build_report(root, manifest, manifest_path, generated_utc) -> dict[str, Any]`
-- `def render_markdown(report) -> str`
+- `def sha256_bytes(data) -> str`
 
 ## Exports
 

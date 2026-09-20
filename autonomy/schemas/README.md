@@ -1,24 +1,27 @@
 # Schemas
 
-**Path:** `autonomy/schemas` | **Kind:** corpus
+**Path:** `autonomy/schemas` | **Tier:** discovered
 
 ## Purpose
 
-This directory holds 8 JSON.
+AST-extracted module documentation.
 
-## File types
 
-- JSON: 8
 
-## Contents
+## Components
 
-- `adapter-config.schema.json`
-- `agent-contract.schema.json`
-- `agent-deployment.schema.json`
-- `agent-lease.schema.json`
-- `artifact-envelope.schema.json`
-- `campaign-authorization.schema.json`
-- `conformance-report.schema.json`
-- `orchestration-receipt.schema.json`
+_No public classes in this path._
 
-<!-- l9-folder-readme: generated-from-tree -->
+## Functions
+
+_No public module-level functions._
+
+## Exports
+
+_No `__all__` exports._
+
+## Dependencies
+
+_No imports parsed._
+
+<!-- l9-module-readme: generated-from-ast -->

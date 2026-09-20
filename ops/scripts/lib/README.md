@@ -32,7 +32,9 @@ What `workspace_roots` chose, and what it left behind and why.
 - `ops/scripts/lib/gh_auth_probe.sh`
 - `ops/scripts/lib/gh_graphql.sh`
 - `ops/scripts/lib/gh_subscribe_pr.sh`
+- `ops/scripts/lib/git_remote_head.sh`
 - `ops/scripts/lib/path_contracts.sh`
+- `ops/scripts/lib/plugin_siblings.sh`
 - `ops/scripts/lib/precommit_log.sh`
 - `ops/scripts/lib/repo_write_lock.sh`
 - `ops/scripts/lib/resolve_pr_stack.sh`
@@ -43,6 +45,7 @@ What `workspace_roots` chose, and what it left behind and why.
 - `ops/scripts/lib/ssot_machine_local_keep.sh`
 - `ops/scripts/lib/surface_detect.sh`
 - `ops/scripts/lib/workspace_kind.sh`
+- `ops/scripts/lib/workspace_link_health.sh`
 
 ## Functions
 
@@ -63,6 +66,7 @@ What `workspace_roots` chose, and what it left behind and why.
 - `def select_workspace_roots(workspace) -> RootSelection` — `workspace_roots`, plus the roots it excluded and the rule that did it.
 - `def workspace_roots(workspace) -> list[Path]` — Repository roots inside `workspace`, in resolution order.
 - `def projection_roots(workspace) -> list[Path]` — Mount roots a project-scope projection must reconcile.
+- `def adopted_projection_roots(workspace, relative_target, state_name, exclude_targets) -> list[Path]` — Ancestors of `workspace` that already hold a projection of this adapter.
 
 ## Exports
 

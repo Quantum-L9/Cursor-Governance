@@ -14,7 +14,7 @@ Workflow Graphs — Discovery Boundary
 
 State flowing through inspect graph.
 
-- File: `workflows/dags/inspect_dag.py` (L88–148)
+- File: `workflows/dags/inspect_dag.py` (L67–126)
 - Methods: _none_
 
 ### `NovelCommit`

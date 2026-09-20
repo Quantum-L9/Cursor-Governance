@@ -24,21 +24,14 @@ Deny first Edit/Write of stack files unless Context7 ran or a PASS receipt exist
 - `def authority_from_environment() -> dict[str, Any] | None` — The worker window's root authority, or None when it is incomplete.
 - `def persisted_authority(environment_authority) -> tuple[dict[str, Any] | None, str]` — Resolve the window's environment to the grant receipt PE persisted.
 - `def authorize(raw) -> int` — 0 when this effect may proceed to the ops gate, 2 when it may not.
-- `def main() -> int`
-- `def main() -> int`
-- `def main() -> int`
-- `def main() -> int`
-- `def main() -> int`
+- `def prefetch_agent_id(env) -> str` — Writer id for this prefetch run.
+- `def hook_session_start_payload(context) -> dict[str, object]` — SessionStart envelope.
 - `def render(summary) -> str`
-- `def main() -> int`
-- `def main() -> int`
-- `def main() -> int`
+- `def session_roots(stdin_text, environ) -> list[str]` — The repositories this session owns: CLAUDE_PROJECT_DIR and the hook event cwd.
 - `def skill_from_payload(payload) -> tuple[str, str]`
-- `def main() -> int`
 - `def load_routing(root)`
 - `def find_governance_root() -> Path`
 - `def log_recommendation(payload, recommendation) -> None`
-- `def main() -> int`
 
 ## Exports
 

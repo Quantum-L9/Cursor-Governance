@@ -84,7 +84,7 @@ No description
 
 The canonical runtime store, opened in explicit-transaction mode.
 
-- File: `environment/program-execution/core/program-execution-controller-template/scripts/pec/state.py` (L74–1172)
+- File: `environment/program-execution/core/program-execution-controller-template/scripts/pec/state.py` (L74–1193)
 - Methods: `in_transaction`, `controller_transaction`, `on_commit`, `schema_version`, `close`, `set_meta`, `get_meta`, `upsert_repository`
 
 ## Functions

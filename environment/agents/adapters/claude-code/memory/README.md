@@ -34,18 +34,18 @@ Raised when a memory write is refused by attribution policy.
 - `def conflicts() -> dict[str, Any]` — Memory conflicts are evidence, never a mutex.
 - `def load_contract() -> dict[str, Any]`
 - `def workspace_root() -> Path` — Resolve the session workspace root that anchors ``.l9/memory``.
-- `def resolve_session_id() -> str` — Authoritative session id: hook event first, else required CLI arg.
+- `def extract_chat_id(event) -> tuple[str, str]` — Per-chat discriminator for the write-gate receipt. Never the session id.
+- `def extract_writer_agent_id(event) -> str`
+- `def receipt_identity() -> tuple[str, str]` — The two RAW components of a writer receipt key: ``(writer_agent, chat)``.
+- `def compose_receipt_id(writer_agent, chat) -> str` — ``<writer_agent>__<chat>`` — the one place the receipt key is spelled.
+- `def resolve_receipt_id() -> str` — Writer-scoped receipt key. Distinct from SessionStart's session id.
+- `def resolve_session_id() -> str` — SessionStart session id only. Never a write-gate receipt key.
 - `def graphiti_state_path(session_id) -> Path`
 - `def identity_snapshot(contract, session_id) -> dict[str, str]`
-- `def state_root(contract) -> Path`
+- `def workspace_for_target(tool_input) -> Path` — Git root of the file being edited, else the session workspace.
+- `def state_root(contract, workspace) -> Path`
 - `def resolve_namespaces(contract) -> list[str]`
 - `def resolve_writer_identity(contract) -> dict[str, str]` — Resolve the memory writer's identity from the environment.
-- `def validate_memory_writer(identity) -> None` — Deny a memory write whose attribution is missing or reserved.
-- `def receipt_path(contract, session_id) -> Path`
-- `def write_receipt(contract, session_id, payload) -> Path`
-- `def fresh_receipt(contract, session_id) -> bool`
-- `def usable_receipt(contract, session_id) -> bool` — True when this session already ran SessionStart prefetch.
-- `def record_override(contract, rule_id, reason) -> None`
 
 ## Exports
 

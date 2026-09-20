@@ -1,25 +1,27 @@
 # Failures
 
-**Path:** `learning/failures` | **Kind:** corpus
+**Path:** `learning/failures` | **Tier:** discovered
 
 ## Purpose
 
-This directory holds 1 JSON, 7 Markdown.
+AST-extracted module documentation.
 
-## File types
 
-- JSON: 1
-- Markdown: 7
 
-## Contents
+## Components
 
-- `check-must-not-recreate-archived.md`
-- `formal_lessons_pending.json`
-- `integrity-tool-must-not-heal.md`
-- `learned-lessons-corpus.md`
-- `precommit-hook-attribution.md`
-- `reasoning_insights.md`
-- `repeated-mistakes.md`
-- `worktree-make-pr-wiring.md`
+_No public classes in this path._
 
-<!-- l9-folder-readme: generated-from-tree -->
+## Functions
+
+_No public module-level functions._
+
+## Exports
+
+_No `__all__` exports._
+
+## Dependencies
+
+_No imports parsed._
+
+<!-- l9-module-readme: generated-from-ast -->

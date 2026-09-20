@@ -1,22 +1,27 @@
 # Sql
 
-**Path:** `tools/l9_agent_ui_control/sql` | **Kind:** corpus
+**Path:** `tools/l9_agent_ui_control/sql` | **Tier:** discovered
 
 ## Purpose
 
-This directory holds 6 SQL.
+AST-extracted module documentation.
 
-## File types
 
-- SQL: 6
 
-## Contents
+## Components
 
-- `01_catalog_tables.sql`
-- `02_catalog_columns.sql`
-- `03_discover_payment_like_tables.sql`
-- `04_list_p0_dump_targets.sql`
-- `05_probe_payment_tops.sql`
-- `07_p0_sample_tops.sql`
+_No public classes in this path._
 
-<!-- l9-folder-readme: generated-from-tree -->
+## Functions
+
+_No public module-level functions._
+
+## Exports
+
+_No `__all__` exports._
+
+## Dependencies
+
+_No imports parsed._
+
+<!-- l9-module-readme: generated-from-ast -->

@@ -1,19 +1,27 @@
-# Pe V3 Hardening
+# PE V3 Hardening
 
-**Path:** `environment/program-execution/campaigns/pe-v3-hardening` | **Kind:** index
+**Path:** `environment/program-execution/campaigns/pe-v3-hardening` | **Tier:** discovered
 
 ## Purpose
 
-Index of child modules and document folders.
+AST-extracted module documentation.
 
-## File types
 
-_No files in this directory; see child folders._
 
-## Contents
+## Components
 
-- `audits/`
-- `baseline/`
-- `blueprint/`
+_No public classes in this path._
 
-<!-- l9-folder-readme: generated-from-tree -->
+## Functions
+
+_No public module-level functions._
+
+## Exports
+
+_No `__all__` exports._
+
+## Dependencies
+
+_No imports parsed._
+
+<!-- l9-module-readme: generated-from-ast -->

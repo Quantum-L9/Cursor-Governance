@@ -1,12 +1,12 @@
-# Graphiti memory client
+# Graphiti hydration and legacy support
 
 **Path:** `ops/graphiti` | **Tier:** operations
 
 ## Purpose
 
-One episodic resume store via inject / PICKUP.
+Support hydration and archive paths. Canonical agent memory is the l9-graphite-memory control plane reached through ops/memory (CANONICAL_LAW section 8.2); Graphiti is a projection that plane owns.
 
-Graphiti CLI, hydration, and memory-bank policy.
+Hydration helpers, transcript archive, and redaction retained around the retired direct-Graphiti client. Not the memory front door.
 
 ## Components
 
@@ -22,7 +22,6 @@ _No public classes in this path._
 - `def shell_gate(payload) -> dict`
 - `def subagent_gate(payload) -> dict` — A subagent inherits the PARENT session's evidence, read-only.
 - `def main() -> int`
-- `def main(argv) -> int`
 
 ## Exports
 

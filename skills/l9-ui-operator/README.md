@@ -1,4 +1,4 @@
-# L9 Ui Operator
+# L9 UI Operator
 
 **Path:** `skills/l9-ui-operator` | **Tier:** discovered
 

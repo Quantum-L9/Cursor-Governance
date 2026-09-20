@@ -22,18 +22,14 @@ _No public classes in this path._
 - `def main()`
 - `def inventory(path)`
 - `def inventory_acquisition(path)`
-- `def main()`
 - `def portability_closed(c)`
 - `def beneficiary_fit_closed(c)`
 - `def qualify(c)`
-- `def main()`
 - `def rank(obj)`
-- `def main()`
 - `def table_rows(items, fields)`
 - `def render(h)`
-- `def main()`
 - `def portability(runtime_required, dependency)`
-- `def main()`
+- `def validate(obj)`
 
 ## Exports
 

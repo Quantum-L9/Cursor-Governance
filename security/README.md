@@ -1,18 +1,27 @@
 # Security
 
-**Path:** `security` | **Kind:** corpus
+**Path:** `security` | **Tier:** discovered
 
 ## Purpose
 
-This directory holds 2 Markdown.
+AST-extracted module documentation.
 
-## File types
 
-- Markdown: 2
 
-## Contents
+## Components
 
-- `api-key-verification.md`
-- `security-audit.md`
+_No public classes in this path._
 
-<!-- l9-folder-readme: generated-from-tree -->
+## Functions
+
+_No public module-level functions._
+
+## Exports
+
+_No `__all__` exports._
+
+## Dependencies
+
+_No imports parsed._
+
+<!-- l9-module-readme: generated-from-ast -->

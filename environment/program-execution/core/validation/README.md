@@ -1,19 +1,27 @@
 # Validation
 
-**Path:** `environment/program-execution/core/validation` | **Kind:** corpus
+**Path:** `environment/program-execution/core/validation` | **Tier:** discovered
 
 ## Purpose
 
-This directory holds 1 Markdown, 1 YAML.
+AST-extracted module documentation.
 
-## File types
 
-- Markdown: 1
-- YAML: 1
 
-## Contents
+## Components
 
-- `validation_report.yaml`
-- `validation_summary.md`
+_No public classes in this path._
 
-<!-- l9-folder-readme: generated-from-tree -->
+## Functions
+
+_No public module-level functions._
+
+## Exports
+
+_No `__all__` exports._
+
+## Dependencies
+
+_No imports parsed._
+
+<!-- l9-module-readme: generated-from-ast -->

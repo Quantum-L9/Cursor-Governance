@@ -30,10 +30,15 @@ subsystems:
     purpose: Activate governance, hydrate Graphiti, and deny mid-execution publish.
   ops_graphiti:
     path: ops/graphiti
-    title: Graphiti memory client
+    title: Graphiti hydration and legacy support
     tier: operations
-    description: Graphiti CLI, hydration, and memory-bank policy.
-    purpose: One episodic resume store via inject / PICKUP.
+    description: >-
+      Hydration helpers, transcript archive, and redaction retained around the
+      retired direct-Graphiti client. Not the memory front door.
+    purpose: >-
+      Support hydration and archive paths. Canonical agent memory is the
+      l9-graphite-memory control plane reached through ops/memory (CANONICAL_LAW
+      section 8.2); Graphiti is a projection that plane owns.
   ops_scripts:
     path: ops/scripts
     title: Governance scripts

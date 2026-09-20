@@ -34,11 +34,11 @@ HTTPS transport; bearer only when a token was already in the environment.
 - `def node_gates(repo) -> list[dict]`
 - `def count_suppressions(repo, languages) -> dict[str, int]`
 - `def run_gates(repo, gates) -> list[dict]`
-- `def main() -> int`
 - `def main(argv) -> int`
+- `def sonar_snapshot_binding_error(snapshot, pr) -> str | None` — Explain why a Sonar snapshot is not evidence for ``pr``; None when it binds.
+- `def resolve_sonar_snapshot(cwd, fixture_dir, explicit) -> Path | None` — Attach Sonar whenever sonar-project.properties exists. --sonar stays optional.
 - `def collect() -> dict[str, Any]`
-- `def main(argv) -> int`
-- `def main(argv) -> int`
+- `def rest_only() -> bool` — True when this surface refuses GitHub GraphQL and REST routes must be used.
 - `def strip_bot_suffix(login) -> str`
 - `def reviewer_class(login) -> str`
 - `def ledger_source() -> str` — Map an ingest event onto the remediation-plan source vocabulary.
@@ -49,7 +49,7 @@ HTTPS transport; bearer only when a token was already in the environment.
 
 ## Exports
 
-`__footer_meta__`, `__l9_trace__`, `count_suppressions`, `detect_languages`, `main`, `run_gates`
+`count_suppressions`, `detect_languages`, `main`, `run_gates`
 
 ## Dependencies
 

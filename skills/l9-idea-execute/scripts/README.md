@@ -30,15 +30,15 @@ No description
 - `def check_unit(unit, current_caps) -> dict[str, Any]`
 - `def main() -> int`
 - `def preflight(envelope) -> dict[str, Any]`
-- `def main() -> int`
 - `def route_envelope(envelope, registry) -> dict[str, Any]`
-- `def main() -> int`
 - `def envelope(reqs)`
 - `def req(rid, cap, state)`
 - `def find_unit(graph, topology)`
 - `def caps(adapter, unit_id)`
 - `def receipt_for(env, graph)`
 - `def skill_section(heading) -> str`
+- `def expect_contract_error(fn, needle) -> None`
+- `def validate_adapter_snapshot(data) -> dict[str, Any]`
 
 ## Exports
 

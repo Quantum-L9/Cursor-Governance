@@ -1,4 +1,4 @@
-# L9 Aws Secrets
+# L9 AWS Secrets
 
 **Path:** `skills/l9-aws-secrets` | **Tier:** discovered
 

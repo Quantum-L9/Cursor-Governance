@@ -30,10 +30,10 @@ _No public classes in this path._
 - `def test_files_under(path) -> list[Path]`
 - `def line_evidence(root, path, line_number, text) -> dict[str, Any]`
 - `def audit(root) -> dict[str, Any]`
-- `def main() -> int`
 - `def utc_now() -> str`
 - `def load_json(path) -> Any`
 - `def safe_cli_path(value) -> Path` — Resolve a CLI-supplied file path and require it to stay within the current working
+- `def write_json(path, payload) -> None`
 
 ## Exports
 

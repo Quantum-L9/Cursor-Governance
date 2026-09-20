@@ -1,17 +1,27 @@
 # Contracts
 
-**Path:** `contracts` | **Kind:** corpus
+**Path:** `contracts` | **Tier:** discovered
 
 ## Purpose
 
-This directory is reserved. It has no files yet.
+AST-extracted module documentation.
 
-## File types
 
-_No files yet._
 
-## Contents
+## Components
 
-_Empty._
+_No public classes in this path._
 
-<!-- l9-folder-readme: generated-from-tree -->
+## Functions
+
+_No public module-level functions._
+
+## Exports
+
+_No `__all__` exports._
+
+## Dependencies
+
+_No imports parsed._
+
+<!-- l9-module-readme: generated-from-ast -->

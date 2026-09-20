@@ -1,22 +1,27 @@
 # Graphiti Episodes
 
-**Path:** `learning/graphiti-episodes` | **Kind:** corpus
+**Path:** `learning/graphiti-episodes` | **Tier:** discovered
 
 ## Purpose
 
-This directory holds 6 JSON.
+AST-extracted module documentation.
 
-## File types
 
-- JSON: 6
 
-## Contents
+## Components
 
-- `audit-log.episodes.json`
-- `manifest.json`
-- `quick-fixes.episodes.json`
-- `repeated-mistakes.episodes.json`
-- `solutions.episodes.json`
-- `violations.episodes.json`
+_No public classes in this path._
 
-<!-- l9-folder-readme: generated-from-tree -->
+## Functions
+
+_No public module-level functions._
+
+## Exports
+
+_No `__all__` exports._
+
+## Dependencies
+
+_No imports parsed._
+
+<!-- l9-module-readme: generated-from-ast -->

@@ -20,20 +20,20 @@ _No public classes in this path._
 - `def classify_all(repo, catalog_path) -> dict`
 - `def main(argv) -> int`
 - `def classify(path) -> dict`
-- `def main(argv) -> int`
 - `def load_session_graph(path) -> dict`
 - `def load_ir_graph(path) -> dict`
 - `def refuse_prose(repo, graph) -> list[str]`
 - `def emit_package(repo, graph, emit_dir, dag_id) -> dict`
 - `def convert(repo) -> dict`
-- `def main(argv) -> int`
 - `def inspect(root)`
 - `def main(argv)`
 - `def probe(repo_root, dag_id)`
-- `def main(argv)`
-- `def main()`
 - `def main()`
 - `def validate(path, expected_dag_id)`
+- `def validate(path) -> dict`
+- `def validate_package(directory) -> dict`
+- `def validate(data)`
+- `def validate(path)`
 
 ## Exports
 

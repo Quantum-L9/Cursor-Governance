@@ -14,7 +14,7 @@ SessionStart bootstrap and shell gates.
 
 One outer budget shared by every child call of a single prefetch.
 
-- File: `ops/hooks/plan_memory_prefetch.py` (L317–327)
+- File: `ops/hooks/plan_memory_prefetch.py` (L342–352)
 - Methods: `remaining`, `budget`
 
 ### Shell entrypoints
@@ -47,7 +47,6 @@ One outer budget shared by every child call of a single prefetch.
 - `def extract_prompt(payload) -> str`
 - `def proactive_enabled() -> bool`
 - `def route_event(payload, plane) -> dict[str, Any] | None` — Resolve scope, route, materialize, and persist one receipt state.
-- `def main() -> int`
 - `def repo_root() -> Path`
 - `def plans_store() -> Path | None`
 - `def is_store_plan(path) -> bool`
@@ -62,6 +61,7 @@ One outer budget shared by every child call of a single prefetch.
 - `def extract_command(event) -> str`
 - `def is_campaign_execute(command) -> bool`
 - `def argv_plan_paths(command) -> list[Path]`
+- `def execute_verdict(event) -> tuple[str, str]`
 
 ## Exports
 
@@ -69,6 +69,6 @@ _No `__all__` exports._
 
 ## Dependencies
 
-`__future__`, `argparse`, `datetime`, `fnmatch`, `importlib`, `importlib.util`, `json`, `os`, `pathlib`, `re`, `subprocess`, `sys`, `tempfile`, `time`, `types`, `typing`
+`__future__`, `argparse`, `datetime`, `fnmatch`, `importlib`, `importlib.util`, `json`, `os`, `pathlib`, `re`, `session_authored_ledger`, `subprocess`, `sys`, `tempfile`, `time`, `types`, `typing`
 
 <!-- l9-module-readme: generated-from-ast -->

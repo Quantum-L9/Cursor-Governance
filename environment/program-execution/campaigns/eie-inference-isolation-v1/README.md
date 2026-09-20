@@ -1,19 +1,27 @@
 # Eie Inference Isolation V1
 
-**Path:** `environment/program-execution/campaigns/eie-inference-isolation-v1` | **Kind:** corpus
+**Path:** `environment/program-execution/campaigns/eie-inference-isolation-v1` | **Tier:** discovered
 
 ## Purpose
 
-This directory holds 1 JSON, 1 YAML.
+AST-extracted module documentation.
 
-## File types
 
-- JSON: 1
-- YAML: 1
 
-## Contents
+## Components
 
-- `CAMPAIGN_SOURCE.yaml`
-- `source-integrity-receipt.json`
+_No public classes in this path._
 
-<!-- l9-folder-readme: generated-from-tree -->
+## Functions
+
+_No public module-level functions._
+
+## Exports
+
+_No `__all__` exports._
+
+## Dependencies
+
+_No imports parsed._
+
+<!-- l9-module-readme: generated-from-ast -->

@@ -1,28 +1,27 @@
 # References
 
-**Path:** `environment/program-execution/core/program-execution-controller-template/references` | **Kind:** corpus
+**Path:** `environment/program-execution/core/program-execution-controller-template/references` | **Tier:** discovered
 
 ## Purpose
 
-This directory holds 12 Markdown.
+AST-extracted module documentation.
 
-## File types
 
-- Markdown: 12
 
-## Contents
+## Components
 
-- `APPROVALS_WAIVERS_AND_HANDOFF.md`
-- `AUTHORITY_AND_RISK.md`
-- `AUTONOMY_BRIDGE.md`
-- `BLUEPRINT_MAPPING.md`
-- `CONTRACTS_AND_SCOPE.md`
-- `NEGATIVE_TEST_MATRIX.md`
-- `RECOVERY.md`
-- `REMOTE_ACTIONS.md`
-- `SCHEDULER_AND_LEASES.md`
-- `STATE_MACHINE.md`
-- `VERIFICATION_AND_RECEIPTS.md`
-- `WORKER_ADAPTER.md`
+_No public classes in this path._
 
-<!-- l9-folder-readme: generated-from-tree -->
+## Functions
+
+_No public module-level functions._
+
+## Exports
+
+_No `__all__` exports._
+
+## Dependencies
+
+_No imports parsed._
+
+<!-- l9-module-readme: generated-from-ast -->

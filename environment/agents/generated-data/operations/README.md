@@ -22,10 +22,7 @@ No description
 - `def redact(value) -> Any`
 - `def main() -> int`
 - `def run_health() -> dict[str, Any]`
-- `def main() -> int`
-- `def main() -> int`
 - `def status_payload(store) -> dict[str, Any]`
-- `def main() -> int`
 
 ## Exports
 

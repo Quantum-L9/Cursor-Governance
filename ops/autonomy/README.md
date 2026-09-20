@@ -100,7 +100,6 @@ Read-only view of repository state.
 - `def main() -> int`
 - `def auth_path(explicit) -> Path`
 - `def write_authorization() -> dict[str, Any]`
-- `def main() -> int`
 - `def default_receipt_path() -> Path`
 - `def load_receipt(path) -> dict[str, Any] | None`
 - `def evaluate(receipt) -> dict[str, Any]` — Classify a receipt. Never raises.
@@ -116,13 +115,14 @@ Read-only view of repository state.
 - `def make_workspace_raw(segment) -> str | None` — Last ``WS=`` / ``L9_L4_WORKSPACE=`` on a make segment, or None.
 - `def extract_named_roots(command) -> list[str]` — Static repo paths named by ``git -C``, make ``WS=`` / ``make -C``, or ``cd``.
 - `def governance_root() -> Path`
+- `def load_policy(root) -> dict[str, Any]`
 
 ## Exports
 
-`BlastRadius`, `CONTRACT_ID`, `CONTRACT_PATH`, `CONTRACT_VERSION`, `ContractError`, `Decision`, `DirtyPath`, `Effect`, `Finding`, `GuardContext`, `GuardResult`, `HUMAN_AUTHORIZATION_ENV`, `LiveProbe`, `Outcome`, `Ownership`, `OwnershipOracle`, `PROBE_TIMEOUT_S`, `PUSH_BREAKGLASS_ENV`, `Probe`, `ProbeError` (+22 more)
+`APPLY_REL`, `APPLY_SCHEMA`, `BlastRadius`, `CONTRACT_ID`, `CONTRACT_PATH`, `CONTRACT_VERSION`, `ContractError`, `Decision`, `DirtyPath`, `Effect`, `Finding`, `GuardContext`, `GuardResult`, `HUMAN_AUTHORIZATION_ENV`, `LiveProbe`, `MEMORY_EXECUTABLES`, `OPERATOR_MODULE`, `Outcome`, `Ownership`, `OwnershipOracle` (+38 more)
 
 ## Dependencies
 
-`__future__`, `argparse`, `collections.abc`, `command_parse`, `concurrent.futures`, `dataclasses`, `datetime`, `enum`, `execution_profile`, `first_publication_gate`, `functools`, `git_execution_exemption`, `git_guardrails`, `hashlib`, `json`, `l4_local`, `merge_gate`, `ops.autonomy.surface_detect`, `os`, `pathlib`, `re`, `shutil`, `subprocess`, `surface_detect`
+`__future__`, `argparse`, `collections.abc`, `command_parse`, `concurrent.futures`, `dataclasses`, `datetime`, `enum`, `execution_profile`, `first_publication_gate`, `functools`, `git_execution_exemption`, `git_guardrails`, `hashlib`, `json`, `l4_local`, `merge_gate`, `ops.autonomy`, `ops.autonomy.kernel_predicates`, `ops.autonomy.surface_detect`, `os`, `pathlib`, `re`, `shutil`
 
 <!-- l9-module-readme: generated-from-ast -->

@@ -21,21 +21,21 @@ The blueprint tree holds something an inventory cannot honestly digest.
 
 No description
 
-- File: `environment/program-execution/scripts/campaign_input.py` (L47–54)
+- File: `environment/program-execution/scripts/campaign_input.py` (L53–61)
 - Methods: _none_
 
 ### `Classification`
 
 No description
 
-- File: `environment/program-execution/scripts/campaign_input.py` (L80–116)
+- File: `environment/program-execution/scripts/campaign_input.py` (L87–123)
 - Methods: `supported`, `route`, `to_dict`
 
 ### `CampaignInputRejected`
 
 A terminal, self-explaining refusal. Nothing has executed when it raises.
 
-- File: `environment/program-execution/scripts/campaign_input.py` (L119–176)
+- File: `environment/program-execution/scripts/campaign_input.py` (L126–183)
 - Methods: `to_dict`, `render`
 
 ### `CopyError`
@@ -56,7 +56,7 @@ Terminal, self-explaining. Nothing has executed when this raises.
 
 No description
 
-- File: `environment/program-execution/scripts/compile_campaign_source.py` (L113–114)
+- File: `environment/program-execution/scripts/compile_campaign_source.py` (L119–120)
 - Methods: _none_
 
 ### `StackProofError`
@@ -104,7 +104,6 @@ The live handle a stage body uses to see and set its own result.
 - `def command_dispatch(args) -> int`
 - `def command_lifecycle(args, operation) -> int`
 - `def build_parser() -> argparse.ArgumentParser`
-- `def main(argv) -> int`
 - `def apply(repository_root) -> list[str]`
 - `def main() -> int`
 - `def tree_files(root) -> list[Path]` — Every regular file under `root`, refusing any symlink on the way.
@@ -116,6 +115,7 @@ The live handle a stage body uses to see and set its own result.
 - `def scan_placeholders(root) -> list[str]` — Mirror the validator's placeholder scan (same patterns, same file classes).
 - `def write_manifest(root, compiled_from) -> None` — Canonical Blueprint MANIFEST.yaml generator (digest of every tree file).
 - `def patch_phase0_operator_name(root, owner) -> bool` — Fill PHASE0_USER_CONFIG.operator_ack.name when it is the template placeholder.
+- `def lock_exists_for_blueprint(root) -> bool` — True when an existing program-lock binds this blueprint root.
 
 ## Exports
 

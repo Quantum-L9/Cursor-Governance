@@ -65,13 +65,10 @@ No description
 - `def main(argv) -> int`
 - `def render_agent_contract() -> dict[str, Any]`
 - `def send_heartbeat() -> dict[str, Any]`
-- `def build_parser() -> argparse.ArgumentParser`
-- `def main(argv) -> int`
 - `def infer_capability(tool_name, arguments) -> str`
 - `def infer_resource(tool_name, arguments) -> str | None`
 - `def pre_tool_use() -> dict[str, Any]` — Authorize one tool call through the root capability gateway.
 - `def post_tool_use() -> dict[str, Any]`
-- `def main(argv) -> int`
 
 ## Exports
 

@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Render l9-graphiti-memory auth_tokens.json from the agent registry.
+Render agent grants + validate ADR-0031 door/signing secrets.
 
 
 
@@ -26,7 +26,8 @@ No description
 - `def write_namespaces_for(agent, role, workspace) -> list[str]` — Compute write namespace grants for one agent role.
 - `def grants_for(agent, role_def, workspace) -> tuple[list[str], list[str], list[str]]` — Derive read/write/promote namespace globs for one agent.
 - `def require_unique(value, seen_ids) -> None`
-- `def require_token(agent_id, token_map, tokens_path, seen_tokens) -> str`
+- `def require_signing_key(agent_id, keys, tokens_path, seen_keys) -> str` — Per-agent HMAC signing key — MUST be unique (ADR-0031 spoof prevention).
+- `def load_local_secret_map(tokens_path) -> tuple[str, str, dict[str, str]]`
 - `def build_principal(agent, role_def) -> dict`
 - `def process_agent(key, agent, roles) -> tuple[str, dict] | None`
 - `def write_under_root(root, rel, content) -> Path` — Validate relative path under root, then write via open().
@@ -38,7 +39,6 @@ No description
 - `def check_one_adapter(key, agent, root, production_url) -> None`
 - `def check_adapters(reg, root) -> None`
 - `def check_secrets(root) -> None`
-- `def main() -> int`
 
 ## Exports
 

@@ -1,21 +1,27 @@
 # Intelligence
 
-**Path:** `intelligence` | **Kind:** corpus
+**Path:** `intelligence` | **Tier:** discovered
 
 ## Purpose
 
-This directory holds 1 JSON, 3 Markdown.
+AST-extracted module documentation.
 
-## File types
 
-- JSON: 1
-- Markdown: 3
 
-## Contents
+## Components
 
-- `adaptive-reasoning.md`
-- `intelligence-manifest.json`
-- `pre-build-question-framework.md`
-- `system-reflection.md`
+_No public classes in this path._
 
-<!-- l9-folder-readme: generated-from-tree -->
+## Functions
+
+_No public module-level functions._
+
+## Exports
+
+_No `__all__` exports._
+
+## Dependencies
+
+_No imports parsed._
+
+<!-- l9-module-readme: generated-from-ast -->

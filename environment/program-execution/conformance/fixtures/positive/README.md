@@ -1,21 +1,27 @@
 # Positive
 
-**Path:** `environment/program-execution/conformance/fixtures/positive` | **Kind:** corpus
+**Path:** `environment/program-execution/conformance/fixtures/positive` | **Tier:** discovered
 
 ## Purpose
 
-This directory holds 5 YAML.
+AST-extracted module documentation.
 
-## File types
 
-- YAML: 5
 
-## Contents
+## Components
 
-- `claude-code-direct-write.yaml`
-- `cursor-foreground-readonly.yaml`
-- `generic-shell-verification.yaml`
-- `github-pr-authorized.yaml`
-- `valid-adapter.yaml`
+_No public classes in this path._
 
-<!-- l9-folder-readme: generated-from-tree -->
+## Functions
+
+_No public module-level functions._
+
+## Exports
+
+_No `__all__` exports._
+
+## Dependencies
+
+_No imports parsed._
+
+<!-- l9-module-readme: generated-from-ast -->

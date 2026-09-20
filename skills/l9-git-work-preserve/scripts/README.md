@@ -29,16 +29,16 @@ Fail-closed extract/apply error. ``code`` is the process exit status.
 - `def show_blob(repo, ref, rel) -> bytes | None`
 - `def apply_copy(repo, ref, dest, copy) -> list[str]`
 - `def extract_plan(repo) -> dict[str, Any]`
-- `def main() -> int`
 - `def fetch_origin(repo, baseline) -> dict` — Refresh remote-tracking refs so novelty is judged against current origin.
 - `def porcelain_path(line) -> str`
 - `def is_skip_noise(rel) -> bool`
 - `def is_wiring_noise(rel) -> bool`
 - `def remote_url(repo) -> str`
 - `def discover_worktrees(repo, extra_roots) -> list[Path]`
-- `def path_on_baseline(repo, baseline, rel) -> bool`
 - `def classify_path(rel) -> str`
 - `def inspect_worktree(wt) -> dict[str, Any]`
+- `def harvest_plan(repo) -> dict[str, Any]`
+- `def default_extra_roots() -> list[Path]`
 
 ## Exports
 

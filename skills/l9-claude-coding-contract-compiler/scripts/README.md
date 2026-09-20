@@ -29,11 +29,11 @@ _No public classes in this path._
 - `def main(argv)`
 - `def generate(contract, output_dir) -> None`
 - `def main()`
-- `def generate(contract, output_dir) -> None`
-- `def main()`
 - `def sha256(s) -> str`
 - `def fits_one(m, cfg) -> tuple[bool, list[str]]`
 - `def group_commits(commit_groups, source_id, total) -> list[dict]` — Convert raw commit groups -> sub-contract descriptors with stable IDs.
+- `def compute_chain_digest(sub_contracts) -> str`
+- `def plan(manifest, commit_groups, cfg) -> dict`
 
 ## Exports
 

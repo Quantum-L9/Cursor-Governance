@@ -1,22 +1,27 @@
 # Dags Harvest
 
-**Path:** `workflows/Dags-Harvest` | **Kind:** corpus
+**Path:** `workflows/Dags-Harvest` | **Tier:** discovered
 
 ## Purpose
 
-This directory holds 6 Markdown.
+AST-extracted module documentation.
 
-## File types
 
-- Markdown: 6
 
-## Contents
+## Components
 
-- `DAG-Harvest-1.md`
-- `DAG-Harvest-2.md`
-- `DAG-Harvest-3.md`
-- `DAG-Harvest-4.md`
-- `DAG-Harvest-5.md`
-- `DAG-Harvest-6-MAKE DAGS.md`
+_No public classes in this path._
 
-<!-- l9-folder-readme: generated-from-tree -->
+## Functions
+
+_No public module-level functions._
+
+## Exports
+
+_No `__all__` exports._
+
+## Dependencies
+
+_No imports parsed._
+
+<!-- l9-module-readme: generated-from-ast -->

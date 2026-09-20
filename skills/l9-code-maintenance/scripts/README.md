@@ -33,7 +33,6 @@ No description
 - `def main(argv) -> int`
 - `def analyze(intent, root) -> SweepResult`
 - `def render_markdown(result) -> str`
-- `def main(argv) -> int`
 - `def run(cmd) -> subprocess.CompletedProcess[str]`
 - `def validation_parity() -> None`
 - `def test_refactor_sweep_dry_run() -> None`

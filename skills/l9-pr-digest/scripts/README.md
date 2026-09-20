@@ -33,7 +33,7 @@ _No public classes in this path._
 - `def question(code, paths, text) -> dict[str, Any]`
 - `def growth(kind, path) -> dict[str, Any]`
 - `def check(doc) -> list[str]`
-- `def parser() -> argparse.ArgumentParser`
+- `def fixture()`
 
 ## Exports
 

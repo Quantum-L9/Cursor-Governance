@@ -21,7 +21,6 @@ _No public classes in this path._
 - `def format_markdown(payload) -> str`
 - `def main(argv) -> int`
 - `def invoke(plans_dir, workspace, today) -> dict`
-- `def main(argv) -> int`
 - `def main() -> int`
 - `def apply_status(path, verdict) -> None` — Set folder/current status. Never write a parked status onto live root.
 - `def shelf_dir(plans_dir, verdict) -> Path`
@@ -31,8 +30,6 @@ _No public classes in this path._
 - `def merge_unique_todos(src, dest) -> int` — Copy unique pending/in-progress todos from src onto dest before dest-wins.
 - `def fold_retired(plans_dir, workspace, actions) -> dict[str, int]`
 - `def shelf(plans_dir, workspace, today) -> dict[str, Any]`
-- `def format_markdown(payload) -> str`
-- `def main(argv) -> int`
 
 ## Exports
 

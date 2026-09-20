@@ -1,21 +1,27 @@
 # Policies
 
-**Path:** `autonomy/policies` | **Kind:** corpus
+**Path:** `autonomy/policies` | **Tier:** discovered
 
 ## Purpose
 
-This directory holds 5 JSON.
+AST-extracted module documentation.
 
-## File types
 
-- JSON: 5
 
-## Contents
+## Components
 
-- `adapter-requirements.json`
-- `operation-aliases.json`
-- `pipeline-invariants.json`
-- `resource-classes.json`
-- `role-capabilities.json`
+_No public classes in this path._
 
-<!-- l9-folder-readme: generated-from-tree -->
+## Functions
+
+_No public module-level functions._
+
+## Exports
+
+_No `__all__` exports._
+
+## Dependencies
+
+_No imports parsed._
+
+<!-- l9-module-readme: generated-from-ast -->

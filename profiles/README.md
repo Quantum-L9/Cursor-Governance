@@ -1,28 +1,27 @@
 # Profiles
 
-**Path:** `profiles` | **Kind:** corpus
+**Path:** `profiles` | **Tier:** discovered
 
 ## Purpose
 
-This directory holds 12 Markdown.
+AST-extracted module documentation.
 
-## File types
 
-- Markdown: 12
 
-## Contents
+## Components
 
-- `advanced-features.md`
-- `dev_mode.md`
-- `operational-health.md`
-- `orchestrator.md`
-- `reasoning_docs.md`
-- `reasoning_l9.md`
-- `reasoning_technical_operations.md`
-- `security-access.md`
-- `session-startup-protocol.md`
-- `versioning.md`
-- `workflow-governance.md`
-- `ynp_mode.md`
+_No public classes in this path._
 
-<!-- l9-folder-readme: generated-from-tree -->
+## Functions
+
+_No public module-level functions._
+
+## Exports
+
+_No `__all__` exports._
+
+## Dependencies
+
+_No imports parsed._
+
+<!-- l9-module-readme: generated-from-ast -->

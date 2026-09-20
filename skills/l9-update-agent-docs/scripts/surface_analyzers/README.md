@@ -15,7 +15,6 @@ _No public classes in this path._
 ## Functions
 
 - `def analyze(root, target) -> dict[str, Any]`
-- `def analyze(root, target) -> dict[str, Any]`
 
 ## Exports
 

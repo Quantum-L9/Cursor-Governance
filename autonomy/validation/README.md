@@ -41,9 +41,6 @@ No description
 ## Functions
 
 - `def main() -> int`
-- `def main() -> int`
-- `def main() -> int`
-- `def main() -> int`
 
 ## Exports
 

@@ -1,32 +1,27 @@
 # Config
 
-**Path:** `ops/config` | **Kind:** corpus
+**Path:** `ops/config` | **Tier:** discovered
 
 ## Purpose
 
-This directory holds 8 JSON, 7 YAML.
+AST-extracted module documentation.
 
-## File types
 
-- JSON: 8
-- YAML: 7
 
-## Contents
+## Components
 
-- `commit-verification-contract.json`
-- `doctrine-baseline.rules.yaml`
-- `governance-runtime-contract.yaml`
-- `llm_rules_projection.yaml`
-- `memory-binding.json`
-- `memory-canonical-epoch.json`
-- `memory-egress-allowlist.json`
-- `memory-receipt-contract.json`
-- `precommit-hook-contract.json`
-- `python-contract.json`
-- `root-file-protection.json`
-- `wip-corpus.yaml`
-- `wip-inventory.schema.yaml`
-- `wip-prune-receipt.schema.yaml`
-- `workspace-clean-routing.yaml`
+_No public classes in this path._
 
-<!-- l9-folder-readme: generated-from-tree -->
+## Functions
+
+_No public module-level functions._
+
+## Exports
+
+_No `__all__` exports._
+
+## Dependencies
+
+_No imports parsed._
+
+<!-- l9-module-readme: generated-from-ast -->

@@ -1,4 +1,4 @@
-# L9 Pr Remediation
+# L9 PR Remediation
 
 **Path:** `skills/l9-pr-remediation` | **Tier:** discovered
 

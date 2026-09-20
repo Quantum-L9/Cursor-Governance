@@ -42,10 +42,10 @@ No description
 - `def patch_status_ledger(path, campaign_id) -> bool`
 - `def assert_no_forbidden(campaign_dir) -> None`
 - `def compile_activation(intent_path, repo_root) -> dict[str, Any]`
-- `def main() -> int`
 - `def slugify_token(value) -> str`
 - `def slugify_filename(filename) -> str`
 - `def title_from_filename(filename) -> str`
+- `def assign_campaign_id(base, existing_ids) -> str`
 
 ## Exports
 

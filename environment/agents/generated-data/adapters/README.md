@@ -101,9 +101,6 @@ Raised when an Odoo repository cannot be adapted safely.
 - `def main(argv) -> int`
 - `def resolve_namespace(candidate) -> str` — The namespace request for this candidate; raises when it cannot be honest.
 - `def ingest_candidate(candidate) -> dict[str, Any]`
-- `def main(argv) -> int`
-- `def main(argv) -> int`
-- `def main(argv) -> int`
 
 ## Exports
 

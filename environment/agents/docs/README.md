@@ -1,21 +1,27 @@
 # Docs
 
-**Path:** `environment/agents/docs` | **Kind:** corpus
+**Path:** `environment/agents/docs` | **Tier:** discovered
 
 ## Purpose
 
-This directory holds 5 Markdown.
+AST-extracted module documentation.
 
-## File types
 
-- Markdown: 5
 
-## Contents
+## Components
 
-- `DEPLOY.md`
-- `MEMORY_TOPOLOGY.md`
-- `SONAR-FP-PATH-ESCAPE.md`
-- `WORK_CLAIM_PROTOCOL.md`
-- `network-allowlist.md`
+_No public classes in this path._
 
-<!-- l9-folder-readme: generated-from-tree -->
+## Functions
+
+_No public module-level functions._
+
+## Exports
+
+_No `__all__` exports._
+
+## Dependencies
+
+_No imports parsed._
+
+<!-- l9-module-readme: generated-from-ast -->

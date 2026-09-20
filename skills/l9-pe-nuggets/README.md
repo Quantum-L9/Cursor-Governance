@@ -1,4 +1,4 @@
-# L9 Pe Nuggets
+# L9 PE Nuggets
 
 **Path:** `skills/l9-pe-nuggets` | **Tier:** discovered
 

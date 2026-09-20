@@ -17,10 +17,8 @@ _No public classes in this path._
 - `def write_manifest(root) -> None`
 - `def main() -> int`
 - `def run(cmd, success) -> subprocess.CompletedProcess[str]`
-- `def main() -> int`
 - `def load_yaml(path) -> Any`
 - `def validate(root, mode) -> list[str]`
-- `def main() -> int`
 
 ## Exports
 

@@ -98,17 +98,17 @@ No description
 - `def bootstrap_baseline(census, baseline_path, reason) -> None`
 - `def check_baseline(census, baseline) -> list[str]`
 - `def tighten_baseline(census, baseline_path) -> None`
-- `def main() -> int`
 - `def resolve_all(root, registry_path) -> list[dict[str, Any]]`
 - `def build_projection_index(root, registry_path) -> tuple[dict[str, dict[str, Any]], dict[str, str]]`
 - `def expected_outputs(root, registry_path) -> tuple[dict[str, str], dict[str, dict[str, Any]]]`
 - `def check(root, registry_path) -> list[str]`
 - `def explain(root, selector, registry_path) -> dict[str, Any]`
 - `def impact(root, contract_id, registry_path) -> list[dict[str, Any]]`
-- `def main() -> int`
 - `def semantic_tokens(record) -> set[str]`
 - `def token_bigrams(tokens) -> set[str]`
 - `def jaccard(left, right) -> float`
+- `def classification_similarity(left, right) -> float`
+- `def semantic_similarity(left, right) -> float`
 
 ## Exports
 

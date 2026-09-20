@@ -97,11 +97,6 @@ Raised when a subagent data packet violates a required contract.
 ## Functions
 
 - `def main(argv) -> int`
-- `def main(argv) -> int`
-- `def main(argv) -> int`
-- `def main(argv) -> int`
-- `def main(argv) -> int`
-- `def main(argv) -> int`
 
 ## Exports
 
