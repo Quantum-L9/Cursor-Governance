@@ -10,6 +10,14 @@
         "--transport",
         "stdio"
       ]
+    },
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "timeout": 120000,
+      "headers": {
+        "Authorization": "Bearer ${CONTEXT7_API_KEY}"
+      }
     }
   }
 }
