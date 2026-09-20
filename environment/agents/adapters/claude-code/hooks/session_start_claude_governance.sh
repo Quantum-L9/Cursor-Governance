@@ -714,6 +714,17 @@ _l9_door_status() {
     say "signed-agent door: pre-launch handoff PRESENT (agent_id=${L9_MEMORY_AGENT_ID:-unset}) — the l9-graphite-memory stdio server inherits it from the Claude parent environment"
   elif [ "${#missing[@]}" -eq 4 ]; then
     say "signed-agent door: UNAVAILABLE — no assertion env in the Claude parent environment, and a SessionStart hook cannot deliver it to the separately launched MCP server. Provision BEFORE launch: 'source ops/memory/export_agent_assertion_env.sh' (L9_MEMORY_AGENT_ID=${L9_MEMORY_AGENT_ID:-claude-code}) in the shell that starts Claude. This session the package server runs without the agents door (operator fallback tier); memory.write_agent / write_governed carry no signed principal"
+    # Name the CONSEQUENCE, not just the missing credential. Tier 3 resolves the
+    # principal ONCE at server spawn from the server's cwd and freezes it, so the
+    # namespace argument on memory.write_agent is checked against a grant set
+    # fixed from this workspace. A session with a second root (the governance
+    # SSOT beside the workspace) cannot agent-write that second namespace at all,
+    # and no tool usage from inside the session changes it. That is an
+    # agent-lane gap to REPORT, never a reason to route a model-authored fact
+    # through the operator CLI (ADR-0033 / INV-03b: ops/memory/cli.py is
+    # operator form). The lift is at the principal boundary — the signed door
+    # before launch — or the package's 2.5.0 per-request resolution (ADR-083).
+    say "agent lane scope: memory.write_agent can write ONLY the namespace derived from the MCP server's working directory (${WORKSPACE:-\$PWD}) — its principal is frozen at spawn (Tier 3, l9_graphite_memory 2.4.0). Any OTHER repository in this session, including the governance SSOT, is NOT writable through the agent lane this session. Report such a fact as an agent-lane gap (namespace + dry_run verdict); do not reroute it through the operator CLI (ADR-0033 / INV-03b). Lift: provision the signed door before launch, or the 2.5.0 wheel (per-request Tier 3, ADR-083)"
   else
     say "signed-agent door: PARTIAL pre-launch handoff — missing ${missing[*]}; the package server refuses the door when L9_MEMORY_AGENTS_DOOR_SECRET is set without the assertion, key map, and grants (fail-closed). Re-source ops/memory/export_agent_assertion_env.sh in the launching shell"
   fi

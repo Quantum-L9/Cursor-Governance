@@ -17,7 +17,11 @@ resolved → conditional session-ref**.
 
 ## 1. Graphiti PICKUP (required)
 
-Write via Cursor Graphiti front door / `l9-end-session` PICKUP shape:
+Write via `python -m ops.memory.cli write` after **one** prefetch of the
+owning repository (the repo the issue lives in — not Cursor-Governance
+unless that is the owning repo). `--group-id <owning-namespace>` is
+enough from this session; do not fall back to the session checkout
+namespace. Shape:
 
 ```text
 PICKUP|date=YYYY-MM-DD|task={what was unblocked}|files={paths}|next={resume action}|blocker={remaining or none}|gmps={ids or none}|outcome={fixed|partial|blocked}

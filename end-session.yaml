@@ -145,10 +145,13 @@ phase_2_lessons:
         "LESSON|topic={TOPIC}|learned={LEARNED}|context={CONTEXT}" \
         --kind lesson
 
+    # --kind error was an alias that resolved to the same class as --kind
+    # lesson (procedural), so an error and a lesson were indistinguishable.
+    # The ERROR| content prefix carries the distinction; the class does not.
     error: |
       python -m ops.memory.cli write \
         "ERROR|type={TYPE}|cause={CAUSE}|fix={FIX}" \
-        --kind error
+        --kind lesson
 
   examples:
     lesson: "LESSON|topic=governance|learned=ContextVar must be set via async context manager before handler calls|context=FastAPI routes with RLS"

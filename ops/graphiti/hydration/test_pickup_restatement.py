@@ -40,4 +40,4 @@ def test_canonical_no_hit_reports_empty_task_state(monkeypatch, tmp_path):
     assert "start from the user request" in packet["active_objective"]
     ctx = comp.format_additional_context(packet)
     assert "facts_returned=0" in ctx
-    assert "continuation: none" in ctx
+    assert "continuation=none" in ctx

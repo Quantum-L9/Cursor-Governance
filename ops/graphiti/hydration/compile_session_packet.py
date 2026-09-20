@@ -37,6 +37,7 @@ from ops.memory.hydration import (  # noqa: E402
     STATUS_NAMESPACE_UNRESOLVED,
     canonical_hydrate,
 )
+from ops.memory.session_contracts import session_task_objective  # noqa: E402
 from ops.memory.session_state import write_session_state  # noqa: E402
 
 #: Default hydration budget (chars). Formerly read from promotion_rules.yaml,
@@ -129,7 +130,7 @@ def compile_session_packet(
             "user_id": os.environ.get("USER_ID") or "cursor_agent",
         }
 
-    task = f"Resume session in {project.name}"
+    task = session_task_objective(project.name)
     # SessionStart has no task yet, so a task-signature match is impossible
     # here by construction; the packet asks for the explicit repository
     # fallback and reports it (audit P1-02). A task-bearing caller keeps the
@@ -261,6 +262,8 @@ def compile_session_packet(
         "continuation_selection": continuation.selection if continuation else None,
         "fan_in_denied": hydration.fan_in_denied,
         "projection_status": hydration.projection_status,
+        "agent_lane_records": len(hydration.agent_lane_record_ids),
+        "agent_lane_window_hours": hydration.agent_lane_window_hours,
     }
 
     memory_block: dict[str, Any] = hydration.as_dict()
@@ -302,7 +305,7 @@ def compile_session_packet(
 
 
 def format_additional_context(packet: dict[str, Any]) -> str:
-    """Markdown + compact JSON for Cursor additional_context."""
+    """Human-readable hydrate block: one field=value per line, then JSON."""
     budget = _hydration_budget()
     contract = packet.get("next_action_contract") or {}
     next_action = contract.get("next_action") or ""
@@ -326,47 +329,42 @@ def format_additional_context(packet: dict[str, Any]) -> str:
     if memory_degraded:
         lines.append(LEAD_DEGRADED)
     lines.append(HEADING)
-    flags = ""
+    lines.append(f"namespace={packet.get('group_id')}")
+    lines.append(f"agent_id={packet.get('agent_id')}")
+    lines.append(f"packet={packet.get('packet_id')}")
+    lines.append(f"status={status}")
     if memory_degraded:
-        flags += f" {LEAD_DEGRADED}"
+        lines.append(f"memory_degraded={LEAD_DEGRADED}")
     if environment_fault:
-        flags += f" {LEAD_ENVIRONMENT_FAULT}"
+        lines.append(f"environment_fault={LEAD_ENVIRONMENT_FAULT}")
     if close_gap:
-        flags += f" {LEAD_CLOSE_GAP}"
-    lines.append(
-        f"memory hydrate: namespace={packet.get('group_id')} "
-        f"agent_id={packet.get('agent_id')} packet={packet.get('packet_id')} "
-        f"status={status}{flags}"
-    )
+        lines.append(f"close_gap={LEAD_CLOSE_GAP}")
     if memory_degraded and packet.get("degrade_reason"):
-        lines.append(f"hydration degraded: {packet['degrade_reason']}")
+        lines.append(f"degrade_reason={packet['degrade_reason']}")
     if environment_fault:
         detail = stats.get("environment_fault_reason") or memory_status or "runtime unbound"
-        lines.append(f"environment fault: {detail}")
+        lines.append(f"environment_fault_detail={detail}")
     if close_gap:
         detail = packet.get("close_gap_reason") or stats.get("close_gap_reason") or ""
-        lines.append(f"close-gap: {detail or 'prior session did not close'}")
-    lines.append(f"objective: {packet.get('active_objective', '')}")
+        lines.append(f"close_gap_reason={detail or 'prior session did not close'}")
+    lines.append(f"objective={packet.get('active_objective', '')}")
     lines.append(f"next={next_action}")
     if contract.get("rationale"):
-        lines.append(f"rationale: {contract['rationale']}")
+        lines.append(f"rationale={contract['rationale']}")
     record = stats.get("continuation_record_id")
     if record:
-        stale = " STALE" if stats.get("continuation_stale") else ""
-        source = stats.get("continuation_source")
-        lines.append(f"continuation: record={str(record)[:8]} source={source}{stale}")
+        lines.append(f"continuation_record={str(record)[:8]}")
+        lines.append(f"continuation_source={stats.get('continuation_source')}")
+        lines.append(f"continuation_stale={'yes' if stats.get('continuation_stale') else 'no'}")
     elif stats.get("continuation_source"):
-        lines.append(f"continuation: source={stats.get('continuation_source')}")
+        lines.append(f"continuation_source={stats.get('continuation_source')}")
     else:
-        lines.append("continuation: none")
-    lines.append(
-        "stats: "
-        f"facts_returned={stats.get('facts_returned', packet.get('fact_count', 0))} | "
-        f"pickup_parsed={'yes' if stats.get('pickup_parsed') else 'no'} | "
-        f"context_chars={stats.get('context_chars', 0)} | "
-        f"search_queries_used={stats.get('search_queries_used', 0)} | "
-        f"budget_chars={stats.get('budget_chars', budget)}"
-    )
+        lines.append("continuation=none")
+    lines.append(f"facts_returned={stats.get('facts_returned', packet.get('fact_count', 0))}")
+    lines.append(f"pickup_parsed={'yes' if stats.get('pickup_parsed') else 'no'}")
+    lines.append(f"context_chars={stats.get('context_chars', 0)}")
+    lines.append(f"search_queries_used={stats.get('search_queries_used', 0)}")
+    lines.append(f"budget_chars={stats.get('budget_chars', budget)}")
     if stats.get("fan_in_denied"):
         lines.append(f"fan-in: denied by memory ({str(stats['fan_in_denied'])[:160]})")
     previews = packet.get("fact_previews") or []
@@ -392,7 +390,7 @@ def format_additional_context(packet: dict[str, Any]) -> str:
         "close_gap_reason": packet.get("close_gap_reason") or stats.get("close_gap_reason") or "",
         "hydrate_stats": stats,
     }
-    fence = "```json\n" + json.dumps(compact, ensure_ascii=False) + "\n```"
+    fence = "```json\n" + json.dumps(compact, ensure_ascii=False, indent=2) + "\n```"
     text = "\n".join(lines) + "\n" + fence
     if len(text) > budget:
         text = text[: budget - 20] + "\n…[truncated]"

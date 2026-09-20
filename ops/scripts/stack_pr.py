@@ -62,7 +62,10 @@ def open_prs(repo: str, prefix: str) -> list[dict[str, Any]]:
     answers it 403 ("sessions are bound to their configured repositories"), so
     ``stack_pr.py order`` could not run at all there — at exactly the moment
     stack order matters, since rules 48/53 make bottom-up merge order a
-    correctness requirement and PR_STACK=auto is the ``make pr`` default. The
+    correctness requirement wherever a stack exists. (PR_STACK=auto was the
+    ``make pr`` default until 2026-09-19 and is now opt-in; the endpoint still
+    has to work, because this script only ever runs when someone is stacking.)
+    The
     repo is known at call time, so nothing here ever needed org-wide reach.
 
     The 403 was also masking two defects that would have produced wrong answers
