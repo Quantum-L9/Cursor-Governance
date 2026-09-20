@@ -3,6 +3,7 @@
   "description": "Hook-lane capability envelopes (ADR-0033, INV-03b). Every automatic caller of ops/memory/control_plane_client.py names its surface; the client refuses, client-side and before any process is spawned, an operation, record class, record count or byte size outside that surface's envelope (REJECTED, error 'REJECTED:envelope ...') and stamps principal.type=hook / principal.surface=<id> into the integration receipt. Bounded means the same MemoryService, the same admission and the same store with a narrower envelope — never an alternate path. Agents are NOT on this list: the agent lane is the package's public l9-memory / MCP surface and Cursor-Governance does not mediate it. A client constructed without a surface is the operator form (python -m ops.memory.cli by a human, legacy reconciliation, diagnostics) and carries principal.type=operator.",
   "authority": [
     "docs/decisions/ADR-0033-two-lanes-one-memoryservice.md",
+    "docs/decisions/ADR-0034-hydrate-close-agent-lane-alignment.md",
     "INVARIANTS.md INV-03b",
     "CANONICAL_LAW.md MEMORY_TWO_LANES_V1"
   ],
@@ -92,6 +93,7 @@
         "health",
         "capabilities",
         "hydrate",
+        "search",
         "ingest_candidate",
         "close",
         "distill",
@@ -117,6 +119,7 @@
         "health",
         "capabilities",
         "hydrate",
+        "search",
         "ingest_candidate",
         "close",
         "distill"

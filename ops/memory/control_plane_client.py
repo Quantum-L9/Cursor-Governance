@@ -567,12 +567,16 @@ class MemoryControlPlaneClient:
         limit: int = 10,
         memory_classes: Sequence[str] = (),
         task_signature: str | None = None,
+        recorded_after: datetime | None = None,
     ) -> OperationOutcome:
         """Canonical search returning full records (the typed-continuation path).
 
         ``tags`` is a selector memory applies (every tag required), so a
         consumer can retrieve its ``session_continuation`` records without
-        depending on query text. Read fan-in is requested; memory authorizes.
+        depending on query text. ``recorded_after`` is the recency-window
+        selector (ADR-0035): when the bound CLI accepts it, memory returns
+        authorized records after that floor even without query overlap.
+        Read fan-in is requested; memory authorizes.
         """
 
         if guard := self._guard("search"):
@@ -586,6 +590,11 @@ class MemoryControlPlaneClient:
             argv += ["--memory-class", memory_class]
         for tag in tags:
             argv += ["--tag", tag]
+        if recorded_after is not None:
+            argv += [
+                "--recorded-after",
+                recorded_after.astimezone(UTC).replace(microsecond=0).isoformat(),
+            ]
         raw = self._invoke(argv, cwd=workspace)
         namespaces = tuple(read_namespace_hints)
         if raw.payload is None:
@@ -621,6 +630,7 @@ class MemoryControlPlaneClient:
                 tags=tuple(tags),
                 limit=limit,
                 memory_classes=tuple(memory_classes),
+                recorded_after=recorded_after,
             ),
             receipt,
             requested_namespaces=tuple(read_namespace_hints),

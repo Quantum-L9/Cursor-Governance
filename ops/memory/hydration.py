@@ -8,6 +8,7 @@ canonical memory control plane:
         → memory.hydrate           (bounded context; fan-in requested, memory authorizes)
         → memory.search --tag session_continuation
                                    (typed records; the latest valid capsule is evidence)
+        → memory.search --recorded-after <now-24h>  (repo-scoped agent-lane writes)
         → CanonicalHydration       (what Cursor composes its packet from)
 
 Nothing here reruns a provider search, fills gaps from a projection, revives
@@ -31,6 +32,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from ops.memory.agent_lane import AGENT_LANE_LIMIT, AGENT_LANE_WINDOW, is_agent_lane_record
 from ops.memory.control_plane_client import (
     FAULT_CANONICAL,
     FAULT_ENVIRONMENT,
@@ -67,6 +69,15 @@ SOURCE_CANONICAL = "canonical"
 SOURCE_LEGACY_UNVERIFIED = "legacy_unverified"
 
 _OK_STATUSES = frozenset({OutcomeStatus.OK.value, OutcomeStatus.NO_HITS.value})
+
+#: How many 24h agent-lane sections are placed ahead of ordinary hydration
+#: sections, so they survive the packet compiler's truncation of
+#: ``context_sections``. Deliberately small: ``AGENT_LANE_LIMIT`` is 20 and the
+#: packet renders only a handful, so an unbounded prepend would evict ordinary
+#: hydration entirely. This reserves a guaranteed head without owning the
+#: consumer's window size — agent-lane facts beyond the reserve keep their old
+#: position after the ordinary sections.
+AGENT_LANE_PACKET_RESERVE = 3
 
 #: Continuation selection policies (audit P1-02). ``task`` is the default and
 #: the only one a task-bearing caller should use: a capsule is resumed only
@@ -157,6 +168,9 @@ class CanonicalHydration:
     hydrate_receipt_digest: str | None = None
     integration_receipts: tuple[dict[str, Any], ...] = field(default_factory=tuple, repr=False)
     warnings: tuple[str, ...] = ()
+    #: Repo-scoped agent-lane records admitted by the 24h prefetch (ADR-0034).
+    agent_lane_record_ids: tuple[str, ...] = ()
+    agent_lane_window_hours: int = 24
     #: What the one-shot environment heal did on the bound runtime, carried so
     #: an ``environment`` fault names its own repair attempt.
     environment_heal: str | None = None
@@ -224,6 +238,8 @@ class CanonicalHydration:
             "fan_in_denied": self.fan_in_denied,
             "error": self.error,
             "calls": self.calls,
+            "agent_lane_record_ids": list(self.agent_lane_record_ids),
+            "agent_lane_window_hours": self.agent_lane_window_hours,
             "latency_ms": self.latency_ms,
             "hydrate_receipt_digest": self.hydrate_receipt_digest,
             "warnings": list(self.warnings),
@@ -502,6 +518,61 @@ def canonical_hydrate(
     else:
         warnings.append("no write namespace hint: continuation not requested")
 
+    agent_lane_ids: tuple[str, ...] = ()
+    if primary:
+        recorded_after = (datetime.now(UTC) - AGENT_LANE_WINDOW).replace(microsecond=0)
+        recent = client.search(
+            task,
+            workspace=workspace_path,
+            write_namespace_hint=primary,
+            read_namespace_hints=(primary,),
+            tags=(),
+            limit=AGENT_LANE_LIMIT,
+            recorded_after=recorded_after,
+            task_signature=signature,
+        )
+        receipts.append(recent.integration_receipt)
+        if recent.status is OutcomeStatus.OK and recent.receipt is not None:
+            seen = set(record_ids)
+            extra_sections: list[tuple[str, str]] = []
+            extra_ids: list[str] = []
+            for hit in recent.receipt.hits:
+                record = hit.record
+                if not is_agent_lane_record(record):
+                    continue
+                if record.record_id in seen or not record.content:
+                    continue
+                extra_sections.append((record.memory_class, record.content))
+                extra_ids.append(record.record_id)
+                seen.add(record.record_id)
+            if extra_sections:
+                # Reserve packet space rather than appending. The packet
+                # compiler renders only the first `context_sections`, so
+                # appending put the 24h agent-lane facts behind a truncation
+                # boundary: the search could report OK and expose none of the
+                # agent-written content to the next session.
+                #
+                # Not a bare prepend either — AGENT_LANE_LIMIT is 20 against a
+                # much smaller packet window, so leading with all of them would
+                # evict ordinary hydration completely. The reserved head is
+                # guaranteed, the remainder keeps its old place behind the
+                # ordinary sections.
+                #
+                # `record_ids` is index-aligned with `context_sections`
+                # downstream (the packet zips the two), so both are reordered
+                # identically.
+                head = tuple(extra_sections[:AGENT_LANE_PACKET_RESERVE])
+                tail = tuple(extra_sections[AGENT_LANE_PACKET_RESERVE:])
+                head_ids = tuple(extra_ids[:AGENT_LANE_PACKET_RESERVE])
+                tail_ids = tuple(extra_ids[AGENT_LANE_PACKET_RESERVE:])
+                sections = head + sections + tail
+                record_ids = head_ids + record_ids + tail_ids
+                agent_lane_ids = tuple(extra_ids)
+        elif recent.status is not OutcomeStatus.NO_HITS:
+            warnings.append(
+                f"24h agent-lane search {recent.status.value}: {recent.error or 'no detail'}"
+            )
+
     status = OutcomeStatus.OK.value if (record_ids or continuation) else OutcomeStatus.NO_HITS.value
     return finish(
         status,
@@ -514,6 +585,7 @@ def canonical_hydrate(
         continuation_excluded=excluded,
         fan_in_denied=fan_in_denied,
         hydrate_receipt_digest=result_digest(hydrate.receipt.raw),
+        agent_lane_record_ids=agent_lane_ids,
     )
 
 
