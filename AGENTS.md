@@ -1818,3 +1818,19 @@ stay on disk (additive_only). Do not fold them.
   --limit 5`). Display-only. No archive, no harvest, no auto-Build. Kill
   switch: `L9_SESSIONSTART_UNBUILT_PLANS=0`. Full harvest stays
   `/l9-pipeline-audit`. Links-only auto-wire is unchanged.
+
+<!-- SESSIONSTART_CURSOR_BOOTSTRAP_V2 -->
+## Cursor bootstrap receipt schema is v2 (2026-09-19)
+
+Append-only. This supersedes only the `l9.cursor-bootstrap.v1` schema name in
+`SESSIONSTART_RECEIPT_HYDRATE_UNBUILT_V1`. That paragraph stays on disk
+(additive_only). Do not fold it. Claude remains `l9.claude-bootstrap.v1`.
+
+- Writers emit **`l9.cursor-bootstrap.v2`** (`schema_for("cursor")`, SessionStart
+  payload, `make cursor-install`). The newest Cursor bootstrap schema is v2;
+  `l9.kernel_apply.v2` is a different receipt family.
+- The reader still accepts `l9.cursor-bootstrap.v1` during transition. An
+  unrecognised Cursor schema is `unknown`, not ready.
+- v2 `n/a` stays `N/A` (not `READY`). `probes` names the this-run source
+  (`venv`, `runtime_binding`, `alias:memory`, …). Identity fields (`surface`,
+  `mode`, `stage`, `remediation`, `ttl_seconds`) remain constants.
