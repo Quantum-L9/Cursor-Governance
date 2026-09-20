@@ -8,8 +8,8 @@ metadata:
   tags: [l9, docs, obligations, agents, ci, maintenance]
   owner: igor_beylin
   status: active
-  version: 3.5.0
-  updated: 2026-09-13
+  version: 3.6.0
+  updated: 2026-09-20
   when_to_use: compile documentation obligations after repository changes, assess supported operational contract surfaces, refresh governed documentation through its canonical owner, or prove closure with a machine receipt
 ---
 
@@ -66,7 +66,7 @@ Machine authority:
 - `l9-update-agent-docs` must not absorb Make/Python semantic ownership merely because it detects a material defect.
 - `ops/config/root-file-protection.json` remains the canonical mutation-protection contract. Repo Docs reads and resolves its rule at runtime; it must not copy `additive_only` or other guard semantics into a second authority.
 - `l9-intelligence-harvest` owns semantic discovery and qualification. The compiler consumes canonical `harvest.json`; it never copies Harvest reasoning or mutates the donor through Harvest.
-- `l9-update-agent-docs` owns the root `filetree.md` inventory (`scripts/doc_filetree.py`) and AST module/submodule README generation (`scripts/generate_module_readmes.py`). `filetree.md` is generated or refreshed first; missing README diagnosis reads that inventory. It does not call an LLM and does not import the donor repo. `readme-pipeline-v1` remains an optional sequencer that calls the repo re-export.
+- `l9-update-agent-docs` owns the root `filetree.md` inventory (`scripts/doc_filetree.py`) and README compilation (`scripts/generate_module_readmes.py` over `readme_model.py`, `readme_evidence.py`, `readme_renderers.py`, `readme_quality.py`). `filetree.md` is generated or refreshed first and is the sole automatic README membership authority. It does not call an LLM and does not import the donor repo. `readme-pipeline-v1` remains an optional sequencer that calls the repo re-export.
 - `l9-architecture-decision-records` owns ADR authoring.
 - repository/API owners own API reference generation.
 - organization/community-health owners remain external.
@@ -150,11 +150,21 @@ For GitHub PR execution, pass the source PR head and the tested checkout revisio
 
 Never collapse source head and tested revision into one ambiguous SHA.
 
-### 2. Generate or refresh `filetree.md` first
+### 2. Generate or refresh `filetree.md` first, then compile READMEs
 
-`filetree.md` is a required root output of this skill. The compiler writes or updates it from the live tree in code before it diagnoses missing files.
+`filetree.md` is a required root output of this skill. The compiler writes or updates it from the live tree in code before it diagnoses missing files. Do not walk the tree as a second source of truth after `filetree.md` has been written.
 
-Then diagnose missing module and submodule `README.md` files from that inventory. Do not walk the tree as a second source of truth after `filetree.md` has been written.
+README generation is deterministic repository-documentation **compilation**, not AST-to-Markdown projection. Five stages, in order:
+
+1. **QUALIFY.** `filetree.md` is the sole automatic membership authority. Configuration may suppress a target (`skip: true`) and decorate the rest; it can never invent one. A configured path the inventory does not authorize is reported as stale, not honoured. Exclusion is decided on whole path segments before any classification, and covers the whole subtree.
+2. **MODEL.** Compile deterministic repository evidence into a typed README model. AST facts are evidence, not documentation structure. Purpose precedence is: configured purpose, then the target's own authoritative contract (`SKILL.md` frontmatter `description`, then its `## Purpose`), then — only for a genuine single-module target — that module's docstring. A directory holding several modules never borrows one child's docstring. Where no source supports a statement, the statement is absent.
+3. **RENDER.** Select a closed-world renderer from the target kind: `skill`, `module`, `subsystem`, `corpus`, `index`. Render only sections with positive content. Standard-library imports are not rendered. Module identity is preserved; symbols from unrelated files never share one anonymous list.
+4. **VALIDATE.** Check target authority, path identity, ownership marker, evidence provenance, relative links and semantic quality. An ERROR is a compiler defect and fails the run.
+5. **RECONCILE.** Compare the authorized desired corpus with the generator-owned corpus on disk. Create, refresh, leave unchanged, preserve, retire or report a conflict. Only generator-owned artifacts are created, refreshed or retired.
+
+When uncertain whether a directory deserves generated documentation, do not generate it. An empty directory earns no README.
+
+A generated README is a projection. It never outranks `SKILL.md`, repository-native configuration, or any other canonical owner.
 
 ### 3. Read obligations, not only surfaces
 
@@ -212,11 +222,11 @@ If the analyzer cannot be resolved, the obligation is `BLOCKED`. Do not guess a 
 | `l9-update-agent-docs` / owner-native root index | Surgical pointer/index refresh permitted by topology. |
 | operational contract / `repository-native` execution owner | Apply only the bounded repair justified by assessment, subject to the resolved mutation guard and repository-native validation. |
 | `l9-update-agent-docs` / `filetree.md` | Required. Create if absent. Refresh only when the live file already carries `<!-- l9-filetree: generated-from-tree -->`. An unowned `filetree.md` is preserved; diagnosis still walks the live tree. |
-| `l9-update-agent-docs` / module READMEs | After `filetree.md`, write every missing inventory README via `scripts/generate_module_readmes.py`. Code modules (`.py` / `.sh` / `SKILL.md` / `__init__.py`) get an AST README. Corpus and index folders — a document/config mix, a generic corpus name at depth 0–1, or a parent of two or more qualifying children — get a type-index README (`<!-- l9-folder-readme: generated-from-tree -->`). Recognition is structural and repo-agnostic; do not add a path allowlist. Skip skill-pack sidecars (`SKILL.md` ancestor except `scripts/`), `fixtures` / `handoff` / `deliverables` / `receipts` / `drafts` / `generated`, and the existing skip prefixes. Do not limit the gap fill to the current change set. The optional `changed=` filter stays for manual CLI use only. Refresh only files this generator owns: AST marker, folder marker, plus the legacy corpus written before the marker existed. `auto_generated: false` front matter, or any other shape, is handwritten and is never overwritten without `--force`. Optional sequencer: `readme-pipeline-v1`. |
+| `l9-update-agent-docs` / module READMEs | After `filetree.md`, reconcile the whole authorized corpus via `scripts/generate_module_readmes.py` (qualify → model → render → validate → reconcile). Kinds are renderer identities: a directory with its own `SKILL.md` is `skill`; one with two or more direct source files is `subsystem`; one with fewer is `module`; a document/config folder with files is `corpus`; a parent of two or more qualifying children is `index`. Index qualification runs deepest-first so nested parents reach the fixed point. Recognition is structural and repo-agnostic; never add a path allowlist. Excluded at any depth, whole subtree: `fixtures` / `generated` / `handoff` / `deliverables` / `receipts` / `drafts` / `assets` / `tests` / `_archived`, plus skill-pack sidecars (`SKILL.md` ancestor except `scripts/`) and the skip prefixes. Matching is on whole path segments — `generated-data` is a real directory. Empty directories earn nothing. Do not limit the reconciliation to the current change set; the optional `changed=` filter is manual CLI scope only and suppresses retirement, because a partial view cannot judge staleness. Ownership marker: `<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=… -->`, with both version-1 markers still recognized so an older corpus migrates. A generator-owned README at a no-longer-authorized target is retired. `auto_generated: false` front matter outranks any marker; that and any unmarked shape is handwritten and is never overwritten without `--force`. A marker recording a format version this compiler does not understand is a conflict, never a rewrite. Optional sequencer: `readme-pipeline-v1`. |
 | specialist/external owner | Handoff or use that owner's canonical capability. Do not absorb its implementation here. |
 | `llm.txt` projection | Default enabled. Create if absent. Refresh only when the live file already carries `<!-- l9-llm-txt: generated-projection -->`. If `llm.txt` is missing and `llms.txt` exists, rename (preserve bytes). If both exist, delete leftover `llms.txt`. Never overwrite an unowned `llm.txt`. `--write-llm` does not authorize that overwrite. Projection, never authority. |
 
-`filetree.md` is required and skill-owned. Module README generation reads that inventory and is executable without a consumer-root generator, YAML map, or donor repo. Optional overlay: `config/subsystems/readme_config.yaml` (purpose/skip). Optional sequencer: `workflows/dags/readme_pipeline_dag.py` (`readme-pipeline-v1`). Unsupported extensions stay PARTIAL.
+`filetree.md` is required and skill-owned, and is the sole automatic README membership authority. README compilation reads that inventory and is executable without a consumer-root generator, YAML map, or donor repo. Optional overlay: `config/subsystems/readme_config.yaml` — it may supply `title`, `tier`, `description`, `purpose` and `skip` for a target the inventory already authorizes, and cannot create one. Optional sequencer: `workflows/dags/readme_pipeline_dag.py` (`readme-pipeline-v1`). Unsupported extensions stay PARTIAL.
 
 For `Makefile` and `pyproject.toml`, always resolve `ops/config/root-file-protection.json` before treating a proposed mutation as admissible. A guard justification mechanism authorizes the guard only; it does not transfer semantic ownership to Repo Docs.
 
@@ -293,9 +303,13 @@ Do not introduce a generic plugin system merely to avoid adding a static registr
 - Overwriting a handwritten module README, an unowned skill-handled file, or the repository-root README.md
 - Leaving `llms.txt` in place after `llm.txt` exists
 - Skipping source files because an ancestor directory is named `.l9` (skip only paths relative to the scanned module or repo root)
-- Hand-editing generated module README content instead of using its owner
+- Hand-editing generated module README content instead of using its owner. A wrong generated README is a compiler defect: repair the compiler or its evidence and regenerate.
 - Treating `filetree.md` or `llm.txt` as doctrine
 - Diagnosing missing module READMEs without a current `filetree.md` inventory
+- Letting configuration, a renderer, an AST extractor or a CLI helper create a README target the inventory does not authorize
+- Emitting a purpose, responsibility or boundary no deterministic repository evidence supports, or a section whose only content is that there is none
+- Deriving a directory's purpose from one child module when several live there
+- Retiring a README that carries no ownership marker, or rewriting one whose marker records a newer format version
 - Creating root files not permitted by topology
 - Changing generated formatter ownership blocks by hand
 - Inventing a new CI workflow for this capability when an existing CI owner can consume the receipt
