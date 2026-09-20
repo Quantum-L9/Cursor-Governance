@@ -88,8 +88,13 @@ class ManusMcpServerTests(unittest.TestCase):
         )
 
         validation = self.service.call_tool("governance_validate", {"mode": "manus"})
-        self.assertFalse(validation.get("isError", False))
-        self.assertEqual(validation["structuredContent"]["status"], "passed")
+        self.assertTrue(validation.get("isError", False))
+        self.assertIn("bearer-protected", validation["structuredContent"]["error"])
+
+        protected = mcp_server.GovernanceMcpService(REPOSITORY, bootstrap_enabled=True)
+        allowed = protected.call_tool("governance_validate", {"mode": "manus"})
+        self.assertFalse(allowed.get("isError", False))
+        self.assertEqual(allowed["structuredContent"]["status"], "passed")
 
     def test_lifecycle_tools_require_explicit_protected_service_mode(self) -> None:
         protected = mcp_server.GovernanceMcpService(REPOSITORY, memory_lifecycle_enabled=True)

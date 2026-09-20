@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import hmac
+import importlib.util
 import json
 import os
 import subprocess
@@ -430,26 +431,24 @@ class GovernanceMcpService:
         return sorted(set(files))
 
     def _adapter_contract_errors(self) -> list[str]:
-        sys.path.insert(0, str(self.adapter_root))
-        try:
-            import validate_manus_adapter  # type: ignore[import-not-found]
-
-            return validate_manus_adapter.validate(self.governance_root)
-        finally:
-            try:
-                sys.path.remove(str(self.adapter_root))
-            except ValueError:
-                pass
+        validator = self.adapter_root / "validate_manus_adapter.py"
+        spec = importlib.util.spec_from_file_location("manus_validate_manus_adapter", validator)
+        if spec is None or spec.loader is None:
+            return [f"unable to load adapter validator at {validator}"]
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module.validate(self.governance_root)
 
     def _memory_lifecycle(self):
         """Load the thin lifecycle wrapper after binding it to this checkout."""
 
-        for path in (self.governance_root, self.adapter_root):
-            if str(path) not in sys.path:
-                sys.path.insert(0, str(path))
-        import memory_lifecycle  # type: ignore[import-not-found]
-
-        return memory_lifecycle
+        path = self.adapter_root / "memory_lifecycle.py"
+        spec = importlib.util.spec_from_file_location("manus_memory_lifecycle", path)
+        if spec is None or spec.loader is None:
+            raise ToolInputError(f"unable to load memory lifecycle at {path}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
 
     def _require_memory_lifecycle(self) -> None:
         if not self.memory_lifecycle_enabled:
@@ -524,6 +523,8 @@ class GovernanceMcpService:
         )
 
     def validate(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        if not self.bootstrap_enabled:
+            raise ToolInputError("governance_validate requires a bearer-protected MCP deployment")
         mode = arguments.get("mode", "manus")
         if mode not in {"manus", "full"}:
             raise ToolInputError("mode must be manus or full")
@@ -733,7 +734,6 @@ class GovernanceMcpRequestHandler(BaseHTTPRequestHandler):
 
     def do_OPTIONS(self) -> None:  # noqa: N802
         self.send_response(HTTPStatus.NO_CONTENT)
-        self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header(
             "Access-Control-Allow-Headers", "Authorization, Content-Type, MCP-Session-Id"
         )
@@ -800,7 +800,6 @@ class GovernanceMcpRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("MCP-Session-Id", self.server.session_id)
-        self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(body)
 
