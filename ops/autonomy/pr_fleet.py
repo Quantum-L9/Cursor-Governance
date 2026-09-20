@@ -48,6 +48,7 @@ import json
 import os
 import sys
 import uuid
+from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
@@ -243,17 +244,28 @@ def merge_order(prs: list[dict[str, Any]], edges: list[dict[str, Any]]) -> list[
 # ---------------------------------------------------------------------------
 
 
-def write_claims(pr: dict[str, Any]) -> list[dict[str, Any]]:
+def write_claims(
+    pr: dict[str, Any], extra_surfaces: Sequence[str] | None = None
+) -> list[dict[str, Any]]:
     """Exclusive write claims one remediation of this PR holds.
 
     Path-scoped keys use the claim plane's own grammar so overlap resolves the
     way the registry would resolve it; generated paths are omitted because a
     generated-only collision heals after merge (generated-heal.md). The branch
     key is opaque and serializes two mutators of the same head.
+
+    ``extra_surfaces`` are audit-authorized write surfaces for this PR. They
+    are claimed alongside the diff, because a remediation that may write a path
+    outside ``pr["files"]`` still has to serialize against anyone else holding
+    it.
     """
+    paths = list(pr["files"])
+    for surface in extra_surfaces or []:
+        if surface not in paths:
+            paths.append(surface)
     claims = [
         {"key": f"path:{path}", "mode": "write", "exclusive": True}
-        for path in pr["files"]
+        for path in paths
         if not is_generated_path(path)
     ]
     claims.append({"key": f"branch:{pr['headRefName']}", "mode": "write", "exclusive": True})
@@ -399,11 +411,31 @@ def _mutation_waves(
     return mutation_waves
 
 
+def surfaces_by_pr(raw: Any) -> dict[int, list[str]]:
+    """Normalize an audit-bind ``write_surfaces`` map to int-keyed lists.
+
+    A fleet receipt round-trips through JSON, which turns the PR numbers into
+    strings; callers should not have to know which side of that they are on.
+    """
+    out: dict[int, list[str]] = {}
+    if not isinstance(raw, dict):
+        return out
+    for number, paths in raw.items():
+        try:
+            key = int(number)
+        except (TypeError, ValueError):
+            continue
+        if isinstance(paths, list):
+            out[key] = [str(path) for path in paths]
+    return out
+
+
 def load_audit_bind(path: Path | str | None) -> dict[str, Any]:
     """Read ``require_audit.py`` output. Missing/unreadable → no hold."""
     empty: dict[str, Any] = {
         "hold_merge": False,
         "eligible_prs": [],
+        "write_surfaces": {},
         "path": None,
         "reason": "no_handoff",
     }
@@ -424,9 +456,28 @@ def load_audit_bind(path: Path | str | None) -> dict[str, Any]:
             eligible.append(int(raw))
         except (TypeError, ValueError):
             continue
+    # An audit authorizes a write surface that may sit outside the PR's own
+    # file list — that is the point of an audit-bound remediation. Dropping it
+    # here silently narrows the assignment to the diff.
+    surfaces: dict[int, list[str]] = {}
+    for unit in doc.get("eligible_units") or []:
+        if not isinstance(unit, dict):
+            continue
+        try:
+            number = int(unit.get("pr"))
+        except (TypeError, ValueError):
+            continue
+        if number not in eligible:
+            continue
+        bucket = surfaces.setdefault(number, [])
+        for surface in unit.get("write_surfaces") or []:
+            text = str(surface or "").strip()
+            if text and text not in bucket:
+                bucket.append(text)
     return {
         "hold_merge": bool(doc.get("hold_merge")),
         "eligible_prs": eligible,
+        "write_surfaces": {number: sorted(paths) for number, paths in surfaces.items() if paths},
         "path": str(bind_path),
         "audit_id": doc.get("audit_id"),
         "reason": doc.get("reason")
@@ -447,6 +498,7 @@ def waves(
     edges: list[dict[str, Any]] | None = None,
     force_remediate: list[int] | None = None,
     hold_merge: bool = False,
+    write_surfaces: dict[int, list[str]] | None = None,
 ) -> dict[str, Any]:
     """Assign every PR to the earliest wave in which it may safely run.
 
@@ -461,7 +513,10 @@ def waves(
     """
     by_number = {pr["number"]: pr for pr in prs}
     sequence = order or [pr["number"] for pr in prs]
-    claims = {number: write_claims(by_number[number]) for number in sequence}
+    surfaces = write_surfaces or {}
+    claims = {
+        number: write_claims(by_number[number], surfaces.get(number)) for number in sequence
+    }
     board_map = boards or {}
     leftover = {n for n, board in board_map.items() if board == "leftover"}
     forced = {int(n) for n in (force_remediate or [])} - leftover
@@ -474,6 +529,11 @@ def waves(
     )
     merge_ready = list(merge_plan["merge_now"])
     merge_blocked_nums = [int(item["pr"]) for item in merge_plan["merge_blocked"]]
+    # The hold exists to let same-head audit-eligible units remediate before
+    # anything merges. Once every one of them is leftover, there is nothing
+    # left to wait for, and keeping the hold would suppress merge_now for the
+    # whole board forever.
+    hold_merge = bool(hold_merge and forced)
     if hold_merge:
         held_greens = [n for n in merge_ready if n not in forced]
         merge_admitted: list[int] = []
@@ -584,6 +644,7 @@ def plan(
     bind = audit_bind or {"hold_merge": False, "eligible_prs": []}
     hold = bool(bind.get("hold_merge"))
     eligible = [int(n) for n in (bind.get("eligible_prs") or [])]
+    bind_surfaces = surfaces_by_pr(bind.get("write_surfaces"))
     wave_plan = (
         waves(
             prs,
@@ -594,10 +655,14 @@ def plan(
             edges=edges,
             force_remediate=eligible,
             hold_merge=hold,
+            write_surfaces=bind_surfaces,
         )
         if prs
         else None
     )
+    # waves() clears the hold when every eligible unit turned out to be
+    # leftover; the plan reports what was actually applied.
+    hold = bool((wave_plan or {}).get("hold_merge", hold))
     stacked = {edge["child"] for edge in edges} | {edge["parent"] for edge in edges}
     conflicting = {n for item in overlap if not item["generated_only"] for n in item["prs"]}
     print_fp = fingerprint(prs)
@@ -749,6 +814,7 @@ def build_assignment(
     kind: str,
     run_id: str,
     graph_id: str,
+    write_surfaces: Sequence[str] | None = None,
 ) -> dict[str, Any]:
     if kind not in KINDS:
         raise FleetError(f"unknown assignment kind {kind!r}; expected one of {sorted(KINDS)}")
@@ -757,7 +823,14 @@ def build_assignment(
     assignment_id = f"{kind}-pr{number}-{run_id}"
     allowed = sorted(set(pr["files"]))
     if kind == "remediate":
-        allowed = sorted(set(allowed) | {f"{prefix}*" for prefix in GENERATED_PATH_PREFIXES})
+        # Audit-authorized write surfaces are the reason an audit-bound
+        # remediation can reach a path the PR does not already touch. They are
+        # granted only to the kind that mutates.
+        allowed = sorted(
+            set(allowed)
+            | {str(surface) for surface in (write_surfaces or [])}
+            | {f"{prefix}*" for prefix in GENERATED_PATH_PREFIXES}
+        )
     if kind == "merge":
         allowed = []
     packet = {
@@ -1098,6 +1171,8 @@ def main(argv: list[str] | None = None) -> int:
                         f"{sorted(allowed)}"
                     )
             run_id = _run_id(args.run_id)
+            # A fleet receipt is JSON, so the PR keys came back as strings.
+            bind_surfaces = surfaces_by_pr((fleet.get("audit_bind") or {}).get("write_surfaces"))
             packets = []
             for number in numbers:
                 if number not in by_number:
@@ -1108,6 +1183,7 @@ def main(argv: list[str] | None = None) -> int:
                     kind=args.kind,
                     run_id=run_id,
                     graph_id=str(fleet["fingerprint"]),
+                    write_surfaces=bind_surfaces.get(number),
                 )
                 written = write_assignment(packet)
                 if not written.is_file():
