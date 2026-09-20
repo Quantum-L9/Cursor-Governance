@@ -58,7 +58,7 @@ Compile repository documentation topology into first-class obligation objects.
 
 - `def source_changes_for_surface(policy, impact, surface) -> tuple[list[str], list[str]]`
 - `def semantic_source_digest(root, policy, impact, required_surfaces) -> tuple[str | None, list[str]]`
-- `def build_obligations(root, policy, impact, revision) -> list[dict[str, Any]]` — Compile obligations. ``owned_admissions`` maps a skill-owned surface
+- `def build_obligations(root, policy, impact, revision) -> list[dict[str, Any]]` — Compile obligations.
 - `def apply_semantic_resolutions(obligations, semantic) -> list[dict[str, Any]]`
 - `def validate_and_close_obligations(obligations) -> list[dict[str, Any]]`
 - `def summarize_obligations(obligations) -> dict[str, Any]`
@@ -113,12 +113,13 @@ Deterministic evidence compilation for README targets.
 
 - `SkillContract` — Structural reading of a `SKILL.md`. Never a full Markdown parse.
 - `def read_skill_contract(skill_md) -> SkillContract` — Extract only what is structurally unambiguous from a skill contract.
+- `def summarize_docstring(doc, limit, hard_limit) -> str | None` — First sentence of a docstring, not its first physical line.
 - `def compile_module_docs(repo_root, rel) -> tuple[tuple[ModuleDoc, ...], list[str]]` — One :class:`ModuleDoc` per direct source file, plus raw imports.
 - `def repository_module_names(repo_root, paths) -> frozenset[str]` — Top-level names an import could resolve to inside this repository.
 - `def classify_dependencies(imports, internal_names) -> DependencyDoc` — Split imports into internal, external and standard library.
 - `def compile_readme_model(repo_root, target) -> ReadmeModel` — Compile deterministic evidence for one authorized target.
 
-Exports: `CORPUS_TYPE_LABELS`, `MAX_INTERFACES_PER_MODULE`, `MAX_MODULES_RENDERED`, `SkillContract`, `classify_dependencies`, `compile_module_docs`, `compile_readme_model`, `read_skill_contract`, `repository_module_names`
+Exports: `CORPUS_TYPE_LABELS`, `MAX_INTERFACES_PER_MODULE`, `MAX_MODULES_RENDERED`, `SkillContract`, `classify_dependencies`, `compile_module_docs`, `compile_readme_model`, `read_skill_contract`, `repository_module_names`, `summarize_docstring`
 
 ### `readme_model.py`
 

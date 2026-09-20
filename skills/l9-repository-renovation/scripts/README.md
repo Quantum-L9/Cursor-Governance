@@ -28,7 +28,7 @@ Public-API surface extraction and compatibility diff (AST, zero-dependency).
 
 - `def utc_now() -> str`
 - `def load_json(path) -> Any`
-- `def safe_cli_path(value) -> Path` — Resolve a CLI-supplied file path and require it to stay within the current working
+- `def safe_cli_path(value) -> Path` — Resolve a CLI-supplied file path and require it to stay within the current working directory, so a crafted argument cannot read or write outside the working tree.
 - `def write_json(path, payload) -> None`
 - `def run(command) -> dict[str, Any]`
 - `def iter_files(root) -> Iterable[Path]`
@@ -62,8 +62,8 @@ Public-API surface extraction and compatibility diff (AST, zero-dependency).
 - `def run(command, cwd, expect) -> subprocess.CompletedProcess[str]`
 - `def write(path, text) -> None`
 - `def load(path) -> dict`
-- `def regression_ast_precision() -> None` — Lock the AST-precision behaviors: structural test-content, scope-aware
-- `def regression_api_surface() -> None` — Lock the public-API compatibility gate: a removed parameter is breaking,
+- `def regression_ast_precision() -> None` — Lock the AST-precision behaviors: structural test-content, scope-aware first-party imports, and structural conflict markers — in both directions.
+- `def regression_api_surface() -> None` — Lock the public-API compatibility gate: a removed parameter is breaking, an added optional parameter is compatible.
 - `def main() -> int`
 
 ### `validate_contract.py`

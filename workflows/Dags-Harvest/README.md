@@ -1,4 +1,4 @@
-# Dags Harvest
+# DAGs Harvest
 
 **Path:** `workflows/Dags-Harvest` | **Kind:** corpus
 

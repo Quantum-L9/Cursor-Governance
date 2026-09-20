@@ -6,7 +6,7 @@
 
 ### `build_doctrine_census.py`
 
-Build the deterministic Skills Doctrine Census.
+Build the deterministic Skills Doctrine Census. The census is the migration inventory for the contract-first conversion. It combines: 1. extraction; 2. duplicate/conflict clustering; 3.
 
 - `def build_census() -> dict[str, Any]` — Build the complete deterministic doctrine census.
 - `def render_census(census, output_format) -> str`
@@ -38,7 +38,7 @@ Contract-first Cursor rules compiler front door.
 
 ### `cluster_doctrine.py`
 
-Cluster extracted doctrine into duplicate and potential-conflict families.
+Cluster extracted doctrine into duplicate and potential-conflict families. This is an analysis stage, not an authority stage.
 
 - `UnionFind` — Minimal deterministic union-find for connected cluster construction.
 - `def semantic_tokens(record) -> set[str]`
@@ -52,11 +52,11 @@ Cluster extracted doctrine into duplicate and potential-conflict families.
 
 ### `detect_hidden_doctrine.py`
 
-Detect normative skill doctrine that lacks an authoritative owner.
+Detect normative skill doctrine that lacks an authoritative owner. Ownership is explicit. This validator never infers ownership because a contract name happens to appear nearby.
 
 - `Marker`
 - `Registry`
-- `def doctrine_fingerprint(record) -> str` — Fingerprint debt independently of its line number.
+- `def doctrine_fingerprint(record) -> str` — Fingerprint debt independently of its line number. Repeated copies of the same doctrine intentionally share a fingerprint; the ratchet tracks occurrence count separately.
 - `def parse_marker_fields(body) -> dict[str, str]`
 - `def parse_markers() -> tuple[list[Marker], list[Finding]]`
 - `def bind_markers() -> tuple[dict[str, Marker], list[Finding]]` — Bind each marker to exactly one immediately following extraction record.
@@ -66,7 +66,7 @@ Detect normative skill doctrine that lacks an authoritative owner.
 
 ### `extract_doctrine.py`
 
-Extract candidate governance doctrine from active skill surfaces.
+Extract candidate governance doctrine from active skill surfaces. This module is deliberately non-authoritative.
 
 - `UniqueKeyLoader` — Safe YAML loader that rejects duplicate mapping keys.
 - `Finding` — Structured extraction diagnostic.
@@ -104,7 +104,7 @@ Resolve canonical governance contracts for Cursor rule bindings.
 
 ### `validate_doctrine_ratchet.py`
 
-Enforce the no-new-hidden-doctrine migration ratchet.
+Enforce the no-new-hidden-doctrine migration ratchet. Policy: Legacy doctrine debt may remain temporarily. Legacy doctrine debt may decrease. Legacy doctrine debt may NEVER increase silently.
 
 - `def build_baseline() -> dict[str, Any]`
 - `def validate_baseline_structure(baseline) -> list[str]`

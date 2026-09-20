@@ -1,4 +1,4 @@
-# Sql
+# SQL
 
 **Path:** `tools/l9_agent_ui_control/sql` | **Kind:** corpus
 

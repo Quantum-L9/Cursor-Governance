@@ -1,4 +1,4 @@
-# L9 Dag Authoring
+# L9 DAG Authoring
 
 **Path:** `skills/l9-dag-authoring` | **Kind:** skill
 

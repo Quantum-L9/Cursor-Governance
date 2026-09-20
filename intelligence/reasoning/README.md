@@ -4,7 +4,7 @@
 
 ## Purpose
 
-L9_META
+L9_META l9_schema: 1 artifact_type: generator component: reasoning_snapshot_generator tags: [reasoning, snapshot, generator, automation, governance] retrieval: on_demand status: active
 
 ## Public interface
 

@@ -159,6 +159,69 @@ def test_relative_imports_are_not_dependencies(tmp_path: Path):
     assert model.dependencies.external == ()
 
 
+def test_a_wrapped_docstring_summary_is_not_cut_at_the_newline(tmp_path: Path):
+    """A one-sentence summary wrapped over two source lines is one sentence."""
+    write(
+        tmp_path / "pkg" / "mod.py",
+        "def is_migration(rel):\n"
+        '    """Migration modules are invoked by the framework via file path;\n'
+        '    their top-level defs are never referenced by name."""\n'
+        "    return True\n",
+    )
+    model = ev.compile_readme_model(tmp_path, target("pkg"))
+    summary = model.modules[0].functions[0].summary
+    assert summary.endswith("by name.")
+    assert not summary.rstrip().endswith(";")
+
+
+# --- generated prose must not read as broken output ---
+
+
+def test_routing_clause_removal_leaves_no_dangling_punctuation(tmp_path: Path):
+    """`… asks for AWS —` reads as truncation, not as a finished sentence."""
+    write(
+        tmp_path / "skills" / "demo" / "SKILL.md",
+        "---\ndescription: bind credentials at will; AWS is the one seed — "
+        "use when an agent needs a token\n---\n\n# Demo\n",
+    )
+    model = ev.compile_readme_model(tmp_path, target("skills/demo", "skill"))
+    assert model.purpose == "bind credentials at will; AWS is the one seed"
+    assert not model.purpose.endswith(("—", "-", ";", ",", ":", "…"))
+
+
+def test_a_short_description_is_never_ellipsized(tmp_path: Path):
+    write(
+        tmp_path / "skills" / "demo" / "SKILL.md",
+        "---\ndescription: portable saas dashboard ui operator — use when running a dashboard\n"
+        "---\n\n# Demo\n",
+    )
+    model = ev.compile_readme_model(tmp_path, target("skills/demo", "skill"))
+    assert model.purpose == "portable saas dashboard ui operator"
+
+
+def test_one_long_sentence_is_kept_whole_rather_than_ellipsized(tmp_path: Path):
+    sentence = "deep-audit pull requests against " + "architecture and invariants " * 11
+    write(
+        tmp_path / "skills" / "demo" / "SKILL.md",
+        f"---\ndescription: {sentence.strip()}. use when auditing\n---\n\n# Demo\n",
+    )
+    model = ev.compile_readme_model(tmp_path, target("skills/demo", "skill"))
+    assert 320 < len(model.purpose) <= 480
+    assert not model.purpose.endswith("…")
+
+
+def test_a_sentence_boundary_is_preferred_over_a_hard_cut(tmp_path: Path):
+    first = "Compile the thing deterministically."
+    description = first + " " + "And then a great deal more prose besides. " * 12
+    write(
+        tmp_path / "skills" / "demo" / "SKILL.md",
+        "---\nname: demo\n---\n\n# Demo\n\n## Purpose\n\n" + description + "\n",
+    )
+    model = ev.compile_readme_model(tmp_path, target("skills/demo", "skill"))
+    assert model.purpose.endswith(".")
+    assert not model.purpose.endswith("…")
+
+
 def test_repository_module_names_are_conservative(tmp_path: Path):
     write(tmp_path / "ops" / "helper.py", "x = 1\n")
     names = ev.repository_module_names(tmp_path, ["ops"])

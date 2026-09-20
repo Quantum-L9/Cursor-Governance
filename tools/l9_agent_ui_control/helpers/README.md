@@ -10,7 +10,7 @@ Mac Agent helper utilities.
 
 ### `logging.py`
 
-Mac Agent Logging Helpers
+Mac Agent Logging Helpers ==========================
 
 - `def ts() -> str` — Get current timestamp in ISO format.
 - `def log_step(log_list, step_num, action, status, details) -> None` — Append a structured log entry for a step.

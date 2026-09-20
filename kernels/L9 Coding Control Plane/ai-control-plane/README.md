@@ -1,4 +1,4 @@
-# Ai Control Plane
+# AI Control Plane
 
 **Path:** `kernels/L9 Coding Control Plane/ai-control-plane` | **Kind:** corpus
 

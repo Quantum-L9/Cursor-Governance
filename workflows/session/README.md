@@ -6,13 +6,13 @@
 
 ### `__init__.py`
 
-L9 Session DAGs - Systematic Coding Workflows
+L9 Session DAGs - Systematic Coding Workflows ==============================================
 
 Exports: `GateType`, `NodeType`, `SessionDAG`, `SessionEdge`, `SessionNode`, `SessionState`, `get_session_dag`, `list_session_dags`, `register_session_dag`, `session_dag_registry`
 
 ### `interface.py`
 
-Session DAG Interface - Core Types
+Session DAG Interface - Core Types ==================================
 
 - `NodeType` — Type of session node.
 - `GateType` — Type of gate (decision point).
@@ -23,7 +23,7 @@ Session DAG Interface - Core Types
 
 ### `registry.py`
 
-Session DAG Registry
+Session DAG Registry ====================
 
 - `SessionDAGRegistry` — Registry for Session DAGs.
 - `def register_session_dag(dag) -> None` — Register a session DAG in the global registry.
@@ -32,6 +32,8 @@ Session DAG Registry
 
 ## Dependencies
 
-**External:** `structlog`, `workflows`
+**Internal:** `workflows`
+
+**External:** `structlog`
 
 <!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

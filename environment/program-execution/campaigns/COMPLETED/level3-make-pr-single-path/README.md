@@ -1,4 +1,4 @@
-# Level3 Make Pr Single Path
+# Level3 Make PR Single Path
 
 **Path:** `environment/program-execution/campaigns/COMPLETED/level3-make-pr-single-path` | **Kind:** corpus
 

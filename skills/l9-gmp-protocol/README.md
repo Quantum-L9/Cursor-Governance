@@ -1,4 +1,4 @@
-# L9 Gmp Protocol
+# L9 GMP Protocol
 
 **Path:** `skills/l9-gmp-protocol` | **Kind:** skill
 

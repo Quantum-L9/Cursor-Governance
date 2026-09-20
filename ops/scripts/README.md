@@ -135,7 +135,7 @@ Autonomous PR-body compile for make pr.
 - `def collect_mechanical(workspace) -> MechanicalFacts`
 - `def range_problem(facts) -> str` — The Problem statement for the whole range.
 - `def range_summary(facts) -> str` — One line: the oldest subject plus the count of what follows.
-- `def range_title(facts) -> str` — The PR title: the oldest own subject, no count. Empty when the range is empty
+- `def range_title(facts) -> str` — The PR title: the oldest own subject, no count. Empty when the range is empty so the caller can fall back to the branch name.
 - `def range_fix(facts) -> str` — The Fix: every commit subject, oldest first. One commit reads as one line.
 - `def path_why(facts, path) -> str` — Why this path changed: the subject of the commit that last touched it.
 - _+5 more public symbol(s)_

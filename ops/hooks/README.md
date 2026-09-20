@@ -80,8 +80,8 @@ Cursor workspaceOpen hook: per-workspace-class addon plugin loader.
 - `def resolve_governance_root() -> Path | None` — SSOT: the local GitHub clone at $HOME/.cursor-governance, and only that.
 - `def load_yaml_dict(path) -> dict[str, Any]`
 - `def load_json_dict(path) -> dict[str, Any]`
-- `def has_marker(workspace, pattern, max_depth) -> bool` — True if a file/dir matching `pattern` (glob or literal) exists within
-- `def classify_workspace(workspace, exceptions) -> str` — First-match-wins classification: odoo_plasticos -> aws_infra ->
+- `def has_marker(workspace, pattern, max_depth) -> bool` — True if a file/dir matching `pattern` (glob or literal) exists within `max_depth` levels of `workspace`. Skips hidden dirs and common vendor dirs so this never turns into an accidental full-tree walk.
+- `def classify_workspace(workspace, exceptions) -> str` — First-match-wins classification: odoo_plasticos -> aws_infra -> zep_memory -> core_default. Mirrors environment/ide/exceptions.yaml's two-step (explicit names, then marker heuristic) pattern.
 - `def addon_plugin_paths_for_class(class_name, gov_root, policy, render) -> list[str]`
 - `def compute_plugin_paths(workspace_roots) -> list[str]`
 - `def classify_only(workspace_arg) -> int` — `--classify <path>` mode: print just the class name for one workspace.

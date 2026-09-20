@@ -1,4 +1,4 @@
-# Github
+# GitHub
 
 **Path:** `environment/program-execution/adapters/github` | **Kind:** module
 

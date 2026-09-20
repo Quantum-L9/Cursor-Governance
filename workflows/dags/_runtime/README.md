@@ -1,4 +1,4 @@
-#  Runtime
+# Runtime
 
 **Path:** `workflows/dags/_runtime` | **Kind:** subsystem
 
@@ -17,6 +17,8 @@ Workspace-scoped durable LangGraph checkpointer.
 
 ## Dependencies
 
-**External:** `langgraph`, `workflows`
+**Internal:** `workflows`
+
+**External:** `langgraph`
 
 <!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

@@ -1,4 +1,4 @@
-# Ci
+# CI
 
 **Path:** `environment/program-execution/adapters/ci` | **Kind:** index
 

@@ -35,7 +35,12 @@ from doc_filetree import (
     is_excluded_path,
     walk_inventory,
 )
-from readme_evidence import classify_dependencies, compile_readme_model, repository_module_names
+from readme_evidence import (
+    classify_dependencies,
+    compile_readme_model,
+    repository_module_names,
+    summarize_docstring,
+)
 from readme_model import (
     MUTATING_ACTIONS,
     README_KINDS,
@@ -460,8 +465,57 @@ def _skipped_rel(rel: str, prefixes: tuple[str, ...]) -> bool:
     return is_excluded_path(rel, prefixes)
 
 
+#: Tokens `str.title()` gets wrong. Presentation only — this never decides
+#: whether a directory is a target, so it is a casing table, not a path
+#: allowlist. `github` titlecases to `Github`, which reads as a misspelling
+#: of the product in a heading.
+TITLE_CASING = {
+    "adr": "ADR",
+    "adrs": "ADRs",
+    "ai": "AI",
+    "api": "API",
+    "aws": "AWS",
+    "cd": "CD",
+    "ci": "CI",
+    "cli": "CLI",
+    "css": "CSS",
+    "dag": "DAG",
+    "dags": "DAGs",
+    "db": "DB",
+    "gcp": "GCP",
+    "github": "GitHub",
+    "gitlab": "GitLab",
+    "gmp": "GMP",
+    "html": "HTML",
+    "http": "HTTP",
+    "https": "HTTPS",
+    "id": "ID",
+    "ide": "IDE",
+    "io": "IO",
+    "json": "JSON",
+    "llm": "LLM",
+    "mcp": "MCP",
+    "ml": "ML",
+    "npm": "npm",
+    "os": "OS",
+    "pr": "PR",
+    "prs": "PRs",
+    "sdk": "SDK",
+    "sql": "SQL",
+    "ssh": "SSH",
+    "tls": "TLS",
+    "ui": "UI",
+    "uri": "URI",
+    "url": "URL",
+    "ux": "UX",
+    "vm": "VM",
+    "yaml": "YAML",
+}
+
+
 def _humanize(posix: str) -> str:
-    return Path(posix).name.replace("_", " ").replace("-", " ").title()
+    words = Path(posix).name.replace("_", " ").replace("-", " ").split()
+    return " ".join(TITLE_CASING.get(word.lower(), word.title()) for word in words)
 
 
 def spec_for_path(rel: str, config: dict[str, Any]) -> dict[str, Any]:
@@ -606,9 +660,21 @@ def build_readme_targets(
 def compile_readme_outputs(
     repo_root: Path,
     targets: list[ReadmeTarget],
+    *,
+    internal_paths: list[str] | None = None,
 ) -> list[tuple[ReadmeModel, str]]:
-    """Compile and render every target. Pure: touches no destination file."""
-    internal_names = repository_module_names(repo_root, [target.path for target in targets])
+    """Compile and render every target. Pure: touches no destination file.
+
+    ``internal_paths`` is what counts as first-party for dependency
+    classification, and is deliberately wider than the target list:
+    suppressing a directory decides whether to document it, not whether
+    it is this repository's own code. Reading it off the targets made a
+    suppressed `workflows/` import render as an external dependency.
+    """
+    internal_names = repository_module_names(
+        repo_root,
+        internal_paths if internal_paths is not None else [target.path for target in targets],
+    )
     outputs: list[tuple[ReadmeModel, str]] = []
     for target in targets:
         model = compile_readme_model(repo_root, target, internal_names=internal_names)
@@ -630,16 +696,14 @@ def _model_from_facts(target: ReadmeTarget, facts: ModuleFacts) -> ReadmeModel:
             by_file.setdefault(path, ([], []))
     for cls in facts.classes:
         by_file.setdefault(cls.file, ([], []))[0].append(
-            InterfaceDoc(name=cls.name, summary=cls.docstring.splitlines()[0] or None)
-            if cls.docstring
-            else InterfaceDoc(name=cls.name)
+            InterfaceDoc(name=cls.name, summary=summarize_docstring(cls.docstring))
         )
     for func in facts.functions:
         by_file.setdefault(func.file, ([], []))[1].append(
             InterfaceDoc(
                 name=func.name,
                 signature=func.signature,
-                summary=func.docstring.splitlines()[0] if func.docstring else None,
+                summary=summarize_docstring(func.docstring),
             )
         )
     modules: list[ModuleDoc] = []
@@ -650,7 +714,7 @@ def _model_from_facts(target: ReadmeTarget, facts: ModuleFacts) -> ReadmeModel:
             ModuleDoc(
                 file=Path(path).name,
                 name=Path(path).stem,
-                purpose=doc.splitlines()[0] if doc else None,
+                purpose=summarize_docstring(doc),
                 classes=tuple(classes),
                 functions=tuple(functions),
                 exports=tuple(facts.exports) if len(by_file) == 1 else (),
@@ -743,14 +807,25 @@ def plan_module_readmes(
     """
     repo_root = repo_root.resolve()
     config = config if config is not None else load_config(repo_root)
-    targets = build_readme_targets(repo_root, config, inventory=inventory)
+    source = resolve_inventory(repo_root, config, inventory=inventory)
+    targets = build_readme_targets(repo_root, config, inventory=source)
     if changed is not None:
         targets = [
             target
             for target in targets
             if any(path == target.path or path.startswith(target.path + "/") for path in changed)
         ]
-    outputs = compile_readme_outputs(repo_root, targets)
+    # First-party names come from the whole inventory plus the repository's
+    # own top-level directories, never from the suppressed target list.
+    internal_paths = sorted(
+        {row.path for row in source.modules}
+        | {
+            child.name
+            for child in repo_root.iterdir()
+            if child.is_dir() and not child.name.startswith(".")
+        }
+    )
+    outputs = compile_readme_outputs(repo_root, targets, internal_paths=internal_paths)
     findings: list[QualityFinding] = list(
         validate_readme_models(
             repo_root,

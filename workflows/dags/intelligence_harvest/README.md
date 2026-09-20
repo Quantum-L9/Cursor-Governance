@@ -39,6 +39,8 @@ Exports: `build_intelligence_harvest_graph`
 
 ## Dependencies
 
-**External:** `langgraph`, `workflows`
+**Internal:** `workflows`
+
+**External:** `langgraph`
 
 <!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

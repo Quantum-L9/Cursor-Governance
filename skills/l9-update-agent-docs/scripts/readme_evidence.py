@@ -36,6 +36,7 @@ __all__ = [
     "compile_readme_model",
     "read_skill_contract",
     "repository_module_names",
+    "summarize_docstring",
 ]
 
 CORPUS_TYPE_LABELS = {
@@ -88,23 +89,47 @@ class SkillContract:
         self.version = version
 
 
-def _first_sentence(text: str, limit: int = 320) -> str:
-    """Collapse whitespace and, if it must cut, cut on a word boundary."""
+#: Trailing characters that joined a clause to the one removed after it.
+_DANGLING_TAIL = " \t,;:-–—…"
+
+
+def _first_sentence(text: str, limit: int = 320, hard_limit: int = 480) -> str:
+    """Collapse whitespace and cut where a reader would.
+
+    A sentence boundary inside the limit is the natural cut. Failing that,
+    one long sentence is kept whole up to the hard limit rather than
+    published as a fragment — a Purpose ending in an ellipsis reads as
+    broken output, which is exactly what the caller is trying to avoid.
+    """
     cleaned = " ".join(text.split())
     if len(cleaned) <= limit:
         return cleaned
-    head = cleaned[:limit]
-    boundary = head.rfind(" ")
-    return (head[:boundary] if boundary > 0 else head).rstrip(" ,;:-") + "…"
+    boundary = max(
+        cleaned.rfind(". ", 0, limit),
+        cleaned.rfind("! ", 0, limit),
+        cleaned.rfind("? ", 0, limit),
+    )
+    if boundary > 0:
+        return cleaned[: boundary + 1]
+    if len(cleaned) <= hard_limit:
+        return cleaned
+    cut = cleaned.rfind(" ", 0, hard_limit)
+    head = cleaned[:cut] if cut > 0 else cleaned[:hard_limit]
+    return head.rstrip(_DANGLING_TAIL) + "…"
 
 
 def _strip_routing_clause(description: str) -> str:
-    """Keep what the skill does; drop the router's when-to-pick-it clause."""
+    """Keep what the skill does; drop the router's when-to-pick-it clause.
+
+    The two halves are usually joined by punctuation, so the cut leaves it
+    behind: `… asks for AWS —` reads as a truncated sentence rather than a
+    deliberate one.
+    """
     match = _ROUTING_CLAUSE_RE.search(description)
     if match is None:
-        return description.strip()
-    head = description[: match.start()].strip().rstrip(".").strip()
-    return head or description.strip()
+        return description.strip().rstrip(_DANGLING_TAIL)
+    head = description[: match.start()].strip().rstrip(".").rstrip(_DANGLING_TAIL).strip()
+    return head or description.strip().rstrip(_DANGLING_TAIL)
 
 
 def _section_body(text: str, wanted: tuple[str, ...]) -> str | None:
@@ -154,7 +179,7 @@ def read_skill_contract(skill_md: Path) -> SkillContract:
         # A bullet ending in a colon introduces a nested list the top-level
         # pattern does not capture, so keeping it leaves a dangling stem.
         bullets = [
-            _first_sentence(match.group(1), 200)
+            _first_sentence(match.group(1), 200, 260)
             for match in _BULLET_RE.finditer(boundary_body)
             if not match.group(1).rstrip().endswith(":")
         ]
@@ -178,12 +203,20 @@ def _signature(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
     return f"{prefix} {node.name}({', '.join(args)}){returns}"
 
 
-def _summary(node: ast.AST) -> str | None:
-    doc = ast.get_docstring(node)  # type: ignore[arg-type]
-    if not doc:
+def summarize_docstring(doc: str | None, limit: int = 200, hard_limit: int = 260) -> str | None:
+    """First sentence of a docstring, not its first physical line.
+
+    A one-sentence summary wrapped across two source lines was being cut
+    at the newline, which publishes half a clause ending in `;`.
+    """
+    if not doc or not doc.strip():
         return None
-    first = doc.strip().splitlines()[0].strip()
-    return first or None
+    paragraph = doc.strip().split("\n\n", 1)[0]
+    return _first_sentence(paragraph, limit, hard_limit) or None
+
+
+def _summary(node: ast.AST) -> str | None:
+    return summarize_docstring(ast.get_docstring(node))  # type: ignore[arg-type]
 
 
 def _direct_source_files(module_dir: Path, suffix: str) -> list[Path]:

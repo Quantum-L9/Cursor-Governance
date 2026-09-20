@@ -12,7 +12,7 @@ compile_contract.py — l9-claude-coding-contract-compiler v2.7.0
 - `def validate_command_list(commands, field)` — Validate canonical shell command strings structurally without executing target code.
 - `def validate_spec(spec)` — Fail-closed canonical-spec validation. Critical execution rules do not depend on jsonschema.
 - `def glob_to_re(g)`
-- `def owns_path_check(in_scope_paths, owns)` — DPK doctrine: in_scope MUST be within boundaries.owns. Enforced only when owns carries
+- `def owns_path_check(in_scope_paths, owns)` — DPK doctrine: in_scope MUST be within boundaries.owns. Enforced only when owns carries path-like globs (has '/', '*', or a file extension); pure domain labels can't gate paths.
 - `def dpk_readiness(cats, manifest, rollback_target, has_ai, eval_suite)`
 - `def build_sections(na_map)`
 - `def unique_commands(commands)` — Stable, order-preserving deduplication for canonical command projections.
@@ -20,21 +20,21 @@ compile_contract.py — l9-claude-coding-contract-compiler v2.7.0
 
 ### `generate_claude_settings.py`
 
-generate_claude_settings.py — l9-claude-coding-contract-compiler v2.7.0
+generate_claude_settings.py — l9-claude-coding-contract-compiler v2.7.0 From a validated contract JSON instance, emit: .claude/settings.json — direct remote-mutation denials for Claude Code CLAUDE.md — scope, resume, one-commit, and terminal-delivery…
 
 - `def generate(contract, output_dir) -> None`
 - `def main()`
 
 ### `generate_preflight.py`
 
-generate_preflight.py — l9-claude-coding-contract-compiler v2.7.0
+generate_preflight.py — l9-claude-coding-contract-compiler v2.7.0 Emit a runnable preflight.sh from a contract instance.
 
 - `def generate(contract, output_dir) -> None`
 - `def main()`
 
 ### `plan_decomposition.py`
 
-plan_decomposition.py — l9-claude-coding-contract-compiler v2.7.0
+plan_decomposition.py — l9-claude-coding-contract-compiler v2.7.0 Deterministic sizing and chain-decomposition planner.
 
 - `def sha256(s) -> str`
 - `def fits_one(m, cfg) -> tuple[bool, list[str]]`
@@ -45,7 +45,7 @@ plan_decomposition.py — l9-claude-coding-contract-compiler v2.7.0
 
 ### `validate_chain.py`
 
-validate_chain.py — l9-claude-coding-contract-compiler v2.7.0
+validate_chain.py — l9-claude-coding-contract-compiler v2.7.0 Chain-level validation for same-branch, one-commit-per-contract execution.
 
 - `def sha256(s) -> str`
 - `def compute_chain_digest(ids) -> str`
@@ -55,7 +55,7 @@ validate_chain.py — l9-claude-coding-contract-compiler v2.7.0
 
 ### `validate_contract.py`
 
-Validate a compiled Claude coding contract against bundled JSON schemas + Claude-fit
+Validate a compiled Claude coding contract against bundled JSON schemas + Claude-fit + DPK-1.0 readiness rules.
 
 - `def dpk_score(contract)` — Compute DPK readiness. Returns (total, band, red_line_reasons).
 - `def check_read_only_authority(contract, fit)` — read_only_authority items must be {resource: str, method: GET|LIST}.

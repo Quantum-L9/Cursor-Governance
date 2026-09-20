@@ -9,8 +9,8 @@
 Build a deterministic optimization CLI PR commit pack from a Git worktree.
 
 - `PackError` — Raised when the pack cannot be built safely.
-- `def schema_validate(instance, schema_filename, label) -> None` — Validate an instance against a bundled JSON Schema. jsonschema is a hard
-- `def improvement_from_measurements(baseline_value, candidate_value, direction)` — Recompute improvement percent from the two measurements with metric
+- `def schema_validate(instance, schema_filename, label) -> None` — Validate an instance against a bundled JSON Schema. jsonschema is a hard dependency so the schemas are authoritative, not decorative.
+- `def improvement_from_measurements(baseline_value, candidate_value, direction)` — Recompute improvement percent from the two measurements with metric direction. Returns (percent | None, error | None).
 - `def run(command, cwd) -> subprocess.CompletedProcess[str]`
 - `def sha256_bytes(data) -> str`
 - `def sha256_file(path) -> str`
@@ -20,7 +20,7 @@ Build a deterministic optimization CLI PR commit pack from a Git worktree.
 
 ### `build_flag_activation_pack.py`
 
-Build a deterministic, review-required PR pack from a full-throttle activation
+Build a deterministic, review-required PR pack from a full-throttle activation report (the output of `full_throttle.py --mode apply`).
 
 - `PackError`
 - `def under_root(root, path) -> Path`
@@ -29,17 +29,17 @@ Build a deterministic, review-required PR pack from a full-throttle activation
 
 ### `flag_inventory.py`
 
-Full-throttle flag inventory: enumerate off-by-default flags, classify each by
+Full-throttle flag inventory: enumerate off-by-default flags, classify each by danger polarity, and emit a deterministic single-line flip transform.
 
 - `def classify_flag(name, context) -> tuple[str, str]` — Classify flipping `name` False->True. Returns (classification, reason).
-- `def flip_flag(text, flag) -> str` — Deterministic single-line edit: on `flag['line']`, flip the first
-- `def inventory_flags(root, overrides) -> list[dict]` — Enumerate every off-by-default flag under `root`, classify each, and
+- `def flip_flag(text, flag) -> str` — Deterministic single-line edit: on `flag['line']`, flip the first False/0/false value token after the `=`/`:` to True/1/true.
+- `def inventory_flags(root, overrides) -> list[dict]` — Enumerate every off-by-default flag under `root`, classify each, and attach the flip decision. Test files and archived/scratch trees are read for context but excluded from activation candidates.
 - `def summarize(rows) -> dict`
 - `def main() -> int`
 
 ### `full_throttle.py`
 
-Full-throttle activation harness: flip a repo's off-by-default flags on, prove
+Full-throttle activation harness: flip a repo's off-by-default flags on, prove them with the repo's OWN tests in an isolated git worktree, and back out any flag whose activation regresses tests.
 
 - `def discover_test_cmd(root) -> list[str] | None` — Best-effort discovery of the repo's own test command (no execution).
 - `def under_root(root, path) -> Path`
@@ -69,11 +69,11 @@ Scan a repository for CANDIDATE underutilization, dead-wiring, and breakage.
 - `def is_test_file(rel) -> bool`
 - `def is_archived(rel) -> bool`
 - `def is_scratch(rel) -> bool`
-- `def is_excluded(rel) -> bool` — A path whose OWN contents should not be flagged as candidates (archived or
+- `def is_excluded(rel) -> bool` — A path whose OWN contents should not be flagged as candidates (archived or scratch). Such files are still read for reference/wiring analysis.
 - `def iter_files(root)`
 - `def python_defs_and_refs(text)` — Return (top_level_defs_without_decorators, referenced_names) for a module.
 - `def python_import_modules(text) -> list[str]` — Full dotted module names imported by a module (best-effort; AST).
-- `def is_migration_file(rel) -> bool` — Alembic/migration modules are invoked by the framework via file path;
+- `def is_migration_file(rel) -> bool` — Alembic/migration modules are invoked by the framework via file path; their top-level upgrade/downgrade defs are never referenced by name.
 - _+9 more public symbol(s)_
 
 ### `self_test.py`

@@ -1,4 +1,4 @@
-# L9 Code Graph Rag Mcp
+# L9 Code Graph Rag MCP
 
 **Path:** `skills/l9-code-graph-rag-mcp` | **Kind:** skill
 

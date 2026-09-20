@@ -221,6 +221,42 @@ def test_a_corpus_without_qualifying_children_stays_a_corpus(tmp_path: Path):
     assert kinds(tmp_path)["protocols"] == "corpus"
 
 
+# --- titles and dependency classification ---
+
+
+def test_acronym_directory_names_are_cased_correctly(tmp_path: Path):
+    """`github`.title() is `Github`, which reads as a misspelt product."""
+    write(tmp_path / "adapters" / "github" / "mod.py")
+    write(tmp_path / "adapters" / "ci" / "mod.py")
+    gm.write_missing_module_readmes(tmp_path)
+    assert (
+        (tmp_path / "adapters" / "github" / "README.md")
+        .read_text(encoding="utf-8")
+        .startswith("# GitHub\n")
+    )
+    assert (
+        (tmp_path / "adapters" / "ci" / "README.md")
+        .read_text(encoding="utf-8")
+        .startswith("# CI\n")
+    )
+
+
+def test_a_suppressed_directory_is_still_a_first_party_dependency(tmp_path: Path):
+    """Suppression decides documentation, not whether code is ours."""
+    write(tmp_path / "workflows" / "dags" / "a.py", "a = 1\n")
+    write(tmp_path / "workflows" / "dags" / "b.py", "b = 1\n")
+    write(tmp_path / "runtime" / "one.py", "import workflows\nimport langgraph\n")
+    config = {
+        "defaults": {},
+        "subsystems": {"workflows": {"path": "workflows", "skip": True}},
+    }
+    gm.write_missing_module_readmes(tmp_path, config=config)
+    text = (tmp_path / "runtime" / "README.md").read_text(encoding="utf-8")
+    assert "**Internal:** `workflows`" in text
+    assert "**External:** `langgraph`" in text
+    assert not (tmp_path / "workflows" / "README.md").exists()
+
+
 # --- empty directories earn nothing ---
 
 

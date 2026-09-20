@@ -1,4 +1,4 @@
-# Gmp
+# GMP
 
 **Path:** `workflows/dags/gmp` | **Kind:** subsystem
 
@@ -40,6 +40,8 @@ GMP State — State definition for GMP execution
 
 ## Dependencies
 
-**External:** `langgraph`, `structlog`, `workflows`
+**Internal:** `workflows`
+
+**External:** `langgraph`, `structlog`
 
 <!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

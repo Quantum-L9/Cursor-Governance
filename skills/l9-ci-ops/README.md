@@ -1,4 +1,4 @@
-# L9 Ci Ops
+# L9 CI Ops
 
 **Path:** `skills/l9-ci-ops` | **Kind:** skill
 

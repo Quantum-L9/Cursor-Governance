@@ -6,7 +6,7 @@
 
 ### `__init__.py`
 
-Destination and repository-class adapters for L9 subagent-generated data.
+Destination and repository-class adapters for L9 subagent-generated data. Adapters do not decide whether a unit is eligible for promotion.
 
 ### `graphiti_memory.py`
 

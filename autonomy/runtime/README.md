@@ -37,7 +37,7 @@ Wave 2 enforcement runtime.
 
 - `LeaseManager`
 - `def producer_agent_ids(connection) -> list[str]` — Agents that produced (or hold/held the lease on) the given actions.
-- `def independence_sources(action) -> list[str]` — Actions this one must be independent from: the explicit declaration
+- `def independence_sources(action) -> list[str]` — Actions this one must be independent from: the explicit declaration first (it names the subject under review), then every dependency.
 - `def requires_independence(action) -> bool`
 
 ### `receipts.py`

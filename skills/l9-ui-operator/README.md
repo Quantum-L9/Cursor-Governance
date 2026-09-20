@@ -1,10 +1,10 @@
-# L9 Ui Operator
+# L9 UI Operator
 
 **Path:** `skills/l9-ui-operator` | **Kind:** skill
 
 ## Purpose
 
-portable saas dashboard ui operator —
+portable saas dashboard ui operator
 
 ## Key components
 

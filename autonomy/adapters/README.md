@@ -6,7 +6,7 @@
 
 ### `__init__.py`
 
-Wave 3 IDE adapter layer.
+Wave 3 IDE adapter layer. Adapters are untrusted orchestration clients. They cannot authorize work. They may only: 1. register and pass conformance, 2. request a runnable action, 3.
 
 ### `bridge.py`
 

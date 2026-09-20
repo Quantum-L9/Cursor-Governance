@@ -1,4 +1,4 @@
-# L9 Setting Up Ci
+# L9 Setting Up CI
 
 **Path:** `skills/l9-setting-up-ci` | **Kind:** skill
 

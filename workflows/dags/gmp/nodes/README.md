@@ -26,6 +26,6 @@ GMP Core Nodes — All node functions for GMP execution
 
 ## Dependencies
 
-**External:** `workflows`
+**Internal:** `workflows`
 
 <!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

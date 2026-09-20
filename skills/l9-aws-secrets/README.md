@@ -1,10 +1,10 @@
-# L9 Aws Secrets
+# L9 AWS Secrets
 
 **Path:** `skills/l9-aws-secrets` | **Kind:** skill
 
 ## Purpose
 
-bind credentials from Infisical project cursor-governance at will; AWS is the one login seed unless the human explicitly asks for AWS —
+bind credentials from Infisical project cursor-governance at will; AWS is the one login seed unless the human explicitly asks for AWS
 
 ## Key components
 

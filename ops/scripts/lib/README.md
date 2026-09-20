@@ -15,7 +15,7 @@ Shared classification of worktree dirtiness paths.
 - `def normalize(path) -> str`
 - `def is_scratch_path(path) -> bool`
 - `def protected_root_files(root) -> set[str]` — Repository-root files registered in the append-only protection policy.
-- `def classify_path(root, path) -> str` — One of: scratch, generated, protected, source. ``root`` is the tree being
+- `def classify_path(root, path) -> str` — One of: scratch, generated, protected, source. ``root`` is the tree being measured; it supplies the protected-root-file policy only.
 - `def decode_git_quoted_path(path) -> str` — Decode C-style escapes in git status quoted paths (octal + \n \t \" \\).
 - `def porcelain_path(line) -> str` — Extract the path from a `git status --porcelain` line, handling renames.
 

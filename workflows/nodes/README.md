@@ -49,6 +49,8 @@ Validate Node — Run validation checks on deployed files.
 
 ## Dependencies
 
-**External:** `structlog`, `workflows`
+**Internal:** `workflows`
+
+**External:** `structlog`
 
 <!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

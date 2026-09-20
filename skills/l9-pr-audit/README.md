@@ -1,10 +1,10 @@
-# L9 Pr Audit
+# L9 PR Audit
 
 **Path:** `skills/l9-pr-audit` | **Kind:** skill
 
 ## Purpose
 
-deep-audit one or more GitHub pull requests against current repository architecture, invariants, contracts, ownership, CI, reviews, change proportionality, and cross-PR interactions, using a deterministic evidence census plus recursive verification to produce a revision-bound audit and PR Remediation Contract without…
+deep-audit one or more GitHub pull requests against current repository architecture, invariants, contracts, ownership, CI, reviews, change proportionality, and cross-PR interactions, using a deterministic evidence census plus recursive verification to produce a revision-bound audit and PR Remediation Contract without mutating the target repository
 
 ## Key components
 

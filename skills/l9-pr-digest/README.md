@@ -1,4 +1,4 @@
-# L9 Pr Digest
+# L9 PR Digest
 
 **Path:** `skills/l9-pr-digest` | **Kind:** skill
 

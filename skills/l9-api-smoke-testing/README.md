@@ -1,4 +1,4 @@
-# L9 Api Smoke Testing
+# L9 API Smoke Testing
 
 **Path:** `skills/l9-api-smoke-testing` | **Kind:** skill
 

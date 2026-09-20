@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Audit, deterministically verify, or runtime-probe a named component — exports, imports, wiring, and loadability — as a read-only escalation ladder. Use from /audit-component, or from /analyze, /evaluate, or /analyze_evaluate when the user names a component, module, import, or wiring check. Do not use for DAG authoring…
+Audit, deterministically verify, or runtime-probe a named component — exports, imports, wiring, and loadability — as a read-only escalation ladder. Use from /audit-component, or from /analyze, /evaluate, or /analyze_evaluate when the user names a component, module, import, or wiring check.
 
 ## Key components
 
