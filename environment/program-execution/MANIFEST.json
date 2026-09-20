@@ -2055,7 +2055,7 @@
     },
     {
       "path": "scripts/generate_manifest.py",
-      "sha256": "b4b821362649de7d42445d1cd0f0308b34b2838172da1e37a9bc2fd24619815b"
+      "sha256": "e63f65fe32d4cad7e188326b6830ff1dd8518e722ee4dc63c3e0803435ded16f"
     },
     {
       "path": "scripts/launchability.py",
@@ -2430,9 +2430,11 @@
       "sha256": "3939d0022962711e48afa34ba51ae1465c923ea06e2692f86ec5a1ed0124500c"
     }
   ],
+  "generator": "environment/program-execution/scripts/generate_manifest.py",
   "integrity": {
     "algorithm": "sha256",
     "self_excluded": true
   },
+  "regenerate": "make sync-generated-pe",
   "schema": "program-execution-adapter-layer.manifest.v1"
 }

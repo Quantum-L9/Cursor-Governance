@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
 import sys
 from collections.abc import Mapping
 from datetime import UTC, datetime
@@ -260,6 +261,20 @@ def template_command(root: Path, gov: Path) -> str:
     return f'{interpreter} {script} apply-report-template --workspace "{root}"'
 
 
+def authorize_command(root: Path, gov: Path) -> str:
+    """An authorize-release command runnable from a CONSUMER workspace.
+
+    Same reasoning as ``record_command``: the governance script path, the
+    locked interpreter, and the workspace the receipt belongs to, so the
+    printed line re-authorizes THIS tree wherever it is pasted — never the
+    current directory of whoever reads it.
+    """
+    locked = gov / ".venv" / "bin" / "python"
+    interpreter = str(locked) if locked.is_file() else "python3"
+    script = gov / "ops" / "autonomy" / "l4_local.py"
+    return f'{interpreter} {script} --workspace "{root}" authorize-release'
+
+
 def apply_report_template() -> str:
     """Skeleton for the apply report. Deltas are left empty on purpose.
 
@@ -465,7 +480,71 @@ def cmd_record(args: argparse.Namespace) -> int:
         sys.stderr.write(_agent_required_tree(root, gov))
         return 2
     print(json.dumps(receipt, indent=2, sort_keys=True))
+    hint = l4_release_drift_hint(root, gov)
+    if hint:
+        sys.stderr.write(hint)
     return 0
+
+
+#: Bound for the advisory L4 status probe. ``status`` re-derives the tree
+#: digest and may ask GitHub whether a PR is open; neither may hold ``record``.
+_L4_STATUS_TIMEOUT_S = 60
+
+
+def l4_release_drift_hint(root: Path, gov: Path) -> str:
+    """A ``NEXT:`` line when an L4 release receipt attests a tree this is not.
+
+    The kernel receipt deliberately does not bind to the tree (see ``record``),
+    but the L4 release receipt does: ``authorize-release`` hashes worktree
+    bytes. The kernel apply this record attests normally changed bytes and was
+    committed, so a release receipt issued before it is already stale — and
+    the documented recovery ("record, then re-run the same make pr") used to
+    surface that only at the very end of the next gate run, as ``L4 receipt
+    stale``, costing a full cycle. Naming it at record time is the fix.
+
+    The probe is ``l4_local.py status`` run as a subprocess, not an import:
+    ``l4_local`` already imports this module for kernel evidence, and an
+    import in the other direction is a cycle (CodeQL flagged it). The CLI is
+    also the contract that already answers ``stale`` for operators.
+
+    Advisory only: this never writes, never authorizes, and an L4 state it
+    cannot read is silence rather than an error — but only for the failures a
+    probe can legitimately have (no script, spawn failure, timeout, non-zero
+    exit, non-JSON output). A programming error still raises. Kernels remain
+    not an L4 phase; the hint reports drift the operator caused, not a
+    coupling.
+    """
+    script = gov / "ops" / "autonomy" / "l4_local.py"
+    if not script.is_file():
+        return ""
+    locked = gov / ".venv" / "bin" / "python"
+    interpreter = str(locked) if locked.is_file() else sys.executable
+    try:
+        proc = subprocess.run(
+            [interpreter, str(script), "--workspace", str(root), "status"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=_L4_STATUS_TIMEOUT_S,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    if proc.returncode != 0:
+        return ""
+    try:
+        status = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        return ""
+    if not isinstance(status, dict):
+        return ""
+    if status.get("phase") != "release_authorized" or not status.get("stale"):
+        return ""
+    return (
+        "NEXT: the L4 release receipt for this workspace attests a different tree "
+        "(stale); the kernel apply moved it. Re-authorize before re-running make pr:\n"
+        f"      {authorize_command(root, gov)}\n"
+        "      or its remote check refuses with 'L4 receipt stale'.\n"
+    )
 
 
 def cmd_apply_report_template(args: argparse.Namespace) -> int:

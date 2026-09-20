@@ -120,6 +120,20 @@ def test_digest_mismatch_is_reported(tree: Path) -> None:
     assert errors == ["manifest digest mismatch: scripts/run.py"]
 
 
+def test_manifest_names_its_generator_and_heal_command(tree: Path) -> None:
+    """The enforced manifest must say who writes it and how to rewrite it.
+
+    It is validated by `make program-execution-conformance` and CI, yet carried
+    nothing that pointed a reader at the generator, and `make sync-generated`
+    did not reach it; the only correct invocation lived in a CI error string.
+    """
+    value = _write(tree)
+    assert value["generator"] == "environment/program-execution/scripts/generate_manifest.py"
+    assert value["regenerate"] == "make sync-generated-pe"
+    # Self-description is metadata, never an input: validation still round-trips.
+    assert validate_manifest.validate(tree) == []
+
+
 def test_untracked_new_file_is_reported(tree: Path) -> None:
     _write(tree)
     (tree / "adapters" / "extra.yaml").write_text("b: 2\n", encoding="utf-8")

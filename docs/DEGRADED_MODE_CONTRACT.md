@@ -311,6 +311,27 @@ capability is a delivery problem; a pasted secret is a permanent compromise on
 this surface.
 
 
+## Context7 row after the gate removal (2026-09-19) — supersedes the `context7.mcp` row above
+
+Dated counter-observation, not a rewrite of the row above. `context7` in
+`mcp.template.json` was `_requires_env`-gated on `CONTEXT7_API_KEY`, and the
+SessionStart hook stripped that variable before projecting on governance
+checkouts. Together they turned a missing secret into a silently absent server:
+every hosted session lost the docs MCP with nothing failing, and rule 22
+mandated a tool that did not exist. Measured on this container at `5f9f713`:
+`CONTEXT7_API_KEY` absent, projection receipt `gated_out_servers: ["context7"]`,
+no `mcp__context7__*` on the tool surface, SessionStart line blaming
+`SKIP_PLUGIN_MARKETPLACE`.
+
+The server now renders unconditionally with its `${CONTEXT7_API_KEY}` header
+and the hook no longer strips the variable. With the secret unpopulated the
+server **fails to authenticate**, and SessionStart says so and names the fix:
+the secret populating (Infisical inventory key `CONTEXT7_API_KEY`, proxied into
+the session environment). That is a delivery problem to fix, never a server to
+gate out again, and — as everywhere in this contract — never a reason to paste
+the value into the account variables field or any file.
+
+
 ## Memory rows after the realignment (2026-09-06) — supersedes the Graphiti rows above
 
 Dated counter-observation, not a rewrite of the rows above. Since campaign
