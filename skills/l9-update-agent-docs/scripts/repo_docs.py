@@ -429,9 +429,7 @@ def audit_repository(
     ):
         try:
             run_mutations.extend(
-                write_missing_module_readmes(
-                    root, write=True, changed=module_changes, inventory=inventory
-                )
+                write_missing_module_readmes(root, write=True, inventory=inventory)
             )
             refreshed, _, later_mutations = build_filetree_state(root, write=write_filetree)
         except OSError as exc:
@@ -573,7 +571,10 @@ def main() -> int:
     parser.add_argument(
         "--no-write-module-readmes",
         action="store_true",
-        help="Compile module README obligations without creating missing files.",
+        help=(
+            "Compile module README obligations without creating missing files. "
+            "Default writes every inventory gap, not only the change set."
+        ),
     )
     parser.add_argument(
         "--no-write-filetree",

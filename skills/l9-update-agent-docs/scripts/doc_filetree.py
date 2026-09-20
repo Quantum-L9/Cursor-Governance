@@ -23,6 +23,44 @@ FILETREE_MARKER = "<!-- l9-filetree: generated-from-tree -->"
 SOURCE_SUFFIXES = {".py", ".sh"}
 MODULE_MARKERS = {"SKILL.md", "__init__.py"}
 INTEREST_NAMES = MODULE_MARKERS | {"README.md"}
+# Document/config mix that is not a code module. Names are generic so any
+# repo can match; do not add repository-specific paths here.
+CORPUS_SUFFIXES = {".md", ".markdown", ".yaml", ".yml", ".json", ".toml", ".sql", ".csv"}
+CORPUS_DIR_NAMES = frozenset(
+    {
+        "audits",
+        "config",
+        "configs",
+        "contracts",
+        "docs",
+        "examples",
+        "learning",
+        "pipeline",
+        "policies",
+        "profiles",
+        "prompts",
+        "protocols",
+        "registry",
+        "reports",
+        "schema",
+        "schemas",
+        "security",
+        "telemetry",
+    }
+)
+# Never a type-index target at any depth (typed by the name, or residue).
+SKIP_LEAF_NAMES = frozenset(
+    {
+        "assets",
+        "deliverables",
+        "drafts",
+        "fixtures",
+        "generated",
+        "handoff",
+        "node_modules",
+        "receipts",
+    }
+)
 SKIP_DIR_NAMES = {
     ".git",
     ".venv",
@@ -45,7 +83,7 @@ DEFAULT_SKIP_PREFIXES = (
     "workflows/_archived",
 )
 MODULE_ROW_RE = re.compile(
-    r"^\|\s+`([^`]+)`\s+\|\s+(module|submodule)\s+\|\s+(\d+)\s+\|\s+(present|missing)\s+\|\s*$"
+    r"^\|\s+`([^`]+)`\s+\|\s+(module|submodule|corpus|index)\s+\|\s+(\d+)\s+\|\s+(present|missing)\s+\|\s*$"
 )
 ROOT_FILE_RE = re.compile(r"^- `([^`]+)`\s*$")
 
@@ -99,12 +137,56 @@ def interest_files(path: Path) -> list[str]:
     return names
 
 
+def corpus_files(path: Path) -> list[str]:
+    names: list[str] = []
+    try:
+        children = sorted(path.iterdir(), key=lambda item: item.name)
+    except OSError:
+        return names
+    for child in children:
+        if not child.is_file() or child.name.startswith("."):
+            continue
+        if child.name.startswith("test_") or child.name == "README.md":
+            continue
+        if child.suffix.lower() in CORPUS_SUFFIXES:
+            names.append(child.name)
+    return names
+
+
 def is_module_dir(path: Path) -> bool:
     for name in interest_files(path):
         if name in MODULE_MARKERS:
             return True
         if Path(name).suffix in SOURCE_SUFFIXES:
             return True
+    return False
+
+
+def under_skill_pack(root: Path, rel: str) -> bool:
+    current = root
+    for part in Path(rel).parts[:-1]:
+        current = current / part
+        if (current / "SKILL.md").is_file():
+            return True
+    return False
+
+
+def is_corpus_dir(root: Path, rel: str, path: Path) -> bool:
+    name = Path(rel).name.lower()
+    if name in SKIP_LEAF_NAMES:
+        return False
+    if under_skill_pack(root, rel) and Path(rel).name != "scripts":
+        return False
+    if is_module_dir(path):
+        return False
+    files = corpus_files(path)
+    depth = rel.count("/")
+    if len(files) >= 2:
+        return True
+    if depth == 0 and (files or name in CORPUS_DIR_NAMES):
+        return True
+    if name in CORPUS_DIR_NAMES and files and (len(files) >= 2 or depth <= 1):
+        return True
     return False
 
 
@@ -116,6 +198,7 @@ def walk_inventory(root: Path, extra_skip: list[str] | None = None) -> FiletreeI
         child.name for child in root.iterdir() if child.is_file() and not child.name.startswith(".")
     )
     found: list[ModuleRow] = []
+    seen: dict[str, Path] = {}
     for current, dirnames, _filenames in root.walk():
         dirnames[:] = [
             name for name in dirnames if name not in SKIP_DIR_NAMES and not name.startswith(".")
@@ -130,6 +213,7 @@ def walk_inventory(root: Path, extra_skip: list[str] | None = None) -> FiletreeI
             dirnames[:] = []
             continue
         inventory.tree_dirs.append(rel)
+        seen[rel] = current
         files = interest_files(current)
         if is_module_dir(current):
             found.append(
@@ -141,9 +225,53 @@ def walk_inventory(root: Path, extra_skip: list[str] | None = None) -> FiletreeI
                     files=files,
                 )
             )
-    module_paths = {row.path for row in found}
+    qualifying = {row.path for row in found}
+    for rel, current in seen.items():
+        if rel in qualifying:
+            continue
+        if not is_corpus_dir(root, rel, current):
+            continue
+        files = corpus_files(current)
+        found.append(
+            ModuleRow(
+                path=rel,
+                kind="corpus",
+                sources=len(files),
+                readme="present" if (current / "README.md").is_file() else "missing",
+                files=files,
+            )
+        )
+        qualifying.add(rel)
+    for rel, current in seen.items():
+        if rel in qualifying:
+            continue
+        name = Path(rel).name.lower()
+        if name in SKIP_LEAF_NAMES:
+            continue
+        if under_skill_pack(root, rel) and Path(rel).name != "scripts":
+            continue
+        immediate = [
+            child
+            for child in qualifying
+            if child.startswith(rel + "/") and "/" not in child[len(rel) + 1 :]
+        ]
+        if len(immediate) < 2:
+            continue
+        found.append(
+            ModuleRow(
+                path=rel,
+                kind="index",
+                sources=len(immediate),
+                readme="present" if (current / "README.md").is_file() else "missing",
+                files=[],
+            )
+        )
+        qualifying.add(rel)
+    parent_paths = {row.path for row in found}
     for row in found:
-        if any(row.path.startswith(parent + "/") for parent in module_paths if parent != row.path):
+        if row.kind == "module" and any(
+            row.path.startswith(parent + "/") for parent in parent_paths if parent != row.path
+        ):
             row.kind = "submodule"
     inventory.modules = sorted(found, key=lambda row: row.path)
     return inventory

@@ -1,0 +1,262 @@
+{
+  "schema_version": "1.1.0",
+  "request": {
+    "request_id": "repo-docs-a9957c381bc1",
+    "donor": "Quantum-L9/Cursor-Governance",
+    "beneficiary": "Quantum-L9/Cursor-Governance",
+    "harvest_target": "repo-docs:agents,architecture,invariants",
+    "access_mode": "read-only",
+    "depth": "standard",
+    "brief": false
+  },
+  "source_identity": {
+    "repository": "Quantum-L9/Cursor-Governance",
+    "repo_docs": {
+      "repository": "Quantum-L9/Cursor-Governance",
+      "semantic_source_digest": "a53f4adce9c3d0a930467b9d4c060147ef31d5c5bc4de84ee63cb68f439a7cd7",
+      "required_surfaces": ["agents", "architecture", "invariants"]
+    }
+  },
+  "inventory": [
+    {
+      "path": "ORG_INVARIANTS.yaml",
+      "purpose": "Canonical Quantum-L9 organization policy; source of L9-ORG-015 and L9-PRINCIPLE-008.",
+      "classification": "canonical",
+      "owner": "governance-admins",
+      "consumers": ["INVARIANTS.md", "docs/governance/ORG_INVARIANTS.md", "ops/scripts/validate_org_policy.py"],
+      "importance": 5,
+      "action": "keep",
+      "evidence_ids": ["ev-org-014", "ev-principle-008"]
+    }
+  ],
+  "system": {
+    "identity": "Organization invariant policy plus this-repo pointer indexes",
+    "workflows": [
+      {
+        "name": "org-policy validation",
+        "entry": "ops/scripts/validate_org_policy.py"
+      }
+    ],
+    "control_flow": [
+      {
+        "from": "ORG_INVARIANTS.yaml",
+        "to": "INVARIANTS.md pointer row",
+        "then": "do not copy L9-ORG bodies into AGENTS.md or ARCHITECTURE.md"
+      }
+    ],
+    "ownership_boundaries": [
+      {
+        "owner": "ORG_INVARIANTS.yaml",
+        "responsibility": "machine organization policy including L9-ORG-015"
+      },
+      {
+        "owner": "INVARIANTS.md",
+        "responsibility": "this-repo invariant index; point at YAML IDs"
+      },
+      {
+        "owner": "AGENTS.md",
+        "responsibility": "operating instructions; do not absorb org-law bodies"
+      },
+      {
+        "owner": "ARCHITECTURE.md",
+        "responsibility": "module and CI index; cite org policy, do not restate it"
+      }
+    ],
+    "dependencies": [
+      {
+        "from": "INVARIANTS.md",
+        "to": "ORG_INVARIANTS.yaml",
+        "kind": "pointer"
+      }
+    ],
+    "must_not_own": [
+      "copied L9-ORG requirement bodies in pointer indexes",
+      "symptom-only patches presented as repairs"
+    ]
+  },
+  "surfaces": [
+    {
+      "item": "agents",
+      "source": "AGENTS.md",
+      "visibility": "repository",
+      "is_wrapper": false,
+      "resolved_target": "AGENTS.md",
+      "dependencies": ["ORG_INVARIANTS.yaml"],
+      "mutations": ["preserve"],
+      "evidence_ids": ["ev-org-014"]
+    },
+    {
+      "item": "architecture",
+      "source": "ARCHITECTURE.md",
+      "visibility": "repository",
+      "is_wrapper": false,
+      "resolved_target": "ARCHITECTURE.md",
+      "dependencies": ["ORG_INVARIANTS.yaml", "INVARIANTS.md"],
+      "mutations": ["preserve"],
+      "evidence_ids": ["ev-org-014"]
+    },
+    {
+      "item": "invariants",
+      "source": "INVARIANTS.md",
+      "visibility": "repository",
+      "is_wrapper": false,
+      "resolved_target": "INVARIANTS.md",
+      "dependencies": ["ORG_INVARIANTS.yaml"],
+      "mutations": ["surgical pointer"],
+      "evidence_ids": ["ev-org-014", "ev-invariants-pointer"]
+    }
+  ],
+  "drift": [],
+  "evidence": [
+    {
+      "id": "ev-org-014",
+      "epistemic": "CONFIRMED",
+      "source": "Quantum-L9/Cursor-Governance",
+      "locator": {
+        "kind": "path_lines",
+        "value": "ORG_INVARIANTS.yaml"
+      },
+      "claim": "L9-ORG-015 requires the verified root cause to be repaired at the earliest owning producer; a downstream symptom-only patch is not a sufficient repair.",
+      "secret_redacted": false
+    },
+    {
+      "id": "ev-principle-008",
+      "epistemic": "CONFIRMED",
+      "source": "Quantum-L9/Cursor-Governance",
+      "locator": {
+        "kind": "path_lines",
+        "value": "ORG_INVARIANTS.yaml"
+      },
+      "claim": "L9-PRINCIPLE-008 states that a verified defect must be repaired at the earliest owning producer and that hiding the symptom is not a sufficient repair.",
+      "secret_redacted": false
+    },
+    {
+      "id": "ev-invariants-pointer",
+      "epistemic": "CONFIRMED",
+      "source": "Quantum-L9/Cursor-Governance",
+      "locator": {
+        "kind": "path_lines",
+        "value": "INVARIANTS.md"
+      },
+      "claim": "INVARIANTS.md already points at ORG_INVARIANTS.yaml L9-ORG-015 without copying the requirement body.",
+      "secret_redacted": false
+    }
+  ],
+  "concepts": [
+    {
+      "id": "upstream-repair-agents-preserve",
+      "name": "Keep org-law bodies out of AGENTS.md",
+      "description": "The upstream-repair obligation lives in ORG_INVARIANTS.yaml. AGENTS.md already owns operating procedure and test-integrity language; it must not absorb L9-ORG bodies.",
+      "problem": "Copying a new org invariant into AGENTS.md creates a second policy SSOT.",
+      "semantic_contract": "Organization invariant text stays in ORG_INVARIANTS.yaml. AGENTS.md may cite the YAML; it must not restate L9-ORG-015.",
+      "disposition": "MERGE_WITH_EXISTING",
+      "beneficiary_destination": "docs:agents",
+      "evidence_ids": ["ev-org-014", "ev-principle-008"],
+      "risks": ["Folding org law into AGENTS.md would compete with the YAML SSOT."],
+      "acceptance_tests": [
+        {
+          "given": "L9-ORG-015 is declared in ORG_INVARIANTS.yaml",
+          "when": "the agents surface is qualified",
+          "then": "AGENTS.md is preserved without a copied org-law body",
+          "must_not": "append L9-ORG-015 requirement text to AGENTS.md"
+        }
+      ],
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "existing_owner": "repository_operating_instructions",
+        "merge_decision": "preserve AGENTS.md; cite YAML only if a later additive operating note is needed",
+        "compatibility_risk": "low"
+      },
+      "portability": {
+        "donor_identity_independent": true,
+        "donor_execution_authority_independent": true,
+        "donor_infrastructure_independent": true,
+        "incidental_implementation_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null
+      },
+      "leverage": 4,
+      "compounding": 4,
+      "rank_score": 80,
+      "nugget": true
+    },
+    {
+      "id": "upstream-repair-architecture-preserve",
+      "name": "Keep architecture index as a module/CI map",
+      "description": "ARCHITECTURE.md already cites ORG_INVARIANTS.yaml. The new invariant is organization policy, not a module or workflow row.",
+      "problem": "Restating org policy in the architecture index duplicates INVARIANTS.md and the YAML.",
+      "semantic_contract": "ARCHITECTURE.md remains a module and CI index and may cite org policy by path; it does not own L9-ORG bodies.",
+      "disposition": "MERGE_WITH_EXISTING",
+      "beneficiary_destination": "docs:architecture",
+      "evidence_ids": ["ev-org-014"],
+      "risks": ["Adding an org-policy row would mix law into the architecture map."],
+      "acceptance_tests": [
+        {
+          "given": "ARCHITECTURE.md already cites ORG_INVARIANTS.yaml",
+          "when": "the architecture surface is qualified",
+          "then": "the architecture index is preserved",
+          "must_not": "copy L9-ORG-015 into ARCHITECTURE.md"
+        }
+      ],
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "existing_owner": "repository_architecture_index",
+        "merge_decision": "preserve the live architecture index; org policy stays cited, not restated",
+        "compatibility_risk": "low"
+      },
+      "portability": {
+        "donor_identity_independent": true,
+        "donor_execution_authority_independent": true,
+        "donor_infrastructure_independent": true,
+        "incidental_implementation_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null
+      },
+      "leverage": 3,
+      "compounding": 3,
+      "rank_score": 70,
+      "nugget": true
+    },
+    {
+      "id": "upstream-repair-invariants-pointer",
+      "name": "Point INVARIANTS.md at L9-ORG-015",
+      "description": "The this-repo invariant index must name the new org invariant by ID and path without copying the YAML body.",
+      "problem": "A new org invariant is invisible to agents if the pointer index omits it.",
+      "semantic_contract": "INVARIANTS.md carries a one-line pointer to ORG_INVARIANTS.yaml L9-ORG-015 and does not duplicate the requirement statement.",
+      "disposition": "PORT",
+      "beneficiary_destination": "docs:invariants",
+      "evidence_ids": ["ev-org-014", "ev-invariants-pointer"],
+      "risks": ["Copying the YAML body would create a second org-policy SSOT."],
+      "acceptance_tests": [
+        {
+          "given": "L9-ORG-015 exists in ORG_INVARIANTS.yaml",
+          "when": "INVARIANTS.md is refreshed",
+          "then": "it points at L9-ORG-015 by ID",
+          "must_not": "paste the L9-ORG-015 requirement body into INVARIANTS.md"
+        }
+      ],
+      "beneficiary_fit": {
+        "comparison": "DONOR_STRONGER",
+        "existing_owner": "repository_invariant_index",
+        "merge_decision": "keep the existing L9-ORG-015 pointer row",
+        "compatibility_risk": "low"
+      },
+      "portability": {
+        "donor_identity_independent": true,
+        "donor_execution_authority_independent": true,
+        "donor_infrastructure_independent": true,
+        "incidental_implementation_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null
+      },
+      "leverage": 5,
+      "compounding": 5,
+      "rank_score": 95,
+      "nugget": true
+    }
+  ],
+  "safety": [],
+  "unknowns": [],
+  "highest_leverage_nugget": "upstream-repair-invariants-pointer",
+  "status": "PASS"
+}

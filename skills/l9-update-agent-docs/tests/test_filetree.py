@@ -43,6 +43,26 @@ def test_write_filetree_lists_modules_and_skips_wip(tmp_path: Path):
     assert "README.md" in parsed.root_files
 
 
+def test_filetree_lists_corpus_and_index_kinds(tmp_path: Path):
+    (tmp_path / "protocols").mkdir()
+    (tmp_path / "protocols" / "a.md").write_text("# A\n", encoding="utf-8")
+    (tmp_path / "protocols" / "b.md").write_text("# B\n", encoding="utf-8")
+    (tmp_path / "pkg" / "a").mkdir(parents=True)
+    (tmp_path / "pkg" / "b").mkdir()
+    (tmp_path / "pkg" / "a" / "a.py").write_text("def a():\n    return 1\n", encoding="utf-8")
+    (tmp_path / "pkg" / "b" / "b.py").write_text("def b():\n    return 1\n", encoding="utf-8")
+    inventory, written, admission = df.write_filetree(tmp_path)
+    assert written is True
+    assert admission == "create"
+    kinds = {row.path: row.kind for row in inventory.modules}
+    assert kinds["protocols"] == "corpus"
+    assert kinds["pkg"] == "index"
+    assert kinds["pkg/a"] == "submodule"
+    text = (tmp_path / "filetree.md").read_text(encoding="utf-8")
+    parsed = df.parse_inventory(text)
+    assert {row.path: row.kind for row in parsed.modules}["protocols"] == "corpus"
+
+
 def test_discover_modules_reads_filetree_not_a_second_walk(tmp_path: Path):
     (tmp_path / "pkg").mkdir()
     (tmp_path / "pkg" / "mod.py").write_text("def top():\n    return 1\n", encoding="utf-8")

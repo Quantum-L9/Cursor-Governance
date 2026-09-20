@@ -142,6 +142,13 @@ principles:
       Governance validation must report executed controls, evidence, remaining
       unknowns, scope drift, and whether repeated evaluation has converged.
 
+  - id: L9-PRINCIPLE-008
+    title: Fix the cause as far upstream as possible
+    statement: >-
+      A verified defect must be repaired at the earliest owning producer that
+      can stop the class of failure. Downstream patches that only hide the
+      symptom are not a sufficient repair.
+
 trust_model:
   untrusted_change_producers:
     - human_contributor
@@ -1065,6 +1072,54 @@ invariants:
         rules/56-wip-main-bound.mdc, but no verified control yet compares
         branch-local work-corpus paths against the default branch, so this is
         currently agent-side discipline rather than an enforced boundary.
+
+  - id: L9-ORG-015
+    title: Root causes must be fixed as far upstream as possible
+    domain: change_control
+    severity: high
+    policy_state: active
+
+    requirement:
+      statement: >-
+        When a defect is identified, the required repair is the earliest
+        owning producer that can stop the class of failure. A downstream
+        patch that only hides the symptom is not a sufficient repair, even
+        when it makes one instance pass.
+
+      enforcement_requirement: blocking
+      fail_behavior: closed
+
+    applies_to:
+      operations:
+        - defect_repair
+        - policy_change
+        - test_or_gate_change
+        - consumer_mirror_or_adapter_change
+
+    forbidden:
+      - symptom_only_patch
+      - silencing_or_weakening_a_check_to_hide_the_cause
+      - documenting_around_an_unfixed_producer
+      - copying_the_same_workaround_into_each_consumer
+
+    allowed:
+      - repair_at_the_owning_producer
+      - temporary_downstream_guard_that_names_the_upstream_owner_and_removal_trigger
+
+    violation:
+      code: L9_ORG_SYMPTOM_ONLY_REPAIR
+      action: block
+      message: >-
+        The change patches a symptom instead of repairing the verified root
+        cause at the earliest owning producer.
+
+    assurance:
+      effective_enforcement_state: unenforced
+      assurance_state: insufficient_evidence
+      reason: >-
+        The obligation is declared. No verified organization-level reviewer
+        or gate yet classifies a change as symptom-only versus upstream
+        repair.
 
 control_registry:
   # Controls remain "planned" until executable and platform evidence exists.

@@ -26,6 +26,7 @@ Named pointers only. One line + path. Bind from live law at refresh time.
 | One mutating agent per worktree; stage explicit pathspecs only | `AGENTS.md` + `rules/49-shared-worktree-isolation.mdc` |
 | Org repository birth under `Quantum-L9` | `ORG_INVARIANTS.yaml` `invariants:`; `docs/governance/ORG_INVARIANTS.md` |
 | Work-corpus packs (WIP, plans, campaign sources) are main-bound: authored on `main`, committed the turn they appear, landed on `origin/main` the same session; a branch-only, preserve-ref-only, or shelf-only copy is not delivery | `ORG_INVARIANTS.yaml` `invariants:` (`L9-ORG-014`); [`rules/56-wip-main-bound.mdc`](rules/56-wip-main-bound.mdc); `rules/15-work-tracking.mdc` |
+| Fix the verified root cause as far upstream as possible; do not patch the symptom | `ORG_INVARIANTS.yaml` `L9-ORG-015` |
 | Tests run once locally (same worktree digest + `PR_BASE`); full corpus is `make pr-full` / nightly / push-to-`main` | `AGENTS.md` `TESTS_ONCE_AND_PUBLISH_V1`; `CANONICAL_LAW.md` §6.2.5 |
 | Commit finished work when done, then `make pr` (remediates=1; `PR_REMEDIATE=0` opt-out) | `AGENTS.md` `TESTS_ONCE_AND_PUBLISH_V1`; `rules/48-make-pr-remediation.mdc` |
 | `pr-check` is the INTERNAL gate leaf of `make pr`; Diagnose is `OPEN_PR=0 make pr`; do not run `pr-check` after `precommit-repo` | `AGENTS.md` `PR_CHECK_FOLDED_V1`; `rules/48-make-pr-remediation.mdc` |

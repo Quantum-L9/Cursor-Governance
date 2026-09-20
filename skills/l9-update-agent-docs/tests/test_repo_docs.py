@@ -247,6 +247,24 @@ def test_bound_harvest_normalizes_into_same_obligations_and_closes(tmp_path: Pat
     assert rd.validate_receipt_shape(receipt) == []
 
 
+def test_audit_fills_missing_readmes_outside_the_change_set(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    module_pipeline(root)
+    write(root / "skills/demo/x.py", "def x():\n    return 1\n")
+    write(root / "environment/agents/lifecycle/mod.py", "def ready():\n    return True\n")
+    base = commit(root, "base with two modules and no readmes")
+    write(root / "skills/demo/x.py", "def x():\n    return 2\n")
+    commit(root, "touch only one module")
+    receipt = rd.audit_repository(root, changed_since=base)
+    assert (root / "skills/demo/README.md").is_file()
+    assert (root / "environment/agents/lifecycle/README.md").is_file()
+    assert "environment/agents/lifecycle/README.md" in receipt["changes"]["run_mutations"]
+    assert receipt["final_status"] == "PASS"
+
+
 def test_module_change_resolves_exact_generator_target_and_lifecycle(tmp_path: Path):
     root = tmp_path / "repo"
     root.mkdir()

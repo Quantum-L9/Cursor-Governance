@@ -1,8 +1,8 @@
 ---
 title: L9 Governance
-version: 2.0.0
+version: 2.0.1
 created: 2025-01-27
-updated: 2026-07-19
+updated: 2026-09-13
 owner: Igor Beylin
 source: Post-Suite-6, Graphiti-native governance
 tags: [governance, skills, commands, rules, ops, graphiti]
@@ -31,12 +31,12 @@ Activation is automatic — one hook, no manual step:
 `ops/hooks/session_start_bootstrap.sh` → installed at
 `~/.cursor/hooks/session-start-bootstrap.sh` → registered in
 `~/.cursor/hooks.json` under `sessionStart`. It syncs this clone, reconciles
-the declared Claude Code plugin set (`ops/scripts/setup_claude_code_plugins.sh`),
-reconciles the IDE profile (`environment/ide/` — Biome/Ruff/Pyright extensions plus
-a managed-key merge into `.vscode/settings.json`), auto-wires symlinks, and checks Graphiti
-(activated and round-trip verified as of 2026-07-27 — see `AGENTS.md` §2.3), hydrating
-session context from Graphiti (`SessionHydrationPacket` / PICKUP — `memory-bank/` is
-retired, see `ops/graphiti/MEMORY_BANK_POLICY.md`). See `AGENTS.md` §2
+the IDE profile (`environment/ide/` — Biome/Ruff/Pyright extensions plus
+a managed-key merge into `.vscode/settings.json`), and auto-wires consumer
+symlinks. Cursor SessionStart does not run Claude projection
+(`AGENTS.md` `CURSOR_SESSIONSTART_NO_CLAUDE_CLOUD_V1`). Resume SSOT is the
+memory control plane (`ops/memory/`; `CANONICAL_LAW.md` §8.2) — `memory-bank/`
+is retired, see `ops/graphiti/MEMORY_BANK_POLICY.md`. See `AGENTS.md` §2
 for the full activation contract and manual/repair commands. `start-session.yaml`
 (the old YAML "protocol") was retired 2026-07-19 — the `.sh` hook above is now
 the sole activation mechanism.
@@ -59,16 +59,20 @@ make -C "$HOME/.cursor-governance" start WS="$(pwd)"
 │   ├── scripts/       # Active automation (setup, validation, backup, sync)
 │   ├── scripts/_archived/  # Retired pre-Graphiti / Suite-6 scripts (do not depend on)
 │   ├── hooks/         # sessionStart / sessionEnd hooks
-│   ├── graphiti/      # Graphiti memory client + activation runbooks
+│   ├── graphiti/      # Hydration composition + retired provider-client tombstone
+│   ├── memory/        # Canonical memory control plane (l9-graphite-memory)
+│   ├── skill_routing/ # Virtual Skill Plane v2 scorer / materializer
 │   ├── secrets/       # AWS SM registry SSOT (openclaw-igorbot/*) + resolve
 │   ├── ui-operator/   # Portable SaaS UI console, cartridges, receipts
 │   └── logs/          # Runtime logs
 ├── intelligence/      # Active signal corpus — chat exports, distillation, mining
 ├── environment/       # Runtime environment adapters (IDE-neutral policy + per-target renderers)
+│   ├── agents/        # Thin surface adapters (claude-code, cursor, …) — no environment/claude-code/
 │   ├── contracts/     # First-class execution contracts/templates (executable plan SSOT)
 │   ├── ide/           # Editor profile: policy.json + render.cursor.json (Cursor/VS Code)
-│   ├── program-execution/  # Program Execution System (Blueprint/Controller/adapters)
-│   └── claude-code/   # Claude Code environment (CLI · Web · Mobile) — committed .claude/ + account env
+│   ├── mcp/           # Master MCP config
+│   ├── plugins/       # Declarative plugin desired-state
+│   └── program-execution/  # Program Execution System (Blueprint/Controller/adapters)
 ├── profiles/          # DEPRECATED — content ported into skills/ + rules/; pending retirement
 ├── learning/          # Curated lessons, repeated-mistakes, quick-fixes
 ├── protocols/         # GMP protocol contracts and templates
@@ -116,7 +120,8 @@ tree was merged into top-level `ops/` (see `ops/operational-oversight.md`).
 - [`environment/contracts/autonomy/MANIFEST.yaml`](environment/contracts/autonomy/MANIFEST.yaml) — **first-class** autonomy family registry (subordinate to PE; `owns_program_state: false`)
 - [`skills/l9-structured-reasoning/SKILL.md`](skills/l9-structured-reasoning/SKILL.md) — adaptive evidence-based reasoning (plan/review/architecture/debug/corpus)
 - [`skills/_archived/`](skills/_archived/) — retired skill packs (not discoverable; do not activate)
-- [`skills/l9-graphiti-memory/SKILL.md`](skills/l9-graphiti-memory/SKILL.md) — Graphiti memory wiring
+- [`skills/l9-graphiti-memory/SKILL.md`](skills/l9-graphiti-memory/SKILL.md) — memory control plane (`ops/memory`)
+- [`ops/memory/README.md`](ops/memory/README.md) — binding, readiness, and write path
 - [`skills/l9-aws-secrets/SKILL.md`](skills/l9-aws-secrets/SKILL.md) — AWS SM + Infisical Cursor-Governance vault via `ops/secrets`
 - [`skills/l9-ui-operator/SKILL.md`](skills/l9-ui-operator/SKILL.md) — SaaS UI console when API is insufficient (explicit-only)
 
@@ -161,8 +166,8 @@ clone at `~/.cursor-governance/` is the SSOT working copy — see
 
 ---
 
-**Last Updated:** 2026-07-19
-**Version:** 2.0.0
+**Last Updated:** 2026-09-13
+**Version:** 2.0.1
 <!-- PROGRAM_EXECUTION_ADAPTER_LAYER_V1:README -->
 
 ## Program Execution

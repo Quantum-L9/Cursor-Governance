@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""AST module/submodule README generator owned by l9-update-agent-docs.
+"""Module, corpus, and index README generator owned by l9-update-agent-docs.
 
-Walks the repository for code modules and nested submodules, extracts facts
-with stdlib AST, and writes missing README.md files. Never writes the
-repository-root README.md. Does not call an LLM or the donor repo.
+Walks the repository for code modules (AST) and document/config folders
+(type index). Never writes the repository-root README.md. Does not call
+an LLM or the donor repo.
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ from doc_filetree import (
     DEFAULT_SKIP_PREFIXES,
     SKIP_DIR_NAMES,
     FiletreeInventory,
+    corpus_files,
     inventory_from_filetree,
     walk_inventory,
 )
@@ -62,7 +63,18 @@ CONFIG_PATH = Path("config/subsystems/readme_config.yaml")
 ROOT_README = Path("README.md")
 FORBIDDEN_RELATIVE_PATHS = {"", ".", ".."}
 GENERATED_MARKER = "<!-- l9-module-readme: generated-from-ast -->"
+FOLDER_MARKER = "<!-- l9-folder-readme: generated-from-tree -->"
 HEADING_RE = re.compile(r"^##\s+(.+?)\s*$", re.MULTILINE)
+CORPUS_TYPE_LABELS = {
+    ".md": "Markdown",
+    ".markdown": "Markdown",
+    ".yaml": "YAML",
+    ".yml": "YAML",
+    ".json": "JSON",
+    ".toml": "TOML",
+    ".sql": "SQL",
+    ".csv": "CSV",
+}
 # Pre-marker contract of scripts/generate_subsystem_readmes.py: a README whose
 # front matter (or first 400 bytes) declares `auto_generated: false` is
 # handwritten; everything that generator wrote carries the README_TEMPLATE
@@ -101,6 +113,27 @@ README_TEMPLATE = (
 
 """
     + GENERATED_MARKER
+    + "\n"
+)
+FOLDER_TEMPLATE = (
+    """# {title}
+
+**Path:** `{path}` | **Kind:** {kind}
+
+## Purpose
+
+{purpose}
+
+## File types
+
+{file_types}
+
+## Contents
+
+{contents}
+
+"""
+    + FOLDER_MARKER
     + "\n"
 )
 
@@ -399,6 +432,50 @@ def generate_readme(
     )
 
 
+def _generate_folder_readme(rel: str, kind: str, folder: Path, spec: dict[str, Any]) -> str:
+    files = corpus_files(folder)
+    counts: dict[str, int] = {}
+    for name in files:
+        label = CORPUS_TYPE_LABELS.get(Path(name).suffix.lower(), "Other")
+        counts[label] = counts.get(label, 0) + 1
+    if kind == "index":
+        purpose = (
+            str(spec.get("purpose") or "").strip() or "Index of child modules and document folders."
+        )
+        children = sorted(
+            child.name
+            for child in folder.iterdir()
+            if child.is_dir() and not child.name.startswith(".")
+        )
+        file_types = "_No files in this directory; see child folders._"
+        contents = (
+            "\n".join(f"- `{name}/`" for name in children) if children else "_No child folders._"
+        )
+    elif files:
+        labels = ", ".join(f"{count} {label}" for label, count in sorted(counts.items()))
+        purpose = str(spec.get("purpose") or "").strip() or f"This directory holds {labels}."
+        file_types = "\n".join(f"- {label}: {count}" for label, count in sorted(counts.items()))
+        contents = "\n".join(f"- `{name}`" for name in files)
+    else:
+        purpose = (
+            str(spec.get("purpose") or "").strip()
+            or "This directory is reserved. It has no files yet."
+        )
+        file_types = "_No files yet._"
+        contents = "_Empty._"
+    return _fill(
+        FOLDER_TEMPLATE,
+        {
+            "title": str(spec.get("title") or Path(rel).name),
+            "path": rel,
+            "kind": kind,
+            "purpose": purpose,
+            "file_types": file_types,
+            "contents": contents,
+        },
+    )
+
+
 def resolve_under_root(repo_root: Path, rel: str) -> Path | None:
     cleaned = (rel or "").strip()
     if cleaned in FORBIDDEN_RELATIVE_PATHS:
@@ -441,13 +518,13 @@ def _legacy_generated_shape(text: str) -> bool:
 def classify_readme_text(text: str) -> ReadmeOwnership:
     """Ownership of an existing README body.
 
-    ``generated``: carries GENERATED_MARKER, so this generator owns it.
+    ``generated``: carries GENERATED_MARKER or FOLDER_MARKER, so this generator owns it.
     ``legacy_generated``: written by the pre-marker generator (README_TEMPLATE
     header line plus its section set) and not opted out with
     ``auto_generated: false``; a refresh migrates it to the marker.
     ``handwritten``: everything else; never overwritten without ``--force``.
     """
-    if GENERATED_MARKER in text:
+    if GENERATED_MARKER in text or FOLDER_MARKER in text:
         return "generated"
     if _legacy_handwritten(text):
         return "handwritten"
@@ -593,7 +670,14 @@ def write_missing_module_readmes(
         return []
     config = load_config(repo_root)
     defaults = config.get("defaults") or {}
-    discovered = discover_module_paths(repo_root, config, inventory=inventory)
+    prefixes = _skip_prefixes(config)
+    source = inventory if inventory is not None else inventory_from_filetree(repo_root)
+    if source is None:
+        source = walk_inventory(repo_root, extra_skip=list(prefixes))
+    discovered = discover_module_paths(repo_root, config, inventory=source)
+    kinds = {row.path: row.kind for row in source.modules}
+    # Optional CLI scope only. repo_docs.py must not pass `changed` — existing
+    # modules without a README stay in the gap fill until they have one.
     if changed is not None:
         discovered = [
             rel
@@ -614,8 +698,12 @@ def write_missing_module_readmes(
             if not regenerate:
                 continue
         spec = spec_for_path(rel, config)
-        facts = extract_subsystem_facts(repo_root, rel)
-        content = generate_readme(rel.replace("/", "_"), spec, facts, defaults)
+        kind = kinds.get(rel, "module")
+        if kind in {"corpus", "index"}:
+            content = _generate_folder_readme(rel, kind, module_dir, spec)
+        else:
+            facts = extract_subsystem_facts(repo_root, rel)
+            content = generate_readme(rel.replace("/", "_"), spec, facts, defaults)
         dest.parent.mkdir(parents=True, exist_ok=True)
         write_readme(dest, content, backup=backup)
         mutations.append(f"{rel}/README.md")

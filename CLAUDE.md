@@ -31,7 +31,8 @@ SSOTs:
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — this-repo module / CI index
 - [`INVARIANTS.md`](INVARIANTS.md) — this-repo invariant + CI enforcement index
 - [`ORG_INVARIANTS.yaml`](ORG_INVARIANTS.yaml) — machine org-policy SSOT
-  (`INVARIANTS.md` points at it; do not copy `L9-ORG-*` bodies here)
+  (`INVARIANTS.md` points at it, including `L9-ORG-014`; do not copy
+  `L9-ORG-*` bodies here)
 
 Resume SSOT is the canonical memory control plane (`python -m ops.memory.cli hydrate`; CANONICAL_LAW §8.2). Do not write `memory-bank/`.
 Activation is SessionStart only (`AGENTS.md` §2). Publish is

@@ -152,6 +152,49 @@ def test_extract_facts_ignores_ancestor_dot_l9(tmp_path: Path):
     assert facts.files == ["pkg/mod.py"]
 
 
+def test_corpus_and_index_folders_get_type_index_readmes(tmp_path: Path):
+    (tmp_path / "protocols").mkdir()
+    (tmp_path / "protocols" / "alpha.md").write_text("# A\n", encoding="utf-8")
+    (tmp_path / "protocols" / "beta.md").write_text("# B\n", encoding="utf-8")
+    (tmp_path / "prompts").mkdir()
+    (tmp_path / "lib" / "schemas").mkdir(parents=True)
+    (tmp_path / "lib" / "schemas" / "one.json").write_text("{}\n", encoding="utf-8")
+    (tmp_path / "lib" / "schemas" / "two.json").write_text("{}\n", encoding="utf-8")
+    (tmp_path / "pkg" / "a").mkdir(parents=True)
+    (tmp_path / "pkg" / "b").mkdir()
+    (tmp_path / "pkg" / "a" / "a.py").write_text("def a():\n    return 1\n", encoding="utf-8")
+    (tmp_path / "pkg" / "b" / "b.py").write_text("def b():\n    return 1\n", encoding="utf-8")
+    (tmp_path / "deep" / "nested" / "schemas").mkdir(parents=True)
+    (tmp_path / "deep" / "nested" / "schemas" / "only.json").write_text("{}\n", encoding="utf-8")
+    (tmp_path / "skills" / "demo" / "references").mkdir(parents=True)
+    (tmp_path / "skills" / "demo" / "SKILL.md").write_text("# Demo\n", encoding="utf-8")
+    (tmp_path / "skills" / "demo" / "references" / "note.md").write_text("# N\n", encoding="utf-8")
+    (tmp_path / "skills" / "demo" / "references" / "other.md").write_text("# O\n", encoding="utf-8")
+    (tmp_path / "WIP" / "profiles").mkdir(parents=True)
+    (tmp_path / "WIP" / "profiles" / "x.md").write_text("# X\n", encoding="utf-8")
+    (tmp_path / "foundation" / "security").mkdir(parents=True)
+    written = set(gm.write_missing_module_readmes(tmp_path))
+    assert "protocols/README.md" in written
+    assert "prompts/README.md" in written
+    assert "lib/schemas/README.md" in written
+    assert "pkg/README.md" in written
+    assert "pkg/a/README.md" in written
+    proto = (tmp_path / "protocols" / "README.md").read_text(encoding="utf-8")
+    assert gm.FOLDER_MARKER in proto
+    assert "Markdown" in proto
+    assert "alpha.md" in proto
+    prompts = (tmp_path / "prompts" / "README.md").read_text(encoding="utf-8")
+    assert "reserved" in prompts.lower()
+    index = (tmp_path / "pkg" / "README.md").read_text(encoding="utf-8")
+    assert gm.FOLDER_MARKER in index
+    assert "**Kind:** index" in index
+    assert "deep/nested/schemas/README.md" not in written
+    assert "skills/demo/references/README.md" not in written
+    assert "WIP/profiles/README.md" not in written
+    assert "foundation/README.md" not in written
+    assert "foundation/security/README.md" not in written
+
+
 def test_changed_filter_limits_writes(tmp_path: Path):
     (tmp_path / "alpha").mkdir()
     (tmp_path / "beta").mkdir()
