@@ -9,8 +9,8 @@ metadata:
   tags: [l9, memory, control-plane, prefetch, gmp, end-session, write-agent, write-governed, two-lanes]
   owner: igor_beylin
   status: active
-  version: 2.3.0
-  updated: 2026-09-15
+  version: 2.4.0
+  updated: 2026-09-19
 ---
 
 # Agent memory (canonical control plane)
@@ -98,6 +98,23 @@ bearer; the memory runtime resolves its own configuration (memory ADR-016).
   Cursor-Governance keeps no memory cognition of its own: the close hands the
   redacted excerpt to `l9-memory distill`.
 - Both lanes end at `MemoryService`. Neither touches a provider.
+
+## Hydrate / close alignment (ADR-0034, ADR-0035)
+
+SessionStart and sessionEnd share one task string:
+`session_task_objective(project)` → `Continue work in {folder}`. Do not
+hydrate under `Resume session in {folder}`.
+
+A healthy SessionStart with a write-namespace hint makes **four** control-plane
+calls (health, hydrate, tagged continuation, 24h agent-lane search). The
+fourth call is `--recorded-after <now-24h>` on the **primary namespace only**.
+It fail-opens if the bound CLI does not accept the flag. Classify hits with
+`ops/memory/agent_lane.py`; do not open sqlite.
+
+sessionEnd runs the same 24h search (envelope allows `search`) and folds
+agent-lane decisions / unfinished work / file paths into the
+`ContinuationCapsuleV2` before `ingest_candidate`. This does not constrain
+`write_agent`.
 
 ## Interactive write (agent lane)
 
