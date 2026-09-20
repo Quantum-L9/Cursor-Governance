@@ -269,6 +269,40 @@ def test_audit_fills_missing_readmes_outside_the_change_set(tmp_path: Path):
     assert receipt["final_status"] == "PASS"
 
 
+def test_receipt_carries_the_readme_reconciliation_histogram(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    module_pipeline(root)
+    write(root / "skills/demo/x.py", "def x():\n    return 1\n")
+    base = commit(root, "base")
+    write(root / "skills/demo/x.py", "def x():\n    return 2\n")
+    commit(root, "code")
+    receipt = rd.audit_repository(root, changed_since=base)
+    planned = receipt["capabilities"]["module_readmes"]["planned"]
+    assert set(planned) == {
+        "create",
+        "refresh",
+        "unchanged",
+        "preserve",
+        "retire",
+        "conflict",
+    }
+    assert planned["create"] >= 1
+    assert planned["conflict"] == 0
+    # The histogram is diagnostics on the capability, not a second ledger.
+    assert receipt["final_status"] == "PASS"
+
+    # A second audit over the settled tree plans no mutation at all.
+    again = rd.audit_repository(root, changed_since=base)
+    settled = again["capabilities"]["module_readmes"]["planned"]
+    assert settled["create"] == 0
+    assert settled["refresh"] == 0
+    assert settled["retire"] == 0
+    assert settled["conflict"] == 0
+
+
 def test_module_change_resolves_exact_generator_target_and_lifecycle(tmp_path: Path):
     root = tmp_path / "repo"
     root.mkdir()
