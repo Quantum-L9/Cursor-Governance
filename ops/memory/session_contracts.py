@@ -64,6 +64,19 @@ def task_signature_for(objective: str, repository_identity: str) -> str:
     return sha256_text(f"{repository_identity}\n{objective.strip()}")[:32]
 
 
+def session_task_objective(project_name: str) -> str:
+    """One session-task string for SessionStart hydrate and sessionEnd close.
+
+    Hydrate used to search ``Resume session in {folder}`` while close wrote
+    ``Continue work in {folder}``. Those two strings produced different
+    ``task_signature`` values whenever local session state was missing, so
+    the next SessionStart could not task-match the capsule it just wrote.
+    """
+
+    name = (project_name or "").strip() or "project"
+    return f"Continue work in {name}"
+
+
 @dataclass(frozen=True)
 class ContinuationCapsuleV2:
     session_id: str
@@ -245,6 +258,7 @@ __all__ = [
     "ContinuationContractError",
     "canonical_json",
     "continuation_from_record_metadata",
+    "session_task_objective",
     "sha256_text",
     "task_signature_for",
 ]

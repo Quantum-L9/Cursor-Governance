@@ -37,6 +37,7 @@ from ops.memory.hydration import (  # noqa: E402
     STATUS_NAMESPACE_UNRESOLVED,
     canonical_hydrate,
 )
+from ops.memory.session_contracts import session_task_objective  # noqa: E402
 from ops.memory.session_state import write_session_state  # noqa: E402
 
 #: Default hydration budget (chars). Formerly read from promotion_rules.yaml,
@@ -129,7 +130,7 @@ def compile_session_packet(
             "user_id": os.environ.get("USER_ID") or "cursor_agent",
         }
 
-    task = f"Resume session in {project.name}"
+    task = session_task_objective(project.name)
     # SessionStart has no task yet, so a task-signature match is impossible
     # here by construction; the packet asks for the explicit repository
     # fallback and reports it (audit P1-02). A task-bearing caller keeps the
@@ -261,6 +262,8 @@ def compile_session_packet(
         "continuation_selection": continuation.selection if continuation else None,
         "fan_in_denied": hydration.fan_in_denied,
         "projection_status": hydration.projection_status,
+        "agent_lane_records": len(hydration.agent_lane_record_ids),
+        "agent_lane_window_hours": hydration.agent_lane_window_hours,
     }
 
     memory_block: dict[str, Any] = hydration.as_dict()

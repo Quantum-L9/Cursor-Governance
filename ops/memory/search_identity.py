@@ -36,15 +36,23 @@ import json
 import os
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import Any
 
 #: Selectors that change which records come back. Anything here that a receipt
 #: cannot bind is a gap in the evidence, not a detail.
-RESULT_AFFECTING_SELECTORS = ("query", "namespaces", "tags", "limit", "memory_classes")
+RESULT_AFFECTING_SELECTORS = (
+    "query",
+    "namespaces",
+    "tags",
+    "limit",
+    "memory_classes",
+    "recorded_after",
+)
 
 #: Version of *Cursor's* normalization, stamped into its own digest so a change
 #: to it can never be mistaken for a change in the request.
-CURSOR_CANONICALIZATION = "cursor.search-request/v1"
+CURSOR_CANONICALIZATION = "cursor.search-request/v2"
 
 #: Turns an unbound result-affecting selector from "recorded" into "refused".
 ENV_REQUIRE_SEARCH_IDENTITY = "L9_MEMORY_REQUIRE_SEARCH_IDENTITY"
@@ -66,6 +74,7 @@ class SearchRequest:
     tags: tuple[str, ...] = ()
     limit: int | None = None
     memory_classes: tuple[str, ...] = ()
+    recorded_after: datetime | None = None
 
     def canonical(self) -> dict[str, Any]:
         """Deterministic shape. Tags and classes are unordered *sets* — asking
@@ -79,6 +88,9 @@ class SearchRequest:
             "tags": sorted(set(self.tags)),
             "limit": self.limit,
             "memory_classes": sorted(set(self.memory_classes)),
+            "recorded_after": None
+            if self.recorded_after is None
+            else self.recorded_after.astimezone(UTC).isoformat(),
         }
 
     def digest(self) -> str:
@@ -173,6 +185,33 @@ def verify_request_identity(
         detail.append(f"receipt limit {echoed_limit} != requested {request.limit}")
     else:
         bound.append("limit")
+
+    echoed_after = raw.get("recorded_after")
+    requested_after = (
+        None
+        if request.recorded_after is None
+        else request.recorded_after.astimezone(UTC).isoformat()
+    )
+    if echoed_after is None:
+        unbound.append("recorded_after")
+    elif requested_after is None:
+        # A selector present only in the receipt is drift, not agreement.
+        # `recorded_after` is result-affecting (ADR-0035), so a receipt that
+        # carries one the request never set describes a *narrower* search than
+        # Cursor asked for. Falling through to `bound` here let Cursor accept a
+        # result set filtered by a selector it did not request — the one case
+        # the equality check below cannot see, because it only runs when the
+        # request set a value to compare against.
+        mismatched.append("recorded_after")
+        detail.append(
+            f"receipt recorded_after {echoed_after!r} but the request set none; "
+            "the result set is filtered by a selector Cursor did not ask for"
+        )
+    elif str(echoed_after) != requested_after:
+        mismatched.append("recorded_after")
+        detail.append(f"receipt recorded_after {echoed_after!r} != requested {requested_after!r}")
+    else:
+        bound.append("recorded_after")
 
     receipt_digest = raw.get("request_digest")
     if receipt_digest is None:
