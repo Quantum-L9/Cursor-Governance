@@ -25,13 +25,8 @@ def test_hmac_names_are_inventoried_for_infisical_bind() -> None:
 
 
 def test_hmac_pair_is_not_an_aws_overlay() -> None:
-    overlay = yaml.safe_load(
-        (SECRETS_DIR / "registry.overlays.yaml").read_text(encoding="utf-8")
-    )
-    ids = {
-        str(entry.get("secret_id") or "")
-        for entry in (overlay or {}).get("overlays") or []
-    }
+    overlay = yaml.safe_load((SECRETS_DIR / "registry.overlays.yaml").read_text(encoding="utf-8"))
+    ids = {str(entry.get("secret_id") or "") for entry in (overlay or {}).get("overlays") or []}
     assert OVERLAY_ID not in ids
     text = (SECRETS_DIR / "registry.overlays.yaml").read_text(encoding="utf-8")
     assert "l9-intelligence-corpus" not in text
