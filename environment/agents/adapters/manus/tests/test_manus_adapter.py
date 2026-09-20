@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Manus adapter tests: shared binding, identity, and retired memory transport."""
+"""Manus adapter tests: shared binding, identity, and governance MCP boundary."""
 
 from __future__ import annotations
 
@@ -75,10 +75,47 @@ class ManusAdapterContractTests(unittest.TestCase):
         self.assertNotIn("GRAPHITI_MCP_TOKEN=", environment)
         self.assertNotIn("INFISICAL_CLIENT_SECRET=", environment)
 
-    def test_mcp_carrier_advertises_no_unprovisioned_remote_transport(self) -> None:
+    def test_mcp_carrier_declares_the_bounded_memory_lifecycle_boundary(self) -> None:
         connector = json.loads((ADAPTER / "mcp-connector.json").read_text(encoding="utf-8"))
-        self.assertEqual(connector["transport"], "none")
-        self.assertEqual(connector["status"], "retired-pending-memory-remote-transport")
+        self.assertEqual(connector["transport"], "streamable-http")
+        self.assertEqual(connector["endpoint_path"], "/mcp")
+        self.assertEqual(connector["health_path"], "/health")
+        self.assertEqual(
+            connector["memory"],
+            {
+                "agent_lane": "package-owned-l9-graphite-memory-mcp-or-cli",
+                "lifecycle": "bearer-protected-canonical-hydrate-and-close-only",
+                "fallback": "fail-closed-no-local-operator-identity",
+            },
+        )
+        self.assertTrue(connector["safety"]["no_shell"])
+        self.assertTrue(connector["safety"]["no_credentials"])
+        self.assertTrue(connector["safety"]["no_arbitrary_file_access"])
+        self.assertTrue(connector["safety"]["no_repository_write_tools"])
+        self.assertNotIn("mcpServers", connector)
+        self.assertNotIn("url", connector)
+        self.assertNotIn("headers", connector)
+
+    def test_memory_mcp_carrier_is_separate_and_package_owned(self) -> None:
+        connector = json.loads((ADAPTER / "memory-mcp-connector.json").read_text(encoding="utf-8"))
+        self.assertEqual(connector["name"], "l9-memory-manus")
+        self.assertEqual(connector["transport"], "stdio")
+        self.assertEqual(connector["command"], "rendered-locally")
+        self.assertEqual(
+            connector["authentication"],
+            {
+                "mode": "inherited-signed-agent-assertion",
+                "agent_id": "manus",
+                "human_door": "forbidden",
+                "local_operator_fallback": "forbidden",
+            },
+        )
+        self.assertEqual(connector["package"]["distribution"], "l9-graphite-memory")
+        self.assertEqual(connector["package"]["entrypoint"], "l9-memory-server --transport stdio")
+        self.assertTrue(connector["scope"]["ordinary_agent_reads"])
+        self.assertTrue(connector["scope"]["cold_safe_agent_writes"])
+        self.assertTrue(connector["scope"]["governed_writes_and_phase_locks"])
+        self.assertFalse(connector["scope"]["lifecycle_start_close"])
         self.assertNotIn("mcpServers", connector)
         self.assertNotIn("url", connector)
         self.assertNotIn("headers", connector)
@@ -102,6 +139,52 @@ class ManusAdapterContractTests(unittest.TestCase):
         text = installer.read_text(encoding="utf-8")
         self.assertIn("bootstrap_agent_environment.sh", text)
         self.assertIn("--surface manus", text)
+
+    def test_mcp_launcher_uses_the_locked_interpreter(self) -> None:
+        launcher = ADAPTER / "serve_mcp.sh"
+        syntax = subprocess.run(
+            ["bash", "-n", str(launcher)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(syntax.returncode, 0, syntax.stderr)
+        text = launcher.read_text(encoding="utf-8")
+        self.assertIn(".venv/bin/python", text)
+        self.assertIn("mcp_server.py", text)
+        self.assertIn("export_agent_assertion_env.sh", text)
+
+    def test_memory_mcp_launcher_fails_closed_without_signed_assertion(self) -> None:
+        launcher = ADAPTER / "serve_memory_mcp.sh"
+        syntax = subprocess.run(
+            ["bash", "-n", str(launcher)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(syntax.returncode, 0, syntax.stderr)
+        result = subprocess.run(
+            ["bash", str(launcher), "--governance", str(REPOSITORY)],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={"HOME": str(Path.home()), "PATH": "/usr/bin:/bin"},
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("signed Manus memory door unavailable", result.stderr)
+        text = launcher.read_text(encoding="utf-8")
+        self.assertIn("l9-memory-server", text)
+        self.assertIn("export_agent_assertion_env.sh", text)
+        self.assertIn("local-operator compatibility principal", text)
+
+    def test_memory_mcp_renderer_emits_no_secret_stdio_draft(self) -> None:
+        renderer = importlib.import_module("render_memory_mcp_connector")
+        draft = renderer.draft(REPOSITORY)
+        server = draft["mcpServers"]["l9-memory-manus"]
+        self.assertEqual(server["command"], str(ADAPTER / "serve_memory_mcp.sh"))
+        self.assertEqual(server["args"], ["--governance", str(REPOSITORY)])
+        self.assertNotIn("env", server)
+        self.assertNotIn("headers", server)
 
     def test_installer_refuses_a_non_repository_before_bootstrapping(self) -> None:
         installer = ADAPTER / "install.sh"
