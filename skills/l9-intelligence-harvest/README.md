@@ -1,27 +1,22 @@
 # L9 Intelligence Harvest
 
-**Path:** `skills/l9-intelligence-harvest` | **Tier:** discovered
+**Path:** `skills/l9-intelligence-harvest` | **Kind:** skill
 
 ## Purpose
 
-AST-extracted module documentation.
+mine reusable semantic intelligence from a donor, compare it against a beneficiary, classify transfer dispositions, and emit harvest.json. use for donor-to-beneficiary harvests and pattern mining, not literal code extraction.
 
+## Key components
 
+- [`agents/`](agents/)
+- [`contracts/`](contracts/)
+- [`meta/`](meta/)
+- [`policies/`](policies/)
+- [`references/`](references/)
+- [`scripts/`](scripts/)
 
-## Components
+## Authority
 
-_No public classes in this path._
+`SKILL.md` in this directory is the authoritative operating contract. This README is a navigation projection of it and never outranks it.
 
-## Functions
-
-_No public module-level functions._
-
-## Exports
-
-_No `__all__` exports._
-
-## Dependencies
-
-_No imports parsed._
-
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=skill -->

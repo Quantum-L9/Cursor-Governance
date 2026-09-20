@@ -2,31 +2,28 @@
 
 **Path:** `ops/config` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 8 JSON, 7 YAML.
+- `commit-verification-contract.json` — JSON
+- `doctrine-baseline.rules.yaml` — YAML
+- `governance-runtime-contract.yaml` — YAML
+- `llm_rules_projection.yaml` — YAML
+- `memory-binding.json` — JSON
+- `memory-canonical-epoch.json` — JSON
+- `memory-egress-allowlist.json` — JSON
+- `memory-hook-envelopes.json` — JSON
+- `memory-receipt-contract.json` — JSON
+- `precommit-hook-contract.json` — JSON
+- `python-contract.json` — JSON
+- `root-file-protection.json` — JSON
+- `wip-corpus.yaml` — YAML
+- `wip-inventory.schema.yaml` — YAML
+- `wip-prune-receipt.schema.yaml` — YAML
+- `workspace-clean-routing.yaml` — YAML
 
 ## File types
 
-- JSON: 8
+- JSON: 9
 - YAML: 7
 
-## Contents
-
-- `commit-verification-contract.json`
-- `doctrine-baseline.rules.yaml`
-- `governance-runtime-contract.yaml`
-- `llm_rules_projection.yaml`
-- `memory-binding.json`
-- `memory-canonical-epoch.json`
-- `memory-egress-allowlist.json`
-- `memory-receipt-contract.json`
-- `precommit-hook-contract.json`
-- `python-contract.json`
-- `root-file-protection.json`
-- `wip-corpus.yaml`
-- `wip-inventory.schema.yaml`
-- `wip-prune-receipt.schema.yaml`
-- `workspace-clean-routing.yaml`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

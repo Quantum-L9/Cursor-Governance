@@ -2,20 +2,16 @@
 
 **Path:** `autonomy/policies` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 5 JSON.
+- `adapter-requirements.json` — JSON
+- `operation-aliases.json` — JSON
+- `pipeline-invariants.json` — JSON
+- `resource-classes.json` — JSON
+- `role-capabilities.json` — JSON
 
 ## File types
 
 - JSON: 5
 
-## Contents
-
-- `adapter-requirements.json`
-- `operation-aliases.json`
-- `pipeline-invariants.json`
-- `resource-classes.json`
-- `role-capabilities.json`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

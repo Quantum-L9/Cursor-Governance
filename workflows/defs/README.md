@@ -2,19 +2,15 @@
 
 **Path:** `workflows/defs` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 4 YAML.
+- `gmp-execution.yaml` — YAML
+- `harvest-deploy.yaml` — YAML
+- `readme-pipeline.yaml` — YAML
+- `workflow-template.yaml` — YAML
 
 ## File types
 
 - YAML: 4
 
-## Contents
-
-- `gmp-execution.yaml`
-- `harvest-deploy.yaml`
-- `readme-pipeline.yaml`
-- `workflow-template.yaml`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

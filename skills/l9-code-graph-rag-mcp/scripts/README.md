@@ -1,28 +1,23 @@
 # Scripts
 
-**Path:** `skills/l9-code-graph-rag-mcp/scripts` | **Tier:** discovered
+**Path:** `skills/l9-code-graph-rag-mcp/scripts` | **Kind:** subsystem
 
-## Purpose
+## Modules
+
+### `code_graph_cli.py`
 
 Invoke code-graph-rag-mcp tools via one-shot JSON-RPC CLI (stderr suppressed).
-
-
-
-## Components
-
-### Shell entrypoints
-
-- `skills/l9-code-graph-rag-mcp/scripts/code_graph_batch_index.sh`
-- `skills/l9-code-graph-rag-mcp/scripts/code_graph_gmp_baseline.sh`
-- `skills/l9-code-graph-rag-mcp/scripts/code_graph_health.sh`
-
-## Functions
 
 - `def resolve_bin() -> Path`
 - `def resolve_repo() -> Path`
 - `def extract_jsonrpc_payload(stdout) -> dict[str, Any]` — Return JSON-RPC response from stdout (pretty-printed or single-line).
 - `def call_tool(repo_root, tool_name, arguments) -> dict[str, Any]`
 - `def main() -> int`
+
+### `code_graph_plasticos_gate.py`
+
+Shared PlasticOS code-graph gate logic for Cursor hooks and GMP baseline.
+
 - `def is_plasticos_repo(repo) -> bool`
 - `def normalize_rel_path(path) -> str`
 - `def is_high_impact_path(rel_path) -> bool`
@@ -31,19 +26,12 @@ Invoke code-graph-rag-mcp tools via one-shot JSON-RPC CLI (stderr suppressed).
 - `def load_evidence(repo) -> dict[str, Any] | None`
 - `def evidence_is_fresh(data) -> bool`
 - `def evidence_covers_path(data, rel_path) -> bool`
-- `def extract_tool_path(hook_input) -> tuple[str | None, str | None]`
-- `def extract_mcp_tool(hook_input) -> tuple[str | None, dict[str, Any]]`
-- `def hook_response(permission, user_message, agent_message) -> dict[str, Any]`
-- `def check_pre_tool_use(hook_input) -> dict[str, Any]`
-- `def check_before_mcp(hook_input) -> dict[str, Any]`
-- `def main() -> int`
+- _+6 more public symbol(s)_
 
-## Exports
+## Entrypoints
 
-_No `__all__` exports._
+- `code_graph_batch_index.sh`
+- `code_graph_gmp_baseline.sh`
+- `code_graph_health.sh`
 
-## Dependencies
-
-`__future__`, `datetime`, `json`, `os`, `pathlib`, `re`, `subprocess`, `sys`, `typing`
-
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

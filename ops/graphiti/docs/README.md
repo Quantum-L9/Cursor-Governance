@@ -2,17 +2,13 @@
 
 **Path:** `ops/graphiti/docs` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 2 Markdown.
+- `CURSOR-GRAPHITI-INSTANTIATION-BRIEF.md` — Markdown
+- `MACHINE-ENV-POLICY.md` — Markdown
 
 ## File types
 
 - Markdown: 2
 
-## Contents
-
-- `CURSOR-GRAPHITI-INSTANTIATION-BRIEF.md`
-- `MACHINE-ENV-POLICY.md`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

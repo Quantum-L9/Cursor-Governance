@@ -2,23 +2,19 @@
 
 **Path:** `environment/program-execution/core/program-execution-controller-template/policy` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 8 YAML.
+- `authority.yaml` — YAML
+- `autonomy.yaml` — YAML
+- `evidence.yaml` — YAML
+- `parallelism.yaml` — YAML
+- `remote-actions.yaml` — YAML
+- `risk-tiers.yaml` — YAML
+- `stop-conditions.yaml` — YAML
+- `waivers.yaml` — YAML
 
 ## File types
 
 - YAML: 8
 
-## Contents
-
-- `authority.yaml`
-- `autonomy.yaml`
-- `evidence.yaml`
-- `parallelism.yaml`
-- `remote-actions.yaml`
-- `risk-tiers.yaml`
-- `stop-conditions.yaml`
-- `waivers.yaml`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

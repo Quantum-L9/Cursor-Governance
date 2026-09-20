@@ -1,27 +1,13 @@
 # L9 Skill Gateway
 
-**Path:** `environment/agents/adapters/cursor/skills/l9-skill-gateway` | **Tier:** discovered
+**Path:** `environment/agents/adapters/cursor/skills/l9-skill-gateway` | **Kind:** skill
 
 ## Purpose
 
-AST-extracted module documentation.
+Cursor adapter gateway to the canonical L9 skill corpus
 
+## Authority
 
+`SKILL.md` in this directory is the authoritative operating contract. This README is a navigation projection of it and never outranks it.
 
-## Components
-
-_No public classes in this path._
-
-## Functions
-
-_No public module-level functions._
-
-## Exports
-
-_No `__all__` exports._
-
-## Dependencies
-
-_No imports parsed._
-
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=skill -->

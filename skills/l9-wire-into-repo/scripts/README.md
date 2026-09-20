@@ -1,30 +1,21 @@
 # Scripts
 
-**Path:** `skills/l9-wire-into-repo/scripts` | **Tier:** discovered
+**Path:** `skills/l9-wire-into-repo/scripts` | **Kind:** subsystem
 
-## Purpose
+## Modules
+
+### `self_test.py`
 
 Executable proof for the l9-wire-into-repo validation seam.
 
-
-
-## Components
-
-_No public classes in this path._
-
-## Functions
-
 - `def run(fixture) -> int`
 - `def main() -> int`
+
+### `validate_wiring_fixture.py`
+
+Deterministic fixture validator for l9-wire-into-repo core invariants.
+
 - `def validate(data) -> list[str]`
 - `def main(argv) -> int`
 
-## Exports
-
-_No `__all__` exports._
-
-## Dependencies
-
-`__future__`, `argparse`, `collections`, `json`, `pathlib`, `subprocess`, `sys`, `typing`
-
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

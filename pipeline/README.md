@@ -2,18 +2,14 @@
 
 **Path:** `pipeline` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 3 Markdown.
+- `pipeline_kickstart.md` — Markdown
+- `pipeline_midstream.md` — Markdown
+- `pipeline_precommit.md` — Markdown
 
 ## File types
 
 - Markdown: 3
 
-## Contents
-
-- `pipeline_kickstart.md`
-- `pipeline_midstream.md`
-- `pipeline_precommit.md`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

@@ -1,28 +1,18 @@
 # Helpers
 
-**Path:** `tools/l9_agent_ui_control/helpers` | **Tier:** discovered
+**Path:** `tools/l9_agent_ui_control/helpers` | **Kind:** subsystem
 
-## Purpose
+## Modules
+
+### `__init__.py`
 
 Mac Agent helper utilities.
 
+### `logging.py`
 
-
-## Components
-
-_No public classes in this path._
-
-## Functions
+Mac Agent Logging Helpers
 
 - `def ts() -> str` — Get current timestamp in ISO format.
 - `def log_step(log_list, step_num, action, status, details) -> None` — Append a structured log entry for a step.
 
-## Exports
-
-_No `__all__` exports._
-
-## Dependencies
-
-`datetime`, `typing`
-
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

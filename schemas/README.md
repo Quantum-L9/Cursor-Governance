@@ -2,16 +2,12 @@
 
 **Path:** `schemas` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 1 JSON.
+- `org-invariants.schema.json` — JSON
 
 ## File types
 
 - JSON: 1
 
-## Contents
-
-- `org-invariants.schema.json`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

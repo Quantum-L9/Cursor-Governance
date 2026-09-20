@@ -1,18 +1,12 @@
 # Scripts
 
-**Path:** `skills/l9-audit-plans/scripts` | **Tier:** discovered
+**Path:** `skills/l9-audit-plans/scripts` | **Kind:** subsystem
 
-## Purpose
+## Modules
+
+### `refine_plans.py`
 
 Fold or compile leftover plan todos. Never write AGENTS.md. Never harvest-write.
-
-
-
-## Components
-
-_No public classes in this path._
-
-## Functions
 
 - `def concern_for(path, fm) -> str`
 - `def leftover_todos(fm) -> list[dict[str, Any]]`
@@ -20,9 +14,24 @@ _No public classes in this path._
 - `def refine(plans_dir) -> dict[str, Any]`
 - `def format_markdown(payload) -> str`
 - `def main(argv) -> int`
+
+### `run_audit_plans.py`
+
+Single /l9-audit-plans invoke: shelf → refine → shelf → README.
+
 - `def invoke(plans_dir, workspace, today) -> dict`
 - `def main(argv) -> int`
+
+### `self_test.py`
+
+Self-test for l9-audit-plans (skill-local; not collected by root pytest).
+
 - `def main() -> int`
+
+### `shelf_plans.py`
+
+Put every plans-store .plan.md on the binding shelf.
+
 - `def apply_status(path, verdict) -> None` — Set folder/current status. Never write a parked status onto live root.
 - `def shelf_dir(plans_dir, verdict) -> Path`
 - `def slug_collision(dest_dir, src) -> Path` — Prefer an existing same-slug file over basename-only dest.
@@ -31,15 +40,10 @@ _No public classes in this path._
 - `def merge_unique_todos(src, dest) -> int` — Copy unique pending/in-progress todos from src onto dest before dest-wins.
 - `def fold_retired(plans_dir, workspace, actions) -> dict[str, int]`
 - `def shelf(plans_dir, workspace, today) -> dict[str, Any]`
-- `def format_markdown(payload) -> str`
-- `def main(argv) -> int`
-
-## Exports
-
-_No `__all__` exports._
+- _+2 more public symbol(s)_
 
 ## Dependencies
 
-`__future__`, `argparse`, `audit_plans`, `datetime`, `hashlib`, `json`, `os`, `pathlib`, `re`, `refine_plans`, `shelf_plans`, `shutil`, `subprocess`, `sys`, `typing`
+**Internal:** `audit_plans`, `refine_plans`, `shelf_plans`
 
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

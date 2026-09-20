@@ -2,17 +2,13 @@
 
 **Path:** `environment/program-execution/audits` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 2 YAML.
+- `pec-remediation-workpack.v1.yaml` — YAML
+- `pipeline-assembly-audit.v1.yaml` — YAML
 
 ## File types
 
 - YAML: 2
 
-## Contents
-
-- `pec-remediation-workpack.v1.yaml`
-- `pipeline-assembly-audit.v1.yaml`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

@@ -1,29 +1,21 @@
 # Integration
 
-**Path:** `environment/agents/generated-data/integration` | **Tier:** discovered
+**Path:** `environment/agents/generated-data/integration` | **Kind:** subsystem
 
-## Purpose
+## Modules
+
+### `__init__.py`
 
 Executable integration proofs for the generated-data compounding loop.
 
-
-
-## Components
-
-_No public classes in this path._
-
-## Functions
+### `end_to_end_golden.py`
 
 - `def load_fixture() -> Mapping[str, Any]`
 - `def run_golden() -> dict[str, Any]`
 - `def main() -> int`
 
-## Exports
-
-_No `__all__` exports._
-
 ## Dependencies
 
-`__future__`, `argparse`, `collections.abc`, `context_query`, `context_selector`, `delivery_worker`, `json`, `pathlib`, `processor`, `receipts`, `repository_event_bridge`, `reuse_recorder`, `state_store`, `sys`, `tempfile`, `typing`
+**Internal:** `context_query`, `context_selector`, `delivery_worker`, `processor`, `receipts`, `repository_event_bridge`, `reuse_recorder`, `state_store`
 
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

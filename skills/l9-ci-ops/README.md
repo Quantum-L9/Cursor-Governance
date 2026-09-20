@@ -1,27 +1,17 @@
 # L9 Ci Ops
 
-**Path:** `skills/l9-ci-ops` | **Tier:** discovered
+**Path:** `skills/l9-ci-ops` | **Kind:** skill
 
 ## Purpose
 
-AST-extracted module documentation.
+ci/cd pipeline status, fix failures, list gates, and author ci regression policies
 
+## Key components
 
+- [`references/`](references/)
 
-## Components
+## Authority
 
-_No public classes in this path._
+`SKILL.md` in this directory is the authoritative operating contract. This README is a navigation projection of it and never outranks it.
 
-## Functions
-
-_No public module-level functions._
-
-## Exports
-
-_No `__all__` exports._
-
-## Dependencies
-
-_No imports parsed._
-
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=skill -->

@@ -2,18 +2,14 @@
 
 **Path:** `environment/program-execution/campaigns/pe-v3-hardening` | **Kind:** index
 
-## Purpose
-
-Index of child modules and document folders.
-
-## File types
-
-_No files in this directory; see child folders._
-
 ## Contents
 
-- `audits/`
-- `baseline/`
-- `blueprint/`
+- [`audits/`](audits/)
+- [`baseline/`](baseline/)
+- [`blueprint/`](blueprint/)
 
-<!-- l9-folder-readme: generated-from-tree -->
+## Files
+
+- `CAMPAIGN_SOURCE.yaml` — YAML
+
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=index -->

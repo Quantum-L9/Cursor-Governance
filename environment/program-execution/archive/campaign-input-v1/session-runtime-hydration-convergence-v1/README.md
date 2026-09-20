@@ -1,19 +1,16 @@
 # Session Runtime Hydration Convergence V1
 
-**Path:** `environment/program-execution/campaigns/session-runtime-hydration-convergence-v1` | **Kind:** corpus
+**Path:** `environment/program-execution/archive/campaign-input-v1/session-runtime-hydration-convergence-v1` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 1 JSON, 1 YAML.
+- `ARCHIVE_RECORD.yaml` — YAML
+- `CAMPAIGN_SOURCE.yaml` — YAML
+- `source-integrity-receipt.json` — JSON
 
 ## File types
 
 - JSON: 1
-- YAML: 1
+- YAML: 2
 
-## Contents
-
-- `CAMPAIGN_SOURCE.yaml`
-- `source-integrity-receipt.json`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

@@ -1,27 +1,25 @@
 # Cursor rules
 
-**Path:** `rules` | **Tier:** control_plane
+**Path:** `rules` | **Kind:** corpus
 
 ## Purpose
 
 Bind agent behavior without a second governance tree.
 
+## Description
+
 Always-on and requestable .mdc rules.
 
-## Components
+## Contents
 
-_No public classes in this path._
+- `RULES-MANIFEST.json` — JSON
+- `RULES-MANIFEST.md` — Markdown
+- `RULES-MANIFEST.yaml` — YAML
 
-## Functions
+## File types
 
-_No public module-level functions._
+- JSON: 1
+- Markdown: 1
+- YAML: 1
 
-## Exports
-
-_No `__all__` exports._
-
-## Dependencies
-
-_No imports parsed._
-
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

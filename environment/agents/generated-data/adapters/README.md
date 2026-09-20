@@ -1,116 +1,49 @@
 # Adapters
 
-**Path:** `environment/agents/generated-data/adapters` | **Tier:** discovered
+**Path:** `environment/agents/generated-data/adapters` | **Kind:** subsystem
 
-## Purpose
+## Modules
+
+### `__init__.py`
 
 Destination and repository-class adapters for L9 subagent-generated data.
 
+### `graphiti_memory.py`
 
+- `GraphitiAdapterError` — Raised when governed memory delivery cannot be completed safely.
+- `MemoryCandidate`
+- `MemoryDeliveryResult`
+- `MemoryTransport`
+- `FileOutboxTransport` — Durably enqueue candidates for later Graphiti ingestion.
+- `HttpJsonTransport` — Submit governed candidates to an HTTPS JSON endpoint.
+- `CommandTransport` — Invoke an explicit Graphiti ingestion command with JSON on stdin.
+- `GraphitiMemoryAdapter` — Compile approved memory-route units into governed candidates.
+- _+3 more public symbol(s)_
 
-## Components
+### `ingest_memory_candidate.py`
 
-### `GraphitiAdapterError`
+Map a MemoryCandidate on stdin to a canonical memory write (stage C10).
 
-Raised when governed memory delivery cannot be completed safely.
-
-- File: `environment/agents/generated-data/adapters/graphiti_memory.py` (L37–38)
-- Methods: _none_
-
-### `MemoryCandidate`
-
-No description
-
-- File: `environment/agents/generated-data/adapters/graphiti_memory.py` (L42–62)
-- Methods: `to_dict`
-
-### `MemoryDeliveryResult`
-
-No description
-
-- File: `environment/agents/generated-data/adapters/graphiti_memory.py` (L66–82)
-- Methods: `to_dict`
-
-### `MemoryTransport`
-
-No description
-
-- File: `environment/agents/generated-data/adapters/graphiti_memory.py` (L85–87)
-- Methods: `deliver`
-
-### `FileOutboxTransport`
-
-Durably enqueue candidates for later Graphiti ingestion.
-
-- File: `environment/agents/generated-data/adapters/graphiti_memory.py` (L90–128)
-- Methods: `deliver`
-
-### `HttpJsonTransport`
-
-Submit governed candidates to an HTTPS JSON endpoint.
-
-- File: `environment/agents/generated-data/adapters/graphiti_memory.py` (L131–196)
-- Methods: `deliver`
-
-### `CommandTransport`
-
-Invoke an explicit Graphiti ingestion command with JSON on stdin.
-
-- File: `environment/agents/generated-data/adapters/graphiti_memory.py` (L199–251)
-- Methods: `deliver`
-
-### `GraphitiMemoryAdapter`
-
-Compile approved memory-route units into governed candidates.
-
-- File: `environment/agents/generated-data/adapters/graphiti_memory.py` (L254–426)
-- Methods: `compile_candidate`, `deliver`
-
-### `L9PythonAdapterError`
-
-Raised when an L9 Python repository cannot be adapted safely.
-
-- File: `environment/agents/generated-data/adapters/l9_python.py` (L9–10)
-- Methods: _none_
-
-### `RepositoryContext`
-
-No description
-
-- File: `environment/agents/generated-data/adapters/l9_python.py` (L14–32)
-- Methods: `to_dict`
-
-### `L9PythonRepositoryAdapter`
-
-Interpret generated data for strict L9 Python repositories.
-
-- File: `environment/agents/generated-data/adapters/l9_python.py` (L35–159)
-- Methods: `inspect`, `enrich_unit`
-
-### `OdooAdapterError`
-
-Raised when an Odoo repository cannot be adapted safely.
-
-- File: `environment/agents/generated-data/adapters/odoo.py` (L9–10)
-- Methods: _none_
-
-## Functions
-
-- `def canonical_json(value) -> bytes`
-- `def select_transport() -> MemoryTransport`
-- `def main(argv) -> int`
 - `def resolve_namespace(candidate) -> str` — The namespace request for this candidate; raises when it cannot be honest.
 - `def ingest_candidate(candidate) -> dict[str, Any]`
 - `def main(argv) -> int`
-- `def main(argv) -> int`
+
+### `l9_python.py`
+
+- `L9PythonAdapterError` — Raised when an L9 Python repository cannot be adapted safely.
+- `RepositoryContext`
+- `L9PythonRepositoryAdapter` — Interpret generated data for strict L9 Python repositories.
 - `def main(argv) -> int`
 
-## Exports
+### `odoo.py`
 
-_No `__all__` exports._
+- `OdooAdapterError` — Raised when an Odoo repository cannot be adapted safely.
+- `OdooRepositoryContext`
+- `OdooRepositoryAdapter` — Interpret generated data for pragmatic local-first Odoo repos.
+- `def main(argv) -> int`
 
 ## Dependencies
 
-`__future__`, `argparse`, `collections.abc`, `dataclasses`, `hashlib`, `json`, `os`, `pathlib`, `safe_https`, `subprocess`, `sys`, `tempfile`, `typing`, `urllib.error`, `urllib.request`
+**Internal:** `safe_https`
 
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

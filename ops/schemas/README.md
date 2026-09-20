@@ -2,18 +2,14 @@
 
 **Path:** `ops/schemas` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 3 JSON.
+- `rule-manifest.schema.json` — JSON
+- `rule-metadata.schema.json` — JSON
+- `rule-selection.schema.json` — JSON
 
 ## File types
 
 - JSON: 3
 
-## Contents
-
-- `rule-manifest.schema.json`
-- `rule-metadata.schema.json`
-- `rule-selection.schema.json`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

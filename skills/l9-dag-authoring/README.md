@@ -1,27 +1,21 @@
 # L9 Dag Authoring
 
-**Path:** `skills/l9-dag-authoring` | **Tier:** discovered
+**Path:** `skills/l9-dag-authoring` | **Kind:** skill
 
 ## Purpose
 
-AST-extracted module documentation.
+Author, update, validate, register, discover, and optionally bind thin command triggers to L9 workflow graphs, keeping SessionDAG guidance graphs and executable LangGraph runtimes as distinct first-class kinds
 
+## Key components
 
+- [`agents/`](agents/)
+- [`contracts/`](contracts/)
+- [`policies/`](policies/)
+- [`references/`](references/)
+- [`scripts/`](scripts/)
 
-## Components
+## Authority
 
-_No public classes in this path._
+`SKILL.md` in this directory is the authoritative operating contract. This README is a navigation projection of it and never outranks it.
 
-## Functions
-
-_No public module-level functions._
-
-## Exports
-
-_No `__all__` exports._
-
-## Dependencies
-
-_No imports parsed._
-
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=skill -->

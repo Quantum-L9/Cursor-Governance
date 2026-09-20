@@ -2,22 +2,18 @@
 
 **Path:** `environment/agents/adapters` | **Kind:** index
 
-## Purpose
-
-Index of child modules and document folders.
-
-## File types
-
-_No files in this directory; see child folders._
-
 ## Contents
 
-- `claude-code/`
-- `claude-desktop/`
-- `codex/`
-- `cursor/`
-- `gemini/`
-- `generic/`
-- `manus/`
+- [`claude-code/`](claude-code/)
+- [`claude-desktop/`](claude-desktop/)
+- [`codex/`](codex/)
+- [`cursor/`](cursor/)
+- [`gemini/`](gemini/)
+- [`generic/`](generic/)
+- [`manus/`](manus/)
 
-<!-- l9-folder-readme: generated-from-tree -->
+## Files
+
+- `ADAPTER_CONTRACT.md` — Markdown
+
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=index -->

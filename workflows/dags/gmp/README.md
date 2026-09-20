@@ -1,50 +1,45 @@
 # Gmp
 
-**Path:** `workflows/dags/gmp` | **Tier:** discovered
+**Path:** `workflows/dags/gmp` | **Kind:** subsystem
 
-## Purpose
+## Modules
+
+### `__init__.py`
 
 GMP Package — Modular GMP execution DAG
 
+Exports: `GMPLangGraphExecutor`, `GMPPhase`, `GMPState`, `build_gmp_graph`, `main`
 
+### `executor.py`
 
-## Components
+GMP Executor — Executor class and CLI for GMP workflow
 
-### `GMPLangGraphExecutor`
-
-Executor for GMP workflow using LangGraph.
-
-- File: `workflows/dags/gmp/executor.py` (L22–76)
-- Methods: `run`, `resume`, `get_state`, `get_mermaid`
-
-### `GMPPhase`
-
-GMP execution phases.
-
-- File: `workflows/dags/gmp/state.py` (L13–27)
-- Methods: _none_
-
-### `GMPState`
-
-State object for GMP execution.
-
-- File: `workflows/dags/gmp/state.py` (L31–86)
-- Methods: `add_message`
-
-## Functions
-
+- `GMPLangGraphExecutor` — Executor for GMP workflow using LangGraph.
 - `def compile_graph(workspace)`
 - `def main()` — CLI entry point.
+
+### `graph.py`
+
+GMP Graph — Build the GMP execution graph
+
 - `def build_gmp_graph() -> StateGraph` — Build the GMP execution graph using LangGraph.
+
+### `routing.py`
+
+GMP Routing — Conditional routing functions for GMP DAG
+
 - `def route_after_scope_confirm(state) -> Literal['baseline', 'aborted']` — Route after scope confirmation.
 - `def route_after_validation_confirm(state) -> Literal['memory_write', 'implement', 'aborted']` — Route after validation confirmation.
 
-## Exports
+### `state.py`
 
-`GMPLangGraphExecutor`, `GMPPhase`, `GMPState`, `build_gmp_graph`, `main`
+GMP State — State definition for GMP execution
+
+- `GMPPhase` — GMP execution phases.
+- `GMPState` — State object for GMP execution.
 
 ## Dependencies
 
-`__future__`, `dataclasses`, `datetime`, `enum`, `langgraph.graph`, `pathlib`, `structlog`, `typing`, `workflows.dags._runtime.durable_checkpointer`, `workflows.dags.gmp.executor`, `workflows.dags.gmp.graph`, `workflows.dags.gmp.nodes`, `workflows.dags.gmp.routing`, `workflows.dags.gmp.state`
+**External:** `langgraph`, `structlog`, `workflows`
 
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

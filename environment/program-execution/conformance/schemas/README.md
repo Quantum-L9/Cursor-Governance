@@ -2,26 +2,22 @@
 
 **Path:** `environment/program-execution/conformance/schemas` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 11 JSON.
+- `canonical-execution-request.schema.json` — JSON
+- `canonical-provider-result.schema.json` — JSON
+- `capability-receipt.schema.json` — JSON
+- `context-manifest.schema.json` — JSON
+- `deployment-receipt.schema.json` — JSON
+- `executable-peer-readiness.schema.json` — JSON
+- `execution-adapter-spec.schema.json` — JSON
+- `execution-profile.schema.json` — JSON
+- `host-envelope.schema.json` — JSON
+- `lifecycle-receipt.schema.json` — JSON
+- `remote-action-receipt.schema.json` — JSON
 
 ## File types
 
 - JSON: 11
 
-## Contents
-
-- `canonical-execution-request.schema.json`
-- `canonical-provider-result.schema.json`
-- `capability-receipt.schema.json`
-- `context-manifest.schema.json`
-- `deployment-receipt.schema.json`
-- `executable-peer-readiness.schema.json`
-- `execution-adapter-spec.schema.json`
-- `execution-profile.schema.json`
-- `host-envelope.schema.json`
-- `lifecycle-receipt.schema.json`
-- `remote-action-receipt.schema.json`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

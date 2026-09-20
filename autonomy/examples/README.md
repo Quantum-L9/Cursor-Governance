@@ -2,18 +2,14 @@
 
 **Path:** `autonomy/examples` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 3 JSON.
+- `w7-actions.json` — JSON
+- `w7-campaign.json` — JSON
+- `w7-deployment.json` — JSON
 
 ## File types
 
 - JSON: 3
 
-## Contents
-
-- `w7-actions.json`
-- `w7-campaign.json`
-- `w7-deployment.json`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

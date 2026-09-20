@@ -1,25 +1,34 @@
 # Scripts
 
-**Path:** `skills/l9-pr-digest/scripts` | **Tier:** discovered
+**Path:** `skills/l9-pr-digest/scripts` | **Kind:** subsystem
 
-## Purpose
+## Modules
+
+### `pr_digest.py`
 
 CLI for the deterministic, read-only L9 pre-remediation PR digest.
 
-
-
-## Components
-
-_No public classes in this path._
-
-## Functions
-
 - `def parser() -> argparse.ArgumentParser`
 - `def main() -> int`
+
+### `pr_digest_core.py`
+
+Deterministic decision engine for l9-pr-digest.
+
 - `def digest(evidence, workspace, on_event) -> dict[str, Any]`
 - `def validate(doc) -> list[str]`
+
+### `pr_digest_render.py`
+
+Human stream + interactive unpack for a PR digest. Same semantics as the JSON.
+
 - `def emit_line(kind, payload) -> str`
 - `def interactive_report(doc) -> str`
+
+### `pr_evidence.py`
+
+Evidence helpers for l9-pr-digest. Pure/read-only except subprocess collection.
+
 - `def run(cmd, cwd, timeout) -> str`
 - `def live_evidence(repo, pr_number, workspace) -> dict[str, Any]`
 - `def git_patches(workspace, base, head) -> tuple[str | None, dict[str, str]]`
@@ -28,19 +37,23 @@ _No public classes in this path._
 - `def intent_of(evidence) -> tuple[dict[str, Any], str]`
 - `def tokens(text) -> set[str]`
 - `def is_test(path) -> bool`
-- `def added_lines(patch) -> str`
-- `def format_only(patch) -> bool`
-- `def question(code, paths, text) -> dict[str, Any]`
-- `def growth(kind, path) -> dict[str, Any]`
+- _+4 more public symbol(s)_
+
+### `require_digest.py`
+
+Fail-closed check that a digest exists, is revision-bound, and (for Converge) is READY.
+
 - `def check(doc) -> list[str]`
 - `def parser() -> argparse.ArgumentParser`
+- `def main() -> int`
 
-## Exports
+### `self_test.py`
 
-_No `__all__` exports._
+- `def fixture()`
+- `def main() -> int`
 
 ## Dependencies
 
-`__future__`, `argparse`, `collections.abc`, `json`, `pathlib`, `pr_digest_core`, `pr_digest_render`, `pr_evidence`, `re`, `require_digest`, `subprocess`, `sys`, `tempfile`, `typing`
+**Internal:** `pr_digest_core`, `pr_digest_render`, `pr_evidence`, `require_digest`
 
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

@@ -1,30 +1,19 @@
 # Memory
 
-**Path:** `environment/agents/adapters/claude-code/memory` | **Tier:** discovered
+**Path:** `environment/agents/adapters/claude-code/memory` | **Kind:** subsystem
 
-## Purpose
+## Modules
+
+### `errors.py`
 
 Shared exception types for the memory enforcement modules.
 
+- `MemoryErrorBase` — Base class for every memory-subsystem error.
+- `MemoryWriteDenied` — Raised when a memory write is refused by attribution policy.
 
+### `memory_bridge.py`
 
-## Components
-
-### `MemoryErrorBase`
-
-Base class for every memory-subsystem error.
-
-- File: `environment/agents/adapters/claude-code/memory/errors.py` (L13–14)
-- Methods: _none_
-
-### `MemoryWriteDenied`
-
-Raised when a memory write is refused by attribution policy.
-
-- File: `environment/agents/adapters/claude-code/memory/errors.py` (L17–23)
-- Methods: _none_
-
-## Functions
+Thin Claude adapter → canonical memory control plane (campaign stage C8).
 
 - `def find_governance_root() -> Path`
 - `def ensure_importable(root) -> Path` — Put the governance root first on ``sys.path`` so ``ops.memory`` imports.
@@ -32,27 +21,25 @@ Raised when a memory write is refused by attribution policy.
 - `def memory_client(session_id) -> Any` — A canonical client bound to this checkout's memory runtime.
 - `def hydrate(task) -> dict[str, Any]` — Canonical hydration for one repository (integration-receipt shape).
 - `def conflicts() -> dict[str, Any]` — Memory conflicts are evidence, never a mutex.
+
+Exports: `BOUNDARY_REL`, `bind_session_env`, `conflicts`, `ensure_importable`, `find_governance_root`, `hydrate`, `memory_client`
+
+### `memory_state.py`
+
+Local state + contract matching shared by the memory enforcement hooks.
+
 - `def load_contract() -> dict[str, Any]`
 - `def workspace_root() -> Path` — Resolve the session workspace root that anchors ``.l9/memory``.
-- `def resolve_session_id() -> str` — Authoritative session id: hook event first, else required CLI arg.
-- `def graphiti_state_path(session_id) -> Path`
-- `def identity_snapshot(contract, session_id) -> dict[str, str]`
-- `def state_root(contract) -> Path`
-- `def resolve_namespaces(contract) -> list[str]`
-- `def resolve_writer_identity(contract) -> dict[str, str]` — Resolve the memory writer's identity from the environment.
-- `def validate_memory_writer(identity) -> None` — Deny a memory write whose attribution is missing or reserved.
-- `def receipt_path(contract, session_id) -> Path`
-- `def write_receipt(contract, session_id, payload) -> Path`
-- `def fresh_receipt(contract, session_id) -> bool`
-- `def usable_receipt(contract, session_id) -> bool` — True when this session already ran SessionStart prefetch.
-- `def record_override(contract, rule_id, reason) -> None`
-
-## Exports
-
-`BOUNDARY_REL`, `bind_session_env`, `conflicts`, `ensure_importable`, `find_governance_root`, `hydrate`, `memory_client`
+- `def extract_chat_id(event) -> tuple[str, str]` — Per-chat discriminator for the write-gate receipt. Never the session id.
+- `def extract_writer_agent_id(event) -> str`
+- `def receipt_identity() -> tuple[str, str]` — The two RAW components of a writer receipt key: ``(writer_agent, chat)``.
+- `def compose_receipt_id(writer_agent, chat) -> str` — ``<writer_agent>__<chat>`` — the one place the receipt key is spelled.
+- `def resolve_receipt_id() -> str` — Writer-scoped receipt key. Distinct from SessionStart's session id.
+- `def resolve_session_id() -> str` — SessionStart session id only. Never a write-gate receipt key.
+- _+14 more public symbol(s)_
 
 ## Dependencies
 
-`__future__`, `errors`, `json`, `os`, `pathlib`, `re`, `subprocess`, `sys`, `time`, `typing`
+**Internal:** `errors`
 
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

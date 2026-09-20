@@ -2,20 +2,16 @@
 
 **Path:** `governance` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 3 Markdown, 1 YAML.
+- `ASSERTION_TYPES.yaml` — YAML
+- `CHANGE_PROCESS.md` — Markdown
+- `POLICY_MODEL.md` — Markdown
+- `TRUST_MODEL.md` — Markdown
 
 ## File types
 
 - Markdown: 3
 - YAML: 1
 
-## Contents
-
-- `ASSERTION_TYPES.yaml`
-- `CHANGE_PROCESS.md`
-- `POLICY_MODEL.md`
-- `TRUST_MODEL.md`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

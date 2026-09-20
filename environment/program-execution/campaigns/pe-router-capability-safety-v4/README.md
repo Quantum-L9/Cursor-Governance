@@ -2,18 +2,14 @@
 
 **Path:** `environment/program-execution/campaigns/pe-router-capability-safety-v4` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 1 JSON, 1 YAML.
+- `CAMPAIGN_SOURCE.yaml` — YAML
+- `source-integrity-receipt.json` — JSON
 
 ## File types
 
 - JSON: 1
 - YAML: 1
 
-## Contents
-
-- `CAMPAIGN_SOURCE.yaml`
-- `source-integrity-receipt.json`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

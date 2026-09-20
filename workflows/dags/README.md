@@ -1,48 +1,44 @@
 # Dags
 
-**Path:** `workflows/dags` | **Tier:** discovered
+**Path:** `workflows/dags` | **Kind:** subsystem
 
-## Purpose
+## Modules
+
+### `__init__.py`
 
 Workflow Graphs — Discovery Boundary
 
+Exports: `DAG_AUTHORING_DAG`, `GMP_EXECUTION_DAG`, `HARVEST_DEPLOY_DAG`, `INSPECT_DAG`, `INTELLIGENCE_HARVEST_V1`, `InspectState`, `PLAN_SIMPLE_BUILD_DAG`, `PR_TRAIN_DAG`, `PrTrainState`, `README_PIPELINE_DAG`, `REFACTORING_DAG`, `SLASH_COMMAND_UPDATE_DAG` (+6 more)
 
+### `dag_authoring_dag.py`
 
-## Components
-
-### `InspectState`
-
-State flowing through inspect graph.
-
-- File: `workflows/dags/inspect_dag.py` (L88–148)
-- Methods: _none_
-
-### `NovelCommit`
-
-No description
-
-- File: `workflows/dags/pr_train_dag.py` (L74–77)
-- Methods: _none_
-
-### `ExtractEmpty`
-
-Slice produced no new commit on the tip. Skip to the next car; do not halt the train.
-
-- File: `workflows/dags/pr_train_dag.py` (L108–109)
-- Methods: _none_
-
-### `PrTrainState`
-
-No description
-
-- File: `workflows/dags/pr_train_dag.py` (L439–485)
-- Methods: _none_
-
-## Functions
+DAG Authoring Graph — the graph lifecycle, encoded
 
 - `def register()` — Register the DAG authoring graph (SESSION_GUIDANCE).
+
+### `gmp_execution_dag.py`
+
+GMP Execution DAG — Enforced Step Ordering
+
 - `def get_gmp_execution_dag() -> SessionDAG` — Get the GMP execution DAG.
+
+### `gmp_langgraph_executor.py`
+
+GMP LangGraph Executor — Backwards Compatibility Shim
+
+Exports: `GMPLangGraphExecutor`, `GMPPhase`, `GMPState`, `build_gmp_graph`, `main`, `node_aborted`, `node_baseline`, `node_end`, `node_finalize`, `node_implement`, `node_memory_read`, `node_memory_write` (+7 more)
+
+### `harvest_deploy_dag.py`
+
+Harvest-Deploy Session DAG
+
 - `def get_harvest_deploy_dag() -> SessionDAG` — Get the harvest-deploy DAG.
+
+### `inspect_dag.py`
+
+Inspect DAG — Real LangGraph Implementation
+
+- `InspectState` — State flowing through inspect graph.
 - `def validators_available() -> bool` — True when the external-code validators are importable in this checkout.
 - `async def classify_node(state) -> dict[str, Any]` — Classify target into type and tier. Detect external code.
 - `async def orient_node(state) -> dict[str, Any]` — 30-second understanding of what this does.
@@ -50,23 +46,52 @@ No description
 - `async def compliance_node(state) -> dict[str, Any]` — Check L9 canon compliance using real validators.
 - `async def impact_node(state) -> dict[str, Any]` — Calculate impact score.
 - `async def routing_node(state) -> dict[str, Any]` — Decide next command.
-- `async def report_node(state) -> dict[str, Any]` — Generate final report.
-- `def build_inspect_graph() -> StateGraph` — Build and compile the inspect graph.
-- `async def run_inspect(target) -> InspectState` — Execute inspect graph on target.
+- _+3 more public symbol(s)_
+
+### `intelligence_harvest_dag.py`
+
+Intelligence Harvest DAG - donor-to-beneficiary semantic mining (Enforced)
+
+### `plan_simple_build_dag.py`
+
+Plan-Simple → Improve → Validate & Repair → Build/GMP
+
+### `pr_train_dag.py`
+
+PR-train LangGraph — open stacked PRs, halt for remediator, then /ff.
+
+- `NovelCommit`
+- `ExtractEmpty` — Slice produced no new commit on the tip. Skip to the next car; do not halt the train.
+- `PrTrainState`
 - `def campaign_halt(branch, override) -> str | None`
 - `def generated_prefix(path) -> str | None`
 - `def shares_generated_clobber(left, right) -> bool` — Whole-file generated corpora clobber on MERGE_TRAIN if split across PRs.
 - `def is_empty_cherry_pick(stdout, stderr) -> bool` — Already-landed patch. ``cherry-pick --skip`` is not conflict resolution.
 - `def parse_merge_tree_name_only(stdout, returncode) -> list[str] | None` — Same contract as ``pr_overlap_check.probe_ref_conflicts``: [] / paths / None.
-- `def is_git_repo(repo) -> bool`
-- `def sha_is_commit(repo, sha) -> bool`
+- _+44 more public symbol(s)_
 
-## Exports
+### `readme_pipeline_dag.py`
 
-`DAG_AUTHORING_DAG`, `GMPLangGraphExecutor`, `GMPPhase`, `GMPState`, `GMP_EXECUTION_DAG`, `HARVEST_DEPLOY_DAG`, `INSPECT_DAG`, `INTELLIGENCE_HARVEST_V1`, `InspectState`, `PLAN_SIMPLE_BUILD_DAG`, `PR_TRAIN_DAG`, `PrTrainState`, `README_PIPELINE_DAG`, `REFACTORING_DAG`, `SLASH_COMMAND_UPDATE_DAG`, `TEST_PIPELINE_DAG`, `WIRE_DAG`, `build_gmp_graph`, `build_inspect_graph`, `build_pr_train_graph` (+17 more)
+README Pipeline Session DAG
+
+- `def register()` — Register the README pipeline DAG.
+
+### `refactoring_dag.py`
+
+Refactoring Session DAG
+
+- `def get_refactoring_dag() -> SessionDAG` — Get the refactoring DAG.
+
+### `slash_command_update_dag.py`
+
+Slash Command Update DAG — Update Commands as Minimal Triggers
+
+- `def register()` — Register the slash command update DAG.
+
+_+1 further module(s) in this directory._
 
 ## Dependencies
 
-`__future__`, `argparse`, `ast`, `collections.abc`, `dataclasses`, `importlib.util`, `json`, `langgraph.graph`, `os`, `pathlib`, `pydantic`, `structlog`, `subprocess`, `sys`, `time`, `typing`, `workflows.dags.dag_authoring_dag`, `workflows.dags.gmp`, `workflows.dags.gmp.nodes`, `workflows.dags.gmp.routing`, `workflows.dags.gmp_execution_dag`, `workflows.dags.harvest_deploy_dag`, `workflows.dags.inspect_dag`, `workflows.dags.intelligence_harvest_dag`
+**External:** `langgraph`, `pydantic`, `structlog`, `workflows`
 
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

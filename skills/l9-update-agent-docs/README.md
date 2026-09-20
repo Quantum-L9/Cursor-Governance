@@ -1,27 +1,28 @@
 # L9 Update Agent Docs
 
-**Path:** `skills/l9-update-agent-docs` | **Tier:** discovered
+**Path:** `skills/l9-update-agent-docs` | **Kind:** skill
 
 ## Purpose
 
-AST-extracted module documentation.
+compile repository changes into typed documentation and operational-contract obligations, assess Makefile/pyproject surfaces, and emit repo-docs receipts
 
+## Responsibilities
 
+- `l9-update-agent-docs` owns documentation topology, impact qualification, target resolution, obligation compilation, deterministic materiality assessment for explicitly registered operational…
+- `DocumentationObligation` remains the only durable work unit. `assessment` is evidence attached to an obligation, never a second findings ledger or second obligation system.
+- `l9-update-agent-docs` must not absorb Make/Python semantic ownership merely because it detects a material defect.
+- `ops/config/root-file-protection.json` remains the canonical mutation-protection contract. Repo Docs reads and resolves its rule at runtime; it must not copy `additive_only` or other guard semantics…
+- `l9-intelligence-harvest` owns semantic discovery and qualification. The compiler consumes canonical `harvest.json`; it never copies Harvest reasoning or mutates the donor through Harvest.
+- `l9-update-agent-docs` owns the root `filetree.md` inventory (`scripts/doc_filetree.py`) and README compilation (`scripts/generate_module_readmes.py` over `readme_model.py`, `readme_evidence.py`…
 
-## Components
+## Key components
 
-_No public classes in this path._
+- [`contracts/`](contracts/)
+- [`references/`](references/)
+- [`scripts/`](scripts/)
 
-## Functions
+## Authority
 
-_No public module-level functions._
+`SKILL.md` in this directory is the authoritative operating contract. This README is a navigation projection of it and never outranks it.
 
-## Exports
-
-_No `__all__` exports._
-
-## Dependencies
-
-_No imports parsed._
-
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=skill -->

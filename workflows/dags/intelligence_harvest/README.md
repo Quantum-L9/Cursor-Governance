@@ -1,33 +1,24 @@
 # Intelligence Harvest
 
-**Path:** `workflows/dags/intelligence_harvest` | **Tier:** discovered
+**Path:** `workflows/dags/intelligence_harvest` | **Kind:** subsystem
 
-## Purpose
+## Modules
 
-AST-extracted module documentation.
+### `__init__.py`
 
+Exports: `build_intelligence_harvest_graph`
 
+### `executor.py`
 
-## Components
-
-### `HarvestExecutor`
-
-No description
-
-- File: `workflows/dags/intelligence_harvest/executor.py` (L19–46)
-- Methods: `run`, `resume`, `get_state`
-
-### `HarvestState`
-
-No description
-
-- File: `workflows/dags/intelligence_harvest/state.py` (L6–11)
-- Methods: _none_
-
-## Functions
-
+- `HarvestExecutor`
 - `def compile_graph(workspace)`
+
+### `graph.py`
+
 - `def build_intelligence_harvest_graph() -> StateGraph`
+
+### `nodes.py`
+
 - `def node_bind_request(state) -> HarvestState`
 - `def node_blocked(state) -> HarvestState`
 - `def node_compare_beneficiary(state) -> HarvestState`
@@ -36,23 +27,18 @@ No description
 - `def node_disposition_concepts(state) -> HarvestState`
 - `def node_evidence_closure(state) -> HarvestState`
 - `def node_extract_concept_candidates(state) -> HarvestState`
-- `def node_fail(state) -> HarvestState`
-- `def node_inventory_donor(state) -> HarvestState`
-- `def node_lock_source_identity(state) -> HarvestState`
-- `def node_partial(state) -> HarvestState`
-- `def node_pass(state) -> HarvestState`
-- `def node_probe_capabilities(state) -> HarvestState`
-- `def node_qualify_nuggets(state) -> HarvestState`
-- `def node_rank_nuggets(state) -> HarvestState`
-- `def node_reconstruct_system(state) -> HarvestState`
-- `def node_render_output(state) -> HarvestState`
+- _+12 more public symbol(s)_
 
-## Exports
+### `routing.py`
 
-`build_intelligence_harvest_graph`
+- `def route_after_render_output(state) -> str`
+
+### `state.py`
+
+- `HarvestState`
 
 ## Dependencies
 
-`__future__`, `datetime`, `langgraph.graph`, `pathlib`, `typing`, `workflows.dags._runtime.durable_checkpointer`, `workflows.dags.intelligence_harvest.graph`, `workflows.dags.intelligence_harvest.nodes`, `workflows.dags.intelligence_harvest.routing`, `workflows.dags.intelligence_harvest.state`
+**External:** `langgraph`, `workflows`
 
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

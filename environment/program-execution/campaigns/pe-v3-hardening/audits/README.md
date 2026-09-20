@@ -2,17 +2,13 @@
 
 **Path:** `environment/program-execution/campaigns/pe-v3-hardening/audits` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 2 Markdown.
+- `recursive-alignment.md` — Markdown
+- `validate-repair.md` — Markdown
 
 ## File types
 
 - Markdown: 2
 
-## Contents
-
-- `recursive-alignment.md`
-- `validate-repair.md`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

@@ -2,20 +2,16 @@
 
 **Path:** `environment/agents/generated-data/schemas` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 5 JSON.
+- `generated-data-unit.schema.json` — JSON
+- `learning-closure.schema.json` — JSON
+- `provenance.schema.json` — JSON
+- `routing-decision.schema.json` — JSON
+- `subagent-data-packet.schema.json` — JSON
 
 ## File types
 
 - JSON: 5
 
-## Contents
-
-- `generated-data-unit.schema.json`
-- `learning-closure.schema.json`
-- `provenance.schema.json`
-- `routing-decision.schema.json`
-- `subagent-data-packet.schema.json`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

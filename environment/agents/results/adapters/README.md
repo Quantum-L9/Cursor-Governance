@@ -1,27 +1,13 @@
 # Adapters
 
-**Path:** `environment/agents/results/adapters` | **Tier:** discovered
+**Path:** `environment/agents/results/adapters` | **Kind:** subsystem
 
-## Purpose
+## Modules
 
-AST-extracted module documentation.
+### `__init__.py`
 
-
-
-## Components
-
-_No public classes in this path._
-
-## Functions
+### `cursor_subagent.py`
 
 - `def normalize(surface_result) -> dict[str, Any]` — Validate and digest-bind one Cursor result document.
 
-## Exports
-
-_No `__all__` exports._
-
-## Dependencies
-
-`__future__`, `collections.abc`, `importlib.util`, `pathlib`, `sys`, `typing`
-
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

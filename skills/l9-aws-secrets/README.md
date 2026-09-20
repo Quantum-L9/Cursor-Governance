@@ -1,27 +1,18 @@
 # L9 Aws Secrets
 
-**Path:** `skills/l9-aws-secrets` | **Tier:** discovered
+**Path:** `skills/l9-aws-secrets` | **Kind:** skill
 
 ## Purpose
 
-AST-extracted module documentation.
+bind credentials from Infisical project cursor-governance at will; AWS is the one login seed unless the human explicitly asks for AWS —
 
+## Key components
 
+- [`agents/`](agents/)
+- [`references/`](references/)
 
-## Components
+## Authority
 
-_No public classes in this path._
+`SKILL.md` in this directory is the authoritative operating contract. This README is a navigation projection of it and never outranks it.
 
-## Functions
-
-_No public module-level functions._
-
-## Exports
-
-_No `__all__` exports._
-
-## Dependencies
-
-_No imports parsed._
-
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=skill -->

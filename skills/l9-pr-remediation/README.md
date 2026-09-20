@@ -1,27 +1,19 @@
 # L9 Pr Remediation
 
-**Path:** `skills/l9-pr-remediation` | **Tier:** discovered
+**Path:** `skills/l9-pr-remediation` | **Kind:** skill
 
 ## Purpose
 
-AST-extracted module documentation.
+diagnose or converge github prs — plan the fleet once, launch execution-profile-capped subagents to remediate, poll remediating PRs, and start stack-safe merge trains on the oldest green PRs that will not conflict downstream. do not wait for every PR to be green. do not run make pr
 
+## Key components
 
+- [`agents/`](agents/)
+- [`references/`](references/)
+- [`scripts/`](scripts/)
 
-## Components
+## Authority
 
-_No public classes in this path._
+`SKILL.md` in this directory is the authoritative operating contract. This README is a navigation projection of it and never outranks it.
 
-## Functions
-
-_No public module-level functions._
-
-## Exports
-
-_No `__all__` exports._
-
-## Dependencies
-
-_No imports parsed._
-
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=skill -->

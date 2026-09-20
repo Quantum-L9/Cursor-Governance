@@ -2,21 +2,17 @@
 
 **Path:** `workflows/Dags-Harvest` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 6 Markdown.
+- `DAG-Harvest-1.md` — Markdown
+- `DAG-Harvest-2.md` — Markdown
+- `DAG-Harvest-3.md` — Markdown
+- `DAG-Harvest-4.md` — Markdown
+- `DAG-Harvest-5.md` — Markdown
+- `DAG-Harvest-6-MAKE DAGS.md` — Markdown
 
 ## File types
 
 - Markdown: 6
 
-## Contents
-
-- `DAG-Harvest-1.md`
-- `DAG-Harvest-2.md`
-- `DAG-Harvest-3.md`
-- `DAG-Harvest-4.md`
-- `DAG-Harvest-5.md`
-- `DAG-Harvest-6-MAKE DAGS.md`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

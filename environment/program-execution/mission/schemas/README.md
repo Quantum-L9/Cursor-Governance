@@ -2,17 +2,13 @@
 
 **Path:** `environment/program-execution/mission/schemas` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 2 JSON.
+- `mission-program-binding.schema.json` — JSON
+- `mission.schema.json` — JSON
 
 ## File types
 
 - JSON: 2
 
-## Contents
-
-- `mission-program-binding.schema.json`
-- `mission.schema.json`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

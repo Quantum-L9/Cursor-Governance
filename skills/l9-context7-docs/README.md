@@ -1,27 +1,13 @@
 # L9 Context7 Docs
 
-**Path:** `skills/l9-context7-docs` | **Tier:** discovered
+**Path:** `skills/l9-context7-docs` | **Kind:** skill
 
 ## Purpose
 
-AST-extracted module documentation.
+ground implementation decisions in current Context7 documentation before coding
 
+## Authority
 
+`SKILL.md` in this directory is the authoritative operating contract. This README is a navigation projection of it and never outranks it.
 
-## Components
-
-_No public classes in this path._
-
-## Functions
-
-_No public module-level functions._
-
-## Exports
-
-_No `__all__` exports._
-
-## Dependencies
-
-_No imports parsed._
-
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=skill -->

@@ -2,21 +2,17 @@
 
 **Path:** `learning/graphiti-episodes` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 6 JSON.
+- `audit-log.episodes.json` — JSON
+- `manifest.json` — JSON
+- `quick-fixes.episodes.json` — JSON
+- `repeated-mistakes.episodes.json` — JSON
+- `solutions.episodes.json` — JSON
+- `violations.episodes.json` — JSON
 
 ## File types
 
 - JSON: 6
 
-## Contents
-
-- `audit-log.episodes.json`
-- `manifest.json`
-- `quick-fixes.episodes.json`
-- `repeated-mistakes.episodes.json`
-- `solutions.episodes.json`
-- `violations.episodes.json`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

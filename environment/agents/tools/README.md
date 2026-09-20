@@ -1,23 +1,12 @@
 # Tools
 
-**Path:** `environment/agents/tools` | **Tier:** discovered
+**Path:** `environment/agents/tools` | **Kind:** subsystem
 
-## Purpose
+## Modules
 
-Render l9-graphiti-memory auth_tokens.json from the agent registry.
+### `render_principals.py`
 
-
-
-## Components
-
-### `ExecutablePeerModel`
-
-No description
-
-- File: `environment/agents/tools/validate_executable_peers.py` (L30–79)
-- Methods: `entries_for`, `descriptor`, `required_peers`
-
-## Functions
+Render agent grants + validate ADR-0031 door/signing secrets.
 
 - `def fail(msg) -> None`
 - `def require_basename(name) -> str` — Reject anything that is not a single path segment (basename only).
@@ -26,11 +15,13 @@ No description
 - `def write_namespaces_for(agent, role, workspace) -> list[str]` — Compute write namespace grants for one agent role.
 - `def grants_for(agent, role_def, workspace) -> tuple[list[str], list[str], list[str]]` — Derive read/write/promote namespace globs for one agent.
 - `def require_unique(value, seen_ids) -> None`
-- `def require_token(agent_id, token_map, tokens_path, seen_tokens) -> str`
-- `def build_principal(agent, role_def) -> dict`
-- `def process_agent(key, agent, roles) -> tuple[str, dict] | None`
-- `def write_under_root(root, rel, content) -> Path` — Validate relative path under root, then write via open().
-- `def main() -> int`
+- `def require_signing_key(agent_id, keys, tokens_path, seen_keys) -> str` — Per-agent HMAC signing key — MUST be unique (ADR-0031 spoof prevention).
+- _+5 more public symbol(s)_
+
+### `validate_agents.py`
+
+N-agent registry and adapter validator (peer of validate_claude_env.py).
+
 - `def err(rule, msg) -> None`
 - `def check_registry(root) -> dict`
 - `def check_one_agent(key, agent, roles, seen) -> None`
@@ -40,12 +31,15 @@ No description
 - `def check_secrets(root) -> None`
 - `def main() -> int`
 
-## Exports
+### `validate_executable_peers.py`
 
-_No `__all__` exports._
+- `ExecutablePeerModel`
+- `def validate_bindings_schema(repo_root) -> dict[str, Any]`
+- `def validate(repo_root) -> dict[str, Any]`
+- `def main(argv) -> int`
 
 ## Dependencies
 
-`__future__`, `argparse`, `json`, `jsonschema`, `os`, `pathlib`, `re`, `sys`, `typing`, `yaml`
+**External:** `jsonschema`, `yaml`
 
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

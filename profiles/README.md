@@ -2,27 +2,23 @@
 
 **Path:** `profiles` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 12 Markdown.
+- `advanced-features.md` — Markdown
+- `dev_mode.md` — Markdown
+- `operational-health.md` — Markdown
+- `orchestrator.md` — Markdown
+- `reasoning_docs.md` — Markdown
+- `reasoning_l9.md` — Markdown
+- `reasoning_technical_operations.md` — Markdown
+- `security-access.md` — Markdown
+- `session-startup-protocol.md` — Markdown
+- `versioning.md` — Markdown
+- `workflow-governance.md` — Markdown
+- `ynp_mode.md` — Markdown
 
 ## File types
 
 - Markdown: 12
 
-## Contents
-
-- `advanced-features.md`
-- `dev_mode.md`
-- `operational-health.md`
-- `orchestrator.md`
-- `reasoning_docs.md`
-- `reasoning_l9.md`
-- `reasoning_technical_operations.md`
-- `security-access.md`
-- `session-startup-protocol.md`
-- `versioning.md`
-- `workflow-governance.md`
-- `ynp_mode.md`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

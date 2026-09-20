@@ -2,25 +2,14 @@
 
 **Path:** `environment` | **Kind:** index
 
-## Purpose
-
-Index of child modules and document folders.
-
-## File types
-
-_No files in this directory; see child folders._
-
 ## Contents
 
-- `_archived/`
-- `agents/`
-- `contracts/`
-- `generated/`
-- `ide/`
-- `mcp/`
-- `plugins/`
-- `program-execution/`
-- `program-execution-campaigns/`
-- `skill-adapters/`
+- [`agents/`](agents/)
+- [`contracts/`](contracts/)
+- [`ide/`](ide/)
+- [`mcp/`](mcp/)
+- [`plugins/`](plugins/)
+- [`program-execution/`](program-execution/)
+- [`skill-adapters/`](skill-adapters/)
 
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=index -->

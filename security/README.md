@@ -2,17 +2,13 @@
 
 **Path:** `security` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 2 Markdown.
+- `api-key-verification.md` — Markdown
+- `security-audit.md` — Markdown
 
 ## File types
 
 - Markdown: 2
 
-## Contents
-
-- `api-key-verification.md`
-- `security-audit.md`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

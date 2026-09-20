@@ -1,18 +1,24 @@
 # Graphiti memory client
 
-**Path:** `ops/graphiti` | **Tier:** operations
+**Path:** `ops/graphiti` | **Kind:** subsystem
 
 ## Purpose
 
 One episodic resume store via inject / PICKUP.
 
+## Description
+
 Graphiti CLI, hydration, and memory-bank policy.
 
-## Components
+## Modules
 
-_No public classes in this path._
+### `__init__.py`
 
-## Functions
+Graphiti memory ops (Cursor-primary front door).
+
+### `graphiti_gate_lib.py`
+
+Memory write gate logic for Cursor hooks — canonical evidence (stage C8).
 
 - `def load_state(conv_id) -> dict` — Canonical session state for this conversation, or ``{}``.
 - `def gates_enabled() -> bool`
@@ -22,14 +28,9 @@ _No public classes in this path._
 - `def shell_gate(payload) -> dict`
 - `def subagent_gate(payload) -> dict` — A subagent inherits the PARENT session's evidence, read-only.
 - `def main() -> int`
-- `def main(argv) -> int`
-
-## Exports
-
-_No `__all__` exports._
 
 ## Dependencies
 
-`__future__`, `git_execution_exemption`, `json`, `ops.memory.session_state`, `os`, `pathlib`, `re`, `sys`
+**Internal:** `git_execution_exemption`, `ops`
 
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

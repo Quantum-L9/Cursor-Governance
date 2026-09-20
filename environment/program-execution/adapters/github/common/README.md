@@ -1,34 +1,31 @@
 # Common
 
-**Path:** `environment/program-execution/adapters/github/common` | **Tier:** discovered
+**Path:** `environment/program-execution/adapters/github/common` | **Kind:** subsystem
 
-## Purpose
+## Modules
+
+### `__init__.py`
 
 Shared GitHub adapter transport.
 
-
-
-## Components
-
-### `GhTransport`
-
-No description
-
-- File: `environment/program-execution/adapters/github/common/gh_transport.py` (L10–52)
-- Methods: `run`, `json`, `api`
-
-## Functions
+### `auth_probe.py`
 
 - `def probe(cwd) -> dict[str, Any]`
+
+### `gh_transport.py`
+
+- `GhTransport`
+
+### `permission_probe.py`
+
 - `def repository_permissions(transport, repository) -> dict[str, Any]`
+
+### `response_normalizer.py`
+
 - `def parse_json(value) -> Any`
-
-## Exports
-
-_No `__all__` exports._
 
 ## Dependencies
 
-`__future__`, `adapters.common.subprocess_runner`, `adapters.github.common.gh_transport`, `json`, `pathlib`, `shutil`, `typing`
+**Internal:** `adapters`
 
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

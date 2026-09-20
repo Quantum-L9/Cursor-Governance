@@ -2,23 +2,19 @@
 
 **Path:** `autonomy/schemas` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 8 JSON.
+- `adapter-config.schema.json` — JSON
+- `agent-contract.schema.json` — JSON
+- `agent-deployment.schema.json` — JSON
+- `agent-lease.schema.json` — JSON
+- `artifact-envelope.schema.json` — JSON
+- `campaign-authorization.schema.json` — JSON
+- `conformance-report.schema.json` — JSON
+- `orchestration-receipt.schema.json` — JSON
 
 ## File types
 
 - JSON: 8
 
-## Contents
-
-- `adapter-config.schema.json`
-- `agent-contract.schema.json`
-- `agent-deployment.schema.json`
-- `agent-lease.schema.json`
-- `artifact-envelope.schema.json`
-- `campaign-authorization.schema.json`
-- `conformance-report.schema.json`
-- `orchestration-receipt.schema.json`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

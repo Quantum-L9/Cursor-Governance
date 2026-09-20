@@ -2,18 +2,14 @@
 
 **Path:** `intelligence/models` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 3 Markdown.
+- `command_execution_risk.md` — Markdown
+- `escalation_need.md` — Markdown
+- `file_compliance_risk.md` — Markdown
 
 ## File types
 
 - Markdown: 3
 
-## Contents
-
-- `command_execution_risk.md`
-- `escalation_need.md`
-- `file_compliance_risk.md`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

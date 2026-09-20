@@ -2,17 +2,13 @@
 
 **Path:** `ops/ui-operator/cartridges` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 2 YAML.
+- `github-packages-actions-access.yaml` — YAML
+- `vercel-project-settings-stub.yaml` — YAML
 
 ## File types
 
 - YAML: 2
 
-## Contents
-
-- `github-packages-actions-access.yaml`
-- `vercel-project-settings-stub.yaml`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

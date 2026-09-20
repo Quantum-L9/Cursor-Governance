@@ -1,33 +1,31 @@
 # Scripts
 
-**Path:** `environment/program-execution/core/program-execution-controller-template/scripts` | **Tier:** discovered
+**Path:** `environment/program-execution/core/program-execution-controller-template/scripts` | **Kind:** subsystem
 
-## Purpose
+## Modules
 
-AST-extracted module documentation.
-
-
-
-## Components
-
-_No public classes in this path._
-
-## Functions
+### `instantiate.py`
 
 - `def write_manifest(root) -> None`
 - `def main() -> int`
+
+### `pec.py`
+
+### `run_negative_tests.py`
+
 - `def run(cmd, success) -> subprocess.CompletedProcess[str]`
 - `def main() -> int`
+
+### `validate_controller.py`
+
 - `def load_yaml(path) -> Any`
 - `def validate(root, mode) -> list[str]`
 - `def main() -> int`
 
-## Exports
-
-_No `__all__` exports._
-
 ## Dependencies
 
-`__future__`, `argparse`, `hashlib`, `json`, `jsonschema`, `os`, `pathlib`, `pec.cli`, `re`, `shutil`, `subprocess`, `sys`, `typing`, `yaml`
+**Internal:** `pec`
 
-<!-- l9-module-readme: generated-from-ast -->
+**External:** `jsonschema`, `yaml`
+
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

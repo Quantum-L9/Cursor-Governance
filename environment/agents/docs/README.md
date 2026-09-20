@@ -2,20 +2,16 @@
 
 **Path:** `environment/agents/docs` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 5 Markdown.
+- `DEPLOY.md` — Markdown
+- `MEMORY_TOPOLOGY.md` — Markdown
+- `SONAR-FP-PATH-ESCAPE.md` — Markdown
+- `WORK_CLAIM_PROTOCOL.md` — Markdown
+- `network-allowlist.md` — Markdown
 
 ## File types
 
 - Markdown: 5
 
-## Contents
-
-- `DEPLOY.md`
-- `MEMORY_TOPOLOGY.md`
-- `SONAR-FP-PATH-ESCAPE.md`
-- `WORK_CLAIM_PROTOCOL.md`
-- `network-allowlist.md`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

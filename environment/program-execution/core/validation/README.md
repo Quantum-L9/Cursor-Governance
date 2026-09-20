@@ -2,18 +2,14 @@
 
 **Path:** `environment/program-execution/core/validation` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 1 Markdown, 1 YAML.
+- `validation_report.yaml` — YAML
+- `validation_summary.md` — Markdown
 
 ## File types
 
 - Markdown: 1
 - YAML: 1
 
-## Contents
-
-- `validation_report.yaml`
-- `validation_summary.md`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

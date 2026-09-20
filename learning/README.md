@@ -1,17 +1,16 @@
 # Learning
 
-**Path:** `learning` | **Kind:** corpus
-
-## Purpose
-
-This directory holds 1 Markdown.
-
-## File types
-
-- Markdown: 1
+**Path:** `learning` | **Kind:** index
 
 ## Contents
 
-- `credentials-policy.md`
+- [`failures/`](failures/)
+- [`graphiti-episodes/`](graphiti-episodes/)
+- [`patterns/`](patterns/)
+- [`solutions/`](solutions/)
 
-<!-- l9-folder-readme: generated-from-tree -->
+## Files
+
+- `credentials-policy.md` — Markdown
+
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=index -->

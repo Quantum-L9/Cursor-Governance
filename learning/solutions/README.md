@@ -2,17 +2,13 @@
 
 **Path:** `learning/solutions` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 2 Markdown.
+- `authentication-fixes.md` — Markdown
+- `json-issues.md` — Markdown
 
 ## File types
 
 - Markdown: 2
 
-## Contents
-
-- `authentication-fixes.md`
-- `json-issues.md`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

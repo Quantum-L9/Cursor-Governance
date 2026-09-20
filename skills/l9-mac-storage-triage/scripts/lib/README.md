@@ -1,29 +1,9 @@
 # Lib
 
-**Path:** `skills/l9-mac-storage-triage/scripts/lib` | **Tier:** discovered
+**Path:** `skills/l9-mac-storage-triage/scripts/lib` | **Kind:** module
 
-## Purpose
+## Entrypoints
 
-AST-extracted module documentation.
+- `common.sh`
 
-
-
-## Components
-
-### Shell entrypoints
-
-- `skills/l9-mac-storage-triage/scripts/lib/common.sh`
-
-## Functions
-
-_No public module-level functions._
-
-## Exports
-
-_No `__all__` exports._
-
-## Dependencies
-
-_No imports parsed._
-
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=module -->

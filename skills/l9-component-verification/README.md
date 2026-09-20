@@ -1,27 +1,17 @@
 # L9 Component Verification
 
-**Path:** `skills/l9-component-verification` | **Tier:** discovered
+**Path:** `skills/l9-component-verification` | **Kind:** skill
 
 ## Purpose
 
-AST-extracted module documentation.
+Audit, deterministically verify, or runtime-probe a named component — exports, imports, wiring, and loadability — as a read-only escalation ladder. Use from /audit-component, or from /analyze, /evaluate, or /analyze_evaluate when the user names a component, module, import, or wiring check. Do not use for DAG authoring…
 
+## Key components
 
+- [`references/`](references/)
 
-## Components
+## Authority
 
-_No public classes in this path._
+`SKILL.md` in this directory is the authoritative operating contract. This README is a navigation projection of it and never outranks it.
 
-## Functions
-
-_No public module-level functions._
-
-## Exports
-
-_No `__all__` exports._
-
-## Dependencies
-
-_No imports parsed._
-
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=skill -->

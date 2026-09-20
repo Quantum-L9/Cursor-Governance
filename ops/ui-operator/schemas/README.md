@@ -2,17 +2,13 @@
 
 **Path:** `ops/ui-operator/schemas` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 2 YAML.
+- `cartridge.schema.yaml` — YAML
+- `receipt.schema.yaml` — YAML
 
 ## File types
 
 - YAML: 2
 
-## Contents
-
-- `cartridge.schema.yaml`
-- `receipt.schema.yaml`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

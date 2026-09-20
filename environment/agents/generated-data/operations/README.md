@@ -1,38 +1,35 @@
 # Operations
 
-**Path:** `environment/agents/generated-data/operations` | **Tier:** discovered
+**Path:** `environment/agents/generated-data/operations` | **Kind:** subsystem
 
-## Purpose
+## Modules
+
+### `__init__.py`
 
 Operational health, status, replay, and dead-letter controls.
 
-
-
-## Components
-
-### `HealthCheck`
-
-No description
-
-- File: `environment/agents/generated-data/operations/health.py` (L27–39)
-- Methods: `to_dict`
-
-## Functions
+### `dead_letter.py`
 
 - `def redact(value) -> Any`
 - `def main() -> int`
+
+### `health.py`
+
+- `HealthCheck`
 - `def run_health() -> dict[str, Any]`
 - `def main() -> int`
+
+### `replay.py`
+
 - `def main() -> int`
+
+### `status.py`
+
 - `def status_payload(store) -> dict[str, Any]`
 - `def main() -> int`
 
-## Exports
-
-_No `__all__` exports._
-
 ## Dependencies
 
-`__future__`, `argparse`, `collections.abc`, `dataclasses`, `json`, `module_loader`, `os`, `pathlib`, `receipts`, `shlex`, `state_store`, `sys`, `typing`
+**Internal:** `module_loader`, `receipts`, `state_store`
 
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

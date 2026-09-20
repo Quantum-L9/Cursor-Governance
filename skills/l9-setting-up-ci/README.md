@@ -1,27 +1,13 @@
 # L9 Setting Up Ci
 
-**Path:** `skills/l9-setting-up-ci` | **Tier:** discovered
+**Path:** `skills/l9-setting-up-ci` | **Kind:** skill
 
 ## Purpose
 
-AST-extracted module documentation.
+activate governed L9 CI from the org seeder or l9-ci-core stamp. never invent ci.yml or biome.json
 
+## Authority
 
+`SKILL.md` in this directory is the authoritative operating contract. This README is a navigation projection of it and never outranks it.
 
-## Components
-
-_No public classes in this path._
-
-## Functions
-
-_No public module-level functions._
-
-## Exports
-
-_No `__all__` exports._
-
-## Dependencies
-
-_No imports parsed._
-
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=skill -->

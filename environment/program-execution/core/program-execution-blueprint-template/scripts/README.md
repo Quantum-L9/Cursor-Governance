@@ -1,22 +1,17 @@
 # Scripts
 
-**Path:** `environment/program-execution/core/program-execution-blueprint-template/scripts` | **Tier:** discovered
+**Path:** `environment/program-execution/core/program-execution-blueprint-template/scripts` | **Kind:** subsystem
 
-## Purpose
+## Modules
 
-AST-extracted module documentation.
-
-
-
-## Components
-
-_No public classes in this path._
-
-## Functions
+### `instantiate.py`
 
 - `def render_tree(target, replacements) -> None`
 - `def write_manifest(root) -> None`
 - `def main() -> int`
+
+### `validate_blueprint.py`
+
 - `def load_yaml(path) -> Any`
 - `def collect_ids(items, label, errors) -> set[str]`
 - `def check_refs(values, valid, context, errors) -> None`
@@ -24,12 +19,8 @@ _No public classes in this path._
 - `def validate(root, mode) -> list[str]`
 - `def main() -> int`
 
-## Exports
-
-_No `__all__` exports._
-
 ## Dependencies
 
-`__future__`, `argparse`, `hashlib`, `json`, `jsonschema`, `os`, `pathlib`, `re`, `shutil`, `typing`, `yaml`
+**External:** `jsonschema`, `yaml`
 
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

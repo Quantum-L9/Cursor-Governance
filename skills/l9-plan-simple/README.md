@@ -1,27 +1,20 @@
 # L9 Plan Simple
 
-**Path:** `skills/l9-plan-simple` | **Tier:** discovered
+**Path:** `skills/l9-plan-simple` | **Kind:** skill
 
 ## Purpose
 
-AST-extracted module documentation.
+create a machine-validated cursor .plan.md from the executable-plan template. cursor-build executes then opens a stacked PR; embedded stops at planning artifacts with no execution authority
 
+## Key components
 
+- [`agents/`](agents/)
+- [`references/`](references/)
+- [`schemas/`](schemas/)
+- [`scripts/`](scripts/)
 
-## Components
+## Authority
 
-_No public classes in this path._
+`SKILL.md` in this directory is the authoritative operating contract. This README is a navigation projection of it and never outranks it.
 
-## Functions
-
-_No public module-level functions._
-
-## Exports
-
-_No `__all__` exports._
-
-## Dependencies
-
-_No imports parsed._
-
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=skill -->

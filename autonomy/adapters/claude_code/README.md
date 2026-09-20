@@ -1,29 +1,21 @@
 # Claude Code
 
-**Path:** `autonomy/adapters/claude_code` | **Tier:** discovered
+**Path:** `autonomy/adapters/claude_code` | **Kind:** subsystem
 
-## Purpose
+## Modules
+
+### `__init__.py`
 
 Claude Code adapter configuration and hook builders.
 
-
-
-## Components
-
-_No public classes in this path._
-
-## Functions
+### `adapter.py`
 
 - `def load_claude_code_config(payload) -> AdapterConfig`
 - `def build_claude_task(deployment) -> dict[str, Any]`
 - `def claude_task_json(deployment) -> str`
 
-## Exports
-
-_No `__all__` exports._
-
 ## Dependencies
 
-`__future__`, `autonomy.adapters.protocol`, `collections.abc`, `typing`
+**Internal:** `autonomy`
 
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

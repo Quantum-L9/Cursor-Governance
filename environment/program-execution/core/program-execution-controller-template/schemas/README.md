@@ -2,27 +2,23 @@
 
 **Path:** `environment/program-execution/core/program-execution-controller-template/schemas` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 12 JSON.
+- `approval.schema.json` — JSON
+- `attempt-receipt.schema.json` — JSON
+- `controller.schema.json` — JSON
+- `event.schema.json` — JSON
+- `gate-evaluation.schema.json` — JSON
+- `handoff-receipt.schema.json` — JSON
+- `program-lock.schema.json` — JSON
+- `repository-registration.schema.json` — JSON
+- `source-contract.schema.json` — JSON
+- `task-contract.schema.json` — JSON
+- `verification-receipt.schema.json` — JSON
+- `waiver.schema.json` — JSON
 
 ## File types
 
 - JSON: 12
 
-## Contents
-
-- `approval.schema.json`
-- `attempt-receipt.schema.json`
-- `controller.schema.json`
-- `event.schema.json`
-- `gate-evaluation.schema.json`
-- `handoff-receipt.schema.json`
-- `program-lock.schema.json`
-- `repository-registration.schema.json`
-- `source-contract.schema.json`
-- `task-contract.schema.json`
-- `verification-receipt.schema.json`
-- `waiver.schema.json`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

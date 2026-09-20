@@ -2,17 +2,13 @@
 
 **Path:** `learning/patterns` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 2 Markdown.
+- `anti-patterns.md` — Markdown
+- `quick-fixes.md` — Markdown
 
 ## File types
 
 - Markdown: 2
 
-## Contents
-
-- `anti-patterns.md`
-- `quick-fixes.md`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

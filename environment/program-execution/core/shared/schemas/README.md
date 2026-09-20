@@ -2,21 +2,17 @@
 
 **Path:** `environment/program-execution/core/shared/schemas` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 6 JSON.
+- `action-authorization.schema.json` — JSON
+- `campaign-source.schema.json` — JSON
+- `evidence-reference.schema.json` — JSON
+- `gate-evaluation.schema.json` — JSON
+- `handoff-receipt.schema.json` — JSON
+- `replan-revision.schema.json` — JSON
 
 ## File types
 
 - JSON: 6
 
-## Contents
-
-- `action-authorization.schema.json`
-- `campaign-source.schema.json`
-- `evidence-reference.schema.json`
-- `gate-evaluation.schema.json`
-- `handoff-receipt.schema.json`
-- `replan-revision.schema.json`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

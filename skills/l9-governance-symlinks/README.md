@@ -1,27 +1,13 @@
 # L9 Governance Symlinks
 
-**Path:** `skills/l9-governance-symlinks` | **Tier:** discovered
+**Path:** `skills/l9-governance-symlinks` | **Kind:** skill
 
 ## Purpose
 
-AST-extracted module documentation.
+Wire and verify a repo's Cursor governance symlinks against the GitHub-backed governance SSOT at $HOME/.cursor-governance. Runs the canonical setup_workspace_symlinks.sh in the current workspace, then runs validate_governance_symlinks.sh and confirms PASS
 
+## Authority
 
+`SKILL.md` in this directory is the authoritative operating contract. This README is a navigation projection of it and never outranks it.
 
-## Components
-
-_No public classes in this path._
-
-## Functions
-
-_No public module-level functions._
-
-## Exports
-
-_No `__all__` exports._
-
-## Dependencies
-
-_No imports parsed._
-
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=skill -->

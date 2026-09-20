@@ -2,22 +2,18 @@
 
 **Path:** `kernels/L9 Coding Control Plane/ai-control-plane` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 7 Markdown.
+- `AUDIT.md` — Markdown
+- `BUILD.md` — Markdown
+- `CHANGE.md` — Markdown
+- `DEFINITION_OF_DONE.md` — Markdown
+- `PLAN.md` — Markdown
+- `RELEASE.md` — Markdown
+- `VALIDATION.md` — Markdown
 
 ## File types
 
 - Markdown: 7
 
-## Contents
-
-- `AUDIT.md`
-- `BUILD.md`
-- `CHANGE.md`
-- `DEFINITION_OF_DONE.md`
-- `PLAN.md`
-- `RELEASE.md`
-- `VALIDATION.md`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

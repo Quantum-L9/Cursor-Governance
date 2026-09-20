@@ -2,29 +2,20 @@
 
 **Path:** `environment/agents/generated-data` | **Kind:** index
 
-## Purpose
-
-Index of child modules and document folders.
-
-## File types
-
-_No files in this directory; see child folders._
-
 ## Contents
 
-- `adapters/`
-- `config/`
-- `ingress/`
-- `integration/`
-- `invalidation/`
-- `law/`
-- `operations/`
-- `orchestration/`
-- `retrieval/`
-- `roles/`
-- `routes/`
-- `runtime/`
-- `schemas/`
-- `tests/`
+- [`adapters/`](adapters/)
+- [`config/`](config/)
+- [`ingress/`](ingress/)
+- [`integration/`](integration/)
+- [`invalidation/`](invalidation/)
+- [`law/`](law/)
+- [`operations/`](operations/)
+- [`orchestration/`](orchestration/)
+- [`retrieval/`](retrieval/)
+- [`roles/`](roles/)
+- [`routes/`](routes/)
+- [`runtime/`](runtime/)
+- [`schemas/`](schemas/)
 
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=index -->

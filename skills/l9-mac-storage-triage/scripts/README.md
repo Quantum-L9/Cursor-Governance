@@ -1,32 +1,16 @@
 # Scripts
 
-**Path:** `skills/l9-mac-storage-triage/scripts` | **Tier:** discovered
+**Path:** `skills/l9-mac-storage-triage/scripts` | **Kind:** subsystem
 
 ## Purpose
 
 Emit FINDINGS.txt (human) and findings.json (machine) from one catalog + diagnosis.
 
+## Modules
 
+### `emit-findings.py`
 
-## Components
-
-### Shell entrypoints
-
-- `skills/l9-mac-storage-triage/scripts/00-diagnose.sh`
-- `skills/l9-mac-storage-triage/scripts/01-summarize.sh`
-- `skills/l9-mac-storage-triage/scripts/02-initialize-env.sh`
-- `skills/l9-mac-storage-triage/scripts/03-validate-env.sh`
-- `skills/l9-mac-storage-triage/scripts/04-plan.sh`
-- `skills/l9-mac-storage-triage/scripts/05-apply.sh`
-- `skills/l9-mac-storage-triage/scripts/06-verify.sh`
-- `skills/l9-mac-storage-triage/scripts/07-inventory-noise.sh`
-- `skills/l9-mac-storage-triage/scripts/08-focus-layout.sh`
-- `skills/l9-mac-storage-triage/scripts/09-emit-findings.sh`
-- `skills/l9-mac-storage-triage/scripts/inspect-sparse-file.sh`
-- `skills/l9-mac-storage-triage/scripts/mode-run.sh`
-- `skills/l9-mac-storage-triage/scripts/scan-ncdu.sh`
-
-## Functions
+Emit FINDINGS.txt (human) and findings.json (machine) from one catalog + diagnosis.
 
 - `def kib_to_gib(kib) -> float | None`
 - `def load_env_file(path) -> dict[str, str]`
@@ -36,22 +20,22 @@ Emit FINDINGS.txt (human) and findings.json (machine) from one catalog + diagnos
 - `def safe_label(item) -> str`
 - `def pad(text, width) -> str`
 - `def wrap_words(text, width) -> list[str]`
-- `def du_gib(path, timeout) -> float | None`
-- `def entry_when(entry) -> str`
-- `def needs_inspect(raw) -> bool`
-- `def inspect_path(abs_path, hint) -> dict | None`
-- `def render_txt(doc) -> str`
-- `def build_doc(report_dir) -> dict`
-- `def write_outputs(doc, report_dir) -> None`
-- `def latest_report() -> Path | None`
-- `def main() -> int`
+- _+9 more public symbol(s)_
 
-## Exports
+## Entrypoints
 
-_No `__all__` exports._
+- `00-diagnose.sh`
+- `01-summarize.sh`
+- `02-initialize-env.sh`
+- `03-validate-env.sh`
+- `04-plan.sh`
+- `05-apply.sh`
+- `06-verify.sh`
+- `07-inventory-noise.sh`
+- `08-focus-layout.sh`
+- `09-emit-findings.sh`
+- `inspect-sparse-file.sh`
+- `mode-run.sh`
+- `scan-ncdu.sh`
 
-## Dependencies
-
-`__future__`, `datetime`, `json`, `os`, `pathlib`, `shutil`, `subprocess`
-
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

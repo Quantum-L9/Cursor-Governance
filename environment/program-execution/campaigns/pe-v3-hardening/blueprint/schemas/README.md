@@ -2,38 +2,34 @@
 
 **Path:** `environment/program-execution/campaigns/pe-v3-hardening/blueprint/schemas` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 23 JSON.
+- `acceptance-receipt.schema.json` — JSON
+- `authority-registry.schema.json` — JSON
+- `convergence-gate.schema.json` — JSON
+- `convergence-gates.schema.json` — JSON
+- `current-state-delta.schema.json` — JSON
+- `cutover-and-rollback.schema.json` — JSON
+- `decision-register.schema.json` — JSON
+- `dependency-graph.schema.json` — JSON
+- `do-not-build.schema.json` — JSON
+- `evidence-catalog.schema.json` — JSON
+- `execution-index.schema.json` — JSON
+- `execution-targets.schema.json` — JSON
+- `execution-waves.schema.json` — JSON
+- `observability-plan.schema.json` — JSON
+- `phase0-user-config.schema.json` — JSON
+- `program.schema.json` — JSON
+- `risk-register.schema.json` — JSON
+- `source-traceability.schema.json` — JSON
+- `task-card.schema.json` — JSON
+- `task-cards.schema.json` — JSON
+- `unknown-register.schema.json` — JSON
+- `waiver-register.schema.json` — JSON
+- `workstreams.schema.json` — JSON
 
 ## File types
 
 - JSON: 23
 
-## Contents
-
-- `acceptance-receipt.schema.json`
-- `authority-registry.schema.json`
-- `convergence-gate.schema.json`
-- `convergence-gates.schema.json`
-- `current-state-delta.schema.json`
-- `cutover-and-rollback.schema.json`
-- `decision-register.schema.json`
-- `dependency-graph.schema.json`
-- `do-not-build.schema.json`
-- `evidence-catalog.schema.json`
-- `execution-index.schema.json`
-- `execution-targets.schema.json`
-- `execution-waves.schema.json`
-- `observability-plan.schema.json`
-- `phase0-user-config.schema.json`
-- `program.schema.json`
-- `risk-register.schema.json`
-- `source-traceability.schema.json`
-- `task-card.schema.json`
-- `task-cards.schema.json`
-- `unknown-register.schema.json`
-- `waiver-register.schema.json`
-- `workstreams.schema.json`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

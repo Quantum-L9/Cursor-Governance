@@ -1,29 +1,24 @@
 # Readiness
 
-**Path:** `environment/agents/readiness` | **Tier:** discovered
+**Path:** `environment/agents/readiness` | **Kind:** subsystem
 
-## Purpose
+## Modules
+
+### `__init__.py`
 
 Unified executable-peer readiness composition.
 
-
-
-## Components
-
-_No public classes in this path._
-
-## Functions
+### `compose.py`
 
 - `def execution_ready(dimensions) -> dict[str, Any]` — Cursor EXECUTION_READY = all required dimensions true.
 - `def completion_evidence_ok() -> dict[str, Any]` — Controller completion evidence join (no new PE states).
+
+### `probe_runtime.py`
+
 - `def main() -> int`
-
-## Exports
-
-_No `__all__` exports._
 
 ## Dependencies
 
-`__future__`, `environment.agents.readiness.compose`, `json`, `pathlib`, `sys`, `typing`
+**Internal:** `environment`
 
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

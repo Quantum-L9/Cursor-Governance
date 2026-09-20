@@ -1,28 +1,14 @@
 # Scripts
 
-**Path:** `skills/l9-repo-sync/scripts` | **Tier:** discovered
+**Path:** `skills/l9-repo-sync/scripts` | **Kind:** subsystem
 
-## Purpose
+## Modules
+
+### `ff_shelf.py`
 
 Shelf leftover corpus after /ff: untracked and dirty-tracked.
 
-
-
-## Components
-
-### `OpenShelfPR`
-
-No description
-
-- File: `skills/l9-repo-sync/scripts/ff_shelf.py` (L39–43)
-- Methods: _none_
-
-### Shell entrypoints
-
-- `skills/l9-repo-sync/scripts/ff.sh`
-
-## Functions
-
+- `OpenShelfPR`
 - `def run(cmd) -> subprocess.CompletedProcess[str]`
 - `def is_shelf_path(rel) -> bool`
 - `def collect_untracked(clone) -> list[str]`
@@ -30,26 +16,31 @@ No description
 - `def collect_dirty_deleted(clone) -> list[str]`
 - `def collect_shelf_paths(clone) -> list[str]`
 - `def apply_shelf_deletions(shelf, deleted) -> None`
-- `def write_untracked_list(clone, paths) -> Path`
-- `def files_from_ok(list_path, clone) -> None`
-- `def build_rsync_argv(clone, shelf, list_path) -> list[str]`
-- `def build_add_argv(shelf, list_path) -> list[str]`
-- `def build_commit_argv(shelf, message) -> list[str]`
-- `def load_open_shelf_prs(path) -> list[OpenShelfPR]`
-- `def gh_login() -> str`
-- `def github_repo_slug(clone) -> str`
-- `def gh_open_shelf_prs(clone) -> list[OpenShelfPR]`
-- `def resolve_shelf_branch(prs, author, stamp) -> tuple[str, str]` — Return (branch, action) where action is append or stamp.
-- `def worktree_for_branch(clone, branch) -> Path | None`
-- `def sha256_file(path) -> str | None`
-- `def blob_sha256(repo, rev, rel) -> str | None`
+- _+19 more public symbol(s)_
 
-## Exports
+### `self_test.py`
 
-_No `__all__` exports._
+Fixture self-test: /ff parks unique work and never deletes it.
 
-## Dependencies
+- `def run(cmd, cwd, env) -> subprocess.CompletedProcess[str]`
+- `def git(repo) -> None`
+- `def test_behind_with_colliding_and_hold() -> int`
+- `def test_ignored_colliding_untracked_is_parked() -> int` — A gitignored colliding copy must not hide a path origin/main now tracks.
+- `def test_origin_only_scan_is_fixed_cost() -> int` — The performance objective, measured — not asserted in a comment.
+- `def test_comm_failure_blocks_destructive_sync() -> int` — Process substitution used to swallow this; an empty set is not a result.
+- `def test_sort_failure_blocks_destructive_sync() -> int`
+- `def test_comm_runs_under_c_collation() -> int` — `comm` must compare in the collation its inputs were sorted with.
+- _+16 more public symbol(s)_
 
-`__future__`, `argparse`, `dataclasses`, `datetime`, `hashlib`, `json`, `os`, `pathlib`, `re`, `subprocess`, `sys`, `tempfile`
+### `validate_pack_structure.py`
 
-<!-- l9-module-readme: generated-from-ast -->
+Validate l9-repo-sync pack structure (this pack only).
+
+- `def primitives_only_under_allowed_headings(text) -> list[str]` — Return primitive hits that are not under Forbidden/incident headings.
+- `def main() -> int`
+
+## Entrypoints
+
+- `ff.sh`
+
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

@@ -1,25 +1,29 @@
 # Scripts
 
-**Path:** `skills/l9-plan-simple/scripts` | **Tier:** discovered
+**Path:** `skills/l9-plan-simple/scripts` | **Kind:** subsystem
 
-## Purpose
+## Modules
+
+### `generate_plan_section_receipt.py`
 
 Write a section-completeness receipt for a simple plan pair.
 
-
-
-## Components
-
-_No public classes in this path._
-
-## Functions
-
 - `def build_receipt(plan_json_path, plan_md_path) -> dict[str, Any]`
 - `def main(argv) -> int`
+
+### `paths.py`
+
+CLI path confinement for SonarCloud pythonsecurity:S8707.
+
 - `def plans_store_root() -> Path | None` — Machine Cursor plans store (``~/.cursor/plans`` or ``L9_PLANS_STORE``).
 - `def is_under(path, root) -> bool`
 - `def confined_roots() -> list[Path]`
 - `def safe_cli_path(value) -> Path` — Resolve a CLI path; require cwd or the canonical plans store.
+
+### `plan_sections.py`
+
+Required simple-plan sections — derived from owners, not a third list.
+
 - `def plan_schema_path() -> Path`
 - `def template_path() -> Path`
 - `def json_required_keys(schema) -> list[str]`
@@ -28,19 +32,23 @@ _No public classes in this path._
 - `def parse_frontmatter(text) -> dict[str, Any]`
 - `def handoff_mode(text) -> str` — The plan's declared handoff mode; cursor-build is the default.
 - `def frontmatter_presence(text) -> dict[str, bool]`
-- `def live_pe_heading(text) -> bool`
-- `def live_make_campaign(text) -> bool`
-- `def json_section_presence(plan) -> dict[str, bool]`
-- `def md_section_presence(text) -> dict[str, bool]`
-- `def execute_swap_presence(text) -> dict[str, bool]`
-- `def receipt_status(json_sections, md_sections, frontmatter, execute_swap, gar_invoked) -> str`
+- _+7 more public symbol(s)_
 
-## Exports
+### `self_test.py`
 
-_No `__all__` exports._
+Pack self-test for l9-plan-simple GAR wire + section receipt (both handoff modes).
+
+- `def main() -> int`
+
+### `validate_plan_section_receipt.py`
+
+Fail-closed check that a simple plan has every skill-required section.
+
+- `def check_receipt(path) -> list[str]`
+- `def main(argv) -> int`
 
 ## Dependencies
 
-`__future__`, `argparse`, `datetime`, `generate_plan_section_receipt`, `hashlib`, `json`, `os`, `pathlib`, `paths`, `plan_sections`, `re`, `subprocess`, `sys`, `tempfile`, `typing`, `validate_plan_section_receipt`
+**Internal:** `generate_plan_section_receipt`, `paths`, `plan_sections`, `validate_plan_section_receipt`
 
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

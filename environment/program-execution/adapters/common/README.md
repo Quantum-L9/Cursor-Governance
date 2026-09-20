@@ -1,27 +1,61 @@
 # Common
 
-**Path:** `environment/program-execution/adapters/common` | **Tier:** discovered
+**Path:** `environment/program-execution/adapters/common` | **Kind:** subsystem
 
-## Purpose
+## Modules
+
+### `__init__.py`
 
 Compatibility imports. Canonical shared execution code lives in peer_execution/.
 
+### `approvals.py`
 
+Compatibility shim. Canonical implementation: peer_execution/approvals.py.
 
-## Components
+### `base.py`
 
-_No public classes in this path._
+Compatibility shim. Canonical implementation: peer_execution/base.py.
 
-## Functions
+### `contracts.py`
 
-_No public module-level functions._
+Compatibility shim. Canonical implementation: peer_execution/contracts.py.
 
-## Exports
+### `core_receipts.py`
 
-_No `__all__` exports._
+Compatibility shim. Canonical implementation: peer_execution/core_receipts.py.
+
+### `digests.py`
+
+Compatibility shim. Canonical implementation: peer_execution/digests.py.
+
+### `errors.py`
+
+Compatibility shim. Canonical implementation: peer_execution/errors.py.
+
+### `imports.py`
+
+Compatibility shim. Canonical implementation: peer_execution/imports.py.
+
+### `models.py`
+
+Compatibility shim. Canonical implementation: peer_execution/models.py.
+
+### `protocol.py`
+
+Compatibility shim. Canonical implementation: peer_execution/protocol.py.
+
+### `receipts.py`
+
+Compatibility shim. Canonical implementation: peer_execution/receipts.py.
+
+### `runtime_store.py`
+
+Compatibility shim. Canonical implementation: peer_execution/runtime_store.py.
+
+_+2 further module(s) in this directory._
 
 ## Dependencies
 
-`__future__`, `peer_execution`, `peer_execution.approvals`, `peer_execution.base`, `peer_execution.contracts`, `peer_execution.core_receipts`, `peer_execution.digests`, `peer_execution.errors`, `peer_execution.imports`, `peer_execution.models`, `peer_execution.protocol`, `peer_execution.receipts`, `peer_execution.runtime_store`, `peer_execution.schema_registry`, `peer_execution.subprocess_runner`
+**Internal:** `peer_execution`
 
-<!-- l9-module-readme: generated-from-ast -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=subsystem -->

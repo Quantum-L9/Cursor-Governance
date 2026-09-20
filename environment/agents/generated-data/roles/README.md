@@ -2,21 +2,17 @@
 
 **Path:** `environment/agents/generated-data/roles` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 6 YAML.
+- `executor.yaml` — YAML
+- `poller.yaml` — YAML
+- `recon.yaml` — YAML
+- `reviewer.yaml` — YAML
+- `synthesis.yaml` — YAML
+- `verifier.yaml` — YAML
 
 ## File types
 
 - YAML: 6
 
-## Contents
-
-- `executor.yaml`
-- `poller.yaml`
-- `recon.yaml`
-- `reviewer.yaml`
-- `synthesis.yaml`
-- `verifier.yaml`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->

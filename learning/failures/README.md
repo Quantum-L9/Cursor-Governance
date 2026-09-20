@@ -2,24 +2,20 @@
 
 **Path:** `learning/failures` | **Kind:** corpus
 
-## Purpose
+## Contents
 
-This directory holds 1 JSON, 7 Markdown.
+- `check-must-not-recreate-archived.md` — Markdown
+- `formal_lessons_pending.json` — JSON
+- `integrity-tool-must-not-heal.md` — Markdown
+- `learned-lessons-corpus.md` — Markdown
+- `precommit-hook-attribution.md` — Markdown
+- `reasoning_insights.md` — Markdown
+- `repeated-mistakes.md` — Markdown
+- `worktree-make-pr-wiring.md` — Markdown
 
 ## File types
 
 - JSON: 1
 - Markdown: 7
 
-## Contents
-
-- `check-must-not-recreate-archived.md`
-- `formal_lessons_pending.json`
-- `integrity-tool-must-not-heal.md`
-- `learned-lessons-corpus.md`
-- `precommit-hook-attribution.md`
-- `reasoning_insights.md`
-- `repeated-mistakes.md`
-- `worktree-make-pr-wiring.md`
-
-<!-- l9-folder-readme: generated-from-tree -->
+<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=corpus -->
