@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import fnmatch
 import json
 import re
@@ -23,6 +24,10 @@ RECEIPT_SCHEMA = PACK / "contracts/repo-docs-receipt.schema.json"
 POINTER_MAP = PACK / "references/pointer-heading-map.yaml"
 HEADINGS = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
 DIRECTIVES = re.compile(r"<!--\s*L9_DOCS\s*\n(.*?)\n\s*-->", re.DOTALL)
+PYTHON_FENCE = re.compile(
+    r"^```python[^\S\r\n]*\r?\n(?P<source>.*?)^```[^\S\r\n]*(?:\r?\n|$)",
+    re.MULTILINE | re.DOTALL,
+)
 
 
 def git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -198,6 +203,33 @@ def pointer_validate_root(root: Path) -> dict[str, Any]:
         findings.extend(local)
     status = "FAIL" if findings else "PARTIAL" if unknown else "PASS"
     return {"status": status, "findings": findings + unknown, "files": rows}
+
+
+def python_fence_validate_root(root: Path) -> dict[str, Any]:
+    """Parse only explicitly marked Python fences in declared root documents.
+
+    This is a bounded syntax check borrowed from the donor validator. It never
+    executes a snippet, traverses arbitrary Markdown, or decides root-document
+    membership itself; ``pointer-heading-map.yaml`` remains the topology owner.
+    """
+    mapping = yaml.safe_load(POINTER_MAP.read_text(encoding="utf-8"))
+    findings: list[str] = []
+    rows: list[dict[str, Any]] = []
+    for rel in mapping["files"]:
+        path = root / rel
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        fences = list(PYTHON_FENCE.finditer(text))
+        rows.append({"path": rel, "fence_count": len(fences)})
+        for match in fences:
+            try:
+                ast.parse(match.group("source"), filename=rel)
+            except SyntaxError as exc:
+                fence_line = text.count("\n", 0, match.start()) + 1
+                source_line = fence_line + (exc.lineno or 1)
+                findings.append(f"{rel}:{source_line}: invalid Python fence: {exc.msg}")
+    return {"status": "FAIL" if findings else "PASS", "findings": findings, "files": rows}
 
 
 def selector_paths(root: Path, selectors: list[str]) -> list[str]:
