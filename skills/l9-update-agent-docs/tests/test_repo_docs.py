@@ -291,6 +291,13 @@ def test_receipt_carries_the_readme_reconciliation_histogram(tmp_path: Path):
     }
     assert planned["create"] >= 1
     assert planned["conflict"] == 0
+    quality = receipt["capabilities"]["module_readmes"]["quality"]
+    assert quality
+    assert {row["completeness"] for row in quality} <= {
+        "complete",
+        "partial",
+        "minimal-by-design",
+    }
     # The histogram is diagnostics on the capability, not a second ledger.
     assert receipt["final_status"] == "PASS"
 
@@ -341,9 +348,9 @@ def test_policy_capability_controls_are_executable(tmp_path: Path):
     assert capability["status"] == "AVAILABLE"
     assert capability["owner"] == "l9-update-agent-docs"
     assert capability["present"]["generator"] is True
-    partial = dc.probe_module_readme_capability(root, policy, ["skills/x.xml"])
-    assert partial["status"] == "PARTIAL"
-    assert partial["unsupported_impacted_extensions"] == [".xml"]
+    xml = dc.probe_module_readme_capability(root, policy, ["skills/x.xml"])
+    assert xml["status"] == "AVAILABLE"
+    assert xml["unsupported_impacted_extensions"] == []
 
 
 def test_default_llm_projection_is_created_and_closed(tmp_path: Path):

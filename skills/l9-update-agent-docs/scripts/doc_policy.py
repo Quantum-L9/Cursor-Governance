@@ -103,6 +103,19 @@ def validate_policy(policy: dict[str, Any]) -> list[str]:
         unknown = sorted(set(rule["surfaces"]) - known)
         if unknown:
             errors.append(f"impact rule {name}: unknown surfaces {unknown}")
+    source_registry = policy.get("source_evidence") or {}
+    source_patterns = {
+        pattern
+        for group in ("extensions", "filenames")
+        for entry in (source_registry.get(group) or {}).values()
+        if isinstance(entry, dict)
+        for pattern in entry.get("patterns") or []
+    }
+    module_rule = policy["impact_rules"].get("module_implementation_change") or {}
+    if set(module_rule.get("patterns") or []) != source_patterns:
+        errors.append(
+            "module_implementation_change patterns must exactly match source_evidence patterns"
+        )
     for surface, rules in policy["semantic_harvest"]["activation"].items():
         if surface not in known:
             errors.append(f"semantic activation references unknown surface {surface!r}")

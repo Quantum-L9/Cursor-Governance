@@ -150,6 +150,23 @@
                 "retire": {"type": "integer", "minimum": 0},
                 "conflict": {"type": "integer", "minimum": 0}
               }
+            },
+            "quality": {
+              "description": "Deterministic source-evidence coverage per README target.",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["path", "completeness", "eligible_source_count", "extracted_source_count", "extraction_issue_count", "relationship_count"],
+                "properties": {
+                  "path": {"type": "string"},
+                  "completeness": {"enum": ["complete", "partial", "minimal-by-design"]},
+                  "eligible_source_count": {"type": "integer", "minimum": 0},
+                  "extracted_source_count": {"type": "integer", "minimum": 0},
+                  "extraction_issue_count": {"type": "integer", "minimum": 0},
+                  "relationship_count": {"type": "integer", "minimum": 0}
+                }
+              }
             }
           }
         }
