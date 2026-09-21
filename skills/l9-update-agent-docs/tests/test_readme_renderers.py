@@ -241,3 +241,48 @@ def test_validator_accepts_a_clean_compiled_model(tmp_path: Path):
 def test_retirement_refuses_an_unowned_file():
     assert rq.retirement_findings("a/README.md", "# Handwritten\n")
     assert not rq.retirement_findings("a/README.md", rr.marker_for("module"))
+
+
+def test_ownership_requires_a_complete_marker_not_a_mention() -> None:
+    """A document that quotes the prefix is not thereby generator-owned.
+
+    The check was `prefix in text`. Any file explaining the marker format —
+    including this generator's own documentation — matched, and a matched
+    file is eligible for refresh and retirement.
+    """
+    mention = (
+        "Generated files end with `<!-- l9-readme: generated-by=l9-update-agent-docs`\n"
+        "and then the version and kind.\n"
+    )
+    assert rr.owns_marker(mention) is False
+    assert rr.owns_any_marker(mention) is False
+    assert rr.marker_version(mention) is None
+    assert rr.marker_kind(mention) is None
+
+
+def test_a_marker_without_a_version_token_is_not_ownership() -> None:
+    partial = "<!-- l9-readme: generated-by=l9-update-agent-docs kind=module -->\n"
+    assert rr.owns_marker(partial) is False
+
+
+def test_the_last_marker_wins_over_an_earlier_example() -> None:
+    """The real marker is the final line, so an example must not outrank it."""
+    text = (
+        "# Docs\n\nExample: "
+        + rr.marker_for("module")
+        + "\n\nbody\n\n"
+        + rr.marker_for("subsystem")
+        + "\n"
+    )
+    assert rr.owns_marker(text) is True
+    assert rr.marker_kind(text) == "subsystem"
+
+
+def test_an_unreadable_version_is_distinct_from_no_marker() -> None:
+    """Three outcomes, and conflating any two reopens the overwrite hole."""
+    unreadable = "<!-- l9-readme: generated-by=l9-update-agent-docs version=3.0 kind=module -->\n"
+    assert rr.owns_marker(unreadable) is True
+    assert rr.marker_version(unreadable) == rr.UNREADABLE_MARKER_VERSION
+    assert rr.marker_version(rr.marker_for("module")) == rr.MARKER_VERSION
+    assert rr.marker_version("# plain\n") is None
+    assert rr.marker_version(rr.LEGACY_MODULE_MARKER) == 1

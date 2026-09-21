@@ -20,6 +20,7 @@ from pathlib import Path
 from readme_model import QualityFinding, ReadmeModel
 from readme_renderers import (
     MARKER_VERSION,
+    UNREADABLE_MARKER_VERSION,
     marker_for,
     marker_kind,
     marker_version,
@@ -267,6 +268,17 @@ def retirement_findings(path: str, text: str) -> list[QualityFinding]:
             )
         ]
     version = marker_version(text)
+    if version == UNREADABLE_MARKER_VERSION:
+        return [
+            _error(
+                "readme.marker.future_version",
+                (
+                    f"{path} carries a format version this compiler cannot read; it "
+                    f"understands {MARKER_VERSION} and will not rewrite or delete it"
+                ),
+                path,
+            )
+        ]
     if version is not None and version > MARKER_VERSION:
         return [
             _error(

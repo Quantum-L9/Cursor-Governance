@@ -31,6 +31,7 @@ __all__ = [
     "MARKER_PREFIX",
     "MARKER_VERSION",
     "RENDERERS",
+    "UNREADABLE_MARKER_VERSION",
     "marker_for",
     "marker_kind",
     "marker_version",
@@ -41,6 +42,12 @@ __all__ = [
 
 GENERATOR_NAME = "l9-update-agent-docs"
 MARKER_VERSION = 2
+#: Reported by :func:`marker_version` for an owned marker whose ``version=``
+#: token is not an integer. It is deliberately not a version number: the only
+#: safe reading of an unreadable version is "newer than anything this
+#: compiler understands", so the planner must treat it as a conflict rather
+#: than compare it.
+UNREADABLE_MARKER_VERSION = -1
 #: Ownership is identified by generator and format version, not by the
 #: technique that happened to produce the bytes. `generated-from-ast` made
 #: the extraction method part of the identity; AST is evidence, not format.
@@ -56,9 +63,43 @@ def marker_for(kind: str) -> str:
     return f"{MARKER_PREFIX}{GENERATOR_NAME} version={MARKER_VERSION} kind={kind} -->"
 
 
+def _marker_body(text: str) -> str | None:
+    """Inner text of the last well-formed current-format marker.
+
+    Ownership is decided by a *complete* marker comment, not by the prefix
+    appearing anywhere in the file. A document that quotes the prefix while
+    explaining the format — this module's own docs, a README describing the
+    convention — would otherwise be classified as generator-owned and become
+    eligible for refresh or retirement, which is an overwrite of handwritten
+    work.
+
+    Well-formed means: the prefix, a ``-->`` closing it on the same line, and
+    a ``version=`` token inside. The version is not parsed here — a marker
+    carrying a version this compiler cannot read is still this generator's
+    marker, and is reported as a conflict rather than silently disowned.
+
+    The last occurrence wins because the marker is written as the final line,
+    so an example quoted earlier in a generated file cannot outrank it.
+    """
+    opener = f"{MARKER_PREFIX}{GENERATOR_NAME} "
+    search_from = len(text)
+    while True:
+        start = text.rfind(opener, 0, search_from)
+        if start == -1:
+            return None
+        search_from = start
+        end = text.find("-->", start)
+        if end != -1:
+            body = text[start:end]
+            if "\n" not in body and any(token.startswith("version=") for token in body.split()):
+                return body
+        if start == 0:
+            return None
+
+
 def owns_marker(text: str) -> bool:
-    """True for a current-format marker only."""
-    return f"{MARKER_PREFIX}{GENERATOR_NAME} " in text
+    """True for a well-formed current-format marker only."""
+    return _marker_body(text) is not None
 
 
 def owns_any_marker(text: str) -> bool:
@@ -67,13 +108,10 @@ def owns_any_marker(text: str) -> bool:
 
 
 def _marker_token(text: str, key: str) -> str | None:
-    start = text.find(f"{MARKER_PREFIX}{GENERATOR_NAME} ")
-    if start == -1:
+    body = _marker_body(text)
+    if body is None:
         return None
-    end = text.find("-->", start)
-    if end == -1:
-        return None
-    for token in text[start:end].split():
+    for token in body.split():
         if token.startswith(f"{key}="):
             return token[len(key) + 1 :] or None
     return None
@@ -90,6 +128,12 @@ def marker_version(text: str) -> int | None:
     A version this compiler does not know belongs to a newer generator.
     Rewriting or deleting its output silently is how a rollback quietly
     destroys work, so the planner reports it rather than acting.
+
+    Three outcomes, and conflating any two of them reopens that hole:
+    an integer is a version this compiler can compare; ``None`` means the
+    file carries no marker of this generator's at all; and
+    :data:`UNREADABLE_MARKER_VERSION` means it carries one whose version
+    token is not an integer — a newer format, not an absent claim.
     """
     raw = _marker_token(text, "version")
     if raw is None:
@@ -97,7 +141,7 @@ def marker_version(text: str) -> int | None:
     try:
         return int(raw)
     except ValueError:
-        return None
+        return UNREADABLE_MARKER_VERSION
 
 
 def _join(blocks: Sequence[str]) -> str:

@@ -36,8 +36,6 @@ def load(name: str, path: Path):
 df = load("doc_filetree", SCRIPTS / "doc_filetree.py")
 gm = load("generate_module_readmes", SCRIPTS / "generate_module_readmes.py")
 
-EMPTY_CONFIG: dict = {"defaults": {}, "subsystems": {}}
-
 
 def kinds(root: Path) -> dict[str, str]:
     return {row.path: row.kind for row in df.walk_inventory(root).modules}

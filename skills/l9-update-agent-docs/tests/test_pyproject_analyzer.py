@@ -228,6 +228,44 @@ def test_literal_concatenation_still_resolves():
     assert resolved
 
 
+def test_annotated_collect_ignore_is_a_guard():
+    """`collect_ignore: list[str] = [...]` is an AnnAssign, and pytest honours it.
+
+    Walking only Assign/AugAssign returned an empty guard set marked
+    *resolved* — a fail-open dressed as a clean read, which then reported a
+    genuinely guarded self-test as unguarded.
+    """
+    ignore, _glob, resolved = parse_collection_guards(
+        'collect_ignore: list[str] = ["skills/foo/scripts/self_test.py"]\n'
+    )
+    assert ignore == ("skills/foo/scripts/self_test.py",)
+    assert resolved
+
+
+def test_annotated_collect_ignore_glob_is_a_guard():
+    _ignore, glob, resolved = parse_collection_guards(
+        'collect_ignore_glob: list[str] = ["skills/*/scripts/self_test.py"]\n'
+    )
+    assert glob == ("skills/*/scripts/self_test.py",)
+    assert resolved
+
+
+def test_a_bare_annotation_is_no_guard_rather_than_an_unreadable_one():
+    """Declaring the name without assigning it guards nothing, and hides nothing."""
+    ignore, glob, resolved = parse_collection_guards("collect_ignore: list[str]\n")
+    assert ignore == ()
+    assert glob == ()
+    assert resolved
+
+
+def test_a_dynamic_annotated_assignment_is_still_unresolved():
+    ignore, _glob, resolved = parse_collection_guards(
+        "collect_ignore: list[str] = build_ignore_list()\n"
+    )
+    assert ignore == ()
+    assert resolved is False
+
+
 # --- T-PY-015 / T-PY-016: repository policy ---
 
 

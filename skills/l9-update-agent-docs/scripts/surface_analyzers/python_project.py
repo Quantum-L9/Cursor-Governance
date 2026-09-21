@@ -203,11 +203,19 @@ def parse_collection_guards(text: str) -> tuple[tuple[str, ...], tuple[str, ...]
     ignore_glob: list[str] = []
     resolved = True
     for node in ast.walk(tree):
-        if not isinstance(node, (ast.Assign, ast.AugAssign)):
+        if not isinstance(node, (ast.Assign, ast.AugAssign, ast.AnnAssign)):
             continue
+        # `collect_ignore: list[str] = [...]` is an AnnAssign, not an Assign,
+        # and pytest honours it exactly the same. Skipping it returned an
+        # empty guard set marked *resolved*, so a genuinely guarded file was
+        # reported unguarded — a fail-open dressed as a clean read.
         targets = node.targets if isinstance(node, ast.Assign) else [node.target]
         names = {target.id for target in targets if isinstance(target, ast.Name)}
         if not names & {"collect_ignore", "collect_ignore_glob"}:
+            continue
+        if node.value is None:
+            # A bare annotation declares a name without assigning it. That is
+            # not an unreadable guard, it is no guard at all.
             continue
         values = _literal_string_list(node.value)
         if values is None:
