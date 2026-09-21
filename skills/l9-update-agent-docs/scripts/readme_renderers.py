@@ -197,8 +197,7 @@ def _modules_block(modules: Sequence[ModuleDoc]) -> str:
     if len(modules) > MAX_MODULES_RENDERED:
         hidden = len(modules) - MAX_MODULES_RENDERED
         blocks.append(
-            f"_+{hidden} further module(s); see "
-            "[Complete interface index](#complete-interface-index)._"
+            f"_+{hidden} further module(s); see [Complete module index](#complete-module-index)._"
         )
     return "\n\n".join(blocks)
 
@@ -276,6 +275,11 @@ def _detail_interface_block(modules: Sequence[ModuleDoc]) -> str:
     return "\n\n".join(blocks)
 
 
+def _detail_module_block(modules: Sequence[ModuleDoc]) -> str:
+    """Complete source-backed module inventory for a truncated summary."""
+    return "\n".join(f"- `{module.file}`" for module in modules)
+
+
 def _detail_file_block(contents: Sequence[str]) -> str:
     return "\n".join(f"- `{name}`" for name in contents)
 
@@ -336,6 +340,7 @@ def render_subsystem_readme(model: ReadmeModel) -> str:
             _section("Purpose", model.purpose),
             _section("Description", model.description),
             _section("Modules", _modules_block(model.modules)),
+            _section("Complete module index", _detail_module_block(model.modules)),
             _section("Entrypoints", _shell_block(model.shell_entrypoints)),
             _section("Dependencies", _dependencies_block(model.dependencies)),
             _section("Integrates with", _relationships_block(_renderable_relationships(model))),
