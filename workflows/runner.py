@@ -477,14 +477,36 @@ class DAGRunner:
         with open(self.workflow_path) as f:
             self.workflow = yaml.safe_load(f)
 
+        if not isinstance(self.workflow, dict):
+            raise ValueError("workflow definition must be a mapping")
+        raw_steps = self.workflow.get("steps", [])
+        if not isinstance(raw_steps, list):
+            raise ValueError("workflow steps must be a list")
+
         # Parse steps
-        for step_def in self.workflow.get("steps", []):
+        self.steps.clear()
+        for step_def in raw_steps:
+            if not isinstance(step_def, dict):
+                raise ValueError("each workflow step must be a mapping")
+            step_id = step_def.get("id")
+            if not isinstance(step_id, str) or not step_id.strip():
+                raise ValueError("each workflow step requires a non-empty string id")
+            if step_id in self.steps:
+                raise ValueError(f"duplicate workflow step id: {step_id}")
+            depends_on = step_def.get("depends_on", [])
+            if not isinstance(depends_on, list) or not all(
+                isinstance(dependency, str) and dependency for dependency in depends_on
+            ):
+                raise ValueError(f"step '{step_id}' depends_on must be a list of non-empty ids")
+            config = step_def.get("config", {})
+            if not isinstance(config, dict):
+                raise ValueError(f"step '{step_id}' config must be a mapping")
             step = Step(
-                id=step_def["id"],
-                name=step_def.get("name", step_def["id"]),
+                id=step_id,
+                name=step_def.get("name", step_id),
                 type=StepType(step_def["type"]),
-                config=step_def.get("config", {}),
-                depends_on=step_def.get("depends_on", []),
+                config=config,
+                depends_on=depends_on,
                 checkpoint=step_def.get("checkpoint", False),
                 continue_on_fail=step_def.get("continue_on_fail", False),
             )
@@ -538,10 +560,11 @@ class DAGRunner:
 
     def _topological_order(self) -> list[str]:
         """Get steps in topological order."""
-        visited = set()
-        order = []
+        visited: set[str] = set()
+        visiting: set[str] = set()
+        order: list[str] = []
 
-        def visit(step_id: str):
+        def visit(step_id: str) -> None:
             """
             Performs a depth-first traversal of workflow steps to determine execution order
             based on dependencies.
@@ -557,21 +580,51 @@ class DAGRunner:
             """
             if step_id in visited:
                 return
-            visited.add(step_id)
+            if step_id in visiting:
+                raise ValueError(f"Workflow contains a cycle involving step '{step_id}'")
             step = self.steps.get(step_id)
-            if step:
-                for dep in step.depends_on:
-                    visit(dep)
-                order.append(step_id)
+            if step is None:
+                raise KeyError(f"unknown workflow step '{step_id}'")
+            visiting.add(step_id)
+            for dep in step.depends_on:
+                visit(dep)
+            visiting.remove(step_id)
+            visited.add(step_id)
+            order.append(step_id)
 
         for step_id in self.steps:
             visit(step_id)
 
         return order
 
+    def _validation_errors(self) -> list[str]:
+        """Return graph errors that must block execution and state creation."""
+        errors: list[str] = []
+        for step in self.steps.values():
+            for dep in step.depends_on:
+                if dep not in self.steps:
+                    errors.append(f"Step '{step.id}' depends on unknown step '{dep}'")
+        if errors:
+            return errors
+        try:
+            self._topological_order()
+        except (KeyError, ValueError) as exc:
+            errors.append(str(exc))
+        return errors
+
     def run(self, resume: bool = False) -> bool:
         """Execute the workflow DAG."""
-        self.load()
+        try:
+            self.load()
+        except (OSError, ValueError, yaml.YAMLError) as exc:
+            print(f"❌ Workflow load failed: {exc}")
+            return False
+        errors = self._validation_errors()
+        if errors:
+            print("❌ Workflow validation failed:")
+            for error in errors:
+                print(f"   - {error}")
+            return False
 
         print(f"\n{'=' * 60}")
         print(f"WORKFLOW: {self.workflow.get('name', self.workflow_path.name)}")
@@ -685,21 +738,12 @@ class DAGRunner:
 
     def validate(self) -> bool:
         """Validate workflow definition."""
-        self.load()
-
-        errors = []
-
-        # Check for missing dependencies
-        for step in self.steps.values():
-            for dep in step.depends_on:
-                if dep not in self.steps:
-                    errors.append(f"Step '{step.id}' depends on unknown step '{dep}'")
-
-        # Check for cycles (simple check)
         try:
-            self._topological_order()
-        except RecursionError:
-            errors.append("Workflow contains a cycle")
+            self.load()
+        except (OSError, ValueError, yaml.YAMLError) as exc:
+            print(f"❌ Workflow validation failed:\n   - {exc}")
+            return False
+        errors = self._validation_errors()
 
         if errors:
             print("❌ Workflow validation failed:")

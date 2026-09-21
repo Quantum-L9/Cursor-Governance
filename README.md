@@ -1,9 +1,9 @@
 ---
 title: L9 Governance
-version: 2.0.0
+version: 2.0.1
 created: 2025-01-27
-updated: 2026-07-19
-owner: Igor Beylin
+updated: 2026-09-21
+owner: Quantum AI Partners
 source: Post-Suite-6, Graphiti-native governance
 tags: [governance, skills, commands, rules, ops, graphiti]
 domain: system-governance
@@ -75,7 +75,6 @@ make -C "$HOME/.cursor-governance" start WS="$(pwd)"
 ├── security/          # Security governance docs
 ├── pipeline/          # Pipeline orchestration & validation docs
 ├── reports/           # GMP execution reports
-├── C_GOV_FILES/       # Legacy duplicate tree — pending removal (see hygiene PRs)
 ├── ORG_INVARIANTS.yaml # Canonical Quantum-L9 org policy
 ├── CANONICAL_LAW.md   # Authoritative governance contract (read first)
 ├── AGENTS.md          # Activation contract + agent operating rules (read second)
@@ -161,8 +160,8 @@ clone at `~/.cursor-governance/` is the SSOT working copy — see
 
 ---
 
-**Last Updated:** 2026-07-19
-**Version:** 2.0.0
+**Last Updated:** 2026-09-21
+**Version:** 2.0.1
 <!-- PROGRAM_EXECUTION_ADAPTER_LAYER_V1:README -->
 
 ## Program Execution

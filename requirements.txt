@@ -26,7 +26,7 @@
 #
 # Machine CLIs (not installable from this file) — see AGENTS.md § toolchain:
 #   uv          >=0.8.0          (https://docs.astral.sh/uv/)
-#   pre-commit  (latest stable)  pipx/pip/brew; runs .pre-commit-config.yaml
+#   pre-commit  ==4.5.0          runs .pre-commit-config.yaml through the locked dev venv
 #   gitleaks    8.24.3           brew install gitleaks  (core security.yml;
 #                                SDK has no gitleaks pin)
 #   semgrep     >=1.100.0,<2.0.0 brew / pip / uvx; SDK version policy
@@ -49,6 +49,7 @@ pytest-cov==7.1.0
 #   Locked into uv.lock so CI installs them from the lockfile, not floating pip.
 pytest-xdist==3.8.0
 pytest-timeout==2.4.0
+pre-commit==4.5.0
 
 # --- l9-ci-core only (SDK does not pin these; used by make pr-security) -------
 bandit==1.9.4

@@ -5,53 +5,71 @@ path: environment/agents/adapters/generic/README.md
 layer: adapter
 owner: governance-control-plane
 status: active
-version: 1.1.0
-updated: 2026-07-31
+version: 2.0.0
+updated: 2026-09-21
 /L9_META -->
 
-# Generic Adapter — any future MCP-capable LLM surface
+# Generic Adapter — future agent surfaces
 
-Use this to onboard a surface that has no dedicated adapter yet (Windsurf,
-VS Code Copilot, open-source CLIs, custom bots). Follow
-`../ADAPTER_CONTRACT.md` — the same three carriers as Claude Code.
+Use this template only when a surface has no dedicated adapter. Read and follow
+[`../ADAPTER_CONTRACT.md`](../ADAPTER_CONTRACT.md) first. An adapter is a thin
+carrier for surface bootstrap, identity examples, and canonical-policy references;
+it must not duplicate shared execution, autonomy, memory, or secret-resolution
+logic.
 
-Claude Code stays at `environment/agents/adapters/claude-code/`; do not relocate it here.
+Claude Code remains at `environment/agents/adapters/claude-code/`; do not
+relocate or copy it here.
 
-## 1. Register the agent (identity first)
+## 1. Register the identity
 
-Add an entry to `../../agent_registry.yaml` following the naming law
-(`agent_id` kebab-case; `user_id=<agent_id>_agent`; `source=agent_id`;
-`principal_id=<agent_id>-memory-client`; `token_env=L9_MEMORY_TOKEN__<AGENT>`;
-pick a role; list `assigned_groups`; `status: active`). Run
-`tools/validate_agents.py` — it must pass before anything else.
-
-## 2. Issue the principal
-
-Add `"<agent_id>": "<fresh ≥24-char token>"` to `agent_tokens.local.json`,
-run `tools/render_principals.py`, sync to C1 per `docs/DEPLOY.md`.
-
-## 3. Create `adapters/<agent_id>/` from this template
-
-Copy and fill:
-
-| From generic | Required in named adapter |
-|---|---|
-| `environment.env.example` | Identity lines matching registry; `GRAPHITI_MCP_URL` + `GRAPHITI_MCP_TOKEN` |
-| `mcp.template.json` | Server name `graphiti-memory`; replace identity headers with the real agent_id |
-| `bootstrap.template.md` | Fill `{{AGENT_ID}}` / `{{ROLE}}` → rename to `session_bootstrap.md` |
-| README | Setup + role limits |
-
-## 4. Wire the surface
+Register the surface in [`../../agent_registry.yaml`](../../agent_registry.yaml)
+under the naming and ownership rules in the registry. The identity declaration is
+reviewable metadata, not a credential. Validate the change before continuing:
 
 ```bash
-GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp
-GRAPHITI_MCP_TOKEN=<its own Graphiti bearer>
-USER_ID=<agent_id>_agent
-L9_MEMORY_AGENT_ID=<agent_id>
-L9_MEMORY_SOURCE=<agent_id>
+make agents-env
+make agents-runtime-bindings-validate
 ```
 
-Point its MCP client at the Graphiti HTTPS front door with Bearer auth
-(`graphiti-memory`). Do **not** use retired `L9_MEMORY_HTTP_*` / `l9-shared-memory`.
-Inject the bootstrap into its system-prompt/instructions carrier. Allowlist
-`memory.quantumaipartners.com` (`docs/network-allowlist.md`).
+## 2. Create the thin surface carrier
+
+Create `adapters/<agent-id>/` with only the artifacts required by the surface:
+
+| Carrier | Requirement |
+|---|---|
+| Environment example | Identity fields such as `USER_ID`, `L9_MEMORY_AGENT_ID`, and `L9_MEMORY_SOURCE`; **no credentials** |
+| MCP configuration | The canonical stdio memory runtime: `${L9_MEMORY_INTERPRETER} -m l9_graphite_memory.server --transport stdio` |
+| Bootstrap instructions | Surface setup and role limits, referring to shared policy rather than copying it |
+| README | Installation, supported capabilities, and explicit authority limits |
+
+Do not add provider URLs, HTTP headers, bearer tokens, `env` secret blocks, or a
+surface-local memory/secret resolver. A model-controlled surface never receives
+raw secret material.
+
+## 3. Bind the surface through shared control planes
+
+The canonical memory runtime resolves its own configuration. If it is not bound,
+report the surface as **memory-blind** and use the supported recovery commands:
+
+```bash
+make memory-binding
+make memory-mcp-install
+```
+
+Capabilities are named requests handled on the trusted-operator side of the
+boundary. Register capability references in `ops/secrets/capabilities.yaml` only
+when an existing secret reference already exists; never place a token in an
+adapter environment file.
+
+## 4. Validate and publish
+
+```bash
+make agents-env
+make agents-runtime-bindings-validate
+make program-execution-adapters
+make program-execution-conformance
+make peer-execution-validate
+```
+
+Publish only through `PR_REMEDIATE=0 make pr`. Raw `git push`, `gh pr create`,
+and direct GitHub write tools are prohibited for all adapter surfaces.
