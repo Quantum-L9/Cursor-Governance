@@ -573,11 +573,13 @@ def test_current_owned_targets_close_without_a_rewrite(tmp_path: Path):
     write(root / "ARCHITECTURE.md", "# Architecture\n\nChanged again.\n")
     commit(root)
     receipt = rd.audit_repository(root, changed_since=base)
-    assert receipt["llm_txt"]["admission"] == "unchanged"
-    assert receipt["llm_txt"]["written"] is False
+    # The v3 LLM manifest carries every indexed source digest, so an
+    # architecture byte change requires a projection refresh.
+    assert receipt["llm_txt"]["admission"] == "refresh"
+    assert receipt["llm_txt"]["written"] is True
     assert receipt["filetree"]["admission"] == "unchanged"
     assert receipt["filetree"]["written"] is False
-    assert "llm.txt" not in receipt["changes"]["run_mutations"]
+    assert "llm.txt" in receipt["changes"]["run_mutations"]
     rows = {row["surface"]: row for row in receipt["obligations"]}
     for surface in ("llm_txt", "filetree"):
         assert rows[surface]["lifecycle"]["status"] == "CLOSED"

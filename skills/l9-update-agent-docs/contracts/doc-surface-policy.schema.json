@@ -70,6 +70,7 @@
           "evidence_sources": {"type": "array", "items": {"type": "string"}},
           "prohibited_mutations": {"type": "array", "items": {"type": "string"}},
           "llm_include": {"type": "boolean"},
+          "projection_inputs": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
           "kind": {"type": "string", "minLength": 1},
           "ownership": {
             "type": "object",
@@ -180,14 +181,15 @@
     "llm_txt": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["owner", "spec_version", "published_surface_markers", "adapter_directive_block", "default_enabled", "surface_order"],
+      "required": ["owner", "spec_version", "published_surface_markers", "adapter_directive_block", "default_enabled", "surface_order", "manifest_schema"],
       "properties": {
         "owner": {"type": "string"},
         "spec_version": {"type": "string"},
         "published_surface_markers": {"type": "array", "items": {"type": "string"}},
         "adapter_directive_block": {"type": "string"},
         "default_enabled": {"const": true},
-        "surface_order": {"type": "array", "items": {"type": "string"}}
+        "surface_order": {"type": "array", "items": {"type": "string"}},
+        "manifest_schema": {"const": "l9.repo-docs.llm-manifest.v1"}
       }
     }
   },

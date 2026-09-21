@@ -8,6 +8,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from root_contracts import assess_architecture_index, assess_root_agent_contract
 from surface_analyzers.makefile import analyze as analyze_makefile
 from surface_analyzers.openapi import analyze as analyze_openapi
 from surface_analyzers.pyproject import analyze as analyze_pyproject
@@ -16,9 +17,11 @@ from surface_analyzers.workflow import analyze as analyze_workflow
 Analyzer = Callable[[Path, Path], dict[str, Any]]
 
 ANALYZERS: dict[str, Analyzer] = {
+    "architecture-index-contract-v1": analyze_makefile,
     "makefile-contract-v1": analyze_makefile,
     "openapi-contract-v1": analyze_openapi,
     "python-project-contract-v1": analyze_pyproject,
+    "root-agent-contract-v1": analyze_makefile,
     "workflow-contract-v1": analyze_workflow,
 }
 
@@ -136,6 +139,8 @@ def assess_surface_obligations(
     root: Path,
     policy: dict[str, Any],
     obligations: list[dict[str, Any]],
+    *,
+    snapshot: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Attach deterministic assessment and separated ownership to obligations."""
 
@@ -214,7 +219,12 @@ def assess_surface_obligations(
             obligation["blockers"] = sorted(set(obligation["blockers"] + [detail]))
             continue
 
-        result = analyzer(root, root / target_rel)
+        if analyzer_id == "architecture-index-contract-v1":
+            result = assess_architecture_index(root, root / target_rel, snapshot or {})
+        elif analyzer_id == "root-agent-contract-v1":
+            result = assess_root_agent_contract(root, root / target_rel, snapshot or {})
+        else:
+            result = analyzer(root, root / target_rel)
         if result.get("status") == "BLOCKED":
             blockers = [str(item) for item in result.get("blockers", [])]
             obligation["assessment"] = {
@@ -270,8 +280,14 @@ def assess_surface_obligations(
                 }
             )
 
+        root_contract = analyzer_id in {
+            "architecture-index-contract-v1",
+            "root-agent-contract-v1",
+        }
         if normalized:
-            handoff = any(row.get("remediation_class") == "HANDOFF" for row in normalized)
+            handoff = root_contract or any(
+                row.get("remediation_class") == "HANDOFF" for row in normalized
+            )
             if handoff:
                 obligation["assessment"] = {
                     "analyzer": analyzer_id,
@@ -333,6 +349,17 @@ def assess_surface_obligations(
                 finding_evidence_ids,
             )
             obligation["validation"]["results"] = [existing[name] for name in sorted(existing)]
+        elif root_contract:
+            # Root-document validation is evidence for the existing semantic
+            # obligation.  A clean structural check must not erase a Harvest
+            # refresh requirement by replacing it with PRESERVE.
+            obligation["assessment"] = {
+                "analyzer": analyzer_id,
+                "status": "PASS",
+                "findings": [],
+                "disposition": "PRESERVE",
+                "mutation_guard": guard,
+            }
         else:
             obligation["assessment"] = {
                 "analyzer": analyzer_id,

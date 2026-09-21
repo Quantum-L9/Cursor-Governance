@@ -1,6 +1,6 @@
 ---
 name: l9-update-agent-docs
-description: compile repository changes into typed documentation and operational-contract obligations, assess Makefile, Python, workflow, and OpenAPI surfaces, and emit repo-docs receipts. use when refreshing repo or agent docs, checking docs or operational-contract impact after code/CI changes, generating evidence-backed module READMEs, or proving documentation freshness before merge.
+description: compile repository changes into typed documentation and consumer-contract obligations, assess root-agent, architecture, Makefile, Python, workflow, and OpenAPI surfaces, and emit evidence-bound repo-docs receipts. use when refreshing repo or agent docs, checking consumer operational-contract impact after code/CI changes, generating evidence-backed module READMEs, or proving documentation freshness before merge.
 metadata:
   skill_schema: 1
   layer: control_plane
@@ -8,7 +8,7 @@ metadata:
   tags: [l9, docs, obligations, agents, ci, maintenance]
   owner: igor_beylin
   status: active
-  version: 3.8.0
+  version: 3.9.0
   updated: 2026-09-21
   when_to_use: compile documentation obligations after repository changes, assess supported operational contract surfaces, refresh governed documentation through its canonical owner, or prove closure with a machine receipt
 ---
@@ -17,7 +17,7 @@ metadata:
 
 ## Purpose
 
-Compile repository state plus a repository delta into first-class documentation obligations. Each material obligation names the exact target, source revision, canonical obligation owner, semantic owner, execution owner, mutation guard when applicable, required action, evidence, validation requirements, and lifecycle state. Surfaces are routing topology; `DocumentationObligation` remains the durable unit of work.
+Compile repository state plus a repository delta into first-class documentation obligations. First compile one immutable, closed-world consumer snapshot of root documents, selected operational declarations, entrypoints, CI lock commands, and topology. Each material obligation names the exact target, source revision, canonical obligation owner, semantic owner, execution owner, mutation guard when applicable, required action, evidence, validation requirements, and lifecycle state. Surfaces are routing topology; `DocumentationObligation` remains the durable unit of work.
 
 Repository documentation is not limited to Markdown. A repository surface may participate when it embeds a meaningful operator- or agent-facing contract that can be deterministically assessed against existing repository authority. `Makefile` and `pyproject.toml` are the first supported operational-contract surfaces. Their admission does not make Repo Docs the semantic authority for Make, Python packaging, dependency policy, CI, or root-file mutation policy.
 
@@ -27,6 +27,8 @@ The compiler is not a doctrine author, general docs writer, generic parser frame
 
 ```text
 repository state + repository delta
+  -> ConsumerContractSnapshot (one immutable observation bundle)
+  -> root-agent and architecture contract validation
   -> filetree.md inventory (required, first)
   -> missing module/submodule README diagnosis from that inventory
   -> documentation topology
@@ -47,6 +49,8 @@ Machine authority:
 - obligation schema: `contracts/documentation-obligation.schema.json`
 - receipt schema: `contracts/repo-docs-receipt.schema.json`
 - machine compiler: `scripts/repo_docs.py`
+- consumer snapshot: `scripts/consumer_snapshot.py`
+- root contracts: `scripts/root_contracts.py`
 - filetree generator: `scripts/doc_filetree.py`
 - module README generator: `scripts/generate_module_readmes.py`
 - operational assessment registry: `scripts/doc_surface_analysis.py`
@@ -86,6 +90,8 @@ Current registry:
 - `python-project-contract-v1` -> `scripts/surface_analyzers/pyproject.py`
 - `workflow-contract-v1` -> `scripts/surface_analyzers/workflow.py`
 - `openapi-contract-v1` -> `scripts/surface_analyzers/openapi.py`
+- `root-agent-contract-v1` -> `scripts/root_contracts.py`
+- `architecture-index-contract-v1` -> `scripts/root_contracts.py`
 
 Unknown analyzer IDs fail closed. Do not add dynamic imports, entry-point discovery, repository scanning for plugins, or a generic parser framework.
 
@@ -116,6 +122,8 @@ The surface may be expanded only with evidence-backed deterministic checks whose
 
 - `project.requires-python` alignment with Ruff, mypy, and Pyright interpreter settings when those settings are present;
 - `uv.lock` presence when `[tool.uv]` declares the uv project environment contract;
+- locked `uv` commands declared in Makefiles or GitHub Actions workflows;
+- declared `project.scripts` module resolution and explicit pytest `testpaths` existence;
 - skill `scripts/self_test.py` registration against `ops/config/python-contract.json`;
 - root pytest collection protection for those self-test scripts through pyproject addopts or root `conftest.py`.
 
@@ -241,11 +249,12 @@ For `Makefile` and `pyproject.toml`, always resolve `ops/config/root-file-protec
 - `CLAUDE.md`: load pointer only. Create only when topology permits `create_if_absent`. No doctrine, CI table, or registry dump.
 - `AGENTS.md`: surgical additive operating-instruction update only. Never fold to a pointer.
 - root `README.md`: pointer/index correction only. Never generate from the module README generator.
+- Root agent documents: validate only explicit local Markdown links, local heading anchors, and the optional `L9_AGENT_CONTRACT` YAML block. The block may name Make targets, repository files, value-free environment variable names, and authority files. Never infer requirements from prose or execute a named command.
 - Root Python fences: syntax-check only `python` fences in files named by `references/pointer-heading-map.yaml`, using `scripts/doc_policy.py::python_fence_validate_root`. Parse without executing snippets; do not scan arbitrary Markdown or duplicate the repository security scanner.
-- `ARCHITECTURE.md`: surgical architecture-index refresh only when present; never create when topology says `never`.
+- `ARCHITECTURE.md`: surgical architecture-index refresh only when present; never create when topology says `never`. Validate explicit local links and the optional `L9_ARCHITECTURE_COMPONENTS` YAML manifest, whose component paths must exist. Emit typed architecture-delta candidates from changed Make, Python, and workflow facts for Harvest qualification; never author architectural prose automatically.
 - `INVARIANTS.md`: invariant/enforcement index. Create only when topology permits. Point to enforcing sources; do not copy organization-law bodies.
 - `filetree.md`: required inventory. Create if absent; refresh only a marker-owned generated file. Projection, never authority.
-- `llm.txt`: default-enabled LLM discovery index. Create if absent; refresh only a marker-owned generated file. Retire leftover `llms.txt` once `llm.txt` exists (rename first when the canonical name is still missing). Do not treat as doctrine.
+- `llm.txt`: default-enabled LLM discovery manifest. Create if absent; refresh only a marker-owned generated file. Its `L9_DOC_MANIFEST` block binds every listed document path, authority class, owner, availability, source SHA-256, and the immutable consumer-snapshot digest. Published URLs are emitted only when a configured base URL and an explicit publication marker coexist; otherwise paths remain repository-local. Retire leftover `llms.txt` once `llm.txt` exists (rename first when the canonical name is still missing). Do not treat as doctrine.
 - Owned-write rule for every skill-handled file: missing → create when policy allows; generator marker present and stale → refresh; any other existing file → preserve. Do not infer overwrite from staleness, validation noise, or `--write-llm`.
 - Each admission is receipt evidence, not silence: `create` / `refresh` satisfy the obligation through the run mutation; `unchanged` (render byte-identical to the target) closes it with `target_freshness: PASS`; `preserve` (unowned target left in place) is the terminal `PRESERVED` lifecycle with the admission recorded as evidence. A `skipped` admission (no-write mode, or a blocked write) keeps the obligation open. A filesystem error during retirement or an owned write is a `BLOCKED` receipt state and structural failure, never a crash.
 - `CANONICAL_LAW.md`: never mutate through this skill.

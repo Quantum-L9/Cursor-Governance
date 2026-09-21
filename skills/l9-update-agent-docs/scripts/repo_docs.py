@@ -12,6 +12,7 @@ from typing import Any
 
 import yaml
 from compile_semantic_obligations import compile_harvest_evidence
+from consumer_snapshot import build_consumer_snapshot
 from doc_change import (
     automatic_changed_scope,
     changed_files_since,
@@ -58,6 +59,7 @@ from doc_policy import (
 )
 from doc_surface_analysis import assess_surface_obligations
 from generate_module_readmes import apply_module_readme_plan, plan_module_readmes
+from root_contracts import architecture_delta, assess_architecture_index, assess_root_agent_contract
 
 RECEIPT_ID = "l9.repo-docs.receipt.v3"
 PACK = Path(__file__).resolve().parents[1]
@@ -240,6 +242,7 @@ def build_llm_state(
     directives: dict[str, Any],
     base_url_value: str | None,
     write_llm: bool,
+    snapshot: dict[str, Any],
 ) -> tuple[dict[str, Any], list[str]]:
     enabled, enabled_reason = llm_enabled(root, policy, directives)
     base_url, base_source = llm_base_url(directives, base_url_value)
@@ -267,8 +270,8 @@ def build_llm_state(
         return state, mutations
     if not enabled:
         return state, mutations
-    rendered = render_llm_txt(root, policy, base_url)
-    render_findings = validate_llm_txt(rendered)
+    rendered = render_llm_txt(root, policy, base_url, snapshot)
+    render_findings = validate_llm_txt(rendered, root=root, snapshot=snapshot)
     if LLM_MARKER not in rendered:
         render_findings.append(f"{PROJECTION_FILENAME} render missing generator marker")
     target = resolve_under_root(root, PROJECTION_FILENAME)
@@ -306,6 +309,25 @@ def build_llm_state(
         )
     state.update(status="PASS", admission=admission, findings=findings)
     return state, mutations
+
+
+def root_contract_validation(root: Path, snapshot: dict[str, Any]) -> dict[str, Any]:
+    """Validate explicit root references without interpreting free-form prose."""
+    findings: list[str] = []
+    for rel in ("README.md", "CLAUDE.md", "AGENTS.md"):
+        target = root / rel
+        if target.is_file():
+            findings.extend(
+                f"{rel}: {item['rule_id']}: {item['observed_state']}"
+                for item in assess_root_agent_contract(root, target, snapshot).get("findings", [])
+            )
+    target = root / "ARCHITECTURE.md"
+    if target.is_file():
+        findings.extend(
+            f"ARCHITECTURE.md: {item['rule_id']}: {item['observed_state']}"
+            for item in assess_architecture_index(root, target, snapshot).get("findings", [])
+        )
+    return {"status": "FAIL" if findings else "PASS", "findings": findings}
 
 
 def _structural_failure(code: str, severity: str, detail: str) -> dict[str, str]:
@@ -384,6 +406,8 @@ def audit_repository(
         dirty_scope=dirty_scope,
     )
     impact = impact_analysis(policy, changed_files)
+    snapshot = build_consumer_snapshot(root, policy, revision, changed_files=changed_files)
+    root_contracts = root_contract_validation(root, snapshot)
     impact_internal = dict(impact)
     impact_internal["all_changed_files"] = changed_files
     pointer = pointer_validate_root(root)
@@ -397,6 +421,10 @@ def audit_repository(
             _structural_failure(
                 "python_fence_validation", "FAIL", "; ".join(python_fences["findings"])
             )
+        )
+    if root_contracts["status"] == "FAIL":
+        structural.append(
+            _structural_failure("root_contracts", "FAIL", "; ".join(root_contracts["findings"]))
         )
     managed_status, managed_findings = validate_managed_regions(
         root, base_ref, changed_files, policy
@@ -430,7 +458,9 @@ def audit_repository(
         filetree = _failed_filetree_state("BLOCKED", detail)
         inventory = FiletreeInventory()
         structural.append(_structural_failure("filetree", "BLOCKED", detail))
-    llm, llm_mutations = build_llm_state(root, policy, directives, llm_base_url_value, write_llm)
+    llm, llm_mutations = build_llm_state(
+        root, policy, directives, llm_base_url_value, write_llm, snapshot
+    )
     run_mutations.extend(llm_mutations)
     if llm["status"] == "BLOCKED":
         structural.append(
@@ -475,6 +505,13 @@ def audit_repository(
         impacted = sorted(set(impact.get("impacted_surfaces", [])) | {FILETREE_SURFACE_ID})
         impact["impacted_surfaces"] = impacted
         impact_internal["impacted_surfaces"] = impacted
+    generated_surfaces = set(impact.get("impacted_surfaces", []))
+    if PROJECTION_FILENAME in run_mutations:
+        generated_surfaces.add(LLM_SURFACE_ID)
+    if "filetree.md" in run_mutations:
+        generated_surfaces.add(FILETREE_SURFACE_ID)
+    impact["impacted_surfaces"] = sorted(generated_surfaces)
+    impact_internal["impacted_surfaces"] = sorted(generated_surfaces)
     semantic_required = semantic_harvest_required(policy, impact, root)
     owned_admissions = {
         LLM_SURFACE_ID: str(llm.get("admission") or "skipped"),
@@ -505,7 +542,7 @@ def audit_repository(
             changed_files=changed_files,
             run_mutations=run_mutations,
         )
-    obligations = assess_surface_obligations(root, policy, obligations)
+    obligations = assess_surface_obligations(root, policy, obligations, snapshot=snapshot)
     obligations = validate_and_close_obligations(
         obligations, changed_files=changed_files, run_mutations=run_mutations
     )
@@ -529,6 +566,11 @@ def audit_repository(
             "name": "root_python_fences",
             "status": python_fences["status"],
             "findings": python_fences["findings"],
+        },
+        {
+            "name": "root_contracts",
+            "status": root_contracts["status"],
+            "findings": root_contracts["findings"],
         },
         {"name": "managed_regions", "status": managed_status, "findings": managed_findings},
         {
@@ -571,6 +613,8 @@ def audit_repository(
             "run_mutations": sorted(set(run_mutations)),
         },
         "impact": impact,
+        "consumer_snapshot": snapshot,
+        "architecture_delta": architecture_delta(snapshot),
         "surfaces": surfaces,
         "obligations": obligations,
         "summary": summary,

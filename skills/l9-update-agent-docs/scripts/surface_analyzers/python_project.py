@@ -53,6 +53,7 @@ class VersionFloor:
 class PythonProjectState:
     """What the project declares. No judgement, no repository knowledge."""
 
+    project_name: str | None = None
     requires_python: str | None = None
     floor: VersionFloor = field(default_factory=lambda: VersionFloor(None, "unknown", "absent"))
     ruff_target: str | None = None
@@ -66,6 +67,9 @@ class PythonProjectState:
     collect_ignore_glob: tuple[str, ...] = ()
     collect_guards_resolved: bool = True
     lock_workflow_declared: bool = False
+    project_scripts: tuple[tuple[str, str], ...] = ()
+    pytest_testpaths: tuple[str, ...] = ()
+    pytest_testpaths_resolved: bool = True
 
 
 def _release(raw: str) -> tuple[int, ...] | None:
@@ -261,6 +265,15 @@ def _lock_workflow_declared(root: Path) -> bool:
             continue
         if "uv lock --check" in text or "uv sync --locked" in text:
             return True
+    workflow_root = root / ".github/workflows"
+    if workflow_root.is_dir():
+        for candidate in sorted((*workflow_root.glob("*.yml"), *workflow_root.glob("*.yaml"))):
+            try:
+                text = candidate.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+            if "uv lock --check" in text or "uv sync --locked" in text:
+                return True
     return False
 
 
@@ -273,6 +286,22 @@ def inspect_python_project(root: Path, data: dict[str, Any]) -> PythonProjectSta
 
     pytest_options = tool.get("pytest", {}).get("ini_options", {})
     addopts, addopts_resolved = normalize_pytest_addopts(pytest_options.get("addopts"))
+    raw_testpaths = pytest_options.get("testpaths")
+    if raw_testpaths is None:
+        testpaths, testpaths_resolved = (), True
+    elif isinstance(raw_testpaths, list) and all(isinstance(item, str) for item in raw_testpaths):
+        testpaths, testpaths_resolved = tuple(raw_testpaths), True
+    elif isinstance(raw_testpaths, str):
+        testpaths, testpaths_resolved = (raw_testpaths,), True
+    else:
+        testpaths, testpaths_resolved = (), False
+    raw_scripts = project.get("scripts") or {}
+    project_scripts = (
+        tuple(sorted((str(name), str(value)) for name, value in raw_scripts.items()))
+        if isinstance(raw_scripts, dict)
+        and all(isinstance(value, str) for value in raw_scripts.values())
+        else ()
+    )
 
     conftest = root / "conftest.py"
     if conftest.is_file():
@@ -290,6 +319,7 @@ def inspect_python_project(root: Path, data: dict[str, Any]) -> PythonProjectSta
         return None if value is None else str(value)
 
     return PythonProjectState(
+        project_name=str(project.get("name")) if project.get("name") is not None else None,
         requires_python=requires_python,
         floor=python_floor(requires_python),
         ruff_target=_tool_value("ruff", "target-version"),
@@ -303,4 +333,7 @@ def inspect_python_project(root: Path, data: dict[str, Any]) -> PythonProjectSta
         collect_ignore_glob=ignore_glob,
         collect_guards_resolved=guards_resolved,
         lock_workflow_declared=_lock_workflow_declared(root),
+        project_scripts=project_scripts,
+        pytest_testpaths=testpaths,
+        pytest_testpaths_resolved=testpaths_resolved,
     )
