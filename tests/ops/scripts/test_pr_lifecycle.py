@@ -715,7 +715,6 @@ def test_gate_does_not_rerun_ruff() -> None:
 
 
 def test_early_overlap_is_pr_goal_only() -> None:
-    makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
     gate = (ROOT / "ops" / "scripts" / "run_pr_gate.sh").read_text(encoding="utf-8")
     open_pr = (SCRIPTS / "open_pr_after_gate.sh").read_text(encoding="utf-8")
     publish = (ROOT / "ops" / "make" / "publish.mk").read_text(encoding="utf-8")
