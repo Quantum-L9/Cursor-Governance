@@ -63,9 +63,7 @@ def test_live_teachers_do_not_teach_removed_pr_check_target() -> None:
         if hits:
             rel = path.relative_to(ROOT).as_posix()
             failures.append(f"{rel}: {hits}")
-    assert not failures, "removed gate alias taught in live teachers:\n" + "\n".join(
-        failures
-    )
+    assert not failures, "removed gate alias taught in live teachers:\n" + "\n".join(failures)
 
 
 def test_live_teachers_do_not_teach_postcommit_precommit_repo() -> None:
@@ -117,8 +115,8 @@ def test_makefile_pr_graph_uses_direct_gate() -> None:
         "publish fragment must invoke the gate directly after pr-preflight"
     )
     assert "run_pr_gate.sh" in publish
-    assert "pr-" "check:" not in makefile
-    assert "pr-" "check:" not in publish
+    assert "pr-check:" not in makefile
+    assert "pr-check:" not in publish
     assert "precommit-repo" not in re.search(
         r"^pr:\s*pr-preflight.*?(?=^\S|\Z)", publish, re.MULTILINE | re.DOTALL
     ).group(0)

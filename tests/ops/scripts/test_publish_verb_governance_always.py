@@ -52,9 +52,9 @@ def test_doctrine_states_consumer_needs_no_pr_target() -> None:
     ):
         # Normalize away markdown emphasis/backticks so `no` / **no** / `pr` match.
         norm = _read(rel).lower().replace("*", "").replace("`", "")
-        assert (
-            ("needs no pr" in norm) or ("no local pr" in norm)
-        ), f"{rel} does not state a consumer needs no local `pr` target"
+        assert ("needs no pr" in norm) or ("no local pr" in norm), (
+            f"{rel} does not state a consumer needs no local `pr` target"
+        )
 
 
 # --- the gate binds the governance pre-commit config ---------------------------

@@ -112,7 +112,14 @@ MAKE_PR_FORMS = [
     "/usr/bin/make pr",
 ]
 
-NOT_MAKE_PR = ["OPEN_PR=0 make pr", "make push", "make test", "make definitely-not-a-real-target", "git push origin main", ""]
+NOT_MAKE_PR = [
+    "OPEN_PR=0 make pr",
+    "make push",
+    "make test",
+    "make definitely-not-a-real-target",
+    "git push origin main",
+    "",
+]
 
 
 @pytest.mark.parametrize("command", MAKE_PR_FORMS)
@@ -139,7 +146,10 @@ class TestMakeGoalsAreExactTokens:
         monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
         monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
         monkeypatch.setattr(gate, "release_allows_remote", _release(False, "L4 denied"))
-        assert gate.evaluate("Bash", {"command": "make definitely-not-a-real-target"}, root=tmp_path) is None
+        assert (
+            gate.evaluate("Bash", {"command": "make definitely-not-a-real-target"}, root=tmp_path)
+            is None
+        )
 
     @pytest.mark.parametrize(
         "command",
@@ -161,10 +171,20 @@ class TestMakeGoalsAreExactTokens:
         """`make definitely-not-a-real-target pr` runs both goals, so the publish must be seen."""
         assert gate.is_make_pr("make definitely-not-a-real-target pr") is True
         assert gate.command_is_remote_mutation("make definitely-not-a-real-target pr") is True
-        assert gate.make_goals("make definitely-not-a-real-target pr") == ("definitely-not-a-real-target", "pr")
+        assert gate.make_goals("make definitely-not-a-real-target pr") == (
+            "definitely-not-a-real-target",
+            "pr",
+        )
 
     @pytest.mark.parametrize(
-        "command", ["make test", "make lint", "make improve", "make start", "make definitely-not-a-real-target"]
+        "command",
+        [
+            "make test",
+            "make lint",
+            "make improve",
+            "make start",
+            "make definitely-not-a-real-target",
+        ],
     )
     def test_local_goals_are_never_remote(self, command: str) -> None:
         assert gate.command_is_remote_mutation(command) is False
