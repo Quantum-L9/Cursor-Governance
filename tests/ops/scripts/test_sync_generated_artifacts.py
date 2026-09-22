@@ -330,7 +330,14 @@ def test_skill_registry_names_its_generator_and_heal_command() -> None:
 def makefile_has_target(repo: Path, name: str) -> bool:
     """Read Make's composed database rather than assuming root recipe ownership."""
     result = subprocess.run(
-        ["make", "--no-print-directory", "-rRpn"],
+        [
+            "make",
+            "--no-print-directory",
+            "-rRpn",
+            "--eval",
+            "__l9_make_database_probe: ; @:",
+            "__l9_make_database_probe",
+        ],
         cwd=repo,
         text=True,
         capture_output=True,
