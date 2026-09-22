@@ -49,6 +49,7 @@ pytest-cov==7.1.0
 #   Locked into uv.lock so CI installs them from the lockfile, not floating pip.
 pytest-xdist==3.8.0
 pytest-timeout==2.4.0
+pre-commit==4.5.0
 
 # --- l9-ci-core only (SDK does not pin these; used by make pr-security) -------
 bandit==1.9.4
