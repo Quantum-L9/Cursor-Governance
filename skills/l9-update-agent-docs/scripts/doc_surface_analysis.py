@@ -16,12 +16,29 @@ from surface_analyzers.workflow import analyze as analyze_workflow
 
 Analyzer = Callable[[Path, Path], dict[str, Any]]
 
+
+def _snapshot_required_analyzer(_root: Path, _target: Path) -> dict[str, Any]:
+    """Fail closed if a snapshot-aware root contract reaches generic dispatch.
+
+    Root-agent and architecture contracts consume the repository-wide consumer
+    snapshot. Their real dispatch is intentionally handled below in
+    :func:`assess_surface_obligations`; registering this explicit sentinel keeps
+    a future refactor from silently substituting an unrelated two-argument
+    analyzer.
+    """
+    return {
+        "status": "BLOCKED",
+        "findings": [],
+        "blockers": ["snapshot-aware root contract requires consumer snapshot evidence"],
+    }
+
+
 ANALYZERS: dict[str, Analyzer] = {
-    "architecture-index-contract-v1": analyze_makefile,
+    "architecture-index-contract-v1": _snapshot_required_analyzer,
     "makefile-contract-v1": analyze_makefile,
     "openapi-contract-v1": analyze_openapi,
     "python-project-contract-v1": analyze_pyproject,
-    "root-agent-contract-v1": analyze_makefile,
+    "root-agent-contract-v1": _snapshot_required_analyzer,
     "workflow-contract-v1": analyze_workflow,
 }
 

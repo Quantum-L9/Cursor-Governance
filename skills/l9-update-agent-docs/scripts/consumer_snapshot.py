@@ -160,7 +160,12 @@ def _project_facts(root: Path) -> list[dict[str, Any]]:
             if not isinstance(value, str):
                 continue
             module = value.split(":", 1)[0].strip()
-            assignment = re.search(rf"^\s*{re.escape(str(name))}\s*=", text, re.MULTILINE)
+            key = re.escape(str(name))
+            assignment = re.search(
+                rf"^\s*(?:{key}|\"{key}\"|'{key}')\s*=",
+                text,
+                re.MULTILINE,
+            )
             candidates = [
                 f"{module.replace('.', '/')}.py",
                 f"src/{module.replace('.', '/')}.py",

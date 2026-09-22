@@ -14,7 +14,11 @@ sys.path.insert(0, str(SCRIPTS))
 from consumer_snapshot import build_consumer_snapshot  # noqa: E402
 from doc_llm import render_llm_txt, validate_llm_txt  # noqa: E402
 from doc_policy import load_policy  # noqa: E402
-from doc_surface_analysis import assess_surface_obligations  # noqa: E402
+from doc_surface_analysis import (  # noqa: E402
+    ANALYZERS,
+    _snapshot_required_analyzer,
+    assess_surface_obligations,
+)
 from repo_docs import audit_repository, revision_identity  # noqa: E402
 from root_contracts import (  # noqa: E402
     architecture_delta,
@@ -202,6 +206,29 @@ def test_project_script_snapshot_records_a_numeric_source_line(tmp_path: Path) -
     fact = next(item for item in snapshot(root)["facts"] if item["kind"] == "project_script")
     assert fact["line"] == 6
     assert fact["resolution"] == "consumer/cli.py"
+
+
+def test_project_script_snapshot_records_a_quoted_key_source_line(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    write(
+        root / "pyproject.toml",
+        "[project]\nname = 'consumer'\nrequires-python = '>=3.12'\n\n"
+        "[project.scripts]\n\"consumer-cli\" = 'consumer.cli:main'\n",
+    )
+    write(root / "consumer" / "cli.py", "def main():\n    return 0\n")
+    fact = next(item for item in snapshot(root)["facts"] if item["kind"] == "project_script")
+    assert fact["line"] == 6
+    assert fact["resolution"] == "consumer/cli.py"
+
+
+def test_root_contract_registry_uses_explicit_snapshot_sentinel(tmp_path: Path) -> None:
+    assert ANALYZERS["architecture-index-contract-v1"] is _snapshot_required_analyzer
+    assert ANALYZERS["root-agent-contract-v1"] is _snapshot_required_analyzer
+    result = _snapshot_required_analyzer(tmp_path, tmp_path / "AGENTS.md")
+    assert result["status"] == "BLOCKED"
+    assert "consumer snapshot evidence" in result["blockers"][0]
 
 
 def test_root_contract_rejects_escaped_reference_before_authority_filter(tmp_path: Path) -> None:
