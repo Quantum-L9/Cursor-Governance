@@ -81,6 +81,30 @@ class WorkflowGraphValidationTests(unittest.TestCase):
             )
             self.assertFalse(_runner_type()(workflow, directory).validate())
 
+    def test_validate_rejects_missing_or_non_string_step_type(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            missing = self._workflow(
+                directory,
+                """
+                id: missing-type
+                steps:
+                  - id: one
+                """,
+            )
+            self.assertFalse(_runner_type()(missing, directory).validate())
+
+            non_string = self._workflow(
+                directory,
+                """
+                id: invalid-type
+                steps:
+                  - id: one
+                    type: [shell]
+                """,
+            )
+            self.assertFalse(_runner_type()(non_string, directory).validate())
+
 
 if __name__ == "__main__":
     raise SystemExit(unittest.main())

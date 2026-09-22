@@ -501,10 +501,20 @@ class DAGRunner:
             config = step_def.get("config", {})
             if not isinstance(config, dict):
                 raise ValueError(f"step '{step_id}' config must be a mapping")
+            raw_type = step_def.get("type")
+            if not isinstance(raw_type, str) or not raw_type.strip():
+                raise ValueError(f"step '{step_id}' type must be a non-empty string")
+            try:
+                step_type = StepType(raw_type)
+            except ValueError as exc:
+                allowed = ", ".join(item.value for item in StepType)
+                raise ValueError(
+                    f"step '{step_id}' type {raw_type!r} is unsupported; expected one of: {allowed}"
+                ) from exc
             step = Step(
                 id=step_id,
                 name=step_def.get("name", step_id),
-                type=StepType(step_def["type"]),
+                type=step_type,
                 config=config,
                 depends_on=depends_on,
                 checkpoint=step_def.get("checkpoint", False),

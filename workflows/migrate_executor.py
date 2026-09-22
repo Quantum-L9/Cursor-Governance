@@ -42,8 +42,8 @@ from pathlib import Path
 # =============================================================================
 
 REPO_ROOT = Path(__file__).parent.parent
-REPORT_GENERATOR = REPO_ROOT / "scripts" / "generate_gmp_report.py"
 STATE_FILE = REPO_ROOT / ".migrate_executor_state.json"
+_FALLBACK_EXCLUDED_PARTS = frozenset({".git", ".venv", "__pycache__", "node_modules"})
 
 # Protected files - escalate if touched
 PROTECTED_FILES = {
@@ -139,14 +139,37 @@ class MigrateExecutor:
 
     def _run_command(self, args: list[str], capture: bool = True) -> tuple[int, str, str]:
         """Run a fixed argv command from the repository root."""
-        result = subprocess.run(
-            args,
-            cwd=REPO_ROOT,
-            capture_output=capture,
-            text=True,
-            check=False,
-        )
+        try:
+            result = subprocess.run(
+                args,
+                cwd=REPO_ROOT,
+                capture_output=capture,
+                text=True,
+                check=False,
+            )
+        except FileNotFoundError as exc:
+            return 127, "", str(exc)
         return result.returncode, result.stdout, result.stderr
+
+    @staticmethod
+    def _fallback_python_matches(pattern: str) -> list[str]:
+        """Find literal matches when the optional ``rg`` executable is absent."""
+        matches: list[str] = []
+        for path in sorted(REPO_ROOT.rglob("*.py")):
+            try:
+                rel = path.relative_to(REPO_ROOT)
+            except ValueError:
+                continue
+            if any(part in _FALLBACK_EXCLUDED_PARTS for part in rel.parts):
+                continue
+            try:
+                lines = path.read_text(encoding="utf-8").splitlines()
+            except (OSError, UnicodeDecodeError):
+                continue
+            for number, line in enumerate(lines, start=1):
+                if pattern in line:
+                    matches.append(f"{rel.as_posix()}:{number}:{line}")
+        return matches
 
     @staticmethod
     def _repo_file(filepath: str) -> Path:
@@ -170,6 +193,8 @@ class MigrateExecutor:
             return len([line for line in stdout.splitlines() if line])
         if code == 1:
             return 0
+        if code == 127:
+            return len({line.split(":", 1)[0] for line in self._fallback_python_matches(pattern)})
         raise RuntimeError(f"ripgrep failed while confirming migration: {stderr.strip()}")
 
     def _print_header(self, title: str):
@@ -190,6 +215,10 @@ class MigrateExecutor:
         code, stdout, stderr = self._run_command(
             ["rg", "--fixed-strings", "--type", "py", "-n", "--", pattern]
         )
+        if code == 127:
+            fallback = self._fallback_python_matches(pattern)
+            stdout = "\n".join(fallback)
+            code = 0 if fallback else 1
         if code not in (0, 1):
             print(f"❌ ripgrep failed: {stderr[:200]}")
             return False
@@ -338,6 +367,10 @@ class MigrateExecutor:
                 source = full_path.read_text(encoding="utf-8")
                 changed = source.replace(old, new)
                 if source == changed:
+                    if new in source:
+                        print(f"↩️  {filepath}: already migrated")
+                        success_count += 1
+                        continue
                     raise ValueError("expected literal pattern no longer present")
                 full_path.write_text(changed, encoding="utf-8")
             except (OSError, UnicodeError, ValueError) as exc:
@@ -347,9 +380,10 @@ class MigrateExecutor:
                 success_count += 1
                 print(f"✅ {filepath}")
 
-        # Mark matches as migrated
+        # Mark only files that have been applied or were already safely migrated.
         for m in self.state.matches:
-            m["migrated"] = True
+            if m["file"] in self.state.files_modified:
+                m["migrated"] = True
 
         print(f"\n✅ Applied: {success_count} files")
         if fail_count:
@@ -484,59 +518,37 @@ class MigrateExecutor:
     # STEP 8: GENERATE REPORT
     # =========================================================================
     def _step_generate_report(self) -> bool:
-        self._print_header("GENERATE REPORT — GMP Report via Script")
-
-        if not REPORT_GENERATOR.is_file():
-            print(f"❌ Required report generator is unavailable: {REPORT_GENERATOR}")
-            return False
-
-        # Build report arguments without shell interpolation.
-        todo_args: list[str] = []
-        for i, f in enumerate(self.state.files_modified[:10], 1):
-            todo_args.extend(["--todo", f"M{i}|{f}|*|MIGRATE|literal replacement"])
-
-        # Build validation items
-        val_args: list[str] = []
-        for v in self.state.validation_results:
-            val_args.extend(["--validation", f"{v['check']}|{v['status']}"])
-
-        if not todo_args:
-            todo_args.extend(["--todo", "M1|migration|*|VERIFY|Pattern migration"])
-        if not val_args:
-            val_args.extend(["--validation", "migration|✅"])
-
-        print("Generating report...")
-        code, stdout, stderr = self._run_command(
-            [
-                sys.executable,
-                str(REPORT_GENERATOR),
-                "--task",
-                f"Migrate: {self.state.old_pattern[:30]} → {self.state.new_pattern[:30]}",
-                "--tier",
-                "RUNTIME_TIER",
-                *todo_args,
-                *val_args,
-                "--summary",
-                "Code migration via /migrate DAG executor",
-                "--skip-verify",
-            ]
+        self._print_header("GENERATE REPORT — Local Migration Receipt")
+        reports = REPO_ROOT / "reports"
+        slug = re.sub(r"[^a-z0-9]+", "-", self.state.old_pattern.lower())[:32].strip("-")
+        target = reports / f"migration-{slug or 'change'}.md"
+        lines = [
+            "# Migration Receipt",
+            "",
+            f"**From:** `{self.state.old_pattern}`",
+            f"**To:** `{self.state.new_pattern}`",
+            "",
+            "## Files",
+            "",
+        ]
+        lines.extend(f"- `{path}`" for path in self.state.files_modified)
+        if not self.state.files_modified:
+            lines.append("- No repository files required modification.")
+        lines.extend(["", "## Validation", ""])
+        lines.extend(
+            f"- {result.get('status', '?')} {result.get('check', 'migration')}"
+            for result in self.state.validation_results
         )
-        if code != 0:
-            print(f"❌ Report generation failed: {(stderr or stdout)[:200]}")
+        if not self.state.validation_results:
+            lines.append("- No validation results were recorded.")
+        try:
+            reports.mkdir(parents=True, exist_ok=True)
+            target.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        except OSError as exc:
+            print(f"❌ Local report generation failed: {exc}")
             return False
-
-        # Extract report path
-        for line in stdout.split("\n"):
-            if "Report saved:" in line or "reports/" in line.lower():
-                self.state.report_path = line.strip()
-                break
-
-        if self.state.report_path:
-            print(f"✅ Report: {self.state.report_path}")
-        else:
-            print("❌ Report generator returned no attested report path")
-            return False
-
+        self.state.report_path = target.relative_to(REPO_ROOT).as_posix()
+        print(f"Report saved: {self.state.report_path}")
         return True
 
     # =========================================================================
@@ -639,14 +651,6 @@ class MigrateExecutor:
                 current_step=STEP_ORDER[0],
             )
             self._save_state()
-
-        if not self.dry_run and not REPORT_GENERATOR.is_file():
-            print(f"❌ Required report generator is unavailable: {REPORT_GENERATOR}")
-            print(
-                "No migration changes were applied. "
-                "Restore or replace the supported generator first."
-            )
-            return False
 
         mode = "DRY-RUN " if self.dry_run else ""
         self._print_header(

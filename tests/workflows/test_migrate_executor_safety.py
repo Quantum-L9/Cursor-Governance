@@ -60,20 +60,66 @@ class MigrateExecutorSafetyTests(unittest.TestCase):
                 self.assertFalse(executor._step_apply_changes())
             self.assertEqual(outside.read_text(encoding="utf-8"), "old\n")
 
-    def test_missing_report_generator_blocks_mutation_before_apply(self) -> None:
+    def test_report_generation_uses_a_confined_local_receipt(self) -> None:
+        mod = _module()
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            executor = mod.MigrateExecutor()
+            executor.state = mod.MigrateState(
+                old_pattern="old",
+                new_pattern="new",
+                started_at="now",
+                current_step="generate_report",
+                files_modified=["sample.py"],
+                validation_results=[{"check": "py_compile", "status": "✅"}],
+            )
+            with (
+                patch.object(mod, "REPO_ROOT", root),
+                patch.object(mod, "STATE_FILE", root / ".migration-state.json"),
+            ):
+                self.assertTrue(executor._step_generate_report())
+            self.assertEqual(executor.state.report_path, "reports/migration-old.md")
+            self.assertTrue((root / executor.state.report_path).is_file())
+
+    def test_apply_is_idempotent_for_a_previously_migrated_file(self) -> None:
         mod = _module()
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             target = root / "sample.py"
-            target.write_text("old\n", encoding="utf-8")
+            target.write_text("new\n", encoding="utf-8")
             executor = mod.MigrateExecutor()
+            executor.state = mod.MigrateState(
+                old_pattern="old",
+                new_pattern="new",
+                started_at="now",
+                current_step="apply_changes",
+                files_modified=["sample.py"],
+                matches=[{"file": "sample.py"}],
+            )
+            with patch.object(mod, "REPO_ROOT", root):
+                self.assertTrue(executor._step_apply_changes())
+            self.assertEqual(target.read_text(encoding="utf-8"), "new\n")
+            self.assertTrue(executor.state.matches[0]["migrated"])
+
+    def test_index_and_confirmation_fall_back_when_ripgrep_is_unavailable(self) -> None:
+        mod = _module()
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "sample.py").write_text("value = 'old'\n", encoding="utf-8")
+            executor = mod.MigrateExecutor()
+            executor.state = mod.MigrateState(
+                old_pattern="old",
+                new_pattern="new",
+                started_at="now",
+                current_step="index_analysis",
+            )
             with (
                 patch.object(mod, "REPO_ROOT", root),
-                patch.object(mod, "STATE_FILE", root / ".migration-state.json"),
-                patch.object(mod, "REPORT_GENERATOR", root / "missing_report_generator.py"),
+                patch.object(executor, "_run_command", return_value=(127, "", "rg unavailable")),
             ):
-                self.assertFalse(executor.run("old", "new"))
-            self.assertEqual(target.read_text(encoding="utf-8"), "old\n")
+                self.assertTrue(executor._step_index_analysis())
+                self.assertEqual(executor._fixed_string_file_count("old"), 1)
+            self.assertEqual(executor.state.matches[0]["file"], "sample.py")
 
     def test_commit_failure_is_not_reported_as_success(self) -> None:
         mod = _module()

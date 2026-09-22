@@ -26,7 +26,7 @@
 #
 # Machine CLIs (not installable from this file) — see AGENTS.md § toolchain:
 #   uv          >=0.8.0          (https://docs.astral.sh/uv/)
-#   pre-commit  ==4.5.0          runs .pre-commit-config.yaml through the locked dev venv
+#   pre-commit  (latest stable)  pipx/pip/brew; runs .pre-commit-config.yaml
 #   gitleaks    8.24.3           brew install gitleaks  (core security.yml;
 #                                SDK has no gitleaks pin)
 #   semgrep     >=1.100.0,<2.0.0 brew / pip / uvx; SDK version policy
