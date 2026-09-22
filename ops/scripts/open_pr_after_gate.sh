@@ -81,7 +81,7 @@ if [[ "$branch" == "main" || "$branch" == "master" ]]; then
 fi
 
 # Bind the unique chain tip before fetch/overlap so the PR opens against the
-# same base pr-check already gated. Receipt reuse skips a second gh round-trip.
+# same base the local publication gate already validated. Receipt reuse skips a second gh round-trip.
 pr_stack_apply_publish_base "$WS" || exit $?
 export PR_BASE
 BASE_REF="${PR_BASE#origin/}"

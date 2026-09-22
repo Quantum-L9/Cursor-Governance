@@ -391,7 +391,7 @@ def _agent_required_tree(root: Path, gov: Path) -> str:
         "     entry per file you changed (path + kernel + note). For a skeleton:\n"
         f"       {template_command(root, gov)}\n"
         f"  5. {record_command(root, gov)}\n"
-        "  6. Re-run the same command (make precommit-repo / make pr-check / make pr).\n"
+        "  6. Re-run the same command (make precommit-repo / OPEN_PR=0 make pr / make pr).\n"
         "     Hooks and tests run once after this hook passes.\n"
         "The report IS the receipt. record refuses an absent report, empty deltas, a\n"
         "path outside .l9/autonomy/, or a delta naming a file that does not exist —\n"

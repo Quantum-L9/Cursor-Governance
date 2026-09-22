@@ -78,7 +78,7 @@ skill_intelligence_report:
   invariants:
     - Diagnose never commits, pushes, edits, or merges
     - Converge invocation is merge authorization for every open PR in the target repo
-    - verify is L9_REMEDIATOR=1 PR_STACK= PR_BASE=origin/main make precommit-repo; publish is git push of the open PR branch; make pr and make pr-check are never invoked
+    - verify is L9_REMEDIATOR=1 PR_STACK= PR_BASE=origin/main make precommit-repo; publish is git push of the open PR branch; make pr and OPEN_PR=0 make pr are never invoked
     - two mutation lanes never share a branch or a non-generated path
     - 'a result document is judged against its assignment: identity, base SHA, role, writable scope'
     - a red check outside the required set never holds the merge train

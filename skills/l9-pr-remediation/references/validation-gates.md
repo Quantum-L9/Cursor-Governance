@@ -45,11 +45,11 @@ gate_registry:
 
 Validation:
 - [ ] `verify` is `make precommit-repo` and remediator `publish` is `git push`
-- [ ] Ceremony `make pr-check` / `PR_REMEDIATE=0 make pr` are named only as do-not-run
+- [ ] Ceremony `OPEN_PR=0 make pr` / `PR_REMEDIATE=0 make pr` are named only as do-not-run
 - [ ] INTERNAL targets (`pr-preflight`, `precommit`, `pr-full`) are not the cached shipping verbs
 - [ ] Workflow `run:` leftover is empty when `precommit-repo` exists
 
-**STOP if:** the agent cached ceremony `make pr` / `make pr-check` as this skill's verbs.
+**STOP if:** the agent cached ceremony `make pr` / `OPEN_PR=0 make pr` as this skill's verbs.
 
 Repos with no Makefile and no workflows: ask whether CI is configured; record `Unknown`.
 
@@ -122,7 +122,7 @@ local_verify_log:
 Validation:
 - [ ] `result: Passed` before commit on a code-changing PR
 - [ ] Remote CI is not recorded here (independent later)
-- [ ] `make precommit-repo` ran (hooks plus ruff). Did **not** run `make pr-check`
+- [ ] `make precommit-repo` ran (hooks plus ruff). Did **not** run `OPEN_PR=0 make pr`
 - [ ] cited/planned paths were checked even if the default toolchain excludes them
 - [ ] `iteration <= 5`
 - [ ] Commit will not use `--no-verify`
@@ -195,7 +195,7 @@ If at ANY point the agent:
 - Commits per-finding or publishes to probe CI → **VIOLATION: not-one-and-done**
 - Edits before the plan gate → **VIOLATION: patch-before-plan**
 - Skips `make precommit-repo` or uses `--no-verify` → **VIOLATION: skipped-local-verify**
-- Uses `make pr-check` / `make pr` / `make precommit` / `--all-files` as the remediator gate → **VIOLATION: wrong-makefile-verb**
+- Uses `OPEN_PR=0 make pr` / `make pr` / `make precommit` / `--all-files` as the remediator gate → **VIOLATION: wrong-makefile-verb**
 - Merges from Diagnose or emits `gh pr merge` in Diagnose YNP → **VIOLATION: diagnose-merge**
 - Squash-merges a stack parent or `update-branch` after parent squash → **VIOLATION: stack-unsafe**
 - Leaves threads unresolved after Step 7.5 → **VIOLATION: silent-fix**

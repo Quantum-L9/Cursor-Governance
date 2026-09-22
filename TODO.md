@@ -744,15 +744,15 @@ Keep shipping through `make improve` → `make pr` → `make pr`.
      install the `pre-commit` framework. A unit test that shelled into
      `run_pr_precommit.sh` failed until empty file-lists PASS without the
      binary (PR #209).
-3. **Duplication is real, but `pr-check` is not only a ruff clone.**
+3. **Duplication is real, but the former secondary gate alias is not only a ruff clone.**
 
-   | In `.pre-commit-config.yaml` | Re-run after that in `pr-check` | Only in `pr-check` |
+   | In `.pre-commit-config.yaml` | Re-run after that in the former secondary gate alias | Only in the former secondary gate alias |
    |---|---|---|
    | merge-conflict, path-lint, rules, skills, hygiene, ruff, ruff-format | ruff + format (locked venv) | pytest, gitleaks/bandit/semgrep, uv-lock, wiring, gate receipt |
 
 4. **Intended later owner (not this slice):** yaml owns lint; `make pr`
-   stays the publish path; `pr-check` becomes a thin alias (catalog + the
-   non-lint extras). Do not delete `pr-check` until pytest/security/receipt
+   stays the publish path; the former secondary gate alias becomes a thin alias (catalog + the
+   non-lint extras). Do not delete the former secondary gate alias until pytest/security/receipt
    live in the yaml or stay as named extras. Do not teach
    `pre-commit install` as the shipping gate.
 5. **Other leftover surfaces (leave alone for now):**
