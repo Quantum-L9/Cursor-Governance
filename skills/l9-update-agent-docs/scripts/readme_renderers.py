@@ -263,13 +263,20 @@ def _detail_interface_block(modules: Sequence[ModuleDoc]) -> str:
     for module in modules:
         language = f" ({module.language})" if module.language else ""
         lines = [f"### `{module.file}`{language}"]
-        for cls in module.classes:
-            lines.append(f"- `{cls.name}`" + (f" — {cls.summary}" if cls.summary else ""))
-        for function in module.functions:
-            name = function.signature or function.name
-            lines.append(f"- `{name}`" + (f" — {function.summary}" if function.summary else ""))
-        if module.exports:
-            lines.append("- Exports: " + ", ".join(f"`{name}`" for name in module.exports))
+        symbols = [(cls.name, cls.summary) for cls in module.classes] + [
+            (function.signature or function.name, function.summary) for function in module.functions
+        ]
+        for name, summary in symbols[:MAX_INTERFACES_PER_MODULE]:
+            lines.append(f"- `{name}`" + (f" — {summary}" if summary else ""))
+        hidden_symbols = len(symbols) - min(len(symbols), MAX_INTERFACES_PER_MODULE)
+        if hidden_symbols:
+            lines.append(f"- _+{hidden_symbols} public symbol(s) omitted from this index._")
+        exports = module.exports[:MAX_INTERFACES_PER_MODULE]
+        if exports:
+            lines.append("- Exports: " + ", ".join(f"`{name}`" for name in exports))
+        hidden_exports = len(module.exports) - len(exports)
+        if hidden_exports:
+            lines.append(f"- _+{hidden_exports} export(s) omitted from this index._")
         if len(lines) > 1:
             blocks.append("\n".join(lines))
     return "\n\n".join(blocks)

@@ -28,6 +28,7 @@ rm = load("readme_model", SCRIPTS / "readme_model.py")
 rr = load("readme_renderers", SCRIPTS / "readme_renderers.py")
 rq = load("readme_quality", SCRIPTS / "readme_quality.py")
 df = load("doc_filetree", SCRIPTS / "doc_filetree.py")
+sf = load("source_facts", SCRIPTS / "source_facts.py")
 
 
 def write(path: Path, text: str) -> None:
@@ -99,7 +100,9 @@ def test_long_interfaces_and_file_indexes_are_complete_and_linked(tmp_path: Path
     rendered = rr.render_readme(model)
     assert "[Complete interface index](#complete-interface-index)" in rendered
     assert "## Complete interface index" in rendered
-    assert "`def function_9()`" in rendered
+    assert "`def function_7()`" in rendered
+    assert "`def function_8()`" not in rendered
+    assert "_+2 public symbol(s) omitted from this index._" in rendered
 
     for index in range(41):
         write(tmp_path / "corpus" / f"item-{index}.md", f"# Item {index}\n")
@@ -108,6 +111,24 @@ def test_long_interfaces_and_file_indexes_are_complete_and_linked(tmp_path: Path
     assert "[Complete file index](#complete-file-index)" in corpus_rendered
     assert "## Complete file index" in corpus_rendered
     assert "`item-40.md`" in corpus_rendered
+
+
+def test_xml_dtds_are_rejected_as_visible_extraction_issues(tmp_path: Path):
+    write(
+        tmp_path / "xml" / "config.xml",
+        "<!DOCTYPE config [<!ENTITY value 'unsafe'>]>\n<config>&value;</config>\n",
+    )
+    model = ev.compile_readme_model(tmp_path, target("xml"))
+    assert model.completeness == "partial"
+    assert any("DTD and entity declarations" in issue.detail for issue in model.extraction_issues)
+
+
+def test_source_evidence_registry_is_cached_per_process():
+    sf.load_source_evidence_registry.cache_clear()
+    first = sf.load_source_evidence_registry()
+    second = sf.load_source_evidence_registry()
+    assert first is second
+    assert sf.load_source_evidence_registry.cache_info().hits == 1
 
 
 def test_manifest_purpose_and_link_errors_are_evidence_backed(tmp_path: Path):
