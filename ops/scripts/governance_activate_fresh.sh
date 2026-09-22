@@ -32,8 +32,11 @@ else
   ssot_is_machine_local_keep() { return 1; }
 fi
 unset _ssot_keep_cand
-BRANCH="${GOVERNANCE_GITHUB_BRANCH:-main}"
-REMOTE="${GOVERNANCE_GITHUB_REMOTE:-https://github.com/Quantum-L9/Cursor-Governance.git}"
+# The governance source is a trust boundary, not a caller preference. Session
+# environments can select local cache locations but cannot redirect governance
+# code to a different repository or branch.
+BRANCH="main"
+REMOTE="https://github.com/Quantum-L9/Cursor-Governance.git"
 REPO="${CURSOR_PROJECT_DIR:-${REPO:-}}"
 LOCK="$HOME/.cursor/governance-sync.lock"
 RECEIPT="$HOME/.cursor/governance-activate.last"
@@ -246,13 +249,16 @@ do_ff() {
   head="$(git -C "$CLONE" rev-parse HEAD 2>/dev/null || echo "")"
   origin_sha="$(git -C "$CLONE" rev-parse "origin/${BRANCH}" 2>/dev/null || echo "")"
   [ -n "$head" ] && [ -n "$origin_sha" ] || return 1
-  if [ "$head" = "$origin_sha" ]; then
-    LOCAL_SHA="$head"
-    return 0
+  if [ "$head" != "$origin_sha" ]; then
+    git -C "$CLONE" reset --keep "origin/${BRANCH}" 2>/dev/null || return 1
   fi
-  git -C "$CLONE" reset --keep "origin/${BRANCH}" 2>/dev/null || return 1
   LOCAL_SHA="$(local_head)"
-  [ "$LOCAL_SHA" = "$REMOTE_SHA" ] || [ "$LOCAL_SHA" = "$origin_sha" ]
+  REMOTE_SHA="$(ls_remote_sha)"
+  if [ -z "$REMOTE_SHA" ] || [ "$LOCAL_SHA" != "$REMOTE_SHA" ]; then
+    DETAIL="tip_race"
+    return 1
+  fi
+  return 0
 }
 
 do_swap() {
@@ -278,16 +284,18 @@ do_swap() {
     rm -rf "$STAGING" 2>/dev/null || true
     return 1
   fi
-  # Tip may have moved; accept staged if it matches ls-remote now, else one refresh.
+  # A successful activation must attest the tip observed after the clone. A
+  # staging checkout from a moving branch is safe to discard, never safe to
+  # report as fresh.
   if [ "$staged" != "$REMOTE_SHA" ]; then
     local again
     again="$(ls_remote_sha)"
     if [ -n "$again" ] && [ "$staged" = "$again" ]; then
       REMOTE_SHA="$again"
     else
-      # Still activate staged tip if it's on the expected branch (race); record mismatch.
-      DETAIL="tip_race_activated_${staged:0:7}"
-      REMOTE_SHA="${again:-$REMOTE_SHA}"
+      DETAIL="tip_race"
+      rm -rf "$STAGING" 2>/dev/null || true
+      return 1
     fi
   fi
   local bak=""
@@ -313,6 +321,11 @@ do_swap() {
   # Clone may have recorded an insteadOf-rewritten URL — force canonical remote.
   git -C "$CLONE" remote set-url origin "$REMOTE" 2>/dev/null || true
   LOCAL_SHA="$(local_head)"
+  REMOTE_SHA="$(ls_remote_sha)"
+  if [ -z "$REMOTE_SHA" ] || [ "$LOCAL_SHA" != "$REMOTE_SHA" ]; then
+    DETAIL="tip_race_after_swap"
+    return 1
+  fi
   prune_baks
   return 0
 }
@@ -334,6 +347,12 @@ bootstrap_missing() {
     return 1
   fi
   LOCAL_SHA="$(git -C "$STAGING" rev-parse HEAD 2>/dev/null || echo "")"
+  REMOTE_SHA="$(ls_remote_sha)"
+  if [ -z "$REMOTE_SHA" ] || [ "$LOCAL_SHA" != "$REMOTE_SHA" ]; then
+    DETAIL="bootstrap_tip_race"
+    rm -rf "$STAGING" 2>/dev/null || true
+    return 1
+  fi
   if [ -e "$CLONE" ]; then
     DETAIL="bootstrap_target_exists"
     rm -rf "$STAGING" 2>/dev/null || true
@@ -344,6 +363,12 @@ bootstrap_missing() {
     return 1
   }
   git -C "$CLONE" remote set-url origin "$REMOTE" 2>/dev/null || true
+  LOCAL_SHA="$(local_head)"
+  REMOTE_SHA="$(ls_remote_sha)"
+  if [ -z "$REMOTE_SHA" ] || [ "$LOCAL_SHA" != "$REMOTE_SHA" ]; then
+    DETAIL="bootstrap_tip_race_after_swap"
+    return 1
+  fi
   return 0
 }
 

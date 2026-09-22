@@ -58,19 +58,8 @@ WORK1="$TMP/seed1"
 make_bare_with_commit "$BARE1" "$WORK1"
 CLONE1="$HOME1/.cursor-governance"
 git clone -q "$BARE1" "$CLONE1"
-# Ensure origin tip matches HEAD
-OUT="$(
-  HOME="$HOME1" \
-  CURSOR_GOVERNANCE_DIR="$CLONE1" \
-  GOVERNANCE_GITHUB_REMOTE="$BARE1" \
-  GOVERNANCE_GITHUB_BRANCH=main \
-  GOVERNANCE_ACTIVATE_DEADLINE_SECS=30 \
-  bash "$ACTIVATE" 2>/dev/null | tail -n 1
-)"
-[[ "$OUT" == STATUS* ]] || fail "T1 no STATUS: $OUT"
-# expected_remote_ok rejects file:// bare paths — override by using a github-shaped remote
-# For fixtures we set GOVERNANCE_GITHUB_REMOTE to the canonical github URL and map it
-# to the bare via GIT_CONFIG_GLOBAL only (never real ~/.gitconfig / --global).
+# Map the fixed canonical source to the bare fixture via GIT_CONFIG_GLOBAL only
+# (never real ~/.gitconfig / --global).
 export GIT_CONFIG_GLOBAL="$HOME1/gitconfig"
 : >"$GIT_CONFIG_GLOBAL"
 git config --file "$GIT_CONFIG_GLOBAL" "url.$BARE1.insteadof" "https://github.com/Quantum-L9/Cursor-Governance.git"
@@ -115,6 +104,20 @@ NEW_HEAD="$(git -C "$CLONE1" rev-parse HEAD)"
 [ "$ACTION" = "ff" ] || [ "$ACTION" = "swapped" ] || fail "T2 expected ff/swapped got $OUT"
 [ "$NEW_HEAD" != "$OLD_HEAD" ] || fail "T2 HEAD did not move"
 pass "clean behind → ff or swap advanced tip"
+
+# ── T9: inherited remote overrides are ignored ───────────────────────────────
+OUT="$(
+  HOME="$HOME1" \
+  GIT_CONFIG_GLOBAL="$GIT_CONFIG_GLOBAL" \
+  CURSOR_GOVERNANCE_DIR="$CLONE1" \
+  GOVERNANCE_GITHUB_REMOTE="https://example.invalid/not-governance.git" \
+  GOVERNANCE_GITHUB_BRANCH="untrusted-branch" \
+  GOVERNANCE_ACTIVATE_DEADLINE_SECS=30 \
+  bash "$ACTIVATE" 2>/dev/null | tail -n 1
+)"
+ACTION="$(status_field "$OUT" action)"
+[ "$ACTION" = "fresh" ] || [ "$ACTION" = "wire_only" ] || fail "T9 source override affected activation: $OUT"
+pass "inherited remote and branch overrides are ignored"
 
 # ── T3: Dropbox-style consumer link → wire_only when already at tip ──────────
 HOME3="$TMP/h3"
@@ -258,6 +261,9 @@ DO_FF="$(awk '/^do_ff\(\)/,/^}/' "$ACTIVATE")"
 echo "$DO_FF" | grep -v '^[[:space:]]*#' | grep -q 'merge --ff-only' && fail "T8 do_ff still uses merge --ff-only"
 echo "$DO_FF" | grep -v '^[[:space:]]*#' | grep -q 'unshallow' && fail "T8 do_ff must never unshallow"
 echo "$DO_FF" | grep -q 'reset --keep' || fail "T8 do_ff must reset --keep"
+grep -q 'REMOTE="https://github.com/Quantum-L9/Cursor-Governance.git"' "$ACTIVATE" \
+  || fail "T8 canonical remote is not fixed in the activator"
+grep -q 'DETAIL="tip_race"' "$ACTIVATE" || fail "T8 activator must fail closed on a tip race"
 pass "do_ff is SHA-first reset --keep (no merge --ff-only)"
 
 assert_no_global_pollution

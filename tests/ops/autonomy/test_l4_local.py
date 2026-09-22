@@ -259,8 +259,8 @@ def _record_kernel_evidence(repo: Path, *, delta_path: str = "evidenced.txt") ->
 
     target = repo / delta_path
     target.write_text("touched\n", encoding="utf-8")
-    repair_path = repo / "validated.txt"
-    repair_path.write_text("validated\n", encoding="utf-8")
+    validated = repo / "validated.txt"
+    validated.write_text("validated\n", encoding="utf-8")
     report = repo / ".l9" / "autonomy" / "kernel-apply.md"
     report.parent.mkdir(parents=True, exist_ok=True)
     report.write_text(
@@ -274,7 +274,7 @@ def _record_kernel_evidence(repo: Path, *, delta_path: str = "evidenced.txt") ->
         "    note: narrowed a guard\n"
         "  - path: validated.txt\n"
         "    kernel: validate_repair\n"
-        "    note: validated the narrowed guard\n"
+        "    note: validated the recorded kernel evidence\n"
         "---\n"
         "\n## Recursive Alignment\n\napplied\n"
         "\n## Validate & Repair\n\nran the checks\n",
