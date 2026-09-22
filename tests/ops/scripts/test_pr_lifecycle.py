@@ -510,15 +510,15 @@ def _stamp_kernel(repo: Path) -> None:
         "kernels: [recursive_alignment, validate_repair]\n"
         "convergence_status: converged\n"
         "deltas:\n"
-            f"  - path: {delta}\n"
-            "    kernel: recursive_alignment\n"
-            "    note: fixture apply\n"
-            f"  - path: {repair_delta}\n"
-            "    kernel: validate_repair\n"
-            "    note: fixture apply\n"
-            "---\n\n## Recursive Alignment\n\nfixture\n\n## Validate & Repair\n\nfixture\n",
-            encoding="utf-8",
-        )
+        f"  - path: {delta}\n"
+        "    kernel: recursive_alignment\n"
+        "    note: fixture apply\n"
+        f"  - path: {repair_delta}\n"
+        "    kernel: validate_repair\n"
+        "    note: fixture apply\n"
+        "---\n\n## Recursive Alignment\n\nfixture\n\n## Validate & Repair\n\nfixture\n",
+        encoding="utf-8",
+    )
     proc = _run(
         [
             "python3",
@@ -638,8 +638,8 @@ def test_pr_direct_gate_does_not_double_run_precommit_repo() -> None:
     makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
     publish = (ROOT / "ops" / "make" / "publish.mk").read_text(encoding="utf-8")
     maintenance = (ROOT / "ops" / "make" / "maintenance.mk").read_text(encoding="utf-8")
-    assert "pr-" "check:" not in makefile
-    assert "pr-" "check:" not in publish
+    assert "pr-check:" not in makefile
+    assert "pr-check:" not in publish
     assert "pr: precommit-repo" not in publish
     assert "push: precommit-repo backup" in maintenance
     assert "push: precommit backup" not in maintenance

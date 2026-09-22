@@ -46,9 +46,9 @@ OWNERS = (
 STALE = (
     "mint_admission",
     "L9_ADMISSION_TOKEN",
-    "the public local gate **is** `pr-" "check`",
+    "the public local gate **is** `pr-check`",
     "Raw `git push` when Makefile `pr` exists",
-    "PUBLIC verbs recorded when a Makefile exists (`pr-" "check`",
+    "PUBLIC verbs recorded when a Makefile exists (`pr-check`",
     "every 15s (cap `max_wait_snapshots`)",
     "PR **not merged**",
     "gh run watch",
