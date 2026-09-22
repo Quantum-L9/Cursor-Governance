@@ -59,6 +59,12 @@ The compiler must fail closed on a missing required layer, output drift, an unkn
 
 A new `runtime-make` repository is not created. Cursor-Governance does not gain a generic consumer adapter compiler. The active `l9-update-agent-docs` PR stack is not used to implement this runtime; after that stack settles, Repo Docs runs independently against the Core change to compile documentation obligations and a receipt.
 
+### Governance integration and Claude projection compatibility
+
+The Governance-side Makefile upgrade is limited to replacing the monolith with the root composition and `ops/make/*.mk` capability graph, while retaining a single direct publication ceremony. The `pr_remediation_until_green` route remains semantically unchanged: its identifier, primary skill, priority, positive and negative signals, supporting skills, and mutation authority do not change. Its explanatory note removes obsolete `make pr` and `make pr-check` wording and names the direct campaign-publication ceremony and its gate-only diagnosis instead.
+
+The Claude projection snapshot deliberately hashes complete route definitions, including notes. The wording-only correction therefore requires an explicit baseline re-attestation. That re-attestation is independently justified by this obsolete-command removal, records no Claude adapter or routing-policy redesign, and preserves the Claude Code boundaries in `docs/CLAUDE_CODE_PRESERVATION_CONTRACT.md` (CC-001 through CC-010).
+
 ## References
 
 [1]: https://github.com/Quantum-L9/l9-ci-core/blob/ed22910dbe7069181aafd10d0ba6c94763520bed/tools/l9_repo/Makefile.template "Current Core portable Make facade"
