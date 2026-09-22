@@ -135,8 +135,8 @@ surfaces:
     create_policy: create_if_absent
     refresh_policy: generator_owned
     generator: skill:scripts/generate_module_readmes.py
-    evidence_sources: [filetree.md, source_tree_ast, config/subsystems/readme_config.yaml]
-    prohibited_mutations: [root_readme_write, handwritten_readme_overwrite, unowned_overwrite, llm_authored_readme, donor_repo_import]
+    evidence_sources: [filetree.md, source_tree, source_tree_ast, target_native_contracts, config/subsystems/readme_config.yaml]
+    prohibited_mutations: [root_readme_write, handwritten_readme_overwrite, unowned_overwrite, llm_authored_readme, donor_repo_import, config_invented_target, unsupported_semantic_inference]
     llm_include: false
   filetree:
     owner: l9-update-agent-docs
