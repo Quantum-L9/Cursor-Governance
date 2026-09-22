@@ -14,6 +14,7 @@ import json
 import re
 import tomllib
 import xml.etree.ElementTree as element_tree
+from functools import cache
 from pathlib import Path
 from typing import Any
 
@@ -57,10 +58,12 @@ _DOCKER_ENTRYPOINT_RE = re.compile(
     r"^\s*(?:ENTRYPOINT|CMD)\s+(.+?)\s*$", re.MULTILINE | re.IGNORECASE
 )
 _COMMENT_RE = re.compile(r"^\s*(?://|#(?!\!))\s*(.+?)\s*$", re.MULTILINE)
+_XML_UNSAFE_DECLARATION_RE = re.compile(r"<!\s*(?:DOCTYPE|ENTITY)\b", re.IGNORECASE)
 
 
+@cache
 def load_source_evidence_registry() -> dict[str, Any]:
-    """Load the one policy-owned source-evidence registry."""
+    """Load and cache the one policy-owned source-evidence registry per process."""
     raw = yaml.safe_load(POLICY_PATH.read_text(encoding="utf-8"))
     registry = raw.get("source_evidence") if isinstance(raw, dict) else None
     if not isinstance(registry, dict):
@@ -368,6 +371,8 @@ def _extract_terraform(path: Path, text: str, rel: str) -> SourceFact:
 
 
 def _extract_xml(path: Path, text: str, rel: str) -> SourceFact:
+    if _XML_UNSAFE_DECLARATION_RE.search(text):
+        raise ValueError("XML DTD and entity declarations are not supported")
     root = element_tree.fromstring(text)
     direct = sorted({child.tag.split("}")[-1] for child in root})
     return SourceFact(

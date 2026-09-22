@@ -7,8 +7,6 @@ from typing import Any
 
 import yaml
 
-_METHODS = frozenset({"checkout", "setup", "build", "test", "deploy"})
-
 
 def _finding(
     rule_id: str,
