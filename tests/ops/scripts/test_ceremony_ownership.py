@@ -27,6 +27,10 @@ SCAN_GLOBS = (
     "rules/*.mdc",
     "commands/*.md",
 )
+CURRENT_PUBLICATION_DOCTRINE = (
+    ROOT / "AGENTS.md",
+    ROOT / "CANONICAL_LAW.md",
+)
 
 
 def _iter_scan_paths() -> list[Path]:
@@ -64,6 +68,18 @@ def test_live_teachers_do_not_teach_removed_pr_check_target() -> None:
             rel = path.relative_to(ROOT).as_posix()
             failures.append(f"{rel}: {hits}")
     assert not failures, "removed gate alias taught in live teachers:\n" + "\n".join(failures)
+
+
+def test_current_publication_doctrine_names_one_gate_only() -> None:
+    """AGENTS and canonical law must retire the old public gate together."""
+    for path in CURRENT_PUBLICATION_DOCTRINE:
+        text = path.read_text(encoding="utf-8")
+        assert "OPEN_PR=0 make pr" in text, f"{path.name} lacks the gate-only command"
+        if path.name == "AGENTS.md":
+            assert re.search(r"Do\s+not invoke `make pr-check`", text)
+        else:
+            assert "PR_CHECK_TARGET_REMOVED_V2" in text
+            assert "`pr-check` as an invocable Make target" in text
 
 
 def test_live_teachers_do_not_teach_postcommit_precommit_repo() -> None:

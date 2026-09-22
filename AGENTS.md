@@ -254,6 +254,21 @@ This repo does **not** use a git commit hook. Do not run `pre-commit install`.
 `make pr` auto-heals derived artifacts via
 `ops/scripts/sync_generated_artifacts.py` (WARN to stage, not a hard fail).
 
+<!-- AGENTS_PR_CHECK_TARGET_REMOVED_V2 -->
+### 4.0 Current publication command contract (2026-09-22)
+
+This append-only amendment supersedes earlier text in this file wherever it
+describes `pr-check` as an invocable Make target or a public capability. The
+single publication ceremony is `make pr`. It runs `pr-preflight` followed by
+`ops/scripts/run_pr_gate.sh`, and it opens or updates GitHub only when
+`OPEN_PR=1`.
+
+For a gate-only diagnosis, use `OPEN_PR=0 make pr` (or `OPEN_PR=0 l9 pr`). Do
+not invoke `make pr-check`: the target is removed. `make precommit-repo`
+remains a remediation-local verification leaf; it is not a replacement public
+publication ceremony. This amendment is the current instruction when it
+conflicts with the historical append-only material above.
+
 **`PR_REMEDIATE`:** Makefile default is `1` (after open, emit
 `L9_AGENT_REQUIRED` so the agent may spawn `l9-pr-remediation`).
 `open_pr_after_gate.sh` itself defaults to `0` if the env is unset.
