@@ -24,9 +24,8 @@ RECEIPT_SCHEMA = PACK / "contracts/repo-docs-receipt.schema.json"
 POINTER_MAP = PACK / "references/pointer-heading-map.yaml"
 HEADINGS = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
 DIRECTIVES = re.compile(r"<!--\s*L9_DOCS\s*\n(.*?)\n\s*-->", re.DOTALL)
-PYTHON_FENCE = re.compile(
-    r"^```python[^\S\r\n]*\r?\n(?P<source>.*?)^```[^\S\r\n]*(?:\r?\n|$)",
-    re.MULTILINE | re.DOTALL,
+PYTHON_FENCE_OPEN = re.compile(
+    r"^(?P<indent> {0,3})(?P<delimiter>`{3,}|~{3,})[ \t]*python[ \t]*(?:\r?\n|$)"
 )
 
 
@@ -218,6 +217,37 @@ def pointer_validate_root(root: Path) -> dict[str, Any]:
     return {"status": status, "findings": findings + unknown, "files": rows}
 
 
+def _python_fences(text: str) -> list[tuple[int, str]]:
+    """Extract declared Python fences using the Markdown delimiter rules.
+
+    This intentionally recognizes only ``python`` info strings. A closing
+    fence must use the opener's delimiter character and be at least as long as
+    the opener; Markdown permits a longer close. The scanner never attempts to
+    recover an unclosed fence or inspect arbitrary document content.
+    """
+    lines = text.splitlines(keepends=True)
+    fences: list[tuple[int, str]] = []
+    index = 0
+    while index < len(lines):
+        opening = PYTHON_FENCE_OPEN.match(lines[index])
+        if not opening:
+            index += 1
+            continue
+        delimiter = opening.group("delimiter")
+        character = re.escape(delimiter[0])
+        closing = re.compile(rf"^ {{0,3}}{character}{{{len(delimiter)},}}[ \t]*(?:\r?\n|$)")
+        source_start = index
+        index += 1
+        source: list[str] = []
+        while index < len(lines) and not closing.match(lines[index]):
+            source.append(lines[index])
+            index += 1
+        if index < len(lines):
+            fences.append((source_start, "".join(source)))
+            index += 1
+    return fences
+
+
 def python_fence_validate_root(root: Path) -> dict[str, Any]:
     """Parse only explicitly marked Python fences in declared root documents.
 
@@ -233,13 +263,13 @@ def python_fence_validate_root(root: Path) -> dict[str, Any]:
         if not path.is_file():
             continue
         text = path.read_text(encoding="utf-8")
-        fences = list(PYTHON_FENCE.finditer(text))
+        fences = _python_fences(text)
         rows.append({"path": rel, "fence_count": len(fences)})
-        for match in fences:
+        for fence_start, source in fences:
             try:
-                ast.parse(match.group("source"), filename=rel)
+                ast.parse(source, filename=rel)
             except SyntaxError as exc:
-                fence_line = text.count("\n", 0, match.start()) + 1
+                fence_line = fence_start + 1
                 source_line = fence_line + (exc.lineno or 1)
                 findings.append(f"{rel}:{source_line}: invalid Python fence: {exc.msg}")
     return {"status": "FAIL" if findings else "PASS", "findings": findings, "files": rows}
