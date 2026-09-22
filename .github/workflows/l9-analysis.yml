@@ -199,6 +199,9 @@ jobs:
       actions: read
       checks: write
       contents: read
+      # The reusable Core publisher may upload the normalized SARIF bundle to
+      # GitHub code scanning; a called workflow cannot elevate this permission.
+      security-events: write
     with:
       artifact-name: ${{ needs.analyze.outputs.artifact-name }}
       profile: pr_fast
