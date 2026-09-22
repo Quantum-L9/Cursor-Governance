@@ -458,14 +458,6 @@ def audit_repository(
         filetree = _failed_filetree_state("BLOCKED", detail)
         inventory = FiletreeInventory()
         structural.append(_structural_failure("filetree", "BLOCKED", detail))
-    llm, llm_mutations = build_llm_state(
-        root, policy, directives, llm_base_url_value, write_llm, snapshot
-    )
-    run_mutations.extend(llm_mutations)
-    if llm["status"] == "BLOCKED":
-        structural.append(
-            _structural_failure(LLM_SURFACE_ID, "BLOCKED", "; ".join(llm["findings"]))
-        )
     if (
         write_module_readmes
         and module_cap["status"] == "AVAILABLE"
@@ -501,6 +493,19 @@ def audit_repository(
         else:
             filetree = refreshed
             run_mutations.extend(later_mutations)
+    # ``filetree.md`` is an owned projection and may have been created or
+    # refreshed above. Re-observe the repository before rendering llm.txt so
+    # its digest-backed manifest is validated against the post-generation
+    # consumer state rather than the pre-write snapshot.
+    snapshot = build_consumer_snapshot(root, policy, revision, changed_files=changed_files)
+    llm, llm_mutations = build_llm_state(
+        root, policy, directives, llm_base_url_value, write_llm, snapshot
+    )
+    run_mutations.extend(llm_mutations)
+    if llm["status"] == "BLOCKED":
+        structural.append(
+            _structural_failure(LLM_SURFACE_ID, "BLOCKED", "; ".join(llm["findings"]))
+        )
     if "filetree.md" in run_mutations:
         impacted = sorted(set(impact.get("impacted_surfaces", [])) | {FILETREE_SURFACE_ID})
         impact["impacted_surfaces"] = impacted

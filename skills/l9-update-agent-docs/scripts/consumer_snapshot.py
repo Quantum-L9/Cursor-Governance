@@ -160,6 +160,7 @@ def _project_facts(root: Path) -> list[dict[str, Any]]:
             if not isinstance(value, str):
                 continue
             module = value.split(":", 1)[0].strip()
+            assignment = re.search(rf"^\s*{re.escape(str(name))}\s*=", text, re.MULTILINE)
             candidates = [
                 f"{module.replace('.', '/')}.py",
                 f"src/{module.replace('.', '/')}.py",
@@ -170,7 +171,7 @@ def _project_facts(root: Path) -> list[dict[str, Any]]:
                     "id": f"project-script:{name}",
                     "kind": "project_script",
                     "path": "pyproject.toml",
-                    "line": _line(text, f'"{name}"') if f'"{name}"' in text else None,
+                    "line": _line(text, assignment.start()) if assignment else None,
                     "name": str(name),
                     "value": value,
                     "resolution": resolution,

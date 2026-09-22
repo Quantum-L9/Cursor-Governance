@@ -219,10 +219,30 @@ def assess_surface_obligations(
             obligation["blockers"] = sorted(set(obligation["blockers"] + [detail]))
             continue
 
+        root_contract = analyzer_id in {
+            "architecture-index-contract-v1",
+            "root-agent-contract-v1",
+        }
+        if root_contract and not isinstance(snapshot, dict):
+            detail = "snapshot-aware root contract assessment requires consumer snapshot evidence"
+            obligation["assessment"] = {
+                "analyzer": analyzer_id,
+                "status": "BLOCKED",
+                "findings": [],
+                "disposition": "UNKNOWN",
+                "mutation_guard": guard,
+            }
+            obligation["lifecycle"] = {
+                "status": "BLOCKED",
+                "reason": "root contract evidence is unavailable",
+                "terminal": False,
+            }
+            obligation["blockers"] = sorted(set(obligation["blockers"] + [detail]))
+            continue
         if analyzer_id == "architecture-index-contract-v1":
-            result = assess_architecture_index(root, root / target_rel, snapshot or {})
+            result = assess_architecture_index(root, root / target_rel, snapshot)
         elif analyzer_id == "root-agent-contract-v1":
-            result = assess_root_agent_contract(root, root / target_rel, snapshot or {})
+            result = assess_root_agent_contract(root, root / target_rel, snapshot)
         else:
             result = analyzer(root, root / target_rel)
         if result.get("status") == "BLOCKED":
@@ -280,10 +300,6 @@ def assess_surface_obligations(
                 }
             )
 
-        root_contract = analyzer_id in {
-            "architecture-index-contract-v1",
-            "root-agent-contract-v1",
-        }
         if normalized:
             handoff = root_contract or any(
                 row.get("remediation_class") == "HANDOFF" for row in normalized

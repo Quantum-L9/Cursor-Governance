@@ -78,13 +78,6 @@ def _link_findings(root: Path, snapshot: dict[str, Any], rel: str) -> list[dict[
         raw = str(link["raw"])
         target = link.get("target")
         line = int(link["line"])
-        # A root document may navigate to product or generated documentation
-        # that is intentionally external to this compiler's topology.  The
-        # validator is authority-bounded: only references into the root
-        # authority set are structural assertions; component manifests and
-        # agent-contract file entries carry their own closed-world checks.
-        if target not in _ROOT_AUTHORITY_DOCUMENTS:
-            continue
         if target is None:
             findings.append(
                 _finding(
@@ -96,6 +89,13 @@ def _link_findings(root: Path, snapshot: dict[str, Any], rel: str) -> list[dict[
                     source=rel,
                 )
             )
+            continue
+        # A root document may navigate to product or generated documentation
+        # that is intentionally external to this compiler's topology.  The
+        # validator is authority-bounded: only references into the root
+        # authority set are structural assertions; component manifests and
+        # agent-contract file entries carry their own closed-world checks.
+        if target not in _ROOT_AUTHORITY_DOCUMENTS:
             continue
         target_path = root / str(target)
         if not target_path.exists():
@@ -283,8 +283,17 @@ def _architecture_block_findings(root: Path, rel: str) -> list[dict[str, Any]]:
             )
         ]
     findings: list[dict[str, Any]] = []
+    root_resolved = root.resolve()
     for item in components:
-        if not isinstance(item, str) or not (root / item).exists():
+        candidate = (root / item).resolve() if isinstance(item, str) else None
+        contained = False
+        if candidate is not None:
+            try:
+                candidate.relative_to(root_resolved)
+                contained = True
+            except ValueError:
+                contained = False
+        if candidate is None or not contained or not candidate.exists():
             findings.append(
                 _finding(
                     "architecture.component_missing",

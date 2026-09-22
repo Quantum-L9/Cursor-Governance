@@ -14,6 +14,7 @@ sys.path.insert(0, str(SCRIPTS))
 from consumer_snapshot import build_consumer_snapshot  # noqa: E402
 from doc_llm import render_llm_txt, validate_llm_txt  # noqa: E402
 from doc_policy import load_policy  # noqa: E402
+from doc_surface_analysis import assess_surface_obligations  # noqa: E402
 from repo_docs import audit_repository, revision_identity  # noqa: E402
 from root_contracts import (  # noqa: E402
     architecture_delta,
@@ -112,6 +113,7 @@ def test_api_projection_mutation_creates_llm_obligation(tmp_path: Path) -> None:
     assert "api_reference" in surfaces
     assert "llm_txt" in surfaces
     assert "llm.txt" in receipt["changes"]["run_mutations"]
+    assert "filetree.md" in receipt["consumer_snapshot"]["documents"]
 
 
 def test_ci_locked_uv_workflow_requires_a_lockfile(tmp_path: Path) -> None:
@@ -185,3 +187,60 @@ def test_architecture_contract_checks_components_and_emits_delta(tmp_path: Path)
             "evidence_id": "pyproject.toml",
         }
     ]
+
+
+def test_project_script_snapshot_records_a_numeric_source_line(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    write(
+        root / "pyproject.toml",
+        "[project]\nname = 'consumer'\nrequires-python = '>=3.12'\n\n"
+        "[project.scripts]\nconsumer = 'consumer.cli:main'\n",
+    )
+    write(root / "consumer" / "cli.py", "def main():\n    return 0\n")
+    fact = next(item for item in snapshot(root)["facts"] if item["kind"] == "project_script")
+    assert fact["line"] == 6
+    assert fact["resolution"] == "consumer/cli.py"
+
+
+def test_root_contract_rejects_escaped_reference_before_authority_filter(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    write(root / "README.md", "# Consumer\n\n[escape](../outside.md)\n")
+    findings = assess_root_agent_contract(root, root / "README.md", snapshot(root))["findings"]
+    assert "root.reference.escaped_root" in {row["rule_id"] for row in findings}
+
+
+def test_architecture_component_must_remain_under_repository_root(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    outside = tmp_path / "outside.py"
+    outside.write_text("# external\n", encoding="utf-8")
+    write(
+        root / "ARCHITECTURE.md",
+        "# Architecture\n\n<!-- L9_ARCHITECTURE_COMPONENTS\ncomponents: [../outside.py]\n-->\n",
+    )
+    findings = assess_architecture_index(root, root / "ARCHITECTURE.md", snapshot(root))["findings"]
+    assert "architecture.component_missing" in {row["rule_id"] for row in findings}
+
+
+def test_snapshot_aware_root_assessment_blocks_when_evidence_is_absent(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    policy = load_policy()
+    obligation = {
+        "surface": "architecture",
+        "target": {"path": "ARCHITECTURE.md", "present": True},
+        "evidence": [],
+        "blockers": [],
+        "required_action": {},
+        "lifecycle": {},
+        "validation": {"required": [], "results": []},
+    }
+    result = assess_surface_obligations(root, policy, [obligation], snapshot=None)[0]
+    assert result["assessment"]["status"] == "BLOCKED"
+    assert result["lifecycle"]["status"] == "BLOCKED"
