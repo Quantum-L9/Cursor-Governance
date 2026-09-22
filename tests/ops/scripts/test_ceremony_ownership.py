@@ -82,6 +82,17 @@ def test_current_publication_doctrine_names_one_gate_only() -> None:
             assert "`pr-check` as an invocable Make target" in text
 
 
+def test_active_agents_publication_section_has_no_retired_gate() -> None:
+    """The live publication section cannot rely on a later amendment to be correct."""
+    agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+    current_section = agents.split("## 4. Publish path (capability graph)", 1)[1].split(
+        "<!-- AGENTS_PR_CHECK_TARGET_REMOVED_V2 -->", 1
+    )[0]
+    assert not REMOVED_GATE.search(current_section), (
+        "active AGENTS publication doctrine still names the removed pr-check command"
+    )
+
+
 def test_live_teachers_do_not_teach_postcommit_precommit_repo() -> None:
     failures: list[str] = []
     for path in _iter_scan_paths():

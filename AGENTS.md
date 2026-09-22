@@ -226,17 +226,17 @@ Makefile is a capability graph.
 
 | Kind | Verbs |
 |---|---|
-| **PUBLIC** | `improve`, `pr-check`, `pr` |
+| **PUBLIC** | `improve`, `pr` |
 | **INTERNAL** | `pr-preflight`, `precommit`, `precommit-repo` |
 
 This repo does **not** use a git commit hook. Do not run `pre-commit install`.
 
 1. `make improve` composes L4 wrappers. Apply the two kernels, commit
    revisions, then `make improve IMPROVE_RECORD=1`.
-2. `make pr-check` is quality only (changed-files pre-commit + locked ruff /
-   security / pytest). No L4. Empty changeset vs `PR_BASE` is PASS. A PASS
-   writes `.l9/pr/gate-receipt.json`. The same HEAD + worktree + `PR_BASE` is
-   not re-gated.
+2. **`make pr`** runs the changed-files pre-commit, locked ruff, security, and
+   pytest gate after L4 release. Empty changeset vs `PR_BASE` is PASS. A PASS
+   writes `.l9/pr/gate-receipt.json`, so the same HEAD + worktree + `PR_BASE`
+   is not re-gated.
 3. Preferred path to GitHub = **`make pr`** after L4 release — the only route
    that runs the checkers. Mechanically denied at every phase: `make push`,
    MCP `create_pull_request` / `push_files`. Raw `git push` / `gh pr create` /
@@ -246,10 +246,10 @@ This repo does **not** use a git commit hook. Do not run `pre-commit install`.
    message to stop you — prefer `make pr` because it gates, not because the
    alternative errors. `make pr` / `PR` / `Pr` / `pR` are equivalent.
 4. Failure loop: diagnose → fix → (`make improve` if kernels apply) →
-   `make pr-check` → `make pr` **once**. Do not run a second full gate on an
-   unchanged tree.
-5. `make pr` runs INTERNAL `pr-preflight`, then `pr-check` (receipt skip if
-   unchanged), then `open_pr_after_gate.sh`.
+   `make pr` **once**. Do not run a second full gate on an unchanged tree.
+5. `make pr` runs INTERNAL `pr-preflight`, then
+   `ops/scripts/run_pr_gate.sh` (receipt skip if unchanged), then
+   `open_pr_after_gate.sh`.
 
 `make pr` auto-heals derived artifacts via
 `ops/scripts/sync_generated_artifacts.py` (WARN to stage, not a hard fail).
@@ -281,7 +281,7 @@ the user invokes `/l9-pr-remediation`. Cap in the skill pack is **3**
 Handoff: `.l9/pr/pr-remediation-handoff.json`. Live rule:
 `rules/48-make-pr-remediation.mdc`.
 
-Do not open or push if `make pr` / `make pr-check` fails.
+Do not open or push if `make pr` fails.
 
 CI Lint is `uv run ruff`, not the pre-commit CLI. Pin lockstep:
 `.pre-commit-config.yaml` ruff `rev` matches `requirements.txt`.
