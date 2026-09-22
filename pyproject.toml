@@ -54,7 +54,7 @@ dev = [
 # Portable UI Operator / AWS secrets resolve — NOT required for make pr.
 # Install: uv sync --extra ui-operator && playwright install
 ui-operator = [
-    "playwright==1.62.0",
+    "playwright==1.63.0",
     "boto3>=1.34,<2",
 ]
 
