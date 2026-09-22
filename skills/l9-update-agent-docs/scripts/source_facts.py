@@ -41,14 +41,22 @@ _SHELL_FUNCTION_RE = re.compile(
 )
 _SHELL_SOURCE_RE = re.compile(r"^\s*(?:source|\.)\s+([^\s;]+)", re.MULTILINE)
 _SHELL_ENV_RE = re.compile(r"\$\{?([A-Z][A-Z0-9_]*)\}?")
+_SHELL_ASSIGNMENT_RE = re.compile(
+    r"^\s*(?:(?:local|readonly)\s+|declare(?:\s+-[A-Za-z]+)?\s+)?"
+    r"([A-Z][A-Z0-9_]*)=(.*)$",
+    re.MULTILINE,
+)
 _TERRAFORM_BLOCK_RE = re.compile(
     r'^\s*(resource|data|module|variable)\s+"([^"]+)"(?:\s+"([^"]+)")?\s*\{', re.MULTILINE
 )
-_DOCKER_FROM_RE = re.compile(r"^\s*FROM\s+([^\s]+)", re.MULTILINE | re.IGNORECASE)
+_DOCKER_FROM_RE = re.compile(
+    r"^\s*FROM(?:\s+--[A-Za-z][A-Za-z0-9-]*(?:=[^\s]+)?)*\s+([^\s]+)",
+    re.MULTILINE | re.IGNORECASE,
+)
 _DOCKER_ENTRYPOINT_RE = re.compile(
     r"^\s*(?:ENTRYPOINT|CMD)\s+(.+?)\s*$", re.MULTILINE | re.IGNORECASE
 )
-_COMMENT_RE = re.compile(r"^\s*(?://|#)\s*(.+?)\s*$", re.MULTILINE)
+_COMMENT_RE = re.compile(r"^\s*(?://|#(?!\!))\s*(.+?)\s*$", re.MULTILINE)
 
 
 def load_source_evidence_registry() -> dict[str, Any]:
@@ -124,6 +132,25 @@ def _summary(text: str | None, limit: int = 260) -> str | None:
 def _leading_comment(text: str) -> str | None:
     match = _COMMENT_RE.search(text[:1200])
     return _summary(match.group(1)) if match else None
+
+
+def _shell_environment_names(text: str) -> list[str]:
+    """Return uppercase inputs not established as shell-local variables.
+
+    A bare uppercase expansion is evidence of an external environment input only
+    when the script does not assign that name. An assignment that reads its own
+    prior value (``NAME=${NAME:-default}``) is an explicit environment-default
+    declaration, so it remains an input even though it also creates a local
+    value for later lines.
+    """
+    assignments = list(_SHELL_ASSIGNMENT_RE.finditer(text))
+    local_names = {match.group(1) for match in assignments}
+    external = {name for name in _SHELL_ENV_RE.findall(text) if name not in local_names}
+    for assignment in assignments:
+        name = assignment.group(1)
+        if name in _SHELL_ENV_RE.findall(assignment.group(2)):
+            external.add(name)
+    return sorted(external)
 
 
 def _python_signature(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
@@ -297,7 +324,7 @@ def _extract_shell(path: Path, text: str, rel: str) -> SourceFact:
     relationships = [_import_relation(value, rel) for value in sourced]
     relationships.extend(
         RelationshipDoc(kind="configures", target=value, source=rel)
-        for value in sorted(set(_SHELL_ENV_RE.findall(text)))
+        for value in _shell_environment_names(text)
     )
     return SourceFact(
         path=rel,
@@ -385,10 +412,17 @@ def extract_source_fact(
         return None, None
     try:
         rel = path.relative_to(root).as_posix()
+    except ValueError:
+        return None, ExtractionIssue(
+            path=path.name,
+            language=language,
+            detail="source path is outside the repository root",
+        )
+    try:
         text = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as exc:
         return None, ExtractionIssue(
-            path=str(path), language=language, detail=f"unreadable source: {exc}"
+            path=rel, language=language, detail=f"unreadable source: {exc}"
         )
     try:
         if language == "python":

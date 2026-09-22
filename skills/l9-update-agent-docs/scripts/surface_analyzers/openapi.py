@@ -7,12 +7,14 @@ an API repair. All findings hand off to the declared API contract owner.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
 import yaml
 
 _HTTP_METHODS = frozenset({"get", "put", "post", "delete", "options", "head", "patch", "trace"})
+_OPENAPI_VERSION = re.compile(r"^3\.(?:0|1)\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
 
 
 def _finding(
@@ -67,13 +69,13 @@ def analyze(root: Path, target: Path) -> dict[str, Any]:
 
     findings: list[dict[str, Any]] = []
     version = data.get("openapi")
-    if not isinstance(version, str) or not version.startswith("3."):
+    if not isinstance(version, str) or not _OPENAPI_VERSION.fullmatch(version):
         findings.append(
             _finding(
                 "openapi.version.supported",
                 property_name="openapi",
                 observed=repr(version),
-                expected="an OpenAPI 3.x version string",
+                expected="a supported OpenAPI 3.0.x or 3.1.x version string",
                 line=_line_for(text, "openapi"),
             )
         )
