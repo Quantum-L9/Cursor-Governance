@@ -86,7 +86,8 @@ jobs:
           set -euo pipefail
           echo "artifact-name=l9-semgrep-${MATRIX_ID}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
 
-      - name: Run semgrep (produce raw report)
+      - id: semgrep
+        name: Run semgrep (produce raw report)
         if: steps.gov.outputs.enabled == 'true'
         run: |
           set -euo pipefail
@@ -94,6 +95,9 @@ jobs:
           # `semgrep` would float onto a future major and silently change
           # findings/normalization between runs of the same commit.
           python -m pip install --upgrade pip 'semgrep>=1.100.0,<2.0.0'
+          provider_version="$(semgrep --version | head -n1)"
+          test -n "${provider_version}"
+          echo "provider-version=${provider_version}" >> "$GITHUB_OUTPUT"
           mkdir -p "artifacts/raw/semgrep/${L9_MATRIX_ID}"
           # ── PER-LANGUAGE RULESETS ──────────────────────────────────────────
           # Python repo:   --config p/python
@@ -126,6 +130,7 @@ jobs:
           root: .
           snapshot-id: ${{ github.sha }}
           revision: ${{ github.sha }}
+          provider-version: ${{ steps.semgrep.outputs.provider-version }}
           strict: ${{ steps.gov.outputs.strict }}
           required: ${{ steps.gov.outputs.required-provider }}
           policy: ${{ steps.gov.outputs.sdk-policy }}
