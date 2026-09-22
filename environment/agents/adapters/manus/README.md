@@ -5,8 +5,8 @@ path: environment/agents/adapters/manus/README.md
 layer: adapter
 owner: governance-control-plane
 status: active
-version: 4.0.0
-updated: 2026-09-19
+version: 5.0.0
+updated: 2026-09-20
 /L9_META -->
 
 # Manus adapter — governance MCP and native Infisical capability binding
@@ -81,11 +81,11 @@ Use [`render_mcp_connector.py`](render_mcp_connector.py) to create a Custom MCP 
 
 ## Package-owned ordinary memory MCP
 
-The adapter now carries a **separate** [`memory-mcp-connector.json`](memory-mcp-connector.json) for ordinary agent memory activity. Its renderer, [`render_memory_mcp_connector.py`](render_memory_mcp_connector.py), produces a local stdio Custom MCP draft that starts [`serve_memory_mcp.sh`](serve_memory_mcp.sh). That launcher resolves the scoped Manus signed assertion before `exec`-ing the exact pinned `l9-memory-server --transport stdio` package entrypoint. No proxy translates tools, no wrapper stores a memory credential, and package-owned `MCPToolApplication` remains the tool authority.
+The adapter carries a **separate** [`memory-mcp-connector.json`](memory-mcp-connector.json) for ordinary agent memory activity. Its renderer, [`render_memory_mcp_connector.py`](render_memory_mcp_connector.py), produces a local stdio Custom MCP draft that starts [`serve_memory_mcp.sh`](serve_memory_mcp.sh). A durable draft may contain one encrypted connector environment value: a JSON map restricted to the shared agents door and Manus's own signing key. The launcher validates that exact scope, derives the public Manus grant from `agent_registry.yaml`, materializes mode-0600 maps in a unique mode-0700 runtime directory, unsets the connector value, and removes the directory when the package process exits. No proxy translates tools, no wrapper stores human or peer-agent authority, and package-owned `MCPToolApplication` remains the tool authority.
 
 This connector exposes the package’s canonical tools, including `memory.search`, `memory.hydrate`, `memory.write_agent`, `memory.phase_lock`, `memory.write_governed`, conflict checks, and package health/capability receipts. Memory authorization is determined by the signed Manus principal and its scoped grants inside the package. The connector does not expose the human door, promote or deletion authority beyond what the package grants, a provider endpoint, a generic shell, or lifecycle start/close. Lifecycle remains intentionally isolated in `l9-governance`.
 
-The connection is intentionally fail-closed. A missing, partial, wrong-agent, or human-door assertion causes the stdio command to exit before the package can select its compatibility `local-operator` principal. Provision the assertion/grant maps on the host that launches the connector; never put raw door material in the Manus model environment, connector draft, repository, or task text.
+The connection is intentionally fail-closed. A missing, partial, wrong-agent, peer-key, or human-door assertion causes the stdio command to exit before the package can select its compatibility `local-operator` principal. For cross-chat use, place only the Manus-scoped map in the Custom MCP connector's encrypted environment using the renderer; do not add it to a project environment, repository, task text, header, URL, or a lifecycle connector. The registry-derived grant is not stored as a secret and is created only for the child process.
 
 ## Native Infisical connector configuration
 

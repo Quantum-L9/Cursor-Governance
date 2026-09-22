@@ -21,6 +21,7 @@ fi
 GOVERNANCE="$(cd "$GOVERNANCE" && pwd -P)"
 PYTHON="$GOVERNANCE/.venv/bin/python"
 MEMORY_SERVER="$GOVERNANCE/.venv/bin/l9-memory-server"
+MATERIALIZER="$SCRIPT_DIR/materialize_memory_authority.py"
 
 if [ ! -x "$PYTHON" ] || [ ! -x "$MEMORY_SERVER" ]; then
   printf '%s\n' 'manus-memory-mcp ERROR: pinned l9-graphite-memory runtime is unavailable' >&2
@@ -30,6 +31,10 @@ if [ ! -f "$GOVERNANCE/CANONICAL_LAW.md" ]; then
   printf 'manus-memory-mcp ERROR: no governance SSOT at %s\n' "$GOVERNANCE" >&2
   exit 1
 fi
+if [ ! -f "$MATERIALIZER" ]; then
+  printf '%s\n' 'manus-memory-mcp ERROR: scoped authority materializer is unavailable' >&2
+  exit 1
+fi
 if [ -n "${L9_MEMORY_HUMAN_DOOR_SECRET:-}" ]; then
   printf '%s\n' 'manus-memory-mcp ERROR: refusing human memory door in an agent process' >&2
   exit 1
@@ -37,6 +42,40 @@ fi
 if [ -n "${L9_MEMORY_AGENT_ID:-}" ] && [ "$L9_MEMORY_AGENT_ID" != "manus" ]; then
   printf '%s\n' 'manus-memory-mcp ERROR: L9_MEMORY_AGENT_ID must be manus' >&2
   exit 1
+fi
+
+# A persistent connector may receive only the shared agent door and Manus's own
+# signing key in its encrypted connector environment. Never accept the human
+# door, peer-agent keys, a provider URL, or a pre-minted assertion. The helper
+# derives the public Manus grant from the canonical registry and writes both
+# maps below a unique 0700 runtime directory for this child process only.
+RUNTIME_PARENT="${XDG_RUNTIME_DIR:-/tmp}"
+if [ ! -d "$RUNTIME_PARENT" ]; then
+  RUNTIME_PARENT=/tmp
+fi
+umask 077
+if ! RUNTIME_AUTHORITY_DIRECTORY="$(mktemp -d "$RUNTIME_PARENT/l9-manus-memory.XXXXXX")"; then
+  printf '%s\n' 'manus-memory-mcp ERROR: could not create private runtime authority directory' >&2
+  exit 1
+fi
+if [ -z "$RUNTIME_AUTHORITY_DIRECTORY" ] || [ ! -d "$RUNTIME_AUTHORITY_DIRECTORY" ]; then
+  printf '%s\n' 'manus-memory-mcp ERROR: runtime authority directory is missing after mktemp' >&2
+  exit 1
+fi
+chmod 700 "$RUNTIME_AUTHORITY_DIRECTORY"
+cleanup() {
+  rm -rf "$RUNTIME_AUTHORITY_DIRECTORY"
+}
+trap cleanup EXIT HUP INT TERM
+
+if [ -n "${L9_MANUS_MEMORY_AUTHORITY_JSON:-}" ]; then
+  printf '%s' "$L9_MANUS_MEMORY_AUTHORITY_JSON" \
+    | "$PYTHON" "$MATERIALIZER" \
+      --governance "$GOVERNANCE" \
+      --output-directory "$RUNTIME_AUTHORITY_DIRECTORY"
+  unset L9_MANUS_MEMORY_AUTHORITY_JSON
+  export L9_MEMORY_SECRET_MAP="$RUNTIME_AUTHORITY_DIRECTORY/agent_tokens.local.json"
+  export L9_MEMORY_GRANTS_MAP="$RUNTIME_AUTHORITY_DIRECTORY/agent_grants.json"
 fi
 
 # The helper writes a short-lived 0600 source file, exports only Manus's scoped
@@ -64,4 +103,9 @@ if [ "${#missing[@]}" -ne 0 ]; then
   exit 1
 fi
 
-exec "$MEMORY_SERVER" --transport stdio
+# Do not exec: the parent owns cleanup of the per-process authority directory.
+set +e
+"$MEMORY_SERVER" --transport stdio
+server_status=$?
+set -e
+exit "$server_status"

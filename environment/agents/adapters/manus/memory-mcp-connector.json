@@ -6,9 +6,9 @@
     "layer": "adapter",
     "owner": "memory-control-plane",
     "status": "active",
-    "version": "1.0.0",
-    "updated": "2026-09-19",
-    "note": "No-secret carrier for the separate package-owned signed Manus memory MCP stdio lane. Render a local absolute command draft with render_memory_mcp_connector.py; never add an HTTP URL, provider credential, human door, or raw assertion here."
+    "version": "2.0.0",
+    "updated": "2026-09-20",
+    "note": "Carrier for the separate package-owned signed Manus memory MCP stdio lane. A local draft may place only the Manus-scoped agent door and Manus signing key in the Custom MCP encrypted environment; the launcher derives the public Manus grant and removes per-process material on exit. Never add an HTTP URL, provider credential, human door, peer key, or raw assertion here."
   },
   "name": "l9-memory-manus",
   "transport": "stdio",
@@ -18,6 +18,12 @@
     "agent_id": "manus",
     "human_door": "forbidden",
     "local_operator_fallback": "forbidden"
+  },
+  "authority_delivery": {
+    "mode": "encrypted-connector-environment",
+    "payload": "manus-scoped-agent-door-and-signing-key-only",
+    "grant": "derived-from-canonical-agent-registry",
+    "materialization": "per-process-0600-runtime-files-removed-on-exit"
   },
   "package": {
     "distribution": "l9-graphite-memory",
