@@ -470,7 +470,8 @@ Context: `tests/`, `templates/`, and `startup/` were deleted (superseded by v6 L
   `AGENTS.md` + `ops/hooks/session_start_bootstrap.sh` instead.
 - [x] **`execution-governance/README.md`** — **archived** (2026-07-19), **deleted**
   (2026-08-28, TODO A1) after harvest C3/C1/C4 landed in `audit_rules_corpus.py`.
-- [ ] **`README.md`** (GlobalCommands root) — startup/templates references
+- [x] **`README.md`** (GlobalCommands root) — refreshed ownership metadata and
+  removed the stale `C_GOV_FILES/` directory listing (2026-09-21).
 - [x] **`C_GOV_FILES/`** duplicates — **path already deleted** (2026-07-05). Remaining work is
   doc scrub only — see DELETE LIST A8.
 - [ ] **`workflows/Dags-Harvest/DAG-Harvest-5.md`** — startup references (verify)

@@ -50,9 +50,9 @@ class WorkflowPinTests(unittest.TestCase):
             self._run(_load_mod(), "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"), 0
         )
 
-    def test_first_party_org_tag_allowed(self) -> None:
+    def test_first_party_org_tag_fails(self) -> None:
         self.assertEqual(
-            self._run(_load_mod(), "Quantum-L9/.github/.github/workflows/governance-pr.yml@v1"), 0
+            self._run(_load_mod(), "Quantum-L9/.github/.github/workflows/governance-pr.yml@v1"), 1
         )
 
     def test_local_action_exempt(self) -> None:

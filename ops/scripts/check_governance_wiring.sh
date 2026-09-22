@@ -207,9 +207,9 @@ done
 
 echo ""
 echo "=== SSOT clone freshness ($GC) ==="
-SSOT_BRANCH_EXPECTED="${GOVERNANCE_GITHUB_BRANCH:-main}"
-if [ ! -d "$GC/.git" ]; then
-  fail "SSOT clone missing .git at $GC"
+SSOT_BRANCH_EXPECTED="main"
+if ! git -C "$GC" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  fail "SSOT checkout is not a Git worktree at $GC"
 else
   ssot_branch=$(git -C "$GC" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
   if [ "$ssot_branch" = "$SSOT_BRANCH_EXPECTED" ]; then

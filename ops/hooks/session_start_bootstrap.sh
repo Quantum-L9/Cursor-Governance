@@ -69,8 +69,10 @@ run_reconciler() {
   fi
 }
 
-GOVERNANCE_REMOTE="${GOVERNANCE_GITHUB_REMOTE:-https://github.com/Quantum-L9/Cursor-Governance.git}"
-GOVERNANCE_BRANCH="${GOVERNANCE_GITHUB_BRANCH:-main}"
+# The session hook is a trust boundary: governance code is always fetched from
+# its canonical source, never from an inherited process environment.
+GOVERNANCE_REMOTE="https://github.com/Quantum-L9/Cursor-Governance.git"
+GOVERNANCE_BRANCH="main"
 
 # ── Chicken-egg: ensure activator exists, then run foreground BEFORE resolve ──
 chicken_egg_minimal_clone() {
@@ -118,8 +120,6 @@ ACTIVATE_BIN="$(resolve_activator || true)"
 if [ -n "${ACTIVATE_BIN:-}" ] && [ -x "$ACTIVATE_BIN" ]; then
   ACTIVATE_OUT="$(
     CURSOR_PROJECT_DIR="$REPO" \
-    GOVERNANCE_GITHUB_REMOTE="$GOVERNANCE_REMOTE" \
-    GOVERNANCE_GITHUB_BRANCH="$GOVERNANCE_BRANCH" \
     bash "$ACTIVATE_BIN" 2>/dev/null || true
   )"
   STATUS_LINE="$(printf '%s\n' "$ACTIVATE_OUT" | grep '^STATUS ' | tail -n 1 || true)"

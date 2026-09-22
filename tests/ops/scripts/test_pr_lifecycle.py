@@ -495,9 +495,10 @@ def _stamp_kernel(repo: Path) -> None:
     report whose deltas name files that exist, so the artifact is part of
     fixture setup now rather than a bare CLI call.
     """
-    delta = "a.txt"
-    if not (repo / delta).exists():
-        (repo / delta).write_text("a\n", encoding="utf-8")
+    alignment_delta = "kernel-ra-fixture.txt"
+    validation_delta = "kernel-vr-fixture.txt"
+    (repo / alignment_delta).write_text("alignment\n", encoding="utf-8")
+    (repo / validation_delta).write_text("validation\n", encoding="utf-8")
     report = repo / ".l9" / "autonomy" / "kernel-apply.md"
     report.parent.mkdir(parents=True, exist_ok=True)
     report.write_text(
@@ -506,9 +507,12 @@ def _stamp_kernel(repo: Path) -> None:
         "kernels: [recursive_alignment, validate_repair]\n"
         "convergence_status: converged\n"
         "deltas:\n"
-        f"  - path: {delta}\n"
+        f"  - path: {alignment_delta}\n"
         "    kernel: recursive_alignment\n"
-        "    note: fixture apply\n"
+        "    note: prepared the lifecycle kernel fixture\n"
+        f"  - path: {validation_delta}\n"
+        "    kernel: validate_repair\n"
+        "    note: validated the lifecycle kernel fixture\n"
         "---\n\n## Recursive Alignment\n\nfixture\n\n## Validate & Repair\n\nfixture\n",
         encoding="utf-8",
     )
