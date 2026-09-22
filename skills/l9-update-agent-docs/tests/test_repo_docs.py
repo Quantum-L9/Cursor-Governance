@@ -649,6 +649,39 @@ def test_invalid_root_python_fence_is_bounded_to_declared_pointer_documents(tmp_
     assert "invalid Python fence" in fence["findings"][0]
 
 
+def test_root_python_fence_scanner_accepts_markdown_indentation_and_delimiters(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    for fence in (
+        "   ```python\ndef broken(:\n   ```\n",
+        "````python\ndef broken(:\n````\n",
+        "~~~python\ndef broken(:\n~~~\n",
+    ):
+        write(root / "README.md", "# Repo\n\n" + fence)
+        checked = dp.python_fence_validate_root(root)
+        assert checked["status"] == "FAIL"
+        assert next(row for row in checked["files"] if row["path"] == "README.md") == {
+            "path": "README.md",
+            "fence_count": 1,
+        }
+
+
+def test_root_python_fence_scanner_requires_the_opening_delimiter_length(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    write(
+        root / "README.md",
+        "# Repo\n\n````python\nx = 1\n```\ny = 2\n````\n",
+    )
+    assert dp.python_fence_validate_root(root)["status"] == "FAIL"
+    write(root / "README.md", "# Repo\n\n````python\nx = 1\n`````\n")
+    assert dp.python_fence_validate_root(root)["status"] == "PASS"
+
+
 def test_invalid_root_python_fence_is_a_receipt_structural_failure(tmp_path: Path):
     root = tmp_path / "repo"
     root.mkdir()
