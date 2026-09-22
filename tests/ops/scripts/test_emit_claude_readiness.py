@@ -549,7 +549,7 @@ def _init_fake_gov(
     fake_py.chmod(0o755)
 
     (gov / "Makefile").write_text(
-        "l9-consumer-safe-list:\n\t@echo start pr pr-check improve\n", encoding="utf-8"
+        "l9-consumer-safe-list:\n\t@echo start pr improve\n", encoding="utf-8"
     )
     # The emitter imports merge_gate.evaluate() in-process (the CLI needs a git
     # work tree it does not have). A deny is a returned reason string; an allow

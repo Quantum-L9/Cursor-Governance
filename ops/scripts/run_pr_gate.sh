@@ -107,7 +107,7 @@ PY
 #
 # The old digest was HEAD + `git status --porcelain`. Both change when you
 # stage and commit, while the bytes the gate just validated do not — so the
-# one sequence every operator actually runs (pr-check -> add -> commit -> pr)
+# ordinary finish -> gate -> publication sequence
 # was guaranteed to miss its own cache and re-run the full suite, twice.
 # Hashing the worktree instead is invariant across `git add` and `git commit`
 # and changes the moment a file's content does. Costs ~0.7s over ~3.7k files

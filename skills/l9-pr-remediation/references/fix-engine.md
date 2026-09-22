@@ -54,7 +54,7 @@ rg -i "<error class or key phrase>" \
 
 ## Gate Discovery (MANDATORY FIRST STEP)
 
-When a Makefile exists, the remediator local gate **is** `make precommit-repo`. Do not build a second suite from every workflow `run:`. Do not run `make pr-check` or `make pr` from this skill.
+When a Makefile exists, the remediator local gate **is** `make precommit-repo`. Do not build a second suite from every workflow `run:`. Do not run `OPEN_PR=0 make pr` or `make pr` from this skill.
 
 ```bash
 # remediator verbs
@@ -164,7 +164,7 @@ PR_BASE=origin/main make precommit-repo
 
 ### What "locally" means
 
-- Run `make precommit-repo` — not a reconstructed list of CI `run:` lines. Do not run `make pr-check`.
+- Run `make precommit-repo` — not a reconstructed list of CI `run:` lines. Do not run `OPEN_PR=0 make pr`.
 - Use the locked `.venv` interpreter / cached native `UV_PYTHON`.
 - If a command requires env vars that are secrets (API keys), check if it has a `--ci` or `--skip-secrets` flag.
 - If a command requires external services (database, API), check if it has a dry-run or mock mode.
@@ -188,7 +188,7 @@ PR_BASE=origin/main make precommit-repo
 │  ❌ NEVER: commit after each fix                         │
 │  ❌ NEVER: publish to see what CI says                   │
 │  ❌ NEVER: git commit --no-verify                        │
-│  ❌ NEVER: make pr / make pr-check (ceremony)            │
+│  ❌ NEVER: make pr / OPEN_PR=0 make pr (ceremony)            │
 │  ❌ NEVER: git add -u / -A or git reset --hard           │
 │  ❌ NEVER: merge this PR because it is now green         │
 └─────────────────────────────────────────────────────────┘

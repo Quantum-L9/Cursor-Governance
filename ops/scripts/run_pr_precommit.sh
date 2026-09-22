@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# INTERNAL leaf of `make pr-check` / `run_pr_gate.sh`.
+# INTERNAL hook catalog invoked by `run_pr_gate.sh`.
 # Runs the hook catalog in .pre-commit-config.yaml on changed files only.
 # This is not a public gate and not a git commit hook. Full-tree of the same
 # catalog is INTERNAL `make precommit` (nightly / make pr-full).
@@ -16,7 +16,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/resolve_governance_paths.sh"
 # Bind the authoritative clone before GOV_ROOT is used below (rules/06).
 resolve_governance_paths || true
-# Staged mode: invoked from a git commit hook rather than from make pr-check.
+# Staged mode: invoked from a git commit hook rather than from the publication gate.
 # Same catalog, same SKIP list — the single reason `pre-commit install` is
 # forbidden is that a RAW shim runs the catalog WITHOUT that list, so
 # symlinks-check rejects every commit on a non-cursor surface. Delegating here
@@ -103,10 +103,10 @@ if [[ ! -s "$tmp" ]]; then
 fi
 
 command -v pre-commit >/dev/null 2>&1 || {
-  echo "FAIL: pre-commit CLI missing (INTERNAL leaf of make pr-check)." >&2
+  echo "FAIL: pre-commit CLI missing (INTERNAL publication-gate hook catalog)." >&2
   echo "      Install the framework: pipx install pre-commit" >&2
   echo "      Do not run 'pre-commit install' — this repo has no git commit hook." >&2
-  echo "      Public quality gate: make pr-check" >&2
+  echo "      Gate-only diagnosis: OPEN_PR=0 make pr" >&2
   exit 1
 }
 

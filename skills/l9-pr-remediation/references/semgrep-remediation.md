@@ -36,7 +36,7 @@ required set.
 
 If a PR already exists, feed the baseline into the normal ingest / classify / fix
 loop. Do not treat Semgrep as a second publish path and do not run `make pr` or
-`make pr-check` to "confirm" it.
+`OPEN_PR=0 make pr` to "confirm" it.
 
 ## Authority order (this signal)
 

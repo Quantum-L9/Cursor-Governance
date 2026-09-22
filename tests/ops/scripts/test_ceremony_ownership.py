@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 
-DUAL_CEREMONY = re.compile(r"make pr-check\s*&&\s*make pr")
+REMOVED_GATE = re.compile(r"(?<![\w-])(?:make\s+)?pr[-]check(?![\w-])")
 POST_COMMIT_PRECOMMIT = re.compile(
     r"after every local commit,\s*run `make precommit-repo`",
     re.IGNORECASE,
@@ -17,7 +17,6 @@ NEGATION = re.compile(
 )
 
 # Live teachers only. AGENTS.md historical append-only blocks are skipped.
-# Remediator pack files that already forbid make pr-check are skipped.
 SCAN_FILES = (
     ROOT / "ops" / "autonomy" / "surface_profile.yaml",
     ROOT / "ops" / "scripts" / "open_pr_after_gate.sh",
@@ -28,8 +27,6 @@ SCAN_GLOBS = (
     "rules/*.mdc",
     "commands/*.md",
 )
-
-SKIP_REMEDIATOR_IF_FORBIDS = "do not run make pr-check"
 
 
 def _iter_scan_paths() -> list[Path]:
@@ -47,13 +44,6 @@ def _iter_scan_paths() -> list[Path]:
     return out
 
 
-def _skip_remediator(path: Path, text: str) -> bool:
-    rel = path.relative_to(ROOT).as_posix()
-    if "l9-pr-remediation" not in rel:
-        return False
-    return SKIP_REMEDIATOR_IF_FORBIDS in text.lower()
-
-
 def _unnegated_hits(text: str, pattern: re.Pattern[str]) -> list[str]:
     hits: list[str] = []
     for number, line in enumerate(text.splitlines(), start=1):
@@ -65,17 +55,15 @@ def _unnegated_hits(text: str, pattern: re.Pattern[str]) -> list[str]:
     return hits
 
 
-def test_live_teachers_do_not_stack_pr_check_then_pr() -> None:
+def test_live_teachers_do_not_teach_removed_pr_check_target() -> None:
     failures: list[str] = []
     for path in _iter_scan_paths():
         text = path.read_text(encoding="utf-8")
-        if _skip_remediator(path, text):
-            continue
-        hits = _unnegated_hits(text, DUAL_CEREMONY)
+        hits = _unnegated_hits(text, REMOVED_GATE)
         if hits:
             rel = path.relative_to(ROOT).as_posix()
             failures.append(f"{rel}: {hits}")
-    assert not failures, "unnegated make pr-check && make pr in live teachers:\n" + "\n".join(
+    assert not failures, "removed gate alias taught in live teachers:\n" + "\n".join(
         failures
     )
 
@@ -84,8 +72,6 @@ def test_live_teachers_do_not_teach_postcommit_precommit_repo() -> None:
     failures: list[str] = []
     for path in _iter_scan_paths():
         text = path.read_text(encoding="utf-8")
-        if _skip_remediator(path, text):
-            continue
         hits = _unnegated_hits(text, POST_COMMIT_PRECOMMIT)
         if hits:
             rel = path.relative_to(ROOT).as_posix()
@@ -101,7 +87,6 @@ PLAN_TEACHERS = (
 )
 
 PLAN_CEREMONY_GATES = (
-    re.compile(r"make pr-check"),
     re.compile(r"OPEN_PR=0"),
     re.compile(r"git commit"),
     re.compile(r"git push"),
@@ -124,17 +109,19 @@ def test_plan_teachers_keep_only_precommit_catalog() -> None:
     )
 
 
-def test_makefile_pr_graph_keeps_pr_check_leaf() -> None:
+def test_makefile_pr_graph_uses_direct_gate() -> None:
     makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
-    assert re.search(r"^pr:\s*pr-preflight\s+pr-check\s*$", makefile, re.MULTILINE), (
-        "Makefile must keep pr: pr-preflight pr-check"
+    publish = (ROOT / "ops" / "make" / "publish.mk").read_text(encoding="utf-8")
+    assert "ops/make/publish.mk" in makefile
+    assert re.search(r"^pr:\s*pr-preflight\s*$", publish, re.MULTILINE), (
+        "publish fragment must invoke the gate directly after pr-preflight"
     )
-    assert not re.search(r"^pr-check:\s*.*precommit-repo", makefile, re.MULTILINE), (
-        "Do not re-add precommit-repo as a Make prereq of pr-check"
-    )
-    assert not re.search(r"^pr:\s*.*precommit-repo", makefile, re.MULTILINE), (
-        "Do not re-add precommit-repo as a Make prereq of pr"
-    )
+    assert "run_pr_gate.sh" in publish
+    assert "pr-" "check:" not in makefile
+    assert "pr-" "check:" not in publish
+    assert "precommit-repo" not in re.search(
+        r"^pr:\s*pr-preflight.*?(?=^\S|\Z)", publish, re.MULTILINE | re.DOTALL
+    ).group(0)
 
 
 FINISH_TEACHERS = (

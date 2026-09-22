@@ -1913,3 +1913,14 @@ disk (additive_only). Do not fold them. Digest unwire is a separate lane.
   gate sees a prefetch receipt. Host `subagentStop` runs
   `graphiti-session-end.sh` (canonical `memory.close`). Spawn still requires
   parent hydration.
+
+<!-- MAKE_PR_SINGLE_GATE_SURFACE_V2 -->
+## `make pr` is the sole Make publication and diagnosis surface (2026-09-21)
+
+This canonical amendment supersedes prior material that describes `pr-check`
+as a Make target, a dispatcher capability, or a prerequisite of `pr`. The
+only public ceremony is `make pr` (any casing) or `l9 pr`. Gate-only
+diagnosis is `OPEN_PR=0 make pr` or `OPEN_PR=0 l9 pr`. `make pr` invokes
+`pr-preflight` and `ops/scripts/run_pr_gate.sh` directly. Remediation-local
+verification remains `make precommit-repo`; do not create a second Make
+gate alias.
