@@ -228,7 +228,7 @@ def build_manifest(
         "source_relative": str(config.get("source_relative") or "rules"),
         "output_relative": str(config.get("output_relative") or "environment/generated/llm-rules"),
         "summary": {
-            "source_mdc": len(rows),
+            "source_mdc": sum(1 for row in rows if str(row.get("source", "")).endswith(".mdc")),
             "projected": len(projected),
             "denied": sum(1 for row in rows if row.get("class") == "denied"),
             "skipped_agent_requested": sum(

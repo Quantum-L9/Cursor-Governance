@@ -259,6 +259,8 @@ def _record_kernel_evidence(repo: Path, *, delta_path: str = "evidenced.txt") ->
 
     target = repo / delta_path
     target.write_text("touched\n", encoding="utf-8")
+    validated = repo / "validated.txt"
+    validated.write_text("validated\n", encoding="utf-8")
     report = repo / ".l9" / "autonomy" / "kernel-apply.md"
     report.parent.mkdir(parents=True, exist_ok=True)
     report.write_text(
@@ -270,6 +272,9 @@ def _record_kernel_evidence(repo: Path, *, delta_path: str = "evidenced.txt") ->
         f"  - path: {delta_path}\n"
         "    kernel: recursive_alignment\n"
         "    note: narrowed a guard\n"
+        "  - path: validated.txt\n"
+        "    kernel: validate_repair\n"
+        "    note: validated the recorded kernel evidence\n"
         "---\n"
         "\n## Recursive Alignment\n\napplied\n"
         "\n## Validate & Repair\n\nran the checks\n",
@@ -297,7 +302,7 @@ def test_authorize_release_annotates_kernels_from_the_kernel_receipt(
         assert entry["report_rel"] == kernel_receipt["report_rel"]
         assert entry["report_sha256"] == kernel_receipt["report_sha256"]
         assert entry["applied_at"] == kernel_receipt["applied_at"]
-        assert entry["delta_count"] == 1
+        assert entry["delta_count"] == 2
     assert status_dict(stacked_repo)["kernel_evidence"] == "evidenced"
 
 

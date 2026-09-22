@@ -42,8 +42,8 @@ from pathlib import Path
 # =============================================================================
 
 REPO_ROOT = Path(__file__).parent.parent
-REPORT_GENERATOR = REPO_ROOT / "scripts" / "generate_gmp_report.py"
 STATE_FILE = REPO_ROOT / ".migrate_executor_state.json"
+_FALLBACK_EXCLUDED_PARTS = frozenset({".git", ".venv", "__pycache__", "node_modules"})
 
 # Protected files - escalate if touched
 PROTECTED_FILES = {
@@ -137,16 +137,65 @@ class MigrateExecutor:
             STATE_FILE.unlink()
         self.state = None
 
-    def _run_shell(self, cmd: str, capture: bool = True) -> tuple[int, str, str]:
-        """Run shell command."""
-        result = subprocess.run(  # noqa: S602 - shell=True required for DAG executor
-            cmd,
-            shell=True,
-            cwd=REPO_ROOT,
-            capture_output=capture,
-            text=True,
-        )
+    def _run_command(self, args: list[str], capture: bool = True) -> tuple[int, str, str]:
+        """Run a fixed argv command from the repository root."""
+        try:
+            result = subprocess.run(
+                args,
+                cwd=REPO_ROOT,
+                capture_output=capture,
+                text=True,
+                check=False,
+            )
+        except FileNotFoundError as exc:
+            return 127, "", str(exc)
         return result.returncode, result.stdout, result.stderr
+
+    @staticmethod
+    def _fallback_python_matches(pattern: str) -> list[str]:
+        """Find literal matches when the optional ``rg`` executable is absent."""
+        matches: list[str] = []
+        for path in sorted(REPO_ROOT.rglob("*.py")):
+            try:
+                rel = path.relative_to(REPO_ROOT)
+            except ValueError:
+                continue
+            if any(part in _FALLBACK_EXCLUDED_PARTS for part in rel.parts):
+                continue
+            try:
+                lines = path.read_text(encoding="utf-8").splitlines()
+            except (OSError, UnicodeDecodeError):
+                continue
+            for number, line in enumerate(lines, start=1):
+                if pattern in line:
+                    matches.append(f"{rel.as_posix()}:{number}:{line}")
+        return matches
+
+    @staticmethod
+    def _repo_file(filepath: str) -> Path:
+        """Resolve a state path while refusing traversal outside the repository."""
+        relative = Path(filepath)
+        if relative.is_absolute() or ".." in relative.parts:
+            raise ValueError(f"migration path must be repository-relative: {filepath}")
+        candidate = (REPO_ROOT / relative).resolve()
+        try:
+            candidate.relative_to(REPO_ROOT.resolve())
+        except ValueError as exc:
+            raise ValueError(f"migration path escapes repository: {filepath}") from exc
+        return candidate
+
+    def _fixed_string_file_count(self, pattern: str) -> int:
+        """Return the number of Python files containing a literal pattern."""
+        code, stdout, stderr = self._run_command(
+            ["rg", "--fixed-strings", "--type", "py", "-l", "--", pattern]
+        )
+        if code == 0:
+            return len([line for line in stdout.splitlines() if line])
+        if code == 1:
+            return 0
+        if code == 127:
+            return len({line.split(":", 1)[0] for line in self._fallback_python_matches(pattern)})
+        raise RuntimeError(f"ripgrep failed while confirming migration: {stderr.strip()}")
 
     def _print_header(self, title: str):
         print(f"\n{'=' * 60}")
@@ -162,10 +211,17 @@ class MigrateExecutor:
         pattern = self.state.old_pattern
         print(f"Searching for: {pattern}\n")
 
-        # Use ripgrep to find all matches
-        escaped_pattern = pattern.replace('"', '\\"')
-        cmd = f'rg "{escaped_pattern}" --type py -n 2>/dev/null || true'
-        _code, stdout, _stderr = self._run_shell(cmd)
+        # The requested pattern is data, never shell syntax.
+        code, stdout, stderr = self._run_command(
+            ["rg", "--fixed-strings", "--type", "py", "-n", "--", pattern]
+        )
+        if code == 127:
+            fallback = self._fallback_python_matches(pattern)
+            stdout = "\n".join(fallback)
+            code = 0 if fallback else 1
+        if code not in (0, 1):
+            print(f"❌ ripgrep failed: {stderr[:200]}")
+            return False
 
         matches = []
         for line in stdout.strip().split("\n"):
@@ -287,45 +343,53 @@ class MigrateExecutor:
     # STEP 4: APPLY CHANGES (AUTONOMOUS - NO CONFIRMATION)
     # =========================================================================
     def _step_apply_changes(self) -> bool:
-        self._print_header("APPLY CHANGES — Using sed (Autonomous)")
+        self._print_header("APPLY CHANGES — Literal Replacement (Autonomous)")
 
         old = self.state.old_pattern
         new = self.state.new_pattern
-
-        # Escape special characters for sed
-        old_escaped = old.replace("/", "\\/").replace("&", "\\&")
-        new_escaped = new.replace("/", "\\/").replace("&", "\\&")
 
         success_count = 0
         fail_count = 0
 
         for filepath in self.state.files_modified:
-            full_path = REPO_ROOT / filepath
-            if not full_path.exists():
+            try:
+                full_path = self._repo_file(filepath)
+            except ValueError as exc:
+                print(f"❌ {filepath}: {exc}")
+                fail_count += 1
+                continue
+            if not full_path.is_file():
                 print(f"⚠️  File not found: {filepath}")
                 fail_count += 1
                 continue
 
-            # Use sed for in-place replacement
-            cmd = f'sed -i "" "s/{old_escaped}/{new_escaped}/g" "{full_path}"'
-            code, _stdout, stderr = self._run_shell(cmd)
-
-            if code == 0:
+            try:
+                source = full_path.read_text(encoding="utf-8")
+                changed = source.replace(old, new)
+                if source == changed:
+                    if new in source:
+                        print(f"↩️  {filepath}: already migrated")
+                        success_count += 1
+                        continue
+                    raise ValueError("expected literal pattern no longer present")
+                full_path.write_text(changed, encoding="utf-8")
+            except (OSError, UnicodeError, ValueError) as exc:
+                print(f"❌ {filepath}: {exc}")
+                fail_count += 1
+            else:
                 success_count += 1
                 print(f"✅ {filepath}")
-            else:
-                fail_count += 1
-                print(f"❌ {filepath}: {stderr[:50]}")
 
-        # Mark matches as migrated
+        # Mark only files that have been applied or were already safely migrated.
         for m in self.state.matches:
-            m["migrated"] = True
+            if m["file"] in self.state.files_modified:
+                m["migrated"] = True
 
         print(f"\n✅ Applied: {success_count} files")
         if fail_count:
             print(f"❌ Failed: {fail_count} files")
 
-        return fail_count == 0 or success_count > 0
+        return fail_count == 0
 
     # =========================================================================
     # STEP 5: VALIDATE
@@ -338,8 +402,13 @@ class MigrateExecutor:
         # py_compile on modified files
         py_files = [f for f in self.state.files_modified if f.endswith(".py")]
         if py_files:
-            files_str = " ".join(str(REPO_ROOT / f) for f in py_files)
-            code, _stdout, stderr = self._run_shell(f"python3 -m py_compile {files_str}")
+            try:
+                files = [str(self._repo_file(path)) for path in py_files]
+            except ValueError as exc:
+                validations.append({"check": "py_compile", "status": "❌", "error": str(exc)})
+                self.state.validation_results = validations
+                return False
+            code, _stdout, stderr = self._run_command([sys.executable, "-m", "py_compile", *files])
             if code == 0:
                 validations.append({"check": "py_compile", "status": "✅"})
                 print(f"✅ py_compile: {len(py_files)} files OK")
@@ -347,7 +416,8 @@ class MigrateExecutor:
                 validations.append({"check": "py_compile", "status": "❌", "error": stderr})
                 print("❌ py_compile: FAILED")
                 print(stderr[:200])
-                # Don't fail - let wiring step handle
+                self.state.validation_results = validations
+                return False
 
         # Quick import test for affected modules
         modules_tested = set()
@@ -357,8 +427,10 @@ class MigrateExecutor:
                 continue
             modules_tested.add(module)
 
-            cmd = f'python3 -c "import {module}" 2>&1'
-            code, _stdout, _stderr = self._run_shell(cmd)
+            if not re.fullmatch(r"[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*", module):
+                print(f"⚠️  import skipped for non-module path: {module[:40]}")
+                continue
+            code, _stdout, _stderr = self._run_command([sys.executable, "-c", f"import {module}"])
             if code == 0:
                 print(f"✅ import {module[:40]}")
             else:
@@ -382,9 +454,13 @@ class MigrateExecutor:
             match = re.search(r"from\s+([\w.]+)\s+import|import\s+([\w.]+)", new_pattern)
             if match:
                 module_name = match.group(1) or match.group(2)
+                if not re.fullmatch(r"[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*", module_name):
+                    print(f"❌ Invalid import target: {module_name}")
+                    return False
                 # Verify module exists
-                cmd = f'python3 -c "import {module_name}" 2>&1'
-                code, stdout, _stderr = self._run_shell(cmd)
+                code, stdout, _stderr = self._run_command(
+                    [sys.executable, "-c", f"import {module_name}"]
+                )
                 if code == 0:
                     print(f"✅ Module {module_name} is importable")
                 else:
@@ -404,9 +480,11 @@ class MigrateExecutor:
 
         # Verify no broken references remain
         old_pattern = self.state.old_pattern
-        cmd = f'rg "{old_pattern}" --type py -l 2>/dev/null | wc -l'
-        _code, stdout, _stderr = self._run_shell(cmd)
-        remaining = int(stdout.strip() or "0")
+        try:
+            remaining = self._fixed_string_file_count(old_pattern)
+        except RuntimeError as exc:
+            print(f"❌ {exc}")
+            return False
 
         if remaining == 0:
             checks.append({"check": "Old pattern removed", "status": "✅"})
@@ -417,9 +495,11 @@ class MigrateExecutor:
 
         # Verify new pattern exists
         new_pattern = self.state.new_pattern
-        cmd = f'rg "{new_pattern}" --type py -l 2>/dev/null | wc -l'
-        _code, stdout, _stderr = self._run_shell(cmd)
-        new_count = int(stdout.strip() or "0")
+        try:
+            new_count = self._fixed_string_file_count(new_pattern)
+        except RuntimeError as exc:
+            print(f"❌ {exc}")
+            return False
 
         checks.append({"check": "New pattern present", "status": f"✅ {new_count} files"})
         print(f"✅ New pattern in {new_count} files")
@@ -438,46 +518,37 @@ class MigrateExecutor:
     # STEP 8: GENERATE REPORT
     # =========================================================================
     def _step_generate_report(self) -> bool:
-        self._print_header("GENERATE REPORT — GMP Report via Script")
-
-        # Build TODO items
-        todo_args = []
-        for i, f in enumerate(self.state.files_modified[:10], 1):
-            todo_args.append(f'--todo "M{i}|{f}|*|MIGRATE|sed replace"')
-
-        # Build validation items
-        val_args = []
-        for v in self.state.validation_results:
-            val_args.append(f'--validation "{v["check"]}|{v["status"]}"')
-
-        if not todo_args:
-            todo_args.append('--todo "M1|migration|*|VERIFY|Pattern migration"')
-        if not val_args:
-            val_args.append('--validation "migration|✅"')
-
-        cmd = f'''python3 {REPORT_GENERATOR} \
-            --task "Migrate: {self.state.old_pattern[:30]} → {self.state.new_pattern[:30]}" \
-            --tier RUNTIME_TIER \
-            {" ".join(todo_args)} \
-            {" ".join(val_args)} \
-            --summary "Code migration via /migrate DAG executor" \
-            --skip-verify 2>/dev/null || echo "Report generation skipped"'''
-
-        print("Generating report...")
-        _code, stdout, _stderr = self._run_shell(cmd)
-
-        # Extract report path
-        for line in stdout.split("\n"):
-            if "Report saved:" in line or "reports/" in line.lower():
-                self.state.report_path = line.strip()
-                break
-
-        if self.state.report_path:
-            print(f"✅ Report: {self.state.report_path}")
-        else:
-            print("⚠️  Report generation skipped")
-            self.state.report_path = "N/A"
-
+        self._print_header("GENERATE REPORT — Local Migration Receipt")
+        reports = REPO_ROOT / "reports"
+        slug = re.sub(r"[^a-z0-9]+", "-", self.state.old_pattern.lower())[:32].strip("-")
+        target = reports / f"migration-{slug or 'change'}.md"
+        lines = [
+            "# Migration Receipt",
+            "",
+            f"**From:** `{self.state.old_pattern}`",
+            f"**To:** `{self.state.new_pattern}`",
+            "",
+            "## Files",
+            "",
+        ]
+        lines.extend(f"- `{path}`" for path in self.state.files_modified)
+        if not self.state.files_modified:
+            lines.append("- No repository files required modification.")
+        lines.extend(["", "## Validation", ""])
+        lines.extend(
+            f"- {result.get('status', '?')} {result.get('check', 'migration')}"
+            for result in self.state.validation_results
+        )
+        if not self.state.validation_results:
+            lines.append("- No validation results were recorded.")
+        try:
+            reports.mkdir(parents=True, exist_ok=True)
+            target.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        except OSError as exc:
+            print(f"❌ Local report generation failed: {exc}")
+            return False
+        self.state.report_path = target.relative_to(REPO_ROOT).as_posix()
+        print(f"Report saved: {self.state.report_path}")
         return True
 
     # =========================================================================
@@ -492,7 +563,15 @@ class MigrateExecutor:
 
         # Stage files
         for f in self.state.files_modified:
-            self._run_shell(f'git add "{f}"')
+            try:
+                self._repo_file(f)
+            except ValueError as exc:
+                print(f"❌ {exc}")
+                return False
+            code, _stdout, stderr = self._run_command(["git", "add", "--", f])
+            if code != 0:
+                print(f"❌ Failed to stage {f}: {stderr[:200]}")
+                return False
 
         # Create commit message
         old = self.state.old_pattern[:20]
@@ -501,24 +580,29 @@ class MigrateExecutor:
 
         commit_msg = f"migrate: {old} → {new} ({count} files)"
 
-        # Commit
-        # Hooks run. A commit that cannot pass local verification is a
-        # finding to repair, not a flag to add (contract
-        # l9-commit-verification-integrity); a hook failure lands in the
-        # `else` below and is reported rather than silently committed.
-        cmd = f'git commit -m "{commit_msg}" 2>&1 || true'
-        code, stdout, _stderr = self._run_shell(cmd)
+        before_code, before_head, before_stderr = self._run_command(["git", "rev-parse", "HEAD"])
+        if before_code != 0:
+            print(f"❌ Could not resolve pre-commit HEAD: {before_stderr[:200]}")
+            return False
+
+        # Hooks run. A commit that cannot pass local verification is a finding to
+        # repair, not a success receipt.
+        code, stdout, stderr = self._run_command(["git", "commit", "-m", commit_msg])
 
         if "nothing to commit" in stdout.lower():
             print("✅ Nothing to commit — working tree clean")
-        elif code == 0 or "file changed" in stdout.lower():
-            # Get commit hash
-            code, hash_out, _ = self._run_shell("git rev-parse --short HEAD")
-            self.state.commit_hash = hash_out.strip()
-            print(f"✅ Committed: {self.state.commit_hash}")
-            print(f"   Message: {commit_msg}")
-        else:
-            print(f"⚠️  Commit result: {stdout[:100]}")
+            return True
+        if code != 0:
+            print(f"❌ Commit failed: {(stderr or stdout)[:200]}")
+            return False
+
+        code, hash_out, stderr = self._run_command(["git", "rev-parse", "HEAD"])
+        if code != 0 or hash_out.strip() == before_head.strip():
+            print(f"❌ Commit did not produce a new HEAD: {stderr[:200]}")
+            return False
+        self.state.commit_hash = hash_out.strip()
+        print(f"✅ Committed: {self.state.commit_hash}")
+        print(f"   Message: {commit_msg}")
 
         print("\n⚠️  DO NOT PUSH — Review changes first")
 
