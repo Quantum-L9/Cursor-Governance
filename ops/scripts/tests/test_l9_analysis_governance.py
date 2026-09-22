@@ -10,6 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 GOVERNANCE_ROOT = ROOT / ".github" / "governance"
 QUALITY_THRESHOLDS = GOVERNANCE_ROOT / "quality-thresholds.yaml"
+L9_ANALYSIS = ROOT / ".github" / "workflows" / "l9-analysis.yml"
 
 
 class L9AnalysisGovernanceTests(unittest.TestCase):
@@ -31,6 +32,17 @@ class L9AnalysisGovernanceTests(unittest.TestCase):
                     (GOVERNANCE_ROOT / policy).is_file(),
                     f"sdk policy for {profile_name} must exist under .github/governance",
                 )
+
+    def test_normalization_receives_observed_provider_version(self) -> None:
+        """Keep SDK evidence complete when the pinned SDK requires a version."""
+        workflow = L9_ANALYSIS.read_text(encoding="utf-8")
+        self.assertIn("- id: semgrep", workflow)
+        self.assertIn('provider_version="$(semgrep --version | head -n1)"', workflow)
+        self.assertIn('echo "provider-version=${provider_version}" >> "$GITHUB_OUTPUT"', workflow)
+        self.assertIn(
+            "provider-version: ${{ steps.semgrep.outputs.provider-version }}",
+            workflow,
+        )
 
 
 if __name__ == "__main__":
