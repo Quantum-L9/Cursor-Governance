@@ -498,9 +498,7 @@ def _stamp_kernel(repo: Path) -> None:
     report.parent.mkdir(parents=True, exist_ok=True)
     changed_file = repo / ".l9" / "pr" / "changed-files.txt"
     changed_file.parent.mkdir(parents=True, exist_ok=True)
-    changed_file.write_text(
-        f"{alignment_delta}\n{validation_delta}\n", encoding="utf-8"
-    )
+    changed_file.write_text(f"{alignment_delta}\n{validation_delta}\n", encoding="utf-8")
     report.write_text(
         "---\n"
         "schema: l9.kernel_apply.v1\n"
