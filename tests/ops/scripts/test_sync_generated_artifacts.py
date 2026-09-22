@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -301,11 +303,17 @@ def test_make_has_a_target_that_heals_the_pe_manifest() -> None:
     at all, and the heal command was discoverable only from a CI failure line.
     """
     repo = Path(__file__).resolve().parents[3]
-    makefile = (repo / "Makefile").read_text(encoding="utf-8")
-    recipe = makefile.split("\nsync-generated-pe:\n", 1)[1].split("\n\n", 1)[0]
-    assert "sync_generated_artifacts.py" in recipe
-    assert "--pe-manifest" in recipe
-    assert ".PHONY: sync-generated-pe" in makefile
+    result = subprocess.run(
+        ["make", "--no-print-directory", "-n", "sync-generated-pe"],
+        cwd=repo,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "sync_generated_artifacts.py" in result.stdout
+    assert "--pe-manifest" in result.stdout
+    assert makefile_has_target(repo, "sync-generated-pe")
 
 
 def test_skill_registry_names_its_generator_and_heal_command() -> None:
@@ -320,7 +328,17 @@ def test_skill_registry_names_its_generator_and_heal_command() -> None:
 
 
 def makefile_has_target(repo: Path, name: str) -> bool:
-    return f"\n{name}:\n" in (repo / "Makefile").read_text(encoding="utf-8")
+    """Read Make's composed database rather than assuming root recipe ownership."""
+    result = subprocess.run(
+        ["make", "--no-print-directory", "-rRpn"],
+        cwd=repo,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    return (
+        result.returncode == 0 and re.search(rf"(?m)^{re.escape(name)}:", result.stdout) is not None
+    )
 
 
 def test_sync_pe_templates_tolerates_a_missing_template(tmp_path: Path) -> None:
