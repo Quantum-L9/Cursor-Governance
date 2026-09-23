@@ -98,8 +98,12 @@ class PostPublishHandoffTest(unittest.TestCase):
         self.close_status = "closed_canonically"
 
     # -- fixtures -----------------------------------------------------------
+    def _env(self) -> dict[str, str]:
+        """ONE environment for stamping and reading: the receipt key is writer-scoped."""
+        return {"CLAUDE_PROJECT_DIR": str(self.repo), "L9_MEMORY_AGENT_ID": "claude-code"}
+
     def _prefetch(self) -> None:
-        with mock.patch.dict(os.environ, {"CLAUDE_PROJECT_DIR": str(self.repo)}):
+        with mock.patch.dict(os.environ, self._env()):
             contract = st.load_contract()
             st.write_receipt(
                 contract,
@@ -149,7 +153,7 @@ class PostPublishHandoffTest(unittest.TestCase):
         stub = types.ModuleType("ops.graphiti.hydration.close_session")
         stub.close_session = _close
         stub.memory_client = lambda **_kw: _Client()
-        env = {"CLAUDE_PROJECT_DIR": str(self.repo), "L9_MEMORY_AGENT_ID": "claude-code"}
+        env = self._env()
         with (
             mock.patch.dict(
                 sys.modules,
