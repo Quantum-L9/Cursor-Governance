@@ -46,6 +46,7 @@ _SESSION_AUTH_LEAKS = (
 def _env_without_session_auth(**overrides: str) -> dict[str, str]:
     """Copy the process env without inherited task-base / git-auth flags."""
     environ = {**os.environ, "PATH": os.environ.get("PATH", "")}
+    environ.pop("PR_OVERLAP", None)
     for key in _SESSION_AUTH_LEAKS:
         environ.pop(key, None)
     for key, value in overrides.items():
@@ -60,6 +61,7 @@ def run_gate(script: Path, repo: Path, base: str, **env: str) -> subprocess.Comp
     environ = _env_without_session_auth(**env)
     return subprocess.run(
         [sys.executable, str(script), "--workspace", str(repo), "--base", base],
+        cwd=repo,
         capture_output=True,
         text=True,
         check=False,
@@ -302,7 +304,7 @@ def test_undeterminable_collision_state_blocks_autonomous_publication(
         OVERLAP,
         repo,
         "origin/main",
-        PATH=f"{empty_path}:/usr/bin:/bin",  # no gh on PATH
+        PATH=str(empty_path),  # no gh on PATH
         L9_AUTONOMY_ENABLED="true",
     )
     # TELEMETRY_DENIED_EXIT is 3 (distinct from ordinary overlap deny=1).
@@ -323,7 +325,7 @@ def test_operator_may_override_telemetry_failure(upstream: Path, tmp_path: Path)
         OVERLAP,
         repo,
         "origin/main",
-        PATH=f"{empty_path}:/usr/bin:/bin",
+        PATH=str(empty_path),
         L9_AUTONOMY_ENABLED="true",
         PR_OVERLAP_TELEMETRY="open",
     )

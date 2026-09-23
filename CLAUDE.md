@@ -1,158 +1,63 @@
 # CLAUDE.md — authority pointer
 
-This file exists to be **loaded**, not to be comprehensive. It is deliberately
-short so it always fits, and it duplicates no doctrine: it says where doctrine
-lives and what outranks what.
-
-A mobile bootstrap audit measured `memory_files_completed {"file_count": 0}` for
-a session working in this repository. `CANONICAL_LAW.md` (35 KB) and `AGENTS.md`
-(28 KB) were both present on disk and neither reached the model's context, so
-the authority chain below was in force and invisible at the same time.
+This file is deliberately compact: it names the binding authorities and the few
+safety rules that must be available before deeper repository documentation loads.
+It is **not** a second doctrine source.
 
 ## Authority chain
 
-Highest first. A lower rung never overrides a higher one.
+Read and apply these in order; a lower source never overrides a higher source.
 
-1. **`CANONICAL_LAW.md`** — the constitution. Read it before proposing a change
-   to governance, memory, the publish path, or the secret plane.
-2. **Autonomy Surface Profile** — `ops/autonomy/surface_profile.yaml`. Matches on
-   the exact surface id `claude-code`; a variant id silently drops the session
-   out of its standing authority.
-3. **`AGENTS.md`** — operating instructions for agents in this repository.
-4. **`skills/l9-*`** — task-scoped procedures, invoked by name.
-5. **Agent-invented contracts** — none. If you find yourself designing a rule,
-   it belongs in one of the four rungs above, in a PR.
+1. [`CANONICAL_LAW.md`](CANONICAL_LAW.md) — binding governance, trust, memory,
+   publication, and secret-plane law. Read it before changing those surfaces.
+2. [`ops/autonomy/surface_profile.yaml`](ops/autonomy/surface_profile.yaml) —
+   standing authority for the exact surface identifier `claude-code`. A variant
+   identifier can remove the session from its declared authority.
+3. [`AGENTS.md`](AGENTS.md) — repository operating instructions and activation
+   contract.
+4. [`skills/l9-*`](skills/) — task-scoped procedures invoked when their routing
+   conditions apply.
+5. Agent-invented contracts — **no authority**. Propose a governed change through
+   the sources above instead of silently creating a rule.
 
-This file is not a rung. It only names them.
+Useful maps, not competing authority: [`ARCHITECTURE.md`](ARCHITECTURE.md),
+[`INVARIANTS.md`](INVARIANTS.md), and
+[`ORG_INVARIANTS.yaml`](ORG_INVARIANTS.yaml).
 
-Maps, not rungs — live at **this repo's root**, not org-seeded, not competing
-SSOTs:
+## Immediate operating directives
 
-- [`ARCHITECTURE.md`](ARCHITECTURE.md) — this-repo module / CI index
-- [`INVARIANTS.md`](INVARIANTS.md) — this-repo invariant + CI enforcement index
-- [`ORG_INVARIANTS.yaml`](ORG_INVARIANTS.yaml) — machine org-policy SSOT
-  (`INVARIANTS.md` points at it; do not copy `L9-ORG-*` bodies here)
+- **Memory:** hydrate through `python -m ops.memory.cli hydrate`; never create or
+  write `memory-bank/`.
+- **Activation:** SessionStart is the only activation path. Follow `AGENTS.md`
+  for activation and repair, not an ad hoc bootstrap.
+- **Publication:** use `PR_REMEDIATE=0 make pr`. Do not use `make push`, raw
+  first-publication `git push`, `gh pr create`, or MCP push/PR-creation tools.
+- **Credentials:** this model-controlled surface holds no raw credentials. Never
+  paste a token or bearer when a capability is unavailable; use
+  [`docs/DEGRADED_MODE_CONTRACT.md`](docs/DEGRADED_MODE_CONTRACT.md).
+- **Verification:** this repository intentionally has no local commit hook. Do
+  not use bypass flags or variables (`--no-verify`, `SKIP`, `HUSKY`, or altered
+  hooks paths). Use `make pr` or `OPEN_PR=0 make pr` for diagnostics.
+- **Failures:** treat every failure as evidence. Reproduce in isolation, baseline
+  against unmodified `main`, identify any shared state, then classify or repair.
+  “Pre-existing” is not a resolution.
+- **Receipts:** inspect current bootstrap and refresh state with
+  `python3 ops/scripts/claude_bootstrap_receipt.py` and
+  `python3 ops/scripts/governance_refresh_receipt.py`; absent is never ready.
+- **Destructive work:** inspect and name an explicit target list first; never use
+  a glob or an unreviewed variable expansion. The detailed policy and exceptions
+  remain in `CANONICAL_LAW.md` and `AGENTS.md`.
 
-Resume SSOT is the canonical memory control plane (`python -m ops.memory.cli hydrate`; CANONICAL_LAW §8.2). Do not write `memory-bank/`.
-Activation is SessionStart only (`AGENTS.md` §2). Publish is
-`PR_REMEDIATE=0 make pr` (`make PR` / `Pr` / `pR` are the same target).
-Consumers do not inherit this file from the Quantum-L9/.github seeder; they
-keep their own `CLAUDE.md` if they have one (`agentdocs.sh` only maintains
-the formatter block).
-
-## The things most often got wrong here
-
-- **`make pr` (any capitalization) is the sanctioned route to GitHub, and a
-  FIRST publication has no other route.** git and gh are exempt from the
-  workflow plane and answer by effect: `ops/autonomy/git_guardrails.py`
-  (destruction), `verification_bypass_gate.py` (hook skipping) and
-  `first_publication_gate.py` (CANONICAL_LAW §6.2.8). A raw `git push` of a
-  branch with **no open PR**, or `gh pr create`, is denied because none of the
-  checkers ran; a `git push` that advances an **open** PR is the remediator
-  path and stays allowed. Undeterminable PR state (no gh, no network) denies.
-  Also denied at every phase: `make push` and the MCP `create_pull_request` /
-  `push_files` tools. If `make pr` is what is denied, that is a fault.
-- **This surface holds no credentials.** It is `model-controlled`: no Infisical
-  import, no PAT, no bearer. The capability-broker experiment never shipped;
-  authenticated Sonar/Semgrep/Context7 are not delivered through a broker. A
-  capability reporting `UNAVAILABLE` is never a reason to paste a secret — see
-  `docs/DEGRADED_MODE_CONTRACT.md`.
-- **Local `git commit` runs no hooks here, and that is deliberate.** This repo
-  installs no commit hook — `pre-commit install` is *forbidden*
-  (`validate_claude_env.check_session_deps_installs_no_git_hook`,
-  `ops/scripts/run_pr_precommit.sh`), because a raw hook runs the catalog
-  without the surface-aware SKIP list. Verification lives at `make pr` /
-  `l9 pr` (publish) and `OPEN_PR=0 make pr` (diagnose). So never reach for `--no-verify`,
-  `git commit -n`, `-c core.hooksPath=`, or `SKIP=`/`HUSKY=`: there is no hook
-  to skip, the token only signals intent to dodge verification, and
-  `ops/autonomy/verification_bypass_gate.py` denies it at PreToolUse. If you
-  want the checks, run `OPEN_PR=0 make pr` or `l9 pr`.
-- **"Pre-existing" and "environment defect" are conclusions, not first
-  impressions.** A failing test is evidence (`rules/95`), and rule 42 puts a bug
-  in scope *the moment it is identified* — including one you did not write. So a
-  test that fails only in your clone, or only after another test ran, is not
-  triaged until you can name the mechanism. Baselining it on unmodified `main`
-  tells you whose it is; it does not tell you whether it is real.
-
-  Order-dependent failures almost always mean **shared mutable state**, and
-  shared state inside a gate is the bug rather than the noise. Two L4 tests
-  failed this way and were nearly written off as clone artifacts; the mechanism
-  was `L9_AUTONOMY_STATE_DIR` resolving to one machine-wide `~/.l9/autonomy`
-  with no workspace stamped in the receipt, so an `authorize-release` in one
-  checkout authorized `git push` in every other checkout sharing the branch
-  name — which, in a fleet that puts one branch name across every repo, is all
-  of them. Recording and deferring it was the wrong call; it is a security
-  boundary. Fix it or say plainly that you have not.
-
-  Diagnose in this order: reproduce in isolation → baseline on unmodified
-  `main` → name the shared resource → only then classify. `session_debt.py
-  defer` records what you could not finish; it never converts a live defect into
-  an acceptable one.
-- **Destructive commands take an explicit list, never a glob.** `rm -f
-  docs/plans/BUILT/*.plan.md`, meant to drop six duplicate files, deleted 213
-  tracked ones because the directory was already tracked — recoverable only
-  because everything in it was committed. Before any delete: `git status
-  --porcelain` and `git clean -nd` to read the target list, then name the paths
-  you verified. Never `rm -rf $VAR/...` where `$VAR` could be empty, and never
-  widen a delete to "tidy up" beyond what you proved disposable
-  (`rules/54`, `rules/49`).
-
-  Mechanically denied here, so reaching for them is a wasted turn: `make push`
-  and MCP `create_pull_request` / `push_files` (`local_execution_gate.py`, every
-  phase); `git commit --no-verify` / `-n`, `-c core.hooksPath=`, `SKIP=`,
-  `HUSKY=0`, `pre-commit uninstall`, edits to `.git/hooks/**`
-  (`verification_bypass_gate.py`); `git add -A` / `--all` / `.` / `-u` without
-  pathspecs, `git revert` / `reset` / `checkout` / `switch` on a shared dirty
-  clone, and `rm -rf WIP` (`worktree_isolation_gate.py`). Force-push,
-  hard-reset, admin-merge and secret exfiltration are never waived. Staging is
-  explicit pathspecs for paths *you* authored this session — a `git diff
-  --name-only | … git add` scoop takes another agent's work with it.
-- **Receipts expire.** `~/.l9/claude/bootstrap-state.json` and
-  `~/.l9/claude/gov-refresh.json` carry a UTC timestamp and a TTL. Read them
-  through `ops/scripts/claude_bootstrap_receipt.py` and
-  `ops/scripts/governance_refresh_receipt.py`, which recompute state rather than
-  trusting the recorded word. An absent receipt means `never_ran`, not `ready`.
-  Both read by default — no flag needed, and `--json` for the machine form:
-
-  ```bash
-  python3 ops/scripts/claude_bootstrap_receipt.py            # bootstrap state + per-component
-  python3 ops/scripts/governance_refresh_receipt.py --json   # refresh state, machine-readable
-  ```
-
-  Expiry is not only the clock: a bootstrap receipt also goes `unknown` when the
-  governance revision it was produced against is no longer checked out, because
-  the artifacts it describes — skills, rules, settings, plugins — are projected
-  from that revision. Time alone let a DEGRADED verdict from a dead revision be
-  reported as current for a full day, since the bootstrap TTL is 24x the
-  governance refresh TTL. SessionStart now runs the installer once per revision
-  when the receipt is not `ready`, instead of printing its remediation.
-
-## Checking what is actually wired
+## Readiness and document ownership
 
 ```bash
-make claude-env      # structural validation + RUNTIME readiness (exit 5 = not wired)
+make claude-env
 ```
 
-Every step of that target runs even when an earlier one fails, so the `RUNTIME:`
-line is always printed. A structural failure still decides the exit code, so
-exit 5 means specifically: the files are correct and nothing loaded them.
-
-`STRUCTURAL_PASS` means the files are correct. It says nothing about whether any
-of them were loaded into this session; `RUNTIME:` is the line that answers that.
-
-This file is `managed` (rewrite allowed, no `ALLOW-ROOT-DELETION`). Twelve root
-files are `additive_only` — among them `pyproject.toml`, `requirements.txt`,
-`conftest.py`, and `.pre-commit-config.yaml`, not only the obvious `Makefile`
-and `AGENTS.md`. Adding lines to one is free. **Removing or overwriting a line
-needs `ALLOW-ROOT-DELETION: <path> — <reason>` in a commit message on the
-branch** (any commit in the range counts) plus CODEOWNERS approval, and the PR
-must use `.github/pull_request_template.md`
-(`<!-- L9_PROTECTED_ROOT_PR -->`). `make pr` fills the Protected-root block
-at the top of that one template; without the stamp the gate blocks the push. Authoritative list:
-`ops/config/root-file-protection.json`. Full rule: `AGENTS.md` §14.
-`ops/autonomy/root_file_advisory.py` warns at the start of a turn when a
-protected root file is being overwritten without its marker, so this is caught
-at edit time rather than at push.
+`STRUCTURAL_PASS` means files are correct; the `RUNTIME:` line determines whether
+this session actually loaded them. Root-document protection and ownership are
+owned by [`ops/config/root-file-protection.json`](ops/config/root-file-protection.json)
+and `AGENTS.md` §14. Read those sources before changing protected root files.
 
 <!-- BEGIN L9 FORMATTER OWNERSHIP (generated — do not edit) -->
 
