@@ -104,6 +104,18 @@ def test_subsystem_groups_symbols_by_module(tmp_path: Path):
     assert "## Public interface" not in text
 
 
+def test_truncated_module_summary_links_to_an_emitted_complete_module_index(tmp_path: Path):
+    """A source-only subsystem has no interface index, but still needs an index."""
+    for index in range(ev.MAX_MODULES_RENDERED + 1):
+        write(tmp_path / "wide" / f"module_{index}.py", "_private = 1\n")
+    model = ev.compile_readme_model(tmp_path, target("wide", "subsystem"))
+    text = rr.render_readme(model)
+    assert "[Complete module index](#complete-module-index)" in text
+    assert "## Complete module index" in text
+    findings = rq.validate_readme_model(tmp_path, model, text, authorized={"wide"})
+    assert not any(finding.rule_id == "readme.reference.anchor_missing" for finding in findings)
+
+
 # --- T-R-003: dependency output is curated ---
 
 

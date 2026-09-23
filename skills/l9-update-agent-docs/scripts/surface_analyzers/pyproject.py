@@ -283,6 +283,60 @@ def _self_test_findings(
     return findings
 
 
+def _entrypoint_findings(root: Path, state: PythonProjectState, text: str) -> list[dict[str, Any]]:
+    """Verify only declared Python module entrypoints, never infer package layout."""
+    findings: list[dict[str, Any]] = []
+    for name, value in state.project_scripts:
+        module = value.split(":", 1)[0].strip()
+        rel = module.replace(".", "/")
+        candidates = (
+            root / f"{rel}.py",
+            root / rel / "__init__.py",
+            root / "src" / f"{rel}.py",
+            root / "src" / rel / "__init__.py",
+        )
+        if not any(candidate.is_file() for candidate in candidates):
+            findings.append(
+                _finding(
+                    "python.project_script.module_resolution",
+                    property_name="project.scripts",
+                    observed=f"{name} = {value}",
+                    expected="a module path that resolves in the repository root or src/ layout",
+                    line=_line_for(text, name),
+                    remediation_class="HANDOFF",
+                    source="pyproject.toml",
+                )
+            )
+    return findings
+
+
+def _testpath_findings(root: Path, state: PythonProjectState, text: str) -> list[dict[str, Any]]:
+    if not state.pytest_testpaths_resolved:
+        return [
+            _finding(
+                "python.pytest.testpaths_unknown",
+                property_name="tool.pytest.ini_options.testpaths",
+                observed="testpaths is not a string or list of strings",
+                expected="a statically readable pytest test-root declaration",
+                line=_line_for(text, "testpaths"),
+                remediation_class="HANDOFF",
+                source="pyproject.toml",
+            )
+        ]
+    return [
+        _finding(
+            "python.pytest.testpath_missing",
+            property_name="tool.pytest.ini_options.testpaths",
+            observed=path,
+            expected="an existing repository test path",
+            line=_line_for(text, path),
+            source="pyproject.toml",
+        )
+        for path in state.pytest_testpaths
+        if not (root / path).exists()
+    ]
+
+
 def assess_python_project(
     root: Path,
     state: PythonProjectState,
@@ -293,6 +347,8 @@ def assess_python_project(
     findings = _version_findings(state, text)
     findings.extend(_lock_findings(state, policy, text))
     findings.extend(_self_test_findings(root, state, policy, text))
+    findings.extend(_entrypoint_findings(root, state, text))
+    findings.extend(_testpath_findings(root, state, text))
     return findings
 
 
