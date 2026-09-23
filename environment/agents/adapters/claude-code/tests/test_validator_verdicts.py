@@ -13,6 +13,7 @@ readiness.
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import tempfile
 import unittest
@@ -82,8 +83,22 @@ class ValidatorVerdictTests(unittest.TestCase):
         self.assertLess(structural, runtime, "runtime verdict must follow, not replace, structural")
 
     def test_make_claude_env_asserts_runtime(self) -> None:
-        makefile = (REPO / "Makefile").read_text(encoding="utf-8")
-        self.assertIn("validate_claude_env.py --runtime", makefile)
+        # The recipe lives in whichever ops/make fragment owns it, so read the
+        # composed Make database rather than one file's bytes. -n with the
+        # default goal prints the database without running any recipe.
+        result = subprocess.run(
+            ["make", "--no-print-directory", "-rRpn"],
+            cwd=REPO,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        rule = re.search(r"(?ms)^claude-env:.*?(?=\n\n|\Z)", result.stdout)
+        self.assertIsNotNone(rule, "claude-env is not a composed Make capability")
+        assert rule is not None
+        recipe = re.sub(r"\s*\\\n\s*", " ", rule.group(0))
+        self.assertIn("validate_claude_env.py --runtime", recipe)
 
 
 if __name__ == "__main__":
