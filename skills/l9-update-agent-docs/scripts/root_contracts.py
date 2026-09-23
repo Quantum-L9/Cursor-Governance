@@ -32,6 +32,134 @@ _ROOT_AUTHORITY_DOCUMENTS = {
     "ARCHITECTURE.md",
     "INVARIANTS.md",
 }
+_MAKE_ASSIGNMENT = re.compile(
+    r"^(?:(?:override|export)\s+)*([A-Za-z0-9_.-]+)\s*(:::=|::=|:=|\?=|\+=|!=|=)\s*(.*)$"
+)
+_MAKE_INCLUDE = re.compile(r"^(-include|sinclude|include)\s+(.*)$")
+_MAKE_REFERENCE = re.compile(r"\$[({]([A-Za-z0-9_.-]+)[)}]")
+_MAKE_DIRECTIVES = (
+    "ifeq",
+    "ifneq",
+    "ifdef",
+    "ifndef",
+    "else",
+    "endif",
+    "export",
+    "unexport",
+    "override",
+    "undefine",
+    "vpath",
+    "private",
+)
+
+
+def _make_logical_lines(text: str) -> list[str]:
+    """Join backslash continuations and drop comments, as Make reads them."""
+    lines: list[str] = []
+    pending = ""
+    in_recipe_continuation = False
+    for raw in text.splitlines():
+        if in_recipe_continuation or (raw.startswith("\t") and not pending):
+            in_recipe_continuation = raw.endswith("\\")
+            lines.append("\t" + raw.lstrip("\t"))
+            continue
+        joined = pending + raw
+        if joined.endswith("\\"):
+            pending = joined[:-1] + " "
+            continue
+        pending = ""
+        lines.append(joined.split("#", 1)[0].rstrip())
+    if pending:
+        lines.append(pending.split("#", 1)[0].rstrip())
+    return lines
+
+
+def _make_expand(value: str, variables: dict[str, str], depth: int = 0) -> str:
+    if depth > 16:
+        return value
+    expanded = _MAKE_REFERENCE.sub(
+        lambda match: variables.get(match.group(1), match.group(0)), value
+    )
+    if expanded == value:
+        return value
+    return _make_expand(expanded, variables, depth + 1)
+
+
+def _composed_make_targets(root: Path) -> tuple[set[str], list[str]]:
+    """Statically resolve the Make capability graph rooted at ``Makefile``.
+
+    Follows ``include``/``-include``/``sinclude`` directives into repository
+    fragments, expanding plain variable references defined by the parsed files.
+    Nothing is executed: ``$(shell ...)``, ``!=`` and other functions are never
+    evaluated, so an include that depends on them is reported as unresolved
+    rather than guessed. Conditionals are not evaluated, so every branch
+    contributes targets.
+    """
+    root = root.resolve()
+    variables: dict[str, str] = {"CURDIR": str(root)}
+    targets: set[str] = set()
+    unresolved: list[str] = []
+    seen: set[Path] = set()
+
+    def visit(path: Path) -> None:
+        if path in seen or not path.is_file():
+            return
+        seen.add(path)
+        in_define = False
+        for line in _make_logical_lines(path.read_text(encoding="utf-8")):
+            stripped = line.strip()
+            if in_define:
+                in_define = stripped != "endef"
+                continue
+            if not stripped or line.startswith("\t"):
+                continue
+            if stripped.startswith("define ") or stripped == "define":
+                in_define = True
+                continue
+            if include := _MAKE_INCLUDE.match(stripped):
+                optional = include.group(1) != "include"
+                expression = _make_expand(include.group(2), variables)
+                if "$" in expression:
+                    unresolved.append(expression.strip())
+                    continue
+                for word in expression.split():
+                    candidate = (root / word).resolve()
+                    if not candidate.is_relative_to(root):
+                        unresolved.append(word)
+                        continue
+                    pattern = candidate.relative_to(root).as_posix()
+                    if any(char in pattern for char in "*?["):
+                        fragments = sorted(root.glob(pattern))
+                    else:
+                        fragments = [candidate]
+                    for fragment in fragments:
+                        if fragment.is_file():
+                            visit(fragment.resolve())
+                        elif not optional:
+                            unresolved.append(word)
+                continue
+            if assignment := _MAKE_ASSIGNMENT.match(stripped):
+                name, operator, value = assignment.groups()
+                if operator == "!=":
+                    continue
+                if operator == "?=" and name in variables:
+                    continue
+                if operator == "+=" and name in variables:
+                    variables[name] = f"{variables[name]} {value}".strip()
+                else:
+                    variables[name] = value
+                continue
+            if stripped.split(None, 1)[0] in _MAKE_DIRECTIVES or ":" not in stripped:
+                continue
+            head = _make_expand(stripped.split(":", 1)[0], variables)
+            if "$" in head:
+                continue
+            targets.update(
+                name for name in head.split() if "%" not in name and not name.startswith(".")
+            )
+
+    visit(root / "Makefile")
+    return targets, unresolved
 
 
 def _finding(
@@ -169,14 +297,10 @@ def _agent_block_findings(root: Path, rel: str) -> list[dict[str, Any]]:
             )
         ]
     findings: list[dict[str, Any]] = []
-    make_targets: set[str] = set()
-    makefile = root / "Makefile"
-    if makefile.is_file():
-        make_targets = {
-            row.split(":", 1)[0].strip()
-            for row in makefile.read_text(encoding="utf-8").splitlines()
-            if ":" in row and not row.startswith(("\t", " ", "#"))
-        }
+    make_targets, unresolved_includes = _composed_make_targets(root)
+    expected_target = "a target declared by Makefile or a Make fragment it includes"
+    if unresolved_includes:
+        expected_target += f" (unresolved includes: {', '.join(sorted(set(unresolved_includes)))})"
     for command in value.get("commands") or []:
         if not isinstance(command, str):
             continue
@@ -187,7 +311,7 @@ def _agent_block_findings(root: Path, rel: str) -> list[dict[str, Any]]:
                     "agents.contract.command_missing",
                     property_name="agent_command_resolution",
                     observed=command,
-                    expected="a declared Makefile target",
+                    expected=expected_target,
                     line=line,
                     source=rel,
                 )
