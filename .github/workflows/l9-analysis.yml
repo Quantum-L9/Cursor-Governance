@@ -69,7 +69,7 @@ jobs:
 
       - id: gov
         name: Resolve governance (Core)
-        uses: Quantum-L9/l9-ci-core/.github/actions/resolve-governance@4c842cb838b6c49cf44681ecc683a432538fd348
+        uses: Quantum-L9/l9-ci-core/.github/actions/resolve-governance@e5cca9582f2d88bdfe0c659d2ece3a9e43e1297b
         with:
           profile: ${{ env.L9_PROFILE }}
           provider: semgrep
