@@ -770,7 +770,7 @@ class HookWiringTests(unittest.TestCase):
         self.assertNotIn('run_with_timeout() { shift; "$@"; }', text)
         skipped = text.index("bootstrap receipt: NOT GENERATED — run_with_timeout.sh missing")
         generate = text.index('run_with_timeout "$_gen_cap"', skipped)
-        installer = text.index('bash "$installer"', generate)
+        installer = text.index('bash "$BOOTSTRAP_INSTALLER"', generate)
         self.assertLess(skipped, generate)
         self.assertLess(generate, installer)
 

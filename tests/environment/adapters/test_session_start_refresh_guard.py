@@ -71,8 +71,8 @@ def test_every_bootstrap_generates_its_receipt_unconditionally() -> None:
     text = body()
     assert ".attempted" not in text, "no once-per-revision gate on generation"
     assert "repair_verdict" not in text, "generation is not armed by a state verdict"
-    assert 'env L9_BOOTSTRAP_ID="$ceremony_id"' in text
-    assert 'bash "$installer"' in text
+    assert 'env L9_BOOTSTRAP_ID="$_L9_CEREMONY_ID"' in text
+    assert 'bash "$BOOTSTRAP_INSTALLER"' in text
 
 
 def test_bootstrap_generation_is_bounded_by_the_remaining_hook_budget() -> None:
@@ -82,7 +82,7 @@ def test_bootstrap_generation_is_bounded_by_the_remaining_hook_budget() -> None:
     that follows, and generation is declined outright when that is too little.
     """
     text = body()
-    assert "_gen_left=$(( $(_l9_budget_left) - ${L9_BOOTSTRAP_REPORT_FLOOR:-3} ))" in text
+    assert "_gen_left=$(( $(_l9_budget_left) - ${L9_BOOTSTRAP_REPORT_FLOOR:-6} ))" in text
     assert '[ "$_gen_cap" -gt "$_gen_left" ] && _gen_cap="$_gen_left"' in text
     assert 'run_with_timeout "$_gen_cap"' in text, "run under the clamped ceiling"
     assert "bootstrap receipt: NOT GENERATED" in text
@@ -90,7 +90,7 @@ def test_bootstrap_generation_is_bounded_by_the_remaining_hook_budget() -> None:
     assert not re.search(r'(?<!run_with_)timeout "\$_gen_cap"', text)
     assert 'run_with_timeout() { shift; "$@"; }' not in text
     assert text.index("NOT GENERATED — run_with_timeout.sh missing") < text.index(
-        'bash "$installer"'
+        'bash "$BOOTSTRAP_INSTALLER"'
     )
 
 
@@ -103,11 +103,25 @@ def test_the_reader_reads_the_receipt_this_ceremony_generated() -> None:
     reader must be bound to the id the installer stamped.
     """
     text = body()
-    generate = text.index('bash "$installer"')
+    generate = text.index('bash "$BOOTSTRAP_INSTALLER"')
     environment = text.index("--- L9 Claude environment ---")
     refresh = text.index('"$refresh_reader" --read')
     assert generate < environment < refresh
-    assert '"$reader" --read --reprobe --bootstrap-id "$ceremony_id"' in text
+    assert '"$reader" --read --reprobe --bootstrap-id "${_L9_CEREMONY_ID:-not-generated-$$}"' in text
+
+
+def test_the_installer_is_this_ceremonys_projection() -> None:
+    """The standalone projection engine runs only when there is no installer.
+
+    install.sh runs the same projection engine. Running both spent a cold
+    projection (~8 s measured) twice, and left a cold ceremony too little budget
+    to generate its receipt at all.
+    """
+    text = body()
+    installer = text.index('if [ -f "$BOOTSTRAP_INSTALLER" ]; then')
+    standalone = text.index('elif [ "${L9_SKIP_SESSION_PROJECTION:-}" != "1" ]')
+    engine_run = text.index('"$PROJECTION_ENGINE" --root "$GOV"')
+    assert installer < standalone < engine_run
 
 
 def _synthetic_gov(home: Path, *, tracked_dirt: bool, untracked_dirt: bool) -> Path:
