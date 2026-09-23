@@ -802,24 +802,18 @@ emit_bootstrap_status() {
   # id — or none, when generation did not run — reads as unknown: it is not
   # evidence about this bootstrap, however fresh its clock.
 
-  # A receipt written for a different directory reports READY for artifacts this
-  # session never loads, so compare the wired workspace against this project.
-  local wired block prefix
-  wired="$("$py" -c 'import json,sys
-try:
-    print(json.load(open(sys.argv[1], encoding="utf-8")).get("workspace",""))
-except Exception:
-    print("")' "$HOME/.l9/claude/bootstrap-state.json" 2>/dev/null || true)"
-  prefix=""
-  if [ -n "$wired" ] && [ "$wired" != "$WORKSPACE" ]; then
-    prefix="STALE: "
-    say "STALE: bootstrap receipt workspace $wired != session $WORKSPACE"
-  fi
-  block="$("$py" "$reader" --read --reprobe --bootstrap-id "${_L9_CEREMONY_ID:-not-generated-$$}" 2>/dev/null || true)"
+  # Workspace ownership is the reader's rule too (receipt_belongs_to): a
+  # receipt for another workspace reads as unknown with the reason named. This
+  # hook used to parse the file inline and compare the single `workspace` field,
+  # a third rule that disagreed with the reader's covered_roots and with the
+  # runtime report about the same receipt.
+  local block
+  block="$("$py" "$reader" --read --reprobe --bootstrap-id "${_L9_CEREMONY_ID:-not-generated-$$}" \
+    --workspace "$WORKSPACE" 2>/dev/null || true)"
   if [ -n "$block" ]; then
     say "--- L9 Claude environment ---"
     while IFS= read -r line || [ -n "$line" ]; do
-      say "${prefix}${line}"
+      say "$line"
     done <<< "$block"
   else
     say "L9 Claude environment: bootstrap receipt unreadable — run 'make claude-install'"
@@ -939,7 +933,8 @@ emit_readiness_receipt() {
   # session's real hydration. The block names its source and age either way.
   # Bounded: the emitter's memory probe alone carries a 90 s internal timeout.
   local block rc
-  block="$(_l9_bounded 8 "$py" "$emitter" --root "$GOV" --workspace "$WORKSPACE" --read --reuse-fresh 2>/dev/null)"
+  block="$(_l9_bounded 8 env L9_BOOTSTRAP_ID="${_L9_CEREMONY_ID:-not-generated-$$}" \
+    "$py" "$emitter" --root "$GOV" --workspace "$WORKSPACE" --read --reuse-fresh 2>/dev/null)"
   rc=$?
   case "$rc" in
     125)

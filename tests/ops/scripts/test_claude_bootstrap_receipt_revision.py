@@ -150,18 +150,42 @@ def test_receipt_is_workspace_bound_when_it_can_say_so() -> None:
     assert "not evidence about this workspace" in other["reason"]
 
 
-def test_workspace_binding_is_back_compatible() -> None:
-    """A receipt predating covered_roots must not be demoted on a guess."""
+def test_a_receipt_without_covered_roots_is_bound_by_its_workspace_field() -> None:
+    """One ownership rule for every reader (receipt_belongs_to).
+
+    A receipt predating covered_roots still records the workspace it was
+    installed for. The runtime report already treated a mismatch as another
+    session's receipt while this reader called it "cannot say", so one receipt
+    was this session's to one reader and stale to the other.
+    """
     legacy = make(revision="d" * 40)
     legacy.pop("covered_roots", None)
 
     # No workspace asked about: behaviour is exactly as before.
     assert receipt.evaluate(legacy, now=NOW, governance_revision="d" * 40)["state"] == receipt.READY
 
-    # Asked about, but the receipt cannot say — None, and no demotion.
-    asked = receipt.evaluate(legacy, now=NOW, governance_revision="d" * 40, workspace="/anywhere")
+    same = receipt.evaluate(legacy, now=NOW, governance_revision="d" * 40, workspace="/home/user")
+    assert same["workspace_covered"] is True
+    assert same["state"] == receipt.READY
+
+    other = receipt.evaluate(legacy, now=NOW, governance_revision="d" * 40, workspace="/anywhere")
+    assert other["workspace_covered"] is False
+    assert other["state"] == receipt.UNKNOWN
+
+    # Neither covered_roots nor workspace: the receipt genuinely cannot say.
+    bare = {k: v for k, v in legacy.items() if k != "workspace"}
+    asked = receipt.evaluate(bare, now=NOW, governance_revision="d" * 40, workspace="/anywhere")
     assert asked["workspace_covered"] is None
     assert asked["state"] == receipt.READY
+
+
+def test_a_receipt_written_for_home_is_never_this_sessions() -> None:
+    home = make(revision="e" * 40)
+    home.pop("covered_roots", None)
+    home["workspace"] = str(Path.home())
+    result = receipt.evaluate(home, now=NOW, governance_revision="e" * 40, workspace="/tmp/ws")
+    assert result["workspace_covered"] is False
+    assert "$HOME" in result["reason"]
 
 
 def test_cursor_writer_emits_newest_schema() -> None:

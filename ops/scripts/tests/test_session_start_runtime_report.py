@@ -840,6 +840,24 @@ class ReceiptSurfaceIsolationTests(unittest.TestCase):
         self.assertEqual(lines[0]["class"], report.OK)
 
 
+class ReceiptLogTests(unittest.TestCase):
+    """The evidence log is the one the receipt names, not the newest by glob."""
+
+    def test_log_comes_from_the_receipts_own_log_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            own = Path(tmp) / "bootstrap-abc.log"
+            own.write_text("projection=ok\n", encoding="utf-8")
+            decoy = Path(tmp) / "bootstrap-repair-zzz.log"
+            decoy.write_text("an earlier session's repair\n", encoding="utf-8")
+            name, text = report.receipt_log({"log_path": str(own)})
+            self.assertEqual(name, str(own))
+            self.assertIn("projection=ok", text)
+            self.assertNotIn("earlier session", text)
+
+    def test_no_log_path_is_no_evidence(self) -> None:
+        self.assertEqual(report.receipt_log({}), ("", ""))
+
+
 class CursorAdapterClassificationTests(unittest.TestCase):
     def test_not_cursor_surface_emits_nothing(self) -> None:
         self.assertEqual(

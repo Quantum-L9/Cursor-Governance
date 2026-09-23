@@ -126,6 +126,28 @@ def test_the_installer_is_this_ceremonys_projection() -> None:
     assert installer < standalone < engine_run
 
 
+def test_the_hook_carries_no_second_receipt_parser() -> None:
+    """Receipt path, expiry, workspace and ceremony are the reader's rules.
+
+    The hook used to json.load bootstrap-state.json inline and compare the
+    single `workspace` field — a rule that disagreed with the reader's
+    covered_roots and with the runtime report about the same receipt.
+    """
+    text = body()
+    assert '"$HOME/.l9/claude/bootstrap-state.json"' not in text
+    assert '--workspace "$WORKSPACE"' in text[text.index('"$reader" --read --reprobe') :][:200]
+    # The readiness emitter reads the bootstrap receipt too; it gets the id.
+    assert 'env L9_BOOTSTRAP_ID="${_L9_CEREMONY_ID:-not-generated-$$}"' in text
+
+
+def test_the_readiness_emitter_reads_the_receipt_through_the_reader() -> None:
+    emitter = (REPO_ROOT / "ops" / "scripts" / "emit_claude_readiness.py").read_text(
+        encoding="utf-8"
+    )
+    assert "bootstrap_receipt.read(" in emitter
+    assert '"bootstrap-state.json")' not in emitter
+
+
 def _synthetic_gov(home: Path, *, tracked_dirt: bool, untracked_dirt: bool) -> Path:
     """A minimal governance clone the hook will accept as $GOV."""
     import subprocess

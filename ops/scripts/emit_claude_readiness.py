@@ -22,7 +22,7 @@ Sources (all local; capability broker retired, never probed; no provider URL
 since realignment stage C9):
   git -C $GOV            governance repository / default branch / SHA / freshness
   ~/.l9/claude/projection-receipt.json   skill/command/rule/settings/hooks/plugins/mcp
-  ~/.l9/claude/bootstrap-state.json      capabilities / memory / mcp coarse words
+  ~/.l9/claude/bootstrap-state.json      mcp word, via claude_bootstrap_receipt.read
   ops/memory/diagnostics.py              memory.cli (R0/R1 binding + executable),
                                          memory control plane (R2/R3 store + service)
   workspace .mcp.json + spawn wrapper + bound interpreter
@@ -44,6 +44,9 @@ from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import claude_bootstrap_receipt as bootstrap_receipt  # noqa: E402
 
 SCHEMA_VERSION = "l9.claude-readiness.v1"
 
@@ -580,22 +583,53 @@ def _gated_out_note(gated_out: frozenset[str]) -> str:
     return cause + ", ".join(names)
 
 
+#: Reader verdicts under which a receipt's component words describe this
+#: session. `unknown` (expired, superseded, another workspace or ceremony),
+#: `never_ran` and `failed` carry words that are not evidence about now.
+_BOOTSTRAP_EVIDENCE_STATES = frozenset(
+    {bootstrap_receipt.READY, bootstrap_receipt.DEGRADED, bootstrap_receipt.BLOCKED}
+)
+
+
+def _bootstrap_verdict(gov: Path, workspace: str) -> dict[str, Any]:
+    """The bootstrap receipt as the ONE reader classifies it.
+
+    This module used to `json.load` the receipt and trust its `mcp` word raw:
+    an expired receipt, one for another workspace, or one an earlier ceremony
+    wrote all reported MCP_status as if current — the second-parser defect the
+    reader exists to remove (B-04/B-05). Path, expiry, revision, workspace and
+    ceremony (L9_BOOTSTRAP_ID, set by SessionStart) are the reader's rules.
+    """
+    return bootstrap_receipt.read(
+        bootstrap_receipt.receipt_path(),
+        governance_revision=_git(gov, "rev-parse", "HEAD"),
+        workspace=workspace,
+        bootstrap_id=os.environ.get("L9_BOOTSTRAP_ID") or None,
+    )
+
+
 def _mcp_status(
-    bootstrap: dict[str, Any] | None,
+    verdict: dict[str, Any] | None,
     proj_mcp: str,
     gated_out: frozenset[str] = frozenset(),
 ) -> tuple[str, str]:
     # A configured MCP server is not a loaded MCP server. Trust the bootstrap
-    # runtime word over the projection (which only proves the file was rendered).
+    # runtime word over the projection (which only proves the file was
+    # rendered) — but only when the reader says the receipt describes now.
     gated = _gated_out_note(gated_out)
-    if bootstrap:
-        word = str(bootstrap.get("mcp") or "").upper()
+    state = str((verdict or {}).get("state") or "")
+    if state in _BOOTSTRAP_EVIDENCE_STATES:
+        word = str(((verdict or {}).get("components") or {}).get("mcp") or "").upper()
         if word in {READY, DEGRADED, BLOCKED}:
             note = "configured; runtime load per bootstrap"
             return word, note + gated
+    unproven = f"; bootstrap receipt {state}: {(verdict or {}).get('reason', '')}" if state else ""
     if proj_mcp == READY:
-        return DEGRADED, "projection rendered .mcp.json; runtime load unproven" + gated
-    return proj_mcp, "from projection receipt" + gated
+        return (
+            DEGRADED,
+            "projection rendered .mcp.json; runtime load unproven" + unproven + gated,
+        )
+    return proj_mcp, "from projection receipt" + unproven + gated
 
 
 def _makefile_facade(gov: Path) -> tuple[str, str]:
@@ -772,20 +806,20 @@ def _uv_version() -> str:
     return match.group(1) if match else ""
 
 
-def _bootstrap_binding(bootstrap: dict[str, Any] | None) -> str:
+def _bootstrap_binding(verdict: dict[str, Any] | None) -> str:
     """Identity of the bootstrap receipt a readiness receipt was built from.
 
     The bootstrap ceremony generates a new bootstrap receipt every session, and
     MCP_status is read from it. A readiness receipt reused across that boundary
     would report the previous bootstrap's receipt as this one's, so reuse is
-    bound to this identity: ceremony id plus write instant.
+    bound to this identity: ceremony id plus write instant — taken from the
+    reader's verdict, and only when the reader says the receipt describes now.
+    A partial receipt ("@" / "id@") identifies nothing and binds nothing.
     """
-    if not isinstance(bootstrap, dict):
+    if not isinstance(verdict, dict) or verdict.get("state") not in _BOOTSTRAP_EVIDENCE_STATES:
         return ""
-    ceremony = str(bootstrap.get("bootstrap_id") or "").strip()
-    written = str(bootstrap.get("generated_at") or "").strip()
-    # A partial or pre-binding receipt identifies nothing: "@" or "id@" would
-    # match another equally empty binding and license reuse. No binding at all.
+    ceremony = str(verdict.get("bootstrap_id") or "").strip()
+    written = str(verdict.get("generated_at") or "").strip()
     if not ceremony or not written:
         return ""
     return f"{ceremony}@{written}"
@@ -798,7 +832,7 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
 
     ident = _governance_identity(gov)
     proj = _read_json(home / ".l9" / "claude" / "projection-receipt.json")
-    bootstrap = _read_json(home / ".l9" / "claude" / "bootstrap-state.json")
+    bootstrap = _bootstrap_verdict(gov, workspace)
     proj_status = _projection_statuses(proj)
     split = memory_probe(gov, workspace, projection=proj)
     cli_status = str(split["cli"]["status"])
@@ -985,9 +1019,7 @@ def reusable_receipt(
         return None
     # Built from a different bootstrap receipt than the one on disk now: the
     # ceremony generated a new receipt since, and that is the one to read.
-    current = _bootstrap_binding(
-        _read_json(Path.home() / ".l9" / "claude" / "bootstrap-state.json")
-    )
+    current = _bootstrap_binding(_bootstrap_verdict(gov, workspace))
     if not current or str(existing.get("bootstrap_receipt") or "") != current:
         return None
     return existing
