@@ -21,6 +21,7 @@ POLICY_PATH = PACK / "references/doc-surface-policy.yaml"
 POLICY_SCHEMA = PACK / "contracts/doc-surface-policy.schema.json"
 OBLIGATION_SCHEMA = PACK / "contracts/documentation-obligation.schema.json"
 RECEIPT_SCHEMA = PACK / "contracts/repo-docs-receipt.schema.json"
+LEGACY_RECEIPT_V3_SCHEMA = PACK / "contracts/repo-docs-receipt.v3.schema.json"
 POINTER_MAP = PACK / "references/pointer-heading-map.yaml"
 HEADINGS = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
 DIRECTIVES = re.compile(r"<!--\s*L9_DOCS\s*\n(.*?)\n\s*-->", re.DOTALL)
@@ -56,7 +57,7 @@ def load_json(path: Path) -> dict[str, Any]:
 
 def _schema_registry() -> Registry:
     registry = Registry()
-    for path in (POLICY_SCHEMA, OBLIGATION_SCHEMA, RECEIPT_SCHEMA):
+    for path in (POLICY_SCHEMA, OBLIGATION_SCHEMA, LEGACY_RECEIPT_V3_SCHEMA, RECEIPT_SCHEMA):
         if not path.is_file():
             continue
         schema = load_json(path)

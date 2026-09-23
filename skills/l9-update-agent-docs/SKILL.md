@@ -1,6 +1,6 @@
 ---
 name: l9-update-agent-docs
-description: compile repository changes into typed documentation and consumer-contract obligations, assess root-agent, architecture, Makefile, Python, workflow, and OpenAPI surfaces, and emit evidence-bound repo-docs receipts. use when refreshing repo or agent docs, checking consumer operational-contract impact after code/CI changes, generating evidence-backed module READMEs, or proving documentation freshness before merge.
+description: compile repository changes into typed documentation and consumer-contract obligations, assess root-agent, architecture, ADR, Makefile, Python, workflow, and OpenAPI surfaces, and emit evidence-bound repo-docs receipts. use when refreshing repo or agent docs, checking consumer operational-contract impact after code/CI changes, generating evidence-backed module READMEs, or proving documentation freshness before merge.
 metadata:
   skill_schema: 1
   layer: control_plane
@@ -8,8 +8,8 @@ metadata:
   tags: [l9, docs, obligations, agents, ci, maintenance]
   owner: igor_beylin
   status: active
-  version: 3.9.0
-  updated: 2026-09-21
+  version: 4.0.0
+  updated: 2026-09-23
   when_to_use: compile documentation obligations after repository changes, assess supported operational contract surfaces, refresh governed documentation through its canonical owner, or prove closure with a machine receipt
 ---
 
@@ -29,6 +29,7 @@ The compiler is not a doctrine author, general docs writer, generic parser frame
 repository state + repository delta
   -> ConsumerContractSnapshot (one immutable observation bundle)
   -> root-agent and architecture contract validation
+  -> ADR catalog compilation (observation-only; changed records only)
   -> filetree.md inventory (required, first)
   -> missing module/submodule README diagnosis from that inventory
   -> documentation topology
@@ -51,12 +52,14 @@ Machine authority:
 - machine compiler: `scripts/repo_docs.py`
 - consumer snapshot: `scripts/consumer_snapshot.py`
 - root contracts: `scripts/root_contracts.py`
+- ADR catalog compiler: `scripts/adr_compile.py`
+- ADR alignment invariants: `references/adr-catalog-alignment.md`
 - filetree generator: `scripts/doc_filetree.py`
 - module README generator: `scripts/generate_module_readmes.py`
 - operational assessment registry: `scripts/doc_surface_analysis.py`
 - compatibility CLI: `scripts/validate_pointer_headings.py`
 
-`l9.repo-docs.receipt.v3` derives PASS/PARTIAL/BLOCKED from obligation terminality plus structural validation failures. Aggregate impact/capability/Harvest fields are diagnostics and provenance, not competing obligation truth.
+`l9.repo-docs.receipt.v4` derives PASS/PARTIAL/BLOCKED from obligation terminality plus structural validation failures. Aggregate impact/capability/Harvest fields are diagnostics and provenance, not competing obligation truth. The validator retains `l9.repo-docs.receipt.v3` dispatch for stored receipts; adding a required receipt field is a major schema transition, never a silent mutation of the prior contract.
 
 ## Ownership boundaries
 
@@ -72,6 +75,9 @@ Machine authority:
 - `l9-intelligence-harvest` owns semantic discovery and qualification. The compiler consumes canonical `harvest.json`; it never copies Harvest reasoning or mutates the donor through Harvest.
 - `l9-update-agent-docs` owns the root `filetree.md` inventory (`scripts/doc_filetree.py`) and README compilation (`scripts/generate_module_readmes.py` over `readme_model.py`, `source_facts.py`, `readme_evidence.py`, `readme_renderers.py`, `readme_quality.py`). `filetree.md` is generated or refreshed first and is the sole automatic README membership authority. It does not call an LLM, execute source, or import the donor repo. `readme-pipeline-v1` remains an optional sequencer that calls the repo re-export.
 - `l9-architecture-decision-records` owns ADR authoring.
+- `l9-update-agent-docs` owns deterministic ADR-catalog compilation and routes
+  active record defects to `l9-architecture-decision-records`; it never writes,
+  renumbers, rewrites, or supersedes a decision record.
 - repository/API owners own API reference generation.
 - organization/community-health owners remain external.
 - `CANONICAL_LAW.md` remains external authority.
@@ -92,6 +98,7 @@ Current registry:
 - `openapi-contract-v1` -> `scripts/surface_analyzers/openapi.py`
 - `root-agent-contract-v1` -> `scripts/root_contracts.py`
 - `architecture-index-contract-v1` -> `scripts/root_contracts.py`
+- `adr-catalog-contract-v1` -> `scripts/adr_compile.py`
 
 Unknown analyzer IDs fail closed. Do not add dynamic imports, entry-point discovery, repository scanning for plugins, or a generic parser framework.
 
@@ -132,6 +139,32 @@ Dependency and tool-policy truth remains in the repository's existing Python aut
 ## Workflow and OpenAPI contracts
 
 `workflow_contract` validates only workflow-internal `needs` references and local `uses: ./…` paths. `openapi_contract` validates OpenAPI 3.x structure, slash-prefixed path keys, and responses for declared operations. Both analyzers emit `HANDOFF` findings: workflow and API owners retain semantic and repair authority. They never write a workflow or an API contract, and no mutation guard is resolved because this skill is assessment-only on those surfaces.
+
+## ADR catalog contract
+
+`adr_compile.py` is the deterministic bridge between repository documentation
+compilation and the ADR authoring skill. It scans only policy-declared
+`docs/adr/` and `docs/decisions/` record paths, emits a digest-bound catalog in
+the receipt, and validates the ADR skill's existing title, status, ISO date,
+context, options, decision, consequences, unique-number, and supersession-link
+contract. The component does not import, invoke, or duplicate the ADR skill.
+
+ADR alignment invariants are concrete and test-bound: active ADR paths are
+derived from the Git change set (so a deletion remains a handoff target), both
+established `ADR-NNN[-slug].md` and `NNN[-slug].md` conventions are accepted,
+the date is exactly `YYYY-MM-DD`, and no ADR path may resolve through a symlink
+outside the audited root. Historical records remain compatibility evidence.
+An active violation produces a specialist handoff and the governance CI gate
+fails closed; unrelated non-terminal documentation obligations remain within
+the explicitly advisory pilot boundary.
+
+Existing decision history is compatibility evidence, not a migration demand.
+Historical records remain visible as `PARTIAL` catalog evidence but are never
+retroactively made non-terminal. The full contract applies only to ADR files
+in the evaluated change set; an active defect produces an evidence-bound
+`HANDOFF` obligation whose semantic and execution owner is
+`l9-architecture-decision-records`. The component never creates, changes,
+deletes, renumbers, or supersedes an ADR.
 
 ## Evidence and authority order
 

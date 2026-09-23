@@ -110,6 +110,25 @@ def _generic_targets(
     return [{"kind": kind, "path": literal, "selector": literal, "present": False}]
 
 
+def _changed_external_targets(root: Path, changed: list[str]) -> list[dict[str, Any]]:
+    """Preserve exact changed external-owner targets, including deletions.
+
+    Selector discovery is intentionally current-worktree based.  An external
+    contract removed in the evaluated delta therefore needs the change list as
+    its durable target source; otherwise a deletion becomes invisible before
+    the specialist owner can receive a handoff.
+    """
+    return [
+        {
+            "kind": "external",
+            "path": path,
+            "selector": path,
+            "present": (root / path).is_file(),
+        }
+        for path in sorted(set(changed))
+    ]
+
+
 def _execution(spec: dict[str, Any], applicable: bool) -> tuple[str, str | None]:
     if not applicable:
         return "none", None
@@ -242,11 +261,18 @@ def build_obligations(
                 ]
         else:
             targets = _generic_targets(root, surface, spec, llm_enabled=llm_enabled)
+        if surface == "adrs" and source_changes:
+            targets = _changed_external_targets(root, source_changes)
         for target in targets:
             local_sources = sorted(set(target.get("source_changes", source_changes)))
             applicable = _target_applicable(surface, spec, target, llm_enabled=llm_enabled)
             if surface == "module_readmes" and target.get("path") is None:
                 applicable = False
+            if surface == "adrs" and target.get("path") in source_changes:
+                # An active deletion has no current-worktree file, but it is
+                # still a real architecture decision change and must reach
+                # the ADR owner as a handoff rather than becoming invisible.
+                applicable = True
             execution_mode, executor = _execution(spec, applicable)
             action_type, action_mode = _action(spec, target, applicable)
             semantic = surface in semantic_required and applicable

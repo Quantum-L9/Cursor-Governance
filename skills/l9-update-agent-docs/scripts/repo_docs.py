@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from adr_compile import compile_adr_catalog
+from adr_compile import format_findings as format_adr_findings
 from compile_semantic_obligations import compile_harvest_evidence
 from consumer_snapshot import build_consumer_snapshot
 from doc_change import (
@@ -42,6 +44,7 @@ from doc_obligations import (
     validate_and_close_obligations,
 )
 from doc_policy import (
+    LEGACY_RECEIPT_V3_SCHEMA,
     LLM_SURFACE_ID,
     RECEIPT_SCHEMA,
     adapter_directives,
@@ -61,7 +64,8 @@ from doc_surface_analysis import assess_surface_obligations
 from generate_module_readmes import apply_module_readme_plan, plan_module_readmes
 from root_contracts import architecture_delta, assess_architecture_index, assess_root_agent_contract
 
-RECEIPT_ID = "l9.repo-docs.receipt.v3"
+RECEIPT_ID = "l9.repo-docs.receipt.v4"
+LEGACY_RECEIPT_ID = "l9.repo-docs.receipt.v3"
 PACK = Path(__file__).resolve().parents[1]
 
 
@@ -355,7 +359,12 @@ def _status_with_structural(obligation_status: str, failures: list[dict[str, str
 
 
 def validate_receipt_shape(receipt: dict[str, Any]) -> list[str]:
-    return schema_errors(receipt, RECEIPT_SCHEMA)
+    schema = receipt.get("schema")
+    if schema == RECEIPT_ID:
+        return schema_errors(receipt, RECEIPT_SCHEMA)
+    if schema == LEGACY_RECEIPT_ID:
+        return schema_errors(receipt, LEGACY_RECEIPT_V3_SCHEMA)
+    return [f"schema: unsupported receipt schema {schema!r}"]
 
 
 def audit_repository(
@@ -407,6 +416,7 @@ def audit_repository(
     )
     impact = impact_analysis(policy, changed_files)
     snapshot = build_consumer_snapshot(root, policy, revision, changed_files=changed_files)
+    adr_catalog = compile_adr_catalog(root, changed_files=changed_files)
     root_contracts = root_contract_validation(root, snapshot)
     impact_internal = dict(impact)
     impact_internal["all_changed_files"] = changed_files
@@ -547,7 +557,13 @@ def audit_repository(
             changed_files=changed_files,
             run_mutations=run_mutations,
         )
-    obligations = assess_surface_obligations(root, policy, obligations, snapshot=snapshot)
+    obligations = assess_surface_obligations(
+        root,
+        policy,
+        obligations,
+        snapshot=snapshot,
+        adr_catalog=adr_catalog,
+    )
     obligations = validate_and_close_obligations(
         obligations, changed_files=changed_files, run_mutations=run_mutations
     )
@@ -576,6 +592,11 @@ def audit_repository(
             "name": "root_contracts",
             "status": root_contracts["status"],
             "findings": root_contracts["findings"],
+        },
+        {
+            "name": "adr_catalog",
+            "status": adr_catalog["status"],
+            "findings": format_adr_findings(adr_catalog),
         },
         {"name": "managed_regions", "status": managed_status, "findings": managed_findings},
         {
@@ -620,6 +641,7 @@ def audit_repository(
         "impact": impact,
         "consumer_snapshot": snapshot,
         "architecture_delta": architecture_delta(snapshot),
+        "adr_catalog": adr_catalog,
         "surfaces": surfaces,
         "obligations": obligations,
         "summary": summary,
