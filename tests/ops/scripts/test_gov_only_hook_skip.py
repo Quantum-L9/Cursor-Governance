@@ -68,23 +68,20 @@ def _consumer_repo(tmp_path: Path) -> Path:
     return repo
 
 
-def _stub_precommit(tmp_path: Path) -> Path:
-    """A `pre-commit` that reports the SKIP and PATH it was handed and exits clean."""
-    bin_dir = tmp_path / "stub-bin"
-    bin_dir.mkdir()
-    stub = bin_dir / "pre-commit"
-    stub.write_text(
-        '#!/usr/bin/env bash\necho "SKIP=${SKIP:-}"\necho "PATH=$PATH"\nexit 0\n',
+def _precommit_observer(tmp_path: Path) -> Path:
+    """Observe the runner invocation without overriding its locked PATH order."""
+    observer = tmp_path / "precommit-observer.sh"
+    observer.write_text(
+        'pre-commit() { echo "SKIP=${SKIP:-}"; echo "PATH=$PATH"; }\n',
         encoding="utf-8",
     )
-    stub.chmod(0o755)
-    return bin_dir
+    return observer
 
 
 def _effective_skips(tmp_path: Path, workspace: Path) -> list[str]:
     changed = tmp_path / "changed.txt"
     changed.write_text("package.json\n", encoding="utf-8")
-    bin_dir = _stub_precommit(tmp_path)
+    observer = _precommit_observer(tmp_path)
     proc = subprocess.run(
         ["bash", str(SCRIPTS / "run_pr_precommit.sh"), str(workspace)],
         cwd=str(workspace),
@@ -97,7 +94,7 @@ def _effective_skips(tmp_path: Path, workspace: Path) -> list[str]:
             "PR_BASE": "main",
             "PR_CHANGED_FILE": str(changed),
             "PR_PRECOMMIT_STAGE": "readers",
-            "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}",
+            "BASH_ENV": str(observer),
         },
     )
     assert "SKIP=" in proc.stdout, proc.stdout + proc.stderr
@@ -130,7 +127,7 @@ def test_governance_hooks_resolve_python3_to_locked_venv(tmp_path: Path) -> None
     )
     changed = tmp_path / "changed.txt"
     changed.write_text("package.json\n", encoding="utf-8")
-    bin_dir = _stub_precommit(tmp_path)
+    observer = _precommit_observer(tmp_path)
     proc = subprocess.run(
         ["bash", str(SCRIPTS / "run_pr_precommit.sh"), str(ROOT)],
         cwd=str(ROOT),
@@ -143,7 +140,7 @@ def test_governance_hooks_resolve_python3_to_locked_venv(tmp_path: Path) -> None
             "PR_BASE": "main",
             "PR_CHANGED_FILE": str(changed),
             "PR_PRECOMMIT_STAGE": "readers",
-            "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}",
+            "BASH_ENV": str(observer),
         },
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr

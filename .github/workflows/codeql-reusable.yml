@@ -9,8 +9,9 @@
 #
 # Quantum-L9 org-wide CodeQL analysis, exposed as a REUSABLE workflow.
 # Single source of truth: every L9 repo calls this via a ~18-line thin caller
-# (see docs/handoffs/codeql-caller-template.yml). Change analysis here once and
-# it propagates to all callers pinned at @main.
+# (see docs/handoffs/codeql-caller-template.yml). Consumers pin a reviewed
+# commit; releases propagate through deliberate pin updates, never a mutable
+# branch reference.
 #
 # Portable by design: the `detect` job resolves the analysis matrix from the
 # caller repo's actual language composition and assigns a per-language
@@ -26,7 +27,7 @@ on:
         description: "CodeQL config (owner/repo/path@ref or local path)."
         type: string
         required: false
-        default: "Quantum-L9/Cursor-Governance/.github/codeql/codeql-config.yml@main"
+        default: "Quantum-L9/Cursor-Governance/.github/codeql/codeql-config.yml@615d16c5229c18b416d6d28c12bbb97989350769"
       runner:
         description: "Runner label."
         type: string
@@ -115,13 +116,13 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@b96794f015dfd88f77b49b1c93e0fa7110f94c63  # v4.38.0
+        uses: github/codeql-action/init@1c5b675653bb5c22dbe9b12b556ec555138e09fd  # v4.38.1
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
           config-file: ${{ inputs.config-file }}
 
       - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@b96794f015dfd88f77b49b1c93e0fa7110f94c63  # v4.38.0
+        uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd  # v4.38.1
         with:
           category: "/language:${{ matrix.language }}"
