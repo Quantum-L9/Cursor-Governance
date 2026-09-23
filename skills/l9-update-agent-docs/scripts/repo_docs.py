@@ -49,6 +49,7 @@ from doc_policy import (
     load_json,
     load_policy,
     pointer_validate_root,
+    python_fence_validate_root,
     repository_identity,
     resolve_adapter,
     resolve_under_root,
@@ -386,9 +387,16 @@ def audit_repository(
     impact_internal = dict(impact)
     impact_internal["all_changed_files"] = changed_files
     pointer = pointer_validate_root(root)
+    python_fences = python_fence_validate_root(root)
     if pointer["status"] == "FAIL":
         structural.append(
             _structural_failure("pointer_validation", "FAIL", "; ".join(pointer["findings"]))
+        )
+    if python_fences["status"] == "FAIL":
+        structural.append(
+            _structural_failure(
+                "python_fence_validation", "FAIL", "; ".join(python_fences["findings"])
+            )
         )
     managed_status, managed_findings = validate_managed_regions(
         root, base_ref, changed_files, policy
@@ -515,6 +523,11 @@ def audit_repository(
     validators = [
         {"name": "doc_surface_policy", "status": "PASS", "findings": []},
         {"name": "pointer_headings", "status": pointer["status"], "findings": pointer["findings"]},
+        {
+            "name": "root_python_fences",
+            "status": python_fences["status"],
+            "findings": python_fences["findings"],
+        },
         {"name": "managed_regions", "status": managed_status, "findings": managed_findings},
         {
             "name": "semantic_harvest",

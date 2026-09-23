@@ -1,0 +1,15 @@
+{
+  "checks": [
+    {
+      "errors": [],
+      "id": "harvest_schema_evidence_portability_authority_closure",
+      "status": "PASS"
+    }
+  ],
+  "outputs": [
+    "harvest.json"
+  ],
+  "request_id": "gar-readme-validator-stack-630-20260920",
+  "status": "PASS",
+  "unknowns": []
+}

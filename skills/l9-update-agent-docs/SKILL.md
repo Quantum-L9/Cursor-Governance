@@ -8,7 +8,7 @@ metadata:
   tags: [l9, docs, obligations, agents, ci, maintenance]
   owner: igor_beylin
   status: active
-  version: 3.6.0
+  version: 3.6.1
   updated: 2026-09-20
   when_to_use: compile documentation obligations after repository changes, assess supported operational contract surfaces, refresh governed documentation through its canonical owner, or prove closure with a machine receipt
 ---
@@ -235,6 +235,7 @@ For `Makefile` and `pyproject.toml`, always resolve `ops/config/root-file-protec
 - `CLAUDE.md`: load pointer only. Create only when topology permits `create_if_absent`. No doctrine, CI table, or registry dump.
 - `AGENTS.md`: surgical additive operating-instruction update only. Never fold to a pointer.
 - root `README.md`: pointer/index correction only. Never generate from the module README generator.
+- Root Python fences: syntax-check only `python` fences in files named by `references/pointer-heading-map.yaml`, using `scripts/doc_policy.py::python_fence_validate_root`. Parse without executing snippets; do not scan arbitrary Markdown or duplicate the repository security scanner.
 - `ARCHITECTURE.md`: surgical architecture-index refresh only when present; never create when topology says `never`.
 - `INVARIANTS.md`: invariant/enforcement index. Create only when topology permits. Point to enforcing sources; do not copy organization-law bodies.
 - `filetree.md`: required inventory. Create if absent; refresh only a marker-owned generated file. Projection, never authority.
@@ -298,6 +299,7 @@ Do not introduce a generic plugin system merely to avoid adding a static registr
 - Copying `root-file-protection.json` rules into Repo Docs policy as independent truth
 - Making Repo Docs the semantic owner of Make, Python packaging, CI, dependency policy, or root-file protection
 - Dynamic analyzer/plugin discovery
+- Executing code from fenced Markdown or expanding root Python-fence validation beyond the declared pointer-document topology
 - Authoring ADRs or API contracts here
 - Adding LLM-authored or donor-repo README generation
 - Overwriting a handwritten module README, an unowned skill-handled file, or the repository-root README.md
