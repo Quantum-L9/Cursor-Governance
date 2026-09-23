@@ -49,6 +49,9 @@ surfaces:
     evidence_sources: [AGENTS.md, CANONICAL_LAW.md]
     prohibited_mutations: [fold_to_pointer, wholesale_rewrite, duplicate_canonical_law]
     llm_include: true
+    analysis:
+      analyzer: root-agent-contract-v1
+      mode: deterministic_first
   claude:
     owner: l9-update-agent-docs
     role: agent load pointer
@@ -61,6 +64,9 @@ surfaces:
     evidence_sources: [AGENTS.md, CANONICAL_LAW.md, INVARIANTS.md, ARCHITECTURE.md]
     prohibited_mutations: [own_doctrine, ci_table_dump, registry_dump, managed_region_change]
     llm_include: true
+    analysis:
+      analyzer: root-agent-contract-v1
+      mode: deterministic_first
   readme_root:
     owner: repository_human_index
     role: repository index
@@ -85,6 +91,9 @@ surfaces:
     evidence_sources: [.github/workflows, config, source_tree]
     prohibited_mutations: [copy_operating_ssot, copy_canonical_law, managed_region_change]
     llm_include: true
+    analysis:
+      analyzer: architecture-index-contract-v1
+      mode: deterministic_first
   invariants:
     owner: repository_invariant_index
     role: invariant enforcement map
@@ -205,6 +214,7 @@ surfaces:
     evidence_sources: [source_tree]
     prohibited_mutations: [hand_maintain, llm_authored_filetree, own_doctrine, unowned_overwrite]
     llm_include: true
+    projection_inputs: [source_tree]
   llm_txt:
     owner: l9-update-agent-docs
     role: LLM documentation discovery index
@@ -217,6 +227,7 @@ surfaces:
     evidence_sources: [references/doc-surface-policy.yaml, project_adapter]
     prohibited_mutations: [own_doctrine, embed_authority_bodies, guess_published_urls, hand_maintain, unowned_overwrite, leave_legacy_llms_txt]
     llm_include: false
+    projection_inputs: [documentation_surfaces, publication_configuration]
   community_health:
     owner: sync-ci-or-org-community-health
     role: community health documentation
@@ -307,8 +318,9 @@ capabilities:
 
 llm_txt:
   owner: l9-update-agent-docs
-  spec_version: v2
+  spec_version: v3
   published_surface_markers: [mkdocs.yml, mkdocs.yaml, docusaurus.config.js, docusaurus.config.ts, mint.json, gitbook.yaml, docs/.vitepress/config.js, docs/.vitepress/config.ts]
   adapter_directive_block: L9_DOCS
   default_enabled: true
   surface_order: [readme_root, filetree, architecture, invariants, agents, claude, api_reference, adrs]
+  manifest_schema: l9.repo-docs.llm-manifest.v1
