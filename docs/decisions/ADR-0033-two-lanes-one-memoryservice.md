@@ -133,7 +133,6 @@ the interpreter.
 | `ops/hooks/graphiti-session-end.sh` → `close_session.py` (capsule ingest, `close`, `distill`) | hook | `cursor-session-end` / `claude-session-end` |
 | `environment/agents/adapters/claude-code/memory/memory_bridge.py` (hydrate, conflicts) | hook | `claude-session-start` |
 | `environment/agents/adapters/claude-code/hooks/memory_writeback.py` | hook | `claude-session-end` |
-| `environment/agents/adapters/claude-code/hooks/memory_writeback.py` (post-publish `governance_friction` only; `namespaces: [cursor-governance]`) | hook | `claude-governance-friction` |
 | `ops/hooks/plan_memory_prefetch.py` | hook | `plan-prefetch` |
 | `ops/hooks/pr_publish_memory_write.py` (deterministic adapter) | hook | `pr-publish` |
 | `environment/agents/generated-data/adapters/ingest_memory_candidate.py` (SGD automatic ingest) | hook | `pe-sgd-ingest` |
