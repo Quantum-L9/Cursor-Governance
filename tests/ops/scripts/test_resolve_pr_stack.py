@@ -1,4 +1,4 @@
-"""PR_STACK=auto binds the unique chain tip before pr-check, not after it."""
+"""PR_STACK=auto binds the unique chain tip before the direct gate, not after it."""
 
 from __future__ import annotations
 
@@ -15,7 +15,8 @@ LIB = SCRIPTS / "lib" / "resolve_pr_stack.sh"
 GATE = SCRIPTS / "run_pr_gate.sh"
 PREFLIGHT = SCRIPTS / "pr_preflight.sh"
 OPEN_PR = SCRIPTS / "open_pr_after_gate.sh"
-MAKEFILE = ROOT / "Makefile"
+PUBLISH = ROOT / "ops" / "make" / "publish.mk"
+QUALITY = ROOT / "ops" / "make" / "quality.mk"
 
 
 def _run(
@@ -237,18 +238,19 @@ def test_generated_heal_is_serialized_before_reader_wave() -> None:
 
 
 def test_makefile_passes_pr_stack_into_gate_recipes() -> None:
-    makefile = MAKEFILE.read_text(encoding="utf-8")
-    preflight = makefile.split("pr-preflight:", 1)[1].split("\n\n", 1)[0]
-    pr_check = makefile.split("pr-check:", 1)[1].split("\n\n", 1)[0]
+    publish = PUBLISH.read_text(encoding="utf-8")
+    preflight = publish.split("pr-preflight:", 1)[1].split("\n\n", 1)[0]
+    pr = publish.split("pr:", 1)[1].split("\n\n", 1)[0]
     assert 'PR_STACK="$(PR_STACK)"' in preflight
-    assert 'PR_STACK="$(PR_STACK)"' in pr_check
-    precommit_repo = makefile.split("precommit-repo:", 1)[1].split("\n\n", 1)[0]
-    # Recipe line stays byte-identical (additive_only). PR_STACK is a
-    # simply-expanded target-specific export so Apple Make 3.81 can snapshot
-    # `auto` without a recursive self-ref (`=` flavor).
-    assert 'PR_BASE="$(PR_BASE)" bash ops/scripts/run_pr_precommit.sh' in precommit_repo
-    assert "precommit-repo: export PR_STACK := $(PR_STACK)" in makefile
-    assert "precommit-repo: export PR_STACK = $(PR_STACK)" not in makefile
+    assert 'PR_STACK="$(PR_STACK)"' in pr
+    quality = QUALITY.read_text(encoding="utf-8")
+    precommit_repo = quality.split("precommit-repo:", 1)[1].split("\n\n", 1)[0]
+    # The quality recipe stays byte-identical; the simply-expanded export
+    # remains in the publication fragment for GNU Make 3.81.
+    assert 'PR_BASE="$(PR_BASE)"' in precommit_repo
+    assert "bash ops/scripts/run_pr_precommit.sh" in precommit_repo
+    assert "precommit-repo: export PR_STACK := $(PR_STACK)" in publish
+    assert "precommit-repo: export PR_STACK = $(PR_STACK)" not in publish
     assert "pr_stack_apply_publish_base" in PREFLIGHT.read_text(encoding="utf-8")
     assert "pr_stack_apply_publish_base" in OPEN_PR.read_text(encoding="utf-8")
     assert "pr_stack_apply_publish_base" in GATE.read_text(encoding="utf-8")

@@ -132,6 +132,15 @@ Template and workflow live in this file. Check repo for existing `docs/decisions
 
 Every ADR MUST include Status, Date, Context, Options Considered (≥2), Decision, and Consequences. File naming MUST follow repo sequential numbering. Superseded ADRs MUST link forward — never delete.
 
+## Compiler integration
+
+`l9-update-agent-docs/scripts/adr_compile.py` may compile a deterministic,
+receipt-bound catalog of ADRs that changed in the evaluated repository delta.
+It observes this contract and returns evidence-bound handoffs; it never writes,
+renumbers, supersedes, or rewrites ADRs. This skill remains the sole authoring
+and maintenance owner. Historical ADR compatibility findings are visible to the
+compiler but do not authorize a bulk history rewrite.
+
 ## Failure Handling
 
 - Decision already made without ADR → write retrospective ADR; label status Accepted.

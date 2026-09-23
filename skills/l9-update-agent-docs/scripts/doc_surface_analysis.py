@@ -8,14 +8,49 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from adr_compile import ADR_ANALYZER_ID, assess_adr_catalog
+from root_contracts import assess_architecture_index, assess_root_agent_contract
 from surface_analyzers.makefile import analyze as analyze_makefile
+from surface_analyzers.openapi import analyze as analyze_openapi
 from surface_analyzers.pyproject import analyze as analyze_pyproject
+from surface_analyzers.workflow import analyze as analyze_workflow
 
 Analyzer = Callable[[Path, Path], dict[str, Any]]
 
+
+def _snapshot_required_analyzer(_root: Path, _target: Path) -> dict[str, Any]:
+    """Fail closed if a snapshot-aware root contract reaches generic dispatch.
+
+    Root-agent and architecture contracts consume the repository-wide consumer
+    snapshot. Their real dispatch is intentionally handled below in
+    :func:`assess_surface_obligations`; registering this explicit sentinel keeps
+    a future refactor from silently substituting an unrelated two-argument
+    analyzer.
+    """
+    return {
+        "status": "BLOCKED",
+        "findings": [],
+        "blockers": ["snapshot-aware root contract requires consumer snapshot evidence"],
+    }
+
+
+def _adr_catalog_required_analyzer(_root: Path, _target: Path) -> dict[str, Any]:
+    """Fail closed if an ADR contract reaches generic two-argument dispatch."""
+    return {
+        "status": "BLOCKED",
+        "findings": [],
+        "blockers": ["ADR contract requires deterministic ADR catalog evidence"],
+    }
+
+
 ANALYZERS: dict[str, Analyzer] = {
+    ADR_ANALYZER_ID: _adr_catalog_required_analyzer,
+    "architecture-index-contract-v1": _snapshot_required_analyzer,
     "makefile-contract-v1": analyze_makefile,
+    "openapi-contract-v1": analyze_openapi,
     "python-project-contract-v1": analyze_pyproject,
+    "root-agent-contract-v1": _snapshot_required_analyzer,
+    "workflow-contract-v1": analyze_workflow,
 }
 
 
@@ -44,6 +79,10 @@ def _guard_resolution(
     target: str | None,
 ) -> dict[str, Any] | None:
     if not guard_id:
+        return None
+    if guard_id == "external-owner":
+        # The repository-docs skill may assess this target but may not mutate
+        # it. Its semantic owner receives any deterministic findings.
         return None
     if guard_id != "root-file-protection":
         return {
@@ -128,6 +167,9 @@ def assess_surface_obligations(
     root: Path,
     policy: dict[str, Any],
     obligations: list[dict[str, Any]],
+    *,
+    snapshot: dict[str, Any] | None = None,
+    adr_catalog: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Attach deterministic assessment and separated ownership to obligations."""
 
@@ -142,7 +184,9 @@ def assess_surface_obligations(
 
         analyzer_id = str(analysis.get("analyzer") or "")
         target_rel = obligation["target"].get("path")
-        if not target_rel or not obligation["target"].get("present"):
+        if not target_rel or (
+            not obligation["target"].get("present") and analyzer_id != ADR_ANALYZER_ID
+        ):
             obligation["assessment"] = {
                 "analyzer": analyzer_id or None,
                 "status": "NOT_APPLICABLE",
@@ -206,7 +250,50 @@ def assess_surface_obligations(
             obligation["blockers"] = sorted(set(obligation["blockers"] + [detail]))
             continue
 
-        result = analyzer(root, root / target_rel)
+        root_contract = analyzer_id in {
+            "architecture-index-contract-v1",
+            "root-agent-contract-v1",
+        }
+        if root_contract and not isinstance(snapshot, dict):
+            detail = "snapshot-aware root contract assessment requires consumer snapshot evidence"
+            obligation["assessment"] = {
+                "analyzer": analyzer_id,
+                "status": "BLOCKED",
+                "findings": [],
+                "disposition": "UNKNOWN",
+                "mutation_guard": guard,
+            }
+            obligation["lifecycle"] = {
+                "status": "BLOCKED",
+                "reason": "root contract evidence is unavailable",
+                "terminal": False,
+            }
+            obligation["blockers"] = sorted(set(obligation["blockers"] + [detail]))
+            continue
+        if analyzer_id == ADR_ANALYZER_ID and not isinstance(adr_catalog, dict):
+            detail = "ADR catalog assessment requires deterministic catalog evidence"
+            obligation["assessment"] = {
+                "analyzer": analyzer_id,
+                "status": "BLOCKED",
+                "findings": [],
+                "disposition": "UNKNOWN",
+                "mutation_guard": guard,
+            }
+            obligation["lifecycle"] = {
+                "status": "BLOCKED",
+                "reason": "ADR catalog evidence is unavailable",
+                "terminal": False,
+            }
+            obligation["blockers"] = sorted(set(obligation["blockers"] + [detail]))
+            continue
+        if analyzer_id == "architecture-index-contract-v1":
+            result = assess_architecture_index(root, root / target_rel, snapshot)
+        elif analyzer_id == "root-agent-contract-v1":
+            result = assess_root_agent_contract(root, root / target_rel, snapshot)
+        elif analyzer_id == ADR_ANALYZER_ID:
+            result = assess_adr_catalog(root, root / target_rel, adr_catalog)
+        else:
+            result = analyzer(root, root / target_rel)
         if result.get("status") == "BLOCKED":
             blockers = [str(item) for item in result.get("blockers", [])]
             obligation["assessment"] = {
@@ -263,7 +350,9 @@ def assess_surface_obligations(
             )
 
         if normalized:
-            handoff = any(row.get("remediation_class") == "HANDOFF" for row in normalized)
+            handoff = root_contract or any(
+                row.get("remediation_class") == "HANDOFF" for row in normalized
+            )
             if handoff:
                 obligation["assessment"] = {
                     "analyzer": analyzer_id,
@@ -325,6 +414,17 @@ def assess_surface_obligations(
                 finding_evidence_ids,
             )
             obligation["validation"]["results"] = [existing[name] for name in sorted(existing)]
+        elif root_contract:
+            # Root-document validation is evidence for the existing semantic
+            # obligation.  A clean structural check must not erase a Harvest
+            # refresh requirement by replacing it with PRESERVE.
+            obligation["assessment"] = {
+                "analyzer": analyzer_id,
+                "status": "PASS",
+                "findings": [],
+                "disposition": "PRESERVE",
+                "mutation_guard": guard,
+            }
         else:
             obligation["assessment"] = {
                 "analyzer": analyzer_id,

@@ -1,5 +1,5 @@
 {
-  "generation_id": "24e1e45317b3cb6f24c2dd29d4bb138b0d3c2a105b5b397bc1906691e503ee21",
+  "generation_id": "45192b152115903d3404b921c06254a7067b295e3b3ee0f0d02b6a77e91e17e7",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -70,7 +70,7 @@
           "admin merge",
           "force push"
         ],
-        "note": "Invoking /l9-pr-remediation authorizes merge of all open PRs in the target repo after Converge (oldest-first, stack-safe). Subscribe/own every open PR through required checks; do not hand the watch back to the human. The per-PR board verdict comes from ops/autonomy/pr_board.py (required-check identity from branch protection plus rulesets, conflicted paths); an ownership class is the edit axis and never parks a PR; leftover requires --human-decision or --unfixable-check; above-paygrade leftovers open a GitHub issue and launch l9-issue-remediation \u2014 do not ask the human to unblock; mission is open_prs=0. Verify with make precommit-repo; publish with git push of the already-open PR branch. Do not run make pr or make pr-check. Campaigns/make pr stay no-merge. Force-push and admin-merge remain forbidden. Receipt: ops/autonomy/authorize_merge.py --all-open.\n",
+        "note": "Invoking /l9-pr-remediation authorizes merge of all open PRs in the target repo after Converge (oldest-first, stack-safe). Subscribe/own every open PR through required checks; do not hand the watch back to the human. The per-PR board verdict comes from ops/autonomy/pr_board.py (required-check identity from branch protection plus rulesets, conflicted paths); an ownership class is the edit axis and never parks a PR; leftover requires --human-decision or --unfixable-check; above-paygrade leftovers open a GitHub issue and launch l9-issue-remediation \u2014 do not ask the human to unblock; mission is open_prs=0. Verify with make precommit-repo; publish with git push of the already-open PR branch. Do not run the campaign publication ceremony or its gate-only diagnosis. Campaigns/make pr stay no-merge. Force-push and admin-merge remain forbidden. Receipt: ops/autonomy/authorize_merge.py --all-open.\n",
         "positive_signals": [
           "remediate the pr",
           "remediate until green",
@@ -880,7 +880,7 @@
       "path": "skills/l9-architecture-decision-records",
       "reason": "",
       "skill_md": "skills/l9-architecture-decision-records/SKILL.md",
-      "skill_sha256": "e5b9b94084e865958e0be0bcb0dd35c0df59e647cdacf4078bbf3335373cee41",
+      "skill_sha256": "f352200d3cd68aac8040eb488279ba13b14b54ccb5eb4fd20d1f8297e3c914ab",
       "user_invocable": true,
       "when_to_use": "capturing a significant architecture/design decision, recording trade-offs, or creating an ADR"
     },
@@ -971,7 +971,7 @@
       "path": "skills/l9-ci-ops",
       "reason": "CI/CD pipeline operations and gate authoring",
       "skill_md": "skills/l9-ci-ops/SKILL.md",
-      "skill_sha256": "7c6d005ff4e353c44a9c2af382cd6ccdca3d0855ff8b6eb0e57e0e6bbe57a8af",
+      "skill_sha256": "1bf9a93aa9d039f66a23b178247a288806d3198c3aa328f58f522b0cd9cd65b1",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1413,7 +1413,7 @@
       "path": "skills/l9-pr-remediation",
       "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked). The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Above-paygrade HUMAN / unfixable required CI / ENVIRONMENT after best-effort opens a GitHub issue and launches l9-issue-remediation via cursor-subagents; do not ask the human to unblock. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
       "skill_md": "skills/l9-pr-remediation/SKILL.md",
-      "skill_sha256": "89d2df911c9885dff57cdbb2f724d196ce12b75bbe5f0f2cf8d6770af13986a7",
+      "skill_sha256": "354be2c14a5949833eb536daeb1101321bda8c45f0300fe1c1e6c973faf2fa0d",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1575,14 +1575,14 @@
     },
     {
       "composition_role": "primary",
-      "description": "compile repository changes into typed documentation and operational-contract obligations, assess Makefile/pyproject surfaces, and emit repo-docs receipts. use when refreshing repo or agent docs, checking docs or operational-contract impact after code/CI changes, generating module READMEs, or proving documentation freshness before merge.",
+      "description": "compile repository changes into typed documentation and consumer-contract obligations, assess root-agent, architecture, ADR, Makefile, Python, workflow, and OpenAPI surfaces, and emit evidence-bound repo-docs receipts. use when refreshing repo or agent docs, checking consumer operational-contract impact after code/CI changes, generating evidence-backed module READMEs, or proving documentation freshness before merge.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-update-agent-docs",
       "path": "skills/l9-update-agent-docs",
       "reason": "",
       "skill_md": "skills/l9-update-agent-docs/SKILL.md",
-      "skill_sha256": "d73a5583320877d08210609368ba4c1e900d86e9bd968ac4e66b6689278957b6",
+      "skill_sha256": "1a54381218fe5c4f14ac5f6fc9e3dd5c399ed8c381ed51df3966048693d4a7ad",
       "user_invocable": true,
       "when_to_use": "refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes, or creating root CLAUDE.md / INVARIANTS.md when missing"
     },
@@ -1614,6 +1614,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "de4a8b1992a9b8b992e69b2a61f4f369d63a28ef094b8d3443043fe803abd6ae",
-  "source_skill_corpus_sha256": "8f24f716b9cb2e31d074ac617265f675c4b6fea50a6a5441c8d309ad9a12d6bc"
+  "source_manifest_sha256": "2cc1c76dd45b8a970c3ecabce7a832b7d5c9f8b6fc36cb56bb15cd69d7269c5b",
+  "source_skill_corpus_sha256": "759a464043edc4765acbf244272d64541056de2acf4ae951644287a5a0489c6e"
 }

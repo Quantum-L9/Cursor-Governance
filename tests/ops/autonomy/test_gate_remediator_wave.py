@@ -19,7 +19,7 @@ from local_execution_gate import (  # noqa: E402
 
 
 def test_command_runs_reader_wave_detects_ceremony_goals() -> None:
-    assert command_runs_reader_wave("make pr-check") == "make pr-check"
+    assert command_runs_reader_wave("OPEN_PR=0 make pr") == "make pr"
     assert command_runs_reader_wave("PR_BASE=origin/main make pr") == "make pr"
     assert "run_pr_gate.sh" in (command_runs_reader_wave("bash ops/scripts/run_pr_gate.sh") or "")
     assert command_runs_reader_wave("L9_REMEDIATOR=1 make precommit-repo") is None
@@ -30,19 +30,19 @@ def test_evaluate_denies_pr_check_when_remediator_env_set(
 ) -> None:
     monkeypatch.setenv(REMEDIATOR_ENV, "1")
     assert remediator_env_active() is True
-    reason = evaluate("Bash", {"command": "make pr-check"}, root=tmp_path)
+    reason = evaluate("Bash", {"command": "OPEN_PR=0 make pr"}, root=tmp_path)
     assert reason is not None
     assert "reader wave" in reason
     assert "make precommit-repo" in reason
     monkeypatch.delenv(REMEDIATOR_ENV, raising=False)
-    assert evaluate("Bash", {"command": "make pr-check"}, root=tmp_path) is None
+    assert evaluate("Bash", {"command": "OPEN_PR=0 make pr"}, root=tmp_path) is None
     assert (
         evaluate("Bash", {"command": "L9_REMEDIATOR=1 make precommit-repo"}, root=tmp_path) is None
     )
 
 
 def test_evaluate_denies_inline_remediator_assignment(tmp_path: Path) -> None:
-    reason = evaluate("Bash", {"command": "L9_REMEDIATOR=1 make pr-check"}, root=tmp_path)
+    reason = evaluate("Bash", {"command": "L9_REMEDIATOR=1 OPEN_PR=0 make pr"}, root=tmp_path)
     assert reason is not None
     assert "reader wave" in reason
 
@@ -59,7 +59,7 @@ def test_cursor_shell_denies_pr_check_when_remediator_env_set(
     monkeypatch.setattr(
         sys,
         "stdin",
-        StringIO(json.dumps({"command": "make pr-check"})),
+        StringIO(json.dumps({"command": "OPEN_PR=0 make pr"})),
     )
     assert gate.main_cursor_shell() == 0
     payload = json.loads(capsys.readouterr().out.strip().splitlines()[-1])

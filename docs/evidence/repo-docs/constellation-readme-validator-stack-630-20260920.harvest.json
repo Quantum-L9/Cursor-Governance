@@ -1,0 +1,521 @@
+{
+  "concepts": [
+    {
+      "acceptance_tests": [
+        {
+          "given": "a donor has README metadata",
+          "must_not": "add README.meta.yaml as a new recipient authority",
+          "then": "the recipient retains its own topology and mutation guard",
+          "when": "the recipient receives harvested validation semantics"
+        }
+      ],
+      "beneficiary_destination": "skills/l9-update-agent-docs/references/doc-surface-policy.yaml",
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "compatibility_risk": "A second documentation SSOT could allow conflicting required headings or unsafe mutation routing.",
+        "existing_owner": "l9-update-agent-docs and root-file protection",
+        "merge_decision": "Preserve the recipient policy; do not import README.meta.yaml as a second authority."
+      },
+      "compounding": 4,
+      "description": "Per-document README metadata may be evidence, but the recipient's doc-surface policy and root-file protection remain the only active topology and mutation authorities.",
+      "disposition": "MERGE_WITH_EXISTING",
+      "evidence_ids": [
+        "ev-meta-contract",
+        "ev-recipient-topology",
+        "ev-recipient-root-guard"
+      ],
+      "id": "c-metadata-policy-boundary",
+      "leverage": 5,
+      "name": "Metadata-policy authority stays recipient-native",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "A donor-local README.meta.yaml contract would duplicate the recipient's documentation topology and mutation authority.",
+      "rank_score": 54,
+      "risks": [
+        "A second documentation SSOT could allow conflicting required headings or unsafe mutation routing."
+      ],
+      "semantic_contract": "Per-document README metadata may be evidence, but the recipient's doc-surface policy and root-file protection remain the only active topology and mutation authorities."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a root document is declared in the recipient pointer map",
+          "must_not": "require donor overview or API headings",
+          "then": "recipient-specific required headings are checked",
+          "when": "pointer validation runs"
+        }
+      ],
+      "beneficiary_destination": "skills/l9-update-agent-docs/scripts/doc_policy.py",
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "compatibility_risk": "Importing donor names would impose irrelevant headings and create false failures.",
+        "existing_owner": "l9-update-agent-docs pointer validation",
+        "merge_decision": "Retain the recipient pointer-heading map as the required-heading authority."
+      },
+      "compounding": 4,
+      "description": "Validate required root-document headings only from the recipient pointer map, preserving recipient-specific roles rather than donor section names.",
+      "disposition": "MERGE_WITH_EXISTING",
+      "evidence_ids": [
+        "ev-validator",
+        "ev-recipient-pointer-validation"
+      ],
+      "id": "c-required-section-validation",
+      "leverage": 4,
+      "name": "Required root-document headings validate against recipient policy",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "Root documentation can drift by omitting the headings that make its declared role usable.",
+      "rank_score": 44,
+      "risks": [
+        "Importing donor names would impose irrelevant headings and create false failures."
+      ],
+      "semantic_contract": "Validate required root-document headings only from the recipient pointer map, preserving recipient-specific roles rather than donor section names."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a declared root document contains a labeled Python fence with invalid syntax",
+          "must_not": "execute the snippet or lint unrelated Markdown files",
+          "then": "the receipt records a structural Python-fence validation failure with a source line",
+          "when": "repository documentation validation runs"
+        }
+      ],
+      "beneficiary_destination": "skills/l9-update-agent-docs/scripts/doc_policy.py and repo_docs.py",
+      "beneficiary_fit": {
+        "comparison": "DONOR_STRONGER",
+        "compatibility_risk": "Unbounded Markdown scanning could create cost and ownership drift; executing snippets would add unsafe side effects.",
+        "existing_owner": "l9-update-agent-docs root-document validation",
+        "merge_decision": "Port a bounded syntax-only check into the existing pointer validation path with recipient-defined scope."
+      },
+      "compounding": 5,
+      "description": "Parse explicitly labeled Python fenced blocks in only the root documents declared by the recipient pointer map; report syntax failures as a structural documentation validation failure, without executing snippets or broadening into a repository-wide Markdown linter.",
+      "disposition": "PORT_WITH_HARDENING",
+      "evidence_ids": [
+        "ev-python-fence",
+        "ev-recipient-pointer-validation",
+        "ev-recipient-topology"
+      ],
+      "id": "c-root-python-fence-syntax",
+      "leverage": 5,
+      "name": "Root-document Python fences are parsed before receipt closure",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "An agent-facing root document can contain a malformed Python example that misleads an operator even when heading structure is valid.",
+      "rank_score": 55,
+      "risks": [
+        "Unbounded Markdown scanning could create cost and ownership drift; executing snippets would add unsafe side effects."
+      ],
+      "semantic_contract": "Parse explicitly labeled Python fenced blocks in only the root documents declared by the recipient pointer map; report syntax failures as a structural documentation validation failure, without executing snippets or broadening into a repository-wide Markdown linter."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "documentation changes include a credential-like value",
+          "must_not": "create a second Repo Docs secret-scanning authority",
+          "then": "the central security scanner evaluates the changed documentation",
+          "when": "the PR security gate runs"
+        }
+      ],
+      "beneficiary_destination": "ops/scripts/run_pr_security.sh",
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "compatibility_risk": "A duplicate regex set can drift from gitleaks and create conflicting conclusions.",
+        "existing_owner": "recipient PR security gate",
+        "merge_decision": "Keep secret scanning with the existing security owner and name that boundary in Repo Docs."
+      },
+      "compounding": 4,
+      "description": "Repo Docs must not replicate donor secret regexes; the recipient's gitleaks-based security owner remains responsible for detecting changed-file secret exposure.",
+      "disposition": "MERGE_WITH_EXISTING",
+      "evidence_ids": [
+        "ev-validator",
+        "ev-recipient-security"
+      ],
+      "id": "c-document-secret-scanning",
+      "leverage": 4,
+      "name": "Documentation secrets stay in the central security scan",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "Documentation can expose credential-like material, but duplicate scanners produce inconsistent patterns and severity.",
+      "rank_score": 44,
+      "risks": [
+        "A duplicate regex set can drift from gitleaks and create conflicting conclusions."
+      ],
+      "semantic_contract": "Repo Docs must not replicate donor secret regexes; the recipient's gitleaks-based security owner remains responsible for detecting changed-file secret exposure."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a documentation obligation proposes a root-file mutation",
+          "must_not": "authorize a write from donor metadata alone",
+          "then": "the recipient resolves the canonical mutation guard before action",
+          "when": "surface assessment runs"
+        }
+      ],
+      "beneficiary_destination": "skills/l9-update-agent-docs/scripts/doc_surface_analysis.py",
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "compatibility_risk": "String-matched scopes are weaker than the recipient's explicit owner and guard model.",
+        "existing_owner": "recipient ownership and root-file protection",
+        "merge_decision": "Preserve named owner and mutation guard resolution; do not add donor scope parsing."
+      },
+      "compounding": 3,
+      "description": "Use recipient topology, named execution owner, and root-file mutation guard to determine admissible writes; donor scope strings are non-authoritative evidence only.",
+      "disposition": "MERGE_WITH_EXISTING",
+      "evidence_ids": [
+        "ev-validator",
+        "ev-recipient-topology",
+        "ev-recipient-root-guard"
+      ],
+      "id": "c-forbidden-scope-boundary",
+      "leverage": 4,
+      "name": "Documentation mutation scope stays governed by existing guards",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "A documentation compiler must not write outside authorized targets merely because a donor metadata file allows or forbids paths.",
+      "rank_score": 43,
+      "risks": [
+        "String-matched scopes are weaker than the recipient's explicit owner and guard model."
+      ],
+      "semantic_contract": "Use recipient topology, named execution owner, and root-file mutation guard to determine admissible writes; donor scope strings are non-authoritative evidence only."
+    }
+  ],
+  "drift": [
+    {
+      "behavior": "Per-document metadata owns required headings and allowed scopes in the donor.",
+      "canonical_candidate": "Recipient doc-surface-policy.yaml, pointer-heading-map.yaml, and root-file protection.",
+      "resolution": "Preserve recipient topology and mutation guards; do not import a parallel README.meta.yaml authority."
+    },
+    {
+      "behavior": "Donor secret regexes identify possible README leaks.",
+      "canonical_candidate": "Recipient gitleaks-based PR security owner.",
+      "resolution": "Keep security scanning with the existing security owner; do not duplicate secret patterns in Repo Docs."
+    }
+  ],
+  "evidence": [
+    {
+      "claim": "The donor declares README location, required headings, collaboration scope, and change policy in metadata.",
+      "epistemic": "CONFIRMED",
+      "id": "ev-meta-contract",
+      "locator": {
+        "kind": "path_lines",
+        "value": "README.meta.yaml:1-43"
+      },
+      "secret_redacted": false,
+      "source": "Quantum-L9/Constellation.ReadmeValidator"
+    },
+    {
+      "claim": "The donor performs pure metadata, required-heading, secret, forbidden-scope, and Python-fence validation without repository writes.",
+      "epistemic": "CONFIRMED",
+      "id": "ev-validator",
+      "locator": {
+        "kind": "path_lines",
+        "value": "src/constellation_readme_validator/validator.py:60-200"
+      },
+      "secret_redacted": false,
+      "source": "Quantum-L9/Constellation.ReadmeValidator"
+    },
+    {
+      "claim": "The donor parses Python fenced blocks with ast.parse and reports syntax failures with approximate line locations.",
+      "epistemic": "CONFIRMED",
+      "id": "ev-python-fence",
+      "locator": {
+        "kind": "path_lines",
+        "value": "src/constellation_readme_validator/validator.py:156-176"
+      },
+      "secret_redacted": false,
+      "source": "Quantum-L9/Constellation.ReadmeValidator"
+    },
+    {
+      "claim": "The donor regression tests cover metadata, secret, and required-heading pass and fail cases.",
+      "epistemic": "CONFIRMED",
+      "id": "ev-tests",
+      "locator": {
+        "kind": "path_lines",
+        "value": "tests/unit/test_validator.py:35-129"
+      },
+      "secret_redacted": false,
+      "source": "Quantum-L9/Constellation.ReadmeValidator"
+    },
+    {
+      "claim": "The donor runs independent lint, type, unit, integration, and README-validation stages in CI.",
+      "epistemic": "CONFIRMED",
+      "id": "ev-ci",
+      "locator": {
+        "kind": "path_lines",
+        "value": ".github/workflows/ci-l9-aligned.yml:1-55"
+      },
+      "secret_redacted": false,
+      "source": "Quantum-L9/Constellation.ReadmeValidator"
+    },
+    {
+      "claim": "The recipient already owns documentation topology, generated projections, and explicit mutation boundaries.",
+      "epistemic": "CONFIRMED",
+      "id": "ev-recipient-topology",
+      "locator": {
+        "kind": "path_lines",
+        "value": "skills/l9-update-agent-docs/references/doc-surface-policy.yaml:14-260"
+      },
+      "secret_redacted": false,
+      "source": "Quantum-L9/Cursor-Governance"
+    },
+    {
+      "claim": "The recipient already validates declared root-document headings and required pointers through its pointer validation path.",
+      "epistemic": "CONFIRMED",
+      "id": "ev-recipient-pointer-validation",
+      "locator": {
+        "kind": "path_lines",
+        "value": "skills/l9-update-agent-docs/scripts/doc_policy.py:171-200"
+      },
+      "secret_redacted": false,
+      "source": "Quantum-L9/Cursor-Governance"
+    },
+    {
+      "claim": "The recipient's PR security path owns gitleaks-based secret scanning for changed files.",
+      "epistemic": "CONFIRMED",
+      "id": "ev-recipient-security",
+      "locator": {
+        "kind": "path_lines",
+        "value": "ops/scripts/run_pr_security.sh:222-256"
+      },
+      "secret_redacted": false,
+      "source": "Quantum-L9/Cursor-Governance"
+    },
+    {
+      "claim": "The recipient resolves root-file mutation protection from its canonical root-file guard rather than from README metadata.",
+      "epistemic": "CONFIRMED",
+      "id": "ev-recipient-root-guard",
+      "locator": {
+        "kind": "path_lines",
+        "value": "ops/config/root-file-protection.json"
+      },
+      "secret_redacted": false,
+      "source": "Quantum-L9/Cursor-Governance"
+    }
+  ],
+  "highest_leverage_nugget": "c-root-python-fence-syntax",
+  "inventory": [
+    {
+      "action": "keep",
+      "classification": "active",
+      "consumers": [
+        "validator.py",
+        "tests/unit/test_validator.py"
+      ],
+      "evidence_ids": [
+        "ev-meta-contract"
+      ],
+      "importance": 5,
+      "owner": "constellation_readme_validator",
+      "path": "README.meta.yaml",
+      "purpose": "Declares README location, required sections, collaboration scopes, and change policy."
+    },
+    {
+      "action": "keep",
+      "classification": "active",
+      "consumers": [
+        "tests/unit/test_validator.py"
+      ],
+      "evidence_ids": [
+        "ev-validator"
+      ],
+      "importance": 5,
+      "owner": "constellation_readme_validator",
+      "path": "src/constellation_readme_validator/validator.py",
+      "purpose": "Pure deterministic validation functions for metadata, headings, secrets, scopes, and Python fences."
+    },
+    {
+      "action": "keep",
+      "classification": "active",
+      "consumers": [
+        "CI"
+      ],
+      "evidence_ids": [
+        "ev-tests"
+      ],
+      "importance": 4,
+      "owner": "constellation_readme_validator",
+      "path": "tests/unit/test_validator.py",
+      "purpose": "Focused regression cases for README validator behavior."
+    },
+    {
+      "action": "keep",
+      "classification": "active",
+      "consumers": [
+        "GitHub Actions"
+      ],
+      "evidence_ids": [
+        "ev-ci"
+      ],
+      "importance": 3,
+      "owner": "donor CI",
+      "path": ".github/workflows/ci-l9-aligned.yml",
+      "purpose": "Runs lint, type, unit, integration, and README validation checks."
+    }
+  ],
+  "request": {
+    "access_mode": "read-only",
+    "beneficiary": "Quantum-L9/Cursor-Governance:skills/l9-update-agent-docs",
+    "brief": true,
+    "depth": "standard",
+    "donor": "Quantum-L9/Constellation.ReadmeValidator",
+    "harvest_target": "deterministic repository-document validation practices",
+    "language": "as-donor",
+    "request_id": "gar-readme-validator-stack-630-20260920",
+    "secrets_policy": "redact"
+  },
+  "safety": [
+    {
+      "claim": "No donor code, configuration, runtime dependency, or secret pattern is imported; all accepted nuggets are semantic and runtime-independent.",
+      "epistemic": "CONFIRMED"
+    },
+    {
+      "claim": "The recipient's topology, security, and mutation guards retain ownership for all donor concepts except the bounded Python-fence syntax check.",
+      "epistemic": "CONFIRMED"
+    }
+  ],
+  "schema_version": "1.1.0",
+  "source_identity": {
+    "adapter": "remote_repository",
+    "beneficiary_revision": "f0d13198f73555a7e839efd84c0200944ab41068",
+    "beneficiary_stack": "pull/630",
+    "content_sha256": "37b3a147c0ff98c50a2692e85274f083e8e100207a14b1322f8fd2a39cd6951b",
+    "file_count": 37,
+    "immutable_ref": "c95b7133df76e720a27f84a9691d85958c7215d3",
+    "kind": "repository",
+    "locator": "https://github.com/Quantum-L9/Constellation.ReadmeValidator",
+    "provider": "GitHub",
+    "repository": "Quantum-L9/Constellation.ReadmeValidator",
+    "transport": "connector"
+  },
+  "status": "PASS",
+  "surfaces": [
+    {
+      "dependencies": [
+        "validator.py"
+      ],
+      "evidence_ids": [
+        "ev-meta-contract"
+      ],
+      "is_wrapper": false,
+      "item": "per-README metadata contract",
+      "mutations": [],
+      "resolved_target": "README.md",
+      "source": "README.meta.yaml",
+      "visibility": "repository"
+    },
+    {
+      "dependencies": [
+        "README.meta.yaml",
+        "PyYAML",
+        "Python AST"
+      ],
+      "evidence_ids": [
+        "ev-validator"
+      ],
+      "is_wrapper": false,
+      "item": "deterministic validation engine",
+      "mutations": [],
+      "resolved_target": "ValidationResult",
+      "source": "src/constellation_readme_validator/validator.py",
+      "visibility": "package"
+    },
+    {
+      "dependencies": [
+        "pytest"
+      ],
+      "evidence_ids": [
+        "ev-tests",
+        "ev-ci"
+      ],
+      "is_wrapper": false,
+      "item": "focused regressions",
+      "mutations": [],
+      "resolved_target": "validator functions",
+      "source": "tests/unit/test_validator.py",
+      "visibility": "CI"
+    }
+  ],
+  "system": {
+    "control_flow": [
+      {
+        "from": "README.meta.yaml",
+        "then": "ValidationResult with severity-coded violations",
+        "to": "validator.py"
+      }
+    ],
+    "dependencies": [
+      {
+        "from": "validator.py",
+        "kind": "parsing",
+        "to": "PyYAML and Python AST"
+      }
+    ],
+    "identity": "Read-only README and metadata validation gate",
+    "must_not_own": [
+      "README authoring",
+      "repository mutation",
+      "network access",
+      "beneficiary repository authority"
+    ],
+    "ownership_boundaries": [
+      {
+        "owner": "donor metadata files",
+        "responsibility": "Per-README validation policy"
+      },
+      {
+        "owner": "donor validator",
+        "responsibility": "Read-only deterministic validation"
+      }
+    ],
+    "workflows": [
+      {
+        "entry": "scan_directory(root, check_diff)",
+        "name": "scan directory",
+        "steps": [
+          "load *.meta.yaml",
+          "validate metadata schema and target location",
+          "validate required headings",
+          "scan for secret patterns",
+          "check forbidden changed scopes",
+          "parse Python fenced blocks"
+        ]
+      }
+    ]
+  },
+  "unknowns": []
+}

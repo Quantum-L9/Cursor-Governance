@@ -936,7 +936,18 @@ def plan_module_readmes(
             )
 
     items.sort(key=lambda item: (item.path, item.action))
-    return ReadmePlan(items=tuple(items), findings=tuple(findings))
+    quality = tuple(
+        {
+            "path": model.target.path,
+            "completeness": model.completeness,
+            "eligible_source_count": model.eligible_source_count,
+            "extracted_source_count": model.extracted_source_count,
+            "extraction_issue_count": len(model.extraction_issues),
+            "relationship_count": len(model.relationships),
+        }
+        for model, _rendered in outputs
+    )
+    return ReadmePlan(items=tuple(items), findings=tuple(findings), quality=quality)
 
 
 def apply_module_readme_plan(

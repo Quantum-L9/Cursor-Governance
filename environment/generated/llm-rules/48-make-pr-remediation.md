@@ -17,8 +17,8 @@ adapters as the first `make pr` writers step, before pytest.
 1. Use `make pr` (any capitalization) so Makefile checkers run before push.
    The `pr` target is the **governance** Makefile's, always — reach it with
    `l9 pr` / `make -C "$GOV" pr WS="$PWD"` regardless of the workspace repo's
-   own Makefile. A consumer repo needs **no** `pr`/`pr-check` target; do not
-   add one, and do not fall back to a raw `git push` where one is absent.
+   own Makefile. A consumer repo needs **no** local `pr` target; do not add one, and do
+   not fall back to a raw `git push` where one is absent.
 2. Do **not** pin `PR_REMEDIATE` in the account or ambient environment.
    The standing finish path is `PR_REMEDIATE=0 make pr` at the **call site**
    (campaign / L4 authorize-release). Unset remediates is 1 only when that
@@ -31,7 +31,7 @@ adapters as the first `make pr` writers step, before pytest.
    with Converge intent): merge **is** authorized for **all open PRs** in
    the target repo. Remediator publish is **not** `make pr`. Local verify
    is `make precommit-repo` (hooks plus ruff). Publish is `git push` of the
-   already-open PR branch. Do not run `make pr-check`, pytest, or
+   already-open PR branch. Do not run the publication ceremony, pytest, or
    conformance. Write the receipt, converge each PR, then merge
    bottom-up:
 
@@ -136,20 +136,17 @@ repo-write lock ledger instead. `L9_GATE_STRICT_LEGACY=1` restores the old
 abort-on-any-non-zero behavior.
 
 
-## Failure loop and gate receipt (2026-08-17)
+## Failure loop and gate receipt (2026-09-21)
 
-Do **not** treat `make pr-check` then `make pr` as the happy path. That
-sequence is a teaching failure: on an unchanged tree the receipt skip
-prevents a second pytest, but agents must not type the extra command.
-Happy path on every surface: finish → scoped-commit → `PR_REMEDIATE=0
-make pr` / `l9 pr`. `pr-check` / `OPEN_PR=0 make pr` remain
-diagnose-only. `make precommit-repo` is an internal leaf of the gate,
-not a post-commit ritual. Do not run `pr-check` after `precommit-repo`.
+There is one Make ceremony. Happy path on every surface is finish →
+scoped commit → `PR_REMEDIATE=0 make pr` / `l9 pr`. Gate-only diagnosis is
+`OPEN_PR=0 make pr` / `OPEN_PR=0 l9 pr`. `make precommit-repo` is a
+remediation-local verification leaf, not a post-commit ritual. The
+changed-file gate is implemented by `ops/scripts/run_pr_gate.sh` and is
+invoked directly by `make pr`. GitHub mutation remains `make pr` only.
 
 ```bash
 make pr  # L9_GOVERNANCE_SURFACE=claude-code
 ```
-
-`pr-check` is the INTERNAL gate leaf. GitHub mutation stays `make pr` only.
 
 <!-- generated-from: rules/48-make-pr-remediation.mdc; do-not-edit -->

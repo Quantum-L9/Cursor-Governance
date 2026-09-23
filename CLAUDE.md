@@ -32,6 +32,8 @@ Useful maps, not competing authority: [`ARCHITECTURE.md`](ARCHITECTURE.md),
   for activation and repair, not an ad hoc bootstrap.
 - **Publication:** use `PR_REMEDIATE=0 make pr`. Do not use `make push`, raw
   first-publication `git push`, `gh pr create`, or MCP push/PR-creation tools.
+- **Makefile graph:** invoke the root `make <target>` facade. Capability logic
+  lives in `ops/make/*.mk`; do not duplicate target recipes or bypass `make pr`.
 - **Credentials:** this model-controlled surface holds no raw credentials. Never
   paste a token or bearer when a capability is unavailable; use
   [`docs/DEGRADED_MODE_CONTRACT.md`](docs/DEGRADED_MODE_CONTRACT.md).

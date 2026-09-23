@@ -21,6 +21,7 @@ __all__ = [
     "README_KINDS",
     "DependencyDoc",
     "EvidenceRef",
+    "ExtractionIssue",
     "InterfaceDoc",
     "ModuleDoc",
     "PlanAction",
@@ -30,6 +31,8 @@ __all__ = [
     "ReadmePlan",
     "ReadmePlanItem",
     "ReadmeTarget",
+    "RelationshipDoc",
+    "SourceFact",
 ]
 
 ReadmeKind = Literal[
@@ -100,6 +103,25 @@ class InterfaceDoc:
 
 
 @dataclass(frozen=True)
+class RelationshipDoc:
+    """One source-located deterministic relationship for reader navigation."""
+
+    kind: str
+    target: str
+    source: str
+    detail: str | None = None
+
+
+@dataclass(frozen=True)
+class ExtractionIssue:
+    """A source that policy admitted but the static extractor could not read."""
+
+    path: str
+    language: str
+    detail: str
+
+
+@dataclass(frozen=True)
 class ModuleDoc:
     """One source file's public surface.
 
@@ -113,6 +135,20 @@ class ModuleDoc:
     classes: tuple[InterfaceDoc, ...] = ()
     functions: tuple[InterfaceDoc, ...] = ()
     exports: tuple[str, ...] = ()
+    language: str | None = None
+
+
+@dataclass(frozen=True)
+class SourceFact:
+    """Language-neutral source evidence before it becomes a README model."""
+
+    path: str
+    language: str
+    module: ModuleDoc
+    imports: tuple[str, ...] = ()
+    relative_imports: tuple[str, ...] = ()
+    entrypoints: tuple[str, ...] = ()
+    relationships: tuple[RelationshipDoc, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -147,6 +183,23 @@ class ReadmeModel:
     dependencies: DependencyDoc = field(default_factory=DependencyDoc)
     authority_links: tuple[str, ...] = ()
     evidence: tuple[EvidenceRef, ...] = ()
+    source_facts: tuple[SourceFact, ...] = ()
+    extraction_issues: tuple[ExtractionIssue, ...] = ()
+    relationships: tuple[RelationshipDoc, ...] = ()
+    eligible_source_count: int = 0
+    extracted_source_count: int = 0
+    rendered_symbol_count: int = 0
+
+    @property
+    def completeness(self) -> str:
+        """Deterministic evidence disposition, never a prose-quality opinion."""
+        if self.extraction_issues:
+            return "partial"
+        if self.eligible_source_count == 0:
+            return "minimal-by-design"
+        if self.extracted_source_count < self.eligible_source_count:
+            return "partial"
+        return "complete"
 
 
 @dataclass(frozen=True)
@@ -176,6 +229,7 @@ class ReadmePlan:
 
     items: tuple[ReadmePlanItem, ...] = ()
     findings: tuple[QualityFinding, ...] = ()
+    quality: tuple[dict[str, int | str], ...] = ()
 
     @property
     def mutations(self) -> tuple[ReadmePlanItem, ...]:

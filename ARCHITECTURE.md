@@ -110,3 +110,12 @@ Hook count at write time: **15** hooks in `.pre-commit-config.yaml` (5 `pre-comm
 ## Refresh
 
 Use skill `l9-update-agent-docs` with adapter [`.claude/adapters/cursor-governance-update-agent-docs.md`](.claude/adapters/cursor-governance-update-agent-docs.md). Keep this file a pointer index. Bump **Version** when the module list or workflow map changes.
+
+<!-- MAKEFILE_CAPABILITY_GRAPH_V2 -->
+## Make capability graph
+
+`ops/make/` contains included domain fragments of the root Make capability
+graph. The root `Makefile` owns global variables, complete target
+registration, `CONSUMER_SAFE` classification, interpreter gating, and
+introspection. Fragments compose capabilities and do not define a second
+policy authority.
