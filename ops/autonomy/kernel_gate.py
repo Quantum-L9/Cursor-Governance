@@ -88,7 +88,7 @@ PLAN_SKIP_PREFIXES = (
 
 
 def _rel_path(raw: str) -> str:
-    return raw.strip().lstrip("./")
+    return kernel_predicates.relative_path(raw)
 
 
 def _is_corpus_path(rel: str) -> bool:
@@ -479,7 +479,7 @@ def _load_plan_checker(gov: Path):
 def verify_plans(changed_paths: list[str], *, workspace: Path, gov: Path) -> str | None:
     plans: list[Path] = []
     for raw in changed_paths:
-        rel = raw.strip().lstrip("./")
+        rel = _rel_path(raw)
         if not rel.endswith(".plan.md"):
             continue
         if _is_corpus_path(rel):
