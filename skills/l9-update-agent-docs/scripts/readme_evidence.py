@@ -11,8 +11,10 @@ deterministic source supports it. Nothing here renders Markdown.
 from __future__ import annotations
 
 import ast
+import json
 import re
 import sys
+import tomllib
 from pathlib import Path
 
 import yaml
@@ -20,11 +22,14 @@ from doc_filetree import corpus_files, is_excluded_path, skip_prefixes
 from readme_model import (
     DependencyDoc,
     EvidenceRef,
-    InterfaceDoc,
+    ExtractionIssue,
     ModuleDoc,
     ReadmeModel,
     ReadmeTarget,
+    RelationshipDoc,
+    SourceFact,
 )
+from source_facts import compile_source_facts, supported_source_files
 
 __all__ = [
     "CORPUS_TYPE_LABELS",
@@ -32,6 +37,7 @@ __all__ = [
     "MAX_MODULES_RENDERED",
     "SkillContract",
     "classify_dependencies",
+    "compile_source_evidence",
     "compile_module_docs",
     "compile_readme_model",
     "read_skill_contract",
@@ -228,83 +234,34 @@ def _direct_source_files(module_dir: Path, suffix: str) -> list[Path]:
     return sorted(found, key=lambda item: item.name)
 
 
+def compile_source_evidence(
+    repo_root: Path, rel: str
+) -> tuple[tuple[SourceFact, ...], tuple[ExtractionIssue, ...]]:
+    """Compatibility-facing access to the policy-owned static extractors."""
+    return compile_source_facts(repo_root, rel)
+
+
 def compile_module_docs(
     repo_root: Path, rel: str
 ) -> tuple[tuple[ModuleDoc, ...], list[str], set[str]]:
-    """Per-file :class:`ModuleDoc`s, absolute imports, and relative names.
+    """Compatibility projection of static source facts into legacy outputs.
 
-    Per-file identity is preserved deliberately. Aggregating first is what
-    let a directory claim one anonymous API built from unrelated files.
-
-    Relative imports are returned separately rather than discarded: a
-    package-style subsystem wires itself together with `from .registry
-    import …`, and dropping those left its README with no Dependencies
-    section at all while the relationships were the most real ones it had.
+    The complete source facts, extraction issues, entrypoints, and relations
+    live on :class:`ReadmeModel`; this function stays for callers that only
+    need modules plus dependency inputs.
     """
-    module_dir = repo_root / rel
-    if not module_dir.is_dir():
-        return (), [], set()
-    docs: list[ModuleDoc] = []
-    imports: list[str] = []
-    relative: set[str] = set()
-    for py_file in _direct_source_files(module_dir, ".py"):
-        try:
-            tree = ast.parse(py_file.read_text(encoding="utf-8"))
-        except (OSError, SyntaxError, UnicodeDecodeError, ValueError):
-            continue
-        classes: list[InterfaceDoc] = []
-        functions: list[InterfaceDoc] = []
-        exports: list[str] = []
-        for node in tree.body:
-            if isinstance(node, ast.Import):
-                imports.extend(alias.name for alias in node.names)
-            elif isinstance(node, ast.ImportFrom):
-                if node.level:
-                    # `from .registry import X` names a sibling module;
-                    # `from . import a, b` names the siblings directly.
-                    if node.module:
-                        relative.add(node.module.split(".", 1)[0])
-                    else:
-                        relative.update(alias.name for alias in node.names)
-                elif node.module:
-                    imports.append(node.module)
-            elif isinstance(node, ast.ClassDef) and _public(node.name):
-                classes.append(InterfaceDoc(name=node.name, summary=_summary(node)))
-            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and _public(node.name):
-                functions.append(
-                    InterfaceDoc(
-                        name=node.name,
-                        signature=_signature(node),
-                        summary=_summary(node),
-                    )
-                )
-            elif isinstance(node, ast.Assign):
-                for target in node.targets:
-                    if isinstance(target, ast.Name) and target.id == "__all__":
-                        value = node.value
-                        if isinstance(value, (ast.List, ast.Tuple)):
-                            exports.extend(
-                                elt.value
-                                for elt in value.elts
-                                if isinstance(elt, ast.Constant) and isinstance(elt.value, str)
-                            )
-        docs.append(
-            ModuleDoc(
-                file=py_file.name,
-                name=py_file.stem,
-                purpose=_summary(tree),
-                classes=tuple(classes),
-                functions=tuple(functions),
-                exports=tuple(sorted(set(exports))),
-            )
-        )
-    return tuple(docs), imports, relative
+    facts, _issues = compile_source_evidence(repo_root, rel)
+    return (
+        tuple(fact.module for fact in facts),
+        [item for fact in facts for item in fact.imports],
+        {item for fact in facts for item in fact.relative_imports},
+    )
 
 
 def repository_module_names(repo_root: Path, paths: list[str]) -> frozenset[str]:
     """Top-level names an import could resolve to inside this repository.
 
-    Conservative by construction: only directory names and direct `.py`
+    Conservative by construction: only directory names and direct source
     stems of inventory-authorized paths count, so an unknown import stays
     external rather than being claimed as internal.
     """
@@ -314,9 +271,8 @@ def repository_module_names(repo_root: Path, paths: list[str]) -> frozenset[str]
         if not directory.is_dir():
             continue
         names.add(Path(rel).name)
-        for child in directory.iterdir():
-            if child.is_file() and child.suffix == ".py" and not child.name.startswith("test_"):
-                names.add(child.stem)
+        for child in supported_source_files(directory):
+            names.add(child.stem)
     return frozenset(names)
 
 
@@ -384,15 +340,12 @@ def _file_type_counts(names: list[str]) -> tuple[tuple[str, int], ...]:
 
 
 def _resolve_purpose(
+    module_dir: Path,
     target: ReadmeTarget,
     modules: tuple[ModuleDoc, ...],
     contract: SkillContract | None,
 ) -> tuple[str | None, EvidenceRef | None]:
-    """Purpose precedence: configuration, target-native contract, then a
-    single module's own docstring. Never a docstring borrowed from one of
-    several unrelated modules — that is how a compiler directory came to
-    describe itself as an IR normalizer.
-    """
+    """Purpose precedence from target-local, deterministic evidence only."""
     if target.configured_purpose:
         return target.configured_purpose, EvidenceRef(
             source="config/subsystems/readme_config.yaml",
@@ -406,6 +359,55 @@ def _resolve_purpose(
                 source=f"{target.path}/SKILL.md",
                 kind="skill_contract",
                 detail="frontmatter description" if contract.description else "## Purpose",
+            )
+    package_doc = module_dir / "__init__.py"
+    if package_doc.is_file():
+        try:
+            purpose = summarize_docstring(
+                ast.get_docstring(ast.parse(package_doc.read_text("utf-8")))
+            )
+        except (OSError, SyntaxError, UnicodeDecodeError, ValueError):
+            purpose = None
+        if purpose:
+            return purpose, EvidenceRef(
+                source=f"{target.path}/__init__.py",
+                kind="package_docstring",
+                detail="target package docstring",
+            )
+    for name in (
+        "package.json",
+        "pyproject.toml",
+        "manifest.json",
+        "manifest.yaml",
+        "manifest.yml",
+    ):
+        manifest = module_dir / name
+        if not manifest.is_file():
+            continue
+        try:
+            raw = manifest.read_text(encoding="utf-8")
+            if name in {"package.json", "manifest.json"}:
+                data = json.loads(raw)
+            elif name == "pyproject.toml":
+                parsed = tomllib.loads(raw)
+                data = parsed.get("project") if isinstance(parsed, dict) else None
+            else:
+                data = yaml.safe_load(raw)
+        except (
+            OSError,
+            UnicodeDecodeError,
+            ValueError,
+            json.JSONDecodeError,
+            tomllib.TOMLDecodeError,
+            yaml.YAMLError,
+        ):
+            continue
+        description = data.get("description") if isinstance(data, dict) else None
+        if isinstance(description, str) and (purpose := _first_sentence(description)):
+            return purpose, EvidenceRef(
+                source=f"{target.path}/{name}",
+                kind="manifest_description",
+                detail="target-local manifest description",
             )
     if len(modules) == 1 and modules[0].purpose:
         return modules[0].purpose, EvidenceRef(
@@ -436,26 +438,49 @@ def compile_readme_model(
     modules: tuple[ModuleDoc, ...] = ()
     dependencies = DependencyDoc()
     shell_entrypoints: tuple[str, ...] = ()
+    source_facts: tuple[SourceFact, ...] = ()
+    extraction_issues: tuple[ExtractionIssue, ...] = ()
+    relationships: tuple[RelationshipDoc, ...] = ()
+    eligible_source_count = 0
     if target.kind in {"module", "subsystem", "skill"}:
-        modules, imports, relative = compile_module_docs(repo_root, target.path)
+        source_facts, extraction_issues = compile_source_evidence(repo_root, target.path)
+        modules = tuple(fact.module for fact in source_facts)
+        imports = [
+            item for fact in source_facts if fact.language == "python" for item in fact.imports
+        ]
+        relative = {item for fact in source_facts for item in fact.relative_imports}
         dependencies = classify_dependencies(imports, internal_names, relative)
-        if modules:
+        if source_facts:
             evidence.append(
                 EvidenceRef(
                     source=target.path,
-                    kind="source_tree_ast",
-                    detail=f"{len(modules)} module(s)",
+                    kind="source_facts",
+                    detail=f"{len(source_facts)} extracted source file(s)",
                 )
             )
-        if module_dir.is_dir():
-            shell_entrypoints = tuple(path.name for path in _direct_source_files(module_dir, ".sh"))
+        for issue in extraction_issues:
+            evidence.append(
+                EvidenceRef(source=issue.path, kind="source_extraction_issue", detail=issue.detail)
+            )
+        shell_entrypoints = tuple(
+            sorted({entrypoint for fact in source_facts for entrypoint in fact.entrypoints})
+        )
+        relationships = tuple(
+            sorted(
+                {relation for fact in source_facts for relation in fact.relationships},
+                key=lambda item: (item.kind, item.target, item.source, item.detail or ""),
+            )
+        )
+        eligible_source_count = (
+            len(supported_source_files(module_dir)) if module_dir.is_dir() else 0
+        )
 
     contents: tuple[str, ...] = ()
     file_types: tuple[tuple[str, int], ...] = ()
     children: tuple[str, ...] = ()
     if target.kind == "corpus" and module_dir.is_dir():
         names = corpus_files(module_dir)
-        contents = tuple(names[:MAX_CONTENTS])
+        contents = tuple(names)
         file_types = _file_type_counts(names)
         evidence.append(
             EvidenceRef(source=target.path, kind="source_tree", detail=f"{len(names)} file(s)")
@@ -465,7 +490,7 @@ def compile_readme_model(
         # An index may also hold direct files. They are listed rather than
         # dropped: being a parent does not make a manifest beside it invisible.
         names = corpus_files(module_dir)
-        contents = tuple(names[:MAX_CONTENTS])
+        contents = tuple(names)
         file_types = _file_type_counts(names)
         evidence.append(
             EvidenceRef(
@@ -475,7 +500,7 @@ def compile_readme_model(
     elif target.kind == "skill" and module_dir.is_dir():
         children = _child_directories(module_dir, target.path)
 
-    purpose, purpose_evidence = _resolve_purpose(target, modules, contract)
+    purpose, purpose_evidence = _resolve_purpose(module_dir, target, modules, contract)
     if purpose_evidence is not None:
         evidence.append(purpose_evidence)
 
@@ -494,4 +519,12 @@ def compile_readme_model(
         dependencies=dependencies,
         authority_links=tuple(authority_links),
         evidence=tuple(evidence),
+        source_facts=source_facts,
+        extraction_issues=extraction_issues,
+        relationships=relationships,
+        eligible_source_count=eligible_source_count,
+        extracted_source_count=len(source_facts),
+        rendered_symbol_count=sum(
+            len(module.classes) + len(module.functions) + len(module.exports) for module in modules
+        ),
     )

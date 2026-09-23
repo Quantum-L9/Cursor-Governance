@@ -16,6 +16,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable, Sequence
 from pathlib import Path
+from urllib.parse import unquote
 
 from readme_model import QualityFinding, ReadmeModel
 from readme_renderers import (
@@ -38,7 +39,15 @@ __all__ = [
 #: Evidence kinds that may support a rendered directory purpose. Anything
 #: else means the purpose reached the model without a deterministic source,
 #: which is the failure INV-RD-004 exists to prevent.
-PURPOSE_EVIDENCE_KINDS = frozenset({"configured_purpose", "skill_contract", "module_docstring"})
+PURPOSE_EVIDENCE_KINDS = frozenset(
+    {
+        "configured_purpose",
+        "skill_contract",
+        "module_docstring",
+        "package_docstring",
+        "manifest_description",
+    }
+)
 
 #: Phrases the old templates emitted when they had nothing to say. They
 #: are forbidden outright rather than discouraged: a README whose Purpose
@@ -51,7 +60,8 @@ FORBIDDEN_PURPOSE_PHRASES = (
     "no description",
 )
 _EMPTY_SECTION_RE = re.compile(r"^##\s+.+\n+_No [^\n]*_\s*$", re.MULTILINE)
-_RELATIVE_LINK_RE = re.compile(r"\[[^\]]*\]\((?!https?://|#|mailto:)([^)]+)\)")
+_MARKDOWN_LINK_RE = re.compile(r"(?<!!)\[[^\]]*\]\(([^)]+)\)")
+_HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$", re.MULTILINE)
 _MAX_EXTERNAL_DEPENDENCIES = 24
 
 
@@ -61,6 +71,92 @@ def _error(rule_id: str, message: str, source: str | None) -> QualityFinding:
 
 def _warn(rule_id: str, message: str, source: str | None) -> QualityFinding:
     return QualityFinding(rule_id=rule_id, severity="WARN", message=message, source=source)
+
+
+def _anchor(value: str) -> str:
+    """Normalize a generated Markdown heading for local-anchor validation."""
+    lowered = value.strip().lower()
+    lowered = re.sub(r"[`*_~]", "", lowered)
+    lowered = re.sub(r"[^\w\s-]", "", lowered)
+    return re.sub(r"\s+", "-", lowered).strip("-")
+
+
+def _anchors(text: str) -> tuple[set[str], set[str]]:
+    seen: set[str] = set()
+    duplicates: set[str] = set()
+    for match in _HEADING_RE.finditer(text):
+        anchor = _anchor(match.group(2))
+        if not anchor:
+            continue
+        if anchor in seen:
+            duplicates.add(anchor)
+        seen.add(anchor)
+    return seen, duplicates
+
+
+def _link_findings(
+    repo_root: Path,
+    target_path: str,
+    rendered: str,
+    source: str,
+) -> list[QualityFinding]:
+    findings: list[QualityFinding] = []
+    local_anchors, duplicates = _anchors(rendered)
+    for anchor in sorted(duplicates):
+        findings.append(
+            _error(
+                "readme.anchor.duplicate",
+                f"generated heading anchor {anchor!r} is not unique",
+                source,
+            )
+        )
+    root = repo_root.resolve()
+    current = root / target_path / "README.md"
+    for match in _MARKDOWN_LINK_RE.finditer(rendered):
+        raw = match.group(1).strip().strip("<>")
+        if not raw or raw.startswith(("http://", "https://", "mailto:")):
+            continue
+        path_part, separator, fragment = unquote(raw).partition("#")
+        destination = (current.parent / path_part).resolve() if path_part else current.resolve()
+        try:
+            destination.relative_to(root)
+        except ValueError:
+            findings.append(
+                _error(
+                    "readme.reference.escaped_root",
+                    f"relative reference {raw!r} resolves outside the repository root",
+                    source,
+                )
+            )
+            continue
+        if not destination.exists() and not (destination == current.resolve() and not path_part):
+            findings.append(
+                _error(
+                    "readme.reference.missing",
+                    f"relative reference {path_part!r} resolves to nothing",
+                    source,
+                )
+            )
+            continue
+        if separator and fragment:
+            if destination == current.resolve():
+                anchors = local_anchors
+            elif destination.is_file():
+                try:
+                    anchors, _ = _anchors(destination.read_text(encoding="utf-8"))
+                except (OSError, UnicodeDecodeError):
+                    anchors = set()
+            else:
+                anchors = set()
+            if _anchor(fragment) not in anchors:
+                findings.append(
+                    _error(
+                        "readme.reference.anchor_missing",
+                        f"relative reference {raw!r} names no local heading anchor",
+                        source,
+                    )
+                )
+    return findings
 
 
 def validate_readme_model(
@@ -144,7 +240,16 @@ def validate_readme_model(
             )
         )
 
-    if len(model.modules) > 1 and model.purpose and not target.configured_purpose:
+    native_directory_purpose = {
+        "configured_purpose",
+        "skill_contract",
+        "package_docstring",
+        "manifest_description",
+    }
+    has_native_directory_purpose = any(
+        ref.kind in native_directory_purpose for ref in model.evidence
+    )
+    if len(model.modules) > 1 and model.purpose and not has_native_directory_purpose:
         borrowed = [module for module in model.modules if module.purpose == model.purpose]
         if borrowed:
             findings.append(
@@ -158,19 +263,7 @@ def validate_readme_model(
                 )
             )
 
-    for match in _RELATIVE_LINK_RE.finditer(rendered):
-        href = match.group(1).split("#", 1)[0].strip()
-        if not href:
-            continue
-        resolved = repo_root / target.path / href
-        if not resolved.exists():
-            findings.append(
-                _error(
-                    "readme.reference.missing",
-                    f"relative reference {href!r} resolves to nothing",
-                    source,
-                )
-            )
+    findings.extend(_link_findings(repo_root, target.path, rendered, source))
 
     # --- WARN: presentation debt ---
 
@@ -223,6 +316,24 @@ def validate_readme_model(
     if target.title == target.path and "/" in target.path:
         findings.append(
             _warn("readme.title.raw_path", "title is an unprocessed path", source),
+        )
+
+    if model.extraction_issues:
+        details = "; ".join(f"{issue.path}: {issue.detail}" for issue in model.extraction_issues)
+        findings.append(
+            _warn(
+                "readme.source.extraction_issue",
+                f"generated projection is {model.completeness}: {details}",
+                source,
+            )
+        )
+    elif model.eligible_source_count and not model.extracted_source_count:
+        findings.append(
+            _warn(
+                "readme.source.no_facts",
+                "eligible source files produced no extractable evidence",
+                source,
+            )
         )
 
     return findings

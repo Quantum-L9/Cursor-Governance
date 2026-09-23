@@ -11,6 +11,8 @@
     "adapter",
     "changes",
     "impact",
+    "consumer_snapshot",
+    "architecture_delta",
     "surfaces",
     "obligations",
     "summary",
@@ -54,6 +56,44 @@
         "matched_rules": {
           "type": "object",
           "additionalProperties": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+        }
+      }
+    },
+    "consumer_snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "revision", "changed_files", "surface_paths", "documents", "facts", "publication_markers", "authority_graph", "digest"],
+      "properties": {
+        "schema": {"const": "l9.repo-docs.consumer-snapshot.v1"},
+        "revision": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["repository", "tested_revision_sha"],
+          "properties": {
+            "repository": {"type": "string"},
+            "tested_revision_sha": {"type": "string"}
+          }
+        },
+        "changed_files": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "surface_paths": {"type": "object", "additionalProperties": {"type": "array", "items": {"type": "string"}}},
+        "documents": {"type": "object", "additionalProperties": {"type": "object"}},
+        "facts": {"type": "array", "items": {"type": "object"}},
+        "publication_markers": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "authority_graph": {"type": "object"},
+        "digest": {"type": "string", "minLength": 64, "maxLength": 64}
+      }
+    },
+    "architecture_delta": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["action", "kind", "path", "evidence_id"],
+        "properties": {
+          "action": {"enum": ["change", "unknown"]},
+          "kind": {"type": "string"},
+          "path": {"type": "string"},
+          "evidence_id": {"type": "string"}
         }
       }
     },
@@ -149,6 +189,23 @@
                 "preserve": {"type": "integer", "minimum": 0},
                 "retire": {"type": "integer", "minimum": 0},
                 "conflict": {"type": "integer", "minimum": 0}
+              }
+            },
+            "quality": {
+              "description": "Deterministic source-evidence coverage per README target.",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["path", "completeness", "eligible_source_count", "extracted_source_count", "extraction_issue_count", "relationship_count"],
+                "properties": {
+                  "path": {"type": "string"},
+                  "completeness": {"enum": ["complete", "partial", "minimal-by-design"]},
+                  "eligible_source_count": {"type": "integer", "minimum": 0},
+                  "extracted_source_count": {"type": "integer", "minimum": 0},
+                  "extraction_issue_count": {"type": "integer", "minimum": 0},
+                  "relationship_count": {"type": "integer", "minimum": 0}
+                }
               }
             }
           }

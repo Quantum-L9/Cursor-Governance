@@ -4,11 +4,21 @@
   "title": "L9 Repository Documentation Surface Policy",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "version", "owner", "managed_regions", "surfaces", "impact_rules", "semantic_harvest", "capabilities", "llm_txt"],
+  "required": ["schema", "version", "owner", "source_evidence", "managed_regions", "surfaces", "impact_rules", "semantic_harvest", "capabilities", "llm_txt"],
   "properties": {
     "schema": {"const": "l9.repo-docs.surface-policy.v3"},
     "version": {"const": 3},
     "owner": {"type": "string", "minLength": 1},
+    "source_evidence": {
+      "description": "The single static registry that aligns source extraction, inventory classification, and change impact.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["extensions", "filenames"],
+      "properties": {
+        "extensions": {"$ref": "#/$defs/sourceEvidenceEntries"},
+        "filenames": {"$ref": "#/$defs/sourceEvidenceEntries"}
+      }
+    },
     "managed_regions": {
       "type": "object",
       "additionalProperties": false,
@@ -60,6 +70,7 @@
           "evidence_sources": {"type": "array", "items": {"type": "string"}},
           "prohibited_mutations": {"type": "array", "items": {"type": "string"}},
           "llm_include": {"type": "boolean"},
+          "projection_inputs": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
           "kind": {"type": "string", "minLength": 1},
           "ownership": {
             "type": "object",
@@ -146,7 +157,7 @@
         "module_readmes": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["owner", "required_paths", "absence_behavior", "partial_behavior", "partial_repair_route", "polyglot_extension_owner", "supported_extensions"],
+          "required": ["owner", "required_paths", "absence_behavior", "partial_behavior", "partial_repair_route", "polyglot_extension_owner"],
           "properties": {
             "owner": {"type": "string"},
             "required_paths": {
@@ -162,8 +173,7 @@
             "absence_behavior": {"enum": ["NotApplicable", "BLOCKED"]},
             "partial_behavior": {"enum": ["PARTIAL", "BLOCKED"]},
             "partial_repair_route": {"type": ["string", "null"]},
-            "polyglot_extension_owner": {"type": "string"},
-            "supported_extensions": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+            "polyglot_extension_owner": {"type": "string"}
           }
         }
       }
@@ -171,14 +181,30 @@
     "llm_txt": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["owner", "spec_version", "published_surface_markers", "adapter_directive_block", "default_enabled", "surface_order"],
+      "required": ["owner", "spec_version", "published_surface_markers", "adapter_directive_block", "default_enabled", "surface_order", "manifest_schema"],
       "properties": {
         "owner": {"type": "string"},
         "spec_version": {"type": "string"},
         "published_surface_markers": {"type": "array", "items": {"type": "string"}},
         "adapter_directive_block": {"type": "string"},
         "default_enabled": {"const": true},
-        "surface_order": {"type": "array", "items": {"type": "string"}}
+        "surface_order": {"type": "array", "items": {"type": "string"}},
+        "manifest_schema": {"const": "l9.repo-docs.llm-manifest.v1"}
+      }
+    }
+  },
+  "$defs": {
+    "sourceEvidenceEntries": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["language", "patterns"],
+        "properties": {
+          "language": {"enum": ["python", "shell", "javascript", "typescript", "terraform", "xml", "dockerfile"]},
+          "patterns": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+        }
       }
     }
   }
