@@ -35,6 +35,8 @@ def main() -> int:
         "makefile-contract-v1",
         "python-project-contract-v1",
         "root-file-protection.json",
+        "Root Python fences",
+        "python_fence_validate_root",
         "kernels/Recursive Alignment.md",
         "kernels/Validate & Repair.md",
         "Passed",

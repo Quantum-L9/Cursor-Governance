@@ -22,6 +22,8 @@ BEFORE="${2:?status_before file required}"
 PRECOMMIT_LOG="${3:-}"
 WS="$(cd "$WS" && pwd)"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+GOV_PYTHON="${GOV_TOOLCHAIN_ROOT:-$GOV_ROOT}/.venv/bin/python3"
 
 cd "$WS" || exit 0
 
@@ -64,7 +66,7 @@ fi
 # external to pre-commit.
 replayed_note="skipped"
 if [[ "${PR_ATTRIBUTE_REPLAY:-1}" != "0" ]] && command -v pre-commit >/dev/null 2>&1; then
-  read_only_ids="$(python3 - "$SCRIPT_DIR/../config/precommit-hook-contract.json" <<'PY'
+  read_only_ids="$("$GOV_PYTHON" - "$SCRIPT_DIR/../config/precommit-hook-contract.json" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -98,7 +100,12 @@ PY
   fi
 fi
 
-python3 - "$WS" "$BEFORE" "$AFTER" "$REPLAY" "${blamed% }" "$replayed_note" "$SCRIPT_DIR/lib" <<'PY'
+if [[ ! -x "$GOV_PYTHON" ]]; then
+  echo "WARN: locked governance interpreter unavailable at $GOV_PYTHON; attribution receipt not written"
+  exit 0
+fi
+
+"$GOV_PYTHON" - "$WS" "$BEFORE" "$AFTER" "$REPLAY" "${blamed% }" "$replayed_note" "$SCRIPT_DIR/lib" <<'PY'
 import json
 import sys
 from pathlib import Path

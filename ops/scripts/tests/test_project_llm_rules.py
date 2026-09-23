@@ -93,6 +93,7 @@ class ProjectLlmRulesTests(unittest.TestCase):
             self.assertIn("src/**/*.py", paths_text)
             self.assertIn("generated-from: rules/20-paths.mdc", paths_text)
             manifest = json.loads((out / "MANIFEST.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["summary"]["source_mdc"], 5)
             self.assertEqual(manifest["summary"]["projected"], 4)
             self.assertEqual(manifest["summary"]["denied"], 1)
             self.assertEqual(manifest["summary"]["skipped_agent_requested"], 1)
