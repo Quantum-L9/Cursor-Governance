@@ -9,7 +9,9 @@ import types
 import unittest
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
+import peer_execution.front_door as front_door
 from peer_execution.errors import AdapterFailure, CanonicalErrorCode
 from peer_execution.front_door import (
     AMBIGUOUS_SIDE_EFFECT,
@@ -54,13 +56,26 @@ class _Probe:
 
 
 class _Outcome:
-    def __init__(self, status: str, *, timed_out: bool = False, termination: str | None = None):
+    def __init__(
+        self,
+        status: str,
+        *,
+        timed_out: bool = False,
+        termination: str | None = None,
+        status_receipts: list[dict[str, Any]] | None = None,
+    ):
         self.status = status
         self.timed_out = timed_out
         self.termination = termination
+        self.status_receipts = status_receipts or []
 
     def to_dict(self) -> dict[str, Any]:
-        return {"status": self.status, "timed_out": self.timed_out, "termination": self.termination}
+        return {
+            "status": self.status,
+            "timed_out": self.timed_out,
+            "termination": self.termination,
+            "status_receipts": self.status_receipts,
+        }
 
 
 class _Lifecycle:
@@ -86,6 +101,8 @@ class _Lifecycle:
     def probe_provider(self, *, binding: Any, **_: Any) -> Any:
         self.calls.append(("probe", binding.provider_ref))
         plan = self.script[binding.provider_ref]
+        if plan.get("probe_raises"):
+            raise OSError("probe transport unavailable")
         blocked = plan.get("probe_blocked")
         return _Probe("BLOCKED", blocked) if blocked else _Probe()
 
@@ -155,6 +172,28 @@ class FailoverTests(unittest.TestCase):
         )
         self.assertEqual(result["attempts"][0]["stage"], "resolve")
 
+    def test_dormant_provider_is_rejected_before_adapter_instantiation(self) -> None:
+        loader = types.SimpleNamespace(
+            registry_entry=lambda _adapter_id: {"status": "dormant"},
+            instantiate=mock.Mock(),
+        )
+        with (
+            mock.patch.object(
+                front_door,
+                "resolve_peer_binding",
+                return_value=_Binding("dormant-adapter"),
+            ),
+            mock.patch.object(front_door, "pe_script", return_value=loader),
+            self.assertRaisesRegex(ValueError, "not selectable"),
+        ):
+            front_door.resolve_provider(
+                workspace=self.tmp,
+                agent_ref="agent",
+                surface="surface",
+                provider_ref="dormant-adapter",
+            )
+        loader.instantiate.assert_not_called()
+
     def test_unsupported_capability_does_not_fail_over(self) -> None:
         lifecycle = _Lifecycle(
             {"primary": {"probe_blocked": "CAPABILITY_UNSUPPORTED"}, "alternate": {}}
@@ -200,6 +239,52 @@ class FailoverTests(unittest.TestCase):
         self.assertEqual(result["status"], "PASS")
         self.assertEqual(result["attempts"][0]["stage"], "dispatch")
         self.assertEqual(result["attempts"][0]["failure_class"], SAFE_BEFORE_DISPATCH)
+
+    def test_probe_transport_error_is_recorded_and_fails_over_before_dispatch(self) -> None:
+        result = _run(
+            _Lifecycle({"primary": {"probe_raises": True}, "alternate": {}}),
+            _request(self.tmp, provider_ref="primary", provider_candidates=("alternate",)),
+        )
+        self.assertEqual(result["status"], "PASS")
+        self.assertEqual(result["provider_ref"], "alternate")
+        self.assertEqual(result["attempts"][0]["stage"], "probe")
+        self.assertEqual(result["attempts"][0]["failure_class"], SAFE_BEFORE_DISPATCH)
+
+    def test_dispatch_transport_error_is_recorded_and_fails_over_before_dispatch(self) -> None:
+        result = _run(
+            _Lifecycle({"primary": {"dispatch_raises": OSError("host down")}, "alternate": {}}),
+            _request(self.tmp, provider_ref="primary", provider_candidates=("alternate",)),
+        )
+        self.assertEqual(result["status"], "PASS")
+        self.assertEqual(result["provider_ref"], "alternate")
+        self.assertEqual(result["attempts"][0]["stage"], "dispatch")
+        self.assertEqual(result["attempts"][0]["failure_class"], SAFE_BEFORE_DISPATCH)
+
+    def test_terminal_non_retryable_status_code_stops_failover(self) -> None:
+        result = _run(
+            _Lifecycle(
+                {
+                    "primary": {
+                        "outcome": _Outcome(
+                            "FAIL",
+                            status_receipts=[
+                                {"canonical_error_code": "CAPABILITY_UNSUPPORTED"}
+                            ],
+                        )
+                    },
+                    "alternate": {},
+                }
+            ),
+            _request(
+                self.tmp,
+                mutating=False,
+                provider_ref="primary",
+                provider_candidates=("alternate",),
+            ),
+        )
+        self.assertEqual(result["status"], "FAIL")
+        self.assertEqual(result["attempts"][0]["canonical_error_code"], "CAPABILITY_UNSUPPORTED")
+        self.assertEqual(len(result["attempts"]), 1)
 
     def test_timeout_after_execution_started_is_never_failed_over(self) -> None:
         lifecycle = _Lifecycle(
@@ -252,8 +337,7 @@ class FailoverTests(unittest.TestCase):
                 fence_prior_attempt=lambda entry: fenced.append(entry) or True,
             ),
         )
-        self.assertEqual(with_fence["status"], "PASS")
-        self.assertEqual(with_fence["provider_ref"], "alternate")
+        self.assertEqual(with_fence["status"], "FAIL")
         self.assertEqual(len(fenced), 1)
         self.assertTrue(with_fence["attempts"][0]["fenced"])
 
@@ -297,7 +381,9 @@ class FailoverTests(unittest.TestCase):
                 fence_prior_attempt=fence,
             ),
         )
-        self.assertEqual(order, ["dispatch", "fence", "dispatch"])
+        # An unclassified terminal outcome now fails closed after fencing rather
+        # than dispatching a second provider against an ambiguous policy code.
+        self.assertEqual(order, ["dispatch", "fence"])
 
     def test_retry_limit_reached_is_terminal(self) -> None:
         lifecycle = _Lifecycle(

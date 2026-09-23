@@ -163,8 +163,33 @@ class EventProjectionTests(unittest.TestCase):
                 str(receipt_file),
             )
             verification = run_cli("verify", "TASK-001", "--workspace", str(workspace))
-            self.assertEqual(verification["verdict"], "PASSED_LOCAL")
+            # The retry's baseline captured the prior attempt's preserved
+            # result. It cannot claim that old file as new work for attempt 2.
+            self.assertEqual(verification["verdict"], "FAILED")
+            self.assertEqual(verification["observed_changed_files"], [])
             cleanup_worktree(repo, workspace)
+
+    def test_halt_state_rolls_back_if_its_ledger_event_cannot_be_recorded(self) -> None:
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            _, _, workspace = bootstrap_repo(temp)
+            events_before = _db_events(workspace)
+            with (
+                unittest.mock.patch.object(
+                    pec_ledger.EventLedger,
+                    "append",
+                    side_effect=RuntimeError("ledger unavailable"),
+                ),
+                self.assertRaises(RuntimeError),
+            ):
+                pec_controller.set_halt(workspace, True, "fault injection", "operator")
+
+            db = StateDB(workspace / "runtime" / "state.sqlite")
+            try:
+                self.assertFalse(db.get_meta("global_halt", False))
+            finally:
+                db.close()
+            self.assertEqual(_db_events(workspace), events_before)
 
     def test_concurrent_controllers_never_mint_the_same_sequence(self) -> None:
         with TemporaryDirectory() as raw:

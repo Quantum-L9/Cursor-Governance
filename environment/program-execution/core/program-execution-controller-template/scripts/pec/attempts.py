@@ -104,6 +104,7 @@ def write_baseline_artifact(
     baseline: dict[str, str],
 ) -> tuple[Path, str]:
     """Persist the baseline atomically; returns (path, digest of the payload)."""
+    head_sha = run_git(worktree, "rev-parse", "HEAD").stdout.strip()
     payload: dict[str, Any] = {
         "schema": BASELINE_SCHEMA,
         "task_id": task_id,
@@ -113,6 +114,7 @@ def write_baseline_artifact(
         "contract_digest": contract_digest,
         "base_sha": base_sha,
         "worktree": str(worktree.resolve()),
+        "head_sha": head_sha,
         "captured_at": utc_now(),
         "baseline": dict(sorted(baseline.items())),
     }
@@ -122,7 +124,7 @@ def write_baseline_artifact(
     return path, payload["baseline_digest"]
 
 
-def load_baseline_artifact(path: Path, *, attempt: dict[str, Any]) -> dict[str, str]:
+def _load_baseline_payload(path: Path, *, attempt: dict[str, Any]) -> dict[str, Any]:
     """The baseline this attempt was dispatched under, or a fail-closed refusal.
 
     Every binding is re-checked against the attempt row: a baseline for a
@@ -168,13 +170,47 @@ def load_baseline_artifact(path: Path, *, attempt: dict[str, Any]) -> dict[str, 
             f"execution baseline carries no path fingerprints: {path}",
             error_code="EXECUTION_BASELINE_MISSING",
         )
-    return dict(baseline)
+    head_sha = payload.get("head_sha")
+    if not isinstance(head_sha, str) or not head_sha:
+        raise ControllerError(
+            f"execution baseline has no captured Git head: {path}",
+            error_code="EXECUTION_BASELINE_MISSING",
+        )
+    return payload
 
 
-def effected_paths(worktree: Path, baseline: dict[str, str]) -> list[str]:
-    """Paths the attempt created or altered relative to its own baseline."""
+def load_baseline_artifact(path: Path, *, attempt: dict[str, Any]) -> dict[str, str]:
+    """Load the immutable pre-dispatch path fingerprints for one attempt."""
+    return dict(_load_baseline_payload(path, attempt=attempt)["baseline"])
+
+
+def load_baseline_head(path: Path, *, attempt: dict[str, Any]) -> str:
+    """Load the Git tree identity captured with the immutable attempt baseline."""
+    return str(_load_baseline_payload(path, attempt=attempt)["head_sha"])
+
+
+def effected_paths(
+    worktree: Path, baseline: dict[str, str], *, baseline_head: str | None = None
+) -> list[str]:
+    """Paths the attempt created or altered relative to its own baseline.
+
+    A retry can commit work that pre-dated its dispatch. Include the committed
+    delta from the recorded baseline head, then remove paths whose fingerprints
+    still equal the pre-dispatch snapshot so prior-attempt work is not credited
+    to the successor.
+    """
+    candidates = set(_changed_paths(worktree))
+    if baseline_head:
+        diff = run_git(
+            worktree,
+            "diff",
+            "--name-only",
+            "--no-renames",
+            f"{baseline_head}..HEAD",
+        ).stdout
+        candidates.update(path.strip().replace("\\", "/") for path in diff.splitlines() if path.strip())
     return sorted(
         path
-        for path in _changed_paths(worktree)
+        for path in candidates
         if baseline.get(path) != path_fingerprint(worktree, path)
     )

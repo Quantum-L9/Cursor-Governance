@@ -22,6 +22,9 @@ from .attempts import (
     ATTEMPT_TERMINAL,
     FENCE_FENCED,
     capture_baseline,
+    effected_paths,
+    load_baseline_artifact,
+    load_baseline_head,
     write_baseline_artifact,
 )
 from .blueprint import (
@@ -121,6 +124,7 @@ def write_campaign_status(
     source_status: str,
     runtime_status: str,
     actor: str,
+    db: StateDB | None = None,
     ledger: EventLedger | None = None,
     verdict: str | None = None,
     evidence: dict[str, Any] | None = None,
@@ -130,7 +134,10 @@ def write_campaign_status(
         raise ControllerError(f"invalid source_status={source_status}")
     if runtime_status not in RUNTIME_STATUSES:
         raise ControllerError(f"invalid runtime_status={runtime_status}")
-    current = read_campaign_status(workspace) or {}
+    # The JSON file is a recovery-friendly projection, never an authority
+    # source. A pre-commit file write used to make an interrupted close look
+    # terminal forever; StateDB is the canonical status record.
+    current = (db.get_meta("campaign_status") if db is not None else read_campaign_status(workspace)) or {}
     activated_at = current.get("activated_at")
     if runtime_status == "active" and not activated_at:
         activated_at = utc_now()
@@ -148,12 +155,21 @@ def write_campaign_status(
         else current.get("closure_receipt"),
         "actor": actor,
     }
-    write_json(campaign_status_path(workspace), payload)
+    if db is None:
+        write_json(campaign_status_path(workspace), payload)
+    else:
+        db.set_meta("campaign_status", payload)
+        db.on_commit(lambda: write_json(campaign_status_path(workspace), payload))
     if ledger is not None and runtime_status == "active":
         ledger.append("CAMPAIGN_ACTIVATED", actor, payload)
     if ledger is not None and runtime_status == "completed":
         ledger.append("CAMPAIGN_COMPLETED", actor, payload)
     return payload
+
+
+def _canonical_campaign_status(db: StateDB, workspace: Path) -> dict[str, Any]:
+    """Return canonical status, falling back only for a pre-status legacy runtime."""
+    return db.get_meta("campaign_status") or read_campaign_status(workspace) or {}
 
 
 def _program_recommendation(db: StateDB, ledger: EventLedger) -> tuple[str, dict[str, Any]]:
@@ -258,7 +274,7 @@ def complete_campaign(
     db, ledger = open_runtime(workspace)
     workspace = workspace.resolve()
     try:
-        current = read_campaign_status(workspace) or db.get_meta("campaign_status") or {}
+        current = _canonical_campaign_status(db, workspace)
         if current.get("runtime_status") == "completed":
             existing = current.get("closure_receipt")
             if current.get("verdict") == verdict and existing and Path(existing).is_file():
@@ -340,12 +356,12 @@ def complete_campaign(
                 source_status=str(current.get("source_status") or "operator_intake"),
                 runtime_status="completed",
                 actor=actor,
+                db=db,
                 ledger=None,
                 verdict=verdict,
                 evidence={**dict(evidence or {}), "closure_id": closure_id},
                 closure_receipt=str(target),
             )
-            db.set_meta("campaign_status", payload)
             ledger.append(
                 "CAMPAIGN_COMPLETED",
                 actor,
@@ -366,23 +382,29 @@ def ensure_campaign_active(
     db: StateDB,
     ledger: EventLedger,
 ) -> dict[str, Any]:
-    current = read_campaign_status(workspace)
+    current = _canonical_campaign_status(db, workspace)
     if current and current.get("runtime_status") == "active":
+        # A missing or stale status file is a projection fault, not terminal
+        # authority. The canonical record already committed, so repair the
+        # materialized convenience view before returning.
+        if read_campaign_status(workspace) != current:
+            write_json(campaign_status_path(workspace), current)
         return current
     if current and current.get("runtime_status") in TERMINAL_RUNTIME:
         raise ControllerError(
             f"campaign cannot run; runtime_status={current.get('runtime_status')}"
         )
     source_status = str((current or {}).get("source_status") or "operator_intake")
-    payload = write_campaign_status(
-        workspace,
-        campaign_id=_campaign_id_from_program(db.get_meta("program")),
-        source_status=source_status,
-        runtime_status="active",
-        actor=actor,
-        ledger=ledger,
-    )
-    db.set_meta("campaign_status", payload)
+    with db.controller_transaction():
+        payload = write_campaign_status(
+            workspace,
+            campaign_id=_campaign_id_from_program(db.get_meta("program")),
+            source_status=source_status,
+            runtime_status="active",
+            actor=actor,
+            db=db,
+            ledger=ledger,
+        )
     return payload
 
 
@@ -563,9 +585,9 @@ def bootstrap(
             source_status="operator_intake",
             runtime_status="operator_intake" if admission_draft else "active",
             actor="controller",
+            db=db,
             ledger=None if admission_draft else ledger,
         )
-        db.set_meta("campaign_status", campaign_status)
     finally:
         db.close()
     return {
@@ -808,7 +830,7 @@ def reconcile_legacy(workspace: Path, actor: str) -> dict[str, Any]:
         report["executing_without_attempt"] = marked
         if marked:
             report["halt_required"] = True
-        status_payload = read_campaign_status(workspace) or {}
+        status_payload = _canonical_campaign_status(db, workspace)
         if status_payload.get("runtime_status") == "completed":
             problems: list[str] = []
             if db.active_leases():
@@ -1492,8 +1514,7 @@ def status(workspace: Path) -> dict[str, Any]:
             "current": _current_work(tasks),
             "definition_status": definition_status,
             "admission_draft": admission_draft,
-            "campaign_status": read_campaign_status(workspace)
-            or db.get_meta("campaign_status")
+            "campaign_status": _canonical_campaign_status(db, workspace)
             or {
                 "source_status": "operator_intake",
                 "runtime_status": "operator_intake",
@@ -1729,6 +1750,11 @@ def claim_task(
         assert repo is not None
         issued = dt.datetime.now(dt.UTC).replace(microsecond=0)
         minutes = ttl_minutes if ttl_minutes is not None else ttl_hours * 60
+        if minutes <= 0:
+            raise ControllerError(
+                "lease TTL must be a positive number of minutes",
+                error_code="LEASE_TTL_INVALID",
+            )
         lease_id = f"lease-{uuid.uuid4().hex[:16]}"
         branch = f"pec/{task['wave_id'].lower()}/{task_id.lower()}"
         base_sha = _lease_base_sha(workspace, repo, task_id)
@@ -1764,6 +1790,41 @@ def claim_task(
         return lease
     finally:
         db.close()
+
+
+def _require_active_unexpired_lease(
+    db: StateDB,
+    task_id: str,
+    *,
+    expected_lease_id: str | None = None,
+    error_code: str = "STALE_LEASE_RESULT",
+) -> dict[str, Any]:
+    """Return the task lease only while it retains execution authority.
+
+    Recovery owns expiry cleanup. Lifecycle commands must never treat an
+    expired active row as a valid fencing token while waiting for recovery.
+    """
+    lease = db.active_lease_for_task(task_id)
+    if lease is None or (
+        expected_lease_id is not None and str(lease.get("lease_id")) != expected_lease_id
+    ):
+        raise ControllerError(
+            f"{task_id}: no active lease bound to the task",
+            error_code=error_code,
+        )
+    try:
+        expires_at = parse_time(str(lease.get("expires_at") or ""))
+    except ValueError as exc:
+        raise ControllerError(
+            f"{task_id}: lease {lease['lease_id']} has an invalid expiry; run `pec recover`",
+            error_code="LEASE_EXPIRED",
+        ) from exc
+    if expires_at <= dt.datetime.now(dt.UTC):
+        raise ControllerError(
+            f"{task_id}: lease {lease['lease_id']} has expired; run `pec recover` before retrying",
+            error_code="LEASE_EXPIRED",
+        )
+    return lease
 
 
 def _add_task_worktree(
@@ -1837,9 +1898,9 @@ def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
         task = db.task(task_id)
         if task is None or task["runtime_state"] != "LEASED":
             raise ControllerError("task must be LEASED")
-        lease = db.active_lease_for_task(task_id)
-        if lease is None:
-            raise ControllerError("active lease required")
+        lease = _require_active_unexpired_lease(
+            db, task_id, expected_lease_id=str(task.get("lease_id") or "")
+        )
         repo = db.repository(task["repository_id"])
         if repo is None:
             raise ControllerError("repository not reconciled")
@@ -2030,12 +2091,11 @@ def start_task(
         _require_ledger_integrity(ledger)
         _refuse_operator_memo_cwd(workspace)
         ensure_campaign_active(workspace, actor, db, ledger)
-        lease = db.active_lease_for_task(task_id)
-        if lease is None or str(lease.get("lease_id")) != str(task.get("lease_id") or ""):
-            raise ControllerError(
-                f"{task_id}: no active lease bound to the task; refuse to dispatch",
-                error_code="STALE_LEASE_RESULT",
-            )
+        lease = _require_active_unexpired_lease(
+            db,
+            task_id,
+            expected_lease_id=str(task.get("lease_id") or ""),
+        )
         if db.live_execution_attempt(task_id) is not None:
             raise ControllerError(
                 f"{task_id}: an execution attempt is still live; resolve, fence or abandon "
@@ -2163,17 +2223,18 @@ def bind_dispatch(
         }
         if provider_ref:
             fields["provider_ref"] = provider_ref
-        db.update_execution_attempt(str(attempt["attempt_id"]), **fields)
-        ledger.append(
-            "EXECUTION_DISPATCH_BOUND",
-            "controller",
-            {
-                "task_id": task_id,
-                "attempt_id": attempt["attempt_id"],
-                "provider_execution_id": provider_execution_id,
-                "provider_ref": provider_ref or attempt.get("provider_ref"),
-            },
-        )
+        with db.controller_transaction():
+            db.update_execution_attempt(str(attempt["attempt_id"]), **fields)
+            ledger.append(
+                "EXECUTION_DISPATCH_BOUND",
+                "controller",
+                {
+                    "task_id": task_id,
+                    "attempt_id": attempt["attempt_id"],
+                    "provider_execution_id": provider_execution_id,
+                    "provider_ref": provider_ref or attempt.get("provider_ref"),
+                },
+            )
         return _attempt_summary(db.execution_attempt(str(attempt["attempt_id"]))) or {}
     finally:
         db.close()
@@ -2218,13 +2279,11 @@ def record_attempt(workspace: Path, task_id: str, receipt_source: Path) -> dict[
                 "is refused",
                 error_code="STALE_ATTEMPT_RESULT",
             )
-        lease = db.active_lease_for_task(task_id)
-        if lease is None or str(lease["lease_id"]) != str(live["lease_id"]):
-            raise ControllerError(
-                f"{task_id}: the live attempt was dispatched under lease {live['lease_id']}, "
-                "which is no longer the task's active lease; result refused",
-                error_code="STALE_LEASE_RESULT",
-            )
+        lease = _require_active_unexpired_lease(
+            db,
+            task_id,
+            expected_lease_id=str(live["lease_id"]),
+        )
         if (
             receipt["contract_digest"] != live["contract_digest"]
             or receipt["base_sha"] != live["base_sha"]
@@ -2736,16 +2795,26 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
                 replay["runtime_state"] = task["runtime_state"]
                 return replay
             raise _verify_state_error(task, task_id)
+        lease = _require_active_unexpired_lease(
+            db,
+            task_id,
+            expected_lease_id=str(task.get("lease_id") or ""),
+        )
         db.transition_task(task_id, "VERIFYING")
-        lease = db.active_lease_for_task(task_id)
         attempt = db.latest_attempt(task_id)
+        execution_attempt = next(
+            (
+                item
+                for item in db.execution_attempts(task_id)
+                if attempt is not None and int(item["attempt_number"]) == int(attempt["attempt_number"])
+            ),
+            None,
+        )
         gates: dict[str, str] = {}
         gates["program_lock"] = "PASS" if lock_trusted_for_task(workspace, task_id) else "STALE"
         ledger_ok, _ = ledger.verify()
         gates["ledger"] = "PASS" if ledger_ok else "FAIL"
-        gates["lease"] = (
-            "PASS" if lease and lease.get("lease_id") == task.get("lease_id") else "FAIL"
-        )
+        gates["lease"] = "PASS" if lease.get("lease_id") == task.get("lease_id") else "FAIL"
         contract: dict[str, Any] = {}
         if task.get("rendered_contract_path") and Path(task["rendered_contract_path"]).is_file():
             contract = load_json(Path(task["rendered_contract_path"]))
@@ -2813,7 +2882,19 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
                 == 0
                 else "FAIL"
             )
-            changed = _changed_paths(worktree, task.get("base_sha"))
+            if execution_attempt is None:
+                raise ControllerError(
+                    f"{task_id}: verification requires an execution attempt baseline",
+                    error_code="EXECUTION_BASELINE_MISSING",
+                )
+            baseline_path = Path(str(execution_attempt.get("baseline_path") or ""))
+            baseline = load_baseline_artifact(baseline_path, attempt=execution_attempt)
+            baseline_head = load_baseline_head(baseline_path, attempt=execution_attempt)
+            changed = [
+                path
+                for path in effected_paths(worktree, baseline, baseline_head=baseline_head)
+                if not _is_wiring_path(path)
+            ]
             observed_digests = _observed_file_digests(worktree, changed)
             declared = sorted(set(receipt.get("changed_files") or []))
             gates["changed_files_exact"] = "PASS" if declared == changed else "FAIL"
@@ -2911,14 +2992,6 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
         )
         attempt_number = attempt["attempt_number"] if attempt else task["attempts"]
         evidence_id = f"EVID-RUNTIME-{task_id}-{int(attempt_number):03d}"
-        execution_attempt = next(
-            (
-                item
-                for item in db.execution_attempts(task_id)
-                if int(item["attempt_number"]) == int(attempt_number)
-            ),
-            None,
-        )
         verification = {
             "schema": "program-execution-controller.verification-receipt.v2",
             "verification_id": f"VERIFY-{uuid.uuid4().hex[:16]}",
@@ -3085,13 +3158,14 @@ def release_lease(workspace: Path, task_id: str, reason: str, actor: str) -> dic
         lease = db.active_lease_for_task(task_id)
         if lease is None:
             raise ControllerError("no active lease")
-        db.release_lease(lease["lease_id"])
-        db.update_task(task_id, lease_id=None)
-        ledger.append(
-            "LEASE_RELEASED",
-            actor,
-            {"task_id": task_id, "lease_id": lease["lease_id"], "reason": reason},
-        )
+        with db.controller_transaction():
+            db.release_lease(lease["lease_id"])
+            db.update_task(task_id, lease_id=None)
+            ledger.append(
+                "LEASE_RELEASED",
+                actor,
+                {"task_id": task_id, "lease_id": lease["lease_id"], "reason": reason},
+            )
         return {"status": "RELEASED", "task_id": task_id, "lease_id": lease["lease_id"]}
     finally:
         db.close()
@@ -3474,17 +3548,18 @@ def add_approval(workspace: Path, approval_file: Path) -> dict[str, Any]:
         if not all(db.evidence(item) is not None for item in approval["prerequisite_evidence_ids"]):
             raise ControllerError("approval references unknown prerequisite evidence")
         target = workspace / "receipts" / "approvals" / f"{approval['approval_id']}.json"
-        write_json(target, approval)
-        db.add_approval(approval)
-        ledger.append(
-            "APPROVAL_RECORDED",
-            approval["approved_by"],
-            {
-                "approval_id": approval["approval_id"],
-                "task_id": approval["task_id"],
-                "receipt": str(target),
-            },
-        )
+        with db.controller_transaction():
+            db.add_approval(approval)
+            ledger.append(
+                "APPROVAL_RECORDED",
+                approval["approved_by"],
+                {
+                    "approval_id": approval["approval_id"],
+                    "task_id": approval["task_id"],
+                    "receipt": str(target),
+                },
+            )
+            db.on_commit(lambda: write_json(target, approval))
         return {
             "status": "RECORDED",
             "approval_id": approval["approval_id"],
@@ -3505,12 +3580,13 @@ def set_decision(
             raise ControllerError("accepted decision requires evidence")
         if not all(_evidence_valid(db, item) for item in evidence_ids):
             raise ControllerError("decision evidence is missing, stale, or invalid")
-        db.set_decision(decision_id, status_value, evidence_ids)
-        ledger.append(
-            "DECISION_PROJECTION_UPDATED",
-            actor,
-            {"decision_id": decision_id, "status": status_value, "evidence_ids": evidence_ids},
-        )
+        with db.controller_transaction():
+            db.set_decision(decision_id, status_value, evidence_ids)
+            ledger.append(
+                "DECISION_PROJECTION_UPDATED",
+                actor,
+                {"decision_id": decision_id, "status": status_value, "evidence_ids": evidence_ids},
+            )
         return {"status": status_value, "decision_id": decision_id, "evidence_ids": evidence_ids}
     finally:
         db.close()
@@ -3527,12 +3603,13 @@ def set_unknown(
             raise ControllerError("resolved or accepted-risk Unknown requires evidence")
         if not all(_evidence_valid(db, item) for item in evidence_ids):
             raise ControllerError("Unknown resolution evidence is missing, stale, or invalid")
-        db.set_unknown(unknown_id, status_value, evidence_ids)
-        ledger.append(
-            "UNKNOWN_PROJECTION_UPDATED",
-            actor,
-            {"unknown_id": unknown_id, "status": status_value, "evidence_ids": evidence_ids},
-        )
+        with db.controller_transaction():
+            db.set_unknown(unknown_id, status_value, evidence_ids)
+            ledger.append(
+                "UNKNOWN_PROJECTION_UPDATED",
+                actor,
+                {"unknown_id": unknown_id, "status": status_value, "evidence_ids": evidence_ids},
+            )
         return {"status": status_value, "unknown_id": unknown_id, "evidence_ids": evidence_ids}
     finally:
         db.close()
@@ -3712,10 +3789,27 @@ def _integrate_candidate(
         raise ControllerError(f"verified candidate branch missing: {task_branch}")
     candidate_sha = candidate.stdout.strip()
     receipt_path = _integration_receipt_path(workspace, task_id)
-    if receipt_path.is_file():
-        receipt = load_json(receipt_path)
+    canonical = db.receipt_by_artifact(str(receipt_path))
+    if canonical is not None:
+        receipt = dict(canonical["payload"])
         if receipt.get("candidate_sha") == candidate_sha:
-            # Already integrated: replay safely without duplicating commits.
+            campaign_head = run_git(repo_path, "rev-parse", f"refs/heads/{branch}").stdout.strip()
+            recorded_campaign_sha = str(receipt.get("campaign_sha") or "")
+            included = run_git(
+                repo_path,
+                "merge-base",
+                "--is-ancestor",
+                recorded_campaign_sha,
+                campaign_head,
+                check=False,
+            )
+            if included.returncode != 0:
+                raise ControllerError(
+                    f"canonical integration receipt for {task_id} is no longer present in {branch}; "
+                    "refuse completion until recovery reconciles branch lineage",
+                    error_code="INTEGRATION_LINEAGE_MISMATCH",
+                )
+            # Already canonically integrated: replay safely without duplicating commits.
             return receipt
     descends = run_git(
         repo_path, "merge-base", "--is-ancestor", base_sha, candidate_sha, check=False
@@ -3785,7 +3879,8 @@ def _integrate_candidate(
         integrated.append(commit)
     campaign_sha = run_git(tree, "rev-parse", "HEAD").stdout.strip()
     receipt = {
-        "schema": "program-execution-controller.integration-receipt.v1",
+        "schema": "program-execution-controller.integration-receipt.v2",
+        "integration_id": f"INTEGRATION-{task_id}-{candidate_sha[:16]}",
         "task_id": task_id,
         "integration_branch": branch,
         "base_sha": base_sha,
@@ -3794,9 +3889,7 @@ def _integrate_candidate(
         "campaign_sha": campaign_sha,
         "integrated_at": utc_now(),
     }
-    write_json(receipt_path, receipt)
-    db.upsert_repository(str(task["repository_id"]), str(repo["target_id"]), head_sha=campaign_sha)
-    ledger.append("TASK_INTEGRATED", "controller", receipt)
+    receipt["receipt_digest"] = digest_object(receipt)
     return receipt
 
 
@@ -3862,12 +3955,36 @@ def complete_task(
                 raise ControllerError(
                     "PASSED_LOCAL is not Done; Definition of Done required before complete"
                 )
+            _require_active_unexpired_lease(
+                db,
+                task_id,
+                expected_lease_id=str(task.get("lease_id") or ""),
+            )
             # Verified fan-in first: a repo_local task is not COMPLETED until
             # its candidate range is integrated into the campaign integration
             # branch. An integration conflict raises here and leaves the task
             # PASSED_LOCAL with its candidate branch and worktree preserved.
             integration = _integrate_candidate(db, ledger, workspace, task)
             with db.controller_transaction():
+                if integration is not None:
+                    integration_path = _integration_receipt_path(workspace, task_id)
+                    _record_receipt(
+                        db,
+                        receipt_id=str(integration["integration_id"]),
+                        receipt_type="integration",
+                        entity_id=task_id,
+                        payload=integration,
+                        artifact=integration_path,
+                    )
+                    repo = db.repository(str(task["repository_id"]))
+                    if repo is None:
+                        raise ControllerError("repository not reconciled")
+                    db.upsert_repository(
+                        str(task["repository_id"]),
+                        str(repo["target_id"]),
+                        head_sha=str(integration["campaign_sha"]),
+                    )
+                    ledger.append("TASK_INTEGRATED", "controller", integration)
                 db.transition_task(task_id, "COMPLETED")
                 lease = db.active_lease_for_task(task_id)
                 if lease:
@@ -3895,8 +4012,9 @@ def complete_task(
 def set_halt(workspace: Path, halted: bool, reason: str, actor: str) -> dict[str, Any]:
     db, ledger = open_runtime(workspace)
     try:
-        db.set_meta("global_halt", halted)
-        ledger.append("GLOBAL_HALT_CHANGED", actor, {"halted": halted, "reason": reason})
+        with db.controller_transaction():
+            db.set_meta("global_halt", halted)
+            ledger.append("GLOBAL_HALT_CHANGED", actor, {"halted": halted, "reason": reason})
         return {"global_halt": halted, "reason": reason}
     finally:
         db.close()
@@ -4086,7 +4204,7 @@ def export_handoff(
         # handoff reports what the Controller would recommend and leaves the
         # runtime active; `pec close`, invoked by the program owner, is the one
         # path that accepts or refuses a terminal verdict.
-        receipt["campaign_status"] = read_campaign_status(workspace) or {}
+        receipt["campaign_status"] = _canonical_campaign_status(db, workspace)
         from .signals import publish_controller_event
 
         receipt["signal"] = publish_controller_event(

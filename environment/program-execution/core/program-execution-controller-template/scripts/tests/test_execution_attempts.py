@@ -316,6 +316,41 @@ class DurableAttemptTests(unittest.TestCase):
             self.assertEqual(len(_rows(workspace)), 2)
             cleanup_worktree(repo, workspace)
 
+    def test_retry_verification_excludes_work_preserved_before_its_baseline(self) -> None:
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            _, repo, workspace = bootstrap_repo(temp)
+            register_contract(temp, workspace)
+            _first, worktree, _ = _start(temp, workspace)
+            (worktree / "docs").mkdir(parents=True, exist_ok=True)
+            (worktree / "docs" / "result.txt").write_text("ok\n", encoding="utf-8")
+            run_cli(
+                "fail",
+                "TASK-001",
+                "--workspace",
+                str(workspace),
+                "--reason",
+                "provider died after writing",
+                "--actor",
+                "worker",
+            )
+            _second, reused_worktree, contract = _start(temp, workspace)
+            self.assertEqual(reused_worktree, worktree)
+            run_cli(
+                "record-attempt",
+                "TASK-001",
+                "--workspace",
+                str(workspace),
+                "--receipt",
+                str(_receipt(temp, contract, changed_files=[])),
+            )
+
+            verification = run_cli("verify", "TASK-001", "--workspace", str(workspace))
+
+            self.assertEqual(verification["observed_changed_files"], [])
+            self.assertEqual(verification["gates"]["changed_files_exact"], "PASS")
+            cleanup_worktree(repo, workspace)
+
     def test_bind_dispatch_records_provider_correlation_on_the_live_attempt(self) -> None:
         with TemporaryDirectory() as raw:
             temp = Path(raw)

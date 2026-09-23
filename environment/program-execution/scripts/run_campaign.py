@@ -5501,7 +5501,11 @@ def reconcile_resumed_source(
     Program Lock and does not prove the current source produced the runtime.
     """
     if not source.is_file():
-        return {"status": "NO_SOURCE"}
+        raise CampaignError(
+            f"{campaign_id}: the submitted campaign source is unavailable at {source}; "
+            "refusing to resume without authored-source provenance",
+            error_code="RESUME_SOURCE_UNVERIFIED",
+        )
     shape = campaign_source_shape(source)
     if shape is None:
         raise CampaignError(
@@ -5657,6 +5661,7 @@ def resume_live_campaign(
     *,
     campaign_id: str,
     seed: dict[str, Any],
+    submitted_source: Path | None,
     requested_until: str,
     until: str,
     primary: Path,
@@ -5702,9 +5707,14 @@ def resume_live_campaign(
     # at it would execute a lock the operator has since edited underneath. Ask
     # the source what moved: per-task edits are relocked, anything wider is a
     # different program wearing the same id and is refused.
+    # Direct campaign-source inputs must bind the exact document this invocation
+    # submitted. Activation/plan inputs have no source document of their own,
+    # so they reconcile the persisted authored source at the recorded host.
+    # Missing persisted source remains RESUME_SOURCE_UNVERIFIED.
+    resume_source = submitted_source or campaign_source_path(write_root, campaign_id)
     reconcile_resumed_source(
         campaign_id=campaign_id,
-        source=campaign_source_path(write_root, campaign_id),
+        source=resume_source,
         pec_workspace=pec_workspace,
         l9_home=l9_home,
         repo_root=write_root,
@@ -5979,6 +5989,7 @@ def _stage_classify_and_prime(run: _CampaignRun) -> CampaignReport | None:
         return resume_live_campaign(
             campaign_id=campaign_id,
             seed=seed,
+            submitted_source=resolved_intent if campaign_source_doc is not None else None,
             requested_until=requested_until,
             until=until,
             primary=primary,
