@@ -586,6 +586,9 @@ def finding_paths_exist(root: Path, findings: list[dict[str, Any]]) -> list[str]
         path = relative_path(finding.get("path", ""))
         if not path:
             continue
+        if path.startswith("/") or ".." in Path(path).parts:
+            errors.append(f"finding path is not workspace-relative: {finding.get('path')}")
+            continue
         candidate = root_r / path
         if not candidate.is_file():
             errors.append(f"finding path does not exist: {path}")

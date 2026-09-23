@@ -859,3 +859,14 @@ def test_finding_paths_exist_resolves_dot_directory_paths(tmp_path: Path) -> Non
     (tmp_path / ".github").mkdir()
     (tmp_path / ".github" / "ci.yml").write_text("on: push\n", encoding="utf-8")
     assert preds.finding_paths_exist(tmp_path, [{"path": ".github/ci.yml"}]) == []
+
+
+def test_finding_paths_exist_rejects_paths_outside_the_workspace(tmp_path: Path) -> None:
+    preds = _preds()
+    root = tmp_path / "repo"
+    root.mkdir()
+    outside = tmp_path / "outside.py"
+    outside.write_text("x = 1\n", encoding="utf-8")
+    for path in (str(outside), "../outside.py", "./../outside.py", "sub/../../outside.py"):
+        errors = preds.finding_paths_exist(root, [{"path": path}])
+        assert errors == [f"finding path is not workspace-relative: {path}"], path
