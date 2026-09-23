@@ -383,3 +383,26 @@ def test_cursor_client_lifecycle_is_memory_owned(bound, fake_cli) -> None:
     assert c.cursor_client_verify(config_path="/tmp/mcp.json").ok
     argv = fake_cli.calls[-1][0]
     assert argv[1:4] == ["client", "cursor", "verify"] and "--path" in argv
+
+
+# ---------------------------------------------------------------------------
+# Namespace-restricted hook surface (post-publish governance friction)
+# ---------------------------------------------------------------------------
+
+
+def test_friction_surface_refuses_a_repository_namespace_before_spawning(bound, fake_cli) -> None:
+    """Governance friction can only ever land in cursor-governance."""
+    friction = MemoryControlPlaneClient(
+        bound, runner=fake_cli.run, surface="claude-governance-friction"
+    )
+    outcome = friction.write(
+        "friction",
+        workspace=WS,
+        namespace="website-bot",
+        memory_class="observation",
+        source="claude-post-publish-handoff",
+        source_id="k",
+    )
+    assert outcome.status is OutcomeStatus.REJECTED
+    assert "may write only to cursor-governance" in (outcome.error or "")
+    assert fake_cli.calls == [], "the refusal happens client-side, before any process"
