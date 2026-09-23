@@ -94,7 +94,7 @@ def _is_subagent(event: dict) -> bool:
     return str(event.get("agent_type") or event.get("agentType") or "").lower() == "subagent"
 
 
-def _writeback_roots(contract: dict, session_id: str, workspace: Path) -> list[Path]:
+def _writeback_roots(contract: dict, receipt_id: str, workspace: Path) -> list[Path]:
     """Repositories to close, preferring the ones this session hydrated.
 
     Falling back to ``workspace_roots`` matters for a session whose prefetch
@@ -103,7 +103,7 @@ def _writeback_roots(contract: dict, session_id: str, workspace: Path) -> list[P
     remove.
     """
     try:
-        data = json.loads(st.receipt_path(contract, session_id).read_text(encoding="utf-8"))
+        data = json.loads(st.receipt_path(contract, receipt_id).read_text(encoding="utf-8"))
         roots = [Path(r) for r in (data.get("hydrated_roots") or []) if r]
         roots = [r for r in roots if r.is_dir()]
         if roots:
@@ -133,14 +133,24 @@ def main() -> int:
         # close. A subagent inherits read evidence only and writes nothing.
         _record(contract, session_id, status="skipped_subagent")
         return 0
-    if not st.fresh_receipt(contract, session_id):
+    # The prefetch receipt is keyed by the writer-scoped id
+    # (``<writer_agent>__<chat>``, memory_state.resolve_receipt_id), the one
+    # key prefetch stamps and the write gate reads. This hook looked it up by
+    # the raw session id, found nothing, recorded skipped_no_prefetch on every
+    # Stop, and never reached close_session — so no Claude session ever wrote
+    # its continuation, and nothing on disk or in memory said so.
+    try:
+        receipt_id = st.resolve_receipt_id(event=event)
+    except ValueError:
+        receipt_id = ""
+    if not receipt_id or not st.fresh_receipt(contract, receipt_id):
         # A policy skip: this session never prefetched, so there is nothing to
         # close. Recorded so it stays distinguishable from a runtime failure.
-        _record(contract, session_id, status="skipped_no_prefetch")
+        _record(contract, session_id, status="skipped_no_prefetch", receipt_id=receipt_id)
         return 0
 
     workspace = st.workspace_root()
-    roots = _writeback_roots(contract, session_id, workspace)
+    roots = _writeback_roots(contract, receipt_id, workspace)
     os.environ.setdefault("L9_MEMORY_AGENT_ID", "claude-code")
     os.environ.setdefault("USER_ID", "claude_code_agent")
 
