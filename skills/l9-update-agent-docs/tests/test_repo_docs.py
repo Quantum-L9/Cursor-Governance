@@ -291,6 +291,13 @@ def test_receipt_carries_the_readme_reconciliation_histogram(tmp_path: Path):
     }
     assert planned["create"] >= 1
     assert planned["conflict"] == 0
+    quality = receipt["capabilities"]["module_readmes"]["quality"]
+    assert quality
+    assert {row["completeness"] for row in quality} <= {
+        "complete",
+        "partial",
+        "minimal-by-design",
+    }
     # The histogram is diagnostics on the capability, not a second ledger.
     assert receipt["final_status"] == "PASS"
 
@@ -341,9 +348,9 @@ def test_policy_capability_controls_are_executable(tmp_path: Path):
     assert capability["status"] == "AVAILABLE"
     assert capability["owner"] == "l9-update-agent-docs"
     assert capability["present"]["generator"] is True
-    partial = dc.probe_module_readme_capability(root, policy, ["skills/x.xml"])
-    assert partial["status"] == "PARTIAL"
-    assert partial["unsupported_impacted_extensions"] == [".xml"]
+    xml = dc.probe_module_readme_capability(root, policy, ["skills/x.xml"])
+    assert xml["status"] == "AVAILABLE"
+    assert xml["unsupported_impacted_extensions"] == []
 
 
 def test_default_llm_projection_is_created_and_closed(tmp_path: Path):
@@ -566,11 +573,13 @@ def test_current_owned_targets_close_without_a_rewrite(tmp_path: Path):
     write(root / "ARCHITECTURE.md", "# Architecture\n\nChanged again.\n")
     commit(root)
     receipt = rd.audit_repository(root, changed_since=base)
-    assert receipt["llm_txt"]["admission"] == "unchanged"
-    assert receipt["llm_txt"]["written"] is False
+    # The v3 LLM manifest carries every indexed source digest, so an
+    # architecture byte change requires a projection refresh.
+    assert receipt["llm_txt"]["admission"] == "refresh"
+    assert receipt["llm_txt"]["written"] is True
     assert receipt["filetree"]["admission"] == "unchanged"
     assert receipt["filetree"]["written"] is False
-    assert "llm.txt" not in receipt["changes"]["run_mutations"]
+    assert "llm.txt" in receipt["changes"]["run_mutations"]
     rows = {row["surface"]: row for row in receipt["obligations"]}
     for surface in ("llm_txt", "filetree"):
         assert rows[surface]["lifecycle"]["status"] == "CLOSED"

@@ -1,5 +1,5 @@
 {
-  "generation_id": "c6fbe0b380b161e153529c34dd4d8604c205860661715134d2146ebc434549b3",
+  "generation_id": "2a7cdf1df85391aa914f15c2315bf80f5a4ba0b0e64ab23d3869ec2bc923577d",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1575,14 +1575,14 @@
     },
     {
       "composition_role": "primary",
-      "description": "compile repository changes into typed documentation and operational-contract obligations, assess Makefile/pyproject surfaces, and emit repo-docs receipts. use when refreshing repo or agent docs, checking docs or operational-contract impact after code/CI changes, generating module READMEs, or proving documentation freshness before merge.",
+      "description": "compile repository changes into typed documentation and consumer-contract obligations, assess root-agent, architecture, Makefile, Python, workflow, and OpenAPI surfaces, and emit evidence-bound repo-docs receipts. use when refreshing repo or agent docs, checking consumer operational-contract impact after code/CI changes, generating evidence-backed module READMEs, or proving documentation freshness before merge.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-update-agent-docs",
       "path": "skills/l9-update-agent-docs",
       "reason": "",
       "skill_md": "skills/l9-update-agent-docs/SKILL.md",
-      "skill_sha256": "cf9f4b25de226965aa98a48a3004cc4335755fd8f25432835ecc3648f58ef804",
+      "skill_sha256": "e0f5d3bfbea879ff3fa639541ce8b1dbb959569dbaa2f775919e870717069ce0",
       "user_invocable": true,
       "when_to_use": "refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes, or creating root CLAUDE.md / INVARIANTS.md when missing"
     },
@@ -1615,5 +1615,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "2cc1c76dd45b8a970c3ecabce7a832b7d5c9f8b6fc36cb56bb15cd69d7269c5b",
-  "source_skill_corpus_sha256": "0d56bc36580c928b15527f322cee633e9cfad2f5556f6dc016dea37c8c4c059b"
+  "source_skill_corpus_sha256": "12d75dd9a46c8ca05b6b94f4aa08be2c43135df6b0c30c775c8c6e490158735d"
 }
