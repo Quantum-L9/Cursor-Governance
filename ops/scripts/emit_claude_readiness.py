@@ -782,7 +782,13 @@ def _bootstrap_binding(bootstrap: dict[str, Any] | None) -> str:
     """
     if not isinstance(bootstrap, dict):
         return ""
-    return f"{bootstrap.get('bootstrap_id') or ''}@{bootstrap.get('generated_at') or ''}"
+    ceremony = str(bootstrap.get("bootstrap_id") or "").strip()
+    written = str(bootstrap.get("generated_at") or "").strip()
+    # A partial or pre-binding receipt identifies nothing: "@" or "id@" would
+    # match another equally empty binding and license reuse. No binding at all.
+    if not ceremony or not written:
+        return ""
+    return f"{ceremony}@{written}"
 
 
 def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> dict[str, Any]:
@@ -982,7 +988,7 @@ def reusable_receipt(
     current = _bootstrap_binding(
         _read_json(Path.home() / ".l9" / "claude" / "bootstrap-state.json")
     )
-    if str(existing.get("bootstrap_receipt") or "") != current:
+    if not current or str(existing.get("bootstrap_receipt") or "") != current:
         return None
     return existing
 

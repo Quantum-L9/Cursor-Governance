@@ -47,7 +47,7 @@ _L9_GRACE="${L9_SESSION_START_GRACE:-2}"
 # child as TIMED OUT, with the run still completing, rather than being torn
 # down together with the child at the same instant and read as PARTIAL.
 _l9_budget_left() {
-  local total="${L9_SESSION_START_BUDGET:-30}" reserve="${L9_SESSION_START_RESERVE:-4}"
+  local total="${L9_SESSION_START_BUDGET:-60}" reserve="${L9_SESSION_START_RESERVE:-4}"
   echo $(( total - ( $(date +%s) - _L9_HOOK_START ) - reserve - _L9_GRACE - 1 ))
 }
 
@@ -244,7 +244,7 @@ if [ "$_L9_ROLE" = "parent" ]; then
     # reserve stays a reserve. Budget and registration are held in lockstep by
     # tests/test_session_start_partial_emit.py::BudgetRegistrationLockstepTest.
     _l9_grace="$_L9_GRACE"
-    _l9_deadline=$(( ${L9_SESSION_START_BUDGET:-30} - ${L9_SESSION_START_RESERVE:-4} - _l9_grace ))
+    _l9_deadline=$(( ${L9_SESSION_START_BUDGET:-60} - ${L9_SESSION_START_RESERVE:-4} - _l9_grace ))
     [ "$_l9_deadline" -lt 1 ] && _l9_deadline=1
 
     # BACKGROUND + `wait`, deliberately, not `timeout`:
@@ -615,7 +615,7 @@ if GOV=$(resolve_governance_dir); then
     if ! type run_with_timeout >/dev/null 2>&1; then
       say "bootstrap receipt: NOT GENERATED — run_with_timeout.sh missing; installer not started"
     elif [ "$_gen_cap" -lt "${L9_BOOTSTRAP_GENERATE_MIN:-15}" ]; then
-      say "bootstrap receipt: NOT GENERATED — ${_gen_left}s of hook budget left, needs >=${L9_BOOTSTRAP_GENERATE_MIN:-15}s"
+      say "bootstrap receipt: NOT GENERATED — ${_gen_left}s of generation budget left (hook budget minus ${L9_BOOTSTRAP_REPORT_FLOOR:-6}s report floor), needs >=${L9_BOOTSTRAP_GENERATE_MIN:-15}s"
       say "bootstrap receipt:   run 'make claude-install' to generate it now"
     elif run_with_timeout "$_gen_cap" \
       env L9_BOOTSTRAP_ID="$_L9_CEREMONY_ID" L9_BOOTSTRAP_LOG_PATH="$_gen_log" \

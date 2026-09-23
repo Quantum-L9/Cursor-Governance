@@ -814,10 +814,25 @@ def test_receipt_carries_a_write_time_and_expires(tmp_path: Path, monkeypatch) -
 # --- SessionStart reuse: the receipt is handed back only while it is believable
 
 
+#: The bootstrap receipt identity a reusable readiness receipt is bound to.
+_BINDING = "ceremony-1@2026-09-23T17:00:00Z"
+
+
+def _seed_bootstrap_receipt(home: Path) -> None:
+    """The bootstrap receipt this ceremony generated, matching ``_BINDING``."""
+    state = home / ".l9" / "claude" / "bootstrap-state.json"
+    state.parent.mkdir(parents=True, exist_ok=True)
+    state.write_text(
+        json.dumps({"bootstrap_id": "ceremony-1", "generated_at": "2026-09-23T17:00:00Z"}),
+        encoding="utf-8",
+    )
+
+
 def _fresh_receipt(sha: str = "abc123", workspace: str = "/ws") -> dict:
     from datetime import UTC, datetime
 
     return {
+        "bootstrap_receipt": _BINDING,
         "schema_version": er.SCHEMA_VERSION,
         "generated_at": datetime.now(UTC).strftime(er._TIMESTAMP_FORMAT),
         "ttl_seconds": er.RECEIPT_TTL_SECONDS,
@@ -841,7 +856,8 @@ def test_reusable_receipt_requires_fresh_same_workspace_and_live_sha(
     from datetime import UTC, datetime, timedelta
 
     gov = tmp_path / "gov"
-    monkeypatch.setenv("HOME", str(tmp_path))  # no bootstrap receipt on disk
+    monkeypatch.setenv("HOME", str(tmp_path))
+    _seed_bootstrap_receipt(tmp_path)
     monkeypatch.setattr(er, "_git", lambda _g, *a: "abc123" if a == ("rev-parse", "HEAD") else "")
     receipt = _fresh_receipt()
 
@@ -853,6 +869,11 @@ def test_reusable_receipt_requires_fresh_same_workspace_and_live_sha(
     assert er.reusable_receipt(expired, gov=gov, workspace="/ws") is None
     assert er.reusable_receipt(None, gov=gov, workspace="/ws") is None
     assert er.reusable_receipt({**receipt, "schema_version": "x"}, gov=gov, workspace="/ws") is None
+
+    # No bootstrap receipt on disk: nothing this ceremony generated to bind to.
+    (tmp_path / ".l9" / "claude" / "bootstrap-state.json").unlink()
+    assert er.reusable_receipt(receipt, gov=gov, workspace="/ws") is None
+    _seed_bootstrap_receipt(tmp_path)
 
     # An unknowable live SHA is not a match — a missing probe must not
     # manufacture reuse out of a receipt that may describe another revision.
@@ -886,7 +907,28 @@ def test_reusable_receipt_is_bound_to_the_bootstrap_receipt_on_disk(
     )
     assert er.reusable_receipt(built_here, gov=tmp_path, workspace="/ws") is None
     # A readiness receipt predating the binding cannot vouch for any bootstrap.
-    assert er.reusable_receipt(_fresh_receipt(), gov=tmp_path, workspace="/ws") is None
+    unbound = {k: v for k, v in _fresh_receipt().items() if k != "bootstrap_receipt"}
+    assert er.reusable_receipt(unbound, gov=tmp_path, workspace="/ws") is None
+
+
+def test_a_partial_bootstrap_receipt_binds_nothing(tmp_path: Path, monkeypatch) -> None:
+    """A bootstrap receipt missing its id or timestamp is no binding at all.
+
+    Formatting the fields blind produced "@" / "id@", a non-empty identity that
+    matched another equally empty binding and licensed reuse.
+    """
+    assert er._bootstrap_binding({}) == ""
+    assert er._bootstrap_binding({"bootstrap_id": "c-1"}) == ""
+    assert er._bootstrap_binding({"generated_at": "2026-09-23T17:00:00Z"}) == ""
+    assert er._bootstrap_binding({"bootstrap_id": " ", "generated_at": " "}) == ""
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setattr(er, "_git", lambda _g, *a: "abc123" if a == ("rev-parse", "HEAD") else "")
+    state = tmp_path / ".l9" / "claude" / "bootstrap-state.json"
+    state.parent.mkdir(parents=True)
+    state.write_text("{}", encoding="utf-8")
+    forged = {**_fresh_receipt(), "bootstrap_receipt": "@"}
+    assert er.reusable_receipt(forged, gov=tmp_path, workspace="/ws") is None
 
 
 def test_compact_names_the_receipt_source() -> None:
@@ -903,7 +945,8 @@ def test_reuse_fresh_skips_every_probe_and_leaves_the_file_untouched(
     receipt = _fresh_receipt(workspace=str(tmp_path))
     path.write_text(json.dumps(receipt) + "\n", encoding="utf-8")
     before = path.read_bytes()
-    monkeypatch.setenv("HOME", str(tmp_path))  # no bootstrap receipt on disk
+    monkeypatch.setenv("HOME", str(tmp_path))
+    _seed_bootstrap_receipt(tmp_path)
     monkeypatch.setenv("L9_READINESS_RECEIPT_FILE", str(path))
     monkeypatch.setattr(er, "_git", lambda _g, *a: "abc123" if a == ("rev-parse", "HEAD") else "")
 
