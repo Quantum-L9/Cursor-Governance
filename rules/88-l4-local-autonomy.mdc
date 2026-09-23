@@ -69,7 +69,7 @@ two commands bound to your workspace.
 On every surface, `make pr` runs the **governance** Makefile's
 `pr` target regardless of the workspace repo or its Makefile — reach it
 with `l9 pr` / `make -C "$GOV" pr WS="$PWD"` from a consumer checkout
-with no local `pr` target. A consumer needs no `pr`/`pr-check` target;
+with no local `pr` target. A consumer needs no additional local target;
 there is no raw-push fallback where one is absent.
 
 5. Do **not** merge from the campaign / `make pr` path. Campaign end state

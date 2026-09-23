@@ -201,7 +201,7 @@ def test_gate_a_rejects_ceremony_verbs() -> None:
         "A",
         {
             "gate_registry": registry,
-            "cached_verbs": "make pr-check",
+            "cached_verbs": "OPEN_PR=0 make pr",
         },
     )
     assert errors

@@ -35,7 +35,7 @@ What do you need?
 │  └─ BUILD → SHIP
 │
 ├─ "Ready to land on remote / production path"
-│  └─ SHIP (after BUILD or small fix + pr-check)
+│  └─ SHIP (after BUILD or small fix + the governed `make pr` gate)
 │
 ├─ "Weekly health / preventive maintenance"
 │  └─ CHECK (8–10 min, safe)
@@ -110,7 +110,7 @@ Generic repos: swap `make pr` / `make audit` for equivalent CI gates. The publis
 
 | Step | Action | On failure |
 |------|--------|------------|
-| 1. Pre-flight | Confirm pr-check passed; review diff | Stop — fix locally |
+| 1. Pre-flight | Confirm the governed `make pr` gate passed; review diff | Stop — fix locally |
 | 2. Security | `l9-auditing-security` or CI secret scan | Stop on critical |
 | 3. Backup | Commit pushed; tag or note SHA for rollback | Required before merge |
 | 4. Push / PR | `PR_REMEDIATE=0 make pr` (`l9 pr`) | `make push` is denied at every phase; fix what `make pr` reported, never route around it |

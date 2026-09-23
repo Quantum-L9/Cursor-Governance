@@ -112,7 +112,14 @@ MAKE_PR_FORMS = [
     "/usr/bin/make pr",
 ]
 
-NOT_MAKE_PR = ["make push", "make test", "make pr-check", "git push origin main", ""]
+NOT_MAKE_PR = [
+    "OPEN_PR=0 make pr",
+    "make push",
+    "make test",
+    "make definitely-not-a-real-target",
+    "git push origin main",
+    "",
+]
 
 
 @pytest.mark.parametrize("command", MAKE_PR_FORMS)
@@ -122,29 +129,27 @@ def test_is_make_pr_accepts_real_invocations(command: str) -> None:
 
 @pytest.mark.parametrize("command", NOT_MAKE_PR)
 def test_is_make_pr_rejects_other_goals(command: str) -> None:
-    """`make pr-check` runs the gate but never pushes, so it is not the publish path."""
+    """An unrecognized Make goal is not the sanctioned publication path."""
     assert gate.is_make_pr(command) is False
 
 
 class TestMakeGoalsAreExactTokens:
-    """`make pr-check` is the local quality gate and never reaches GitHub.
+    """Exact token parsing keeps unrelated Make goals out of the publication path."""
 
-    A regex for `make pr` matches `make pr-check` too — \\b closes on the hyphen
-    — so the L4 remote gate denied the one command an agent is supposed to run
-    before publishing. Goals are matched as exact tokens instead.
-    """
+    def test_removed_goal_is_not_a_remote_mutation(self) -> None:
+        assert gate.command_is_remote_mutation("make definitely-not-a-real-target") is False
+        assert gate.command_bypasses_publish_path("make definitely-not-a-real-target") is None
 
-    def test_pr_check_is_not_a_remote_mutation(self) -> None:
-        assert gate.command_is_remote_mutation("make pr-check") is False
-        assert gate.command_bypasses_publish_path("make pr-check") is None
-
-    def test_pr_check_passes_the_gate_without_a_release_receipt(
+    def test_removed_goal_passes_the_gate_without_a_release_receipt(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
         monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
         monkeypatch.setattr(gate, "release_allows_remote", _release(False, "L4 denied"))
-        assert gate.evaluate("Bash", {"command": "make pr-check"}, root=tmp_path) is None
+        assert (
+            gate.evaluate("Bash", {"command": "make definitely-not-a-real-target"}, root=tmp_path)
+            is None
+        )
 
     @pytest.mark.parametrize(
         "command",
@@ -163,13 +168,23 @@ class TestMakeGoalsAreExactTokens:
         assert gate.is_make_pr("make -C /tmp/repo pr") is True
 
     def test_goal_lists_are_scanned_whole(self) -> None:
-        """`make pr-check pr` runs both goals, so the publish must be seen."""
-        assert gate.is_make_pr("make pr-check pr") is True
-        assert gate.command_is_remote_mutation("make pr-check pr") is True
-        assert gate.make_goals("make pr-check pr") == ("pr-check", "pr")
+        """`make definitely-not-a-real-target pr` runs both goals, so the publish must be seen."""
+        assert gate.is_make_pr("make definitely-not-a-real-target pr") is True
+        assert gate.command_is_remote_mutation("make definitely-not-a-real-target pr") is True
+        assert gate.make_goals("make definitely-not-a-real-target pr") == (
+            "definitely-not-a-real-target",
+            "pr",
+        )
 
     @pytest.mark.parametrize(
-        "command", ["make test", "make lint", "make improve", "make start", "make pr-check"]
+        "command",
+        [
+            "make test",
+            "make lint",
+            "make improve",
+            "make start",
+            "make definitely-not-a-real-target",
+        ],
     )
     def test_local_goals_are_never_remote(self, command: str) -> None:
         assert gate.command_is_remote_mutation(command) is False

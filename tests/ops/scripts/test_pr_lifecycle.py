@@ -484,23 +484,21 @@ def test_precommit_missing_binary_fails_after_files(tmp_path: Path) -> None:
         },
     )
     assert proc.returncode == 1
-    assert "INTERNAL leaf of make pr" in proc.stderr
+    assert "INTERNAL publication-gate hook catalog" in proc.stderr
     assert "Do not run 'pre-commit install'" in proc.stderr
 
 
 def _stamp_kernel(repo: Path) -> None:
-    """Satisfy the tree latch the way an agent must: report, then record.
-
-    `record` refuses to write a receipt without a hashed, path-confined apply
-    report whose deltas name files that exist, so the artifact is part of
-    fixture setup now rather than a bare CLI call.
-    """
+    """Satisfy the tree latch through a bound, path-confined apply report."""
     alignment_delta = "kernel-ra-fixture.txt"
     validation_delta = "kernel-vr-fixture.txt"
     (repo / alignment_delta).write_text("alignment\n", encoding="utf-8")
     (repo / validation_delta).write_text("validation\n", encoding="utf-8")
     report = repo / ".l9" / "autonomy" / "kernel-apply.md"
     report.parent.mkdir(parents=True, exist_ok=True)
+    changed_file = repo / ".l9" / "pr" / "changed-files.txt"
+    changed_file.parent.mkdir(parents=True, exist_ok=True)
+    changed_file.write_text(f"{alignment_delta}\n{validation_delta}\n", encoding="utf-8")
     report.write_text(
         "---\n"
         "schema: l9.kernel_apply.v1\n"
@@ -513,7 +511,8 @@ def _stamp_kernel(repo: Path) -> None:
         f"  - path: {validation_delta}\n"
         "    kernel: validate_repair\n"
         "    note: validated the lifecycle kernel fixture\n"
-        "---\n\n## Recursive Alignment\n\nfixture\n\n## Validate & Repair\n\nfixture\n",
+        "---\n\n## Recursive Alignment\n\nfixture\n\n"
+        "## Validate & Repair\n\nfixture\n",
         encoding="utf-8",
     )
     proc = _run(
@@ -525,6 +524,8 @@ def _stamp_kernel(repo: Path) -> None:
             str(repo),
             "--gov-root",
             str(ROOT),
+            "--changed-file",
+            str(changed_file),
         ],
         cwd=repo,
     )
@@ -629,25 +630,27 @@ def test_precommit_repo_fails_closed_on_tracked_dirt(tmp_path: Path) -> None:
     assert "Do not auto-stage" in proc.stdout
 
 
-def test_pr_check_does_not_double_run_precommit_repo() -> None:
+def test_pr_direct_gate_does_not_double_run_precommit_repo() -> None:
     makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
-    assert "pr-check: precommit-repo" not in makefile
-    assert "pr: precommit-repo" not in makefile
-    assert "pr-check: capability-contract-validate" not in makefile
-    assert "push: precommit-repo backup" in makefile
-    assert "push: precommit backup" not in makefile
+    publish = (ROOT / "ops" / "make" / "publish.mk").read_text(encoding="utf-8")
+    maintenance = (ROOT / "ops" / "make" / "maintenance.mk").read_text(encoding="utf-8")
+    assert "pr-check:" not in makefile
+    assert "pr-check:" not in publish
+    assert "pr: precommit-repo" not in publish
+    assert "push: precommit-repo backup" in maintenance
+    assert "push: precommit backup" not in maintenance
 
 
 def test_pr_full_owns_corpus_validators() -> None:
-    makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
-    assert "pr-full: capability-contract-validate" in makefile
+    publish = (ROOT / "ops" / "make" / "publish.mk").read_text(encoding="utf-8")
+    assert "pr-full: capability-contract-validate" in publish
     for name in (
         "validate_legacy_doctrine_residue.py",
         "validate_workflow_action_pins.py",
         "validate_governance_contract_surface.py",
         "validate_git_denial_residue.py",
     ):
-        assert name in makefile
+        assert name in publish
 
 
 def test_precommit_script_runs_kernel_hook_first() -> None:
@@ -710,12 +713,10 @@ def test_gate_does_not_rerun_ruff() -> None:
 
 
 def test_early_overlap_is_pr_goal_only() -> None:
-    makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
     gate = (ROOT / "ops" / "scripts" / "run_pr_gate.sh").read_text(encoding="utf-8")
     open_pr = (SCRIPTS / "open_pr_after_gate.sh").read_text(encoding="utf-8")
-    assert "pr: export PR_EARLY_OVERLAP = 1" in makefile
-    pr_check = makefile.split("pr-check:", 1)[1].split("\n\n", 1)[0]
-    assert "PR_EARLY_OVERLAP" not in pr_check
+    publish = (ROOT / "ops" / "make" / "publish.mk").read_text(encoding="utf-8")
+    assert "pr: export PR_EARLY_OVERLAP = 1" in publish
     assert "PR_EARLY_OVERLAP:-0" in gate
     assert "--reuse-receipt" in open_pr
     assert "l4-preflight.json" in open_pr

@@ -69,8 +69,9 @@ since a person can read it and judge. Override either way with
 decision (no probe ⇒ filename overlap still blocks); fail-closed on a detected
 non-generated textual conflict.
 
-`PR_STACK=auto` binds the unique open-PR chain tip at **pr-preflight / pr-check
-start** (`ops/scripts/lib/resolve_pr_stack.sh`), not only after the gate.
+`PR_STACK=auto` binds the unique open-PR chain tip at **pr-preflight /
+run_pr_gate.sh start** (`ops/scripts/lib/resolve_pr_stack.sh`), not only after
+the gate.
 Empty `PR_STACK=` keeps `PR_BASE`. `open_pr_after_gate.sh` reuses the
 stack-base receipt so the opened PR targets the same parent the gate used.
 

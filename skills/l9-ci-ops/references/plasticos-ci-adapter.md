@@ -1,7 +1,7 @@
 <!-- L9_META
 l9_schema: 1
 origin: skill-hardening GMP-SKILL-HARDEN-001
-tags: [ci, plasticos, pr-check, makefile]
+tags: [ci, plasticos, pr-gate, makefile]
 status: active
 /L9_META -->
 

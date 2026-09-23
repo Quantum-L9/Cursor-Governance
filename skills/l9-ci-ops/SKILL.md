@@ -6,7 +6,7 @@ metadata:
   skill_schema: 1
   layer: control_plane
   role: skill_entrypoint
-  tags: [l9, ci, github-actions, pr-check, policy, triage]
+  tags: [l9, ci, github-actions, pr-gate, policy, triage]
   owner: igor_beylin
   status: active
   version: 2.0.0
@@ -31,7 +31,7 @@ Operate CI/CD for the current repo: check pipeline status, fix failing gates, en
 ## Authority Order
 
 1. User request and failing log excerpt / run ID.
-2. Repo ground truth: `.github/workflows/ci.yml`, `Makefile` (`pr-check`), `AGENTS.md` CI section if present.
+2. Repo ground truth: `.github/workflows/ci.yml`, `Makefile` (`pr-gate`), `AGENTS.md` CI section if present.
 3. This skill's references.
 4. `Unknown` — do not invent gate tables.
 

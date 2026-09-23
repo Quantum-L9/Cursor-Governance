@@ -29,7 +29,6 @@ RUN_CAMPAIGN_RE = re.compile(
     re.I,
 )
 PEC_RE = re.compile(r"\bpec\.py\b")
-PR_CHECK_RE = re.compile(r"\bmake(?:\s+\S+)*\s+pr-check\b", re.I)
 CHECK_INPUT_RE = re.compile(r"campaign-check-input")
 PLAN_PATH_RE = re.compile(r"(\S+\.plan\.md)")
 
@@ -217,7 +216,7 @@ def is_campaign_execute(command: str) -> bool:
     stripped = command.lstrip()
     if stripped.startswith("git ") or stripped.startswith("git\t"):
         return False
-    if CHECK_INPUT_RE.search(command) or PEC_RE.search(command) or PR_CHECK_RE.search(command):
+    if CHECK_INPUT_RE.search(command) or PEC_RE.search(command):
         return False
     return bool(RUN_CAMPAIGN_RE.search(command) or CAMPAIGN_RE.search(command))
 
@@ -322,9 +321,9 @@ def _self_test() -> int:
         pec_perm, _ = execute_verdict({"cwd": str(ws), "command": "python3 pec.py claim"})
         if pec_perm != "allow":
             errors.append("pec.py must allow")
-        pr_perm, _ = execute_verdict({"cwd": str(ws), "command": "make pr-check"})
+        pr_perm, _ = execute_verdict({"cwd": str(ws), "command": "OPEN_PR=0 make pr"})
         if pr_perm != "allow":
-            errors.append("make pr-check must allow")
+            errors.append("OPEN_PR=0 make pr must allow")
 
     if errors:
         for err in errors:

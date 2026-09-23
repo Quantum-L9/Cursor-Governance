@@ -160,7 +160,7 @@ program:
     \ a trustworthy tenant. Do not add a fake tenant parameter to `/api/v1/enrich`, `/fields`,\
     \ or `/discover` and call that security.\n\n## Validation\n\nAfter each mutating release:\
     \ targeted pytest for the files above, then `make agent-check` (EIE 7-gate pre-commit).\
-    \ Name `make pr-check` when a governed overlay exposes it; do not invent that target in\
+    \ Name `OPEN_PR=0 make pr` for governed gate-only diagnosis; do not invent that target in\
     \ this campaign. Coverage stays at or above 60 percent. Quarantine shrink happens only\
     \ after the proven tests pass.\n\nC-13 lockstep applies when T4 files change: `app/main.py`,\
     \ `app/api/v1/chassis_endpoint.py`, `app/services/chassis_handlers.py`, `app/engines/orchestration_layer.py`,\

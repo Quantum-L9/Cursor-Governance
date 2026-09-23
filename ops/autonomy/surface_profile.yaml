@@ -185,7 +185,7 @@ pr_stacking:
     probe: git_merge_tree # git merge-tree --write-tree textual-conflict probe
     auto_stack_env: PR_STACK # default empty (keeps PR_BASE); opt in with auto to start on the unique open-PR tip
     stack_default: none # 2026-09-19: was auto; ambiguous sibling chains made it a blocked publish by default
-    gate_resolves_tip: true # pr-preflight / pr-check / open_pr bind resolve_stack_tip.py when PR_STACK=auto
+    gate_resolves_tip: true # pr-preflight / run_pr_gate.sh / open_pr bind resolve_stack_tip.py when PR_STACK=auto
     gate: ops/scripts/pr_overlap_check.py
   # GITHUB_REST_ROUTE_V1 — same openclaw PAT; not a second secret.
   github_rest:
@@ -317,9 +317,9 @@ session_start_block: |
     From a consumer checkout with no local `pr` target, publish with
     `l9 pr` (equivalently `make -C "$GOV" pr WS="$PWD"`) — **not** a bare
     `make pr` that would read the consumer's own Makefile, and **not** a raw
-    `git push` fallback. A consumer repo needs **no** `pr`/`pr-check` target;
-    do not add one. There is no "no pr target → fall back" branch: the
-    governance Makefile is always present.
+    `git push` fallback. A consumer repo needs **no** local `pr` target; do
+    not add one. There is no "no pr target → fall back" branch: the
+    governance Makefile is always present and exposes no secondary PR-gate target.
   - After the PR is open, campaign/make-pr work ends green and merge-ready.
     Do **not** merge from the campaign path. Invoking `/l9-pr-remediation`
     authorizes merge of **all open PRs** in the target repo: write
@@ -340,12 +340,11 @@ session_start_block: |
     push advancing an open PR stays allowed).
   - **On adapter surfaces, `make pr` is the local validation and publish
     path — a whole-catalog pytest run belongs to CI, not to a chat turn.**
-    The gate leaf (`pr-check` / `OPEN_PR=0 make pr`) runs precommit once and
-    selects pytest targets from your changed set
+    The gate invoked by `make pr` / `OPEN_PR=0 make pr` runs precommit once
+    and selects pytest targets from your changed set
     (`ops/scripts/select_pr_pytest_paths.py`), including tests that name a
-    changed shell script or config file. Do not run `pr-check` after
-    `precommit-repo`. Diagnose on every surface is `OPEN_PR=0 make pr`
-    (the `pr-check` leaf). `pytest .`, a bare `pytest`, `make test` and
+    changed shell script or config file. Diagnose on every surface is
+    `OPEN_PR=0 make pr`. `pytest .`, a bare `pytest`, `make test` and
     `make pr-full` are **denied** by `ops/autonomy/local_execution_gate.py`.
     Human/ops override: `L9_FULL_PYTEST_AUTHORIZED=<reason>`.
   - YOU MUST NOT force-push, hard-reset, admin-merge, or exfiltrate secrets.
@@ -367,8 +366,7 @@ session_start_block: |
     `symlinks-check` would reject every commit on a non-cursor surface.
     `pre-commit install` is forbidden and asserted against by
     `validate_claude_env.py`. Verification lives at **`make pr` / `l9 pr`**,
-    not at commit time. Diagnose is `OPEN_PR=0 make pr` (the `pr-check`
-    leaf). Do not run `pr-check` after `precommit-repo`. A clean commit
+    not at commit time. Diagnose is `OPEN_PR=0 make pr`. A clean commit
     proves nothing was verified — name the command you ran. Check the model with
     `python3 ops/autonomy/verification_bypass_gate.py --status`
     (`model: governed_gate` = correct, not a deficiency). To ALSO verify at

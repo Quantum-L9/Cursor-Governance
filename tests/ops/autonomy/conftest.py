@@ -1,30 +1,7 @@
-"""Shared fixtures for ops/autonomy tests."""
+"""Autonomy test namespace.
 
-from __future__ import annotations
-
-import subprocess
-from pathlib import Path
-
-import pytest
-
-
-def git_in(repo: Path, *args: str) -> None:
-    subprocess.run(["git", "-C", str(repo), *args], check=True, capture_output=True)
-
-
-@pytest.fixture
-def stacked_repo(tmp_path: Path) -> Path:
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    git_in(repo, "init")
-    git_in(repo, "config", "user.email", "test@example.com")
-    git_in(repo, "config", "user.name", "test")
-    (repo / "README.md").write_text("x\n", encoding="utf-8")
-    git_in(repo, "add", "README.md")
-    git_in(repo, "commit", "-m", "init")
-    git_in(repo, "branch", "-M", "main")
-    git_in(repo, "checkout", "-b", "feat/l4-stack")
-    (repo / "a.txt").write_text("a\n", encoding="utf-8")
-    git_in(repo, "add", "a.txt")
-    git_in(repo, "commit", "-m", "local work")
-    return repo
+`stacked_repo` is intentionally declared in the repository-root ``conftest.py``.
+The scoped publication runner selects test files across multiple top-level roots;
+the root fixture remains available to that composite selection while this local
+module stays free of a duplicate fixture definition.
+"""

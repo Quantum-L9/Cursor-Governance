@@ -22,7 +22,7 @@ Emit `RUN_CONTRACT` in the first Converge status. Reuse until invalidation.
 
 | Id | Check | Fail |
 |----|-------|------|
-| `P_cmd` | Cache remediator verify=`make precommit-repo` and remediator publish=`git push` of an already-open PR branch. Name ceremony verbs `make pr-check` and `PR_REMEDIATE=0 make pr` only as **do not run**. INTERNAL: `pr-preflight`, `precommit`, `pr-full`. | Caching `make pr` / `make pr-check` as this skill's publish/verify is a skill defect. |
+| `P_cmd` | Cache remediator verify=`make precommit-repo` and remediator publish=`git push` of an already-open PR branch. Name ceremony verbs `OPEN_PR=0 make pr` and `PR_REMEDIATE=0 make pr` only as **do not run**. INTERNAL: `pr-preflight`, `precommit`, `pr-full`. | Caching `make pr` / `OPEN_PR=0 make pr` as this skill's publish/verify is a skill defect. |
 | `P_venv` | `.python-version`, `.venv/pyvenv.cfg` `home`, `file` + `platform.machine()` of `.venv/bin/python`, `cryptography` + `pytest` import | Arch mismatch, miniconda `home`, or import fail → set `UV_PYTHON` to uv-managed **native** CPython matching requires-python. Never `uv python find --system` (conda `base` wins). Do not loop. |
 | `P_fleet` | `"$GOV_PY" ops/autonomy/pr_fleet.py plan --repo {owner}/{repo} --board --json` then `scripts/require_audit.py --fleet .l9/pr/fleet.json` then `pr_fleet.py plan --board --audit-bind .l9/pr/audit-bind.json` — inventory, `hold_merge`, waves, `merge_now`, fingerprint; receipt `.l9/pr/fleet.json` | Non-generated overlap is serialized by the planner, never by hand. When `hold_merge` is true, skip `--kind merge` until same-head eligible units publish. Absent/stale audit → no hold. Independent remediations still launch together. `FAIL:` from the planner → no wave; fix the telemetry. Re-plan only when the fingerprint changes. |
 | `P_stack` | Read `stack_edges` / `merge_order` from the receipt (parents before children) | Stacked parent: squash/rebase denied. Children first, retarget, or `--merge`. |
@@ -31,7 +31,7 @@ Emit `RUN_CONTRACT` in the first Converge status. Reuse until invalidation.
 | `P_blockers` | Known HUMAN / CI_PIPELINE / ENVIRONMENT — **edit axis only** | Note which files you may not patch; continue independent CODEBASE work. These classes are **not** board verdicts and do not park a PR. A named human decision or an unfixable required check reaches the board only as `pr_board.py --human-decision` / `--unfixable-check`. |
 | `P_audit` | `scripts/require_audit.py --repo {owner}/{repo} --fleet .l9/pr/fleet.json`. Same-head `mutation_eligible` units hold merge and ingest via `ingest_signals.py --audit`. | Absent/stale packet → no hold, continue. Do not load `_emit*.py` generators. Skip `WIP/Legal Defense`. |
 | `P_diag` | For the PR about to be edited: `scripts/ingest_signals.py` (head SHA + failed checks + unresolved threads + CRA). Then cited-file read at that SHA. `gh run view --log-failed` is root-cause judgment, not retrieve. | Missing evidence → `Unknown`; do not edit. `disposition: fix` requires a verified root cause. |
-| `P_verify` | `make precommit-repo` (changed-file hooks plus ruff) | `make precommit-repo` is the remediator gate. Record `Passed` / `Failed` / `Unknown`. Do not run `make pr-check`. Do not run pytest or conformance. Do not treat local `Passed` as remote CI `Passed`. |
+| `P_verify` | `make precommit-repo` (changed-file hooks plus ruff) | `make precommit-repo` is the remediator gate. Record `Passed` / `Failed` / `Unknown`. Do not run `OPEN_PR=0 make pr`. Do not run pytest or conformance. Do not treat local `Passed` as remote CI `Passed`. |
 
 Stop cataloging when `RUN_CONTRACT` is filled and the next PR to edit has a finding list sufficient to patch without predictable rework.
 
@@ -52,14 +52,14 @@ This host (Cursor-Governance / Makefile capability graph):
 
 Forbidden during Converge (this skill):
 
-- `make pr` / `make pr-check` / `PR_REMEDIATE=0 make pr` (ceremony — do not run)
+- `make pr` / `OPEN_PR=0 make pr` / `PR_REMEDIATE=0 make pr` (ceremony — do not run)
 - `make pr-full` / pytest / peer-execution conformance
 - L4 `begin` / `record-kernels` / `authorize-release` as a publish ritual
 - `git add -u` / `git add -A`
 - `git reset --hard`
 - `make precommit` / `pre-commit run --all-files` / `pre-commit install` as the public gate
 - `make pr-preflight` as a shipping command
-- `make pr-check && make pr` as a second full gate on an unchanged tree
+- `OPEN_PR=0 make pr && make pr` as a second full gate on an unchanged tree
 
 Campaign / feature work that is **not** this skill still must not treat raw `git push` as its publish path when `make pr` exists. Remediator `git push` of an already-open PR is this skill's publish.
 

@@ -117,7 +117,7 @@ Companion miss is a plan-gate failure. Cursor-Governance: skill edits → `sync_
 
 ## 3. Local verify (blocks commit)
 
-Discover, then run. Local verify **is** `make precommit-repo`. Do not run `make pr-check`. Do not require `pre-commit --all-files`. Do not invoke INTERNAL `precommit` / `pr-preflight` / `pr-full`.
+Discover, then run. Local verify **is** `make precommit-repo`. Do not run `OPEN_PR=0 make pr`. Do not require `pre-commit --all-files`. Do not invoke INTERNAL `precommit` / `pr-preflight` / `pr-full`.
 
 ### Discover
 
@@ -126,7 +126,7 @@ ls Makefile Makefile.am 2>/dev/null
 # remediator verbs: precommit-repo (verify), git push (publish)
 ```
 
-Prefer: `precommit-repo` (verify), then `git push` (publish). `improve` is optional kernels, not verify. Do not run `make pr` or `make pr-check`.
+Prefer: `precommit-repo` (verify), then `git push` (publish). `improve` is optional kernels, not verify. Do not run `make pr` or `OPEN_PR=0 make pr`.
 
 ### Run (blocking)
 
@@ -142,7 +142,7 @@ Rules:
 4. **Never** `git commit --no-verify` / `--no-gpg-sign`.
 5. Native-ext import fail is `ENVIRONMENT`, not a lock-pin or source edit. Do not use `uv python find --system`.
 6. Local verify iterations ≤ 5. Still one commit at the end.
-7. Do not replay every workflow `run:`. Do not run ceremony `make pr-check`.
+7. Do not replay every workflow `run:`. Do not run ceremony `OPEN_PR=0 make pr`.
 
 ### No Makefile
 
@@ -161,7 +161,7 @@ git push
 
 - Exactly one new commit on the branch for this remediation.
 - Exactly one remediator publish (`git push` of the already-open PR branch).
-- Do not run `make pr` or `make pr-check`. Campaign / feature work that is not this skill still must not treat raw `git push` as its publish path when `make pr` exists.
+- Do not run `make pr` or `OPEN_PR=0 make pr`. Campaign / feature work that is not this skill still must not treat raw `git push` as its publish path when `make pr` exists.
 - Never `git add -u` / `-A`.
 - Commit message lists finding ids; trailer `Remediation-Cycle: {repo}#{pr}/cycle-1`.
 - **Forbidden:** commit-per-finding, publish-to-probe-CI, "wip" then fixup.

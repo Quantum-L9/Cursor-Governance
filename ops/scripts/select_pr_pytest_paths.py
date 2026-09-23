@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Select local make pr-check pytest paths. Never emit repo-root '.'."""
+"""Select local publication-gate pytest paths. Never emit repo-root '.'."""
 
 from __future__ import annotations
 
@@ -224,7 +224,7 @@ def _drop_unrunnable(selected: list[str], suites: list[dict]) -> tuple[list[str]
     A path the root conftest excludes belongs to a non-pytest loader (the
     Program Execution adapter layer runs under `make program-execution-conformance`).
     Handing it to the repo-root suite as an explicit argument overrides that
-    exclusion and fails on import, so it is not a valid pr-check target unless a
+    exclusion and fails on import, so it is not a valid scoped publication-gate target unless a
     non-root suite owns it.
 
     Both spellings of the exclusion count. A path ignored via pyproject
@@ -336,7 +336,7 @@ def tests_naming_path(
 
 
 def select_pr_pytest_paths(changed: list[str], *, registry: Path = REGISTRY_PATH) -> list[str]:
-    """Return explicit pytest targets for the local pr-check profile."""
+    """Return explicit pytest targets for the local publication-gate profile."""
     py_changed = [path for path in changed if path.endswith(".py")]
     # A non-Python change is not an untested change. Shell scripts, workflows
     # and config files are asserted about by name, so they select the tests
