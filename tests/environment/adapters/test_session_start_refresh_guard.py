@@ -107,7 +107,9 @@ def test_the_reader_reads_the_receipt_this_ceremony_generated() -> None:
     environment = text.index("--- L9 Claude environment ---")
     refresh = text.index('"$refresh_reader" --read')
     assert generate < environment < refresh
-    assert '"$reader" --read --reprobe --bootstrap-id "${_L9_CEREMONY_ID:-not-generated-$$}"' in text
+    assert (
+        '"$reader" --read --reprobe --bootstrap-id "${_L9_CEREMONY_ID:-not-generated-$$}"' in text
+    )
 
 
 def test_the_installer_is_this_ceremonys_projection() -> None:

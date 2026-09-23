@@ -979,7 +979,9 @@ def reusable_receipt(
         return None
     # Built from a different bootstrap receipt than the one on disk now: the
     # ceremony generated a new receipt since, and that is the one to read.
-    current = _bootstrap_binding(_read_json(Path.home() / ".l9" / "claude" / "bootstrap-state.json"))
+    current = _bootstrap_binding(
+        _read_json(Path.home() / ".l9" / "claude" / "bootstrap-state.json")
+    )
     if str(existing.get("bootstrap_receipt") or "") != current:
         return None
     return existing

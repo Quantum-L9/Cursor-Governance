@@ -449,7 +449,9 @@ class ReceiptGenerationTest(unittest.TestCase):
         """\
         import json, pathlib, sys
         home = pathlib.Path.home() / ".l9" / "claude"
-        want = sys.argv[sys.argv.index("--bootstrap-id") + 1] if "--bootstrap-id" in sys.argv else None
+        want = None
+        if "--bootstrap-id" in sys.argv:
+            want = sys.argv[sys.argv.index("--bootstrap-id") + 1]
         if want is not None:
             (home / "reader-id").write_text(want)
         try:
