@@ -98,7 +98,7 @@ MIN_ROOT_BUDGET = 9.0
 # nothing, and a non-write outcome (a policy skip, a failure) is announced when
 # it first appears or changes, not on every turn.
 
-_ITEM_CHARS = 200
+_ITEM_CHARS = 600
 _ITEMS = 8
 
 
