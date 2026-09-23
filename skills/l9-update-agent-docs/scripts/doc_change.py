@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from doc_policy import git, selector_paths
+from source_facts import source_language, source_patterns
 
 PACK = Path(__file__).resolve().parents[1]
 
@@ -50,13 +51,14 @@ def impact_analysis(policy: dict[str, Any], changed: list[str]) -> dict[str, Any
     impacted: set[str] = set()
     matched: dict[str, list[str]] = {}
     for name, rule in policy["impact_rules"].items():
+        patterns = source_patterns() if name == "module_implementation_change" else rule["patterns"]
         hits = [
             path
             for path in changed
             if not any(
                 fnmatch.fnmatch(path, pattern) for pattern in rule.get("exclude_patterns", [])
             )
-            and any(fnmatch.fnmatch(path, pattern) for pattern in rule["patterns"])
+            and any(fnmatch.fnmatch(path, pattern) for pattern in patterns)
         ]
         if hits:
             matched[name] = sorted(set(hits))
@@ -151,8 +153,13 @@ def probe_module_readme_capability(
         status = cap["absence_behavior"]
     else:
         status = cap["partial_behavior"]
-    extensions = {Path(path).suffix for path in changed or [] if Path(path).suffix}
-    unsupported = sorted(extensions - set(cap.get("supported_extensions", [])))
+    unsupported = sorted(
+        {
+            Path(path).suffix or Path(path).name
+            for path in changed or []
+            if source_language(Path(path)) is None
+        }
+    )
     if status == "AVAILABLE" and unsupported:
         status = "PARTIAL"
     return {

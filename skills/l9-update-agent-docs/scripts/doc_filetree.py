@@ -16,11 +16,11 @@ from typing import Any
 
 from doc_owned_write import Admission, apply_owned_write
 from doc_policy import repo_slug, resolve_under_root
+from source_facts import load_source_evidence_registry, source_language
 
 FILETREE_FILENAME = "filetree.md"
 FILETREE_SURFACE_ID = "filetree"
 FILETREE_MARKER = "<!-- l9-filetree: generated-from-tree -->"
-SOURCE_SUFFIXES = {".py", ".sh"}
 MODULE_MARKERS = {"SKILL.md", "__init__.py"}
 INTEREST_NAMES = MODULE_MARKERS | {"README.md"}
 # Document/config mix that is not a code module. Names are generic so any
@@ -158,12 +158,13 @@ def interest_files(path: Path) -> list[str]:
         children = sorted(path.iterdir(), key=lambda item: item.name)
     except OSError:
         return names
+    registry = load_source_evidence_registry()
     for child in children:
         if not child.is_file() or child.name.startswith("."):
             continue
         if child.name.startswith("test_"):
             continue
-        if child.name in INTEREST_NAMES or child.suffix in SOURCE_SUFFIXES:
+        if child.name in INTEREST_NAMES or source_language(child, registry):
             names.append(child.name)
     return names
 
@@ -185,10 +186,11 @@ def corpus_files(path: Path) -> list[str]:
 
 
 def is_module_dir(path: Path) -> bool:
+    registry = load_source_evidence_registry()
     for name in interest_files(path):
         if name in MODULE_MARKERS:
             return True
-        if Path(name).suffix in SOURCE_SUFFIXES:
+        if source_language(path / name, registry):
             return True
     return False
 
@@ -199,7 +201,8 @@ def is_skill_root(path: Path) -> bool:
 
 
 def direct_source_count(path: Path) -> int:
-    return sum(1 for name in interest_files(path) if Path(name).suffix in SOURCE_SUFFIXES)
+    registry = load_source_evidence_registry()
+    return sum(1 for name in interest_files(path) if source_language(path / name, registry))
 
 
 def code_kind(path: Path) -> str | None:

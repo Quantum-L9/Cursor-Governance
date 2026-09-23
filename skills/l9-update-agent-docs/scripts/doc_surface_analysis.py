@@ -9,13 +9,17 @@ from pathlib import Path
 from typing import Any
 
 from surface_analyzers.makefile import analyze as analyze_makefile
+from surface_analyzers.openapi import analyze as analyze_openapi
 from surface_analyzers.pyproject import analyze as analyze_pyproject
+from surface_analyzers.workflow import analyze as analyze_workflow
 
 Analyzer = Callable[[Path, Path], dict[str, Any]]
 
 ANALYZERS: dict[str, Analyzer] = {
     "makefile-contract-v1": analyze_makefile,
+    "openapi-contract-v1": analyze_openapi,
     "python-project-contract-v1": analyze_pyproject,
+    "workflow-contract-v1": analyze_workflow,
 }
 
 
@@ -44,6 +48,10 @@ def _guard_resolution(
     target: str | None,
 ) -> dict[str, Any] | None:
     if not guard_id:
+        return None
+    if guard_id == "external-owner":
+        # The repository-docs skill may assess this target but may not mutate
+        # it. Its semantic owner receives any deterministic findings.
         return None
     if guard_id != "root-file-protection":
         return {

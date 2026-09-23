@@ -2,6 +2,19 @@ schema: l9.repo-docs.surface-policy.v3
 version: 3
 owner: l9-update-agent-docs
 
+source_evidence:
+  extensions:
+    .py: {language: python, patterns: ['**/*.py']}
+    .sh: {language: shell, patterns: ['**/*.sh']}
+    .js: {language: javascript, patterns: ['**/*.js']}
+    .jsx: {language: javascript, patterns: ['**/*.jsx']}
+    .ts: {language: typescript, patterns: ['**/*.ts']}
+    .tsx: {language: typescript, patterns: ['**/*.tsx']}
+    .tf: {language: terraform, patterns: ['**/*.tf']}
+    .xml: {language: xml, patterns: ['**/*.xml']}
+  filenames:
+    Dockerfile: {language: dockerfile, patterns: [Dockerfile, '**/Dockerfile']}
+
 managed_regions:
   blocks:
     - id: l9_formatter_ownership
@@ -126,6 +139,48 @@ surfaces:
       mode: deterministic_first
     mutation:
       guard: root-file-protection
+  workflow_contract:
+    owner: repository-workflow-owner
+    role: CI workflow contract
+    authority_class: specialist
+    requirement: conditional
+    selectors: ['.github/workflows/*.yml', '.github/workflows/*.yaml']
+    create_policy: never
+    refresh_policy: external_only
+    generator: repository_workflow_owner
+    evidence_sources: [.github/workflows, reusable_workflow_contracts, local_actions]
+    prohibited_mutations: [author_workflow_by_this_skill, weaken_ci_contract, bypass_workflow_owner]
+    llm_include: false
+    kind: operational_contract
+    ownership:
+      semantic_owner: repository-workflow-contract
+      execution_owner: repository-workflow-owner
+    analysis:
+      analyzer: workflow-contract-v1
+      mode: deterministic_first
+    mutation:
+      guard: external-owner
+  openapi_contract:
+    owner: repository-api-docs-owner
+    role: OpenAPI contract
+    authority_class: specialist
+    requirement: conditional
+    selectors: [openapi.yaml, openapi.yml, openapi.json]
+    create_policy: never
+    refresh_policy: external_only
+    generator: specialist_or_repo_owner
+    evidence_sources: [openapi_schema, public_api_surface]
+    prohibited_mutations: [author_api_contract_by_this_skill, infer_unverified_schema]
+    llm_include: false
+    kind: operational_contract
+    ownership:
+      semantic_owner: repository-api-contract
+      execution_owner: repository-api-docs-owner
+    analysis:
+      analyzer: openapi-contract-v1
+      mode: deterministic_first
+    mutation:
+      guard: external-owner
   module_readmes:
     owner: l9-update-agent-docs
     role: module documentation
@@ -202,7 +257,7 @@ surfaces:
 impact_rules:
   workflow_change:
     patterns: ['.github/workflows/*', '.github/workflows/**/*', '.pre-commit-config.yaml']
-    surfaces: [architecture, invariants]
+    surfaces: [workflow_contract, architecture, invariants]
   makefile_contract_change:
     patterns: [Makefile, '.github/workflows/*', '.github/workflows/**/*', 'ops/scripts/*', 'ops/scripts/**/*']
     surfaces: [makefile_contract, architecture, invariants]
@@ -215,7 +270,7 @@ impact_rules:
   public_api_change:
     patterns: ['**/api/**', '**/routes/**', '**/schemas/**', '**/models/**', 'openapi.*', '**/*.proto']
     exclude_patterns: ['tests/**', '**/tests/**']
-    surfaces: [api_reference]
+    surfaces: [api_reference, openapi_contract]
   module_implementation_change:
     patterns: ['**/*.py', '**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx', '**/*.xml', '**/*.sh', '**/*.tf', Dockerfile, '**/Dockerfile']
     exclude_patterns: ['tests/**', '**/tests/**', 'docs/**', '**/__pycache__/**']
@@ -249,7 +304,6 @@ capabilities:
     partial_behavior: PARTIAL
     partial_repair_route: l9-update-agent-docs
     polyglot_extension_owner: skill:scripts/generate_module_readmes.py
-    supported_extensions: [.py, .sh]
 
 llm_txt:
   owner: l9-update-agent-docs

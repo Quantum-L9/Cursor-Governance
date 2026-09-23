@@ -1,6 +1,6 @@
 ---
 name: l9-update-agent-docs
-description: compile repository changes into typed documentation and operational-contract obligations, assess Makefile/pyproject surfaces, and emit repo-docs receipts. use when refreshing repo or agent docs, checking docs or operational-contract impact after code/CI changes, generating module READMEs, or proving documentation freshness before merge.
+description: compile repository changes into typed documentation and operational-contract obligations, assess Makefile, Python, workflow, and OpenAPI surfaces, and emit repo-docs receipts. use when refreshing repo or agent docs, checking docs or operational-contract impact after code/CI changes, generating evidence-backed module READMEs, or proving documentation freshness before merge.
 metadata:
   skill_schema: 1
   layer: control_plane
@@ -8,8 +8,8 @@ metadata:
   tags: [l9, docs, obligations, agents, ci, maintenance]
   owner: igor_beylin
   status: active
-  version: 3.6.1
-  updated: 2026-09-20
+  version: 3.8.0
+  updated: 2026-09-21
   when_to_use: compile documentation obligations after repository changes, assess supported operational contract surfaces, refresh governed documentation through its canonical owner, or prove closure with a machine receipt
 ---
 
@@ -66,7 +66,7 @@ Machine authority:
 - `l9-update-agent-docs` must not absorb Make/Python semantic ownership merely because it detects a material defect.
 - `ops/config/root-file-protection.json` remains the canonical mutation-protection contract. Repo Docs reads and resolves its rule at runtime; it must not copy `additive_only` or other guard semantics into a second authority.
 - `l9-intelligence-harvest` owns semantic discovery and qualification. The compiler consumes canonical `harvest.json`; it never copies Harvest reasoning or mutates the donor through Harvest.
-- `l9-update-agent-docs` owns the root `filetree.md` inventory (`scripts/doc_filetree.py`) and README compilation (`scripts/generate_module_readmes.py` over `readme_model.py`, `readme_evidence.py`, `readme_renderers.py`, `readme_quality.py`). `filetree.md` is generated or refreshed first and is the sole automatic README membership authority. It does not call an LLM and does not import the donor repo. `readme-pipeline-v1` remains an optional sequencer that calls the repo re-export.
+- `l9-update-agent-docs` owns the root `filetree.md` inventory (`scripts/doc_filetree.py`) and README compilation (`scripts/generate_module_readmes.py` over `readme_model.py`, `source_facts.py`, `readme_evidence.py`, `readme_renderers.py`, `readme_quality.py`). `filetree.md` is generated or refreshed first and is the sole automatic README membership authority. It does not call an LLM, execute source, or import the donor repo. `readme-pipeline-v1` remains an optional sequencer that calls the repo re-export.
 - `l9-architecture-decision-records` owns ADR authoring.
 - repository/API owners own API reference generation.
 - organization/community-health owners remain external.
@@ -84,6 +84,8 @@ Current registry:
 
 - `makefile-contract-v1` -> `scripts/surface_analyzers/makefile.py`
 - `python-project-contract-v1` -> `scripts/surface_analyzers/pyproject.py`
+- `workflow-contract-v1` -> `scripts/surface_analyzers/workflow.py`
+- `openapi-contract-v1` -> `scripts/surface_analyzers/openapi.py`
 
 Unknown analyzer IDs fail closed. Do not add dynamic imports, entry-point discovery, repository scanning for plugins, or a generic parser framework.
 
@@ -118,6 +120,10 @@ The surface may be expanded only with evidence-backed deterministic checks whose
 - root pytest collection protection for those self-test scripts through pyproject addopts or root `conftest.py`.
 
 Dependency and tool-policy truth remains in the repository's existing Python authorities. Do not add packages from aspiration, infer version policy from preference, or duplicate `ops/config/python-contract.json` inside this skill.
+
+## Workflow and OpenAPI contracts
+
+`workflow_contract` validates only workflow-internal `needs` references and local `uses: ./…` paths. `openapi_contract` validates OpenAPI 3.x structure, slash-prefixed path keys, and responses for declared operations. Both analyzers emit `HANDOFF` findings: workflow and API owners retain semantic and repair authority. They never write a workflow or an API contract, and no mutation guard is resolved because this skill is assessment-only on those surfaces.
 
 ## Evidence and authority order
 
@@ -157,9 +163,9 @@ Never collapse source head and tested revision into one ambiguous SHA.
 README generation is deterministic repository-documentation **compilation**, not AST-to-Markdown projection. Five stages, in order:
 
 1. **QUALIFY.** `filetree.md` is the sole automatic membership authority. Configuration may suppress a target (`skip: true`) and decorate the rest; it can never invent one. A configured path the inventory does not authorize is reported as stale, not honoured. Exclusion is decided on whole path segments before any classification, and covers the whole subtree.
-2. **MODEL.** Compile deterministic repository evidence into a typed README model. AST facts are evidence, not documentation structure. Purpose precedence is: configured purpose, then the target's own authoritative contract (`SKILL.md` frontmatter `description`, then its `## Purpose`), then — only for a genuine single-module target — that module's docstring. A directory holding several modules never borrows one child's docstring. Where no source supports a statement, the statement is absent.
-3. **RENDER.** Select a closed-world renderer from the target kind: `skill`, `module`, `subsystem`, `corpus`, `index`. Render only sections with positive content. Standard-library imports are not rendered. Module identity is preserved; symbols from unrelated files never share one anonymous list.
-4. **VALIDATE.** Check target authority, path identity, ownership marker, evidence provenance, relative links and semantic quality. An ERROR is a compiler defect and fails the run.
+2. **MODEL.** Compile deterministic repository evidence into a typed README model. `source_evidence` in `references/doc-surface-policy.yaml` is the single registry for admitted source files, static extractors, inventory classification, and implementation-change impact. The closed extractors cover Python, shell, JavaScript/TypeScript, Terraform, XML, and Dockerfiles; they never execute source. Parse failures stay as named evidence and produce a `partial` coverage status. Purpose precedence is: configured purpose, the target's own authoritative contract (`SKILL.md` frontmatter `description`, then its `## Purpose`), package `__init__.py` docstring, target-local manifest description, then — only for a genuine single-module target — that module's docstring. A directory holding several modules never borrows one child's docstring. Where no source supports a statement, the statement is absent.
+3. **RENDER.** Select a closed-world renderer from the target kind: `skill`, `module`, `subsystem`, `corpus`, `index`. Render only sections with positive content. Standard-library imports are not rendered. Module identity is preserved; relationships are typed and source-backed. Short summaries link to a complete interface or file index rather than silently dropping the tail. Source coverage reports extracted versus eligible files, symbols, relationships, and any extraction issue.
+4. **VALIDATE.** Check target authority, path identity, ownership marker, evidence provenance, duplicate heading anchors, root-escaping references, local file links, local anchors, and semantic quality. An ERROR is a compiler defect and fails the run.
 5. **RECONCILE.** Compare the authorized desired corpus with the generator-owned corpus on disk. Create, refresh, leave unchanged, preserve, retire or report a conflict. Only generator-owned artifacts are created, refreshed or retired.
 
 When uncertain whether a directory deserves generated documentation, do not generate it. An empty directory earns no README.
@@ -222,11 +228,11 @@ If the analyzer cannot be resolved, the obligation is `BLOCKED`. Do not guess a 
 | `l9-update-agent-docs` / owner-native root index | Surgical pointer/index refresh permitted by topology. |
 | operational contract / `repository-native` execution owner | Apply only the bounded repair justified by assessment, subject to the resolved mutation guard and repository-native validation. |
 | `l9-update-agent-docs` / `filetree.md` | Required. Create if absent. Refresh only when the live file already carries `<!-- l9-filetree: generated-from-tree -->`. An unowned `filetree.md` is preserved; diagnosis still walks the live tree. |
-| `l9-update-agent-docs` / module READMEs | After `filetree.md`, reconcile the whole authorized corpus via `scripts/generate_module_readmes.py` (qualify → model → render → validate → reconcile). Kinds are renderer identities: a directory with its own `SKILL.md` is `skill`; one with two or more direct source files is `subsystem`; one with fewer is `module`; a document/config folder with files is `corpus`; a parent of two or more qualifying children is `index`. Index qualification runs deepest-first so nested parents reach the fixed point. Recognition is structural and repo-agnostic; never add a path allowlist. Excluded at any depth, whole subtree: `fixtures` / `generated` / `handoff` / `deliverables` / `receipts` / `drafts` / `assets` / `tests` / `_archived`, plus skill-pack sidecars (`SKILL.md` ancestor except `scripts/`) and the skip prefixes. Matching is on whole path segments — `generated-data` is a real directory. Empty directories earn nothing. Do not limit the reconciliation to the current change set; the optional `changed=` filter is manual CLI scope only and suppresses retirement, because a partial view cannot judge staleness. Ownership marker: `<!-- l9-readme: generated-by=l9-update-agent-docs version=2 kind=… -->`, with both version-1 markers still recognized so an older corpus migrates. A generator-owned README at a no-longer-authorized target is retired. `auto_generated: false` front matter outranks any marker; that and any unmarked shape is handwritten and is never overwritten without `--force`. A marker recording a format version this compiler does not understand is a conflict, never a rewrite. Optional sequencer: `readme-pipeline-v1`. |
+| `l9-update-agent-docs` / module READMEs | After `filetree.md`, reconcile the whole authorized corpus via `scripts/generate_module_readmes.py` (qualify → model → render → validate → reconcile). Kinds are renderer identities: a directory with its own `SKILL.md` is `skill`; one with two or more direct source files is `subsystem`; one with fewer is `module`; a document/config folder with files is `corpus`; a parent of two or more qualifying children is `index`. Index qualification runs deepest-first so nested parents reach the fixed point. Recognition is structural and repo-agnostic; never add a path allowlist. Excluded at any depth, whole subtree: `fixtures` / `generated` / `handoff` / `deliverables` / `receipts` / `drafts` / `assets` / `tests` / `_archived`, plus skill-pack sidecars (`SKILL.md` ancestor except `scripts/`) and the skip prefixes. Matching is on whole path segments — `generated-data` is a real directory. Empty directories earn nothing. Do not limit the reconciliation to the current change set; the optional `changed=` filter is manual CLI scope only and suppresses retirement, because a partial view cannot judge staleness. Ownership marker: `<!-- l9-readme: generated-by=l9-update-agent-docs version=3 kind=… -->`, with older markers still recognized so an older corpus migrates. A generator-owned README at a no-longer-authorized target is retired. `auto_generated: false` front matter outranks any marker; that and any unmarked shape is handwritten and is never overwritten without `--force`. A marker recording a format version this compiler does not understand is a conflict, never a rewrite. The receipt carries the evidence-coverage profile for every reconciled README. Optional sequencer: `readme-pipeline-v1`. |
 | specialist/external owner | Handoff or use that owner's canonical capability. Do not absorb its implementation here. |
 | `llm.txt` projection | Default enabled. Create if absent. Refresh only when the live file already carries `<!-- l9-llm-txt: generated-projection -->`. If `llm.txt` is missing and `llms.txt` exists, rename (preserve bytes). If both exist, delete leftover `llms.txt`. Never overwrite an unowned `llm.txt`. `--write-llm` does not authorize that overwrite. Projection, never authority. |
 
-`filetree.md` is required and skill-owned, and is the sole automatic README membership authority. README compilation reads that inventory and is executable without a consumer-root generator, YAML map, or donor repo. Optional overlay: `config/subsystems/readme_config.yaml` — it may supply `title`, `tier`, `description`, `purpose` and `skip` for a target the inventory already authorizes, and cannot create one. Optional sequencer: `workflows/dags/readme_pipeline_dag.py` (`readme-pipeline-v1`). Unsupported extensions stay PARTIAL.
+`filetree.md` is required and skill-owned, and is the sole automatic README membership authority. README compilation reads that inventory and is executable without a consumer-root generator, YAML map, or donor repo. Optional overlay: `config/subsystems/readme_config.yaml` — it may supply `title`, `tier`, `description`, `purpose` and `skip` for a target the inventory already authorizes, and cannot create one. Optional sequencer: `workflows/dags/readme_pipeline_dag.py` (`readme-pipeline-v1`). A source parse failure stays `partial` with a named extraction issue; do not hide it or replace it with invented prose.
 
 For `Makefile` and `pyproject.toml`, always resolve `ops/config/root-file-protection.json` before treating a proposed mutation as admissible. A guard justification mechanism authorizes the guard only; it does not transfer semantic ownership to Repo Docs.
 

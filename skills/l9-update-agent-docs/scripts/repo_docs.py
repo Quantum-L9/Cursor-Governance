@@ -416,6 +416,7 @@ def audit_repository(
     # Not a second obligation ledger: DocumentationObligation remains the
     # only durable work unit.
     module_readme_plan: dict[str, int] | None = None
+    module_readme_quality: list[dict[str, int | str]] | None = None
     try:
         filetree, inventory, run_mutations = build_filetree_state(root, write=write_filetree)
     except ValueError as exc:
@@ -443,6 +444,7 @@ def audit_repository(
         try:
             readme_plan = plan_module_readmes(root, inventory=inventory)
             module_readme_plan = readme_plan.counts()
+            module_readme_quality = list(readme_plan.quality)
             if readme_plan.errors:
                 # Validation is fail-closed: nothing is written. A compiled
                 # README that is wrong about the repository is a defect in
@@ -577,7 +579,11 @@ def audit_repository(
             "module_readmes": (
                 module_cap
                 if module_readme_plan is None
-                else {**module_cap, "planned": module_readme_plan}
+                else {
+                    **module_cap,
+                    "planned": module_readme_plan,
+                    "quality": module_readme_quality,
+                }
             )
         },
         LLM_SURFACE_ID: llm,

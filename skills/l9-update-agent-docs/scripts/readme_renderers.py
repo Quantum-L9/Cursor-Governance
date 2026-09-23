@@ -18,10 +18,11 @@ from collections.abc import Callable, Sequence
 
 from readme_evidence import (
     CORPUS_TYPE_LABELS,
+    MAX_CONTENTS,
     MAX_INTERFACES_PER_MODULE,
     MAX_MODULES_RENDERED,
 )
-from readme_model import DependencyDoc, ModuleDoc, ReadmeKind, ReadmeModel
+from readme_model import DependencyDoc, ModuleDoc, ReadmeKind, ReadmeModel, RelationshipDoc
 
 __all__ = [
     "GENERATOR_NAME",
@@ -41,7 +42,7 @@ __all__ = [
 ]
 
 GENERATOR_NAME = "l9-update-agent-docs"
-MARKER_VERSION = 2
+MARKER_VERSION = 3
 #: Reported by :func:`marker_version` for an owned marker whose ``version=``
 #: token is not an integer. It is deliberately not a version number: the only
 #: safe reading of an unreadable version is "newer than anything this
@@ -172,7 +173,10 @@ def _interface_lines(module: ModuleDoc) -> list[str]:
         lines.append(f"- `{func.signature or func.name}`{suffix}")
     hidden = (len(module.classes) + len(module.functions)) - len(lines)
     if hidden > 0:
-        lines.append(f"- _+{hidden} more public symbol(s)_")
+        lines.append(
+            f"- _+{hidden} more public symbol(s); see "
+            "[Complete interface index](#complete-interface-index)._"
+        )
     return lines
 
 
@@ -192,7 +196,9 @@ def _modules_block(modules: Sequence[ModuleDoc]) -> str:
         blocks.append("\n\n".join(parts))
     if len(modules) > MAX_MODULES_RENDERED:
         hidden = len(modules) - MAX_MODULES_RENDERED
-        blocks.append(f"_+{hidden} further module(s) in this directory._")
+        blocks.append(
+            f"_+{hidden} further module(s); see [Complete module index](#complete-module-index)._"
+        )
     return "\n\n".join(blocks)
 
 
@@ -211,6 +217,80 @@ def _shell_block(entrypoints: Sequence[str]) -> str:
     return "\n".join(f"- `{name}`" for name in entrypoints)
 
 
+def _relationships_block(relationships: Sequence[RelationshipDoc]) -> str:
+    labels = {
+        "base_image": "Base images",
+        "configures": "Configuration",
+        "imports": "Imports",
+        "uses_module": "Modules",
+    }
+    grouped: dict[str, list[str]] = {}
+    for relationship in relationships:
+        grouped.setdefault(relationship.kind, []).append(relationship.target)
+    lines: list[str] = []
+    for kind in sorted(grouped):
+        values = ", ".join(f"`{value}`" for value in sorted(set(grouped[kind])))
+        lines.append(f"**{labels.get(kind, kind.title())}:** {values}")
+    return "\n\n".join(lines)
+
+
+def _renderable_relationships(model: ReadmeModel) -> tuple[RelationshipDoc, ...]:
+    stdlib = set(model.dependencies.stdlib)
+    return tuple(
+        relationship
+        for relationship in model.relationships
+        if not (relationship.kind == "imports" and relationship.target.split(".", 1)[0] in stdlib)
+    )
+
+
+def _source_coverage_block(model: ReadmeModel) -> str:
+    if model.eligible_source_count == 0:
+        return (
+            "**Status:** minimal-by-design "
+            "(no implementation source files qualify for this target)."
+        )
+    issue_count = len(model.extraction_issues)
+    issue_note = f"; {issue_count} extraction issue(s) recorded" if issue_count else ""
+    return (
+        f"**Status:** {model.completeness}; **Files:** "
+        f"{model.extracted_source_count}/{model.eligible_source_count} extracted; "
+        f"**Public symbols:** {model.rendered_symbol_count}{issue_note}."
+    )
+
+
+def _detail_interface_block(modules: Sequence[ModuleDoc]) -> str:
+    blocks: list[str] = []
+    for module in modules:
+        language = f" ({module.language})" if module.language else ""
+        lines = [f"### `{module.file}`{language}"]
+        symbols = [(cls.name, cls.summary) for cls in module.classes] + [
+            (function.signature or function.name, function.summary) for function in module.functions
+        ]
+        for name, summary in symbols[:MAX_INTERFACES_PER_MODULE]:
+            lines.append(f"- `{name}`" + (f" — {summary}" if summary else ""))
+        hidden_symbols = len(symbols) - min(len(symbols), MAX_INTERFACES_PER_MODULE)
+        if hidden_symbols:
+            lines.append(f"- _+{hidden_symbols} public symbol(s) omitted from this index._")
+        exports = module.exports[:MAX_INTERFACES_PER_MODULE]
+        if exports:
+            lines.append("- Exports: " + ", ".join(f"`{name}`" for name in exports))
+        hidden_exports = len(module.exports) - len(exports)
+        if hidden_exports:
+            lines.append(f"- _+{hidden_exports} export(s) omitted from this index._")
+        if len(lines) > 1:
+            blocks.append("\n".join(lines))
+    return "\n\n".join(blocks)
+
+
+def _detail_module_block(modules: Sequence[ModuleDoc]) -> str:
+    """Complete source-backed module inventory for a truncated summary."""
+    return "\n".join(f"- `{module.file}`" for module in modules)
+
+
+def _detail_file_block(contents: Sequence[str]) -> str:
+    return "\n".join(f"- `{name}`" for name in contents)
+
+
 def render_skill_readme(model: ReadmeModel) -> str:
     """Orientation for a skill pack. `SKILL.md` remains the contract."""
     components: list[str] = []
@@ -227,6 +307,8 @@ def render_skill_readme(model: ReadmeModel) -> str:
             _section("Responsibilities", "\n".join(f"- {item}" for item in model.responsibilities)),
             _section("Key components", "\n".join(components)),
             _section("Entrypoints", _shell_block(model.shell_entrypoints)),
+            _section("Integrates with", _relationships_block(_renderable_relationships(model))),
+            _section("Source coverage", _source_coverage_block(model)),
             _section("Authority", authority),
             marker_for(model.target.kind),
         ]
@@ -249,6 +331,9 @@ def render_module_readme(model: ReadmeModel) -> str:
             _section("Public interface", interfaces),
             _section("Entrypoints", _shell_block(model.shell_entrypoints)),
             _section("Dependencies", _dependencies_block(model.dependencies)),
+            _section("Integrates with", _relationships_block(_renderable_relationships(model))),
+            _section("Source coverage", _source_coverage_block(model)),
+            _section("Complete interface index", _detail_interface_block(model.modules)),
             marker_for(model.target.kind),
         ]
     )
@@ -262,8 +347,12 @@ def render_subsystem_readme(model: ReadmeModel) -> str:
             _section("Purpose", model.purpose),
             _section("Description", model.description),
             _section("Modules", _modules_block(model.modules)),
+            _section("Complete module index", _detail_module_block(model.modules)),
             _section("Entrypoints", _shell_block(model.shell_entrypoints)),
             _section("Dependencies", _dependencies_block(model.dependencies)),
+            _section("Integrates with", _relationships_block(_renderable_relationships(model))),
+            _section("Source coverage", _source_coverage_block(model)),
+            _section("Complete interface index", _detail_interface_block(model.modules)),
             marker_for(model.target.kind),
         ]
     )
@@ -273,8 +362,12 @@ def render_corpus_readme(model: ReadmeModel) -> str:
     """A document/config folder. The file inventory is itself the value."""
     contents = "\n".join(
         f"- `{name}`" + (f" — {label}" if (label := _type_label(name)) else "")
-        for name in model.contents
+        for name in model.contents[:MAX_CONTENTS]
     )
+    if len(model.contents) > MAX_CONTENTS:
+        contents += (
+            "\n\n_Additional files appear in the [Complete file index](#complete-file-index)._"
+        )
     file_types = "\n".join(f"- {label}: {count}" for label, count in model.file_types)
     return _join(
         [
@@ -283,6 +376,7 @@ def render_corpus_readme(model: ReadmeModel) -> str:
             _section("Description", model.description),
             _section("Contents", contents),
             _section("File types", file_types),
+            _section("Complete file index", _detail_file_block(model.contents)),
             marker_for(model.target.kind),
         ]
     )
@@ -298,8 +392,10 @@ def render_index_readme(model: ReadmeModel) -> str:
     children = "\n".join(f"- [`{name}/`]({name}/)" for name in model.children)
     files = "\n".join(
         f"- `{name}`" + (f" — {label}" if (label := _type_label(name)) else "")
-        for name in model.contents
+        for name in model.contents[:MAX_CONTENTS]
     )
+    if len(model.contents) > MAX_CONTENTS:
+        files += "\n\n_Additional files appear in the [Complete file index](#complete-file-index)._"
     return _join(
         [
             _header(model),
@@ -307,6 +403,7 @@ def render_index_readme(model: ReadmeModel) -> str:
             _section("Description", model.description),
             _section("Contents", children),
             _section("Files", files),
+            _section("Complete file index", _detail_file_block(model.contents)),
             marker_for(model.target.kind),
         ]
     )
