@@ -55,6 +55,11 @@ class HookEnvelope:
     max_bytes: int
     provenance_required: bool
     callers: tuple[str, ...] = field(default=())
+    #: Namespaces this surface may write. Empty = unrestricted (every surface
+    #: predating the field). A surface that exists to route material to ONE
+    #: namespace — governance friction to cursor-governance — declares it, so
+    #: a wiring slip cannot land that material in a repository's namespace.
+    namespaces: frozenset[str] = field(default=frozenset())
 
     def violation(
         self,
@@ -65,6 +70,7 @@ class HookEnvelope:
         records: int = 0,
         byte_size: int | None = None,
         provenance: bool | None = None,
+        namespace: str | None = None,
     ) -> str | None:
         """The first reason ``operation`` falls outside this envelope, or ``None``.
 
@@ -93,6 +99,11 @@ class HookEnvelope:
             )
         if self.provenance_required and provenance is False:
             return f"{REJECTED_PREFIX} {self.surface} requires provenance on {operation!r}"
+        if self.namespaces and records and namespace not in self.namespaces:
+            return (
+                f"{REJECTED_PREFIX} {self.surface} may write only to "
+                f"{', '.join(sorted(self.namespaces))} (requested {namespace!r})"
+            )
         return None
 
     def principal(self) -> dict[str, Any]:
@@ -149,6 +160,7 @@ def _parse(document: dict[str, Any]) -> dict[str, HookEnvelope]:
             max_bytes=max_bytes,
             provenance_required=bool(spec.get("provenance_required", True)),
             callers=tuple(str(c) for c in spec.get("callers") or ()),
+            namespaces=frozenset(str(n) for n in spec.get("namespaces") or ()),
         )
     return parsed
 

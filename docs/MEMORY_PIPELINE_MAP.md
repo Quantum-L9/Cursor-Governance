@@ -131,6 +131,8 @@ Entry points:
 |---------|-------|-------|
 | Cursor | `ops/hooks/session_start_memory_orchestrator.sh` | `ops/hooks/graphiti-session-end.sh` |
 | Claude | `environment/agents/adapters/claude-code/hooks/memory_prefetch.py` | `environment/agents/adapters/claude-code/hooks/memory_writeback.py` |
+
+**Claude close = post-publish handoff (2026-09-23).** `memory_writeback.py` runs on `Stop` but closes only after a publication of this session (`.l9/pr/pr-summary.json` newer than the session's prefetch), once per publication. The first Stop after publish asks the agent once (Stop `decision: block`) for `.l9/memory/handoff.json` (`l9.session_handoff.v1`: objective, status, published, completed, not_completed, blocked + unblock, decisions + rationale, conflicts + resolution, human_actions, next_actions, open_questions, risks, verification, governance_friction). The close carries that brief losslessly in the continuation capsule for the in-scope repository (≤32 KB, supersedes the session's earlier continuation); `governance_friction` goes only to `cursor-governance` on surface `claude-governance-friction`. Every write and failure is announced to the user (Stop `systemMessage`); every hook-lane memory read and write fails loudly.
 | CLI | `python -m ops.graphiti.hydration.cli compile` | `… cli close` |
 
 ## Identity

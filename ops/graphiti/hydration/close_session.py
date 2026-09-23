@@ -119,7 +119,9 @@ def _closes_dir(project_dir: Path) -> str:
     return _latches.closes_dir(project_dir)
 
 
-def already_closed(project_dir: Path, session_id: str, head_hash: str) -> bool:
+def already_closed(
+    project_dir: Path, session_id: str, head_hash: str, *, strict: bool = False
+) -> bool:
     try:
         path_r = _latches.receipt_path(project_dir, session_id)
     except ValueError:
@@ -132,9 +134,49 @@ def already_closed(project_dir: Path, session_id: str, head_hash: str) -> bool:
             data = json.load(handle)
     except (OSError, json.JSONDecodeError):
         return False
+    if strict:
+        # A publication-scoped close (post-publish handoff) is done only when
+        # THIS publication closed — an earlier close of the session is not it.
+        return _latches.receipt_is_successful_close(data) and data.get("head_hash") == head_hash
     return _latches.receipt_is_successful_close(data) and (
         data.get("head_hash") == head_hash or data.get("status") == STATUS_CLOSED_CANONICALLY
     )
+
+
+def _previous_continuation(project_dir: Path, session_id: str) -> str | None:
+    """This session's last admitted continuation record, to supersede."""
+    try:
+        path_r = _latches.receipt_path(project_dir, session_id)
+        with open(path_r, encoding="utf-8") as handle:  # NOSONAR python:S2083
+            data = json.load(handle)
+    except (OSError, ValueError):
+        return None
+    if data.get("status") != STATUS_CLOSED_CANONICALLY:
+        return None
+    ref = str(data.get("continuation_reference") or "").strip()
+    return ref or None
+
+
+def _handoff_pickup(handoff: dict[str, Any], pickup: dict[str, Any]) -> dict[str, Any]:
+    """Headline capsule fields FROM the agent's brief (no inference, no scoring)."""
+    merged = dict(pickup)
+    merged["active_objective"] = handoff["objective"]
+    merged["next_action"] = (handoff.get("next_actions") or [handoff["status"]])[0]
+    merged["blockers"] = [
+        b["item"]
+        + (f" — {b['blocker']}" if b.get("blocker") else "")
+        + (f" (unblock: {b['unblock']})" if b.get("unblock") else "")
+        for b in handoff.get("blocked") or []
+    ]
+    merged["decisions"] = [
+        d["decision"] + (f" — {d['rationale']}" if d.get("rationale") else "")
+        for d in handoff.get("decisions") or []
+    ]
+    merged["unfinished_work"] = [
+        n["item"] + (f" — {n['reason']}" if n.get("reason") else "")
+        for n in handoff.get("not_completed") or []
+    ]
+    return merged
 
 
 def write_receipt(project_dir: Path, session_id: str, payload: dict[str, Any]) -> None:
@@ -275,6 +317,7 @@ def build_capsule(
     decisions: list[str] | None = None,
     unfinished_work: list[str] | None = None,
     task_signature: str | None = None,
+    handoff: dict[str, Any] | None = None,
 ) -> ContinuationCapsuleV2:
     """The Cursor-owned continuation capsule for this session (plan §12).
 
@@ -295,6 +338,7 @@ def build_capsule(
         blockers=tuple(str(b) for b in pickup.get("blockers") or ())[:8],
         decisions=tuple(decisions or ())[:8],
         unfinished_work=tuple(unfinished_work or ())[:8],
+        handoff=handoff,
     )
 
 
@@ -442,8 +486,16 @@ def close_session(
     budget: float | None = None,
     client: MemoryControlPlaneClient | None = None,
     surface: str = DEFAULT_CLOSE_SURFACE,
+    handoff: dict[str, Any] | None = None,
+    publication: str | None = None,
 ) -> dict[str, Any]:
     """Canonical close. Fail-open to hooks; never raises. Never writes a provider.
+
+    ``handoff`` + ``publication``: the post-publish close. The capsule carries
+    the agent's comprehensive brief (``l9.session_handoff.v1``) losslessly, its
+    headline fields come from that brief, idempotency is scoped to the
+    publication (one close per publication, not one per session), and the
+    session's previous continuation is superseded so exactly one stays ACTIVE.
 
     ``surface`` names the hook-lane envelope this close runs under when no
     ``client`` is injected (``cursor-session-end`` by default,
@@ -490,12 +542,21 @@ def close_session(
         transcript_path=transcript_path,
         conversation_id=session_id,
     )
-    head_hash = hashlib.sha256(
-        f"{session_id}:{reason}:{transcript[:2000]}:{t_source}".encode()
-    ).hexdigest()[:24]
+    if publication:
+        # One close per publication: the key is the publication, not the
+        # transcript, so a later turn of the same publication is a replay.
+        head_hash = hashlib.sha256(f"{session_id}:publication:{publication}".encode()).hexdigest()[
+            :24
+        ]
+    else:
+        head_hash = hashlib.sha256(
+            f"{session_id}:{reason}:{transcript[:2000]}:{t_source}".encode()
+        ).hexdigest()[:24]
     report["head_hash"] = head_hash
+    if publication:
+        report["publication"] = publication
 
-    if already_closed(project, session_id, head_hash) and not dry_run:
+    if already_closed(project, session_id, head_hash, strict=bool(publication)) and not dry_run:
         report["status"] = "idempotent_skip"
         return report
 
@@ -555,6 +616,8 @@ def close_session(
         warnings=report["warnings"],
     )
     task_signature = session_task_signature(session_id)
+    if handoff:
+        pickup = _handoff_pickup(handoff, pickup)
     capsule = build_capsule(
         session_id=session_id,
         repository_identity=repository_identity,
@@ -563,10 +626,17 @@ def close_session(
         decisions=list(pickup.get("decisions") or []),
         unfinished_work=list(pickup.get("unfinished_work") or []),
         task_signature=task_signature,
+        handoff=({**handoff, "publication": publication} if handoff else None),
     )
+    previous = _previous_continuation(project, session_id) if handoff else None
     candidate = capsule.to_governed_candidate(
-        namespace=namespace, source_sha=head or "0" * 40, agent_id=identity["agent_id"]
+        namespace=namespace,
+        source_sha=head or "0" * 40,
+        agent_id=identity["agent_id"],
+        supersedes=[previous] if previous else (),
     )
+    if previous:
+        report["supersedes"] = previous
     admitted = client.ingest_candidate(candidate, workspace=workspace)
     report["writes"].append(_write_entry(admitted, kind="session_continuation"))
     continuation_status = (
