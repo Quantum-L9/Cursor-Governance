@@ -1,0 +1,381 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Quantum-L9/Cursor-Governance/ops/memory/schemas/l9.session_handoff.v1.schema.json",
+  "title": "L9 post-publish repository handoff (l9.session_handoff.v1)",
+  "description": "The comprehensive end-of-contract brief the agent writes to .l9/memory/handoff.json after make pr. The Stop hook memory_writeback.py carries it losslessly inside the ONE continuation record it already writes for the IN-SCOPE repository's namespace. Enforced by ops/memory/session_handoff.py; this schema is its machine form. Also enforced there and not expressible here: the normalized brief is at most 32768 bytes (UTF-8 JSON). Environment, bootstrap and governance friction does not belong here: it goes in .l9/memory/governance-handoff.json (l9.governance_handoff.v1).",
+  "type": "object",
+  "required": [
+    "schema",
+    "pr_number",
+    "objective",
+    "status"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "l9.session_handoff.v1"
+    },
+    "pr_number": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "The published PR's number. Must equal the number in .l9/pr/pr-summary.json written by make pr, or the brief is not this publication's and is refused."
+    },
+    "objective": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S",
+      "description": "What this contract set out to do."
+    },
+    "status": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S",
+      "description": "Where things stand right now, in one or two sentences."
+    },
+    "published": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "maxItems": 40,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "\\S",
+        "description": "One item."
+      },
+      "description": "What shipped in this PR. Empty is []. Absent or null is treated as []."
+    },
+    "completed": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "maxItems": 40,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "\\S",
+        "description": "One item."
+      },
+      "description": "What is done and verified. Empty is []. Absent or null is treated as []."
+    },
+    "next_actions": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "maxItems": 40,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "\\S",
+        "description": "One item."
+      },
+      "description": "The next concrete steps for the next session. Empty is []. Absent or null is treated as []."
+    },
+    "open_questions": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "maxItems": 40,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "\\S",
+        "description": "One item."
+      },
+      "description": "Questions still open for the operator. Empty is []. Absent or null is treated as []."
+    },
+    "risks": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "maxItems": 40,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "\\S",
+        "description": "One item."
+      },
+      "description": "Known risks introduced or left. Empty is []. Absent or null is treated as []."
+    },
+    "verification": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "maxItems": 40,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "\\S",
+        "description": "One item."
+      },
+      "description": "Commands run and their results. Empty is []. Absent or null is treated as []."
+    },
+    "not_completed": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "maxItems": 40,
+      "items": {
+        "description": "Work not completed, each with why. A bare string is accepted and becomes {\"item\": <string>}.",
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S",
+            "description": "Shorthand for {\"item\": <string>}."
+          },
+          {
+            "type": "object",
+            "required": [
+              "item"
+            ],
+            "properties": {
+              "item": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S",
+                "description": "Required. Whitespace is collapsed; longer than 1200 characters is truncated with an ellipsis."
+              },
+              "reason": {
+                "type": "string",
+                "description": "Optional. Empty or absent is omitted."
+              }
+            },
+            "additionalProperties": true
+          }
+        ]
+      },
+      "description": "Work not completed, each with why. Empty is []. Absent or null is treated as []."
+    },
+    "blocked": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "maxItems": 40,
+      "items": {
+        "description": "Work blocked, each with its blocker and what unblocks it. A bare string is accepted and becomes {\"item\": <string>}.",
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S",
+            "description": "Shorthand for {\"item\": <string>}."
+          },
+          {
+            "type": "object",
+            "required": [
+              "item"
+            ],
+            "properties": {
+              "item": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S",
+                "description": "Required. Whitespace is collapsed; longer than 1200 characters is truncated with an ellipsis."
+              },
+              "blocker": {
+                "type": "string",
+                "description": "Optional. Empty or absent is omitted."
+              },
+              "unblock": {
+                "type": "string",
+                "description": "Optional. Empty or absent is omitted."
+              }
+            },
+            "additionalProperties": true
+          }
+        ]
+      },
+      "description": "Work blocked, each with its blocker and what unblocks it. Empty is []. Absent or null is treated as []."
+    },
+    "decisions": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "maxItems": 40,
+      "items": {
+        "description": "Decisions made, each with its rationale. A bare string is accepted and becomes {\"decision\": <string>}.",
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S",
+            "description": "Shorthand for {\"decision\": <string>}."
+          },
+          {
+            "type": "object",
+            "required": [
+              "decision"
+            ],
+            "properties": {
+              "decision": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S",
+                "description": "Required. Whitespace is collapsed; longer than 1200 characters is truncated with an ellipsis."
+              },
+              "rationale": {
+                "type": "string",
+                "description": "Optional. Empty or absent is omitted."
+              }
+            },
+            "additionalProperties": true
+          }
+        ]
+      },
+      "description": "Decisions made, each with its rationale. Empty is []. Absent or null is treated as []."
+    },
+    "conflicts": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "maxItems": 40,
+      "items": {
+        "description": "Conflicts encountered, each with how it was resolved (or 'open'). A bare string is accepted and becomes {\"conflict\": <string>}.",
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S",
+            "description": "Shorthand for {\"conflict\": <string>}."
+          },
+          {
+            "type": "object",
+            "required": [
+              "conflict"
+            ],
+            "properties": {
+              "conflict": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S",
+                "description": "Required. Whitespace is collapsed; longer than 1200 characters is truncated with an ellipsis."
+              },
+              "resolution": {
+                "type": "string",
+                "description": "Optional. Empty or absent is omitted."
+              }
+            },
+            "additionalProperties": true
+          }
+        ]
+      },
+      "description": "Conflicts encountered, each with how it was resolved (or 'open'). Empty is []. Absent or null is treated as []."
+    },
+    "human_actions": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "maxItems": 40,
+      "items": {
+        "description": "What the human must do elsewhere: where, why, and what to do on coming back. A bare string is accepted and becomes {\"action\": <string>}.",
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S",
+            "description": "Shorthand for {\"action\": <string>}."
+          },
+          {
+            "type": "object",
+            "required": [
+              "action"
+            ],
+            "properties": {
+              "action": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S",
+                "description": "Required. Whitespace is collapsed; longer than 1200 characters is truncated with an ellipsis."
+              },
+              "where": {
+                "type": "string",
+                "description": "Optional. Empty or absent is omitted."
+              },
+              "why": {
+                "type": "string",
+                "description": "Optional. Empty or absent is omitted."
+              },
+              "then": {
+                "type": "string",
+                "description": "Optional. Empty or absent is omitted."
+              }
+            },
+            "additionalProperties": true
+          }
+        ]
+      },
+      "description": "What the human must do elsewhere: where, why, and what to do on coming back. Empty is []. Absent or null is treated as []."
+    }
+  },
+  "examples": [
+    {
+      "schema": "l9.session_handoff.v1",
+      "pr_number": 42,
+      "objective": "what this contract set out to do",
+      "status": "where things stand right now, in one or two sentences",
+      "published": [
+        "what shipped in this PR"
+      ],
+      "completed": [
+        "what is done and verified"
+      ],
+      "not_completed": [
+        {
+          "item": "…",
+          "reason": "why not"
+        }
+      ],
+      "blocked": [
+        {
+          "item": "…",
+          "blocker": "what blocks it",
+          "unblock": "what unblocks it"
+        }
+      ],
+      "decisions": [
+        {
+          "decision": "…",
+          "rationale": "why"
+        }
+      ],
+      "conflicts": [
+        {
+          "conflict": "…",
+          "resolution": "how it was resolved, or open"
+        }
+      ],
+      "human_actions": [
+        {
+          "action": "what the human must do",
+          "where": "system/URL",
+          "why": "…",
+          "then": "what to do when coming back"
+        }
+      ],
+      "next_actions": [
+        "the next concrete step for the next session"
+      ],
+      "open_questions": [
+        "…"
+      ],
+      "risks": [
+        "…"
+      ],
+      "verification": [
+        "commands run and their results"
+      ]
+    }
+  ]
+}

@@ -3,10 +3,14 @@
 
 WHEN: once per publication of this session, after it — never on an ordinary
 turn. The first Stop after ``make pr`` asks the agent (once) for the
-comprehensive handoff (``.l9/memory/handoff.json``, l9.session_handoff.v1);
-the next Stop closes the in-scope repository with that brief carried in its
-continuation capsule, routes ``governance_friction`` to cursor-governance only,
-and announces exactly what was written — or loudly, what was not.
+comprehensive handoff (``.l9/memory/handoff.json``, l9.session_handoff.v1)
+and, in the same single request, the governance handoff
+(``.l9/memory/governance-handoff.json``, l9.governance_handoff.v1); the next
+Stop closes the in-scope repository with the repository brief carried in its
+continuation capsule and announces exactly what was written — or loudly, what
+was not. The governance handoff is written by its own Stop hook,
+``governance_handoff_writeback.py``, running in parallel with this one, to the
+cursor-governance namespace only.
 
 Multi-repository by construction, because hydration is. A cloud container puts
 several repositories side by side and ``WORKSPACE`` then names the *container*,
@@ -66,6 +70,7 @@ sys.path.insert(0, str(MEM))
 
 import memory_bridge as mb  # noqa: E402
 import memory_state as st  # noqa: E402
+import post_publish as pp  # noqa: E402
 
 #: Receipt key suffix. Reuses st.write_receipt (the existing mechanism) under a
 #: distinct id so this never overwrites the SessionStart prefetch receipt that
@@ -147,113 +152,26 @@ def _repo_block(repo: Path, report: dict, session_id: str) -> list[str]:
 #: Bound by main() after the governance tree is importable (ops.* is not on the
 #: path at import time of this hook).
 session_handoff: Any = None
-memory_client: Any = None
+governance_handoff: Any = None
 
 
-def _bind_runtime(close_module: Any, handoff_module: Any) -> None:
-    global session_handoff, memory_client  # noqa: PLW0603 - bound once per hook run
+def _bind_runtime(handoff_module: Any, governance_module: Any) -> None:
+    global session_handoff, governance_handoff  # noqa: PLW0603 - bound once per hook run
     session_handoff = handoff_module
-    memory_client = close_module.memory_client
+    governance_handoff = governance_module
 
 
 #: Per-publication ledger: one handoff request and one close per publication.
+#: The governance hook keeps its own (``.l9/memory/governance-handoffs``).
 HANDOFF_LEDGER_REL = Path(".l9") / "memory" / "handoffs"
-PR_SUMMARY_REL = Path(".l9") / "pr" / "pr-summary.json"
-FRICTION_NAMESPACE = "cursor-governance"
-FRICTION_SURFACE = "claude-governance-friction"
-
-
-def _safe(key: str) -> str:
-    return "".join(c if c.isalnum() or c in "-_." else "_" for c in key)[:180]
-
-
-def _ledger(root: Path, key: str) -> dict:
-    try:
-        return json.loads((root / HANDOFF_LEDGER_REL / f"{_safe(key)}.json").read_text("utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-
-
-def _write_ledger(root: Path, key: str, fields: dict) -> None:
-    path = root / HANDOFF_LEDGER_REL / f"{_safe(key)}.json"
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        data = {**_ledger(root, key), **fields, "publication": key, "updated_at": time.time()}
-        path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", "utf-8")
-    except OSError as exc:
-        print(f"memory-writeback: ledger not written ({type(exc).__name__})", file=sys.stderr)
-
-
-def _prefetch_started_at(contract: dict, receipt_id: str) -> float:
-    try:
-        data = json.loads(st.receipt_path(contract, receipt_id).read_text(encoding="utf-8"))
-        return float(data.get("created_at") or 0)
-    except (OSError, json.JSONDecodeError, TypeError, ValueError):
-        return 0.0
 
 
 def _pending_publication(root: Path, started_at: float) -> dict | None:
-    """This session's newest publication in ``root`` that has not closed yet.
-
-    The publish receipt (``.l9/pr/pr-summary.json``, written by make pr) must
-    post-date this session's prefetch — a container can outlive a session, and
-    an earlier session's publication is not this one's to hand off.
-    """
-    path = root / PR_SUMMARY_REL
-    try:
-        if path.stat().st_mtime < started_at:
-            return None
-        summary = json.loads(path.read_text(encoding="utf-8"))
-        number = int(summary["number"])
-        repo = str(summary["repo"])
-        head_sha = str(summary.get("head_sha") or "")
-    except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError):
+    """This session's newest publication in ``root`` that has not closed yet."""
+    pub = pp.publication(root, started_at)
+    if pub is None or pp.ledger(root, HANDOFF_LEDGER_REL, pub["key"]).get("closed"):
         return None
-    key = f"{repo}#{number}@{head_sha[:12]}"
-    if _ledger(root, key).get("closed"):
-        return None
-    return {
-        "key": key,
-        "repo": repo,
-        "number": number,
-        "url": str(summary.get("url") or ""),
-        "label": f"{repo}#{number}",
-    }
-
-
-def _record_id(outcome: object) -> str | None:
-    receipt = getattr(outcome, "receipt", None)
-    return getattr(receipt, "record_id", None) or getattr(receipt, "receipt_id", None)
-
-
-def _write_friction(friction: list[dict], pub: dict, key: str) -> object:
-    """Governance friction → Cursor-Governance ONLY, on its own hook surface."""
-    gov = Path.home() / ".cursor-governance"
-    try:
-        client = memory_client(surface=FRICTION_SURFACE)
-        return client.write(
-            session_handoff.friction_text(friction, repository=pub["repo"], pr=pub["label"]),
-            workspace=str(gov),
-            namespace=FRICTION_NAMESPACE,
-            memory_class="observation",
-            tags=["governance-friction", f"repo:{pub['repo']}", "agent:claude-code"],
-            idempotency_key=f"friction:{key}",
-            source="claude-post-publish-handoff",
-            source_id=key,
-        )
-    except Exception as exc:  # noqa: BLE001 - reported, never silent
-        return _FrictionFailure(exc)
-
-
-class _FrictionFailure:
-    """An outcome stand-in for a friction write that raised, reported like one."""
-
-    ok = False
-    receipt = None
-
-    def __init__(self, exc: Exception) -> None:
-        self.status = f"error:{type(exc).__name__}"
-        self.error = str(exc)[:200]
+    return pub
 
 
 def _section(title: str, items: list, render) -> list[str]:
@@ -268,15 +186,12 @@ def compose_handoff_announcement(
     pub: dict,
     report: dict,
     brief: dict | None,
-    friction: list[dict],
-    friction_outcome: object,
     handoff_error: str,
 ) -> str:
     """The formal record of what the post-publish close wrote — or failed to."""
     wrote = any(w.get("written") for w in _writes(report))
     closed = str(report.get("status")) == "closed_canonically"
-    friction_ok = not friction or bool(getattr(friction_outcome, "ok", False))
-    if closed and brief is not None and friction_ok:
+    if closed and brief is not None:
         title = "WRITTEN"
     elif wrote:
         title = "PARTIAL"
@@ -346,17 +261,10 @@ def compose_handoff_announcement(
                 ),
             )
         )
-    if friction:
-        state = (
-            f"written, id {_record_id(friction_outcome)}"
-            if getattr(friction_outcome, "ok", False)
-            else f"NOT written ({getattr(friction_outcome, 'status', '?')}: "
-            f"{_clip(getattr(friction_outcome, 'error', '') or '')})"
-        )
-        lines.append(
-            f"• governance friction → namespace {FRICTION_NAMESPACE}: {len(friction)} item(s), "
-            f"{state}"
-        )
+    lines.append(
+        "• governance handoff → namespace cursor-governance: written separately by "
+        "governance_handoff_writeback.py (its own announcement)"
+    )
     return "\n".join(lines)
 
 
@@ -368,9 +276,7 @@ def _previous(contract: dict, session_id: str) -> dict:
         return {}
 
 
-def _emit(message: str) -> None:
-    """Stop-hook output: a user-visible message that does not continue the turn."""
-    print(json.dumps({"systemMessage": message}, ensure_ascii=False))
+_emit = pp.emit
 
 
 def _announce_state(contract: dict, session_id: str, status: str, message: str) -> str | None:
@@ -410,13 +316,6 @@ def _runtime_failure(contract: dict, session_id: str, **fields: object) -> None:
     )
 
 
-def _is_subagent(event: dict) -> bool:
-    """A subagent / background run never closes the parent session's memory."""
-    if event.get("is_background_agent") or event.get("isBackgroundAgent"):
-        return True
-    return str(event.get("agent_type") or event.get("agentType") or "").lower() == "subagent"
-
-
 def _writeback_roots(contract: dict, receipt_id: str, workspace: Path) -> list[Path]:
     """Repositories to close, preferring the ones this session hydrated.
 
@@ -425,19 +324,7 @@ def _writeback_roots(contract: dict, receipt_id: str, workspace: Path) -> list[P
     container root again, which is the exact defect this function exists to
     remove.
     """
-    try:
-        data = json.loads(st.receipt_path(contract, receipt_id).read_text(encoding="utf-8"))
-        roots = [Path(r) for r in (data.get("hydrated_roots") or []) if r]
-        roots = [r for r in roots if r.is_dir()]
-        if roots:
-            return roots
-    except (OSError, json.JSONDecodeError, TypeError, ValueError):
-        # Deliberately swallowed, and the fallback below is the whole point: an
-        # absent, truncated or malformed prefetch receipt is an ordinary state
-        # (a session that never hydrated, a container reaped mid-write), not an
-        # error to propagate out of a fail-open Stop hook.
-        pass
-    return _shared_workspace_roots(workspace)
+    return pp.session_roots(contract, receipt_id, _shared_workspace_roots, workspace)
 
 
 def main() -> int:
@@ -451,7 +338,7 @@ def main() -> int:
         contract = st.load_contract()
     except (OSError, json.JSONDecodeError):
         return 0
-    if _is_subagent(event):
+    if pp.is_subagent(event):
         # Authority narrowing: the parent session owns its continuation and its
         # close. A subagent inherits read evidence only and writes nothing.
         _record(contract, session_id, status="skipped_subagent")
@@ -466,7 +353,11 @@ def main() -> int:
         receipt_id = st.resolve_receipt_id(event=event)
     except ValueError:
         receipt_id = ""
-    if not receipt_id or not st.fresh_receipt(contract, receipt_id):
+    # usable, not fresh: fresh_receipt() is False for a DEGRADED hydration, which
+    # made a degraded session indistinguishable from one that never started —
+    # it was never closed and was announced as "no prefetch receipt". The write
+    # gate made the same move for the same reason (memory_state.usable_receipt).
+    if not st.usable_receipt(contract, receipt_id):
         # A policy skip: this session never prefetched, so there is nothing to
         # close. Recorded so it stays distinguishable from a runtime failure.
         announced = _announce_state(
@@ -499,11 +390,12 @@ def main() -> int:
         # an earlier import) and still goes through __import__, so an import
         # failure is raised HERE and classified below.
         from ops.graphiti.hydration.close_session import close_session
+        from ops.memory.governance_handoff import GOVERNANCE_SCHEMA  # noqa: F401
         from ops.memory.session_handoff import HANDOFF_SCHEMA  # noqa: F401
 
         _bind_runtime(
-            sys.modules["ops.graphiti.hydration.close_session"],
             sys.modules["ops.memory.session_handoff"],
+            sys.modules["ops.memory.governance_handoff"],
         )
     except ModuleNotFoundError as exc:
         # The F-13 failure: the hook reached this line on an interpreter without
@@ -540,7 +432,7 @@ def main() -> int:
     # comprehensive handoff — never on an ordinary turn. It used to fire on the
     # first Stop of a session, freeze a generic "Continue work in <repo>"
     # capsule from turn one, and idempotent-skip every turn after.
-    started_at = _prefetch_started_at(contract, receipt_id)
+    started_at = pp.prefetch_started_at(contract, receipt_id)
     pending = [
         (root, pub) for root in roots if (pub := _pending_publication(root, started_at)) is not None
     ]
@@ -558,35 +450,58 @@ def main() -> int:
     statuses: list[str] = []
     for root, pub in pending:
         key = pub["key"]
+        handoff, handoff_error = None, ""
+        missing: dict[str, str] = {}
         try:
             handoff = session_handoff.load(root, pr_number=pub["number"])
         except session_handoff.HandoffError as exc:
-            ledger = _ledger(root, key)
-            if not ledger.get("requested") and not event.get("stop_hook_active"):
-                # Ask once. Blocking this Stop hands the agent the schema and one
-                # more turn to write the brief; the next Stop closes with it.
-                _write_ledger(root, key, {"requested": True, "request_error": str(exc)})
-                _record(contract, session_id, status="handoff_requested", publication=key)
-                print(
-                    json.dumps(
-                        {
-                            "decision": "block",
-                            "reason": session_handoff.request_reason(
-                                pr_label=pub["label"], pr_number=pub["number"]
-                            ),
-                        },
-                        ensure_ascii=False,
-                    )
-                )
-                return 0
-            # Asked and still absent or invalid: close with what the session
-            # has, and say LOUDLY that the handoff was not captured.
-            handoff = None
             handoff_error = str(exc)
-        else:
-            handoff_error = ""
+            missing[str(session_handoff.HANDOFF_REL)] = handoff_error
+        try:
+            governance_handoff.load(root, pr_number=pub["number"])
+        except session_handoff.HandoffError as exc:
+            missing[str(governance_handoff.GOVERNANCE_REL)] = str(exc)
+        ledger_rel = HANDOFF_LEDGER_REL
+        if (
+            missing
+            and not pp.ledger(root, ledger_rel, key).get("requested")
+            and not event.get("stop_hook_active")
+        ):
+            # Ask ONCE, for both handoffs in one reason: this is the only hook
+            # that blocks (the governance hook runs in parallel and never does).
+            # Blocking hands the agent the schemas and one more turn; the next
+            # Stop closes with what exists and each hook announces the rest.
+            pp.write_ledger(
+                root,
+                ledger_rel,
+                key,
+                {"requested": True, "request_missing": missing},
+                who="memory-writeback",
+            )
+            _record(contract, session_id, status="handoff_requested", publication=key)
+            gov_rel = str(governance_handoff.GOVERNANCE_REL)
+            print(
+                json.dumps(
+                    {
+                        "decision": "block",
+                        "reason": session_handoff.request_reason(
+                            pr_label=pub["label"],
+                            pr_number=pub["number"],
+                            missing=missing,
+                            governance=(
+                                gov_rel,
+                                governance_handoff.GOVERNANCE_SCHEMA,
+                                governance_handoff.example(pub["number"]),
+                            ),
+                        ),
+                    },
+                    ensure_ascii=False,
+                )
+            )
+            return 0
+        # Asked and the repository brief is still absent or invalid: close with
+        # what the session has, and say LOUDLY that the handoff was not captured.
 
-        repo_brief, friction = session_handoff.split(handoff) if handoff else (None, [])
         left = max(MIN_ROOT_BUDGET, deadline - time.monotonic())
         try:
             report = close_session(
@@ -599,26 +514,17 @@ def main() -> int:
                 dry_run=False,
                 budget=left,
                 surface="claude-session-end",
-                handoff=repo_brief,
+                handoff=handoff,
                 publication=key,
             )
         except Exception as exc:  # noqa: BLE001 - fail-open, but never silent
             report = {"status": "error", "writes": [], "warnings": [type(exc).__name__]}
-        friction_outcome = _write_friction(friction, pub, key) if friction else None
-        text = compose_handoff_announcement(
-            session_id,
-            root,
-            pub,
-            report,
-            repo_brief,
-            friction,
-            friction_outcome,
-            handoff_error,
-        )
+        text = compose_handoff_announcement(session_id, root, pub, report, handoff, handoff_error)
         announcements.append(text)
         statuses.append(f"{root.name}={report.get('status')}")
-        _write_ledger(
+        pp.write_ledger(
             root,
+            ledger_rel,
             key,
             {
                 "requested": True,
@@ -626,9 +532,9 @@ def main() -> int:
                 "handoff_captured": handoff is not None,
                 "handoff_error": handoff_error,
                 "continuation": (report.get("continuation") or {}).get("record_id"),
-                "friction_record": _record_id(friction_outcome),
                 "announcement": text,
             },
+            who="memory-writeback",
         )
 
     announcement = "\n\n".join(announcements)

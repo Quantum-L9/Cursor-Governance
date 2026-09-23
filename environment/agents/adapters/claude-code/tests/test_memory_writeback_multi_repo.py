@@ -35,17 +35,27 @@ import memory_state as st  # noqa: E402
 REPO_ROOT = CLAUDE_DIR.parents[3]
 
 
-def _handoff_module() -> types.ModuleType:
-    """The tree-under-test's ops.memory.session_handoff (never the SSOT's copy)."""
+def _tree_module(name: str, rel: str, deps: dict | None = None) -> types.ModuleType:
+    """A module from the tree under test (never the SSOT's copy)."""
     import importlib.util  # noqa: PLC0415
 
-    spec = importlib.util.spec_from_file_location(
-        "ops.memory.session_handoff", REPO_ROOT / "ops" / "memory" / "session_handoff.py"
-    )
+    spec = importlib.util.spec_from_file_location(name, REPO_ROOT / rel)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
-    spec.loader.exec_module(module)
+    with mock.patch.dict(sys.modules, {**(deps or {}), name: module}):
+        spec.loader.exec_module(module)
     return module
+
+
+def _handoff_modules() -> dict[str, types.ModuleType]:
+    """Both handoff modules, the governance one importing the tree's session one."""
+    session = _tree_module("ops.memory.session_handoff", "ops/memory/session_handoff.py")
+    governance = _tree_module(
+        "ops.memory.governance_handoff",
+        "ops/memory/governance_handoff.py",
+        {"ops.memory.session_handoff": session},
+    )
+    return {"ops.memory.session_handoff": session, "ops.memory.governance_handoff": governance}
 
 
 def _make_repo(root: Path, name: str) -> Path:
@@ -55,7 +65,7 @@ def _make_repo(root: Path, name: str) -> Path:
 
 
 def _publish(root: Path, number: int) -> None:
-    """What make pr leaves behind (pr-summary.json) plus the agent's handoff."""
+    """What make pr leaves behind (pr-summary.json) plus the agent's two handoffs."""
     pr = root / ".l9" / "pr"
     pr.mkdir(parents=True, exist_ok=True)
     (pr / "pr-summary.json").write_text(
@@ -73,6 +83,10 @@ def _publish(root: Path, number: int) -> None:
                 "status": "published, awaiting review",
             }
         ),
+        encoding="utf-8",
+    )
+    (mem / "governance-handoff.json").write_text(
+        json.dumps({"schema": "l9.governance_handoff.v1", "pr_number": number}),
         encoding="utf-8",
     )
 
@@ -116,7 +130,7 @@ class WritebackFanOutTest(unittest.TestCase):
                 sys.modules,
                 {
                     "ops.graphiti.hydration.close_session": stub,
-                    "ops.memory.session_handoff": _handoff_module(),
+                    **_handoff_modules(),
                 },
             ),
             mock.patch.dict("os.environ", env, clear=False),

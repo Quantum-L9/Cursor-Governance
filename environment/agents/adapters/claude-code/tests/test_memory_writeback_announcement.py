@@ -4,11 +4,13 @@
 The contract these pin:
 
 * No publication in this session -> no close, no output (an ordinary turn).
-* The first Stop after a publication, with no handoff written -> the hook asks
-  ONCE (Stop ``decision: block`` carrying the l9.session_handoff.v1 shape).
+* The first Stop after a publication, with either handoff missing -> the hook
+  asks ONCE, for both (Stop ``decision: block`` carrying the l9.session_handoff.v1
+  and l9.governance_handoff.v1 shapes). It is the only hook that blocks.
 * The next Stop, with the handoff -> ONE close to the in-scope repository
-  carrying the comprehensive brief; governance friction goes separately to
-  cursor-governance; a formal announcement names every section and record.
+  carrying the comprehensive brief; a formal announcement names every section
+  and record. The governance handoff is NOT written here — its own parallel
+  hook (governance_handoff_writeback.py) writes it to cursor-governance.
 * Asked and still missing -> close anyway, announce LOUDLY that the handoff
   was not captured.
 * After the close -> nothing further for that publication.
@@ -47,11 +49,15 @@ def _load(name: str, rel: str) -> types.ModuleType:
     spec = importlib.util.spec_from_file_location(name, REPO_ROOT / rel)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
-    spec.loader.exec_module(module)
+    with mock.patch.dict(sys.modules, {name: module}):
+        spec.loader.exec_module(module)
     return module
 
 
+# The tree under test, never the SSOT copy the hook's ensure_importable() adds.
 HANDOFF = _load("ops.memory.session_handoff", "ops/memory/session_handoff.py")
+with mock.patch.dict(sys.modules, {"ops.memory.session_handoff": HANDOFF}):
+    GOVERNANCE = _load("ops.memory.governance_handoff", "ops/memory/governance_handoff.py")
 
 
 def _brief(**extra: object) -> dict:
@@ -73,17 +79,17 @@ def _brief(**extra: object) -> dict:
         "open_questions": ["webhook retries?"],
         "risks": ["rate limits"],
         "verification": ["pytest: 120 passed"],
-        "governance_friction": [{"item": "SessionStart budget tight", "detail": "cold 27s"}],
         **extra,
     }
 
 
-class _Outcome:
-    def __init__(self, ok: bool, record: str | None = None, status: str = "OK") -> None:
-        self.ok = ok
-        self.status = status
-        self.error = None if ok else "denied"
-        self.receipt = types.SimpleNamespace(record_id=record, receipt_id=None)
+def _governance(**extra: object) -> dict:
+    return {
+        "schema": "l9.governance_handoff.v1",
+        "pr_number": PR,
+        "environment_friction": [{"item": "SessionStart budget tight", "detail": "cold 27s"}],
+        **extra,
+    }
 
 
 class PostPublishHandoffTest(unittest.TestCase):
@@ -93,8 +99,6 @@ class PostPublishHandoffTest(unittest.TestCase):
         self.repo = Path(self._tmp.name).resolve()
         (self.repo / ".git").mkdir()
         self.closes: list[dict] = []
-        self.friction: list[dict] = []
-        self.friction_ok = True
         self.close_status = "closed_canonically"
 
     # -- fixtures -----------------------------------------------------------
@@ -102,13 +106,17 @@ class PostPublishHandoffTest(unittest.TestCase):
         """ONE environment for stamping and reading: the receipt key is writer-scoped."""
         return {"CLAUDE_PROJECT_DIR": str(self.repo), "L9_MEMORY_AGENT_ID": "claude-code"}
 
-    def _prefetch(self) -> None:
+    def _prefetch(self, degraded: bool = False) -> None:
         with mock.patch.dict(os.environ, self._env()):
             contract = st.load_contract()
             st.write_receipt(
                 contract,
                 st.resolve_receipt_id(event={"session_id": SESSION}),
-                {"status": "prefetched", "degraded": False, "hydrated_roots": [str(self.repo)]},
+                {
+                    "status": "degraded" if degraded else "prefetched",
+                    "degraded": degraded,
+                    "hydrated_roots": [str(self.repo)],
+                },
             )
 
     def _publish(self) -> None:
@@ -127,10 +135,14 @@ class PostPublishHandoffTest(unittest.TestCase):
             encoding="utf-8",
         )
 
-    def _write_handoff(self, brief: dict) -> None:
-        path = self.repo / ".l9" / "memory" / "handoff.json"
+    def _write_handoff(self, brief: dict, name: str = "handoff.json") -> None:
+        path = self.repo / ".l9" / "memory" / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(brief), encoding="utf-8")
+
+    def _write_both(self, brief: dict | None = None) -> None:
+        self._write_handoff(brief or _brief())
+        self._write_handoff(_governance(), "governance-handoff.json")
 
     def _stop(self, **event: object) -> tuple[dict | None, dict]:
         def _close(**kwargs):
@@ -145,14 +157,8 @@ class PostPublishHandoffTest(unittest.TestCase):
                 "continuation": {"record_id": "rec-cont"},
             }
 
-        class _Client:
-            def write(inner, content, **kwargs):  # noqa: N805
-                self.friction.append({"content": content, **kwargs})
-                return _Outcome(self.friction_ok, "rec-friction")
-
         stub = types.ModuleType("ops.graphiti.hydration.close_session")
         stub.close_session = _close
-        stub.memory_client = lambda **_kw: _Client()
         env = self._env()
         with (
             mock.patch.dict(
@@ -160,6 +166,7 @@ class PostPublishHandoffTest(unittest.TestCase):
                 {
                     "ops.graphiti.hydration.close_session": stub,
                     "ops.memory.session_handoff": HANDOFF,
+                    "ops.memory.governance_handoff": GOVERNANCE,
                 },
             ),
             mock.patch.dict(os.environ, env, clear=False),
@@ -188,6 +195,17 @@ class PostPublishHandoffTest(unittest.TestCase):
         self.assertEqual(self.closes, [])
         self.assertEqual(receipt["status"], "no_publication")
 
+    def test_a_degraded_hydration_still_closes_after_publish(self) -> None:
+        """Regression: fresh_receipt() is False when degraded; that skipped the close."""
+        self._prefetch(degraded=True)
+        self._publish()
+        self._write_both()
+        output, receipt = self._stop()
+        self.assertEqual(len(self.closes), 1)
+        assert output is not None
+        self.assertNotIn("no SessionStart prefetch receipt", output["systemMessage"])
+        self.assertEqual(receipt["status"], "ran")
+
     def test_a_publication_from_before_this_session_is_not_this_sessions(self) -> None:
         self._publish()
         time.sleep(0.01)
@@ -196,23 +214,55 @@ class PostPublishHandoffTest(unittest.TestCase):
         self.assertIsNone(output)
         self.assertEqual(self.closes, [])
 
-    def test_the_first_stop_after_publish_asks_for_the_handoff_once(self) -> None:
+    def test_the_first_stop_after_publish_asks_once_for_both_handoffs(self) -> None:
         self._prefetch()
         self._publish()
         output, receipt = self._stop()
         assert output is not None
         self.assertEqual(output["decision"], "block")
-        self.assertIn("l9.session_handoff.v1", output["reason"])
-        self.assertIn('"pr_number": 42', output["reason"])
-        self.assertIn("governance_friction", output["reason"])
+        reason = output["reason"]
+        self.assertIn("l9.session_handoff.v1", reason)
+        self.assertIn("l9.governance_handoff.v1", reason)
+        self.assertIn(".l9/memory/governance-handoff.json", reason)
+        self.assertIn('"pr_number": 42', reason)
         self.assertEqual(self.closes, [], "nothing is closed before the brief exists")
         self.assertEqual(receipt["status"], "handoff_requested")
+
+    def test_a_missing_governance_handoff_alone_is_requested(self) -> None:
+        self._prefetch()
+        self._publish()
+        self._write_handoff(_brief())
+        output, _ = self._stop()
+        assert output is not None
+        self.assertEqual(output["decision"], "block")
+        self.assertIn("l9.governance_handoff.v1", output["reason"])
+        self.assertNotIn("1) .l9/memory/handoff.json", output["reason"])
+
+    def test_both_handoffs_present_close_without_asking(self) -> None:
+        self._prefetch()
+        self._publish()
+        self._write_both()
+        output, _ = self._stop()
+        assert output is not None
+        self.assertNotIn("decision", output)
+        self.assertEqual(len(self.closes), 1)
+
+    def test_friction_in_the_repository_handoff_is_refused_and_named(self) -> None:
+        self._prefetch()
+        self._publish()
+        self._write_both(_brief(governance_friction=[{"item": "x"}]))
+        output, _ = self._stop()
+        assert output is not None
+        self.assertEqual(output["decision"], "block")
+        self.assertIn(
+            "governance_friction belongs in .l9/memory/governance-handoff.json", output["reason"]
+        )
 
     def test_the_handoff_is_written_once_with_everything_and_announced(self) -> None:
         self._prefetch()
         self._publish()
         self._stop()  # asks
-        self._write_handoff(_brief())
+        self._write_both()
         output, receipt = self._stop(stop_hook_active=True)
 
         self.assertEqual(len(self.closes), 1, "exactly one close for the publication")
@@ -220,14 +270,7 @@ class PostPublishHandoffTest(unittest.TestCase):
         self.assertEqual(close["publication"], "Org/website-bot#42@" + "b" * 12)
         brief = close["handoff"]
         self.assertEqual(brief["objective"], "Ship the checkout flow")
-        self.assertNotIn("governance_friction", brief, "friction never enters the repo record")
         self.assertEqual(brief["human_actions"][0]["where"], "Infisical")
-
-        self.assertEqual(len(self.friction), 1)
-        friction = self.friction[0]
-        self.assertEqual(friction["namespace"], "cursor-governance")
-        self.assertEqual(friction["memory_class"], "observation")
-        self.assertIn("SessionStart budget tight", friction["content"])
 
         assert output is not None
         message = output["systemMessage"]
@@ -242,9 +285,10 @@ class PostPublishHandoffTest(unittest.TestCase):
             "YOUR ACTIONS ELSEWHERE",
             "add STRIPE_KEY @ Infisical",
             "pytest: 120 passed",
-            "governance friction → namespace cursor-governance: 1 item(s), written",
+            "governance handoff → namespace cursor-governance: written separately",
         ):
             self.assertIn(fragment, message)
+        self.assertNotIn("SessionStart budget tight", message, "governance is not this hook's")
         self.assertEqual(receipt["announcement"], message)
 
         # And never again for this publication.
@@ -267,43 +311,28 @@ class PostPublishHandoffTest(unittest.TestCase):
     def test_a_handoff_for_another_publication_is_not_accepted(self) -> None:
         self._prefetch()
         self._publish()
-        self._write_handoff(_brief(pr_number=7))
+        self._write_both(_brief(pr_number=7))
         output, _ = self._stop()
         assert output is not None
         self.assertEqual(output["decision"], "block", "a stale brief is not this PR's")
 
-    def test_a_failed_friction_write_is_announced(self) -> None:
-        self.friction_ok = False
-        self._prefetch()
-        self._publish()
-        self._write_handoff(_brief())
-        output, _ = self._stop()
-        assert output is not None
-        message = output["systemMessage"]
-        self.assertIn("— PARTIAL", message)
-        self.assertIn(
-            "governance friction → namespace cursor-governance: 1 item(s), NOT written", message
-        )
-
-    def test_a_failed_close_is_announced_as_failed(self) -> None:
+    def test_a_failed_close_is_not_announced_as_written(self) -> None:
         self.close_status = "close_incomplete"
         self._prefetch()
         self._publish()
-        self._write_handoff(_brief(governance_friction=[]))
+        self._write_both()
         output, _ = self._stop()
         assert output is not None
         # writes were reported by the stub, so the close is PARTIAL, not WRITTEN
         self.assertNotIn("— WRITTEN", output["systemMessage"])
+        self.assertIn("— PARTIAL", output["systemMessage"])
 
 
 class HandoffFormatTest(unittest.TestCase):
-    def test_normalize_keeps_every_section_and_splits_friction(self) -> None:
+    def test_normalize_keeps_every_section(self) -> None:
         brief = HANDOFF.normalize(_brief(), pr_number=PR)
-        repo, friction = HANDOFF.split(brief)
-        self.assertNotIn("governance_friction", repo)
-        self.assertEqual(friction[0]["item"], "SessionStart budget tight")
         for key in ("published", "blocked", "decisions", "conflicts", "human_actions"):
-            self.assertTrue(repo[key], key)
+            self.assertTrue(brief[key], key)
 
     def test_the_32kb_cap_is_enforced(self) -> None:
         huge = _brief(risks=["x" * 1100] * 40, verification=["y" * 1100] * 40)
@@ -311,7 +340,7 @@ class HandoffFormatTest(unittest.TestCase):
             HANDOFF.normalize(huge, pr_number=PR)
 
     def test_render_shows_every_section(self) -> None:
-        text = HANDOFF.render(HANDOFF.split(HANDOFF.normalize(_brief(), pr_number=PR))[0])
+        text = HANDOFF.render(HANDOFF.normalize(_brief(), pr_number=PR))
         for fragment in ("objective:", "blocked:", "human actions:", "verification:"):
             self.assertIn(fragment, text)
 

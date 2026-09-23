@@ -9,9 +9,13 @@ already writes — so a later session hydrates where things stand, not a generic
 
 Hooks prepare material and never author it (CANONICAL_LAW §8.6, INV-03b): this
 module validates, normalizes and caps what the agent wrote; it never infers,
-summarizes or scores. ``governance_friction`` is split off here and never enters
-the repository's record: environment, bootstrap and governance friction belongs
-to the Cursor-Governance namespace alone.
+summarizes or scores. Environment, bootstrap and governance friction is NOT part
+of this brief: it is its own handoff (``ops/memory/governance_handoff.py``,
+``.l9/memory/governance-handoff.json``), written by its own Stop hook to the
+Cursor-Governance namespace alone.
+
+Machine form: ``ops/memory/schemas/l9.session_handoff.v1.schema.json``;
+contract: ``ops/memory/HANDOFF_CONTRACT.md``.
 """
 
 from __future__ import annotations
@@ -45,25 +49,33 @@ STRUCTURED = {
     "decisions": ("decision", ("rationale",)),
     "conflicts": ("conflict", ("resolution",)),
     "human_actions": ("action", ("where", "why", "then")),
-    "governance_friction": ("item", ("detail",)),
 }
 
-#: Friction is governance-plane material: routed to Cursor-Governance only.
-FRICTION = "governance_friction"
+#: Every top-level key the brief may carry. Anything else is refused, loudly: a
+#: section the hook silently dropped would be a write the operator believes
+#: happened and did not.
+KEYS = frozenset({"schema", "pr_number", "objective", "status", *TEXT_LISTS, *STRUCTURED})
+
+#: Keys that belong to the governance handoff, named in the refusal.
+MISPLACED = {
+    "governance_friction": ".l9/memory/governance-handoff.json",
+    "environment_friction": ".l9/memory/governance-handoff.json",
+    "degraded_bootstrap": ".l9/memory/governance-handoff.json",
+}
 
 
 class HandoffError(ValueError):
     """The handoff file is absent, malformed, or not for this publication."""
 
 
-def _text(value: Any, field: str) -> str:
+def clean_text(value: Any, field: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise HandoffError(f"{field} must be a non-empty string")
     text = " ".join(value.split())
     return text if len(text) <= MAX_TEXT else text[: MAX_TEXT - 1] + "…"
 
 
-def _items(payload: dict[str, Any], key: str) -> list[Any]:
+def clean_list(payload: dict[str, Any], key: str) -> list[Any]:
     value = payload.get(key, [])
     if value is None:
         return []
@@ -74,19 +86,34 @@ def _items(payload: dict[str, Any], key: str) -> list[Any]:
     return value
 
 
-def _structured(payload: dict[str, Any], key: str) -> list[dict[str, str]]:
-    required, optional = STRUCTURED[key]
+def check_keys(
+    payload: dict[str, Any], allowed: frozenset[str], *, misplaced: dict[str, str]
+) -> None:
+    """Refuse unknown top-level keys, naming the file a misplaced one belongs in."""
+    unknown = sorted(set(payload) - allowed)
+    if not unknown:
+        return
+    hints = [f"{k} belongs in {misplaced[k]}" for k in unknown if k in misplaced]
+    detail = f" ({'; '.join(hints)})" if hints else ""
+    raise HandoffError(f"unknown section(s) {', '.join(unknown)}{detail}")
+
+
+def clean_structured(
+    payload: dict[str, Any], key: str, spec: dict[str, tuple[str, tuple[str, ...]]] = STRUCTURED
+) -> list[dict[str, str]]:
+    """A list of {required, optional...} objects; a bare string is the required field."""
+    required, optional = spec[key]
     out: list[dict[str, str]] = []
-    for index, entry in enumerate(_items(payload, key)):
+    for index, entry in enumerate(clean_list(payload, key)):
         where = f"{key}[{index}]"
         if isinstance(entry, str):
             entry = {required: entry}
         if not isinstance(entry, dict):
             raise HandoffError(f"{where} must be an object with {required!r}")
-        item = {required: _text(entry.get(required), f"{where}.{required}")}
+        item = {required: clean_text(entry.get(required), f"{where}.{required}")}
         for name in optional:
             if entry.get(name):
-                item[name] = _text(entry[name], f"{where}.{name}")
+                item[name] = clean_text(entry[name], f"{where}.{name}")
         out.append(item)
     return out
 
@@ -101,6 +128,10 @@ def normalize(payload: Any, *, pr_number: int | None = None) -> dict[str, Any]:
         raise HandoffError("handoff must be a JSON object")
     if payload.get("schema") != HANDOFF_SCHEMA:
         raise HandoffError(f"schema must be {HANDOFF_SCHEMA!r}")
+    check_keys(payload, KEYS, misplaced=MISPLACED)
+    number = payload.get("pr_number")
+    if not isinstance(number, int) or isinstance(number, bool) or number < 1:
+        raise HandoffError("pr_number must be the published PR's number (a positive integer)")
     if pr_number is not None and payload.get("pr_number") != pr_number:
         raise HandoffError(
             f"pr_number {payload.get('pr_number')!r} is not this publication (#{pr_number})"
@@ -108,13 +139,13 @@ def normalize(payload: Any, *, pr_number: int | None = None) -> dict[str, Any]:
     brief: dict[str, Any] = {
         "schema": HANDOFF_SCHEMA,
         "pr_number": payload.get("pr_number"),
-        "objective": _text(payload.get("objective"), "objective"),
-        "status": _text(payload.get("status"), "status"),
+        "objective": clean_text(payload.get("objective"), "objective"),
+        "status": clean_text(payload.get("status"), "status"),
     }
     for key in TEXT_LISTS:
-        brief[key] = [_text(v, f"{key}[{i}]") for i, v in enumerate(_items(payload, key))]
+        brief[key] = [clean_text(v, f"{key}[{i}]") for i, v in enumerate(clean_list(payload, key))]
     for key in STRUCTURED:
-        brief[key] = _structured(payload, key)
+        brief[key] = clean_structured(payload, key)
     size = len(json.dumps(brief, ensure_ascii=False).encode("utf-8"))
     if size > MAX_HANDOFF_BYTES:
         raise HandoffError(f"handoff is {size} bytes; the cap is {MAX_HANDOFF_BYTES}")
@@ -130,20 +161,6 @@ def load(workspace: Path, *, pr_number: int | None = None) -> dict[str, Any]:
     except (OSError, json.JSONDecodeError) as exc:
         raise HandoffError(f"{HANDOFF_REL} is not readable JSON ({type(exc).__name__})") from exc
     return normalize(payload, pr_number=pr_number)
-
-
-def split(brief: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, str]]]:
-    """(repository brief, governance friction) — friction never stays in the brief."""
-    repo = {k: v for k, v in brief.items() if k != FRICTION}
-    return repo, list(brief.get(FRICTION) or [])
-
-
-def friction_text(friction: list[dict[str, str]], *, repository: str, pr: str) -> str:
-    lines = [f"Governance friction reported from {repository} ({pr}):"]
-    for entry in friction:
-        detail = f" — {entry['detail']}" if entry.get("detail") else ""
-        lines.append(f"- {entry['item']}{detail}")
-    return "\n".join(lines)
 
 
 def render(brief: dict[str, Any]) -> str:
@@ -187,9 +204,9 @@ def render(brief: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def request_reason(*, pr_label: str, pr_number: int) -> str:
-    """What the Stop hook hands the agent when the handoff is missing (once)."""
-    example = {
+def example(pr_number: int) -> dict[str, Any]:
+    """The shape the agent is asked to write — every section, for this publication."""
+    return {
         "schema": HANDOFF_SCHEMA,
         "pr_number": pr_number,
         "objective": "what this contract set out to do",
@@ -212,30 +229,64 @@ def request_reason(*, pr_label: str, pr_number: int) -> str:
         "open_questions": ["…"],
         "risks": ["…"],
         "verification": ["commands run and their results"],
-        "governance_friction": [
-            {"item": "environment/bootstrap/governance friction only", "detail": "…"}
-        ],
     }
-    return (
-        f"L9 post-publish handoff required for {pr_label}. Write {HANDOFF_REL} "
-        f"(schema {HANDOFF_SCHEMA}) — the comprehensive brief of where this contract "
-        "stands — then stop. It is written once to the in-scope repository's memory. "
-        "Put environment/bootstrap/governance friction ONLY under governance_friction "
-        "(routed to Cursor-Governance, never the repository). Empty sections are []. "
-        f"Shape:\n{json.dumps(example, indent=2)}"
-    )
+
+
+def request_reason(
+    *,
+    pr_label: str,
+    pr_number: int,
+    missing: dict[str, str],
+    governance: tuple[str, str, dict[str, Any]] | None = None,
+) -> str:
+    """What the Stop hook hands the agent, ONCE, when a post-publish handoff is missing.
+
+    ONE request covers both handoffs: Claude Code runs every Stop hook in parallel
+    and does not document how two concurrent ``decision: block`` outputs combine,
+    so only the repository write-back ever blocks. ``missing`` maps each missing
+    file to why it was not accepted; ``governance`` is (path, schema, example)
+    of the governance handoff when that one is missing.
+    """
+    parts = [
+        f"L9 post-publish handoffs required for {pr_label}. Write the file(s) below, "
+        "then stop. Each is written ONCE to memory. Empty sections are []."
+    ]
+    if str(HANDOFF_REL) in missing:
+        parts.append(
+            f"\n1) {HANDOFF_REL} (schema {HANDOFF_SCHEMA}) — the comprehensive brief of "
+            "where this contract stands, for the IN-SCOPE repository's memory. No "
+            "environment/bootstrap/governance friction here. Not accepted because: "
+            f"{missing[str(HANDOFF_REL)]}.\nShape:\n{json.dumps(example(pr_number), indent=2)}"
+        )
+    if governance is not None and governance[0] in missing:
+        path, schema, shape = governance
+        parts.append(
+            f"\n2) {path} (schema {schema}) — ONLY environment friction, environment/"
+            "governance blockers, degraded bootstrap items, workarounds and governance "
+            "actions; written to the cursor-governance namespace, never the repository. "
+            f"Not accepted because: {missing[path]}.\nShape:\n{json.dumps(shape, indent=2)}"
+        )
+    return "\n".join(parts)
 
 
 __all__ = [
-    "FRICTION",
     "HANDOFF_REL",
     "HANDOFF_SCHEMA",
     "MAX_HANDOFF_BYTES",
+    "MAX_ITEMS",
+    "MAX_TEXT",
+    "STRUCTURED",
+    "TEXT_LISTS",
+    "KEYS",
+    "MISPLACED",
     "HandoffError",
-    "friction_text",
+    "check_keys",
+    "clean_list",
+    "clean_structured",
+    "clean_text",
+    "example",
     "load",
     "normalize",
     "render",
     "request_reason",
-    "split",
 ]

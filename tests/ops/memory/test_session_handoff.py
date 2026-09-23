@@ -18,7 +18,6 @@ def _brief(**extra: object) -> dict:
         "status": "PR open",
         "blocked": [{"item": "payments", "blocker": "no key", "unblock": "add key"}],
         "human_actions": ["rotate the key"],
-        "governance_friction": [{"item": "budget tight"}],
         **extra,
     }
 
@@ -56,15 +55,41 @@ def test_string_items_are_accepted_for_structured_sections() -> None:
     assert brief["human_actions"] == [{"action": "rotate the key"}]
 
 
-def test_friction_is_split_out_of_the_repository_brief() -> None:
-    repo, friction = sh.split(sh.normalize(_brief()))
-    assert sh.FRICTION not in repo
-    assert friction == [{"item": "budget tight"}]
-    text = sh.friction_text(friction, repository="Org/repo", pr="Org/repo#7")
-    assert "Org/repo#7" in text and "- budget tight" in text
+def test_pr_number_must_be_a_positive_integer() -> None:
+    for bad in (None, "7", 0, True):
+        with pytest.raises(sh.HandoffError, match="pr_number"):
+            sh.normalize({**_brief(), "pr_number": bad})
 
 
-def test_the_request_carries_the_full_shape_for_this_publication() -> None:
-    reason = sh.request_reason(pr_label="Org/repo#7", pr_number=7)
-    for key in ("objective", "blocked", "human_actions", "governance_friction", '"pr_number": 7'):
-        assert key in reason
+def test_unknown_sections_are_refused_and_misplaced_ones_are_named() -> None:
+    with pytest.raises(sh.HandoffError, match="unknown section"):
+        sh.normalize({**_brief(), "summary": "x"})
+    with pytest.raises(
+        sh.HandoffError, match="governance_friction belongs in .l9/memory/governance-handoff.json"
+    ):
+        sh.normalize({**_brief(), "governance_friction": [{"item": "budget tight"}]})
+
+
+def test_one_request_carries_only_the_missing_handoffs() -> None:
+    rel = str(sh.HANDOFF_REL)
+    gov = (".l9/memory/governance-handoff.json", "l9.governance_handoff.v1", {"pr_number": 7})
+    both = sh.request_reason(
+        pr_label="Org/repo#7",
+        pr_number=7,
+        missing={rel: "absent", gov[0]: "absent"},
+        governance=gov,
+    )
+    for key in ("objective", "blocked", "human_actions", '"pr_number": 7', gov[1]):
+        assert key in both
+    only_repo = sh.request_reason(
+        pr_label="Org/repo#7", pr_number=7, missing={rel: "absent"}, governance=gov
+    )
+    assert gov[1] not in only_repo and sh.HANDOFF_SCHEMA in only_repo
+    only_gov = sh.request_reason(
+        pr_label="Org/repo#7", pr_number=7, missing={gov[0]: "absent"}, governance=gov
+    )
+    assert gov[1] in only_gov and f"1) {rel}" not in only_gov
+
+
+def test_the_example_is_itself_a_valid_brief() -> None:
+    assert sh.normalize(sh.example(7), pr_number=7)["objective"]

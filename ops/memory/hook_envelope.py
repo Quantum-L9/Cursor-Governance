@@ -99,7 +99,9 @@ class HookEnvelope:
             )
         if self.provenance_required and provenance is False:
             return f"{REJECTED_PREFIX} {self.surface} requires provenance on {operation!r}"
-        if self.namespaces and records and namespace not in self.namespaces:
+        # Any call that names a namespace, dry runs included: a dry run
+        # (records=0) must return the verdict the real write would get.
+        if self.namespaces and namespace is not None and namespace not in self.namespaces:
             return (
                 f"{REJECTED_PREFIX} {self.surface} may write only to "
                 f"{', '.join(sorted(self.namespaces))} (requested {namespace!r})"

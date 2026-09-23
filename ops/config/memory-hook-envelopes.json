@@ -203,7 +203,7 @@
       "max_bytes": 8192,
       "provenance_required": true
     },
-    "claude-governance-friction": {
+    "claude-governance-handoff": {
       "allowed_operations": [
         "resolve",
         "health",
@@ -219,7 +219,7 @@
         "cursor-governance"
       ],
       "callers": [
-        "environment/agents/adapters/claude-code/hooks/memory_writeback.py (governance_friction from the post-publish handoff)"
+        "environment/agents/adapters/claude-code/hooks/governance_handoff_writeback.py (post-publish governance handoff: l9.governance_handoff.v1 + receipt-copied degradation, one record, cursor-governance only)"
       ]
     }
   },
