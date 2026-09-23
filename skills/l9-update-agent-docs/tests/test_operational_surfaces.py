@@ -78,26 +78,45 @@ def test_makefile_analyzer_detects_missing_literal_script(tmp_path: Path) -> Non
     assert any(row["rule_id"] == "make.recipe.script_resolution" for row in result["findings"])
 
 
-def test_pyproject_analyzer_detects_interpreter_and_lock_drift(tmp_path: Path) -> None:
+DRIFTED_PYPROJECT = (
+    "[project]\n"
+    'requires-python = ">=3.12"\n\n'
+    "[tool.uv]\n"
+    "package = false\n\n"
+    "[tool.ruff]\n"
+    'target-version = "py311"\n\n'
+    "[tool.mypy]\n"
+    'python_version = "3.11"\n\n'
+    "[tool.pyright]\n"
+    'pythonVersion = "3.11"\n'
+)
+
+
+def rule_ids_for(root: Path) -> list[str]:
+    return [row["rule_id"] for row in analyze_pyproject(root, root / "pyproject.toml")["findings"]]
+
+
+def test_pyproject_analyzer_detects_interpreter_drift(tmp_path: Path) -> None:
     root = tmp_path / "repo"
-    write(
-        root / "pyproject.toml",
-        "[project]\n"
-        'requires-python = ">=3.12"\n\n'
-        "[tool.uv]\n"
-        "package = false\n\n"
-        "[tool.ruff]\n"
-        'target-version = "py311"\n\n'
-        "[tool.mypy]\n"
-        'python_version = "3.11"\n\n'
-        "[tool.pyright]\n"
-        'pythonVersion = "3.11"\n',
-    )
+    write(root / "pyproject.toml", DRIFTED_PYPROJECT)
     result = analyze_pyproject(root, root / "pyproject.toml")
     rule_ids = [row["rule_id"] for row in result["findings"]]
     assert result["status"] == "NEEDS_IMPROVEMENT"
     assert rule_ids.count("python.interpreter.version_alignment") == 3
-    assert "python.uv.lock_presence" in rule_ids
+    # `[tool.uv]` says the project uses uv. uv's own documentation makes no
+    # claim that it commits a lockfile, and `package = false` projects in
+    # particular often do not.
+    assert "python.uv.lock_presence" not in rule_ids
+
+
+def test_uv_lock_requirement_comes_from_declared_repository_automation(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    write(root / "pyproject.toml", DRIFTED_PYPROJECT)
+    write(root / "Makefile", "uv-lock-check:\n\tuv lock --check\n")
+    assert "python.uv.lock_presence" in rule_ids_for(root)
+
+    write(root / "uv.lock", "# locked\n")
+    assert "python.uv.lock_presence" not in rule_ids_for(root)
 
 
 def test_assessment_separates_ownership_and_derives_root_guard(tmp_path: Path) -> None:

@@ -1,20 +1,20 @@
-# Module README map for readme-pipeline-v1.
-# SSOT for scripts/generate_subsystem_readmes.py.
+# Optional semantic and presentation overlay for README targets that
+# `filetree.md` already authorizes.
+#
+# This file is NOT a topology authority. It cannot create a target the
+# current inventory does not contain — a configured path with no
+# authorized target is reported as stale (`readme.config.unauthorized_target`)
+# rather than honoured. Supported per-target keys: path, title, tier,
+# description, purpose, skip.
+#
 # Root README.md is never a generate target (owned by l9-update-agent-docs pointer stack).
 version: "1.0"
 defaults:
   owner: l9-update-agent-docs
-  sections:
-    purpose:
-      required: true
-    components:
-      required: true
-    functions:
-      required: false
-    exports:
-      required: false
-    dependencies:
-      required: false
+  # `sections` is retired. With kind-specific renderers there is no section
+  # list every kind can carry, and requiring one is what produced
+  # `_No public classes in this path._`: the old template emitted filler to
+  # satisfy this map. Sections are now gated on evidence.
 subsystems:
   ops_autonomy:
     path: ops/autonomy
@@ -60,6 +60,12 @@ subsystems:
     tier: control_plane
     description: Always-on and requestable .mdc rules.
     purpose: Bind agent behavior without a second governance tree.
+    # Suppressed: ops/scripts/check_rules_standard.py fails closed on any
+    # `.md` in rules/ except RULES-MANIFEST*, because Cursor ignores them.
+    # A generated README here breaks governance-self-check. This is
+    # repository policy, so it is stated in the overlay rather than taught
+    # to the compiler.
+    skip: true
   kernels:
     path: kernels
     title: Alignment kernels

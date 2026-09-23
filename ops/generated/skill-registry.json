@@ -1,5 +1,5 @@
 {
-  "generation_id": "6751c666538407ec3aab5fea00c656412dbcc89c729b3dcb7d0efe0e5129943f",
+  "generation_id": "c6fbe0b380b161e153529c34dd4d8604c205860661715134d2146ebc434549b3",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1582,7 +1582,7 @@
       "path": "skills/l9-update-agent-docs",
       "reason": "",
       "skill_md": "skills/l9-update-agent-docs/SKILL.md",
-      "skill_sha256": "2e95a2eb6ab0fc2aed5632130660f1cc8d3ec34b7dbad8ce1b0028694019c473",
+      "skill_sha256": "cf9f4b25de226965aa98a48a3004cc4335755fd8f25432835ecc3648f58ef804",
       "user_invocable": true,
       "when_to_use": "refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes, or creating root CLAUDE.md / INVARIANTS.md when missing"
     },
@@ -1615,5 +1615,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "2cc1c76dd45b8a970c3ecabce7a832b7d5c9f8b6fc36cb56bb15cd69d7269c5b",
-  "source_skill_corpus_sha256": "2d50597dade09ffdfe3925350eba12507c6440440758257ccca6b8d00330b06c"
+  "source_skill_corpus_sha256": "0d56bc36580c928b15527f322cee633e9cfad2f5556f6dc016dea37c8c4c059b"
 }

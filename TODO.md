@@ -1,5 +1,12 @@
 ## Issue unblock (session reference)
 
+**Cluster:** Quantum-L9/Cursor-Governance#493
+**Owning fix:** https://github.com/Quantum-L9/Cursor-Governance/pull/629
+**Next:** none — Infisical-native HMAC bind; do not create AWS SM
+**Pickup:** Graphiti PICKUP written 2026-09-20 record 121d7999-5239-4c54-a2b2-32e25b7beba1
+
+## Issue unblock (session reference)
+
 **Cluster:** Quantum-L9/Cursor-Governance#597
 **Owning fix:** https://github.com/Quantum-L9/Cursor-Governance/pull/585 head 4bd0a6b2250269fdaed3fc34330399c71b300421
 **Next:** PR 585 MERGEABLE after origin/main merge; digest rebound still BLOCKED inspect-only
