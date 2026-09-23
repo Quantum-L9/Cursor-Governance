@@ -772,6 +772,19 @@ def _uv_version() -> str:
     return match.group(1) if match else ""
 
 
+def _bootstrap_binding(bootstrap: dict[str, Any] | None) -> str:
+    """Identity of the bootstrap receipt a readiness receipt was built from.
+
+    The bootstrap ceremony generates a new bootstrap receipt every session, and
+    MCP_status is read from it. A readiness receipt reused across that boundary
+    would report the previous bootstrap's receipt as this one's, so reuse is
+    bound to this identity: ceremony id plus write instant.
+    """
+    if not isinstance(bootstrap, dict):
+        return ""
+    return f"{bootstrap.get('bootstrap_id') or ''}@{bootstrap.get('generated_at') or ''}"
+
+
 def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> dict[str, Any]:
     gov = gov or _gov_root()
     workspace = workspace or os.environ.get("CURSOR_PROJECT_DIR") or os.getcwd()
@@ -874,6 +887,7 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
         # Observation, not a dims entry — see MEMORY_TRANSPORT. The transport
         # is a constant posture: stdio to the bound runtime, no URL, no bearer.
         "memory_transport": _memory_transport(),
+        "bootstrap_receipt": _bootstrap_binding(bootstrap),
     }
     receipt.update(dims)
     receipt["overall_readiness"] = overall
@@ -944,8 +958,9 @@ def reusable_receipt(
     by its own TTL (`receipt_freshness`), must describe this workspace, and must
     carry the governance SHA checked out right now — a moved SHA rebuilt the
     projected artifacts the receipt describes, so the SHA is the stronger
-    binding and is checked even while the clock still says fresh. Anything
-    else returns None and the caller rebuilds.
+    binding and is checked even while the clock still says fresh — and must
+    have been built from the bootstrap receipt on disk now (`_bootstrap_binding`).
+    Anything else returns None and the caller rebuilds.
 
     Why it exists: the memory diagnostics probe alone costs ~5 s of a 30 s
     SessionStart hook, and every SessionStart (startup, resume, compaction)
@@ -961,6 +976,11 @@ def reusable_receipt(
         return None
     live = _git(gov, "rev-parse", "HEAD")
     if not live or str(existing.get("governance_SHA") or "") != live:
+        return None
+    # Built from a different bootstrap receipt than the one on disk now: the
+    # ceremony generated a new receipt since, and that is the one to read.
+    current = _bootstrap_binding(_read_json(Path.home() / ".l9" / "claude" / "bootstrap-state.json"))
+    if str(existing.get("bootstrap_receipt") or "") != current:
         return None
     return existing
 

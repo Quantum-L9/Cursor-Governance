@@ -841,6 +841,7 @@ def test_reusable_receipt_requires_fresh_same_workspace_and_live_sha(
     from datetime import UTC, datetime, timedelta
 
     gov = tmp_path / "gov"
+    monkeypatch.setenv("HOME", str(tmp_path))  # no bootstrap receipt on disk
     monkeypatch.setattr(er, "_git", lambda _g, *a: "abc123" if a == ("rev-parse", "HEAD") else "")
     receipt = _fresh_receipt()
 
@@ -859,6 +860,35 @@ def test_reusable_receipt_requires_fresh_same_workspace_and_live_sha(
     assert er.reusable_receipt(receipt, gov=gov, workspace="/ws") is None
 
 
+def test_reusable_receipt_is_bound_to_the_bootstrap_receipt_on_disk(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """A readiness receipt built from an earlier bootstrap receipt is not reused.
+
+    Every bootstrap ceremony generates a new bootstrap receipt, and MCP_status
+    is read from it. Reusing a readiness receipt across that boundary would
+    report the previous bootstrap's receipt as this one's.
+    """
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setattr(er, "_git", lambda _g, *a: "abc123" if a == ("rev-parse", "HEAD") else "")
+    state = tmp_path / ".l9" / "claude" / "bootstrap-state.json"
+    state.parent.mkdir(parents=True)
+    state.write_text(
+        json.dumps({"bootstrap_id": "ceremony-1", "generated_at": "2026-09-23T17:00:00Z"}),
+        encoding="utf-8",
+    )
+    built_here = {**_fresh_receipt(), "bootstrap_receipt": "ceremony-1@2026-09-23T17:00:00Z"}
+    assert er.reusable_receipt(built_here, gov=tmp_path, workspace="/ws") is built_here
+
+    state.write_text(
+        json.dumps({"bootstrap_id": "ceremony-2", "generated_at": "2026-09-23T17:30:00Z"}),
+        encoding="utf-8",
+    )
+    assert er.reusable_receipt(built_here, gov=tmp_path, workspace="/ws") is None
+    # A readiness receipt predating the binding cannot vouch for any bootstrap.
+    assert er.reusable_receipt(_fresh_receipt(), gov=tmp_path, workspace="/ws") is None
+
+
 def test_compact_names_the_receipt_source() -> None:
     receipt = _fresh_receipt()
     assert "receipt_source=rebuilt" in er._compact(receipt)
@@ -873,6 +903,7 @@ def test_reuse_fresh_skips_every_probe_and_leaves_the_file_untouched(
     receipt = _fresh_receipt(workspace=str(tmp_path))
     path.write_text(json.dumps(receipt) + "\n", encoding="utf-8")
     before = path.read_bytes()
+    monkeypatch.setenv("HOME", str(tmp_path))  # no bootstrap receipt on disk
     monkeypatch.setenv("L9_READINESS_RECEIPT_FILE", str(path))
     monkeypatch.setattr(er, "_git", lambda _g, *a: "abc123" if a == ("rev-parse", "HEAD") else "")
 

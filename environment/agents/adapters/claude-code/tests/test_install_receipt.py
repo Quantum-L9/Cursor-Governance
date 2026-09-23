@@ -18,6 +18,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[5]
@@ -122,6 +123,20 @@ class InstallReceiptTests(unittest.TestCase):
         self.assertIsInstance(parsed["ttl_seconds"], int)
         self.assertIsInstance(parsed.get("reasons"), dict)
         self.assertIn("log_path", parsed)
+
+    def test_receipt_carries_the_ceremony_id_that_generated_it(self) -> None:
+        """SessionStart reads back only the receipt its own ceremony stamped."""
+        (self.gov / "CANONICAL_LAW.md").write_text("synthetic", encoding="utf-8")
+        with mock.patch.dict(os.environ, {"L9_BOOTSTRAP_ID": "1790184611-4242-7"}):
+            self._run()
+        self.assertEqual(self._receipt()["bootstrap_id"], "1790184611-4242-7")
+
+    def test_receipt_outside_a_ceremony_carries_an_empty_id(self) -> None:
+        (self.gov / "CANONICAL_LAW.md").write_text("synthetic", encoding="utf-8")
+        env = {k: v for k, v in os.environ.items() if k != "L9_BOOTSTRAP_ID"}
+        with mock.patch.dict(os.environ, env, clear=True):
+            self._run()
+        self.assertEqual(self._receipt()["bootstrap_id"], "")
 
     def test_non_repository_workspace_is_blocked_not_ready(self) -> None:
         (self.gov / "CANONICAL_LAW.md").write_text("synthetic", encoding="utf-8")
