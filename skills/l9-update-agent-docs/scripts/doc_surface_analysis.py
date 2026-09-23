@@ -184,7 +184,9 @@ def assess_surface_obligations(
 
         analyzer_id = str(analysis.get("analyzer") or "")
         target_rel = obligation["target"].get("path")
-        if not target_rel or not obligation["target"].get("present"):
+        if not target_rel or (
+            not obligation["target"].get("present") and analyzer_id != ADR_ANALYZER_ID
+        ):
             obligation["assessment"] = {
                 "analyzer": analyzer_id or None,
                 "status": "NOT_APPLICABLE",

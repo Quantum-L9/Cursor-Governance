@@ -14,7 +14,7 @@ import hashlib
 import json
 import re
 from datetime import date
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 ADR_CATALOG_SCHEMA = "l9.repo-docs.adr-catalog.v1"
@@ -29,12 +29,13 @@ __all__ = [
 ]
 
 _ADR_PATHS = ("docs/adr", "docs/decisions")
-_ADR_FILENAME = re.compile(r"^ADR-(?P<number>\d{3,})(?:[-_].+)?\.md$")
-_TITLE = re.compile(r"^#\s+ADR-(?P<number>\d+):\s+(?P<title>\S.*)\s*$", re.MULTILINE)
+_ADR_FILENAME = re.compile(r"^(?:ADR-)?(?P<number>\d{3,})(?:[-_].+)?\.md$")
+_TITLE = re.compile(r"^#\s+(?:ADR-)?(?P<number>\d+):\s+(?P<title>\S.*)\s*$", re.MULTILINE)
 _H2 = re.compile(r"^##\s+(?P<heading>.+?)\s*#*\s*$", re.MULTILINE)
 _NUMBERED_OPTION = re.compile(r"^\s*\d+[.)]\s+\S", re.MULTILINE)
 _OPTION_HEADING = re.compile(r"^###\s+\S", re.MULTILINE)
 _ADR_REFERENCE = re.compile(r"\bADR-(\d{3,})\b", re.IGNORECASE)
+_CALENDAR_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _ALLOWED_STATUSES = frozenset({"proposed", "accepted", "deprecated"})
 
 
@@ -84,6 +85,34 @@ def _first_content_line(text: str) -> str | None:
     return next((line.strip() for line in text.splitlines() if line.strip()), None)
 
 
+def _active_adr_paths(changed_files: list[str]) -> set[str]:
+    """Return only declared ADR record paths from a change scope.
+
+    The compiler receives Git path names, not an invitation to traverse the
+    filesystem.  Retaining removed ADR paths here makes deletion observable
+    even though no current-worktree file remains to enumerate.
+    """
+    active: set[str] = set()
+    for value in changed_files:
+        candidate = PurePosixPath(value)
+        if candidate.is_absolute() or ".." in candidate.parts or len(candidate.parts) != 3:
+            continue
+        if candidate.parts[:2] not in {("docs", "adr"), ("docs", "decisions")}:
+            continue
+        if _ADR_FILENAME.fullmatch(candidate.name):
+            active.add(candidate.as_posix())
+    return active
+
+
+def _resolves_under_root(root: Path, path: Path) -> bool:
+    """Return whether a source resolves inside the audited repository root."""
+    try:
+        path.resolve(strict=False).relative_to(root.resolve())
+    except (OSError, ValueError):
+        return False
+    return True
+
+
 def _record_paths(root: Path) -> list[Path]:
     records: list[Path] = []
     for directory in _ADR_PATHS:
@@ -104,6 +133,30 @@ def _parse_record(root: Path, path: Path, *, active: bool) -> dict[str, Any]:
     assert filename is not None
     number = filename.group("number")
     findings: list[dict[str, Any]] = []
+    if not _resolves_under_root(root, path):
+        findings.append(
+            _finding(
+                "adr.file.symlink_boundary",
+                property_name="ADR source boundary",
+                observed="ADR path resolves outside the audited repository root",
+                expected="an ADR source that resolves inside the audited repository root",
+                source=rel,
+                line=None,
+                severity="blocking",
+            )
+        )
+        return {
+            "path": rel,
+            "present": True,
+            "number": number,
+            "title": None,
+            "status": None,
+            "date": None,
+            "headings": [],
+            "content_digest": None,
+            "active": active,
+            "validation": {"status": "BLOCKED", "findings": findings},
+        }
     try:
         raw = path.read_bytes()
         text = raw.decode("utf-8")
@@ -121,6 +174,7 @@ def _parse_record(root: Path, path: Path, *, active: bool) -> dict[str, Any]:
         )
         return {
             "path": rel,
+            "present": True,
             "number": number,
             "title": None,
             "status": None,
@@ -204,6 +258,8 @@ def _parse_record(root: Path, path: Path, *, active: bool) -> dict[str, Any]:
         )
     else:
         try:
+            if not _CALENDAR_DATE.fullmatch(date_value):
+                raise ValueError("date must use YYYY-MM-DD")
             date.fromisoformat(date_value)
         except ValueError:
             findings.append(
@@ -262,6 +318,7 @@ def _parse_record(root: Path, path: Path, *, active: bool) -> dict[str, Any]:
 
     return {
         "path": rel,
+        "present": True,
         "number": number,
         "title": title,
         "status": status,
@@ -276,11 +333,40 @@ def _parse_record(root: Path, path: Path, *, active: bool) -> dict[str, Any]:
     }
 
 
+def _deleted_record(rel: str) -> dict[str, Any]:
+    """Compile an active ADR deletion into handoff evidence without reading it."""
+    filename = _ADR_FILENAME.fullmatch(PurePosixPath(rel).name)
+    assert filename is not None
+    number = filename.group("number")
+    finding = _finding(
+        "adr.record.presence",
+        property_name="ADR source presence",
+        observed="record is absent from the evaluated repository revision",
+        expected="an ADR record retained at the active policy-declared path",
+        source=rel,
+        line=None,
+    )
+    return {
+        "path": rel,
+        "present": False,
+        "number": number,
+        "title": None,
+        "status": None,
+        "date": None,
+        "headings": [],
+        "content_digest": None,
+        "active": True,
+        "validation": {"status": "NEEDS_IMPROVEMENT", "findings": [finding]},
+    }
+
+
 def _catalog_findings(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Attach cross-record findings to the affected ADRs only."""
     findings: list[dict[str, Any]] = []
     by_number: dict[str, list[dict[str, Any]]] = {}
     for record in records:
+        if not record["present"]:
+            continue
         by_number.setdefault(str(record["number"]), []).append(record)
     known_numbers = set(by_number)
     for number, rows in sorted(by_number.items(), key=lambda item: int(item[0])):
@@ -331,11 +417,14 @@ def compile_adr_catalog(root: Path, *, changed_files: list[str]) -> dict[str, An
     demands a wholesale decision-history rewrite.
     """
     root = root.resolve()
-    active_paths = set(changed_files)
+    active_paths = _active_adr_paths(changed_files)
     records = [
         _parse_record(root, path, active=path.relative_to(root).as_posix() in active_paths)
         for path in _record_paths(root)
     ]
+    observed_paths = {record["path"] for record in records}
+    records.extend(_deleted_record(rel) for rel in sorted(active_paths - observed_paths))
+    records.sort(key=lambda row: str(row["path"]))
     findings = [finding for record in records for finding in record["validation"]["findings"]]
     findings.extend(_catalog_findings(records))
     active_findings = [
@@ -366,7 +455,7 @@ def compile_adr_catalog(root: Path, *, changed_files: list[str]) -> dict[str, An
         ],
         "conventions": {
             "directories": list(_ADR_PATHS),
-            "filename": "ADR-NNN[-slug].md",
+            "filename": "ADR-NNN[-slug].md or NNN[-slug].md",
             "active_contract": [
                 "title",
                 "status",

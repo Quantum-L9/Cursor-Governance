@@ -199,6 +199,28 @@ def test_policy_and_receipt_contracts_are_deeply_executable(tmp_path: Path):
     assert rd.validate_receipt_shape(broken_receipt)
 
 
+def test_receipt_validation_dispatches_current_and_legacy_versions(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    commit(root, "base")
+
+    current = rd.audit_repository(root)
+    assert current["schema"] == rd.RECEIPT_ID
+    assert rd.validate_receipt_shape(current) == []
+
+    legacy = copy.deepcopy(current)
+    legacy["schema"] = rd.LEGACY_RECEIPT_ID
+    legacy.pop("adr_catalog")
+    assert rd.validate_receipt_shape(legacy) == []
+
+    legacy["schema"] = "l9.repo-docs.receipt.v999"
+    assert rd.validate_receipt_shape(legacy) == [
+        "schema: unsupported receipt schema 'l9.repo-docs.receipt.v999'"
+    ]
+
+
 def test_workflow_change_compiles_target_resolved_semantic_obligations(tmp_path: Path):
     root = tmp_path / "repo"
     root.mkdir()

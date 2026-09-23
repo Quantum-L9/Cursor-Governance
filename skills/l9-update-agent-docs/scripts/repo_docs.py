@@ -44,6 +44,7 @@ from doc_obligations import (
     validate_and_close_obligations,
 )
 from doc_policy import (
+    LEGACY_RECEIPT_V3_SCHEMA,
     LLM_SURFACE_ID,
     RECEIPT_SCHEMA,
     adapter_directives,
@@ -63,7 +64,8 @@ from doc_surface_analysis import assess_surface_obligations
 from generate_module_readmes import apply_module_readme_plan, plan_module_readmes
 from root_contracts import architecture_delta, assess_architecture_index, assess_root_agent_contract
 
-RECEIPT_ID = "l9.repo-docs.receipt.v3"
+RECEIPT_ID = "l9.repo-docs.receipt.v4"
+LEGACY_RECEIPT_ID = "l9.repo-docs.receipt.v3"
 PACK = Path(__file__).resolve().parents[1]
 
 
@@ -357,7 +359,12 @@ def _status_with_structural(obligation_status: str, failures: list[dict[str, str
 
 
 def validate_receipt_shape(receipt: dict[str, Any]) -> list[str]:
-    return schema_errors(receipt, RECEIPT_SCHEMA)
+    schema = receipt.get("schema")
+    if schema == RECEIPT_ID:
+        return schema_errors(receipt, RECEIPT_SCHEMA)
+    if schema == LEGACY_RECEIPT_ID:
+        return schema_errors(receipt, LEGACY_RECEIPT_V3_SCHEMA)
+    return [f"schema: unsupported receipt schema {schema!r}"]
 
 
 def audit_repository(

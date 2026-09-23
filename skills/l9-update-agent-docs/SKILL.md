@@ -8,8 +8,8 @@ metadata:
   tags: [l9, docs, obligations, agents, ci, maintenance]
   owner: igor_beylin
   status: active
-  version: 3.10.0
-  updated: 2026-09-22
+  version: 4.0.0
+  updated: 2026-09-23
   when_to_use: compile documentation obligations after repository changes, assess supported operational contract surfaces, refresh governed documentation through its canonical owner, or prove closure with a machine receipt
 ---
 
@@ -53,12 +53,13 @@ Machine authority:
 - consumer snapshot: `scripts/consumer_snapshot.py`
 - root contracts: `scripts/root_contracts.py`
 - ADR catalog compiler: `scripts/adr_compile.py`
+- ADR alignment invariants: `references/adr-catalog-alignment.md`
 - filetree generator: `scripts/doc_filetree.py`
 - module README generator: `scripts/generate_module_readmes.py`
 - operational assessment registry: `scripts/doc_surface_analysis.py`
 - compatibility CLI: `scripts/validate_pointer_headings.py`
 
-`l9.repo-docs.receipt.v3` derives PASS/PARTIAL/BLOCKED from obligation terminality plus structural validation failures. Aggregate impact/capability/Harvest fields are diagnostics and provenance, not competing obligation truth.
+`l9.repo-docs.receipt.v4` derives PASS/PARTIAL/BLOCKED from obligation terminality plus structural validation failures. Aggregate impact/capability/Harvest fields are diagnostics and provenance, not competing obligation truth. The validator retains `l9.repo-docs.receipt.v3` dispatch for stored receipts; adding a required receipt field is a major schema transition, never a silent mutation of the prior contract.
 
 ## Ownership boundaries
 
@@ -147,6 +148,15 @@ compilation and the ADR authoring skill. It scans only policy-declared
 the receipt, and validates the ADR skill's existing title, status, ISO date,
 context, options, decision, consequences, unique-number, and supersession-link
 contract. The component does not import, invoke, or duplicate the ADR skill.
+
+ADR alignment invariants are concrete and test-bound: active ADR paths are
+derived from the Git change set (so a deletion remains a handoff target), both
+established `ADR-NNN[-slug].md` and `NNN[-slug].md` conventions are accepted,
+the date is exactly `YYYY-MM-DD`, and no ADR path may resolve through a symlink
+outside the audited root. Historical records remain compatibility evidence.
+An active violation produces a specialist handoff and the governance CI gate
+fails closed; unrelated non-terminal documentation obligations remain within
+the explicitly advisory pilot boundary.
 
 Existing decision history is compatibility evidence, not a migration demand.
 Historical records remain visible as `PARTIAL` catalog evidence but are never

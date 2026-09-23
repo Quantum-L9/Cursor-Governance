@@ -97,6 +97,17 @@ def test_catalog_accepts_active_contract_and_stays_observation_only(tmp_path: Pa
     assert path.read_bytes() == before
 
 
+def test_catalog_accepts_established_nonprefixed_adr_filename(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    path = root / "docs/decisions/001-compatible.md"
+    write(path, valid_adr(1).replace("# ADR-001:", "# 001:"))
+
+    catalog = compile_adr_catalog(root, changed_files=["docs/decisions/001-compatible.md"])
+
+    assert catalog["status"] == "PASS"
+    assert catalog["records"][0]["number"] == "001"
+
+
 def test_historical_compatibility_is_visible_but_not_retroactively_enforced(tmp_path: Path) -> None:
     root = tmp_path / "repo"
     path = root / "docs/decisions/ADR-001-historical.md"
@@ -130,6 +141,62 @@ def test_active_nonconformant_adr_requires_authoring_skill_handoff(tmp_path: Pat
         "adr.section.consequences",
     }
     assert {item["remediation_class"] for item in assessment["findings"]} == {"HANDOFF"}
+
+
+def test_active_deleted_adr_remains_visible_as_specialist_handoff(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    adr = root / "docs/decisions/ADR-001-retained.md"
+    write(adr, valid_adr(1))
+    base = commit(root, "record decision")
+    adr.unlink()
+    commit(root, "delete decision")
+
+    receipt = audit_repository(root, changed_since=base)
+    record = receipt["adr_catalog"]["records"][0]
+    obligation = next(item for item in receipt["obligations"] if item["surface"] == "adrs")
+
+    assert receipt["adr_catalog"]["status"] == "FAIL"
+    assert record["present"] is False
+    assert record["active"] is True
+    assert {finding["rule_id"] for finding in record["validation"]["findings"]} == {
+        "adr.record.presence"
+    }
+    assert obligation["target"]["path"] == "docs/decisions/ADR-001-retained.md"
+    assert obligation["assessment"]["disposition"] == "HANDOFF"
+
+
+def test_active_adr_symlink_escape_is_blocked_without_reading_external_source(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo"
+    outside = tmp_path / "outside.md"
+    write(outside, valid_adr(1))
+    path = root / "docs/decisions/ADR-001-escaped.md"
+    path.parent.mkdir(parents=True)
+    path.symlink_to(outside)
+
+    catalog = compile_adr_catalog(root, changed_files=["docs/decisions/ADR-001-escaped.md"])
+    record = catalog["records"][0]
+
+    assert catalog["status"] == "FAIL"
+    assert record["validation"]["status"] == "BLOCKED"
+    assert record["content_digest"] is None
+    assert {finding["rule_id"] for finding in record["validation"]["findings"]} == {
+        "adr.file.symlink_boundary"
+    }
+
+
+def test_active_adr_rejects_non_calendar_date_forms(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    path = root / "docs/decisions/ADR-001-date.md"
+    write(path, valid_adr(1).replace("2026-09-22", "2026-09-22T00:00:00"))
+
+    catalog = compile_adr_catalog(root, changed_files=["docs/decisions/ADR-001-date.md"])
+
+    assert catalog["status"] == "FAIL"
+    assert "adr.date.iso8601" in {finding["rule_id"] for finding in catalog["findings"]}
 
 
 def test_active_duplicate_numbers_and_broken_supersession_are_rejected(tmp_path: Path) -> None:
