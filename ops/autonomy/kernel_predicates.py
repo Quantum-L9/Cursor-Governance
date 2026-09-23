@@ -170,6 +170,19 @@ __all__ = [
 ]
 
 
+def relative_path(raw: str) -> str:
+    """Normalize a workspace-relative path by removing leading ``./`` prefixes.
+
+    ``str.lstrip("./")`` is not this: it strips every leading ``.`` and ``/``
+    character, turning ``.github/x`` into ``github/x`` and
+    ``.l9/autonomy/kernel-apply.md`` into ``l9/autonomy/kernel-apply.md``.
+    """
+    path = raw.strip()
+    while path.startswith("./"):
+        path = path[2:]
+    return path
+
+
 def confine_report_path(root: Path, report: Path) -> Path:
     """Resolve report and refuse any path that leaves workspace/.l9/autonomy/."""
     root_r = root.resolve()
@@ -271,9 +284,7 @@ def delta_paths_exist(root: Path, deltas: list[dict[str, str]]) -> list[str]:
     errors: list[str] = []
     root_r = root.resolve()
     for item in deltas:
-        rel = item["path"].strip()
-        if rel.startswith("./"):
-            rel = rel[2:]
+        rel = relative_path(item["path"])
         parts = Path(rel).parts
         if not rel or rel.startswith("/") or ".." in parts:
             errors.append(f"delta path is not workspace-relative: {item['path']}")
@@ -330,8 +341,8 @@ def _is_exempt_path(rel: str) -> bool:
 def deltas_cover_diff(deltas: list[dict[str, str]], changed_paths: list[str]) -> list[str]:
     """Check that deltas cover all changed paths (minus exempt prefixes)."""
     errors: list[str] = []
-    delta_paths = {item["path"].strip().lstrip("./") for item in deltas}
-    changed_set = {p.strip().lstrip("./") for p in changed_paths if p.strip()}
+    delta_paths = {relative_path(item["path"]) for item in deltas}
+    changed_set = {relative_path(p) for p in changed_paths if p.strip()}
 
     # Paths in the change set that are not exempt must appear in deltas
     for path in changed_set:
@@ -420,7 +431,7 @@ def no_duplicate_delta_paths(deltas: list[dict[str, str]]) -> list[str]:
     errors: list[str] = []
     seen: set[str] = set()
     for item in deltas:
-        path = item.get("path", "").strip().lstrip("./")
+        path = relative_path(item.get("path", ""))
         if not path:
             continue
         if path in seen:
@@ -572,7 +583,7 @@ def finding_paths_exist(root: Path, findings: list[dict[str, Any]]) -> list[str]
     errors: list[str] = []
     root_r = root.resolve()
     for finding in findings:
-        path = finding.get("path", "").strip().lstrip("./")
+        path = relative_path(finding.get("path", ""))
         if not path:
             continue
         candidate = root_r / path
@@ -843,11 +854,11 @@ def seed_findings(changed_paths: list[str]) -> list[dict[str, Any]]:
         List of seed finding dictionaries
     """
     seeds: list[dict[str, Any]] = []
-    changed_set = {p.strip().lstrip("./") for p in changed_paths if p.strip()}
+    changed_set = {relative_path(p) for p in changed_paths if p.strip()}
     seen_paths: set[str] = set()
 
     for raw_path in changed_paths:
-        path = raw_path.strip().lstrip("./")
+        path = relative_path(raw_path)
         if not path:
             continue
 

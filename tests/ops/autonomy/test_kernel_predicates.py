@@ -809,3 +809,53 @@ def test_seed_findings_present_empty_seeds_passes() -> None:
     findings: list[dict[str, Any]] = []
     errors = preds.seed_findings_present(findings, seeds)
     assert errors == []
+
+
+# --- Leading-dot paths (./ prefix removal, not character stripping) ----------
+#
+# `str.lstrip("./")` strips any run of "." and "/" characters, so
+# `.l9/autonomy/kernel-apply.md` became `l9/autonomy/kernel-apply.md` and
+# `.github/...` became `github/...`. The report-as-delta allowance never
+# matched and dot-directory finding paths could never exist.
+
+
+def test_relative_path_removes_only_a_dot_slash_prefix() -> None:
+    preds = _preds()
+    assert preds.relative_path("./a.py") == "a.py"
+    assert preds.relative_path("././a.py") == "a.py"
+    assert preds.relative_path("  .github/workflows/ci.yml ") == ".github/workflows/ci.yml"
+    assert preds.relative_path(".l9/autonomy/kernel-apply.md") == ".l9/autonomy/kernel-apply.md"
+    assert preds.relative_path("../escape.py") == "../escape.py"
+
+
+def test_deltas_cover_diff_allows_the_apply_report_as_a_delta() -> None:
+    preds = _preds()
+    deltas = [
+        {"path": "tests/test_x.py", "kernel": "validate_repair", "note": "n"},
+        {"path": ".l9/autonomy/kernel-apply.md", "kernel": "recursive_alignment", "note": "n"},
+    ]
+    assert preds.deltas_cover_diff(deltas, ["tests/test_x.py"]) == []
+
+
+def test_deltas_cover_diff_matches_dot_directory_paths() -> None:
+    preds = _preds()
+    deltas = [{"path": ".github/workflows/ci.yml", "kernel": "validate_repair", "note": "n"}]
+    assert preds.deltas_cover_diff(deltas, ["./.github/workflows/ci.yml"]) == []
+    errors = preds.deltas_cover_diff(deltas, ["github/workflows/ci.yml"])
+    assert "changed path not in deltas: github/workflows/ci.yml" in errors
+
+
+def test_duplicate_delta_paths_keep_the_leading_dot() -> None:
+    preds = _preds()
+    deltas = [
+        {"path": ".github/a.yml", "kernel": "validate_repair", "note": "n"},
+        {"path": "github/a.yml", "kernel": "recursive_alignment", "note": "n"},
+    ]
+    assert preds.no_duplicate_delta_paths(deltas) == []
+
+
+def test_finding_paths_exist_resolves_dot_directory_paths(tmp_path: Path) -> None:
+    preds = _preds()
+    (tmp_path / ".github").mkdir()
+    (tmp_path / ".github" / "ci.yml").write_text("on: push\n", encoding="utf-8")
+    assert preds.finding_paths_exist(tmp_path, [{"path": ".github/ci.yml"}]) == []
