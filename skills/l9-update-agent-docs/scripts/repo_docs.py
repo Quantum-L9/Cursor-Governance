@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from adr_compile import compile_adr_catalog
+from adr_compile import format_findings as format_adr_findings
 from compile_semantic_obligations import compile_harvest_evidence
 from consumer_snapshot import build_consumer_snapshot
 from doc_change import (
@@ -407,6 +409,7 @@ def audit_repository(
     )
     impact = impact_analysis(policy, changed_files)
     snapshot = build_consumer_snapshot(root, policy, revision, changed_files=changed_files)
+    adr_catalog = compile_adr_catalog(root, changed_files=changed_files)
     root_contracts = root_contract_validation(root, snapshot)
     impact_internal = dict(impact)
     impact_internal["all_changed_files"] = changed_files
@@ -547,7 +550,13 @@ def audit_repository(
             changed_files=changed_files,
             run_mutations=run_mutations,
         )
-    obligations = assess_surface_obligations(root, policy, obligations, snapshot=snapshot)
+    obligations = assess_surface_obligations(
+        root,
+        policy,
+        obligations,
+        snapshot=snapshot,
+        adr_catalog=adr_catalog,
+    )
     obligations = validate_and_close_obligations(
         obligations, changed_files=changed_files, run_mutations=run_mutations
     )
@@ -576,6 +585,11 @@ def audit_repository(
             "name": "root_contracts",
             "status": root_contracts["status"],
             "findings": root_contracts["findings"],
+        },
+        {
+            "name": "adr_catalog",
+            "status": adr_catalog["status"],
+            "findings": format_adr_findings(adr_catalog),
         },
         {"name": "managed_regions", "status": managed_status, "findings": managed_findings},
         {
@@ -620,6 +634,7 @@ def audit_repository(
         "impact": impact,
         "consumer_snapshot": snapshot,
         "architecture_delta": architecture_delta(snapshot),
+        "adr_catalog": adr_catalog,
         "surfaces": surfaces,
         "obligations": obligations,
         "summary": summary,

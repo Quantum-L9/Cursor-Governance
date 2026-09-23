@@ -248,10 +248,19 @@ surfaces:
     selectors: [docs/adr/README.md, 'docs/adr/*.md', 'docs/decisions/*.md']
     create_policy: external_only
     refresh_policy: external_only
-    generator: specialist_skill
+    generator: skill:scripts/adr_compile.py
     evidence_sources: [docs/adr, docs/decisions]
     prohibited_mutations: [author_decisions_in_repo_docs_skill, rewrite_decision_history]
     llm_include: true
+    kind: operational_contract
+    ownership:
+      semantic_owner: l9-architecture-decision-records
+      execution_owner: l9-architecture-decision-records
+    analysis:
+      analyzer: adr-catalog-contract-v1
+      mode: deterministic_first
+    mutation:
+      guard: external-owner
   api_reference:
     owner: repository-api-docs-owner
     role: API reference
@@ -286,6 +295,9 @@ impact_rules:
     patterns: ['**/*.py', '**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx', '**/*.xml', '**/*.sh', '**/*.tf', Dockerfile, '**/Dockerfile']
     exclude_patterns: ['tests/**', '**/tests/**', 'docs/**', '**/__pycache__/**']
     surfaces: [module_readmes, filetree]
+  adr_change:
+    patterns: ['docs/adr/*.md', 'docs/decisions/*.md']
+    surfaces: [adrs, llm_txt, filetree]
   docs_topology_change:
     patterns: [README.md, AGENTS.md, CLAUDE.md, ARCHITECTURE.md, INVARIANTS.md, filetree.md, 'docs/**', config/subsystems/readme_config.yaml, skills/l9-update-agent-docs/references/doc-surface-policy.yaml]
     surfaces: [llm_txt, filetree]

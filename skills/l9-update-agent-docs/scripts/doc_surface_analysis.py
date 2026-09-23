@@ -8,6 +8,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from adr_compile import ADR_ANALYZER_ID, assess_adr_catalog
 from root_contracts import assess_architecture_index, assess_root_agent_contract
 from surface_analyzers.makefile import analyze as analyze_makefile
 from surface_analyzers.openapi import analyze as analyze_openapi
@@ -33,7 +34,17 @@ def _snapshot_required_analyzer(_root: Path, _target: Path) -> dict[str, Any]:
     }
 
 
+def _adr_catalog_required_analyzer(_root: Path, _target: Path) -> dict[str, Any]:
+    """Fail closed if an ADR contract reaches generic two-argument dispatch."""
+    return {
+        "status": "BLOCKED",
+        "findings": [],
+        "blockers": ["ADR contract requires deterministic ADR catalog evidence"],
+    }
+
+
 ANALYZERS: dict[str, Analyzer] = {
+    ADR_ANALYZER_ID: _adr_catalog_required_analyzer,
     "architecture-index-contract-v1": _snapshot_required_analyzer,
     "makefile-contract-v1": analyze_makefile,
     "openapi-contract-v1": analyze_openapi,
@@ -158,6 +169,7 @@ def assess_surface_obligations(
     obligations: list[dict[str, Any]],
     *,
     snapshot: dict[str, Any] | None = None,
+    adr_catalog: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Attach deterministic assessment and separated ownership to obligations."""
 
@@ -256,10 +268,28 @@ def assess_surface_obligations(
             }
             obligation["blockers"] = sorted(set(obligation["blockers"] + [detail]))
             continue
+        if analyzer_id == ADR_ANALYZER_ID and not isinstance(adr_catalog, dict):
+            detail = "ADR catalog assessment requires deterministic catalog evidence"
+            obligation["assessment"] = {
+                "analyzer": analyzer_id,
+                "status": "BLOCKED",
+                "findings": [],
+                "disposition": "UNKNOWN",
+                "mutation_guard": guard,
+            }
+            obligation["lifecycle"] = {
+                "status": "BLOCKED",
+                "reason": "ADR catalog evidence is unavailable",
+                "terminal": False,
+            }
+            obligation["blockers"] = sorted(set(obligation["blockers"] + [detail]))
+            continue
         if analyzer_id == "architecture-index-contract-v1":
             result = assess_architecture_index(root, root / target_rel, snapshot)
         elif analyzer_id == "root-agent-contract-v1":
             result = assess_root_agent_contract(root, root / target_rel, snapshot)
+        elif analyzer_id == ADR_ANALYZER_ID:
+            result = assess_adr_catalog(root, root / target_rel, adr_catalog)
         else:
             result = analyzer(root, root / target_rel)
         if result.get("status") == "BLOCKED":

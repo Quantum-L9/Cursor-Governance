@@ -1,5 +1,5 @@
 {
-  "generation_id": "084d46c45df3aee726198c2e172bd447702e439246c6de96d3544aaf24617d55",
+  "generation_id": "6de158696cd431c6a621316f8e8f21f2ee98d35e4c63d440bd1f1f00872ff209",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -880,7 +880,7 @@
       "path": "skills/l9-architecture-decision-records",
       "reason": "",
       "skill_md": "skills/l9-architecture-decision-records/SKILL.md",
-      "skill_sha256": "e5b9b94084e865958e0be0bcb0dd35c0df59e647cdacf4078bbf3335373cee41",
+      "skill_sha256": "f352200d3cd68aac8040eb488279ba13b14b54ccb5eb4fd20d1f8297e3c914ab",
       "user_invocable": true,
       "when_to_use": "capturing a significant architecture/design decision, recording trade-offs, or creating an ADR"
     },
@@ -1575,14 +1575,14 @@
     },
     {
       "composition_role": "primary",
-      "description": "compile repository changes into typed documentation and consumer-contract obligations, assess root-agent, architecture, Makefile, Python, workflow, and OpenAPI surfaces, and emit evidence-bound repo-docs receipts. use when refreshing repo or agent docs, checking consumer operational-contract impact after code/CI changes, generating evidence-backed module READMEs, or proving documentation freshness before merge.",
+      "description": "compile repository changes into typed documentation and consumer-contract obligations, assess root-agent, architecture, ADR, Makefile, Python, workflow, and OpenAPI surfaces, and emit evidence-bound repo-docs receipts. use when refreshing repo or agent docs, checking consumer operational-contract impact after code/CI changes, generating evidence-backed module READMEs, or proving documentation freshness before merge.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-update-agent-docs",
       "path": "skills/l9-update-agent-docs",
       "reason": "",
       "skill_md": "skills/l9-update-agent-docs/SKILL.md",
-      "skill_sha256": "e0f5d3bfbea879ff3fa639541ce8b1dbb959569dbaa2f775919e870717069ce0",
+      "skill_sha256": "7950a3d455d1744c75d26c1cf62629a3bde0e2df03bc436648ff19efdf9883bc",
       "user_invocable": true,
       "when_to_use": "refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes, or creating root CLAUDE.md / INVARIANTS.md when missing"
     },
@@ -1615,5 +1615,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "de4a8b1992a9b8b992e69b2a61f4f369d63a28ef094b8d3443043fe803abd6ae",
-  "source_skill_corpus_sha256": "98be2cd6f5eab16d333724d78f696383c4e135e77acf3c3e200187696f92c79e"
+  "source_skill_corpus_sha256": "3a5658af80aa9d11e633966fa3defcce4d8550a94786296ff3aa8f5b07474f03"
 }

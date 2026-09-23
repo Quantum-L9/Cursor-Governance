@@ -32,6 +32,9 @@ def main() -> int:
         "llms.txt",
         "generator marker",
         "doc_surface_analysis.py",
+        "adr_compile.py",
+        "adr-catalog-contract-v1",
+        "l9-architecture-decision-records",
         "makefile-contract-v1",
         "python-project-contract-v1",
         "root-file-protection.json",
@@ -71,6 +74,8 @@ def main() -> int:
         errors.append("missing generate_module_readmes.py")
     if not (PACK / "scripts" / "doc_filetree.py").is_file():
         errors.append("missing doc_filetree.py")
+    if not (PACK / "scripts" / "adr_compile.py").is_file():
+        errors.append("missing adr_compile.py")
     for path, expected in (
         (OBLIGATION, "l9.repo-docs.obligation.v1"),
         (RECEIPT, "l9.repo-docs.receipt.v3"),
