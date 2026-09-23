@@ -170,6 +170,69 @@ def test_root_agent_contract_rejects_missing_links_and_commands(tmp_path: Path) 
     } <= {row["rule_id"] for row in findings}
 
 
+def _command_findings(root: Path, commands: str) -> list[dict]:
+    write(
+        root / "AGENTS.md",
+        f"# Agents\n\n<!-- L9_AGENT_CONTRACT\ncommands: [{commands}]\n-->\n",
+    )
+    findings = assess_root_agent_contract(root, root / "AGENTS.md", snapshot(root))["findings"]
+    return [row for row in findings if row["rule_id"] == "agents.contract.command_missing"]
+
+
+def test_root_agent_commands_resolve_through_included_make_fragments(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    write(
+        root / "Makefile",
+        "PYTHON := $(CURDIR)/.venv/bin/python\n"
+        "L9_TARGETS := \\\n\thelp\n"
+        "MAKE_FRAGMENTS := \\\n\tops/make/core.mk \\\n\tops/make/publish.mk\n"
+        "include $(MAKE_FRAGMENTS)\n"
+        "-include ops/make/local/*.mk\n"
+        "-include ops/make/optional-absent.mk\n"
+        "help: ## Show help\n\t@echo usage: make help\n",
+    )
+    write(root / "ops/make/core.mk", "start:\n\t@echo start\nL9_TARGETS += start\n")
+    write(
+        root / "ops/make/publish.mk",
+        "pr: export PR_EARLY_OVERLAP = 1\npr: pr-preflight\n\t@echo \\\n    publish: now\n"
+        "pr-preflight:\n\t@true\n",
+    )
+    write(root / "ops/make/local/extra.mk", "extra-check:\n\t@true\n")
+
+    missing = _command_findings(
+        root,
+        "make pr, make start, make help, make extra-check, make missing, make PYTHON, make publish",
+    )
+
+    assert sorted(row["observed_state"] for row in missing) == [
+        "make PYTHON",
+        "make missing",
+        "make publish",
+    ]
+    assert all("unresolved includes" not in row["expected_state"] for row in missing)
+
+
+def test_root_agent_command_resolution_reports_unresolvable_includes(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    write(
+        root / "Makefile",
+        "include $(shell ls ops/make/*.mk)\ninclude ops/make/required-absent.mk\n"
+        "include ../outside.mk\nhelp:\n\t@true\n",
+    )
+
+    missing = _command_findings(root, "make help, make pr")
+
+    assert [row["observed_state"] for row in missing] == ["make pr"]
+    expected = missing[0]["expected_state"]
+    assert "ops/make/required-absent.mk" in expected
+    assert "../outside.mk" in expected
+    assert "$(shell ls ops/make/*.mk)" in expected
+
+
 def test_architecture_contract_checks_components_and_emits_delta(tmp_path: Path) -> None:
     root = tmp_path / "repo"
     root.mkdir()

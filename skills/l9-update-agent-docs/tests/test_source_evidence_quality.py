@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 import sys
 from pathlib import Path
@@ -111,6 +112,40 @@ def test_long_interfaces_and_file_indexes_are_complete_and_linked(tmp_path: Path
     assert "[Complete file index](#complete-file-index)" in corpus_rendered
     assert "## Complete file index" in corpus_rendered
     assert "`item-40.md`" in corpus_rendered
+
+
+def test_python_signatures_preserve_the_complete_argument_contract(tmp_path: Path):
+    write(
+        tmp_path / "sig" / "api.py",
+        "def f(a: int, /, b: str = 'x', *args: bytes, flag: bool = False,"
+        " **kwargs: object) -> None:\n    pass\n"
+        "def keyword_only(*, key=1):\n    pass\n"
+        "async def fetch(url: str, *, timeout: float = 1.0) -> bytes:\n    return b''\n",
+    )
+    model = ev.compile_readme_model(tmp_path, target("sig"))
+    signatures = {
+        function.name: function.signature
+        for fact in model.source_facts
+        for function in fact.module.functions
+    }
+
+    assert signatures["f"] == (
+        "def f(a: int, /, b: str='x', *args: bytes, flag: bool=False, **kwargs: object) -> None"
+    )
+    assert signatures["keyword_only"] == "def keyword_only(*, key=1)"
+    assert signatures["fetch"] == "async def fetch(url: str, *, timeout: float=1.0) -> bytes"
+    assert "`def f(a: int, /, b: str='x', *args: bytes" in rr.render_readme(model)
+
+    methods = ast.parse(
+        "def call(self, path, /, retries=3, *extra, **options): pass\n"
+        "def plain(self, value): pass\n"
+        "def defaulted(self=None): pass\n"
+    ).body
+    assert [sf._python_signature(node) for node in methods] == [
+        "def call(path, /, retries=3, *extra, **options)",
+        "def plain(value)",
+        "def defaulted(self=None)",
+    ]
 
 
 def test_xml_dtds_are_rejected_as_visible_extraction_issues(tmp_path: Path):

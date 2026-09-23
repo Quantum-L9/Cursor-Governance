@@ -1188,3 +1188,13 @@ v2.3.0, `l9-end-session`, `l9-chat-extraction` v1.2.0. ADRs: ADR-0033 (new);
 ADR-0030 items 7–9 amended where they name `write_governed` as the model
 write. Docs: `docs/MEMORY_PIPELINE_MAP.md` "Lanes", `INVARIANTS.md` INV-03b,
 `ARCHITECTURE.md`.
+
+<!-- PR_CHECK_TARGET_REMOVED_V2 -->
+## 6.2.10 Single Make publication ceremony (2026-09-21)
+
+This append-only amendment supersedes prior material only where it treats
+`pr-check` as an invocable Make target or dispatcher capability. `make pr`
+runs `pr-preflight`, then `ops/scripts/run_pr_gate.sh`, and publishes with
+`ops/scripts/open_pr_after_gate.sh` only when `OPEN_PR=1`. The sole
+gate-only diagnosis is `OPEN_PR=0 make pr` (or `OPEN_PR=0 l9 pr`).
+`make precommit-repo` remains the remediation-local verification leaf.

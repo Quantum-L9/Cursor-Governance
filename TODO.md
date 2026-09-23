@@ -1,5 +1,12 @@
 ## Issue unblock (session reference)
 
+**Cluster:** Quantum-L9/Cursor-Governance#493
+**Owning fix:** https://github.com/Quantum-L9/Cursor-Governance/pull/629
+**Next:** none — Infisical-native HMAC bind; do not create AWS SM
+**Pickup:** Graphiti PICKUP written 2026-09-20 record 121d7999-5239-4c54-a2b2-32e25b7beba1
+
+## Issue unblock (session reference)
+
 **Cluster:** Quantum-L9/Cursor-Governance#597
 **Owning fix:** https://github.com/Quantum-L9/Cursor-Governance/pull/585 head 4bd0a6b2250269fdaed3fc34330399c71b300421
 **Next:** PR 585 MERGEABLE after origin/main merge; digest rebound still BLOCKED inspect-only
@@ -463,7 +470,8 @@ Context: `tests/`, `templates/`, and `startup/` were deleted (superseded by v6 L
   `AGENTS.md` + `ops/hooks/session_start_bootstrap.sh` instead.
 - [x] **`execution-governance/README.md`** — **archived** (2026-07-19), **deleted**
   (2026-08-28, TODO A1) after harvest C3/C1/C4 landed in `audit_rules_corpus.py`.
-- [ ] **`README.md`** (GlobalCommands root) — startup/templates references
+- [x] **`README.md`** (GlobalCommands root) — refreshed ownership metadata and
+  removed the stale `C_GOV_FILES/` directory listing (2026-09-21).
 - [x] **`C_GOV_FILES/`** duplicates — **path already deleted** (2026-07-05). Remaining work is
   doc scrub only — see DELETE LIST A8.
 - [ ] **`workflows/Dags-Harvest/DAG-Harvest-5.md`** — startup references (verify)
@@ -744,15 +752,15 @@ Keep shipping through `make improve` → `make pr` → `make pr`.
      install the `pre-commit` framework. A unit test that shelled into
      `run_pr_precommit.sh` failed until empty file-lists PASS without the
      binary (PR #209).
-3. **Duplication is real, but `pr-check` is not only a ruff clone.**
+3. **Duplication is real, but the former secondary gate alias is not only a ruff clone.**
 
-   | In `.pre-commit-config.yaml` | Re-run after that in `pr-check` | Only in `pr-check` |
+   | In `.pre-commit-config.yaml` | Re-run after that in the former secondary gate alias | Only in the former secondary gate alias |
    |---|---|---|
    | merge-conflict, path-lint, rules, skills, hygiene, ruff, ruff-format | ruff + format (locked venv) | pytest, gitleaks/bandit/semgrep, uv-lock, wiring, gate receipt |
 
 4. **Intended later owner (not this slice):** yaml owns lint; `make pr`
-   stays the publish path; `pr-check` becomes a thin alias (catalog + the
-   non-lint extras). Do not delete `pr-check` until pytest/security/receipt
+   stays the publish path; the former secondary gate alias becomes a thin alias (catalog + the
+   non-lint extras). Do not delete the former secondary gate alias until pytest/security/receipt
    live in the yaml or stay as named extras. Do not teach
    `pre-commit install` as the shipping gate.
 5. **Other leftover surfaces (leave alone for now):**

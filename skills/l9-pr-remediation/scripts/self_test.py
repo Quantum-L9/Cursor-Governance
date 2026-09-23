@@ -242,12 +242,12 @@ def test_verbs_and_publish() -> None:
     _need(SKILL, "publish: git push", "SKILL.md")
     _need(SKILL, "do not run `make pr`", "SKILL.md")
     _need(SKILL, "must not invoke `make pr`", "SKILL.md")
-    _need(SKILL, "Do not run `make pr-check`", "SKILL.md")
+    _need(SKILL, "Do not run `OPEN_PR=0 make pr`", "SKILL.md")
     _need(SKILL, "PR_REMEDIATE=0 make pr", "SKILL.md")
     _need(REFS["run-contract.md"], "L9_REMEDIATOR=1", "run-contract.md")
     _need(REFS["run-contract.md"], 'publish: "git push"', "run-contract.md")
     _need(REFS["fix-engine.md"], "Makefile:precommit-repo", "fix-engine.md")
-    _forbid(REFS["fix-engine.md"], "Makefile:pr-check", "fix-engine.md")
+    _forbid(REFS["fix-engine.md"], "Makefile:OPEN_PR=0 make pr", "fix-engine.md")
     _need(REFS["merge-advise.md"], "already-open PR branch is `git push`", "merge-advise.md")
     _need(
         REFS["signal-ingestion.md"],

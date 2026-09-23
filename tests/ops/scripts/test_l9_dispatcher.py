@@ -19,7 +19,7 @@ REPO = Path(__file__).resolve().parents[3]
 DISPATCHER = REPO / "environment" / "agents" / "adapters" / "claude-code" / "bin" / "l9"
 INSTALLER = REPO / "ops" / "scripts" / "install_l9_dispatcher.sh"
 
-SAFE_LIST = "start pr pr-check improve claude-env l4-status clean"
+SAFE_LIST = "start pr improve claude-env l4-status clean"
 
 
 def _fake_make(bin_dir: Path, argv_out: Path, exit_code: int = 0) -> None:

@@ -4,7 +4,7 @@
 #
 # Same topology as ops/scripts/resolve_stack_tip.py (start and publish).
 # This lib is the *when*: an opted-in PR_STACK=auto must bind PR_BASE before
-# pr-check selects changed files, not only after the gate in
+# run_pr_gate.sh selects changed files, not only after the gate in
 # open_pr_after_gate.sh. (auto was the Makefile default until 2026-09-19; the
 # binding order matters identically now that it is opt-in.)
 #
@@ -147,7 +147,7 @@ pr_stack_is_telemetry_fail() {
   esac
 }
 
-# Bind PR_BASE for make pr / pr-check / pr-preflight / open_pr_after_gate.
+# Bind PR_BASE for make pr / pr-preflight / run_pr_gate.sh / open_pr_after_gate.
 # Does not rewrite an explicit non-main PR_BASE. Empty PR_STACK is a no-op.
 pr_stack_apply_publish_base() {
   local workspace="$1" out rc tip sha reason base chain

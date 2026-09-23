@@ -50,11 +50,12 @@ dev = [
     "pytest-timeout==2.4.0",
     "bandit==1.9.4",
     "pip-audit==2.10.1",
+    "pre-commit==4.5.0",
 ]
 # Portable UI Operator / AWS secrets resolve — NOT required for make pr.
 # Install: uv sync --extra ui-operator && playwright install
 ui-operator = [
-    "playwright==1.62.0",
+    "playwright==1.63.0",
     "boto3>=1.34,<2",
 ]
 

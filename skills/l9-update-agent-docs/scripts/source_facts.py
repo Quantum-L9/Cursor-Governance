@@ -157,10 +157,27 @@ def _shell_environment_names(text: str) -> list[str]:
 
 
 def _python_signature(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
-    names = [arg.arg for arg in node.args.args if arg.arg != "self"]
+    """Render the complete argument contract, omitting only a leading ``self``.
+
+    Positional-only markers, defaults, annotations, ``*args``, keyword-only
+    arguments and ``**kwargs`` are part of the callable contract, so the AST
+    ``arguments`` node is unparsed whole rather than rebuilt from bare names.
+    """
+    arguments = node.args
+    positional = [*arguments.posonlyargs, *arguments.args]
+    if positional and positional[0].arg == "self" and len(positional) > len(arguments.defaults):
+        arguments = ast.arguments(
+            posonlyargs=arguments.posonlyargs[1:],
+            args=arguments.args if arguments.posonlyargs else arguments.args[1:],
+            vararg=arguments.vararg,
+            kwonlyargs=arguments.kwonlyargs,
+            kw_defaults=arguments.kw_defaults,
+            kwarg=arguments.kwarg,
+            defaults=arguments.defaults,
+        )
     prefix = "async def" if isinstance(node, ast.AsyncFunctionDef) else "def"
     returned = f" -> {ast.unparse(node.returns)}" if node.returns is not None else ""
-    return f"{prefix} {node.name}({', '.join(names)}){returned}"
+    return f"{prefix} {node.name}({ast.unparse(arguments)}){returned}"
 
 
 def _public(name: str) -> bool:

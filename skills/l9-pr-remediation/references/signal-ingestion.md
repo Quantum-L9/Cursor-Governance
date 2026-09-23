@@ -79,7 +79,7 @@ Normalize each hit to the unified finding list with `source: semgrep`, its
 ## Gate Discovery (FIRST — before CI log ingestion)
 
 When a Makefile exists, skip reconstructing a local suite from workflow YAML.
-Record remediator `make precommit-repo` / `git push`. Do not run ceremony `make pr-check` / `make pr`. Continue to CI log ingestion only for already-red checks.
+Record remediator `make precommit-repo` / `git push`. Do not run ceremony `OPEN_PR=0 make pr` / `make pr`. Continue to CI log ingestion only for already-red checks.
 
 ### Step 0: Parse workflow YAML (fallback only — no Makefile)
 
@@ -127,14 +127,14 @@ Also check `package.json` scripts for additional gates:
 cat package.json | grep -A1 '"scripts"'
 ```
 
-**Remediator verbs (required)** — `make precommit-repo` is the local-verify surface, `git push` is publish. Ceremony `make pr-check` / `make pr` must not be invoked. See [remediation-plan.md](remediation-plan.md).
+**Remediator verbs (required)** — `make precommit-repo` is the local-verify surface, `git push` is publish. Ceremony `OPEN_PR=0 make pr` / `make pr` must not be invoked. See [remediation-plan.md](remediation-plan.md).
 
 ```bash
 test -f Makefile && grep -E '^(precommit-repo|improve):' Makefile
 test -f .pre-commit-config.yaml && grep -E '^[[:space:]]+- id:' .pre-commit-config.yaml
 ```
 
-A census that lists CI failures but omits remediator `make precommit-repo` is incomplete. Workflow `run:` replay is leftover fallback only when no Makefile exists. Ceremony `make pr-check` is not the remediator gate.
+A census that lists CI failures but omits remediator `make precommit-repo` is incomplete. Workflow `run:` replay is leftover fallback only when no Makefile exists. Ceremony `OPEN_PR=0 make pr` is not the remediator gate.
 
 ## CI Signal Ingestion
 

@@ -118,7 +118,7 @@ PUBLISH_COMMAND = "git push"
 IMPROVE_COMMAND = "make improve"
 FORBIDDEN_VERIFY = (
     "make pr",
-    "make pr-check",
+    "OPEN_PR=0 make pr",
     "PR_REMEDIATE=0 make pr",
     "make precommit",
     "make pr-full",
