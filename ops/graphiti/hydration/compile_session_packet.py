@@ -125,10 +125,12 @@ def compile_session_packet(
     try:
         identity = resolve_write_identity(explicit_agent_id=agent_id, surface="cursor")
     except Exception:  # noqa: BLE001
-        identity = {
-            "agent_id": (agent_id or os.environ.get("L9_MEMORY_AGENT_ID") or "cursor").strip(),
-            "user_id": os.environ.get("USER_ID") or "cursor_agent",
-        }
+        # A read packet still names who read, but never a guessed identity:
+        # "unresolved" is the honest label when none can be derived.
+        from ops.memory.agent_identity import resolve_agent_id, user_id_for  # noqa: PLC0415
+
+        derived = resolve_agent_id() or "unresolved"
+        identity = {"agent_id": derived, "user_id": user_id_for(derived)}
 
     task = session_task_objective(project.name)
     # SessionStart has no task yet, so a task-signature match is impossible

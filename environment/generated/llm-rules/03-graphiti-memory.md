@@ -18,6 +18,8 @@ description: Agent memory SSOT (canonical l9-graphite-memory control plane) — 
 
 **Updated: 2026-09-13** — ADR-0031 / CANONICAL_LAW §8.5: ordinary / cold model writes use MCP `memory.write_agent` (no `phase_lock`). Conflict-sensitive writes remain `memory.phase_lock` → `memory.write_governed`. Agent HTTP is sealed. Identity is the shared agents door + a signed `agent_id` assertion; the human door stays private.
 
+**Updated: 2026-09-24** — Agent memory write contract `l9.agent_memory_write.v1` (`ops/memory/AGENT_WRITE_CONTRACT.md`, schema `ops/memory/schemas/l9.agent_memory_write.v1.schema.json`): a model-authored fact is never freehand. Build its arguments with `python -m ops.memory.agent_write build` (one atomic one-line fact, canonical class `decision|insight|observation|constraint|episodic|semantic`, exactly one `agent:<id>` tag plus a topic tag, content-derived `idempotency_key`) and pass them unchanged to `memory_write_agent` (or `memory_write_governed` with `task_signature`). The agent keeps this contract itself; nothing sits in front of the tool, and `MemoryService` still decides grants and admission. Canonical classes only: `write_governed` has no alias table in 2.4.0, so `lesson` fails there.
+
 **Updated: 2026-09-15** — ADR-0033 / CANONICAL_LAW §8.6 (two lanes, one `MemoryService`; INV-03b). "ONE canonical egress (`ops/memory`)" above means *no provider bypass*, not *all memory traffic passes through Cursor-Governance*. **Agent lane:** the ordinary write is `memory.write_agent` (MCP) or `l9-memory write`, immediately visible to the next `hydrate` / `search`; it waits on no receipt, phase, session close, PR or governance approval, and Cursor-Governance must not gate it (`memory_gate.py` exempts `l9-memory` / `ops.memory.cli`). `phase_lock` → `write_governed` is an optional conflict-sensitive pair. **Hook lane:** SessionStart / End, prefetch, PR publish and PE/SGD ingest use `MemoryControlPlaneClient(surface=…)` under `ops/config/memory-hook-envelopes.json`. Cursor-Governance holds no local memory cognition (Phase B, promotion rules, distill queue deleted at C15); sessionEnd hands the redacted excerpt to `l9-memory distill`. `graphiti_memory_client.py` is deleted (the C11 tombstone is gone); `make graphiti-health` is `make memory-readiness`.
 
 
@@ -45,33 +47,29 @@ description: Agent memory SSOT (canonical l9-graphite-memory control plane) — 
 
 - **Agents MUST be able to write durable memory.** Ordinary / cold facts use `memory.write_agent {namespace, content, memory_class, tags…}` on the package-owned `l9-graphite-memory` MCP server — no SessionStart receipt and no `phase_lock`. Conflict-sensitive facts use `memory.phase_lock {namespace, task_signature}` then `memory.write_governed {namespace, content, task_signature, memory_class, tags…}`. `MemoryService` grants the lock only after a conflict check, binds the write to the namespace snapshot digest, and refuses it if the namespace moved.
 - **The phase-lock is a memory-write precondition only.** It never authorizes a source edit, never serializes git, never replaces worktree / branch / publication governance (`96-multi-agent-main-bound-execution` E7/E8/E10; `98-graphiti-memory-gate`).
-- **The agent lane is scoped to ONE namespace per session — while the vendored
-  wheel is `l9_graphite_memory-2.4.0`.** Without the signed door the stdio
-  server falls back to Tier 3, which resolves its principal once at spawn from
-  the server's working directory and freezes it. The `namespace` argument is
-  then checked against that frozen grant set, so a second repository in the
-  session — typically the governance SSOT beside the workspace — is **not**
-  writable through `write_agent`, whatever the argument says. Confirm cheaply
-  with `memory.write_agent {…, dry_run: true}`: `namespace did not match any
-  write grant` is this, not a malformed call.
+- **The agent lane runs only as the signed agent principal (2026-09-24).** A
+  memory must name the agent that wrote it, so `ops/memory/run_memory_mcp.sh`
+  mints the ADR-0031 door at MCP spawn from `L9_MEMORY_AGENT_AUTHORITY_JSON`
+  (or the workstation key maps) and refuses to start the server without it;
+  the anonymous Tier 3 `local-operator` fallback of the vendored
+  `l9_graphite_memory-2.4.0` wheel — whose grants froze to the spawn directory
+  and covered only the package's four bundled repositories — no longer runs
+  (`L9_MEMORY_ALLOW_LOCAL_OPERATOR=1` is the announced operator opt-out). The
+  agent's write grants are its `assigned_groups` in
+  `environment/agents/agent_registry.yaml`, whichever directory the server
+  starts in. Confirm cheaply with `memory.write_agent {…, dry_run: true}`:
+  `namespace did not match any write grant` means the namespace is not in the
+  agent's `assigned_groups`.
 
-  **This is a bounded agent-lane limitation, not a lane swap.** A fact the
-  agent lane cannot write this session is reported as a gap — name the
-  namespace and the `dry_run` verdict — exactly like an unbound server. It is
-  **not** rerouted through the operator CLI: ADR-0033 / INV-03b classifies
-  `ops/memory/cli.py` as operator form, and a model-authored fact does not
-  change lane because its grant is missing. The fix belongs at the
-  package/principal boundary: provision the signed door before launch
-  (`source ops/memory/export_agent_assertion_env.sh` in the shell that starts
-  the session) so the principal carries its grants, or wait for the 2.5.0
-  per-request resolution below.
-
-  **Removal trigger:** `l9-graphite-memory` 2.5.0 resolves Tier 3 per request
-  (its ADR-083), so this bullet is **deleted** in the same PR that re-vendors
-  the 2.5.0 wheel and bumps `pyproject.toml` / `uv.lock`. Check the pin before
-  trusting this paragraph: a scope limit documented after it stopped existing
-  misleads exactly as the original silence did.
-- **No evasion.** Generic `memory.ingest` and the generic CLI `write` are not the model's alternative to `write_agent` or `write_governed`. If the MCP server is unbound, or the agent lane holds no grant for the namespace a fact belongs to (the 2.4.0 scope limit above), the write is reported as a gap (`L9_MEMORY_INTERPRETER` / `make memory-binding`; namespace + `dry_run` verdict), not rerouted.
+  **A missing grant is a bounded agent-lane limitation, not a lane swap.** A
+  fact the agent lane cannot write is reported as a gap — name the namespace
+  and the `dry_run` verdict — exactly like an unbound server. It is **not**
+  rerouted through the operator CLI: ADR-0033 / INV-03b classifies
+  `ops/memory/cli.py` as operator form. The fix is the one-line registry change
+  that adds the repository to the agent's `assigned_groups`, or provisioning
+  `L9_MEMORY_AGENT_AUTHORITY_JSON` when SessionStart reports the door
+  UNAVAILABLE (`ops/memory/AGENT_WRITE_CONTRACT.md`).
+- **No evasion.** Generic `memory.ingest` and the generic CLI `write` are not the model's alternative to `write_agent` or `write_governed`. If the MCP server is unbound, or the agent lane holds no grant for the namespace a fact belongs to (not in the agent's `assigned_groups`), the write is reported as a gap (`L9_MEMORY_INTERPRETER` / `make memory-binding`; namespace + `dry_run` verdict), not rerouted.
 - **Deterministic adapters** (SessionStart hydrate, sessionEnd close, `repair-write`, reconciliation, diagnostics) use purpose-specific `ops/memory` operations over the same admission path — adapters, not second egresses.
 - **No provider transport.** Neither CLI nor MCP carries a provider URL, bearer, or raw provider tool; agents never write to the provider directly.
 
@@ -79,7 +77,7 @@ description: Agent memory SSOT (canonical l9-graphite-memory control plane) — 
 
 - Resume from sessionStart hydration (`next=`, canonical continuation record) — never treat `memory-bank/` or a Graphiti `inject` / PICKUP read as SSOT
 - Every memory request names its namespace from `python -m ops.memory.cli resolve` — a request memory authorizes, never a grant Cursor holds
-- Every write stamps `agent_id` (`L9_MEMORY_AGENT_ID`; Cursor=`cursor`, Claude=`claude-code`)
+- Every write stamps `agent_id`, DERIVED at write time from host markers by `ops/memory/agent_identity.py` — never configured: Cursor=`cursor`, Claude Code Desktop=`claude-code-desktop`, Claude Code Mobile=`claude-code-mobile`; adapter agents (Manus=`manus`, `codex`, `gemini`; reserved and not yet wired: `perplexity`, `perplexity-computer`, `l-cto`, `igorbot`) by the id their adapter sets, only if registered. A configured `L9_MEMORY_AGENT_ID` is ignored on those surfaces (reported as drift); no derivable identity means the write is refused, never attributed to a surface that did not run
 - Never write to `group_id=main` or `group_id=default`
 - Never use Cursor `update_memory` / native Memories for repo/code facts
 - Never use code-graph for episodic decisions (use canonical memory)

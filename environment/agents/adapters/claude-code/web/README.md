@@ -160,8 +160,17 @@ was retired at realignment stage C8; the capability broker never shipped; the
 the variables field is a contract violation, not a configuration.
 
 **Identity (shared namespace, distinct author).** The repository namespace is
-shared with Cursor. Writing identity is not: `USER_ID=claude_code_agent` /
-`L9_MEMORY_AGENT_ID=claude-code`.
+shared with Cursor; the writing identity is not, and it is **derived**, never
+configured. A Mobile session is `claude-code-mobile`, from the host's own
+markers (`ops/memory/agent_identity.py`). Do not set `L9_MEMORY_AGENT_ID`,
+`USER_ID` or `L9_MEMORY_SOURCE` here: they are ignored and reported as drift.
+
+**Signed door (every memory names its author).** Setup mints the container's
+own signing key into `~/.config/l9-memory`, and the memory launcher does the
+same at spawn if setup did not. Nothing is pasted, and
+`L9_MEMORY_AGENT_AUTHORITY_JSON` stays out of the variables field. SessionStart
+reports `signed-agent door: PROVISIONED`. See
+`ops/memory/AGENT_WRITE_CONTRACT.md` → Provisioning.
 
 **Allowlist:** the memory package is installed from GitHub
 (`Quantum-L9/l9-graphiti-memory`); allow `github.com` or use Full.
