@@ -91,6 +91,16 @@
         ]
       },
       {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || { printf \"l9-gate: launcher missing at %s — BLOCKING (INV-1)\\n\" \"$x\" >&2; exit 2; }; exec bash \"$x\" --class gate ci_parity_push_gate.py'",
+            "timeout": 720
+          }
+        ]
+      },
+      {
         "matcher": "Edit|Write|NotebookEdit|Bash|mcp__github__.*",
         "hooks": [
           {
@@ -109,6 +119,16 @@
             "type": "command",
             "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer pr_summary_posttool.py'",
             "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer ci_parity_posttool.py'",
+            "timeout": 20
           }
         ]
       }
