@@ -16,8 +16,29 @@ if [ ! -f "$GOV_ROOT/pyproject.toml" ] || [ ! -f "$GOV_ROOT/uv.lock" ]; then
   exit 2
 fi
 
+# One interpreter predicate for the whole script: the cached-environment guard,
+# the post-sync check and the seal all name this binary. A venv that ships only
+# a python3 shim (no python alias) passes the guard and must seal with it too.
+VENV_PYTHON="$GOV_ROOT/.venv/bin/python3"
+
+# The interpreter whose identity the fingerprint records: the venv's own, never
+# the caller's `python3`. Callers inside the venv (pytest, the gate's reader
+# wave) resolve `python3` to .venv/bin (3.12 here) while callers outside it
+# resolve the system one (3.11): the same tree then fingerprinted two ways, so
+# every crossing between the two ran `uv sync` and the seal's force-reinstall of
+# the memory wheel — mid-pytest, under other xdist workers importing it. Before
+# the first sync there is no venv, the fallback cannot match any stored value,
+# and the post-sync fingerprint is recomputed with the venv interpreter.
+_fingerprint_python() {
+  if [ -x "$VENV_PYTHON" ]; then
+    printf '%s\n' "$VENV_PYTHON"
+  else
+    printf '%s\n' python3
+  fi
+}
+
 fingerprint() {
-  python3 - "$GOV_ROOT" "$(uv --version 2>/dev/null || true)" <<'PY'
+  "$(_fingerprint_python)" - "$GOV_ROOT" "$(uv --version 2>/dev/null || true)" <<'PY'
 import hashlib
 import platform
 import sys
@@ -48,11 +69,6 @@ PY
 expected="$(fingerprint)"
 current=""
 [ -f "$STATE_FILE" ] && current="$(cat "$STATE_FILE")"
-
-# One interpreter predicate for the whole script: the cached-environment guard,
-# the post-sync check and the seal all name this binary. A venv that ships only
-# a python3 shim (no python alias) passes the guard and must seal with it too.
-VENV_PYTHON="$GOV_ROOT/.venv/bin/python3"
 
 _seal_memory_artifact() {
   # Fail-open, never silent: an offline or unsealed venv stays
@@ -105,6 +121,9 @@ if [ ! -x "$VENV_PYTHON" ]; then
   exit 1
 fi
 
+# Recorded as the NEXT caller will compute it: with the venv interpreter the
+# sync just produced, not the fallback that computed the pre-sync value.
+expected="$(fingerprint)"
 mkdir -p "$(dirname "$STATE_FILE")"
 tmp="${STATE_FILE}.tmp.$$"
 printf '%s\n' "$expected" > "$tmp"
