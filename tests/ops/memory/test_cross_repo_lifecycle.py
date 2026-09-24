@@ -41,6 +41,7 @@ from ops.memory.canonical_validation import (
 )
 from ops.memory.control_plane_client import (
     DISTILL_CLI_OPTIONS,
+    RECORDED_AFTER_OPTION,
     MemoryControlPlaneClient,
     OutcomeStatus,
 )
@@ -685,9 +686,10 @@ def test_recency_search_holds_against_the_exact_bound_cli(
     that parser defines, the record written a moment ago is inside the window,
     and a floor in the future excludes it.
     """
-    import ops.memory.control_plane_client as cpc
-
-    monkeypatch.setattr(cpc, "_RECORDED_AFTER_REFUSED", set())
+    # The client reads this module global at call time, so the patched set is
+    # the one it learns the refusal into.
+    refused: set[str] = set()
+    monkeypatch.setattr("ops.memory.control_plane_client._RECORDED_AFTER_REFUSED", refused)
     client, _env = runtime
     context = resolve_namespace_context(ROOT)
     namespace = context.write_namespace_hint
@@ -715,14 +717,14 @@ def test_recency_search_holds_against_the_exact_bound_cli(
     parser_options = _bound_search_options(client)
     answered = _search_argvs(client)[-1]
     assert {a for a in answered[2:] if a.startswith("--")} <= parser_options, answered
-    if cpc.RECORDED_AFTER_OPTION in parser_options:
+    if RECORDED_AFTER_OPTION in parser_options:
         # A release that grew the selector is asked with it, and nothing is refused.
-        assert cpc.RECORDED_AFTER_OPTION in answered
-        assert not cpc._RECORDED_AFTER_REFUSED
+        assert RECORDED_AFTER_OPTION in answered
+        assert not refused
     else:
         # This release refuses it: learned once, then asked without it.
-        assert cpc.RECORDED_AFTER_OPTION not in answered
-        assert client.binding.memory_cli in cpc._RECORDED_AFTER_REFUSED
+        assert RECORDED_AFTER_OPTION not in answered
+        assert client.binding.memory_cli in refused
 
     future = client.search(
         f"recency proof {stamp}",
