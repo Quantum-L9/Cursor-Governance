@@ -461,7 +461,7 @@ class ProgramBoundRootAuthorityTests(unittest.TestCase):
                 connection.close()
             self.assertIsNotNone(session)
             self.assertEqual(session["status"], "PASS")
-            self.assertEqual(session["peer_ref"], "claude-code")
+            self.assertEqual(session["peer_ref"], "claude-code-desktop")
             self.assertEqual(session["surface"], "claude-cli")
             # The live orchestrator authorizes a tool only against the session
             # the lease itself was issued under.
