@@ -2009,3 +2009,9 @@ push-and-wait cycle. Cursor is unchanged by construction.
   org policy without creating a scan; CI's record stays the only record.
 - **SonarCloud** is read, never scanned locally (a scanner run publishes):
   `ops/ci_parity/sonar_status.py` holds `SONAR_TOKEN` in-process only.
+- **The push check fails open.** `ci_parity_push_gate.py` is registered
+  `--class observer`: it blocks (exit 2) when it evaluates and finds a blocking
+  finding, and is skipped, never blocking, when it cannot evaluate. A
+  fail-closed gate on every Bash call blocked the whole shell when a settings
+  projection from a newer checkout named a hook the governance clone did not
+  yet have; INV-1 fail-closed stays reserved for security and publication gates.
