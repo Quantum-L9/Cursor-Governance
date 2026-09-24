@@ -20,8 +20,10 @@ EXPORTER = REPO_ROOT / "ops" / "memory" / "export_agent_assertion_env.sh"
 #: The launcher starts the server only with the signed agent door (every memory
 #: names its author); these stand in for a minted door (presence is checked,
 #: values never read here).
+#: Identity comes from the host marker (Claude Code Desktop), never a pasted id.
+DESKTOP = {"CLAUDECODE": "1"}
 DOOR = {
-    "L9_MEMORY_AGENT_ID": "claude-code-desktop",
+    **DESKTOP,
     "L9_MEMORY_AGENTS_DOOR_SECRET": "stub-door",
     "L9_MEMORY_AGENT_ASSERTION": "stub-assertion",
     "L9_MEMORY_AGENT_SIGNING_KEYS_JSON": "{}",
@@ -113,8 +115,19 @@ def test_proven_interpreter_is_execd_with_forwarded_argv(tmp_path: Path) -> None
 def test_a_proven_interpreter_without_a_door_is_not_launched(tmp_path: Path) -> None:
     gov = _stub_gov(tmp_path)
     launched = _executable(tmp_path / "proven-python")
-    env = {"STUB_FALLBACK": str(launched), "L9_MEMORY_AGENT_ID": "claude-code-desktop"}
+    env = {"STUB_FALLBACK": str(launched), **DESKTOP}
     result = _run(gov, env, args=["-m", "x"])
     assert result.returncode == 1
     assert "LAUNCH" not in result.stdout
     assert "a memory must name the agent that wrote it" in result.stderr
+
+
+def test_a_pasted_derived_identity_without_host_markers_is_not_launched(tmp_path: Path) -> None:
+    gov = _stub_gov(tmp_path)
+    launched = _executable(tmp_path / "proven-python")
+    door = {k: v for k, v in DOOR.items() if k not in DESKTOP}
+    env = {"STUB_FALLBACK": str(launched), **door, "L9_MEMORY_AGENT_ID": "claude-code-desktop"}
+    result = _run(gov, env, args=["-m", "x"])
+    assert result.returncode == 1
+    assert "LAUNCH" not in result.stdout
+    assert "not a registered memory identity" in result.stderr

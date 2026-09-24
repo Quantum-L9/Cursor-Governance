@@ -15,9 +15,22 @@ where the code is actually running:
 On a Cursor or Claude Code surface a static ``L9_MEMORY_AGENT_ID`` is IGNORED:
 the host's own markers are the only evidence, so a pasted or projected value
 (the retired single ``claude-code`` identity, say) can never mislabel a write.
-:func:`static_drift` names such a value so SessionStart can report it. Only an
-agent with no host markers of its own (manus, codex, gemini, an operator
-shell) is identified by ``L9_MEMORY_AGENT_ID`` — its adapter sets it.
+:func:`static_drift` names such a value so SessionStart can report it.
+
+Agents with no host markers of their own are identified by the
+``L9_MEMORY_AGENT_ID`` their ADAPTER sets (never an operator's pasted value),
+and only when it names a registered identity — see ADAPTER_IDENTITIES:
+
+    manus                Manus (adapters/manus sets and enforces it)
+    codex, gemini        existing adapters
+    human                the operator's private entrance
+    perplexity           Perplexity                 reserved — not yet wired
+    perplexity-computer  Perplexity Computer        reserved — not yet wired
+    l-cto                L CTO                      reserved — not yet wired
+    igorbot              IgorBot                    reserved — not yet wired
+
+Any other value is not an identity. ``tests/ops/memory/test_agent_identity.py``
+holds this set equal to ``environment/agents/agent_registry.yaml`` (no drift).
 
 No guessing: a Claude Code cloud session whose entrypoint is not recognised,
 and the retired ``claude-code`` value, resolve to NO identity (""), and every
@@ -40,6 +53,21 @@ CLAUDE_MOBILE: Final = "claude-code-mobile"
 #: Every identity this resolver derives from host markers.
 DERIVED_IDENTITIES: Final = frozenset({CURSOR, CLAUDE_DESKTOP, CLAUDE_MOBILE})
 CLAUDE_IDENTITIES: Final = frozenset({CLAUDE_DESKTOP, CLAUDE_MOBILE})
+#: Identities set by an agent's own adapter (no host markers to derive from).
+ADAPTER_IDENTITIES: Final = frozenset(
+    {
+        "manus",
+        "codex",
+        "gemini",
+        "human",
+        "perplexity",
+        "perplexity-computer",
+        "l-cto",
+        "igorbot",
+    }
+)
+#: Every memory identity there is; equal to the registry's agents.
+ALL_IDENTITIES: Final = DERIVED_IDENTITIES | ADAPTER_IDENTITIES
 #: The retired single identity: never an author (it named no surface).
 RETIRED: Final = frozenset({"claude-code"})
 #: CLAUDE_CODE_ENTRYPOINT values of a cloud session and the identity each is.
@@ -76,7 +104,7 @@ def resolve_agent_id(env: Mapping[str, str] | None = None) -> str:
     if _is_claude(source):
         return _claude_identity(source)
     explicit = _flag(source, "L9_MEMORY_AGENT_ID")
-    return "" if explicit in RETIRED else explicit
+    return explicit if explicit in ADAPTER_IDENTITIES else ""
 
 
 def static_drift(env: Mapping[str, str] | None = None) -> str:
@@ -102,6 +130,8 @@ def unresolved_reason(env: Mapping[str, str] | None = None) -> str:
     explicit = _flag(source, "L9_MEMORY_AGENT_ID")
     if explicit in RETIRED:
         return f"L9_MEMORY_AGENT_ID={explicit} is the retired single identity; it names no surface"
+    if explicit:
+        return f"L9_MEMORY_AGENT_ID={explicit} is not a registered memory identity"
     return "no host markers (CURSOR_AGENT / Claude Code) and no L9_MEMORY_AGENT_ID"
 
 

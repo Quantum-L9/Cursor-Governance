@@ -33,6 +33,13 @@ REGISTRY = Path(__file__).resolve().parents[3] / "environment/agents/agent_regis
         ({**MOBILE, "L9_MEMORY_AGENT_ID": "claude-code-desktop"}, "claude-code-mobile"),
         # agents with no host markers are identified by their adapter's setting
         ({"L9_MEMORY_AGENT_ID": "manus"}, "manus"),
+        ({"L9_MEMORY_AGENT_ID": "perplexity"}, "perplexity"),
+        ({"L9_MEMORY_AGENT_ID": "perplexity-computer"}, "perplexity-computer"),
+        ({"L9_MEMORY_AGENT_ID": "l-cto"}, "l-cto"),
+        ({"L9_MEMORY_AGENT_ID": "igorbot"}, "igorbot"),
+        # ...and only when it is a registered identity
+        ({"L9_MEMORY_AGENT_ID": "agent-b"}, ""),
+        ({"L9_MEMORY_AGENT_ID": "IgorBot"}, ""),
         # no guessing
         ({**CLAUDE, "CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": "remote_web"}, ""),
         ({**CLAUDE, "CLAUDE_CODE_REMOTE": "true"}, ""),
@@ -65,10 +72,31 @@ def test_exactly_the_three_requested_identities_are_derived() -> None:
     assert ai.DERIVED_IDENTITIES == {"cursor", "claude-code-desktop", "claude-code-mobile"}
 
 
+def test_the_reserved_identities_exist_unwired() -> None:
+    """Perplexity, Perplexity Computer, L CTO and IgorBot are reserved identities:
+    registered, planned, no adapter, read-only until wired."""
+    agents = yaml.safe_load(REGISTRY.read_text(encoding="utf-8"))["agents"]
+    for agent_id in ("perplexity", "perplexity-computer", "l-cto", "igorbot"):
+        entry = agents[agent_id]
+        assert entry["status"] == "planned", agent_id
+        assert entry["adapter"] == "none", agent_id
+        assert entry["role"] == "observer" and entry["assigned_groups"] == [], agent_id
+    assert agents["manus"]["status"] == "active" and agents["manus"]["adapter"] == "manus"
+
+
+def test_an_unregistered_identity_says_why() -> None:
+    assert "not a registered memory identity" in ai.unresolved_reason(
+        {"L9_MEMORY_AGENT_ID": "agent-b"}
+    )
+
+
 def test_registry_and_resolver_cannot_drift_apart() -> None:
     """Every derived identity is an active registry agent with the derived USER_ID,
     and no retired or unrequested Claude identity is registered."""
     agents = yaml.safe_load(REGISTRY.read_text(encoding="utf-8"))["agents"]
+    assert set(agents) == set(ai.ALL_IDENTITIES), (
+        "the resolver and the registry must name the same agents"
+    )
     for agent_id in ai.DERIVED_IDENTITIES:
         assert agents[agent_id]["status"] == "active", agent_id
         assert agents[agent_id]["user_id"] == ai.user_id_for(agent_id), agent_id

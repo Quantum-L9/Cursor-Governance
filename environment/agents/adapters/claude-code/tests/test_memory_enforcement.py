@@ -261,10 +261,10 @@ class MemoryGateTests(unittest.TestCase):
         self.assertEqual(raw, "claude-code-desktop__chat-42")
         self.assertEqual(composed, raw)
         # An agent with no host markers is identified by its adapter's setting.
-        with mock.patch.dict(os.environ, {**no_markers, "L9_MEMORY_AGENT_ID": "agent-b"}):
+        with mock.patch.dict(os.environ, {**no_markers, "L9_MEMORY_AGENT_ID": "manus"}):
             # Another writer's prefix is chat text, not this writer's key.
-            other = st.resolve_receipt_id(event={}, cli_arg="claude-code__chat-42")
-        self.assertEqual(other, "agent-b__claude-code__chat-42")
+            other = st.resolve_receipt_id(event={}, cli_arg="claude-code-desktop__chat-42")
+        self.assertEqual(other, "manus__claude-code-desktop__chat-42")
 
     def test_allows_git_push_without_lock(self) -> None:
         """``git``/``gh`` commands are exempt from the memory gate.

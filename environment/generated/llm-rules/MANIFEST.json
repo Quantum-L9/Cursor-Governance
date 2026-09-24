@@ -33,9 +33,9 @@
       "alias": null,
       "class": "always",
       "output": "03-graphiti-memory.md",
-      "output_sha256": "2950b7038c127b4053817420db2e2da9f42189844ecdaf66f3744088aa8d10f8",
+      "output_sha256": "baf6aa39ed7ec75514d3cdf8c208149c837ec2c82249ac4db7d373209cd9b92a",
       "source": "rules/03-graphiti-memory.mdc",
-      "source_sha256": "d01361deb4d75c0bccbb866f9259ca75184311a2725e26ba0834be80c69a01a2",
+      "source_sha256": "2b743af607ee3b707a100efef6cb1ae92c663e5b5253e49388b3f14a283f9037",
       "stem": "03-graphiti-memory"
     },
     {
@@ -510,9 +510,9 @@
       "alias": null,
       "class": "always",
       "output": "87-cursor-memory-kernel.md",
-      "output_sha256": "7b9cd0fc38d8849facfe8076603b9209da46c889696ea451b0a3bab9302eb65a",
+      "output_sha256": "d41beed47a4ebaf5994fd72a268590cfb063dc258b05e5819dd90676627a66f5",
       "source": "rules/87-cursor-memory-kernel.mdc",
-      "source_sha256": "42753e0919599418d7932510403952a154054a4b7647558ae6b31cfe7316f072",
+      "source_sha256": "069af57fbc05a167bb8f8e38706b753eec64bc8c85acdbcbfac245d7e28b8a07",
       "stem": "87-cursor-memory-kernel"
     },
     {
@@ -641,5 +641,5 @@
     "skipped_agent_requested": 16,
     "source_mdc": 69
   },
-  "tree_sha256": "86d5295df045542ec6bc711729064511921b155f444810421706e2f213a4ee88"
+  "tree_sha256": "cf5aaa07a46da2bf6f3c355eadee13e73fe5b25a116dcc85e8cb8e17a6e78c24"
 }

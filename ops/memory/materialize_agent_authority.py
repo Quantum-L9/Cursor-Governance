@@ -165,8 +165,8 @@ def export_authority(secret_map: Path, agent_ids: list[str], output: Path) -> No
 def add_missing_keys(secret_map: Path, agent_ids: list[str]) -> list[str]:
     """Give each named identity a signing key in the local map if it has none.
 
-    For the operator adding a new identity (e.g. claude-code-desktop/-mobile/-web
-    after the one "claude-code" identity was split). Existing keys are never
+    For the operator adding a new identity (e.g. claude-code-desktop/-mobile
+    after the one "claude-code" identity was split, or manus). Existing keys are never
     replaced, the file stays 0600, and no value is printed. Returns the ids added.
     """
     import secrets  # noqa: PLC0415

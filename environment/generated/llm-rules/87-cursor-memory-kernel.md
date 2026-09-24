@@ -139,7 +139,7 @@ memcli write \
 2. **Terse.** No "SESSION: 2026-02-16. WORK: ..." preamble. Just the fact.
 3. **Pre-classify.** Use the correct `--kind` (lesson, insight, note, rule, pattern, preference, decision, observation, pickup_context) — see the canonical list above. Not `error`.
 4. **No prose summaries.** The distiller exists to convert prose into facts — don't make it redo work you can do at write time.
-5. **Stamp identity.** The identity is DERIVED from host markers by `ops/memory/agent_identity.py`, never configured: Cursor=`cursor`, Claude Code Desktop=`claude-code-desktop`, Claude Code Mobile=`claude-code-mobile`. The agent-write builder stamps it and refuses a different `--agent-id` as drift; the operator CLI takes `--agent-id`.
+5. **Stamp identity.** The identity is DERIVED from host markers by `ops/memory/agent_identity.py`, never configured: Cursor=`cursor`, Claude Code Desktop=`claude-code-desktop`, Claude Code Mobile=`claude-code-mobile`; adapter agents (Manus=`manus`, `codex`, `gemini`, and the reserved `perplexity`, `perplexity-computer`, `l-cto`, `igorbot`) by the registered id their adapter sets. The agent-write builder stamps it and refuses a different `--agent-id` as drift; the operator CLI takes `--agent-id`.
 
 ### Anti-pattern (NEVER do this)
 

@@ -89,6 +89,19 @@ and by the MCP launcher:
 | `cursor` | Cursor | `CURSOR_AGENT` |
 | `claude-code-desktop` | Claude Code Desktop, on your machine | Claude Code markers, `CLAUDE_CODE_REMOTE` unset |
 | `claude-code-mobile` | Claude Code Mobile, a cloud session | `CLAUDE_CODE_REMOTE=true` and `CLAUDE_CODE_ENTRYPOINT=remote_mobile` |
+| `manus` | Manus | the `L9_MEMORY_AGENT_ID` its adapter sets and enforces (`adapters/manus`) |
+| `codex`, `gemini` | Codex, Gemini | the `L9_MEMORY_AGENT_ID` their adapters set |
+| `perplexity` | Perplexity | reserved, not yet wired (planned, read-only) |
+| `perplexity-computer` | Perplexity Computer | reserved, not yet wired (planned, read-only) |
+| `l-cto` | L CTO | reserved, not yet wired (planned, read-only) |
+| `igorbot` | IgorBot | reserved, not yet wired (planned, read-only) |
+
+Agents without host markers are identified only by the `L9_MEMORY_AGENT_ID`
+their own adapter sets, and only when it names a registered identity. Any other
+value is refused. The resolver's set and `environment/agents/agent_registry.yaml`
+are held equal by `tests/ops/memory/test_agent_identity.py`. A reserved identity
+becomes writable when its adapter lands and its registry entry gains a writing
+role, `assigned_groups` and `status: active`.
 
 - **Configured values are ignored.** On these surfaces a configured
   `L9_MEMORY_AGENT_ID` or `USER_ID` is ignored, and SessionStart reports it as
