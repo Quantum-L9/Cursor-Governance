@@ -345,8 +345,8 @@ files:
   sha256: 1c97c455db405eead95452458bbd62c3843425adbeb120a7cf5da2848d42a2bb
   bytes: 52
 - path: program-execution-controller-template/scripts/pec/attempts.py
-  sha256: 8cfb9de98ea76a89f72ca3eadd970706ceab3b0a28431657c8c699e6bf073de0
-  bytes: 8570
+  sha256: 906ae53d09632b9b0a9501c0d209ad47218d6e43d0e6e6a69a3ed86c7d7e3ec3
+  bytes: 8576
 - path: program-execution-controller-template/scripts/pec/blueprint.py
   sha256: f036839ffc5f4a2034097c1e6b377e28b6f7a07163f70872634a4a896928611f
   bytes: 27540
@@ -360,8 +360,8 @@ files:
   sha256: 949dc350361c43754353102992e6cbdd39c92a66c31152732cd27a418c41e403
   bytes: 18338
 - path: program-execution-controller-template/scripts/pec/controller.py
-  sha256: 5d0b08f3e6557b96e07323646235e87f28ade9d4ba431e582fba1e60cbb11b9f
-  bytes: 183940
+  sha256: b87fe377738c61ce9cae9fa0b739d362fef8f26f0f5503189c15c0d37260b4ca
+  bytes: 185173
 - path: program-execution-controller-template/scripts/pec/dispatch.py
   sha256: 87e8619e49131144071d7eff92100888241b4903e742c68a2cf09ffbb2603fb7
   bytes: 5846
@@ -402,8 +402,8 @@ files:
   sha256: 16dd96536bac0b9c5b6cfcf78b5cc308a6493a819712c829ebeb64bff70f4d31
   bytes: 1227
 - path: program-execution-controller-template/scripts/tests/conftest.py
-  sha256: e94eac3ff43f404bb8db192d0e6505a05d0e191c19f47782cab0bfcdabdbeb2d
-  bytes: 634
+  sha256: b3d9da00e556b20d1376da61c9bfaeaac4dbf491395335dcfcf6e82e326c7c93
+  bytes: 633
 - path: program-execution-controller-template/scripts/tests/helpers.py
   sha256: fca60da4d908e66faf0376d5bb4b586c468cc7cb668c690fa3f5321b01cd934e
   bytes: 25538
@@ -420,8 +420,8 @@ files:
   sha256: b480c969090f1b58c7b6f60934947749e09c14cf59a0a08faac8c92dcba51a72
   bytes: 3420
 - path: program-execution-controller-template/scripts/tests/test_campaign_fan_in.py
-  sha256: b1ee5aa6eaa575cc6c15b3e1bb7c97281cff1ce2af8f017bf61b403144a56cf7
-  bytes: 13819
+  sha256: 3b94d8f22aaa97053fa80a7e342795f8f379199b65405707148d8b65356b9c56
+  bytes: 13789
 - path: program-execution-controller-template/scripts/tests/test_campaign_status.py
   sha256: 31cb4d4d20f262bc3eacc1a3c2d19628bb47ff105c9e9d36213e8a8943e9cb49
   bytes: 11736
@@ -447,8 +447,8 @@ files:
   sha256: 0395821cfbd0e63920d091a808f8b8b30f9ba2ef1a62b188ed3e90c5790d16e9
   bytes: 2611
 - path: program-execution-controller-template/scripts/tests/test_execution_attempts.py
-  sha256: 7eab203ab01db577feb7ad1928e862c695425b08d537c0dc267168f88c9d33a3
-  bytes: 17787
+  sha256: 4465504d42ebd5d783019e3373f3d1e5fd175321568951c32197622bcad409b9
+  bytes: 20531
 - path: program-execution-controller-template/scripts/tests/test_execution_recovery.py
   sha256: 23fe5e654e89a90791404ff89ab7f93750c4f1901cfe89dbb6b4699cbec19b98
   bytes: 10809
@@ -658,4 +658,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 217
-  total_bytes: 1126461
+  total_bytes: 1130413
