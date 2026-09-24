@@ -141,12 +141,37 @@ _GIT_HOST_LEAKS = (
 )
 
 
+def _with_git_config(env: dict[str, str], *pairs: tuple[str, str]) -> dict[str, str]:
+    """Append GIT_CONFIG_COUNT overlays without clobbering earlier keys."""
+    out = dict(env)
+    count = int(out.get("GIT_CONFIG_COUNT") or 0)
+    for key, value in pairs:
+        out[f"GIT_CONFIG_KEY_{count}"] = key
+        out[f"GIT_CONFIG_VALUE_{count}"] = value
+        count += 1
+    out["GIT_CONFIG_COUNT"] = str(count)
+    return out
+
+
 def _isolated_git_env() -> dict[str, str]:
     env = os.environ.copy()
     for key in _GIT_HOST_LEAKS:
         env.pop(key, None)
     env["GIT_TERMINAL_PROMPT"] = "0"
-    return env
+    # Fetch/push in these fixtures must not spawn detached `git maintenance`.
+    # That process outlives the test and races TemporaryDirectory cleanup
+    # (Cursor-Governance#646, OSError 39 Directory not empty).
+    return _with_git_config(env, ("maintenance.auto", "false"), ("gc.auto", "0"))
+
+
+def test_isolated_git_env_disables_detached_maintenance() -> None:
+    env = _isolated_git_env()
+    pairs = {
+        env[f"GIT_CONFIG_KEY_{i}"]: env[f"GIT_CONFIG_VALUE_{i}"]
+        for i in range(int(env["GIT_CONFIG_COUNT"]))
+    }
+    assert pairs.get("maintenance.auto") == "false"
+    assert pairs.get("gc.auto") == "0"
 
 
 def _write_task_output(worktree: Path, rel: str, title: str) -> str:
@@ -366,11 +391,12 @@ def _github_redirect(repository_id: str, target: Path) -> dict[str, str]:
     would otherwise reach the network. ``url.<local>.insteadOf`` keeps the test
     hermetic without changing what the code under test does.
     """
-    return {
-        "GIT_CONFIG_COUNT": "1",
-        "GIT_CONFIG_KEY_0": f"url.{target}.insteadOf",
-        "GIT_CONFIG_VALUE_0": f"https://github.com/{repository_id}.git",
-    }
+    return _with_git_config(
+        {},
+        (f"url.{target}.insteadOf", f"https://github.com/{repository_id}.git"),
+        ("maintenance.auto", "false"),
+        ("gc.auto", "0"),
+    )
 
 
 class RunCampaignTests(unittest.TestCase):
