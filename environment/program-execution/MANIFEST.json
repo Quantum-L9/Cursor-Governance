@@ -1931,7 +1931,7 @@
     },
     {
       "path": "peer_execution/tests/test_front_door.py",
-      "sha256": "3af061340956a64a9e81c8381db66bbfe4aab5b7e708cede29cc1e06cd2d22b1"
+      "sha256": "60ee126892682b63d9d0992c8e50612c45fce46e1d84b61c0696e5d5a2f53618"
     },
     {
       "path": "peer_execution/tests/test_peer_execution_contracts.py",
@@ -2111,7 +2111,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "3c884a57971e162b56b06185cc954ed8f777f1755f54502dd474e801fe8cf987"
+      "sha256": "ec3aa6f3f0bdb294f1fc8875f218f2777105d4156e57998e955e1e116a20d911"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -2163,7 +2163,7 @@
     },
     {
       "path": "scripts/tests/test_compile_campaign_source.py",
-      "sha256": "b9741432a1c8388d0c97377e61aa30d340298a092dcbc6f0e37e76ed524676b8"
+      "sha256": "1e9ead40302156d6e7dbc8cdb44fd775d67eaab3ee369bf1dfffe453fb89c964"
     },
     {
       "path": "scripts/tests/test_context7_stack_proof.py",

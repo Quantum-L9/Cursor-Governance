@@ -248,9 +248,7 @@ class CampaignFanInTests(unittest.TestCase):
             before = _make_campaign_branch(repo)
             register_contract(temp, workspace)
             _contract, prepared = prepare_attempt(temp, workspace)
-            candidate_sha = _commit_worktree(
-                Path(prepared["worktree"]), "TASK-001 verified work"
-            )
+            candidate_sha = _commit_worktree(Path(prepared["worktree"]), "TASK-001 verified work")
             verification = run_cli("verify", "TASK-001", "--workspace", str(workspace))
             self.assertEqual(verification["verdict"], "PASSED_LOCAL")
             evidence_id = verification["evidence_id"]

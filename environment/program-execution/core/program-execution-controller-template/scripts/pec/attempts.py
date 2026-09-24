@@ -208,9 +208,9 @@ def effected_paths(
             "--no-renames",
             f"{baseline_head}..HEAD",
         ).stdout
-        candidates.update(path.strip().replace("\\", "/") for path in diff.splitlines() if path.strip())
+        candidates.update(
+            path.strip().replace("\\", "/") for path in diff.splitlines() if path.strip()
+        )
     return sorted(
-        path
-        for path in candidates
-        if baseline.get(path) != path_fingerprint(worktree, path)
+        path for path in candidates if baseline.get(path) != path_fingerprint(worktree, path)
     )

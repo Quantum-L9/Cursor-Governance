@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 from unittest import mock
 
-import peer_execution.front_door as front_door
+from peer_execution import front_door
 from peer_execution.errors import AdapterFailure, CanonicalErrorCode
 from peer_execution.front_door import (
     AMBIGUOUS_SIDE_EFFECT,
@@ -267,9 +267,7 @@ class FailoverTests(unittest.TestCase):
                     "primary": {
                         "outcome": _Outcome(
                             "FAIL",
-                            status_receipts=[
-                                {"canonical_error_code": "CAPABILITY_UNSUPPORTED"}
-                            ],
+                            status_receipts=[{"canonical_error_code": "CAPABILITY_UNSUPPORTED"}],
                         )
                     },
                     "alternate": {},

@@ -5502,7 +5502,7 @@ def reconcile_resumed_source(
     """
     if not source.is_file():
         raise CampaignError(
-            f"{campaign_id}: the submitted campaign source is unavailable at {source}; "
+            f"{campaign_id}: the campaign source is unavailable at {source}; "
             "refusing to resume without authored-source provenance",
             error_code="RESUME_SOURCE_UNVERIFIED",
         )

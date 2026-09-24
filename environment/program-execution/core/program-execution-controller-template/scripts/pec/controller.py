@@ -137,7 +137,9 @@ def write_campaign_status(
     # The JSON file is a recovery-friendly projection, never an authority
     # source. A pre-commit file write used to make an interrupted close look
     # terminal forever; StateDB is the canonical status record.
-    current = (db.get_meta("campaign_status") if db is not None else read_campaign_status(workspace)) or {}
+    current = (
+        db.get_meta("campaign_status") if db is not None else read_campaign_status(workspace)
+    ) or {}
     activated_at = current.get("activated_at")
     if runtime_status == "active" and not activated_at:
         activated_at = utc_now()
@@ -2279,7 +2281,7 @@ def record_attempt(workspace: Path, task_id: str, receipt_source: Path) -> dict[
                 "is refused",
                 error_code="STALE_ATTEMPT_RESULT",
             )
-        lease = _require_active_unexpired_lease(
+        _require_active_unexpired_lease(
             db,
             task_id,
             expected_lease_id=str(live["lease_id"]),
@@ -2800,16 +2802,46 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
             task_id,
             expected_lease_id=str(task.get("lease_id") or ""),
         )
-        db.transition_task(task_id, "VERIFYING")
         attempt = db.latest_attempt(task_id)
         execution_attempt = next(
             (
                 item
                 for item in db.execution_attempts(task_id)
-                if attempt is not None and int(item["attempt_number"]) == int(attempt["attempt_number"])
+                if attempt is not None
+                and int(item["attempt_number"]) == int(attempt["attempt_number"])
             ),
             None,
         )
+        worktree = Path(task["worktree"]) if task.get("worktree") else None
+        baseline: dict[str, str] = {}
+        baseline_head: str | None = None
+        if worktree is not None and worktree.is_dir():
+            # Admit the attempt baseline BEFORE the SUBMITTED -> VERIFYING
+            # transition. `transition_task` autocommits outside a controller
+            # transaction, so a baseline fault raised after it used to strand
+            # the task in VERIFYING: no receipt to replay, no transition back,
+            # recovery required for what is only missing evidence
+            # (PEC-P0-003). Refusing here leaves the task SUBMITTED, so the
+            # evidence can be repaired and `verify` re-run on the same attempt.
+            if execution_attempt is None:
+                raise ControllerError(
+                    f"{task_id}: verification requires an execution attempt baseline",
+                    error_code="EXECUTION_BASELINE_MISSING",
+                )
+            raw_baseline_path = str(execution_attempt.get("baseline_path") or "")
+            if not raw_baseline_path:
+                # An empty reference would resolve to Path(".") and fail as
+                # "unreadable baseline", hiding that the attempt row itself
+                # records no baseline artifact.
+                raise ControllerError(
+                    f"{task_id}: execution attempt {execution_attempt.get('attempt_id')} "
+                    "records no baseline_path",
+                    error_code="EXECUTION_BASELINE_MISSING",
+                )
+            baseline_path = Path(raw_baseline_path)
+            baseline = load_baseline_artifact(baseline_path, attempt=execution_attempt)
+            baseline_head = load_baseline_head(baseline_path, attempt=execution_attempt)
+        db.transition_task(task_id, "VERIFYING")
         gates: dict[str, str] = {}
         gates["program_lock"] = "PASS" if lock_trusted_for_task(workspace, task_id) else "STALE"
         ledger_ok, _ = ledger.verify()
@@ -2851,7 +2883,6 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
             and receipt.get("base_sha") == task["base_sha"]
             else "FAIL"
         )
-        worktree = Path(task["worktree"]) if task.get("worktree") else None
         changed: list[str] = []
         observed_digests: dict[str, str] = {}
         validations: list[dict[str, Any]] = []
@@ -2882,14 +2913,6 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
                 == 0
                 else "FAIL"
             )
-            if execution_attempt is None:
-                raise ControllerError(
-                    f"{task_id}: verification requires an execution attempt baseline",
-                    error_code="EXECUTION_BASELINE_MISSING",
-                )
-            baseline_path = Path(str(execution_attempt.get("baseline_path") or ""))
-            baseline = load_baseline_artifact(baseline_path, attempt=execution_attempt)
-            baseline_head = load_baseline_head(baseline_path, attempt=execution_attempt)
             changed = [
                 path
                 for path in effected_paths(worktree, baseline, baseline_head=baseline_head)
@@ -3805,8 +3828,8 @@ def _integrate_candidate(
             )
             if included.returncode != 0:
                 raise ControllerError(
-                    f"canonical integration receipt for {task_id} is no longer present in {branch}; "
-                    "refuse completion until recovery reconciles branch lineage",
+                    f"canonical integration receipt for {task_id} is no longer present in "
+                    f"{branch}; refuse completion until recovery reconciles branch lineage",
                     error_code="INTEGRATION_LINEAGE_MISMATCH",
                 )
             # Already canonically integrated: replay safely without duplicating commits.

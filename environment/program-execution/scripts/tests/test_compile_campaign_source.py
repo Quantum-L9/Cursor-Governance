@@ -76,7 +76,10 @@ def _scoped_source(directory: Path) -> Path:
 
 class ProgramCompletenessTests(unittest.TestCase):
     def test_preflight_rejects_a_program_field_required_by_lowering(self) -> None:
-        compiler = _load("compile_campaign_source_program_completeness", PE_ROOT / "scripts/compile_campaign_source.py")
+        compiler = _load(
+            "compile_campaign_source_program_completeness",
+            PE_ROOT / "scripts/compile_campaign_source.py",
+        )
         source = _with_declared_scope(yaml.safe_load(SOURCE.read_text(encoding="utf-8")))
         del source["program"]["owner"]
 
