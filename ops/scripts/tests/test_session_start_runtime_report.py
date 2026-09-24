@@ -126,20 +126,22 @@ class MarkdownEmitTests(unittest.TestCase):
         )
         self.assertIn("### Degraded\n- none", md)
 
-    def test_aws_cli_failed_leads_markdown(self) -> None:
+    def test_a_failed_identity_leads_markdown(self) -> None:
         md = report.format_markdown(
             [
-                report.classify_aws_cli(
+                report.classify_infisical_identity(
                     {
                         "ok": False,
-                        "code": "AWS_CLI_NOT_FOUND",
-                        "summary": "AWS_CLI_NOT_FOUND — secrets plane cannot start",
+                        "code": "IDENTITY_ABSENT",
+                        "summary": "no Infisical machine identity — set L9_INFISICAL_CLIENT_ID "
+                        "and L9_INFISICAL_CLIENT_SECRET in the environment settings",
                     }
                 )
             ]
         )
         self.assertTrue(md.startswith("### FAILED"))
-        self.assertIn("aws-cli: failed", md)
+        self.assertIn("infisical-identity: failed", md)
+        self.assertIn("L9_INFISICAL_CLIENT_SECRET", md)
         self.assertIn("### Runtime", md)
 
 
@@ -151,30 +153,41 @@ class SecretsPlaneClassificationTests(unittest.TestCase):
         self.assertIn("GITHUB_TOKEN", BIND_NAMES)
 
     def test_aws_source_is_a_fault(self) -> None:
-        line = report.classify_secrets_bind(
+        line = report.classify_bind_line(
             [{"name": "SEMGREP_APP_TOKEN", "bound": True, "source": "aws"}]
         )
         self.assertEqual(line["class"], report.FAILED)
         self.assertIn("source=aws is a fault", line["summary"])
 
     def test_unbound_is_degraded_not_a_paste(self) -> None:
-        line = report.classify_secrets_bind(
+        line = report.classify_bind_line(
             [{"name": "SONAR_TOKEN", "bound": False, "source": "unbound"}]
         )
         self.assertEqual(line["class"], report.DEGRADED)
         self.assertIn("do not paste a token", line["summary"])
 
     def test_missing_receipt_is_unread_not_a_live_probe(self) -> None:
-        line = report.classify_secrets_bind(None)
+        line = report.classify_bind_line(None)
         self.assertEqual(line["class"], report.DEGRADED)
         self.assertIn("secrets-plane receipt unread", line["summary"])
         self.assertNotIn("capability_bind", line["summary"])
 
-    def test_aws_missing_receipt_is_unread(self) -> None:
-        line = report.classify_aws_cli(None)
+    def test_identity_missing_receipt_is_unread(self) -> None:
+        line = report.classify_infisical_identity(None)
         self.assertEqual(line["class"], report.FAILED)
-        self.assertIn("aws-cli receipt unread", line["summary"])
-        self.assertNotIn("aws_cli_preflight", line["summary"])
+        self.assertIn("secrets-plane receipt unread", line["summary"])
+
+    def test_the_aws_line_is_reported_only_where_the_plane_ran_it(self) -> None:
+        """Cursor / operator keep AWS; Claude's receipt carries no aws object."""
+        self.assertIsNone(report.classify_aws_cli(None))
+        self.assertEqual(report.classify_aws_cli({"ok": True})["class"], report.OK)
+        failed = report.classify_aws_cli({"ok": False, "code": "AWS_CLI_NOT_FOUND"})
+        self.assertEqual(failed["class"], report.FAILED)
+        self.assertTrue(report.format_markdown([failed]).startswith("### FAILED"))
+        planted = report.classify_aws_cli({"ok": False, "code": "CANARY", "summary": "CANARY"})
+        self.assertNotIn("CANARY", json.dumps(planted))
+        self.assertIsNone(report.secrets_receipt_aws({"identity": {}}))
+        self.assertEqual(report.secrets_receipt_aws({"aws": {"ok": True}}), {"ok": True})
 
 
 class VenvBackupClassificationTests(unittest.TestCase):
@@ -217,71 +230,53 @@ class VenvBackupClassificationTests(unittest.TestCase):
 
 
 class SecretsReceiptLoadTests(unittest.TestCase):
-    def test_load_receipt_passes_aws_and_binds(self) -> None:
+    RECEIPT = {
+        "ok": True,
+        "state": "ok",
+        "surface_class": "model_controlled",
+        "login": "env",
+        "identity": {"ok": True, "code": "OK", "source": "env", "summary": "logged in"},
+        "binds": [{"name": "GITHUB_TOKEN", "bound": True, "source": "infisical"}],
+    }
+
+    def _write(self, tmp: str, payload: dict) -> None:
+        dest = Path(tmp) / ".l9" / "session"
+        dest.mkdir(parents=True)
+        (dest / "secrets-plane.json").write_text(json.dumps(payload), encoding="utf-8")
+
+    def test_load_receipt_passes_identity_and_binds(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            dest = Path(tmp) / ".l9" / "session"
-            dest.mkdir(parents=True)
-            (dest / "secrets-plane.json").write_text(
-                json.dumps(
-                    {
-                        "ok": True,
-                        "login": "present",
-                        "aws": {"ok": True, "code": "OK", "summary": "authorized"},
-                        "binds": [{"name": "GITHUB_TOKEN", "bound": True, "source": "infisical"}],
-                    }
-                ),
-                encoding="utf-8",
-            )
-            receipt = report.load_secrets_plane_receipt(tmp)
-            aws, binds = report.secrets_receipt_parts(receipt)
-            self.assertEqual(aws["code"], "OK")
-            self.assertEqual(binds[0]["source"], "infisical")
+            self._write(tmp, self.RECEIPT)
+            identity, binds = report.secrets_receipt_parts(report.load_secrets_plane_receipt(tmp))
+        self.assertEqual(identity["source"], "env")
+        self.assertEqual(binds[0]["source"], "infisical")
 
     def test_absent_receipt_is_unread_parts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            aws, binds = report.secrets_receipt_parts(report.load_secrets_plane_receipt(tmp))
-        self.assertIsNone(aws)
+            identity, binds = report.secrets_receipt_parts(report.load_secrets_plane_receipt(tmp))
+        self.assertIsNone(identity)
         self.assertIsNone(binds)
 
     def test_receipt_carries_the_plane_state(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            dest = Path(tmp) / ".l9" / "session"
-            dest.mkdir(parents=True)
-            (dest / "secrets-plane.json").write_text(
-                json.dumps(
-                    {
-                        "ok": False,
-                        "state": "unavailable_by_surface",
-                        "surface_class": "model_controlled",
-                        "login": "skipped",
-                        "aws": {
-                            "ok": False,
-                            "code": "AWS_CLI_NOT_FOUND",
-                            "summary": "AWS_CLI_NOT_FOUND — secrets plane cannot start",
-                        },
-                        "binds": [
-                            {"name": "SONAR_TOKEN", "bound": False, "source": "unbound"},
-                        ],
-                    }
-                ),
-                encoding="utf-8",
-            )
+            self._write(tmp, self.RECEIPT)
             receipt = report.load_secrets_plane_receipt(tmp)
-            self.assertEqual(
-                report.secrets_plane_state(receipt),
-                report.PLANE_UNAVAILABLE_BY_SURFACE,
-            )
+        self.assertEqual(report.secrets_plane_state(receipt), "ok")
 
-    def test_pre_carve_out_receipt_has_no_state(self) -> None:
-        """A receipt written before the carve-out reads '' and keeps failing."""
-        legacy = {"ok": False, "aws": {"ok": False, "code": "AWS_CLI_NOT_FOUND"}}
+    def test_a_legacy_aws_receipt_fails_closed(self) -> None:
+        """A receipt from the retired AWS plane carries no identity: FAILED, not ok."""
+        legacy = {
+            "ok": False,
+            "state": "unavailable_by_surface",
+            "aws": {"ok": False, "code": "AWS_CLI_NOT_FOUND"},
+        }
         self.assertEqual(report.secrets_plane_state(legacy), "")
-        line = report.classify_aws_cli(legacy["aws"], report.secrets_plane_state(legacy))
+        identity, _ = report.secrets_receipt_parts(legacy)
+        line = report.classify_infisical_identity(identity)
         self.assertEqual(line["class"], report.FAILED)
 
     def test_unrecognized_state_is_fail_closed(self) -> None:
-        """An unknown state degrades to no-state, never to the carve-out."""
-        for raw in ("unavailable", "OK", "ok ", "sudo", "", None, 1, {"a": 1}):
+        for raw in ("unavailable_by_surface", "OK", "ok ", "sudo", "", None, 1, {"a": 1}):
             with self.subTest(state=raw):
                 self.assertEqual(report.secrets_plane_state({"state": raw}), "")
 
@@ -290,108 +285,48 @@ class SecretsReceiptLoadTests(unittest.TestCase):
 
         The report is printed, so a value flowing from the receipt into the
         rendered output is a clear-text-logging path (CodeQL flagged exactly
-        that). Returning the allowlisted literal is the barrier: the object
-        returned is the module's own constant, never the parsed string.
+        that). Returning the allowlisted literal is the barrier.
         """
-        parsed = json.loads('{"state": "unavailable_by_surface"}')
+        parsed = json.loads('{"state": "failed"}')
         returned = report.secrets_plane_state(parsed)
-        self.assertEqual(returned, report.PLANE_UNAVAILABLE_BY_SURFACE)
+        self.assertEqual(returned, "failed")
         self.assertIn(returned, report.PLANE_STATES)
-        # Identity, not just equality: the literal, not the receipt's string.
-        self.assertIs(returned, report.PLANE_UNAVAILABLE_BY_SURFACE)
         self.assertIsNot(returned, parsed["state"])
 
 
-class SecretsBindSurfaceClassificationTests(unittest.TestCase):
-    """The carve-out reaches the bind classifier too.
-
-    Without this the report contradicted itself: aws-cli named the surface and
-    said "not a fault" while secrets-bind degraded on the very same cause.
-    """
+class InfisicalIdentityClassificationTests(unittest.TestCase):
+    """The machine identity is every surface's one bootstrap; none is exempt."""
 
     UNBOUND = [
         {"name": "SEMGREP_APP_TOKEN", "bound": False, "source": "infisical-machine-absent"},
-        {"name": "SONAR_TOKEN", "bound": False, "source": "infisical-machine-absent"},
         {"name": "GITHUB_TOKEN", "bound": True, "source": "env"},
     ]
 
-    def test_unbound_by_surface_is_not_degraded(self) -> None:
-        line = report.classify_secrets_bind(self.UNBOUND, report.PLANE_UNAVAILABLE_BY_SURFACE)
-        self.assertEqual(line["class"], report.NA)
-        self.assertFalse(line["include_in_degraded"])
-        self.assertIn("unbound by surface", line["summary"])
-        # Still named, so the unbound inventory stays visible in the report.
-        self.assertIn("SEMGREP_APP_TOKEN", line["evidence"])
+    def test_a_logged_in_identity_is_ok(self) -> None:
+        line = report.classify_infisical_identity(
+            {"ok": True, "code": "OK", "source": "env", "summary": "logged in (source=env)"}
+        )
+        self.assertEqual(line["class"], report.OK)
 
-    def test_unbound_without_the_carve_out_still_degrades(self) -> None:
-        for state in ("failed", "ok", ""):
+    def test_absent_and_refused_identities_fail(self) -> None:
+        for code in ("IDENTITY_ABSENT", "LOGIN_REFUSED"):
+            with self.subTest(code=code):
+                line = report.classify_infisical_identity({"ok": False, "code": code})
+                self.assertEqual(line["class"], report.FAILED)
+                self.assertTrue(line["include_in_degraded"])
+                self.assertIn("### FAILED", report.format_markdown([line]))
+
+    def test_unbound_names_degrade_whatever_the_state(self) -> None:
+        for state in ("failed", "ok", "", "unavailable_by_surface"):
             with self.subTest(state=state):
-                line = report.classify_secrets_bind(self.UNBOUND, state)
+                line = report.classify_bind_line(self.UNBOUND, state)
                 self.assertEqual(line["class"], report.DEGRADED)
                 self.assertTrue(line["include_in_degraded"])
 
-    def test_source_aws_is_a_fault_on_every_surface(self) -> None:
-        """A real fault is never carved out — checked before the unbound branch."""
+    def test_source_aws_is_a_fault(self) -> None:
         leftover = [{"name": "SONAR_TOKEN", "bound": True, "source": "aws"}]
-        for state in (report.PLANE_UNAVAILABLE_BY_SURFACE, "failed", ""):
-            with self.subTest(state=state):
-                line = report.classify_secrets_bind(leftover, state)
-                self.assertEqual(line["class"], report.FAILED)
-                self.assertTrue(line["include_in_degraded"])
-
-    def test_unread_receipt_is_degraded_whatever_the_state(self) -> None:
-        line = report.classify_secrets_bind(None, report.PLANE_UNAVAILABLE_BY_SURFACE)
-        self.assertEqual(line["class"], report.DEGRADED)
-
-    def test_report_does_not_contradict_itself_on_a_carved_out_surface(self) -> None:
-        """The regression Codex caught: both lines, one cause, one verdict."""
-        aws = {"ok": False, "code": "AWS_CLI_NOT_FOUND", "summary": "absent"}
-        state = report.PLANE_UNAVAILABLE_BY_SURFACE
-        lines = [
-            report.classify_aws_cli(aws, state),
-            report.classify_secrets_bind(self.UNBOUND, state),
-        ]
-        self.assertEqual([item["class"] for item in lines], [report.NA, report.NA])
-        rendered = report.format_markdown(lines)
-        self.assertNotIn("### FAILED", rendered)
-        degraded_section = rendered.split("### Degraded", 1)[1]
-        self.assertIn("none", degraded_section)
-
-
-class AwsCliSurfaceClassificationTests(unittest.TestCase):
-    """The third state renders as neither ok nor FAILED."""
-
-    ABSENT = {
-        "ok": False,
-        "code": "AWS_CLI_NOT_FOUND",
-        "summary": "AWS_CLI_NOT_FOUND — secrets plane cannot start",
-    }
-
-    def test_unavailable_by_surface_is_not_failed_and_not_degraded(self) -> None:
-        line = report.classify_aws_cli(self.ABSENT, report.PLANE_UNAVAILABLE_BY_SURFACE)
-        self.assertEqual(line["class"], report.NA)
-        self.assertFalse(line["include_in_degraded"])
-        self.assertFalse(line["this_surface"])
-        self.assertIn("unavailable by surface", line["summary"])
-        # Still named in the report — visible, just not scored as a fault.
-        self.assertEqual(line["evidence"], "AWS_CLI_NOT_FOUND")
-
-    def test_failed_plane_state_still_fails(self) -> None:
-        for state in ("failed", ""):
-            with self.subTest(state=state):
-                line = report.classify_aws_cli(self.ABSENT, state)
-                self.assertEqual(line["class"], report.FAILED)
-                self.assertTrue(line["include_in_degraded"])
-
-    def test_unread_receipt_still_fails_whatever_the_state(self) -> None:
-        line = report.classify_aws_cli(None, report.PLANE_UNAVAILABLE_BY_SURFACE)
+        line = report.classify_bind_line(leftover, "ok")
         self.assertEqual(line["class"], report.FAILED)
-
-    def test_markdown_omits_the_failed_header_for_the_carve_out(self) -> None:
-        carved = report.classify_aws_cli(self.ABSENT, report.PLANE_UNAVAILABLE_BY_SURFACE)
-        self.assertNotIn("### FAILED", report.format_markdown([carved]))
-        failed = report.classify_aws_cli(self.ABSENT, "failed")
-        self.assertIn("### FAILED", report.format_markdown([failed]))
 
 
 class MemoryProofClassificationTests(unittest.TestCase):
@@ -511,7 +446,7 @@ class HydrateCollapseTests(unittest.TestCase):
                 hydrate_degraded=True,
                 hydrate_reason="CANONICAL_UNAVAILABLE: store unreachable",
                 home=Path(tmp),
-                aws_cli={"ok": True, "code": "OK", "summary": "authorized"},
+                identity={"ok": True, "code": "OK", "source": "env", "summary": "logged in"},
                 secrets_bind=[
                     {"name": "SEMGREP_APP_TOKEN", "bound": True, "source": "env"},
                     {"name": "SONAR_TOKEN", "bound": True, "source": "infisical"},
@@ -543,7 +478,7 @@ class HydrateCollapseTests(unittest.TestCase):
                 hydrate_reason="",
                 hydrate_condition=condition,
                 home=Path(tmp),
-                aws_cli={"ok": True, "code": "OK", "summary": "authorized"},
+                identity={"ok": True, "code": "OK", "source": "env", "summary": "logged in"},
                 secrets_bind=[],
             )
         return next(item for item in lines if item["name"] == "memory-hydrate")
@@ -591,7 +526,7 @@ class HydrateCollapseTests(unittest.TestCase):
                 hydrate_reason="",
                 hydrate_condition="",
                 home=Path(tmp),
-                aws_cli={"ok": True, "code": "OK", "summary": "authorized"},
+                identity={"ok": True, "code": "OK", "source": "env", "summary": "logged in"},
                 secrets_bind=[],
             )
         self.assertNotIn("memory-hydrate", [item["name"] for item in lines])
@@ -613,7 +548,7 @@ class HydrateCollapseTests(unittest.TestCase):
                 hydrate_degraded=True,
                 hydrate_reason="empty packet",
                 home=Path(tmp),
-                aws_cli={"ok": True, "code": "OK", "summary": "authorized"},
+                identity={"ok": True, "code": "OK", "source": "env", "summary": "logged in"},
                 secrets_bind=[
                     {"name": "SEMGREP_APP_TOKEN", "bound": True, "source": "env"},
                     {"name": "SONAR_TOKEN", "bound": True, "source": "infisical"},
@@ -1034,7 +969,7 @@ class SessionStartCeremonyTests(unittest.TestCase):
             "hydrate_reason": "",
             "home": tmp,
             "workspace": str(tmp),
-            "aws_cli": {"ok": True, "code": "OK", "summary": "authorized"},
+            "identity": {"ok": True, "code": "OK", "source": "env", "summary": "logged in"},
             "secrets_bind": [
                 {"name": "SEMGREP_APP_TOKEN", "bound": True, "source": "infisical"},
                 {"name": "SONAR_TOKEN", "bound": True, "source": "infisical"},
@@ -1086,3 +1021,22 @@ class SessionStartCeremonyTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class IdentityLiteralBarrierTests(unittest.TestCase):
+    """Nothing read from the receipt's identity object may reach the report."""
+
+    def test_a_planted_summary_never_reaches_the_report(self) -> None:
+        for receipt in (
+            {"ok": True, "code": "OK", "summary": "CANARY-LEAK"},
+            {"ok": False, "code": "IDENTITY_ABSENT", "summary": "CANARY-LEAK"},
+            {"ok": False, "code": "CANARY-LEAK", "summary": "CANARY-LEAK"},
+        ):
+            with self.subTest(receipt=receipt):
+                line = report.classify_infisical_identity(receipt)
+                self.assertNotIn("CANARY-LEAK", json.dumps(line))
+                self.assertNotIn("CANARY-LEAK", report.format_markdown([line]))
+
+    def test_ok_requires_both_ok_and_the_ok_code(self) -> None:
+        line = report.classify_infisical_identity({"ok": True, "code": "IDENTITY_ABSENT"})
+        self.assertEqual(line["class"], report.FAILED)

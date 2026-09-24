@@ -53,7 +53,7 @@ work today.
 | `context7.mcp` | No library docs retrieval via the retired broker |
 | `gitguardian.mcp` | No brokered secret scanning; `gitleaks` still runs locally |
 | `github.mcp`, `github.packages_read` | Platform GitHub MCP (where connected) covers most of this |
-| Infisical / AWS Secrets Manager bind | The AWS CLI is absent here, so the one login seed cannot be read and the Infisical-bound names in the plane's inventory (`SEMGREP_APP_TOKEN`, `SONAR_TOKEN`) stay unbound. The third inventoried name, `GITHUB_TOKEN`, is unaffected — it binds from the proxied environment, not from Infisical. The SessionStart plane reports `state: unavailable_by_surface` and is **not** counted DEGRADED — an environment property, not a bootstrap fault. Do not install a CLI or paste a credential to clear it |
+| Infisical bind | Bound as this surface's Infisical machine identity (`L9_INFISICAL_CLIENT_ID` + `L9_INFISICAL_CLIENT_SECRET` in the environment settings) — see "Secrets plane, 2026-09-24" below. Without that identity the plane FAILS and names the fix; there is no AWS step and no surface is exempt |
 
 ## Observed GitHub transports
 
@@ -293,6 +293,12 @@ A capability reporting `UNAVAILABLE`, `DEGRADED`, or `BLOCKED_BY_PLATFORM` is
 **never** a reason to paste a credential into this surface. Not `SONAR_TOKEN`,
 not `SEMGREP_APP_TOKEN`, not `INFISICAL_CLIENT_SECRET`, not a Graphiti bearer.
 
+The one sanctioned exception (2026-09-24) is the surface's own Infisical machine
+identity, `L9_INFISICAL_CLIENT_SECRET`, set once by the operator in the
+environment settings — never pasted into a chat, never another agent's
+identity, never a second credential. Every other secret is bound from Infisical
+in-process and stays out of the environment.
+
 **And there is no containment boundary below the session.** Measured 2026-09-05:
 a Task subagent receives **168 of 168** environment variables with identical
 digests — every `L9_*`, `GRAPHITI_MCP_URL`, and every credential-shaped name
@@ -389,3 +395,36 @@ The plane stays visible either way: the SessionStart report renders the state as
 and the receipt's `ok` field still reads `false`, because the plane did not bind.
 Nothing here is a reason to install a CLI or paste a credential — see **The rule
 that does not bend** above.
+
+## Secrets plane, 2026-09-24 — supersedes the 2026-09-19 carve-out above
+
+A dated section, not a rewrite. The operator decided that Infisical is the agent
+secret vault, that secrets are not optional on any surface, and that the
+bootstrap diverges by peer.
+
+- **Claude (this surface): one bootstrap secret, no AWS.** It binds through its
+  own Infisical machine identity: `L9_INFISICAL_CLIENT_SECRET` plus the
+  non-secret `L9_INFISICAL_CLIENT_ID`, set once in the environment settings. No
+  AWS preflight runs here and no AWS code is imported.
+- **Cursor / operator: unchanged.** AWS CLI preflight, then the existing profile
+  or the AWS login seed that writes it; the `aws-cli` line still reports it.
+- **No carve-out.** `unavailable_by_surface` is retired. This surface without its
+  identity reports `state: failed` and the fix; the reporter's
+  `infisical-identity` line is FAILED. The tri-state table above is historical.
+- **What the model can read.** On this surface the bootstrap secret is visible
+  to the session like every environment value (there is no containment boundary
+  below the session, as measured above). The control is scope: a dedicated,
+  least-privilege, revocable identity per surface. Bound secrets are held
+  in-process by `capability_bind` and never exported.
+- **HTTP/1.1.** `ops/lib/safe_https.exchange` sent HTTP/1.0, which this
+  container's egress answers with `426 Upgrade Required` for every origin tried
+  (Infisical, Context7), so no Infisical bind could have succeeded here. It now
+  sends HTTP/1.1.
+
+| Probe (this container, 2026-09-24) | Observed |
+|---|---|
+| `safe_https` HTTP/1.0 → `app.infisical.com/api/status` | `426 Upgrade Required` |
+| same, HTTP/1.1 | `200` |
+| HTTP/1.1 Universal Auth login with a fake identity | `401 Invalid credentials` (the path reaches auth) |
+| Context7 through `vault_mcp_bridge` (no key) | `initialize` + `tools/list` answered |
+| `CONTEXT7_API_KEY` via `capability_bind --check` (no identity set) | `infisical-machine-absent` |
