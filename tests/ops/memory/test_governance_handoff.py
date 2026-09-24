@@ -87,3 +87,16 @@ def test_the_record_labels_observed_receipts_and_fits_the_surface_cap() -> None:
 def test_the_example_is_itself_a_valid_brief() -> None:
     brief = gh.normalize(gh.example(7), pr_number=7)
     assert all(brief[key] for key in gh.SECTIONS)
+
+
+def test_the_record_names_the_writing_agent_never_a_literal() -> None:
+    text = gh.record_text(
+        gh.normalize(_brief()),
+        {},
+        repository="Org/repo",
+        pr_label="Org/repo#7",
+        session_id="s1",
+        agent_id="claude-code-mobile",
+    )
+    assert "agent claude-code-mobile." in text.splitlines()[0]
+    assert "agent claude-code." not in text
