@@ -231,10 +231,8 @@ def main() -> int:
     session_ws = st.workspace_root()
     if args.workspace:
         workspace = Path(args.workspace).expanduser().resolve()
-        namespaces = []
     else:
         workspace = session_ws
-        namespaces = st.resolve_namespaces(contract)
     agent_id = prefetch_agent_id()
     os.environ.setdefault("L9_MEMORY_AGENT_ID", agent_id)
     os.environ.setdefault(
@@ -288,6 +286,9 @@ def main() -> int:
                 contexts.append(header + "\n" + body if len(roots) > 1 else body)
 
         degraded = degraded_any or not group_ids
+        # Requested = the in-scope repositories' own namespaces (explicit
+        # L9_MEMORY_NAMESPACES aside), never a governance-repo constant.
+        namespaces = st.resolve_namespaces(contract, group_ids)
         if not receipt_id:
             raise ValueError("prefetch refused to stamp a session-scoped write-gate receipt")
         st.write_receipt(
