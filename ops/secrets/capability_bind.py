@@ -9,14 +9,16 @@ them on stdout, stderr, ``os.environ``, a file, or a receipt.
 Resolution order:
 
 1. The name is already in the process environment (operator / CI import).
-2. ``~/.infisical/l9-machine.json`` via the Infisical HTTP client
-   (``port_aws_to_infisical.infisical_req``). The Infisical CLI keyring
-   session is disconnected — it has no login on this surface.
+2. Infisical over HTTP (``infisical_http``) as this surface's machine identity
+   (``infisical_cli_login.machine_identity``): ``L9_INFISICAL_CLIENT_ID`` +
+   ``L9_INFISICAL_CLIENT_SECRET`` in the environment — the one bootstrap
+   secret — or an operator's ``~/.infisical/l9-machine.json``.
 
-AWS Secrets Manager is **not** a bind path. ``source=aws`` is a fault.
+AWS is not on this path at all. ``source=aws`` is a fault.
 Only names listed in ``infisical-cursor-governance.yaml`` ``root_env_keys``
 (plus the documented aliases ``GH_TOKEN`` / ``SONARCLOUD_TOKEN``) are accepted.
-``INFISICAL_CLIENT_SECRET`` is refused even if asked.
+``INFISICAL_CLIENT_SECRET`` and the bootstrap ``L9_INFISICAL_CLIENT_SECRET`` are
+refused even if asked: the identity is used, never handed out.
 
 Usage:
   capability_bind.py --check SEMGREP_APP_TOKEN   # names + source only
@@ -25,7 +27,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import sys
 import urllib.parse
@@ -48,6 +49,7 @@ HTTP_RETRIES = 2
 REFUSED_NAMES = frozenset(
     {
         "INFISICAL_CLIENT_SECRET",
+        "L9_INFISICAL_CLIENT_SECRET",
         "INFISICAL_TOKEN",
         "INFISICAL_PASSWORD",
         "AWS_SECRET_ACCESS_KEY",
@@ -107,37 +109,14 @@ def _accepted_secret(name: str, value: str) -> bool:
 
 
 def _machine_profile() -> dict[str, str] | None:
-    """Load the SessionStart machine profile. Never logs values."""
+    """This surface's machine identity (environment, then workstation file)."""
     global _PROFILE, _PROFILE_LOADED
     if _PROFILE_LOADED:
         return _PROFILE
     _PROFILE_LOADED = True
     import infisical_cli_login as machine_login
 
-    path = machine_login.profile_path()
-    if not path.is_file():
-        _PROFILE = None
-        return None
-    try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        _PROFILE = None
-        return None
-    if not isinstance(raw, dict):
-        _PROFILE = None
-        return None
-    if not all(str(raw.get(key) or "").strip() for key in machine_login.REQUIRED):
-        _PROFILE = None
-        return None
-    _PROFILE = {
-        "host": str(raw.get("host") or machine_login.DEFAULT_HOST).strip()
-        or machine_login.DEFAULT_HOST,
-        "project_id": str(raw["project_id"]).strip(),
-        "environment": str(raw.get("environment") or machine_login.DEFAULT_ENV).strip()
-        or machine_login.DEFAULT_ENV,
-        "client_id": str(raw["client_id"]).strip(),
-        "client_secret": str(raw["client_secret"]).strip(),
-    }
+    _PROFILE = machine_login.machine_identity()[1]
     return _PROFILE
 
 
@@ -145,17 +124,12 @@ def _ua_token(profile: dict[str, str]) -> str | None:
     global _UA_TOKEN
     if _UA_TOKEN:
         return _UA_TOKEN
-    from port_aws_to_infisical import infisical_req
+    from infisical_http import universal_auth_login
 
-    status, payload = infisical_req(
-        profile["host"],
-        "POST",
-        "/api/v1/auth/universal-auth/login",
-        body={"clientId": profile["client_id"], "clientSecret": profile["client_secret"]},
-        retries=HTTP_RETRIES,
+    token = universal_auth_login(
+        profile["host"], profile["client_id"], profile["client_secret"], retries=HTTP_RETRIES
     )
-    token = str((payload or {}).get("accessToken") or "").strip()
-    if status != 200 or not token:
+    if not token:
         return None
     _UA_TOKEN = token
     return _UA_TOKEN
@@ -174,14 +148,14 @@ def _secret_from_payload(payload: dict, name: str) -> str | None:
 
 
 def _from_machine_profile(name: str) -> str | None:
-    """One secret via l9-machine.json + Infisical HTTP. CLI keyring is unused."""
+    """One secret as this surface's machine identity, over Infisical HTTP."""
     profile = _machine_profile()
     if profile is None:
         return None
     token = _ua_token(profile)
     if not token:
         return None
-    from port_aws_to_infisical import infisical_req
+    from infisical_http import infisical_req
 
     query = urllib.parse.urlencode(
         {

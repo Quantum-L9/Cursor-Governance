@@ -40,10 +40,6 @@ FAILED = "failed"
 #: runtime is a bootstrap/environment fault, not memory degradation. Listed
 #: under ### Degraded so it is not hidden, but named for what it is.
 ENVIRONMENT_FAULT = "environment_fault"
-#: Secrets-plane state (ops/secrets/session_start_secrets.py) meaning the plane
-#: did not bind because this surface holds no credential plane at all. Distinct
-#: from a bind that should have happened and failed.
-PLANE_UNAVAILABLE_BY_SURFACE = "unavailable_by_surface"
 
 
 def _line(
@@ -472,34 +468,26 @@ def classify_backup(detail: str) -> dict[str, Any]:
     return _line("backup", OK, text)
 
 
-def classify_aws_cli(result: dict[str, Any] | None, plane_state: str = "") -> dict[str, Any]:
-    """Derived view of the secrets-plane receipt aws object. Never prints account ids."""
+def classify_infisical_identity(result: dict[str, Any] | None) -> dict[str, Any]:
+    """Derived view of the secrets-plane receipt identity object. Names only.
+
+    The machine identity is the one bootstrap every surface needs to reach
+    Infisical, the only agent secret plane. No surface is exempt: a missing or
+    refused identity is FAILED, with the fix named.
+    """
     if not result:
         return _line(
-            "aws-cli",
+            "infisical-identity",
             FAILED,
-            "aws-cli receipt unread",
+            "secrets-plane receipt unread",
             evidence="no receipt",
         )
     if result.get("ok"):
-        return _line("aws-cli", OK, str(result.get("summary") or "authorized"))
-    if plane_state == PLANE_UNAVAILABLE_BY_SURFACE:
-        # Neither ok nor FAILED: the CLI is absent because this surface holds no
-        # credential plane at all. Reported, never hidden — but not this
-        # session's fault and not a repair anyone can perform here.
-        return _line(
-            "aws-cli",
-            NA,
-            "unavailable by surface — model-controlled surface holds no "
-            "Infisical bind by design; do not install a CLI or paste a secret",
-            evidence=str(result.get("code") or ""),
-            this_surface=False,
-            include_in_degraded=False,
-        )
+        return _line("infisical-identity", OK, str(result.get("summary") or "logged in"))
     return _line(
-        "aws-cli",
+        "infisical-identity",
         FAILED,
-        str(result.get("summary") or result.get("code") or "unauthorized"),
+        str(result.get("summary") or result.get("code") or "no machine identity"),
         evidence=str(result.get("code") or ""),
     )
 
@@ -510,16 +498,9 @@ def classify_secrets_bind(
     """SessionStart visibility for local bind. Never includes a secret value.
 
     source=aws is a fault: bind is Infisical only. Unbound is a vault miss,
-    not a reason to paste a token.
-
-    The carve-out reaches this classifier too. When the plane is
-    ``unavailable_by_surface`` there is no vault to miss — the surface holds no
-    Infisical bind by design — so an unbound inventory name is the expected
-    state, not a degradation. Scoring it DEGRADED made the report contradict
-    itself: ``aws-cli`` named the surface and said "not a fault" while
-    ``secrets-bind`` degraded on the very same cause. A fault stays a fault:
-    ``source=aws`` is checked first and is unconditional on every surface.
+    not a reason to paste a token. No surface is exempt from binding.
     """
+    del plane_state  # the identity line carries the plane's verdict
     if statuses is None:
         return _line(
             "secrets-bind",
@@ -549,16 +530,6 @@ def classify_secrets_bind(
             evidence="aws " + ",".join(aws_leftover),
         )
     if unbound:
-        if plane_state == PLANE_UNAVAILABLE_BY_SURFACE:
-            return _line(
-                "secrets-bind",
-                NA,
-                f"{summary} — unbound by surface; this surface holds no "
-                "Infisical bind, so there is nothing to retry and nothing to paste",
-                evidence="unbound " + ",".join(unbound),
-                this_surface=False,
-                include_in_degraded=False,
-            )
         return _line(
             "secrets-bind",
             DEGRADED,
@@ -589,20 +560,19 @@ def secrets_receipt_parts(
 ) -> tuple[dict[str, Any] | None, list[dict[str, Any]] | None]:
     if not receipt:
         return None, None
-    aws = receipt.get("aws")
+    identity = receipt.get("identity")
     binds = receipt.get("binds")
     return (
-        aws if isinstance(aws, dict) else None,
+        identity if isinstance(identity, dict) else None,
         binds if isinstance(binds, list) else None,
     )
 
 
-#: The only plane states this reader will propagate. Anything else — a
-#: pre-carve-out receipt, a truncated write, a value from a newer producer —
-#: reads as no-state, which classifies FAILED exactly as before the carve-out.
+#: The only plane states this reader will propagate. Anything else — a retired
+#: state, a truncated write, a value from a newer producer — reads as no-state.
 #: The allowlist is what keeps receipt content out of the rendered report: only
 #: these literals can ever leave this function, never a value read from disk.
-PLANE_STATES = frozenset({"ok", PLANE_UNAVAILABLE_BY_SURFACE, "failed"})
+PLANE_STATES = frozenset({"ok", "failed"})
 
 
 def secrets_plane_state(receipt: dict[str, Any] | None) -> str:
@@ -660,10 +630,12 @@ def latest_repair_log(repair_dir: Path) -> tuple[str, str]:
 
 def format_markdown(lines: list[dict[str, Any]]) -> str:
     parts: list[str] = []
-    failed_aws = [item for item in lines if item["name"] == "aws-cli" and item["class"] == FAILED]
-    if failed_aws:
+    failed_identity = [
+        item for item in lines if item["name"] == "infisical-identity" and item["class"] == FAILED
+    ]
+    if failed_identity:
         parts.append("### FAILED")
-        for item in failed_aws:
+        for item in failed_identity:
             parts.append(f"- {item['name']}: {item['class']} — {item['summary']}")
         parts.append("")
     runtime = ["### Runtime"]
@@ -700,7 +672,7 @@ def collect(
     hydrate_condition: str = "",
     home: Path | None = None,
     workspace: str = "",
-    aws_cli: dict[str, Any] | None = None,
+    identity: dict[str, Any] | None = None,
     secrets_bind: list[dict[str, Any]] | None = None,
     write_receipt: bool = True,
     plane_state: str = "",
@@ -714,7 +686,7 @@ def collect(
         if memory_proof is not None
         else classify_memory(detail=memory_detail, stderr=memory_stderr, healthy=memory_healthy),
         classify_publish_path(evaluate(load_receipt())),
-        classify_aws_cli(aws_cli, plane_state),
+        classify_infisical_identity(identity),
         classify_secrets_bind(secrets_bind, plane_state),
         classify_skill_usage(skill_note),
     ]
@@ -875,7 +847,7 @@ def main(argv: list[str] | None = None) -> int:
         raw_detail=args.memory_detail,
     )
     plane_receipt = load_secrets_plane_receipt(args.workspace)
-    aws_cli, secrets_bind = secrets_receipt_parts(plane_receipt)
+    identity, secrets_bind = secrets_receipt_parts(plane_receipt)
     lines = collect(
         surface=args.surface,
         venv=args.venv,
@@ -893,16 +865,18 @@ def main(argv: list[str] | None = None) -> int:
         hydrate_reason=args.hydrate_reason,
         hydrate_condition=args.hydrate_condition,
         workspace=args.workspace,
-        aws_cli=aws_cli,
+        identity=identity,
         secrets_bind=secrets_bind,
         plane_state=secrets_plane_state(plane_receipt),
     )
-    aws_failed = any(item["name"] == "aws-cli" and item["class"] == FAILED for item in lines)
+    identity_failed = any(
+        item["name"] == "infisical-identity" and item["class"] == FAILED for item in lines
+    )
     if args.json:
         print(json.dumps({"lines": lines}, indent=2, sort_keys=True))
-        return 1 if aws_failed else 0
+        return 1 if identity_failed else 0
     print(format_markdown(lines))
-    return 1 if aws_failed else 0
+    return 1 if identity_failed else 0
 
 
 if __name__ == "__main__":

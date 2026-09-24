@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
-"""SessionStart secrets plane — one owner, fail loud.
+"""SessionStart secrets plane — one owner, fail loud, Infisical only.
 
-SessionStart binds Infisical. AWS CLI must be installed and authorized so the
-one login secret can seed the machine profile. If that preflight fails, the
-downstream secrets plane cannot start.
-
-On a model-controlled surface it cannot start *by design*: that surface holds
-no Infisical bind, no PAT and no bearer, so the AWS CLI is absent as a property
-of the environment rather than as a fault in it. Reporting that absence as a
-bootstrap failure produces a false DEGRADED, which is the same class of lie as
-a false READY and just as expensive to chase. The plane therefore carries a
-tri-state — the probe stays truthful, only the scoring is classified.
+SessionStart logs in to Infisical as this surface's machine identity
+(``infisical_cli_login``: ``L9_INFISICAL_CLIENT_ID`` + ``L9_INFISICAL_CLIENT_SECRET``,
+or an operator's ``~/.infisical/l9-machine.json``) and probes the inventoried
+names. There is no AWS step: the AWS login seed and the AWS CLI preflight are
+retired, and no surface is exempt. Every surface that runs agents needs its
+identity; a surface without one FAILS, loudly, with the fix named — secrets are
+not optional.
 
 This is not a Makefile ceremony. Values are never printed or exported.
 """
@@ -29,24 +26,24 @@ _SECRETS = Path(__file__).resolve().parent
 if str(_SECRETS) not in sys.path:
     sys.path.insert(0, str(_SECRETS))
 
-import aws_cli_preflight as aws_preflight  # noqa: E402
 import capability_bind as cb  # noqa: E402
 import infisical_cli_login as login  # noqa: E402
 
-BIND_NAMES = ("SEMGREP_APP_TOKEN", "SONAR_TOKEN", "GITHUB_TOKEN")
+BIND_NAMES = ("SEMGREP_APP_TOKEN", "SONAR_TOKEN", "GITHUB_TOKEN", "CONTEXT7_API_KEY")
 
-#: Surface classes. Only ``model_controlled`` earns the carve-out below: a
-#: self-hosted pool and an operator machine *can* hold a credential plane, so
-#: AWS absence there is a real fault and must keep degrading.
+#: Surface classes, reported for context only: no class is exempt from binding.
 MODEL_CONTROLLED = "model_controlled"
 SELF_HOSTED = "self_hosted"
 OPERATOR = "operator"
 
-#: Plane states. ``ok`` and ``unavailable_by_surface`` both exit 0; only
-#: ``failed`` — a surface that should have bound and did not — exits 1.
+#: Plane states. Only ``ok`` exits 0.
 STATE_OK = "ok"
-STATE_UNAVAILABLE_BY_SURFACE = "unavailable_by_surface"
 STATE_FAILED = "failed"
+
+#: Identity codes (names only, never values).
+IDENTITY_OK = "OK"
+IDENTITY_ABSENT = "IDENTITY_ABSENT"
+IDENTITY_REFUSED = "LOGIN_REFUSED"
 
 
 def surface_class(env: Mapping[str, str] | None = None) -> str:
@@ -77,26 +74,38 @@ def surface_class(env: Mapping[str, str] | None = None) -> str:
     return OPERATOR
 
 
-def plane_state(aws: Mapping[str, Any], login_state: str, klass: str) -> str:
-    """Score the plane. The probe is not consulted for anything but its truth.
-
-    A present-but-broken CLI (``AWS_NOT_AUTHORIZED``, ``TIMEOUT``) is a fault on
-    every surface, including a hosted one. Only an *absent* CLI on a
-    model-controlled surface is an environment property.
-    """
-    if bool(aws.get("ok")) and login_state != "failed":
-        return STATE_OK
-    if klass == MODEL_CONTROLLED and str(aws.get("code") or "") == aws_preflight.AWS_CLI_NOT_FOUND:
-        return STATE_UNAVAILABLE_BY_SURFACE
-    return STATE_FAILED
+def identity_status(login_state: str, source: str) -> dict[str, Any]:
+    """The machine identity's state, names only."""
+    if login_state in {"env", "present"}:
+        return {
+            "ok": True,
+            "code": IDENTITY_OK,
+            "source": source,
+            "summary": f"Infisical machine identity logged in (source={source})",
+        }
+    if login_state == "absent":
+        return {
+            "ok": False,
+            "code": IDENTITY_ABSENT,
+            "source": "",
+            "summary": (
+                f"no Infisical machine identity — set {login.ENV_CLIENT_ID} and "
+                f"{login.ENV_CLIENT_SECRET} in the environment settings"
+            ),
+        }
+    return {
+        "ok": False,
+        "code": IDENTITY_REFUSED,
+        "source": source,
+        "summary": "Infisical refused the machine identity or was unreachable",
+    }
 
 
 def run_plane(env: Mapping[str, str] | None = None) -> dict[str, Any]:
-    aws = aws_preflight.probe()
     klass = surface_class(env)
-    login_state = "skipped"
-    if aws.get("ok"):
-        login_state = login.ensure_machine_profile()
+    login_state = login.ensure_machine_profile(env)
+    source = login.machine_identity(env)[0]
+    identity = identity_status(login_state, source)
     binds: list[dict[str, Any]] = []
     for name in BIND_NAMES:
         status = cb.bind_status(name)
@@ -108,33 +117,28 @@ def run_plane(env: Mapping[str, str] | None = None) -> dict[str, Any]:
             }
         )
     return {
-        "aws": {
-            "ok": bool(aws.get("ok")),
-            "code": str(aws.get("code") or ""),
-            "summary": str(aws.get("summary") or ""),
-        },
+        "identity": identity,
         "login": login_state,
         "binds": binds,
-        "plane_ok": bool(aws.get("ok")) and login_state != "failed",
+        "plane_ok": bool(identity["ok"]),
         "surface_class": klass,
-        "state": plane_state(aws, login_state, klass),
+        "state": STATE_OK if identity["ok"] else STATE_FAILED,
     }
 
 
 def receipt_payload(result: dict[str, Any]) -> dict[str, Any]:
-    aws = result.get("aws") if isinstance(result.get("aws"), dict) else {}
+    identity = result.get("identity") if isinstance(result.get("identity"), dict) else {}
     binds = result.get("binds") if isinstance(result.get("binds"), list) else []
     return {
-        # `ok` keeps its old meaning — did the plane bind — and stays false when
-        # it did not, because it did not. Only the scoring of that fact moved.
         "ok": bool(result.get("plane_ok")),
         "state": str(result.get("state") or STATE_FAILED),
         "surface_class": str(result.get("surface_class") or OPERATOR),
         "login": result.get("login"),
-        "aws": {
-            "ok": bool(aws.get("ok")),
-            "code": str(aws.get("code") or ""),
-            "summary": str(aws.get("summary") or ""),
+        "identity": {
+            "ok": bool(identity.get("ok")),
+            "code": str(identity.get("code") or ""),
+            "source": str(identity.get("source") or ""),
+            "summary": str(identity.get("summary") or ""),
         },
         "binds": binds,
     }
@@ -163,37 +167,11 @@ def main(argv: list[str] | None = None) -> int:
         write_receipt(Path(args.receipt_out), result)
     if args.json:
         print(json.dumps(payload))
-    if result["state"] == STATE_UNAVAILABLE_BY_SURFACE:
-        # Visible, never silent — just not a fault. The inventoried secrets stay
-        # unbound and the receipt still says so; there is nothing to repair here
-        # and nothing to paste (rule 62).
-        print(
-            "session_start_secrets: secrets plane unavailable by surface "
-            f"({MODEL_CONTROLLED}; no Infisical bind by design) — not a fault. "
-            + " ".join(f"{b['name']}={b['source']}" for b in result["binds"]),
-            file=sys.stderr,
-        )
-        return 0
+    binds = " ".join(f"{b['name']}={b['source']}" for b in result["binds"])
     if not result["plane_ok"]:
-        if not result["aws"]["ok"]:
-            print(
-                "FAILED: AWS CLI is missing or not authorized. "
-                "Infisical bind cannot start. Repair: install AWS CLI v2 && "
-                "aws sts get-caller-identity",
-                file=sys.stderr,
-            )
-        else:
-            print(
-                f"FAILED: Infisical machine profile {result['login']}. "
-                "SessionStart cannot bind inventoried secrets.",
-                file=sys.stderr,
-            )
+        print(f"FAILED: {result['identity']['summary']}. {binds}", file=sys.stderr)
         return 1
-    print(
-        f"session_start_secrets: ok login={result['login']} "
-        + " ".join(f"{b['name']}={b['source']}" for b in result["binds"]),
-        file=sys.stderr,
-    )
+    print(f"session_start_secrets: ok login={result['login']} {binds}", file=sys.stderr)
     return 0
 
 
