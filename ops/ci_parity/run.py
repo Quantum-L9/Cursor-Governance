@@ -121,7 +121,13 @@ def open_pr_base(repo: Path, slug: str) -> str | None:
     return candidate if _git(repo, "rev-parse", "--verify", "-q", candidate, check=False) else None
 
 
-def resolve_base(repo: Path, sha: str, base: str | None) -> str:
+def resolve_base(repo: Path, sha: str, base: str | None) -> str | None:
+    """Merge-base of the requested ref and sha, or None when it cannot be evaluated.
+
+    A missing base or a shallow history that cannot see the base is cannot-evaluate.
+    Never substitutes ``sha^`` or ``sha``: that would hide earlier commits of a
+    multi-commit change.
+    """
     ref = (
         base
         or os.environ.get("L9_CI_PARITY_BASE")
@@ -129,8 +135,7 @@ def resolve_base(repo: Path, sha: str, base: str | None) -> str:
         or open_pr_base(repo, repo_slug(repo))
         or "origin/main"
     )
-    merge_base = _git(repo, "merge-base", ref, sha, check=False)
-    return merge_base or _git(repo, "rev-parse", f"{sha}^", check=False) or sha
+    return _git(repo, "merge-base", ref, sha, check=False) or None
 
 
 @dataclass
@@ -416,7 +421,12 @@ def _mapped_rules(ctx: Context, lane: manifest.Lane) -> frozenset[str]:
 def _runner_digest() -> str:
     """The runner's own code: a change to how findings are judged voids receipts."""
     digest = hashlib.sha256(RUNNER_VERSION.encode())
-    for path in (Path(__file__).resolve(), HERE / "findings.py", YAMLLINT_CONFIG):
+    for path in (
+        Path(__file__).resolve(),
+        HERE / "findings.py",
+        HERE / "manifest.py",
+        YAMLLINT_CONFIG,
+    ):
         digest.update(path.read_bytes())
     return digest.hexdigest()
 
@@ -612,9 +622,11 @@ class clone_lock:
 
 def build_context(
     loaded: manifest.Manifest, workspace: Path, sha_ref: str, base: str | None, *, nice: bool
-) -> Context:
+) -> Context | None:
     sha = _git(workspace, "rev-parse", sha_ref)
     merge_base = resolve_base(workspace, sha, base)
+    if merge_base is None:
+        return None
     changed = [
         line
         for line in _git(
@@ -732,6 +744,12 @@ def mode_commit(
             )
         return 0
     ctx = build_context(loaded, workspace, sha_ref, base, nice=True)
+    if ctx is None:
+        print(
+            f"ci-parity commit {sha_ref}: cannot-evaluate — merge-base unresolved "
+            "(shallow history or missing base; no parent-commit fallback)"
+        )
+        return 0
     if not applicable(ctx, ("fast", "heavy")):
         return 0
     cancel_older(ctx.cache, ctx.sha)
@@ -754,6 +772,12 @@ def mode_commit(
 
 def mode_gate(loaded: manifest.Manifest, workspace: Path, sha_ref: str, base: str | None) -> int:
     ctx = build_context(loaded, workspace, sha_ref, base, nice=True)
+    if ctx is None:
+        print(
+            f"ci-parity gate {sha_ref}: cannot-evaluate — merge-base unresolved "
+            "(shallow history or missing base; no parent-commit fallback)"
+        )
+        return 0
     if not applicable(ctx, ("fast", "heavy")):
         print(f"ci-parity gate {ctx.sha[:8]}: no lane applies to this change")
         return 0

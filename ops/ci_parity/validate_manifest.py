@@ -10,6 +10,7 @@ version it runs and the local pin no longer mirrors it: re-pin tools.yaml
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -42,6 +43,33 @@ def check(repo_root: Path = REPO_ROOT, path: Path = manifest.MANIFEST) -> list[s
             problems.append(
                 f"{tool.name}: {ref.get('path')} no longer contains {ref.get('contains')!r} — "
                 "CI changed the version it runs; re-pin tools.yaml"
+            )
+    problems.extend(_blocking_identity(loaded))
+    return problems
+
+
+_RANGE = re.compile(r">=|<=|<|>")
+
+
+def _blocking_identity(loaded: manifest.Manifest) -> list[str]:
+    """A blocking lane needs an exact CI pin. A version range is not an identity."""
+    problems: list[str] = []
+    seen: set[str] = set()
+    for lane in loaded.lanes.values():
+        if not lane.block or lane.tool in seen:
+            continue
+        seen.add(lane.tool)
+        ref = loaded.tools[lane.tool].ci_ref
+        contains = ref.get("contains", "")
+        if not ref or not contains:
+            problems.append(
+                f"{lane.name}: blocking lane has no exact ci_ref — "
+                "keep it advisory or bind an exact CI pin"
+            )
+            continue
+        if _RANGE.search(contains):
+            problems.append(
+                f"{lane.name}: ci_ref {contains!r} is a version range, not an exact pin"
             )
     return problems
 

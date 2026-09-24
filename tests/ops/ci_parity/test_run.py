@@ -206,3 +206,54 @@ def test_kill_switch_disables_every_mode(
     monkeypatch.setenv("L9_CI_PARITY", "0")
     assert run.main(["--gate", "HEAD"]) == 0
     assert "disabled" in capsys.readouterr().out
+
+
+def test_missing_base_is_cannot_evaluate_not_the_parent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init", "-q", "-b", "main")
+    (repo / "f.txt").write_text("one\n")
+    _git(repo, "add", "f.txt")
+    _git(repo, "commit", "-q", "-m", "one")
+    first = _git(repo, "rev-parse", "HEAD")
+    (repo / "f.txt").write_text("two\n")
+    _git(repo, "add", "f.txt")
+    _git(repo, "commit", "-q", "-m", "two")
+    head = _git(repo, "rev-parse", "HEAD")
+    parent = _git(repo, "rev-parse", "HEAD^")
+    monkeypatch.delenv("PR_BASE", raising=False)
+    monkeypatch.delenv("L9_CI_PARITY_BASE", raising=False)
+    assert run.resolve_base(repo, head, "does-not-exist") is None
+    assert run.resolve_base(repo, head, "does-not-exist") != parent
+    assert run.resolve_base(repo, head, first) == first
+    shallow = tmp_path / "shallow"
+    subprocess.run(
+        ["git", "clone", "--depth", "1", f"file://{repo}", str(shallow)],
+        check=True,
+        capture_output=True,
+    )
+    shallow_head = _git(shallow, "rev-parse", "HEAD")
+    assert run.resolve_base(shallow, shallow_head, "does-not-exist") is None
+    loaded = manifest.load()
+    assert run.mode_gate(loaded, repo, head, "does-not-exist") == 0
+    assert "cannot-evaluate" in capsys.readouterr().out
+
+
+def test_manifest_bytes_change_the_runner_digest(monkeypatch: pytest.MonkeyPatch) -> None:
+    original = run._runner_digest()
+    real = Path.read_bytes
+
+    def wrapped(self: Path, *args: object, **kwargs: object) -> bytes:
+        data = real(self, *args, **kwargs)
+        if self.name == "manifest.py":
+            return data + b"\n# semantic\n"
+        return data
+
+    monkeypatch.setattr(Path, "read_bytes", wrapped)
+    changed = run._runner_digest()
+    assert changed != original
+    lane = manifest.load().lanes["codeql"]
+    tool = manifest.load().tools[lane.tool]
+    assert run.lane_digest(lane, tool)

@@ -121,3 +121,39 @@ def test_install_never_clobbers_a_foreign_file_on_path(tmp_path: Path) -> None:
     assert install.install_tool(loaded, "fake", tmp_path / "dl") == "INSTALLED"
     assert foreign.read_text() == "operator's own binary"
     assert loaded.resolve("fake") is not None  # resolved from state, not PATH
+
+
+def test_unpinned_scanners_are_advisory() -> None:
+    lanes = manifest.load().lanes
+    for name in ("shellcheck", "actionlint", "zizmor", "yamllint", "semgrep-l9", "osv-scanner"):
+        assert lanes[name].block == (), name
+    assert lanes["codeql"].block
+
+
+def test_blocking_lane_rejects_a_version_range(tmp_path: Path) -> None:
+    tool = manifest.Tool(
+        name="semgrep",
+        version="1",
+        method="uv_tool",
+        binary="semgrep",
+        version_cmd=("--version",),
+        expect="1",
+        ci_ref={"path": "x", "contains": "semgrep>=1.100.0,<2.0.0"},
+    )
+    lane = manifest.Lane(
+        name="semgrep-l9",
+        tool="semgrep",
+        tier="heavy",
+        globs=("*.py",),
+        block=("error",),
+        weight=1,
+    )
+    loaded = manifest.Manifest(
+        install_root=tmp_path,
+        bin_dir=tmp_path,
+        cache_root=tmp_path,
+        tools={"semgrep": tool},
+        lanes={"semgrep-l9": lane},
+    )
+    problems = validate_manifest._blocking_identity(loaded)
+    assert problems and "version range" in problems[0]
