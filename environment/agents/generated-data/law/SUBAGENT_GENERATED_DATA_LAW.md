@@ -1285,3 +1285,57 @@ A subagent’s strategic work is not complete when its immediate answer is consu
 It is complete when its reusable value has been promoted, retained, deferred, or deliberately rejected.
 
 Discarded intelligence is failed leverage.
+
+⸻
+
+36. Execution-Intelligence Harvest Boundary (2026-09-24) — clarifies §3, §13, §19 and §34
+
+This section records the boundary as it is implemented. It adds no new machinery.
+
+36.1 Three planes
+
+* Repository continuity ("where did this work stop?") belongs to the continuation owner: `ops/graphiti/hydration/close_session.py` building `ContinuationCapsuleV2` (`ops/memory/session_contracts.py`). This pipeline does not write continuation state.
+* Governance telemetry ("what did the environment teach us about itself?") has no executable owner in this repository. This pipeline must not invent one; there is no `governance_handoff` route.
+* Execution intelligence ("what did delegated execution produce that would otherwise disappear?") is this pipeline. It is a source and harvest plane, not a memory backend. Its only durable-knowledge destination is the canonical memory owner (`l9-graphite-memory` via `ops/memory`), which Graphiti projects.
+
+36.2 Sources and their governed consideration point
+
+| Source | Path into ingress | Status |
+|---|---|---|
+| Subagent final result (Cursor) | `subagentStop` → `lifecycle/compose_stop.py` → `results/gateway.accept_and_ingest` → `ingest_accepted_result` | active |
+| Partial/failed subagent (Cursor) | `result_bridge.compile_incomplete_result` → `ACCEPTED_INCOMPLETE` → ingress; never promoted | active |
+| Recon output | enters only as a `ReconReport` result document; no recon-file scanner exists | by design |
+| Program Execution outcome | `make campaign` → `outcome_publisher.publish` → `ingest_packet` | active |
+| Child transcript | not read; raw chat is never written to memory (cursor-subagents README) | by design |
+| Claude Code subagents | no SubagentStop registration and no start-time dispatch receipt | not wired |
+
+36.3 Idempotency boundary
+
+This pipeline owns source-processing idempotency only:
+
+* ingress receipt keyed by `acceptance_receipt_digest` (a settled receipt short-circuits a replay);
+* processor job id derived from campaign/action/packet/base_sha;
+* per-delivery `idempotency_key`.
+
+The harvester's per-packet `_semantic_key` only collapses repeats of one normalized statement inside a single packet. Deduplication across packets or against existing memory, supersession, temporal validity, and admission (§19, §20, §22) belong to the canonical memory owner. They must not be reimplemented here.
+
+36.4 Harvest receipt contract
+
+`l9.generated-data-ingress-receipt.v1` is the audit record. Its machine form is `schemas/generated-data-ingress-receipt.schema.json`, and `ingress/receipts.py` validates every receipt against it before writing.
+
+| Contract outcome | Receipt |
+|---|---|
+| routed | `CAPTURED` with a `processing_status` and a `delivery` reference |
+| nothing_to_preserve | `NO_REUSABLE_DATA`, with no job and no delivery |
+| partial | `CAPTURED` whose `delivery` records mixed route results |
+| failed | `FAILED` or `REJECTED`, never `NO_REUSABLE_DATA` |
+
+The receipt carries references, not evidence bodies. Scope is read from the packet identity at `packet_evidence_path`.
+
+36.5 Delivery to memory is operator-configured
+
+The memory route delivers live only when `L9_SGD_GRAPHITI_INGEST_COMMAND` or `L9_SGD_GRAPHITI_INGEST_ENDPOINT` is set (`config/instantiation.example.yaml`). Otherwise candidates wait in the durable outbox with status `DESTINATION_SUBMITTED`, which is never reported as accepted.
+
+The default command, `adapters/ingest_memory_candidate.py`, writes through `MemoryControlPlaneClient.write`. It does not call the owner's `ingest-governed-candidate` operation. Whether to switch is a namespace-authority decision for the memory owner (§34), not for this pipeline.
+
+A harvested signal never broadens task, architecture, namespace, merge, or deployment authority.
