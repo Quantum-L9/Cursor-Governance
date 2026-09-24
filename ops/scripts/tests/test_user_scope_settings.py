@@ -85,11 +85,13 @@ class UserScopeSettingsTests(unittest.TestCase):
         # present before agents choose tools. session_deps_cloud.sh keeps its
         # own concurrent SessionStart registration and timeout rather than
         # consuming the governance-hydration hook budget.
-        self.assertEqual(len(commands), 14, "every L9 hook registration must reach user scope")
+        # +2 (2026-09-24): ci_parity_push_gate.py and ci_parity_posttool.py,
+        # both --class observer, so the gate count below is unchanged.
+        self.assertEqual(len(commands), 16, "every L9 hook registration must reach user scope")
         self.assertEqual(sum("--class gate" in c for c in commands), 3)
-        self.assertEqual(sum("--class observer" in c for c in commands), 11)
+        self.assertEqual(sum("--class observer" in c for c in commands), 13)
         names = {c.rsplit(" ", 1)[-1].rstrip("'") for c in commands}
-        self.assertEqual(len(names), 13, "thirteen distinct hook scripts")
+        self.assertEqual(len(names), 15, "fifteen distinct hook scripts")
         session_start_commands = [
             entry["command"]
             for matcher in settings["hooks"]["SessionStart"]
