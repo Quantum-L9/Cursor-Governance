@@ -21,6 +21,9 @@ them, and each schema says so in its own text; they have their own tests below:
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import sys
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, NamedTuple
@@ -83,7 +86,9 @@ KINDS = (
         (),
         (),
         gh.SECTIONS,
-        tuple(k for k in sh.KEYS if k not in {"schema", "pr_number"}),
+        # sorted: KEYS is a frozenset, and its iteration order changes with the
+        # per-process hash seed; pytest-xdist workers must collect identical ids.
+        tuple(sorted(sh.KEYS - {"schema", "pr_number"})),
     ),
 )
 
@@ -244,6 +249,31 @@ def test_the_table_covers_every_case_class() -> None:
         ):
             assert fragment in labels, (kind.name, fragment)
     assert len(CASES) > 500
+
+
+def test_the_table_is_identical_in_every_process() -> None:
+    """pytest-xdist requires every worker to collect the same ids in the same order.
+
+    Two interpreters with different hash seeds must generate the same labels.
+    """
+    probe = (
+        "import json, tests.ops.memory.test_handoff_schemas as t;"
+        "print(json.dumps([c.label for c in t.CASES]))"
+    )
+    root = Path(__file__).resolve().parents[3]
+    runs = [
+        subprocess.run(
+            [sys.executable, "-c", probe],
+            capture_output=True,
+            text=True,
+            check=True,
+            cwd=root,
+            env={**os.environ, "PYTHONHASHSEED": seed, "PYTHONPATH": str(root)},
+        ).stdout
+        for seed in ("1", "2")
+    ]
+    assert runs[0] == runs[1]
+    assert json.loads(runs[0]) == [c.label for c in CASES]
 
 
 # -- structure ----------------------------------------------------------------
