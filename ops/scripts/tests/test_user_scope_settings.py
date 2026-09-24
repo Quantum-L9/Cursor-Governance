@@ -99,9 +99,7 @@ class UserScopeSettingsTests(unittest.TestCase):
         ]
         self.assertIn("bootstrap_capability_preflight.sh", session_start_commands[0])
         stop_commands = [
-            entry["command"]
-            for matcher in settings["hooks"]["Stop"]
-            for entry in matcher["hooks"]
+            entry["command"] for matcher in settings["hooks"]["Stop"] for entry in matcher["hooks"]
         ]
         self.assertEqual(
             [c.rsplit(" ", 1)[-1].rstrip("'") for c in stop_commands],
