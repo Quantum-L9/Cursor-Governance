@@ -41,7 +41,11 @@ repos:
         args: ["--maxkb=1000"]
       - id: check-yaml
         args: ["--allow-multiple-documents"]
-        exclude: "^(environment/generated/|environment/program-execution/core/)"
+        # Helm templates are Go-templated text, never YAML. This config is also
+        # the authority for consumer `make pr` (run_pr_precommit.sh --config),
+        # so a consumer change under */helm/*/templates/*.yaml must not fail
+        # the governance check-yaml hook (Cursor-Governance#641).
+        exclude: "^(environment/generated/|environment/program-execution/core/|.*/helm/.*/templates/)"
 
   - repo: local
     hooks:
