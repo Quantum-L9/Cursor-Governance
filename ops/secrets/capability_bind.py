@@ -231,6 +231,28 @@ def bind_first(
     return None
 
 
+#: Every source this module reports. ``literal_source`` maps a reported value
+#: back to one of these module constants, so a caller that prints a source prints
+#: a literal owned by this module and never a value derived from a bind result
+#: (CodeQL py/clear-text-logging-sensitive-data treats bind results as secret).
+KNOWN_SOURCES = (
+    SOURCE_ENV,
+    SOURCE_INFISICAL,
+    SOURCE_INFISICAL_ABSENT,
+    SOURCE_UNBOUND,
+    SOURCE_REFUSED,
+    SOURCE_AWS,
+)
+
+
+def literal_source(raw: object) -> str:
+    """The module's own constant for ``raw``, or ``"unknown"``. Never ``raw`` itself."""
+    for known in KNOWN_SOURCES:
+        if raw == known:
+            return known
+    return "unknown"
+
+
 def bind_status(name: str) -> dict[str, str | bool]:
     """Availability only. The value is never included."""
     if name not in _SOURCES:
@@ -254,10 +276,15 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     exit_code = 0
+    allowed = allowed_names()
     for name in args.names:
         status = bind_status(name)
-        label = "bound" if status["bound"] else status["source"]
-        print(f"{status['name']}: {label} source={status['source']}")
+        source = literal_source(status["source"])
+        label = "bound" if status["bound"] else source
+        # The name is echoed only when it is an inventory name (a literal of the
+        # inventory), never the caller's raw argument.
+        shown = next((known for known in allowed if known == name), "<not-in-inventory>")
+        print(f"{shown}: {label} source={source}")
         if not status["bound"]:
             exit_code = 1
     return exit_code

@@ -164,13 +164,21 @@ def main(argv: list[str] | None = None) -> int:
     if args.check:
         source, identity = machine_identity()
         if identity is not None:
-            _status(f"identity present source={source}")
+            # Literals only: nothing derived from the identity is printed.
+            _status(
+                "identity present source=env"
+                if source == SOURCE_ENV
+                else "identity present source=profile"
+            )
             return 0
         _status(f"identity absent — set {ENV_CLIENT_ID} and {ENV_CLIENT_SECRET}")
         return 1
     state = ensure_machine_profile()
-    if state in {"env", "present"}:
-        _status(f"login ok project=cursor-governance source={state}")
+    if state == "env":
+        _status("login ok project=cursor-governance source=env")
+        return 0
+    if state == "present":
+        _status("login ok project=cursor-governance source=profile")
         return 0
     if state == "absent":
         _status(f"identity absent — set {ENV_CLIENT_ID} and {ENV_CLIENT_SECRET}")

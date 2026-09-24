@@ -468,6 +468,17 @@ def classify_backup(detail: str) -> dict[str, Any]:
     return _line("backup", OK, text)
 
 
+#: The identity summaries this reporter prints, keyed by the receipt's code.
+IDENTITY_SUMMARIES = {
+    "OK": "Infisical machine identity logged in",
+    "IDENTITY_ABSENT": (
+        "no Infisical machine identity — set L9_INFISICAL_CLIENT_ID and "
+        "L9_INFISICAL_CLIENT_SECRET in the environment settings"
+    ),
+    "LOGIN_REFUSED": "Infisical refused the machine identity or was unreachable",
+}
+
+
 def classify_infisical_identity(result: dict[str, Any] | None) -> dict[str, Any]:
     """Derived view of the secrets-plane receipt identity object. Names only.
 
@@ -482,13 +493,17 @@ def classify_infisical_identity(result: dict[str, Any] | None) -> dict[str, Any]
             "secrets-plane receipt unread",
             evidence="no receipt",
         )
-    if result.get("ok"):
-        return _line("infisical-identity", OK, str(result.get("summary") or "logged in"))
+    # Only this module's literals reach the printed report — never a string read
+    # from the receipt (the same barrier as secrets_plane_state; CodeQL
+    # py/clear-text-logging-sensitive-data).
+    code = next((c for c in IDENTITY_SUMMARIES if c == result.get("code")), "")
+    if result.get("ok") is True and code == "OK":
+        return _line("infisical-identity", OK, IDENTITY_SUMMARIES["OK"])
     return _line(
         "infisical-identity",
         FAILED,
-        str(result.get("summary") or result.get("code") or "no machine identity"),
-        evidence=str(result.get("code") or ""),
+        IDENTITY_SUMMARIES.get(code, IDENTITY_SUMMARIES["IDENTITY_ABSENT"]),
+        evidence=code,
     )
 
 

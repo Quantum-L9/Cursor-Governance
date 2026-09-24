@@ -173,12 +173,15 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     key = cb.bind(config["secret"])
     if not key:
-        source = cb.bind_status(config["secret"])["source"]
+        # Literals only (the source constant, the inventory's own name): nothing
+        # derived from the bind result reaches stderr.
+        source = cb.literal_source(cb.bind_status(config["secret"])["source"])
+        name = next((n for n in cb.allowed_names() if n == config["secret"]), "the key")
         print(
-            f"vault_mcp_bridge: {config['secret']} is not bound (source={source}) — the "
-            f"{args[0]} MCP server cannot start. It is bound from Infisical as this "
-            "surface's machine identity: set L9_INFISICAL_CLIENT_ID and "
-            "L9_INFISICAL_CLIENT_SECRET in the environment settings.",
+            f"vault_mcp_bridge: {name} is not bound (source={source}) — this MCP "
+            "server cannot start. It is bound from Infisical as this surface's machine "
+            "identity: set L9_INFISICAL_CLIENT_ID and L9_INFISICAL_CLIENT_SECRET in the "
+            "environment settings.",
             file=sys.stderr,
         )
         return 1

@@ -225,3 +225,21 @@ class SurfaceClassTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LiteralOutputTests(unittest.TestCase):
+    """stderr carries module literals only — never a string from the identity."""
+
+    def test_a_planted_identity_summary_never_reaches_stderr(self) -> None:
+        planted = {"ok": False, "code": plane.IDENTITY_ABSENT, "source": "", "summary": "CANARY"}
+        with mock.patch.object(plane, "identity_status", return_value=planted):
+            _, rc, out, err = _run("absent", "", BINDS_NONE, ["--json"], {})
+        self.assertEqual(rc, 1)
+        self.assertNotIn("CANARY", err)
+        self.assertIn("no Infisical machine identity", err)
+
+    def test_bind_sources_are_mapped_to_literals(self) -> None:
+        odd = [{**row, "source": "CANARY-SOURCE"} for row in BINDS_OK]
+        _, _, _, err = _run("env", "env", odd, [], {})
+        self.assertNotIn("CANARY-SOURCE", err)
+        self.assertIn("CONTEXT7_API_KEY=unknown", err)

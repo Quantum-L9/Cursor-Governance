@@ -74,6 +74,23 @@ def surface_class(env: Mapping[str, str] | None = None) -> str:
     return OPERATOR
 
 
+#: The only identity messages this module prints: literals, keyed by code.
+IDENTITY_MESSAGES = {
+    IDENTITY_OK: "Infisical machine identity logged in",
+    IDENTITY_ABSENT: (
+        "no Infisical machine identity — set L9_INFISICAL_CLIENT_ID and "
+        "L9_INFISICAL_CLIENT_SECRET in the environment settings"
+    ),
+    IDENTITY_REFUSED: "Infisical refused the machine identity or was unreachable",
+}
+
+
+def _bind_line(binds: list[dict[str, Any]]) -> str:
+    """NAME=source for each probed name, built from module literals only."""
+    by_name = {str(b.get("name")): b.get("source") for b in binds}
+    return " ".join(f"{name}={cb.literal_source(by_name.get(name))}" for name in BIND_NAMES)
+
+
 def identity_status(login_state: str, source: str) -> dict[str, Any]:
     """The machine identity's state, names only."""
     if login_state in {"env", "present"}:
@@ -167,11 +184,15 @@ def main(argv: list[str] | None = None) -> int:
         write_receipt(Path(args.receipt_out), result)
     if args.json:
         print(json.dumps(payload))
-    binds = " ".join(f"{b['name']}={b['source']}" for b in result["binds"])
+    binds = _bind_line(result["binds"])
     if not result["plane_ok"]:
-        print(f"FAILED: {result['identity']['summary']}. {binds}", file=sys.stderr)
+        code = next(
+            (c for c in (IDENTITY_ABSENT, IDENTITY_REFUSED) if c == result["identity"]["code"]),
+            IDENTITY_REFUSED,
+        )
+        print(f"FAILED: {IDENTITY_MESSAGES[code]}. {binds}", file=sys.stderr)
         return 1
-    print(f"session_start_secrets: ok login={result['login']} {binds}", file=sys.stderr)
+    print(f"session_start_secrets: ok {IDENTITY_MESSAGES[IDENTITY_OK]}. {binds}", file=sys.stderr)
     return 0
 
 

@@ -999,3 +999,22 @@ class SessionStartCeremonyTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class IdentityLiteralBarrierTests(unittest.TestCase):
+    """Nothing read from the receipt's identity object may reach the report."""
+
+    def test_a_planted_summary_never_reaches_the_report(self) -> None:
+        for receipt in (
+            {"ok": True, "code": "OK", "summary": "CANARY-LEAK"},
+            {"ok": False, "code": "IDENTITY_ABSENT", "summary": "CANARY-LEAK"},
+            {"ok": False, "code": "CANARY-LEAK", "summary": "CANARY-LEAK"},
+        ):
+            with self.subTest(receipt=receipt):
+                line = report.classify_infisical_identity(receipt)
+                self.assertNotIn("CANARY-LEAK", json.dumps(line))
+                self.assertNotIn("CANARY-LEAK", report.format_markdown([line]))
+
+    def test_ok_requires_both_ok_and_the_ok_code(self) -> None:
+        line = report.classify_infisical_identity({"ok": True, "code": "IDENTITY_ABSENT"})
+        self.assertEqual(line["class"], report.FAILED)
