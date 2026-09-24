@@ -220,6 +220,11 @@ write_receipt() {
     printf '  "stage": "%s",\n' "$(json_token "$RECEIPT_STAGE")"
     printf '  "remediation": "%s",\n' "$(json_token "$RECEIPT_REMEDIATION")"
     printf '  "generated_at": "%s",\n' "$ts"
+    # The ceremony that generated this receipt. SessionStart sets
+    # L9_BOOTSTRAP_ID, runs this installer, then reads the receipt back with
+    # the same id — so what it reports is the receipt THIS bootstrap wrote,
+    # never one left on disk by an earlier session. Empty outside a ceremony.
+    printf '  "bootstrap_id": "%s",\n' "$(json_token "${L9_BOOTSTRAP_ID:-}")"
     printf '  "ttl_seconds": %s,\n' "${L9_CLAUDE_BOOTSTRAP_TTL:-86400}"
     printf '  "governance_revision": "%s",\n' \
       "$(json_token "$(git -C "$GOV_DIR" rev-parse HEAD 2>/dev/null || echo unknown)")"

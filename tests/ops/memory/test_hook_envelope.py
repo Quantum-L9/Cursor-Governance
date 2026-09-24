@@ -80,6 +80,7 @@ def test_registry_declares_every_surface_the_pipeline_map_names() -> None:
         "plan-prefetch",
         "pr-publish",
         "pe-sgd-ingest",
+        "claude-governance-handoff",
     }
     for envelope in load_envelopes().values():
         assert envelope.callers, f"{envelope.surface} names no caller"
@@ -563,6 +564,9 @@ HOOK_LANE_CALLERS: dict[str, str] = {
     "ops/graphiti/hydration/compile_session_packet.py": "cursor-session-start",
     "ops/graphiti/hydration/close_session.py": "cursor-session-end",
     "environment/agents/adapters/claude-code/hooks/memory_writeback.py": "claude-session-end",
+    "environment/agents/adapters/claude-code/hooks/governance_handoff_writeback.py": (
+        "claude-governance-handoff"
+    ),
     "environment/agents/adapters/claude-code/memory/memory_bridge.py": "claude-session-start",
     "environment/agents/adapters/manus/memory_lifecycle.py": "manus-session-start",
     "ops/hooks/plan_memory_prefetch.py": "plan-prefetch",
@@ -659,3 +663,45 @@ def test_close_session_default_and_claude_surfaces_are_declared() -> None:
         ROOT / "environment/agents/adapters/claude-code/hooks/memory_writeback.py"
     ).read_text(encoding="utf-8")
     assert 'surface="claude-session-end"' in writeback
+
+
+def test_governance_handoff_surface_writes_only_to_the_governance_namespace() -> None:
+    """The governance handoff is routed to Cursor-Governance and nowhere else."""
+    envelope = envelope_for("claude-governance-handoff")
+    assert envelope.namespaces == frozenset({"cursor-governance"})
+    assert envelope.record_classes == frozenset({"observation"})
+    assert envelope.max_records == 1
+    ok = envelope.violation(
+        "write",
+        memory_class="observation",
+        records=1,
+        byte_size=200,
+        provenance=True,
+        namespace="cursor-governance",
+    )
+    assert ok is None
+    refused = envelope.violation(
+        "write",
+        memory_class="observation",
+        records=1,
+        byte_size=200,
+        provenance=True,
+        namespace="website-bot",
+    )
+    assert refused and "may write only to cursor-governance" in refused
+
+
+def test_surfaces_without_a_namespace_list_stay_unrestricted() -> None:
+    envelope = envelope_for("pr-publish")
+    assert envelope.namespaces == frozenset()
+    assert (
+        envelope.violation(
+            "write",
+            memory_class="episodic",
+            records=1,
+            byte_size=10,
+            provenance=True,
+            namespace="any-repo",
+        )
+        is None
+    )

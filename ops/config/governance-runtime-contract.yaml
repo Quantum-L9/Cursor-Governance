@@ -31,8 +31,11 @@ invariants:
       the Makefile remaps non-canonical casing to `pr`. Authority prose must not
       claim make targets are case-sensitive or that `make PR` errors.
     projections:
+      # The root Makefile is a facade; capability recipes live in ops/make/*.mk
+      # (CLAUDE.md "Makefile graph"), and the case remap moved with the pr
+      # target into publish.mk. Asserting it in the facade failed on main.
       - type: file_contains
-        path: Makefile
+        path: ops/make/publish.mk
         pattern: "PR Pr pR: pr"
         present: true
       - type: file_contains

@@ -58,7 +58,7 @@
           {
             "type": "command",
             "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; if [ ! -f \"$x\" ]; then c=\"${CLAUDE_PROJECT_DIR:-$PWD}/.claude/hooks/session_start_claude_governance.sh\"; [ -f \"$c\" ] || exit 0; exec bash \"$c\"; fi; exec bash \"$x\" --class observer session_start_claude_governance.sh'",
-            "timeout": 30
+            "timeout": 60
           },
           {
             "type": "command",
@@ -80,6 +80,11 @@
             "type": "command",
             "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer memory_writeback.py'",
             "timeout": 90
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer governance_handoff_writeback.py'",
+            "timeout": 60
           }
         ]
       }
@@ -286,7 +291,7 @@
     "CLAUDE_CODE_DISABLE_CRON": "1",
     "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS": "480",
     "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "3",
-    "L9_SESSION_START_BUDGET": "30",
+    "L9_SESSION_START_BUDGET": "60",
     "L9_MEMORY_WRITEBACK_BUDGET": "75"
   },
   "skillOverrides": {
