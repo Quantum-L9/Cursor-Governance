@@ -257,7 +257,9 @@ transcript. Session continuity belongs to `ContinuationCapsuleV2`.
 `close_session.py` folds your last-24h agent-lane records into them. A
 `decision` record lands in `decisions`. A record whose content starts with
 `TODO:` / `NEXT:` / `BLOCKED:` / `WIP:`, or that carries one of those tags,
-lands in `unfinished_work`. Anything else stays evidence. So:
+lands in `unfinished_work`. Anything else stays evidence. The fold fails
+open: if the 24h agent-lane search is refused (see the hydrate warnings),
+the records stay searchable but do not reach the capsule. So:
 
 - Finished work: write it unmarked. A marked finished item is resent as
   pending work.
