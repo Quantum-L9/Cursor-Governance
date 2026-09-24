@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sqlite3
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -20,9 +21,15 @@ class RecoveryTest(unittest.TestCase):
                 str(workspace),
                 "--holder",
                 "worker",
-                "--ttl-hours",
-                "0",
             )
+            # Simulate passage beyond a valid positive TTL without allowing a
+            # caller to mint a zero-duration lease.
+            conn = sqlite3.connect(workspace / "runtime" / "state.sqlite")
+            try:
+                conn.execute("UPDATE leases SET expires_at='2000-01-01T00:00:00+00:00'")
+                conn.commit()
+            finally:
+                conn.close()
             result = run_cli("recover", "--workspace", str(workspace), "--actor", "operator")
             self.assertEqual(result["status"], "RECOVERED")
             self.assertEqual(len(result["items"]), 1)

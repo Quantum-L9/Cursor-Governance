@@ -125,7 +125,7 @@ class ClosedLoopTests(unittest.TestCase):
         quarantined = ingest.ingest_packet(
             generated_data_packet={"token": "password=hunter2"},
             source_receipt_digest="acceptance-secret",
-            source_kind="test",
+            source_kind="program_execution_outcome",
             actor="test",
             repository_root=Path(__file__).resolve().parents[3],
         )

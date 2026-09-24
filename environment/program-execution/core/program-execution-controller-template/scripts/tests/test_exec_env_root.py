@@ -30,3 +30,7 @@ class ExecEnvRootTests(unittest.TestCase):
         self.assertIsNone(exec_env_root(Path("/tmp/somewhere")))
         self.assertIsNone(exec_env_root(Path.home() / ".l9" / "gov-worktrees" / "x"))
         self.assertIsNone(exec_env_root(Path.home() / ".l9" / "programs" / "demo-v1"))
+
+
+if __name__ == "__main__":
+    unittest.main()

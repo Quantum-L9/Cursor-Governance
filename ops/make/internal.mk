@@ -6,6 +6,14 @@ L9_TARGETS += \
 # Internal / temporary replay helpers
 #
 # Not the live Program Execution path.
+#
+# RETIRED WRITERS: `campaign-materialize` and `campaign-reset` no longer copy
+# paths, retire runtime state, or rewind branches. replay_campaign.py refuses
+# both with ReplayError because they bypassed Controller lease, task-state and
+# recovery authority; `campaign-drive` refuses the same way when REF= is given.
+# Execution recovery is Controller-owned: `pec recover` / `pec recover-execution`
+# in environment/program-execution/core/program-execution-controller-template.
+# The targets stay registered so the refusal is reachable and explicit.
 # ---------------------------------------------------------------------------
 campaign-materialize:
 	@test -n "$(CAMPAIGN_ID)" || ( \
