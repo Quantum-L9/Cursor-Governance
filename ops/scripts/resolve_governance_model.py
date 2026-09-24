@@ -34,9 +34,9 @@ class InvocationError(RuntimeError):
 
 
 def _canonical(value: Any) -> bytes:
-    return json.dumps(
-        value, sort_keys=True, separators=(",", ":"), ensure_ascii=False
-    ).encode("utf-8")
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode(
+        "utf-8"
+    )
 
 
 def _sha256(data: bytes) -> str:
@@ -94,7 +94,7 @@ def _repo_revision(root: Path, explicit: str | None) -> str:
             timeout=10,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
-        raise InvocationError "source revision unavailable; pass --source-revision" from exc
+        raise InvocationError("source revision unavailable; pass --source-revision") from exc
     if result.returncode != 0 or not result.stdout.strip():
         raise InvocationError("source revision unavailable; pass --source-revision")
     return result.stdout.strip()
@@ -210,9 +210,8 @@ def resolve(
                     evidence_ids.append(fact["id"])
                     explicit_failure = explicit_failure or verdict == "FAIL"
                     external_unknown = external_unknown or verdict == "UNKNOWN"
-                elif (
-                    kind in {"ruleset_evidence", "manual_external"}
-                    and verifier.get("required", False)
+                elif kind in {"ruleset_evidence", "manual_external"} and verifier.get(
+                    "required", False
                 ):
                     external_unknown = True
 
@@ -224,12 +223,10 @@ def resolve(
                 status = "UNKNOWN"
             else:
                 required_verifiers = [
-                    row
-                    for row in invariant.get("verifiers") or []
-                    if row.get("required", False)
+                    row for row in invariant.get("verifiers") or [] if row.get("required", False)
                 ]
                 passed = 0
-                for verifier in required_verifiers :
+                for verifier in required_verifiers:
                     key = verifier.get("invocation_id") or verifier["path"]
                     if admitted.get(key) == "PASS":
                         passed += 1
@@ -357,8 +354,7 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(payload, indent=2, sort_keys=True))
         else:
             print(
-                f"[governance-resolve] {payload['status']} "
-                f"model_digest={payload['model_digest']}"
+                f"[governance-resolve] {payload['status']} model_digest={payload['model_digest']}"
             )
         return 0 if receipt["status"] == "PASS" else 1
     except ResolveError as exc:
