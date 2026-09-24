@@ -1038,6 +1038,30 @@ def preflight_campaign_source_document(src: dict[str, Any]) -> list[str]:
         raise CompileError(
             "campaign source failed schema validation:\n  - " + "\n  - ".join(errors)
         )
+    program = src.get("program")
+    required_program_fields = (
+        "id",
+        "name",
+        "definition_status",
+        "owner",
+        "objective",
+        "problem_statement",
+        "target_state",
+        "scope",
+        "authority_order",
+        "operating_rules",
+        "terminal_verdicts",
+    )
+    missing_program_fields = [
+        field
+        for field in required_program_fields
+        if not isinstance(program, dict) or field not in program
+    ]
+    if missing_program_fields:
+        raise CompileError(
+            "campaign source program is incomplete for lowering: missing "
+            + ", ".join(missing_program_fields)
+        )
     warnings = _semantic_precheck(src)
 
     task_pattern = re.compile(blueprint_task_id_pattern())
