@@ -121,7 +121,7 @@ agents:
     # per-session, so a namespace absent here is unwritable through the agent
     # lane for that whole session (Tier 2). Tier 3 freezes the principal at
     # spawn from the server's cwd, so it covers exactly one of the two.
-    assigned_groups: [constellation-gate, cursor-governance, l9-graphiti-memory, l9-node-template]
+    assigned_groups: [constellation-gate, cursor-governance, l9-ci-core, l9-graphiti-memory, l9-node-template]
     adapter: claude-code             # environment/agents/adapters/claude-code/, identities now rendered from here
     status: active
 

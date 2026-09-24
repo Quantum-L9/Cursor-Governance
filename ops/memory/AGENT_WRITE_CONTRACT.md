@@ -74,3 +74,42 @@ agent-set.
 - **No permission dialog.** The agent-lane tools are pre-approved in
   `settings.template.json` under the names Claude Code actually emits
   (`memory_write_agent`, …). The ordinary write runs with no popup.
+
+## Signed agent identity: every memory names its author
+
+A memory must name the agent that wrote it. The `l9-graphite-memory` MCP server
+therefore runs only as a signed agent principal (ADR-0031). It never runs as
+the anonymous `local-operator`, whose writes carry no agent.
+
+- **At spawn, `ops/memory/run_memory_mcp.sh`:**
+  1. reads `L9_MEMORY_AGENT_AUTHORITY_JSON` from the environment Claude Code
+     starts with;
+  2. scopes it with `ops/memory/materialize_agent_authority.py`: only the
+     agents door and this agent's key, and never the human door;
+  3. derives the agent's grants from `environment/agents/agent_registry.yaml`,
+     never from the secret;
+  4. mints the signed assertion.
+
+  The server's principal is then the agent (`claude-code-memory-client`), and
+  its write grants are the agent's `assigned_groups`, whichever directory the
+  server starts in.
+- **Without the door** the launcher **refuses to start the server** and says
+  why, and SessionStart announces `AGENT MEMORY WRITES ARE OFF`.
+  `L9_MEMORY_ALLOW_LOCAL_OPERATOR=1` is the explicit operator opt-out, and it is
+  announced as such.
+- **Grants** are reviewed repository policy. Adding a repository to
+  `claude-code`'s `assigned_groups` is a one-line registry change.
+  `tests/ops/memory/test_assigned_groups_lockstep.py` requires every entry to be
+  a registered namespace.
+
+### Provisioning a hosted (cloud) environment, once
+
+1. On a workstation that holds the local key maps, write the scoped authority
+   to a private file:
+   `python -m ops.memory.materialize_agent_authority --agent-id claude-code --export-from ~/.config/l9-memory/agent_tokens.local.json --output ./claude-code-authority.json`
+   This writes a `0600` file and prints no values.
+2. Add the file's contents as the environment variable
+   `L9_MEMORY_AGENT_AUTHORITY_JSON` in the Claude Code environment settings
+   (the environment menu in the session title bar, then Edit). Never paste it
+   into a chat.
+3. Delete the local file. The next session mints the door at spawn.

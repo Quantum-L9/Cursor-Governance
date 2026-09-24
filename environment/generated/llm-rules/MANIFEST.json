@@ -33,9 +33,9 @@
       "alias": null,
       "class": "always",
       "output": "03-graphiti-memory.md",
-      "output_sha256": "dd61954da037091f8a963a24b6efedfd810f8693fcdfc319ee083472f10f29c2",
+      "output_sha256": "77904e70c1271b6bc5390117f084a50b50c78e1e77fbe3c247504719b33b14ed",
       "source": "rules/03-graphiti-memory.mdc",
-      "source_sha256": "eae4bd32794e0a3a02e13dddae3a2ec6d6f51805a069a52b5f5cab70ccc512cc",
+      "source_sha256": "2913bdbb9096d0cbf3a3d891944d7dc900e31b4f09b1fec8d3ac9f19bd6564b3",
       "stem": "03-graphiti-memory"
     },
     {
@@ -641,5 +641,5 @@
     "skipped_agent_requested": 16,
     "source_mdc": 69
   },
-  "tree_sha256": "4fd5db285fca27f414e59d43861dd6dae611aed9e14e1eee1fd15e1c3da01749"
+  "tree_sha256": "4eacd3e8bf883d47af89e9d573a13e8804b7bcd04e75334cf12627c922d2777a"
 }
