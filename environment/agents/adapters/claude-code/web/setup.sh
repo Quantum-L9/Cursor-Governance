@@ -244,8 +244,11 @@ log "CI-parity scanners"
 CI_PARITY_PY="$GOV_DIR/.venv/bin/python3"
 [ -x "$CI_PARITY_PY" ] || CI_PARITY_PY="python3"
 if [ -f "$GOV_DIR/ops/ci_parity/install.py" ]; then
-  "$CI_PARITY_PY" "$GOV_DIR/ops/ci_parity/install.py" \
-    || echo "WARN: ci-parity tools incomplete — SessionStart retries in the background"
+  # Reported, not swallowed: install.py prints each failing tool, and
+  # session_deps_cloud.sh re-runs it at every SessionStart until --check passes.
+  if ! "$CI_PARITY_PY" "$GOV_DIR/ops/ci_parity/install.py"; then
+    echo "WARN: ci-parity tools incomplete (see lines above) — SessionStart retries in the background"
+  fi
 fi
 
 # NOT here: the consumer workspace's own language toolchain (uv/pip/npm) and
