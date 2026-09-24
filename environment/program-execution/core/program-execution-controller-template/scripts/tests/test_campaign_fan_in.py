@@ -240,6 +240,53 @@ class CampaignFanInTests(unittest.TestCase):
             self.assertEqual(replay["candidate_sha"], integration["candidate_sha"])
             self.assertEqual(_git(repo, "rev-parse", CAMPAIGN_BRANCH), after_first)
 
+    def test_unrecorded_integration_file_cannot_skip_verified_fan_in(self) -> None:
+        """A runtime file alone is never evidence that the campaign contains a candidate."""
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            _, repo, workspace = bootstrap_repo(temp)
+            before = _make_campaign_branch(repo)
+            register_contract(temp, workspace)
+            _contract, prepared = prepare_attempt(temp, workspace)
+            candidate_sha = _commit_worktree(Path(prepared["worktree"]), "TASK-001 verified work")
+            verification = run_cli("verify", "TASK-001", "--workspace", str(workspace))
+            self.assertEqual(verification["verdict"], "PASSED_LOCAL")
+            evidence_id = verification["evidence_id"]
+            run_cli(
+                "evaluate-gate",
+                "GATE-001",
+                "PASS",
+                "--workspace",
+                str(workspace),
+                "--evidence-id",
+                evidence_id,
+                "--method",
+                "independent verification",
+                "--actor",
+                "controller",
+            )
+            receipt_path = workspace / "receipts" / "integration" / "TASK-001.json"
+            receipt_path.parent.mkdir(parents=True, exist_ok=True)
+            write_json(receipt_path, {"candidate_sha": candidate_sha, "campaign_sha": before})
+
+            result = run_cli(
+                "complete",
+                "TASK-001",
+                "--workspace",
+                str(workspace),
+                "--actor",
+                "operator",
+                "--evidence-id",
+                evidence_id,
+            )
+
+            after = _git(repo, "rev-parse", CAMPAIGN_BRANCH)
+            self.assertNotEqual(after, before)
+            self.assertEqual(result["integration"]["campaign_sha"], after)
+            persisted = json.loads(receipt_path.read_text(encoding="utf-8"))
+            self.assertEqual(persisted["candidate_sha"], candidate_sha)
+            self.assertTrue(persisted["receipt_digest"])
+
     def test_run_git_ignores_host_git_dir(self) -> None:
         """``git -C`` must win when the host exported GIT_DIR (GHA/CI)."""
         import sys

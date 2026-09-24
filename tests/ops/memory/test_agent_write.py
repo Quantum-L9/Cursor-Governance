@@ -104,7 +104,8 @@ def test_the_module_does_no_memory_io() -> None:
     """The contract is the agent's own: it imports no client, no process spawner."""
     import ast  # noqa: PLC0415
 
-    tree = ast.parse(open(aw.__file__, encoding="utf-8").read())
+    with open(aw.__file__, encoding="utf-8") as source:
+        tree = ast.parse(source.read())
     imported: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
