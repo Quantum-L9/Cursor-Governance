@@ -81,6 +81,25 @@ class LeaseTests(unittest.TestCase):
             finally:
                 db.close()
 
+    def test_claim_rejects_a_non_positive_lease_ttl(self) -> None:
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            _, _, workspace = bootstrap_repo(temp)
+            register_contract(temp, workspace)
+            for ttl in ("0", "-1"):
+                refused = run_cli(
+                    "claim",
+                    "TASK-001",
+                    "--workspace",
+                    str(workspace),
+                    "--holder",
+                    "worker",
+                    "--ttl-minutes",
+                    ttl,
+                    expect=2,
+                )
+                self.assertEqual(refused["error_code"], "LEASE_TTL_INVALID")
+
 
 if __name__ == "__main__":
     unittest.main()
