@@ -89,6 +89,10 @@ class VerifyLifecycleTest(unittest.TestCase):
                 temp, workspace, declared_changed=["docs/never-written.txt"]
             )
             worktree = Path(prepared["worktree"])
+            # The first attempt's prepared sample output is not repair work for
+            # the successor. Remove it before the retry so the second baseline
+            # captures an absent path and the following commit is genuinely new.
+            (worktree / "docs" / "result.txt").unlink()
             failed = run_cli("verify", "TASK-001", "--workspace", str(workspace))
             self.assertEqual(failed["verdict"], "FAILED")
 

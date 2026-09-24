@@ -49,7 +49,7 @@ class ReplayCampaignTests(unittest.TestCase):
         self.assertIn("return 0", held)
         self.assertNotIn("return 9", held)
 
-    def test_materialize_copies_declared_paths_and_holds_later_functions(self) -> None:
+    def test_materialize_is_disabled_without_controller_recovery_authority(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             target = root / "target"
@@ -82,21 +82,19 @@ class ReplayCampaignTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            result = self.mod.materialize_task(
-                workspace=workspace,
-                task_id="TASK-001",
-                target=target,
-                ref=ref,
-                hold_back={"TASK-001": {"shared.py": ("late",)}},
-            )
-            self.assertEqual(sorted(result["ported"]), ["only.py", "shared.py"])
-            self.assertEqual(result["missing"], [])
-            self.assertEqual(result["held_back"], ["late"])
+            with self.assertRaises(self.mod.ReplayError) as ctx:
+                self.mod.materialize_task(
+                    workspace=workspace,
+                    task_id="TASK-001",
+                    target=target,
+                    ref=ref,
+                    hold_back={"TASK-001": {"shared.py": ("late",)}},
+                )
+            self.assertIn("disabled", str(ctx.exception))
             shared = (worktree / "shared.py").read_text(encoding="utf-8")
-            self.assertIn("return 2", shared)
+            self.assertIn("return 1", shared)
             self.assertIn("return 0", shared)
-            self.assertNotIn("return 9", shared)
-            self.assertEqual((worktree / "only.py").read_text(encoding="utf-8"), "only-new\n")
+            self.assertEqual((worktree / "only.py").read_text(encoding="utf-8"), "only\n")
 
     def test_regenerate_manifest_rewrites_hashes(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -123,7 +121,7 @@ class ReplayCampaignTests(unittest.TestCase):
         finally:
             self.mod.pec_status_tasks = original
 
-    def test_reset_retires_runtime_and_rewinds_target(self) -> None:
+    def test_reset_is_disabled_without_controller_recovery_authority(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             l9 = root / "l9"
@@ -157,34 +155,32 @@ class ReplayCampaignTests(unittest.TestCase):
                 return subprocess.CompletedProcess(args=[], returncode=0, stdout="arm\n", stderr="")
 
             self.mod.run_campaign_until = fake_until
-            result = self.mod.reset_campaign(
-                campaign_id="demo",
-                isolate=isolate,
-                target=target,
-                base=base,
-                intent=intent,
-                l9_root=l9,
-            )
-            self.assertEqual(armed, ["arm"])
-            self.assertFalse(live.exists())
-            self.assertTrue(Path(result["retired"]).is_dir())
+            with self.assertRaises(self.mod.ReplayError) as ctx:
+                self.mod.reset_campaign(
+                    campaign_id="demo",
+                    isolate=isolate,
+                    target=target,
+                    base=base,
+                    intent=intent,
+                    l9_root=l9,
+                )
+            self.assertIn("disabled", str(ctx.exception))
+            self.assertEqual(armed, [])
+            self.assertTrue(live.exists())
             head = subprocess.run(
                 ["git", "-C", str(target), "rev-parse", "HEAD"],
                 check=True,
                 capture_output=True,
                 text=True,
             ).stdout.strip()
-            self.assertEqual(head, base)
+            self.assertNotEqual(head, base)
             branches = subprocess.run(
                 ["git", "-C", str(target), "branch", "--format=%(refname:short)"],
                 check=True,
                 capture_output=True,
                 text=True,
             ).stdout
-            self.assertNotIn("pec/w0/task-001\n", branches + "\n")
-            self.assertTrue(
-                any(name.startswith("retired/pec-w0-task-001-") for name in branches.splitlines())
-            )
+            self.assertIn("pec/w0/task-001", branches.splitlines())
 
 
 if __name__ == "__main__":
