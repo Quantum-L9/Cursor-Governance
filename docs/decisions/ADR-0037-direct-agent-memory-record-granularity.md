@@ -37,6 +37,26 @@ prose:
 | Direct agent write | `memory.write_agent` → `MemoryService.write` | ordinary durable knowledge the agent chose to keep |
 | Governed write | `memory.phase_lock` → `memory.write_governed` → `MemoryService.write_governed` | conflict-sensitive write bound to a namespace snapshot |
 
+## Options Considered
+
+1. **Leave "one atomic fact" undefined.** Zero cost, but the phrase keeps being
+   read as one sentence or one triple, and nothing states that independent
+   memories are separate writes or that `memory.phase_lock` is not prefetch.
+   Rejected: the ambiguity is the defect.
+2. **Enforce atomicity at runtime** (proposition counting, an NLP splitter, or
+   an LLM validator in front of `memory.write_agent`). Mechanically checkable
+   in principle, but it adds a new authority surface on the agent lane that
+   ADR-0033 / CANONICAL_LAW §8.6 forbid interposing, and semantic splitting is
+   unreliable. Rejected.
+3. **Define granularity by independent retrievability and supersession; keep
+   runtime enforcement structural.** No new mechanism; the agent decomposes;
+   existing schema, grant and admission controls stay the enforcement boundary.
+   **Chosen.**
+4. **Add a batch write that carries several facts in one call.** Would
+   formalise "remember several things" as one request, but couples unrelated
+   records in one admission and adds a new write API. Rejected: several
+   `memory.write_agent` calls already express it.
+
 ## Decision
 
 **A direct agent memory record represents one independently retrievable
