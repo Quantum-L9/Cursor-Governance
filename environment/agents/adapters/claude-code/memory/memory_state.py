@@ -149,21 +149,33 @@ def _identity_module() -> Any:
 
 
 def writer_identity(env: dict[str, str] | None = None) -> str:
-    """This surface's memory identity: cursor, claude-code-desktop/-mobile/-web, …
+    """This process's memory identity, DERIVED from host markers ("" when none).
 
-    Never the bare family marker ``claude-code``: every memory must say which
-    surface wrote it (ops/memory/agent_identity.py).
+    cursor / claude-code-desktop / claude-code-mobile (ops/memory/agent_identity.py).
+    A configured L9_MEMORY_AGENT_ID never overrides the markers on those
+    surfaces, so the author recorded is always the surface that ran.
     """
     return _identity_module().resolve_agent_id(os.environ if env is None else env)
 
 
+def unresolved_identity_reason() -> str:
+    return _identity_module().unresolved_reason(os.environ)
+
+
 def bind_identity_env() -> str:
-    """Stamp the resolved identity (and its USER_ID) into this process's env."""
+    """Stamp the DERIVED identity and USER_ID into this process's env; "" when none.
+
+    Both are overwritten, never defaulted: a stale or projected value (the
+    retired single "claude-code") must not survive into a record. With no
+    derivable identity nothing is stamped and the caller refuses to write.
+    """
     module = _identity_module()
-    agent_id = module.resolve_agent_id(os.environ) or "unknown-agent"
-    os.environ["L9_MEMORY_AGENT_ID"] = agent_id
-    if os.environ.get("USER_ID", "") in ("", "claude_code_agent"):
+    agent_id = module.resolve_agent_id(os.environ)
+    if agent_id:
+        os.environ["L9_MEMORY_AGENT_ID"] = agent_id
         os.environ["USER_ID"] = module.user_id_for(agent_id)
+    else:
+        os.environ.pop("L9_MEMORY_AGENT_ID", None)
     return agent_id
 
 
@@ -303,25 +315,20 @@ RESERVED_WRITER_IDENTITIES = frozenset({"cursor_agent", "cursor-agent"})
 def resolve_writer_identity(
     contract: dict[str, Any] | None = None, *, require_explicit: bool = True
 ) -> dict[str, str]:
-    """Resolve the memory writer's identity from the environment.
+    """The memory writer's identity, DERIVED from host markers (no drift).
 
-    ``agent_id`` comes from the contract-declared ``agent_id_env`` (default
-    ``L9_MEMORY_AGENT_ID``); ``user_id`` comes from ``USER_ID``. When
-    ``require_explicit`` is True — every write path — an unset value is returned
-    as an empty string so :func:`validate_memory_writer` denies it. The contract
-    defaults are applied only for read/bootstrap resolution
-    (``require_explicit=False``); this keeps a missing runtime identity from
-    being silently defaulted into a valid write, so ``test_missing_agent_id``
-    can actually deny.
+    ``agent_id`` is ops/memory/agent_identity.py's answer for this process and
+    ``user_id`` is derived from it. Neither is read from a configured
+    L9_MEMORY_AGENT_ID / USER_ID or defaulted from the contract: a missing
+    identity comes back empty so :func:`validate_memory_writer` denies the
+    write rather than attributing it to a surface that did not run.
+    ``contract`` and ``require_explicit`` are kept for call compatibility.
     """
-    mem = (contract or {}).get("memory", {})
-    agent_env = mem.get("agent_id_env", "L9_MEMORY_AGENT_ID")
-    default_agent = mem.get("default_agent_id", "claude-code")
-    agent_id = os.environ.get(agent_env, "").strip()
-    user_id = os.environ.get("USER_ID", "").strip()
-    if not require_explicit:
-        agent_id = agent_id or default_agent
-        user_id = user_id or "claude_code_agent"
+    del contract  # the identity is derived, never a contract default (no drift)
+    module = _identity_module()
+    agent_id = module.resolve_agent_id(os.environ)
+    user_id = module.user_id_for(agent_id) if agent_id else ""
+    del require_explicit  # no default either way: an unknown author is denied
     return {"agent_id": agent_id, "user_id": user_id}
 
 

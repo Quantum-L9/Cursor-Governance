@@ -67,14 +67,10 @@ def test_scoping_refuses_the_human_door_peers_and_short_or_reused_keys() -> None
         maa.scoped_tokens({**good, "agent_signing_keys": {agent: door}}, agent)
 
 
-def test_one_hosted_secret_serves_mobile_and_web_but_passes_on_one_key() -> None:
-    hosted = _authority("claude-code-mobile", "claude-code-web")
-    for agent in ("claude-code-mobile", "claude-code-web"):
-        scoped = maa.scoped_tokens(hosted, agent)
-        assert set(scoped["agent_signing_keys"]) == {agent}
+def test_a_secret_carrying_another_identitys_key_is_refused() -> None:
     with pytest.raises(maa.AuthorityMaterializationError, match="no key beyond"):
         maa.scoped_tokens(
-            _authority("claude-code-desktop", "claude-code-mobile"), "claude-code-desktop"
+            _authority("claude-code-mobile", "claude-code-desktop"), "claude-code-mobile"
         )
 
 
@@ -105,19 +101,19 @@ def test_export_scopes_a_full_local_map_to_one_agent(tmp_path: Path) -> None:
         "agents_door_secret": secrets.token_hex(24),
         "agent_signing_keys": {
             "claude-code-mobile": secrets.token_hex(24),
-            "claude-code-web": secrets.token_hex(24),
+            "claude-code-desktop": secrets.token_hex(24),
             "manus": secrets.token_hex(24),
         },
         "human_door_secret": secrets.token_hex(24),
     }
     source = tmp_path / "agent_tokens.local.json"
     source.write_text(json.dumps(full))
-    output = tmp_path / "claude-code-hosted-authority.json"
-    maa.export_authority(source, ["claude-code-mobile", "claude-code-web"], output)
+    output = tmp_path / "claude-code-mobile-authority.json"
+    maa.export_authority(source, ["claude-code-mobile"], output)
     exported = json.loads(output.read_text())
     assert stat.S_IMODE(output.stat().st_mode) == 0o600
     assert set(exported) == {"agents_door_secret", "agent_signing_keys"}
-    assert set(exported["agent_signing_keys"]) == {"claude-code-mobile", "claude-code-web"}
+    assert set(exported["agent_signing_keys"]) == {"claude-code-mobile"}
     with pytest.raises(maa.AuthorityMaterializationError, match="no key beyond"):
         maa.export_authority(source, ["claude-code-mobile", "manus"], tmp_path / "bad.json")
 
@@ -176,7 +172,7 @@ def test_the_operator_opt_out_is_explicit_and_announced(tmp_path: Path) -> None:
 
 
 def test_the_hosted_secret_mints_the_mobile_door_at_spawn(tmp_path: Path) -> None:
-    hosted = json.dumps(_authority("claude-code-mobile", "claude-code-web"))
+    hosted = json.dumps(_authority("claude-code-mobile"))
     result = _launch({"L9_MEMORY_AGENT_AUTHORITY_JSON": hosted, **MOBILE}, tmp_path)
     assert result.returncode == 0, result.stderr
     assert result.stdout.split() == ["claude-code-mobile", *DOOR_VARS]

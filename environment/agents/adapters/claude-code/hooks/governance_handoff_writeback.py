@@ -305,7 +305,15 @@ def main() -> int:
         _record(contract, session_id, status="no_publication")
         return 0
 
-    st.bind_identity_env()
+    if not st.bind_identity_env():
+        reason = st.unresolved_identity_reason()
+        if _previous(contract, session_id).get("status") != "identity_unresolved":
+            pp.emit(
+                f"L9 GOVERNANCE HANDOFF — FAILED (session {session_id}): no memory identity "
+                f"for this surface ({reason}); nothing was written."
+            )
+        _record(contract, session_id, status="identity_unresolved", reason=reason)
+        return 0
     mb.ensure_importable()
     global governance_handoff  # noqa: PLW0603 - bound once per hook run
     try:

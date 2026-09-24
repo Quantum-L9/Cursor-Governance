@@ -1,27 +1,30 @@
-"""Which agent is writing memory — one answer per surface, never "one Claude Code".
+"""Which agent is writing memory — DERIVED from the running process, never configured.
 
 Every memory names the agent that wrote it (ADR-0031), and the operator must be
-able to tell a Cursor fact from a Claude Code Desktop fact from a Claude Code
-Mobile fact. This module is the single resolver both memory lanes use: the
-hook lane (SessionStart prefetch, Stop close, handoffs) stamps it as the writer,
-and ``ops/memory/run_memory_mcp.sh`` mints the signed MCP door for it.
+able to hold each surface accountable for what it wrote. The identity is
+therefore derived at write time from markers the host itself sets on the
+running process — never read from a hard-coded setting that can drift from
+where the code is actually running:
 
-    cursor               Cursor (CURSOR_AGENT)
-    claude-code-desktop  Claude Code on the operator's machine — desktop app,
-                         CLI or IDE (Claude Code markers, CLAUDE_CODE_REMOTE unset)
-    claude-code-mobile   Claude Code cloud session from the mobile app
-                         (CLAUDE_CODE_REMOTE=true, CLAUDE_CODE_ENTRYPOINT=remote_mobile)
-    claude-code-web      any other Claude Code cloud session (web, API-started),
-                         so a non-mobile cloud session is never labelled mobile
+    cursor               Cursor                  CURSOR_AGENT is set
+    claude-code-desktop  Claude Code Desktop     Claude Code markers, CLAUDE_CODE_REMOTE unset
+                         (runs on the operator's machine)
+    claude-code-mobile   Claude Code Mobile      CLAUDE_CODE_REMOTE=true and
+                         (cloud session)         CLAUDE_CODE_ENTRYPOINT=remote_mobile
 
-``L9_MEMORY_AGENT_ID`` set to a concrete id (``cursor``, ``manus``,
-``claude-code-mobile``, …) is authoritative. The legacy value ``claude-code``
-— which ``settings.template.json`` projects into every Claude surface, and
-which Cursor can inherit by loading ``.claude/settings.json`` — is only the
-family marker and is refined from the runtime markers above.
+On a Cursor or Claude Code surface a static ``L9_MEMORY_AGENT_ID`` is IGNORED:
+the host's own markers are the only evidence, so a pasted or projected value
+(the retired single ``claude-code`` identity, say) can never mislabel a write.
+:func:`static_drift` names such a value so SessionStart can report it. Only an
+agent with no host markers of its own (manus, codex, gemini, an operator
+shell) is identified by ``L9_MEMORY_AGENT_ID`` — its adapter sets it.
+
+No guessing: a Claude Code cloud session whose entrypoint is not recognised,
+and the retired ``claude-code`` value, resolve to NO identity (""), and every
+memory writer refuses to write rather than record an inaccurate author.
 
 Pure: reads the mapping it is given, no I/O. ``python -m ops.memory.agent_identity``
-prints the id for the current environment (empty and exit 1 when unknown).
+prints the identity for the current process (exit 1 and a reason when none).
 """
 
 from __future__ import annotations
@@ -31,19 +34,24 @@ import sys
 from collections.abc import Mapping
 from typing import Final
 
-CLAUDE_FAMILY: Final = "claude-code"
 CURSOR: Final = "cursor"
 CLAUDE_DESKTOP: Final = "claude-code-desktop"
 CLAUDE_MOBILE: Final = "claude-code-mobile"
-CLAUDE_WEB: Final = "claude-code-web"
-CLAUDE_IDENTITIES: Final = frozenset({CLAUDE_DESKTOP, CLAUDE_MOBILE, CLAUDE_WEB})
-#: Identities that share one hosted environment (and so one provisioned secret).
-HOSTED_CLAUDE: Final = frozenset({CLAUDE_MOBILE, CLAUDE_WEB})
-MOBILE_ENTRYPOINTS: Final = frozenset({"remote_mobile"})
+#: Every identity this resolver derives from host markers.
+DERIVED_IDENTITIES: Final = frozenset({CURSOR, CLAUDE_DESKTOP, CLAUDE_MOBILE})
+CLAUDE_IDENTITIES: Final = frozenset({CLAUDE_DESKTOP, CLAUDE_MOBILE})
+#: The retired single identity: never an author (it named no surface).
+RETIRED: Final = frozenset({"claude-code"})
+#: CLAUDE_CODE_ENTRYPOINT values of a cloud session and the identity each is.
+REMOTE_ENTRYPOINTS: Final = {"remote_mobile": CLAUDE_MOBILE}
 
 
 def _flag(env: Mapping[str, str], name: str) -> str:
     return (env.get(name) or "").strip()
+
+
+def _is_cursor(env: Mapping[str, str]) -> bool:
+    return bool(_flag(env, "CURSOR_AGENT"))
 
 
 def _is_claude(env: Mapping[str, str]) -> bool:
@@ -54,38 +62,61 @@ def _is_claude(env: Mapping[str, str]) -> bool:
     )
 
 
-def claude_identity(env: Mapping[str, str]) -> str:
-    """The Claude Code surface identity from runtime markers."""
+def _claude_identity(env: Mapping[str, str]) -> str:
     if _flag(env, "CLAUDE_CODE_REMOTE").lower() == "true":
-        if _flag(env, "CLAUDE_CODE_ENTRYPOINT").lower() in MOBILE_ENTRYPOINTS:
-            return CLAUDE_MOBILE
-        return CLAUDE_WEB
+        return REMOTE_ENTRYPOINTS.get(_flag(env, "CLAUDE_CODE_ENTRYPOINT").lower(), "")
     return CLAUDE_DESKTOP
 
 
 def resolve_agent_id(env: Mapping[str, str] | None = None) -> str:
-    """The writing agent's identity, or "" when nothing identifies one."""
+    """The writing agent's identity, derived from host markers; "" when unknown."""
+    source = os.environ if env is None else env
+    if _is_cursor(source):
+        return CURSOR
+    if _is_claude(source):
+        return _claude_identity(source)
+    explicit = _flag(source, "L9_MEMORY_AGENT_ID")
+    return "" if explicit in RETIRED else explicit
+
+
+def static_drift(env: Mapping[str, str] | None = None) -> str:
+    """A configured L9_MEMORY_AGENT_ID that disagrees with the derived identity, or ""."""
     source = os.environ if env is None else env
     explicit = _flag(source, "L9_MEMORY_AGENT_ID")
-    if explicit and explicit != CLAUDE_FAMILY:
-        return explicit
-    # Cursor wins over a Claude family marker it inherited from .claude/settings.json.
-    if _flag(source, "CURSOR_AGENT"):
-        return CURSOR
-    if explicit == CLAUDE_FAMILY or _is_claude(source):
-        return claude_identity(source)
-    return ""
+    if not explicit or not (_is_cursor(source) or _is_claude(source)):
+        return ""
+    return explicit if explicit != resolve_agent_id(source) else ""
+
+
+def unresolved_reason(env: Mapping[str, str] | None = None) -> str:
+    """Why no identity could be derived (for a loud refusal), or ""."""
+    source = os.environ if env is None else env
+    if resolve_agent_id(source):
+        return ""
+    if _is_claude(source):
+        entry = _flag(source, "CLAUDE_CODE_ENTRYPOINT") or "unset"
+        return (
+            f"Claude Code cloud session with CLAUDE_CODE_ENTRYPOINT={entry} has no registered "
+            f"memory identity (known: {', '.join(sorted(REMOTE_ENTRYPOINTS))})"
+        )
+    explicit = _flag(source, "L9_MEMORY_AGENT_ID")
+    if explicit in RETIRED:
+        return f"L9_MEMORY_AGENT_ID={explicit} is the retired single identity; it names no surface"
+    return "no host markers (CURSOR_AGENT / Claude Code) and no L9_MEMORY_AGENT_ID"
 
 
 def user_id_for(agent_id: str) -> str:
-    """The registry's USER_ID convention (validate_agents R3)."""
+    """The registry's USER_ID convention (validate_agents R3), derived from the identity."""
     return f"{agent_id.replace('-', '_')}_agent"
 
 
 def main() -> int:
     agent_id = resolve_agent_id()
-    print(agent_id)
-    return 0 if agent_id else 1
+    if agent_id:
+        print(agent_id)
+        return 0
+    print(f"no memory identity: {unresolved_reason()}", file=sys.stderr)
+    return 1
 
 
 if __name__ == "__main__":

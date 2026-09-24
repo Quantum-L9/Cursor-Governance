@@ -27,20 +27,12 @@ from typing import Any
 
 import yaml
 
-from ops.memory.agent_identity import HOSTED_CLAUDE
-
 MIN_SECRET = 24
 
 
 def allowed_peers(agent_id: str) -> frozenset[str]:
-    """Identities whose keys may travel in the same secret as ``agent_id``'s.
-
-    Claude Code mobile and web cloud sessions run in one hosted environment, so
-    its one provisioned secret carries both keys; the materializer passes on
-    only the key of the identity actually running. Every other agent's secret
-    carries exactly its own key.
-    """
-    return HOSTED_CLAUDE if agent_id in HOSTED_CLAUDE else frozenset({agent_id})
+    """Identities whose keys may travel in ``agent_id``'s secret: only its own."""
+    return frozenset({agent_id})
 
 
 class AuthorityMaterializationError(ValueError):

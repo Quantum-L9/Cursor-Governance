@@ -381,6 +381,25 @@ def main() -> int:
     workspace = st.workspace_root()
     roots = _writeback_roots(contract, receipt_id, workspace)
     agent_id = st.bind_identity_env()
+    if not agent_id:
+        # Accountability: never close under a guessed or configured author.
+        reason = st.unresolved_identity_reason()
+        announced = _announce_state(
+            contract,
+            session_id,
+            "identity_unresolved",
+            f"L9 MEMORY WRITE-BACK — FAILED (session {session_id}): no memory identity "
+            f"for this surface ({reason}); nothing was written. Every memory must name "
+            "the surface that wrote it (ops/memory/agent_identity.py).",
+        )
+        _record(
+            contract,
+            session_id,
+            status="identity_unresolved",
+            reason=reason,
+            announcement=announced or _previous(contract, session_id).get("announcement"),
+        )
+        return 0
 
     mb.ensure_importable()
 

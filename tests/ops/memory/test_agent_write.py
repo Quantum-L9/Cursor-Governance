@@ -56,7 +56,22 @@ def test_refusals_explain_themselves(extra: dict, message: str) -> None:
         _build(**extra)
 
 
-def test_the_cli_prints_tool_and_arguments(capsys: pytest.CaptureFixture[str]) -> None:
+def _desktop(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The builder stamps the DERIVED identity; state the surface (Claude Code Desktop)."""
+    for name in (
+        "CURSOR_AGENT",
+        "CLAUDE_CODE_REMOTE",
+        "CLAUDE_CODE_ENTRYPOINT",
+        "L9_MEMORY_AGENT_ID",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("CLAUDECODE", "1")
+
+
+def test_the_cli_prints_tool_and_arguments(
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _desktop(monkeypatch)
     code = aw.main(
         [
             "build",
@@ -110,3 +125,26 @@ def test_the_module_does_no_memory_io() -> None:
         "typing",
         "ops.memory.agent_identity",  # pure resolver, no I/O
     }, sorted(imported)
+
+
+def test_the_cli_refuses_an_agent_id_that_is_not_this_process(
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _desktop(monkeypatch)
+    code = aw.main(
+        [
+            "build",
+            "--namespace",
+            "cursor-governance",
+            "--class",
+            "decision",
+            "--content",
+            "An author chosen by the caller is drift",
+            "--tag",
+            "identity",
+            "--agent-id",
+            "claude-code-mobile",
+        ]
+    )
+    assert code == 1
+    assert "identity drift" in capsys.readouterr().err

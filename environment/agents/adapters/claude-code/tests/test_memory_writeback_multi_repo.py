@@ -121,7 +121,11 @@ class WritebackFanOutTest(unittest.TestCase):
 
         env = {
             "CLAUDE_PROJECT_DIR": str(self.workspace),
-            "L9_MEMORY_AGENT_ID": "claude-code",
+            # Claude Code Desktop, stated: the identity is derived from host markers
+            "CLAUDECODE": "1",
+            "CLAUDE_CODE_REMOTE": "false",
+            "CLAUDE_CODE_ENTRYPOINT": "cli",
+            "CURSOR_AGENT": "",
             **(env_extra or {}),
         }
 

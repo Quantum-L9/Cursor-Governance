@@ -246,14 +246,22 @@ class MemoryGateTests(unittest.TestCase):
 
     def test_precomposed_receipt_key_is_reduced_not_doubled(self) -> None:
         """An old-style hint that passes the composed key still repairs the right file."""
-        # A concrete identity: the bare "claude-code" family marker is refined
-        # from the surface markers of whatever machine runs the test.
-        with mock.patch.dict(os.environ, {"L9_MEMORY_AGENT_ID": "claude-code-desktop"}):
+        # The writer is DERIVED from host markers, so the surface is stated here
+        # (Claude Code Desktop) rather than inherited from the machine running it.
+        no_markers = {
+            "CURSOR_AGENT": "",
+            "CLAUDECODE": "",
+            "CLAUDE_CODE_ENTRYPOINT": "",
+            "CLAUDE_CODE_SESSION_ID": "",
+            "CLAUDE_CODE_REMOTE": "",
+        }
+        with mock.patch.dict(os.environ, {**no_markers, "CLAUDECODE": "1"}):
             raw = st.resolve_receipt_id(event={}, cli_arg="chat-42")
             composed = st.resolve_receipt_id(event={}, cli_arg="claude-code-desktop__chat-42")
         self.assertEqual(raw, "claude-code-desktop__chat-42")
         self.assertEqual(composed, raw)
-        with mock.patch.dict(os.environ, {"L9_MEMORY_AGENT_ID": "agent-b"}):
+        # An agent with no host markers is identified by its adapter's setting.
+        with mock.patch.dict(os.environ, {**no_markers, "L9_MEMORY_AGENT_ID": "agent-b"}):
             # Another writer's prefix is chat text, not this writer's key.
             other = st.resolve_receipt_id(event={}, cli_arg="claude-code__chat-42")
         self.assertEqual(other, "agent-b__claude-code__chat-42")

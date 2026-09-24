@@ -95,12 +95,8 @@ class PrefetchRuntimeGuardTests(unittest.TestCase):
             ),
             "cursor",
         )
-        # One identity per surface, never one "claude-code" (ops/memory/agent_identity.py).
+        # DERIVED from host markers, never configured (ops/memory/agent_identity.py).
         self.assertEqual(prefetch.prefetch_agent_id({"CLAUDECODE": "1"}), "claude-code-desktop")
-        self.assertEqual(
-            prefetch.prefetch_agent_id({"L9_GOVERNANCE_SURFACE": "claude-code"}),
-            "claude-code-desktop",
-        )
         self.assertEqual(
             prefetch.prefetch_agent_id(
                 {
@@ -111,9 +107,10 @@ class PrefetchRuntimeGuardTests(unittest.TestCase):
             ),
             "claude-code-mobile",
         )
+        # No host marker, no identity: a governance-surface string is not evidence.
+        self.assertEqual(prefetch.prefetch_agent_id({"L9_GOVERNANCE_SURFACE": "claude-code"}), "")
         self.assertEqual(
-            prefetch.prefetch_agent_id({"CLAUDECODE": "1", "CLAUDE_CODE_REMOTE": "true"}),
-            "claude-code-web",
+            prefetch.prefetch_agent_id({"CLAUDECODE": "1", "CLAUDE_CODE_REMOTE": "true"}), ""
         )
 
     def test_a_degraded_read_is_shown_to_the_user(self) -> None:

@@ -77,7 +77,7 @@ description: Agent memory SSOT (canonical l9-graphite-memory control plane) — 
 
 - Resume from sessionStart hydration (`next=`, canonical continuation record) — never treat `memory-bank/` or a Graphiti `inject` / PICKUP read as SSOT
 - Every memory request names its namespace from `python -m ops.memory.cli resolve` — a request memory authorizes, never a grant Cursor holds
-- Every write stamps `agent_id`, one identity per surface from `ops/memory/agent_identity.py`: Cursor=`cursor`, Claude Code=`claude-code-desktop` | `claude-code-mobile` | `claude-code-web` (the bare `claude-code` in `L9_MEMORY_AGENT_ID` is only the family marker, refined by surface)
+- Every write stamps `agent_id`, DERIVED at write time from host markers by `ops/memory/agent_identity.py` — never configured: Cursor=`cursor`, Claude Code Desktop=`claude-code-desktop`, Claude Code Mobile=`claude-code-mobile`. A configured `L9_MEMORY_AGENT_ID` is ignored on those surfaces (reported as drift); no derivable identity means the write is refused, never attributed to a surface that did not run
 - Never write to `group_id=main` or `group_id=default`
 - Never use Cursor `update_memory` / native Memories for repo/code facts
 - Never use code-graph for episodic decisions (use canonical memory)

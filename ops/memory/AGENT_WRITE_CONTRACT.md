@@ -77,59 +77,63 @@ agent-set.
 
 ## Signed agent identity: every memory names its author and its surface
 
-A memory must name the agent that wrote it. Each surface is its own agent;
-there is no single "Claude Code" identity. `ops/memory/agent_identity.py` is the
-one resolver, used by the hook lane and by the MCP launcher:
+A memory must name the agent that wrote it, and the operator must be able to
+hold each surface accountable for what it wrote. The identity is therefore
+**derived** at write time from markers the host sets on the running process.
+It is never configured, so it cannot drift from where the code actually ran.
+`ops/memory/agent_identity.py` is the one resolver, used by both memory lanes
+and by the MCP launcher:
 
-| Identity | Surface | Resolved from |
+| Identity | Surface | Derived from |
 |---|---|---|
-| `cursor` | Cursor | `CURSOR_AGENT` (wins over an inherited `claude-code` marker) |
-| `claude-code-desktop` | Claude Code on your machine: desktop app, CLI, IDE | Claude Code markers, `CLAUDE_CODE_REMOTE` unset |
-| `claude-code-mobile` | Claude Code cloud session started from the mobile app | `CLAUDE_CODE_REMOTE=true`, `CLAUDE_CODE_ENTRYPOINT=remote_mobile` |
-| `claude-code-web` | Any other Claude Code cloud session (web, API) | `CLAUDE_CODE_REMOTE=true`, any other entrypoint |
+| `cursor` | Cursor | `CURSOR_AGENT` |
+| `claude-code-desktop` | Claude Code Desktop, on your machine | Claude Code markers, `CLAUDE_CODE_REMOTE` unset |
+| `claude-code-mobile` | Claude Code Mobile, a cloud session | `CLAUDE_CODE_REMOTE=true` and `CLAUDE_CODE_ENTRYPOINT=remote_mobile` |
 
-`L9_MEMORY_AGENT_ID=claude-code`, projected by `settings.template.json`, is
-only the family marker. It is refined to one of the three identities above and
-is never written as an identity. The builder refuses `agent:claude-code`.
-
+- **Configured values are ignored.** On these surfaces a configured
+  `L9_MEMORY_AGENT_ID` or `USER_ID` is ignored, and SessionStart reports it as
+  drift. `USER_ID` is always derived from the identity, for example
+  `claude_code_mobile_agent`. Only agents without host markers of their own
+  (manus, codex, gemini, an operator shell) are identified by
+  `L9_MEMORY_AGENT_ID`, which their adapters set.
+- **No guessing.** A Claude Code cloud session with an unrecognized entrypoint,
+  and the retired single `claude-code` identity, have **no** identity. Every
+  writer refuses to write and says why, rather than recording an author that
+  did not run.
+- **Drift is refused.** When a caller names an identity that disagrees with the
+  running surface (an explicit `agent_id`, or the builder's `--agent-id`), the
+  write is refused as drift.
 - **At spawn**, `ops/memory/run_memory_mcp.sh`:
-  1. resolves the identity;
-  2. reads `L9_MEMORY_AGENT_AUTHORITY_JSON` from the environment Claude Code
-     starts with;
-  3. scopes it with `ops/memory/materialize_agent_authority.py`: only the
-     agents door and this identity's key pass through, and never the human
-     door;
-  4. derives the grants from `environment/agents/agent_registry.yaml`, never
-     from the secret;
+  1. derives the identity;
+  2. reads `L9_MEMORY_AGENT_AUTHORITY_JSON` or the workstation key maps;
+  3. passes on only that identity's key, never the human door;
+  4. derives the grants from `environment/agents/agent_registry.yaml`;
   5. mints the signed assertion.
 
-  The server's principal is then that identity (for example
-  `claude-code-mobile-memory-client`), and its write grants are that agent's
-  `assigned_groups`, whichever directory the server starts in.
-- **Without the door** the launcher **refuses to start the server** and says
-  why, and SessionStart announces `AGENT MEMORY WRITES ARE OFF`.
-  `L9_MEMORY_ALLOW_LOCAL_OPERATOR=1` is the explicit operator opt-out, and it is
-  announced as such.
-- **SessionStart prints** `memory identity: <id>` in every Claude session.
+  The server's principal is that identity, for example
+  `claude-code-mobile-memory-client`. Without a door the server refuses to
+  start. `L9_MEMORY_ALLOW_LOCAL_OPERATOR=1` is the announced operator opt-out.
+- **SessionStart prints** `memory identity: <id> (derived from host markers)`,
+  or `NONE` with the reason.
 
 ### Provisioning, once per surface
 
 Run these on the workstation that holds the local key maps. No values are ever
 printed. Paste secrets only into environment settings, never into a chat.
 
-1. **Give the new identities keys** (existing keys are kept):
-   `python -m ops.memory.materialize_agent_authority --add-keys-to ~/.config/l9-memory/agent_tokens.local.json --agent-id claude-code-desktop --agent-id claude-code-mobile --agent-id claude-code-web`
-2. **Claude Code Desktop:** nothing more. The launcher reads the local maps
-   through `export_agent_assertion_env.sh`, and the server runs as
-   `claude-code-desktop`.
-3. **Claude Code cloud sessions, mobile and web:** they share one hosted
-   environment, so its one secret carries both keys, and the launcher passes on
-   only the key of the surface that is running.
+1. **Give the identities keys** (existing keys are kept):
+   `python -m ops.memory.materialize_agent_authority --add-keys-to ~/.config/l9-memory/agent_tokens.local.json --agent-id claude-code-desktop --agent-id claude-code-mobile`
+2. **Claude Code Desktop:** nothing more. The launcher reads the local maps,
+   and the server runs as `claude-code-desktop`.
+3. **Claude Code Mobile (cloud):**
    1. Write the scoped secret:
-      `python -m ops.memory.materialize_agent_authority --export-from ~/.config/l9-memory/agent_tokens.local.json --agent-id claude-code-mobile --agent-id claude-code-web --output ./claude-code-hosted-authority.json`
+      `python -m ops.memory.materialize_agent_authority --export-from ~/.config/l9-memory/agent_tokens.local.json --agent-id claude-code-mobile --output ./claude-code-mobile-authority.json`
    2. Add the file's contents as `L9_MEMORY_AGENT_AUTHORITY_JSON` in the
       Claude Code environment settings (the environment menu in the session
       title bar, then Edit).
    3. Delete the file.
+   4. While you're there, remove any `L9_MEMORY_AGENT_ID`, `USER_ID` or
+      `L9_MEMORY_SOURCE` from those settings. They are ignored, and reported as
+      drift until removed.
 4. **Cursor:** its SessionStart mints the `cursor` door from the same local
    maps (`ops/hooks/session_start_bootstrap.sh`).

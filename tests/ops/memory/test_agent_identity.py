@@ -1,62 +1,77 @@
-"""ops/memory/agent_identity.py — one memory identity per surface, never one Claude Code."""
+"""ops/memory/agent_identity.py — the memory identity is DERIVED, never configured.
+
+Cursor, Claude Code Desktop and Claude Code Mobile each have their own identity,
+derived from markers the host sets on the running process. A configured
+L9_MEMORY_AGENT_ID can never relabel a write (no drift), and a surface that
+cannot be identified gets no identity rather than a guessed one.
+"""
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
+import yaml
 
 from ops.memory import agent_identity as ai
 
 CLAUDE = {"CLAUDECODE": "1"}
+MOBILE = {**CLAUDE, "CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": "remote_mobile"}
+REGISTRY = Path(__file__).resolve().parents[3] / "environment/agents/agent_registry.yaml"
 
 
 @pytest.mark.parametrize(
     ("env", "expected"),
     [
         ({"CURSOR_AGENT": "1"}, "cursor"),
-        ({"CURSOR_AGENT": "1", "L9_MEMORY_AGENT_ID": "claude-code"}, "cursor"),
         (CLAUDE, "claude-code-desktop"),
-        ({"L9_MEMORY_AGENT_ID": "claude-code"}, "claude-code-desktop"),
-        ({**CLAUDE, "CLAUDE_CODE_ENTRYPOINT": "cli"}, "claude-code-desktop"),
-        (
-            {**CLAUDE, "CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": "remote_mobile"},
-            "claude-code-mobile",
-        ),
-        (
-            {**CLAUDE, "CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": "remote_web"},
-            "claude-code-web",
-        ),
-        ({**CLAUDE, "CLAUDE_CODE_REMOTE": "true"}, "claude-code-web"),
+        ({"CLAUDE_CODE_ENTRYPOINT": "cli"}, "claude-code-desktop"),
+        (MOBILE, "claude-code-mobile"),
+        # configured values never relabel a surface that has markers
+        ({"CURSOR_AGENT": "1", "L9_MEMORY_AGENT_ID": "claude-code"}, "cursor"),
+        ({**CLAUDE, "L9_MEMORY_AGENT_ID": "claude-code-mobile"}, "claude-code-desktop"),
+        ({**MOBILE, "L9_MEMORY_AGENT_ID": "claude-code-desktop"}, "claude-code-mobile"),
+        # agents with no host markers are identified by their adapter's setting
         ({"L9_MEMORY_AGENT_ID": "manus"}, "manus"),
-        (
-            {"L9_MEMORY_AGENT_ID": "claude-code-mobile", "CLAUDE_CODE_REMOTE": "false"},
-            "claude-code-mobile",
-        ),
+        # no guessing
+        ({**CLAUDE, "CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": "remote_web"}, ""),
+        ({**CLAUDE, "CLAUDE_CODE_REMOTE": "true"}, ""),
+        ({"L9_MEMORY_AGENT_ID": "claude-code"}, ""),
         ({}, ""),
     ],
 )
-def test_each_surface_resolves_to_its_own_identity(env: dict[str, str], expected: str) -> None:
+def test_the_identity_is_derived_from_host_markers(env: dict[str, str], expected: str) -> None:
     assert ai.resolve_agent_id(env) == expected
 
 
-def test_the_family_marker_is_never_an_identity() -> None:
-    for env in (
-        {"L9_MEMORY_AGENT_ID": "claude-code"},
-        CLAUDE,
-        {**CLAUDE, "CLAUDE_CODE_REMOTE": "true"},
-    ):
-        assert ai.resolve_agent_id(env) != ai.CLAUDE_FAMILY
-
-
-def test_every_claude_identity_is_a_registered_agent() -> None:
-    from pathlib import Path  # noqa: PLC0415
-
-    import yaml  # noqa: PLC0415
-
-    registry = yaml.safe_load(
-        (Path(__file__).resolve().parents[3] / "environment/agents/agent_registry.yaml").read_text()
+def test_a_configured_value_that_disagrees_is_reported_as_drift() -> None:
+    assert ai.static_drift({**MOBILE, "L9_MEMORY_AGENT_ID": "claude-code"}) == "claude-code"
+    assert ai.static_drift({**MOBILE, "L9_MEMORY_AGENT_ID": "claude-code-mobile"}) == ""
+    assert ai.static_drift({"L9_MEMORY_AGENT_ID": "manus"}) == "", (
+        "no markers: nothing to drift from"
     )
-    agents = registry["agents"]
-    assert "claude-code" not in agents, "one Claude Code identity for every surface is retired"
-    for agent_id in (*ai.CLAUDE_IDENTITIES, ai.CURSOR):
-        assert agents[agent_id]["status"] == "active"
-        assert agents[agent_id]["user_id"] == ai.user_id_for(agent_id)
+
+
+def test_an_unidentifiable_surface_says_why() -> None:
+    reason = ai.unresolved_reason(
+        {**CLAUDE, "CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": "remote_web"}
+    )
+    assert "remote_web" in reason and "no registered memory identity" in reason
+    assert "retired" in ai.unresolved_reason({"L9_MEMORY_AGENT_ID": "claude-code"})
+    assert ai.unresolved_reason(MOBILE) == ""
+
+
+def test_exactly_the_three_requested_identities_are_derived() -> None:
+    assert ai.DERIVED_IDENTITIES == {"cursor", "claude-code-desktop", "claude-code-mobile"}
+
+
+def test_registry_and_resolver_cannot_drift_apart() -> None:
+    """Every derived identity is an active registry agent with the derived USER_ID,
+    and no retired or unrequested Claude identity is registered."""
+    agents = yaml.safe_load(REGISTRY.read_text(encoding="utf-8"))["agents"]
+    for agent_id in ai.DERIVED_IDENTITIES:
+        assert agents[agent_id]["status"] == "active", agent_id
+        assert agents[agent_id]["user_id"] == ai.user_id_for(agent_id), agent_id
+    claude_agents = {a for a, v in agents.items() if v.get("adapter") == "claude-code"}
+    assert claude_agents == set(ai.CLAUDE_IDENTITIES)
+    assert not ai.RETIRED & set(agents)

@@ -18,20 +18,78 @@ from ops.graphiti.hydration import compile_session_packet as comp  # noqa: E402
 from ops.graphiti.hydration import identity as ident  # noqa: E402
 from ops.graphiti.hydration import transcript as tr  # noqa: E402
 
+_SURFACE_MARKERS = (
+    "CURSOR_AGENT",
+    "CLAUDECODE",
+    "CLAUDE_CODE_ENTRYPOINT",
+    "CLAUDE_CODE_SESSION_ID",
+    "CLAUDE_CODE_REMOTE",
+    "L9_MEMORY_AGENT_ID",
+)
+
+
+@pytest.fixture(autouse=True)
+def _cursor_surface(monkeypatch):
+    """These tests model the Cursor lane; the identity is derived from host
+    markers (ops/memory/agent_identity.py), so the surface is stated, never
+    inherited from whichever machine runs the suite."""
+    _surface(monkeypatch, CURSOR_AGENT="1")
+
+
+def _surface(monkeypatch, **markers: str) -> None:
+    """Hermetic: the identity is derived from host markers, so state them exactly."""
+    for name in _SURFACE_MARKERS:
+        monkeypatch.delenv(name, raising=False)
+    for name, value in markers.items():
+        monkeypatch.setenv(name, value)
+
 
 def test_identity_requires_agent_id(monkeypatch):
-    monkeypatch.delenv("L9_MEMORY_AGENT_ID", raising=False)
+    _surface(monkeypatch)
     with pytest.raises(ident.IdentityError):
         ident.resolve_write_identity(surface="cursor")
 
 
-def test_identity_cursor_stamp():
+def test_identity_cursor_stamp(monkeypatch):
+    _surface(monkeypatch, CURSOR_AGENT="1")
     got = ident.resolve_write_identity(explicit_agent_id="cursor", surface="cursor")
     assert got["agent_id"] == "cursor"
+    assert got["user_id"] == "cursor_agent"
     assert "agent=cursor;kind=lesson" == ident.stamp_source_description("cursor", "lesson")
 
 
-def test_identity_claude_cannot_impersonate_cursor():
+def test_identity_is_derived_per_surface_and_configured_values_are_ignored(monkeypatch):
+    _surface(monkeypatch, CLAUDECODE="1", L9_MEMORY_AGENT_ID="claude-code")
+    assert ident.resolve_write_identity(surface="claude-code")["agent_id"] == "claude-code-desktop"
+    _surface(
+        monkeypatch,
+        CLAUDECODE="1",
+        CLAUDE_CODE_REMOTE="true",
+        CLAUDE_CODE_ENTRYPOINT="remote_mobile",
+        L9_MEMORY_AGENT_ID="claude-code-desktop",
+    )
+    got = ident.resolve_write_identity(surface="claude-code")
+    assert got == {
+        "agent_id": "claude-code-mobile",
+        "user_id": "claude_code_mobile_agent",
+        "surface": "claude-code",
+    }
+
+
+def test_identity_drift_is_refused_not_recorded(monkeypatch):
+    _surface(monkeypatch, CLAUDECODE="1")
+    with pytest.raises(ident.IdentityError, match="drift"):
+        ident.resolve_write_identity(explicit_agent_id="claude-code-mobile", surface="claude-code")
+
+
+def test_the_retired_single_identity_names_no_surface(monkeypatch):
+    _surface(monkeypatch, L9_MEMORY_AGENT_ID="claude-code")
+    with pytest.raises(ident.IdentityError, match="retired"):
+        ident.resolve_write_identity(surface="claude-code")
+
+
+def test_identity_claude_cannot_impersonate_cursor(monkeypatch):
+    _surface(monkeypatch, CLAUDECODE="1")
     with pytest.raises(ident.IdentityError):
         ident.resolve_write_identity(
             explicit_agent_id="cursor",

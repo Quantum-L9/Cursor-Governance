@@ -36,7 +36,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from ops.memory.agent_identity import CLAUDE_FAMILY, resolve_agent_id
+from ops.memory.agent_identity import RETIRED, resolve_agent_id
 
 SCHEMA_ID = "l9.agent_memory_write.v1"
 WRITE_TOOL = "mcp__l9-graphite-memory__memory_write_agent"
@@ -181,9 +181,10 @@ def validate(payload: Any) -> dict[str, Any]:
     agent_tags = [t for t in tags if re.search(AGENT_TAG_RE, t)]
     if len(agent_tags) != 1:
         raise AgentWriteError("tags must carry exactly one agent:<id> tag")
-    if agent_tags[0] == f"agent:{CLAUDE_FAMILY}":
+    if agent_tags[0].removeprefix("agent:") in RETIRED:
         raise AgentWriteError(
-            "agent:claude-code names no surface: use claude-code-desktop, -mobile or -web"
+            "agent:claude-code is the retired single identity and names no surface; "
+            "the builder stamps the derived identity (claude-code-desktop / claude-code-mobile)"
         )
 
     key = payload["idempotency_key"]
@@ -277,7 +278,7 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument(
         "--agent-id",
         default=resolve_agent_id() or None,
-        help="default: this surface's identity (ops/memory/agent_identity.py)",
+        help="default: this process's DERIVED identity (ops/memory/agent_identity.py)",
     )
     b.add_argument("--source-id", help="evidence: PR, commit, ADR, file path")
     b.add_argument("--task-signature", help="present => memory_write_governed")
@@ -289,8 +290,16 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         if args.command == "build":
+            derived = resolve_agent_id()
+            if derived and args.agent_id != derived:
+                raise AgentWriteError(
+                    f"identity drift: --agent-id {args.agent_id!r} but this process is "
+                    f"{derived!r}; the author is derived, never chosen"
+                )
             if not args.agent_id:
-                raise AgentWriteError("--agent-id or L9_MEMORY_AGENT_ID is required")
+                raise AgentWriteError(
+                    "no memory identity for this process (ops/memory/agent_identity.py)"
+                )
             payload = build(
                 namespace=args.namespace,
                 memory_class=args.memory_class,

@@ -30,6 +30,26 @@ from ops.graphiti.hydration.session_latches import (
 from ops.memory.control_plane_client import MemoryControlPlaneClient, OutcomeStatus
 from ops.memory.namespace_context import NamespaceContext
 
+_SURFACE_MARKERS = (
+    "CURSOR_AGENT",
+    "CLAUDECODE",
+    "CLAUDE_CODE_ENTRYPOINT",
+    "CLAUDE_CODE_SESSION_ID",
+    "CLAUDE_CODE_REMOTE",
+    "L9_MEMORY_AGENT_ID",
+)
+
+
+@pytest.fixture(autouse=True)
+def _cursor_surface(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These tests model the Cursor lane (agent_id="cursor"). The identity is
+    derived from host markers (ops/memory/agent_identity.py), so the surface is
+    stated rather than inherited from whichever machine runs the suite."""
+    for name in _SURFACE_MARKERS:
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("CURSOR_AGENT", "1")
+
+
 RECORD = "66666666-6666-6666-6666-666666666666"
 
 

@@ -703,12 +703,21 @@ say "shared memory: canonical memory control plane only (ops/memory; l9-graphite
 # the door. Values are never printed. Memory never gates repository writes.
 _l9_door_status() {
   local missing=()
-  # One memory identity per surface (ops/memory/agent_identity.py): cursor,
-  # claude-code-desktop, claude-code-mobile, claude-code-web — never one
-  # "claude-code" for every surface.
-  local _agent
+  # The memory identity is DERIVED from host markers (ops/memory/agent_identity.py):
+  # cursor, claude-code-desktop, claude-code-mobile — never configured, so it
+  # cannot drift from the surface that is actually running.
+  local _agent _why _drift
   _agent="$(PYTHONPATH="$GOV${PYTHONPATH:+:$PYTHONPATH}" "$PY" -m ops.memory.agent_identity 2>/dev/null || true)"
-  say "memory identity: ${_agent:-UNRESOLVED} — every memory this session writes names this agent (ops/memory/agent_identity.py)"
+  _drift="$(PYTHONPATH="$GOV${PYTHONPATH:+:$PYTHONPATH}" "$PY" -c 'from ops.memory.agent_identity import static_drift; print(static_drift())' 2>/dev/null || true)"
+  if [ -n "$_agent" ]; then
+    say "memory identity: $_agent (derived from host markers) — every memory this session writes names this agent"
+  else
+    _why="$(PYTHONPATH="$GOV${PYTHONPATH:+:$PYTHONPATH}" "$PY" -c 'from ops.memory.agent_identity import unresolved_reason; print(unresolved_reason())' 2>/dev/null || true)"
+    say "memory identity: NONE — ${_why:-unresolved}. MEMORY WRITES ARE REFUSED this session rather than attributed to a surface that did not run"
+  fi
+  if [ -n "$_drift" ]; then
+    say "memory identity: IGNORED configured L9_MEMORY_AGENT_ID=$_drift (the running surface is ${_agent:-unresolved}); remove it from the environment settings — the identity is derived, never configured"
+  fi
   [ -n "${L9_MEMORY_AGENTS_DOOR_SECRET:-}" ] || missing+=(L9_MEMORY_AGENTS_DOOR_SECRET)
   [ -n "${L9_MEMORY_AGENT_ASSERTION:-}" ] || missing+=(L9_MEMORY_AGENT_ASSERTION)
   [ -n "${L9_MEMORY_AGENT_SIGNING_KEYS_JSON:-}" ] || missing+=(L9_MEMORY_AGENT_SIGNING_KEYS_JSON)

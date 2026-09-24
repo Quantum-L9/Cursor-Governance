@@ -75,7 +75,7 @@
       },
       "minContains": 1,
       "maxContains": 1,
-      "description": "Exactly one agent:<id> tag naming the writing surface's identity (cursor, claude-code-desktop, claude-code-mobile, claude-code-web, …; never the bare family agent:claude-code — ops/memory/agent_identity.py) plus at least one lowercase topic tag.",
+      "description": "Exactly one agent:<id> tag naming the DERIVED identity of the writing process (cursor, claude-code-desktop, claude-code-mobile, …; never the retired agent:claude-code — ops/memory/agent_identity.py) plus at least one lowercase topic tag.",
       "not": {
         "contains": {
           "const": "agent:claude-code"
