@@ -144,7 +144,14 @@ def resolve_provider(
 ) -> tuple[Any, Any, Path]:
     binding = resolve_peer_binding(repository_root or REPO_ROOT, agent_ref, surface, provider_ref)
     runtime = workspace / "runtime" / "peer-execution"
-    adapter = pe_script("provider_loader").instantiate(
+    loader = pe_script("provider_loader")
+    entry = loader.registry_entry(binding.provider_ref)
+    if entry.get("status") in {"dormant", "non_routable"}:
+        raise ValueError(
+            f"adapter is not selectable by Peer Execution: {binding.provider_ref} "
+            f"(status={entry.get('status')})"
+        )
+    adapter = loader.instantiate(
         binding.provider_ref,
         runtime,
         execution_profile_ref=binding.execution_profile_ref,
@@ -434,14 +441,29 @@ def execute(
             if len(history) >= budget:
                 break
             # --- probe (SAFE_BEFORE_DISPATCH on BLOCKED) -----------------------
-            probe = lifecycle.probe_provider(
-                binding=binding,
-                adapter=adapter,
-                runtime=runtime,
-                program_digest=program_digest,
-                requested_capabilities=requested,
-                repository_root=request.repository_root,
-            )
+            try:
+                probe = lifecycle.probe_provider(
+                    binding=binding,
+                    adapter=adapter,
+                    runtime=runtime,
+                    program_digest=program_digest,
+                    requested_capabilities=requested,
+                    repository_root=request.repository_root,
+                )
+            except Exception as exc:  # noqa: BLE001 - no dispatch id exists yet
+                reason = f"probe transport failed: {type(exc).__name__}: {exc}"
+                record(
+                    {
+                        "provider_ref": provider_ref,
+                        "stage": "probe",
+                        "status": "FAIL",
+                        "failure_class": SAFE_BEFORE_DISPATCH,
+                        "reason": reason,
+                        "retryable": False,
+                    }
+                )
+                last_failure = history[-1]
+                break
             if str(getattr(probe, "status", "")) != "PASS":
                 reason = str(getattr(probe, "blocked_reason", None) or "UNKNOWN")
                 code = _canonical_code(reason, policy)
@@ -507,6 +529,20 @@ def execute(
                         "execution_profile_ref": binding.execution_profile_ref,
                     }
                 )
+            except Exception as exc:  # noqa: BLE001 - no dispatch id exists yet
+                reason = f"dispatch transport failed: {type(exc).__name__}: {exc}"
+                record(
+                    {
+                        "provider_ref": provider_ref,
+                        "stage": "dispatch",
+                        "status": "FAIL",
+                        "failure_class": SAFE_BEFORE_DISPATCH,
+                        "reason": reason,
+                        "retryable": False,
+                    }
+                )
+                last_failure = history[-1]
+                break
             # --- await (post-dispatch: KNOWN_TERMINAL or AMBIGUOUS) ----------
             try:
                 outcome = lifecycle.await_provider(
@@ -612,12 +648,17 @@ def execute(
                     }
                 )
             failure_class, reason = classify_outcome(outcome)
-            code = _canonical_code(
-                (outcome.to_dict().get("cancel_receipt") or {}).get("canonical_error_code")
-                if hasattr(outcome, "to_dict")
-                else None,
-                policy,
-            )
+            outcome_payload = outcome.to_dict() if hasattr(outcome, "to_dict") else {}
+            receipt_codes = [
+                (outcome_payload.get("cancel_receipt") or {}).get("canonical_error_code"),
+                *[
+                    item.get("canonical_error_code")
+                    for item in (outcome_payload.get("status_receipts") or [])
+                    if isinstance(item, dict)
+                ],
+                dispatched.get("canonical_error_code"),
+            ]
+            code = _canonical_code(next((item for item in receipt_codes if item), None), policy)
             record(
                 {
                     "provider_ref": provider_ref,
@@ -657,7 +698,7 @@ def execute(
                     unsafe = True
                     terminal["reason"] = f"{PROVIDER_FAILOVER_UNSAFE}: {reason}"
                     return finish(terminal)
-            if not _retryable(policy, code, transient=False) and code is not None:
+            if not _retryable(policy, code, transient=False):
                 return finish(terminal)
             # retryable (or unclassified) known-terminal failure: next try/candidate
             continue

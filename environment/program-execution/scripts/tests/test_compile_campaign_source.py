@@ -74,6 +74,22 @@ def _scoped_source(directory: Path) -> Path:
     return path
 
 
+class ProgramCompletenessTests(unittest.TestCase):
+    def test_preflight_rejects_a_program_field_required_by_lowering(self) -> None:
+        compiler = _load(
+            "compile_campaign_source_program_completeness",
+            PE_ROOT / "scripts/compile_campaign_source.py",
+        )
+        source = _with_declared_scope(yaml.safe_load(SOURCE.read_text(encoding="utf-8")))
+        del source["program"]["owner"]
+
+        with self.assertRaises(compiler.CompileError) as ctx:
+            compiler.preflight_campaign_source_document(source)
+
+        self.assertIn("owner", str(ctx.exception))
+        self.assertIn("incomplete for lowering", str(ctx.exception))
+
+
 def _load(name: str, path: Path):
     spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
