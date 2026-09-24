@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import hashlib
 import json
 import os
@@ -21,16 +22,27 @@ from environment.agents.runtime_paths import (
 )
 
 SCHEMA = "l9.generated-data-ingress-receipt.v1"
+#: Machine form of SCHEMA (law §36). write_ingress validates every receipt
+#: against it, so the file and the runtime cannot drift apart.
+SCHEMA_PATH = (
+    Path(__file__).resolve().parents[1] / "schemas" / "generated-data-ingress-receipt.schema.json"
+)
 OUTCOMES = {"CAPTURED", "NO_REUSABLE_DATA", "QUARANTINED", "REJECTED", "FAILED"}
+#: Ingress-only states plus every orchestration ``PipelineState``: ingest copies
+#: the job state into the receipt, so an unlisted state would turn a processing
+#: failure into an escaping ValueError instead of a FAILED receipt.
 PROCESSING_STATUSES = {
     "NOT_STARTED",
     "PENDING",
+    "RECEIVED",
     "VALIDATED",
     "HARVESTED",
     "CLASSIFIED",
     "ROUTED",
     "PROMOTION_DECIDED",
     "DELIVERY_PENDING",
+    "DELIVERING",
+    "DELIVERED",
     "DESTINATION_SUBMITTED",
     "DESTINATION_DEFERRED",
     "DESTINATION_ACCEPTED",
@@ -101,6 +113,22 @@ def write_packet_evidence(packet: dict[str, Any], packet_digest: str) -> Path:
     return path
 
 
+@functools.cache
+def _receipt_validator() -> Any:
+    from jsonschema import Draft202012Validator, FormatChecker
+
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    Draft202012Validator.check_schema(schema)
+    return Draft202012Validator(schema, format_checker=FormatChecker())
+
+
+def _validate_receipt(stored: dict[str, Any]) -> None:
+    errors = sorted(_receipt_validator().iter_errors(stored), key=lambda e: list(e.path))
+    if errors:
+        detail = "; ".join(f"{'/'.join(map(str, e.path)) or '<root>'}: {e.message}" for e in errors)
+        raise ValueError(f"ingress receipt violates {SCHEMA}: {detail}")
+
+
 def write_ingress(body: dict[str, Any]) -> dict[str, Any]:
     if body["outcome"] not in OUTCOMES:
         raise ValueError(f"unsupported ingress outcome: {body['outcome']}")
@@ -118,6 +146,7 @@ def write_ingress(body: dict[str, Any]) -> dict[str, Any]:
     ).hexdigest()
     stored["receipt_digest"] = digest
     path = _path(stored["acceptance_receipt_digest"])
+    _validate_receipt(stored)
     _atomic_write(
         path,
         json.dumps(stored, indent=2, sort_keys=True, ensure_ascii=False).encode("utf-8") + b"\n",

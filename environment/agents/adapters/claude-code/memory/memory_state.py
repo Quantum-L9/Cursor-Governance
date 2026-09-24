@@ -298,12 +298,22 @@ def state_root(contract: dict[str, Any], workspace: Path | None = None) -> Path:
     return path if path.is_absolute() else Path(base).resolve() / path
 
 
-def resolve_namespaces(contract: dict[str, Any]) -> list[str]:
+def resolve_namespaces(contract: dict[str, Any], in_scope: list[str] | None = None) -> list[str]:
+    """Namespaces this session requests: the in-scope repositories' own.
+
+    An explicit ``L9_MEMORY_NAMESPACES`` wins. Otherwise the answer is the
+    namespaces resolved from the repositories in session scope (``in_scope``,
+    one per hydrated root). There is no static default: the contract used to
+    carry ``default_namespaces: ["cursor-governance"]``, so every consumer
+    repository's session requested and recorded the governance SSOT's
+    namespace instead of its own. The SSOT is requested only when it is itself
+    the repository in scope.
+    """
     env = contract.get("memory", {}).get("namespace_env", "L9_MEMORY_NAMESPACES")
     raw = os.environ.get(env, "").strip()
     if raw:
         return [n.strip() for n in raw.split(",") if n.strip()]
-    return list(contract.get("memory", {}).get("default_namespaces", []))
+    return list(dict.fromkeys(n for n in (in_scope or []) if n))
 
 
 # --- writer identity (runtime attribution enforcement) ----------------------
