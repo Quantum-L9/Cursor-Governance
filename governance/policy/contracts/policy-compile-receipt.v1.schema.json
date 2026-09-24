@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "l9/policy-compile-receipt/v1",
+  "title": "Policy Compile Receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "compiler_version", "transaction_count", "transaction_set_digest", "schema_digests", "policy_digest", "outputs", "errors"],
+  "properties": {
+    "schema": {"const": "l9.policy-compile-receipt.v1"},
+    "status": {"enum": ["PASS", "BLOCKED"]},
+    "compiler_version": {"type": "string", "minLength": 1},
+    "transaction_count": {"type": "integer", "minimum": 0},
+    "transaction_set_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "schema_digests": {"type": "object", "additionalProperties": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}},
+    "policy_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "digest", "current"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "current": {"type": "boolean"}
+        }
+      }
+    },
+    "errors": {"type": "array", "items": {"type": "string"}}
+  }
+}
