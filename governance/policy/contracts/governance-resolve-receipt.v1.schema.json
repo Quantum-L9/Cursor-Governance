@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "l9/governance-resolve-receipt/v1",
+  "title": "Governance Resolve Receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "resolver_version", "source_revision", "policy_digest", "model_digest", "evidence_set_digest", "counts", "blocked_ids"],
+  "properties": {
+    "schema": {"const": "l9.governance-resolve-receipt.v1"},
+    "status": {"enum": ["PASS", "BLOCKED"]},
+    "resolver_version": {"type": "string", "minLength": 1},
+    "source_revision": {"type": "string", "minLength": 7},
+    "policy_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "model_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "evidence_set_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["VERIFIED", "IMPLEMENTED", "MISSING", "UNKNOWN", "CONFLICT"],
+      "properties": {
+        "VERIFIED": {"type": "integer", "minimum": 0},
+        "IMPLEMENTED": {"type": "integer", "minimum": 0},
+        "MISSING": {"type": "integer", "minimum": 0},
+        "UNKNOWN": {"type": "integer", "minimum": 0},
+        "CONFLICT": {"type": "integer", "minimum": 0}
+      }
+    },
+    "blocked_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^L9-(ORG|REPO)-[0-9]{3,}$"}}
+  }
+}
