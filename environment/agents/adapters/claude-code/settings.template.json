@@ -27,6 +27,10 @@
     "authority. Generic memory.ingest, admin/destructive memory operations, compatibility",
     "aliases, and the retired graphiti-memory provider server are not ambient capabilities",
     "and must not become alternate vocabularies or bypasses.",
+    "Claude Code names an MCP tool mcp__<server>__<tool> with every '.' in the tool name mapped",
+    "to '_' (memory.write_agent is mcp__l9-graphite-memory__memory_write_agent). A dotted",
+    "permission entry can never match, so it silently prompts or silently fails to deny;",
+    "test_single_owner_capability_planes.py pins every entry to a tool the server exposes.",
     "On Claude hosted surfaces GraphQL-backed gh pr/repo commands are intentionally NOT",
     "advertised as approved: the session gateway may reject GraphQL while repository-scoped",
     "REST works. bootstrap_capability_preflight.sh injects the REST-only rule at SessionStart.",
@@ -80,6 +84,11 @@
             "type": "command",
             "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer memory_writeback.py'",
             "timeout": 90
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer governance_handoff_writeback.py'",
+            "timeout": 60
           }
         ]
       }
@@ -137,8 +146,13 @@
         ]
       },
       {
-        "matcher": "Bash",
+        "matcher": "Edit|Write|NotebookEdit|Bash|mcp__github__.*",
         "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || { printf \"l9-gate: launcher missing at %s \u2014 BLOCKING (INV-1)\\n\" \"$x\" >&2; exit 2; }; exec bash \"$x\" --class gate memory_gate.py'",
+            "timeout": 12
+          },
           {
             "type": "command",
             "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer ci_parity_push_gate.py'",
@@ -147,14 +161,7 @@
         ]
       },
       {
-        "matcher": "Edit|Write|NotebookEdit|Bash|mcp__github__.*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || { printf \"l9-gate: launcher missing at %s \u2014 BLOCKING (INV-1)\\n\" \"$x\" >&2; exit 2; }; exec bash \"$x\" --class gate memory_gate.py'",
-            "timeout": 12
-          }
-        ]
+        "hooks": []
       }
     ],
     "PostToolUse": [
@@ -169,7 +176,6 @@
         ]
       },
       {
-        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
         "hooks": [
           {
             "type": "command",
@@ -247,14 +253,19 @@
       "mcp__github__subscribe_pr_activity",
       "mcp__github__unsubscribe_pr_activity",
       "mcp__github__update_pull_request",
-      "mcp__l9-graphite-memory__memory.health",
-      "mcp__l9-graphite-memory__memory.search",
-      "mcp__l9-graphite-memory__memory.hydrate",
-      "mcp__l9-graphite-memory__memory.conflicts",
-      "mcp__l9-graphite-memory__memory.phase_lock",
-      "mcp__l9-graphite-memory__memory.write_agent",
-      "mcp__l9-graphite-memory__memory.write_governed",
-      "mcp__l9-graphite-memory__memory.close",
+      "mcp__l9-graphite-memory__memory_health",
+      "mcp__l9-graphite-memory__memory_search",
+      "mcp__l9-graphite-memory__memory_hydrate",
+      "mcp__l9-graphite-memory__memory_conflicts",
+      "mcp__l9-graphite-memory__memory_phase_lock",
+      "mcp__l9-graphite-memory__memory_write_agent",
+      "mcp__l9-graphite-memory__memory_write_governed",
+      "mcp__l9-graphite-memory__memory_close",
+      "mcp__l9-graphite-memory__memory_get",
+      "mcp__l9-graphite-memory__memory_capabilities",
+      "mcp__l9-graphite-memory__memory_verify_phase_lock",
+      "mcp__l9-graphite-memory__memory_lineage",
+      "mcp__l9-graphite-memory__write_agent",
       "mcp__context7__resolve-library-id",
       "mcp__context7__query-docs",
       "mcp__plugin_context7_context7__resolve-library-id",
@@ -268,15 +279,15 @@
       "mcp__github__create_pull_request",
       "mcp__github__push_files",
       "mcp__graphiti-memory__*",
-      "mcp__l9-graphite-memory__memory.ingest",
-      "mcp__l9-graphite-memory__memory.delete",
-      "mcp__l9-graphite-memory__memory.promote",
-      "mcp__l9-graphite-memory__memory.bootstrap",
-      "mcp__l9-graphite-memory__memory.distill",
-      "mcp__l9-graphite-memory__memory.synthesize_procedures",
-      "mcp__l9-graphite-memory__memory.ingest_governed_candidate",
-      "mcp__l9-graphite-memory__memory.record_reuse",
-      "mcp__l9-graphite-memory__memory.invalidate_source",
+      "mcp__l9-graphite-memory__memory_ingest",
+      "mcp__l9-graphite-memory__memory_delete",
+      "mcp__l9-graphite-memory__memory_promote",
+      "mcp__l9-graphite-memory__memory_bootstrap",
+      "mcp__l9-graphite-memory__memory_distill",
+      "mcp__l9-graphite-memory__memory_synthesize_procedures",
+      "mcp__l9-graphite-memory__memory_ingest_governed_candidate",
+      "mcp__l9-graphite-memory__memory_record_reuse",
+      "mcp__l9-graphite-memory__memory_invalidate_source",
       "mcp__l9-graphite-memory__write",
       "mcp__l9-graphite-memory__search",
       "mcp__l9-graphite-memory__health",
@@ -284,8 +295,8 @@
       "mcp__l9-graphite-memory__phase_lock",
       "mcp__l9-graphite-memory__verify_phase_lock",
       "mcp__l9-graphite-memory__conflicts",
-      "mcp__l9-graphite-memory__graphiti.query",
-      "mcp__l9-graphite-memory__graphiti.write_governed"
+      "mcp__l9-graphite-memory__graphiti_query",
+      "mcp__l9-graphite-memory__graphiti_write_governed"
     ]
   },
   "env": {

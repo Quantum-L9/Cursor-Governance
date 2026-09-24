@@ -628,34 +628,46 @@ def check_no_secret_paste_instructions(failures: list[str]) -> None:
 
 
 def check_memory_identity_distinct(failures: list[str]) -> None:
-    """Claude Code's memory identity must differ from Cursor's (`cursor_agent`).
+    """Claude Code's memory identity is DERIVED, never configured in the template.
 
-    The repo namespace (group_id) is shared with Cursor on purpose; the writing
-    agent identity is not. Guard the env template so that invariant cannot
-    silently regress into Claude Code writing as ``cursor_agent``.
+    ops/memory/agent_identity.py derives it from host markers at write time
+    (claude-code-desktop / claude-code-mobile; Cursor is ``cursor``), so it is
+    always the surface that ran and always distinct from Cursor's. A value in
+    the environment template would be pasted into the hosted environment and
+    drift from the surface that actually runs — the template must not set
+    L9_MEMORY_AGENT_ID, USER_ID or L9_MEMORY_SOURCE at all.
+
+    Nor L9_MEMORY_AGENT_AUTHORITY_JSON: it is a signing credential, the template
+    is pasted into a plaintext model-readable field that carries none, and a
+    hosted container mints its own (materialize_agent_authority --provision-hosted).
     """
     path = HERE / "web" / "environment.env.example"
     if not path.is_file():
         return
-    assignments: dict[str, str] = {}
+    assigned = set()
     for line in path.read_text(encoding="utf-8").splitlines():
         stripped = line.strip()
         if stripped.startswith("#") or "=" not in stripped:
             continue
-        key, _, value = stripped.partition("=")
-        assignments[key.strip()] = value.strip()
-
-    agent_id = assignments.get("L9_MEMORY_AGENT_ID", "")
-    user_id = assignments.get("USER_ID", "")
-    if not agent_id:
+        assigned.add(stripped.partition("=")[0].strip())
+    configured = sorted(assigned & {"L9_MEMORY_AGENT_ID", "USER_ID", "L9_MEMORY_SOURCE"})
+    if "L9_MEMORY_AGENT_AUTHORITY_JSON" in assigned:
         _fail(
-            "environment.env.example must set L9_MEMORY_AGENT_ID (distinct memory identity)",
+            "environment.env.example must not set L9_MEMORY_AGENT_AUTHORITY_JSON: it is a "
+            "credential, and a hosted container mints its own memory authority",
             failures,
         )
-    if user_id == "cursor_agent" or agent_id == "cursor_agent":
-        _fail("memory identity collides with Cursor's cursor_agent — must be distinct", failures)
-    if agent_id and agent_id != "cursor_agent" and user_id != "cursor_agent":
-        print(f"  OK: memory identity distinct from Cursor (agent_id={agent_id!r})")
+    if configured:
+        _fail(
+            f"environment.env.example must not set {', '.join(configured)}: the memory "
+            "identity is derived from host markers (ops/memory/agent_identity.py)",
+            failures,
+        )
+    else:
+        print(
+            "  OK: memory identity is derived (no L9_MEMORY_AGENT_ID / USER_ID / "
+            "L9_MEMORY_SOURCE in the template)"
+        )
 
 
 def check_skill_activation(failures: list[str]) -> None:

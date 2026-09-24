@@ -65,6 +65,8 @@ INTERACTIVE_WRITE_CONSTS: dict[str, object] = {
     "canonical_mcp_server": CANONICAL_MCP_SERVER,
     "cold_write_operation": "memory.write_agent",
     "cold_write_prerequisite": "none",
+    # The payload shape the agent keeps itself (ops/memory/AGENT_WRITE_CONTRACT.md).
+    "payload_contract": "ops/memory/schemas/l9.agent_memory_write.v1.schema.json",
     "governed_write_prerequisite": "memory.phase_lock",
     "governed_write_operation": "memory.write_governed",
     # Legacy aliases for the high-stakes path (kept for older readers).

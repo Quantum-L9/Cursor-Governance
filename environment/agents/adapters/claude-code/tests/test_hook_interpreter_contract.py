@@ -338,6 +338,17 @@ class WritebackObservabilityTests(unittest.TestCase):
             mock.patch.object(self.wb.st, "load_contract", return_value={"memory": {}}),
             mock.patch.object(self.wb.st, "write_receipt", side_effect=fake_write_receipt),
             mock.patch.object(self.wb.st, "workspace_root", return_value=self.state),
+            # The writer identity is DERIVED from host markers; state the surface
+            # (Claude Code Desktop) so these tests reach the runtime stage on any runner.
+            mock.patch.dict(
+                "os.environ",
+                {
+                    "CLAUDECODE": "1",
+                    "CLAUDE_CODE_REMOTE": "false",
+                    "CLAUDE_CODE_ENTRYPOINT": "cli",
+                    "CURSOR_AGENT": "",
+                },
+            ),
         ]
         for patch in self.patches:
             patch.start()
@@ -360,14 +371,14 @@ class WritebackObservabilityTests(unittest.TestCase):
         return self.receipts[key]
 
     def test_normal_policy_skip_is_recorded_as_a_skip(self) -> None:
-        with mock.patch.object(self.wb.st, "fresh_receipt", return_value=False):
+        with mock.patch.object(self.wb.st, "usable_receipt", return_value=False):
             self._run()
         self.assertEqual(self.rc, 0)
         self.assertEqual(self._writeback_receipt()["status"], "skipped_no_prefetch")
 
     def test_missing_module_is_recorded_as_runtime_failure(self) -> None:
         """The exact F-13 shape: pydantic absent, so write-back never ran."""
-        with mock.patch.object(self.wb.st, "fresh_receipt", return_value=True):
+        with mock.patch.object(self.wb.st, "usable_receipt", return_value=True):
             with mock.patch.object(self.wb.mb, "ensure_importable", return_value=self.state):
                 with mock.patch.dict(sys.modules, {}, clear=False):
                     with mock.patch(
@@ -384,12 +395,12 @@ class WritebackObservabilityTests(unittest.TestCase):
 
     def test_runtime_failure_is_distinguishable_from_skip(self) -> None:
         """The single invariant: two different states, not one word."""
-        with mock.patch.object(self.wb.st, "fresh_receipt", return_value=False):
+        with mock.patch.object(self.wb.st, "usable_receipt", return_value=False):
             self._run()
         skip_status = self._writeback_receipt()["status"]
 
         self.receipts.clear()
-        with mock.patch.object(self.wb.st, "fresh_receipt", return_value=True):
+        with mock.patch.object(self.wb.st, "usable_receipt", return_value=True):
             with mock.patch.object(self.wb.mb, "ensure_importable", return_value=self.state):
                 with mock.patch("builtins.__import__", side_effect=_import_raiser("pydantic")):
                     self._run()
@@ -409,7 +420,7 @@ class WritebackObservabilityTests(unittest.TestCase):
         silence" shape the receipt exists to prevent.
         """
         boom = ImportError("cannot import name 'close_session' (circular import)")
-        with mock.patch.object(self.wb.st, "fresh_receipt", return_value=True):
+        with mock.patch.object(self.wb.st, "usable_receipt", return_value=True):
             with mock.patch.object(self.wb.mb, "ensure_importable", return_value=self.state):
                 with mock.patch("builtins.__import__", side_effect=_import_exploder(boom)):
                     self._run()
@@ -421,7 +432,7 @@ class WritebackObservabilityTests(unittest.TestCase):
 
     def test_stop_hook_never_blocks_session_termination(self) -> None:
         """Section 6.3 - observability, not a new blocking policy."""
-        with mock.patch.object(self.wb.st, "fresh_receipt", return_value=True):
+        with mock.patch.object(self.wb.st, "usable_receipt", return_value=True):
             with mock.patch.object(self.wb.mb, "ensure_importable", return_value=self.state):
                 with mock.patch("builtins.__import__", side_effect=_import_raiser("anything")):
                     self._run()

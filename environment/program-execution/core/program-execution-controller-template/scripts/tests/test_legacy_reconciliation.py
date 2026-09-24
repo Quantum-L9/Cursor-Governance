@@ -22,6 +22,7 @@ from helpers import (
 
 sys.path.insert(0, str(SCRIPTS))
 from pec.reasons import ALL_REASON_CODES  # noqa: E402
+from pec.state import StateDB  # noqa: E402
 
 
 class LegacyReconciliationTests(unittest.TestCase):
@@ -110,6 +111,11 @@ class LegacyReconciliationTests(unittest.TestCase):
             payload = json.loads(status_path.read_text(encoding="utf-8"))
             payload.update({"runtime_status": "completed", "verdict": "NOT_CONVERGED"})
             status_path.write_text(json.dumps(payload), encoding="utf-8")
+            db = StateDB(workspace / "runtime" / "state.sqlite")
+            try:
+                db.set_meta("campaign_status", payload)
+            finally:
+                db.close()
             report = run_cli("reconcile-legacy", "--workspace", str(workspace), expect=1)
             self.assertEqual(report["terminal"]["disposition"], "TERMINAL_STATE_INCONSISTENT")
             self.assertIn("active_lease", report["terminal"]["problems"])

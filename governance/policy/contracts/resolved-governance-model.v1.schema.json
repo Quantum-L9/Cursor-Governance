@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "l9/resolved-governance-model/v1",
+  "title": "Resolved Governance Model v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "repository", "source_revision", "policy_digest", "evidence_set_digest", "model_digest", "invariants", "facts", "status"],
+  "properties": {
+    "schema": {"const": "l9.resolved-governance-model.v1"},
+    "repository": {"const": "Quantum-L9/Cursor-Governance"},
+    "source_revision": {"type": "string", "minLength": 7},
+    "policy_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "evidence_set_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "model_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "status": {"enum": ["PASS", "BLOCKED"]},
+    "invariants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "scope", "requirement", "authority", "relationships", "bindings", "verifiers", "implementation", "projection", "source_digest"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^L9-(ORG|REPO)-[0-9]{3,}$"},
+          "scope": {"enum": ["organization", "repository"]},
+          "requirement": {"type": "string", "minLength": 1},
+          "authority": {"type": "object"},
+          "relationships": {"type": "array"},
+          "bindings": {"type": "array"},
+          "verifiers": {"type": "array"},
+          "implementation": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["status", "evidence_ids"],
+            "properties": {
+              "status": {"enum": ["VERIFIED", "IMPLEMENTED", "MISSING", "UNKNOWN", "CONFLICT"]},
+              "evidence_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}}
+            }
+          },
+          "projection": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["invariants", "agents", "providers"],
+            "properties": {
+              "invariants": {"type": "boolean"},
+              "agents": {"type": "boolean"},
+              "providers": {"type": "array", "uniqueItems": true, "items": {"type": "string"}}
+            }
+          },
+          "source_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+        }
+      }
+    },
+    "facts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "adapter", "source", "digest", "claim"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "adapter": {"type": "string", "minLength": 1},
+          "source": {"type": "string", "minLength": 1},
+          "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "claim": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}

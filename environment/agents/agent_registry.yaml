@@ -107,22 +107,40 @@ agents:
     adapter: cursor                  # existing .cursor-commands activation, unchanged
     status: active
 
-  claude-code:
-    agent_id: claude-code
-    user_id: claude_code_agent       # matches environment/agents/adapters/claude-code/web/environment.env.example
-    source: claude-code
-    principal_id: claude-code-memory-client
-    token_env: L9_MEMORY_TOKEN__CLAUDE_CODE
-    signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__CLAUDE_CODE
+  claude-code-desktop:
+    agent_id: claude-code-desktop
+    user_id: claude_code_desktop_agent
+    source: claude-code-desktop
+    principal_id: claude-code-desktop-memory-client
+    token_env: L9_MEMORY_TOKEN__CLAUDE_CODE_DESKTOP
+    signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__CLAUDE_CODE_DESKTOP
     role: implementer
-    surfaces: [claude-cli, claude-web, claude-mobile]
-    # A claude-code session routinely carries two roots: the consumer workspace
-    # it was opened on and the governance SSOT. Grants are per-agent, not
-    # per-session, so a namespace absent here is unwritable through the agent
-    # lane for that whole session (Tier 2). Tier 3 freezes the principal at
-    # spawn from the server's cwd, so it covers exactly one of the two.
-    assigned_groups: [constellation-gate, cursor-governance, l9-graphiti-memory, l9-node-template]
-    adapter: claude-code             # environment/agents/adapters/claude-code/, identities now rendered from here
+    surfaces: [claude-desktop, claude-cli, claude-ide]
+    # Claude Code Desktop: runs on the operator's machine (CLAUDE_CODE_REMOTE unset).
+    # DERIVED at write time by ops/memory/agent_identity.py from host markers,
+    # never configured; the two Claude Code identities share a role and grants
+    # but never an identity, so every memory says which surface wrote it. Grants are per-agent: a namespace absent here is
+    # unwritable through the agent lane (Tier 2).
+    assigned_groups: [constellation-gate, cursor-governance, l9-ci-core, l9-graphiti-memory, l9-node-template]
+    adapter: claude-code             # environment/agents/adapters/claude-code/
+    status: active
+
+  claude-code-mobile:
+    agent_id: claude-code-mobile
+    user_id: claude_code_mobile_agent
+    source: claude-code-mobile
+    principal_id: claude-code-mobile-memory-client
+    token_env: L9_MEMORY_TOKEN__CLAUDE_CODE_MOBILE
+    signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__CLAUDE_CODE_MOBILE
+    role: implementer
+    surfaces: [claude-mobile]
+    # Claude Code Mobile: cloud session, CLAUDE_CODE_REMOTE=true + CLAUDE_CODE_ENTRYPOINT=remote_mobile.
+    # DERIVED at write time by ops/memory/agent_identity.py from host markers,
+    # never configured; the two Claude Code identities share a role and grants
+    # but never an identity, so every memory says which surface wrote it. Grants are per-agent: a namespace absent here is
+    # unwritable through the agent lane (Tier 2).
+    assigned_groups: [constellation-gate, cursor-governance, l9-ci-core, l9-graphiti-memory, l9-node-template]
+    adapter: claude-code             # environment/agents/adapters/claude-code/
     status: active
 
   manus:
@@ -163,6 +181,74 @@ agents:
     assigned_groups: [cursor-governance, l9-graphiti-memory]
     adapter: gemini
     status: active
+
+  perplexity:
+    agent_id: perplexity
+    user_id: perplexity_agent
+    source: perplexity
+    principal_id: perplexity-memory-client
+    token_env: L9_MEMORY_TOKEN__PERPLEXITY
+    signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__PERPLEXITY
+    # Perplexity (assistant).
+    # Reserved identity, not yet wired: no adapter, observer role (read only,
+    # no write grants). When its adapter lands it sets L9_MEMORY_AGENT_ID=perplexity,
+    # gets a writing role + assigned_groups, and moves to status: active.
+    role: observer
+    surfaces: [perplexity]
+    assigned_groups: []
+    adapter: none
+    status: planned
+
+  perplexity-computer:
+    agent_id: perplexity-computer
+    user_id: perplexity_computer_agent
+    source: perplexity-computer
+    principal_id: perplexity-computer-memory-client
+    token_env: L9_MEMORY_TOKEN__PERPLEXITY_COMPUTER
+    signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__PERPLEXITY_COMPUTER
+    # Perplexity Computer (computer-use agent).
+    # Reserved identity, not yet wired: no adapter, observer role (read only,
+    # no write grants). When its adapter lands it sets L9_MEMORY_AGENT_ID=perplexity-computer,
+    # gets a writing role + assigned_groups, and moves to status: active.
+    role: observer
+    surfaces: [perplexity-computer]
+    assigned_groups: []
+    adapter: none
+    status: planned
+
+  l-cto:
+    agent_id: l-cto
+    user_id: l_cto_agent
+    source: l-cto
+    principal_id: l-cto-memory-client
+    token_env: L9_MEMORY_TOKEN__L_CTO
+    signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__L_CTO
+    # L CTO: strategic technical-decision agent.
+    # Reserved identity, not yet wired: no adapter, observer role (read only,
+    # no write grants). When its adapter lands it sets L9_MEMORY_AGENT_ID=l-cto,
+    # gets a writing role + assigned_groups, and moves to status: active.
+    role: observer
+    surfaces: [l-cto]
+    assigned_groups: []
+    adapter: none
+    status: planned
+
+  igorbot:
+    agent_id: igorbot
+    user_id: igorbot_agent
+    source: igorbot
+    principal_id: igorbot-memory-client
+    token_env: L9_MEMORY_TOKEN__IGORBOT
+    signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__IGORBOT
+    # IgorBot.
+    # Reserved identity, not yet wired: no adapter, observer role (read only,
+    # no write grants). When its adapter lands it sets L9_MEMORY_AGENT_ID=igorbot,
+    # gets a writing role + assigned_groups, and moves to status: active.
+    role: observer
+    surfaces: [igorbot]
+    assigned_groups: []
+    adapter: none
+    status: planned
 
   human:
     agent_id: human

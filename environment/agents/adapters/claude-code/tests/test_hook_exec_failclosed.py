@@ -407,7 +407,7 @@ class ProgramBoundAuthorizationTests(unittest.TestCase):
             self.workspace,
             self.contract,
             attempt_number=1,
-            agent_ref="claude-code",
+            agent_ref="claude-code-desktop",
             surface="claude-cli",
         )["autonomy_authority"]
         self.gate_log = self.root / "gate-stdin.bin"

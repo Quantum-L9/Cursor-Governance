@@ -76,28 +76,38 @@ class UserScopeSettingsTests(unittest.TestCase):
             for matcher in group
             for entry in matcher["hooks"]
         ]
-        # 14 registrations covering 13 distinct hook scripts: skill_usage_logger
+        # 17 registrations covering 16 distinct hook scripts: skill_usage_logger
         # is registered twice (PreToolUse and UserPromptExpansion). Three are
-        # fail-closed gates; eleven are observers. session_debt_wrap.py remains
-        # invocable but is not a Stop/bootstrap registration.
+        # fail-closed gates; fourteen are observers. The two Stop observers,
+        # memory_writeback.py and governance_handoff_writeback.py, run in
+        # parallel once per publication. ci_parity_push_gate.py and
+        # ci_parity_posttool.py are observers, so the gate count is unchanged.
+        # session_debt_wrap.py remains invocable but is not a Stop/bootstrap
+        # registration.
         # bootstrap_capability_preflight is the first SessionStart observer so
         # capability ownership and the hosted REST-only transport rule are
         # present before agents choose tools. session_deps_cloud.sh keeps its
         # own concurrent SessionStart registration and timeout rather than
         # consuming the governance-hydration hook budget.
-        # +2 (2026-09-24): ci_parity_push_gate.py and ci_parity_posttool.py,
-        # both --class observer, so the gate count below is unchanged.
-        self.assertEqual(len(commands), 16, "every L9 hook registration must reach user scope")
+        self.assertEqual(len(commands), 17, "every L9 hook registration must reach user scope")
         self.assertEqual(sum("--class gate" in c for c in commands), 3)
-        self.assertEqual(sum("--class observer" in c for c in commands), 13)
+        self.assertEqual(sum("--class observer" in c for c in commands), 14)
         names = {c.rsplit(" ", 1)[-1].rstrip("'") for c in commands}
-        self.assertEqual(len(names), 15, "fifteen distinct hook scripts")
+        self.assertEqual(len(names), 16, "sixteen distinct hook scripts")
         session_start_commands = [
             entry["command"]
             for matcher in settings["hooks"]["SessionStart"]
             for entry in matcher["hooks"]
         ]
         self.assertIn("bootstrap_capability_preflight.sh", session_start_commands[0])
+        stop_commands = [
+            entry["command"] for matcher in settings["hooks"]["Stop"] for entry in matcher["hooks"]
+        ]
+        self.assertEqual(
+            [c.rsplit(" ", 1)[-1].rstrip("'") for c in stop_commands],
+            ["memory_writeback.py", "governance_handoff_writeback.py"],
+            "both post-publish handoff hooks reach user scope, in one parallel Stop group",
+        )
 
     def test_managed_keys_are_all_present(self) -> None:
         self._reconcile()

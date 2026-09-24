@@ -202,6 +202,25 @@
       "max_records": 64,
       "max_bytes": 8192,
       "provenance_required": true
+    },
+    "claude-governance-handoff": {
+      "allowed_operations": [
+        "resolve",
+        "health",
+        "write"
+      ],
+      "record_classes": [
+        "observation"
+      ],
+      "max_records": 1,
+      "max_bytes": 16384,
+      "provenance_required": true,
+      "namespaces": [
+        "cursor-governance"
+      ],
+      "callers": [
+        "environment/agents/adapters/claude-code/hooks/governance_handoff_writeback.py (post-publish governance handoff: l9.governance_handoff.v1 + receipt-copied degradation, one record, cursor-governance only)"
+      ]
     }
   },
   "record_class_note": "Record classes are the canonical memory_class values as they reach l9-memory (after ops.memory.cli KIND_ALIASES: pickup_context->episodic (+ tag session_continuation; a continuation is tag-selected, not a MemoryClass), lesson->procedural, note->observation, rule->decision). A governed candidate is checked on knowledge.primary_class, where session_continuation is the capsule class; a distill is bounded by memory's own extractor, so record_classes does not apply to it.",

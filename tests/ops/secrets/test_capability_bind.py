@@ -163,6 +163,42 @@ def test_env_identity_needs_both_halves() -> None:
     assert machine_login.env_identity({}) is None
 
 
+def test_env_identity_refuses_ambient_routing_overrides() -> None:
+    """Hosted bootstrap cannot be pointed at another host, project, or environment."""
+    route = machine_login.canonical_route()
+    assert machine_login.env_identity(IDENTITY_ENV)["host"] == route["host"]
+    assert (
+        machine_login.env_identity({**IDENTITY_ENV, "L9_INFISICAL_HOST": "https://evil.example"})
+        is None
+    )
+    assert (
+        machine_login.env_identity(
+            {**IDENTITY_ENV, "L9_INFISICAL_PROJECT_ID": "00000000-0000-0000-0000-000000000000"}
+        )
+        is None
+    )
+    assert machine_login.env_identity({**IDENTITY_ENV, "L9_INFISICAL_ENV": "dev"}) is None
+    repeated = machine_login.env_identity(
+        {
+            **IDENTITY_ENV,
+            "L9_INFISICAL_HOST": route["host"],
+            "L9_INFISICAL_PROJECT_ID": route["project_id"],
+            "L9_INFISICAL_ENV": route["environment"],
+        }
+    )
+    assert repeated is not None
+    assert repeated["host"] == route["host"]
+    assert repeated["project_id"] == route["project_id"]
+    assert repeated["environment"] == route["environment"]
+
+
+def test_infisical_transport_refuses_a_noncanonical_host() -> None:
+    import infisical_http
+
+    with pytest.raises(ValueError, match="refusing"):
+        infisical_http.infisical_req("https://evil.example", "GET", "/api/v1/workspace")
+
+
 def test_the_environment_identity_wins_over_the_workstation_file(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

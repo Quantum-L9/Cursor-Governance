@@ -95,11 +95,35 @@ class PrefetchRuntimeGuardTests(unittest.TestCase):
             ),
             "cursor",
         )
-        self.assertEqual(prefetch.prefetch_agent_id({"CLAUDECODE": "1"}), "claude-code")
+        # DERIVED from host markers, never configured (ops/memory/agent_identity.py).
+        self.assertEqual(prefetch.prefetch_agent_id({"CLAUDECODE": "1"}), "claude-code-desktop")
         self.assertEqual(
-            prefetch.prefetch_agent_id({"L9_GOVERNANCE_SURFACE": "claude-code"}),
-            "claude-code",
+            prefetch.prefetch_agent_id(
+                {
+                    "CLAUDECODE": "1",
+                    "CLAUDE_CODE_REMOTE": "true",
+                    "CLAUDE_CODE_ENTRYPOINT": "remote_mobile",
+                }
+            ),
+            "claude-code-mobile",
         )
+        # No host marker, no identity: a governance-surface string is not evidence.
+        self.assertEqual(prefetch.prefetch_agent_id({"L9_GOVERNANCE_SURFACE": "claude-code"}), "")
+        self.assertEqual(
+            prefetch.prefetch_agent_id({"CLAUDECODE": "1", "CLAUDE_CODE_REMOTE": "true"}), ""
+        )
+
+    def test_a_degraded_read_is_shown_to_the_user(self) -> None:
+        """A memory read that failed or degraded is a user-visible systemMessage."""
+        sys.path.insert(0, str(PREFETCH.parent))
+        import memory_prefetch as prefetch
+
+        quiet = prefetch.hook_session_start_payload("ctx")
+        self.assertNotIn("systemMessage", quiet, "a healthy read adds nothing")
+        loud = prefetch.hook_session_start_payload(
+            "ctx", prefetch._loud_read_failure("DEGRADED at session start: x")
+        )
+        self.assertEqual(loud["systemMessage"], "L9 MEMORY READ — DEGRADED at session start: x")
 
     def test_additional_context_is_a_string_not_an_array(self) -> None:
         """SESSION_START_SPEC §3: ``additionalContext`` is a string.
