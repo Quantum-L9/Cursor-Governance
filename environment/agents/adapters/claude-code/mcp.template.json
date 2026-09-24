@@ -7,9 +7,9 @@
     "projection, never a second authority.",
     "",
     "NO CREDENTIAL VALUES in this file, in .mcp.json, or in the account variables",
-    "field. Transport credentials are referenced as ${VAR} only: the platform",
-    "proxies a value into the variable when it has one to proxy, Claude Code",
-    "expands it at load, and nothing is ever written down.",
+    "field. A remote server's credential is bound from Infisical at spawn by a",
+    "local bridge (ops/secrets/vault_mcp_bridge.py) and never written down;",
+    "a ${VAR} reference remains only for values the host itself supplies.",
     "",
     "_requires_env on a server: the server renders only when every listed variable",
     "is set and non-empty. _optional_headers: {VAR: {header: value}} merges those",
@@ -17,14 +17,14 @@
     "from the render like _comment. Use them for a server that has a working",
     "fallback when its credential is absent.",
     "",
-    "context7 is deliberately NOT _requires_env-gated. Gating it turned a missing",
-    "secret into a silently absent server: every hosted session lost the docs",
-    "MCP with nothing failing, and the rule that mandates Context7 pointed at a",
-    "tool that did not exist. The server now renders unconditionally with its",
-    "${CONTEXT7_API_KEY} header; when the variable is not populated the server",
-    "fails to authenticate, which is a visible failure whose fix is populating",
-    "the secret (Infisical inventory key CONTEXT7_API_KEY, proxied into the",
-    "session environment), never gating the server out again.",
+    "context7 is deliberately NOT _requires_env-gated: a gated server turned a",
+    "missing secret into a silently absent one. It is a local stdio BRIDGE",
+    "(ops/secrets/run_vault_mcp_bridge.sh context7 -> vault_mcp_bridge.py) that",
+    "binds CONTEXT7_API_KEY from Infisical in-process, as this surface's machine",
+    "identity, and forwards to https://mcp.context7.com/mcp. The key is never in",
+    "the environment, argv, .mcp.json or a file. An unbound key makes the bridge",
+    "refuse to start and name the fix (L9_INFISICAL_CLIENT_ID/_SECRET); SessionStart",
+    "reports the bind either way.",
     "",
     "l9-graphite-memory is the ONLY memory server (MemoryService over stdio;",
     "memory-control-plane/v1). command is the spawn wrapper at",
@@ -68,12 +68,11 @@
       "_owner": "l9-graphite-memory: args stay the package's managed_server_entry (client_config/cursor.py); command is the bootstrap spawn wrapper so Claude Code desktop can launch without L9_MEMORY_INTERPRETER in the parent env. tests/ops/memory/test_mcp_surfaces.py holds the wrapper command and package args. No secret values in this template (ADR-016). ADR-0031 assertion env (L9_MEMORY_AGENTS_DOOR_SECRET / L9_MEMORY_AGENT_ASSERTION / the launching principal's own signing-key and grant JSON) must already be present in the environment Claude Code is started with — a pre-launch handoff, e.g. `source ops/memory/export_agent_assertion_env.sh` in the launching shell. The server inherits Claude's environment; a SessionStart hook is a child of Claude and cannot inject into it, and this file never carries an env block or a secret. When the handoff is absent the SessionStart context reports the signed-agent door UNAVAILABLE."
     },
     "context7": {
-      "type": "http",
-      "url": "https://mcp.context7.com/mcp",
-      "timeout": 120000,
-      "headers": {
-        "Authorization": "Bearer ${CONTEXT7_API_KEY}"
-      }
+      "type": "stdio",
+      "command": "${HOME}/.cursor-governance/ops/secrets/run_vault_mcp_bridge.sh",
+      "args": [
+        "context7"
+      ]
     }
   }
 }

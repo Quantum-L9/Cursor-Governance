@@ -1077,17 +1077,19 @@ emit_account_drift "$PY"
 emit_readiness_receipt "$PY"
 emit_capability_readiness "$PY"
 
-# Context7 is rendered unconditionally (mcp.template.json); what decides
-# whether its tools work is the secret. Report that fact, never the value:
-# an absent key is an authentication failure to fix by populating
-# CONTEXT7_API_KEY (Infisical inventory, proxied into the session), not a
-# server to gate out and not a reason to paste anything. The marketplace flag
-# only says the plugin route is closed on hosted surfaces.
-if [ -n "${CONTEXT7_API_KEY:-}" ]; then
-  say "Context7: rendered in .mcp.json; CONTEXT7_API_KEY proxied — mcp__context7__* expected on this session"
-else
-  say "Context7: rendered in .mcp.json but CONTEXT7_API_KEY is ABSENT — the server will fail to authenticate until the secret populates (Infisical CONTEXT7_API_KEY); do not paste it, and use skill l9-context7-docs or an official docs GET until then"
-fi
+# Context7 is rendered unconditionally (mcp.template.json) — never gated out,
+# never a header, never a pasted key. What decides whether its tools work is
+# whether the bridge can bind the key from Infisical.
+# Context7 is a stdio bridge (ops/secrets/vault_mcp_bridge.py) that binds
+# CONTEXT7_API_KEY from Infisical as this surface's machine identity. Report the
+# bind by NAME and SOURCE only (capability_bind --check never prints a value).
+_c7_bind="$("$PY" "$GOV/ops/secrets/capability_bind.py" --check CONTEXT7_API_KEY 2>/dev/null | head -1 || true)"
+case "$_c7_bind" in
+  *"source=infisical"*|*"source=env"*)
+    say "Context7: bridged — CONTEXT7_API_KEY bound from Infisical (${_c7_bind#*source=}); mcp__context7__* expected on this session" ;;
+  *)
+    say "Context7: key NOT bound (${_c7_bind:-capability_bind unavailable}) — the bridge refuses to start until this surface's Infisical machine identity is set (L9_INFISICAL_CLIENT_ID + L9_INFISICAL_CLIENT_SECRET in the environment settings); use skill l9-context7-docs or an official docs GET until then" ;;
+esac
 if [ "${SKIP_PLUGIN_MARKETPLACE:-}" = "true" ]; then
   say "Context7 (hosted skip): marketplace plugin route closed on this surface — the governed remote server above is the route"
 fi
