@@ -111,7 +111,10 @@ When hitting an error during execution:
 
 ## Memory Write Format (MUST FOLLOW)
 
-**Atomic writes only.** One fact per memory write. No prose blobs.
+**Atomic writes only.** One fact per memory write. No prose blobs. The format
+rules below apply identically to the MCP writes (`write_agent` / `write_governed`:
+`content`, `memory_class`, `tags`) and to the operator CLI (`write`, `--kind`, `--tag`);
+the CLI examples are the operator / adapter form.
 
 **"Atomic" / "one fact" is defined (ADR-0037):** one memory record represents
 one independently retrievable assertion or closely coupled relationship that
@@ -136,11 +139,6 @@ but does not attempt to determine proposition-level atomicity.
 `memory.phase_lock` governs the governed-write lane. It is not the SessionStart
 memory-prefetch receipt and MUST NOT become a prerequisite for ordinary
 `memory.write_agent`.
-
-The format
-rules below apply identically to the MCP writes (`write_agent` / `write_governed`:
-`content`, `memory_class`, `tags`) and to the operator CLI (`write`, `--kind`, `--tag`);
-the CLI examples are the operator / adapter form.
 
 ### Why
 
