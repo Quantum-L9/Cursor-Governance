@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-09-21T23:02:51Z'
+generated_utc: '2026-09-24T05:13:10Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:4735447689883f3d4721f739ec8e6b054e370a92928be0d6ecb450850acc26fe
+source_tree_digest: sha256:d74eea47cb60e4f670a608ea305f634eb514fda2cee53fa27531ab4b74b9fdf2
 summary:
   total_mdc_files: 69
   always_apply_true: 35
@@ -1333,7 +1333,7 @@ rules:
 - file: 87-cursor-memory-kernel.mdc
   id: l9.rule.cursor.memory.kernel
   id_source: explicit
-  version: 1.4.0
+  version: 1.5.0
   description: Cursor Memory Kernel enforcement — authoritative source for memory operations, kinds, two lanes (agent write_agent direct; hooks bounded), and session lifecycle
   scope: global
   domain: memory
@@ -1343,8 +1343,8 @@ rules:
   globs: null
   first_heading: Cursor Memory Kernel Enforcement
   has_yaml_frontmatter: true
-  line_count: 211
-  content_digest: sha256:975c9e6a79dcdc45098468022d6624c6c3eaf3d92255821f34d0776976c7b4b9
+  line_count: 237
+  content_digest: sha256:c54195eb4deb330c8d91145bf19b55663e89d18dbc30067fbaec8d3aef97609e
   authority: canonical_global
   context_cost: moderate
   deprecated: false

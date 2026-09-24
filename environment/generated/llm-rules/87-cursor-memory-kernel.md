@@ -104,7 +104,33 @@ When hitting an error during execution:
 
 ## Memory Write Format (MUST FOLLOW)
 
-**Atomic writes only.** One fact per memory write. No prose blobs. The format
+**Atomic writes only.** One fact per memory write. No prose blobs.
+
+**"Atomic" / "one fact" is defined (ADR-0037):** one memory record represents
+one independently retrievable assertion or closely coupled relationship that
+can be superseded without changing unrelated knowledge. Independent assertions
+are written as separate records — several memories are several
+`memory.write_agent` calls, never a batch or session-summary record. Semantic
+decomposition is the agent's responsibility; runtime validation enforces the
+record contract (shape, class, bounds, namespace, identity, tags, idempotency)
+but does not attempt to determine proposition-level atomicity.
+
+- ✅ one record: "Repository and governance handoffs use separate namespaces
+  to prevent cross-plane contamination." — the relationship is the knowledge.
+- ❌ one record: "Repository handoffs use the repository namespace; degraded
+  hydration remains usable for closure; PR 652 introduced the agent lane." —
+  three independent ideas; write three records.
+
+| Write lane | Purpose | `memory.phase_lock` | SessionStart prefetch per write |
+|---|---|---|---|
+| `memory.write_agent` | ordinary agent-selected durable knowledge | No | no prerequisite |
+| `memory.write_governed` | conflict-sensitive governed write | Required (existing) | existing execution contract only |
+
+`memory.phase_lock` governs the governed-write lane. It is not the SessionStart
+memory-prefetch receipt and MUST NOT become a prerequisite for ordinary
+`memory.write_agent`.
+
+The format
 rules below apply identically to the MCP writes (`write_agent` / `write_governed`:
 `content`, `memory_class`, `tags`) and to the operator CLI (`write`, `--kind`, `--tag`);
 the CLI examples are the operator / adapter form.

@@ -96,7 +96,13 @@ Rules that follow from the table:
 - The memory phase-lock is a **memory-write consistency precondition**. It
   never authorizes a source edit, never serializes git, never replaces
   worktree / branch / publication governance (`rules/96` E7/E8/E10,
-  `rules/98`).
+  `rules/98`). It is also **not** the SessionStart prefetch receipt
+  (`preconditions.session_prefetch`) and never a prerequisite for
+  `memory.write_agent` (ADR-0037 INV-AMW-04/06).
+- One `memory.write_agent` record is one independently retrievable,
+  independently supersedable assertion or closely coupled relationship;
+  several independent memories are several sequential writes, not a batch
+  (ADR-0037; `tests/ops/memory/test_agent_write_semantics.py`).
 - Generic `memory.ingest` and the operator CLI `write` are **not** the model's
   alternative to `write_governed`; routing a model-authored fact through them
   to avoid the lock is a doctrine violation. An unbound MCP server is a

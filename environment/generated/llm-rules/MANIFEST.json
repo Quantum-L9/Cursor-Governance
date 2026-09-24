@@ -510,9 +510,9 @@
       "alias": null,
       "class": "always",
       "output": "87-cursor-memory-kernel.md",
-      "output_sha256": "6f2d8a64868fba4362f42565ef645400a9f4988c58289fdc02cf83ed7b198ec3",
+      "output_sha256": "c8bc90abf239875cb36aa36057cf756c41d99ffab9a36cb1b7714d59939dd711",
       "source": "rules/87-cursor-memory-kernel.mdc",
-      "source_sha256": "975c9e6a79dcdc45098468022d6624c6c3eaf3d92255821f34d0776976c7b4b9",
+      "source_sha256": "c54195eb4deb330c8d91145bf19b55663e89d18dbc30067fbaec8d3aef97609e",
       "stem": "87-cursor-memory-kernel"
     },
     {
@@ -641,5 +641,5 @@
     "skipped_agent_requested": 16,
     "source_mdc": 69
   },
-  "tree_sha256": "56b9cb29f929bbd8a5abf04344b21b5bd25b1163597e080a2b092fafebcf3677"
+  "tree_sha256": "25f5482c4063486b08124954cd7bc6a15b25bd23e94c2e03c9ff637fbb800b83"
 }
