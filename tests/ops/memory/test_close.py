@@ -925,3 +925,68 @@ def test_8_warning_only_handling_is_rejected(workspace, scripted, fake_cli) -> N
         "CLOSED_CANONICALLY — this is exactly the defect CG-P1-01 names"
     )
     assert load_close_receipt(workspace, "sess")["status"] != STATUS_CLOSED_CANONICALLY
+
+
+# --- Post-publish close: one per publication, headline from the brief --------
+
+
+def test_the_capsule_headline_comes_from_the_agents_brief() -> None:
+    brief = {
+        "objective": "Ship checkout",
+        "status": "PR open",
+        "next_actions": ["merge after review"],
+        "blocked": [{"item": "payments", "blocker": "no key", "unblock": "add key"}],
+        "decisions": [{"decision": "Stripe", "rationale": "contract"}],
+        "not_completed": [{"item": "refunds", "reason": "scope"}],
+    }
+    merged = cs._handoff_pickup(brief, {"active_files": ["a.py"]})
+    assert merged["active_objective"] == "Ship checkout"
+    assert merged["next_action"] == "merge after review"
+    assert merged["blockers"] == ["payments — no key (unblock: add key)"]
+    assert merged["decisions"] == ["Stripe — contract"]
+    assert merged["unfinished_work"] == ["refunds — scope"]
+    assert merged["active_files"] == ["a.py"], "session evidence is kept"
+
+
+def test_a_publication_close_is_idempotent_per_publication_not_per_session(
+    tmp_path: Path,
+) -> None:
+    """strict: an earlier close of the session is not THIS publication's close."""
+    closes = tmp_path / ".l9" / "memory" / "closes"
+    closes.mkdir(parents=True)
+    (closes / "sess.json").write_text(
+        json.dumps(
+            {
+                "status": cs.STATUS_CLOSED_CANONICALLY,
+                "canonical_operation_id": "op-1",
+                "head_hash": "first-publication",
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert cs.already_closed(tmp_path, "sess", "second-publication") is True
+    assert cs.already_closed(tmp_path, "sess", "second-publication", strict=True) is False
+    assert cs.already_closed(tmp_path, "sess", "first-publication", strict=True) is True
+
+
+def test_the_next_session_hydrate_renders_the_full_handoff() -> None:
+    packet = {
+        "group_id": "repo",
+        "agent_id": "claude-code",
+        "packet_id": "p",
+        "active_objective": "Ship checkout",
+        "next_action_contract": {"next_action": "merge"},
+        "hydrate_stats": {},
+        "handoff": {
+            "publication": "Org/repo#42@abc",
+            "objective": "Ship checkout",
+            "status": "PR open",
+            "blocked": [{"item": "payments", "blocker": "no key", "unblock": "add key"}],
+            "human_actions": [{"action": "add key", "where": "Infisical"}],
+        },
+    }
+    text = comp.format_additional_context(packet)
+    assert "### last handoff (post-publish brief)" in text
+    assert "publication: Org/repo#42@abc" in text
+    assert "payments — no key | unblock: add key" in text
+    assert "add key @ Infisical" in text

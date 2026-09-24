@@ -383,3 +383,45 @@ def test_cursor_client_lifecycle_is_memory_owned(bound, fake_cli) -> None:
     assert c.cursor_client_verify(config_path="/tmp/mcp.json").ok
     argv = fake_cli.calls[-1][0]
     assert argv[1:4] == ["client", "cursor", "verify"] and "--path" in argv
+
+
+# ---------------------------------------------------------------------------
+# Namespace-restricted hook surface (post-publish governance handoff)
+# ---------------------------------------------------------------------------
+
+
+def test_governance_surface_refuses_a_repository_namespace_before_spawning(bound, fake_cli) -> None:
+    """The governance handoff can only ever land in cursor-governance."""
+    friction = MemoryControlPlaneClient(
+        bound, runner=fake_cli.run, surface="claude-governance-handoff"
+    )
+    outcome = friction.write(
+        "friction",
+        workspace=WS,
+        namespace="website-bot",
+        memory_class="observation",
+        source="claude-post-publish-governance-handoff",
+        source_id="k",
+    )
+    assert outcome.status is OutcomeStatus.REJECTED
+    assert "may write only to cursor-governance" in (outcome.error or "")
+    assert fake_cli.calls == [], "the refusal happens client-side, before any process"
+
+
+def test_a_dry_run_gets_the_same_namespace_verdict_as_the_real_write(bound, fake_cli) -> None:
+    """Regression: the namespace check was skipped when records=0 (dry_run=True)."""
+    client = MemoryControlPlaneClient(
+        bound, runner=fake_cli.run, surface="claude-governance-handoff"
+    )
+    outcome = client.write(
+        "governance",
+        workspace=WS,
+        namespace="website-bot",
+        memory_class="observation",
+        source="claude-post-publish-governance-handoff",
+        source_id="k",
+        dry_run=True,
+    )
+    assert outcome.status is OutcomeStatus.REJECTED
+    assert "may write only to cursor-governance" in (outcome.error or "")
+    assert fake_cli.calls == []
