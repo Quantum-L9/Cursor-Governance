@@ -8,7 +8,7 @@ metadata:
   tags: [l9, aws, infisical, secrets, openclaw-igorbot, registry, fail-closed, ssot]
   owner: igor_beylin
   status: active
-  version: 1.5.0
+  version: 1.6.0
   updated: 2026-09-24
 ---
 
@@ -143,6 +143,10 @@ See [references/infisical-protocol.md](references/infisical-protocol.md).
 - AWS registry SSOT: `ops/secrets/openclaw-igorbot.registry.yaml`
 - Infisical inventory (IDs/keys only): `ops/secrets/infisical-cursor-governance.yaml`
 - Overlays: `ops/secrets/registry.overlays.yaml`
+- Child-env exec for tools that read their own credential (Semgrep Pro):
+  `ops/secrets/capability_exec.py` + `capability-exec.json` — registered entries
+  only, secret in that child's environment only, output scrubbed
+  (`AGENTS.md` → CI_PARITY_HOSTED_CLAUDE_V1). Never export the token instead.
 
 ## Validation
 

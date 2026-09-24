@@ -1972,3 +1972,40 @@ PEER, by design:
 - On a hosted surface the bootstrap secret is readable by the model, like any
   environment value. Its mitigation is scope: one least-privilege identity per
   surface, revocable in Infisical without touching any other surface.
+
+<!-- CI_PARITY_HOSTED_CLAUDE_V1 -->
+## CI-parity scanners on hosted Claude; paid tiers through `capability_exec` (2026-09-24) — amends INFISICAL_MACHINE_IDENTITY_V1
+
+Append-only. Hosted Claude Code sessions run the scanners CI runs, at the
+versions CI runs them, before a push — so a CI-only finding stops costing a
+push-and-wait cycle. Cursor is unchanged by construction.
+
+- **One pin manifest**: `ops/ci_parity/tools.yaml` (CodeQL, Semgrep, Biome,
+  pip-audit at CI's versions; actionlint, zizmor, shellcheck, osv-scanner,
+  yamllint added). `ops/ci_parity/install.py` installs them sha256-verified
+  from the hosted Setup script, and `session_deps_cloud.sh` reinstalls a
+  missing or off-pin tool in the background. `validate_manifest.py` fails when
+  a CI pin recorded in `ci_ref` moves without a re-pin.
+- **Timing** (`ops/ci_parity/run.py`): fast lanes on the edited file after
+  every Edit/Write (PostToolUse observer, findings as context); every lane on
+  each new commit in the background, in a `git clone --shared` snapshot under
+  `~/.cache/l9-ci-parity` (never the working tree); the PreToolUse push gate
+  and the `make pr` wave (Claude surfaces only) reuse those receipts. Lanes
+  share an nproc CPU budget at nice 10; a newer commit cancels an older run.
+- **What blocks**: only a NEW finding on a line the change touched — for
+  CodeQL, a data-flow result whose source or sink is in the diff, matching
+  CI's diff-informed analysis — at a severity its lane lists as blocking.
+  Pre-existing debt, absent tools and unbound tokens never block. CI stays
+  authoritative: no local receipt skips or weakens a CI check.
+  `L9_CI_PARITY=0` disables every lane and hook.
+- **Paid tiers**: a tool that reads its credential from its own environment
+  runs through `ops/secrets/capability_exec.py` — one registered entry in
+  `capability-exec.json` (today only `semgrep ci --dry-run`), fixed argv,
+  validated placeholders, the secret bound in-process by `capability_bind` and
+  placed only in that child's environment built from nothing, output that
+  echoes it withheld. **Residual, stated:** while that child runs, its
+  environment is readable by the same uid via `/proc/<pid>/environ` — the same
+  exposure class as the vault bridge's in-process key. `--dry-run` fetches the
+  org policy without creating a scan; CI's record stays the only record.
+- **SonarCloud** is read, never scanned locally (a scanner run publishes):
+  `ops/ci_parity/sonar_status.py` holds `SONAR_TOKEN` in-process only.
