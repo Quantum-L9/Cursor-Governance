@@ -1,0 +1,287 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Quantum-L9/Cursor-Governance/ops/memory/schemas/l9.governance_handoff.v1.schema.json",
+  "title": "L9 post-publish governance handoff (l9.governance_handoff.v1)",
+  "description": "Environment, bootstrap and governance material ONLY, written by the agent to .l9/memory/governance-handoff.json after make pr. The parallel Stop hook governance_handoff_writeback.py writes it as ONE observation record to the cursor-governance namespace, never the repository's, through the namespace-restricted hook surface claude-governance-handoff. The hook appends an 'observed' block copied verbatim from receipts (bootstrap receipt when not ready, degraded prefetch receipt, hook skips since session start); that block is not part of this file. Enforced by ops/memory/governance_handoff.py; also enforced there: the normalized brief is at most 12288 bytes and the record at most 16384 bytes. An all-empty brief with nothing observed writes no record.",
+  "type": "object",
+  "required": [
+    "schema",
+    "pr_number"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "l9.governance_handoff.v1"
+    },
+    "pr_number": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "The published PR's number. Must equal the number in .l9/pr/pr-summary.json written by make pr, or the brief is not this publication's and is refused. A number with a zero fractional part (7.0) is the integer 7."
+    },
+    "environment_friction": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "maxItems": 40,
+      "items": {
+        "description": "What got in the way in the environment: evidence (detail) and cost (impact). A bare string is accepted and becomes {\"item\": <string>}.",
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S",
+            "description": "Shorthand for {\"item\": <string>}."
+          },
+          {
+            "type": "object",
+            "required": [
+              "item"
+            ],
+            "properties": {
+              "item": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S",
+                "description": "Required. Whitespace is collapsed; longer than 1200 characters is truncated with an ellipsis."
+              },
+              "detail": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Optional. Absent, null, empty or whitespace-only is omitted."
+              },
+              "impact": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Optional. Absent, null, empty or whitespace-only is omitted."
+              }
+            },
+            "additionalProperties": true
+          }
+        ]
+      },
+      "description": "What got in the way in the environment: evidence (detail) and cost (impact). Empty is []. Absent or null is treated as []."
+    },
+    "blockers": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "maxItems": 40,
+      "items": {
+        "description": "Environment or governance blockers, each with its cause and what unblocks it. A bare string is accepted and becomes {\"item\": <string>}.",
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S",
+            "description": "Shorthand for {\"item\": <string>}."
+          },
+          {
+            "type": "object",
+            "required": [
+              "item"
+            ],
+            "properties": {
+              "item": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S",
+                "description": "Required. Whitespace is collapsed; longer than 1200 characters is truncated with an ellipsis."
+              },
+              "blocker": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Optional. Absent, null, empty or whitespace-only is omitted."
+              },
+              "unblock": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Optional. Absent, null, empty or whitespace-only is omitted."
+              }
+            },
+            "additionalProperties": true
+          }
+        ]
+      },
+      "description": "Environment or governance blockers, each with its cause and what unblocks it. Empty is []. Absent or null is treated as []."
+    },
+    "degraded_bootstrap": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "maxItems": 40,
+      "items": {
+        "description": "Bootstrap components or hooks observed degraded, each with the state and reason seen. A bare string is accepted and becomes {\"component\": <string>}.",
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S",
+            "description": "Shorthand for {\"component\": <string>}."
+          },
+          {
+            "type": "object",
+            "required": [
+              "component"
+            ],
+            "properties": {
+              "component": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S",
+                "description": "Required. Whitespace is collapsed; longer than 1200 characters is truncated with an ellipsis."
+              },
+              "detail": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Optional. Absent, null, empty or whitespace-only is omitted."
+              }
+            },
+            "additionalProperties": true
+          }
+        ]
+      },
+      "description": "Bootstrap components or hooks observed degraded, each with the state and reason seen. Empty is []. Absent or null is treated as []."
+    },
+    "workarounds": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "maxItems": 40,
+      "items": {
+        "description": "What was done instead of the blocked path. A bare string is accepted and becomes {\"item\": <string>}.",
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S",
+            "description": "Shorthand for {\"item\": <string>}."
+          },
+          {
+            "type": "object",
+            "required": [
+              "item"
+            ],
+            "properties": {
+              "item": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S",
+                "description": "Required. Whitespace is collapsed; longer than 1200 characters is truncated with an ellipsis."
+              },
+              "workaround": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Optional. Absent, null, empty or whitespace-only is omitted."
+              }
+            },
+            "additionalProperties": true
+          }
+        ]
+      },
+      "description": "What was done instead of the blocked path. Empty is []. Absent or null is treated as []."
+    },
+    "governance_actions": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "maxItems": 40,
+      "items": {
+        "description": "What a human must change in governance or environment settings: where and why. A bare string is accepted and becomes {\"action\": <string>}.",
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S",
+            "description": "Shorthand for {\"action\": <string>}."
+          },
+          {
+            "type": "object",
+            "required": [
+              "action"
+            ],
+            "properties": {
+              "action": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S",
+                "description": "Required. Whitespace is collapsed; longer than 1200 characters is truncated with an ellipsis."
+              },
+              "where": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Optional. Absent, null, empty or whitespace-only is omitted."
+              },
+              "why": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Optional. Absent, null, empty or whitespace-only is omitted."
+              }
+            },
+            "additionalProperties": true
+          }
+        ]
+      },
+      "description": "What a human must change in governance or environment settings: where and why. Empty is []. Absent or null is treated as []."
+    }
+  },
+  "examples": [
+    {
+      "schema": "l9.governance_handoff.v1",
+      "pr_number": 42,
+      "environment_friction": [
+        {
+          "item": "what got in the way",
+          "detail": "evidence: command, message, receipt",
+          "impact": "time lost / what it prevented"
+        }
+      ],
+      "blockers": [
+        {
+          "item": "…",
+          "blocker": "the environment/governance cause",
+          "unblock": "the fix"
+        }
+      ],
+      "degraded_bootstrap": [
+        {
+          "component": "bootstrap component or hook",
+          "detail": "state and reason observed"
+        }
+      ],
+      "workarounds": [
+        {
+          "item": "…",
+          "workaround": "what was done instead"
+        }
+      ],
+      "governance_actions": [
+        {
+          "action": "what a human must change",
+          "where": "setting/file/URL",
+          "why": "…"
+        }
+      ]
+    }
+  ]
+}

@@ -101,6 +101,18 @@ class PrefetchRuntimeGuardTests(unittest.TestCase):
             "claude-code",
         )
 
+    def test_a_degraded_read_is_shown_to_the_user(self) -> None:
+        """A memory read that failed or degraded is a user-visible systemMessage."""
+        sys.path.insert(0, str(PREFETCH.parent))
+        import memory_prefetch as prefetch
+
+        quiet = prefetch.hook_session_start_payload("ctx")
+        self.assertNotIn("systemMessage", quiet, "a healthy read adds nothing")
+        loud = prefetch.hook_session_start_payload(
+            "ctx", prefetch._loud_read_failure("DEGRADED at session start: x")
+        )
+        self.assertEqual(loud["systemMessage"], "L9 MEMORY READ — DEGRADED at session start: x")
+
     def test_additional_context_is_a_string_not_an_array(self) -> None:
         """SESSION_START_SPEC §3: ``additionalContext`` is a string.
 

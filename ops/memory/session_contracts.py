@@ -90,6 +90,11 @@ class ContinuationCapsuleV2:
     blockers: tuple[str, ...] = ()
     decisions: tuple[str, ...] = ()
     unfinished_work: tuple[str, ...] = ()
+    #: The agent-authored post-publish brief (``l9.session_handoff.v1``,
+    #: ops/memory/session_handoff.py), carried losslessly. Optional and
+    #: omitted from the payload when absent, so capsules without one keep
+    #: their exact prior payload and digest.
+    handoff: dict[str, Any] | None = None
     created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     producer: str = PRODUCER
     schema: str = CONTINUATION_SCHEMA
@@ -114,6 +119,8 @@ class ContinuationCapsuleV2:
         payload = asdict(self)
         for key in ("active_files", "blockers", "decisions", "unfinished_work"):
             payload[key] = list(payload[key])
+        if payload.get("handoff") is None:
+            payload.pop("handoff", None)
         return payload
 
     def canonical(self) -> str:
@@ -152,6 +159,7 @@ class ContinuationCapsuleV2:
             blockers=_strings("blockers"),
             decisions=_strings("decisions"),
             unfinished_work=_strings("unfinished_work"),
+            handoff=payload.get("handoff") if isinstance(payload.get("handoff"), dict) else None,
             created_at=str(payload["created_at"]),
             producer=str(payload["producer"]),
             schema=str(payload["schema"]),

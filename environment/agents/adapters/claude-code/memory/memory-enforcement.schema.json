@@ -195,7 +195,8 @@
       "required": [
         "prefetch",
         "gate",
-        "writeback"
+        "writeback",
+        "governance_writeback"
       ],
       "properties": {
         "prefetch": {
@@ -205,6 +206,9 @@
           "$ref": "#/definitions/hook"
         },
         "writeback": {
+          "$ref": "#/definitions/hook"
+        },
+        "governance_writeback": {
           "$ref": "#/definitions/hook"
         }
       }
