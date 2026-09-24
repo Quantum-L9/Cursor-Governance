@@ -512,21 +512,9 @@ def run_lanes(ctx: Context, lanes: Sequence[manifest.Lane]) -> list[dict[str, An
 # --- snapshot clone, receipts, in-flight ------------------------------------
 
 
-def _snapshot_usable(clone: Path) -> bool:
-    """A clone git can still read, not merely a directory named ``.git``.
-
-    Observed on a hosted session: ``clone/.git`` held HEAD, config and index but
-    no ``objects/`` or ``refs/`` (a clone or cleanup cut short, e.g. by
-    ``cancel_older``'s TERM). Keyed on ``.git`` existing, every later run then
-    failed the detached checkout with exit 128 and never re-cloned — the gate
-    stayed red until someone deleted the cache by hand. The snapshot is a
-    derived cache of the workspace, so an unreadable one is rebuilt.
-    """
-
-    if not (clone / ".git" / "objects").is_dir():
-        return False
+def _has_commit(clone: Path, sha: str) -> bool:
     probe = subprocess.run(
-        ["git", "-C", str(clone), "rev-parse", "--git-dir"],
+        ["git", "-C", str(clone), "cat-file", "-e", f"{sha}^{{commit}}"],
         capture_output=True,
         check=False,
     )
@@ -535,7 +523,7 @@ def _snapshot_usable(clone: Path) -> bool:
 
 def ensure_snapshot(workspace: Path, cache: Path, sha: str) -> Path:
     clone = cache / "clone"
-    if not _snapshot_usable(clone):
+    if not (clone / ".git").exists():
         if clone.exists():
             shutil.rmtree(clone)
         subprocess.run(
@@ -543,6 +531,12 @@ def ensure_snapshot(workspace: Path, cache: Path, sha: str) -> Path:
             check=True,
             capture_output=True,
         )
+    if not _has_commit(clone, sha):
+        # A shallow workspace cannot be shared: git ignores --shared/--local for
+        # a shallow source, so the clone is a copy frozen at creation, with no
+        # alternates. Every later commit was then "not a tree" (checkout exit
+        # 128) on every run — hosted checkouts are shallow. Fetch it in.
+        _git(clone, "fetch", "-q", "--no-tags", "origin", sha)
     _git(clone, "-c", "advice.detachedHead=false", "checkout", "-q", "--detach", "--force", sha)
     _git(clone, "clean", "-q", "-f", "-d", "-x")
     return clone

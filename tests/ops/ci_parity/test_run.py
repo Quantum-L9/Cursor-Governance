@@ -128,25 +128,31 @@ def test_receipt_is_reused_and_the_worktree_is_never_touched(world: dict) -> Non
     assert _git(repo, "status", "--porcelain") == before
 
 
-def test_a_gutted_snapshot_clone_is_rebuilt_not_fatal(world: dict, tmp_path: Path) -> None:
-    """A `.git` without objects/refs must not wedge every later run.
+def test_a_shallow_workspace_snapshot_sees_later_commits(world: dict, tmp_path: Path) -> None:
+    """The snapshot of a shallow workspace must not freeze at its first commit.
 
-    Observed shape: the cached clone kept HEAD, config and index but lost
-    `objects/` and `refs/`; the detached checkout then failed with exit 128 on
-    every run because the clone was only rebuilt when `.git` was absent.
+    git ignores --shared/--local for a shallow source, so the cached clone is a
+    copy with no alternates. Observed on a hosted (shallow) checkout: the first
+    ci-parity run built the snapshot, and every run after the next commit failed
+    `checkout --detach <sha>` with "reference is not a tree" (exit 128).
     """
-    import shutil
+    workspace = tmp_path / "shallow-ws"
+    subprocess.run(
+        ["git", "clone", "-q", "--depth", "1", f"file://{world['repo']}", str(workspace)],
+        check=True,
+        capture_output=True,
+    )
+    assert _git(workspace, "rev-parse", "--is-shallow-repository") == "true"
+    cache = tmp_path / "snapcache"
+    first = _git(workspace, "rev-parse", "HEAD")
+    run.ensure_snapshot(workspace, cache, first)
 
-    repo, cache = world["repo"], tmp_path / "snapcache"
-    sha = _git(repo, "rev-parse", "HEAD")
-    clone = run.ensure_snapshot(repo, cache, sha)
-    shutil.rmtree(clone / ".git" / "objects")
-    shutil.rmtree(clone / ".git" / "refs")
-    assert (clone / ".git").is_dir(), "the gutted shape keeps a .git directory"
-
-    clone = run.ensure_snapshot(repo, cache, sha)
-    assert _git(clone, "rev-parse", "HEAD") == sha
-    assert (clone / "a.sh").is_file()
+    (workspace / "a.sh").write_text("ok\n")
+    _git(workspace, "commit", "-q", "-am", "later commit")
+    later = _git(workspace, "rev-parse", "HEAD")
+    clone = run.ensure_snapshot(workspace, cache, later)
+    assert _git(clone, "rev-parse", "HEAD") == later
+    assert (clone / "a.sh").read_text() == "ok\n"
 
 
 def test_fixing_the_finding_clears_the_gate(world: dict) -> None:
