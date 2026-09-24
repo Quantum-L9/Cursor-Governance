@@ -123,19 +123,29 @@ On the `l9-graphite-memory` MCP server (rendered only when
 classes — `write_agent` is the ordinary write; the governed pair is optional
 and conflict-sensitive:
 
+Never freehand: build the arguments with the agent write contract
+(`l9.agent_memory_write.v1`, `ops/memory/AGENT_WRITE_CONTRACT.md`) and pass them
+to the tool unchanged:
+
+```bash
+python -m ops.memory.agent_write build --namespace <write hint> --class decision \
+  --content "<one atomic fact, one line>" --tag <topic> --source-id <PR/commit/ADR>
+# prints {"tool": "mcp__l9-graphite-memory__memory_write_agent", "arguments": {…}}
+```
+
 ```text
 # ordinary / cold — no SessionStart receipt, no phase_lock
 memory.write_agent     {namespace: "<memcli resolve → write_namespace_hint>",
-                        content: "<one terse fact>",
-                        memory_class: "lesson" | "insight" | "decision",
-                        tags: ["agent:cursor"], idempotency_key: "<optional>"}
+                        content: "<one atomic fact, one line>",
+                        memory_class: "insight" | "decision" | "observation" | "constraint" | "episodic" | "semantic",
+                        tags: ["agent:cursor", "<topic>"], idempotency_key: "agent:<ns>:<digest>"}
 
 # conflict-sensitive — lock then governed write
 memory.phase_lock      {namespace: "<memcli resolve → write_namespace_hint>",
                         task_signature: "<task>", ttl_seconds: 1800}
-memory.write_governed  {namespace, content: "<one terse fact>", task_signature,
-                        memory_class: "lesson" | "insight" | "decision",
-                        tags: ["agent:cursor"], idempotency_key: "<optional>"}
+memory.write_governed  {namespace, content: "<one atomic fact, one line>", task_signature,
+                        memory_class: "insight" | "decision" | …,   # canonical only: no alias table here
+                        tags: ["agent:cursor", "<topic>"], idempotency_key: "agent:<ns>:<digest>"}
 ```
 
 `MemoryService` grants the lock only after a conflict check on the namespace
@@ -190,7 +200,7 @@ Boundary: [`ops/memory/README.md`](../../ops/memory/README.md).
    `memory-bank/`.
 3. **Session work** — atomic T2 writes: ordinary `memory.write_agent`;
    conflict-sensitive `memory.phase_lock` → `memory.write_governed`
-   (`memory_class: lesson|insight|decision`). Do not wait for sessionEnd.
+   (arguments built by `ops.memory.agent_write`, canonical `memory_class`). Do not wait for sessionEnd.
 4. **sessionEnd hook** — `graphiti-session-end.sh` → Phase A/B close:
    `ContinuationCapsuleV2` → governed candidate → `memory.close` with an
    idempotency key; the local obligation under `.l9/memory/closes/` answers
@@ -205,10 +215,12 @@ waiting to be asked:
 
 ```text
 memcli resolve                          # expect the repo namespace, e.g. cursor-governance
-memory.write_agent     {namespace: "cursor-governance", content: "…", memory_class: "lesson", tags: ["agent:cursor"]}
+python -m ops.memory.agent_write build --namespace cursor-governance --class insight --content "…" --tag <topic>
+memory.write_agent     {…the printed arguments, unchanged…}
 # only when concurrent writers / snapshot consistency matter:
 memory.phase_lock      {namespace: "cursor-governance", task_signature: "<task>"}
-memory.write_governed  {namespace: "cursor-governance", content: "…", task_signature: "<task>", memory_class: "lesson", tags: ["agent:cursor"]}
+python -m ops.memory.agent_write build … --task-signature "<task>"   # tool: memory_write_governed
+memory.write_governed  {…the printed arguments, unchanged…}
 ```
 
 **MUST NOT** request the shared workspace namespace as a write target — memory

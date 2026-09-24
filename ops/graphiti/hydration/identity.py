@@ -16,28 +16,43 @@ def resolve_write_identity(
     explicit_user_id: str | None = None,
     surface: str = "cursor",
 ) -> dict[str, str]:
-    """Resolve agent_id / user_id for a memory write.
+    """agent_id / user_id for a memory write — DERIVED, never configured (no drift).
 
-    Cursor hooks export ``L9_MEMORY_AGENT_ID=cursor`` and ``USER_ID=cursor_agent``.
-    Claude keeps ``claude-code`` / contract defaults. Empty agent_id is refused.
+    ``ops/memory/agent_identity.py`` is the one source: on a Cursor or Claude
+    Code surface the identity comes from the host's own markers (cursor,
+    claude-code-desktop, claude-code-mobile). An explicit id that disagrees
+    with the surface that is actually running is refused as drift rather than
+    recorded. Only a process with no host markers (manus, codex, gemini, an
+    operator shell) is identified by its explicit id / L9_MEMORY_AGENT_ID. The
+    retired single ``claude-code`` names no surface and is refused. ``user_id``
+    is always derived from ``agent_id``; ``explicit_user_id`` is ignored.
     """
-    agent_id = (explicit_agent_id or os.environ.get("L9_MEMORY_AGENT_ID", "")).strip()
-    user_id = (explicit_user_id or os.environ.get("USER_ID", "")).strip()
-    if not agent_id:
-        raise IdentityError("memory write denied: missing agent_id (set L9_MEMORY_AGENT_ID)")
-    if surface == "claude-code":
-        # Claude must not impersonate Cursor reserved user identities.
-        reserved = {"cursor_agent", "cursor-agent", "cursor"}
-        if agent_id in reserved or user_id in {"cursor_agent", "cursor-agent"}:
+    del explicit_user_id  # derived from agent_id; a configured value could drift
+    from ops.memory.agent_identity import (  # noqa: PLC0415
+        RETIRED,
+        resolve_agent_id,
+        unresolved_reason,
+        user_id_for,
+    )
+
+    derived = resolve_agent_id()
+    explicit = (explicit_agent_id or "").strip()
+    if derived:
+        if explicit and explicit != derived:
             raise IdentityError(
-                f"memory write denied: Claude cannot stamp Cursor identity "
-                f"(agent_id={agent_id!r}, user_id={user_id!r})"
+                f"memory write denied: identity drift — caller says {explicit!r} but this "
+                f"process is {derived!r} (ops/memory/agent_identity.py)"
             )
-        if not user_id:
-            user_id = "claude_code_agent"
-    elif not user_id:
-        user_id = "cursor_agent" if agent_id == "cursor" else f"{agent_id}_agent"
-    return {"agent_id": agent_id, "user_id": user_id, "surface": surface}
+        agent_id = derived
+    else:
+        agent_id = explicit or os.environ.get("L9_MEMORY_AGENT_ID", "").strip()
+        if not agent_id or agent_id in RETIRED:
+            raise IdentityError(f"memory write denied: no memory identity ({unresolved_reason()})")
+    if surface == "claude-code" and agent_id == "cursor":
+        raise IdentityError(
+            "memory write denied: a Claude surface cannot stamp the Cursor identity"
+        )
+    return {"agent_id": agent_id, "user_id": user_id_for(agent_id), "surface": surface}
 
 
 def stamp_source_description(agent_id: str, kind: str) -> str:

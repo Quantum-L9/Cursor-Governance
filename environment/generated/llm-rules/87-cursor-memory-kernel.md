@@ -16,6 +16,8 @@ description: Cursor Memory Kernel enforcement — authoritative source for memor
 
 **Updated: 2026-09-13** — ADR-0031 / CANONICAL_LAW §8.5: ordinary / cold model writes use MCP `memory.write_agent` (no `phase_lock`). Conflict-sensitive writes remain `memory.phase_lock` → `memory.write_governed`. Agent HTTP is sealed.
 
+**Updated: 2026-09-24** — Agent memory write contract `l9.agent_memory_write.v1` (`ops/memory/AGENT_WRITE_CONTRACT.md`, schema `ops/memory/schemas/l9.agent_memory_write.v1.schema.json`): a model-authored fact is never freehand. Build its arguments with `python -m ops.memory.agent_write build` (one atomic one-line fact, canonical class `decision|insight|observation|constraint|episodic|semantic`, exactly one `agent:<id>` tag plus a topic tag, content-derived `idempotency_key`) and pass them unchanged to `memory_write_agent` (or `memory_write_governed` with `task_signature`). The agent keeps this contract itself; nothing sits in front of the tool, and `MemoryService` still decides grants and admission. Canonical classes only: `write_governed` has no alias table in 2.4.0, so `lesson` fails there.
+
 **Updated: 2026-09-15** — ADR-0033 / CANONICAL_LAW §8.6 (two lanes, one `MemoryService`; INV-03b). The agent lane is direct: `memory.write_agent` is the ordinary write and is not gated by any Cursor-Governance receipt, phase, session close or PR step; `phase_lock` → `write_governed` is optional. The hook lane (`SessionStart` / `sessionEnd` / prefetch / PR publish / PE-SGD ingest) is `MemoryControlPlaneClient(surface=…)` bounded by `ops/config/memory-hook-envelopes.json` and stamped `principal.type=hook`. "Sole front door through `ops/memory`" above describes the hook lane and the operator CLI, not a toll booth on agent writes. `graphiti_memory_client.py` is deleted at C15; local Phase B distill / promotion is gone — sessionEnd calls `l9-memory distill`.
 
 **Effective: 2026-02-14**
@@ -53,17 +55,20 @@ WS="${CURSOR_PROJECT_DIR:-$(pwd)}"
 memcli() { (cd "$GOV" && PYTHONPATH="$GOV" "$GRAPHITI_PY" -m ops.memory.cli "$@" --workspace "${WS:-$PWD}"); }
 ```
 
-Interactive write (model-initiated, MCP `l9-graphite-memory`):
+Interactive write (model-initiated, MCP `l9-graphite-memory`), arguments built by
+`python -m ops.memory.agent_write build` (contract `l9.agent_memory_write.v1`):
 
 ```text
 # ordinary / cold (ADR-0031)
 memory.write_agent     {namespace: <memcli resolve write hint>, content: "<one terse fact>",
-                        memory_class: lesson|insight|decision, tags: ["agent:cursor", …]}
+                        memory_class: insight|decision|observation|constraint|episodic|semantic,
+                        tags: ["agent:cursor", "<topic>"], idempotency_key: "agent:<ns>:<digest>"}
 
 # conflict-sensitive
 memory.phase_lock      {namespace: <memcli resolve write hint>, task_signature: <task>}
 memory.write_governed  {namespace, content: "<one terse fact>", task_signature,
-                        memory_class: lesson|insight|decision, tags: ["agent:cursor", …]}
+                        memory_class: insight|decision|…, tags: ["agent:cursor", "<topic>"],
+                        idempotency_key: "agent:<ns>:<digest>"}
 ```
 
 Every verdict is the canonical receipt; a refused lock or write is the verdict, not a reason to retry through another door.
@@ -87,7 +92,7 @@ When the user corrects a mistake:
 
 1. **Extract lesson immediately** — do not wait for session end
 2. **Dedupe-check:** `memcli search "lesson topic"` (or `memory.search` on the MCP server)
-3. **Write to memory:** ordinary correction → `memory.write_agent` with `memory_class: lesson`. Conflict-sensitive correction → `memory.phase_lock` → `memory.write_governed`
+3. **Write to memory:** ordinary correction → `memory.write_agent` with `memory_class: insight` (built by `ops.memory.agent_write`). Conflict-sensitive correction → `memory.phase_lock` → `memory.write_governed`
 4. **Update repeated-mistakes.md** if the lesson is significant enough for the curated list
 
 ---
@@ -98,13 +103,16 @@ When hitting an error during execution:
 
 1. **Check memory first:** `memcli search "error description"`
 2. **If solution found:** Apply it. Do not debug from scratch.
-3. **If no solution:** Debug normally, then write the fix to memory for next time (`memory.write_agent`, `memory_class: lesson`; use `write_governed` only when concurrent writers matter).
+3. **If no solution:** Debug normally, then write the fix to memory for next time (`memory.write_agent`, `memory_class: insight`; use `write_governed` only when concurrent writers matter).
 
 ---
 
 ## Memory Write Format (MUST FOLLOW)
 
-**Atomic writes only.** One fact per memory write. No prose blobs. The format
+**Atomic writes only.** One fact per memory write. No prose blobs. For the MCP
+writes the machine form of these rules is `l9.agent_memory_write.v1`
+(`ops/memory/AGENT_WRITE_CONTRACT.md`): build the arguments with
+`python -m ops.memory.agent_write build` and pass them unchanged. The format
 rules below apply identically to the MCP writes (`write_agent` / `write_governed`:
 `content`, `memory_class`, `tags`) and to the operator CLI (`write`, `--kind`, `--tag`);
 the CLI examples are the operator / adapter form.
@@ -131,7 +139,7 @@ memcli write \
 2. **Terse.** No "SESSION: 2026-02-16. WORK: ..." preamble. Just the fact.
 3. **Pre-classify.** Use the correct `--kind` (lesson, insight, note, rule, pattern, preference, decision, observation, pickup_context) — see the canonical list above. Not `error`.
 4. **No prose summaries.** The distiller exists to convert prose into facts — don't make it redo work you can do at write time.
-5. **Stamp identity.** Pass `--agent-id` or export `L9_MEMORY_AGENT_ID` (Cursor=`cursor`).
+5. **Stamp identity.** The identity is DERIVED from host markers by `ops/memory/agent_identity.py`, never configured: Cursor=`cursor`, Claude Code Desktop=`claude-code-desktop`, Claude Code Mobile=`claude-code-mobile`; adapter agents (Manus=`manus`, `codex`, `gemini`, and the reserved `perplexity`, `perplexity-computer`, `l-cto`, `igorbot`) by the registered id their adapter sets. The agent-write builder stamps it and refuses a different `--agent-id` as drift; the operator CLI takes `--agent-id`.
 
 ### Anti-pattern (NEVER do this)
 
@@ -177,7 +185,8 @@ After completing a GMP, major refactor, or multi-file change:
 Before committing, verify:
 
 - [ ] Memory writes request the resolved repo namespace (not `main` / `default` / the shared workspace)
-- [ ] Every write includes `agent_id` (`agent=` in `source_description`)
+- [ ] Every write carries exactly one `agent:<id>` tag (MCP) or `--agent-id` (CLI); the MCP tool has no `source_description` field
+- [ ] Every MCP write's arguments conform to `l9.agent_memory_write.v1` (`python -m ops.memory.agent_write validate`)
 - [ ] Ordinary model-authored facts went `memory.write_agent`; conflict-sensitive facts went `memory.phase_lock` → `memory.write_governed` (no generic ingest, no CLI `write` as a bypass)
 - [ ] No memory phase-lock was treated as permission to edit, commit, push or publish
 - [ ] No fake `--scope` flag on `write`
