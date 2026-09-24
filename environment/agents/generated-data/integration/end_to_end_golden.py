@@ -37,10 +37,18 @@ from processor import (
 from receipts import ProcessingReceiptChain
 from repository_event_bridge import (
     ChangedPath,
+    ChangeKind,
+    CommandInvalidationTransport,
     RepositoryChangeEvent,
     RepositoryEventBridge,
 )
-from reuse_recorder import ReuseRecorder
+from reuse_recorder import (
+    CommandReuseTransport,
+    PendingReuse,
+    ReuseFinalization,
+    ReuseIdentity,
+    ReuseRecorder,
+)
 from state_store import (
     PipelineState,
     PipelineStateStore,
@@ -63,6 +71,7 @@ def run_golden(
     repository_root: str | Path,
 ) -> dict[str, Any]:
     root = Path(repository_root).resolve()
+    outbox_root = Path(database).resolve().parent / "golden-outbox"
     store = PipelineStateStore(database)
     packet = load_fixture()
     processor = GeneratedDataProcessor(
@@ -101,8 +110,10 @@ def run_golden(
             database_path=str(database),
             memory_mode=memory_mode,
             memory_command=command,
-            memory_outbox=str(BASE / ".runtime" / "memory-outbox"),
-            route_outbox_root=str(BASE / ".runtime"),
+            # Beside the golden's own database, never BASE/.runtime: that is the
+            # drain's legacy outbox, which a real drain adopts into live state.
+            memory_outbox=str(outbox_root / "memory"),
+            route_outbox_root=str(outbox_root),
         ),
         store=store,
     )
@@ -184,36 +195,44 @@ def run_golden(
         payload=selection.to_dict(),
         status="SELECTED",
     )
-    recorder = ReuseRecorder.from_environment(store)
+    # Remote reuse/invalidation transports exist only in live mode; mock and
+    # outbox runs record locally, mirroring the bridge's dry_run below.
+    recorder = ReuseRecorder(
+        store,
+        transport=CommandReuseTransport.from_environment() if mode == "live" else None,
+    )
+    consumer = ReuseIdentity(
+        repository=query.repository,
+        campaign_id=query.campaign_id,
+        action_id=query.action_id,
+        agent_id=query.agent_id,
+        role=query.role,
+    )
     reuse_results = []
     for record_id in selection.record_ids:
-        recorder.record_selection(
+        pending = PendingReuse(
             record_id=record_id,
-            campaign_id=query.campaign_id,
-            action_id=query.action_id,
-            agent_id=query.agent_id,
+            consumer=consumer,
             context_pack_id=context_pack_id,
-            payload={"selection_hash": selection.selection_hash},
+            query=query.task_type,
+        )
+        recorder.record_selection(
+            pending,
+            evidence={"selection_hash": selection.selection_hash},
         )
         recorder.record_injection(
-            record_id=record_id,
-            campaign_id=query.campaign_id,
-            action_id=query.action_id,
-            agent_id=query.agent_id,
-            context_pack_id=context_pack_id,
-            payload={"attached_to_agent_contract": True},
+            pending,
+            evidence={"attached_to_agent_contract": True},
         )
         reuse_results.append(
             recorder.finalize_outcome(
-                record_id=record_id,
-                campaign_id=query.campaign_id,
-                action_id=query.action_id,
-                agent_id=query.agent_id,
-                context_pack_id=context_pack_id,
-                outcome="reduced_discovery",
-                correction_required=False,
-                validity_confirmed=True,
-                evidence={"golden": True},
+                pending,
+                ReuseFinalization(
+                    outcome="reduced_discovery",
+                    evidence={"golden": True},
+                    correction_required=False,
+                    validity_confirmed=True,
+                ),
             ).to_dict()
         )
     event = RepositoryChangeEvent(
@@ -225,11 +244,14 @@ def run_golden(
         changed_paths=(
             ChangedPath(
                 path="uv.lock",
-                change_kind="modified",
+                change_kind=ChangeKind.MODIFIED,
             ),
         ),
     )
-    bridge = RepositoryEventBridge.from_environment(store)
+    bridge = RepositoryEventBridge(
+        store,
+        transport=CommandInvalidationTransport.from_environment() if mode == "live" else None,
+    )
     invalidation = bridge.dispatch(
         event,
         dry_run=(mode != "live"),
@@ -240,7 +262,9 @@ def run_golden(
         mode != "live" or all(item["remote_dispatched"] for item in reuse_results)
     )
     invalidation_proven = (
-        invalidation.remote_dispatched if mode == "live" else invalidation.local_recorded
+        invalidation.remote_dispatched
+        if mode == "live"
+        else (invalidation.local_created or invalidation.local_duplicate)
     )
     full_live = (
         mode == "live"
