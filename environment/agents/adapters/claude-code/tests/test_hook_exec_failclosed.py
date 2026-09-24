@@ -53,6 +53,10 @@ OBSERVERS = (
     "context7_stack_pretool.py",
     "memory_prefetch.py",
     "memory_writeback.py",
+    "ci_parity_posttool.py",
+    # Blocks by exit 2 when it evaluates, fails OPEN when it cannot (CI stays
+    # authoritative): see the ci_parity_push_gate.py docstring.
+    "ci_parity_push_gate.py",
 )
 
 

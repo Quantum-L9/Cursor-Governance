@@ -1,0 +1,568 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Claude Code CI-parity scanners with Infisical-bound paid tiers",
+  "objective": "In hosted Claude Code sessions only (Cursor untouched), install CI-parity scanners pinned to the versions CI actually runs (CodeQL CLI 2.27.0, Semgrep 1.178.0 incl. Semgrep Pro via SEMGREP_APP_TOKEN, Biome 2.5.5, pip-audit 2.10.1) plus actionlint, zizmor, shellcheck, osv-scanner and yamllint, bind the paid-tier tokens (SEMGREP_APP_TOKEN, SONAR_TOKEN) from Infisical project cursor-governance through the claude-code machine identity without ever placing them in the ambient environment, argv, files, logs or chat, and run every scanner automatically at the cheapest moment that still precedes the push (edit, commit, pre-push, post-push), concurrently under a CPU budget and without touching the working tree, so CI-only findings stop costing push-and-wait cycles.",
+  "success_criteria": [
+    "A fresh hosted Claude session reaches `python3 ops/ci_parity/install.py --check` = all 10 tools present at tools.yaml versions with sha256-verified binaries, with no manual step by the user beyond setting L9_INFISICAL_CLIENT_ID / L9_INFISICAL_CLIENT_SECRET",
+    "Replaying #659 commit 745a1b06 through `ops/ci_parity/run.py --gate` reports the same CodeQL py/clear-text-logging-sensitive-data alerts CI reported on that head, and 29c767df reports zero new blocking CodeQL findings (discriminating parity proof)",
+    "The Semgrep Pro lane runs `semgrep ci --dry-run` with SEMGREP_APP_TOKEN bound from Infisical; canary tests prove the token value never appears in argv, the ambient/session environment, stdout, stderr, receipts, or any file",
+    "Edit-time single-file lanes return feedback in <= 3 s p95; commit-time heavy lanes run detached; `make pr` on a Claude surface adds <= 15 s when a receipt for HEAD exists",
+    "The push gate denies a push whose diff introduces a blocking new finding in changed lines, allows a clean diff, and never blocks on findings outside changed lines",
+    "With CURSOR_AGENT=1 (Cursor surface) every new hook exits 0 with no output and the make pr wave list is byte-identical to main; `git diff origin/main... -- environment/agents/adapters/cursor ops/hooks .cursor` is empty",
+    "Six PR-triggered workflows without a concurrency group gain cancel-superseded-PR-run groups and pass actionlint + zizmor --offline + validate_workflow_action_pins.py"
+  ],
+  "scope": {
+    "in": [
+      "ops/ci_parity/ engine: tools.yaml pin manifest, install.py, findings.py (diff-range filter + normaliser), run.py (lanes, scheduler, snapshot clone, receipts), sonar_status.py, lane configs, README",
+      "ops/secrets/capability_exec.py + capability-exec.json allowlisted exec broker (single entry: semgrep ci --dry-run) and its doctrine amendment",
+      "Claude adapter wiring: web/setup.sh install step, hooks/session_deps_cloud.sh self-heal, new PostToolUse/PreToolUse hooks, settings.template.json + projected .claude/settings.json",
+      "Claude-guarded ci-parity wave entry in ops/scripts/run_pr_gate.sh + _GATE_CODE_FILES",
+      "CI minutes: concurrency groups on codeql.yml, governance-self-check.yml, governance.yml, repo-hygiene.yml, validate-org-policy.yml, claude-preservation.yml",
+      "SonarCloud root-cause fix in sonar-project.properties + .sonarcloud.properties if probe U3 confirms",
+      "Docs: AGENTS.md append section, ops/secrets/README.md, capabilities.yaml semgrep entry, web/network-policy.md, web/README.md, environment.env.example, skills/l9-aws-secrets/SKILL.md"
+    ],
+    "out": [
+      "Any Cursor surface file or behaviour: environment/agents/adapters/cursor/, ops/hooks/, .cursor/, Cursor AWS seed path (aws_cli_preflight.py, login_registry.py, allow_aws_seed branch of infisical_cli_login.py)",
+      "Adding the new tools as CI jobs (would change every surface's PR checks; separate decision)",
+      "Changing ops/scripts/run_pr_security.sh community Semgrep lane, .pre-commit-config.yaml, uv.lock, pyproject.toml, requirements.txt",
+      ".gitleaks.toml zero-rules defect (queued as separate task task_fe02e326: shared gate)",
+      "Running sonar-scanner locally (it publishes an analysis; SonarCloud stays CI/automatic-owned)",
+      "Claude Code Desktop tool installation (hooks degrade to SKIP when tools are absent)",
+      "Weakening any CI check, required context, or reducing CI rigor on the basis of local receipts"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "bind workspace /home/user/wt-infisical: branch feat/infisical-without-aws, HEAD 29c767df (PR #659 open, CI suites green on head); build stacks on this chain tip (PR_STACK=auto) because capability_bind env identity lands in #659",
+      "pass_criteria": "single root, clean tree, head matches origin/feat/infisical-without-aws",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "name .pre-commit-config.yaml (18 hooks) as the hook catalog; make pr runs writer/reader passes",
+      "pass_criteria": "catalog named",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "verify CLI contracts from installed binaries (Context7 MCP rejected its API key; official fallback = tool --help): semgrep 1.178.0 `ci --dry-run` does not report to semgrep.dev; `--baseline-commit` aborts on unstaged changes; zizmor 1.30.1 `--offline`; yamllint 1.38.0; pip-audit 2.10.1",
+      "pass_criteria": "flags exist in pinned versions",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "probe download transport through the hosted proxy: GitHub release asset GET (206), HEAD (403), pypi.org, registry.npmjs.org, binaries.sonarsource.com reachable",
+      "pass_criteria": "every install source reachable by GET",
+      "status": "passed"
+    },
+    {
+      "id": "P4",
+      "command_or_action": "record CI ground truth: CodeQL action v4.37.9 cdf488f5 / CLI 2.27.0 via codeql.yml@a01485a4, config .github/codeql/codeql-config.yml security-and-quality, pr-diff-range; L9 Analysis semgrep p/python p/javascript p/typescript strict + identity map; central Core semgrep 1.171.0 (required); Biome 2.5.5 sha256 12ecb833 advisory; SonarCloud last analysis 2026-08-12",
+      "pass_criteria": "pins recorded with evidence refs",
+      "status": "passed"
+    },
+    {
+      "id": "P5",
+      "command_or_action": "Infisical machine identity present in this session (L9_INFISICAL_CLIENT_ID / L9_INFISICAL_CLIENT_SECRET)",
+      "pass_criteria": "infisical_cli_login.py --check exits 0",
+      "status": "failed"
+    },
+    {
+      "id": "P6",
+      "command_or_action": "host capacity: 4 CPU, 15 GB RAM, ~26 GB free disk; CodeQL bundle 1.4 GB extracted",
+      "pass_criteria": "tools fit with >= 20 GB headroom",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Create the single pin manifest ops/ci_parity/tools.yaml: per tool version, install method (github-release binary with sha256 | uv tool install pkg==ver), ci_ref evidence (workflow path + pinned ref + observed version), lane(s), file triggers, blocking class (block_new | advisory), thread weight; plus README with lane/timing table. Add a drift validator that fails when a CI pin line recorded in ci_ref (codeql.yml reusable ref, l9-lint-test-node biome ref) changes without a manifest bump.",
+      "files": [
+        "ops/ci_parity/tools.yaml",
+        "ops/ci_parity/README.md",
+        "ops/ci_parity/validate_manifest.py",
+        "tests/ops/ci_parity/test_manifest.py"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "new directory ops/ci_parity/",
+      "leverage_rank": 3,
+      "shared_root_cause": "tool pins floating or scattered versus what CI runs"
+    },
+    {
+      "id": "T2",
+      "task": "Create ops/ci_parity/install.py: idempotent, flock single-flight (~/.local/share/l9-ci-parity/.install.lock), sha256-verified release binaries (codeql bundle 2.27.0, actionlint, shellcheck, osv-scanner, biome 2.5.5) into ~/.local/share/l9-ci-parity/<tool>/<ver> with ~/.local/bin symlinks; `uv tool install pkg==ver` for semgrep/zizmor/yamllint/pip-audit; version probe skips reinstall; --check prints literal per-tool status; sha mismatch refuses and leaves prior install intact.",
+      "files": ["ops/ci_parity/install.py", "tests/ops/ci_parity/test_install.py"],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["T1"],
+      "operation": "Create",
+      "anchor": "new file",
+      "leverage_rank": 5
+    },
+    {
+      "id": "T3",
+      "task": "Wire the installer Claude-only: add an install step to environment/agents/adapters/claude-code/web/setup.sh (snapshot-cached) and a self-heal call inside the existing setsid background worker of hooks/session_deps_cloud.sh (hosted-only, never blocks SessionStart); fix the fingerprint typo package-lock.yaml -> package-lock.json in that same file; keep validate_claude_env.py rules green.",
+      "files": [
+        "environment/agents/adapters/claude-code/web/setup.sh",
+        "environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh",
+        ".claude/hooks/session_deps_cloud.sh",
+        "environment/agents/adapters/claude-code/tests/test_ci_parity_install_wiring.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": ["T2"],
+      "operation": "Insert",
+      "anchor": "setup.sh after toolchain step; session_deps_cloud.sh background worker after deps install",
+      "leverage_rank": 8
+    },
+    {
+      "id": "T4",
+      "task": "Create ops/ci_parity/findings.py: normalise SARIF (codeql, semgrep, zizmor, osv) and JSON/gcc outputs (shellcheck, actionlint, yamllint, biome, pip-audit) into one finding record {tool, rule, severity, path, line, message}; compute changed line ranges from `git diff -U0 merge-base(PR_BASE,HEAD)..<sha>`; keep only findings inside changed ranges (emulates CodeQL pr-diff-range and Semgrep diff-aware); map severity to block/advisory per tools.yaml mirroring CI (code-scanning error / security-severity high+ blocks).",
+      "files": [
+        "ops/ci_parity/findings.py",
+        "tests/ops/ci_parity/test_findings.py",
+        "tests/ops/ci_parity/fixtures/"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["T1"],
+      "operation": "Create",
+      "anchor": "new file",
+      "leverage_rank": 2,
+      "shared_root_cause": "legacy debt noise (Biome 628 errors, 180 unchecked .sh files) drowns new findings without diff scoping"
+    },
+    {
+      "id": "T5",
+      "task": "Create the allowlisted exec broker ops/secrets/capability_exec.py + capability-exec.json (one entry: semgrep-pro -> `semgrep ci --dry-run --baseline-commit <merge-base> --sarif-output <receipt-path>`): binds SEMGREP_APP_TOKEN in-process via capability_bind, builds a minimal child env (PATH, HOME, token) with no caller-supplied argv beyond registered placeholders, runs inside the scan snapshot clone, scrubs the token from stdout/stderr/output files (withhold on echo), literal-only diagnostics. Amend doctrine: capabilities.yaml semgrep.appsec_scan execution trusted_worker (retired broker) -> capability_exec with the bounded /proc residual stated; AGENTS.md append section CI_PARITY_HOSTED_CLAUDE_V1; ops/secrets/README.md; skills/l9-aws-secrets/SKILL.md.",
+      "files": [
+        "ops/secrets/capability_exec.py",
+        "ops/secrets/capability-exec.json",
+        "ops/secrets/capabilities.yaml",
+        "ops/secrets/README.md",
+        "AGENTS.md",
+        "skills/l9-aws-secrets/SKILL.md",
+        "tests/ops/secrets/test_capability_exec.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "new files; AGENTS.md append-only tail section",
+      "leverage_rank": 4
+    },
+    {
+      "id": "T6",
+      "task": "Create ops/ci_parity/run.py: table-driven lanes (fast: ruff, shellcheck, actionlint, zizmor --offline, yamllint, biome; heavy: codeql database create+analyze with .github/codeql/codeql-config.yml, semgrep-pro via T5, semgrep-l9-analysis parity with identity-map strict, osv-scanner + pip-audit only when lockfiles change); scan in a per-repo snapshot clone (`git clone --shared` under ~/.cache/l9-ci-parity/<repo>/clone, flock-serialised detached checkout) so the worktree is never read mid-edit or dirtied; weighted CPU semaphore <= nproc with nice 10; latest-wins cancellation of older-sha runs per repo; receipts keyed by (sha, lane, tool version, config digest) under ~/.cache/l9-ci-parity/<repo>/<sha>/. Modes: --file PATH (edit-time), --commit SHA --background (setsid), --gate SHA (consume receipts, wait on in-flight up to L9_CI_PARITY_WAIT, run missing lanes, exit 2 on blocking new findings), --status. Kill switch L9_CI_PARITY=0.",
+      "files": [
+        "ops/ci_parity/run.py",
+        "ops/ci_parity/lanes/yamllint.yaml",
+        "tests/ops/ci_parity/test_run.py",
+        "tests/ops/ci_parity/test_scheduler.py"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": ["T1", "T4", "T5"],
+      "operation": "Create",
+      "anchor": "new file",
+      "leverage_rank": 1,
+      "shared_root_cause": "CI-only scanners discovered after push (3 CodeQL push-and-wait rounds on #659)"
+    },
+    {
+      "id": "T7",
+      "task": "Resolve U3 then create ops/ci_parity/sonar_status.py: SONAR_TOKEN bound in-process (capability_bind) and sent only via safe_https to sonarcloud.io; read-only project_status + issues for the PR (pullRequest=N) into a receipt; post-push lane. If /api/ce/activity shows analysis failing on missing source dir `hooks`, remove it from sonar.sources in both properties files.",
+      "files": [
+        "ops/ci_parity/sonar_status.py",
+        "tests/ops/ci_parity/test_sonar_status.py",
+        "sonar-project.properties",
+        ".sonarcloud.properties"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": ["T1"],
+      "operation": "Create",
+      "anchor": "new file; properties sonar.sources line",
+      "leverage_rank": 9
+    },
+    {
+      "id": "T8",
+      "task": "Create Claude hooks: ci_parity_posttool.py (PostToolUse Edit|Write|MultiEdit -> run.py --file, findings as additionalContext; PostToolUse Bash on successful `git commit` -> run.py --commit HEAD --background) and ci_parity_push_gate.py (PreToolUse Bash `git push` -> run.py --gate HEAD; deny with a compact finding list on blocking new findings; SKIP-with-notice when tools absent; exit 0 silently on any non-Claude surface incl. CURSOR_AGENT). Register via l9_hook_exec.sh in settings.template.json, re-project .claude/settings.json, mirror .claude/hooks.",
+      "files": [
+        "environment/agents/adapters/claude-code/hooks/ci_parity_posttool.py",
+        "environment/agents/adapters/claude-code/hooks/ci_parity_push_gate.py",
+        ".claude/hooks/ci_parity_posttool.py",
+        ".claude/hooks/ci_parity_push_gate.py",
+        "environment/agents/adapters/claude-code/settings.template.json",
+        ".claude/settings.json",
+        "environment/agents/adapters/claude-code/tests/test_ci_parity_hooks.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": ["T6"],
+      "operation": "Create",
+      "anchor": "new hook files; settings PostToolUse/PreToolUse arrays",
+      "leverage_rank": 6
+    },
+    {
+      "id": "T9",
+      "task": "Add a Claude-guarded `_wave_start ci-parity` entry to ops/scripts/run_pr_gate.sh parallel reader wave (runs run.py --gate HEAD niced so pytest keeps priority; guard = l9_is_claude_gate_surface && tools present && L9_CI_PARITY!=0) and add ops/ci_parity/*.py, tools.yaml and lane configs to _GATE_CODE_FILES.",
+      "files": ["ops/scripts/run_pr_gate.sh", "tests/ops/scripts/test_run_pr_gate_ci_parity.py"],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": ["T6"],
+      "operation": "Insert",
+      "anchor": "run_pr_gate.sh parallel reader wave (~:973-1026) and _GATE_CODE_FILES (~:123-142)",
+      "leverage_rank": 7
+    },
+    {
+      "id": "T10",
+      "task": "Docs + environment: network-policy.md adds app.infisical.com, semgrep.dev, sonarcloud.io, GitHub release asset hosts; web/README.md describes the tools, timing tiers and kill switch; environment.env.example documents optional L9_CI_PARITY / L9_CI_PARITY_WAIT; recommend narrowing the claude-code identity from project Viewer to Additional Privileges on SEMGREP_APP_TOKEN, SONAR_TOKEN, CONTEXT7_API_KEY.",
+      "files": [
+        "environment/agents/adapters/claude-code/web/network-policy.md",
+        "environment/agents/adapters/claude-code/web/README.md",
+        "environment/agents/adapters/claude-code/environment.env.example"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": ["T6"],
+      "operation": "Replace",
+      "anchor": "host allowlist table; setup section; env example tail",
+      "leverage_rank": 11
+    },
+    {
+      "id": "T11",
+      "task": "Cut CI minutes: add `concurrency: {group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}, cancel-in-progress: ${{ github.event_name == 'pull_request' }}}` to the six PR-triggered workflows that lack one; validate with actionlint, zizmor --offline and validate_workflow_action_pins.py.",
+      "files": [
+        ".github/workflows/codeql.yml",
+        ".github/workflows/governance-self-check.yml",
+        ".github/workflows/governance.yml",
+        ".github/workflows/repo-hygiene.yml",
+        ".github/workflows/validate-org-policy.yml",
+        ".github/workflows/claude-preservation.yml"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": ["T2"],
+      "operation": "Insert",
+      "anchor": "top-level after `on:` block",
+      "leverage_rank": 10
+    },
+    {
+      "id": "T12",
+      "task": "Parity proof: run `run.py --gate` on 745a1b06 and 29c767df in the snapshot clone; record the CodeQL/semgrep verdicts next to the CI verdicts for those heads in ops/ci_parity/README.md and the PR body.",
+      "files": ["ops/ci_parity/README.md"],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": ["T6", "T3"],
+      "operation": "Insert",
+      "anchor": "README evidence section",
+      "leverage_rank": 12
+    }
+  ],
+  "critical_path": ["T1", "T4", "T5", "T6", "T8", "T9", "T12"],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "tools.yaml + install.py install all 10 tools sha256-verified in the hosted container",
+      "unlocks": "every lane and the CI concurrency validation"
+    },
+    {
+      "id": "M2",
+      "outcome": "probes U1-U3 resolved; capability_exec + doctrine amendment committed",
+      "unlocks": "Semgrep Pro and Sonar lanes"
+    },
+    {
+      "id": "M3",
+      "outcome": "run.py produces diff-scoped receipts; #659 replay reproduces CI's CodeQL verdicts",
+      "unlocks": "hooks, push gate, make pr wave"
+    },
+    {
+      "id": "M4",
+      "outcome": "hooks + gate wired Claude-only; Cursor invariance tests green; OPEN_PR=0 make pr PASS",
+      "unlocks": "publish"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "install.py --check output listing each tool at manifest version; test_install.py sha-mismatch case refuses",
+      "no_go_action": "fix pins/checksums; do not proceed to lanes on unverified binaries"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "U1 dry-run proof (no scan created on semgrep.dev), U3 ce/activity verdict, canary tests for capability_exec green",
+      "no_go_action": "drop Semgrep Pro lane to advisory CE-only and report the blocker; never paste a token"
+    },
+    {
+      "id": "C3",
+      "after": "M3",
+      "evidence_required": "replay table: 745a1b06 reproduces CI CodeQL alerts; 29c767df clean",
+      "no_go_action": "treat lane as advisory until parity is shown; root-cause the divergence (config, version, diff-range)"
+    },
+    {
+      "id": "C4",
+      "after": "M4",
+      "evidence_required": "CURSOR_AGENT=1 invariance tests green; empty diff on Cursor paths; gate receipt PASS",
+      "no_go_action": "remove the offending wiring; Cursor behaviour must be unchanged"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "update",
+      "todo_ids": ["T5"],
+      "reason": "append-only section CI_PARITY_HOSTED_CLAUDE_V1 records the capability_exec amendment and timing tiers"
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "secret-plane law holds: tokens still never enter ambient env, files, logs or chat; the amendment lives in AGENTS.md + capabilities.yaml"
+    },
+    {
+      "surface": "ops/secrets/capabilities.yaml + ops/secrets/README.md",
+      "action": "update",
+      "todo_ids": ["T5"]
+    },
+    {
+      "surface": "environment/agents/adapters/claude-code/web/{README.md,network-policy.md} + environment.env.example",
+      "action": "update",
+      "todo_ids": ["T10"]
+    },
+    {
+      "surface": "Makefile / ops/make/*.mk",
+      "action": "n_a",
+      "reason": "no new target; lanes run via hooks and the existing make pr wave"
+    },
+    {
+      "surface": "ARCHITECTURE.md",
+      "action": "n_a",
+      "reason": "no module boundary change beyond a self-contained ops/ci_parity package documented in its README"
+    },
+    {
+      "surface": "Cursor adapter / ops/hooks / .cursor",
+      "action": "n_a",
+      "reason": "explicitly out of scope; invariance test enforces it"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does a full-database local CodeQL run block on pre-existing alerts that CI's pr-diff-range would hide? (T4 diff-range filter must make 29c767df clean)",
+      "Does running heavy lanes during make pr push the gate past today's ~120 s? (receipts from commit-time runs + nice 10 must keep the wave <= +15 s)",
+      "Can the model read SEMGREP_APP_TOKEN from /proc/<pid>/environ while semgrep runs? (yes, bounded to the run; same class as the vault bridge's in-process key; stated in the amendment, never logged)",
+      "Does a PreToolUse push gate contradict the rule that the remediator's git push must not be workflow-denied? (it denies only on blocking new findings, like make pr's checkers; tools-absent is SKIP, kill switch exists)",
+      "Will floating CI versions (L9 Analysis semgrep >=1.100,<2) drift from the local pin silently? (drift validator on recorded ci_ref lines; semgrep float is a stated residual)",
+      "Will the hosted setup snapshot (~7-day cache) keep stale tools after a manifest bump? (session_deps_cloud self-heal compares versions every session)",
+      "Could scanners writing into the worktree trip the gate's dirtiness detector? (all output under ~/.cache/l9-ci-parity; scans run in a snapshot clone)"
+    ],
+    "assumed_false_ifs": [
+      "GitHub release assets stay reachable by GET through the hosted proxy (HEAD 403, GET 206 observed 2026-09-24)",
+      "`semgrep ci --dry-run` keeps its 1.178.0 contract: no scan started, no findings reported",
+      "The hosted container keeps >= 4 CPU, 15 GB RAM and >= 20 GB free disk",
+      "The claude-code Infisical identity is granted read on SEMGREP_APP_TOKEN and SONAR_TOKEN and its Universal Auth client id/secret are set in the environment",
+      "Claude PostToolUse/PreToolUse hooks keep receiving tool_input for Edit/Write/Bash"
+    ],
+    "blast_radius": "Hosted Claude sessions: a faulty push gate can block pushes and a faulty post-edit hook can slow edits; a secret-handling defect in capability_exec could expose SEMGREP_APP_TOKEN in output. The make pr gate changes only on Claude surfaces. CI concurrency groups affect every PR's superseded runs. Cursor is unaffected by construction.",
+    "rollback": "Immediate: set L9_CI_PARITY=0 (disables hooks and the gate wave without a revert). Full: revert the PR; installed binaries are inert under ~/.local/share/l9-ci-parity and ~/.cache/l9-ci-parity and are removed by explicit path; rotate SEMGREP_APP_TOKEN in Infisical if any canary test ever fails post-merge."
+  },
+  "leverage": {
+    "ranked_todo_ids": ["T6", "T4", "T1", "T5", "T2", "T8", "T9", "T3", "T7", "T11", "T10", "T12"],
+    "shared_causes": [
+      "CI-only scanners discovered after push (3 CodeQL push-and-wait rounds on #659)",
+      "legacy finding debt with no diff scoping makes every new scanner noisy",
+      "tool versions floating or scattered versus what CI actually runs",
+      "retired capability broker left paid-tier tokens with no sanctioned execution path"
+    ],
+    "deletions_or_consolidations": [
+      "Replace capabilities.yaml `execution: trusted_worker` (retired broker) for semgrep.appsec_scan with the capability_exec entry",
+      "One tools.yaml pin manifest instead of per-script installs",
+      "Reuse session_deps_cloud.sh's detached worker instead of adding a new SessionStart hook"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Token exposure through semgrep output or error text",
+      "mitigation": "capability_exec withholds any output containing the token, literal-only diagnostics, canary tests on stdout/stderr/files/receipts"
+    },
+    {
+      "risk": "Push gate blocks legitimate pushes (false positives, slow CodeQL)",
+      "mitigation": "block only new findings in changed lines at CI-blocking severities; commit-time precompute; bounded wait; SKIP when tools absent; L9_CI_PARITY=0"
+    },
+    {
+      "risk": "CPU contention with pytest -n auto during make pr",
+      "mitigation": "weighted semaphore <= nproc, nice 10, receipt reuse"
+    },
+    {
+      "risk": "Semgrep central Core (required) policy not reproducible locally",
+      "mitigation": "probe U2; else proxy with Semgrep Pro org policy + L9 Analysis config and record the residual"
+    },
+    {
+      "risk": "CodeQL bundle size (1.4 GB) exhausts the session disk allowance",
+      "mitigation": "single shared install root, one snapshot clone per repo, receipts pruned to the last 5 shas"
+    },
+    {
+      "risk": "Cursor loads .claude/settings.json and could run the new hooks",
+      "mitigation": "launcher surface guard plus in-hook CURSOR_AGENT/surface check; invariance tests"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Does `semgrep ci --dry-run` with SEMGREP_APP_TOKEN apply the same org policy and Pro engine as the semgrep-cloud-platform/scan PR check, without creating a scan?",
+      "decision_effect": "blocking vs advisory status of the Semgrep Pro lane",
+      "resolution": "probe"
+    },
+    {
+      "id": "U2",
+      "question": "Can the session read Quantum-L9/l9-ci-core to fetch the central Core semgrep policy (required context) at its pinned ref?",
+      "decision_effect": "whether the required central check can be replicated or stays CI-only",
+      "resolution": "probe"
+    },
+    {
+      "id": "U3",
+      "question": "Why has SonarCloud not analysed Quantum-L9_Cursor-Governance since 2026-08-12 (suspected missing `hooks` source dir)?",
+      "decision_effect": "whether T7 fixes sonar.sources or only reads status",
+      "resolution": "probe"
+    },
+    {
+      "id": "U4",
+      "question": "The claude-code identity holds project Viewer (all secrets); should it be narrowed to Additional Privileges on the three needed names?",
+      "decision_effect": "least-privilege posture only; no code path changes",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U5",
+      "question": "Is the new Mobile environment on Full or Custom networking?",
+      "decision_effect": "whether network-policy hosts must be added in the environment settings",
+      "resolution": "probe"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "python3 -m pytest tests/ops/ci_parity tests/ops/secrets/test_capability_exec.py environment/agents/adapters/claude-code/tests/test_ci_parity_hooks.py environment/agents/adapters/claude-code/tests/test_ci_parity_install_wiring.py tests/ops/scripts/test_run_pr_gate_ci_parity.py -q",
+      "pass_criteria": "all pass",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "python3 environment/agents/adapters/claude-code/validate_claude_env.py && python3 ops/ci_parity/validate_manifest.py",
+      "pass_criteria": "exit 0",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "python3 ops/ci_parity/install.py --check",
+      "pass_criteria": "10/10 tools at manifest versions",
+      "status": "pending"
+    },
+    {
+      "id": "V4",
+      "command": "actionlint .github/workflows/*.yml && zizmor --offline .github/workflows && python3 ops/scripts/validate_workflow_action_pins.py",
+      "pass_criteria": "no errors on the six edited workflows",
+      "status": "pending"
+    },
+    {
+      "id": "V5",
+      "command": "python3 ops/ci_parity/run.py --gate 745a1b06 ; python3 ops/ci_parity/run.py --gate 29c767df",
+      "pass_criteria": "first reproduces CI CodeQL alerts; second has zero blocking new findings",
+      "status": "pending"
+    },
+    {
+      "id": "V6",
+      "command": "git diff --stat origin/main... -- environment/agents/adapters/cursor ops/hooks .cursor",
+      "pass_criteria": "empty",
+      "status": "pending"
+    },
+    {
+      "id": "V7",
+      "command": "OPEN_PR=0 make pr",
+      "pass_criteria": "gate PASS; .pre-commit-config.yaml hooks green",
+      "status": "pending"
+    },
+    {
+      "id": "V8",
+      "command": ".pre-commit-config.yaml",
+      "pass_criteria": "all 18 hooks PASS via the make pr writer/reader passes",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": ["U1", "U2", "U3", "U5"],
+    "next_skill": "l9-gmp-protocol",
+    "stop_reason": "plan validated structurally; U1-U3/U5 are execution-time probes with defined fallbacks; P5 needs the user to set the claude-code identity in the environment before secret lanes can be proven live"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "ops/ci_parity/",
+      "ops/secrets/capability_exec.py",
+      "ops/secrets/capability-exec.json",
+      "ops/secrets/capabilities.yaml",
+      "ops/secrets/README.md",
+      "ops/scripts/run_pr_gate.sh",
+      "environment/agents/adapters/claude-code/",
+      ".claude/settings.json",
+      ".claude/hooks/",
+      ".github/workflows/{codeql,governance-self-check,governance,repo-hygiene,validate-org-policy,claude-preservation}.yml",
+      "sonar-project.properties",
+      ".sonarcloud.properties",
+      "AGENTS.md (append-only)",
+      "skills/l9-aws-secrets/SKILL.md",
+      "tests/ops/ci_parity/",
+      "tests/ops/secrets/test_capability_exec.py",
+      "tests/ops/scripts/test_run_pr_gate_ci_parity.py"
+    ],
+    "must_not_modify": [
+      "environment/agents/adapters/cursor/",
+      "ops/hooks/",
+      ".cursor/",
+      "ops/secrets/aws_cli_preflight.py",
+      "ops/secrets/login_registry.py",
+      "ops/secrets/infisical_cli_login.py",
+      "ops/scripts/run_pr_security.sh",
+      ".pre-commit-config.yaml",
+      ".gitleaks.toml",
+      "uv.lock",
+      "pyproject.toml",
+      "requirements.txt",
+      "CANONICAL_LAW.md",
+      "Makefile"
+    ],
+    "preserved_contracts": [
+      "Secrets never in ambient env, argv, files, logs, receipts or chat; bind via capability_bind",
+      "Cursor surface behaviour byte-identical (CURSOR_AGENT invariance)",
+      "CI stays authoritative; local receipts never skip or weaken a CI check",
+      "Scanners never write inside the worktree (gate dirtiness semantics)",
+      "Publication only via make pr; no raw first-publication push",
+      "Semgrep CE lane in run_pr_security.sh stays credential-free"
+    ],
+    "validation_commands": [
+      "python3 -m pytest tests/ops/ci_parity tests/ops/secrets/test_capability_exec.py -q",
+      "python3 environment/agents/adapters/claude-code/validate_claude_env.py",
+      "python3 ops/ci_parity/install.py --check",
+      "OPEN_PR=0 make pr"
+    ]
+  },
+  "depth": "deep",
+  "checklist": [
+    "pin manifest + drift validator",
+    "installer",
+    "diff-range findings",
+    "capability_exec + amendment",
+    "runner + scheduler + receipts",
+    "hooks + push gate",
+    "make pr wave",
+    "sonar",
+    "CI concurrency",
+    "parity replay"
+  ],
+  "estimate": "2-3 GMP runs"
+}

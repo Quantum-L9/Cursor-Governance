@@ -52,6 +52,24 @@ already resolve to. It matters that it exists: the sandbox's system `python3` is
 locked venv the memory gate cannot import its brain and governed writes are
 denied.
 
+### CI-parity scanners
+
+The Setup script also installs the scanners CI runs, at CI's versions, from the
+one pin manifest `ops/ci_parity/tools.yaml` (sha256-verified): CodeQL, Semgrep
+(incl. the Pro policy via `semgrep ci --dry-run`), Biome, pip-audit, plus
+actionlint, zizmor, shellcheck, osv-scanner and yamllint. SessionStart reinstalls
+a missing or off-pin tool in the background. Nothing to paste: they run on their own.
+
+| When | What runs | Blocks? |
+|---|---|---|
+| After each Edit/Write | fast lanes on that file (findings returned to the agent) | no |
+| After each commit | every lane, in the background, in a snapshot clone | no — writes a receipt |
+| Before a push (`git push`, `make pr`) | reuses the commit's receipt | only a NEW CI-blocking finding on a changed line |
+| After a push | SonarCloud PR quality gate + issues, read-only | no |
+
+`L9_CI_PARITY=0` disables all of it for a session. Details and the parity proof:
+`ops/ci_parity/README.md`; doctrine: `AGENTS.md` CI_PARITY_HOSTED_CLAUDE_V1.
+
 ### Secrets: one machine identity, everything else bound from Infisical
 
 Infisical project `cursor-governance` is the secret vault, and this surface

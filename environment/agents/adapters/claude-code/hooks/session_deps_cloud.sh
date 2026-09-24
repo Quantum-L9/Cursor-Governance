@@ -109,7 +109,7 @@ file_hash() {
 
 fingerprint() {
   local repo="$1" stamp_input="" f
-  for f in uv.lock pyproject.toml requirements.txt package.json pnpm-lock.yaml package-lock.yaml .pre-commit-config.yaml; do
+  for f in uv.lock pyproject.toml requirements.txt package.json pnpm-lock.yaml package-lock.json .pre-commit-config.yaml; do
     if [ -f "$repo/$f" ]; then
       stamp_input="$stamp_input|$f:$(file_hash "$repo/$f")"
     fi
@@ -281,6 +281,23 @@ if [ "${SESSION_DEPS_DETACHED:-}" = "1" ]; then
   done < <(resolve_roots)
   echo "session-deps: install pass complete" >&2
   exit "$DEPS_FAILED"
+fi
+
+# --- CI-parity tools (ops/ci_parity/tools.yaml) -----------------------------
+# The Setup script installs them into the cached environment snapshot. A
+# snapshot built before they existed, or before a manifest bump, lacks them:
+# install the missing ones in a detached worker so SessionStart never waits.
+# install.py is flock single-flight and a no-op when every pin is satisfied.
+_CI_PARITY_GOV="${L9_GOVERNANCE_DIR:-$HOME/.cursor-governance}"
+_CI_PARITY_INSTALL="$_CI_PARITY_GOV/ops/ci_parity/install.py"
+if [ "${L9_CI_PARITY:-1}" != "0" ] && [ -f "$_CI_PARITY_INSTALL" ] && have setsid; then
+  _CI_PARITY_PY="$_CI_PARITY_GOV/.venv/bin/python"
+  [ -x "$_CI_PARITY_PY" ] || _CI_PARITY_PY="python3"
+  if ! "$_CI_PARITY_PY" "$_CI_PARITY_INSTALL" --check >/dev/null 2>&1; then
+    setsid "$_CI_PARITY_PY" "$_CI_PARITY_INSTALL" \
+      >"$STAMP_DIR/ci-parity-install.log" 2>&1 </dev/null &
+    echo "session-deps: ci-parity tools missing or off-pin — installing in background (see $STAMP_DIR/ci-parity-install.log)"
+  fi
 fi
 
 # --- Synchronous entry: report per repository, work only where needed -------

@@ -1,0 +1,198 @@
+# CI-parity tool pins and lanes for hosted Claude Code sessions.
+#
+# The single place these versions live. install.py installs exactly these;
+# run.py refuses a tool whose installed version differs. `ci_ref` records the
+# CI evidence a pin mirrors; validate_manifest.py fails when the recorded CI pin
+# line changes without this file being re-pinned, so local parity cannot drift
+# silently from what CI runs.
+#
+# Cursor never reads this file: the runner is wired only from Claude hooks and
+# a Claude-guarded make pr wave entry (see README.md).
+schema: l9.ci-parity.tools.v1
+install_root: ~/.local/share/l9-ci-parity
+bin_dir: ~/.local/bin
+cache_root: ~/.cache/l9-ci-parity
+
+tools:
+  codeql:
+    version: 2.27.0
+    method: release_archive
+    url: https://github.com/github/codeql-action/releases/download/codeql-bundle-v2.27.0/codeql-bundle-linux64.tar.gz
+    sha256: 8e870433e5c80d0e916c3c1aa9005fc88aab990bcdcc649fade9dfc4d7e94305
+    binary: codeql/codeql
+    version_cmd: [version, --format=terse]
+    expect: 2.27.0
+    ci_ref:
+      path: .github/workflows/codeql.yml
+      contains: a01485a4a3c16a8c78012b15d2a11d48e1836ed1
+      observed: codeql-action v4.37.9 cdf488f5 runs CLI 2.27.0 (PR #658 CI log, 2026-09-24)
+  actionlint:
+    version: 1.7.12
+    method: release_archive
+    url: https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+    sha256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+    binary: actionlint
+    version_cmd: [-version]
+    expect: 1.7.12
+  shellcheck:
+    version: 0.11.0
+    method: release_archive
+    url: https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.xz
+    sha256: 8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198
+    binary: shellcheck-v0.11.0/shellcheck
+    version_cmd: [--version]
+    expect: "version: 0.11.0"
+  osv-scanner:
+    version: 2.6.0
+    method: release_binary
+    url: https://github.com/google/osv-scanner/releases/download/v2.6.0/osv-scanner_linux_amd64
+    sha256: ca69b3d3cd08f889a49dc0a383122f71cc528b83803671df5fd874d97485b108
+    binary: osv-scanner
+    version_cmd: [--version]
+    expect: 2.6.0
+  biome:
+    version: 2.5.5
+    method: release_binary
+    url: https://github.com/biomejs/biome/releases/download/%40biomejs%2Fbiome%402.5.5/biome-linux-x64
+    sha256: 12ecb833102c8bf8ab6ede7ecd5b6e6fc76e8af95b3ef356933a1f5330afc028
+    binary: biome
+    version_cmd: [--version]
+    expect: 2.5.5
+    ci_ref:
+      path: .github/workflows/l9-lint-test-node.yml
+      contains: f546f122d33601ea5a4b2592e3482c5c39eddd82
+      observed: l9-biome-scan.yml runs Biome 2.5.5 with this exact sha256 (PR #658 CI log, 2026-09-24)
+  semgrep:
+    version: 1.178.0
+    method: uv_tool
+    package: semgrep
+    binary: semgrep
+    version_cmd: [--version]
+    expect: 1.178.0
+    ci_ref:
+      path: .github/workflows/l9-analysis.yml
+      contains: semgrep>=1.100.0,<2.0.0
+      observed: floating range, not an exact pin; semgrep lanes stay advisory until CI pins one version
+  zizmor:
+    version: 1.30.1
+    method: uv_tool
+    package: zizmor
+    binary: zizmor
+    version_cmd: [--version]
+    expect: 1.30.1
+  yamllint:
+    version: 1.38.0
+    method: uv_tool
+    package: yamllint
+    binary: yamllint
+    version_cmd: [--version]
+    expect: 1.38.0
+  ruff:
+    # Not installed here: the locked governance venv owns ruff (uv.lock). The
+    # runner resolves it from ~/.cursor-governance/.venv/bin/ruff.
+    version: 0.16.1
+    method: venv
+    binary: ruff
+    version_cmd: [--version]
+    expect: 0.16.1
+    ci_ref:
+      path: pyproject.toml
+      contains: ruff==0.16.1
+      observed: Lint and Type Check installs the uv.lock pin
+  pip-audit:
+    # Installed for manual use and parity; it has no lane because the make pr
+    # security wave already runs this exact pin when dependency files change,
+    # and osv-scanner covers lockfiles at commit time.
+    version: 2.10.1
+    method: uv_tool
+    package: pip-audit
+    binary: pip-audit
+    version_cmd: [--version]
+    expect: 2.10.1
+    ci_ref:
+      path: requirements.txt
+      contains: pip-audit==2.10.1
+      observed: make pr security wave pins this version (run_pr_security.sh)
+
+# Lanes: when a tool runs, over which changed files, and what blocks.
+#   tier fast  — single-file, edit-time (seconds) and in every commit/gate run
+#   tier heavy — commit-time in the background snapshot clone, reused by the gate
+#   block      — severities that block when the finding is NEW on a changed line
+#                (empty = advisory: reported, never blocks)
+#   weight     — CPU slots taken from the nproc budget while the lane runs
+lanes:
+  ruff:
+    tool: ruff
+    tier: fast
+    globs: ["*.py", "*.pyi"]
+    # make pr's writer pass fixes ruff findings; edit-time feedback only.
+    block: []
+    weight: 1
+  shellcheck:
+    tool: shellcheck
+    tier: fast
+    globs: ["*.sh", "*.bash"]
+    # Advisory: no required CI check pins this scanner. F-662-002.
+    block: []
+    weight: 1
+  actionlint:
+    tool: actionlint
+    tier: fast
+    globs: [".github/workflows/*.yml", ".github/workflows/*.yaml"]
+    # Advisory: no required CI check pins this scanner. F-662-002.
+    block: []
+    weight: 1
+  zizmor:
+    tool: zizmor
+    tier: fast
+    globs: [".github/workflows/*.yml", ".github/workflows/*.yaml", ".github/actions/*/action.yml"]
+    # Advisory: no required CI check pins this scanner. F-662-002.
+    block: []
+    weight: 1
+  yamllint:
+    tool: yamllint
+    tier: fast
+    globs: ["*.yml", "*.yaml"]
+    # Advisory: no required CI check pins this scanner. F-662-002.
+    block: []
+    weight: 1
+  biome:
+    tool: biome
+    tier: fast
+    globs: ["*.json", "*.js", "*.jsx", "*.ts", "*.tsx", "*.mjs", "*.cjs"]
+    # CI runs Biome advisory (enforce-biome: false); local mirrors that.
+    block: []
+    weight: 1
+  codeql:
+    tool: codeql
+    tier: heavy
+    globs: ["*.py"]
+    languages: [python]
+    config: .github/codeql/codeql-config.yml
+    # GitHub code scanning fails the check on error-level or security-severity >= 7.0.
+    block: [error, security-high]
+    weight: 2
+  semgrep-l9:
+    tool: semgrep
+    tier: heavy
+    globs: ["*.py", "*.js", "*.jsx", "*.ts", "*.tsx"]
+    configs: [p/python, p/javascript, p/typescript]
+    identity_map: .github/governance/semgrep-identity-map.yaml
+    # Advisory until CI pins an exact semgrep version. A floating range is not an identity. F-662-002.
+    block: []
+    weight: 1
+  semgrep-pro:
+    tool: semgrep
+    tier: heavy
+    globs: ["*.py", "*.js", "*.jsx", "*.ts", "*.tsx", "*.sh", "*.yml", "*.yaml", "*.json"]
+    capability: semgrep-pro
+    # Advisory until probe U1 proves dry-run parity with semgrep-cloud-platform/scan.
+    block: []
+    weight: 1
+  osv-scanner:
+    tool: osv-scanner
+    tier: heavy
+    globs: ["uv.lock", "requirements*.txt", "package-lock.json", "pnpm-lock.yaml", "poetry.lock", "Pipfile.lock"]
+    # Advisory: no required CI check names this scanner. F-662-002.
+    block: []
+    weight: 1
