@@ -1,5 +1,5 @@
 {
-  "generation_id": "45192b152115903d3404b921c06254a7067b295e3b3ee0f0d02b6a77e91e17e7",
+  "generation_id": "6144de84057a1453db8ac5c60da73f3a1c8f7da7337c2ed2c42d471f239034fe",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -925,14 +925,14 @@
     },
     {
       "composition_role": "primary",
-      "description": "bind credentials from Infisical project cursor-governance at will; AWS is the one login seed unless the human explicitly asks for AWS \u2014 use when an agent needs an api key, token, password, infisical bind, aws secret ref, registry sync, or fail-closed credential check without printing values.",
+      "description": "bind credentials from Infisical project cursor-governance at will, as this surface's machine identity (no AWS) \u2014 use when an agent needs an api key, token, password, infisical bind, aws secret ref, registry sync, or fail-closed credential check without printing values.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-aws-secrets",
       "path": "skills/l9-aws-secrets",
       "reason": "",
       "skill_md": "skills/l9-aws-secrets/SKILL.md",
-      "skill_sha256": "3678e74015413bee047e0ef592fea417832aad0f2c6992d91b6749e6581e6915",
+      "skill_sha256": "ead5b5ea5f00be9fc3287f78bc08be8f1b63c437cf7703111b0b97448635305d",
       "user_invocable": true,
       "when_to_use": "an agent needs an api key, token, password, infisical hydrate, aws secret ref, registry sync, or fail-closed credential check without keychain or printing values"
     },
@@ -1615,5 +1615,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "2cc1c76dd45b8a970c3ecabce7a832b7d5c9f8b6fc36cb56bb15cd69d7269c5b",
-  "source_skill_corpus_sha256": "759a464043edc4765acbf244272d64541056de2acf4ae951644287a5a0489c6e"
+  "source_skill_corpus_sha256": "80796c2fafa4aa3c8dd0c955a4559ee08bf7c286968a23c565bab0dbbfe228db"
 }

@@ -1939,3 +1939,34 @@ diagnosis is `OPEN_PR=0 make pr` or `OPEN_PR=0 l9 pr`. `make pr` invokes
 `pr-preflight` and `ops/scripts/run_pr_gate.sh` directly. Remediation-local
 verification remains `make precommit-repo`; do not create a second Make
 gate alias.
+
+<!-- INFISICAL_MACHINE_IDENTITY_V1 -->
+## Infisical machine identity replaces the AWS login seed (2026-09-24) — supersedes "SessionStart owns the secrets plane (2026-09-07)" on AWS CLI preflight, the login seed and the `aws-cli` report line
+
+Append-only. Infisical project `cursor-governance` is the only agent secret
+plane, and AWS is not a dependency of it.
+
+- Every surface reaches Infisical with ONE bootstrap secret: the Universal Auth
+  client secret of a machine identity dedicated to that surface,
+  `L9_INFISICAL_CLIENT_SECRET`, beside the non-secret `L9_INFISICAL_CLIENT_ID`
+  (project, environment and host come from
+  `ops/secrets/infisical-cursor-governance.yaml`). A hosted Claude Code
+  environment sets both once in its environment settings. An operator
+  workstation may instead keep an existing `~/.infisical/l9-machine.json`.
+- `ops/secrets/infisical_cli_login.py` reads the identity; it seeds nothing from
+  AWS. `capability_bind.py` binds each name in-process as that identity and
+  refuses to hand out the bootstrap secret itself. `infisical_http.py` is the
+  one transport; nothing on the bind path imports AWS code.
+- `session_start_secrets.py` runs no AWS preflight. Its receipt carries an
+  `identity` object; `session_start_runtime_report.py` reports an
+  `infisical-identity` line in place of `aws-cli`. **No surface is exempt**: the
+  `unavailable_by_surface` carve-out is retired, and a missing or refused
+  identity FAILS with the fix named. Secrets are not optional.
+- A remote MCP server that needs a key is a local stdio bridge
+  (`ops/secrets/vault_mcp_bridge.py`, declared in `vault-mcp-bridges.json`) that
+  binds the key from Infisical at spawn. Context7 is the first; its key is never
+  in the environment, argv, `.mcp.json` or a file.
+- The bootstrap secret is readable by the model on a hosted surface, like any
+  environment value. Its mitigation is scope, not concealment: one identity per
+  surface, least privilege, revocable in Infisical without touching any other
+  surface. Every other credential stays out of the environment.

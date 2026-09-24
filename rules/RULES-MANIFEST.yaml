@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-09-21T23:02:51Z'
+generated_utc: '2026-09-24T07:01:09Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:4735447689883f3d4721f739ec8e6b054e370a92928be0d6ecb450850acc26fe
+source_tree_digest: sha256:f93abb0e13a153a1924836eb343dc2132cef6741e2aa664b4f1c9e7a2f91f1aa
 summary:
   total_mdc_files: 69
   always_apply_true: 35
@@ -307,7 +307,7 @@ rules:
 - file: 22-context7-auto-invoke.mdc
   id: l9.rule.22.context7.auto.invoke
   id_source: explicit
-  version: 1.2.0
+  version: 1.3.0
   description: Auto-invoke Context7 MCP before coding on external libraries —FastAPI, Neo4j, pytest, GitHub Actions, new platforms/tools, APIs, MCP, install, Docker.
   scope: global
   domain: git
@@ -318,7 +318,7 @@ rules:
   first_heading: Context7 Auto-Invoke (External Docs)
   has_yaml_frontmatter: true
   line_count: 91
-  content_digest: sha256:dd9454223e2c28ee99e7555e7dd9b9d74e1f967b78b0817c15e802d7761e92c6
+  content_digest: sha256:8a089dbb14eaf86fe2859473d009b57f02468534d387920c07674ad0952de599
   authority: canonical_global
   context_cost: moderate
   deprecated: false
