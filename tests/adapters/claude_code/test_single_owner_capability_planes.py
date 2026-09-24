@@ -106,7 +106,7 @@ def test_every_memory_permission_names_a_tool_claude_code_can_match() -> None:
     admin deny applied."""
     allow, deny = _permissions()
     exposed = _exposed_memory_tools()
-    for entry in sorted((allow | deny)):
+    for entry in sorted(allow | deny):
         if not entry.startswith(MEMORY_PREFIX):
             continue
         assert "." not in entry, f"{entry}: Claude Code tool names never contain '.'"
