@@ -125,7 +125,9 @@ def load(path: Path = MANIFEST) -> Manifest:
             package=str(raw.get("package") or ""),
             ci_ref={k: str(v) for k, v in (raw.get("ci_ref") or {}).items()},
         )
-        if method.startswith("release_") and (not tool.url.startswith("https://") or len(tool.sha256) != 64):
+        if method.startswith("release_") and (
+            not tool.url.startswith("https://") or len(tool.sha256) != 64
+        ):
             raise ManifestError(f"{where}: release tools need an https url and a sha256")
         if method == "uv_tool" and not tool.package:
             raise ManifestError(f"{where}: uv_tool needs a package")

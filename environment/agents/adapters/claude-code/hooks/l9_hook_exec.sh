@@ -80,7 +80,7 @@ esac
 # being wrong is silent.
 l9_required_class() {
   case "$1" in
-    merge_gate_wrap.py|local_execution_gate_wrap.py|memory_gate.py|session_debt_wrap.py)
+    merge_gate_wrap.py|local_execution_gate_wrap.py|memory_gate.py|session_debt_wrap.py|ci_parity_push_gate.py)
       printf 'gate' ;;
     *) printf '' ;;
   esac
@@ -120,7 +120,8 @@ GOV_DIR="$HOME/.cursor-governance"
 # Surface guard (INV-2): one canonical detector decides which host owns each
 # hook. All observers are Claude adapter observers, so they skip on every
 # non-Claude surface, including unknown. Gates keep the existing named-hook
-# policy: only local_execution_gate_wrap.py and memory_gate.py are Claude-only;
+# policy: only local_execution_gate_wrap.py, memory_gate.py and
+# ci_parity_push_gate.py are Claude-only;
 # merge_gate_wrap.py and session_debt_wrap.py stay active. Unknown gates still
 # run, fail-toward-closed. L9_SURFACE_GUARD=0 restores pre-guard behavior.
 #

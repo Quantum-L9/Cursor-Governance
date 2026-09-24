@@ -41,11 +41,13 @@ GATES = (
     "local_execution_gate_wrap.py",
     "memory_gate.py",
     "session_debt_wrap.py",
+    "ci_parity_push_gate.py",
 )
 REGISTERED_GATES = (
     "merge_gate_wrap.py",
     "local_execution_gate_wrap.py",
     "memory_gate.py",
+    "ci_parity_push_gate.py",
 )
 OBSERVERS = (
     "skill_usage_logger.py",
@@ -53,6 +55,7 @@ OBSERVERS = (
     "context7_stack_pretool.py",
     "memory_prefetch.py",
     "memory_writeback.py",
+    "ci_parity_posttool.py",
 )
 
 

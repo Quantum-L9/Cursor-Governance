@@ -47,7 +47,9 @@ import capability_bind as cb  # noqa: E402
 
 REGISTRY = HERE / "capability-exec.json"
 SCHEMA = "l9.capability-exec.v1"
-CACHE_ROOT = Path(os.path.expanduser(os.environ.get("L9_CI_PARITY_CACHE") or "~/.cache/l9-ci-parity"))
+CACHE_ROOT = Path(
+    os.path.expanduser(os.environ.get("L9_CI_PARITY_CACHE") or "~/.cache/l9-ci-parity")
+)
 SAFE_PATH = ":".join(
     str(p)
     for p in (
@@ -108,7 +110,9 @@ class Plan:
     env_name: str
 
 
-def plan(name: str, params: dict[str, str], cwd: str, registry: dict[str, dict[str, object]]) -> Plan:
+def plan(
+    name: str, params: dict[str, str], cwd: str, registry: dict[str, dict[str, object]]
+) -> Plan:
     """Validate a request against its entry. Binds nothing."""
     entry = registry.get(name)
     if not isinstance(entry, dict):
@@ -155,7 +159,13 @@ def execute(p: Plan, *, bind: object = None) -> Result:
     env[p.env_name] = secret
     try:
         proc = subprocess.run(
-            p.argv, cwd=p.cwd, env=env, capture_output=True, text=True, timeout=p.timeout, check=False
+            p.argv,
+            cwd=p.cwd,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=p.timeout,
+            check=False,
         )
     except subprocess.TimeoutExpired:
         return Result("timeout", 124, "", "")
@@ -171,7 +181,9 @@ def execute(p: Plan, *, bind: object = None) -> Result:
             continue
     if leaked:
         return Result("withheld", proc.returncode, WITHHELD, WITHHELD)
-    return Result("ok" if proc.returncode in (0, 1) else "failed", proc.returncode, proc.stdout, proc.stderr)
+    return Result(
+        "ok" if proc.returncode in (0, 1) else "failed", proc.returncode, proc.stdout, proc.stderr
+    )
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -104,14 +104,18 @@ def parse_sarif(
                 for thread in flow.get("threadFlows") or []
                 for loc in thread.get("locations") or []
             ]
-            flow_nodes += [r.get("physicalLocation") or {} for r in result.get("relatedLocations") or []]
+            flow_nodes += [
+                r.get("physicalLocation") or {} for r in result.get("relatedLocations") or []
+            ]
             if not physical and flow_nodes:
                 physical = flow_nodes[0]
             uri = ((physical.get("artifactLocation") or {}).get("uri")) or ""
             line = int(((physical.get("region") or {}).get("startLine")) or 1)
             related = tuple(
                 (
-                    normalize_path(str((node.get("artifactLocation") or {}).get("uri")), repo_root, scanned),
+                    normalize_path(
+                        str((node.get("artifactLocation") or {}).get("uri")), repo_root, scanned
+                    ),
                     int((node.get("region") or {}).get("startLine") or 1),
                 )
                 for node in flow_nodes
@@ -164,7 +168,9 @@ def parse_actionlint(text: str, repo_root: Path, scanned: Sequence[str] = ()) ->
     ]
 
 
-_YAMLLINT = re.compile(r"^(?P<path>.+?):(?P<line>\d+):\d+: \[(?P<sev>\w+)\] (?P<msg>.*?)(?: \((?P<rule>[\w-]+)\))?$")
+_YAMLLINT = re.compile(
+    r"^(?P<path>.+?):(?P<line>\d+):\d+: \[(?P<sev>\w+)\] (?P<msg>.*?)(?: \((?P<rule>[\w-]+)\))?$"
+)
 
 
 def parse_yamllint(text: str, repo_root: Path, scanned: Sequence[str] = ()) -> list[Finding]:
@@ -236,7 +242,9 @@ def parse_unified_diff(text: str) -> dict[str, list[tuple[int, int]]]:
     return ranges
 
 
-def changed_ranges(repo_root: Path, base: str, head: str | None) -> dict[str, list[tuple[int, int]]]:
+def changed_ranges(
+    repo_root: Path, base: str, head: str | None
+) -> dict[str, list[tuple[int, int]]]:
     """Lines added or modified in base..head (head None = working tree vs base)."""
     args = ["git", "-C", str(repo_root), "diff", "-U0", "--no-color", "--no-ext-diff", base]
     if head:
@@ -261,10 +269,14 @@ def new_findings(
     def touched(path: str, line: int) -> bool:
         return any(lo <= line <= hi for lo, hi in ranges.get(path) or ())
 
-    return [f for f in findings if touched(f.path, f.line) or any(touched(p, n) for p, n in f.related)]
+    return [
+        f for f in findings if touched(f.path, f.line) or any(touched(p, n) for p, n in f.related)
+    ]
 
 
-def blocks(finding: Finding, block: Sequence[str], mapped_rules: frozenset[str] = frozenset()) -> bool:
+def blocks(
+    finding: Finding, block: Sequence[str], mapped_rules: frozenset[str] = frozenset()
+) -> bool:
     """Whether a NEW finding blocks under a lane's `block` list."""
     if "error" in block and finding.severity == "error":
         return True

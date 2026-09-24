@@ -69,7 +69,17 @@ def _download(url: str, dest: Path, from_dir: Path | None) -> None:
             shutil.copyfile(candidate, dest)
             return
     subprocess.run(
-        ["curl", "-fsSL", "--retry", "3", "--max-time", str(DOWNLOAD_TIMEOUT), "-o", str(dest), url],
+        [
+            "curl",
+            "-fsSL",
+            "--retry",
+            "3",
+            "--max-time",
+            str(DOWNLOAD_TIMEOUT),
+            "-o",
+            str(dest),
+            url,
+        ],
         check=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
@@ -93,7 +103,9 @@ def _install_release(tool: manifest.Tool, target: Path, from_dir: Path | None) -
         _download(tool.url, asset, from_dir)
         actual = sha256_of(asset)
         if actual != tool.sha256:
-            raise InstallError(f"{tool.name}: sha256 mismatch (refusing; previous install untouched)")
+            raise InstallError(
+                f"{tool.name}: sha256 mismatch (refusing; previous install untouched)"
+            )
         staging = Path(tmp) / "staging"
         staging.mkdir()
         if tool.method == "release_binary":

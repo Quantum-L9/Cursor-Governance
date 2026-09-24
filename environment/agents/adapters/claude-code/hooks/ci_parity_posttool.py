@@ -50,18 +50,26 @@ def disabled() -> bool:
 
 
 def _emit(text: str) -> None:
-    print(json.dumps({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": text}}))
+    print(
+        json.dumps(
+            {"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": text}}
+        )
+    )
 
 
 def _git(cwd: Path, *args: str) -> str:
-    proc = subprocess.run(["git", "-C", str(cwd), *args], capture_output=True, text=True, check=False)
+    proc = subprocess.run(
+        ["git", "-C", str(cwd), *args], capture_output=True, text=True, check=False
+    )
     return proc.stdout.strip() if proc.returncode == 0 else ""
 
 
 def _detach(argv: list[str], log: Path) -> None:
     log.parent.mkdir(parents=True, exist_ok=True)
     with log.open("ab") as handle:
-        subprocess.Popen(argv, stdout=handle, stderr=handle, stdin=subprocess.DEVNULL, start_new_session=True)
+        subprocess.Popen(
+            argv, stdout=handle, stderr=handle, stdin=subprocess.DEVNULL, start_new_session=True
+        )
 
 
 def on_edit(tool_input: dict[str, Any]) -> None:
@@ -71,7 +79,10 @@ def on_edit(tool_input: dict[str, Any]) -> None:
     try:
         proc = subprocess.run(
             [sys.executable, str(RUNNER), "--file", str(path)],
-            capture_output=True, text=True, timeout=FILE_TIMEOUT, check=False,
+            capture_output=True,
+            text=True,
+            timeout=FILE_TIMEOUT,
+            check=False,
         )
     except subprocess.TimeoutExpired:
         return

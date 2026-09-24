@@ -57,34 +57,60 @@ def project_key(workspace: Path) -> str:
 
 def get(path: str, params: dict[str, str], token: str, *, send: Any = None) -> dict[str, Any]:
     url = f"{API}/{path}?{urllib.parse.urlencode(params)}"
-    request = urllib.request.Request(url, method="GET", headers={"Authorization": f"Bearer {token}"})
-    response = (send or https_exchange)(request, timeout=TIMEOUT, allowed_hosts=frozenset({HOST}), label="sonar")
+    request = urllib.request.Request(
+        url, method="GET", headers={"Authorization": f"Bearer {token}"}
+    )
+    response = (send or https_exchange)(
+        request, timeout=TIMEOUT, allowed_hosts=frozenset({HOST}), label="sonar"
+    )
     return json.loads(response.read() or b"{}")
 
 
 def open_pr(workspace: Path) -> int | None:
     gh = shutil.which("gh")
     branch = subprocess.run(
-        ["git", "-C", str(workspace), "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, check=False
+        ["git", "-C", str(workspace), "rev-parse", "--abbrev-ref", "HEAD"],
+        capture_output=True,
+        text=True,
+        check=False,
     ).stdout.strip()
     url = subprocess.run(
-        ["git", "-C", str(workspace), "remote", "get-url", "origin"], capture_output=True, text=True, check=False
+        ["git", "-C", str(workspace), "remote", "get-url", "origin"],
+        capture_output=True,
+        text=True,
+        check=False,
     ).stdout.strip()
     parts = url.rstrip("/").removesuffix(".git").replace(":", "/").split("/")
     if gh is None or not branch or branch == "HEAD" or len(parts) < 2:
         return None
     owner, name = parts[-2], parts[-1]
     proc = subprocess.run(
-        [gh, "api", "--method", "GET", f"repos/{owner}/{name}/pulls", "-f", f"head={owner}:{branch}",
-         "-f", "state=open", "--jq", ".[0].number // empty"],
-        capture_output=True, text=True, timeout=15, check=False,
+        [
+            gh,
+            "api",
+            "--method",
+            "GET",
+            f"repos/{owner}/{name}/pulls",
+            "-f",
+            f"head={owner}:{branch}",
+            "-f",
+            "state=open",
+            "--jq",
+            ".[0].number // empty",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=15,
+        check=False,
     )
     text = proc.stdout.strip()
     return int(text) if proc.returncode == 0 and text.isdigit() else None
 
 
 def pr_report(key: str, pr: int, token: str, *, send: Any = None) -> dict[str, Any]:
-    gate = get("qualitygates/project_status", {"projectKey": key, "pullRequest": str(pr)}, token, send=send)
+    gate = get(
+        "qualitygates/project_status", {"projectKey": key, "pullRequest": str(pr)}, token, send=send
+    )
     issues = get(
         "issues/search",
         {"componentKeys": key, "pullRequest": str(pr), "resolved": "false", "ps": "100"},
@@ -148,9 +174,13 @@ def main(argv: list[str] | None = None) -> int:
     out = loaded.cache_root / "sonar" / f"{key}-pr-{report['pr']}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-    print(f"sonar: PR #{report['pr']} quality_gate={report['quality_gate']} open_issues={len(report['issues'])} ({out})")
+    print(
+        f"sonar: PR #{report['pr']} quality_gate={report['quality_gate']} "
+        f"open_issues={len(report['issues'])} ({out})"
+    )
     for issue in report["issues"][:20]:
-        print(f"  {issue['path']}:{issue['line']}: [{issue['severity']}] {issue['rule']} — {issue['message']}")
+        location = f"{issue['path']}:{issue['line']}"
+        print(f"  {location}: [{issue['severity']}] {issue['rule']} — {issue['message']}")
     return 0
 
 

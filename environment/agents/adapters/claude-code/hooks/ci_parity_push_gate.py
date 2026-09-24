@@ -89,10 +89,15 @@ def main() -> int:
     try:
         proc = subprocess.run(
             [sys.executable, str(RUNNER), "--gate", "HEAD", "--workspace", str(repo)],
-            capture_output=True, text=True, timeout=wait + 120, check=False,
+            capture_output=True,
+            text=True,
+            timeout=wait + 120,
+            check=False,
         )
     except subprocess.TimeoutExpired:
-        print("ci-parity: push gate timed out — allowing; CI remains authoritative", file=sys.stderr)
+        print(
+            "ci-parity: push gate timed out — allowing; CI remains authoritative", file=sys.stderr
+        )
         return 0
     if proc.returncode == 2:
         print(proc.stdout.strip(), file=sys.stderr)

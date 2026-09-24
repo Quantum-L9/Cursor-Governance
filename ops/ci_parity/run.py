@@ -61,7 +61,9 @@ DEFAULT_WAIT = 600
 
 
 def _git(repo: Path, *args: str, check: bool = True) -> str:
-    proc = subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=True, check=check)
+    proc = subprocess.run(
+        ["git", "-C", str(repo), *args], capture_output=True, text=True, check=check
+    )
     return proc.stdout.strip()
 
 
@@ -92,9 +94,23 @@ def open_pr_base(repo: Path, slug: str) -> str | None:
     owner = slug.split("/", 1)[0]
     try:
         proc = subprocess.run(
-            [gh, "api", "--method", "GET", f"repos/{slug}/pulls", "-f", f"head={owner}:{branch}",
-             "-f", "state=open", "--jq", ".[0].base.ref // empty"],
-            capture_output=True, text=True, timeout=8, check=False,
+            [
+                gh,
+                "api",
+                "--method",
+                "GET",
+                f"repos/{slug}/pulls",
+                "-f",
+                f"head={owner}:{branch}",
+                "-f",
+                "state=open",
+                "--jq",
+                ".[0].base.ref // empty",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=8,
+            check=False,
         )
     except (OSError, subprocess.TimeoutExpired):
         return None
@@ -142,7 +158,9 @@ def cache_dir(loaded: manifest.Manifest, slug: str) -> Path:
 # --- process helpers ---------------------------------------------------------
 
 
-def _run(argv: Sequence[str], cwd: Path, ctx: Context, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+def _run(
+    argv: Sequence[str], cwd: Path, ctx: Context, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
     child_env = dict(os.environ if env is None else env)
     child_env.pop("SEMGREP_APP_TOKEN", None)  # only capability_exec may place it
     return subprocess.run(
@@ -184,32 +202,48 @@ class WeightedSemaphore:
 LaneFn = Callable[[Context, manifest.Lane, Path, list[str]], list[fnd.Finding]]
 
 
-def _lane_ruff(ctx: Context, lane: manifest.Lane, binary: Path, files: list[str]) -> list[fnd.Finding]:
-    proc = _run([str(binary), "check", "--output-format=json", "--no-fix", *files], ctx.scan_dir, ctx)
+def _lane_ruff(
+    ctx: Context, lane: manifest.Lane, binary: Path, files: list[str]
+) -> list[fnd.Finding]:
+    proc = _run(
+        [str(binary), "check", "--output-format=json", "--no-fix", *files], ctx.scan_dir, ctx
+    )
     return fnd.parse_ruff(proc.stdout, ctx.scan_dir, files)
 
 
-def _lane_shellcheck(ctx: Context, lane: manifest.Lane, binary: Path, files: list[str]) -> list[fnd.Finding]:
+def _lane_shellcheck(
+    ctx: Context, lane: manifest.Lane, binary: Path, files: list[str]
+) -> list[fnd.Finding]:
     proc = _run([str(binary), "--format=json1", "-x", *files], ctx.scan_dir, ctx)
     return fnd.parse_shellcheck(proc.stdout or "{}", ctx.scan_dir, files)
 
 
-def _lane_actionlint(ctx: Context, lane: manifest.Lane, binary: Path, files: list[str]) -> list[fnd.Finding]:
+def _lane_actionlint(
+    ctx: Context, lane: manifest.Lane, binary: Path, files: list[str]
+) -> list[fnd.Finding]:
     proc = _run([str(binary), "-format", "{{json .}}", *files], ctx.scan_dir, ctx)
     return fnd.parse_actionlint(proc.stdout or "[]", ctx.scan_dir, files)
 
 
-def _lane_zizmor(ctx: Context, lane: manifest.Lane, binary: Path, files: list[str]) -> list[fnd.Finding]:
+def _lane_zizmor(
+    ctx: Context, lane: manifest.Lane, binary: Path, files: list[str]
+) -> list[fnd.Finding]:
     proc = _run([str(binary), "--offline", "--format", "sarif", *files], ctx.scan_dir, ctx)
     return fnd.parse_sarif(json.loads(proc.stdout or "{}"), "zizmor", ctx.scan_dir, files)
 
 
-def _lane_yamllint(ctx: Context, lane: manifest.Lane, binary: Path, files: list[str]) -> list[fnd.Finding]:
-    proc = _run([str(binary), "-f", "parsable", "-c", str(YAMLLINT_CONFIG), *files], ctx.scan_dir, ctx)
+def _lane_yamllint(
+    ctx: Context, lane: manifest.Lane, binary: Path, files: list[str]
+) -> list[fnd.Finding]:
+    proc = _run(
+        [str(binary), "-f", "parsable", "-c", str(YAMLLINT_CONFIG), *files], ctx.scan_dir, ctx
+    )
     return fnd.parse_yamllint(proc.stdout, ctx.scan_dir, files)
 
 
-def _lane_biome(ctx: Context, lane: manifest.Lane, binary: Path, files: list[str]) -> list[fnd.Finding]:
+def _lane_biome(
+    ctx: Context, lane: manifest.Lane, binary: Path, files: list[str]
+) -> list[fnd.Finding]:
     proc = _run([str(binary), "ci", "--reporter=sarif", "--colors=off", *files], ctx.scan_dir, ctx)
     try:
         data = json.loads(proc.stdout or "{}")
@@ -218,15 +252,24 @@ def _lane_biome(ctx: Context, lane: manifest.Lane, binary: Path, files: list[str
     return fnd.parse_sarif(data, "biome", ctx.scan_dir, files)
 
 
-def _lane_codeql(ctx: Context, lane: manifest.Lane, binary: Path, files: list[str]) -> list[fnd.Finding]:
+def _lane_codeql(
+    ctx: Context, lane: manifest.Lane, binary: Path, files: list[str]
+) -> list[fnd.Finding]:
     threads = str(max(1, lane.weight))
     db = ctx.cache / "codeql-db"
     sarif = ctx.cache / "codeql.sarif"
     config = ctx.scan_dir / str(lane.extra.get("config") or "")
     languages = ",".join(lane.extra.get("languages") or ["python"])
     create = [
-        str(binary), "database", "create", str(db), f"--language={languages}",
-        "--build-mode=none", f"--source-root={ctx.scan_dir}", f"--threads={threads}", "--overwrite",
+        str(binary),
+        "database",
+        "create",
+        str(db),
+        f"--language={languages}",
+        "--build-mode=none",
+        f"--source-root={ctx.scan_dir}",
+        f"--threads={threads}",
+        "--overwrite",
     ]
     if config.is_file():
         create.append(f"--codescanning-config={config}")
@@ -235,19 +278,36 @@ def _lane_codeql(ctx: Context, lane: manifest.Lane, binary: Path, files: list[st
         ctx.notices.append("codeql: database create failed")
         return []
     analyze = [
-        str(binary), "database", "analyze", str(db), "--format=sarif-latest",
-        f"--output={sarif}", f"--threads={threads}",
+        str(binary),
+        "database",
+        "analyze",
+        str(db),
+        "--format=sarif-latest",
+        f"--output={sarif}",
+        f"--threads={threads}",
     ]
     proc = _run(analyze, ctx.scan_dir, ctx)
     if proc.returncode != 0 or not sarif.is_file():
         ctx.notices.append("codeql: analyze failed")
         return []
-    return fnd.parse_sarif(json.loads(sarif.read_text(encoding="utf-8")), "codeql", ctx.scan_dir, files)
+    return fnd.parse_sarif(
+        json.loads(sarif.read_text(encoding="utf-8")), "codeql", ctx.scan_dir, files
+    )
 
 
-def _lane_semgrep_l9(ctx: Context, lane: manifest.Lane, binary: Path, files: list[str]) -> list[fnd.Finding]:
+def _lane_semgrep_l9(
+    ctx: Context, lane: manifest.Lane, binary: Path, files: list[str]
+) -> list[fnd.Finding]:
     sarif = ctx.cache / "semgrep-l9.sarif"
-    argv = [str(binary), "scan", "--sarif", f"--output={sarif}", "--metrics=off", "--disable-version-check", "--quiet"]
+    argv = [
+        str(binary),
+        "scan",
+        "--sarif",
+        f"--output={sarif}",
+        "--metrics=off",
+        "--disable-version-check",
+        "--quiet",
+    ]
     for config in lane.extra.get("configs") or []:
         argv.append(f"--config={config}")
     argv += [f"--baseline-commit={ctx.base}", "."]
@@ -255,10 +315,14 @@ def _lane_semgrep_l9(ctx: Context, lane: manifest.Lane, binary: Path, files: lis
     if not sarif.is_file():
         ctx.notices.append("semgrep-l9: no SARIF produced")
         return []
-    return fnd.parse_sarif(json.loads(sarif.read_text(encoding="utf-8")), "semgrep-l9", ctx.scan_dir, files)
+    return fnd.parse_sarif(
+        json.loads(sarif.read_text(encoding="utf-8")), "semgrep-l9", ctx.scan_dir, files
+    )
 
 
-def _lane_semgrep_pro(ctx: Context, lane: manifest.Lane, binary: Path, files: list[str]) -> list[fnd.Finding]:
+def _lane_semgrep_pro(
+    ctx: Context, lane: manifest.Lane, binary: Path, files: list[str]
+) -> list[fnd.Finding]:
     import capability_exec as cx  # noqa: PLC0415
 
     sarif = ctx.cache / "semgrep-pro.sarif"
@@ -271,15 +335,21 @@ def _lane_semgrep_pro(ctx: Context, lane: manifest.Lane, binary: Path, files: li
     )
     result = cx.execute(plan)
     if result.status == "unbound":
-        ctx.notices.append("semgrep-pro: SKIP — SEMGREP_APP_TOKEN not bound (set the Infisical identity)")
+        ctx.notices.append(
+            "semgrep-pro: SKIP — SEMGREP_APP_TOKEN not bound (set the Infisical identity)"
+        )
         return []
     if result.status != "ok" or not sarif.is_file():
         ctx.notices.append(f"semgrep-pro: {result.status}")
         return []
-    return fnd.parse_sarif(json.loads(sarif.read_text(encoding="utf-8") or "{}"), "semgrep-pro", ctx.scan_dir, files)
+    return fnd.parse_sarif(
+        json.loads(sarif.read_text(encoding="utf-8") or "{}"), "semgrep-pro", ctx.scan_dir, files
+    )
 
 
-def _lane_osv(ctx: Context, lane: manifest.Lane, binary: Path, files: list[str]) -> list[fnd.Finding]:
+def _lane_osv(
+    ctx: Context, lane: manifest.Lane, binary: Path, files: list[str]
+) -> list[fnd.Finding]:
     out: list[fnd.Finding] = []
     for rel in files:
         head = _osv_scan(ctx, binary, ctx.scan_dir / rel)
@@ -287,19 +357,26 @@ def _lane_osv(ctx: Context, lane: manifest.Lane, binary: Path, files: list[str])
             base_file = Path(tmp) / Path(rel).name
             shown = subprocess.run(
                 ["git", "-C", str(ctx.scan_dir), "show", f"{ctx.base}:{rel}"],
-                capture_output=True, check=False,
+                capture_output=True,
+                check=False,
             )
             base = set()
             if shown.returncode == 0:
                 base_file.write_bytes(shown.stdout)
                 base = _osv_scan(ctx, binary, base_file)
         for _, package, vuln in sorted(head - base):
-            out.append(fnd.Finding("osv-scanner", vuln, "error", rel, 1, f"{package} is affected by {vuln}"))
+            out.append(
+                fnd.Finding(
+                    "osv-scanner", vuln, "error", rel, 1, f"{package} is affected by {vuln}"
+                )
+            )
     return out
 
 
 def _osv_scan(ctx: Context, binary: Path, path: Path) -> set[tuple[str, str, str]]:
-    proc = _run([str(binary), "scan", "source", "-L", str(path), "--format", "json"], ctx.scan_dir, ctx)
+    proc = _run(
+        [str(binary), "scan", "source", "-L", str(path), "--format", "json"], ctx.scan_dir, ctx
+    )
     try:
         return fnd.osv_vulnerabilities(json.loads(proc.stdout or "{}"))
     except json.JSONDecodeError:
@@ -346,7 +423,9 @@ def _runner_digest() -> str:
 
 def lane_digest(lane: manifest.Lane, tool: manifest.Tool) -> str:
     payload = json.dumps(
-        {"runner": _runner_digest(), "lane": lane.__dict__, "tool": tool.version}, sort_keys=True, default=str
+        {"runner": _runner_digest(), "lane": lane.__dict__, "tool": tool.version},
+        sort_keys=True,
+        default=str,
     )
     return hashlib.sha256(payload.encode()).hexdigest()[:16]
 
@@ -368,7 +447,10 @@ def run_lane(ctx: Context, lane: manifest.Lane, sem: WeightedSemaphore) -> dict[
     }
     binary = ctx.loaded.resolve(lane.tool)
     if binary is None:
-        record.update(status="skip", notice=f"{lane.tool} {tool.version} not installed (ops/ci_parity/install.py)")
+        record.update(
+            status="skip",
+            notice=f"{lane.tool} {tool.version} not installed (ops/ci_parity/install.py)",
+        )
         return record
     ctx = replace(ctx, notices=[])  # per lane: lanes run concurrently
     weight = sem.acquire(lane.weight)
@@ -427,7 +509,8 @@ def ensure_snapshot(workspace: Path, cache: Path, sha: str) -> Path:
             shutil.rmtree(clone)
         subprocess.run(
             ["git", "clone", "-q", "--shared", "--no-checkout", str(workspace), str(clone)],
-            check=True, capture_output=True,
+            check=True,
+            capture_output=True,
         )
     _git(clone, "-c", "advice.detachedHead=false", "checkout", "-q", "--detach", "--force", sha)
     _git(clone, "clean", "-q", "-f", "-d", "-x")
@@ -525,12 +608,16 @@ class clone_lock:
 # --- modes -------------------------------------------------------------------
 
 
-def build_context(loaded: manifest.Manifest, workspace: Path, sha_ref: str, base: str | None, *, nice: bool) -> Context:
+def build_context(
+    loaded: manifest.Manifest, workspace: Path, sha_ref: str, base: str | None, *, nice: bool
+) -> Context:
     sha = _git(workspace, "rev-parse", sha_ref)
     merge_base = resolve_base(workspace, sha, base)
     changed = [
         line
-        for line in _git(workspace, "diff", "--name-only", "--diff-filter=ACMR", merge_base, sha).splitlines()
+        for line in _git(
+            workspace, "diff", "--name-only", "--diff-filter=ACMR", merge_base, sha
+        ).splitlines()
         if line
     ]
     slug = repo_slug(workspace)
@@ -576,7 +663,9 @@ def summarize(ctx: Context, records: Sequence[dict[str, Any]], *, label: str) ->
     for item in advisory[:15]:
         lines.append("  note  " + fnd.Finding.from_dict(item).render())
     for record in skipped:
-        lines.append(f"  skip  {record.get('notice') or record['lane'] + ': ' + str(record.get('status'))}")
+        lines.append(
+            f"  skip  {record.get('notice') or record['lane'] + ': ' + str(record.get('status'))}"
+        )
     return "\n".join(lines), len(blocking)
 
 
@@ -593,11 +682,23 @@ def mode_file(loaded: manifest.Manifest, paths: Sequence[str]) -> int:
         by_repo.setdefault(repo, []).append(path.relative_to(repo).as_posix())
     output: list[str] = []
     for repo, rels in by_repo.items():
-        ranges = fnd.changed_ranges(repo, "HEAD", None) if _git(repo, "rev-parse", "--verify", "-q", "HEAD", check=False) else {r: [fnd.WHOLE_FILE] for r in rels}
+        ranges = (
+            fnd.changed_ranges(repo, "HEAD", None)
+            if _git(repo, "rev-parse", "--verify", "-q", "HEAD", check=False)
+            else {r: [fnd.WHOLE_FILE] for r in rels}
+        )
         ctx = Context(
-            loaded=loaded, workspace=repo, slug=repo_slug(repo), cache=cache_dir(loaded, repo_slug(repo)),
-            scan_dir=repo, sha="worktree", base="HEAD", changed=rels,
-            ranges={r: ranges.get(r, []) for r in rels}, nice=False, timeout=FILE_MODE_TIMEOUT,
+            loaded=loaded,
+            workspace=repo,
+            slug=repo_slug(repo),
+            cache=cache_dir(loaded, repo_slug(repo)),
+            scan_dir=repo,
+            sha="worktree",
+            base="HEAD",
+            changed=rels,
+            ranges={r: ranges.get(r, []) for r in rels},
+            nice=False,
+            timeout=FILE_MODE_TIMEOUT,
         )
         records = run_lanes(ctx, applicable(ctx, ("fast",)))
         findings = [f for r in records for f in r.get("blocking", []) + r.get("advisory", [])]
@@ -608,21 +709,34 @@ def mode_file(loaded: manifest.Manifest, paths: Sequence[str]) -> int:
     return 0
 
 
-def mode_commit(loaded: manifest.Manifest, workspace: Path, sha_ref: str, base: str | None, background: bool) -> int:
+def mode_commit(
+    loaded: manifest.Manifest, workspace: Path, sha_ref: str, base: str | None, background: bool
+) -> int:
     if background:
         log = cache_dir(loaded, repo_slug(workspace)) / "commit.log"
-        argv = [sys.executable, str(Path(__file__).resolve()), "--commit", sha_ref, "--workspace", str(workspace)]
+        argv = [
+            sys.executable,
+            str(Path(__file__).resolve()),
+            "--commit",
+            sha_ref,
+            "--workspace",
+            str(workspace),
+        ]
         if base:
             argv += ["--base", base]
         with log.open("ab") as handle:
-            subprocess.Popen(argv, stdout=handle, stderr=handle, stdin=subprocess.DEVNULL, start_new_session=True)
+            subprocess.Popen(
+                argv, stdout=handle, stderr=handle, stdin=subprocess.DEVNULL, start_new_session=True
+            )
         return 0
     ctx = build_context(loaded, workspace, sha_ref, base, nice=True)
     if not applicable(ctx, ("fast", "heavy")):
         return 0
     cancel_older(ctx.cache, ctx.sha)
     _inflight_path(ctx.cache).write_text(
-        json.dumps({"sha": ctx.sha, "pid": os.getpid(), "pgid": os.getpgid(0), "started": time.time()}),
+        json.dumps(
+            {"sha": ctx.sha, "pid": os.getpid(), "pgid": os.getpgid(0), "started": time.time()}
+        ),
         encoding="utf-8",
     )
     try:
@@ -645,7 +759,10 @@ def mode_gate(loaded: manifest.Manifest, workspace: Path, sha_ref: str, base: st
     try:
         records = scan_commit(ctx, wait=wait)
     except TimeoutError:
-        print(f"ci-parity gate {ctx.sha[:8]}: SKIP — scan still running after {int(wait)}s (L9_CI_PARITY_WAIT)")
+        print(
+            f"ci-parity gate {ctx.sha[:8]}: SKIP — scan still running after "
+            f"{int(wait)}s (L9_CI_PARITY_WAIT)"
+        )
         return 0
     text, blocking = summarize(ctx, records, label="gate")
     print(text)
@@ -655,8 +772,11 @@ def mode_gate(loaded: manifest.Manifest, workspace: Path, sha_ref: str, base: st
 def mode_status(loaded: manifest.Manifest, workspace: Path) -> int:
     cache = cache_dir(loaded, repo_slug(workspace))
     inflight = read_inflight(cache)
-    print(f"ci-parity: repo={repo_slug(workspace)} inflight={inflight.get('sha', '')[:8] if inflight else 'none'}")
-    for directory in sorted((cache / "receipts").glob("*"), key=lambda p: p.stat().st_mtime, reverse=True):
+    running = str(inflight.get("sha", ""))[:8] if inflight else "none"
+    print(f"ci-parity: repo={repo_slug(workspace)} inflight={running}")
+    for directory in sorted(
+        (cache / "receipts").glob("*"), key=lambda p: p.stat().st_mtime, reverse=True
+    ):
         verdicts = []
         for path in sorted(directory.glob("*.json")):
             data = json.loads(path.read_text(encoding="utf-8"))
