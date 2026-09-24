@@ -131,7 +131,8 @@ def unresolved_reason(env: Mapping[str, str] | None = None) -> str:
     if explicit in RETIRED:
         return f"L9_MEMORY_AGENT_ID={explicit} is the retired single identity; it names no surface"
     if explicit:
-        return f"L9_MEMORY_AGENT_ID={explicit} is not a registered memory identity"
+        known = ", ".join(sorted(ALL_IDENTITIES))
+        return f"L9_MEMORY_AGENT_ID={explicit} is not a registered memory identity (known: {known})"
     return "no host markers (CURSOR_AGENT / Claude Code) and no L9_MEMORY_AGENT_ID"
 
 
