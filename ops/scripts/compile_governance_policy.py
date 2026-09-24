@@ -6,11 +6,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import sys
-import tempfile
 from collections import defaultdict
-from copy import deepcopy
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -73,7 +70,7 @@ def _bytes_digest(value: bytes) -> str:
 
 def _json(path: Path) -> dict[str, Any]:
     try:
-        value = json.loads(path.read_text())
+        value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise InvocationError(f"cannot load JSON {path}: {exc}") from exc
     if not isinstance(value, dict):
@@ -83,194 +80,216 @@ def _json(path: Path) -> dict[str, Any]:
 
 def _yaml(path: Path) -> dict[str, Any]:
     try:
-        value = yaml.load(path.read_text(), Loader=UniqueKeyLoader)
-    except (OSError, yaml.YAMLError, InvocationError"2W†3 ¢&—6R–çfö6F–öäW'&÷"†b&6ææ÷BÆöB”ÔÂ·F‡Ó¢¶W†7Ò"’g&öÒW†0¢–bæ÷B—6–ç7Fæ6R‡fÇVRÂF–7B“ ¢&—6R–çfö6F–öäW'&÷"†b%”ÔÂ&ö÷B×W7B&RÖ–æs¢·F‡Ò"¢&WGW&âfÇVP  ¦FVb÷fÆ–FFR‡fÇVS¢F–7E·7G"Âç•ÒÂ66†VÖ¢F–7E·7G"Âç•ÒÂÆ&VÃ¢7G"’ÓâæöæS ¢W'&÷'2Ò6÷'FVB„G&gC##%fÆ–FF÷"‡66†VÖ’æ—FW%öW'&÷'2‡fÇVR’Â¶W“ÖÆÖ&FS¢Æ—7B†RçF‚’¢–bW'&÷'3 ¢FWF–ÂÒ#²"æ¦ö–â€¢b'²râræ¦ö–âˆX\
-Ý‹\œ›Ü‹œ]
-JHÜˆ	É	ßNˆÙ\œ›Ü‹›Y\ÜØYÙ_Hˆ›Üˆ\œ›Üˆ[ˆ\œ›ÜœÂˆ
-Bˆ˜Z\ÙHÛXÞQ\œ›ÜŠˆžÛX™[NˆÙ]Z[HŠB‚‚™YˆÜØY™WÜ™[
-˜[YNˆÝ‹X™[ˆÝŠHOˆÝŽ‚ˆ]H\™TÜÚ^]
-˜[YJBˆYˆ›Ý˜[YHÜˆ]š\×ØXœÛÛ]J
-HÜˆ‹‹ˆˆ[ˆ]œ\ÈÜˆ˜[YKœÝ\ÝÚ]
-‹‹ÈŠN‚ˆ˜Z\ÙHÛXÞQ\œ›ÜŠˆ[œØY™HÛX™[NˆÝ˜[YH\ŸHŠBˆ™]\›ˆ˜[YB‚‚™YˆÚYÚÙ^J˜[YNˆÝŠHOˆ\VÜÝ‹[N‚ˆ™Yš^[X™\ˆH˜[YKœœÜ]
-‹H‹JBˆ™]\›ˆ™Yš^[
-[X™\ŠB‚‚™YˆÜ™XÛÜ™
-ˆXÝÜÝ‹[žWJHOˆXÝÜÝ‹[žWN‚ˆ›ÝÈHÂˆšYŽˆÈš[˜\šX[ÚY—Kˆ]HŽˆÈœ™\]Z\™[Y[—VÈ]H—KˆœÝ][Y[ŽˆÈœ™\]Z\™[Y[—VÈœÝ][Y[—Kˆ˜\XØXš[]HŽˆÈœ™\]Z\™[Y[—VÈ˜\XØXš[]H—Kˆœ™[][ÛœÚ\ÈŽˆY\ÛÜJ™Ù]
-œ™[][ÛœÚ\ÈŠHÜˆ×JKˆ˜š[™[™ÜÈŽˆY\ÛÜJ™Ù]
-˜š[™[™ÜÈŠHÜˆ×JKˆ™\šYšY\œÈŽˆY\ÛÜJ™Ù]
-™\šYšY\œÈŠHÜˆ×JKˆœ›Ú™XÝ[ÛˆŽˆY\ÛÜJÈœ›Ú™XÝ[Ûˆ—JKˆBˆ›ÝÖÈš[˜\šX[ÙYÙ\Ý—HHÙYÙ\Ý
-›ÝÊBˆ™]\›ˆ›ÝÂ‚‚™YˆÜÝ]WÙYÙ\Ý
-ˆÜ™ÎˆXÝÜÝ‹XÝÜÝ‹[žWWKˆ™\ÎˆXÝÜÝ‹XÝÜÝ‹[žWWKˆ™]\™YÛÜ™ÎˆÙ]ÜÝ—Kˆ™]\™YÜ™\ÎˆÙ]ÜÝ—KŠHOˆÝŽ‚ˆYˆ›ÝÜÊ˜[Y\ÎˆXÝÜÝ‹XÝÜÝ‹[žWWJHOˆ\ÝÙXÝÜÝ‹[žWWN‚ˆ™]\›ˆÂˆÚÙ^Nˆ˜[›ÜˆÙ^K˜[[ˆ›ÝËš][\Ê
-HYˆÙ^HOHœÛÝ\˜ÙWØÚ[™ÙWÚYÈŸBˆ›ÜˆË›ÝÈ[ˆÛÜY
-˜[Y\Ëš][\Ê
-KÙ^O[[X™H][NˆÚYÚÙ^J][VÌJJBˆB‚ˆ™]\›ˆÙYÙ\Ý
-ˆÂˆ›Ü™Ø[š^˜][ÛˆŽˆ›ÝÜÊÜ™ÊKˆœ™\ÜÚ]ÜžHŽˆ›ÝÜÊ™\ÊKˆœ™]\™YÛÜ™Ø[š^˜][Û—ÚYÈŽˆÛÜY
-™]\™YÛÜ™ËÙ^OWÚYÚÙ^JKˆœ™]\™YÜ™\ÜÚ]ÜžWÚYÈŽˆÛÜY
-™]\™YÜ™\ËÙ^OWÚYÚÙ^JKˆBˆ
-B‚‚˜Û\ÜÈÛXÞPÛÛ\[\Ž‚ˆYˆ×Ú[š]×ÊÙ[‹›ÛÝˆ]Ú[™Ù\×Ü›ÛÝˆÝˆHQUSÐÒS‘ÑTÊHOˆ›Û™N‚ˆÙ[‹œ›ÛÝH›ÛÝœ™\ÛÛ™J
-BˆÙ[‹˜Ú[™Ù\×Ü™[HÜØY™WÜ™[
-Ú[™Ù\×Ü›ÛÝ˜Ú[™Ù\È›ÛÝŠBˆÙ[‹˜Ú[™Ù\ÈH
-Ù[‹œ›ÛÝÈÙ[‹˜Ú[™Ù\×Ü™[
-Kœ™\ÛÛ™J
-BˆžN‚ˆÙ[‹˜Ú[™Ù\Ëœ™[]]™WÝÊÙ[‹œ›ÛÝ
-Bˆ^Ù\˜[YQ\œ›Üˆ\È^Î‚ˆ˜Z\ÙH[›ØØ][Û‘\œ›ÜŠ˜Ú[™Ù\È›ÛÝ\ØØ\\È™\ÜÚ]ÜžHŠHœ›ÛH^ÂˆÙ[‹œØÚ[X\ÈHÂˆ˜Ú[™ÙHŽˆÚœÛÛŠÙ[‹œ›ÛÝÈÒS‘ÑWÔÐÒSPJKˆ›Ü™ÈŽˆÚœÛÛŠÙ[‹œ›ÛÝÈÔ‘×ÔÐÒSPJKˆœ™\ÈŽˆÚœÛÛŠÙ[‹œ›ÛÝÈ‘T×ÔÐÒSPJKˆœ™XÙZ\ŽˆÚœÛÛŠÙ[‹œ›ÛÝÈ‘PÑRTÔÐÒSPJKˆB‚ˆYˆØY
-Ù[ŠHOˆ\ÝÝ\VÜÝ‹XÝÜÝ‹[žWWWN‚ˆYˆ›ÝÙ[‹˜Ú[™Ù\Ë™^\ÝÊ
-N‚ˆ™]\›ˆ×Bˆ™\Ý[ˆ\ÝÝ\VÜÝ‹XÝÜÝ‹[žWWWHH×BˆÙY[ŽˆÙ]ÜÝ—HHÙ]
+        value = yaml.load(path.read_text(encoding="utf-8"), Loader=UniqueKeyLoader)
+    except (OSError, yaml.YAMLError, InvocationError) as exc:
+        raise InvocationError(f"cannot load YAML {path}: {exc}") from exc
+    if not isinstance(value, dict):
+        raise InvocationError(f"YAML root must be a mapping: {path}")
+    return value
 
-Bˆ›Üˆ][ˆÛÜY
-Ù[‹˜Ú[™Ù\Ëœ™ÛØŠŠ‹žX[[ŠJN‚ˆ™\ÛÛ™YH]œ™\ÛÛ™J
-BˆžN‚ˆ™\ÛÛ™Yœ™[]]™WÝÊÙ[‹œ›ÛÝ
-Bˆ^Ù\˜[YQ\œ›Üˆ\È^Î‚ˆ˜Z\ÙHÛXÞQ\œ›ÜŠˆ˜[œØXÝ[Ûˆ\ØØ\\È™\ÜÚ]ÜžNˆÜ]HŠHœ›ÛH^Âˆ˜[YHHÞX[[
-]
-Bˆ™[H]œ™[]]™WÝÊÙ[‹œ›ÛÝ
-K˜\×ÜÜÚ^
 
-BˆÝ˜[Y]J˜[YKÙ[‹œØÚ[X\ÖÈ˜Ú[™ÙH—K™[
-BˆYˆ˜[YVÈ˜Ú[™ÙWÚY—H[ˆÙY[Ž‚ˆ˜Z\ÙHÛXÞQ\œ›ÜŠˆ™\XØ]HÚ[™ÙWÚYˆÝ˜[YVÉØÚ[™ÙWÚY	×_HŠBˆÙY[‹˜Y
-˜[YVÈ˜Ú[™ÙWÚY—JBˆ›Üˆš[™[™È[ˆ˜[YK™Ù]
-˜š[™[™ÜÈŠHÜˆ×N‚ˆÜØY™WÜ™[
-š[™[™ÖÈœ]—K˜š[™[™È]ŠBˆ›Üˆ™\šYšY\ˆ[ˆ˜[YK™Ù]
-™\šYšY\œÈŠHÜˆ×N‚ˆÜØY™WÜ™[
-™\šYšY\–Èœ]—K™\šYšY\ˆ]ŠBˆ™\Ý[˜\[™
+def _unsafe_binding(path: str) -> bool:
+    if not path or path.startswith(("/", "\\")) or "\\" in path:
+        return True
+    return any(part == ".." for part in PurePosixPath(path).parts)
 
-™[˜[YJJBˆ™]\›ˆ™\Ý[‚ˆÝ]XÛY]ÙˆYˆÜ™\Š›ÝÜÎˆ\ÝÝ\VÜÝ‹XÝÜÝ‹[žWWWJHOˆ\ÝÝ\VÜÝ‹XÝÜÝ‹[žWWWN‚ˆžWÚYHÝÈ˜Ú[™ÙWÚY—Nˆ
-]
-H›Üˆ][ˆ›ÝÜßBˆ\ÈHÚÙ^NˆÙ]
-™Ù]
-™\[™×ÛÛˆŠHÜˆ×JH›ÜˆÙ^K
-Ë
-H[ˆžWÚYš][\Ê
-_Bˆ[šÛ›ÝÛˆHÛÜY
-Ù\›Üˆ˜[Y\È[ˆ\Ë˜[Y\Ê
-H›Üˆ\[ˆ˜[Y\ÈYˆ\›Ý[ˆžWÚYJBˆYˆ[šÛ›ÝÛŽ‚ˆ˜Z\ÙHÛXÞQ\œ›ÜŠˆ[šÛ›ÝÛˆ\[™[˜ÚY\ÎˆÉË	Ëš›Ú[Š[šÛ›ÝÛŠ_HŠBˆÚ[™[ŽˆXÝÜÝ‹Ù]ÜÝ—WHHY˜][XÝ
-Ù]
-Bˆ›ÜˆÚ[˜[Y\È[ˆ\Ëš][\Ê
-N‚ˆ›Üˆ\™[[ˆ˜[Y\Î‚ˆÚ[™[–Ü\™[K˜Y
-Ú[
-Bˆ™XYHHÛÜY
-Ù^H›ÜˆÙ^K˜[Y\È[ˆ\Ëš][\Ê
-HYˆ›Ý˜[Y\ÊBˆÜ™\™Yˆ\ÝÜÝ—HH×BˆÚ[H™XYN‚ˆÝ\œ™[H™XYKœÜ
-
-BˆÜ™\™Y˜\[™
-Ý\œ™[
-Bˆ›ÜˆÚ[[ˆÛÜY
-Ú[™[–ØÝ\œ™[JN‚ˆ\ÖØÚ[K™\ØØ\™
-Ý\œ™[
-BˆYˆ›Ý\ÖØÚ[H[™Ú[›Ý[ˆÜ™\™Y[™Ú[›Ý[ˆ™XYN‚ˆ™XYK˜\[™
-Ú[
-Bˆ™XYKœÛÜ
 
-BˆYˆ[ŠÜ™\™Y
-HOH[ŠžWÚY
-N‚ˆ˜Z\ÙHÛXÞQ\œ›ÜŠ˜[œØXÝ[Ûˆ\[™[˜ÞHÞXÛHŠBˆ™]\›ˆØžWÚYÚÙ^WH›ÜˆÙ^H[ˆÜ™\™YB‚ˆYˆÛÛ\[JÙ[ŠHOˆXÝÜÝ‹[žWN‚ˆ›ÝÜÈHÙ[‹›ØY
+def _catalog(schema: str, owner_key: str, owner: str) -> dict[str, Any]:
+    return {
+        "schema": schema,
+        "policy_digest": "",
+        owner_key: owner,
+        "source_transaction_digest": _digest([]),
+        "status": "active",
+        "invariants": [],
+        "retired_ids": [],
+    }
 
-BˆÜ™ÈHßBˆ™\ÈHßBˆ™]\™YÛÜ™ÎˆÙ]ÜÝ—HHÙ]
 
-Bˆ™]\™YÜ™\ÎˆÙ]ÜÝ—HHÙ]
+def _seal(repo: dict[str, Any], org: dict[str, Any], applied: list[dict[str, Any]]) -> str:
+    tx_digest = _digest(applied)
+    repo["source_transaction_digest"] = tx_digest
+    org["source_transaction_digest"] = tx_digest
+    body = {
+        "org": {key: value for key, value in org.items() if key != "policy_digest"},
+        "repo": {key: value for key, value in repo.items() if key != "policy_digest"},
+    }
+    digest = _digest(body)
+    repo["policy_digest"] = digest
+    org["policy_digest"] = digest
+    return digest
 
-Bˆ™\Ù\™YˆÙ]ÜÝ—HHÙ]
 
-Bˆ^XÝYHÜÝ]WÙYÙ\Ý
-Ü™Ë™\Ë™]\™YÛÜ™Ë™]\™YÜ™\ÊB‚ˆ›Üˆ™[[ˆÙ[‹›Ü™\Š›ÝÜÊN‚ˆ™HHÈœ™XÛÛ™][ÛœÈ—BˆYˆ™VÈ˜˜\ÙWÜÛXÞWÙYÙ\Ý—HOH^XÝY‚ˆ˜Z\ÙHÛXÞQ\œ›ÜŠˆžÜ™[NˆÝ[H˜\ÙWÜÛXÞWÙYÙ\ÝŠBˆØÛÜHHÈœØÛÜH—BˆXÝ]™HHÜ™ÈYˆØÛÜHOH›Ü™Ø[š^˜][Ûˆˆ[ÙH™\Âˆ™]\™YH™]\™YÛÜ™ÈYˆØÛÜHOH›Ü™Ø[š^˜][Ûˆˆ[ÙH™]\™YÜ™\Âˆ\™Ù]HÈš[˜\šX[ÚY—BˆÜ\˜][ÛˆHÈ›Ü\˜][Ûˆ—B‚ˆYˆÜ\˜][ÛˆOH˜YŽ‚ˆYˆ\™Ù][ˆXÝ]™HÜˆ\™Ù][ˆ™\Ù\™YÜˆ\™Ù][ˆ™]\™Y‚ˆ˜Z\ÙHÛXÞQ\œ›ÜŠˆžÜ™[Nˆ[˜\šX[Q[™XYH\ÙYÜˆ™]\™YˆÝ\™Ù]HŠBˆ›ÝÈHÜ™XÛÜ™
-
-Bˆ›ÝÖÈœÛÝ\˜ÙWØÚ[™ÙWÚYÈ—HHÝÈ˜Ú[™ÙWÚY—WBˆXÝ]™VÝ\™Ù]HH›ÝÂˆ™\Ù\™Y˜Y
-\™Ù]
-Bˆ[YˆÜ\˜][Ûˆ[ˆÈ˜[Y[™‹œ™]\™HŸN‚ˆYˆ\™Ù]›Ý[ˆXÝ]™N‚ˆ˜Z\ÙHÛXÞQ\œ›ÜŠˆžÜ™[Nˆ\™Ù]\È›ÝXÝ]™NˆÝ\™Ù]HŠBˆYˆ™VÈ\™Ù]Ú[˜\šX[ÙYÙ\Ý—HOHXÝ]™VÝ\™Ù]VÈš[˜\šX[ÙYÙ\Ý—N‚ˆ˜Z\ÙHÛXÞQ\œ›ÜŠˆžÜ™[NˆÝ[H\™Ù]Ú[˜\šX[ÙYÙ\ÝŠBˆYˆÜ\˜][ÛˆOHœ™]\™HŽ‚ˆ[XÝ]™VÝ\™Ù]Bˆ™]\™Y˜Y
-\™Ù]
-Bˆ™\Ù\™Y˜Y
-\™Ù]
-Bˆ[ÙN‚ˆ›ÝÈHÜ™XÛÜ™
-
-Bˆ›ÝÖÈœÛÝ\˜ÙWØÚ[™ÙWÚYÈ—HHÂˆ
-˜XÝ]™VÝ\™Ù]VÈœÛÝ\˜ÙWØÚ[™ÙWÚYÈ—KˆÈ˜Ú[™ÙWÚY—KˆBˆXÝ]™VÝ\™Ù]HH›ÝÂˆ[ÙN‚ˆYˆ\™Ù][ˆXÝ]™HÜˆ\™Ù][ˆ™\Ù\™YÜˆ\™Ù][ˆ™]\™Y‚ˆ˜Z\ÙHÛXÞQ\œ›ÜŠˆžÜ™[Nˆ™\XÙ[Y[Q[™XYH\ÙYˆÝ\™Ù]HŠBˆÝ\\œÙY\ÈH™Ù]
-œÝ\\œÙY\ÈŠHÜˆ×BˆYÙ\ÝÈH™VÈœÝ\\œÙYYÚ[˜\šX[ÙYÙ\ÝÈ—BˆYˆÙ]
-YÙ\ÝÊHOHÙ]
-Ý\\œÙY\ÊN‚ˆ˜Z\ÙHÛXÞQ\œ›ÜŠˆžÜ™[NˆÝ\\œÙYYYÙ\ÝX\Z\ÛX]ÚŠBˆ›ÜˆÛ[ˆÝ\\œÙY\Î‚ˆYˆÛœÝ\ÝÚ]
-“KSÔ‘ËHŠH[™ØÛÜHOH›Ü™Ø[š^˜][ÛˆŽ‚ˆ˜Z\ÙHÛXÞQ\œ›ÜŠˆžÜ™[Nˆ™\ÜÚ]ÜžHØ[››ÝÝ\\œÙYHÛÛHŠBˆÛØXÝ]™HHÜ™ÈYˆÛœÝ\ÝÚ]
-“KSÔ‘ËHŠH[ÙH™\ÂˆÛÜ™]\™YH™]\™YÛÜ™ÈYˆÛœÝ\ÝÚ]
-“KSÔ‘ËHŠH[ÙH™]\™YÜ™\ÂˆYˆÛ›Ý[ˆÛØXÝ]™HÜˆYÙ\ÝÖÛÛHOHÛØXÝ]™VÛÛVÈš[˜\šX[ÙYÙ\Ý—N‚ˆ˜Z\ÙHÛXÞQ\œ›ÜŠˆžÜ™[NˆÝ[HÝ\\œÙYY[˜\šX[ÛÛHŠBˆ[ÛØXÝ]™VÛÛBˆÛÜ™]\™Y˜Y
-Û
-Bˆ™\Ù\™Y˜Y
-Û
-Bˆ›ÝÈHÜ™XÛÜ™
-
-Bˆ›ÝÖÈœÛÝ\˜ÙWØÚ[™ÙWÚYÈ—HHÝÈ˜Ú[™ÙWÚY—WBˆXÝ]™VÝ\™Ù]HH›ÝÂˆ™\Ù\™Y˜Y
-\™Ù]
-Bˆ^XÝYHÜÝ]WÙYÙ\Ý
-Ü™Ë™\Ë™]\™YÛÜ™Ë™]\™YÜ™\ÊB‚ˆXÝ]™WÚYÈHÙ]
-Ü™ÊHÙ]
-™\ÊBˆ›Üˆ[˜\šX[[ˆÊ›Ü™Ë˜[Y\Ê
-K
-œ™\Ë˜[Y\Ê
-WN‚ˆ›Üˆ™[][Ûˆ[ˆ[˜\šX[™Ù]
-œ™[][ÛœÚ\ÈŠHÜˆ×N‚ˆ\™Ù]H™[][Û‹™Ù]
-\™Ù]ŠBˆYˆ
-ˆ\Ú[œÝ[˜ÙJ\™Ù]ÝŠBˆ[™\™Ù]œÝ\ÝÚ]
-“KHŠBˆ[™\™Ù]›Ý[ˆXÝ]™WÚYÂˆ
-N‚ˆ˜Z\ÙHÛXÞQ\œ›ÜŠˆ[œ™\ÛÛ™Y[˜\šX[™[][ÛœÚ\ˆÝ\™Ù]HŠB‚ˆÙYÙ\ÝHÙYÙ\Ý
-ÖÈœ]‹H›Üˆ][ˆ›ÝÜ×JBˆÛXÞWÙYÙ\ÝHÜÝ]WÙYÙ\Ý
-Ü™Ë™\Ë™]\™YÛÜ™Ë™]\™YÜ™\ÊBˆÜ™×Ý˜[YKÜ™×Øž]\ÈHÙ[‹—Ü™[™\Šˆ›Ü™Ø[š^˜][Ûˆ‹Ü™Ë™]\™YÛÜ™ËÛXÞWÙYÙ\ÝÙYÙ\Ýˆ
-Bˆ™\×Ý˜[YK™\×Øž]\ÈHÙ[‹—Ü™[™\Šˆœ™\ÜÚ]ÜžH‹™\Ë™]\™YÜ™\ËÛXÞWÙYÙ\ÝÙYÙ\Ýˆ
-Bˆ™XÙZ\HÂˆœØÚ[XHŽˆ›KœÛXÞKXÛÛ\[K\™XÙZ\ŒH‹ˆœÝ]\ÈŽˆ”TÔÈ‹ˆ˜ÛÛ\[\—Ý™\œÚ[ÛˆŽˆ‘T”ÒSÓ‹ˆ˜[œØXÝ[Û—ØÛÝ[Žˆ[Š›ÝÜÊKˆ˜[œØXÝ[Û—ÜÙ]ÙYÙ\ÝŽˆÙYÙ\ÝˆœØÚ[XWÙYÙ\ÝÈŽˆÂˆÙ^NˆÙYÙ\Ý
-˜[YJBˆ›ÜˆÙ^K˜[YH[ˆÛÜY
-Ù[‹œØÚ[X\Ëš][\Ê
-JBˆYˆÙ^HOHœ™XÙZ\‚ˆKˆœÛXÞWÙYÙ\ÝŽˆÛXÞWÙYÙ\Ýˆ›Ý]]ÈŽˆÂˆÈœ]ŽˆQUSÓÔ‘Ë™YÙ\ÝŽˆØž]\×ÙYÙ\Ý
-Ü™×Øž]\ÊK˜Ý\œ™[Žˆ˜[Ù_KˆÈœ]ŽˆQUSÔ‘TË™YÙ\ÝŽˆØž]\×ÙYÙ\Ý
-™\×Øž]\ÊK˜Ý\œ™[Žˆ˜[Ù_KˆKˆ™\œ›ÜœÈŽˆ×KˆBˆÝ˜[Y]J™XÙZ\Ù[‹œØÚ[X\ÖÈœ™XÙZ\—K˜ÛÛ\[H™XÙZ\ŠBˆ™]\›ˆÂˆ›Ü™Ø[š^˜][ÛˆŽˆÜ™×Ý˜[YKˆœ™\ÜÚ]ÜžHŽˆ™\×Ý˜[YKˆ›Ü™×Øž]\ÈŽˆÜ™×Øž]\Ëˆœ™\×Øž]\ÈŽˆ™\×Øž]\Ëˆœ™XÙZ\Žˆ™XÙZ\ˆB‚ˆYˆÜ™[™\ŠˆÙ[‹ˆØÛÜNˆÝ‹ˆXÝ]™NˆXÝÜÝ‹XÝÜÝ‹[žWWKˆ™]\™YˆÙ]ÜÝ—KˆÛXÞWÙYÙ\ÝˆÝ‹ˆÙYÙ\ÝˆÝ‹ˆ
-HOˆ\VÙXÝÜÝ‹[žWKž]\×N‚ˆ˜[YHHÂˆœØÚ[XHŽˆ
-ˆ›K›Ü™ËZ[˜\šX[Ë˜ÛÛ\[YŒH‚ˆYˆØÛÜHOH›Ü™Ø[š^˜][Ûˆ‚ˆ[ÙH›Kœ™\ËZ[˜\šX[ËŒH‚ˆ
-Kˆ›Ü™Ø[š^˜][ÛˆŽˆ”]X[[KSHˆYˆØÛÜHOH›Ü™Ø[š^˜][Ûˆˆ[ÙH›Û™Kˆœ™\ÜÚ]ÜžHŽˆ”]X[[KSKÐÝ\œÛÜ‹QÛÝ™\›˜[˜ÙHˆYˆØÛÜHOHœ™\ÜÚ]ÜžHˆ[ÙH›Û™KˆœÛXÞWÙYÙ\ÝŽˆÛXÞWÙYÙ\ÝˆœÛÝ\˜ÙWÝ˜[œØXÝ[Û—ÙYÙ\ÝŽˆÙYÙ\ÝˆœÝ]\ÈŽˆ˜XÝ]™H‹ˆš[˜\šX[ÈŽˆÂˆY\ÛÜJ›ÝÊBˆ›ÜˆË›ÝÈ[ˆÛÜY
-XÝ]™Kš][\Ê
-KÙ^O[[X™H][NˆÚYÚÙ^J][VÌJJBˆKˆœ™]\™YÚYÈŽˆÛÜY
-™]\™YÙ^OWÚYÚÙ^JKˆBˆ˜[YHHÚÙ^Nˆ][H›ÜˆÙ^K][H[ˆ˜[YKš][\Ê
-HYˆ][H\È›Ý›Û™_BˆØÚ[XHHÙ[‹œØÚ[X\ÖÈ›Ü™ÈˆYˆØÛÜHOH›Ü™Ø[š^˜][Ûˆˆ[ÙHœ™\È—BˆÝ˜[Y]J˜[YKØÚ[XKˆ˜ÛÛ\[YÜØÛÜ_HØ][ÙÈŠBˆ]HHX[[œØY™WÙ[\
-˜[YKÛÜÚÙ^\ÏQ˜[ÙK[Ý×Ý[šXÛÙOUYKÚYLL
-K™[˜ÛÙJ
-Bˆ™]\›ˆ˜[YK]B‚‚™YˆØ]ÛZXÊ]ˆ]]Nˆž]\ÊHOˆ›Û™N‚ˆ]œ\™[›ZÙ\Š\™[ÏUYK^\ÝÛÚÏUYJBˆ™˜]ÈH[\š[K›ZÜÝ[\
-™Yš^Yˆ‹žÜ]›˜[Y_Kˆ‹\\]œ\™[
-Bˆ\H]
-˜]ÊBˆžN‚ˆÚ]ÜË™™Ü[Š™ØˆŠH\È[™N‚ˆ[™KÜš]J]JBˆ[™K™›\Ú
+def _invariant_from(tx: dict[str, Any]) -> dict[str, Any]:
+    requirement = tx["requirement"]
+    body = {
+        "id": tx["invariant_id"],
+        "title": requirement["title"],
+        "statement": requirement["statement"],
+        "applicability": requirement["applicability"],
+        "relationships": tx.get("relationships") or [],
+        "bindings": tx.get("bindings") or [],
+        "verifiers": tx.get("verifiers") or [],
+        "projection": tx["projection"],
+        "source_change_ids": [tx["change_id"]],
+    }
+    body["invariant_digest"] = _digest(body)
+    return body
 
-BˆÜË™œÞ[˜Ê[™K™š[[›Ê
-JBˆÜËœ™\XÙJ\]
-Bˆš[˜[N‚ˆ\[›[šÊZ\ÜÚ[™×ÛÚÏUYJB‚‚™YˆXZ[Š\™ÝŽˆ\ÝÜÝ—H›Û™HH›Û™JHOˆ[‚ˆ\œÙ\ˆH\™Ü\œÙK\™Ý[Y[\œÙ\Š\ØÜš\[ÛW×ÙØ××ÊBˆ\œÙ\‹˜YØ\™Ý[Y[
-˜ÛÛ[X[™‹ÚÚXÙ\ÏJ˜ÛÛ\[H‹˜ÚXÚÈ‹š[œÜXÝŠJBˆ\œÙ\‹˜YØ\™Ý[Y[
-‹K\›ÛÝ‹Y˜][H‹ˆŠBˆ\œÙ\‹˜YØ\™Ý[Y[
-‹KXÚ[™Ù\Ë\›ÛÝ‹Y˜][QQUSÐÒS‘ÑTÊBˆ\œÙ\‹˜YØ\™Ý[Y[
-‹K[Ü™Ë[Ý]]‹Y˜][QQUSÓÔ‘ÊBˆ\œÙ\‹˜YØ\™Ý[Y[
-‹K\™\Ë[Ý]]‹Y˜][QQUSÔ‘TÊBˆ\œÙ\‹˜YØ\™Ý[Y[
-‹K\™XÙZ\‹Y˜][QQUSÔ‘PÑRT
-Bˆ\œÙ\‹˜YØ\™Ý[Y[
-‹KZœÛÛˆ‹XÝ[ÛHœÝÜ™WÝYHŠBˆ\™ÜÈH\œÙ\‹œ\œÙWØ\™ÜÊ\™ÝŠBˆžN‚ˆ›ÛÝH]
-\™ÜËœ›ÛÝ
-Kœ™\ÛÛ™J
-BˆÛÛ\[YHÛXÞPÛÛ\[\Š›ÛÝ\™ÜË˜Ú[™Ù\×Ü›ÛÝ
-K˜ÛÛ\[J
-BˆÜ™×Ü]H›ÛÝÈÜØY™WÜ™[
-\™ÜË›Ü™×ÛÝ]]›Ü™Ø[š^˜][ÛˆÝ]]ŠBˆ™\×Ü]H›ÛÝÈÜØY™WÜ™[
-\™ÜËœ™\×ÛÝ]]œ™\ÜÚ]ÜžHÝ]]ŠBˆ™XÙZ\Ü]H›ÛÝÈÜØY™WÜ™[
-\™ÜËœ™XÙZ\œ™XÙZ\Ý]]ŠBˆZ\œÈHÊÜ™×Ü]ÛÛ\[YÈ›Ü™×Øž]\È—JK
-™\×Ü]ÛÛ\[YÈœ™\×Øž]\È—JWBˆÝ\œ™[HÜ]š\×Ùš[J
-H[™]œ™XYØž]\Ê
-HOH]H›Üˆ]]H[ˆZ\œ×Bˆ›Üˆ›ÝËÝ]H[ˆš\
-ÛÛ\[YÈœ™XÙZ\—VÈ›Ý]]È—KÝ\œ™[ÝšXÝUYJN‚ˆ›ÝÖÈ˜Ý\œ™[—HHÝ]BˆYˆ\™ÜË˜ÛÛ[X[™OH˜ÛÛ\[HŽ‚ˆ›Üˆ]]H[ˆZ\œÎ‚ˆØ]ÛZXÊ]]JBˆ›Üˆ›ÝÈ[ˆÛÛ\[YÈœ™XÙZ\—VÈ›Ý]]È—N‚ˆ›ÝÖÈ˜Ý\œ™[—HHYBˆ[Yˆ\™ÜË˜ÛÛ[X[™OH˜ÚXÚÈˆ[™›Ý[
-Ý\œ™[
-N‚ˆ›Üˆ
-]]JKÝ]H[ˆš\
-Z\œËÝ\œ™[ÝšXÝUYJN‚ˆYˆ›ÝÝ]N‚ˆXÝX[HØž]\×ÙYÙ\Ý
-]œ™XYØž]\Ê
-JHYˆ]š\×Ùš[J
-H[ÙH›Z\ÜÚ[™È‚ˆš[
-ˆˆ–ÜÛXÞKXÛÛ\[WHÕSHÜ]œ™[]]™WÝÊ›ÛÝ
-_Nˆ‚ˆˆ™^XÝY^×Øž]\×ÙYÙ\Ý
-]J_HXÝX[^ØXÝX[H‹ˆš[O\Þ\ËœÝ\œ‹ˆ
-Bˆ™]\›ˆBˆYˆ\™ÜË˜ÛÛ[X[™OHš[œÜXÝŽ‚ˆØ]ÛZXÊˆ™XÙZ\Ü]ˆ
-œÛÛ‹™[\ÊÛÛ\[YÈœ™XÙZ\—K[™[L‹ÛÜÚÙ^\ÏUYJH
-È—ˆŠK™[˜ÛÙJ
-Kˆ
-Bˆ^[ØYHÂˆœÝ]\ÈŽˆ”TÔÈ‹ˆœÛXÞWÙYÙ\ÝŽˆÛÛ\[YÈœ™XÙZ\—VÈœÛXÞWÙYÙ\Ý—Kˆ˜[œØXÝ[Û—ØÛÝ[ŽˆÛÛ\[YÈœ™XÙZ\—VÈ˜[œØXÝ[Û—ØÛÝ[—Kˆ›Ü™Ø[š^˜][Û—Ú[˜\šX[ÈŽˆÂˆ›ÝÖÈšY—H›Üˆ›ÝÈ[ˆÛÛ\[YÈ›Ü™Ø[š^˜][Ûˆ—VÈš[˜\šX[È—BˆKˆœ™\ÜÚ]ÜžWÚ[˜\šX[ÈŽˆÂˆ›ÝÖÈšY—H›Üˆ›ÝÈ[ˆÛÛ\[YÈœ™\ÜÚ]ÜžH—VÈš[˜\šX[È—BˆKˆBˆYˆ\™ÜËšœÛÛˆÜˆ\™ÜË˜ÛÛ[X[™OHš[œÜXÝŽ‚ˆš[
-œÛÛ‹™[\Ê^[ØY[™[L‹ÛÜÚÙ^\ÏUYJJBˆ[ÙN‚ˆš[
-ˆ–ÜÛXÞKXÛÛ\[WHTÔÈÛXÞWÙYÙ\Ý^Ü^[ØYÉÜÛXÞWÙYÙ\Ý	×_HŠBˆ™]\›ˆˆ^Ù\ÛXÞQ\œ›Üˆ\È^Î‚ˆš[
-ˆ–ÜÛXÞKXÛÛ\[WH“ÐÒÑQˆÙ^ßH‹š[O\Þ\ËœÝ\œŠBˆ™]\›ˆBˆ^Ù\[›ØØ][Û‘\œ›Üˆ\È^Î‚ˆš[
-ˆ–ÜÛXÞKXÛÛ\[WHUSˆÙ^ßH‹š[O\Þ\ËœÝ\œŠBˆ™]\›ˆ‚‚‚šYˆ×Û˜[YW×ÈOH—×ÛXZ[—×ÈŽ‚ˆ˜Z\ÙHÞ\Ý[Q^]
-XZ[Š
-JB
+
+def _order(transactions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    by_id = {tx["change_id"]: tx for tx in transactions}
+    children: dict[str, list[str]] = defaultdict(list)
+    indegree = {change_id: 0 for change_id in by_id}
+    for change_id, tx in by_id.items():
+        for dep in tx.get("depends_on") or []:
+            if dep not in by_id:
+                raise PolicyError(f"unknown dependency {dep}")
+            children[dep].append(change_id)
+            indegree[change_id] += 1
+    ready = sorted(change_id for change_id, degree in indegree.items() if degree == 0)
+    ordered: list[dict[str, Any]] = []
+    while ready:
+        change_id = ready.pop(0)
+        ordered.append(by_id[change_id])
+        nxt: list[str] = []
+        for child in children[change_id]:
+            indegree[child] -= 1
+            if indegree[child] == 0:
+                nxt.append(child)
+        ready.extend(sorted(nxt))
+        ready.sort()
+    if len(ordered) != len(transactions):
+        raise PolicyError("dependency cycle")
+    return ordered
+
+
+class PolicyCompiler:
+    def __init__(self, root: Path) -> None:
+        self.root = Path(root)
+
+    def _schema(self, relative: Path) -> dict[str, Any]:
+        return _json(self.root / relative)
+
+    def _transactions(self) -> list[dict[str, Any]]:
+        directory = self.root / DEFAULT_CHANGES
+        if not directory.is_dir():
+            return []
+        validator = Draft202012Validator(self._schema(CHANGE_SCHEMA))
+        loaded: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        paths = sorted(directory.glob("*.yaml")) + sorted(directory.glob("*.yml"))
+        for path in paths:
+            tx = _yaml(path)
+            errors = sorted(validator.iter_errors(tx), key=lambda item: list(item.path))
+            if errors:
+                raise PolicyError(errors[0].message)
+            change_id = tx["change_id"]
+            if change_id in seen:
+                raise PolicyError(f"duplicate change_id {change_id}")
+            seen.add(change_id)
+            for binding in tx.get("bindings") or []:
+                if _unsafe_binding(str(binding.get("path", ""))):
+                    raise PolicyError(f"unsafe binding path: {binding.get('path')}")
+            loaded.append(tx)
+        return _order(loaded)
+
+    def compile(self) -> dict[str, Any]:
+        org = _catalog("l9.org-invariants.compiled.v1", "organization", "Quantum-L9")
+        repo = _catalog("l9.repo-invariants.v1", "repository", "Quantum-L9/Cursor-Governance")
+        digest = _seal(repo, org, [])
+        applied: list[dict[str, Any]] = []
+        for tx in self._transactions():
+            claimed = tx["preconditions"]["base_policy_digest"]
+            if claimed != digest:
+                raise PolicyError("stale base_policy_digest")
+            self._apply(tx, repo, org)
+            applied.append(tx)
+            digest = _seal(repo, org, applied)
+        repo_bytes = yaml.safe_dump(repo, sort_keys=True, allow_unicode=True).encode("utf-8")
+        schema_paths = (CHANGE_SCHEMA, ORG_SCHEMA, REPO_SCHEMA, RECEIPT_SCHEMA)
+        receipt = {
+            "schema": "l9.policy-compile-receipt.v1",
+            "status": "PASS",
+            "compiler_version": VERSION,
+            "transaction_count": len(applied),
+            "transaction_set_digest": _digest(applied),
+            "schema_digests": {
+                path.as_posix(): _bytes_digest((self.root / path).read_bytes())
+                for path in schema_paths
+                if (self.root / path).is_file()
+            },
+            "policy_digest": digest,
+            "outputs": [
+                {"path": DEFAULT_REPO, "digest": _bytes_digest(repo_bytes), "current": True}
+            ],
+            "errors": [],
+        }
+        return {
+            "receipt": receipt,
+            "repo_bytes": repo_bytes,
+            "repository": repo,
+            "organization": org,
+        }
+
+    def _apply(self, tx: dict[str, Any], repo: dict[str, Any], org: dict[str, Any]) -> None:
+        catalog = repo if tx["scope"] == "repository" else org
+        operation = tx["operation"]
+        invariant_id = tx["invariant_id"]
+        active = {item["id"]: item for item in catalog["invariants"]}
+        retired = set(catalog["retired_ids"])
+        if operation == "add":
+            if invariant_id in active or invariant_id in retired:
+                raise PolicyError(f"invariant {invariant_id} already used or retired")
+            catalog["invariants"].append(_invariant_from(tx))
+            catalog["invariants"].sort(key=lambda item: item["id"])
+            return
+        if operation == "retire":
+            current = active.get(invariant_id)
+            if current is None:
+                raise PolicyError(f"invariant {invariant_id} already used or retired")
+            target = tx["preconditions"].get("target_invariant_digest")
+            if target != current["invariant_digest"]:
+                raise PolicyError("target_invariant_digest mismatch")
+            catalog["invariants"] = [
+                item for item in catalog["invariants"] if item["id"] != invariant_id
+            ]
+            catalog["retired_ids"] = sorted(retired | {invariant_id})
+            return
+        if operation == "amend":
+            current = active.get(invariant_id)
+            if current is None:
+                raise PolicyError(f"invariant {invariant_id} is not active")
+            target = tx["preconditions"].get("target_invariant_digest")
+            if target != current["invariant_digest"]:
+                raise PolicyError("target_invariant_digest mismatch")
+            replacement = _invariant_from(tx)
+            catalog["invariants"] = [
+                replacement if item["id"] == invariant_id else item
+                for item in catalog["invariants"]
+            ]
+            return
+        raise PolicyError(f"unsupported operation {operation}")
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Compile governance policy transactions")
+    parser.add_argument("command", choices=("compile", "check"))
+    parser.add_argument("--root", type=Path, default=Path("."))
+    args = parser.parse_args(argv)
+    try:
+        result = PolicyCompiler(args.root).compile()
+    except (PolicyError, InvocationError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    target = args.root / DEFAULT_REPO
+    if args.command == "check":
+        current = target.read_bytes() if target.is_file() else b""
+        return 0 if current == result["repo_bytes"] else 1
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(result["repo_bytes"])
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

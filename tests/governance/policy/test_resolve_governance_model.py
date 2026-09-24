@@ -36,9 +36,7 @@ def _seed(tmp_path: Path, *, binding: bool = True, external: bool = False) -> Pa
         (root / "ops" / "x").mkdir(parents=True)
         (root / "ops" / "x" / "binding.json").write_text("{}\n", encoding="utf-8")
         (root / "tests").mkdir()
-        (root / "tests/test_x.py").write_text(
-            "def test_x():\n    assert True\n", encoding="utf-8"
-        )
+        (root / "tests/test_x.py").write_text("def test_x():\n    assert True\n", encoding="utf-8")
     inv = {
         "id": "L9-REPO-001",
         "title": "X",

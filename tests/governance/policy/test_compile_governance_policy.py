@@ -11,6 +11,8 @@ import yaml
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = ROOT / "ops/scripts/compile_governance_policy.py"
 
+# The compiler module is loaded as UTF-8 source. A binary blob at this path fails collection.
+
 
 def _load():
     spec = importlib.util.spec_from_file_location("policy_compiler", SCRIPT)
