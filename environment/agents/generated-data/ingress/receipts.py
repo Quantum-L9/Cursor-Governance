@@ -28,15 +28,21 @@ SCHEMA_PATH = (
     Path(__file__).resolve().parents[1] / "schemas" / "generated-data-ingress-receipt.schema.json"
 )
 OUTCOMES = {"CAPTURED", "NO_REUSABLE_DATA", "QUARANTINED", "REJECTED", "FAILED"}
+#: Ingress-only states plus every orchestration ``PipelineState``: ingest copies
+#: the job state into the receipt, so an unlisted state would turn a processing
+#: failure into an escaping ValueError instead of a FAILED receipt.
 PROCESSING_STATUSES = {
     "NOT_STARTED",
     "PENDING",
+    "RECEIVED",
     "VALIDATED",
     "HARVESTED",
     "CLASSIFIED",
     "ROUTED",
     "PROMOTION_DECIDED",
     "DELIVERY_PENDING",
+    "DELIVERING",
+    "DELIVERED",
     "DESTINATION_SUBMITTED",
     "DESTINATION_DEFERRED",
     "DESTINATION_ACCEPTED",

@@ -267,3 +267,36 @@ def test_replayed_source_is_not_reprocessed(tmp_path, monkeypatch):
     assert second == first
     ingress_dir = Path(receipts.generated_data_receipt_root()) / "ingress"
     assert sorted(p.name for p in ingress_dir.glob("*.json")) == ["acc-replay.json"]
+
+
+def test_receipt_status_vocabulary_covers_every_pipeline_state():
+    """ingest copies the job state into the receipt, so every state must be writable."""
+    orchestration = str(GENERATED_DATA / "orchestration")
+    if orchestration not in sys.path:
+        sys.path.insert(0, orchestration)
+    from state_store import PipelineState  # type: ignore[import-not-found]
+
+    assert {state.value for state in PipelineState} <= receipts.PROCESSING_STATUSES
+
+
+def test_processor_crash_before_validation_still_yields_a_failed_receipt(monkeypatch):
+    """A job left in RECEIVED must produce a FAILED receipt, not an escaping raise."""
+    orchestration = str(GENERATED_DATA / "orchestration")
+    if orchestration not in sys.path:
+        sys.path.insert(0, orchestration)
+    from processor import GeneratedDataProcessor  # type: ignore[import-not-found]
+
+    def crash(self):
+        raise RuntimeError("runtime module is missing")
+
+    monkeypatch.setattr(GeneratedDataProcessor, "_load_runtime", crash)
+    out = ingest.ingest_packet(
+        generated_data_packet=_packet(),
+        source_receipt_digest="acc-crash",
+        source_kind="program_execution_outcome",
+        actor="test",
+    )
+    assert out["outcome"] == "FAILED"
+    assert out["processing_status"] == "RECEIVED"
+    assert out["processing_error"]["message"] == "runtime module is missing"
+    assert _on_disk(out) == out
