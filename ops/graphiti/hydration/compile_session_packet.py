@@ -286,6 +286,7 @@ def compile_session_packet(
         },
         "group_id": namespace,
         "agent_id": identity["agent_id"],
+        "handoff": (continuation.capsule.handoff if continuation else None),
         "anchors": list(continuation.capsule.active_files[:12]) if continuation else [],
         "artifacts": [],
         "blockers": list(continuation.capsule.blockers[:8]) if continuation else [],
@@ -374,6 +375,16 @@ def format_additional_context(packet: dict[str, Any]) -> str:
             uid = str(prev.get("uuid") or "")[:8]
             head = str(prev.get("text_head") or "").replace("\n", " ")
             lines.append(f"- {uid}: {head}" if uid else f"- {head}")
+    handoff = packet.get("handoff")
+    if isinstance(handoff, dict) and handoff:
+        # The last post-publish handoff, in full. Not subject to the fact
+        # budget: it is already capped (32 KB) at write time, and a truncated
+        # brief would drop exactly the blocked items and human actions it
+        # exists to carry.
+        from ops.memory.session_handoff import render as render_handoff
+
+        lines.append("### last handoff (post-publish brief)")
+        lines.append(render_handoff(handoff))
     slice_text = packet.get("context_slice") or ""
     if slice_text:
         lines.append("facts:")

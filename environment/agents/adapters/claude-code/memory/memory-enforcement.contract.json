@@ -88,6 +88,12 @@
       "script": "environment/agents/adapters/claude-code/hooks/memory_writeback.py",
       "fail_mode": "open",
       "note": "Stop thin wrap of the canonical close (continuation capsule -> governed candidate -> memory.close). Subagent/background Stop records skipped_subagent and closes nothing. Fail-open."
+    },
+    "governance_writeback": {
+      "event": "Stop",
+      "script": "environment/agents/adapters/claude-code/hooks/governance_handoff_writeback.py",
+      "fail_mode": "open",
+      "note": "Parallel Stop hook: once per publication, writes the agent's governance handoff (l9.governance_handoff.v1) plus receipt-copied bootstrap/prefetch/hook-skip degradation as ONE observation record to the cursor-governance namespace only (surface claude-governance-handoff). Never blocks; announces every outcome. Fail-open."
     }
   },
   "preconditions": {

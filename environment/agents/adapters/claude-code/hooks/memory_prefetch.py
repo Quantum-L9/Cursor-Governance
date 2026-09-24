@@ -146,7 +146,9 @@ import memory_bridge as mb  # noqa: E402
 import memory_state as st  # noqa: E402
 
 
-def hook_session_start_payload(context: str) -> dict[str, object]:
+def hook_session_start_payload(
+    context: str, system_message: str | None = None
+) -> dict[str, object]:
     """SessionStart envelope.
 
     ``additionalContext`` is a **string**. SESSION_START_SPEC.md §3 and the
@@ -160,16 +162,29 @@ def hook_session_start_payload(context: str) -> dict[str, object]:
     newlines and its non-ASCII intact (``ensure_ascii=False`` at the emit
     site), which is what a human reading the log needs.
     """
-    return {
+    payload: dict[str, object] = {
         "hookSpecificOutput": {
             "hookEventName": "SessionStart",
             "additionalContext": context,
         }
     }
+    if system_message:
+        # Shown to the USER, not only the model: a memory read that failed or
+        # degraded must never be discoverable only by reading the model context.
+        payload["systemMessage"] = system_message
+    return payload
 
 
-def _emit(context: str) -> None:
-    print(json.dumps(hook_session_start_payload(context), ensure_ascii=False, indent=2))
+def _emit(context: str, system_message: str | None = None) -> None:
+    print(
+        json.dumps(
+            hook_session_start_payload(context, system_message), ensure_ascii=False, indent=2
+        )
+    )
+
+
+def _loud_read_failure(detail: str) -> str:
+    return f"L9 MEMORY READ — {detail}"
 
 
 def main() -> int:
@@ -340,13 +355,39 @@ def main() -> int:
                 f"{_repo_count(workspace)} under {workspace}"
                 + (f"; excluded={dropped_note}" if dropped_note else ""),
             )
-        _emit("\n".join(line for line in lines if line))
-    except Exception as exc:  # fail-open
+        loud = None
+        if degraded:
+            healthy = {"OK", "NO_HITS"}  # NO_HITS: memory answered, nothing to resume
+            unresolved = [r.name for r in roots if memory_statuses.get(r.name) not in healthy]
+            loud = _loud_read_failure(
+                "DEGRADED at session start: "
+                + (
+                    f"namespace unresolved for {', '.join(r.name for r in roots)}"
+                    if not group_ids
+                    else "hydration degraded for "
+                    + ", ".join(
+                        f"{name} ({memory_statuses.get(name, 'unknown')})"
+                        for name in (unresolved or [r.name for r in roots])
+                    )
+                )
+                + ". This session may be missing its memory; repair: make memory-readiness."
+            )
+        if dropped:
+            note = _dropped_summary(dropped)
+            loud = (loud + " " if loud else "") + _loud_read_failure(
+                f"NOT HYDRATED this session: {note}."
+            )
+        _emit("\n".join(line for line in lines if line), loud)
+    except Exception as exc:  # fail-open, never silent
         _emit(
             "L9 memory: prefetch DEGRADED ("
             f"{exc}). No receipt written; governed writes remain fail-closed until the "
             "canonical memory runtime is bound (make memory-readiness). Operator-only "
-            "override: L9_MEMORY_ENFORCEMENT_BREAKGLASS. next="
+            "override: L9_MEMORY_ENFORCEMENT_BREAKGLASS. next=",
+            _loud_read_failure(
+                f"FAILED at session start ({type(exc).__name__}): no memory was loaded "
+                "for this session. Repair: make memory-readiness."
+            ),
         )
     return 0
 
