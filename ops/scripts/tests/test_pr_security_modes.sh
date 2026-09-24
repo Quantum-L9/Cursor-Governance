@@ -89,4 +89,11 @@ grep -Eq 'run_pr_security\.sh"? --mode gate' "$PR_GATE" \
   || fail "run_pr_gate.sh must invoke the security gate in gate mode"
 pass "publish path invokes gate mode"
 
+# T6 — lockfile-only consumers (no uv.lock) must not fall through to `uv run`.
+grep -Fq 'elif [[ -f requirements.lock ]]' "$SECURITY" \
+  || fail "run_pip_audit must branch on requirements.lock"
+grep -Fq 'pip-audit could not run' "$SECURITY" \
+  || fail "tooling errors must not be labelled as vulnerabilities"
+pass "pip-audit has a requirements.lock branch and distinct tooling-error text"
+
 echo "OK: $PASS assertions"

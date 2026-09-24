@@ -364,7 +364,7 @@ run_pip_audit() {
   local need=0 f
   for f in "${CHANGED[@]}"; do
     case "$f" in
-      uv.lock|pyproject.toml|requirements.txt|requirements-*.txt|constraints.txt) need=1 ;;
+      uv.lock|pyproject.toml|requirements.txt|requirements.lock|requirements-*.txt|constraints.txt) need=1 ;;
     esac
   done
   if [[ "$need" -ne 1 ]]; then
@@ -375,16 +375,29 @@ run_pip_audit() {
     missing_tool pip-audit "install uv (https://astral.sh/uv)"
     return 0
   fi
+  local audit_rc=0
   (
     cd "$WS"
     if [[ -f uv.lock ]]; then
       uv run --with "pip-audit==${PIP_AUDIT_PIN}" pip-audit --progress-spinner off
     elif [[ -f requirements.txt ]]; then
       run_uvx_pkg "pip-audit==${PIP_AUDIT_PIN}" pip-audit -r requirements.txt --progress-spinner off
+    elif [[ -f requirements.lock ]]; then
+      run_uvx_pkg "pip-audit==${PIP_AUDIT_PIN}" pip-audit -r requirements.lock --progress-spinner off
+    elif [[ -f requirements-ci.txt ]]; then
+      run_uvx_pkg "pip-audit==${PIP_AUDIT_PIN}" pip-audit -r requirements-ci.txt --progress-spinner off
     else
-      uv run --with "pip-audit==${PIP_AUDIT_PIN}" pip-audit --progress-spinner off
+      echo "pip-audit: no uv.lock, requirements.txt, requirements.lock, or requirements-ci.txt in $WS" >&2
+      exit 2
     fi
-  ) && ok "pip-audit==$PIP_AUDIT_PIN" || fail "pip-audit found vulnerabilities"
+  ) && audit_rc=0 || audit_rc=$?
+  if [[ "$audit_rc" -eq 0 ]]; then
+    ok "pip-audit==$PIP_AUDIT_PIN"
+  elif [[ "$audit_rc" -eq 2 ]]; then
+    fail "pip-audit could not run (no supported lockfile)"
+  else
+    fail "pip-audit found vulnerabilities"
+  fi
 }
 
 _wave_dir="$(mktemp -d "${TMPDIR:-/tmp}/l9-pr-security-wave.XXXXXX")"

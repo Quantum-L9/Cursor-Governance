@@ -2239,7 +2239,7 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "74e0b27729b51da5a8ecf486912183e7f9a5ab53a4655a30a1120989e591c876"
+      "sha256": "9c85c55fbb14f4cc9272063bd749a37febdd69ee30f092a21fc5e3c480ef8d5f"
     },
     {
       "path": "scripts/tests/test_run_campaign_repairs.py",
