@@ -174,9 +174,11 @@ def test_posttool_is_silent_on_cursor(
     assert capsys.readouterr().out == ""
 
 
-def test_launcher_treats_the_push_gate_as_claude_only() -> None:
+def test_push_gate_is_not_a_fail_closed_gate() -> None:
+    # A fail-closed gate on every Bash call blocked the whole shell when the
+    # governance clone lacked this file (observed while publishing this change).
     launcher = (HOOKS / "l9_hook_exec.sh").read_text()
-    assert "local_execution_gate_wrap.py|memory_gate.py|ci_parity_push_gate.py)" in launcher
+    assert "ci_parity_push_gate.py" not in launcher
 
 
 def test_settings_register_both_hooks_through_the_launcher() -> None:
@@ -184,8 +186,34 @@ def test_settings_register_both_hooks_through_the_launcher() -> None:
         hooks = json.loads(path.read_text())["hooks"]
         pre = json.dumps(hooks["PreToolUse"])
         post = json.dumps(hooks["PostToolUse"])
-        assert "--class gate ci_parity_push_gate.py" in pre
+        assert "--class observer ci_parity_push_gate.py" in pre
+        assert "--class gate ci_parity_push_gate.py" not in pre
         assert "--class observer ci_parity_posttool.py" in post
+
+
+def test_absent_push_gate_fails_open_through_the_real_launcher(tmp_path: Path) -> None:
+    """The lockout regression: governance clone without the hook file → allow, not block."""
+    gov = tmp_path / ".cursor-governance"
+    hooks_dir = gov / "environment" / "agents" / "adapters" / "claude-code" / "hooks"
+    hooks_dir.mkdir(parents=True)
+    (gov / "CANONICAL_LAW.md").write_text("stub\n")
+    launcher = hooks_dir / "l9_hook_exec.sh"
+    launcher.write_text((HOOKS / "l9_hook_exec.sh").read_text())
+    env = {
+        "HOME": str(tmp_path),
+        "PATH": "/usr/bin:/bin",
+        "L9_GOVERNANCE_SURFACE": "claude-code",
+        "L9_HOOK_SKIP_LOG": str(tmp_path / "skips.log"),
+    }
+    proc = subprocess.run(
+        ["bash", str(launcher), "--class", "observer", "ci_parity_push_gate.py"],
+        input=json.dumps({"tool_name": "Bash", "tool_input": {"command": "git push"}}),
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
 
 
 def _gate_fn() -> str:

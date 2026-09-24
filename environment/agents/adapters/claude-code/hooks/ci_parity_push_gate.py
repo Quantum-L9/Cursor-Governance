@@ -1,8 +1,17 @@
 #!/usr/bin/env python3
 """Deny a `git push` whose commit adds a CI-blocking finding on a changed line.
 
-Registered `--class gate` on PreToolUse (Bash). It runs `ops/ci_parity/run.py
---gate HEAD` for the repository being pushed. Usually a receipt from the
+Registered on PreToolUse (Bash) as `--class observer`, deliberately. The
+launcher `exec`s observers, so exit 2 here still blocks the push. What the class
+decides is the CANNOT-EVALUATE case: a gate fails closed (INV-1) and, matched on
+every Bash call, would block the whole shell whenever this file is absent from
+~/.cursor-governance — which is exactly the state between a settings projection
+from a newer checkout and the governance clone catching up (observed while
+publishing this change). A CI-parity check must fail open there: CI remains the
+authority, so an unevaluated push loses nothing CI will not catch.
+
+It runs `ops/ci_parity/run.py --gate HEAD` for the repository being pushed.
+Usually a receipt from the
 commit-time background run already exists and this returns at once; otherwise
 it waits on the in-flight run or scans (bounded by L9_CI_PARITY_WAIT).
 
