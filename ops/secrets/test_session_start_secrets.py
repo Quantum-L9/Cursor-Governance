@@ -50,11 +50,22 @@ BINDS_OK = [
 BINDS_NONE = [{**row, "bound": False, "source": "infisical-machine-absent"} for row in BINDS_OK]
 
 
+HOSTED = {"CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE": "cloud_default"}
+AWS_OK = {"ok": True, "code": "OK", "summary": "authorized"}
+AWS_DOWN = {"ok": False, "code": "AWS_CLI_NOT_FOUND", "summary": "AWS_CLI_NOT_FOUND"}
+
+
 def _run(
-    login_state: str, source: str, binds: list[dict[str, Any]], argv: list[str], env: dict
+    login_state: str,
+    source: str,
+    binds: list[dict[str, Any]],
+    argv: list[str],
+    env: dict,
+    aws: dict | None = None,
 ) -> tuple[dict[str, Any], int, str, str]:
     with (
         mock.patch.dict("os.environ", env, clear=True),
+        mock.patch.object(plane, "_aws_probe", return_value=aws or AWS_OK),
         mock.patch.object(plane.login, "ensure_machine_profile", return_value=login_state),
         mock.patch.object(plane.login, "machine_identity", return_value=(source, None)),
         mock.patch.object(plane.cb, "bind_status", side_effect=_bind_status(binds)),
@@ -67,10 +78,10 @@ def _run(
 
 
 class SessionStartSecretsTests(unittest.TestCase):
-    """Infisical is the only plane; the machine identity is the one bootstrap."""
+    """Claude: the environment machine identity, no AWS step (run as hosted)."""
 
     def test_an_identity_that_logs_in_binds_and_exits_0(self) -> None:
-        result, rc, _, err = _run("env", "env", BINDS_OK, [], {})
+        result, rc, _, err = _run("env", "env", BINDS_OK, [], HOSTED)
         self.assertTrue(result["plane_ok"])
         self.assertEqual(result["state"], plane.STATE_OK)
         self.assertEqual(result["identity"]["code"], plane.IDENTITY_OK)
@@ -82,7 +93,7 @@ class SessionStartSecretsTests(unittest.TestCase):
         self.assertIn("CONTEXT7_API_KEY", plane.BIND_NAMES)
 
     def test_a_missing_identity_fails_loudly_and_names_the_fix(self) -> None:
-        result, rc, _, err = _run("absent", "", BINDS_NONE, [], {})
+        result, rc, _, err = _run("absent", "", BINDS_NONE, [], HOSTED)
         self.assertFalse(result["plane_ok"])
         self.assertEqual(result["identity"]["code"], plane.IDENTITY_ABSENT)
         self.assertEqual(rc, 1)
@@ -91,25 +102,92 @@ class SessionStartSecretsTests(unittest.TestCase):
         self.assertIn("L9_INFISICAL_CLIENT_SECRET", err)
 
     def test_a_refused_identity_fails(self) -> None:
-        result, rc, _, err = _run("failed", "env", BINDS_NONE, [], {})
+        result, rc, _, err = _run("failed", "env", BINDS_NONE, [], HOSTED)
         self.assertEqual(result["identity"]["code"], plane.IDENTITY_REFUSED)
         self.assertEqual(rc, 1)
         self.assertIn("FAILED: Infisical refused the machine identity", err)
 
     def test_no_surface_is_exempt(self) -> None:
         """The retired carve-out scored a hosted surface's absence as 'not a fault'."""
-        for env in (
-            {"CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE": "cloud_default"},
-            {"CLAUDE_CODE_REMOTE_ENVIRONMENT_ID": "ccpool_x"},
-            {},
+        for env, aws in (
+            (HOSTED, None),
+            ({"CLAUDE_CODE_REMOTE_ENVIRONMENT_ID": "ccpool_x"}, AWS_DOWN),
+            ({}, AWS_DOWN),
         ):
             with self.subTest(env=env):
-                result, rc, _, _ = _run("absent", "", BINDS_NONE, [], env)
+                result, rc, _, _ = _run("absent", "", BINDS_NONE, [], env, aws)
                 self.assertEqual(result["state"], plane.STATE_FAILED)
                 self.assertEqual(rc, 1)
 
+    def test_claude_never_probes_aws(self) -> None:
+        with (
+            mock.patch.dict("os.environ", HOSTED, clear=True),
+            mock.patch.object(plane, "_aws_probe") as probe,
+            mock.patch.object(
+                plane.login, "ensure_machine_profile", return_value="absent"
+            ) as ensure,
+            mock.patch.object(plane.cb, "bind_status", side_effect=_bind_status(BINDS_NONE)),
+        ):
+            result = plane.run_plane()
+        probe.assert_not_called()
+        ensure.assert_called_once()
+        self.assertNotIn("allow_aws_seed", ensure.call_args.kwargs)
+        self.assertNotIn("aws", plane.receipt_payload(result))
+
+
+class OperatorPathTests(unittest.TestCase):
+    """Cursor / operator: main's behaviour, unchanged — AWS preflight, then seed."""
+
+    def test_aws_down_fails_with_mains_message_and_never_seeds(self) -> None:
+        with (
+            mock.patch.dict("os.environ", {}, clear=True),
+            mock.patch.object(plane, "_aws_probe", return_value=AWS_DOWN),
+            mock.patch.object(plane.login, "machine_identity", return_value=("", None)),
+            mock.patch.object(plane.login, "ensure_machine_profile") as ensure,
+            mock.patch.object(plane.cb, "bind_status", side_effect=_bind_status(BINDS_NONE)),
+            mock.patch("sys.stderr", new_callable=io.StringIO) as err,
+        ):
+            result = plane.run_plane()
+            rc = plane.main([])
+        ensure.assert_not_called()
+        self.assertEqual(result["login"], "skipped")
+        self.assertEqual(rc, 1)
+        self.assertIn("FAILED: AWS CLI is missing or not authorized", err.getvalue())
+        self.assertEqual(plane.receipt_payload(result)["aws"]["code"], "AWS_CLI_NOT_FOUND")
+
+    def test_aws_ok_seeds_or_uses_the_profile(self) -> None:
+        for state in ("present", "seeded"):
+            with self.subTest(state=state):
+                with (
+                    mock.patch.dict("os.environ", {}, clear=True),
+                    mock.patch.object(plane, "_aws_probe", return_value=AWS_OK),
+                    mock.patch.object(
+                        plane.login, "machine_identity", return_value=("profile", None)
+                    ),
+                    mock.patch.object(
+                        plane.login, "ensure_machine_profile", return_value=state
+                    ) as ensure,
+                    mock.patch.object(plane.cb, "bind_status", side_effect=_bind_status(BINDS_OK)),
+                ):
+                    result = plane.run_plane()
+                self.assertTrue(ensure.call_args.kwargs.get("allow_aws_seed"))
+                self.assertTrue(result["plane_ok"])
+                self.assertTrue(plane.receipt_payload(result)["aws"]["ok"])
+
+    def test_an_environment_identity_on_an_operator_needs_no_aws(self) -> None:
+        with (
+            mock.patch.dict("os.environ", {}, clear=True),
+            mock.patch.object(plane, "_aws_probe") as probe,
+            mock.patch.object(plane.login, "machine_identity", return_value=("env", None)),
+            mock.patch.object(plane.login, "ensure_machine_profile", return_value="env"),
+            mock.patch.object(plane.cb, "bind_status", side_effect=_bind_status(BINDS_OK)),
+        ):
+            result = plane.run_plane()
+        probe.assert_not_called()
+        self.assertTrue(result["plane_ok"])
+
     def test_json_stdout_has_no_values(self) -> None:
-        _, rc, out, _ = _run("env", "env", BINDS_OK, ["--json"], {})
+        _, rc, out, _ = _run("env", "env", BINDS_OK, ["--json"], HOSTED)
         self.assertEqual(rc, 0)
         payload = json.loads(out)
         self.assertEqual(payload["ok"], True)
@@ -122,7 +200,7 @@ class SessionStartSecretsTests(unittest.TestCase):
     def test_receipt_out_writes_same_object(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             dest = Path(tmp) / "secrets-plane.json"
-            _, rc, _, _ = _run("env", "env", BINDS_OK, ["--receipt-out", str(dest)], {})
+            _, rc, _, _ = _run("env", "env", BINDS_OK, ["--receipt-out", str(dest)], HOSTED)
             self.assertEqual(rc, 0)
             payload = json.loads(dest.read_text(encoding="utf-8"))
             self.assertEqual(payload["identity"]["source"], "env")
@@ -131,7 +209,7 @@ class SessionStartSecretsTests(unittest.TestCase):
     def test_omit_receipt_out_writes_no_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             dest = Path(tmp) / "secrets-plane.json"
-            _, rc, _, _ = _run("env", "env", BINDS_OK, [], {})
+            _, rc, _, _ = _run("env", "env", BINDS_OK, [], HOSTED)
             self.assertEqual(rc, 0)
             self.assertFalse(dest.exists())
 
@@ -216,7 +294,7 @@ class SurfaceClassTests(unittest.TestCase):
         self.assertNotEqual(plane.surface_class(self.POOL), plane.MODEL_CONTROLLED)
 
     def test_receipt_carries_state_and_surface_class(self) -> None:
-        result, _, _, _ = _run("absent", "", BINDS_NONE, [], self.HOSTED)
+        result, _, _, _ = _run("absent", "", BINDS_NONE, [], HOSTED)
         payload = plane.receipt_payload(result)
         self.assertEqual(payload["state"], plane.STATE_FAILED)
         self.assertEqual(payload["surface_class"], plane.MODEL_CONTROLLED)
@@ -233,13 +311,13 @@ class LiteralOutputTests(unittest.TestCase):
     def test_a_planted_identity_summary_never_reaches_stderr(self) -> None:
         planted = {"ok": False, "code": plane.IDENTITY_ABSENT, "source": "", "summary": "CANARY"}
         with mock.patch.object(plane, "identity_status", return_value=planted):
-            _, rc, out, err = _run("absent", "", BINDS_NONE, ["--json"], {})
+            _, rc, out, err = _run("absent", "", BINDS_NONE, ["--json"], HOSTED)
         self.assertEqual(rc, 1)
         self.assertNotIn("CANARY", err)
         self.assertIn("no Infisical machine identity", err)
 
     def test_bind_sources_are_mapped_to_literals(self) -> None:
         odd = [{**row, "source": "CANARY-SOURCE"} for row in BINDS_OK]
-        _, _, _, err = _run("env", "env", odd, [], {})
+        _, _, _, err = _run("env", "env", odd, [], HOSTED)
         self.assertNotIn("CANARY-SOURCE", err)
         self.assertIn("CONTEXT7_API_KEY=unknown", err)

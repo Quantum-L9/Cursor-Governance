@@ -224,3 +224,41 @@ def test_the_bootstrap_secret_itself_is_never_bound() -> None:
     cb.reset_cache()
     assert cb.bind_status("L9_INFISICAL_CLIENT_SECRET")["source"] == "refused"
     cb.reset_cache()
+
+
+def test_the_aws_seed_is_cursors_path_only(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Cursor / operator seed the profile from AWS; Claude never calls the seed."""
+    import stat
+
+    profile = tmp_path / "l9-machine.json"
+    monkeypatch.setattr(machine_login, "PROFILE", profile)
+    calls: list[str] = []
+
+    def seed() -> dict[str, str]:
+        calls.append("seed")
+        return {
+            "schema": "1",
+            "host": "https://app.infisical.com",
+            "project_id": "p",
+            "environment": "prod",
+            "client_id": "cid",
+            "client_secret": "seeded-secret",
+        }
+
+    monkeypatch.setattr(machine_login, "_seed_from_aws", seed)
+    monkeypatch.setattr(machine_login, "universal_auth_login", lambda *a, **k: "token")
+    assert machine_login.ensure_machine_profile({}) == "absent"
+    assert calls == [], "no seed without allow_aws_seed (Claude)"
+    assert machine_login.ensure_machine_profile({}, allow_aws_seed=True) == "seeded"
+    assert calls == ["seed"]
+    assert stat.S_IMODE(profile.stat().st_mode) == 0o600
+    assert machine_login.ensure_machine_profile({}, allow_aws_seed=True) == "present"
+    assert calls == ["seed"], "an existing profile is used as before, never re-seeded"
+
+
+def test_a_failed_seed_is_failed_not_absent(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(machine_login, "PROFILE", tmp_path / "l9-machine.json")
+    monkeypatch.setattr(machine_login, "_seed_from_aws", lambda: None)
+    assert machine_login.ensure_machine_profile({}, allow_aws_seed=True) == "failed"

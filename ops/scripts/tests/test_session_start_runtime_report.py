@@ -177,8 +177,17 @@ class SecretsPlaneClassificationTests(unittest.TestCase):
         self.assertEqual(line["class"], report.FAILED)
         self.assertIn("secrets-plane receipt unread", line["summary"])
 
-    def test_no_aws_line_is_reported(self) -> None:
-        self.assertFalse(hasattr(report, "classify_aws_cli"))
+    def test_the_aws_line_is_reported_only_where_the_plane_ran_it(self) -> None:
+        """Cursor / operator keep AWS; Claude's receipt carries no aws object."""
+        self.assertIsNone(report.classify_aws_cli(None))
+        self.assertEqual(report.classify_aws_cli({"ok": True})["class"], report.OK)
+        failed = report.classify_aws_cli({"ok": False, "code": "AWS_CLI_NOT_FOUND"})
+        self.assertEqual(failed["class"], report.FAILED)
+        self.assertTrue(report.format_markdown([failed]).startswith("### FAILED"))
+        planted = report.classify_aws_cli({"ok": False, "code": "CANARY", "summary": "CANARY"})
+        self.assertNotIn("CANARY", json.dumps(planted))
+        self.assertIsNone(report.secrets_receipt_aws({"identity": {}}))
+        self.assertEqual(report.secrets_receipt_aws({"aws": {"ok": True}}), {"ok": True})
 
 
 class VenvBackupClassificationTests(unittest.TestCase):

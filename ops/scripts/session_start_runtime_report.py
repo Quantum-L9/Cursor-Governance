@@ -468,6 +468,32 @@ def classify_backup(detail: str) -> dict[str, Any]:
     return _line("backup", OK, text)
 
 
+def classify_aws_cli(result: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Cursor / operator only: the AWS CLI preflight their bootstrap still uses.
+
+    The receipt carries an ``aws`` object only where the plane ran the preflight
+    (not on Claude, which binds through its environment identity with no AWS
+    step), so its absence means "not this peer's path", not "unread".
+    """
+    if result is None:
+        return None
+    if result.get("ok") is True:
+        return _line("aws-cli", OK, "authorized")
+    code = next((c for c in AWS_CODES if c == result.get("code")), "AWS_FAILED")
+    return _line(
+        "aws-cli", FAILED, AWS_CODES.get(code, "AWS CLI missing or not authorized"), evidence=code
+    )
+
+
+#: AWS preflight codes the reporter prints, as literals (never receipt text).
+AWS_CODES = {
+    "AWS_CLI_NOT_FOUND": "AWS_CLI_NOT_FOUND — secrets plane cannot start",
+    "AWS_NOT_AUTHORIZED": "AWS_NOT_AUTHORIZED — secrets plane cannot start",
+    "TIMEOUT": "TIMEOUT — secrets plane cannot start",
+    "AWS_FAILED": "AWS CLI missing or not authorized",
+}
+
+
 #: The identity summaries this reporter prints, keyed by the receipt's code.
 IDENTITY_SUMMARIES = {
     "OK": "Infisical machine identity logged in",
@@ -476,6 +502,10 @@ IDENTITY_SUMMARIES = {
         "L9_INFISICAL_CLIENT_SECRET in the environment settings"
     ),
     "LOGIN_REFUSED": "Infisical refused the machine identity or was unreachable",
+    "AWS_PREFLIGHT_FAILED": (
+        "AWS CLI is missing or not authorized — this Cursor / operator machine seeds its "
+        "Infisical profile from AWS"
+    ),
 }
 
 
@@ -583,6 +613,12 @@ def secrets_receipt_parts(
     )
 
 
+def secrets_receipt_aws(receipt: dict[str, Any] | None) -> dict[str, Any] | None:
+    """The Cursor / operator AWS preflight object, when the plane ran it."""
+    aws = (receipt or {}).get("aws")
+    return aws if isinstance(aws, dict) else None
+
+
 #: The only plane states this reader will propagate. Anything else — a retired
 #: state, a truncated write, a value from a newer producer — reads as no-state.
 #: The allowlist is what keeps receipt content out of the rendered report: only
@@ -646,7 +682,9 @@ def latest_repair_log(repair_dir: Path) -> tuple[str, str]:
 def format_markdown(lines: list[dict[str, Any]]) -> str:
     parts: list[str] = []
     failed_identity = [
-        item for item in lines if item["name"] == "infisical-identity" and item["class"] == FAILED
+        item
+        for item in lines
+        if item["name"] in {"infisical-identity", "aws-cli"} and item["class"] == FAILED
     ]
     if failed_identity:
         parts.append("### FAILED")
@@ -688,6 +726,7 @@ def collect(
     home: Path | None = None,
     workspace: str = "",
     identity: dict[str, Any] | None = None,
+    aws_cli: dict[str, Any] | None = None,
     secrets_bind: list[dict[str, Any]] | None = None,
     write_receipt: bool = True,
     plane_state: str = "",
@@ -702,6 +741,7 @@ def collect(
         else classify_memory(detail=memory_detail, stderr=memory_stderr, healthy=memory_healthy),
         classify_publish_path(evaluate(load_receipt())),
         classify_infisical_identity(identity),
+        *([line] if (line := classify_aws_cli(aws_cli)) is not None else []),
         classify_secrets_bind(secrets_bind, plane_state),
         classify_skill_usage(skill_note),
     ]
@@ -881,11 +921,13 @@ def main(argv: list[str] | None = None) -> int:
         hydrate_condition=args.hydrate_condition,
         workspace=args.workspace,
         identity=identity,
+        aws_cli=secrets_receipt_aws(plane_receipt),
         secrets_bind=secrets_bind,
         plane_state=secrets_plane_state(plane_receipt),
     )
     identity_failed = any(
-        item["name"] == "infisical-identity" and item["class"] == FAILED for item in lines
+        item["name"] in {"infisical-identity", "aws-cli"} and item["class"] == FAILED
+        for item in lines
     )
     if args.json:
         print(json.dumps({"lines": lines}, indent=2, sort_keys=True))

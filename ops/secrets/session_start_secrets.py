@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-"""SessionStart secrets plane — one owner, fail loud, Infisical only.
+"""SessionStart secrets plane — one owner, fail loud, Infisical is the vault.
 
-SessionStart logs in to Infisical as this surface's machine identity
-(``infisical_cli_login``: ``L9_INFISICAL_CLIENT_ID`` + ``L9_INFISICAL_CLIENT_SECRET``,
-or an operator's ``~/.infisical/l9-machine.json``) and probes the inventoried
-names. There is no AWS step: the AWS login seed and the AWS CLI preflight are
-retired, and no surface is exempt. Every surface that runs agents needs its
-identity; a surface without one FAILS, loudly, with the fix named — secrets are
-not optional.
+Every surface binds secrets from Infisical as its machine identity, and no
+surface is exempt: a surface without one FAILS, loudly, with the fix named —
+secrets are not optional. How the identity is obtained DIVERGES BY PEER:
+
+* Claude Code (model-controlled) — or any surface whose environment carries
+  ``L9_INFISICAL_CLIENT_ID`` + ``L9_INFISICAL_CLIENT_SECRET``: that identity,
+  with no AWS step and no AWS import.
+* Cursor / operator machines: unchanged — AWS CLI preflight, then the existing
+  ``~/.infisical/l9-machine.json`` or the AWS login seed that writes it, and the
+  ``aws`` receipt object the reporter's ``aws-cli`` line reads.
 
 This is not a Makefile ceremony. Values are never printed or exported.
 """
@@ -44,6 +47,7 @@ STATE_FAILED = "failed"
 IDENTITY_OK = "OK"
 IDENTITY_ABSENT = "IDENTITY_ABSENT"
 IDENTITY_REFUSED = "LOGIN_REFUSED"
+IDENTITY_AWS_UNAVAILABLE = "AWS_PREFLIGHT_FAILED"
 
 
 def surface_class(env: Mapping[str, str] | None = None) -> str:
@@ -82,6 +86,10 @@ IDENTITY_MESSAGES = {
         "L9_INFISICAL_CLIENT_SECRET in the environment settings"
     ),
     IDENTITY_REFUSED: "Infisical refused the machine identity or was unreachable",
+    IDENTITY_AWS_UNAVAILABLE: (
+        "AWS CLI is missing or not authorized. Infisical bind cannot start. "
+        "Repair: install AWS CLI v2 && aws sts get-caller-identity"
+    ),
 }
 
 
@@ -93,7 +101,14 @@ def _bind_line(binds: list[dict[str, Any]]) -> str:
 
 def identity_status(login_state: str, source: str) -> dict[str, Any]:
     """The machine identity's state, names only."""
-    if login_state in {"env", "present"}:
+    if login_state == "skipped":
+        return {
+            "ok": False,
+            "code": IDENTITY_AWS_UNAVAILABLE,
+            "source": "",
+            "summary": IDENTITY_MESSAGES[IDENTITY_AWS_UNAVAILABLE],
+        }
+    if login_state in {"env", "present", "seeded"}:
         return {
             "ok": True,
             "code": IDENTITY_OK,
@@ -118,10 +133,28 @@ def identity_status(login_state: str, source: str) -> dict[str, Any]:
     }
 
 
+def _aws_probe() -> dict[str, Any]:
+    """Cursor / operator only. Imported lazily: Claude never loads AWS code."""
+    import aws_cli_preflight  # noqa: PLC0415
+
+    return aws_cli_preflight.probe()
+
+
 def run_plane(env: Mapping[str, str] | None = None) -> dict[str, Any]:
     klass = surface_class(env)
-    login_state = login.ensure_machine_profile(env)
     source = login.machine_identity(env)[0]
+    aws: dict[str, Any] | None = None
+    if klass == MODEL_CONTROLLED or source == login.SOURCE_ENV:
+        # Claude: the environment identity; no AWS step at all.
+        login_state = login.ensure_machine_profile(env)
+    else:
+        # Cursor / operator: main's behaviour, unchanged — AWS preflight, then
+        # the existing profile or the AWS seed that writes it.
+        aws = _aws_probe()
+        login_state = (
+            login.ensure_machine_profile(env, allow_aws_seed=True) if aws.get("ok") else "skipped"
+        )
+        source = login.machine_identity(env)[0] or source
     identity = identity_status(login_state, source)
     binds: list[dict[str, Any]] = []
     for name in BIND_NAMES:
@@ -133,14 +166,22 @@ def run_plane(env: Mapping[str, str] | None = None) -> dict[str, Any]:
                 "source": str(status.get("source") or "unbound"),
             }
         )
-    return {
+    plane_ok = bool(identity["ok"]) and (aws is None or bool(aws.get("ok")))
+    result: dict[str, Any] = {
         "identity": identity,
         "login": login_state,
         "binds": binds,
-        "plane_ok": bool(identity["ok"]),
+        "plane_ok": plane_ok,
         "surface_class": klass,
-        "state": STATE_OK if identity["ok"] else STATE_FAILED,
+        "state": STATE_OK if plane_ok else STATE_FAILED,
     }
+    if aws is not None:
+        result["aws"] = {
+            "ok": bool(aws.get("ok")),
+            "code": str(aws.get("code") or ""),
+            "summary": str(aws.get("summary") or ""),
+        }
+    return result
 
 
 def receipt_payload(result: dict[str, Any]) -> dict[str, Any]:
@@ -158,6 +199,7 @@ def receipt_payload(result: dict[str, Any]) -> dict[str, Any]:
             "summary": str(identity.get("summary") or ""),
         },
         "binds": binds,
+        **({"aws": result["aws"]} if isinstance(result.get("aws"), dict) else {}),
     }
 
 
@@ -187,7 +229,11 @@ def main(argv: list[str] | None = None) -> int:
     binds = _bind_line(result["binds"])
     if not result["plane_ok"]:
         code = next(
-            (c for c in (IDENTITY_ABSENT, IDENTITY_REFUSED) if c == result["identity"]["code"]),
+            (
+                c
+                for c in (IDENTITY_ABSENT, IDENTITY_REFUSED, IDENTITY_AWS_UNAVAILABLE)
+                if c == result["identity"]["code"]
+            ),
             IDENTITY_REFUSED,
         )
         print(f"FAILED: {IDENTITY_MESSAGES[code]}. {binds}", file=sys.stderr)
