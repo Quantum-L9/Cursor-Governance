@@ -26,6 +26,9 @@ from safe_https import exchange  # noqa: E402
 
 DEFAULT_HOST = "https://app.infisical.com"
 
+#: The only host this transport will send a machine identity to.
+CANONICAL_HTTPS_HOSTS = frozenset({"app.infisical.com"})
+
 
 def infisical_req(
     host: str,
@@ -48,7 +51,12 @@ def infisical_req(
     for attempt in range(retries):
         req = urllib.request.Request(f"{host}{path}", data=data, method=method, headers=headers)
         try:
-            with exchange(req, timeout=timeout, label="Infisical URL") as resp:
+            with exchange(
+                req,
+                timeout=timeout,
+                allowed_https_hosts=CANONICAL_HTTPS_HOSTS,
+                label="Infisical URL",
+            ) as resp:
                 raw = resp.read().decode()
                 return resp.status, json.loads(raw) if raw else {}
         except urllib.error.HTTPError as e:

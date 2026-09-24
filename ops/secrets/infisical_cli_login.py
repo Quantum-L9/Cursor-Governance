@@ -14,10 +14,11 @@ Where the identity comes from, in order:
 
 1. The environment: ``L9_INFISICAL_CLIENT_ID`` (not a secret) and
    ``L9_INFISICAL_CLIENT_SECRET`` (the one bootstrap secret). Project,
-   environment and host default to ``infisical-cursor-governance.yaml`` and may
-   be overridden by ``L9_INFISICAL_PROJECT_ID`` / ``L9_INFISICAL_ENV`` /
-   ``L9_INFISICAL_HOST``. This is how a hosted Claude Code session is provisioned
-   (the variable is set once in the environment settings).
+   environment and host come only from ``infisical-cursor-governance.yaml``.
+   ``L9_INFISICAL_PROJECT_ID`` / ``L9_INFISICAL_ENV`` / ``L9_INFISICAL_HOST``
+   cannot redirect that destination: a value that differs from the inventory
+   refuses the identity. This is how a hosted Claude Code session is provisioned
+   (the client id and secret are set once in the environment settings).
 2. ``~/.infisical/l9-machine.json`` (mode 0600) on a Cursor / operator
    machine. Nothing writes it from the environment: a secret already in the
    process environment is not copied to disk.
@@ -97,19 +98,40 @@ def _flag(env: Mapping[str, str], name: str) -> str:
     return (env.get(name) or "").strip()
 
 
+def canonical_route() -> dict[str, str]:
+    """Host, project and environment from the inventory. Not from the process."""
+    inventory = _inventory_project()
+    return {
+        "host": (inventory.get("host") or DEFAULT_HOST).strip() or DEFAULT_HOST,
+        "project_id": (inventory.get("project_id") or "").strip(),
+        "environment": (inventory.get("environment") or DEFAULT_ENV).strip() or DEFAULT_ENV,
+    }
+
+
 def env_identity(env: Mapping[str, str] | None = None) -> dict[str, str] | None:
-    """The machine identity carried by the environment, or None when incomplete."""
+    """The machine identity carried by the environment, or None when incomplete.
+
+    Client id and secret may come from the environment. Routing metadata may not:
+    a set ``L9_INFISICAL_HOST`` / ``PROJECT_ID`` / ``ENV`` that differs from the
+    inventory refuses the identity instead of following the ambient value.
+    """
     source = os.environ if env is None else env
     client_id, client_secret = _flag(source, ENV_CLIENT_ID), _flag(source, ENV_CLIENT_SECRET)
     if not client_id or not client_secret:
         return None
-    inventory = _inventory_project()
+    route = canonical_route()
+    for env_name, key in (
+        (ENV_HOST, "host"),
+        (ENV_PROJECT_ID, "project_id"),
+        (ENV_ENVIRONMENT, "environment"),
+    ):
+        override = _flag(source, env_name)
+        if override and override != route[key]:
+            return None
     identity = {
-        "host": _flag(source, ENV_HOST) or inventory.get("host") or DEFAULT_HOST,
-        "project_id": _flag(source, ENV_PROJECT_ID) or inventory.get("project_id", ""),
-        "environment": _flag(source, ENV_ENVIRONMENT)
-        or inventory.get("environment")
-        or DEFAULT_ENV,
+        "host": route["host"],
+        "project_id": route["project_id"],
+        "environment": route["environment"],
         "client_id": client_id,
         "client_secret": client_secret,
     }
