@@ -121,7 +121,16 @@ def build_root(base: Path, count: int) -> Path:
     return root
 
 
+#: Samples for the cheap, disk-touching steps (materialize, durable receipt write).
+#: With `timed`'s index rule a "p95" over 5 samples is the maximum, so one fsync
+#: stall on a shared runner (observed: 1.013 s against a ~5 ms median) decided
+#: the ceiling. Twenty samples make it the 19th of 20: a real tail percentile
+#: that one stall cannot set, at a cost of milliseconds.
+DURABLE_REPEAT = 20
+
+
 def timed(fn, repeat: int = 5) -> tuple[float, float]:
+    """Median and p95 of ``repeat`` runs. Below 20 samples the p95 is the max."""
     samples = []
     for _ in range(repeat):
         start = time.perf_counter()
@@ -166,7 +175,7 @@ def test_scale_pipeline(roots, count: int, capsys):
         fallback = rp.route_prompt(fallback_prompt, loaded.data)
         assert fallback is not None and fallback["primary"] == f"l9-synth-{target:05d}"
 
-    mat_med, mat_p95 = timed(lambda: mat.materialize_route(decision, loaded))
+    mat_med, mat_p95 = timed(lambda: mat.materialize_route(decision, loaded), DURABLE_REPEAT)
     materialized = mat.materialize_route(decision, loaded)
 
     state = root / "routes"
@@ -187,7 +196,7 @@ def test_scale_pipeline(roots, count: int, capsys):
         )
         rc.write_receipt(receipt, state)
 
-    rcpt_med, rcpt_p95 = timed(write)
+    rcpt_med, rcpt_p95 = timed(write, DURABLE_REPEAT)
     rc.read_receipt(f"scale-{count}", state_root=state, generation_id=loaded.generation_id)
 
     env = dict(os.environ, L9_GOVERNANCE_DIR=str(root), L9_ROUTE_STATE_ROOT=str(state))
@@ -233,6 +242,28 @@ def test_scale_pipeline(roots, count: int, capsys):
     assert route_p95 < CEILING_ROUTE[count]
     assert mat_p95 + rcpt_p95 < 1.0
     assert hook_p95 < 10.0
+
+
+def test_one_stalled_write_does_not_set_the_durable_p95(monkeypatch) -> None:
+    """One ~1 s fsync stall among the durable samples is a tail, not the p95.
+
+    Deterministic: a fake clock gives 19 runs of 5 ms and one of 1.013 s — the
+    CI sample that failed ``mat_p95 + rcpt_p95 < 1.0`` on 2026-09-24.
+    """
+    durations = [0.005] * DURABLE_REPEAT
+    durations[2] = 1.013
+    ticks: list[float] = []
+    now = 0.0
+    for duration in durations:
+        ticks += [now, now + duration]
+        now += duration
+    clock = iter(ticks)
+    monkeypatch.setattr(time, "perf_counter", lambda: next(clock))
+
+    median, p95 = timed(lambda: None, DURABLE_REPEAT)
+    assert median == pytest.approx(0.005)
+    assert p95 == pytest.approx(0.005), "a single stall must not be the p95"
+    assert p95 < 1.0
 
 
 def test_native_count_is_constant_across_scale(roots):

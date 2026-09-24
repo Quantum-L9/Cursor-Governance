@@ -29,7 +29,7 @@ import json
 import os
 import re
 import subprocess
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -41,6 +41,7 @@ from ops.memory.canonical_validation import (
 )
 from ops.memory.control_plane_client import (
     DISTILL_CLI_OPTIONS,
+    RECORDED_AFTER_OPTION,
     MemoryControlPlaneClient,
     OutcomeStatus,
 )
@@ -653,6 +654,86 @@ def test_hook_distill_record_bound_holds_against_the_exact_bound_cli(
     parser_options = _bound_distill_options(hook)
     for argv in (counting, commit):
         assert {a for a in argv[2:] if a.startswith("--")} <= parser_options
+
+
+def _bound_search_options(client: MemoryControlPlaneClient) -> set[str]:
+    """The options the exact bound ``l9-memory search`` parser defines (``--help``)."""
+    assert client.binding.memory_cli is not None
+    completed = subprocess.run(
+        [client.binding.memory_cli, "search", "--help"],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        env=client._child_env(),
+        check=True,
+    )
+    return set(re.findall(r"(?<![\w-])(--[a-z][\w-]*)", completed.stdout))
+
+
+def _search_argvs(client: MemoryControlPlaneClient) -> list[list[str]]:
+    return [argv for argv in client._proof_calls if argv[1] == "search"]  # type: ignore[attr-defined]
+
+
+def test_recency_search_holds_against_the_exact_bound_cli(
+    runtime, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The 24h agent-lane search, against the real release's parser.
+
+    The unit suite scripts a fake CLI that accepted ``--recorded-after``; the
+    pinned 2.4.0 parser does not define it, and every hosted SessionStart then
+    lost the agent lane to INVALID_RECEIPT. This proof runs the recency search
+    through the exact bound CLI: the search that answers carries only options
+    that parser defines, the record written a moment ago is inside the window,
+    and a floor in the future excludes it.
+    """
+    # The client reads this module global at call time, so the patched set is
+    # the one it learns the refusal into.
+    refused: set[str] = set()
+    monkeypatch.setattr("ops.memory.control_plane_client._RECORDED_AFTER_REFUSED", refused)
+    client, _env = runtime
+    context = resolve_namespace_context(ROOT)
+    namespace = context.write_namespace_hint
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%f")
+    content = f"recency proof {stamp} binds the agent lane to the bound parser"
+    written = client.write(
+        content,
+        workspace=str(ROOT),
+        namespace=namespace,
+        memory_class="observation",
+        tags=("agent:cursor", "recency-proof"),
+    )
+    assert written.ok, written.error
+
+    window = client.search(
+        f"recency proof {stamp}",
+        workspace=str(ROOT),
+        write_namespace_hint=namespace,
+        read_namespace_hints=(namespace,),
+        recorded_after=datetime.now(UTC) - timedelta(hours=24),
+    )
+    assert window.status is OutcomeStatus.OK, window.error
+    assert any(hit.record.content == content for hit in window.receipt.hits)
+
+    parser_options = _bound_search_options(client)
+    answered = _search_argvs(client)[-1]
+    assert {a for a in answered[2:] if a.startswith("--")} <= parser_options, answered
+    if RECORDED_AFTER_OPTION in parser_options:
+        # A release that grew the selector is asked with it, and nothing is refused.
+        assert RECORDED_AFTER_OPTION in answered
+        assert not refused
+    else:
+        # This release refuses it: learned once, then asked without it.
+        assert RECORDED_AFTER_OPTION not in answered
+        assert client.binding.memory_cli in refused
+
+    future = client.search(
+        f"recency proof {stamp}",
+        workspace=str(ROOT),
+        write_namespace_hint=namespace,
+        read_namespace_hints=(namespace,),
+        recorded_after=datetime.now(UTC) + timedelta(hours=1),
+    )
+    assert future.status is OutcomeStatus.NO_HITS, future.error
 
 
 def repository_identity_for(context) -> str:
