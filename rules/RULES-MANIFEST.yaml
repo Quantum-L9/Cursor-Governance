@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-09-21T23:02:51Z'
+generated_utc: '2026-09-24T03:17:20Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:4735447689883f3d4721f739ec8e6b054e370a92928be0d6ecb450850acc26fe
+source_tree_digest: sha256:e2868300be7ba8cd8ebce3596ef37e7d8a1c6fe012f58dcd799ccfcb2b243894
 summary:
   total_mdc_files: 69
   always_apply_true: 35
@@ -91,8 +91,8 @@ rules:
   globs: null
   first_heading: Graphiti Memory (SSOT)
   has_yaml_frontmatter: true
-  line_count: 118
-  content_digest: sha256:d696f599ed7ece7549c0aec85f339c07c0783fdf73b780bbe06f68c0c69cdc8c
+  line_count: 120
+  content_digest: sha256:eae4bd32794e0a3a02e13dddae3a2ec6d6f51805a069a52b5f5cab70ccc512cc
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -1343,8 +1343,8 @@ rules:
   globs: null
   first_heading: Cursor Memory Kernel Enforcement
   has_yaml_frontmatter: true
-  line_count: 211
-  content_digest: sha256:975c9e6a79dcdc45098468022d6624c6c3eaf3d92255821f34d0776976c7b4b9
+  line_count: 220
+  content_digest: sha256:196440a78f9ecee8b7fc7f7f14725b99199ea85811c454e64753883ab6b9fc09
   authority: canonical_global
   context_cost: moderate
   deprecated: false

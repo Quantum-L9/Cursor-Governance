@@ -36,6 +36,7 @@
     "canonical_mcp_server": "l9-graphite-memory",
     "cold_write_operation": "memory.write_agent",
     "cold_write_prerequisite": "none",
+    "payload_contract": "ops/memory/schemas/l9.agent_memory_write.v1.schema.json",
     "governed_write_prerequisite": "memory.phase_lock",
     "governed_write_operation": "memory.write_governed",
     "repository_authority": false,
