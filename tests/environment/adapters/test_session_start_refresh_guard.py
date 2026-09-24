@@ -60,84 +60,92 @@ def test_hook_still_fails_open() -> None:
     assert "set -e" not in text.splitlines()[0:5]
 
 
-def test_bootstrap_repair_marker_records_the_attempt_not_the_success() -> None:
-    """The repair must CONVERGE, and a revision bump must be what re-arms it.
+def test_every_bootstrap_generates_its_receipt_unconditionally() -> None:
+    """Generation is not a repair: it is not gated on state or on a marker.
 
-    This assertion was inverted, and the inversion is the bug. The marker was
-    written only on installer success, so a repair that could not succeed inside
-    the hook budget never wrote one — and re-armed on every single session,
-    consuming the whole budget each time and killing the hook before it emitted
-    any context at all. "Not permanently skipped" had quietly become "permanently
-    re-attempted and permanently failing", which is strictly worse: it costs the
-    session its entire governance context to achieve nothing.
-
-    An attempt that fails is still an attempt. The marker therefore records the
-    attempt BEFORE the installer runs, and the outcome is appended to it, so the
-    marker is diagnosable rather than merely present. Re-arming stays keyed on
-    the governance revision (the marker path carries it), which is what the
-    original intent — repair must not be skipped forever — actually requires.
+    The installer used to run only for a non-ready verdict and at most once per
+    governance revision (a `.attempted` marker). A session whose on-disk receipt
+    read `ready` therefore generated nothing and reported an earlier session's
+    receipt as its own. Every ceremony now runs the installer and stamps its id.
     """
     text = body()
-    marker_write = text.index('>"$marker"')
-    installer = text.index('bash "$installer"', marker_write)
-    assert marker_write < installer, (
-        "record the attempt BEFORE running the installer, or an unfinishable "
-        "repair re-arms every session forever"
-    )
-    # The outcome is appended, so the marker distinguishes ok from failed.
-    assert "printf 'ok\\n' >>\"$marker\"" in text
-    assert "printf 'failed rc=%s\\n'" in text
-    # Re-arming stays revision-keyed: the marker path must carry the revision.
-    assert 'marker="$HOME/.l9/claude/bootstrap-repair-${revision}.attempted"' in text
+    assert ".attempted" not in text, "no once-per-revision gate on generation"
+    assert "repair_verdict" not in text, "generation is not armed by a state verdict"
+    assert 'env L9_BOOTSTRAP_ID="$_L9_CEREMONY_ID"' in text
+    assert 'bash "$BOOTSTRAP_INSTALLER"' in text
 
 
-def test_bootstrap_repair_is_bounded_by_the_remaining_hook_budget() -> None:
+def test_bootstrap_generation_is_bounded_by_the_remaining_hook_budget() -> None:
     """A 90 s ceiling inside a 30 s hook is not long-running, it is impossible.
 
-    The repair used to be launched with a fixed ``L9_BOOTSTRAP_REPAIR_BUDGET``
-    of 90 s from a hook registered with ``timeout: 30``. It could only ever be
-    killed. The ceiling must be clamped to what is actually left, and the repair
-    must be declined outright when that is too little to finish.
+    The ceiling is clamped to what is left, minus a floor kept for the reporting
+    that follows, and generation is declined outright when that is too little.
     """
     text = body()
-    assert '_repair_left="$(_l9_budget_left)"' in text, "size the repair from what is LEFT"
-    assert '[ "$_repair_cap" -gt "$_repair_left" ] && _repair_cap="$_repair_left"' in text, (
-        "the configured ceiling must never exceed the remaining budget"
-    )
-    assert 'run_with_timeout "$_repair_cap"' in text, "run under the clamped ceiling"
-    assert "bootstrap repair: DEFERRED" in text, (
-        "a repair that cannot finish must say so rather than start and be killed"
-    )
+    assert "_gen_left=$(( $(_l9_budget_left) - ${L9_BOOTSTRAP_REPORT_FLOOR:-6} ))" in text
+    assert '[ "$_gen_cap" -gt "$_gen_left" ] && _gen_cap="$_gen_left"' in text
+    assert 'run_with_timeout "$_gen_cap"' in text, "run under the clamped ceiling"
+    assert "bootstrap receipt: NOT GENERATED" in text
     # Never a bare `timeout` call — run_with_timeout is the portable wrapper.
-    assert not re.search(r'(?<!run_with_)timeout "\$_repair_cap"', text)
+    assert not re.search(r'(?<!run_with_)timeout "\$_gen_cap"', text)
     assert 'run_with_timeout() { shift; "$@"; }' not in text
-    assert text.index("bootstrap repair: SKIPPED — run_with_timeout.sh missing") < text.index(
-        'bash "$installer"'
+    assert text.index("NOT GENERATED — run_with_timeout.sh missing") < text.index(
+        'bash "$BOOTSTRAP_INSTALLER"'
     )
 
 
-def test_repair_never_precedes_the_reporting_it_can_starve() -> None:
-    """Provisioning runs LAST, after every line the hook must emit.
+def test_the_reader_reads_the_receipt_this_ceremony_generated() -> None:
+    """Generate, THEN read — and read bound to the ceremony id.
 
-    The repair used to run first inside ``emit_bootstrap_status``, ahead of the
-    environment block and the ``governance refresh`` projection. Clamping it to
-    the remaining budget bounds how long it runs; it does not stop it spending
-    that budget before the required lines are reached. On a runner whose
-    receipt is absent — every fresh CI runner — it took its whole clamp and CI
-    emitted ``bootstrap repair: FAILED rc=124`` followed by PARTIAL, with both
-    required items missing (`Test Suite` on 225174b9).
-
-    ``SESSION_START_SPEC`` lists the must-emit items and states that dependency
-    provisioning is NOT one of them, so ordering is the fix rather than a
-    bigger budget: reporting first can never be starved by a repair that
-    follows it, however long the repair takes.
+    Printing the on-disk receipt before the installer ran reported an expired
+    verdict the installer was about to replace, and nothing re-read the receipt
+    the installer wrote. The environment block must follow generation, and the
+    reader must be bound to the id the installer stamped.
     """
     text = body()
-    repair = text.index("running the installer once")
-    refresh = text.index('"$refresh_reader" --read')
+    generate = text.index('bash "$BOOTSTRAP_INSTALLER"')
     environment = text.index("--- L9 Claude environment ---")
-    assert refresh < repair, "the governance refresh projection must precede the repair"
-    assert environment < repair, "the environment status block must precede the repair"
+    refresh = text.index('"$refresh_reader" --read')
+    assert generate < environment < refresh
+    assert (
+        '"$reader" --read --reprobe --bootstrap-id "${_L9_CEREMONY_ID:-not-generated-$$}"' in text
+    )
+
+
+def test_the_installer_is_this_ceremonys_projection() -> None:
+    """The standalone projection engine runs only when there is no installer.
+
+    install.sh runs the same projection engine. Running both spent a cold
+    projection (~8 s measured) twice, and left a cold ceremony too little budget
+    to generate its receipt at all.
+    """
+    text = body()
+    installer = text.index('if [ -f "$BOOTSTRAP_INSTALLER" ]; then')
+    standalone = text.index('elif [ "${L9_SKIP_SESSION_PROJECTION:-}" != "1" ]')
+    engine_run = text.index('"$PROJECTION_ENGINE" --root "$GOV"')
+    assert installer < standalone < engine_run
+
+
+def test_the_hook_carries_no_second_receipt_parser() -> None:
+    """Receipt path, expiry, workspace and ceremony are the reader's rules.
+
+    The hook used to json.load bootstrap-state.json inline and compare the
+    single `workspace` field — a rule that disagreed with the reader's
+    covered_roots and with the runtime report about the same receipt.
+    """
+    text = body()
+    assert '"$HOME/.l9/claude/bootstrap-state.json"' not in text
+    assert '--workspace "$WORKSPACE"' in text[text.index('"$reader" --read --reprobe') :][:200]
+    # The readiness emitter reads the bootstrap receipt too; it gets the id.
+    assert 'env L9_BOOTSTRAP_ID="${_L9_CEREMONY_ID:-not-generated-$$}"' in text
+
+
+def test_the_readiness_emitter_reads_the_receipt_through_the_reader() -> None:
+    emitter = (REPO_ROOT / "ops" / "scripts" / "emit_claude_readiness.py").read_text(
+        encoding="utf-8"
+    )
+    assert "bootstrap_receipt.read(" in emitter
+    assert '"bootstrap-state.json")' not in emitter
 
 
 def _synthetic_gov(home: Path, *, tracked_dirt: bool, untracked_dirt: bool) -> Path:
