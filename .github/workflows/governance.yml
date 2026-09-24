@@ -32,6 +32,13 @@ on:
   issues:
     types: [opened, edited, reopened]
 
+# Cancel a superseded run of the same PR (saves CI minutes on rapid pushes).
+# Non-PR events get a unique group, so push/schedule/issue runs never cancel
+# or queue behind one another.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   pr:
     if: github.event_name == 'pull_request'
