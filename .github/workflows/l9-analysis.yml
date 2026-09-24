@@ -190,7 +190,8 @@ jobs:
           agent-payload: ${{ steps.route.outputs.agent-payload }}
           raw-directory: ${{ steps.route.outputs.raw-directory }}
           routing-record: ${{ steps.route.outputs.routing-record }}
-          output: artifacts/metadata/${{ env.L9_MATRIX_ID }}/artifact-manifest.json
+          # Core fixes the index location; retrieve-artifacts reads it back there.
+          output: artifacts/metadata/${{ env.L9_MATRIX_ID }}/artifact-index.json
 
       - name: Upload analysis artifact set
         if: steps.gov.outputs.enabled == 'true'
