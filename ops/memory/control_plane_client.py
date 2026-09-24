@@ -17,7 +17,7 @@ import os
 import subprocess
 import time
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
@@ -63,6 +63,16 @@ EXIT_CANDIDATE_REJECTED = 7
 #: preflight instead (see ``MemoryControlPlaneClient.distill``). Anything the
 #: client emits outside this set is a cross-repository contract break.
 DISTILL_CLI_OPTIONS = frozenset({"--group-id", "--repository", "--dry-run"})
+
+#: The recency selector (ADR-0035). The bound 2.4.0 parser does not define it —
+#: it has only ``--recorded-before`` — and answers ``unrecognized arguments``
+#: with exit 2. Emitting it unconditionally turned every SessionStart and
+#: sessionEnd agent-lane search into ``INVALID_RECEIPT`` and dropped the 24h
+#: agent-lane records on the floor. ``search`` now learns once per process and
+#: memory CLI that the flag is refused, re-asks without it, and applies the
+#: same floor to the hits itself.
+RECORDED_AFTER_OPTION = "--recorded-after"
+_RECORDED_AFTER_REFUSED: set[str] = set()
 
 # Provider transport variables a stale machine environment may still carry.
 # Assembled from parts on purpose: the boundary never spells the provider
@@ -592,12 +602,21 @@ class MemoryControlPlaneClient:
             argv += ["--memory-class", memory_class]
         for tag in tags:
             argv += ["--tag", tag]
-        if recorded_after is not None:
-            argv += [
-                "--recorded-after",
-                recorded_after.astimezone(UTC).replace(microsecond=0).isoformat(),
+        cli = str(self.binding.memory_cli)
+        # The floor memory is asked to apply; None when the bound parser refuses
+        # the selector and the floor is applied to the hits below instead.
+        sent_after = recorded_after if cli not in _RECORDED_AFTER_REFUSED else None
+        selector: list[str] = []
+        if sent_after is not None:
+            selector = [
+                RECORDED_AFTER_OPTION,
+                sent_after.astimezone(UTC).replace(microsecond=0).isoformat(),
             ]
-        raw = self._invoke(argv, cwd=workspace)
+        raw = self._invoke(argv + selector, cwd=workspace)
+        if selector and _refused_option(raw, RECORDED_AFTER_OPTION):
+            _RECORDED_AFTER_REFUSED.add(cli)
+            sent_after = None
+            raw = self._invoke(argv, cwd=workspace)
         namespaces = tuple(read_namespace_hints)
         if raw.payload is None:
             return self._outcome(
@@ -632,7 +651,7 @@ class MemoryControlPlaneClient:
                 tags=tuple(tags),
                 limit=limit,
                 memory_classes=tuple(memory_classes),
-                recorded_after=recorded_after,
+                recorded_after=sent_after,
             ),
             receipt,
             requested_namespaces=tuple(read_namespace_hints),
@@ -665,6 +684,11 @@ class MemoryControlPlaneClient:
                     + ", ".join(identity.unbound)
                     + "; it cannot prove these hits answer this request"
                 ),
+            )
+        if recorded_after is not None and sent_after is None:
+            receipt = replace(
+                receipt,
+                hits=tuple(h for h in receipt.hits if _recorded_since(h.record, recorded_after)),
             )
         if receipt.status == "failed":
             status = OutcomeStatus.CANONICAL_UNAVAILABLE
@@ -1271,6 +1295,32 @@ class MemoryControlPlaneClient:
 
 def _ms(started: float) -> int:
     return int((time.monotonic() - started) * 1000)
+
+
+def _refused_option(raw: _Raw, option: str) -> bool:
+    """True when the CLI's argument parser rejected ``option`` (argparse exit 2)."""
+
+    return raw.exit_code == 2 and f"unrecognized arguments: {option}" in (raw.error_message or "")
+
+
+def _recorded_since(record: Any, floor: datetime) -> bool:
+    """The recency floor, applied to a hit when memory could not apply it.
+
+    ``recorded_at`` first, then ``created_at``. A record carrying neither cannot
+    be shown to fall inside the window, so it is left out — the window is a
+    bound, and an unprovable record is not evidence it holds.
+    """
+
+    stamp = getattr(record, "recorded_at", None) or getattr(record, "created_at", None)
+    if not stamp:
+        return False
+    try:
+        moment = datetime.fromisoformat(str(stamp).replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=UTC)
+    return moment >= floor.astimezone(UTC)
 
 
 def _parse_stderr(stderr: str) -> tuple[str | None, str | None]:

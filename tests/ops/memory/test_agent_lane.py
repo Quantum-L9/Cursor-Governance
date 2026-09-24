@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -116,6 +117,79 @@ def test_24h_prefetch_fail_open_does_not_degrade(
     assert result.ok
     assert result.agent_lane_record_ids == ()
     assert any("24h agent-lane search" in warning for warning in result.warnings)
+
+
+def _argparse_refusal(argv: list[str]) -> tuple[int, None, str]:
+    """What the bound 2.4.0 parser prints for an option it does not define."""
+
+    value = argv[argv.index("--recorded-after") + 1]
+    return (
+        2,
+        None,
+        "usage: l9-memory search [-h] [--group-id GROUP_ID] [--namespace NAMESPACE]\n"
+        "                        [--recorded-before RECORDED_BEFORE] query\n"
+        f"l9-memory: error: unrecognized arguments: --recorded-after {value}\n",
+    )
+
+
+def test_a_parser_without_recorded_after_falls_back_to_a_client_floor(
+    monkeypatch, fake_cli: FakeMemoryCli, bound
+) -> None:
+    """The bound release refuses the selector; the 24h lane must still arrive.
+
+    Observed on every hosted SessionStart: `l9-memory` 2.4.0 answers
+    `--recorded-after` with argparse's exit 2, the search came back
+    INVALID_RECEIPT, and the 24h agent-lane records never reached the packet.
+    The client now re-asks without the selector and applies the floor itself.
+    """
+    from ops.memory import control_plane_client as cpc
+
+    monkeypatch.setattr(cpc, "_RECORDED_AFTER_REFUSED", set())
+    now = datetime.now(UTC)
+    recent = agent_lane_record(
+        record_id="aaaaaaaa-0000-0000-0000-000000000001",
+        content="recent agent fact",
+        created_at=(now - timedelta(hours=1)).isoformat(),
+    )
+    stale = agent_lane_record(
+        record_id="aaaaaaaa-0000-0000-0000-000000000002",
+        content="stale agent fact",
+        created_at=(now - timedelta(hours=48)).isoformat(),
+    )
+
+    def search(argv, _stdin):
+        if "--recorded-after" in argv:
+            return _argparse_refusal(argv)
+        if "session_continuation" in argv:
+            return 0, search_payload(), ""
+        return 0, search_payload(recent, stale), ""
+
+    fake_cli.reply("health", 0, health_payload()).reply("hydrate", 0, hydration_payload()).on(
+        "search", search
+    )
+    result = _hydrate(monkeypatch, fake_cli, bound)
+
+    assert result.status == "OK"
+    assert result.agent_lane_record_ids == (recent["record_id"],), "the floor drops the 48h record"
+    assert not any("24h agent-lane search" in w for w in result.warnings), result.warnings
+    assert cpc._RECORDED_AFTER_REFUSED, "the refusal is learned"
+
+    # Learned once per process and CLI: the next hydrate never re-sends it.
+    refused_before = sum("--recorded-after" in argv for argv, _c, _s in fake_cli.calls)
+    _hydrate(monkeypatch, fake_cli, bound)
+    refused_after = sum("--recorded-after" in argv for argv, _c, _s in fake_cli.calls)
+    assert refused_before == refused_after == 1
+
+
+def test_the_client_floor_excludes_a_record_it_cannot_date() -> None:
+    from ops.memory.control_plane_client import _recorded_since
+
+    floor = datetime.now(UTC) - timedelta(hours=24)
+    assert _recorded_since(SimpleNamespace(recorded_at=None, created_at=None), floor) is False
+    undated = SimpleNamespace(recorded_at="not a date", created_at=None)
+    assert _recorded_since(undated, floor) is False
+    inside = (datetime.now(UTC) - timedelta(hours=1)).isoformat().replace("+00:00", "Z")
+    assert _recorded_since(SimpleNamespace(recorded_at=inside, created_at=None), floor) is True
 
 
 def test_agent_authored_meta_survives_the_hook_class_filter() -> None:

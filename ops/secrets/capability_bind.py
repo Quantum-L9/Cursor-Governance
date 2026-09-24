@@ -69,6 +69,12 @@ _SOURCES: dict[str, str] = {}
 _PROFILE: dict[str, str] | None = None
 _PROFILE_LOADED = False
 _UA_TOKEN: str | None = None
+#: A login this process already lost. Every name binds through the same identity,
+#: so once universal-auth has failed (with its own retry policy) the next name
+#: cannot succeed either — and on an egress-denied host each fresh attempt cost
+#: ~1.1 s, four of them per SessionStart, inside a 30 s hook budget. Cleared only
+#: by ``reset_cache``; a new process starts clean.
+_UA_FAILED = False
 
 InfisicalFn = Callable[[str], str | None]
 
@@ -89,12 +95,25 @@ def allowed_names() -> frozenset[str]:
 
 def reset_cache() -> None:
     """Test hook. Never call from a fetcher to 'retry' a miss with a paste."""
-    global _PROFILE, _PROFILE_LOADED, _UA_TOKEN
+    global _PROFILE, _PROFILE_LOADED, _UA_TOKEN, _UA_FAILED
     _VALUES.clear()
     _SOURCES.clear()
     _PROFILE = None
     _PROFILE_LOADED = False
     _UA_TOKEN = None
+    _UA_FAILED = False
+
+
+def note_login_failed() -> None:
+    """Record that this process's machine-identity login already failed.
+
+    For a caller that logged in as the same identity itself (SessionStart's
+    ``ensure_machine_profile``) so the binds that follow do not repeat a login
+    it has just watched fail. Never a way to skip a bind: sources still read
+    ``unbound`` and the plane still reports FAILED.
+    """
+    global _UA_FAILED
+    _UA_FAILED = True
 
 
 def _accepted_secret(name: str, value: str) -> bool:
@@ -121,15 +140,18 @@ def _machine_profile() -> dict[str, str] | None:
 
 
 def _ua_token(profile: dict[str, str]) -> str | None:
-    global _UA_TOKEN
+    global _UA_TOKEN, _UA_FAILED
     if _UA_TOKEN:
         return _UA_TOKEN
+    if _UA_FAILED:
+        return None
     from infisical_http import universal_auth_login
 
     token = universal_auth_login(
         profile["host"], profile["client_id"], profile["client_secret"], retries=HTTP_RETRIES
     )
     if not token:
+        _UA_FAILED = True
         return None
     _UA_TOKEN = token
     return _UA_TOKEN

@@ -624,8 +624,16 @@ if GOV=$(resolve_governance_dir); then
       say "bootstrap receipt: generated this bootstrap (id $_L9_CEREMONY_ID, ${_gen_rev:0:8})"
     else
       _gen_rc=$?
-      _gen_how="$(head -n 3 "$_gen_log" 2>/dev/null | tr '\n' ' ')"
-      say "bootstrap receipt: installer FAILED rc=${_gen_rc} — ${_gen_how:-no log bytes}"
+      if [ "$_gen_rc" = 124 ]; then
+        # `timeout` expired and TERMed the installer: the run was cut short, not
+        # failed. install.sh records an `interrupted` receipt naming the stage
+        # reached; the log tail is where it stopped, not its banner.
+        _gen_how="$(tail -n 2 "$_gen_log" 2>/dev/null | tr '\n' ' ')"
+        say "bootstrap receipt: installer TIMED OUT after ${_gen_cap}s (hook budget) — last: ${_gen_how:-no log bytes}"
+      else
+        _gen_how="$(head -n 3 "$_gen_log" 2>/dev/null | tr '\n' ' ')"
+        say "bootstrap receipt: installer FAILED rc=${_gen_rc} — ${_gen_how:-no log bytes}"
+      fi
     fi
     _gen_proj="$(grep -m1 '^projection=' "$_gen_log" 2>/dev/null || true)"
     [ -n "$_gen_proj" ] && say "claude projection: ${_gen_proj#projection=} (via bootstrap installer; log $_gen_log)"

@@ -14,9 +14,11 @@ from __future__ import annotations
 
 import json
 import os
+import signal
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -217,6 +219,107 @@ class InstallReceiptTests(unittest.TestCase):
                 parsed["reasons"].get(key, ""),
                 f"{key}: a completed run must not report anything as unevaluated",
             )
+
+    # -- Interruption: a budget kill is not a failed environment ------------
+
+    def _interrupt_inside_projection(self) -> subprocess.CompletedProcess[str]:
+        """Run the real installer and TERM its process group mid-projection.
+
+        Exactly the SessionStart shape: `timeout` expires and signals the group,
+        after the shared bootstrap finished and while a later stage is running.
+        The observed receipt from that kill said `failed` and listed all eleven
+        components "not evaluated", although several had been.
+        """
+        (self.gov / "CANONICAL_LAW.md").write_text("synthetic", encoding="utf-8")
+        subprocess.run(["git", "init", "-q", str(self.workspace)], check=True)
+        scripts = self.gov / "ops" / "scripts"
+        scripts.mkdir(parents=True)
+        (scripts / "bootstrap_agent_environment.sh").write_text("exit 0\n", encoding="utf-8")
+        marker = self.root / "projection-started"
+        (scripts / "claude_projection.py").write_text(
+            "import pathlib, time\n"
+            f"pathlib.Path({str(marker)!r}).write_text('x')\n"
+            "time.sleep(60)\n",
+            encoding="utf-8",
+        )
+        venv_bin = self.gov / ".venv" / "bin"
+        venv_bin.mkdir(parents=True)
+        (venv_bin / "python3").symlink_to(sys.executable)
+
+        env = dict(os.environ)
+        env.update({"HOME": str(self.home), "L9_CLAUDE_BOOTSTRAP_RECEIPT": str(self.receipt)})
+        env.pop("L9_GOVERNANCE_DIR", None)
+        proc = subprocess.Popen(
+            [
+                "bash",
+                str(INSTALL),
+                "--governance",
+                str(self.gov),
+                "--workspace",
+                str(self.workspace),
+                "--quiet",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=env,
+            start_new_session=True,
+        )
+        deadline = time.monotonic() + 30
+        while not marker.exists():
+            if proc.poll() is not None or time.monotonic() > deadline:
+                out, err = proc.communicate()
+                self.fail(f"installer never reached the projection stage:\n{out}\n{err}")
+            time.sleep(0.05)
+        os.killpg(proc.pid, signal.SIGTERM)
+        out, err = proc.communicate(timeout=30)
+        return subprocess.CompletedProcess(proc.args, proc.returncode, out, err)
+
+    def test_a_signal_records_an_interrupted_receipt_not_a_failed_one(self) -> None:
+        result = self._interrupt_inside_projection()
+        self.assertEqual(result.returncode, 143, result.stderr)
+        parsed = self._receipt()
+        self.assertEqual(parsed["state"], "interrupted")
+        self.assertEqual(parsed["interrupted_by"], "TERM")
+        self.assertEqual(parsed["stage"], "claude-projection")
+        self.assertIsInstance(parsed["elapsed_seconds"], int)
+        self.assertIn("INTERRUPTED", result.stderr)
+
+    def test_an_interrupted_run_keeps_the_verdicts_its_finished_stages_reached(self) -> None:
+        self._interrupt_inside_projection()
+        parsed = self._receipt()
+        # The shared bootstrap finished and exited 0: evaluated, and READY.
+        self.assertEqual(parsed["shared_bootstrap"], "READY")
+        self.assertEqual(parsed["reasons"]["shared_bootstrap"], "")
+        # The projection it was killed inside never classified its domains.
+        expected = "interrupted by SIGTERM at stage claude-projection"
+        for key in ("settings", "skills", "commands", "rules", "plugins", "mcp", "memory"):
+            self.assertEqual(parsed[key], "UNKNOWN", key)
+            self.assertIn(expected, parsed["reasons"][key])
+
+    def test_reader_classifies_an_interrupted_receipt_as_degraded_and_says_why(self) -> None:
+        self._interrupt_inside_projection()
+        result = read(self.receipt, governance_revision="unknown")
+        self.assertEqual(result["state"], "degraded")
+        self.assertIn("interrupted by SIGTERM at stage 'claude-projection'", result["reason"])
+        self.assertIn("not evaluated:", result["reason"])
+        self.assertNotIn("shared_bootstrap", result["reason"].split("not evaluated:")[1])
+
+    def test_reader_keeps_blocked_ahead_of_an_interruption(self) -> None:
+        receipt = {
+            "schema": "l9.claude-bootstrap.v1",
+            "state": "interrupted",
+            "overall": "interrupted",
+            "stage": "memory-readiness",
+            "interrupted_by": "TERM",
+            "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "governance_revision": "unknown",
+            **{key: "UNKNOWN" for key in COMPONENTS},
+            "shared_bootstrap": "BLOCKED",
+        }
+        self.receipt.write_text(json.dumps(receipt), encoding="utf-8")
+        result = read(self.receipt, governance_revision="unknown")
+        self.assertEqual(result["state"], "blocked")
 
     # -- T-10: absence is never_ran, never ready ----------------------------
 
