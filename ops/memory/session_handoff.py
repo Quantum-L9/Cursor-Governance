@@ -56,11 +56,20 @@ STRUCTURED = {
 #: happened and did not.
 KEYS = frozenset({"schema", "pr_number", "objective", "status", *TEXT_LISTS, *STRUCTURED})
 
-#: Keys that belong to the governance handoff, named in the refusal.
+#: Keys that belong to the governance handoff, named in the refusal: every
+#: governance section (``governance_handoff.SECTIONS``, which imports this
+#: module, so the list is spelled out and a test holds the two equal) plus the
+#: ``governance_friction`` name agents reach for.
 MISPLACED = {
-    "governance_friction": ".l9/memory/governance-handoff.json",
-    "environment_friction": ".l9/memory/governance-handoff.json",
-    "degraded_bootstrap": ".l9/memory/governance-handoff.json",
+    key: ".l9/memory/governance-handoff.json"
+    for key in (
+        "environment_friction",
+        "blockers",
+        "degraded_bootstrap",
+        "workarounds",
+        "governance_actions",
+        "governance_friction",
+    )
 }
 
 
@@ -83,6 +92,20 @@ def clean_list(payload: dict[str, Any], key: str) -> list[Any]:
         raise HandoffError(f"{key} must be a list")
     if len(value) > MAX_ITEMS:
         raise HandoffError(f"{key} has {len(value)} items; at most {MAX_ITEMS}")
+    return value
+
+
+def clean_pr_number(value: Any) -> int:
+    """The publication number: a positive integer.
+
+    A JSON number with a zero fractional part (``7.0``) is an integer to JSON
+    Schema (draft 2020-12) and is accepted as one here, so the runtime and the
+    schema give the same verdict. A boolean is never a number.
+    """
+    if isinstance(value, float) and not isinstance(value, bool) and value.is_integer():
+        value = int(value)
+    if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+        raise HandoffError("pr_number must be the published PR's number (a positive integer)")
     return value
 
 
@@ -112,8 +135,16 @@ def clean_structured(
             raise HandoffError(f"{where} must be an object with {required!r}")
         item = {required: clean_text(entry.get(required), f"{where}.{required}")}
         for name in optional:
-            if entry.get(name):
-                item[name] = clean_text(entry[name], f"{where}.{name}")
+            # Absent, null, empty or whitespace-only is omitted; anything else
+            # must be a string (a truthy number or list used to be refused
+            # while a falsy one was silently dropped).
+            value = entry.get(name)
+            if value is None:
+                continue
+            if not isinstance(value, str):
+                raise HandoffError(f"{where}.{name} must be a string when present")
+            if value.strip():
+                item[name] = clean_text(value, f"{where}.{name}")
         out.append(item)
     return out
 
@@ -129,16 +160,12 @@ def normalize(payload: Any, *, pr_number: int | None = None) -> dict[str, Any]:
     if payload.get("schema") != HANDOFF_SCHEMA:
         raise HandoffError(f"schema must be {HANDOFF_SCHEMA!r}")
     check_keys(payload, KEYS, misplaced=MISPLACED)
-    number = payload.get("pr_number")
-    if not isinstance(number, int) or isinstance(number, bool) or number < 1:
-        raise HandoffError("pr_number must be the published PR's number (a positive integer)")
-    if pr_number is not None and payload.get("pr_number") != pr_number:
-        raise HandoffError(
-            f"pr_number {payload.get('pr_number')!r} is not this publication (#{pr_number})"
-        )
+    number = clean_pr_number(payload.get("pr_number"))
+    if pr_number is not None and number != pr_number:
+        raise HandoffError(f"pr_number {number!r} is not this publication (#{pr_number})")
     brief: dict[str, Any] = {
         "schema": HANDOFF_SCHEMA,
-        "pr_number": payload.get("pr_number"),
+        "pr_number": number,
         "objective": clean_text(payload.get("objective"), "objective"),
         "status": clean_text(payload.get("status"), "status"),
     }
@@ -281,6 +308,7 @@ __all__ = [
     "MISPLACED",
     "HandoffError",
     "check_keys",
+    "clean_pr_number",
     "clean_list",
     "clean_structured",
     "clean_text",

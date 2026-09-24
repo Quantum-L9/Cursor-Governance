@@ -16,7 +16,7 @@
     "pr_number": {
       "type": "integer",
       "minimum": 1,
-      "description": "The published PR's number. Must equal the number in .l9/pr/pr-summary.json written by make pr, or the brief is not this publication's and is refused."
+      "description": "The published PR's number. Must equal the number in .l9/pr/pr-summary.json written by make pr, or the brief is not this publication's and is refused. A number with a zero fractional part (7.0) is the integer 7."
     },
     "environment_friction": {
       "type": [
@@ -46,12 +46,18 @@
                 "description": "Required. Whitespace is collapsed; longer than 1200 characters is truncated with an ellipsis."
               },
               "detail": {
-                "type": "string",
-                "description": "Optional. Empty or absent is omitted."
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Optional. Absent, null, empty or whitespace-only is omitted."
               },
               "impact": {
-                "type": "string",
-                "description": "Optional. Empty or absent is omitted."
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Optional. Absent, null, empty or whitespace-only is omitted."
               }
             },
             "additionalProperties": true
@@ -88,12 +94,18 @@
                 "description": "Required. Whitespace is collapsed; longer than 1200 characters is truncated with an ellipsis."
               },
               "blocker": {
-                "type": "string",
-                "description": "Optional. Empty or absent is omitted."
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Optional. Absent, null, empty or whitespace-only is omitted."
               },
               "unblock": {
-                "type": "string",
-                "description": "Optional. Empty or absent is omitted."
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Optional. Absent, null, empty or whitespace-only is omitted."
               }
             },
             "additionalProperties": true
@@ -130,8 +142,11 @@
                 "description": "Required. Whitespace is collapsed; longer than 1200 characters is truncated with an ellipsis."
               },
               "detail": {
-                "type": "string",
-                "description": "Optional. Empty or absent is omitted."
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Optional. Absent, null, empty or whitespace-only is omitted."
               }
             },
             "additionalProperties": true
@@ -168,8 +183,11 @@
                 "description": "Required. Whitespace is collapsed; longer than 1200 characters is truncated with an ellipsis."
               },
               "workaround": {
-                "type": "string",
-                "description": "Optional. Empty or absent is omitted."
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Optional. Absent, null, empty or whitespace-only is omitted."
               }
             },
             "additionalProperties": true
@@ -206,12 +224,18 @@
                 "description": "Required. Whitespace is collapsed; longer than 1200 characters is truncated with an ellipsis."
               },
               "where": {
-                "type": "string",
-                "description": "Optional. Empty or absent is omitted."
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Optional. Absent, null, empty or whitespace-only is omitted."
               },
               "why": {
-                "type": "string",
-                "description": "Optional. Empty or absent is omitted."
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Optional. Absent, null, empty or whitespace-only is omitted."
               }
             },
             "additionalProperties": true
