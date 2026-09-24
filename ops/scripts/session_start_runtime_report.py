@@ -30,7 +30,10 @@ for _path in (_REPO, _SCRIPTS, _AUTONOMY, _SECRETS):
 
 from breakglass_receipt import evaluate, load_receipt  # noqa: E402
 from claude_bootstrap_receipt import read as read_claude_receipt  # noqa: E402
-from claude_bootstrap_receipt import write_cursor_bootstrap_receipt  # noqa: E402
+from claude_bootstrap_receipt import (  # noqa: E402
+    receipt_belongs_to,
+    write_cursor_bootstrap_receipt,
+)
 
 OK = "ok"
 NA = "n/a"
@@ -141,28 +144,13 @@ def classify_itest(*, error: str, codegraph: str) -> dict[str, Any]:
 
 def _receipt_belongs_here(receipt: dict[str, Any], workspace: str) -> tuple[bool, str]:
     """A receipt written for another workspace (or for $HOME) is not this
-    session's state. The observed poisoning: a Claude harness SessionStart ran
-    install.sh with --workspace $HOME and its receipt was then reported as the
-    current session's bootstrap verdict.
+    session's state. The rule itself is the receipt reader's
+    (claude_bootstrap_receipt.receipt_belongs_to) — this report used to carry
+    its own, which disagreed with the reader and the SessionStart hook about
+    the same receipt. "Cannot say" (None) is not a fault.
     """
-    recorded = str(receipt.get("workspace") or "").strip()
-    if not recorded:
-        return True, ""  # old receipts carry no workspace; do not invent a fault
-    try:
-        recorded_real = os.path.realpath(recorded)
-    except OSError:
-        recorded_real = recorded
-    home_real = os.path.realpath(str(Path.home()))
-    if recorded_real == home_real:
-        return False, f"receipt workspace is $HOME ({recorded}) — harness/other-surface run"
-    if workspace:
-        try:
-            ws_real = os.path.realpath(workspace)
-        except OSError:
-            ws_real = workspace
-        if recorded_real != ws_real:
-            return False, f"receipt workspace {recorded} is not this session's {workspace}"
-    return True, ""
+    belongs, why = receipt_belongs_to(receipt, workspace)
+    return belongs is not False, why
 
 
 def classify_claude_adapter(
@@ -684,18 +672,24 @@ def probe_neo4j(host: str = "127.0.0.1", port: int = 7687, timeout: float = 0.3)
     return ""
 
 
-def latest_repair_log(repair_dir: Path) -> tuple[str, str]:
-    if not repair_dir.is_dir():
+def receipt_log(receipt: dict[str, Any]) -> tuple[str, str]:
+    """The log of the run that wrote THIS receipt (its own `log_path`).
+
+    It used to be the newest `bootstrap-repair-*.log` by mtime: a filename
+    convention, not a fact about the receipt, so a renamed log or a log from
+    an earlier session was reported as this receipt's evidence.
+    """
+    name = str(receipt.get("log_path") or "").strip()
+    if not name:
         return "", ""
-    logs = [p for p in repair_dir.glob("bootstrap-repair-*.log") if p.is_file()]
-    if not logs:
-        return "", ""
-    newest = max(logs, key=lambda p: p.stat().st_mtime)
+    log = Path(name)
+    if not log.is_file():
+        return name, ""
     try:
-        text = newest.read_text(encoding="utf-8", errors="replace").strip()
+        text = log.read_text(encoding="utf-8", errors="replace").strip()
     except OSError as exc:
-        return str(newest), f"unreadable: {exc}"
-    return str(newest), text[:400]
+        return name, f"unreadable: {exc}"
+    return name, text[:400]
 
 
 def format_markdown(lines: list[dict[str, Any]]) -> str:
@@ -765,7 +759,7 @@ def collect(
         classify_skill_usage(skill_note),
     ]
     receipt = read_claude_receipt(path=root / ".l9" / "claude" / "bootstrap-state.json")
-    repair_log, repair_text = latest_repair_log(root / ".l9" / "claude")
+    repair_log, repair_text = receipt_log(receipt)
     lines.extend(
         classify_claude_adapter(
             surface=surface,

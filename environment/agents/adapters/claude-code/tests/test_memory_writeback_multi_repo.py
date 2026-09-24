@@ -32,11 +32,63 @@ for _p in (str(MEM), str(HOOKS)):
 
 import memory_state as st  # noqa: E402
 
+REPO_ROOT = CLAUDE_DIR.parents[3]
+
+
+def _tree_module(name: str, rel: str, deps: dict | None = None) -> types.ModuleType:
+    """A module from the tree under test (never the SSOT's copy)."""
+    import importlib.util  # noqa: PLC0415
+
+    spec = importlib.util.spec_from_file_location(name, REPO_ROOT / rel)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    with mock.patch.dict(sys.modules, {**(deps or {}), name: module}):
+        spec.loader.exec_module(module)
+    return module
+
+
+def _handoff_modules() -> dict[str, types.ModuleType]:
+    """Both handoff modules, the governance one importing the tree's session one."""
+    session = _tree_module("ops.memory.session_handoff", "ops/memory/session_handoff.py")
+    governance = _tree_module(
+        "ops.memory.governance_handoff",
+        "ops/memory/governance_handoff.py",
+        {"ops.memory.session_handoff": session},
+    )
+    return {"ops.memory.session_handoff": session, "ops.memory.governance_handoff": governance}
+
 
 def _make_repo(root: Path, name: str) -> Path:
     repo = root / name
     (repo / ".git").mkdir(parents=True)
     return repo
+
+
+def _publish(root: Path, number: int) -> None:
+    """What make pr leaves behind (pr-summary.json) plus the agent's two handoffs."""
+    pr = root / ".l9" / "pr"
+    pr.mkdir(parents=True, exist_ok=True)
+    (pr / "pr-summary.json").write_text(
+        json.dumps({"repo": f"Org/{root.name}", "number": number, "head_sha": "a" * 40}),
+        encoding="utf-8",
+    )
+    mem = root / ".l9" / "memory"
+    mem.mkdir(parents=True, exist_ok=True)
+    (mem / "handoff.json").write_text(
+        json.dumps(
+            {
+                "schema": "l9.session_handoff.v1",
+                "pr_number": number,
+                "objective": f"ship {root.name}",
+                "status": "published, awaiting review",
+            }
+        ),
+        encoding="utf-8",
+    )
+    (mem / "governance-handoff.json").write_text(
+        json.dumps({"schema": "l9.governance_handoff.v1", "pr_number": number}),
+        encoding="utf-8",
+    )
 
 
 class WritebackFanOutTest(unittest.TestCase):
@@ -54,6 +106,7 @@ class WritebackFanOutTest(unittest.TestCase):
         hydrated_roots: list[Path] | None,
         close_impl,
         env_extra: dict[str, str] | None = None,
+        publish_in: list[Path] | None = None,
     ) -> tuple[dict, list[dict]]:
         """Import the hook fresh, stub close_session, run main(), return receipt."""
         calls: list[dict] = []
@@ -64,15 +117,26 @@ class WritebackFanOutTest(unittest.TestCase):
 
         stub = types.ModuleType("ops.graphiti.hydration.close_session")
         stub.close_session = _close
+        stub.memory_client = lambda **_kw: None
 
         env = {
             "CLAUDE_PROJECT_DIR": str(self.workspace),
-            "L9_MEMORY_AGENT_ID": "claude-code",
+            # Claude Code Desktop, stated: the identity is derived from host markers
+            "CLAUDECODE": "1",
+            "CLAUDE_CODE_REMOTE": "false",
+            "CLAUDE_CODE_ENTRYPOINT": "cli",
+            "CURSOR_AGENT": "",
             **(env_extra or {}),
         }
 
         with (
-            mock.patch.dict(sys.modules, {"ops.graphiti.hydration.close_session": stub}),
+            mock.patch.dict(
+                sys.modules,
+                {
+                    "ops.graphiti.hydration.close_session": stub,
+                    **_handoff_modules(),
+                },
+            ),
             mock.patch.dict("os.environ", env, clear=False),
         ):
             contract = st.load_contract()
@@ -84,7 +148,12 @@ class WritebackFanOutTest(unittest.TestCase):
             }
             if hydrated_roots is not None:
                 payload["hydrated_roots"] = [str(r) for r in hydrated_roots]
-            st.write_receipt(contract, self.session_id, payload)
+            # Keyed exactly as memory_prefetch stamps it: the writer-scoped
+            # receipt id, never the raw session id (that mismatch hid the bug).
+            receipt_id = st.resolve_receipt_id(event={"session_id": self.session_id})
+            st.write_receipt(contract, receipt_id, payload)
+            for number, root in enumerate(publish_in or [], start=1):
+                _publish(root, number)
 
             sys.modules.pop("memory_writeback", None)
             import memory_writeback as wb  # noqa: PLC0415
@@ -100,103 +169,52 @@ class WritebackFanOutTest(unittest.TestCase):
             receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
         return receipt, calls
 
-    def test_closes_each_hydrated_root_once(self) -> None:
+    def test_no_publication_closes_nothing(self) -> None:
+        """The close fires only after a publication — never on an ordinary turn."""
+        repos = [_make_repo(self.workspace, n) for n in ("alpha", "beta")]
+        receipt, calls = self._run_hook(
+            hydrated_roots=repos,
+            close_impl=lambda **k: {"status": "closed_canonically", "writes": []},
+        )
+        self.assertEqual(calls, [])
+        self.assertEqual(receipt["status"], "no_publication")
+
+    def test_only_the_published_repository_closes_with_its_handoff(self) -> None:
         repos = [_make_repo(self.workspace, n) for n in ("alpha", "beta", "gamma")]
         receipt, calls = self._run_hook(
             hydrated_roots=repos,
-            close_impl=lambda **k: {"status": "phase_a", "writes": ["w"], "warnings": []},
+            close_impl=lambda **k: {"status": "closed_canonically", "writes": []},
+            publish_in=[repos[1]],
         )
-        self.assertEqual(len(calls), 3, "one close_session per hydrated repository")
-        self.assertEqual(
-            [Path(c["project_dir"]).name for c in calls],
-            ["alpha", "beta", "gamma"],
-            "closes the repositories, never the container root",
-        )
-        self.assertNotIn(
-            str(self.workspace),
-            [str(c["project_dir"]) for c in calls],
-            "the container root is exactly what must NOT be closed",
-        )
-        self.assertEqual(receipt["writes"], 3)
+        self.assertEqual([Path(c["project_dir"]).name for c in calls], ["beta"])
+        call = calls[0]
+        self.assertEqual(call["handoff"]["objective"], "ship beta")
+        self.assertEqual(call["publication"], "Org/beta#1@" + "a" * 12)
+        self.assertNotIn(str(self.workspace), [str(c["project_dir"]) for c in calls])
         self.assertEqual(receipt["status"], "ran")
-        self.assertEqual(receipt["deferred_roots"], [])
 
-    def test_each_call_carries_a_budget(self) -> None:
-        """Each call is budgeted; six default-ceiling calls would overrun the hook."""
-        repos = [_make_repo(self.workspace, n) for n in ("a", "b")]
-        _, calls = self._run_hook(
-            hydrated_roots=repos,
-            close_impl=lambda **k: {"status": "phase_a", "writes": [], "warnings": []},
-            env_extra={"L9_MEMORY_WRITEBACK_BUDGET": "40"},
-        )
-        self.assertTrue(all("budget" in c for c in calls), "budget must be passed through")
-        self.assertTrue(
-            all(0 < c["budget"] <= 40 for c in calls),
-            f"each budget must fit the hook allowance, got {[c['budget'] for c in calls]}",
-        )
-
-    def test_exhausted_budget_defers_and_names_the_remainder(self) -> None:
-        """A truncated loop reports what it did NOT close, rather than only wins."""
-        repos = [_make_repo(self.workspace, n) for n in ("a", "b", "c", "d")]
-
-        def slow(**kwargs):
-            # Burn the whole allowance on the first repository.
-            import time as _t
-
-            _t.sleep(1.2)
-            return {"status": "phase_a", "writes": [], "warnings": []}
-
-        receipt, calls = self._run_hook(
-            hydrated_roots=repos,
-            close_impl=slow,
-            env_extra={"L9_MEMORY_WRITEBACK_BUDGET": "1"},
-        )
-        self.assertEqual(len(calls), 1, "stops once the budget cannot cover another root")
-        self.assertEqual(
-            [Path(p).name for p in receipt["deferred_roots"]],
-            ["b", "c", "d"],
-            "deferred roots are named in the receipt, not silently dropped",
-        )
-
-    def test_falls_back_to_shared_resolver_without_a_receipt_field(self) -> None:
-        """No hydrated_roots recorded → the shared workspace_roots answer, not the container."""
+    def test_fallback_roots_are_repositories_never_the_container(self) -> None:
+        """No hydrated_roots recorded → the shared resolver, never the container root."""
         repos = [_make_repo(self.workspace, n) for n in ("one", "two")]
         _, calls = self._run_hook(
             hydrated_roots=None,
-            close_impl=lambda **k: {"status": "phase_a", "writes": [], "warnings": []},
+            close_impl=lambda **k: {"status": "closed_canonically", "writes": []},
+            publish_in=[repos[1]],
         )
-        self.assertEqual(
-            sorted(Path(c["project_dir"]).name for c in calls),
-            [r.name for r in repos],
-            "fallback must still enumerate repositories, never the container root",
-        )
+        self.assertEqual([Path(c["project_dir"]).name for c in calls], ["two"])
 
-    def test_single_repository_workspace_is_unchanged(self) -> None:
-        """A workspace that IS a checkout closes exactly itself — byte-for-byte prior behaviour."""
-        (self.workspace / ".git").mkdir()
-        _, calls = self._run_hook(
-            hydrated_roots=None,
-            close_impl=lambda **k: {"status": "phase_a", "writes": [], "warnings": []},
-        )
-        self.assertEqual(len(calls), 1)
-        self.assertEqual(Path(calls[0]["project_dir"]).resolve(), self.workspace)
-
-    def test_one_failing_root_does_not_lose_the_others(self) -> None:
-        repos = [_make_repo(self.workspace, n) for n in ("ok1", "boom", "ok2")]
-        seen: list[str] = []
+    def test_one_failing_publication_root_does_not_lose_the_others(self) -> None:
+        repos = [_make_repo(self.workspace, n) for n in ("ok1", "boom")]
 
         def flaky(**kwargs):
-            name = Path(kwargs["project_dir"]).name
-            seen.append(name)
-            if name == "boom":
+            if Path(kwargs["project_dir"]).name == "boom":
                 raise RuntimeError("transport exploded")
-            return {"status": "phase_a", "writes": ["w"], "warnings": []}
+            return {"status": "closed_canonically", "writes": []}
 
-        receipt, calls = self._run_hook(hydrated_roots=repos, close_impl=flaky)
-        self.assertEqual(seen, ["ok1", "boom", "ok2"], "every root is still attempted, in order")
-        self.assertEqual(len(calls), 3, "a raising root must not abort the loop")
+        receipt, calls = self._run_hook(hydrated_roots=repos, close_impl=flaky, publish_in=repos)
+        self.assertEqual(len(calls), 2, "a raising root must not abort the loop")
         self.assertIn("boom=error", receipt["close_status"])
-        self.assertEqual(receipt["writes"], 2, "the healthy roots still wrote")
+        self.assertIn("ok1=closed_canonically", receipt["close_status"])
 
 
 class WritebackPolicySkipTest(unittest.TestCase):

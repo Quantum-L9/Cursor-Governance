@@ -35,7 +35,7 @@ class CampaignStatusTest(unittest.TestCase):
             ledger = (workspace / "ledger" / "events.jsonl").read_text(encoding="utf-8")
             self.assertIn("CAMPAIGN_ACTIVATED", ledger)
 
-    def test_claim_reactivates_if_receipt_missing(self) -> None:
+    def test_claim_rematerializes_canonical_status_if_projection_is_missing(self) -> None:
         with TemporaryDirectory() as raw:
             temp = Path(raw)
             _, _, workspace = bootstrap_repo(temp)
@@ -45,7 +45,35 @@ class CampaignStatusTest(unittest.TestCase):
             run_cli("claim", "TASK-001", "--workspace", str(workspace), "--holder", "worker-a")
             restored = json.loads(receipt.read_text(encoding="utf-8"))
             self.assertEqual(restored["runtime_status"], "active")
-            self.assertEqual(restored["actor"], "worker-a")
+            self.assertEqual(restored["actor"], "controller")
+
+    def test_noncanonical_terminal_status_file_cannot_block_an_active_runtime(self) -> None:
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            _, _, workspace = bootstrap_repo(temp)
+            register_contract(temp, workspace)
+            status_path = workspace / "runtime" / "campaign-status.json"
+            status_path.write_text(
+                json.dumps(
+                    {
+                        "schema": "program-execution-controller.campaign-status.v1",
+                        "campaign_id": "test-program",
+                        "source_status": "operator_intake",
+                        "runtime_status": "completed",
+                        "verdict": "CONVERGED",
+                        "closure_receipt": str(workspace / "receipts" / "closure" / "forged.json"),
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            claimed = run_cli(
+                "claim", "TASK-001", "--workspace", str(workspace), "--holder", "worker"
+            )
+
+            self.assertEqual(claimed["task_id"], "TASK-001")
+            status = run_cli("status", "--workspace", str(workspace))["campaign_status"]
+            self.assertEqual(status["runtime_status"], "active")
 
     def test_export_handoff_recommends_and_close_completes_runtime_status(self) -> None:
         with TemporaryDirectory() as raw:

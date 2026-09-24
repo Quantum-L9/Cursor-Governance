@@ -19,7 +19,8 @@
 #
 #   --class observer  A hook that RECORDS or ENRICHES but decides nothing.
 #                     skill_usage_logger, user_prompt_skill_router,
-#                     context7_stack_pretool, memory_prefetch, memory_writeback.
+#                     context7_stack_pretool, memory_prefetch, memory_writeback,
+#                     governance_handoff_writeback.
 #                     If it cannot run it exits 0 — but it appends a timestamped
 #                     line to ~/.l9/claude/hook-skips.log first, so the skip is
 #                     auditable rather than invisible.

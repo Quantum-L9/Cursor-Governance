@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Quantum-L9/Cursor-Governance/ops/memory/schemas/l9.agent_memory_write.v1.schema.json",
+  "title": "L9 agent memory write (l9.agent_memory_write.v1)",
+  "description": "The ARGUMENTS of one model-authored durable memory write: MCP tool mcp__l9-graphite-memory__memory_write_agent, or mcp__l9-graphite-memory__memory_write_governed when task_signature is present. One atomic fact, one line, a canonical agent-lane class, an agent:<id> tag plus a topic tag, and an idempotency key so the same fact is one record. Build with `python -m ops.memory.agent_write build`; check with `python -m ops.memory.agent_write validate`. Enforced by ops/memory/agent_write.py, which this schema mirrors (tests/ops/memory/test_agent_write_schema.py). The agent keeps this contract itself: no hook, matcher or receipt stands in front of the tool (CANONICAL_LAW §8.6); MemoryService still decides grants and admission. Contract: ops/memory/AGENT_WRITE_CONTRACT.md.",
+  "type": "object",
+  "required": [
+    "namespace",
+    "content",
+    "memory_class",
+    "tags",
+    "idempotency_key"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "namespace": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+      "maxLength": 63,
+      "not": {
+        "enum": [
+          "main",
+          "master",
+          "default",
+          "test",
+          "l9-workspace"
+        ]
+      },
+      "description": "The repository namespace from `python -m ops.memory.cli resolve` (write hint). Never main, master, default, test or the shared l9-workspace."
+    },
+    "content": {
+      "type": "string",
+      "minLength": 12,
+      "maxLength": 600,
+      "allOf": [
+        {
+          "pattern": "^[^\\r\\n]+$"
+        },
+        {
+          "not": {
+            "pattern": "^[A-Z][A-Z ]{2,20}:"
+          }
+        },
+        {
+          "not": {
+            "pattern": "(ghp_|gho_|ghs_|github_pat_|xox[bap]-|sk-[A-Za-z0-9]{20}|AKIA[0-9A-Z]{16}|-----BEGIN)"
+          }
+        }
+      ],
+      "description": "One atomic fact, one line, 12-600 characters. No SESSION:/WORK:-style preamble, no prose summary, never a credential."
+    },
+    "memory_class": {
+      "enum": [
+        "decision",
+        "insight",
+        "observation",
+        "constraint",
+        "episodic",
+        "semantic"
+      ],
+      "description": "Canonical agent-lane class. Legacy words are mapped by the builder (lesson->insight, note->observation, rule->decision) and never appear in the payload, because memory_write_governed has no alias table. procedural, preference, identity and meta are not agent-lane facts."
+    },
+    "tags": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 12,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9_.:/-]{0,79}$"
+      },
+      "contains": {
+        "type": "string",
+        "pattern": "^agent:[a-z0-9][a-z0-9-]{1,40}$"
+      },
+      "minContains": 1,
+      "maxContains": 1,
+      "description": "Exactly one agent:<id> tag naming the DERIVED identity of the writing process (cursor, claude-code-desktop, claude-code-mobile, …; never the retired agent:claude-code — ops/memory/agent_identity.py) plus at least one lowercase topic tag.",
+      "not": {
+        "contains": {
+          "const": "agent:claude-code"
+        }
+      }
+    },
+    "idempotency_key": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:/#@-]{8,200}$",
+      "description": "Default agent:<namespace>:<sha256(class, normalized content)[:16]>: the same fact written twice is one record."
+    },
+    "source_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "pattern": "\\S",
+      "description": "Evidence: a PR, commit, ADR or file path."
+    },
+    "subject": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "pattern": "\\S"
+    },
+    "predicate": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "pattern": "\\S"
+    },
+    "object": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "pattern": "\\S"
+    },
+    "supersedes": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "description": "Record ids this fact replaces."
+    },
+    "references": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      }
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "valid_from": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "valid_to": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "task_signature": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "pattern": "\\S",
+      "description": "Present => the governed write (after memory_phase_lock)."
+    },
+    "dry_run": {
+      "type": "boolean",
+      "description": "A self-check: the verdict without a commit."
+    }
+  },
+  "dependentRequired": {
+    "subject": [
+      "predicate",
+      "object"
+    ],
+    "predicate": [
+      "subject",
+      "object"
+    ],
+    "object": [
+      "subject",
+      "predicate"
+    ]
+  },
+  "examples": [
+    {
+      "namespace": "cursor-governance",
+      "content": "Stop hooks gate on usable_receipt, not fresh_receipt, so degraded sessions still close",
+      "memory_class": "decision",
+      "tags": [
+        "agent:claude-code-mobile",
+        "hooks"
+      ],
+      "idempotency_key": "agent:cursor-governance:788405ad0434f6de",
+      "source_id": "Quantum-L9/Cursor-Governance#651"
+    }
+  ]
+}
