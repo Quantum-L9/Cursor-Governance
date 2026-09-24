@@ -301,6 +301,15 @@ def test_provisioning_is_additive_and_idempotent(tmp_path: Path) -> None:
     assert json.loads((local / "agent_tokens.local.json").read_text()) == tokens
 
 
+def test_provisioning_refuses_a_directory_that_is_not_private(tmp_path: Path) -> None:
+    local = tmp_path / "l9-memory"
+    local.mkdir()
+    local.chmod(0o755)
+    with pytest.raises(maa.AuthorityMaterializationError, match="0700"):
+        maa.provision_local(ROOT, local, ["claude-code-mobile"])
+    assert not (local / "agent_tokens.local.json").exists(), "nothing written"
+
+
 def test_provisioning_an_inactive_identity_is_refused(tmp_path: Path) -> None:
     with pytest.raises(maa.AuthorityMaterializationError, match="active perplexity"):
         maa.provision_local(ROOT, tmp_path / "l9-memory", ["perplexity"])

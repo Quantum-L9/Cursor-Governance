@@ -227,7 +227,10 @@ def provision_local(governance: Path, directory: Path, agent_ids: list[str]) -> 
     if not agent_ids:
         raise AuthorityMaterializationError("no identity to provision")
     directory.mkdir(mode=0o700, parents=True, exist_ok=True)
-    os.chmod(directory, 0o700)
+    # Created private, never loosened or silently tightened: a directory that
+    # is already more open than 0700 is refused, as materialize() refuses one.
+    if stat.S_IMODE(directory.stat().st_mode) != 0o700:
+        raise AuthorityMaterializationError(f"{directory} must be mode 0700")
     tokens = directory / "agent_tokens.local.json"
     if not tokens.exists():
         import secrets  # noqa: PLC0415
