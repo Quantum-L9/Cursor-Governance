@@ -191,6 +191,15 @@ minus `L9_BOOTSTRAP_REPORT_FLOOR` (6 s) kept for the must-emit lines, and is
 **not started**, with a named remediation, when less than
 `L9_BOOTSTRAP_GENERATE_MIN` (15 s) is left.
 
+When the clamp expires, `timeout` TERMs the installer's process group (rc 124).
+That is an **interruption**, not a failure: the hook prints `installer TIMED
+OUT after <n>s (hook budget)` with the log tail (the stage reached), and
+`install.sh` traps the signal and writes `state: interrupted` with
+`interrupted_by` and `elapsed_seconds`. Components whose stage finished keep
+their verdicts; only the rest read `UNKNOWN` ("interrupted by SIGTERM at stage
+…"). The reader classifies an interrupted receipt as `degraded` (a `BLOCKED`
+component still wins) and names the stage and every unevaluated component.
+
 This replaces the repair-once model (installer only for a non-ready verdict,
 once per governance revision, after printing), under which a session reported
 an earlier session's receipt as its own and a repairing session never read the
