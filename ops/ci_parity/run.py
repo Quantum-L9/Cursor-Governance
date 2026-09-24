@@ -512,9 +512,30 @@ def run_lanes(ctx: Context, lanes: Sequence[manifest.Lane]) -> list[dict[str, An
 # --- snapshot clone, receipts, in-flight ------------------------------------
 
 
+def _snapshot_usable(clone: Path) -> bool:
+    """A clone git can still read, not merely a directory named ``.git``.
+
+    Observed on a hosted session: ``clone/.git`` held HEAD, config and index but
+    no ``objects/`` or ``refs/`` (a clone or cleanup cut short, e.g. by
+    ``cancel_older``'s TERM). Keyed on ``.git`` existing, every later run then
+    failed the detached checkout with exit 128 and never re-cloned — the gate
+    stayed red until someone deleted the cache by hand. The snapshot is a
+    derived cache of the workspace, so an unreadable one is rebuilt.
+    """
+
+    if not (clone / ".git" / "objects").is_dir():
+        return False
+    probe = subprocess.run(
+        ["git", "-C", str(clone), "rev-parse", "--git-dir"],
+        capture_output=True,
+        check=False,
+    )
+    return probe.returncode == 0
+
+
 def ensure_snapshot(workspace: Path, cache: Path, sha: str) -> Path:
     clone = cache / "clone"
-    if not (clone / ".git").exists():
+    if not _snapshot_usable(clone):
         if clone.exists():
             shutil.rmtree(clone)
         subprocess.run(

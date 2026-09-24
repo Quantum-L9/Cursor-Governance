@@ -128,6 +128,27 @@ def test_receipt_is_reused_and_the_worktree_is_never_touched(world: dict) -> Non
     assert _git(repo, "status", "--porcelain") == before
 
 
+def test_a_gutted_snapshot_clone_is_rebuilt_not_fatal(world: dict, tmp_path: Path) -> None:
+    """A `.git` without objects/refs must not wedge every later run.
+
+    Observed shape: the cached clone kept HEAD, config and index but lost
+    `objects/` and `refs/`; the detached checkout then failed with exit 128 on
+    every run because the clone was only rebuilt when `.git` was absent.
+    """
+    import shutil
+
+    repo, cache = world["repo"], tmp_path / "snapcache"
+    sha = _git(repo, "rev-parse", "HEAD")
+    clone = run.ensure_snapshot(repo, cache, sha)
+    shutil.rmtree(clone / ".git" / "objects")
+    shutil.rmtree(clone / ".git" / "refs")
+    assert (clone / ".git").is_dir(), "the gutted shape keeps a .git directory"
+
+    clone = run.ensure_snapshot(repo, cache, sha)
+    assert _git(clone, "rev-parse", "HEAD") == sha
+    assert (clone / "a.sh").is_file()
+
+
 def test_fixing_the_finding_clears_the_gate(world: dict) -> None:
     repo = world["repo"]
     (repo / "a.sh").write_text("BAD legacy\nok\nBAD new\n")
