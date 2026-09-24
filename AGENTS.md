@@ -1941,32 +1941,34 @@ verification remains `make precommit-repo`; do not create a second Make
 gate alias.
 
 <!-- INFISICAL_MACHINE_IDENTITY_V1 -->
-## Infisical machine identity replaces the AWS login seed (2026-09-24) — supersedes "SessionStart owns the secrets plane (2026-09-07)" on AWS CLI preflight, the login seed and the `aws-cli` report line
+## Claude binds Infisical with a machine identity; Cursor keeps its AWS seed (2026-09-24) — amends "SessionStart owns the secrets plane (2026-09-07)"
 
-Append-only. Infisical project `cursor-governance` is the only agent secret
-plane, and AWS is not a dependency of it.
+Append-only. Infisical project `cursor-governance` is the agent secret vault on
+every surface. How a surface obtains its Infisical machine identity DIVERGES BY
+PEER, by design:
 
-- Every surface reaches Infisical with ONE bootstrap secret: the Universal Auth
-  client secret of a machine identity dedicated to that surface,
-  `L9_INFISICAL_CLIENT_SECRET`, beside the non-secret `L9_INFISICAL_CLIENT_ID`
-  (project, environment and host come from
-  `ops/secrets/infisical-cursor-governance.yaml`). A hosted Claude Code
-  environment sets both once in its environment settings. An operator
-  workstation may instead keep an existing `~/.infisical/l9-machine.json`.
-- `ops/secrets/infisical_cli_login.py` reads the identity; it seeds nothing from
-  AWS. `capability_bind.py` binds each name in-process as that identity and
-  refuses to hand out the bootstrap secret itself. `infisical_http.py` is the
-  one transport; nothing on the bind path imports AWS code.
-- `session_start_secrets.py` runs no AWS preflight. Its receipt carries an
-  `identity` object; `session_start_runtime_report.py` reports an
-  `infisical-identity` line in place of `aws-cli`. **No surface is exempt**: the
-  `unavailable_by_surface` carve-out is retired, and a missing or refused
-  identity FAILS with the fix named. Secrets are not optional.
+- **Claude Code (hosted, model-controlled)** — no AWS anywhere on its path. ONE
+  bootstrap secret, the Universal Auth client secret of a machine identity
+  dedicated to that surface: `L9_INFISICAL_CLIENT_SECRET`, beside the
+  non-secret `L9_INFISICAL_CLIENT_ID` (project, environment and host come from
+  `ops/secrets/infisical-cursor-governance.yaml`), set once in the environment
+  settings. SessionStart runs no AWS preflight and imports no AWS code there.
+- **Cursor / operator machines** — unchanged: the AWS CLI preflight, then the
+  existing `~/.infisical/l9-machine.json` or the AWS login seed that writes it,
+  and the reporter's `aws-cli` line. Leave that path alone; Cursor needs no
+  connector.
+- `infisical_cli_login.py` resolves the identity in that order (environment,
+  profile, AWS seed on Cursor / operator only). `capability_bind.py` binds each
+  name in-process as that identity and refuses to hand out the bootstrap secret.
+  `infisical_http.py` is the one Infisical transport; the AWS modules are
+  imported lazily, only by the Cursor / operator seed.
+- **No surface is exempt**: the `unavailable_by_surface` carve-out is retired. A
+  hosted surface without its identity FAILS with the fix named (reporter line
+  `infisical-identity`). Secrets are not optional.
 - A remote MCP server that needs a key is a local stdio bridge
   (`ops/secrets/vault_mcp_bridge.py`, declared in `vault-mcp-bridges.json`) that
   binds the key from Infisical at spawn. Context7 is the first; its key is never
   in the environment, argv, `.mcp.json` or a file.
-- The bootstrap secret is readable by the model on a hosted surface, like any
-  environment value. Its mitigation is scope, not concealment: one identity per
-  surface, least privilege, revocable in Infisical without touching any other
-  surface. Every other credential stays out of the environment.
+- On a hosted surface the bootstrap secret is readable by the model, like any
+  environment value. Its mitigation is scope: one least-privilege identity per
+  surface, revocable in Infisical without touching any other surface.

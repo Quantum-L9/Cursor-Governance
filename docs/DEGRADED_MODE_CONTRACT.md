@@ -398,16 +398,17 @@ that does not bend** above.
 
 ## Secrets plane, 2026-09-24 — supersedes the 2026-09-19 carve-out above
 
-A dated section, not a rewrite. The operator decided that Infisical is the only
-agent secret plane, that AWS is not a dependency of it, and that secrets are not
-optional on any surface.
+A dated section, not a rewrite. The operator decided that Infisical is the agent
+secret vault, that secrets are not optional on any surface, and that the
+bootstrap diverges by peer.
 
-- **One bootstrap secret, not AWS.** Each surface binds through its own
-  Infisical machine identity: `L9_INFISICAL_CLIENT_SECRET` plus the non-secret
-  `L9_INFISICAL_CLIENT_ID`, set once in the environment settings. The AWS
-  Secrets Manager login seed, `aws_cli_preflight`, and the `aws-cli` report line
-  are gone from the plane.
-- **No carve-out.** `unavailable_by_surface` is retired. A surface without an
+- **Claude (this surface): one bootstrap secret, no AWS.** It binds through its
+  own Infisical machine identity: `L9_INFISICAL_CLIENT_SECRET` plus the
+  non-secret `L9_INFISICAL_CLIENT_ID`, set once in the environment settings. No
+  AWS preflight runs here and no AWS code is imported.
+- **Cursor / operator: unchanged.** AWS CLI preflight, then the existing profile
+  or the AWS login seed that writes it; the `aws-cli` line still reports it.
+- **No carve-out.** `unavailable_by_surface` is retired. This surface without its
   identity reports `state: failed` and the fix; the reporter's
   `infisical-identity` line is FAILED. The tri-state table above is historical.
 - **What the model can read.** On this surface the bootstrap secret is visible

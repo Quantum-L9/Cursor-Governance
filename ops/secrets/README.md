@@ -4,7 +4,8 @@
 > authenticates to Infisical as its own machine identity — the ONE bootstrap
 > secret, `L9_INFISICAL_CLIENT_SECRET` beside the non-secret `L9_INFISICAL_CLIENT_ID`
 > — and `capability_bind.py` holds each bound value in the calling process only.
-> AWS is not on this path (2026-09-24; `AGENTS.md` → INFISICAL_MACHINE_IDENTITY_V1).
+> Claude obtains that identity from the environment with no AWS; Cursor / operator
+> machines keep the AWS login seed (2026-09-24; `AGENTS.md` → INFISICAL_MACHINE_IDENTITY_V1).
 
 This directory owns the **openclaw-igorbot/\*** inventory for Quantum-L9 coding
 workspaces. Other repos consume refs from here — they do not supply the
@@ -13,16 +14,16 @@ manifest back into Governance.
 Infisical project **Cursor-Governance** (`cursor-governance`, prod) holds a
 ported copy of every `openclaw-igorbot/*` AWS secret (env-var names at `/`,
 structured copies at `/aws/openclaw-igorbot/<name>/`). Surfaces reach it with
-their own machine identity (`infisical_cli_login.py`), never through an AWS
-login seed. See `infisical-cursor-governance.yaml` (IDs and key names only).
+their own machine identity (`infisical_cli_login.py`): Claude from the
+environment; Cursor / operator from the profile seeded by the AWS login seed. See `infisical-cursor-governance.yaml` (IDs and key names only).
 
 ## Layout
 
 | Path | Role |
 |---|---|
 | `openclaw-igorbot.registry.yaml` | Operator AWS inventory (IDs + JSON key names + annotations only) |
-| `infisical-login.registry.yaml` | Retired AWS login-seed inventory (no longer read by any agent path) |
-| `session_start_secrets.py` | SessionStart owner (machine identity login → Infisical bind `--check`; no AWS) |
+| `infisical-login.registry.yaml` | Cursor / operator AWS login-seed inventory (SM name in `login_registry.py`); Claude never reads it |
+| `session_start_secrets.py` | SessionStart owner: Claude — environment identity, no AWS; Cursor / operator — AWS preflight → profile / seed. Then Infisical bind `--check` |
 | `infisical_cli_login.py` | This surface's machine identity: environment, else the operator profile file |
 | `infisical_http.py` | The one Infisical HTTP transport (split from the AWS port tool) |
 | `capability_bind.py` | In-process Infisical bind as the machine identity (never export; `source=aws` is a fault) |

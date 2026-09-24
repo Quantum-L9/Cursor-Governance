@@ -54,8 +54,8 @@ denied.
 
 ### Secrets: one machine identity, everything else bound from Infisical
 
-Infisical project `cursor-governance` is the only secret plane; AWS is not
-involved (2026-09-24). The account environment carries exactly **one**
+Infisical project `cursor-governance` is the secret vault, and this surface
+reaches it with no AWS (2026-09-24; Cursor keeps its own AWS login seed). The account environment carries exactly **one**
 credential: this surface's Infisical machine identity,
 `L9_INFISICAL_CLIENT_SECRET`, beside the non-secret `L9_INFISICAL_CLIENT_ID`.
 Anthropic stores the variables field in plaintext and the model can read it, so
