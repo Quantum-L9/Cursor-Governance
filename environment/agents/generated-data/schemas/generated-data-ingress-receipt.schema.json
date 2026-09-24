@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.dev/schemas/subagent-generated-data/generated-data-ingress-receipt.schema.json",
+  "title": "L9 Generated Data Ingress Receipt",
+  "description": "Formalizes the existing l9.generated-data-ingress-receipt.v1 written by ingress/receipts.py write_ingress. It is the harvest-plane audit record: which source was considered (acceptance_receipt_digest, source_kind), what happened (outcome, processing_status, reason), and where downstream proof lives (processor_job_id, packet_evidence_path, delivery). It carries references, not evidence bodies, and does not model memory admission, dedup, or supersession, which the canonical memory owner decides. Law §36.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "acceptance_receipt_digest",
+    "source_kind",
+    "outcome",
+    "reason",
+    "processor_job_id",
+    "processing_status",
+    "observed_at",
+    "receipt_digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "l9.generated-data-ingress-receipt.v1"
+    },
+    "acceptance_receipt_digest": {
+      "description": "Source identity and the source-processing idempotency key: one receipt file per digest. Not a semantic-memory dedup key.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+    },
+    "source_kind": {
+      "description": "Which existing producer handed the source to ingress.",
+      "enum": ["accepted_subagent_result", "program_execution_outcome"]
+    },
+    "outcome": {
+      "description": "Harvest disposition. CAPTURED = processed (see processing_status); NO_REUSABLE_DATA = successful no-op; QUARANTINED / REJECTED = refused; FAILED = processing could not complete. FAILED is never NO_REUSABLE_DATA.",
+      "enum": ["CAPTURED", "NO_REUSABLE_DATA", "QUARANTINED", "REJECTED", "FAILED"]
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "processor_job_id": {
+      "type": ["string", "null"]
+    },
+    "processing_status": {
+      "enum": [
+        "NOT_STARTED",
+        "PENDING",
+        "VALIDATED",
+        "HARVESTED",
+        "CLASSIFIED",
+        "ROUTED",
+        "PROMOTION_DECIDED",
+        "DELIVERY_PENDING",
+        "DESTINATION_SUBMITTED",
+        "DESTINATION_DEFERRED",
+        "DESTINATION_ACCEPTED",
+        "DESTINATION_REJECTED",
+        "LEARNING_CLOSED",
+        "REJECTED",
+        "RETRY_WAIT",
+        "DEAD_LETTERED",
+        "FAILED",
+        "UNKNOWN"
+      ]
+    },
+    "packet_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "packet_evidence_path": {
+      "description": "Reference to the raw packet evidence. Repository/campaign/action scope is read from its identity block rather than copied here.",
+      "type": "string",
+      "minLength": 1
+    },
+    "database_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "delivery_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "delivery": {
+      "description": "Delivery-worker result reference (route outcomes, destination receipt ids) or null when no delivery ran.",
+      "type": ["object", "null"]
+    },
+    "processing_error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "message"],
+      "properties": {
+        "type": {"type": "string", "minLength": 1},
+        "message": {"type": "string"}
+      }
+    },
+    "observed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "receipt_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "allOf": [
+    {
+      "description": "Nothing to preserve routes nothing: no job, no processing, no evidence packet.",
+      "if": {"properties": {"outcome": {"const": "NO_REUSABLE_DATA"}}},
+      "then": {
+        "properties": {
+          "processor_job_id": {"const": null},
+          "processing_status": {"const": "NOT_STARTED"}
+        },
+        "not": {"anyOf": [{"required": ["delivery"]}, {"required": ["packet_digest"]}]}
+      }
+    },
+    {
+      "description": "A quarantined source never reaches the processor, and its evidence stays addressable.",
+      "if": {"properties": {"outcome": {"const": "QUARANTINED"}}},
+      "then": {
+        "required": ["packet_digest", "packet_evidence_path"],
+        "properties": {
+          "processor_job_id": {"const": null},
+          "processing_status": {"const": "NOT_STARTED"}
+        }
+      }
+    },
+    {
+      "description": "A captured source is bound to a processor job and its evidence.",
+      "if": {"properties": {"outcome": {"const": "CAPTURED"}}},
+      "then": {
+        "required": ["packet_digest", "packet_evidence_path"],
+        "properties": {"processor_job_id": {"type": "string", "minLength": 1}}
+      }
+    },
+    {
+      "description": "A processing error is only ever reported as a failure or a refusal, never as success or a no-op.",
+      "if": {"required": ["processing_error"]},
+      "then": {"properties": {"outcome": {"enum": ["FAILED", "REJECTED"]}}}
+    }
+  ]
+}
