@@ -243,7 +243,11 @@ MEMORY_DOCTRINE_REQUIRED_TOKENS: dict[str, tuple[str, ...]] = {
         "ContinuationCapsuleV2",
     ),
     "environment/generated/llm-rules/98-graphiti-memory-gate.md": (AGENT_WRITE_TOKEN,),
-    "skills/l9-graphiti-memory/SKILL.md": (AGENT_WRITE_TOKEN,),
+    "skills/l9-graphiti-memory/SKILL.md": (
+        AGENT_WRITE_TOKEN,
+        "Memory is context, not authority",
+        "independently retrievable assertion",
+    ),
     "skills/l9-end-session/SKILL.md": (AGENT_WRITE_TOKEN, "repair-write"),
     "skills/l9-end-session/references/end-session-protocol.md": (
         AGENT_WRITE_TOKEN,
