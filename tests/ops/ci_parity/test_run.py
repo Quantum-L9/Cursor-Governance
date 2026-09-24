@@ -128,6 +128,33 @@ def test_receipt_is_reused_and_the_worktree_is_never_touched(world: dict) -> Non
     assert _git(repo, "status", "--porcelain") == before
 
 
+def test_a_shallow_workspace_snapshot_sees_later_commits(world: dict, tmp_path: Path) -> None:
+    """The snapshot of a shallow workspace must not freeze at its first commit.
+
+    git ignores --shared/--local for a shallow source, so the cached clone is a
+    copy with no alternates. Observed on a hosted (shallow) checkout: the first
+    ci-parity run built the snapshot, and every run after the next commit failed
+    `checkout --detach <sha>` with "reference is not a tree" (exit 128).
+    """
+    workspace = tmp_path / "shallow-ws"
+    subprocess.run(
+        ["git", "clone", "-q", "--depth", "1", f"file://{world['repo']}", str(workspace)],
+        check=True,
+        capture_output=True,
+    )
+    assert _git(workspace, "rev-parse", "--is-shallow-repository") == "true"
+    cache = tmp_path / "snapcache"
+    first = _git(workspace, "rev-parse", "HEAD")
+    run.ensure_snapshot(workspace, cache, first)
+
+    (workspace / "a.sh").write_text("ok\n")
+    _git(workspace, "commit", "-q", "-am", "later commit")
+    later = _git(workspace, "rev-parse", "HEAD")
+    clone = run.ensure_snapshot(workspace, cache, later)
+    assert _git(clone, "rev-parse", "HEAD") == later
+    assert (clone / "a.sh").read_text() == "ok\n"
+
+
 def test_fixing_the_finding_clears_the_gate(world: dict) -> None:
     repo = world["repo"]
     (repo / "a.sh").write_text("BAD legacy\nok\nBAD new\n")

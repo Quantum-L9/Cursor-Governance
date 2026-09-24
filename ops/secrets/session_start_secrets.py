@@ -136,6 +136,10 @@ def run_plane(env: Mapping[str, str] | None = None) -> dict[str, Any]:
     if klass == MODEL_CONTROLLED or source == login.SOURCE_ENV:
         # Claude: the environment identity; no AWS step at all.
         login_state = login.ensure_machine_profile(env)
+        if login_state == "failed":
+            # Same identity the binds below would log in as: one attempt, not
+            # one per name. Their sources still read unbound.
+            cb.note_login_failed()
     else:
         # Cursor / operator: main's behaviour, unchanged — AWS preflight, then
         # the existing profile or the AWS seed that writes it.

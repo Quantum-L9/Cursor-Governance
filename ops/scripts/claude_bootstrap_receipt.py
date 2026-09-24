@@ -12,7 +12,10 @@ The distinction this module exists to preserve:
                 This is what the audited runtime actually looked like (B-04).
     failed      the installer ran and recorded the stage it died at.
     blocked     a required component could not be wired.
-    degraded    an optional component is unavailable.
+    degraded    an optional component is unavailable — or the installer was
+                interrupted by a signal (recorded state ``interrupted``, e.g.
+                the SessionStart budget kill): components its finished stages
+                classified keep their verdicts, the rest read UNKNOWN.
     ready       the required contract is satisfied.
     unknown     a receipt exists but no longer describes an observed state,
                 either because it outlived its TTL or because the governance
@@ -350,6 +353,8 @@ def evaluate(
             "reason": f"installer failed at stage '{receipt.get('stage', 'unknown')}'",
             **carried,
         }
+    if recorded == "INTERRUPTED" and "BLOCKED" not in components.values():
+        return {"state": DEGRADED, "reason": _interrupted_reason(receipt, components), **carried}
     if recorded == "BLOCKED" or "BLOCKED" in components.values():
         return {"state": BLOCKED, "reason": _first_non_ready(components, "BLOCKED"), **carried}
     if recorded == "DEGRADED" or "DEGRADED" in components.values():
@@ -357,6 +362,27 @@ def evaluate(
     if recorded == "READY":
         return {"state": READY, "reason": f"all components READY ({age}s ago)", **carried}
     return {"state": UNKNOWN, "reason": f"unrecognised recorded state {recorded!r}", **carried}
+
+
+def _interrupted_reason(receipt: dict[str, Any], components: dict[str, Any]) -> str:
+    """A signal cut the run short; name where, how long, and what went unverified.
+
+    Not ``failed``: the SessionStart budget kill is TERM from ``timeout``, and
+    what the run reached before it is evidence the receipt still carries.
+    """
+    signal = str(receipt.get("interrupted_by") or "").strip() or "signal"
+    elapsed = receipt.get("elapsed_seconds")
+    after = f" after {elapsed}s" if isinstance(elapsed, int) else ""
+    reason = (
+        f"installer interrupted by SIG{signal} at stage '{receipt.get('stage', 'unknown')}'{after}"
+    )
+    unknown = [key for key, value in components.items() if value == "UNKNOWN"]
+    if unknown:
+        reason += f"; not evaluated: {', '.join(unknown)}"
+    degraded = [key for key, value in components.items() if value == "DEGRADED"]
+    if degraded:
+        reason += f"; degraded: {', '.join(degraded)}"
+    return reason
 
 
 def _first_non_ready(components: dict[str, Any], level: str) -> str:

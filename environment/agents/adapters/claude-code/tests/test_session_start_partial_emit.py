@@ -482,9 +482,10 @@ class ReceiptGenerationTest(unittest.TestCase):
         )
         return gov
 
-    def _run(self, tmp: str, budget: str = "120") -> str:
+    def _run(self, tmp: str, budget: str = "120", extra_env: dict[str, str] | None = None) -> str:
         env = _base_env(Path(tmp) / "home")
         env["L9_SESSION_START_BUDGET"] = budget
+        env.update(extra_env or {})
         proc = subprocess.run(
             ["bash", str(HOOK)],
             capture_output=True,
@@ -543,6 +544,29 @@ class ReceiptGenerationTest(unittest.TestCase):
             # The earlier session's READY receipt is not reported as this one's.
             self.assertIn("claude bootstrap: unknown", context)
             self.assertNotIn("claude bootstrap: ready", context)
+
+    def test_a_generation_the_budget_cut_short_is_timed_out_not_failed(self) -> None:
+        """rc 124 is `timeout` expiring, and the log tail is where it stopped.
+
+        The hosted receipt read "installer FAILED rc=124 — agent bootstrap:
+        surface=claude-code ..." — the installer's banner, which says nothing
+        about the stage the budget ran out in.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._fake_governance(
+                root,
+                installer_body=(
+                    "#!/usr/bin/env bash\necho 'banner line'\necho 'reached stage-x'\nsleep 300\n"
+                ),
+            )
+            context = self._run(
+                tmp,
+                extra_env={"L9_BOOTSTRAP_GENERATE_BUDGET": "2", "L9_BOOTSTRAP_GENERATE_MIN": "1"},
+            )
+            self.assertIn("bootstrap receipt: installer TIMED OUT after 2s (hook budget)", context)
+            self.assertIn("reached stage-x", context)
+            self.assertNotIn("installer FAILED", context)
 
     def test_a_failed_generation_is_reported_and_not_masked(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

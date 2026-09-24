@@ -256,6 +256,52 @@ def test_bind_as_the_env_identity_over_http_never_exports(
     cb.reset_cache()
 
 
+def test_a_failed_login_is_attempted_once_for_every_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Every name binds through one identity; a lost login is lost for all of them."""
+    import infisical_http
+
+    for name, value in IDENTITY_ENV.items():
+        monkeypatch.setenv(name, value)
+    for name in ("SEMGREP_APP_TOKEN", "SONAR_TOKEN", "CONTEXT7_API_KEY"):
+        monkeypatch.delenv(name, raising=False)
+    logins: list[str] = []
+
+    def fake_req(host, method, path, token=None, body=None, retries=6):
+        logins.append(path)
+        return 403, {"error": "denied"}
+
+    monkeypatch.setattr(infisical_http, "infisical_req", fake_req)
+    for name in ("SEMGREP_APP_TOKEN", "SONAR_TOKEN", "CONTEXT7_API_KEY"):
+        assert cb.bind_status(name)["source"] == "unbound"
+    assert logins == ["/api/v1/auth/universal-auth/login"]
+    cb.reset_cache()
+    assert cb.bind_status("SONAR_TOKEN")["source"] == "unbound"
+    assert len(logins) == 2, "reset_cache clears the remembered failure"
+
+
+def test_a_noted_login_failure_skips_the_login_entirely(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import infisical_http
+
+    for name, value in IDENTITY_ENV.items():
+        monkeypatch.setenv(name, value)
+    monkeypatch.delenv("SONAR_TOKEN", raising=False)
+
+    def fake_req(*_a, **_k):
+        raise AssertionError("no login after note_login_failed")
+
+    monkeypatch.setattr(infisical_http, "infisical_req", fake_req)
+    cb.note_login_failed()
+    assert cb.bind_status("SONAR_TOKEN") == {
+        "name": "SONAR_TOKEN",
+        "bound": False,
+        "source": "unbound",
+    }
+
+
 def test_the_bootstrap_secret_itself_is_never_bound() -> None:
     cb.reset_cache()
     assert cb.bind_status("L9_INFISICAL_CLIENT_SECRET")["source"] == "refused"

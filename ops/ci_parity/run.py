@@ -512,6 +512,15 @@ def run_lanes(ctx: Context, lanes: Sequence[manifest.Lane]) -> list[dict[str, An
 # --- snapshot clone, receipts, in-flight ------------------------------------
 
 
+def _has_commit(clone: Path, sha: str) -> bool:
+    probe = subprocess.run(
+        ["git", "-C", str(clone), "cat-file", "-e", f"{sha}^{{commit}}"],
+        capture_output=True,
+        check=False,
+    )
+    return probe.returncode == 0
+
+
 def ensure_snapshot(workspace: Path, cache: Path, sha: str) -> Path:
     clone = cache / "clone"
     if not (clone / ".git").exists():
@@ -522,6 +531,12 @@ def ensure_snapshot(workspace: Path, cache: Path, sha: str) -> Path:
             check=True,
             capture_output=True,
         )
+    if not _has_commit(clone, sha):
+        # A shallow workspace cannot be shared: git ignores --shared/--local for
+        # a shallow source, so the clone is a copy frozen at creation, with no
+        # alternates. Every later commit was then "not a tree" (checkout exit
+        # 128) on every run — hosted checkouts are shallow. Fetch it in.
+        _git(clone, "fetch", "-q", "--no-tags", "origin", sha)
     _git(clone, "-c", "advice.detachedHead=false", "checkout", "-q", "--detach", "--force", sha)
     _git(clone, "clean", "-q", "-f", "-d", "-x")
     return clone

@@ -62,6 +62,7 @@ def _run(
     argv: list[str],
     env: dict,
     aws: dict | None = None,
+    login_failed: mock.MagicMock | None = None,
 ) -> tuple[dict[str, Any], int, str, str]:
     with (
         mock.patch.dict("os.environ", env, clear=True),
@@ -69,6 +70,8 @@ def _run(
         mock.patch.object(plane.login, "ensure_machine_profile", return_value=login_state),
         mock.patch.object(plane.login, "machine_identity", return_value=(source, None)),
         mock.patch.object(plane.cb, "bind_status", side_effect=_bind_status(binds)),
+        # Process-global in capability_bind; never let a test leave it set.
+        mock.patch.object(plane.cb, "note_login_failed", login_failed or mock.MagicMock()),
         mock.patch("sys.stdout", new_callable=io.StringIO) as out,
         mock.patch("sys.stderr", new_callable=io.StringIO) as err,
     ):
@@ -106,6 +109,20 @@ class SessionStartSecretsTests(unittest.TestCase):
         self.assertEqual(result["identity"]["code"], plane.IDENTITY_REFUSED)
         self.assertEqual(rc, 1)
         self.assertIn("FAILED: Infisical refused the machine identity", err)
+
+    def test_a_failed_login_is_not_repeated_by_every_bind(self) -> None:
+        """One login attempt per plane run, not one per name.
+
+        On an egress-denied host each attempt cost ~1.1 s and the plane made
+        four (the identity check, then three binds), 4.5 s of a 30 s
+        SessionStart budget spent learning the same thing four times.
+        """
+        failed = mock.MagicMock()
+        _run("failed", "env", BINDS_NONE, [], HOSTED, login_failed=failed)
+        failed.assert_called()
+        ok = mock.MagicMock()
+        _run("env", "env", BINDS_OK, [], HOSTED, login_failed=ok)
+        ok.assert_not_called()
 
     def test_no_surface_is_exempt(self) -> None:
         """The retired carve-out scored a hosted surface's absence as 'not a fault'."""

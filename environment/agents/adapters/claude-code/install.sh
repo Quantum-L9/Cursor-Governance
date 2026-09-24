@@ -126,8 +126,21 @@ RECEIPT_WRITTEN=0
 #: every stage ran. Until then any component still reading READY holds its
 #: INITIAL value, not a verdict.
 RECEIPT_COMPLETE=0
+#: Components a stage actually classified, space-delimited STATUS_* names. On an
+#: incomplete run these keep their verdict — READY included — because the stage
+#: that owns them finished. Only the rest are rewritten to UNKNOWN. Without this
+#: a SessionStart budget kill after STRUCTURAL_PASS reported all eleven
+#: components "not evaluated", although every stage that classifies them had
+#: finished. (`capabilities` has no classifying stage, so it stays UNKNOWN.)
+EVALUATED=" "
+#: Signal that ended the run (TERM/INT/HUP), empty otherwise. A SessionStart
+#: budget kill is `timeout` sending TERM to this process group: the environment
+#: did not fail, the run was cut short, and the receipt must say which.
+INTERRUPTED_BY=""
 
 stage() { RECEIPT_STAGE="$1"; }
+evaluated() { local n; for n in "$@"; do EVALUATED="$EVALUATED$n "; done; }
+_is_evaluated() { case "$EVALUATED" in *" $1 "*) return 0 ;; esac; return 1; }
 
 # On an INCOMPLETE run, a component still reading READY was never evaluated.
 # Serialising it as READY is how a receipt came to assert total failure and
@@ -187,8 +200,12 @@ PYEOF
   esac
 }
 
-_receipt_component() {
-  if [ "$RECEIPT_COMPLETE" = "0" ] && [ "${1:-}" = "READY" ]; then
+_receipt_unevaluated() { # $1=status $2=STATUS_* name
+  [ "$RECEIPT_COMPLETE" = "0" ] && [ "${1:-}" = "READY" ] && ! _is_evaluated "${2:-}"
+}
+
+_receipt_component() { # $1=status $2=STATUS_* name
+  if _receipt_unevaluated "${1:-}" "${2:-}"; then
     printf 'UNKNOWN'
   else
     printf '%s' "${1:-}"
@@ -197,9 +214,14 @@ _receipt_component() {
 
 # Reason for a component the run never reached. Named so the receipt says why it
 # is UNKNOWN rather than leaving the empty string that made this invisible.
-_receipt_reason() { # $1=status $2=recorded reason
-  if [ "$RECEIPT_COMPLETE" = "0" ] && [ "${1:-}" = "READY" ]; then
-    printf 'not evaluated — installer exited at stage %s' "$RECEIPT_STAGE"
+_receipt_reason() { # $1=status $2=recorded reason $3=STATUS_* name
+  if _receipt_unevaluated "${1:-}" "${3:-}"; then
+    if [ -n "$INTERRUPTED_BY" ]; then
+      printf 'not evaluated — installer interrupted by SIG%s at stage %s' \
+        "$INTERRUPTED_BY" "$RECEIPT_STAGE"
+    else
+      printf 'not evaluated — installer exited at stage %s' "$RECEIPT_STAGE"
+    fi
   else
     printf '%s' "${2:-}"
   fi
@@ -230,31 +252,35 @@ write_receipt() {
       "$(json_token "$(git -C "$GOV_DIR" rev-parse HEAD 2>/dev/null || echo unknown)")"
     printf '  "workspace": "%s",\n' "$(json_token "$WORKSPACE")"
     printf '  "covered_roots": %s,\n' "$(receipt_covered_roots)"
-    printf '  "shared_bootstrap": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_SHARED")")"
-    printf '  "settings": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_SETTINGS")")"
-    printf '  "skills": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_SKILLS")")"
-    printf '  "commands": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_COMMANDS")")"
-    printf '  "rules": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_RULES")")"
-    printf '  "capabilities": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_CAPABILITIES")")"
-    printf '  "memory": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_MEMORY")")"
-    printf '  "memory_cli": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_MEMORY_CLI")")"
-    printf '  "memory_mcp": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_MEMORY_MCP")")"
-    printf '  "mcp": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_MCP")")"
-    printf '  "plugins": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_PLUGINS")")"
+    printf '  "shared_bootstrap": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_SHARED" STATUS_SHARED)")"
+    printf '  "settings": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_SETTINGS" STATUS_SETTINGS)")"
+    printf '  "skills": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_SKILLS" STATUS_SKILLS)")"
+    printf '  "commands": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_COMMANDS" STATUS_COMMANDS)")"
+    printf '  "rules": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_RULES" STATUS_RULES)")"
+    printf '  "capabilities": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_CAPABILITIES" STATUS_CAPABILITIES)")"
+    printf '  "memory": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_MEMORY" STATUS_MEMORY)")"
+    printf '  "memory_cli": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_MEMORY_CLI" STATUS_MEMORY_CLI)")"
+    printf '  "memory_mcp": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_MEMORY_MCP" STATUS_MEMORY_MCP)")"
+    printf '  "mcp": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_MCP" STATUS_MCP)")"
+    printf '  "plugins": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_PLUGINS" STATUS_PLUGINS)")"
     printf '  "reasons": {\n'
-    printf '    "shared_bootstrap": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_SHARED" "$REASON_SHARED")")"
-    printf '    "settings": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_SETTINGS" "$REASON_SETTINGS")")"
-    printf '    "skills": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_SKILLS" "$REASON_SKILLS")")"
-    printf '    "commands": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_COMMANDS" "$REASON_COMMANDS")")"
-    printf '    "rules": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_RULES" "$REASON_RULES")")"
-    printf '    "capabilities": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_CAPABILITIES" "$REASON_CAPABILITIES")")"
-    printf '    "memory": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_MEMORY" "$REASON_MEMORY")")"
-    printf '    "memory_cli": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_MEMORY_CLI" "$REASON_MEMORY_CLI")")"
-    printf '    "memory_mcp": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_MEMORY_MCP" "$REASON_MEMORY_MCP")")"
-    printf '    "mcp": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_MCP" "$REASON_MCP")")"
-    printf '    "plugins": "%s"\n' "$(json_token "$(_receipt_reason "$STATUS_PLUGINS" "$REASON_PLUGINS")")"
+    printf '    "shared_bootstrap": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_SHARED" "$REASON_SHARED" STATUS_SHARED)")"
+    printf '    "settings": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_SETTINGS" "$REASON_SETTINGS" STATUS_SETTINGS)")"
+    printf '    "skills": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_SKILLS" "$REASON_SKILLS" STATUS_SKILLS)")"
+    printf '    "commands": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_COMMANDS" "$REASON_COMMANDS" STATUS_COMMANDS)")"
+    printf '    "rules": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_RULES" "$REASON_RULES" STATUS_RULES)")"
+    printf '    "capabilities": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_CAPABILITIES" "$REASON_CAPABILITIES" STATUS_CAPABILITIES)")"
+    printf '    "memory": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_MEMORY" "$REASON_MEMORY" STATUS_MEMORY)")"
+    printf '    "memory_cli": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_MEMORY_CLI" "$REASON_MEMORY_CLI" STATUS_MEMORY_CLI)")"
+    printf '    "memory_mcp": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_MEMORY_MCP" "$REASON_MEMORY_MCP" STATUS_MEMORY_MCP)")"
+    printf '    "mcp": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_MCP" "$REASON_MCP" STATUS_MCP)")"
+    printf '    "plugins": "%s"\n' "$(json_token "$(_receipt_reason "$STATUS_PLUGINS" "$REASON_PLUGINS" STATUS_PLUGINS)")"
     printf '  },\n'
     printf '  "log_path": "%s",\n' "$(json_token "${L9_BOOTSTRAP_LOG_PATH:-}")"
+    # Wall-clock seconds the run took, so a budget overrun is diagnosable from
+    # the receipt alone rather than by re-running the installer under a clock.
+    printf '  "elapsed_seconds": %s,\n' "${SECONDS:-0}"
+    printf '  "interrupted_by": "%s",\n' "$(json_token "$INTERRUPTED_BY")"
     printf '  "overall": "%s"\n' "$(json_token "$state")"
     printf '}\n'
   } > "$RECEIPT" 2>/dev/null || return 0
@@ -263,16 +289,31 @@ write_receipt() {
 
 # The trap is the guarantee. Any exit that has not already written a receipt —
 # including `exit 1` from a guard clause and any unexpected termination — leaves
-# a `failed` receipt naming the stage that was in flight.
+# a receipt naming the stage that was in flight: `interrupted` when a signal cut
+# the run short (the SessionStart budget kill is TERM from `timeout`), `failed`
+# for every other early exit. An interruption is not a failed environment.
 on_exit() {
   local rc=$?
   if [ "$RECEIPT_WRITTEN" = "0" ]; then
-    write_receipt failed
-    warn "wrote FAILED bootstrap receipt at stage '$RECEIPT_STAGE' (exit $rc): $RECEIPT"
+    if [ -n "$INTERRUPTED_BY" ]; then
+      write_receipt interrupted
+      warn "wrote INTERRUPTED bootstrap receipt at stage '$RECEIPT_STAGE' (SIG$INTERRUPTED_BY after ${SECONDS}s): $RECEIPT"
+    else
+      write_receipt failed
+      warn "wrote FAILED bootstrap receipt at stage '$RECEIPT_STAGE' (exit $rc): $RECEIPT"
+    fi
   fi
   return 0
 }
+on_signal() { # $1=signal name $2=exit code
+  INTERRUPTED_BY="$1"
+  trap - "$1"
+  exit "$2"
+}
 trap on_exit EXIT
+trap 'on_signal TERM 143' TERM
+trap 'on_signal INT 130' INT
+trap 'on_signal HUP 129' HUP
 
 # --- Workspace sanity -------------------------------------------------------
 # A caller that resolves the wrong workspace (e.g. the PARENT of a lone
@@ -390,6 +431,7 @@ if [ ! -x "$GOV_PY" ]; then
   downgrade STATUS_SHARED BLOCKED "locked interpreter unusable"
   GOV_PY=""
 fi
+evaluated STATUS_SHARED
 
 log "Claude Code vendor wiring"
 say "governance=$GOV_DIR workspace=$WORKSPACE"
@@ -454,6 +496,7 @@ if [ -n "$GOV_PY" ] && [ -f "$PROJECTION_ENGINE" ]; then
         ;;
     esac
   done
+  evaluated STATUS_SETTINGS STATUS_SKILLS STATUS_COMMANDS STATUS_RULES STATUS_PLUGINS
 elif [ -n "$GOV_PY" ]; then
   warn "missing ops/scripts/claude_projection.py"
   downgrade STATUS_SETTINGS BLOCKED "projection engine missing"
@@ -512,6 +555,7 @@ case "$MCP_STATUS" in
   drift) downgrade STATUS_MCP DEGRADED ".mcp.json drifted from mcp.template.json (check mode)" ;;
   *) downgrade STATUS_MCP DEGRADED "mcp projection: $MCP_STATUS" ;;
 esac
+evaluated STATUS_MCP
 
 # Memory readiness without the capability broker and without a provider URL
 # (stage C9): ops/memory/diagnostics.py proves which exact l9-graphite-memory
@@ -540,6 +584,7 @@ if [ -n "$GOV_PY" ] && [ -f "$EMITTER" ]; then
       DEGRADED|BLOCKED|UNKNOWN) downgrade STATUS_MEMORY_MCP DEGRADED "${mcp_rs:-memory mcp entry}" ;;
     esac
     say "memory cli=$cli_st control_plane=$plane_st mcp=$mcp_st"
+    evaluated STATUS_MEMORY_CLI STATUS_MEMORY_MCP STATUS_MEMORY
   fi
 fi
 if [ "$STATUS_MEMORY_CLI" != "READY" ]; then
@@ -567,6 +612,7 @@ if [ "${SKIP_PLUGIN_MARKETPLACE:-}" = "true" ]; then
 elif ! command -v claude >/dev/null 2>&1; then
   downgrade STATUS_PLUGINS DEGRADED "claude CLI unavailable — plugins not converged"
 fi
+evaluated STATUS_PLUGINS
 
 # Structural doctor. --check still runs it; the session receipt is not
 # overwritten in check mode (bootstrap-check.json). A non-zero structural
@@ -586,6 +632,9 @@ fi
 # Option B: same list as the shared bootstrap (session_git_excludes.sh).
 # install.sh still writes it because tests / L9_SKIP_SHARED_BOOTSTRAP skip
 # the shared half. Never a blanket `.claude/` (Option A).
+# Its own stage: a run cut short here used to be recorded against
+# structural-validate, which had already printed STRUCTURAL_PASS.
+stage "git-excludes"
 # shellcheck source=../../../../ops/scripts/lib/session_git_excludes.sh
 source "$GOV_DIR/ops/scripts/lib/session_git_excludes.sh"
 if [ "$CHECK" != "1" ] && git -C "$WORKSPACE" rev-parse --git-dir >/dev/null 2>&1; then
