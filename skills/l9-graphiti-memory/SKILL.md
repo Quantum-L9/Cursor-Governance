@@ -148,6 +148,13 @@ memory.write_governed  {namespace, content: "<one atomic fact, one line>", task_
                         tags: ["agent:cursor", "<topic>"], idempotency_key: "agent:<ns>:<digest>"}
 ```
 
+"One terse fact" (ADR-0037): one independently retrievable assertion or closely
+coupled relationship that can be superseded without changing unrelated
+knowledge. Independent memories are separate `memory.write_agent` calls — no
+batch. Decomposition is the agent's job; runtime validation is structural only.
+`memory.phase_lock` belongs to the governed pair alone: it is not the
+SessionStart prefetch receipt and never a prerequisite for `write_agent`.
+
 `MemoryService` grants the lock only after a conflict check on the namespace
 snapshot and re-verifies the digest inside the admitting transaction; a
 refused lock or write is the verdict. If the MCP server is unbound, report the
