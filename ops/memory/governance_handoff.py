@@ -31,6 +31,7 @@ from typing import Any
 from ops.memory.session_handoff import (
     HandoffError,
     check_keys,
+    clean_pr_number,
     clean_structured,
 )
 
@@ -82,9 +83,7 @@ def normalize(payload: Any, *, pr_number: int | None = None) -> dict[str, Any]:
     if payload.get("schema") != GOVERNANCE_SCHEMA:
         raise HandoffError(f"schema must be {GOVERNANCE_SCHEMA!r}")
     check_keys(payload, KEYS, misplaced=MISPLACED)
-    number = payload.get("pr_number")
-    if not isinstance(number, int) or isinstance(number, bool) or number < 1:
-        raise HandoffError("pr_number must be the published PR's number (a positive integer)")
+    number = clean_pr_number(payload.get("pr_number"))
     if pr_number is not None and number != pr_number:
         raise HandoffError(f"pr_number {number!r} is not this publication (#{pr_number})")
     brief: dict[str, Any] = {"schema": GOVERNANCE_SCHEMA, "pr_number": number}

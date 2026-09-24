@@ -19,7 +19,20 @@ different namespaces:
 
 The JSON Schemas are the machine form of the code, and
 `tests/ops/memory/test_handoff_schemas.py` holds them to the same verdict on every
-case. When the two disagree, that test fails. The code is what runs.
+case. Its table is generated per section of each schema, and each fixture
+carries the verdict both must reach. That covers:
+- missing required fields, a wrong `schema`, and bad `pr_number` values;
+- unknown keys, and sections placed in the wrong file;
+- sections that are absent, null or empty;
+- bare-string shorthand, structured items, and whitespace-only strings;
+- 40 against 41 items, and oversized values.
+
+When the two disagree, that test fails. The code is what runs.
+
+Two rules cannot be expressed in JSON Schema. Each schema states them in its own
+text, and each has its own test:
+- the aggregate byte cap of the normalized brief;
+- `pr_number` equal to this publication's number.
 
 ## Repository handoff — `l9.session_handoff.v1`
 
@@ -73,7 +86,11 @@ As a result, a degraded bootstrap is recorded even when the agent wrote no brief
   `governance_friction belongs in .l9/memory/governance-handoff.json`.
 - **Items.** A bare string is shorthand for the object's required field.
   Whitespace is collapsed. A value over 1200 characters is truncated with an
-  ellipsis. Each section holds at most 40 items.
+  ellipsis. Each section holds at most 40 items. An optional field that is
+  absent, `null`, empty or whitespace-only is omitted. Any other non-string
+  value in an optional field is refused.
+- **`pr_number`** is a positive integer. `7.0` is the integer 7, as it is to
+  JSON Schema. A boolean is not a number.
 - **Hooks never author content.** Both hooks validate, normalize, cap and render
   what the agent wrote. The only non-agent content is the verbatim receipt copy
   described above (CANONICAL_LAW §8.6, INV-03b).
@@ -99,6 +116,18 @@ As a result, a degraded bootstrap is recorded even when the agent wrote no brief
 A subagent or background Stop never closes or hands off. A **degraded**
 hydration still closes, because the hooks check `usable_receipt` rather than
 `fresh_receipt`.
+
+`environment/agents/adapters/claude-code/tests/test_post_publish_stop_state_machine.py`
+runs both hooks' real `main()` together, in either order, as one state machine.
+It asserts that one publication and any number of Stops produce at most:
+- one repository close;
+- one governance result;
+- one block, which always comes from the repository hook.
+
+It also asserts that the persisted ledgers do not depend on which hook ran
+first. A seeded random walk extends this over hundreds of sequences. If a
+ledger is lost, both hooks retry under the same publication-scoped idempotency
+key, so the store replays rather than writing twice.
 
 ## Announcements: loud by design
 
