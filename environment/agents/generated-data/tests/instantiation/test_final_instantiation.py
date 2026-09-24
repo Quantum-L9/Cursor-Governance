@@ -7,7 +7,7 @@ from pathlib import Path
 
 TEST_FILE = Path(__file__).resolve()
 BASE = TEST_FILE.parents[2]
-ROOT = TEST_FILE.parents[3]
+ROOT = TEST_FILE.parents[5]
 ORCHESTRATION = BASE / "orchestration"
 RETRIEVAL = BASE / "retrieval"
 INVALIDATION = BASE / "invalidation"
@@ -31,8 +31,28 @@ from repository_event_bridge import (
     normalize_relative_path,
     parse_name_status,
 )
-from reuse_recorder import ReuseRecorder
+from reuse_recorder import (
+    PendingReuse,
+    ReuseFinalization,
+    ReuseIdentity,
+    ReuseRecorder,
+)
 from state_store import PipelineStateStore
+
+
+def _pending_reuse() -> PendingReuse:
+    return PendingReuse(
+        record_id="r1",
+        consumer=ReuseIdentity(
+            repository="r",
+            campaign_id="c",
+            action_id="a",
+            agent_id="g",
+            role="verifier",
+        ),
+        context_pack_id="p",
+        query="test",
+    )
 
 
 class FinalInstantiationTests(unittest.TestCase):
@@ -135,22 +155,9 @@ class FinalInstantiationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             store = PipelineStateStore(Path(temp) / "pipeline.sqlite3")
             recorder = ReuseRecorder(store)
-            selected = recorder.record_selection(
-                record_id="r1",
-                campaign_id="c",
-                action_id="a",
-                agent_id="g",
-                context_pack_id="p",
-                payload={},
-            )
-            injected = recorder.record_injection(
-                record_id="r1",
-                campaign_id="c",
-                action_id="a",
-                agent_id="g",
-                context_pack_id="p",
-                payload={},
-            )
+            pending = _pending_reuse()
+            selected = recorder.record_selection(pending, evidence={})
+            injected = recorder.record_injection(pending, evidence={})
             self.assertFalse(selected.remote_dispatched)
             self.assertFalse(injected.remote_dispatched)
 
@@ -160,15 +167,13 @@ class FinalInstantiationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             store = PipelineStateStore(Path(temp) / "pipeline.sqlite3")
             result = ReuseRecorder(store).finalize_outcome(
-                record_id="r1",
-                campaign_id="c",
-                action_id="a",
-                agent_id="g",
-                context_pack_id="p",
-                outcome="stale",
-                correction_required=True,
-                validity_confirmed=False,
-                evidence={},
+                _pending_reuse(),
+                ReuseFinalization(
+                    outcome="stale",
+                    correction_required=True,
+                    validity_confirmed=False,
+                    evidence={},
+                ),
             )
             self.assertIsNotNone(result.invalidation_candidate)
             self.assertTrue(result.invalidation_candidate["requires_policy_approval"])
@@ -213,6 +218,21 @@ class FinalInstantiationTests(unittest.TestCase):
         self.assertTrue(result["pipeline_passed"])
         self.assertFalse(result["destination_acceptance_proven"])
         self.assertFalse(result["full_compounding_loop_proven"])
+
+    def test_golden_does_not_write_the_legacy_outbox(self) -> None:
+        """The legacy outbox is adopted by real drains; the golden must stay hermetic."""
+        legacy = BASE / ".runtime" / "memory-outbox"
+        before = set(legacy.glob("memcand-*.json")) if legacy.is_dir() else set()
+        with tempfile.TemporaryDirectory() as temp:
+            run_golden(
+                mode="outbox",
+                database=Path(temp) / "pipeline.sqlite3",
+                repository_root=ROOT,
+            )
+            written = list((Path(temp) / "golden-outbox" / "memory").glob("memcand-*.json"))
+            self.assertTrue(written)
+        after = set(legacy.glob("memcand-*.json")) if legacy.is_dir() else set()
+        self.assertEqual(after, before)
 
 
 if __name__ == "__main__":
