@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -649,6 +650,28 @@ class BudgetRegistrationLockstepTest(unittest.TestCase):
             default,
             configured,
             "an unset L9_MEMORY_WRITEBACK_BUDGET must not silently change the budget",
+        )
+
+    def test_session_start_hook_default_matches_the_configured_budget(self) -> None:
+        """The hook's ``${L9_SESSION_START_BUDGET:-N}`` fallback is the configured budget.
+
+        Lockstep alone cannot see a coordinated regression: PR #648 moved budget
+        and registration 30 -> 60, and a stale merge resolution in #652 restored
+        both to 30. They still agreed, so the lockstep test stayed green while
+        every hosted session ran under half the budget the hook was sized for.
+        The hook's own fallback kept 60, and this pins the template to it.
+        """
+        template = json.loads(self.TEMPLATE.read_text(encoding="utf-8"))
+        configured = int(template["env"]["L9_SESSION_START_BUDGET"])
+        hook = CLAUDE_DIR / "hooks" / "session_start_claude_governance.sh"
+        defaults = {
+            int(m) for m in re.findall(r"\$\{L9_SESSION_START_BUDGET:-(\d+)\}", hook.read_text())
+        }
+        self.assertTrue(defaults, "hook no longer reads L9_SESSION_START_BUDGET with a fallback")
+        self.assertEqual(
+            defaults,
+            {configured},
+            f"hook falls back to {sorted(defaults)}s but the template configures {configured}s",
         )
 
 
